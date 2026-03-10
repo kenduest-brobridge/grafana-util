@@ -206,3 +206,11 @@ python3 grafana-alert-utils.py -h
 
 - `README.md`: public usage and high-level behavior
 - `DEVELOPER.md`: maintenance notes, internal architecture, compatibility rules, and implementation tradeoffs
+- `ai-status.md` / `ai-changes.md`: internal working notes only; do not treat them as public GitHub-facing documentation
+
+Documentation policy:
+
+- keep `README.md` suitable for GitHub readers
+- keep environment-specific validation logs, migration notes, and maintainer-only tradeoffs in `DEVELOPER.md`
+- avoid relying on `ai-status.md` and `ai-changes.md` for public project documentation
+- if user-facing release history is needed, prefer a curated `CHANGELOG.md`
