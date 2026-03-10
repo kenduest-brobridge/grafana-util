@@ -1,5 +1,19 @@
 # ai-status.md
 
+## 2026-03-11 - Task: Package Grafana Utilities for Installation
+- State: Done
+- Scope: `pyproject.toml`, `grafana_utils/__init__.py`, `grafana_utils/dashboard_cli.py`, `grafana_utils/alert_cli.py`, `grafana_utils/http_transport.py`, `cmd/grafana-utils.py`, `cmd/grafana-alert-utils.py`, `tests/test_dump_grafana_dashboards.py`, `tests/test_grafana_alert_utils.py`, `tests/test_packaging.py`, `README.md`, `README.zh-TW.md`, `DEVELOPER.md`, `AGENTS.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The repo runs from source, but it is not structured as an installable Python package. The implementation lives under `cmd/`, there is no packaging metadata, and there are no console entry points for global or per-user installs on other systems.
+- Current Update: Moved the implementation into the `grafana_utils/` package, kept `cmd/` as thin source-tree wrappers, added `pyproject.toml` with console scripts for `grafana-utils` and `grafana-alert-utils`, and updated the English and Traditional Chinese docs plus maintainer guidance to cover normal, `--user`, and optional HTTP/2 installs. Packaging validation now includes package metadata tests and an isolated local `pip install --target` run.
+- Result: The repo now supports installation as a Python package for either system/global environments or user-local environments while preserving direct repo execution through `cmd/`. Targeted tests and the full unittest suite passed. Local package installation also succeeded into `/tmp` with `--no-build-isolation`; a post-install `pyenv` rehash hook reported a local permissions warning after the install completed.
+
+## 2026-03-11 - Task: Enable Persistent Grafana HTTP Connections
+- State: Done
+- Scope: `cmd/grafana_http_transport.py`, `tests/test_dump_grafana_dashboards.py`, `tests/test_grafana_alert_utils.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The shared transport abstraction exists, but both transport adapters still issue one-shot requests. That means no deliberate connection reuse, and HTTP/2 is not attempted even when the runtime could support it.
+- Current Update: Changed the `requests` transport to use a persistent `requests.Session`, changed the `httpx` transport to use a persistent `httpx.Client`, and added automatic HTTP/2 enablement for `httpx` only when the runtime has `h2` support available. The default transport selector now uses `auto`, which prefers HTTP/2-capable `httpx` when possible and otherwise falls back to `requests` keep-alive sessions.
+- Result: Grafana HTTP requests now reuse connections by default, and HTTP/2 is enabled automatically only in environments that can actually negotiate it. Full unit tests still pass after the transport behavior change.
+
 ## 2026-03-11 - Task: Make Grafana HTTP Transport Replaceable
 - State: Done
 - Scope: `cmd/grafana_http_transport.py`, `cmd/grafana-utils.py`, `cmd/grafana-alert-utils.py`, `tests/test_dump_grafana_dashboards.py`, `tests/test_grafana_alert_utils.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

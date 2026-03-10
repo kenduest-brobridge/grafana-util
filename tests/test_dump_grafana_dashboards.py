@@ -1,21 +1,20 @@
 import argparse
 import ast
 import base64
-import importlib.util
+import importlib
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-MODULE_PATH = Path(__file__).resolve().parents[1] / "cmd" / "grafana-utils.py"
-TRANSPORT_MODULE_PATH = MODULE_PATH.parent / "grafana_http_transport.py"
-if str(MODULE_PATH.parent) not in sys.path:
-    sys.path.insert(0, str(MODULE_PATH.parent))
-SPEC = importlib.util.spec_from_file_location("grafana_utils_script", MODULE_PATH)
-if SPEC is None or SPEC.loader is None:
-    raise RuntimeError(f"Cannot load module from {MODULE_PATH}")
-exporter = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(exporter)
+REPO_ROOT = Path(__file__).resolve().parents[1]
+MODULE_PATH = REPO_ROOT / "grafana_utils" / "dashboard_cli.py"
+TRANSPORT_MODULE_PATH = REPO_ROOT / "grafana_utils" / "http_transport.py"
+WRAPPER_PATH = REPO_ROOT / "cmd" / "grafana-utils.py"
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+transport_module = importlib.import_module("grafana_utils.http_transport")
+exporter = importlib.import_module("grafana_utils.dashboard_cli")
 
 
 class FakeGrafanaClient(exporter.GrafanaClient):
@@ -41,6 +40,11 @@ class ExporterTests(unittest.TestCase):
         source = TRANSPORT_MODULE_PATH.read_text(encoding="utf-8")
 
         ast.parse(source, filename=str(TRANSPORT_MODULE_PATH), feature_version=(3, 6))
+
+    def test_dashboard_wrapper_script_parses_as_python36_syntax(self):
+        source = WRAPPER_PATH.read_text(encoding="utf-8")
+
+        ast.parse(source, filename=str(WRAPPER_PATH), feature_version=(3, 6))
 
     def test_parse_args_requires_subcommand(self):
         with self.assertRaises(SystemExit):
@@ -87,7 +91,12 @@ class ExporterTests(unittest.TestCase):
             verify_ssl=False,
         )
 
-        self.assertEqual(type(transport).__name__, "RequestsJsonHttpTransport")
+        expected = (
+            "HttpxJsonHttpTransport"
+            if transport_module.httpx_is_available() and transport_module.http2_is_available()
+            else "RequestsJsonHttpTransport"
+        )
+        self.assertEqual(type(transport).__name__, expected)
 
     def test_build_json_http_transport_supports_httpx(self):
         transport = exporter.build_json_http_transport(
@@ -99,6 +108,9 @@ class ExporterTests(unittest.TestCase):
         )
 
         self.assertEqual(type(transport).__name__, "HttpxJsonHttpTransport")
+
+    def test_http2_capability_helper_returns_boolean(self):
+        self.assertIsInstance(transport_module.http2_is_available(), bool)
 
     def test_client_accepts_injected_transport(self):
         class FakeTransport:

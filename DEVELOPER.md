@@ -4,10 +4,15 @@ This document is for maintainers. Keep `README.md` GitHub-facing and task-orient
 
 ## Repository Scope
 
-- `cmd/grafana-utils.py`: dashboard export/import utility
-- `cmd/grafana-alert-utils.py`: alerting resource export/import utility
+- `grafana_utils/dashboard_cli.py`: packaged dashboard export/import utility
+- `grafana_utils/alert_cli.py`: packaged alerting resource export/import utility
+- `grafana_utils/http_transport.py`: shared HTTP transport adapters and transport selection
+- `cmd/grafana-utils.py`: thin source-tree wrapper for the packaged dashboard CLI
+- `cmd/grafana-alert-utils.py`: thin source-tree wrapper for the packaged alerting CLI
+- `pyproject.toml`: build metadata, dependencies, and console-script entrypoints
 - `tests/test_dump_grafana_dashboards.py`: dashboard utility unit tests
 - `tests/test_grafana_alert_utils.py`: alerting utility unit tests
+- `tests/test_packaging.py`: package metadata and console-script tests
 
 ## Python Baseline
 
@@ -21,9 +26,18 @@ This document is for maintainers. Keep `README.md` GitHub-facing and task-orient
 ### CLI shape
 
 - Mode selection is explicit.
+- Installed commands are `grafana-utils` and `grafana-alert-utils`.
 - Use `python3 cmd/grafana-utils.py export ...` for export.
 - Use `python3 cmd/grafana-utils.py import ...` for import.
 - The export subcommand intentionally uses `--export-dir` instead of `--output-dir` to avoid mixing export terminology with import behavior.
+
+### Packaging layout
+
+- The installable package lives under `grafana_utils/`.
+- `cmd/` keeps only thin wrappers so the repo can still be used without installation.
+- `pyproject.toml` exposes `grafana-utils` and `grafana-alert-utils` as console scripts.
+- Base installation depends on `requests`.
+- Optional extra `.[http2]` adds `httpx[http2]` for Python 3.8+ environments.
 
 ### Export variants
 
@@ -188,14 +202,20 @@ Notes:
 Common checks:
 
 ```bash
+python3 -m pip install --no-deps --target /tmp/grafana-utils-install .
 python3 -m unittest tests.test_dump_grafana_dashboards
 python3 -m unittest tests.test_grafana_alert_utils
+python3 -m unittest tests.test_packaging
 python3 -m unittest -v
 ```
 
 Useful CLI help checks:
 
 ```bash
+grafana-utils -h
+grafana-utils export -h
+grafana-utils import -h
+grafana-alert-utils -h
 python3 cmd/grafana-utils.py -h
 python3 cmd/grafana-utils.py export -h
 python3 cmd/grafana-utils.py import -h

@@ -6,8 +6,8 @@ This repository is for exporting, backing up, migrating, and re-importing Grafan
 
 It provides two command-line tools:
 
-- `cmd/grafana-utils.py`: export and import dashboards
-- `cmd/grafana-alert-utils.py`: export and import alerting resources such as alert rules, contact points, mute timings, notification policies, and templates
+- `grafana-utils`: export and import dashboards
+- `grafana-alert-utils`: export and import alerting resources such as alert rules, contact points, mute timings, notification policies, and templates
 
 Use this repo when you need to:
 
@@ -16,17 +16,51 @@ Use this repo when you need to:
 - keep Grafana JSON under version control
 - prepare dashboards either for API re-import or for Grafana web UI import with datasource prompts
 
-Dashboard workflow is handled by `cmd/grafana-utils.py`. Use explicit subcommands to avoid mixing export and import:
+Dashboard workflow is handled by `grafana-utils`. Use explicit subcommands to avoid mixing export and import:
 
-- `python3 cmd/grafana-utils.py export ...`
-- `python3 cmd/grafana-utils.py import ...`
+- `grafana-utils export ...`
+- `grafana-utils import ...`
 
-Alerting workflow is handled separately by `cmd/grafana-alert-utils.py` because Grafana alerting uses different APIs and file shapes than dashboards.
+Alerting workflow is handled separately by `grafana-alert-utils` because Grafana alerting uses different APIs and file shapes than dashboards.
+
+The examples below use `python3 cmd/...` so they also work directly from the git checkout. If you installed the package, use the same arguments with the installed command names instead.
 
 Compatibility:
 
 - supported on RHEL 8 and later
 - both Python entrypoints are kept compatible with Python 3.6 syntax so they remain parseable on RHEL 8 environments
+
+## Installation
+
+Install into the current Python environment:
+
+```bash
+python3 -m pip install .
+```
+
+Install into a user-local environment without touching the system Python site-packages:
+
+```bash
+python3 -m pip install --user .
+```
+
+Optional HTTP/2 support is available on Python 3.8+ environments with:
+
+```bash
+python3 -m pip install '.[http2]'
+```
+
+After installation, use the installed commands:
+
+- `grafana-utils export ...`
+- `grafana-utils import ...`
+- `grafana-alert-utils ...`
+
+If you are running directly from the git checkout instead of installing the package, keep using the thin wrappers under `cmd/`:
+
+- `python3 cmd/grafana-utils.py export ...`
+- `python3 cmd/grafana-utils.py import ...`
+- `python3 cmd/grafana-alert-utils.py ...`
 
 The default export root is `dashboards/`. One export run now writes two variants automatically:
 

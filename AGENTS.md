@@ -2,17 +2,27 @@
 
 ## Project Structure & Module Organization
 
-- `cmd/grafana-utils.py`: dashboard export/import CLI.
-- `cmd/grafana-alert-utils.py`: alerting resource export/import CLI.
+- `grafana_utils/dashboard_cli.py`: packaged dashboard export/import implementation.
+- `grafana_utils/alert_cli.py`: packaged alerting resource export/import implementation.
+- `grafana_utils/http_transport.py`: shared replaceable HTTP transport layer.
+- `cmd/grafana-utils.py`: thin wrapper for running the dashboard CLI directly from the repo checkout.
+- `cmd/grafana-alert-utils.py`: thin wrapper for running the alerting CLI directly from the repo checkout.
+- `pyproject.toml`: package metadata and console-script entrypoints.
 - `tests/`: unit tests for both entrypoints.
 - `README.md`: GitHub-facing usage and operator examples.
 - `DEVELOPER.md`: maintainer notes, internal behavior, and implementation tradeoffs.
 - `docs/internal/ai-status.md` and `docs/internal/ai-changes.md`: internal change trace files for meaningful feature work.
 
-Keep new code in the existing `cmd/` Python CLIs unless a new workflow clearly deserves its own script.
+Keep implementation code in `grafana_utils/` and keep `cmd/` wrappers thin unless a new workflow clearly deserves its own module.
 
 ## Build, Test, and Development Commands
 
+- `python3 -m pip install .`: install the package into the active Python environment.
+- `python3 -m pip install --user .`: install the package into the current user's Python environment.
+- `python3 -m pip install '.[http2]'`: install the optional HTTP/2 transport dependencies on Python 3.8+.
+- `grafana-utils export -h`: show installed dashboard CLI help.
+- `grafana-utils import -h`: show installed dashboard import help.
+- `grafana-alert-utils -h`: show installed alerting CLI help and examples.
 - `python3 cmd/grafana-utils.py export -h`: show dashboard CLI help.
 - `python3 cmd/grafana-utils.py import -h`: show dashboard import help.
 - `python3 cmd/grafana-alert-utils.py -h`: show alerting CLI help and examples.

@@ -6,8 +6,8 @@
 
 它提供兩個命令列工具：
 
-- `cmd/grafana-utils.py`：匯出與匯入 dashboards
-- `cmd/grafana-alert-utils.py`：匯出與匯入 alerting 資源，例如 alert rules、contact points、mute timings、notification policies、templates
+- `grafana-utils`：匯出與匯入 dashboards
+- `grafana-alert-utils`：匯出與匯入 alerting 資源，例如 alert rules、contact points、mute timings、notification policies、templates
 
 當你有以下需求時，可以使用這個 repo：
 
@@ -16,17 +16,51 @@
 - 將 Grafana JSON 納入版本控制
 - 準備可供 API 再匯入的 dashboard JSON，或準備可供 Grafana Web UI 匯入並重新對應 datasource 的 dashboard JSON
 
-Dashboard 流程由 `cmd/grafana-utils.py` 處理。請使用明確的子命令，避免把匯出與匯入流程混在一起：
+Dashboard 流程由 `grafana-utils` 處理。請使用明確的子命令，避免把匯出與匯入流程混在一起：
 
-- `python3 cmd/grafana-utils.py export ...`
-- `python3 cmd/grafana-utils.py import ...`
+- `grafana-utils export ...`
+- `grafana-utils import ...`
 
-Alerting 流程由 `cmd/grafana-alert-utils.py` 獨立處理，因為 Grafana alerting 使用的 API 與檔案格式和 dashboard 不同。
+Alerting 流程由 `grafana-alert-utils` 獨立處理，因為 Grafana alerting 使用的 API 與檔案格式和 dashboard 不同。
+
+下方範例仍使用 `python3 cmd/...`，這樣可以直接在 git checkout 內執行。如果你已經安裝成 package，只要把相同參數改用已安裝的命令名稱即可。
 
 相容性：
 
 - 支援 RHEL 8 與更新版本
 - 兩個 Python 入口腳本都維持 Python 3.6 語法相容，確保在 RHEL 8 環境中可被解析
+
+## 安裝
+
+安裝到目前的 Python 環境：
+
+```bash
+python3 -m pip install .
+```
+
+若你要安裝到使用者自己的環境，不動系統層 site-packages：
+
+```bash
+python3 -m pip install --user .
+```
+
+如果你想盡量使用 HTTP/2，且環境是 Python 3.8+，可以安裝可選依賴：
+
+```bash
+python3 -m pip install '.[http2]'
+```
+
+安裝完成後，使用已安裝的命令：
+
+- `grafana-utils export ...`
+- `grafana-utils import ...`
+- `grafana-alert-utils ...`
+
+如果你不是安裝成 package，而是直接在 git checkout 內執行，則繼續使用 `cmd/` 下的薄封裝腳本：
+
+- `python3 cmd/grafana-utils.py export ...`
+- `python3 cmd/grafana-utils.py import ...`
+- `python3 cmd/grafana-alert-utils.py ...`
 
 預設匯出根目錄是 `dashboards/`。一次匯出會自動產生兩種格式：
 
