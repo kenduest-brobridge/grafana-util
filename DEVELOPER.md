@@ -79,8 +79,17 @@ This is why prompt export needs live datasource metadata while raw export does n
 - contact points
 - mute timings
 - notification policies
+- notification message templates
 
 The alerting export root is `alerts/raw/`, with one subdirectory per resource kind.
+
+Default layout:
+
+- `alerts/raw/rules/<folderUID>/<ruleGroup>/<title>__<uid>.json`
+- `alerts/raw/contact-points/<name>/<name>__<uid>.json`
+- `alerts/raw/mute-timings/<name>/<name>.json`
+- `alerts/raw/policies/notification-policies.json`
+- `alerts/raw/templates/<name>/<name>.json`
 
 ### Import behavior by resource kind
 
@@ -88,6 +97,21 @@ The alerting export root is `alerts/raw/`, with one subdirectory per resource ki
 - contact points: create by default, update by `uid` when `--replace-existing` is set
 - mute timings: create by default, update by `name` when `--replace-existing` is set
 - notification policies: always applied as one policy tree with `PUT`
+- notification templates: applied with `PUT`; when `--replace-existing` is set, fetch the current template version first and send it back with the update payload
+
+Template handling notes:
+
+- Grafana template identity is the template `name`
+- template list may return JSON `null`; treat that as an empty list
+- template updates should strip `name` from the request body because the API path already carries the name
+- without `--replace-existing`, importing an existing template should fail fast instead of silently updating it
+
+### Alerting import shape and rejection rules
+
+- Import accepts the tool-owned document format emitted by `grafana-alert-utils.py`
+- `detect_document_kind(...)` also accepts plain resource-shaped JSON for rules/contact points/mute timings/policies/templates
+- Grafana provisioning `/export` payloads are intentionally rejected for API import
+- Reject the combined `alerts/` export root on import; require callers to point at `alerts/raw/`
 
 ### Dashboard-linked alert rules
 
@@ -97,18 +121,67 @@ Export behavior:
 
 - preserve the original linkage fields
 - export extra linked-dashboard metadata used for import-time repair
+- when the source dashboard still exists during export, enrich metadata with:
+  - `dashboardTitle`
+  - `folderTitle`
+  - `folderUid`
+  - `dashboardSlug`
+  - `panelTitle`
+  - `panelType`
 
 Import behavior:
 
 1. try the original `__dashboardUid__`
-2. if the target Grafana does not have that UID, fall back to exported dashboard metadata
-3. try to find one unique target dashboard match by title, folder title, and slug
-4. rewrite `__dashboardUid__` when a unique match is found
+2. if `--dashboard-uid-map` is present, apply that mapping first
+3. if `--panel-id-map` is present, rewrite `__panelId__` using the mapped source dashboard UID plus source panel ID
+4. if the target Grafana has the mapped or original dashboard UID, stop there
+5. otherwise fall back to exported dashboard metadata
+6. search target dashboards by exported title, then narrow by folder title and slug
+7. rewrite `__dashboardUid__` only when that fallback search resolves to exactly one dashboard
 
 Current limitation:
 
-- only `__dashboardUid__` is rewritten
-- `__panelId__` is preserved as-is
+- automatic fallback only rewrites `__dashboardUid__`
+- `__panelId__` is preserved unless `--panel-id-map` is supplied
+- panel matching is intentionally explicit; there is no heuristic panel-title-based rewrite
+
+### Mapping file formats
+
+Dashboard UID map:
+
+```json
+{
+  "old-dashboard-uid": "new-dashboard-uid"
+}
+```
+
+Panel ID map:
+
+```json
+{
+  "old-dashboard-uid": {
+    "7": "19"
+  }
+}
+```
+
+Notes:
+
+- both mapping loaders coerce keys and values to strings
+- panel maps are keyed by source dashboard UID, then source panel ID
+- explicit maps take precedence over fallback dashboard metadata matching
+
+### Live validation notes
+
+- Primary automated coverage lives in `test_grafana_alert_utils.py`
+- Container-based validation was done against Grafana `12.4.1`
+- Verified round-trip coverage includes:
+  - rules
+  - contact points
+  - mute timings
+  - notification policies
+  - notification templates
+  - dashboard-linked rules with repaired `__dashboardUid__`
 
 ## Validation
 

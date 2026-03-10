@@ -1,5 +1,14 @@
 # ai-changes.md
 
+## 2026-03-10 - Extend Grafana Alerting Resource Coverage
+- Summary: Extended `grafana-alert-utils.py` beyond rules, contact points, mute timings, and notification policies by adding notification template export/import support, explicit dashboard UID and panel ID mapping files for linked alert rules, and richer linked-dashboard metadata capture during export. Template import now uses the template name as the stable identity, fetches the current template version before `PUT` updates, and tolerates Grafana returning `null` from the template list endpoint when no templates exist.
+- Tests: Expanded `test_grafana_alert_utils.py` to cover template export documents, template import payload validation, template create/update conflict handling, parser support for the new mapping flags, empty template list handling, and linked alert-rule rewrite behavior when dashboard and panel maps are provided.
+- Test Run: `python3 -m unittest -v` (pass)
+- Validation: Local unit tests passed for the full project test target. README was updated to document `alerts/raw/templates/`, `--dashboard-uid-map`, `--panel-id-map`, and template update behavior.
+- Impact: `grafana-alert-utils.py`, `test_grafana_alert_utils.py`, `README.md`, `ai-status.md`
+- Rollback/Risk: Moderate risk is limited to the standalone alert CLI. Template updates still depend on Grafana's provisioning API behavior and linked-rule automatic fallback only rewrites dashboard UID unless a panel map is supplied.
+- Follow-up: If environments rely on template groups or panel IDs that are regenerated during dashboard migration, add an optional live validation flow against Grafana 9.x/10.x in addition to the current unit coverage.
+
 ## 2026-03-10 - Rename Grafana Dashboard Export Flag
 - Summary: Renamed the dashboard export CLI flag from `--output-dir` to `--export-dir` in `grafana-utils.py`. The change updates the parser, the parsed argument name, the help text, and the dashboard README examples so export mode reads clearly next to the explicit `import` subcommand.
 - Tests: Updated the dashboard CLI parse test to assert the default `export_dir` value and reran the dashboard test suite.

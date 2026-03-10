@@ -21,6 +21,7 @@ RULES_SUBDIR = "rules"
 CONTACT_POINTS_SUBDIR = "contact-points"
 MUTE_TIMINGS_SUBDIR = "mute-timings"
 POLICIES_SUBDIR = "policies"
+TEMPLATES_SUBDIR = "templates"
 LINKED_DASHBOARD_ANNOTATION_KEY = "__dashboardUid__"
 LINKED_PANEL_ANNOTATION_KEY = "__panelId__"
 
@@ -28,19 +29,34 @@ RULE_KIND = "grafana-alert-rule"
 CONTACT_POINT_KIND = "grafana-contact-point"
 MUTE_TIMING_KIND = "grafana-mute-timing"
 POLICIES_KIND = "grafana-notification-policies"
+TEMPLATE_KIND = "grafana-notification-template"
 TOOL_API_VERSION = 1
+HELP_EPILOG = """Examples:
+
+  Export alerting resources with an API token:
+    export GRAFANA_API_TOKEN='your-token'
+    python3 grafana-alert-utils.py --url https://grafana.example.com --output-dir ./alerts --overwrite
+
+  Import back into Grafana and update existing resources:
+    python3 grafana-alert-utils.py --url https://grafana.example.com --import-dir ./alerts/raw --replace-existing
+
+  Import linked alert rules with dashboard and panel remapping:
+    python3 grafana-alert-utils.py --url https://grafana.example.com --import-dir ./alerts/raw --replace-existing --dashboard-uid-map ./dashboard-map.json --panel-id-map ./panel-map.json
+"""
 
 RESOURCE_SUBDIR_BY_KIND = {
     RULE_KIND: RULES_SUBDIR,
     CONTACT_POINT_KIND: CONTACT_POINTS_SUBDIR,
     MUTE_TIMING_KIND: MUTE_TIMINGS_SUBDIR,
     POLICIES_KIND: POLICIES_SUBDIR,
+    TEMPLATE_KIND: TEMPLATES_SUBDIR,
 }
 SERVER_MANAGED_FIELDS_BY_KIND = {
     RULE_KIND: {"id", "updated", "provenance"},
     CONTACT_POINT_KIND: {"provenance"},
     MUTE_TIMING_KIND: {"version", "provenance"},
     POLICIES_KIND: {"provenance"},
+    TEMPLATE_KIND: {"provenance"},
 }
 
 
@@ -58,9 +74,11 @@ class GrafanaApiError(GrafanaError):
         super().__init__(f"Grafana API error {status_code} for {url}: {body}")
 
 
-def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Export or import Grafana alerting resources."
+        description="Export or import Grafana alerting resources.",
+        epilog=HELP_EPILOG,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
         "--url",
@@ -123,11 +141,31 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         help="Update existing resources with the same identity instead of failing on import.",
     )
     parser.add_argument(
+        "--dashboard-uid-map",
+        default=None,
+        help=(
+            "JSON file that maps source dashboard UIDs to target dashboard UIDs "
+            "for linked alert-rule repair during import."
+        ),
+    )
+    parser.add_argument(
+        "--panel-id-map",
+        default=None,
+        help=(
+            "JSON file that maps source dashboard UID and source panel ID to a "
+            "target panel ID for linked alert-rule repair during import."
+        ),
+    )
+    parser.add_argument(
         "--verify-ssl",
         action="store_true",
         help="Enable TLS certificate verification. Verification is disabled by default.",
     )
-    return parser.parse_args(argv)
+    return parser
+
+
+def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
+    return build_parser().parse_args(argv)
 
 
 def env_value(name: str) -> Optional[str]:
@@ -243,6 +281,16 @@ def build_mute_timing_output_path(
 
 def build_policies_output_path(output_dir: Path) -> Path:
     return output_dir / "notification-policies.json"
+
+
+def build_template_output_path(
+    output_dir: Path,
+    template: Dict[str, Any],
+    flat: bool,
+) -> Path:
+    name = sanitize_path_component(template.get("name") or "template")
+    filename = f"{name}.json"
+    return output_dir / filename if flat else output_dir / name / filename
 
 
 def discover_alert_resource_files(import_dir: Path) -> List[Path]:
@@ -436,6 +484,34 @@ class GrafanaAlertClient:
             )
         return data
 
+    def list_templates(self) -> List[Dict[str, Any]]:
+        data = self.request_json("/api/v1/provisioning/templates")
+        if data is None:
+            return []
+        if not isinstance(data, list):
+            raise GrafanaError("Unexpected template list response from Grafana.")
+        return [item for item in data if isinstance(item, dict)]
+
+    def get_template(self, name: str) -> Dict[str, Any]:
+        data = self.request_json(
+            f"/api/v1/provisioning/templates/{parse.quote(name, safe='')}"
+        )
+        if not isinstance(data, dict):
+            raise GrafanaError(f"Unexpected template payload for name {name}.")
+        return data
+
+    def update_template(self, name: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+        body = dict(payload)
+        body.pop("name", None)
+        data = self.request_json(
+            f"/api/v1/provisioning/templates/{parse.quote(name, safe='')}",
+            method="PUT",
+            payload=body,
+        )
+        if not isinstance(data, dict):
+            raise GrafanaError("Unexpected template update response from Grafana.")
+        return data
+
 
 def strip_server_managed_fields(kind: str, payload: Dict[str, Any]) -> Dict[str, Any]:
     normalized = copy.deepcopy(payload)
@@ -462,6 +538,21 @@ def get_rule_linkage(rule: Dict[str, Any]) -> Optional[Dict[str, str]]:
     return linkage
 
 
+def find_panel_by_id(panels: Any, panel_id: str) -> Optional[Dict[str, Any]]:
+    if not isinstance(panels, list):
+        return None
+    for panel in panels:
+        if not isinstance(panel, dict):
+            continue
+        current_panel_id = panel.get("id")
+        if current_panel_id is not None and str(current_panel_id) == panel_id:
+            return panel
+        nested = find_panel_by_id(panel.get("panels"), panel_id)
+        if nested is not None:
+            return nested
+    return None
+
+
 def build_linked_dashboard_metadata(
     client: GrafanaAlertClient,
     rule: Dict[str, Any],
@@ -483,6 +574,12 @@ def build_linked_dashboard_metadata(
     meta = dashboard_payload.get("meta")
     if isinstance(dashboard, dict):
         metadata["dashboardTitle"] = str(dashboard.get("title") or "")
+        panel_id = metadata.get("panelId")
+        if panel_id:
+            panel = find_panel_by_id(dashboard.get("panels"), panel_id)
+            if isinstance(panel, dict):
+                metadata["panelTitle"] = str(panel.get("title") or "")
+                metadata["panelType"] = str(panel.get("type") or "")
     if isinstance(meta, dict):
         metadata["folderTitle"] = str(meta.get("folderTitle") or "")
         metadata["folderUid"] = str(meta.get("folderUid") or "")
@@ -556,19 +653,63 @@ def resolve_dashboard_uid_fallback(
     )
 
 
+def load_string_map(path_value: Optional[str], label: str) -> Dict[str, str]:
+    if not path_value:
+        return {}
+    payload = load_json_file(Path(path_value))
+    if not isinstance(payload, dict):
+        raise GrafanaError(f"{label} must be a JSON object.")
+    normalized = {}
+    for key, value in payload.items():
+        normalized[str(key)] = str(value)
+    return normalized
+
+
+def load_panel_id_map(path_value: Optional[str]) -> Dict[str, Dict[str, str]]:
+    if not path_value:
+        return {}
+    payload = load_json_file(Path(path_value))
+    if not isinstance(payload, dict):
+        raise GrafanaError("Panel ID map must be a JSON object.")
+    normalized = {}
+    for dashboard_uid, panel_mapping in payload.items():
+        if not isinstance(panel_mapping, dict):
+            raise GrafanaError(
+                "Panel ID map values must be JSON objects keyed by source panel ID."
+            )
+        normalized[str(dashboard_uid)] = {
+            str(panel_id): str(target_panel_id)
+            for panel_id, target_panel_id in panel_mapping.items()
+        }
+    return normalized
+
+
 def rewrite_rule_dashboard_linkage(
     client: GrafanaAlertClient,
     payload: Dict[str, Any],
     document: Dict[str, Any],
+    dashboard_uid_map: Dict[str, str],
+    panel_id_map: Dict[str, Dict[str, str]],
 ) -> Dict[str, Any]:
     linkage = get_rule_linkage(payload)
     if not linkage:
         return payload
 
-    dashboard_uid = linkage["dashboardUid"]
+    source_dashboard_uid = linkage["dashboardUid"]
+    dashboard_uid = dashboard_uid_map.get(source_dashboard_uid, source_dashboard_uid)
+    source_panel_id = linkage.get("panelId", "")
+    mapped_panel_id = panel_id_map.get(source_dashboard_uid, {}).get(source_panel_id, "")
+    normalized = copy.deepcopy(payload)
+    annotations = normalized.setdefault("annotations", {})
+    if not isinstance(annotations, dict):
+        raise GrafanaError("Alert-rule annotations must be an object.")
+    annotations[LINKED_DASHBOARD_ANNOTATION_KEY] = dashboard_uid
+    if mapped_panel_id:
+        annotations[LINKED_PANEL_ANNOTATION_KEY] = mapped_panel_id
+
     try:
         client.get_dashboard(dashboard_uid)
-        return payload
+        return normalized
     except GrafanaApiError as exc:
         if exc.status_code != 404:
             raise
@@ -583,10 +724,6 @@ def rewrite_rule_dashboard_linkage(
         )
 
     replacement_uid = resolve_dashboard_uid_fallback(client, linked_dashboard)
-    normalized = copy.deepcopy(payload)
-    annotations = normalized.setdefault("annotations", {})
-    if not isinstance(annotations, dict):
-        raise GrafanaError("Alert-rule annotations must be an object.")
     annotations[LINKED_DASHBOARD_ANNOTATION_KEY] = replacement_uid
     return normalized
 
@@ -622,12 +759,17 @@ def build_policies_metadata(policies: Dict[str, Any]) -> Dict[str, str]:
     return {"receiver": str(policies.get("receiver") or "")}
 
 
+def build_template_metadata(template: Dict[str, Any]) -> Dict[str, str]:
+    return {"name": str(template.get("name") or "")}
+
+
 def build_tool_document(kind: str, spec: Dict[str, Any]) -> Dict[str, Any]:
     metadata_builders = {
         RULE_KIND: build_rule_metadata,
         CONTACT_POINT_KIND: build_contact_point_metadata,
         MUTE_TIMING_KIND: build_mute_timing_metadata,
         POLICIES_KIND: build_policies_metadata,
+        TEMPLATE_KIND: build_template_metadata,
     }
     metadata_builder = metadata_builders[kind]
     return {
@@ -678,8 +820,22 @@ def build_policies_export_document(policies: Dict[str, Any]) -> Dict[str, Any]:
     )
 
 
+def build_template_export_document(template: Dict[str, Any]) -> Dict[str, Any]:
+    if not isinstance(template, dict):
+        raise GrafanaError("Unexpected template payload from Grafana.")
+    return build_tool_document(
+        TEMPLATE_KIND,
+        strip_server_managed_fields(TEMPLATE_KIND, template),
+    )
+
+
 def reject_provisioning_export(document: Dict[str, Any]) -> None:
-    if "groups" in document or "contactPoints" in document or "policies" in document:
+    if (
+        "groups" in document
+        or "contactPoints" in document
+        or "policies" in document
+        or "templates" in document
+    ):
         raise GrafanaError(
             "Grafana provisioning export format is not supported for API import. "
             "Use files exported by grafana-alert-utils.py."
@@ -696,6 +852,8 @@ def detect_document_kind(document: Dict[str, Any]) -> str:
         return MUTE_TIMING_KIND
     if "type" in document and "settings" in document and "name" in document:
         return CONTACT_POINT_KIND
+    if "name" in document and "template" in document:
+        return TEMPLATE_KIND
     if "receiver" in document or "routes" in document or "group_by" in document:
         return POLICIES_KIND
     raise GrafanaError("Cannot determine alerting resource kind from import document.")
@@ -776,6 +934,21 @@ def build_policies_import_payload(document: Dict[str, Any]) -> Dict[str, Any]:
     return payload
 
 
+def build_template_import_payload(document: Dict[str, Any]) -> Dict[str, Any]:
+    reject_provisioning_export(document)
+    payload = strip_server_managed_fields(
+        TEMPLATE_KIND, extract_tool_spec(document, TEMPLATE_KIND)
+    )
+    required_fields = ("name", "template")
+    missing = [field for field in required_fields if field not in payload]
+    if missing:
+        raise GrafanaError(
+            "Template import document is missing required fields: "
+            + ", ".join(missing)
+        )
+    return payload
+
+
 def build_import_operation(document: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
     if not isinstance(document, dict):
         raise GrafanaError("Unexpected alerting resource document. Expected a JSON object.")
@@ -785,6 +958,7 @@ def build_import_operation(document: Dict[str, Any]) -> Tuple[str, Dict[str, Any
         CONTACT_POINT_KIND: build_contact_point_import_payload,
         MUTE_TIMING_KIND: build_mute_timing_import_payload,
         POLICIES_KIND: build_policies_import_payload,
+        TEMPLATE_KIND: build_template_import_payload,
     }
     return kind, builders[kind](document)
 
@@ -804,12 +978,14 @@ def export_alerting_resources(args: argparse.Namespace) -> int:
     contact_points = client.list_contact_points()
     mute_timings = client.list_mute_timings()
     policies = client.get_notification_policies()
+    templates = client.list_templates()
 
     root_index: Dict[str, List[Dict[str, str]]] = {
         RULES_SUBDIR: [],
         CONTACT_POINTS_SUBDIR: [],
         MUTE_TIMINGS_SUBDIR: [],
         POLICIES_SUBDIR: [],
+        TEMPLATES_SUBDIR: [],
     }
 
     for rule in rules:
@@ -880,6 +1056,21 @@ def export_alerting_resources(args: argparse.Namespace) -> int:
         f"{policies_item['receiver'] or 'unknown'} -> {policies_path}"
     )
 
+    for template in templates:
+        document = build_template_export_document(template)
+        spec = document["spec"]
+        output_path = build_template_output_path(
+            resource_dirs[TEMPLATE_KIND], spec, args.flat
+        )
+        write_json(document, output_path, args.overwrite)
+        item = {
+            "kind": TEMPLATE_KIND,
+            "name": str(spec.get("name") or ""),
+            "path": str(output_path),
+        }
+        root_index[TEMPLATES_SUBDIR].append(item)
+        print(f"Exported template {item['name'] or 'unknown'} -> {output_path}")
+
     for kind, subdir in RESOURCE_SUBDIR_BY_KIND.items():
         write_json(
             root_index[subdir],
@@ -894,7 +1085,8 @@ def export_alerting_resources(args: argparse.Namespace) -> int:
         f"{len(root_index[RULES_SUBDIR])} alert rules, "
         f"{len(root_index[CONTACT_POINTS_SUBDIR])} contact points, "
         f"{len(root_index[MUTE_TIMINGS_SUBDIR])} mute timings, "
-        f"{len(root_index[POLICIES_SUBDIR])} notification policy documents. "
+        f"{len(root_index[POLICIES_SUBDIR])} notification policy documents, "
+        f"{len(root_index[TEMPLATES_SUBDIR])} templates. "
         f"Root index: {index_path}"
     )
     return 0
@@ -905,6 +1097,8 @@ def import_alerting_resources(args: argparse.Namespace) -> int:
     import_dir = Path(args.import_dir)
     resource_files = discover_alert_resource_files(import_dir)
     policies_seen = 0
+    dashboard_uid_map = load_string_map(args.dashboard_uid_map, "Dashboard UID map")
+    panel_id_map = load_panel_id_map(args.panel_id_map)
 
     for resource_file in resource_files:
         document = load_json_file(resource_file)
@@ -918,7 +1112,13 @@ def import_alerting_resources(args: argparse.Namespace) -> int:
                 )
 
         if kind == RULE_KIND:
-            payload = rewrite_rule_dashboard_linkage(client, payload, document)
+            payload = rewrite_rule_dashboard_linkage(
+                client,
+                payload,
+                document,
+                dashboard_uid_map,
+                panel_id_map,
+            )
             uid = str(payload.get("uid") or "")
             if args.replace_existing and uid:
                 try:
@@ -962,6 +1162,22 @@ def import_alerting_resources(args: argparse.Namespace) -> int:
             else:
                 result = client.create_mute_timing(payload)
                 action = "created"
+            identity = str(result.get("name") or name or "unknown")
+        elif kind == TEMPLATE_KIND:
+            name = str(payload.get("name") or "")
+            existing = {str(item.get("name") or "") for item in client.list_templates()}
+            template_payload = dict(payload)
+            if name in existing and not args.replace_existing:
+                raise GrafanaError(
+                    f"Template {name!r} already exists. Use --replace-existing."
+                )
+            if name in existing:
+                current_template = client.get_template(name)
+                template_payload["version"] = str(current_template.get("version") or "")
+            else:
+                template_payload["version"] = ""
+            result = client.update_template(name, template_payload)
+            action = "updated" if name in existing else "created"
             identity = str(result.get("name") or name or "unknown")
         else:
             client.update_notification_policies(payload)

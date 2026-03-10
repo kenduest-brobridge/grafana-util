@@ -1,5 +1,12 @@
 # ai-status.md
 
+## 2026-03-10 - Task: Extend Grafana Alerting Resource Coverage
+- State: Done
+- Scope: `grafana-alert-utils.py`, `test_grafana_alert_utils.py`, `README.md`, `ai-status.md`, `ai-changes.md`
+- Baseline: `grafana-alert-utils.py` already exports and imports alert rules, contact points, mute timings, and notification policies, and it can repair linked alert-rule dashboard UIDs by matching exported dashboard metadata. It does not yet cover notification templates, manual dashboard UID maps, or panel ID maps.
+- Current Update: Added notification template export/import support, including version-aware template updates on `--replace-existing` and empty-list handling when Grafana returns `null`. Added `--dashboard-uid-map` and `--panel-id-map` so linked alert rules can be remapped explicitly during import before the existing metadata fallback logic runs. Exported linked-dashboard metadata now also captures panel title and panel type when available, and the README now documents the new alerting resource scope and mapping-file usage.
+- Result: The standalone alert CLI now covers templates in addition to the existing alerting resources, supports operator-provided dashboard and panel remapping files for linked rules, and keeps the older dashboard-title/folder/slug fallback for cases where no explicit map is provided.
+
 ## 2026-03-10 - Task: Rename Grafana Dashboard Export Flag
 - State: Done
 - Scope: `grafana-utils.py`, `test_dump_grafana_dashboards.py`, `README.md`, `ai-status.md`, `ai-changes.md`

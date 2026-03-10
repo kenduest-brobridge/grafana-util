@@ -105,6 +105,17 @@ def sample_policies(**overrides):
     return policies
 
 
+def sample_template(**overrides):
+    template = {
+        "name": "codex.message",
+        "template": "{{ define \"codex.message\" }}Hello{{ end }}",
+        "version": "template-version-1",
+        "provenance": "api",
+    }
+    template.update(overrides)
+    return template
+
+
 class FakeAlertClient:
     def __init__(
         self,
@@ -112,12 +123,14 @@ class FakeAlertClient:
         contact_points=None,
         mute_timings=None,
         policies=None,
+        templates=None,
         existing_rules=None,
     ):
         self.rules = [dict(rule) for rule in (rules or [])]
         self.contact_points = [dict(item) for item in (contact_points or [])]
         self.mute_timings = [dict(item) for item in (mute_timings or [])]
         self.policies = dict(policies or sample_policies())
+        self.templates = [dict(item) for item in (templates or [])]
         self.existing_rules = {
             uid: dict(rule) for uid, rule in (existing_rules or {}).items()
         }
@@ -129,6 +142,7 @@ class FakeAlertClient:
         self.created_mute_timings = []
         self.updated_mute_timings = []
         self.updated_policies = []
+        self.updated_templates = []
         self.dashboard_by_uid = {}
         self.dashboard_search_results = []
 
@@ -179,6 +193,19 @@ class FakeAlertClient:
         self.policies = dict(payload)
         return {"message": "policies updated"}
 
+    def list_templates(self):
+        return [dict(item) for item in self.templates]
+
+    def get_template(self, name):
+        for item in self.templates:
+            if str(item.get("name")) == name:
+                return dict(item)
+        raise alert_utils.GrafanaApiError(404, f"https://grafana/templates/{name}", "not found")
+
+    def update_template(self, name, payload):
+        self.updated_templates.append((name, dict(payload)))
+        return {"name": name}
+
     def get_dashboard(self, uid):
         if uid not in self.dashboard_by_uid:
             raise alert_utils.GrafanaApiError(404, f"https://grafana/d/{uid}", "not found")
@@ -198,6 +225,29 @@ class AlertUtilsTests(unittest.TestCase):
         args = alert_utils.parse_args(["--import-dir", "alerts/raw"])
 
         self.assertEqual(args.import_dir, "alerts/raw")
+
+    def test_parse_args_accepts_mapping_files(self):
+        args = alert_utils.parse_args(
+            [
+                "--import-dir",
+                "alerts/raw",
+                "--dashboard-uid-map",
+                "dash-map.json",
+                "--panel-id-map",
+                "panel-map.json",
+            ]
+        )
+
+        self.assertEqual(args.dashboard_uid_map, "dash-map.json")
+        self.assertEqual(args.panel_id_map, "panel-map.json")
+
+    def test_help_includes_usage_examples(self):
+        help_text = alert_utils.build_parser().format_help()
+
+        self.assertIn("Examples:", help_text)
+        self.assertIn("--output-dir ./alerts --overwrite", help_text)
+        self.assertIn("--import-dir ./alerts/raw --replace-existing", help_text)
+        self.assertIn("--dashboard-uid-map ./dashboard-map.json", help_text)
 
     def test_parse_args_defaults_output_dir_to_alerts(self):
         args = alert_utils.parse_args([])
@@ -270,6 +320,19 @@ class AlertUtilsTests(unittest.TestCase):
             path,
             Path("alerts/raw/contact-points/Webhook_Main/Webhook_Main__cp-uid.json"),
         )
+
+    def test_list_templates_treats_null_as_empty(self):
+        client = alert_utils.GrafanaAlertClient(
+            base_url="http://127.0.0.1:3000",
+            headers={},
+            timeout=30,
+            verify_ssl=False,
+        )
+
+        with mock.patch.object(client, "request_json", return_value=None):
+            templates = client.list_templates()
+
+        self.assertEqual(templates, [])
 
     def test_build_mute_timing_output_path_uses_name(self):
         path = alert_utils.build_mute_timing_output_path(
@@ -376,6 +439,13 @@ class AlertUtilsTests(unittest.TestCase):
         self.assertEqual(document["metadata"]["receiver"], "Webhook Main")
         self.assertNotIn("provenance", document["spec"])
 
+    def test_build_template_export_document_strips_server_managed_fields(self):
+        document = alert_utils.build_template_export_document(sample_template())
+
+        self.assertEqual(document["kind"], alert_utils.TEMPLATE_KIND)
+        self.assertEqual(document["metadata"]["name"], "codex.message")
+        self.assertNotIn("provenance", document["spec"])
+
     def test_build_import_operation_accepts_rule_tool_document(self):
         document = alert_utils.build_rule_export_document(sample_rule())
 
@@ -414,6 +484,14 @@ class AlertUtilsTests(unittest.TestCase):
         self.assertEqual(kind, alert_utils.POLICIES_KIND)
         self.assertEqual(payload["receiver"], "Webhook Main")
 
+    def test_build_import_operation_accepts_template_tool_document(self):
+        document = alert_utils.build_template_export_document(sample_template())
+
+        kind, payload = alert_utils.build_import_operation(document)
+
+        self.assertEqual(kind, alert_utils.TEMPLATE_KIND)
+        self.assertEqual(payload["name"], "codex.message")
+
     def test_build_import_operation_accepts_plain_rule_document(self):
         kind, payload = alert_utils.build_import_operation(sample_rule())
 
@@ -444,7 +522,7 @@ class AlertUtilsTests(unittest.TestCase):
         }
 
         rewritten = alert_utils.rewrite_rule_dashboard_linkage(
-            fake_client, payload, document
+            fake_client, payload, document, {}, {}
         )
 
         self.assertEqual(
@@ -481,7 +559,9 @@ class AlertUtilsTests(unittest.TestCase):
         }
 
         with self.assertRaises(alert_utils.GrafanaError):
-            alert_utils.rewrite_rule_dashboard_linkage(fake_client, payload, document)
+            alert_utils.rewrite_rule_dashboard_linkage(
+                fake_client, payload, document, {}, {}
+            )
 
     def test_build_import_operation_rejects_provisioning_export_format(self):
         with self.assertRaises(alert_utils.GrafanaError):
@@ -501,6 +581,28 @@ class AlertUtilsTests(unittest.TestCase):
         with self.assertRaises(alert_utils.GrafanaError):
             alert_utils.build_mute_timing_import_payload({"name": "weekday-maintenance"})
 
+    def test_build_template_import_payload_requires_expected_fields(self):
+        with self.assertRaises(alert_utils.GrafanaError):
+            alert_utils.build_template_import_payload({"name": "codex.message"})
+
+    def test_load_string_map_accepts_simple_json_object(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "map.json"
+            path.write_text('{"old":"new"}', encoding="utf-8")
+
+            payload = alert_utils.load_string_map(str(path), "Dashboard UID map")
+
+            self.assertEqual(payload, {"old": "new"})
+
+    def test_load_panel_id_map_accepts_nested_json_object(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "panel-map.json"
+            path.write_text('{"dash-a":{"7":"13"}}', encoding="utf-8")
+
+            payload = alert_utils.load_panel_id_map(str(path))
+
+            self.assertEqual(payload, {"dash-a": {"7": "13"}})
+
     def test_export_alerting_resources_writes_all_resource_types(self):
         args = alert_utils.parse_args(["--output-dir", "unused", "--overwrite"])
         fake_client = FakeAlertClient(
@@ -508,6 +610,7 @@ class AlertUtilsTests(unittest.TestCase):
             contact_points=[sample_contact_point()],
             mute_timings=[sample_mute_timing()],
             policies=sample_policies(),
+            templates=[sample_template()],
         )
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -545,11 +648,15 @@ class AlertUtilsTests(unittest.TestCase):
             self.assertTrue(
                 (raw_dir / "policies" / "notification-policies.json").exists()
             )
+            self.assertTrue(
+                (raw_dir / "templates" / "codex.message" / "codex.message.json").exists()
+            )
             root_index = alert_utils.load_json_file(Path(tmpdir) / "index.json")
             self.assertEqual(len(root_index["rules"]), 1)
             self.assertEqual(len(root_index["contact-points"]), 1)
             self.assertEqual(len(root_index["mute-timings"]), 1)
             self.assertEqual(len(root_index["policies"]), 1)
+            self.assertEqual(len(root_index["templates"]), 1)
 
     def test_import_alerting_resources_updates_existing_rule_when_requested(self):
         args = alert_utils.parse_args(["--import-dir", "unused", "--replace-existing"])
@@ -632,6 +739,67 @@ class AlertUtilsTests(unittest.TestCase):
             self.assertEqual(result, 0)
             self.assertEqual(len(fake_client.updated_policies), 1)
             self.assertEqual(fake_client.updated_policies[0]["receiver"], "Webhook Main")
+
+    def test_import_alerting_resources_updates_existing_template_when_requested(self):
+        args = alert_utils.parse_args(["--import-dir", "unused", "--replace-existing"])
+        fake_client = FakeAlertClient(templates=[sample_template()])
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args.import_dir = tmpdir
+            path = Path(tmpdir) / "template.json"
+            alert_utils.write_json(
+                alert_utils.build_template_export_document(sample_template()),
+                path,
+                overwrite=True,
+            )
+            with mock.patch.object(alert_utils, "build_client", return_value=fake_client):
+                result = alert_utils.import_alerting_resources(args)
+
+            self.assertEqual(result, 0)
+            self.assertEqual(len(fake_client.updated_templates), 1)
+            self.assertEqual(fake_client.updated_templates[0][0], "codex.message")
+            self.assertEqual(
+                fake_client.updated_templates[0][1]["version"], "template-version-1"
+            )
+
+    def test_import_alerting_resources_rejects_existing_template_without_replace(self):
+        args = alert_utils.parse_args(["--import-dir", "unused"])
+        fake_client = FakeAlertClient(templates=[sample_template()])
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args.import_dir = tmpdir
+            path = Path(tmpdir) / "template.json"
+            alert_utils.write_json(
+                alert_utils.build_template_export_document(sample_template()),
+                path,
+                overwrite=True,
+            )
+            with mock.patch.object(alert_utils, "build_client", return_value=fake_client):
+                with self.assertRaises(alert_utils.GrafanaError):
+                    alert_utils.import_alerting_resources(args)
+
+    def test_rewrite_rule_dashboard_linkage_applies_uid_and_panel_maps(self):
+        fake_client = FakeAlertClient()
+        fake_client.dashboard_by_uid = {
+            "mapped-dashboard-uid": {
+                "dashboard": {"uid": "mapped-dashboard-uid", "title": "Ops Overview"},
+                "meta": {"folderTitle": "Operations"},
+            }
+        }
+        payload = alert_utils.build_rule_import_payload(sample_linked_rule())
+
+        rewritten = alert_utils.rewrite_rule_dashboard_linkage(
+            fake_client,
+            payload,
+            {"metadata": {}},
+            {"source-dashboard-uid": "mapped-dashboard-uid"},
+            {"source-dashboard-uid": {"7": "19"}},
+        )
+
+        self.assertEqual(
+            rewritten["annotations"]["__dashboardUid__"], "mapped-dashboard-uid"
+        )
+        self.assertEqual(rewritten["annotations"]["__panelId__"], "19")
 
     def test_import_alerting_resources_rejects_multiple_policy_documents(self):
         args = alert_utils.parse_args(["--import-dir", "unused"])

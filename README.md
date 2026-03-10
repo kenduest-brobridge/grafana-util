@@ -158,14 +158,12 @@ Current scope:
 - contact points
 - mute timings
 - notification policies
+- notification message templates
 - export to a tool-owned JSON format under `alerts/raw/`
 - import that same tool-owned format back through the Grafana alerting provisioning HTTP API
-- export linked-dashboard metadata for alert rules that carry `__dashboardUid__` / `__panelId__`
-- repair linked alert-rule dashboard UIDs on import when the original dashboard UID is missing on the target Grafana
 
 Not in scope:
 
-- message templates
 - direct reuse of Grafana provisioning `/export` files for API import
 
 ### Alerting export
@@ -185,19 +183,38 @@ This writes:
 - `alerts/raw/contact-points/`
 - `alerts/raw/mute-timings/`
 - `alerts/raw/policies/`
+- `alerts/raw/templates/`
 - `alerts/index.json`
-
-Default paths:
-
-- rules: `alerts/raw/rules/<folderUID>/<ruleGroup>/<title>__<uid>.json`
-- contact points: `alerts/raw/contact-points/<name>/<name>__<uid>.json`
-- mute timings: `alerts/raw/mute-timings/<name>/<name>.json`
-- notification policies: `alerts/raw/policies/notification-policies.json`
 
 If you want a flat layout:
 
 ```bash
 python3 grafana-alert-utils.py --output-dir ./alerts --flat
+```
+
+Common usage examples:
+
+API token:
+
+```bash
+export GRAFANA_API_TOKEN='your-token'
+
+python3 grafana-alert-utils.py \
+  --url https://grafana.example.com \
+  --output-dir ./alerts \
+  --overwrite
+```
+
+Username/password:
+
+```bash
+export GRAFANA_USERNAME='admin'
+export GRAFANA_PASSWORD='secret'
+
+python3 grafana-alert-utils.py \
+  --url https://grafana.example.com \
+  --output-dir ./alerts \
+  --overwrite
 ```
 
 ### Alerting import
@@ -211,26 +228,57 @@ python3 grafana-alert-utils.py \
   --replace-existing
 ```
 
+Import with linked dashboard or panel remapping:
+
+```bash
+python3 grafana-alert-utils.py \
+  --url https://grafana.example.com \
+  --import-dir ./alerts/raw \
+  --replace-existing \
+  --dashboard-uid-map ./dashboard-map.json \
+  --panel-id-map ./panel-map.json
+```
+
+Example `dashboard-map.json`:
+
+```json
+{
+  "old-dashboard-uid": "new-dashboard-uid"
+}
+```
+
+Example `panel-map.json`:
+
+```json
+{
+  "old-dashboard-uid": {
+    "7": "19"
+  }
+}
+```
+
 Behavior:
 
 - `--replace-existing` updates existing rules by `uid`, contact points by `uid`, and mute timings by `name`
 - notification policies are always applied with `PUT`, because Grafana exposes them as one policy tree
+- notification templates are applied with `PUT`; with `--replace-existing` the tool first reads the current template version and sends it back on update
 - without `--replace-existing`, rule/contact-point/mute-timing import uses create and Grafana will reject conflicting identities
+- without `--replace-existing`, template import fails if the template name already exists
 - import expects files exported by `grafana-alert-utils.py`
 - do not point `--import-dir` at the combined `alerts/` root
-- for rules linked to dashboards, import first tries the original `__dashboardUid__`; if that UID does not exist on the target Grafana, the tool falls back to exported dashboard metadata and looks for a unique dashboard match by title, folder title, and slug before rewriting `__dashboardUid__`
+- use `--dashboard-uid-map` and `--panel-id-map` when linked alert rules must be remapped during import
+- internal matching and mapping details are documented in `DEVELOPER.md`
 
 Important limitation:
 
 - Grafana alert provisioning `/export` output is not accepted by this import path
 - Grafana documents that provisioning export format is for file/Terraform provisioning, not direct HTTP API round-trip updates
-- dashboard linkage repair currently rewrites `__dashboardUid__` only; `__panelId__` is preserved as-is
 
 Validation approach:
 
 - unit tests via `python3 -m unittest -v`
 - container-based end-to-end validation during development
-- verified export/import of rules, contact points, mute timings, notification policies, and dashboard-linked alert rules
+- verified export/import of rules, contact points, mute timings, notification policies, notification templates, and dashboard-linked alert rules
 
 ## Validation
 
