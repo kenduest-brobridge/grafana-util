@@ -1,5 +1,23 @@
 # ai-changes.md
 
+## 2026-03-10 - Rename Grafana Dashboard Export Flag
+- Summary: Renamed the dashboard export CLI flag from `--output-dir` to `--export-dir` in `grafana-utils.py`. The change updates the parser, the parsed argument name, the help text, and the dashboard README examples so export mode reads clearly next to the explicit `import` subcommand.
+- Tests: Updated the dashboard CLI parse test to assert the default `export_dir` value and reran the dashboard test suite.
+- Test Run: `python3 -m unittest test_dump_grafana_dashboards.py` (pass)
+- Validation: Local dashboard unit tests passed and the dashboard CLI help now shows `--export-dir` under the `export` subcommand.
+- Impact: `grafana-utils.py`, `test_dump_grafana_dashboards.py`, `README.md`, `ai-status.md`
+- Rollback/Risk: Low to moderate operator-facing change because older `--output-dir` dashboard export invocations will no longer parse. The rename makes export intent more explicit.
+- Follow-up: None.
+
+## 2026-03-10 - Add Grafana Dashboard Import and Export Subcommands
+- Summary: Changed `grafana-utils.py` so dashboard mode selection is explicit at the CLI level. The script now requires `export` or `import` subcommands, and export-only and import-only options live on separate subparsers instead of being mixed together on one parser.
+- Tests: Updated the dashboard CLI tests to cover required subcommand selection, export defaults, import parsing, and the export validation path under the new command layout.
+- Test Run: `python3 -m unittest test_dump_grafana_dashboards.py` (pass)
+- Validation: Local dashboard unit tests passed and README examples were updated to use `python3 grafana-utils.py export ...` and `python3 grafana-utils.py import ...`.
+- Impact: `grafana-utils.py`, `test_dump_grafana_dashboards.py`, `README.md`, `ai-status.md`
+- Rollback/Risk: Moderate operator-facing change because old invocations without subcommands will now fail argument parsing. The benefit is that import and export intent is explicit.
+- Follow-up: If backward compatibility is needed later, add a deliberate legacy shim rather than returning to implicit mode inference.
+
 ## 2026-03-10 - Change Grafana Default Server URL
 - Summary: Changed the default Grafana base URL in both utilities from a hardcoded remote host to `http://127.0.0.1:3000`. Updated README examples and added direct unit tests so the new default is locked in.
 - Tests: Added parse-args assertions for the default URL in both dashboard and alert utility test suites.

@@ -1,5 +1,19 @@
 # ai-status.md
 
+## 2026-03-10 - Task: Rename Grafana Dashboard Export Flag
+- State: Done
+- Scope: `grafana-utils.py`, `test_dump_grafana_dashboards.py`, `README.md`, `ai-status.md`, `ai-changes.md`
+- Baseline: The dashboard export subcommand uses `--output-dir`, which is generic enough to be confused with import behavior now that the CLI has explicit import and export modes.
+- Current Update: Renamed the dashboard export flag to `--export-dir`, updated the parsed attribute and help text, and changed dashboard README examples and tests to use the more explicit export-only name.
+- Result: The dashboard CLI now uses `--export-dir` for export mode, which better matches the subcommand and reduces mode confusion.
+
+## 2026-03-10 - Task: Add Grafana Dashboard Import and Export Subcommands
+- State: Done
+- Scope: `grafana-utils.py`, `test_dump_grafana_dashboards.py`, `README.md`, `ai-status.md`, `ai-changes.md`
+- Baseline: `grafana-utils.py` decides between export and import implicitly by checking whether `--import-dir` is present, so export-only and import-only flags live in the same top-level parser and can be confused.
+- Current Update: Split the dashboard CLI into explicit `export` and `import` subcommands, moved mode-specific flags onto the matching subparser, and added maintainer comments in the parser setup explaining why the split exists. README examples now call the subcommands directly.
+- Result: Operators must now choose import or export explicitly at the command line, which removes the ambiguous mode inference and makes misuse harder.
+
 ## 2026-03-10 - Task: Change Grafana Default Server URL
 - State: Done
 - Scope: `grafana-utils.py`, `grafana-alert-utils.py`, `test_dump_grafana_dashboards.py`, `test_grafana_alert_utils.py`, `README.md`, `ai-status.md`, `ai-changes.md`
@@ -18,8 +32,8 @@
 - State: Done
 - Scope: `grafana-alert-utils.py`, `test_grafana_alert_utils.py`, `README.md`, `ai-status.md`, `ai-changes.md`
 - Baseline: Alert rules are not supported. The workspace only has dashboard export/import tooling in `grafana-utils.py`.
-- Current Update: Expanded the standalone alerting CLI so it now exports and imports four resource types under `alerts/raw/`: rules, contact points, mute timings, and notification policies. Import uses create by default, switches to update with `--replace-existing` for rules/contact points/mute timings, and always applies the notification policy tree with `PUT`. Validation now includes a live Docker-based Grafana 12.4.1 multi-resource round-trip: exported all four resource types, reset Grafana state, then re-imported them successfully with preserved rule UID, folder metadata, contact point UID, mute timing name, and policy references.
-- Result: Grafana alerting backup/restore is now separated from `grafana-utils.py` and covers the core alerting resources needed for notifications. The tool rejects Grafana provisioning `/export` files for API import, documents the limitation, has dedicated unit tests, and has passed real Grafana container validation for all supported resource kinds.
+- Current Update: Expanded the standalone alerting CLI so it now exports and imports four resource types under `alerts/raw/`: rules, contact points, mute timings, and notification policies. Import uses create by default, switches to update with `--replace-existing` for rules/contact points/mute timings, and always applies the notification policy tree with `PUT`. The current increment adds alert-rule linkage metadata export for `__dashboardUid__`/`__panelId__`, plus import-time fallback that rewrites missing dashboard UIDs by matching the target Grafana dashboard on exported title/folder/slug metadata. Validation now includes a live Docker scenario where a linked rule was exported from dashboard UID `source-dashboard-uid`, the source dashboard was deleted, a replacement dashboard with UID `target-dashboard-uid` but the same title/folder/slug was created, and alert import rewrote the rule linkage to the new dashboard UID automatically.
+- Result: Grafana alerting backup/restore is now separated from `grafana-utils.py` and covers the core alerting resources needed for notifications. The tool rejects Grafana provisioning `/export` files for API import, documents the limitation, has dedicated unit tests, and now preserves or repairs panel-linked alert rules when dashboard UIDs differ across Grafana systems.
 
 ## 2026-03-10 - Task: Export Grafana Dashboards
 - State: Done

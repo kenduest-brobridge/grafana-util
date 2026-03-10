@@ -1,6 +1,10 @@
 # Grafana Utilities
 
 `grafana-utils.py` exports Grafana dashboards to JSON and can also import JSON back through the Grafana HTTP API.
+Use explicit subcommands to avoid mixing the two workflows:
+
+- `python3 grafana-utils.py export ...`
+- `python3 grafana-utils.py import ...`
 
 The default export root is `dashboards/`. One export run now writes two variants automatically:
 
@@ -24,9 +28,9 @@ You can suppress one side explicitly:
 Example:
 
 ```bash
-python3 grafana-utils.py \
+python3 grafana-utils.py export \
   --url http://127.0.0.1:3000 \
-  --output-dir ./dashboards \
+  --export-dir ./dashboards \
   --overwrite
 ```
 
@@ -35,7 +39,7 @@ Use `dashboards/raw/` when you want minimal changes and want to re-import the da
 If you only want the prompt variant:
 
 ```bash
-python3 grafana-utils.py --output-dir ./dashboards --without-raw
+python3 grafana-utils.py export --export-dir ./dashboards --without-raw
 ```
 
 ### `prompt/` export
@@ -45,9 +49,9 @@ python3 grafana-utils.py --output-dir ./dashboards --without-raw
 Example:
 
 ```bash
-python3 grafana-utils.py \
+python3 grafana-utils.py export \
   --url http://127.0.0.1:3000 \
-  --output-dir ./dashboards \
+  --export-dir ./dashboards \
   --overwrite
 ```
 
@@ -67,17 +71,17 @@ Notes:
 If you only want the raw variant:
 
 ```bash
-python3 grafana-utils.py --output-dir ./dashboards --without-prompt
+python3 grafana-utils.py export --export-dir ./dashboards --without-prompt
 ```
 
 ### API import
 
-`--import-dir` imports dashboard JSON files through the Grafana API.
+`import` imports dashboard JSON files through the Grafana API.
 
 Example:
 
 ```bash
-python3 grafana-utils.py \
+python3 grafana-utils.py import \
   --url http://127.0.0.1:3000 \
   --import-dir ./dashboards/raw \
   --replace-existing
@@ -95,7 +99,7 @@ API token:
 
 ```bash
 export GRAFANA_API_TOKEN='your-token'
-python3 grafana-utils.py --output-dir ./dashboards
+python3 grafana-utils.py export --export-dir ./dashboards
 ```
 
 Username/password:
@@ -103,7 +107,7 @@ Username/password:
 ```bash
 export GRAFANA_USERNAME='your-user'
 export GRAFANA_PASSWORD='your-pass'
-python3 grafana-utils.py --output-dir ./dashboards
+python3 grafana-utils.py export --export-dir ./dashboards
 ```
 
 ## SSL
@@ -113,14 +117,14 @@ SSL verification is disabled by default.
 If you want strict verification:
 
 ```bash
-python3 grafana-utils.py --verify-ssl
+python3 grafana-utils.py export --verify-ssl
 ```
 
 ## Import behavior summary
 
 - `dashboards/raw/`: best for preserving the same dashboard `uid` with minimal changes.
 - `dashboards/prompt/`: best for Grafana web import when you want datasource mapping prompts.
-- `--import-dir ./dashboards/raw`: best for API import of normal dashboard JSON.
+- `python3 grafana-utils.py import --import-dir ./dashboards/raw`: best for API import of normal dashboard JSON.
 
 ## Alerting Utility
 
@@ -134,6 +138,8 @@ Current scope:
 - notification policies
 - export to a tool-owned JSON format under `alerts/raw/`
 - import that same tool-owned format back through the Grafana alerting provisioning HTTP API
+- export linked-dashboard metadata for alert rules that carry `__dashboardUid__` / `__panelId__`
+- repair linked alert-rule dashboard UIDs on import when the original dashboard UID is missing on the target Grafana
 
 Not in scope:
 
@@ -190,17 +196,20 @@ Behavior:
 - without `--replace-existing`, rule/contact-point/mute-timing import uses create and Grafana will reject conflicting identities
 - import expects files exported by `grafana-alert-utils.py`
 - do not point `--import-dir` at the combined `alerts/` root
+- for rules linked to dashboards, import first tries the original `__dashboardUid__`; if that UID does not exist on the target Grafana, the tool falls back to exported dashboard metadata and looks for a unique dashboard match by title, folder title, and slug before rewriting `__dashboardUid__`
 
 Important limitation:
 
 - Grafana alert provisioning `/export` output is not accepted by this import path
 - Grafana documents that provisioning export format is for file/Terraform provisioning, not direct HTTP API round-trip updates
+- dashboard linkage repair currently rewrites `__dashboardUid__` only; `__panelId__` is preserved as-is
 
 Validation done in this workspace:
 
 - unit tests via `python3 -m unittest -v`
 - live Docker round-trip against Grafana `12.4.1`
 - verified export/import of one alert rule, one contact point, one mute timing, and one notification policy tree
+- verified a dashboard-linked alert rule round-trip where the source dashboard UID was deleted, a same-title same-folder replacement dashboard with a new UID was created, and import rewrote the rule's `__dashboardUid__` to the replacement dashboard UID
 
 ## Validation
 

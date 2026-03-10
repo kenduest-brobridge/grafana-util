@@ -27,34 +27,40 @@ class FakeGrafanaClient(exporter.GrafanaClient):
 
 
 class ExporterTests(unittest.TestCase):
+    def test_parse_args_requires_subcommand(self):
+        with self.assertRaises(SystemExit):
+            exporter.parse_args([])
+
     def test_parse_args_supports_import_mode(self):
-        args = exporter.parse_args(["--import-dir", "dashboards"])
+        args = exporter.parse_args(["import", "--import-dir", "dashboards"])
 
         self.assertEqual(args.import_dir, "dashboards")
+        self.assertEqual(args.command, "import")
 
-    def test_parse_args_defaults_output_dir_to_dashboards(self):
-        args = exporter.parse_args([])
+    def test_parse_args_defaults_export_dir_to_dashboards(self):
+        args = exporter.parse_args(["export"])
 
-        self.assertEqual(args.output_dir, "dashboards")
+        self.assertEqual(args.export_dir, "dashboards")
+        self.assertEqual(args.command, "export")
 
     def test_parse_args_defaults_url_to_local_grafana(self):
-        args = exporter.parse_args([])
+        args = exporter.parse_args(["export"])
 
         self.assertEqual(args.url, "http://127.0.0.1:3000")
 
     def test_parse_args_supports_variant_switches(self):
-        args = exporter.parse_args(["--without-raw", "--without-prompt"])
+        args = exporter.parse_args(["export", "--without-raw", "--without-prompt"])
 
         self.assertTrue(args.without_raw)
         self.assertTrue(args.without_prompt)
 
     def test_parse_args_disables_ssl_verification_by_default(self):
-        args = exporter.parse_args([])
+        args = exporter.parse_args(["export"])
 
         self.assertFalse(args.verify_ssl)
 
     def test_parse_args_can_enable_ssl_verification(self):
-        args = exporter.parse_args(["--verify-ssl"])
+        args = exporter.parse_args(["export", "--verify-ssl"])
 
         self.assertTrue(args.verify_ssl)
 
@@ -150,7 +156,7 @@ class ExporterTests(unittest.TestCase):
                 exporter.discover_dashboard_files(root)
 
     def test_export_dashboards_rejects_disabling_all_variants(self):
-        args = exporter.parse_args(["--without-raw", "--without-prompt"])
+        args = exporter.parse_args(["export", "--without-raw", "--without-prompt"])
 
         with self.assertRaises(exporter.GrafanaError):
             exporter.export_dashboards(args)

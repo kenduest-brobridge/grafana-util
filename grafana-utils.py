@@ -44,7 +44,7 @@ from urllib import error, parse, request
 DEFAULT_URL = "http://127.0.0.1:3000"
 DEFAULT_TIMEOUT = 30
 DEFAULT_PAGE_SIZE = 500
-DEFAULT_OUTPUT_DIR = "dashboards"
+DEFAULT_EXPORT_DIR = "dashboards"
 RAW_EXPORT_SUBDIR = "raw"
 PROMPT_EXPORT_SUBDIR = "prompt"
 BUILTIN_DATASOURCE_TYPES = {"__expr__", "grafana"}
@@ -79,10 +79,7 @@ class GrafanaError(RuntimeError):
     """Raised when Grafana returns an unexpected response."""
 
 
-def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Export or import Grafana dashboards."
-    )
+def add_common_cli_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--url",
         default=DEFAULT_URL,
@@ -104,19 +101,25 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         help="Grafana password. Falls back to GRAFANA_PASSWORD.",
     )
     parser.add_argument(
-        "--output-dir",
-        default=DEFAULT_OUTPUT_DIR,
+        "--timeout",
+        type=int,
+        default=DEFAULT_TIMEOUT,
+        help=f"HTTP timeout in seconds (default: {DEFAULT_TIMEOUT}).",
+    )
+    parser.add_argument(
+        "--verify-ssl",
+        action="store_true",
+        help="Enable TLS certificate verification. Verification is disabled by default.",
+    )
+
+
+def add_export_cli_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--export-dir",
+        default=DEFAULT_EXPORT_DIR,
         help=(
             "Directory to write exported dashboards into. Export writes two "
             f"subdirectories by default: {RAW_EXPORT_SUBDIR}/ and {PROMPT_EXPORT_SUBDIR}/."
-        ),
-    )
-    parser.add_argument(
-        "--import-dir",
-        default=None,
-        help=(
-            "Import dashboards from this directory instead of exporting. "
-            f"Point this to the {RAW_EXPORT_SUBDIR}/ export directory explicitly."
         ),
     )
     parser.add_argument(
@@ -126,15 +129,9 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         help=f"Dashboard search page size (default: {DEFAULT_PAGE_SIZE}).",
     )
     parser.add_argument(
-        "--timeout",
-        type=int,
-        default=DEFAULT_TIMEOUT,
-        help=f"HTTP timeout in seconds (default: {DEFAULT_TIMEOUT}).",
-    )
-    parser.add_argument(
         "--flat",
         action="store_true",
-        help="Write all dashboards into the output root instead of per-folder directories.",
+        help="Write all dashboards into the export root instead of per-folder directories.",
     )
     parser.add_argument(
         "--overwrite",
@@ -151,6 +148,17 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         action="store_true",
         help=f"Skip exporting the {PROMPT_EXPORT_SUBDIR}/ variant.",
     )
+
+
+def add_import_cli_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--import-dir",
+        required=True,
+        help=(
+            "Import dashboards from this directory. "
+            f"Point this to the {RAW_EXPORT_SUBDIR}/ export directory explicitly."
+        ),
+    )
     parser.add_argument(
         "--replace-existing",
         action="store_true",
@@ -166,11 +174,31 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         default="Imported by grafana-utils.py",
         help="Version history message to attach to imported dashboards.",
     )
-    parser.add_argument(
-        "--verify-ssl",
-        action="store_true",
-        help="Enable TLS certificate verification. Verification is disabled by default.",
+
+
+def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Export or import Grafana dashboards."
     )
+    # Keep export-only and import-only flags on separate subcommands so the
+    # operator must choose the intended mode explicitly at the CLI boundary.
+    subparsers = parser.add_subparsers(dest="command")
+    subparsers.required = True
+
+    export_parser = subparsers.add_parser(
+        "export",
+        help="Export dashboards into raw/ and prompt/ variants.",
+    )
+    add_common_cli_args(export_parser)
+    add_export_cli_args(export_parser)
+
+    import_parser = subparsers.add_parser(
+        "import",
+        help="Import dashboards from exported raw JSON files.",
+    )
+    add_common_cli_args(import_parser)
+    add_import_cli_args(import_parser)
+
     return parser.parse_args(argv)
 
 
@@ -942,7 +970,7 @@ def export_dashboards(args: argparse.Namespace) -> int:
         raise GrafanaError("Nothing to export. Remove one of --without-raw or --without-prompt.")
 
     client = build_client(args)
-    output_dir = Path(args.output_dir)
+    output_dir = Path(args.export_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     raw_dir, prompt_dir = build_export_variant_dirs(output_dir)
     export_raw = not args.without_raw
@@ -1081,7 +1109,7 @@ def build_client(args: argparse.Namespace) -> GrafanaClient:
 def main() -> int:
     args = parse_args()
     try:
-        if args.import_dir:
+        if args.command == "import":
             return import_dashboards(args)
         return export_dashboards(args)
     except GrafanaError as exc:
