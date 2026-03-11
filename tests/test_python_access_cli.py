@@ -45,6 +45,9 @@ class FakeAccessClient:
         self.service_account_searches = []
         self.created_service_accounts = []
         self.created_service_account_tokens = []
+        self.created_users = []
+        self.updated_user_org_roles = []
+        self.updated_user_permissions = []
 
     def list_org_users(self):
         return [dict(item) for item in self.org_users]
@@ -98,6 +101,21 @@ class FakeAccessClient:
             "key": "glsa_token",
             "secondsToLive": payload.get("secondsToLive"),
         }
+
+    def create_user(self, payload):
+        self.created_users.append(dict(payload))
+        return {
+            "id": 31,
+            "message": "User created",
+        }
+
+    def update_user_org_role(self, user_id, role):
+        self.updated_user_org_roles.append((str(user_id), role))
+        return {"message": "Organization user updated"}
+
+    def update_user_permissions(self, user_id, is_grafana_admin):
+        self.updated_user_permissions.append((str(user_id), bool(is_grafana_admin)))
+        return {"message": "User permissions updated"}
 
 
 class AccessCliTests(unittest.TestCase):
@@ -169,6 +187,56 @@ class AccessCliTests(unittest.TestCase):
         self.assertEqual(args.page, 2)
         self.assertEqual(args.per_page, 5)
         self.assertTrue(args.table)
+
+    def test_parse_args_supports_user_add_mode(self):
+        args = access_utils.parse_args(
+            [
+                "user",
+                "add",
+                "--basic-user",
+                "admin",
+                "--basic-password",
+                "grafana-secret",
+                "--login",
+                "alice",
+                "--email",
+                "alice@example.com",
+                "--name",
+                "Alice",
+                "--password",
+                "secret123",
+                "--org-id",
+                "7",
+                "--org-role",
+                "Editor",
+                "--grafana-admin",
+                "true",
+                "--json",
+            ]
+        )
+
+        self.assertEqual(args.resource, "user")
+        self.assertEqual(args.command, "add")
+        self.assertEqual(args.auth_username, "admin")
+        self.assertEqual(args.auth_password, "grafana-secret")
+        self.assertEqual(args.login, "alice")
+        self.assertEqual(args.email, "alice@example.com")
+        self.assertEqual(args.name, "Alice")
+        self.assertEqual(args.new_user_password, "secret123")
+        self.assertEqual(args.org_id, "7")
+        self.assertEqual(args.org_role, "Editor")
+        self.assertEqual(args.grafana_admin, "true")
+        self.assertTrue(args.json)
+
+    def test_user_add_help_uses_basic_auth_and_local_password_flags(self):
+        parser = access_utils.build_parser()
+        user_add_parser = parser._subparsers._group_actions[0].choices["user"]._subparsers._group_actions[0].choices["add"]
+        help_text = user_add_parser.format_help()
+
+        self.assertIn("--basic-user USERNAME", help_text)
+        self.assertIn("--basic-password PASSWORD", help_text)
+        self.assertIn("--password NEW_USER_PASSWORD", help_text)
+        self.assertNotIn("--token", help_text)
 
     def test_parse_args_supports_team_list_mode(self):
         args = access_utils.parse_args(
@@ -265,6 +333,29 @@ class AccessCliTests(unittest.TestCase):
         self.assertEqual(auth_mode, "basic")
         self.assertTrue(headers["Authorization"].startswith("Basic "))
 
+    def test_resolve_auth_prefers_explicit_basic_auth_over_env_token(self):
+        import os
+
+        args = argparse.Namespace(
+            api_token=None,
+            username=None,
+            password=None,
+            auth_username="admin",
+            auth_password="secret",
+        )
+        original_token = os.environ.get("GRAFANA_API_TOKEN")
+        os.environ["GRAFANA_API_TOKEN"] = "env-token"
+        try:
+            headers, auth_mode = access_utils.resolve_auth(args)
+        finally:
+            if original_token is None:
+                os.environ.pop("GRAFANA_API_TOKEN", None)
+            else:
+                os.environ["GRAFANA_API_TOKEN"] = original_token
+
+        self.assertEqual(auth_mode, "basic")
+        self.assertTrue(headers["Authorization"].startswith("Basic "))
+
     def test_resolve_auth_rejects_mixed_auth(self):
         args = argparse.Namespace(
             api_token="abc123",
@@ -286,6 +377,10 @@ class AccessCliTests(unittest.TestCase):
 
         with self.assertRaisesRegex(access_utils.GrafanaError, "--with-teams requires Basic auth"):
             access_utils.validate_user_list_auth(args, "token")
+
+    def test_validate_user_add_auth_rejects_token_auth(self):
+        with self.assertRaisesRegex(access_utils.GrafanaError, "User add requires Basic auth"):
+            access_utils.validate_user_add_auth("token")
 
     def test_list_users_with_client_filters_org_users(self):
         client = FakeAccessClient(
@@ -507,6 +602,41 @@ class AccessCliTests(unittest.TestCase):
         self.assertEqual(result, 0)
         self.assertEqual(client.service_account_searches, [("access", 1, 10)])
         self.assertIn('"name": "access-cli-test"', output.getvalue())
+
+    def test_add_user_with_client_uses_expected_payload_and_follow_up_calls(self):
+        client = FakeAccessClient()
+        args = argparse.Namespace(
+            login="alice",
+            email="alice@example.com",
+            name="Alice",
+            new_user_password="secret123",
+            org_id="7",
+            org_role="Editor",
+            grafana_admin="true",
+            json=True,
+        )
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            result = access_utils.add_user_with_client(args, client)
+
+        self.assertEqual(result, 0)
+        self.assertEqual(
+            client.created_users,
+            [
+                {
+                    "name": "Alice",
+                    "email": "alice@example.com",
+                    "login": "alice",
+                    "password": "secret123",
+                    "OrgId": "7",
+                }
+            ],
+        )
+        self.assertEqual(client.updated_user_org_roles, [("31", "Editor")])
+        self.assertEqual(client.updated_user_permissions, [("31", True)])
+        self.assertIn('"login": "alice"', output.getvalue())
+        self.assertIn('"orgRole": "Editor"', output.getvalue())
 
     def test_add_service_account_with_client_uses_expected_payload(self):
         client = FakeAccessClient()

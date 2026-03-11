@@ -3,6 +3,7 @@
 
 Initial scope:
 - `grafana-access-utils user list`
+- `grafana-access-utils user add`
 - `grafana-access-utils team list`
 - `grafana-access-utils service-account list`
 - `grafana-access-utils service-account add`
@@ -122,6 +123,19 @@ def build_parser() -> argparse.ArgumentParser:
     add_common_cli_args(list_parser)
     add_user_list_cli_args(list_parser)
 
+    add_parser = user_subparsers.add_parser(
+        "add",
+        help="Create a Grafana user through the global admin API.",
+    )
+    add_common_cli_args(
+        add_parser,
+        allow_legacy_auth_aliases=False,
+        allow_token_auth=False,
+        username_dest="auth_username",
+        password_dest="auth_password",
+    )
+    add_user_add_cli_args(add_parser)
+
     team_parser = subparsers.add_parser(
         "team",
         help="List Grafana teams.",
@@ -175,37 +189,50 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def add_common_cli_args(parser: argparse.ArgumentParser) -> None:
+def add_common_cli_args(
+    parser: argparse.ArgumentParser,
+    allow_legacy_auth_aliases: bool = True,
+    allow_token_auth: bool = True,
+    username_dest: str = "username",
+    password_dest: str = "password",
+) -> None:
     parser.add_argument(
         "--url",
         default=DEFAULT_URL,
         help="Grafana base URL (default: %s)" % DEFAULT_URL,
     )
+    if allow_token_auth:
+        parser.add_argument(
+            "--token",
+            "--api-token",
+            dest="api_token",
+            default=None,
+            metavar="TOKEN",
+            help=(
+                "Grafana API token. Preferred flag: --token. "
+                "Falls back to GRAFANA_API_TOKEN."
+            ),
+        )
+    basic_user_flags = ["--basic-user"]
+    basic_password_flags = ["--basic-password"]
+    if allow_legacy_auth_aliases:
+        basic_user_flags.append("--username")
+        basic_password_flags.append("--password")
     parser.add_argument(
-        "--token",
-        "--api-token",
-        dest="api_token",
+        *basic_user_flags,
+        dest=username_dest,
         default=None,
-        help=(
-            "Grafana API token. Preferred flag: --token. "
-            "Falls back to GRAFANA_API_TOKEN."
-        ),
-    )
-    parser.add_argument(
-        "--basic-user",
-        "--username",
-        dest="username",
-        default=None,
+        metavar="USERNAME",
         help=(
             "Grafana Basic auth username. Preferred flag: --basic-user. "
             "Falls back to GRAFANA_USERNAME."
         ),
     )
     parser.add_argument(
-        "--basic-password",
-        "--password",
-        dest="password",
+        *basic_password_flags,
+        dest=password_dest,
         default=None,
+        metavar="PASSWORD",
         help=(
             "Grafana Basic auth password. Preferred flag: --basic-password. "
             "Falls back to GRAFANA_PASSWORD."
@@ -295,6 +322,47 @@ def add_user_list_cli_args(parser: argparse.ArgumentParser) -> None:
         "--json",
         action="store_true",
         help="Render users as JSON.",
+    )
+
+
+def add_user_add_cli_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--login",
+        required=True,
+        help="Login name for the new Grafana user.",
+    )
+    parser.add_argument(
+        "--email",
+        required=True,
+        help="Email address for the new Grafana user.",
+    )
+    parser.add_argument(
+        "--name",
+        required=True,
+        help="Display name for the new Grafana user.",
+    )
+    parser.add_argument(
+        "--password",
+        dest="new_user_password",
+        required=True,
+        help="Password for the new local Grafana user.",
+    )
+    parser.add_argument(
+        "--org-role",
+        default=None,
+        choices=["Viewer", "Editor", "Admin", "None"],
+        help="Optional Grafana organization role to set after user creation.",
+    )
+    parser.add_argument(
+        "--grafana-admin",
+        default=None,
+        type=bool_choice,
+        help="Optional Grafana server-admin state to set after user creation: true or false.",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Render the created user as JSON.",
     )
 
 
@@ -475,6 +543,10 @@ def resolve_auth(args: argparse.Namespace) -> Tuple[Dict[str, str], str]:
     cli_token = getattr(args, "api_token", None)
     cli_username = getattr(args, "username", None)
     cli_password = getattr(args, "password", None)
+    if cli_username is None:
+        cli_username = getattr(args, "auth_username", None)
+    if cli_password is None:
+        cli_password = getattr(args, "auth_password", None)
 
     if cli_token and (cli_username or cli_password):
         raise GrafanaError(
@@ -492,13 +564,24 @@ def resolve_auth(args: argparse.Namespace) -> Tuple[Dict[str, str], str]:
             "--basic-password / --password."
         )
 
-    token = cli_token or env_value("GRAFANA_API_TOKEN")
+    if cli_token:
+        headers = {"Authorization": "Bearer %s" % cli_token}
+        return headers, "token"
+
+    if cli_username and cli_password:
+        encoded = base64.b64encode(
+            ("%s:%s" % (cli_username, cli_password)).encode("utf-8")
+        ).decode("ascii")
+        headers = {"Authorization": "Basic %s" % encoded}
+        return headers, "basic"
+
+    token = env_value("GRAFANA_API_TOKEN")
     if token:
         headers = {"Authorization": "Bearer %s" % token}
         return headers, "token"
 
-    username = cli_username or env_value("GRAFANA_USERNAME")
-    password = cli_password or env_value("GRAFANA_PASSWORD")
+    username = env_value("GRAFANA_USERNAME")
+    password = env_value("GRAFANA_PASSWORD")
     if username and password:
         encoded = base64.b64encode(
             ("%s:%s" % (username, password)).encode("utf-8")
@@ -533,6 +616,13 @@ def validate_user_list_auth(args: argparse.Namespace, auth_mode: str) -> None:
         )
     if args.with_teams and auth_mode != "basic":
         raise GrafanaError("--with-teams requires Basic auth.")
+
+
+def validate_user_add_auth(auth_mode: str) -> None:
+    if auth_mode != "basic":
+        raise GrafanaError(
+            "User add requires Basic auth (--basic-user / --basic-password)."
+        )
 
 
 class GrafanaAccessClient:
@@ -605,6 +695,45 @@ class GrafanaAccessClient:
                 "Unexpected team list response for Grafana user %s." % user_id
             )
         return [item for item in data if isinstance(item, dict)]
+
+    def create_user(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        data = self.request_json(
+            "/api/admin/users",
+            method="POST",
+            payload=payload,
+        )
+        if not isinstance(data, dict):
+            raise GrafanaError("Unexpected user create response from Grafana.")
+        return data
+
+    def update_user_org_role(self, user_id: Any, role: str) -> Dict[str, Any]:
+        data = self.request_json(
+            "/api/org/users/%s" % parse.quote(str(user_id), safe=""),
+            method="PATCH",
+            payload={"role": role},
+        )
+        if not isinstance(data, dict):
+            raise GrafanaError(
+                "Unexpected org-role update response for Grafana user %s." % user_id
+            )
+        return data
+
+    def update_user_permissions(
+        self,
+        user_id: Any,
+        is_grafana_admin: bool,
+    ) -> Dict[str, Any]:
+        data = self.request_json(
+            "/api/admin/users/%s/permissions" % parse.quote(str(user_id), safe=""),
+            method="PUT",
+            payload={"isGrafanaAdmin": is_grafana_admin},
+        )
+        if not isinstance(data, dict):
+            raise GrafanaError(
+                "Unexpected permission update response for Grafana user %s."
+                % user_id
+            )
+        return data
 
     def list_service_accounts(
         self,
@@ -783,6 +912,22 @@ def normalize_org_user(item: Dict[str, Any]) -> Dict[str, Any]:
         "orgRole": normalize_org_role(item.get("role")),
         "grafanaAdmin": normalize_bool(item.get("isGrafanaAdmin")),
         "scope": "org",
+        "teams": [],
+    }
+
+
+def normalize_created_user(
+    user_id: Any,
+    args: argparse.Namespace,
+) -> Dict[str, Any]:
+    return {
+        "id": str(user_id or ""),
+        "login": str(args.login or ""),
+        "email": str(args.email or ""),
+        "name": str(args.name or ""),
+        "orgRole": normalize_org_role(args.org_role),
+        "grafanaAdmin": normalize_bool(args.grafana_admin),
+        "scope": "global",
         "teams": [],
     }
 
@@ -1343,6 +1488,51 @@ def add_service_account_with_client(
     return 0
 
 
+def add_user_with_client(
+    args: argparse.Namespace,
+    client: GrafanaAccessClient,
+) -> int:
+    payload = {
+        "name": args.name,
+        "email": args.email,
+        "login": args.login,
+        "password": args.new_user_password,
+    }
+    if args.org_id is not None:
+        payload["OrgId"] = args.org_id
+
+    created_payload = client.create_user(payload)
+    user_id = created_payload.get("id")
+    if not user_id:
+        raise GrafanaError("Grafana user create response did not include an id.")
+
+    if args.org_role:
+        client.update_user_org_role(user_id, args.org_role)
+    if args.grafana_admin is not None:
+        client.update_user_permissions(user_id, args.grafana_admin == "true")
+
+    created_user = normalize_created_user(user_id, args)
+    if args.json:
+        print(
+            json.dumps(
+                serialize_user_row(created_user),
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
+    else:
+        print(
+            "Created user %s -> id=%s orgRole=%s grafanaAdmin=%s"
+            % (
+                created_user.get("login") or "",
+                created_user.get("id") or "",
+                created_user.get("orgRole") or "",
+                bool_label(normalize_bool(created_user.get("grafanaAdmin"))),
+            )
+        )
+    return 0
+
+
 def add_service_account_token_with_client(
     args: argparse.Namespace,
     client: GrafanaAccessClient,
@@ -1382,6 +1572,9 @@ def run(args: argparse.Namespace) -> int:
     if args.resource == "user" and args.command == "list":
         validate_user_list_auth(args, auth_mode)
         return list_users_with_client(args, client)
+    if args.resource == "user" and args.command == "add":
+        validate_user_add_auth(auth_mode)
+        return add_user_with_client(args, client)
     if args.resource == "team" and args.command == "list":
         return list_teams_with_client(args, client)
     if args.resource == "service-account" and args.command == "list":

@@ -6,6 +6,7 @@
 
 - added `grafana-access-utils`
 - implemented `user list`
+- implemented `user add`
 - implemented `team list`
 - implemented `service-account list`
 - implemented `service-account add`
@@ -21,7 +22,6 @@
 ### Next
 
 - `team modify`
-- `user add`
 - `user modify`
 - `user delete`
 - `team add`
@@ -54,6 +54,7 @@ Use subcommands instead of `user --list` style flags.
 Current implementation status:
 
 - `user list`: done
+- `user add`: done
 - `team list`: done
 - `service-account list`: done
 - `service-account add`: done
@@ -97,6 +98,7 @@ Current note:
 
 ```text
 grafana-access-utils user list
+grafana-access-utils user add
 grafana-access-utils team list
 grafana-access-utils service-account list
 grafana-access-utils service-account add
@@ -155,6 +157,7 @@ Current implementation status:
 - `user list --scope org`: token or Basic auth
 - `user list --scope global`: Basic auth only
 - `user list --with-teams`: Basic auth only
+- `user add`: Basic auth only
 - `team list`: token or Basic auth
 - service-account operations: token or Basic auth
 - remaining planned commands still need explicit per-command auth preflight
@@ -298,6 +301,7 @@ The CLI should perform an auth preflight and return a clear error when the selec
 Completed ahead of the original order:
 
 - `user list`
+- `user add`
 - `team list`
 - `service-account list`
 - `service-account add`

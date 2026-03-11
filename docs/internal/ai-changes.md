@@ -1,5 +1,15 @@
 # ai-changes.md
 
+## 2026-03-11 - Add Access Utility User Add
+- Summary: Added Python `grafana-access-utils user add` support, including parser/help wiring, Basic-auth-only validation, Grafana admin API user creation, optional org-role and Grafana-admin follow-up updates, and aligned public/maintainer docs. The command now distinguishes Grafana auth `--basic-password` from the new user’s required `--password` cleanly in both parsing and help output.
+- Tests: Extended `tests/test_python_access_cli.py` with parser/help coverage, auth-validation coverage, explicit-basic-over-env-token coverage, and create-flow tests for user creation plus follow-up role/permission calls.
+- Test Run: `python3 -m unittest -v tests/test_python_access_cli.py`; `python3 -m unittest -v`; `python3 cmd/grafana-access-utils.py user -h`; `python3 cmd/grafana-access-utils.py user add -h`
+- Reason: `TODO.md` called out `user add` as one of the next access-management lifecycle steps, and the CLI needed a real server-admin create path before moving on to user modification and deletion.
+- Validation: Verified Python 3.6 syntax compatibility, corrected an argparse destination collision between auth password and the new-user password flag, ensured explicit CLI Basic auth wins over an ambient token env var, and ran a Docker-backed Grafana `12.4.1` smoke test that created a user and verified it through both global and org-scoped listing.
+- Impact: `grafana_utils/access_cli.py`, `tests/test_python_access_cli.py`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`, `TODO.md`
+- Rollback/Risk: Low to moderate. The new command is additive, but Grafana user-creation and follow-up admin/org APIs are Basic-auth server-admin workflows and may expose different fields across Grafana versions; live validation showed the global list API does not echo org role even after the org-role update, while org-scoped listing does.
+- Follow-up: Continue with the remaining access-management plan: `team modify`, `user modify`, `user delete`, and the remaining team/group mutating workflow.
+
 ## 2026-03-11 - Add Access Utility Team List
 - Summary: Added Python `grafana-access-utils team list` support, including parser/help wiring, Grafana team search and member lookup client calls, normalization/rendering for text/table/CSV/JSON output, and aligned public/maintainer docs. The command is org-scoped and follows the same auth model as the other org-scoped access commands.
 - Tests: Extended `tests/test_python_access_cli.py` with parser/help coverage plus team row/build/render tests.

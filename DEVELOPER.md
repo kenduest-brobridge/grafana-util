@@ -6,7 +6,7 @@ This document is for maintainers. Keep `README.md` GitHub-facing and task-orient
 
 - `grafana_utils/dashboard_cli.py`: packaged dashboard export/import utility
 - `grafana_utils/alert_cli.py`: packaged alerting resource export/import utility
-- `grafana_utils/access_cli.py`: packaged access-management utility, currently covering `user list`, `team list`, and initial service-account commands
+- `grafana_utils/access_cli.py`: packaged access-management utility, currently covering `user list`, `user add`, `team list`, and initial service-account commands
 - `grafana_utils/http_transport.py`: shared HTTP transport adapters and transport selection
 - `cmd/grafana-utils.py`: thin source-tree wrapper for the packaged dashboard CLI
 - `cmd/grafana-alert-utils.py`: thin source-tree wrapper for the packaged alerting CLI
@@ -36,6 +36,7 @@ This document is for maintainers. Keep `README.md` GitHub-facing and task-orient
 - Use `python3 cmd/grafana-utils.py import ...` for import.
 - Use `python3 cmd/grafana-utils.py diff ...` for live-vs-local comparison.
 - Use `python3 cmd/grafana-access-utils.py user list ...` to inspect Grafana users.
+- Use `python3 cmd/grafana-access-utils.py user add ...` to create Grafana users through the server-admin API.
 - Use `python3 cmd/grafana-access-utils.py team list ...` to inspect Grafana teams.
 - Use `python3 cmd/grafana-access-utils.py service-account ...` for org-scoped service-account operations.
 - The export subcommand intentionally uses `--export-dir` instead of `--output-dir` to avoid mixing export terminology with import behavior.
@@ -285,6 +286,7 @@ Alerting import format notes:
 `cmd/grafana-access-utils.py` currently supports:
 
 - `user list`
+- `user add`
 - `team list`
 - `service-account list`
 - `service-account add`
@@ -292,7 +294,6 @@ Alerting import format notes:
 
 Not implemented yet:
 
-- `user add`
 - `user modify`
 - `user delete`
 - mutating `team` commands
@@ -302,6 +303,7 @@ Not implemented yet:
 
 - `user list --scope org` may use token auth or Basic auth
 - `user list --scope global` requires Basic auth and should be treated as a Grafana server-admin workflow
+- `user add` requires Basic auth and should be treated as a Grafana server-admin workflow
 - `team list` is org-scoped and may use token auth or Basic auth
 - service-account commands are org-scoped and may use token auth or Basic auth
 - do not silently fall back from a token-only global request into a weaker behavior; fail early with a clear error instead
@@ -350,6 +352,7 @@ grafana-utils import -h
 grafana-alert-utils -h
 grafana-access-utils -h
 grafana-access-utils user list -h
+grafana-access-utils user add -h
 grafana-access-utils team list -h
 grafana-access-utils service-account list -h
 grafana-access-utils service-account add -h
@@ -361,6 +364,7 @@ python3 cmd/grafana-utils.py import -h
 python3 cmd/grafana-alert-utils.py -h
 python3 cmd/grafana-access-utils.py -h
 python3 cmd/grafana-access-utils.py user list -h
+python3 cmd/grafana-access-utils.py user add -h
 python3 cmd/grafana-access-utils.py team list -h
 python3 cmd/grafana-access-utils.py service-account list -h
 python3 cmd/grafana-access-utils.py service-account add -h
