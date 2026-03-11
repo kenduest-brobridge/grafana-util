@@ -1,5 +1,19 @@
 # ai-status.md
 
+## 2026-03-11 - Task: Remove Python Dependency From Rust Live Smoke Test
+- State: Done
+- Scope: `scripts/test-rust-live-grafana.sh`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The Rust Docker smoke script required `python3` only to extract simple JSON fields while creating a Grafana API token.
+- Current Update: Replaced the JSON field helper with `jq`, removed the explicit `python3` prerequisite from the script, replaced the last Perl-based in-place JSON rewrite with a `jq` temp-file rewrite, and now check for `jq` at startup.
+- Result: The Rust live smoke test no longer depends on Python or Perl and now keeps its runtime requirements to Docker, curl, and `jq`.
+
+## 2026-03-11 - Task: Clarify Rust CLI Help Text
+- State: Done
+- Scope: `rust/src/dashboard.rs`, `rust/src/alert.rs`, `rust/src/dashboard_rust_tests.rs`, `rust/src/alert_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The Rust `-h` and `--help` output listed many flags without operator-facing explanations, so switches like `--flat` were hard to understand from the CLI alone.
+- Current Update: Added explicit clap help text for common auth/TLS flags plus dashboard and alerting mode flags, and added help-output tests that assert the Rust help explains flat export layout and includes examples.
+- Result: `grafana-utils export -h` and `grafana-alert-utils -h` now explain what options do instead of only showing their names, reducing the need to cross-reference README or Python help for common workflows.
+
 ## 2026-03-11 - Task: Add Preferred Auth Flag Aliases
 - State: Done
 - Scope: `grafana_utils/dashboard_cli.py`, `grafana_utils/alert_cli.py`, `tests/test_python_dashboard_cli.py`, `tests/test_python_alert_cli.py`, `README.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

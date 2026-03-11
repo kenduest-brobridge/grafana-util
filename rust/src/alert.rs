@@ -36,35 +36,67 @@ pub const ROOT_INDEX_KIND: &str = "grafana-utils-alert-export-index";
     after_help = "Examples:\n\n  Export alerting resources with an API token:\n    export GRAFANA_API_TOKEN='your-token'\n    grafana-alert-utils --url https://grafana.example.com --output-dir ./alerts --overwrite\n\n  Import back into Grafana and update existing resources:\n    grafana-alert-utils --url https://grafana.example.com --import-dir ./alerts/raw --replace-existing\n\n  Import linked alert rules with dashboard and panel remapping:\n    grafana-alert-utils --url https://grafana.example.com --import-dir ./alerts/raw --replace-existing --dashboard-uid-map ./dashboard-map.json --panel-id-map ./panel-map.json"
 )]
 pub struct AlertCliArgs {
-    #[arg(long, default_value = DEFAULT_URL)]
+    #[arg(long, default_value = DEFAULT_URL, help = "Grafana base URL.")]
     pub url: String,
-    #[arg(long)]
+    #[arg(
+        long = "token",
+        visible_alias = "api-token",
+        help = "Grafana API token. Preferred flag: --token. Falls back to GRAFANA_API_TOKEN."
+    )]
     pub api_token: Option<String>,
-    #[arg(long)]
+    #[arg(
+        long = "basic-user",
+        visible_alias = "username",
+        help = "Grafana Basic auth username. Preferred flag: --basic-user. Falls back to GRAFANA_USERNAME."
+    )]
     pub username: Option<String>,
-    #[arg(long)]
+    #[arg(
+        long = "basic-password",
+        visible_alias = "password",
+        help = "Grafana Basic auth password. Preferred flag: --basic-password. Falls back to GRAFANA_PASSWORD."
+    )]
     pub password: Option<String>,
-    #[arg(long, default_value = DEFAULT_OUTPUT_DIR)]
+    #[arg(
+        long,
+        default_value = DEFAULT_OUTPUT_DIR,
+        help = "Directory to write exported alerting resources into. Export writes files under raw/."
+    )]
     pub output_dir: PathBuf,
-    #[arg(long, conflicts_with = "diff_dir")]
+    #[arg(
+        long,
+        conflicts_with = "diff_dir",
+        help = "Import alerting resource JSON from this directory instead of exporting. Point this to the raw/ export directory explicitly."
+    )]
     pub import_dir: Option<PathBuf>,
-    #[arg(long, conflicts_with = "import_dir")]
+    #[arg(
+        long,
+        conflicts_with = "import_dir",
+        help = "Compare alerting resource JSON from this directory against Grafana. Point this to the raw/ export directory explicitly."
+    )]
     pub diff_dir: Option<PathBuf>,
-    #[arg(long, default_value_t = DEFAULT_TIMEOUT)]
+    #[arg(long, default_value_t = DEFAULT_TIMEOUT, help = "HTTP timeout in seconds.")]
     pub timeout: u64,
-    #[arg(long, default_value_t = false)]
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Write rule, contact-point, mute-timing, and template files directly into their resource directories instead of nested subdirectories."
+    )]
     pub flat: bool,
-    #[arg(long, default_value_t = false)]
+    #[arg(long, default_value_t = false, help = "Overwrite existing exported files.")]
     pub overwrite: bool,
-    #[arg(long, default_value_t = false)]
+    #[arg(long, default_value_t = false, help = "Update existing resources with the same identity instead of failing on import.")]
     pub replace_existing: bool,
-    #[arg(long, default_value_t = false)]
+    #[arg(long, default_value_t = false, help = "Show whether each import file would create or update resources without changing Grafana.")]
     pub dry_run: bool,
-    #[arg(long)]
+    #[arg(long, help = "JSON file that maps source dashboard UIDs to target dashboard UIDs for linked alert-rule repair during import.")]
     pub dashboard_uid_map: Option<PathBuf>,
-    #[arg(long)]
+    #[arg(long, help = "JSON file that maps source dashboard UID and source panel ID to a target panel ID for linked alert-rule repair during import.")]
     pub panel_id_map: Option<PathBuf>,
-    #[arg(long, default_value_t = false)]
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Enable TLS certificate verification. Verification is disabled by default."
+    )]
     pub verify_ssl: bool,
 }
 

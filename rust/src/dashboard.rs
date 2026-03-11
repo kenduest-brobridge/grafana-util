@@ -34,17 +34,33 @@ const BUILTIN_DATASOURCE_NAMES: &[&str] = &[
 
 #[derive(Debug, Clone, Args)]
 pub struct CommonCliArgs {
-    #[arg(long, default_value = DEFAULT_URL)]
+    #[arg(long, default_value = DEFAULT_URL, help = "Grafana base URL.")]
     pub url: String,
-    #[arg(long)]
+    #[arg(
+        long = "token",
+        visible_alias = "api-token",
+        help = "Grafana API token. Preferred flag: --token. Falls back to GRAFANA_API_TOKEN."
+    )]
     pub api_token: Option<String>,
-    #[arg(long)]
+    #[arg(
+        long = "basic-user",
+        visible_alias = "username",
+        help = "Grafana Basic auth username. Preferred flag: --basic-user. Falls back to GRAFANA_USERNAME."
+    )]
     pub username: Option<String>,
-    #[arg(long)]
+    #[arg(
+        long = "basic-password",
+        visible_alias = "password",
+        help = "Grafana Basic auth password. Preferred flag: --basic-password. Falls back to GRAFANA_PASSWORD."
+    )]
     pub password: Option<String>,
-    #[arg(long, default_value_t = DEFAULT_TIMEOUT)]
+    #[arg(long, default_value_t = DEFAULT_TIMEOUT, help = "HTTP timeout in seconds.")]
     pub timeout: u64,
-    #[arg(long, default_value_t = false)]
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Enable TLS certificate verification. Verification is disabled by default."
+    )]
     pub verify_ssl: bool,
 }
 
@@ -52,19 +68,31 @@ pub struct CommonCliArgs {
 pub struct ExportArgs {
     #[command(flatten)]
     pub common: CommonCliArgs,
-    #[arg(long, default_value = DEFAULT_EXPORT_DIR)]
+    #[arg(
+        long,
+        default_value = DEFAULT_EXPORT_DIR,
+        help = "Directory to write exported dashboards into. Export writes raw/ and prompt/ subdirectories by default."
+    )]
     pub export_dir: PathBuf,
-    #[arg(long, default_value_t = DEFAULT_PAGE_SIZE)]
+    #[arg(long, default_value_t = DEFAULT_PAGE_SIZE, help = "Dashboard search page size.")]
     pub page_size: usize,
-    #[arg(long, default_value_t = false)]
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Write dashboard files directly into the export variant directory instead of per-folder subdirectories."
+    )]
     pub flat: bool,
-    #[arg(long, default_value_t = false)]
+    #[arg(long, default_value_t = false, help = "Overwrite existing dashboard files.")]
     pub overwrite: bool,
-    #[arg(long, default_value_t = false)]
+    #[arg(long, default_value_t = false, help = "Skip exporting the raw/ variant.")]
     pub without_dashboard_raw: bool,
-    #[arg(long, default_value_t = false)]
+    #[arg(long, default_value_t = false, help = "Skip exporting the prompt/ variant.")]
     pub without_dashboard_prompt: bool,
-    #[arg(long, default_value_t = false)]
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Preview the dashboard files and indexes that would be written without changing disk."
+    )]
     pub dry_run: bool,
 }
 
@@ -72,13 +100,13 @@ pub struct ExportArgs {
 pub struct ListArgs {
     #[command(flatten)]
     pub common: CommonCliArgs,
-    #[arg(long, default_value_t = DEFAULT_PAGE_SIZE)]
+    #[arg(long, default_value_t = DEFAULT_PAGE_SIZE, help = "Dashboard search page size.")]
     pub page_size: usize,
-    #[arg(long, default_value_t = false, conflicts_with_all = ["csv", "json"])]
+    #[arg(long, default_value_t = false, conflicts_with_all = ["csv", "json"], help = "Render dashboard summaries as a table.")]
     pub table: bool,
-    #[arg(long, default_value_t = false, conflicts_with_all = ["table", "json"])]
+    #[arg(long, default_value_t = false, conflicts_with_all = ["table", "json"], help = "Render dashboard summaries as CSV.")]
     pub csv: bool,
-    #[arg(long, default_value_t = false, conflicts_with_all = ["table", "csv"])]
+    #[arg(long, default_value_t = false, conflicts_with_all = ["table", "csv"], help = "Render dashboard summaries as JSON.")]
     pub json: bool,
 }
 
@@ -86,15 +114,18 @@ pub struct ListArgs {
 pub struct ImportArgs {
     #[command(flatten)]
     pub common: CommonCliArgs,
-    #[arg(long)]
+    #[arg(
+        long,
+        help = "Import dashboards from this directory. Point this to the raw/ export directory explicitly."
+    )]
     pub import_dir: PathBuf,
-    #[arg(long)]
+    #[arg(long, help = "Override the destination Grafana folder UID for all imported dashboards.")]
     pub import_folder_uid: Option<String>,
-    #[arg(long, default_value_t = false)]
+    #[arg(long, default_value_t = false, help = "Allow imports to replace existing dashboards with the same UID.")]
     pub replace_existing: bool,
-    #[arg(long, default_value = DEFAULT_IMPORT_MESSAGE)]
+    #[arg(long, default_value = DEFAULT_IMPORT_MESSAGE, help = "Version history message to attach to imported dashboards.")]
     pub import_message: String,
-    #[arg(long, default_value_t = false)]
+    #[arg(long, default_value_t = false, help = "Show whether each dashboard would be created or updated without importing it.")]
     pub dry_run: bool,
 }
 
@@ -102,24 +133,34 @@ pub struct ImportArgs {
 pub struct DiffArgs {
     #[command(flatten)]
     pub common: CommonCliArgs,
-    #[arg(long)]
+    #[arg(
+        long,
+        help = "Compare dashboards from this directory against Grafana. Point this to the raw/ export directory explicitly."
+    )]
     pub import_dir: PathBuf,
-    #[arg(long)]
+    #[arg(long, help = "Override the destination Grafana folder UID when comparing imported dashboards.")]
     pub import_folder_uid: Option<String>,
-    #[arg(long, default_value_t = 3)]
+    #[arg(long, default_value_t = 3, help = "Number of unified diff context lines.")]
     pub context_lines: usize,
 }
 
 #[derive(Debug, Clone, Subcommand)]
 pub enum DashboardCommand {
+    #[command(about = "List dashboard summaries without writing export files.")]
     List(ListArgs),
+    #[command(about = "Export dashboards to raw/ and prompt/ JSON files.")]
     Export(ExportArgs),
+    #[command(about = "Import dashboard JSON files through the Grafana API.")]
     Import(ImportArgs),
+    #[command(about = "Compare local raw dashboard files against live Grafana dashboards.")]
     Diff(DiffArgs),
 }
 
 #[derive(Debug, Clone, Parser)]
-#[command(about = "Export or import Grafana dashboards.")]
+#[command(
+    about = "Export or import Grafana dashboards.",
+    after_help = "Examples:\n\n  Export dashboards with an API token:\n    export GRAFANA_API_TOKEN='your-token'\n    grafana-utils export --url https://grafana.example.com --token \"$GRAFANA_API_TOKEN\" --export-dir ./dashboards --overwrite\n\n  Export into a flat directory layout instead of per-folder subdirectories:\n    grafana-utils export --url https://grafana.example.com --token \"$GRAFANA_API_TOKEN\" --export-dir ./dashboards --flat\n\n  Compare raw dashboard exports against live Grafana:\n    grafana-utils diff --url https://grafana.example.com --token \"$GRAFANA_API_TOKEN\" --import-dir ./dashboards/raw"
+)]
 pub struct DashboardCliArgs {
     #[command(subcommand)]
     pub command: DashboardCommand,

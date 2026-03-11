@@ -8,6 +8,7 @@ GRAFANA_IMAGE="${GRAFANA_IMAGE:-grafana/grafana:12.4.1}"
 GRAFANA_PORT="${GRAFANA_PORT:-}"
 GRAFANA_USER="${GRAFANA_USER:-admin}"
 GRAFANA_PASSWORD="${GRAFANA_PASSWORD:-admin}"
+GRAFANA_API_TOKEN="${GRAFANA_API_TOKEN:-}"
 GRAFANA_URL=""
 CONTAINER_NAME="${GRAFANA_CONTAINER_NAME:-grafana-utils-rust-live-$$}"
 WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/grafana-utils-rust-live.XXXXXX")"
@@ -57,6 +58,57 @@ wait_for_grafana() {
     fi
     sleep 2
   done
+}
+
+json_field() {
+  local field="$1"
+  jq -r --arg field "${field}" '.[$field] // empty'
+}
+
+rewrite_contact_point_url() {
+  local path="$1"
+  local url="$2"
+  local tmp_path="${path}.tmp"
+
+  jq --arg url "${url}" '.spec.settings.url = $url' "${path}" >"${tmp_path}" \
+    || fail "failed to rewrite contact point URL in ${path}"
+  mv "${tmp_path}" "${path}"
+}
+
+create_api_token() {
+  local response=""
+  local service_account_id=""
+
+  if [[ -n "${GRAFANA_API_TOKEN}" ]]; then
+    return
+  fi
+
+  if response="$(api POST "/api/auth/keys" '{
+    "name": "grafana-utils-rust-live",
+    "role": "Admin",
+    "secondsToLive": 3600
+  }' 2>/dev/null)"; then
+    GRAFANA_API_TOKEN="$(printf '%s' "${response}" | json_field key)"
+  fi
+
+  if [[ -n "${GRAFANA_API_TOKEN}" ]]; then
+    return
+  fi
+
+  response="$(api POST "/api/serviceaccounts" '{
+    "name": "grafana-utils-rust-live",
+    "role": "Admin",
+    "isDisabled": false
+  }')"
+  service_account_id="$(printf '%s' "${response}" | json_field id)"
+  [[ -n "${service_account_id}" ]] || fail "failed to create Grafana service account for token auth"
+
+  response="$(api POST "/api/serviceaccounts/${service_account_id}/tokens" '{
+    "name": "grafana-utils-rust-live",
+    "secondsToLive": 3600
+  }')"
+  GRAFANA_API_TOKEN="$(printf '%s' "${response}" | json_field key)"
+  [[ -n "${GRAFANA_API_TOKEN}" ]] || fail "failed to create Grafana API token"
 }
 
 start_grafana() {
@@ -174,8 +226,7 @@ run_dashboard_smoke() {
 
   "$(dashboard_bin)" export \
     --url "${GRAFANA_URL}" \
-    --username "${GRAFANA_USER}" \
-    --password "${GRAFANA_PASSWORD}" \
+    --token "${GRAFANA_API_TOKEN}" \
     --export-dir "${DASHBOARD_EXPORT_DIR}" \
     --overwrite
 
@@ -191,14 +242,12 @@ run_dashboard_smoke() {
 
   "$(dashboard_bin)" diff \
     --url "${GRAFANA_URL}" \
-    --username "${GRAFANA_USER}" \
-    --password "${GRAFANA_PASSWORD}" \
+    --token "${GRAFANA_API_TOKEN}" \
     --import-dir "${DASHBOARD_EXPORT_DIR}/raw"
 
   "$(dashboard_bin)" export \
     --url "${GRAFANA_URL}" \
-    --username "${GRAFANA_USER}" \
-    --password "${GRAFANA_PASSWORD}" \
+    --token "${GRAFANA_API_TOKEN}" \
     --export-dir "${DASHBOARD_DRY_RUN_DIR}" \
     --overwrite \
     --dry-run
@@ -207,8 +256,7 @@ run_dashboard_smoke() {
 
   "$(dashboard_bin)" import \
     --url "${GRAFANA_URL}" \
-    --username "${GRAFANA_USER}" \
-    --password "${GRAFANA_PASSWORD}" \
+    --token "${GRAFANA_API_TOKEN}" \
     --import-dir "${DASHBOARD_EXPORT_DIR}/raw" \
     --replace-existing \
     --dry-run | tee "${dry_run_log}" >/dev/null
@@ -217,8 +265,7 @@ run_dashboard_smoke() {
   seed_dashboard "Smoke Dashboard Drifted"
   if "$(dashboard_bin)" diff \
     --url "${GRAFANA_URL}" \
-    --username "${GRAFANA_USER}" \
-    --password "${GRAFANA_PASSWORD}" \
+    --token "${GRAFANA_API_TOKEN}" \
     --import-dir "${DASHBOARD_EXPORT_DIR}/raw" >"${diff_log}" 2>&1; then
     fail "dashboard diff should have failed after live drift"
   fi
@@ -228,8 +275,7 @@ run_dashboard_smoke() {
 
   "$(dashboard_bin)" import \
     --url "${GRAFANA_URL}" \
-    --username "${GRAFANA_USER}" \
-    --password "${GRAFANA_PASSWORD}" \
+    --token "${GRAFANA_API_TOKEN}" \
     --import-dir "${DASHBOARD_EXPORT_DIR}/raw" \
     --replace-existing >/dev/null
 
@@ -244,8 +290,7 @@ run_alert_smoke() {
 
   "$(alert_bin)" \
     --url "${GRAFANA_URL}" \
-    --username "${GRAFANA_USER}" \
-    --password "${GRAFANA_PASSWORD}" \
+    --token "${GRAFANA_API_TOKEN}" \
     --output-dir "${ALERT_EXPORT_DIR}" \
     --overwrite >/dev/null
 
@@ -256,16 +301,14 @@ run_alert_smoke() {
 
   "$(alert_bin)" \
     --url "${GRAFANA_URL}" \
-    --username "${GRAFANA_USER}" \
-    --password "${GRAFANA_PASSWORD}" \
+    --token "${GRAFANA_API_TOKEN}" \
     --diff-dir "${ALERT_EXPORT_DIR}/raw" >/dev/null
 
-  perl -0pi -e 's#http://127.0.0.1/notify#http://127.0.0.1/updated#g' "${contact_file}"
+  rewrite_contact_point_url "${contact_file}" "http://127.0.0.1/updated"
 
   if "$(alert_bin)" \
     --url "${GRAFANA_URL}" \
-    --username "${GRAFANA_USER}" \
-    --password "${GRAFANA_PASSWORD}" \
+    --token "${GRAFANA_API_TOKEN}" \
     --diff-dir "${ALERT_EXPORT_DIR}/raw" >"${diff_log}" 2>&1; then
     fail "alert diff should have failed after local drift"
   fi
@@ -273,8 +316,7 @@ run_alert_smoke() {
 
   "$(alert_bin)" \
     --url "${GRAFANA_URL}" \
-    --username "${GRAFANA_USER}" \
-    --password "${GRAFANA_PASSWORD}" \
+    --token "${GRAFANA_API_TOKEN}" \
     --import-dir "${ALERT_EXPORT_DIR}/raw" \
     --replace-existing \
     --dry-run | tee "${dry_run_log}" >/dev/null
@@ -282,28 +324,27 @@ run_alert_smoke() {
 
   "$(alert_bin)" \
     --url "${GRAFANA_URL}" \
-    --username "${GRAFANA_USER}" \
-    --password "${GRAFANA_PASSWORD}" \
+    --token "${GRAFANA_API_TOKEN}" \
     --import-dir "${ALERT_EXPORT_DIR}/raw" \
     --replace-existing >/dev/null
 
   "$(alert_bin)" \
     --url "${GRAFANA_URL}" \
-    --username "${GRAFANA_USER}" \
-    --password "${GRAFANA_PASSWORD}" \
+    --token "${GRAFANA_API_TOKEN}" \
     --diff-dir "${ALERT_EXPORT_DIR}/raw" >/dev/null
 }
 
 main() {
   command -v docker >/dev/null || fail "docker is required"
   command -v curl >/dev/null || fail "curl is required"
-  command -v perl >/dev/null || fail "perl is required"
+  command -v jq >/dev/null || fail "jq is required"
 
   build_rust_bins
   start_grafana
   seed_datasource
   seed_dashboard "Smoke Dashboard"
   seed_contact_point
+  create_api_token
   run_dashboard_smoke
   run_alert_smoke
   printf 'Rust live Grafana smoke test passed against %s using %s\n' "${GRAFANA_URL}" "${GRAFANA_IMAGE}"

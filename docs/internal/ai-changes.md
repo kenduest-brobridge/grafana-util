@@ -1,5 +1,23 @@
 # ai-changes.md
 
+## 2026-03-11 - Remove Python Dependency From Rust Live Smoke Test
+- Summary: Updated the Docker-backed Rust Grafana smoke script so its token bootstrap path parses JSON with `jq` instead of calling `python3`, and replaced the last Perl-based in-place JSON edit with a `jq` temp-file rewrite. The script no longer checks for Python or Perl at startup and now requires `jq` explicitly.
+- Tests: Reused the existing smoke script validation path after the helper change.
+- Test Run: `bash -n scripts/test-rust-live-grafana.sh` (pass); `./scripts/test-rust-live-grafana.sh` (pass)
+- Validation: The Docker-backed Grafana smoke test still created a token, rewrote the exported contact point, and completed successfully after replacing both the Python and Perl JSON helpers with `jq`.
+- Impact: `scripts/test-rust-live-grafana.sh`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low risk. The change only affects test-script dependency handling; failure would be limited to token extraction during live smoke validation.
+- Follow-up: None.
+
+## 2026-03-11 - Clarify Rust CLI Help Text
+- Summary: Added operator-facing help text to the Rust dashboard and alerting CLIs so `-h` and `--help` explain common flags such as auth, TLS verification, `--flat`, dry-run, diff, and import/export directory behavior. The dashboard Rust CLI now also includes top-level usage examples in help output.
+- Tests: Added Rust help-output coverage for dashboard export help, dashboard top-level help examples, and alert help text for `--flat`.
+- Test Run: `cd rust && cargo test --quiet` (pass)
+- Validation: `cargo run --quiet --bin grafana-utils -- export -h` now explains that `--flat` writes dashboard files directly into the export variant directory instead of per-folder subdirectories; `cargo run --quiet --bin grafana-alert-utils -- -h` now explains that alert `--flat` writes resource files directly into their resource directories instead of nested subdirectories.
+- Impact: `rust/src/dashboard.rs`, `rust/src/alert.rs`, `rust/src/dashboard_rust_tests.rs`, `rust/src/alert_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low risk. This changes CLI help text only and adds tests around the displayed wording.
+- Follow-up: If more operator questions come up, mirror the same level of detail into Rust subcommand examples beyond the current dashboard top-level help.
+
 ## 2026-03-11 - Add Preferred Auth Flag Aliases
 - Summary: Updated both Python CLIs to prefer `--token`, `--basic-user`, and `--basic-password` while still accepting the older `--api-token`, `--username`, and `--password` spellings. The auth resolver now fails early when operators mix token and Basic-auth flags or provide only one side of the Basic-auth pair, instead of silently preferring one mode.
 - Tests: Added parser and auth-validation coverage in both Python CLI suites for the preferred aliases, token-only auth, Basic-auth success, mixed-auth rejection, and partial Basic-auth rejection.

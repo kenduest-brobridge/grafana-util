@@ -5,8 +5,16 @@ use super::{
     serialize_compare_document, AlertCliArgs, CONTACT_POINT_KIND, ROOT_INDEX_KIND, RULE_KIND,
     TOOL_API_VERSION, TOOL_SCHEMA_VERSION,
 };
+use clap::CommandFactory;
 use serde_json::json;
 use std::path::Path;
+
+fn render_alert_help() -> String {
+    let mut command = AlertCliArgs::command();
+    let mut output = Vec::new();
+    command.write_long_help(&mut output).unwrap();
+    String::from_utf8(output).unwrap()
+}
 
 #[test]
 fn build_rule_output_path_keeps_folder_structure() {
@@ -122,6 +130,29 @@ fn parse_cli_supports_diff_dir_and_dry_run() {
     assert_eq!(args.diff_dir.as_deref(), Some(Path::new("./alerts/raw")));
     assert!(args.import_dir.is_none());
     assert!(args.dry_run);
+}
+
+#[test]
+fn parse_cli_supports_preferred_auth_aliases() {
+    let args: AlertCliArgs = parse_cli_from([
+        "grafana-alert-utils",
+        "--token",
+        "abc123",
+        "--basic-user",
+        "user",
+        "--basic-password",
+        "pass",
+    ]);
+    assert_eq!(args.api_token.as_deref(), Some("abc123"));
+    assert_eq!(args.username.as_deref(), Some("user"));
+    assert_eq!(args.password.as_deref(), Some("pass"));
+}
+
+#[test]
+fn help_explains_flat_layout() {
+    let help = render_alert_help();
+    assert!(help.contains("Write rule, contact-point, mute-timing, and template files directly"));
+    assert!(help.contains("instead of nested subdirectories"));
 }
 
 #[test]

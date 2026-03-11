@@ -7,7 +7,7 @@ use super::{
     render_dashboard_summary_table, CommonCliArgs, DashboardCliArgs, DiffArgs, ExportArgs, ImportArgs,
     ListArgs, DashboardCommand, EXPORT_METADATA_FILENAME, TOOL_SCHEMA_VERSION,
 };
-use clap::Parser;
+use clap::{CommandFactory, Parser};
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
 use std::fs;
@@ -23,6 +23,23 @@ fn make_common_args(base_url: String) -> CommonCliArgs {
         timeout: 30,
         verify_ssl: false,
     }
+}
+
+fn render_dashboard_subcommand_help(name: &str) -> String {
+    let mut command = DashboardCliArgs::command();
+    let subcommand = command
+        .find_subcommand_mut(name)
+        .unwrap_or_else(|| panic!("missing subcommand {name}"));
+    let mut output = Vec::new();
+    subcommand.write_long_help(&mut output).unwrap();
+    String::from_utf8(output).unwrap()
+}
+
+fn render_dashboard_help() -> String {
+    let mut command = DashboardCliArgs::command();
+    let mut output = Vec::new();
+    command.write_long_help(&mut output).unwrap();
+    String::from_utf8(output).unwrap()
 }
 
 #[test]
@@ -46,6 +63,43 @@ fn parse_cli_supports_list_mode() {
         }
         _ => panic!("expected list command"),
     }
+}
+
+#[test]
+fn parse_cli_supports_preferred_auth_aliases() {
+    let args = parse_cli_from([
+        "grafana-utils",
+        "export",
+        "--token",
+        "abc123",
+        "--basic-user",
+        "user",
+        "--basic-password",
+        "pass",
+    ]);
+
+    match args.command {
+        DashboardCommand::Export(export_args) => {
+            assert_eq!(export_args.common.api_token.as_deref(), Some("abc123"));
+            assert_eq!(export_args.common.username.as_deref(), Some("user"));
+            assert_eq!(export_args.common.password.as_deref(), Some("pass"));
+        }
+        _ => panic!("expected export command"),
+    }
+}
+
+#[test]
+fn export_help_explains_flat_layout() {
+    let help = render_dashboard_subcommand_help("export");
+    assert!(help.contains("Write dashboard files directly into the export variant directory"));
+    assert!(help.contains("instead of per-folder subdirectories"));
+}
+
+#[test]
+fn top_level_help_includes_examples() {
+    let help = render_dashboard_help();
+    assert!(help.contains("Export dashboards with an API token"));
+    assert!(help.contains("grafana-utils diff"));
 }
 
 #[test]

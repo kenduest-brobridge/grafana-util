@@ -63,30 +63,51 @@ pub fn resolve_auth_headers(
     username: Option<&str>,
     password: Option<&str>,
 ) -> Result<Vec<(String, String)>> {
-    let token = api_token
-        .map(str::to_owned)
-        .filter(|value| !value.is_empty())
-        .or_else(|| env_value("GRAFANA_API_TOKEN"));
+    let cli_token = api_token.map(str::to_owned).filter(|value| !value.is_empty());
+    let cli_username = username.map(str::to_owned).filter(|value| !value.is_empty());
+    let cli_password = password.map(str::to_owned).filter(|value| !value.is_empty());
+
+    if cli_token.is_some() && (cli_username.is_some() || cli_password.is_some()) {
+        return Err(message(
+            "Choose either token auth (--token / --api-token) or Basic auth \
+(--basic-user / --username with --basic-password / --password), not both.",
+        ));
+    }
+    if cli_username.is_some() && cli_password.is_none() {
+        return Err(message(
+            "Basic auth requires both --basic-user / --username and \
+--basic-password / --password.",
+        ));
+    }
+    if cli_password.is_some() && cli_username.is_none() {
+        return Err(message(
+            "Basic auth requires both --basic-user / --username and \
+--basic-password / --password.",
+        ));
+    }
+
+    let token = cli_token.or_else(|| env_value("GRAFANA_API_TOKEN"));
     if let Some(token) = token {
         return Ok(vec![("Authorization".to_string(), format!("Bearer {token}"))]);
     }
 
-    let username = username
-        .map(str::to_owned)
-        .filter(|value| !value.is_empty())
-        .or_else(|| env_value("GRAFANA_USERNAME"));
-    let password = password
-        .map(str::to_owned)
-        .filter(|value| !value.is_empty())
-        .or_else(|| env_value("GRAFANA_PASSWORD"));
-    if let (Some(username), Some(password)) = (username, password) {
+    let username = cli_username.or_else(|| env_value("GRAFANA_USERNAME"));
+    let password = cli_password.or_else(|| env_value("GRAFANA_PASSWORD"));
+    if let (Some(username), Some(password)) = (username.as_ref(), password.as_ref()) {
         let encoded = STANDARD.encode(format!("{username}:{password}"));
         return Ok(vec![("Authorization".to_string(), format!("Basic {encoded}"))]);
     }
+    if username.is_some() || password.is_some() {
+        return Err(message(
+            "Basic auth requires both --basic-user / --username and \
+--basic-password / --password.",
+        ));
+    }
 
     Err(message(
-        "Authentication required. Set --api-token / GRAFANA_API_TOKEN or \
---username and --password / GRAFANA_USERNAME and GRAFANA_PASSWORD.",
+        "Authentication required. Set --token / --api-token / GRAFANA_API_TOKEN \
+or --basic-user and --basic-password / --username and --password / \
+GRAFANA_USERNAME and GRAFANA_PASSWORD.",
     ))
 }
 
