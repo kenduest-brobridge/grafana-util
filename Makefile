@@ -1,4 +1,4 @@
-.PHONY: help build build-python build-rust test test-python test-rust
+.PHONY: help build build-python build-rust test test-python test-rust test-rust-live
 
 PYTHON ?= python3
 PIP ?= $(PYTHON) -m pip
@@ -14,7 +14,8 @@ help:
 		'  make build-rust    Build Rust release binaries in rust/target/release/' \
 		'  make test          Run both Python and Rust test suites' \
 		'  make test-python   Run the Python unittest suite' \
-		'  make test-rust     Run the Rust cargo test suite'
+		'  make test-rust     Run the Rust cargo test suite' \
+		'  make test-rust-live Start Grafana in Docker and run the Rust live smoke test'
 
 build: build-python build-rust
 
@@ -31,3 +32,6 @@ test-python:
 
 test-rust:
 	cd $(RUST_DIR) && $(CARGO) test
+
+test-rust-live:
+	./scripts/test-rust-live-grafana.sh

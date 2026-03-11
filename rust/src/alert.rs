@@ -283,10 +283,12 @@ impl GrafanaAlertClient {
     }
 
     pub fn list_templates(&self) -> Result<Vec<Map<String, Value>>> {
-        match self.request_json(Method::GET, "/api/v1/provisioning/templates", &[], None)? {
-            None => Ok(Vec::new()),
-            Some(value) => expect_object_list(Some(value), "Unexpected template list response from Grafana."),
-        }
+        parse_template_list_response(self.request_json(
+            Method::GET,
+            "/api/v1/provisioning/templates",
+            &[],
+            None,
+        )?)
     }
 
     pub fn get_template(&self, name: &str) -> Result<Map<String, Value>> {
@@ -335,6 +337,13 @@ fn expect_object_list(value: Option<Value>, error_message: &str) -> Result<Vec<M
             _ => None,
         })
         .collect())
+}
+
+fn parse_template_list_response(value: Option<Value>) -> Result<Vec<Map<String, Value>>> {
+    match value {
+        None | Some(Value::Null) => Ok(Vec::new()),
+        Some(value) => expect_object_list(Some(value), "Unexpected template list response from Grafana."),
+    }
 }
 
 pub fn resource_subdir_by_kind() -> BTreeMap<&'static str, &'static str> {

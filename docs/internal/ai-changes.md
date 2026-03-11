@@ -1,5 +1,23 @@
 # ai-changes.md
 
+## 2026-03-11 - Add Dashboard List Subcommand
+- Summary: Added a new read-only `list` subcommand to both the Python and Rust dashboard CLIs so operators can inspect live dashboard summaries without writing export files. Both implementations now reuse the existing `/api/search` pagination helper and print each summary in compact `uid=<uid> folder=<folder> title=<title>` form, followed by a final count line.
+- Tests: Updated dashboard test coverage in both implementations to cover parser support for the new `list` mode, stable summary-line formatting, and list behavior against mocked `/api/search` results.
+- Test Run: `python3 -m unittest -v tests/test_python_dashboard_cli.py` (pass); `cd rust && cargo test dashboard` (pass); `python3 -m unittest -v` (pass); `cd rust && cargo test` (pass)
+- Validation: README, Traditional Chinese README, maintainer notes, and repo instructions now include the new `grafana-utils list` / `python3 cmd/grafana-utils.py list` entrypoints. The command is read-only and does not change existing export/import/diff behavior.
+- Impact: `grafana_utils/dashboard_cli.py`, `tests/test_python_dashboard_cli.py`, `rust/src/dashboard.rs`, `rust/src/dashboard_rust_tests.rs`, `README.md`, `README.zh-TW.md`, `DEVELOPER.md`, `AGENTS.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low operator-facing risk. The new mode only exposes an internal listing capability already used by export, and it does not alter any import/export payload handling.
+- Follow-up: If operators later need machine-readable listing output, add an optional JSON mode rather than changing the current default text format.
+
+## 2026-03-11 - Add Docker-Backed Rust Grafana Smoke Test
+- Summary: Added a repeatable Docker-backed live validation path for the Rust CLIs with `scripts/test-rust-live-grafana.sh` and the root `make test-rust-live` shortcut. The script builds the Rust binaries, starts a temporary Grafana container, seeds a Prometheus datasource, a dashboard, and a webhook contact point, then validates dashboard export/import/diff/dry-run and alerting export/import/diff/dry-run against the live instance.
+- Tests: Added Rust unit coverage for the alerting template-list null case so the client now matches Python behavior when Grafana returns JSON `null` from `/api/v1/provisioning/templates`.
+- Test Run: `bash -n scripts/test-rust-live-grafana.sh` (pass); `cd rust && cargo test alert` (pass); `make test-rust-live` (pass); `cd rust && cargo test` (pass)
+- Validation: The live smoke test passed against `grafana/grafana:12.4.1` on an auto-assigned localhost port, confirmed prompt export generated datasource `__inputs`, confirmed dashboard diff detected live drift, confirmed dashboard import restored a deleted dashboard, confirmed alert diff detected a changed exported contact point, and confirmed alert dry-run/update import reconciled that drift.
+- Impact: `scripts/test-rust-live-grafana.sh`, `Makefile`, `README.md`, `README.zh-TW.md`, `DEVELOPER.md`, `AGENTS.md`, `rust/src/alert.rs`, `rust/src/alert_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low to moderate workflow risk. The new smoke test depends on Docker availability and local daemon access, but it is opt-in and pinned to a known Grafana version by default. The Rust null-handling fix reduces runtime failure risk against real Grafana alerting exports.
+- Follow-up: If a future CI system is added, the new smoke test can be reused as the Docker-based Rust integration step instead of rebuilding this flow from scratch.
+
 ## 2026-03-11 - Add Versioned Export Schema, Dry-Run, and Diff Workflows
 - Summary: Extended the Python dashboard and alerting CLIs so they can validate export schema versioning, preview import behavior safely, and compare local exports against live Grafana state before writing changes. Dashboard exports now write `export-metadata.json` manifests for the root and variant directories, the dashboard CLI now exposes `diff` as a first-class subcommand, and both Python CLIs now support non-mutating import `--dry-run`. The alerting tool-owned format now carries `schemaVersion` alongside the older `apiVersion`, import still accepts legacy tool documents without `schemaVersion`, and alerting diff now prints unified diffs for changed resources.
 - Tests: Expanded Python CLI coverage around parser support for new dry-run and diff flags, schema-version validation, export manifest/index markers, dry-run non-mutation behavior, and unified diff output for changed dashboard and alert-rule payloads.

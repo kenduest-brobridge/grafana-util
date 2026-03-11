@@ -1,5 +1,19 @@
 # ai-status.md
 
+## 2026-03-11 - Task: Add Dashboard List Subcommand
+- State: Done
+- Scope: `grafana_utils/dashboard_cli.py`, `tests/test_python_dashboard_cli.py`, `rust/src/dashboard.rs`, `rust/src/dashboard_rust_tests.rs`, `README.md`, `README.zh-TW.md`, `DEVELOPER.md`, `AGENTS.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The dashboard CLIs currently expose `export`, `import`, and `diff`, but there is no standalone operator command for listing dashboards without writing export files. The underlying `/api/search` lookup already exists only as an internal export helper.
+- Current Update: Added a new explicit `list` subcommand in both Python and Rust dashboard CLIs, reusing the existing `/api/search` pagination path and rendering each result as a compact operator-readable line. Updated dashboard unit tests to cover parser support and list output behavior, and refreshed the public and maintainer docs to surface the new command.
+- Result: Operators can now run `grafana-utils list` to inspect live dashboard summaries without exporting files first. Both `python3 -m unittest -v tests/test_python_dashboard_cli.py` and `cd rust && cargo test dashboard` pass, and the full Python and Rust test suites still pass after the new subcommand was added.
+
+## 2026-03-11 - Task: Add Docker-Backed Rust Grafana Smoke Test
+- State: Done
+- Scope: `scripts/test-rust-live-grafana.sh`, `Makefile`, `README.md`, `README.zh-TW.md`, `DEVELOPER.md`, `AGENTS.md`, `rust/src/alert.rs`, `rust/src/alert_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The Rust CLIs already have unit coverage, but the repo has no repeatable live Grafana validation path for the Rust export/import/diff/dry-run workflows. Manual Docker validation knowledge is scattered, and the Rust alerting client still rejects Grafana template-list responses when the API returns JSON `null`.
+- Current Update: Added `scripts/test-rust-live-grafana.sh` plus `make test-rust-live` to start a temporary Grafana Docker container, seed a datasource/dashboard/contact point, and exercise Rust dashboard export/import/diff/dry-run plus Rust alerting export/import/diff/dry-run. The script now defaults to pinned image `grafana/grafana:12.4.1`, auto-selects a free localhost port when `GRAFANA_PORT` is unset, and cleans up the container automatically. Also fixed the Rust alerting template-list path so `GET /api/v1/provisioning/templates` returning JSON `null` is treated as an empty list, matching the Python behavior.
+- Result: `make test-rust-live` now passes locally against a temporary Docker Grafana instance, and `cd rust && cargo test` still passes after the Rust alerting null-handling fix. Maintainer and public docs now point at the live smoke-test entrypoint and its overrides.
+
 ## 2026-03-11 - Task: Add Versioned Export Schema, Dry-Run, and Diff Workflows
 - State: Done
 - Scope: `grafana_utils/dashboard_cli.py`, `grafana_utils/alert_cli.py`, `tests/test_python_dashboard_cli.py`, `tests/test_python_alert_cli.py`, `README.md`, `README.zh-TW.md`, `DEVELOPER.md`, `AGENTS.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

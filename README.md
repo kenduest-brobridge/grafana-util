@@ -41,6 +41,7 @@ Compatibility:
 The two command names are intentionally separate because dashboards and alerting use different Grafana APIs and different file shapes.
 
 - `grafana-utils export ...`
+- `grafana-utils list ...`
 - `grafana-utils import ...`
 - `grafana-utils diff ...`
 - `grafana-alert-utils ...`
@@ -75,6 +76,13 @@ python3 cmd/grafana-utils.py export \
   --url http://127.0.0.1:3000 \
   --export-dir ./dashboards \
   --overwrite
+```
+
+List live dashboards without writing export files:
+
+```bash
+python3 cmd/grafana-utils.py list \
+  --url http://127.0.0.1:3000
 ```
 
 Dashboard API import from the raw export:
@@ -124,6 +132,7 @@ python3 cmd/grafana-alert-utils.py \
 
 `grafana-utils` has explicit subcommands:
 
+- `list`
 - `export`
 - `import`
 - `diff`
@@ -372,6 +381,7 @@ The repo root includes a [`Makefile`](Makefile):
 - `make build`
 - `make test-python`
 - `make test-rust`
+- `make test-rust-live`
 - `make test`
 
 Artifact locations:
@@ -400,6 +410,20 @@ Run the Rust alerting CLI from the repo:
 cd rust
 cargo run --bin grafana-alert-utils -- -h
 ```
+
+Run the Docker-backed Rust live smoke test:
+
+```bash
+make test-rust-live
+```
+
+Notes:
+
+- requires Docker plus local access to the Docker daemon
+- defaults to `grafana/grafana:12.4.1` and can be overridden with `GRAFANA_IMAGE=...`
+- uses a random localhost port by default; set `GRAFANA_PORT=43000` if you want a fixed port
+- starts a temporary Grafana container, seeds one dashboard, one datasource, and one contact point
+- validates Rust dashboard export/import/diff/dry-run and Rust alerting export/import/diff/dry-run
 
 ## Authentication and TLS
 
@@ -473,6 +497,7 @@ Common validation commands:
 make test
 python3 -m unittest -v
 cd rust && cargo test
+make test-rust-live
 ```
 
 ## Documentation

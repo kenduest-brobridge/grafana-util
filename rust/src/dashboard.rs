@@ -69,6 +69,14 @@ pub struct ExportArgs {
 }
 
 #[derive(Debug, Clone, Args)]
+pub struct ListArgs {
+    #[command(flatten)]
+    pub common: CommonCliArgs,
+    #[arg(long, default_value_t = DEFAULT_PAGE_SIZE)]
+    pub page_size: usize,
+}
+
+#[derive(Debug, Clone, Args)]
 pub struct ImportArgs {
     #[command(flatten)]
     pub common: CommonCliArgs,
@@ -98,6 +106,7 @@ pub struct DiffArgs {
 
 #[derive(Debug, Clone, Subcommand)]
 pub enum DashboardCommand {
+    List(ListArgs),
     Export(ExportArgs),
     Import(ImportArgs),
     Diff(DiffArgs),
@@ -1220,6 +1229,32 @@ pub fn list_dashboard_summaries(client: &JsonHttpClient, page_size: usize) -> Re
     )
 }
 
+fn format_dashboard_summary_line(summary: &Map<String, Value>) -> String {
+    let uid = string_field(summary, "uid", "unknown");
+    let folder_title = string_field(summary, "folderTitle", "General");
+    let title = string_field(summary, "title", "dashboard");
+    format!("uid={uid} folder={folder_title} title={title}")
+}
+
+fn list_dashboards_with_request<F>(mut request_json: F, args: &ListArgs) -> Result<usize>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    let summaries = list_dashboard_summaries_with_request(&mut request_json, args.page_size)?;
+    for summary in &summaries {
+        println!("{}", format_dashboard_summary_line(summary));
+    }
+    println!("Listed {} dashboard(s).", summaries.len());
+    Ok(summaries.len())
+}
+
+pub fn list_dashboards_with_client(client: &JsonHttpClient, args: &ListArgs) -> Result<usize> {
+    list_dashboards_with_request(
+        |method, path, params, payload| client.request_json(method, path, params, payload),
+        args,
+    )
+}
+
 fn fetch_dashboard_with_request<F>(mut request_json: F, uid: &str) -> Result<Value>
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
@@ -1623,6 +1658,10 @@ pub fn diff_dashboards_with_client(client: &JsonHttpClient, args: &DiffArgs) -> 
 
 pub fn run_dashboard_cli_with_client(client: &JsonHttpClient, args: DashboardCliArgs) -> Result<()> {
     match args.command {
+        DashboardCommand::List(list_args) => {
+            let _ = list_dashboards_with_client(client, &list_args)?;
+            Ok(())
+        }
         DashboardCommand::Export(export_args) => {
             let _ = export_dashboards_with_client(client, &export_args)?;
             Ok(())
@@ -1646,6 +1685,11 @@ pub fn run_dashboard_cli_with_client(client: &JsonHttpClient, args: DashboardCli
 
 pub fn run_dashboard_cli(args: DashboardCliArgs) -> Result<()> {
     match args.command {
+        DashboardCommand::List(list_args) => {
+            let client = build_http_client(&list_args.common)?;
+            let _ = list_dashboards_with_client(&client, &list_args)?;
+            Ok(())
+        }
         DashboardCommand::Export(export_args) => {
             let client = build_http_client(&export_args.common)?;
             if export_args.without_dashboard_raw && export_args.without_dashboard_prompt {

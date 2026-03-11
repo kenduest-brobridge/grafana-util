@@ -86,6 +86,12 @@ class ExporterTests(unittest.TestCase):
         self.assertEqual(args.import_dir, "dashboards")
         self.assertEqual(args.command, "import")
 
+    def test_parse_args_supports_list_mode(self):
+        args = exporter.parse_args(["list", "--page-size", "25"])
+
+        self.assertEqual(args.command, "list")
+        self.assertEqual(args.page_size, 25)
+
     def test_parse_args_supports_diff_mode(self):
         args = exporter.parse_args(["diff", "--import-dir", "dashboards/raw"])
 
@@ -238,6 +244,44 @@ class ExporterTests(unittest.TestCase):
                 ("/api/search", {"type": "dash-db", "limit": 2, "page": 1}),
                 ("/api/search", {"type": "dash-db", "limit": 2, "page": 2}),
                 ("/api/search", {"type": "dash-db", "limit": 2, "page": 3}),
+            ],
+        )
+
+    def test_format_dashboard_summary_line_uses_defaults(self):
+        line = exporter.format_dashboard_summary_line({"uid": "abc"})
+
+        self.assertEqual(line, "uid=abc folder=General title=dashboard")
+
+    def test_list_dashboards_prints_live_summaries(self):
+        args = argparse.Namespace(
+            command="list",
+            url="http://127.0.0.1:3000",
+            api_token=None,
+            username=None,
+            password=None,
+            timeout=30,
+            verify_ssl=False,
+            page_size=50,
+        )
+        client = FakeDashboardWorkflowClient(
+            summaries=[
+                {"uid": "abc", "folderTitle": "Infra", "title": "CPU"},
+                {"uid": "xyz", "title": "Overview"},
+            ]
+        )
+
+        with mock.patch.object(exporter, "build_client", return_value=client):
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = exporter.list_dashboards(args)
+
+        self.assertEqual(result, 0)
+        self.assertEqual(
+            stdout.getvalue().splitlines(),
+            [
+                "uid=abc folder=Infra title=CPU",
+                "uid=xyz folder=General title=Overview",
+                "Listed 2 dashboard summaries from http://127.0.0.1:3000",
             ],
         )
 

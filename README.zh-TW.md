@@ -41,6 +41,7 @@
 兩個命令分開是刻意設計，因為 dashboards 與 alerting 使用不同的 Grafana API，也有不同的檔案格式。
 
 - `grafana-utils export ...`
+- `grafana-utils list ...`
 - `grafana-utils import ...`
 - `grafana-utils diff ...`
 - `grafana-alert-utils ...`
@@ -75,6 +76,13 @@ python3 cmd/grafana-utils.py export \
   --url http://127.0.0.1:3000 \
   --export-dir ./dashboards \
   --overwrite
+```
+
+列出目前 Grafana 上的 dashboard，不寫出匯出檔：
+
+```bash
+python3 cmd/grafana-utils.py list \
+  --url http://127.0.0.1:3000
 ```
 
 從 raw 匯出結果做 dashboard API 匯入：
@@ -124,6 +132,7 @@ python3 cmd/grafana-alert-utils.py \
 
 `grafana-utils` 使用明確的子命令：
 
+- `list`
 - `export`
 - `import`
 - `diff`
@@ -362,6 +371,7 @@ Repo 根目錄提供 [`Makefile`](Makefile)：
 - `make build`
 - `make test-python`
 - `make test-rust`
+- `make test-rust-live`
 - `make test`
 
 輸出位置：
@@ -390,6 +400,20 @@ cargo run --bin grafana-utils -- export -h
 cd rust
 cargo run --bin grafana-alert-utils -- -h
 ```
+
+執行 Docker-backed 的 Rust live smoke test：
+
+```bash
+make test-rust-live
+```
+
+說明：
+
+- 需要 Docker，且本機必須能存取 Docker daemon
+- 預設使用 `grafana/grafana:12.4.1`，可用 `GRAFANA_IMAGE=...` 覆寫
+- 預設使用隨機 localhost port；若要固定 port，可指定 `GRAFANA_PORT=43000`
+- 會啟動暫時的 Grafana container，seed 一個 dashboard、一個 datasource、以及一個 contact point
+- 會驗證 Rust dashboard 的 export/import/diff/dry-run 與 Rust alerting 的 export/import/diff/dry-run
 
 ## 認證與 TLS
 
@@ -463,6 +487,7 @@ alerts/
 make test
 python3 -m unittest -v
 cd rust && cargo test
+make test-rust-live
 ```
 
 ## 文件說明

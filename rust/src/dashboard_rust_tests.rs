@@ -1,8 +1,9 @@
 use super::{
     build_export_variant_dirs, build_external_export_document, build_import_payload, build_output_path,
     build_preserved_web_import_document, diff_dashboards_with_request, discover_dashboard_files,
-    export_dashboards_with_request, import_dashboards_with_request, CommonCliArgs, DiffArgs,
-    ExportArgs, ImportArgs, EXPORT_METADATA_FILENAME, TOOL_SCHEMA_VERSION,
+    export_dashboards_with_request, format_dashboard_summary_line, import_dashboards_with_request,
+    list_dashboards_with_request, parse_cli_from, CommonCliArgs, DiffArgs, ExportArgs, ImportArgs,
+    ListArgs, DashboardCommand, EXPORT_METADATA_FILENAME, TOOL_SCHEMA_VERSION,
 };
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
@@ -18,6 +19,26 @@ fn make_common_args(base_url: String) -> CommonCliArgs {
         password: None,
         timeout: 30,
         verify_ssl: false,
+    }
+}
+
+#[test]
+fn parse_cli_supports_list_mode() {
+    let args = parse_cli_from([
+        "grafana-utils",
+        "list",
+        "--url",
+        "https://grafana.example.com",
+        "--page-size",
+        "25",
+    ]);
+
+    match args.command {
+        DashboardCommand::List(list_args) => {
+            assert_eq!(list_args.common.url, "https://grafana.example.com");
+            assert_eq!(list_args.page_size, 25);
+        }
+        _ => panic!("expected list command"),
     }
 }
 
@@ -103,6 +124,40 @@ fn build_preserved_web_import_document_clears_numeric_id() {
 
     assert_eq!(document["id"], Value::Null);
     assert_eq!(document["uid"], "abc");
+}
+
+#[test]
+fn format_dashboard_summary_line_uses_uid_folder_and_title() {
+    let summary = json!({
+        "uid": "abc",
+        "folderTitle": "Infra",
+        "title": "CPU"
+    });
+
+    let line = format_dashboard_summary_line(summary.as_object().unwrap());
+    assert_eq!(line, "uid=abc folder=Infra title=CPU");
+}
+
+#[test]
+fn list_dashboards_with_request_returns_dashboard_count() {
+    let args = ListArgs {
+        common: make_common_args("http://127.0.0.1:3000".to_string()),
+        page_size: 500,
+    };
+
+    let count = list_dashboards_with_request(
+        |_method, path, _params, _payload| match path {
+            "/api/search" => Ok(Some(json!([
+                {"uid": "abc", "title": "CPU", "folderTitle": "Infra"},
+                {"uid": "def", "title": "Memory", "folderTitle": "Infra"},
+            ]))),
+            _ => Err(super::message(format!("unexpected path {path}"))),
+        },
+        &args,
+    )
+    .unwrap();
+
+    assert_eq!(count, 2);
 }
 
 #[test]

@@ -1,8 +1,9 @@
 use super::{
     build_compare_diff_text, build_contact_point_export_document, build_contact_point_output_path,
     build_empty_root_index, build_import_operation, build_rule_export_document, build_rule_output_path,
-    detect_document_kind, parse_cli_from, serialize_compare_document, AlertCliArgs, CONTACT_POINT_KIND,
-    ROOT_INDEX_KIND, RULE_KIND, TOOL_API_VERSION, TOOL_SCHEMA_VERSION,
+    detect_document_kind, expect_object_list, parse_cli_from, parse_template_list_response,
+    serialize_compare_document, AlertCliArgs, CONTACT_POINT_KIND, ROOT_INDEX_KIND, RULE_KIND,
+    TOOL_API_VERSION, TOOL_SCHEMA_VERSION,
 };
 use serde_json::json;
 use std::path::Path;
@@ -227,4 +228,19 @@ fn serialize_compare_document_sorts_object_keys_stably() {
         serialize_compare_document(&first).unwrap(),
         serialize_compare_document(&second).unwrap()
     );
+}
+
+#[test]
+fn expect_object_list_rejects_json_null() {
+    let error = expect_object_list(Some(serde_json::Value::Null), "Unexpected template list response from Grafana.")
+        .unwrap_err();
+    assert!(error
+        .to_string()
+        .contains("Unexpected template list response from Grafana."));
+}
+
+#[test]
+fn template_list_null_is_treated_as_empty_in_live_client_path() {
+    let templates = parse_template_list_response(Some(serde_json::Value::Null)).unwrap();
+    assert!(templates.is_empty());
 }

@@ -175,6 +175,15 @@ def add_export_cli_args(parser: argparse.ArgumentParser) -> None:
     )
 
 
+def add_list_cli_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--page-size",
+        type=int,
+        default=DEFAULT_PAGE_SIZE,
+        help=f"Dashboard search page size (default: {DEFAULT_PAGE_SIZE}).",
+    )
+
+
 def add_import_cli_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--import-dir",
@@ -243,6 +252,13 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     )
     add_common_cli_args(export_parser)
     add_export_cli_args(export_parser)
+
+    list_parser = subparsers.add_parser(
+        "list",
+        help="List live dashboard summaries from Grafana.",
+    )
+    add_common_cli_args(list_parser)
+    add_list_cli_args(list_parser)
 
     import_parser = subparsers.add_parser(
         "import",
@@ -1508,6 +1524,24 @@ def export_dashboards(args: argparse.Namespace) -> int:
     return 0
 
 
+def format_dashboard_summary_line(summary: Dict[str, Any]) -> str:
+    """Render one live dashboard summary in a compact operator-readable form."""
+    uid = str(summary.get("uid") or "unknown")
+    folder = str(summary.get("folderTitle") or "General")
+    title = str(summary.get("title") or "dashboard")
+    return f"uid={uid} folder={folder} title={title}"
+
+
+def list_dashboards(args: argparse.Namespace) -> int:
+    """List live dashboard summaries without exporting dashboard JSON."""
+    client = build_client(args)
+    summaries = client.iter_dashboard_summaries(args.page_size)
+    for summary in summaries:
+        print(format_dashboard_summary_line(summary))
+    print(f"Listed {len(summaries)} dashboard summaries from {args.url}")
+    return 0
+
+
 def import_dashboards(args: argparse.Namespace) -> int:
     """Import previously exported raw dashboard JSON files through Grafana's API."""
     client = build_client(args)
@@ -1614,6 +1648,8 @@ def build_client(args: argparse.Namespace) -> GrafanaClient:
 def main() -> int:
     args = parse_args()
     try:
+        if args.command == "list":
+            return list_dashboards(args)
         if args.command == "import":
             return import_dashboards(args)
         if args.command == "diff":

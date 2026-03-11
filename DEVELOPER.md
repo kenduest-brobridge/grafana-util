@@ -14,6 +14,7 @@ This document is for maintainers. Keep `README.md` GitHub-facing and task-orient
 - `tests/test_python_alert_cli.py`: alerting Python unit tests
 - `tests/test_python_packaging.py`: Python package metadata and console-script tests
 - `Makefile`: shared developer shortcuts for Python wheel builds, Rust release builds, and test runs
+- `scripts/test-rust-live-grafana.sh`: Docker-backed Grafana smoke test for the Rust CLIs
 
 ## Python Baseline
 
@@ -28,10 +29,12 @@ This document is for maintainers. Keep `README.md` GitHub-facing and task-orient
 
 - Mode selection is explicit.
 - Installed commands are `grafana-utils` and `grafana-alert-utils`.
+- Use `python3 cmd/grafana-utils.py list ...` to inspect live dashboard summaries.
 - Use `python3 cmd/grafana-utils.py export ...` for export.
 - Use `python3 cmd/grafana-utils.py import ...` for import.
 - Use `python3 cmd/grafana-utils.py diff ...` for live-vs-local comparison.
 - The export subcommand intentionally uses `--export-dir` instead of `--output-dir` to avoid mixing export terminology with import behavior.
+- The `list` subcommand is read-only and prints compact live dashboard summaries in `uid=<uid> folder=<folder> title=<title>` format.
 
 ### Packaging layout
 
@@ -275,6 +278,7 @@ make help
 make build-python
 make build-rust
 make test
+make test-rust-live
 python3 -m pip install --no-deps --target /tmp/grafana-utils-install .
 python3 -m unittest tests.test_python_dashboard_cli
 python3 -m unittest tests.test_python_alert_cli
@@ -282,14 +286,25 @@ python3 -m unittest tests.test_python_packaging
 python3 -m unittest -v
 ```
 
+Rust live smoke test notes:
+
+- `make test-rust-live` runs `scripts/test-rust-live-grafana.sh`
+- the script defaults to `grafana/grafana:12.4.1` and binds Grafana to a random localhost port unless `GRAFANA_PORT` is set explicitly
+- the script seeds one Prometheus datasource, one dashboard, and one webhook contact point
+- dashboard coverage: export, prompt export datasource rewrite, diff same, diff drifted, dry-run export, dry-run import, delete-and-import restore
+- alerting coverage: export, diff same, diff changed, dry-run import, update import
+- useful overrides: `GRAFANA_IMAGE`, `GRAFANA_PORT`, `GRAFANA_USER`, `GRAFANA_PASSWORD`, `CARGO_BIN`
+
 Useful CLI help checks:
 
 ```bash
 grafana-utils -h
+grafana-utils list -h
 grafana-utils export -h
 grafana-utils import -h
 grafana-alert-utils -h
 python3 cmd/grafana-utils.py -h
+python3 cmd/grafana-utils.py list -h
 python3 cmd/grafana-utils.py export -h
 python3 cmd/grafana-utils.py import -h
 python3 cmd/grafana-alert-utils.py -h
