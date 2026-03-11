@@ -2,6 +2,7 @@ use clap::Parser;
 use reqwest::Method;
 use serde_json::{json, Map, Value};
 use std::collections::BTreeMap;
+use std::fmt::Write as _;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -26,6 +27,8 @@ pub const MUTE_TIMING_KIND: &str = "grafana-mute-timing";
 pub const POLICIES_KIND: &str = "grafana-notification-policies";
 pub const TEMPLATE_KIND: &str = "grafana-notification-template";
 pub const TOOL_API_VERSION: i64 = 1;
+pub const TOOL_SCHEMA_VERSION: i64 = 1;
+pub const ROOT_INDEX_KIND: &str = "grafana-utils-alert-export-index";
 
 #[derive(Debug, Clone, Parser)]
 #[command(
@@ -43,8 +46,10 @@ pub struct AlertCliArgs {
     pub password: Option<String>,
     #[arg(long, default_value = DEFAULT_OUTPUT_DIR)]
     pub output_dir: PathBuf,
-    #[arg(long)]
+    #[arg(long, conflicts_with = "diff_dir")]
     pub import_dir: Option<PathBuf>,
+    #[arg(long, conflicts_with = "import_dir")]
+    pub diff_dir: Option<PathBuf>,
     #[arg(long, default_value_t = DEFAULT_TIMEOUT)]
     pub timeout: u64,
     #[arg(long, default_value_t = false)]
@@ -53,6 +58,8 @@ pub struct AlertCliArgs {
     pub overwrite: bool,
     #[arg(long, default_value_t = false)]
     pub replace_existing: bool,
+    #[arg(long, default_value_t = false)]
+    pub dry_run: bool,
     #[arg(long)]
     pub dashboard_uid_map: Option<PathBuf>,
     #[arg(long)]
@@ -573,6 +580,7 @@ fn build_template_metadata(template: &Map<String, Value>) -> Value {
 
 fn build_tool_document(kind: &str, spec: Map<String, Value>, metadata: Value) -> Value {
     json!({
+        "schemaVersion": TOOL_SCHEMA_VERSION,
         "apiVersion": TOOL_API_VERSION,
         "kind": kind,
         "metadata": metadata,
@@ -671,7 +679,23 @@ pub fn detect_document_kind(document: &Map<String, Value>) -> Result<&'static st
 
 fn extract_tool_spec(document: &Map<String, Value>, expected_kind: &str) -> Result<Map<String, Value>> {
     let spec = if document.get("kind").and_then(Value::as_str) == Some(expected_kind) {
-        if document.get("apiVersion").and_then(Value::as_i64) != Some(TOOL_API_VERSION) {
+        if let Some(api_version) = document.get("apiVersion").and_then(Value::as_i64) {
+            if api_version != TOOL_API_VERSION {
+                return Err(message(format!(
+                    "Unsupported {expected_kind} export version: {:?}",
+                    document.get("apiVersion")
+                )));
+            }
+        }
+        if let Some(schema_version) = document.get("schemaVersion").and_then(Value::as_i64) {
+            if schema_version != TOOL_SCHEMA_VERSION {
+                return Err(message(format!(
+                    "Unsupported {expected_kind} schema version: {:?}",
+                    document.get("schemaVersion")
+                )));
+            }
+        }
+        if document.get("apiVersion").is_none() && document.get("schemaVersion").is_none() {
             return Err(message(format!(
                 "Unsupported {expected_kind} export version: {:?}",
                 document.get("apiVersion")
@@ -782,6 +806,15 @@ pub fn build_import_operation(document: &Value) -> Result<(String, Map<String, V
 
 pub fn build_empty_root_index() -> Map<String, Value> {
     [
+        (
+            "schemaVersion".to_string(),
+            Value::Number(TOOL_SCHEMA_VERSION.into()),
+        ),
+        (
+            "apiVersion".to_string(),
+            Value::Number(TOOL_API_VERSION.into()),
+        ),
+        ("kind".to_string(), Value::String(ROOT_INDEX_KIND.to_string())),
         (RULES_SUBDIR.to_string(), Value::Array(Vec::new())),
         (CONTACT_POINTS_SUBDIR.to_string(), Value::Array(Vec::new())),
         (MUTE_TIMINGS_SUBDIR.to_string(), Value::Array(Vec::new())),
@@ -790,6 +823,68 @@ pub fn build_empty_root_index() -> Map<String, Value> {
     ]
     .into_iter()
     .collect()
+}
+
+fn build_compare_document(kind: &str, payload: &Map<String, Value>) -> Value {
+    Value::Object(Map::from_iter([
+        ("kind".to_string(), Value::String(kind.to_string())),
+        ("spec".to_string(), Value::Object(payload.clone())),
+    ]))
+}
+
+fn canonicalize_value(value: &Value) -> Value {
+    match value {
+        Value::Array(items) => Value::Array(items.iter().map(canonicalize_value).collect()),
+        Value::Object(object) => {
+            let sorted = object
+                .iter()
+                .map(|(key, item)| (key.clone(), canonicalize_value(item)))
+                .collect::<BTreeMap<_, _>>();
+            Value::Object(Map::from_iter(sorted.into_iter()))
+        }
+        _ => value.clone(),
+    }
+}
+
+fn serialize_compare_document(document: &Value) -> Result<String> {
+    Ok(serde_json::to_string(&canonicalize_value(document))?)
+}
+
+fn build_compare_diff_text(
+    remote_compare: &Value,
+    local_compare: &Value,
+    identity: &str,
+    resource_file: &Path,
+) -> Result<String> {
+    let remote_pretty = serde_json::to_string_pretty(&canonicalize_value(remote_compare))?;
+    let local_pretty = serde_json::to_string_pretty(&canonicalize_value(local_compare))?;
+    let mut text = String::new();
+    let _ = writeln!(&mut text, "--- remote:{identity}");
+    let _ = writeln!(&mut text, "+++ {}", resource_file.display());
+    for line in remote_pretty.lines() {
+        let _ = writeln!(&mut text, "-{line}");
+    }
+    for line in local_pretty.lines() {
+        let _ = writeln!(&mut text, "+{line}");
+    }
+    Ok(text)
+}
+
+fn build_resource_identity(kind: &str, payload: &Map<String, Value>) -> String {
+    match kind {
+        RULE_KIND => string_field(payload, "uid", "unknown"),
+        CONTACT_POINT_KIND => {
+            let uid = string_field(payload, "uid", "");
+            if uid.is_empty() {
+                string_field(payload, "name", "unknown")
+            } else {
+                uid
+            }
+        }
+        MUTE_TIMING_KIND | TEMPLATE_KIND => string_field(payload, "name", "unknown"),
+        POLICIES_KIND => string_field(payload, "receiver", "root"),
+        _ => "unknown".to_string(),
+    }
 }
 
 fn append_root_index_item(root_index: &mut Map<String, Value>, subdir: &str, item: Value) {
@@ -1204,27 +1299,188 @@ fn count_policy_documents(kind: &str, policies_seen: usize) -> Result<usize> {
     Ok(next)
 }
 
+fn prepare_import_payload_for_target(
+    client: &GrafanaAlertClient,
+    kind: &str,
+    payload: &Map<String, Value>,
+    document: &Value,
+    dashboard_uid_map: &BTreeMap<String, String>,
+    panel_id_map: &BTreeMap<String, BTreeMap<String, String>>,
+) -> Result<Map<String, Value>> {
+    if kind == RULE_KIND {
+        return rewrite_rule_dashboard_linkage(
+            client,
+            payload,
+            document,
+            dashboard_uid_map,
+            panel_id_map,
+        );
+    }
+    Ok(payload.clone())
+}
+
+fn determine_rule_import_action(
+    client: &GrafanaAlertClient,
+    payload: &Map<String, Value>,
+    replace_existing: bool,
+) -> Result<&'static str> {
+    let uid = string_field(payload, "uid", "");
+    if uid.is_empty() {
+        return Ok("would-create");
+    }
+    match client.get_alert_rule(&uid) {
+        Ok(_) if replace_existing => Ok("would-update"),
+        Ok(_) => Ok("would-fail-existing"),
+        Err(error) if error.status_code() == Some(404) => Ok("would-create"),
+        Err(error) => Err(error),
+    }
+}
+
+fn determine_contact_point_import_action(
+    client: &GrafanaAlertClient,
+    payload: &Map<String, Value>,
+    replace_existing: bool,
+) -> Result<&'static str> {
+    let uid = string_field(payload, "uid", "");
+    let exists = client
+        .list_contact_points()?
+        .into_iter()
+        .any(|item| string_field(&item, "uid", "") == uid);
+    if exists {
+        if replace_existing {
+            Ok("would-update")
+        } else {
+            Ok("would-fail-existing")
+        }
+    } else {
+        Ok("would-create")
+    }
+}
+
+fn determine_mute_timing_import_action(
+    client: &GrafanaAlertClient,
+    payload: &Map<String, Value>,
+    replace_existing: bool,
+) -> Result<&'static str> {
+    let name = string_field(payload, "name", "");
+    let exists = client
+        .list_mute_timings()?
+        .into_iter()
+        .any(|item| string_field(&item, "name", "") == name);
+    if exists {
+        if replace_existing {
+            Ok("would-update")
+        } else {
+            Ok("would-fail-existing")
+        }
+    } else {
+        Ok("would-create")
+    }
+}
+
+fn determine_template_import_action(
+    client: &GrafanaAlertClient,
+    payload: &Map<String, Value>,
+    replace_existing: bool,
+) -> Result<&'static str> {
+    let name = string_field(payload, "name", "");
+    let exists = client
+        .list_templates()?
+        .into_iter()
+        .any(|item| string_field(&item, "name", "") == name);
+    if exists {
+        if replace_existing {
+            Ok("would-update")
+        } else {
+            Ok("would-fail-existing")
+        }
+    } else {
+        Ok("would-create")
+    }
+}
+
+fn determine_import_action(
+    client: &GrafanaAlertClient,
+    kind: &str,
+    payload: &Map<String, Value>,
+    replace_existing: bool,
+) -> Result<&'static str> {
+    match kind {
+        RULE_KIND => determine_rule_import_action(client, payload, replace_existing),
+        CONTACT_POINT_KIND => determine_contact_point_import_action(client, payload, replace_existing),
+        MUTE_TIMING_KIND => determine_mute_timing_import_action(client, payload, replace_existing),
+        TEMPLATE_KIND => determine_template_import_action(client, payload, replace_existing),
+        POLICIES_KIND => Ok("would-update"),
+        _ => unreachable!(),
+    }
+}
+
+fn fetch_live_compare_document(
+    client: &GrafanaAlertClient,
+    kind: &str,
+    payload: &Map<String, Value>,
+) -> Result<Option<Value>> {
+    match kind {
+        RULE_KIND => {
+            let uid = string_field(payload, "uid", "");
+            if uid.is_empty() {
+                return Ok(None);
+            }
+            match client.get_alert_rule(&uid) {
+                Ok(remote) => Ok(Some(build_compare_document(kind, &strip_server_managed_fields(kind, &remote)))),
+                Err(error) if error.status_code() == Some(404) => Ok(None),
+                Err(error) => Err(error),
+            }
+        }
+        CONTACT_POINT_KIND => {
+            let uid = string_field(payload, "uid", "");
+            let remote = client
+                .list_contact_points()?
+                .into_iter()
+                .find(|item| string_field(item, "uid", "") == uid);
+            Ok(remote.map(|item| build_compare_document(kind, &strip_server_managed_fields(kind, &item))))
+        }
+        MUTE_TIMING_KIND => {
+            let name = string_field(payload, "name", "");
+            let remote = client
+                .list_mute_timings()?
+                .into_iter()
+                .find(|item| string_field(item, "name", "") == name);
+            Ok(remote.map(|item| build_compare_document(kind, &strip_server_managed_fields(kind, &item))))
+        }
+        TEMPLATE_KIND => {
+            let name = string_field(payload, "name", "");
+            match client.get_template(&name) {
+                Ok(remote) => Ok(Some(build_compare_document(kind, &strip_server_managed_fields(kind, &remote)))),
+                Err(error) if error.status_code() == Some(404) => Ok(None),
+                Err(error) => Err(error),
+            }
+        }
+        POLICIES_KIND => {
+            let remote = client.get_notification_policies()?;
+            Ok(Some(build_compare_document(kind, &strip_server_managed_fields(kind, &remote))))
+        }
+        _ => unreachable!(),
+    }
+}
+
 fn import_rule_document(
     client: &GrafanaAlertClient,
     payload: &Map<String, Value>,
-    document: &Value,
-    args: &AlertCliArgs,
-    dashboard_uid_map: &BTreeMap<String, String>,
-    panel_id_map: &BTreeMap<String, BTreeMap<String, String>>,
+    replace_existing: bool,
 ) -> Result<(String, String)> {
-    let payload = rewrite_rule_dashboard_linkage(client, payload, document, dashboard_uid_map, panel_id_map)?;
-    let uid = string_field(&payload, "uid", "");
-    if args.replace_existing && !uid.is_empty() {
+    let uid = string_field(payload, "uid", "");
+    if replace_existing && !uid.is_empty() {
         match client.get_alert_rule(&uid) {
             Ok(_) => {
-                let result = client.update_alert_rule(&uid, &payload)?;
+                let result = client.update_alert_rule(&uid, payload)?;
                 return Ok(("updated".to_string(), string_field(&result, "uid", &uid)));
             }
             Err(error) if error.status_code() == Some(404) => {}
             Err(error) => return Err(error),
         }
     }
-    let result = client.create_alert_rule(&payload)?;
+    let result = client.create_alert_rule(payload)?;
     Ok(("created".to_string(), string_field(&result, "uid", &uid)))
 }
 
@@ -1313,13 +1569,10 @@ fn import_resource_document(
     client: &GrafanaAlertClient,
     kind: &str,
     payload: &Map<String, Value>,
-    document: &Value,
     args: &AlertCliArgs,
-    dashboard_uid_map: &BTreeMap<String, String>,
-    panel_id_map: &BTreeMap<String, BTreeMap<String, String>>,
 ) -> Result<(String, String)> {
     match kind {
-        RULE_KIND => import_rule_document(client, payload, document, args, dashboard_uid_map, panel_id_map),
+        RULE_KIND => import_rule_document(client, payload, args.replace_existing),
         CONTACT_POINT_KIND => import_contact_point_document(client, payload, args.replace_existing),
         MUTE_TIMING_KIND => import_mute_timing_document(client, payload, args.replace_existing),
         TEMPLATE_KIND => import_template_document(client, payload, args.replace_existing),
@@ -1342,16 +1595,29 @@ fn import_alerting_resources(args: &AlertCliArgs) -> Result<()> {
     for resource_file in &resource_files {
         let document = load_json_object_file(resource_file, "Alerting resource")?;
         let (kind, payload) = build_import_operation(&document)?;
-        policies_seen = count_policy_documents(&kind, policies_seen)?;
-        let (action, identity) = import_resource_document(
+        let payload = prepare_import_payload_for_target(
             &client,
             &kind,
             &payload,
             &document,
-            args,
             &dashboard_uid_map,
             &panel_id_map,
         )?;
+        policies_seen = count_policy_documents(&kind, policies_seen)?;
+        let identity = build_resource_identity(&kind, &payload);
+        if args.dry_run {
+            let action = determine_import_action(&client, &kind, &payload, args.replace_existing)?;
+            println!(
+                "Dry-run {} -> kind={} id={} action={}",
+                resource_file.display(),
+                kind,
+                identity,
+                action
+            );
+            continue;
+        }
+
+        let (action, identity) = import_resource_document(&client, &kind, &payload, args)?;
         println!(
             "Imported {} -> kind={} id={} action={}",
             resource_file.display(),
@@ -1361,17 +1627,105 @@ fn import_alerting_resources(args: &AlertCliArgs) -> Result<()> {
         );
     }
 
-    println!(
-        "Imported {} alerting resource files from {}",
-        resource_files.len(),
-        import_dir.display()
-    );
+    if args.dry_run {
+        println!(
+            "Dry-run checked {} alerting resource files from {}",
+            resource_files.len(),
+            import_dir.display()
+        );
+    } else {
+        println!(
+            "Imported {} alerting resource files from {}",
+            resource_files.len(),
+            import_dir.display()
+        );
+    }
+    Ok(())
+}
+
+fn diff_alerting_resources(args: &AlertCliArgs) -> Result<()> {
+    let client = GrafanaAlertClient::new(&build_auth_context(args)?)?;
+    let diff_dir = args
+        .diff_dir
+        .as_ref()
+        .ok_or_else(|| message("Diff directory is required for alerting diff."))?;
+    let resource_files = discover_alert_resource_files(diff_dir)?;
+    let dashboard_uid_map = load_string_map(args.dashboard_uid_map.as_deref(), "Dashboard UID map")?;
+    let panel_id_map = load_panel_id_map(args.panel_id_map.as_deref())?;
+    let mut policies_seen = 0usize;
+    let mut differences = 0usize;
+
+    for resource_file in &resource_files {
+        let document = load_json_object_file(resource_file, "Alerting resource")?;
+        let (kind, payload) = build_import_operation(&document)?;
+        let payload = prepare_import_payload_for_target(
+            &client,
+            &kind,
+            &payload,
+            &document,
+            &dashboard_uid_map,
+            &panel_id_map,
+        )?;
+        policies_seen = count_policy_documents(&kind, policies_seen)?;
+        let identity = build_resource_identity(&kind, &payload);
+        let local_compare = build_compare_document(&kind, &payload);
+        let remote_compare = fetch_live_compare_document(&client, &kind, &payload)?;
+
+        if let Some(remote_compare) = remote_compare {
+            if serialize_compare_document(&local_compare)? == serialize_compare_document(&remote_compare)? {
+                println!(
+                    "Diff same {} -> kind={} id={}",
+                    resource_file.display(),
+                    kind,
+                    identity
+                );
+                continue;
+            }
+
+            println!(
+                "Diff different {} -> kind={} id={}",
+                resource_file.display(),
+                kind,
+                identity
+            );
+            print!(
+                "{}",
+                build_compare_diff_text(&remote_compare, &local_compare, &identity, resource_file)?
+            );
+            differences += 1;
+            continue;
+        }
+
+        println!(
+            "Diff missing-remote {} -> kind={} id={}",
+            resource_file.display(),
+            kind,
+            identity
+        );
+        print!(
+            "{}",
+            build_compare_diff_text(&json!({}), &local_compare, &identity, resource_file)?
+        );
+        differences += 1;
+    }
+
+    if differences > 0 {
+        return Err(message(format!(
+            "Found {differences} alerting differences across {} files.",
+            resource_files.len()
+        )));
+    }
+
+    println!("No alerting differences across {} files.", resource_files.len());
     Ok(())
 }
 
 pub fn run_alert_cli(args: AlertCliArgs) -> Result<()> {
     if args.import_dir.is_some() {
         return import_alerting_resources(&args);
+    }
+    if args.diff_dir.is_some() {
+        return diff_alerting_resources(&args);
     }
     export_alerting_resources(&args)
 }

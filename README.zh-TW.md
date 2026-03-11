@@ -469,4 +469,5 @@ cd rust && cargo test
 
 - 英文 README：[`README.md`](README.md)
 - 繁體中文 README：[`README.zh-TW.md`](README.zh-TW.md)
+- 最近變更紀錄：[`CHANGELOG.md`](CHANGELOG.md)
 - maintainer 與實作細節：[`DEVELOPER.md`](DEVELOPER.md)

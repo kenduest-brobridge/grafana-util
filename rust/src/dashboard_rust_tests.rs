@@ -1,7 +1,8 @@
 use super::{
     build_export_variant_dirs, build_external_export_document, build_import_payload, build_output_path,
-    build_preserved_web_import_document, discover_dashboard_files, export_dashboards_with_request,
-    import_dashboards_with_request, CommonCliArgs, ExportArgs, ImportArgs,
+    build_preserved_web_import_document, diff_dashboards_with_request, discover_dashboard_files,
+    export_dashboards_with_request, import_dashboards_with_request, CommonCliArgs, DiffArgs,
+    ExportArgs, ImportArgs, EXPORT_METADATA_FILENAME, TOOL_SCHEMA_VERSION,
 };
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
@@ -48,6 +49,33 @@ fn discover_dashboard_files_rejects_combined_export_root() {
 }
 
 #[test]
+fn discover_dashboard_files_ignores_export_metadata() {
+    let temp = tempdir().unwrap();
+    fs::create_dir_all(temp.path().join("raw/subdir")).unwrap();
+    fs::write(
+        temp.path().join("raw/subdir/dashboard.json"),
+        serde_json::to_string_pretty(&json!({"uid": "abc", "title": "CPU"})).unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        temp.path().join("raw").join(EXPORT_METADATA_FILENAME),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-dashboard-export-index",
+            "schemaVersion": TOOL_SCHEMA_VERSION,
+            "variant": "raw",
+            "dashboardCount": 1,
+            "indexFile": "index.json",
+            "format": "grafana-web-import-preserve-uid"
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+
+    let files = discover_dashboard_files(&temp.path().join("raw")).unwrap();
+    assert_eq!(files, vec![temp.path().join("raw/subdir/dashboard.json")]);
+}
+
+#[test]
 fn build_import_payload_accepts_wrapped_document() {
     let payload = build_import_payload(
         &json!({
@@ -88,6 +116,7 @@ fn export_dashboards_with_client_writes_raw_variant_and_indexes() {
         overwrite: true,
         without_dashboard_raw: false,
         without_dashboard_prompt: true,
+        dry_run: false,
     };
     let mut calls = Vec::new();
     let count = export_dashboards_with_request(
@@ -108,7 +137,9 @@ fn export_dashboards_with_client_writes_raw_variant_and_indexes() {
     assert_eq!(count, 1);
     assert!(args.export_dir.join("raw/Infra/CPU__abc.json").is_file());
     assert!(args.export_dir.join("raw/index.json").is_file());
+    assert!(args.export_dir.join("raw/export-metadata.json").is_file());
     assert!(args.export_dir.join("index.json").is_file());
+    assert!(args.export_dir.join("export-metadata.json").is_file());
     assert_eq!(calls.len(), 2);
 }
 
@@ -222,6 +253,7 @@ fn export_dashboards_with_client_writes_prompt_variant_and_indexes() {
         overwrite: true,
         without_dashboard_raw: false,
         without_dashboard_prompt: false,
+        dry_run: false,
     };
 
     let count = export_dashboards_with_request(
@@ -249,6 +281,37 @@ fn export_dashboards_with_client_writes_prompt_variant_and_indexes() {
     assert_eq!(count, 1);
     assert!(args.export_dir.join("prompt/Infra/CPU__abc.json").is_file());
     assert!(args.export_dir.join("prompt/index.json").is_file());
+    assert!(args.export_dir.join("prompt/export-metadata.json").is_file());
+}
+
+#[test]
+fn export_dashboards_with_dry_run_keeps_output_dir_empty() {
+    let temp = tempdir().unwrap();
+    let args = ExportArgs {
+        common: make_common_args("http://127.0.0.1:3000".to_string()),
+        export_dir: temp.path().join("dashboards"),
+        page_size: 500,
+        flat: false,
+        overwrite: true,
+        without_dashboard_raw: false,
+        without_dashboard_prompt: true,
+        dry_run: true,
+    };
+
+    let count = export_dashboards_with_request(
+        |_method, path, _params, _payload| match path {
+            "/api/search" => Ok(Some(json!([{ "uid": "abc", "title": "CPU", "folderTitle": "Infra" }]))),
+            "/api/dashboards/uid/abc" => {
+                Ok(Some(json!({"dashboard": {"id": 7, "uid": "abc", "title": "CPU"}})))
+            }
+            _ => Err(super::message(format!("unexpected path {path}"))),
+        },
+        &args,
+    )
+    .unwrap();
+
+    assert_eq!(count, 1);
+    assert!(!args.export_dir.exists());
 }
 
 #[test]
@@ -256,6 +319,19 @@ fn import_dashboards_with_client_imports_discovered_files() {
     let temp = tempdir().unwrap();
     let raw_dir = temp.path().join("raw");
     fs::create_dir_all(&raw_dir).unwrap();
+    fs::write(
+        raw_dir.join(EXPORT_METADATA_FILENAME),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-dashboard-export-index",
+            "schemaVersion": TOOL_SCHEMA_VERSION,
+            "variant": "raw",
+            "dashboardCount": 1,
+            "indexFile": "index.json",
+            "format": "grafana-web-import-preserve-uid"
+        }))
+        .unwrap(),
+    )
+    .unwrap();
     fs::write(
         raw_dir.join("dash.json"),
         serde_json::to_string_pretty(&json!({
@@ -271,6 +347,7 @@ fn import_dashboards_with_client_imports_discovered_files() {
         import_folder_uid: Some("new-folder".to_string()),
         replace_existing: true,
         import_message: "sync dashboards".to_string(),
+        dry_run: false,
     };
     let mut posted_payloads = Vec::new();
     let count = import_dashboards_with_request(
@@ -287,4 +364,186 @@ fn import_dashboards_with_client_imports_discovered_files() {
     assert_eq!(posted_payloads.len(), 1);
     assert_eq!(posted_payloads[0]["folderUid"], "new-folder");
     assert_eq!(posted_payloads[0]["dashboard"]["id"], Value::Null);
+}
+
+#[test]
+fn import_dashboards_with_dry_run_skips_post_requests() {
+    let temp = tempdir().unwrap();
+    let raw_dir = temp.path().join("raw");
+    fs::create_dir_all(&raw_dir).unwrap();
+    fs::write(
+        raw_dir.join(EXPORT_METADATA_FILENAME),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-dashboard-export-index",
+            "schemaVersion": TOOL_SCHEMA_VERSION,
+            "variant": "raw",
+            "dashboardCount": 1,
+            "indexFile": "index.json",
+            "format": "grafana-web-import-preserve-uid"
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        raw_dir.join("dash.json"),
+        serde_json::to_string_pretty(&json!({
+            "dashboard": {"id": 7, "uid": "abc", "title": "CPU"}
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let args = ImportArgs {
+        common: make_common_args("http://127.0.0.1:3000".to_string()),
+        import_dir: raw_dir,
+        import_folder_uid: None,
+        replace_existing: true,
+        import_message: "sync dashboards".to_string(),
+        dry_run: true,
+    };
+
+    let count = import_dashboards_with_request(
+        |_method, path, _params, _payload| match path {
+            "/api/dashboards/uid/abc" => Ok(Some(json!({
+                "dashboard": {"id": 7, "uid": "abc", "title": "CPU"},
+                "meta": {"folderUid": "old-folder"}
+            }))),
+            "/api/dashboards/db" => Err(super::message("dry-run must not post dashboards")),
+            _ => Err(super::message(format!("unexpected path {path}"))),
+        },
+        &args,
+    )
+    .unwrap();
+
+    assert_eq!(count, 1);
+}
+
+#[test]
+fn import_dashboards_rejects_unsupported_export_schema_version() {
+    let temp = tempdir().unwrap();
+    let raw_dir = temp.path().join("raw");
+    fs::create_dir_all(&raw_dir).unwrap();
+    fs::write(
+        raw_dir.join(EXPORT_METADATA_FILENAME),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-dashboard-export-index",
+            "schemaVersion": TOOL_SCHEMA_VERSION + 1,
+            "variant": "raw",
+            "dashboardCount": 0,
+            "indexFile": "index.json"
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let args = ImportArgs {
+        common: make_common_args("http://127.0.0.1:3000".to_string()),
+        import_dir: raw_dir,
+        import_folder_uid: None,
+        replace_existing: false,
+        import_message: "sync dashboards".to_string(),
+        dry_run: false,
+    };
+
+    let error = import_dashboards_with_request(
+        |_method, _path, _params, _payload| Ok(None),
+        &args,
+    )
+    .unwrap_err();
+
+    assert!(error.to_string().contains("Unsupported dashboard export schemaVersion"));
+}
+
+#[test]
+fn diff_dashboards_with_client_returns_zero_for_matching_dashboard() {
+    let temp = tempdir().unwrap();
+    let raw_dir = temp.path().join("raw");
+    fs::create_dir_all(&raw_dir).unwrap();
+    fs::write(
+        raw_dir.join(EXPORT_METADATA_FILENAME),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-dashboard-export-index",
+            "schemaVersion": TOOL_SCHEMA_VERSION,
+            "variant": "raw",
+            "dashboardCount": 1,
+            "indexFile": "index.json",
+            "format": "grafana-web-import-preserve-uid"
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        raw_dir.join("dash.json"),
+        serde_json::to_string_pretty(&json!({
+            "dashboard": {"id": 7, "uid": "abc", "title": "CPU"},
+            "meta": {"folderUid": "old-folder"}
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let args = DiffArgs {
+        common: make_common_args("http://127.0.0.1:3000".to_string()),
+        import_dir: raw_dir,
+        import_folder_uid: Some("old-folder".to_string()),
+        context_lines: 3,
+    };
+
+    let count = diff_dashboards_with_request(
+        |_method, path, _params, _payload| match path {
+            "/api/dashboards/uid/abc" => Ok(Some(json!({
+                "dashboard": {"id": 7, "uid": "abc", "title": "CPU"},
+                "meta": {"folderUid": "old-folder"}
+            }))),
+            _ => Err(super::message(format!("unexpected path {path}"))),
+        },
+        &args,
+    )
+    .unwrap();
+
+    assert_eq!(count, 0);
+}
+
+#[test]
+fn diff_dashboards_with_client_detects_dashboard_difference() {
+    let temp = tempdir().unwrap();
+    let raw_dir = temp.path().join("raw");
+    fs::create_dir_all(&raw_dir).unwrap();
+    fs::write(
+        raw_dir.join(EXPORT_METADATA_FILENAME),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-dashboard-export-index",
+            "schemaVersion": TOOL_SCHEMA_VERSION,
+            "variant": "raw",
+            "dashboardCount": 1,
+            "indexFile": "index.json",
+            "format": "grafana-web-import-preserve-uid"
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        raw_dir.join("dash.json"),
+        serde_json::to_string_pretty(&json!({
+            "dashboard": {"id": 7, "uid": "abc", "title": "CPU"}
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let args = DiffArgs {
+        common: make_common_args("http://127.0.0.1:3000".to_string()),
+        import_dir: raw_dir,
+        import_folder_uid: None,
+        context_lines: 3,
+    };
+
+    let count = diff_dashboards_with_request(
+        |_method, path, _params, _payload| match path {
+            "/api/dashboards/uid/abc" => Ok(Some(json!({
+                "dashboard": {"id": 7, "uid": "abc", "title": "Memory"}
+            }))),
+            _ => Err(super::message(format!("unexpected path {path}"))),
+        },
+        &args,
+    )
+    .unwrap();
+
+    assert_eq!(count, 1);
 }

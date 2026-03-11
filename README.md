@@ -479,4 +479,5 @@ cd rust && cargo test
 
 - English README: [`README.md`](README.md)
 - Traditional Chinese README: [`README.zh-TW.md`](README.zh-TW.md)
+- recent change history: [`CHANGELOG.md`](CHANGELOG.md)
 - maintainer and implementation notes: [`DEVELOPER.md`](DEVELOPER.md)
