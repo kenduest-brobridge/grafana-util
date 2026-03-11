@@ -13,6 +13,7 @@ This document is for maintainers. Keep `README.md` GitHub-facing and task-orient
 - `tests/test_dump_grafana_dashboards.py`: dashboard utility unit tests
 - `tests/test_grafana_alert_utils.py`: alerting utility unit tests
 - `tests/test_packaging.py`: package metadata and console-script tests
+- `Makefile`: shared developer shortcuts for Python wheel builds, Rust release builds, and test runs
 
 ## Python Baseline
 
@@ -45,6 +46,11 @@ Dashboard export writes two variants by default:
 
 - `raw/`: API-safe dashboard JSON intended for later `import`
 - `prompt/`: Grafana web-import JSON with datasource `__inputs`
+
+Current export suppression flags:
+
+- `--without-dashboard-raw`
+- `--without-dashboard-prompt`
 
 The two variants serve different consumers and should not be treated as interchangeable.
 
@@ -202,6 +208,10 @@ Notes:
 Common checks:
 
 ```bash
+make help
+make build-python
+make build-rust
+make test
 python3 -m pip install --no-deps --target /tmp/grafana-utils-install .
 python3 -m unittest tests.test_dump_grafana_dashboards
 python3 -m unittest tests.test_grafana_alert_utils

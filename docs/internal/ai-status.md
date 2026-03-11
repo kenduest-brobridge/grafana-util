@@ -1,5 +1,12 @@
 # ai-status.md
 
+## 2026-03-11 - Task: Add Unified Build Makefile
+- State: Done
+- Scope: `Makefile`, `.gitignore`, `README.md`, `README.zh-TW.md`, `DEVELOPER.md`, `AGENTS.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The repo supports Python packaging and a separate Rust crate, but build commands are split across `pip` and `cargo` examples in the docs. There is no single root command surface for building the Python wheel and Rust release binaries together.
+- Current Update: Added a root `Makefile` with Python, Rust, aggregate build, and aggregate test targets. Updated the English and Traditional Chinese README files plus maintainer docs to document those commands, and extended `.gitignore` for Python build outputs created by `make build-python`.
+- Result: `make help`, `make build-python`, and `make build-rust` all pass locally. The Python target writes the wheel to `dist/`, and the Rust target produces release binaries under `rust/target/release/`.
+
 ## 2026-03-11 - Task: Rename Dashboard Export Variant Flags
 - State: Done
 - Scope: `grafana_utils/dashboard_cli.py`, `rust/src/dashboard.rs`, `tests/test_dump_grafana_dashboards.py`, `README.md`, `README.zh-TW.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

@@ -1,5 +1,14 @@
 # ai-changes.md
 
+## 2026-03-11 - Add Unified Build Makefile
+- Summary: Added a root `Makefile` so the repo has one consistent command surface for building both implementations. The new targets cover Python wheel builds, Rust release builds, and aggregate `build` / `test` entrypoints.
+- Tests: Validation is by executing the new `Makefile` targets directly instead of adding unit tests for shell behavior.
+- Test Run: `make help` (pass); `make build-python` (pass); `make build-rust` (pass)
+- Validation: README, Traditional Chinese README, maintainer notes, and repo instructions were updated to document the new `make` targets and where their build artifacts land. `make build-python` produced `dist/grafana_utils-0.1.0-py3-none-any.whl`, and `make build-rust` produced `rust/target/release/grafana-utils` plus `rust/target/release/grafana-alert-utils`.
+- Impact: `Makefile`, `.gitignore`, `README.md`, `README.zh-TW.md`, `DEVELOPER.md`, `AGENTS.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low workflow risk. The new file adds convenience commands only and does not replace the existing direct `pip` or `cargo` build paths.
+- Follow-up: None.
+
 ## 2026-03-11 - Rename Dashboard Export Variant Flags
 - Summary: Renamed the dashboard export suppression flags in both implementations from `--without-raw` and `--without-prompt` to `--without-dashboard-raw` and `--without-dashboard-prompt`. The Python parser fields and Rust `ExportArgs` fields now use the dashboard-specific names as well, and the error text for disabling both export variants was updated to match.
 - Tests: Updated the dashboard CLI unittest coverage to parse the renamed flags and to keep the invalid "disable both variants" path covered. Existing Rust dashboard tests continued to validate the export flow with the renamed `ExportArgs` fields.

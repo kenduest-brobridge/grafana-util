@@ -9,6 +9,7 @@
 - `cmd/grafana-alert-utils.py`: thin wrapper for running the alerting CLI directly from the repo checkout.
 - `pyproject.toml`: package metadata and console-script entrypoints.
 - `tests/`: unit tests for both entrypoints.
+- `Makefile`: root shortcuts for Python wheel builds, Rust release builds, and test runs.
 - `README.md`: GitHub-facing usage and operator examples.
 - `DEVELOPER.md`: maintainer notes, internal behavior, and implementation tradeoffs.
 - `docs/internal/ai-status.md` and `docs/internal/ai-changes.md`: internal change trace files for meaningful feature work.
@@ -20,6 +21,10 @@ Keep implementation code in `grafana_utils/` and keep `cmd/` wrappers thin unles
 - `python3 -m pip install .`: install the package into the active Python environment.
 - `python3 -m pip install --user .`: install the package into the current user's Python environment.
 - `python3 -m pip install '.[http2]'`: install the optional HTTP/2 transport dependencies on Python 3.8+.
+- `make build-python`: build the Python wheel into `dist/`.
+- `make build-rust`: build Rust release binaries into `rust/target/release/`.
+- `make build`: build both the Python wheel and the Rust release binaries.
+- `make test`: run both the Python and Rust test suites.
 - `grafana-utils export -h`: show installed dashboard CLI help.
 - `grafana-utils import -h`: show installed dashboard import help.
 - `grafana-alert-utils -h`: show installed alerting CLI help and examples.

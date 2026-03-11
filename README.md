@@ -1,10 +1,10 @@
 # Grafana Utilities
 
-Traditional Chinese guide: [README.zh-TW.md](README.zh-TW.md)
+Language / 語言: English | [繁體中文 README.zh-TW.md](README.zh-TW.md)
 
 This repository is for exporting, backing up, migrating, and re-importing Grafana configuration as JSON.
 
-It provides two command-line tools:
+It provides the same two command-line tools in both a packaged Python implementation and a Rust implementation under `rust/`:
 
 - `grafana-utils`: export and import dashboards
 - `grafana-alert-utils`: export and import alerting resources such as alert rules, contact points, mute timings, notification policies, and templates
@@ -23,7 +23,7 @@ Dashboard workflow is handled by `grafana-utils`. Use explicit subcommands to av
 
 Alerting workflow is handled separately by `grafana-alert-utils` because Grafana alerting uses different APIs and file shapes than dashboards.
 
-The examples below use `python3 cmd/...` so they also work directly from the git checkout. If you installed the package, use the same arguments with the installed command names instead.
+The examples below use `python3 cmd/...` for the Python implementation so they also work directly from the git checkout. If you installed the package, use the same arguments with the installed command names instead. Rust build and run examples are listed in the `Rust Tools` section below.
 
 Compatibility:
 
@@ -36,6 +36,14 @@ Install into the current Python environment:
 
 ```bash
 python3 -m pip install .
+```
+
+If you want simple repo-local build commands instead of invoking `pip` or `cargo` directly:
+
+```bash
+make build-python
+make build-rust
+make build
 ```
 
 Install into a user-local environment without touching the system Python site-packages:
@@ -61,6 +69,37 @@ If you are running directly from the git checkout instead of installing the pack
 - `python3 cmd/grafana-utils.py export ...`
 - `python3 cmd/grafana-utils.py import ...`
 - `python3 cmd/grafana-alert-utils.py ...`
+
+## Rust Tools
+
+This repository also includes a Rust implementation under [`rust/`](rust/).
+
+Build the Rust binaries:
+
+```bash
+make build-rust
+```
+
+Run the Rust dashboard CLI from the repo:
+
+```bash
+cd rust
+cargo run --bin grafana-utils -- export -h
+```
+
+Run the Rust alerting CLI from the repo:
+
+```bash
+cd rust
+cargo run --bin grafana-alert-utils -- -h
+```
+
+Notes:
+
+- the Rust binaries are currently built from the `rust/` crate, not installed by `python3 -m pip install .`
+- the Rust binary names match the Python command names: `grafana-utils` and `grafana-alert-utils`
+- `make build-python` builds the Python wheel into `dist/`
+- `make build-rust` builds the Rust release binaries into `rust/target/release/`
 
 The default export root is `dashboards/`. One export run now writes two variants automatically:
 
