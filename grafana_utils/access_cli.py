@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""List Grafana users and manage service accounts through Grafana APIs.
+"""List Grafana users, teams, and service accounts through Grafana APIs.
 
 Initial scope:
 - `grafana-access-utils user list`
+- `grafana-access-utils team list`
 - `grafana-access-utils service-account list`
 - `grafana-access-utils service-account add`
 - `grafana-access-utils service-account token add`
@@ -47,6 +48,13 @@ OUTPUT_FIELDS = [
     "grafanaAdmin",
     "scope",
     "teams",
+]
+TEAM_OUTPUT_FIELDS = [
+    "id",
+    "name",
+    "email",
+    "memberCount",
+    "members",
 ]
 SERVICE_ACCOUNT_OUTPUT_FIELDS = [
     "id",
@@ -95,7 +103,7 @@ def bool_choice(value: str) -> str:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="List Grafana users and manage Grafana service accounts."
+        description="List Grafana users, teams, and manage Grafana service accounts."
     )
     subparsers = parser.add_subparsers(dest="resource")
     subparsers.required = True
@@ -113,6 +121,20 @@ def build_parser() -> argparse.ArgumentParser:
     )
     add_common_cli_args(list_parser)
     add_user_list_cli_args(list_parser)
+
+    team_parser = subparsers.add_parser(
+        "team",
+        help="List Grafana teams.",
+    )
+    team_subparsers = team_parser.add_subparsers(dest="command")
+    team_subparsers.required = True
+
+    team_list_parser = team_subparsers.add_parser(
+        "list",
+        help="List Grafana teams from the org-scoped API.",
+    )
+    add_common_cli_args(team_list_parser)
+    add_team_list_cli_args(team_list_parser)
 
     service_account_parser = subparsers.add_parser(
         "service-account",
@@ -312,6 +334,52 @@ def add_service_account_list_cli_args(parser: argparse.ArgumentParser) -> None:
     )
 
 
+def add_team_list_cli_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--query",
+        default=None,
+        help="Case-insensitive substring match against team name or email.",
+    )
+    parser.add_argument(
+        "--name",
+        default=None,
+        help="Filter to one exact team name.",
+    )
+    parser.add_argument(
+        "--with-members",
+        action="store_true",
+        help="Include team member login names when the API returns them.",
+    )
+    parser.add_argument(
+        "--page",
+        type=positive_int,
+        default=1,
+        help="Page number after filtering (default: 1).",
+    )
+    parser.add_argument(
+        "--per-page",
+        type=positive_int,
+        default=DEFAULT_PAGE_SIZE,
+        help="Items per page after filtering (default: %s)." % DEFAULT_PAGE_SIZE,
+    )
+    output_group = parser.add_mutually_exclusive_group()
+    output_group.add_argument(
+        "--table",
+        action="store_true",
+        help="Render teams as a table.",
+    )
+    output_group.add_argument(
+        "--csv",
+        action="store_true",
+        help="Render teams as CSV.",
+    )
+    output_group.add_argument(
+        "--json",
+        action="store_true",
+        help="Render teams as JSON.",
+    )
+
+
 def add_service_account_add_cli_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--name",
@@ -379,6 +447,10 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
 
     if argv == ["user"]:
         parser._subparsers._group_actions[0].choices["user"].print_help()
+        raise SystemExit(0)
+
+    if argv == ["team"]:
+        parser._subparsers._group_actions[0].choices["team"].print_help()
         raise SystemExit(0)
 
     if argv == ["service-account"]:
@@ -559,6 +631,58 @@ class GrafanaAccessClient:
             )
         return [item for item in items if isinstance(item, dict)]
 
+    def list_teams(
+        self,
+        query: Optional[str],
+        page: int,
+        per_page: int,
+    ) -> List[Dict[str, Any]]:
+        data = self.request_json(
+            "/api/teams/search",
+            params={
+                "query": query or "",
+                "page": page,
+                "perpage": per_page,
+            },
+        )
+        if not isinstance(data, dict):
+            raise GrafanaError("Unexpected team list response from Grafana.")
+        items = data.get("teams", [])
+        if not isinstance(items, list):
+            raise GrafanaError("Unexpected team list response from Grafana.")
+        return [item for item in items if isinstance(item, dict)]
+
+    def iter_teams(
+        self,
+        query: Optional[str],
+        page_size: int,
+    ) -> List[Dict[str, Any]]:
+        teams = []
+        page = 1
+        while True:
+            batch = self.list_teams(
+                query=query,
+                page=page,
+                per_page=page_size,
+            )
+            if not batch:
+                break
+            teams.extend(batch)
+            if len(batch) < page_size:
+                break
+            page += 1
+        return teams
+
+    def list_team_members(self, team_id: Any) -> List[Dict[str, Any]]:
+        data = self.request_json(
+            "/api/teams/%s/members" % parse.quote(str(team_id), safe="")
+        )
+        if not isinstance(data, list):
+            raise GrafanaError(
+                "Unexpected member list response for Grafana team %s." % team_id
+            )
+        return [item for item in data if isinstance(item, dict)]
+
     def create_service_account(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         data = self.request_json(
             "/api/serviceaccounts",
@@ -637,6 +761,16 @@ def normalize_service_account(item: Dict[str, Any]) -> Dict[str, Any]:
         "disabled": normalize_bool(item.get("isDisabled")),
         "tokens": str(item.get("tokens") or 0),
         "orgId": str(item.get("orgId") or ""),
+    }
+
+
+def normalize_team(item: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "id": str(item.get("id") or ""),
+        "name": str(item.get("name") or ""),
+        "email": str(item.get("email") or ""),
+        "memberCount": str(item.get("memberCount") or 0),
+        "members": [],
     }
 
 
@@ -811,6 +945,47 @@ def service_account_matches_query(
     return any(text in haystack for haystack in haystacks)
 
 
+def team_matches_filters(team: Dict[str, Any], args: argparse.Namespace) -> bool:
+    query = str(args.query or "").strip().lower()
+    if query:
+        haystacks = [
+            str(team.get("name") or "").lower(),
+            str(team.get("email") or "").lower(),
+        ]
+        if not any(query in haystack for haystack in haystacks):
+            return False
+    if args.name and str(team.get("name") or "") != args.name:
+        return False
+    return True
+
+
+def paginate_teams(
+    teams: List[Dict[str, Any]],
+    page: int,
+    per_page: int,
+) -> List[Dict[str, Any]]:
+    start = (page - 1) * per_page
+    end = start + per_page
+    return teams[start:end]
+
+
+def attach_team_members(
+    teams: List[Dict[str, Any]],
+    client: GrafanaAccessClient,
+) -> None:
+    for team in teams:
+        team_id = team.get("id")
+        if not team_id:
+            continue
+        raw_members = client.list_team_members(team_id)
+        member_names = []
+        for member in raw_members:
+            login = str(member.get("login") or "").strip()
+            if login:
+                member_names.append(login)
+        team["members"] = sorted(member_names)
+
+
 def serialize_service_account_row(
     service_account: Dict[str, Any],
 ) -> Dict[str, Any]:
@@ -822,6 +997,93 @@ def serialize_service_account_row(
         else:
             row[field] = str(value or "")
     return row
+
+
+def build_team_rows(
+    client: GrafanaAccessClient,
+    args: argparse.Namespace,
+) -> List[Dict[str, Any]]:
+    raw_teams = client.iter_teams(
+        query=args.query,
+        page_size=max(args.per_page, DEFAULT_PAGE_SIZE),
+    )
+    teams = [normalize_team(item) for item in raw_teams]
+    teams = [team for team in teams if team_matches_filters(team, args)]
+    teams.sort(key=lambda item: (str(item.get("name") or ""), str(item.get("email") or "")))
+    if args.with_members:
+        attach_team_members(teams, client)
+    return paginate_teams(teams, args.page, args.per_page)
+
+
+def serialize_team_row(team: Dict[str, Any]) -> Dict[str, Any]:
+    row = {}
+    for field in TEAM_OUTPUT_FIELDS:
+        value = team.get(field)
+        if field == "members":
+            row[field] = list(value or [])
+        else:
+            row[field] = str(value or "")
+    return row
+
+
+def render_team_json(teams: List[Dict[str, Any]]) -> str:
+    payload = [serialize_team_row(team) for team in teams]
+    return json.dumps(payload, indent=2, ensure_ascii=False)
+
+
+def render_team_csv(teams: List[Dict[str, Any]]) -> None:
+    writer = csv.DictWriter(sys.stdout, fieldnames=TEAM_OUTPUT_FIELDS)
+    writer.writeheader()
+    for team in teams:
+        row = serialize_team_row(team)
+        row["members"] = ",".join(row["members"])
+        writer.writerow(row)
+
+
+def render_team_table(teams: List[Dict[str, Any]]) -> List[str]:
+    headers = {
+        "id": "ID",
+        "name": "Name",
+        "email": "Email",
+        "memberCount": "Members",
+        "members": "Member Logins",
+    }
+    rows = []
+    for team in teams:
+        serialized = serialize_team_row(team)
+        serialized["members"] = ", ".join(serialized["members"])
+        rows.append(serialized)
+
+    widths = {}
+    for field in TEAM_OUTPUT_FIELDS:
+        widths[field] = len(headers[field])
+        for row in rows:
+            widths[field] = max(widths[field], len(str(row.get(field) or "")))
+
+    def build_row(values: Dict[str, Any]) -> str:
+        return "  ".join(
+            str(values.get(field) or "").ljust(widths[field])
+            for field in TEAM_OUTPUT_FIELDS
+        )
+
+    header_row = build_row(headers)
+    separator_row = "  ".join("-" * widths[field] for field in TEAM_OUTPUT_FIELDS)
+    return [header_row, separator_row] + [build_row(row) for row in rows]
+
+
+def format_team_summary_line(team: Dict[str, Any]) -> str:
+    parts = [
+        "id=%s" % (team.get("id") or ""),
+        "name=%s" % (team.get("name") or ""),
+    ]
+    email = team.get("email") or ""
+    if email:
+        parts.append("email=%s" % email)
+    parts.append("memberCount=%s" % (team.get("memberCount") or "0"))
+    members = team.get("members") or []
+    if members:
+        parts.append("members=%s" % ",".join(members))
+    return " ".join(parts)
 
 
 def render_service_account_json(service_accounts: List[Dict[str, Any]]) -> str:
@@ -1024,6 +1286,30 @@ def list_service_accounts_with_client(
     return 0
 
 
+def list_teams_with_client(
+    args: argparse.Namespace,
+    client: GrafanaAccessClient,
+) -> int:
+    teams = build_team_rows(client, args)
+
+    if args.csv:
+        render_team_csv(teams)
+        return 0
+    if args.json:
+        print(render_team_json(teams))
+        return 0
+    if args.table:
+        for line in render_team_table(teams):
+            print(line)
+    else:
+        for team in teams:
+            print(format_team_summary_line(team))
+
+    print("")
+    print("Listed %s team(s) at %s" % (len(teams), args.url))
+    return 0
+
+
 def add_service_account_with_client(
     args: argparse.Namespace,
     client: GrafanaAccessClient,
@@ -1096,6 +1382,8 @@ def run(args: argparse.Namespace) -> int:
     if args.resource == "user" and args.command == "list":
         validate_user_list_auth(args, auth_mode)
         return list_users_with_client(args, client)
+    if args.resource == "team" and args.command == "list":
+        return list_teams_with_client(args, client)
     if args.resource == "service-account" and args.command == "list":
         return list_service_accounts_with_client(args, client)
     if args.resource == "service-account" and args.command == "add":

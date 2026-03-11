@@ -8,7 +8,7 @@ This repository provides two primary CLI tools in two implementations, plus an a
 
 - `grafana-utils`: dashboard export and import
 - `grafana-alert-utils`: alerting resource export and import
-- `grafana-access-utils`: access-management workflow, currently covering `user list` plus initial service-account commands
+- `grafana-access-utils`: access-management workflow, currently covering `user list`, `team list`, and initial service-account commands
 - packaged Python implementation under [`grafana_utils/`](grafana_utils/)
 - Rust implementation under [`rust/`](rust/)
 
@@ -48,6 +48,7 @@ The two command names are intentionally separate because dashboards and alerting
 - `grafana-utils diff ...`
 - `grafana-alert-utils ...`
 - `grafana-access-utils user list ...`
+- `grafana-access-utils team list ...`
 - `grafana-access-utils service-account ...`
 
 The most important distinction in this repo is dashboard export format:
@@ -176,6 +177,15 @@ python3 cmd/grafana-access-utils.py user list \
   --basic-user "$GRAFANA_USERNAME" \
   --basic-password "$GRAFANA_PASSWORD" \
   --json
+```
+
+Access-management team listing, org scope with token auth:
+
+```bash
+python3 cmd/grafana-access-utils.py team list \
+  --url http://127.0.0.1:3000 \
+  --token "$GRAFANA_API_TOKEN" \
+  --table
 ```
 
 Access-management service-account listing, org scope with token auth:
@@ -439,15 +449,17 @@ Current implementation scope:
 
 - Python implementation only
 - `user list`
+- `team list`
 - `service-account list`
 - `service-account add`
 - `service-account token add`
-- no `user add`, `user modify`, `user delete`, `team`, or `group` commands yet
+- no `user add`, `user modify`, `user delete`, mutating `team` commands, or `group` alias commands yet
 
 Initial auth model:
 
 - `user list --scope org` may use token auth or Basic auth
 - `user list --scope global` requires Basic auth because Grafana global user APIs are Basic-auth-first admin workflows
+- `team list` is org-scoped and may use token auth or Basic auth
 - service-account commands are org-scoped and may use token auth or Basic auth
 
 Output modes:
@@ -547,6 +559,7 @@ Auth note:
 - `GRAFANA_API_TOKEN`, `GRAFANA_USERNAME`, and `GRAFANA_PASSWORD` still work as environment fallbacks
 - for `grafana-access-utils`, org-scoped `user list` can use token auth or Basic auth
 - for `grafana-access-utils`, global `user list` requires Basic auth
+- for `grafana-access-utils`, `team list` is org-scoped and can use token auth or Basic auth
 - for `grafana-access-utils`, service-account commands are org-scoped and can use token auth or Basic auth
 
 API token example:
@@ -618,6 +631,7 @@ make test
 python3 -m unittest -v
 python3 cmd/grafana-access-utils.py -h
 python3 cmd/grafana-access-utils.py user list -h
+python3 cmd/grafana-access-utils.py team list -h
 python3 cmd/grafana-access-utils.py service-account list -h
 python3 cmd/grafana-access-utils.py service-account add -h
 python3 cmd/grafana-access-utils.py service-account token add -h

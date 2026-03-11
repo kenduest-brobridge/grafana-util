@@ -1,5 +1,15 @@
 # ai-changes.md
 
+## 2026-03-11 - Add Access Utility Team List
+- Summary: Added Python `grafana-access-utils team list` support, including parser/help wiring, Grafana team search and member lookup client calls, normalization/rendering for text/table/CSV/JSON output, and aligned public/maintainer docs. The command is org-scoped and follows the same auth model as the other org-scoped access commands.
+- Tests: Extended `tests/test_python_access_cli.py` with parser/help coverage plus team row/build/render tests.
+- Test Run: `python3 -m unittest -v tests/test_python_access_cli.py`; `python3 -m unittest -v`; `python3 cmd/grafana-access-utils.py team -h`; `python3 cmd/grafana-access-utils.py team list -h`
+- Reason: `TODO.md` identified `team list` as the next access-management slice after `user list`, and the repo needed the first team-oriented command before moving on to mutating team membership workflows.
+- Validation: Verified Python 3.6 syntax compatibility, incomplete-command help behavior, and the new team list output surfaces. Also fixed a pagination issue during review so team listing now iterates server pages before local filtering/pagination.
+- Impact: `grafana_utils/access_cli.py`, `tests/test_python_access_cli.py`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`, `TODO.md`
+- Rollback/Risk: Low to moderate. The new command is additive, but Grafana team search payloads can vary by version; member lookup remains best-effort and depends on the org-scoped team APIs returning the expected fields.
+- Follow-up: Continue with the remaining access-management plan: `team modify`, `user add`, and the rest of the team/group mutating workflow.
+
 ## 2026-03-11 - Add Access Utility User List
 - Summary: Added a new Python `grafana-access-utils` command with an initial access-management surface covering `user list`, `service-account list`, `service-account add`, and `service-account token add`. The first cut introduces `grafana_utils/access_cli.py`, the console-script entrypoint, a thin `cmd/grafana-access-utils.py` wrapper, packaging coverage, dedicated access-CLI unit tests, and public/maintainer docs that scope the feature to Python only for now.
 - Tests: Added `tests/test_python_access_cli.py` for parser coverage, auth validation, filtering, pagination, and rendering behavior, and extended packaging coverage for the new console script.

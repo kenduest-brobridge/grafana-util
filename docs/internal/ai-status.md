@@ -7,6 +7,13 @@
 - Current Update: Added `grafana_utils/access_cli.py` with an initial Python access-management surface that now covers `user list` plus `service-account list`, `service-account add`, and `service-account token add`. Packaging wiring, focused unit coverage, and public/maintainer docs now describe the access CLI as Python-only for this first cut. The auth split is explicit: org-scoped user listing may use token or Basic auth, global user listing requires Basic auth, and the service-account commands are org-scoped and may use token or Basic auth.
 - Result: The repo now ships a first Python access-management CLI surface for user listing and service-account creation flows, with focused tests plus a full Python suite pass confirming the new command does not regress the existing dashboard and alerting tools.
 
+## 2026-03-11 - Task: Add Access Utility Team List
+- State: Done
+- Scope: `grafana_utils/access_cli.py`, `tests/test_python_access_cli.py`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The Python access CLI already supports `user list` plus initial service-account commands, but `TODO.md` still lists all `team` operations as not started and the public docs say no `team` command exists yet.
+- Current Update: Added a read-only `grafana-access-utils team list` command with org-scoped team search, optional member lookup, standard `--table|--csv|--json` output modes, and incomplete-command help for `grafana-access-utils team`. Public and maintainer docs now include the command and its auth expectations.
+- Result: The Python access CLI now covers `user list`, `team list`, and the initial service-account workflows, with targeted and full Python test suite passes confirming the new command surface.
+
 ## 2026-03-11 - Task: Remove Python Dependency From Rust Live Smoke Test
 - State: Done
 - Scope: `scripts/test-rust-live-grafana.sh`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

@@ -1,5 +1,33 @@
 # TODO
 
+## Status
+
+### Done
+
+- added `grafana-access-utils`
+- implemented `user list`
+- implemented `team list`
+- implemented `service-account list`
+- implemented `service-account add`
+- implemented `service-account token add`
+- added Python packaging entrypoint and thin `cmd/grafana-access-utils.py` wrapper
+- added unit tests and Docker-backed live validation for the implemented access workflows
+
+### In Progress
+
+- access-management CLI exists, but only part of the planned user/team/group scope is implemented
+- auth preflight is implemented for current commands, but not yet for the remaining planned mutating commands
+
+### Next
+
+- `team modify`
+- `user add`
+- `user modify`
+- `user delete`
+- `team add`
+- `team delete`
+- `group` alias for `team`
+
 ## Planned: User and Group Management
 
 Add a dedicated access-management CLI for Grafana user and team operations.
@@ -22,6 +50,16 @@ Reasoning:
 ### Proposed command shape
 
 Use subcommands instead of `user --list` style flags.
+
+Current implementation status:
+
+- `user list`: done
+- `team list`: done
+- `service-account list`: done
+- `service-account add`: done
+- `service-account token add`: done
+- remaining `team` commands: not started
+- `group` alias: not started
 
 #### User commands
 
@@ -52,6 +90,19 @@ grafana-access-utils group modify
 
 `group` should behave as a compatibility alias for `team`.
 
+Current note:
+
+- `service-account` is now also a first-class resource even though it was not in the original command sketch above
+- current implemented command set is:
+
+```text
+grafana-access-utils user list
+grafana-access-utils team list
+grafana-access-utils service-account list
+grafana-access-utils service-account add
+grafana-access-utils service-account token add
+```
+
 ### Shared connection and output parameters
 
 - `--url`
@@ -64,6 +115,11 @@ grafana-access-utils group modify
 - `--json`
 - `--csv`
 - `--table`
+
+Current implementation status:
+
+- done: `--url`, `--token`, `--basic-user`, `--basic-password`, `--org-id`, `--json`, `--csv`, `--table`
+- not done: `--insecure`, `--ca-cert`
 
 ### Authentication behavior
 
@@ -93,6 +149,15 @@ Important design note:
 - current dashboard and alerting tools already support token-based access patterns
 - the new access-management CLI should align with that operator experience
 - do not design the new commands around a username/password-only assumption
+
+Current implementation status:
+
+- `user list --scope org`: token or Basic auth
+- `user list --scope global`: Basic auth only
+- `user list --with-teams`: Basic auth only
+- `team list`: token or Basic auth
+- service-account operations: token or Basic auth
+- remaining planned commands still need explicit per-command auth preflight
 
 ### Proposed user CLI parameters
 
@@ -221,14 +286,22 @@ The CLI should perform an auth preflight and return a clear error when the selec
 
 ### Recommended v1 implementation order
 
-1. `user list`
-2. `team list`
-3. `team modify` for add/remove member and add/remove admin
-4. `user add`
-5. `user modify`
-6. `user delete`
-7. `team add`
-8. `team delete`
+1. `team list`
+2. `team modify` for add/remove member and add/remove admin
+3. `user add`
+4. `user modify`
+5. `user delete`
+6. `team add`
+7. `team delete`
+8. `group` alias for `team`
+
+Completed ahead of the original order:
+
+- `user list`
+- `team list`
+- `service-account list`
+- `service-account add`
+- `service-account token add`
 
 ### Explicitly out of scope for v1
 

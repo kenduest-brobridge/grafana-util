@@ -22,6 +22,8 @@ class FakeAccessClient:
         org_users=None,
         global_users=None,
         teams_by_user_id=None,
+        teams=None,
+        team_members_by_team_id=None,
         service_accounts=None,
     ):
         self.org_users = [dict(item) for item in (org_users or [])]
@@ -30,9 +32,16 @@ class FakeAccessClient:
             str(key): [dict(item) for item in value]
             for key, value in (teams_by_user_id or {}).items()
         }
+        self.teams = [dict(item) for item in (teams or [])]
+        self.team_members_by_team_id = {
+            str(key): [dict(item) for item in value]
+            for key, value in (team_members_by_team_id or {}).items()
+        }
         self.service_accounts = [dict(item) for item in (service_accounts or [])]
         self.global_page_sizes = []
         self.team_lookups = []
+        self.team_searches = []
+        self.team_member_lookups = []
         self.service_account_searches = []
         self.created_service_accounts = []
         self.created_service_account_tokens = []
@@ -47,6 +56,21 @@ class FakeAccessClient:
     def list_user_teams(self, user_id):
         self.team_lookups.append(str(user_id))
         return [dict(item) for item in self.teams_by_user_id.get(str(user_id), [])]
+
+    def list_teams(self, query, page, per_page):
+        self.team_searches.append((query, page, per_page))
+        return [dict(item) for item in self.teams]
+
+    def iter_teams(self, query, page_size):
+        self.team_searches.append((query, "iter", page_size))
+        return [dict(item) for item in self.teams]
+
+    def list_team_members(self, team_id):
+        self.team_member_lookups.append(str(team_id))
+        return [
+            dict(item)
+            for item in self.team_members_by_team_id.get(str(team_id), [])
+        ]
 
     def list_service_accounts(self, query, page, per_page):
         self.service_account_searches.append((query, page, per_page))
@@ -92,13 +116,22 @@ class AccessCliTests(unittest.TestCase):
                 access_utils.parse_args([])
 
         self.assertEqual(exc.exception.code, 0)
-        self.assertIn("{user,service-account}", stdout.getvalue())
+        self.assertIn("{user,team,service-account}", stdout.getvalue())
 
     def test_parse_args_user_without_subcommand_prints_user_help(self):
         stdout = io.StringIO()
         with redirect_stdout(stdout):
             with self.assertRaises(SystemExit) as exc:
                 access_utils.parse_args(["user"])
+
+        self.assertEqual(exc.exception.code, 0)
+        self.assertIn("list", stdout.getvalue())
+
+    def test_parse_args_team_without_subcommand_prints_team_help(self):
+        stdout = io.StringIO()
+        with redirect_stdout(stdout):
+            with self.assertRaises(SystemExit) as exc:
+                access_utils.parse_args(["team"])
 
         self.assertEqual(exc.exception.code, 0)
         self.assertIn("list", stdout.getvalue())
@@ -136,6 +169,33 @@ class AccessCliTests(unittest.TestCase):
         self.assertEqual(args.page, 2)
         self.assertEqual(args.per_page, 5)
         self.assertTrue(args.table)
+
+    def test_parse_args_supports_team_list_mode(self):
+        args = access_utils.parse_args(
+            [
+                "team",
+                "list",
+                "--query",
+                "ops",
+                "--name",
+                "Ops",
+                "--with-members",
+                "--page",
+                "2",
+                "--per-page",
+                "5",
+                "--json",
+            ]
+        )
+
+        self.assertEqual(args.resource, "team")
+        self.assertEqual(args.command, "list")
+        self.assertEqual(args.query, "ops")
+        self.assertEqual(args.name, "Ops")
+        self.assertTrue(args.with_members)
+        self.assertEqual(args.page, 2)
+        self.assertEqual(args.per_page, 5)
+        self.assertTrue(args.json)
 
     def test_parse_args_supports_preferred_auth_aliases(self):
         args = access_utils.parse_args(
@@ -326,6 +386,96 @@ class AccessCliTests(unittest.TestCase):
 
         self.assertIn('"login": "alice"', payload)
         self.assertIn('"teams": [', payload)
+
+    def test_build_team_rows_filters_and_attaches_members(self):
+        client = FakeAccessClient(
+            teams=[
+                {
+                    "id": 3,
+                    "name": "Ops",
+                    "email": "ops@example.com",
+                    "memberCount": 2,
+                },
+                {
+                    "id": 8,
+                    "name": "Platform",
+                    "email": "platform@example.com",
+                    "memberCount": 1,
+                },
+            ],
+            team_members_by_team_id={
+                "3": [
+                    {"login": "alice"},
+                    {"login": "bob"},
+                ]
+            },
+        )
+        args = argparse.Namespace(
+            query="ops",
+            name="Ops",
+            with_members=True,
+            page=1,
+            per_page=10,
+        )
+
+        teams = access_utils.build_team_rows(client, args)
+
+        self.assertEqual(client.team_searches, [("ops", "iter", 100)])
+        self.assertEqual(client.team_member_lookups, ["3"])
+        self.assertEqual(len(teams), 1)
+        self.assertEqual(teams[0]["members"], ["alice", "bob"])
+
+    def test_render_team_json_is_machine_readable(self):
+        payload = access_utils.render_team_json(
+            [
+                {
+                    "id": "3",
+                    "name": "Ops",
+                    "email": "ops@example.com",
+                    "memberCount": "2",
+                    "members": ["alice", "bob"],
+                }
+            ]
+        )
+
+        self.assertIn('"name": "Ops"', payload)
+        self.assertIn('"members": [', payload)
+
+    def test_list_teams_with_client_renders_table(self):
+        client = FakeAccessClient(
+            teams=[
+                {
+                    "id": 3,
+                    "name": "Ops",
+                    "email": "ops@example.com",
+                    "memberCount": 2,
+                }
+            ],
+            team_members_by_team_id={
+                "3": [{"login": "alice"}],
+            },
+        )
+        args = argparse.Namespace(
+            query="ops",
+            name=None,
+            with_members=True,
+            page=1,
+            per_page=10,
+            csv=False,
+            json=False,
+            table=True,
+            url="http://127.0.0.1:3000",
+        )
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            result = access_utils.list_teams_with_client(args, client)
+
+        self.assertEqual(result, 0)
+        rendered = output.getvalue()
+        self.assertIn("Member Logins", rendered)
+        self.assertIn("alice", rendered)
+        self.assertIn("Listed 1 team(s)", rendered)
 
     def test_list_service_accounts_with_client_renders_json(self):
         client = FakeAccessClient(
