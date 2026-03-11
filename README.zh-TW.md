@@ -2,193 +2,194 @@
 
 英文版： [README.md](README.md)
 
-這個 repository 用來將 Grafana 設定匯出成 JSON，方便備份、搬移、再匯入，以及納入版本控制。
+這個 repository 用來將 Grafana dashboards 與 alerting 資源匯出成 JSON，方便備份、搬移、再匯入，以及納入版本控制。
 
-它同時提供 packaged Python 實作，以及放在 `rust/` 下的 Rust 實作，兩邊都對應同樣的兩個命令列工具：
+這裡提供兩個 CLI 工具，而且同時有兩種實作：
 
 - `grafana-utils`：匯出與匯入 dashboards
-- `grafana-alert-utils`：匯出與匯入 alerting 資源，例如 alert rules、contact points、mute timings、notification policies、templates
+- `grafana-alert-utils`：匯出與匯入 alerting 資源
+- packaged Python 實作位於 [`grafana_utils/`](grafana_utils/)
+- Rust 實作位於 [`rust/`](rust/)
 
-當你有以下需求時，可以使用這個 repo：
+這個 repo 適合以下情境：
 
-- 從某個 Grafana instance 備份 dashboards 或 alerting 資源
-- 將 dashboards 或 alerting 資源從一套 Grafana 搬移到另一套 Grafana
+- 從 Grafana 備份 dashboards 或 alerting 資源
+- 在不同環境之間搬移 Grafana 內容
 - 將 Grafana JSON 納入版本控制
-- 準備可供 API 再匯入的 dashboard JSON，或準備可供 Grafana Web UI 匯入並重新對應 datasource 的 dashboard JSON
-
-Dashboard 流程由 `grafana-utils` 處理。請使用明確的子命令，避免把匯出與匯入流程混在一起：
-
-- `grafana-utils export ...`
-- `grafana-utils import ...`
-
-Alerting 流程由 `grafana-alert-utils` 獨立處理，因為 Grafana alerting 使用的 API 與檔案格式和 dashboard 不同。
-
-下方範例仍使用 `python3 cmd/...` 表示 Python 實作，這樣可以直接在 git checkout 內執行。如果你已經安裝成 package，只要把相同參數改用已安裝的命令名稱即可。Rust 的 build 與執行方式請看下面的 `Rust 版本工具` 章節。
+- 準備可供 API 匯入的 dashboard JSON，或可供 Grafana Web UI 匯入並重新 mapping datasource 的 dashboard JSON
 
 相容性：
 
 - 支援 RHEL 8 與更新版本
-- 兩個 Python 入口腳本都維持 Python 3.6 語法相容，確保在 RHEL 8 環境中可被解析
+- Python 入口腳本維持 Python 3.6 語法可解析，方便 RHEL 8 環境使用
 
-## 安裝
+## 目錄
 
-安裝到目前的 Python 環境：
+- [總覽](#總覽)
+- [選擇 Python 或 Rust](#選擇-python-或-rust)
+- [快速開始](#快速開始)
+- [Dashboard 工具](#dashboard-工具)
+- [Alerting 工具](#alerting-工具)
+- [Build 與安裝](#build-與安裝)
+- [認證與 TLS](#認證與-tls)
+- [輸出目錄結構](#輸出目錄結構)
+- [驗證](#驗證)
+- [文件說明](#文件說明)
 
-```bash
-python3 -m pip install .
-```
+## 總覽
 
-如果你想用簡單的 repo 內建 build 指令，而不是自己直接呼叫 `pip` 或 `cargo`：
-
-```bash
-make build-python
-make build-rust
-make build
-```
-
-若你要安裝到使用者自己的環境，不動系統層 site-packages：
-
-```bash
-python3 -m pip install --user .
-```
-
-如果你想盡量使用 HTTP/2，且環境是 Python 3.8+，可以安裝可選依賴：
-
-```bash
-python3 -m pip install '.[http2]'
-```
-
-安裝完成後，使用已安裝的命令：
+兩個命令分開是刻意設計，因為 dashboards 與 alerting 使用不同的 Grafana API，也有不同的檔案格式。
 
 - `grafana-utils export ...`
 - `grafana-utils import ...`
 - `grafana-alert-utils ...`
 
-如果你不是安裝成 package，而是直接在 git checkout 內執行，則繼續使用 `cmd/` 下的薄封裝腳本：
+這個 repo 最重要的差別是 dashboard 匯出格式分成兩種：
 
-- `python3 cmd/grafana-utils.py export ...`
-- `python3 cmd/grafana-utils.py import ...`
-- `python3 cmd/grafana-alert-utils.py ...`
+- `dashboards/raw/`：給 Grafana API 再匯入
+- `dashboards/prompt/`：給 Grafana Web UI 匯入時做 datasource mapping
 
-## Rust 版本工具
+## 選擇 Python 或 Rust
 
-這個 repository 也包含放在 [`rust/`](rust/) 下的 Rust 實作。
+請依你的使用方式選擇：
 
-建立 Rust binary：
+| 選項 | 適合情境 | 指令 |
+| --- | --- | --- |
+| 已安裝的 Python package | 一般使用的預設路徑 | `grafana-utils ...`、`grafana-alert-utils ...` |
+| 直接從 git checkout 執行 Python | 開發或直接在 repo 內測試 | `python3 cmd/grafana-utils.py ...`、`python3 cmd/grafana-alert-utils.py ...` |
+| 直接從 git checkout 執行 Rust | 驗證或開發 Rust 實作 | `cargo run --bin grafana-utils -- ...`、`cargo run --bin grafana-alert-utils -- ...` |
+
+說明：
+
+- Python package 是這個 repo 目前最直接的安裝與使用方式
+- Rust binaries 是從 [`rust/`](rust/) 建立，不會被 `python3 -m pip install .` 安裝
+- 兩種實作共用相同的命令名稱與操作概念
+
+## 快速開始
+
+Dashboard 匯出，同時產生 `raw/` 與 `prompt/`：
 
 ```bash
-make build-rust
+python3 cmd/grafana-utils.py export \
+  --url http://127.0.0.1:3000 \
+  --export-dir ./dashboards \
+  --overwrite
 ```
 
-直接從 repo 執行 Rust dashboard CLI：
+從 raw 匯出結果做 dashboard API 匯入：
 
 ```bash
-cd rust
-cargo run --bin grafana-utils -- export -h
+python3 cmd/grafana-utils.py import \
+  --url http://127.0.0.1:3000 \
+  --import-dir ./dashboards/raw \
+  --replace-existing
 ```
 
-直接從 repo 執行 Rust alerting CLI：
+Alerting 匯出：
 
 ```bash
-cd rust
-cargo run --bin grafana-alert-utils -- -h
+python3 cmd/grafana-alert-utils.py \
+  --url http://127.0.0.1:3000 \
+  --output-dir ./alerts \
+  --overwrite
 ```
 
-注意：
+Alerting 匯入：
 
-- Rust binaries 目前是從 `rust/` crate 建立，不包含在 `python3 -m pip install .` 的安裝流程裡
-- Rust binary 名稱和 Python 命令一致，都是 `grafana-utils` 與 `grafana-alert-utils`
-- `make build-python` 會把 Python wheel 建立到 `dist/`
-- `make build-rust` 會把 Rust release binaries 建立到 `rust/target/release/`
+```bash
+python3 cmd/grafana-alert-utils.py \
+  --url http://127.0.0.1:3000 \
+  --import-dir ./alerts/raw \
+  --replace-existing
+```
 
-預設匯出根目錄是 `dashboards/`。一次匯出會自動產生兩種格式：
+## Dashboard 工具
+
+`grafana-utils` 使用明確的子命令：
+
+- `export`
+- `import`
+
+### 匯出格式
+
+一次 dashboard 匯出預設會產生兩種格式：
 
 - `dashboards/raw/`
 - `dashboards/prompt/`
 
-如果你想明確關掉其中一種輸出：
+如果你只想保留其中一種，使用：
 
 - `--without-dashboard-raw`
 - `--without-dashboard-prompt`
 
-## 模式
+`raw/` 適合：
 
-### `export` 參數
+- 保留相同 dashboard `uid`
+- 盡量少改動內容
+- 用 API 再匯入
+
+`prompt/` 適合：
+
+- 用 Grafana Web UI 匯入
+- 在匯入時做 datasource mapping
+- 需要 Grafana 風格的 `__inputs`
+
+### 常用匯出參數
 
 | 參數 | 用途 |
 | --- | --- |
-| `--url` | Grafana 基礎 URL。預設為 `http://127.0.0.1:3000`。 |
-| `--api-token` | 使用 Grafana API token。若未提供，會回退到 `GRAFANA_API_TOKEN`。 |
-| `--username` | Grafana 使用者名稱。若未提供，會回退到 `GRAFANA_USERNAME`。 |
-| `--password` | Grafana 密碼。若未提供，會回退到 `GRAFANA_PASSWORD`。 |
-| `--timeout` | HTTP timeout 秒數。預設為 `30`。 |
-| `--verify-ssl` | 啟用 TLS 憑證驗證。預設關閉。 |
-| `--export-dir` | Dashboard 匯出的根目錄。預設為 `dashboards/`。 |
-| `--page-size` | Grafana dashboard search page size。預設為 `500`。 |
-| `--flat` | 直接把檔案寫到匯出根目錄，不使用依 folder 分類的子目錄。 |
-| `--overwrite` | 若匯出檔已存在則覆寫。 |
-| `--without-dashboard-raw` | 跳過 `dashboards/raw/` 匯出格式。 |
-| `--without-dashboard-prompt` | 跳過 `dashboards/prompt/` 匯出格式。 |
+| `--url` | Grafana 基礎 URL，預設 `http://127.0.0.1:3000` |
+| `--export-dir` | 匯出根目錄，預設 `dashboards/` |
+| `--page-size` | Dashboard search page size，預設 `500` |
+| `--flat` | 不建立依 folder 分類的子目錄 |
+| `--overwrite` | 覆寫既有匯出檔案 |
+| `--without-dashboard-raw` | 跳過 `raw/` 匯出 |
+| `--without-dashboard-prompt` | 跳過 `prompt/` 匯出 |
+| `--verify-ssl` | 啟用 TLS 憑證驗證 |
 
-### `raw/` 匯出
+### Raw 匯出
+
+Raw 匯出會盡量保留 Grafana dashboard identity：
 
 - 保留 dashboard `uid`
 - 保留 dashboard `title`
-- 將 dashboard `id` 設為 `null`
-- 保留原本的 datasource references，不做改寫
+- 將數字型 dashboard `id` 設為 `null`
+- 保留 datasource references，不改寫
 
-範例：
-
-```bash
-python3 cmd/grafana-utils.py export \
-  --url http://127.0.0.1:3000 \
-  --export-dir ./dashboards \
-  --overwrite
-```
-
-如果你希望盡量少改動，並且想用相同 identity 將 dashboard 再匯入，請使用 `dashboards/raw/`。
-
-如果你只想要 prompt 格式：
-
-```bash
-python3 cmd/grafana-utils.py export --export-dir ./dashboards --without-dashboard-raw
-```
-
-### `prompt/` 匯出
-
-`dashboards/prompt/` 會在同一次匯出流程中一起產生。這個格式用於 Grafana Web import，適合在匯入時讓 Grafana 詢問要把 datasource 對應到哪一個目標 datasource。
-
-範例：
+如果你只要 prompt 格式：
 
 ```bash
 python3 cmd/grafana-utils.py export \
-  --url http://127.0.0.1:3000 \
   --export-dir ./dashboards \
-  --overwrite
+  --without-dashboard-raw
 ```
 
-這個 prompt 格式會遵循 Grafana Web import 預期的資料形狀：
+### Prompt 匯出
+
+Prompt 匯出會把 dashboard 改寫成 Grafana Web import 比較能直接理解的格式：
 
 - 產生非空的 `__inputs`
 - 保留 `__elements`
-- 在適用時新增或正規化 dashboard datasource 變數
-- 將相依的 template-query datasource references 改寫成 `${DS_...}`
-- 對於單一 datasource type 的 dashboards，將 panel datasource references 正規化為 `{"uid":"$datasource"}`
+- 把 datasource references 改寫成 import placeholders
+- 若整個 dashboard 只使用一種 datasource type，可能會把 panel datasource refs 正規化成 `{"uid":"$datasource"}`
 
-注意：
+重要說明：
 
-- 混合多種 datasource 的 dashboards 會保留明確的 `DS_...` placeholders，因為單一 `$datasource` 變數無法安全表示多組 datasource 對應。
-- 沒有 datasource `type` 的 datasource 變數，例如 `{"uid":"$datasource"}`，無法安全轉成 Grafana import prompt，因此會原樣保留。
+- 混合多種 datasource 的 dashboards 會保留明確的 `DS_...` placeholders
+- 無法安全轉換的 untyped datasource variables 會保留原樣
+- prompt JSON 是給 Grafana Web UI 匯入，不是給 API 匯入
 
-如果你只想要 raw 格式：
+如果你只要 raw 格式：
 
 ```bash
-python3 cmd/grafana-utils.py export --export-dir ./dashboards --without-dashboard-prompt
+python3 cmd/grafana-utils.py export \
+  --export-dir ./dashboards \
+  --without-dashboard-prompt
 ```
 
-### API 匯入
+### Dashboard 匯入
 
-`import` 會透過 Grafana API 匯入 dashboard JSON 檔案。
+Dashboard 匯入會透過 Grafana API 讀取一般 dashboard JSON。
 
 範例：
 
@@ -199,62 +200,25 @@ python3 cmd/grafana-utils.py import \
   --replace-existing
 ```
 
-這條路徑只適用於一般 dashboard JSON，不適用於 prompt JSON。包含 `__inputs` 的檔案應該改用 Grafana Web UI 匯入。
+重要規則：
 
-請明確把 `--import-dir` 指向 `dashboards/raw/`，不要指向合併後的 `dashboards/` 根目錄。
-
-## 認證
-
-你可以使用 API token，或是 username/password。
-
-API token：
-
-```bash
-export GRAFANA_API_TOKEN='your-token'
-python3 cmd/grafana-utils.py export --export-dir ./dashboards
-```
-
-使用者名稱與密碼：
-
-```bash
-export GRAFANA_USERNAME='your-user'
-export GRAFANA_PASSWORD='your-pass'
-python3 cmd/grafana-utils.py export --export-dir ./dashboards
-```
-
-## SSL
-
-預設會停用 SSL 驗證。
-
-如果你需要嚴格驗證：
-
-```bash
-python3 cmd/grafana-utils.py export --verify-ssl
-```
-
-## 匯入行為摘要
-
-- `dashboards/raw/`：最適合在保留相同 dashboard `uid` 的情況下，以最少改動重新匯入。
-- `dashboards/prompt/`：最適合用 Grafana Web import，並在匯入時重新做 datasource mapping。
-- `python3 cmd/grafana-utils.py import --import-dir ./dashboards/raw`：最適合用 API 匯入一般 dashboard JSON。
+- `--import-dir` 要指向 `dashboards/raw/`，不是整個 `dashboards/`
+- 不要把 `prompt/` 檔案拿去走 API 匯入
+- 含有 `__inputs` 的檔案應該改走 Grafana Web UI 匯入
+- `--import-folder-uid` 可覆寫所有匯入 dashboard 的目標 folder
+- `--import-message` 可設定 dashboard version-history message
 
 ## Alerting 工具
 
-`cmd/grafana-alert-utils.py` 是處理 Grafana alerting 資源的獨立 CLI。它存在的目的，是把 alerting 邏輯與 `cmd/grafana-utils.py` 分開。
+`grafana-alert-utils` 專門處理 Grafana alerting 資源，與 dashboard 分開。
 
-目前支援的範圍：
+支援的資源：
 
 - alert rules
 - contact points
 - mute timings
 - notification policies
 - notification message templates
-- 匯出為工具自有的 JSON 格式，存放在 `alerts/raw/`
-- 將同一種工具自有格式再透過 Grafana alerting provisioning HTTP API 匯入
-
-不支援的範圍：
-
-- 直接重用 Grafana provisioning `/export` 產生的檔案來做 API 匯入
 
 ### Alerting 匯出
 
@@ -267,44 +231,10 @@ python3 cmd/grafana-alert-utils.py \
   --overwrite
 ```
 
-會寫出：
-
-- `alerts/raw/rules/`
-- `alerts/raw/contact-points/`
-- `alerts/raw/mute-timings/`
-- `alerts/raw/policies/`
-- `alerts/raw/templates/`
-- `alerts/index.json`
-
-如果你想使用平面目錄結構：
+若你想使用較平面的目錄結構：
 
 ```bash
 python3 cmd/grafana-alert-utils.py --output-dir ./alerts --flat
-```
-
-常見使用範例：
-
-API token：
-
-```bash
-export GRAFANA_API_TOKEN='your-token'
-
-python3 cmd/grafana-alert-utils.py \
-  --url https://grafana.example.com \
-  --output-dir ./alerts \
-  --overwrite
-```
-
-使用者名稱與密碼：
-
-```bash
-export GRAFANA_USERNAME='admin'
-export GRAFANA_PASSWORD='secret'
-
-python3 cmd/grafana-alert-utils.py \
-  --url https://grafana.example.com \
-  --output-dir ./alerts \
-  --overwrite
 ```
 
 ### Alerting 匯入
@@ -318,7 +248,7 @@ python3 cmd/grafana-alert-utils.py \
   --replace-existing
 ```
 
-匯入時若需要重對應 linked dashboard 或 panel：
+若 linked dashboard 或 panel 需要重對應：
 
 ```bash
 python3 cmd/grafana-alert-utils.py \
@@ -347,33 +277,168 @@ python3 cmd/grafana-alert-utils.py \
 }
 ```
 
-行為說明：
+### Alerting 匯入規則
 
-- `--replace-existing` 會依 `uid` 更新既有 rules、依 `uid` 更新 contact points、依 `name` 更新 mute timings
-- notification policies 一律使用 `PUT` 套用，因為 Grafana 將它們視為單一 policy tree
-- notification templates 以 `PUT` 套用；若有 `--replace-existing`，工具會先讀取目前 template 版本，再在更新時一起送回
-- 未使用 `--replace-existing` 時，rule/contact-point/mute-timing 匯入會走 create；若 identity 衝突，Grafana 會拒絕
-- 未使用 `--replace-existing` 時，如果 template 名稱已存在，template 匯入會失敗
-- 匯入只接受由 `cmd/grafana-alert-utils.py` 匯出的檔案
-- 不要把 `--import-dir` 指到合併後的 `alerts/` 根目錄
-- 當 linked alert rules 在匯入時需要重對應，請使用 `--dashboard-uid-map` 與 `--panel-id-map`
-- 內部 matching 與 mapping 細節記錄在 `DEVELOPER.md`
+- `--replace-existing` 會依 `uid` 更新既有 rules
+- `--replace-existing` 會依 `uid` 更新既有 contact points
+- `--replace-existing` 會依 `name` 更新既有 mute timings
+- notification policies 一律用 `PUT`
+- notification templates 使用 `PUT`；若有 `--replace-existing`，會先讀取目前版本
+- 未使用 `--replace-existing` 時，rule/contact-point/mute-timing 匯入走 create，若衝突則 Grafana 會拒絕
+- 未使用 `--replace-existing` 時，若 template 名稱已存在，template 匯入會失敗
+- 匯入只接受由本工具匯出的檔案
+- 不要把 `--import-dir` 指到整個 `alerts/` 根目錄
 
 重要限制：
 
-- Grafana alert provisioning `/export` 的輸出不能直接拿來走這條匯入路徑
-- Grafana 官方文件也說明 provisioning export format 是給 file/Terraform provisioning 使用，不是給 HTTP API 直接 round-trip update 使用
+- Grafana 官方 alert provisioning `/export` 匯出的檔案，不是本工具支援的匯入格式
+- 本工具只保證由 `grafana-alert-utils` 自己匯出的檔案可以再匯入
 
-驗證方式：
+原因說明：
 
-- 單元測試：`python3 -m unittest -v`
-- 開發期間會做 container-based end-to-end validation
-- 已驗證 rules、contact points、mute timings、notification policies、notification templates，以及 dashboard-linked alert rules 的 export/import
+- Grafana 的 alert provisioning `export` payload 比較偏向 provisioning 表示格式，不是設計成給 HTTP API 直接 round-trip 匯入
+- Grafana 的 create/update API 預期的 request shape，和 `/export` 回傳的 response shape 並不相同
+- 因為這兩套格式不對稱，所以本工具另外定義了自己的匯出格式來做備份與還原
+
+對 linked alert rules：
+
+- 當 dashboard 或 panel identity 已改變時，請使用 `--dashboard-uid-map` 與 `--panel-id-map`
+- 關於 fallback matching 與修復行為的 maintainer 細節，請看 [`DEVELOPER.md`](DEVELOPER.md)
+
+## Build 與安裝
+
+### Python Package
+
+安裝到目前的 Python 環境：
+
+```bash
+python3 -m pip install .
+```
+
+安裝到使用者自己的環境：
+
+```bash
+python3 -m pip install --user .
+```
+
+Python 3.8+ 若要安裝可選的 HTTP/2 依賴：
+
+```bash
+python3 -m pip install '.[http2]'
+```
+
+### Makefile 快捷指令
+
+Repo 根目錄提供 [`Makefile`](Makefile)：
+
+- `make help`
+- `make build-python`
+- `make build-rust`
+- `make build`
+- `make test-python`
+- `make test-rust`
+- `make test`
+
+輸出位置：
+
+- `make build-python` 會把 wheel 放到 `dist/`
+- `make build-rust` 會把 release binaries 放到 `rust/target/release/`
+
+### Rust Build 與執行
+
+建立 Rust release binaries：
+
+```bash
+make build-rust
+```
+
+直接從 repo 執行 Rust dashboard CLI：
+
+```bash
+cd rust
+cargo run --bin grafana-utils -- export -h
+```
+
+直接從 repo 執行 Rust alerting CLI：
+
+```bash
+cd rust
+cargo run --bin grafana-alert-utils -- -h
+```
+
+## 認證與 TLS
+
+支援的認證方式：
+
+- API token
+- 使用者名稱與密碼
+
+API token 範例：
+
+```bash
+export GRAFANA_API_TOKEN='your-token'
+python3 cmd/grafana-utils.py export --export-dir ./dashboards
+```
+
+使用者名稱與密碼範例：
+
+```bash
+export GRAFANA_USERNAME='your-user'
+export GRAFANA_PASSWORD='your-pass'
+python3 cmd/grafana-utils.py export --export-dir ./dashboards
+```
+
+TLS 說明：
+
+- 預設關閉 SSL verification
+- 若你要嚴格驗證憑證，請加上 `--verify-ssl`
+
+範例：
+
+```bash
+python3 cmd/grafana-utils.py export --verify-ssl
+```
+
+## 輸出目錄結構
+
+Dashboard 匯出目錄：
+
+```text
+dashboards/
+  index.json
+  raw/
+    index.json
+    ...
+  prompt/
+    index.json
+    ...
+```
+
+Alerting 匯出目錄：
+
+```text
+alerts/
+  index.json
+  raw/
+    rules/
+    contact-points/
+    mute-timings/
+    policies/
+    templates/
+```
 
 ## 驗證
 
-執行測試：
+常用驗證指令：
 
 ```bash
+make test
 python3 -m unittest -v
+cd rust && cargo test
 ```
+
+## 文件說明
+
+- 英文 README：[`README.md`](README.md)
+- 繁體中文 README：[`README.zh-TW.md`](README.zh-TW.md)
+- maintainer 與實作細節：[`DEVELOPER.md`](DEVELOPER.md)

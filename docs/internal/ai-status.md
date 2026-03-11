@@ -1,5 +1,12 @@
 # ai-status.md
 
+## 2026-03-11 - Task: Distinguish Python and Rust Test File Names
+- State: Done
+- Scope: `tests/test_python_dashboard_cli.py`, `tests/test_python_alert_cli.py`, `tests/test_python_packaging.py`, `rust/src/common.rs`, `rust/src/http.rs`, `rust/src/alert.rs`, `rust/src/dashboard.rs`, `rust/src/common_rust_tests.rs`, `rust/src/http_rust_tests.rs`, `rust/src/alert_rust_tests.rs`, `rust/src/dashboard_rust_tests.rs`, `DEVELOPER.md`, `AGENTS.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Python tests are named generically under `tests/test_*.py`, while Rust unit tests are inline inside implementation files. That makes it hard to distinguish Python and Rust test files by filename alone.
+- Current Update: Renamed the Python test files to `test_python_*`, moved the Rust unit tests into dedicated `*_rust_tests.rs` files loaded from their parent modules, and updated maintainer docs to use the new test names and layout.
+- Result: Python and Rust test files are now distinguishable by filename, and both `python3 -m unittest -v` and `cd rust && cargo test` still pass with the new layout.
+
 ## 2026-03-11 - Task: Add Unified Build Makefile
 - State: Done
 - Scope: `Makefile`, `.gitignore`, `README.md`, `README.zh-TW.md`, `DEVELOPER.md`, `AGENTS.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

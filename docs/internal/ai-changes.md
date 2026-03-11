@@ -1,5 +1,14 @@
 # ai-changes.md
 
+## 2026-03-11 - Distinguish Python and Rust Test File Names
+- Summary: Renamed the Python test modules so their filenames explicitly carry the implementation marker, and moved the Rust unit tests into dedicated `*_rust_tests.rs` files instead of keeping them inline inside production modules. The Python test files are now `test_python_dashboard_cli.py`, `test_python_alert_cli.py`, and `test_python_packaging.py`.
+- Tests: No new behavior tests were added. Validation focused on test discovery and compile-time wiring after the file moves.
+- Test Run: `python3 -m unittest -v` (pass); `cd rust && /opt/homebrew/bin/cargo test` (pass)
+- Validation: Maintainer-facing docs were updated so targeted test commands and naming guidance now match the new Python and Rust test filenames.
+- Impact: `tests/test_python_dashboard_cli.py`, `tests/test_python_alert_cli.py`, `tests/test_python_packaging.py`, `rust/src/common.rs`, `rust/src/http.rs`, `rust/src/alert.rs`, `rust/src/dashboard.rs`, `rust/src/common_rust_tests.rs`, `rust/src/http_rust_tests.rs`, `rust/src/alert_rust_tests.rs`, `rust/src/dashboard_rust_tests.rs`, `DEVELOPER.md`, `AGENTS.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low structural risk. The change affects only test-file layout and discovery, not production behavior.
+- Follow-up: None.
+
 ## 2026-03-11 - Add Unified Build Makefile
 - Summary: Added a root `Makefile` so the repo has one consistent command surface for building both implementations. The new targets cover Python wheel builds, Rust release builds, and aggregate `build` / `test` entrypoints.
 - Tests: Validation is by executing the new `Makefile` targets directly instead of adding unit tests for shell behavior.

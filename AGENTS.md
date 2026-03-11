@@ -32,8 +32,8 @@ Keep implementation code in `grafana_utils/` and keep `cmd/` wrappers thin unles
 - `python3 cmd/grafana-utils.py import -h`: show dashboard import help.
 - `python3 cmd/grafana-alert-utils.py -h`: show alerting CLI help and examples.
 - `python3 -m unittest -v`: run the full test suite.
-- `python3 -m unittest -v tests/test_grafana_alert_utils.py`: run alerting tests only.
-- `python3 -m unittest -v tests/test_dump_grafana_dashboards.py`: run dashboard tests only.
+- `python3 -m unittest -v tests/test_python_alert_cli.py`: run alerting Python tests only.
+- `python3 -m unittest -v tests/test_python_dashboard_cli.py`: run dashboard Python tests only.
 
 Run the smallest relevant test target first, then the full suite when behavior changes span both tools.
 
@@ -48,7 +48,8 @@ Run the smallest relevant test target first, then the full suite when behavior c
 ## Testing Guidelines
 
 - Tests use `unittest`.
-- Name test files `tests/test_*.py` and test methods `test_*`.
+- Name Python test files `tests/test_python_*.py` and test methods `test_*`.
+- Keep Rust unit tests in `rust/src/*_rust_tests.rs` when the filename needs to distinguish them from Python tests.
 - Add or update tests for every user-visible behavior change.
 - For CLI UX changes, test parser behavior or `format_help()` output directly.
 

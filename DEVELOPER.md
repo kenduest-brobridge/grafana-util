@@ -10,9 +10,9 @@ This document is for maintainers. Keep `README.md` GitHub-facing and task-orient
 - `cmd/grafana-utils.py`: thin source-tree wrapper for the packaged dashboard CLI
 - `cmd/grafana-alert-utils.py`: thin source-tree wrapper for the packaged alerting CLI
 - `pyproject.toml`: build metadata, dependencies, and console-script entrypoints
-- `tests/test_dump_grafana_dashboards.py`: dashboard utility unit tests
-- `tests/test_grafana_alert_utils.py`: alerting utility unit tests
-- `tests/test_packaging.py`: package metadata and console-script tests
+- `tests/test_python_dashboard_cli.py`: dashboard Python unit tests
+- `tests/test_python_alert_cli.py`: alerting Python unit tests
+- `tests/test_python_packaging.py`: Python package metadata and console-script tests
 - `Makefile`: shared developer shortcuts for Python wheel builds, Rust release builds, and test runs
 
 ## Python Baseline
@@ -130,7 +130,8 @@ Template handling notes:
 
 - Import accepts the tool-owned document format emitted by `cmd/grafana-alert-utils.py`
 - `detect_document_kind(...)` also accepts plain resource-shaped JSON for rules/contact points/mute timings/policies/templates
-- Grafana provisioning `/export` payloads are intentionally rejected for API import
+- Grafana official provisioning `/export` payloads are intentionally rejected for API import
+- Round-trip import is only guaranteed for the tool-owned export format emitted by `cmd/grafana-alert-utils.py`
 - Reject the combined `alerts/` export root on import; require callers to point at `alerts/raw/`
 
 ### Dashboard-linked alert rules
@@ -193,7 +194,7 @@ Notes:
 
 ### Live validation notes
 
-- Primary automated coverage lives in `tests/test_grafana_alert_utils.py`
+- Primary automated coverage lives in `tests/test_python_alert_cli.py`
 - Container-based validation was done against Grafana `12.4.1`
 - Verified round-trip coverage includes:
   - rules
@@ -202,6 +203,49 @@ Notes:
   - notification policies
   - notification templates
   - dashboard-linked rules with repaired `__dashboardUid__`
+
+## Grafana API Endpoints Used
+
+This section lists the Grafana HTTP API paths used by this project. It is intended as a maintainer map of what each endpoint means to Grafana and how the Python and Rust implementations use it.
+
+### Dashboard and shared lookup APIs
+
+| Method | Endpoint | Grafana meaning | Project usage |
+| --- | --- | --- | --- |
+| `GET` | `/api/search` | Search Grafana objects. In this project it is always called with `type=dash-db` plus pagination params. | List dashboards for export and search dashboards by title when repairing linked alert-rule dashboard references. |
+| `GET` | `/api/dashboards/uid/{uid}` | Fetch one dashboard plus Grafana `meta` fields by dashboard UID. | Export a dashboard by UID, and inspect dashboard metadata during alert-rule linked-dashboard repair. |
+| `POST` | `/api/dashboards/db` | Create or update a dashboard from the standard dashboard import payload. Grafana expects a wrapped payload such as `{dashboard, folderUid, overwrite, message}`. | Import dashboards from the tool's raw dashboard files. |
+| `GET` | `/api/datasources` | List datasource definitions known to Grafana. | Build the datasource catalog used by dashboard prompt export so datasource references can be rewritten into Grafana import placeholders. |
+
+Notes:
+
+- No dashboard folder-management endpoint is used. Folder destination is carried through `folderUid` inside the dashboard import payload.
+- The alerting utility reuses `/api/search` and `/api/dashboards/uid/{uid}` only for linked-dashboard metadata lookup and repair, not for dashboard export/import.
+
+### Alerting provisioning APIs
+
+| Method | Endpoint | Grafana meaning | Project usage |
+| --- | --- | --- | --- |
+| `GET` | `/api/v1/provisioning/alert-rules` | List all provisioned alert rules. | Export alert rules. |
+| `GET` | `/api/v1/provisioning/alert-rules/{uid}` | Fetch one alert rule by UID. | Check whether a rule already exists before update/replace flows. |
+| `POST` | `/api/v1/provisioning/alert-rules` | Create a new alert rule from a provisioning-style rule payload. | Import a rule when not replacing an existing one. |
+| `PUT` | `/api/v1/provisioning/alert-rules/{uid}` | Replace an existing alert rule by UID. | Import a rule when `--replace-existing` is set. |
+| `GET` | `/api/v1/provisioning/contact-points` | List provisioned contact points. | Export contact points and detect existing identities before updates. |
+| `POST` | `/api/v1/provisioning/contact-points` | Create a new contact point. | Import a contact point when not replacing an existing one. |
+| `PUT` | `/api/v1/provisioning/contact-points/{uid}` | Replace an existing contact point by UID. | Import a contact point when `--replace-existing` is set. |
+| `GET` | `/api/v1/provisioning/mute-timings` | List provisioned mute timings. | Export mute timings and detect existing identities before updates. |
+| `POST` | `/api/v1/provisioning/mute-timings` | Create a new mute timing. | Import a mute timing when not replacing an existing one. |
+| `PUT` | `/api/v1/provisioning/mute-timings/{name}` | Replace an existing mute timing by name. | Import a mute timing when `--replace-existing` is set. |
+| `GET` | `/api/v1/provisioning/policies` | Fetch the notification policy tree. Grafana models policies as one tree, not as many independent objects. | Export the policy tree. |
+| `PUT` | `/api/v1/provisioning/policies` | Replace the notification policy tree. | Import the policy tree. The tool always uses `PUT` because this resource is tree-shaped. |
+| `GET` | `/api/v1/provisioning/templates` | List notification templates. Grafana may return JSON `null` when none exist. | Export templates and detect existing template names. |
+| `GET` | `/api/v1/provisioning/templates/{name}` | Fetch one notification template by name. | Read the current template version before a replace/update. |
+| `PUT` | `/api/v1/provisioning/templates/{name}` | Replace a notification template by name. | Import or update a template. The request body intentionally omits `name` because the API path already carries the identity. |
+
+Alerting import format notes:
+
+- The tool accepts its own tool-owned export documents, not Grafana's official provisioning `/export` documents.
+- The create/update payload shapes for these APIs are not the same as Grafana's `/export` response shape, which is why the project normalizes resources into its own round-trip format first.
 
 ## Validation
 
@@ -213,9 +257,9 @@ make build-python
 make build-rust
 make test
 python3 -m pip install --no-deps --target /tmp/grafana-utils-install .
-python3 -m unittest tests.test_dump_grafana_dashboards
-python3 -m unittest tests.test_grafana_alert_utils
-python3 -m unittest tests.test_packaging
+python3 -m unittest tests.test_python_dashboard_cli
+python3 -m unittest tests.test_python_alert_cli
+python3 -m unittest tests.test_python_packaging
 python3 -m unittest -v
 ```
 
@@ -237,6 +281,58 @@ python3 cmd/grafana-alert-utils.py -h
 - `README.md`: public usage and high-level behavior
 - `DEVELOPER.md`: maintenance notes, internal architecture, compatibility rules, and implementation tradeoffs
 - `docs/internal/ai-status.md` / `docs/internal/ai-changes.md`: internal working notes only; do not treat them as public GitHub-facing documentation
+
+## GitHub metadata updates
+
+When updating GitHub repository description or topics for this project, use `gh api` against the REST endpoints instead of relying on `gh repo view` GraphQL lookups alone.
+
+Known repositories:
+
+- public: `kenduest/grafana-utils`
+- private mirror: `kenduest-brobridge/grafana-utils`
+
+Recommended sequence:
+
+1. Check current auth:
+
+```bash
+gh auth status
+```
+
+2. Switch to the account that owns the target repo if needed:
+
+```bash
+gh auth switch -u kenduest
+gh auth switch -u kenduest-brobridge
+```
+
+3. Update description with REST:
+
+```bash
+gh api repos/<owner>/grafana-utils -X PATCH \
+  -f description='Python and Rust CLI tools for exporting, backing up, migrating, and re-importing Grafana dashboards and alerting resources.'
+```
+
+4. Update topics with REST:
+
+```bash
+gh api repos/<owner>/grafana-utils/topics -X PUT \
+  -H 'Accept: application/vnd.github+json' \
+  -f 'names[]=grafana' \
+  -f 'names[]=dashboards' \
+  -f 'names[]=alerting' \
+  -f 'names[]=backup' \
+  -f 'names[]=migration' \
+  -f 'names[]=cli' \
+  -f 'names[]=python' \
+  -f 'names[]=rust'
+```
+
+Things to remember:
+
+- `gh repo view <owner>/<repo>` may fail to resolve a private repo depending on the active account and GraphQL visibility, even when `gh api repos/<owner>/<repo>` works
+- in `zsh`, quote each `names[]=...` argument or the shell will treat it as a glob and fail before the API call
+- if one repo update returns `404`, check the active `gh` account before assuming the repo path is wrong
 
 Documentation policy:
 
