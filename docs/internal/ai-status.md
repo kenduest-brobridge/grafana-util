@@ -1,5 +1,19 @@
 # ai-status.md
 
+## 2026-03-11 - Task: Port Grafana HTTP and API Flows Into Rust
+- State: Done
+- Scope: `rust/Cargo.toml`, `rust/Cargo.lock`, `rust/src/lib.rs`, `rust/src/common.rs`, `rust/src/http.rs`, `rust/src/dashboard.rs`, `rust/src/alert.rs`, `rust/src/bin/grafana-utils.rs`, `rust/src/bin/grafana-alert-utils.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The Rust crate can parse CLI arguments and normalize dashboard and alerting documents, but the actual Grafana HTTP client and live export/import flows are still stubbed with explicit not-implemented errors.
+- Current Update: Added a shared Rust JSON HTTP client on top of `reqwest`, wired real dashboard raw export/import flows into `rust/src/dashboard.rs`, and wired real alerting export/import flows into `rust/src/alert.rs` for rules, contact points, mute timings, policies, and templates. The Rust alerting path now also includes linked-dashboard metadata export plus import-time dashboard UID repair logic. The remaining dashboard gap, prompt-export datasource rewrite, is now ported as well, including datasource-template-variable input generation and dependent-variable placeholder rewrites.
+- Result: The Rust crate now executes the real Grafana HTTP/API flows and can produce both raw and prompt-style dashboard exports instead of relying on Python for datasource rewrite parity. `/opt/homebrew/bin/cargo test` passes, the targeted dashboard Rust tests pass, and the existing Python `python3 -m unittest -v` suite still passes.
+
+## 2026-03-11 - Task: Add Rust Rewrite Scaffold for Grafana Utilities
+- State: Done
+- Scope: `rust/Cargo.toml`, `rust/Cargo.lock`, `rust/src/lib.rs`, `rust/src/common.rs`, `rust/src/dashboard.rs`, `rust/src/alert.rs`, `rust/src/bin/grafana-utils.rs`, `rust/src/bin/grafana-alert-utils.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The repo ships only Python implementations. There is no Rust crate, no Rust CLI entrypoints, and no shared Rust model for dashboard or alerting document normalization.
+- Current Update: Added an isolated `rust/` crate with shared auth and path helpers, a first-pass dashboard module, a first-pass alerting module, and Rust binary entrypoints for `grafana-utils` and `grafana-alert-utils`. The Rust port currently covers CLI parsing, auth/header resolution, path-building helpers, file discovery, and dashboard/alerting document normalization helpers, while the live HTTP flows still return explicit not-implemented errors.
+- Result: The repository now contains a concrete Rust rewrite scaffold that can be extended incrementally without disturbing the shipping Python package. Existing Python tests still pass, and the new Rust crate now passes `cargo test` after the Rust toolchain was installed locally.
+
 ## 2026-03-11 - Task: Package Grafana Utilities for Installation
 - State: Done
 - Scope: `pyproject.toml`, `grafana_utils/__init__.py`, `grafana_utils/dashboard_cli.py`, `grafana_utils/alert_cli.py`, `grafana_utils/http_transport.py`, `cmd/grafana-utils.py`, `cmd/grafana-alert-utils.py`, `tests/test_dump_grafana_dashboards.py`, `tests/test_grafana_alert_utils.py`, `tests/test_packaging.py`, `README.md`, `README.zh-TW.md`, `DEVELOPER.md`, `AGENTS.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
