@@ -7,7 +7,7 @@
 - `grafana_utils/access_cli.py`: packaged access-management implementation.
 - `grafana_utils/unified_cli.py`: unified Python CLI dispatcher.
 - `grafana_utils/http_transport.py`: shared replaceable HTTP transport layer.
-- `cmd/grafana-utils.py`: thin wrapper for running the unified CLI directly from the repo checkout.
+- `python/grafana-utils.py`: thin wrapper for running the unified CLI directly from the repo checkout.
 - `pyproject.toml`: package metadata and console-script entrypoints.
 - `rust/src/`: Rust implementation for dashboard, alerting, access, and unified dispatch.
 - `tests/`: Python unit tests.
@@ -16,7 +16,7 @@
 - `DEVELOPER.md`: maintainer notes, internal behavior, and implementation tradeoffs.
 - `docs/internal/ai-status.md` and `docs/internal/ai-changes.md`: internal change trace files for meaningful feature work.
 
-Keep implementation code in `grafana_utils/` and keep `cmd/` wrappers thin unless a new workflow clearly deserves its own module.
+Keep implementation code in `grafana_utils/` and keep `python/` wrappers thin unless a new workflow clearly deserves its own module.
 
 ## Build, Test, and Development Commands
 
@@ -29,10 +29,10 @@ Keep implementation code in `grafana_utils/` and keep `cmd/` wrappers thin unles
 - `make test`: run both the Python and Rust test suites.
 - `make test-rust-live`: start Docker Grafana and run the Rust live smoke test script.
 - `grafana-utils -h`: show installed unified CLI help.
-- `python3 cmd/grafana-utils.py -h`: show unified source-tree CLI help.
-- `python3 cmd/grafana-utils.py dashboard list -h`: show dashboard list help.
-- `python3 cmd/grafana-utils.py alert -h`: show alerting help.
-- `python3 cmd/grafana-utils.py access user list -h`: show access-management help.
+- `python3 python/grafana-utils.py -h`: show unified source-tree CLI help.
+- `python3 python/grafana-utils.py dashboard list -h`: show dashboard list help.
+- `python3 python/grafana-utils.py alert -h`: show alerting help.
+- `python3 python/grafana-utils.py access user list -h`: show access-management help.
 - `python3 -m unittest -v`: run the full test suite.
 - `python3 -m unittest -v tests/test_python_alert_cli.py`: run alerting Python tests only.
 - `python3 -m unittest -v tests/test_python_dashboard_cli.py`: run dashboard Python tests only.

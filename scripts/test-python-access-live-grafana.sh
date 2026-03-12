@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
-ACCESS_BIN="${ROOT_DIR}/cmd/grafana-access-utils.py"
+ACCESS_BIN="${ROOT_DIR}/python/grafana-utils.py"
 GRAFANA_IMAGE="${GRAFANA_IMAGE:-grafana/grafana:12.4.1}"
 GRAFANA_PORT="${GRAFANA_PORT:-}"
 GRAFANA_USER="${GRAFANA_USER:-admin}"
@@ -123,7 +123,7 @@ create_api_token() {
 }
 
 access_cli() {
-  "${PYTHON_BIN}" "${ACCESS_BIN}" "$@"
+  "${PYTHON_BIN}" "${ACCESS_BIN}" access "$@"
 }
 
 run_user_smoke() {

@@ -1,5 +1,12 @@
 # ai-status.md
 
+## 2026-03-12 - Task: Move Python Source-Tree Wrapper To python/ And Remove Python Access Shim
+- State: Done
+- Scope: `python/grafana-utils.py`, `grafana_utils/unified_cli.py`, `grafana_utils/access_cli.py`, `pyproject.toml`, `scripts/test-python-access-live-grafana.sh`, `tests/test_python_packaging.py`, `tests/test_python_unified_cli.py`, `tests/test_python_access_cli.py`, `tests/test_python_dashboard_cli.py`, `README.md`, `DEVELOPER.md`, `AGENTS.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Python source-tree usage still lived under `cmd/`, and the repo still shipped a Python `grafana-access-utils` wrapper plus console-script entry even after `grafana-utils access ...` became the primary Python access path.
+- Current Update: Moved the source-tree Python wrapper to `python/grafana-utils.py`, removed the Python `grafana-access-utils` wrapper and console-script entry, updated the live access smoke script to invoke `python/grafana-utils.py access ...`, and refreshed current docs/tests to use the single Python command shape.
+- Result: Python checkout usage now matches the unified CLI direction more cleanly: one source-tree wrapper under `python/` and one Python command surface built around `grafana-utils ...`.
+
 ## 2026-03-12 - Task: Split Rust Dashboard Prompt Rewrite Module
 - State: Done
 - Scope: `rust/src/dashboard.rs`, `rust/src/dashboard_prompt.rs`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

@@ -10,7 +10,7 @@ from unittest import mock
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MODULE_PATH = REPO_ROOT / "grafana_utils" / "unified_cli.py"
-WRAPPER_PATH = REPO_ROOT / "cmd" / "grafana-utils.py"
+WRAPPER_PATH = REPO_ROOT / "python" / "grafana-utils.py"
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 unified_cli = importlib.import_module("grafana_utils.unified_cli")

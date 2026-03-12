@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """List Grafana users, teams, and service accounts through Grafana APIs.
 
-Initial scope:
-- `grafana-access-utils user list`
-- `grafana-access-utils user add`
-- `grafana-access-utils user modify`
-- `grafana-access-utils user delete`
-- `grafana-access-utils team list`
-- `grafana-access-utils team modify`
-- `grafana-access-utils service-account list`
-- `grafana-access-utils service-account add`
-- `grafana-access-utils service-account token add`
+Primary command surface:
+- `grafana-utils access user list`
+- `grafana-utils access user add`
+- `grafana-utils access user modify`
+- `grafana-utils access user delete`
+- `grafana-utils access team list`
+- `grafana-utils access team modify`
+- `grafana-utils access service-account list`
+- `grafana-utils access service-account add`
+- `grafana-utils access service-account token add`
 
 Design notes:
 - org-scoped listing can use token auth or Basic auth

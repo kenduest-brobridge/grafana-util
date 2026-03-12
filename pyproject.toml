@@ -21,7 +21,6 @@ http2 = [
 
 [project.scripts]
 grafana-utils = "grafana_utils.unified_cli:main"
-grafana-access-utils = "grafana_utils.unified_cli:access_main"
 
 [tool.setuptools]
 include-package-data = false

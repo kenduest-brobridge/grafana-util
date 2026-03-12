@@ -22,8 +22,7 @@ Commit message default for this repo:
 - `rust/src/dashboard_prompt.rs`: Rust dashboard prompt-export datasource resolution and template-rewrite logic
 - `grafana_utils/http_transport.py`: shared HTTP transport adapters and transport selection
 - `grafana_utils/unified_cli.py`: unified Python entrypoint that dispatches dashboard, alert, and access workflows
-- `cmd/grafana-utils.py`: thin source-tree wrapper for the packaged unified CLI
-- `cmd/grafana-access-utils.py`: thin source-tree wrapper for the access compatibility shim
+- `python/grafana-utils.py`: thin source-tree wrapper for the packaged unified CLI
 - `rust/src/cli.rs`: unified Rust entrypoint that dispatches dashboard, alert, and access workflows
 - `rust/src/bin/grafana-access-utils.rs`: thin Rust compatibility binary for the access-management CLI
 - `pyproject.toml`: build metadata, dependencies, and console-script entrypoints
@@ -49,23 +48,24 @@ Commit message default for this repo:
 ### CLI shape
 
 - Mode selection is explicit.
-- Installed commands are `grafana-utils` and `grafana-access-utils`.
+- Installed Python console script is `grafana-utils`.
+- Rust still keeps `grafana-access-utils` as a compatibility binary.
 - Alert workflows no longer ship a separate `grafana-alert-utils` entrypoint; use `grafana-utils alert ...`.
 - `grafana-utils` is now the primary entrypoint for dashboard, alert, and access workflows.
-- Use `python3 cmd/grafana-utils.py dashboard list ...` to inspect live dashboard summaries.
-- Use `python3 cmd/grafana-utils.py dashboard list-data-sources ...` to inspect live Grafana data sources.
-- Use `python3 cmd/grafana-utils.py dashboard export ...` for export.
-- Use `python3 cmd/grafana-utils.py dashboard import ...` for import.
-- Use `python3 cmd/grafana-utils.py dashboard diff ...` for live-vs-local comparison.
-- Use `python3 cmd/grafana-utils.py access ...` or `cargo run --bin grafana-utils -- access ...` for Grafana access-management workflows.
-- `grafana-access-utils user list ...` inspects Grafana users.
-- `grafana-access-utils user add ...` creates Grafana users through the server-admin API.
-- `grafana-access-utils user modify ...` updates Grafana users through the global and admin user APIs.
-- `grafana-access-utils user delete ...` removes Grafana users from the org or globally with explicit confirmation.
-- `grafana-access-utils team list ...` inspects Grafana teams.
-- `grafana-access-utils team add ...` creates an org-scoped Grafana team with optional initial members and admins.
-- `grafana-access-utils team modify ...` changes Grafana team membership and admin assignments.
-- `grafana-access-utils service-account ...` handles org-scoped service-account operations.
+- Use `python3 python/grafana-utils.py dashboard list ...` to inspect live dashboard summaries.
+- Use `python3 python/grafana-utils.py dashboard list-data-sources ...` to inspect live Grafana data sources.
+- Use `python3 python/grafana-utils.py dashboard export ...` for export.
+- Use `python3 python/grafana-utils.py dashboard import ...` for import.
+- Use `python3 python/grafana-utils.py dashboard diff ...` for live-vs-local comparison.
+- Use `python3 python/grafana-utils.py access ...` or `cargo run --bin grafana-utils -- access ...` for Grafana access-management workflows.
+- `grafana-utils access user list ...` inspects Grafana users.
+- `grafana-utils access user add ...` creates Grafana users through the server-admin API.
+- `grafana-utils access user modify ...` updates Grafana users through the global and admin user APIs.
+- `grafana-utils access user delete ...` removes Grafana users from the org or globally with explicit confirmation.
+- `grafana-utils access team list ...` inspects Grafana teams.
+- `grafana-utils access team add ...` creates an org-scoped Grafana team with optional initial members and admins.
+- `grafana-utils access team modify ...` changes Grafana team membership and admin assignments.
+- `grafana-utils access service-account ...` handles org-scoped service-account operations.
 - The export subcommand intentionally uses `--export-dir` instead of `--output-dir` to avoid mixing export terminology with import behavior.
 - `export-dashboard --org-id <ID>` rebuilds the dashboard client with `X-Grafana-Org-Id` and is Basic-auth-only because org switching is a server-admin-style workflow rather than a token-bound current-org workflow.
 - `export-dashboard --all-orgs` lists `/api/orgs`, rebuilds one scoped export client per org, and exports each org into an `org_<id>_<name>/` subtree to avoid cross-org file collisions on disk.
@@ -93,8 +93,8 @@ Commit message default for this repo:
 ### Packaging layout
 
 - The installable package lives under `grafana_utils/`.
-- `cmd/` keeps only thin wrappers so the repo can still be used without installation.
-- `pyproject.toml` exposes `grafana-utils` and `grafana-access-utils` as console scripts.
+- `python/` keeps only thin wrappers so the repo can still be used without installation.
+- `pyproject.toml` exposes `grafana-utils` as the Python console script.
 - Base installation depends on `requests`.
 - Optional extra `.[http2]` adds `httpx[http2]` for Python 3.8+ environments.
 
@@ -137,7 +137,7 @@ Those manifests use `schemaVersion` and `variant` markers so `import` and `diff`
 - Preserve `uid`.
 - Clear numeric `id`.
 - Keep datasource references unchanged.
-- Best input for `python3 cmd/grafana-utils.py import-dashboard`.
+- Best input for `python3 python/grafana-utils.py import-dashboard`.
 
 ### Prompt export intent
 
@@ -354,9 +354,9 @@ Alerting import format notes:
 
 ### Current scope
 
-Primary access entrypoints are `cmd/grafana-utils.py access ...` and `cargo run --bin grafana-utils -- access ...`.
+Primary access entrypoints are `python/grafana-utils.py access ...` and `cargo run --bin grafana-utils -- access ...`.
 
-Compatibility shims `cmd/grafana-access-utils.py ...` and `cargo run --bin grafana-access-utils -- ...` still support the same command surface:
+Rust still keeps a compatibility shim via `cargo run --bin grafana-access-utils -- ...` for the same command surface:
 
 - `user list`
 - `user add`
@@ -377,7 +377,7 @@ Not implemented yet:
 Current team creation command shape:
 
 ```bash
-python3 cmd/grafana-access-utils.py team add \
+python3 python/grafana-utils.py access team add \
   --url http://localhost:3000 \
   --token "$GRAFANA_API_TOKEN" \
   --name platform-operators \
@@ -483,17 +483,6 @@ grafana-utils access service-account list -h
 grafana-utils access service-account add -h
 grafana-utils access service-account token add -h
 grafana-utils alert -h
-grafana-access-utils -h
-grafana-access-utils user list -h
-grafana-access-utils user add -h
-grafana-access-utils user modify -h
-grafana-access-utils user delete -h
-grafana-access-utils team list -h
-grafana-access-utils team add -h
-grafana-access-utils team modify -h
-grafana-access-utils service-account list -h
-grafana-access-utils service-account add -h
-grafana-access-utils service-account token add -h
 cargo run --quiet --manifest-path rust/Cargo.toml --bin grafana-utils -- -h
 cargo run --quiet --manifest-path rust/Cargo.toml --bin grafana-utils -- dashboard -h
 cargo run --quiet --manifest-path rust/Cargo.toml --bin grafana-utils -- dashboard list -h
@@ -513,27 +502,27 @@ cargo run --quiet --manifest-path rust/Cargo.toml --bin grafana-utils -- access 
 cargo run --quiet --manifest-path rust/Cargo.toml --bin grafana-utils -- access service-account list -h
 cargo run --quiet --manifest-path rust/Cargo.toml --bin grafana-utils -- access service-account add -h
 cargo run --quiet --manifest-path rust/Cargo.toml --bin grafana-utils -- access service-account token add -h
-python3 cmd/grafana-utils.py -h
-python3 cmd/grafana-utils.py dashboard -h
-python3 cmd/grafana-utils.py dashboard list -h
-python3 cmd/grafana-utils.py dashboard list-data-sources -h
-python3 cmd/grafana-utils.py dashboard export -h
-python3 cmd/grafana-utils.py dashboard import -h
-python3 cmd/grafana-utils.py dashboard diff -h
-python3 cmd/grafana-utils.py alert -h
-python3 cmd/grafana-utils.py access -h
-python3 cmd/grafana-utils.py access user list -h
-python3 cmd/grafana-utils.py access user add -h
-python3 cmd/grafana-utils.py access user modify -h
-python3 cmd/grafana-utils.py access user delete -h
-python3 cmd/grafana-utils.py access team list -h
-python3 cmd/grafana-utils.py access team add -h
-python3 cmd/grafana-utils.py access team modify -h
-python3 cmd/grafana-utils.py access service-account list -h
-python3 cmd/grafana-utils.py access service-account add -h
-python3 cmd/grafana-utils.py access service-account token add -h
-python3 cmd/grafana-utils.py alert -h
-python3 cmd/grafana-access-utils.py -h
+python3 python/grafana-utils.py -h
+python3 python/grafana-utils.py dashboard -h
+python3 python/grafana-utils.py dashboard list -h
+python3 python/grafana-utils.py dashboard list-data-sources -h
+python3 python/grafana-utils.py dashboard export -h
+python3 python/grafana-utils.py dashboard import -h
+python3 python/grafana-utils.py dashboard diff -h
+python3 python/grafana-utils.py alert -h
+python3 python/grafana-utils.py access -h
+python3 python/grafana-utils.py access user list -h
+python3 python/grafana-utils.py access user add -h
+python3 python/grafana-utils.py access user modify -h
+python3 python/grafana-utils.py access user delete -h
+python3 python/grafana-utils.py access team list -h
+python3 python/grafana-utils.py access team add -h
+python3 python/grafana-utils.py access team modify -h
+python3 python/grafana-utils.py access service-account list -h
+python3 python/grafana-utils.py access service-account add -h
+python3 python/grafana-utils.py access service-account token add -h
+python3 python/grafana-utils.py alert -h
+python3 python/grafana-utils.py access -h
 ```
 
 ## Documentation split

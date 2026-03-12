@@ -163,11 +163,5 @@ def main(argv: Optional[List[str]] = None) -> int:
     if args.entrypoint == "access":
         return access_cli.main(args.forwarded_argv)
     raise RuntimeError("Unsupported unified CLI entrypoint.")
-
-
-def access_main(argv: Optional[List[str]] = None) -> int:
-    return access_cli.main(argv)
-
-
 if __name__ == "__main__":
     sys.exit(main())

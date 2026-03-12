@@ -1,5 +1,14 @@
 # ai-changes.md
 
+## 2026-03-12 - Move Python Source-Tree Wrapper To python/ And Remove Python Access Shim
+- Summary: Moved the repo-local Python wrapper from `cmd/grafana-utils.py` to `python/grafana-utils.py` and removed the separate Python `grafana-access-utils` shim from both the source tree and `pyproject.toml`. Python source-tree and installed usage now both center on one command family: `grafana-utils ...`, with access workflows entering through `grafana-utils access ...`.
+- Tests: Updated Python packaging, unified CLI, access CLI, and dashboard CLI tests to load the new wrapper path and to stop expecting a separate Python access console script.
+- Test Run: `python3 -m unittest -v tests/test_python_packaging.py tests/test_python_unified_cli.py tests/test_python_access_cli.py tests/test_python_dashboard_cli.py`
+- Reason: After the CLI consolidation, keeping Python wrappers under `cmd/` and preserving a second Python access wrapper no longer matched the actual command model and added path churn to docs, tests, and live scripts.
+- Validation: Verified that the repo-local wrapper still parses as Python 3.6 syntax, that current docs point at `python/grafana-utils.py`, and that the Python access smoke script now calls the unified wrapper with `access ...`.
+- Impact: `python/grafana-utils.py`, `grafana_utils/unified_cli.py`, `grafana_utils/access_cli.py`, `pyproject.toml`, `scripts/test-python-access-live-grafana.sh`, `tests/test_python_packaging.py`, `tests/test_python_unified_cli.py`, `tests/test_python_access_cli.py`, `tests/test_python_dashboard_cli.py`, `README.md`, `DEVELOPER.md`, `AGENTS.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Moderate. Anyone still invoking Python source-tree paths under `cmd/` or relying on a Python `grafana-access-utils` console script must switch to `python/grafana-utils.py` or installed `grafana-utils access ...`, but the underlying access behavior is unchanged once callers update the entrypoint.
+
 ## 2026-03-12 - Split Rust Dashboard Prompt Rewrite Module
 - Summary: Moved the Rust dashboard prompt-export datasource resolution and template-rewrite logic into a dedicated `dashboard_prompt.rs` internal module. The extracted module now owns datasource-catalog helpers, datasource reference discovery, datasource placeholder handling, template-variable rewrite logic, and `build_external_export_document`, while `dashboard.rs` keeps the public facade and the remaining shared IO/import/diff flows.
 - Tests: Kept the existing dashboard Rust tests and preserved test imports through targeted `dashboard.rs` re-exports where needed.
