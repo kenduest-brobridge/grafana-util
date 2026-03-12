@@ -46,7 +46,10 @@ struct InputMapping {
 
 pub(crate) fn build_datasource_catalog(
     datasources: &[Map<String, Value>],
-) -> (BTreeMap<String, Map<String, Value>>, BTreeMap<String, Map<String, Value>>) {
+) -> (
+    BTreeMap<String, Map<String, Value>>,
+    BTreeMap<String, Map<String, Value>>,
+) {
     let mut by_uid = BTreeMap::new();
     let mut by_name = BTreeMap::new();
     for datasource in datasources {
@@ -83,12 +86,22 @@ fn is_generated_input_placeholder(value: &str) -> bool {
 pub(crate) fn is_builtin_datasource_ref(value: &Value) -> bool {
     match value {
         Value::String(text) => {
-            BUILTIN_DATASOURCE_NAMES.contains(&text.as_str()) || is_generated_input_placeholder(text)
+            BUILTIN_DATASOURCE_NAMES.contains(&text.as_str())
+                || is_generated_input_placeholder(text)
         }
         Value::Object(object) => {
-            let uid = object.get("uid").and_then(Value::as_str).unwrap_or_default();
-            let name = object.get("name").and_then(Value::as_str).unwrap_or_default();
-            let ds_type = object.get("type").and_then(Value::as_str).unwrap_or_default();
+            let uid = object
+                .get("uid")
+                .and_then(Value::as_str)
+                .unwrap_or_default();
+            let name = object
+                .get("name")
+                .and_then(Value::as_str)
+                .unwrap_or_default();
+            let ds_type = object
+                .get("type")
+                .and_then(Value::as_str)
+                .unwrap_or_default();
             is_generated_input_placeholder(uid)
                 || is_generated_input_placeholder(name)
                 || BUILTIN_DATASOURCE_NAMES.contains(&uid)
@@ -132,7 +145,14 @@ fn make_input_name(label: &str) -> String {
         }
     }
     let normalized = normalized.trim_matches('_').to_string();
-    format!("DS_{}", if normalized.is_empty() { "DATASOURCE" } else { &normalized })
+    format!(
+        "DS_{}",
+        if normalized.is_empty() {
+            "DATASOURCE"
+        } else {
+            &normalized
+        }
+    )
 }
 
 fn format_plugin_name(datasource_type: &str) -> String {
@@ -160,7 +180,11 @@ fn make_input_label(datasource_type: &str, index: usize) -> String {
     }
 }
 
-fn build_resolved_datasource(key: String, ds_type: String, input_label: String) -> ResolvedDatasource {
+fn build_resolved_datasource(
+    key: String,
+    ds_type: String,
+    input_label: String,
+) -> ResolvedDatasource {
     ResolvedDatasource {
         key,
         input_label,
@@ -207,9 +231,12 @@ fn resolve_string_datasource_ref(
     datasources_by_uid: &BTreeMap<String, Map<String, Value>>,
     datasources_by_name: &BTreeMap<String, Map<String, Value>>,
 ) -> Result<ResolvedDatasource> {
-    if let Some(datasource) =
-        lookup_datasource(datasources_by_uid, datasources_by_name, Some(reference), Some(reference))
-    {
+    if let Some(datasource) = lookup_datasource(
+        datasources_by_uid,
+        datasources_by_name,
+        Some(reference),
+        Some(reference),
+    ) {
         let uid = string_field(&datasource, "uid", reference);
         let ds_type = string_field(&datasource, "type", "");
         if ds_type.is_empty() {
@@ -218,7 +245,11 @@ fn resolve_string_datasource_ref(
             )));
         }
         let label = string_field(&datasource, "name", reference);
-        return Ok(build_resolved_datasource(format!("uid:{uid}"), ds_type, label));
+        return Ok(build_resolved_datasource(
+            format!("uid:{uid}"),
+            ds_type,
+            label,
+        ));
     }
 
     if let Some(datasource_type) = resolve_datasource_type_alias(reference, datasources_by_uid) {
@@ -263,7 +294,8 @@ fn resolve_object_datasource_ref(
     let uid = reference.get("uid").and_then(Value::as_str);
     let name = reference.get("name").and_then(Value::as_str);
     let ds_type = reference.get("type").and_then(Value::as_str);
-    let has_placeholder = uid.is_some_and(is_placeholder_string) || name.is_some_and(is_placeholder_string);
+    let has_placeholder =
+        uid.is_some_and(is_placeholder_string) || name.is_some_and(is_placeholder_string);
 
     if let Some(resolved) = resolve_placeholder_object_ref(uid, name, ds_type) {
         return Ok(Some(resolved));
@@ -322,10 +354,13 @@ fn resolve_datasource_ref(
             if is_placeholder_string(text) {
                 Ok(None)
             } else {
-                resolve_string_datasource_ref(text, datasources_by_uid, datasources_by_name).map(Some)
+                resolve_string_datasource_ref(text, datasources_by_uid, datasources_by_name)
+                    .map(Some)
             }
         }
-        Value::Object(object) => resolve_object_datasource_ref(object, datasources_by_uid, datasources_by_name),
+        Value::Object(object) => {
+            resolve_object_datasource_ref(object, datasources_by_uid, datasources_by_name)
+        }
         _ => Ok(None),
     }
 }
@@ -372,7 +407,11 @@ fn rewrite_template_variable_query(
     datasource_var_mappings: &mut BTreeMap<String, InputMapping>,
     datasource_var_placeholders: &mut BTreeSet<String>,
 ) {
-    if let Some(name) = variable.get("name").and_then(Value::as_str).filter(|value| !value.is_empty()) {
+    if let Some(name) = variable
+        .get("name")
+        .and_then(Value::as_str)
+        .filter(|value| !value.is_empty())
+    {
         datasource_var_mappings.insert(name.to_string(), mapping.clone());
         datasource_var_placeholders.insert(format!("${name}"));
         datasource_var_placeholders.insert(format!("${{{name}}}"));
@@ -396,7 +435,10 @@ fn rewrite_template_variable_datasource(
 ) {
     let placeholder_value = match variable.get("datasource") {
         Some(Value::String(text)) => Some(text.clone()),
-        Some(Value::Object(object)) => object.get("uid").and_then(Value::as_str).map(|value| value.to_string()),
+        Some(Value::Object(object)) => object
+            .get("uid")
+            .and_then(Value::as_str)
+            .map(|value| value.to_string()),
         _ => None,
     };
     let Some(placeholder_value) = placeholder_value else {
@@ -428,7 +470,10 @@ fn prepare_templating_for_external_import(
     datasources_by_uid: &BTreeMap<String, Map<String, Value>>,
     datasources_by_name: &BTreeMap<String, Map<String, Value>>,
 ) {
-    let Some(templating) = dashboard.get_mut("templating").and_then(Value::as_object_mut) else {
+    let Some(templating) = dashboard
+        .get_mut("templating")
+        .and_then(Value::as_object_mut)
+    else {
         return;
     };
     let Some(variables) = templating.get_mut("list").and_then(Value::as_array_mut) else {
@@ -445,17 +490,26 @@ fn prepare_templating_for_external_import(
         if variable_object.get("type").and_then(Value::as_str) != Some("datasource") {
             continue;
         }
-        let Some(query) = variable_object.get("query").and_then(Value::as_str).filter(|value| !value.is_empty()) else {
+        let Some(query) = variable_object
+            .get("query")
+            .and_then(Value::as_str)
+            .filter(|value| !value.is_empty())
+        else {
             continue;
         };
         let Some(resolved) = resolve_datasource_ref(
             &Value::String(query.to_string()),
             datasources_by_uid,
             datasources_by_name,
-        ).ok().flatten() else {
+        )
+        .ok()
+        .flatten() else {
             continue;
         };
-        let variable_name = variable_object.get("name").and_then(Value::as_str).unwrap_or(&resolved.key);
+        let variable_name = variable_object
+            .get("name")
+            .and_then(Value::as_str)
+            .unwrap_or(&resolved.key);
         let mapping = allocate_input_mapping(
             &resolved,
             ref_mapping,
@@ -490,11 +544,16 @@ fn replace_datasource_refs_in_dashboard(
     match node {
         Value::Object(object) => {
             if let Some(datasource_value) = object.get_mut("datasource") {
-                if let Some(resolved) =
-                    resolve_datasource_ref(datasource_value, datasources_by_uid, datasources_by_name)?
-                {
+                if let Some(resolved) = resolve_datasource_ref(
+                    datasource_value,
+                    datasources_by_uid,
+                    datasources_by_name,
+                )? {
                     let mapping = ref_mapping.get(&resolved.key).ok_or_else(|| {
-                        message(format!("Missing datasource input mapping for {}", resolved.key))
+                        message(format!(
+                            "Missing datasource input mapping for {}",
+                            resolved.key
+                        ))
                     })?;
                     let placeholder = format!("${{{}}}", mapping.input_name);
                     let replacement = if datasource_value.is_object() {
@@ -597,7 +656,10 @@ fn rewrite_panel_datasources_to_template_variable(
                     *datasource = json!({"uid": "$datasource"});
                 }
                 Value::Object(object) => {
-                    let uid = object.get("uid").and_then(Value::as_str).unwrap_or_default();
+                    let uid = object
+                        .get("uid")
+                        .and_then(Value::as_str)
+                        .unwrap_or_default();
                     if placeholder_names.contains(uid)
                         || uid == "$datasource"
                         || uid == "${datasource}"
@@ -683,7 +745,10 @@ fn build_requires_block(
 
 pub fn build_external_export_document(
     payload: &Value,
-    datasource_catalog: &(BTreeMap<String, Map<String, Value>>, BTreeMap<String, Map<String, Value>>),
+    datasource_catalog: &(
+        BTreeMap<String, Map<String, Value>>,
+        BTreeMap<String, Map<String, Value>>,
+    ),
 ) -> Result<Value> {
     let mut dashboard = build_preserved_web_import_document(payload)?;
     let dashboard_object = dashboard
@@ -736,7 +801,10 @@ pub fn build_external_export_document(
             .values()
             .map(|mapping| format!("${{{}}}", mapping.input_name))
             .collect::<BTreeSet<String>>();
-        if let Some(panels) = dashboard_object.get_mut("panels").and_then(Value::as_array_mut) {
+        if let Some(panels) = dashboard_object
+            .get_mut("panels")
+            .and_then(Value::as_array_mut)
+        {
             rewrite_panel_datasources_to_template_variable(panels, &placeholder_names);
         }
     }
@@ -748,8 +816,14 @@ pub fn build_external_export_document(
     let dashboard_object = dashboard
         .as_object_mut()
         .ok_or_else(|| message("Unexpected dashboard payload from Grafana."))?;
-    dashboard_object.insert("__inputs".to_string(), build_input_definitions(&ref_mapping));
-    dashboard_object.insert("__requires".to_string(), build_requires_block(&ref_mapping, &panel_types));
+    dashboard_object.insert(
+        "__inputs".to_string(),
+        build_input_definitions(&ref_mapping),
+    );
+    dashboard_object.insert(
+        "__requires".to_string(),
+        build_requires_block(&ref_mapping, &panel_types),
+    );
     dashboard_object.insert("__elements".to_string(), Value::Object(Map::new()));
     Ok(dashboard)
 }

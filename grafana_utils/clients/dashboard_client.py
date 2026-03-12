@@ -95,6 +95,25 @@ class GrafanaClient:
             raise GrafanaError("Unexpected folder payload for UID %s." % uid)
         return data
 
+    def create_folder(
+        self,
+        uid: str,
+        title: str,
+        parent_uid: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Create one folder through POST /api/folders."""
+        payload: Dict[str, Any] = {"uid": uid, "title": title}
+        if parent_uid:
+            payload["parentUid"] = parent_uid
+        data = self.request_json(
+            "/api/folders",
+            method="POST",
+            payload=payload,
+        )
+        if not isinstance(data, dict):
+            raise GrafanaError("Unexpected folder create response from Grafana.")
+        return data
+
     def fetch_dashboard(self, uid: str) -> Dict[str, Any]:
         """Fetch the full dashboard wrapper for a single Grafana UID."""
         data = self.fetch_dashboard_if_exists(uid)

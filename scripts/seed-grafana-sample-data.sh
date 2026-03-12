@@ -42,8 +42,8 @@ The script is idempotent:
 Seeded sample layout:
 - Org 1 Main Org.
   - Datasources: Smoke Prometheus, Smoke Prometheus 2, Smoke Loki
-  - Folders: Platform, Platform / Infra
-  - Dashboards: smoke-main, smoke-prom-only, query-smoke, mixed-query-smoke, two-prom-query-smoke, subfolder-main
+  - Folders: Platform, Platform / Infra, Platform / Team / Apps / Prod, Platform / Team / Apps / API
+  - Dashboards: smoke-main, smoke-prom-only, query-smoke, mixed-query-smoke, two-prom-query-smoke, subfolder-main, subfolder-chain-smoke
 - Org 2 Org Two
   - Dashboard: org-two-main
 - Org 3 QA Org
@@ -593,6 +593,32 @@ dashboard_subfolder_main() {
 EOF
 }
 
+dashboard_subfolder_chain_smoke() {
+  cat <<'EOF'
+{
+  "id": null,
+  "uid": "subfolder-chain-smoke",
+  "title": "Subfolder Chain Dashboard",
+  "tags": ["sample", "folder", "chain"],
+  "timezone": "browser",
+  "schemaVersion": 41,
+  "version": 0,
+  "panels": [
+    {
+      "id": 1,
+      "title": "Prod Chain Query",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "smoke-prom"},
+      "targets": [
+        {"refId": "A", "expr": "sum(up)", "legendFormat": "prod"}
+      ],
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 0}
+    }
+  ]
+}
+EOF
+}
+
 dashboard_org_two() {
   cat <<'EOF'
 {
@@ -678,22 +704,32 @@ seed_main_org() {
   ensure_datasource "${org_id}" "smoke-loki" "Smoke Loki" "loki" "http://loki:3100" false
   ensure_folder "${org_id}" "platform" "Platform"
   ensure_folder "${org_id}" "infra" "Infra" "platform"
+  ensure_folder "${org_id}" "team" "Team" "platform"
+  ensure_folder "${org_id}" "apps" "Apps" "team"
+  ensure_folder "${org_id}" "prod" "Prod" "apps"
+  ensure_folder "${org_id}" "api" "API" "apps"
   upsert_dashboard "${org_id}" "" "$(dashboard_smoke_main)"
   upsert_dashboard "${org_id}" "" "$(dashboard_prom_only)"
   upsert_dashboard "${org_id}" "" "$(dashboard_query_smoke)"
   upsert_dashboard "${org_id}" "" "$(dashboard_mixed_query_smoke)"
   upsert_dashboard "${org_id}" "" "$(dashboard_two_prom_query_smoke)"
   upsert_dashboard "${org_id}" "infra" "$(dashboard_subfolder_main)"
+  upsert_dashboard "${org_id}" "prod" "$(dashboard_subfolder_chain_smoke)"
 }
 
 destroy_main_org() {
   local org_id="$1"
+  delete_dashboard "${org_id}" "subfolder-chain-smoke"
   delete_dashboard "${org_id}" "subfolder-main"
   delete_dashboard "${org_id}" "two-prom-query-smoke"
   delete_dashboard "${org_id}" "mixed-query-smoke"
   delete_dashboard "${org_id}" "query-smoke"
   delete_dashboard "${org_id}" "smoke-prom-only"
   delete_dashboard "${org_id}" "smoke-main"
+  delete_folder "${org_id}" "api" "API"
+  delete_folder "${org_id}" "prod" "Prod"
+  delete_folder "${org_id}" "apps" "Apps"
+  delete_folder "${org_id}" "team" "Team"
   delete_folder "${org_id}" "infra" "Infra"
   delete_folder "${org_id}" "platform" "Platform"
   delete_datasource "${org_id}" "smoke-loki" "Smoke Loki"
