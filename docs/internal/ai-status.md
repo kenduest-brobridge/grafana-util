@@ -1,5 +1,12 @@
 # ai-status.md
 
+## 2026-03-12 - Task: Consolidate Python And Rust CLIs Under grafana-utils
+- State: Done
+- Scope: `grafana_utils/unified_cli.py`, `grafana_utils/dashboard_cli.py`, `grafana_utils/alert_cli.py`, `cmd/grafana-utils.py`, `cmd/grafana-alert-utils.py`, `cmd/grafana-access-utils.py`, `pyproject.toml`, `tests/test_python_unified_cli.py`, `tests/test_python_packaging.py`, `rust/src/cli.rs`, `rust/src/cli_rust_tests.rs`, `rust/src/bin/grafana-utils.rs`, `rust/src/dashboard.rs`, `rust/src/alert.rs`, `rust/src/lib.rs`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The repo had three split command names across Python and Rust. Dashboard already lived under `grafana-utils`, but alerting and access used separate primary binaries and docs still described the access path as split or Python-first.
+- Current Update: Added a unified Python dispatcher and a unified Rust dispatcher so `grafana-utils` is now the primary command for `dashboard`, `alert`, and `access` workflows. Old dashboard direct forms such as `grafana-utils export-dashboard ...` still work as compatibility paths, and `grafana-alert-utils` plus `grafana-access-utils` remain available as shims.
+- Result: Operators can now use one primary command shape in both implementations, while older scripts and muscle memory keep working through compatibility entrypoints during the transition.
+
 ## 2026-03-12 - Task: Add Developer Grafana Sample-Data Seed Script
 - State: Done
 - Scope: `scripts/seed-grafana-sample-data.sh`, `Makefile`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

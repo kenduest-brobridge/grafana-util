@@ -1,16 +1,15 @@
 use super::{
     build_compare_diff_text, build_contact_point_export_document, build_contact_point_output_path,
     build_empty_root_index, build_import_operation, build_rule_export_document, build_rule_output_path,
-    detect_document_kind, expect_object_list, parse_cli_from, parse_template_list_response,
+    detect_document_kind, expect_object_list, parse_cli_from, parse_template_list_response, root_command,
     serialize_compare_document, AlertCliArgs, CONTACT_POINT_KIND, ROOT_INDEX_KIND, RULE_KIND,
     TOOL_API_VERSION, TOOL_SCHEMA_VERSION,
 };
-use clap::CommandFactory;
 use serde_json::json;
 use std::path::Path;
 
 fn render_alert_help() -> String {
-    let mut command = AlertCliArgs::command();
+    let mut command = root_command();
     let mut output = Vec::new();
     command.write_long_help(&mut output).unwrap();
     String::from_utf8(output).unwrap()

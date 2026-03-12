@@ -48,7 +48,7 @@ fn render_dashboard_help() -> String {
 fn parse_cli_supports_list_mode() {
     let args = parse_cli_from([
         "grafana-utils",
-        "list-dashboard",
+        "list",
         "--url",
         "https://grafana.example.com",
         "--page-size",
@@ -74,7 +74,7 @@ fn parse_cli_supports_list_mode() {
 fn parse_cli_supports_list_with_sources() {
     let args = parse_cli_from([
         "grafana-utils",
-        "list-dashboard",
+        "list",
         "--url",
         "https://grafana.example.com",
         "--with-sources",
@@ -119,7 +119,7 @@ fn parse_cli_supports_list_data_sources_mode() {
 fn parse_cli_supports_preferred_auth_aliases() {
     let args = parse_cli_from([
         "grafana-utils",
-        "export-dashboard",
+        "export",
         "--token",
         "abc123",
         "--basic-user",
@@ -143,7 +143,7 @@ fn parse_cli_supports_preferred_auth_aliases() {
 fn parse_cli_supports_prompt_password() {
     let args = parse_cli_from([
         "grafana-utils",
-        "export-dashboard",
+        "export",
         "--basic-user",
         "user",
         "--prompt-password",
@@ -163,13 +163,13 @@ fn parse_cli_supports_prompt_password() {
 fn parse_cli_supports_export_org_scope_flags() {
     let org_args = parse_cli_from([
         "grafana-utils",
-        "export-dashboard",
+        "export",
         "--org-id",
         "7",
     ]);
     let all_orgs_args = parse_cli_from([
         "grafana-utils",
-        "export-dashboard",
+        "export",
         "--all-orgs",
     ]);
 
@@ -194,7 +194,7 @@ fn parse_cli_supports_export_org_scope_flags() {
 fn parse_cli_rejects_conflicting_export_org_scope_flags() {
     let error = DashboardCliArgs::try_parse_from([
         "grafana-utils",
-        "export-dashboard",
+        "export",
         "--org-id",
         "7",
         "--all-orgs",
@@ -207,7 +207,7 @@ fn parse_cli_rejects_conflicting_export_org_scope_flags() {
 
 #[test]
 fn export_help_explains_flat_layout() {
-    let help = render_dashboard_subcommand_help("export-dashboard");
+    let help = render_dashboard_subcommand_help("export");
     assert!(help.contains("Write dashboard files directly into the export variant directory"));
     assert!(help.contains("instead of per-folder subdirectories"));
 }
@@ -217,7 +217,7 @@ fn top_level_help_includes_examples() {
     let help = render_dashboard_help();
     assert!(help.contains("Export dashboards from local Grafana with Basic auth"));
     assert!(help.contains("Export dashboards with an API token"));
-    assert!(help.contains("grafana-utils export-dashboard"));
+    assert!(help.contains("grafana-utils export"));
     assert!(help.contains("grafana-utils diff"));
 }
 
@@ -225,7 +225,7 @@ fn top_level_help_includes_examples() {
 fn parse_cli_supports_list_csv_mode() {
     let args = parse_cli_from([
         "grafana-utils",
-        "list-dashboard",
+        "list",
         "--url",
         "https://grafana.example.com",
         "--csv",
@@ -247,7 +247,7 @@ fn parse_cli_supports_list_csv_mode() {
 fn parse_cli_supports_list_json_mode() {
     let args = parse_cli_from([
         "grafana-utils",
-        "list-dashboard",
+        "list",
         "--url",
         "https://grafana.example.com",
         "--json",
@@ -269,7 +269,7 @@ fn parse_cli_supports_list_json_mode() {
 fn parse_cli_rejects_conflicting_list_output_modes() {
     let error = DashboardCliArgs::try_parse_from([
         "grafana-utils",
-        "list-dashboard",
+        "list",
         "--url",
         "https://grafana.example.com",
         "--table",
@@ -285,13 +285,13 @@ fn parse_cli_rejects_conflicting_list_output_modes() {
 fn parse_cli_supports_list_org_scope_flags() {
     let org_args = parse_cli_from([
         "grafana-utils",
-        "list-dashboard",
+        "list",
         "--org-id",
         "7",
     ]);
     let all_orgs_args = parse_cli_from([
         "grafana-utils",
-        "list-dashboard",
+        "list",
         "--all-orgs",
     ]);
 
@@ -316,7 +316,7 @@ fn parse_cli_supports_list_org_scope_flags() {
 fn parse_cli_rejects_conflicting_list_org_scope_flags() {
     let error = DashboardCliArgs::try_parse_from([
         "grafana-utils",
-        "list-dashboard",
+        "list",
         "--org-id",
         "7",
         "--all-orgs",
@@ -328,11 +328,13 @@ fn parse_cli_rejects_conflicting_list_org_scope_flags() {
 }
 
 #[test]
-fn parse_cli_rejects_old_list_subcommand_name() {
-    let error = DashboardCliArgs::try_parse_from(["grafana-utils", "list", "--json"]).unwrap_err();
-    let rendered = error.to_string();
-    assert!(rendered.contains("unrecognized subcommand"));
-    assert!(rendered.contains("list"));
+fn parse_cli_supports_legacy_list_alias() {
+    let args = parse_cli_from(["grafana-utils", "list-dashboard", "--json"]);
+
+    match args.command {
+        DashboardCommand::List(list_args) => assert!(list_args.json),
+        _ => panic!("expected list command"),
+    }
 }
 
 #[test]

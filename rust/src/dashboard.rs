@@ -178,13 +178,13 @@ pub struct DiffArgs {
 
 #[derive(Debug, Clone, Subcommand)]
 pub enum DashboardCommand {
-    #[command(name = "list-dashboard", about = "List dashboard summaries without writing export files.")]
+    #[command(name = "list", visible_alias = "list-dashboard", about = "List dashboard summaries without writing export files.")]
     List(ListArgs),
     #[command(name = "list-data-sources", about = "List Grafana data sources.")]
     ListDataSources(ListDataSourcesArgs),
-    #[command(name = "export-dashboard", about = "Export dashboards to raw/ and prompt/ JSON files.")]
+    #[command(name = "export", visible_alias = "export-dashboard", about = "Export dashboards to raw/ and prompt/ JSON files.")]
     Export(ExportArgs),
-    #[command(name = "import-dashboard", about = "Import dashboard JSON files through the Grafana API.")]
+    #[command(name = "import", visible_alias = "import-dashboard", about = "Import dashboard JSON files through the Grafana API.")]
     Import(ImportArgs),
     #[command(about = "Compare local raw dashboard files against live Grafana dashboards.")]
     Diff(DiffArgs),
@@ -193,7 +193,7 @@ pub enum DashboardCommand {
 #[derive(Debug, Clone, Parser)]
 #[command(
     about = "Export or import Grafana dashboards.",
-    after_help = "Examples:\n\n  Export dashboards from local Grafana with Basic auth:\n    grafana-utils export-dashboard --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./dashboards --overwrite\n\n  Export dashboards with an API token:\n    export GRAFANA_API_TOKEN='your-token'\n    grafana-utils export-dashboard --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --export-dir ./dashboards --overwrite\n\n  Export into a flat directory layout instead of per-folder subdirectories:\n    grafana-utils export-dashboard --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./dashboards --flat\n\n  Compare raw dashboard exports against local Grafana:\n    grafana-utils diff --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/raw"
+    after_help = "Examples:\n\n  Export dashboards from local Grafana with Basic auth:\n    grafana-utils export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./dashboards --overwrite\n\n  Export dashboards with an API token:\n    export GRAFANA_API_TOKEN='your-token'\n    grafana-utils export --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --export-dir ./dashboards --overwrite\n\n  Export into a flat directory layout instead of per-folder subdirectories:\n    grafana-utils export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./dashboards --flat\n\n  Compare raw dashboard exports against local Grafana:\n    grafana-utils diff --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/raw"
 )]
 pub struct DashboardCliArgs {
     #[command(subcommand)]

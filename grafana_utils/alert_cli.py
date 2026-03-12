@@ -84,8 +84,9 @@ class GrafanaApiError(GrafanaError):
         super().__init__(f"Grafana API error {status_code} for {url}: {body}")
 
 
-def build_parser() -> argparse.ArgumentParser:
+def build_parser(prog: Optional[str] = None) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
+        prog=prog,
         description="Export or import Grafana alerting resources.",
         epilog=HELP_EPILOG,
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -1830,8 +1831,8 @@ def build_client(args: argparse.Namespace) -> GrafanaAlertClient:
     )
 
 
-def main() -> int:
-    args = parse_args()
+def main(argv: Optional[List[str]] = None) -> int:
+    args = parse_args(argv)
     try:
         if args.import_dir:
             return import_alerting_resources(args)

@@ -2350,8 +2350,8 @@ def build_client(args: argparse.Namespace) -> GrafanaClient:
     )
 
 
-def main() -> int:
-    args = parse_args()
+def main(argv: Optional[List[str]] = None) -> int:
+    args = parse_args(argv)
     try:
         if args.command == "list-dashboard":
             return list_dashboards(args)

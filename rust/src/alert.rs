@@ -1,4 +1,4 @@
-use clap::Parser;
+use clap::{Args, Command, CommandFactory, Parser};
 use reqwest::Method;
 use serde_json::{json, Map, Value};
 use std::collections::BTreeMap;
@@ -30,11 +30,20 @@ pub const TOOL_API_VERSION: i64 = 1;
 pub const TOOL_SCHEMA_VERSION: i64 = 1;
 pub const ROOT_INDEX_KIND: &str = "grafana-utils-alert-export-index";
 
+pub const ALERT_HELP_TEXT: &str = "Examples:\n\n  Export alerting resources with an API token:\n    export GRAFANA_API_TOKEN='your-token'\n    grafana-alert-utils --url https://grafana.example.com --output-dir ./alerts --overwrite\n\n  Import back into Grafana and update existing resources:\n    grafana-alert-utils --url https://grafana.example.com --import-dir ./alerts/raw --replace-existing\n\n  Import linked alert rules with dashboard and panel remapping:\n    grafana-alert-utils --url https://grafana.example.com --import-dir ./alerts/raw --replace-existing --dashboard-uid-map ./dashboard-map.json --panel-id-map ./panel-map.json";
+
 #[derive(Debug, Clone, Parser)]
 #[command(
+    name = "grafana-alert-utils",
     about = "Export or import Grafana alerting resources.",
-    after_help = "Examples:\n\n  Export alerting resources with an API token:\n    export GRAFANA_API_TOKEN='your-token'\n    grafana-alert-utils --url https://grafana.example.com --output-dir ./alerts --overwrite\n\n  Import back into Grafana and update existing resources:\n    grafana-alert-utils --url https://grafana.example.com --import-dir ./alerts/raw --replace-existing\n\n  Import linked alert rules with dashboard and panel remapping:\n    grafana-alert-utils --url https://grafana.example.com --import-dir ./alerts/raw --replace-existing --dashboard-uid-map ./dashboard-map.json --panel-id-map ./panel-map.json"
+    after_help = ALERT_HELP_TEXT
 )]
+struct AlertCliRoot {
+    #[command(flatten)]
+    args: AlertCliArgs,
+}
+
+#[derive(Debug, Clone, Args)]
 pub struct AlertCliArgs {
     #[arg(long, default_value = DEFAULT_URL, help = "Grafana base URL.")]
     pub url: String,
@@ -123,7 +132,11 @@ where
     I: IntoIterator<Item = T>,
     T: Into<std::ffi::OsString> + Clone,
 {
-    AlertCliArgs::parse_from(iter)
+    AlertCliRoot::parse_from(iter).args
+}
+
+pub fn root_command() -> Command {
+    AlertCliRoot::command()
 }
 
 pub fn build_auth_context(args: &AlertCliArgs) -> Result<AlertAuthContext> {
