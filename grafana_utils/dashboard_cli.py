@@ -364,6 +364,16 @@ def add_inspect_export_cli_args(parser: argparse.ArgumentParser) -> None:
         action="store_true",
         help="Render the export analysis as JSON instead of human-readable summary lines.",
     )
+    parser.add_argument(
+        "--table",
+        action="store_true",
+        help="Render the export analysis as multi-section tables instead of prose summary lines.",
+    )
+    parser.add_argument(
+        "--no-header",
+        action="store_true",
+        help="With --table, omit the per-section table header rows.",
+    )
 
 
 def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
@@ -2428,12 +2438,134 @@ def render_export_inspection_summary(document: Dict[str, Any], import_dir: Path)
     return lines
 
 
+def render_export_inspection_table_section(
+    headers: List[str],
+    rows: List[List[str]],
+    include_header: bool = True,
+) -> List[str]:
+    """Render one simple left-aligned table section."""
+    widths = [len(header) for header in headers]
+    for row in rows:
+        for index, value in enumerate(row):
+            widths[index] = max(widths[index], len(value))
+
+    def format_row(values: List[str]) -> str:
+        return "  ".join(
+            value.ljust(widths[index]) for index, value in enumerate(values)
+        )
+
+    lines = []
+    if include_header:
+        lines.append(format_row(headers))
+        lines.append(format_row(["-" * width for width in widths]))
+    lines.extend(format_row(row) for row in rows)
+    return lines
+
+
+def render_export_inspection_tables(
+    document: Dict[str, Any],
+    import_dir: Path,
+    include_header: bool = True,
+) -> List[str]:
+    """Render export inspection as multiple compact table sections."""
+    summary = document.get("summary") or {}
+    folder_records = list(document.get("folders") or [])
+    datasource_records = list(document.get("datasources") or [])
+    mixed_dashboards = list(document.get("mixedDatasourceDashboards") or [])
+    lines = ["Export inspection: %s" % import_dir, ""]
+
+    lines.append("Summary:")
+    lines.extend(
+        render_export_inspection_table_section(
+            ["METRIC", "VALUE"],
+            [
+                ["dashboard_count", str(int(summary.get("dashboardCount") or 0))],
+                ["folder_count", str(int(summary.get("folderCount") or 0))],
+                ["panel_count", str(int(summary.get("panelCount") or 0))],
+                ["query_count", str(int(summary.get("queryCount") or 0))],
+                [
+                    "mixed_datasource_dashboard_count",
+                    str(int(summary.get("mixedDatasourceDashboardCount") or 0)),
+                ],
+            ],
+            include_header=include_header,
+        )
+    )
+
+    if folder_records:
+        lines.append("")
+        lines.append("Folder paths:")
+        lines.extend(
+            render_export_inspection_table_section(
+                ["FOLDER_PATH", "DASHBOARDS"],
+                [
+                    [
+                        str(record.get("path") or "General"),
+                        str(int(record.get("dashboardCount") or 0)),
+                    ]
+                    for record in folder_records
+                ],
+                include_header=include_header,
+            )
+        )
+
+    if datasource_records:
+        lines.append("")
+        lines.append("Datasource usage:")
+        lines.extend(
+            render_export_inspection_table_section(
+                ["DATASOURCE", "REFS", "DASHBOARDS"],
+                [
+                    [
+                        str(record.get("name") or ""),
+                        str(int(record.get("referenceCount") or 0)),
+                        str(int(record.get("dashboardCount") or 0)),
+                    ]
+                    for record in datasource_records
+                ],
+                include_header=include_header,
+            )
+        )
+
+    if mixed_dashboards:
+        lines.append("")
+        lines.append("Mixed datasource dashboards:")
+        lines.extend(
+            render_export_inspection_table_section(
+                ["UID", "TITLE", "FOLDER_PATH", "DATASOURCES"],
+                [
+                    [
+                        str(record.get("uid") or ""),
+                        str(record.get("title") or ""),
+                        str(record.get("folderPath") or "General"),
+                        ",".join(record.get("datasources") or []),
+                    ]
+                    for record in mixed_dashboards
+                ],
+                include_header=include_header,
+            )
+        )
+    return lines
+
+
 def inspect_export(args: argparse.Namespace) -> int:
     """Inspect one raw export directory and summarize dashboards, folders, and datasources."""
     import_dir = Path(args.import_dir)
+    if getattr(args, "table", False) and getattr(args, "json", False):
+        raise GrafanaError("--table and --json are mutually exclusive for inspect-export.")
+    if getattr(args, "no_header", False) and not getattr(args, "table", False):
+        raise GrafanaError("--no-header is only supported with --table for inspect-export.")
     document = build_export_inspection_document(import_dir)
     if getattr(args, "json", False):
         print(json.dumps(document, indent=2, sort_keys=False, ensure_ascii=False))
+        return 0
+    if getattr(args, "table", False):
+        for line in render_export_inspection_tables(
+            document,
+            import_dir,
+            include_header=not bool(getattr(args, "no_header", False)),
+        ):
+            print(line)
         return 0
     for line in render_export_inspection_summary(document, import_dir):
         print(line)

@@ -144,7 +144,7 @@ Dashboard export also writes versioned `export-metadata.json` files at:
 
 Those manifests use `schemaVersion` and `variant` markers so `import` and `diff` can reject directories that are not the expected raw export layout.
 
-The Python CLI also has `inspect-export` for offline raw-export analysis. It reads the raw `export-metadata.json`, `index.json`, `folders.json`, and dashboard files, then summarizes dashboard count, folder paths, panel/query totals, datasource usage, and mixed-datasource dashboards. `inspect-export --json` emits the same analysis as one machine-readable document.
+The Python CLI also has `inspect-export` for offline raw-export analysis. It reads the raw `export-metadata.json`, `index.json`, `folders.json`, and dashboard files, then summarizes dashboard count, folder paths, panel/query totals, datasource usage, and mixed-datasource dashboards. `inspect-export --json` emits the same analysis as one machine-readable document, while `inspect-export --table` renders the analysis as separate summary, folder-path, datasource-usage, and mixed-dashboard tables.
 
 ### Raw export intent
 
@@ -189,6 +189,7 @@ This is why prompt export needs live datasource metadata while raw export does n
 - Import `--update-existing-only` switches the workflow to `update-or-skip-missing` by dashboard `uid`, implies overwrite-on-existing behavior, and never creates missing dashboards.
 - When import updates an existing dashboard by `uid`, it preserves the destination Grafana folder by default; only an explicit `--import-folder-uid` overrides that folder placement.
 - `inspect-export` is a local raw-export analysis workflow; it does not call Grafana APIs and instead reads `raw/export-metadata.json`, `raw/folders.json`, and dashboard JSON files to summarize folder paths, panels, queries, datasource references, and mixed-datasource dashboards.
+- `inspect-export --table --no-header` suppresses the header row for each rendered section table when operators need compact terminal output.
 - Import now prints an `Import mode: ...` line before processing files so operators can confirm the active create/update/skip strategy immediately.
 - `diff` compares normalized local raw payloads against live Grafana dashboard wrappers and prints a unified diff when they differ.
 

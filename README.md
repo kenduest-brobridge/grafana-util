@@ -140,6 +140,14 @@ python3 python/grafana-utils.py dashboard inspect-export \
   --json
 ```
 
+Inspect the same raw export directory as tables:
+
+```bash
+python3 python/grafana-utils.py dashboard inspect-export \
+  --import-dir ./dashboards/raw \
+  --table
+```
+
 Dashboard list, including resolved datasource names per dashboard:
 
 ```bash
@@ -470,11 +478,12 @@ Use `prompt/` when you want:
 | `--org-id ORG_ID` | For `list-dashboard` or `export-dashboard`, switch to one explicit Grafana org ID; requires Basic auth |
 | `--all-orgs` | For `list-dashboard` or `export-dashboard`, enumerate visible Grafana orgs and aggregate list output or export each org; requires Basic auth |
 | `--with-sources` | For `list-dashboard`, fetch each dashboard payload and include datasource names used by that dashboard; CSV and JSON also add datasource UIDs |
-| `--no-header` | For `list-dashboard`, `list-data-sources`, or `import-dashboard --dry-run --table`, omit the table header row |
+| `--no-header` | For `list-dashboard`, `list-data-sources`, `import-dashboard --dry-run --table`, or `inspect-export --table`, omit the table header row |
 | `--progress` | For `export-dashboard` or `import-dashboard`, print concise per-dashboard `current/total` progress lines while the command runs |
 | `-v, --verbose` | For `export-dashboard` or `import-dashboard`, print detailed per-item output including variants, paths, and import results; overrides `--progress` |
 | `import-dashboard --dry-run --table` | Render dry-run import predictions as a table showing `uid`, destination state, action, destination folder path, and file |
 | `inspect-export --json` | Analyze a raw export directory and emit machine-readable structure summary including folder paths, panels, queries, datasource usage, and mixed dashboards |
+| `inspect-export --table` | Analyze a raw export directory and render multi-section tables for summary, folder paths, datasource usage, and mixed dashboards |
 | `--update-existing-only` | For `import-dashboard`, update only dashboards whose UID already exists in Grafana and skip missing dashboards instead of creating them |
 | `--ensure-folders` | For `import-dashboard`, read `raw/folders.json` and create any missing destination folder chain before importing dashboards |
 | `list-data-sources --table|--csv|--json` | List live Grafana data sources in human-readable or machine-readable output |
@@ -515,6 +524,8 @@ For dashboard export:
 - `import-dashboard` now prints an `Import mode: ...` line up front so you can see whether the run is `create-only`, `create-or-update`, or `update-or-skip-missing`
 - `inspect-export` analyzes a raw export directory offline and summarizes dashboard count, folder paths, panels, queries, datasource usage, and mixed-datasource dashboards
 - `inspect-export --json` emits the same analysis as one JSON document for scripts or CI checks
+- `inspect-export --table` renders the same analysis as multiple tables for summary, folder paths, datasource usage, and mixed dashboards
+- `inspect-export --table --no-header` suppresses each section's header row when you need compact copy/paste output
 
 For datasource listing:
 

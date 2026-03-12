@@ -2184,15 +2184,21 @@ fn build_export_inspection_summary_reports_structure_and_datasources() {
     assert_eq!(summary.panel_count, 2);
     assert_eq!(summary.query_count, 3);
     assert_eq!(summary.mixed_dashboard_count, 1);
-    assert_eq!(summary.folder_paths[0].path, "General");
+    assert!(summary
+        .folder_paths
+        .iter()
+        .any(|item| item.path == "General" && item.dashboards == 1));
     assert!(summary
         .folder_paths
         .iter()
         .any(|item| item.path == "Platform / Team / Apps / Prod"));
-    assert!(summary
+    let prom_usage = summary
         .datasource_usage
         .iter()
-        .any(|item| item.datasource == "prom-a"));
+        .find(|item| item.datasource == "prom-a")
+        .unwrap();
+    assert_eq!(prom_usage.reference_count, 3);
+    assert_eq!(prom_usage.dashboard_count, 2);
     assert_eq!(summary.mixed_dashboards[0].uid, "mixed");
 }
 
@@ -2246,6 +2252,96 @@ fn build_export_inspection_summary_uses_unique_folder_title_fallback_for_full_pa
     let summary = super::build_export_inspection_summary(&raw_dir).unwrap();
 
     assert_eq!(summary.folder_paths[0].path, "Platform / Infra");
+}
+
+#[test]
+fn build_export_inspection_summary_includes_zero_dashboard_ancestor_paths() {
+    let temp = tempdir().unwrap();
+    let raw_dir = temp.path().join("raw");
+    fs::create_dir_all(raw_dir.join("Prod")).unwrap();
+    fs::write(
+        raw_dir.join(EXPORT_METADATA_FILENAME),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-dashboard-export-index",
+            "schemaVersion": TOOL_SCHEMA_VERSION,
+            "variant": "raw",
+            "dashboardCount": 1,
+            "indexFile": "index.json",
+            "format": "grafana-web-import-preserve-uid",
+            "foldersFile": FOLDER_INVENTORY_FILENAME
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        raw_dir.join(FOLDER_INVENTORY_FILENAME),
+        serde_json::to_string_pretty(&json!([
+            {
+                "uid": "platform",
+                "title": "Platform",
+                "parentUid": null,
+                "path": "Platform",
+                "org": "Main Org.",
+                "orgId": "1"
+            },
+            {
+                "uid": "team",
+                "title": "Team",
+                "parentUid": "platform",
+                "path": "Platform / Team",
+                "org": "Main Org.",
+                "orgId": "1"
+            },
+            {
+                "uid": "apps",
+                "title": "Apps",
+                "parentUid": "team",
+                "path": "Platform / Team / Apps",
+                "org": "Main Org.",
+                "orgId": "1"
+            },
+            {
+                "uid": "prod",
+                "title": "Prod",
+                "parentUid": "apps",
+                "path": "Platform / Team / Apps / Prod",
+                "org": "Main Org.",
+                "orgId": "1"
+            }
+        ]))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        raw_dir.join("Prod").join("prod.json"),
+        serde_json::to_string_pretty(&json!({
+            "dashboard": {
+                "uid": "prod-main",
+                "title": "Prod Main",
+                "panels": []
+            },
+            "meta": {"folderUid": "prod"}
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+
+    let summary = super::build_export_inspection_summary(&raw_dir).unwrap();
+    let paths = summary
+        .folder_paths
+        .iter()
+        .map(|item| (item.path.clone(), item.dashboards))
+        .collect::<Vec<(String, usize)>>();
+
+    assert_eq!(
+        paths,
+        vec![
+            ("Platform".to_string(), 0),
+            ("Platform / Team".to_string(), 0),
+            ("Platform / Team / Apps".to_string(), 0),
+            ("Platform / Team / Apps / Prod".to_string(), 1),
+        ]
+    );
 }
 
 #[test]

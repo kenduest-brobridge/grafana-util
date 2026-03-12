@@ -179,6 +179,7 @@ class ExporterTests(unittest.TestCase):
         help_text = stream.getvalue()
         self.assertIn("raw/ export directory explicitly", help_text)
         self.assertIn("--json", help_text)
+        self.assertIn("--table", help_text)
 
 
     def test_parse_args_supports_import_mode(self):
@@ -374,6 +375,15 @@ class ExporterTests(unittest.TestCase):
 
         self.assertEqual(args.command, "inspect-export")
         self.assertTrue(args.json)
+
+    def test_parse_args_supports_inspect_export_table(self):
+        args = exporter.parse_args(
+            ["inspect-export", "--import-dir", "dashboards/raw", "--table", "--no-header"]
+        )
+
+        self.assertEqual(args.command, "inspect-export")
+        self.assertTrue(args.table)
+        self.assertTrue(args.no_header)
 
     def test_parse_args_supports_ensure_folders(self):
         args = exporter.parse_args(
@@ -920,6 +930,140 @@ class ExporterTests(unittest.TestCase):
             self.assertEqual(payload["datasources"][0]["name"], "prom-main")
             self.assertEqual(payload["dashboards"][0]["folderPath"], "General")
             self.assertFalse(payload["dashboards"][0]["mixedDatasource"])
+
+    def test_inspect_export_renders_table_sections(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import_dir = Path(tmpdir)
+            exporter.write_json_document(
+                exporter.build_export_metadata(
+                    variant=exporter.RAW_EXPORT_SUBDIR,
+                    dashboard_count=2,
+                    format_name="grafana-web-import-preserve-uid",
+                    folders_file=exporter.FOLDER_INVENTORY_FILENAME,
+                ),
+                import_dir / exporter.EXPORT_METADATA_FILENAME,
+            )
+            exporter.write_json_document(
+                [
+                    {
+                        "uid": "infra",
+                        "title": "Infra",
+                        "parentUid": "platform",
+                        "path": "Platform / Infra",
+                        "org": "Main Org.",
+                        "orgId": "1",
+                    }
+                ],
+                import_dir / exporter.FOLDER_INVENTORY_FILENAME,
+            )
+            exporter.write_json_document(
+                {
+                    "dashboard": {
+                        "id": None,
+                        "uid": "cpu-main",
+                        "title": "CPU Main",
+                        "panels": [
+                            {
+                                "id": 1,
+                                "type": "timeseries",
+                                "datasource": {"type": "prometheus", "uid": "prom-main"},
+                                "targets": [{"refId": "A"}],
+                            }
+                        ],
+                    },
+                    "meta": {},
+                },
+                import_dir / "General" / "CPU_Main__cpu-main.json",
+            )
+            exporter.write_json_document(
+                {
+                    "dashboard": {
+                        "id": None,
+                        "uid": "mixed-main",
+                        "title": "Mixed Main",
+                        "panels": [
+                            {
+                                "id": 1,
+                                "type": "timeseries",
+                                "datasource": {"type": "datasource", "uid": "-- Mixed --"},
+                                "targets": [
+                                    {"refId": "A", "datasource": {"type": "prometheus", "uid": "prom-main"}},
+                                    {"refId": "B", "datasource": {"type": "loki", "uid": "logs-main"}},
+                                ],
+                            }
+                        ],
+                    },
+                    "meta": {"folderUid": "infra"},
+                },
+                import_dir / "Infra" / "Mixed_Main__mixed-main.json",
+            )
+
+            args = exporter.parse_args(
+                ["inspect-export", "--import-dir", str(import_dir), "--table"]
+            )
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = exporter.inspect_export(args)
+
+            output = stdout.getvalue()
+            self.assertEqual(result, 0)
+            self.assertIn("Summary:", output)
+            self.assertIn("METRIC", output)
+            self.assertIn("FOLDER_PATH", output)
+            self.assertIn("DATASOURCE", output)
+            self.assertIn("UID", output)
+            self.assertIn("Platform / Infra", output)
+            self.assertIn("prom-main", output)
+            self.assertIn("mixed-main", output)
+
+    def test_inspect_export_table_can_omit_header(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import_dir = Path(tmpdir)
+            exporter.write_json_document(
+                exporter.build_export_metadata(
+                    variant=exporter.RAW_EXPORT_SUBDIR,
+                    dashboard_count=1,
+                    format_name="grafana-web-import-preserve-uid",
+                    folders_file=exporter.FOLDER_INVENTORY_FILENAME,
+                ),
+                import_dir / exporter.EXPORT_METADATA_FILENAME,
+            )
+            exporter.write_json_document([], import_dir / exporter.FOLDER_INVENTORY_FILENAME)
+            exporter.write_json_document(
+                {
+                    "dashboard": {"id": None, "uid": "cpu-main", "title": "CPU Main", "panels": []},
+                    "meta": {},
+                },
+                import_dir / "General" / "CPU_Main__cpu-main.json",
+            )
+
+            args = exporter.parse_args(
+                ["inspect-export", "--import-dir", str(import_dir), "--table", "--no-header"]
+            )
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = exporter.inspect_export(args)
+
+            output = stdout.getvalue()
+            self.assertEqual(result, 0)
+            self.assertIn("Summary:", output)
+            self.assertNotIn("METRIC", output)
+
+    def test_inspect_export_rejects_no_header_without_table(self):
+        args = exporter.parse_args(
+            ["inspect-export", "--import-dir", "dashboards/raw", "--no-header"]
+        )
+
+        with self.assertRaisesRegex(exporter.GrafanaError, "--no-header is only supported with --table"):
+            exporter.inspect_export(args)
+
+    def test_inspect_export_rejects_table_with_json(self):
+        args = exporter.parse_args(
+            ["inspect-export", "--import-dir", "dashboards/raw", "--table", "--json"]
+        )
+
+        with self.assertRaisesRegex(exporter.GrafanaError, "--table and --json are mutually exclusive"):
+            exporter.inspect_export(args)
 
     def test_render_dashboard_summary_table_uses_headers_and_defaults(self):
         lines = exporter.render_dashboard_summary_table(
