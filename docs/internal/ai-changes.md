@@ -1,5 +1,32 @@
 # ai-changes.md
 
+## 2026-03-12 - Split Python Access Client And Models
+- Summary: Split the Python access-management implementation into a smaller CLI facade plus two reusable support modules. `grafana_utils/clients/access_client.py` now owns the Grafana access-management HTTP wrapper, `grafana_utils/access/models.py` owns row normalization and table/CSV/JSON rendering helpers for users, teams, and service accounts, and `grafana_utils/access/common.py` holds shared access constants and exceptions. `grafana_utils/access_cli.py` keeps the CLI/orchestration surface and re-exports the moved helpers so existing tests and callers still work.
+- Tests: Extended `tests/test_python_access_cli.py` with Python 3.6 syntax coverage for the new extracted modules and kept the existing access behavior tests exercising the stable facade.
+- Test Run: `python3 -m unittest -v tests/test_python_access_cli.py`; `python3 -m unittest -v`
+- Reason: `grafana_utils/access_cli.py` had become the largest remaining Python hotspot in the repo. The Grafana access client and rendering/model helpers were the clearest low-risk extraction boundaries and matched the same refactor pattern already applied to dashboard and alerting.
+- Validation: Verified the extracted modules compile, the focused access suite still passes, and the full Python suite still passes with all three Python CLI refactors present together.
+- Impact: `grafana_utils/access_cli.py`, `grafana_utils/clients/access_client.py`, `grafana_utils/access/common.py`, `grafana_utils/access/models.py`, `tests/test_python_access_cli.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low to moderate. The change is intended to be behavior-preserving, but future Python access work should keep transport code under `grafana_utils/clients/access_client.py` and normalization/rendering logic under `grafana_utils/access/models.py` instead of growing `access_cli.py` again.
+
+## 2026-03-12 - Split Rust Alert Module Internals
+- Summary: Split the Rust alerting implementation into smaller internal files without changing the public `crate::alert` API or the existing unified alert CLI behavior. The new `alert_cli_defs.rs` contains clap/auth normalization, `alert_client.rs` contains the Grafana alert provisioning client plus shared response parsers, and `alert_list.rs` contains list rendering and list-command dispatch. `alert.rs` now acts as the alert orchestration root and keeps the remaining shared alert document helpers plus export/import/diff flows.
+- Tests: Kept the existing alert Rust tests and preserved their current imports through targeted re-exports from `alert.rs`.
+- Test Run: `cd rust && cargo test alert --quiet`; `cd rust && cargo test --quiet`
+- Reason: `rust/src/alert.rs` had reached the same maintenance threshold as the earlier dashboard and access modules: too many unrelated responsibilities were living in one file even though the behavior was still correct.
+- Validation: Verified the focused alert Rust suite and the full Rust suite still pass after the split, with no CLI behavior changes and no churn in the existing alert test API.
+- Impact: `rust/src/alert.rs`, `rust/src/alert_cli_defs.rs`, `rust/src/alert_client.rs`, `rust/src/alert_list.rs`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low. This is an internal refactor only, but future alert work should keep client, list, and CLI parsing logic in the new module boundaries instead of growing `alert.rs` again.
+
+## 2026-03-12 - Split Python Alert Client And Provisioning Helpers
+- Summary: Split the Python alerting implementation along the same broad lines as the Python dashboard refactor and the repo's Rust module direction, without changing the public Python alert CLI surface. `grafana_utils/clients/alert_client.py` now owns the Grafana alert provisioning HTTP wrapper, `grafana_utils/alerts/provisioning.py` owns tool-document import/export normalization plus linked-dashboard rewrite helpers, and `grafana_utils/alerts/common.py` holds shared alert constants and exceptions. `grafana_utils/alert_cli.py` remains the CLI/orchestration facade and re-exports the moved helpers so current tests and callers still work.
+- Tests: Extended `tests/test_python_alert_cli.py` with Python 3.6 syntax coverage for the new extracted modules and kept the existing alert behavior tests exercising the facade exports.
+- Test Run: `python3 -m unittest -v tests/test_python_alert_cli.py`; `python3 -m unittest -v`
+- Reason: `grafana_utils/alert_cli.py` had reached the same maintenance threshold as `dashboard_cli.py`: too many responsibilities were living in one file. The alert client and provisioning import/export logic were the clearest low-risk extraction boundaries.
+- Validation: Verified the new modules compile, the focused alert suite still passes against the stable `grafana_utils.alert_cli` facade, and the full Python suite still passes with both the dashboard and alert refactors present together.
+- Impact: `grafana_utils/alert_cli.py`, `grafana_utils/clients/alert_client.py`, `grafana_utils/alerts/common.py`, `grafana_utils/alerts/provisioning.py`, `tests/test_python_alert_cli.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low to moderate. The change is intended to be behavior-preserving, but future Python alert work should keep transport code under `grafana_utils/clients/alert_client.py` and provisioning/document logic under `grafana_utils/alerts/provisioning.py` instead of growing `alert_cli.py` again.
+
 ## 2026-03-12 - Split Python Dashboard Client And Prompt Transformer
 - Summary: Split the Python dashboard implementation along the same broad lines as the existing Rust dashboard modules without changing the public Python CLI entrypoints. `grafana_utils/clients/dashboard_client.py` now owns the Grafana dashboard HTTP wrapper, `grafana_utils/dashboards/transformer.py` owns prompt-export datasource rewrite and datasource-resolution helpers, and `grafana_utils/dashboards/common.py` holds shared dashboard constants and exceptions. `grafana_utils/dashboard_cli.py` remains the CLI/orchestration facade and re-exports the moved pieces so current tests and callers keep working.
 - Tests: Extended `tests/test_python_dashboard_cli.py` with Python 3.6 syntax coverage for the new extracted modules and kept the existing dashboard behavior tests exercising the facade exports.

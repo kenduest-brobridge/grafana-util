@@ -20,6 +20,10 @@ Commit message default for this repo:
 - `rust/src/access_user.rs`: Rust access user list/add/modify/delete flows
 - `rust/src/access_team.rs`: Rust access team list/add/modify flows
 - `rust/src/access_service_account.rs`: Rust access service-account list/add/token-add flows
+- `rust/src/alert.rs`: Rust alert orchestration entrypoint plus shared alert import/export/diff helpers
+- `rust/src/alert_cli_defs.rs`: Rust alert CLI arg definitions and auth-context builders
+- `rust/src/alert_client.rs`: Rust Grafana alert provisioning HTTP client wrapper and shared response parsers
+- `rust/src/alert_list.rs`: Rust alert list rendering and list-command orchestration
 - `rust/src/dashboard.rs`: Rust dashboard orchestration entrypoint and shared dashboard helpers that are still used across import, diff, and prompt-export flows
 - `rust/src/dashboard_cli_defs.rs`: Rust dashboard CLI arg definitions and auth/client builders
 - `rust/src/dashboard_list.rs`: Rust dashboard and datasource list rendering plus multi-org list orchestration
@@ -93,6 +97,7 @@ Commit message default for this repo:
 - `list-data-sources --no-header` suppresses the table header line while keeping the same column layout.
 - `list-data-sources --csv` emits header `uid,name,type,url,isDefault`.
 - `list-data-sources --json` emits an array of objects with keys `uid`, `name`, `type`, `url`, and `isDefault`.
+- The Rust alert implementation is intentionally split by responsibility: `alert_cli_defs.rs` owns clap/auth normalization, `alert_client.rs` owns the Grafana alert provisioning client plus shared response parsing helpers, `alert_list.rs` owns list rendering and list-command dispatch, and `alert.rs` keeps the remaining import/export/diff orchestration plus shared alert document helpers.
 - The Rust dashboard implementation is intentionally split by responsibility: `dashboard_cli_defs.rs` owns clap/auth/client setup, `dashboard_list.rs` owns list/datasource renderers and org-aware list orchestration, `dashboard_export.rs` owns export pathing and multi-org export orchestration, `dashboard_prompt.rs` owns datasource resolution plus prompt-export template rewrites, and `dashboard.rs` keeps the remaining shared helpers, import, diff, and top-level orchestration flows.
 - The Rust access implementation is intentionally split by responsibility: `access_cli_defs.rs` owns clap/auth/client setup, `access_render.rs` owns output formatting and row normalization, `access_user.rs` owns user flows, `access_team.rs` owns team flows, `access_service_account.rs` owns service-account flows, and `access.rs` keeps shared request wrappers plus top-level dispatch.
 

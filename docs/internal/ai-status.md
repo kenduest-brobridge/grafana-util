@@ -1,5 +1,26 @@
 # ai-status.md
 
+## 2026-03-12 - Task: Split Python Access Client And Models
+- State: Done
+- Scope: `grafana_utils/access_cli.py`, `grafana_utils/clients/access_client.py`, `grafana_utils/access/common.py`, `grafana_utils/access/models.py`, `tests/test_python_access_cli.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: `grafana_utils/access_cli.py` was still the largest Python module in the repo and mixed CLI parsing, Grafana access-management HTTP client behavior, row normalization, table/CSV/JSON rendering, and user/team/service-account workflows in one file.
+- Current Update: Extracted the Grafana access API wrapper into `grafana_utils/clients/access_client.py`, moved row normalization and rendering helpers into `grafana_utils/access/models.py`, added `grafana_utils/access/common.py` for shared access constants and exceptions, and kept `grafana_utils/access_cli.py` as the stable facade by importing and re-exporting the moved pieces.
+- Result: All three large Python CLIs now follow the same direction: the top-level `*_cli.py` modules are more orchestration-focused, while transport and domain-formatting logic live in smaller reusable modules.
+
+## 2026-03-12 - Task: Split Rust Alert Module Internals
+- State: Done
+- Scope: `rust/src/alert.rs`, `rust/src/alert_cli_defs.rs`, `rust/src/alert_client.rs`, `rust/src/alert_list.rs`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: `rust/src/alert.rs` had grown into a 2200+ line mixed module that combined clap definitions, auth-context building, the Grafana provisioning client, list rendering, export/import/diff orchestration, and shared alert document helpers in one file.
+- Current Update: Split the Rust alert implementation into internal modules without changing the public alert CLI API or the existing test imports. `alert_cli_defs.rs` now owns clap parsing and auth normalization, `alert_client.rs` owns the Grafana alert provisioning client plus shared response parsers, and `alert_list.rs` owns list rendering and list-command dispatch. `alert.rs` now keeps the remaining alert document helpers plus export/import/diff orchestration.
+- Result: The Rust alert implementation is materially easier to navigate and extend while preserving the existing `crate::alert` API, unified CLI behavior, and focused Rust tests.
+
+## 2026-03-12 - Task: Split Python Alert Client And Provisioning Helpers
+- State: Done
+- Scope: `grafana_utils/alert_cli.py`, `grafana_utils/clients/alert_client.py`, `grafana_utils/alerts/common.py`, `grafana_utils/alerts/provisioning.py`, `tests/test_python_alert_cli.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: `grafana_utils/alert_cli.py` still mixed CLI parsing, Grafana alerting HTTP client behavior, linked-dashboard rewrite logic, alert provisioning import/export normalization, and list/export/import/diff orchestration in one 2100+ line Python module.
+- Current Update: Extracted the alerting API wrapper into `grafana_utils/clients/alert_client.py`, moved provisioning import/export and linked-dashboard rewrite helpers into `grafana_utils/alerts/provisioning.py`, added `grafana_utils/alerts/common.py` for shared alert constants and exceptions, and kept `grafana_utils/alert_cli.py` as the stable CLI-facing facade by importing and re-exporting the moved helpers.
+- Result: The Python alert implementation now follows the same split direction as the dashboard refactor and the existing Rust design: `alert_cli.py` is more focused on orchestration, while transport and provisioning logic live in dedicated Python modules that are easier to test and reuse.
+
 ## 2026-03-12 - Task: Split Python Dashboard Client And Prompt Transformer
 - State: Done
 - Scope: `grafana_utils/dashboard_cli.py`, `grafana_utils/clients/dashboard_client.py`, `grafana_utils/dashboards/common.py`, `grafana_utils/dashboards/transformer.py`, `tests/test_python_dashboard_cli.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
