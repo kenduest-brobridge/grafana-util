@@ -17,15 +17,15 @@ mod alert_client;
 mod alert_list;
 
 pub use alert_cli_defs::{
-    build_auth_context, cli_args_from_common, normalize_alert_group_command, normalize_alert_namespace_args,
-    parse_cli_from, root_command, AlertAuthContext, AlertCliArgs, AlertCommonArgs, AlertDiffArgs,
-    AlertExportArgs, AlertGroupCommand, AlertImportArgs, AlertLegacyArgs, AlertListArgs,
-    AlertListKind, AlertNamespaceArgs,
+    build_auth_context, cli_args_from_common, normalize_alert_group_command,
+    normalize_alert_namespace_args, parse_cli_from, root_command, AlertAuthContext, AlertCliArgs,
+    AlertCommonArgs, AlertDiffArgs, AlertExportArgs, AlertGroupCommand, AlertImportArgs,
+    AlertLegacyArgs, AlertListArgs, AlertListKind, AlertNamespaceArgs,
 };
 use alert_client::GrafanaAlertClient;
-use alert_list::list_alert_resources;
 #[cfg(test)]
 pub(crate) use alert_client::{expect_object_list, parse_template_list_response};
+use alert_list::list_alert_resources;
 
 pub const DEFAULT_URL: &str = "http://127.0.0.1:3000";
 pub const DEFAULT_TIMEOUT: u64 = 30;
@@ -192,7 +192,12 @@ pub fn derive_dashboard_slug(value: &Value) -> String {
         }
     }
     if text.starts_with('/') {
-        text = text.trim_end_matches('/').rsplit('/').next().unwrap_or_default().to_string();
+        text = text
+            .trim_end_matches('/')
+            .rsplit('/')
+            .next()
+            .unwrap_or_default()
+            .to_string();
     }
     text
 }
@@ -209,7 +214,9 @@ pub fn load_string_map(path: Option<&Path>, label: &str) -> Result<BTreeMap<Stri
         .collect())
 }
 
-pub fn load_panel_id_map(path: Option<&Path>) -> Result<BTreeMap<String, BTreeMap<String, String>>> {
+pub fn load_panel_id_map(
+    path: Option<&Path>,
+) -> Result<BTreeMap<String, BTreeMap<String, String>>> {
     let Some(path) = path else {
         return Ok(BTreeMap::new());
     };
@@ -301,10 +308,17 @@ fn build_tool_document(kind: &str, spec: Map<String, Value>, metadata: Value) ->
 pub fn build_rule_export_document(rule: &Map<String, Value>) -> Value {
     let mut normalized = strip_server_managed_fields(RULE_KIND, rule);
     let linked_dashboard = normalized.remove("__linkedDashboardMetadata__");
-    let mut document = build_tool_document(RULE_KIND, normalized.clone(), build_rule_metadata(&normalized));
+    let mut document = build_tool_document(
+        RULE_KIND,
+        normalized.clone(),
+        build_rule_metadata(&normalized),
+    );
     if let Some(Value::Object(linked_dashboard)) = linked_dashboard {
         if let Some(metadata) = document.get_mut("metadata").and_then(Value::as_object_mut) {
-            metadata.insert("linkedDashboard".to_string(), Value::Object(linked_dashboard));
+            metadata.insert(
+                "linkedDashboard".to_string(),
+                Value::Object(linked_dashboard),
+            );
         }
     }
     document
@@ -330,12 +344,20 @@ pub fn build_mute_timing_export_document(mute_timing: &Map<String, Value>) -> Va
 
 pub fn build_policies_export_document(policies: &Map<String, Value>) -> Value {
     let normalized = strip_server_managed_fields(POLICIES_KIND, policies);
-    build_tool_document(POLICIES_KIND, normalized.clone(), build_policies_metadata(&normalized))
+    build_tool_document(
+        POLICIES_KIND,
+        normalized.clone(),
+        build_policies_metadata(&normalized),
+    )
 }
 
 pub fn build_template_export_document(template: &Map<String, Value>) -> Value {
     let normalized = strip_server_managed_fields(TEMPLATE_KIND, template);
-    build_tool_document(TEMPLATE_KIND, normalized.clone(), build_template_metadata(&normalized))
+    build_tool_document(
+        TEMPLATE_KIND,
+        normalized.clone(),
+        build_template_metadata(&normalized),
+    )
 }
 
 pub fn reject_provisioning_export(document: &Map<String, Value>) -> Result<()> {
@@ -371,13 +393,18 @@ pub fn detect_document_kind(document: &Map<String, Value>) -> Result<&'static st
     if document.contains_key("time_intervals") && document.contains_key("name") {
         return Ok(MUTE_TIMING_KIND);
     }
-    if document.contains_key("type") && document.contains_key("settings") && document.contains_key("name") {
+    if document.contains_key("type")
+        && document.contains_key("settings")
+        && document.contains_key("name")
+    {
         return Ok(CONTACT_POINT_KIND);
     }
     if document.contains_key("name") && document.contains_key("template") {
         return Ok(TEMPLATE_KIND);
     }
-    if document.contains_key("receiver") || document.contains_key("routes") || document.contains_key("group_by")
+    if document.contains_key("receiver")
+        || document.contains_key("routes")
+        || document.contains_key("group_by")
     {
         return Ok(POLICIES_KIND);
     }
@@ -387,7 +414,10 @@ pub fn detect_document_kind(document: &Map<String, Value>) -> Result<&'static st
     ))
 }
 
-fn extract_tool_spec(document: &Map<String, Value>, expected_kind: &str) -> Result<Map<String, Value>> {
+fn extract_tool_spec(
+    document: &Map<String, Value>,
+    expected_kind: &str,
+) -> Result<Map<String, Value>> {
     let spec = if document.get("kind").and_then(Value::as_str) == Some(expected_kind) {
         if let Some(api_version) = document.get("apiVersion").and_then(Value::as_i64) {
             if api_version != TOOL_API_VERSION {
@@ -444,10 +474,14 @@ pub fn build_rule_import_payload(document: &Map<String, Value>) -> Result<Map<St
     Ok(payload)
 }
 
-pub fn build_contact_point_import_payload(document: &Map<String, Value>) -> Result<Map<String, Value>> {
+pub fn build_contact_point_import_payload(
+    document: &Map<String, Value>,
+) -> Result<Map<String, Value>> {
     reject_provisioning_export(document)?;
-    let payload =
-        strip_server_managed_fields(CONTACT_POINT_KIND, &extract_tool_spec(document, CONTACT_POINT_KIND)?);
+    let payload = strip_server_managed_fields(
+        CONTACT_POINT_KIND,
+        &extract_tool_spec(document, CONTACT_POINT_KIND)?,
+    );
     for field in ["name", "type", "settings"] {
         if !payload.contains_key(field) {
             return Err(message(format!(
@@ -455,16 +489,24 @@ pub fn build_contact_point_import_payload(document: &Map<String, Value>) -> Resu
             )));
         }
     }
-    if !payload.get("settings").map(Value::is_object).unwrap_or(false) {
+    if !payload
+        .get("settings")
+        .map(Value::is_object)
+        .unwrap_or(false)
+    {
         return Err(message("Contact-point field 'settings' must be an object."));
     }
     Ok(payload)
 }
 
-pub fn build_mute_timing_import_payload(document: &Map<String, Value>) -> Result<Map<String, Value>> {
+pub fn build_mute_timing_import_payload(
+    document: &Map<String, Value>,
+) -> Result<Map<String, Value>> {
     reject_provisioning_export(document)?;
-    let payload =
-        strip_server_managed_fields(MUTE_TIMING_KIND, &extract_tool_spec(document, MUTE_TIMING_KIND)?);
+    let payload = strip_server_managed_fields(
+        MUTE_TIMING_KIND,
+        &extract_tool_spec(document, MUTE_TIMING_KIND)?,
+    );
     for field in ["name", "time_intervals"] {
         if !payload.contains_key(field) {
             return Err(message(format!(
@@ -477,7 +519,9 @@ pub fn build_mute_timing_import_payload(document: &Map<String, Value>) -> Result
         .map(Value::is_array)
         .unwrap_or(false)
     {
-        return Err(message("Mute-timing field 'time_intervals' must be a list."));
+        return Err(message(
+            "Mute-timing field 'time_intervals' must be a list.",
+        ));
     }
     Ok(payload)
 }
@@ -489,7 +533,8 @@ pub fn build_policies_import_payload(document: &Map<String, Value>) -> Result<Ma
 
 pub fn build_template_import_payload(document: &Map<String, Value>) -> Result<Map<String, Value>> {
     reject_provisioning_export(document)?;
-    let payload = strip_server_managed_fields(TEMPLATE_KIND, &extract_tool_spec(document, TEMPLATE_KIND)?);
+    let payload =
+        strip_server_managed_fields(TEMPLATE_KIND, &extract_tool_spec(document, TEMPLATE_KIND)?);
     for field in ["name", "template"] {
         if !payload.contains_key(field) {
             return Err(message(format!(
@@ -524,7 +569,10 @@ pub fn build_empty_root_index() -> Map<String, Value> {
             "apiVersion".to_string(),
             Value::Number(TOOL_API_VERSION.into()),
         ),
-        ("kind".to_string(), Value::String(ROOT_INDEX_KIND.to_string())),
+        (
+            "kind".to_string(),
+            Value::String(ROOT_INDEX_KIND.to_string()),
+        ),
         (RULES_SUBDIR.to_string(), Value::Array(Vec::new())),
         (CONTACT_POINTS_SUBDIR.to_string(), Value::Array(Vec::new())),
         (MUTE_TIMINGS_SUBDIR.to_string(), Value::Array(Vec::new())),
@@ -704,13 +752,18 @@ fn build_linked_dashboard_metadata(
         Err(error) => return Err(error),
     };
 
-    if let Some(dashboard) = dashboard_payload.get("dashboard").and_then(Value::as_object) {
+    if let Some(dashboard) = dashboard_payload
+        .get("dashboard")
+        .and_then(Value::as_object)
+    {
         metadata.insert(
             "dashboardTitle".to_string(),
             Value::String(string_field(dashboard, "title", "")),
         );
         if let Some(panel_id) = metadata.get("panelId").and_then(Value::as_str) {
-            if let Some(panel) = find_panel_by_id(dashboard.get("panels").and_then(Value::as_array), panel_id) {
+            if let Some(panel) =
+                find_panel_by_id(dashboard.get("panels").and_then(Value::as_array), panel_id)
+            {
                 metadata.insert(
                     "panelTitle".to_string(),
                     Value::String(string_field(&panel, "title", "")),
@@ -768,13 +821,20 @@ fn filter_dashboard_search_matches(
         }
     }
 
-    let slug = derive_dashboard_slug(linked_dashboard.get("dashboardSlug").unwrap_or(&Value::Null));
+    let slug = derive_dashboard_slug(
+        linked_dashboard
+            .get("dashboardSlug")
+            .unwrap_or(&Value::Null),
+    );
     if !slug.is_empty() {
         let slug_matches: Vec<Map<String, Value>> = filtered
             .iter()
             .filter(|item| {
-                derive_dashboard_slug(item.get("url").or_else(|| item.get("slug")).unwrap_or(&Value::Null))
-                    == slug
+                derive_dashboard_slug(
+                    item.get("url")
+                        .or_else(|| item.get("slug"))
+                        .unwrap_or(&Value::Null),
+                ) == slug
             })
             .cloned()
             .collect();
@@ -797,7 +857,10 @@ fn resolve_dashboard_uid_fallback(
         ));
     }
 
-    let filtered = filter_dashboard_search_matches(client.search_dashboards(&dashboard_title)?, linked_dashboard);
+    let filtered = filter_dashboard_search_matches(
+        client.search_dashboards(&dashboard_title)?,
+        linked_dashboard,
+    );
     if filtered.len() == 1 {
         let resolved_uid = string_field(&filtered[0], "uid", "");
         if !resolved_uid.is_empty() {
@@ -806,7 +869,11 @@ fn resolve_dashboard_uid_fallback(
     }
 
     let folder_title = string_field(linked_dashboard, "folderTitle", "");
-    let slug = derive_dashboard_slug(linked_dashboard.get("dashboardSlug").unwrap_or(&Value::Null));
+    let slug = derive_dashboard_slug(
+        linked_dashboard
+            .get("dashboardSlug")
+            .unwrap_or(&Value::Null),
+    );
     if filtered.is_empty() {
         return Err(message(format!(
             "Cannot resolve linked dashboard for alert rule. No dashboard matched title={dashboard_title:?}, folderTitle={folder_title:?}, slug={slug:?}.",
@@ -846,7 +913,10 @@ fn rewrite_rule_dashboard_linkage(
         .or_insert_with(|| Value::Object(Map::new()))
         .as_object_mut()
         .ok_or_else(|| message("Alert-rule annotations must be an object."))?;
-    annotations.insert("__dashboardUid__".to_string(), Value::String(dashboard_uid.clone()));
+    annotations.insert(
+        "__dashboardUid__".to_string(),
+        Value::String(dashboard_uid.clone()),
+    );
     if let Some(panel_id) = mapped_panel_id {
         annotations.insert("__panelId__".to_string(), Value::String(panel_id));
     }
@@ -868,7 +938,10 @@ fn rewrite_rule_dashboard_linkage(
             ))
         })?;
     let replacement_uid = resolve_dashboard_uid_fallback(client, linked_dashboard)?;
-    annotations.insert("__dashboardUid__".to_string(), Value::String(replacement_uid));
+    annotations.insert(
+        "__dashboardUid__".to_string(),
+        Value::String(replacement_uid),
+    );
     Ok(normalized)
 }
 
@@ -900,7 +973,9 @@ fn export_alerting_resources(args: &AlertCliArgs) -> Result<()> {
             );
         }
         let document = build_rule_export_document(&normalized_rule);
-        let spec = document["spec"].as_object().ok_or_else(|| message("Rule export spec must be an object."))?;
+        let spec = document["spec"]
+            .as_object()
+            .ok_or_else(|| message("Rule export spec must be an object."))?;
         let output_path = build_rule_output_path(&resource_dirs[RULE_KIND], spec, args.flat);
         write_json_file(&output_path, &document, args.overwrite)?;
         append_root_index_item(
@@ -915,13 +990,20 @@ fn export_alerting_resources(args: &AlertCliArgs) -> Result<()> {
                 "path": output_path.to_string_lossy(),
             }),
         );
-        println!("Exported alert rule {} -> {}", string_field(spec, "uid", "unknown"), output_path.display());
+        println!(
+            "Exported alert rule {} -> {}",
+            string_field(spec, "uid", "unknown"),
+            output_path.display()
+        );
     }
 
     for contact_point in contact_points {
         let document = build_contact_point_export_document(&contact_point);
-        let spec = document["spec"].as_object().ok_or_else(|| message("Contact-point export spec must be an object."))?;
-        let output_path = build_contact_point_output_path(&resource_dirs[CONTACT_POINT_KIND], spec, args.flat);
+        let spec = document["spec"]
+            .as_object()
+            .ok_or_else(|| message("Contact-point export spec must be an object."))?;
+        let output_path =
+            build_contact_point_output_path(&resource_dirs[CONTACT_POINT_KIND], spec, args.flat);
         write_json_file(&output_path, &document, args.overwrite)?;
         append_root_index_item(
             &mut root_index,
@@ -934,13 +1016,20 @@ fn export_alerting_resources(args: &AlertCliArgs) -> Result<()> {
                 "path": output_path.to_string_lossy(),
             }),
         );
-        println!("Exported contact point {} -> {}", string_field(spec, "uid", "unknown"), output_path.display());
+        println!(
+            "Exported contact point {} -> {}",
+            string_field(spec, "uid", "unknown"),
+            output_path.display()
+        );
     }
 
     for mute_timing in mute_timings {
         let document = build_mute_timing_export_document(&mute_timing);
-        let spec = document["spec"].as_object().ok_or_else(|| message("Mute-timing export spec must be an object."))?;
-        let output_path = build_mute_timing_output_path(&resource_dirs[MUTE_TIMING_KIND], spec, args.flat);
+        let spec = document["spec"]
+            .as_object()
+            .ok_or_else(|| message("Mute-timing export spec must be an object."))?;
+        let output_path =
+            build_mute_timing_output_path(&resource_dirs[MUTE_TIMING_KIND], spec, args.flat);
         write_json_file(&output_path, &document, args.overwrite)?;
         append_root_index_item(
             &mut root_index,
@@ -951,7 +1040,11 @@ fn export_alerting_resources(args: &AlertCliArgs) -> Result<()> {
                 "path": output_path.to_string_lossy(),
             }),
         );
-        println!("Exported mute timing {} -> {}", string_field(spec, "name", "unknown"), output_path.display());
+        println!(
+            "Exported mute timing {} -> {}",
+            string_field(spec, "name", "unknown"),
+            output_path.display()
+        );
     }
 
     let policies_document = build_policies_export_document(&policies);
@@ -968,14 +1061,19 @@ fn export_alerting_resources(args: &AlertCliArgs) -> Result<()> {
     );
     println!(
         "Exported notification policies {} -> {}",
-        policies_document["spec"]["receiver"].as_str().unwrap_or("unknown"),
+        policies_document["spec"]["receiver"]
+            .as_str()
+            .unwrap_or("unknown"),
         policies_path.display()
     );
 
     for template in templates {
         let document = build_template_export_document(&template);
-        let spec = document["spec"].as_object().ok_or_else(|| message("Template export spec must be an object."))?;
-        let output_path = build_template_output_path(&resource_dirs[TEMPLATE_KIND], spec, args.flat);
+        let spec = document["spec"]
+            .as_object()
+            .ok_or_else(|| message("Template export spec must be an object."))?;
+        let output_path =
+            build_template_output_path(&resource_dirs[TEMPLATE_KIND], spec, args.flat);
         write_json_file(&output_path, &document, args.overwrite)?;
         append_root_index_item(
             &mut root_index,
@@ -986,7 +1084,11 @@ fn export_alerting_resources(args: &AlertCliArgs) -> Result<()> {
                 "path": output_path.to_string_lossy(),
             }),
         );
-        println!("Exported template {} -> {}", string_field(spec, "name", "unknown"), output_path.display());
+        println!(
+            "Exported template {} -> {}",
+            string_field(spec, "name", "unknown"),
+            output_path.display()
+        );
     }
 
     write_resource_indexes(&resource_dirs, &root_index)?;
@@ -1117,7 +1219,9 @@ fn determine_import_action(
 ) -> Result<&'static str> {
     match kind {
         RULE_KIND => determine_rule_import_action(client, payload, replace_existing),
-        CONTACT_POINT_KIND => determine_contact_point_import_action(client, payload, replace_existing),
+        CONTACT_POINT_KIND => {
+            determine_contact_point_import_action(client, payload, replace_existing)
+        }
         MUTE_TIMING_KIND => determine_mute_timing_import_action(client, payload, replace_existing),
         TEMPLATE_KIND => determine_template_import_action(client, payload, replace_existing),
         POLICIES_KIND => Ok("would-update"),
@@ -1137,7 +1241,10 @@ fn fetch_live_compare_document(
                 return Ok(None);
             }
             match client.get_alert_rule(&uid) {
-                Ok(remote) => Ok(Some(build_compare_document(kind, &strip_server_managed_fields(kind, &remote)))),
+                Ok(remote) => Ok(Some(build_compare_document(
+                    kind,
+                    &strip_server_managed_fields(kind, &remote),
+                ))),
                 Err(error) if error.status_code() == Some(404) => Ok(None),
                 Err(error) => Err(error),
             }
@@ -1148,7 +1255,9 @@ fn fetch_live_compare_document(
                 .list_contact_points()?
                 .into_iter()
                 .find(|item| string_field(item, "uid", "") == uid);
-            Ok(remote.map(|item| build_compare_document(kind, &strip_server_managed_fields(kind, &item))))
+            Ok(remote.map(|item| {
+                build_compare_document(kind, &strip_server_managed_fields(kind, &item))
+            }))
         }
         MUTE_TIMING_KIND => {
             let name = string_field(payload, "name", "");
@@ -1156,19 +1265,27 @@ fn fetch_live_compare_document(
                 .list_mute_timings()?
                 .into_iter()
                 .find(|item| string_field(item, "name", "") == name);
-            Ok(remote.map(|item| build_compare_document(kind, &strip_server_managed_fields(kind, &item))))
+            Ok(remote.map(|item| {
+                build_compare_document(kind, &strip_server_managed_fields(kind, &item))
+            }))
         }
         TEMPLATE_KIND => {
             let name = string_field(payload, "name", "");
             match client.get_template(&name) {
-                Ok(remote) => Ok(Some(build_compare_document(kind, &strip_server_managed_fields(kind, &remote)))),
+                Ok(remote) => Ok(Some(build_compare_document(
+                    kind,
+                    &strip_server_managed_fields(kind, &remote),
+                ))),
                 Err(error) if error.status_code() == Some(404) => Ok(None),
                 Err(error) => Err(error),
             }
         }
         POLICIES_KIND => {
             let remote = client.get_notification_policies()?;
-            Ok(Some(build_compare_document(kind, &strip_server_managed_fields(kind, &remote))))
+            Ok(Some(build_compare_document(
+                kind,
+                &strip_server_managed_fields(kind, &remote),
+            )))
         }
         _ => unreachable!(),
     }
@@ -1264,7 +1381,10 @@ fn import_template_document(
     }
 
     let result = client.update_template(&name, &template_payload)?;
-    Ok(((if exists { "updated" } else { "created" }).to_string(), string_field(&result, "name", &name)))
+    Ok((
+        (if exists { "updated" } else { "created" }).to_string(),
+        string_field(&result, "name", &name),
+    ))
 }
 
 fn import_policies_document(
@@ -1272,7 +1392,10 @@ fn import_policies_document(
     payload: &Map<String, Value>,
 ) -> Result<(String, String)> {
     client.update_notification_policies(payload)?;
-    Ok(("updated".to_string(), string_field(payload, "receiver", "root")))
+    Ok((
+        "updated".to_string(),
+        string_field(payload, "receiver", "root"),
+    ))
 }
 
 fn import_resource_document(
@@ -1298,7 +1421,8 @@ fn import_alerting_resources(args: &AlertCliArgs) -> Result<()> {
         .as_ref()
         .ok_or_else(|| message("Import directory is required for alerting import."))?;
     let resource_files = discover_alert_resource_files(import_dir)?;
-    let dashboard_uid_map = load_string_map(args.dashboard_uid_map.as_deref(), "Dashboard UID map")?;
+    let dashboard_uid_map =
+        load_string_map(args.dashboard_uid_map.as_deref(), "Dashboard UID map")?;
     let panel_id_map = load_panel_id_map(args.panel_id_map.as_deref())?;
     let mut policies_seen = 0usize;
 
@@ -1360,7 +1484,8 @@ fn diff_alerting_resources(args: &AlertCliArgs) -> Result<()> {
         .as_ref()
         .ok_or_else(|| message("Diff directory is required for alerting diff."))?;
     let resource_files = discover_alert_resource_files(diff_dir)?;
-    let dashboard_uid_map = load_string_map(args.dashboard_uid_map.as_deref(), "Dashboard UID map")?;
+    let dashboard_uid_map =
+        load_string_map(args.dashboard_uid_map.as_deref(), "Dashboard UID map")?;
     let panel_id_map = load_panel_id_map(args.panel_id_map.as_deref())?;
     let mut policies_seen = 0usize;
     let mut differences = 0usize;
@@ -1382,7 +1507,9 @@ fn diff_alerting_resources(args: &AlertCliArgs) -> Result<()> {
         let remote_compare = fetch_live_compare_document(&client, &kind, &payload)?;
 
         if let Some(remote_compare) = remote_compare {
-            if serialize_compare_document(&local_compare)? == serialize_compare_document(&remote_compare)? {
+            if serialize_compare_document(&local_compare)?
+                == serialize_compare_document(&remote_compare)?
+            {
                 println!(
                     "Diff same {} -> kind={} id={}",
                     resource_file.display(),
@@ -1426,7 +1553,10 @@ fn diff_alerting_resources(args: &AlertCliArgs) -> Result<()> {
         )));
     }
 
-    println!("No alerting differences across {} files.", resource_files.len());
+    println!(
+        "No alerting differences across {} files.",
+        resource_files.len()
+    );
     Ok(())
 }
 

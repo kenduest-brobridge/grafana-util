@@ -1,9 +1,9 @@
 use super::{
     build_compare_diff_text, build_contact_point_export_document, build_contact_point_output_path,
-    build_empty_root_index, build_import_operation, build_rule_export_document, build_rule_output_path,
-    detect_document_kind, expect_object_list, parse_cli_from, parse_template_list_response, root_command,
-    serialize_compare_document, AlertCliArgs, CONTACT_POINT_KIND, ROOT_INDEX_KIND, RULE_KIND,
-    TOOL_API_VERSION, TOOL_SCHEMA_VERSION,
+    build_empty_root_index, build_import_operation, build_rule_export_document,
+    build_rule_output_path, detect_document_kind, expect_object_list, parse_cli_from,
+    parse_template_list_response, root_command, serialize_compare_document, AlertCliArgs,
+    CONTACT_POINT_KIND, ROOT_INDEX_KIND, RULE_KIND, TOOL_API_VERSION, TOOL_SCHEMA_VERSION,
 };
 use serde_json::json;
 use std::path::Path;
@@ -23,7 +23,11 @@ fn build_rule_output_path_keeps_folder_structure() {
         "title": "DB CPU > 90%",
         "uid": "rule-1",
     });
-    let path = build_rule_output_path(Path::new("alerts/raw/rules"), rule.as_object().unwrap(), false);
+    let path = build_rule_output_path(
+        Path::new("alerts/raw/rules"),
+        rule.as_object().unwrap(),
+        false,
+    );
     assert_eq!(
         path,
         Path::new("alerts/raw/rules/infra_folder/CPU_Alerts/DB_CPU_90__rule-1.json")
@@ -189,11 +193,7 @@ fn parse_cli_supports_import_subcommand() {
 
 #[test]
 fn parse_cli_supports_list_rules_subcommand() {
-    let args: AlertCliArgs = parse_cli_from([
-        "grafana-utils alert",
-        "list-rules",
-        "--json",
-    ]);
+    let args: AlertCliArgs = parse_cli_from(["grafana-utils alert", "list-rules", "--json"]);
     assert_eq!(args.list_kind, Some(super::AlertListKind::Rules));
     assert!(args.json);
     assert!(!args.csv);
@@ -235,7 +235,9 @@ fn build_import_operation_rejects_unsupported_schema_version() {
         }
     }))
     .unwrap_err();
-    assert!(error.to_string().contains("Unsupported grafana-alert-rule schema version"));
+    assert!(error
+        .to_string()
+        .contains("Unsupported grafana-alert-rule schema version"));
 }
 
 #[test]
@@ -307,8 +309,11 @@ fn serialize_compare_document_sorts_object_keys_stably() {
 
 #[test]
 fn expect_object_list_rejects_json_null() {
-    let error = expect_object_list(Some(serde_json::Value::Null), "Unexpected template list response from Grafana.")
-        .unwrap_err();
+    let error = expect_object_list(
+        Some(serde_json::Value::Null),
+        "Unexpected template list response from Grafana.",
+    )
+    .unwrap_err();
     assert!(error
         .to_string()
         .contains("Unexpected template list response from Grafana."));

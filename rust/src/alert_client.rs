@@ -91,7 +91,11 @@ impl GrafanaAlertClient {
         )
     }
 
-    pub fn update_alert_rule(&self, uid: &str, payload: &Map<String, Value>) -> Result<Map<String, Value>> {
+    pub fn update_alert_rule(
+        &self,
+        uid: &str,
+        payload: &Map<String, Value>,
+    ) -> Result<Map<String, Value>> {
         expect_object(
             self.request_json(
                 Method::PUT,
@@ -105,7 +109,12 @@ impl GrafanaAlertClient {
 
     pub fn list_contact_points(&self) -> Result<Vec<Map<String, Value>>> {
         expect_object_list(
-            self.request_json(Method::GET, "/api/v1/provisioning/contact-points", &[], None)?,
+            self.request_json(
+                Method::GET,
+                "/api/v1/provisioning/contact-points",
+                &[],
+                None,
+            )?,
             "Unexpected contact-point list response from Grafana.",
         )
     }
@@ -157,7 +166,11 @@ impl GrafanaAlertClient {
         )
     }
 
-    pub fn update_mute_timing(&self, name: &str, payload: &Map<String, Value>) -> Result<Map<String, Value>> {
+    pub fn update_mute_timing(
+        &self,
+        name: &str,
+        payload: &Map<String, Value>,
+    ) -> Result<Map<String, Value>> {
         expect_object(
             self.request_json(
                 Method::PUT,
@@ -212,7 +225,11 @@ impl GrafanaAlertClient {
         )
     }
 
-    pub fn update_template(&self, name: &str, payload: &Map<String, Value>) -> Result<Map<String, Value>> {
+    pub fn update_template(
+        &self,
+        name: &str,
+        payload: &Map<String, Value>,
+    ) -> Result<Map<String, Value>> {
         let mut body = payload.clone();
         body.remove("name");
         expect_object(
@@ -234,7 +251,10 @@ fn expect_object(value: Option<Value>, error_message: &str) -> Result<Map<String
     }
 }
 
-pub fn expect_object_list(value: Option<Value>, error_message: &str) -> Result<Vec<Map<String, Value>>> {
+pub fn expect_object_list(
+    value: Option<Value>,
+    error_message: &str,
+) -> Result<Vec<Map<String, Value>>> {
     let array = match value {
         Some(Value::Array(items)) => items,
         _ => return Err(message(error_message)),
@@ -251,6 +271,9 @@ pub fn expect_object_list(value: Option<Value>, error_message: &str) -> Result<V
 pub fn parse_template_list_response(value: Option<Value>) -> Result<Vec<Map<String, Value>>> {
     match value {
         None | Some(Value::Null) => Ok(Vec::new()),
-        Some(value) => expect_object_list(Some(value), "Unexpected template list response from Grafana."),
+        Some(value) => expect_object_list(
+            Some(value),
+            "Unexpected template list response from Grafana.",
+        ),
     }
 }

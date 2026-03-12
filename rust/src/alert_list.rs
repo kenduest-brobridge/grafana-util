@@ -4,9 +4,7 @@ use std::fmt::Write as _;
 
 use crate::common::{message, string_field, Result};
 
-use super::{
-    build_auth_context, AlertCliArgs, AlertListKind, GrafanaAlertClient,
-};
+use super::{build_auth_context, AlertCliArgs, AlertListKind, GrafanaAlertClient};
 
 const ALERT_RULE_LIST_FIELDS: [&str; 4] = ["uid", "title", "folderUID", "ruleGroup"];
 const CONTACT_POINT_LIST_FIELDS: [&str; 3] = ["uid", "name", "type"];
@@ -41,7 +39,11 @@ fn render_alert_table(
             .iter()
             .map(|field| {
                 let width = *widths.get(field).unwrap_or(&0);
-                format!("{:width$}", values.get(field).map(String::as_str).unwrap_or(""), width = width)
+                format!(
+                    "{:width$}",
+                    values.get(field).map(String::as_str).unwrap_or(""),
+                    width = width
+                )
             })
             .collect::<Vec<_>>()
             .join("  ")
@@ -96,7 +98,9 @@ fn serialize_rule_list_rows(items: &[Map<String, Value>]) -> Vec<BTreeMap<&'stat
         .collect()
 }
 
-fn serialize_contact_point_list_rows(items: &[Map<String, Value>]) -> Vec<BTreeMap<&'static str, String>> {
+fn serialize_contact_point_list_rows(
+    items: &[Map<String, Value>],
+) -> Vec<BTreeMap<&'static str, String>> {
     items
         .iter()
         .map(|item| {
@@ -109,7 +113,9 @@ fn serialize_contact_point_list_rows(items: &[Map<String, Value>]) -> Vec<BTreeM
         .collect()
 }
 
-fn serialize_mute_timing_list_rows(items: &[Map<String, Value>]) -> Vec<BTreeMap<&'static str, String>> {
+fn serialize_mute_timing_list_rows(
+    items: &[Map<String, Value>],
+) -> Vec<BTreeMap<&'static str, String>> {
     items
         .iter()
         .map(|item| {
@@ -126,7 +132,9 @@ fn serialize_mute_timing_list_rows(items: &[Map<String, Value>]) -> Vec<BTreeMap
         .collect()
 }
 
-fn serialize_template_list_rows(items: &[Map<String, Value>]) -> Vec<BTreeMap<&'static str, String>> {
+fn serialize_template_list_rows(
+    items: &[Map<String, Value>],
+) -> Vec<BTreeMap<&'static str, String>> {
     items
         .iter()
         .map(|item| BTreeMap::from([("name", string_field(item, "name", ""))]))
@@ -148,7 +156,12 @@ pub fn list_alert_resources(args: &AlertCliArgs) -> Result<()> {
                     render_alert_table(
                         &rows,
                         &ALERT_RULE_LIST_FIELDS,
-                        &[("uid", "UID"), ("title", "TITLE"), ("folderUID", "FOLDER_UID"), ("ruleGroup", "RULE_GROUP")],
+                        &[
+                            ("uid", "UID"),
+                            ("title", "TITLE"),
+                            ("folderUID", "FOLDER_UID"),
+                            ("ruleGroup", "RULE_GROUP")
+                        ],
                         !args.no_header,
                     )
                 );

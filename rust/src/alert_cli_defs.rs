@@ -82,15 +82,33 @@ pub struct AlertLegacyArgs {
         help = "Write rule, contact-point, mute-timing, and template files directly into their resource directories instead of nested subdirectories."
     )]
     pub flat: bool,
-    #[arg(long, default_value_t = false, help = "Overwrite existing exported files.")]
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Overwrite existing exported files."
+    )]
     pub overwrite: bool,
-    #[arg(long, default_value_t = false, help = "Update existing resources with the same identity instead of failing on import.")]
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Update existing resources with the same identity instead of failing on import."
+    )]
     pub replace_existing: bool,
-    #[arg(long, default_value_t = false, help = "Show whether each import file would create or update resources without changing Grafana.")]
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Show whether each import file would create or update resources without changing Grafana."
+    )]
     pub dry_run: bool,
-    #[arg(long, help = "JSON file that maps source dashboard UIDs to target dashboard UIDs for linked alert-rule repair during import.")]
+    #[arg(
+        long,
+        help = "JSON file that maps source dashboard UIDs to target dashboard UIDs for linked alert-rule repair during import."
+    )]
     pub dashboard_uid_map: Option<PathBuf>,
-    #[arg(long, help = "JSON file that maps source dashboard UID and source panel ID to a target panel ID for linked alert-rule repair during import.")]
+    #[arg(
+        long,
+        help = "JSON file that maps source dashboard UID and source panel ID to a target panel ID for linked alert-rule repair during import."
+    )]
     pub panel_id_map: Option<PathBuf>,
 }
 
@@ -110,7 +128,11 @@ pub struct AlertExportArgs {
         help = "Write rule, contact-point, mute-timing, and template files directly into their resource directories instead of nested subdirectories."
     )]
     pub flat: bool,
-    #[arg(long, default_value_t = false, help = "Overwrite existing exported files.")]
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Overwrite existing exported files."
+    )]
     pub overwrite: bool,
 }
 
@@ -123,13 +145,27 @@ pub struct AlertImportArgs {
         help = "Import alerting resource JSON from this directory instead of exporting. Point this to the raw/ export directory explicitly."
     )]
     pub import_dir: PathBuf,
-    #[arg(long, default_value_t = false, help = "Update existing resources with the same identity instead of failing on import.")]
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Update existing resources with the same identity instead of failing on import."
+    )]
     pub replace_existing: bool,
-    #[arg(long, default_value_t = false, help = "Show whether each import file would create or update resources without changing Grafana.")]
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Show whether each import file would create or update resources without changing Grafana."
+    )]
     pub dry_run: bool,
-    #[arg(long, help = "JSON file that maps source dashboard UIDs to target dashboard UIDs for linked alert-rule repair during import.")]
+    #[arg(
+        long,
+        help = "JSON file that maps source dashboard UIDs to target dashboard UIDs for linked alert-rule repair during import."
+    )]
     pub dashboard_uid_map: Option<PathBuf>,
-    #[arg(long, help = "JSON file that maps source dashboard UID and source panel ID to a target panel ID for linked alert-rule repair during import.")]
+    #[arg(
+        long,
+        help = "JSON file that maps source dashboard UID and source panel ID to a target panel ID for linked alert-rule repair during import."
+    )]
     pub panel_id_map: Option<PathBuf>,
 }
 
@@ -142,9 +178,15 @@ pub struct AlertDiffArgs {
         help = "Compare alerting resource JSON from this directory against Grafana. Point this to the raw/ export directory explicitly."
     )]
     pub diff_dir: PathBuf,
-    #[arg(long, help = "JSON file that maps source dashboard UIDs to target dashboard UIDs for linked alert-rule repair during import.")]
+    #[arg(
+        long,
+        help = "JSON file that maps source dashboard UIDs to target dashboard UIDs for linked alert-rule repair during import."
+    )]
     pub dashboard_uid_map: Option<PathBuf>,
-    #[arg(long, help = "JSON file that maps source dashboard UID and source panel ID to a target panel ID for linked alert-rule repair during import.")]
+    #[arg(
+        long,
+        help = "JSON file that maps source dashboard UID and source panel ID to a target panel ID for linked alert-rule repair during import."
+    )]
     pub panel_id_map: Option<PathBuf>,
 }
 
@@ -160,7 +202,11 @@ pub enum AlertListKind {
 pub struct AlertListArgs {
     #[command(flatten)]
     pub common: AlertCommonArgs,
-    #[arg(long, default_value_t = false, help = "Render list output as a table. This is the default.")]
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Render list output as a table. This is the default."
+    )]
     pub table: bool,
     #[arg(long, default_value_t = false, help = "Render list output as CSV.")]
     pub csv: bool,
@@ -180,11 +226,17 @@ pub enum AlertGroupCommand {
     Diff(AlertDiffArgs),
     #[command(name = "list-rules", about = "List live Grafana alert rules.")]
     ListRules(AlertListArgs),
-    #[command(name = "list-contact-points", about = "List live Grafana alert contact points.")]
+    #[command(
+        name = "list-contact-points",
+        about = "List live Grafana alert contact points."
+    )]
     ListContactPoints(AlertListArgs),
     #[command(name = "list-mute-timings", about = "List live Grafana mute timings.")]
     ListMuteTimings(AlertListArgs),
-    #[command(name = "list-templates", about = "List live Grafana notification templates.")]
+    #[command(
+        name = "list-templates",
+        about = "List live Grafana notification templates."
+    )]
     ListTemplates(AlertListArgs),
 }
 
