@@ -1156,9 +1156,7 @@ where
         }
         return Ok("would-create");
     }
-    if replace_existing {
-        Ok("would-update")
-    } else if update_existing_only {
+    if replace_existing || update_existing_only {
         Ok("would-update")
     } else {
         Ok("would-fail-existing")
@@ -1820,7 +1818,7 @@ where
             .into_iter()
             .map(|item| {
                 value_as_object(&item, "Unexpected datasource payload from Grafana.")
-                    .map(|object| object.clone())
+                    .cloned()
             })
             .collect(),
         Some(_) => Err(message("Unexpected datasource list response from Grafana.")),

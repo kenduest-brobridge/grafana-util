@@ -598,7 +598,7 @@ fn canonicalize_value(value: &Value) -> Value {
                 .iter()
                 .map(|(key, item)| (key.clone(), canonicalize_value(item)))
                 .collect::<BTreeMap<_, _>>();
-            Value::Object(Map::from_iter(sorted.into_iter()))
+            Value::Object(Map::from_iter(sorted))
         }
         _ => value.clone(),
     }

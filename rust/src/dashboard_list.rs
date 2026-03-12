@@ -586,10 +586,7 @@ fn resolve_datasource_source_uid(
 
 pub(crate) fn collect_dashboard_source_metadata(
     payload: &Value,
-    datasource_catalog: &(
-        BTreeMap<String, Map<String, Value>>,
-        BTreeMap<String, Map<String, Value>>,
-    ),
+    datasource_catalog: &super::dashboard_prompt::DatasourceCatalog,
 ) -> Result<(Vec<String>, Vec<String>)> {
     let payload_object = value_as_object(payload, "Unexpected dashboard payload from Grafana.")?;
     let dashboard_object = payload_object

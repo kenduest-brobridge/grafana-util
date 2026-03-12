@@ -44,12 +44,14 @@ struct InputMapping {
     ds_type: String,
 }
 
+pub(crate) type DatasourceCatalog = (
+    BTreeMap<String, Map<String, Value>>,
+    BTreeMap<String, Map<String, Value>>,
+);
+
 pub(crate) fn build_datasource_catalog(
     datasources: &[Map<String, Value>],
-) -> (
-    BTreeMap<String, Map<String, Value>>,
-    BTreeMap<String, Map<String, Value>>,
-) {
+) -> DatasourceCatalog {
     let mut by_uid = BTreeMap::new();
     let mut by_name = BTreeMap::new();
     for datasource in datasources {
@@ -157,8 +159,7 @@ fn make_input_name(label: &str) -> String {
 
 fn format_plugin_name(datasource_type: &str) -> String {
     datasource_type_alias(datasource_type)
-        .replace('-', " ")
-        .replace('_', " ")
+        .replace(['-', '_'], " ")
         .split_whitespace()
         .map(|part| {
             let mut chars = part.chars();
@@ -745,10 +746,7 @@ fn build_requires_block(
 
 pub fn build_external_export_document(
     payload: &Value,
-    datasource_catalog: &(
-        BTreeMap<String, Map<String, Value>>,
-        BTreeMap<String, Map<String, Value>>,
-    ),
+    datasource_catalog: &DatasourceCatalog,
 ) -> Result<Value> {
     let mut dashboard = build_preserved_web_import_document(payload)?;
     let dashboard_object = dashboard

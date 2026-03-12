@@ -1442,7 +1442,7 @@ fn collect_dashboard_source_names_prefers_datasource_names() {
             ]
         }
     });
-    let catalog = super::build_datasource_catalog(&vec![
+    let catalog = super::build_datasource_catalog(&[
         json!({"uid": "prom_uid", "name": "Prom Main", "type": "prometheus"})
             .as_object()
             .unwrap()
@@ -1916,7 +1916,7 @@ fn build_external_export_document_adds_datasource_inputs() {
             ]
         }
     });
-    let catalog = super::build_datasource_catalog(&vec![
+    let catalog = super::build_datasource_catalog(&[
         json!({"uid": "prom_uid", "name": "Prom Main", "type": "prometheus"})
             .as_object()
             .unwrap()
