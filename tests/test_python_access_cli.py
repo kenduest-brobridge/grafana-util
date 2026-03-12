@@ -11,6 +11,8 @@ from unittest import mock
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MODULE_PATH = REPO_ROOT / "grafana_utils" / "access_cli.py"
+CLIENT_MODULE_PATH = REPO_ROOT / "grafana_utils" / "clients" / "access_client.py"
+MODELS_MODULE_PATH = REPO_ROOT / "grafana_utils" / "access" / "models.py"
 WRAPPER_PATH = REPO_ROOT / "python" / "grafana-utils.py"
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
@@ -188,6 +190,14 @@ class AccessCliTests(unittest.TestCase):
     def test_access_script_parses_as_python36_syntax(self):
         source = MODULE_PATH.read_text(encoding="utf-8")
         ast.parse(source, filename=str(MODULE_PATH), feature_version=(3, 6))
+
+    def test_access_client_module_parses_as_python36_syntax(self):
+        source = CLIENT_MODULE_PATH.read_text(encoding="utf-8")
+        ast.parse(source, filename=str(CLIENT_MODULE_PATH), feature_version=(3, 6))
+
+    def test_access_models_module_parses_as_python36_syntax(self):
+        source = MODELS_MODULE_PATH.read_text(encoding="utf-8")
+        ast.parse(source, filename=str(MODELS_MODULE_PATH), feature_version=(3, 6))
 
     def test_access_wrapper_script_parses_as_python36_syntax(self):
         source = WRAPPER_PATH.read_text(encoding="utf-8")
