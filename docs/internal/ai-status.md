@@ -1,5 +1,12 @@
 # ai-status.md
 
+## 2026-03-12 - Task: Add Dashboard List Datasource Display
+- State: Done
+- Scope: `grafana_utils/dashboard_cli.py`, `tests/test_python_dashboard_cli.py`, `rust/src/dashboard.rs`, `rust/src/dashboard_rust_tests.rs`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The dashboard `list` subcommand already showed `uid`, `name`, `folder`, `folderUid`, and resolved folder path, but it could not show which datasource names each dashboard used.
+- Current Update: Added an opt-in `--with-sources` flag to both Python and Rust dashboard list paths. When enabled, the command fetches the datasource catalog and each dashboard payload, resolves datasource references into display names, and appends those names to text, table, CSV, and JSON output. CSV output also carries a best-effort `sourceUids` column.
+- Result: Operators can now inspect dashboard datasource usage directly from `grafana-utils list --with-sources` without exporting dashboard files, while plain `list` remains unchanged and cheaper. CSV consumers can also capture concrete datasource UIDs when Grafana exposed them.
+
 ## 2026-03-12 - Task: Add Access Utility Team Add
 - State: Done
 - Scope: `grafana_utils/access_cli.py`, `tests/test_python_access_cli.py`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`, `TODO.md`

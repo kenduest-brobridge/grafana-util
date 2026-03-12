@@ -198,6 +198,14 @@ def add_list_cli_args(parser: argparse.ArgumentParser) -> None:
         default=DEFAULT_PAGE_SIZE,
         help=f"Dashboard search page size (default: {DEFAULT_PAGE_SIZE}).",
     )
+    parser.add_argument(
+        "--with-sources",
+        action="store_true",
+        help=(
+            "Fetch each dashboard payload and include resolved datasource names. "
+            "This makes extra API calls."
+        ),
+    )
     output_group = parser.add_mutually_exclusive_group()
     output_group.add_argument(
         "--table",
@@ -1596,22 +1604,30 @@ def export_dashboards(args: argparse.Namespace) -> int:
 def format_dashboard_summary_line(summary: Dict[str, Any]) -> str:
     """Render one live dashboard summary in a compact operator-readable form."""
     record = build_dashboard_summary_record(summary)
-    return (
+    line = (
         f"uid={record['uid']} name={record['name']} folder={record['folder']} "
         f"folderUid={record['folderUid']} path={record['path']}"
     )
+    if record.get("sources"):
+        line += f" sources={record['sources']}"
+    return line
 
 
 def build_dashboard_summary_record(summary: Dict[str, Any]) -> Dict[str, str]:
     """Normalize a dashboard summary into a stable output record."""
     folder = str(summary.get("folderTitle") or "General")
-    return {
+    record = {
         "uid": str(summary.get("uid") or "unknown"),
         "name": str(summary.get("title") or "dashboard"),
         "folder": folder,
         "folderUid": str(summary.get("folderUid") or "general"),
         "path": str(summary.get("folderPath") or folder),
     }
+    if "sources" in summary:
+        record["sources"] = ",".join(summary.get("sources") or [])
+    if "sourceUids" in summary:
+        record["sourceUids"] = ",".join(summary.get("sourceUids") or [])
+    return record
 
 
 def build_folder_path(folder: Dict[str, Any], fallback_title: str) -> str:
@@ -1658,19 +1674,202 @@ def attach_dashboard_folder_paths(
     return enriched
 
 
+def describe_datasource_ref(
+    ref: Any,
+    datasources_by_uid: Dict[str, Dict[str, Any]],
+    datasources_by_name: Dict[str, Dict[str, Any]],
+) -> Optional[str]:
+    """Resolve one datasource reference into a display label when possible."""
+    if ref is None or is_builtin_datasource_ref(ref):
+        return None
+
+    if isinstance(ref, str):
+        if is_placeholder_string(ref):
+            return None
+        datasource = lookup_datasource(
+            datasources_by_uid,
+            datasources_by_name,
+            uid=ref,
+            name=ref,
+        )
+        if datasource is not None:
+            label = datasource.get("name") or ref
+            if isinstance(label, str) and label:
+                return label
+        datasource_type = resolve_datasource_type_alias(ref, datasources_by_uid)
+        if datasource_type is not None:
+            return datasource_type
+        return ref
+
+    if isinstance(ref, dict):
+        uid = ref.get("uid")
+        name = ref.get("name")
+        ds_type = ref.get("type")
+        has_placeholder = (
+            isinstance(uid, str)
+            and is_placeholder_string(uid)
+            or isinstance(name, str)
+            and is_placeholder_string(name)
+        )
+        if has_placeholder:
+            return None
+        datasource = lookup_datasource(
+            datasources_by_uid,
+            datasources_by_name,
+            uid=uid,
+            name=name,
+        )
+        if datasource is not None:
+            label = datasource.get("name") or name or uid
+            if isinstance(label, str) and label:
+                return label
+        for candidate in (name, uid, ds_type):
+            if isinstance(candidate, str) and candidate:
+                return candidate
+    return None
+
+
+def resolve_datasource_uid(
+    ref: Any,
+    datasources_by_uid: Dict[str, Dict[str, Any]],
+    datasources_by_name: Dict[str, Dict[str, Any]],
+) -> Optional[str]:
+    """Resolve one datasource reference into a concrete datasource UID when possible."""
+    if ref is None or is_builtin_datasource_ref(ref):
+        return None
+
+    if isinstance(ref, str):
+        if is_placeholder_string(ref):
+            return None
+        datasource = lookup_datasource(
+            datasources_by_uid,
+            datasources_by_name,
+            uid=ref,
+            name=ref,
+        )
+        if datasource is None:
+            return None
+        uid = datasource.get("uid")
+        if isinstance(uid, str) and uid:
+            return uid
+        return None
+
+    if isinstance(ref, dict):
+        uid = ref.get("uid")
+        name = ref.get("name")
+        has_placeholder = (
+            isinstance(uid, str)
+            and is_placeholder_string(uid)
+            or isinstance(name, str)
+            and is_placeholder_string(name)
+        )
+        if has_placeholder:
+            return None
+        datasource = lookup_datasource(
+            datasources_by_uid,
+            datasources_by_name,
+            uid=uid,
+            name=name,
+        )
+        if datasource is not None:
+            resolved_uid = datasource.get("uid")
+            if isinstance(resolved_uid, str) and resolved_uid:
+                return resolved_uid
+        if isinstance(uid, str) and uid:
+            return uid
+    return None
+
+
+def resolve_dashboard_source_metadata(
+    payload: Dict[str, Any],
+    datasources_by_uid: Dict[str, Dict[str, Any]],
+    datasources_by_name: Dict[str, Dict[str, Any]],
+) -> Tuple[List[str], List[str]]:
+    """Collect sorted datasource display names and concrete UIDs from one dashboard payload."""
+    dashboard = extract_dashboard_object(
+        payload,
+        "Unexpected dashboard payload from Grafana.",
+    )
+    refs: List[Any] = []
+    collect_datasource_refs(dashboard, refs)
+    source_names: Set[str] = set()
+    source_uids: Set[str] = set()
+    for ref in refs:
+        try:
+            resolved = resolve_datasource_ref(
+                ref,
+                datasources_by_uid=datasources_by_uid,
+                datasources_by_name=datasources_by_name,
+            )
+        except GrafanaError:
+            resolved = None
+        if resolved is not None:
+            label = resolved.get("label")
+            if isinstance(label, str) and label:
+                source_names.add(label)
+
+        label = describe_datasource_ref(
+            ref,
+            datasources_by_uid=datasources_by_uid,
+            datasources_by_name=datasources_by_name,
+        )
+        if label:
+            source_names.add(label)
+        uid = resolve_datasource_uid(
+            ref,
+            datasources_by_uid=datasources_by_uid,
+            datasources_by_name=datasources_by_name,
+        )
+        if uid:
+            source_uids.add(uid)
+    return sorted(source_names), sorted(source_uids)
+
+
+def attach_dashboard_sources(
+    client: GrafanaClient,
+    summaries: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Attach sorted datasource display names to each dashboard summary."""
+    datasources_by_uid, datasources_by_name = build_datasource_catalog(
+        client.list_datasources()
+    )
+    enriched: List[Dict[str, Any]] = []
+    for summary in summaries:
+        item = dict(summary)
+        uid = str(item.get("uid") or "").strip()
+        if uid:
+            payload = client.fetch_dashboard(uid)
+            sources, source_uids = resolve_dashboard_source_metadata(
+                payload,
+                datasources_by_uid=datasources_by_uid,
+                datasources_by_name=datasources_by_name,
+            )
+            item["sources"] = sources
+            item["sourceUids"] = source_uids
+        else:
+            item["sources"] = []
+            item["sourceUids"] = []
+        enriched.append(item)
+    return enriched
+
+
 def render_dashboard_summary_table(summaries: List[Dict[str, Any]]) -> List[str]:
     """Render dashboard summaries as a fixed-width table."""
     headers = ["UID", "NAME", "FOLDER", "FOLDER_UID", "FOLDER_PATH"]
-    rows = [
-        [
+    if summaries and "sources" in summaries[0]:
+        headers.append("SOURCES")
+    rows = []
+    for record in [build_dashboard_summary_record(summary) for summary in summaries]:
+        row = [
             record["uid"],
             record["name"],
             record["folder"],
             record["folderUid"],
             record["path"],
         ]
-        for record in [build_dashboard_summary_record(summary) for summary in summaries]
-    ]
+        if "sources" in record:
+            row.append(record["sources"])
+        rows.append(row)
     widths = [len(header) for header in headers]
     for row in rows:
         for index, value in enumerate(row):
@@ -1689,6 +1888,10 @@ def render_dashboard_summary_table(summaries: List[Dict[str, Any]]) -> List[str]
 def render_dashboard_summary_csv(summaries: List[Dict[str, Any]]) -> None:
     """Render dashboard summaries as CSV records."""
     fieldnames = ["uid", "name", "folder", "folderUid", "path"]
+    if summaries and "sources" in summaries[0]:
+        fieldnames.append("sources")
+    if summaries and "sourceUids" in summaries[0]:
+        fieldnames.append("sourceUids")
     writer = csv.DictWriter(sys.stdout, fieldnames=fieldnames, lineterminator="\n")
     writer.writeheader()
     for summary in summaries:
@@ -1697,7 +1900,12 @@ def render_dashboard_summary_csv(summaries: List[Dict[str, Any]]) -> None:
 
 def render_dashboard_summary_json(summaries: List[Dict[str, Any]]) -> str:
     """Render dashboard summaries as JSON."""
-    records = [build_dashboard_summary_record(summary) for summary in summaries]
+    records = []
+    for summary in summaries:
+        record = build_dashboard_summary_record(summary)
+        if "sources" in summary:
+            record["sources"] = list(summary.get("sources") or [])
+        records.append(record)
     return json.dumps(records, indent=2, sort_keys=False)
 
 
@@ -1708,6 +1916,8 @@ def list_dashboards(args: argparse.Namespace) -> int:
         client,
         client.iter_dashboard_summaries(args.page_size),
     )
+    if getattr(args, "with_sources", False):
+        summaries = attach_dashboard_sources(client, summaries)
     if args.csv:
         render_dashboard_summary_csv(summaries)
         return 0

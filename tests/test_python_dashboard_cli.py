@@ -113,12 +113,14 @@ class ExporterTests(unittest.TestCase):
         self.assertEqual(args.command, "list")
         self.assertEqual(args.page_size, 25)
         self.assertTrue(args.table)
+        self.assertFalse(args.with_sources)
         self.assertFalse(args.csv)
         self.assertFalse(args.json)
 
     def test_parse_args_supports_list_csv_and_json_modes(self):
         csv_args = exporter.parse_args(["list", "--csv"])
         json_args = exporter.parse_args(["list", "--json"])
+        source_args = exporter.parse_args(["list", "--with-sources"])
 
         self.assertTrue(csv_args.csv)
         self.assertFalse(csv_args.table)
@@ -126,6 +128,7 @@ class ExporterTests(unittest.TestCase):
         self.assertTrue(json_args.json)
         self.assertFalse(json_args.table)
         self.assertFalse(json_args.csv)
+        self.assertTrue(source_args.with_sources)
 
     def test_parse_args_rejects_multiple_list_output_modes(self):
         with self.assertRaises(SystemExit):
@@ -336,6 +339,23 @@ class ExporterTests(unittest.TestCase):
             "uid=abc name=dashboard folder=General folderUid=general path=General",
         )
 
+    def test_format_dashboard_summary_line_includes_sources_when_present(self):
+        line = exporter.format_dashboard_summary_line(
+            {
+                "uid": "abc",
+                "title": "CPU",
+                "sources": ["Loki Logs", "Prometheus Main"],
+            }
+        )
+
+        self.assertEqual(
+            line,
+            (
+                "uid=abc name=CPU folder=General folderUid=general path=General "
+                "sources=Loki Logs,Prometheus Main"
+            ),
+        )
+
     def test_build_folder_path_joins_parents_and_title(self):
         path = exporter.build_folder_path(
             {
@@ -386,6 +406,24 @@ class ExporterTests(unittest.TestCase):
         self.assertEqual(lines[2], "abc  CPU       Infra    infra       Platform / Infra")
         self.assertEqual(lines[3], "xyz  Overview  General  general     General         ")
 
+    def test_render_dashboard_summary_table_includes_sources_column(self):
+        lines = exporter.render_dashboard_summary_table(
+            [
+                {
+                    "uid": "abc",
+                    "folderTitle": "Infra",
+                    "folderUid": "infra",
+                    "folderPath": "Platform / Infra",
+                    "title": "CPU",
+                    "sources": ["Loki Logs", "Prometheus Main"],
+                }
+            ]
+        )
+
+        self.assertIn("SOURCES", lines[0])
+        self.assertIn("Loki Logs,Prometheus Main", lines[2])
+        self.assertTrue(lines[2].startswith("abc  CPU   Infra   infra"))
+
     def test_render_dashboard_summary_json_uses_expected_fields(self):
         document = exporter.render_dashboard_summary_json(
             [
@@ -412,6 +450,89 @@ class ExporterTests(unittest.TestCase):
             ],
         )
 
+    def test_render_dashboard_summary_json_includes_sources_when_present(self):
+        document = exporter.render_dashboard_summary_json(
+            [
+                {
+                    "uid": "abc",
+                    "folderTitle": "Infra",
+                    "folderUid": "infra",
+                    "folderPath": "Platform / Infra",
+                    "title": "CPU",
+                    "sources": ["Loki Logs", "Prometheus Main"],
+                }
+            ]
+        )
+
+        self.assertEqual(
+            json.loads(document),
+            [
+                {
+                    "uid": "abc",
+                    "name": "CPU",
+                    "folder": "Infra",
+                    "folderUid": "infra",
+                    "path": "Platform / Infra",
+                    "sources": ["Loki Logs", "Prometheus Main"],
+                }
+            ],
+        )
+
+    def test_render_dashboard_summary_csv_includes_sources_column(self):
+        stdout = io.StringIO()
+        with redirect_stdout(stdout):
+            exporter.render_dashboard_summary_csv(
+                [
+                    {
+                        "uid": "abc",
+                        "folderTitle": "Infra",
+                        "folderUid": "infra",
+                        "folderPath": "Platform / Infra",
+                        "title": "CPU",
+                        "sources": ["Loki Logs", "Prometheus Main"],
+                        "sourceUids": ["loki_uid", "prom_uid"],
+                    }
+                ]
+            )
+
+        self.assertEqual(
+            stdout.getvalue().splitlines(),
+            [
+                "uid,name,folder,folderUid,path,sources,sourceUids",
+                "abc,CPU,Infra,infra,Platform / Infra,\"Loki Logs,Prometheus Main\",\"loki_uid,prom_uid\"",
+            ],
+        )
+
+    def test_attach_dashboard_sources_resolves_datasource_names(self):
+        client = FakeDashboardWorkflowClient(
+            dashboards={
+                "abc": {
+                    "dashboard": {
+                        "uid": "abc",
+                        "title": "CPU",
+                        "panels": [
+                            {"datasource": {"uid": "prom_uid", "type": "prometheus"}},
+                            {"datasource": "loki_uid"},
+                            {"targets": [{"datasource": "Prometheus Main"}]},
+                            {"datasource": "-- Grafana --"},
+                        ],
+                    }
+                }
+            },
+            datasources=[
+                {"uid": "prom_uid", "name": "Prometheus Main", "type": "prometheus"},
+                {"uid": "loki_uid", "name": "Loki Logs", "type": "loki"},
+            ],
+        )
+
+        summaries = exporter.attach_dashboard_sources(
+            client,
+            [{"uid": "abc", "title": "CPU"}],
+        )
+
+        self.assertEqual(summaries[0]["sources"], ["Loki Logs", "Prometheus Main"])
+        self.assertEqual(summaries[0]["sourceUids"], ["loki_uid", "prom_uid"])
+
     def test_list_dashboards_prints_live_summaries(self):
         args = argparse.Namespace(
             command="list",
@@ -422,6 +543,7 @@ class ExporterTests(unittest.TestCase):
             timeout=30,
             verify_ssl=False,
             page_size=50,
+            with_sources=False,
             table=False,
             csv=False,
             json=False,
@@ -462,6 +584,7 @@ class ExporterTests(unittest.TestCase):
             timeout=30,
             verify_ssl=False,
             page_size=50,
+            with_sources=False,
             table=True,
             csv=False,
             json=False,
@@ -504,6 +627,7 @@ class ExporterTests(unittest.TestCase):
             timeout=30,
             verify_ssl=False,
             page_size=50,
+            with_sources=False,
             table=False,
             csv=True,
             json=False,
@@ -543,6 +667,7 @@ class ExporterTests(unittest.TestCase):
             timeout=30,
             verify_ssl=False,
             page_size=50,
+            with_sources=False,
             table=False,
             csv=False,
             json=True,
@@ -580,6 +705,61 @@ class ExporterTests(unittest.TestCase):
                     "folderUid": "general",
                     "path": "General",
                 },
+            ],
+        )
+
+    def test_list_dashboards_with_sources_includes_resolved_datasource_names(self):
+        args = argparse.Namespace(
+            command="list",
+            url="http://127.0.0.1:3000",
+            api_token=None,
+            username=None,
+            password=None,
+            timeout=30,
+            verify_ssl=False,
+            page_size=50,
+            with_sources=True,
+            table=False,
+            csv=False,
+            json=False,
+        )
+        client = FakeDashboardWorkflowClient(
+            summaries=[
+                {"uid": "abc", "folderTitle": "Infra", "folderUid": "infra", "title": "CPU"},
+            ],
+            dashboards={
+                "abc": {
+                    "dashboard": {
+                        "uid": "abc",
+                        "title": "CPU",
+                        "panels": [
+                            {"datasource": {"uid": "prom_uid", "type": "prometheus"}},
+                            {"datasource": "Loki Logs"},
+                        ],
+                    }
+                }
+            },
+            datasources=[
+                {"uid": "prom_uid", "name": "Prometheus Main", "type": "prometheus"},
+                {"uid": "loki_uid", "name": "Loki Logs", "type": "loki"},
+            ],
+            folders={
+                "infra": {"title": "Infra", "parents": [{"title": "Platform"}]},
+            },
+        )
+
+        with mock.patch.object(exporter, "build_client", return_value=client):
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = exporter.list_dashboards(args)
+
+        self.assertEqual(result, 0)
+        self.assertEqual(
+            stdout.getvalue().splitlines(),
+            [
+                "uid=abc name=CPU folder=Infra folderUid=infra path=Platform / Infra sources=Loki Logs,Prometheus Main",
+                "",
+                "Listed 1 dashboard summaries from http://127.0.0.1:3000",
             ],
         )
 

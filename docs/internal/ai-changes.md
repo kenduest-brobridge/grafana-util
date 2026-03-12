@@ -1,5 +1,14 @@
 # ai-changes.md
 
+## 2026-03-12 - Add Dashboard List Datasource Display
+- Summary: Extended both the Python and Rust dashboard `list` subcommands with `--with-sources`, an opt-in mode that fetches each dashboard payload and resolves datasource references into datasource names for display. The extra data now appears in compact text output and in table, CSV, and JSON output as a `sources` field or column. CSV output also includes best-effort datasource UID collection in a `sourceUids` column.
+- Tests: Added parser/help coverage plus Python and Rust list rendering tests for the new `sources` field and datasource-resolution helpers.
+- Test Run: `python3 -m unittest -v tests/test_python_dashboard_cli.py`; `python3 -m unittest -v`; `python3 cmd/grafana-utils.py list -h`; `cd rust && cargo test dashboard --quiet`; `cd rust && cargo run --quiet --bin grafana-utils -- list -h`
+- Validation: Verified that plain `list` output stays unchanged unless `--with-sources` is passed, and that `--with-sources` shows resolved datasource names consistently across Python and Rust.
+- Impact: `grafana_utils/dashboard_cli.py`, `tests/test_python_dashboard_cli.py`, `rust/src/dashboard.rs`, `rust/src/dashboard_rust_tests.rs`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low to moderate. The new behavior is opt-in, but it adds extra API calls and best-effort datasource resolution for dashboards that use aliases, UIDs, or unusual placeholder patterns.
+- Follow-up: Optional live Docker validation for `list --with-sources` if we want end-to-end confirmation against a real Grafana datasource catalog.
+
 ## 2026-03-12 - Add Access Utility Team Add
 - Summary: Added Python `grafana-access-utils team add` support, including parser/help wiring, Grafana team creation through the org-scoped API, optional initial member/admin seeding, and aligned public/maintainer docs. The command creates the team first, then reuses the existing exact org-user resolution and guarded membership/admin update flow so initial admins are applied consistently with `team modify`.
 - Tests: Extended `tests/test_python_access_cli.py` with parser/help coverage plus create-flow tests for initial members/admins and the failure path when an initial user cannot be resolved.

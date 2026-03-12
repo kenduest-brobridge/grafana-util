@@ -57,9 +57,32 @@ fn parse_cli_supports_list_mode() {
         DashboardCommand::List(list_args) => {
             assert_eq!(list_args.common.url, "https://grafana.example.com");
             assert_eq!(list_args.page_size, 25);
+            assert!(!list_args.with_sources);
             assert!(!list_args.table);
             assert!(!list_args.csv);
             assert!(!list_args.json);
+        }
+        _ => panic!("expected list command"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_list_with_sources() {
+    let args = parse_cli_from([
+        "grafana-utils",
+        "list",
+        "--url",
+        "https://grafana.example.com",
+        "--with-sources",
+        "--json",
+    ]);
+
+    match args.command {
+        DashboardCommand::List(list_args) => {
+            assert!(list_args.with_sources);
+            assert!(list_args.json);
+            assert!(!list_args.table);
+            assert!(!list_args.csv);
         }
         _ => panic!("expected list command"),
     }
@@ -257,6 +280,24 @@ fn format_dashboard_summary_line_uses_uid_name_and_folder_details() {
 }
 
 #[test]
+fn format_dashboard_summary_line_appends_sources_when_present() {
+    let summary = json!({
+        "uid": "abc",
+        "folderUid": "infra",
+        "folderPath": "Platform / Infra",
+        "folderTitle": "Infra",
+        "title": "CPU",
+        "sources": ["Loki Logs", "Prom Main"]
+    });
+
+    let line = format_dashboard_summary_line(summary.as_object().unwrap());
+    assert_eq!(
+        line,
+        "uid=abc name=CPU folder=Infra folderUid=infra path=Platform / Infra sources=Loki Logs,Prom Main"
+    );
+}
+
+#[test]
 fn render_dashboard_summary_table_uses_headers_and_defaults() {
     let summaries = vec![
         json!({
@@ -282,6 +323,28 @@ fn render_dashboard_summary_table_uses_headers_and_defaults() {
     assert_eq!(lines[0], "UID  NAME      FOLDER   FOLDER_UID  FOLDER_PATH     ");
     assert_eq!(lines[2], "abc  CPU       Infra    infra       Platform / Infra");
     assert_eq!(lines[3], "xyz  Overview  General  general     General         ");
+}
+
+#[test]
+fn render_dashboard_summary_table_includes_sources_column_when_present() {
+    let summaries = vec![
+        json!({
+            "uid": "abc",
+            "folderUid": "infra",
+            "folderPath": "Platform / Infra",
+            "folderTitle": "Infra",
+            "title": "CPU",
+            "sources": ["Prom Main", "Loki Logs"]
+        })
+        .as_object()
+        .unwrap()
+        .clone(),
+    ];
+
+    let lines = render_dashboard_summary_table(&summaries);
+    assert!(lines[0].contains("SOURCES"));
+    assert!(lines[2].starts_with("abc  CPU   Infra   infra"));
+    assert!(lines[2].ends_with("Prom Main,Loki Logs"));
 }
 
 #[test]
@@ -313,6 +376,28 @@ fn render_dashboard_summary_csv_uses_headers_and_escaping() {
     assert_eq!(lines[0], "uid,name,folder,folderUid,path");
     assert_eq!(lines[1], "abc,CPU,Infra,infra,Platform / Infra");
     assert_eq!(lines[2], "xyz,\"CPU, \"\"critical\"\"\",Ops,ops,Root / Ops");
+}
+
+#[test]
+fn render_dashboard_summary_csv_includes_sources_column_when_present() {
+    let summaries = vec![
+        json!({
+            "uid": "abc",
+            "folderUid": "infra",
+            "folderPath": "Platform / Infra",
+            "folderTitle": "Infra",
+            "title": "CPU",
+            "sources": ["Prom Main", "Loki Logs"],
+            "sourceUids": ["loki_uid", "prom_uid"]
+        })
+        .as_object()
+        .unwrap()
+        .clone(),
+    ];
+
+    let lines = render_dashboard_summary_csv(&summaries);
+    assert_eq!(lines[0], "uid,name,folder,folderUid,path,sources,sourceUids");
+    assert_eq!(lines[1], "abc,CPU,Infra,infra,Platform / Infra,\"Prom Main,Loki Logs\",\"loki_uid,prom_uid\"");
 }
 
 #[test]
@@ -354,6 +439,38 @@ fn render_dashboard_summary_json_returns_objects() {
                 "folder": "General",
                 "folderUid": "general",
                 "path": "General"
+            }
+        ])
+    );
+}
+
+#[test]
+fn render_dashboard_summary_json_includes_sources_when_present() {
+    let summaries = vec![
+        json!({
+            "uid": "abc",
+            "folderUid": "infra",
+            "folderPath": "Platform / Infra",
+            "folderTitle": "Infra",
+            "title": "CPU",
+            "sources": ["Loki Logs", "Prom Main"]
+        })
+        .as_object()
+        .unwrap()
+        .clone(),
+    ];
+
+    let value = render_dashboard_summary_json(&summaries);
+    assert_eq!(
+        value,
+        json!([
+            {
+                "uid": "abc",
+                "name": "CPU",
+                "folder": "Infra",
+                "folderUid": "infra",
+                "path": "Platform / Infra",
+                "sources": ["Loki Logs", "Prom Main"]
             }
         ])
     );
@@ -411,6 +528,7 @@ fn list_dashboards_with_request_returns_dashboard_count() {
     let args = ListArgs {
         common: make_common_args("http://127.0.0.1:3000".to_string()),
         page_size: 500,
+        with_sources: false,
         table: false,
         csv: false,
         json: false,
@@ -433,6 +551,83 @@ fn list_dashboards_with_request_returns_dashboard_count() {
     .unwrap();
 
     assert_eq!(count, 2);
+}
+
+#[test]
+fn collect_dashboard_source_names_prefers_datasource_names() {
+    let payload = json!({
+        "dashboard": {
+            "uid": "abc",
+            "title": "CPU",
+            "panels": [
+                {"datasource": {"uid": "prom_uid", "type": "prometheus"}},
+                {"datasource": "Loki Logs"},
+                {"datasource": "prometheus"},
+                {"datasource": "-- Mixed --"}
+            ]
+        }
+    });
+    let catalog = super::build_datasource_catalog(&vec![
+        json!({"uid": "prom_uid", "name": "Prom Main", "type": "prometheus"})
+            .as_object()
+            .unwrap()
+            .clone(),
+        json!({"uid": "loki_uid", "name": "Loki Logs", "type": "loki"})
+            .as_object()
+            .unwrap()
+            .clone(),
+    ]);
+
+    let (sources, source_uids) = super::collect_dashboard_source_metadata(&payload, &catalog).unwrap();
+    assert_eq!(sources, vec!["Loki Logs".to_string(), "Prom Main".to_string()]);
+    assert_eq!(source_uids, vec!["loki_uid".to_string(), "prom_uid".to_string()]);
+}
+
+#[test]
+fn list_dashboards_with_request_with_sources_fetches_dashboards_and_datasources() {
+    let args = ListArgs {
+        common: make_common_args("http://127.0.0.1:3000".to_string()),
+        page_size: 500,
+        with_sources: true,
+        table: false,
+        csv: false,
+        json: true,
+    };
+    let mut calls = Vec::new();
+
+    let count = list_dashboards_with_request(
+        |method, path, _params, _payload| {
+            calls.push((method.to_string(), path.to_string()));
+            match path {
+                "/api/search" => Ok(Some(json!([
+                    {"uid": "abc", "title": "CPU", "folderTitle": "Infra", "folderUid": "infra"}
+                ]))),
+                "/api/folders/infra" => Ok(Some(json!({
+                    "title": "Infra",
+                    "parents": [{"title": "Platform"}]
+                }))),
+                "/api/datasources" => Ok(Some(json!([
+                    {"uid": "prom_uid", "name": "Prom Main", "type": "prometheus"}
+                ]))),
+                "/api/dashboards/uid/abc" => Ok(Some(json!({
+                    "dashboard": {
+                        "uid": "abc",
+                        "title": "CPU",
+                        "panels": [
+                            {"datasource": {"uid": "prom_uid", "type": "prometheus"}}
+                        ]
+                    }
+                }))),
+                _ => Err(super::message(format!("unexpected path {path}"))),
+            }
+        },
+        &args,
+    )
+    .unwrap();
+
+    assert_eq!(count, 1);
+    assert!(calls.iter().any(|(_, path)| path == "/api/datasources"));
+    assert!(calls.iter().any(|(_, path)| path == "/api/dashboards/uid/abc"));
 }
 
 #[test]

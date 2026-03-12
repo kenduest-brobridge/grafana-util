@@ -102,6 +102,12 @@ pub struct ListArgs {
     pub common: CommonCliArgs,
     #[arg(long, default_value_t = DEFAULT_PAGE_SIZE, help = "Dashboard search page size.")]
     pub page_size: usize,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Fetch each dashboard payload and include resolved datasource names in the list output."
+    )]
+    pub with_sources: bool,
     #[arg(long, default_value_t = false, conflicts_with_all = ["csv", "json"], help = "Render dashboard summaries as a table.")]
     pub table: bool,
     #[arg(long, default_value_t = false, conflicts_with_all = ["table", "json"], help = "Render dashboard summaries as CSV.")]
@@ -1360,11 +1366,16 @@ fn format_dashboard_summary_line(summary: &Map<String, Value>) -> String {
     let folder_uid = string_field(summary, "folderUid", "general");
     let folder_path = string_field(summary, "folderPath", &folder_title);
     let title = string_field(summary, "title", "dashboard");
-    format!("uid={uid} name={title} folder={folder_title} folderUid={folder_uid} path={folder_path}")
+    let mut line =
+        format!("uid={uid} name={title} folder={folder_title} folderUid={folder_uid} path={folder_path}");
+    if let Some(sources) = dashboard_sources_cell(summary) {
+        let _ = write!(&mut line, " sources={sources}");
+    }
+    line
 }
 
-fn build_dashboard_summary_row(summary: &Map<String, Value>) -> Vec<String> {
-    vec![
+fn build_dashboard_summary_row(summary: &Map<String, Value>, include_sources: bool) -> Vec<String> {
+    let mut row = vec![
         string_field(summary, "uid", "unknown"),
         string_field(summary, "title", "dashboard"),
         string_field(summary, "folderTitle", "General"),
@@ -1374,20 +1385,67 @@ fn build_dashboard_summary_row(summary: &Map<String, Value>) -> Vec<String> {
             "folderPath",
             &string_field(summary, "folderTitle", "General"),
         ),
-    ]
+    ];
+    if include_sources {
+        row.push(dashboard_sources_cell(summary).unwrap_or_default());
+    }
+    row
+}
+
+fn dashboard_sources(summary: &Map<String, Value>) -> Option<Vec<String>> {
+    let values = summary.get("sources")?.as_array()?;
+    Some(
+        values
+            .iter()
+            .filter_map(Value::as_str)
+            .map(|value| value.to_string())
+            .collect(),
+    )
+}
+
+fn dashboard_source_uids(summary: &Map<String, Value>) -> Option<Vec<String>> {
+    let values = summary.get("sourceUids")?.as_array()?;
+    Some(
+        values
+            .iter()
+            .filter_map(Value::as_str)
+            .map(|value| value.to_string())
+            .collect(),
+    )
+}
+
+fn dashboard_sources_cell(summary: &Map<String, Value>) -> Option<String> {
+    let values = dashboard_sources(summary)?;
+    if values.is_empty() {
+        None
+    } else {
+        Some(values.join(","))
+    }
+}
+
+fn summaries_include_sources(summaries: &[Map<String, Value>]) -> bool {
+    summaries.iter().any(|summary| summary.contains_key("sources"))
+}
+
+fn summaries_include_source_uids(summaries: &[Map<String, Value>]) -> bool {
+    summaries.iter().any(|summary| summary.contains_key("sourceUids"))
 }
 
 fn render_dashboard_summary_table(summaries: &[Map<String, Value>]) -> Vec<String> {
-    let headers = vec![
+    let include_sources = summaries_include_sources(summaries);
+    let mut headers = vec![
         "UID".to_string(),
         "NAME".to_string(),
         "FOLDER".to_string(),
         "FOLDER_UID".to_string(),
         "FOLDER_PATH".to_string(),
     ];
+    if include_sources {
+        headers.push("SOURCES".to_string());
+    }
     let rows: Vec<Vec<String>> = summaries
         .iter()
-        .map(build_dashboard_summary_row)
+        .map(|summary| build_dashboard_summary_row(summary, include_sources))
         .collect();
     let mut widths: Vec<usize> = headers.iter().map(|header| header.len()).collect();
     for row in &rows {
@@ -1412,10 +1470,28 @@ fn render_dashboard_summary_table(summaries: &[Map<String, Value>]) -> Vec<Strin
 }
 
 fn render_dashboard_summary_csv(summaries: &[Map<String, Value>]) -> Vec<String> {
-    let mut lines = vec!["uid,name,folder,folderUid,path".to_string()];
+    let include_sources = summaries_include_sources(summaries);
+    let include_source_uids = summaries_include_source_uids(summaries);
+    let mut header = vec![
+        "uid".to_string(),
+        "name".to_string(),
+        "folder".to_string(),
+        "folderUid".to_string(),
+        "path".to_string(),
+    ];
+    if include_sources {
+        header.push("sources".to_string());
+    }
+    if include_source_uids {
+        header.push("sourceUids".to_string());
+    }
+    let mut lines = vec![header.join(",")];
     lines.extend(summaries.iter().map(|summary| {
-        build_dashboard_summary_row(summary)
-            .into_iter()
+        let mut row = build_dashboard_summary_row(summary, include_sources);
+        if include_source_uids {
+            row.push(dashboard_source_uids(summary).unwrap_or_default().join(","));
+        }
+        row.into_iter()
             .map(|value| {
                 if value.contains(',') || value.contains('"') || value.contains('\n') {
                     format!("\"{}\"", value.replace('"', "\"\""))
@@ -1430,21 +1506,210 @@ fn render_dashboard_summary_csv(summaries: &[Map<String, Value>]) -> Vec<String>
 }
 
 fn render_dashboard_summary_json(summaries: &[Map<String, Value>]) -> Value {
+    let include_sources = summaries_include_sources(summaries);
     Value::Array(
         summaries
             .iter()
             .map(|summary| {
-                let row = build_dashboard_summary_row(summary);
-                Value::Object(Map::from_iter(vec![
+                let row = build_dashboard_summary_row(summary, include_sources);
+                let mut object = Map::from_iter(vec![
                     ("uid".to_string(), Value::String(row[0].clone())),
                     ("name".to_string(), Value::String(row[1].clone())),
                     ("folder".to_string(), Value::String(row[2].clone())),
                     ("folderUid".to_string(), Value::String(row[3].clone())),
                     ("path".to_string(), Value::String(row[4].clone())),
-                ]))
+                ]);
+                if include_sources {
+                    object.insert(
+                        "sources".to_string(),
+                        Value::Array(
+                            dashboard_sources(summary)
+                                .unwrap_or_default()
+                                .into_iter()
+                                .map(Value::String)
+                                .collect(),
+                        ),
+                    );
+                }
+                Value::Object(object)
             })
             .collect(),
     )
+}
+
+fn lookup_unique_datasource_name_by_type(
+    datasources_by_uid: &BTreeMap<String, Map<String, Value>>,
+    datasource_type: &str,
+) -> Option<String> {
+    let matches: BTreeSet<String> = datasources_by_uid
+        .values()
+        .filter(|datasource| string_field(datasource, "type", "").eq_ignore_ascii_case(datasource_type))
+        .map(|datasource| {
+            let name = string_field(datasource, "name", "");
+            if name.is_empty() {
+                string_field(datasource, "uid", datasource_type)
+            } else {
+                name
+            }
+        })
+        .collect();
+    if matches.len() == 1 {
+        matches.iter().next().cloned()
+    } else {
+        None
+    }
+}
+
+fn resolve_datasource_source_name(
+    reference: &Value,
+    datasources_by_uid: &BTreeMap<String, Map<String, Value>>,
+    datasources_by_name: &BTreeMap<String, Map<String, Value>>,
+) -> Option<String> {
+    if reference.is_null() || is_builtin_datasource_ref(reference) {
+        return None;
+    }
+    match reference {
+        Value::String(text) => {
+            if is_placeholder_string(text) {
+                return None;
+            }
+            if let Some(datasource) =
+                lookup_datasource(datasources_by_uid, datasources_by_name, Some(text), Some(text))
+            {
+                let name = string_field(&datasource, "name", text);
+                return Some(name);
+            }
+            resolve_datasource_type_alias(text, datasources_by_uid)
+                .and_then(|datasource_type| {
+                    lookup_unique_datasource_name_by_type(datasources_by_uid, &datasource_type)
+                        .or_else(|| Some(datasource_type_alias(&datasource_type).to_string()))
+                })
+                .or_else(|| Some(text.to_string()))
+        }
+        Value::Object(object) => {
+            let uid = object.get("uid").and_then(Value::as_str);
+            let name = object.get("name").and_then(Value::as_str);
+            let datasource_type = object.get("type").and_then(Value::as_str);
+            let has_placeholder = uid.is_some_and(is_placeholder_string)
+                || name.is_some_and(is_placeholder_string);
+            if has_placeholder {
+                return None;
+            }
+            if let Some(datasource) = lookup_datasource(datasources_by_uid, datasources_by_name, uid, name) {
+                let resolved_name = string_field(
+                    &datasource,
+                    "name",
+                    uid.or(name).unwrap_or_else(|| datasource_type.unwrap_or("")),
+                );
+                if !resolved_name.is_empty() {
+                    return Some(resolved_name);
+                }
+            }
+            name.map(str::to_string)
+                .or_else(|| uid.map(str::to_string))
+                .or_else(|| {
+                    datasource_type.and_then(|value| {
+                        lookup_unique_datasource_name_by_type(datasources_by_uid, value)
+                            .or_else(|| Some(datasource_type_alias(value).to_string()))
+                    })
+                })
+        }
+        _ => None,
+    }
+}
+
+fn resolve_datasource_source_uid(
+    reference: &Value,
+    datasources_by_uid: &BTreeMap<String, Map<String, Value>>,
+    datasources_by_name: &BTreeMap<String, Map<String, Value>>,
+) -> Option<String> {
+    if reference.is_null() || is_builtin_datasource_ref(reference) {
+        return None;
+    }
+    match reference {
+        Value::String(text) => {
+            if is_placeholder_string(text) {
+                return None;
+            }
+            lookup_datasource(datasources_by_uid, datasources_by_name, Some(text), Some(text))
+                .map(|datasource| string_field(&datasource, "uid", ""))
+                .filter(|uid| !uid.is_empty())
+        }
+        Value::Object(object) => {
+            let uid = object.get("uid").and_then(Value::as_str);
+            let name = object.get("name").and_then(Value::as_str);
+            let has_placeholder = uid.is_some_and(is_placeholder_string)
+                || name.is_some_and(is_placeholder_string);
+            if has_placeholder {
+                return None;
+            }
+            if let Some(datasource) = lookup_datasource(datasources_by_uid, datasources_by_name, uid, name) {
+                let resolved_uid = string_field(&datasource, "uid", "");
+                if !resolved_uid.is_empty() {
+                    return Some(resolved_uid);
+                }
+            }
+            uid.filter(|value| !value.is_empty()).map(str::to_string)
+        }
+        _ => None,
+    }
+}
+
+fn collect_dashboard_source_metadata(
+    payload: &Value,
+    datasource_catalog: &(BTreeMap<String, Map<String, Value>>, BTreeMap<String, Map<String, Value>>),
+) -> Result<(Vec<String>, Vec<String>)> {
+    let payload_object = value_as_object(payload, "Unexpected dashboard payload from Grafana.")?;
+    let dashboard_object = object_field(payload_object, "dashboard")
+        .ok_or_else(|| message("Unexpected dashboard payload from Grafana."))?;
+    let (datasources_by_uid, datasources_by_name) = datasource_catalog;
+    let mut refs = Vec::new();
+    collect_datasource_refs(&Value::Object(dashboard_object.clone()), &mut refs);
+    let mut names = BTreeSet::new();
+    let mut uids = BTreeSet::new();
+    for reference in refs {
+        if let Some(name) = resolve_datasource_source_name(&reference, datasources_by_uid, datasources_by_name) {
+            names.insert(name);
+        }
+        if let Some(uid) = resolve_datasource_source_uid(&reference, datasources_by_uid, datasources_by_name) {
+            uids.insert(uid);
+        }
+    }
+    Ok((names.into_iter().collect(), uids.into_iter().collect()))
+}
+
+fn attach_dashboard_sources_with_request<F>(
+    mut request_json: F,
+    summaries: &[Map<String, Value>],
+) -> Result<Vec<Map<String, Value>>>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    let datasource_catalog = build_datasource_catalog(&list_datasources_with_request(&mut request_json)?);
+    summaries
+        .iter()
+        .map(|summary| {
+            let uid = string_field(summary, "uid", "");
+            let mut item = summary.clone();
+            if uid.is_empty() {
+                item.insert("sources".to_string(), Value::Array(Vec::new()));
+                item.insert("sourceUids".to_string(), Value::Array(Vec::new()));
+                return Ok(item);
+            }
+            let payload = fetch_dashboard_with_request(&mut request_json, &uid)?;
+            let (sources, source_uids) =
+                collect_dashboard_source_metadata(&payload, &datasource_catalog)?;
+            item.insert(
+                "sources".to_string(),
+                Value::Array(sources.into_iter().map(Value::String).collect()),
+            );
+            item.insert(
+                "sourceUids".to_string(),
+                Value::Array(source_uids.into_iter().map(Value::String).collect()),
+            );
+            Ok(item)
+        })
+        .collect()
 }
 
 fn list_dashboards_with_request<F>(mut request_json: F, args: &ListArgs) -> Result<usize>
@@ -1453,6 +1718,11 @@ where
 {
     let dashboard_summaries = list_dashboard_summaries_with_request(&mut request_json, args.page_size)?;
     let summaries = attach_dashboard_folder_paths_with_request(&mut request_json, &dashboard_summaries)?;
+    let summaries = if args.with_sources && !summaries.is_empty() {
+        attach_dashboard_sources_with_request(&mut request_json, &summaries)?
+    } else {
+        summaries
+    };
     if args.json {
         println!("{}", serde_json::to_string_pretty(&render_dashboard_summary_json(&summaries))?);
     } else if args.csv {

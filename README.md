@@ -89,6 +89,15 @@ python3 cmd/grafana-utils.py export \
   --overwrite
 ```
 
+Dashboard list, including resolved datasource names per dashboard:
+
+```bash
+python3 cmd/grafana-utils.py list \
+  --url http://127.0.0.1:3000 \
+  --with-sources \
+  --table
+```
+
 List live dashboards without writing export files:
 
 ```bash
@@ -331,12 +340,20 @@ Use `prompt/` when you want:
 | `--url` | Grafana base URL. Default: `http://127.0.0.1:3000` |
 | `--export-dir` | Root export directory. Default: `dashboards/` |
 | `--page-size` | Dashboard search page size. Default: `500` |
+| `--with-sources` | For `list`, fetch each dashboard payload and include datasource names used by that dashboard; CSV also adds datasource UIDs |
 | `--flat` | Do not create per-folder subdirectories |
 | `--overwrite` | Replace existing exported files |
 | `--without-dashboard-raw` | Skip the `raw/` export variant |
 | `--without-dashboard-prompt` | Skip the `prompt/` export variant |
 | `--dry-run` | Preview export output without writing files |
 | `--verify-ssl` | Enable TLS certificate verification |
+
+For dashboard listing:
+
+- default `list` output shows `uid`, `name`, `folder`, `folderUid`, and resolved folder tree path
+- `list --with-sources` adds datasource names per dashboard to text, table, CSV, and JSON output
+- `list --with-sources --csv` also adds a `sourceUids` column with best-effort datasource UIDs
+- `list --with-sources` is slower than plain `list` because it fetches each dashboard payload and the datasource catalog
 
 ### Raw Export
 

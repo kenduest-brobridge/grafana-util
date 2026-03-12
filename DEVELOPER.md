@@ -48,6 +48,9 @@ This document is for maintainers. Keep `README.md` GitHub-facing and task-orient
 - `list --table` renders the same fields in columns and adds a `FOLDER_PATH` column.
 - `list --csv` emits header `uid,name,folder,folderUid,path` with CSV escaping.
 - `list --json` emits an array of objects with keys `uid`, `name`, `folder`, `folderUid`, and `path`.
+- `list --with-sources` fetches each dashboard payload plus the datasource catalog, then appends resolved datasource names to text, table, CSV, and JSON output.
+- `list --with-sources --csv` also appends `sourceUids` so spreadsheet or script consumers can correlate dashboards back to concrete datasource UIDs when Grafana exposed them.
+- `list --with-sources` should stay opt-in because it turns one search-oriented list call into a per-dashboard inspection workflow.
 - Folder tree path is resolved from `GET /api/folders/{uid}` using the folder `parents[]` chain when `folderUid` is present.
 
 ### Packaging layout
