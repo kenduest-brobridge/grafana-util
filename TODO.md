@@ -39,6 +39,7 @@
 - `group` alias for `team`
 - `service-account delete`
 - `service-account token delete`
+- dashboard `prompt` export should surface the original datasource name in Grafana web-import prompts, not only the datasource type label
 - split oversized Rust `access.rs`
 - split oversized Rust `alert.rs`
 
