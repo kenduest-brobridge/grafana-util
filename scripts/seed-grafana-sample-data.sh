@@ -162,6 +162,7 @@ ensure_datasource() {
   local url="$5"
   local is_default="$6"
   local existing_uid
+  local recreated=false
 
   request_json GET "/api/datasources" "" "${org_id}"
   existing_uid="$(
@@ -170,10 +171,14 @@ ensure_datasource() {
         '.[] | select(.uid == $uid or .name == $name) | .uid' | head -n 1
   )"
   if [[ -n "${existing_uid}" ]]; then
-    printf 'Reused datasource %s (org %s)\n' "${name}" "${org_id}"
-    return
+    if [[ "${existing_uid}" != "${uid}" ]]; then
+      request_json DELETE "/api/datasources/uid/${existing_uid}" "" "${org_id}"
+      recreated=true
+    else
+      printf 'Reused datasource %s (org %s)\n' "${name}" "${org_id}"
+      return
+    fi
   fi
-
   request_json POST "/api/datasources" "$(
     jq -cn \
       --arg uid "${uid}" \
@@ -190,7 +195,11 @@ ensure_datasource() {
         isDefault: $isDefault
       }'
   )" "${org_id}"
-  printf 'Created datasource %s (org %s)\n' "${name}" "${org_id}"
+  if [[ "${recreated}" == true ]]; then
+    printf 'Recreated datasource %s (org %s): replaced uid %s with %s\n' "${name}" "${org_id}" "${existing_uid}" "${uid}"
+  else
+    printf 'Created datasource %s (org %s)\n' "${name}" "${org_id}"
+  fi
 }
 
 delete_datasource() {

@@ -234,9 +234,13 @@ class ExporterTests(unittest.TestCase):
     def test_parse_args_supports_export_and_import_progress(self):
         export_args = exporter.parse_args(["export-dashboard", "--progress"])
         import_args = exporter.parse_args(["import-dashboard", "--import-dir", "./dashboards/raw", "--progress"])
+        verbose_export_args = exporter.parse_args(["export-dashboard", "--verbose"])
+        verbose_import_args = exporter.parse_args(["import-dashboard", "--import-dir", "./dashboards/raw", "--verbose"])
 
         self.assertTrue(export_args.progress)
         self.assertTrue(import_args.progress)
+        self.assertTrue(verbose_export_args.verbose)
+        self.assertTrue(verbose_import_args.verbose)
 
     def test_parse_args_rejects_multiple_list_output_modes(self):
         with self.assertRaises(SystemExit):
@@ -1515,6 +1519,92 @@ class ExporterTests(unittest.TestCase):
             self.assertEqual(
                 stdout.getvalue().splitlines(),
                 [
+                    "Exporting dashboard 1/1: abc",
+                    "Exported 1 dashboards. Raw index: %s Raw manifest: %s Root index: %s Root manifest: %s"
+                    % (
+                        Path(tmpdir) / exporter.RAW_EXPORT_SUBDIR / "index.json",
+                        Path(tmpdir) / exporter.RAW_EXPORT_SUBDIR / exporter.EXPORT_METADATA_FILENAME,
+                        Path(tmpdir) / "index.json",
+                        Path(tmpdir) / exporter.EXPORT_METADATA_FILENAME,
+                    ),
+                ],
+            )
+
+    def test_export_dashboards_verbose_prints_paths(self):
+        summary = {"uid": "abc", "title": "CPU", "folderTitle": "Infra"}
+        dashboard = {
+            "dashboard": {"id": 7, "uid": "abc", "title": "CPU", "panels": []},
+            "meta": {"folderUid": "infra"},
+        }
+        client = FakeDashboardWorkflowClient(
+            summaries=[summary],
+            dashboards={"abc": dashboard},
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args = exporter.parse_args(
+                [
+                    "export-dashboard",
+                    "--export-dir",
+                    tmpdir,
+                    "--without-dashboard-prompt",
+                    "--verbose",
+                ]
+            )
+
+            with mock.patch.object(exporter, "build_client", return_value=client):
+                stdout = io.StringIO()
+                with redirect_stdout(stdout):
+                    result = exporter.export_dashboards(args)
+
+            self.assertEqual(result, 0)
+            self.assertEqual(
+                stdout.getvalue().splitlines(),
+                [
+                    "Exported raw    abc -> %s"
+                    % (Path(tmpdir) / exporter.RAW_EXPORT_SUBDIR / "Infra" / "CPU__abc.json"),
+                    "Exported 1 dashboards. Raw index: %s Raw manifest: %s Root index: %s Root manifest: %s"
+                    % (
+                        Path(tmpdir) / exporter.RAW_EXPORT_SUBDIR / "index.json",
+                        Path(tmpdir) / exporter.RAW_EXPORT_SUBDIR / exporter.EXPORT_METADATA_FILENAME,
+                        Path(tmpdir) / "index.json",
+                        Path(tmpdir) / exporter.EXPORT_METADATA_FILENAME,
+                    ),
+                ],
+            )
+
+    def test_export_dashboards_verbose_supersedes_progress_output(self):
+        summary = {"uid": "abc", "title": "CPU", "folderTitle": "Infra"}
+        dashboard = {
+            "dashboard": {"id": 7, "uid": "abc", "title": "CPU", "panels": []},
+            "meta": {"folderUid": "infra"},
+        }
+        client = FakeDashboardWorkflowClient(
+            summaries=[summary],
+            dashboards={"abc": dashboard},
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args = exporter.parse_args(
+                [
+                    "export-dashboard",
+                    "--export-dir",
+                    tmpdir,
+                    "--without-dashboard-prompt",
+                    "--progress",
+                    "--verbose",
+                ]
+            )
+
+            with mock.patch.object(exporter, "build_client", return_value=client):
+                stdout = io.StringIO()
+                with redirect_stdout(stdout):
+                    result = exporter.export_dashboards(args)
+
+            self.assertEqual(result, 0)
+            self.assertEqual(
+                stdout.getvalue().splitlines(),
+                [
                     "Exported raw    abc -> %s"
                     % (Path(tmpdir) / exporter.RAW_EXPORT_SUBDIR / "Infra" / "CPU__abc.json"),
                     "Exported 1 dashboards. Raw index: %s Raw manifest: %s Root index: %s Root manifest: %s"
@@ -1729,6 +1819,82 @@ class ExporterTests(unittest.TestCase):
             )
             args = exporter.parse_args(
                 ["import-dashboard", "--import-dir", str(import_dir), "--progress"]
+            )
+
+            with mock.patch.object(exporter, "build_client", return_value=client):
+                stdout = io.StringIO()
+                with redirect_stdout(stdout):
+                    result = exporter.import_dashboards(args)
+
+            self.assertEqual(result, 0)
+            self.assertEqual(
+                stdout.getvalue().splitlines(),
+                [
+                    "Importing dashboard 1/1: abc",
+                    "Imported 1 dashboard files from %s" % import_dir,
+                ],
+            )
+
+    def test_import_dashboards_verbose_prints_paths(self):
+        client = FakeDashboardWorkflowClient()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import_dir = Path(tmpdir)
+            exporter.write_json_document(
+                exporter.build_export_metadata(
+                    variant=exporter.RAW_EXPORT_SUBDIR,
+                    dashboard_count=1,
+                    format_name="grafana-web-import-preserve-uid",
+                ),
+                import_dir / exporter.EXPORT_METADATA_FILENAME,
+            )
+            exporter.write_json_document(
+                {"dashboard": {"id": None, "uid": "abc", "title": "CPU", "panels": []}},
+                import_dir / "cpu__abc.json",
+            )
+            args = exporter.parse_args(
+                ["import-dashboard", "--import-dir", str(import_dir), "--verbose"]
+            )
+
+            with mock.patch.object(exporter, "build_client", return_value=client):
+                stdout = io.StringIO()
+                with redirect_stdout(stdout):
+                    result = exporter.import_dashboards(args)
+
+            self.assertEqual(result, 0)
+            self.assertEqual(
+                stdout.getvalue().splitlines(),
+                [
+                    "Imported %s -> uid=abc status=success" % (import_dir / "cpu__abc.json"),
+                    "Imported 1 dashboard files from %s" % import_dir,
+                ],
+            )
+
+    def test_import_dashboards_verbose_supersedes_progress_output(self):
+        client = FakeDashboardWorkflowClient()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import_dir = Path(tmpdir)
+            exporter.write_json_document(
+                exporter.build_export_metadata(
+                    variant=exporter.RAW_EXPORT_SUBDIR,
+                    dashboard_count=1,
+                    format_name="grafana-web-import-preserve-uid",
+                ),
+                import_dir / exporter.EXPORT_METADATA_FILENAME,
+            )
+            exporter.write_json_document(
+                {"dashboard": {"id": None, "uid": "abc", "title": "CPU", "panels": []}},
+                import_dir / "cpu__abc.json",
+            )
+            args = exporter.parse_args(
+                [
+                    "import-dashboard",
+                    "--import-dir",
+                    str(import_dir),
+                    "--progress",
+                    "--verbose",
+                ]
             )
 
             with mock.patch.object(exporter, "build_client", return_value=client):

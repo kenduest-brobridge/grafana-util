@@ -5,9 +5,7 @@ use std::fmt::Write as _;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::common::{
-    message, object_field, string_field, value_as_object, Result,
-};
+use crate::common::{message, object_field, string_field, value_as_object, Result};
 use crate::http::JsonHttpClient;
 
 #[path = "dashboard_cli_defs.rs"]
@@ -20,11 +18,13 @@ mod dashboard_list;
 mod dashboard_prompt;
 
 pub use dashboard_cli_defs::{
-    build_auth_context, build_http_client, build_http_client_for_org, parse_cli_from, CommonCliArgs,
-    DashboardAuthContext, DashboardCliArgs, DashboardCommand, DiffArgs, ExportArgs, ImportArgs,
-    ListArgs, ListDataSourcesArgs,
+    build_auth_context, build_http_client, build_http_client_for_org, parse_cli_from,
+    CommonCliArgs, DashboardAuthContext, DashboardCliArgs, DashboardCommand, DiffArgs, ExportArgs,
+    ImportArgs, ListArgs, ListDataSourcesArgs,
 };
-pub use dashboard_export::{build_export_variant_dirs, build_output_path, export_dashboards_with_client};
+pub use dashboard_export::{
+    build_export_variant_dirs, build_output_path, export_dashboards_with_client,
+};
 pub use dashboard_list::{list_dashboards_with_client, list_data_sources_with_client};
 pub use dashboard_prompt::build_external_export_document;
 
@@ -32,7 +32,9 @@ use dashboard_export::export_dashboards_with_org_clients;
 use dashboard_list::list_dashboards_with_org_clients;
 
 #[cfg(test)]
-pub(crate) use dashboard_export::export_dashboards_with_request;
+pub(crate) use dashboard_export::{
+    export_dashboards_with_request, format_export_progress_line, format_export_verbose_line,
+};
 #[cfg(test)]
 pub(crate) use dashboard_list::{
     attach_dashboard_folder_paths_with_request, collect_dashboard_source_metadata,
@@ -42,8 +44,9 @@ pub(crate) use dashboard_list::{
     render_data_source_table,
 };
 pub(crate) use dashboard_prompt::{
-    build_datasource_catalog, collect_datasource_refs, datasource_type_alias, is_builtin_datasource_ref,
-    is_placeholder_string, lookup_datasource, resolve_datasource_type_alias,
+    build_datasource_catalog, collect_datasource_refs, datasource_type_alias,
+    is_builtin_datasource_ref, is_placeholder_string, lookup_datasource,
+    resolve_datasource_type_alias,
 };
 
 pub const DEFAULT_URL: &str = "http://localhost:3000";
@@ -134,7 +137,8 @@ pub fn discover_dashboard_files(import_dir: &Path) -> Result<Vec<PathBuf>> {
             import_dir.display()
         )));
     }
-    if import_dir.join(RAW_EXPORT_SUBDIR).is_dir() && import_dir.join(PROMPT_EXPORT_SUBDIR).is_dir() {
+    if import_dir.join(RAW_EXPORT_SUBDIR).is_dir() && import_dir.join(PROMPT_EXPORT_SUBDIR).is_dir()
+    {
         return Err(message(format!(
             "Import path {} looks like the combined export root. Point --import-dir at {}.",
             import_dir.display(),
@@ -160,7 +164,11 @@ pub fn discover_dashboard_files(import_dir: &Path) -> Result<Vec<PathBuf>> {
     Ok(files)
 }
 
-fn build_export_metadata(variant: &str, dashboard_count: usize, format_name: Option<&str>) -> ExportMetadata {
+fn build_export_metadata(
+    variant: &str,
+    dashboard_count: usize,
+    format_name: Option<&str>,
+) -> ExportMetadata {
     ExportMetadata {
         schema_version: TOOL_SCHEMA_VERSION,
         kind: ROOT_INDEX_KIND.to_string(),
@@ -203,15 +211,22 @@ fn validate_export_metadata(
     Ok(())
 }
 
-fn load_export_metadata(import_dir: &Path, expected_variant: Option<&str>) -> Result<Option<ExportMetadata>> {
+fn load_export_metadata(
+    import_dir: &Path,
+    expected_variant: Option<&str>,
+) -> Result<Option<ExportMetadata>> {
     let metadata_path = import_dir.join(EXPORT_METADATA_FILENAME);
     if !metadata_path.is_file() {
         return Ok(None);
     }
     let value = load_json_file(&metadata_path)?;
     value_as_object(&value, "Dashboard export metadata must be a JSON object.")?;
-    let metadata: ExportMetadata = serde_json::from_value(value)
-        .map_err(|error| message(format!("Invalid dashboard export metadata in {}: {error}", metadata_path.display())))?;
+    let metadata: ExportMetadata = serde_json::from_value(value).map_err(|error| {
+        message(format!(
+            "Invalid dashboard export metadata in {}: {error}",
+            metadata_path.display()
+        ))
+    })?;
     validate_export_metadata(&metadata, &metadata_path, expected_variant)?;
     Ok(Some(metadata))
 }
@@ -260,19 +275,20 @@ pub fn build_import_payload(
     let mut dashboard = dashboard.clone();
     dashboard.insert("id".to_string(), Value::Null);
 
-    let folder_uid = folder_uid_override
-        .map(str::to_owned)
-        .or_else(|| {
-            object_field(document_object, "meta")
-                .and_then(|meta| meta.get("folderUid"))
-                .and_then(Value::as_str)
-                .map(str::to_owned)
-        });
+    let folder_uid = folder_uid_override.map(str::to_owned).or_else(|| {
+        object_field(document_object, "meta")
+            .and_then(|meta| meta.get("folderUid"))
+            .and_then(Value::as_str)
+            .map(str::to_owned)
+    });
 
     let mut payload = Map::new();
     payload.insert("dashboard".to_string(), Value::Object(dashboard));
     payload.insert("overwrite".to_string(), Value::Bool(replace_existing));
-    payload.insert("message".to_string(), Value::String(message_text.to_string()));
+    payload.insert(
+        "message".to_string(),
+        Value::String(message_text.to_string()),
+    );
     if let Some(folder_uid) = folder_uid.filter(|value| !value.is_empty()) {
         payload.insert("folderUid".to_string(), Value::String(folder_uid));
     }
@@ -369,7 +385,10 @@ fn build_root_export_index(
     }
 }
 
-fn list_dashboard_summaries_with_request<F>(mut request_json: F, page_size: usize) -> Result<Vec<Map<String, Value>>>
+fn list_dashboard_summaries_with_request<F>(
+    mut request_json: F,
+    page_size: usize,
+) -> Result<Vec<Map<String, Value>>>
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
@@ -396,7 +415,8 @@ where
 
         let batch_len = batch.len();
         for item in batch {
-            let object = value_as_object(&item, "Unexpected dashboard summary payload from Grafana.")?;
+            let object =
+                value_as_object(&item, "Unexpected dashboard summary payload from Grafana.")?;
             let uid = string_field(object, "uid", "");
             if uid.is_empty() || seen_uids.contains(&uid) {
                 continue;
@@ -414,20 +434,27 @@ where
     Ok(dashboards)
 }
 
-pub fn list_dashboard_summaries(client: &JsonHttpClient, page_size: usize) -> Result<Vec<Map<String, Value>>> {
+pub fn list_dashboard_summaries(
+    client: &JsonHttpClient,
+    page_size: usize,
+) -> Result<Vec<Map<String, Value>>> {
     list_dashboard_summaries_with_request(
         |method, path, params, payload| client.request_json(method, path, params, payload),
         page_size,
     )
 }
 
-fn fetch_folder_if_exists_with_request<F>(mut request_json: F, uid: &str) -> Result<Option<Map<String, Value>>>
+fn fetch_folder_if_exists_with_request<F>(
+    mut request_json: F,
+    uid: &str,
+) -> Result<Option<Map<String, Value>>>
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
     match request_json(Method::GET, &format!("/api/folders/{uid}"), &[], None)? {
         Some(value) => {
-            let object = value_as_object(&value, &format!("Unexpected folder payload for UID {uid}."))?;
+            let object =
+                value_as_object(&value, &format!("Unexpected folder payload for UID {uid}."))?;
             Ok(Some(object.clone()))
         }
         None => Ok(None),
@@ -461,15 +488,27 @@ fn fetch_dashboard_with_request<F>(mut request_json: F, uid: &str) -> Result<Val
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
-    match request_json(Method::GET, &format!("/api/dashboards/uid/{uid}"), &[], None)? {
+    match request_json(
+        Method::GET,
+        &format!("/api/dashboards/uid/{uid}"),
+        &[],
+        None,
+    )? {
         Some(value) => {
-            let object = value_as_object(&value, &format!("Unexpected dashboard payload for UID {uid}."))?;
+            let object = value_as_object(
+                &value,
+                &format!("Unexpected dashboard payload for UID {uid}."),
+            )?;
             if !object.contains_key("dashboard") {
-                return Err(message(format!("Unexpected dashboard payload for UID {uid}.")));
+                return Err(message(format!(
+                    "Unexpected dashboard payload for UID {uid}."
+                )));
             }
             Ok(value)
         }
-        None => Err(message(format!("Unexpected empty dashboard payload for UID {uid}."))),
+        None => Err(message(format!(
+            "Unexpected empty dashboard payload for UID {uid}."
+        ))),
     }
 }
 
@@ -480,7 +519,10 @@ pub fn fetch_dashboard(client: &JsonHttpClient, uid: &str) -> Result<Value> {
     )
 }
 
-fn fetch_dashboard_if_exists_with_request<F>(mut request_json: F, uid: &str) -> Result<Option<Value>>
+fn fetch_dashboard_if_exists_with_request<F>(
+    mut request_json: F,
+    uid: &str,
+) -> Result<Option<Value>>
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
@@ -500,13 +542,17 @@ where
             value_as_object(&value, "Unexpected dashboard import response from Grafana.")?;
             Ok(value)
         }
-        None => Err(message("Unexpected empty dashboard import response from Grafana.")),
+        None => Err(message(
+            "Unexpected empty dashboard import response from Grafana.",
+        )),
     }
 }
 
 pub fn import_dashboard_request(client: &JsonHttpClient, payload: &Value) -> Result<Value> {
     import_dashboard_request_with_request(
-        |method, path, params, request_payload| client.request_json(method, path, params, request_payload),
+        |method, path, params, request_payload| {
+            client.request_json(method, path, params, request_payload)
+        },
         payload,
     )
 }
@@ -515,14 +561,21 @@ fn build_compare_document(dashboard: &Map<String, Value>, folder_uid: Option<&st
     let mut compare = Map::new();
     compare.insert("dashboard".to_string(), Value::Object(dashboard.clone()));
     if let Some(folder_uid) = folder_uid.filter(|value| !value.is_empty()) {
-        compare.insert("folderUid".to_string(), Value::String(folder_uid.to_string()));
+        compare.insert(
+            "folderUid".to_string(),
+            Value::String(folder_uid.to_string()),
+        );
     }
     Value::Object(compare)
 }
 
-fn build_local_compare_document(document: &Value, folder_uid_override: Option<&str>) -> Result<Value> {
+fn build_local_compare_document(
+    document: &Value,
+    folder_uid_override: Option<&str>,
+) -> Result<Value> {
     let payload = build_import_payload(document, folder_uid_override, false, "")?;
-    let payload_object = value_as_object(&payload, "Dashboard import payload must be a JSON object.")?;
+    let payload_object =
+        value_as_object(&payload, "Dashboard import payload must be a JSON object.")?;
     let dashboard = payload_object
         .get("dashboard")
         .and_then(Value::as_object)
@@ -531,9 +584,13 @@ fn build_local_compare_document(document: &Value, folder_uid_override: Option<&s
     Ok(build_compare_document(dashboard, folder_uid))
 }
 
-fn build_remote_compare_document(payload: &Value, folder_uid_override: Option<&str>) -> Result<Value> {
+fn build_remote_compare_document(
+    payload: &Value,
+    folder_uid_override: Option<&str>,
+) -> Result<Value> {
     let dashboard = build_preserved_web_import_document(payload)?;
-    let dashboard_object = value_as_object(&dashboard, "Unexpected dashboard payload from Grafana.")?;
+    let dashboard_object =
+        value_as_object(&dashboard, "Unexpected dashboard payload from Grafana.")?;
     let payload_object = value_as_object(payload, "Unexpected dashboard payload from Grafana.")?;
     let folder_uid = folder_uid_override.or_else(|| {
         object_field(payload_object, "meta")
@@ -576,7 +633,8 @@ fn determine_dashboard_import_action_with_request<F>(
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
-    let payload_object = value_as_object(payload, "Dashboard import payload must be a JSON object.")?;
+    let payload_object =
+        value_as_object(payload, "Dashboard import payload must be a JSON object.")?;
     let dashboard = payload_object
         .get("dashboard")
         .and_then(Value::as_object)
@@ -613,9 +671,42 @@ where
 }
 
 pub fn list_datasources(client: &JsonHttpClient) -> Result<Vec<Map<String, Value>>> {
-    list_datasources_with_request(
-        |method, path, params, payload| client.request_json(method, path, params, payload),
+    list_datasources_with_request(|method, path, params, payload| {
+        client.request_json(method, path, params, payload)
+    })
+}
+
+pub(crate) fn format_import_progress_line(
+    current: usize,
+    total: usize,
+    dashboard_file: &Path,
+    dry_run: bool,
+) -> String {
+    format!(
+        "{} dashboard {current}/{total}: {}",
+        if dry_run {
+            "Dry-run import"
+        } else {
+            "Importing"
+        },
+        dashboard_file.display()
     )
+}
+
+pub(crate) fn format_import_verbose_line(
+    dashboard_file: &Path,
+    dry_run: bool,
+    action: Option<&str>,
+) -> String {
+    if dry_run {
+        format!(
+            "Dry-run import {} -> {}",
+            dashboard_file.display(),
+            action.unwrap_or("unknown")
+        )
+    } else {
+        format!("Imported {}", dashboard_file.display())
+    }
 }
 
 fn import_dashboards_with_request<F>(mut request_json: F, args: &ImportArgs) -> Result<usize>
@@ -624,7 +715,8 @@ where
 {
     let _ = load_export_metadata(&args.import_dir, Some(RAW_EXPORT_SUBDIR))?;
     let dashboard_files = discover_dashboard_files(&args.import_dir)?;
-    for dashboard_file in &dashboard_files {
+    let total = dashboard_files.len();
+    for (index, dashboard_file) in dashboard_files.iter().enumerate() {
         let document = load_json_file(dashboard_file)?;
         let payload = build_import_payload(
             &document,
@@ -638,18 +730,30 @@ where
                 &payload,
                 args.replace_existing,
             )?;
-            if args.progress {
+            if args.verbose {
                 println!(
-                    "Dry-run import {} -> {}",
-                    dashboard_file.display(),
-                    action
+                    "{}",
+                    format_import_verbose_line(dashboard_file, true, Some(action))
+                );
+            } else if args.progress {
+                println!(
+                    "{}",
+                    format_import_progress_line(index + 1, total, dashboard_file, true)
                 );
             }
             continue;
         }
         let _result = import_dashboard_request_with_request(&mut request_json, &payload)?;
-        if args.progress {
-            println!("Imported {}", dashboard_file.display());
+        if args.verbose {
+            println!(
+                "{}",
+                format_import_verbose_line(dashboard_file, false, None)
+            );
+        } else if args.progress {
+            println!(
+                "{}",
+                format_import_progress_line(index + 1, total, dashboard_file, false)
+            );
         }
     }
     if args.dry_run {
@@ -679,14 +783,17 @@ where
     for dashboard_file in &dashboard_files {
         let document = load_json_file(dashboard_file)?;
         let payload = build_import_payload(&document, None, false, "")?;
-        let payload_object = value_as_object(&payload, "Dashboard import payload must be a JSON object.")?;
+        let payload_object =
+            value_as_object(&payload, "Dashboard import payload must be a JSON object.")?;
         let dashboard = payload_object
             .get("dashboard")
             .and_then(Value::as_object)
             .ok_or_else(|| message("Dashboard import payload is missing dashboard."))?;
         let uid = string_field(dashboard, "uid", "");
-        let local_compare = build_local_compare_document(&document, args.import_folder_uid.as_deref())?;
-        let Some(remote_payload) = fetch_dashboard_if_exists_with_request(&mut request_json, &uid)? else {
+        let local_compare =
+            build_local_compare_document(&document, args.import_folder_uid.as_deref())?;
+        let Some(remote_payload) = fetch_dashboard_if_exists_with_request(&mut request_json, &uid)?
+        else {
             println!(
                 "Diff missing in Grafana for uid={} from {}",
                 uid,
@@ -695,8 +802,11 @@ where
             differences += 1;
             continue;
         };
-        let remote_compare = build_remote_compare_document(&remote_payload, args.import_folder_uid.as_deref())?;
-        if serialize_compare_document(&local_compare)? != serialize_compare_document(&remote_compare)? {
+        let remote_compare =
+            build_remote_compare_document(&remote_payload, args.import_folder_uid.as_deref())?;
+        if serialize_compare_document(&local_compare)?
+            != serialize_compare_document(&remote_compare)?
+        {
             let diff_text = build_compare_diff_text(
                 &remote_compare,
                 &local_compare,
@@ -725,7 +835,10 @@ pub fn diff_dashboards_with_client(client: &JsonHttpClient, args: &DiffArgs) -> 
     )
 }
 
-pub fn run_dashboard_cli_with_client(client: &JsonHttpClient, args: DashboardCliArgs) -> Result<()> {
+pub fn run_dashboard_cli_with_client(
+    client: &JsonHttpClient,
+    args: DashboardCliArgs,
+) -> Result<()> {
     match args.command {
         DashboardCommand::List(list_args) => {
             let _ = list_dashboards_with_client(client, &list_args)?;

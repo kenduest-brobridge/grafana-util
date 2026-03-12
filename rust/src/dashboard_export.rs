@@ -6,15 +6,17 @@ use std::path::{Path, PathBuf};
 use crate::common::{message, sanitize_path_component, string_field, Result};
 use crate::http::JsonHttpClient;
 
-use super::{
-    build_datasource_catalog, build_export_metadata, build_external_export_document, build_http_client,
-    build_http_client_for_org, build_preserved_web_import_document, build_root_export_index,
-    build_variant_index, fetch_dashboard_with_request, list_dashboard_summaries_with_request,
-    list_datasources_with_request, write_dashboard, write_json_document, ExportArgs,
-    EXPORT_METADATA_FILENAME, PROMPT_EXPORT_SUBDIR, RAW_EXPORT_SUBDIR,
-};
 use super::dashboard_list::{
-    attach_dashboard_org_metadata, fetch_current_org_with_request, list_orgs_with_request, org_id_value,
+    attach_dashboard_org_metadata, fetch_current_org_with_request, list_orgs_with_request,
+    org_id_value,
+};
+use super::{
+    build_datasource_catalog, build_export_metadata, build_external_export_document,
+    build_http_client, build_http_client_for_org, build_preserved_web_import_document,
+    build_root_export_index, build_variant_index, fetch_dashboard_with_request,
+    list_dashboard_summaries_with_request, list_datasources_with_request, write_dashboard,
+    write_json_document, ExportArgs, EXPORT_METADATA_FILENAME, PROMPT_EXPORT_SUBDIR,
+    RAW_EXPORT_SUBDIR,
 };
 
 pub fn build_output_path(output_dir: &Path, summary: &Map<String, Value>, flat: bool) -> PathBuf {
@@ -49,6 +51,31 @@ pub fn build_export_variant_dirs(output_dir: &Path) -> (PathBuf, PathBuf) {
     (
         output_dir.join(RAW_EXPORT_SUBDIR),
         output_dir.join(PROMPT_EXPORT_SUBDIR),
+    )
+}
+
+pub(crate) fn format_export_progress_line(
+    current: usize,
+    total: usize,
+    uid: &str,
+    dry_run: bool,
+) -> String {
+    format!(
+        "{} dashboard {current}/{total}: {uid}",
+        if dry_run { "Would export" } else { "Exporting" }
+    )
+}
+
+pub(crate) fn format_export_verbose_line(
+    kind: &str,
+    uid: &str,
+    path: &Path,
+    dry_run: bool,
+) -> String {
+    format!(
+        "{} {kind:<6} {uid} -> {}",
+        if dry_run { "Would export" } else { "Exported" },
+        path.display()
     )
 }
 
@@ -96,7 +123,9 @@ where
     let datasource_catalog = if args.without_dashboard_prompt {
         None
     } else {
-        Some(build_datasource_catalog(&list_datasources_with_request(&mut scoped_request)?))
+        Some(build_datasource_catalog(&list_datasources_with_request(
+            &mut scoped_request,
+        )?))
     };
 
     let summaries = list_dashboard_summaries_with_request(&mut scoped_request, args.page_size)?;
@@ -107,10 +136,19 @@ where
 
     let mut exported_count = 0;
     let mut index_items = Vec::new();
-    for summary in summaries {
+    let total = summaries.len();
+    for (index, summary) in summaries.into_iter().enumerate() {
         let uid = string_field(&summary, "uid", "");
         if uid.is_empty() {
             continue;
+        }
+        if args.verbose {
+            // Verbose mode prints per-variant details after each write, so it suppresses concise progress lines.
+        } else if args.progress {
+            println!(
+                "{}",
+                format_export_progress_line(index + 1, total, &uid, args.dry_run)
+            );
         }
         let payload = fetch_dashboard_with_request(&mut scoped_request, &uid)?;
         let mut item = super::build_dashboard_index_item(&summary, &uid);
@@ -120,12 +158,10 @@ where
             if !args.dry_run {
                 write_dashboard(&raw_document, &raw_path, args.overwrite)?;
             }
-            if args.progress {
+            if args.verbose {
                 println!(
-                    "{} raw    {} -> {}",
-                    if args.dry_run { "Would export" } else { "Exported" },
-                    uid,
-                    raw_path.display()
+                    "{}",
+                    format_export_verbose_line("raw", &uid, &raw_path, args.dry_run)
                 );
             }
             item.raw_path = Some(raw_path.display().to_string());
@@ -141,12 +177,10 @@ where
             if !args.dry_run {
                 write_dashboard(&prompt_document, &prompt_path, args.overwrite)?;
             }
-            if args.progress {
+            if args.verbose {
                 println!(
-                    "{} prompt {} -> {}",
-                    if args.dry_run { "Would export" } else { "Exported" },
-                    uid,
-                    prompt_path.display()
+                    "{}",
+                    format_export_verbose_line("prompt", &uid, &prompt_path, args.dry_run)
                 );
             }
             item.prompt_path = Some(prompt_path.display().to_string());
@@ -176,7 +210,10 @@ where
             write_json_document(
                 &build_export_metadata(
                     RAW_EXPORT_SUBDIR,
-                    index_items.iter().filter(|item| item.raw_path.is_some()).count(),
+                    index_items
+                        .iter()
+                        .filter(|item| item.raw_path.is_some())
+                        .count(),
                     Some("grafana-web-import-preserve-uid"),
                 ),
                 &metadata_path,
@@ -218,7 +255,11 @@ where
     }
     if !args.dry_run {
         write_json_document(
-            &build_root_export_index(&index_items, raw_index_path.as_deref(), prompt_index_path.as_deref()),
+            &build_root_export_index(
+                &index_items,
+                raw_index_path.as_deref(),
+                prompt_index_path.as_deref(),
+            ),
             &args.export_dir.join("index.json"),
         )?;
         write_json_document(
@@ -229,7 +270,10 @@ where
     Ok(exported_count)
 }
 
-pub(crate) fn export_dashboards_with_request<F>(mut request_json: F, args: &ExportArgs) -> Result<usize>
+pub(crate) fn export_dashboards_with_request<F>(
+    mut request_json: F,
+    args: &ExportArgs,
+) -> Result<usize>
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
@@ -237,7 +281,12 @@ where
         let mut total = 0usize;
         for org in list_orgs_with_request(&mut request_json)? {
             let org_id = org_id_value(&org)?;
-            total += export_dashboards_in_scope_with_request(&mut request_json, args, Some(&org), Some(org_id))?;
+            total += export_dashboards_in_scope_with_request(
+                &mut request_json,
+                args,
+                Some(&org),
+                Some(org_id),
+            )?;
         }
         Ok(total)
     } else {
@@ -262,7 +311,9 @@ pub(crate) fn export_dashboards_with_org_clients(args: &ExportArgs) -> Result<us
             let org_id = org_id_value(&org)?;
             let org_client = build_http_client_for_org(&args.common, org_id)?;
             total += export_dashboards_in_scope_with_request(
-                &mut |method, path, params, payload| org_client.request_json(method, path, params, payload),
+                &mut |method, path, params, payload| {
+                    org_client.request_json(method, path, params, payload)
+                },
                 args,
                 Some(&org),
                 None,
@@ -272,7 +323,9 @@ pub(crate) fn export_dashboards_with_org_clients(args: &ExportArgs) -> Result<us
     } else if let Some(org_id) = args.org_id {
         let org_client = build_http_client_for_org(&args.common, org_id)?;
         export_dashboards_in_scope_with_request(
-            &mut |method, path, params, payload| org_client.request_json(method, path, params, payload),
+            &mut |method, path, params, payload| {
+                org_client.request_json(method, path, params, payload)
+            },
             args,
             None,
             None,

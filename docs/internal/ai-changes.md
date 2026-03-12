@@ -127,6 +127,15 @@
 - Rollback/Risk: Moderate. Default list output changed, so scripts that parsed the old plain-text format now need to switch to `--csv`, `--json`, or adapt to the table default.
 - Follow-up: Decide whether alert or access list-style commands should adopt the same default-table plus `--no-header` behavior for consistency.
 
+## 2026-03-12 - Add Concise And Verbose Dashboard Progress Modes
+- Summary: Changed the Python and Rust dashboard export/import flows to keep summary-only output by default, use `--progress` for concise `current/total` progress lines, and use `-v/--verbose` for detailed path and status output that overrides the concise progress form.
+- Tests: Updated Python parser and workflow coverage for export/import progress and verbose modes, and updated Rust CLI/help and formatter coverage for the same combinations.
+- Test Run: `python3 -m unittest -v tests/test_python_dashboard_cli.py`; `cargo test dashboard --manifest-path rust/Cargo.toml --quiet`
+- Reason: Operators wanted a clearer split between lightweight progress visibility during long runs and full detailed logging when diagnosing export or import behavior.
+- Validation: Verified that default runs remain quiet except for summary lines, `--progress` prints one concise line per dashboard, and `--verbose` restores detailed per-item output without duplicating the concise progress lines.
+- Impact: `grafana_utils/dashboard_cli.py`, `tests/test_python_dashboard_cli.py`, `rust/src/dashboard_cli_defs.rs`, `rust/src/dashboard_export.rs`, `rust/src/dashboard.rs`, `rust/src/dashboard_rust_tests.rs`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low. The change is additive in CLI surface area, but scripts that asserted on the exact `--progress` output text now need to expect the new concise form or switch to `--verbose`.
+
 ## 2026-03-12 - Consolidate Python And Rust CLIs Under grafana-utils
 - Summary: Added a unified Python dispatcher and a unified Rust dispatcher so `grafana-utils` becomes the primary entrypoint for `dashboard`, `alert`, and `access` workflows in both implementations. The new primary shape is `grafana-utils dashboard ...`, `grafana-utils alert ...`, and `grafana-utils access ...`, while old dashboard direct forms and the split `grafana-alert-utils` / `grafana-access-utils` names remain available as compatibility shims.
 - Tests: Added Python unified-entrypoint coverage and Rust unified-dispatch coverage, then reran the existing dashboard, alert, and access test suites to confirm the merged entrypoint did not break the underlying command implementations.

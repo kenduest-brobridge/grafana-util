@@ -1,14 +1,15 @@
 use super::{
-    attach_dashboard_folder_paths_with_request, build_export_variant_dirs, build_external_export_document,
-    build_export_metadata, build_folder_path, build_import_payload, build_output_path,
+    attach_dashboard_folder_paths_with_request, build_export_metadata, build_export_variant_dirs,
+    build_external_export_document, build_folder_path, build_import_payload, build_output_path,
     build_preserved_web_import_document, build_root_export_index, diff_dashboards_with_request,
     discover_dashboard_files, export_dashboards_with_request, format_dashboard_summary_line,
-    format_data_source_line, import_dashboards_with_request, list_dashboards_with_request,
-    list_data_sources_with_request, parse_cli_from, render_dashboard_summary_csv,
-    render_dashboard_summary_json, render_dashboard_summary_table, render_data_source_csv,
-    render_data_source_json, render_data_source_table, CommonCliArgs, DashboardCliArgs, DiffArgs,
-    ExportArgs, ImportArgs, ListArgs, ListDataSourcesArgs, DashboardCommand, EXPORT_METADATA_FILENAME,
-    TOOL_SCHEMA_VERSION,
+    format_data_source_line, format_export_progress_line, format_export_verbose_line,
+    format_import_progress_line, format_import_verbose_line, import_dashboards_with_request,
+    list_dashboards_with_request, list_data_sources_with_request, parse_cli_from,
+    render_dashboard_summary_csv, render_dashboard_summary_json, render_dashboard_summary_table,
+    render_data_source_csv, render_data_source_json, render_data_source_table, CommonCliArgs,
+    DashboardCliArgs, DashboardCommand, DiffArgs, ExportArgs, ImportArgs, ListArgs,
+    ListDataSourcesArgs, EXPORT_METADATA_FILENAME, TOOL_SCHEMA_VERSION,
 };
 use clap::{CommandFactory, Parser};
 use serde_json::{json, Value};
@@ -48,8 +49,12 @@ fn render_dashboard_help() -> String {
 
 #[test]
 fn build_export_metadata_serializes_expected_shape() {
-    let value = serde_json::to_value(build_export_metadata("raw", 2, Some("grafana-web-import-preserve-uid")))
-        .unwrap();
+    let value = serde_json::to_value(build_export_metadata(
+        "raw",
+        2,
+        Some("grafana-web-import-preserve-uid"),
+    ))
+    .unwrap();
 
     assert_eq!(
         value,
@@ -226,17 +231,8 @@ fn parse_cli_supports_prompt_password() {
 
 #[test]
 fn parse_cli_supports_export_org_scope_flags() {
-    let org_args = parse_cli_from([
-        "grafana-utils",
-        "export",
-        "--org-id",
-        "7",
-    ]);
-    let all_orgs_args = parse_cli_from([
-        "grafana-utils",
-        "export",
-        "--all-orgs",
-    ]);
+    let org_args = parse_cli_from(["grafana-utils", "export", "--org-id", "7"]);
+    let all_orgs_args = parse_cli_from(["grafana-utils", "export", "--all-orgs"]);
 
     match org_args.command {
         DashboardCommand::Export(export_args) => {
@@ -278,6 +274,15 @@ fn export_help_explains_flat_layout() {
 }
 
 #[test]
+fn export_help_describes_progress_and_verbose_modes() {
+    let help = render_dashboard_subcommand_help("export");
+    assert!(help.contains("--progress"));
+    assert!(help.contains("<current>/<total>"));
+    assert!(help.contains("-v, --verbose"));
+    assert!(help.contains("Overrides --progress output"));
+}
+
+#[test]
 fn top_level_help_includes_examples() {
     let help = render_dashboard_help();
     assert!(help.contains("Export dashboards from local Grafana with Basic auth"));
@@ -305,6 +310,39 @@ fn parse_cli_supports_list_csv_mode() {
             assert!(!list_args.json);
         }
         _ => panic!("expected list command"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_export_progress_and_verbose_flags() {
+    let args = parse_cli_from(["grafana-utils", "export", "--progress", "--verbose"]);
+
+    match args.command {
+        DashboardCommand::Export(export_args) => {
+            assert!(export_args.progress);
+            assert!(export_args.verbose);
+        }
+        _ => panic!("expected export command"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_import_progress_and_verbose_flags() {
+    let args = parse_cli_from([
+        "grafana-utils",
+        "import",
+        "--import-dir",
+        "./dashboards/raw",
+        "--progress",
+        "-v",
+    ]);
+
+    match args.command {
+        DashboardCommand::Import(import_args) => {
+            assert!(import_args.progress);
+            assert!(import_args.verbose);
+        }
+        _ => panic!("expected import command"),
     }
 }
 
@@ -348,17 +386,8 @@ fn parse_cli_rejects_conflicting_list_output_modes() {
 
 #[test]
 fn parse_cli_supports_list_org_scope_flags() {
-    let org_args = parse_cli_from([
-        "grafana-utils",
-        "list",
-        "--org-id",
-        "7",
-    ]);
-    let all_orgs_args = parse_cli_from([
-        "grafana-utils",
-        "list",
-        "--all-orgs",
-    ]);
+    let org_args = parse_cli_from(["grafana-utils", "list", "--org-id", "7"]);
+    let all_orgs_args = parse_cli_from(["grafana-utils", "list", "--all-orgs"]);
 
     match org_args.command {
         DashboardCommand::List(list_args) => {
@@ -379,14 +408,9 @@ fn parse_cli_supports_list_org_scope_flags() {
 
 #[test]
 fn parse_cli_rejects_conflicting_list_org_scope_flags() {
-    let error = DashboardCliArgs::try_parse_from([
-        "grafana-utils",
-        "list",
-        "--org-id",
-        "7",
-        "--all-orgs",
-    ])
-    .unwrap_err();
+    let error =
+        DashboardCliArgs::try_parse_from(["grafana-utils", "list", "--org-id", "7", "--all-orgs"])
+            .unwrap_err();
 
     assert!(error.to_string().contains("--org-id"));
     assert!(error.to_string().contains("--all-orgs"));
@@ -425,6 +449,54 @@ fn build_output_path_keeps_folder_structure() {
     });
     let path = build_output_path(Path::new("out"), summary.as_object().unwrap(), false);
     assert_eq!(path, Path::new("out/Infra_Team/Cluster_Health__abc.json"));
+}
+
+#[test]
+fn export_progress_line_uses_concise_counter_format() {
+    assert_eq!(
+        format_export_progress_line(2, 5, "cpu-main", false),
+        "Exporting dashboard 2/5: cpu-main"
+    );
+    assert_eq!(
+        format_export_progress_line(2, 5, "cpu-main", true),
+        "Would export dashboard 2/5: cpu-main"
+    );
+}
+
+#[test]
+fn export_verbose_line_includes_variant_and_path() {
+    assert_eq!(
+        format_export_verbose_line("prompt", "cpu-main", Path::new("/tmp/out.json"), false),
+        "Exported prompt cpu-main -> /tmp/out.json"
+    );
+    assert_eq!(
+        format_export_verbose_line("raw", "cpu-main", Path::new("/tmp/out.json"), true),
+        "Would export raw    cpu-main -> /tmp/out.json"
+    );
+}
+
+#[test]
+fn import_progress_line_uses_concise_counter_format() {
+    assert_eq!(
+        format_import_progress_line(3, 7, Path::new("/tmp/raw/cpu.json"), false),
+        "Importing dashboard 3/7: /tmp/raw/cpu.json"
+    );
+    assert_eq!(
+        format_import_progress_line(3, 7, Path::new("/tmp/raw/cpu.json"), true),
+        "Dry-run import dashboard 3/7: /tmp/raw/cpu.json"
+    );
+}
+
+#[test]
+fn import_verbose_line_includes_dry_run_action() {
+    assert_eq!(
+        format_import_verbose_line(Path::new("/tmp/raw/cpu.json"), false, None),
+        "Imported /tmp/raw/cpu.json"
+    );
+    assert_eq!(
+        format_import_verbose_line(Path::new("/tmp/raw/cpu.json"), true, Some("would-update")),
+        "Dry-run import /tmp/raw/cpu.json -> would-update"
+    );
 }
 
 #[test]
@@ -582,45 +654,53 @@ fn render_data_source_table_uses_headers_and_values() {
     ];
 
     let lines = render_data_source_table(&datasources, true);
-    assert_eq!(lines[0], "UID       NAME             TYPE        URL                     IS_DEFAULT");
-    assert_eq!(lines[2], "prom_uid  Prometheus Main  prometheus  http://prometheus:9090  true      ");
-    assert_eq!(lines[3], "loki_uid  Loki Logs        loki        http://loki:3100        false     ");
+    assert_eq!(
+        lines[0],
+        "UID       NAME             TYPE        URL                     IS_DEFAULT"
+    );
+    assert_eq!(
+        lines[2],
+        "prom_uid  Prometheus Main  prometheus  http://prometheus:9090  true      "
+    );
+    assert_eq!(
+        lines[3],
+        "loki_uid  Loki Logs        loki        http://loki:3100        false     "
+    );
 }
 
 #[test]
 fn render_data_source_csv_uses_expected_fields() {
-    let datasources = vec![
-        json!({
-            "uid": "prom_uid",
-            "name": "Prometheus Main",
-            "type": "prometheus",
-            "url": "http://prometheus:9090",
-            "isDefault": true
-        })
-        .as_object()
-        .unwrap()
-        .clone(),
-    ];
+    let datasources = vec![json!({
+        "uid": "prom_uid",
+        "name": "Prometheus Main",
+        "type": "prometheus",
+        "url": "http://prometheus:9090",
+        "isDefault": true
+    })
+    .as_object()
+    .unwrap()
+    .clone()];
 
     let lines = render_data_source_csv(&datasources);
     assert_eq!(lines[0], "uid,name,type,url,isDefault");
-    assert_eq!(lines[1], "prom_uid,Prometheus Main,prometheus,http://prometheus:9090,true");
+    assert_eq!(
+        lines[1],
+        "prom_uid,Prometheus Main,prometheus,http://prometheus:9090,true"
+    );
 }
 
 #[test]
 fn render_data_source_json_uses_expected_fields() {
-    let datasources = vec![
-        json!({
-            "uid": "prom_uid",
-            "name": "Prometheus Main",
-            "type": "prometheus",
-            "url": "http://prometheus:9090",
-            "isDefault": true
-        })
-        .as_object()
-        .unwrap()
-        .clone(),
-    ];
+    let datasources = vec![json!({
+        "uid": "prom_uid",
+        "name": "Prometheus Main",
+        "type": "prometheus",
+        "url": "http://prometheus:9090",
+        "isDefault": true
+    })
+    .as_object()
+    .unwrap()
+    .clone()];
 
     let value = render_data_source_json(&datasources);
     assert_eq!(
@@ -673,21 +753,19 @@ fn render_dashboard_summary_table_uses_headers_and_defaults() {
 
 #[test]
 fn render_dashboard_summary_table_includes_sources_column_when_present() {
-    let summaries = vec![
-        json!({
-            "uid": "abc",
-            "folderUid": "infra",
-            "folderPath": "Platform / Infra",
-            "folderTitle": "Infra",
-            "orgId": 1,
-            "orgName": "Main Org",
-            "title": "CPU",
-            "sources": ["Prom Main", "Loki Logs"]
-        })
-        .as_object()
-        .unwrap()
-        .clone(),
-    ];
+    let summaries = vec![json!({
+        "uid": "abc",
+        "folderUid": "infra",
+        "folderPath": "Platform / Infra",
+        "folderTitle": "Infra",
+        "orgId": 1,
+        "orgName": "Main Org",
+        "title": "CPU",
+        "sources": ["Prom Main", "Loki Logs"]
+    })
+    .as_object()
+    .unwrap()
+    .clone()];
 
     let lines = render_dashboard_summary_table(&summaries, true);
     assert!(lines[0].contains("ORG"));
@@ -699,20 +777,18 @@ fn render_dashboard_summary_table_includes_sources_column_when_present() {
 
 #[test]
 fn render_dashboard_summary_table_can_omit_header() {
-    let summaries = vec![
-        json!({
-            "uid": "abc",
-            "folderUid": "infra",
-            "folderPath": "Platform / Infra",
-            "folderTitle": "Infra",
-            "orgId": 1,
-            "orgName": "Main Org",
-            "title": "CPU"
-        })
-        .as_object()
-        .unwrap()
-        .clone(),
-    ];
+    let summaries = vec![json!({
+        "uid": "abc",
+        "folderUid": "infra",
+        "folderPath": "Platform / Infra",
+        "folderTitle": "Infra",
+        "orgId": 1,
+        "orgName": "Main Org",
+        "title": "CPU"
+    })
+    .as_object()
+    .unwrap()
+    .clone()];
 
     let lines = render_dashboard_summary_table(&summaries, false);
     assert_eq!(lines.len(), 1);
@@ -721,18 +797,16 @@ fn render_dashboard_summary_table_can_omit_header() {
 
 #[test]
 fn render_data_source_table_can_omit_header() {
-    let datasources = vec![
-        json!({
-            "uid": "prom_uid",
-            "name": "Prometheus Main",
-            "type": "prometheus",
-            "url": "http://prometheus:9090",
-            "isDefault": true
-        })
-        .as_object()
-        .unwrap()
-        .clone(),
-    ];
+    let datasources = vec![json!({
+        "uid": "prom_uid",
+        "name": "Prometheus Main",
+        "type": "prometheus",
+        "url": "http://prometheus:9090",
+        "isDefault": true
+    })
+    .as_object()
+    .unwrap()
+    .clone()];
 
     let lines = render_data_source_table(&datasources, false);
     assert_eq!(lines.len(), 1);
@@ -771,30 +845,34 @@ fn render_dashboard_summary_csv_uses_headers_and_escaping() {
     let lines = render_dashboard_summary_csv(&summaries);
     assert_eq!(lines[0], "uid,name,folder,folderUid,path,org,orgId");
     assert_eq!(lines[1], "abc,CPU,Infra,infra,Platform / Infra,Main Org,1");
-    assert_eq!(lines[2], "xyz,\"CPU, \"\"critical\"\"\",Ops,ops,Root / Ops,Main Org,1");
+    assert_eq!(
+        lines[2],
+        "xyz,\"CPU, \"\"critical\"\"\",Ops,ops,Root / Ops,Main Org,1"
+    );
 }
 
 #[test]
 fn render_dashboard_summary_csv_includes_sources_column_when_present() {
-    let summaries = vec![
-        json!({
-            "uid": "abc",
-            "folderUid": "infra",
-            "folderPath": "Platform / Infra",
-            "folderTitle": "Infra",
-            "orgId": 1,
-            "orgName": "Main Org",
-            "title": "CPU",
-            "sources": ["Prom Main", "Loki Logs"],
-            "sourceUids": ["loki_uid", "prom_uid"]
-        })
-        .as_object()
-        .unwrap()
-        .clone(),
-    ];
+    let summaries = vec![json!({
+        "uid": "abc",
+        "folderUid": "infra",
+        "folderPath": "Platform / Infra",
+        "folderTitle": "Infra",
+        "orgId": 1,
+        "orgName": "Main Org",
+        "title": "CPU",
+        "sources": ["Prom Main", "Loki Logs"],
+        "sourceUids": ["loki_uid", "prom_uid"]
+    })
+    .as_object()
+    .unwrap()
+    .clone()];
 
     let lines = render_dashboard_summary_csv(&summaries);
-    assert_eq!(lines[0], "uid,name,folder,folderUid,path,org,orgId,sources,sourceUids");
+    assert_eq!(
+        lines[0],
+        "uid,name,folder,folderUid,path,org,orgId,sources,sourceUids"
+    );
     assert_eq!(
         lines[1],
         "abc,CPU,Infra,infra,Platform / Infra,Main Org,1,\"Prom Main,Loki Logs\",\"loki_uid,prom_uid\""
@@ -855,22 +933,20 @@ fn render_dashboard_summary_json_returns_objects() {
 
 #[test]
 fn render_dashboard_summary_json_includes_sources_when_present() {
-    let summaries = vec![
-        json!({
-            "uid": "abc",
-            "folderUid": "infra",
-            "folderPath": "Platform / Infra",
-            "folderTitle": "Infra",
-            "orgId": 1,
-            "orgName": "Main Org",
-            "title": "CPU",
-            "sources": ["Loki Logs", "Prom Main"],
-            "sourceUids": ["loki_uid", "prom_uid"]
-        })
-        .as_object()
-        .unwrap()
-        .clone(),
-    ];
+    let summaries = vec![json!({
+        "uid": "abc",
+        "folderUid": "infra",
+        "folderPath": "Platform / Infra",
+        "folderTitle": "Infra",
+        "orgId": 1,
+        "orgName": "Main Org",
+        "title": "CPU",
+        "sources": ["Loki Logs", "Prom Main"],
+        "sourceUids": ["loki_uid", "prom_uid"]
+    })
+    .as_object()
+    .unwrap()
+    .clone()];
 
     let value = render_dashboard_summary_json(&summaries);
     assert_eq!(
@@ -957,20 +1033,20 @@ fn list_dashboards_with_request_returns_dashboard_count() {
         |method, path, _params, _payload| {
             calls.push((method.to_string(), path.to_string()));
             match path {
-            "/api/search" => Ok(Some(json!([
-                {"uid": "abc", "title": "CPU", "folderTitle": "Infra", "folderUid": "infra"},
-                {"uid": "def", "title": "Memory", "folderTitle": "Infra"},
-            ]))),
-            "/api/org" => Ok(Some(json!({
-                "id": 1,
-                "name": "Main Org"
-            }))),
-            "/api/folders/infra" => Ok(Some(json!({
-                "title": "Infra",
-                "parents": [{"title": "Platform"}]
-            }))),
-            _ => Err(super::message(format!("unexpected path {path}"))),
-        }
+                "/api/search" => Ok(Some(json!([
+                    {"uid": "abc", "title": "CPU", "folderTitle": "Infra", "folderUid": "infra"},
+                    {"uid": "def", "title": "Memory", "folderTitle": "Infra"},
+                ]))),
+                "/api/org" => Ok(Some(json!({
+                    "id": 1,
+                    "name": "Main Org"
+                }))),
+                "/api/folders/infra" => Ok(Some(json!({
+                    "title": "Infra",
+                    "parents": [{"title": "Platform"}]
+                }))),
+                _ => Err(super::message(format!("unexpected path {path}"))),
+            }
         },
         &args,
     )
@@ -1008,9 +1084,16 @@ fn collect_dashboard_source_names_prefers_datasource_names() {
             .clone(),
     ]);
 
-    let (sources, source_uids) = super::collect_dashboard_source_metadata(&payload, &catalog).unwrap();
-    assert_eq!(sources, vec!["Loki Logs".to_string(), "Prom Main".to_string()]);
-    assert_eq!(source_uids, vec!["loki_uid".to_string(), "prom_uid".to_string()]);
+    let (sources, source_uids) =
+        super::collect_dashboard_source_metadata(&payload, &catalog).unwrap();
+    assert_eq!(
+        sources,
+        vec!["Loki Logs".to_string(), "Prom Main".to_string()]
+    );
+    assert_eq!(
+        source_uids,
+        vec!["loki_uid".to_string(), "prom_uid".to_string()]
+    );
 }
 
 #[test]
@@ -1068,7 +1151,9 @@ fn list_dashboards_with_request_with_sources_fetches_dashboards_and_datasources(
         1
     );
     assert!(calls.iter().any(|(_, path)| path == "/api/datasources"));
-    assert!(calls.iter().any(|(_, path)| path == "/api/dashboards/uid/abc"));
+    assert!(calls
+        .iter()
+        .any(|(_, path)| path == "/api/dashboards/uid/abc"));
 }
 
 #[test]
@@ -1117,7 +1202,9 @@ fn list_dashboards_with_request_with_org_id_scopes_requests() {
         calls
             .iter()
             .filter(|(_, path, params)| path == "/api/search"
-                && params.iter().any(|(key, value)| key == "orgId" && value == "7"))
+                && params
+                    .iter()
+                    .any(|(key, value)| key == "orgId" && value == "7"))
             .count(),
         1
     );
@@ -1173,14 +1260,9 @@ fn list_dashboards_with_request_all_orgs_aggregates_results() {
 
     assert_eq!(count, 2);
     assert_eq!(
-        calls.iter().filter(|(_, path, _)| path == "/api/orgs").count(),
-        1
-    );
-    assert_eq!(
         calls
             .iter()
-            .filter(|(_, path, params)| path == "/api/search"
-                && params.iter().any(|(key, value)| key == "orgId" && value == "1"))
+            .filter(|(_, path, _)| path == "/api/orgs")
             .count(),
         1
     );
@@ -1188,7 +1270,19 @@ fn list_dashboards_with_request_all_orgs_aggregates_results() {
         calls
             .iter()
             .filter(|(_, path, params)| path == "/api/search"
-                && params.iter().any(|(key, value)| key == "orgId" && value == "2"))
+                && params
+                    .iter()
+                    .any(|(key, value)| key == "orgId" && value == "1"))
+            .count(),
+        1
+    );
+    assert_eq!(
+        calls
+            .iter()
+            .filter(|(_, path, params)| path == "/api/search"
+                && params
+                    .iter()
+                    .any(|(key, value)| key == "orgId" && value == "2"))
             .count(),
         1
     );
@@ -1246,19 +1340,29 @@ fn export_dashboards_with_client_writes_raw_variant_and_indexes() {
         without_dashboard_prompt: true,
         dry_run: false,
         progress: false,
+        verbose: false,
     };
     let mut calls = Vec::new();
     let count = export_dashboards_with_request(
         |method, path, params, payload| {
-            calls.push((method.to_string(), path.to_string(), params.to_vec(), payload.cloned()));
+            calls.push((
+                method.to_string(),
+                path.to_string(),
+                params.to_vec(),
+                payload.cloned(),
+            ));
             if path == "/api/org" {
                 return Ok(Some(json!({"id": 1, "name": "Main Org."})));
             }
             if path == "/api/search" {
-                return Ok(Some(json!([{ "uid": "abc", "title": "CPU", "folderTitle": "Infra" }])));
+                return Ok(Some(
+                    json!([{ "uid": "abc", "title": "CPU", "folderTitle": "Infra" }]),
+                ));
             }
             if path == "/api/dashboards/uid/abc" {
-                return Ok(Some(json!({"dashboard": {"id": 7, "uid": "abc", "title": "CPU"}})));
+                return Ok(Some(
+                    json!({"dashboard": {"id": 7, "uid": "abc", "title": "CPU"}}),
+                ));
             }
             Err(super::message(format!("unexpected path {path}")))
         },
@@ -1290,26 +1394,30 @@ fn export_dashboards_with_request_with_org_id_scopes_requests() {
         without_dashboard_prompt: true,
         dry_run: false,
         progress: false,
+        verbose: false,
     };
     let mut calls = Vec::new();
 
     let count = export_dashboards_with_request(
         |method, path, params, payload| {
-            calls.push((method.to_string(), path.to_string(), params.to_vec(), payload.cloned()));
+            calls.push((
+                method.to_string(),
+                path.to_string(),
+                params.to_vec(),
+                payload.cloned(),
+            ));
             let scoped_org = params
                 .iter()
                 .find(|(key, _)| key == "orgId")
                 .map(|(_, value)| value.as_str());
             match (path, scoped_org) {
-                ("/api/org", Some("7")) => {
-                    Ok(Some(json!({"id": 7, "name": "Scoped Org"})))
-                }
-                ("/api/search", Some("7")) => {
-                    Ok(Some(json!([{ "uid": "abc", "title": "CPU", "folderTitle": "Infra" }])))
-                }
-                ("/api/dashboards/uid/abc", Some("7")) => {
-                    Ok(Some(json!({"dashboard": {"id": 7, "uid": "abc", "title": "CPU"}})))
-                }
+                ("/api/org", Some("7")) => Ok(Some(json!({"id": 7, "name": "Scoped Org"}))),
+                ("/api/search", Some("7")) => Ok(Some(
+                    json!([{ "uid": "abc", "title": "CPU", "folderTitle": "Infra" }]),
+                )),
+                ("/api/dashboards/uid/abc", Some("7")) => Ok(Some(
+                    json!({"dashboard": {"id": 7, "uid": "abc", "title": "CPU"}}),
+                )),
                 _ => Err(super::message(format!("unexpected path {path}"))),
             }
         },
@@ -1323,7 +1431,9 @@ fn export_dashboards_with_request_with_org_id_scopes_requests() {
         calls
             .iter()
             .filter(|(_, path, params, _)| path == "/api/search"
-                && params.iter().any(|(key, value)| key == "orgId" && value == "7"))
+                && params
+                    .iter()
+                    .any(|(key, value)| key == "orgId" && value == "7"))
             .count(),
         1
     );
@@ -1366,8 +1476,14 @@ fn build_external_export_document_adds_datasource_inputs() {
 
     let document = build_external_export_document(&payload, &catalog).unwrap();
 
-    assert_eq!(document["panels"][0]["datasource"]["uid"], "${DS_PROM_MAIN}");
-    assert_eq!(document["panels"][0]["targets"][0]["datasource"]["uid"], "${DS_PROM_MAIN}");
+    assert_eq!(
+        document["panels"][0]["datasource"]["uid"],
+        "${DS_PROM_MAIN}"
+    );
+    assert_eq!(
+        document["panels"][0]["targets"][0]["datasource"]["uid"],
+        "${DS_PROM_MAIN}"
+    );
     assert_eq!(document["panels"][1]["datasource"], "${DS_LOKI_LOGS}");
     assert_eq!(document["__inputs"][0]["name"], "DS_LOKI_LOGS");
     assert_eq!(document["__inputs"][1]["name"], "DS_PROM_MAIN");
@@ -1424,11 +1540,15 @@ fn build_external_export_document_creates_input_from_datasource_template_variabl
         }
     });
 
-    let document = build_external_export_document(&payload, &(BTreeMap::new(), BTreeMap::new())).unwrap();
+    let document =
+        build_external_export_document(&payload, &(BTreeMap::new(), BTreeMap::new())).unwrap();
     assert_eq!(document["__inputs"][0]["name"], "DS_PROMETHEUS");
     assert_eq!(document["templating"]["list"][0]["current"], json!({}));
     assert_eq!(document["templating"]["list"][0]["query"], "prometheus");
-    assert_eq!(document["templating"]["list"][1]["datasource"]["uid"], "${DS_PROMETHEUS}");
+    assert_eq!(
+        document["templating"]["list"][1]["datasource"]["uid"],
+        "${DS_PROMETHEUS}"
+    );
     assert_eq!(document["panels"][0]["datasource"]["uid"], "$datasource");
 }
 
@@ -1447,6 +1567,7 @@ fn export_dashboards_with_client_writes_prompt_variant_and_indexes() {
         without_dashboard_prompt: false,
         dry_run: false,
         progress: false,
+        verbose: false,
     };
 
     let count = export_dashboards_with_request(
@@ -1475,7 +1596,10 @@ fn export_dashboards_with_client_writes_prompt_variant_and_indexes() {
     assert_eq!(count, 1);
     assert!(args.export_dir.join("prompt/Infra/CPU__abc.json").is_file());
     assert!(args.export_dir.join("prompt/index.json").is_file());
-    assert!(args.export_dir.join("prompt/export-metadata.json").is_file());
+    assert!(args
+        .export_dir
+        .join("prompt/export-metadata.json")
+        .is_file());
 }
 
 #[test]
@@ -1493,12 +1617,18 @@ fn export_dashboards_with_request_all_orgs_aggregates_results() {
         without_dashboard_prompt: true,
         dry_run: false,
         progress: false,
+        verbose: false,
     };
     let mut calls = Vec::new();
 
     let count = export_dashboards_with_request(
         |method, path, params, payload| {
-            calls.push((method.to_string(), path.to_string(), params.to_vec(), payload.cloned()));
+            calls.push((
+                method.to_string(),
+                path.to_string(),
+                params.to_vec(),
+                payload.cloned(),
+            ));
             let scoped_org = params
                 .iter()
                 .find(|(key, _)| key == "orgId")
@@ -1510,18 +1640,18 @@ fn export_dashboards_with_request_all_orgs_aggregates_results() {
                 ]))),
                 ("/api/org", Some("1")) => Ok(Some(json!({"id": 1, "name": "Main Org"}))),
                 ("/api/org", Some("2")) => Ok(Some(json!({"id": 2, "name": "Ops Org"}))),
-                ("/api/search", Some("1")) => {
-                    Ok(Some(json!([{ "uid": "abc", "title": "CPU", "folderTitle": "Infra" }])))
-                }
-                ("/api/search", Some("2")) => {
-                    Ok(Some(json!([{ "uid": "xyz", "title": "Logs", "folderTitle": "Ops" }])))
-                }
-                ("/api/dashboards/uid/abc", Some("1")) => {
-                    Ok(Some(json!({"dashboard": {"id": 7, "uid": "abc", "title": "CPU"}})))
-                }
-                ("/api/dashboards/uid/xyz", Some("2")) => {
-                    Ok(Some(json!({"dashboard": {"id": 8, "uid": "xyz", "title": "Logs"}})))
-                }
+                ("/api/search", Some("1")) => Ok(Some(
+                    json!([{ "uid": "abc", "title": "CPU", "folderTitle": "Infra" }]),
+                )),
+                ("/api/search", Some("2")) => Ok(Some(
+                    json!([{ "uid": "xyz", "title": "Logs", "folderTitle": "Ops" }]),
+                )),
+                ("/api/dashboards/uid/abc", Some("1")) => Ok(Some(
+                    json!({"dashboard": {"id": 7, "uid": "abc", "title": "CPU"}}),
+                )),
+                ("/api/dashboards/uid/xyz", Some("2")) => Ok(Some(
+                    json!({"dashboard": {"id": 8, "uid": "xyz", "title": "Logs"}}),
+                )),
                 _ => Err(super::message(format!("unexpected path {path}"))),
             }
         },
@@ -1530,18 +1660,19 @@ fn export_dashboards_with_request_all_orgs_aggregates_results() {
     .unwrap();
 
     assert_eq!(count, 2);
-    assert!(args.export_dir.join("org_1_Main_Org/raw/Infra/CPU__abc.json").is_file());
-    assert!(args.export_dir.join("org_2_Ops_Org/raw/Ops/Logs__xyz.json").is_file());
+    assert!(args
+        .export_dir
+        .join("org_1_Main_Org/raw/Infra/CPU__abc.json")
+        .is_file());
+    assert!(args
+        .export_dir
+        .join("org_2_Ops_Org/raw/Ops/Logs__xyz.json")
+        .is_file());
     assert!(args.export_dir.join("raw/index.json").is_file());
-    assert_eq!(
-        calls.iter().filter(|(_, path, _, _)| path == "/api/orgs").count(),
-        1
-    );
     assert_eq!(
         calls
             .iter()
-            .filter(|(_, path, params, _)| path == "/api/search"
-                && params.iter().any(|(key, value)| key == "orgId" && value == "1"))
+            .filter(|(_, path, _, _)| path == "/api/orgs")
             .count(),
         1
     );
@@ -1549,7 +1680,19 @@ fn export_dashboards_with_request_all_orgs_aggregates_results() {
         calls
             .iter()
             .filter(|(_, path, params, _)| path == "/api/search"
-                && params.iter().any(|(key, value)| key == "orgId" && value == "2"))
+                && params
+                    .iter()
+                    .any(|(key, value)| key == "orgId" && value == "1"))
+            .count(),
+        1
+    );
+    assert_eq!(
+        calls
+            .iter()
+            .filter(|(_, path, params, _)| path == "/api/search"
+                && params
+                    .iter()
+                    .any(|(key, value)| key == "orgId" && value == "2"))
             .count(),
         1
     );
@@ -1570,15 +1713,18 @@ fn export_dashboards_with_dry_run_keeps_output_dir_empty() {
         without_dashboard_prompt: true,
         dry_run: true,
         progress: false,
+        verbose: false,
     };
 
     let count = export_dashboards_with_request(
         |_method, path, _params, _payload| match path {
             "/api/org" => Ok(Some(json!({"id": 1, "name": "Main Org."}))),
-            "/api/search" => Ok(Some(json!([{ "uid": "abc", "title": "CPU", "folderTitle": "Infra" }]))),
-            "/api/dashboards/uid/abc" => {
-                Ok(Some(json!({"dashboard": {"id": 7, "uid": "abc", "title": "CPU"}})))
-            }
+            "/api/search" => Ok(Some(
+                json!([{ "uid": "abc", "title": "CPU", "folderTitle": "Infra" }]),
+            )),
+            "/api/dashboards/uid/abc" => Ok(Some(
+                json!({"dashboard": {"id": 7, "uid": "abc", "title": "CPU"}}),
+            )),
             _ => Err(super::message(format!("unexpected path {path}"))),
         },
         &args,
@@ -1624,6 +1770,7 @@ fn import_dashboards_with_client_imports_discovered_files() {
         import_message: "sync dashboards".to_string(),
         dry_run: false,
         progress: false,
+        verbose: false,
     };
     let mut posted_payloads = Vec::new();
     let count = import_dashboards_with_request(
@@ -1676,6 +1823,7 @@ fn import_dashboards_with_dry_run_skips_post_requests() {
         import_message: "sync dashboards".to_string(),
         dry_run: true,
         progress: false,
+        verbose: false,
     };
 
     let count = import_dashboards_with_request(
@@ -1719,15 +1867,15 @@ fn import_dashboards_rejects_unsupported_export_schema_version() {
         import_message: "sync dashboards".to_string(),
         dry_run: false,
         progress: false,
+        verbose: false,
     };
 
-    let error = import_dashboards_with_request(
-        |_method, _path, _params, _payload| Ok(None),
-        &args,
-    )
-    .unwrap_err();
+    let error = import_dashboards_with_request(|_method, _path, _params, _payload| Ok(None), &args)
+        .unwrap_err();
 
-    assert!(error.to_string().contains("Unsupported dashboard export schemaVersion"));
+    assert!(error
+        .to_string()
+        .contains("Unsupported dashboard export schemaVersion"));
 }
 
 #[test]

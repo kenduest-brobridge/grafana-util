@@ -98,6 +98,13 @@
 - Current Update: Changed Python and Rust `list-dashboard` plus `list-data-sources` to default to table output, added `--no-header` for those table-oriented list commands, and added `--progress` to `export-dashboard` and `import-dashboard` so per-dashboard progress lines are opt-in.
 - Result: Operators now get a more readable default listing format, can remove table headers for scripts or copy/paste workflows, and can choose whether dashboard export/import should stay quiet or show item-by-item progress.
 
+## 2026-03-12 - Task: Add Concise And Verbose Dashboard Progress Modes
+- State: Done
+- Scope: `grafana_utils/dashboard_cli.py`, `tests/test_python_dashboard_cli.py`, `rust/src/dashboard_cli_defs.rs`, `rust/src/dashboard_export.rs`, `rust/src/dashboard.rs`, `rust/src/dashboard_rust_tests.rs`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Dashboard export and import only had a single `--progress` mode, which printed detailed per-item lines and did not provide a lighter-weight progress view for long runs.
+- Current Update: Added a concise `--progress` mode for both Python and Rust dashboard export/import that prints one `current/total` line per dashboard, plus a new `-v/--verbose` mode that keeps detailed path/status output and supersedes the concise progress form.
+- Result: Operators can now choose between quiet summary-only runs, compact progress for long jobs, or detailed item-by-item logging for troubleshooting.
+
 ## 2026-03-12 - Task: Consolidate Python And Rust CLIs Under grafana-utils
 - State: Done
 - Scope: `grafana_utils/unified_cli.py`, `grafana_utils/dashboard_cli.py`, `grafana_utils/alert_cli.py`, `cmd/grafana-utils.py`, `cmd/grafana-alert-utils.py`, `cmd/grafana-access-utils.py`, `pyproject.toml`, `tests/test_python_unified_cli.py`, `tests/test_python_packaging.py`, `rust/src/cli.rs`, `rust/src/cli_rust_tests.rs`, `rust/src/bin/grafana-utils.rs`, `rust/src/dashboard.rs`, `rust/src/alert.rs`, `rust/src/lib.rs`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

@@ -456,7 +456,8 @@ Use `prompt/` when you want:
 | `--all-orgs` | For `list-dashboard` or `export-dashboard`, enumerate visible Grafana orgs and aggregate list output or export each org; requires Basic auth |
 | `--with-sources` | For `list-dashboard`, fetch each dashboard payload and include datasource names used by that dashboard; CSV and JSON also add datasource UIDs |
 | `--no-header` | For `list-dashboard` or `list-data-sources`, omit the table header row |
-| `--progress` | For `export-dashboard` or `import-dashboard`, print per-dashboard progress lines while the command runs |
+| `--progress` | For `export-dashboard` or `import-dashboard`, print concise per-dashboard `current/total` progress lines while the command runs |
+| `-v, --verbose` | For `export-dashboard` or `import-dashboard`, print detailed per-item output including variants, paths, and import results; overrides `--progress` |
 | `list-data-sources --table|--csv|--json` | List live Grafana data sources in human-readable or machine-readable output |
 | `--flat` | Do not create per-folder subdirectories |
 | `--overwrite` | Replace existing exported files |
@@ -481,7 +482,14 @@ For dashboard export:
 - `export-dashboard --org-id <ID>` exports dashboards from that explicit org instead of the current auth context and requires Basic auth
 - `export-dashboard --all-orgs` exports dashboards from every visible org and requires Basic auth
 - `export-dashboard --all-orgs` writes per-org trees such as `org_2_Org_Two/raw/...` and `org_2_Org_Two/prompt/...` to avoid cross-org file collisions
-- `export-dashboard --progress` prints one progress line per exported dashboard in addition to the final summary
+- `export-dashboard` stays quiet by default except for the final summary
+- `export-dashboard --progress` prints one concise progress line per exported dashboard, such as `Exporting dashboard 3/10: cpu-main`
+- `export-dashboard -v` prints detailed per-variant output such as `Exported raw    cpu-main -> dashboards/raw/Infra/CPU__cpu-main.json`
+- `export-dashboard -v --progress` uses verbose output and suppresses the concise progress form
+- `import-dashboard` stays quiet by default except for the final summary
+- `import-dashboard --progress` prints one concise progress line per imported dashboard, such as `Importing dashboard 2/7: cpu-main`
+- `import-dashboard -v` prints detailed per-file import results, including dry-run actions or returned status values
+- `import-dashboard -v --progress` uses verbose output and suppresses the concise progress form
 
 For datasource listing:
 

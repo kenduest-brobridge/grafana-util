@@ -177,7 +177,13 @@ def add_export_cli_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--progress",
         action="store_true",
-        help="Show per-dashboard export progress while processing files.",
+        help="Show concise per-dashboard export progress as current/total while processing files.",
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Show detailed per-dashboard export output, including paths. Supersedes --progress.",
     )
 
 
@@ -285,7 +291,13 @@ def add_import_cli_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--progress",
         action="store_true",
-        help="Show per-dashboard import progress while processing files.",
+        help="Show concise per-dashboard import progress as current/total while processing files.",
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Show detailed per-dashboard import output, including file paths and results. Supersedes --progress.",
     )
 
 
@@ -679,6 +691,69 @@ def build_export_metadata(
     return metadata
 
 
+def print_dashboard_export_progress(
+    args: argparse.Namespace,
+    index: int,
+    total: int,
+    uid: str,
+    variant: str,
+    path: Path,
+    dry_run: bool,
+) -> None:
+    """Render one export progress update in concise or verbose form."""
+    if getattr(args, "verbose", False):
+        print(
+            "%s %s    %s -> %s"
+            % ("Would export" if dry_run else "Exported", variant, uid, path)
+        )
+
+
+def print_dashboard_export_progress_summary(
+    args: argparse.Namespace,
+    index: int,
+    total: int,
+    uid: str,
+    dry_run: bool,
+) -> None:
+    """Render one concise export progress update per dashboard."""
+    if getattr(args, "verbose", False):
+        return
+    if getattr(args, "progress", False):
+        print(
+            "%s dashboard %s/%s: %s"
+            % ("Would export" if dry_run else "Exporting", index, total, uid)
+        )
+
+
+def print_dashboard_import_progress(
+    args: argparse.Namespace,
+    index: int,
+    total: int,
+    dashboard_file: Path,
+    uid: str,
+    action: Optional[str] = None,
+    status: Optional[str] = None,
+    dry_run: bool = False,
+) -> None:
+    """Render one import progress update in concise or verbose form."""
+    if getattr(args, "verbose", False):
+        if dry_run:
+            print("Dry-run %s -> uid=%s action=%s" % (dashboard_file, uid, action or "unknown"))
+        else:
+            print("Imported %s -> uid=%s status=%s" % (dashboard_file, uid, status or "unknown"))
+        return
+    if getattr(args, "progress", False):
+        print(
+            "%s dashboard %s/%s: %s"
+            % (
+                "Dry-run importing" if dry_run else "Importing",
+                index,
+                total,
+                uid,
+            )
+        )
+
+
 def load_export_metadata(
     import_dir: Path,
     expected_variant: Optional[str] = None,
@@ -868,7 +943,8 @@ def export_dashboards(args: argparse.Namespace) -> int:
     else:
         clients = [(client.fetch_current_org(), client)]
 
-    index_items: List[Dict[str, str]] = []
+    org_exports = []
+    total_dashboards = 0
     for org, scoped_client in clients:
         scoped_output_dir = output_dir
         if all_orgs:
@@ -886,9 +962,24 @@ def export_dashboards(args: argparse.Namespace) -> int:
         )
         if not summaries:
             continue
+        total_dashboards += len(summaries)
+        org_exports.append(
+            (org, scoped_client, scoped_output_dir, raw_dir, prompt_dir, datasource_catalog, summaries)
+        )
 
+    index_items: List[Dict[str, str]] = []
+    processed_dashboards = 0
+    for _, scoped_client, _, raw_dir, prompt_dir, datasource_catalog, summaries in org_exports:
         for summary in summaries:
+            processed_dashboards += 1
             uid = str(summary["uid"])
+            print_dashboard_export_progress_summary(
+                args,
+                processed_dashboards,
+                total_dashboards,
+                uid,
+                dry_run=bool(args.dry_run),
+            )
             payload = scoped_client.fetch_dashboard(uid)
             item = build_dashboard_index_item(summary, uid)
             if export_raw:
@@ -900,12 +991,26 @@ def export_dashboards(args: argparse.Namespace) -> int:
                         args.overwrite,
                         create_parents=False,
                     )
-                    if args.progress:
-                        print(f"Would export raw    {uid} -> {raw_path}")
+                    print_dashboard_export_progress(
+                        args,
+                        processed_dashboards,
+                        total_dashboards,
+                        uid,
+                        "raw",
+                        raw_path,
+                        dry_run=True,
+                    )
                 else:
                     write_dashboard(raw_document, raw_path, args.overwrite)
-                    if args.progress:
-                        print(f"Exported raw    {uid} -> {raw_path}")
+                    print_dashboard_export_progress(
+                        args,
+                        processed_dashboards,
+                        total_dashboards,
+                        uid,
+                        "raw",
+                        raw_path,
+                        dry_run=False,
+                    )
                 item["raw_path"] = str(raw_path)
             if export_prompt:
                 assert datasource_catalog is not None
@@ -917,12 +1022,26 @@ def export_dashboards(args: argparse.Namespace) -> int:
                         args.overwrite,
                         create_parents=False,
                     )
-                    if args.progress:
-                        print(f"Would export prompt {uid} -> {prompt_path}")
+                    print_dashboard_export_progress(
+                        args,
+                        processed_dashboards,
+                        total_dashboards,
+                        uid,
+                        "prompt",
+                        prompt_path,
+                        dry_run=True,
+                    )
                 else:
                     write_dashboard(prompt_document, prompt_path, args.overwrite)
-                    if args.progress:
-                        print(f"Exported prompt {uid} -> {prompt_path}")
+                    print_dashboard_export_progress(
+                        args,
+                        processed_dashboards,
+                        total_dashboards,
+                        uid,
+                        "prompt",
+                        prompt_path,
+                        dry_run=False,
+                    )
                 item["prompt_path"] = str(prompt_path)
             index_items.append(item)
 
@@ -1479,7 +1598,8 @@ def import_dashboards(args: argparse.Namespace) -> int:
     load_export_metadata(import_dir, expected_variant=RAW_EXPORT_SUBDIR)
     dashboard_files = discover_dashboard_files(import_dir)
 
-    for dashboard_file in dashboard_files:
+    total_dashboards = len(dashboard_files)
+    for index, dashboard_file in enumerate(dashboard_files, 1):
         document = load_json_file(dashboard_file)
         payload = build_import_payload(
             document=document,
@@ -1494,15 +1614,29 @@ def import_dashboards(args: argparse.Namespace) -> int:
                 payload,
                 args.replace_existing,
             )
-            if args.progress:
-                print(f"Dry-run {dashboard_file} -> uid={uid} action={action}")
+            print_dashboard_import_progress(
+                args,
+                index,
+                total_dashboards,
+                dashboard_file,
+                str(uid),
+                action=action,
+                dry_run=True,
+            )
             continue
 
         result = client.import_dashboard(payload)
         status = result.get("status", "unknown")
         uid = result.get("uid") or uid
-        if args.progress:
-            print(f"Imported {dashboard_file} -> uid={uid} status={status}")
+        print_dashboard_import_progress(
+            args,
+            index,
+            total_dashboards,
+            dashboard_file,
+            str(uid),
+            status=str(status),
+            dry_run=False,
+        )
 
     if args.dry_run:
         print(f"Dry-run checked {len(dashboard_files)} dashboard files from {import_dir}")

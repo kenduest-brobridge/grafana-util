@@ -91,7 +91,9 @@ Commit message default for this repo:
 - `list-dashboard --with-sources --csv` also appends `sourceUids` so spreadsheet or script consumers can correlate dashboards back to concrete datasource UIDs when Grafana exposed them.
 - `list-dashboard --with-sources --json` also appends `sourceUids` as an array.
 - `list-dashboard --with-sources` should stay opt-in because it turns one search-oriented list call into a per-dashboard inspection workflow.
-- `export-dashboard --progress` and `import-dashboard --progress` turn on per-dashboard progress lines. Without `--progress`, both commands stay quiet except for summary output and explicit warnings/errors.
+- `export-dashboard` and `import-dashboard` stay quiet by default except for summary output and explicit warnings/errors.
+- `export-dashboard --progress` and `import-dashboard --progress` turn on concise per-dashboard `current/total` progress lines.
+- `export-dashboard -v` and `import-dashboard -v` turn on detailed per-item output and intentionally suppress the concise `--progress` form when both flags are present.
 - Folder tree path is resolved from `GET /api/folders/{uid}` using the folder `parents[]` chain when `folderUid` is present.
 - `list-data-sources` is read-only and now defaults to a table with `UID`, `NAME`, `TYPE`, `URL`, and `IS_DEFAULT`.
 - `list-data-sources --no-header` suppresses the table header line while keeping the same column layout.
