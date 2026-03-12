@@ -138,7 +138,7 @@ pub struct ListArgs {
     #[arg(
         long,
         default_value_t = false,
-        help = "Fetch each dashboard payload and include resolved datasource names in the list output. This is slower because it makes extra API calls per dashboard."
+        help = "For table or CSV output, fetch each dashboard payload and include resolved datasource names in the list output. JSON already includes datasource names and UIDs by default. This is slower because it makes extra API calls per dashboard."
     )]
     pub with_sources: bool,
     #[arg(long, default_value_t = false, conflicts_with_all = ["csv", "json"], help = "Render dashboard summaries as a table.")]

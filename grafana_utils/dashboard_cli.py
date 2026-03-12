@@ -211,7 +211,8 @@ def add_list_cli_args(parser: argparse.ArgumentParser) -> None:
         "--with-sources",
         action="store_true",
         help=(
-            "Fetch each dashboard payload and include resolved datasource names in the list output. "
+            "For table or CSV output, fetch each dashboard payload and include resolved datasource "
+            "names in the list output. JSON already includes datasource names and UIDs by default. "
             "This is slower because it makes extra API calls per dashboard."
         ),
     )
@@ -2043,7 +2044,7 @@ def list_dashboards(args: argparse.Namespace) -> int:
             scoped_client.iter_dashboard_summaries(args.page_size),
         )
         scoped_summaries = attach_dashboard_org(scoped_client, scoped_summaries)
-        if getattr(args, "with_sources", False):
+        if args.json or getattr(args, "with_sources", False):
             scoped_summaries = attach_dashboard_sources(scoped_client, scoped_summaries)
         summaries.extend(scoped_summaries)
     if args.csv:

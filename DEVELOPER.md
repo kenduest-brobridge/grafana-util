@@ -83,14 +83,13 @@ Commit message default for this repo:
 - The `list-dashboard` subcommand is read-only and now defaults to table output with `UID`, `NAME`, `FOLDER`, `FOLDER_UID`, `FOLDER_PATH`, `ORG`, and `ORG_ID` columns.
 - `list-dashboard --no-header` keeps the table rows but suppresses the header line for shell pipelines or snapshot-style output.
 - `list-dashboard --csv` emits header `uid,name,folder,folderUid,path,org,orgId` with CSV escaping.
-- `list-dashboard --json` emits an array of objects with keys `uid`, `name`, `folder`, `folderUid`, `path`, `org`, and `orgId`.
+- `list-dashboard --json` emits an array of objects with keys `uid`, `name`, `folder`, `folderUid`, `path`, `org`, `orgId`, `sources`, and `sourceUids`.
 - `list-dashboard` fetches the current org from `GET /api/org` once and attaches that `org` and `orgId` metadata to every listed dashboard summary.
 - `list-dashboard --org-id <ID>` rebuilds the client with `X-Grafana-Org-Id` and is Basic-auth-only because the CLI needs a server-admin-style org switch rather than a token-bound current org context.
 - `list-dashboard --all-orgs` lists `/api/orgs`, rebuilds one scoped client per org, and aggregates the combined dashboard list output. This is also Basic-auth-only.
-- `list-dashboard --with-sources` fetches each dashboard payload plus the datasource catalog, then appends resolved datasource names to table, CSV, and JSON output.
-- `list-dashboard --with-sources --csv` also appends `sourceUids` so spreadsheet or script consumers can correlate dashboards back to concrete datasource UIDs when Grafana exposed them.
-- `list-dashboard --with-sources --json` also appends `sourceUids` as an array.
-- `list-dashboard --with-sources` should stay opt-in because it turns one search-oriented list call into a per-dashboard inspection workflow.
+- `list-dashboard --json` now fetches each dashboard payload plus the datasource catalog by default so machine-readable output includes `sources` and `sourceUids` without an extra flag.
+- `list-dashboard --with-sources` still controls datasource expansion for table and CSV output, because those compact human-readable formats would otherwise become wider and slower by default.
+- `list-dashboard --with-sources --csv` appends both `sources` and `sourceUids` so spreadsheet or script consumers can correlate dashboards back to concrete datasource UIDs when Grafana exposed them.
 - `export-dashboard` and `import-dashboard` stay quiet by default except for summary output and explicit warnings/errors.
 - `export-dashboard --progress` and `import-dashboard --progress` turn on concise per-dashboard `current/total` progress lines.
 - `export-dashboard -v` and `import-dashboard -v` turn on detailed per-item output and intentionally suppress the concise `--progress` form when both flags are present.

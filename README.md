@@ -477,7 +477,7 @@ Use `prompt/` when you want:
 | `--page-size` | Dashboard search page size. Default: `500` |
 | `--org-id ORG_ID` | For `list-dashboard` or `export-dashboard`, switch to one explicit Grafana org ID; requires Basic auth |
 | `--all-orgs` | For `list-dashboard` or `export-dashboard`, enumerate visible Grafana orgs and aggregate list output or export each org; requires Basic auth |
-| `--with-sources` | For `list-dashboard`, fetch each dashboard payload and include datasource names used by that dashboard; CSV and JSON also add datasource UIDs |
+| `--with-sources` | For `list-dashboard` table or CSV output, fetch each dashboard payload and include datasource names used by that dashboard; JSON already includes datasource names and best-effort datasource UIDs by default |
 | `--no-header` | For `list-dashboard`, `list-data-sources`, `import-dashboard --dry-run --table`, or `inspect-export --table`, omit the table header row |
 | `--progress` | For `export-dashboard` or `import-dashboard`, print concise per-dashboard `current/total` progress lines while the command runs |
 | `-v, --verbose` | For `export-dashboard` or `import-dashboard`, print detailed per-item output including variants, paths, and import results; overrides `--progress` |
@@ -500,9 +500,9 @@ For dashboard listing:
 - `list-dashboard --no-header` omits the table header row
 - `list-dashboard --org-id <ID>` reads dashboards from that explicit org instead of the current auth context and requires Basic auth
 - `list-dashboard --all-orgs` aggregates dashboards across every visible org and requires Basic auth
-- `list-dashboard --with-sources` adds datasource names per dashboard to table, CSV, and JSON output
-- `list-dashboard --with-sources --csv` also adds a `sourceUids` column with best-effort datasource UIDs
-- `list-dashboard --with-sources --json` also adds a `sourceUids` array with best-effort datasource UIDs
+- `list-dashboard --json` includes datasource names and a best-effort `sourceUids` array by default
+- `list-dashboard --with-sources` remains useful for table or CSV output, where datasource expansion stays opt-in to keep the default list view compact
+- `list-dashboard --with-sources --csv` adds `sources` plus a `sourceUids` column with best-effort datasource UIDs
 - `list-dashboard --with-sources` is slower than plain `list-dashboard` because it fetches each dashboard payload and the datasource catalog
 
 For dashboard export:

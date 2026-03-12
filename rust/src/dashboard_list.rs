@@ -124,8 +124,9 @@ pub(crate) fn format_dashboard_summary_line(summary: &Map<String, Value>) -> Str
     let folder_uid = string_field(summary, "folderUid", "general");
     let folder_path = string_field(summary, "folderPath", &folder_title);
     let title = string_field(summary, "title", "dashboard");
-    let mut line =
-        format!("uid={uid} name={title} folder={folder_title} folderUid={folder_uid} path={folder_path}");
+    let mut line = format!(
+        "uid={uid} name={title} folder={folder_title} folderUid={folder_uid} path={folder_path}"
+    );
     if summary.contains_key("orgName") || summary.contains_key("orgId") {
         let org_name = string_field(summary, "orgName", "");
         let org_id = dashboard_org_id_cell(summary).unwrap_or_default();
@@ -195,7 +196,9 @@ fn dashboard_sources_cell(summary: &Map<String, Value>) -> Option<String> {
 }
 
 fn summaries_include_sources(summaries: &[Map<String, Value>]) -> bool {
-    summaries.iter().any(|summary| summary.contains_key("sources"))
+    summaries
+        .iter()
+        .any(|summary| summary.contains_key("sources"))
 }
 
 fn summaries_include_org_metadata(summaries: &[Map<String, Value>]) -> bool {
@@ -205,7 +208,9 @@ fn summaries_include_org_metadata(summaries: &[Map<String, Value>]) -> bool {
 }
 
 fn summaries_include_source_uids(summaries: &[Map<String, Value>]) -> bool {
-    summaries.iter().any(|summary| summary.contains_key("sourceUids"))
+    summaries
+        .iter()
+        .any(|summary| summary.contains_key("sourceUids"))
 }
 
 pub(crate) fn render_dashboard_summary_table(
@@ -354,7 +359,11 @@ fn build_data_source_record(datasource: &Map<String, Value>) -> Vec<String> {
         string_field(datasource, "name", ""),
         string_field(datasource, "type", ""),
         string_field(datasource, "url", ""),
-        if datasource.get("isDefault").and_then(Value::as_bool).unwrap_or(false) {
+        if datasource
+            .get("isDefault")
+            .and_then(Value::as_bool)
+            .unwrap_or(false)
+        {
             "true".to_string()
         } else {
             "false".to_string()
@@ -448,7 +457,9 @@ fn lookup_unique_datasource_name_by_type(
 ) -> Option<String> {
     let matches: BTreeSet<String> = datasources_by_uid
         .values()
-        .filter(|datasource| string_field(datasource, "type", "").eq_ignore_ascii_case(datasource_type))
+        .filter(|datasource| {
+            string_field(datasource, "type", "").eq_ignore_ascii_case(datasource_type)
+        })
         .map(|datasource| {
             let name = string_field(datasource, "name", "");
             if name.is_empty() {
@@ -478,9 +489,12 @@ fn resolve_datasource_source_name(
             if is_placeholder_string(text) {
                 return None;
             }
-            if let Some(datasource) =
-                lookup_datasource(datasources_by_uid, datasources_by_name, Some(text), Some(text))
-            {
+            if let Some(datasource) = lookup_datasource(
+                datasources_by_uid,
+                datasources_by_name,
+                Some(text),
+                Some(text),
+            ) {
                 let name = string_field(&datasource, "name", text);
                 return Some(name);
             }
@@ -495,16 +509,19 @@ fn resolve_datasource_source_name(
             let uid = object.get("uid").and_then(Value::as_str);
             let name = object.get("name").and_then(Value::as_str);
             let datasource_type = object.get("type").and_then(Value::as_str);
-            let has_placeholder = uid.is_some_and(is_placeholder_string)
-                || name.is_some_and(is_placeholder_string);
+            let has_placeholder =
+                uid.is_some_and(is_placeholder_string) || name.is_some_and(is_placeholder_string);
             if has_placeholder {
                 return None;
             }
-            if let Some(datasource) = lookup_datasource(datasources_by_uid, datasources_by_name, uid, name) {
+            if let Some(datasource) =
+                lookup_datasource(datasources_by_uid, datasources_by_name, uid, name)
+            {
                 let resolved_name = string_field(
                     &datasource,
                     "name",
-                    uid.or(name).unwrap_or_else(|| datasource_type.unwrap_or("")),
+                    uid.or(name)
+                        .unwrap_or_else(|| datasource_type.unwrap_or("")),
                 );
                 if !resolved_name.is_empty() {
                     return Some(resolved_name);
@@ -536,19 +553,26 @@ fn resolve_datasource_source_uid(
             if is_placeholder_string(text) {
                 return None;
             }
-            lookup_datasource(datasources_by_uid, datasources_by_name, Some(text), Some(text))
-                .map(|datasource| string_field(&datasource, "uid", ""))
-                .filter(|uid| !uid.is_empty())
+            lookup_datasource(
+                datasources_by_uid,
+                datasources_by_name,
+                Some(text),
+                Some(text),
+            )
+            .map(|datasource| string_field(&datasource, "uid", ""))
+            .filter(|uid| !uid.is_empty())
         }
         Value::Object(object) => {
             let uid = object.get("uid").and_then(Value::as_str);
             let name = object.get("name").and_then(Value::as_str);
-            let has_placeholder = uid.is_some_and(is_placeholder_string)
-                || name.is_some_and(is_placeholder_string);
+            let has_placeholder =
+                uid.is_some_and(is_placeholder_string) || name.is_some_and(is_placeholder_string);
             if has_placeholder {
                 return None;
             }
-            if let Some(datasource) = lookup_datasource(datasources_by_uid, datasources_by_name, uid, name) {
+            if let Some(datasource) =
+                lookup_datasource(datasources_by_uid, datasources_by_name, uid, name)
+            {
                 let resolved_uid = string_field(&datasource, "uid", "");
                 if !resolved_uid.is_empty() {
                     return Some(resolved_uid);
@@ -562,7 +586,10 @@ fn resolve_datasource_source_uid(
 
 pub(crate) fn collect_dashboard_source_metadata(
     payload: &Value,
-    datasource_catalog: &(BTreeMap<String, Map<String, Value>>, BTreeMap<String, Map<String, Value>>),
+    datasource_catalog: &(
+        BTreeMap<String, Map<String, Value>>,
+        BTreeMap<String, Map<String, Value>>,
+    ),
 ) -> Result<(Vec<String>, Vec<String>)> {
     let payload_object = value_as_object(payload, "Unexpected dashboard payload from Grafana.")?;
     let dashboard_object = payload_object
@@ -575,10 +602,14 @@ pub(crate) fn collect_dashboard_source_metadata(
     let mut names = BTreeSet::new();
     let mut uids = BTreeSet::new();
     for reference in refs {
-        if let Some(name) = resolve_datasource_source_name(&reference, datasources_by_uid, datasources_by_name) {
+        if let Some(name) =
+            resolve_datasource_source_name(&reference, datasources_by_uid, datasources_by_name)
+        {
             names.insert(name);
         }
-        if let Some(uid) = resolve_datasource_source_uid(&reference, datasources_by_uid, datasources_by_name) {
+        if let Some(uid) =
+            resolve_datasource_source_uid(&reference, datasources_by_uid, datasources_by_name)
+        {
             uids.insert(uid);
         }
     }
@@ -592,7 +623,8 @@ fn attach_dashboard_sources_with_request<F>(
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
-    let datasource_catalog = build_datasource_catalog(&list_datasources_with_request(&mut request_json)?);
+    let datasource_catalog =
+        build_datasource_catalog(&list_datasources_with_request(&mut request_json)?);
     summaries
         .iter()
         .map(|summary| {
@@ -640,14 +672,16 @@ where
         request_json(method, path, &scoped_params, payload)
     };
 
-    let dashboard_summaries = list_dashboard_summaries_with_request(&mut scoped_request, args.page_size)?;
+    let dashboard_summaries =
+        list_dashboard_summaries_with_request(&mut scoped_request, args.page_size)?;
     let current_org = match org {
         Some(org) => org.clone(),
         None => fetch_current_org_with_request(&mut scoped_request)?,
     };
-    let summaries = attach_dashboard_folder_paths_with_request(&mut scoped_request, &dashboard_summaries)?;
+    let summaries =
+        attach_dashboard_folder_paths_with_request(&mut scoped_request, &dashboard_summaries)?;
     let summaries = attach_dashboard_org_metadata(&summaries, &current_org);
-    let summaries = if args.with_sources && !summaries.is_empty() {
+    let summaries = if (args.with_sources || args.json) && !summaries.is_empty() {
         attach_dashboard_sources_with_request(&mut scoped_request, &summaries)?
     } else {
         summaries
@@ -655,9 +689,15 @@ where
     Ok(summaries)
 }
 
-fn render_dashboard_list_output(summaries: &[Map<String, Value>], args: &ListArgs) -> Result<usize> {
+fn render_dashboard_list_output(
+    summaries: &[Map<String, Value>],
+    args: &ListArgs,
+) -> Result<usize> {
     if args.json {
-        println!("{}", serde_json::to_string_pretty(&render_dashboard_summary_json(summaries))?);
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&render_dashboard_summary_json(summaries))?
+        );
     } else if args.csv {
         for line in render_dashboard_summary_csv(summaries) {
             println!("{line}");
@@ -691,12 +731,8 @@ where
             summaries.append(&mut scoped);
         }
     } else {
-        summaries = collect_list_dashboards_with_request(
-            &mut request_json,
-            args,
-            None,
-            args.org_id,
-        )?;
+        summaries =
+            collect_list_dashboards_with_request(&mut request_json, args, None, args.org_id)?;
     }
     render_dashboard_list_output(&summaries, args)
 }
@@ -735,7 +771,9 @@ pub(crate) fn list_dashboards_with_org_clients(args: &ListArgs) -> Result<usize>
     } else if let Some(org_id) = args.org_id {
         let org_client = build_http_client_for_org(&args.common, org_id)?;
         summaries = collect_list_dashboards_with_request(
-            &mut |method, path, params, payload| org_client.request_json(method, path, params, payload),
+            &mut |method, path, params, payload| {
+                org_client.request_json(method, path, params, payload)
+            },
             args,
             None,
             None,
@@ -761,7 +799,10 @@ where
 {
     let datasources = list_datasources_with_request(&mut request_json)?;
     if args.json {
-        println!("{}", serde_json::to_string_pretty(&render_data_source_json(&datasources))?);
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&render_data_source_json(&datasources))?
+        );
     } else if args.csv {
         for line in render_data_source_csv(&datasources) {
             println!("{line}");
@@ -778,7 +819,10 @@ where
     Ok(datasources.len())
 }
 
-pub fn list_data_sources_with_client(client: &JsonHttpClient, args: &ListDataSourcesArgs) -> Result<usize> {
+pub fn list_data_sources_with_client(
+    client: &JsonHttpClient,
+    args: &ListDataSourcesArgs,
+) -> Result<usize> {
     list_data_sources_with_request(
         |method, path, params, payload| client.request_json(method, path, params, payload),
         args,

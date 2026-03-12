@@ -1,5 +1,12 @@
 # ai-status.md
 
+## 2026-03-13 - Task: Include Dashboard Sources By Default In JSON List Output
+- State: Done
+- Scope: `grafana_utils/dashboard_cli.py`, `tests/test_python_dashboard_cli.py`, `rust/src/dashboard_list.rs`, `rust/src/dashboard_cli_defs.rs`, `rust/src/dashboard_rust_tests.rs`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: `list-dashboard --with-sources` existed mainly to keep text and table output from getting too wide and expensive, but JSON mode also required the extra flag even though machine-readable output benefits more from completeness than compactness.
+- Current Update: Changed both Python and Rust dashboard list flows so `--json` automatically fetches dashboard payloads plus the datasource catalog and includes `sources` and `sourceUids` by default, while plain, table, and CSV output still require `--with-sources` to opt into the more expensive datasource expansion.
+- Result: JSON list output is now self-contained for script consumers, while operator-facing table and CSV output remain compact unless users explicitly ask for datasource expansion.
+
 ## 2026-03-13 - Task: Export Datasource Inventory With Raw Dashboard Exports
 - State: Done
 - Scope: `grafana_utils/dashboard_cli.py`, `tests/test_python_dashboard_cli.py`, `rust/src/dashboard.rs`, `rust/src/dashboard_export.rs`, `rust/src/dashboard_rust_tests.rs`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

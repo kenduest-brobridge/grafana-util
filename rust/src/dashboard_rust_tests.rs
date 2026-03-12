@@ -1422,6 +1422,10 @@ fn list_dashboards_with_request_returns_dashboard_count() {
         calls.iter().filter(|(_, path)| path == "/api/org").count(),
         1
     );
+    assert!(!calls.iter().any(|(_, path)| path == "/api/datasources"));
+    assert!(!calls
+        .iter()
+        .any(|(_, path)| path.starts_with("/api/dashboards/uid/")));
 }
 
 #[test]
@@ -1462,13 +1466,13 @@ fn collect_dashboard_source_names_prefers_datasource_names() {
 }
 
 #[test]
-fn list_dashboards_with_request_with_sources_fetches_dashboards_and_datasources() {
+fn list_dashboards_with_request_json_fetches_dashboards_and_datasources_by_default() {
     let args = ListArgs {
         common: make_common_args("http://127.0.0.1:3000".to_string()),
         page_size: 500,
         org_id: None,
         all_orgs: false,
-        with_sources: true,
+        with_sources: false,
         table: false,
         csv: false,
         json: true,
@@ -1555,6 +1559,18 @@ fn list_dashboards_with_request_with_org_id_scopes_requests() {
                     "title": "Infra",
                     "parents": [{"title": "Platform"}]
                 }))),
+                ("/api/datasources", Some("7")) => Ok(Some(json!([
+                    {"uid": "prom_uid", "name": "Prom Main", "type": "prometheus"}
+                ]))),
+                ("/api/dashboards/uid/abc", Some("7")) => Ok(Some(json!({
+                    "dashboard": {
+                        "uid": "abc",
+                        "title": "CPU",
+                        "panels": [
+                            {"datasource": {"uid": "prom_uid", "type": "prometheus"}}
+                        ]
+                    }
+                }))),
                 _ => Err(super::message(format!("unexpected path {path}"))),
             }
         },
@@ -1567,6 +1583,26 @@ fn list_dashboards_with_request_with_org_id_scopes_requests() {
         calls
             .iter()
             .filter(|(_, path, params)| path == "/api/search"
+                && params
+                    .iter()
+                    .any(|(key, value)| key == "orgId" && value == "7"))
+            .count(),
+        1
+    );
+    assert_eq!(
+        calls
+            .iter()
+            .filter(|(_, path, params)| path == "/api/datasources"
+                && params
+                    .iter()
+                    .any(|(key, value)| key == "orgId" && value == "7"))
+            .count(),
+        1
+    );
+    assert_eq!(
+        calls
+            .iter()
+            .filter(|(_, path, params)| path == "/api/dashboards/uid/abc"
                 && params
                     .iter()
                     .any(|(key, value)| key == "orgId" && value == "7"))
@@ -1605,8 +1641,14 @@ fn list_dashboards_with_request_all_orgs_aggregates_results() {
                 ("/api/search", Some("1")) => Ok(Some(json!([
                     {"uid": "abc", "title": "CPU", "folderTitle": "Infra", "folderUid": "infra"}
                 ]))),
+                ("/api/datasources", Some("1")) => Ok(Some(json!([
+                    {"uid": "prom_uid", "name": "Prom Main", "type": "prometheus"}
+                ]))),
                 ("/api/search", Some("2")) => Ok(Some(json!([
                     {"uid": "xyz", "title": "Logs", "folderTitle": "Ops", "folderUid": "ops"}
+                ]))),
+                ("/api/datasources", Some("2")) => Ok(Some(json!([
+                    {"uid": "loki_uid", "name": "Loki Logs", "type": "loki"}
                 ]))),
                 ("/api/folders/infra", Some("1")) => Ok(Some(json!({
                     "title": "Infra",
@@ -1615,6 +1657,24 @@ fn list_dashboards_with_request_all_orgs_aggregates_results() {
                 ("/api/folders/ops", Some("2")) => Ok(Some(json!({
                     "title": "Ops",
                     "parents": [{"title": "Platform"}]
+                }))),
+                ("/api/dashboards/uid/abc", Some("1")) => Ok(Some(json!({
+                    "dashboard": {
+                        "uid": "abc",
+                        "title": "CPU",
+                        "panels": [
+                            {"datasource": {"uid": "prom_uid", "type": "prometheus"}}
+                        ]
+                    }
+                }))),
+                ("/api/dashboards/uid/xyz", Some("2")) => Ok(Some(json!({
+                    "dashboard": {
+                        "uid": "xyz",
+                        "title": "Logs",
+                        "panels": [
+                            {"datasource": {"uid": "loki_uid", "type": "loki"}}
+                        ]
+                    }
                 }))),
                 _ => Err(super::message(format!("unexpected path {path}"))),
             }
@@ -1645,6 +1705,26 @@ fn list_dashboards_with_request_all_orgs_aggregates_results() {
         calls
             .iter()
             .filter(|(_, path, params)| path == "/api/search"
+                && params
+                    .iter()
+                    .any(|(key, value)| key == "orgId" && value == "2"))
+            .count(),
+        1
+    );
+    assert_eq!(
+        calls
+            .iter()
+            .filter(|(_, path, params)| path == "/api/datasources"
+                && params
+                    .iter()
+                    .any(|(key, value)| key == "orgId" && value == "1"))
+            .count(),
+        1
+    );
+    assert_eq!(
+        calls
+            .iter()
+            .filter(|(_, path, params)| path == "/api/datasources"
                 && params
                     .iter()
                     .any(|(key, value)| key == "orgId" && value == "2"))

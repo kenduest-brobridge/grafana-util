@@ -1453,7 +1453,7 @@ class ExporterTests(unittest.TestCase):
             ],
         )
 
-    def test_list_dashboards_prints_json_when_requested(self):
+    def test_list_dashboards_prints_json_with_sources_by_default(self):
         args = argparse.Namespace(
             command="list",
             url="http://127.0.0.1:3000",
@@ -1475,6 +1475,29 @@ class ExporterTests(unittest.TestCase):
             summaries=[
                 {"uid": "abc", "folderTitle": "Infra", "folderUid": "infra", "title": "CPU"},
                 {"uid": "xyz", "title": "Overview"},
+            ],
+            dashboards={
+                "abc": {
+                    "dashboard": {
+                        "uid": "abc",
+                        "title": "CPU",
+                        "panels": [
+                            {"datasource": {"uid": "prom_uid", "type": "prometheus"}},
+                            {"datasource": "Loki Logs"},
+                        ],
+                    }
+                },
+                "xyz": {
+                    "dashboard": {
+                        "uid": "xyz",
+                        "title": "Overview",
+                        "panels": [],
+                    }
+                },
+            },
+            datasources=[
+                {"uid": "prom_uid", "name": "Prometheus Main", "type": "prometheus"},
+                {"uid": "loki_uid", "name": "Loki Logs", "type": "loki"},
             ],
             folders={
                 "infra": {"title": "Infra", "parents": [{"title": "Platform"}]},
@@ -1498,6 +1521,8 @@ class ExporterTests(unittest.TestCase):
                     "path": "Platform / Infra",
                     "org": "Main Org.",
                     "orgId": "1",
+                    "sources": ["Loki Logs", "Prometheus Main"],
+                    "sourceUids": ["loki_uid", "prom_uid"],
                 },
                 {
                     "uid": "xyz",
@@ -1507,6 +1532,8 @@ class ExporterTests(unittest.TestCase):
                     "path": "General",
                     "org": "Main Org.",
                     "orgId": "1",
+                    "sources": [],
+                    "sourceUids": [],
                 },
             ],
         )

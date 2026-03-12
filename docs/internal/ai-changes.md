@@ -1,5 +1,14 @@
 # ai-changes.md
 
+## 2026-03-13 - Include Dashboard Sources By Default In JSON List Output
+- Summary: Changed both the Python and Rust dashboard list flows so `list-dashboard --json` now performs the same datasource inspection that `--with-sources` previously gated, then includes `sources` and `sourceUids` in every JSON record by default. Table, plain-text, and CSV output stay compact and still require `--with-sources` for datasource expansion.
+- Tests: Updated focused Python and Rust dashboard list tests so JSON mode asserts datasource catalog fetches, per-dashboard payload fetches, and the resulting `sources` plus `sourceUids` fields without requiring `--with-sources`.
+- Test Run: `python3 -m unittest -v tests/test_python_dashboard_cli.py`; `cargo test dashboard --manifest-path rust/Cargo.toml --quiet`
+- Reason: The original reason for `--with-sources` was mostly to keep human-readable list output from becoming too wide and slow. That tradeoff does not apply the same way to JSON, where callers usually want the most complete machine-readable record possible.
+- Validation: Verified the focused Python and Rust dashboard suites still pass, and preserved explicit non-JSON coverage to ensure table/plain list output still does not fetch dashboard payloads or datasource catalogs unless `--with-sources` is set.
+- Impact: `grafana_utils/dashboard_cli.py`, `tests/test_python_dashboard_cli.py`, `rust/src/dashboard_list.rs`, `rust/src/dashboard_cli_defs.rs`, `rust/src/dashboard_rust_tests.rs`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Moderate. JSON list consumers will now see extra `sources` and `sourceUids` fields and the command makes more API calls in JSON mode, but human-readable list formats keep the previous opt-in datasource expansion behavior.
+
 ## 2026-03-13 - Export Datasource Inventory With Raw Dashboard Exports
 - Summary: Extended raw dashboard export to write `raw/datasources.json` alongside `raw/folders.json`, recorded the datasource inventory filename in `export-metadata.json`, and taught both the Python and Rust `inspect-export` flows to surface datasource inventory records next to datasource usage summaries. The new inventory records preserve datasource `uid`, `name`, `type`, `access`, `url`, `isDefault`, `org`, and `orgId`, and `inspect-export` now computes per-inventory reference and dashboard counts from the exported dashboard documents.
 - Tests: Updated Python dashboard tests for datasource inventory loading, raw export manifest writing, and `inspect-export` human/JSON/table output. Updated Rust dashboard tests for typed export metadata, raw export request coverage, and `build_export_inspection_summary` inventory accounting.
