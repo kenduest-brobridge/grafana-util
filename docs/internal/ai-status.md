@@ -21,6 +21,13 @@
 - Current Update: Added `grafana-access-utils user add` as a Basic-auth server-admin workflow that creates Grafana users through the admin API, supports optional org-role and Grafana-admin follow-up updates, and avoids the `--basic-password` versus new-user `--password` flag collision by separating the internal parser destinations and help text.
 - Result: The Python access CLI now covers `user list`, `user add`, `team list`, and the initial service-account workflows, with targeted tests, the full Python suite, and a Docker-backed Grafana `12.4.1` smoke test confirming the new command path.
 
+## 2026-03-11 - Task: Add Access Utility Team Modify
+- State: Done
+- Scope: `grafana_utils/access_cli.py`, `tests/test_python_access_cli.py`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The Python access CLI can now list teams, but it still cannot add or remove team members or admins even though `TODO.md` puts `team modify` next in the planned access-management sequence.
+- Current Update: Added `grafana-access-utils team modify` with `--team-id` or exact `--name` targeting, add/remove member actions, add/remove admin actions, and text or `--json` output. The command resolves users by exact login or email, uses org-scoped team APIs, and preserves admin changes safely by reading current member permission metadata before issuing the bulk admin update payload.
+- Result: The Python access CLI now covers `user list`, `user add`, `team list`, `team modify`, and the initial service-account workflows, with targeted tests, the full Python suite, and Docker-backed Grafana `12.4.1` smoke tests confirming member and admin modification flows with both Basic auth and token auth.
+
 ## 2026-03-11 - Task: Remove Python Dependency From Rust Live Smoke Test
 - State: Done
 - Scope: `scripts/test-rust-live-grafana.sh`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

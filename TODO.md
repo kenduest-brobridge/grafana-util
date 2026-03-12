@@ -8,6 +8,7 @@
 - implemented `user list`
 - implemented `user add`
 - implemented `team list`
+- implemented `team modify`
 - implemented `service-account list`
 - implemented `service-account add`
 - implemented `service-account token add`
@@ -21,7 +22,6 @@
 
 ### Next
 
-- `team modify`
 - `user modify`
 - `user delete`
 - `team add`
@@ -56,6 +56,7 @@ Current implementation status:
 - `user list`: done
 - `user add`: done
 - `team list`: done
+- `team modify`: done
 - `service-account list`: done
 - `service-account add`: done
 - `service-account token add`: done
@@ -100,6 +101,7 @@ Current note:
 grafana-access-utils user list
 grafana-access-utils user add
 grafana-access-utils team list
+grafana-access-utils team modify
 grafana-access-utils service-account list
 grafana-access-utils service-account add
 grafana-access-utils service-account token add
@@ -159,6 +161,7 @@ Current implementation status:
 - `user list --with-teams`: Basic auth only
 - `user add`: Basic auth only
 - `team list`: token or Basic auth
+- `team modify`: token or Basic auth
 - service-account operations: token or Basic auth
 - remaining planned commands still need explicit per-command auth preflight
 
@@ -303,6 +306,7 @@ Completed ahead of the original order:
 - `user list`
 - `user add`
 - `team list`
+- `team modify`
 - `service-account list`
 - `service-account add`
 - `service-account token add`

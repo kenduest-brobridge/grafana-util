@@ -5,6 +5,7 @@ Initial scope:
 - `grafana-access-utils user list`
 - `grafana-access-utils user add`
 - `grafana-access-utils team list`
+- `grafana-access-utils team modify`
 - `grafana-access-utils service-account list`
 - `grafana-access-utils service-account add`
 - `grafana-access-utils service-account token add`
@@ -149,6 +150,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     add_common_cli_args(team_list_parser)
     add_team_list_cli_args(team_list_parser)
+
+    team_modify_parser = team_subparsers.add_parser(
+        "modify",
+        help="Modify Grafana team members and team admins.",
+    )
+    add_common_cli_args(team_modify_parser)
+    add_team_modify_cli_args(team_modify_parser)
 
     service_account_parser = subparsers.add_parser(
         "service-account",
@@ -448,6 +456,53 @@ def add_team_list_cli_args(parser: argparse.ArgumentParser) -> None:
     )
 
 
+def add_team_modify_cli_args(parser: argparse.ArgumentParser) -> None:
+    identity_group = parser.add_mutually_exclusive_group(required=True)
+    identity_group.add_argument(
+        "--team-id",
+        default=None,
+        help="Modify the team identified by this Grafana team id.",
+    )
+    identity_group.add_argument(
+        "--name",
+        default=None,
+        help="Resolve the team by exact name before modifying memberships.",
+    )
+    parser.add_argument(
+        "--add-member",
+        action="append",
+        default=[],
+        metavar="LOGIN_OR_EMAIL",
+        help="Add one team member by exact login or exact email. Repeat as needed.",
+    )
+    parser.add_argument(
+        "--remove-member",
+        action="append",
+        default=[],
+        metavar="LOGIN_OR_EMAIL",
+        help="Remove one team member by exact login or exact email. Repeat as needed.",
+    )
+    parser.add_argument(
+        "--add-admin",
+        action="append",
+        default=[],
+        metavar="LOGIN_OR_EMAIL",
+        help="Promote one user to team admin by exact login or exact email. Repeat as needed.",
+    )
+    parser.add_argument(
+        "--remove-admin",
+        action="append",
+        default=[],
+        metavar="LOGIN_OR_EMAIL",
+        help="Demote one team admin to regular team member by exact login or exact email. Repeat as needed.",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Render the team modification result as JSON.",
+    )
+
+
 def add_service_account_add_cli_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--name",
@@ -622,6 +677,19 @@ def validate_user_add_auth(auth_mode: str) -> None:
     if auth_mode != "basic":
         raise GrafanaError(
             "User add requires Basic auth (--basic-user / --basic-password)."
+        )
+
+
+def validate_team_modify_args(args: argparse.Namespace) -> None:
+    if not (
+        args.add_member
+        or args.remove_member
+        or args.add_admin
+        or args.remove_admin
+    ):
+        raise GrafanaError(
+            "Team modify requires at least one of --add-member, --remove-member, "
+            "--add-admin, or --remove-admin."
         )
 
 
@@ -811,6 +879,56 @@ class GrafanaAccessClient:
                 "Unexpected member list response for Grafana team %s." % team_id
             )
         return [item for item in data if isinstance(item, dict)]
+
+    def get_team(self, team_id: Any) -> Dict[str, Any]:
+        data = self.request_json(
+            "/api/teams/%s" % parse.quote(str(team_id), safe="")
+        )
+        if not isinstance(data, dict):
+            raise GrafanaError(
+                "Unexpected team lookup response for Grafana team %s." % team_id
+            )
+        return data
+
+    def add_team_member(self, team_id: Any, user_id: Any) -> Dict[str, Any]:
+        data = self.request_json(
+            "/api/teams/%s/members" % parse.quote(str(team_id), safe=""),
+            method="POST",
+            payload={"userId": user_id},
+        )
+        if not isinstance(data, dict):
+            raise GrafanaError(
+                "Unexpected add-member response for Grafana team %s." % team_id
+            )
+        return data
+
+    def remove_team_member(self, team_id: Any, user_id: Any) -> Dict[str, Any]:
+        data = self.request_json(
+            "/api/teams/%s/members/%s"
+            % (
+                parse.quote(str(team_id), safe=""),
+                parse.quote(str(user_id), safe=""),
+            ),
+            method="DELETE",
+        )
+        if not isinstance(data, dict):
+            raise GrafanaError(
+                "Unexpected remove-member response for Grafana team %s." % team_id
+            )
+        return data
+
+    def update_team_members(self, team_id: Any, payload: Dict[str, Any]) -> Dict[str, Any]:
+        data = self.request_json(
+            "/api/teams/%s/members" % parse.quote(str(team_id), safe=""),
+            method="PUT",
+            payload=payload,
+        )
+        if not isinstance(data, dict):
+            raise GrafanaError(
+                "Unexpected team member update response for Grafana team %s."
+                % team_id
+            )
+        return data
 
     def create_service_account(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         data = self.request_json(
@@ -1231,6 +1349,23 @@ def format_team_summary_line(team: Dict[str, Any]) -> str:
     return " ".join(parts)
 
 
+def format_team_modify_summary_line(payload: Dict[str, Any]) -> str:
+    parts = [
+        "teamId=%s" % (payload.get("teamId") or ""),
+        "name=%s" % (payload.get("name") or ""),
+    ]
+    for field in (
+        "addedMembers",
+        "removedMembers",
+        "addedAdmins",
+        "removedAdmins",
+    ):
+        values = payload.get(field) or []
+        if values:
+            parts.append("%s=%s" % (field, ",".join(values)))
+    return " ".join(parts)
+
+
 def render_service_account_json(service_accounts: List[Dict[str, Any]]) -> str:
     payload = [
         serialize_service_account_row(service_account)
@@ -1342,6 +1477,107 @@ def lookup_service_account_id_by_name(
             % service_account_name
         )
     return str(service_account_id)
+
+
+def lookup_team_by_name(
+    client: GrafanaAccessClient,
+    team_name: str,
+) -> Dict[str, Any]:
+    candidates = client.iter_teams(
+        query=team_name,
+        page_size=DEFAULT_PAGE_SIZE,
+    )
+    exact_matches = []
+    for item in candidates:
+        if str(item.get("name") or "") == team_name:
+            exact_matches.append(item)
+    if not exact_matches:
+        raise GrafanaError("Team not found by name: %s" % team_name)
+    if len(exact_matches) > 1:
+        raise GrafanaError("Team name matched multiple items: %s" % team_name)
+    return dict(exact_matches[0])
+
+
+def lookup_org_user_by_identity(
+    client: GrafanaAccessClient,
+    identity: str,
+) -> Dict[str, Any]:
+    target = str(identity or "").strip()
+    if not target:
+        raise GrafanaError("User target cannot be empty.")
+
+    exact_matches = []
+    for item in client.list_org_users():
+        login = str(item.get("login") or "")
+        email = str(item.get("email") or "")
+        if login == target or email == target:
+            exact_matches.append(item)
+
+    if not exact_matches:
+        raise GrafanaError("User not found by login or email: %s" % target)
+    if len(exact_matches) > 1:
+        raise GrafanaError(
+            "User identity matched multiple org users: %s" % target
+        )
+    return dict(exact_matches[0])
+
+
+def normalize_identity_list(values: List[str]) -> List[str]:
+    identities = []
+    seen = set()
+    for value in values:
+        normalized = str(value or "").strip()
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        identities.append(normalized)
+    return identities
+
+
+def validate_conflicting_identity_sets(
+    added: List[str],
+    removed: List[str],
+    add_flag: str,
+    remove_flag: str,
+) -> None:
+    overlap = sorted(set(added) & set(removed))
+    if overlap:
+        raise GrafanaError(
+            "%s and %s cannot target the same identities: %s"
+            % (add_flag, remove_flag, ", ".join(overlap))
+        )
+
+
+def team_member_admin_state(member: Dict[str, Any]) -> Optional[bool]:
+    for key in ("isAdmin", "admin"):
+        value = member.get(key)
+        normalized = normalize_bool(value)
+        if normalized is not None:
+            return normalized
+
+    for key in ("role", "teamRole", "permissionName"):
+        value = str(member.get(key) or "").strip().lower()
+        if value in {"member", "viewer"}:
+            return False
+        if value in {"admin", "teamadmin", "team-admin", "administrator"}:
+            return True
+
+    permission = member.get("permission")
+    try:
+        if permission is not None and int(permission) == 4:
+            return True
+        if permission is not None and int(permission) == 0:
+            return False
+    except (TypeError, ValueError):
+        pass
+    return None
+
+
+def extract_member_identity(member: Dict[str, Any]) -> str:
+    email = str(member.get("email") or "").strip()
+    if email:
+        return email
+    return str(member.get("login") or "").strip()
 
 
 def format_user_summary_line(user: Dict[str, Any]) -> str:
@@ -1533,6 +1769,151 @@ def add_user_with_client(
     return 0
 
 
+def modify_team_with_client(
+    args: argparse.Namespace,
+    client: GrafanaAccessClient,
+) -> int:
+    validate_team_modify_args(args)
+
+    add_member_targets = normalize_identity_list(args.add_member)
+    remove_member_targets = normalize_identity_list(args.remove_member)
+    add_admin_targets = normalize_identity_list(args.add_admin)
+    remove_admin_targets = normalize_identity_list(args.remove_admin)
+
+    validate_conflicting_identity_sets(
+        add_member_targets,
+        remove_member_targets,
+        "--add-member",
+        "--remove-member",
+    )
+    validate_conflicting_identity_sets(
+        add_admin_targets,
+        remove_admin_targets,
+        "--add-admin",
+        "--remove-admin",
+    )
+
+    if args.team_id:
+        team_payload = client.get_team(args.team_id)
+    else:
+        team_payload = lookup_team_by_name(client, args.name)
+
+    team_id = str(team_payload.get("id") or args.team_id or "")
+    if not team_id:
+        raise GrafanaError("Team lookup did not return an id.")
+    team_name = str(team_payload.get("name") or args.name or "")
+
+    raw_members = client.list_team_members(team_id)
+    members_by_identity = {}
+    member_user_ids = {}
+    admin_identities = set()
+    saw_admin_metadata = False
+    for member in raw_members:
+        identity = extract_member_identity(member)
+        if not identity:
+            continue
+        members_by_identity[identity] = dict(member)
+        user_id = member.get("userId") or member.get("id")
+        if user_id is not None:
+            member_user_ids[identity] = str(user_id)
+        admin_state = team_member_admin_state(member)
+        if admin_state is not None:
+            saw_admin_metadata = True
+            if admin_state:
+                admin_identities.add(identity)
+
+    added_members = []
+    removed_members = []
+    for target in add_member_targets:
+        user = lookup_org_user_by_identity(client, target)
+        identity = str(user.get("email") or user.get("login") or "").strip()
+        if not identity:
+            raise GrafanaError(
+                "Resolved user did not include a login or email for %s." % target
+            )
+        if identity in members_by_identity:
+            continue
+        user_id = user.get("userId") or user.get("id")
+        if user_id is None:
+            raise GrafanaError(
+                "Resolved user did not include an id for %s." % target
+            )
+        client.add_team_member(team_id, user_id)
+        members_by_identity[identity] = dict(user)
+        member_user_ids[identity] = str(user_id)
+        added_members.append(identity)
+
+    for target in remove_member_targets:
+        user = lookup_org_user_by_identity(client, target)
+        identity = str(user.get("email") or user.get("login") or "").strip()
+        if not identity:
+            raise GrafanaError(
+                "Resolved user did not include a login or email for %s." % target
+            )
+        user_id = member_user_ids.get(identity)
+        if not user_id:
+            continue
+        client.remove_team_member(team_id, user_id)
+        members_by_identity.pop(identity, None)
+        member_user_ids.pop(identity, None)
+        admin_identities.discard(identity)
+        removed_members.append(identity)
+
+    added_admins = []
+    removed_admins = []
+    if add_admin_targets or remove_admin_targets:
+        if raw_members and not saw_admin_metadata:
+            raise GrafanaError(
+                "Team modify admin operations require Grafana team member responses "
+                "to include admin state metadata."
+            )
+
+        for target in add_admin_targets:
+            user = lookup_org_user_by_identity(client, target)
+            identity = str(user.get("email") or user.get("login") or "").strip()
+            if not identity:
+                raise GrafanaError(
+                    "Resolved user did not include a login or email for %s." % target
+                )
+            if identity not in members_by_identity:
+                members_by_identity[identity] = dict(user)
+            if identity not in admin_identities:
+                admin_identities.add(identity)
+                added_admins.append(identity)
+
+        for target in remove_admin_targets:
+            user = lookup_org_user_by_identity(client, target)
+            identity = str(user.get("email") or user.get("login") or "").strip()
+            if identity in admin_identities:
+                admin_identities.discard(identity)
+                removed_admins.append(identity)
+
+        regular_members = sorted(
+            identity
+            for identity in members_by_identity
+            if identity not in admin_identities
+        )
+        admin_members = sorted(admin_identities)
+        client.update_team_members(
+            team_id,
+            {"members": regular_members, "admins": admin_members},
+        )
+
+    payload = {
+        "teamId": team_id,
+        "name": team_name,
+        "addedMembers": added_members,
+        "removedMembers": removed_members,
+        "addedAdmins": added_admins,
+        "removedAdmins": removed_admins,
+    }
+    if args.json:
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+    else:
+        print(format_team_modify_summary_line(payload))
+    return 0
+
+
 def add_service_account_token_with_client(
     args: argparse.Namespace,
     client: GrafanaAccessClient,
@@ -1577,6 +1958,8 @@ def run(args: argparse.Namespace) -> int:
         return add_user_with_client(args, client)
     if args.resource == "team" and args.command == "list":
         return list_teams_with_client(args, client)
+    if args.resource == "team" and args.command == "modify":
+        return modify_team_with_client(args, client)
     if args.resource == "service-account" and args.command == "list":
         return list_service_accounts_with_client(args, client)
     if args.resource == "service-account" and args.command == "add":

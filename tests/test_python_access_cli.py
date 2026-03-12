@@ -48,6 +48,10 @@ class FakeAccessClient:
         self.created_users = []
         self.updated_user_org_roles = []
         self.updated_user_permissions = []
+        self.team_gets = []
+        self.added_team_members = []
+        self.removed_team_members = []
+        self.updated_team_memberships = []
 
     def list_org_users(self):
         return [dict(item) for item in self.org_users]
@@ -74,6 +78,25 @@ class FakeAccessClient:
             dict(item)
             for item in self.team_members_by_team_id.get(str(team_id), [])
         ]
+
+    def get_team(self, team_id):
+        self.team_gets.append(str(team_id))
+        for item in self.teams:
+            if str(item.get("id")) == str(team_id):
+                return dict(item)
+        return {"id": team_id, "name": ""}
+
+    def add_team_member(self, team_id, user_id):
+        self.added_team_members.append((str(team_id), str(user_id)))
+        return {"message": "Team member added"}
+
+    def remove_team_member(self, team_id, user_id):
+        self.removed_team_members.append((str(team_id), str(user_id)))
+        return {"message": "Team member removed"}
+
+    def update_team_members(self, team_id, payload):
+        self.updated_team_memberships.append((str(team_id), dict(payload)))
+        return {"message": "Team members updated"}
 
     def list_service_accounts(self, query, page, per_page):
         self.service_account_searches.append((query, page, per_page))
@@ -265,6 +288,34 @@ class AccessCliTests(unittest.TestCase):
         self.assertEqual(args.per_page, 5)
         self.assertTrue(args.json)
 
+    def test_parse_args_supports_team_modify_mode(self):
+        args = access_utils.parse_args(
+            [
+                "team",
+                "modify",
+                "--team-id",
+                "7",
+                "--add-member",
+                "alice",
+                "--remove-member",
+                "bob@example.com",
+                "--add-admin",
+                "carol",
+                "--remove-admin",
+                "dave@example.com",
+                "--json",
+            ]
+        )
+
+        self.assertEqual(args.resource, "team")
+        self.assertEqual(args.command, "modify")
+        self.assertEqual(args.team_id, "7")
+        self.assertEqual(args.add_member, ["alice"])
+        self.assertEqual(args.remove_member, ["bob@example.com"])
+        self.assertEqual(args.add_admin, ["carol"])
+        self.assertEqual(args.remove_admin, ["dave@example.com"])
+        self.assertTrue(args.json)
+
     def test_parse_args_supports_preferred_auth_aliases(self):
         args = access_utils.parse_args(
             [
@@ -381,6 +432,17 @@ class AccessCliTests(unittest.TestCase):
     def test_validate_user_add_auth_rejects_token_auth(self):
         with self.assertRaisesRegex(access_utils.GrafanaError, "User add requires Basic auth"):
             access_utils.validate_user_add_auth("token")
+
+    def test_validate_team_modify_args_requires_changes(self):
+        args = argparse.Namespace(
+            add_member=[],
+            remove_member=[],
+            add_admin=[],
+            remove_admin=[],
+        )
+
+        with self.assertRaisesRegex(access_utils.GrafanaError, "requires at least one"):
+            access_utils.validate_team_modify_args(args)
 
     def test_list_users_with_client_filters_org_users(self):
         client = FakeAccessClient(
@@ -571,6 +633,141 @@ class AccessCliTests(unittest.TestCase):
         self.assertIn("Member Logins", rendered)
         self.assertIn("alice", rendered)
         self.assertIn("Listed 1 team(s)", rendered)
+
+    def test_modify_team_with_client_adds_and_removes_members(self):
+        client = FakeAccessClient(
+            org_users=[
+                {"userId": 11, "login": "alice", "email": "alice@example.com"},
+                {"userId": 12, "login": "bob", "email": "bob@example.com"},
+            ],
+            teams=[
+                {"id": 3, "name": "Ops", "email": "ops@example.com"},
+            ],
+            team_members_by_team_id={
+                "3": [
+                    {
+                        "userId": 12,
+                        "login": "bob",
+                        "email": "bob@example.com",
+                    }
+                ]
+            },
+        )
+        args = argparse.Namespace(
+            team_id="3",
+            name=None,
+            add_member=["alice"],
+            remove_member=["bob"],
+            add_admin=[],
+            remove_admin=[],
+            json=True,
+        )
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            result = access_utils.modify_team_with_client(args, client)
+
+        self.assertEqual(result, 0)
+        self.assertEqual(client.team_gets, ["3"])
+        self.assertEqual(client.added_team_members, [("3", "11")])
+        self.assertEqual(client.removed_team_members, [("3", "12")])
+        self.assertEqual(client.updated_team_memberships, [])
+        self.assertIn('"addedMembers": [', output.getvalue())
+        self.assertIn('"removedMembers": [', output.getvalue())
+
+    def test_modify_team_with_client_updates_admins_with_bulk_payload(self):
+        client = FakeAccessClient(
+            org_users=[
+                {"userId": 21, "login": "owner", "email": "owner@example.com"},
+                {"userId": 22, "login": "member", "email": "member@example.com"},
+                {"userId": 23, "login": "carol", "email": "carol@example.com"},
+            ],
+            teams=[
+                {"id": 3, "name": "Ops", "email": "ops@example.com"},
+            ],
+            team_members_by_team_id={
+                "3": [
+                    {
+                        "userId": 21,
+                        "login": "owner",
+                        "email": "owner@example.com",
+                        "isAdmin": True,
+                    },
+                    {
+                        "userId": 22,
+                        "login": "member",
+                        "email": "member@example.com",
+                        "isAdmin": False,
+                    },
+                ]
+            },
+        )
+        args = argparse.Namespace(
+            team_id=None,
+            name="Ops",
+            add_member=[],
+            remove_member=[],
+            add_admin=["carol"],
+            remove_admin=["owner@example.com"],
+            json=False,
+        )
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            result = access_utils.modify_team_with_client(args, client)
+
+        self.assertEqual(result, 0)
+        self.assertEqual(client.added_team_members, [])
+        self.assertEqual(client.removed_team_members, [])
+        self.assertEqual(
+            client.updated_team_memberships,
+            [
+                (
+                    "3",
+                    {
+                        "members": [
+                            "member@example.com",
+                            "owner@example.com",
+                        ],
+                        "admins": ["carol@example.com"],
+                    },
+                )
+            ],
+        )
+        rendered = output.getvalue()
+        self.assertIn("addedAdmins=carol@example.com", rendered)
+        self.assertIn("removedAdmins=owner@example.com", rendered)
+
+    def test_modify_team_with_client_rejects_admin_changes_without_metadata(self):
+        client = FakeAccessClient(
+            org_users=[
+                {"userId": 23, "login": "carol", "email": "carol@example.com"},
+            ],
+            teams=[
+                {"id": 3, "name": "Ops", "email": "ops@example.com"},
+            ],
+            team_members_by_team_id={
+                "3": [
+                    {
+                        "userId": 21,
+                        "login": "owner",
+                        "email": "owner@example.com",
+                    }
+                ]
+            },
+        )
+        args = argparse.Namespace(
+            team_id="3",
+            name=None,
+            add_member=[],
+            remove_member=[],
+            add_admin=["carol"],
+            remove_admin=[],
+            json=True,
+        )
+
+        with self.assertRaisesRegex(access_utils.GrafanaError, "admin state metadata"):
+            access_utils.modify_team_with_client(args, client)
 
     def test_list_service_accounts_with_client_renders_json(self):
         client = FakeAccessClient(
