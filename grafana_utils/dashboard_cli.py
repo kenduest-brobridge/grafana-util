@@ -43,7 +43,16 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from .clients.dashboard_client import GrafanaClient
-from .dashboards.common import GrafanaApiError, GrafanaError
+from .dashboards.common import (
+    DEFAULT_DASHBOARD_TITLE,
+    DEFAULT_FOLDER_TITLE,
+    DEFAULT_FOLDER_UID,
+    DEFAULT_ORG_ID,
+    DEFAULT_ORG_NAME,
+    DEFAULT_UNKNOWN_UID,
+    GrafanaApiError,
+    GrafanaError,
+)
 from .dashboards.transformer import (
     build_datasource_catalog,
     build_external_export_document,
@@ -538,10 +547,10 @@ def build_output_path(
     summary: Dict[str, Any],
     flat: bool,
 ) -> Path:
-    folder_title = summary.get("folderTitle") or "General"
+    folder_title = summary.get("folderTitle") or DEFAULT_FOLDER_TITLE
     folder_name = sanitize_path_component(folder_title)
-    title = sanitize_path_component(summary.get("title") or "dashboard")
-    uid = sanitize_path_component(summary.get("uid") or "unknown")
+    title = sanitize_path_component(summary.get("title") or DEFAULT_DASHBOARD_TITLE)
+    uid = sanitize_path_component(summary.get("uid") or DEFAULT_UNKNOWN_UID)
     filename = f"{title}__{uid}.json"
     if flat:
         return output_dir / filename
@@ -553,7 +562,7 @@ def build_all_orgs_output_dir(
     org: Dict[str, Any],
 ) -> Path:
     """Return one org-prefixed export directory for multi-org dashboard exports."""
-    org_id = sanitize_path_component(str(org.get("id") or "unknown"))
+    org_id = sanitize_path_component(str(org.get("id") or DEFAULT_UNKNOWN_UID))
     org_name = sanitize_path_component(str(org.get("name") or "org"))
     return output_dir / ("org_%s_%s" % (org_id, org_name))
 
@@ -697,8 +706,8 @@ def build_dashboard_index_item(summary: Dict[str, Any], uid: str) -> Dict[str, s
         "uid": uid,
         "title": str(summary.get("title") or ""),
         "folder": str(summary.get("folderTitle") or ""),
-        "org": str(summary.get("orgName") or "Main Org."),
-        "orgId": str(summary.get("orgId") or "1"),
+        "org": str(summary.get("orgName") or DEFAULT_ORG_NAME),
+        "orgId": str(summary.get("orgId") or DEFAULT_ORG_ID),
     }
 
 
@@ -770,7 +779,7 @@ def build_folder_inventory_record(
     fallback_title: str,
 ) -> Dict[str, str]:
     uid = str(folder.get("uid") or "")
-    title = str(folder.get("title") or fallback_title or uid or "General")
+    title = str(folder.get("title") or fallback_title or uid or DEFAULT_FOLDER_TITLE)
     parents = folder.get("parents")
     parent_uid = ""
     if isinstance(parents, list) and parents:
@@ -782,8 +791,8 @@ def build_folder_inventory_record(
         "title": title,
         "parentUid": parent_uid,
         "path": build_folder_path(folder, title),
-        "org": str(org.get("name") or "Main Org."),
-        "orgId": str(org.get("id") or "1"),
+        "org": str(org.get("name") or DEFAULT_ORG_NAME),
+        "orgId": str(org.get("id") or DEFAULT_ORG_ID),
     }
 
 
@@ -796,7 +805,7 @@ def collect_folder_inventory(
     pending: List[Dict[str, str]] = []
     for summary in summaries:
         folder_uid = str(summary.get("folderUid") or "").strip()
-        folder_title = str(summary.get("folderTitle") or "General")
+        folder_title = str(summary.get("folderTitle") or DEFAULT_FOLDER_TITLE)
         if folder_uid:
             pending.append({"uid": folder_uid, "title": folder_title})
 
@@ -1011,10 +1020,10 @@ def resolve_folder_inventory_record_for_dashboard(
 ) -> Optional[Dict[str, str]]:
     def build_general_record() -> Dict[str, str]:
         return {
-            "uid": "general",
-            "title": "General",
+            "uid": DEFAULT_FOLDER_UID,
+            "title": DEFAULT_FOLDER_TITLE,
             "parentUid": "",
-            "path": "General",
+            "path": DEFAULT_FOLDER_TITLE,
             "builtin": "true",
         }
 
@@ -1023,13 +1032,13 @@ def resolve_folder_inventory_record_for_dashboard(
         folder_uid = str(meta.get("folderUid") or "")
         if folder_uid and folder_uid in folder_lookup:
             return dict(folder_lookup[folder_uid])
-        if folder_uid == "general":
+        if folder_uid == DEFAULT_FOLDER_UID:
             return build_general_record()
 
     folder_path = build_import_dashboard_folder_path(dashboard_file, import_dir)
     if not folder_path:
         return None
-    if folder_path == "General":
+    if folder_path == DEFAULT_FOLDER_TITLE:
         return build_general_record()
     if " / " not in folder_path:
         title_matches = []
@@ -1124,8 +1133,8 @@ def resolve_dashboard_import_folder_path(
 ) -> str:
     """Resolve the effective destination folder path for one dashboard import."""
     folder_uid = str(payload.get("folderUid") or "").strip()
-    if not folder_uid or folder_uid == "general":
-        return "General"
+    if not folder_uid or folder_uid == DEFAULT_FOLDER_UID:
+        return DEFAULT_FOLDER_TITLE
 
     live_folder = client.fetch_folder_if_exists(folder_uid)
     if isinstance(live_folder, dict):
@@ -1689,15 +1698,15 @@ def format_dashboard_summary_line(summary: Dict[str, Any]) -> str:
 
 def build_dashboard_summary_record(summary: Dict[str, Any]) -> Dict[str, str]:
     """Normalize a dashboard summary into a stable output record."""
-    folder = str(summary.get("folderTitle") or "General")
+    folder = str(summary.get("folderTitle") or DEFAULT_FOLDER_TITLE)
     record = {
-        "uid": str(summary.get("uid") or "unknown"),
-        "name": str(summary.get("title") or "dashboard"),
+        "uid": str(summary.get("uid") or DEFAULT_UNKNOWN_UID),
+        "name": str(summary.get("title") or DEFAULT_DASHBOARD_TITLE),
         "folder": folder,
-        "folderUid": str(summary.get("folderUid") or "general"),
+        "folderUid": str(summary.get("folderUid") or DEFAULT_FOLDER_UID),
         "path": str(summary.get("folderPath") or folder),
-        "org": str(summary.get("orgName") or "Main Org."),
-        "orgId": str(summary.get("orgId") or "1"),
+        "org": str(summary.get("orgName") or DEFAULT_ORG_NAME),
+        "orgId": str(summary.get("orgId") or DEFAULT_ORG_ID),
     }
     if "sources" in summary:
         record["sources"] = ",".join(summary.get("sources") or [])
@@ -1716,7 +1725,10 @@ def build_folder_path(folder: Dict[str, Any], fallback_title: str) -> str:
                 title = str(parent.get("title") or "").strip()
                 if title:
                     titles.append(title)
-    title = str(folder.get("title") or fallback_title or "General").strip() or "General"
+    title = (
+        str(folder.get("title") or fallback_title or DEFAULT_FOLDER_TITLE).strip()
+        or DEFAULT_FOLDER_TITLE
+    )
     titles.append(title)
     return " / ".join(titles)
 
@@ -1729,7 +1741,7 @@ def attach_dashboard_folder_paths(
     folder_paths: Dict[str, str] = {}
     for summary in summaries:
         folder_uid = str(summary.get("folderUid") or "").strip()
-        folder_title = str(summary.get("folderTitle") or "General")
+        folder_title = str(summary.get("folderTitle") or DEFAULT_FOLDER_TITLE)
         if not folder_uid:
             continue
         if folder_uid in folder_paths:
@@ -1744,7 +1756,7 @@ def attach_dashboard_folder_paths(
     for summary in summaries:
         item = dict(summary)
         folder_uid = str(item.get("folderUid") or "").strip()
-        folder_title = str(item.get("folderTitle") or "General")
+        folder_title = str(item.get("folderTitle") or DEFAULT_FOLDER_TITLE)
         item["folderPath"] = folder_paths.get(folder_uid, folder_title)
         enriched.append(item)
     return enriched
@@ -1935,7 +1947,7 @@ def attach_dashboard_org(
 ) -> List[Dict[str, Any]]:
     """Attach the current Grafana organization to each dashboard summary."""
     org = client.fetch_current_org()
-    org_name = str(org.get("name") or "Main Org.")
+    org_name = str(org.get("name") or DEFAULT_ORG_NAME)
     org_id = str(org.get("id") or "1")
     enriched: List[Dict[str, Any]] = []
     for summary in summaries:
@@ -2087,7 +2099,7 @@ def build_datasource_inventory_record(
 ) -> Dict[str, str]:
     record = build_data_source_record(datasource)
     record["access"] = str(datasource.get("access") or "")
-    record["org"] = str(org.get("name") or "Main Org.")
+    record["org"] = str(org.get("name") or DEFAULT_ORG_NAME)
     record["orgId"] = str(org.get("id") or "1")
     return record
 
@@ -2394,8 +2406,8 @@ def build_export_inspection_document(import_dir: Path) -> Dict[str, Any]:
         folder_path = str(
             folder_record.get("path")
             or folder_record.get("title")
-            or "General"
-        ).strip() or "General"
+            or DEFAULT_FOLDER_TITLE
+        ).strip() or DEFAULT_FOLDER_TITLE
         folder_paths[folder_path] = int(folder_paths.get(folder_path) or 0) + 1
 
         panels = iter_dashboard_panels(dashboard.get("panels"))
@@ -2426,13 +2438,13 @@ def build_export_inspection_document(import_dir: Path) -> Dict[str, Any]:
                 {"name": label, "referenceCount": 0, "dashboards": set()},
             )
             usage["referenceCount"] = int(usage.get("referenceCount") or 0) + 1
-            usage["dashboards"].add(str(dashboard.get("uid") or "unknown"))
+            usage["dashboards"].add(str(dashboard.get("uid") or DEFAULT_UNKNOWN_UID))
 
         total_panels += panel_count
         total_queries += query_count
         dashboard_record = {
-            "uid": str(dashboard.get("uid") or "unknown"),
-            "title": str(dashboard.get("title") or "dashboard"),
+            "uid": str(dashboard.get("uid") or DEFAULT_UNKNOWN_UID),
+            "title": str(dashboard.get("title") or DEFAULT_DASHBOARD_TITLE),
             "folderPath": folder_path,
             "panelCount": panel_count,
             "queryCount": query_count,
@@ -2535,7 +2547,7 @@ def render_export_inspection_summary(document: Dict[str, Any], import_dir: Path)
             lines.append(
                 "- %s (%s dashboards)"
                 % (
-                    str(record.get("path") or "General"),
+                    str(record.get("path") or DEFAULT_FOLDER_TITLE),
                     int(record.get("dashboardCount") or 0),
                 )
             )
@@ -2578,7 +2590,7 @@ def render_export_inspection_summary(document: Dict[str, Any], import_dir: Path)
                 % (
                     str(record.get("title") or ""),
                     str(record.get("uid") or ""),
-                    str(record.get("folderPath") or "General"),
+                    str(record.get("folderPath") or DEFAULT_FOLDER_TITLE),
                     ",".join(record.get("datasources") or []),
                 )
             )
@@ -2652,7 +2664,7 @@ def render_export_inspection_tables(
                 ["FOLDER_PATH", "DASHBOARDS"],
                 [
                     [
-                        str(record.get("path") or "General"),
+                        str(record.get("path") or DEFAULT_FOLDER_TITLE),
                         str(int(record.get("dashboardCount") or 0)),
                     ]
                     for record in folder_records
@@ -2723,7 +2735,7 @@ def render_export_inspection_tables(
                     [
                         str(record.get("uid") or ""),
                         str(record.get("title") or ""),
-                        str(record.get("folderPath") or "General"),
+                        str(record.get("folderPath") or DEFAULT_FOLDER_TITLE),
                         ",".join(record.get("datasources") or []),
                     ]
                     for record in mixed_dashboards

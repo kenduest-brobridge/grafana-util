@@ -15,6 +15,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 MODULE_PATH = REPO_ROOT / "grafana_utils" / "dashboard_cli.py"
 TRANSPORT_MODULE_PATH = REPO_ROOT / "grafana_utils" / "http_transport.py"
 CLIENT_MODULE_PATH = REPO_ROOT / "grafana_utils" / "clients" / "dashboard_client.py"
+COMMON_MODULE_PATH = REPO_ROOT / "grafana_utils" / "dashboards" / "common.py"
 TRANSFORMER_MODULE_PATH = REPO_ROOT / "grafana_utils" / "dashboards" / "transformer.py"
 WRAPPER_PATH = REPO_ROOT / "python" / "grafana-utils.py"
 if str(REPO_ROOT) not in sys.path:
@@ -116,6 +117,11 @@ class ExporterTests(unittest.TestCase):
         source = CLIENT_MODULE_PATH.read_text(encoding="utf-8")
 
         ast.parse(source, filename=str(CLIENT_MODULE_PATH), feature_version=(3, 6))
+
+    def test_dashboard_common_module_parses_as_python36_syntax(self):
+        source = COMMON_MODULE_PATH.read_text(encoding="utf-8")
+
+        ast.parse(source, filename=str(COMMON_MODULE_PATH), feature_version=(3, 6))
 
     def test_dashboard_transformer_module_parses_as_python36_syntax(self):
         source = TRANSFORMER_MODULE_PATH.read_text(encoding="utf-8")
@@ -644,6 +650,16 @@ class ExporterTests(unittest.TestCase):
                 "org=Main Org. orgId=1 sources=Loki Logs,Prometheus Main"
             ),
         )
+
+    def test_build_dashboard_summary_record_uses_shared_default_constants(self):
+        record = exporter.build_dashboard_summary_record({})
+
+        self.assertEqual(record["uid"], exporter.DEFAULT_UNKNOWN_UID)
+        self.assertEqual(record["name"], exporter.DEFAULT_DASHBOARD_TITLE)
+        self.assertEqual(record["folder"], exporter.DEFAULT_FOLDER_TITLE)
+        self.assertEqual(record["folderUid"], exporter.DEFAULT_FOLDER_UID)
+        self.assertEqual(record["org"], exporter.DEFAULT_ORG_NAME)
+        self.assertEqual(record["orgId"], exporter.DEFAULT_ORG_ID)
 
     def test_build_folder_path_joins_parents_and_title(self):
         path = exporter.build_folder_path(

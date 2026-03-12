@@ -1,5 +1,12 @@
 """Shared dashboard constants and exceptions."""
 
+DEFAULT_DASHBOARD_TITLE = "dashboard"
+DEFAULT_FOLDER_TITLE = "General"
+DEFAULT_FOLDER_UID = "general"
+DEFAULT_ORG_ID = "1"
+DEFAULT_ORG_NAME = "Main Org."
+DEFAULT_UNKNOWN_UID = "unknown"
+
 BUILTIN_DATASOURCE_TYPES = {"__expr__", "grafana"}
 BUILTIN_DATASOURCE_NAMES = {
     "-- Dashboard --",

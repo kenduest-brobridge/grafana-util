@@ -16,7 +16,6 @@ use super::{
 use crate::common::api_response;
 use clap::{CommandFactory, Parser};
 use serde_json::{json, Value};
-use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 use tempfile::tempdir;
@@ -1993,8 +1992,8 @@ fn build_external_export_document_creates_input_from_datasource_template_variabl
         }
     });
 
-    let document =
-        build_external_export_document(&payload, &(BTreeMap::new(), BTreeMap::new())).unwrap();
+    let catalog = super::build_datasource_catalog(&[]);
+    let document = build_external_export_document(&payload, &catalog).unwrap();
     assert_eq!(document["__inputs"][0]["name"], "DS_PROMETHEUS");
     assert_eq!(document["templating"]["list"][0]["current"], json!({}));
     assert_eq!(document["templating"]["list"][0]["query"], "prometheus");

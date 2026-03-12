@@ -1,5 +1,12 @@
 # ai-status.md
 
+## 2026-03-13 - Task: Tighten Dashboard Typed Records And Integration Coverage
+- State: Done
+- Scope: `grafana_utils/dashboards/common.py`, `grafana_utils/dashboard_cli.py`, `tests/test_python_dashboard_cli.py`, `tests/test_python_dashboard_integration_flow.py`, `rust/src/dashboard_prompt.rs`, `rust/src/dashboard_list.rs`, `rust/src/dashboard_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Dashboard code still repeated fallback literals such as `General`, `Main Org.`, and `unknown` across Python export/import/inspect flows, Rust prompt export still passed datasource catalogs around as anonymous tuple maps, and the Python dashboard suite mostly validated helpers in isolation rather than one end-to-end raw-export inspection and dry-run import flow.
+- Current Update: Extracted shared Python dashboard fallback constants into `grafana_utils/dashboards/common.py`, updated dashboard summary and export/import inspection paths to reuse them, replaced Rust's tuple-shaped datasource catalog with a named `DatasourceCatalog { by_uid, by_name }`, and added focused Python integration-style tests for offline `inspect-export --json` plus `import-dashboard --dry-run --json --ensure-folders`.
+- Result: Dashboard fallback behavior is easier to keep consistent, Rust datasource resolution now has a typed boundary instead of anonymous paired maps, and the Python suite now covers a higher-value raw-export to inspect/import dry-run workflow without depending on live Grafana.
+
 ## 2026-03-13 - Task: Include Dashboard Sources By Default In JSON List Output
 - State: Done
 - Scope: `grafana_utils/dashboard_cli.py`, `tests/test_python_dashboard_cli.py`, `rust/src/dashboard_list.rs`, `rust/src/dashboard_cli_defs.rs`, `rust/src/dashboard_rust_tests.rs`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

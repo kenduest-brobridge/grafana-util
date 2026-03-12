@@ -44,10 +44,12 @@ struct InputMapping {
     ds_type: String,
 }
 
-pub(crate) type DatasourceCatalog = (
-    BTreeMap<String, Map<String, Value>>,
-    BTreeMap<String, Map<String, Value>>,
-);
+pub struct DatasourceCatalog {
+    pub(crate) by_uid: BTreeMap<String, Map<String, Value>>,
+    pub(crate) by_name: BTreeMap<String, Map<String, Value>>,
+}
+
+const DEFAULT_GENERATED_DATASOURCE_INPUT: &str = "DATASOURCE";
 
 pub(crate) fn build_datasource_catalog(
     datasources: &[Map<String, Value>],
@@ -64,7 +66,7 @@ pub(crate) fn build_datasource_catalog(
             by_name.insert(name, datasource.clone());
         }
     }
-    (by_uid, by_name)
+    DatasourceCatalog { by_uid, by_name }
 }
 
 pub(crate) fn is_placeholder_string(value: &str) -> bool {
@@ -150,7 +152,7 @@ fn make_input_name(label: &str) -> String {
     format!(
         "DS_{}",
         if normalized.is_empty() {
-            "DATASOURCE"
+            DEFAULT_GENERATED_DATASOURCE_INPUT
         } else {
             &normalized
         }
@@ -194,31 +196,30 @@ fn build_resolved_datasource(
 }
 
 pub(crate) fn lookup_datasource(
-    datasources_by_uid: &BTreeMap<String, Map<String, Value>>,
-    datasources_by_name: &BTreeMap<String, Map<String, Value>>,
+    datasource_catalog: &DatasourceCatalog,
     uid: Option<&str>,
     name: Option<&str>,
 ) -> Option<Map<String, Value>> {
     if let Some(uid) = uid.filter(|value| !value.is_empty()) {
-        if let Some(datasource) = datasources_by_uid.get(uid) {
+        if let Some(datasource) = datasource_catalog.by_uid.get(uid) {
             return Some(datasource.clone());
         }
     }
     if let Some(name) = name.filter(|value| !value.is_empty()) {
-        return datasources_by_name.get(name).cloned();
+        return datasource_catalog.by_name.get(name).cloned();
     }
     None
 }
 
 pub(crate) fn resolve_datasource_type_alias(
     reference: &str,
-    datasources_by_uid: &BTreeMap<String, Map<String, Value>>,
+    datasource_catalog: &DatasourceCatalog,
 ) -> Option<String> {
     if let Some(alias) = known_datasource_type(reference) {
         return Some(alias.to_string());
     }
     let lower = reference.to_ascii_lowercase();
-    for candidate in datasources_by_uid.values() {
+    for candidate in datasource_catalog.by_uid.values() {
         let candidate_type = string_field(candidate, "type", "");
         if !candidate_type.is_empty() && candidate_type.eq_ignore_ascii_case(&lower) {
             return Some(candidate_type);
@@ -229,15 +230,11 @@ pub(crate) fn resolve_datasource_type_alias(
 
 fn resolve_string_datasource_ref(
     reference: &str,
-    datasources_by_uid: &BTreeMap<String, Map<String, Value>>,
-    datasources_by_name: &BTreeMap<String, Map<String, Value>>,
+    datasource_catalog: &DatasourceCatalog,
 ) -> Result<ResolvedDatasource> {
-    if let Some(datasource) = lookup_datasource(
-        datasources_by_uid,
-        datasources_by_name,
-        Some(reference),
-        Some(reference),
-    ) {
+    if let Some(datasource) =
+        lookup_datasource(datasource_catalog, Some(reference), Some(reference))
+    {
         let uid = string_field(&datasource, "uid", reference);
         let ds_type = string_field(&datasource, "type", "");
         if ds_type.is_empty() {
@@ -253,7 +250,7 @@ fn resolve_string_datasource_ref(
         ));
     }
 
-    if let Some(datasource_type) = resolve_datasource_type_alias(reference, datasources_by_uid) {
+    if let Some(datasource_type) = resolve_datasource_type_alias(reference, datasource_catalog) {
         return Ok(build_resolved_datasource(
             format!("type:{datasource_type}"),
             datasource_type.clone(),
@@ -289,8 +286,7 @@ fn resolve_placeholder_object_ref(
 
 fn resolve_object_datasource_ref(
     reference: &Map<String, Value>,
-    datasources_by_uid: &BTreeMap<String, Map<String, Value>>,
-    datasources_by_name: &BTreeMap<String, Map<String, Value>>,
+    datasource_catalog: &DatasourceCatalog,
 ) -> Result<Option<ResolvedDatasource>> {
     let uid = reference.get("uid").and_then(Value::as_str);
     let name = reference.get("name").and_then(Value::as_str);
@@ -305,7 +301,7 @@ fn resolve_object_datasource_ref(
         return Ok(None);
     }
 
-    let datasource = lookup_datasource(datasources_by_uid, datasources_by_name, uid, name);
+    let datasource = lookup_datasource(datasource_catalog, uid, name);
     let mut resolved_type = ds_type.unwrap_or_default().to_string();
     let mut resolved_label = name.unwrap_or(uid.unwrap_or_default()).to_string();
     let mut resolved_uid = uid.unwrap_or(name.unwrap_or_default()).to_string();
@@ -344,8 +340,7 @@ fn resolve_object_datasource_ref(
 
 fn resolve_datasource_ref(
     reference: &Value,
-    datasources_by_uid: &BTreeMap<String, Map<String, Value>>,
-    datasources_by_name: &BTreeMap<String, Map<String, Value>>,
+    datasource_catalog: &DatasourceCatalog,
 ) -> Result<Option<ResolvedDatasource>> {
     if reference.is_null() || is_builtin_datasource_ref(reference) {
         return Ok(None);
@@ -355,13 +350,10 @@ fn resolve_datasource_ref(
             if is_placeholder_string(text) {
                 Ok(None)
             } else {
-                resolve_string_datasource_ref(text, datasources_by_uid, datasources_by_name)
-                    .map(Some)
+                resolve_string_datasource_ref(text, datasource_catalog).map(Some)
             }
         }
-        Value::Object(object) => {
-            resolve_object_datasource_ref(object, datasources_by_uid, datasources_by_name)
-        }
+        Value::Object(object) => resolve_object_datasource_ref(object, datasource_catalog),
         _ => Ok(None),
     }
 }
@@ -468,8 +460,7 @@ fn prepare_templating_for_external_import(
     dashboard: &mut Map<String, Value>,
     ref_mapping: &mut BTreeMap<String, InputMapping>,
     type_counts: &mut BTreeMap<String, usize>,
-    datasources_by_uid: &BTreeMap<String, Map<String, Value>>,
-    datasources_by_name: &BTreeMap<String, Map<String, Value>>,
+    datasource_catalog: &DatasourceCatalog,
 ) {
     let Some(templating) = dashboard
         .get_mut("templating")
@@ -500,8 +491,7 @@ fn prepare_templating_for_external_import(
         };
         let Some(resolved) = resolve_datasource_ref(
             &Value::String(query.to_string()),
-            datasources_by_uid,
-            datasources_by_name,
+            datasource_catalog,
         )
         .ok()
         .flatten() else {
@@ -539,17 +529,13 @@ fn prepare_templating_for_external_import(
 fn replace_datasource_refs_in_dashboard(
     node: &mut Value,
     ref_mapping: &BTreeMap<String, InputMapping>,
-    datasources_by_uid: &BTreeMap<String, Map<String, Value>>,
-    datasources_by_name: &BTreeMap<String, Map<String, Value>>,
+    datasource_catalog: &DatasourceCatalog,
 ) -> Result<()> {
     match node {
         Value::Object(object) => {
             if let Some(datasource_value) = object.get_mut("datasource") {
-                if let Some(resolved) = resolve_datasource_ref(
-                    datasource_value,
-                    datasources_by_uid,
-                    datasources_by_name,
-                )? {
+                if let Some(resolved) = resolve_datasource_ref(datasource_value, datasource_catalog)?
+                {
                     let mapping = ref_mapping.get(&resolved.key).ok_or_else(|| {
                         message(format!(
                             "Missing datasource input mapping for {}",
@@ -579,20 +565,14 @@ fn replace_datasource_refs_in_dashboard(
                     replace_datasource_refs_in_dashboard(
                         value,
                         ref_mapping,
-                        datasources_by_uid,
-                        datasources_by_name,
+                        datasource_catalog,
                     )?;
                 }
             }
         }
         Value::Array(items) => {
             for item in items {
-                replace_datasource_refs_in_dashboard(
-                    item,
-                    ref_mapping,
-                    datasources_by_uid,
-                    datasources_by_name,
-                )?;
+                replace_datasource_refs_in_dashboard(item, ref_mapping, datasource_catalog)?;
             }
         }
         _ => {}
@@ -753,7 +733,6 @@ pub fn build_external_export_document(
         .as_object_mut()
         .ok_or_else(|| message("Unexpected dashboard payload from Grafana."))?;
 
-    let (datasources_by_uid, datasources_by_name) = datasource_catalog;
     let mut refs = Vec::new();
     collect_datasource_refs(&Value::Object(dashboard_object.clone()), &mut refs);
 
@@ -763,13 +742,10 @@ pub fn build_external_export_document(
         dashboard_object,
         &mut ref_mapping,
         &mut type_counts,
-        datasources_by_uid,
-        datasources_by_name,
+        datasource_catalog,
     );
     for reference in refs {
-        let Some(resolved) =
-            resolve_datasource_ref(&reference, datasources_by_uid, datasources_by_name)?
-        else {
+        let Some(resolved) = resolve_datasource_ref(&reference, datasource_catalog)? else {
             continue;
         };
         if ref_mapping.contains_key(&resolved.key) {
@@ -778,12 +754,7 @@ pub fn build_external_export_document(
         allocate_input_mapping(&resolved, &mut ref_mapping, &mut type_counts, None);
     }
 
-    replace_datasource_refs_in_dashboard(
-        &mut dashboard,
-        &ref_mapping,
-        datasources_by_uid,
-        datasources_by_name,
-    )?;
+    replace_datasource_refs_in_dashboard(&mut dashboard, &ref_mapping, datasource_catalog)?;
 
     let datasource_types = ref_mapping
         .values()

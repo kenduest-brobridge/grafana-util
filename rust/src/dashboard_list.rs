@@ -21,10 +21,11 @@ pub(crate) fn attach_dashboard_folder_paths_with_request<F>(
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
+    const DEFAULT_FOLDER_TITLE: &str = "General";
     let mut folder_paths = BTreeMap::new();
     for summary in summaries {
         let folder_uid = string_field(summary, "folderUid", "");
-        let folder_title = string_field(summary, "folderTitle", "General");
+        let folder_title = string_field(summary, "folderTitle", DEFAULT_FOLDER_TITLE);
         if folder_uid.is_empty() || folder_paths.contains_key(&folder_uid) {
             continue;
         }
@@ -41,7 +42,7 @@ where
         .map(|summary| {
             let mut item = summary.clone();
             let folder_uid = string_field(summary, "folderUid", "");
-            let folder_title = string_field(summary, "folderTitle", "General");
+            let folder_title = string_field(summary, "folderTitle", DEFAULT_FOLDER_TITLE);
             item.insert(
                 "folderPath".to_string(),
                 Value::String(
@@ -478,8 +479,7 @@ fn lookup_unique_datasource_name_by_type(
 
 fn resolve_datasource_source_name(
     reference: &Value,
-    datasources_by_uid: &BTreeMap<String, Map<String, Value>>,
-    datasources_by_name: &BTreeMap<String, Map<String, Value>>,
+    datasource_catalog: &super::dashboard_prompt::DatasourceCatalog,
 ) -> Option<String> {
     if reference.is_null() || is_builtin_datasource_ref(reference) {
         return None;
@@ -489,18 +489,18 @@ fn resolve_datasource_source_name(
             if is_placeholder_string(text) {
                 return None;
             }
-            if let Some(datasource) = lookup_datasource(
-                datasources_by_uid,
-                datasources_by_name,
-                Some(text),
-                Some(text),
-            ) {
+            if let Some(datasource) =
+                lookup_datasource(datasource_catalog, Some(text), Some(text))
+            {
                 let name = string_field(&datasource, "name", text);
                 return Some(name);
             }
-            resolve_datasource_type_alias(text, datasources_by_uid)
+            resolve_datasource_type_alias(text, datasource_catalog)
                 .and_then(|datasource_type| {
-                    lookup_unique_datasource_name_by_type(datasources_by_uid, &datasource_type)
+                    lookup_unique_datasource_name_by_type(
+                        &datasource_catalog.by_uid,
+                        &datasource_type,
+                    )
                         .or_else(|| Some(datasource_type_alias(&datasource_type).to_string()))
                 })
                 .or_else(|| Some(text.to_string()))
@@ -514,9 +514,7 @@ fn resolve_datasource_source_name(
             if has_placeholder {
                 return None;
             }
-            if let Some(datasource) =
-                lookup_datasource(datasources_by_uid, datasources_by_name, uid, name)
-            {
+            if let Some(datasource) = lookup_datasource(datasource_catalog, uid, name) {
                 let resolved_name = string_field(
                     &datasource,
                     "name",
@@ -531,7 +529,7 @@ fn resolve_datasource_source_name(
                 .or_else(|| uid.map(str::to_string))
                 .or_else(|| {
                     datasource_type.and_then(|value| {
-                        lookup_unique_datasource_name_by_type(datasources_by_uid, value)
+                        lookup_unique_datasource_name_by_type(&datasource_catalog.by_uid, value)
                             .or_else(|| Some(datasource_type_alias(value).to_string()))
                     })
                 })
@@ -542,8 +540,7 @@ fn resolve_datasource_source_name(
 
 fn resolve_datasource_source_uid(
     reference: &Value,
-    datasources_by_uid: &BTreeMap<String, Map<String, Value>>,
-    datasources_by_name: &BTreeMap<String, Map<String, Value>>,
+    datasource_catalog: &super::dashboard_prompt::DatasourceCatalog,
 ) -> Option<String> {
     if reference.is_null() || is_builtin_datasource_ref(reference) {
         return None;
@@ -553,12 +550,7 @@ fn resolve_datasource_source_uid(
             if is_placeholder_string(text) {
                 return None;
             }
-            lookup_datasource(
-                datasources_by_uid,
-                datasources_by_name,
-                Some(text),
-                Some(text),
-            )
+            lookup_datasource(datasource_catalog, Some(text), Some(text))
             .map(|datasource| string_field(&datasource, "uid", ""))
             .filter(|uid| !uid.is_empty())
         }
@@ -570,9 +562,7 @@ fn resolve_datasource_source_uid(
             if has_placeholder {
                 return None;
             }
-            if let Some(datasource) =
-                lookup_datasource(datasources_by_uid, datasources_by_name, uid, name)
-            {
+            if let Some(datasource) = lookup_datasource(datasource_catalog, uid, name) {
                 let resolved_uid = string_field(&datasource, "uid", "");
                 if !resolved_uid.is_empty() {
                     return Some(resolved_uid);
@@ -593,20 +583,15 @@ pub(crate) fn collect_dashboard_source_metadata(
         .get("dashboard")
         .and_then(Value::as_object)
         .ok_or_else(|| message("Unexpected dashboard payload from Grafana."))?;
-    let (datasources_by_uid, datasources_by_name) = datasource_catalog;
     let mut refs = Vec::new();
     super::collect_datasource_refs(&Value::Object(dashboard_object.clone()), &mut refs);
     let mut names = BTreeSet::new();
     let mut uids = BTreeSet::new();
     for reference in refs {
-        if let Some(name) =
-            resolve_datasource_source_name(&reference, datasources_by_uid, datasources_by_name)
-        {
+        if let Some(name) = resolve_datasource_source_name(&reference, datasource_catalog) {
             names.insert(name);
         }
-        if let Some(uid) =
-            resolve_datasource_source_uid(&reference, datasources_by_uid, datasources_by_name)
-        {
+        if let Some(uid) = resolve_datasource_source_uid(&reference, datasource_catalog) {
             uids.insert(uid);
         }
     }

@@ -1,5 +1,14 @@
 # ai-changes.md
 
+## 2026-03-13 - Tighten Dashboard Typed Records And Integration Coverage
+- Summary: Pulled repeated Python dashboard fallback values into `grafana_utils/dashboards/common.py` so export/import/inspect code paths now reuse one set of defaults for `General`, `Main Org.`, `unknown`, and related dashboard summary fields. Replaced the Rust prompt-export datasource catalog tuple with a named `DatasourceCatalog` struct and threaded that typed boundary through prompt rewrite plus dashboard source-metadata collection.
+- Tests: Added Python syntax coverage for the new dashboard common module, added a focused default-constant summary test, and added `tests/test_python_dashboard_integration_flow.py` to exercise offline `inspect-export --json` and `import-dashboard --dry-run --json --ensure-folders --update-existing-only` against realistic raw export directories.
+- Test Run: `python3 -m unittest -v tests/test_python_dashboard_cli.py`; `python3 -m unittest -v tests/test_python_dashboard_integration_flow.py`; `cargo test dashboard --manifest-path rust/Cargo.toml --quiet`
+- Reason: The repo had already accumulated enough dashboard fallback behavior and raw-export/import orchestration that keeping literals duplicated and datasource catalogs tuple-shaped was adding maintenance friction without adding clarity.
+- Validation: Verified focused Python helper coverage still passes, verified the new integration-style Python flow tests pass without live Grafana, and verified the Rust dashboard suite still passes after the typed datasource-catalog boundary change.
+- Impact: `grafana_utils/dashboards/common.py`, `grafana_utils/dashboard_cli.py`, `tests/test_python_dashboard_cli.py`, `tests/test_python_dashboard_integration_flow.py`, `rust/src/dashboard_prompt.rs`, `rust/src/dashboard_list.rs`, `rust/src/dashboard_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low to moderate. The change is intended to be behavior-preserving, but future dashboard work should keep new fallback behavior anchored to the shared constants and avoid reintroducing anonymous paired-map datasource catalogs on the Rust side.
+
 ## 2026-03-13 - Include Dashboard Sources By Default In JSON List Output
 - Summary: Changed both the Python and Rust dashboard list flows so `list-dashboard --json` now performs the same datasource inspection that `--with-sources` previously gated, then includes `sources` and `sourceUids` in every JSON record by default. Table, plain-text, and CSV output stay compact and still require `--with-sources` for datasource expansion.
 - Tests: Updated focused Python and Rust dashboard list tests so JSON mode asserts datasource catalog fetches, per-dashboard payload fetches, and the resulting `sources` plus `sourceUids` fields without requiring `--with-sources`.
