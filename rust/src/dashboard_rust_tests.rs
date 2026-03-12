@@ -478,24 +478,62 @@ fn export_verbose_line_includes_variant_and_path() {
 #[test]
 fn import_progress_line_uses_concise_counter_format() {
     assert_eq!(
-        format_import_progress_line(3, 7, Path::new("/tmp/raw/cpu.json"), false),
+        format_import_progress_line(3, 7, "/tmp/raw/cpu.json", false, None),
         "Importing dashboard 3/7: /tmp/raw/cpu.json"
     );
     assert_eq!(
-        format_import_progress_line(3, 7, Path::new("/tmp/raw/cpu.json"), true),
-        "Dry-run import dashboard 3/7: /tmp/raw/cpu.json"
+        format_import_progress_line(3, 7, "cpu-main", true, Some("would-update")),
+        "Dry-run dashboard 3/7: cpu-main dest=exists action=update"
     );
+}
+
+#[test]
+fn render_import_dry_run_table_supports_optional_header() {
+    let rows = vec![
+        [
+            "abc".to_string(),
+            "exists".to_string(),
+            "update".to_string(),
+            "/tmp/a.json".to_string(),
+        ],
+        [
+            "xyz".to_string(),
+            "missing".to_string(),
+            "create".to_string(),
+            "/tmp/b.json".to_string(),
+        ],
+    ];
+    let with_header = super::render_import_dry_run_table(&rows, true);
+    assert!(with_header[0].contains("UID"));
+    assert!(with_header[0].contains("DESTINATION"));
+    assert!(with_header[0].contains("ACTION"));
+    assert!(with_header[0].contains("FILE"));
+    assert!(with_header[2].contains("abc"));
+    assert!(with_header[2].contains("exists"));
+    assert!(with_header[2].contains("update"));
+    assert!(with_header[2].contains("/tmp/a.json"));
+    let without_header = super::render_import_dry_run_table(&rows, false);
+    assert_eq!(without_header.len(), 2);
+    assert!(without_header[0].contains("abc"));
+    assert!(without_header[0].contains("exists"));
+    assert!(without_header[0].contains("update"));
+    assert!(without_header[0].contains("/tmp/a.json"));
 }
 
 #[test]
 fn import_verbose_line_includes_dry_run_action() {
     assert_eq!(
-        format_import_verbose_line(Path::new("/tmp/raw/cpu.json"), false, None),
+        format_import_verbose_line(Path::new("/tmp/raw/cpu.json"), false, None, None),
         "Imported /tmp/raw/cpu.json"
     );
     assert_eq!(
-        format_import_verbose_line(Path::new("/tmp/raw/cpu.json"), true, Some("would-update")),
-        "Dry-run import /tmp/raw/cpu.json -> would-update"
+        format_import_verbose_line(
+            Path::new("/tmp/raw/cpu.json"),
+            true,
+            Some("cpu-main"),
+            Some("would-update")
+        ),
+        "Dry-run import uid=cpu-main dest=exists action=update file=/tmp/raw/cpu.json"
     );
 }
 
@@ -1769,6 +1807,8 @@ fn import_dashboards_with_client_imports_discovered_files() {
         replace_existing: true,
         import_message: "sync dashboards".to_string(),
         dry_run: false,
+        table: false,
+        no_header: false,
         progress: false,
         verbose: false,
     };
@@ -1822,6 +1862,8 @@ fn import_dashboards_with_dry_run_skips_post_requests() {
         replace_existing: true,
         import_message: "sync dashboards".to_string(),
         dry_run: true,
+        table: false,
+        no_header: false,
         progress: false,
         verbose: false,
     };
@@ -1866,6 +1908,8 @@ fn import_dashboards_rejects_unsupported_export_schema_version() {
         replace_existing: false,
         import_message: "sync dashboards".to_string(),
         dry_run: false,
+        table: false,
+        no_header: false,
         progress: false,
         verbose: false,
     };

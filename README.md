@@ -455,9 +455,10 @@ Use `prompt/` when you want:
 | `--org-id ORG_ID` | For `list-dashboard` or `export-dashboard`, switch to one explicit Grafana org ID; requires Basic auth |
 | `--all-orgs` | For `list-dashboard` or `export-dashboard`, enumerate visible Grafana orgs and aggregate list output or export each org; requires Basic auth |
 | `--with-sources` | For `list-dashboard`, fetch each dashboard payload and include datasource names used by that dashboard; CSV and JSON also add datasource UIDs |
-| `--no-header` | For `list-dashboard` or `list-data-sources`, omit the table header row |
+| `--no-header` | For `list-dashboard`, `list-data-sources`, or `import-dashboard --dry-run --table`, omit the table header row |
 | `--progress` | For `export-dashboard` or `import-dashboard`, print concise per-dashboard `current/total` progress lines while the command runs |
 | `-v, --verbose` | For `export-dashboard` or `import-dashboard`, print detailed per-item output including variants, paths, and import results; overrides `--progress` |
+| `import-dashboard --dry-run --table` | Render dry-run import predictions as a table showing `uid`, destination state, action, and file |
 | `list-data-sources --table|--csv|--json` | List live Grafana data sources in human-readable or machine-readable output |
 | `--flat` | Do not create per-folder subdirectories |
 | `--overwrite` | Replace existing exported files |
@@ -490,6 +491,8 @@ For dashboard export:
 - `import-dashboard --progress` prints one concise progress line per imported dashboard, such as `Importing dashboard 2/7: cpu-main`
 - `import-dashboard -v` prints detailed per-file import results, including dry-run actions or returned status values
 - `import-dashboard -v --progress` uses verbose output and suppresses the concise progress form
+- `import-dashboard --dry-run --table` prints a final table with `uid`, `destination`, `action`, and `file`
+- `import-dashboard --dry-run --table --no-header` omits the dry-run table header row
 
 For datasource listing:
 
@@ -551,6 +554,16 @@ python3 python/grafana-utils.py import-dashboard \
   --replace-existing
 ```
 
+Dry-run import as a table:
+
+```bash
+python3 python/grafana-utils.py import-dashboard \
+  --url http://127.0.0.1:3000 \
+  --import-dir ./dashboards/raw \
+  --dry-run \
+  --table
+```
+
 Important rules:
 
 - point `--import-dir` at `dashboards/raw/`, not the combined `dashboards/` root
@@ -559,6 +572,7 @@ Important rules:
 - `--import-folder-uid` overrides the target folder for all imported dashboards
 - `--import-message` sets the dashboard version-history message
 - `--dry-run` shows whether each dashboard would create or update without calling Grafana import APIs
+- `--dry-run --table` renders the same predictions as a summary table, and `--no-header` suppresses that table's header row
 - `diff` compares local raw files with the live Grafana dashboard payload and returns exit code `1` when differences are found
 
 Dashboard export also writes small versioned manifest files named `export-metadata.json` at the root and per-variant directories. They describe the export schema version and help `import` and `diff` validate that a directory really contains the expected `raw/` format.

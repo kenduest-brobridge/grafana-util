@@ -309,6 +309,15 @@ class ExporterTests(unittest.TestCase):
 
         self.assertTrue(args.dry_run)
 
+    def test_parse_args_supports_import_dry_run_table_flags(self):
+        args = exporter.parse_args(
+            ["import-dashboard", "--import-dir", "dashboards/raw", "--dry-run", "--table", "--no-header"]
+        )
+
+        self.assertTrue(args.dry_run)
+        self.assertTrue(args.table)
+        self.assertTrue(args.no_header)
+
     def test_parse_args_disables_ssl_verification_by_default(self):
         args = exporter.parse_args(["export-dashboard"])
 
@@ -1799,6 +1808,188 @@ class ExporterTests(unittest.TestCase):
 
             self.assertEqual(result, 0)
             self.assertEqual(client.imported_payloads, [])
+
+    def test_import_dashboards_dry_run_verbose_reports_destination_state(self):
+        client = FakeDashboardWorkflowClient(
+            dashboards={
+                "abc": {
+                    "dashboard": {"id": 7, "uid": "abc", "title": "CPU", "panels": []},
+                    "meta": {"folderUid": "infra"},
+                }
+            }
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import_dir = Path(tmpdir)
+            exporter.write_json_document(
+                exporter.build_export_metadata(
+                    variant=exporter.RAW_EXPORT_SUBDIR,
+                    dashboard_count=1,
+                    format_name="grafana-web-import-preserve-uid",
+                ),
+                import_dir / exporter.EXPORT_METADATA_FILENAME,
+            )
+            exporter.write_json_document(
+                {"dashboard": {"id": None, "uid": "abc", "title": "CPU", "panels": []}},
+                import_dir / "cpu__abc.json",
+            )
+            args = exporter.parse_args(
+                ["import-dashboard", "--import-dir", str(import_dir), "--dry-run", "--verbose"]
+            )
+
+            with mock.patch.object(exporter, "build_client", return_value=client):
+                stdout = io.StringIO()
+                with redirect_stdout(stdout):
+                    result = exporter.import_dashboards(args)
+
+            self.assertEqual(result, 0)
+            self.assertEqual(
+                stdout.getvalue().splitlines(),
+                [
+                    "Dry-run import uid=abc dest=exists action=blocked-existing file=%s"
+                    % (import_dir / "cpu__abc.json"),
+                    "Dry-run checked 1 dashboard files from %s" % import_dir,
+                ],
+            )
+
+    def test_import_dashboards_dry_run_progress_reports_destination_state(self):
+        client = FakeDashboardWorkflowClient()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import_dir = Path(tmpdir)
+            exporter.write_json_document(
+                exporter.build_export_metadata(
+                    variant=exporter.RAW_EXPORT_SUBDIR,
+                    dashboard_count=1,
+                    format_name="grafana-web-import-preserve-uid",
+                ),
+                import_dir / exporter.EXPORT_METADATA_FILENAME,
+            )
+            exporter.write_json_document(
+                {"dashboard": {"id": None, "uid": "abc", "title": "CPU", "panels": []}},
+                import_dir / "cpu__abc.json",
+            )
+            args = exporter.parse_args(
+                ["import-dashboard", "--import-dir", str(import_dir), "--dry-run", "--progress"]
+            )
+
+            with mock.patch.object(exporter, "build_client", return_value=client):
+                stdout = io.StringIO()
+                with redirect_stdout(stdout):
+                    result = exporter.import_dashboards(args)
+
+            self.assertEqual(result, 0)
+            self.assertEqual(
+                stdout.getvalue().splitlines(),
+                [
+                    "Dry-run dashboard 1/1: abc dest=missing action=create",
+                    "Dry-run checked 1 dashboard files from %s" % import_dir,
+                ],
+            )
+
+    def test_import_dashboards_dry_run_table_renders_rows(self):
+        client = FakeDashboardWorkflowClient(
+            dashboards={
+                "abc": {
+                    "dashboard": {"id": 7, "uid": "abc", "title": "CPU", "panels": []},
+                    "meta": {"folderUid": "infra"},
+                }
+            }
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import_dir = Path(tmpdir)
+            exporter.write_json_document(
+                exporter.build_export_metadata(
+                    variant=exporter.RAW_EXPORT_SUBDIR,
+                    dashboard_count=2,
+                    format_name="grafana-web-import-preserve-uid",
+                ),
+                import_dir / exporter.EXPORT_METADATA_FILENAME,
+            )
+            exporter.write_json_document(
+                {"dashboard": {"id": None, "uid": "abc", "title": "CPU", "panels": []}},
+                import_dir / "cpu__abc.json",
+            )
+            exporter.write_json_document(
+                {"dashboard": {"id": None, "uid": "xyz", "title": "Memory", "panels": []}},
+                import_dir / "memory__xyz.json",
+            )
+            args = exporter.parse_args(
+                ["import-dashboard", "--import-dir", str(import_dir), "--dry-run", "--table"]
+            )
+
+            with mock.patch.object(exporter, "build_client", return_value=client):
+                stdout = io.StringIO()
+                with redirect_stdout(stdout):
+                    result = exporter.import_dashboards(args)
+
+            self.assertEqual(result, 0)
+            lines = stdout.getvalue().splitlines()
+            self.assertEqual(lines[-1], "Dry-run checked 2 dashboard files from %s" % import_dir)
+            self.assertIn("UID", lines[0])
+            self.assertIn("DESTINATION", lines[0])
+            self.assertIn("ACTION", lines[0])
+            self.assertIn("FILE", lines[0])
+            self.assertIn("abc", lines[2])
+            self.assertIn("exists", lines[2])
+            self.assertIn("blocked-existing", lines[2])
+            self.assertIn(str(import_dir / "cpu__abc.json"), lines[2])
+            self.assertIn("xyz", lines[3])
+            self.assertIn("missing", lines[3])
+            self.assertIn("create", lines[3])
+            self.assertIn(str(import_dir / "memory__xyz.json"), lines[3])
+
+    def test_import_dashboards_dry_run_table_can_omit_header(self):
+        client = FakeDashboardWorkflowClient()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import_dir = Path(tmpdir)
+            exporter.write_json_document(
+                exporter.build_export_metadata(
+                    variant=exporter.RAW_EXPORT_SUBDIR,
+                    dashboard_count=1,
+                    format_name="grafana-web-import-preserve-uid",
+                ),
+                import_dir / exporter.EXPORT_METADATA_FILENAME,
+            )
+            exporter.write_json_document(
+                {"dashboard": {"id": None, "uid": "xyz", "title": "Memory", "panels": []}},
+                import_dir / "memory__xyz.json",
+            )
+            args = exporter.parse_args(
+                ["import-dashboard", "--import-dir", str(import_dir), "--dry-run", "--table", "--no-header"]
+            )
+
+            with mock.patch.object(exporter, "build_client", return_value=client):
+                stdout = io.StringIO()
+                with redirect_stdout(stdout):
+                    result = exporter.import_dashboards(args)
+
+            self.assertEqual(result, 0)
+            self.assertEqual(
+                stdout.getvalue().splitlines(),
+                [
+                    "xyz  missing      create  %s" % (import_dir / "memory__xyz.json"),
+                    "Dry-run checked 1 dashboard files from %s" % import_dir,
+                ],
+            )
+
+    def test_import_dashboards_rejects_table_without_dry_run(self):
+        client = FakeDashboardWorkflowClient()
+        args = exporter.parse_args(["import-dashboard", "--import-dir", "dashboards/raw", "--table"])
+
+        with mock.patch.object(exporter, "build_client", return_value=client):
+            with self.assertRaisesRegex(exporter.GrafanaError, "--table is only supported with --dry-run"):
+                exporter.import_dashboards(args)
+
+    def test_import_dashboards_rejects_no_header_without_table(self):
+        client = FakeDashboardWorkflowClient()
+        args = exporter.parse_args(["import-dashboard", "--import-dir", "dashboards/raw", "--dry-run", "--no-header"])
+
+        with mock.patch.object(exporter, "build_client", return_value=client):
+            with self.assertRaisesRegex(exporter.GrafanaError, "--no-header is only supported with --dry-run --table"):
+                exporter.import_dashboards(args)
 
     def test_import_dashboards_progress_is_opt_in(self):
         client = FakeDashboardWorkflowClient()

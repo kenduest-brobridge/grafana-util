@@ -204,6 +204,18 @@ pub struct ImportArgs {
     #[arg(
         long,
         default_value_t = false,
+        help = "For --dry-run only, render import predictions as a table instead of per-dashboard log lines."
+    )]
+    pub table: bool,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "For --dry-run --table only, omit the table header row."
+    )]
+    pub no_header: bool,
+    #[arg(
+        long,
+        default_value_t = false,
         help = "Show concise per-dashboard import progress in <current>/<total> form while processing files."
     )]
     pub progress: bool,

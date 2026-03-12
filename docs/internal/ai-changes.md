@@ -136,6 +136,15 @@
 - Impact: `grafana_utils/dashboard_cli.py`, `tests/test_python_dashboard_cli.py`, `rust/src/dashboard_cli_defs.rs`, `rust/src/dashboard_export.rs`, `rust/src/dashboard.rs`, `rust/src/dashboard_rust_tests.rs`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
 - Rollback/Risk: Low. The change is additive in CLI surface area, but scripts that asserted on the exact `--progress` output text now need to expect the new concise form or switch to `--verbose`.
 
+## 2026-03-13 - Add Dry-Run Import Table Output
+- Summary: Added a dry-run-only `--table` mode for dashboard import in both Python and Rust so operators can review predicted `uid`, destination state, action, and file path in a compact table, with `--no-header` available for the table form.
+- Tests: Added parser and workflow coverage for `import-dashboard --dry-run --table`, `--no-header`, and the validation errors for using those flags outside the supported mode.
+- Test Run: `python3 -m unittest -v tests/test_python_dashboard_cli.py`; `cargo test dashboard --manifest-path rust/Cargo.toml --quiet`
+- Reason: Operators wanted a more scannable dry-run summary than line-oriented logging when validating a larger raw dashboard import batch.
+- Validation: Verified that dry-run table output renders the expected columns, supports header suppression, and that non-dry-run import still rejects `--table`.
+- Impact: `grafana_utils/dashboard_cli.py`, `tests/test_python_dashboard_cli.py`, `rust/src/dashboard_cli_defs.rs`, `rust/src/dashboard.rs`, `rust/src/dashboard_rust_tests.rs`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low. The feature is additive and intentionally gated behind `--dry-run`.
+
 ## 2026-03-12 - Consolidate Python And Rust CLIs Under grafana-utils
 - Summary: Added a unified Python dispatcher and a unified Rust dispatcher so `grafana-utils` becomes the primary entrypoint for `dashboard`, `alert`, and `access` workflows in both implementations. The new primary shape is `grafana-utils dashboard ...`, `grafana-utils alert ...`, and `grafana-utils access ...`, while old dashboard direct forms and the split `grafana-alert-utils` / `grafana-access-utils` names remain available as compatibility shims.
 - Tests: Added Python unified-entrypoint coverage and Rust unified-dispatch coverage, then reran the existing dashboard, alert, and access test suites to confirm the merged entrypoint did not break the underlying command implementations.

@@ -289,6 +289,16 @@ def add_import_cli_args(parser: argparse.ArgumentParser) -> None:
         help="Show whether each dashboard would be created or updated without importing it.",
     )
     parser.add_argument(
+        "--table",
+        action="store_true",
+        help="For --dry-run only, render import predictions as a table instead of per-dashboard log lines.",
+    )
+    parser.add_argument(
+        "--no-header",
+        action="store_true",
+        help="For --dry-run --table only, omit the table header row.",
+    )
+    parser.add_argument(
         "--progress",
         action="store_true",
         help="Show concise per-dashboard import progress as current/total while processing files.",
@@ -736,22 +746,37 @@ def print_dashboard_import_progress(
     dry_run: bool = False,
 ) -> None:
     """Render one import progress update in concise or verbose form."""
+    destination = None
+    action_label = action or "unknown"
+    if action:
+        if action == "would-create":
+            destination = "missing"
+            action_label = "create"
+        elif action in ("would-update", "would-fail-existing"):
+            destination = "exists"
+            if action == "would-update":
+                action_label = "update"
+            else:
+                action_label = "blocked-existing"
+        else:
+            destination = "unknown"
     if getattr(args, "verbose", False):
         if dry_run:
-            print("Dry-run %s -> uid=%s action=%s" % (dashboard_file, uid, action or "unknown"))
+            print(
+                "Dry-run import uid=%s dest=%s action=%s file=%s"
+                % (uid, destination or "unknown", action_label, dashboard_file)
+            )
         else:
             print("Imported %s -> uid=%s status=%s" % (dashboard_file, uid, status or "unknown"))
         return
     if getattr(args, "progress", False):
-        print(
-            "%s dashboard %s/%s: %s"
-            % (
-                "Dry-run importing" if dry_run else "Importing",
-                index,
-                total,
-                uid,
+        if dry_run:
+            print(
+                "Dry-run dashboard %s/%s: %s dest=%s action=%s"
+                % (index, total, uid, destination or "unknown", action_label)
             )
-        )
+        else:
+            print("Importing dashboard %s/%s: %s" % (index, total, uid))
 
 
 def load_export_metadata(
@@ -1553,6 +1578,62 @@ def render_data_source_table(
     return lines
 
 
+def build_dashboard_import_dry_run_record(
+    dashboard_file: Path,
+    uid: str,
+    action: str,
+) -> Dict[str, str]:
+    destination = "unknown"
+    action_label = action or "unknown"
+    if action == "would-create":
+        destination = "missing"
+        action_label = "create"
+    elif action == "would-update":
+        destination = "exists"
+        action_label = "update"
+    elif action == "would-fail-existing":
+        destination = "exists"
+        action_label = "blocked-existing"
+    return {
+        "uid": uid,
+        "destination": destination,
+        "action": action_label,
+        "file": str(dashboard_file),
+    }
+
+
+def render_dashboard_import_dry_run_table(
+    records: List[Dict[str, str]],
+    include_header: bool = True,
+) -> List[str]:
+    headers = ["UID", "DESTINATION", "ACTION", "FILE"]
+    rows = []
+    for record in records:
+        rows.append(
+            [
+                record["uid"],
+                record["destination"],
+                record["action"],
+                record["file"],
+            ]
+        )
+    widths = [len(header) for header in headers]
+    for row in rows:
+        for index, value in enumerate(row):
+            widths[index] = max(widths[index], len(value))
+
+    def format_row(values: List[str]) -> str:
+        return "  ".join(
+            value.ljust(widths[index]) for index, value in enumerate(values)
+        )
+
+    lines = []
+    if include_header:
+        lines.extend([format_row(headers), format_row(["-" * width for width in widths])])
+    lines.extend(format_row(row) for row in rows)
+    return lines
+
+
 def render_data_source_csv(datasources: List[Dict[str, Any]]) -> None:
     writer = csv.DictWriter(
         sys.stdout,
@@ -1593,11 +1674,16 @@ def list_data_sources(args: argparse.Namespace) -> int:
 
 def import_dashboards(args: argparse.Namespace) -> int:
     """Import previously exported raw dashboard JSON files through Grafana's API."""
+    if getattr(args, "table", False) and not args.dry_run:
+        raise GrafanaError("--table is only supported with --dry-run for import-dashboard.")
+    if getattr(args, "no_header", False) and not getattr(args, "table", False):
+        raise GrafanaError("--no-header is only supported with --dry-run --table for import-dashboard.")
     client = build_client(args)
     import_dir = Path(args.import_dir)
     load_export_metadata(import_dir, expected_variant=RAW_EXPORT_SUBDIR)
     dashboard_files = discover_dashboard_files(import_dir)
 
+    dry_run_records = []
     total_dashboards = len(dashboard_files)
     for index, dashboard_file in enumerate(dashboard_files, 1):
         document = load_json_file(dashboard_file)
@@ -1614,6 +1700,11 @@ def import_dashboards(args: argparse.Namespace) -> int:
                 payload,
                 args.replace_existing,
             )
+            if getattr(args, "table", False):
+                dry_run_records.append(
+                    build_dashboard_import_dry_run_record(dashboard_file, str(uid), action)
+                )
+                continue
             print_dashboard_import_progress(
                 args,
                 index,
@@ -1639,6 +1730,12 @@ def import_dashboards(args: argparse.Namespace) -> int:
         )
 
     if args.dry_run:
+        if getattr(args, "table", False):
+            for line in render_dashboard_import_dry_run_table(
+                dry_run_records,
+                include_header=not bool(getattr(args, "no_header", False)),
+            ):
+                print(line)
         print(f"Dry-run checked {len(dashboard_files)} dashboard files from {import_dir}")
     else:
         print(f"Imported {len(dashboard_files)} dashboard files from {import_dir}")

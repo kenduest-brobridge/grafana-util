@@ -179,6 +179,7 @@ This is why prompt export needs live datasource metadata while raw export does n
 - Import can override folder destination with `--import-folder-uid`.
 - Import can set the dashboard version-history message with `--import-message`.
 - Import `--dry-run` predicts `would-create`, `would-update`, or `would-fail-existing` by checking the live Grafana UID first.
+- Import `--dry-run --table` renders those predictions as `UID`, `DESTINATION`, `ACTION`, and `FILE`, and `--no-header` can suppress the header row only in that mode.
 - `diff` compares normalized local raw payloads against live Grafana dashboard wrappers and prints a unified diff when they differ.
 
 ## Alerting Utility

@@ -105,6 +105,13 @@
 - Current Update: Added a concise `--progress` mode for both Python and Rust dashboard export/import that prints one `current/total` line per dashboard, plus a new `-v/--verbose` mode that keeps detailed path/status output and supersedes the concise progress form.
 - Result: Operators can now choose between quiet summary-only runs, compact progress for long jobs, or detailed item-by-item logging for troubleshooting.
 
+## 2026-03-13 - Task: Add Dry-Run Import Table Output
+- State: Done
+- Scope: `grafana_utils/dashboard_cli.py`, `tests/test_python_dashboard_cli.py`, `rust/src/dashboard_cli_defs.rs`, `rust/src/dashboard.rs`, `rust/src/dashboard_rust_tests.rs`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Dashboard import dry-run output was line-oriented only, so operators could not switch to a compact summary table when reviewing a larger batch.
+- Current Update: Added `import-dashboard --dry-run --table` plus `--no-header` support in both Python and Rust, while rejecting `--table` outside dry-run mode.
+- Result: Operators can keep the default line-oriented dry-run output or opt into a summary table that is easier to scan or pipe into snapshots.
+
 ## 2026-03-12 - Task: Consolidate Python And Rust CLIs Under grafana-utils
 - State: Done
 - Scope: `grafana_utils/unified_cli.py`, `grafana_utils/dashboard_cli.py`, `grafana_utils/alert_cli.py`, `cmd/grafana-utils.py`, `cmd/grafana-alert-utils.py`, `cmd/grafana-access-utils.py`, `pyproject.toml`, `tests/test_python_unified_cli.py`, `tests/test_python_packaging.py`, `rust/src/cli.rs`, `rust/src/cli_rust_tests.rs`, `rust/src/bin/grafana-utils.rs`, `rust/src/dashboard.rs`, `rust/src/alert.rs`, `rust/src/lib.rs`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

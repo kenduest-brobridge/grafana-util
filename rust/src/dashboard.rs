@@ -653,6 +653,68 @@ where
     }
 }
 
+fn describe_import_action(action: &str) -> (&'static str, &str) {
+    match action {
+        "would-create" => ("missing", "create"),
+        "would-update" => ("exists", "update"),
+        "would-fail-existing" => ("exists", "blocked-existing"),
+        _ => ("unknown", action),
+    }
+}
+
+fn build_import_dry_run_record(
+    dashboard_file: &Path,
+    uid: &str,
+    action: &str,
+) -> [String; 4] {
+    let (destination, action_label) = describe_import_action(action);
+    [
+        uid.to_string(),
+        destination.to_string(),
+        action_label.to_string(),
+        dashboard_file.display().to_string(),
+    ]
+}
+
+fn render_import_dry_run_table(records: &[[String; 4]], include_header: bool) -> Vec<String> {
+    let headers = ["UID", "DESTINATION", "ACTION", "FILE"];
+    let mut widths = headers.map(str::len);
+    for row in records {
+        for (index, value) in row.iter().enumerate() {
+            widths[index] = widths[index].max(value.len());
+        }
+    }
+    let format_row = |values: &[String; 4]| -> String {
+        values
+            .iter()
+            .enumerate()
+            .map(|(index, value)| format!("{value:<width$}", width = widths[index]))
+            .collect::<Vec<String>>()
+            .join("  ")
+    };
+    let mut lines = Vec::new();
+    if include_header {
+        let header_values = [
+            headers[0].to_string(),
+            headers[1].to_string(),
+            headers[2].to_string(),
+            headers[3].to_string(),
+        ];
+        let divider_values = [
+            "-".repeat(widths[0]),
+            "-".repeat(widths[1]),
+            "-".repeat(widths[2]),
+            "-".repeat(widths[3]),
+        ];
+        lines.push(format_row(&header_values));
+        lines.push(format_row(&divider_values));
+    }
+    for row in records {
+        lines.push(format_row(row));
+    }
+    lines
+}
+
 fn list_datasources_with_request<F>(mut request_json: F) -> Result<Vec<Map<String, Value>>>
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
@@ -679,30 +741,34 @@ pub fn list_datasources(client: &JsonHttpClient) -> Result<Vec<Map<String, Value
 pub(crate) fn format_import_progress_line(
     current: usize,
     total: usize,
-    dashboard_file: &Path,
+    dashboard_target: &str,
     dry_run: bool,
+    action: Option<&str>,
 ) -> String {
-    format!(
-        "{} dashboard {current}/{total}: {}",
-        if dry_run {
-            "Dry-run import"
-        } else {
-            "Importing"
-        },
-        dashboard_file.display()
-    )
+    if dry_run {
+        let (destination, action_label) = describe_import_action(action.unwrap_or("unknown"));
+        format!(
+            "Dry-run dashboard {current}/{total}: {dashboard_target} dest={destination} action={action_label}"
+        )
+    } else {
+        format!("Importing dashboard {current}/{total}: {dashboard_target}")
+    }
 }
 
 pub(crate) fn format_import_verbose_line(
     dashboard_file: &Path,
     dry_run: bool,
+    uid: Option<&str>,
     action: Option<&str>,
 ) -> String {
     if dry_run {
+        let (destination, action_label) = describe_import_action(action.unwrap_or("unknown"));
         format!(
-            "Dry-run import {} -> {}",
-            dashboard_file.display(),
-            action.unwrap_or("unknown")
+            "Dry-run import uid={} dest={} action={} file={}",
+            uid.unwrap_or("unknown"),
+            destination,
+            action_label,
+            dashboard_file.display()
         )
     } else {
         format!("Imported {}", dashboard_file.display())
@@ -713,9 +779,20 @@ fn import_dashboards_with_request<F>(mut request_json: F, args: &ImportArgs) -> 
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
+    if args.table && !args.dry_run {
+        return Err(message(
+            "--table is only supported with --dry-run for import-dashboard.",
+        ));
+    }
+    if args.no_header && !args.table {
+        return Err(message(
+            "--no-header is only supported with --dry-run --table for import-dashboard.",
+        ));
+    }
     let _ = load_export_metadata(&args.import_dir, Some(RAW_EXPORT_SUBDIR))?;
     let dashboard_files = discover_dashboard_files(&args.import_dir)?;
     let total = dashboard_files.len();
+    let mut dry_run_records: Vec<[String; 4]> = Vec::new();
     for (index, dashboard_file) in dashboard_files.iter().enumerate() {
         let document = load_json_file(dashboard_file)?;
         let payload = build_import_payload(
@@ -730,15 +807,24 @@ where
                 &payload,
                 args.replace_existing,
             )?;
-            if args.verbose {
+            let payload_object =
+                value_as_object(&payload, "Dashboard import payload must be a JSON object.")?;
+            let dashboard = payload_object
+                .get("dashboard")
+                .and_then(Value::as_object)
+                .ok_or_else(|| message("Dashboard import payload is missing dashboard."))?;
+            let uid = string_field(dashboard, "uid", "unknown");
+            if args.table {
+                dry_run_records.push(build_import_dry_run_record(dashboard_file, &uid, action));
+            } else if args.verbose {
                 println!(
                     "{}",
-                    format_import_verbose_line(dashboard_file, true, Some(action))
+                    format_import_verbose_line(dashboard_file, true, Some(&uid), Some(action))
                 );
             } else if args.progress {
                 println!(
                     "{}",
-                    format_import_progress_line(index + 1, total, dashboard_file, true)
+                    format_import_progress_line(index + 1, total, &uid, true, Some(action))
                 );
             }
             continue;
@@ -747,16 +833,27 @@ where
         if args.verbose {
             println!(
                 "{}",
-                format_import_verbose_line(dashboard_file, false, None)
+                format_import_verbose_line(dashboard_file, false, None, None)
             );
         } else if args.progress {
             println!(
                 "{}",
-                format_import_progress_line(index + 1, total, dashboard_file, false)
+                format_import_progress_line(
+                    index + 1,
+                    total,
+                    &dashboard_file.display().to_string(),
+                    false,
+                    None,
+                )
             );
         }
     }
     if args.dry_run {
+        if args.table {
+            for line in render_import_dry_run_table(&dry_run_records, !args.no_header) {
+                println!("{line}");
+            }
+        }
         println!(
             "Dry-run checked {} dashboard(s) from {}",
             dashboard_files.len(),
