@@ -26,6 +26,17 @@
   - `dashboard_export.rs`
   - `dashboard_prompt.rs`
 - Rust dashboard export metadata and index documents now use typed internal structs without changing JSON output shape
+- Rust `access.rs` internals were split into:
+  - `access_cli_defs.rs`
+  - `access_user.rs`
+  - `access_team.rs`
+  - `access_service_account.rs`
+  - `access_render.rs`
+- Rust alert internals were split further across:
+  - `alert_cli_defs.rs`
+  - `alert_client.rs`
+  - `alert_list.rs`
+  - `alert.rs` orchestration helpers
 
 ### In Progress
 
@@ -42,8 +53,10 @@
 - dashboard `prompt` export should surface the original datasource name in Grafana web-import prompts, not only the datasource type label
 - dashboard `prompt` export should align `__requires` names and versions with Grafana external export where possible
 - dashboard `prompt` export should add broader mixed-type and same-type datasource validation coverage beyond the current Prometheus/Loki cases
-- split oversized Rust `access.rs`
-- split oversized Rust `alert.rs`
+- gradually replace ad hoc dashboard and alert datasource reference maps with typed structs where the shape is stable enough to justify it
+- extract repeated dashboard and alert fallback strings into shared constants where they still appear in multiple places
+- evaluate streaming or lower-memory dashboard listing/export paths only if large-instance validation shows the current full-materialization approach is a real bottleneck
+- evaluate semantic alert diff normalization for equivalent values such as duration aliases after the current structural diff behavior is otherwise stable
 
 ## Remaining Access Work
 
@@ -140,51 +153,11 @@ Rules to keep:
 - reject mixed auth inputs unless the command has a specific, documented reason to support them
 - keep prompted password support aligned with dashboard and alert auth behavior
 
-## Rust Refactor Backlog
-
-### `access.rs`
-
-Recommended first split target.
-
-Reason:
-
-- lower risk than `alert.rs`
-- clearer responsibility boundaries
-- already large enough that review and maintenance cost are rising
-
-Recommended split:
-
-- `access_cli_defs.rs`
-- `access_user.rs`
-- `access_team.rs`
-- `access_service_account.rs`
-- `access_render.rs`
-- keep `access.rs` as orchestration and shared helpers
-
-### `alert.rs`
-
-Recommended second split target.
-
-Reason:
-
-- still oversized
-- import/export/diff logic is feature-rich and harder to navigate
-- resource-specific logic can be isolated further
-
-Recommended split:
-
-- `alert_cli_defs.rs`
-- `alert_export.rs`
-- `alert_import.rs`
-- `alert_diff.rs`
-- `alert_list.rs`
-- keep `alert.rs` as orchestration and shared helpers
-
 ## Priority Order
 
 1. `team delete`
 2. `service-account delete`
 3. `service-account token delete`
 4. `group` alias
-5. split Rust `access.rs`
-6. split Rust `alert.rs`
+5. typed datasource reference structs in the Rust dashboard and alert paths
+6. semantic alert diff normalization for equivalent values
