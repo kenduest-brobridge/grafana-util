@@ -318,6 +318,27 @@ class ExporterTests(unittest.TestCase):
         self.assertTrue(args.table)
         self.assertTrue(args.no_header)
 
+    def test_parse_args_supports_update_existing_only(self):
+        args = exporter.parse_args(
+            ["import-dashboard", "--import-dir", "dashboards/raw", "--update-existing-only"]
+        )
+
+        self.assertTrue(args.update_existing_only)
+
+    def test_describe_dashboard_import_mode(self):
+        self.assertEqual(
+            exporter.describe_dashboard_import_mode(False, False),
+            "create-only",
+        )
+        self.assertEqual(
+            exporter.describe_dashboard_import_mode(True, False),
+            "create-or-update",
+        )
+        self.assertEqual(
+            exporter.describe_dashboard_import_mode(False, True),
+            "update-or-skip-missing",
+        )
+
     def test_parse_args_disables_ssl_verification_by_default(self):
         args = exporter.parse_args(["export-dashboard"])
 
@@ -1846,6 +1867,7 @@ class ExporterTests(unittest.TestCase):
             self.assertEqual(
                 stdout.getvalue().splitlines(),
                 [
+                    "Import mode: create-only",
                     "Dry-run import uid=abc dest=exists action=blocked-existing file=%s"
                     % (import_dir / "cpu__abc.json"),
                     "Dry-run checked 1 dashboard files from %s" % import_dir,
@@ -1882,6 +1904,7 @@ class ExporterTests(unittest.TestCase):
             self.assertEqual(
                 stdout.getvalue().splitlines(),
                 [
+                    "Import mode: create-only",
                     "Dry-run dashboard 1/1: abc dest=missing action=create",
                     "Dry-run checked 1 dashboard files from %s" % import_dir,
                 ],
@@ -1926,19 +1949,20 @@ class ExporterTests(unittest.TestCase):
 
             self.assertEqual(result, 0)
             lines = stdout.getvalue().splitlines()
+            self.assertEqual(lines[0], "Import mode: create-only")
             self.assertEqual(lines[-1], "Dry-run checked 2 dashboard files from %s" % import_dir)
-            self.assertIn("UID", lines[0])
-            self.assertIn("DESTINATION", lines[0])
-            self.assertIn("ACTION", lines[0])
-            self.assertIn("FILE", lines[0])
-            self.assertIn("abc", lines[2])
-            self.assertIn("exists", lines[2])
-            self.assertIn("blocked-existing", lines[2])
-            self.assertIn(str(import_dir / "cpu__abc.json"), lines[2])
-            self.assertIn("xyz", lines[3])
-            self.assertIn("missing", lines[3])
-            self.assertIn("create", lines[3])
-            self.assertIn(str(import_dir / "memory__xyz.json"), lines[3])
+            self.assertIn("UID", lines[1])
+            self.assertIn("DESTINATION", lines[1])
+            self.assertIn("ACTION", lines[1])
+            self.assertIn("FILE", lines[1])
+            self.assertIn("abc", lines[3])
+            self.assertIn("exists", lines[3])
+            self.assertIn("blocked-existing", lines[3])
+            self.assertIn(str(import_dir / "cpu__abc.json"), lines[3])
+            self.assertIn("xyz", lines[4])
+            self.assertIn("missing", lines[4])
+            self.assertIn("create", lines[4])
+            self.assertIn(str(import_dir / "memory__xyz.json"), lines[4])
 
     def test_import_dashboards_dry_run_table_can_omit_header(self):
         client = FakeDashboardWorkflowClient()
@@ -1970,10 +1994,218 @@ class ExporterTests(unittest.TestCase):
             self.assertEqual(
                 stdout.getvalue().splitlines(),
                 [
+                    "Import mode: create-only",
                     "xyz  missing      create  %s" % (import_dir / "memory__xyz.json"),
                     "Dry-run checked 1 dashboard files from %s" % import_dir,
                 ],
             )
+
+    def test_import_dashboards_dry_run_table_marks_missing_dashboards_as_skipped_when_update_existing_only(self):
+        client = FakeDashboardWorkflowClient(
+            dashboards={
+                "abc": {
+                    "dashboard": {"id": 7, "uid": "abc", "title": "CPU", "panels": []},
+                    "meta": {"folderUid": "infra"},
+                }
+            }
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import_dir = Path(tmpdir)
+            exporter.write_json_document(
+                exporter.build_export_metadata(
+                    variant=exporter.RAW_EXPORT_SUBDIR,
+                    dashboard_count=2,
+                    format_name="grafana-web-import-preserve-uid",
+                ),
+                import_dir / exporter.EXPORT_METADATA_FILENAME,
+            )
+            exporter.write_json_document(
+                {"dashboard": {"id": None, "uid": "abc", "title": "CPU", "panels": []}},
+                import_dir / "cpu__abc.json",
+            )
+            exporter.write_json_document(
+                {"dashboard": {"id": None, "uid": "xyz", "title": "Memory", "panels": []}},
+                import_dir / "memory__xyz.json",
+            )
+            args = exporter.parse_args(
+                [
+                    "import-dashboard",
+                    "--import-dir",
+                    str(import_dir),
+                    "--dry-run",
+                    "--table",
+                    "--update-existing-only",
+                ]
+            )
+
+            with mock.patch.object(exporter, "build_client", return_value=client):
+                stdout = io.StringIO()
+                with redirect_stdout(stdout):
+                    result = exporter.import_dashboards(args)
+
+            self.assertEqual(result, 0)
+            lines = stdout.getvalue().splitlines()
+            self.assertEqual(lines[0], "Import mode: update-or-skip-missing")
+            self.assertIn("abc", lines[3])
+            self.assertIn("update", lines[3])
+            self.assertIn("xyz", lines[4])
+            self.assertIn("skip-missing", lines[4])
+            self.assertEqual(
+                lines[-1],
+                "Dry-run checked 2 dashboard files from %s; would skip 1 missing dashboards"
+                % import_dir,
+            )
+
+    def test_import_dashboards_update_existing_only_skips_missing_live_dashboards(self):
+        client = FakeDashboardWorkflowClient(
+            dashboards={
+                "abc": {
+                    "dashboard": {"id": 7, "uid": "abc", "title": "CPU", "panels": []},
+                    "meta": {"folderUid": "infra"},
+                }
+            }
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import_dir = Path(tmpdir)
+            exporter.write_json_document(
+                exporter.build_export_metadata(
+                    variant=exporter.RAW_EXPORT_SUBDIR,
+                    dashboard_count=2,
+                    format_name="grafana-web-import-preserve-uid",
+                ),
+                import_dir / exporter.EXPORT_METADATA_FILENAME,
+            )
+            exporter.write_json_document(
+                {"dashboard": {"id": None, "uid": "abc", "title": "CPU", "panels": []}},
+                import_dir / "cpu__abc.json",
+            )
+            exporter.write_json_document(
+                {"dashboard": {"id": None, "uid": "xyz", "title": "Memory", "panels": []}},
+                import_dir / "memory__xyz.json",
+            )
+            args = exporter.parse_args(
+                [
+                    "import-dashboard",
+                    "--import-dir",
+                    str(import_dir),
+                    "--update-existing-only",
+                    "--verbose",
+                ]
+            )
+
+            with mock.patch.object(exporter, "build_client", return_value=client):
+                stdout = io.StringIO()
+                with redirect_stdout(stdout):
+                    result = exporter.import_dashboards(args)
+
+            self.assertEqual(result, 0)
+            self.assertEqual(len(client.imported_payloads), 1)
+            self.assertEqual(client.imported_payloads[0]["dashboard"]["uid"], "abc")
+            self.assertEqual(
+                stdout.getvalue().splitlines(),
+                [
+                    "Import mode: update-or-skip-missing",
+                    "Imported %s -> uid=abc status=success" % (import_dir / "cpu__abc.json"),
+                    "Skipped import uid=xyz dest=missing action=skip-missing file=%s"
+                    % (import_dir / "memory__xyz.json"),
+                    "Imported 1 dashboard files from %s; skipped 1 missing dashboards" % import_dir,
+                ],
+            )
+
+    def test_import_dashboards_update_existing_only_progress_shows_skips(self):
+        client = FakeDashboardWorkflowClient(
+            dashboards={
+                "abc": {
+                    "dashboard": {"id": 7, "uid": "abc", "title": "CPU", "panels": []},
+                    "meta": {"folderUid": "infra"},
+                }
+            }
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import_dir = Path(tmpdir)
+            exporter.write_json_document(
+                exporter.build_export_metadata(
+                    variant=exporter.RAW_EXPORT_SUBDIR,
+                    dashboard_count=2,
+                    format_name="grafana-web-import-preserve-uid",
+                ),
+                import_dir / exporter.EXPORT_METADATA_FILENAME,
+            )
+            exporter.write_json_document(
+                {"dashboard": {"id": None, "uid": "abc", "title": "CPU", "panels": []}},
+                import_dir / "cpu__abc.json",
+            )
+            exporter.write_json_document(
+                {"dashboard": {"id": None, "uid": "xyz", "title": "Memory", "panels": []}},
+                import_dir / "memory__xyz.json",
+            )
+            args = exporter.parse_args(
+                [
+                    "import-dashboard",
+                    "--import-dir",
+                    str(import_dir),
+                    "--update-existing-only",
+                    "--progress",
+                ]
+            )
+
+            with mock.patch.object(exporter, "build_client", return_value=client):
+                stdout = io.StringIO()
+                with redirect_stdout(stdout):
+                    result = exporter.import_dashboards(args)
+
+            self.assertEqual(result, 0)
+            self.assertEqual(
+                stdout.getvalue().splitlines(),
+                [
+                    "Import mode: update-or-skip-missing",
+                    "Importing dashboard 1/2: abc",
+                    "Skipping dashboard 2/2: xyz dest=missing action=skip-missing",
+                    "Imported 1 dashboard files from %s; skipped 1 missing dashboards" % import_dir,
+                ],
+            )
+
+    def test_import_dashboards_replace_existing_preserves_destination_folder(self):
+        client = FakeDashboardWorkflowClient(
+            dashboards={
+                "abc": {
+                    "dashboard": {"id": 7, "uid": "abc", "title": "CPU", "panels": []},
+                    "meta": {"folderUid": "dest-folder"},
+                }
+            }
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import_dir = Path(tmpdir)
+            exporter.write_json_document(
+                exporter.build_export_metadata(
+                    variant=exporter.RAW_EXPORT_SUBDIR,
+                    dashboard_count=1,
+                    format_name="grafana-web-import-preserve-uid",
+                ),
+                import_dir / exporter.EXPORT_METADATA_FILENAME,
+            )
+            exporter.write_json_document(
+                {
+                    "dashboard": {"id": None, "uid": "abc", "title": "CPU", "panels": []},
+                    "meta": {"folderUid": "source-folder"},
+                },
+                import_dir / "cpu__abc.json",
+            )
+            args = exporter.parse_args(
+                ["import-dashboard", "--import-dir", str(import_dir), "--replace-existing"]
+            )
+
+            with mock.patch.object(exporter, "build_client", return_value=client):
+                result = exporter.import_dashboards(args)
+
+            self.assertEqual(result, 0)
+            self.assertEqual(len(client.imported_payloads), 1)
+            self.assertEqual(client.imported_payloads[0]["folderUid"], "dest-folder")
+            self.assertTrue(client.imported_payloads[0]["overwrite"])
 
     def test_import_dashboards_rejects_table_without_dry_run(self):
         client = FakeDashboardWorkflowClient()
@@ -2021,6 +2253,7 @@ class ExporterTests(unittest.TestCase):
             self.assertEqual(
                 stdout.getvalue().splitlines(),
                 [
+                    "Import mode: create-only",
                     "Importing dashboard 1/1: abc",
                     "Imported 1 dashboard files from %s" % import_dir,
                 ],
@@ -2056,6 +2289,7 @@ class ExporterTests(unittest.TestCase):
             self.assertEqual(
                 stdout.getvalue().splitlines(),
                 [
+                    "Import mode: create-only",
                     "Imported %s -> uid=abc status=success" % (import_dir / "cpu__abc.json"),
                     "Imported 1 dashboard files from %s" % import_dir,
                 ],
@@ -2097,6 +2331,7 @@ class ExporterTests(unittest.TestCase):
             self.assertEqual(
                 stdout.getvalue().splitlines(),
                 [
+                    "Import mode: create-only",
                     "Imported %s -> uid=abc status=success" % (import_dir / "cpu__abc.json"),
                     "Imported 1 dashboard files from %s" % import_dir,
                 ],

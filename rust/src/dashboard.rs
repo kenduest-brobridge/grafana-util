@@ -629,6 +629,7 @@ fn determine_dashboard_import_action_with_request<F>(
     mut request_json: F,
     payload: &Value,
     replace_existing: bool,
+    update_existing_only: bool,
 ) -> Result<&'static str>
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
@@ -644,12 +645,57 @@ where
         return Ok("would-create");
     }
     if fetch_dashboard_if_exists_with_request(&mut request_json, &uid)?.is_none() {
+        if update_existing_only {
+            return Ok("would-skip-missing");
+        }
         return Ok("would-create");
     }
     if replace_existing {
         Ok("would-update")
+    } else if update_existing_only {
+        Ok("would-update")
     } else {
         Ok("would-fail-existing")
+    }
+}
+
+fn determine_import_folder_uid_override_with_request<F>(
+    mut request_json: F,
+    uid: &str,
+    folder_uid_override: Option<&str>,
+    preserve_existing_folder: bool,
+) -> Result<Option<String>>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    if let Some(value) = folder_uid_override {
+        return Ok(Some(value.to_string()));
+    }
+    if !preserve_existing_folder || uid.is_empty() {
+        return Ok(None);
+    }
+    let Some(existing_payload) = fetch_dashboard_if_exists_with_request(&mut request_json, uid)? else {
+        return Ok(None);
+    };
+    let object = value_as_object(
+        &existing_payload,
+        &format!("Unexpected dashboard payload for UID {uid}."),
+    )?;
+    let folder_uid = object_field(object, "meta")
+        .and_then(|meta| meta.get("folderUid"))
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .to_string();
+    Ok(Some(folder_uid))
+}
+
+fn describe_dashboard_import_mode(replace_existing: bool, update_existing_only: bool) -> &'static str {
+    if update_existing_only {
+        "update-or-skip-missing"
+    } else if replace_existing {
+        "create-or-update"
+    } else {
+        "create-only"
     }
 }
 
@@ -657,6 +703,7 @@ fn describe_import_action(action: &str) -> (&'static str, &str) {
     match action {
         "would-create" => ("missing", "create"),
         "would-update" => ("exists", "update"),
+        "would-skip-missing" => ("missing", "skip-missing"),
         "would-fail-existing" => ("exists", "blocked-existing"),
         _ => ("unknown", action),
     }
@@ -792,13 +839,30 @@ where
     let _ = load_export_metadata(&args.import_dir, Some(RAW_EXPORT_SUBDIR))?;
     let dashboard_files = discover_dashboard_files(&args.import_dir)?;
     let total = dashboard_files.len();
+    let effective_replace_existing = args.replace_existing || args.update_existing_only;
     let mut dry_run_records: Vec<[String; 4]> = Vec::new();
+    let mut imported_count = 0usize;
+    let mut skipped_missing_count = 0usize;
+    println!(
+        "Import mode: {}",
+        describe_dashboard_import_mode(args.replace_existing, args.update_existing_only)
+    );
     for (index, dashboard_file) in dashboard_files.iter().enumerate() {
         let document = load_json_file(dashboard_file)?;
+        let document_object =
+            value_as_object(&document, "Dashboard payload must be a JSON object.")?;
+        let dashboard = extract_dashboard_object(document_object)?;
+        let uid = string_field(dashboard, "uid", "");
+        let folder_uid_override = determine_import_folder_uid_override_with_request(
+            &mut request_json,
+            &uid,
+            args.import_folder_uid.as_deref(),
+            effective_replace_existing,
+        )?;
         let payload = build_import_payload(
             &document,
-            args.import_folder_uid.as_deref(),
-            args.replace_existing,
+            folder_uid_override.as_deref(),
+            effective_replace_existing,
             &args.import_message,
         )?;
         if args.dry_run {
@@ -806,6 +870,7 @@ where
                 &mut request_json,
                 &payload,
                 args.replace_existing,
+                args.update_existing_only,
             )?;
             let payload_object =
                 value_as_object(&payload, "Dashboard import payload must be a JSON object.")?;
@@ -829,7 +894,41 @@ where
             }
             continue;
         }
+        if args.update_existing_only {
+            let action = determine_dashboard_import_action_with_request(
+                &mut request_json,
+                &payload,
+                args.replace_existing,
+                true,
+            )?;
+            let payload_object =
+                value_as_object(&payload, "Dashboard import payload must be a JSON object.")?;
+            let dashboard = payload_object
+                .get("dashboard")
+                .and_then(Value::as_object)
+                .ok_or_else(|| message("Dashboard import payload is missing dashboard."))?;
+            let uid = string_field(dashboard, "uid", "unknown");
+            if action == "would-skip-missing" {
+                skipped_missing_count += 1;
+                if args.verbose {
+                    println!(
+                        "Skipped import uid={} dest=missing action=skip-missing file={}",
+                        uid,
+                        dashboard_file.display()
+                    );
+                } else if args.progress {
+                    println!(
+                        "Skipping dashboard {}/{}: {} dest=missing action=skip-missing",
+                        index + 1,
+                        total,
+                        uid
+                    );
+                }
+                continue;
+            }
+        }
         let _result = import_dashboard_request_with_request(&mut request_json, &payload)?;
+        imported_count += 1;
         if args.verbose {
             println!(
                 "{}",
@@ -849,18 +948,42 @@ where
         }
     }
     if args.dry_run {
+        if args.update_existing_only {
+            skipped_missing_count = dry_run_records
+                .iter()
+                .filter(|record| record[2] == "skip-missing")
+                .count();
+        }
         if args.table {
             for line in render_import_dry_run_table(&dry_run_records, !args.no_header) {
                 println!("{line}");
             }
         }
+        if args.update_existing_only && skipped_missing_count > 0 {
+            println!(
+                "Dry-run checked {} dashboard(s) from {}; would skip {} missing dashboards",
+                dashboard_files.len(),
+                args.import_dir.display(),
+                skipped_missing_count
+            );
+        } else {
+            println!(
+                "Dry-run checked {} dashboard(s) from {}",
+                dashboard_files.len(),
+                args.import_dir.display()
+            );
+        }
+        return Ok(dashboard_files.len());
+    }
+    if args.update_existing_only && skipped_missing_count > 0 {
         println!(
-            "Dry-run checked {} dashboard(s) from {}",
-            dashboard_files.len(),
-            args.import_dir.display()
+            "Imported {} dashboard files from {}; skipped {} missing dashboards",
+            imported_count,
+            args.import_dir.display(),
+            skipped_missing_count
         );
     }
-    Ok(dashboard_files.len())
+    Ok(imported_count)
 }
 
 pub fn import_dashboards_with_client(client: &JsonHttpClient, args: &ImportArgs) -> Result<usize> {

@@ -17,6 +17,7 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 use tempfile::tempdir;
+use crate::common::api_response;
 
 fn make_common_args(base_url: String) -> CommonCliArgs {
     CommonCliArgs {
@@ -347,6 +348,25 @@ fn parse_cli_supports_import_progress_and_verbose_flags() {
 }
 
 #[test]
+fn parse_cli_supports_import_update_existing_only_flag() {
+    let args = parse_cli_from([
+        "grafana-utils",
+        "import",
+        "--import-dir",
+        "./dashboards/raw",
+        "--update-existing-only",
+    ]);
+
+    match args.command {
+        DashboardCommand::Import(import_args) => {
+            assert!(import_args.update_existing_only);
+            assert!(!import_args.replace_existing);
+        }
+        _ => panic!("expected import command"),
+    }
+}
+
+#[test]
 fn parse_cli_supports_list_json_mode() {
     let args = parse_cli_from([
         "grafana-utils",
@@ -485,6 +505,10 @@ fn import_progress_line_uses_concise_counter_format() {
         format_import_progress_line(3, 7, "cpu-main", true, Some("would-update")),
         "Dry-run dashboard 3/7: cpu-main dest=exists action=update"
     );
+    assert_eq!(
+        format_import_progress_line(3, 7, "cpu-main", true, Some("would-skip-missing")),
+        "Dry-run dashboard 3/7: cpu-main dest=missing action=skip-missing"
+    );
 }
 
 #[test]
@@ -521,6 +545,16 @@ fn render_import_dry_run_table_supports_optional_header() {
 }
 
 #[test]
+fn describe_dashboard_import_mode_uses_expected_labels() {
+    assert_eq!(super::describe_dashboard_import_mode(false, false), "create-only");
+    assert_eq!(super::describe_dashboard_import_mode(true, false), "create-or-update");
+    assert_eq!(
+        super::describe_dashboard_import_mode(false, true),
+        "update-or-skip-missing"
+    );
+}
+
+#[test]
 fn import_verbose_line_includes_dry_run_action() {
     assert_eq!(
         format_import_verbose_line(Path::new("/tmp/raw/cpu.json"), false, None, None),
@@ -534,6 +568,15 @@ fn import_verbose_line_includes_dry_run_action() {
             Some("would-update")
         ),
         "Dry-run import uid=cpu-main dest=exists action=update file=/tmp/raw/cpu.json"
+    );
+    assert_eq!(
+        format_import_verbose_line(
+            Path::new("/tmp/raw/cpu.json"),
+            true,
+            Some("cpu-main"),
+            Some("would-skip-missing")
+        ),
+        "Dry-run import uid=cpu-main dest=missing action=skip-missing file=/tmp/raw/cpu.json"
     );
 }
 
@@ -1805,6 +1848,7 @@ fn import_dashboards_with_client_imports_discovered_files() {
         import_dir: raw_dir,
         import_folder_uid: Some("new-folder".to_string()),
         replace_existing: true,
+        update_existing_only: false,
         import_message: "sync dashboards".to_string(),
         dry_run: false,
         table: false,
@@ -1860,6 +1904,7 @@ fn import_dashboards_with_dry_run_skips_post_requests() {
         import_dir: raw_dir,
         import_folder_uid: None,
         replace_existing: true,
+        update_existing_only: false,
         import_message: "sync dashboards".to_string(),
         dry_run: true,
         table: false,
@@ -1906,6 +1951,7 @@ fn import_dashboards_rejects_unsupported_export_schema_version() {
         import_dir: raw_dir,
         import_folder_uid: None,
         replace_existing: false,
+        update_existing_only: false,
         import_message: "sync dashboards".to_string(),
         dry_run: false,
         table: false,
@@ -1920,6 +1966,200 @@ fn import_dashboards_rejects_unsupported_export_schema_version() {
     assert!(error
         .to_string()
         .contains("Unsupported dashboard export schemaVersion"));
+}
+
+#[test]
+fn import_dashboards_with_update_existing_only_skips_missing_dashboards() {
+    let temp = tempdir().unwrap();
+    let raw_dir = temp.path().join("raw");
+    fs::create_dir_all(&raw_dir).unwrap();
+    fs::write(
+        raw_dir.join(EXPORT_METADATA_FILENAME),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-dashboard-export-index",
+            "schemaVersion": TOOL_SCHEMA_VERSION,
+            "variant": "raw",
+            "dashboardCount": 2,
+            "indexFile": "index.json",
+            "format": "grafana-web-import-preserve-uid"
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        raw_dir.join("exists.json"),
+        serde_json::to_string_pretty(&json!({
+            "dashboard": {"id": 7, "uid": "abc", "title": "CPU"}
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        raw_dir.join("missing.json"),
+        serde_json::to_string_pretty(&json!({
+            "dashboard": {"id": 8, "uid": "xyz", "title": "Memory"}
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let args = ImportArgs {
+        common: make_common_args("http://127.0.0.1:3000".to_string()),
+        import_dir: raw_dir,
+        import_folder_uid: None,
+        replace_existing: false,
+        update_existing_only: true,
+        import_message: "sync dashboards".to_string(),
+        dry_run: false,
+        table: false,
+        no_header: false,
+        progress: false,
+        verbose: false,
+    };
+    let mut posted_payloads = Vec::new();
+    let count = import_dashboards_with_request(
+        |_method, path, _params, payload| match path {
+            "/api/dashboards/uid/abc" => Ok(Some(json!({
+                "dashboard": {"id": 7, "uid": "abc", "title": "CPU"}
+            }))),
+            "/api/dashboards/uid/xyz" => Err(api_response(
+                404,
+                "http://127.0.0.1:3000/api/dashboards/uid/xyz",
+                "{\"message\":\"not found\"}",
+            )),
+            "/api/dashboards/db" => {
+                posted_payloads.push(payload.cloned().unwrap());
+                Ok(Some(json!({"status": "success"})))
+            }
+            _ => Err(super::message(format!("unexpected path {path}"))),
+        },
+        &args,
+    )
+    .unwrap();
+
+    assert_eq!(count, 1);
+    assert_eq!(posted_payloads.len(), 1);
+    assert_eq!(posted_payloads[0]["dashboard"]["uid"], "abc");
+    assert_eq!(posted_payloads[0]["overwrite"], true);
+}
+
+#[test]
+fn import_dashboards_with_update_existing_only_table_marks_missing_dashboards_as_skipped() {
+    let temp = tempdir().unwrap();
+    let raw_dir = temp.path().join("raw");
+    fs::create_dir_all(&raw_dir).unwrap();
+    fs::write(
+        raw_dir.join(EXPORT_METADATA_FILENAME),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-dashboard-export-index",
+            "schemaVersion": TOOL_SCHEMA_VERSION,
+            "variant": "raw",
+            "dashboardCount": 1,
+            "indexFile": "index.json",
+            "format": "grafana-web-import-preserve-uid"
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        raw_dir.join("missing.json"),
+        serde_json::to_string_pretty(&json!({
+            "dashboard": {"id": 8, "uid": "xyz", "title": "Memory"}
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let args = ImportArgs {
+        common: make_common_args("http://127.0.0.1:3000".to_string()),
+        import_dir: raw_dir,
+        import_folder_uid: None,
+        replace_existing: false,
+        update_existing_only: true,
+        import_message: "sync dashboards".to_string(),
+        dry_run: true,
+        table: true,
+        no_header: true,
+        progress: false,
+        verbose: false,
+    };
+
+    let count = import_dashboards_with_request(
+        |_method, path, _params, _payload| match path {
+            "/api/dashboards/uid/xyz" => Err(api_response(
+                404,
+                "http://127.0.0.1:3000/api/dashboards/uid/xyz",
+                "{\"message\":\"not found\"}",
+            )),
+            "/api/dashboards/db" => Err(super::message("dry-run must not post dashboards")),
+            _ => Err(super::message(format!("unexpected path {path}"))),
+        },
+        &args,
+    )
+    .unwrap();
+
+    assert_eq!(count, 1);
+}
+
+#[test]
+fn import_dashboards_replace_existing_preserves_destination_folder() {
+    let temp = tempdir().unwrap();
+    let raw_dir = temp.path().join("raw");
+    fs::create_dir_all(&raw_dir).unwrap();
+    fs::write(
+        raw_dir.join(EXPORT_METADATA_FILENAME),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-dashboard-export-index",
+            "schemaVersion": TOOL_SCHEMA_VERSION,
+            "variant": "raw",
+            "dashboardCount": 1,
+            "indexFile": "index.json",
+            "format": "grafana-web-import-preserve-uid"
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        raw_dir.join("exists.json"),
+        serde_json::to_string_pretty(&json!({
+            "dashboard": {"id": 7, "uid": "abc", "title": "CPU"},
+            "meta": {"folderUid": "source-folder"}
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let args = ImportArgs {
+        common: make_common_args("http://127.0.0.1:3000".to_string()),
+        import_dir: raw_dir,
+        import_folder_uid: None,
+        replace_existing: true,
+        update_existing_only: false,
+        import_message: "sync dashboards".to_string(),
+        dry_run: false,
+        table: false,
+        no_header: false,
+        progress: false,
+        verbose: false,
+    };
+    let mut posted_payloads = Vec::new();
+    let count = import_dashboards_with_request(
+        |_method, path, _params, payload| match path {
+            "/api/dashboards/uid/abc" => Ok(Some(json!({
+                "dashboard": {"id": 7, "uid": "abc", "title": "CPU"},
+                "meta": {"folderUid": "dest-folder"}
+            }))),
+            "/api/dashboards/db" => {
+                posted_payloads.push(payload.cloned().unwrap());
+                Ok(Some(json!({"status": "success"})))
+            }
+            _ => Err(super::message(format!("unexpected path {path}"))),
+        },
+        &args,
+    )
+    .unwrap();
+
+    assert_eq!(count, 1);
+    assert_eq!(posted_payloads.len(), 1);
+    assert_eq!(posted_payloads[0]["folderUid"], "dest-folder");
+    assert_eq!(posted_payloads[0]["overwrite"], true);
 }
 
 #[test]

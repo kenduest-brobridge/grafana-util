@@ -274,6 +274,11 @@ def add_import_cli_args(parser: argparse.ArgumentParser) -> None:
         help="Allow imports to replace existing dashboards with the same UID.",
     )
     parser.add_argument(
+        "--update-existing-only",
+        action="store_true",
+        help="Update only dashboards whose UID already exists in Grafana and skip missing dashboards instead of creating them.",
+    )
+    parser.add_argument(
         "--import-folder-uid",
         default=None,
         help="Override the destination Grafana folder UID for all imported dashboards.",
@@ -752,6 +757,9 @@ def print_dashboard_import_progress(
         if action == "would-create":
             destination = "missing"
             action_label = "create"
+        elif action == "would-skip-missing":
+            destination = "missing"
+            action_label = "skip-missing"
         elif action in ("would-update", "would-fail-existing"):
             destination = "exists"
             if action == "would-update":
@@ -916,6 +924,7 @@ def determine_dashboard_import_action(
     client: "GrafanaClient",
     payload: Dict[str, Any],
     replace_existing: bool,
+    update_existing_only: bool = False,
 ) -> str:
     """Predict whether one dashboard import would create, update, or fail."""
     uid = str(payload["dashboard"].get("uid") or "")
@@ -926,12 +935,46 @@ def determine_dashboard_import_action(
         client.fetch_dashboard(uid)
     except GrafanaApiError as exc:
         if exc.status_code == 404:
+            if update_existing_only:
+                return "would-skip-missing"
             return "would-create"
         raise
 
-    if replace_existing:
+    if replace_existing or update_existing_only:
         return "would-update"
     return "would-fail-existing"
+
+
+def determine_import_folder_uid_override(
+    client: "GrafanaClient",
+    uid: str,
+    folder_uid_override: Optional[str],
+    preserve_existing_folder: bool,
+) -> Optional[str]:
+    """Prefer an explicit override, otherwise keep the destination folder for updates."""
+    if folder_uid_override is not None:
+        return folder_uid_override
+    if not preserve_existing_folder or not uid:
+        return None
+    existing_payload = client.fetch_dashboard_if_exists(uid)
+    if existing_payload is None:
+        return None
+    meta = existing_payload.get("meta")
+    if not isinstance(meta, dict):
+        return ""
+    return str(meta.get("folderUid") or "")
+
+
+def describe_dashboard_import_mode(
+    replace_existing: bool,
+    update_existing_only: bool,
+) -> str:
+    """Return the operator-facing import mode label."""
+    if update_existing_only:
+        return "update-or-skip-missing"
+    if replace_existing:
+        return "create-or-update"
+    return "create-only"
 
 
 def export_dashboards(args: argparse.Namespace) -> int:
@@ -1588,6 +1631,9 @@ def build_dashboard_import_dry_run_record(
     if action == "would-create":
         destination = "missing"
         action_label = "create"
+    elif action == "would-skip-missing":
+        destination = "missing"
+        action_label = "skip-missing"
     elif action == "would-update":
         destination = "exists"
         action_label = "update"
@@ -1684,13 +1730,36 @@ def import_dashboards(args: argparse.Namespace) -> int:
     dashboard_files = discover_dashboard_files(import_dir)
 
     dry_run_records = []
+    imported_count = 0
+    skipped_missing_count = 0
+    effective_replace_existing = bool(
+        getattr(args, "replace_existing", False)
+        or getattr(args, "update_existing_only", False)
+    )
+    print(
+        "Import mode: %s"
+        % describe_dashboard_import_mode(
+            bool(getattr(args, "replace_existing", False)),
+            bool(getattr(args, "update_existing_only", False)),
+        )
+    )
     total_dashboards = len(dashboard_files)
     for index, dashboard_file in enumerate(dashboard_files, 1):
         document = load_json_file(dashboard_file)
+        dashboard = extract_dashboard_object(
+            document, "Dashboard payload must be a JSON object."
+        )
+        dashboard_uid = str(dashboard.get("uid") or "")
+        folder_uid_override = determine_import_folder_uid_override(
+            client,
+            dashboard_uid,
+            args.import_folder_uid,
+            preserve_existing_folder=effective_replace_existing,
+        )
         payload = build_import_payload(
             document=document,
-            folder_uid_override=args.import_folder_uid,
-            replace_existing=args.replace_existing,
+            folder_uid_override=folder_uid_override,
+            replace_existing=effective_replace_existing,
             message=args.import_message,
         )
         uid = payload["dashboard"].get("uid") or "unknown"
@@ -1698,7 +1767,8 @@ def import_dashboards(args: argparse.Namespace) -> int:
             action = determine_dashboard_import_action(
                 client,
                 payload,
-                args.replace_existing,
+                effective_replace_existing,
+                update_existing_only=bool(getattr(args, "update_existing_only", False)),
             )
             if getattr(args, "table", False):
                 dry_run_records.append(
@@ -1716,9 +1786,31 @@ def import_dashboards(args: argparse.Namespace) -> int:
             )
             continue
 
+        if bool(getattr(args, "update_existing_only", False)):
+            action = determine_dashboard_import_action(
+                client,
+                payload,
+                effective_replace_existing,
+                update_existing_only=True,
+            )
+            if action == "would-skip-missing":
+                skipped_missing_count += 1
+                if getattr(args, "verbose", False):
+                    print(
+                        "Skipped import uid=%s dest=missing action=skip-missing file=%s"
+                        % (uid, dashboard_file)
+                    )
+                elif getattr(args, "progress", False):
+                    print(
+                        "Skipping dashboard %s/%s: %s dest=missing action=skip-missing"
+                        % (index, total_dashboards, uid)
+                    )
+                continue
+
         result = client.import_dashboard(payload)
         status = result.get("status", "unknown")
         uid = result.get("uid") or uid
+        imported_count += 1
         print_dashboard_import_progress(
             args,
             index,
@@ -1730,15 +1822,31 @@ def import_dashboards(args: argparse.Namespace) -> int:
         )
 
     if args.dry_run:
+        if getattr(args, "update_existing_only", False):
+            skipped_missing_count = len(
+                [record for record in dry_run_records if record.get("action") == "skip-missing"]
+            )
         if getattr(args, "table", False):
             for line in render_dashboard_import_dry_run_table(
                 dry_run_records,
                 include_header=not bool(getattr(args, "no_header", False)),
             ):
                 print(line)
-        print(f"Dry-run checked {len(dashboard_files)} dashboard files from {import_dir}")
+        if getattr(args, "update_existing_only", False) and skipped_missing_count:
+            print(
+                "Dry-run checked %s dashboard files from %s; would skip %s missing dashboards"
+                % (len(dashboard_files), import_dir, skipped_missing_count)
+            )
+        else:
+            print(f"Dry-run checked {len(dashboard_files)} dashboard files from {import_dir}")
     else:
-        print(f"Imported {len(dashboard_files)} dashboard files from {import_dir}")
+        if getattr(args, "update_existing_only", False) and skipped_missing_count:
+            print(
+                "Imported %s dashboard files from %s; skipped %s missing dashboards"
+                % (imported_count, import_dir, skipped_missing_count)
+            )
+        else:
+            print(f"Imported {imported_count} dashboard files from {import_dir}")
     return 0
 
 

@@ -145,6 +145,15 @@
 - Impact: `grafana_utils/dashboard_cli.py`, `tests/test_python_dashboard_cli.py`, `rust/src/dashboard_cli_defs.rs`, `rust/src/dashboard.rs`, `rust/src/dashboard_rust_tests.rs`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
 - Rollback/Risk: Low. The feature is additive and intentionally gated behind `--dry-run`.
 
+## 2026-03-13 - Add Update-Existing-Only Dashboard Import Mode
+- Summary: Added `--update-existing-only` to both Python and Rust dashboard import so operators can update only dashboards whose `uid` already exists in the target Grafana and skip missing dashboards instead of creating them. The mode implies overwrite-on-existing behavior and keeps dry-run, progress, verbose, and table output aligned around the new `skip-missing` prediction.
+- Tests: Added parser coverage plus focused import workflow tests for dry-run table output, verbose/progress skip messaging, imported/skipped counts, and same-UID update behavior under the new mode.
+- Test Run: `python3 -m unittest -v tests/test_python_dashboard_cli.py`; `cargo test dashboard --manifest-path rust/Cargo.toml --quiet`
+- Reason: Operators wanted a safe reconciliation mode for large local dashboard batches where only already-known Grafana dashboards should be updated and all missing dashboards should be ignored.
+- Validation: Verified that existing UIDs still update, missing UIDs are skipped without POSTing a create payload, dry-run reports `skip-missing`, and the final summary reports the imported versus skipped counts.
+- Impact: `grafana_utils/dashboard_cli.py`, `tests/test_python_dashboard_cli.py`, `rust/src/dashboard_cli_defs.rs`, `rust/src/dashboard.rs`, `rust/src/dashboard_rust_tests.rs`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low. The new mode is opt-in and only narrows import behavior relative to the existing create-or-update path.
+
 ## 2026-03-12 - Consolidate Python And Rust CLIs Under grafana-utils
 - Summary: Added a unified Python dispatcher and a unified Rust dispatcher so `grafana-utils` becomes the primary entrypoint for `dashboard`, `alert`, and `access` workflows in both implementations. The new primary shape is `grafana-utils dashboard ...`, `grafana-utils alert ...`, and `grafana-utils access ...`, while old dashboard direct forms and the split `grafana-alert-utils` / `grafana-access-utils` names remain available as compatibility shims.
 - Tests: Added Python unified-entrypoint coverage and Rust unified-dispatch coverage, then reran the existing dashboard, alert, and access test suites to confirm the merged entrypoint did not break the underlying command implementations.

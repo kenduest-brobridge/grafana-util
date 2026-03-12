@@ -193,6 +193,12 @@ pub struct ImportArgs {
         help = "Allow imports to replace existing dashboards with the same UID."
     )]
     pub replace_existing: bool,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Only update dashboards whose UID already exists in Grafana, and skip files whose UID is missing on the destination."
+    )]
+    pub update_existing_only: bool,
     #[arg(long, default_value = DEFAULT_IMPORT_MESSAGE, help = "Version history message to attach to imported dashboards.")]
     pub import_message: String,
     #[arg(
