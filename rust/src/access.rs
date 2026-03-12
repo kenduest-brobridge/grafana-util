@@ -17,10 +17,11 @@ mod access_user;
 
 pub use access_cli_defs::{
     build_auth_context, build_http_client, parse_cli_from, root_command, AccessAuthContext,
-    AccessCliArgs, AccessCommand, CommonCliArgs, Scope, ServiceAccountAddArgs, ServiceAccountCommand,
-    ServiceAccountListArgs, ServiceAccountTokenAddArgs, ServiceAccountTokenCommand, TeamAddArgs,
-    TeamCommand, TeamListArgs, TeamModifyArgs, UserAddArgs, UserCommand, UserDeleteArgs,
-    UserListArgs, UserModifyArgs, DEFAULT_PAGE_SIZE, DEFAULT_TIMEOUT, DEFAULT_URL,
+    AccessCliArgs, AccessCommand, CommonCliArgs, Scope, ServiceAccountAddArgs,
+    ServiceAccountCommand, ServiceAccountListArgs, ServiceAccountTokenAddArgs,
+    ServiceAccountTokenCommand, TeamAddArgs, TeamCommand, TeamListArgs, TeamModifyArgs,
+    UserAddArgs, UserCommand, UserDeleteArgs, UserListArgs, UserModifyArgs, DEFAULT_PAGE_SIZE,
+    DEFAULT_TIMEOUT, DEFAULT_URL,
 };
 
 #[cfg(test)]
@@ -34,7 +35,8 @@ pub(crate) use access_team::{
 };
 #[cfg(test)]
 pub(crate) use access_user::{
-    add_user_with_request, delete_user_with_request, list_users_with_request, modify_user_with_request,
+    add_user_with_request, delete_user_with_request, list_users_with_request,
+    modify_user_with_request,
 };
 
 fn request_object<F>(

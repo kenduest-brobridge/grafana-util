@@ -5,11 +5,13 @@ use std::fmt::Write as _;
 use crate::common::{message, string_field, value_as_object, Result};
 
 use super::access_render::{
-    format_table, map_get_text, normalize_team_row, render_csv, render_objects_json,
-    scalar_text, team_summary_line, team_table_rows, value_bool,
+    format_table, map_get_text, normalize_team_row, render_csv, render_objects_json, scalar_text,
+    team_summary_line, team_table_rows, value_bool,
 };
 use super::access_user::lookup_org_user_by_identity;
-use super::{request_array, request_object, TeamAddArgs, TeamListArgs, TeamModifyArgs, DEFAULT_PAGE_SIZE};
+use super::{
+    request_array, request_object, TeamAddArgs, TeamListArgs, TeamModifyArgs, DEFAULT_PAGE_SIZE,
+};
 
 fn list_teams_with_request<F>(
     mut request_json: F,
@@ -36,13 +38,18 @@ where
     match object.get("teams") {
         Some(Value::Array(values)) => values
             .iter()
-            .map(|value| Ok(value_as_object(value, "Unexpected team list response from Grafana.")?.clone()))
+            .map(|value| {
+                Ok(value_as_object(value, "Unexpected team list response from Grafana.")?.clone())
+            })
             .collect(),
         _ => Err(message("Unexpected team list response from Grafana.")),
     }
 }
 
-fn list_team_members_with_request<F>(mut request_json: F, team_id: &str) -> Result<Vec<Map<String, Value>>>
+fn list_team_members_with_request<F>(
+    mut request_json: F,
+    team_id: &str,
+) -> Result<Vec<Map<String, Value>>>
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
@@ -188,10 +195,16 @@ fn team_member_identity(member: &Map<String, Value>) -> String {
 }
 
 fn team_member_is_admin(member: &Map<String, Value>) -> bool {
-    value_bool(member.get("isAdmin")).unwrap_or_else(|| value_bool(member.get("admin")).unwrap_or(false))
+    value_bool(member.get("isAdmin"))
+        .unwrap_or_else(|| value_bool(member.get("admin")).unwrap_or(false))
 }
 
-fn add_or_remove_member<F>(request_json: &mut F, team_id: &str, identity: &str, add: bool) -> Result<String>
+fn add_or_remove_member<F>(
+    request_json: &mut F,
+    team_id: &str,
+    identity: &str,
+    add: bool,
+) -> Result<String>
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
@@ -202,7 +215,11 @@ where
     } else {
         let _ = remove_team_member_with_request(&mut *request_json, team_id, &user_id)?;
     }
-    Ok(string_field(&user, "email", &string_field(&user, "login", identity)))
+    Ok(string_field(
+        &user,
+        "email",
+        &string_field(&user, "login", identity),
+    ))
 }
 
 pub(crate) fn list_teams_command_with_request<F>(
@@ -212,10 +229,15 @@ pub(crate) fn list_teams_command_with_request<F>(
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
-    let mut rows = list_teams_with_request(&mut request_json, args.query.as_deref(), args.page, args.per_page)?
-        .into_iter()
-        .map(|team| normalize_team_row(&team))
-        .collect::<Vec<Map<String, Value>>>();
+    let mut rows = list_teams_with_request(
+        &mut request_json,
+        args.query.as_deref(),
+        args.page,
+        args.per_page,
+    )?
+    .into_iter()
+    .map(|team| normalize_team_row(&team))
+    .collect::<Vec<Map<String, Value>>>();
     if let Some(name) = &args.name {
         rows.retain(|row| map_get_text(row, "name") == *name);
     }
@@ -297,7 +319,12 @@ fn team_modify_summary_line(result: &Map<String, Value>) -> String {
         map_get_text(result, "teamId"),
         map_get_text(result, "name")
     );
-    for key in ["addedMembers", "removedMembers", "addedAdmins", "removedAdmins"] {
+    for key in [
+        "addedMembers",
+        "removedMembers",
+        "addedAdmins",
+        "removedAdmins",
+    ] {
         let value = map_get_text(result, key);
         if !value.is_empty() {
             let _ = write!(&mut text, " {}={}", key, value);
@@ -324,10 +351,20 @@ where
     let mut added_members = Vec::new();
     let mut removed_members = Vec::new();
     for identity in &args.add_member {
-        added_members.push(add_or_remove_member(&mut request_json, &team_id, identity, true)?);
+        added_members.push(add_or_remove_member(
+            &mut request_json,
+            &team_id,
+            identity,
+            true,
+        )?);
     }
     for identity in &args.remove_member {
-        removed_members.push(add_or_remove_member(&mut request_json, &team_id, identity, false)?);
+        removed_members.push(add_or_remove_member(
+            &mut request_json,
+            &team_id,
+            identity,
+            false,
+        )?);
     }
     let existing_members = list_team_members_with_request(&mut request_json, &team_id)?;
     let mut member_identities = existing_members

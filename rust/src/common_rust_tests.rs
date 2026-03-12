@@ -9,12 +9,16 @@ fn sanitize_path_component_normalizes_symbols_and_spaces() {
 #[test]
 fn resolve_auth_headers_prefers_bearer_token() {
     let headers = resolve_auth_headers(Some("abc123"), None, None, false).unwrap();
-    assert_eq!(headers[0], ("Authorization".to_string(), "Bearer abc123".to_string()));
+    assert_eq!(
+        headers[0],
+        ("Authorization".to_string(), "Bearer abc123".to_string())
+    );
 }
 
 #[test]
 fn resolve_auth_headers_rejects_mixed_token_and_basic_auth() {
-    let error = resolve_auth_headers(Some("abc123"), Some("user"), Some("pass"), false).unwrap_err();
+    let error =
+        resolve_auth_headers(Some("abc123"), Some("user"), Some("pass"), false).unwrap_err();
     assert!(error.to_string().contains("Choose either token auth"));
 }
 
@@ -43,8 +47,9 @@ fn resolve_auth_headers_supports_prompt_password() {
 
 #[test]
 fn resolve_auth_headers_rejects_prompt_without_username() {
-    let error = resolve_auth_headers_with_prompt(None, None, None, true, || Ok("secret".to_string()))
-        .unwrap_err();
+    let error =
+        resolve_auth_headers_with_prompt(None, None, None, true, || Ok("secret".to_string()))
+            .unwrap_err();
     assert!(error
         .to_string()
         .contains("--prompt-password requires --basic-user / --username."));

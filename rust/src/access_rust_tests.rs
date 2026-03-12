@@ -1,9 +1,10 @@
 use super::{
-    add_service_account_with_request, add_service_account_token_with_request, add_team_with_request,
-    add_user_with_request, list_service_accounts_command_with_request, list_teams_command_with_request,
+    add_service_account_token_with_request, add_service_account_with_request,
+    add_team_with_request, add_user_with_request, delete_user_with_request,
+    list_service_accounts_command_with_request, list_teams_command_with_request,
     list_users_with_request, modify_team_with_request, modify_user_with_request, parse_cli_from,
-    run_access_cli_with_request, delete_user_with_request, AccessCommand, CommonCliArgs,
-    Scope, ServiceAccountAddArgs, ServiceAccountCommand, ServiceAccountListArgs, ServiceAccountTokenAddArgs,
+    run_access_cli_with_request, AccessCommand, CommonCliArgs, Scope, ServiceAccountAddArgs,
+    ServiceAccountCommand, ServiceAccountListArgs, ServiceAccountTokenAddArgs,
     ServiceAccountTokenCommand, TeamAddArgs, TeamListArgs, TeamModifyArgs, UserAddArgs,
     UserCommand, UserDeleteArgs, UserListArgs, UserModifyArgs,
 };
@@ -48,7 +49,9 @@ fn parse_cli_supports_user_list() {
     ]);
 
     match args.command {
-        AccessCommand::User { command: UserCommand::List(list_args) } => {
+        AccessCommand::User {
+            command: UserCommand::List(list_args),
+        } => {
             assert_eq!(list_args.scope, Scope::Global);
             assert!(list_args.table);
             assert!(!list_args.csv);
@@ -72,7 +75,12 @@ fn parse_cli_supports_service_account_token_add() {
     ]);
 
     match args.command {
-        AccessCommand::ServiceAccount { command: ServiceAccountCommand::Token { command: ServiceAccountTokenCommand::Add(token_args) } } => {
+        AccessCommand::ServiceAccount {
+            command:
+                ServiceAccountCommand::Token {
+                    command: ServiceAccountTokenCommand::Add(token_args),
+                },
+        } => {
             assert_eq!(token_args.name.as_deref(), Some("sa-one"));
             assert_eq!(token_args.token_name, "automation");
         }
@@ -132,7 +140,12 @@ fn user_add_with_request_requires_basic_auth_and_updates_role() {
     let mut calls = Vec::new();
     let result = add_user_with_request(
         |method, path, params, payload| {
-            calls.push((method.to_string(), path.to_string(), params.to_vec(), payload.cloned()));
+            calls.push((
+                method.to_string(),
+                path.to_string(),
+                params.to_vec(),
+                payload.cloned(),
+            ));
             match path {
                 "/api/admin/users" => Ok(Some(json!({"id": 9}))),
                 "/api/org/users/9" => Ok(Some(json!({"message": "ok"}))),
@@ -144,9 +157,15 @@ fn user_add_with_request_requires_basic_auth_and_updates_role() {
     );
 
     assert!(result.is_ok());
-    assert!(calls.iter().any(|(_, path, _, _)| path == "/api/admin/users"));
-    assert!(calls.iter().any(|(_, path, _, _)| path == "/api/org/users/9"));
-    assert!(calls.iter().any(|(_, path, _, _)| path == "/api/admin/users/9/permissions"));
+    assert!(calls
+        .iter()
+        .any(|(_, path, _, _)| path == "/api/admin/users"));
+    assert!(calls
+        .iter()
+        .any(|(_, path, _, _)| path == "/api/org/users/9"));
+    assert!(calls
+        .iter()
+        .any(|(_, path, _, _)| path == "/api/admin/users/9/permissions"));
 }
 
 #[test]
@@ -167,9 +186,16 @@ fn user_modify_with_request_updates_profile_and_password() {
     let mut calls = Vec::new();
     let result = modify_user_with_request(
         |method, path, params, payload| {
-            calls.push((method.to_string(), path.to_string(), params.to_vec(), payload.cloned()));
+            calls.push((
+                method.to_string(),
+                path.to_string(),
+                params.to_vec(),
+                payload.cloned(),
+            ));
             match path {
-                "/api/users/9" if method == Method::GET => Ok(Some(json!({"id": 9, "login": "alice", "email": "alice@example.com", "name": "Alice"}))),
+                "/api/users/9" if method == Method::GET => Ok(Some(
+                    json!({"id": 9, "login": "alice", "email": "alice@example.com", "name": "Alice"}),
+                )),
                 "/api/users/9" if method == Method::PUT => Ok(Some(json!({"message": "ok"}))),
                 "/api/admin/users/9/password" => Ok(Some(json!({"message": "ok"}))),
                 _ => panic!("unexpected path {path}"),
@@ -179,8 +205,12 @@ fn user_modify_with_request_updates_profile_and_password() {
     );
 
     assert!(result.is_ok());
-    assert!(calls.iter().any(|(method, path, _, _)| method == "PUT" && path == "/api/users/9"));
-    assert!(calls.iter().any(|(_, path, _, _)| path == "/api/admin/users/9/password"));
+    assert!(calls
+        .iter()
+        .any(|(method, path, _, _)| method == "PUT" && path == "/api/users/9"));
+    assert!(calls
+        .iter()
+        .any(|(_, path, _, _)| path == "/api/admin/users/9/password"));
 }
 
 #[test]
@@ -199,8 +229,12 @@ fn user_delete_with_request_requires_yes_and_deletes() {
         |method, path, params, _payload| {
             calls.push((method.to_string(), path.to_string(), params.to_vec()));
             match path {
-                "/api/users/9" if method == Method::GET => Ok(Some(json!({"id": 9, "login": "alice"}))),
-                "/api/admin/users/9" if method == Method::DELETE => Ok(Some(json!({"message": "deleted"}))),
+                "/api/users/9" if method == Method::GET => {
+                    Ok(Some(json!({"id": 9, "login": "alice"})))
+                }
+                "/api/admin/users/9" if method == Method::DELETE => {
+                    Ok(Some(json!({"message": "deleted"})))
+                }
                 _ => panic!("unexpected path {path}"),
             }
         },
@@ -208,7 +242,9 @@ fn user_delete_with_request_requires_yes_and_deletes() {
     );
 
     assert!(result.is_ok());
-    assert!(calls.iter().any(|(method, path, _)| method == "DELETE" && path == "/api/admin/users/9"));
+    assert!(calls
+        .iter()
+        .any(|(method, path, _)| method == "DELETE" && path == "/api/admin/users/9"));
 }
 
 #[test]
@@ -229,7 +265,9 @@ fn team_list_with_request_reads_search_and_members() {
         |method, path, params, _payload| {
             calls.push((method.to_string(), path.to_string(), params.to_vec()));
             match path {
-                "/api/teams/search" => Ok(Some(json!({"teams": [{"id": 5, "name": "Ops", "memberCount": 1}]}))),
+                "/api/teams/search" => Ok(Some(
+                    json!({"teams": [{"id": 5, "name": "Ops", "memberCount": 1}]}),
+                )),
                 "/api/teams/5/members" => Ok(Some(json!([{"login": "alice"}]))),
                 _ => panic!("unexpected path {path}"),
             }
@@ -239,7 +277,9 @@ fn team_list_with_request_reads_search_and_members() {
 
     assert_eq!(result.unwrap(), 1);
     assert!(calls.iter().any(|(_, path, _)| path == "/api/teams/search"));
-    assert!(calls.iter().any(|(_, path, _)| path == "/api/teams/5/members"));
+    assert!(calls
+        .iter()
+        .any(|(_, path, _)| path == "/api/teams/5/members"));
 }
 
 #[test]
@@ -255,11 +295,20 @@ fn team_add_with_request_creates_team_and_members() {
     let mut calls = Vec::new();
     let result = add_team_with_request(
         |method, path, params, payload| {
-            calls.push((method.to_string(), path.to_string(), params.to_vec(), payload.cloned()));
+            calls.push((
+                method.to_string(),
+                path.to_string(),
+                params.to_vec(),
+                payload.cloned(),
+            ));
             match path {
                 "/api/teams" => Ok(Some(json!({"teamId": 3}))),
-                "/api/teams/3" => Ok(Some(json!({"id": 3, "name": "Ops", "email": "ops@example.com"}))),
-                "/api/teams/3/members" if method == Method::POST => Ok(Some(json!({"message": "ok"}))),
+                "/api/teams/3" => Ok(Some(
+                    json!({"id": 3, "name": "Ops", "email": "ops@example.com"}),
+                )),
+                "/api/teams/3/members" if method == Method::POST => {
+                    Ok(Some(json!({"message": "ok"})))
+                }
                 "/api/teams/3/members" if method == Method::GET => Ok(Some(json!([
                     {"login": "alice@example.com", "email": "alice@example.com", "userId": 7, "isAdmin": false}
                 ]))),
@@ -267,7 +316,9 @@ fn team_add_with_request_creates_team_and_members() {
                     {"userId": 7, "login": "alice@example.com", "email": "alice@example.com"},
                     {"userId": 8, "login": "bob@example.com", "email": "bob@example.com"}
                 ]))),
-                "/api/teams/3/members" if method == Method::PUT => Ok(Some(json!({"message": "ok"}))),
+                "/api/teams/3/members" if method == Method::PUT => {
+                    Ok(Some(json!({"message": "ok"})))
+                }
                 _ => panic!("unexpected path {path} {method:?}"),
             }
         },
@@ -276,7 +327,9 @@ fn team_add_with_request_creates_team_and_members() {
 
     assert!(result.is_ok());
     assert!(calls.iter().any(|(_, path, _, _)| path == "/api/teams"));
-    assert!(calls.iter().any(|(method, path, _, _)| method == "PUT" && path == "/api/teams/3/members"));
+    assert!(calls
+        .iter()
+        .any(|(method, path, _, _)| method == "PUT" && path == "/api/teams/3/members"));
 }
 
 #[test]
@@ -294,18 +347,27 @@ fn team_modify_with_request_updates_members_and_admins() {
     let mut calls = Vec::new();
     let result = modify_team_with_request(
         |method, path, params, payload| {
-            calls.push((method.to_string(), path.to_string(), params.to_vec(), payload.cloned()));
+            calls.push((
+                method.to_string(),
+                path.to_string(),
+                params.to_vec(),
+                payload.cloned(),
+            ));
             match path {
                 "/api/teams/3" => Ok(Some(json!({"id": 3, "name": "Ops"}))),
                 "/api/org/users" => Ok(Some(json!([
                     {"userId": 7, "login": "alice@example.com", "email": "alice@example.com"},
                     {"userId": 8, "login": "bob@example.com", "email": "bob@example.com"}
                 ]))),
-                "/api/teams/3/members" if method == Method::POST => Ok(Some(json!({"message": "ok"}))),
+                "/api/teams/3/members" if method == Method::POST => {
+                    Ok(Some(json!({"message": "ok"})))
+                }
                 "/api/teams/3/members" if method == Method::GET => Ok(Some(json!([
                     {"login": "alice@example.com", "email": "alice@example.com", "userId": 7, "isAdmin": false}
                 ]))),
-                "/api/teams/3/members" if method == Method::PUT => Ok(Some(json!({"message": "ok"}))),
+                "/api/teams/3/members" if method == Method::PUT => {
+                    Ok(Some(json!({"message": "ok"})))
+                }
                 _ => panic!("unexpected path {path}"),
             }
         },
@@ -313,7 +375,9 @@ fn team_modify_with_request_updates_members_and_admins() {
     );
 
     assert!(result.is_ok());
-    assert!(calls.iter().any(|(method, path, _, _)| method == "PUT" && path == "/api/teams/3/members"));
+    assert!(calls
+        .iter()
+        .any(|(method, path, _, _)| method == "PUT" && path == "/api/teams/3/members"));
 }
 
 #[test]
@@ -332,7 +396,9 @@ fn service_account_list_with_request_reads_search() {
         |method, path, params, _payload| {
             calls.push((method.to_string(), path.to_string(), params.to_vec()));
             match path {
-                "/api/serviceaccounts/search" => Ok(Some(json!({"serviceAccounts": [{"id": 4, "name": "svc", "login": "sa-svc", "role": "Viewer", "isDisabled": false, "tokens": 1, "orgId": 1}]}))),
+                "/api/serviceaccounts/search" => Ok(Some(
+                    json!({"serviceAccounts": [{"id": 4, "name": "svc", "login": "sa-svc", "role": "Viewer", "isDisabled": false, "tokens": 1, "orgId": 1}]}),
+                )),
                 _ => panic!("unexpected path {path}"),
             }
         },
@@ -355,9 +421,16 @@ fn service_account_add_with_request_creates_account() {
     let mut calls = Vec::new();
     let result = add_service_account_with_request(
         |method, path, params, payload| {
-            calls.push((method.to_string(), path.to_string(), params.to_vec(), payload.cloned()));
+            calls.push((
+                method.to_string(),
+                path.to_string(),
+                params.to_vec(),
+                payload.cloned(),
+            ));
             match path {
-                "/api/serviceaccounts" => Ok(Some(json!({"id": 4, "name": "svc", "login": "sa-svc", "role": "Viewer", "isDisabled": false, "tokens": 0, "orgId": 1}))),
+                "/api/serviceaccounts" => Ok(Some(
+                    json!({"id": 4, "name": "svc", "login": "sa-svc", "role": "Viewer", "isDisabled": false, "tokens": 0, "orgId": 1}),
+                )),
                 _ => panic!("unexpected path {path}"),
             }
         },
@@ -381,10 +454,19 @@ fn service_account_token_add_with_request_resolves_name() {
     let mut calls = Vec::new();
     let result = add_service_account_token_with_request(
         |method, path, params, payload| {
-            calls.push((method.to_string(), path.to_string(), params.to_vec(), payload.cloned()));
+            calls.push((
+                method.to_string(),
+                path.to_string(),
+                params.to_vec(),
+                payload.cloned(),
+            ));
             match path {
-                "/api/serviceaccounts/search" => Ok(Some(json!({"serviceAccounts": [{"id": 4, "name": "svc"}]}))),
-                "/api/serviceaccounts/4/tokens" => Ok(Some(json!({"name": "automation", "key": "token"}))),
+                "/api/serviceaccounts/search" => {
+                    Ok(Some(json!({"serviceAccounts": [{"id": 4, "name": "svc"}]})))
+                }
+                "/api/serviceaccounts/4/tokens" => {
+                    Ok(Some(json!({"name": "automation", "key": "token"})))
+                }
                 _ => panic!("unexpected path {path}"),
             }
         },
@@ -392,12 +474,21 @@ fn service_account_token_add_with_request_resolves_name() {
     );
 
     assert!(result.is_ok());
-    assert!(calls.iter().any(|(_, path, _, _)| path == "/api/serviceaccounts/4/tokens"));
+    assert!(calls
+        .iter()
+        .any(|(_, path, _, _)| path == "/api/serviceaccounts/4/tokens"));
 }
 
 #[test]
 fn run_access_cli_with_request_routes_user_list() {
-    let args = parse_cli_from(["grafana-access-utils", "user", "list", "--json", "--token", "abc"]);
+    let args = parse_cli_from([
+        "grafana-access-utils",
+        "user",
+        "list",
+        "--json",
+        "--token",
+        "abc",
+    ]);
     let result = run_access_cli_with_request(
         |_method, path, _params, _payload| match path {
             "/api/org/users" => Ok(Some(json!([]))),

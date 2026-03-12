@@ -88,8 +88,14 @@ pub(crate) fn format_table(headers: &[&str], rows: &[Vec<String>]) -> Vec<String
             .collect::<Vec<String>>()
             .join("  ")
     };
-    let header_row = headers.iter().map(|value| value.to_string()).collect::<Vec<String>>();
-    let separator = widths.iter().map(|width| "-".repeat(*width)).collect::<Vec<String>>();
+    let header_row = headers
+        .iter()
+        .map(|value| value.to_string())
+        .collect::<Vec<String>>();
+    let separator = widths
+        .iter()
+        .map(|width| "-".repeat(*width))
+        .collect::<Vec<String>>();
     let mut lines = vec![format_row(&header_row), format_row(&separator)];
     lines.extend(rows.iter().map(|row| format_row(row)));
     lines
@@ -105,10 +111,13 @@ fn csv_escape(value: String) -> String {
 
 pub(crate) fn render_csv(headers: &[&str], rows: &[Vec<String>]) -> Vec<String> {
     let mut lines = vec![headers.join(",")];
-    lines.extend(
-        rows.iter()
-            .map(|row| row.iter().cloned().map(csv_escape).collect::<Vec<String>>().join(",")),
-    );
+    lines.extend(rows.iter().map(|row| {
+        row.iter()
+            .cloned()
+            .map(csv_escape)
+            .collect::<Vec<String>>()
+            .join(",")
+    }));
     lines
 }
 
@@ -125,9 +134,18 @@ pub(crate) fn normalize_user_row(user: &Map<String, Value>, scope: &Scope) -> Ma
                 }
             }),
         ),
-        ("login".to_string(), Value::String(string_field(user, "login", ""))),
-        ("email".to_string(), Value::String(string_field(user, "email", ""))),
-        ("name".to_string(), Value::String(string_field(user, "name", ""))),
+        (
+            "login".to_string(),
+            Value::String(string_field(user, "login", "")),
+        ),
+        (
+            "email".to_string(),
+            Value::String(string_field(user, "email", "")),
+        ),
+        (
+            "name".to_string(),
+            Value::String(string_field(user, "name", "")),
+        ),
         (
             "orgRole".to_string(),
             Value::String(normalize_org_role(user.get("role"))),
@@ -149,8 +167,14 @@ pub(crate) fn normalize_user_row(user: &Map<String, Value>, scope: &Scope) -> Ma
 pub(crate) fn normalize_team_row(team: &Map<String, Value>) -> Map<String, Value> {
     Map::from_iter(vec![
         ("id".to_string(), Value::String(scalar_text(team.get("id")))),
-        ("name".to_string(), Value::String(string_field(team, "name", ""))),
-        ("email".to_string(), Value::String(string_field(team, "email", ""))),
+        (
+            "name".to_string(),
+            Value::String(string_field(team, "name", "")),
+        ),
+        (
+            "email".to_string(),
+            Value::String(string_field(team, "email", "")),
+        ),
         (
             "memberCount".to_string(),
             Value::String({
@@ -169,9 +193,18 @@ pub(crate) fn normalize_team_row(team: &Map<String, Value>) -> Map<String, Value
 pub(crate) fn normalize_service_account_row(team: &Map<String, Value>) -> Map<String, Value> {
     Map::from_iter(vec![
         ("id".to_string(), Value::String(scalar_text(team.get("id")))),
-        ("name".to_string(), Value::String(string_field(team, "name", ""))),
-        ("login".to_string(), Value::String(string_field(team, "login", ""))),
-        ("role".to_string(), Value::String(normalize_org_role(team.get("role")))),
+        (
+            "name".to_string(),
+            Value::String(string_field(team, "name", "")),
+        ),
+        (
+            "login".to_string(),
+            Value::String(string_field(team, "login", "")),
+        ),
+        (
+            "role".to_string(),
+            Value::String(normalize_org_role(team.get("role"))),
+        ),
         (
             "disabled".to_string(),
             Value::String(bool_label(value_bool(team.get("isDisabled")))),
@@ -187,7 +220,10 @@ pub(crate) fn normalize_service_account_row(team: &Map<String, Value>) -> Map<St
                 }
             }),
         ),
-        ("orgId".to_string(), Value::String(scalar_text(team.get("orgId")))),
+        (
+            "orgId".to_string(),
+            Value::String(scalar_text(team.get("orgId"))),
+        ),
     ])
 }
 

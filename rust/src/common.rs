@@ -80,11 +80,18 @@ fn resolve_auth_headers_with_prompt<F>(
 where
     F: FnOnce() -> Result<String>,
 {
-    let cli_token = api_token.map(str::to_owned).filter(|value| !value.is_empty());
-    let cli_username = username.map(str::to_owned).filter(|value| !value.is_empty());
-    let mut cli_password = password.map(str::to_owned).filter(|value| !value.is_empty());
+    let cli_token = api_token
+        .map(str::to_owned)
+        .filter(|value| !value.is_empty());
+    let cli_username = username
+        .map(str::to_owned)
+        .filter(|value| !value.is_empty());
+    let mut cli_password = password
+        .map(str::to_owned)
+        .filter(|value| !value.is_empty());
 
-    if cli_token.is_some() && (cli_username.is_some() || cli_password.is_some() || prompt_for_password)
+    if cli_token.is_some()
+        && (cli_username.is_some() || cli_password.is_some() || prompt_for_password)
     {
         return Err(message(
             "Choose either token auth (--token / --api-token) or Basic auth \
@@ -116,7 +123,10 @@ where
 
     let token = cli_token.or_else(|| env_value("GRAFANA_API_TOKEN"));
     if let Some(token) = token {
-        return Ok(vec![("Authorization".to_string(), format!("Bearer {token}"))]);
+        return Ok(vec![(
+            "Authorization".to_string(),
+            format!("Bearer {token}"),
+        )]);
     }
 
     if prompt_for_password && cli_username.is_some() {
@@ -127,7 +137,10 @@ where
     let password = cli_password.or_else(|| env_value("GRAFANA_PASSWORD"));
     if let (Some(username), Some(password)) = (username.as_ref(), password.as_ref()) {
         let encoded = STANDARD.encode(format!("{username}:{password}"));
-        return Ok(vec![("Authorization".to_string(), format!("Basic {encoded}"))]);
+        return Ok(vec![(
+            "Authorization".to_string(),
+            format!("Basic {encoded}"),
+        )]);
     }
     if username.is_some() || password.is_some() {
         return Err(message(
@@ -159,14 +172,20 @@ pub fn sanitize_path_component(value: &str) -> String {
     }
 }
 
-pub fn value_as_object<'a>(value: &'a Value, error_message: &str) -> Result<&'a Map<String, Value>> {
+pub fn value_as_object<'a>(
+    value: &'a Value,
+    error_message: &str,
+) -> Result<&'a Map<String, Value>> {
     match value.as_object() {
         Some(object) => Ok(object),
         None => Err(message(error_message)),
     }
 }
 
-pub fn object_field<'a>(object: &'a Map<String, Value>, key: &str) -> Option<&'a Map<String, Value>> {
+pub fn object_field<'a>(
+    object: &'a Map<String, Value>,
+    key: &str,
+) -> Option<&'a Map<String, Value>> {
     object.get(key).and_then(Value::as_object)
 }
 

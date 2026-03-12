@@ -29,9 +29,16 @@ pub struct CommonCliArgs {
         help = "Grafana Basic auth password. Preferred flag: --basic-password. Falls back to GRAFANA_PASSWORD."
     )]
     pub password: Option<String>,
-    #[arg(long, default_value_t = false, help = "Prompt for the Grafana Basic auth password.")]
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Prompt for the Grafana Basic auth password."
+    )]
     pub prompt_password: bool,
-    #[arg(long, help = "Grafana organization id to send through X-Grafana-Org-Id.")]
+    #[arg(
+        long,
+        help = "Grafana organization id to send through X-Grafana-Org-Id."
+    )]
     pub org_id: Option<i64>,
     #[arg(long, default_value_t = DEFAULT_TIMEOUT, help = "HTTP timeout in seconds.")]
     pub timeout: u64,
@@ -297,7 +304,10 @@ pub enum AccessCommand {
 }
 
 #[derive(Debug, Clone, Parser)]
-#[command(name = "grafana-access-utils", about = "List and manage Grafana users, teams, and service accounts.")]
+#[command(
+    name = "grafana-access-utils",
+    about = "List and manage Grafana users, teams, and service accounts."
+)]
 struct AccessCliRoot {
     #[command(flatten)]
     args: AccessCliArgs,

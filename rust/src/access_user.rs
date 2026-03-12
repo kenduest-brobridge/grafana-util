@@ -4,13 +4,13 @@ use serde_json::{Map, Value};
 use crate::common::{message, string_field, Result};
 
 use super::access_render::{
-    bool_label, map_get_text, normalize_org_role, normalize_user_row, paginate_rows, render_csv,
-    render_objects_json, user_matches, user_scope_text, user_summary_line, user_table_rows,
-    value_bool, scalar_text, format_table,
+    bool_label, format_table, map_get_text, normalize_org_role, normalize_user_row, paginate_rows,
+    render_csv, render_objects_json, scalar_text, user_matches, user_scope_text, user_summary_line,
+    user_table_rows, value_bool,
 };
 use super::{
-    build_auth_context, request_array, request_object, Scope, UserAddArgs,
-    UserDeleteArgs, UserListArgs, UserModifyArgs, DEFAULT_PAGE_SIZE,
+    build_auth_context, request_array, request_object, Scope, UserAddArgs, UserDeleteArgs,
+    UserListArgs, UserModifyArgs, DEFAULT_PAGE_SIZE,
 };
 
 pub(crate) fn list_org_users_with_request<F>(mut request_json: F) -> Result<Vec<Map<String, Value>>>
@@ -27,7 +27,10 @@ where
     )
 }
 
-fn iter_global_users_with_request<F>(mut request_json: F, page_size: usize) -> Result<Vec<Map<String, Value>>>
+fn iter_global_users_with_request<F>(
+    mut request_json: F,
+    page_size: usize,
+) -> Result<Vec<Map<String, Value>>>
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
@@ -59,7 +62,10 @@ where
     Ok(users)
 }
 
-fn list_user_teams_with_request<F>(mut request_json: F, user_id: &str) -> Result<Vec<Map<String, Value>>>
+fn list_user_teams_with_request<F>(
+    mut request_json: F,
+    user_id: &str,
+) -> Result<Vec<Map<String, Value>>>
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
@@ -101,7 +107,11 @@ where
     )
 }
 
-fn update_user_with_request<F>(mut request_json: F, user_id: &str, payload: &Value) -> Result<Map<String, Value>>
+fn update_user_with_request<F>(
+    mut request_json: F,
+    user_id: &str,
+    payload: &Value,
+) -> Result<Map<String, Value>>
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
@@ -178,7 +188,10 @@ where
     )
 }
 
-fn delete_global_user_with_request<F>(mut request_json: F, user_id: &str) -> Result<Map<String, Value>>
+fn delete_global_user_with_request<F>(
+    mut request_json: F,
+    user_id: &str,
+) -> Result<Map<String, Value>>
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
@@ -224,7 +237,10 @@ where
         .ok_or_else(|| message("Grafana user lookup did not find a matching global user."))
 }
 
-pub(crate) fn lookup_org_user_by_identity<F>(mut request_json: F, identity: &str) -> Result<Map<String, Value>>
+pub(crate) fn lookup_org_user_by_identity<F>(
+    mut request_json: F,
+    identity: &str,
+) -> Result<Map<String, Value>>
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
@@ -265,7 +281,9 @@ fn validate_user_list_auth(args: &UserListArgs, auth_mode: &str) -> Result<()> {
 fn validate_user_modify_args(args: &UserModifyArgs) -> Result<()> {
     let has_identity = args.user_id.is_some() || args.login.is_some() || args.email.is_some();
     if !has_identity {
-        return Err(message("User modify requires one of --user-id, --login, or --email."));
+        return Err(message(
+            "User modify requires one of --user-id, --login, or --email.",
+        ));
     }
     if args.set_login.is_none()
         && args.set_email.is_none()
@@ -286,7 +304,9 @@ fn validate_user_delete_args(args: &UserDeleteArgs) -> Result<()> {
         return Err(message("User delete requires --yes."));
     }
     if args.user_id.is_none() && args.login.is_none() && args.email.is_none() {
-        return Err(message("User delete requires one of --user-id, --login, or --email."));
+        return Err(message(
+            "User delete requires one of --user-id, --login, or --email.",
+        ));
     }
     Ok(())
 }
@@ -325,14 +345,32 @@ where
         println!("{}", render_objects_json(&rows)?);
     } else if args.csv {
         for line in render_csv(
-            &["id", "login", "email", "name", "orgRole", "grafanaAdmin", "scope", "teams"],
+            &[
+                "id",
+                "login",
+                "email",
+                "name",
+                "orgRole",
+                "grafanaAdmin",
+                "scope",
+                "teams",
+            ],
             &user_table_rows(&rows),
         ) {
             println!("{line}");
         }
     } else if args.table {
         for line in format_table(
-            &["ID", "LOGIN", "EMAIL", "NAME", "ORG_ROLE", "GRAFANA_ADMIN", "SCOPE", "TEAMS"],
+            &[
+                "ID",
+                "LOGIN",
+                "EMAIL",
+                "NAME",
+                "ORG_ROLE",
+                "GRAFANA_ADMIN",
+                "SCOPE",
+                "TEAMS",
+            ],
             &user_table_rows(&rows),
         ) {
             println!("{line}");
@@ -369,7 +407,10 @@ where
         ("login".to_string(), Value::String(args.login.clone())),
         ("email".to_string(), Value::String(args.email.clone())),
         ("name".to_string(), Value::String(args.name.clone())),
-        ("password".to_string(), Value::String(args.new_user_password.clone())),
+        (
+            "password".to_string(),
+            Value::String(args.new_user_password.clone()),
+        ),
     ]);
     if let Some(org_id) = args.common.org_id {
         payload.insert("OrgId".to_string(), Value::Number(org_id.into()));
@@ -377,7 +418,9 @@ where
     let created = create_user_with_request(&mut request_json, &Value::Object(payload))?;
     let user_id = scalar_text(created.get("id"));
     if user_id.is_empty() {
-        return Err(message("Grafana user create response did not include an id."));
+        return Err(message(
+            "Grafana user create response did not include an id.",
+        ));
     }
     if let Some(role) = &args.org_role {
         let _ = update_user_org_role_with_request(&mut request_json, &user_id, role)?;
@@ -428,7 +471,11 @@ where
     let base_user = if let Some(user_id) = &args.user_id {
         get_user_with_request(&mut request_json, user_id)?
     } else {
-        lookup_global_user_by_identity(&mut request_json, args.login.as_deref(), args.email.as_deref())?
+        lookup_global_user_by_identity(
+            &mut request_json,
+            args.login.as_deref(),
+            args.email.as_deref(),
+        )?
     };
     let user_id = string_field(&base_user, "id", "");
     let user_id = if user_id.is_empty() {
@@ -526,7 +573,10 @@ where
             } else {
                 lookup_org_user_by_identity(
                     &mut request_json,
-                    args.login.as_deref().or(args.email.as_deref()).unwrap_or(""),
+                    args.login
+                        .as_deref()
+                        .or(args.email.as_deref())
+                        .unwrap_or(""),
                 )?
             }
         }
