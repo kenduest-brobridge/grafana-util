@@ -106,8 +106,9 @@ def bool_choice(value: str) -> str:
     return normalized
 
 
-def build_parser() -> argparse.ArgumentParser:
+def build_parser(prog: Optional[str] = None) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
+        prog=prog,
         description="List Grafana users, teams, and manage Grafana service accounts."
     )
     subparsers = parser.add_subparsers(dest="resource")

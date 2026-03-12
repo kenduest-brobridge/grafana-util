@@ -208,6 +208,11 @@ def add_export_cli_args(parser: argparse.ArgumentParser) -> None:
         action="store_true",
         help="Preview the dashboard files and indexes that would be written without changing disk.",
     )
+    parser.add_argument(
+        "--progress",
+        action="store_true",
+        help="Show per-dashboard export progress while processing files.",
+    )
 
 
 def add_list_cli_args(parser: argparse.ArgumentParser) -> None:
@@ -251,6 +256,11 @@ def add_list_cli_args(parser: argparse.ArgumentParser) -> None:
         action="store_true",
         help="Render dashboard summaries as JSON.",
     )
+    parser.add_argument(
+        "--no-header",
+        action="store_true",
+        help="Do not print table headers when rendering the default table output.",
+    )
 
 
 def add_list_data_sources_cli_args(parser: argparse.ArgumentParser) -> None:
@@ -269,6 +279,11 @@ def add_list_data_sources_cli_args(parser: argparse.ArgumentParser) -> None:
         "--json",
         action="store_true",
         help="Render datasource summaries as JSON.",
+    )
+    parser.add_argument(
+        "--no-header",
+        action="store_true",
+        help="Do not print table headers when rendering the default table output.",
     )
 
 
@@ -300,6 +315,11 @@ def add_import_cli_args(parser: argparse.ArgumentParser) -> None:
         "--dry-run",
         action="store_true",
         help="Show whether each dashboard would be created or updated without importing it.",
+    )
+    parser.add_argument(
+        "--progress",
+        action="store_true",
+        help="Show per-dashboard import progress while processing files.",
     )
 
 
@@ -1687,10 +1707,12 @@ def export_dashboards(args: argparse.Namespace) -> int:
                         args.overwrite,
                         create_parents=False,
                     )
-                    print(f"Would export raw    {uid} -> {raw_path}")
+                    if args.progress:
+                        print(f"Would export raw    {uid} -> {raw_path}")
                 else:
                     write_dashboard(raw_document, raw_path, args.overwrite)
-                    print(f"Exported raw    {uid} -> {raw_path}")
+                    if args.progress:
+                        print(f"Exported raw    {uid} -> {raw_path}")
                 item["raw_path"] = str(raw_path)
             if export_prompt:
                 assert datasource_catalog is not None
@@ -1702,10 +1724,12 @@ def export_dashboards(args: argparse.Namespace) -> int:
                         args.overwrite,
                         create_parents=False,
                     )
-                    print(f"Would export prompt {uid} -> {prompt_path}")
+                    if args.progress:
+                        print(f"Would export prompt {uid} -> {prompt_path}")
                 else:
                     write_dashboard(prompt_document, prompt_path, args.overwrite)
-                    print(f"Exported prompt {uid} -> {prompt_path}")
+                    if args.progress:
+                        print(f"Exported prompt {uid} -> {prompt_path}")
                 item["prompt_path"] = str(prompt_path)
             index_items.append(item)
 
@@ -2049,7 +2073,10 @@ def attach_dashboard_org(
     return enriched
 
 
-def render_dashboard_summary_table(summaries: List[Dict[str, Any]]) -> List[str]:
+def render_dashboard_summary_table(
+    summaries: List[Dict[str, Any]],
+    include_header: bool = True,
+) -> List[str]:
     """Render dashboard summaries as a fixed-width table."""
     headers = ["UID", "NAME", "FOLDER", "FOLDER_UID", "FOLDER_PATH", "ORG", "ORG_ID"]
     if summaries and "sources" in summaries[0]:
@@ -2078,7 +2105,9 @@ def render_dashboard_summary_table(summaries: List[Dict[str, Any]]) -> List[str]
             value.ljust(widths[index]) for index, value in enumerate(values)
         )
 
-    lines = [format_row(headers), format_row(["-" * width for width in widths])]
+    lines = []
+    if include_header:
+        lines.extend([format_row(headers), format_row(["-" * width for width in widths])])
     lines.extend(format_row(row) for row in rows)
     return lines
 
@@ -2151,12 +2180,11 @@ def list_dashboards(args: argparse.Namespace) -> int:
     if args.json:
         print(render_dashboard_summary_json(summaries))
         return 0
-    if args.table:
-        for line in render_dashboard_summary_table(summaries):
-            print(line)
-    else:
-        for summary in summaries:
-            print(format_dashboard_summary_line(summary))
+    for line in render_dashboard_summary_table(
+        summaries,
+        include_header=not bool(getattr(args, "no_header", False)),
+    ):
+        print(line)
     print("")
     print(f"Listed {len(summaries)} dashboard summaries from {args.url}")
     return 0
@@ -2180,7 +2208,10 @@ def build_data_source_record(datasource: Dict[str, Any]) -> Dict[str, str]:
     }
 
 
-def render_data_source_table(datasources: List[Dict[str, Any]]) -> List[str]:
+def render_data_source_table(
+    datasources: List[Dict[str, Any]],
+    include_header: bool = True,
+) -> List[str]:
     headers = ["UID", "NAME", "TYPE", "URL", "IS_DEFAULT"]
     rows = []
     for record in [build_data_source_record(item) for item in datasources]:
@@ -2203,7 +2234,9 @@ def render_data_source_table(datasources: List[Dict[str, Any]]) -> List[str]:
             value.ljust(widths[index]) for index, value in enumerate(values)
         )
 
-    lines = [format_row(headers), format_row(["-" * width for width in widths])]
+    lines = []
+    if include_header:
+        lines.extend([format_row(headers), format_row(["-" * width for width in widths])])
     lines.extend(format_row(row) for row in rows)
     return lines
 
@@ -2236,12 +2269,11 @@ def list_data_sources(args: argparse.Namespace) -> int:
     if args.json:
         print(render_data_source_json(datasources))
         return 0
-    if args.table:
-        for line in render_data_source_table(datasources):
-            print(line)
-    else:
-        for datasource in datasources:
-            print(format_data_source_line(datasource))
+    for line in render_data_source_table(
+        datasources,
+        include_header=not bool(getattr(args, "no_header", False)),
+    ):
+        print(line)
     print("")
     print(f"Listed {len(datasources)} data source(s) from {args.url}")
     return 0
@@ -2269,13 +2301,15 @@ def import_dashboards(args: argparse.Namespace) -> int:
                 payload,
                 args.replace_existing,
             )
-            print(f"Dry-run {dashboard_file} -> uid={uid} action={action}")
+            if args.progress:
+                print(f"Dry-run {dashboard_file} -> uid={uid} action={action}")
             continue
 
         result = client.import_dashboard(payload)
         status = result.get("status", "unknown")
         uid = result.get("uid") or uid
-        print(f"Imported {dashboard_file} -> uid={uid} status={status}")
+        if args.progress:
+            print(f"Imported {dashboard_file} -> uid={uid} status={status}")
 
     if args.dry_run:
         print(f"Dry-run checked {len(dashboard_files)} dashboard files from {import_dir}")

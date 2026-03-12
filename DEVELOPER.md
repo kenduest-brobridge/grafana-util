@@ -43,6 +43,7 @@ This document is for maintainers. Keep `README.md` GitHub-facing and task-orient
 
 - Mode selection is explicit.
 - Installed commands are `grafana-utils` and `grafana-access-utils`.
+- Alert workflows no longer ship a separate `grafana-alert-utils` entrypoint; use `grafana-utils alert ...`.
 - `grafana-utils` is now the primary entrypoint for dashboard, alert, and access workflows.
 - Use `python3 cmd/grafana-utils.py dashboard list ...` to inspect live dashboard summaries.
 - Use `python3 cmd/grafana-utils.py dashboard list-data-sources ...` to inspect live Grafana data sources.

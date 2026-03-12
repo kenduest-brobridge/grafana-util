@@ -65,6 +65,7 @@ fn parse_cli_supports_list_mode() {
             assert!(!list_args.table);
             assert!(!list_args.csv);
             assert!(!list_args.json);
+            assert!(!list_args.no_header);
         }
         _ => panic!("expected list command"),
     }
@@ -110,6 +111,7 @@ fn parse_cli_supports_list_data_sources_mode() {
             assert!(list_args.table);
             assert!(!list_args.csv);
             assert!(!list_args.json);
+            assert!(!list_args.no_header);
         }
         _ => panic!("expected list-data-sources command"),
     }
@@ -516,7 +518,7 @@ fn render_data_source_table_uses_headers_and_values() {
         .clone(),
     ];
 
-    let lines = render_data_source_table(&datasources);
+    let lines = render_data_source_table(&datasources, true);
     assert_eq!(lines[0], "UID       NAME             TYPE        URL                     IS_DEFAULT");
     assert_eq!(lines[2], "prom_uid  Prometheus Main  prometheus  http://prometheus:9090  true      ");
     assert_eq!(lines[3], "loki_uid  Loki Logs        loki        http://loki:3100        false     ");
@@ -598,7 +600,7 @@ fn render_dashboard_summary_table_uses_headers_and_defaults() {
         .clone(),
     ];
 
-    let lines = render_dashboard_summary_table(&summaries);
+    let lines = render_dashboard_summary_table(&summaries, true);
     assert!(lines[0].contains("ORG"));
     assert!(lines[0].contains("ORG_ID"));
     assert!(lines[2].contains("Main Org"));
@@ -624,12 +626,54 @@ fn render_dashboard_summary_table_includes_sources_column_when_present() {
         .clone(),
     ];
 
-    let lines = render_dashboard_summary_table(&summaries);
+    let lines = render_dashboard_summary_table(&summaries, true);
     assert!(lines[0].contains("ORG"));
     assert!(lines[0].contains("SOURCES"));
     assert!(lines[2].starts_with("abc  CPU   Infra   infra"));
     assert!(lines[2].contains("Main Org"));
     assert!(lines[2].ends_with("Prom Main,Loki Logs"));
+}
+
+#[test]
+fn render_dashboard_summary_table_can_omit_header() {
+    let summaries = vec![
+        json!({
+            "uid": "abc",
+            "folderUid": "infra",
+            "folderPath": "Platform / Infra",
+            "folderTitle": "Infra",
+            "orgId": 1,
+            "orgName": "Main Org",
+            "title": "CPU"
+        })
+        .as_object()
+        .unwrap()
+        .clone(),
+    ];
+
+    let lines = render_dashboard_summary_table(&summaries, false);
+    assert_eq!(lines.len(), 1);
+    assert!(lines[0].starts_with("abc"));
+}
+
+#[test]
+fn render_data_source_table_can_omit_header() {
+    let datasources = vec![
+        json!({
+            "uid": "prom_uid",
+            "name": "Prometheus Main",
+            "type": "prometheus",
+            "url": "http://prometheus:9090",
+            "isDefault": true
+        })
+        .as_object()
+        .unwrap()
+        .clone(),
+    ];
+
+    let lines = render_data_source_table(&datasources, false);
+    assert_eq!(lines.len(), 1);
+    assert!(lines[0].starts_with("prom_uid"));
 }
 
 #[test]
@@ -842,6 +886,7 @@ fn list_dashboards_with_request_returns_dashboard_count() {
         table: false,
         csv: false,
         json: false,
+        no_header: false,
     };
 
     let mut calls = Vec::new();
@@ -916,6 +961,7 @@ fn list_dashboards_with_request_with_sources_fetches_dashboards_and_datasources(
         table: false,
         csv: false,
         json: true,
+        no_header: false,
     };
     let mut calls = Vec::new();
 
@@ -973,6 +1019,7 @@ fn list_dashboards_with_request_with_org_id_scopes_requests() {
         table: false,
         csv: false,
         json: true,
+        no_header: false,
     };
     let mut calls = Vec::new();
 
@@ -1024,6 +1071,7 @@ fn list_dashboards_with_request_all_orgs_aggregates_results() {
         table: false,
         csv: false,
         json: true,
+        no_header: false,
     };
     let mut calls = Vec::new();
 
@@ -1090,6 +1138,7 @@ fn list_data_sources_with_request_returns_count() {
         table: false,
         csv: true,
         json: false,
+        no_header: false,
     };
 
     let count = list_data_sources_with_request(
@@ -1133,6 +1182,7 @@ fn export_dashboards_with_client_writes_raw_variant_and_indexes() {
         without_dashboard_raw: false,
         without_dashboard_prompt: true,
         dry_run: false,
+        progress: false,
     };
     let mut calls = Vec::new();
     let count = export_dashboards_with_request(
@@ -1176,6 +1226,7 @@ fn export_dashboards_with_request_with_org_id_scopes_requests() {
         without_dashboard_raw: false,
         without_dashboard_prompt: true,
         dry_run: false,
+        progress: false,
     };
     let mut calls = Vec::new();
 
@@ -1328,6 +1379,7 @@ fn export_dashboards_with_client_writes_prompt_variant_and_indexes() {
         without_dashboard_raw: false,
         without_dashboard_prompt: false,
         dry_run: false,
+        progress: false,
     };
 
     let count = export_dashboards_with_request(
@@ -1373,6 +1425,7 @@ fn export_dashboards_with_request_all_orgs_aggregates_results() {
         without_dashboard_raw: false,
         without_dashboard_prompt: true,
         dry_run: false,
+        progress: false,
     };
     let mut calls = Vec::new();
 
@@ -1449,6 +1502,7 @@ fn export_dashboards_with_dry_run_keeps_output_dir_empty() {
         without_dashboard_raw: false,
         without_dashboard_prompt: true,
         dry_run: true,
+        progress: false,
     };
 
     let count = export_dashboards_with_request(
@@ -1502,6 +1556,7 @@ fn import_dashboards_with_client_imports_discovered_files() {
         replace_existing: true,
         import_message: "sync dashboards".to_string(),
         dry_run: false,
+        progress: false,
     };
     let mut posted_payloads = Vec::new();
     let count = import_dashboards_with_request(
@@ -1553,6 +1608,7 @@ fn import_dashboards_with_dry_run_skips_post_requests() {
         replace_existing: true,
         import_message: "sync dashboards".to_string(),
         dry_run: true,
+        progress: false,
     };
 
     let count = import_dashboards_with_request(
@@ -1595,6 +1651,7 @@ fn import_dashboards_rejects_unsupported_export_schema_version() {
         replace_existing: false,
         import_message: "sync dashboards".to_string(),
         dry_run: false,
+        progress: false,
     };
 
     let error = import_dashboards_with_request(

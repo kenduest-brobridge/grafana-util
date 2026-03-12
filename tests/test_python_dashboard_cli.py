@@ -174,14 +174,15 @@ class ExporterTests(unittest.TestCase):
         self.assertTrue(args.prompt_password)
 
     def test_parse_args_supports_list_mode(self):
-        args = exporter.parse_args(["list-dashboard", "--page-size", "25", "--table"])
+        args = exporter.parse_args(["list-dashboard", "--page-size", "25"])
 
         self.assertEqual(args.command, "list-dashboard")
         self.assertEqual(args.page_size, 25)
-        self.assertTrue(args.table)
+        self.assertFalse(args.table)
         self.assertFalse(args.with_sources)
         self.assertFalse(args.csv)
         self.assertFalse(args.json)
+        self.assertFalse(args.no_header)
         self.assertIsNone(args.org_id)
         self.assertFalse(args.all_orgs)
 
@@ -195,17 +196,19 @@ class ExporterTests(unittest.TestCase):
         self.assertIsNone(all_args.org_id)
 
     def test_parse_args_supports_list_data_sources_mode(self):
-        args = exporter.parse_args(["list-data-sources", "--table"])
+        args = exporter.parse_args(["list-data-sources"])
 
         self.assertEqual(args.command, "list-data-sources")
-        self.assertTrue(args.table)
+        self.assertFalse(args.table)
         self.assertFalse(args.csv)
         self.assertFalse(args.json)
+        self.assertFalse(args.no_header)
 
     def test_parse_args_supports_list_csv_and_json_modes(self):
         csv_args = exporter.parse_args(["list-dashboard", "--csv"])
         json_args = exporter.parse_args(["list-dashboard", "--json"])
         source_args = exporter.parse_args(["list-dashboard", "--with-sources"])
+        no_header_args = exporter.parse_args(["list-dashboard", "--no-header"])
 
         self.assertTrue(csv_args.csv)
         self.assertFalse(csv_args.table)
@@ -214,6 +217,14 @@ class ExporterTests(unittest.TestCase):
         self.assertFalse(json_args.table)
         self.assertFalse(json_args.csv)
         self.assertTrue(source_args.with_sources)
+        self.assertTrue(no_header_args.no_header)
+
+    def test_parse_args_supports_export_and_import_progress(self):
+        export_args = exporter.parse_args(["export-dashboard", "--progress"])
+        import_args = exporter.parse_args(["import-dashboard", "--import-dir", "./dashboards/raw", "--progress"])
+
+        self.assertTrue(export_args.progress)
+        self.assertTrue(import_args.progress)
 
     def test_parse_args_rejects_multiple_list_output_modes(self):
         with self.assertRaises(SystemExit):
@@ -604,6 +615,22 @@ class ExporterTests(unittest.TestCase):
         self.assertEqual(lines[2], "prom_uid  Prometheus Main  prometheus  http://prometheus:9090  true      ")
         self.assertEqual(lines[3], "loki_uid  Loki Logs        loki        http://loki:3100        false     ")
 
+    def test_render_data_source_table_can_omit_header(self):
+        lines = exporter.render_data_source_table(
+            [
+                {
+                    "uid": "prom_uid",
+                    "name": "Prometheus Main",
+                    "type": "prometheus",
+                    "url": "http://prometheus:9090",
+                    "isDefault": True,
+                }
+            ],
+            include_header=False,
+        )
+
+        self.assertEqual(lines, ["prom_uid  Prometheus Main  prometheus  http://prometheus:9090  true      "])
+
     def test_render_data_source_csv_uses_expected_fields(self):
         stdout = io.StringIO()
         with redirect_stdout(stdout):
@@ -672,6 +699,25 @@ class ExporterTests(unittest.TestCase):
         self.assertEqual(lines[0], "UID  NAME      FOLDER   FOLDER_UID  FOLDER_PATH       ORG        ORG_ID")
         self.assertEqual(lines[2], "abc  CPU       Infra    infra       Platform / Infra  Main Org.  1     ")
         self.assertEqual(lines[3], "xyz  Overview  General  general     General           Main Org.  1     ")
+
+    def test_render_dashboard_summary_table_can_omit_header(self):
+        lines = exporter.render_dashboard_summary_table(
+            [
+                {
+                    "uid": "abc",
+                    "folderTitle": "Infra",
+                    "folderUid": "infra",
+                    "folderPath": "Platform / Infra",
+                    "title": "CPU",
+                    "orgName": "Main Org.",
+                    "orgId": "1",
+                }
+            ],
+            include_header=False,
+        )
+
+        self.assertEqual(len(lines), 1)
+        self.assertTrue(lines[0].startswith("abc  CPU   Infra"))
 
     def test_render_dashboard_summary_table_includes_sources_column(self):
         lines = exporter.render_dashboard_summary_table(
@@ -814,7 +860,7 @@ class ExporterTests(unittest.TestCase):
         self.assertEqual(summaries[0]["sources"], ["Loki Logs", "Prometheus Main"])
         self.assertEqual(summaries[0]["sourceUids"], ["loki_uid", "prom_uid"])
 
-    def test_list_dashboards_prints_live_summaries(self):
+    def test_list_dashboards_prints_table_by_default(self):
         args = argparse.Namespace(
             command="list",
             url="http://127.0.0.1:3000",
@@ -824,51 +870,13 @@ class ExporterTests(unittest.TestCase):
             timeout=30,
             verify_ssl=False,
             page_size=50,
+            org_id=None,
+            all_orgs=False,
             with_sources=False,
             table=False,
             csv=False,
             json=False,
-        )
-        client = FakeDashboardWorkflowClient(
-            summaries=[
-                {"uid": "abc", "folderTitle": "Infra", "folderUid": "infra", "title": "CPU"},
-                {"uid": "xyz", "title": "Overview"},
-            ],
-            folders={
-                "infra": {"title": "Infra", "parents": [{"title": "Platform"}]},
-            },
-        )
-
-        with mock.patch.object(exporter, "build_client", return_value=client):
-            stdout = io.StringIO()
-            with redirect_stdout(stdout):
-                result = exporter.list_dashboards(args)
-
-        self.assertEqual(result, 0)
-        self.assertEqual(
-            stdout.getvalue().splitlines(),
-            [
-                "uid=abc name=CPU folder=Infra folderUid=infra path=Platform / Infra org=Main Org. orgId=1",
-                "uid=xyz name=Overview folder=General folderUid=general path=General org=Main Org. orgId=1",
-                "",
-                "Listed 2 dashboard summaries from http://127.0.0.1:3000",
-            ],
-        )
-
-    def test_list_dashboards_prints_table_when_requested(self):
-        args = argparse.Namespace(
-            command="list",
-            url="http://127.0.0.1:3000",
-            api_token=None,
-            username=None,
-            password=None,
-            timeout=30,
-            verify_ssl=False,
-            page_size=50,
-            with_sources=False,
-            table=True,
-            csv=False,
-            json=False,
+            no_header=False,
         )
         client = FakeDashboardWorkflowClient(
             summaries=[
@@ -898,6 +906,50 @@ class ExporterTests(unittest.TestCase):
             ],
         )
 
+    def test_list_dashboards_no_header_hides_table_header(self):
+        args = argparse.Namespace(
+            command="list",
+            url="http://127.0.0.1:3000",
+            api_token=None,
+            username=None,
+            password=None,
+            timeout=30,
+            verify_ssl=False,
+            page_size=50,
+            org_id=None,
+            all_orgs=False,
+            with_sources=False,
+            table=False,
+            csv=False,
+            json=False,
+            no_header=True,
+        )
+        client = FakeDashboardWorkflowClient(
+            summaries=[
+                {"uid": "abc", "folderTitle": "Infra", "folderUid": "infra", "title": "CPU"},
+                {"uid": "xyz", "title": "Overview"},
+            ],
+            folders={
+                "infra": {"title": "Infra", "parents": [{"title": "Platform"}]},
+            },
+        )
+
+        with mock.patch.object(exporter, "build_client", return_value=client):
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = exporter.list_dashboards(args)
+
+        self.assertEqual(result, 0)
+        self.assertEqual(
+            stdout.getvalue().splitlines(),
+            [
+                "abc  CPU       Infra    infra       Platform / Infra  Main Org.  1     ",
+                "xyz  Overview  General  general     General           Main Org.  1     ",
+                "",
+                "Listed 2 dashboard summaries from http://127.0.0.1:3000",
+            ],
+        )
+
     def test_list_dashboards_prints_csv_when_requested(self):
         args = argparse.Namespace(
             command="list",
@@ -908,10 +960,13 @@ class ExporterTests(unittest.TestCase):
             timeout=30,
             verify_ssl=False,
             page_size=50,
+            org_id=None,
+            all_orgs=False,
             with_sources=False,
             table=False,
             csv=True,
             json=False,
+            no_header=False,
         )
         client = FakeDashboardWorkflowClient(
             summaries=[
@@ -948,10 +1003,13 @@ class ExporterTests(unittest.TestCase):
             timeout=30,
             verify_ssl=False,
             page_size=50,
+            org_id=None,
+            all_orgs=False,
             with_sources=False,
             table=False,
             csv=False,
             json=True,
+            no_header=False,
         )
         client = FakeDashboardWorkflowClient(
             summaries=[
@@ -1009,6 +1067,7 @@ class ExporterTests(unittest.TestCase):
             table=False,
             csv=False,
             json=False,
+            no_header=False,
         )
         client = FakeDashboardWorkflowClient(
             summaries=[
@@ -1044,7 +1103,9 @@ class ExporterTests(unittest.TestCase):
         self.assertEqual(
             stdout.getvalue().splitlines(),
             [
-                "uid=abc name=CPU folder=Infra folderUid=infra path=Platform / Infra org=Main Org. orgId=1 sources=Loki Logs,Prometheus Main",
+                "UID  NAME  FOLDER  FOLDER_UID  FOLDER_PATH       ORG        ORG_ID  SOURCES                  ",
+                "---  ----  ------  ----------  ----------------  ---------  ------  -------------------------",
+                "abc  CPU   Infra   infra       Platform / Infra  Main Org.  1       Loki Logs,Prometheus Main",
                 "",
                 "Listed 1 dashboard summaries from http://127.0.0.1:3000",
             ],
@@ -1086,7 +1147,9 @@ class ExporterTests(unittest.TestCase):
         self.assertEqual(
             stdout.getvalue().splitlines(),
             [
-                "uid=org2 name=Org Two Dashboard folder=General folderUid=general path=General org=Org Two orgId=2",
+                "UID   NAME               FOLDER   FOLDER_UID  FOLDER_PATH  ORG      ORG_ID",
+                "----  -----------------  -------  ----------  -----------  -------  ------",
+                "org2  Org Two Dashboard  General  general     General      Org Two  2     ",
                 "",
                 "Listed 1 dashboard summaries from http://127.0.0.1:3000",
             ],
@@ -1184,7 +1247,7 @@ class ExporterTests(unittest.TestCase):
             with self.assertRaises(exporter.GrafanaError):
                 exporter.list_dashboards(args)
 
-    def test_list_data_sources_prints_table_when_requested(self):
+    def test_list_data_sources_prints_table_by_default(self):
         args = argparse.Namespace(
             command="list-data-sources",
             url="http://127.0.0.1:3000",
@@ -1193,9 +1256,10 @@ class ExporterTests(unittest.TestCase):
             password=None,
             timeout=30,
             verify_ssl=False,
-            table=True,
+            table=False,
             csv=False,
             json=False,
+            no_header=False,
         )
         client = FakeDashboardWorkflowClient(
             datasources=[
@@ -1231,6 +1295,47 @@ class ExporterTests(unittest.TestCase):
                 "loki_uid  Loki Logs        loki        http://loki:3100        false     ",
                 "",
                 "Listed 2 data source(s) from http://127.0.0.1:3000",
+            ],
+        )
+
+    def test_list_data_sources_no_header_hides_table_header(self):
+        args = argparse.Namespace(
+            command="list-data-sources",
+            url="http://127.0.0.1:3000",
+            api_token=None,
+            username=None,
+            password=None,
+            timeout=30,
+            verify_ssl=False,
+            table=False,
+            csv=False,
+            json=False,
+            no_header=True,
+        )
+        client = FakeDashboardWorkflowClient(
+            datasources=[
+                {
+                    "uid": "prom_uid",
+                    "name": "Prometheus Main",
+                    "type": "prometheus",
+                    "url": "http://prometheus:9090",
+                    "isDefault": True,
+                }
+            ]
+        )
+
+        with mock.patch.object(exporter, "build_client", return_value=client):
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = exporter.list_data_sources(args)
+
+        self.assertEqual(result, 0)
+        self.assertEqual(
+            stdout.getvalue().splitlines(),
+            [
+                "prom_uid  Prometheus Main  prometheus  http://prometheus:9090  true      ",
+                "",
+                "Listed 1 data source(s) from http://127.0.0.1:3000",
             ],
         )
 
@@ -1366,6 +1471,49 @@ class ExporterTests(unittest.TestCase):
             self.assertEqual(root_metadata["variant"], "root")
             self.assertEqual(raw_metadata["variant"], exporter.RAW_EXPORT_SUBDIR)
             self.assertEqual(raw_metadata["dashboardCount"], 1)
+
+    def test_export_dashboards_progress_is_opt_in(self):
+        summary = {"uid": "abc", "title": "CPU", "folderTitle": "Infra"}
+        dashboard = {
+            "dashboard": {"id": 7, "uid": "abc", "title": "CPU", "panels": []},
+            "meta": {"folderUid": "infra"},
+        }
+        client = FakeDashboardWorkflowClient(
+            summaries=[summary],
+            dashboards={"abc": dashboard},
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args = exporter.parse_args(
+                [
+                    "export-dashboard",
+                    "--export-dir",
+                    tmpdir,
+                    "--without-dashboard-prompt",
+                    "--progress",
+                ]
+            )
+
+            with mock.patch.object(exporter, "build_client", return_value=client):
+                stdout = io.StringIO()
+                with redirect_stdout(stdout):
+                    result = exporter.export_dashboards(args)
+
+            self.assertEqual(result, 0)
+            self.assertEqual(
+                stdout.getvalue().splitlines(),
+                [
+                    "Exported raw    abc -> %s"
+                    % (Path(tmpdir) / exporter.RAW_EXPORT_SUBDIR / "Infra" / "CPU__abc.json"),
+                    "Exported 1 dashboards. Raw index: %s Raw manifest: %s Root index: %s Root manifest: %s"
+                    % (
+                        Path(tmpdir) / exporter.RAW_EXPORT_SUBDIR / "index.json",
+                        Path(tmpdir) / exporter.RAW_EXPORT_SUBDIR / exporter.EXPORT_METADATA_FILENAME,
+                        Path(tmpdir) / "index.json",
+                        Path(tmpdir) / exporter.EXPORT_METADATA_FILENAME,
+                    ),
+                ],
+            )
 
     def test_export_dashboards_dry_run_keeps_directory_empty(self):
         summary = {"uid": "abc", "title": "CPU", "folderTitle": "Infra"}
@@ -1549,6 +1697,41 @@ class ExporterTests(unittest.TestCase):
 
             self.assertEqual(result, 0)
             self.assertEqual(client.imported_payloads, [])
+
+    def test_import_dashboards_progress_is_opt_in(self):
+        client = FakeDashboardWorkflowClient()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import_dir = Path(tmpdir)
+            exporter.write_json_document(
+                exporter.build_export_metadata(
+                    variant=exporter.RAW_EXPORT_SUBDIR,
+                    dashboard_count=1,
+                    format_name="grafana-web-import-preserve-uid",
+                ),
+                import_dir / exporter.EXPORT_METADATA_FILENAME,
+            )
+            exporter.write_json_document(
+                {"dashboard": {"id": None, "uid": "abc", "title": "CPU", "panels": []}},
+                import_dir / "cpu__abc.json",
+            )
+            args = exporter.parse_args(
+                ["import-dashboard", "--import-dir", str(import_dir), "--progress"]
+            )
+
+            with mock.patch.object(exporter, "build_client", return_value=client):
+                stdout = io.StringIO()
+                with redirect_stdout(stdout):
+                    result = exporter.import_dashboards(args)
+
+            self.assertEqual(result, 0)
+            self.assertEqual(
+                stdout.getvalue().splitlines(),
+                [
+                    "Imported %s -> uid=abc status=success" % (import_dir / "cpu__abc.json"),
+                    "Imported 1 dashboard files from %s" % import_dir,
+                ],
+            )
 
     def test_import_dashboards_rejects_unsupported_manifest_schema(self):
         client = FakeDashboardWorkflowClient()

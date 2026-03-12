@@ -232,8 +232,10 @@ python3 cmd/grafana-utils.py diff \
 Alerting export:
 
 ```bash
-python3 cmd/grafana-alert-utils.py export \
+python3 cmd/grafana-utils.py alert export \
   --url http://localhost:3000 \
+  --basic-user admin \
+  --basic-password admin \
   --output-dir ./alerts \
   --overwrite
 ```
@@ -241,8 +243,10 @@ python3 cmd/grafana-alert-utils.py export \
 Alerting import:
 
 ```bash
-python3 cmd/grafana-alert-utils.py import \
+python3 cmd/grafana-utils.py alert import \
   --url http://localhost:3000 \
+  --basic-user admin \
+  --basic-password admin \
   --import-dir ./alerts/raw \
   --replace-existing
 ```
@@ -250,8 +254,10 @@ python3 cmd/grafana-alert-utils.py import \
 Alerting diff against the current Grafana state:
 
 ```bash
-python3 cmd/grafana-alert-utils.py diff \
+python3 cmd/grafana-utils.py alert diff \
   --url http://localhost:3000 \
+  --basic-user admin \
+  --basic-password admin \
   --diff-dir ./alerts/raw
 ```
 

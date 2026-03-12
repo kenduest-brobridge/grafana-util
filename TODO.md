@@ -17,16 +17,20 @@
 - implemented `service-account token add`
 - added Python packaging entrypoint and thin `cmd/grafana-access-utils.py` wrapper
 - added unit tests and Docker-backed live validation for the implemented access workflows
+- dashboard CLI also now includes `list-data-sources` in both Python and Rust, but that is outside the remaining access-management scope tracked below
 
 ### In Progress
 
 - access-management CLI exists, but only part of the planned user/team/group scope is implemented
 - auth preflight is implemented for current commands, but not yet for the remaining planned mutating commands
+- service-account support exists, but only the initial create/list/token-add slice is implemented
 
 ### Next
 
 - `team delete`
 - `group` alias for `team`
+- `service-account delete`
+- `service-account token delete`
 
 ## Planned: User and Group Management
 
@@ -60,9 +64,12 @@ Current implementation status:
 - `team list`: done
 - `team add`: done
 - `team modify`: done
+- `team delete`: not started
 - `service-account list`: done
 - `service-account add`: done
 - `service-account token add`: done
+- `service-account delete`: not started
+- `service-account token delete`: not started
 - remaining `team` commands: `team delete` only
 - `group` alias: not started
 
@@ -111,6 +118,18 @@ grafana-access-utils team modify
 grafana-access-utils service-account list
 grafana-access-utils service-account add
 grafana-access-utils service-account token add
+```
+
+- still not implemented:
+
+```text
+grafana-access-utils team delete
+grafana-access-utils group list
+grafana-access-utils group add
+grafana-access-utils group modify
+grafana-access-utils group delete
+grafana-access-utils service-account delete
+grafana-access-utils service-account token delete
 ```
 
 ### Shared connection and output parameters
@@ -170,8 +189,9 @@ Current implementation status:
 - `user delete --scope global`: Basic auth only
 - `user delete --scope org`: token or Basic auth
 - `team list`: token or Basic auth
+- `team add`: token or Basic auth
 - `team modify`: token or Basic auth
-- service-account operations: token or Basic auth
+- service-account list/add/token-add: token or Basic auth
 - remaining planned commands still need explicit per-command auth preflight
 
 ### Proposed user CLI parameters
@@ -324,9 +344,15 @@ Completed ahead of the original order:
 - `user delete`
 - `team list`
 - `team modify`
+- `team add`
 - `service-account list`
 - `service-account add`
 - `service-account token add`
+
+Remaining from the original order:
+
+1. `team delete`
+2. `group` alias for `team`
 
 ### Explicitly out of scope for v1
 
