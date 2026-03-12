@@ -35,12 +35,25 @@ class FakeGrafanaClient(exporter.GrafanaClient):
 
 
 class FakeDashboardWorkflowClient:
-    def __init__(self, summaries=None, dashboards=None, datasources=None, folders=None, org=None):
+    def __init__(
+        self,
+        summaries=None,
+        dashboards=None,
+        datasources=None,
+        folders=None,
+        org=None,
+        orgs=None,
+        org_clients=None,
+        headers=None,
+    ):
         self.summaries = summaries or []
         self.dashboards = dashboards or {}
         self.datasources = datasources or []
         self.folders = folders or {}
         self.org = org or {"id": 1, "name": "Main Org."}
+        self.orgs = orgs or [self.org]
+        self.org_clients = org_clients or {}
+        self.headers = headers or {"Authorization": "Basic test"}
         self.imported_payloads = []
 
     def iter_dashboard_summaries(self, page_size):
@@ -62,6 +75,15 @@ class FakeDashboardWorkflowClient:
 
     def fetch_current_org(self):
         return dict(self.org)
+
+    def list_orgs(self):
+        return list(self.orgs)
+
+    def with_org_id(self, org_id):
+        key = str(org_id)
+        if key not in self.org_clients:
+            raise AssertionError("Unexpected org id %s" % key)
+        return self.org_clients[key]
 
     def import_dashboard(self, payload):
         self.imported_payloads.append(payload)
@@ -120,6 +142,17 @@ class ExporterTests(unittest.TestCase):
         self.assertFalse(args.with_sources)
         self.assertFalse(args.csv)
         self.assertFalse(args.json)
+        self.assertIsNone(args.org_id)
+        self.assertFalse(args.all_orgs)
+
+    def test_parse_args_supports_list_org_selection(self):
+        org_args = exporter.parse_args(["list-dashboard", "--org-id", "2"])
+        all_args = exporter.parse_args(["list-dashboard", "--all-orgs"])
+
+        self.assertEqual(org_args.org_id, "2")
+        self.assertFalse(org_args.all_orgs)
+        self.assertTrue(all_args.all_orgs)
+        self.assertIsNone(all_args.org_id)
 
     def test_parse_args_supports_list_data_sources_mode(self):
         args = exporter.parse_args(["list-data-sources", "--table"])
@@ -864,6 +897,8 @@ class ExporterTests(unittest.TestCase):
             timeout=30,
             verify_ssl=False,
             page_size=50,
+            org_id=None,
+            all_orgs=False,
             with_sources=True,
             table=False,
             csv=False,
@@ -908,6 +943,140 @@ class ExporterTests(unittest.TestCase):
                 "Listed 1 dashboard summaries from http://127.0.0.1:3000",
             ],
         )
+
+    def test_list_dashboards_with_org_id_uses_scoped_client(self):
+        args = argparse.Namespace(
+            command="list-dashboard",
+            url="http://127.0.0.1:3000",
+            api_token=None,
+            username="admin",
+            password="admin",
+            timeout=30,
+            verify_ssl=False,
+            page_size=50,
+            org_id="2",
+            all_orgs=False,
+            with_sources=False,
+            table=False,
+            csv=False,
+            json=False,
+        )
+        org_two_client = FakeDashboardWorkflowClient(
+            summaries=[{"uid": "org2", "title": "Org Two Dashboard"}],
+            org={"id": 2, "name": "Org Two"},
+            headers={"Authorization": "Basic test"},
+        )
+        client = FakeDashboardWorkflowClient(
+            org_clients={"2": org_two_client},
+            headers={"Authorization": "Basic test"},
+        )
+
+        with mock.patch.object(exporter, "build_client", return_value=client):
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = exporter.list_dashboards(args)
+
+        self.assertEqual(result, 0)
+        self.assertEqual(
+            stdout.getvalue().splitlines(),
+            [
+                "uid=org2 name=Org Two Dashboard folder=General folderUid=general path=General org=Org Two orgId=2",
+                "",
+                "Listed 1 dashboard summaries from http://127.0.0.1:3000",
+            ],
+        )
+
+    def test_list_dashboards_with_all_orgs_aggregates_results(self):
+        args = argparse.Namespace(
+            command="list-dashboard",
+            url="http://127.0.0.1:3000",
+            api_token=None,
+            username="admin",
+            password="admin",
+            timeout=30,
+            verify_ssl=False,
+            page_size=50,
+            org_id=None,
+            all_orgs=True,
+            with_sources=False,
+            table=False,
+            csv=True,
+            json=False,
+        )
+        org_one_client = FakeDashboardWorkflowClient(
+            summaries=[{"uid": "org1", "title": "Org One Dashboard"}],
+            org={"id": 1, "name": "Main Org."},
+            headers={"Authorization": "Basic test"},
+        )
+        org_two_client = FakeDashboardWorkflowClient(
+            summaries=[{"uid": "org2", "title": "Org Two Dashboard"}],
+            org={"id": 2, "name": "Org Two"},
+            headers={"Authorization": "Basic test"},
+        )
+        client = FakeDashboardWorkflowClient(
+            orgs=[{"id": 1, "name": "Main Org."}, {"id": 2, "name": "Org Two"}],
+            org_clients={"1": org_one_client, "2": org_two_client},
+            headers={"Authorization": "Basic test"},
+        )
+
+        with mock.patch.object(exporter, "build_client", return_value=client):
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = exporter.list_dashboards(args)
+
+        self.assertEqual(result, 0)
+        self.assertEqual(
+            stdout.getvalue().splitlines(),
+            [
+                "uid,name,folder,folderUid,path,org,orgId",
+                "org1,Org One Dashboard,General,general,General,Main Org.,1",
+                "org2,Org Two Dashboard,General,general,General,Org Two,2",
+            ],
+        )
+
+    def test_list_dashboards_rejects_all_orgs_with_org_id(self):
+        args = argparse.Namespace(
+            command="list-dashboard",
+            url="http://127.0.0.1:3000",
+            api_token=None,
+            username="admin",
+            password="admin",
+            timeout=30,
+            verify_ssl=False,
+            page_size=50,
+            org_id="2",
+            all_orgs=True,
+            with_sources=False,
+            table=False,
+            csv=False,
+            json=False,
+        )
+
+        with self.assertRaises(exporter.GrafanaError):
+            exporter.list_dashboards(args)
+
+    def test_list_dashboards_rejects_org_switch_with_token_auth(self):
+        args = argparse.Namespace(
+            command="list-dashboard",
+            url="http://127.0.0.1:3000",
+            api_token="token",
+            username=None,
+            password=None,
+            timeout=30,
+            verify_ssl=False,
+            page_size=50,
+            org_id="2",
+            all_orgs=False,
+            with_sources=False,
+            table=False,
+            csv=False,
+            json=False,
+        )
+        client = FakeDashboardWorkflowClient(headers={"Authorization": "Bearer token"})
+
+        with mock.patch.object(exporter, "build_client", return_value=client):
+            with self.assertRaises(exporter.GrafanaError):
+                exporter.list_dashboards(args)
 
     def test_list_data_sources_prints_table_when_requested(self):
         args = argparse.Namespace(

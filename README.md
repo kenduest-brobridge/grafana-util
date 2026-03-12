@@ -99,6 +99,28 @@ python3 cmd/grafana-utils.py list-dashboard \
   --table
 ```
 
+List dashboards from one explicit Grafana org:
+
+```bash
+python3 cmd/grafana-utils.py list-dashboard \
+  --url http://127.0.0.1:3000 \
+  --basic-user "$GRAFANA_USERNAME" \
+  --basic-password "$GRAFANA_PASSWORD" \
+  --org-id 2 \
+  --json
+```
+
+List dashboards across every visible Grafana org:
+
+```bash
+python3 cmd/grafana-utils.py list-dashboard \
+  --url http://127.0.0.1:3000 \
+  --basic-user "$GRAFANA_USERNAME" \
+  --basic-password "$GRAFANA_PASSWORD" \
+  --all-orgs \
+  --json
+```
+
 List live dashboards without writing export files:
 
 ```bash
@@ -349,7 +371,9 @@ Use `prompt/` when you want:
 | `--url` | Grafana base URL. Default: `http://127.0.0.1:3000` |
 | `--export-dir` | Root export directory. Default: `dashboards/` |
 | `--page-size` | Dashboard search page size. Default: `500` |
-| `--with-sources` | For `list`, fetch each dashboard payload and include datasource names used by that dashboard; CSV and JSON also add datasource UIDs |
+| `--org-id ORG_ID` | For `list-dashboard`, switch the read context to one explicit Grafana org ID; requires Basic auth |
+| `--all-orgs` | For `list-dashboard`, enumerate visible Grafana orgs and aggregate dashboard output across them; requires Basic auth |
+| `--with-sources` | For `list-dashboard`, fetch each dashboard payload and include datasource names used by that dashboard; CSV and JSON also add datasource UIDs |
 | `list-data-sources --table|--csv|--json` | List live Grafana data sources in human-readable or machine-readable output |
 | `--flat` | Do not create per-folder subdirectories |
 | `--overwrite` | Replace existing exported files |
@@ -360,11 +384,13 @@ Use `prompt/` when you want:
 
 For dashboard listing:
 
-- default `list` output shows `uid`, `name`, `folder`, `folderUid`, resolved folder tree path, `org`, and `orgId`
-- `list --with-sources` adds datasource names per dashboard to text, table, CSV, and JSON output
-- `list --with-sources --csv` also adds a `sourceUids` column with best-effort datasource UIDs
-- `list --with-sources --json` also adds a `sourceUids` array with best-effort datasource UIDs
-- `list --with-sources` is slower than plain `list` because it fetches each dashboard payload and the datasource catalog
+- default `list-dashboard` output shows `uid`, `name`, `folder`, `folderUid`, resolved folder tree path, `org`, and `orgId`
+- `list-dashboard --org-id <ID>` reads dashboards from that explicit org instead of the current auth context and requires Basic auth
+- `list-dashboard --all-orgs` aggregates dashboards across every visible org and requires Basic auth
+- `list-dashboard --with-sources` adds datasource names per dashboard to text, table, CSV, and JSON output
+- `list-dashboard --with-sources --csv` also adds a `sourceUids` column with best-effort datasource UIDs
+- `list-dashboard --with-sources --json` also adds a `sourceUids` array with best-effort datasource UIDs
+- `list-dashboard --with-sources` is slower than plain `list-dashboard` because it fetches each dashboard payload and the datasource catalog
 
 For datasource listing:
 

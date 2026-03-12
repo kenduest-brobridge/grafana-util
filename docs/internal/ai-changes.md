@@ -1,5 +1,15 @@
 # ai-changes.md
 
+## 2026-03-12 - Add Dashboard Multi-Org Listing
+- Summary: Extended both the Python and Rust `list-dashboard` commands with `--org-id` and `--all-orgs`. `--org-id` switches listing to one explicit Grafana org, while `--all-orgs` enumerates visible orgs and aggregates dashboard output across them. Both paths keep the existing per-dashboard `org` and `orgId` metadata and are intentionally Basic-auth-only.
+- Tests: Extended the focused Python and Rust dashboard suites with parser coverage, auth validation, and request-scoping tests for explicit-org and all-org listing.
+- Test Run: `python3 -m unittest -v tests/test_python_dashboard_cli.py`; `cd rust && cargo test dashboard --quiet`
+- Reason: Operators asked for the same org-switching capability Grafana exposes in the UI so dashboard listing can inspect another org or all visible orgs without manually changing session context first.
+- Validation: Live-checked the Python CLI against Docker Grafana `12.4.1` by creating org `2`, seeding dashboard `org-two-main`, and verifying `list-dashboard --all-orgs --json` returned dashboards from both org `1` and org `2`.
+- Impact: `grafana_utils/dashboard_cli.py`, `tests/test_python_dashboard_cli.py`, `rust/src/dashboard.rs`, `rust/src/dashboard_rust_tests.rs`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Moderate. The feature is additive, but it depends on Grafana org-enumeration and org-switch behavior that are server-admin/Basic-auth workflows. Operators using token auth remain limited to the current org context.
+- Follow-up: Decide whether `export-dashboard` should eventually gain the same `--org-id` and `--all-orgs` options or stay current-org-only.
+
 ## 2026-03-12 - Add Dashboard Datasource Listing Command
 - Summary: Added `list-data-sources` to both the Python and Rust dashboard CLIs so operators can inspect the live Grafana datasource catalog directly. The new command reuses the existing `/api/datasources` client path and supports compact text output plus `--table`, `--csv`, and `--json` for datasource fields `uid`, `name`, `type`, `url`, and `isDefault`.
 - Tests: Extended the focused Python and Rust dashboard suites with parser coverage, conflicting-output-mode validation, datasource renderer assertions, and command-path tests for the new datasource listing flow.
@@ -21,7 +31,7 @@
 - Follow-up: Decide whether to add temporary aliases for backward compatibility or keep the rename strict.
 
 ## 2026-03-12 - Add Dashboard List Org Metadata
-- Summary: Extended both the Python and Rust dashboard `list` subcommands to fetch the current Grafana organization once from `GET /api/org` and include `org` and `orgId` in compact text output plus table, CSV, and JSON renderers. The change applies to plain `list` and `list --with-sources`, so source metadata now sits alongside explicit org metadata in all list formats.
+- Summary: Extended both the Python and Rust dashboard `list-dashboard` subcommands to fetch the current Grafana organization once from `GET /api/org` and include `org` and `orgId` in compact text output plus table, CSV, and JSON renderers. The change applies to plain `list-dashboard` and `list-dashboard --with-sources`, so source metadata now sits alongside explicit org metadata in all list formats.
 - Tests: Extended `tests/test_python_dashboard_cli.py` and `rust/src/dashboard_rust_tests.rs` with current-org attachment coverage plus text, table, CSV, and JSON output assertions that include `org` and `orgId`.
 - Test Run: `python3 -m unittest -v tests/test_python_dashboard_cli.py`; `cd rust && cargo test dashboard --quiet`
 - Reason: Operators asked for dashboard list output to show the Grafana organization explicitly because the same host can expose multiple org contexts and the previous list output had no direct org identifier.
@@ -31,7 +41,7 @@
 - Follow-up: Add a checked-in live smoke script for dashboard `list --with-sources` if we want repeatable end-to-end coverage for the datasource and org metadata together.
 
 ## 2026-03-12 - Add Dashboard List Datasource Display
-- Summary: Extended both the Python and Rust dashboard `list` subcommands with `--with-sources`, an opt-in mode that fetches each dashboard payload and resolves datasource references into datasource names for display. The extra data now appears in compact text output and in table, CSV, and JSON output as a `sources` field or column. CSV output also includes best-effort datasource UID collection in a `sourceUids` column.
+- Summary: Extended both the Python and Rust dashboard `list-dashboard` subcommands with `--with-sources`, an opt-in mode that fetches each dashboard payload and resolves datasource references into datasource names for display. The extra data now appears in compact text output and in table, CSV, and JSON output as a `sources` field or column. CSV output also includes best-effort datasource UID collection in a `sourceUids` column.
 - Tests: Added parser/help coverage plus Python and Rust list rendering tests for the new `sources` field and datasource-resolution helpers.
 - Test Run: `python3 -m unittest -v tests/test_python_dashboard_cli.py`; `python3 -m unittest -v`; `python3 cmd/grafana-utils.py list -h`; `cd rust && cargo test dashboard --quiet`; `cd rust && cargo run --quiet --bin grafana-utils -- list -h`
 - Validation: Verified that plain `list` output stays unchanged unless `--with-sources` is passed, and that `--with-sources` shows resolved datasource names consistently across Python and Rust.

@@ -102,6 +102,10 @@ pub struct ListArgs {
     pub common: CommonCliArgs,
     #[arg(long, default_value_t = DEFAULT_PAGE_SIZE, help = "Dashboard search page size.")]
     pub page_size: usize,
+    #[arg(long, conflicts_with = "all_orgs", help = "List dashboards from this Grafana org ID.")]
+    pub org_id: Option<i64>,
+    #[arg(long, default_value_t = false, conflicts_with = "org_id", help = "Enumerate all visible Grafana orgs and aggregate dashboard list output across them.")]
+    pub all_orgs: bool,
     #[arg(
         long,
         default_value_t = false,
@@ -217,6 +221,19 @@ pub fn build_auth_context(common: &CommonCliArgs) -> Result<DashboardAuthContext
 
 pub fn build_http_client(common: &CommonCliArgs) -> Result<JsonHttpClient> {
     let context = build_auth_context(common)?;
+    JsonHttpClient::new(JsonHttpClientConfig {
+        base_url: context.url,
+        headers: context.headers,
+        timeout_secs: context.timeout,
+        verify_ssl: context.verify_ssl,
+    })
+}
+
+fn build_http_client_for_org(common: &CommonCliArgs, org_id: i64) -> Result<JsonHttpClient> {
+    let mut context = build_auth_context(common)?;
+    context
+        .headers
+        .push(("X-Grafana-Org-Id".to_string(), org_id.to_string()));
     JsonHttpClient::new(JsonHttpClientConfig {
         base_url: context.url,
         headers: context.headers,
@@ -1387,6 +1404,23 @@ where
     }
 }
 
+fn list_orgs_with_request<F>(mut request_json: F) -> Result<Vec<Map<String, Value>>>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    match request_json(Method::GET, "/api/orgs", &[], None)? {
+        Some(Value::Array(values)) => values
+            .into_iter()
+            .map(|value| {
+                let object = value_as_object(&value, "Unexpected org list payload from Grafana.")?;
+                Ok(object.clone())
+            })
+            .collect(),
+        Some(_) => Err(message("Unexpected org list payload from Grafana.")),
+        None => Ok(Vec::new()),
+    }
+}
+
 fn attach_dashboard_org_metadata(
     summaries: &[Map<String, Value>],
     org: &Map<String, Value>,
@@ -1410,6 +1444,12 @@ fn dashboard_org_id_cell(summary: &Map<String, Value>) -> Option<String> {
         Value::String(text) => Some(text.clone()),
         _ => None,
     })
+}
+
+fn org_id_value(org: &Map<String, Value>) -> Result<i64> {
+    org.get("id")
+        .and_then(Value::as_i64)
+        .ok_or_else(|| message("Grafana org payload did not include a usable id."))
 }
 
 fn format_dashboard_summary_line(summary: &Map<String, Value>) -> String {
@@ -1898,19 +1938,43 @@ where
         .collect()
 }
 
-fn list_dashboards_with_request<F>(mut request_json: F, args: &ListArgs) -> Result<usize>
+fn collect_list_dashboards_with_request<F>(
+    request_json: &mut F,
+    args: &ListArgs,
+    org: Option<&Map<String, Value>>,
+    org_id_override: Option<i64>,
+) -> Result<Vec<Map<String, Value>>>
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
-    let dashboard_summaries = list_dashboard_summaries_with_request(&mut request_json, args.page_size)?;
-    let current_org = fetch_current_org_with_request(&mut request_json)?;
-    let summaries = attach_dashboard_folder_paths_with_request(&mut request_json, &dashboard_summaries)?;
+    let mut scoped_request = |method: Method,
+                              path: &str,
+                              params: &[(String, String)],
+                              payload: Option<&Value>|
+     -> Result<Option<Value>> {
+        let mut scoped_params = params.to_vec();
+        if let Some(org_id) = org_id_override {
+            scoped_params.push(("orgId".to_string(), org_id.to_string()));
+        }
+        request_json(method, path, &scoped_params, payload)
+    };
+
+    let dashboard_summaries = list_dashboard_summaries_with_request(&mut scoped_request, args.page_size)?;
+    let current_org = match org {
+        Some(org) => org.clone(),
+        None => fetch_current_org_with_request(&mut scoped_request)?,
+    };
+    let summaries = attach_dashboard_folder_paths_with_request(&mut scoped_request, &dashboard_summaries)?;
     let summaries = attach_dashboard_org_metadata(&summaries, &current_org);
     let summaries = if args.with_sources && !summaries.is_empty() {
-        attach_dashboard_sources_with_request(&mut request_json, &summaries)?
+        attach_dashboard_sources_with_request(&mut scoped_request, &summaries)?
     } else {
         summaries
     };
+    Ok(summaries)
+}
+
+fn render_dashboard_list_output(summaries: &[Map<String, Value>], args: &ListArgs) -> Result<usize> {
     if args.json {
         println!("{}", serde_json::to_string_pretty(&render_dashboard_summary_json(&summaries))?);
     } else if args.csv {
@@ -1922,7 +1986,7 @@ where
             println!("{line}");
         }
     } else {
-        for summary in &summaries {
+        for summary in summaries {
             println!("{}", format_dashboard_summary_line(summary));
         }
     }
@@ -1933,11 +1997,82 @@ where
     Ok(summaries.len())
 }
 
+fn list_dashboards_with_request<F>(mut request_json: F, args: &ListArgs) -> Result<usize>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    let mut summaries = Vec::new();
+    if args.all_orgs {
+        for org in list_orgs_with_request(&mut request_json)? {
+            let org_id = org_id_value(&org)?;
+            let mut scoped = collect_list_dashboards_with_request(
+                &mut request_json,
+                args,
+                Some(&org),
+                Some(org_id),
+            )?;
+            summaries.append(&mut scoped);
+        }
+    } else {
+        summaries = collect_list_dashboards_with_request(
+            &mut request_json,
+            args,
+            None,
+            args.org_id,
+        )?;
+    }
+    render_dashboard_list_output(&summaries, args)
+}
+
 pub fn list_dashboards_with_client(client: &JsonHttpClient, args: &ListArgs) -> Result<usize> {
     list_dashboards_with_request(
         |method, path, params, payload| client.request_json(method, path, params, payload),
         args,
     )
+}
+
+fn list_dashboards_with_org_clients(args: &ListArgs) -> Result<usize> {
+    let admin_client = build_http_client(&args.common)?;
+    let orgs = if args.all_orgs {
+        list_orgs_with_request(|method, path, params, payload| {
+            admin_client.request_json(method, path, params, payload)
+        })?
+    } else {
+        Vec::new()
+    };
+    let mut summaries = Vec::new();
+    if args.all_orgs {
+        for org in orgs {
+            let org_id = org_id_value(&org)?;
+            let org_client = build_http_client_for_org(&args.common, org_id)?;
+            let mut scoped = collect_list_dashboards_with_request(
+                &mut |method, path, params, payload| {
+                    org_client.request_json(method, path, params, payload)
+                },
+                args,
+                Some(&org),
+                None,
+            )?;
+            summaries.append(&mut scoped);
+        }
+    } else if let Some(org_id) = args.org_id {
+        let org_client = build_http_client_for_org(&args.common, org_id)?;
+        summaries = collect_list_dashboards_with_request(
+            &mut |method, path, params, payload| org_client.request_json(method, path, params, payload),
+            args,
+            None,
+            None,
+        )?;
+    } else {
+        let client = build_http_client(&args.common)?;
+        summaries = collect_list_dashboards_with_request(
+            &mut |method, path, params, payload| client.request_json(method, path, params, payload),
+            args,
+            None,
+            None,
+        )?;
+    }
+    render_dashboard_list_output(&summaries, args)
 }
 
 fn list_data_sources_with_request<F>(mut request_json: F, args: &ListDataSourcesArgs) -> Result<usize>
@@ -2409,8 +2544,7 @@ pub fn run_dashboard_cli_with_client(client: &JsonHttpClient, args: DashboardCli
 pub fn run_dashboard_cli(args: DashboardCliArgs) -> Result<()> {
     match args.command {
         DashboardCommand::List(list_args) => {
-            let client = build_http_client(&list_args.common)?;
-            let _ = list_dashboards_with_client(&client, &list_args)?;
+            let _ = list_dashboards_with_org_clients(&list_args)?;
             Ok(())
         }
         DashboardCommand::ListDataSources(list_data_sources_args) => {

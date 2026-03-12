@@ -199,6 +199,16 @@ def add_list_cli_args(parser: argparse.ArgumentParser) -> None:
         help=f"Dashboard search page size (default: {DEFAULT_PAGE_SIZE}).",
     )
     parser.add_argument(
+        "--org-id",
+        default=None,
+        help="List dashboards from this Grafana organization ID instead of the current org context.",
+    )
+    parser.add_argument(
+        "--all-orgs",
+        action="store_true",
+        help="List dashboards from every Grafana organization. Requires Basic auth.",
+    )
+    parser.add_argument(
         "--with-sources",
         action="store_true",
         help=(
@@ -433,6 +443,10 @@ class GrafanaClient:
         verify_ssl: bool,
         transport: Optional[JsonHttpTransport] = None,
     ) -> None:
+        self.base_url = base_url
+        self.headers = dict(headers)
+        self.timeout = timeout
+        self.verify_ssl = verify_ssl
         self.transport = transport or build_json_http_transport(
             base_url=base_url,
             headers={"Accept": "application/json", **headers},
@@ -551,6 +565,24 @@ class GrafanaClient:
         if not isinstance(data, dict):
             raise GrafanaError("Unexpected current org response from Grafana.")
         return data
+
+    def list_orgs(self) -> List[Dict[str, Any]]:
+        """List Grafana organizations visible to the current authenticated caller."""
+        data = self.request_json("/api/orgs")
+        if not isinstance(data, list):
+            raise GrafanaError("Unexpected org list response from Grafana.")
+        return [item for item in data if isinstance(item, dict)]
+
+    def with_org_id(self, org_id: str) -> "GrafanaClient":
+        """Return a new client scoped to one explicit Grafana organization."""
+        headers = dict(self.headers)
+        headers["X-Grafana-Org-Id"] = str(org_id)
+        return GrafanaClient(
+            base_url=self.base_url,
+            headers=headers,
+            timeout=self.timeout,
+            verify_ssl=self.verify_ssl,
+        )
 
 
 def write_dashboard(
@@ -1968,14 +2000,40 @@ def render_dashboard_summary_json(summaries: List[Dict[str, Any]]) -> str:
 
 def list_dashboards(args: argparse.Namespace) -> int:
     """List live dashboard summaries without exporting dashboard JSON."""
+    all_orgs = bool(getattr(args, "all_orgs", False))
+    org_id = getattr(args, "org_id", None)
+    if all_orgs and org_id:
+        raise GrafanaError("Choose either --org-id or --all-orgs, not both.")
     client = build_client(args)
-    summaries = attach_dashboard_folder_paths(
-        client,
-        client.iter_dashboard_summaries(args.page_size),
-    )
-    summaries = attach_dashboard_org(client, summaries)
-    if getattr(args, "with_sources", False):
-        summaries = attach_dashboard_sources(client, summaries)
+    auth_header = client.headers.get("Authorization", "")
+    if (all_orgs or org_id) and not auth_header.startswith("Basic "):
+        raise GrafanaError(
+            "Dashboard org switching requires Basic auth. Use --basic-user and --basic-password."
+        )
+
+    clients: List[GrafanaClient]
+    if all_orgs:
+        orgs = client.list_orgs()
+        clients = []
+        for org in orgs:
+            org_id = str(org.get("id") or "").strip()
+            if org_id:
+                clients.append(client.with_org_id(org_id))
+    elif org_id:
+        clients = [client.with_org_id(str(org_id))]
+    else:
+        clients = [client]
+
+    summaries: List[Dict[str, Any]] = []
+    for scoped_client in clients:
+        scoped_summaries = attach_dashboard_folder_paths(
+            scoped_client,
+            scoped_client.iter_dashboard_summaries(args.page_size),
+        )
+        scoped_summaries = attach_dashboard_org(scoped_client, scoped_summaries)
+        if getattr(args, "with_sources", False):
+            scoped_summaries = attach_dashboard_sources(scoped_client, scoped_summaries)
+        summaries.extend(scoped_summaries)
     if args.csv:
         render_dashboard_summary_csv(summaries)
         return 0

@@ -58,6 +58,8 @@ fn parse_cli_supports_list_mode() {
         DashboardCommand::List(list_args) => {
             assert_eq!(list_args.common.url, "https://grafana.example.com");
             assert_eq!(list_args.page_size, 25);
+            assert_eq!(list_args.org_id, None);
+            assert!(!list_args.all_orgs);
             assert!(!list_args.with_sources);
             assert!(!list_args.table);
             assert!(!list_args.csv);
@@ -80,6 +82,8 @@ fn parse_cli_supports_list_with_sources() {
 
     match args.command {
         DashboardCommand::List(list_args) => {
+            assert_eq!(list_args.org_id, None);
+            assert!(!list_args.all_orgs);
             assert!(list_args.with_sources);
             assert!(list_args.json);
             assert!(!list_args.table);
@@ -160,6 +164,8 @@ fn parse_cli_supports_list_csv_mode() {
 
     match args.command {
         DashboardCommand::List(list_args) => {
+            assert_eq!(list_args.org_id, None);
+            assert!(!list_args.all_orgs);
             assert!(!list_args.table);
             assert!(list_args.csv);
             assert!(!list_args.json);
@@ -180,6 +186,8 @@ fn parse_cli_supports_list_json_mode() {
 
     match args.command {
         DashboardCommand::List(list_args) => {
+            assert_eq!(list_args.org_id, None);
+            assert!(!list_args.all_orgs);
             assert!(!list_args.table);
             assert!(!list_args.csv);
             assert!(list_args.json);
@@ -202,6 +210,52 @@ fn parse_cli_rejects_conflicting_list_output_modes() {
 
     assert!(error.to_string().contains("--table"));
     assert!(error.to_string().contains("--json"));
+}
+
+#[test]
+fn parse_cli_supports_list_org_scope_flags() {
+    let org_args = parse_cli_from([
+        "grafana-utils",
+        "list-dashboard",
+        "--org-id",
+        "7",
+    ]);
+    let all_orgs_args = parse_cli_from([
+        "grafana-utils",
+        "list-dashboard",
+        "--all-orgs",
+    ]);
+
+    match org_args.command {
+        DashboardCommand::List(list_args) => {
+            assert_eq!(list_args.org_id, Some(7));
+            assert!(!list_args.all_orgs);
+        }
+        _ => panic!("expected list command"),
+    }
+
+    match all_orgs_args.command {
+        DashboardCommand::List(list_args) => {
+            assert_eq!(list_args.org_id, None);
+            assert!(list_args.all_orgs);
+        }
+        _ => panic!("expected list command"),
+    }
+}
+
+#[test]
+fn parse_cli_rejects_conflicting_list_org_scope_flags() {
+    let error = DashboardCliArgs::try_parse_from([
+        "grafana-utils",
+        "list-dashboard",
+        "--org-id",
+        "7",
+        "--all-orgs",
+    ])
+    .unwrap_err();
+
+    assert!(error.to_string().contains("--org-id"));
+    assert!(error.to_string().contains("--all-orgs"));
 }
 
 #[test]
@@ -711,6 +765,8 @@ fn list_dashboards_with_request_returns_dashboard_count() {
     let args = ListArgs {
         common: make_common_args("http://127.0.0.1:3000".to_string()),
         page_size: 500,
+        org_id: None,
+        all_orgs: false,
         with_sources: false,
         table: false,
         csv: false,
@@ -783,6 +839,8 @@ fn list_dashboards_with_request_with_sources_fetches_dashboards_and_datasources(
     let args = ListArgs {
         common: make_common_args("http://127.0.0.1:3000".to_string()),
         page_size: 500,
+        org_id: None,
+        all_orgs: false,
         with_sources: true,
         table: false,
         csv: false,
@@ -831,6 +889,127 @@ fn list_dashboards_with_request_with_sources_fetches_dashboards_and_datasources(
     );
     assert!(calls.iter().any(|(_, path)| path == "/api/datasources"));
     assert!(calls.iter().any(|(_, path)| path == "/api/dashboards/uid/abc"));
+}
+
+#[test]
+fn list_dashboards_with_request_with_org_id_scopes_requests() {
+    let args = ListArgs {
+        common: make_common_args("http://127.0.0.1:3000".to_string()),
+        page_size: 500,
+        org_id: Some(7),
+        all_orgs: false,
+        with_sources: false,
+        table: false,
+        csv: false,
+        json: true,
+    };
+    let mut calls = Vec::new();
+
+    let count = list_dashboards_with_request(
+        |method, path, params, _payload| {
+            calls.push((method.to_string(), path.to_string(), params.to_vec()));
+            let scoped_org = params
+                .iter()
+                .find(|(key, _)| key == "orgId")
+                .map(|(_, value)| value.as_str());
+            match (path, scoped_org) {
+                ("/api/search", Some("7")) => Ok(Some(json!([
+                    {"uid": "abc", "title": "CPU", "folderTitle": "Infra", "folderUid": "infra"}
+                ]))),
+                ("/api/org", Some("7")) => Ok(Some(json!({
+                    "id": 7,
+                    "name": "Scoped Org"
+                }))),
+                ("/api/folders/infra", Some("7")) => Ok(Some(json!({
+                    "title": "Infra",
+                    "parents": [{"title": "Platform"}]
+                }))),
+                _ => Err(super::message(format!("unexpected path {path}"))),
+            }
+        },
+        &args,
+    )
+    .unwrap();
+
+    assert_eq!(count, 1);
+    assert_eq!(
+        calls
+            .iter()
+            .filter(|(_, path, params)| path == "/api/search"
+                && params.iter().any(|(key, value)| key == "orgId" && value == "7"))
+            .count(),
+        1
+    );
+}
+
+#[test]
+fn list_dashboards_with_request_all_orgs_aggregates_results() {
+    let args = ListArgs {
+        common: make_common_args("http://127.0.0.1:3000".to_string()),
+        page_size: 500,
+        org_id: None,
+        all_orgs: true,
+        with_sources: false,
+        table: false,
+        csv: false,
+        json: true,
+    };
+    let mut calls = Vec::new();
+
+    let count = list_dashboards_with_request(
+        |method, path, params, _payload| {
+            calls.push((method.to_string(), path.to_string(), params.to_vec()));
+            let scoped_org = params
+                .iter()
+                .find(|(key, _)| key == "orgId")
+                .map(|(_, value)| value.as_str());
+            match (path, scoped_org) {
+                ("/api/orgs", None) => Ok(Some(json!([
+                    {"id": 1, "name": "Main Org"},
+                    {"id": 2, "name": "Ops Org"}
+                ]))),
+                ("/api/search", Some("1")) => Ok(Some(json!([
+                    {"uid": "abc", "title": "CPU", "folderTitle": "Infra", "folderUid": "infra"}
+                ]))),
+                ("/api/search", Some("2")) => Ok(Some(json!([
+                    {"uid": "xyz", "title": "Logs", "folderTitle": "Ops", "folderUid": "ops"}
+                ]))),
+                ("/api/folders/infra", Some("1")) => Ok(Some(json!({
+                    "title": "Infra",
+                    "parents": [{"title": "Platform"}]
+                }))),
+                ("/api/folders/ops", Some("2")) => Ok(Some(json!({
+                    "title": "Ops",
+                    "parents": [{"title": "Platform"}]
+                }))),
+                _ => Err(super::message(format!("unexpected path {path}"))),
+            }
+        },
+        &args,
+    )
+    .unwrap();
+
+    assert_eq!(count, 2);
+    assert_eq!(
+        calls.iter().filter(|(_, path, _)| path == "/api/orgs").count(),
+        1
+    );
+    assert_eq!(
+        calls
+            .iter()
+            .filter(|(_, path, params)| path == "/api/search"
+                && params.iter().any(|(key, value)| key == "orgId" && value == "1"))
+            .count(),
+        1
+    );
+    assert_eq!(
+        calls
+            .iter()
+            .filter(|(_, path, params)| path == "/api/search"
+                && params.iter().any(|(key, value)| key == "orgId" && value == "2"))
+            .count(),
+        1
+    );
 }
 
 #[test]

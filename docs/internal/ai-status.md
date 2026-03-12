@@ -1,5 +1,12 @@
 # ai-status.md
 
+## 2026-03-12 - Task: Add Dashboard Multi-Org Listing
+- State: Done
+- Scope: `grafana_utils/dashboard_cli.py`, `tests/test_python_dashboard_cli.py`, `rust/src/dashboard.rs`, `rust/src/dashboard_rust_tests.rs`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: `list-dashboard` already exposed current-org metadata in each row, but it still only listed dashboards in the current request org context. Operators could not point the command at another org or aggregate dashboards across all visible orgs from one run.
+- Current Update: Added `--org-id` and `--all-orgs` to Python and Rust `list-dashboard`. The command now accepts one explicit org override or enumerates `/api/orgs` and aggregates dashboard results across all visible orgs. Both paths are Basic-auth-only and preserve the existing `org` and `orgId` output fields for every listed dashboard.
+- Result: Operators can now inspect one chosen Grafana org or all visible orgs from a single `list-dashboard` run instead of being limited to the auth context's current org.
+
 ## 2026-03-12 - Task: Add Dashboard Datasource Listing Command
 - State: Done
 - Scope: `grafana_utils/dashboard_cli.py`, `tests/test_python_dashboard_cli.py`, `rust/src/dashboard.rs`, `rust/src/dashboard_rust_tests.rs`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
@@ -26,7 +33,7 @@
 - Scope: `grafana_utils/dashboard_cli.py`, `tests/test_python_dashboard_cli.py`, `rust/src/dashboard.rs`, `rust/src/dashboard_rust_tests.rs`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
 - Baseline: The dashboard `list` subcommand already showed `uid`, `name`, `folder`, `folderUid`, and resolved folder path, but it could not show which datasource names each dashboard used.
 - Current Update: Added an opt-in `--with-sources` flag to both Python and Rust dashboard list paths. When enabled, the command fetches the datasource catalog and each dashboard payload, resolves datasource references into display names, and appends those names to text, table, CSV, and JSON output. CSV output also carries a best-effort `sourceUids` column.
-- Result: Operators can now inspect dashboard datasource usage directly from `grafana-utils list --with-sources` without exporting dashboard files, while plain `list` remains unchanged and cheaper. CSV consumers can also capture concrete datasource UIDs when Grafana exposed them.
+- Result: Operators can now inspect dashboard datasource usage directly from `grafana-utils list-dashboard --with-sources` without exporting dashboard files, while plain `list-dashboard` remains unchanged and cheaper. CSV consumers can also capture concrete datasource UIDs when Grafana exposed them.
 
 ## 2026-03-12 - Task: Add Python Access Live Smoke Test
 - State: Done

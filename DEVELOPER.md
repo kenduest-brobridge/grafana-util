@@ -45,15 +45,17 @@ This document is for maintainers. Keep `README.md` GitHub-facing and task-orient
 - Use `python3 cmd/grafana-access-utils.py team modify ...` to change Grafana team membership and admin assignments.
 - Use `python3 cmd/grafana-access-utils.py service-account ...` for org-scoped service-account operations.
 - The export subcommand intentionally uses `--export-dir` instead of `--output-dir` to avoid mixing export terminology with import behavior.
-- The `list` subcommand is read-only and defaults to compact `uid=<uid> name=<title> folder=<folder> folderUid=<folderUid> path=<folderTreePath> org=<orgName> orgId=<orgId>` output.
-- `list --table` renders the same fields in columns and adds `FOLDER_PATH`, `ORG`, and `ORG_ID` columns.
-- `list --csv` emits header `uid,name,folder,folderUid,path,org,orgId` with CSV escaping.
-- `list --json` emits an array of objects with keys `uid`, `name`, `folder`, `folderUid`, `path`, `org`, and `orgId`.
-- `list --with-sources` fetches each dashboard payload plus the datasource catalog, then appends resolved datasource names to text, table, CSV, and JSON output.
-- `list` fetches the current org from `GET /api/org` once and attaches that `org` and `orgId` metadata to every listed dashboard summary.
-- `list --with-sources --csv` also appends `sourceUids` so spreadsheet or script consumers can correlate dashboards back to concrete datasource UIDs when Grafana exposed them.
-- `list --with-sources --json` also appends `sourceUids` as an array.
-- `list --with-sources` should stay opt-in because it turns one search-oriented list call into a per-dashboard inspection workflow.
+- The `list-dashboard` subcommand is read-only and defaults to compact `uid=<uid> name=<title> folder=<folder> folderUid=<folderUid> path=<folderTreePath> org=<orgName> orgId=<orgId>` output.
+- `list-dashboard --table` renders the same fields in columns and adds `FOLDER_PATH`, `ORG`, and `ORG_ID` columns.
+- `list-dashboard --csv` emits header `uid,name,folder,folderUid,path,org,orgId` with CSV escaping.
+- `list-dashboard --json` emits an array of objects with keys `uid`, `name`, `folder`, `folderUid`, `path`, `org`, and `orgId`.
+- `list-dashboard` fetches the current org from `GET /api/org` once and attaches that `org` and `orgId` metadata to every listed dashboard summary.
+- `list-dashboard --org-id <ID>` rebuilds the client with `X-Grafana-Org-Id` and is Basic-auth-only because the CLI needs a server-admin-style org switch rather than a token-bound current org context.
+- `list-dashboard --all-orgs` lists `/api/orgs`, rebuilds one scoped client per org, and aggregates the combined dashboard list output. This is also Basic-auth-only.
+- `list-dashboard --with-sources` fetches each dashboard payload plus the datasource catalog, then appends resolved datasource names to text, table, CSV, and JSON output.
+- `list-dashboard --with-sources --csv` also appends `sourceUids` so spreadsheet or script consumers can correlate dashboards back to concrete datasource UIDs when Grafana exposed them.
+- `list-dashboard --with-sources --json` also appends `sourceUids` as an array.
+- `list-dashboard --with-sources` should stay opt-in because it turns one search-oriented list call into a per-dashboard inspection workflow.
 - Folder tree path is resolved from `GET /api/folders/{uid}` using the folder `parents[]` chain when `folderUid` is present.
 - `list-data-sources` is read-only and defaults to compact `uid=<uid> name=<name> type=<type> url=<url> isDefault=<true|false>` output.
 - `list-data-sources --table` renders `UID`, `NAME`, `TYPE`, `URL`, and `IS_DEFAULT`.
