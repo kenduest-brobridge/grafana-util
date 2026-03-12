@@ -169,6 +169,17 @@ class ExporterTests(unittest.TestCase):
         self.assertIn("skipped/blocked", help_text)
         self.assertIn("table form", help_text)
 
+    def test_inspect_export_help_mentions_raw_export_directory(self):
+        stream = io.StringIO()
+
+        with redirect_stdout(stream):
+            with self.assertRaises(SystemExit):
+                exporter.parse_args(["inspect-export", "-h"])
+
+        help_text = stream.getvalue()
+        self.assertIn("raw/ export directory explicitly", help_text)
+        self.assertIn("--json", help_text)
+
 
     def test_parse_args_supports_import_mode(self):
         args = exporter.parse_args(["import-dashboard", "--import-dir", "dashboards"])
@@ -355,6 +366,14 @@ class ExporterTests(unittest.TestCase):
         )
 
         self.assertTrue(args.update_existing_only)
+
+    def test_parse_args_supports_inspect_export_json(self):
+        args = exporter.parse_args(
+            ["inspect-export", "--import-dir", "dashboards/raw", "--json"]
+        )
+
+        self.assertEqual(args.command, "inspect-export")
+        self.assertTrue(args.json)
 
     def test_parse_args_supports_ensure_folders(self):
         args = exporter.parse_args(
@@ -763,6 +782,144 @@ class ExporterTests(unittest.TestCase):
                 }
             ],
         )
+
+    def test_inspect_export_renders_human_summary(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import_dir = Path(tmpdir)
+            exporter.write_json_document(
+                exporter.build_export_metadata(
+                    variant=exporter.RAW_EXPORT_SUBDIR,
+                    dashboard_count=2,
+                    format_name="grafana-web-import-preserve-uid",
+                    folders_file=exporter.FOLDER_INVENTORY_FILENAME,
+                ),
+                import_dir / exporter.EXPORT_METADATA_FILENAME,
+            )
+            exporter.write_json_document(
+                [{"uid": "abc", "title": "CPU", "path": "General", "kind": "raw"}],
+                import_dir / "index.json",
+            )
+            exporter.write_json_document(
+                [
+                    {
+                        "uid": "infra",
+                        "title": "Infra",
+                        "parentUid": "platform",
+                        "path": "Platform / Infra",
+                        "org": "Main Org.",
+                        "orgId": "1",
+                    }
+                ],
+                import_dir / exporter.FOLDER_INVENTORY_FILENAME,
+            )
+            exporter.write_json_document(
+                {
+                    "dashboard": {
+                        "id": None,
+                        "uid": "cpu-main",
+                        "title": "CPU Main",
+                        "panels": [
+                            {
+                                "id": 1,
+                                "type": "timeseries",
+                                "datasource": {"type": "prometheus", "uid": "prom-main"},
+                                "targets": [{"refId": "A"}],
+                            }
+                        ],
+                    },
+                    "meta": {},
+                },
+                import_dir / "General" / "CPU_Main__cpu-main.json",
+            )
+            exporter.write_json_document(
+                {
+                    "dashboard": {
+                        "id": None,
+                        "uid": "mixed-main",
+                        "title": "Mixed Main",
+                        "panels": [
+                            {
+                                "id": 1,
+                                "type": "timeseries",
+                                "datasource": {"type": "datasource", "uid": "-- Mixed --"},
+                                "targets": [
+                                    {"refId": "A", "datasource": {"type": "prometheus", "uid": "prom-main"}},
+                                    {"refId": "B", "datasource": {"type": "loki", "uid": "logs-main"}},
+                                ],
+                            }
+                        ],
+                    },
+                    "meta": {"folderUid": "infra"},
+                },
+                import_dir / "Infra" / "Mixed_Main__mixed-main.json",
+            )
+
+            args = exporter.parse_args(["inspect-export", "--import-dir", str(import_dir)])
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = exporter.inspect_export(args)
+
+            output = stdout.getvalue()
+            self.assertEqual(result, 0)
+            self.assertIn("Dashboards: 2", output)
+            self.assertIn("Folders: 2", output)
+            self.assertIn("Panels: 2", output)
+            self.assertIn("Queries: 3", output)
+            self.assertIn("Mixed datasource dashboards: 1", output)
+            self.assertIn("Platform / Infra (1 dashboards)", output)
+            self.assertIn("prom-main (2 refs across 2 dashboards)", output)
+            self.assertIn("logs-main (1 refs across 1 dashboards)", output)
+            self.assertIn("Mixed Main (mixed-main) path=Platform / Infra", output)
+
+    def test_inspect_export_renders_json(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import_dir = Path(tmpdir)
+            exporter.write_json_document(
+                exporter.build_export_metadata(
+                    variant=exporter.RAW_EXPORT_SUBDIR,
+                    dashboard_count=1,
+                    format_name="grafana-web-import-preserve-uid",
+                    folders_file=exporter.FOLDER_INVENTORY_FILENAME,
+                ),
+                import_dir / exporter.EXPORT_METADATA_FILENAME,
+            )
+            exporter.write_json_document([], import_dir / exporter.FOLDER_INVENTORY_FILENAME)
+            exporter.write_json_document(
+                {
+                    "dashboard": {
+                        "id": None,
+                        "uid": "cpu-main",
+                        "title": "CPU Main",
+                        "panels": [
+                            {
+                                "id": 1,
+                                "type": "timeseries",
+                                "datasource": {"type": "prometheus", "uid": "prom-main"},
+                                "targets": [{"refId": "A"}, {"refId": "B"}],
+                            }
+                        ],
+                    },
+                    "meta": {},
+                },
+                import_dir / "General" / "CPU_Main__cpu-main.json",
+            )
+
+            args = exporter.parse_args(
+                ["inspect-export", "--import-dir", str(import_dir), "--json"]
+            )
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = exporter.inspect_export(args)
+
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(result, 0)
+            self.assertEqual(payload["summary"]["dashboardCount"], 1)
+            self.assertEqual(payload["summary"]["panelCount"], 1)
+            self.assertEqual(payload["summary"]["queryCount"], 2)
+            self.assertEqual(payload["folders"][0]["path"], "General")
+            self.assertEqual(payload["datasources"][0]["name"], "prom-main")
+            self.assertEqual(payload["dashboards"][0]["folderPath"], "General")
+            self.assertFalse(payload["dashboards"][0]["mixedDatasource"])
 
     def test_render_dashboard_summary_table_uses_headers_and_defaults(self):
         lines = exporter.render_dashboard_summary_table(

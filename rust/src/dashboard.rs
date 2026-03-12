@@ -20,7 +20,7 @@ mod dashboard_prompt;
 pub use dashboard_cli_defs::{
     build_auth_context, build_http_client, build_http_client_for_org, parse_cli_from,
     CommonCliArgs, DashboardAuthContext, DashboardCliArgs, DashboardCommand, DiffArgs, ExportArgs,
-    ImportArgs, ListArgs, ListDataSourcesArgs,
+    ImportArgs, InspectExportArgs, ListArgs, ListDataSourcesArgs,
 };
 pub use dashboard_export::{
     build_export_variant_dirs, build_output_path, export_dashboards_with_client,
@@ -158,6 +158,40 @@ pub(crate) struct FolderInventoryStatus {
     pub actual_parent_uid: Option<String>,
     pub actual_path: Option<String>,
     pub kind: FolderInventoryStatusKind,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+struct ExportFolderUsage {
+    path: String,
+    dashboards: usize,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+struct ExportDatasourceUsage {
+    datasource: String,
+    count: usize,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+struct MixedDashboardSummary {
+    uid: String,
+    title: String,
+    folder_path: String,
+    datasource_count: usize,
+    datasources: Vec<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+struct ExportInspectionSummary {
+    import_dir: String,
+    dashboard_count: usize,
+    folder_count: usize,
+    panel_count: usize,
+    query_count: usize,
+    mixed_dashboard_count: usize,
+    folder_paths: Vec<ExportFolderUsage>,
+    datasource_usage: Vec<ExportDatasourceUsage>,
+    mixed_dashboards: Vec<MixedDashboardSummary>,
 }
 
 pub fn discover_dashboard_files(import_dir: &Path) -> Result<Vec<PathBuf>> {
@@ -1254,6 +1288,285 @@ fn render_import_dry_run_json(
     Ok(serde_json::to_string_pretty(&payload)?)
 }
 
+fn render_simple_table(headers: &[&str], rows: &[Vec<String>], include_header: bool) -> Vec<String> {
+    let mut widths = headers.iter().map(|header| header.len()).collect::<Vec<usize>>();
+    for row in rows {
+        for (index, value) in row.iter().enumerate() {
+            widths[index] = widths[index].max(value.len());
+        }
+    }
+    let format_row = |values: &[String]| -> String {
+        values
+            .iter()
+            .enumerate()
+            .map(|(index, value)| format!("{value:<width$}", width = widths[index]))
+            .collect::<Vec<String>>()
+            .join("  ")
+    };
+    let mut lines = Vec::new();
+    if include_header {
+        lines.push(format_row(
+            &headers.iter().map(|value| value.to_string()).collect::<Vec<String>>(),
+        ));
+        lines.push(format_row(
+            &widths
+                .iter()
+                .map(|width| "-".repeat(*width))
+                .collect::<Vec<String>>(),
+        ));
+    }
+    for row in rows {
+        lines.push(format_row(row));
+    }
+    lines
+}
+
+fn resolve_export_folder_path(
+    document: &Map<String, Value>,
+    dashboard_file: &Path,
+    import_dir: &Path,
+    folders_by_uid: &std::collections::BTreeMap<String, FolderInventoryItem>,
+) -> String {
+    let folder_uid = object_field(document, "meta")
+        .and_then(|meta| meta.get("folderUid"))
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .trim()
+        .to_string();
+    if !folder_uid.is_empty() {
+        if let Some(folder) = folders_by_uid.get(&folder_uid) {
+            return folder.path.clone();
+        }
+    }
+    let relative_parent = dashboard_file
+        .strip_prefix(import_dir)
+        .ok()
+        .and_then(|path| path.parent())
+        .unwrap_or_else(|| Path::new(""));
+    let folder_name = relative_parent.display().to_string();
+    if !folder_name.is_empty() && folder_name != "." && folder_name != "General" {
+        let matches = folders_by_uid
+            .values()
+            .filter(|item| item.title == folder_name)
+            .collect::<Vec<&FolderInventoryItem>>();
+        if matches.len() == 1 {
+            return matches[0].path.clone();
+        }
+    }
+    if folder_name.is_empty() || folder_name == "." || folder_name == "General" {
+        "General".to_string()
+    } else {
+        folder_name
+    }
+}
+
+fn collect_panel_stats(panel: &Map<String, Value>) -> (usize, usize) {
+    let mut panel_count = 1usize;
+    let mut query_count = panel
+        .get("targets")
+        .and_then(Value::as_array)
+        .map(|targets| targets.len())
+        .unwrap_or(0);
+    if let Some(children) = panel.get("panels").and_then(Value::as_array) {
+        for child in children {
+            if let Some(child_object) = child.as_object() {
+                let (child_panels, child_queries) = collect_panel_stats(child_object);
+                panel_count += child_panels;
+                query_count += child_queries;
+            }
+        }
+    }
+    (panel_count, query_count)
+}
+
+fn count_dashboard_panels_and_queries(dashboard: &Map<String, Value>) -> (usize, usize) {
+    let mut panel_count = 0usize;
+    let mut query_count = 0usize;
+    if let Some(panels) = dashboard.get("panels").and_then(Value::as_array) {
+        for panel in panels {
+            if let Some(panel_object) = panel.as_object() {
+                let (child_panels, child_queries) = collect_panel_stats(panel_object);
+                panel_count += child_panels;
+                query_count += child_queries;
+            }
+        }
+    }
+    (panel_count, query_count)
+}
+
+fn summarize_datasource_ref(reference: &Value) -> Option<String> {
+    if reference.is_null() || is_builtin_datasource_ref(reference) {
+        return None;
+    }
+    match reference {
+        Value::String(text) => {
+            if is_placeholder_string(text) {
+                None
+            } else {
+                Some(text.to_string())
+            }
+        }
+        Value::Object(object) => {
+            for key in ["name", "uid", "type"] {
+                if let Some(value) = object.get(key).and_then(Value::as_str) {
+                    if !value.is_empty() && !is_placeholder_string(value) {
+                        return Some(value.to_string());
+                    }
+                }
+            }
+            None
+        }
+        _ => None,
+    }
+}
+
+fn build_export_inspection_summary(import_dir: &Path) -> Result<ExportInspectionSummary> {
+    let _ = load_export_metadata(import_dir, Some(RAW_EXPORT_SUBDIR))?;
+    let dashboard_files = discover_dashboard_files(import_dir)?;
+    let folder_inventory = load_folder_inventory(import_dir, None)?;
+    let folders_by_uid = folder_inventory
+        .into_iter()
+        .map(|item| (item.uid.clone(), item))
+        .collect::<std::collections::BTreeMap<String, FolderInventoryItem>>();
+
+    let mut folder_counts = std::collections::BTreeMap::new();
+    let mut datasource_counts = std::collections::BTreeMap::new();
+    let mut mixed_dashboards = Vec::new();
+    let mut total_panels = 0usize;
+    let mut total_queries = 0usize;
+
+    for dashboard_file in &dashboard_files {
+        let document = load_json_file(dashboard_file)?;
+        let document_object =
+            value_as_object(&document, "Dashboard payload must be a JSON object.")?;
+        let dashboard = extract_dashboard_object(document_object)?;
+        let uid = string_field(dashboard, "uid", "unknown");
+        let title = string_field(dashboard, "title", "dashboard");
+        let folder_path =
+            resolve_export_folder_path(document_object, dashboard_file, import_dir, &folders_by_uid);
+        *folder_counts.entry(folder_path.clone()).or_insert(0usize) += 1;
+
+        let (panel_count, query_count) = count_dashboard_panels_and_queries(dashboard);
+        total_panels += panel_count;
+        total_queries += query_count;
+
+        let mut refs = Vec::new();
+        collect_datasource_refs(&Value::Object(dashboard.clone()), &mut refs);
+        let mut unique_datasources = std::collections::BTreeSet::new();
+        for reference in refs {
+            if let Some(label) = summarize_datasource_ref(&reference) {
+                *datasource_counts.entry(label.clone()).or_insert(0usize) += 1;
+                unique_datasources.insert(label);
+            }
+        }
+        if unique_datasources.len() > 1 {
+            mixed_dashboards.push(MixedDashboardSummary {
+                uid,
+                title,
+                folder_path,
+                datasource_count: unique_datasources.len(),
+                datasources: unique_datasources.into_iter().collect(),
+            });
+        }
+    }
+
+    let mut folder_paths = folder_counts
+        .into_iter()
+        .map(|(path, dashboards)| ExportFolderUsage { path, dashboards })
+        .collect::<Vec<ExportFolderUsage>>();
+    folder_paths.sort_by(|left, right| {
+        right
+            .dashboards
+            .cmp(&left.dashboards)
+            .then(left.path.cmp(&right.path))
+    });
+    let mut datasource_usage = datasource_counts
+        .into_iter()
+        .map(|(datasource, count)| ExportDatasourceUsage { datasource, count })
+        .collect::<Vec<ExportDatasourceUsage>>();
+    datasource_usage.sort_by(|left, right| {
+        right
+            .count
+            .cmp(&left.count)
+            .then(left.datasource.cmp(&right.datasource))
+    });
+    mixed_dashboards.sort_by(|left, right| left.uid.cmp(&right.uid));
+
+    Ok(ExportInspectionSummary {
+        import_dir: import_dir.display().to_string(),
+        dashboard_count: dashboard_files.len(),
+        folder_count: folder_paths.len(),
+        panel_count: total_panels,
+        query_count: total_queries,
+        mixed_dashboard_count: mixed_dashboards.len(),
+        folder_paths,
+        datasource_usage,
+        mixed_dashboards,
+    })
+}
+
+fn analyze_export_dir(args: &InspectExportArgs) -> Result<usize> {
+    let summary = build_export_inspection_summary(&args.import_dir)?;
+    if args.json {
+        println!("{}", serde_json::to_string_pretty(&summary)?);
+        return Ok(summary.dashboard_count);
+    }
+
+    println!("Export analysis: {}", summary.import_dir);
+    println!("Dashboards: {}", summary.dashboard_count);
+    println!("Folders: {}", summary.folder_count);
+    println!("Panels: {}", summary.panel_count);
+    println!("Queries: {}", summary.query_count);
+    println!("Mixed datasource dashboards: {}", summary.mixed_dashboard_count);
+
+    println!();
+    println!("Folder paths:");
+    let folder_rows = summary
+        .folder_paths
+        .iter()
+        .map(|item| vec![item.path.clone(), item.dashboards.to_string()])
+        .collect::<Vec<Vec<String>>>();
+    for line in render_simple_table(&["FOLDER_PATH", "DASHBOARDS"], &folder_rows, !args.no_header) {
+        println!("{line}");
+    }
+
+    println!();
+    println!("Datasource usage:");
+    let datasource_rows = summary
+        .datasource_usage
+        .iter()
+        .map(|item| vec![item.datasource.clone(), item.count.to_string()])
+        .collect::<Vec<Vec<String>>>();
+    for line in render_simple_table(&["DATASOURCE", "COUNT"], &datasource_rows, !args.no_header) {
+        println!("{line}");
+    }
+
+    if !summary.mixed_dashboards.is_empty() {
+        println!();
+        println!("Mixed datasource dashboards:");
+        let mixed_rows = summary
+            .mixed_dashboards
+            .iter()
+            .map(|item| {
+                vec![
+                    item.uid.clone(),
+                    item.title.clone(),
+                    item.folder_path.clone(),
+                    item.datasources.join(","),
+                ]
+            })
+            .collect::<Vec<Vec<String>>>();
+        for line in render_simple_table(
+            &["UID", "TITLE", "FOLDER_PATH", "DATASOURCES"],
+            &mixed_rows,
+            !args.no_header,
+        ) {
+            println!("{line}");
+        }
+    }
+    Ok(summary.dashboard_count)
+}
+
 fn list_datasources_with_request<F>(mut request_json: F) -> Result<Vec<Map<String, Value>>>
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
@@ -1730,6 +2043,10 @@ pub fn run_dashboard_cli_with_client(
             }
             Ok(())
         }
+        DashboardCommand::InspectExport(inspect_args) => {
+            let _ = analyze_export_dir(&inspect_args)?;
+            Ok(())
+        }
     }
 }
 
@@ -1767,6 +2084,10 @@ pub fn run_dashboard_cli(args: DashboardCliArgs) -> Result<()> {
                     differences
                 )));
             }
+            Ok(())
+        }
+        DashboardCommand::InspectExport(inspect_args) => {
+            let _ = analyze_export_dir(&inspect_args)?;
             Ok(())
         }
     }

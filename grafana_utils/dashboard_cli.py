@@ -38,6 +38,7 @@ import getpass
 import json
 import re
 import sys
+from collections import OrderedDict
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
@@ -349,6 +350,22 @@ def add_diff_cli_args(parser: argparse.ArgumentParser) -> None:
     )
 
 
+def add_inspect_export_cli_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--import-dir",
+        required=True,
+        help=(
+            "Inspect dashboards from this raw export directory. "
+            f"Point this to the {RAW_EXPORT_SUBDIR}/ export directory explicitly."
+        ),
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Render the export analysis as JSON instead of human-readable summary lines.",
+    )
+
+
 def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Export or import Grafana dashboards.",
@@ -420,6 +437,12 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     )
     add_common_cli_args(diff_parser)
     add_diff_cli_args(diff_parser)
+
+    inspect_export_parser = subparsers.add_parser(
+        "inspect-export",
+        help="Inspect one raw dashboard export directory and summarize its structure.",
+    )
+    add_inspect_export_cli_args(inspect_export_parser)
 
     return parser.parse_args(argv)
 
@@ -2201,6 +2224,222 @@ def list_data_sources(args: argparse.Namespace) -> int:
     return 0
 
 
+def iter_dashboard_panels(panels: Any) -> List[Dict[str, Any]]:
+    """Flatten Grafana panels, including nested row/library panel layouts."""
+    flattened = []
+    if not isinstance(panels, list):
+        return flattened
+    for panel in panels:
+        if not isinstance(panel, dict):
+            continue
+        flattened.append(panel)
+        nested_panels = panel.get("panels")
+        if isinstance(nested_panels, list):
+            flattened.extend(iter_dashboard_panels(nested_panels))
+    return flattened
+
+
+def describe_export_datasource_ref(ref: Any) -> Optional[str]:
+    """Convert one raw-export datasource ref into a readable usage label."""
+    if ref is None or is_builtin_datasource_ref(ref):
+        return None
+    if isinstance(ref, str):
+        return ref
+    if isinstance(ref, dict):
+        for key in ("name", "uid", "type"):
+            value = ref.get(key)
+            if isinstance(value, str) and value:
+                return value
+    return None
+
+
+def build_export_inspection_document(import_dir: Path) -> Dict[str, Any]:
+    """Analyze one raw export directory and summarize dashboard structure."""
+    metadata = load_export_metadata(import_dir, expected_variant=RAW_EXPORT_SUBDIR)
+    dashboard_files = discover_dashboard_files(import_dir)
+    folder_inventory = load_folder_inventory(import_dir, metadata)
+    folder_lookup = build_folder_inventory_lookup(folder_inventory)
+    folder_paths = OrderedDict()
+    datasource_usage: Dict[str, Dict[str, Any]] = {}
+    dashboards = []
+    total_panels = 0
+    total_queries = 0
+    mixed_dashboards = []
+
+    for folder in sorted(folder_inventory, key=lambda item: str(item.get("path") or "")):
+        path = str(folder.get("path") or str(folder.get("title") or "")).strip()
+        if path:
+            folder_paths[path] = 0
+
+    for dashboard_file in dashboard_files:
+        document = load_json_file(dashboard_file)
+        dashboard = extract_dashboard_object(
+            document, "Dashboard payload must be a JSON object."
+        )
+        folder_record = resolve_folder_inventory_record_for_dashboard(
+            document,
+            dashboard_file,
+            import_dir,
+            folder_lookup,
+        )
+        folder_path = str(
+            folder_record.get("path")
+            or folder_record.get("title")
+            or "General"
+        ).strip() or "General"
+        folder_paths[folder_path] = int(folder_paths.get(folder_path) or 0) + 1
+
+        panels = iter_dashboard_panels(dashboard.get("panels"))
+        panel_count = len(panels)
+        query_count = 0
+        datasource_refs = []
+        collect_datasource_refs(dashboard, datasource_refs)
+        datasource_labels = []
+        for ref in datasource_refs:
+            label = describe_export_datasource_ref(ref)
+            if label:
+                datasource_labels.append(label)
+        unique_datasources = sorted(set(datasource_labels))
+        is_mixed = False
+        for panel in panels:
+            targets = panel.get("targets")
+            if isinstance(targets, list):
+                query_count += len([target for target in targets if isinstance(target, dict)])
+            panel_datasource = panel.get("datasource")
+            if isinstance(panel_datasource, dict) and str(panel_datasource.get("uid") or "") == "-- Mixed --":
+                is_mixed = True
+        if len(unique_datasources) > 1:
+            is_mixed = True
+
+        for label in datasource_labels:
+            usage = datasource_usage.setdefault(
+                label,
+                {"name": label, "referenceCount": 0, "dashboards": set()},
+            )
+            usage["referenceCount"] = int(usage.get("referenceCount") or 0) + 1
+            usage["dashboards"].add(str(dashboard.get("uid") or "unknown"))
+
+        total_panels += panel_count
+        total_queries += query_count
+        dashboard_record = {
+            "uid": str(dashboard.get("uid") or "unknown"),
+            "title": str(dashboard.get("title") or "dashboard"),
+            "folderPath": folder_path,
+            "panelCount": panel_count,
+            "queryCount": query_count,
+            "datasources": unique_datasources,
+            "mixedDatasource": is_mixed,
+            "file": str(dashboard_file),
+        }
+        dashboards.append(dashboard_record)
+        if is_mixed:
+            mixed_dashboards.append(
+                {
+                    "uid": dashboard_record["uid"],
+                    "title": dashboard_record["title"],
+                    "folderPath": folder_path,
+                    "datasources": unique_datasources,
+                }
+            )
+
+    datasource_records = []
+    for label in sorted(datasource_usage):
+        usage = datasource_usage[label]
+        datasource_records.append(
+            {
+                "name": label,
+                "referenceCount": int(usage.get("referenceCount") or 0),
+                "dashboardCount": len(usage.get("dashboards") or []),
+            }
+        )
+
+    folder_records = [
+        {"path": path, "dashboardCount": count}
+        for path, count in folder_paths.items()
+    ]
+    dashboards.sort(key=lambda item: (item["folderPath"], item["title"], item["uid"]))
+    mixed_dashboards.sort(key=lambda item: (item["folderPath"], item["title"], item["uid"]))
+    return {
+        "summary": {
+            "dashboardCount": len(dashboards),
+            "folderCount": len(folder_records),
+            "panelCount": total_panels,
+            "queryCount": total_queries,
+            "mixedDatasourceDashboardCount": len(mixed_dashboards),
+        },
+        "folders": folder_records,
+        "datasources": datasource_records,
+        "mixedDatasourceDashboards": mixed_dashboards,
+        "dashboards": dashboards,
+    }
+
+
+def render_export_inspection_summary(document: Dict[str, Any], import_dir: Path) -> List[str]:
+    """Render a compact human-readable export inspection summary."""
+    summary = document.get("summary") or {}
+    folder_records = list(document.get("folders") or [])
+    datasource_records = list(document.get("datasources") or [])
+    mixed_dashboards = list(document.get("mixedDatasourceDashboards") or [])
+    lines = [
+        "Export inspection: %s" % import_dir,
+        "Dashboards: %s" % int(summary.get("dashboardCount") or 0),
+        "Folders: %s" % int(summary.get("folderCount") or 0),
+        "Panels: %s" % int(summary.get("panelCount") or 0),
+        "Queries: %s" % int(summary.get("queryCount") or 0),
+        "Mixed datasource dashboards: %s"
+        % int(summary.get("mixedDatasourceDashboardCount") or 0),
+    ]
+    if folder_records:
+        lines.append("")
+        lines.append("Folder paths:")
+        for record in folder_records:
+            lines.append(
+                "- %s (%s dashboards)"
+                % (
+                    str(record.get("path") or "General"),
+                    int(record.get("dashboardCount") or 0),
+                )
+            )
+    if datasource_records:
+        lines.append("")
+        lines.append("Datasource usage:")
+        for record in datasource_records:
+            lines.append(
+                "- %s (%s refs across %s dashboards)"
+                % (
+                    str(record.get("name") or ""),
+                    int(record.get("referenceCount") or 0),
+                    int(record.get("dashboardCount") or 0),
+                )
+            )
+    if mixed_dashboards:
+        lines.append("")
+        lines.append("Mixed datasource dashboards:")
+        for record in mixed_dashboards:
+            lines.append(
+                "- %s (%s) path=%s datasources=%s"
+                % (
+                    str(record.get("title") or ""),
+                    str(record.get("uid") or ""),
+                    str(record.get("folderPath") or "General"),
+                    ",".join(record.get("datasources") or []),
+                )
+            )
+    return lines
+
+
+def inspect_export(args: argparse.Namespace) -> int:
+    """Inspect one raw export directory and summarize dashboards, folders, and datasources."""
+    import_dir = Path(args.import_dir)
+    document = build_export_inspection_document(import_dir)
+    if getattr(args, "json", False):
+        print(json.dumps(document, indent=2, sort_keys=False, ensure_ascii=False))
+        return 0
+    for line in render_export_inspection_summary(document, import_dir):
+        print(line)
+    return 0
+
+
 def import_dashboards(args: argparse.Namespace) -> int:
     """Import previously exported raw dashboard JSON files through Grafana's API."""
     if getattr(args, "table", False) and not args.dry_run:
@@ -2498,6 +2737,8 @@ def main(argv: Optional[List[str]] = None) -> int:
             return list_dashboards(args)
         if args.command == "list-data-sources":
             return list_data_sources(args)
+        if args.command == "inspect-export":
+            return inspect_export(args)
         if args.command == "import-dashboard":
             return import_dashboards(args)
         if args.command == "diff":

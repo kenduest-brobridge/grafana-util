@@ -14,6 +14,7 @@ DASHBOARD_COMMAND_HELP = {
     "list-data-sources": "List live Grafana data sources.",
     "import": "Import dashboards from exported raw JSON files.",
     "diff": "Compare exported raw dashboards with the current Grafana state.",
+    "inspect-export": "Analyze a raw dashboard export directory offline.",
 }
 LEGACY_DASHBOARD_COMMAND_MAP = {
     "export-dashboard": "export-dashboard",
@@ -21,6 +22,7 @@ LEGACY_DASHBOARD_COMMAND_MAP = {
     "import-dashboard": "import-dashboard",
     "diff": "diff",
     "list-data-sources": "list-data-sources",
+    "inspect-export": "inspect-export",
 }
 UNIFIED_DASHBOARD_COMMAND_MAP = {
     "export": "export-dashboard",
@@ -28,6 +30,7 @@ UNIFIED_DASHBOARD_COMMAND_MAP = {
     "import": "import-dashboard",
     "diff": "diff",
     "list-data-sources": "list-data-sources",
+    "inspect-export": "inspect-export",
 }
 ALERT_COMMAND_HELP = {
     "export-alert": "Export alerting resources into raw/ JSON files.",
@@ -57,7 +60,8 @@ def _print_dashboard_group_help() -> None:
         "  list               List live dashboard summaries from Grafana.\n"
         "  list-data-sources  List live Grafana data sources.\n"
         "  import             Import dashboards from exported raw JSON files.\n"
-        "  diff               Compare exported raw dashboards with the current Grafana state."
+        "  diff               Compare exported raw dashboards with the current Grafana state.\n"
+        "  inspect-export     Analyze a raw dashboard export directory offline."
     )
 
 

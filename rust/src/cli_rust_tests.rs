@@ -13,7 +13,13 @@ fn render_unified_help() -> String {
 
 #[test]
 fn parse_cli_supports_dashboard_group_command() {
-    let args: CliArgs = parse_cli_from(["grafana-utils", "dashboard", "export", "--export-dir", "./dashboards"]);
+    let args: CliArgs = parse_cli_from([
+        "grafana-utils",
+        "dashboard",
+        "export",
+        "--export-dir",
+        "./dashboards",
+    ]);
 
     match args.command {
         UnifiedCommand::Dashboard { command } => match command {
@@ -21,6 +27,29 @@ fn parse_cli_supports_dashboard_group_command() {
                 assert_eq!(inner.export_dir, Path::new("./dashboards"));
             }
             _ => panic!("expected dashboard export"),
+        },
+        _ => panic!("expected dashboard group"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_dashboard_group_inspect_export_command() {
+    let args: CliArgs = parse_cli_from([
+        "grafana-utils",
+        "dashboard",
+        "inspect-export",
+        "--import-dir",
+        "./dashboards/raw",
+        "--json",
+    ]);
+
+    match args.command {
+        UnifiedCommand::Dashboard { command } => match command {
+            super::DashboardGroupCommand::InspectExport(inner) => {
+                assert_eq!(inner.import_dir, Path::new("./dashboards/raw"));
+                assert!(inner.json);
+            }
+            _ => panic!("expected dashboard inspect-export"),
         },
         _ => panic!("expected dashboard group"),
     }
@@ -40,8 +69,14 @@ fn parse_cli_supports_legacy_dashboard_command() {
 
 #[test]
 fn parse_cli_supports_alert_group() {
-    let args: CliArgs =
-        parse_cli_from(["grafana-utils", "alert", "export", "--output-dir", "./alerts", "--overwrite"]);
+    let args: CliArgs = parse_cli_from([
+        "grafana-utils",
+        "alert",
+        "export",
+        "--output-dir",
+        "./alerts",
+        "--overwrite",
+    ]);
 
     match args.command {
         UnifiedCommand::Alert(inner) => match inner.command {
@@ -50,7 +85,7 @@ fn parse_cli_supports_alert_group() {
                 assert!(export_args.overwrite);
             }
             _ => panic!("expected alert export"),
-        }
+        },
         _ => panic!("expected alert group"),
     }
 }
@@ -69,8 +104,15 @@ fn parse_cli_supports_legacy_alert_alias() {
 
 #[test]
 fn parse_cli_supports_access_group() {
-    let args: CliArgs =
-        parse_cli_from(["grafana-utils", "access", "user", "list", "--json", "--token", "abc"]);
+    let args: CliArgs = parse_cli_from([
+        "grafana-utils",
+        "access",
+        "user",
+        "list",
+        "--json",
+        "--token",
+        "abc",
+    ]);
 
     match args.command {
         UnifiedCommand::Access(inner) => match inner.command {
@@ -96,7 +138,13 @@ fn unified_help_mentions_alert_access_and_shims() {
 
 #[test]
 fn dispatch_routes_dashboard_group_to_dashboard_handler() {
-    let args: CliArgs = parse_cli_from(["grafana-utils", "dashboard", "diff", "--import-dir", "./dashboards/raw"]);
+    let args: CliArgs = parse_cli_from([
+        "grafana-utils",
+        "dashboard",
+        "diff",
+        "--import-dir",
+        "./dashboards/raw",
+    ]);
     let routed = RefCell::new(Vec::new());
 
     let result = dispatch_with_handlers(
@@ -124,8 +172,15 @@ fn dispatch_routes_dashboard_group_to_dashboard_handler() {
 
 #[test]
 fn dispatch_routes_access_group_to_access_handler() {
-    let args: CliArgs =
-        parse_cli_from(["grafana-utils", "access", "service-account", "list", "--json", "--token", "abc"]);
+    let args: CliArgs = parse_cli_from([
+        "grafana-utils",
+        "access",
+        "service-account",
+        "list",
+        "--json",
+        "--token",
+        "abc",
+    ]);
     let routed = RefCell::new(Vec::new());
 
     let result = dispatch_with_handlers(

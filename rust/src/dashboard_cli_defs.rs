@@ -268,6 +268,35 @@ pub struct DiffArgs {
     pub context_lines: usize,
 }
 
+#[derive(Debug, Clone, Args)]
+pub struct InspectExportArgs {
+    #[arg(
+        long,
+        help = "Analyze dashboards from this raw export directory. Point this to the raw/ export directory explicitly."
+    )]
+    pub import_dir: PathBuf,
+    #[arg(
+        long,
+        default_value_t = false,
+        conflicts_with = "table",
+        help = "Render the export analysis as JSON."
+    )]
+    pub json: bool,
+    #[arg(
+        long,
+        default_value_t = false,
+        conflicts_with = "json",
+        help = "Render the export analysis as a table-oriented summary."
+    )]
+    pub table: bool,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Do not print table headers when rendering the table summary."
+    )]
+    pub no_header: bool,
+}
+
 #[derive(Debug, Clone, Subcommand)]
 pub enum DashboardCommand {
     #[command(
@@ -292,6 +321,11 @@ pub enum DashboardCommand {
     Import(ImportArgs),
     #[command(about = "Compare local raw dashboard files against live Grafana dashboards.")]
     Diff(DiffArgs),
+    #[command(
+        name = "inspect-export",
+        about = "Analyze a raw dashboard export directory and summarize its structure."
+    )]
+    InspectExport(InspectExportArgs),
 }
 
 #[derive(Debug, Clone, Parser)]

@@ -125,6 +125,21 @@ python3 python/grafana-utils.py dashboard export \
   --overwrite
 ```
 
+Inspect one raw export directory and summarize its structure:
+
+```bash
+python3 python/grafana-utils.py dashboard inspect-export \
+  --import-dir ./dashboards/raw
+```
+
+Inspect the same raw export directory as JSON:
+
+```bash
+python3 python/grafana-utils.py dashboard inspect-export \
+  --import-dir ./dashboards/raw \
+  --json
+```
+
 Dashboard list, including resolved datasource names per dashboard:
 
 ```bash
@@ -459,6 +474,7 @@ Use `prompt/` when you want:
 | `--progress` | For `export-dashboard` or `import-dashboard`, print concise per-dashboard `current/total` progress lines while the command runs |
 | `-v, --verbose` | For `export-dashboard` or `import-dashboard`, print detailed per-item output including variants, paths, and import results; overrides `--progress` |
 | `import-dashboard --dry-run --table` | Render dry-run import predictions as a table showing `uid`, destination state, action, destination folder path, and file |
+| `inspect-export --json` | Analyze a raw export directory and emit machine-readable structure summary including folder paths, panels, queries, datasource usage, and mixed dashboards |
 | `--update-existing-only` | For `import-dashboard`, update only dashboards whose UID already exists in Grafana and skip missing dashboards instead of creating them |
 | `--ensure-folders` | For `import-dashboard`, read `raw/folders.json` and create any missing destination folder chain before importing dashboards |
 | `list-data-sources --table|--csv|--json` | List live Grafana data sources in human-readable or machine-readable output |
@@ -497,6 +513,8 @@ For dashboard export:
 - `import-dashboard --dry-run --table --no-header` omits the dry-run table header row
 - `import-dashboard --update-existing-only` updates only existing dashboard UIDs, skips missing dashboards, and implies `--replace-existing`
 - `import-dashboard` now prints an `Import mode: ...` line up front so you can see whether the run is `create-only`, `create-or-update`, or `update-or-skip-missing`
+- `inspect-export` analyzes a raw export directory offline and summarizes dashboard count, folder paths, panels, queries, datasource usage, and mixed-datasource dashboards
+- `inspect-export --json` emits the same analysis as one JSON document for scripts or CI checks
 
 For datasource listing:
 

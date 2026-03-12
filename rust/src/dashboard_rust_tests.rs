@@ -462,6 +462,26 @@ fn parse_cli_supports_import_update_existing_only_flag() {
 }
 
 #[test]
+fn parse_cli_supports_inspect_export_json_flag() {
+    let args = parse_cli_from([
+        "grafana-utils",
+        "inspect-export",
+        "--import-dir",
+        "./dashboards/raw",
+        "--json",
+    ]);
+
+    match args.command {
+        DashboardCommand::InspectExport(inspect_args) => {
+            assert_eq!(inspect_args.import_dir, Path::new("./dashboards/raw"));
+            assert!(inspect_args.json);
+            assert!(!inspect_args.table);
+        }
+        _ => panic!("expected inspect-export command"),
+    }
+}
+
+#[test]
 fn parse_cli_supports_list_json_mode() {
     let args = parse_cli_from([
         "grafana-utils",
@@ -2076,6 +2096,156 @@ fn export_dashboards_with_dry_run_keeps_output_dir_empty() {
 
     assert_eq!(count, 1);
     assert!(!args.export_dir.exists());
+}
+
+#[test]
+fn build_export_inspection_summary_reports_structure_and_datasources() {
+    let temp = tempdir().unwrap();
+    let raw_dir = temp.path().join("raw");
+    fs::create_dir_all(raw_dir.join("General")).unwrap();
+    fs::create_dir_all(raw_dir.join("Prod")).unwrap();
+    fs::write(
+        raw_dir.join(EXPORT_METADATA_FILENAME),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-dashboard-export-index",
+            "schemaVersion": TOOL_SCHEMA_VERSION,
+            "variant": "raw",
+            "dashboardCount": 2,
+            "indexFile": "index.json",
+            "format": "grafana-web-import-preserve-uid",
+            "foldersFile": FOLDER_INVENTORY_FILENAME
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        raw_dir.join(FOLDER_INVENTORY_FILENAME),
+        serde_json::to_string_pretty(&json!([
+            {
+                "uid": "prod",
+                "title": "Prod",
+                "parentUid": "apps",
+                "path": "Platform / Team / Apps / Prod",
+                "org": "Main Org.",
+                "orgId": "1"
+            }
+        ]))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        raw_dir.join("General").join("main.json"),
+        serde_json::to_string_pretty(&json!({
+            "dashboard": {
+                "uid": "main",
+                "title": "Main",
+                "panels": [
+                    {
+                        "id": 1,
+                        "type": "timeseries",
+                        "datasource": {"uid": "prom-a", "type": "prometheus"},
+                        "targets": [
+                            {"refId": "A", "datasource": {"uid": "prom-a", "type": "prometheus"}}
+                        ]
+                    }
+                ]
+            }
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        raw_dir.join("Prod").join("mixed.json"),
+        serde_json::to_string_pretty(&json!({
+            "dashboard": {
+                "uid": "mixed",
+                "title": "Mixed",
+                "panels": [
+                    {
+                        "id": 2,
+                        "type": "timeseries",
+                        "targets": [
+                            {"refId": "A", "datasource": {"uid": "prom-a", "type": "prometheus"}},
+                            {"refId": "B", "datasource": {"uid": "loki-a", "type": "loki"}}
+                        ]
+                    }
+                ]
+            },
+            "meta": {"folderUid": "prod"}
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+
+    let summary = super::build_export_inspection_summary(&raw_dir).unwrap();
+
+    assert_eq!(summary.dashboard_count, 2);
+    assert_eq!(summary.folder_count, 2);
+    assert_eq!(summary.panel_count, 2);
+    assert_eq!(summary.query_count, 3);
+    assert_eq!(summary.mixed_dashboard_count, 1);
+    assert_eq!(summary.folder_paths[0].path, "General");
+    assert!(summary
+        .folder_paths
+        .iter()
+        .any(|item| item.path == "Platform / Team / Apps / Prod"));
+    assert!(summary
+        .datasource_usage
+        .iter()
+        .any(|item| item.datasource == "prom-a"));
+    assert_eq!(summary.mixed_dashboards[0].uid, "mixed");
+}
+
+#[test]
+fn build_export_inspection_summary_uses_unique_folder_title_fallback_for_full_path() {
+    let temp = tempdir().unwrap();
+    let raw_dir = temp.path().join("raw");
+    fs::create_dir_all(raw_dir.join("Infra")).unwrap();
+    fs::write(
+        raw_dir.join(EXPORT_METADATA_FILENAME),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-dashboard-export-index",
+            "schemaVersion": TOOL_SCHEMA_VERSION,
+            "variant": "raw",
+            "dashboardCount": 1,
+            "indexFile": "index.json",
+            "format": "grafana-web-import-preserve-uid",
+            "foldersFile": FOLDER_INVENTORY_FILENAME
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        raw_dir.join(FOLDER_INVENTORY_FILENAME),
+        serde_json::to_string_pretty(&json!([
+            {
+                "uid": "infra",
+                "title": "Infra",
+                "parentUid": "platform",
+                "path": "Platform / Infra",
+                "org": "Main Org.",
+                "orgId": "1"
+            }
+        ]))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        raw_dir.join("Infra").join("sub.json"),
+        serde_json::to_string_pretty(&json!({
+            "dashboard": {
+                "uid": "sub",
+                "title": "Sub",
+                "panels": []
+            }
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+
+    let summary = super::build_export_inspection_summary(&raw_dir).unwrap();
+
+    assert_eq!(summary.folder_paths[0].path, "Platform / Infra");
 }
 
 #[test]
