@@ -1,5 +1,15 @@
 # ai-changes.md
 
+## 2026-03-12 - Add Dashboard Datasource Listing Command
+- Summary: Added `list-data-sources` to both the Python and Rust dashboard CLIs so operators can inspect the live Grafana datasource catalog directly. The new command reuses the existing `/api/datasources` client path and supports compact text output plus `--table`, `--csv`, and `--json` for datasource fields `uid`, `name`, `type`, `url`, and `isDefault`.
+- Tests: Extended the focused Python and Rust dashboard suites with parser coverage, conflicting-output-mode validation, datasource renderer assertions, and command-path tests for the new datasource listing flow.
+- Test Run: `python3 -m unittest -v tests/test_python_dashboard_cli.py`; `cd rust && cargo test dashboard --quiet`
+- Reason: Operators asked for a first-class datasource listing command instead of inferring datasource usage only indirectly through dashboards or raw API calls.
+- Validation: Verified the new command shape and output renderers in both implementations. The new output remains read-only and does not change existing dashboard export, import, diff, or dashboard-list behavior.
+- Impact: `grafana_utils/dashboard_cli.py`, `tests/test_python_dashboard_cli.py`, `rust/src/dashboard.rs`, `rust/src/dashboard_rust_tests.rs`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low. The command is additive and reuses the existing datasource list API path, but consumers should treat the output schema as distinct from the dashboard list schema.
+- Follow-up: Optional live Docker validation for `list-data-sources` if we want a checked-in smoke path for datasource listing similar to the existing dashboard and access live checks.
+
 ## 2026-03-12 - Rename Dashboard CLI Subcommands
 - Summary: Renamed the dashboard CLI subcommands from `export`, `list`, and `import` to `export-dashboard`, `list-dashboard`, and `import-dashboard` in both the Python and Rust implementations. The CLI help, parser tests, and public/maintainer docs now use the explicit dashboard-prefixed names consistently, while `diff` remains unchanged.
 - Tests: Extended focused Python and Rust dashboard parser/help coverage to assert the new subcommand names and to reject the old `list` name.

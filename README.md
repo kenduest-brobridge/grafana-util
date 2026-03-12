@@ -44,6 +44,7 @@ The two command names are intentionally separate because dashboards and alerting
 
 - `grafana-utils export-dashboard ...`
 - `grafana-utils list-dashboard ...`
+- `grafana-utils list-data-sources ...`
 - `grafana-utils import-dashboard ...`
 - `grafana-utils diff ...`
 - `grafana-alert-utils ...`
@@ -126,6 +127,14 @@ List live dashboards as JSON:
 ```bash
 python3 cmd/grafana-utils.py list-dashboard \
   --json \
+  --url http://127.0.0.1:3000
+```
+
+List live Grafana data sources as a table:
+
+```bash
+python3 cmd/grafana-utils.py list-data-sources \
+  --table \
   --url http://127.0.0.1:3000
 ```
 
@@ -341,6 +350,7 @@ Use `prompt/` when you want:
 | `--export-dir` | Root export directory. Default: `dashboards/` |
 | `--page-size` | Dashboard search page size. Default: `500` |
 | `--with-sources` | For `list`, fetch each dashboard payload and include datasource names used by that dashboard; CSV and JSON also add datasource UIDs |
+| `list-data-sources --table|--csv|--json` | List live Grafana data sources in human-readable or machine-readable output |
 | `--flat` | Do not create per-folder subdirectories |
 | `--overwrite` | Replace existing exported files |
 | `--without-dashboard-raw` | Skip the `raw/` export variant |
@@ -355,6 +365,13 @@ For dashboard listing:
 - `list --with-sources --csv` also adds a `sourceUids` column with best-effort datasource UIDs
 - `list --with-sources --json` also adds a `sourceUids` array with best-effort datasource UIDs
 - `list --with-sources` is slower than plain `list` because it fetches each dashboard payload and the datasource catalog
+
+For datasource listing:
+
+- `list-data-sources` shows `uid`, `name`, `type`, `url`, and `isDefault`
+- `list-data-sources --table` renders fixed-width columns
+- `list-data-sources --csv` emits `uid,name,type,url,isDefault`
+- `list-data-sources --json` emits an array of datasource objects
 
 ### Raw Export
 

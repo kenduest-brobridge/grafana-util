@@ -32,6 +32,7 @@ This document is for maintainers. Keep `README.md` GitHub-facing and task-orient
 - Mode selection is explicit.
 - Installed commands are `grafana-utils`, `grafana-alert-utils`, and `grafana-access-utils`.
 - Use `python3 cmd/grafana-utils.py list-dashboard ...` to inspect live dashboard summaries.
+- Use `python3 cmd/grafana-utils.py list-data-sources ...` to inspect live Grafana data sources.
 - Use `python3 cmd/grafana-utils.py export-dashboard ...` for export.
 - Use `python3 cmd/grafana-utils.py import-dashboard ...` for import.
 - Use `python3 cmd/grafana-utils.py diff ...` for live-vs-local comparison.
@@ -54,6 +55,10 @@ This document is for maintainers. Keep `README.md` GitHub-facing and task-orient
 - `list --with-sources --json` also appends `sourceUids` as an array.
 - `list --with-sources` should stay opt-in because it turns one search-oriented list call into a per-dashboard inspection workflow.
 - Folder tree path is resolved from `GET /api/folders/{uid}` using the folder `parents[]` chain when `folderUid` is present.
+- `list-data-sources` is read-only and defaults to compact `uid=<uid> name=<name> type=<type> url=<url> isDefault=<true|false>` output.
+- `list-data-sources --table` renders `UID`, `NAME`, `TYPE`, `URL`, and `IS_DEFAULT`.
+- `list-data-sources --csv` emits header `uid,name,type,url,isDefault`.
+- `list-data-sources --json` emits an array of objects with keys `uid`, `name`, `type`, `url`, and `isDefault`.
 
 ### Packaging layout
 
@@ -385,6 +390,7 @@ Useful CLI help checks:
 ```bash
 grafana-utils -h
 grafana-utils list-dashboard -h
+grafana-utils list-data-sources -h
 grafana-utils export-dashboard -h
 grafana-utils import-dashboard -h
 grafana-alert-utils -h
@@ -401,6 +407,7 @@ grafana-access-utils service-account add -h
 grafana-access-utils service-account token add -h
 python3 cmd/grafana-utils.py -h
 python3 cmd/grafana-utils.py list-dashboard -h
+python3 cmd/grafana-utils.py list-data-sources -h
 python3 cmd/grafana-utils.py export-dashboard -h
 python3 cmd/grafana-utils.py import-dashboard -h
 python3 cmd/grafana-alert-utils.py -h

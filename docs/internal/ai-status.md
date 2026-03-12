@@ -1,5 +1,12 @@
 # ai-status.md
 
+## 2026-03-12 - Task: Add Dashboard Datasource Listing Command
+- State: Done
+- Scope: `grafana_utils/dashboard_cli.py`, `tests/test_python_dashboard_cli.py`, `rust/src/dashboard.rs`, `rust/src/dashboard_rust_tests.rs`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The dashboard CLI could list dashboards and could fetch the datasource catalog internally, but there was no dedicated operator command to inspect Grafana data sources directly with table, CSV, or JSON output.
+- Current Update: Added `list-data-sources` in both Python and Rust, reusing the existing datasource list API path and adding compact text, `--table`, `--csv`, and `--json` renderers for `uid`, `name`, `type`, `url`, and `isDefault`.
+- Result: Operators can now inspect live Grafana data sources directly from `grafana-utils` without exporting dashboards or reading raw API responses.
+
 ## 2026-03-12 - Task: Rename Dashboard CLI Subcommands
 - State: Done
 - Scope: `grafana_utils/dashboard_cli.py`, `tests/test_python_dashboard_cli.py`, `rust/src/dashboard.rs`, `rust/src/dashboard_rust_tests.rs`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

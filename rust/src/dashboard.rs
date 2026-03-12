@@ -117,6 +117,18 @@ pub struct ListArgs {
 }
 
 #[derive(Debug, Clone, Args)]
+pub struct ListDataSourcesArgs {
+    #[command(flatten)]
+    pub common: CommonCliArgs,
+    #[arg(long, default_value_t = false, conflicts_with_all = ["csv", "json"], help = "Render datasource summaries as a table.")]
+    pub table: bool,
+    #[arg(long, default_value_t = false, conflicts_with_all = ["table", "json"], help = "Render datasource summaries as CSV.")]
+    pub csv: bool,
+    #[arg(long, default_value_t = false, conflicts_with_all = ["table", "csv"], help = "Render datasource summaries as JSON.")]
+    pub json: bool,
+}
+
+#[derive(Debug, Clone, Args)]
 pub struct ImportArgs {
     #[command(flatten)]
     pub common: CommonCliArgs,
@@ -154,6 +166,8 @@ pub struct DiffArgs {
 pub enum DashboardCommand {
     #[command(name = "list-dashboard", about = "List dashboard summaries without writing export files.")]
     List(ListArgs),
+    #[command(name = "list-data-sources", about = "List Grafana data sources.")]
+    ListDataSources(ListDataSourcesArgs),
     #[command(name = "export-dashboard", about = "Export dashboards to raw/ and prompt/ JSON files.")]
     Export(ExportArgs),
     #[command(name = "import-dashboard", about = "Import dashboard JSON files through the Grafana API.")]
@@ -1622,6 +1636,93 @@ fn render_dashboard_summary_json(summaries: &[Map<String, Value>]) -> Value {
     )
 }
 
+fn build_data_source_record(datasource: &Map<String, Value>) -> Vec<String> {
+    vec![
+        string_field(datasource, "uid", ""),
+        string_field(datasource, "name", ""),
+        string_field(datasource, "type", ""),
+        string_field(datasource, "url", ""),
+        if datasource.get("isDefault").and_then(Value::as_bool).unwrap_or(false) {
+            "true".to_string()
+        } else {
+            "false".to_string()
+        },
+    ]
+}
+
+fn format_data_source_line(datasource: &Map<String, Value>) -> String {
+    let row = build_data_source_record(datasource);
+    format!(
+        "uid={} name={} type={} url={} isDefault={}",
+        row[0], row[1], row[2], row[3], row[4]
+    )
+}
+
+fn render_data_source_table(datasources: &[Map<String, Value>]) -> Vec<String> {
+    let headers = vec![
+        "UID".to_string(),
+        "NAME".to_string(),
+        "TYPE".to_string(),
+        "URL".to_string(),
+        "IS_DEFAULT".to_string(),
+    ];
+    let rows: Vec<Vec<String>> = datasources.iter().map(build_data_source_record).collect();
+    let mut widths: Vec<usize> = headers.iter().map(|header| header.len()).collect();
+    for row in &rows {
+        for (index, value) in row.iter().enumerate() {
+            widths[index] = widths[index].max(value.len());
+        }
+    }
+    let format_row = |values: &[String]| -> String {
+        values
+            .iter()
+            .enumerate()
+            .map(|(index, value)| format!("{:<width$}", value, width = widths[index]))
+            .collect::<Vec<String>>()
+            .join("  ")
+    };
+    let separator: Vec<String> = widths.iter().map(|width| "-".repeat(*width)).collect();
+    let mut lines = vec![format_row(&headers), format_row(&separator)];
+    lines.extend(rows.iter().map(|row| format_row(row)));
+    lines
+}
+
+fn render_data_source_csv(datasources: &[Map<String, Value>]) -> Vec<String> {
+    let mut lines = vec!["uid,name,type,url,isDefault".to_string()];
+    lines.extend(datasources.iter().map(|datasource| {
+        build_data_source_record(datasource)
+            .into_iter()
+            .map(|value| {
+                if value.contains(',') || value.contains('"') || value.contains('\n') {
+                    format!("\"{}\"", value.replace('"', "\"\""))
+                } else {
+                    value
+                }
+            })
+            .collect::<Vec<String>>()
+            .join(",")
+    }));
+    lines
+}
+
+fn render_data_source_json(datasources: &[Map<String, Value>]) -> Value {
+    Value::Array(
+        datasources
+            .iter()
+            .map(|datasource| {
+                let row = build_data_source_record(datasource);
+                Value::Object(Map::from_iter(vec![
+                    ("uid".to_string(), Value::String(row[0].clone())),
+                    ("name".to_string(), Value::String(row[1].clone())),
+                    ("type".to_string(), Value::String(row[2].clone())),
+                    ("url".to_string(), Value::String(row[3].clone())),
+                    ("isDefault".to_string(), Value::String(row[4].clone())),
+                ]))
+            })
+            .collect(),
+    )
+}
+
 fn lookup_unique_datasource_name_by_type(
     datasources_by_uid: &BTreeMap<String, Map<String, Value>>,
     datasource_type: &str,
@@ -1834,6 +1935,40 @@ where
 
 pub fn list_dashboards_with_client(client: &JsonHttpClient, args: &ListArgs) -> Result<usize> {
     list_dashboards_with_request(
+        |method, path, params, payload| client.request_json(method, path, params, payload),
+        args,
+    )
+}
+
+fn list_data_sources_with_request<F>(mut request_json: F, args: &ListDataSourcesArgs) -> Result<usize>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    let datasources = list_datasources_with_request(&mut request_json)?;
+    if args.json {
+        println!("{}", serde_json::to_string_pretty(&render_data_source_json(&datasources))?);
+    } else if args.csv {
+        for line in render_data_source_csv(&datasources) {
+            println!("{line}");
+        }
+    } else if args.table {
+        for line in render_data_source_table(&datasources) {
+            println!("{line}");
+        }
+    } else {
+        for datasource in &datasources {
+            println!("{}", format_data_source_line(datasource));
+        }
+    }
+    if !args.csv && !args.json {
+        println!();
+        println!("Listed {} data source(s).", datasources.len());
+    }
+    Ok(datasources.len())
+}
+
+pub fn list_data_sources_with_client(client: &JsonHttpClient, args: &ListDataSourcesArgs) -> Result<usize> {
+    list_data_sources_with_request(
         |method, path, params, payload| client.request_json(method, path, params, payload),
         args,
     )
@@ -2246,6 +2381,10 @@ pub fn run_dashboard_cli_with_client(client: &JsonHttpClient, args: DashboardCli
             let _ = list_dashboards_with_client(client, &list_args)?;
             Ok(())
         }
+        DashboardCommand::ListDataSources(list_data_sources_args) => {
+            let _ = list_data_sources_with_client(client, &list_data_sources_args)?;
+            Ok(())
+        }
         DashboardCommand::Export(export_args) => {
             let _ = export_dashboards_with_client(client, &export_args)?;
             Ok(())
@@ -2272,6 +2411,11 @@ pub fn run_dashboard_cli(args: DashboardCliArgs) -> Result<()> {
         DashboardCommand::List(list_args) => {
             let client = build_http_client(&list_args.common)?;
             let _ = list_dashboards_with_client(&client, &list_args)?;
+            Ok(())
+        }
+        DashboardCommand::ListDataSources(list_data_sources_args) => {
+            let client = build_http_client(&list_data_sources_args.common)?;
+            let _ = list_data_sources_with_client(&client, &list_data_sources_args)?;
             Ok(())
         }
         DashboardCommand::Export(export_args) => {

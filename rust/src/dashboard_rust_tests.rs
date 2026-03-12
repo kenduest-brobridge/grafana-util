@@ -3,9 +3,10 @@ use super::{
     build_import_payload, build_output_path, build_preserved_web_import_document,
     build_folder_path, diff_dashboards_with_request, discover_dashboard_files, export_dashboards_with_request,
     format_dashboard_summary_line, import_dashboards_with_request, list_dashboards_with_request,
-    parse_cli_from, render_dashboard_summary_csv, render_dashboard_summary_json,
+    list_data_sources_with_request, parse_cli_from, render_dashboard_summary_csv, render_dashboard_summary_json,
     render_dashboard_summary_table, CommonCliArgs, DashboardCliArgs, DiffArgs, ExportArgs, ImportArgs,
-    ListArgs, DashboardCommand, EXPORT_METADATA_FILENAME, TOOL_SCHEMA_VERSION,
+    ListArgs, ListDataSourcesArgs, DashboardCommand, EXPORT_METADATA_FILENAME, TOOL_SCHEMA_VERSION,
+    format_data_source_line, render_data_source_csv, render_data_source_json, render_data_source_table,
 };
 use clap::{CommandFactory, Parser};
 use serde_json::{json, Value};
@@ -85,6 +86,27 @@ fn parse_cli_supports_list_with_sources() {
             assert!(!list_args.csv);
         }
         _ => panic!("expected list command"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_list_data_sources_mode() {
+    let args = parse_cli_from([
+        "grafana-utils",
+        "list-data-sources",
+        "--url",
+        "https://grafana.example.com",
+        "--table",
+    ]);
+
+    match args.command {
+        DashboardCommand::ListDataSources(list_args) => {
+            assert_eq!(list_args.common.url, "https://grafana.example.com");
+            assert!(list_args.table);
+            assert!(!list_args.csv);
+            assert!(!list_args.json);
+        }
+        _ => panic!("expected list-data-sources command"),
     }
 }
 
@@ -188,6 +210,20 @@ fn parse_cli_rejects_old_list_subcommand_name() {
     let rendered = error.to_string();
     assert!(rendered.contains("unrecognized subcommand"));
     assert!(rendered.contains("list"));
+}
+
+#[test]
+fn parse_cli_rejects_conflicting_list_data_sources_output_modes() {
+    let error = DashboardCliArgs::try_parse_from([
+        "grafana-utils",
+        "list-data-sources",
+        "--table",
+        "--json",
+    ])
+    .unwrap_err();
+
+    assert!(error.to_string().contains("--table"));
+    assert!(error.to_string().contains("--json"));
 }
 
 #[test]
@@ -310,6 +346,104 @@ fn format_dashboard_summary_line_appends_sources_when_present() {
     assert_eq!(
         line,
         "uid=abc name=CPU folder=Infra folderUid=infra path=Platform / Infra org=Main Org orgId=1 sources=Loki Logs,Prom Main"
+    );
+}
+
+#[test]
+fn format_data_source_line_uses_expected_fields() {
+    let datasource = json!({
+        "uid": "prom_uid",
+        "name": "Prometheus Main",
+        "type": "prometheus",
+        "url": "http://prometheus:9090",
+        "isDefault": true
+    });
+
+    let line = format_data_source_line(datasource.as_object().unwrap());
+    assert_eq!(
+        line,
+        "uid=prom_uid name=Prometheus Main type=prometheus url=http://prometheus:9090 isDefault=true"
+    );
+}
+
+#[test]
+fn render_data_source_table_uses_headers_and_values() {
+    let datasources = vec![
+        json!({
+            "uid": "prom_uid",
+            "name": "Prometheus Main",
+            "type": "prometheus",
+            "url": "http://prometheus:9090",
+            "isDefault": true
+        })
+        .as_object()
+        .unwrap()
+        .clone(),
+        json!({
+            "uid": "loki_uid",
+            "name": "Loki Logs",
+            "type": "loki",
+            "url": "http://loki:3100",
+            "isDefault": false
+        })
+        .as_object()
+        .unwrap()
+        .clone(),
+    ];
+
+    let lines = render_data_source_table(&datasources);
+    assert_eq!(lines[0], "UID       NAME             TYPE        URL                     IS_DEFAULT");
+    assert_eq!(lines[2], "prom_uid  Prometheus Main  prometheus  http://prometheus:9090  true      ");
+    assert_eq!(lines[3], "loki_uid  Loki Logs        loki        http://loki:3100        false     ");
+}
+
+#[test]
+fn render_data_source_csv_uses_expected_fields() {
+    let datasources = vec![
+        json!({
+            "uid": "prom_uid",
+            "name": "Prometheus Main",
+            "type": "prometheus",
+            "url": "http://prometheus:9090",
+            "isDefault": true
+        })
+        .as_object()
+        .unwrap()
+        .clone(),
+    ];
+
+    let lines = render_data_source_csv(&datasources);
+    assert_eq!(lines[0], "uid,name,type,url,isDefault");
+    assert_eq!(lines[1], "prom_uid,Prometheus Main,prometheus,http://prometheus:9090,true");
+}
+
+#[test]
+fn render_data_source_json_uses_expected_fields() {
+    let datasources = vec![
+        json!({
+            "uid": "prom_uid",
+            "name": "Prometheus Main",
+            "type": "prometheus",
+            "url": "http://prometheus:9090",
+            "isDefault": true
+        })
+        .as_object()
+        .unwrap()
+        .clone(),
+    ];
+
+    let value = render_data_source_json(&datasources);
+    assert_eq!(
+        value,
+        json!([
+            {
+                "uid": "prom_uid",
+                "name": "Prometheus Main",
+                "type": "prometheus",
+                "url": "http://prometheus:9090",
+                "isDefault": "true"
+            }
+        ])
     );
 }
 
@@ -697,6 +831,42 @@ fn list_dashboards_with_request_with_sources_fetches_dashboards_and_datasources(
     );
     assert!(calls.iter().any(|(_, path)| path == "/api/datasources"));
     assert!(calls.iter().any(|(_, path)| path == "/api/dashboards/uid/abc"));
+}
+
+#[test]
+fn list_data_sources_with_request_returns_count() {
+    let args = ListDataSourcesArgs {
+        common: make_common_args("http://127.0.0.1:3000".to_string()),
+        table: false,
+        csv: true,
+        json: false,
+    };
+
+    let count = list_data_sources_with_request(
+        |_method, path, _params, _payload| match path {
+            "/api/datasources" => Ok(Some(json!([
+                {
+                    "uid": "prom_uid",
+                    "name": "Prometheus Main",
+                    "type": "prometheus",
+                    "url": "http://prometheus:9090",
+                    "isDefault": true
+                },
+                {
+                    "uid": "loki_uid",
+                    "name": "Loki Logs",
+                    "type": "loki",
+                    "url": "http://loki:3100",
+                    "isDefault": false
+                }
+            ]))),
+            _ => Err(super::message(format!("unexpected path {path}"))),
+        },
+        &args,
+    )
+    .unwrap();
+
+    assert_eq!(count, 2);
 }
 
 #[test]

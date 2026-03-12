@@ -224,6 +224,25 @@ def add_list_cli_args(parser: argparse.ArgumentParser) -> None:
     )
 
 
+def add_list_data_sources_cli_args(parser: argparse.ArgumentParser) -> None:
+    output_group = parser.add_mutually_exclusive_group()
+    output_group.add_argument(
+        "--table",
+        action="store_true",
+        help="Render datasource summaries as a table.",
+    )
+    output_group.add_argument(
+        "--csv",
+        action="store_true",
+        help="Render datasource summaries as CSV.",
+    )
+    output_group.add_argument(
+        "--json",
+        action="store_true",
+        help="Render datasource summaries as JSON.",
+    )
+
+
 def add_import_cli_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--import-dir",
@@ -299,6 +318,13 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     )
     add_common_cli_args(list_parser)
     add_list_cli_args(list_parser)
+
+    list_data_sources_parser = subparsers.add_parser(
+        "list-data-sources",
+        help="List live Grafana data sources.",
+    )
+    add_common_cli_args(list_data_sources_parser)
+    add_list_data_sources_cli_args(list_data_sources_parser)
 
     import_parser = subparsers.add_parser(
         "import-dashboard",
@@ -1967,6 +1993,91 @@ def list_dashboards(args: argparse.Namespace) -> int:
     return 0
 
 
+def format_data_source_line(datasource: Dict[str, Any]) -> str:
+    record = build_data_source_record(datasource)
+    return (
+        f"uid={record['uid']} name={record['name']} type={record['type']} "
+        f"url={record['url']} isDefault={record['isDefault']}"
+    )
+
+
+def build_data_source_record(datasource: Dict[str, Any]) -> Dict[str, str]:
+    return {
+        "uid": str(datasource.get("uid") or ""),
+        "name": str(datasource.get("name") or ""),
+        "type": str(datasource.get("type") or ""),
+        "url": str(datasource.get("url") or ""),
+        "isDefault": "true" if bool(datasource.get("isDefault")) else "false",
+    }
+
+
+def render_data_source_table(datasources: List[Dict[str, Any]]) -> List[str]:
+    headers = ["UID", "NAME", "TYPE", "URL", "IS_DEFAULT"]
+    rows = []
+    for record in [build_data_source_record(item) for item in datasources]:
+        rows.append(
+            [
+                record["uid"],
+                record["name"],
+                record["type"],
+                record["url"],
+                record["isDefault"],
+            ]
+        )
+    widths = [len(header) for header in headers]
+    for row in rows:
+        for index, value in enumerate(row):
+            widths[index] = max(widths[index], len(value))
+
+    def format_row(values: List[str]) -> str:
+        return "  ".join(
+            value.ljust(widths[index]) for index, value in enumerate(values)
+        )
+
+    lines = [format_row(headers), format_row(["-" * width for width in widths])]
+    lines.extend(format_row(row) for row in rows)
+    return lines
+
+
+def render_data_source_csv(datasources: List[Dict[str, Any]]) -> None:
+    writer = csv.DictWriter(
+        sys.stdout,
+        fieldnames=["uid", "name", "type", "url", "isDefault"],
+        lineterminator="\n",
+    )
+    writer.writeheader()
+    for datasource in datasources:
+        writer.writerow(build_data_source_record(datasource))
+
+
+def render_data_source_json(datasources: List[Dict[str, Any]]) -> str:
+    return json.dumps(
+        [build_data_source_record(item) for item in datasources],
+        indent=2,
+        sort_keys=False,
+    )
+
+
+def list_data_sources(args: argparse.Namespace) -> int:
+    client = build_client(args)
+    datasources = client.list_datasources()
+    if args.csv:
+        render_data_source_csv(datasources)
+        return 0
+    if args.json:
+        print(render_data_source_json(datasources))
+        return 0
+    if args.table:
+        for line in render_data_source_table(datasources):
+            print(line)
+    else:
+        for datasource in datasources:
+            print(format_data_source_line(datasource))
+    print("")
+    print(f"Listed {len(datasources)} data source(s) from {args.url}")
+    return 0
+
+
 def import_dashboards(args: argparse.Namespace) -> int:
     """Import previously exported raw dashboard JSON files through Grafana's API."""
     client = build_client(args)
@@ -2075,6 +2186,8 @@ def main() -> int:
     try:
         if args.command == "list-dashboard":
             return list_dashboards(args)
+        if args.command == "list-data-sources":
+            return list_data_sources(args)
         if args.command == "import-dashboard":
             return import_dashboards(args)
         if args.command == "diff":

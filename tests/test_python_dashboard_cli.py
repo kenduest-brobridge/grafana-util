@@ -121,6 +121,14 @@ class ExporterTests(unittest.TestCase):
         self.assertFalse(args.csv)
         self.assertFalse(args.json)
 
+    def test_parse_args_supports_list_data_sources_mode(self):
+        args = exporter.parse_args(["list-data-sources", "--table"])
+
+        self.assertEqual(args.command, "list-data-sources")
+        self.assertTrue(args.table)
+        self.assertFalse(args.csv)
+        self.assertFalse(args.json)
+
     def test_parse_args_supports_list_csv_and_json_modes(self):
         csv_args = exporter.parse_args(["list-dashboard", "--csv"])
         json_args = exporter.parse_args(["list-dashboard", "--json"])
@@ -143,6 +151,16 @@ class ExporterTests(unittest.TestCase):
 
         with self.assertRaises(SystemExit):
             exporter.parse_args(["list-dashboard", "--csv", "--json"])
+
+    def test_parse_args_rejects_multiple_list_data_sources_output_modes(self):
+        with self.assertRaises(SystemExit):
+            exporter.parse_args(["list-data-sources", "--table", "--csv"])
+
+        with self.assertRaises(SystemExit):
+            exporter.parse_args(["list-data-sources", "--table", "--json"])
+
+        with self.assertRaises(SystemExit):
+            exporter.parse_args(["list-data-sources", "--csv", "--json"])
 
     def test_parse_args_supports_diff_mode(self):
         args = exporter.parse_args(["diff", "--import-dir", "dashboards/raw"])
@@ -406,6 +424,95 @@ class ExporterTests(unittest.TestCase):
 
         self.assertEqual(summaries[0]["orgName"], "Ops Org")
         self.assertEqual(summaries[0]["orgId"], "7")
+
+    def test_format_data_source_line_uses_expected_fields(self):
+        line = exporter.format_data_source_line(
+            {
+                "uid": "prom_uid",
+                "name": "Prometheus Main",
+                "type": "prometheus",
+                "url": "http://prometheus:9090",
+                "isDefault": True,
+            }
+        )
+
+        self.assertEqual(
+            line,
+            "uid=prom_uid name=Prometheus Main type=prometheus url=http://prometheus:9090 isDefault=true",
+        )
+
+    def test_render_data_source_table_uses_headers_and_values(self):
+        lines = exporter.render_data_source_table(
+            [
+                {
+                    "uid": "prom_uid",
+                    "name": "Prometheus Main",
+                    "type": "prometheus",
+                    "url": "http://prometheus:9090",
+                    "isDefault": True,
+                },
+                {
+                    "uid": "loki_uid",
+                    "name": "Loki Logs",
+                    "type": "loki",
+                    "url": "http://loki:3100",
+                    "isDefault": False,
+                },
+            ]
+        )
+
+        self.assertEqual(lines[0], "UID       NAME             TYPE        URL                     IS_DEFAULT")
+        self.assertEqual(lines[2], "prom_uid  Prometheus Main  prometheus  http://prometheus:9090  true      ")
+        self.assertEqual(lines[3], "loki_uid  Loki Logs        loki        http://loki:3100        false     ")
+
+    def test_render_data_source_csv_uses_expected_fields(self):
+        stdout = io.StringIO()
+        with redirect_stdout(stdout):
+            exporter.render_data_source_csv(
+                [
+                    {
+                        "uid": "prom_uid",
+                        "name": "Prometheus Main",
+                        "type": "prometheus",
+                        "url": "http://prometheus:9090",
+                        "isDefault": True,
+                    }
+                ]
+            )
+
+        self.assertEqual(
+            stdout.getvalue().splitlines(),
+            [
+                "uid,name,type,url,isDefault",
+                "prom_uid,Prometheus Main,prometheus,http://prometheus:9090,true",
+            ],
+        )
+
+    def test_render_data_source_json_uses_expected_fields(self):
+        document = exporter.render_data_source_json(
+            [
+                {
+                    "uid": "prom_uid",
+                    "name": "Prometheus Main",
+                    "type": "prometheus",
+                    "url": "http://prometheus:9090",
+                    "isDefault": True,
+                }
+            ]
+        )
+
+        self.assertEqual(
+            json.loads(document),
+            [
+                {
+                    "uid": "prom_uid",
+                    "name": "Prometheus Main",
+                    "type": "prometheus",
+                    "url": "http://prometheus:9090",
+                    "isDefault": "true",
+                }
+            ],
+        )
 
     def test_render_dashboard_summary_table_uses_headers_and_defaults(self):
         lines = exporter.render_dashboard_summary_table(
@@ -799,6 +906,56 @@ class ExporterTests(unittest.TestCase):
                 "uid=abc name=CPU folder=Infra folderUid=infra path=Platform / Infra org=Main Org. orgId=1 sources=Loki Logs,Prometheus Main",
                 "",
                 "Listed 1 dashboard summaries from http://127.0.0.1:3000",
+            ],
+        )
+
+    def test_list_data_sources_prints_table_when_requested(self):
+        args = argparse.Namespace(
+            command="list-data-sources",
+            url="http://127.0.0.1:3000",
+            api_token=None,
+            username=None,
+            password=None,
+            timeout=30,
+            verify_ssl=False,
+            table=True,
+            csv=False,
+            json=False,
+        )
+        client = FakeDashboardWorkflowClient(
+            datasources=[
+                {
+                    "uid": "prom_uid",
+                    "name": "Prometheus Main",
+                    "type": "prometheus",
+                    "url": "http://prometheus:9090",
+                    "isDefault": True,
+                },
+                {
+                    "uid": "loki_uid",
+                    "name": "Loki Logs",
+                    "type": "loki",
+                    "url": "http://loki:3100",
+                    "isDefault": False,
+                },
+            ]
+        )
+
+        with mock.patch.object(exporter, "build_client", return_value=client):
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = exporter.list_data_sources(args)
+
+        self.assertEqual(result, 0)
+        self.assertEqual(
+            stdout.getvalue().splitlines(),
+            [
+                "UID       NAME             TYPE        URL                     IS_DEFAULT",
+                "--------  ---------------  ----------  ----------------------  ----------",
+                "prom_uid  Prometheus Main  prometheus  http://prometheus:9090  true      ",
+                "loki_uid  Loki Logs        loki        http://loki:3100        false     ",
+                "",
+                "Listed 2 data source(s) from http://127.0.0.1:3000",
             ],
         )
 
