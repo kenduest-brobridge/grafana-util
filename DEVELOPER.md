@@ -6,7 +6,7 @@ This document is for maintainers. Keep `README.md` GitHub-facing and task-orient
 
 - `grafana_utils/dashboard_cli.py`: packaged dashboard export/import utility
 - `grafana_utils/alert_cli.py`: packaged alerting resource export/import utility
-- `grafana_utils/access_cli.py`: packaged access-management utility, currently covering `user list`, `user add`, `team list`, `team modify`, and initial service-account commands
+- `grafana_utils/access_cli.py`: packaged access-management utility, currently covering `user list`, `user add`, `user modify`, `user delete`, `team list`, `team modify`, and initial service-account commands
 - `grafana_utils/http_transport.py`: shared HTTP transport adapters and transport selection
 - `cmd/grafana-utils.py`: thin source-tree wrapper for the packaged dashboard CLI
 - `cmd/grafana-alert-utils.py`: thin source-tree wrapper for the packaged alerting CLI
@@ -37,6 +37,8 @@ This document is for maintainers. Keep `README.md` GitHub-facing and task-orient
 - Use `python3 cmd/grafana-utils.py diff ...` for live-vs-local comparison.
 - Use `python3 cmd/grafana-access-utils.py user list ...` to inspect Grafana users.
 - Use `python3 cmd/grafana-access-utils.py user add ...` to create Grafana users through the server-admin API.
+- Use `python3 cmd/grafana-access-utils.py user modify ...` to update Grafana users through the global and admin user APIs.
+- Use `python3 cmd/grafana-access-utils.py user delete ...` to remove Grafana users from the org or globally with explicit confirmation.
 - Use `python3 cmd/grafana-access-utils.py team list ...` to inspect Grafana teams.
 - Use `python3 cmd/grafana-access-utils.py team modify ...` to change Grafana team membership and admin assignments.
 - Use `python3 cmd/grafana-access-utils.py service-account ...` for org-scoped service-account operations.
@@ -288,6 +290,8 @@ Alerting import format notes:
 
 - `user list`
 - `user add`
+- `user modify`
+- `user delete`
 - `team list`
 - `team modify`
 - `service-account list`
@@ -296,8 +300,6 @@ Alerting import format notes:
 
 Not implemented yet:
 
-- `user modify`
-- `user delete`
 - `team add`
 - `team delete`
 - any `group` alias commands
@@ -307,6 +309,9 @@ Not implemented yet:
 - `user list --scope org` may use token auth or Basic auth
 - `user list --scope global` requires Basic auth and should be treated as a Grafana server-admin workflow
 - `user add` requires Basic auth and should be treated as a Grafana server-admin workflow
+- `user modify` requires Basic auth and should be treated as a Grafana server-admin workflow
+- `user delete --scope global` requires Basic auth and should be treated as a Grafana server-admin workflow
+- `user delete --scope org` may use token auth or Basic auth
 - `team list` is org-scoped and may use token auth or Basic auth
 - `team modify` is org-scoped and may use token auth or Basic auth
 - service-account commands are org-scoped and may use token auth or Basic auth
@@ -357,6 +362,8 @@ grafana-alert-utils -h
 grafana-access-utils -h
 grafana-access-utils user list -h
 grafana-access-utils user add -h
+grafana-access-utils user modify -h
+grafana-access-utils user delete -h
 grafana-access-utils team list -h
 grafana-access-utils team modify -h
 grafana-access-utils service-account list -h
@@ -370,6 +377,8 @@ python3 cmd/grafana-alert-utils.py -h
 python3 cmd/grafana-access-utils.py -h
 python3 cmd/grafana-access-utils.py user list -h
 python3 cmd/grafana-access-utils.py user add -h
+python3 cmd/grafana-access-utils.py user modify -h
+python3 cmd/grafana-access-utils.py user delete -h
 python3 cmd/grafana-access-utils.py team list -h
 python3 cmd/grafana-access-utils.py team modify -h
 python3 cmd/grafana-access-utils.py service-account list -h

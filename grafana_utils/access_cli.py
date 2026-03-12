@@ -4,6 +4,8 @@
 Initial scope:
 - `grafana-access-utils user list`
 - `grafana-access-utils user add`
+- `grafana-access-utils user modify`
+- `grafana-access-utils user delete`
 - `grafana-access-utils team list`
 - `grafana-access-utils team modify`
 - `grafana-access-utils service-account list`
@@ -136,6 +138,31 @@ def build_parser() -> argparse.ArgumentParser:
         password_dest="auth_password",
     )
     add_user_add_cli_args(add_parser)
+
+    modify_parser = user_subparsers.add_parser(
+        "modify",
+        help="Modify a Grafana user through the global admin APIs.",
+    )
+    add_common_cli_args(
+        modify_parser,
+        allow_legacy_auth_aliases=False,
+        allow_token_auth=False,
+        username_dest="auth_username",
+        password_dest="auth_password",
+    )
+    add_user_modify_cli_args(modify_parser)
+
+    delete_parser = user_subparsers.add_parser(
+        "delete",
+        help="Delete a Grafana user from the org or globally.",
+    )
+    add_common_cli_args(
+        delete_parser,
+        allow_legacy_auth_aliases=False,
+        username_dest="auth_username",
+        password_dest="auth_password",
+    )
+    add_user_delete_cli_args(delete_parser)
 
     team_parser = subparsers.add_parser(
         "team",
@@ -371,6 +398,97 @@ def add_user_add_cli_args(parser: argparse.ArgumentParser) -> None:
         "--json",
         action="store_true",
         help="Render the created user as JSON.",
+    )
+
+
+def add_user_modify_cli_args(parser: argparse.ArgumentParser) -> None:
+    identity_group = parser.add_mutually_exclusive_group(required=True)
+    identity_group.add_argument(
+        "--user-id",
+        default=None,
+        help="Modify the user identified by this Grafana user id.",
+    )
+    identity_group.add_argument(
+        "--login",
+        default=None,
+        help="Resolve the user by exact login before modifying it.",
+    )
+    identity_group.add_argument(
+        "--email",
+        default=None,
+        help="Resolve the user by exact email before modifying it.",
+    )
+    parser.add_argument(
+        "--set-login",
+        default=None,
+        help="Set a new login for the target user.",
+    )
+    parser.add_argument(
+        "--set-email",
+        default=None,
+        help="Set a new email address for the target user.",
+    )
+    parser.add_argument(
+        "--set-name",
+        default=None,
+        help="Set a new display name for the target user.",
+    )
+    parser.add_argument(
+        "--set-password",
+        default=None,
+        help="Set a new local password for the target user.",
+    )
+    parser.add_argument(
+        "--set-org-role",
+        default=None,
+        choices=["Viewer", "Editor", "Admin", "None"],
+        help="Optional Grafana organization role to set after profile changes.",
+    )
+    parser.add_argument(
+        "--set-grafana-admin",
+        default=None,
+        type=bool_choice,
+        help="Optional Grafana server-admin state to set after profile changes: true or false.",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Render the modified user as JSON.",
+    )
+
+
+def add_user_delete_cli_args(parser: argparse.ArgumentParser) -> None:
+    identity_group = parser.add_mutually_exclusive_group(required=True)
+    identity_group.add_argument(
+        "--user-id",
+        default=None,
+        help="Delete the user identified by this Grafana user id.",
+    )
+    identity_group.add_argument(
+        "--login",
+        default=None,
+        help="Resolve the user by exact login before deleting it.",
+    )
+    identity_group.add_argument(
+        "--email",
+        default=None,
+        help="Resolve the user by exact email before deleting it.",
+    )
+    parser.add_argument(
+        "--scope",
+        choices=SCOPE_CHOICES,
+        default="global",
+        help="Choose org-scoped removal or global deletion (default: global).",
+    )
+    parser.add_argument(
+        "--yes",
+        action="store_true",
+        help="Confirm that the target user should be deleted or removed.",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Render the deleted user summary as JSON.",
     )
 
 
@@ -680,6 +798,41 @@ def validate_user_add_auth(auth_mode: str) -> None:
         )
 
 
+def validate_user_modify_args(args: argparse.Namespace) -> None:
+    if not (
+        args.set_login
+        or args.set_email
+        or args.set_name
+        or args.set_password
+        or args.set_org_role
+        or args.set_grafana_admin is not None
+    ):
+        raise GrafanaError(
+            "User modify requires at least one of --set-login, --set-email, "
+            "--set-name, --set-password, --set-org-role, or --set-grafana-admin."
+        )
+
+
+def validate_user_modify_auth(auth_mode: str) -> None:
+    if auth_mode != "basic":
+        raise GrafanaError(
+            "User modify requires Basic auth (--basic-user / --basic-password)."
+        )
+
+
+def validate_user_delete_args(args: argparse.Namespace) -> None:
+    if not args.yes:
+        raise GrafanaError("User delete requires --yes.")
+
+
+def validate_user_delete_auth(args: argparse.Namespace, auth_mode: str) -> None:
+    if args.scope == "global" and auth_mode != "basic":
+        raise GrafanaError(
+            "User delete with --scope global requires Basic auth "
+            "(--basic-user / --basic-password)."
+        )
+
+
 def validate_team_modify_args(args: argparse.Namespace) -> None:
     if not (
         args.add_member
@@ -764,6 +917,16 @@ class GrafanaAccessClient:
             )
         return [item for item in data if isinstance(item, dict)]
 
+    def get_user(self, user_id: Any) -> Dict[str, Any]:
+        data = self.request_json(
+            "/api/users/%s" % parse.quote(str(user_id), safe="")
+        )
+        if not isinstance(data, dict):
+            raise GrafanaError(
+                "Unexpected user lookup response for Grafana user %s." % user_id
+            )
+        return data
+
     def create_user(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         data = self.request_json(
             "/api/admin/users",
@@ -772,6 +935,31 @@ class GrafanaAccessClient:
         )
         if not isinstance(data, dict):
             raise GrafanaError("Unexpected user create response from Grafana.")
+        return data
+
+    def update_user(self, user_id: Any, payload: Dict[str, Any]) -> Dict[str, Any]:
+        data = self.request_json(
+            "/api/users/%s" % parse.quote(str(user_id), safe=""),
+            method="PUT",
+            payload=payload,
+        )
+        if not isinstance(data, dict):
+            raise GrafanaError(
+                "Unexpected user update response for Grafana user %s." % user_id
+            )
+        return data
+
+    def update_user_password(self, user_id: Any, password: str) -> Dict[str, Any]:
+        data = self.request_json(
+            "/api/admin/users/%s/password" % parse.quote(str(user_id), safe=""),
+            method="PUT",
+            payload={"password": password},
+        )
+        if not isinstance(data, dict):
+            raise GrafanaError(
+                "Unexpected password update response for Grafana user %s."
+                % user_id
+            )
         return data
 
     def update_user_org_role(self, user_id: Any, role: str) -> Dict[str, Any]:
@@ -800,6 +988,29 @@ class GrafanaAccessClient:
             raise GrafanaError(
                 "Unexpected permission update response for Grafana user %s."
                 % user_id
+            )
+        return data
+
+    def delete_global_user(self, user_id: Any) -> Dict[str, Any]:
+        data = self.request_json(
+            "/api/admin/users/%s" % parse.quote(str(user_id), safe=""),
+            method="DELETE",
+        )
+        if not isinstance(data, dict):
+            raise GrafanaError(
+                "Unexpected global delete response for Grafana user %s."
+                % user_id
+            )
+        return data
+
+    def delete_org_user(self, user_id: Any) -> Dict[str, Any]:
+        data = self.request_json(
+            "/api/org/users/%s" % parse.quote(str(user_id), safe=""),
+            method="DELETE",
+        )
+        if not isinstance(data, dict):
+            raise GrafanaError(
+                "Unexpected org delete response for Grafana user %s." % user_id
             )
         return data
 
@@ -1522,6 +1733,102 @@ def lookup_org_user_by_identity(
     return dict(exact_matches[0])
 
 
+def lookup_global_user_by_identity(
+    client: GrafanaAccessClient,
+    login: Optional[str] = None,
+    email: Optional[str] = None,
+) -> Dict[str, Any]:
+    target_login = str(login or "").strip()
+    target_email = str(email or "").strip()
+    if not target_login and not target_email:
+        raise GrafanaError("User identity lookup requires a login or email.")
+
+    exact_matches = []
+    for item in client.iter_global_users(DEFAULT_PAGE_SIZE):
+        item_login = str(item.get("login") or "")
+        item_email = str(item.get("email") or "")
+        if target_login and item_login == target_login:
+            exact_matches.append(item)
+        elif target_email and item_email == target_email:
+            exact_matches.append(item)
+
+    if not exact_matches:
+        target = target_login or target_email
+        raise GrafanaError("User not found by login or email: %s" % target)
+    if len(exact_matches) > 1:
+        target = target_login or target_email
+        raise GrafanaError(
+            "User identity matched multiple global users: %s" % target
+        )
+    return dict(exact_matches[0])
+
+
+def lookup_org_user_by_user_id(
+    client: GrafanaAccessClient,
+    user_id: Any,
+) -> Dict[str, Any]:
+    target = str(user_id or "").strip()
+    if not target:
+        raise GrafanaError("User id cannot be empty.")
+
+    exact_matches = []
+    for item in client.list_org_users():
+        item_id = str(item.get("userId") or item.get("id") or "")
+        if item_id == target:
+            exact_matches.append(item)
+
+    if not exact_matches:
+        raise GrafanaError("Org user not found by id: %s" % target)
+    if len(exact_matches) > 1:
+        raise GrafanaError("Org user id matched multiple users: %s" % target)
+    return dict(exact_matches[0])
+
+
+def normalize_modified_user(
+    base_user: Dict[str, Any],
+    args: argparse.Namespace,
+) -> Dict[str, Any]:
+    return {
+        "id": str(base_user.get("id") or ""),
+        "login": str(args.set_login or base_user.get("login") or ""),
+        "email": str(args.set_email or base_user.get("email") or ""),
+        "name": str(args.set_name or base_user.get("name") or ""),
+        "orgRole": normalize_org_role(
+            args.set_org_role or base_user.get("orgRole") or base_user.get("role")
+        ),
+        "grafanaAdmin": normalize_bool(
+            args.set_grafana_admin
+            if args.set_grafana_admin is not None
+            else base_user.get("isGrafanaAdmin", base_user.get("isAdmin"))
+        ),
+        "scope": "global",
+        "teams": [],
+    }
+
+
+def normalize_deleted_user(
+    base_user: Dict[str, Any],
+    scope: str,
+) -> Dict[str, Any]:
+    if scope == "org":
+        return normalize_org_user(base_user)
+
+    return {
+        "id": str(base_user.get("id") or ""),
+        "login": str(base_user.get("login") or ""),
+        "email": str(base_user.get("email") or ""),
+        "name": str(base_user.get("name") or ""),
+        "orgRole": normalize_org_role(
+            base_user.get("orgRole") or base_user.get("role")
+        ),
+        "grafanaAdmin": normalize_bool(
+            base_user.get("isGrafanaAdmin", base_user.get("isAdmin"))
+        ),
+        "scope": "global",
+        "teams": [],
+    }
+
+
 def normalize_identity_list(values: List[str]) -> List[str]:
     identities = []
     seen = set()
@@ -1769,6 +2076,116 @@ def add_user_with_client(
     return 0
 
 
+def modify_user_with_client(
+    args: argparse.Namespace,
+    client: GrafanaAccessClient,
+) -> int:
+    validate_user_modify_args(args)
+
+    if args.user_id:
+        base_user = client.get_user(args.user_id)
+    else:
+        base_user = lookup_global_user_by_identity(
+            client,
+            login=args.login,
+            email=args.email,
+        )
+
+    user_id = base_user.get("id") or args.user_id
+    if not user_id:
+        raise GrafanaError("User lookup did not return an id.")
+
+    profile_payload = {}
+    if args.set_login is not None:
+        profile_payload["login"] = args.set_login
+    if args.set_email is not None:
+        profile_payload["email"] = args.set_email
+    if args.set_name is not None:
+        profile_payload["name"] = args.set_name
+    if profile_payload:
+        client.update_user(user_id, profile_payload)
+    if args.set_password is not None:
+        client.update_user_password(user_id, args.set_password)
+    if args.set_org_role is not None:
+        client.update_user_org_role(user_id, args.set_org_role)
+    if args.set_grafana_admin is not None:
+        client.update_user_permissions(user_id, args.set_grafana_admin == "true")
+
+    modified_user = normalize_modified_user(base_user, args)
+    if args.json:
+        print(
+            json.dumps(
+                serialize_user_row(modified_user),
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
+    else:
+        print(
+            "Modified user %s -> id=%s orgRole=%s grafanaAdmin=%s"
+            % (
+                modified_user.get("login") or "",
+                modified_user.get("id") or "",
+                modified_user.get("orgRole") or "",
+                bool_label(normalize_bool(modified_user.get("grafanaAdmin"))),
+            )
+        )
+    return 0
+
+
+def delete_user_with_client(
+    args: argparse.Namespace,
+    client: GrafanaAccessClient,
+) -> int:
+    validate_user_delete_args(args)
+
+    if args.scope == "org":
+        if args.user_id:
+            base_user = lookup_org_user_by_user_id(client, args.user_id)
+        else:
+            base_user = lookup_org_user_by_identity(
+                client,
+                args.login or args.email,
+            )
+        user_id = base_user.get("userId") or base_user.get("id")
+        if not user_id:
+            raise GrafanaError("Org user lookup did not return an id.")
+        client.delete_org_user(user_id)
+    else:
+        if args.user_id:
+            base_user = client.get_user(args.user_id)
+        else:
+            base_user = lookup_global_user_by_identity(
+                client,
+                login=args.login,
+                email=args.email,
+            )
+        user_id = base_user.get("id") or args.user_id
+        if not user_id:
+            raise GrafanaError("User lookup did not return an id.")
+        client.delete_global_user(user_id)
+
+    deleted_user = normalize_deleted_user(base_user, args.scope)
+    if args.json:
+        print(
+            json.dumps(
+                serialize_user_row(deleted_user),
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
+    else:
+        print(
+            "Deleted user %s -> id=%s scope=%s"
+            % (
+                deleted_user.get("login") or "",
+                deleted_user.get("id") or "",
+                deleted_user.get("scope") or "",
+            )
+        )
+    return 0
+
+
 def modify_team_with_client(
     args: argparse.Namespace,
     client: GrafanaAccessClient,
@@ -1956,6 +2373,12 @@ def run(args: argparse.Namespace) -> int:
     if args.resource == "user" and args.command == "add":
         validate_user_add_auth(auth_mode)
         return add_user_with_client(args, client)
+    if args.resource == "user" and args.command == "modify":
+        validate_user_modify_auth(auth_mode)
+        return modify_user_with_client(args, client)
+    if args.resource == "user" and args.command == "delete":
+        validate_user_delete_auth(args, auth_mode)
+        return delete_user_with_client(args, client)
     if args.resource == "team" and args.command == "list":
         return list_teams_with_client(args, client)
     if args.resource == "team" and args.command == "modify":

@@ -46,6 +46,11 @@ class FakeAccessClient:
         self.created_service_accounts = []
         self.created_service_account_tokens = []
         self.created_users = []
+        self.user_gets = []
+        self.updated_users = []
+        self.updated_user_passwords = []
+        self.deleted_global_users = []
+        self.deleted_org_users = []
         self.updated_user_org_roles = []
         self.updated_user_permissions = []
         self.team_gets = []
@@ -131,6 +136,29 @@ class FakeAccessClient:
             "id": 31,
             "message": "User created",
         }
+
+    def get_user(self, user_id):
+        self.user_gets.append(str(user_id))
+        for item in self.global_users:
+            if str(item.get("id")) == str(user_id):
+                return dict(item)
+        return {"id": user_id}
+
+    def update_user(self, user_id, payload):
+        self.updated_users.append((str(user_id), dict(payload)))
+        return {"message": "User updated"}
+
+    def update_user_password(self, user_id, password):
+        self.updated_user_passwords.append((str(user_id), password))
+        return {"message": "User password updated"}
+
+    def delete_global_user(self, user_id):
+        self.deleted_global_users.append(str(user_id))
+        return {"message": "User deleted"}
+
+    def delete_org_user(self, user_id):
+        self.deleted_org_users.append(str(user_id))
+        return {"message": "Org user removed"}
 
     def update_user_org_role(self, user_id, role):
         self.updated_user_org_roles.append((str(user_id), role))
@@ -251,6 +279,73 @@ class AccessCliTests(unittest.TestCase):
         self.assertEqual(args.grafana_admin, "true")
         self.assertTrue(args.json)
 
+    def test_parse_args_supports_user_modify_mode(self):
+        args = access_utils.parse_args(
+            [
+                "user",
+                "modify",
+                "--basic-user",
+                "admin",
+                "--basic-password",
+                "grafana-secret",
+                "--login",
+                "alice",
+                "--set-login",
+                "alice2",
+                "--set-email",
+                "alice2@example.com",
+                "--set-name",
+                "Alice Two",
+                "--set-password",
+                "new-secret",
+                "--set-org-role",
+                "Admin",
+                "--set-grafana-admin",
+                "true",
+                "--json",
+            ]
+        )
+
+        self.assertEqual(args.resource, "user")
+        self.assertEqual(args.command, "modify")
+        self.assertEqual(args.auth_username, "admin")
+        self.assertEqual(args.auth_password, "grafana-secret")
+        self.assertEqual(args.login, "alice")
+        self.assertEqual(args.set_login, "alice2")
+        self.assertEqual(args.set_email, "alice2@example.com")
+        self.assertEqual(args.set_name, "Alice Two")
+        self.assertEqual(args.set_password, "new-secret")
+        self.assertEqual(args.set_org_role, "Admin")
+        self.assertEqual(args.set_grafana_admin, "true")
+        self.assertTrue(args.json)
+
+    def test_parse_args_supports_user_delete_mode(self):
+        args = access_utils.parse_args(
+            [
+                "user",
+                "delete",
+                "--basic-user",
+                "admin",
+                "--basic-password",
+                "grafana-secret",
+                "--email",
+                "alice@example.com",
+                "--scope",
+                "org",
+                "--yes",
+                "--json",
+            ]
+        )
+
+        self.assertEqual(args.resource, "user")
+        self.assertEqual(args.command, "delete")
+        self.assertEqual(args.auth_username, "admin")
+        self.assertEqual(args.auth_password, "grafana-secret")
+        self.assertEqual(args.email, "alice@example.com")
+        self.assertEqual(args.scope, "org")
+        self.assertTrue(args.yes)
+        self.assertTrue(args.json)
+
     def test_user_add_help_uses_basic_auth_and_local_password_flags(self):
         parser = access_utils.build_parser()
         user_add_parser = parser._subparsers._group_actions[0].choices["user"]._subparsers._group_actions[0].choices["add"]
@@ -260,6 +355,25 @@ class AccessCliTests(unittest.TestCase):
         self.assertIn("--basic-password PASSWORD", help_text)
         self.assertIn("--password NEW_USER_PASSWORD", help_text)
         self.assertNotIn("--token", help_text)
+
+    def test_user_modify_help_uses_basic_auth_only(self):
+        parser = access_utils.build_parser()
+        user_modify_parser = parser._subparsers._group_actions[0].choices["user"]._subparsers._group_actions[0].choices["modify"]
+        help_text = user_modify_parser.format_help()
+
+        self.assertIn("--basic-user USERNAME", help_text)
+        self.assertIn("--basic-password PASSWORD", help_text)
+        self.assertIn("--set-password SET_PASSWORD", help_text)
+        self.assertNotIn("--token", help_text)
+
+    def test_user_delete_help_uses_scope_and_confirmation_flags(self):
+        parser = access_utils.build_parser()
+        user_delete_parser = parser._subparsers._group_actions[0].choices["user"]._subparsers._group_actions[0].choices["delete"]
+        help_text = user_delete_parser.format_help()
+
+        self.assertIn("--basic-user USERNAME", help_text)
+        self.assertIn("--scope {org,global}", help_text)
+        self.assertIn("--yes", help_text)
 
     def test_parse_args_supports_team_list_mode(self):
         args = access_utils.parse_args(
@@ -432,6 +546,35 @@ class AccessCliTests(unittest.TestCase):
     def test_validate_user_add_auth_rejects_token_auth(self):
         with self.assertRaisesRegex(access_utils.GrafanaError, "User add requires Basic auth"):
             access_utils.validate_user_add_auth("token")
+
+    def test_validate_user_modify_auth_rejects_token_auth(self):
+        with self.assertRaisesRegex(access_utils.GrafanaError, "User modify requires Basic auth"):
+            access_utils.validate_user_modify_auth("token")
+
+    def test_validate_user_delete_auth_rejects_global_token_auth(self):
+        args = argparse.Namespace(scope="global")
+
+        with self.assertRaisesRegex(access_utils.GrafanaError, "requires Basic auth"):
+            access_utils.validate_user_delete_auth(args, "token")
+
+    def test_validate_user_delete_args_requires_confirmation(self):
+        args = argparse.Namespace(yes=False)
+
+        with self.assertRaisesRegex(access_utils.GrafanaError, "requires --yes"):
+            access_utils.validate_user_delete_args(args)
+
+    def test_validate_user_modify_args_requires_changes(self):
+        args = argparse.Namespace(
+            set_login=None,
+            set_email=None,
+            set_name=None,
+            set_password=None,
+            set_org_role=None,
+            set_grafana_admin=None,
+        )
+
+        with self.assertRaisesRegex(access_utils.GrafanaError, "requires at least one"):
+            access_utils.validate_user_modify_args(args)
 
     def test_validate_team_modify_args_requires_changes(self):
         args = argparse.Namespace(
@@ -834,6 +977,151 @@ class AccessCliTests(unittest.TestCase):
         self.assertEqual(client.updated_user_permissions, [("31", True)])
         self.assertIn('"login": "alice"', output.getvalue())
         self.assertIn('"orgRole": "Editor"', output.getvalue())
+
+    def test_modify_user_with_client_updates_all_supported_fields(self):
+        client = FakeAccessClient(
+            global_users=[
+                {
+                    "id": 9,
+                    "login": "alice",
+                    "email": "alice@example.com",
+                    "name": "Alice",
+                    "isAdmin": False,
+                }
+            ]
+        )
+        args = argparse.Namespace(
+            user_id=None,
+            login="alice",
+            email=None,
+            set_login="alice2",
+            set_email="alice2@example.com",
+            set_name="Alice Two",
+            set_password="new-secret",
+            set_org_role="Admin",
+            set_grafana_admin="true",
+            json=True,
+        )
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            result = access_utils.modify_user_with_client(args, client)
+
+        self.assertEqual(result, 0)
+        self.assertEqual(
+            client.updated_users,
+            [
+                (
+                    "9",
+                    {
+                        "login": "alice2",
+                        "email": "alice2@example.com",
+                        "name": "Alice Two",
+                    },
+                )
+            ],
+        )
+        self.assertEqual(client.updated_user_passwords, [("9", "new-secret")])
+        self.assertEqual(client.updated_user_org_roles, [("9", "Admin")])
+        self.assertEqual(client.updated_user_permissions, [("9", True)])
+        self.assertIn('"login": "alice2"', output.getvalue())
+        self.assertIn('"orgRole": "Admin"', output.getvalue())
+
+    def test_modify_user_with_client_can_resolve_by_user_id(self):
+        client = FakeAccessClient(
+            global_users=[
+                {
+                    "id": 9,
+                    "login": "alice",
+                    "email": "alice@example.com",
+                    "name": "Alice",
+                    "isAdmin": True,
+                }
+            ]
+        )
+        args = argparse.Namespace(
+            user_id="9",
+            login=None,
+            email=None,
+            set_login=None,
+            set_email="alice3@example.com",
+            set_name=None,
+            set_password=None,
+            set_org_role=None,
+            set_grafana_admin=None,
+            json=False,
+        )
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            result = access_utils.modify_user_with_client(args, client)
+
+        self.assertEqual(result, 0)
+        self.assertEqual(client.user_gets, ["9"])
+        self.assertEqual(client.updated_users, [("9", {"email": "alice3@example.com"})])
+        self.assertIn("Modified user alice", output.getvalue())
+
+    def test_delete_user_with_client_deletes_global_user_by_login(self):
+        client = FakeAccessClient(
+            global_users=[
+                {
+                    "id": 9,
+                    "login": "alice",
+                    "email": "alice@example.com",
+                    "name": "Alice",
+                    "isAdmin": True,
+                }
+            ]
+        )
+        args = argparse.Namespace(
+            user_id=None,
+            login="alice",
+            email=None,
+            scope="global",
+            yes=True,
+            json=True,
+        )
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            result = access_utils.delete_user_with_client(args, client)
+
+        self.assertEqual(result, 0)
+        self.assertEqual(client.deleted_global_users, ["9"])
+        self.assertEqual(client.deleted_org_users, [])
+        self.assertIn('"login": "alice"', output.getvalue())
+        self.assertIn('"scope": "global"', output.getvalue())
+
+    def test_delete_user_with_client_removes_org_user_by_user_id(self):
+        client = FakeAccessClient(
+            org_users=[
+                {
+                    "userId": 12,
+                    "login": "bob",
+                    "email": "bob@example.com",
+                    "name": "Bob",
+                    "role": "Editor",
+                }
+            ]
+        )
+        args = argparse.Namespace(
+            user_id="12",
+            login=None,
+            email=None,
+            scope="org",
+            yes=True,
+            json=False,
+        )
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            result = access_utils.delete_user_with_client(args, client)
+
+        self.assertEqual(result, 0)
+        self.assertEqual(client.deleted_org_users, ["12"])
+        self.assertEqual(client.deleted_global_users, [])
+        self.assertIn("Deleted user bob", output.getvalue())
+        self.assertIn("scope=org", output.getvalue())
 
     def test_add_service_account_with_client_uses_expected_payload(self):
         client = FakeAccessClient()

@@ -7,6 +7,8 @@
 - added `grafana-access-utils`
 - implemented `user list`
 - implemented `user add`
+- implemented `user modify`
+- implemented `user delete`
 - implemented `team list`
 - implemented `team modify`
 - implemented `service-account list`
@@ -22,8 +24,6 @@
 
 ### Next
 
-- `user modify`
-- `user delete`
 - `team add`
 - `team delete`
 - `group` alias for `team`
@@ -55,6 +55,8 @@ Current implementation status:
 
 - `user list`: done
 - `user add`: done
+- `user modify`: done
+- `user delete`: done
 - `team list`: done
 - `team modify`: done
 - `service-account list`: done
@@ -100,6 +102,8 @@ Current note:
 ```text
 grafana-access-utils user list
 grafana-access-utils user add
+grafana-access-utils user modify
+grafana-access-utils user delete
 grafana-access-utils team list
 grafana-access-utils team modify
 grafana-access-utils service-account list
@@ -160,6 +164,9 @@ Current implementation status:
 - `user list --scope global`: Basic auth only
 - `user list --with-teams`: Basic auth only
 - `user add`: Basic auth only
+- `user modify`: Basic auth only
+- `user delete --scope global`: Basic auth only
+- `user delete --scope org`: token or Basic auth
 - `team list`: token or Basic auth
 - `team modify`: token or Basic auth
 - service-account operations: token or Basic auth
@@ -305,6 +312,8 @@ Completed ahead of the original order:
 
 - `user list`
 - `user add`
+- `user modify`
+- `user delete`
 - `team list`
 - `team modify`
 - `service-account list`

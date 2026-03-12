@@ -28,6 +28,20 @@
 - Current Update: Added `grafana-access-utils team modify` with `--team-id` or exact `--name` targeting, add/remove member actions, add/remove admin actions, and text or `--json` output. The command resolves users by exact login or email, uses org-scoped team APIs, and preserves admin changes safely by reading current member permission metadata before issuing the bulk admin update payload.
 - Result: The Python access CLI now covers `user list`, `user add`, `team list`, `team modify`, and the initial service-account workflows, with targeted tests, the full Python suite, and Docker-backed Grafana `12.4.1` smoke tests confirming member and admin modification flows with both Basic auth and token auth.
 
+## 2026-03-12 - Task: Add Access Utility User Modify
+- State: Done
+- Scope: `grafana_utils/access_cli.py`, `tests/test_python_access_cli.py`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The Python access CLI can now create users and modify teams, but it still cannot update an existing user's identity fields, password, org role, or Grafana-admin state even though `TODO.md` lists `user modify` as the next user-lifecycle step.
+- Current Update: Added `grafana-access-utils user modify` with id, login, or email targeting; explicit setters for login, email, name, password, org role, and Grafana-admin state; and text or `--json` output. The command is Basic-auth-only, updates profile fields and password through the global/admin user APIs, and reuses the existing org-role and permission update paths for role changes.
+- Result: The Python access CLI now covers `user list`, `user add`, `user modify`, `team list`, `team modify`, and the initial service-account workflows, with targeted tests, the full Python suite, and a Docker-backed Grafana `12.4.1` smoke test confirming the update path.
+
+## 2026-03-12 - Task: Add Access Utility User Delete
+- State: Done
+- Scope: `grafana_utils/access_cli.py`, `tests/test_python_access_cli.py`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The Python access CLI can now create and modify users, but it still cannot remove users even though `TODO.md` keeps `user delete` as the next unfinished user-lifecycle step.
+- Current Update: Added `grafana-access-utils user delete` with id, login, or email targeting; `--scope org|global`; required `--yes` confirmation; and text or `--json` output. Global deletion uses the admin delete API and requires Basic auth, while org-scoped removal uses the org user API and works with token or Basic auth.
+- Result: The Python access CLI now covers `user list`, `user add`, `user modify`, `user delete`, `team list`, `team modify`, and the initial service-account workflows, with targeted tests, the full Python suite, and Docker-backed Grafana `12.4.1` smoke tests confirming both global delete and org-scoped removal flows.
+
 ## 2026-03-11 - Task: Remove Python Dependency From Rust Live Smoke Test
 - State: Done
 - Scope: `scripts/test-rust-live-grafana.sh`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

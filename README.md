@@ -8,7 +8,7 @@ This repository provides two primary CLI tools in two implementations, plus an a
 
 - `grafana-utils`: dashboard export and import
 - `grafana-alert-utils`: alerting resource export and import
-- `grafana-access-utils`: access-management workflow, currently covering `user list`, `user add`, `team list`, `team modify`, and initial service-account commands
+- `grafana-access-utils`: access-management workflow, currently covering `user list`, `user add`, `user modify`, `user delete`, `team list`, `team modify`, and initial service-account commands
 - packaged Python implementation under [`grafana_utils/`](grafana_utils/)
 - Rust implementation under [`rust/`](rust/)
 
@@ -49,6 +49,8 @@ The two command names are intentionally separate because dashboards and alerting
 - `grafana-alert-utils ...`
 - `grafana-access-utils user list ...`
 - `grafana-access-utils user add ...`
+- `grafana-access-utils user modify ...`
+- `grafana-access-utils user delete ...`
 - `grafana-access-utils team list ...`
 - `grafana-access-utils team modify ...`
 - `grafana-access-utils service-account ...`
@@ -192,6 +194,34 @@ python3 cmd/grafana-access-utils.py user add \
   --email automation-user@example.com \
   --name "Automation User" \
   --password temporary-password \
+  --json
+```
+
+Access-management user update, global scope with Basic auth:
+
+```bash
+python3 cmd/grafana-access-utils.py user modify \
+  --url http://127.0.0.1:3000 \
+  --basic-user "$GRAFANA_USERNAME" \
+  --basic-password "$GRAFANA_PASSWORD" \
+  --login automation-user \
+  --set-email automation-user+ops@example.com \
+  --set-name "Automation User Ops" \
+  --set-org-role Editor \
+  --set-grafana-admin true \
+  --json
+```
+
+Access-management user delete, global scope with Basic auth:
+
+```bash
+python3 cmd/grafana-access-utils.py user delete \
+  --url http://127.0.0.1:3000 \
+  --basic-user "$GRAFANA_USERNAME" \
+  --basic-password "$GRAFANA_PASSWORD" \
+  --login automation-user \
+  --scope global \
+  --yes \
   --json
 ```
 
@@ -478,18 +508,23 @@ Current implementation scope:
 - Python implementation only
 - `user list`
 - `user add`
+- `user modify`
+- `user delete`
 - `team list`
 - `team modify`
 - `service-account list`
 - `service-account add`
 - `service-account token add`
-- no `user modify`, `user delete`, `team add`, `team delete`, or `group` alias commands yet
+- no `team add`, `team delete`, or `group` alias commands yet
 
 Initial auth model:
 
 - `user list --scope org` may use token auth or Basic auth
 - `user list --scope global` requires Basic auth because Grafana global user APIs are Basic-auth-first admin workflows
 - `user add` requires Basic auth because Grafana user-creation is a server-admin workflow
+- `user modify` requires Basic auth because it uses global and admin user-management APIs
+- `user delete --scope global` requires Basic auth because it uses the global admin delete API
+- `user delete --scope org` may use token auth or Basic auth
 - `team list` is org-scoped and may use token auth or Basic auth
 - `team modify` is org-scoped and may use token auth or Basic auth
 - service-account commands are org-scoped and may use token auth or Basic auth
@@ -592,6 +627,9 @@ Auth note:
 - for `grafana-access-utils`, org-scoped `user list` can use token auth or Basic auth
 - for `grafana-access-utils`, global `user list` requires Basic auth
 - for `grafana-access-utils`, `user add` requires Basic auth
+- for `grafana-access-utils`, `user modify` requires Basic auth
+- for `grafana-access-utils`, `user delete --scope global` requires Basic auth
+- for `grafana-access-utils`, `user delete --scope org` can use token auth or Basic auth
 - for `grafana-access-utils`, `team list` is org-scoped and can use token auth or Basic auth
 - for `grafana-access-utils`, `team modify` is org-scoped and can use token auth or Basic auth
 - for `grafana-access-utils`, service-account commands are org-scoped and can use token auth or Basic auth
@@ -666,6 +704,8 @@ python3 -m unittest -v
 python3 cmd/grafana-access-utils.py -h
 python3 cmd/grafana-access-utils.py user list -h
 python3 cmd/grafana-access-utils.py user add -h
+python3 cmd/grafana-access-utils.py user modify -h
+python3 cmd/grafana-access-utils.py user delete -h
 python3 cmd/grafana-access-utils.py team list -h
 python3 cmd/grafana-access-utils.py team modify -h
 python3 cmd/grafana-access-utils.py service-account list -h
