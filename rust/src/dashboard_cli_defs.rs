@@ -1,4 +1,4 @@
-use clap::{Args, Parser, Subcommand};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;
 
 use crate::common::{resolve_auth_headers, Result};
@@ -268,6 +268,13 @@ pub struct DiffArgs {
     pub context_lines: usize,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum InspectExportReportFormat {
+    Table,
+    Csv,
+    Json,
+}
+
 #[derive(Debug, Clone, Args)]
 pub struct InspectExportArgs {
     #[arg(
@@ -278,6 +285,7 @@ pub struct InspectExportArgs {
     #[arg(
         long,
         default_value_t = false,
+        conflicts_with = "report",
         conflicts_with = "table",
         help = "Render the export analysis as JSON."
     )]
@@ -285,14 +293,40 @@ pub struct InspectExportArgs {
     #[arg(
         long,
         default_value_t = false,
+        conflicts_with = "report",
         conflicts_with = "json",
         help = "Render the export analysis as a table-oriented summary."
     )]
     pub table: bool,
     #[arg(
         long,
+        value_enum,
+        num_args = 0..=1,
+        default_missing_value = "table",
+        conflicts_with_all = ["json", "table"],
+        help = "Render a full per-query inspection report. Defaults to table; use --report csv or --report json for machine-readable output."
+    )]
+    pub report: Option<InspectExportReportFormat>,
+    #[arg(
+        long,
+        value_delimiter = ',',
+        help = "For --report table or csv output, limit the query report to the selected columns. Supported values: dashboard_uid, dashboard_title, folder_path, panel_id, panel_title, panel_type, ref_id, datasource, datasource_uid, query_field, metrics, measurements, buckets, query."
+    )]
+    pub report_columns: Vec<String>,
+    #[arg(
+        long,
+        help = "For --report output, include only rows whose datasource label exactly matches this value."
+    )]
+    pub report_filter_datasource: Option<String>,
+    #[arg(
+        long,
+        help = "For --report output, include only rows whose panel id exactly matches this value."
+    )]
+    pub report_filter_panel_id: Option<String>,
+    #[arg(
+        long,
         default_value_t = false,
-        help = "Do not print table headers when rendering the table summary."
+        help = "Do not print table headers when rendering the table summary or table report."
     )]
     pub no_header: bool,
 }

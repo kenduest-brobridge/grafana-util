@@ -10,14 +10,15 @@ use super::{
     render_dashboard_summary_csv, render_dashboard_summary_json, render_dashboard_summary_table,
     render_data_source_csv, render_data_source_json, render_data_source_table, CommonCliArgs,
     DashboardCliArgs, DashboardCommand, DiffArgs, ExportArgs, FolderInventoryStatusKind,
-    ImportArgs, ListArgs, ListDataSourcesArgs, DATASOURCE_INVENTORY_FILENAME,
-    EXPORT_METADATA_FILENAME, FOLDER_INVENTORY_FILENAME, TOOL_SCHEMA_VERSION,
+    ImportArgs, InspectExportArgs, InspectExportReportFormat, ListArgs, ListDataSourcesArgs,
+    DATASOURCE_INVENTORY_FILENAME, EXPORT_METADATA_FILENAME, FOLDER_INVENTORY_FILENAME,
+    TOOL_SCHEMA_VERSION,
 };
 use crate::common::api_response;
 use clap::{CommandFactory, Parser};
 use serde_json::{json, Value};
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use tempfile::tempdir;
 
 fn make_common_args(base_url: String) -> CommonCliArgs {
@@ -483,6 +484,102 @@ fn parse_cli_supports_inspect_export_json_flag() {
 }
 
 #[test]
+fn parse_cli_supports_inspect_export_report_json_flag() {
+    let args = parse_cli_from([
+        "grafana-utils",
+        "inspect-export",
+        "--import-dir",
+        "./dashboards/raw",
+        "--report",
+        "json",
+    ]);
+
+    match args.command {
+        DashboardCommand::InspectExport(inspect_args) => {
+            assert_eq!(inspect_args.import_dir, Path::new("./dashboards/raw"));
+            assert_eq!(inspect_args.report, Some(InspectExportReportFormat::Json));
+            assert!(!inspect_args.json);
+            assert!(!inspect_args.table);
+        }
+        _ => panic!("expected inspect-export command"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_inspect_export_report_csv_flag() {
+    let args = parse_cli_from([
+        "grafana-utils",
+        "inspect-export",
+        "--import-dir",
+        "./dashboards/raw",
+        "--report",
+        "csv",
+    ]);
+
+    match args.command {
+        DashboardCommand::InspectExport(inspect_args) => {
+            assert_eq!(inspect_args.import_dir, Path::new("./dashboards/raw"));
+            assert_eq!(inspect_args.report, Some(InspectExportReportFormat::Csv));
+            assert!(!inspect_args.json);
+            assert!(!inspect_args.table);
+        }
+        _ => panic!("expected inspect-export command"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_inspect_export_report_columns_and_filter() {
+    let args = parse_cli_from([
+        "grafana-utils",
+        "inspect-export",
+        "--import-dir",
+        "./dashboards/raw",
+        "--report",
+        "--report-columns",
+        "dashboard_uid,datasource,query",
+        "--report-filter-datasource",
+        "prom-main",
+        "--report-filter-panel-id",
+        "7",
+    ]);
+
+    match args.command {
+        DashboardCommand::InspectExport(inspect_args) => {
+            assert_eq!(inspect_args.report, Some(InspectExportReportFormat::Table));
+            assert_eq!(
+                inspect_args.report_columns,
+                vec![
+                    "dashboard_uid".to_string(),
+                    "datasource".to_string(),
+                    "query".to_string()
+                ]
+            );
+            assert_eq!(
+                inspect_args.report_filter_datasource,
+                Some("prom-main".to_string())
+            );
+            assert_eq!(
+                inspect_args.report_filter_panel_id,
+                Some("7".to_string())
+            );
+        }
+        _ => panic!("expected inspect-export command"),
+    }
+}
+
+#[test]
+fn inspect_export_help_lists_datasource_uid_report_column() {
+    let mut command = DashboardCliArgs::command();
+    let help = command
+        .find_subcommand_mut("inspect-export")
+        .expect("inspect-export subcommand")
+        .render_help()
+        .to_string();
+
+    assert!(help.contains("datasource_uid"));
+}
+
+#[test]
 fn parse_cli_supports_list_json_mode() {
     let args = parse_cli_from([
         "grafana-utils",
@@ -712,7 +809,14 @@ fn import_progress_line_uses_concise_counter_format() {
         "Importing dashboard 3/7: /tmp/raw/cpu.json"
     );
     assert_eq!(
-        format_import_progress_line(3, 7, "cpu-main", true, Some("would-update"), Some("General")),
+        format_import_progress_line(
+            3,
+            7,
+            "cpu-main",
+            true,
+            Some("would-update"),
+            Some("General")
+        ),
         "Dry-run dashboard 3/7: cpu-main dest=exists action=update folderPath=General"
     );
     assert_eq!(
@@ -2470,6 +2574,319 @@ fn build_export_inspection_summary_includes_zero_dashboard_ancestor_paths() {
             ("Platform / Team / Apps".to_string(), 0),
             ("Platform / Team / Apps / Prod".to_string(), 1),
         ]
+    );
+}
+
+#[test]
+fn build_export_inspection_query_report_extracts_metrics_measurements_and_buckets() {
+    let temp = tempdir().unwrap();
+    let raw_dir = temp.path().join("raw");
+    fs::create_dir_all(raw_dir.join("General")).unwrap();
+    fs::create_dir_all(raw_dir.join("Infra")).unwrap();
+    fs::write(
+        raw_dir.join(EXPORT_METADATA_FILENAME),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-dashboard-export-index",
+            "schemaVersion": TOOL_SCHEMA_VERSION,
+            "variant": "raw",
+            "dashboardCount": 2,
+            "indexFile": "index.json",
+            "format": "grafana-web-import-preserve-uid",
+            "foldersFile": FOLDER_INVENTORY_FILENAME
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        raw_dir.join(FOLDER_INVENTORY_FILENAME),
+        serde_json::to_string_pretty(&json!([
+            {
+                "uid": "infra",
+                "title": "Infra",
+                "parentUid": "platform",
+                "path": "Platform / Infra",
+                "org": "Main Org.",
+                "orgId": "1"
+            }
+        ]))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        raw_dir.join("General").join("main.json"),
+        serde_json::to_string_pretty(&json!({
+            "dashboard": {
+                "uid": "main",
+                "title": "Main",
+                "panels": [
+                    {
+                        "id": 7,
+                        "title": "CPU",
+                        "type": "timeseries",
+                        "datasource": {"uid": "prom-main", "type": "prometheus"},
+                        "targets": [
+                            {
+                                "refId": "A",
+                                "expr": "sum(rate(node_cpu_seconds_total{job=\"node\"}[5m]))"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        raw_dir.join("Infra").join("flux.json"),
+        serde_json::to_string_pretty(&json!({
+            "dashboard": {
+                "uid": "flux-main",
+                "title": "Flux Main",
+                "panels": [
+                    {
+                        "id": 9,
+                        "title": "Requests",
+                        "type": "timeseries",
+                        "targets": [
+                            {
+                                "refId": "B",
+                                "datasource": {"uid": "influx-main", "type": "influxdb"},
+                                "query": "from(bucket: \"prod\") |> range(start: -1h) |> filter(fn: (r) => r._measurement == \"http_requests\")"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "meta": {"folderUid": "infra"}
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+
+    let report = super::build_export_inspection_query_report(&raw_dir).unwrap();
+
+    assert_eq!(report.summary.dashboard_count, 2);
+    assert_eq!(report.summary.panel_count, 2);
+    assert_eq!(report.summary.query_count, 2);
+    assert_eq!(report.summary.report_row_count, 2);
+    assert_eq!(report.queries.len(), 2);
+    assert_eq!(report.queries[0].dashboard_uid, "main");
+    assert_eq!(report.queries[0].panel_id, "7");
+    assert_eq!(report.queries[0].datasource, "prom-main");
+    assert_eq!(report.queries[0].datasource_uid, "prom-main");
+    assert_eq!(report.queries[0].query_field, "expr");
+    assert!(report.queries[0]
+        .metrics
+        .contains(&"node_cpu_seconds_total".to_string()));
+    assert_eq!(report.queries[1].dashboard_uid, "flux-main");
+    assert_eq!(report.queries[1].folder_path, "Platform / Infra");
+    assert_eq!(report.queries[1].datasource, "influx-main");
+    assert_eq!(report.queries[1].datasource_uid, "influx-main");
+    assert_eq!(report.queries[1].query_field, "query");
+    assert_eq!(report.queries[1].buckets, vec!["prod".to_string()]);
+    assert_eq!(
+        report.queries[1].measurements,
+        vec!["http_requests".to_string()]
+    );
+
+    let report_json = serde_json::to_value(&report).unwrap();
+    assert_eq!(
+        report_json["queries"][0]["datasourceUid"],
+        Value::String("prom-main".to_string())
+    );
+    assert_eq!(
+        report_json["queries"][1]["datasourceUid"],
+        Value::String("influx-main".to_string())
+    );
+}
+
+#[test]
+fn resolve_report_column_ids_keep_datasource_uid_optional() {
+    let default_columns = super::resolve_report_column_ids(&[]).unwrap();
+    assert!(!default_columns.iter().any(|value| value == "datasource_uid"));
+
+    let selected = super::resolve_report_column_ids(&[
+        "dashboard_uid".to_string(),
+        "datasource_uid".to_string(),
+        "query".to_string(),
+    ])
+    .unwrap();
+    assert_eq!(
+        selected,
+        vec![
+            "dashboard_uid".to_string(),
+            "datasource_uid".to_string(),
+            "query".to_string(),
+        ]
+    );
+}
+
+#[test]
+fn export_inspection_query_row_json_keeps_datasource_uid_field_when_empty() {
+    let row = super::ExportInspectionQueryRow {
+        dashboard_uid: "main".to_string(),
+        dashboard_title: "Main".to_string(),
+        folder_path: "General".to_string(),
+        panel_id: "1".to_string(),
+        panel_title: "CPU".to_string(),
+        panel_type: "timeseries".to_string(),
+        ref_id: "A".to_string(),
+        datasource: "prom-main".to_string(),
+        datasource_uid: String::new(),
+        query_field: "expr".to_string(),
+        query_text: "up".to_string(),
+        metrics: vec!["up".to_string()],
+        measurements: Vec::new(),
+        buckets: Vec::new(),
+    };
+
+    let value = serde_json::to_value(&row).unwrap();
+
+    assert_eq!(value["datasourceUid"], Value::String(String::new()));
+}
+
+#[test]
+fn resolve_report_column_ids_rejects_unknown_columns() {
+    let error = super::resolve_report_column_ids(&["unknown".to_string()]).unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("Unsupported --report-columns value")
+    );
+}
+
+#[test]
+fn apply_query_report_filters_keep_matching_rows_only() {
+    let report = super::ExportInspectionQueryReport {
+        import_dir: "/tmp/raw".to_string(),
+        summary: super::QueryReportSummary {
+            dashboard_count: 2,
+            panel_count: 2,
+            query_count: 2,
+            report_row_count: 2,
+        },
+        queries: vec![
+            super::ExportInspectionQueryRow {
+                dashboard_uid: "main".to_string(),
+                dashboard_title: "Main".to_string(),
+                folder_path: "General".to_string(),
+                panel_id: "1".to_string(),
+                panel_title: "CPU".to_string(),
+                panel_type: "timeseries".to_string(),
+                ref_id: "A".to_string(),
+                datasource: "prom-main".to_string(),
+                datasource_uid: "prom-uid".to_string(),
+                query_field: "expr".to_string(),
+                query_text: "up".to_string(),
+                metrics: vec!["up".to_string()],
+                measurements: Vec::new(),
+                buckets: Vec::new(),
+            },
+            super::ExportInspectionQueryRow {
+                dashboard_uid: "logs".to_string(),
+                dashboard_title: "Logs".to_string(),
+                folder_path: "General".to_string(),
+                panel_id: "2".to_string(),
+                panel_title: "Logs".to_string(),
+                panel_type: "logs".to_string(),
+                ref_id: "A".to_string(),
+                datasource: "logs-main".to_string(),
+                datasource_uid: "logs-uid".to_string(),
+                query_field: "expr".to_string(),
+                query_text: "{job=\"grafana\"}".to_string(),
+                metrics: Vec::new(),
+                measurements: Vec::new(),
+                buckets: Vec::new(),
+            },
+        ],
+    };
+
+    let filtered = super::apply_query_report_filters(report, Some("prom-main"), Some("1"));
+
+    assert_eq!(filtered.summary.dashboard_count, 1);
+    assert_eq!(filtered.summary.panel_count, 1);
+    assert_eq!(filtered.summary.query_count, 1);
+    assert_eq!(filtered.summary.report_row_count, 1);
+    assert_eq!(filtered.queries.len(), 1);
+    assert_eq!(filtered.queries[0].datasource, "prom-main");
+    assert_eq!(filtered.queries[0].panel_id, "1");
+}
+
+#[test]
+fn validate_inspect_export_report_args_rejects_report_columns_without_report() {
+    let args = InspectExportArgs {
+        import_dir: PathBuf::from("./dashboards/raw"),
+        json: false,
+        table: false,
+        report: None,
+        report_columns: vec!["dashboard_uid".to_string()],
+        report_filter_datasource: None,
+        report_filter_panel_id: None,
+        no_header: false,
+    };
+
+    let error = super::validate_inspect_export_report_args(&args).unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("--report-columns is only supported together with --report")
+    );
+}
+
+#[test]
+fn validate_inspect_export_report_args_rejects_report_columns_for_json_report() {
+    let args = InspectExportArgs {
+        import_dir: PathBuf::from("./dashboards/raw"),
+        json: false,
+        table: false,
+        report: Some(InspectExportReportFormat::Json),
+        report_columns: vec!["dashboard_uid".to_string()],
+        report_filter_datasource: None,
+        report_filter_panel_id: None,
+        no_header: false,
+    };
+
+    let error = super::validate_inspect_export_report_args(&args).unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("--report-columns is only supported with table or csv --report output")
+    );
+}
+
+#[test]
+fn render_csv_uses_headers_and_escaping() {
+    let lines = super::render_csv(
+        &["DASHBOARD_UID", "QUERY"],
+        &[vec![
+            "mixed-main".to_string(),
+            "{job=\"grafana\"},error".to_string(),
+        ]],
+    );
+
+    assert_eq!(lines[0], "DASHBOARD_UID,QUERY");
+    assert_eq!(lines[1], "mixed-main,\"{job=\"\"grafana\"\"},error\"");
+}
+
+#[test]
+fn validate_inspect_export_report_args_rejects_panel_filter_without_report() {
+    let args = InspectExportArgs {
+        import_dir: PathBuf::from("./dashboards/raw"),
+        json: false,
+        table: false,
+        report: None,
+        report_columns: Vec::new(),
+        report_filter_datasource: None,
+        report_filter_panel_id: Some("7".to_string()),
+        no_header: false,
+    };
+
+    let error = super::validate_inspect_export_report_args(&args).unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("--report-filter-panel-id is only supported together with --report")
     );
 }
 

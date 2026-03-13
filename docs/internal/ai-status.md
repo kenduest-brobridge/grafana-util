@@ -1,5 +1,19 @@
 # ai-status.md
 
+## 2026-03-13 - Task: Add Inspect Report Datasource UID
+- State: Done
+- Scope: `grafana_utils/dashboard_cli.py`, `tests/test_python_dashboard_cli.py`, `rust/src/dashboard.rs`, `rust/src/dashboard_cli_defs.rs`, `rust/src/dashboard_rust_tests.rs`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: `inspect-export --report` already carried datasource labels, but JSON rows did not expose datasource UIDs and the table/CSV column contract had no way to opt them in without widening the default report layout.
+- Current Update: Added best-effort `datasourceUid` to the per-query inspection row model, kept it in JSON report output by default, and exposed it as an opt-in `datasource_uid` column for table/CSV output so the common default report shape stays unchanged. The CLI help and docs now describe that split behavior.
+- Result: Operators can now script against datasource UIDs from JSON output immediately, while table and CSV users can request `datasource_uid` only when they need it. Validation passed with `python3 -m unittest -v tests/test_python_dashboard_cli.py` and `cargo test dashboard --manifest-path rust/Cargo.toml --quiet`.
+
+## 2026-03-13 - Task: Add Dashboard Inspect Query Report
+- State: Done
+- Scope: `grafana_utils/dashboard_cli.py`, `tests/test_python_dashboard_cli.py`, `rust/src/dashboard.rs`, `rust/src/dashboard_cli_defs.rs`, `rust/src/dashboard_rust_tests.rs`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: `inspect-export` could summarize dashboard, folder, panel, query, and datasource counts plus mixed-datasource usage, but it did not emit one per-target query report and did not extract metric-like identifiers from query expressions for table or JSON inspection output.
+- Current Update: Added `inspect-export --report[=table|json]` in both Python and Rust, built a per-query offline inspection model with dashboard/panel/datasource/query context, extracted heuristic `metrics`, `measurements`, and `buckets`, added `--report-columns`, `--report-filter-datasource`, and `--report-filter-panel-id` for narrower operator workflows, aligned the new flags in docs, and noted that future parser growth should stay split by datasource family.
+- Result: Operators can now inspect exported dashboards at query-target granularity from raw export directories, use table output by default or JSON for downstream analysis, narrow the report to one datasource or one panel id, and trim table output to selected columns. Validation passed with `python3 -m unittest -v tests/test_python_dashboard_cli.py`, `cargo test dashboard --manifest-path rust/Cargo.toml --quiet`, and real sample runs against `tmp/recheck-export-20260313/raw`.
+
 ## 2026-03-13 - Task: Tighten Dashboard Typed Records And Integration Coverage
 - State: Done
 - Scope: `grafana_utils/dashboards/common.py`, `grafana_utils/dashboard_cli.py`, `tests/test_python_dashboard_cli.py`, `tests/test_python_dashboard_integration_flow.py`, `rust/src/dashboard_prompt.rs`, `rust/src/dashboard_list.rs`, `rust/src/dashboard_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

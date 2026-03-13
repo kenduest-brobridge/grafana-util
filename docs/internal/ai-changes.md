@@ -1,5 +1,37 @@
 # ai-changes.md
 
+## 2026-03-13 - Add Inspect Report Datasource UID
+- Summary: Extended dashboard `inspect-export --report` so each JSON query row now includes a best-effort `datasourceUid` when the raw export carries a concrete datasource uid. Table and CSV report output keep the existing default columns, but operators can now opt `datasource_uid` in explicitly through `--report-columns`.
+- Tests: Updated Python dashboard report parser/output tests and Rust query-report extraction/rendering tests to cover `datasourceUid` in JSON plus the optional `datasource_uid` table/CSV column.
+- Test Run: `python3 -m unittest -v tests/test_python_dashboard_cli.py`; `cargo test dashboard --manifest-path rust/Cargo.toml --quiet`
+- Validation: Verified `python3 python/grafana-utils.py dashboard inspect-export --import-dir ./tmp/live-inspect-demo-20260313/raw --report csv --report-columns dashboard_uid,panel_id,datasource_uid,datasource,query` renders the new opt-in CSV column shape without widening the default table report.
+- Impact: `grafana_utils/dashboard_cli.py`, `tests/test_python_dashboard_cli.py`, `rust/src/dashboard.rs`, `rust/src/dashboard_cli_defs.rs`, `rust/src/dashboard_rust_tests.rs`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low. The change extends the JSON report schema with one additive field and adds one optional column id, while leaving default table/CSV report layouts unchanged.
+
+## 2026-03-13 - Add Inspect Report Panel-ID Filtering
+- Summary: Extended dashboard `inspect-export --report` again with `--report-filter-panel-id` so operators can narrow either table or JSON report output to one exact `panelId` when a single dashboard expands into many rows. The docs now explain that the report rows always carry panel id context and that panel-id filtering composes with datasource filtering and custom report columns.
+- Tests: Added focused Python parser/behavior tests and focused Rust parser/validation/filtering tests for the new panel-id report filter.
+- Test Run: `python3 -m unittest -v tests/test_python_dashboard_cli.py`; `cargo test dashboard --manifest-path rust/Cargo.toml --quiet`
+- Validation: Ran `python3 python/grafana-utils.py dashboard inspect-export --import-dir /Users/kendlee/work/grafana-utils/tmp/recheck-export-20260313/raw --report --report-filter-panel-id 1 --report-columns dashboard_uid,panel_id,panel_title,datasource,query` to confirm the real sample export now narrows the report to one panel id.
+- Impact: `grafana_utils/dashboard_cli.py`, `tests/test_python_dashboard_cli.py`, `rust/src/dashboard.rs`, `rust/src/dashboard_cli_defs.rs`, `rust/src/dashboard_rust_tests.rs`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low. The new flag only affects report mode and uses the existing stable `panelId` carried in every report row.
+
+## 2026-03-13 - Add Inspect Report Column Selection And Datasource Filtering
+- Summary: Extended the new dashboard `inspect-export --report` workflow so operators can now trim the table output with `--report-columns` and narrow either table or JSON report output with `--report-filter-datasource`. The docs now describe the stable report column ids and the maintainer notes call out that future query parsing should stay decomposed by datasource family instead of growing one generic parser.
+- Tests: Added focused Python parser/validation/output tests and focused Rust parser/validation/filtering tests for the new report narrowing flags.
+- Test Run: `python3 -m unittest -v tests/test_python_dashboard_cli.py`; `cargo test dashboard --manifest-path rust/Cargo.toml --quiet`
+- Validation: Ran `python3 python/grafana-utils.py dashboard inspect-export --import-dir /Users/kendlee/work/grafana-utils/tmp/recheck-export-20260313/raw --report --report-filter-datasource smoke-prom --report-columns dashboard_uid,panel_title,datasource,metrics,query` to confirm the real sample export now renders a compact datasource-scoped report.
+- Impact: `grafana_utils/dashboard_cli.py`, `tests/test_python_dashboard_cli.py`, `rust/src/dashboard.rs`, `rust/src/dashboard_cli_defs.rs`, `rust/src/dashboard_rust_tests.rs`, `README.md`, `DEVELOPER.md`, `TODO.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low to moderate. The new flags only affect report mode, but Python and Rust should keep the same stable column-id contract and datasource filtering semantics as the per-query report evolves.
+
+## 2026-03-13 - Add Dashboard Inspect Query Report
+- Summary: Added `dashboard inspect-export --report[=table|json]` in both Python and Rust so raw export analysis can emit one per-query record instead of only the higher-level summary. The new report rows carry dashboard uid/title, folder path, panel id/title/type, `refId`, datasource label, the chosen query field, raw query text, and heuristic extraction fields for `metrics`, `measurements`, and `buckets`.
+- Tests: Added focused Python parser and output tests for report table/JSON mode, plus focused Rust parser and query-report extraction tests.
+- Test Run: `python3 -m unittest -v tests/test_python_dashboard_cli.py`; `cargo test dashboard --manifest-path rust/Cargo.toml --quiet`
+- Validation: Ran `python3 python/grafana-utils.py dashboard inspect-export --import-dir /Users/kendlee/work/grafana-utils/tmp/recheck-export-20260313/raw --report` and verified the table output shows one row per query target with extracted Prometheus metrics and raw query text from the existing sample export.
+- Impact: `grafana_utils/dashboard_cli.py`, `tests/test_python_dashboard_cli.py`, `rust/src/dashboard.rs`, `rust/src/dashboard_cli_defs.rs`, `rust/src/dashboard_rust_tests.rs`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Moderate. The new report mode adds a user-visible inspect-export contract and relies on heuristic query parsing, so callers should treat extracted metrics/measurements/buckets as best-effort metadata rather than a datasource-specific parser guarantee.
+
 ## 2026-03-13 - Tighten Dashboard Typed Records And Integration Coverage
 - Summary: Pulled repeated Python dashboard fallback values into `grafana_utils/dashboards/common.py` so export/import/inspect code paths now reuse one set of defaults for `General`, `Main Org.`, `unknown`, and related dashboard summary fields. Replaced the Rust prompt-export datasource catalog tuple with a named `DatasourceCatalog` struct and threaded that typed boundary through prompt rewrite plus dashboard source-metadata collection.
 - Tests: Added Python syntax coverage for the new dashboard common module, added a focused default-constant summary test, and added `tests/test_python_dashboard_integration_flow.py` to exercise offline `inspect-export --json` and `import-dashboard --dry-run --json --ensure-folders --update-existing-only` against realistic raw export directories.

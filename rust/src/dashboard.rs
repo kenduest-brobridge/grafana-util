@@ -1,3 +1,4 @@
+use regex::Regex;
 use reqwest::Method;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
@@ -20,7 +21,7 @@ mod dashboard_prompt;
 pub use dashboard_cli_defs::{
     build_auth_context, build_http_client, build_http_client_for_org, parse_cli_from,
     CommonCliArgs, DashboardAuthContext, DashboardCliArgs, DashboardCommand, DiffArgs, ExportArgs,
-    ImportArgs, InspectExportArgs, ListArgs, ListDataSourcesArgs,
+    ImportArgs, InspectExportArgs, InspectExportReportFormat, ListArgs, ListDataSourcesArgs,
 };
 pub use dashboard_export::{
     build_export_variant_dirs, build_output_path, export_dashboards_with_client,
@@ -237,6 +238,82 @@ struct ExportInspectionSummary {
     datasource_inventory: Vec<DatasourceInventorySummary>,
     mixed_dashboards: Vec<MixedDashboardSummary>,
 }
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+struct QueryReportSummary {
+    dashboard_count: usize,
+    panel_count: usize,
+    query_count: usize,
+    report_row_count: usize,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+struct ExportInspectionQueryRow {
+    #[serde(rename = "dashboardUid")]
+    dashboard_uid: String,
+    #[serde(rename = "dashboardTitle")]
+    dashboard_title: String,
+    #[serde(rename = "folderPath")]
+    folder_path: String,
+    #[serde(rename = "panelId")]
+    panel_id: String,
+    #[serde(rename = "panelTitle")]
+    panel_title: String,
+    #[serde(rename = "panelType")]
+    panel_type: String,
+    #[serde(rename = "refId")]
+    ref_id: String,
+    datasource: String,
+    #[serde(rename = "datasourceUid")]
+    datasource_uid: String,
+    #[serde(rename = "queryField")]
+    query_field: String,
+    #[serde(rename = "queryText")]
+    query_text: String,
+    metrics: Vec<String>,
+    measurements: Vec<String>,
+    buckets: Vec<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+struct ExportInspectionQueryReport {
+    import_dir: String,
+    summary: QueryReportSummary,
+    queries: Vec<ExportInspectionQueryRow>,
+}
+
+const DEFAULT_REPORT_COLUMN_IDS: &[&str] = &[
+    "dashboard_uid",
+    "dashboard_title",
+    "folder_path",
+    "panel_id",
+    "panel_title",
+    "panel_type",
+    "ref_id",
+    "datasource",
+    "query_field",
+    "metrics",
+    "measurements",
+    "buckets",
+    "query",
+];
+
+const SUPPORTED_REPORT_COLUMN_IDS: &[&str] = &[
+    "dashboard_uid",
+    "dashboard_title",
+    "folder_path",
+    "panel_id",
+    "panel_title",
+    "panel_type",
+    "ref_id",
+    "datasource",
+    "datasource_uid",
+    "query_field",
+    "metrics",
+    "measurements",
+    "buckets",
+    "query",
+];
 
 pub fn discover_dashboard_files(import_dir: &Path) -> Result<Vec<PathBuf>> {
     if !import_dir.exists() {
@@ -1324,7 +1401,9 @@ fn render_import_dry_run_json(
     let mut folders = Vec::new();
     for status in folder_statuses {
         let (destination, status_label, reason) = match status.kind {
-            FolderInventoryStatusKind::Missing => ("missing", "missing", "would-create".to_string()),
+            FolderInventoryStatusKind::Missing => {
+                ("missing", "missing", "would-create".to_string())
+            }
             FolderInventoryStatusKind::Matches => ("exists", "match", String::new()),
             FolderInventoryStatusKind::Mismatch => {
                 let mut reasons = Vec::new();
@@ -1378,8 +1457,15 @@ fn render_import_dry_run_json(
     Ok(serde_json::to_string_pretty(&payload)?)
 }
 
-fn render_simple_table(headers: &[&str], rows: &[Vec<String>], include_header: bool) -> Vec<String> {
-    let mut widths = headers.iter().map(|header| header.len()).collect::<Vec<usize>>();
+fn render_simple_table(
+    headers: &[&str],
+    rows: &[Vec<String>],
+    include_header: bool,
+) -> Vec<String> {
+    let mut widths = headers
+        .iter()
+        .map(|header| header.len())
+        .collect::<Vec<usize>>();
     for row in rows {
         for (index, value) in row.iter().enumerate() {
             widths[index] = widths[index].max(value.len());
@@ -1396,7 +1482,10 @@ fn render_simple_table(headers: &[&str], rows: &[Vec<String>], include_header: b
     let mut lines = Vec::new();
     if include_header {
         lines.push(format_row(
-            &headers.iter().map(|value| value.to_string()).collect::<Vec<String>>(),
+            &headers
+                .iter()
+                .map(|value| value.to_string())
+                .collect::<Vec<String>>(),
         ));
         lines.push(format_row(
             &widths
@@ -1407,6 +1496,34 @@ fn render_simple_table(headers: &[&str], rows: &[Vec<String>], include_header: b
     }
     for row in rows {
         lines.push(format_row(row));
+    }
+    lines
+}
+
+fn render_csv(headers: &[&str], rows: &[Vec<String>]) -> Vec<String> {
+    fn escape_csv(value: &str) -> String {
+        if value.contains(',') || value.contains('"') || value.contains('\n') {
+            format!("\"{}\"", value.replace('"', "\"\""))
+        } else {
+            value.to_string()
+        }
+    }
+
+    let mut lines = Vec::new();
+    lines.push(
+        headers
+            .iter()
+            .map(|value| escape_csv(value))
+            .collect::<Vec<String>>()
+            .join(","),
+    );
+    for row in rows {
+        lines.push(
+            row.iter()
+                .map(|value| escape_csv(value))
+                .collect::<Vec<String>>()
+                .join(","),
+        );
     }
     lines
 }
@@ -1510,9 +1627,34 @@ fn summarize_datasource_ref(reference: &Value) -> Option<String> {
     }
 }
 
+fn summarize_datasource_uid(reference: &Value) -> Option<String> {
+    if reference.is_null() || is_builtin_datasource_ref(reference) {
+        return None;
+    }
+    match reference {
+        Value::String(text) => {
+            if is_placeholder_string(text) {
+                None
+            } else {
+                Some(text.to_string())
+            }
+        }
+        Value::Object(object) => object
+            .get("uid")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|value| !value.is_empty() && !is_placeholder_string(value))
+            .map(ToString::to_string),
+        _ => None,
+    }
+}
+
 fn summarize_datasource_inventory_usage(
     datasource: &DatasourceInventoryItem,
-    usage_by_label: &std::collections::BTreeMap<String, (usize, std::collections::BTreeSet<String>)>,
+    usage_by_label: &std::collections::BTreeMap<
+        String,
+        (usize, std::collections::BTreeSet<String>),
+    >,
 ) -> (usize, usize) {
     let mut labels = Vec::new();
     if !datasource.uid.is_empty() {
@@ -1530,6 +1672,395 @@ fn summarize_datasource_inventory_usage(
         }
     }
     (reference_count, dashboards.len())
+}
+
+fn string_list_field(target: &Map<String, Value>, key: &str) -> Vec<String> {
+    target
+        .get(key)
+        .and_then(Value::as_array)
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(Value::as_str)
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .map(ToString::to_string)
+                .collect::<Vec<String>>()
+        })
+        .unwrap_or_default()
+}
+
+fn quoted_captures(text: &str, pattern: &str) -> Vec<String> {
+    let regex = Regex::new(pattern).expect("invalid hard-coded query report regex");
+    let mut values = std::collections::BTreeSet::new();
+    for captures in regex.captures_iter(text) {
+        if let Some(value) = captures.get(1).map(|item| item.as_str().trim()) {
+            if !value.is_empty() {
+                values.insert(value.to_string());
+            }
+        }
+    }
+    values.into_iter().collect()
+}
+
+fn extract_query_field_and_text(target: &Map<String, Value>) -> (String, String) {
+    for key in ["expr", "expression", "query", "rawSql", "sql", "rawQuery"] {
+        if let Some(value) = target.get(key).and_then(Value::as_str) {
+            let trimmed = value.trim();
+            if !trimmed.is_empty() {
+                return (key.to_string(), trimmed.to_string());
+            }
+        }
+    }
+    (String::new(), String::new())
+}
+
+fn extract_metric_names(query_text: &str) -> Vec<String> {
+    if query_text.trim().is_empty() {
+        return Vec::new();
+    }
+    let token_regex =
+        Regex::new(r"[A-Za-z_:][A-Za-z0-9_:]*").expect("invalid hard-coded metric regex");
+    let mut values = std::collections::BTreeSet::new();
+    let reserved_words = [
+        "and",
+        "bool",
+        "by",
+        "group_left",
+        "group_right",
+        "ignoring",
+        "offset",
+        "on",
+        "or",
+        "unless",
+        "without",
+    ];
+    for capture in quoted_captures(query_text, r#"__name__\s*=\s*"([A-Za-z_:][A-Za-z0-9_:]*)""#) {
+        values.insert(capture);
+    }
+    for matched in token_regex.find_iter(query_text) {
+        let start = matched.start();
+        let end = matched.end();
+        let previous = query_text[..start].chars().next_back();
+        if previous
+            .map(|value| value.is_ascii_alphanumeric() || value == '_' || value == ':')
+            .unwrap_or(false)
+        {
+            continue;
+        }
+        let next = query_text[end..].chars().next();
+        if next
+            .map(|value| value.is_ascii_alphanumeric() || value == '_' || value == ':')
+            .unwrap_or(false)
+        {
+            continue;
+        }
+        let token = matched.as_str();
+        if reserved_words.contains(&token) {
+            continue;
+        }
+        if query_text[end..].trim_start().starts_with('(') {
+            continue;
+        }
+        values.insert(token.to_string());
+    }
+    values.into_iter().collect()
+}
+
+fn extract_query_measurements(target: &Map<String, Value>, query_text: &str) -> Vec<String> {
+    let mut values = std::collections::BTreeSet::new();
+    if let Some(measurement) = target.get("measurement").and_then(Value::as_str) {
+        let trimmed = measurement.trim();
+        if !trimmed.is_empty() {
+            values.insert(trimmed.to_string());
+        }
+    }
+    for value in string_list_field(target, "measurements") {
+        values.insert(value);
+    }
+    for value in quoted_captures(query_text, r#"(?i)\bFROM\s+"?([A-Za-z0-9_.:-]+)"?"#) {
+        values.insert(value);
+    }
+    for value in quoted_captures(query_text, r#"_measurement\s*==\s*"([^"]+)""#) {
+        values.insert(value);
+    }
+    values.into_iter().collect()
+}
+
+fn extract_query_buckets(target: &Map<String, Value>, query_text: &str) -> Vec<String> {
+    let mut values = std::collections::BTreeSet::new();
+    if let Some(bucket) = target.get("bucket").and_then(Value::as_str) {
+        let trimmed = bucket.trim();
+        if !trimmed.is_empty() {
+            values.insert(trimmed.to_string());
+        }
+    }
+    for value in string_list_field(target, "buckets") {
+        values.insert(value);
+    }
+    for value in quoted_captures(query_text, r#"from\s*\(\s*bucket\s*:\s*"([^"]+)""#) {
+        values.insert(value);
+    }
+    values.into_iter().collect()
+}
+
+fn collect_query_report_rows(
+    panels: &[Value],
+    dashboard_uid: &str,
+    dashboard_title: &str,
+    folder_path: &str,
+    rows: &mut Vec<ExportInspectionQueryRow>,
+) {
+    for panel in panels {
+        let Some(panel_object) = panel.as_object() else {
+            continue;
+        };
+        let panel_id = panel_object
+            .get("id")
+            .map(|value| match value {
+                Value::Number(number) => number.to_string(),
+                Value::String(text) => text.clone(),
+                _ => String::new(),
+            })
+            .unwrap_or_default();
+        let panel_title = string_field(panel_object, "title", "");
+        let panel_type = string_field(panel_object, "type", "");
+        let panel_datasource = panel_object.get("datasource");
+        if let Some(targets) = panel_object.get("targets").and_then(Value::as_array) {
+            for target in targets {
+                let Some(target_object) = target.as_object() else {
+                    continue;
+                };
+                let datasource = target_object
+                    .get("datasource")
+                    .and_then(summarize_datasource_ref)
+                    .or_else(|| panel_datasource.and_then(summarize_datasource_ref))
+                    .unwrap_or_default();
+                let datasource_uid = target_object
+                    .get("datasource")
+                    .and_then(summarize_datasource_uid)
+                    .or_else(|| panel_datasource.and_then(summarize_datasource_uid))
+                    .unwrap_or_default();
+                let (query_field, query_text) = extract_query_field_and_text(target_object);
+                let metrics = extract_metric_names(&query_text);
+                let measurements = extract_query_measurements(target_object, &query_text);
+                let buckets = extract_query_buckets(target_object, &query_text);
+                rows.push(ExportInspectionQueryRow {
+                    dashboard_uid: dashboard_uid.to_string(),
+                    dashboard_title: dashboard_title.to_string(),
+                    folder_path: folder_path.to_string(),
+                    panel_id: panel_id.clone(),
+                    panel_title: panel_title.clone(),
+                    panel_type: panel_type.clone(),
+                    ref_id: string_field(target_object, "refId", ""),
+                    datasource,
+                    datasource_uid,
+                    query_field,
+                    query_text,
+                    metrics,
+                    measurements,
+                    buckets,
+                });
+            }
+        }
+        if let Some(children) = panel_object.get("panels").and_then(Value::as_array) {
+            collect_query_report_rows(children, dashboard_uid, dashboard_title, folder_path, rows);
+        }
+    }
+}
+
+fn build_export_inspection_query_report(import_dir: &Path) -> Result<ExportInspectionQueryReport> {
+    let summary = build_export_inspection_summary(import_dir)?;
+    let metadata = load_export_metadata(import_dir, Some(RAW_EXPORT_SUBDIR))?;
+    let dashboard_files = discover_dashboard_files(import_dir)?;
+    let folder_inventory = load_folder_inventory(import_dir, metadata.as_ref())?;
+    let folders_by_uid = folder_inventory
+        .into_iter()
+        .map(|item| (item.uid.clone(), item))
+        .collect::<std::collections::BTreeMap<String, FolderInventoryItem>>();
+    let mut rows = Vec::new();
+
+    for dashboard_file in &dashboard_files {
+        let document = load_json_file(dashboard_file)?;
+        let document_object =
+            value_as_object(&document, "Dashboard payload must be a JSON object.")?;
+        let dashboard = extract_dashboard_object(document_object)?;
+        let folder_path = resolve_export_folder_path(
+            document_object,
+            dashboard_file,
+            import_dir,
+            &folders_by_uid,
+        );
+        let dashboard_uid = string_field(dashboard, "uid", DEFAULT_UNKNOWN_UID);
+        let dashboard_title = string_field(dashboard, "title", DEFAULT_DASHBOARD_TITLE);
+        if let Some(panels) = dashboard.get("panels").and_then(Value::as_array) {
+            collect_query_report_rows(
+                panels,
+                &dashboard_uid,
+                &dashboard_title,
+                &folder_path,
+                &mut rows,
+            );
+        }
+    }
+
+    Ok(ExportInspectionQueryReport {
+        import_dir: summary.import_dir.clone(),
+        summary: QueryReportSummary {
+            dashboard_count: summary.dashboard_count,
+            panel_count: summary.panel_count,
+            query_count: summary.query_count,
+            report_row_count: rows.len(),
+        },
+        queries: rows,
+    })
+}
+
+fn resolve_report_column_ids(selected: &[String]) -> Result<Vec<String>> {
+    if selected.is_empty() {
+        return Ok(DEFAULT_REPORT_COLUMN_IDS
+            .iter()
+            .map(|value| value.to_string())
+            .collect());
+    }
+    let mut result = Vec::new();
+    for value in selected {
+        let normalized = value.trim();
+        if normalized.is_empty() {
+            continue;
+        }
+        if !SUPPORTED_REPORT_COLUMN_IDS.contains(&normalized) {
+            return Err(message(format!(
+                "Unsupported --report-columns value {:?}. Supported columns: {}",
+                normalized,
+                SUPPORTED_REPORT_COLUMN_IDS.join(",")
+            )));
+        }
+        if !result.iter().any(|item| item == normalized) {
+            result.push(normalized.to_string());
+        }
+    }
+    if result.is_empty() {
+        return Err(message(format!(
+            "--report-columns did not include any supported columns. Supported columns: {}",
+            SUPPORTED_REPORT_COLUMN_IDS.join(",")
+        )));
+    }
+    Ok(result)
+}
+
+fn report_column_header(column_id: &str) -> &'static str {
+    match column_id {
+        "dashboard_uid" => "DASHBOARD_UID",
+        "dashboard_title" => "DASHBOARD_TITLE",
+        "folder_path" => "FOLDER_PATH",
+        "panel_id" => "PANEL_ID",
+        "panel_title" => "PANEL_TITLE",
+        "panel_type" => "PANEL_TYPE",
+        "ref_id" => "REF_ID",
+        "datasource" => "DATASOURCE",
+        "datasource_uid" => "DATASOURCE_UID",
+        "query_field" => "QUERY_FIELD",
+        "metrics" => "METRICS",
+        "measurements" => "MEASUREMENTS",
+        "buckets" => "BUCKETS",
+        "query" => "QUERY",
+        _ => unreachable!("unsupported report column header"),
+    }
+}
+
+fn render_query_report_column(row: &ExportInspectionQueryRow, column_id: &str) -> String {
+    match column_id {
+        "dashboard_uid" => row.dashboard_uid.clone(),
+        "dashboard_title" => row.dashboard_title.clone(),
+        "folder_path" => row.folder_path.clone(),
+        "panel_id" => row.panel_id.clone(),
+        "panel_title" => row.panel_title.clone(),
+        "panel_type" => row.panel_type.clone(),
+        "ref_id" => row.ref_id.clone(),
+        "datasource" => row.datasource.clone(),
+        "datasource_uid" => row.datasource_uid.clone(),
+        "query_field" => row.query_field.clone(),
+        "metrics" => row.metrics.join(","),
+        "measurements" => row.measurements.join(","),
+        "buckets" => row.buckets.join(","),
+        "query" => row.query_text.clone(),
+        _ => unreachable!("unsupported report column value"),
+    }
+}
+
+fn apply_query_report_filters(
+    mut report: ExportInspectionQueryReport,
+    datasource_filter: Option<&str>,
+    panel_id_filter: Option<&str>,
+) -> ExportInspectionQueryReport {
+    let datasource_filter = datasource_filter
+        .map(str::trim)
+        .filter(|value| !value.is_empty());
+    let panel_id_filter = panel_id_filter
+        .map(str::trim)
+        .filter(|value| !value.is_empty());
+    if datasource_filter.is_none() && panel_id_filter.is_none() {
+        return report;
+    }
+    report.queries.retain(|row| {
+        let datasource_match = datasource_filter
+            .map(|value| row.datasource == value)
+            .unwrap_or(true);
+        let panel_match = panel_id_filter
+            .map(|value| row.panel_id == value)
+            .unwrap_or(true);
+        datasource_match && panel_match
+    });
+    report.summary.dashboard_count = report
+        .queries
+        .iter()
+        .map(|row| row.dashboard_uid.clone())
+        .collect::<std::collections::BTreeSet<String>>()
+        .len();
+    report.summary.panel_count = report
+        .queries
+        .iter()
+        .map(|row| {
+            (
+                row.dashboard_uid.clone(),
+                row.panel_id.clone(),
+                row.panel_title.clone(),
+            )
+        })
+        .collect::<std::collections::BTreeSet<(String, String, String)>>()
+        .len();
+    report.summary.query_count = report.queries.len();
+    report.summary.report_row_count = report.queries.len();
+    report
+}
+
+fn validate_inspect_export_report_args(args: &InspectExportArgs) -> Result<()> {
+    if args.report.is_none() {
+        if !args.report_columns.is_empty() {
+            return Err(message(
+                "--report-columns is only supported together with --report.",
+            ));
+        }
+        if args.report_filter_datasource.is_some() {
+            return Err(message(
+                "--report-filter-datasource is only supported together with --report.",
+            ));
+        }
+        if args.report_filter_panel_id.is_some() {
+            return Err(message(
+                "--report-filter-panel-id is only supported together with --report.",
+            ));
+        }
+        return Ok(());
+    }
+    if args.report == Some(InspectExportReportFormat::Json) && !args.report_columns.is_empty() {
+        return Err(message(
+            "--report-columns is only supported with table or csv --report output.",
+        ));
+    }
+    let _ = resolve_report_column_ids(&args.report_columns)?;
+    Ok(())
 }
 
 fn build_export_inspection_summary(import_dir: &Path) -> Result<ExportInspectionSummary> {
@@ -1576,8 +2107,12 @@ fn build_export_inspection_summary(import_dir: &Path) -> Result<ExportInspection
         let dashboard = extract_dashboard_object(document_object)?;
         let uid = string_field(dashboard, "uid", DEFAULT_UNKNOWN_UID);
         let title = string_field(dashboard, "title", DEFAULT_DASHBOARD_TITLE);
-        let folder_path =
-            resolve_export_folder_path(document_object, dashboard_file, import_dir, &folders_by_uid);
+        let folder_path = resolve_export_folder_path(
+            document_object,
+            dashboard_file,
+            import_dir,
+            &folders_by_uid,
+        );
         if !folder_counts.contains_key(&folder_path) {
             folder_order.push(folder_path.clone());
             folder_counts.insert(folder_path.clone(), 0usize);
@@ -1621,11 +2156,13 @@ fn build_export_inspection_summary(import_dir: &Path) -> Result<ExportInspection
         .collect::<Vec<ExportFolderUsage>>();
     let mut datasource_usage = datasource_counts
         .iter()
-        .map(|(datasource, (reference_count, dashboards))| ExportDatasourceUsage {
-            datasource: datasource.clone(),
-            reference_count: *reference_count,
-            dashboard_count: dashboards.len(),
-        })
+        .map(
+            |(datasource, (reference_count, dashboards))| ExportDatasourceUsage {
+                datasource: datasource.clone(),
+                reference_count: *reference_count,
+                dashboard_count: dashboards.len(),
+            },
+        )
         .collect::<Vec<ExportDatasourceUsage>>();
     datasource_usage.sort_by(|left, right| left.datasource.cmp(&right.datasource));
     let mut datasource_inventory_summary = datasource_inventory
@@ -1676,6 +2213,50 @@ fn build_export_inspection_summary(import_dir: &Path) -> Result<ExportInspection
 }
 
 fn analyze_export_dir(args: &InspectExportArgs) -> Result<usize> {
+    validate_inspect_export_report_args(args)?;
+    if let Some(report_format) = args.report {
+        let report = apply_query_report_filters(
+            build_export_inspection_query_report(&args.import_dir)?,
+            args.report_filter_datasource.as_deref(),
+            args.report_filter_panel_id.as_deref(),
+        );
+        if report_format == InspectExportReportFormat::Json {
+            println!("{}", serde_json::to_string_pretty(&report)?);
+            return Ok(report.summary.dashboard_count);
+        }
+
+        let column_ids = resolve_report_column_ids(&args.report_columns)?;
+        let rows = report
+            .queries
+            .iter()
+            .map(|item| {
+                column_ids
+                    .iter()
+                    .map(|column_id| render_query_report_column(item, column_id))
+                    .collect::<Vec<String>>()
+            })
+            .collect::<Vec<Vec<String>>>();
+        let headers = column_ids
+            .iter()
+            .map(|column_id| report_column_header(column_id))
+            .collect::<Vec<&str>>();
+
+        if report_format == InspectExportReportFormat::Csv {
+            for line in render_csv(&headers, &rows) {
+                println!("{line}");
+            }
+            return Ok(report.summary.dashboard_count);
+        }
+
+        println!("Export inspection report: {}", report.import_dir);
+        println!();
+        println!("# Query report");
+        for line in render_simple_table(&headers, &rows, !args.no_header) {
+            println!("{line}");
+        }
+        return Ok(report.summary.dashboard_count);
+    }
+
     let summary = build_export_inspection_summary(&args.import_dir)?;
     if args.json {
         println!("{}", serde_json::to_string_pretty(&summary)?);
@@ -1715,7 +2296,10 @@ fn analyze_export_dir(args: &InspectExportArgs) -> Result<usize> {
             "Datasource inventory: {}",
             summary.datasource_inventory_count
         );
-        println!("Mixed datasource dashboards: {}", summary.mixed_dashboard_count);
+        println!(
+            "Mixed datasource dashboards: {}",
+            summary.mixed_dashboard_count
+        );
     }
 
     println!();
@@ -1725,7 +2309,11 @@ fn analyze_export_dir(args: &InspectExportArgs) -> Result<usize> {
         .iter()
         .map(|item| vec![item.path.clone(), item.dashboards.to_string()])
         .collect::<Vec<Vec<String>>>();
-    for line in render_simple_table(&["FOLDER_PATH", "DASHBOARDS"], &folder_rows, !args.no_header) {
+    for line in render_simple_table(
+        &["FOLDER_PATH", "DASHBOARDS"],
+        &folder_rows,
+        !args.no_header,
+    ) {
         println!("{line}");
     }
 
@@ -1823,8 +2411,7 @@ where
         Some(Value::Array(items)) => items
             .into_iter()
             .map(|item| {
-                value_as_object(&item, "Unexpected datasource payload from Grafana.")
-                    .cloned()
+                value_as_object(&item, "Unexpected datasource payload from Grafana.").cloned()
             })
             .collect(),
         Some(_) => Err(message("Unexpected datasource list response from Grafana.")),

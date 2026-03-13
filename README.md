@@ -148,6 +148,23 @@ python3 python/grafana-utils.py dashboard inspect-export \
   --table
 ```
 
+Inspect the same raw export directory as a full per-query report:
+
+```bash
+python3 python/grafana-utils.py dashboard inspect-export \
+  --import-dir ./dashboards/raw \
+  --report
+```
+
+Inspect the same query report as CSV and explicitly include datasource UIDs:
+
+```bash
+python3 python/grafana-utils.py dashboard inspect-export \
+  --import-dir ./dashboards/raw \
+  --report csv \
+  --report-columns dashboard_uid,panel_id,datasource_uid,datasource,query
+```
+
 Dashboard list, including resolved datasource names per dashboard:
 
 ```bash
@@ -484,6 +501,10 @@ Use `prompt/` when you want:
 | `import-dashboard --dry-run --table` | Render dry-run import predictions as a table showing `uid`, destination state, action, destination folder path, and file |
 | `inspect-export --json` | Analyze a raw export directory and emit machine-readable structure summary including folder paths, panels, queries, datasource usage, datasource inventory, and mixed dashboards |
 | `inspect-export --table` | Analyze a raw export directory and render multi-section tables for summary, folder paths, datasource usage, datasource inventory, and mixed dashboards |
+| `inspect-export --report[=table|json]` | Emit one full per-query inspection report; default table output includes dashboard/panel context, datasource, extracted metrics/measurements/buckets, and the raw query text |
+| `inspect-export --report-columns ...` | With `--report` table or csv output, limit the query report to selected columns such as `dashboard_uid,panel_title,datasource,metrics,query` or add optional fields such as `datasource_uid` |
+| `inspect-export --report-filter-datasource ...` | With `--report`, include only rows whose datasource label exactly matches the requested value |
+| `inspect-export --report-filter-panel-id ...` | With `--report`, include only rows whose panel id exactly matches the requested value |
 | `--update-existing-only` | For `import-dashboard`, update only dashboards whose UID already exists in Grafana and skip missing dashboards instead of creating them |
 | `--ensure-folders` | For `import-dashboard`, read `raw/folders.json` and create any missing destination folder chain before importing dashboards |
 | `list-data-sources --table|--csv|--json` | List live Grafana data sources in human-readable or machine-readable output |
@@ -525,6 +546,12 @@ For dashboard export:
 - `inspect-export` analyzes a raw export directory offline and summarizes dashboard count, folder paths, panels, queries, datasource usage, datasource inventory, and mixed-datasource dashboards
 - `inspect-export --json` emits the same analysis as one JSON document for scripts or CI checks
 - `inspect-export --table` renders the same analysis as multiple tables for summary, folder paths, datasource usage, datasource inventory, and mixed dashboards
+- `inspect-export --report` emits one row per query target with dashboard uid/title, folder path, panel id/title/type, datasource, query field, extracted metrics/measurements/buckets, and the raw query text
+- `inspect-export --report json` emits the same per-query inspection model as one machine-readable JSON document, including `datasourceUid` when the raw export carries a concrete datasource uid
+- `inspect-export --report-columns dashboard_uid,panel_title,datasource,metrics,query` trims the table report down to the columns you care about most
+- `inspect-export --report-columns dashboard_uid,panel_id,datasource_uid,datasource,query` opts `datasource_uid` into table or csv output without widening the default report
+- `inspect-export --report-filter-datasource <label>` narrows table or JSON report output to one datasource label, which is useful when checking migration leftovers or datasource retirement impact
+- `inspect-export --report-filter-panel-id <id>` narrows table or JSON report output to one panel id when one dashboard contains many panels and you only want one panel's queries
 - `inspect-export --table --no-header` suppresses each section's header row when you need compact copy/paste output
 
 For datasource listing:
