@@ -46,6 +46,16 @@
 
 ### Next
 
+- add basic quality gates for Python and Rust, including test execution plus formatter/lint/static-check coverage where the toolchain is practical
+- split the oversized Python dashboard CLI orchestration paths into smaller helpers so export/import logic is easier to change safely
+- split the oversized Rust dashboard orchestration paths further so live/export/import/inspect flows do not keep accreting in one module
+- consolidate duplicated Python auth resolution logic across dashboard, alert, and access CLIs into shared helpers to reduce behavior drift
+- reduce Python/Rust inspect-export and inspect-live drift by keeping one stable summary/report schema, shared filters, and synchronized help/examples
+- reduce repeated live Grafana lookups during dashboard import and dry-run paths so large imports do not multiply API round-trips per dashboard
+- add a first-class datasource resource CLI surface beyond dashboard `list-data-sources`, including scoped `list`, `export`, `import`, and `diff` workflows
+- define a datasource import/export contract that strips server-managed fields, handles secure settings safely, and keeps Python/Rust payload normalization aligned
+- add datasource import strategies that match the dashboard workflows: create-only, create-or-update, and update-only/skip-missing
+- add cross-language datasource fixtures that cover Prometheus, Loki, InfluxDB, and mixed auth/secret-handling cases so Python and Rust stay behaviorally aligned
 - `team delete`
 - `group` alias for `team`
 - `service-account delete`
@@ -53,8 +63,15 @@
 - dashboard `prompt` export should surface the original datasource name in Grafana web-import prompts, not only the datasource type label
 - dashboard `prompt` export should align `__requires` names and versions with Grafana external export where possible
 - dashboard `prompt` export should add broader mixed-type and same-type datasource validation coverage beyond the current Prometheus/Loki cases
+- add a broader import dependency preflight that checks datasource existence, plugin availability, and alert/contact references before mutating target Grafana
+- extend dashboard offline inspection from counts and datasource usage into richer dependency analysis, including per-query extracted metrics/buckets/measurements where the datasource format is understood
+- refactor query report extraction behind datasource-type-specific analyzers so Prometheus, Loki, Flux/Influx, SQL, and future datasource families can evolve independently without bloating one generic parser path
+- extend query report extraction for Loki-style log queries so inspection can report stream selectors, label matchers, pipeline stages, filters, and range/aggregation functions instead of leaving Loki queries as empty `metrics`
+- add report modes for datasource usage, orphaned datasource detection, and dashboard-to-datasource dependency summaries that can feed governance and cleanup work
+- add an export package/bundle workflow that can snapshot dashboards, alerting resources, datasource inventory, and metadata as one portable migration artifact
 - gradually replace ad hoc dashboard and alert datasource reference maps with typed structs where the shape is stable enough to justify it
 - extract repeated dashboard and alert fallback strings into shared constants where they still appear in multiple places
+- clean repo workflow noise by keeping local scratch files, temp exports, and ad hoc notes out of normal review/commit paths
 - evaluate streaming or lower-memory dashboard listing/export paths only if large-instance validation shows the current full-materialization approach is a real bottleneck
 - evaluate semantic alert diff normalization for equivalent values such as duration aliases after the current structural diff behavior is otherwise stable
 
@@ -155,9 +172,20 @@ Rules to keep:
 
 ## Priority Order
 
-1. `team delete`
-2. `service-account delete`
-3. `service-account token delete`
-4. `group` alias
-5. typed datasource reference structs in the Rust dashboard and alert paths
-6. semantic alert diff normalization for equivalent values
+1. add basic quality gates for Python and Rust
+2. split Python dashboard import/export/inspect orchestration into smaller helpers
+3. split Rust dashboard live/export/import/inspect orchestration into smaller modules
+4. refactor query report extraction behind datasource-type-specific analyzers
+5. add first-class datasource `list`/`export`/`import`/`diff` workflows plus a stable import/export contract
+6. add broader import dependency preflight for datasources/plugins/alert references
+7. reduce repeated dashboard import lookup calls on live Grafana
+8. extend inspection into richer dependency analysis and datasource usage/orphan reports
+9. `team delete`
+10. `service-account delete`
+11. `service-account token delete`
+12. consolidate Python auth resolution into shared helpers
+13. `group` alias
+14. typed datasource reference structs in the Rust dashboard and alert paths
+15. clean repo workflow noise and local scratch artifacts
+16. export package/bundle workflow
+17. semantic alert diff normalization for equivalent values
