@@ -22,6 +22,12 @@ EXPORT_WORKFLOW_MODULE_PATH = (
 EXPORT_INVENTORY_MODULE_PATH = (
     REPO_ROOT / "grafana_utils" / "dashboards" / "export_inventory.py"
 )
+FOLDER_SUPPORT_MODULE_PATH = (
+    REPO_ROOT / "grafana_utils" / "dashboards" / "folder_support.py"
+)
+IMPORT_SUPPORT_MODULE_PATH = (
+    REPO_ROOT / "grafana_utils" / "dashboards" / "import_support.py"
+)
 IMPORT_WORKFLOW_MODULE_PATH = (
     REPO_ROOT / "grafana_utils" / "dashboards" / "import_workflow.py"
 )
@@ -153,6 +159,24 @@ class ExporterTests(unittest.TestCase):
         ast.parse(
             source,
             filename=str(EXPORT_INVENTORY_MODULE_PATH),
+            feature_version=(3, 6),
+        )
+
+    def test_dashboard_folder_support_module_parses_as_python36_syntax(self):
+        source = FOLDER_SUPPORT_MODULE_PATH.read_text(encoding="utf-8")
+
+        ast.parse(
+            source,
+            filename=str(FOLDER_SUPPORT_MODULE_PATH),
+            feature_version=(3, 6),
+        )
+
+    def test_dashboard_import_support_module_parses_as_python36_syntax(self):
+        source = IMPORT_SUPPORT_MODULE_PATH.read_text(encoding="utf-8")
+
+        ast.parse(
+            source,
+            filename=str(IMPORT_SUPPORT_MODULE_PATH),
             feature_version=(3, 6),
         )
 

@@ -1,5 +1,21 @@
 # ai-changes.md
 
+## 2026-03-13 - Split Python Dashboard Folder Support Helpers
+- Summary: Extracted the remaining Python dashboard folder inventory and import-folder helper block out of `grafana_utils/dashboard_cli.py` into `grafana_utils/dashboards/folder_support.py`. The new module owns folder inventory record building, folder inventory collection/loading, folder ensure/inspect helpers, export-inventory lookup wrappers, live folder status resolution, and dashboard import folder-path resolution, while `dashboard_cli.py` now keeps re-exported facade names for the existing tests and workflow dependency wiring.
+- Tests: Added focused Python 3.6 syntax coverage for the new `grafana_utils/dashboards/folder_support.py` module and the previously extracted `grafana_utils/dashboards/import_support.py` module, then revalidated the existing dashboard CLI suite against the preserved `grafana_utils.dashboard_cli` helper surface.
+- Test Run: `python3 -m unittest -v tests/test_python_dashboard_cli.py`
+- Validation: Verified the reduced dashboard facade still wires the same helper names into export/import/inspection flows, kept Rust untouched, and aligned the remaining Python folder-support ownership more closely with the existing Rust dashboard split direction.
+- Impact: `grafana_utils/dashboard_cli.py`, `grafana_utils/dashboards/folder_support.py`, `tests/test_python_dashboard_cli.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low. This is intended to be behavior-preserving, but future folder inventory and import-folder changes should stay in `grafana_utils/dashboards/folder_support.py` so the top-level dashboard facade does not re-accumulate mixed responsibilities.
+
+## 2026-03-13 - Split Python Dashboard Import Diff Helpers
+- Summary: Extracted the Python dashboard import/diff helper cluster out of `grafana_utils/dashboard_cli.py` into `grafana_utils/dashboards/import_support.py`. The new module owns dashboard JSON loading, wrapped/plain dashboard extraction, import payload normalization, export-manifest validation wrappers, import dry-run renderers, and diff comparison helpers, while `dashboard_cli.py` now stays as the stable facade and re-exports the existing helper names for tests and callers.
+- Tests: Reused the existing focused dashboard CLI suite that exercises the preserved `grafana_utils.dashboard_cli` helper surface for import payloads, manifest validation, dry-run rendering, and diff behavior.
+- Test Run: `python3 -m unittest -v tests/test_python_dashboard_cli.py`
+- Validation: Verified both refactored Python files compile, dropped the duplicate local `build_preserved_web_import_document()` implementation in favor of the existing transformer helper, and kept the dashboard CLI facade wired to the same import workflow dependency contract.
+- Impact: `grafana_utils/dashboard_cli.py`, `grafana_utils/dashboards/import_support.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low. This is intended to be behavior-preserving, but future import/diff changes should keep `grafana_utils/dashboards/import_support.py` as the ownership boundary so helper logic does not drift back into the top-level dashboard facade.
+
 ## 2026-03-13 - Add Datasource Inventory CLI
 - Summary: Added a new Python `grafana-utils datasource` surface with `list` and `export` subcommands while preserving `grafana-utils dashboard list-data-sources` for compatibility. The new export path writes a minimal explicit datasource contract rooted at `datasources.json`, `index.json`, and `export-metadata.json`, and normalizes each datasource record to include `uid`, `name`, `type`, `access`, `url`, `isDefault`, `org`, and `orgId`.
 - Tests: Added a focused Python datasource CLI suite covering parser behavior, default list rendering, and export/dry-run contract output, and extended the unified CLI tests to cover datasource dispatch and help text.

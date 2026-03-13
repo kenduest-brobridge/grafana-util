@@ -1,5 +1,19 @@
 # ai-status.md
 
+## 2026-03-13 - Task: Split Python Dashboard Folder Support Helpers
+- State: Done
+- Scope: `grafana_utils/dashboard_cli.py`, `grafana_utils/dashboards/folder_support.py`, `tests/test_python_dashboard_cli.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: `grafana_utils/dashboard_cli.py` had already shed listing, import/diff helpers, and workflow bodies, but it still kept the remaining folder inventory collection, live folder status checks, export-manifest wrapper loads, and import-folder path resolution logic inline. That left one large folder-oriented helper block in the facade instead of behind a focused Python module matching the Rust split direction.
+- Current Update: Extracted the folder inventory and import-folder helper cluster into `grafana_utils/dashboards/folder_support.py` and rewired `grafana_utils/dashboard_cli.py` to import and re-export the stable helper names used by tests and workflows. Added Python 3.6 syntax coverage for both extracted helper modules so the reduced facade and new helper files stay parseable under the repo's compatibility target.
+- Result: The Python dashboard facade now carries less folder-specific plumbing, helper ownership is closer to the Rust dashboard split without changing Rust itself, and the existing `grafana_utils.dashboard_cli` helper surface remains behavior-compatible for callers and tests.
+
+## 2026-03-13 - Task: Split Python Dashboard Import Diff Helpers
+- State: Done
+- Scope: `grafana_utils/dashboard_cli.py`, `grafana_utils/dashboards/import_support.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: `grafana_utils/dashboard_cli.py` had already moved high-level import orchestration into `grafana_utils/dashboards/import_workflow.py`, but the facade still owned the low-level import payload parsing, export-manifest validation wrappers, dry-run renderers, and diff comparison helpers in one large inline block. That kept import/diff-specific logic mixed into the top-level dashboard CLI module even after earlier workflow and listing splits.
+- Current Update: Extracted the import/diff helper cluster into `grafana_utils/dashboards/import_support.py` and rewired `grafana_utils/dashboard_cli.py` to import and re-export the stable helper surface used by the CLI workflows and tests. The refactor also drops the duplicate local `build_preserved_web_import_document()` implementation in favor of the existing transformer helper.
+- Result: The Python dashboard facade carries less import/diff plumbing, helper ownership is more explicit for future dashboard complexity reduction work, and the public `grafana_utils.dashboard_cli` helper surface remains behavior-compatible for tests and callers.
+
 ## 2026-03-13 - Task: Split Python Dashboard Listing Helpers
 - State: Done
 - Scope: `grafana_utils/dashboard_cli.py`, `grafana_utils/dashboards/listing.py`, `tests/test_python_dashboard_cli.py`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
