@@ -42,6 +42,10 @@ INSPECTION_SUMMARY_MODULE_PATH = (
     REPO_ROOT / "grafana_utils" / "dashboards" / "inspection_summary.py"
 )
 LISTING_MODULE_PATH = REPO_ROOT / "grafana_utils" / "dashboards" / "listing.py"
+OUTPUT_SUPPORT_MODULE_PATH = (
+    REPO_ROOT / "grafana_utils" / "dashboards" / "output_support.py"
+)
+PROGRESS_MODULE_PATH = REPO_ROOT / "grafana_utils" / "dashboards" / "progress.py"
 TRANSFORMER_MODULE_PATH = REPO_ROOT / "grafana_utils" / "dashboards" / "transformer.py"
 WRAPPER_PATH = REPO_ROOT / "python" / "grafana-utils.py"
 if str(REPO_ROOT) not in sys.path:
@@ -226,6 +230,16 @@ class ExporterTests(unittest.TestCase):
         source = LISTING_MODULE_PATH.read_text(encoding="utf-8")
 
         ast.parse(source, filename=str(LISTING_MODULE_PATH), feature_version=(3, 6))
+
+    def test_dashboard_output_support_module_parses_as_python36_syntax(self):
+        source = OUTPUT_SUPPORT_MODULE_PATH.read_text(encoding="utf-8")
+
+        ast.parse(source, filename=str(OUTPUT_SUPPORT_MODULE_PATH), feature_version=(3, 6))
+
+    def test_dashboard_progress_module_parses_as_python36_syntax(self):
+        source = PROGRESS_MODULE_PATH.read_text(encoding="utf-8")
+
+        ast.parse(source, filename=str(PROGRESS_MODULE_PATH), feature_version=(3, 6))
 
     def test_dashboard_transformer_module_parses_as_python36_syntax(self):
         source = TRANSFORMER_MODULE_PATH.read_text(encoding="utf-8")

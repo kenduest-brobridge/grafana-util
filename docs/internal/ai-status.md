@@ -1,5 +1,12 @@
 # ai-status.md
 
+## 2026-03-13 - Task: Split Python Dashboard Output Support Helpers
+- State: Done
+- Scope: `grafana_utils/dashboard_cli.py`, `grafana_utils/dashboards/output_support.py`, `tests/test_python_dashboard_cli.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: After the progress, folder-support, and import-support splits, `grafana_utils/dashboard_cli.py` still kept the remaining export/output path builders, file-write helpers, and export index/metadata builders inline. That left one cohesive export-support block in the facade even though the Rust-side structure already treats those responsibilities as helper-owned instead of top-level CLI-owned.
+- Current Update: Extracted the Python dashboard export/output helper cluster into `grafana_utils/dashboards/output_support.py` and rewired `grafana_utils/dashboard_cli.py` to import and re-export the stable helper names used by tests and workflow dependency bundles. Added Python 3.6 syntax coverage for the new output-support module in the dashboard CLI test suite.
+- Result: The Python dashboard facade is now closer to a parser/dispatch/dependency-bundle host, while output-path generation, export manifest/index construction, and JSON/dashboard file writes live behind a focused helper boundary.
+
 ## 2026-03-13 - Task: Split Python Dashboard Progress Helpers
 - State: Done
 - Scope: `grafana_utils/dashboard_cli.py`, `grafana_utils/dashboards/progress.py`, `tests/test_python_dashboard_cli.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

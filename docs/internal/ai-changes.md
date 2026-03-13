@@ -1,5 +1,13 @@
 # ai-changes.md
 
+## 2026-03-13 - Split Python Dashboard Output Support Helpers
+- Summary: Extracted the remaining Python dashboard export/output helper block out of `grafana_utils/dashboard_cli.py` into `grafana_utils/dashboards/output_support.py`. The new module owns path sanitizing, output-path and per-org export directory building, dashboard/JSON file writers, and export index/metadata builders, while `dashboard_cli.py` now keeps the stable facade names through thin constant-aware wrappers used by tests and workflow dependency bundles.
+- Tests: Added focused Python 3.6 syntax coverage for the new `grafana_utils/dashboards/output_support.py` module and revalidated the dashboard CLI suite against the preserved facade helper surface.
+- Test Run: `python3 -m unittest -v tests/test_python_dashboard_cli.py`
+- Validation: Kept Rust untouched, preserved the existing `grafana_utils.dashboard_cli` helper names, and aligned the remaining Python export-support ownership more closely with the Rust dashboard export helper direction.
+- Impact: `grafana_utils/dashboard_cli.py`, `grafana_utils/dashboards/output_support.py`, `tests/test_python_dashboard_cli.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low. This is intended to be behavior-preserving, but future output-path, write-policy, and export manifest/index changes should stay in `grafana_utils/dashboards/output_support.py` so `dashboard_cli.py` does not re-accumulate export plumbing.
+
 ## 2026-03-13 - Split Python Dashboard Progress Helpers
 - Summary: Extracted the remaining dashboard export/import progress rendering helpers out of `grafana_utils/dashboard_cli.py` into `grafana_utils/dashboards/progress.py`. The new module owns the verbose and progress-mode output formatting for export and import workflows, while the dashboard CLI facade keeps the stable helper names used by the workflow dependency bundles.
 - Tests: Added focused Python 3.6 syntax coverage for the new `grafana_utils/dashboards/progress.py` module and revalidated the dashboard CLI suite against the preserved facade wiring.

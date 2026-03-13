@@ -33,7 +33,6 @@ import argparse
 import base64
 import getpass
 import json
-import re
 import sys
 import tempfile
 from pathlib import Path
@@ -129,6 +128,19 @@ from .dashboards.listing import (
     render_data_source_table,
     resolve_dashboard_source_metadata as resolve_dashboard_source_metadata_from_listing,
     resolve_datasource_uid,
+)
+from .dashboards.output_support import (
+    build_all_orgs_output_dir as build_all_orgs_output_dir_from_output_support,
+    build_dashboard_index_item as build_dashboard_index_item_from_output_support,
+    build_export_metadata as build_export_metadata_from_output_support,
+    build_export_variant_dirs as build_export_variant_dirs_from_output_support,
+    build_output_path as build_output_path_from_output_support,
+    build_root_export_index as build_root_export_index_from_output_support,
+    build_variant_index,
+    ensure_dashboard_write_target as ensure_dashboard_write_target_from_output_support,
+    sanitize_path_component,
+    write_dashboard as write_dashboard_from_output_support,
+    write_json_document,
 )
 from .dashboards.progress import (
     print_dashboard_export_progress,
@@ -769,42 +781,38 @@ def env_value(name: str) -> Optional[str]:
     return value if value else None
 
 
-def sanitize_path_component(value: str) -> str:
-    normalized = re.sub(r"[^\w.\- ]+", "_", value.strip(), flags=re.UNICODE)
-    normalized = re.sub(r"\s+", "_", normalized)
-    normalized = re.sub(r"_+", "_", normalized)
-    normalized = normalized.strip("._")
-    return normalized or "untitled"
-
-
 def build_output_path(
     output_dir: Path,
     summary: Dict[str, Any],
     flat: bool,
 ) -> Path:
-    folder_title = summary.get("folderTitle") or DEFAULT_FOLDER_TITLE
-    folder_name = sanitize_path_component(folder_title)
-    title = sanitize_path_component(summary.get("title") or DEFAULT_DASHBOARD_TITLE)
-    uid = sanitize_path_component(summary.get("uid") or DEFAULT_UNKNOWN_UID)
-    filename = f"{title}__{uid}.json"
-    if flat:
-        return output_dir / filename
-    return output_dir / folder_name / filename
+    return build_output_path_from_output_support(
+        output_dir,
+        summary,
+        flat,
+        default_folder_title=DEFAULT_FOLDER_TITLE,
+        default_dashboard_title=DEFAULT_DASHBOARD_TITLE,
+        default_unknown_uid=DEFAULT_UNKNOWN_UID,
+    )
 
 
 def build_all_orgs_output_dir(
     output_dir: Path,
     org: Dict[str, Any],
 ) -> Path:
-    """Return one org-prefixed export directory for multi-org dashboard exports."""
-    org_id = sanitize_path_component(str(org.get("id") or DEFAULT_UNKNOWN_UID))
-    org_name = sanitize_path_component(str(org.get("name") or "org"))
-    return output_dir / ("org_%s_%s" % (org_id, org_name))
+    return build_all_orgs_output_dir_from_output_support(
+        output_dir,
+        org,
+        default_unknown_uid=DEFAULT_UNKNOWN_UID,
+    )
 
 
 def build_export_variant_dirs(output_dir: Path) -> Tuple[Path, Path]:
-    """Return the raw/ and prompt/ export directories for one dashboard export root."""
-    return output_dir / RAW_EXPORT_SUBDIR, output_dir / PROMPT_EXPORT_SUBDIR
+    return build_export_variant_dirs_from_output_support(
+        output_dir,
+        raw_export_subdir=RAW_EXPORT_SUBDIR,
+        prompt_export_subdir=PROMPT_EXPORT_SUBDIR,
+    )
 
 
 def write_dashboard(
@@ -812,11 +820,11 @@ def write_dashboard(
     output_path: Path,
     overwrite: bool,
 ) -> None:
-    """Write one dashboard JSON file, creating parent directories as needed."""
-    ensure_dashboard_write_target(output_path, overwrite)
-    output_path.write_text(
-        json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
+    write_dashboard_from_output_support(
+        payload,
+        output_path,
+        overwrite,
+        error_cls=GrafanaError,
     )
 
 
@@ -825,21 +833,11 @@ def ensure_dashboard_write_target(
     overwrite: bool,
     create_parents: bool = True,
 ) -> None:
-    """Create parent directories when needed and enforce the overwrite policy."""
-    if create_parents:
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-    if output_path.exists() and not overwrite:
-        raise GrafanaError(
-            f"Refusing to overwrite existing file: {output_path}. Use --overwrite."
-        )
-
-
-def write_json_document(payload: Any, output_path: Path) -> None:
-    """Write a JSON file with the formatting used by this repository."""
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(
-        json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
+    ensure_dashboard_write_target_from_output_support(
+        output_path,
+        overwrite,
+        error_cls=GrafanaError,
+        create_parents=create_parents,
     )
 
 
@@ -854,35 +852,12 @@ def discover_dashboard_files(import_dir: Path) -> List[Path]:
         DATASOURCE_INVENTORY_FILENAME,
     )
 def build_dashboard_index_item(summary: Dict[str, Any], uid: str) -> Dict[str, str]:
-    """Build the shared root index metadata for one exported dashboard."""
-    return {
-        "uid": uid,
-        "title": str(summary.get("title") or ""),
-        "folder": str(summary.get("folderTitle") or ""),
-        "org": str(summary.get("orgName") or DEFAULT_ORG_NAME),
-        "orgId": str(summary.get("orgId") or DEFAULT_ORG_ID),
-    }
-
-
-def build_variant_index(
-    index_items: List[Dict[str, str]],
-    path_key: str,
-    format_name: str,
-) -> List[Dict[str, str]]:
-    """Build one variant-specific index file from the shared root index items."""
-    return [
-        {
-            "uid": item["uid"],
-            "title": item["title"],
-            "folder": item["folder"],
-            "org": item["org"],
-            "orgId": item["orgId"],
-            "path": item[path_key],
-            "format": format_name,
-        }
-        for item in index_items
-        if path_key in item
-    ]
+    return build_dashboard_index_item_from_output_support(
+        summary,
+        uid,
+        default_org_name=DEFAULT_ORG_NAME,
+        default_org_id=DEFAULT_ORG_ID,
+    )
 
 
 def build_root_export_index(
@@ -890,16 +865,13 @@ def build_root_export_index(
     raw_index_path: Optional[Path],
     prompt_index_path: Optional[Path],
 ) -> Dict[str, Any]:
-    """Build the versioned root manifest for one dashboard export run."""
-    return {
-        "schemaVersion": TOOL_SCHEMA_VERSION,
-        "kind": ROOT_INDEX_KIND,
-        "items": index_items,
-        "variants": {
-            "raw": str(raw_index_path) if raw_index_path is not None else None,
-            "prompt": str(prompt_index_path) if prompt_index_path is not None else None,
-        },
-    }
+    return build_root_export_index_from_output_support(
+        index_items,
+        raw_index_path,
+        prompt_index_path,
+        tool_schema_version=TOOL_SCHEMA_VERSION,
+        root_index_kind=ROOT_INDEX_KIND,
+    )
 
 
 def build_export_metadata(
@@ -909,21 +881,15 @@ def build_export_metadata(
     folders_file: Optional[str] = None,
     datasources_file: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Describe one export directory in a small, versioned manifest."""
-    metadata = {
-        "schemaVersion": TOOL_SCHEMA_VERSION,
-        "kind": ROOT_INDEX_KIND,
-        "variant": variant,
-        "dashboardCount": dashboard_count,
-        "indexFile": "index.json",
-    }
-    if format_name:
-        metadata["format"] = format_name
-    if folders_file:
-        metadata["foldersFile"] = folders_file
-    if datasources_file:
-        metadata["datasourcesFile"] = datasources_file
-    return metadata
+    return build_export_metadata_from_output_support(
+        variant,
+        dashboard_count,
+        tool_schema_version=TOOL_SCHEMA_VERSION,
+        root_index_kind=ROOT_INDEX_KIND,
+        format_name=format_name,
+        folders_file=folders_file,
+        datasources_file=datasources_file,
+    )
 
 
 def load_folder_inventory(
