@@ -550,6 +550,28 @@ fn parse_cli_supports_inspect_export_report_tree_flag() {
 }
 
 #[test]
+fn parse_cli_supports_inspect_export_report_tree_table_flag() {
+    let args = parse_cli_from([
+        "grafana-utils",
+        "inspect-export",
+        "--import-dir",
+        "./dashboards/raw",
+        "--report",
+        "tree-table",
+    ]);
+
+    match args.command {
+        DashboardCommand::InspectExport(inspect_args) => {
+            assert_eq!(inspect_args.import_dir, Path::new("./dashboards/raw"));
+            assert_eq!(inspect_args.report, Some(InspectExportReportFormat::TreeTable));
+            assert!(!inspect_args.json);
+            assert!(!inspect_args.table);
+        }
+        _ => panic!("expected inspect-export command"),
+    }
+}
+
+#[test]
 fn parse_cli_supports_inspect_export_report_columns_and_filter() {
     let args = parse_cli_from([
         "grafana-utils",
@@ -609,12 +631,35 @@ fn parse_cli_supports_inspect_live_report_json_flag() {
 }
 
 #[test]
+fn parse_cli_supports_inspect_live_report_tree_table_flag() {
+    let args = parse_cli_from([
+        "grafana-utils",
+        "inspect-live",
+        "--url",
+        "https://grafana.example.com",
+        "--report",
+        "tree-table",
+    ]);
+
+    match args.command {
+        DashboardCommand::InspectLive(inspect_args) => {
+            assert_eq!(inspect_args.common.url, "https://grafana.example.com");
+            assert_eq!(inspect_args.report, Some(InspectExportReportFormat::TreeTable));
+            assert!(!inspect_args.json);
+            assert!(!inspect_args.table);
+        }
+        _ => panic!("expected inspect-live command"),
+    }
+}
+
+#[test]
 fn inspect_live_help_mentions_report_and_panel_filter_flags() {
     let help = render_dashboard_subcommand_help("inspect-live");
 
     assert!(help.contains("--report"));
     assert!(help.contains("--report-filter-panel-id"));
     assert!(help.contains("tree"));
+    assert!(help.contains("tree-table"));
 }
 
 #[test]
@@ -2898,7 +2943,7 @@ fn validate_inspect_export_report_args_rejects_report_columns_for_json_report() 
     let error = super::validate_inspect_export_report_args(&args).unwrap_err();
     assert!(error
         .to_string()
-        .contains("--report-columns is only supported with table or csv --report output"));
+        .contains("--report-columns is only supported with table, tree-table, or csv --report output"));
 }
 
 #[test]
@@ -2917,7 +2962,23 @@ fn validate_inspect_export_report_args_rejects_report_columns_for_tree_report() 
     let error = super::validate_inspect_export_report_args(&args).unwrap_err();
     assert!(error
         .to_string()
-        .contains("--report-columns is only supported with table or csv --report output"));
+        .contains("--report-columns is only supported with table, tree-table, or csv --report output"));
+}
+
+#[test]
+fn validate_inspect_export_report_args_allows_report_columns_for_tree_table_report() {
+    let args = InspectExportArgs {
+        import_dir: PathBuf::from("./dashboards/raw"),
+        json: false,
+        table: false,
+        report: Some(InspectExportReportFormat::TreeTable),
+        report_columns: vec!["panel_id".to_string(), "query".to_string()],
+        report_filter_datasource: None,
+        report_filter_panel_id: None,
+        no_header: false,
+    };
+
+    super::validate_inspect_export_report_args(&args).unwrap();
 }
 
 #[test]
@@ -2985,13 +3046,90 @@ fn render_grouped_query_report_displays_dashboard_panel_and_query_tree() {
 
     assert!(output.contains("Export inspection report: /tmp/raw"));
     assert!(output.contains("# Dashboard tree"));
-    assert!(output.contains("Dashboard: Main (uid=main, folder=General, panels=2, queries=2)"));
+    assert!(output.contains("[1] Dashboard: Main (uid=main, folder=General, panels=2, queries=2)"));
     assert!(output.contains("  Panel: CPU (id=7, type=timeseries, queries=1)"));
     assert!(output.contains("  Panel: Logs (id=8, type=logs, queries=1)"));
     assert!(output.contains("    Query: refId=A datasource=prom-main datasourceUid=prom-main field=expr metrics=up"));
     assert!(output.contains("      up"));
     assert!(output.contains("    Query: refId=B datasource=loki-main datasourceUid=loki-main field=expr"));
     assert!(output.contains("      {job=\"grafana\"}"));
+}
+
+#[test]
+fn render_grouped_query_table_report_displays_dashboard_sections_with_tables() {
+    let report = super::ExportInspectionQueryReport {
+        import_dir: "/tmp/raw".to_string(),
+        summary: super::QueryReportSummary {
+            dashboard_count: 1,
+            panel_count: 2,
+            query_count: 2,
+            report_row_count: 2,
+        },
+        queries: vec![
+            super::ExportInspectionQueryRow {
+                dashboard_uid: "main".to_string(),
+                dashboard_title: "Main".to_string(),
+                folder_path: "General".to_string(),
+                panel_id: "7".to_string(),
+                panel_title: "CPU".to_string(),
+                panel_type: "timeseries".to_string(),
+                ref_id: "A".to_string(),
+                datasource: "prom-main".to_string(),
+                datasource_uid: "prom-main".to_string(),
+                query_field: "expr".to_string(),
+                query_text: "up".to_string(),
+                metrics: vec!["up".to_string()],
+                measurements: Vec::new(),
+                buckets: Vec::new(),
+            },
+            super::ExportInspectionQueryRow {
+                dashboard_uid: "main".to_string(),
+                dashboard_title: "Main".to_string(),
+                folder_path: "General".to_string(),
+                panel_id: "8".to_string(),
+                panel_title: "Logs".to_string(),
+                panel_type: "logs".to_string(),
+                ref_id: "B".to_string(),
+                datasource: "loki-main".to_string(),
+                datasource_uid: "loki-main".to_string(),
+                query_field: "expr".to_string(),
+                query_text: "{job=\"grafana\"}".to_string(),
+                metrics: Vec::new(),
+                measurements: Vec::new(),
+                buckets: Vec::new(),
+            },
+        ],
+    };
+
+    let lines = super::render_grouped_query_table_report(
+        &report,
+        &[
+            "panel_id".to_string(),
+            "panel_title".to_string(),
+            "datasource".to_string(),
+            "query".to_string(),
+        ],
+        true,
+    );
+    let output = lines.join("\n");
+
+    assert!(output.contains("# Dashboard sections"));
+    assert!(output.contains("[1] Dashboard: Main (uid=main, folder=General, panels=2, queries=2)"));
+    assert!(output.contains("PANEL_ID  PANEL_TITLE  DATASOURCE  QUERY"));
+    assert!(output.contains("7         CPU          prom-main   up"));
+    assert!(output.contains("8         Logs         loki-main   {job=\"grafana\"}"));
+}
+
+#[test]
+fn render_grouped_query_table_report_uses_default_column_set_when_requested() {
+    let columns = super::resolve_report_column_ids(&[]).unwrap();
+    assert_eq!(
+        columns,
+        super::DEFAULT_REPORT_COLUMN_IDS
+            .iter()
+            .map(|value| value.to_string())
+            .collect::<Vec<String>>()
+    );
 }
 
 #[test]

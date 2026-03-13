@@ -415,19 +415,20 @@ def add_inspect_export_cli_args(parser: argparse.ArgumentParser) -> None:
         "--report",
         nargs="?",
         const="table",
-        choices=("table", "json", "csv", "tree"),
+        choices=("table", "json", "csv", "tree", "tree-table"),
         default=None,
         help=(
             "Render one full per-query inspection report. "
             "Use --report for flat table output, --report json for flat JSON, "
-            "--report csv for flat CSV, or --report tree for a dashboard/panel/query tree."
+            "--report csv for flat CSV, --report tree for a dashboard/panel/query tree, "
+            "or --report tree-table for per-dashboard tables."
         ),
     )
     parser.add_argument(
         "--report-columns",
         default=None,
         help=(
-            "With --report table or csv, render only these comma-separated report columns. "
+            "With --report table, csv, or tree-table, render only these comma-separated report columns. "
             "Supported values: %s."
             % ", ".join(
                 list(REPORT_COLUMN_ALIASES.keys())
@@ -471,7 +472,7 @@ def add_inspect_export_cli_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--no-header",
         action="store_true",
-        help="With --table, omit the per-section table header rows.",
+        help="With --table or table-like --report output, omit the per-section table header rows.",
     )
 
 
@@ -487,19 +488,20 @@ def add_inspect_live_cli_args(parser: argparse.ArgumentParser) -> None:
         "--report",
         nargs="?",
         const="table",
-        choices=("table", "csv", "json", "tree"),
+        choices=("table", "csv", "json", "tree", "tree-table"),
         default=None,
         help=(
             "Render one full per-query inspection report. "
             "Use --report for flat table output, --report csv for flat CSV, "
-            "--report json for flat JSON, or --report tree for a dashboard/panel/query tree."
+            "--report json for flat JSON, --report tree for a dashboard/panel/query tree, "
+            "or --report tree-table for per-dashboard tables."
         ),
     )
     parser.add_argument(
         "--report-columns",
         default=None,
         help=(
-            "With --report table or csv, render only these comma-separated report columns. "
+            "With --report table, csv, or tree-table, render only these comma-separated report columns. "
             "Supported values: %s."
             % ", ".join(
                 list(REPORT_COLUMN_ALIASES.keys())
@@ -543,7 +545,7 @@ def add_inspect_live_cli_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--no-header",
         action="store_true",
-        help="With --table, omit the per-section table header rows.",
+        help="With --table or table-like --report output, omit the per-section table header rows.",
     )
 
 
@@ -2637,6 +2639,7 @@ def _build_inspection_workflow_deps() -> Dict[str, Any]:
         "render_export_inspection_report_csv": render_export_inspection_report_csv,
         "render_export_inspection_report_tables": render_export_inspection_report_tables,
         "render_export_inspection_summary": render_export_inspection_summary,
+        "render_export_inspection_tree_tables": render_export_inspection_tree_tables,
         "render_export_inspection_tables": render_export_inspection_tables,
         "sys": sys,
         "tempfile": tempfile,
@@ -3217,10 +3220,11 @@ def render_export_inspection_grouped_report(
     if dashboard_records:
         lines.append("")
         lines.append("# Dashboard tree")
-        for dashboard in dashboard_records:
+        for index, dashboard in enumerate(dashboard_records, 1):
             lines.append(
-                "Dashboard %s title=%s path=%s panels=%s queries=%s"
+                "[%s] Dashboard %s title=%s path=%s panels=%s queries=%s"
                 % (
+                    index,
                     str(dashboard.get("dashboardUid") or DEFAULT_UNKNOWN_UID),
                     str(dashboard.get("dashboardTitle") or DEFAULT_DASHBOARD_TITLE),
                     str(dashboard.get("folderPath") or DEFAULT_FOLDER_TITLE),
@@ -3262,6 +3266,75 @@ def render_export_inspection_grouped_report(
                         )
                     )
                     lines.append("      %s" % str(query.get("query") or ""))
+    return lines
+
+
+def render_export_inspection_tree_tables(
+    document: Dict[str, Any],
+    import_dir: Path,
+    include_header: bool = True,
+    selected_columns: Optional[List[str]] = None,
+) -> List[str]:
+    """Render one grouped report as dashboard-first sections with per-dashboard tables."""
+    summary = document.get("summary") or {}
+    dashboard_records = list(document.get("dashboards") or [])
+    selected_columns = list(selected_columns or REPORT_COLUMN_HEADERS.keys())
+    lines = ["Export inspection tree-table report: %s" % import_dir, ""]
+
+    lines.append("# Summary")
+    lines.extend(
+        render_export_inspection_table_section(
+            ["METRIC", "VALUE"],
+            [
+                ["dashboard_count", str(int(summary.get("dashboardCount") or 0))],
+                ["panel_count", str(int(summary.get("panelCount") or 0))],
+                ["query_record_count", str(int(summary.get("queryRecordCount") or 0))],
+            ],
+            include_header=include_header,
+        )
+    )
+
+    if dashboard_records:
+        lines.append("")
+        lines.append("# Dashboard sections")
+        for index, dashboard in enumerate(dashboard_records, 1):
+            lines.append(
+                "[%s] Dashboard %s title=%s path=%s panels=%s queries=%s"
+                % (
+                    index,
+                    str(dashboard.get("dashboardUid") or DEFAULT_UNKNOWN_UID),
+                    str(dashboard.get("dashboardTitle") or DEFAULT_DASHBOARD_TITLE),
+                    str(dashboard.get("folderPath") or DEFAULT_FOLDER_TITLE),
+                    int(dashboard.get("panelCount") or 0),
+                    int(dashboard.get("queryCount") or 0),
+                )
+            )
+            query_records = []
+            for panel in list(dashboard.get("panels") or []):
+                for query in list(panel.get("queries") or []):
+                    query_records.append(query)
+            if query_records:
+                lines.extend(
+                    render_export_inspection_table_section(
+                        [
+                            SUPPORTED_REPORT_COLUMN_HEADERS[column_id]
+                            for column_id in selected_columns
+                        ],
+                        [
+                            [
+                                format_report_column_value(record, column_id)
+                                for column_id in selected_columns
+                            ]
+                            for record in query_records
+                        ],
+                        include_header=include_header,
+                    )
+                )
+            else:
+                lines.append("(no query rows)")
+            lines.append("")
+        if lines[-1] == "":
+            lines.pop()
     return lines
 
 

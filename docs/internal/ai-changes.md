@@ -1,5 +1,21 @@
 # ai-changes.md
 
+## 2026-03-13 - Refine Python Tree-Table Dashboard Inspect Report
+- Summary: Added Python support for `--report tree-table` in dashboard `inspect-export` and `inspect-live`, keeping the flat query-record report model as the canonical intermediate form and rendering dashboard-first sections with one query table per dashboard.
+- Tests: Added Python parser/help coverage plus focused `tree-table` rendering tests, including `--report-columns` behavior to confirm custom columns flow through to the per-dashboard tables.
+- Test Run: `python3 -m unittest -v tests/test_python_dashboard_cli.py`
+- Validation: Verified the focused dashboard Python suite passes and that `tree-table` works without changing the existing Python `table`, `csv`, `json`, or `tree` report behavior.
+- Impact: `grafana_utils/dashboard_cli.py`, `grafana_utils/dashboards/inspection_workflow.py`, `tests/test_python_dashboard_cli.py`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low. The change is additive and continues to reuse the existing filtered flat query-record model, but future Python grouped renderers should keep sharing that model so table-like and tree-like views do not drift.
+
+## 2026-03-13 - Add Tree-Table Dashboard Inspect Report
+- Summary: Added a `--report tree-table` mode for dashboard `inspect-export` and `inspect-live` in both Python and Rust. The mode keeps the filtered flat query-record model as the canonical intermediate form, but renders one table per dashboard so operators can read grouped output without losing columns.
+- Tests: Added parser/help coverage plus focused grouped-table rendering tests, and widened the report-column validation path so `--report-columns` works with `tree-table`.
+- Test Run: `python3 -m unittest -v tests/test_python_dashboard_cli.py`; `cargo test dashboard --manifest-path rust/Cargo.toml --quiet`
+- Validation: Verified that Python and Rust help text both advertise `tree-table`, that grouped-table rendering works for dashboard-first report sections, and that existing `table`, `csv`, `json`, and `tree` report modes remain intact.
+- Impact: `grafana_utils/dashboard_cli.py`, `grafana_utils/dashboards/inspection_workflow.py`, `tests/test_python_dashboard_cli.py`, `rust/src/dashboard.rs`, `rust/src/dashboard_cli_defs.rs`, `rust/src/dashboard_inspect.rs`, `rust/src/dashboard_rust_tests.rs`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low. The change is additive and continues to route all grouped renderers through the same filtered query-record model, but future grouped output work should keep sharing that intermediate form so `tree`, `tree-table`, and flat report variants do not drift.
+
 ## 2026-03-13 - Add Tree Dashboard Inspect Report
 - Summary: Added a `--report tree` mode for dashboard `inspect-export` and `inspect-live` in both Python and Rust. The flat row-per-query report remains unchanged, but operators can now ask for the same filtered record set rendered as a dashboard -> panel -> query tree that is easier to read interactively.
 - Tests: Added parser/help coverage plus focused tree-report rendering tests, including a panel-id-filtered tree report case. Kept the existing flat report tests intact so the prior contract stays covered across both implementations.

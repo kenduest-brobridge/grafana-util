@@ -619,7 +619,7 @@ pub(crate) fn render_grouped_query_report(
     ));
     lines.push(String::new());
     lines.push("# Dashboard tree".to_string());
-    for dashboard in grouped {
+    for (index, dashboard) in grouped.into_iter().enumerate() {
         let panel_count = dashboard.panels.len();
         let query_count = dashboard
             .panels
@@ -627,7 +627,8 @@ pub(crate) fn render_grouped_query_report(
             .map(|panel| panel.queries.len())
             .sum::<usize>();
         lines.push(format!(
-            "Dashboard: {} (uid={}, folder={}, panels={}, queries={})",
+            "[{}] Dashboard: {} (uid={}, folder={}, panels={}, queries={})",
+            index + 1,
             dashboard.dashboard_title,
             dashboard.dashboard_uid,
             dashboard.folder_path,
@@ -671,6 +672,70 @@ pub(crate) fn render_grouped_query_report(
                 }
             }
         }
+    }
+    lines
+}
+
+pub(crate) fn render_grouped_query_table_report(
+    report: &ExportInspectionQueryReport,
+    column_ids: &[String],
+    include_header: bool,
+) -> Vec<String> {
+    let grouped = build_grouped_query_report(report);
+    let headers = column_ids
+        .iter()
+        .map(|column_id| report_column_header(column_id))
+        .collect::<Vec<&str>>();
+    let mut lines = Vec::new();
+    lines.push(format!(
+        "Export inspection tree-table report: {}",
+        report.import_dir
+    ));
+    lines.push(String::new());
+    lines.push("# Summary".to_string());
+    lines.push(format!(
+        "dashboards={} panels={} queries={} rows={}",
+        report.summary.dashboard_count,
+        report.summary.panel_count,
+        report.summary.query_count,
+        report.summary.report_row_count
+    ));
+    lines.push(String::new());
+    lines.push("# Dashboard sections".to_string());
+    for (index, dashboard) in grouped.into_iter().enumerate() {
+        let panel_count = dashboard.panels.len();
+        let query_count = dashboard
+            .panels
+            .iter()
+            .map(|panel| panel.queries.len())
+            .sum::<usize>();
+        lines.push(format!(
+            "[{}] Dashboard: {} (uid={}, folder={}, panels={}, queries={})",
+            index + 1,
+            dashboard.dashboard_title,
+            dashboard.dashboard_uid,
+            dashboard.folder_path,
+            panel_count,
+            query_count
+        ));
+        let rows = dashboard
+            .panels
+            .iter()
+            .flat_map(|panel| panel.queries.iter())
+            .map(|query| {
+                column_ids
+                    .iter()
+                    .map(|column_id| render_query_report_column(query, column_id))
+                    .collect::<Vec<String>>()
+            })
+            .collect::<Vec<Vec<String>>>();
+        for line in render_simple_table(&headers, &rows, include_header) {
+            lines.push(line);
+        }
+        lines.push(String::new());
+    }
+    while matches!(lines.last(), Some(last) if last.is_empty()) {
+        lines.pop();
     }
     lines
 }
@@ -746,7 +811,7 @@ pub(crate) fn validate_inspect_export_report_args(args: &InspectExportArgs) -> R
     ) && !args.report_columns.is_empty()
     {
         return Err(message(
-            "--report-columns is only supported with table or csv --report output.",
+            "--report-columns is only supported with table, tree-table, or csv --report output.",
         ));
     }
     let _ = resolve_report_column_ids(&args.report_columns)?;
@@ -924,6 +989,12 @@ pub(crate) fn analyze_export_dir(args: &InspectExportArgs) -> Result<usize> {
         }
 
         let column_ids = resolve_report_column_ids(&args.report_columns)?;
+        if report_format == InspectExportReportFormat::TreeTable {
+            for line in render_grouped_query_table_report(&report, &column_ids, !args.no_header) {
+                println!("{line}");
+            }
+            return Ok(report.summary.dashboard_count);
+        }
         let rows = report
             .queries
             .iter()

@@ -226,6 +226,7 @@ class ExporterTests(unittest.TestCase):
         self.assertIn("--url", help_text)
         self.assertIn("--page-size", help_text)
         self.assertIn("--report", help_text)
+        self.assertIn("tree-table", help_text)
         self.assertIn("tree", help_text)
         self.assertIn("--report-filter-panel-id", help_text)
 
@@ -453,6 +454,21 @@ class ExporterTests(unittest.TestCase):
         self.assertEqual(args.report_filter_datasource, "prom-main")
         self.assertEqual(args.report_filter_panel_id, "7")
 
+    def test_parse_args_supports_inspect_live_report_tree_table(self):
+        args = exporter.parse_args(
+            [
+                "inspect-live",
+                "--url",
+                "http://localhost:3000",
+                "--report",
+                "tree-table",
+            ]
+        )
+
+        self.assertEqual(args.command, "inspect-live")
+        self.assertEqual(args.url, "http://localhost:3000")
+        self.assertEqual(args.report, "tree-table")
+
     def test_parse_args_supports_inspect_export_report_table(self):
         args = exporter.parse_args(
             ["inspect-export", "--import-dir", "dashboards/raw", "--report"]
@@ -484,6 +500,14 @@ class ExporterTests(unittest.TestCase):
 
         self.assertEqual(args.command, "inspect-export")
         self.assertEqual(args.report, "tree")
+
+    def test_parse_args_supports_inspect_export_report_tree_table(self):
+        args = exporter.parse_args(
+            ["inspect-export", "--import-dir", "dashboards/raw", "--report", "tree-table"]
+        )
+
+        self.assertEqual(args.command, "inspect-export")
+        self.assertEqual(args.report, "tree-table")
 
     def test_parse_args_supports_inspect_export_report_columns_and_filter(self):
         args = exporter.parse_args(
@@ -1464,7 +1488,7 @@ class ExporterTests(unittest.TestCase):
             self.assertIn("Export inspection tree report:", output)
             self.assertIn("# Dashboard tree", output)
             self.assertIn(
-                "Dashboard infra-main title=Infra Main path=General panels=2 queries=2",
+                "[1] Dashboard infra-main title=Infra Main path=General panels=2 queries=2",
                 output,
             )
             self.assertIn(
@@ -1538,6 +1562,185 @@ class ExporterTests(unittest.TestCase):
             self.assertIn("Panel 7 title=CPU", output)
             self.assertNotIn("Panel 8 title=Logs", output)
             self.assertIn("Query A datasource=prom-main field=expr", output)
+
+    def test_inspect_export_renders_tree_table_query_report(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import_dir = Path(tmpdir)
+            exporter.write_json_document(
+                exporter.build_export_metadata(
+                    variant=exporter.RAW_EXPORT_SUBDIR,
+                    dashboard_count=1,
+                    format_name="grafana-web-import-preserve-uid",
+                    folders_file=exporter.FOLDER_INVENTORY_FILENAME,
+                ),
+                import_dir / exporter.EXPORT_METADATA_FILENAME,
+            )
+            exporter.write_json_document([], import_dir / exporter.FOLDER_INVENTORY_FILENAME)
+            exporter.write_json_document(
+                {
+                    "dashboard": {
+                        "id": None,
+                        "uid": "infra-main",
+                        "title": "Infra Main",
+                        "panels": [
+                            {
+                                "id": 7,
+                                "title": "CPU Usage",
+                                "type": "timeseries",
+                                "datasource": {"type": "prometheus", "uid": "prom-main"},
+                                "targets": [{"refId": "A", "expr": "up"}],
+                            },
+                            {
+                                "id": 8,
+                                "title": "Logs",
+                                "type": "logs",
+                                "datasource": {"type": "loki", "uid": "logs-main"},
+                                "targets": [{"refId": "B", "expr": '{job="grafana"}'}],
+                            },
+                        ],
+                    },
+                    "meta": {},
+                },
+                import_dir / "General" / "Infra_Main__infra-main.json",
+            )
+
+            args = exporter.parse_args(
+                ["inspect-export", "--import-dir", str(import_dir), "--report", "tree-table"]
+            )
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = exporter.inspect_export(args)
+
+            output = stdout.getvalue()
+            self.assertEqual(result, 0)
+            self.assertIn("Export inspection tree-table report:", output)
+            self.assertIn("# Dashboard sections", output)
+            self.assertIn(
+                "[1] Dashboard infra-main title=Infra Main path=General panels=2 queries=2",
+                output,
+            )
+            self.assertIn("DASHBOARD_UID", output)
+            self.assertIn("PANEL_ID", output)
+            self.assertIn("infra-main", output)
+            self.assertIn("CPU Usage", output)
+            self.assertIn('{job="grafana"}', output)
+
+    def test_inspect_export_renders_tree_table_query_report_with_selected_columns(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import_dir = Path(tmpdir)
+            exporter.write_json_document(
+                exporter.build_export_metadata(
+                    variant=exporter.RAW_EXPORT_SUBDIR,
+                    dashboard_count=1,
+                    format_name="grafana-web-import-preserve-uid",
+                    folders_file=exporter.FOLDER_INVENTORY_FILENAME,
+                ),
+                import_dir / exporter.EXPORT_METADATA_FILENAME,
+            )
+            exporter.write_json_document([], import_dir / exporter.FOLDER_INVENTORY_FILENAME)
+            exporter.write_json_document(
+                {
+                    "dashboard": {
+                        "id": None,
+                        "uid": "infra-main",
+                        "title": "Infra Main",
+                        "panels": [
+                            {
+                                "id": 7,
+                                "title": "CPU Usage",
+                                "type": "timeseries",
+                                "datasource": {"type": "prometheus", "uid": "prom-main"},
+                                "targets": [{"refId": "A", "expr": "up"}],
+                            }
+                        ],
+                    },
+                    "meta": {},
+                },
+                import_dir / "General" / "Infra_Main__infra-main.json",
+            )
+
+            args = exporter.parse_args(
+                [
+                    "inspect-export",
+                    "--import-dir",
+                    str(import_dir),
+                    "--report",
+                    "tree-table",
+                    "--report-columns",
+                    "panel_id,panel_title,datasource,query",
+                ]
+            )
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = exporter.inspect_export(args)
+
+            output = stdout.getvalue()
+            self.assertEqual(result, 0)
+            self.assertIn("PANEL_ID", output)
+            self.assertIn("PANEL_TITLE", output)
+            self.assertIn("DATASOURCE", output)
+            self.assertIn("QUERY", output)
+            self.assertNotIn("DASHBOARD_UID", output)
+            self.assertNotIn("QUERY_FIELD", output)
+
+    def test_inspect_export_renders_tree_table_query_report_without_headers(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import_dir = Path(tmpdir)
+            exporter.write_json_document(
+                exporter.build_export_metadata(
+                    variant=exporter.RAW_EXPORT_SUBDIR,
+                    dashboard_count=1,
+                    format_name="grafana-web-import-preserve-uid",
+                    folders_file=exporter.FOLDER_INVENTORY_FILENAME,
+                ),
+                import_dir / exporter.EXPORT_METADATA_FILENAME,
+            )
+            exporter.write_json_document([], import_dir / exporter.FOLDER_INVENTORY_FILENAME)
+            exporter.write_json_document(
+                {
+                    "dashboard": {
+                        "id": None,
+                        "uid": "infra-main",
+                        "title": "Infra Main",
+                        "panels": [
+                            {
+                                "id": 7,
+                                "title": "CPU Usage",
+                                "type": "timeseries",
+                                "datasource": {"type": "prometheus", "uid": "prom-main"},
+                                "targets": [{"refId": "A", "expr": "up"}],
+                            }
+                        ],
+                    },
+                    "meta": {},
+                },
+                import_dir / "General" / "Infra_Main__infra-main.json",
+            )
+
+            args = exporter.parse_args(
+                [
+                    "inspect-export",
+                    "--import-dir",
+                    str(import_dir),
+                    "--report",
+                    "tree-table",
+                    "--no-header",
+                    "--report-columns",
+                    "panel_id,query",
+                ]
+            )
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = exporter.inspect_export(args)
+
+            output = stdout.getvalue()
+            self.assertEqual(result, 0)
+            self.assertIn(
+                "[1] Dashboard infra-main title=Infra Main path=General panels=1 queries=1",
+                output,
+            )
+            self.assertIn("7         up", output)
+            self.assertNotIn("PANEL_ID", output)
 
     def test_inspect_export_renders_query_report_csv(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -2050,7 +2253,7 @@ class ExporterTests(unittest.TestCase):
 
         with self.assertRaisesRegex(
             exporter.GrafanaError,
-            "--no-header is only supported with --table or --report",
+            "--no-header is only supported with --table, --report table, --report csv, or --report tree-table",
         ):
             exporter.inspect_export(args)
 
@@ -2105,7 +2308,7 @@ class ExporterTests(unittest.TestCase):
 
         with self.assertRaisesRegex(
             exporter.GrafanaError,
-            "--report-columns is only supported with --report table or --report csv",
+            "--report-columns is only supported with --report table, --report csv, or --report tree-table",
         ):
             exporter.inspect_export(args)
 

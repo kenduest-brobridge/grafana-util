@@ -1,11 +1,25 @@
 # ai-status.md
 
+## 2026-03-13 - Task: Refine Python Tree-Table Dashboard Inspect Report
+- State: Done
+- Scope: `grafana_utils/dashboard_cli.py`, `grafana_utils/dashboards/inspection_workflow.py`, `tests/test_python_dashboard_cli.py`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The repo already had a `tree-table` trace entry, but this Python task specifically needed the Python CLI/parser/docs/tests to accept `tree-table`, honor `--report-columns`, and keep the existing flat and tree modes unchanged without touching Rust files.
+- Current Update: Added Python `tree-table` support to the `inspect-export` and `inspect-live` `--report` choices, allowed `--report-columns` for that mode, and rendered grouped dashboard-first sections with one per-dashboard query table using the filtered flat query-record model.
+- Result: Python operators can now use `--report tree-table` with either default or custom columns, while `table`, `csv`, `json`, and `tree` behavior remains intact. Validation passed with `python3 -m unittest -v tests/test_python_dashboard_cli.py`.
+
 ## 2026-03-13 - Task: Add Tree Dashboard Inspect Report
 - State: Done
 - Scope: `grafana_utils/dashboard_cli.py`, `grafana_utils/dashboards/inspection_workflow.py`, `tests/test_python_dashboard_cli.py`, `rust/src/dashboard.rs`, `rust/src/dashboard_cli_defs.rs`, `rust/src/dashboard_inspect.rs`, `rust/src/dashboard_rust_tests.rs`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
 - Baseline: Dashboard inspection could already emit either a high-level summary or a flat row-per-query report through `inspect-export --report` / `inspect-live --report`, but operators had to scan a wide flat table or JSON array when they wanted to read one dashboard at a time.
 - Current Update: Added a `--report tree` mode for both Python and Rust `inspect-export` and `inspect-live`. The new mode keeps the existing flat report model as the source of truth, applies the existing datasource and panel-id filters first, then renders the filtered records as a dashboard -> panel -> query tree without changing the existing flat `table`, `csv`, or `json` report contracts.
 - Result: Operators can now inspect dashboard exports or live dashboards in a hierarchy that mirrors how Grafana is read in practice, while existing flat report automation remains unchanged. Validation passed with `python3 -m unittest -v tests/test_python_dashboard_cli.py` and `cargo test dashboard --manifest-path rust/Cargo.toml --quiet`.
+
+## 2026-03-13 - Task: Add Tree-Table Dashboard Inspect Report
+- State: Done
+- Scope: `grafana_utils/dashboard_cli.py`, `grafana_utils/dashboards/inspection_workflow.py`, `tests/test_python_dashboard_cli.py`, `rust/src/dashboard.rs`, `rust/src/dashboard_cli_defs.rs`, `rust/src/dashboard_inspect.rs`, `rust/src/dashboard_rust_tests.rs`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: `--report tree` improved readability for dashboard-first inspection, but it intentionally rendered free-form text lines instead of preserving a columnar view. Operators who wanted dashboard-first grouping still had to switch back to the flat table when they needed aligned columns.
+- Current Update: Added `--report tree-table` for both Python and Rust `inspect-export` and `inspect-live`. The new mode keeps the same filtered flat query-record model as the source of truth, groups rows by dashboard, then renders one compact table per dashboard section. `--report-columns` now also applies to `tree-table`, and Python `--no-header` handling now treats `tree-table` as a supported table-like mode.
+- Result: Operators can inspect one dashboard at a time without giving up column alignment. Validation passed with `python3 -m unittest -v tests/test_python_dashboard_cli.py`, `cargo test dashboard --manifest-path rust/Cargo.toml --quiet`, `python3 python/grafana-utils.py dashboard inspect-export --help`, and `cargo run --manifest-path rust/Cargo.toml --quiet --bin grafana-utils -- dashboard inspect-export --help`.
 
 ## 2026-03-13 - Task: Add Basic Quality Gates
 - State: Done

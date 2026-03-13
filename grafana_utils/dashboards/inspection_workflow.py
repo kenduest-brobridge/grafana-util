@@ -105,15 +105,16 @@ def run_inspect_export(args, deps):
         raise grafana_error(
             "--report-filter-panel-id is only supported with --report."
         )
-    if report_columns is not None and report_format not in ("table", "csv"):
+    if report_columns is not None and report_format not in ("table", "csv", "tree-table"):
         raise grafana_error(
-            "--report-columns is only supported with --report table or --report csv."
+            "--report-columns is only supported with --report table, --report csv, or --report tree-table."
         )
     if getattr(args, "no_header", False) and not (
-        getattr(args, "table", False) or report_format == "table"
+        getattr(args, "table", False)
+        or report_format in ("table", "csv", "tree-table")
     ):
         raise grafana_error(
-            "--no-header is only supported with --table or --report for inspect-export."
+            "--no-header is only supported with --table, --report table, --report csv, or --report tree-table."
         )
     if report_format == "json":
         document = deps["filter_export_inspection_report_document"](
@@ -169,6 +170,22 @@ def run_inspect_export(args, deps):
         for line in deps["render_export_inspection_grouped_report"](
             document,
             import_dir,
+        ):
+            print(line)
+        return 0
+    if report_format == "tree-table":
+        document = deps["build_grouped_export_inspection_report_document"](
+            deps["filter_export_inspection_report_document"](
+                deps["build_export_inspection_report_document"](import_dir),
+                datasource_label=report_filter_datasource,
+                panel_id=report_filter_panel_id,
+            )
+        )
+        for line in deps["render_export_inspection_tree_tables"](
+            document,
+            import_dir,
+            include_header=not bool(getattr(args, "no_header", False)),
+            selected_columns=report_columns,
         ):
             print(line)
         return 0

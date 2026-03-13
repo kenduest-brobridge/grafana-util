@@ -274,6 +274,7 @@ pub enum InspectExportReportFormat {
     Csv,
     Json,
     Tree,
+    TreeTable,
 }
 
 #[derive(Debug, Clone, Args)]
@@ -305,13 +306,13 @@ pub struct InspectExportArgs {
         num_args = 0..=1,
         default_missing_value = "table",
         conflicts_with_all = ["json", "table"],
-        help = "Render a full inspection report. Defaults to flat per-query table output; use --report csv or --report json for machine-readable output, or --report tree for dashboard-first grouped text."
+        help = "Render a full inspection report. Defaults to flat per-query table output; use --report csv or --report json for machine-readable output, --report tree for dashboard-first grouped text, or --report tree-table for dashboard-first grouped tables."
     )]
     pub report: Option<InspectExportReportFormat>,
     #[arg(
         long,
         value_delimiter = ',',
-        help = "For --report table or csv output, limit the query report to the selected columns. Supported values: dashboard_uid, dashboard_title, folder_path, panel_id, panel_title, panel_type, ref_id, datasource, datasource_uid, query_field, metrics, measurements, buckets, query."
+        help = "For --report table, csv, or tree-table output, limit the query report to the selected columns. Supported values: dashboard_uid, dashboard_title, folder_path, panel_id, panel_title, panel_type, ref_id, datasource, datasource_uid, query_field, metrics, measurements, buckets, query."
     )]
     pub report_columns: Vec<String>,
     #[arg(
@@ -327,7 +328,7 @@ pub struct InspectExportArgs {
     #[arg(
         long,
         default_value_t = false,
-        help = "Do not print table headers when rendering the table summary or table report."
+        help = "Do not print table headers when rendering the table summary or table-like report output."
     )]
     pub no_header: bool,
 }
@@ -373,13 +374,13 @@ pub struct InspectLiveArgs {
         num_args = 0..=1,
         default_missing_value = "table",
         conflicts_with_all = ["json", "table"],
-        help = "Render a full inspection report. Defaults to flat per-query table output; use --report csv or --report json for alternate output, or --report tree for dashboard-first grouped text."
+        help = "Render a full inspection report. Defaults to flat per-query table output; use --report csv or --report json for alternate output, --report tree for dashboard-first grouped text, or --report tree-table for dashboard-first grouped tables."
     )]
     pub report: Option<InspectExportReportFormat>,
     #[arg(
         long,
         value_delimiter = ',',
-        help = "For --report table or csv output, limit the query report to the selected columns. Supported values: dashboard_uid, dashboard_title, folder_path, panel_id, panel_title, panel_type, ref_id, datasource, datasource_uid, query_field, metrics, measurements, buckets, query."
+        help = "For --report table, csv, or tree-table output, limit the query report to the selected columns. Supported values: dashboard_uid, dashboard_title, folder_path, panel_id, panel_title, panel_type, ref_id, datasource, datasource_uid, query_field, metrics, measurements, buckets, query."
     )]
     pub report_columns: Vec<String>,
     #[arg(
@@ -395,7 +396,7 @@ pub struct InspectLiveArgs {
     #[arg(
         long,
         default_value_t = false,
-        help = "Do not print headers when rendering table or csv inspection output."
+        help = "Do not print headers when rendering table, csv, or tree-table inspection output."
     )]
     pub no_header: bool,
 }
