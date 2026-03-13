@@ -16,6 +16,14 @@ mod dashboard_files;
 mod dashboard_import;
 #[path = "dashboard_inspect.rs"]
 mod dashboard_inspect;
+#[path = "dashboard_inspect_analyzer_flux.rs"]
+mod dashboard_inspect_analyzer_flux;
+#[path = "dashboard_inspect_analyzer_loki.rs"]
+mod dashboard_inspect_analyzer_loki;
+#[path = "dashboard_inspect_analyzer_prometheus.rs"]
+mod dashboard_inspect_analyzer_prometheus;
+#[path = "dashboard_inspect_analyzer_sql.rs"]
+mod dashboard_inspect_analyzer_sql;
 #[path = "dashboard_inspect_report.rs"]
 mod dashboard_inspect_report;
 #[path = "dashboard_list.rs"]
@@ -61,8 +69,11 @@ pub(crate) use dashboard_inspect::inspect_live_dashboards_with_request;
 #[cfg(test)]
 pub(crate) use dashboard_inspect::{
     apply_query_report_filters, build_export_inspection_query_report,
-    build_export_inspection_summary, render_csv, render_grouped_query_report,
-    render_grouped_query_table_report, validate_inspect_export_report_args,
+    build_export_inspection_summary, dispatch_query_analysis, render_csv,
+    render_grouped_query_report, render_grouped_query_table_report,
+    resolve_query_analyzer_family, validate_inspect_export_report_args, QueryAnalysis,
+    QueryExtractionContext, DATASOURCE_FAMILY_FLUX,
+    DATASOURCE_FAMILY_LOKI, DATASOURCE_FAMILY_PROMETHEUS, DATASOURCE_FAMILY_SQL,
 };
 pub(crate) use dashboard_inspect_report::{
     build_query_report, normalize_query_report, refresh_filtered_query_report_summary,

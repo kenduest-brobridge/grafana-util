@@ -10,6 +10,10 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use crate::common::{message, object_field, string_field, value_as_object, Result};
 
 use super::*;
+use super::dashboard_inspect_analyzer_flux;
+use super::dashboard_inspect_analyzer_loki;
+use super::dashboard_inspect_analyzer_prometheus;
+use super::dashboard_inspect_analyzer_sql;
 
 pub(crate) const DATASOURCE_FAMILY_PROMETHEUS: &str = "prometheus";
 pub(crate) const DATASOURCE_FAMILY_LOKI: &str = "loki";
@@ -304,11 +308,30 @@ pub(crate) fn resolve_query_analyzer_family(
 
 pub(crate) fn dispatch_query_analysis(context: &QueryExtractionContext<'_>) -> QueryAnalysis {
     match resolve_query_analyzer_family(context) {
-        DATASOURCE_FAMILY_PROMETHEUS => QueryAnalysis {
-            metrics: extract_prometheus_metric_names(context.query_text),
-            measurements: extract_query_measurements(context.target, context.query_text),
-            buckets: extract_query_buckets(context.target, context.query_text),
-        },
+        DATASOURCE_FAMILY_PROMETHEUS => dashboard_inspect_analyzer_prometheus::analyze_query(
+            context.panel,
+            context.target,
+            context.query_field,
+            context.query_text,
+        ),
+        DATASOURCE_FAMILY_LOKI => dashboard_inspect_analyzer_loki::analyze_query(
+            context.panel,
+            context.target,
+            context.query_field,
+            context.query_text,
+        ),
+        DATASOURCE_FAMILY_FLUX => dashboard_inspect_analyzer_flux::analyze_query(
+            context.panel,
+            context.target,
+            context.query_field,
+            context.query_text,
+        ),
+        DATASOURCE_FAMILY_SQL => dashboard_inspect_analyzer_sql::analyze_query(
+            context.panel,
+            context.target,
+            context.query_field,
+            context.query_text,
+        ),
         _ => QueryAnalysis {
             metrics: extract_metric_names(context.query_text),
             measurements: extract_query_measurements(context.target, context.query_text),
@@ -432,7 +455,7 @@ fn extract_metric_names(query_text: &str) -> Vec<String> {
     values.into_iter().collect()
 }
 
-fn extract_prometheus_metric_names(query_text: &str) -> Vec<String> {
+pub(crate) fn extract_prometheus_metric_names(query_text: &str) -> Vec<String> {
     if query_text.trim().is_empty() {
         return Vec::new();
     }
@@ -546,7 +569,10 @@ fn extract_prometheus_metric_names(query_text: &str) -> Vec<String> {
     values.into_iter().collect()
 }
 
-fn extract_query_measurements(target: &Map<String, Value>, query_text: &str) -> Vec<String> {
+pub(crate) fn extract_query_measurements(
+    target: &Map<String, Value>,
+    query_text: &str,
+) -> Vec<String> {
     let mut values = std::collections::BTreeSet::new();
     if let Some(measurement) = target.get("measurement").and_then(Value::as_str) {
         let trimmed = measurement.trim();
@@ -566,7 +592,7 @@ fn extract_query_measurements(target: &Map<String, Value>, query_text: &str) -> 
     values.into_iter().collect()
 }
 
-fn extract_query_buckets(target: &Map<String, Value>, query_text: &str) -> Vec<String> {
+pub(crate) fn extract_query_buckets(target: &Map<String, Value>, query_text: &str) -> Vec<String> {
     let mut values = std::collections::BTreeSet::new();
     if let Some(bucket) = target.get("bucket").and_then(Value::as_str) {
         let trimmed = bucket.trim();
@@ -583,7 +609,7 @@ fn extract_query_buckets(target: &Map<String, Value>, query_text: &str) -> Vec<S
     values.into_iter().collect()
 }
 
-fn extract_flux_pipeline_functions(query_text: &str) -> Vec<String> {
+pub(crate) fn extract_flux_pipeline_functions(query_text: &str) -> Vec<String> {
     let mut values = Vec::new();
     if let Some(value) = quoted_captures(query_text, r#"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*\("#)
         .into_iter()
@@ -632,7 +658,7 @@ fn normalize_sql_identifier(value: &str) -> String {
         .join(".")
 }
 
-fn extract_sql_source_references(query_text: &str) -> Vec<String> {
+pub(crate) fn extract_sql_source_references(query_text: &str) -> Vec<String> {
     let query_text = strip_sql_comments(query_text);
     if query_text.trim().is_empty() {
         return Vec::new();
@@ -657,7 +683,7 @@ fn extract_sql_source_references(query_text: &str) -> Vec<String> {
     values
 }
 
-fn extract_sql_query_shape_hints(query_text: &str) -> Vec<String> {
+pub(crate) fn extract_sql_query_shape_hints(query_text: &str) -> Vec<String> {
     let lowered = strip_sql_comments(query_text).to_ascii_lowercase();
     let patterns = [
         ("with", r"\bwith\b"),
