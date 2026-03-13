@@ -10,8 +10,9 @@ use super::{
     build_datasource_catalog, build_folder_path, build_http_client, build_http_client_for_org,
     datasource_type_alias, fetch_dashboard_with_request, fetch_folder_if_exists_with_request,
     is_builtin_datasource_ref, is_placeholder_string, list_dashboard_summaries_with_request,
-    list_datasources_with_request, lookup_datasource, resolve_datasource_type_alias, ListArgs,
-    ListDataSourcesArgs,
+    list_datasources_with_request, lookup_datasource, resolve_datasource_type_alias,
+    ListArgs, ListDataSourcesArgs, DEFAULT_DASHBOARD_TITLE, DEFAULT_FOLDER_TITLE,
+    DEFAULT_FOLDER_UID, DEFAULT_UNKNOWN_UID,
 };
 
 pub(crate) fn attach_dashboard_folder_paths_with_request<F>(
@@ -21,7 +22,6 @@ pub(crate) fn attach_dashboard_folder_paths_with_request<F>(
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
-    const DEFAULT_FOLDER_TITLE: &str = "General";
     let mut folder_paths = BTreeMap::new();
     for summary in summaries {
         let folder_uid = string_field(summary, "folderUid", "");
@@ -120,11 +120,11 @@ pub(crate) fn org_id_value(org: &Map<String, Value>) -> Result<i64> {
 
 #[cfg_attr(not(test), allow(dead_code))]
 pub(crate) fn format_dashboard_summary_line(summary: &Map<String, Value>) -> String {
-    let uid = string_field(summary, "uid", "unknown");
-    let folder_title = string_field(summary, "folderTitle", "General");
-    let folder_uid = string_field(summary, "folderUid", "general");
+    let uid = string_field(summary, "uid", DEFAULT_UNKNOWN_UID);
+    let folder_title = string_field(summary, "folderTitle", DEFAULT_FOLDER_TITLE);
+    let folder_uid = string_field(summary, "folderUid", DEFAULT_FOLDER_UID);
     let folder_path = string_field(summary, "folderPath", &folder_title);
-    let title = string_field(summary, "title", "dashboard");
+    let title = string_field(summary, "title", DEFAULT_DASHBOARD_TITLE);
     let mut line = format!(
         "uid={uid} name={title} folder={folder_title} folderUid={folder_uid} path={folder_path}"
     );
@@ -145,14 +145,14 @@ fn build_dashboard_summary_row(
     include_sources: bool,
 ) -> Vec<String> {
     let mut row = vec![
-        string_field(summary, "uid", "unknown"),
-        string_field(summary, "title", "dashboard"),
-        string_field(summary, "folderTitle", "General"),
-        string_field(summary, "folderUid", "general"),
+        string_field(summary, "uid", DEFAULT_UNKNOWN_UID),
+        string_field(summary, "title", DEFAULT_DASHBOARD_TITLE),
+        string_field(summary, "folderTitle", DEFAULT_FOLDER_TITLE),
+        string_field(summary, "folderUid", DEFAULT_FOLDER_UID),
         string_field(
             summary,
             "folderPath",
-            &string_field(summary, "folderTitle", "General"),
+            &string_field(summary, "folderTitle", DEFAULT_FOLDER_TITLE),
         ),
     ];
     if include_org {

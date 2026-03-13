@@ -13,17 +13,18 @@ use super::dashboard_list::{
 use super::{
     build_datasource_catalog, build_export_metadata, build_external_export_document,
     build_datasource_inventory_record, build_http_client, build_http_client_for_org,
-    build_preserved_web_import_document,
-    build_root_export_index, build_variant_index, fetch_dashboard_with_request,
-    list_dashboard_summaries_with_request, list_datasources_with_request, write_dashboard,
-    write_json_document, DATASOURCE_INVENTORY_FILENAME, ExportArgs,
-    EXPORT_METADATA_FILENAME, FOLDER_INVENTORY_FILENAME, PROMPT_EXPORT_SUBDIR, RAW_EXPORT_SUBDIR,
+    build_preserved_web_import_document, build_root_export_index, build_variant_index,
+    fetch_dashboard_with_request, list_dashboard_summaries_with_request,
+    list_datasources_with_request, write_dashboard, write_json_document,
+    DATASOURCE_INVENTORY_FILENAME, DEFAULT_DASHBOARD_TITLE, DEFAULT_FOLDER_TITLE,
+    DEFAULT_UNKNOWN_UID, ExportArgs, EXPORT_METADATA_FILENAME, FOLDER_INVENTORY_FILENAME,
+    PROMPT_EXPORT_SUBDIR, RAW_EXPORT_SUBDIR,
 };
 
 pub fn build_output_path(output_dir: &Path, summary: &Map<String, Value>, flat: bool) -> PathBuf {
-    let folder_title = string_field(summary, "folderTitle", "General");
-    let title = string_field(summary, "title", "dashboard");
-    let uid = string_field(summary, "uid", "unknown");
+    let folder_title = string_field(summary, "folderTitle", DEFAULT_FOLDER_TITLE);
+    let title = string_field(summary, "title", DEFAULT_DASHBOARD_TITLE);
+    let uid = string_field(summary, "uid", DEFAULT_UNKNOWN_UID);
     let file_name = format!(
         "{}__{}.json",
         sanitize_path_component(&title),
@@ -43,7 +44,7 @@ fn build_all_orgs_output_dir(output_dir: &Path, org: &Map<String, Value>) -> Pat
     let org_id = org
         .get("id")
         .map(|value| sanitize_path_component(&value.to_string()))
-        .unwrap_or_else(|| "unknown".to_string());
+        .unwrap_or_else(|| DEFAULT_UNKNOWN_UID.to_string());
     let org_name = sanitize_path_component(&string_field(org, "name", "org"));
     output_dir.join(format!("org_{org_id}_{org_name}"))
 }

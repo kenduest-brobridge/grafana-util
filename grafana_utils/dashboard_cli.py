@@ -1948,7 +1948,7 @@ def attach_dashboard_org(
     """Attach the current Grafana organization to each dashboard summary."""
     org = client.fetch_current_org()
     org_name = str(org.get("name") or DEFAULT_ORG_NAME)
-    org_id = str(org.get("id") or "1")
+    org_id = str(org.get("id") or DEFAULT_ORG_ID)
     enriched: List[Dict[str, Any]] = []
     for summary in summaries:
         item = dict(summary)
@@ -2100,7 +2100,7 @@ def build_datasource_inventory_record(
     record = build_data_source_record(datasource)
     record["access"] = str(datasource.get("access") or "")
     record["org"] = str(org.get("name") or DEFAULT_ORG_NAME)
-    record["orgId"] = str(org.get("id") or "1")
+    record["orgId"] = str(org.get("id") or DEFAULT_ORG_ID)
     return record
 
 
@@ -2888,7 +2888,7 @@ def import_dashboards(args: argparse.Namespace) -> int:
             import_dir,
             folder_inventory_lookup,
         )
-        uid = payload["dashboard"].get("uid") or "unknown"
+        uid = payload["dashboard"].get("uid") or DEFAULT_UNKNOWN_UID
         if args.dry_run:
             action = determine_dashboard_import_action(
                 client,

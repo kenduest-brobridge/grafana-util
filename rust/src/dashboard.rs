@@ -56,6 +56,12 @@ pub const DEFAULT_EXPORT_DIR: &str = "dashboards";
 pub const RAW_EXPORT_SUBDIR: &str = "raw";
 pub const PROMPT_EXPORT_SUBDIR: &str = "prompt";
 pub const DEFAULT_IMPORT_MESSAGE: &str = "Imported by grafana-utils";
+pub const DEFAULT_DASHBOARD_TITLE: &str = "dashboard";
+pub const DEFAULT_FOLDER_TITLE: &str = "General";
+pub const DEFAULT_FOLDER_UID: &str = "general";
+pub const DEFAULT_ORG_ID: &str = "1";
+pub const DEFAULT_ORG_NAME: &str = "Main Org.";
+pub const DEFAULT_UNKNOWN_UID: &str = "unknown";
 pub const EXPORT_METADATA_FILENAME: &str = "export-metadata.json";
 pub const TOOL_SCHEMA_VERSION: i64 = 1;
 pub const ROOT_INDEX_KIND: &str = "grafana-utils-dashboard-export-index";
@@ -449,16 +455,16 @@ fn write_json_document<T: Serialize>(payload: &T, output_path: &Path) -> Result<
 fn build_dashboard_index_item(summary: &Map<String, Value>, uid: &str) -> DashboardIndexItem {
     DashboardIndexItem {
         uid: uid.to_string(),
-        title: string_field(summary, "title", "dashboard"),
-        folder_title: string_field(summary, "folderTitle", "General"),
-        org: string_field(summary, "orgName", "Main Org."),
+        title: string_field(summary, "title", DEFAULT_DASHBOARD_TITLE),
+        folder_title: string_field(summary, "folderTitle", DEFAULT_FOLDER_TITLE),
+        org: string_field(summary, "orgName", DEFAULT_ORG_NAME),
         org_id: summary
             .get("orgId")
             .map(|value| match value {
                 Value::String(text) => text.clone(),
                 _ => value.to_string(),
             })
-            .unwrap_or_else(|| "1".to_string()),
+            .unwrap_or_else(|| DEFAULT_ORG_ID.to_string()),
         raw_path: None,
         prompt_path: None,
     }
@@ -598,7 +604,7 @@ where
                 Value::String(text) => text.clone(),
                 _ => value.to_string(),
             })
-            .unwrap_or_else(|| "1".to_string());
+            .unwrap_or_else(|| DEFAULT_ORG_ID.to_string());
         let key = format!("{org_id}:{folder_uid}");
         if seen.contains(&key) {
             continue;
@@ -607,7 +613,7 @@ where
         else {
             continue;
         };
-        let org = string_field(summary, "orgName", "Main Org.");
+        let org = string_field(summary, "orgName", DEFAULT_ORG_NAME);
         let mut parent_path = Vec::new();
         let mut previous_parent_uid = None;
         if let Some(parents) = folder.get("parents").and_then(Value::as_array) {
@@ -636,7 +642,7 @@ where
                 previous_parent_uid = Some(parent_uid);
             }
         }
-        let folder_title = string_field(&folder, "title", "General");
+        let folder_title = string_field(&folder, "title", DEFAULT_FOLDER_TITLE);
         parent_path.push(folder_title.clone());
         folders.push(FolderInventoryItem {
             uid: folder_uid.clone(),
@@ -676,14 +682,14 @@ pub(crate) fn build_datasource_inventory_record(
         } else {
             "false".to_string()
         },
-        org: string_field(org, "name", "Main Org."),
+        org: string_field(org, "name", DEFAULT_ORG_NAME),
         org_id: org
             .get("id")
             .map(|value| match value {
                 Value::String(text) => text.clone(),
                 _ => value.to_string(),
             })
-            .unwrap_or_else(|| "1".to_string()),
+            .unwrap_or_else(|| DEFAULT_ORG_ID.to_string()),
     }
 }
 
@@ -1213,7 +1219,7 @@ fn describe_import_action(action: &str) -> (&'static str, &str) {
         "would-update" => ("exists", "update"),
         "would-skip-missing" => ("missing", "skip-missing"),
         "would-fail-existing" => ("exists", "blocked-existing"),
-        _ => ("unknown", action),
+        _ => (DEFAULT_UNKNOWN_UID, action),
     }
 }
 
@@ -1233,8 +1239,8 @@ where
         .unwrap_or("")
         .trim()
         .to_string();
-    if folder_uid.is_empty() || folder_uid == "general" {
-        return Ok("General".to_string());
+    if folder_uid.is_empty() || folder_uid == DEFAULT_FOLDER_UID {
+        return Ok(DEFAULT_FOLDER_TITLE.to_string());
     }
     if let Some(folder) = fetch_folder_if_exists_with_request(&mut request_json, &folder_uid)? {
         let fallback_title = string_field(&folder, "title", &folder_uid);
@@ -1428,7 +1434,7 @@ fn resolve_export_folder_path(
         .and_then(|path| path.parent())
         .unwrap_or_else(|| Path::new(""));
     let folder_name = relative_parent.display().to_string();
-    if !folder_name.is_empty() && folder_name != "." && folder_name != "General" {
+    if !folder_name.is_empty() && folder_name != "." && folder_name != DEFAULT_FOLDER_TITLE {
         let matches = folders_by_uid
             .values()
             .filter(|item| item.title == folder_name)
@@ -1437,8 +1443,8 @@ fn resolve_export_folder_path(
             return matches[0].path.clone();
         }
     }
-    if folder_name.is_empty() || folder_name == "." || folder_name == "General" {
-        "General".to_string()
+    if folder_name.is_empty() || folder_name == "." || folder_name == DEFAULT_FOLDER_TITLE {
+        DEFAULT_FOLDER_TITLE.to_string()
     } else {
         folder_name
     }
@@ -1568,8 +1574,8 @@ fn build_export_inspection_summary(import_dir: &Path) -> Result<ExportInspection
         let document_object =
             value_as_object(&document, "Dashboard payload must be a JSON object.")?;
         let dashboard = extract_dashboard_object(document_object)?;
-        let uid = string_field(dashboard, "uid", "unknown");
-        let title = string_field(dashboard, "title", "dashboard");
+        let uid = string_field(dashboard, "uid", DEFAULT_UNKNOWN_UID);
+        let title = string_field(dashboard, "title", DEFAULT_DASHBOARD_TITLE);
         let folder_path =
             resolve_export_folder_path(document_object, dashboard_file, import_dir, &folders_by_uid);
         if !folder_counts.contains_key(&folder_path) {
@@ -1841,7 +1847,8 @@ pub(crate) fn format_import_progress_line(
     folder_path: Option<&str>,
 ) -> String {
     if dry_run {
-        let (destination, action_label) = describe_import_action(action.unwrap_or("unknown"));
+        let (destination, action_label) =
+            describe_import_action(action.unwrap_or(DEFAULT_UNKNOWN_UID));
         let mut line = format!(
             "Dry-run dashboard {current}/{total}: {dashboard_target} dest={destination} action={action_label}"
         );
@@ -1862,10 +1869,11 @@ pub(crate) fn format_import_verbose_line(
     folder_path: Option<&str>,
 ) -> String {
     if dry_run {
-        let (destination, action_label) = describe_import_action(action.unwrap_or("unknown"));
+        let (destination, action_label) =
+            describe_import_action(action.unwrap_or(DEFAULT_UNKNOWN_UID));
         let mut line = format!(
             "Dry-run import uid={} dest={} action={} file={}",
-            uid.unwrap_or("unknown"),
+            uid.unwrap_or(DEFAULT_UNKNOWN_UID),
             destination,
             action_label,
             dashboard_file.display()
@@ -1873,7 +1881,7 @@ pub(crate) fn format_import_verbose_line(
         if let Some(path) = folder_path.filter(|value| !value.is_empty()) {
             line = format!(
                 "Dry-run import uid={} dest={} action={} folderPath={} file={}",
-                uid.unwrap_or("unknown"),
+                uid.unwrap_or(DEFAULT_UNKNOWN_UID),
                 destination,
                 action_label,
                 path,
@@ -2037,12 +2045,12 @@ where
                 .get("dashboard")
                 .and_then(Value::as_object)
                 .ok_or_else(|| message("Dashboard import payload is missing dashboard."))?;
-            let uid = string_field(dashboard, "uid", "unknown");
+            let uid = string_field(dashboard, "uid", DEFAULT_UNKNOWN_UID);
             if args.table || args.json {
                 dry_run_records.push(build_import_dry_run_record(
                     dashboard_file,
                     &uid,
-                    action.unwrap_or("unknown"),
+                    action.unwrap_or(DEFAULT_UNKNOWN_UID),
                     &folder_path,
                 ));
             } else if args.verbose {
@@ -2052,7 +2060,7 @@ where
                         dashboard_file,
                         true,
                         Some(&uid),
-                        Some(action.unwrap_or("unknown")),
+                        Some(action.unwrap_or(DEFAULT_UNKNOWN_UID)),
                         Some(&folder_path),
                     )
                 );
@@ -2064,7 +2072,7 @@ where
                         total,
                         &uid,
                         true,
-                        Some(action.unwrap_or("unknown")),
+                        Some(action.unwrap_or(DEFAULT_UNKNOWN_UID)),
                         Some(&folder_path),
                     )
                 );
@@ -2078,7 +2086,7 @@ where
                 .get("dashboard")
                 .and_then(Value::as_object)
                 .ok_or_else(|| message("Dashboard import payload is missing dashboard."))?;
-            let uid = string_field(dashboard, "uid", "unknown");
+            let uid = string_field(dashboard, "uid", DEFAULT_UNKNOWN_UID);
             if action == Some("would-skip-missing") {
                 skipped_missing_count += 1;
                 if args.verbose {
