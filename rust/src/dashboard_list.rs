@@ -10,9 +10,9 @@ use super::{
     build_datasource_catalog, build_folder_path, build_http_client, build_http_client_for_org,
     datasource_type_alias, fetch_dashboard_with_request, fetch_folder_if_exists_with_request,
     is_builtin_datasource_ref, is_placeholder_string, list_dashboard_summaries_with_request,
-    list_datasources_with_request, lookup_datasource, resolve_datasource_type_alias,
-    ListArgs, ListDataSourcesArgs, DEFAULT_DASHBOARD_TITLE, DEFAULT_FOLDER_TITLE,
-    DEFAULT_FOLDER_UID, DEFAULT_UNKNOWN_UID,
+    list_datasources_with_request, lookup_datasource, resolve_datasource_type_alias, ListArgs,
+    ListDataSourcesArgs, DEFAULT_DASHBOARD_TITLE, DEFAULT_FOLDER_TITLE, DEFAULT_FOLDER_UID,
+    DEFAULT_UNKNOWN_UID,
 };
 
 pub(crate) fn attach_dashboard_folder_paths_with_request<F>(
@@ -489,8 +489,7 @@ fn resolve_datasource_source_name(
             if is_placeholder_string(text) {
                 return None;
             }
-            if let Some(datasource) =
-                lookup_datasource(datasource_catalog, Some(text), Some(text))
+            if let Some(datasource) = lookup_datasource(datasource_catalog, Some(text), Some(text))
             {
                 let name = string_field(&datasource, "name", text);
                 return Some(name);
@@ -501,7 +500,7 @@ fn resolve_datasource_source_name(
                         &datasource_catalog.by_uid,
                         &datasource_type,
                     )
-                        .or_else(|| Some(datasource_type_alias(&datasource_type).to_string()))
+                    .or_else(|| Some(datasource_type_alias(&datasource_type).to_string()))
                 })
                 .or_else(|| Some(text.to_string()))
         }
@@ -551,8 +550,8 @@ fn resolve_datasource_source_uid(
                 return None;
             }
             lookup_datasource(datasource_catalog, Some(text), Some(text))
-            .map(|datasource| string_field(&datasource, "uid", ""))
-            .filter(|uid| !uid.is_empty())
+                .map(|datasource| string_field(&datasource, "uid", ""))
+                .filter(|uid| !uid.is_empty())
         }
         Value::Object(object) => {
             let uid = object.get("uid").and_then(Value::as_str);

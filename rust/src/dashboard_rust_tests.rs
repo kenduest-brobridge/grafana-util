@@ -558,10 +558,7 @@ fn parse_cli_supports_inspect_export_report_columns_and_filter() {
                 inspect_args.report_filter_datasource,
                 Some("prom-main".to_string())
             );
-            assert_eq!(
-                inspect_args.report_filter_panel_id,
-                Some("7".to_string())
-            );
+            assert_eq!(inspect_args.report_filter_panel_id, Some("7".to_string()));
         }
         _ => panic!("expected inspect-export command"),
     }
@@ -2734,7 +2731,9 @@ fn build_export_inspection_query_report_extracts_metrics_measurements_and_bucket
 #[test]
 fn resolve_report_column_ids_keep_datasource_uid_optional() {
     let default_columns = super::resolve_report_column_ids(&[]).unwrap();
-    assert!(!default_columns.iter().any(|value| value == "datasource_uid"));
+    assert!(!default_columns
+        .iter()
+        .any(|value| value == "datasource_uid"));
 
     let selected = super::resolve_report_column_ids(&[
         "dashboard_uid".to_string(),
@@ -2779,11 +2778,9 @@ fn export_inspection_query_row_json_keeps_datasource_uid_field_when_empty() {
 #[test]
 fn resolve_report_column_ids_rejects_unknown_columns() {
     let error = super::resolve_report_column_ids(&["unknown".to_string()]).unwrap_err();
-    assert!(
-        error
-            .to_string()
-            .contains("Unsupported --report-columns value")
-    );
+    assert!(error
+        .to_string()
+        .contains("Unsupported --report-columns value"));
 }
 
 #[test]
@@ -2857,11 +2854,9 @@ fn validate_inspect_export_report_args_rejects_report_columns_without_report() {
     };
 
     let error = super::validate_inspect_export_report_args(&args).unwrap_err();
-    assert!(
-        error
-            .to_string()
-            .contains("--report-columns is only supported together with --report")
-    );
+    assert!(error
+        .to_string()
+        .contains("--report-columns is only supported together with --report"));
 }
 
 #[test]
@@ -2878,11 +2873,9 @@ fn validate_inspect_export_report_args_rejects_report_columns_for_json_report() 
     };
 
     let error = super::validate_inspect_export_report_args(&args).unwrap_err();
-    assert!(
-        error
-            .to_string()
-            .contains("--report-columns is only supported with table or csv --report output")
-    );
+    assert!(error
+        .to_string()
+        .contains("--report-columns is only supported with table or csv --report output"));
 }
 
 #[test]
@@ -2913,11 +2906,9 @@ fn validate_inspect_export_report_args_rejects_panel_filter_without_report() {
     };
 
     let error = super::validate_inspect_export_report_args(&args).unwrap_err();
-    assert!(
-        error
-            .to_string()
-            .contains("--report-filter-panel-id is only supported together with --report")
-    );
+    assert!(error
+        .to_string()
+        .contains("--report-filter-panel-id is only supported together with --report"));
 }
 
 #[test]
@@ -2940,63 +2931,66 @@ fn inspect_live_dashboards_with_request_reports_live_json_via_temp_raw_export() 
         |method, path, _params, _payload| {
             let method_name = method.to_string();
             match (method, path) {
-            (reqwest::Method::GET, "/api/org") => Ok(Some(json!({
-                "id": 1,
-                "name": "Main Org."
-            }))),
-            (reqwest::Method::GET, "/api/datasources") => Ok(Some(json!([
-                {
-                    "uid": "prom-main",
-                    "name": "Prometheus Main",
-                    "type": "prometheus",
-                    "access": "proxy",
-                    "url": "http://prometheus:9090",
-                    "isDefault": true
-                }
-            ]))),
-            (reqwest::Method::GET, "/api/search") => Ok(Some(json!([
-                {
-                    "uid": "cpu-main",
-                    "title": "CPU Main",
-                    "type": "dash-db",
-                    "folderUid": "general",
-                    "folderTitle": "General"
-                }
-            ]))),
-            (reqwest::Method::GET, "/api/folders/general") => Ok(Some(json!({
-                "uid": "general",
-                "title": "General"
-            }))),
-            (reqwest::Method::GET, "/api/dashboards/uid/cpu-main") => Ok(Some(json!({
-                "dashboard": {
-                    "id": 11,
-                    "uid": "cpu-main",
-                    "title": "CPU Main",
-                    "panels": [
-                        {
-                            "id": 7,
-                            "title": "CPU Query",
-                            "type": "timeseries",
-                            "datasource": {"uid": "prom-main", "type": "prometheus"},
-                            "targets": [
-                                {"refId": "A", "expr": "up"}
-                            ]
-                        },
-                        {
-                            "id": 8,
-                            "title": "Memory Query",
-                            "type": "timeseries",
-                            "datasource": {"uid": "prom-main", "type": "prometheus"},
-                            "targets": [
-                                {"refId": "A", "expr": "process_resident_memory_bytes"}
-                            ]
-                        }
-                    ]
-                },
-                "meta": {}
-            }))),
-            _ => Err(super::message(format!("unexpected request {method_name} {path}"))),
-        }},
+                (reqwest::Method::GET, "/api/org") => Ok(Some(json!({
+                    "id": 1,
+                    "name": "Main Org."
+                }))),
+                (reqwest::Method::GET, "/api/datasources") => Ok(Some(json!([
+                    {
+                        "uid": "prom-main",
+                        "name": "Prometheus Main",
+                        "type": "prometheus",
+                        "access": "proxy",
+                        "url": "http://prometheus:9090",
+                        "isDefault": true
+                    }
+                ]))),
+                (reqwest::Method::GET, "/api/search") => Ok(Some(json!([
+                    {
+                        "uid": "cpu-main",
+                        "title": "CPU Main",
+                        "type": "dash-db",
+                        "folderUid": "general",
+                        "folderTitle": "General"
+                    }
+                ]))),
+                (reqwest::Method::GET, "/api/folders/general") => Ok(Some(json!({
+                    "uid": "general",
+                    "title": "General"
+                }))),
+                (reqwest::Method::GET, "/api/dashboards/uid/cpu-main") => Ok(Some(json!({
+                    "dashboard": {
+                        "id": 11,
+                        "uid": "cpu-main",
+                        "title": "CPU Main",
+                        "panels": [
+                            {
+                                "id": 7,
+                                "title": "CPU Query",
+                                "type": "timeseries",
+                                "datasource": {"uid": "prom-main", "type": "prometheus"},
+                                "targets": [
+                                    {"refId": "A", "expr": "up"}
+                                ]
+                            },
+                            {
+                                "id": 8,
+                                "title": "Memory Query",
+                                "type": "timeseries",
+                                "datasource": {"uid": "prom-main", "type": "prometheus"},
+                                "targets": [
+                                    {"refId": "A", "expr": "process_resident_memory_bytes"}
+                                ]
+                            }
+                        ]
+                    },
+                    "meta": {}
+                }))),
+                _ => Err(super::message(format!(
+                    "unexpected request {method_name} {path}"
+                ))),
+            }
+        },
         &args,
     )
     .unwrap();

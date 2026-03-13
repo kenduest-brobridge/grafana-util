@@ -51,9 +51,7 @@ pub struct DatasourceCatalog {
 
 const DEFAULT_GENERATED_DATASOURCE_INPUT: &str = "DATASOURCE";
 
-pub(crate) fn build_datasource_catalog(
-    datasources: &[Map<String, Value>],
-) -> DatasourceCatalog {
+pub(crate) fn build_datasource_catalog(datasources: &[Map<String, Value>]) -> DatasourceCatalog {
     let mut by_uid = BTreeMap::new();
     let mut by_name = BTreeMap::new();
     for datasource in datasources {
@@ -489,12 +487,11 @@ fn prepare_templating_for_external_import(
         else {
             continue;
         };
-        let Some(resolved) = resolve_datasource_ref(
-            &Value::String(query.to_string()),
-            datasource_catalog,
-        )
-        .ok()
-        .flatten() else {
+        let Some(resolved) =
+            resolve_datasource_ref(&Value::String(query.to_string()), datasource_catalog)
+                .ok()
+                .flatten()
+        else {
             continue;
         };
         let variable_name = variable_object
@@ -534,7 +531,8 @@ fn replace_datasource_refs_in_dashboard(
     match node {
         Value::Object(object) => {
             if let Some(datasource_value) = object.get_mut("datasource") {
-                if let Some(resolved) = resolve_datasource_ref(datasource_value, datasource_catalog)?
+                if let Some(resolved) =
+                    resolve_datasource_ref(datasource_value, datasource_catalog)?
                 {
                     let mapping = ref_mapping.get(&resolved.key).ok_or_else(|| {
                         message(format!(
@@ -562,11 +560,7 @@ fn replace_datasource_refs_in_dashboard(
                     continue;
                 }
                 if let Some(value) = object.get_mut(&key) {
-                    replace_datasource_refs_in_dashboard(
-                        value,
-                        ref_mapping,
-                        datasource_catalog,
-                    )?;
+                    replace_datasource_refs_in_dashboard(value, ref_mapping, datasource_catalog)?;
                 }
             }
         }
