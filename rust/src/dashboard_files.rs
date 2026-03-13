@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use crate::common::{message, object_field, string_field, value_as_object, Result};
 
 use super::{
-    DatasourceInventoryItem, DashboardIndexItem, ExportMetadata, FolderInventoryItem,
+    DashboardIndexItem, DatasourceInventoryItem, ExportMetadata, FolderInventoryItem,
     RootExportIndex, RootExportVariants, VariantIndexEntry, DATASOURCE_INVENTORY_FILENAME,
     DEFAULT_DASHBOARD_TITLE, DEFAULT_FOLDER_TITLE, DEFAULT_ORG_ID, DEFAULT_ORG_NAME,
     EXPORT_METADATA_FILENAME, FOLDER_INVENTORY_FILENAME, PROMPT_EXPORT_SUBDIR, RAW_EXPORT_SUBDIR,

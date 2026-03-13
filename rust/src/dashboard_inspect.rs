@@ -9,11 +9,11 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::common::{message, object_field, string_field, value_as_object, Result};
 
-use super::*;
 use super::dashboard_inspect_analyzer_flux;
 use super::dashboard_inspect_analyzer_loki;
 use super::dashboard_inspect_analyzer_prometheus;
 use super::dashboard_inspect_analyzer_sql;
+use super::*;
 
 pub(crate) const DATASOURCE_FAMILY_PROMETHEUS: &str = "prometheus";
 pub(crate) const DATASOURCE_FAMILY_LOKI: &str = "loki";
@@ -21,21 +21,11 @@ pub(crate) const DATASOURCE_FAMILY_FLUX: &str = "flux";
 pub(crate) const DATASOURCE_FAMILY_SQL: &str = "sql";
 pub(crate) const DATASOURCE_FAMILY_UNKNOWN: &str = "unknown";
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub(crate) struct QueryAnalysis {
     pub(crate) metrics: Vec<String>,
     pub(crate) measurements: Vec<String>,
     pub(crate) buckets: Vec<String>,
-}
-
-impl Default for QueryAnalysis {
-    fn default() -> Self {
-        Self {
-            metrics: Vec::new(),
-            measurements: Vec::new(),
-            buckets: Vec::new(),
-        }
-    }
 }
 
 pub(crate) struct QueryExtractionContext<'a> {
@@ -264,12 +254,13 @@ fn summarize_datasource_inventory_usage(
     (reference_count, dashboards.len())
 }
 
-pub(crate) fn resolve_query_analyzer_family(
-    context: &QueryExtractionContext<'_>,
-) -> &'static str {
-    for reference in [context.target.get("datasource"), context.panel.get("datasource")]
-        .into_iter()
-        .flatten()
+pub(crate) fn resolve_query_analyzer_family(context: &QueryExtractionContext<'_>) -> &'static str {
+    for reference in [
+        context.target.get("datasource"),
+        context.panel.get("datasource"),
+    ]
+    .into_iter()
+    .flatten()
     {
         if let Some(datasource_type) = datasource_type_from_reference(reference) {
             match datasource_type.as_str() {
@@ -392,7 +383,15 @@ fn datasource_type_from_reference(reference: &Value) -> Option<String> {
 }
 
 pub(crate) fn extract_query_field_and_text(target: &Map<String, Value>) -> (String, String) {
-    for key in ["expr", "expression", "query", "logql", "rawSql", "sql", "rawQuery"] {
+    for key in [
+        "expr",
+        "expression",
+        "query",
+        "logql",
+        "rawSql",
+        "sql",
+        "rawQuery",
+    ] {
         if let Some(value) = target.get(key).and_then(Value::as_str) {
             let trimmed = value.trim();
             if !trimmed.is_empty() {
@@ -467,8 +466,7 @@ pub(crate) fn extract_prometheus_metric_names(query_text: &str) -> Vec<String> {
         .expect("invalid hard-coded promql vector matching regex");
     let group_modifier_regex = Regex::new(r"\b(?:group_left|group_right)\s*(?:\(\s*[^)]*\))?")
         .expect("invalid hard-coded promql group modifier regex");
-    let matcher_regex =
-        Regex::new(r"\{[^{}]*\}").expect("invalid hard-coded promql matcher regex");
+    let matcher_regex = Regex::new(r"\{[^{}]*\}").expect("invalid hard-coded promql matcher regex");
     let mut values = std::collections::BTreeSet::new();
     let reserved_words = [
         "and",
