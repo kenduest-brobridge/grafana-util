@@ -841,14 +841,18 @@ fn resolve_match(
     }
     if name_matches.len() == 1 {
         let item = name_matches[0];
+        let target_uid = string_field(item, "uid", "");
         return MatchResult {
             destination: "exists-name",
-            action: if replace_existing || update_existing_only {
+            action: if !record.uid.is_empty() && !target_uid.is_empty() && record.uid != target_uid
+            {
+                "would-fail-uid-mismatch"
+            } else if replace_existing || update_existing_only {
                 "would-update"
             } else {
                 "would-fail-existing"
             },
-            target_uid: string_field(item, "uid", ""),
+            target_uid,
             target_name: string_field(item, "name", ""),
             target_id: item.get("id").and_then(Value::as_i64),
         };

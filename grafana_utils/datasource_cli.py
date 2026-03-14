@@ -637,6 +637,15 @@ def determine_datasource_action(
     if state == "ambiguous":
         return "would-fail-ambiguous"
     if existing is not None:
+        existing_uid = str(existing.get("uid") or "")
+        incoming_uid = str(record.get("uid") or "")
+        if (
+            state == "exists-name"
+            and existing_uid
+            and incoming_uid
+            and existing_uid != incoming_uid
+        ):
+            return "would-fail-uid-mismatch"
         existing_type = str(existing.get("type") or "")
         incoming_type = str(record.get("type") or "")
         if existing_type and incoming_type and existing_type != incoming_type:
@@ -744,7 +753,12 @@ def render_import_dry_run_json(
                 item
                 for item in records
                 if item["action"]
-                in ("would-fail-existing", "would-fail-ambiguous", "would-fail-plugin-type-change")
+                in (
+                    "would-fail-existing",
+                    "would-fail-ambiguous",
+                    "would-fail-plugin-type-change",
+                    "would-fail-uid-mismatch",
+                )
             ]
         ),
     }
@@ -984,6 +998,7 @@ def import_datasources(args: argparse.Namespace) -> int:
             "would-fail-existing",
             "would-fail-ambiguous",
             "would-fail-plugin-type-change",
+            "would-fail-uid-mismatch",
         ):
             raise GrafanaError(
                 "Datasource import blocked for uid=%s name=%s action=%s"

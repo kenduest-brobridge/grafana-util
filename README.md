@@ -683,6 +683,7 @@ For datasource inventory:
 - `datasource import --org-id <ID>` switches the whole import run to one explicit destination org and requires Basic auth
 - `datasource import --require-matching-export-org` fails when the export's recorded `orgId` does not match the resolved target org for the run
 - `datasource import --replace-existing` updates existing destination datasources that match by `uid` and otherwise by exact `name`
+- `datasource import --replace-existing` still blocks same-name updates when the live datasource `uid` differs from the exported `uid`, so one datasource identity cannot silently overwrite another by name alone
 - `datasource import --update-existing-only` skips missing datasources and only updates matched destination datasources
 - `datasource import --dry-run --output-format text|table|json` is the new single-flag alternative to the old dry-run output flags
 - `datasource import --dry-run --table` renders predicted datasource import actions as a compact table and `--no-header` suppresses that header row

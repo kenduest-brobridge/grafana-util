@@ -1,5 +1,12 @@
 # ai-status.md
 
+## 2026-03-14 - Task: Block Datasource Name-Match UID Drift Updates
+- State: Done
+- Scope: `grafana_utils/datasource_cli.py`, `tests/test_python_datasource_cli.py`, `rust/src/datasource.rs`, `rust/src/datasource_rust_tests.rs`, `README.md`, `DEVELOPER.md`, `TODO.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Datasource import already blocked plugin-type changes and ambiguous matches, but `--replace-existing` still allowed updates that matched a live datasource only by exact `name` even when the exported `uid` and live `uid` disagreed. That left room for one datasource identity to overwrite another same-name datasource by mistake.
+- Current Update: Added a shared update-safety rule in Python and Rust that turns same-name matches with differing non-empty UIDs into an explicit blocked action instead of a normal update, and added focused tests that lock in the new `would-fail-uid-mismatch` behavior.
+- Result: Datasource import still allows normal UID matches and missing-datasource creates, but it no longer silently updates a same-name datasource when the underlying datasource identity has drifted.
+
 ## 2026-03-14 - Task: Add Prompt Token Auth Flags
 - State: Done
 - Scope: `grafana_utils/auth_staging.py`, `grafana_utils/dashboard_cli.py`, `grafana_utils/alert_cli.py`, `grafana_utils/access_cli.py`, `tests/test_python_dashboard_cli.py`, `tests/test_python_alert_cli.py`, `tests/test_python_access_cli.py`, `tests/test_python_auth_staging.py`, `rust/src/common.rs`, `rust/src/common_rust_tests.rs`, `rust/src/dashboard_cli_defs.rs`, `rust/src/dashboard_rust_tests.rs`, `rust/src/alert_cli_defs.rs`, `rust/src/alert_rust_tests.rs`, `rust/src/access_cli_defs.rs`, `rust/src/access_rust_tests.rs`, `rust/src/access_pending_delete.rs`, `README.md`, `README.zh-TW.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

@@ -1,5 +1,13 @@
 # ai-changes.md
 
+## 2026-03-14 - Block Datasource Name-Match UID Drift Updates
+- Summary: Tightened datasource update safety so `--replace-existing` no longer updates a live datasource by exact `name` when the exported datasource `uid` and live datasource `uid` disagree. Python and Rust now both classify that case as `would-fail-uid-mismatch` instead of a normal update, which keeps one datasource identity from silently overwriting another same-name datasource.
+- Tests: Added focused Python import coverage and Rust match-resolution coverage for same-name different-UID datasource updates.
+- Test Run: `python3 -m unittest -v tests/test_python_datasource_cli.py tests/test_python_datasource_diff.py`; `cargo test --manifest-path rust/Cargo.toml datasource --quiet`
+- Validation: Confirmed both runtimes still update exact UID matches and still allow create/skip flows as before, but now block same-name UID-drift updates even when `--replace-existing` is set.
+- Impact: `grafana_utils/datasource_cli.py`, `tests/test_python_datasource_cli.py`, `rust/src/datasource.rs`, `rust/src/datasource_rust_tests.rs`, `README.md`, `DEVELOPER.md`, `TODO.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low to moderate. This is an intentional safety tightening, so existing workflows that relied on same-name datasource replacement across UID drift will now fail until they align the destination UID or recreate the datasource instead of updating it in place.
+
 ## 2026-03-14 - Add Prompt Token Auth Flags
 - Summary: Added `--prompt-token` across the shared Python and Rust auth paths so manual CLI runs can enter a bearer token without echo instead of passing it directly on the command line. The new flag mirrors the existing `--prompt-password` ergonomics, stays mutually exclusive with explicit `--token`, and remains mutually exclusive with Basic-auth flags.
 - Tests: Added focused Python parser/auth tests and focused Rust parser/auth tests for prompt-token support, then reran the Python auth suites and Rust prompt-token coverage.

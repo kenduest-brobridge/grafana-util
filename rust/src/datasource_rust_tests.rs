@@ -127,6 +127,32 @@ fn resolve_match_allows_update_when_uid_exists_and_replace_existing_is_enabled()
 }
 
 #[test]
+fn resolve_match_blocks_name_match_when_uid_differs() {
+    let record = DatasourceImportRecord {
+        uid: "prom-export".to_string(),
+        name: "Prometheus Main".to_string(),
+        datasource_type: "prometheus".to_string(),
+        access: "proxy".to_string(),
+        url: "http://prometheus:9090".to_string(),
+        is_default: true,
+        org_id: "1".to_string(),
+    };
+    let live = vec![live_datasource(
+        9,
+        "prom-live",
+        "Prometheus Main",
+        "prometheus",
+    )];
+
+    let matching = resolve_match(&record, &live, true, false);
+
+    assert_eq!(matching.destination, "exists-name");
+    assert_eq!(matching.action, "would-fail-uid-mismatch");
+    assert_eq!(matching.target_uid, "prom-live");
+    assert_eq!(matching.target_id, Some(9));
+}
+
+#[test]
 fn render_import_table_can_omit_header() {
     let rows = vec![vec![
         "prom-main".to_string(),

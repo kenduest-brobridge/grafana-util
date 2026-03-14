@@ -615,6 +615,72 @@ class DatasourceCliTests(unittest.TestCase):
             self.assertEqual(scoped_client.imported_payloads, [])
             self.assertIn("Import mode: create-only", stdout.getvalue())
 
+    def test_import_datasources_rejects_name_match_with_different_uid(self):
+        args = datasource_cli.parse_args(
+            [
+                "import",
+                "--import-dir",
+                "ignored",
+                "--replace-existing",
+            ]
+        )
+        client = FakeDatasourceClient(
+            datasources=[
+                {
+                    "id": 9,
+                    "uid": "prom-live",
+                    "name": "Prometheus Main",
+                    "type": "prometheus",
+                    "access": "proxy",
+                    "url": "http://prometheus:9090",
+                    "isDefault": True,
+                }
+            ]
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args.import_dir = tmpdir
+            (Path(tmpdir) / datasource_cli.EXPORT_METADATA_FILENAME).write_text(
+                json.dumps(
+                    {
+                        "kind": datasource_cli.ROOT_INDEX_KIND,
+                        "schemaVersion": datasource_cli.TOOL_SCHEMA_VERSION,
+                        "variant": "root",
+                        "resource": "datasource",
+                        "datasourceCount": 1,
+                        "datasourcesFile": datasource_cli.DATASOURCE_EXPORT_FILENAME,
+                        "indexFile": "index.json",
+                        "format": "grafana-datasource-inventory-v1",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (Path(tmpdir) / datasource_cli.DATASOURCE_EXPORT_FILENAME).write_text(
+                json.dumps(
+                    [
+                        {
+                            "uid": "prom-export",
+                            "name": "Prometheus Main",
+                            "type": "prometheus",
+                            "access": "proxy",
+                            "url": "http://prometheus:9090",
+                            "isDefault": "true",
+                            "org": "Main Org.",
+                            "orgId": "1",
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            (Path(tmpdir) / "index.json").write_text("{}", encoding="utf-8")
+
+            with mock.patch.object(datasource_cli, "build_client", return_value=client):
+                with self.assertRaisesRegex(
+                    datasource_cli.GrafanaError,
+                    "action=would-fail-uid-mismatch",
+                ):
+                    datasource_cli.import_datasources(args)
+
     def test_diff_datasources_returns_zero_when_inventory_matches(self):
         client = FakeDatasourceClient(
             datasources=[
