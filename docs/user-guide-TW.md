@@ -58,7 +58,7 @@ Rust 入口差異要點：
 - Dashboard：`dashboard export`、`dashboard list`、`dashboard list-data-sources`、`dashboard import`、`dashboard diff`、`dashboard inspect-export`、`dashboard inspect-live`
 - Alert：`alert export`、`alert import`、`alert diff`、`alert list-rules`、`alert list-contact-points`、`alert list-mute-timings`、`alert list-templates`
 - Datasource：`datasource list`、`datasource export`、`datasource import`、`datasource diff`
-- Access：`access user list`、`access user add`、`access user modify`、`access user delete`、`access team list`、`access team add`、`access team modify`、`access team delete`、`access service-account list`、`access service-account add`、`access service-account delete`、`access service-account token add`、`access service-account token delete`
+- Access：`access user list`、`access user add`、`access user modify`、`access user delete`、`access user export`、`access user import`、`access team list`、`access team add`、`access team modify`、`access team delete`、`access team export`、`access team import`、`access service-account list`、`access service-account add`、`access service-account delete`、`access service-account token add`、`access service-account token delete`
 
 認證互斥規則（Rust parser 會直接拒絕）:
 
@@ -643,7 +643,57 @@ cargo run --bin grafana-util -- access user delete --url http://localhost:3000 -
 }
 ```
 
-### 6.5 `access team list`
+### 6.5 `access user export`
+
+**用途**：匯出 users 與 role/team memberships 快照，供移轉重播使用。
+
+| 參數 | 用途 | 差異 / 情境 |
+| --- | --- | --- |
+| `--export-dir` | 輸出 `users.json` 與 `export-metadata.json` 的目錄 | 預設 `access-users` |
+| `--overwrite` | 覆蓋既有輸出檔 | 避免手動清理 |
+| `--dry-run` | 僅預覽輸出路徑 | 驗證目錄與權限 |
+| `--scope` | `org` / `global` | 切換識別語意 |
+| `--with-teams` | 匯出每位使用者的 team 成員關係 | 還原 membership 時必加 |
+
+示例命令：
+```bash
+cargo run --bin grafana-util -- access user export --url http://localhost:3000 --token <TOKEN> --export-dir ./access-users --scope org --with-teams
+```
+
+示例輸出：
+```text
+Exported users from http://localhost:3000 -> /tmp/access-users/users.json and /tmp/access-users/export-metadata.json
+```
+
+### 6.6 `access user import`
+
+**用途**：從快照匯入 users。
+
+| 參數 | 用途 | 差異 / 情境 |
+| --- | --- | --- |
+| `--import-dir` | 包含 `users.json` 與 `export-metadata.json` 的目錄 | 必須沿用 export 目錄結構 |
+| `--scope` | `org` / `global` | 控制比對與更新規則 |
+| `--replace-existing` | 更新已存在帳號而非直接跳過 | 做重播同步時必須 |
+| `--dry-run` | 僅預覽，不實際改 Grafana |
+| `--yes` | 跳過 destructive 移除確認 | 當要移除 team 成員會要求 |
+| `--table`、`--json`、`--output-format table/json` | dry-run 輸出模式 | 僅 `--dry-run` 可用，且互斥 |
+
+示例命令：
+```bash
+cargo run --bin grafana-util -- access user import --url http://localhost:3000 --token <TOKEN> --import-dir ./access-users --replace-existing --dry-run --output-format table
+```
+
+示例輸出：
+```text
+INDEX  IDENTITY        ACTION        DETAIL
+1      alice@example.com skip          existing and --replace-existing was not set.
+2      bob@example.com   create        would create user
+3      carol@example.com update-admin  would update grafanaAdmin -> true
+
+Import summary: processed=3 created=1 updated=1 skipped=1 source=./access-users
+```
+
+### 6.7 `access team list`
 
 **用途**：列出 teams。
 
@@ -668,7 +718,7 @@ ID   NAME        EMAIL              MEMBERS   ADMINS
 7    app-team    app@example.com    8         1
 ```
 
-### 6.6 `access team add`
+### 6.8 `access team add`
 
 **用途**：新增 team。
 
@@ -695,7 +745,7 @@ cargo run --bin grafana-util -- access team add --url http://localhost:3000 --to
 }
 ```
 
-### 6.7 `access team modify`
+### 6.9 `access team modify`
 
 **用途**：調整 team 成員與 admin。
 
@@ -722,7 +772,7 @@ cargo run --bin grafana-util -- access team modify --url http://localhost:3000 -
 }
 ```
 
-### 6.8 `access team delete`
+### 6.10 `access team delete`
 
 **用途**：刪除 team。
 
@@ -746,7 +796,56 @@ cargo run --bin grafana-util -- access team delete --url http://localhost:3000 -
 }
 ```
 
-### 6.9 `access service-account list`
+### 6.11 `access team export`
+
+**用途**：匯出 teams 與成員快照。
+
+| 參數 | 用途 | 差異 / 情境 |
+| --- | --- | --- |
+| `--export-dir` | 輸出 `teams.json` 與 `export-metadata.json` 的目錄 | 預設 `access-teams` |
+| `--overwrite` | 覆蓋既有輸出檔 | 適合自動化重跑 |
+| `--dry-run` | 僅預覽輸出路徑 | 驗證目錄與權限 |
+| `--with-members` | 匯出 members 與 admins | 還原成員關係必備 |
+
+示例命令：
+```bash
+cargo run --bin grafana-util -- access team export --url http://localhost:3000 --token <TOKEN> --export-dir ./access-teams --with-members
+```
+
+示例輸出：
+```text
+Exported teams from http://localhost:3000 -> /tmp/access-teams/teams.json and /tmp/access-teams/export-metadata.json
+```
+
+### 6.12 `access team import`
+
+**用途**：從快照匯入 teams 並同步 team 成員。
+
+| 參數 | 用途 | 差異 / 情境 |
+| --- | --- | --- |
+| `--import-dir` | 包含 `teams.json` 與 `export-metadata.json` 的目錄 | 必須沿用 export 目錄結構 |
+| `--replace-existing` | 更新既有 team | 用於跨環境 replay |
+| `--dry-run` | 僅預覽，不實際變更 | 建議先跑 |
+| `--yes` | 跳過 destructive 移除確認 | 當預期移除 team 成員時必需 |
+| `--table`、`--json`、`--output-format table/json` | dry-run 輸出模式 | 僅 `--dry-run` 可用，且互斥 |
+
+示例命令：
+```bash
+cargo run --bin grafana-util -- access team import --url http://localhost:3000 --token <TOKEN> --import-dir ./access-teams --replace-existing --dry-run --output-format table
+```
+
+示例輸出：
+```text
+INDEX  IDENTITY         ACTION       DETAIL
+1      platform-team    skip         existing and --replace-existing was not set.
+2      sre-team         create       would create team
+3      edge-team        add-member   would add team member alice@example.com
+4      edge-team        remove-member would remove team member bob@example.com
+
+Import summary: processed=4 created=1 updated=1 skipped=1 source=./access-teams
+```
+
+### 6.13 `access service-account list`
 
 **用途**：列出 service account。
 
@@ -769,7 +868,7 @@ ID   NAME          ROLE     DISABLED
 5    backup-bot    Viewer   true
 ```
 
-### 6.10 `access service-account add`
+### 6.14 `access service-account add`
 
 **用途**：新增服務帳號。
 
@@ -795,7 +894,7 @@ cargo run --bin grafana-util -- access service-account add --url http://localhos
 }
 ```
 
-### 6.11 `access service-account delete`
+### 6.15 `access service-account delete`
 
 **用途**：刪除服務帳號。
 
@@ -819,7 +918,7 @@ cargo run --bin grafana-util -- access service-account delete --url http://local
 }
 ```
 
-### 6.12 `access service-account token add`
+### 6.16 `access service-account token add`
 
 **用途**：建立服務帳號 token。
 
@@ -846,7 +945,7 @@ cargo run --bin grafana-util -- access service-account token add --url http://lo
 }
 ```
 
-### 6.13 `access service-account token delete`
+### 6.17 `access service-account token delete`
 
 **用途**：刪除服務帳號 token。
 
@@ -944,10 +1043,14 @@ cargo run --bin grafana-util -- access user list --url <URL> --token <TOKEN> --s
 cargo run --bin grafana-util -- access user add --url <URL> --basic-user <USER> --basic-password <PASS> --login <LOGIN> --email <EMAIL> --name <NAME> --password <PWD> [--org-role Editor] [--grafana-admin true|false]
 cargo run --bin grafana-util -- access user modify --url <URL> --basic-user <USER> --basic-password <PASS> --login <LOGIN> --set-email <EMAIL> [--set-name <NAME>] [--set-org-role Viewer|Editor|Admin|None] [--set-grafana-admin true|false]
 cargo run --bin grafana-util -- access user delete --url <URL> --basic-user <USER> --basic-password <PASS> --login <LOGIN> --scope global --yes
+cargo run --bin grafana-util -- access user export --url <URL> --token <TOKEN> --export-dir ./access-users [--scope org|global] [--with-teams]
+cargo run --bin grafana-util -- access user import --url <URL> --token <TOKEN> --import-dir ./access-users --replace-existing [--dry-run] [--table|--json|--output-format text|table|json] [--yes]
 cargo run --bin grafana-util -- access team list --url <URL> --token <TOKEN> [--query <QUERY>|--name <NAME>] [--with-members] [--table|--csv|--json]
 cargo run --bin grafana-util -- access team add --url <URL> --token <TOKEN> --name <NAME> [--email <EMAIL>] [--member <LOGIN_OR_EMAIL>] [--admin <LOGIN_OR_EMAIL>]
 cargo run --bin grafana-util -- access team modify --url <URL> --token <TOKEN> --name <NAME> [--add-member <LOGIN_OR_EMAIL>] [--remove-member <LOGIN_OR_EMAIL>] [--add-admin <LOGIN_OR_EMAIL>] [--remove-admin <LOGIN_OR_EMAIL>]
 cargo run --bin grafana-util -- access team delete --url <URL> --token <TOKEN> --name <NAME> --yes
+cargo run --bin grafana-util -- access team export --url <URL> --token <TOKEN> --export-dir ./access-teams [--with-members]
+cargo run --bin grafana-util -- access team import --url <URL> --token <TOKEN> --import-dir ./access-teams --replace-existing [--dry-run] [--table|--json|--output-format text|table|json] [--yes]
 cargo run --bin grafana-util -- access service-account list --url <URL> --token <TOKEN> [--query <QUERY>] [--table|--csv|--json]
 cargo run --bin grafana-util -- access service-account add --url <URL> --token <TOKEN> --name <NAME> [--role Viewer|Editor|Admin|None] [--disabled true|false]
 cargo run --bin grafana-util -- access service-account delete --url <URL> --token <TOKEN> --name <NAME> --yes
@@ -970,6 +1073,8 @@ cargo run --bin grafana-util -- access service-account token delete --url <URL> 
 | datasource import | text/table/json | 不可（僅 text/table/json） | text 為 dry-run 摘要 |
 | access user list | table/csv/json | 不可 | 同上 |
 | access team list | table/csv/json | 不可 | 同上 |
+| access user import | text/table/json | 不可（僅 text/table/json） | text 為 dry-run 摘要 |
+| access team import | text/table/json | 不可（僅 text/table/json） | text 為 dry-run 摘要 |
 | access service-account list | table/csv/json | 不可 | 同上 |
 
 `DRY-RUN` 類（預覽）：
@@ -979,6 +1084,8 @@ cargo run --bin grafana-util -- access service-account token delete --url <URL> 
 | dashboard import | 僅預覽 `create/update/skip` |
 | datasource import | 僅預覽 `create/update/skip` |
 | alert import | 僅預覽 `create/update` |
+| access user import | 僅預覽 `create/update/skip`，以及 team 變更 preview |
+| access team import | 僅預覽 `create/update/skip`，以及 membership 變更 preview |
 
 `ORG` 控制：
 

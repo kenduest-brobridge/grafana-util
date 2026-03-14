@@ -69,7 +69,7 @@ Default URLs:
 - Dashboard: `dashboard export`, `dashboard list`, `dashboard list-data-sources`, `dashboard import`, `dashboard diff`, `dashboard inspect-export`, `dashboard inspect-live`
 - Alert: `alert export`, `alert import`, `alert diff`, `alert list-rules`, `alert list-contact-points`, `alert list-mute-timings`, `alert list-templates`
 - Datasource: `datasource list`, `datasource export`, `datasource import`, `datasource diff`
-- Access: `access user list`, `access user add`, `access user modify`, `access user delete`, `access team list`, `access team add`, `access team modify`, `access team delete`, `access service-account list`, `access service-account add`, `access service-account delete`, `access service-account token add`, `access service-account token delete`
+- Access: `access user list`, `access user add`, `access user modify`, `access user delete`, `access user export`, `access user import`, `access team list`, `access team add`, `access team modify`, `access team delete`, `access team export`, `access team import`, `access service-account list`, `access service-account add`, `access service-account delete`, `access service-account token add`, `access service-account token delete`
 
 Authentication exclusivity rules:
 
@@ -690,7 +690,64 @@ Example output:
 }
 ```
 
-### 6.5 `access team list`
+### 6.5 `access user export`
+
+Purpose: export users and role/team membership snapshots for migration.
+
+| Option | Purpose | Difference / scenario |
+| --- | --- | --- |
+| `--export-dir` | Directory to write `users.json` and `export-metadata.json` | Default is `access-users` |
+| `--overwrite` | Replace existing output files | Controlled by automation |
+| `--dry-run` | Show planned outputs only | Useful for folder and permission checks |
+| `--scope` | `org` or `global` | Choose target identity scope |
+| `--with-teams` | Include team memberships in each user record | Enable for migration replay |
+
+Example command:
+```bash
+cargo run --bin grafana-util -- access user export --url http://localhost:3000 --token <TOKEN> --export-dir ./access-users --scope org --with-teams
+```
+
+Example output:
+```text
+Exported users from http://localhost:3000 -> /tmp/access-users/users.json and /tmp/access-users/export-metadata.json
+```
+
+### 6.6 `access user import`
+
+Purpose: import users from exported snapshot files.
+
+| Option | Purpose | Difference / scenario |
+| --- | --- | --- |
+| `--import-dir` | Directory that contains `users.json` and `export-metadata.json` | Must match export layout |
+| `--scope` | `org` or `global` | Resolve duplicate matching rules |
+| `--replace-existing` | Update existing user records | Required for repeated sync |
+| `--dry-run` | Plan actions only, no API mutation | Safer first pass |
+| `--yes` | Skip confirmation for destructive membership removals | Required when team removals are detected |
+| `--table`, `--json`, `--output-format table/json` | Dry-run output mode selector | Available only with `--dry-run`; mutually exclusive |
+
+Example command:
+```bash
+cargo run --bin grafana-util -- access user import --url http://localhost:3000 --token <TOKEN> --import-dir ./access-users --replace-existing --dry-run --output-format table
+```
+
+Example output:
+```text
+INDEX  IDENTITY        ACTION        DETAIL
+1      alice@example.com skip          existing and --replace-existing was not set.
+2      bob@example.com   create        would create user
+3      carol@example.com update-admin  would update grafanaAdmin -> true
+
+Import summary: processed=3 created=1 updated=1 skipped=1 source=./access-users
+```
+
+For JSON dry-run:
+```json
+[
+  {"index":"2","identity":"bob@example.com","action":"create","detail":"would create user"}
+]
+```
+
+### 6.7 `access team list`
 
 Purpose: list teams.
 
@@ -715,7 +772,7 @@ ID   NAME        EMAIL              MEMBERS   ADMINS
 7    app-team    app@example.com    8         1
 ```
 
-### 6.6 `access team add`
+### 6.8 `access team add`
 
 Purpose: create a team.
 
@@ -742,7 +799,7 @@ Example output:
 }
 ```
 
-### 6.7 `access team modify`
+### 6.9 `access team modify`
 
 Purpose: adjust team members and admins.
 
@@ -769,7 +826,7 @@ Example output:
 }
 ```
 
-### 6.8 `access team delete`
+### 6.10 `access team delete`
 
 Purpose: delete a team.
 
@@ -793,7 +850,56 @@ Example output:
 }
 ```
 
-### 6.9 `access service-account list`
+### 6.11 `access team export`
+
+Purpose: export teams and member/admin membership snapshots for migration.
+
+| Option | Purpose | Difference / scenario |
+| --- | --- | --- |
+| `--export-dir` | Directory to write `teams.json` and `export-metadata.json` | Default is `access-teams` |
+| `--overwrite` | Replace existing output files | Controlled by automation |
+| `--dry-run` | Show planned outputs only | Useful for folder and permission checks |
+| `--with-members` | Include members/admins in each team record | Required for membership replay |
+
+Example command:
+```bash
+cargo run --bin grafana-util -- access team export --url http://localhost:3000 --token <TOKEN> --export-dir ./access-teams --with-members
+```
+
+Example output:
+```text
+Exported teams from http://localhost:3000 -> /tmp/access-teams/teams.json and /tmp/access-teams/export-metadata.json
+```
+
+### 6.12 `access team import`
+
+Purpose: import teams and synchronize memberships from exported snapshots.
+
+| Option | Purpose | Difference / scenario |
+| --- | --- | --- |
+| `--import-dir` | Directory that contains `teams.json` and `export-metadata.json` | Must match export layout |
+| `--replace-existing` | Update existing teams rather than skip | Required for cross-instance sync |
+| `--dry-run` | Plan actions only, no API mutation | Recommended before replay |
+| `--yes` | Skip confirmation for destructive removals | Required when members would be removed |
+| `--table`, `--json`, `--output-format table/json` | Dry-run output mode selector | Available only with `--dry-run`; mutually exclusive |
+
+Example command:
+```bash
+cargo run --bin grafana-util -- access team import --url http://localhost:3000 --token <TOKEN> --import-dir ./access-teams --replace-existing --dry-run --output-format table
+```
+
+Example output:
+```text
+INDEX  IDENTITY         ACTION       DETAIL
+1      platform-team    skip         existing and --replace-existing was not set.
+2      sre-team         create       would create team
+3      edge-team        add-member   would add team member alice@example.com
+4      edge-team        remove-member would remove team member bob@example.com
+
+Import summary: processed=4 created=1 updated=1 skipped=1 source=./access-teams
+```
+
+### 6.13 `access service-account list`
 
 Purpose: list service accounts.
 
@@ -816,7 +922,7 @@ ID   NAME          ROLE     DISABLED
 5    backup-bot    Viewer   true
 ```
 
-### 6.10 `access service-account add`
+### 6.14 `access service-account add`
 
 Purpose: create a service account.
 
@@ -842,7 +948,7 @@ Example output:
 }
 ```
 
-### 6.11 `access service-account delete`
+### 6.15 `access service-account delete`
 
 Purpose: delete a service account.
 
@@ -866,7 +972,7 @@ Example output:
 }
 ```
 
-### 6.12 `access service-account token add`
+### 6.16 `access service-account token add`
 
 Purpose: create a service-account token.
 
@@ -893,7 +999,7 @@ Example output:
 }
 ```
 
-### 6.13 `access service-account token delete`
+### 6.17 `access service-account token delete`
 
 Purpose: delete a service-account token.
 
@@ -971,6 +1077,10 @@ cargo run --bin grafana-util -- datasource diff --url <URL> --basic-user <USER> 
 
 cargo run --bin grafana-util -- access user list --url <URL> --basic-user <USER> --basic-password <PASS> --scope global --table
 cargo run --bin grafana-util -- access team list --url <URL> --token <TOKEN> --table
+cargo run --bin grafana-util -- access user export --url <URL> --token <TOKEN> --export-dir ./access-users
+cargo run --bin grafana-util -- access team export --url <URL> --token <TOKEN> --export-dir ./access-teams
+cargo run --bin grafana-util -- access user import --url <URL> --token <TOKEN> --import-dir ./access-users --replace-existing --dry-run --output-format table
+cargo run --bin grafana-util -- access team import --url <URL> --token <TOKEN> --import-dir ./access-teams --replace-existing --dry-run --output-format table
 cargo run --bin grafana-util -- access service-account list --url <URL> --token <TOKEN> --table
 ```
 
@@ -985,6 +1095,8 @@ cargo run --bin grafana-util -- access service-account list --url <URL> --token 
 | `datasource list` | `table/csv/json` | Shared list pattern |
 | `datasource import` | `text/table/json` | Dry-run focused |
 | `access list` commands | `table/csv/json` | Shared list pattern |
+| `access user import` | `text/table/json` | Dry-run table/json/ text summary |
+| `access team import` | `text/table/json` | Dry-run table/json/text summary |
 
 | Command | `--org-id` | `--all-orgs` |
 | --- | --- | --- |
