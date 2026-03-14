@@ -1,5 +1,12 @@
 # ai-status.md
 
+## 2026-03-14 - Task: Add Actionable Governance Risk Metadata
+- State: Done
+- Scope: `grafana_utils/dashboards/inspection_governance.py`, `grafana_utils/dashboards/inspection_governance_render.py`, `tests/test_python_dashboard_inspection_governance.py`, `tests/test_python_dashboard_inspection_cli.py`, `rust/src/dashboard_inspect_governance.rs`, `rust/src/dashboard_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Governance reports in both Python and Rust already exposed `kind`, `severity`, `datasource`, and `detail`, but operators still had to infer whether a finding was inventory drift, analyzer coverage debt, or datasource topology risk, and there was no stable remediation hint for automation to consume.
+- Current Update: Added additive `category` and `recommendation` fields to governance `riskRecords` in both Python and Rust for the four current governance risk kinds: `mixed-datasource-dashboard`, `orphaned-datasource`, `unknown-datasource-family`, and `empty-query-analysis`. Updated the governance table renderers so the risk section now shows those fields directly, and extended focused Python and Rust governance tests to lock the new JSON/table contract.
+- Result: Governance JSON now carries a stable actionability layer for follow-up tooling, and governance table output is more operator-actionable without changing report flags or removing any existing fields.
+
 ## 2026-03-14 - Task: Add Dashboard Import Export-Org Guard
 - State: Done
 - Scope: `grafana_utils/dashboard_cli.py`, `grafana_utils/dashboards/export_inventory.py`, `grafana_utils/dashboards/import_workflow.py`, `tests/test_python_dashboard_cli.py`, `rust/src/dashboard_cli_defs.rs`, `rust/src/dashboard_import.rs`, `rust/src/dashboard_rust_tests.rs`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

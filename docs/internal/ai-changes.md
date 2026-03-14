@@ -1,5 +1,13 @@
 # ai-changes.md
 
+## 2026-03-14 - Add Actionable Governance Risk Metadata
+- Summary: Enriched Python and Rust governance `riskRecords` with additive `category` and `recommendation` fields so inspection governance output is not just descriptive but actionable. The existing four governance findings now map to stable remediation metadata, and the governance table renderers expose those fields directly in the risk section.
+- Tests: Extended focused Python governance unit/CLI tests and Rust governance tests to assert the new JSON fields and the new table columns/content.
+- Test Run: `python3 -m unittest -v tests/test_python_dashboard_inspection_governance.py tests/test_python_dashboard_inspection_cli.py`; `cargo test dashboard --manifest-path rust/Cargo.toml --quiet`
+- Validation: Verified both runtimes keep the existing risk kinds and severities while adding machine-readable categories and human-readable recommendations, and confirmed the governance table output now includes `CATEGORY` and `RECOMMENDATION` columns.
+- Impact: `grafana_utils/dashboards/inspection_governance.py`, `grafana_utils/dashboards/inspection_governance_render.py`, `tests/test_python_dashboard_inspection_governance.py`, `tests/test_python_dashboard_inspection_cli.py`, `rust/src/dashboard_inspect_governance.rs`, `rust/src/dashboard_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low. The change is additive and preserves existing governance report selection and risk identifiers, but follow-on automation should treat `category` and `recommendation` as the stable actionability layer instead of parsing `detail`.
+
 ## 2026-03-14 - Add Dashboard Import Export-Org Guard
 - Summary: Added opt-in `--require-matching-export-org` to both Python and Rust dashboard import so operators can fail early when a raw export's recorded `orgId` does not match the resolved target org for the current import run. The guard keeps default import behavior unchanged, but when enabled it resolves source org metadata from raw `index.json`, `folders.json`, and `datasources.json`, then compares that value against either explicit `--org-id` or the active token/Basic-auth current org.
 - Tests: Added focused Python parser/help/import tests for the new guard, including token-scope mismatch and matching-current-org cases; added focused Rust parser/help/import tests for explicit-org mismatch, current-token-org mismatch, and matching-current-org allow behavior.

@@ -3792,6 +3792,20 @@ fn build_export_inspection_governance_document_summarizes_families_and_risks() {
     assert!(risk_kinds.contains(&"orphaned-datasource"));
     assert!(risk_kinds.contains(&"unknown-datasource-family"));
     assert!(risk_kinds.contains(&"empty-query-analysis"));
+    let orphaned = document
+        .risk_records
+        .iter()
+        .find(|item| item.kind == "orphaned-datasource")
+        .unwrap();
+    assert_eq!(orphaned.category, "inventory");
+    assert!(orphaned.recommendation.contains("Remove the unused datasource"));
+    let unknown = document
+        .risk_records
+        .iter()
+        .find(|item| item.kind == "unknown-datasource-family")
+        .unwrap();
+    assert_eq!(unknown.category, "coverage");
+    assert!(unknown.recommendation.contains("extend analyzer support"));
 }
 
 #[test]
@@ -3869,9 +3883,12 @@ fn render_governance_table_report_displays_sections() {
     assert!(output.contains("# Datasource Families"));
     assert!(output.contains("# Datasources"));
     assert!(output.contains("# Risks"));
+    assert!(output.contains("CATEGORY"));
+    assert!(output.contains("RECOMMENDATION"));
     assert!(output.contains("logs-main"));
     assert!(output.contains("unused-main"));
     assert!(output.contains("orphaned-datasource"));
+    assert!(output.contains("Remove the unused datasource"));
 }
 
 #[test]

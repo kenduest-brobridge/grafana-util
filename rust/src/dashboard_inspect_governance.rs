@@ -61,12 +61,14 @@ pub(crate) struct DatasourceCoverageRow {
 pub(crate) struct GovernanceRiskRow {
     pub(crate) kind: String,
     pub(crate) severity: String,
+    pub(crate) category: String,
     #[serde(rename = "dashboardUid")]
     pub(crate) dashboard_uid: String,
     #[serde(rename = "panelId")]
     pub(crate) panel_id: String,
     pub(crate) datasource: String,
     pub(crate) detail: String,
+    pub(crate) recommendation: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -167,6 +169,36 @@ fn resolve_datasource_identity(
         uid: "unknown".to_string(),
         name: "unknown".to_string(),
         datasource_type: "unknown".to_string(),
+    }
+}
+
+fn build_risk_metadata(kind: &str) -> (&'static str, &'static str, &'static str) {
+    match kind {
+        "mixed-datasource-dashboard" => (
+            "topology",
+            "medium",
+            "Split panel queries by datasource or document why mixed datasource composition is required.",
+        ),
+        "orphaned-datasource" => (
+            "inventory",
+            "low",
+            "Remove the unused datasource or reattach it to retained dashboards before the next cleanup cycle.",
+        ),
+        "unknown-datasource-family" => (
+            "coverage",
+            "medium",
+            "Map this datasource plugin type to a known governance family or extend analyzer support for it.",
+        ),
+        "empty-query-analysis" => (
+            "coverage",
+            "low",
+            "Review the query text and extend analyzer coverage if this datasource family should emit governance signals.",
+        ),
+        _ => (
+            "other",
+            "low",
+            "Review this governance finding and assign a follow-up owner if action is needed.",
+        ),
     }
 }
 
@@ -304,11 +336,17 @@ pub(crate) fn build_governance_risk_rows(
     for dashboard in &summary.mixed_dashboards {
         let risk = GovernanceRiskRow {
             kind: "mixed-datasource-dashboard".to_string(),
-            severity: "medium".to_string(),
+            severity: build_risk_metadata("mixed-datasource-dashboard").1.to_string(),
+            category: build_risk_metadata("mixed-datasource-dashboard")
+                .0
+                .to_string(),
             dashboard_uid: dashboard.uid.clone(),
             panel_id: String::new(),
             datasource: dashboard.datasources.join(","),
             detail: dashboard.title.clone(),
+            recommendation: build_risk_metadata("mixed-datasource-dashboard")
+                .2
+                .to_string(),
         };
         if seen.insert(risk.clone()) {
             risks.push(risk);
@@ -320,7 +358,8 @@ pub(crate) fn build_governance_risk_rows(
         }
         let risk = GovernanceRiskRow {
             kind: "orphaned-datasource".to_string(),
-            severity: "low".to_string(),
+            severity: build_risk_metadata("orphaned-datasource").1.to_string(),
+            category: build_risk_metadata("orphaned-datasource").0.to_string(),
             dashboard_uid: String::new(),
             panel_id: String::new(),
             datasource: if datasource.uid.trim().is_empty() {
@@ -329,6 +368,9 @@ pub(crate) fn build_governance_risk_rows(
                 datasource.uid.clone()
             },
             detail: datasource.datasource_type.clone(),
+            recommendation: build_risk_metadata("orphaned-datasource")
+                .2
+                .to_string(),
         };
         if seen.insert(risk.clone()) {
             risks.push(risk);
@@ -339,11 +381,19 @@ pub(crate) fn build_governance_risk_rows(
         if normalize_family_name(&identity.datasource_type) == "unknown" {
             let risk = GovernanceRiskRow {
                 kind: "unknown-datasource-family".to_string(),
-                severity: "medium".to_string(),
+                severity: build_risk_metadata("unknown-datasource-family")
+                    .1
+                    .to_string(),
+                category: build_risk_metadata("unknown-datasource-family")
+                    .0
+                    .to_string(),
                 dashboard_uid: row.dashboard_uid.clone(),
                 panel_id: row.panel_id.clone(),
                 datasource: identity.name.clone(),
                 detail: row.query_field.clone(),
+                recommendation: build_risk_metadata("unknown-datasource-family")
+                    .2
+                    .to_string(),
             };
             if seen.insert(risk.clone()) {
                 risks.push(risk);
@@ -352,11 +402,17 @@ pub(crate) fn build_governance_risk_rows(
         if row.metrics.is_empty() && row.measurements.is_empty() && row.buckets.is_empty() {
             let risk = GovernanceRiskRow {
                 kind: "empty-query-analysis".to_string(),
-                severity: "low".to_string(),
+                severity: build_risk_metadata("empty-query-analysis")
+                    .1
+                    .to_string(),
+                category: build_risk_metadata("empty-query-analysis").0.to_string(),
                 dashboard_uid: row.dashboard_uid.clone(),
                 panel_id: row.panel_id.clone(),
                 datasource: identity.name,
                 detail: row.query_field.clone(),
+                recommendation: build_risk_metadata("empty-query-analysis")
+                    .2
+                    .to_string(),
             };
             if seen.insert(risk.clone()) {
                 risks.push(risk);
@@ -485,11 +541,13 @@ pub(crate) fn render_governance_table_report(
         .map(|row| {
             vec![
                 row.severity.clone(),
+                row.category.clone(),
                 row.kind.clone(),
                 row.dashboard_uid.clone(),
                 row.panel_id.clone(),
                 row.datasource.clone(),
                 row.detail.clone(),
+                row.recommendation.clone(),
             ]
         })
         .collect::<Vec<Vec<String>>>();
@@ -497,7 +555,16 @@ pub(crate) fn render_governance_table_report(
         lines.push("(none)".to_string());
     } else {
         lines.extend(render_simple_table(
-            &["SEVERITY", "KIND", "DASHBOARD_UID", "PANEL_ID", "DATASOURCE", "DETAIL"],
+            &[
+                "SEVERITY",
+                "CATEGORY",
+                "KIND",
+                "DASHBOARD_UID",
+                "PANEL_ID",
+                "DATASOURCE",
+                "DETAIL",
+                "RECOMMENDATION",
+            ],
             &risk_rows,
             true,
         ));

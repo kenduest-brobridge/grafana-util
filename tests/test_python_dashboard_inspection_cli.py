@@ -688,8 +688,18 @@ class DashboardInspectionTests(unittest.TestCase):
             self.assertEqual(payload["datasources"][0]["datasourceUid"], "logs-main")
             self.assertEqual(len(payload["riskRecords"]), 2)
             self.assertEqual(payload["riskRecords"][0]["kind"], "orphaned-datasource")
+            self.assertEqual(payload["riskRecords"][0]["category"], "inventory")
+            self.assertIn(
+                "Remove the unused datasource",
+                payload["riskRecords"][0]["recommendation"],
+            )
             self.assertEqual(
                 payload["riskRecords"][1]["kind"], "mixed-datasource-dashboard"
+            )
+            self.assertEqual(payload["riskRecords"][1]["category"], "topology")
+            self.assertIn(
+                "Split panel queries by datasource",
+                payload["riskRecords"][1]["recommendation"],
             )
 
     def test_inspect_export_renders_governance_tables(self):
@@ -714,9 +724,15 @@ class DashboardInspectionTests(unittest.TestCase):
             self.assertIn("# Datasource Families", output)
             self.assertIn("# Datasources", output)
             self.assertIn("# Risks", output)
+            self.assertIn("CATEGORY", output)
+            self.assertIn("RECOMMENDATION", output)
             self.assertIn("mixed-datasource-dashboard", output)
             self.assertIn("orphaned-datasource", output)
             self.assertIn("unknown-datasource-family", output)
+            self.assertIn("Remove the unused datasource", output)
+            self.assertIn("CATEGORY", output)
+            self.assertIn("RECOMMENDATION", output)
+            self.assertIn("Normalize the datasource type mapping", output)
 
     def test_inspect_export_renders_tree_and_tree_table_reports(self):
         dashboard = {

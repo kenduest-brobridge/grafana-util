@@ -108,9 +108,27 @@ def render_export_inspection_governance_tables(
     lines.extend(
         _render_named_section(
             "# Risks",
-            ["SEVERITY", "KIND", "DASHBOARD_UID", "PANEL_ID", "DATASOURCE", "DETAIL"],
+            [
+                "SEVERITY",
+                "CATEGORY",
+                "KIND",
+                "DASHBOARD_UID",
+                "PANEL_ID",
+                "DATASOURCE",
+                "DETAIL",
+                "RECOMMENDATION",
+            ],
             document.get("riskRecords") or [],
-            ["severity", "kind", "dashboardUid", "panelId", "datasource", "detail"],
+            [
+                "severity",
+                "category",
+                "kind",
+                "dashboardUid",
+                "panelId",
+                "datasource",
+                "detail",
+                "recommendation",
+            ],
         )
     )
     return lines

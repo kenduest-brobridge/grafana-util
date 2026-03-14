@@ -135,6 +135,18 @@ class DashboardInspectionGovernanceTests(unittest.TestCase):
         self.assertIn("orphaned-datasource", risk_kinds)
         self.assertIn("unknown-datasource-family", risk_kinds)
         self.assertIn("empty-query-analysis", risk_kinds)
+        orphaned = [
+            row for row in document["riskRecords"] if row["kind"] == "orphaned-datasource"
+        ][0]
+        self.assertEqual(orphaned["category"], "inventory")
+        self.assertIn("Remove the unused datasource", orphaned["recommendation"])
+        unknown = [
+            row
+            for row in document["riskRecords"]
+            if row["kind"] == "unknown-datasource-family"
+        ][0]
+        self.assertEqual(unknown["category"], "coverage")
+        self.assertIn("Normalize the datasource type mapping", unknown["recommendation"])
 
     def test_render_export_inspection_governance_tables_renders_sections(self):
         summary_document, report_document = self._build_fixture_documents()
@@ -156,6 +168,12 @@ class DashboardInspectionGovernanceTests(unittest.TestCase):
         self.assertIn("loki", output)
         self.assertIn("mixed-datasource-dashboard", output)
         self.assertIn("unused-main", output)
+        self.assertIn("CATEGORY", output)
+        self.assertIn("RECOMMENDATION", output)
+        self.assertIn("Remove the unused datasource", output)
+        self.assertIn("CATEGORY", output)
+        self.assertIn("RECOMMENDATION", output)
+        self.assertIn("Split panel queries by datasource", output)
 
 
 if __name__ == "__main__":

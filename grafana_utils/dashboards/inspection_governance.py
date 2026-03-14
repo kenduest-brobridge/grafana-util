@@ -83,6 +83,51 @@ def _build_query_analysis_state(record: Dict[str, Any]) -> str:
     return "empty"
 
 
+def _build_governance_risk_record(
+    kind: str,
+    severity: str,
+    dashboard_uid: str,
+    panel_id: str,
+    datasource: str,
+    detail: str,
+) -> Dict[str, str]:
+    category = "coverage"
+    recommendation = "Review this governance finding."
+    if kind == "mixed-datasource-dashboard":
+        category = "topology"
+        recommendation = (
+            "Split panel queries by datasource or document why this mixed datasource "
+            "dashboard must stay combined."
+        )
+    elif kind == "orphaned-datasource":
+        category = "inventory"
+        recommendation = (
+            "Remove the unused datasource or attach it to retained dashboards."
+        )
+    elif kind == "unknown-datasource-family":
+        category = "coverage"
+        recommendation = (
+            "Normalize the datasource type mapping or add analyzer support for this "
+            "plugin family."
+        )
+    elif kind == "empty-query-analysis":
+        category = "coverage"
+        recommendation = (
+            "Inspect the query text and extend analyzer coverage if this datasource "
+            "should emit metrics."
+        )
+    return {
+        "kind": kind,
+        "severity": severity,
+        "category": category,
+        "recommendation": recommendation,
+        "dashboardUid": dashboard_uid,
+        "panelId": panel_id,
+        "datasource": datasource,
+        "detail": detail,
+    }
+
+
 def build_datasource_family_coverage_records(
     summary_document: Dict[str, Any],
     report_document: Dict[str, Any],
@@ -224,14 +269,14 @@ def build_governance_risk_records(
     for dashboard in summary_document.get("mixedDatasourceDashboards") or []:
         if not isinstance(dashboard, dict):
             continue
-        record = {
-            "kind": "mixed-datasource-dashboard",
-            "severity": "medium",
-            "dashboardUid": str(dashboard.get("uid") or ""),
-            "panelId": "",
-            "datasource": ",".join(_unique_strings(dashboard.get("datasources") or [])),
-            "detail": str(dashboard.get("title") or ""),
-        }
+        record = _build_governance_risk_record(
+            "mixed-datasource-dashboard",
+            "medium",
+            str(dashboard.get("uid") or ""),
+            "",
+            ",".join(_unique_strings(dashboard.get("datasources") or [])),
+            str(dashboard.get("title") or ""),
+        )
         key = tuple(record.items())
         if key not in seen:
             seen.add(key)
@@ -240,16 +285,14 @@ def build_governance_risk_records(
     for datasource in summary_document.get("orphanedDatasources") or []:
         if not isinstance(datasource, dict):
             continue
-        record = {
-            "kind": "orphaned-datasource",
-            "severity": "low",
-            "dashboardUid": "",
-            "panelId": "",
-            "datasource": str(
-                datasource.get("uid") or datasource.get("name") or "unknown"
-            ),
-            "detail": str(datasource.get("type") or ""),
-        }
+        record = _build_governance_risk_record(
+            "orphaned-datasource",
+            "low",
+            "",
+            "",
+            str(datasource.get("uid") or datasource.get("name") or "unknown"),
+            str(datasource.get("type") or ""),
+        )
         key = tuple(record.items())
         if key not in seen:
             seen.add(key)
@@ -264,27 +307,27 @@ def build_governance_risk_records(
             datasource_by_name,
         )
         if _normalize_family_name(datasource_type) == "unknown":
-            record = {
-                "kind": "unknown-datasource-family",
-                "severity": "medium",
-                "dashboardUid": str(query.get("dashboardUid") or ""),
-                "panelId": str(query.get("panelId") or ""),
-                "datasource": datasource_name or datasource_uid,
-                "detail": str(query.get("queryField") or ""),
-            }
+            record = _build_governance_risk_record(
+                "unknown-datasource-family",
+                "medium",
+                str(query.get("dashboardUid") or ""),
+                str(query.get("panelId") or ""),
+                datasource_name or datasource_uid,
+                str(query.get("queryField") or ""),
+            )
             key = tuple(record.items())
             if key not in seen:
                 seen.add(key)
                 records.append(record)
         if _build_query_analysis_state(query) == "empty":
-            record = {
-                "kind": "empty-query-analysis",
-                "severity": "low",
-                "dashboardUid": str(query.get("dashboardUid") or ""),
-                "panelId": str(query.get("panelId") or ""),
-                "datasource": datasource_name or datasource_uid,
-                "detail": str(query.get("queryField") or ""),
-            }
+            record = _build_governance_risk_record(
+                "empty-query-analysis",
+                "low",
+                str(query.get("dashboardUid") or ""),
+                str(query.get("panelId") or ""),
+                datasource_name or datasource_uid,
+                str(query.get("queryField") or ""),
+            )
             key = tuple(record.items())
             if key not in seen:
                 seen.add(key)
