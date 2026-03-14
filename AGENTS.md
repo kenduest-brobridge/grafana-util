@@ -13,7 +13,7 @@
 - `tests/`: Python unit tests.
 - `Makefile`: root shortcuts for Python wheel builds, Rust release builds, and test runs.
 - `README.md`: GitHub-facing usage and operator examples.
-- `DEVELOPER.md`: maintainer notes, internal behavior, and implementation tradeoffs.
+- `docs/DEVELOPER.md`: maintainer notes, internal behavior, and implementation tradeoffs.
 - `docs/internal/ai-status.md` and `docs/internal/ai-changes.md`: internal change trace files for meaningful feature work.
 
 Keep implementation code in `grafana_utils/` and keep `python/` wrappers thin unless a new workflow clearly deserves its own module.
@@ -89,5 +89,5 @@ Run the smallest relevant test target first, then the full suite when behavior c
 ## Documentation Policy
 
 - Put external usage in `README.md`.
-- Put internal details, mappings, fallback rules, and maintenance notes in `DEVELOPER.md`.
+- Put internal details, mappings, fallback rules, and maintenance notes in `docs/DEVELOPER.md`.
 - Update `docs/internal/ai-status.md` and `docs/internal/ai-changes.md` only for meaningful behavior or architecture changes.

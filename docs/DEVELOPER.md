@@ -18,7 +18,7 @@ Commit message default for this repo:
   - both language versions of the README documentation sections
   - both full user guides, including parameter purpose / mode / scenario notes where affected
 - Treat deprecated/legacy option text as cleanup debt: replace `--table/--csv/--json` and other legacy aliases with `--output-format` guidance where implementation supports it, and remove stale "old options" notes from README/examples.
-- For PR-ready changes, include a brief mention in `DEVELOPER.md` whenever docs structure is updated so future contributors know whether behavior, parser compatibility, or only docs shape changed.
+- For PR-ready changes, include a brief mention in `docs/DEVELOPER.md` whenever docs structure is updated so future contributors know whether behavior, parser compatibility, or only docs shape changed.
 
 ## Repository Scope
 
@@ -660,7 +660,7 @@ python3 -m grafana_utils access -h
 ## Documentation split
 
 - `README.md`: public usage and high-level behavior
-- `DEVELOPER.md`: maintenance notes, internal architecture, compatibility rules, and implementation tradeoffs
+- `docs/DEVELOPER.md`: maintenance notes, internal architecture, compatibility rules, and implementation tradeoffs
 - `docs/internal/ai-status.md` / `docs/internal/ai-changes.md`: internal working notes only; do not treat them as public GitHub-facing documentation
 
 ## Auth Notes
@@ -670,61 +670,9 @@ python3 -m grafana_utils access -h
 - Reject `--prompt-password` when `--basic-password` is also set.
 - Require `--basic-user` with `--prompt-password`.
 
-## GitHub metadata updates
-
-When updating GitHub repository description or topics for this project, use `gh api` against the REST endpoints instead of relying on `gh repo view` GraphQL lookups alone.
-
-Known repositories:
-
-- public: `kenduest/grafana-utils`
-- private mirror: `kenduest-brobridge/grafana-utils`
-
-Recommended sequence:
-
-1. Check current auth:
-
-```bash
-gh auth status
-```
-
-2. Switch to the account that owns the target repo if needed:
-
-```bash
-gh auth switch -u kenduest
-gh auth switch -u kenduest-brobridge
-```
-
-3. Update description with REST:
-
-```bash
-gh api repos/<owner>/grafana-utils -X PATCH \
-  -f description='Python and Rust CLI tools for exporting, backing up, migrating, and re-importing Grafana dashboards and alerting resources.'
-```
-
-4. Update topics with REST:
-
-```bash
-gh api repos/<owner>/grafana-utils/topics -X PUT \
-  -H 'Accept: application/vnd.github+json' \
-  -f 'names[]=grafana' \
-  -f 'names[]=dashboards' \
-  -f 'names[]=alerting' \
-  -f 'names[]=backup' \
-  -f 'names[]=migration' \
-  -f 'names[]=cli' \
-  -f 'names[]=python' \
-  -f 'names[]=rust'
-```
-
-Things to remember:
-
-- `gh repo view <owner>/<repo>` may fail to resolve a private repo depending on the active account and GraphQL visibility, even when `gh api repos/<owner>/<repo>` works
-- in `zsh`, quote each `names[]=...` argument or the shell will treat it as a glob and fail before the API call
-- if one repo update returns `404`, check the active `gh` account before assuming the repo path is wrong
-
 Documentation policy:
 
 - keep `README.md` suitable for GitHub readers
-- keep environment-specific validation logs, migration notes, and maintainer-only tradeoffs in `DEVELOPER.md`
+- keep environment-specific validation logs, migration notes, and maintainer-only tradeoffs in `docs/DEVELOPER.md`
 - avoid relying on `docs/internal/ai-status.md` and `docs/internal/ai-changes.md` for public project documentation
 - if user-facing release history is needed, prefer a curated `CHANGELOG.md`

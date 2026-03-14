@@ -51,6 +51,18 @@ Grafana Utilities turns those workflows into explicit CLI operations with stable
   - csv
   - json
 
+## Supported Grafana Resources
+
+| Resource | List | Export | Import | Diff | Inspect | Add | Modify | Delete | Notes |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Dashboards | ✓ | ✓ | ✓ | ✓ | ✓ | - | - | - | Inventory, backup, restore, and cross-environment migration |
+| Datasources | ✓ | ✓ | ✓ | ✓ | - | - | - | - | Useful for datasource inventory, replay, and drift review |
+| Alert rules and alerting resources | ✓ | ✓ | ✓ | ✓ | - | - | - | - | Covers alert rules, contact points, mute timings, and templates |
+| Users | ✓ | - | - | - | - | ✓ | ✓ | ✓ | Access-management workflow rather than export/import workflow |
+| Teams | ✓ | - | - | - | - | ✓ | ✓ | ✓ | Team membership and team administration |
+| Service accounts | ✓ | - | - | - | - | ✓ | ✓ | ✓ | Service account lifecycle management |
+| Service account tokens | ✓ | - | - | - | - | ✓ | - | ✓ | Token creation, review, and revocation |
+
 ## How To Think About It
 
 Use this tool when you want Grafana operations to behave more like infrastructure operations:
@@ -151,10 +163,9 @@ cargo build --release
 - Traditional Chinese operator guide: [docs/user-guide-TW.md](docs/user-guide-TW.md)
 - Python implementation overview: [docs/overview-python.md](docs/overview-python.md)
 - Rust implementation overview: [docs/overview-rust.md](docs/overview-rust.md)
-- Maintainer notes: [DEVELOPER.md](DEVELOPER.md)
+- Maintainer notes: [docs/DEVELOPER.md](docs/DEVELOPER.md)
 
 ## Compatibility
 
 - RHEL 8 and later
 - Python runtime target: 3.9+
-

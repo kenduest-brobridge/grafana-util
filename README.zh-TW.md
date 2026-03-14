@@ -32,6 +32,18 @@ Grafana Utilities 的價值就是把這些流程明文化：
 - 能直接比較 live Grafana 與本地匯出結果
 - 能用同一套 CLI 處理 dashboard、datasource、alert、access 四類工作
 
+## 支援的 Grafana 項目
+
+| 項目 | List | Export | Import | Diff | Inspect | Add | Modify | Delete | 說明 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Dashboards | ✓ | ✓ | ✓ | ✓ | ✓ | - | - | - | 適合做盤點、備份、還原與跨環境搬移 |
+| Datasources | ✓ | ✓ | ✓ | ✓ | - | - | - | - | 適合做 datasource 盤點、重播與漂移比對 |
+| Alert rules 與 alerting 資源 | ✓ | ✓ | ✓ | ✓ | - | - | - | - | 包含 alert rules、contact points、mute timings、templates |
+| Users | ✓ | - | - | - | - | ✓ | ✓ | ✓ | 屬於 access 管理流程，不是匯出匯入流程 |
+| Teams | ✓ | - | - | - | - | ✓ | ✓ | ✓ | 支援 team 與成員管理 |
+| Service accounts | ✓ | - | - | - | - | ✓ | ✓ | ✓ | 支援 service account 生命週期管理 |
+| Service account tokens | ✓ | - | - | - | - | ✓ | - | ✓ | 支援 token 建立、查看與撤銷 |
+
 如果你現在的流程還是：
 
 - 打開 Grafana
@@ -139,10 +151,9 @@ cargo build --release
 - 繁中使用者手冊： [docs/user-guide-TW.md](docs/user-guide-TW.md)
 - Python 實作說明： [docs/overview-python.md](docs/overview-python.md)
 - Rust 實作說明： [docs/overview-rust.md](docs/overview-rust.md)
-- 維護者文件： [DEVELOPER.md](DEVELOPER.md)
+- 維護者文件： [docs/DEVELOPER.md](docs/DEVELOPER.md)
 
 ## 相容性
 
 - 支援 RHEL 8 以上
 - Python runtime 目標版本：3.9+
-
