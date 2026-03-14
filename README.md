@@ -25,6 +25,7 @@ Compatibility:
 ## Contents
 
 - [Overview](#overview)
+- [Architecture](#architecture)
 - [Choose Python or Rust](#choose-python-or-rust)
 - [Quick Start](#quick-start)
 - [Dashboard Utility](#dashboard-utility)
@@ -72,6 +73,11 @@ Maintainer architecture overviews:
 
 - Python architecture: [`docs/overview-python.md`](docs/overview-python.md)
 - Rust architecture: [`docs/overview-rust.md`](docs/overview-rust.md)
+
+## Architecture
+
+- [Python architecture notes](docs/overview-python.md)
+- [Rust architecture notes](docs/overview-rust.md)
 
 Compatibility notes:
 
