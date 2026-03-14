@@ -38,9 +38,10 @@ pub use access_cli_defs::{
     build_auth_context, build_http_client, normalize_access_cli_args, parse_cli_from, root_command,
     AccessAuthContext, AccessCliArgs, AccessCommand, CommonCliArgs, Scope, ServiceAccountAddArgs,
     ServiceAccountCommand, ServiceAccountListArgs, ServiceAccountTokenAddArgs,
-    ServiceAccountTokenCommand, TeamAddArgs, TeamCommand, TeamListArgs, TeamModifyArgs,
-    UserAddArgs, UserCommand, UserDeleteArgs, UserListArgs, UserModifyArgs, DEFAULT_PAGE_SIZE,
-    DEFAULT_TIMEOUT, DEFAULT_URL,
+    ServiceAccountTokenCommand, TeamAddArgs, TeamCommand, TeamExportArgs, TeamImportArgs,
+    TeamListArgs, TeamModifyArgs, UserAddArgs, UserCommand, UserDeleteArgs, UserExportArgs,
+    UserImportArgs, UserListArgs, UserModifyArgs, DEFAULT_PAGE_SIZE, DEFAULT_TIMEOUT,
+    DEFAULT_URL,
 };
 pub use access_pending_delete::{
     GroupCommandStage, ServiceAccountDeleteArgs, ServiceAccountTokenDeleteArgs, TeamDeleteArgs,
@@ -58,12 +59,13 @@ pub(crate) use access_service_account::{
 };
 #[cfg(test)]
 pub(crate) use access_team::{
-    add_team_with_request, list_teams_command_with_request, modify_team_with_request,
+    add_team_with_request, export_teams_with_request, import_teams_with_request,
+    list_teams_command_with_request, modify_team_with_request,
 };
 #[cfg(test)]
 pub(crate) use access_user::{
-    add_user_with_request, delete_user_with_request, list_users_with_request,
-    modify_user_with_request,
+    add_user_with_request, delete_user_with_request, export_users_with_request,
+    import_users_with_request, list_users_with_request, modify_user_with_request,
 };
 
 fn request_object<F>(
@@ -131,6 +133,12 @@ where
             UserCommand::Modify(args) => {
                 let _ = access_user::modify_user_with_request(&mut request_json, &args)?;
             }
+            UserCommand::Export(args) => {
+                let _ = access_user::export_users_with_request(&mut request_json, &args)?;
+            }
+            UserCommand::Import(args) => {
+                let _ = access_user::import_users_with_request(&mut request_json, &args)?;
+            }
             UserCommand::Delete(args) => {
                 let _ = access_user::delete_user_with_request(&mut request_json, &args)?;
             }
@@ -144,6 +152,12 @@ where
             }
             TeamCommand::Modify(args) => {
                 let _ = access_team::modify_team_with_request(&mut request_json, &args)?;
+            }
+            TeamCommand::Export(args) => {
+                let _ = access_team::export_teams_with_request(&mut request_json, &args)?;
+            }
+            TeamCommand::Import(args) => {
+                let _ = access_team::import_teams_with_request(&mut request_json, &args)?;
             }
             TeamCommand::Delete(args) => {
                 let _ = access_pending_delete::delete_team_with_request(&mut request_json, &args)?;
@@ -207,6 +221,14 @@ pub fn run_access_cli(args: AccessCliArgs) -> Result<()> {
                 let client = build_http_client(&inner.common)?;
                 run_access_cli_with_client(&client, args)
             }
+            UserCommand::Export(inner) => {
+                let client = build_http_client(&inner.common)?;
+                run_access_cli_with_client(&client, args)
+            }
+            UserCommand::Import(inner) => {
+                let client = build_http_client(&inner.common)?;
+                run_access_cli_with_client(&client, args)
+            }
             UserCommand::Delete(inner) => {
                 let client = build_http_client(&inner.common)?;
                 run_access_cli_with_client(&client, args)
@@ -222,6 +244,14 @@ pub fn run_access_cli(args: AccessCliArgs) -> Result<()> {
                 run_access_cli_with_client(&client, args)
             }
             TeamCommand::Modify(inner) => {
+                let client = build_http_client(&inner.common)?;
+                run_access_cli_with_client(&client, args)
+            }
+            TeamCommand::Export(inner) => {
+                let client = build_http_client(&inner.common)?;
+                run_access_cli_with_client(&client, args)
+            }
+            TeamCommand::Import(inner) => {
                 let client = build_http_client(&inner.common)?;
                 run_access_cli_with_client(&client, args)
             }

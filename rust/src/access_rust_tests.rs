@@ -8,7 +8,7 @@ use super::{
     list_teams_command_with_request,
     list_users_with_request, modify_team_with_request, modify_user_with_request, parse_cli_from,
     import_teams_with_request, run_access_cli_with_request, AccessCommand, CommonCliArgs, Scope,
-    ServiceAccountAddArgs,
+    DryRunOutputFormat, ServiceAccountAddArgs,
     ServiceAccountCommand, ServiceAccountDeleteArgs, ServiceAccountListArgs,
     ServiceAccountTokenAddArgs, ServiceAccountTokenCommand, ServiceAccountTokenDeleteArgs,
     TeamAddArgs, TeamCommand, TeamDeleteArgs, TeamImportArgs, TeamListArgs,
@@ -155,6 +155,28 @@ fn parse_cli_supports_user_list_output_format_json() {
             command: UserCommand::List(list_args),
         } => {
             assert!(list_args.json);
+            assert!(!list_args.table);
+            assert!(!list_args.csv);
+        }
+        _ => panic!("expected user list"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_user_list_output_format_text() {
+    let args = parse_cli_from([
+        "grafana-access-utils",
+        "user",
+        "list",
+        "--output-format",
+        "text",
+    ]);
+
+    match args.command {
+        AccessCommand::User {
+            command: UserCommand::List(list_args),
+        } => {
+            assert!(!list_args.json);
             assert!(!list_args.table);
             assert!(!list_args.csv);
         }
@@ -393,6 +415,110 @@ fn parse_cli_supports_team_export_and_import() {
 }
 
 #[test]
+fn parse_cli_supports_user_import_dry_run_output_format_table() {
+    let args = parse_cli_from([
+        "grafana-access-utils",
+        "user",
+        "import",
+        "--import-dir",
+        "/tmp/access-users",
+        "--dry-run",
+        "--output-format",
+        "table",
+    ]);
+
+    match args.command {
+        AccessCommand::User {
+            command: UserCommand::Import(args),
+        } => {
+            assert!(args.dry_run);
+            assert!(args.table);
+            assert!(!args.json);
+            assert_eq!(args.output_format, DryRunOutputFormat::Table);
+        }
+        _ => panic!("expected user import"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_user_import_dry_run_output_format_json() {
+    let args = parse_cli_from([
+        "grafana-access-utils",
+        "user",
+        "import",
+        "--import-dir",
+        "/tmp/access-users",
+        "--dry-run",
+        "--output-format",
+        "json",
+    ]);
+
+    match args.command {
+        AccessCommand::User {
+            command: UserCommand::Import(args),
+        } => {
+            assert!(args.dry_run);
+            assert!(args.json);
+            assert!(!args.table);
+            assert_eq!(args.output_format, DryRunOutputFormat::Json);
+        }
+        _ => panic!("expected user import"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_team_import_dry_run_output_format_table() {
+    let args = parse_cli_from([
+        "grafana-access-utils",
+        "team",
+        "import",
+        "--import-dir",
+        "/tmp/access-teams",
+        "--dry-run",
+        "--output-format",
+        "table",
+    ]);
+
+    match args.command {
+        AccessCommand::Team {
+            command: TeamCommand::Import(args),
+        } => {
+            assert!(args.dry_run);
+            assert!(args.table);
+            assert!(!args.json);
+            assert_eq!(args.output_format, DryRunOutputFormat::Table);
+        }
+        _ => panic!("expected team import"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_team_import_dry_run_output_format_json() {
+    let args = parse_cli_from([
+        "grafana-access-utils",
+        "team",
+        "import",
+        "--import-dir",
+        "/tmp/access-teams",
+        "--dry-run",
+        "--output-format",
+        "json",
+    ]);
+
+    match args.command {
+        AccessCommand::Team {
+            command: TeamCommand::Import(args),
+        } => {
+            assert!(args.dry_run);
+            assert!(args.json);
+            assert!(!args.table);
+            assert_eq!(args.output_format, DryRunOutputFormat::Json);
+        }
+        _ => panic!("expected team import"),
+    }
+}
+
+#[test]
 fn run_access_cli_with_request_routes_user_export() {
     let args = parse_cli_from([
         "grafana-access-utils",
@@ -498,6 +624,9 @@ fn team_import_with_request_creates_team_and_memberships() {
         replace_existing: false,
         dry_run: false,
         yes: false,
+        table: false,
+        json: false,
+        output_format: DryRunOutputFormat::Text,
     };
     let mut calls = Vec::new();
     let result = import_teams_with_request(
@@ -561,6 +690,9 @@ fn team_import_with_request_rejects_member_removals_without_yes() {
         replace_existing: true,
         dry_run: false,
         yes: false,
+        table: false,
+        json: false,
+        output_format: DryRunOutputFormat::Text,
     };
     let result = import_teams_with_request(
         |_method, path, _params, _payload| match path {
@@ -594,6 +726,9 @@ fn team_import_with_request_updates_memberships_when_yes_is_set() {
         replace_existing: true,
         dry_run: false,
         yes: true,
+        table: false,
+        json: false,
+        output_format: DryRunOutputFormat::Text,
     };
     let mut calls = Vec::new();
     let result = import_teams_with_request(
@@ -843,6 +978,41 @@ fn team_add_with_request_creates_team_and_members() {
     assert!(calls
         .iter()
         .any(|(method, path, _, _)| method == "PUT" && path == "/api/teams/3/members"));
+}
+
+#[test]
+fn team_add_with_request_creates_empty_team_without_members() {
+    let args = TeamAddArgs {
+        common: make_token_common(),
+        name: "Ops".to_string(),
+        email: Some("ops@example.com".to_string()),
+        members: Vec::new(),
+        admins: Vec::new(),
+        json: false,
+    };
+    let mut calls = Vec::new();
+    let result = add_team_with_request(
+        |method, path, params, payload| {
+            calls.push((
+                method.to_string(),
+                path.to_string(),
+                params.to_vec(),
+                payload.cloned(),
+            ));
+            match path {
+                "/api/teams" => Ok(Some(json!({"teamId": 3}))),
+                "/api/teams/3" => Ok(Some(
+                    json!({"id": 3, "name": "Ops", "email": "ops@example.com"}),
+                )),
+                _ => panic!("unexpected path {path} {method:?}"),
+            }
+        },
+        &args,
+    );
+
+    assert!(result.is_ok());
+    assert!(calls.iter().any(|(_, path, _, _)| path == "/api/teams"));
+    assert!(!calls.iter().any(|(_, path, _, _)| path == "/api/teams/3/members"));
 }
 
 #[test]

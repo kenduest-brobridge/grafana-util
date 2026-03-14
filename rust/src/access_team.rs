@@ -89,6 +89,45 @@ fn parse_access_identity_list(value: &Value) -> Vec<String> {
         .unwrap_or_default()
 }
 
+fn build_team_import_dry_run_row(
+    index: usize,
+    identity: &str,
+    action: &str,
+    detail: &str,
+) -> Map<String, Value> {
+    Map::from_iter(vec![
+        ("index".to_string(), Value::String(index.to_string())),
+        ("identity".to_string(), Value::String(identity.to_string())),
+        ("action".to_string(), Value::String(action.to_string())),
+        ("detail".to_string(), Value::String(detail.to_string())),
+    ])
+}
+
+fn build_team_import_dry_run_rows(rows: &[Map<String, Value>]) -> Vec<Vec<String>> {
+    rows.iter()
+        .map(|row| {
+            vec![
+                map_get_text(row, "index"),
+                map_get_text(row, "identity"),
+                map_get_text(row, "action"),
+                map_get_text(row, "detail"),
+            ]
+        })
+        .collect()
+}
+
+fn validate_team_import_dry_run_output(args: &TeamImportArgs) -> Result<()> {
+    if (args.table || args.json) && !args.dry_run {
+        return Err(message(
+            "--table/--json for team import are only supported with --dry-run.",
+        ));
+    }
+    if args.table && args.json {
+        return Err(message("--table and --json cannot be used together for team import."));
+    }
+    Ok(())
+}
+
 fn assert_not_overwrite(path: &Path, dry_run: bool, overwrite: bool) -> Result<()> {
     if dry_run || !path.exists() || overwrite {
         return Ok(());
@@ -650,6 +689,24 @@ where
         }
     };
     let team = get_team_with_request(&mut request_json, &team_id)?;
+    if args.members.is_empty() && args.admins.is_empty() {
+        let result = team_modify_result(
+            &team_id,
+            &string_field(&team, "name", &args.name),
+            Vec::new(),
+            Vec::new(),
+            Vec::new(),
+            Vec::new(),
+            string_field(&team, "email", args.email.as_deref().unwrap_or("")),
+        );
+        if args.json {
+            println!("{}", render_objects_json(&[result])?);
+        } else {
+            println!("{}", team_modify_summary_line(&result));
+        }
+        return Ok(0);
+    }
+
     let modify = TeamModifyArgs {
         common: args.common.clone(),
         team_id: Some(team_id.clone()),
@@ -775,11 +832,14 @@ pub(crate) fn import_teams_with_request<F>(
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
+    validate_team_import_dry_run_output(args)?;
     let records = load_team_import_records(&args.import_dir, ACCESS_EXPORT_KIND_TEAMS)?;
     let mut created = 0usize;
     let mut updated = 0usize;
     let mut skipped = 0usize;
     let mut processed = 0usize;
+    let mut dry_run_rows: Vec<Map<String, Value>> = Vec::new();
+    let is_dry_run_table_or_json = args.dry_run && (args.table || args.json);
 
     for (index, record) in records.iter().enumerate() {
         processed += 1;
@@ -823,7 +883,16 @@ where
 
         if existing_team_id.is_none() {
             if args.dry_run {
-                println!("Would create team {}", team_name);
+                if is_dry_run_table_or_json {
+                    dry_run_rows.push(build_team_import_dry_run_row(
+                        index + 1,
+                        &team_name,
+                        "create",
+                        "would create team",
+                    ));
+                } else {
+                    println!("Would create team {}", team_name);
+                }
                 created += 1;
                 continue;
             }
@@ -875,7 +944,16 @@ where
         let team_id = existing_team_id.unwrap();
         if !args.replace_existing {
             skipped += 1;
-            println!("Skipped team {} ({})", team_name, index + 1);
+            if is_dry_run_table_or_json {
+                dry_run_rows.push(build_team_import_dry_run_row(
+                    index + 1,
+                    &team_name,
+                    "skip",
+                    "existing and --replace-existing was not set.",
+                ));
+            } else {
+                println!("Skipped team {} ({})", team_name, index + 1);
+            }
             continue;
         }
 
@@ -949,18 +1027,58 @@ where
             for identity in record_members.iter().chain(record_admins.iter()) {
                 let key = normalize_access_identity(identity);
                 if !existing_members.contains_key(&key) {
-                    println!("Would add team {} member {}", team_name, identity);
+                    if is_dry_run_table_or_json {
+                        dry_run_rows.push(build_team_import_dry_run_row(
+                            index + 1,
+                            &team_name,
+                            "add-member",
+                            &format!("would add team member {identity}"),
+                        ));
+                    } else {
+                        println!("Would add team {} member {}", team_name, identity);
+                    }
                 }
             }
             for key in remove_keys {
                 if let Some((identity, _, _)) = existing_members.get(&key) {
-                    println!("Would remove team {} member {}", team_name, identity);
+                    if is_dry_run_table_or_json {
+                        dry_run_rows.push(build_team_import_dry_run_row(
+                            index + 1,
+                            &team_name,
+                            "remove-member",
+                            &format!("would remove team member {identity}"),
+                        ));
+                    } else {
+                        println!("Would remove team {} member {}", team_name, identity);
+                    }
                 }
             }
         }
 
         updated += 1;
-        println!("Updated team {}", team_name);
+        if is_dry_run_table_or_json {
+            dry_run_rows.push(build_team_import_dry_run_row(
+                index + 1,
+                &team_name,
+                "updated",
+                "would update team",
+            ));
+        } else {
+            println!("Updated team {}", team_name);
+        }
+    }
+
+    if args.dry_run && is_dry_run_table_or_json {
+        if args.table {
+            for line in format_table(
+                &["INDEX", "IDENTITY", "ACTION", "DETAIL"],
+                &build_team_import_dry_run_rows(&dry_run_rows),
+            ) {
+                println!("{line}");
+            }
+        } else if args.json {
+            println!("{}", render_objects_json(&dry_run_rows)?);
+        }
     }
 
     println!(

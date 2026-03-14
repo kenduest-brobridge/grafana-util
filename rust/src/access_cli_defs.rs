@@ -1,6 +1,7 @@
 //! Clap schema for access-management CLI commands.
 //! Centralizes CLI argument enums and parser-normalization helpers for access handlers.
 use clap::{Args, Command, CommandFactory, Parser, Subcommand, ValueEnum};
+use std::path::PathBuf;
 
 use super::access_pending_delete::{
     ServiceAccountDeleteArgs, ServiceAccountTokenDeleteArgs, TeamDeleteArgs,
@@ -11,6 +12,14 @@ use crate::http::{JsonHttpClient, JsonHttpClientConfig};
 pub const DEFAULT_URL: &str = "http://127.0.0.1:3000";
 pub const DEFAULT_TIMEOUT: u64 = 30;
 pub const DEFAULT_PAGE_SIZE: usize = 100;
+pub const DEFAULT_ACCESS_USER_EXPORT_DIR: &str = "access-users";
+pub const DEFAULT_ACCESS_TEAM_EXPORT_DIR: &str = "access-teams";
+pub const ACCESS_EXPORT_KIND_USERS: &str = "grafana-utils-access-user-export-index";
+pub const ACCESS_EXPORT_KIND_TEAMS: &str = "grafana-utils-access-team-export-index";
+pub const ACCESS_EXPORT_VERSION: i64 = 1;
+pub const ACCESS_USER_EXPORT_FILENAME: &str = "users.json";
+pub const ACCESS_TEAM_EXPORT_FILENAME: &str = "teams.json";
+pub const ACCESS_EXPORT_METADATA_FILENAME: &str = "export-metadata.json";
 
 #[derive(Debug, Clone, Args)]
 pub struct CommonCliArgs {
@@ -67,8 +76,16 @@ pub enum Scope {
 
 #[derive(Debug, Clone, ValueEnum, PartialEq, Eq)]
 pub enum ListOutputFormat {
+    Text,
     Table,
     Csv,
+    Json,
+}
+
+#[derive(Debug, Clone, ValueEnum, PartialEq, Eq)]
+pub enum DryRunOutputFormat {
+    Text,
+    Table,
     Json,
 }
 
@@ -118,7 +135,7 @@ pub struct UserListArgs {
         long,
         value_enum,
         conflicts_with_all = ["table", "csv", "json"],
-        help = "Alternative single-flag output selector. Use table, csv, or json."
+        help = "Alternative single-flag output selector. Use text, table, csv, or json."
     )]
     pub output_format: Option<ListOutputFormat>,
 }
@@ -207,6 +224,101 @@ pub struct UserDeleteArgs {
 }
 
 #[derive(Debug, Clone, Args)]
+pub struct UserExportArgs {
+    #[command(flatten)]
+    pub common: CommonCliArgs,
+    #[arg(
+        long,
+        default_value = DEFAULT_ACCESS_USER_EXPORT_DIR,
+        help = "Directory to write users.json and export-metadata.json."
+    )]
+    pub export_dir: PathBuf,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Replace existing export files in the target directory instead of failing."
+    )]
+    pub overwrite: bool,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Preview export paths without writing files."
+    )]
+    pub dry_run: bool,
+    #[arg(
+        long,
+        value_enum,
+        default_value_t = Scope::Org,
+        help = "Export org-scoped or global users (default: org)."
+    )]
+    pub scope: Scope,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Include each user's current team memberships in the export file."
+    )]
+    pub with_teams: bool,
+}
+
+#[derive(Debug, Clone, Args)]
+pub struct UserImportArgs {
+    #[command(flatten)]
+    pub common: CommonCliArgs,
+    #[arg(
+        long,
+        help = "Import directory that contains users.json and export-metadata.json."
+    )]
+    pub import_dir: PathBuf,
+    #[arg(
+        long,
+        value_enum,
+        default_value_t = Scope::Org,
+        help = "Import match strategy for users: global or org scope (default: org)."
+    )]
+    pub scope: Scope,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Update matching existing items instead of failing import on duplicates."
+    )]
+    pub replace_existing: bool,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Preview import changes without writing to Grafana."
+    )]
+    pub dry_run: bool,
+    #[arg(
+        long,
+        default_value_t = false,
+        requires = "dry_run",
+        help = "For --dry-run only, render a compact table instead of per-record log lines."
+    )]
+    pub table: bool,
+    #[arg(
+        long,
+        default_value_t = false,
+        requires = "dry_run",
+        help = "For --dry-run only, render one JSON document with action rows and summary counts."
+    )]
+    pub json: bool,
+    #[arg(
+        long,
+        value_enum,
+        default_value_t = DryRunOutputFormat::Text,
+        conflicts_with_all = ["table", "json"],
+        help = "Alternative single-flag output selector for --dry-run output. Use text, table, or json."
+    )]
+    pub output_format: DryRunOutputFormat,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Acknowledge destructive import operations (remove/missing sync)."
+    )]
+    pub yes: bool,
+}
+
+#[derive(Debug, Clone, Args)]
 pub struct TeamListArgs {
     #[command(flatten)]
     pub common: CommonCliArgs,
@@ -238,7 +350,7 @@ pub struct TeamListArgs {
         long,
         value_enum,
         conflicts_with_all = ["table", "csv", "json"],
-        help = "Alternative single-flag output selector. Use table, csv, or json."
+        help = "Alternative single-flag output selector. Use text, table, csv, or json."
     )]
     pub output_format: Option<ListOutputFormat>,
 }
@@ -253,12 +365,12 @@ pub struct TeamAddArgs {
     pub email: Option<String>,
     #[arg(
         long = "member",
-        help = "Add one or more members by user id or login as part of team creation."
+        help = "Add one or more members by user id, exact login, or exact email as part of team creation."
     )]
     pub members: Vec<String>,
     #[arg(
         long = "admin",
-        help = "Add one or more team admins by user id or login as part of team creation."
+        help = "Add one or more team admins by user id, exact login, or exact email as part of team creation."
     )]
     pub admins: Vec<String>,
     #[arg(
@@ -267,6 +379,87 @@ pub struct TeamAddArgs {
         help = "Render the create response as JSON."
     )]
     pub json: bool,
+}
+
+#[derive(Debug, Clone, Args)]
+pub struct TeamExportArgs {
+    #[command(flatten)]
+    pub common: CommonCliArgs,
+    #[arg(
+        long,
+        default_value = DEFAULT_ACCESS_TEAM_EXPORT_DIR,
+        help = "Directory to write teams.json and export-metadata.json."
+    )]
+    pub export_dir: PathBuf,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Replace existing export files in the target directory instead of failing."
+    )]
+    pub overwrite: bool,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Preview export paths without writing files."
+    )]
+    pub dry_run: bool,
+    #[arg(
+        long,
+        default_value_t = true,
+        help = "Include team members and admins in exported team records."
+    )]
+    pub with_members: bool,
+}
+
+#[derive(Debug, Clone, Args)]
+pub struct TeamImportArgs {
+    #[command(flatten)]
+    pub common: CommonCliArgs,
+    #[arg(
+        long,
+        help = "Import directory that contains teams.json and export-metadata.json."
+    )]
+    pub import_dir: PathBuf,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Update matching existing teams instead of failing on duplicates."
+    )]
+    pub replace_existing: bool,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Preview import changes without writing to Grafana."
+    )]
+    pub dry_run: bool,
+    #[arg(
+        long,
+        default_value_t = false,
+        requires = "dry_run",
+        help = "For --dry-run only, render a compact table instead of per-record log lines."
+    )]
+    pub table: bool,
+    #[arg(
+        long,
+        default_value_t = false,
+        requires = "dry_run",
+        help = "For --dry-run only, render one JSON document with action rows and summary counts."
+    )]
+    pub json: bool,
+    #[arg(
+        long,
+        value_enum,
+        default_value_t = DryRunOutputFormat::Text,
+        conflicts_with_all = ["table", "json"],
+        help = "Alternative single-flag output selector for --dry-run output. Use text, table, or json."
+    )]
+    pub output_format: DryRunOutputFormat,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Acknowledge destructive team-member synchronization operations."
+    )]
+    pub yes: bool,
 }
 
 #[derive(Debug, Clone, Args)]
@@ -287,22 +480,22 @@ pub struct TeamModifyArgs {
     pub name: Option<String>,
     #[arg(
         long = "add-member",
-        help = "Add one or more members by user id or login."
+        help = "Add one or more members by user id, exact login, or exact email."
     )]
     pub add_member: Vec<String>,
     #[arg(
         long = "remove-member",
-        help = "Remove one or more members by user id or login."
+        help = "Remove one or more members by user id, exact login, or exact email."
     )]
     pub remove_member: Vec<String>,
     #[arg(
         long = "add-admin",
-        help = "Promote one or more members to team admin."
+        help = "Promote one or more members to team admin by user id, exact login, or exact email."
     )]
     pub add_admin: Vec<String>,
     #[arg(
         long = "remove-admin",
-        help = "Remove team-admin status from one or more members."
+        help = "Remove team-admin status from one or more members by user id, exact login, or exact email."
     )]
     pub remove_admin: Vec<String>,
     #[arg(
@@ -337,7 +530,7 @@ pub struct ServiceAccountListArgs {
         long,
         value_enum,
         conflicts_with_all = ["table", "csv", "json"],
-        help = "Alternative single-flag output selector. Use table, csv, or json."
+        help = "Alternative single-flag output selector. Use text, table, csv, or json."
     )]
     pub output_format: Option<ListOutputFormat>,
 }
@@ -417,6 +610,8 @@ pub enum TeamCommand {
     List(TeamListArgs),
     Add(TeamAddArgs),
     Modify(TeamModifyArgs),
+    Export(TeamExportArgs),
+    Import(TeamImportArgs),
     Delete(TeamDeleteArgs),
 }
 
@@ -425,6 +620,8 @@ pub enum UserCommand {
     List(UserListArgs),
     Add(UserAddArgs),
     Modify(UserModifyArgs),
+    Export(UserExportArgs),
+    Import(UserImportArgs),
     Delete(UserDeleteArgs),
 }
 
@@ -481,10 +678,23 @@ fn apply_list_output_format(
     output_format: &Option<ListOutputFormat>,
 ) {
     match output_format {
+        Some(ListOutputFormat::Text) => {}
         Some(ListOutputFormat::Table) => *table = true,
         Some(ListOutputFormat::Csv) => *csv = true,
         Some(ListOutputFormat::Json) => *json = true,
         None => {}
+    }
+}
+
+fn apply_dry_run_output_format(
+    table: &mut bool,
+    json: &mut bool,
+    output_format: &DryRunOutputFormat,
+) {
+    match output_format {
+        DryRunOutputFormat::Text => {}
+        DryRunOutputFormat::Table => *table = true,
+        DryRunOutputFormat::Json => *json = true,
     }
 }
 
@@ -501,6 +711,13 @@ pub fn normalize_access_cli_args(mut args: AccessCliArgs) -> AccessCliArgs {
                     &list_args.output_format,
                 );
             }
+            if let UserCommand::Import(import_args) = command {
+                apply_dry_run_output_format(
+                    &mut import_args.table,
+                    &mut import_args.json,
+                    &import_args.output_format,
+                );
+            }
         }
         AccessCommand::Team { command } => {
             if let TeamCommand::List(list_args) = command {
@@ -509,6 +726,13 @@ pub fn normalize_access_cli_args(mut args: AccessCliArgs) -> AccessCliArgs {
                     &mut list_args.csv,
                     &mut list_args.json,
                     &list_args.output_format,
+                );
+            }
+            if let TeamCommand::Import(import_args) = command {
+                apply_dry_run_output_format(
+                    &mut import_args.table,
+                    &mut import_args.json,
+                    &import_args.output_format,
                 );
             }
         }
