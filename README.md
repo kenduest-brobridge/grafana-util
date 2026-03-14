@@ -40,9 +40,6 @@ Grafana Utilities turns those workflows into explicit CLI operations with stable
   - `datasource`
   - `alert`
   - `access`
-- Two implementation paths with the same command model:
-  - installed CLI / Python package
-  - Rust source-tree CLI
 - Export formats that support both:
   - API-friendly restore workflows
   - Grafana UI import workflows
@@ -58,33 +55,19 @@ Grafana Utilities turns those workflows into explicit CLI operations with stable
 | Dashboards | ✓ | ✓ | ✓ | ✓ | ✓ | - | - | - | Inventory, backup, restore, and cross-environment migration |
 | Datasources | ✓ | ✓ | ✓ | ✓ | - | - | - | - | Useful for datasource inventory, replay, and drift review |
 | Alert rules and alerting resources | ✓ | ✓ | ✓ | ✓ | - | - | - | - | Covers alert rules, contact points, mute timings, and templates |
-| Users | ✓ | ✓ | ✓ | - | - | ✓ | ✓ | ✓ | Access workflows with Rust snapshot import/export (`--with-teams` supported on export/import); Python CLI remains live workflow. |
-| Teams (alias: group) | ✓ | ✓ | ✓ | - | - | ✓ | ✓ | ✓ | Team membership and team administration; Rust supports snapshot import/export. |
+| Users | ✓ | ✓ | ✓ | ✓ | - | ✓ | ✓ | ✓ | Access workflows support snapshot export/import and drift review, including optional `--with-teams` membership state |
+| Teams (alias: group) | ✓ | ✓ | ✓ | ✓ | - | ✓ | ✓ | ✓ | Team membership and team administration with export/import and drift comparison |
 | Service accounts | ✓ | - | - | - | - | ✓ | ✓ | ✓ | Service account lifecycle management |
 | Service account tokens | ✓ | - | - | - | - | ✓ | - | ✓ | Token creation, review, and revocation |
 
 ### Access command support design
 
-For this project, access support is implementation-dependent:
+Access workflows follow one operator model across the project:
 
-#### Python CLI (`grafana_utils` / `python3 -m grafana_utils`)
-
-- `user` and `team` (`group`) are modeled as live access-management workflows.
-- No `access ... export` or `access ... import` commands are defined.
-- No canonical snapshot format for full user/team state is provided because IDs, roles, and org contexts are tightly instance-bound.
-- For cross-environment migration, Python callers should use:
-  1. `access user/team list` in source
-  2. normalize desired state in your own orchestration layer (CSV/JSON/YAML)
-  3. apply with `access ... add/modify/delete` on target
-- This keeps destructive operations explicit and avoids blind replay.
-
-#### Rust CLI (`cargo run --bin grafana-util` / built Rust binary)
-
-- `access user` and `access team` export/import are available via `access <user|team> export|import`.
+- `access user export|import|diff` handles user snapshots and optional team membership state.
+- `access team export|import|diff` handles team snapshots and membership/admin drift review.
 - `team import` performs deterministic membership sync and requires `--yes` when existing memberships would be removed.
-- Export/import supports snapshot workflows and is suitable for controlled migration pipelines.
-
-If your environment needs strict file-diff replay, use the Rust `access user|team export` and `import` workflows directly; Python access CLI remains a live-only workflow.
+- Export/import snapshot files are intended for controlled migration, cleanup review, and repeatable reconciliation.
 
 ## How To Think About It
 

@@ -69,7 +69,21 @@ Default URLs:
 - Dashboard: `dashboard export`, `dashboard list`, `dashboard list-data-sources`, `dashboard import`, `dashboard diff`, `dashboard inspect-export`, `dashboard inspect-live`
 - Alert: `alert export`, `alert import`, `alert diff`, `alert list-rules`, `alert list-contact-points`, `alert list-mute-timings`, `alert list-templates`
 - Datasource: `datasource list`, `datasource export`, `datasource import`, `datasource diff`
-- Access: `access user list`, `access user add`, `access user modify`, `access user delete`, `access user export`, `access user import`, `access team list`, `access team add`, `access team modify`, `access team delete`, `access team export`, `access team import`, `access service-account list`, `access service-account add`, `access service-account delete`, `access service-account token add`, `access service-account token delete`
+- Access: `access user list`, `access user add`, `access user modify`, `access user delete`, `access user export`, `access user import`, `access user diff`, `access team list`, `access team add`, `access team modify`, `access team delete`, `access team export`, `access team import`, `access team diff`, `access service-account list`, `access service-account add`, `access service-account delete`, `access service-account token add`, `access service-account token delete`
+
+### Command capability summary
+
+Use this table first when you need to confirm whether a resource supports inventory, file export/import, or drift comparison before reading the per-command sections.
+
+| Resource | List | Export | Import | Diff | Inspect | Add | Modify | Delete | Notes |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Dashboards | ✓ | ✓ | ✓ | ✓ | ✓ | - | - | - | Inventory, backup, and cross-environment migration |
+| Datasources | ✓ | ✓ | ✓ | ✓ | - | - | - | - | Drift review and migration checkpoints |
+| Alert rules & alerting resources | ✓ | ✓ | ✓ | ✓ | - | - | - | - | rule trees, contact points, mute timings, templates |
+| Users | ✓ | ✓ | ✓ | ✓ | - | ✓ | ✓ | ✓ | User inventory, migration, and drift comparison |
+| Teams (`group` alias) | ✓ | ✓ | ✓ | ✓ | - | ✓ | ✓ | ✓ | Team inventory, migration, and drift comparison |
+| Service accounts | ✓ | - | - | - | - | ✓ | ✓ | ✓ | Service account lifecycle |
+| Service account tokens | ✓ | - | - | - | - | ✓ | - | ✓ | token add/delete workflows |
 
 Authentication exclusivity rules:
 
@@ -747,6 +761,47 @@ For JSON dry-run:
 ]
 ```
 
+### `access user diff`
+
+Purpose: compare an exported users snapshot with live users.
+
+| Option | Purpose | Difference / scenario |
+| --- | --- | --- |
+| `--diff-dir` | Directory containing `users.json` and `export-metadata.json` | Default is `access-users` |
+| `--scope` | `org` or `global` | Compare under the same identity scope |
+
+Example command:
+```bash
+cargo run --bin grafana-util -- access user diff --url http://localhost:3000 --token <TOKEN> --diff-dir ./access-users --scope org
+```
+
+Example output:
+```text
+Diff checked 2 user(s).
+alice@example.com  UPDATE  change role from Viewer to Editor
+bob@example.com    DELETE  user not present in snapshot
+```
+
+### `access team diff`
+
+Purpose: compare an exported teams snapshot with live teams and memberships.
+
+| Option | Purpose | Difference / scenario |
+| --- | --- | --- |
+| `--diff-dir` | Directory containing `teams.json` and `export-metadata.json` | Default is `access-teams` |
+
+Example command:
+```bash
+cargo run --bin grafana-util -- access team diff --url http://localhost:3000 --token <TOKEN> --diff-dir ./access-teams
+```
+
+Example output:
+```text
+Diff checked 1 team(s).
+Ops               UPDATE   add-member alice@example.com
+SRE               DELETE   team absent from snapshot
+```
+
 ### 6.7 `access team list`
 
 Purpose: list teams.
@@ -1056,6 +1111,7 @@ Example output:
 2. Use `access user modify` for role changes.
 3. Use `access team modify` for membership changes.
 4. Use `access service-account` and token commands for automation identities.
+5. Validate any snapshot migration with `access user diff` and `access team diff` before import.
 
 9) Minimal SOP Commands
 -----------------------
@@ -1081,6 +1137,8 @@ cargo run --bin grafana-util -- access user export --url <URL> --token <TOKEN> -
 cargo run --bin grafana-util -- access team export --url <URL> --token <TOKEN> --export-dir ./access-teams
 cargo run --bin grafana-util -- access user import --url <URL> --token <TOKEN> --import-dir ./access-users --replace-existing --dry-run --output-format table
 cargo run --bin grafana-util -- access team import --url <URL> --token <TOKEN> --import-dir ./access-teams --replace-existing --dry-run --output-format table
+cargo run --bin grafana-util -- access user diff --url <URL> --token <TOKEN> --diff-dir ./access-users
+cargo run --bin grafana-util -- access team diff --url <URL> --token <TOKEN> --diff-dir ./access-teams
 cargo run --bin grafana-util -- access service-account list --url <URL> --token <TOKEN> --table
 ```
 
@@ -1097,6 +1155,8 @@ cargo run --bin grafana-util -- access service-account list --url <URL> --token 
 | `access list` commands | `table/csv/json` | Shared list pattern |
 | `access user import` | `text/table/json` | Dry-run table/json/ text summary |
 | `access team import` | `text/table/json` | Dry-run table/json/text summary |
+| `access user diff` | text | Summary output |
+| `access team diff` | text | Summary output |
 
 | Command | `--org-id` | `--all-orgs` |
 | --- | --- | --- |

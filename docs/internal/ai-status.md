@@ -919,3 +919,9 @@ Historical note:
 - Baseline: Workspace is empty and there is no existing Grafana export utility.
 - Current Update: Added `--without-raw` and `--without-prompt` so operators can selectively suppress one export variant while keeping the dual-export default. The exporter now rejects disabling both at once.
 - Result: The tool now supports both workflows: export both variants by default, or export only `raw/` or only `prompt/` when needed. API import still requires an explicit path and should point at `raw/`.
+## 2026-03-15 - Task: Promote Python Access User/Team Diff to Supported Status
+- State: Done
+- Scope: `grafana_utils/access_cli.py`, `tests/test_python_access_cli.py`, `README.md`, `README.zh-TW.md`, `docs/user-guide.md`, `docs/user-guide-TW.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The Python access workflows already had `diff_users_with_client` and `diff_teams_with_client`, but the top-level Python facade did not re-export those helpers and the public docs still described Python access snapshots and drift comparison as Rust-only.
+- Current Update: Re-exported Python access export/import/diff helpers from `grafana_utils.access_cli`, added dispatch coverage for `access user diff` and `access team diff`, and updated the English/Traditional Chinese README plus both user guides so access user/team export, import, and diff are documented as supported Python workflows.
+- Result: Python and Rust now present the same supported access command surface for user/team snapshot export, import, and diff in the operator docs, and the Python facade/tests explicitly cover the diff entrypoints.

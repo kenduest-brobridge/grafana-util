@@ -58,7 +58,21 @@ Rust 入口差異要點：
 - Dashboard：`dashboard export`、`dashboard list`、`dashboard list-data-sources`、`dashboard import`、`dashboard diff`、`dashboard inspect-export`、`dashboard inspect-live`
 - Alert：`alert export`、`alert import`、`alert diff`、`alert list-rules`、`alert list-contact-points`、`alert list-mute-timings`、`alert list-templates`
 - Datasource：`datasource list`、`datasource export`、`datasource import`、`datasource diff`
-- Access：`access user list`、`access user add`、`access user modify`、`access user delete`、`access user export`、`access user import`、`access team list`、`access team add`、`access team modify`、`access team delete`、`access team export`、`access team import`、`access service-account list`、`access service-account add`、`access service-account delete`、`access service-account token add`、`access service-account token delete`
+- Access：`access user list`、`access user add`、`access user modify`、`access user delete`、`access user export`、`access user import`、`access user diff`、`access team list`、`access team add`、`access team modify`、`access team delete`、`access team export`、`access team import`、`access team diff`、`access service-account list`、`access service-account add`、`access service-account delete`、`access service-account token add`、`access service-account token delete`
+
+### 指令支援總覽
+
+先看這張表，可以最快確認某個 Grafana 資源目前是否支援盤點、檔案匯出匯入、差異比對，然後再往下查各命令細節。
+
+| 資源 | List | Export | Import | Diff | Inspect | Add | Modify | Delete | 備註 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Dashboard | ✓ | ✓ | ✓ | ✓ | ✓ | - | - | - | 盤點、備份、跨環境還原 |
+| Datasource | ✓ | ✓ | ✓ | ✓ | - | - | - | - | 用於漂移盤點與同儕環境比對 |
+| Alert rules 與 alerting 資源 | ✓ | ✓ | ✓ | ✓ | - | - | - | - | 覆蓋 rule、contact points、mute timings、templates |
+| 使用者（Users） | ✓ | ✓ | ✓ | ✓ | - | ✓ | ✓ | ✓ | 使用者盤點、匯出匯入與差異比對 |
+| Team（group alias） | ✓ | ✓ | ✓ | ✓ | - | ✓ | ✓ | ✓ | Team 盤點、匯出匯入與差異比對 |
+| Service account | ✓ | - | - | - | - | ✓ | ✓ | ✓ | Service account 生命週期 |
+| Service account token | ✓ | - | - | - | - | ✓ | - | ✓ | token 的新增與刪除 |
 
 認證互斥規則（Rust parser 會直接拒絕）:
 
@@ -693,6 +707,47 @@ INDEX  IDENTITY        ACTION        DETAIL
 Import summary: processed=3 created=1 updated=1 skipped=1 source=./access-users
 ```
 
+### `access user diff`
+
+**用途**：比較快照 `users.json` 與 live users。
+
+| 參數 | 用途 | 差異 / 情境 |
+| --- | --- | --- |
+| `--diff-dir` | 包含 `users.json` 與 `export-metadata.json` 的目錄 | 預設 `access-users` |
+| `--scope` | `org` / `global` | 與匯出/匯入使用同一識別語意 |
+
+示例命令：
+```bash
+cargo run --bin grafana-util -- access user diff --url http://localhost:3000 --token <TOKEN> --diff-dir ./access-users --scope org
+```
+
+示例輸出：
+```text
+Diff checked 2 user(s).
+alice@example.com  UPDATE  role 從 Viewer 改成 Editor
+bob@example.com    DELETE  snapshot 中找不到該使用者
+```
+
+### `access team diff`
+
+**用途**：比較快照 `teams.json` 與 live teams、team 成員。
+
+| 參數 | 用途 | 差異 / 情境 |
+| --- | --- | --- |
+| `--diff-dir` | 包含 `teams.json` 與 `export-metadata.json` 的目錄 | 預設 `access-teams` |
+
+示例命令：
+```bash
+cargo run --bin grafana-util -- access team diff --url http://localhost:3000 --token <TOKEN> --diff-dir ./access-teams
+```
+
+示例輸出：
+```text
+Diff checked 1 team(s).
+Ops               UPDATE   add-member alice@example.com
+SRE               DELETE   live 多餘 team，snapshot 沒有
+```
+
 ### 6.7 `access team list`
 
 **用途**：列出 teams。
@@ -1002,6 +1057,7 @@ cargo run --bin grafana-util -- access service-account token delete --url http:/
 2. `access user modify` 調整 role/admin
 3. `access team modify` 調整成員與 admin
 4. `access service-account` 及 `token` 命令做機器人授權
+5. 匯入前先跑 `access user diff` 與 `access team diff` 做快照比對
 
 ### 8.4 參數變體選擇原則
 
@@ -1045,11 +1101,13 @@ cargo run --bin grafana-util -- access user modify --url <URL> --basic-user <USE
 cargo run --bin grafana-util -- access user delete --url <URL> --basic-user <USER> --basic-password <PASS> --login <LOGIN> --scope global --yes
 cargo run --bin grafana-util -- access user export --url <URL> --token <TOKEN> --export-dir ./access-users [--scope org|global] [--with-teams]
 cargo run --bin grafana-util -- access user import --url <URL> --token <TOKEN> --import-dir ./access-users --replace-existing [--dry-run] [--table|--json|--output-format text|table|json] [--yes]
+cargo run --bin grafana-util -- access user diff --url <URL> --token <TOKEN> --diff-dir ./access-users [--scope org|global]
 cargo run --bin grafana-util -- access team list --url <URL> --token <TOKEN> [--query <QUERY>|--name <NAME>] [--with-members] [--table|--csv|--json]
 cargo run --bin grafana-util -- access team add --url <URL> --token <TOKEN> --name <NAME> [--email <EMAIL>] [--member <LOGIN_OR_EMAIL>] [--admin <LOGIN_OR_EMAIL>]
 cargo run --bin grafana-util -- access team modify --url <URL> --token <TOKEN> --name <NAME> [--add-member <LOGIN_OR_EMAIL>] [--remove-member <LOGIN_OR_EMAIL>] [--add-admin <LOGIN_OR_EMAIL>] [--remove-admin <LOGIN_OR_EMAIL>]
 cargo run --bin grafana-util -- access team delete --url <URL> --token <TOKEN> --name <NAME> --yes
 cargo run --bin grafana-util -- access team export --url <URL> --token <TOKEN> --export-dir ./access-teams [--with-members]
+cargo run --bin grafana-util -- access team diff --url <URL> --token <TOKEN> --diff-dir ./access-teams
 cargo run --bin grafana-util -- access team import --url <URL> --token <TOKEN> --import-dir ./access-teams --replace-existing [--dry-run] [--table|--json|--output-format text|table|json] [--yes]
 cargo run --bin grafana-util -- access service-account list --url <URL> --token <TOKEN> [--query <QUERY>] [--table|--csv|--json]
 cargo run --bin grafana-util -- access service-account add --url <URL> --token <TOKEN> --name <NAME> [--role Viewer|Editor|Admin|None] [--disabled true|false]
@@ -1075,6 +1133,8 @@ cargo run --bin grafana-util -- access service-account token delete --url <URL> 
 | access team list | table/csv/json | 不可 | 同上 |
 | access user import | text/table/json | 不可（僅 text/table/json） | text 為 dry-run 摘要 |
 | access team import | text/table/json | 不可（僅 text/table/json） | text 為 dry-run 摘要 |
+| access user diff | text | 僅摘要 |
+| access team diff | text | 僅摘要 |
 | access service-account list | table/csv/json | 不可 | 同上 |
 
 `DRY-RUN` 類（預覽）：

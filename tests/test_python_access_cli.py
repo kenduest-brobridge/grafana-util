@@ -2059,6 +2059,18 @@ class AccessCliTests(unittest.TestCase):
         self.assertEqual(result, 88)
         import_users.assert_called_once_with(args, client)
 
+        args = argparse.Namespace(
+            resource="user",
+            command="diff",
+            diff_dir="tmp",
+            scope="org",
+            with_teams=False,
+        )
+        with mock.patch("grafana_utils.access.workflows.diff_users_with_client", return_value=99) as diff_users:
+            result = access_utils.dispatch_access_command(args, client, "basic")
+        self.assertEqual(result, 99)
+        diff_users.assert_called_once_with(args, client)
+
     def test_dispatch_access_command_routes_team_export_import(self):
         client = FakeAccessClient()
         args = argparse.Namespace(resource="team", command="export", export_dir="tmp")
@@ -2078,6 +2090,12 @@ class AccessCliTests(unittest.TestCase):
             result = access_utils.dispatch_access_command(args, client, "basic")
         self.assertEqual(result, 66)
         import_teams.assert_called_once_with(args, client)
+
+        args = argparse.Namespace(resource="team", command="diff", diff_dir="tmp")
+        with mock.patch("grafana_utils.access.workflows.diff_teams_with_client", return_value=44) as diff_teams:
+            result = access_utils.dispatch_access_command(args, client, "basic")
+        self.assertEqual(result, 44)
+        diff_teams.assert_called_once_with(args, client)
 
     def test_main_returns_one_on_auth_error(self):
         stderr = io.StringIO()
