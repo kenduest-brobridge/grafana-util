@@ -1,3 +1,5 @@
+//! Clap schema for access-management CLI commands.
+//! Centralizes CLI argument enums and parser-normalization helpers for access handlers.
 use clap::{Args, Command, CommandFactory, Parser, Subcommand, ValueEnum};
 
 use super::access_pending_delete::{
@@ -460,6 +462,8 @@ pub struct AccessCliArgs {
     pub command: AccessCommand,
 }
 
+// Parse raw argv into strongly-typed access args, then normalize output-style
+// aliases so callers can rely on one boolean matrix in handlers.
 pub fn parse_cli_from<I, T>(iter: I) -> AccessCliArgs
 where
     I: IntoIterator<Item = T>,
@@ -468,6 +472,8 @@ where
     normalize_access_cli_args(AccessCliRoot::parse_from(iter).args)
 }
 
+// Shared list output flags can come from both legacy boolean flags and the
+// enum-style alias. This helper keeps CLI compatibility while normalizing state.
 fn apply_list_output_format(
     table: &mut bool,
     csv: &mut bool,
@@ -482,6 +488,8 @@ fn apply_list_output_format(
     }
 }
 
+// Convert list output-mode aliases (table/csv/json + output_format) into a single
+// canonical boolean state per command path.
 pub fn normalize_access_cli_args(mut args: AccessCliArgs) -> AccessCliArgs {
     match &mut args.command {
         AccessCommand::User { command } => {
@@ -531,6 +539,8 @@ pub struct AccessAuthContext {
     pub headers: Vec<(String, String)>,
 }
 
+// Parse bool-like CLI text using the explicit true/false contract used by
+// back-compat flags that bypass Clap's native bool parsing.
 fn parse_bool_text(value: &str) -> std::result::Result<bool, String> {
     match value.trim().to_ascii_lowercase().as_str() {
         "true" => Ok(true),

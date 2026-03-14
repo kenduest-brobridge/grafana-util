@@ -1,3 +1,6 @@
+//! Shared primitives for CLI execution.
+//! Contains canonical error/result types, auth/header resolution rules, and
+//! reusable JSON/FS helpers that are consumed by all Rust command domains.
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use regex::Regex;
 use rpassword::prompt_password;

@@ -1,3 +1,5 @@
+//! File-system contract for dashboard exports/imports.
+//! Owns dashboard file discovery, index construction/parsing, and structured JSON write/read paths.
 use serde::Serialize;
 use serde_json::{Map, Value};
 use std::fs;

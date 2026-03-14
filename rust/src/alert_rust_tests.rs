@@ -1,3 +1,5 @@
+// Alert domain test suite.
+// Validates export/import/diff document shaping, kind detection, and CLI parser/help behavior.
 use super::{
     build_compare_diff_text, build_contact_point_export_document, build_contact_point_output_path,
     build_empty_root_index, build_import_operation, build_rule_export_document,

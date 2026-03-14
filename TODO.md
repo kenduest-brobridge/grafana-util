@@ -8,12 +8,10 @@ Completed items that were previously listed here now live in `docs/internal/todo
 
 - shared access TLS/auth parameter expansion is still incomplete for Python and Rust parity
 - live validation coverage still needs follow-through for the newer destructive access commands
-- baseline quality gate scripts now exist and are wired into `make` and CI, but optional Python formatter/lint/static-check coverage still depends on tool availability in the active environment
-- Rust dashboard orchestration is now split across CLI definitions, export, import, inspect, list, shared live helpers, and dedicated help rendering, and the remaining cleanup is to keep shrinking the root `dashboard.rs` surface by moving the last typed export/report structs into dedicated modules
+- Python packaging, docs, and syntax-floor tests now target Python 3.9+, but optional formatter/lint/static-check coverage still depends on tool availability in the active environment
 
 ## Next
 
-- continue splitting the Rust dashboard orchestration surface so `dashboard.rs` keeps only top-level entrypoints/re-exports while the remaining typed export/report structs move into dedicated modules
 - reduce Python/Rust inspect-export and inspect-live drift by keeping one stable summary/report schema, shared filters, and synchronized help/examples
 - reduce repeated live Grafana lookups during dashboard import and dry-run paths so large imports do not multiply API round-trips per dashboard
 - dashboard `prompt` export should surface the original datasource name in Grafana web-import prompts, not only the datasource type label
@@ -80,14 +78,13 @@ Rules to keep:
 
 ## Priority Order
 
-1. continue splitting Rust dashboard live/import/report orchestration into smaller modules
-2. reduce Python/Rust inspect-export and inspect-live drift
-3. reduce repeated dashboard import lookup calls on live Grafana
-4. refactor query report extraction behind datasource-type-specific analyzers
-5. add broader import dependency preflight for datasources/plugins/alert references
-6. improve dashboard prompt export fidelity for datasource names and `__requires`
-7. extend inspection into richer dependency analysis and datasource usage/orphan reports
-8. typed datasource reference structs in the Rust dashboard and alert paths
-9. clean repo workflow noise and local scratch artifacts
-10. export package/bundle workflow
-11. semantic alert diff normalization for equivalent values
+1. reduce Python/Rust inspect-export and inspect-live drift
+2. reduce repeated dashboard import lookup calls on live Grafana
+3. refactor query report extraction behind datasource-type-specific analyzers
+4. add broader import dependency preflight for datasources/plugins/alert references
+5. improve dashboard prompt export fidelity for datasource names and `__requires`
+6. extend inspection into richer dependency analysis and datasource usage/orphan reports
+7. typed datasource reference structs in the Rust dashboard and alert paths
+8. clean repo workflow noise and local scratch artifacts
+9. export package/bundle workflow
+10. semantic alert diff normalization for equivalent values

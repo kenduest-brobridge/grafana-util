@@ -1,3 +1,5 @@
+//! Datasource diff model and normalization helpers.
+//! Holds compare records/status used by list/import/export drift detection and report rendering.
 use serde_json::{Map, Value};
 use std::collections::BTreeMap;
 
@@ -292,6 +294,8 @@ fn bool_field(record: &Map<String, Value>, key: &str) -> bool {
     }
 }
 
+// Pull orgId consistently from export/live records so diff rows compare with a
+// unified representation.
 fn normalize_org_id(record: &Map<String, Value>, origin: &RecordOrigin) -> String {
     let key = match *origin {
         RecordOrigin::Export => "orgId",
@@ -300,6 +304,7 @@ fn normalize_org_id(record: &Map<String, Value>, origin: &RecordOrigin) -> Strin
     string_field(record, key)
 }
 
+// Convert exported record map rows into a typed diff representation.
 pub(crate) fn normalize_export_records(values: &[Value]) -> Vec<DatasourceDiffRecord> {
     values
         .iter()
@@ -308,6 +313,7 @@ pub(crate) fn normalize_export_records(values: &[Value]) -> Vec<DatasourceDiffRe
         .collect()
 }
 
+// Convert live API rows into a typed diff representation.
 pub(crate) fn normalize_live_records(values: &[Value]) -> Vec<DatasourceDiffRecord> {
     values
         .iter()

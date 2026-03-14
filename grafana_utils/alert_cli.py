@@ -1,5 +1,24 @@
 #!/usr/bin/env python3
-"""Export or import Grafana alerting resources."""
+"""Export or import Grafana alerting resources.
+
+Purpose:
+- Parse and dispatch alerting commands, including legacy command compatibility
+  and `grafana-util alert ...` namespaced flow.
+
+Architecture:
+- Support both legacy and modern entry shapes from one module:
+  legacy (`export-alert`, `list-alert-rules`) and modern (`export`, `list-rules`).
+- Keep output-mode normalization and auth resolution in this layer, then dispatch
+  to resource-specific workflows.
+
+Usage notes:
+- Prefer `grafana-util alert export|import|diff|list-*` and keep legacy aliases
+  for backward compatibility.
+
+Caveats:
+- `alert` parser selection is intentionally split between legacy and modern paths;
+  parse behavior should stay synchronized with tests that cover both.
+"""
 
 import argparse
 import csv
@@ -245,6 +264,7 @@ def add_import_args(parser: argparse.ArgumentParser, diff_mode: bool = False) ->
 
 
 def build_legacy_parser(prog: Optional[str] = None) -> argparse.ArgumentParser:
+    """Build parser compatible with legacy alert command names."""
     parser = argparse.ArgumentParser(
         prog=prog,
         description="Export, import, or diff Grafana alerting resources.",
@@ -301,6 +321,7 @@ def build_legacy_parser(prog: Optional[str] = None) -> argparse.ArgumentParser:
 
 
 def build_parser(prog: Optional[str] = None) -> argparse.ArgumentParser:
+    """Build the modern namespaced parser for `grafana-util alert ...`."""
     parser = argparse.ArgumentParser(
         prog=prog,
         description="Export, import, or diff Grafana alerting resources.",
@@ -363,6 +384,16 @@ def build_parser(prog: Optional[str] = None) -> argparse.ArgumentParser:
 
 
 def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
+    """Pick parser variant (legacy or namespaced), then normalize output aliases.
+
+    Flow:
+    - Treat explicit command names (`export/import/diff/list-*`) as the modern
+      namespaced syntax and parse with the new parser.
+    - Otherwise use the legacy parser and normalize `--import-dir`/`--diff-dir`
+      into the canonical `alert_command` value.
+    - Normalize alias output format flags into the mutually-exclusive concrete
+      rendering booleans used by workflows.
+    """
     argv = list(sys.argv[1:] if argv is None else argv)
     if argv in (["-h"], ["--help"]):
         parser = build_parser()
@@ -399,6 +430,7 @@ def _normalize_output_format_args(
     args: argparse.Namespace,
     parser: argparse.ArgumentParser,
 ) -> None:
+    """Convert `--output-format` aliases into exclusive output-mode booleans."""
     output_format = getattr(args, "output_format", None)
     if output_format is None or not str(getattr(args, "alert_command", "")).startswith("list-"):
         return
@@ -1175,6 +1207,7 @@ def list_alert_resources(args: argparse.Namespace) -> int:
 
 
 def main(argv: Optional[list[str]] = None) -> int:
+    """Parse+normalize then dispatch to alert-specific command handlers."""
     args = parse_args(argv)
     try:
         if getattr(args, "alert_command", "").startswith("list-"):

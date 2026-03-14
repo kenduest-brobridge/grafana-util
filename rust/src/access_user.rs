@@ -1,3 +1,5 @@
+//! Access user command handlers.
+//! Supports user listing/lookup and CRUD operations with org/user scope-aware rendering paths.
 use reqwest::Method;
 use serde_json::{Map, Value};
 

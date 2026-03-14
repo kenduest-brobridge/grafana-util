@@ -1,3 +1,5 @@
+//! Access team command handlers.
+//! Covers team CRUD, membership discovery, and table/list rendering helpers for CLI output.
 use reqwest::Method;
 use serde_json::{Map, Value};
 use std::fmt::Write as _;

@@ -1,3 +1,5 @@
+//! Renderer implementations for inspection output.
+//! Converts normalized query rows into plain text table and CSV representations.
 use super::dashboard_inspect_report::{
     normalize_query_report, render_query_report_column, report_column_header,
     ExportInspectionQueryReport,

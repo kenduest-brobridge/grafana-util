@@ -1,3 +1,5 @@
+//! Flux analyzer for dashboard query inspection.
+//! Extracts pipeline functions plus measurement/bucket hints for Flux query classification.
 use serde_json::{Map, Value};
 
 use super::dashboard_inspect::{

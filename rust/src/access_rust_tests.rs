@@ -1,3 +1,5 @@
+// Access domain test suite.
+// Validates CLI parsing/help text surfaces and handler contract behavior with stubbed request closures.
 use super::{
     add_service_account_token_with_request, add_service_account_with_request,
     add_team_with_request, add_user_with_request, delete_service_account_token_with_request,

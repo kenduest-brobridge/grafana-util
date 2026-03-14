@@ -1,3 +1,19 @@
+//! Unified CLI dispatcher for Rust entrypoints.
+//!
+//! Purpose:
+//! - Own only command topology, legacy alias normalization, and domain dispatch.
+//! - Keep `grafana-util` and compatibility aliases in one place.
+//! - Route to domain runners (`dashboard`, `alert`, `access`, `datasource`) without
+//!   carrying transport/request behavior.
+//!
+//! Flow:
+//! - Parse into `CliArgs` via Clap.
+//! - Normalize legacy and namespaced command forms into one domain command enum.
+//! - Delegate execution to the selected domain runner function.
+//!
+//! Caveats:
+//! - Do not add domain logic or HTTP transport details here.
+//! - Keep compatibility aliases minimal so deprecation windows are easy to track.
 use clap::{Parser, Subcommand};
 
 use crate::access::{run_access_cli, AccessCliArgs};
@@ -116,6 +132,9 @@ pub struct CliArgs {
     pub command: UnifiedCommand,
 }
 
+/// Parse raw argv into the unified command tree.
+///
+/// This is intentionally side-effect-free and should only validate CLI shape.
 pub fn parse_cli_from<I, T>(iter: I) -> CliArgs
 where
     I: IntoIterator<Item = T>,
@@ -146,6 +165,8 @@ fn wrap_dashboard_group(command: DashboardGroupCommand) -> DashboardCliArgs {
     }
 }
 
+// Centralized command fan-out before invoking domain runners.
+// Every unified CLI variant is normalized into one of dashboard/alert/datasource/access runners here.
 fn dispatch_with_handlers<FD, FS, FA, FX>(
     args: CliArgs,
     mut run_dashboard: FD,
@@ -205,6 +226,10 @@ where
     }
 }
 
+/// Runtime entrypoint for unified execution.
+///
+/// Keeping handler execution injectable via `dispatch_with_handlers` allows tests to
+/// validate dispatch logic without touching network transport.
 pub fn run_cli(args: CliArgs) -> Result<()> {
     dispatch_with_handlers(
         args,

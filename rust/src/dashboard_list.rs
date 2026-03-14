@@ -1,3 +1,5 @@
+//! Read model for dashboard and datasource listing.
+//! This module translates API responses into stable CLI summary rows and output formats.
 use reqwest::Method;
 use serde_json::{Map, Value};
 use std::collections::{BTreeMap, BTreeSet};

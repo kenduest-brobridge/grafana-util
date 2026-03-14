@@ -1,3 +1,5 @@
+//! Dashboard help extension helpers.
+//! Provides long-help fallback rendering for inspect-export/live commands when `--help-full` is requested.
 use clap::CommandFactory;
 
 use super::DashboardCliArgs;

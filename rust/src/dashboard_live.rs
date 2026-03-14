@@ -1,3 +1,5 @@
+//! Live dashboard and folder/index fetch helpers.
+//! Encapsulates paged Grafana API reads used by list/export/import/inspect flows.
 use reqwest::Method;
 use serde_json::{Map, Value};
 

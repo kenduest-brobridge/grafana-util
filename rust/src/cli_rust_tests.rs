@@ -1,3 +1,5 @@
+// Unified CLI test suite.
+// Focuses on command routing for aliases/groups and ensures handlers receive the expected domain payload shapes.
 use super::{dispatch_with_handlers, parse_cli_from, CliArgs, UnifiedCommand};
 use crate::dashboard::DashboardCommand;
 use crate::datasource::DatasourceGroupCommand;

@@ -1,3 +1,5 @@
+//! Minimal Grafana alerting API client.
+//! Wraps typed request wrappers for list/import/export flows and hides raw HTTP plumbing from CLI handlers.
 use reqwest::Method;
 use serde_json::{Map, Value};
 
@@ -268,6 +270,8 @@ pub fn expect_object_list(
         .collect())
 }
 
+// Interpret Grafana template-list responses in the one supported shape for
+// alerting imports: either empty/null or a JSON array of template objects.
 pub fn parse_template_list_response(value: Option<Value>) -> Result<Vec<Map<String, Value>>> {
     match value {
         None | Some(Value::Null) => Ok(Vec::new()),

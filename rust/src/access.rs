@@ -1,3 +1,20 @@
+//! Access-management domain orchestrator.
+//!
+//! Purpose:
+//! - Own access command taxonomy (`user`, `team`, `service-account`) and argument
+//!   normalization.
+//! - Centralize dispatch between repository-owned handlers and injectable request backends.
+//! - Re-export shared access parser/model types for CLI and test call sites.
+//!
+//! Flow:
+//! - Parse CLI args via `access_cli_defs`.
+//! - For each subcommand, normalize args, build HTTP client(s), and delegate handler calls.
+//! - Allow `run_access_cli_with_request` to receive a mockable request function for tests.
+//!
+//! Caveats:
+//! - Do not implement request semantics in handler branches; keep transport concerns inside
+//!   `http` or per-handler client code.
+//! - Keep this module focused on orchestration, not resource-specific JSON shape details.
 use reqwest::Method;
 use serde_json::{Map, Value};
 
@@ -86,6 +103,8 @@ where
     }
 }
 
+/// Access execution path for callers that already own a configured `JsonHttpClient`.
+/// Delegates to the request-injection path to keep side effects explicit and testable.
 pub fn run_access_cli_with_client(client: &JsonHttpClient, args: AccessCliArgs) -> Result<()> {
     run_access_cli_with_request(
         |method, path, params, payload| client.request_json(method, path, params, payload),
@@ -93,6 +112,10 @@ pub fn run_access_cli_with_client(client: &JsonHttpClient, args: AccessCliArgs) 
     )
 }
 
+/// Access execution path with request-function injection.
+///
+/// Receives fully parsed CLI args and routes each command branch to matching handler
+/// functions that perform request execution.
 pub fn run_access_cli_with_request<F>(mut request_json: F, args: AccessCliArgs) -> Result<()>
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
@@ -164,6 +187,10 @@ where
     Ok(())
 }
 
+/// Access binary entrypoint.
+///
+/// Normalizes arguments and builds one HTTP client per concrete subcommand branch before
+/// delegating to the request-injection runner.
 pub fn run_access_cli(args: AccessCliArgs) -> Result<()> {
     let args = normalize_access_cli_args(args);
     match &args.command {

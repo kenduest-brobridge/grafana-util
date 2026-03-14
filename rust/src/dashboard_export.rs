@@ -1,3 +1,6 @@
+//! Export orchestration for dashboards.
+//! Collects org/catalog context, resolves metadata, writes raw and prompt variants, and emits
+//! progress/formatting output for CLI-facing export modes.
 use reqwest::Method;
 use serde_json::{Map, Value};
 use std::fs;
@@ -150,7 +153,9 @@ where
             continue;
         }
         if args.verbose {
-            // Verbose mode prints per-variant details after each write, so it suppresses concise progress lines.
+            // Verbose mode prints per-variant details after each write, which already
+            // includes status for this iteration; suppressing progress lines avoids
+            // duplicated/noisy output and keeps verbose logs ordered.
         } else if args.progress {
             println!(
                 "{}",

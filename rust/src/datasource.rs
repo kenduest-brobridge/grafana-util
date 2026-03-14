@@ -1,3 +1,18 @@
+//! Datasource domain orchestrator.
+//!
+//! Purpose:
+//! - Own datasource command flows (`list`, `export`, `import`, `diff`).
+//! - Normalize datasource contract shape across live API payloads and exported metadata.
+//! - Keep output serialization (`table`/`csv`/`json`) selection centralized.
+//!
+//! Flow:
+//! - Parse args from `dashboard`-shared auth/common CLI types where possible.
+//! - Normalize command variants before branching by subcommand.
+//! - Build client and route execution to list/export/import/diff helpers.
+//!
+//! Caveats:
+//! - Keep API-field compatibility logic in `datasource_diff.rs` and import/export helpers.
+//! - Avoid side effects in normalization helpers; keep them as pure value transforms.
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use reqwest::Method;
 use serde_json::{Map, Value};
@@ -217,6 +232,8 @@ pub struct DatasourceCliArgs {
     pub command: DatasourceGroupCommand,
 }
 
+// Test-only normalization helper keeps parser + output flag coercion behavior in one
+// place for datasource CLI contract tests.
 #[cfg(test)]
 fn normalize_output_formats(args: &mut DatasourceCliArgs) {
     match &mut args.command {
@@ -235,6 +252,8 @@ fn normalize_output_formats(args: &mut DatasourceCliArgs) {
     }
 }
 
+// Normalize datasource subcommand output-format aliases into boolean render switches so
+// execution paths can use a uniform flag contract.
 fn normalize_datasource_group_command(
     mut command: DatasourceGroupCommand,
 ) -> DatasourceGroupCommand {
@@ -255,6 +274,8 @@ fn normalize_datasource_group_command(
     command
 }
 
+// Parse output-column aliases for datasource import dry-run rendering, accepting both
+// preferred snake_case and legacy camelCase spellings where applicable.
 fn parse_datasource_import_output_column(value: &str) -> std::result::Result<String, String> {
     match value {
         "uid" => Ok("uid".to_string()),
@@ -555,6 +576,7 @@ fn build_export_records(client: &JsonHttpClient) -> Result<Vec<Map<String, Value
         .collect())
 }
 
+// Parse and validate datasource export metadata before importing any inventory data.
 fn parse_export_metadata(path: &Path) -> Result<DatasourceExportMetadata> {
     let value = load_json_object_file(path, "Datasource export metadata")?;
     let object = value
@@ -1020,6 +1042,10 @@ pub(crate) fn diff_datasources_with_live(
     Ok((report.summary.compared_count, difference_count))
 }
 
+/// Datasource runtime entrypoint.
+///
+/// After command normalization, this function builds required clients, validates constraints
+/// for output mode flags, and delegates execution to list/export/import/diff handlers.
 pub fn run_datasource_cli(command: DatasourceGroupCommand) -> Result<()> {
     let command = normalize_datasource_group_command(command);
     match command {
@@ -1332,6 +1358,8 @@ pub fn run_datasource_cli(command: DatasourceGroupCommand) -> Result<()> {
 
 #[cfg(test)]
 impl DatasourceCliArgs {
+    // Parse helper used by tests to validate both clap parsing and normalization
+    // results in one shot.
     fn parse_normalized_from<I, T>(iter: I) -> Self
     where
         I: IntoIterator<Item = T>,

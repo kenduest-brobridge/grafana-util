@@ -1,3 +1,5 @@
+//! Shared render/format helpers for access CLI output.
+//! Centralizes table/csv/json field normalization and human-facing value formatting.
 use serde_json::{Map, Value};
 
 use crate::common::string_field;
@@ -38,6 +40,8 @@ pub(crate) fn value_bool(value: Option<&Value>) -> Option<bool> {
     }
 }
 
+// Normalize user/team role payloads into a canonical display/case convention used by
+// list output and diffing.
 pub(crate) fn normalize_org_role(value: Option<&Value>) -> String {
     let text = match value {
         Some(Value::String(text)) => text.trim(),
@@ -121,6 +125,7 @@ pub(crate) fn render_csv(headers: &[&str], rows: &[Vec<String>]) -> Vec<String> 
     lines
 }
 
+// Build a normalized user row shape expected by access list renderers.
 pub(crate) fn normalize_user_row(user: &Map<String, Value>, scope: &Scope) -> Map<String, Value> {
     Map::from_iter(vec![
         (
@@ -164,6 +169,7 @@ pub(crate) fn normalize_user_row(user: &Map<String, Value>, scope: &Scope) -> Ma
     ])
 }
 
+// Build a normalized team row shape expected by team list renderers.
 pub(crate) fn normalize_team_row(team: &Map<String, Value>) -> Map<String, Value> {
     Map::from_iter(vec![
         ("id".to_string(), Value::String(scalar_text(team.get("id")))),
@@ -190,6 +196,7 @@ pub(crate) fn normalize_team_row(team: &Map<String, Value>) -> Map<String, Value
     ])
 }
 
+// Build a normalized service-account row shape expected by service-account list renderers.
 pub(crate) fn normalize_service_account_row(team: &Map<String, Value>) -> Map<String, Value> {
     Map::from_iter(vec![
         ("id".to_string(), Value::String(scalar_text(team.get("id")))),

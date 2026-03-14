@@ -1,3 +1,9 @@
+//! Unified Rust CLI binary entrypoint.
+//!
+//! Flow:
+//! - Parse raw argv for the special `--help-full` pre-check path.
+//! - Fall back to normal unified CLI parse and dispatch.
+//! - Print any top-level error and exit with status 1.
 use grafana_utils_rust::cli::{parse_cli_from, run_cli};
 use grafana_utils_rust::dashboard::maybe_render_dashboard_help_full_from_os_args;
 

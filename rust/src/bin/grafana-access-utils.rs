@@ -1,3 +1,8 @@
+//! Backward-compatible access shim binary.
+//!
+//! Purpose:
+//! - Preserve legacy `grafana-access-utils` launch path.
+//! - Delegate parsing and execution directly to shared access CLI entrypoints.
 use grafana_utils_rust::access::{parse_cli_from, run_access_cli};
 
 fn main() {

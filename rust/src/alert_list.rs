@@ -1,3 +1,5 @@
+//! Alert list commands and rendering.
+//! Converts alerting resources (rules, contact points, templates, timings) into compact table/JSON output.
 use serde_json::{Map, Value};
 use std::collections::BTreeMap;
 use std::fmt::Write as _;

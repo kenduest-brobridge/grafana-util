@@ -1,3 +1,5 @@
+//! Access service-account command handlers.
+//! Handles service account CRUD and token lifecycle operations behind shared access-request wrappers.
 use reqwest::Method;
 use serde_json::{Map, Value};
 

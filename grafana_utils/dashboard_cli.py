@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 """Export or import Grafana dashboards.
 
+Purpose:
+- Expose dashboard CLI entrypoints (`export-dashboard`, `list-dashboard`,
+  `import-dashboard`, `diff`, and inspect commands) and normalize mode-specific
+  arguments before delegating to workflow helpers.
+
 Maintainer overview:
 - The tool has two separate export targets with different consumers.
 - `raw/` keeps dashboard JSON close to Grafana's API shape so it can round-trip
@@ -27,6 +32,10 @@ Datasource rewrite pipeline for `prompt/` exports:
 Keep in mind:
 - `prompt/` exports are for Grafana web import, not API re-import
 - `raw/` exports are the safe input for this script's import mode
+
+Caveats:
+- Keep `--output-format` normalization and dry-run column parsing in this facade.
+- Avoid moving API behavior from workflow helpers back into the facade layer.
 """
 
 import argparse
@@ -756,6 +765,14 @@ def add_inspect_live_cli_args(parser: argparse.ArgumentParser) -> None:
 
 
 def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
+    """Build dashboard CLI parser and normalize mutually-exclusive dashboard subcommand input.
+
+    Flow:
+    - Build mode-specific subparsers to enforce one command per execution.
+    - Parse arguments, then normalize `--output-format` aliases into concrete mode
+      flags.
+    - Normalize table column selections for import dry-run output.
+    """
     parser = argparse.ArgumentParser(
         description="Export or import Grafana dashboards.",
         epilog=(
@@ -848,6 +865,7 @@ def _normalize_output_format_args(
     args: argparse.Namespace,
     parser: argparse.ArgumentParser,
 ) -> None:
+    """Translate `--output-format` aliases into exclusive list/import output flags."""
     output_format = getattr(args, "output_format", None)
     command = getattr(args, "command", None)
     if output_format is None:
@@ -876,6 +894,7 @@ def _parse_dashboard_import_output_columns(
     args: argparse.Namespace,
     parser: argparse.ArgumentParser,
 ) -> None:
+    """Parse and validate import dry-run output columns only for table-mode import."""
     if getattr(args, "command", None) != "import-dashboard":
         return
     value = getattr(args, "output_columns", None)
@@ -1046,6 +1065,14 @@ def build_client(args: argparse.Namespace) -> GrafanaClient:
 
 
 def main(argv: Optional[list[str]] = None) -> int:
+    """Dispatch normalized dashboard commands to their workflow entrypoints.
+
+    Flow:
+    - Parse and normalize into a single `command` field.
+    - Hand off to workflow helpers (`list`, `export`, `import`, `diff`,
+      `inspect`) based on command name.
+    - Convert caught CLI errors into user-facing exit codes.
+    """
     args = parse_args(argv)
     try:
         if args.command == "list-dashboard":

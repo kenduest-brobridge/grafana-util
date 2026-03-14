@@ -1,4 +1,19 @@
-"""Argparse wiring for the Python datasource CLI."""
+"""Argparse wiring for the Python datasource CLI.
+
+Purpose:
+- Centralize datasource parser and help wiring so facade and tests share one source
+  of parser truth.
+
+Architecture:
+- Keep parser construction centralized in one module so CLI arguments, aliases,
+  and help examples stay stable.
+- `datasource_cli.py` performs parse/normalize and delegates execution to
+  `datasource.workflows`.
+
+Caveats:
+- This module should stay parser-only; do not add import/export business logic
+  here.
+"""
 
 import argparse
 from collections import OrderedDict

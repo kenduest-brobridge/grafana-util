@@ -1,3 +1,19 @@
+//! Alerting domain entry and orchestration module.
+//!
+//! Purpose:
+//! - Own the alerting command surface (`list`, `export`, `import`, `diff`).
+//! - Bridge parsed CLI args to `GrafanaAlertClient` and alerting handlers.
+//! - Keep response parsing and payload shaping close to alert domain types.
+//!
+//! Flow:
+//! - Parse CLI args via `alert_cli_defs`.
+//! - Normalize legacy/namespaced invocation forms before dispatch.
+//! - Build client only in the concrete runtime entrypoint; keep pure routing paths testable.
+//!
+//! Caveats:
+//! - Avoid adding transport policy here; retry/pagination behavior should stay in shared HTTP
+//!   layers and alert handlers.
+//! - Keep diff/import/export payload transforms next to their handlers, not in dispatcher code.
 use serde_json::{json, Map, Value};
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
@@ -1560,6 +1576,10 @@ fn diff_alerting_resources(args: &AlertCliArgs) -> Result<()> {
     Ok(())
 }
 
+/// Alert domain execution entrypoint.
+///
+/// Dispatches by checking argument exclusivity (`list`, `import`, `diff`, else export) and
+/// forwarding to the corresponding handler.
 pub fn run_alert_cli(args: AlertCliArgs) -> Result<()> {
     if args.list_kind.is_some() {
         return list_alert_resources(&args);

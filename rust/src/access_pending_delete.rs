@@ -1,3 +1,5 @@
+//! Access delete staging surface (parser-only, not yet wired to runtime handlers).
+//! Kept adjacent to access CLI modules to avoid command-surface churn while handler work is staged.
 use clap::{Args, Subcommand};
 use reqwest::Method;
 use serde_json::{Map, Value};
@@ -12,6 +14,10 @@ use super::{
 };
 
 // Staging module for the remaining access-management delete surface.
+//
+// This file intentionally contains only argument shapes and parser-level plumbing so
+// the incomplete delete surface can be reviewed incrementally without forcing runtime
+// behavior changes. Keep it aligned with `access.rs` as command handlers are re-enabled.
 //
 // Intended future wiring:
 // - declare this module from `access.rs`

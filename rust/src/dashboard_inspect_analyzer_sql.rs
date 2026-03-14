@@ -1,3 +1,5 @@
+//! SQL analyzer for dashboard query inspection.
+//! Derives source/shape hints and keeps non-flattened row model output for cross-report use.
 use serde_json::{Map, Value};
 
 use super::dashboard_inspect::{

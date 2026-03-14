@@ -1,5 +1,22 @@
 #!/usr/bin/env python3
-"""Stable facade for the Python access-management CLI."""
+"""Stable facade for the Python access-management CLI.
+
+Purpose:
+- Provide the command-line face for access operations and route parsed inputs to
+  workflow orchestration with an authenticated access client.
+
+Architecture:
+- This module is intentionally thin and keeps responsibility boundaries clear:
+  parser/auth definitions are imported from `access.parser`, runtime orchestration
+  lives in `access.workflows`.
+- The only meaningful behavior here is request-auth resolution and command
+  delegation, which keeps unified CLI changes isolated from access-specific logic.
+
+Caveats:
+- Keep only parser/auth glue and dispatch here; access business logic belongs to
+  `access/workflows.py` and model helpers.
+- `main()` is the expected error-handling boundary for CLI exit codes.
+"""
 
 import getpass
 import sys
@@ -83,6 +100,7 @@ from .clients.access_client import GrafanaAccessClient
 
 
 def resolve_auth(args):
+    """Resolve auth and convert parse-layer config errors to CLI error type."""
     try:
         return resolve_cli_auth_from_namespace(
             args,
@@ -95,10 +113,18 @@ def resolve_auth(args):
 
 
 def build_request_headers(args):
+    """Build final auth headers from parsed credentials and prompts."""
     return resolve_auth(args)
 
 
 def run(args):
+    """Build a CLI-scoped client and dispatch the parsed command to access workflows.
+
+    Flow:
+    - Resolve transport auth headers.
+    - Create a domain client with parsed URL/timeouts.
+    - Delegate to `dispatch_access_command` with the parsed auth mode.
+    """
     headers, auth_mode = build_request_headers(args)
     client = GrafanaAccessClient(
         base_url=args.url,
@@ -110,6 +136,7 @@ def run(args):
 
 
 def main(argv=None):
+    """Run access CLI through parser -> auth -> workflow dispatch and normalize exits."""
     try:
         args = parse_args(argv)
         return run(args)

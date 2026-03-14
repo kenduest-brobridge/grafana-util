@@ -1,3 +1,5 @@
+//! Prometheus analyzer for dashboard query inspection.
+//! Extracts metrics, measurement names, and bucket-like hints from panel query text.
 use serde_json::{Map, Value};
 
 use super::dashboard_inspect::{

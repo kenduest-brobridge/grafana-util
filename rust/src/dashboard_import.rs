@@ -1,3 +1,6 @@
+//! Import orchestration for dashboards.
+//! Loads local export artifacts, computes target orgs, and applies idempotent upsert behavior
+//! through the shared dashboard HTTP/auth context.
 use reqwest::Method;
 use serde_json::{Map, Value};
 use std::collections::BTreeMap;
@@ -275,6 +278,8 @@ fn describe_import_action(action: &str) -> (&'static str, &str) {
     }
 }
 
+// Normalize a dashboard folder path from optional CLI input, defaulting to the
+// CLI convention "General" when empty or unset.
 fn normalize_folder_path(path: Option<&str>) -> String {
     let value = path.unwrap_or("").trim();
     if value.is_empty() {

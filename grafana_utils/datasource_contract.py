@@ -1,4 +1,19 @@
-"""Shared datasource import/export normalization helpers."""
+"""Shared datasource import/export normalization helpers.
+
+Purpose:
+- Define the source-of-truth schema checks and normalization used by datasource
+  export/import/diff workflows.
+
+Data contract notes:
+- Normalize values at this boundary so importer/exporter code can rely on stable
+  string fields for comparisons and diff output.
+- Keep the contract strict: only expected keys are allowed so unknown fields are
+  rejected before export or diff logic runs.
+
+Caveats:
+- This contract is intentionally strict; adding fields requires explicit schema
+  updates plus corresponding test coverage.
+"""
 
 from typing import Any
 
@@ -15,6 +30,7 @@ DATASOURCE_CONTRACT_FIELDS = (
 
 
 def normalize_datasource_string(value: Any) -> str:
+    """Return a stable string representation for contract normalization."""
     if value is None:
         return ""
     if isinstance(value, bool):
@@ -23,11 +39,13 @@ def normalize_datasource_string(value: Any) -> str:
 
 
 def normalize_datasource_bool(value: Any) -> bool:
+    """Interpret common datasource bool string formats before normalization."""
     normalized = normalize_datasource_string(value).lower()
     return normalized in ("true", "1", "yes")
 
 
 def normalize_datasource_record(record: dict[str, Any]) -> dict[str, str]:
+    """Normalize a datasource record into the strict contract field set."""
     return {
         "uid": normalize_datasource_string(record.get("uid")),
         "name": normalize_datasource_string(record.get("name")),
@@ -46,6 +64,7 @@ def validate_datasource_contract_record(
     record: dict[str, Any],
     context_label: str,
 ) -> None:
+    """Reject unsupported datasource fields before import/diff workflows."""
     extra_fields = sorted(
         key for key in record.keys() if key not in DATASOURCE_CONTRACT_FIELDS
     )

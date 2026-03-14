@@ -1,3 +1,5 @@
+//! Dashboard prompt output transformation.
+//! Translates query panels into external dashboard import payload shape and keeps datasource mapping helpers.
 use serde_json::{json, Map, Value};
 use std::collections::{BTreeMap, BTreeSet};
 

@@ -1,3 +1,5 @@
+// Datasource domain test suite.
+// Exercises parsing + import/export/diff helpers, including mocked datasource matching and contract fixtures.
 use super::{
     build_import_payload, diff_datasources_with_live, load_import_records, render_import_table,
     resolve_match, run_datasource_cli, DatasourceCliArgs, DatasourceImportRecord,

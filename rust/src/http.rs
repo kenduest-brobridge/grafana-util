@@ -1,3 +1,5 @@
+//! Shared HTTP transport for all Rust domains.
+//! Wraps reqwest blocking client creation, URL building, query encoding, and request/response error mapping.
 use reqwest::blocking::Client;
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue, ACCEPT, CONTENT_TYPE};
 use reqwest::{Method, StatusCode, Url};
@@ -42,6 +44,8 @@ impl JsonHttpClient {
         })
     }
 
+    // Low-level HTTP execution hook used by all domain clients.
+    // Returns decoded JSON on success and maps non-2xx responses through domain Result errors.
     pub fn request_json(
         &self,
         method: Method,
@@ -73,6 +77,8 @@ impl JsonHttpClient {
         Ok(Some(serde_json::from_str(&body)?))
     }
 
+    // Centralized URL constructor for path+query assembly.
+    // Accepts already-resolved base_url and enforces consistent param encoding.
     fn build_url(&self, path: &str, params: &[(String, String)]) -> Result<Url> {
         let mut url = Url::parse(&format!("{}{}", self.base_url, path))
             .map_err(|error| message(format!("Invalid request URL {path}: {error}")))?;

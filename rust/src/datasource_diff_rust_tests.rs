@@ -1,3 +1,5 @@
+// Datasource diff unit tests.
+// Validates compare status/classification and mismatch reporting around import-vs-live contract data.
 #[path = "datasource_diff.rs"]
 mod datasource_diff;
 

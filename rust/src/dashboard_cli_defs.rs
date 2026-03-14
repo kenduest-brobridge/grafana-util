@@ -1,3 +1,5 @@
+//! Clap schema for dashboard CLI commands.
+//! Hosts dashboard command enums/args and parser helpers consumed by the dashboard runtime module.
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;
 
@@ -562,6 +564,8 @@ pub struct DashboardAuthContext {
     pub headers: Vec<(String, String)>,
 }
 
+// Parse dashboard CLI argv and normalize output-format aliases to keep
+// downstream handlers deterministic.
 pub fn parse_cli_from<I, T>(iter: I) -> DashboardCliArgs
 where
     I: IntoIterator<Item = T>,
@@ -570,6 +574,8 @@ where
     normalize_dashboard_cli_args(DashboardCliArgs::parse_from(iter))
 }
 
+// Accept both user-facing legacy aliases and canonical snake_case column names for
+// import dry-run table formatting.
 fn parse_dashboard_import_output_column(value: &str) -> std::result::Result<String, String> {
     match value {
         "uid" => Ok("uid".to_string()),
@@ -588,6 +594,8 @@ fn parse_dashboard_import_output_column(value: &str) -> std::result::Result<Stri
     }
 }
 
+// Map legacy output_format enum selections into boolean render flags for list
+// commands.
 fn normalize_simple_output_format(
     table: &mut bool,
     csv: &mut bool,
@@ -602,6 +610,8 @@ fn normalize_simple_output_format(
     }
 }
 
+// Map dry-run output_format enum selections into render flags, treating text mode
+// as implicit default.
 fn normalize_dry_run_output_format(
     table: &mut bool,
     json: &mut bool,
@@ -614,6 +624,8 @@ fn normalize_dry_run_output_format(
     }
 }
 
+// Normalize dashboard subcommand variants so legacy and explicit flags end up with
+// the same boolean state contract for command handlers.
 pub fn normalize_dashboard_cli_args(mut args: DashboardCliArgs) -> DashboardCliArgs {
     match &mut args.command {
         DashboardCommand::List(list_args) => normalize_simple_output_format(

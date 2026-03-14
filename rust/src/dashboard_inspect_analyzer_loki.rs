@@ -1,3 +1,5 @@
+//! Loki analyzer for dashboard query inspection.
+//! Parses stream selectors, label matchers, and pipeline operations used by report grouping.
 use regex::Regex;
 use serde_json::{Map, Value};
 

@@ -1,3 +1,5 @@
+//! Clap schema for alerting CLI commands.
+//! Defines args/enums/normalization helpers used by alert dispatcher and handlers.
 use clap::{Args, Command, CommandFactory, Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;
 
@@ -352,6 +354,8 @@ pub struct AlertAuthContext {
     pub headers: Vec<(String, String)>,
 }
 
+// Parse alert argv into the namespace model and normalize it immediately into a
+// flattened AlertCliArgs that downstream dispatch can execute directly.
 pub fn parse_cli_from<I, T>(iter: I) -> AlertCliArgs
 where
     I: IntoIterator<Item = T>,
@@ -364,6 +368,8 @@ pub fn root_command() -> Command {
     AlertCliRoot::command()
 }
 
+// Lift nested alert command variants into one canonical argument struct and
+// apply single-output-mode migration for list commands.
 pub fn normalize_alert_namespace_args(args: AlertNamespaceArgs) -> AlertCliArgs {
     fn apply_output_format(args: &mut AlertCliArgs, output_format: Option<AlertListOutputFormat>) {
         match output_format {
@@ -468,6 +474,8 @@ pub fn normalize_alert_namespace_args(args: AlertNamespaceArgs) -> AlertCliArgs 
     }
 }
 
+// Small adapter for callers that already have a concrete group command and need
+// the full normalized AlertCliArgs form.
 pub fn normalize_alert_group_command(command: AlertGroupCommand) -> AlertCliArgs {
     normalize_alert_namespace_args(AlertNamespaceArgs {
         command: Some(command),
