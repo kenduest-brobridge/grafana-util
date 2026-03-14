@@ -42,7 +42,7 @@ Current constraints:
 - dashboard workflows are still the main complexity center
 - Python and Rust dual maintenance increases coordination cost
 - datasource lifecycle support is still incomplete
-- some access-management surface remains unfinished
+- access-management follow-through is now mostly about parity gaps in TLS/auth options and destructive-command live validation rather than missing core commands
 
 ## Roadmap Overview
 
@@ -167,29 +167,29 @@ Explicit non-goals for this phase:
 - no broad policy engine
 - no deployment orchestration outside the CLI's core scope
 
-### Phase 5: Complete Remaining Access Surface Pragmatically
+### Phase 5: Keep Access Surface Stable Pragmatically
 
 Target outcome:
 
-- access-management support covers the most practical missing operations without distracting from the project's core value
+- access-management support stays usable and aligned without distracting from the project's core migration and inspection value
 
 Priority items:
 
-- `team delete`
-- `service-account delete`
-- `service-account token delete`
-- `group` alias for `team`
-- complete per-command auth preflight for remaining mutating commands
+- finish shared TLS/auth option parity such as `--insecure` and `--ca-cert`
+- keep per-command auth preflight explicit and tested
+- extend live validation coverage for destructive access commands
+- preserve `group` alias and compatibility entrypoint behavior without letting them drive new scope
 
 Why this phase is later:
 
 - useful, but less differentiating than migration/inspection/datasource work
-- should be completed pragmatically without consuming the roadmap
+- should stay in maintenance mode rather than consuming roadmap focus now that the planned command surface exists
 
 Definition of done for this phase:
 
-- the remaining planned access commands exist and match the established command model
-- auth requirements are explicit and tested
+- the current access command surface remains stable and matches the established command model
+- auth and TLS requirements are explicit and tested
+- destructive flows have enough live validation coverage to catch drift early
 
 Explicit non-goals for this phase:
 
@@ -212,7 +212,7 @@ If only a small number of items can be advanced next, the recommended order is:
 2. deepen inspection and governance reporting
 3. add first-class datasource lifecycle workflows
 4. improve migration preflight and package safety
-5. complete the remaining access-management commands
+5. keep the access-management surface stable and low-drag
 
 ## Success Metrics
 
