@@ -14,10 +14,10 @@ Historical note:
 
 ## 2026-03-15 - Task: Standardize Python Development On Poetry
 - State: Done
-- Scope: `pyproject.toml`, `README.md`, `DEVELOPER.md`, `AGENTS.md`, `tests/test_python_packaging.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
-- Baseline: Python development instructions were split between direct `python3 -m unittest`, source-tree module execution, and packaged `pip install` examples without one declared standard environment manager for maintainers.
-- Current Update: Declared Poetry as the standard Python development environment workflow, updated current README, maintainer notes, and repo instructions to prefer `poetry install --with dev` plus `poetry run ...` for day-to-day development, and kept packaged `pip install` guidance explicitly scoped to install/build validation.
-- Result: The repo now has one documented Python development workflow for maintainers while preserving the existing packaging and install surfaces for release and compatibility checks.
+- Scope: `pyproject.toml`, `poetry.lock`, `Makefile`, `README.md`, `DEVELOPER.md`, `AGENTS.md`, `tests/test_python_packaging.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Python development instructions were split between direct `python3 -m unittest`, source-tree module execution, and packaged `pip install` examples without one declared standard environment manager for maintainers. The Python build shortcut also only emitted a wheel, leaving no committed Poetry lockfile or standard sdist path for downstream package-install workflows.
+- Current Update: Declared Poetry as the standard Python development environment workflow, added a Poetry dev dependency group plus committed `poetry.lock`, introduced Poetry-oriented `make` targets, and switched `make build-python` to build both `sdist` and `wheel` through the Poetry-managed environment while keeping the existing setuptools packaging backend and `pip install` validation paths.
+- Result: The repo now has one documented Python development workflow for maintainers, one committed Poetry lockfile for reproducible dev environments, and a standard Python build path that emits both `sdist` and `wheel` for downstream installation and release checks.
 
 ## 2026-03-15 - Task: Add Maintainer Architecture Comments for Python CLI Facades
 - State: Done

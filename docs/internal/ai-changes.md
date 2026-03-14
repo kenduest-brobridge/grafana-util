@@ -14,13 +14,12 @@ Historical note:
 - Rollback/Risk: Moderate. This intentionally changes Rust machine-readable inspection output, so any downstream consumers that parsed the older Rust-only JSON field names need to switch to the Python-aligned contract.
 
 ## 2026-03-15 - Standardize Python Development On Poetry
-- Summary: Updated the current repo docs so Poetry becomes the standard Python development environment manager. README, DEVELOPER, and AGENTS now direct maintainers to create the dev environment with `poetry install --with dev` and to run source-tree commands and Python tests through `poetry run ...`, while preserving existing `pip install` examples for packaged-install and build validation.
-- Tests: Not applicable
-- Test Run: Not run
-- Reason: This worker only changed documentation and internal trace entries; code/config validation belongs to the implementation side of the task.
-- Validation: Re-scanned the touched docs to confirm the new Poetry-first guidance is present and that packaged `pip install` guidance remains explicitly framed as install/build validation instead of the primary dev path.
-- Impact: `README.md`, `DEVELOPER.md`, `AGENTS.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
-- Rollback/Risk: Low. This is a documentation-only workflow clarification, but future repo updates should keep Poetry-first development guidance aligned with the actual `pyproject.toml` developer configuration.
+- Summary: Standardized Python development on Poetry while keeping the published packaging backend on setuptools. Added a Poetry dev dependency group plus committed `poetry.lock`, added Poetry-oriented `make` targets, updated maintainer docs to use `poetry install --with dev` and `poetry run ...`, and changed the Python build path so `make build-python` now produces both `sdist` and `wheel` for downstream installation workflows.
+- Tests: Updated packaging assertions to require the Poetry dev group and committed `poetry.lock`.
+- Test Run: `python3 -m unittest -v tests/test_python_packaging.py`; `POETRY_VIRTUALENVS_PATH=/tmp/codex-poetry-venvs poetry check`; `POETRY_VIRTUALENVS_PATH=/tmp/codex-poetry-venvs poetry lock`; `POETRY_VIRTUALENVS_PATH=/tmp/codex-poetry-venvs poetry run python -m build --sdist --wheel --no-isolation --outdir /tmp/grafana-utils-build-check .`
+- Validation: Confirmed `poetry.lock` is generated and committed, confirmed Poetry config stays compatible with the existing `setuptools.build_meta` backend, and confirmed the Poetry-managed build now produces both `grafana_util-0.1.0.tar.gz` and `grafana_util-0.1.0-py3-none-any.whl`.
+- Impact: `pyproject.toml`, `poetry.lock`, `Makefile`, `tests/test_python_packaging.py`, `README.md`, `DEVELOPER.md`, `AGENTS.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low to moderate. Poetry is now the maintainer-default environment manager and `make build-python` expects that environment, but the published package metadata, console script, and setuptools-based build backend remain unchanged for downstream installers.
 
 ## 2026-03-15 - Add Maintainer Architecture Comments for Python CLI Facades
 - Summary: Added maintainer-oriented docstrings and inline flow annotations to the Python CLI facade modules so dispatch boundaries are explicit: unified entry routing and parser-normalization ownership remain in facades, while domain workflows remain in dedicated modules.

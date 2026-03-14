@@ -1,7 +1,8 @@
-.PHONY: help build build-python build-rust build-rust-macos-arm64 build-rust-linux-amd64 build-rust-linux-amd64-zig seed-grafana-sample-data destroy-grafana-sample-data reset-grafana-all-data test test-python test-rust fmt-rust-check lint-rust quality quality-python quality-rust test-rust-live test-access-live
+.PHONY: help poetry-install poetry-lock poetry-test poetry-quality-python build build-python build-rust build-rust-macos-arm64 build-rust-linux-amd64 build-rust-linux-amd64-zig seed-grafana-sample-data destroy-grafana-sample-data reset-grafana-all-data test test-python test-rust fmt-rust-check lint-rust quality quality-python quality-rust test-rust-live test-access-live
 
 PYTHON ?= python3
 PIP ?= $(PYTHON) -m pip
+POETRY ?= poetry
 CARGO ?= cargo
 RUST_DIR ?= rust
 PYTHON_DIST_DIR ?= dist
@@ -9,8 +10,12 @@ PYTHON_DIST_DIR ?= dist
 help:
 	@printf '%s\n' \
 		'Available targets:' \
+		'  make poetry-install  Install the Poetry-managed development environment' \
+		'  make poetry-lock   Refresh poetry.lock from pyproject.toml' \
+		'  make poetry-test   Run the Python unittest suite inside Poetry' \
+		'  make poetry-quality-python  Run Python quality checks inside Poetry' \
 		'  make build         Build both Python and Rust artifacts' \
-		'  make build-python  Build the Python wheel into dist/' \
+		'  make build-python  Build the Python wheel and sdist into dist/' \
 		'  make build-rust    Build Rust release binaries in rust/target/release/' \
 		'  make build-rust-macos-arm64  Build native macOS Apple Silicon (M1/M2/M3) Rust release binaries into dist/macos-arm64/' \
 		'  make build-rust-linux-amd64  Build Linux amd64 Rust release binaries with Docker into dist/linux-amd64/ (containerized Linux build)' \
@@ -29,10 +34,22 @@ help:
 		'  make test-rust-live Start Grafana in Docker and run the Rust live smoke test' \
 		'  make test-access-live Start Grafana in Docker and run the Python access live smoke test'
 
+poetry-install:
+	$(POETRY) install --with dev
+
+poetry-lock:
+	$(POETRY) lock
+
+poetry-test:
+	$(POETRY) run $(PYTHON) -m unittest -v
+
+poetry-quality-python:
+	$(POETRY) run env PYTHON=python ./scripts/check-python-quality.sh
+
 build: build-python build-rust
 
 build-python:
-	$(PIP) wheel --no-deps --no-build-isolation --wheel-dir $(PYTHON_DIST_DIR) .
+	$(POETRY) run python -m build --sdist --wheel --no-isolation --outdir $(PYTHON_DIST_DIR) .
 
 build-rust:
 	cd $(RUST_DIR) && $(CARGO) build --release

@@ -10,7 +10,7 @@ from unittest import mock
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MODULE_PATH = REPO_ROOT / "grafana_utils" / "unified_cli.py"
-WRAPPER_PATH = REPO_ROOT / "python" / "grafana-util.py"
+MODULE_ENTRYPOINT_PATH = REPO_ROOT / "grafana_utils" / "__main__.py"
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 unified_cli = importlib.import_module("grafana_utils.unified_cli")
@@ -21,9 +21,9 @@ class UnifiedCliTests(unittest.TestCase):
         source = MODULE_PATH.read_text(encoding="utf-8")
         ast.parse(source, filename=str(MODULE_PATH), feature_version=(3, 9))
 
-    def test_unified_wrapper_script_parses_as_python39_syntax(self):
-        source = WRAPPER_PATH.read_text(encoding="utf-8")
-        ast.parse(source, filename=str(WRAPPER_PATH), feature_version=(3, 9))
+    def test_unified_module_entrypoint_parses_as_python39_syntax(self):
+        source = MODULE_ENTRYPOINT_PATH.read_text(encoding="utf-8")
+        ast.parse(source, filename=str(MODULE_ENTRYPOINT_PATH), feature_version=(3, 9))
 
     def test_parse_args_without_command_prints_top_level_help(self):
         stdout = io.StringIO()

@@ -7,7 +7,7 @@
 - `grafana_utils/access_cli.py`: packaged access-management implementation.
 - `grafana_utils/unified_cli.py`: unified Python CLI dispatcher.
 - `grafana_utils/http_transport.py`: shared replaceable HTTP transport layer.
-- `python/grafana-util.py`: thin wrapper for running the unified CLI directly from the repo checkout.
+- `grafana_utils/__main__.py`: source-tree module entrypoint for running the unified CLI directly from the repo checkout.
 - `pyproject.toml`: package metadata and console-script entrypoints.
 - `rust/src/`: Rust implementation for dashboard, alerting, access, and unified dispatch.
 - `tests/`: Python unit tests.
@@ -20,24 +20,32 @@ Keep implementation code in `grafana_utils/` and keep `python/` wrappers thin un
 
 ## Build, Test, and Development Commands
 
+- `poetry install --with dev`: create the standard Python development environment for this repo.
+- `poetry run python -m grafana_utils -h`: show unified source-tree CLI help from the Poetry-managed environment.
+- `poetry run python -m unittest -v`: run the full Python test suite from the Poetry-managed environment.
+- `poetry run python -m unittest -v tests/test_python_alert_cli.py`: run alerting Python tests only from the Poetry-managed environment.
+- `poetry run python -m unittest -v tests/test_python_dashboard_cli.py`: run dashboard Python tests only from the Poetry-managed environment.
+- `poetry run python -m unittest -v tests/test_python_access_cli.py`: run access Python tests only from the Poetry-managed environment.
 - `python3 -m pip install .`: install the package into the active Python environment.
 - `python3 -m pip install --user .`: install the package into the current user's Python environment.
-- `python3 -m pip install '.[http2]'`: install the optional HTTP/2 transport dependencies on Python 3.8+.
-- `make build-python`: build the Python wheel into `dist/`.
+- `python3 -m pip install '.[http2]'`: install the optional HTTP/2 transport dependencies on Python 3.9+.
+- `make build-python`: build the Python wheel and sdist into `dist/`.
 - `make build-rust`: build Rust release binaries into `rust/target/release/`.
 - `make build`: build both the Python wheel and the Rust release binaries.
 - `make test`: run both the Python and Rust test suites.
 - `make test-rust-live`: start Docker Grafana and run the Rust live smoke test script.
 - `grafana-util -h`: show installed unified CLI help.
-- `python3 python/grafana-util.py -h`: show unified source-tree CLI help.
-- `python3 python/grafana-util.py dashboard list -h`: show dashboard list help.
-- `python3 python/grafana-util.py alert -h`: show alerting help.
-- `python3 python/grafana-util.py access user list -h`: show access-management help.
+- `python3 -m grafana_utils -h`: show unified source-tree CLI help.
+- `python3 -m grafana_utils dashboard list -h`: show dashboard list help.
+- `python3 -m grafana_utils alert -h`: show alerting help.
+- `python3 -m grafana_utils access user list -h`: show access-management help.
 - `python3 -m unittest -v`: run the full test suite.
 - `python3 -m unittest -v tests/test_python_alert_cli.py`: run alerting Python tests only.
 - `python3 -m unittest -v tests/test_python_dashboard_cli.py`: run dashboard Python tests only.
 - `python3 -m unittest -v tests/test_python_access_cli.py`: run access Python tests only.
 - `cd rust && cargo test --quiet`: run the full Rust test suite.
+
+Use Poetry-first commands for Python development and test execution. Keep the `pip install` commands for packaged-install validation, local release checks, or environments that intentionally skip Poetry.
 
 Run the smallest relevant test target first, then the full suite when behavior changes span both tools.
 

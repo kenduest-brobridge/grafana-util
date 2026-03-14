@@ -48,7 +48,7 @@ Commit message default for this repo:
 - `rust/src/dashboard_prompt.rs`: Rust dashboard prompt-export datasource resolution and template-rewrite logic
 - `grafana_utils/http_transport.py`: shared HTTP transport adapters and transport selection
 - `grafana_utils/unified_cli.py`: unified Python entrypoint that dispatches dashboard, datasource, alert, and access workflows
-- `python/grafana-util.py`: thin source-tree wrapper for the packaged unified CLI
+- `grafana_utils/__main__.py`: source-tree module entrypoint for the packaged unified CLI
 - `rust/src/cli.rs`: unified Rust entrypoint that dispatches dashboard, alert, and access workflows
 - `rust/src/bin/grafana-access-utils.rs`: thin Rust compatibility binary for the access-management CLI
 - `pyproject.toml`: build metadata, dependencies, and console-script entrypoints
@@ -87,14 +87,14 @@ Commit message default for this repo:
 - Rust still keeps `grafana-access-utils` as a compatibility binary.
 - Alert workflows no longer ship a separate `grafana-alert-utils` entrypoint; use `grafana-util alert ...`.
 - `grafana-util` is now the primary entrypoint for dashboard, datasource, alert, and access workflows.
-- Use `python3 python/grafana-util.py dashboard list ...` to inspect live dashboard summaries.
-- Use `python3 python/grafana-util.py dashboard list-data-sources ...` to inspect live Grafana data sources.
-- Use `python3 python/grafana-util.py datasource list ...` for the first-class datasource inventory CLI.
-- Use `python3 python/grafana-util.py dashboard inspect-live ...` to inspect live Grafana dashboards through the same summary/report renderers used for raw exports.
-- Use `python3 python/grafana-util.py dashboard export ...` for export.
-- Use `python3 python/grafana-util.py dashboard import ...` for import.
-- Use `python3 python/grafana-util.py dashboard diff ...` for live-vs-local comparison.
-- Use `python3 python/grafana-util.py access ...` or `cargo run --bin grafana-util -- access ...` for Grafana access-management workflows.
+- Use `python3 -m grafana_utils dashboard list ...` to inspect live dashboard summaries.
+- Use `python3 -m grafana_utils dashboard list-data-sources ...` to inspect live Grafana data sources.
+- Use `python3 -m grafana_utils datasource list ...` for the first-class datasource inventory CLI.
+- Use `python3 -m grafana_utils dashboard inspect-live ...` to inspect live Grafana dashboards through the same summary/report renderers used for raw exports.
+- Use `python3 -m grafana_utils dashboard export ...` for export.
+- Use `python3 -m grafana_utils dashboard import ...` for import.
+- Use `python3 -m grafana_utils dashboard diff ...` for live-vs-local comparison.
+- Use `python3 -m grafana_utils access ...` or `cargo run --bin grafana-util -- access ...` for Grafana access-management workflows.
 - `grafana-util access user list ...` inspects Grafana users.
 - `grafana-util access user add ...` creates Grafana users through the server-admin API.
 - `grafana-util access user modify ...` updates Grafana users through the global and admin user APIs.
@@ -211,7 +211,7 @@ The Python CLI also has `inspect-live`, which accepts the normal live dashboard 
 - Preserve `uid`.
 - Clear numeric `id`.
 - Keep datasource references unchanged.
-- Best input for `python3 python/grafana-util.py import-dashboard`.
+- Best input for `python3 -m grafana_utils import-dashboard`.
 
 ### Prompt export intent
 
@@ -453,7 +453,7 @@ Alerting import format notes:
 
 ### Current scope
 
-Primary access entrypoints are `python/grafana-util.py access ...` and `cargo run --bin grafana-util -- access ...`.
+Primary access entrypoints are `python3 -m grafana_utils access ...` and `cargo run --bin grafana-util -- access ...`.
 
 Rust still keeps a compatibility shim via `cargo run --bin grafana-access-utils -- ...` for the same command surface:
 
@@ -475,7 +475,7 @@ Rust still keeps a compatibility shim via `cargo run --bin grafana-access-utils 
 Current team creation command shape:
 
 ```bash
-python3 python/grafana-util.py access team add \
+python3 -m grafana_utils access team add \
   --url http://localhost:3000 \
   --token "$GRAFANA_API_TOKEN" \
   --name platform-operators \
@@ -511,6 +511,14 @@ python3 python/grafana-util.py access team add \
 Common checks:
 
 ```bash
+poetry install --with dev
+poetry run python -m grafana_utils -h
+poetry run python -m build --sdist --wheel
+poetry run python -m unittest tests.test_python_dashboard_cli
+poetry run python -m unittest tests.test_python_alert_cli
+poetry run python -m unittest tests.test_python_access_cli
+poetry run python -m unittest tests.test_python_packaging
+poetry run python -m unittest -v
 make help
 make build-python
 make build-rust
@@ -524,6 +532,12 @@ python3 -m unittest tests.test_python_access_cli
 python3 -m unittest tests.test_python_packaging
 python3 -m unittest -v
 ```
+
+Development environment notes:
+
+- Poetry is the standard maintainer path for Python development and test execution.
+- Keep `python3 -m pip install ...` commands for packaged-install validation and release checks.
+- The project still builds through the existing Python packaging backend; Poetry only standardizes environment management here.
 
 Rust live smoke test notes:
 
@@ -609,27 +623,27 @@ cargo run --quiet --manifest-path rust/Cargo.toml --bin grafana-util -- access s
 cargo run --quiet --manifest-path rust/Cargo.toml --bin grafana-util -- access service-account delete -h
 cargo run --quiet --manifest-path rust/Cargo.toml --bin grafana-util -- access service-account token add -h
 cargo run --quiet --manifest-path rust/Cargo.toml --bin grafana-util -- access service-account token delete -h
-python3 python/grafana-util.py -h
-python3 python/grafana-util.py dashboard -h
-python3 python/grafana-util.py dashboard list -h
-python3 python/grafana-util.py dashboard list-data-sources -h
-python3 python/grafana-util.py dashboard export -h
-python3 python/grafana-util.py dashboard import -h
-python3 python/grafana-util.py dashboard diff -h
-python3 python/grafana-util.py alert -h
-python3 python/grafana-util.py access -h
-python3 python/grafana-util.py access user list -h
-python3 python/grafana-util.py access user add -h
-python3 python/grafana-util.py access user modify -h
-python3 python/grafana-util.py access user delete -h
-python3 python/grafana-util.py access team list -h
-python3 python/grafana-util.py access team add -h
-python3 python/grafana-util.py access team modify -h
-python3 python/grafana-util.py access service-account list -h
-python3 python/grafana-util.py access service-account add -h
-python3 python/grafana-util.py access service-account token add -h
-python3 python/grafana-util.py alert -h
-python3 python/grafana-util.py access -h
+python3 -m grafana_utils -h
+python3 -m grafana_utils dashboard -h
+python3 -m grafana_utils dashboard list -h
+python3 -m grafana_utils dashboard list-data-sources -h
+python3 -m grafana_utils dashboard export -h
+python3 -m grafana_utils dashboard import -h
+python3 -m grafana_utils dashboard diff -h
+python3 -m grafana_utils alert -h
+python3 -m grafana_utils access -h
+python3 -m grafana_utils access user list -h
+python3 -m grafana_utils access user add -h
+python3 -m grafana_utils access user modify -h
+python3 -m grafana_utils access user delete -h
+python3 -m grafana_utils access team list -h
+python3 -m grafana_utils access team add -h
+python3 -m grafana_utils access team modify -h
+python3 -m grafana_utils access service-account list -h
+python3 -m grafana_utils access service-account add -h
+python3 -m grafana_utils access service-account token add -h
+python3 -m grafana_utils alert -h
+python3 -m grafana_utils access -h
 ```
 
 ## Documentation split

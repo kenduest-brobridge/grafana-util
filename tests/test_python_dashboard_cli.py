@@ -74,7 +74,7 @@ OUTPUT_SUPPORT_MODULE_PATH = (
 )
 PROGRESS_MODULE_PATH = REPO_ROOT / "grafana_utils" / "dashboards" / "progress.py"
 TRANSFORMER_MODULE_PATH = REPO_ROOT / "grafana_utils" / "dashboards" / "transformer.py"
-WRAPPER_PATH = REPO_ROOT / "python" / "grafana-util.py"
+MODULE_ENTRYPOINT_PATH = REPO_ROOT / "grafana_utils" / "__main__.py"
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 transport_module = importlib.import_module("grafana_utils.http_transport")
@@ -529,10 +529,10 @@ class ExporterTests(unittest.TestCase):
 
         ast.parse(source, filename=str(TRANSFORMER_MODULE_PATH), feature_version=(3, 9))
 
-    def test_dashboard_wrapper_script_parses_as_python39_syntax(self):
-        source = WRAPPER_PATH.read_text(encoding="utf-8")
+    def test_dashboard_module_entrypoint_parses_as_python39_syntax(self):
+        source = MODULE_ENTRYPOINT_PATH.read_text(encoding="utf-8")
 
-        ast.parse(source, filename=str(WRAPPER_PATH), feature_version=(3, 9))
+        ast.parse(source, filename=str(MODULE_ENTRYPOINT_PATH), feature_version=(3, 9))
 
     def test_parse_args_requires_subcommand(self):
         with self.assertRaises(SystemExit):

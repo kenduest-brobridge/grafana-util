@@ -6,7 +6,7 @@
 
 Python CLI 的定位是保留一個統一進入點、穩定的域名封裝與可測試的 workflow：
 
-- `python/grafana-util.py`：source-tree wrapper，確保 `python3 python/grafana-util.py` 可直接呼叫未安裝環境中的套件入口。
+- `grafana_utils/__main__.py`：source-tree module entrypoint，讓 `python3 -m grafana_utils` 可直接呼叫未安裝環境中的套件入口。
 - `grafana_utils/unified_cli.py`：統一路由層，不實作 domain 邏輯，只做 legacy / namespaced 命令正規化。
 - `grafana_utils/dashboard_cli.py` / `alert_cli.py` / `access_cli.py` / `datasource_cli.py`：各 domain 的 facade，負責 parser + auth + client 生成 + dispatch。
 - `grafana_utils/clients/*` + `grafana_utils/http_transport.py`：共享 HTTP transport 與 request/response 例外轉譯。
@@ -65,7 +65,7 @@ Python CLI 的定位是保留一個統一進入點、穩定的域名封裝與可
 
 ### Dashboard export (`grafana-util dashboard export`)
 
-1. `python/grafana-util.py` → `unified_cli.parse_args`。
+1. `python3 -m grafana_utils` → `unified_cli.parse_args`。
 2. 透過 legacy/namespaced 映射到 `dashboard_cli` 的 `forwarded_argv`。
 3. `dashboard_cli.parse_args` 解析 → `run`。
 4. `run` 組裝 `GrafanaClient`（透過 `auth_staging.resolve_cli_auth_from_namespace`）。

@@ -15,7 +15,7 @@ PARSER_MODULE_PATH = REPO_ROOT / "grafana_utils" / "access" / "parser.py"
 WORKFLOWS_MODULE_PATH = REPO_ROOT / "grafana_utils" / "access" / "workflows.py"
 CLIENT_MODULE_PATH = REPO_ROOT / "grafana_utils" / "clients" / "access_client.py"
 MODELS_MODULE_PATH = REPO_ROOT / "grafana_utils" / "access" / "models.py"
-WRAPPER_PATH = REPO_ROOT / "python" / "grafana-util.py"
+MODULE_ENTRYPOINT_PATH = REPO_ROOT / "grafana_utils" / "__main__.py"
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 access_utils = importlib.import_module("grafana_utils.access_cli")
@@ -249,13 +249,13 @@ class AccessCliTests(unittest.TestCase):
         source = MODELS_MODULE_PATH.read_text(encoding="utf-8")
         ast.parse(source, filename=str(MODELS_MODULE_PATH), feature_version=(3, 9))
 
-    def test_access_wrapper_script_parses_as_python39_syntax(self):
-        source = WRAPPER_PATH.read_text(encoding="utf-8")
-        ast.parse(source, filename=str(WRAPPER_PATH), feature_version=(3, 9))
+    def test_access_module_entrypoint_parses_as_python39_syntax(self):
+        source = MODULE_ENTRYPOINT_PATH.read_text(encoding="utf-8")
+        ast.parse(source, filename=str(MODULE_ENTRYPOINT_PATH), feature_version=(3, 9))
 
-    def test_access_wrapper_script_uses_unified_main(self):
-        source = WRAPPER_PATH.read_text(encoding="utf-8")
-        self.assertIn("from grafana_utils.unified_cli import main", source)
+    def test_access_module_entrypoint_uses_unified_main(self):
+        source = MODULE_ENTRYPOINT_PATH.read_text(encoding="utf-8")
+        self.assertIn("from .unified_cli import main", source)
 
     def test_parse_args_without_command_prints_top_level_help(self):
         stdout = io.StringIO()

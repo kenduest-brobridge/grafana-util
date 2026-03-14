@@ -1,5 +1,24 @@
 #!/usr/bin/env python3
-"""Stable facade for the Python datasource CLI."""
+"""Stable facade for the Python datasource CLI.
+
+Purpose:
+- Provide a stable facade API for datasource commands and delegate to
+  `datasource.workflows` after parse/normalize has finished.
+
+Architecture:
+- Keep user-facing argument parsing and execution orchestration centralized in this
+  module to preserve legacy API imports from `grafana_utils.datasource_cli`.
+- Delegate heavy workflow work to `grafana_utils.datasource.workflows` after parsing
+  and normalization are complete.
+- Re-export selected workflow helpers for existing callers relying on the old flat
+  import surface.
+
+Caveats:
+- Keep schema/contract strictness in `datasource_contract` and parser details in
+  `datasource/parser.py`.
+- Legacy aliases are intentionally preserved for `python3 -m grafana_utils`
+  compatibility paths.
+"""
 
 import sys
 
@@ -71,6 +90,7 @@ from .datasource_diff import (
 
 
 def _normalize_output_format_args(args, parser):
+    """Normalize datasource `--output-format` into concrete output mode switches."""
     output_format = getattr(args, "output_format", None)
     if output_format is None:
         return
@@ -86,6 +106,7 @@ def _normalize_output_format_args(args, parser):
         args.json = output_format == "json"
         return
     if getattr(args, "command", None) == "import":
+        # Import mode intentionally only supports table/json output mode.
         if bool(getattr(args, "table", False)) or bool(getattr(args, "json", False)):
             parser.error(
                 "--output-format cannot be combined with --table or --json for datasource import."
@@ -95,6 +116,7 @@ def _normalize_output_format_args(args, parser):
 
 
 def _parse_import_output_columns(args, parser):
+    """Parse output-column aliases only for datasource import dry-run table output."""
     if getattr(args, "command", None) != "import":
         return
     value = getattr(args, "output_columns", None)
@@ -111,6 +133,13 @@ def _parse_import_output_columns(args, parser):
 
 
 def parse_args(argv=None):
+    """Parse datasource CLI args then normalize legacy-compatible output options.
+
+    Flow:
+    - Parse argv with datasource parser (`list`/`export`/`import`/`diff`).
+    - Normalize `--output-format` into exclusive `--table`/`--csv`/`--json`.
+    - Parse and validate dry-run output-column aliases.
+    """
     parser = build_parser()
     args = parser.parse_args(argv)
     _normalize_output_format_args(args, parser)
@@ -119,6 +148,7 @@ def parse_args(argv=None):
 
 
 def _sync_facade_overrides():
+    """Rebind workflow-layer dependencies that might be overridden in tests."""
     datasource_workflows.build_client = build_client
 
 
@@ -148,6 +178,13 @@ def dispatch_datasource_command(args):
 
 
 def main(argv=None):
+    """Route datasource commands through the facade after argument normalization.
+
+    Flow:
+    - Parse + normalize input arguments.
+    - Rebind workflow client helpers to facade shims used by tests.
+    - Delegate to workflow dispatch for the selected command.
+    """
     args = parse_args(argv)
     try:
         return dispatch_datasource_command(args)
