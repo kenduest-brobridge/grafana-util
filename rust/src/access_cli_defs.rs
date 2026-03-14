@@ -319,6 +319,25 @@ pub struct UserImportArgs {
 }
 
 #[derive(Debug, Clone, Args)]
+pub struct UserDiffArgs {
+    #[command(flatten)]
+    pub common: CommonCliArgs,
+    #[arg(
+        long,
+        default_value = "access-users",
+        help = "Diff directory that contains users.json and export-metadata.json."
+    )]
+    pub diff_dir: PathBuf,
+    #[arg(
+        long,
+        value_enum,
+        default_value_t = Scope::Org,
+        help = "Compare against org-scoped or global users (default: org)."
+    )]
+    pub scope: Scope,
+}
+
+#[derive(Debug, Clone, Args)]
 pub struct TeamListArgs {
     #[command(flatten)]
     pub common: CommonCliArgs,
@@ -460,6 +479,18 @@ pub struct TeamImportArgs {
         help = "Acknowledge destructive team-member synchronization operations."
     )]
     pub yes: bool,
+}
+
+#[derive(Debug, Clone, Args)]
+pub struct TeamDiffArgs {
+    #[command(flatten)]
+    pub common: CommonCliArgs,
+    #[arg(
+        long,
+        default_value = "access-teams",
+        help = "Diff directory that contains teams.json and export-metadata.json."
+    )]
+    pub diff_dir: PathBuf,
 }
 
 #[derive(Debug, Clone, Args)]
@@ -612,6 +643,7 @@ pub enum TeamCommand {
     Modify(TeamModifyArgs),
     Export(TeamExportArgs),
     Import(TeamImportArgs),
+    Diff(TeamDiffArgs),
     Delete(TeamDeleteArgs),
 }
 
@@ -622,6 +654,7 @@ pub enum UserCommand {
     Modify(UserModifyArgs),
     Export(UserExportArgs),
     Import(UserImportArgs),
+    Diff(UserDiffArgs),
     Delete(UserDeleteArgs),
 }
 

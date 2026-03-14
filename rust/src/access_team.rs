@@ -19,7 +19,7 @@ use super::access_user::lookup_org_user_by_identity;
 use super::{
     request_array, request_object, ACCESS_EXPORT_KIND_TEAMS, ACCESS_EXPORT_METADATA_FILENAME,
     ACCESS_EXPORT_VERSION, ACCESS_TEAM_EXPORT_FILENAME, TeamAddArgs, TeamExportArgs,
-    TeamImportArgs, TeamListArgs, TeamModifyArgs, DEFAULT_PAGE_SIZE,
+    TeamDiffArgs, TeamImportArgs, TeamListArgs, TeamModifyArgs, DEFAULT_PAGE_SIZE,
 };
 
 fn normalize_access_identity(value: &str) -> String {
@@ -46,6 +46,208 @@ fn sorted_membership_union(members: &[String], admins: &[String]) -> Vec<String>
     }
     merged
 }
+
+fn normalize_team_for_diff(record: &Map<String, Value>, include_members: bool) -> Map<String, Value> {
+    let mut members = parse_access_identity_list(record.get("members").unwrap_or(&Value::Null));
+    let mut admins = parse_access_identity_list(record.get("admins").unwrap_or(&Value::Null));
+    members.sort();
+    admins.sort();
+    let mut payload = Map::from_iter(vec![
+        ("name".to_string(), Value::String(string_field(record, "name", ""))),
+        ("email".to_string(), Value::String(string_field(record, "email", ""))),
+    ]);
+    if include_members {
+        payload.insert(
+            "members".to_string(),
+            Value::Array(members.into_iter().map(Value::String).collect()),
+        );
+        payload.insert(
+            "admins".to_string(),
+            Value::Array(admins.into_iter().map(Value::String).collect()),
+        );
+    } else {
+        payload.insert("members".to_string(), Value::Array(Vec::new()));
+        payload.insert("admins".to_string(), Value::Array(Vec::new()));
+    }
+    payload
+}
+
+fn build_team_diff_map(
+    records: &[Map<String, Value>],
+    source: &str,
+    include_members: bool,
+) -> Result<BTreeMap<String, (String, Map<String, Value>)>> {
+    let mut indexed = BTreeMap::new();
+    for record in records {
+        let team_name = string_field(record, "name", "");
+        if team_name.trim().is_empty() {
+            return Err(message(format!(
+                "Team diff record in {} does not include name.",
+                source
+            )));
+        }
+        let key = normalize_access_identity(&team_name);
+        if indexed.contains_key(&key) {
+            return Err(message(format!(
+                "Duplicate team name in {}: {}",
+                source, team_name
+            )));
+        }
+        let payload = normalize_team_for_diff(record, include_members);
+        indexed.insert(key, (team_name, payload));
+    }
+    Ok(indexed)
+}
+
+fn build_team_live_records_for_diff<F>(
+    mut request_json: F,
+    include_members: bool,
+) -> Result<Vec<Map<String, Value>>>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    let teams = iter_teams_with_request(&mut request_json, None)?;
+    let mut records = Vec::new();
+    for team in teams {
+        let mut row = Map::from_iter(vec![
+            (
+                "name".to_string(),
+                Value::String(string_field(&team, "name", "")),
+            ),
+            (
+                "email".to_string(),
+                Value::String(string_field(&team, "email", "")),
+            ),
+        ]);
+        if include_members {
+            let team_id = string_field(&team, "id", "");
+            let mut members = Vec::new();
+            let mut admins = Vec::new();
+            if !team_id.is_empty() {
+                for member in list_team_members_with_request(&mut request_json, &team_id)? {
+                    let identity = team_member_identity(&member);
+                    if identity.is_empty() {
+                        continue;
+                    }
+                    if !members.iter().any(|value| {
+                        normalize_access_identity(value) == normalize_access_identity(&identity)
+                    }) {
+                        members.push(identity.clone());
+                    }
+                    if team_member_is_admin(&member)
+                        && !admins.iter().any(|value| {
+                            normalize_access_identity(value) == normalize_access_identity(&identity)
+                        })
+                    {
+                        admins.push(identity);
+                    }
+                }
+            }
+            members.sort();
+            members.dedup();
+            admins.sort();
+            admins.dedup();
+            row.insert(
+                "members".to_string(),
+                Value::Array(members.into_iter().map(Value::String).collect()),
+            );
+            row.insert(
+                "admins".to_string(),
+                Value::Array(admins.into_iter().map(Value::String).collect()),
+            );
+        }
+        records.push(row);
+    }
+    Ok(records)
+}
+
+fn build_record_diff_fields(left: &Map<String, Value>, right: &Map<String, Value>) -> Vec<String> {
+    let mut keys = BTreeSet::new();
+    for key in left.keys().chain(right.keys()) {
+        keys.insert(key.clone());
+    }
+    let mut changed = Vec::new();
+    for key in keys {
+        if left.get(&key) != right.get(&key) {
+            changed.push(key);
+        }
+    }
+    changed
+}
+
+pub(crate) fn diff_teams_with_request<F>(
+    mut request_json: F,
+    args: &TeamDiffArgs,
+) -> Result<usize>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    let local_records = load_team_import_records(&args.diff_dir, ACCESS_EXPORT_KIND_TEAMS)?;
+    let include_members = local_records.iter().any(|record| {
+        match record.get("members") {
+            Some(Value::Array(values)) => !values.is_empty(),
+            Some(Value::String(text)) => !text.trim().is_empty(),
+            _ => false,
+        } || match record.get("admins") {
+            Some(Value::Array(values)) => !values.is_empty(),
+            Some(Value::String(text)) => !text.trim().is_empty(),
+            _ => false,
+        }
+    });
+    let local_map = build_team_diff_map(
+        &local_records,
+        &args.diff_dir.to_string_lossy(),
+        include_members,
+    )?;
+    let live_records = build_team_live_records_for_diff(&mut request_json, include_members)?;
+    let live_map = build_team_diff_map(&live_records, "Grafana live teams", include_members)?;
+
+    let mut differences = 0usize;
+    let mut checked = 0usize;
+    for key in local_map.keys() {
+        checked += 1;
+        let (local_identity, local_payload) = &local_map[key];
+        match live_map.get(key) {
+            None => {
+                println!("Diff missing-live team {}", local_identity);
+                differences += 1;
+            }
+            Some((_live_identity, live_payload)) => {
+                let changed = build_record_diff_fields(local_payload, live_payload);
+                if changed.is_empty() {
+                    println!("Diff same team {}", local_identity);
+                } else {
+                    differences += 1;
+                    println!(
+                        "Diff different team {} fields={}",
+                        local_identity,
+                        changed.join(",")
+                    );
+                }
+            }
+        }
+    }
+
+    for key in live_map.keys() {
+        if local_map.contains_key(key) {
+            continue;
+        }
+        differences += 1;
+        checked += 1;
+        let (_, live_payload) = &live_map[key];
+        println!("Diff extra-live team {}", map_get_text(live_payload, "name"));
+    }
+    if differences > 0 {
+        println!(
+            "Diff checked {} team(s); {} difference(s) found.",
+            checked, differences
+        );
+    } else {
+        println!("No team differences across {} team(s).", checked);
+    }
+    Ok(differences)
+}
+
 
 fn build_membership_payloads(
     members: &[String],

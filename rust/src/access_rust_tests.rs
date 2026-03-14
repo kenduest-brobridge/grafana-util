@@ -4,7 +4,7 @@ use super::{
     add_service_account_token_with_request, add_service_account_with_request,
     add_team_with_request, add_user_with_request, delete_service_account_token_with_request,
     delete_service_account_with_request, delete_team_with_request, delete_user_with_request,
-    list_service_accounts_command_with_request,
+    diff_teams_with_request, diff_users_with_request, list_service_accounts_command_with_request,
     list_teams_command_with_request,
     list_users_with_request, modify_team_with_request, modify_user_with_request, parse_cli_from,
     import_teams_with_request, run_access_cli_with_request, AccessCommand, CommonCliArgs, Scope,
@@ -12,7 +12,7 @@ use super::{
     ServiceAccountCommand, ServiceAccountDeleteArgs, ServiceAccountListArgs,
     ServiceAccountTokenAddArgs, ServiceAccountTokenCommand, ServiceAccountTokenDeleteArgs,
     TeamAddArgs, TeamCommand, TeamDeleteArgs, TeamImportArgs, TeamListArgs,
-    TeamModifyArgs, UserAddArgs, UserCommand, UserDeleteArgs,
+    TeamDiffArgs, TeamModifyArgs, UserAddArgs, UserCommand, UserDeleteArgs, UserDiffArgs,
     UserListArgs, UserModifyArgs,
 };
 use crate::access::access_cli_defs::AccessCliRoot;
@@ -372,6 +372,49 @@ fn parse_cli_supports_user_export_and_import() {
 }
 
 #[test]
+fn parse_cli_supports_user_diff() {
+    let args = parse_cli_from([
+        "grafana-access-utils",
+        "user",
+        "diff",
+        "--scope",
+        "global",
+        "--diff-dir",
+        "/tmp/access-users",
+    ]);
+
+    match args.command {
+        AccessCommand::User {
+            command: UserCommand::Diff(args),
+        } => {
+            assert_eq!(args.scope, Scope::Global);
+            assert_eq!(args.diff_dir.to_string_lossy().as_ref(), "/tmp/access-users");
+        }
+        _ => panic!("expected user diff"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_team_diff() {
+    let args = parse_cli_from([
+        "grafana-access-utils",
+        "team",
+        "diff",
+        "--diff-dir",
+        "/tmp/access-teams",
+    ]);
+
+    match args.command {
+        AccessCommand::Team {
+            command: TeamCommand::Diff(args),
+        } => {
+            assert_eq!(args.diff_dir.to_string_lossy().as_ref(), "/tmp/access-teams");
+        }
+        _ => panic!("expected team diff"),
+    }
+}
+
+#[test]
 fn parse_cli_supports_team_export_and_import() {
     let export_args = parse_cli_from([
         "grafana-access-utils",
@@ -606,6 +649,156 @@ fn run_access_cli_with_request_routes_team_import() {
             .iter()
             .any(|(method, path)| method == "POST" && path == "/api/teams")
     );
+}
+
+#[test]
+fn run_access_cli_with_request_routes_user_diff() {
+    let temp = tempdir().unwrap();
+    let diff_dir = temp.path().join("access-users");
+    fs::create_dir_all(&diff_dir).unwrap();
+    fs::write(
+        diff_dir.join("users.json"),
+        r#"[
+            {"login":"alice","email":"alice@example.com","name":"Alice","orgRole":"Admin","grafanaAdmin":true}
+        ]"#,
+    )
+    .unwrap();
+
+    let args = parse_cli_from([
+        "grafana-access-utils",
+        "user",
+        "diff",
+        "--diff-dir",
+        diff_dir.to_str().unwrap(),
+        "--scope",
+        "org",
+    ]);
+    let result = run_access_cli_with_request(
+        |method, path, _params, _payload| {
+            assert_eq!(method.to_string(), Method::GET.to_string());
+            match path {
+                "/api/org/users" => Ok(Some(json!([
+                    {"userId":"11","login":"alice","email":"alice@example.com","name":"Alice","role":"Admin"}
+                ]))),
+                _ => panic!("unexpected path {path}"),
+            }
+        },
+        args,
+    );
+    assert!(result.is_ok());
+}
+
+#[test]
+fn run_access_cli_with_request_routes_team_diff() {
+    let temp = tempdir().unwrap();
+    let diff_dir = temp.path().join("access-teams");
+    fs::create_dir_all(&diff_dir).unwrap();
+    fs::write(
+        diff_dir.join("teams.json"),
+        r#"[{"name":"Ops","email":"ops@example.com"}]"#,
+    )
+    .unwrap();
+
+    let args = parse_cli_from([
+        "grafana-access-utils",
+        "team",
+        "diff",
+        "--diff-dir",
+        diff_dir.to_str().unwrap(),
+    ]);
+    let result = run_access_cli_with_request(
+        |_method, path, _params, _payload| match path {
+            "/api/teams/search" => Ok(Some(json!({"teams": [{"id": "3", "name":"Ops", "email":"ops@example.com"}]}))),
+            _ => panic!("unexpected path {path}"),
+        },
+        args,
+    );
+    assert!(result.is_ok());
+}
+
+#[test]
+fn diff_users_with_request_returns_expected_difference_count() {
+    let temp = tempdir().unwrap();
+    let diff_dir = temp.path().join("access-users");
+    fs::create_dir_all(&diff_dir).unwrap();
+    fs::write(
+        diff_dir.join("users.json"),
+        r#"
+[
+  {"login":"alice","email":"alice@example.com","name":"Alice","orgRole":"Admin","grafanaAdmin":true},
+  {"login":"bob","email":"bob@example.com","name":"Bob","orgRole":"Viewer","grafanaAdmin":false},
+  {"login":"carol","email":"carol@example.com","name":"Carol","orgRole":"Viewer","grafanaAdmin":false}
+]
+"#,
+    )
+    .unwrap();
+    let args = UserDiffArgs {
+        common: make_token_common(),
+        diff_dir: diff_dir.clone(),
+        scope: Scope::Org,
+    };
+    let result = diff_users_with_request(
+        |method, path, _params, _payload| {
+            assert_eq!(method.to_string(), Method::GET.to_string());
+            match path {
+                "/api/org/users" => Ok(Some(json!([
+                    {
+                        "userId": "11",
+                        "login": "alice",
+                        "email": "alice@example.com",
+                        "name": "Alice",
+                        "role": "Editor"
+                    },
+                    {
+                        "userId": "12",
+                        "login": "dave",
+                        "email": "dave@example.com",
+                        "name": "Dave",
+                        "role": "Viewer"
+                    }
+                ]))),
+                _ => panic!("unexpected path {path}"),
+            }
+        },
+        &args,
+    )
+    .unwrap();
+    assert_eq!(result, 4);
+}
+
+#[test]
+fn diff_teams_with_request_returns_expected_difference_count() {
+    let temp = tempdir().unwrap();
+    let diff_dir = temp.path().join("access-teams");
+    fs::create_dir_all(&diff_dir).unwrap();
+    fs::write(
+        diff_dir.join("teams.json"),
+        r#"
+[
+  {"name":"Ops","email":"ops@example.com"},
+  {"name":"Dev","email":"dev@example.com"}
+]
+"#,
+    )
+    .unwrap();
+    let args = TeamDiffArgs {
+        common: make_token_common(),
+        diff_dir: diff_dir.clone(),
+    };
+    let result = diff_teams_with_request(
+        |_method, path, _params, _payload| match path {
+            "/api/teams/search" => Ok(Some(json!({
+                "teams": [
+                    {"id":"3","name":"Ops","email":"ops-two@example.com"},
+                    {"id":"5","name":"SRE","email":"sre@example.com"}
+                ]
+            }))),
+            _ => panic!("unexpected path {path}"),
+        },
+        &args,
+    )
+    .unwrap();
+    assert_eq!(result, 3);
 }
 
 #[test]

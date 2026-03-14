@@ -235,6 +235,268 @@ def _normalize_team_record(record):
     }
 
 
+def _normalize_user_for_diff(record):
+    return {
+        "login": str(record.get("login") or ""),
+        "email": str(record.get("email") or ""),
+        "name": str(record.get("name") or ""),
+        "orgRole": normalize_org_role(
+            record.get("orgRole") or record.get("role") or ""
+        ),
+        "grafanaAdmin": normalize_bool(
+            record.get("grafanaAdmin")
+            if record.get("grafanaAdmin") is not None
+            else record.get("isGrafanaAdmin")
+            if record.get("isGrafanaAdmin") is not None
+            else record.get("isAdmin")
+        ),
+        "teams": sorted(_normalize_access_identity_list(record.get("teams") or [])),
+    }
+
+
+def _normalize_team_for_diff(record, include_members=False):
+    payload = {
+        "name": str(record.get("name") or ""),
+        "email": str(record.get("email") or ""),
+    }
+    if include_members:
+        payload["members"] = sorted(
+            _normalize_access_identity_list(record.get("members") or [])
+        )
+        payload["admins"] = sorted(
+            _normalize_access_identity_list(record.get("admins") or [])
+        )
+    else:
+        payload["members"] = []
+        payload["admins"] = []
+    return payload
+
+
+def _build_user_diff_map(records, source):
+    indexed = {}
+    for record in records:
+        key = _normalize_access_import_identity(_resolve_access_user_key(record))
+        if not key:
+            raise GrafanaError(
+                "User diff record in %s does not include login or email." % source
+            )
+        if key in indexed:
+            raise GrafanaError("Duplicate user identity in %s: %s" % (source, key))
+        indexed[key] = {
+            "identity": _resolve_access_user_key(record),
+            "payload": _normalize_user_for_diff(record),
+        }
+    return indexed
+
+
+def _build_team_diff_map(records, source, include_members=False):
+    indexed = {}
+    for record in records:
+        team_name = str(record.get("name") or "").strip()
+        if not team_name:
+            raise GrafanaError(
+                "Team diff record in %s does not include name." % source
+            )
+        key = _normalize_access_import_identity(team_name)
+        if key in indexed:
+            raise GrafanaError("Duplicate team name in %s: %s" % (source, team_name))
+        indexed[key] = {
+            "identity": team_name,
+            "payload": _normalize_team_for_diff(record, include_members),
+        }
+    return indexed
+
+
+def _record_diff_fields(left, right):
+    keys = set(left.keys()) | set(right.keys())
+    changed = []
+    for key in sorted(keys):
+        if left.get(key) != right.get(key):
+            changed.append(key)
+    return changed
+
+
+def _build_user_export_for_diff_records(client, scope, include_teams):
+    raw = (
+        client.iter_global_users(DEFAULT_PAGE_SIZE)
+        if scope == "global"
+        else client.list_org_users()
+    )
+    records = []
+    for item in raw:
+        record = (
+            normalize_global_user(item)
+            if scope == "global"
+            else normalize_org_user(item)
+        )
+        if include_teams:
+            teams = []
+            user_id = record.get("id")
+            if user_id:
+                for team in client.list_user_teams(user_id):
+                    team_name = str(team.get("name") or "").strip()
+                    if team_name:
+                        teams.append(team_name)
+            record["teams"] = sorted(teams)
+        records.append(record)
+    return records
+
+
+def _build_team_export_for_diff_records(client, include_members):
+    records = client.iter_teams(query=None, page_size=DEFAULT_PAGE_SIZE)
+    if not include_members:
+        return [_normalize_team_for_diff(raw_team, False) for raw_team in records]
+    normalized = []
+    for raw_team in records:
+        team_record = {
+            "name": str(raw_team.get("name") or ""),
+            "email": str(raw_team.get("email") or ""),
+            "members": [],
+            "admins": [],
+        }
+        team_id = str(raw_team.get("id") or "")
+        if team_id:
+            for member in client.list_team_members(team_id):
+                identity = extract_member_identity(member)
+                if not identity:
+                    continue
+                if identity not in team_record["members"]:
+                    team_record["members"].append(identity)
+                if team_member_admin_state(member) is True and identity not in team_record["admins"]:
+                    team_record["admins"].append(identity)
+        normalized.append(team_record)
+    return [ _normalize_team_for_diff(item, True) for item in normalized ]
+
+
+def diff_users_with_client(args, client):
+    local_records = [
+        _normalize_user_record(item)
+        for item in _load_access_import_bundle(
+            args.diff_dir,
+            ACCESS_USER_EXPORT_FILENAME,
+            ACCESS_EXPORT_KIND_USERS,
+        )["records"]
+    ]
+    include_teams = any(
+        bool(record.get("teams")) for record in local_records
+    )
+    local_map = _build_user_diff_map(local_records, args.diff_dir)
+
+    live_map = _build_user_diff_map(
+        _build_user_export_for_diff_records(
+            client,
+            args.scope,
+            include_teams,
+        ),
+        "Grafana live users",
+    )
+    differences = 0
+    checked = 0
+
+    for key in sorted(local_map.keys()):
+        checked += 1
+        local_identity = local_map[key]["identity"]
+        local_payload = local_map[key]["payload"]
+        if key not in live_map:
+            print("Diff missing-live user %s" % local_identity)
+            differences += 1
+            continue
+        live_payload = live_map[key]["payload"]
+        changed = _record_diff_fields(local_payload, live_payload)
+        if changed:
+            differences += 1
+            print(
+                "Diff different user %s fields=%s"
+                % (local_identity, ",".join(changed))
+            )
+        else:
+            print("Diff same user %s" % local_identity)
+
+    for key in sorted(live_map.keys()):
+        if key in local_map:
+            continue
+        differences += 1
+        print("Diff extra-live user %s" % live_map[key]["identity"])
+        checked += 1
+
+    if differences:
+        print(
+            "Diff checked %s user(s); %s difference(s) found."
+            % (checked, differences)
+        )
+    else:
+        print("No user differences across %s user(s)." % checked)
+    return differences
+
+
+def diff_teams_with_client(args, client):
+    local_records = [
+        _normalize_team_record(item)
+        for item in _load_access_import_bundle(
+            args.diff_dir,
+            ACCESS_TEAM_EXPORT_FILENAME,
+            ACCESS_EXPORT_KIND_TEAMS,
+        )["records"]
+    ]
+    include_members = any(
+        bool(item.get("members") or item.get("admins")) for item in local_records
+    )
+    if include_members:
+        local_records = [_normalize_team_for_diff(item, True) for item in local_records]
+    local_map = _build_team_diff_map(
+        local_records,
+        args.diff_dir,
+        include_members=include_members,
+    )
+    live_records = _build_team_export_for_diff_records(client, include_members)
+    live_map = {}
+    for item in live_records:
+        team_name = str(item.get("name") or "").strip()
+        if not team_name:
+            continue
+        key = _normalize_access_import_identity(team_name)
+        live_map[key] = {
+            "identity": team_name,
+            "payload": _normalize_team_for_diff(item, include_members),
+        }
+    differences = 0
+    checked = 0
+
+    for key in sorted(local_map.keys()):
+        checked += 1
+        local_identity = local_map[key]["identity"]
+        local_payload = local_map[key]["payload"]
+        if key not in live_map:
+            print("Diff missing-live team %s" % local_identity)
+            differences += 1
+            continue
+        changed = _record_diff_fields(local_payload, live_map[key]["payload"])
+        if changed:
+            differences += 1
+            print(
+                "Diff different team %s fields=%s"
+                % (local_identity, ",".join(changed))
+            )
+        else:
+            print("Diff same team %s" % local_identity)
+
+    for key in sorted(live_map.keys()):
+        if key in local_map:
+            continue
+        differences += 1
+        print("Diff extra-live team %s" % live_map[key]["identity"])
+        checked += 1
+
+    if differences:
+        print(
+            "Diff checked %s team(s); %s difference(s) found."
+            % (checked, differences)
+        )
+    else:
+        print("No team differences across %s team(s)." % checked)
+    return differences
+
+
 
 def _load_json_document(path):
     if not path.exists():
@@ -1703,6 +1965,9 @@ def dispatch_access_command(args, client, auth_mode):
     if args.resource == "user" and args.command == "delete":
         validate_user_delete_auth(args, auth_mode)
         return delete_user_with_client(args, client)
+    if args.resource == "user" and args.command == "diff":
+        validate_user_list_auth(args, auth_mode)
+        return diff_users_with_client(args, client)
     if args.resource == "team" and args.command == "list":
         return list_teams_with_client(args, client)
     if args.resource == "team" and args.command == "add":
@@ -1712,6 +1977,8 @@ def dispatch_access_command(args, client, auth_mode):
     if args.resource == "team" and args.command == "delete":
         validate_team_delete_auth(auth_mode)
         return delete_team_with_client(args, client)
+    if args.resource == "team" and args.command == "diff":
+        return diff_teams_with_client(args, client)
     if args.resource == "team" and args.command == "export":
         return export_teams_with_client(args, client)
     if args.resource == "team" and args.command == "import":

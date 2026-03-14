@@ -2,7 +2,9 @@ import argparse
 import ast
 import importlib
 import io
+import json
 import sys
+import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
@@ -503,6 +505,29 @@ class AccessCliTests(unittest.TestCase):
         self.assertEqual(args.scope, "global")
         self.assertTrue(args.replace_existing)
 
+    def test_parse_args_supports_user_diff_mode(self):
+        args = access_utils.parse_args(
+            [
+                "user",
+                "diff",
+                "--basic-user",
+                "admin",
+                "--basic-password",
+                "secret",
+                "--diff-dir",
+                "/tmp/access-users",
+                "--scope",
+                "global",
+            ]
+        )
+
+        self.assertEqual(args.resource, "user")
+        self.assertEqual(args.command, "diff")
+        self.assertEqual(args.auth_username, "admin")
+        self.assertEqual(args.auth_password, "secret")
+        self.assertEqual(args.diff_dir, "/tmp/access-users")
+        self.assertEqual(args.scope, "global")
+
     def test_user_add_help_uses_basic_auth_and_local_password_flags(self):
         parser = access_utils.build_parser()
         user_add_parser = parser._subparsers._group_actions[0].choices["user"]._subparsers._group_actions[0].choices["add"]
@@ -600,6 +625,26 @@ class AccessCliTests(unittest.TestCase):
         self.assertEqual(args.import_dir, "tmp-access-teams")
         self.assertTrue(args.replace_existing)
         self.assertTrue(args.yes)
+
+    def test_parse_args_supports_team_diff_mode(self):
+        args = access_utils.parse_args(
+            [
+                "team",
+                "diff",
+                "--basic-user",
+                "admin",
+                "--basic-password",
+                "secret",
+                "--diff-dir",
+                "/tmp/access-teams",
+            ]
+        )
+
+        self.assertEqual(args.resource, "team")
+        self.assertEqual(args.command, "diff")
+        self.assertEqual(args.auth_username, "admin")
+        self.assertEqual(args.auth_password, "secret")
+        self.assertEqual(args.diff_dir, "/tmp/access-teams")
 
     def test_team_add_help_describes_initial_members_and_admins(self):
         parser = access_utils.build_parser()
@@ -1579,6 +1624,94 @@ class AccessCliTests(unittest.TestCase):
         self.assertEqual(client.deleted_teams, ["3"])
         self.assertIn('"teamId": "3"', output.getvalue())
         self.assertIn('"name": "Ops"', output.getvalue())
+
+    def test_diff_users_with_client_returns_expected_difference_count(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            diff_dir = Path(temp_dir)
+            (diff_dir / "users.json").write_text(
+                json.dumps(
+                    [
+                        {
+                            "login": "alice",
+                            "email": "alice@example.com",
+                            "name": "Alice",
+                            "orgRole": "Admin",
+                            "grafanaAdmin": True,
+                        },
+                        {
+                            "login": "bob",
+                            "email": "bob@example.com",
+                            "name": "Bob",
+                            "orgRole": "Viewer",
+                            "grafanaAdmin": False,
+                        },
+                        {
+                            "login": "carol",
+                            "email": "carol@example.com",
+                            "name": "Carol",
+                            "orgRole": "Viewer",
+                            "grafanaAdmin": False,
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            args = argparse.Namespace(
+                diff_dir=str(diff_dir),
+                scope="org",
+            )
+            client = FakeAccessClient(
+                org_users=[
+                    {
+                        "userId": "11",
+                        "login": "alice",
+                        "email": "alice@example.com",
+                        "name": "Alice",
+                        "role": "Editor",
+                    },
+                    {
+                        "userId": "12",
+                        "login": "dave",
+                        "email": "dave@example.com",
+                        "name": "Dave",
+                        "role": "Viewer",
+                    },
+                ],
+            )
+            output = io.StringIO()
+            with redirect_stdout(output):
+                result = access_utils.diff_users_with_client(args, client)
+
+            self.assertEqual(result, 4)
+            self.assertIn("Diff checked", output.getvalue())
+
+    def test_diff_teams_with_client_returns_expected_difference_count(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            diff_dir = Path(temp_dir)
+            (diff_dir / "teams.json").write_text(
+                json.dumps(
+                    [
+                        {"name": "Ops", "email": "ops@example.com"},
+                        {"name": "Dev", "email": "dev@example.com"},
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            args = argparse.Namespace(
+                diff_dir=str(diff_dir),
+            )
+            client = FakeAccessClient(
+                teams=[
+                    {"id": 3, "name": "Ops", "email": "ops-two@example.com"},
+                    {"id": 5, "name": "SRE", "email": "sre@example.com"},
+                ]
+            )
+            output = io.StringIO()
+            with redirect_stdout(output):
+                result = access_utils.diff_teams_with_client(args, client)
+
+            self.assertEqual(result, 3)
+            self.assertIn("Diff checked", output.getvalue())
 
     def test_list_service_accounts_with_client_renders_json(self):
         client = FakeAccessClient(

@@ -126,6 +126,30 @@ def add_access_import_cli_args(parser, resource, default_scope=DEFAULT_SCOPE):
     )
 
 
+def add_access_diff_cli_args(parser, resource, default_scope=DEFAULT_SCOPE):
+    parser.add_argument(
+        "--diff-dir",
+        required=True,
+        help=(
+            "Diff directory that contains %s and %s." % (
+                ACCESS_USER_EXPORT_FILENAME
+                if resource == "user"
+                else ACCESS_TEAM_EXPORT_FILENAME,
+                ACCESS_EXPORT_METADATA_FILENAME,
+            )
+        ),
+    )
+    if resource == "user":
+        parser.add_argument(
+            "--scope",
+            choices=SCOPE_CHOICES,
+            default=default_scope,
+            help=(
+                "Match against global or org user listing (default: %s)." % default_scope
+            ),
+        )
+
+
 def build_parser(prog=None):
     parser = argparse.ArgumentParser(
         prog=prog,
@@ -186,6 +210,18 @@ def build_parser(prog=None):
         password_dest="auth_password",
     )
     add_access_import_cli_args(user_import_parser, resource="user", default_scope=DEFAULT_SCOPE)
+
+    user_diff_parser = user_subparsers.add_parser(
+        "diff",
+        help="Diff Grafana users against a previously exported users.json file.",
+    )
+    add_common_cli_args(
+        user_diff_parser,
+        allow_token_auth=True,
+        username_dest="auth_username",
+        password_dest="auth_password",
+    )
+    add_access_diff_cli_args(user_diff_parser, resource="user", default_scope=DEFAULT_SCOPE)
 
     add_parser = user_subparsers.add_parser(
         "add",
@@ -273,6 +309,13 @@ def build_parser(prog=None):
     )
     add_common_cli_args(team_import_parser)
     add_access_import_cli_args(team_import_parser, resource="team")
+
+    team_diff_parser = team_subparsers.add_parser(
+        "diff",
+        help="Diff Grafana teams against a previously exported teams.json file.",
+    )
+    add_common_cli_args(team_diff_parser)
+    add_access_diff_cli_args(team_diff_parser, resource="team")
 
     team_delete_parser = team_subparsers.add_parser(
         "delete",
