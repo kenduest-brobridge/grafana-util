@@ -11,6 +11,8 @@ from unittest import mock
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MODULE_PATH = REPO_ROOT / "grafana_utils" / "access_cli.py"
+PARSER_MODULE_PATH = REPO_ROOT / "grafana_utils" / "access" / "parser.py"
+WORKFLOWS_MODULE_PATH = REPO_ROOT / "grafana_utils" / "access" / "workflows.py"
 CLIENT_MODULE_PATH = REPO_ROOT / "grafana_utils" / "clients" / "access_client.py"
 MODELS_MODULE_PATH = REPO_ROOT / "grafana_utils" / "access" / "models.py"
 WRAPPER_PATH = REPO_ROOT / "python" / "grafana-utils.py"
@@ -234,6 +236,14 @@ class AccessCliTests(unittest.TestCase):
     def test_access_client_module_parses_as_python36_syntax(self):
         source = CLIENT_MODULE_PATH.read_text(encoding="utf-8")
         ast.parse(source, filename=str(CLIENT_MODULE_PATH), feature_version=(3, 6))
+
+    def test_access_parser_module_parses_as_python36_syntax(self):
+        source = PARSER_MODULE_PATH.read_text(encoding="utf-8")
+        ast.parse(source, filename=str(PARSER_MODULE_PATH), feature_version=(3, 6))
+
+    def test_access_workflows_module_parses_as_python36_syntax(self):
+        source = WORKFLOWS_MODULE_PATH.read_text(encoding="utf-8")
+        ast.parse(source, filename=str(WORKFLOWS_MODULE_PATH), feature_version=(3, 6))
 
     def test_access_models_module_parses_as_python36_syntax(self):
         source = MODELS_MODULE_PATH.read_text(encoding="utf-8")

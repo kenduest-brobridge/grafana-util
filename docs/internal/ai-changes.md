@@ -5,6 +5,14 @@ Historical note:
 - Older entries preserve the reasoning and follow-up state as of the entry date.
 - Active backlog now lives in `TODO.md`, while completed or superseded TODO items moved to `docs/internal/todo-archive.md`.
 
+## 2026-03-15 - Split Python Access CLI Facade
+- Summary: Refactored the oversized Python access CLI into a small stable facade plus two new access submodules. `grafana_utils/access/parser.py` now owns argparse wiring and CLI-shape helpers, `grafana_utils/access/workflows.py` now owns auth validation, identity lookup, and user/team/service-account workflows, and `grafana_utils/access_cli.py` now focuses on auth prompting, client creation, and re-exporting the existing helper surface that tests and the unified CLI already use.
+- Tests: Added Python 3.6 syntax coverage for the new parser and workflow modules while keeping the existing access behavior suite exercising the stable `grafana_utils.access_cli` surface.
+- Test Run: `python3 -m unittest -v tests/test_python_access_cli.py`; `python3 -m unittest -v tests/test_python_unified_cli.py`
+- Validation: Confirmed the refactor preserves the existing access parser/help behavior, helper exports, and workflow behavior expected by the focused access tests, and confirmed the unified CLI still dispatches `grafana-utils access ...` through the facade unchanged.
+- Impact: `grafana_utils/access_cli.py`, `grafana_utils/access/parser.py`, `grafana_utils/access/workflows.py`, `tests/test_python_access_cli.py`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low to moderate. The change is intended to be behavior-preserving, but future access work should keep new parser-only concerns in `grafana_utils/access/parser.py` and workflow logic in `grafana_utils/access/workflows.py` instead of rebuilding a catch-all facade.
+
 ## 2026-03-15 - Split Rust Dashboard Import Dry-Run Helpers
 - Summary: Moved the folder inventory dry-run record builder and folder dry-run table renderer out of `rust/src/dashboard.rs` and into `rust/src/dashboard_import.rs`, where the dashboard import flow already owns folder dry-run status handling. Kept the existing dashboard test import path stable by re-exporting the table renderer from `dashboard.rs` under `#[cfg(test)]`.
 - Tests: Reused the Rust dashboard suite, including the existing folder dry-run table assertions, to verify the move without changing behavior.

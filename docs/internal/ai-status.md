@@ -6,9 +6,11 @@ Historical note:
 - `TODO.md` now tracks only the active backlog; completed or superseded TODO items moved to `docs/internal/todo-archive.md`.
 
 ## 2026-03-15 - Task: Split Python Access CLI Facade
-- State: Planned
+- State: Done
 - Scope: `grafana_utils/access_cli.py`, `grafana_utils/access/parser.py`, `grafana_utils/access/workflows.py`, `tests/test_python_access_cli.py`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
 - Baseline: `grafana_utils/access_cli.py` is still the largest Python CLI facade in the repo and currently mixes argparse wiring, auth validation, identity lookup helpers, user/team/service-account workflows, and top-level dispatch in one file even after earlier support-module extractions.
+- Current Update: Split the argparse and CLI-shape wiring into `grafana_utils/access/parser.py`, moved access validation/lookup/workflow logic into `grafana_utils/access/workflows.py`, and reduced `grafana_utils/access_cli.py` to a stable facade that re-exports the tested helper surface while keeping auth prompting and top-level client dispatch local. Extended focused access tests with Python 3.6 syntax coverage for the new modules and updated maintainer notes to document the new boundaries.
+- Result: Python access code now has a real `grafana_utils/access/` submodule layout instead of one oversized facade, while `grafana_utils.access_cli` and the unified CLI still expose the same external command and helper API expected by the existing tests.
 
 ## 2026-03-15 - Task: Split Rust Dashboard Import Dry-Run Helpers
 - State: Done

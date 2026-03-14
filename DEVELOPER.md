@@ -25,7 +25,9 @@ Commit message default for this repo:
 - `grafana_utils/dashboards/inspection_workflow.py`: Python dashboard inspect-live and inspect-export orchestration helper that reuses the existing render/analysis functions through dependency injection
 - `grafana_utils/dashboards/import_workflow.py`: Python dashboard import orchestration helper for dry-run, ensure-folder, and live import flows
 - `grafana_utils/alert_cli.py`: packaged alerting resource export/import utility
-- `grafana_utils/access_cli.py`: packaged access-management utility covering user CRUD, team CRUD with `group` alias compatibility, and service-account list/add/delete plus token add/delete
+- `grafana_utils/access_cli.py`: packaged access-management facade that preserves the stable Python CLI surface and top-level auth/client dispatch
+- `grafana_utils/access/parser.py`: Python access argparse wiring, shared access CLI constants, and group-alias-aware parse helpers
+- `grafana_utils/access/workflows.py`: Python access auth validation, identity lookup helpers, and user/team/service-account workflow implementations
 - `rust/src/access.rs`: Rust access-management orchestration entrypoint and shared request helpers
 - `rust/src/access_cli_defs.rs`: Rust access CLI arg definitions and auth/client builders
 - `rust/src/access_render.rs`: Rust access table/CSV/JSON renderers and row normalization helpers
@@ -131,6 +133,7 @@ Commit message default for this repo:
 - The Rust dashboard implementation follows the same boundary at a crate-module level: `dashboard.rs` stays as the public facade, `dashboard_files.rs` owns raw-export discovery plus inventory/manifest validation helpers, `dashboard_inspect_report.rs` owns the query-report contract and grouped renderers, and the import/inspect orchestration stays in the dedicated dashboard submodules.
 - The Rust dashboard implementation is intentionally split by responsibility: `dashboard_cli_defs.rs` owns clap/auth/client setup, `dashboard_list.rs` owns list/datasource renderers and org-aware list orchestration, `dashboard_export.rs` owns export pathing and multi-org export orchestration, `dashboard_prompt.rs` owns datasource resolution plus prompt-export template rewrites, and `dashboard.rs` keeps the remaining shared helpers, import, diff, and top-level orchestration flows.
 - The Rust access implementation is intentionally split by responsibility: `access_cli_defs.rs` owns clap/auth/client setup, `access_render.rs` owns output formatting and row normalization, `access_user.rs` owns user flows, `access_team.rs` owns team flows, `access_service_account.rs` owns service-account flows, and `access.rs` keeps shared request wrappers plus top-level dispatch.
+- The Python access implementation follows the same pattern at a smaller scale: `access_cli.py` stays as the stable facade, `grafana_utils/access/parser.py` owns argparse wiring and CLI-shape helpers, `grafana_utils/access/workflows.py` owns auth validation plus user/team/service-account orchestration, `grafana_utils/clients/access_client.py` owns HTTP calls, and `grafana_utils/access/models.py` owns normalization and rendering helpers.
 
 ### Packaging layout
 
