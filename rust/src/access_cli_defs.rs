@@ -579,6 +579,7 @@ pub struct ServiceAccountAddArgs {
     #[arg(
         long,
         default_value = "Viewer",
+        value_parser = parse_service_account_role,
         help = "Initial org role for the service account."
     )]
     pub role: String,
@@ -699,6 +700,7 @@ pub struct ServiceAccountTokenAddArgs {
     pub token_name: String,
     #[arg(
         long,
+        value_parser = parse_positive_usize,
         help = "Optional token lifetime in seconds. Omit for a non-expiring token if Grafana allows it."
     )]
     pub seconds_to_live: Option<usize>,
@@ -904,6 +906,23 @@ fn parse_bool_text(value: &str) -> std::result::Result<bool, String> {
         "true" => Ok(true),
         "false" => Ok(false),
         _ => Err("value must be true or false".to_string()),
+    }
+}
+
+fn parse_positive_usize(value: &str) -> std::result::Result<usize, String> {
+    let parsed = value
+        .parse::<usize>()
+        .map_err(|_| format!("invalid integer value: {value}"))?;
+    if parsed < 1 {
+        return Err("value must be >= 1".to_string());
+    }
+    Ok(parsed)
+}
+
+fn parse_service_account_role(value: &str) -> std::result::Result<String, String> {
+    match value {
+        "Viewer" | "Editor" | "Admin" | "None" => Ok(value.to_string()),
+        _ => Err("valid values: Viewer, Editor, Admin, None".to_string()),
     }
 }
 

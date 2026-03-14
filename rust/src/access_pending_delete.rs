@@ -6,9 +6,7 @@ use serde_json::{Map, Value};
 
 use crate::common::{message, string_field, value_as_object, Result};
 
-use super::access_render::{
-    map_get_text, normalize_service_account_row, render_objects_json, scalar_text,
-};
+use super::access_render::{map_get_text, normalize_service_account_row, scalar_text};
 use super::{
     request_object, CommonCliArgs, TeamAddArgs, TeamListArgs, TeamModifyArgs, DEFAULT_PAGE_SIZE,
 };
@@ -86,6 +84,10 @@ fn validate_confirmation(yes: bool, noun: &str) -> Result<()> {
     } else {
         Err(message(format!("{noun} delete requires --yes.")))
     }
+}
+
+fn render_single_object_json(object: &Map<String, Value>) -> Result<String> {
+    serde_json::to_string_pretty(&Value::Object(object.clone())).map_err(Into::into)
 }
 
 fn validate_exactly_one_identity(
@@ -265,7 +267,7 @@ where
     let response = delete_team_api_with_request(&mut request_json, &team_id)?;
     let result = team_delete_result(&team, &response);
     if args.json {
-        println!("{}", render_objects_json(&[result])?);
+        println!("{}", serde_json::to_string_pretty(&Value::Object(result))?);
     } else {
         println!("{}", team_delete_summary_line(&result));
     }
@@ -445,7 +447,7 @@ where
     let response = delete_service_account_api_with_request(&mut request_json, &service_account_id)?;
     let result = service_account_delete_result(&service_account, &response);
     if args.json {
-        println!("{}", render_objects_json(&[result])?);
+        println!("{}", render_single_object_json(&result)?);
     } else {
         println!("{}", service_account_delete_summary_line(&result));
     }
@@ -627,7 +629,7 @@ where
     )?;
     let result = service_account_token_delete_result(&service_account, &token, &response);
     if args.json {
-        println!("{}", render_objects_json(&[result])?);
+        println!("{}", render_single_object_json(&result)?);
     } else {
         println!("{}", service_account_token_delete_summary_line(&result));
     }
@@ -706,5 +708,20 @@ mod access_pending_delete_rust_tests {
         assert!(error
             .to_string()
             .contains("Service-account token delete requires one of --token-id or --token-name."));
+    }
+
+    #[test]
+    fn render_single_object_json_returns_object_payload() {
+        let payload = Map::from_iter(vec![
+            (
+                "serviceAccountId".to_string(),
+                Value::String("4".to_string()),
+            ),
+            ("message".to_string(), Value::String("deleted".to_string())),
+        ]);
+        let rendered = render_single_object_json(&payload).unwrap();
+        assert!(rendered.trim_start().starts_with('{'));
+        assert!(!rendered.trim_start().starts_with('['));
+        assert!(rendered.contains("\"serviceAccountId\": \"4\""));
     }
 }

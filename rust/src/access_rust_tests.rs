@@ -17,7 +17,7 @@ use super::{
     UserCommand, UserDeleteArgs, UserDiffArgs, UserListArgs, UserModifyArgs,
 };
 use crate::access::access_cli_defs::AccessCliRoot;
-use clap::CommandFactory;
+use clap::{CommandFactory, Parser};
 use reqwest::Method;
 use serde_json::json;
 use std::fs;
@@ -332,6 +332,43 @@ fn parse_cli_supports_service_account_token_delete() {
         }
         _ => panic!("expected service-account token delete"),
     }
+}
+
+#[test]
+fn parse_cli_rejects_invalid_service_account_role() {
+    let error = AccessCliRoot::try_parse_from([
+        "grafana-access-utils",
+        "service-account",
+        "add",
+        "--name",
+        "svc",
+        "--role",
+        "Owner",
+    ])
+    .unwrap_err();
+
+    assert!(error
+        .to_string()
+        .contains("valid values: Viewer, Editor, Admin, None"));
+}
+
+#[test]
+fn parse_cli_rejects_non_positive_service_account_token_ttl() {
+    let error = AccessCliRoot::try_parse_from([
+        "grafana-access-utils",
+        "service-account",
+        "token",
+        "add",
+        "--service-account-id",
+        "4",
+        "--token-name",
+        "automation",
+        "--seconds-to-live",
+        "0",
+    ])
+    .unwrap_err();
+
+    assert!(error.to_string().contains("value must be >= 1"));
 }
 
 #[test]

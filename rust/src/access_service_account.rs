@@ -174,6 +174,10 @@ fn normalize_service_account_for_diff(record: &Map<String, Value>) -> Map<String
     ])
 }
 
+fn render_single_object_json(object: &Map<String, Value>) -> Result<String> {
+    serde_json::to_string_pretty(&Value::Object(object.clone())).map_err(Into::into)
+}
+
 fn assert_not_overwrite(path: &Path, dry_run: bool, overwrite: bool) -> Result<()> {
     if dry_run || !path.exists() || overwrite {
         return Ok(());
@@ -459,7 +463,7 @@ where
         &payload,
     )?);
     if args.json {
-        println!("{}", render_objects_json(&[created])?);
+        println!("{}", render_single_object_json(&created)?);
     } else {
         println!(
             "Created service-account {} -> id={} role={} disabled={}",
@@ -882,7 +886,7 @@ where
         Value::String(service_account_id.clone()),
     );
     if args.json {
-        println!("{}", render_objects_json(&[token])?);
+        println!("{}", render_single_object_json(&token)?);
     } else {
         println!(
             "Created service-account token {} -> serviceAccountId={}",
@@ -890,4 +894,22 @@ where
         );
     }
     Ok(0)
+}
+
+#[cfg(test)]
+mod access_service_account_json_tests {
+    use super::render_single_object_json;
+    use serde_json::{Map, Value};
+
+    #[test]
+    fn render_single_object_json_returns_object_payload() {
+        let payload = Map::from_iter(vec![
+            ("id".to_string(), Value::Number(4.into())),
+            ("name".to_string(), Value::String("svc".to_string())),
+        ]);
+        let rendered = render_single_object_json(&payload).unwrap();
+        assert!(rendered.trim_start().starts_with('{'));
+        assert!(!rendered.trim_start().starts_with('['));
+        assert!(rendered.contains("\"name\": \"svc\""));
+    }
 }
