@@ -18,13 +18,16 @@ DEFAULT_SCOPE = "org"
 DEFAULT_SERVICE_ACCOUNT_ROLE = "Viewer"
 DEFAULT_ACCESS_USER_EXPORT_DIR = "access-users"
 DEFAULT_ACCESS_TEAM_EXPORT_DIR = "access-teams"
+DEFAULT_ACCESS_ORG_EXPORT_DIR = "access-orgs"
 DEFAULT_ACCESS_SERVICE_ACCOUNT_EXPORT_DIR = "access-service-accounts"
 ACCESS_USER_EXPORT_FILENAME = "users.json"
 ACCESS_TEAM_EXPORT_FILENAME = "teams.json"
+ACCESS_ORG_EXPORT_FILENAME = "orgs.json"
 ACCESS_SERVICE_ACCOUNT_EXPORT_FILENAME = "service-accounts.json"
 ACCESS_EXPORT_METADATA_FILENAME = "export-metadata.json"
 ACCESS_EXPORT_KIND_USERS = "grafana-utils-access-user-export-index"
 ACCESS_EXPORT_KIND_TEAMS = "grafana-utils-access-team-export-index"
+ACCESS_EXPORT_KIND_ORGS = "grafana-utils-access-org-export-index"
 ACCESS_EXPORT_KIND_SERVICE_ACCOUNTS = "grafana-utils-access-service-account-export-index"
 ACCESS_EXPORT_VERSION = 1
 SCOPE_CHOICES = ("org", "global")
@@ -149,7 +152,7 @@ def add_access_diff_cli_args(parser, resource, default_scope=DEFAULT_SCOPE):
 def build_parser(prog=None):
     parser = argparse.ArgumentParser(
         prog=prog,
-        description="List Grafana users, teams, and manage Grafana service accounts."
+        description="List and manage Grafana users, teams, organizations, and service accounts."
     )
     subparsers = parser.add_subparsers(dest="resource")
     subparsers.required = True
@@ -328,6 +331,96 @@ def build_parser(prog=None):
     add_common_cli_args(team_delete_parser)
     add_team_delete_cli_args(team_delete_parser)
 
+    org_parser = subparsers.add_parser(
+        "org",
+        help="List and manage Grafana organizations.",
+    )
+    org_subparsers = org_parser.add_subparsers(dest="command")
+    org_subparsers.required = True
+
+    org_list_parser = org_subparsers.add_parser(
+        "list",
+        help="List Grafana organizations from the admin API.",
+    )
+    add_common_cli_args(
+        org_list_parser,
+        allow_token_auth=False,
+        username_dest="auth_username",
+        password_dest="auth_password",
+        include_org_id=False,
+    )
+    add_org_list_cli_args(org_list_parser)
+
+    org_add_parser = org_subparsers.add_parser(
+        "add",
+        help="Create a Grafana organization.",
+    )
+    add_common_cli_args(
+        org_add_parser,
+        allow_token_auth=False,
+        username_dest="auth_username",
+        password_dest="auth_password",
+        include_org_id=False,
+    )
+    add_org_add_cli_args(org_add_parser)
+
+    org_modify_parser = org_subparsers.add_parser(
+        "modify",
+        help="Rename a Grafana organization.",
+    )
+    add_common_cli_args(
+        org_modify_parser,
+        allow_token_auth=False,
+        username_dest="auth_username",
+        password_dest="auth_password",
+        include_org_id=False,
+    )
+    add_org_modify_cli_args(org_modify_parser)
+
+    org_delete_parser = org_subparsers.add_parser(
+        "delete",
+        help="Delete a Grafana organization.",
+    )
+    add_common_cli_args(
+        org_delete_parser,
+        allow_token_auth=False,
+        username_dest="auth_username",
+        password_dest="auth_password",
+        include_org_id=False,
+    )
+    add_org_delete_cli_args(org_delete_parser)
+
+    org_export_parser = org_subparsers.add_parser(
+        "export",
+        help="Export Grafana organizations to JSON files.",
+    )
+    add_common_cli_args(
+        org_export_parser,
+        allow_token_auth=False,
+        username_dest="auth_username",
+        password_dest="auth_password",
+        include_org_id=False,
+    )
+    add_access_export_cli_args(
+        org_export_parser,
+        DEFAULT_ACCESS_ORG_EXPORT_DIR,
+        resource="org",
+    )
+    add_org_export_cli_args(org_export_parser)
+
+    org_import_parser = org_subparsers.add_parser(
+        "import",
+        help="Import Grafana organizations from a JSON export.",
+    )
+    add_common_cli_args(
+        org_import_parser,
+        allow_token_auth=False,
+        username_dest="auth_username",
+        password_dest="auth_password",
+        include_org_id=False,
+    )
+    add_access_import_cli_args(org_import_parser, resource="org")
+
     service_account_parser = subparsers.add_parser(
         "service-account",
         help="List, create, export, import, diff, and delete Grafana service accounts.",
@@ -433,6 +526,7 @@ def add_common_cli_args(
     allow_token_auth=True,
     username_dest="username",
     password_dest="password",
+    include_org_id=True,
 ):
     parser.add_argument(
         "--url",
@@ -487,11 +581,12 @@ def add_common_cli_args(
             "passing --basic-password on the command line."
         ),
     )
-    parser.add_argument(
-        "--org-id",
-        default=None,
-        help="Grafana organization id to send through X-Grafana-Org-Id.",
-    )
+    if include_org_id:
+        parser.add_argument(
+            "--org-id",
+            default=None,
+            help="Grafana organization id to send through X-Grafana-Org-Id.",
+        )
     parser.add_argument(
         "--timeout",
         type=positive_int,
@@ -747,6 +842,127 @@ def add_service_account_list_cli_args(parser):
     add_list_output_format_arg(parser)
 
 
+def add_org_list_cli_args(parser):
+    parser.add_argument(
+        "--org-id",
+        default=None,
+        help="Filter to one exact organization id.",
+    )
+    parser.add_argument(
+        "--name",
+        default=None,
+        help="Filter to one exact organization name.",
+    )
+    parser.add_argument(
+        "--query",
+        default=None,
+        help="Case-insensitive substring match against organization name.",
+    )
+    parser.add_argument(
+        "--with-users",
+        action="store_true",
+        help="Include organization users and roles in the output.",
+    )
+    output_group = parser.add_mutually_exclusive_group()
+    output_group.add_argument(
+        "--table",
+        action="store_true",
+        help="Render organizations as a table.",
+    )
+    output_group.add_argument(
+        "--csv",
+        action="store_true",
+        help="Render organizations as CSV.",
+    )
+    output_group.add_argument(
+        "--json",
+        action="store_true",
+        help="Render organizations as JSON.",
+    )
+    add_list_output_format_arg(parser)
+
+
+def add_org_add_cli_args(parser):
+    parser.add_argument(
+        "--name",
+        required=True,
+        help="Organization name to create.",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Render the created organization as JSON.",
+    )
+
+
+def add_org_modify_cli_args(parser):
+    identity_group = parser.add_mutually_exclusive_group(required=True)
+    identity_group.add_argument(
+        "--org-id",
+        dest="target_org_id",
+        default=None,
+        help="Rename the organization identified by this Grafana organization id.",
+    )
+    identity_group.add_argument(
+        "--name",
+        default=None,
+        help="Resolve the organization by exact name before renaming it.",
+    )
+    parser.add_argument(
+        "--set-name",
+        required=True,
+        help="Set a new organization name for the target org.",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Render the modified organization as JSON.",
+    )
+
+
+def add_org_delete_cli_args(parser):
+    identity_group = parser.add_mutually_exclusive_group(required=True)
+    identity_group.add_argument(
+        "--org-id",
+        dest="target_org_id",
+        default=None,
+        help="Delete the organization identified by this Grafana organization id.",
+    )
+    identity_group.add_argument(
+        "--name",
+        default=None,
+        help="Resolve the organization by exact name before deleting it.",
+    )
+    parser.add_argument(
+        "--yes",
+        action="store_true",
+        help="Confirm that the target organization should be deleted.",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Render the deleted organization summary as JSON.",
+    )
+
+
+def add_org_export_cli_args(parser):
+    parser.add_argument(
+        "--org-id",
+        default=None,
+        help="Filter export to one exact organization id.",
+    )
+    parser.add_argument(
+        "--name",
+        default=None,
+        help="Filter export to one exact organization name.",
+    )
+    parser.add_argument(
+        "--with-users",
+        action="store_true",
+        help="Include organization users and org roles in the export bundle.",
+    )
+
+
 def add_team_list_cli_args(parser):
     parser.add_argument(
         "--query",
@@ -935,6 +1151,8 @@ def access_export_filename(resource):
         return ACCESS_USER_EXPORT_FILENAME
     if resource == "team":
         return ACCESS_TEAM_EXPORT_FILENAME
+    if resource == "org":
+        return ACCESS_ORG_EXPORT_FILENAME
     if resource == "service-account":
         return ACCESS_SERVICE_ACCOUNT_EXPORT_FILENAME
     raise ValueError("Unsupported access export resource: %s" % resource)
@@ -960,6 +1178,10 @@ def parse_args(argv=None):
 
     if argv == ["group"]:
         parser._subparsers._group_actions[0].choices["team"].print_help()
+        raise SystemExit(0)
+
+    if argv == ["org"]:
+        parser._subparsers._group_actions[0].choices["org"].print_help()
         raise SystemExit(0)
 
     if argv == ["service-account"]:

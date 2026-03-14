@@ -14,14 +14,17 @@ pub const DEFAULT_TIMEOUT: u64 = 30;
 pub const DEFAULT_PAGE_SIZE: usize = 100;
 pub const DEFAULT_ACCESS_USER_EXPORT_DIR: &str = "access-users";
 pub const DEFAULT_ACCESS_TEAM_EXPORT_DIR: &str = "access-teams";
+pub const DEFAULT_ACCESS_ORG_EXPORT_DIR: &str = "access-orgs";
 pub const DEFAULT_ACCESS_SERVICE_ACCOUNT_EXPORT_DIR: &str = "access-service-accounts";
 pub const ACCESS_EXPORT_KIND_USERS: &str = "grafana-utils-access-user-export-index";
 pub const ACCESS_EXPORT_KIND_TEAMS: &str = "grafana-utils-access-team-export-index";
+pub const ACCESS_EXPORT_KIND_ORGS: &str = "grafana-utils-access-org-export-index";
 pub const ACCESS_EXPORT_KIND_SERVICE_ACCOUNTS: &str =
     "grafana-utils-access-service-account-export-index";
 pub const ACCESS_EXPORT_VERSION: i64 = 1;
 pub const ACCESS_USER_EXPORT_FILENAME: &str = "users.json";
 pub const ACCESS_TEAM_EXPORT_FILENAME: &str = "teams.json";
+pub const ACCESS_ORG_EXPORT_FILENAME: &str = "orgs.json";
 pub const ACCESS_SERVICE_ACCOUNT_EXPORT_FILENAME: &str = "service-accounts.json";
 pub const ACCESS_EXPORT_METADATA_FILENAME: &str = "export-metadata.json";
 
@@ -62,6 +65,48 @@ pub struct CommonCliArgs {
         help = "Grafana organization id to send through X-Grafana-Org-Id."
     )]
     pub org_id: Option<i64>,
+    #[arg(long, default_value_t = DEFAULT_TIMEOUT, help = "HTTP timeout in seconds.")]
+    pub timeout: u64,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Enable TLS certificate verification. Verification is disabled by default."
+    )]
+    pub verify_ssl: bool,
+}
+
+#[derive(Debug, Clone, Args)]
+pub struct CommonCliArgsNoOrgId {
+    #[arg(long, default_value = DEFAULT_URL, help = "Grafana base URL.")]
+    pub url: String,
+    #[arg(
+        long = "token",
+        visible_alias = "api-token",
+        help = "Grafana API token. Preferred flag: --token. Falls back to GRAFANA_API_TOKEN."
+    )]
+    pub api_token: Option<String>,
+    #[arg(
+        long = "basic-user",
+        help = "Grafana Basic auth username. Preferred flag: --basic-user. Falls back to GRAFANA_USERNAME."
+    )]
+    pub username: Option<String>,
+    #[arg(
+        long = "basic-password",
+        help = "Grafana Basic auth password. Preferred flag: --basic-password. Falls back to GRAFANA_PASSWORD."
+    )]
+    pub password: Option<String>,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Prompt for the Grafana Basic auth password."
+    )]
+    pub prompt_password: bool,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Prompt for the Grafana API token without echo instead of passing --token on the command line."
+    )]
+    pub prompt_token: bool,
     #[arg(long, default_value_t = DEFAULT_TIMEOUT, help = "HTTP timeout in seconds.")]
     pub timeout: u64,
     #[arg(
@@ -542,6 +587,111 @@ pub struct TeamModifyArgs {
 }
 
 #[derive(Debug, Clone, Args)]
+pub struct OrgListArgs {
+    #[command(flatten)]
+    pub common: CommonCliArgsNoOrgId,
+    #[arg(long = "org-id", help = "Filter to one exact organization id.")]
+    pub org_id: Option<i64>,
+    #[arg(long, help = "Filter organizations by exact name.")]
+    pub name: Option<String>,
+    #[arg(long, help = "Filter organizations by a free-text search.")]
+    pub query: Option<String>,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Include org users and org roles in the rendered output."
+    )]
+    pub with_users: bool,
+    #[arg(long, default_value_t = false, conflicts_with_all = ["csv", "json"], help = "Render org summaries as a table.")]
+    pub table: bool,
+    #[arg(long, default_value_t = false, conflicts_with_all = ["table", "json"], help = "Render org summaries as CSV.")]
+    pub csv: bool,
+    #[arg(long, default_value_t = false, conflicts_with_all = ["table", "csv"], help = "Render org summaries as JSON.")]
+    pub json: bool,
+    #[arg(
+        long,
+        value_enum,
+        conflicts_with_all = ["table", "csv", "json"],
+        help = "Alternative single-flag output selector. Use text, table, csv, or json."
+    )]
+    pub output_format: Option<ListOutputFormat>,
+}
+
+#[derive(Debug, Clone, Args)]
+pub struct OrgAddArgs {
+    #[command(flatten)]
+    pub common: CommonCliArgsNoOrgId,
+    #[arg(long, help = "Name for the new Grafana organization.")]
+    pub name: String,
+    #[arg(long, default_value_t = false, help = "Render the create response as JSON.")]
+    pub json: bool,
+}
+
+#[derive(Debug, Clone, Args)]
+pub struct OrgModifyArgs {
+    #[command(flatten)]
+    pub common: CommonCliArgsNoOrgId,
+    #[arg(long = "org-id", conflicts_with = "name", help = "Target one organization by numeric Grafana org id.")]
+    pub org_id: Option<i64>,
+    #[arg(long, conflicts_with = "org_id", help = "Target one organization by exact name.")]
+    pub name: Option<String>,
+    #[arg(long, help = "Replace the organization name with this new value.")]
+    pub set_name: String,
+    #[arg(long, default_value_t = false, help = "Render the modify response as JSON.")]
+    pub json: bool,
+}
+
+#[derive(Debug, Clone, Args)]
+pub struct OrgDeleteArgs {
+    #[command(flatten)]
+    pub common: CommonCliArgsNoOrgId,
+    #[arg(long = "org-id", conflicts_with = "name", help = "Delete one organization by numeric Grafana org id.")]
+    pub org_id: Option<i64>,
+    #[arg(long, conflicts_with = "org_id", help = "Delete one organization by exact name.")]
+    pub name: Option<String>,
+    #[arg(long, default_value_t = false, help = "Skip the interactive confirmation prompt.")]
+    pub yes: bool,
+    #[arg(long, default_value_t = false, help = "Render the delete response as JSON.")]
+    pub json: bool,
+}
+
+#[derive(Debug, Clone, Args)]
+pub struct OrgExportArgs {
+    #[command(flatten)]
+    pub common: CommonCliArgsNoOrgId,
+    #[arg(long = "org-id", help = "Filter export to one exact organization id.")]
+    pub org_id: Option<i64>,
+    #[arg(
+        long,
+        default_value = DEFAULT_ACCESS_ORG_EXPORT_DIR,
+        help = "Directory to write orgs.json and export-metadata.json."
+    )]
+    pub export_dir: PathBuf,
+    #[arg(long, default_value_t = false, help = "Overwrite existing export files instead of failing.")]
+    pub overwrite: bool,
+    #[arg(long, default_value_t = false, help = "Preview export paths without writing files.")]
+    pub dry_run: bool,
+    #[arg(long, help = "Filter export to one exact organization name.")]
+    pub name: Option<String>,
+    #[arg(long, default_value_t = false, help = "Include org users and org roles in the export bundle.")]
+    pub with_users: bool,
+}
+
+#[derive(Debug, Clone, Args)]
+pub struct OrgImportArgs {
+    #[command(flatten)]
+    pub common: CommonCliArgsNoOrgId,
+    #[arg(long, help = "Import directory that contains orgs.json and export-metadata.json.")]
+    pub import_dir: PathBuf,
+    #[arg(long, default_value_t = false, help = "Update matching existing orgs or create missing orgs instead of skipping them.")]
+    pub replace_existing: bool,
+    #[arg(long, default_value_t = false, help = "Preview import changes without writing to Grafana.")]
+    pub dry_run: bool,
+    #[arg(long, default_value_t = false, help = "Acknowledge destructive import operations when required.")]
+    pub yes: bool,
+}
+
+#[derive(Debug, Clone, Args)]
 pub struct ServiceAccountListArgs {
     #[command(flatten)]
     pub common: CommonCliArgs,
@@ -733,6 +883,16 @@ pub enum ServiceAccountCommand {
 }
 
 #[derive(Debug, Clone, Subcommand)]
+pub enum OrgCommand {
+    List(OrgListArgs),
+    Add(OrgAddArgs),
+    Modify(OrgModifyArgs),
+    Export(OrgExportArgs),
+    Import(OrgImportArgs),
+    Delete(OrgDeleteArgs),
+}
+
+#[derive(Debug, Clone, Subcommand)]
 pub enum TeamCommand {
     List(TeamListArgs),
     Add(TeamAddArgs),
@@ -760,6 +920,10 @@ pub enum AccessCommand {
         #[command(subcommand)]
         command: UserCommand,
     },
+    Org {
+        #[command(subcommand)]
+        command: OrgCommand,
+    },
     #[command(visible_alias = "group")]
     Team {
         #[command(subcommand)]
@@ -775,7 +939,7 @@ pub enum AccessCommand {
 #[derive(Debug, Clone, Parser)]
 #[command(
     name = "grafana-access-utils",
-    about = "List and manage Grafana users, teams, and service accounts."
+    about = "List and manage Grafana users, orgs, teams, and service accounts."
 )]
 pub(crate) struct AccessCliRoot {
     #[command(flatten)]
@@ -845,6 +1009,16 @@ pub fn normalize_access_cli_args(mut args: AccessCliArgs) -> AccessCliArgs {
                     &mut import_args.table,
                     &mut import_args.json,
                     &import_args.output_format,
+                );
+            }
+        }
+        AccessCommand::Org { command } => {
+            if let OrgCommand::List(list_args) = command {
+                apply_list_output_format(
+                    &mut list_args.table,
+                    &mut list_args.csv,
+                    &mut list_args.json,
+                    &list_args.output_format,
                 );
             }
         }
@@ -957,8 +1131,46 @@ pub fn build_auth_context(common: &CommonCliArgs) -> Result<AccessAuthContext> {
     })
 }
 
+pub fn build_auth_context_no_org_id(common: &CommonCliArgsNoOrgId) -> Result<AccessAuthContext> {
+    let headers = resolve_auth_headers(
+        common.api_token.as_deref(),
+        common.username.as_deref(),
+        common.password.as_deref(),
+        common.prompt_password,
+        common.prompt_token,
+    )?;
+    let auth_mode = headers
+        .iter()
+        .find(|(name, _)| name == "Authorization")
+        .map(|(_, value)| {
+            if value.starts_with("Basic ") {
+                "basic".to_string()
+            } else {
+                "token".to_string()
+            }
+        })
+        .unwrap_or_else(|| "unknown".to_string());
+    Ok(AccessAuthContext {
+        url: common.url.clone(),
+        timeout: common.timeout,
+        verify_ssl: common.verify_ssl,
+        auth_mode,
+        headers,
+    })
+}
+
 pub fn build_http_client(common: &CommonCliArgs) -> Result<JsonHttpClient> {
     let context = build_auth_context(common)?;
+    JsonHttpClient::new(JsonHttpClientConfig {
+        base_url: context.url,
+        headers: context.headers,
+        timeout_secs: context.timeout,
+        verify_ssl: context.verify_ssl,
+    })
+}
+
+pub fn build_http_client_no_org_id(common: &CommonCliArgsNoOrgId) -> Result<JsonHttpClient> {
+    let context = build_auth_context_no_org_id(common)?;
     JsonHttpClient::new(JsonHttpClientConfig {
         base_url: context.url,
         headers: context.headers,

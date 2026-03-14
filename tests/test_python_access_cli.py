@@ -27,6 +27,8 @@ class FakeAccessClient:
     def __init__(
         self,
         org_users=None,
+        organizations=None,
+        organization_users_by_org_id=None,
         global_users=None,
         teams_by_user_id=None,
         teams=None,
@@ -35,6 +37,11 @@ class FakeAccessClient:
         service_account_tokens_by_id=None,
     ):
         self.org_users = [dict(item) for item in (org_users or [])]
+        self.organizations = [dict(item) for item in (organizations or [])]
+        self.organization_users_by_org_id = {
+            str(key): [dict(item) for item in value]
+            for key, value in (organization_users_by_org_id or {}).items()
+        }
         self.global_users = [dict(item) for item in (global_users or [])]
         self.teams_by_user_id = {
             str(key): [dict(item) for item in value]
@@ -76,9 +83,81 @@ class FakeAccessClient:
         self.added_team_members = []
         self.removed_team_members = []
         self.updated_team_memberships = []
+        self.organization_gets = []
+        self.organization_user_lookups = []
+        self.created_organizations = []
+        self.updated_organizations = []
+        self.deleted_organizations = []
+        self.added_organization_users = []
+        self.updated_organization_user_roles = []
+        self.deleted_organization_users = []
 
     def list_org_users(self):
         return [dict(item) for item in self.org_users]
+
+    def list_organizations(self):
+        return [dict(item) for item in self.organizations]
+
+    def get_organization(self, org_id):
+        self.organization_gets.append(str(org_id))
+        for item in self.organizations:
+            if str(item.get("id")) == str(org_id):
+                return dict(item)
+        return {"id": org_id, "name": ""}
+
+    def list_organization_users(self, org_id):
+        self.organization_user_lookups.append(str(org_id))
+        return [
+            dict(item)
+            for item in self.organization_users_by_org_id.get(str(org_id), [])
+        ]
+
+    def create_organization(self, payload):
+        self.created_organizations.append(dict(payload))
+        org_id = str(len(self.organizations) + 1)
+        created = {
+            "id": org_id,
+            "name": payload.get("name", ""),
+        }
+        self.organizations.append(dict(created))
+        self.organization_users_by_org_id.setdefault(org_id, [])
+        return {
+            "orgId": org_id,
+            "message": "Organization created",
+        }
+
+    def update_organization(self, org_id, payload):
+        self.updated_organizations.append((str(org_id), dict(payload)))
+        for item in self.organizations:
+            if str(item.get("id")) == str(org_id):
+                item["name"] = payload.get("name", item.get("name", ""))
+                return {"message": "Organization updated"}
+        return {"message": "Organization updated"}
+
+    def delete_organization(self, org_id):
+        self.deleted_organizations.append(str(org_id))
+        return {"message": "Organization deleted"}
+
+    def add_user_to_organization(self, org_id, payload):
+        org_key = str(org_id)
+        self.added_organization_users.append((org_key, dict(payload)))
+        user = {
+            "userId": str(len(self.organization_users_by_org_id.get(org_key, [])) + 100),
+            "login": payload.get("loginOrEmail", ""),
+            "email": payload.get("loginOrEmail", ""),
+            "name": payload.get("loginOrEmail", ""),
+            "role": payload.get("role", ""),
+        }
+        self.organization_users_by_org_id.setdefault(org_key, []).append(user)
+        return {"message": "Organization user added"}
+
+    def update_organization_user_role(self, org_id, user_id, role):
+        self.updated_organization_user_roles.append((str(org_id), str(user_id), role))
+        return {"message": "Organization user updated"}
+
+    def delete_organization_user(self, org_id, user_id):
+        self.deleted_organization_users.append((str(org_id), str(user_id)))
+        return {"message": "Organization user removed"}
 
     def iter_global_users(self, page_size):
         self.global_page_sizes.append(page_size)
@@ -347,6 +426,9 @@ class AccessCliTests(unittest.TestCase):
         user_args = access_utils.parse_args(
             ["user", "list", "--output-format", "json"]
         )
+        org_args = access_utils.parse_args(
+            ["org", "list", "--output-format", "table"]
+        )
         team_args = access_utils.parse_args(
             ["team", "list", "--output-format", "csv"]
         )
@@ -356,6 +438,8 @@ class AccessCliTests(unittest.TestCase):
 
         self.assertTrue(user_args.json)
         self.assertFalse(user_args.table)
+        self.assertTrue(org_args.table)
+        self.assertFalse(org_args.json)
         self.assertTrue(team_args.csv)
         self.assertFalse(team_args.json)
         self.assertTrue(service_account_args.table)
@@ -364,6 +448,161 @@ class AccessCliTests(unittest.TestCase):
     def test_parse_args_rejects_access_output_format_with_legacy_flags(self):
         with self.assertRaises(SystemExit):
             access_utils.parse_args(["user", "list", "--output-format", "table", "--json"])
+
+    def test_parse_args_supports_org_list_mode(self):
+        args = access_utils.parse_args(
+            [
+                "org",
+                "list",
+                "--basic-user",
+                "admin",
+                "--basic-password",
+                "grafana-secret",
+                "--name",
+                "Main Org.",
+                "--query",
+                "main",
+                "--with-users",
+                "--json",
+            ]
+        )
+
+        self.assertEqual(args.resource, "org")
+        self.assertEqual(args.command, "list")
+        self.assertEqual(args.auth_username, "admin")
+        self.assertEqual(args.auth_password, "grafana-secret")
+        self.assertEqual(args.name, "Main Org.")
+        self.assertEqual(args.query, "main")
+        self.assertTrue(args.with_users)
+        self.assertTrue(args.json)
+
+    def test_parse_args_supports_org_add_mode(self):
+        args = access_utils.parse_args(
+            [
+                "org",
+                "add",
+                "--basic-user",
+                "admin",
+                "--basic-password",
+                "grafana-secret",
+                "--name",
+                "Platform",
+                "--json",
+            ]
+        )
+
+        self.assertEqual(args.resource, "org")
+        self.assertEqual(args.command, "add")
+        self.assertEqual(args.auth_username, "admin")
+        self.assertEqual(args.auth_password, "grafana-secret")
+        self.assertEqual(args.name, "Platform")
+        self.assertTrue(args.json)
+
+    def test_parse_args_supports_org_modify_mode(self):
+        args = access_utils.parse_args(
+            [
+                "org",
+                "modify",
+                "--basic-user",
+                "admin",
+                "--basic-password",
+                "grafana-secret",
+                "--org-id",
+                "7",
+                "--set-name",
+                "Platform Two",
+                "--json",
+            ]
+        )
+
+        self.assertEqual(args.resource, "org")
+        self.assertEqual(args.command, "modify")
+        self.assertEqual(args.auth_username, "admin")
+        self.assertEqual(args.auth_password, "grafana-secret")
+        self.assertEqual(args.target_org_id, "7")
+        self.assertEqual(args.set_name, "Platform Two")
+        self.assertTrue(args.json)
+
+    def test_parse_args_supports_org_delete_mode(self):
+        args = access_utils.parse_args(
+            [
+                "org",
+                "delete",
+                "--basic-user",
+                "admin",
+                "--basic-password",
+                "grafana-secret",
+                "--name",
+                "Platform",
+                "--yes",
+                "--json",
+            ]
+        )
+
+        self.assertEqual(args.resource, "org")
+        self.assertEqual(args.command, "delete")
+        self.assertEqual(args.auth_username, "admin")
+        self.assertEqual(args.auth_password, "grafana-secret")
+        self.assertEqual(args.name, "Platform")
+        self.assertTrue(args.yes)
+        self.assertTrue(args.json)
+
+    def test_parse_args_supports_org_export_mode(self):
+        args = access_utils.parse_args(
+            [
+                "org",
+                "export",
+                "--basic-user",
+                "admin",
+                "--basic-password",
+                "secret",
+                "--export-dir",
+                "tmp-access-orgs",
+                "--name",
+                "Platform",
+                "--with-users",
+            ]
+        )
+
+        self.assertEqual(args.resource, "org")
+        self.assertEqual(args.command, "export")
+        self.assertEqual(args.export_dir, "tmp-access-orgs")
+        self.assertEqual(args.name, "Platform")
+        self.assertTrue(args.with_users)
+
+    def test_parse_args_supports_org_import_mode(self):
+        args = access_utils.parse_args(
+            [
+                "org",
+                "import",
+                "--basic-user",
+                "admin",
+                "--basic-password",
+                "secret",
+                "--import-dir",
+                "tmp-access-orgs",
+                "--replace-existing",
+                "--dry-run",
+                "--yes",
+            ]
+        )
+
+        self.assertEqual(args.resource, "org")
+        self.assertEqual(args.command, "import")
+        self.assertEqual(args.import_dir, "tmp-access-orgs")
+        self.assertTrue(args.replace_existing)
+        self.assertTrue(args.dry_run)
+        self.assertTrue(args.yes)
+
+    def test_org_help_uses_basic_auth_and_no_token_flags(self):
+        parser = access_utils.build_parser()
+        org_list_parser = parser._subparsers._group_actions[0].choices["org"]._subparsers._group_actions[0].choices["list"]
+        help_text = org_list_parser.format_help()
+
+        self.assertIn("--basic-user USERNAME", help_text)
+        self.assertIn("--basic-password PASSWORD", help_text)
+        self.assertIn("--with-users", help_text)
+        self.assertNotIn("--token", help_text)
 
     def test_parse_args_supports_user_add_mode(self):
         args = access_utils.parse_args(
@@ -414,6 +653,8 @@ class AccessCliTests(unittest.TestCase):
                 "admin",
                 "--basic-password",
                 "grafana-secret",
+                "--org-id",
+                "7",
                 "--login",
                 "alice",
                 "--set-login",
@@ -436,6 +677,7 @@ class AccessCliTests(unittest.TestCase):
         self.assertEqual(args.command, "modify")
         self.assertEqual(args.auth_username, "admin")
         self.assertEqual(args.auth_password, "grafana-secret")
+        self.assertEqual(args.org_id, "7")
         self.assertEqual(args.login, "alice")
         self.assertEqual(args.set_login, "alice2")
         self.assertEqual(args.set_email, "alice2@example.com")
@@ -454,6 +696,8 @@ class AccessCliTests(unittest.TestCase):
                 "admin",
                 "--basic-password",
                 "grafana-secret",
+                "--org-id",
+                "7",
                 "--email",
                 "alice@example.com",
                 "--scope",
@@ -467,6 +711,7 @@ class AccessCliTests(unittest.TestCase):
         self.assertEqual(args.command, "delete")
         self.assertEqual(args.auth_username, "admin")
         self.assertEqual(args.auth_password, "grafana-secret")
+        self.assertEqual(args.org_id, "7")
         self.assertEqual(args.email, "alice@example.com")
         self.assertEqual(args.scope, "org")
         self.assertTrue(args.yes)
@@ -1780,6 +2025,187 @@ class AccessCliTests(unittest.TestCase):
             self.assertEqual(result, 3)
             self.assertIn("Diff checked", output.getvalue())
 
+    def test_list_orgs_with_client_renders_json_with_users(self):
+        client = FakeAccessClient(
+            organizations=[
+                {"id": 1, "name": "Main Org."},
+            ],
+            organization_users_by_org_id={
+                "1": [
+                    {
+                        "userId": 11,
+                        "login": "alice",
+                        "email": "alice@example.com",
+                        "name": "Alice",
+                        "role": "Admin",
+                    }
+                ]
+            },
+        )
+        args = argparse.Namespace(
+            target_org_id=None,
+            name=None,
+            query=None,
+            with_users=True,
+            csv=False,
+            json=True,
+            table=False,
+            url="http://127.0.0.1:3000",
+        )
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            result = access_utils.list_orgs_with_client(args, client)
+
+        self.assertEqual(result, 0)
+        self.assertEqual(client.organization_user_lookups, ["1"])
+        self.assertIn('"name": "Main Org."', output.getvalue())
+        self.assertIn('"users": [', output.getvalue())
+
+    def test_add_org_with_client_creates_organization(self):
+        client = FakeAccessClient()
+        args = argparse.Namespace(
+            name="Platform",
+            json=True,
+        )
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            result = access_utils.add_org_with_client(args, client)
+
+        self.assertEqual(result, 0)
+        self.assertEqual(client.created_organizations, [{"name": "Platform"}])
+        self.assertIn('"name": "Platform"', output.getvalue())
+
+    def test_modify_org_with_client_updates_name_by_org_id(self):
+        client = FakeAccessClient(
+            organizations=[
+                {"id": 7, "name": "Platform"},
+            ]
+        )
+        args = argparse.Namespace(
+            target_org_id="7",
+            name=None,
+            set_name="Platform Two",
+            json=False,
+        )
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            result = access_utils.modify_org_with_client(args, client)
+
+        self.assertEqual(result, 0)
+        self.assertEqual(
+            client.updated_organizations,
+            [("7", {"name": "Platform Two"})],
+        )
+        self.assertIn("id=7", output.getvalue())
+        self.assertIn("name=Platform Two", output.getvalue())
+
+    def test_delete_org_with_client_deletes_by_name(self):
+        client = FakeAccessClient(
+            organizations=[
+                {"id": 7, "name": "Platform"},
+            ]
+        )
+        args = argparse.Namespace(
+            target_org_id=None,
+            name="Platform",
+            yes=True,
+            json=True,
+        )
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            result = access_utils.delete_org_with_client(args, client)
+
+        self.assertEqual(result, 0)
+        self.assertEqual(client.deleted_organizations, ["7"])
+        self.assertIn('"id": "7"', output.getvalue())
+        self.assertIn('"name": "Platform"', output.getvalue())
+
+    def test_export_orgs_with_client_writes_org_bundle_with_users(self):
+        client = FakeAccessClient(
+            organizations=[
+                {"id": 1, "name": "Main Org."},
+            ],
+            organization_users_by_org_id={
+                "1": [
+                    {
+                        "userId": 11,
+                        "login": "alice",
+                        "email": "alice@example.com",
+                        "name": "Alice",
+                        "role": "Admin",
+                    }
+                ]
+            },
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            args = argparse.Namespace(
+                export_dir=temp_dir,
+                url="http://127.0.0.1:3000",
+                target_org_id=None,
+                name=None,
+                with_users=True,
+                overwrite=False,
+                dry_run=False,
+            )
+
+            output = io.StringIO()
+            with redirect_stdout(output):
+                result = access_utils.export_orgs_with_client(args, client)
+
+            self.assertEqual(result, 0)
+            bundle = json.loads(
+                (Path(temp_dir) / "orgs.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(bundle["records"][0]["name"], "Main Org.")
+            self.assertEqual(bundle["records"][0]["users"][0]["login"], "alice")
+            self.assertIn("Exported 1 org(s)", output.getvalue())
+
+    def test_import_orgs_with_client_creates_missing_org_and_adds_users(self):
+        client = FakeAccessClient()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            payload = {
+                "kind": "grafana-utils-access-org-export-index",
+                "version": 1,
+                "records": [
+                    {
+                        "name": "Platform",
+                        "users": [
+                            {
+                                "login": "alice",
+                                "email": "alice@example.com",
+                                "orgRole": "Editor",
+                            }
+                        ],
+                    }
+                ],
+            }
+            (Path(temp_dir) / "orgs.json").write_text(
+                json.dumps(payload),
+                encoding="utf-8",
+            )
+            args = argparse.Namespace(
+                import_dir=temp_dir,
+                replace_existing=True,
+                dry_run=False,
+                yes=False,
+            )
+
+            output = io.StringIO()
+            with redirect_stdout(output):
+                result = access_utils.import_orgs_with_client(args, client)
+
+            self.assertEqual(result, 0)
+            self.assertEqual(client.created_organizations, [{"name": "Platform"}])
+            self.assertEqual(
+                client.added_organization_users,
+                [("1", {"loginOrEmail": "alice", "role": "Editor"})],
+            )
+            self.assertIn("Import summary:", output.getvalue())
+
     def test_list_service_accounts_with_client_renders_json(self):
         client = FakeAccessClient(
             service_accounts=[
@@ -2287,6 +2713,52 @@ class AccessCliTests(unittest.TestCase):
             result = access_utils.dispatch_access_command(args, client, "basic")
         self.assertEqual(result, 44)
         diff_teams.assert_called_once_with(args, client)
+
+    def test_dispatch_access_command_routes_org_commands(self):
+        client = FakeAccessClient()
+
+        args = argparse.Namespace(resource="org", command="list", with_users=False)
+        with mock.patch("grafana_utils.access.workflows.list_orgs_with_client", return_value=12) as list_orgs:
+            result = access_utils.dispatch_access_command(args, client, "basic")
+        self.assertEqual(result, 12)
+        list_orgs.assert_called_once_with(args, client)
+
+        args = argparse.Namespace(resource="org", command="add", name="Platform")
+        with mock.patch("grafana_utils.access.workflows.add_org_with_client", return_value=23) as add_org:
+            result = access_utils.dispatch_access_command(args, client, "basic")
+        self.assertEqual(result, 23)
+        add_org.assert_called_once_with(args, client)
+
+        args = argparse.Namespace(resource="org", command="modify", target_org_id="7", set_name="Platform Two")
+        with mock.patch("grafana_utils.access.workflows.modify_org_with_client", return_value=34) as modify_org:
+            result = access_utils.dispatch_access_command(args, client, "basic")
+        self.assertEqual(result, 34)
+        modify_org.assert_called_once_with(args, client)
+
+        args = argparse.Namespace(resource="org", command="delete", target_org_id="7", yes=True)
+        with mock.patch("grafana_utils.access.workflows.delete_org_with_client", return_value=45) as delete_org:
+            result = access_utils.dispatch_access_command(args, client, "basic")
+        self.assertEqual(result, 45)
+        delete_org.assert_called_once_with(args, client)
+
+        args = argparse.Namespace(resource="org", command="export", export_dir="tmp")
+        with mock.patch("grafana_utils.access.workflows.export_orgs_with_client", return_value=56) as export_orgs:
+            result = access_utils.dispatch_access_command(args, client, "basic")
+        self.assertEqual(result, 56)
+        export_orgs.assert_called_once_with(args, client)
+
+        args = argparse.Namespace(
+            resource="org",
+            command="import",
+            import_dir="tmp",
+            replace_existing=True,
+            dry_run=False,
+            yes=False,
+        )
+        with mock.patch("grafana_utils.access.workflows.import_orgs_with_client", return_value=67) as import_orgs:
+            result = access_utils.dispatch_access_command(args, client, "basic")
+        self.assertEqual(result, 67)
+        import_orgs.assert_called_once_with(args, client)
 
     def test_dispatch_access_command_routes_service_account_export_import_diff(self):
         client = FakeAccessClient()

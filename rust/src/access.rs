@@ -25,6 +25,8 @@ use crate::http::JsonHttpClient;
 mod access_cli_defs;
 #[path = "access_pending_delete.rs"]
 mod access_pending_delete;
+#[path = "access_org.rs"]
+mod access_org;
 #[path = "access_render.rs"]
 mod access_render;
 #[path = "access_service_account.rs"]
@@ -36,14 +38,16 @@ mod access_user;
 
 pub use access_cli_defs::{
     build_auth_context, build_http_client, normalize_access_cli_args, parse_cli_from, root_command,
-    AccessAuthContext, AccessCliArgs, AccessCommand, CommonCliArgs, DryRunOutputFormat, Scope,
-    ServiceAccountAddArgs, ServiceAccountCommand, ServiceAccountDiffArgs, ServiceAccountExportArgs,
-    ServiceAccountImportArgs, ServiceAccountListArgs, ServiceAccountTokenAddArgs,
-    ServiceAccountTokenCommand, TeamAddArgs, TeamCommand, TeamDiffArgs, TeamExportArgs,
-    TeamImportArgs, TeamListArgs, TeamModifyArgs, UserAddArgs, UserCommand, UserDeleteArgs,
-    UserDiffArgs, UserExportArgs, UserImportArgs, UserListArgs, UserModifyArgs,
-    ACCESS_EXPORT_KIND_SERVICE_ACCOUNTS, ACCESS_EXPORT_KIND_TEAMS, ACCESS_EXPORT_KIND_USERS,
-    ACCESS_EXPORT_METADATA_FILENAME, ACCESS_EXPORT_VERSION, ACCESS_SERVICE_ACCOUNT_EXPORT_FILENAME,
+    build_http_client_no_org_id, AccessAuthContext, AccessCliArgs, AccessCommand, CommonCliArgs,
+    DryRunOutputFormat, OrgAddArgs, OrgCommand, OrgDeleteArgs, OrgExportArgs, OrgImportArgs,
+    OrgListArgs, OrgModifyArgs, Scope, ServiceAccountAddArgs, ServiceAccountCommand,
+    ServiceAccountDiffArgs, ServiceAccountExportArgs, ServiceAccountImportArgs,
+    ServiceAccountListArgs, ServiceAccountTokenAddArgs, ServiceAccountTokenCommand, TeamAddArgs,
+    TeamCommand, TeamDiffArgs, TeamExportArgs, TeamImportArgs, TeamListArgs, TeamModifyArgs,
+    UserAddArgs, UserCommand, UserDeleteArgs, UserDiffArgs, UserExportArgs, UserImportArgs,
+    UserListArgs, UserModifyArgs, ACCESS_EXPORT_KIND_ORGS, ACCESS_EXPORT_KIND_SERVICE_ACCOUNTS,
+    ACCESS_EXPORT_KIND_TEAMS, ACCESS_EXPORT_KIND_USERS, ACCESS_EXPORT_METADATA_FILENAME,
+    ACCESS_EXPORT_VERSION, ACCESS_ORG_EXPORT_FILENAME, ACCESS_SERVICE_ACCOUNT_EXPORT_FILENAME,
     ACCESS_TEAM_EXPORT_FILENAME, ACCESS_USER_EXPORT_FILENAME, DEFAULT_PAGE_SIZE, DEFAULT_TIMEOUT,
     DEFAULT_URL,
 };
@@ -55,6 +59,10 @@ pub use access_pending_delete::{
 pub(crate) use access_pending_delete::{
     delete_service_account_token_with_request, delete_service_account_with_request,
     delete_team_with_request,
+};
+#[cfg(test)]
+pub(crate) use access_org::{
+    delete_org_with_request, list_orgs_with_request, modify_org_with_request,
 };
 #[cfg(test)]
 pub(crate) use access_service_account::{
@@ -149,6 +157,26 @@ where
             }
             UserCommand::Delete(args) => {
                 let _ = access_user::delete_user_with_request(&mut request_json, &args)?;
+            }
+        },
+        AccessCommand::Org { command } => match command {
+            OrgCommand::List(args) => {
+                let _ = access_org::list_orgs_with_request(&mut request_json, &args)?;
+            }
+            OrgCommand::Add(args) => {
+                let _ = access_org::add_org_with_request(&mut request_json, &args)?;
+            }
+            OrgCommand::Modify(args) => {
+                let _ = access_org::modify_org_with_request(&mut request_json, &args)?;
+            }
+            OrgCommand::Export(args) => {
+                let _ = access_org::export_orgs_with_request(&mut request_json, &args)?;
+            }
+            OrgCommand::Import(args) => {
+                let _ = access_org::import_orgs_with_request(&mut request_json, &args)?;
+            }
+            OrgCommand::Delete(args) => {
+                let _ = access_org::delete_org_with_request(&mut request_json, &args)?;
             }
         },
         AccessCommand::Team { command } => match command {
@@ -264,6 +292,32 @@ pub fn run_access_cli(args: AccessCliArgs) -> Result<()> {
             }
             UserCommand::Delete(inner) => {
                 let client = build_http_client(&inner.common)?;
+                run_access_cli_with_client(&client, args)
+            }
+        },
+        AccessCommand::Org { command } => match command {
+            OrgCommand::List(inner) => {
+                let client = build_http_client_no_org_id(&inner.common)?;
+                run_access_cli_with_client(&client, args)
+            }
+            OrgCommand::Add(inner) => {
+                let client = build_http_client_no_org_id(&inner.common)?;
+                run_access_cli_with_client(&client, args)
+            }
+            OrgCommand::Modify(inner) => {
+                let client = build_http_client_no_org_id(&inner.common)?;
+                run_access_cli_with_client(&client, args)
+            }
+            OrgCommand::Export(inner) => {
+                let client = build_http_client_no_org_id(&inner.common)?;
+                run_access_cli_with_client(&client, args)
+            }
+            OrgCommand::Import(inner) => {
+                let client = build_http_client_no_org_id(&inner.common)?;
+                run_access_cli_with_client(&client, args)
+            }
+            OrgCommand::Delete(inner) => {
+                let client = build_http_client_no_org_id(&inner.common)?;
                 run_access_cli_with_client(&client, args)
             }
         },

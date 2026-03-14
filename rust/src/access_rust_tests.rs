@@ -1,21 +1,25 @@
 // Access domain test suite.
 // Validates CLI parsing/help text surfaces and handler contract behavior with stubbed request closures.
 use super::{
-    add_service_account_token_with_request, add_service_account_with_request,
-    add_team_with_request, add_user_with_request, delete_service_account_token_with_request,
-    delete_service_account_with_request, delete_team_with_request, delete_user_with_request,
-    diff_service_accounts_with_request, diff_teams_with_request, diff_users_with_request,
-    export_service_accounts_with_request, import_service_accounts_with_request,
-    import_teams_with_request, list_service_accounts_command_with_request,
-    list_teams_command_with_request, list_users_with_request, modify_team_with_request,
+    add_service_account_token_with_request, add_service_account_with_request, add_team_with_request,
+    add_user_with_request, delete_org_with_request,
+    delete_service_account_token_with_request, delete_service_account_with_request,
+    delete_team_with_request, delete_user_with_request, diff_service_accounts_with_request,
+    diff_teams_with_request, diff_users_with_request, export_service_accounts_with_request,
+    import_service_accounts_with_request, import_teams_with_request, list_orgs_with_request,
+    list_service_accounts_command_with_request, list_teams_command_with_request,
+    list_users_with_request, modify_org_with_request, modify_team_with_request,
     modify_user_with_request, parse_cli_from, run_access_cli_with_request, AccessCommand,
-    CommonCliArgs, DryRunOutputFormat, Scope, ServiceAccountAddArgs, ServiceAccountCommand,
+    CommonCliArgs, DryRunOutputFormat, OrgCommand, OrgDeleteArgs,
+    OrgListArgs, OrgModifyArgs, Scope, ServiceAccountAddArgs, ServiceAccountCommand,
     ServiceAccountDeleteArgs, ServiceAccountDiffArgs, ServiceAccountExportArgs,
-    ServiceAccountImportArgs, ServiceAccountListArgs, ServiceAccountTokenAddArgs,
-    ServiceAccountTokenCommand, ServiceAccountTokenDeleteArgs, TeamAddArgs, TeamCommand,
-    TeamDeleteArgs, TeamDiffArgs, TeamImportArgs, TeamListArgs, TeamModifyArgs, UserAddArgs,
-    UserCommand, UserDeleteArgs, UserDiffArgs, UserListArgs, UserModifyArgs,
+    ServiceAccountImportArgs, ServiceAccountListArgs,
+    ServiceAccountTokenAddArgs, ServiceAccountTokenCommand, ServiceAccountTokenDeleteArgs,
+    TeamAddArgs, TeamCommand, TeamDeleteArgs, TeamDiffArgs, TeamImportArgs, TeamListArgs,
+    TeamModifyArgs, UserAddArgs, UserCommand, UserDeleteArgs, UserDiffArgs, UserListArgs,
+    UserModifyArgs,
 };
+use crate::access::access_cli_defs::CommonCliArgsNoOrgId;
 use crate::access::access_cli_defs::AccessCliRoot;
 use clap::{CommandFactory, Parser};
 use reqwest::Method;
@@ -59,6 +63,19 @@ fn make_basic_common() -> CommonCliArgs {
         prompt_password: false,
         prompt_token: false,
         org_id: None,
+        timeout: 30,
+        verify_ssl: false,
+    }
+}
+
+fn make_basic_common_no_org_id() -> CommonCliArgsNoOrgId {
+    CommonCliArgsNoOrgId {
+        url: "http://127.0.0.1:3000".to_string(),
+        api_token: None,
+        username: Some("admin".to_string()),
+        password: Some("secret".to_string()),
+        prompt_password: false,
+        prompt_token: false,
         timeout: 30,
         verify_ssl: false,
     }
@@ -121,6 +138,10 @@ fn user_mutation_help_mentions_target_and_json_flags() {
 
 #[test]
 fn team_and_service_account_help_mentions_membership_and_token_flags() {
+    let org_help = render_access_subcommand_help(&["org", "list"]);
+    assert!(org_help.contains("--with-users"));
+    assert!(org_help.contains("Include org users and org roles"));
+
     let team_add_help = render_access_subcommand_help(&["team", "add"]);
     assert!(team_add_help.contains("--member"));
     assert!(team_add_help.contains("Add one or more members"));
@@ -139,6 +160,105 @@ fn team_and_service_account_help_mentions_membership_and_token_flags() {
     assert!(token_help.contains("--token-name"));
     assert!(token_help.contains("Name for the new service-account token"));
     assert!(token_help.contains("--seconds-to-live"));
+}
+
+#[test]
+fn parse_cli_supports_org_commands() {
+    let args = parse_cli_from([
+        "grafana-access-utils",
+        "org",
+        "list",
+        "--query",
+        "main",
+        "--with-users",
+        "--output-format",
+        "json",
+    ]);
+    match args.command {
+        AccessCommand::Org {
+            command: OrgCommand::List(list_args),
+        } => {
+            assert_eq!(list_args.query.as_deref(), Some("main"));
+            assert!(list_args.with_users);
+            assert!(list_args.json);
+        }
+        _ => panic!("expected org list"),
+    }
+
+    let args = parse_cli_from([
+        "grafana-access-utils",
+        "org",
+        "add",
+        "--name",
+        "Main Org",
+        "--json",
+    ]);
+    match args.command {
+        AccessCommand::Org {
+            command: OrgCommand::Add(add_args),
+        } => {
+            assert_eq!(add_args.name, "Main Org");
+            assert!(add_args.json);
+        }
+        _ => panic!("expected org add"),
+    }
+
+    let args = parse_cli_from([
+        "grafana-access-utils",
+        "org",
+        "modify",
+        "--org-id",
+        "7",
+        "--set-name",
+        "Renamed Org",
+    ]);
+    match args.command {
+        AccessCommand::Org {
+            command: OrgCommand::Modify(modify_args),
+        } => {
+            assert_eq!(modify_args.org_id, Some(7));
+            assert_eq!(modify_args.set_name, "Renamed Org");
+        }
+        _ => panic!("expected org modify"),
+    }
+
+    let args = parse_cli_from([
+        "grafana-access-utils",
+        "org",
+        "export",
+        "--with-users",
+        "--export-dir",
+        "/tmp/access-orgs",
+    ]);
+    match args.command {
+        AccessCommand::Org {
+            command: OrgCommand::Export(export_args),
+        } => {
+            assert!(export_args.with_users);
+            assert_eq!(export_args.export_dir.to_string_lossy(), "/tmp/access-orgs");
+        }
+        _ => panic!("expected org export"),
+    }
+
+    let args = parse_cli_from([
+        "grafana-access-utils",
+        "org",
+        "import",
+        "--import-dir",
+        "/tmp/access-orgs",
+        "--replace-existing",
+        "--dry-run",
+    ]);
+    match args.command {
+        AccessCommand::Org {
+            command: OrgCommand::Import(import_args),
+        } => {
+            assert!(import_args.replace_existing);
+            assert!(import_args.dry_run);
+            assert_eq!(import_args.import_dir.to_string_lossy(), "/tmp/access-orgs");
+        }
+        _ => panic!("expected org import"),
+    }
 }
 
 #[test]
@@ -759,6 +879,92 @@ fn run_access_cli_with_request_routes_team_import() {
     assert!(calls
         .iter()
         .any(|(method, path)| method == "POST" && path == "/api/teams"));
+}
+
+#[test]
+fn run_access_cli_with_request_routes_org_export() {
+    let args = parse_cli_from([
+        "grafana-access-utils",
+        "org",
+        "export",
+        "--basic-user",
+        "admin",
+        "--basic-password",
+        "admin",
+        "--dry-run",
+        "--with-users",
+    ]);
+    let result = run_access_cli_with_request(
+        |method, path, _params, _payload| match (method, path) {
+            (Method::GET, "/api/orgs") => Ok(Some(json!([{"id": 1, "name": "Main Org"}]))),
+            (Method::GET, "/api/orgs/1/users") => Ok(Some(json!([
+                {"userId": 7, "login": "alice", "email": "alice@example.com", "role": "Admin"}
+            ]))),
+            _ => panic!("unexpected path {path}"),
+        },
+        args,
+    );
+    assert!(result.is_ok());
+}
+
+#[test]
+fn run_access_cli_with_request_routes_org_import() {
+    let temp = tempdir().unwrap();
+    let import_dir = temp.path().join("access-orgs");
+    fs::create_dir_all(&import_dir).unwrap();
+    fs::write(
+        import_dir.join("orgs.json"),
+        r#"{
+            "kind":"grafana-utils-access-org-export-index",
+            "version":1,
+            "records":[
+                {
+                    "name":"Main Org",
+                    "users":[
+                        {"login":"alice","email":"alice@example.com","orgRole":"Editor"}
+                    ]
+                }
+            ]
+        }"#,
+    )
+    .unwrap();
+    let args = parse_cli_from([
+        "grafana-access-utils",
+        "org",
+        "import",
+        "--basic-user",
+        "admin",
+        "--basic-password",
+        "admin",
+        "--import-dir",
+        import_dir.to_str().unwrap(),
+        "--replace-existing",
+    ]);
+    let mut calls = Vec::new();
+    let result = run_access_cli_with_request(
+        |method, path, _params, payload| {
+            calls.push((method.to_string(), path.to_string()));
+            match (method, path) {
+                (Method::GET, "/api/orgs") => Ok(Some(json!([]))),
+                (Method::POST, "/api/orgs") => {
+                    assert_eq!(
+                        payload.and_then(|value| value.as_object()).unwrap().get("name"),
+                        Some(&json!("Main Org"))
+                    );
+                    Ok(Some(json!({"orgId": "3"})))
+                }
+                (Method::GET, "/api/orgs/3/users") => Ok(Some(json!([]))),
+                (Method::POST, "/api/orgs/3/users") => Ok(Some(json!({"message": "added"}))),
+                _ => panic!("unexpected path {path}"),
+            }
+        },
+        args,
+    );
+    assert!(result.is_ok());
+    assert!(calls.iter().any(|(method, path)| method == "POST" && path == "/api/orgs"));
+    assert!(calls
+        .iter()
+        .any(|(method, path)| method == "POST" && path == "/api/orgs/3/users"));
 }
 
 #[test]
@@ -1679,6 +1885,105 @@ fn service_account_token_delete_with_request_resolves_token_name() {
     assert!(calls.iter().any(|(method, path, _)| {
         method == "DELETE" && path == "/api/serviceaccounts/4/tokens/7"
     }));
+}
+
+#[test]
+fn list_orgs_with_request_reads_orgs_and_memberships() {
+    let args = OrgListArgs {
+        common: make_basic_common_no_org_id(),
+        org_id: None,
+        name: None,
+        query: None,
+        with_users: true,
+        table: false,
+        csv: false,
+        json: true,
+        output_format: None,
+    };
+    let mut calls = Vec::new();
+    let result = list_orgs_with_request(
+        |method, path, params, _payload| {
+            calls.push((method.to_string(), path.to_string(), params.to_vec()));
+            match (method, path) {
+                (Method::GET, "/api/orgs") => Ok(Some(json!([
+                    {"id": 1, "name": "Main Org"}
+                ]))),
+                (Method::GET, "/api/orgs/1/users") => Ok(Some(json!([
+                    {"userId": 7, "login": "alice", "email": "alice@example.com", "role": "Admin"}
+                ]))),
+                _ => panic!("unexpected path {path}"),
+            }
+        },
+        &args,
+    );
+    assert!(result.is_ok());
+    assert!(calls
+        .iter()
+        .any(|(method, path, _)| method == "GET" && path == "/api/orgs/1/users"));
+}
+
+#[test]
+fn modify_org_with_request_renames_resolved_org() {
+    let args = OrgModifyArgs {
+        common: make_basic_common_no_org_id(),
+        org_id: Some(4),
+        name: None,
+        set_name: "Renamed Org".to_string(),
+        json: false,
+    };
+    let mut calls = Vec::new();
+    let result = modify_org_with_request(
+        |method, path, params, payload| {
+            calls.push((method.to_string(), path.to_string(), params.to_vec()));
+            match (method, path) {
+                (Method::GET, "/api/orgs") => Ok(Some(json!([
+                    {"id": 4, "name": "Main Org"}
+                ]))),
+                (Method::PUT, "/api/orgs/4") => {
+                    assert_eq!(
+                        payload.and_then(|value| value.as_object()).unwrap().get("name"),
+                        Some(&json!("Renamed Org"))
+                    );
+                    Ok(Some(json!({"message": "ok"})))
+                }
+                _ => panic!("unexpected path {path}"),
+            }
+        },
+        &args,
+    );
+    assert!(result.is_ok());
+    assert!(calls
+        .iter()
+        .any(|(method, path, _)| method == "PUT" && path == "/api/orgs/4"));
+}
+
+#[test]
+fn delete_org_with_request_deletes_resolved_org() {
+    let args = OrgDeleteArgs {
+        common: make_basic_common_no_org_id(),
+        org_id: None,
+        name: Some("Main Org".to_string()),
+        yes: true,
+        json: true,
+    };
+    let mut calls = Vec::new();
+    let result = delete_org_with_request(
+        |method, path, params, _payload| {
+            calls.push((method.to_string(), path.to_string(), params.to_vec()));
+            match (method, path) {
+                (Method::GET, "/api/orgs") => Ok(Some(json!([
+                    {"id": 4, "name": "Main Org"}
+                ]))),
+                (Method::DELETE, "/api/orgs/4") => Ok(Some(json!({"message": "deleted"}))),
+                _ => panic!("unexpected path {path}"),
+            }
+        },
+        &args,
+    );
+    assert!(result.is_ok());
+    assert!(calls
+        .iter()
+        .any(|(method, path, _)| method == "DELETE" && path == "/api/orgs/4"));
 }
 
 #[test]

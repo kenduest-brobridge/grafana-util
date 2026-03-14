@@ -55,6 +55,123 @@ class GrafanaAccessClient:
             raise GrafanaError("Unexpected org user list response from Grafana.")
         return [item for item in data if isinstance(item, dict)]
 
+    def list_organizations(self) -> list[dict[str, Any]]:
+        data = self.request_json("/api/orgs")
+        if not isinstance(data, list):
+            raise GrafanaError("Unexpected organization list response from Grafana.")
+        return [item for item in data if isinstance(item, dict)]
+
+    def get_organization(self, org_id: Any) -> dict[str, Any]:
+        data = self.request_json(
+            "/api/orgs/%s" % parse.quote(str(org_id), safe="")
+        )
+        if not isinstance(data, dict):
+            raise GrafanaError(
+                "Unexpected organization lookup response for Grafana org %s."
+                % org_id
+            )
+        return data
+
+    def create_organization(self, payload: dict[str, Any]) -> dict[str, Any]:
+        data = self.request_json(
+            "/api/orgs",
+            method="POST",
+            payload=payload,
+        )
+        if not isinstance(data, dict):
+            raise GrafanaError("Unexpected organization create response from Grafana.")
+        return data
+
+    def update_organization(self, org_id: Any, payload: dict[str, Any]) -> dict[str, Any]:
+        data = self.request_json(
+            "/api/orgs/%s" % parse.quote(str(org_id), safe=""),
+            method="PUT",
+            payload=payload,
+        )
+        if not isinstance(data, dict):
+            raise GrafanaError(
+                "Unexpected organization update response for Grafana org %s."
+                % org_id
+            )
+        return data
+
+    def delete_organization(self, org_id: Any) -> dict[str, Any]:
+        data = self.request_json(
+            "/api/orgs/%s" % parse.quote(str(org_id), safe=""),
+            method="DELETE",
+        )
+        if not isinstance(data, dict):
+            raise GrafanaError(
+                "Unexpected organization delete response for Grafana org %s."
+                % org_id
+            )
+        return data
+
+    def list_organization_users(self, org_id: Any) -> list[dict[str, Any]]:
+        data = self.request_json(
+            "/api/orgs/%s/users" % parse.quote(str(org_id), safe="")
+        )
+        if not isinstance(data, list):
+            raise GrafanaError(
+                "Unexpected organization user list response for Grafana org %s."
+                % org_id
+            )
+        return [item for item in data if isinstance(item, dict)]
+
+    def add_user_to_organization(
+        self,
+        org_id: Any,
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        data = self.request_json(
+            "/api/orgs/%s/users" % parse.quote(str(org_id), safe=""),
+            method="POST",
+            payload=payload,
+        )
+        if not isinstance(data, dict):
+            raise GrafanaError(
+                "Unexpected add-user response for Grafana org %s." % org_id
+            )
+        return data
+
+    def update_organization_user_role(
+        self,
+        org_id: Any,
+        user_id: Any,
+        role: str,
+    ) -> dict[str, Any]:
+        data = self.request_json(
+            "/api/orgs/%s/users/%s"
+            % (
+                parse.quote(str(org_id), safe=""),
+                parse.quote(str(user_id), safe=""),
+            ),
+            method="PATCH",
+            payload={"role": role},
+        )
+        if not isinstance(data, dict):
+            raise GrafanaError(
+                "Unexpected org-user role update response for Grafana org %s user %s."
+                % (org_id, user_id)
+            )
+        return data
+
+    def delete_organization_user(self, org_id: Any, user_id: Any) -> dict[str, Any]:
+        data = self.request_json(
+            "/api/orgs/%s/users/%s"
+            % (
+                parse.quote(str(org_id), safe=""),
+                parse.quote(str(user_id), safe=""),
+            ),
+            method="DELETE",
+        )
+        if not isinstance(data, dict):
+            raise GrafanaError(
+                "Unexpected org-user delete response for Grafana org %s user %s."
+                % (org_id, user_id)
+            )
+        return data
+
     def iter_global_users(self, page_size: int) -> list[dict[str, Any]]:
         users = []
         page = 1

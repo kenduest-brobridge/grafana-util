@@ -5,6 +5,13 @@ Historical note:
 - Older entries describe the repo state and `TODO.md` backlog as they existed on the entry date.
 - `TODO.md` now tracks only the active backlog; completed or superseded TODO items moved to `docs/internal/todo-archive.md`.
 
+## 2026-03-15 - Task: Add Access Org Management
+- State: Done
+- Scope: `grafana_utils/access/parser.py`, `grafana_utils/access/workflows.py`, `grafana_utils/clients/access_client.py`, `grafana_utils/access_cli.py`, `tests/test_python_access_cli.py`, `rust/src/access.rs`, `rust/src/access_cli_defs.rs`, `rust/src/access_org.rs`, `rust/src/access_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The access CLIs supported users, teams, and service accounts, but there was no first-class org surface for list/add/modify/delete or snapshot export/import. Existing `access user` flows could only target org-local behavior indirectly through `--org-id`, `--set-org-role`, or `--scope org`, and there was no explicit org membership replay path.
+- Current Update: Added `access org` to the Python and Rust CLIs with Basic-auth-only list/add/modify/delete/export/import workflows, org export bundles (`orgs.json` plus `export-metadata.json`), and import replay that can create missing orgs plus add or role-update org users from snapshot records.
+- Result: Python and Rust now both expose explicit organization management in the access domain, and the current user-management semantics remain available for direct global user creation plus org-scoped role/removal targeting.
+
 ## 2026-03-15 - Task: Add Service-Account Snapshot Export Import Diff
 - State: In Progress
 - Scope: `grafana_utils/access/parser.py`, `grafana_utils/access/workflows.py`, `grafana_utils/clients/access_client.py`, `grafana_utils/access_cli.py`, `tests/test_python_access_cli.py`, `rust/src/access.rs`, `rust/src/access_cli_defs.rs`, `rust/src/access_service_account.rs`, `rust/src/access_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

@@ -5,6 +5,14 @@ Historical note:
 - Older entries preserve the reasoning and follow-up state as of the entry date.
 - Active backlog now lives in `TODO.md`, while completed or superseded TODO items moved to `docs/internal/todo-archive.md`.
 
+## 2026-03-15 - Add Access Org Management
+- Summary: Added `access org` to both implementations so operators can list, create, rename, delete, export, and import Grafana organizations directly instead of relying on indirect user/org header behavior. The new snapshot bundle writes `orgs.json` plus `export-metadata.json`, and import can create missing orgs plus add or role-update org users captured in the export.
+- Tests: Added Python parser/dispatch/workflow coverage for org commands and Rust access coverage for org parsing and request-handler flows. The Python tests also lock in the current `access user` org-targeting semantics around create-time `OrgId`, org-role updates, and org-scoped deletion.
+- Test Run: `python3 -m unittest -v tests/test_python_access_cli.py`; `cargo test --manifest-path rust/Cargo.toml access --quiet`
+- Validation: Confirmed the Python access suite passes with the new org command surface, and confirmed the Rust access-focused suite passes after wiring the new `access_org` module into parser/dispatch/test paths.
+- Impact: `grafana_utils/access/parser.py`, `grafana_utils/access/workflows.py`, `grafana_utils/clients/access_client.py`, `grafana_utils/access_cli.py`, `tests/test_python_access_cli.py`, `rust/src/access.rs`, `rust/src/access_cli_defs.rs`, `rust/src/access_org.rs`, `rust/src/access_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Moderate. Org admin APIs are Basic-auth-only and import replay now depends on org user membership endpoints; the remaining risk is live Grafana version variance around org membership create/update semantics that the current unit suites cannot verify.
+
 ## 2026-03-15 - Add Service-Account Snapshot Export Import Diff
 - Summary: Extended both access implementations so `access service-account` now supports snapshot export, import replay, and drift diff in addition to list/add/delete and token commands. The new snapshot bundle writes `service-accounts.json` plus `export-metadata.json`, indexes records by service-account name, and only treats `role` and `disabled` as mutable replay/diff fields so instance-bound values such as ids, logins, token counts, and org ids do not create false drift.
 - Tests: Added parser/dispatch/workflow coverage for the new Python and Rust service-account snapshot commands. The new tests exercise bundle export, existing-account update replay, and live diff counting at the command-handler level.

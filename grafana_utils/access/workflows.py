@@ -9,10 +9,12 @@ from .common import (
     GrafanaError,
 )
 from .parser import (
+    ACCESS_EXPORT_KIND_ORGS,
     ACCESS_EXPORT_KIND_TEAMS,
     ACCESS_EXPORT_KIND_USERS,
     ACCESS_EXPORT_KIND_SERVICE_ACCOUNTS,
     ACCESS_EXPORT_METADATA_FILENAME,
+    ACCESS_ORG_EXPORT_FILENAME,
     ACCESS_EXPORT_VERSION,
     ACCESS_SERVICE_ACCOUNT_EXPORT_FILENAME,
     ACCESS_TEAM_EXPORT_FILENAME,
@@ -64,6 +66,14 @@ def validate_user_list_auth(args, auth_mode):
         raise GrafanaError(
             "--with-teams does not support API token auth. Use Grafana "
             "username/password login."
+        )
+
+
+def validate_org_auth(auth_mode):
+    if auth_mode != "basic":
+        raise GrafanaError(
+            "Organization commands do not support API token auth. Use Grafana "
+            "username/password login (--basic-user / --basic-password)."
         )
 
 
@@ -143,6 +153,44 @@ def service_account_role_to_api(value):
     return normalized
 
 
+def _normalize_org_user_record(record):
+    return {
+        "userId": str(
+            record.get("userId")
+            or record.get("id")
+            or record.get("user")
+            or ""
+        ),
+        "login": str(record.get("login") or ""),
+        "email": str(record.get("email") or ""),
+        "name": str(record.get("name") or ""),
+        "orgRole": normalize_org_role(
+            record.get("orgRole") or record.get("role") or ""
+        ),
+    }
+
+
+def _normalize_org_record(record):
+    users = []
+    for item in record.get("users") or []:
+        if not isinstance(item, dict):
+            continue
+        users.append(_normalize_org_user_record(item))
+    users.sort(
+        key=lambda item: (
+            item.get("login") or "",
+            item.get("email") or "",
+            item.get("userId") or "",
+        )
+    )
+    return {
+        "id": str(record.get("id") or record.get("orgId") or ""),
+        "name": str(record.get("name") or ""),
+        "users": users,
+        "userCount": str(record.get("userCount") or len(users)),
+    }
+
+
 def normalize_created_user(user_id, args):
     return {
         "id": str(user_id or ""),
@@ -217,6 +265,29 @@ def _build_team_export_records(client, args):
         teams.append(team)
     teams.sort(key=lambda item: (item.get("name") or "", item.get("id") or ""))
     return teams
+
+
+def _build_org_export_records(client, args):
+    records = []
+    for item in client.list_organizations():
+        org = _normalize_org_record(item)
+        target_org_id = str(
+            getattr(args, "org_id", getattr(args, "target_org_id", "")) or ""
+        ).strip()
+        target_name = str(getattr(args, "name", "") or "").strip()
+        if target_org_id and org.get("id") != target_org_id:
+            continue
+        if target_name and org.get("name") != target_name:
+            continue
+        if bool(getattr(args, "with_users", False)):
+            org["users"] = [
+                _normalize_org_user_record(member)
+                for member in client.list_organization_users(org.get("id") or "")
+            ]
+            org["userCount"] = str(len(org["users"]))
+        records.append(org)
+    records.sort(key=lambda item: (item.get("name") or "", item.get("id") or ""))
+    return records
 
 
 def _normalize_user_record(record):
@@ -1007,6 +1078,14 @@ def _build_team_import_records(import_dir):
     )
 
 
+def _build_org_import_records(import_dir):
+    return _load_access_import_bundle(
+        Path(import_dir),
+        ACCESS_ORG_EXPORT_FILENAME,
+        ACCESS_EXPORT_KIND_ORGS,
+    )
+
+
 def _build_service_account_import_records(import_dir):
     return _load_access_import_bundle(
         Path(import_dir),
@@ -1117,6 +1196,226 @@ def export_users_with_client(args, client):
     print(
         "%s %s user(s) from %s -> %s and %s"
         % (action, len(records), args.url, users_path, metadata_path)
+    )
+    return 0
+
+
+def export_orgs_with_client(args, client):
+    export_dir = Path(args.export_dir)
+    records = _build_org_export_records(client, args)
+    payload_path = export_dir / ACCESS_ORG_EXPORT_FILENAME
+    metadata_path = export_dir / ACCESS_EXPORT_METADATA_FILENAME
+    data = {
+        "kind": ACCESS_EXPORT_KIND_ORGS,
+        "version": ACCESS_EXPORT_VERSION,
+        "records": records,
+    }
+    metadata = _build_access_export_metadata(
+        source_url=args.url,
+        kind=ACCESS_EXPORT_KIND_ORGS,
+        source_count=len(records),
+        source_dir=str(export_dir),
+    )
+    _assert_not_overwriting(
+        export_dir,
+        [ACCESS_ORG_EXPORT_FILENAME, ACCESS_EXPORT_METADATA_FILENAME],
+        dry_run=args.dry_run,
+        overwrite=bool(getattr(args, "overwrite", False)),
+    )
+    if not args.dry_run:
+        _write_json_document(payload_path, data)
+        _write_json_document(metadata_path, metadata)
+    action = "Would export" if args.dry_run else "Exported"
+    print(
+        "%s %s org(s) from %s -> %s and %s"
+        % (action, len(records), args.url, payload_path, metadata_path)
+    )
+    return 0
+
+
+def _lookup_org_user_record(users, identity):
+    target = _normalize_access_import_identity(identity)
+    if not target:
+        return None
+    for user in users:
+        login = _normalize_access_import_identity(user.get("login"))
+        email = _normalize_access_import_identity(user.get("email"))
+        if target in (login, email):
+            return user
+    return None
+
+
+def _apply_org_user_import(client, org_id, org_name, desired_users, dry_run):
+    existing_users = [
+        _normalize_org_user_record(item)
+        for item in client.list_organization_users(org_id)
+    ]
+    changed = False
+    for user in desired_users:
+        identity = str(user.get("login") or user.get("email") or "").strip()
+        if not identity:
+            raise GrafanaError(
+                "Organization import record for %s has a user without login/email."
+                % org_name
+            )
+        desired_role = normalize_org_role(user.get("orgRole") or "")
+        if not desired_role:
+            desired_role = "Viewer"
+        existing = _lookup_org_user_record(existing_users, identity)
+        if existing is None:
+            changed = True
+            if dry_run:
+                print(
+                    "Would add user %s to org %s with role %s"
+                    % (identity, org_name, desired_role)
+                )
+            else:
+                client.add_user_to_organization(
+                    org_id,
+                    {
+                        "loginOrEmail": identity,
+                        "role": desired_role,
+                    },
+                )
+            continue
+        existing_role = normalize_org_role(existing.get("orgRole") or "")
+        existing_user_id = str(existing.get("userId") or "")
+        if desired_role and desired_role != existing_role:
+            changed = True
+            if dry_run:
+                print(
+                    "Would update org user %s role in %s -> %s"
+                    % (identity, org_name, desired_role)
+                )
+            else:
+                if not existing_user_id:
+                    raise GrafanaError(
+                        "Organization user lookup did not return an id for %s in %s."
+                        % (identity, org_name)
+                    )
+                client.update_organization_user_role(
+                    org_id,
+                    existing_user_id,
+                    desired_role,
+                )
+    return changed
+
+
+def import_orgs_with_client(args, client):
+    bundle = _build_org_import_records(args.import_dir)
+    raw_records = bundle.get("records") or []
+    records = []
+    for item in raw_records:
+        if not isinstance(item, dict):
+            raise GrafanaError(
+                "Access import entry in %s must be an object." % bundle["bundle_path"]
+            )
+        records.append(_normalize_org_record(item))
+
+    live_orgs = [_normalize_org_record(item) for item in client.list_organizations()]
+    live_by_name = {}
+    live_by_id = {}
+    for org in live_orgs:
+        if org.get("name"):
+            live_by_name[_normalize_access_import_identity(org.get("name"))] = org
+        if org.get("id"):
+            live_by_id[str(org.get("id"))] = org
+
+    created = 0
+    updated = 0
+    skipped = 0
+    processed = 0
+    for index, record in enumerate(records, 1):
+        processed += 1
+        org_name = str(record.get("name") or "").strip()
+        org_id = str(record.get("id") or "").strip()
+        record_changed = False
+        if not org_name:
+            raise GrafanaError(
+                "Access org import record %s in %s lacks name."
+                % (index, bundle["bundle_path"])
+            )
+        existing = live_by_name.get(_normalize_access_import_identity(org_name))
+        if existing is None and org_id:
+            existing = live_by_id.get(org_id)
+        count_as_updated = existing is not None
+
+        target_org_id = ""
+        if existing is None:
+            if not args.replace_existing:
+                skipped += 1
+                print(
+                    "Skipped org %s (%s): missing and --replace-existing was not set."
+                    % (org_name, index)
+                )
+                continue
+            if args.dry_run:
+                created += 1
+                target_org_id = ""
+                record_changed = True
+                print("Would create org %s" % org_name)
+            else:
+                created_payload = client.create_organization({"name": org_name})
+                target_org_id = str(
+                    created_payload.get("orgId") or created_payload.get("id") or ""
+                )
+                created += 1
+                record_changed = True
+                print("Created org %s" % org_name)
+        else:
+            target_org_id = str(existing.get("id") or "")
+            if not args.replace_existing:
+                skipped += 1
+                print("Skipped existing org %s (%s)" % (org_name, index))
+                continue
+            existing_name = str(existing.get("name") or "")
+            if org_id and target_org_id == org_id and existing_name != org_name:
+                if args.dry_run:
+                    print("Would rename org %s -> %s" % (existing_name, org_name))
+                else:
+                    client.update_organization(target_org_id, {"name": org_name})
+                record_changed = True
+
+        desired_users = record.get("users") or []
+        if desired_users:
+            if args.dry_run and not target_org_id:
+                membership_changed = bool(desired_users)
+                for user in desired_users:
+                    identity = str(user.get("login") or user.get("email") or "").strip()
+                    if not identity:
+                        raise GrafanaError(
+                            "Organization import record for %s has a user without login/email."
+                            % org_name
+                        )
+                    role = normalize_org_role(user.get("orgRole") or "") or "Viewer"
+                    print(
+                        "Would add user %s to org %s with role %s"
+                        % (identity, org_name, role)
+                    )
+            else:
+                membership_changed = _apply_org_user_import(
+                    client,
+                    target_org_id,
+                    org_name,
+                    desired_users,
+                    args.dry_run,
+                )
+            if membership_changed and existing is not None:
+                count_as_updated = True
+            record_changed = record_changed or membership_changed
+        elif existing is not None and target_org_id and not record_changed:
+            skipped += 1
+            print("Skipped org %s (%s): already matched live state." % (org_name, index))
+            continue
+
+        if existing is not None and record_changed:
+            if count_as_updated:
+                updated += 1
+            print("Updated org %s" % org_name)
+
+    print(
+        "Import summary: processed=%s created=%s updated=%s skipped=%s source=%s"
+        % (processed, created, updated, skipped, args.import_dir)
     )
     return 0
 
@@ -1956,6 +2255,110 @@ def list_teams_with_client(args, client):
     return 0
 
 
+def _build_org_rows(client, args):
+    rows = []
+    target_org_id = str(
+        getattr(args, "org_id", getattr(args, "target_org_id", "")) or ""
+    ).strip()
+    exact_name = str(getattr(args, "name", "") or "").strip()
+    query = str(getattr(args, "query", "") or "").strip().lower()
+    include_users = bool(getattr(args, "with_users", False))
+    for item in client.list_organizations():
+        org = _normalize_org_record(item)
+        if target_org_id and org.get("id") != target_org_id:
+            continue
+        if exact_name and org.get("name") != exact_name:
+            continue
+        if query and query not in str(org.get("name") or "").lower():
+            continue
+        if include_users:
+            org["users"] = [
+                _normalize_org_user_record(member)
+                for member in client.list_organization_users(org.get("id") or "")
+            ]
+            org["userCount"] = str(len(org["users"]))
+        rows.append(org)
+    rows.sort(key=lambda item: (item.get("name") or "", item.get("id") or ""))
+    return rows
+
+
+def _render_org_table(rows):
+    headers = ["ID", "NAME", "USER_COUNT"]
+    widths = [len(header) for header in headers]
+    values = []
+    for row in rows:
+        current = [
+            str(row.get("id") or ""),
+            str(row.get("name") or ""),
+            str(row.get("userCount") or ""),
+        ]
+        values.append(current)
+        for index, value in enumerate(current):
+            widths[index] = max(widths[index], len(value))
+
+    def _format(items):
+        return "  ".join(
+            item.ljust(widths[index]) for index, item in enumerate(items)
+        )
+
+    lines = [_format(headers), _format(["-" * width for width in widths])]
+    for row in values:
+        lines.append(_format(row))
+    return lines
+
+
+def _render_org_csv(rows):
+    print("id,name,userCount")
+    for row in rows:
+        print(
+            "%s,%s,%s"
+            % (
+                _csv_escape(str(row.get("id") or "")),
+                _csv_escape(str(row.get("name") or "")),
+                _csv_escape(str(row.get("userCount") or "")),
+            )
+        )
+
+
+def _csv_escape(value):
+    text = str(value or "")
+    if any(char in text for char in [",", "\"", "\n"]):
+        return "\"%s\"" % text.replace("\"", "\"\"")
+    return text
+
+
+def _render_org_json(rows):
+    return json.dumps(rows, indent=2, ensure_ascii=False)
+
+
+def _format_org_summary_line(row):
+    parts = [
+        "id=%s" % (row.get("id") or ""),
+        "name=%s" % (row.get("name") or ""),
+        "userCount=%s" % (row.get("userCount") or "0"),
+    ]
+    return " ".join(parts)
+
+
+def list_orgs_with_client(args, client):
+    rows = _build_org_rows(client, args)
+    if args.csv:
+        _render_org_csv(rows)
+        return 0
+    if args.json:
+        print(_render_org_json(rows))
+        return 0
+    if args.table:
+        for line in _render_org_table(rows):
+            print(line)
+    else:
+        for row in rows:
+            print(_format_org_summary_line(row))
+    print("")
+    print("Listed %s org(s) at %s" % (len(rows), args.url))
+    return 0
+
+
 def add_service_account_with_client(args, client):
     payload = {
         "name": args.name,
@@ -1981,6 +2384,102 @@ def add_service_account_with_client(args, client):
                 bool_label(normalize_bool(created.get("disabled"))),
             )
         )
+    return 0
+
+
+def lookup_organization(client, org_id=None, name=None):
+    target_org_id = str(org_id or "").strip()
+    target_name = str(name or "").strip()
+    if not target_org_id and not target_name:
+        raise GrafanaError("Organization lookup requires --org-id or --name.")
+    matches = []
+    for item in client.list_organizations():
+        item_id = str(item.get("id") or item.get("orgId") or "").strip()
+        item_name = str(item.get("name") or "").strip()
+        if target_org_id and item_id == target_org_id:
+            matches.append(item)
+            continue
+        if target_name and item_name == target_name:
+            matches.append(item)
+    if not matches:
+        raise GrafanaError(
+            "Organization not found by id or name: %s" % (target_org_id or target_name)
+        )
+    if len(matches) > 1:
+        raise GrafanaError(
+            "Organization identity matched multiple items: %s"
+            % (target_org_id or target_name)
+        )
+    return _normalize_org_record(matches[0])
+
+
+def add_org_with_client(args, client):
+    created_payload = client.create_organization({"name": args.name})
+    org_id = str(created_payload.get("orgId") or created_payload.get("id") or "")
+    created = {
+        "id": org_id,
+        "name": str(args.name or ""),
+        "userCount": "0",
+        "users": [],
+    }
+    if args.json:
+        print(json.dumps(created, indent=2, ensure_ascii=False))
+    else:
+        print("Created org %s -> id=%s" % (created.get("name") or "", org_id))
+    return 0
+
+
+def modify_org_with_client(args, client):
+    org = lookup_organization(
+        client,
+        org_id=getattr(args, "org_id", getattr(args, "target_org_id", None)),
+        name=args.name,
+    )
+    org_id = str(org.get("id") or "")
+    if not org_id:
+        raise GrafanaError("Organization lookup did not return an id.")
+    client.update_organization(org_id, {"name": args.set_name})
+    modified = {
+        "id": org_id,
+        "name": str(args.set_name or ""),
+        "previousName": str(org.get("name") or ""),
+        "userCount": str(org.get("userCount") or "0"),
+        "users": org.get("users") or [],
+    }
+    if args.json:
+        print(json.dumps(modified, indent=2, ensure_ascii=False))
+    else:
+        print(
+            "Modified org %s -> id=%s name=%s"
+            % (
+                org.get("name") or "",
+                org_id,
+                modified.get("name") or "",
+            )
+        )
+    return 0
+
+
+def delete_org_with_client(args, client):
+    validate_destructive_confirmed(args, "Org delete requires --yes.")
+    org = lookup_organization(
+        client,
+        org_id=getattr(args, "org_id", getattr(args, "target_org_id", None)),
+        name=args.name,
+    )
+    org_id = str(org.get("id") or "")
+    if not org_id:
+        raise GrafanaError("Organization lookup did not return an id.")
+    delete_payload = client.delete_organization(org_id)
+    result = {
+        "id": org_id,
+        "name": str(org.get("name") or ""),
+        "message": str(delete_payload.get("message") or ""),
+    }
+    if args.json:
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+    else:
+        print("Deleted org %s -> id=%s" % (result["name"], result["id"]))
     return 0
 
 
@@ -2426,6 +2925,24 @@ def delete_team_with_client(args, client):
 
 
 def dispatch_access_command(args, client, auth_mode):
+    if args.resource == "org" and args.command == "list":
+        validate_org_auth(auth_mode)
+        return list_orgs_with_client(args, client)
+    if args.resource == "org" and args.command == "add":
+        validate_org_auth(auth_mode)
+        return add_org_with_client(args, client)
+    if args.resource == "org" and args.command == "modify":
+        validate_org_auth(auth_mode)
+        return modify_org_with_client(args, client)
+    if args.resource == "org" and args.command == "delete":
+        validate_org_auth(auth_mode)
+        return delete_org_with_client(args, client)
+    if args.resource == "org" and args.command == "export":
+        validate_org_auth(auth_mode)
+        return export_orgs_with_client(args, client)
+    if args.resource == "org" and args.command == "import":
+        validate_org_auth(auth_mode)
+        return import_orgs_with_client(args, client)
     if args.resource == "user" and args.command == "list":
         validate_user_list_auth(args, auth_mode)
         return list_users_with_client(args, client)
