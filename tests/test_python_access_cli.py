@@ -62,6 +62,7 @@ class FakeAccessClient:
         self.deleted_teams = []
         self.deleted_service_accounts = []
         self.deleted_service_account_tokens = []
+        self.updated_service_accounts = []
         self.created_users = []
         self.user_gets = []
         self.updated_users = []
@@ -164,6 +165,18 @@ class FakeAccessClient:
     def delete_service_account(self, service_account_id):
         self.deleted_service_accounts.append(str(service_account_id))
         return {"message": "Service account deleted"}
+
+    def update_service_account(self, service_account_id, payload):
+        self.updated_service_accounts.append((str(service_account_id), dict(payload)))
+        return {
+            "id": service_account_id,
+            "name": payload.get("name", ""),
+            "login": "sa-updated",
+            "role": payload.get("role", "Viewer"),
+            "isDisabled": payload.get("isDisabled", False),
+            "tokens": 0,
+            "orgId": 1,
+        }
 
     def list_service_account_tokens(self, service_account_id):
         self.service_account_token_lookups.append(str(service_account_id))
@@ -882,6 +895,60 @@ class AccessCliTests(unittest.TestCase):
 
         self.assertTrue(args.prompt_token)
         self.assertIsNone(args.api_token)
+
+    def test_parse_args_supports_service_account_export(self):
+        args = access_utils.parse_args(
+            [
+                "service-account",
+                "export",
+                "--export-dir",
+                "tmp-service-accounts",
+                "--overwrite",
+                "--dry-run",
+            ]
+        )
+
+        self.assertEqual(args.resource, "service-account")
+        self.assertEqual(args.command, "export")
+        self.assertEqual(args.export_dir, "tmp-service-accounts")
+        self.assertTrue(args.overwrite)
+        self.assertTrue(args.dry_run)
+
+    def test_parse_args_supports_service_account_import_and_diff(self):
+        import_args = access_utils.parse_args(
+            [
+                "service-account",
+                "import",
+                "--import-dir",
+                "tmp-service-accounts",
+                "--replace-existing",
+                "--dry-run",
+                "--output-format",
+                "table",
+                "--yes",
+            ]
+        )
+
+        self.assertEqual(import_args.resource, "service-account")
+        self.assertEqual(import_args.command, "import")
+        self.assertEqual(import_args.import_dir, "tmp-service-accounts")
+        self.assertTrue(import_args.replace_existing)
+        self.assertTrue(import_args.dry_run)
+        self.assertTrue(import_args.table)
+        self.assertTrue(import_args.yes)
+
+        diff_args = access_utils.parse_args(
+            [
+                "service-account",
+                "diff",
+                "--diff-dir",
+                "/tmp/service-accounts",
+            ]
+        )
+
+        self.assertEqual(diff_args.resource, "service-account")
+        self.assertEqual(diff_args.command, "diff")
+        self.assertEqual(diff_args.diff_dir, "/tmp/service-accounts")
 
     def test_parse_args_supports_service_account_token_add(self):
         args = access_utils.parse_args(
@@ -1945,6 +2012,130 @@ class AccessCliTests(unittest.TestCase):
         self.assertIn('"role": "None"', output.getvalue())
         self.assertIn('"disabled": "true"', output.getvalue())
 
+    def test_export_service_accounts_with_client_writes_bundle(self):
+        client = FakeAccessClient(
+            service_accounts=[
+                {
+                    "id": 7,
+                    "name": "robot",
+                    "login": "sa-robot",
+                    "role": "Editor",
+                    "isDisabled": False,
+                    "tokens": 1,
+                    "orgId": 1,
+                }
+            ]
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            args = argparse.Namespace(
+                export_dir=temp_dir,
+                url="http://127.0.0.1:3000",
+                dry_run=False,
+                overwrite=True,
+            )
+            output = io.StringIO()
+            with redirect_stdout(output):
+                result = access_utils.export_service_accounts_with_client(args, client)
+
+            self.assertEqual(result, 0)
+            bundle = json.loads((Path(temp_dir) / "service-accounts.json").read_text(encoding="utf-8"))
+            self.assertEqual(bundle["kind"], "grafana-utils-access-service-account-export-index")
+            self.assertEqual(bundle["records"][0]["name"], "robot")
+            self.assertIn("Exported 1 service-account(s)", output.getvalue())
+
+    def test_import_service_accounts_with_client_updates_existing(self):
+        client = FakeAccessClient(
+            service_accounts=[
+                {
+                    "id": 7,
+                    "name": "robot",
+                    "login": "sa-robot",
+                    "role": "Viewer",
+                    "isDisabled": False,
+                    "tokens": 0,
+                    "orgId": 1,
+                }
+            ]
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            diff_dir = Path(temp_dir)
+            (diff_dir / "service-accounts.json").write_text(
+                json.dumps(
+                    {
+                        "kind": "grafana-utils-access-service-account-export-index",
+                        "version": 1,
+                        "records": [
+                            {
+                                "name": "robot",
+                                "role": "Editor",
+                                "disabled": True,
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            args = argparse.Namespace(
+                import_dir=str(diff_dir),
+                replace_existing=True,
+                dry_run=False,
+                table=False,
+                json=False,
+                yes=False,
+            )
+            output = io.StringIO()
+            with redirect_stdout(output):
+                result = access_utils.import_service_accounts_with_client(args, client)
+
+            self.assertEqual(result, 0)
+            self.assertEqual(
+                client.updated_service_accounts,
+                [("7", {"name": "robot", "role": "Editor", "isDisabled": True})],
+            )
+            self.assertIn("Updated service-account robot", output.getvalue())
+
+    def test_diff_service_accounts_with_client_returns_expected_difference_count(self):
+        client = FakeAccessClient(
+            service_accounts=[
+                {
+                    "id": 7,
+                    "name": "robot",
+                    "login": "sa-robot",
+                    "role": "Viewer",
+                    "isDisabled": False,
+                    "tokens": 0,
+                    "orgId": 1,
+                },
+                {
+                    "id": 8,
+                    "name": "extra",
+                    "login": "sa-extra",
+                    "role": "Viewer",
+                    "isDisabled": False,
+                    "tokens": 0,
+                    "orgId": 1,
+                },
+            ]
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            diff_dir = Path(temp_dir)
+            (diff_dir / "service-accounts.json").write_text(
+                json.dumps(
+                    [
+                        {"name": "robot", "role": "Editor", "disabled": False},
+                        {"name": "missing", "role": "Viewer", "disabled": False},
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            args = argparse.Namespace(diff_dir=str(diff_dir))
+            output = io.StringIO()
+            with redirect_stdout(output):
+                result = access_utils.diff_service_accounts_with_client(args, client)
+
+            self.assertEqual(result, 3)
+            self.assertIn("Diff checked", output.getvalue())
+
     def test_lookup_service_account_id_by_name_finds_exact_match(self):
         client = FakeAccessClient(
             service_accounts=[
@@ -2096,6 +2287,35 @@ class AccessCliTests(unittest.TestCase):
             result = access_utils.dispatch_access_command(args, client, "basic")
         self.assertEqual(result, 44)
         diff_teams.assert_called_once_with(args, client)
+
+    def test_dispatch_access_command_routes_service_account_export_import_diff(self):
+        client = FakeAccessClient()
+        args = argparse.Namespace(resource="service-account", command="export", export_dir="tmp")
+        with mock.patch("grafana_utils.access.workflows.export_service_accounts_with_client", return_value=33) as export_service_accounts:
+            result = access_utils.dispatch_access_command(args, client, "basic")
+        self.assertEqual(result, 33)
+        export_service_accounts.assert_called_once_with(args, client)
+
+        args = argparse.Namespace(
+            resource="service-account",
+            command="import",
+            import_dir="tmp",
+            replace_existing=True,
+            dry_run=True,
+            table=False,
+            json=False,
+            yes=False,
+        )
+        with mock.patch("grafana_utils.access.workflows.import_service_accounts_with_client", return_value=22) as import_service_accounts:
+            result = access_utils.dispatch_access_command(args, client, "basic")
+        self.assertEqual(result, 22)
+        import_service_accounts.assert_called_once_with(args, client)
+
+        args = argparse.Namespace(resource="service-account", command="diff", diff_dir="tmp")
+        with mock.patch("grafana_utils.access.workflows.diff_service_accounts_with_client", return_value=11) as diff_service_accounts:
+            result = access_utils.dispatch_access_command(args, client, "basic")
+        self.assertEqual(result, 11)
+        diff_service_accounts.assert_called_once_with(args, client)
 
     def test_main_returns_one_on_auth_error(self):
         stderr = io.StringIO()

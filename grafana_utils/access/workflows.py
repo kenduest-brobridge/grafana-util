@@ -11,8 +11,10 @@ from .common import (
 from .parser import (
     ACCESS_EXPORT_KIND_TEAMS,
     ACCESS_EXPORT_KIND_USERS,
+    ACCESS_EXPORT_KIND_SERVICE_ACCOUNTS,
     ACCESS_EXPORT_METADATA_FILENAME,
     ACCESS_EXPORT_VERSION,
+    ACCESS_SERVICE_ACCOUNT_EXPORT_FILENAME,
     ACCESS_TEAM_EXPORT_FILENAME,
     ACCESS_USER_EXPORT_FILENAME,
 )
@@ -497,6 +499,155 @@ def diff_teams_with_client(args, client):
     return differences
 
 
+def _iter_service_accounts(client, page_size=DEFAULT_PAGE_SIZE):
+    page = 1
+    records = []
+    while True:
+        batch = client.list_service_accounts(
+            query=None,
+            page=page,
+            per_page=page_size,
+        )
+        if not batch:
+            break
+        records.extend(batch)
+        if len(batch) < page_size:
+            break
+        page += 1
+    return records
+
+
+def _normalize_service_account_record(record):
+    return {
+        "id": str(record.get("id") or ""),
+        "name": str(record.get("name") or ""),
+        "login": str(record.get("login") or ""),
+        "role": normalize_org_role(record.get("role") or ""),
+        "disabled": normalize_bool(
+            record.get("disabled")
+            if record.get("disabled") is not None
+            else record.get("isDisabled")
+        ),
+        "tokens": str(record.get("tokens") or 0),
+        "orgId": str(record.get("orgId") or ""),
+    }
+
+
+def _normalize_service_account_for_diff(record):
+    return {
+        "name": str(record.get("name") or ""),
+        "role": normalize_org_role(record.get("role") or ""),
+        "disabled": normalize_bool(
+            record.get("disabled")
+            if record.get("disabled") is not None
+            else record.get("isDisabled")
+        ),
+    }
+
+
+def _build_service_account_diff_map(records, source):
+    indexed = {}
+    for record in records:
+        service_account_name = str(record.get("name") or "").strip()
+        if not service_account_name:
+            raise GrafanaError(
+                "Service-account diff record in %s does not include name." % source
+            )
+        key = _normalize_access_import_identity(service_account_name)
+        if key in indexed:
+            raise GrafanaError(
+                "Duplicate service-account name in %s: %s"
+                % (source, service_account_name)
+            )
+        indexed[key] = {
+            "identity": service_account_name,
+            "payload": _normalize_service_account_for_diff(record),
+        }
+    return indexed
+
+
+def _lookup_service_account_by_name(client, service_account_name):
+    candidates = client.list_service_accounts(
+        query=service_account_name,
+        page=1,
+        per_page=DEFAULT_PAGE_SIZE,
+    )
+    exact_matches = []
+    for item in candidates:
+        if str(item.get("name") or "") == service_account_name:
+            exact_matches.append(item)
+    if not exact_matches:
+        raise GrafanaError(
+            "Service account not found by name: %s" % service_account_name
+        )
+    if len(exact_matches) > 1:
+        raise GrafanaError(
+            "Multiple service accounts matched name %s; refine the lookup."
+            % service_account_name
+        )
+    return exact_matches[0]
+
+
+def diff_service_accounts_with_client(args, client):
+    bundle = _load_access_import_bundle(
+        args.diff_dir,
+        ACCESS_SERVICE_ACCOUNT_EXPORT_FILENAME,
+        ACCESS_EXPORT_KIND_SERVICE_ACCOUNTS,
+    )
+    local_records = []
+    for item in bundle.get("records") or []:
+        if not isinstance(item, dict):
+            raise GrafanaError(
+                "Access import entry in %s must be an object." % bundle["bundle_path"]
+            )
+        local_records.append(_normalize_service_account_record(item))
+    local_map = _build_service_account_diff_map(local_records, bundle["bundle_path"])
+    live_records = [
+        _normalize_service_account_record(item)
+        for item in _iter_service_accounts(client)
+    ]
+    live_map = _build_service_account_diff_map(
+        live_records,
+        "Grafana live service accounts",
+    )
+
+    differences = 0
+    checked = 0
+    for key in sorted(local_map.keys()):
+        checked += 1
+        local_identity = local_map[key]["identity"]
+        local_payload = local_map[key]["payload"]
+        if key not in live_map:
+            print("Diff missing-live service-account %s" % local_identity)
+            differences += 1
+            continue
+        changed = _record_diff_fields(local_payload, live_map[key]["payload"])
+        if changed:
+            differences += 1
+            print(
+                "Diff different service-account %s fields=%s"
+                % (local_identity, ",".join(changed))
+            )
+        else:
+            print("Diff same service-account %s" % local_identity)
+
+    for key in sorted(live_map.keys()):
+        if key in local_map:
+            continue
+        checked += 1
+        differences += 1
+        print("Diff extra-live service-account %s" % live_map[key]["identity"])
+
+    if differences:
+        print(
+            "Diff checked %s service-account(s); %s difference(s) found."
+            % (checked, differences)
+        )
+    else:
+        print("No service-account differences across %s service-account(s)." % checked)
+    return differences
+
+
 
 def _load_json_document(path):
     if not path.exists():
@@ -550,6 +701,60 @@ def _normalize_access_identity_list(values):
         seen.add(lowered)
         normalized.append(text)
     return normalized
+
+
+def _build_access_import_preview_row(index, identity, action, detail):
+    return {
+        "index": str(index),
+        "identity": str(identity or ""),
+        "action": str(action or ""),
+        "detail": str(detail or ""),
+    }
+
+
+def _render_access_import_preview_table(rows):
+    columns = [
+        ("INDEX", "index"),
+        ("IDENTITY", "identity"),
+        ("ACTION", "action"),
+        ("DETAIL", "detail"),
+    ]
+    widths = []
+    for header, key in columns:
+        widths.append(
+            max(
+                len(header),
+                max((len(str(row.get(key) or "")) for row in rows), default=0),
+            )
+        )
+    header = "  ".join(
+        header.ljust(widths[index]) for index, (header, _key) in enumerate(columns)
+    )
+    separator = "  ".join("-" * width for width in widths)
+    lines = [header, separator]
+    for row in rows:
+        lines.append(
+            "  ".join(
+                str(row.get(key) or "").ljust(widths[index])
+                for index, (_header, key) in enumerate(columns)
+            )
+        )
+    return lines
+
+
+def _validate_access_import_preview_output(args, resource_label):
+    if (bool(getattr(args, "table", False)) or bool(getattr(args, "json", False))) and not bool(
+        getattr(args, "dry_run", False)
+    ):
+        raise GrafanaError(
+            "--table/--json for %s import are only supported with --dry-run."
+            % resource_label
+        )
+    if bool(getattr(args, "table", False)) and bool(getattr(args, "json", False)):
+        raise GrafanaError(
+            "--table and --json cannot be used together for %s import."
+            % resource_label
+        )
 
 
 def _load_access_import_bundle(import_dir, expected_filename, expected_kind):
@@ -797,6 +1002,87 @@ def _build_team_import_records(import_dir):
     )
 
 
+def _build_service_account_import_records(import_dir):
+    return _load_access_import_bundle(
+        Path(import_dir),
+        ACCESS_SERVICE_ACCOUNT_EXPORT_FILENAME,
+        ACCESS_EXPORT_KIND_SERVICE_ACCOUNTS,
+    )
+
+
+def _build_service_account_import_row(index, identity, action, detail):
+    return {
+        "index": str(index),
+        "identity": str(identity or ""),
+        "action": str(action or ""),
+        "detail": str(detail or ""),
+    }
+
+
+def _render_service_account_import_table(rows):
+    headers = ["INDEX", "IDENTITY", "ACTION", "DETAIL"]
+    widths = [len(header) for header in headers]
+    values = []
+    for row in rows:
+        current = [
+            str(row.get("index") or ""),
+            str(row.get("identity") or ""),
+            str(row.get("action") or ""),
+            str(row.get("detail") or ""),
+        ]
+        values.append(current)
+        for idx, value in enumerate(current):
+            widths[idx] = max(widths[idx], len(value))
+
+    def _format(items):
+        return "  ".join(item.ljust(widths[idx]) for idx, item in enumerate(items))
+
+    lines = [_format(headers), _format(["-" * width for width in widths])]
+    for row in values:
+        lines.append(_format(row))
+    return lines
+
+
+def _emit_service_account_import_dry_run_output(args, rows, summary):
+    if args.json:
+        print(
+            json.dumps(
+                {
+                    "rows": rows,
+                    "summary": summary,
+                },
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
+        return
+    if args.table:
+        for line in _render_service_account_import_table(rows):
+            print(line)
+        print("")
+        print(
+            "Import summary: processed=%s created=%s updated=%s skipped=%s source=%s"
+            % (
+                summary["processed"],
+                summary["created"],
+                summary["updated"],
+                summary["skipped"],
+                summary["source"],
+            )
+        )
+
+
+def validate_service_account_import_dry_run_output(args):
+    if (args.table or args.json) and not args.dry_run:
+        raise GrafanaError(
+            "--table/--json for service-account import are only supported with --dry-run."
+        )
+    if args.table and args.json:
+        raise GrafanaError(
+            "--table and --json cannot be used together for service-account import."
+        )
+
+
 def export_users_with_client(args, client):
     export_dir = Path(args.export_dir)
     records = _build_user_export_records(client, args)
@@ -1012,6 +1298,192 @@ def import_users_with_client(args, client):
     print(
         "Import summary: processed=%s created=%s updated=%s skipped=%s source=%s"
         % (processed, len(created), len(updated), len(skipped), args.import_dir)
+    )
+    return 0
+
+
+def export_service_accounts_with_client(args, client):
+    export_dir = Path(args.export_dir)
+    records = [
+        _normalize_service_account_record(item)
+        for item in _iter_service_accounts(client)
+    ]
+    payload_path = export_dir / ACCESS_SERVICE_ACCOUNT_EXPORT_FILENAME
+    metadata_path = export_dir / ACCESS_EXPORT_METADATA_FILENAME
+    data = {
+        "kind": ACCESS_EXPORT_KIND_SERVICE_ACCOUNTS,
+        "version": ACCESS_EXPORT_VERSION,
+        "records": records,
+    }
+    metadata = _build_access_export_metadata(
+        source_url=args.url,
+        kind=ACCESS_EXPORT_KIND_SERVICE_ACCOUNTS,
+        source_count=len(records),
+        source_dir=str(export_dir),
+    )
+    _assert_not_overwriting(
+        export_dir,
+        [ACCESS_SERVICE_ACCOUNT_EXPORT_FILENAME, ACCESS_EXPORT_METADATA_FILENAME],
+        dry_run=args.dry_run,
+        overwrite=bool(getattr(args, "overwrite", False)),
+    )
+    if not args.dry_run:
+        _write_json_document(payload_path, data)
+        _write_json_document(metadata_path, metadata)
+    action = "Would export" if args.dry_run else "Exported"
+    print(
+        "%s %s service-account(s) from %s -> %s and %s"
+        % (action, len(records), args.url, payload_path, metadata_path)
+    )
+    return 0
+
+
+def import_service_accounts_with_client(args, client):
+    validate_service_account_import_dry_run_output(args)
+    bundle = _build_service_account_import_records(args.import_dir)
+    raw_records = bundle.get("records") or []
+    records = []
+    for item in raw_records:
+        if not isinstance(item, dict):
+            raise GrafanaError(
+                "Access import entry in %s must be an object." % bundle["bundle_path"]
+            )
+        records.append(_normalize_service_account_record(item))
+
+    created = 0
+    updated = 0
+    skipped = 0
+    processed = 0
+    dry_run_rows = []
+    dry_run_structured = bool(args.dry_run and (args.table or args.json))
+
+    for index, record in enumerate(records, 1):
+        processed += 1
+        service_account_name = str(record.get("name") or "").strip()
+        if not service_account_name:
+            raise GrafanaError(
+                "Access service-account import record %s in %s lacks name."
+                % (index, bundle["bundle_path"])
+            )
+        try:
+            existing = _lookup_service_account_by_name(client, service_account_name)
+        except GrafanaError:
+            existing = None
+
+        if existing is None:
+            if not args.replace_existing:
+                skipped += 1
+                detail = "missing and --replace-existing was not set."
+                if dry_run_structured:
+                    dry_run_rows.append(
+                        _build_service_account_import_row(index, service_account_name, "skip", detail)
+                    )
+                else:
+                    print(
+                        "Skipped service-account %s (%s): %s"
+                        % (service_account_name, index, detail)
+                    )
+                continue
+            if args.dry_run:
+                created += 1
+                if dry_run_structured:
+                    dry_run_rows.append(
+                        _build_service_account_import_row(
+                            index,
+                            service_account_name,
+                            "create",
+                            "would create service account",
+                        )
+                    )
+                else:
+                    print("Would create service-account %s" % service_account_name)
+                continue
+            client.create_service_account(
+                {
+                    "name": service_account_name,
+                    "role": service_account_role_to_api(
+                        record.get("role") or "Viewer"
+                    ),
+                    "isDisabled": bool(normalize_bool(record.get("disabled"))),
+                }
+            )
+            created += 1
+            print("Created service-account %s" % service_account_name)
+            continue
+
+        if not args.replace_existing:
+            skipped += 1
+            detail = "existing and --replace-existing was not set."
+            if dry_run_structured:
+                dry_run_rows.append(
+                    _build_service_account_import_row(index, service_account_name, "skip", detail)
+                )
+            else:
+                print("Skipped existing service-account %s (%s)" % (service_account_name, index))
+            continue
+
+        desired_role = normalize_org_role(record.get("role") or "")
+        existing_role = normalize_org_role(existing.get("role") or "")
+        desired_disabled = normalize_bool(record.get("disabled"))
+        existing_disabled = normalize_bool(
+            existing.get("disabled")
+            if existing.get("disabled") is not None
+            else existing.get("isDisabled")
+        )
+        update_payload = {"name": service_account_name}
+        changed_fields = []
+        if desired_role and desired_role != existing_role:
+            update_payload["role"] = service_account_role_to_api(desired_role)
+            changed_fields.append("role")
+        if desired_disabled is not None and desired_disabled != existing_disabled:
+            update_payload["isDisabled"] = desired_disabled
+            changed_fields.append("disabled")
+
+        if not changed_fields:
+            skipped += 1
+            detail = "already matched live state."
+            if dry_run_structured:
+                dry_run_rows.append(
+                    _build_service_account_import_row(index, service_account_name, "skip", detail)
+                )
+            else:
+                print("Skipped service-account %s (%s): %s" % (service_account_name, index, detail))
+            continue
+
+        if args.dry_run:
+            updated += 1
+            detail = "would update fields=%s" % ",".join(changed_fields)
+            if dry_run_structured:
+                dry_run_rows.append(
+                    _build_service_account_import_row(index, service_account_name, "update", detail)
+                )
+            else:
+                print("Would update service-account %s %s" % (service_account_name, detail))
+            continue
+
+        service_account_id = str(existing.get("id") or "")
+        if not service_account_id:
+            raise GrafanaError(
+                "Resolved service-account did not include an id: %s" % service_account_name
+            )
+        client.update_service_account(service_account_id, update_payload)
+        updated += 1
+        print("Updated service-account %s" % service_account_name)
+
+    summary = {
+        "processed": processed,
+        "created": created,
+        "updated": updated,
+        "skipped": skipped,
+        "source": args.import_dir,
+    }
+    if dry_run_structured:
+        _emit_service_account_import_dry_run_output(args, dry_run_rows, summary)
+        if args.json or args.table:
+            return 0
+    print(
+        "Import summary: processed=%s created=%s updated=%s skipped=%s source=%s"
+        % (processed, created, updated, skipped, args.import_dir)
     )
     return 0
 
@@ -1987,6 +2459,12 @@ def dispatch_access_command(args, client, auth_mode):
         return list_service_accounts_with_client(args, client)
     if args.resource == "service-account" and args.command == "add":
         return add_service_account_with_client(args, client)
+    if args.resource == "service-account" and args.command == "export":
+        return export_service_accounts_with_client(args, client)
+    if args.resource == "service-account" and args.command == "import":
+        return import_service_accounts_with_client(args, client)
+    if args.resource == "service-account" and args.command == "diff":
+        return diff_service_accounts_with_client(args, client)
     if args.resource == "service-account" and args.command == "delete":
         validate_service_account_delete_auth(auth_mode)
         return delete_service_account_with_client(args, client)

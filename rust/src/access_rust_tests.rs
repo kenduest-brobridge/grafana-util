@@ -4,12 +4,13 @@ use super::{
     add_service_account_token_with_request, add_service_account_with_request,
     add_team_with_request, add_user_with_request, delete_service_account_token_with_request,
     delete_service_account_with_request, delete_team_with_request, delete_user_with_request,
-    diff_teams_with_request, diff_users_with_request, list_service_accounts_command_with_request,
-    list_teams_command_with_request,
+    diff_service_accounts_with_request, diff_teams_with_request, diff_users_with_request,
+    export_service_accounts_with_request, import_service_accounts_with_request,
+    list_service_accounts_command_with_request, list_teams_command_with_request,
     list_users_with_request, modify_team_with_request, modify_user_with_request, parse_cli_from,
     import_teams_with_request, run_access_cli_with_request, AccessCommand, CommonCliArgs, Scope,
-    DryRunOutputFormat, ServiceAccountAddArgs,
-    ServiceAccountCommand, ServiceAccountDeleteArgs, ServiceAccountListArgs,
+    DryRunOutputFormat, ServiceAccountAddArgs, ServiceAccountDiffArgs, ServiceAccountExportArgs,
+    ServiceAccountImportArgs, ServiceAccountCommand, ServiceAccountDeleteArgs, ServiceAccountListArgs,
     ServiceAccountTokenAddArgs, ServiceAccountTokenCommand, ServiceAccountTokenDeleteArgs,
     TeamAddArgs, TeamCommand, TeamDeleteArgs, TeamImportArgs, TeamListArgs,
     TeamDiffArgs, TeamModifyArgs, UserAddArgs, UserCommand, UserDeleteArgs, UserDiffArgs,
@@ -208,6 +209,77 @@ fn parse_cli_supports_service_account_token_add() {
             assert_eq!(token_args.token_name, "automation");
         }
         _ => panic!("expected service-account token add"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_service_account_export_import_and_diff() {
+    let export_args = parse_cli_from([
+        "grafana-access-utils",
+        "service-account",
+        "export",
+        "--export-dir",
+        "/tmp/access-service-accounts",
+        "--overwrite",
+        "--dry-run",
+    ]);
+    match export_args.command {
+        AccessCommand::ServiceAccount {
+            command: ServiceAccountCommand::Export(args),
+        } => {
+            assert_eq!(
+                args.export_dir.to_string_lossy().as_ref(),
+                "/tmp/access-service-accounts"
+            );
+            assert!(args.overwrite);
+            assert!(args.dry_run);
+        }
+        _ => panic!("expected service-account export"),
+    }
+
+    let import_args = parse_cli_from([
+        "grafana-access-utils",
+        "service-account",
+        "import",
+        "--import-dir",
+        "/tmp/access-service-accounts",
+        "--replace-existing",
+        "--dry-run",
+        "--output-format",
+        "table",
+    ]);
+    match import_args.command {
+        AccessCommand::ServiceAccount {
+            command: ServiceAccountCommand::Import(args),
+        } => {
+            assert_eq!(
+                args.import_dir.to_string_lossy().as_ref(),
+                "/tmp/access-service-accounts"
+            );
+            assert!(args.replace_existing);
+            assert!(args.dry_run);
+            assert!(args.table);
+        }
+        _ => panic!("expected service-account import"),
+    }
+
+    let diff_args = parse_cli_from([
+        "grafana-access-utils",
+        "service-account",
+        "diff",
+        "--diff-dir",
+        "/tmp/access-service-accounts",
+    ]);
+    match diff_args.command {
+        AccessCommand::ServiceAccount {
+            command: ServiceAccountCommand::Diff(args),
+        } => {
+            assert_eq!(
+                args.diff_dir.to_string_lossy().as_ref(),
+                "/tmp/access-service-accounts"
+            );
+        }
+        _ => panic!("expected service-account diff"),
     }
 }
 
@@ -1316,6 +1388,109 @@ fn service_account_add_with_request_creates_account() {
 
     assert!(result.is_ok());
     assert_eq!(calls[0].1, "/api/serviceaccounts");
+}
+
+#[test]
+fn service_account_export_with_request_writes_bundle() {
+    let temp_dir = tempdir().unwrap();
+    let args = ServiceAccountExportArgs {
+        common: make_token_common(),
+        export_dir: temp_dir.path().to_path_buf(),
+        overwrite: true,
+        dry_run: false,
+    };
+    let result = export_service_accounts_with_request(
+        |_method, path, _params, _payload| match path {
+            "/api/serviceaccounts/search" => Ok(Some(json!({
+                "serviceAccounts": [
+                    {"id": 4, "name": "svc", "login": "sa-svc", "role": "Viewer", "isDisabled": false, "tokens": 1, "orgId": 1}
+                ]
+            }))),
+            _ => panic!("unexpected path {path}"),
+        },
+        &args,
+    );
+    assert!(result.is_ok());
+    let bundle = fs::read_to_string(temp_dir.path().join("service-accounts.json")).unwrap();
+    assert!(bundle.contains("\"grafana-utils-access-service-account-export-index\""));
+}
+
+#[test]
+fn service_account_import_with_request_updates_existing() {
+    let temp_dir = tempdir().unwrap();
+    fs::write(
+        temp_dir.path().join("service-accounts.json"),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-access-service-account-export-index",
+            "version": 1,
+            "records": [
+                {"name": "svc", "role": "Editor", "disabled": true}
+            ]
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let args = ServiceAccountImportArgs {
+        common: make_token_common(),
+        import_dir: temp_dir.path().to_path_buf(),
+        replace_existing: true,
+        dry_run: false,
+        table: false,
+        json: false,
+        output_format: DryRunOutputFormat::Text,
+        yes: false,
+    };
+    let mut calls = Vec::new();
+    let result = import_service_accounts_with_request(
+        |method, path, params, payload| {
+            calls.push((method.to_string(), path.to_string(), params.to_vec(), payload.cloned()));
+            match path {
+                "/api/serviceaccounts/search" => Ok(Some(json!({
+                    "serviceAccounts": [
+                        {"id": 4, "name": "svc", "login": "sa-svc", "role": "Viewer", "isDisabled": false, "tokens": 0, "orgId": 1}
+                    ]
+                }))),
+                "/api/serviceaccounts/4" if method == Method::PUT => Ok(Some(json!({
+                    "id": 4, "name": "svc", "login": "sa-svc", "role": "Editor", "isDisabled": true, "tokens": 0, "orgId": 1
+                }))),
+                _ => panic!("unexpected path {path}"),
+            }
+        },
+        &args,
+    );
+    assert!(result.is_ok());
+    assert!(calls.iter().any(|(method, path, _, _)| method == "PUT" && path == "/api/serviceaccounts/4"));
+}
+
+#[test]
+fn service_account_diff_with_request_reports_differences() {
+    let temp_dir = tempdir().unwrap();
+    fs::write(
+        temp_dir.path().join("service-accounts.json"),
+        serde_json::to_string_pretty(&json!([
+            {"name": "svc", "role": "Editor", "disabled": false},
+            {"name": "missing", "role": "Viewer", "disabled": false}
+        ]))
+        .unwrap(),
+    )
+    .unwrap();
+    let args = ServiceAccountDiffArgs {
+        common: make_token_common(),
+        diff_dir: temp_dir.path().to_path_buf(),
+    };
+    let result = diff_service_accounts_with_request(
+        |_method, path, _params, _payload| match path {
+            "/api/serviceaccounts/search" => Ok(Some(json!({
+                "serviceAccounts": [
+                    {"id": 4, "name": "svc", "login": "sa-svc", "role": "Viewer", "isDisabled": false, "tokens": 0, "orgId": 1},
+                    {"id": 5, "name": "extra", "login": "sa-extra", "role": "Viewer", "isDisabled": false, "tokens": 0, "orgId": 1}
+                ]
+            }))),
+            _ => panic!("unexpected path {path}"),
+        },
+        &args,
+    );
+    assert_eq!(result.unwrap(), 3);
 }
 
 #[test]

@@ -5,6 +5,20 @@ Historical note:
 - Older entries describe the repo state and `TODO.md` backlog as they existed on the entry date.
 - `TODO.md` now tracks only the active backlog; completed or superseded TODO items moved to `docs/internal/todo-archive.md`.
 
+## 2026-03-15 - Task: Add Service-Account Snapshot Export Import Diff
+- State: In Progress
+- Scope: `grafana_utils/access/parser.py`, `grafana_utils/access/workflows.py`, `grafana_utils/clients/access_client.py`, `grafana_utils/access_cli.py`, `tests/test_python_access_cli.py`, `rust/src/access.rs`, `rust/src/access_cli_defs.rs`, `rust/src/access_service_account.rs`, `rust/src/access_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: `access service-account` only supported list/add/delete and token lifecycle operations. There was no snapshot bundle for service accounts, no import replay path, and no live-vs-file drift command in either implementation.
+- Current Update: Added CLI surface and request/client plumbing for `access service-account export`, `import`, and `diff`. The new snapshot contract uses `service-accounts.json` plus `export-metadata.json`, keys records by service-account name, and treats `role` plus `disabled` as the mutable reconciliation fields for import and diff.
+- Result: Python and Rust now expose matching service-account snapshot workflows in the access domain, with create/update replay, dry-run import reporting, and drift summary output designed to mirror the existing access snapshot model.
+
+## 2026-03-15 - Task: Add Service-Account Snapshot Export Import And Diff
+- State: Planned
+- Scope: `grafana_utils/access/parser.py`, `grafana_utils/access/workflows.py`, `grafana_utils/access_cli.py`, `grafana_utils/clients/access_client.py`, `tests/test_python_access_cli.py`, `rust/src/access.rs`, `rust/src/access_cli_defs.rs`, `rust/src/access_service_account.rs`, `rust/src/access_rust_tests.rs`, `README.md`, `README.zh-TW.md`, `docs/user-guide.md`, `docs/user-guide-TW.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: `access service-account` currently supports list/add/delete and token add/delete, but does not provide snapshot-style export/import/diff workflows like `access user` and `access team`. The public docs and support tables still describe service accounts as lifecycle-only resources.
+- Current Update: Scoping Python and Rust changes so service-account snapshots follow the same bundle metadata, dry-run import, and drift diff model already used by user/team workflows.
+- Result: Pending implementation.
+
 ## 2026-03-15 - Task: Align Rust Inspect JSON Contract With Python
 - State: Done
 - Scope: `rust/src/dashboard.rs`, `rust/src/dashboard_inspect.rs`, `rust/src/dashboard_inspect_summary.rs`, `rust/src/dashboard_inspect_report.rs`, `rust/src/dashboard_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

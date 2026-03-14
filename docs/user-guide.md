@@ -69,7 +69,7 @@ Default URLs:
 - Dashboard: `dashboard export`, `dashboard list`, `dashboard list-data-sources`, `dashboard import`, `dashboard diff`, `dashboard inspect-export`, `dashboard inspect-live`
 - Alert: `alert export`, `alert import`, `alert diff`, `alert list-rules`, `alert list-contact-points`, `alert list-mute-timings`, `alert list-templates`
 - Datasource: `datasource list`, `datasource export`, `datasource import`, `datasource diff`
-- Access: `access user list`, `access user add`, `access user modify`, `access user delete`, `access user export`, `access user import`, `access user diff`, `access team list`, `access team add`, `access team modify`, `access team delete`, `access team export`, `access team import`, `access team diff`, `access service-account list`, `access service-account add`, `access service-account delete`, `access service-account token add`, `access service-account token delete`
+- Access: `access user list`, `access user add`, `access user modify`, `access user delete`, `access user export`, `access user import`, `access user diff`, `access team list`, `access team add`, `access team modify`, `access team delete`, `access team export`, `access team import`, `access team diff`, `access service-account list`, `access service-account add`, `access service-account export`, `access service-account import`, `access service-account diff`, `access service-account delete`, `access service-account token add`, `access service-account token delete`
 
 ### Command capability summary
 
@@ -82,7 +82,7 @@ Use this table first when you need to confirm whether a resource supports invent
 | Alert rules & alerting resources | ✓ | ✓ | ✓ | ✓ | - | - | - | - | rule trees, contact points, mute timings, templates |
 | Users | ✓ | ✓ | ✓ | ✓ | - | ✓ | ✓ | ✓ | User inventory, migration, and drift comparison |
 | Teams (`group` alias) | ✓ | ✓ | ✓ | ✓ | - | ✓ | ✓ | ✓ | Team inventory, migration, and drift comparison |
-| Service accounts | ✓ | - | - | - | - | ✓ | ✓ | ✓ | Service account lifecycle |
+| Service accounts | ✓ | ✓ | ✓ | ✓ | - | ✓ | ✓ | ✓ | Service account lifecycle, snapshot replay, and drift review |
 | Service account tokens | ✓ | - | - | - | - | ✓ | - | ✓ | token add/delete workflows |
 
 Authentication exclusivity rules:
@@ -1003,7 +1003,73 @@ Example output:
 }
 ```
 
-### 6.15 `access service-account delete`
+### 6.15 `access service-account export`
+
+Purpose: export service-account snapshots for backup, reconciliation, or cross-environment review.
+
+| Option | Purpose | Difference / scenario |
+| --- | --- | --- |
+| `--export-dir` | Directory that receives `service-accounts.json` and `export-metadata.json` | Default `access-service-accounts` |
+| `--overwrite` | Replace existing snapshot files | Repeatable backup jobs |
+| `--dry-run` | Preview output paths without writing files | Check target path first |
+
+Example command:
+```bash
+cargo run --bin grafana-util -- access service-account export --url http://localhost:3000 --token <TOKEN> --export-dir ./access-service-accounts --overwrite
+```
+
+Example output:
+```text
+Exported 3 service-account(s) from http://localhost:3000 -> access-service-accounts/service-accounts.json and access-service-accounts/export-metadata.json
+```
+
+### 6.16 `access service-account import`
+
+Purpose: replay service-account snapshot files into Grafana.
+
+| Option | Purpose | Difference / scenario |
+| --- | --- | --- |
+| `--import-dir` | Directory containing `service-accounts.json` and `export-metadata.json` | Must match export layout |
+| `--replace-existing` | Create missing service accounts and update existing ones | Required for replay |
+| `--dry-run` | Preview create/update/skip decisions without writing | Recommended first pass |
+| `--table`, `--json`, `--output-format text|table|json` | Dry-run output mode | Summary vs machine-readable review |
+
+Example command:
+```bash
+cargo run --bin grafana-util -- access service-account import --url http://localhost:3000 --token <TOKEN> --import-dir ./access-service-accounts --replace-existing --dry-run --output-format table
+```
+
+Example output:
+```text
+INDEX  IDENTITY     ACTION  DETAIL
+1      deploy-bot   update  would update fields=role,disabled
+2      report-bot   create  would create service account
+
+Import summary: processed=2 created=1 updated=1 skipped=0 source=./access-service-accounts
+```
+
+### 6.17 `access service-account diff`
+
+Purpose: compare service-account snapshot files with live Grafana state.
+
+| Option | Purpose | Difference / scenario |
+| --- | --- | --- |
+| `--diff-dir` | Directory containing `service-accounts.json` and `export-metadata.json` | Default `access-service-accounts` |
+
+Example command:
+```bash
+cargo run --bin grafana-util -- access service-account diff --url http://localhost:3000 --token <TOKEN> --diff-dir ./access-service-accounts
+```
+
+Example output:
+```text
+Diff different service-account deploy-bot fields=role
+Diff missing-live service-account report-bot
+Diff extra-live service-account old-bot
+Diff checked 3 service-account(s); 3 difference(s) found.
+```
+
+### 6.18 `access service-account delete`
 
 Purpose: delete a service account.
 
@@ -1027,7 +1093,7 @@ Example output:
 }
 ```
 
-### 6.16 `access service-account token add`
+### 6.19 `access service-account token add`
 
 Purpose: create a service-account token.
 
@@ -1054,7 +1120,7 @@ Example output:
 }
 ```
 
-### 6.17 `access service-account token delete`
+### 6.20 `access service-account token delete`
 
 Purpose: delete a service-account token.
 
@@ -1139,6 +1205,9 @@ cargo run --bin grafana-util -- access user import --url <URL> --token <TOKEN> -
 cargo run --bin grafana-util -- access team import --url <URL> --token <TOKEN> --import-dir ./access-teams --replace-existing --dry-run --output-format table
 cargo run --bin grafana-util -- access user diff --url <URL> --token <TOKEN> --diff-dir ./access-users
 cargo run --bin grafana-util -- access team diff --url <URL> --token <TOKEN> --diff-dir ./access-teams
+cargo run --bin grafana-util -- access service-account export --url <URL> --token <TOKEN> --export-dir ./access-service-accounts [--overwrite]
+cargo run --bin grafana-util -- access service-account import --url <URL> --token <TOKEN> --import-dir ./access-service-accounts --replace-existing [--dry-run] [--output-format text|table|json]
+cargo run --bin grafana-util -- access service-account diff --url <URL> --token <TOKEN> --diff-dir ./access-service-accounts
 cargo run --bin grafana-util -- access service-account list --url <URL> --token <TOKEN> --table
 ```
 
@@ -1157,6 +1226,8 @@ cargo run --bin grafana-util -- access service-account list --url <URL> --token 
 | `access team import` | `text/table/json` | Dry-run table/json/text summary |
 | `access user diff` | text | Summary output |
 | `access team diff` | text | Summary output |
+| `access service-account import` | `text/table/json` | Dry-run table/json/text summary |
+| `access service-account diff` | text | Summary output |
 
 | Command | `--org-id` | `--all-orgs` |
 | --- | --- | --- |

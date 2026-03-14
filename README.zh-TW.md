@@ -41,7 +41,7 @@ Grafana Utilities 的價值就是把這些流程明文化：
 | Alert rules 與 alerting 資源 | ✓ | ✓ | ✓ | ✓ | - | - | - | - | 包含 alert rules、contact points、mute timings、templates |
 | Users | ✓ | ✓ | ✓ | ✓ | - | ✓ | ✓ | ✓ | 支援 access user 的快照匯出/匯入/差異比對，也可搭配 `--with-teams` 帶出 membership 狀態 |
 | Teams (alias: group) | ✓ | ✓ | ✓ | ✓ | - | ✓ | ✓ | ✓ | 支援 team 與成員管理，也支援匯出/匯入與差異比對 |
-| Service accounts | ✓ | - | - | - | - | ✓ | ✓ | ✓ | 支援 service account 生命週期管理 |
+| Service accounts | ✓ | ✓ | ✓ | ✓ | - | ✓ | ✓ | ✓ | 支援 service account 生命週期管理、快照匯出匯入與差異比對 |
 | Service account tokens | ✓ | - | - | - | - | ✓ | - | ✓ | 支援 token 建立、查看與撤銷 |
 
 ### Access command 的支援設計
@@ -50,6 +50,7 @@ Access 工作流現在以同一套操作模型提供：
 
 - `access user export|import|diff` 處理使用者快照，以及可選的 team membership 狀態。
 - `access team export|import|diff` 處理 team 快照，以及成員與 admin 狀態的漂移比對。
+- `access service-account export|import|diff` 處理 automation identity 的快照與可變欄位漂移比對。
 - `team import` 會做 deterministic membership sync；如果會移除既有 membership，必須加上 `--yes`。
 - 匯出/匯入 snapshot 檔案可用於受控 migration、cleanup review，以及可重播的 reconcile 流程。
 

@@ -363,6 +363,23 @@ class GrafanaAccessClient:
             )
         return data
 
+    def update_service_account(
+        self,
+        service_account_id: Any,
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        data = self.request_json(
+            "/api/serviceaccounts/%s" % parse.quote(str(service_account_id), safe=""),
+            method="PUT",
+            payload=payload,
+        )
+        if not isinstance(data, dict):
+            raise GrafanaError(
+                "Unexpected service-account update response for Grafana service account %s."
+                % service_account_id
+            )
+        return data
+
     def list_service_account_tokens(
         self,
         service_account_id: Any,

@@ -37,11 +37,14 @@ mod access_user;
 pub use access_cli_defs::{
     build_auth_context, build_http_client, normalize_access_cli_args, parse_cli_from, root_command,
     AccessAuthContext, AccessCliArgs, AccessCommand, CommonCliArgs, Scope, ServiceAccountAddArgs,
-    ServiceAccountCommand, ServiceAccountListArgs, ServiceAccountTokenAddArgs,
+    ServiceAccountCommand, ServiceAccountDiffArgs, ServiceAccountExportArgs,
+    ServiceAccountImportArgs, ServiceAccountListArgs, ServiceAccountTokenAddArgs,
     ServiceAccountTokenCommand, TeamAddArgs, TeamCommand, TeamDiffArgs, TeamExportArgs,
     TeamImportArgs, TeamListArgs, TeamModifyArgs, UserAddArgs, UserCommand,
     UserDeleteArgs, UserDiffArgs, UserExportArgs, UserImportArgs, UserListArgs, UserModifyArgs,
-    DEFAULT_PAGE_SIZE, DEFAULT_TIMEOUT, DEFAULT_URL,
+    ACCESS_EXPORT_KIND_SERVICE_ACCOUNTS, ACCESS_EXPORT_METADATA_FILENAME,
+    ACCESS_EXPORT_VERSION, ACCESS_SERVICE_ACCOUNT_EXPORT_FILENAME, DEFAULT_PAGE_SIZE,
+    DEFAULT_TIMEOUT, DEFAULT_URL,
 };
 pub use access_pending_delete::{
     GroupCommandStage, ServiceAccountDeleteArgs, ServiceAccountTokenDeleteArgs, TeamDeleteArgs,
@@ -55,7 +58,8 @@ pub(crate) use access_pending_delete::{
 #[cfg(test)]
 pub(crate) use access_service_account::{
     add_service_account_token_with_request, add_service_account_with_request,
-    list_service_accounts_command_with_request,
+    diff_service_accounts_with_request, export_service_accounts_with_request,
+    import_service_accounts_with_request, list_service_accounts_command_with_request,
 };
 #[cfg(test)]
 pub(crate) use access_team::{
@@ -183,6 +187,24 @@ where
                     &args,
                 )?;
             }
+            ServiceAccountCommand::Export(args) => {
+                let _ = access_service_account::export_service_accounts_with_request(
+                    &mut request_json,
+                    &args,
+                )?;
+            }
+            ServiceAccountCommand::Import(args) => {
+                let _ = access_service_account::import_service_accounts_with_request(
+                    &mut request_json,
+                    &args,
+                )?;
+            }
+            ServiceAccountCommand::Diff(args) => {
+                let _ = access_service_account::diff_service_accounts_with_request(
+                    &mut request_json,
+                    &args,
+                )?;
+            }
             ServiceAccountCommand::Delete(args) => {
                 let _ = access_pending_delete::delete_service_account_with_request(
                     &mut request_json,
@@ -281,6 +303,18 @@ pub fn run_access_cli(args: AccessCliArgs) -> Result<()> {
                 run_access_cli_with_client(&client, args)
             }
             ServiceAccountCommand::Add(inner) => {
+                let client = build_http_client(&inner.common)?;
+                run_access_cli_with_client(&client, args)
+            }
+            ServiceAccountCommand::Export(inner) => {
+                let client = build_http_client(&inner.common)?;
+                run_access_cli_with_client(&client, args)
+            }
+            ServiceAccountCommand::Import(inner) => {
+                let client = build_http_client(&inner.common)?;
+                run_access_cli_with_client(&client, args)
+            }
+            ServiceAccountCommand::Diff(inner) => {
                 let client = build_http_client(&inner.common)?;
                 run_access_cli_with_client(&client, args)
             }

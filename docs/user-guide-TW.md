@@ -58,7 +58,7 @@ Rust 入口差異要點：
 - Dashboard：`dashboard export`、`dashboard list`、`dashboard list-data-sources`、`dashboard import`、`dashboard diff`、`dashboard inspect-export`、`dashboard inspect-live`
 - Alert：`alert export`、`alert import`、`alert diff`、`alert list-rules`、`alert list-contact-points`、`alert list-mute-timings`、`alert list-templates`
 - Datasource：`datasource list`、`datasource export`、`datasource import`、`datasource diff`
-- Access：`access user list`、`access user add`、`access user modify`、`access user delete`、`access user export`、`access user import`、`access user diff`、`access team list`、`access team add`、`access team modify`、`access team delete`、`access team export`、`access team import`、`access team diff`、`access service-account list`、`access service-account add`、`access service-account delete`、`access service-account token add`、`access service-account token delete`
+- Access：`access user list`、`access user add`、`access user modify`、`access user delete`、`access user export`、`access user import`、`access user diff`、`access team list`、`access team add`、`access team modify`、`access team delete`、`access team export`、`access team import`、`access team diff`、`access service-account list`、`access service-account add`、`access service-account export`、`access service-account import`、`access service-account diff`、`access service-account delete`、`access service-account token add`、`access service-account token delete`
 
 ### 指令支援總覽
 
@@ -71,7 +71,7 @@ Rust 入口差異要點：
 | Alert rules 與 alerting 資源 | ✓ | ✓ | ✓ | ✓ | - | - | - | - | 覆蓋 rule、contact points、mute timings、templates |
 | 使用者（Users） | ✓ | ✓ | ✓ | ✓ | - | ✓ | ✓ | ✓ | 使用者盤點、匯出匯入與差異比對 |
 | Team（group alias） | ✓ | ✓ | ✓ | ✓ | - | ✓ | ✓ | ✓ | Team 盤點、匯出匯入與差異比對 |
-| Service account | ✓ | - | - | - | - | ✓ | ✓ | ✓ | Service account 生命週期 |
+| Service account | ✓ | ✓ | ✓ | ✓ | - | ✓ | ✓ | ✓ | Service account 生命週期、快照匯出匯入與差異比對 |
 | Service account token | ✓ | - | - | - | - | ✓ | - | ✓ | token 的新增與刪除 |
 
 認證互斥規則（Rust parser 會直接拒絕）:
@@ -949,7 +949,73 @@ cargo run --bin grafana-util -- access service-account add --url http://localhos
 }
 ```
 
-### 6.15 `access service-account delete`
+### 6.15 `access service-account export`
+
+**用途**：匯出 service-account 快照，方便備份、比對與跨環境檢查。
+
+| 參數 | 用途 | 差異 / 情境 |
+| --- | --- | --- |
+| `--export-dir` | 輸出 `service-accounts.json` 與 `export-metadata.json` 的目錄 | 預設 `access-service-accounts` |
+| `--overwrite` | 覆蓋既有快照檔案 | 定期備份重跑 |
+| `--dry-run` | 僅預覽輸出路徑，不實際寫檔 | 先確認目錄 |
+
+示例命令：
+```bash
+cargo run --bin grafana-util -- access service-account export --url http://localhost:3000 --token <TOKEN> --export-dir ./access-service-accounts --overwrite
+```
+
+示例輸出：
+```text
+Exported 3 service-account(s) from http://localhost:3000 -> access-service-accounts/service-accounts.json and access-service-accounts/export-metadata.json
+```
+
+### 6.16 `access service-account import`
+
+**用途**：把 service-account 快照回放到 Grafana。
+
+| 參數 | 用途 | 差異 / 情境 |
+| --- | --- | --- |
+| `--import-dir` | 包含 `service-accounts.json` 與 `export-metadata.json` 的目錄 | 需沿用 export 結構 |
+| `--replace-existing` | 建立缺漏帳號，並更新既有帳號 | 回放時必備 |
+| `--dry-run` | 只預覽 `create/update/skip` 決策，不實際寫入 | 建議先跑 |
+| `--table` / `--json` / `--output-format text|table|json` | dry-run 輸出模式 | 人工審查或機器判讀 |
+
+示例命令：
+```bash
+cargo run --bin grafana-util -- access service-account import --url http://localhost:3000 --token <TOKEN> --import-dir ./access-service-accounts --replace-existing --dry-run --output-format table
+```
+
+示例輸出：
+```text
+INDEX  IDENTITY     ACTION  DETAIL
+1      deploy-bot   update  would update fields=role,disabled
+2      report-bot   create  would create service account
+
+Import summary: processed=2 created=1 updated=1 skipped=0 source=./access-service-accounts
+```
+
+### 6.17 `access service-account diff`
+
+**用途**：比較 service-account 快照與 live Grafana 狀態。
+
+| 參數 | 用途 | 差異 / 情境 |
+| --- | --- | --- |
+| `--diff-dir` | 包含 `service-accounts.json` 與 `export-metadata.json` 的目錄 | 預設 `access-service-accounts` |
+
+示例命令：
+```bash
+cargo run --bin grafana-util -- access service-account diff --url http://localhost:3000 --token <TOKEN> --diff-dir ./access-service-accounts
+```
+
+示例輸出：
+```text
+Diff different service-account deploy-bot fields=role
+Diff missing-live service-account report-bot
+Diff extra-live service-account old-bot
+Diff checked 3 service-account(s); 3 difference(s) found.
+```
+
+### 6.18 `access service-account delete`
 
 **用途**：刪除服務帳號。
 
@@ -973,7 +1039,7 @@ cargo run --bin grafana-util -- access service-account delete --url http://local
 }
 ```
 
-### 6.16 `access service-account token add`
+### 6.19 `access service-account token add`
 
 **用途**：建立服務帳號 token。
 
@@ -1000,7 +1066,7 @@ cargo run --bin grafana-util -- access service-account token add --url http://lo
 }
 ```
 
-### 6.17 `access service-account token delete`
+### 6.20 `access service-account token delete`
 
 **用途**：刪除服務帳號 token。
 
@@ -1109,6 +1175,9 @@ cargo run --bin grafana-util -- access team delete --url <URL> --token <TOKEN> -
 cargo run --bin grafana-util -- access team export --url <URL> --token <TOKEN> --export-dir ./access-teams [--with-members]
 cargo run --bin grafana-util -- access team diff --url <URL> --token <TOKEN> --diff-dir ./access-teams
 cargo run --bin grafana-util -- access team import --url <URL> --token <TOKEN> --import-dir ./access-teams --replace-existing [--dry-run] [--table|--json|--output-format text|table|json] [--yes]
+cargo run --bin grafana-util -- access service-account export --url <URL> --token <TOKEN> --export-dir ./access-service-accounts [--overwrite]
+cargo run --bin grafana-util -- access service-account import --url <URL> --token <TOKEN> --import-dir ./access-service-accounts --replace-existing [--dry-run] [--table|--json|--output-format text|table|json]
+cargo run --bin grafana-util -- access service-account diff --url <URL> --token <TOKEN> --diff-dir ./access-service-accounts
 cargo run --bin grafana-util -- access service-account list --url <URL> --token <TOKEN> [--query <QUERY>] [--table|--csv|--json]
 cargo run --bin grafana-util -- access service-account add --url <URL> --token <TOKEN> --name <NAME> [--role Viewer|Editor|Admin|None] [--disabled true|false]
 cargo run --bin grafana-util -- access service-account delete --url <URL> --token <TOKEN> --name <NAME> --yes
@@ -1135,6 +1204,8 @@ cargo run --bin grafana-util -- access service-account token delete --url <URL> 
 | access team import | text/table/json | 不可（僅 text/table/json） | text 為 dry-run 摘要 |
 | access user diff | text | 僅摘要 |
 | access team diff | text | 僅摘要 |
+| access service-account import | text/table/json | 不可（僅 text/table/json） | text 為 dry-run 摘要 |
+| access service-account diff | text | 僅摘要 |
 | access service-account list | table/csv/json | 不可 | 同上 |
 
 `DRY-RUN` 類（預覽）：

@@ -14,11 +14,15 @@ pub const DEFAULT_TIMEOUT: u64 = 30;
 pub const DEFAULT_PAGE_SIZE: usize = 100;
 pub const DEFAULT_ACCESS_USER_EXPORT_DIR: &str = "access-users";
 pub const DEFAULT_ACCESS_TEAM_EXPORT_DIR: &str = "access-teams";
+pub const DEFAULT_ACCESS_SERVICE_ACCOUNT_EXPORT_DIR: &str = "access-service-accounts";
 pub const ACCESS_EXPORT_KIND_USERS: &str = "grafana-utils-access-user-export-index";
 pub const ACCESS_EXPORT_KIND_TEAMS: &str = "grafana-utils-access-team-export-index";
+pub const ACCESS_EXPORT_KIND_SERVICE_ACCOUNTS: &str =
+    "grafana-utils-access-service-account-export-index";
 pub const ACCESS_EXPORT_VERSION: i64 = 1;
 pub const ACCESS_USER_EXPORT_FILENAME: &str = "users.json";
 pub const ACCESS_TEAM_EXPORT_FILENAME: &str = "teams.json";
+pub const ACCESS_SERVICE_ACCOUNT_EXPORT_FILENAME: &str = "service-accounts.json";
 pub const ACCESS_EXPORT_METADATA_FILENAME: &str = "export-metadata.json";
 
 #[derive(Debug, Clone, Args)]
@@ -589,6 +593,93 @@ pub struct ServiceAccountAddArgs {
 }
 
 #[derive(Debug, Clone, Args)]
+pub struct ServiceAccountExportArgs {
+    #[command(flatten)]
+    pub common: CommonCliArgs,
+    #[arg(
+        long,
+        default_value = DEFAULT_ACCESS_SERVICE_ACCOUNT_EXPORT_DIR,
+        help = "Directory to write service-accounts.json and export-metadata.json."
+    )]
+    pub export_dir: PathBuf,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Overwrite existing export files instead of failing."
+    )]
+    pub overwrite: bool,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Preview export paths without writing files."
+    )]
+    pub dry_run: bool,
+}
+
+#[derive(Debug, Clone, Args)]
+pub struct ServiceAccountImportArgs {
+    #[command(flatten)]
+    pub common: CommonCliArgs,
+    #[arg(
+        long,
+        help = "Import directory that contains service-accounts.json and export-metadata.json."
+    )]
+    pub import_dir: PathBuf,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Update matching existing service accounts instead of failing on duplicates."
+    )]
+    pub replace_existing: bool,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Preview import changes without writing to Grafana."
+    )]
+    pub dry_run: bool,
+    #[arg(
+        long,
+        default_value_t = false,
+        requires = "dry_run",
+        help = "For --dry-run only, render a compact table instead of per-record log lines."
+    )]
+    pub table: bool,
+    #[arg(
+        long,
+        default_value_t = false,
+        requires = "dry_run",
+        help = "For --dry-run only, render one JSON document with action rows and summary counts."
+    )]
+    pub json: bool,
+    #[arg(
+        long,
+        value_enum,
+        default_value_t = DryRunOutputFormat::Text,
+        conflicts_with_all = ["table", "json"],
+        help = "Alternative single-flag output selector for --dry-run output. Use text, table, or json."
+    )]
+    pub output_format: DryRunOutputFormat,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Acknowledge destructive import operations when required."
+    )]
+    pub yes: bool,
+}
+
+#[derive(Debug, Clone, Args)]
+pub struct ServiceAccountDiffArgs {
+    #[command(flatten)]
+    pub common: CommonCliArgs,
+    #[arg(
+        long,
+        default_value = DEFAULT_ACCESS_SERVICE_ACCOUNT_EXPORT_DIR,
+        help = "Diff directory that contains service-accounts.json and export-metadata.json."
+    )]
+    pub diff_dir: PathBuf,
+}
+
+#[derive(Debug, Clone, Args)]
 pub struct ServiceAccountTokenAddArgs {
     #[command(flatten)]
     pub common: CommonCliArgs,
@@ -629,6 +720,9 @@ pub enum ServiceAccountTokenCommand {
 pub enum ServiceAccountCommand {
     List(ServiceAccountListArgs),
     Add(ServiceAccountAddArgs),
+    Export(ServiceAccountExportArgs),
+    Import(ServiceAccountImportArgs),
+    Diff(ServiceAccountDiffArgs),
     Delete(ServiceAccountDeleteArgs),
     Token {
         #[command(subcommand)]
@@ -776,6 +870,13 @@ pub fn normalize_access_cli_args(mut args: AccessCliArgs) -> AccessCliArgs {
                     &mut list_args.csv,
                     &mut list_args.json,
                     &list_args.output_format,
+                );
+            }
+            if let ServiceAccountCommand::Import(import_args) = command {
+                apply_dry_run_output_format(
+                    &mut import_args.table,
+                    &mut import_args.json,
+                    &import_args.output_format,
                 );
             }
         }

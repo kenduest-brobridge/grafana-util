@@ -5,6 +5,14 @@ Historical note:
 - Older entries preserve the reasoning and follow-up state as of the entry date.
 - Active backlog now lives in `TODO.md`, while completed or superseded TODO items moved to `docs/internal/todo-archive.md`.
 
+## 2026-03-15 - Add Service-Account Snapshot Export Import Diff
+- Summary: Extended both access implementations so `access service-account` now supports snapshot export, import replay, and drift diff in addition to list/add/delete and token commands. The new snapshot bundle writes `service-accounts.json` plus `export-metadata.json`, indexes records by service-account name, and only treats `role` and `disabled` as mutable replay/diff fields so instance-bound values such as ids, logins, token counts, and org ids do not create false drift.
+- Tests: Added parser/dispatch/workflow coverage for the new Python and Rust service-account snapshot commands. The new tests exercise bundle export, existing-account update replay, and live diff counting at the command-handler level.
+- Test Run: Not run in this turn.
+- Validation: Static implementation only. No unit or live Grafana validation has been executed yet in this turn.
+- Impact: `grafana_utils/access/parser.py`, `grafana_utils/access/workflows.py`, `grafana_utils/clients/access_client.py`, `grafana_utils/access_cli.py`, `tests/test_python_access_cli.py`, `rust/src/access.rs`, `rust/src/access_cli_defs.rs`, `rust/src/access_service_account.rs`, `rust/src/access_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Moderate. Both implementations now depend on a service-account update request path and on the new snapshot contract; the highest remaining risk is unvalidated API update semantics against a live Grafana instance.
+
 ## 2026-03-15 - Align Rust Inspect JSON Contract With Python
 - Summary: Switched the Rust inspection JSON boundary from direct internal-struct serialization to dedicated Python-shaped summary/report documents. `inspect-export --json` now emits top-level `summary`, `folders`, `datasources`, `datasourceInventory`, `orphanedDatasources`, and `mixedDatasourceDashboards` keys, while Rust report JSON now uses the same `summary.dashboardCount` and `queries[*].query` naming style expected by the Python inspection contract.
 - Tests: Added focused Rust assertions for the new summary/report JSON document shapes, including the orphaned datasource inventory and query payload field names.

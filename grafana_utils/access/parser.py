@@ -18,14 +18,18 @@ DEFAULT_SCOPE = "org"
 DEFAULT_SERVICE_ACCOUNT_ROLE = "Viewer"
 DEFAULT_ACCESS_USER_EXPORT_DIR = "access-users"
 DEFAULT_ACCESS_TEAM_EXPORT_DIR = "access-teams"
+DEFAULT_ACCESS_SERVICE_ACCOUNT_EXPORT_DIR = "access-service-accounts"
 ACCESS_USER_EXPORT_FILENAME = "users.json"
 ACCESS_TEAM_EXPORT_FILENAME = "teams.json"
+ACCESS_SERVICE_ACCOUNT_EXPORT_FILENAME = "service-accounts.json"
 ACCESS_EXPORT_METADATA_FILENAME = "export-metadata.json"
 ACCESS_EXPORT_KIND_USERS = "grafana-utils-access-user-export-index"
 ACCESS_EXPORT_KIND_TEAMS = "grafana-utils-access-team-export-index"
+ACCESS_EXPORT_KIND_SERVICE_ACCOUNTS = "grafana-utils-access-service-account-export-index"
 ACCESS_EXPORT_VERSION = 1
 SCOPE_CHOICES = ("org", "global")
 LIST_OUTPUT_FORMAT_CHOICES = ("text", "table", "csv", "json")
+DRY_RUN_OUTPUT_FORMAT_CHOICES = ("text", "table", "json")
 
 
 def positive_int(value):
@@ -56,11 +60,7 @@ def add_list_output_format_arg(parser):
 
 
 def add_access_export_cli_args(parser, default_export_dir, resource="user"):
-    payload_name = (
-        ACCESS_USER_EXPORT_FILENAME
-        if resource == "user"
-        else ACCESS_TEAM_EXPORT_FILENAME
-    )
+    payload_name = access_export_filename(resource)
     parser.add_argument(
         "--export-dir",
         default=default_export_dir,
@@ -91,9 +91,7 @@ def add_access_import_cli_args(parser, resource, default_scope=DEFAULT_SCOPE):
         help=(
             "Import directory that contains %s for %s and %s."
             % (
-                ACCESS_USER_EXPORT_FILENAME
-                if resource == "user"
-                else ACCESS_TEAM_EXPORT_FILENAME,
+                access_export_filename(resource),
                 resource,
                 ACCESS_EXPORT_METADATA_FILENAME,
             )
@@ -132,9 +130,7 @@ def add_access_diff_cli_args(parser, resource, default_scope=DEFAULT_SCOPE):
         required=True,
         help=(
             "Diff directory that contains %s and %s." % (
-                ACCESS_USER_EXPORT_FILENAME
-                if resource == "user"
-                else ACCESS_TEAM_EXPORT_FILENAME,
+                access_export_filename(resource),
                 ACCESS_EXPORT_METADATA_FILENAME,
             )
         ),
@@ -307,14 +303,22 @@ def build_parser(prog=None):
         "import",
         help="Import Grafana teams and membership from a JSON export.",
     )
-    add_common_cli_args(team_import_parser)
+    add_common_cli_args(
+        team_import_parser,
+        username_dest="auth_username",
+        password_dest="auth_password",
+    )
     add_access_import_cli_args(team_import_parser, resource="team")
 
     team_diff_parser = team_subparsers.add_parser(
         "diff",
         help="Diff Grafana teams against a previously exported teams.json file.",
     )
-    add_common_cli_args(team_diff_parser)
+    add_common_cli_args(
+        team_diff_parser,
+        username_dest="auth_username",
+        password_dest="auth_password",
+    )
     add_access_diff_cli_args(team_diff_parser, resource="team")
 
     team_delete_parser = team_subparsers.add_parser(
@@ -326,7 +330,7 @@ def build_parser(prog=None):
 
     service_account_parser = subparsers.add_parser(
         "service-account",
-        help="List, create, and delete Grafana service accounts.",
+        help="List, create, export, import, diff, and delete Grafana service accounts.",
     )
     service_account_subparsers = service_account_parser.add_subparsers(dest="command")
     service_account_subparsers.required = True
@@ -344,6 +348,53 @@ def build_parser(prog=None):
     )
     add_common_cli_args(service_account_add_parser)
     add_service_account_add_cli_args(service_account_add_parser)
+
+    service_account_export_parser = service_account_subparsers.add_parser(
+        "export",
+        help="Export Grafana service accounts to JSON files.",
+    )
+    add_common_cli_args(service_account_export_parser)
+    add_access_export_cli_args(
+        service_account_export_parser,
+        DEFAULT_ACCESS_SERVICE_ACCOUNT_EXPORT_DIR,
+        resource="service-account",
+    )
+
+    service_account_import_parser = service_account_subparsers.add_parser(
+        "import",
+        help="Import Grafana service accounts from a JSON export.",
+    )
+    add_common_cli_args(service_account_import_parser)
+    add_access_import_cli_args(
+        service_account_import_parser,
+        resource="service-account",
+    )
+    service_account_import_parser.add_argument(
+        "--table",
+        action="store_true",
+        help="Render service-account import dry-run output as a table.",
+    )
+    service_account_import_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Render service-account import dry-run output as JSON.",
+    )
+    service_account_import_parser.add_argument(
+        "--output-format",
+        choices=DRY_RUN_OUTPUT_FORMAT_CHOICES,
+        default=None,
+        help="Alternative single-flag output selector for --dry-run output. Use text, table, or json.",
+    )
+
+    service_account_diff_parser = service_account_subparsers.add_parser(
+        "diff",
+        help="Diff Grafana service accounts against a previously exported snapshot.",
+    )
+    add_common_cli_args(service_account_diff_parser)
+    add_access_diff_cli_args(
+        service_account_diff_parser,
+        resource="service-account",
+    )
 
     service_account_delete_parser = service_account_subparsers.add_parser(
         "delete",
@@ -874,6 +925,16 @@ def add_service_account_token_add_cli_args(parser):
         action="store_true",
         help="Render the created token payload as JSON.",
     )
+
+
+def access_export_filename(resource):
+    if resource == "user":
+        return ACCESS_USER_EXPORT_FILENAME
+    if resource == "team":
+        return ACCESS_TEAM_EXPORT_FILENAME
+    if resource == "service-account":
+        return ACCESS_SERVICE_ACCOUNT_EXPORT_FILENAME
+    raise ValueError("Unsupported access export resource: %s" % resource)
 
 
 def parse_args(argv=None):

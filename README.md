@@ -57,7 +57,7 @@ Grafana Utilities turns those workflows into explicit CLI operations with stable
 | Alert rules and alerting resources | ✓ | ✓ | ✓ | ✓ | - | - | - | - | Covers alert rules, contact points, mute timings, and templates |
 | Users | ✓ | ✓ | ✓ | ✓ | - | ✓ | ✓ | ✓ | Access workflows support snapshot export/import and drift review, including optional `--with-teams` membership state |
 | Teams (alias: group) | ✓ | ✓ | ✓ | ✓ | - | ✓ | ✓ | ✓ | Team membership and team administration with export/import and drift comparison |
-| Service accounts | ✓ | - | - | - | - | ✓ | ✓ | ✓ | Service account lifecycle management |
+| Service accounts | ✓ | ✓ | ✓ | ✓ | - | ✓ | ✓ | ✓ | Service account lifecycle management with snapshot export/import and drift review |
 | Service account tokens | ✓ | - | - | - | - | ✓ | - | ✓ | Token creation, review, and revocation |
 
 ### Access command support design
@@ -66,6 +66,7 @@ Access workflows follow one operator model across the project:
 
 - `access user export|import|diff` handles user snapshots and optional team membership state.
 - `access team export|import|diff` handles team snapshots and membership/admin drift review.
+- `access service-account export|import|diff` handles automation-identity snapshots and drift review for mutable account state.
 - `team import` performs deterministic membership sync and requires `--yes` when existing memberships would be removed.
 - Export/import snapshot files are intended for controlled migration, cleanup review, and repeatable reconciliation.
 
