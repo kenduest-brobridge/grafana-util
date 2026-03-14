@@ -12,6 +12,7 @@ from unittest import mock
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MODULE_PATH = REPO_ROOT / "grafana_utils" / "datasource_cli.py"
+FIXTURE_PATH = REPO_ROOT / "tests" / "fixtures" / "datasource_contract_cases.json"
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 datasource_cli = importlib.import_module("grafana_utils.datasource_cli")
@@ -56,6 +57,9 @@ class FakeDatasourceClient(object):
 
 
 class DatasourceCliTests(unittest.TestCase):
+    def _load_contract_cases(self):
+        return json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
+
     def test_datasource_module_parses_as_python36_syntax(self):
         source = MODULE_PATH.read_text(encoding="utf-8")
         ast.parse(source, filename=str(MODULE_PATH), feature_version=(3, 6))
@@ -331,6 +335,22 @@ class DatasourceCliTests(unittest.TestCase):
                 metadata_document["datasourcesFile"],
                 datasource_cli.DATASOURCE_EXPORT_FILENAME,
             )
+
+    def test_normalize_datasource_record_matches_shared_contract_fixtures(self):
+        for case in self._load_contract_cases():
+            with self.subTest(case=case["name"]):
+                self.assertEqual(
+                    datasource_cli.normalize_datasource_record(case["rawDatasource"]),
+                    case["expectedNormalizedRecord"],
+                )
+
+    def test_build_import_payload_matches_shared_contract_fixtures(self):
+        for case in self._load_contract_cases():
+            with self.subTest(case=case["name"]):
+                self.assertEqual(
+                    datasource_cli.build_import_payload(case["expectedNormalizedRecord"]),
+                    case["expectedImportPayload"],
+                )
 
     def test_export_datasources_dry_run_does_not_write_files(self):
         args = datasource_cli.parse_args(

@@ -1,5 +1,33 @@
 # ai-status.md
 
+## 2026-03-14 - Task: Align Datasource Contract Fixtures Across Python and Rust
+- State: Done
+- Scope: `grafana_utils/datasource_contract.py`, `grafana_utils/datasource_cli.py`, `grafana_utils/datasource_diff.py`, `tests/fixtures/datasource_contract_cases.json`, `tests/test_python_datasource_cli.py`, `tests/test_python_datasource_diff.py`, `rust/src/datasource_rust_tests.rs`, `rust/src/datasource_diff_rust_tests.rs`, `TODO.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Datasource export/import already used a deliberately small normalized contract, but Python still normalized some values more loosely than Rust, especially for `isDefault` and `orgId` when fixture inputs used booleans or numbers. The repo also did not yet have one shared cross-language datasource fixture set covering secret-bearing Prometheus, Loki, and InfluxDB cases.
+- Current Update: Added a shared Python datasource contract helper for canonical string/bool normalization, rewired the Python datasource CLI and datasource diff helpers to use it, introduced one cross-language fixture file for Prometheus, Loki, and InfluxDB datasource cases with mixed auth/secret fields, and updated both Python and Rust datasource tests to validate normalized export records and import payloads against that same fixture set.
+- Result: Python and Rust datasource tests now enforce the same normalized export/import contract from one fixture source, and Python no longer drifts on bool/int normalization for datasource inventory records.
+
+## 2026-03-14 - Task: Remove Rust Auth Legacy Aliases
+- State: Done
+- Scope: `rust/src/access_cli_defs.rs`, `rust/src/alert_cli_defs.rs`, `rust/src/dashboard_cli_defs.rs`, `rust/src/common.rs`, `rust/src/access_rust_tests.rs`, `rust/src/alert_rust_tests.rs`, `rust/src/common_rust_tests.rs`, `rust/src/dashboard_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The Rust dashboard, alert, and access CLIs still advertised the legacy Basic-auth aliases `--username` and `--password` alongside `--basic-user` and `--basic-password`. That kept help output noisy, left the shared Rust auth errors pointing at both old and new spellings, and directly conflicted with business flags like `access user add --password`.
+- Current Update: Removed the Rust CLI auth aliases from the shared/common Clap definitions, updated the shared Rust auth validation messages to mention only `--basic-user`, `--basic-password`, and `--prompt-password`, and refreshed help/auth tests so the removed aliases stay gone.
+- Result: Rust CLI Basic auth now uses one consistent flag pair across dashboard, alert, and access, and the shared help/error output no longer mixes canonical and legacy spellings.
+
+## 2026-03-14 - Task: Remove Python Auth Legacy Aliases
+- State: Done
+- Scope: `grafana_utils/dashboard_cli.py`, `grafana_utils/alert_cli.py`, `grafana_utils/access_cli.py`, `grafana_utils/auth_staging.py`, `tests/test_python_dashboard_cli.py`, `tests/test_python_alert_cli.py`, `tests/test_python_access_cli.py`, `tests/test_python_auth_staging.py`, `README.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The Python dashboard, alert, and access CLIs still accepted legacy Basic-auth aliases `--username` and `--password` alongside `--basic-user` and `--basic-password`. That made the help text noisier and left a naming collision with business flags such as `access user add --password`.
+- Current Update: Removed the Python CLI parser aliases for `--username` and auth `--password`, updated shared auth error wording to mention only `--basic-user` and `--basic-password`, refreshed parser/auth tests to assert the new contract, and trimmed the README auth section to the new flag vocabulary.
+- Result: Python CLI Basic auth now uses one unambiguous flag pair, `--basic-user` and `--basic-password`, while business flags such as `access user add --password` keep their existing meaning.
+
+## 2026-03-14 - Task: Resolve Rust Access Password Flag Collision
+- State: Done
+- Scope: `rust/src/access_cli_defs.rs`, `rust/src/access_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The Rust access CLI reused the common Basic-auth legacy alias `--password` while `access user add` also defined `--password` for the new user's local password. Clap tolerated normal parsing in some paths, but long-help rendering for `access user add` failed with a duplicate long-option panic.
+- Current Update: Removed the Rust access common-auth `--password` legacy alias, kept `--basic-password` as the supported Basic-auth flag for that CLI family, and re-enabled focused help coverage for `access user add` so the collision stays fixed.
+- Result: `cargo run --quiet --bin grafana-utils -- access user add -h` and the corresponding test help paths now work again, while the user-creation password flag keeps its existing `--password` spelling.
+
 ## 2026-03-14 - Task: Consolidate Python CLI Auth Error Resolution
 - State: Done
 - Scope: `grafana_utils/auth_staging.py`, `grafana_utils/dashboard_cli.py`, `grafana_utils/alert_cli.py`, `grafana_utils/access_cli.py`, `tests/test_python_auth_staging.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

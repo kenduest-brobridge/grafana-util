@@ -95,30 +95,28 @@ where
     {
         return Err(message(
             "Choose either token auth (--token / --api-token) or Basic auth \
-(--basic-user / --username with --basic-password / --password / --prompt-password), not both.",
+(--basic-user with --basic-password / --prompt-password), not both.",
         ));
     }
     if prompt_for_password && cli_password.is_some() {
         return Err(message(
-            "Choose either --basic-password / --password or --prompt-password, not both.",
+            "Choose either --basic-password or --prompt-password, not both.",
         ));
     }
     if cli_username.is_some() && cli_password.is_none() && !prompt_for_password {
         return Err(message(
-            "Basic auth requires both --basic-user / --username and \
---basic-password / --password or --prompt-password.",
+            "Basic auth requires both --basic-user and \
+--basic-password or --prompt-password.",
         ));
     }
     if cli_password.is_some() && cli_username.is_none() {
         return Err(message(
-            "Basic auth requires both --basic-user / --username and \
---basic-password / --password or --prompt-password.",
+            "Basic auth requires both --basic-user and \
+--basic-password or --prompt-password.",
         ));
     }
     if prompt_for_password && cli_username.is_none() {
-        return Err(message(
-            "--prompt-password requires --basic-user / --username.",
-        ));
+        return Err(message("--prompt-password requires --basic-user."));
     }
 
     let token = cli_token.or_else(|| env_value("GRAFANA_API_TOKEN"));
@@ -144,14 +142,14 @@ where
     }
     if username.is_some() || password.is_some() {
         return Err(message(
-            "Basic auth requires both --basic-user / --username and \
---basic-password / --password or --prompt-password.",
+            "Basic auth requires both --basic-user and \
+--basic-password or --prompt-password.",
         ));
     }
 
     Err(message(
         "Authentication required. Set --token / --api-token / GRAFANA_API_TOKEN \
-or --basic-user and --basic-password / --prompt-password / --username and --password / \
+or --basic-user and --basic-password / --prompt-password / \
 GRAFANA_USERNAME and GRAFANA_PASSWORD.",
     ))
 }

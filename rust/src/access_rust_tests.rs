@@ -10,8 +10,23 @@ use super::{
     TeamAddArgs, TeamCommand, TeamDeleteArgs, TeamListArgs, TeamModifyArgs, UserAddArgs,
     UserCommand, UserDeleteArgs, UserListArgs, UserModifyArgs,
 };
+use crate::access::access_cli_defs::AccessCliRoot;
+use clap::CommandFactory;
 use reqwest::Method;
 use serde_json::json;
+
+fn render_access_subcommand_help(path: &[&str]) -> String {
+    let mut command = AccessCliRoot::command();
+    let mut current = &mut command;
+    for segment in path {
+        current = current
+            .find_subcommand_mut(segment)
+            .unwrap_or_else(|| panic!("missing access subcommand help for {segment}"));
+    }
+    let mut output = Vec::new();
+    current.write_long_help(&mut output).unwrap();
+    String::from_utf8(output).unwrap()
+}
 
 fn make_token_common() -> CommonCliArgs {
     CommonCliArgs {
@@ -61,6 +76,59 @@ fn parse_cli_supports_user_list() {
         }
         _ => panic!("expected user list"),
     }
+}
+
+#[test]
+fn user_help_mentions_filter_and_output_flags() {
+    let help = render_access_subcommand_help(&["user", "list"]);
+    assert!(help.contains("--scope"));
+    assert!(help.contains("current org scope"));
+    assert!(help.contains("--with-teams"));
+    assert!(help.contains("Include each user's current team memberships"));
+    assert!(help.contains("--output-format"));
+}
+
+#[test]
+fn user_mutation_help_mentions_target_and_json_flags() {
+    let add_help = render_access_subcommand_help(&["user", "add"]);
+    assert!(add_help.contains("--login"));
+    assert!(add_help.contains("Login name for the new Grafana user"));
+    assert!(add_help.contains("--grafana-admin"));
+    assert!(add_help.contains("server admin"));
+    assert!(add_help.contains("--password"));
+    assert!(add_help.contains("Initial password for the new Grafana user"));
+
+    let modify_help = render_access_subcommand_help(&["user", "modify"]);
+    assert!(modify_help.contains("--user-id"));
+    assert!(modify_help.contains("Target one user by numeric Grafana user id"));
+    assert!(modify_help.contains("--set-password"));
+    assert!(modify_help.contains("Replace the user's password"));
+
+    let delete_help = render_access_subcommand_help(&["user", "delete"]);
+    assert!(delete_help.contains("--yes"));
+    assert!(delete_help.contains("Skip the interactive confirmation prompt"));
+}
+
+#[test]
+fn team_and_service_account_help_mentions_membership_and_token_flags() {
+    let team_add_help = render_access_subcommand_help(&["team", "add"]);
+    assert!(team_add_help.contains("--member"));
+    assert!(team_add_help.contains("Add one or more members"));
+
+    let team_help = render_access_subcommand_help(&["team", "modify"]);
+    assert!(team_help.contains("--add-member"));
+    assert!(team_help.contains("Add one or more members"));
+    assert!(team_help.contains("--remove-admin"));
+    assert!(team_help.contains("Remove team-admin status"));
+
+    let service_account_help = render_access_subcommand_help(&["service-account", "add"]);
+    assert!(service_account_help.contains("--role"));
+    assert!(service_account_help.contains("Initial org role for the service account"));
+
+    let token_help = render_access_subcommand_help(&["service-account", "token", "add"]);
+    assert!(token_help.contains("--token-name"));
+    assert!(token_help.contains("Name for the new service-account token"));
+    assert!(token_help.contains("--seconds-to-live"));
 }
 
 #[test]
@@ -165,6 +233,10 @@ fn parse_cli_supports_service_account_token_delete() {
 
 #[test]
 fn user_list_with_request_reads_org_users() {
+    let list_help = render_access_subcommand_help(&["user", "list"]);
+    assert!(!list_help.contains("--username"));
+    assert!(!list_help.contains("--basic-user USERNAME, --username USERNAME"));
+
     let args = UserListArgs {
         common: make_token_common(),
         scope: Scope::Org,

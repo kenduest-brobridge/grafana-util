@@ -5,7 +5,12 @@ use datasource_diff::{
     build_datasource_diff_report, normalize_export_records, normalize_live_records,
     DatasourceDiffStatus,
 };
-use serde_json::json;
+use serde_json::{json, Value};
+
+fn load_contract_cases() -> Vec<Value> {
+    serde_json::from_str(include_str!("../../tests/fixtures/datasource_contract_cases.json"))
+        .unwrap()
+}
 
 #[test]
 fn normalize_export_records_handles_string_bools_and_org_ids() {
@@ -23,6 +28,37 @@ fn normalize_export_records_handles_string_bools_and_org_ids() {
     assert_eq!(records[0].uid, "prom-main");
     assert!(records[0].is_default);
     assert_eq!(records[0].org_id, "7");
+}
+
+#[test]
+fn normalize_export_records_matches_shared_contract_fixtures() {
+    for case in load_contract_cases() {
+        let object = case.as_object().unwrap();
+        let raw_datasource = object.get("rawDatasource").cloned().unwrap();
+        let expected = object
+            .get("expectedNormalizedRecord")
+            .and_then(Value::as_object)
+            .unwrap();
+        let records = normalize_export_records(&[raw_datasource]);
+
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0].uid, expected.get("uid").and_then(Value::as_str).unwrap());
+        assert_eq!(records[0].name, expected.get("name").and_then(Value::as_str).unwrap());
+        assert_eq!(
+            records[0].datasource_type,
+            expected.get("type").and_then(Value::as_str).unwrap()
+        );
+        assert_eq!(
+            records[0].access,
+            expected.get("access").and_then(Value::as_str).unwrap()
+        );
+        assert_eq!(records[0].url, expected.get("url").and_then(Value::as_str).unwrap());
+        assert_eq!(
+            records[0].is_default,
+            expected.get("isDefault").and_then(Value::as_str).unwrap() == "true"
+        );
+        assert_eq!(records[0].org_id, expected.get("orgId").and_then(Value::as_str).unwrap());
+    }
 }
 
 #[test]

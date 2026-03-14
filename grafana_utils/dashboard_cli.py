@@ -231,7 +231,6 @@ def add_common_cli_args(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument(
         "--basic-user",
-        "--username",
         dest="username",
         default=None,
         help=(
@@ -241,7 +240,6 @@ def add_common_cli_args(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument(
         "--basic-password",
-        "--password",
         dest="password",
         default=None,
         help=(

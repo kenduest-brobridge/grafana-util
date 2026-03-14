@@ -173,6 +173,8 @@ fn help_explains_flat_layout() {
     assert!(help.contains("diff"));
     assert!(help.contains("Write rule, contact-point, mute-timing, and template files directly"));
     assert!(help.contains("instead of nested subdirectories"));
+    assert!(!help.contains("--username"));
+    assert!(!help.contains("--password "));
 }
 
 #[test]

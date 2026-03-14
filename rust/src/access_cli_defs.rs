@@ -22,13 +22,11 @@ pub struct CommonCliArgs {
     pub api_token: Option<String>,
     #[arg(
         long = "basic-user",
-        visible_alias = "username",
         help = "Grafana Basic auth username. Preferred flag: --basic-user. Falls back to GRAFANA_USERNAME."
     )]
     pub username: Option<String>,
     #[arg(
         long = "basic-password",
-        visible_alias = "password",
         help = "Grafana Basic auth password. Preferred flag: --basic-password. Falls back to GRAFANA_PASSWORD."
     )]
     pub password: Option<String>,
@@ -70,29 +68,43 @@ pub enum ListOutputFormat {
 pub struct UserListArgs {
     #[command(flatten)]
     pub common: CommonCliArgs,
-    #[arg(long, value_enum, default_value_t = Scope::Org)]
+    #[arg(long, value_enum, default_value_t = Scope::Org, help = "List users from the current org scope or from the Grafana global admin scope.")]
     pub scope: Scope,
-    #[arg(long)]
+    #[arg(
+        long,
+        help = "Filter users by a free-text search across login, email, or display name."
+    )]
     pub query: Option<String>,
-    #[arg(long)]
+    #[arg(long, help = "Filter users by exact login.")]
     pub login: Option<String>,
-    #[arg(long)]
+    #[arg(long, help = "Filter users by exact email address.")]
     pub email: Option<String>,
-    #[arg(long)]
+    #[arg(
+        long,
+        help = "Filter org users by exact Grafana org role such as Viewer, Editor, or Admin."
+    )]
     pub org_role: Option<String>,
-    #[arg(long, value_parser = parse_bool_text)]
+    #[arg(long, value_parser = parse_bool_text, help = "Filter global users by Grafana server-admin status.")]
     pub grafana_admin: Option<bool>,
-    #[arg(long, default_value_t = false)]
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Include each user's current team memberships in the list output."
+    )]
     pub with_teams: bool,
-    #[arg(long, default_value_t = 1)]
+    #[arg(
+        long,
+        default_value_t = 1,
+        help = "Result page number for paginated Grafana list APIs."
+    )]
     pub page: usize,
-    #[arg(long, default_value_t = DEFAULT_PAGE_SIZE)]
+    #[arg(long, default_value_t = DEFAULT_PAGE_SIZE, help = "Number of users to request per page.")]
     pub per_page: usize,
-    #[arg(long, default_value_t = false, conflicts_with_all = ["csv", "json"])]
+    #[arg(long, default_value_t = false, conflicts_with_all = ["csv", "json"], help = "Render user summaries as a table.")]
     pub table: bool,
-    #[arg(long, default_value_t = false, conflicts_with_all = ["table", "json"])]
+    #[arg(long, default_value_t = false, conflicts_with_all = ["table", "json"], help = "Render user summaries as CSV.")]
     pub csv: bool,
-    #[arg(long, default_value_t = false, conflicts_with_all = ["table", "csv"])]
+    #[arg(long, default_value_t = false, conflicts_with_all = ["table", "csv"], help = "Render user summaries as JSON.")]
     pub json: bool,
     #[arg(
         long,
@@ -107,19 +119,26 @@ pub struct UserListArgs {
 pub struct UserAddArgs {
     #[command(flatten)]
     pub common: CommonCliArgs,
-    #[arg(long)]
+    #[arg(long, help = "Login name for the new Grafana user.")]
     pub login: String,
-    #[arg(long)]
+    #[arg(long, help = "Email address for the new Grafana user.")]
     pub email: String,
-    #[arg(long)]
+    #[arg(long, help = "Display name for the new Grafana user.")]
     pub name: String,
-    #[arg(long = "password")]
+    #[arg(long = "password", help = "Initial password for the new Grafana user.")]
     pub new_user_password: String,
-    #[arg(long = "org-role")]
+    #[arg(
+        long = "org-role",
+        help = "Optional initial org role such as Viewer, Editor, or Admin."
+    )]
     pub org_role: Option<String>,
-    #[arg(long = "grafana-admin", value_parser = parse_bool_text)]
+    #[arg(long = "grafana-admin", value_parser = parse_bool_text, help = "Set whether the new user should be a Grafana server admin.")]
     pub grafana_admin: Option<bool>,
-    #[arg(long, default_value_t = false)]
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Render the create response as JSON."
+    )]
     pub json: bool,
 }
 
@@ -127,25 +146,29 @@ pub struct UserAddArgs {
 pub struct UserModifyArgs {
     #[command(flatten)]
     pub common: CommonCliArgs,
-    #[arg(long, conflicts_with_all = ["login", "email"])]
+    #[arg(long, conflicts_with_all = ["login", "email"], help = "Target one user by numeric Grafana user id.")]
     pub user_id: Option<String>,
-    #[arg(long, conflicts_with_all = ["user_id", "email"])]
+    #[arg(long, conflicts_with_all = ["user_id", "email"], help = "Target one user by exact login.")]
     pub login: Option<String>,
-    #[arg(long, conflicts_with_all = ["user_id", "login"])]
+    #[arg(long, conflicts_with_all = ["user_id", "login"], help = "Target one user by exact email address.")]
     pub email: Option<String>,
-    #[arg(long)]
+    #[arg(long, help = "Replace the user's login with this new value.")]
     pub set_login: Option<String>,
-    #[arg(long)]
+    #[arg(long, help = "Replace the user's email address with this new value.")]
     pub set_email: Option<String>,
-    #[arg(long)]
+    #[arg(long, help = "Replace the user's display name with this new value.")]
     pub set_name: Option<String>,
-    #[arg(long)]
+    #[arg(long, help = "Replace the user's password with this new value.")]
     pub set_password: Option<String>,
-    #[arg(long)]
+    #[arg(long, help = "Change the user's org role to this value.")]
     pub set_org_role: Option<String>,
-    #[arg(long, value_parser = parse_bool_text)]
+    #[arg(long, value_parser = parse_bool_text, help = "Change whether the user is a Grafana server admin.")]
     pub set_grafana_admin: Option<bool>,
-    #[arg(long, default_value_t = false)]
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Render the modify response as JSON."
+    )]
     pub json: bool,
 }
 
@@ -153,17 +176,25 @@ pub struct UserModifyArgs {
 pub struct UserDeleteArgs {
     #[command(flatten)]
     pub common: CommonCliArgs,
-    #[arg(long, conflicts_with_all = ["login", "email"])]
+    #[arg(long, conflicts_with_all = ["login", "email"], help = "Delete one user by numeric Grafana user id.")]
     pub user_id: Option<String>,
-    #[arg(long, conflicts_with_all = ["user_id", "email"])]
+    #[arg(long, conflicts_with_all = ["user_id", "email"], help = "Delete one user by exact login.")]
     pub login: Option<String>,
-    #[arg(long, conflicts_with_all = ["user_id", "login"])]
+    #[arg(long, conflicts_with_all = ["user_id", "login"], help = "Delete one user by exact email address.")]
     pub email: Option<String>,
-    #[arg(long, value_enum, default_value_t = Scope::Global)]
+    #[arg(long, value_enum, default_value_t = Scope::Global, help = "Delete from the org membership only or from the Grafana global user registry.")]
     pub scope: Scope,
-    #[arg(long, default_value_t = false)]
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Skip the interactive confirmation prompt."
+    )]
     pub yes: bool,
-    #[arg(long, default_value_t = false)]
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Render the delete response as JSON."
+    )]
     pub json: bool,
 }
 
@@ -171,21 +202,29 @@ pub struct UserDeleteArgs {
 pub struct TeamListArgs {
     #[command(flatten)]
     pub common: CommonCliArgs,
-    #[arg(long)]
+    #[arg(long, help = "Filter teams by a free-text search.")]
     pub query: Option<String>,
-    #[arg(long)]
+    #[arg(long, help = "Filter teams by exact team name.")]
     pub name: Option<String>,
-    #[arg(long, default_value_t = false)]
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Include team members and admins in the rendered output."
+    )]
     pub with_members: bool,
-    #[arg(long, default_value_t = 1)]
+    #[arg(
+        long,
+        default_value_t = 1,
+        help = "Result page number for paginated Grafana list APIs."
+    )]
     pub page: usize,
-    #[arg(long, default_value_t = DEFAULT_PAGE_SIZE)]
+    #[arg(long, default_value_t = DEFAULT_PAGE_SIZE, help = "Number of teams to request per page.")]
     pub per_page: usize,
-    #[arg(long, default_value_t = false, conflicts_with_all = ["csv", "json"])]
+    #[arg(long, default_value_t = false, conflicts_with_all = ["csv", "json"], help = "Render team summaries as a table.")]
     pub table: bool,
-    #[arg(long, default_value_t = false, conflicts_with_all = ["table", "json"])]
+    #[arg(long, default_value_t = false, conflicts_with_all = ["table", "json"], help = "Render team summaries as CSV.")]
     pub csv: bool,
-    #[arg(long, default_value_t = false, conflicts_with_all = ["table", "csv"])]
+    #[arg(long, default_value_t = false, conflicts_with_all = ["table", "csv"], help = "Render team summaries as JSON.")]
     pub json: bool,
     #[arg(
         long,
@@ -200,15 +239,25 @@ pub struct TeamListArgs {
 pub struct TeamAddArgs {
     #[command(flatten)]
     pub common: CommonCliArgs,
-    #[arg(long)]
+    #[arg(long, help = "Name for the new Grafana team.")]
     pub name: String,
-    #[arg(long)]
+    #[arg(long, help = "Optional contact email for the new Grafana team.")]
     pub email: Option<String>,
-    #[arg(long = "member")]
+    #[arg(
+        long = "member",
+        help = "Add one or more members by user id or login as part of team creation."
+    )]
     pub members: Vec<String>,
-    #[arg(long = "admin")]
+    #[arg(
+        long = "admin",
+        help = "Add one or more team admins by user id or login as part of team creation."
+    )]
     pub admins: Vec<String>,
-    #[arg(long, default_value_t = false)]
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Render the create response as JSON."
+    )]
     pub json: bool,
 }
 
@@ -216,19 +265,43 @@ pub struct TeamAddArgs {
 pub struct TeamModifyArgs {
     #[command(flatten)]
     pub common: CommonCliArgs,
-    #[arg(long, conflicts_with = "name")]
+    #[arg(
+        long,
+        conflicts_with = "name",
+        help = "Target one team by numeric Grafana team id."
+    )]
     pub team_id: Option<String>,
-    #[arg(long, conflicts_with = "team_id")]
+    #[arg(
+        long,
+        conflicts_with = "team_id",
+        help = "Target one team by exact team name."
+    )]
     pub name: Option<String>,
-    #[arg(long = "add-member")]
+    #[arg(
+        long = "add-member",
+        help = "Add one or more members by user id or login."
+    )]
     pub add_member: Vec<String>,
-    #[arg(long = "remove-member")]
+    #[arg(
+        long = "remove-member",
+        help = "Remove one or more members by user id or login."
+    )]
     pub remove_member: Vec<String>,
-    #[arg(long = "add-admin")]
+    #[arg(
+        long = "add-admin",
+        help = "Promote one or more members to team admin."
+    )]
     pub add_admin: Vec<String>,
-    #[arg(long = "remove-admin")]
+    #[arg(
+        long = "remove-admin",
+        help = "Remove team-admin status from one or more members."
+    )]
     pub remove_admin: Vec<String>,
-    #[arg(long, default_value_t = false)]
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Render the modify response as JSON."
+    )]
     pub json: bool,
 }
 
@@ -236,17 +309,21 @@ pub struct TeamModifyArgs {
 pub struct ServiceAccountListArgs {
     #[command(flatten)]
     pub common: CommonCliArgs,
-    #[arg(long)]
+    #[arg(long, help = "Filter service accounts by a free-text search.")]
     pub query: Option<String>,
-    #[arg(long, default_value_t = 1)]
+    #[arg(
+        long,
+        default_value_t = 1,
+        help = "Result page number for paginated Grafana list APIs."
+    )]
     pub page: usize,
-    #[arg(long, default_value_t = DEFAULT_PAGE_SIZE)]
+    #[arg(long, default_value_t = DEFAULT_PAGE_SIZE, help = "Number of service accounts to request per page.")]
     pub per_page: usize,
-    #[arg(long, default_value_t = false, conflicts_with_all = ["csv", "json"])]
+    #[arg(long, default_value_t = false, conflicts_with_all = ["csv", "json"], help = "Render service-account summaries as a table.")]
     pub table: bool,
-    #[arg(long, default_value_t = false, conflicts_with_all = ["table", "json"])]
+    #[arg(long, default_value_t = false, conflicts_with_all = ["table", "json"], help = "Render service-account summaries as CSV.")]
     pub csv: bool,
-    #[arg(long, default_value_t = false, conflicts_with_all = ["table", "csv"])]
+    #[arg(long, default_value_t = false, conflicts_with_all = ["table", "csv"], help = "Render service-account summaries as JSON.")]
     pub json: bool,
     #[arg(
         long,
@@ -261,13 +338,21 @@ pub struct ServiceAccountListArgs {
 pub struct ServiceAccountAddArgs {
     #[command(flatten)]
     pub common: CommonCliArgs,
-    #[arg(long)]
+    #[arg(long, help = "Name for the new Grafana service account.")]
     pub name: String,
-    #[arg(long, default_value = "Viewer")]
+    #[arg(
+        long,
+        default_value = "Viewer",
+        help = "Initial org role for the service account."
+    )]
     pub role: String,
-    #[arg(long, value_parser = parse_bool_text, default_value = "false")]
+    #[arg(long, value_parser = parse_bool_text, default_value = "false", help = "Create the service account in a disabled state.")]
     pub disabled: bool,
-    #[arg(long, default_value_t = false)]
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Render the create response as JSON."
+    )]
     pub json: bool,
 }
 
@@ -275,15 +360,30 @@ pub struct ServiceAccountAddArgs {
 pub struct ServiceAccountTokenAddArgs {
     #[command(flatten)]
     pub common: CommonCliArgs,
-    #[arg(long, conflicts_with = "name")]
+    #[arg(
+        long,
+        conflicts_with = "name",
+        help = "Target one service account by numeric id."
+    )]
     pub service_account_id: Option<String>,
-    #[arg(long, conflicts_with = "service_account_id")]
+    #[arg(
+        long,
+        conflicts_with = "service_account_id",
+        help = "Target one service account by exact name."
+    )]
     pub name: Option<String>,
-    #[arg(long)]
+    #[arg(long, help = "Name for the new service-account token.")]
     pub token_name: String,
-    #[arg(long)]
+    #[arg(
+        long,
+        help = "Optional token lifetime in seconds. Omit for a non-expiring token if Grafana allows it."
+    )]
     pub seconds_to_live: Option<usize>,
-    #[arg(long, default_value_t = false)]
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Render the token create response as JSON."
+    )]
     pub json: bool,
 }
 
@@ -343,7 +443,7 @@ pub enum AccessCommand {
     name = "grafana-access-utils",
     about = "List and manage Grafana users, teams, and service accounts."
 )]
-struct AccessCliRoot {
+pub(crate) struct AccessCliRoot {
     #[command(flatten)]
     args: AccessCliArgs,
 }

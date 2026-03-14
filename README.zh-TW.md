@@ -305,6 +305,17 @@ python3 python/grafana-utils.py dashboard import \
   --replace-existing
 ```
 
+只看 folder mismatch 相關欄位的 dry-run table：
+
+```bash
+python3 python/grafana-utils.py dashboard import \
+  --url http://127.0.0.1:3000 \
+  --import-dir ./dashboards/raw \
+  --dry-run \
+  --output-format table \
+  --output-columns uid,source_folder_path,destination_folder_path,reason,file
+```
+
 重要規則：
 
 - `--import-dir` 要指向 `dashboards/raw/`，不是整個 `dashboards/`
@@ -313,6 +324,7 @@ python3 python/grafana-utils.py dashboard import \
 - `--import-folder-uid` 可覆寫所有匯入 dashboard 的目標 folder
 - `--import-message` 可設定 dashboard version-history message
 - `--dry-run` 只顯示每個 dashboard 會 create、update 或 fail，不真的呼叫匯入 API
+- `--dry-run --table --output-columns uid,source_folder_path,destination_folder_path,reason,file` 可只顯示指定欄位，特別適合看 folder path mismatch
 - `diff` 會把本地 raw 檔與目前 Grafana dashboard payload 做比較；若有差異，exit code 會是 `1`
 
 Dashboard 匯出時也會在根目錄與各 variant 目錄額外寫入 `export-metadata.json`。它描述匯出 schema version，讓 `import` 與 `diff` 可以驗證目錄是否真的是預期的 `raw/` 匯出格式。
@@ -332,6 +344,19 @@ Dashboard 匯出時也會在根目錄與各 variant 目錄額外寫入 `export-m
 - `python3 python/grafana-utils.py datasource export ...`
 - `python3 python/grafana-utils.py datasource import ...`
 - `python3 python/grafana-utils.py datasource diff ...`
+
+常用 dry-run table 範例：
+
+```bash
+python3 python/grafana-utils.py datasource import \
+  --url http://127.0.0.1:3000 \
+  --basic-user admin \
+  --basic-password admin \
+  --import-dir ./datasources \
+  --dry-run \
+  --output-format table \
+  --output-columns uid,action,org_id,file
+```
 
 ## Alerting 工具
 

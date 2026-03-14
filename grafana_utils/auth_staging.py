@@ -20,34 +20,32 @@ def format_cli_auth_error_message(message: str) -> str:
     if message == "Choose either token auth or Basic auth, not both.":
         return (
             "Choose either token auth (--token / --api-token) or Basic auth "
-            "(--basic-user / --username with --basic-password / --password / "
-            "--prompt-password), not both."
+            "(--basic-user with --basic-password / --prompt-password), not both."
         )
     if (
         message
         == "Choose either an explicit Basic auth password or --prompt-password, not both."
     ):
         return (
-            "Choose either --basic-password / --password or "
-            "--prompt-password, not both."
+            "Choose either --basic-password or --prompt-password, not both."
         )
     if (
         message
         == "Basic auth requires both username and password or --prompt-password."
     ):
         return (
-            "Basic auth requires both --basic-user / --username and "
-            "--basic-password / --password or --prompt-password."
+            "Basic auth requires both --basic-user and "
+            "--basic-password or --prompt-password."
         )
     if message == "--prompt-password requires a Basic auth username.":
-        return "--prompt-password requires --basic-user / --username."
+        return "--prompt-password requires --basic-user."
     if (
         message
         == "Basic auth environment configuration requires both GRAFANA_USERNAME and GRAFANA_PASSWORD."
     ):
         return (
-            "Basic auth requires both --basic-user / --username and "
-            "--basic-password / --password or --prompt-password."
+            "Basic auth requires both --basic-user and "
+            "--basic-password or --prompt-password."
         )
     if (
         message

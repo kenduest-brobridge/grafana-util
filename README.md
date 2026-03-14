@@ -627,6 +627,7 @@ For dashboard export:
 - `dashboard import -v` prints detailed per-file import results, including dry-run actions or returned status values
 - `dashboard import -v --progress` uses verbose output and suppresses the concise progress form
 - `dashboard import --dry-run --table` prints a final table with `uid`, `destination`, `action`, `folder_path`, and `file`
+- `dashboard import --dry-run --table --output-columns uid,source_folder_path,destination_folder_path,reason,file` trims the dry-run table to the columns you care about, which is useful when reviewing folder-path mismatches
 - `dashboard import --dry-run --table --no-header` omits the dry-run table header row
 - `dashboard import --org-id <ID>` imports the whole run into that explicit destination org instead of the current auth context and requires Basic auth
 - plain `dashboard import --token ...` imports into the token's current org context
@@ -684,6 +685,7 @@ For datasource inventory:
 - `datasource import --update-existing-only` skips missing datasources and only updates matched destination datasources
 - `datasource import --dry-run --output-format text|table|json` is the new single-flag alternative to the old dry-run output flags
 - `datasource import --dry-run --table` renders predicted datasource import actions as a compact table and `--no-header` suppresses that header row
+- `datasource import --dry-run --table --output-columns uid,action,org_id,file` trims the dry-run table to the selected review columns without changing the default table when the flag is omitted
 - `datasource import --dry-run --json` renders one machine-readable JSON document with the active mode, per-datasource actions, and summary counts
 - `datasource diff` compares one exported datasource inventory root against the current live Grafana datasource inventory
 - `datasource diff --diff-dir <DIR>` reads `datasources.json`, `index.json`, and `export-metadata.json` from that export root, prints per-datasource diff status, and exits with status `1` when differences are found
@@ -761,6 +763,17 @@ python3 python/grafana-utils.py dashboard import \
   --import-dir ./dashboards/raw \
   --dry-run \
   --table
+```
+
+Dry-run import with only the folder mismatch review columns:
+
+```bash
+python3 python/grafana-utils.py dashboard import \
+  --url http://127.0.0.1:3000 \
+  --import-dir ./dashboards/raw \
+  --dry-run \
+  --output-format table \
+  --output-columns uid,source_folder_path,destination_folder_path,reason,file
 ```
 
 Update only dashboards that already exist in Grafana:
@@ -1210,7 +1223,7 @@ Developer sample-data seed notes:
 Authentication methods:
 
 - API token with `--token` or legacy `--api-token`
-- Basic auth with `--basic-user` and `--basic-password` or legacy `--username` and `--password`
+- Basic auth with `--basic-user` and `--basic-password`
 - Prompted Basic auth with `--basic-user` and `--prompt-password`
 
 Auth note:

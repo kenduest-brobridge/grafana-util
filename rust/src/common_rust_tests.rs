@@ -25,9 +25,9 @@ fn resolve_auth_headers_rejects_mixed_token_and_basic_auth() {
 #[test]
 fn resolve_auth_headers_rejects_partial_basic_auth() {
     let error = resolve_auth_headers(None, Some("user"), None, false).unwrap_err();
-    assert!(error
-        .to_string()
-        .contains("Basic auth requires both --basic-user / --username and --basic-password / --password or --prompt-password."));
+    assert!(error.to_string().contains(
+        "Basic auth requires both --basic-user and --basic-password or --prompt-password."
+    ));
 }
 
 #[test]
@@ -52,7 +52,7 @@ fn resolve_auth_headers_rejects_prompt_without_username() {
             .unwrap_err();
     assert!(error
         .to_string()
-        .contains("--prompt-password requires --basic-user / --username."));
+        .contains("--prompt-password requires --basic-user."));
 }
 
 #[test]
@@ -63,5 +63,5 @@ fn resolve_auth_headers_rejects_prompt_with_explicit_password() {
     .unwrap_err();
     assert!(error
         .to_string()
-        .contains("Choose either --basic-password / --password or --prompt-password, not both."));
+        .contains("Choose either --basic-password or --prompt-password, not both."));
 }

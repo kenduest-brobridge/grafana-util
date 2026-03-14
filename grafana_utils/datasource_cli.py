@@ -30,6 +30,7 @@ from .datasource_diff import (
     compare_datasource_bundle_to_live,
     load_datasource_diff_bundle,
 )
+from .datasource_contract import normalize_datasource_record
 
 
 DEFAULT_EXPORT_DIR = "datasources"
@@ -439,19 +440,6 @@ def exporter_api_error_type():
     from .dashboards.common import GrafanaApiError
 
     return GrafanaApiError
-
-
-def normalize_datasource_record(record: Dict[str, Any]) -> Dict[str, str]:
-    return {
-        "uid": str(record.get("uid") or ""),
-        "name": str(record.get("name") or ""),
-        "type": str(record.get("type") or ""),
-        "access": str(record.get("access") or ""),
-        "url": str(record.get("url") or ""),
-        "isDefault": str(record.get("isDefault") or "false"),
-        "org": str(record.get("org") or ""),
-        "orgId": str(record.get("orgId") or ""),
-    }
 
 
 def load_json_document(path: Path) -> Any:

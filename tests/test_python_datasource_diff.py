@@ -7,6 +7,7 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+FIXTURE_PATH = REPO_ROOT / "tests" / "fixtures" / "datasource_contract_cases.json"
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 datasource_diff = importlib.import_module("grafana_utils.datasource_diff")
@@ -26,6 +27,9 @@ class FakeDatasourceClient(object):
 
 
 class DatasourceDiffScaffoldTests(unittest.TestCase):
+    def _load_contract_cases(self):
+        return json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
+
     def test_load_datasource_diff_bundle_normalizes_records(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             import_dir = Path(tmpdir)
@@ -60,8 +64,16 @@ class DatasourceDiffScaffoldTests(unittest.TestCase):
             bundle = datasource_diff.load_datasource_diff_bundle(import_dir)
 
         self.assertEqual(bundle["records"][0]["uid"], "prom-main")
-        self.assertEqual(bundle["records"][0]["isDefault"], "True")
+        self.assertEqual(bundle["records"][0]["isDefault"], "true")
         self.assertEqual(bundle["records"][0]["orgId"], "7")
+
+    def test_normalize_datasource_record_matches_shared_contract_fixtures(self):
+        for case in self._load_contract_cases():
+            with self.subTest(case=case["name"]):
+                self.assertEqual(
+                    datasource_diff.normalize_datasource_record(case["rawDatasource"]),
+                    case["expectedNormalizedRecord"],
+                )
 
     def test_load_datasource_diff_bundle_rejects_wrong_metadata_kind(self):
         with tempfile.TemporaryDirectory() as tmpdir:

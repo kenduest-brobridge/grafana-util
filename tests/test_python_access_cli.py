@@ -621,6 +621,12 @@ class AccessCliTests(unittest.TestCase):
         self.assertEqual(args.password, "secret")
         self.assertFalse(args.prompt_password)
 
+    def test_parse_args_rejects_legacy_basic_auth_aliases(self):
+        with self.assertRaises(SystemExit):
+            access_utils.parse_args(["user", "list", "--username", "admin", "--basic-password", "secret"])
+        with self.assertRaises(SystemExit):
+            access_utils.parse_args(["user", "list", "--basic-user", "admin", "--password", "secret"])
+
     def test_parse_args_supports_prompt_password(self):
         args = access_utils.parse_args(
             ["user", "list", "--basic-user", "admin", "--prompt-password"]
@@ -782,7 +788,7 @@ class AccessCliTests(unittest.TestCase):
 
         with self.assertRaisesRegex(
             access_utils.GrafanaError,
-            "--prompt-password requires --basic-user / --username.",
+            "--prompt-password requires --basic-user.",
         ):
             access_utils.resolve_auth(args)
 
@@ -796,7 +802,7 @@ class AccessCliTests(unittest.TestCase):
 
         with self.assertRaisesRegex(
             access_utils.GrafanaError,
-            "Choose either --basic-password / --password or --prompt-password, not both.",
+            "Choose either --basic-password or --prompt-password, not both.",
         ):
             access_utils.resolve_auth(args)
 

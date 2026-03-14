@@ -147,7 +147,6 @@ def build_parser(prog: Optional[str] = None) -> argparse.ArgumentParser:
     )
     add_common_cli_args(
         add_parser,
-        allow_legacy_auth_aliases=False,
         allow_token_auth=False,
         username_dest="auth_username",
         password_dest="auth_password",
@@ -160,7 +159,6 @@ def build_parser(prog: Optional[str] = None) -> argparse.ArgumentParser:
     )
     add_common_cli_args(
         modify_parser,
-        allow_legacy_auth_aliases=False,
         allow_token_auth=False,
         username_dest="auth_username",
         password_dest="auth_password",
@@ -173,7 +171,6 @@ def build_parser(prog: Optional[str] = None) -> argparse.ArgumentParser:
     )
     add_common_cli_args(
         delete_parser,
-        allow_legacy_auth_aliases=False,
         username_dest="auth_username",
         password_dest="auth_password",
     )
@@ -269,7 +266,6 @@ def build_parser(prog: Optional[str] = None) -> argparse.ArgumentParser:
 
 def add_common_cli_args(
     parser: argparse.ArgumentParser,
-    allow_legacy_auth_aliases: bool = True,
     allow_token_auth: bool = True,
     username_dest: str = "username",
     password_dest: str = "password",
@@ -291,13 +287,8 @@ def add_common_cli_args(
                 "Falls back to GRAFANA_API_TOKEN."
             ),
         )
-    basic_user_flags = ["--basic-user"]
-    basic_password_flags = ["--basic-password"]
-    if allow_legacy_auth_aliases:
-        basic_user_flags.append("--username")
-        basic_password_flags.append("--password")
     parser.add_argument(
-        *basic_user_flags,
+        "--basic-user",
         dest=username_dest,
         default=None,
         metavar="USERNAME",
@@ -307,7 +298,7 @@ def add_common_cli_args(
         ),
     )
     parser.add_argument(
-        *basic_password_flags,
+        "--basic-password",
         dest=password_dest,
         default=None,
         metavar="PASSWORD",

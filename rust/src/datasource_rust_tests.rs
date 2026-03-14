@@ -1,6 +1,6 @@
 use super::{
-    diff_datasources_with_live, render_import_table, resolve_match, run_datasource_cli,
-    DatasourceCliArgs, DatasourceImportRecord,
+    build_import_payload, diff_datasources_with_live, render_import_table, resolve_match,
+    run_datasource_cli, DatasourceCliArgs, DatasourceImportRecord,
 };
 use clap::{CommandFactory, Parser};
 use serde_json::{json, Value};
@@ -24,6 +24,11 @@ fn live_datasource(
     .as_object()
     .unwrap()
     .clone()
+}
+
+fn load_contract_cases() -> Vec<Value> {
+    serde_json::from_str(include_str!("../../tests/fixtures/datasource_contract_cases.json"))
+        .unwrap()
 }
 
 #[test]
@@ -238,6 +243,49 @@ fn parse_datasource_import_supports_output_columns() {
             );
         }
         _ => panic!("expected datasource import"),
+    }
+}
+
+#[test]
+fn build_import_payload_matches_shared_contract_fixtures() {
+    for case in load_contract_cases() {
+        let object = case.as_object().unwrap();
+        let normalized = object
+            .get("expectedNormalizedRecord")
+            .and_then(Value::as_object)
+            .unwrap();
+        let expected_payload = object.get("expectedImportPayload").cloned().unwrap();
+        let record = DatasourceImportRecord {
+            uid: normalized.get("uid").and_then(Value::as_str).unwrap().to_string(),
+            name: normalized
+                .get("name")
+                .and_then(Value::as_str)
+                .unwrap()
+                .to_string(),
+            datasource_type: normalized
+                .get("type")
+                .and_then(Value::as_str)
+                .unwrap()
+                .to_string(),
+            access: normalized
+                .get("access")
+                .and_then(Value::as_str)
+                .unwrap()
+                .to_string(),
+            url: normalized.get("url").and_then(Value::as_str).unwrap().to_string(),
+            is_default: normalized
+                .get("isDefault")
+                .and_then(Value::as_str)
+                .unwrap()
+                == "true",
+            org_id: normalized
+                .get("orgId")
+                .and_then(Value::as_str)
+                .unwrap()
+                .to_string(),
+        };
+
+        assert_eq!(build_import_payload(&record), expected_payload);
     }
 }
 

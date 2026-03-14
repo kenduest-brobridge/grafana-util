@@ -84,8 +84,8 @@ class AuthStagingTests(unittest.TestCase):
 
         self.assertEqual(
             message,
-            "Basic auth requires both --basic-user / --username and "
-            "--basic-password / --password or --prompt-password.",
+            "Basic auth requires both --basic-user and "
+            "--basic-password or --prompt-password.",
         )
 
     def test_resolve_cli_auth_from_namespace_rewrites_auth_errors(self):
@@ -98,7 +98,7 @@ class AuthStagingTests(unittest.TestCase):
 
         with self.assertRaisesRegex(
             auth_staging.AuthConfigError,
-            "--prompt-password requires --basic-user / --username.",
+            "--prompt-password requires --basic-user.",
         ):
             auth_staging.resolve_cli_auth_from_namespace(args)
 

@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from .clients.dashboard_client import GrafanaClient
+from .datasource_contract import normalize_datasource_record
 from .dashboard_cli import GrafanaError, build_datasource_inventory_record
 
 
@@ -24,20 +25,6 @@ COMPARE_FIELDS = (
     "org",
     "orgId",
 )
-
-
-def normalize_datasource_record(record):
-    # type: (Dict[str, Any]) -> Dict[str, str]
-    return {
-        "uid": str(record.get("uid") or ""),
-        "name": str(record.get("name") or ""),
-        "type": str(record.get("type") or ""),
-        "access": str(record.get("access") or ""),
-        "url": str(record.get("url") or ""),
-        "isDefault": str(record.get("isDefault") or "false"),
-        "org": str(record.get("org") or ""),
-        "orgId": str(record.get("orgId") or ""),
-    }
 
 
 def load_json_document(path):

@@ -34,13 +34,11 @@ pub struct CommonCliArgs {
     pub api_token: Option<String>,
     #[arg(
         long = "basic-user",
-        visible_alias = "username",
         help = "Grafana Basic auth username. Preferred flag: --basic-user. Falls back to GRAFANA_USERNAME."
     )]
     pub username: Option<String>,
     #[arg(
         long = "basic-password",
-        visible_alias = "password",
         help = "Grafana Basic auth password. Preferred flag: --basic-password. Falls back to GRAFANA_PASSWORD."
     )]
     pub password: Option<String>,

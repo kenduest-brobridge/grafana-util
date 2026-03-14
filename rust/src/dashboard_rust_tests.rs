@@ -405,6 +405,8 @@ fn export_help_describes_progress_and_verbose_modes() {
     assert!(help.contains("<current>/<total>"));
     assert!(help.contains("-v, --verbose"));
     assert!(help.contains("Overrides --progress output"));
+    assert!(!help.contains("--username"));
+    assert!(!help.contains("--password "));
 }
 
 #[test]

@@ -372,6 +372,12 @@ class AlertUtilsTests(unittest.TestCase):
         self.assertEqual(args.password, "pass")
         self.assertFalse(args.prompt_password)
 
+    def test_parse_args_rejects_legacy_basic_auth_aliases(self):
+        with self.assertRaises(SystemExit):
+            alert_utils.parse_args(["--username", "user", "--basic-password", "pass"])
+        with self.assertRaises(SystemExit):
+            alert_utils.parse_args(["--basic-user", "user", "--password", "pass"])
+
     def test_parse_args_supports_prompt_password(self):
         args = alert_utils.parse_args(["--basic-user", "user", "--prompt-password"])
 
@@ -453,7 +459,7 @@ class AlertUtilsTests(unittest.TestCase):
 
         with self.assertRaisesRegex(
             alert_utils.GrafanaError,
-            "Basic auth requires both --basic-user / --username and --basic-password / --password or --prompt-password.",
+            "Basic auth requires both --basic-user and --basic-password or --prompt-password.",
         ):
             alert_utils.resolve_auth(args)
 
@@ -467,7 +473,7 @@ class AlertUtilsTests(unittest.TestCase):
 
         with self.assertRaisesRegex(
             alert_utils.GrafanaError,
-            "Basic auth requires both --basic-user / --username and --basic-password / --password or --prompt-password.",
+            "Basic auth requires both --basic-user and --basic-password or --prompt-password.",
         ):
             alert_utils.resolve_auth(args)
 
@@ -510,7 +516,7 @@ class AlertUtilsTests(unittest.TestCase):
         with mock.patch.dict("os.environ", {"GRAFANA_USERNAME": "env-user"}, clear=True):
             with self.assertRaisesRegex(
                 alert_utils.GrafanaError,
-                "Basic auth requires both --basic-user / --username and --basic-password / --password or --prompt-password.",
+                "Basic auth requires both --basic-user and --basic-password or --prompt-password.",
             ):
                 alert_utils.resolve_auth(args)
 
@@ -524,7 +530,7 @@ class AlertUtilsTests(unittest.TestCase):
 
         with self.assertRaisesRegex(
             alert_utils.GrafanaError,
-            "--prompt-password requires --basic-user / --username.",
+            "--prompt-password requires --basic-user.",
         ):
             alert_utils.resolve_auth(args)
 
@@ -538,7 +544,7 @@ class AlertUtilsTests(unittest.TestCase):
 
         with self.assertRaisesRegex(
             alert_utils.GrafanaError,
-            "Choose either --basic-password / --password or --prompt-password, not both.",
+            "Choose either --basic-password or --prompt-password, not both.",
         ):
             alert_utils.resolve_auth(args)
 
