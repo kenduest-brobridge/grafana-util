@@ -69,7 +69,7 @@ Default URLs:
 - Dashboard: `dashboard export`, `dashboard list`, `dashboard list-data-sources`, `dashboard import`, `dashboard diff`, `dashboard inspect-export`, `dashboard inspect-live`
 - Alert: `alert export`, `alert import`, `alert diff`, `alert list-rules`, `alert list-contact-points`, `alert list-mute-timings`, `alert list-templates`
 - Datasource: `datasource list`, `datasource export`, `datasource import`, `datasource diff`
-- Access: `access user list`, `access user add`, `access user modify`, `access user delete`, `access user export`, `access user import`, `access user diff`, `access team list`, `access team add`, `access team modify`, `access team delete`, `access team export`, `access team import`, `access team diff`, `access service-account list`, `access service-account add`, `access service-account export`, `access service-account import`, `access service-account diff`, `access service-account delete`, `access service-account token add`, `access service-account token delete`
+- Access: `access org list`, `access org add`, `access org modify`, `access org delete`, `access org export`, `access org import`, `access user list`, `access user add`, `access user modify`, `access user delete`, `access user export`, `access user import`, `access user diff`, `access team list`, `access team add`, `access team modify`, `access team delete`, `access team export`, `access team import`, `access team diff`, `access service-account list`, `access service-account add`, `access service-account export`, `access service-account import`, `access service-account diff`, `access service-account delete`, `access service-account token add`, `access service-account token delete`
 
 ### Command capability summary
 
@@ -77,13 +77,14 @@ Use this table first when you need to confirm whether a resource supports invent
 
 | Resource | List | Export | Import | Diff | Inspect | Add | Modify | Delete | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Dashboards | ✓ | ✓ | ✓ | ✓ | ✓ | - | - | - | Inventory, backup, and cross-environment migration |
-| Datasources | ✓ | ✓ | ✓ | ✓ | - | - | - | - | Drift review and migration checkpoints |
-| Alert rules & alerting resources | ✓ | ✓ | ✓ | ✓ | - | - | - | - | rule trees, contact points, mute timings, templates |
-| Users | ✓ | ✓ | ✓ | ✓ | - | ✓ | ✓ | ✓ | User inventory, migration, and drift comparison |
-| Teams (`group` alias) | ✓ | ✓ | ✓ | ✓ | - | ✓ | ✓ | ✓ | Team inventory, migration, and drift comparison |
-| Service accounts | ✓ | ✓ | ✓ | ✓ | - | ✓ | ✓ | ✓ | Service account lifecycle, snapshot replay, and drift review |
-| Service account tokens | ✓ | - | - | - | - | ✓ | - | ✓ | token add/delete workflows |
+| Dashboards | Yes | Yes | Yes | Yes | Yes | No | No | No | Inventory, backup, and cross-environment migration |
+| Datasources | Yes | Yes | Yes | Yes | No | No | No | No | Drift review and migration checkpoints |
+| Alert rules & alerting resources | Yes | Yes | Yes | Yes | No | No | No | No | rule trees, contact points, mute timings, templates |
+| Organizations | Yes | Yes | Yes | No | No | Yes | Yes | Yes | Org inventory plus membership replay on import |
+| Users | Yes | Yes | Yes | Yes | No | Yes | Yes | Yes | User inventory, migration, and drift comparison |
+| Teams (`group` alias) | Yes | Yes | Yes | Yes | No | Yes | Yes | Yes | Team inventory, migration, and drift comparison |
+| Service accounts | Yes | Yes | Yes | Yes | No | Yes | Yes | Yes | Service account lifecycle, snapshot replay, and drift review |
+| Service account tokens | Yes | No | No | No | No | Yes | No | Yes | token add/delete workflows |
 
 Authentication exclusivity rules:
 
@@ -702,7 +703,9 @@ Purpose: create a user.
 | `--login` | Login name | Required |
 | `--email` | Email | Required |
 | `--name` | Display name | Required |
-| `--password` | Initial password | Required for local user creation |
+| `--password` | Initial password | One password input option |
+| `--password-file` | Read initial password from file | Safer non-interactive usage |
+| `--prompt-user-password` | Prompt for initial password | Safer interactive usage |
 | `--org-role` | Initial org role | Default role assignment |
 | `--grafana-admin` | Server admin flag | Use sparingly |
 | `--json` | JSON output | Automation |
@@ -710,6 +713,15 @@ Purpose: create a user.
 Example command:
 ```bash
 cargo run --bin grafana-util -- access user add --url http://localhost:3000 --basic-user admin --basic-password admin --login bob --email bob@example.com --name "Bob Lin" --password '<SECRET>' --org-role Editor --json
+```
+
+Safer alternatives:
+- Use exactly one of `--password`, `--password-file`, or `--prompt-user-password`.
+- `--password-file` trims one trailing newline, which fits secret files created by common shell tools.
+
+Example with a password file:
+```bash
+cargo run --bin grafana-util -- access user add --url http://localhost:3000 --basic-user admin --basic-password admin --login bob --email bob@example.com --name "Bob Lin" --password-file ./secrets/bob-password.txt --org-role Editor --json
 ```
 
 Example output:
@@ -734,7 +746,9 @@ Purpose: update an existing user.
 | `--set-login` | Change login | Rename account |
 | `--set-email` | Change email | Contact update |
 | `--set-name` | Change display name | Identity cleanup |
-| `--set-password` | Reset password | Recovery or rotation |
+| `--set-password` | Reset password | One password input option |
+| `--set-password-file` | Read new password from file | Safer non-interactive rotation |
+| `--prompt-set-password` | Prompt for new password | Safer interactive rotation |
 | `--set-org-role` | Change org role | Permission changes |
 | `--set-grafana-admin` | Change server admin status | Permission changes |
 | `--json` | JSON output | Automation |
@@ -742,6 +756,14 @@ Purpose: update an existing user.
 Example command:
 ```bash
 cargo run --bin grafana-util -- access user modify --url http://localhost:3000 --basic-user admin --basic-password admin --login alice --set-email alice@example.com --set-org-role Editor --json
+```
+
+Safer alternatives:
+- Use at most one of `--set-password`, `--set-password-file`, or `--prompt-set-password`.
+
+Example with an interactive password prompt:
+```bash
+cargo run --bin grafana-util -- access user modify --url http://localhost:3000 --basic-user admin --basic-password admin --login alice --prompt-set-password --set-org-role Editor --json
 ```
 
 Example output:
@@ -1309,9 +1331,9 @@ cargo run --bin grafana-util -- access service-account list --url <URL> --token 
 
 | Command | `--org-id` | `--all-orgs` |
 | --- | --- | --- |
-| `dashboard list` | supported | supported |
-| `dashboard export` | supported | supported |
-| `dashboard import` | supported | not supported |
-| `datasource import` | supported | not supported |
-| `alert` commands | not supported | not supported |
-| `access` commands | use `--scope` instead | not supported |
+| `dashboard list` | Yes | Yes |
+| `dashboard export` | Yes | Yes |
+| `dashboard import` | Yes | No |
+| `datasource import` | Yes | No |
+| `alert` commands | No | No |
+| `access` commands | No | No |

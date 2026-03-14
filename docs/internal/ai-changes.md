@@ -5,6 +5,14 @@ Historical note:
 - Older entries preserve the reasoning and follow-up state as of the entry date.
 - Active backlog now lives in `TODO.md`, while completed or superseded TODO items moved to `docs/internal/todo-archive.md`.
 
+## 2026-03-15 - Add Safer Access User Password Input
+- Summary: Extended `access user add` and `access user modify` so operators can now supply passwords through safer prompt/file-oriented inputs instead of relying only on cleartext `--password` and `--set-password` flags. Python now resolves user lifecycle passwords from `--password-file` / `--prompt-user-password` and `--set-password-file` / `--prompt-set-password` before dispatch, while Rust mirrors the same CLI surface and request-handler behavior.
+- Tests: Added Python parser/help/runtime-secret coverage for the new password flags and focused Rust parser/help/request-handler coverage for file-based password resolution on user add/modify.
+- Test Run: `python3 -m unittest -v tests/test_python_access_cli.py`; `cargo test --manifest-path rust/Cargo.toml access --quiet`
+- Validation: Confirmed the Python access suite passes with the new prompt/file password inputs, and confirmed the Rust access-focused suite passes with the new user password flag surface and file-based handler paths.
+- Impact: `grafana_utils/access/parser.py`, `grafana_utils/access/workflows.py`, `grafana_utils/access_cli.py`, `tests/test_python_access_cli.py`, `rust/src/access_cli_defs.rs`, `rust/src/access_user.rs`, `rust/src/access_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Moderate. Password-input UX changes affect sensitive operator flows, and the main risk is introducing ambiguous precedence or unsafe fallback behavior between explicit flags, prompts, and file-based sources.
+
 ## 2026-03-15 - Add Access Org Management
 - Summary: Added `access org` to both implementations so operators can list, create, rename, delete, export, and import Grafana organizations directly instead of relying on indirect user/org header behavior. The new snapshot bundle writes `orgs.json` plus `export-metadata.json`, and import can create missing orgs plus add or role-update org users captured in the export.
 - Tests: Added Python parser/dispatch/workflow coverage for org commands and Rust access coverage for org parsing and request-handler flows. The Python tests also lock in the current `access user` org-targeting semantics around create-time `OrgId`, org-role updates, and org-scoped deletion.

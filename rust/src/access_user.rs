@@ -1,6 +1,7 @@
 //! Access user command handlers.
 //! Supports user listing/lookup and CRUD operations with org/user scope-aware rendering paths.
 use reqwest::Method;
+use rpassword::prompt_password;
 use serde_json::{Map, Value};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
@@ -1251,14 +1252,64 @@ fn validate_user_modify_args(args: &UserModifyArgs) -> Result<()> {
         && args.set_email.is_none()
         && args.set_name.is_none()
         && args.set_password.is_none()
+        && args.set_password_file.is_none()
+        && !args.prompt_set_password
         && args.set_org_role.is_none()
         && args.set_grafana_admin.is_none()
     {
         return Err(message(
-            "User modify requires at least one of --set-login, --set-email, --set-name, --set-password, --set-org-role, or --set-grafana-admin.",
+            "User modify requires at least one of --set-login, --set-email, --set-name, --set-password, --set-password-file, --prompt-set-password, --set-org-role, or --set-grafana-admin.",
         ));
     }
     Ok(())
+}
+
+fn read_secret_file(path: &Path, label: &str) -> Result<String> {
+    let raw = fs::read_to_string(path)?;
+    let value = raw.trim_end_matches(&['\r', '\n'][..]).to_string();
+    if value.is_empty() {
+        return Err(message(format!(
+            "{label} file did not contain a usable value: {}",
+            path.display()
+        )));
+    }
+    Ok(value)
+}
+
+fn resolve_user_add_password(args: &UserAddArgs) -> Result<String> {
+    if let Some(password) = &args.new_user_password {
+        return Ok(password.clone());
+    }
+    if let Some(path) = &args.new_user_password_file {
+        return read_secret_file(path, "User password");
+    }
+    if args.prompt_user_password {
+        let password = prompt_password("New Grafana user password: ")?;
+        if password.is_empty() {
+            return Err(message("Prompted user password cannot be empty."));
+        }
+        return Ok(password);
+    }
+    Err(message(
+        "User add requires one of --password, --password-file, or --prompt-user-password.",
+    ))
+}
+
+fn resolve_user_modify_password(args: &UserModifyArgs) -> Result<Option<String>> {
+    if let Some(password) = &args.set_password {
+        return Ok(Some(password.clone()));
+    }
+    if let Some(path) = &args.set_password_file {
+        return Ok(Some(read_secret_file(path, "Replacement user password")?));
+    }
+    if args.prompt_set_password {
+        let password = prompt_password("Replacement Grafana user password: ")?;
+        if password.is_empty() {
+            return Err(message("Prompted replacement user password cannot be empty."));
+        }
+        return Ok(Some(password));
+    }
+    Ok(None)
 }
 
 fn validate_user_delete_args(args: &UserDeleteArgs) -> Result<()> {
@@ -1365,14 +1416,12 @@ where
 {
     let auth_mode = build_auth_context(&args.common)?.auth_mode;
     validate_basic_auth_only(&auth_mode, "User add")?;
+    let user_password = resolve_user_add_password(args)?;
     let mut payload = Map::from_iter(vec![
         ("login".to_string(), Value::String(args.login.clone())),
         ("email".to_string(), Value::String(args.email.clone())),
         ("name".to_string(), Value::String(args.name.clone())),
-        (
-            "password".to_string(),
-            Value::String(args.new_user_password.clone()),
-        ),
+        ("password".to_string(), Value::String(user_password)),
     ]);
     if let Some(org_id) = args.common.org_id {
         payload.insert("OrgId".to_string(), Value::Number(org_id.into()));
@@ -1458,8 +1507,8 @@ where
     if !payload.is_empty() {
         let _ = update_user_with_request(&mut request_json, &user_id, &Value::Object(payload))?;
     }
-    if let Some(password) = &args.set_password {
-        let _ = update_user_password_with_request(&mut request_json, &user_id, password)?;
+    if let Some(password) = resolve_user_modify_password(args)? {
+        let _ = update_user_password_with_request(&mut request_json, &user_id, &password)?;
     }
     if let Some(role) = &args.set_org_role {
         let _ = update_user_org_role_with_request(&mut request_json, &user_id, role)?;

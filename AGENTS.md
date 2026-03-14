@@ -5,11 +5,14 @@
 - `grafana_utils/dashboard_cli.py`: packaged dashboard implementation.
 - `grafana_utils/alert_cli.py`: packaged alerting implementation.
 - `grafana_utils/access_cli.py`: packaged access-management implementation.
+- `grafana_utils/access/parser.py`: Python access CLI argparse definitions.
+- `grafana_utils/access/workflows.py`: Python access user, org, team, and service-account workflows.
 - `grafana_utils/unified_cli.py`: unified Python CLI dispatcher.
 - `grafana_utils/http_transport.py`: shared replaceable HTTP transport layer.
 - `grafana_utils/__main__.py`: source-tree module entrypoint for running the unified CLI directly from the repo checkout.
 - `pyproject.toml`: package metadata and console-script entrypoints.
 - `rust/src/`: Rust implementation for dashboard, alerting, access, and unified dispatch.
+- `rust/src/access_org.rs`: Rust access org list/add/modify/delete/export/import implementation.
 - `tests/`: Python unit tests.
 - `Makefile`: root shortcuts for Python wheel builds, Rust release builds, and test runs.
 - `README.md`: GitHub-facing usage and operator examples.
@@ -21,7 +24,6 @@ Keep implementation code in `grafana_utils/` and keep `python/` wrappers thin un
 ## Build, Test, and Development Commands
 
 - `poetry install --with dev`: create the standard Python development environment for this repo.
-- `poetry run python -m grafana_utils -h`: show unified source-tree CLI help from the Poetry-managed environment.
 - `poetry run python -m unittest -v`: run the full Python test suite from the Poetry-managed environment.
 - `poetry run python -m unittest -v tests/test_python_alert_cli.py`: run alerting Python tests only from the Poetry-managed environment.
 - `poetry run python -m unittest -v tests/test_python_dashboard_cli.py`: run dashboard Python tests only from the Poetry-managed environment.
@@ -34,11 +36,6 @@ Keep implementation code in `grafana_utils/` and keep `python/` wrappers thin un
 - `make build`: build both the Python wheel and the Rust release binaries.
 - `make test`: run both the Python and Rust test suites.
 - `make test-rust-live`: start Docker Grafana and run the Rust live smoke test script.
-- `grafana-util -h`: show installed unified CLI help.
-- `python3 -m grafana_utils -h`: show unified source-tree CLI help.
-- `python3 -m grafana_utils dashboard list -h`: show dashboard list help.
-- `python3 -m grafana_utils alert -h`: show alerting help.
-- `python3 -m grafana_utils access user list -h`: show access-management help.
 - `python3 -m unittest -v`: run the full test suite.
 - `python3 -m unittest -v tests/test_python_alert_cli.py`: run alerting Python tests only.
 - `python3 -m unittest -v tests/test_python_dashboard_cli.py`: run dashboard Python tests only.
@@ -48,6 +45,8 @@ Keep implementation code in `grafana_utils/` and keep `python/` wrappers thin un
 Use Poetry-first commands for Python development and test execution. Keep the `pip install` commands for packaged-install validation, local release checks, or environments that intentionally skip Poetry.
 
 Run the smallest relevant test target first, then the full suite when behavior changes span both tools.
+
+For external command usage and operator examples, prefer `README.md`, `README.zh-TW.md`, `docs/user-guide.md`, and `docs/user-guide-TW.md` instead of expanding usage examples here.
 
 ## Coding Style & Naming Conventions
 

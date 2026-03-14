@@ -20,6 +20,7 @@ Caveats:
 
 import getpass
 import sys
+from pathlib import Path
 
 from .access.common import GrafanaError
 from .access.models import (
@@ -141,6 +142,42 @@ def build_request_headers(args):
     return resolve_auth(args)
 
 
+def _read_secret_file(path, label):
+    file_path = Path(path)
+    try:
+        content = file_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise GrafanaError("Failed to read %s file %s: %s" % (label, file_path, exc))
+    secret = content.rstrip("\r\n")
+    if not secret:
+        raise GrafanaError("%s file was empty: %s" % (label, file_path))
+    return secret
+
+
+def resolve_user_secret_inputs(args):
+    if getattr(args, "command", None) == "add" and getattr(args, "resource", None) == "user":
+        if getattr(args, "new_user_password_file", None):
+            args.new_user_password = _read_secret_file(
+                args.new_user_password_file,
+                "New user password",
+            )
+        elif bool(getattr(args, "prompt_user_password", False)):
+            args.new_user_password = getpass.getpass("New Grafana user password: ")
+            if not args.new_user_password:
+                raise GrafanaError("Prompted new user password cannot be empty.")
+    if getattr(args, "command", None) == "modify" and getattr(args, "resource", None) == "user":
+        if getattr(args, "set_password_file", None):
+            args.set_password = _read_secret_file(
+                args.set_password_file,
+                "Set password",
+            )
+        elif bool(getattr(args, "prompt_set_password", False)):
+            args.set_password = getpass.getpass("Updated Grafana user password: ")
+            if not args.set_password:
+                raise GrafanaError("Prompted set password cannot be empty.")
+    return args
+
+
 def run(args):
     """Build a CLI-scoped client and dispatch the parsed command to access workflows.
 
@@ -163,6 +200,7 @@ def main(argv=None):
     """Run access CLI through parser -> auth -> workflow dispatch and normalize exits."""
     try:
         args = parse_args(argv)
+        args = resolve_user_secret_inputs(args)
         return run(args)
     except GrafanaError as exc:
         print("Error: %s" % exc, file=sys.stderr)

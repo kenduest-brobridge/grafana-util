@@ -644,6 +644,74 @@ class AccessCliTests(unittest.TestCase):
         self.assertEqual(args.grafana_admin, "true")
         self.assertTrue(args.json)
 
+    def test_parse_args_supports_user_add_password_file_mode(self):
+        args = access_utils.parse_args(
+            [
+                "user",
+                "add",
+                "--basic-user",
+                "admin",
+                "--basic-password",
+                "grafana-secret",
+                "--login",
+                "alice",
+                "--email",
+                "alice@example.com",
+                "--name",
+                "Alice",
+                "--password-file",
+                "/tmp/alice-password.txt",
+            ]
+        )
+
+        self.assertEqual(args.new_user_password_file, "/tmp/alice-password.txt")
+        self.assertFalse(args.prompt_user_password)
+
+    def test_parse_args_supports_user_add_prompt_password_mode(self):
+        args = access_utils.parse_args(
+            [
+                "user",
+                "add",
+                "--basic-user",
+                "admin",
+                "--basic-password",
+                "grafana-secret",
+                "--login",
+                "alice",
+                "--email",
+                "alice@example.com",
+                "--name",
+                "Alice",
+                "--prompt-user-password",
+            ]
+        )
+
+        self.assertTrue(args.prompt_user_password)
+        self.assertIsNone(args.new_user_password_file)
+
+    def test_parse_args_rejects_multiple_user_add_password_sources(self):
+        with self.assertRaises(SystemExit):
+            access_utils.parse_args(
+                [
+                    "user",
+                    "add",
+                    "--basic-user",
+                    "admin",
+                    "--basic-password",
+                    "grafana-secret",
+                    "--login",
+                    "alice",
+                    "--email",
+                    "alice@example.com",
+                    "--name",
+                    "Alice",
+                    "--password",
+                    "secret123",
+                    "--password-file",
+                    "/tmp/alice-password.txt",
+                ]
+            )
+
     def test_parse_args_supports_user_modify_mode(self):
         args = access_utils.parse_args(
             [
@@ -686,6 +754,62 @@ class AccessCliTests(unittest.TestCase):
         self.assertEqual(args.set_org_role, "Admin")
         self.assertEqual(args.set_grafana_admin, "true")
         self.assertTrue(args.json)
+
+    def test_parse_args_supports_user_modify_password_file_mode(self):
+        args = access_utils.parse_args(
+            [
+                "user",
+                "modify",
+                "--basic-user",
+                "admin",
+                "--basic-password",
+                "grafana-secret",
+                "--login",
+                "alice",
+                "--set-password-file",
+                "/tmp/alice-password.txt",
+            ]
+        )
+
+        self.assertEqual(args.set_password_file, "/tmp/alice-password.txt")
+        self.assertFalse(args.prompt_set_password)
+
+    def test_parse_args_supports_user_modify_prompt_password_mode(self):
+        args = access_utils.parse_args(
+            [
+                "user",
+                "modify",
+                "--basic-user",
+                "admin",
+                "--basic-password",
+                "grafana-secret",
+                "--login",
+                "alice",
+                "--prompt-set-password",
+            ]
+        )
+
+        self.assertTrue(args.prompt_set_password)
+        self.assertIsNone(args.set_password_file)
+
+    def test_parse_args_rejects_multiple_user_modify_password_sources(self):
+        with self.assertRaises(SystemExit):
+            access_utils.parse_args(
+                [
+                    "user",
+                    "modify",
+                    "--basic-user",
+                    "admin",
+                    "--basic-password",
+                    "grafana-secret",
+                    "--login",
+                    "alice",
+                    "--set-password",
+                    "new-secret",
+                    "--set-password-file",
+                    "/tmp/alice-password.txt",
+                ]
+            )
 
     def test_parse_args_supports_user_delete_mode(self):
         args = access_utils.parse_args(
@@ -794,6 +918,8 @@ class AccessCliTests(unittest.TestCase):
         self.assertIn("--basic-user USERNAME", help_text)
         self.assertIn("--basic-password PASSWORD", help_text)
         self.assertIn("--password NEW_USER_PASSWORD", help_text)
+        self.assertIn("--password-file NEW_USER_PASSWORD_FILE", help_text)
+        self.assertIn("--prompt-user-password", help_text)
         self.assertNotIn("--token", help_text)
 
     def test_user_modify_help_uses_basic_auth_only(self):
@@ -804,6 +930,8 @@ class AccessCliTests(unittest.TestCase):
         self.assertIn("--basic-user USERNAME", help_text)
         self.assertIn("--basic-password PASSWORD", help_text)
         self.assertIn("--set-password SET_PASSWORD", help_text)
+        self.assertIn("--set-password-file SET_PASSWORD_FILE", help_text)
+        self.assertIn("--prompt-set-password", help_text)
         self.assertNotIn("--token", help_text)
 
     def test_user_delete_help_uses_scope_and_confirmation_flags(self):
@@ -1402,6 +1530,68 @@ class AccessCliTests(unittest.TestCase):
             "Choose either --token / --api-token or --prompt-token, not both.",
         ):
             access_utils.resolve_auth(args)
+
+    def test_resolve_user_secret_inputs_reads_new_user_password_file(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            password_path = Path(temp_dir) / "new-user-password.txt"
+            password_path.write_text("secret123\n", encoding="utf-8")
+            args = argparse.Namespace(
+                resource="user",
+                command="add",
+                new_user_password=None,
+                new_user_password_file=str(password_path),
+                prompt_user_password=False,
+            )
+
+            resolved = access_utils.resolve_user_secret_inputs(args)
+
+        self.assertEqual(resolved.new_user_password, "secret123")
+
+    def test_resolve_user_secret_inputs_prompts_for_new_user_password(self):
+        args = argparse.Namespace(
+            resource="user",
+            command="add",
+            new_user_password=None,
+            new_user_password_file=None,
+            prompt_user_password=True,
+        )
+
+        with mock.patch("grafana_utils.access_cli.getpass.getpass", return_value="secret123") as prompt:
+            resolved = access_utils.resolve_user_secret_inputs(args)
+
+        self.assertEqual(resolved.new_user_password, "secret123")
+        prompt.assert_called_once_with("New Grafana user password: ")
+
+    def test_resolve_user_secret_inputs_reads_set_password_file(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            password_path = Path(temp_dir) / "set-password.txt"
+            password_path.write_text("new-secret\n", encoding="utf-8")
+            args = argparse.Namespace(
+                resource="user",
+                command="modify",
+                set_password=None,
+                set_password_file=str(password_path),
+                prompt_set_password=False,
+            )
+
+            resolved = access_utils.resolve_user_secret_inputs(args)
+
+        self.assertEqual(resolved.set_password, "new-secret")
+
+    def test_resolve_user_secret_inputs_prompts_for_set_password(self):
+        args = argparse.Namespace(
+            resource="user",
+            command="modify",
+            set_password=None,
+            set_password_file=None,
+            prompt_set_password=True,
+        )
+
+        with mock.patch("grafana_utils.access_cli.getpass.getpass", return_value="new-secret") as prompt:
+            resolved = access_utils.resolve_user_secret_inputs(args)
+
+        self.assertEqual(resolved.set_password, "new-secret")
+        prompt.assert_called_once_with("Updated Grafana user password: ")
 
     def test_validate_user_list_auth_rejects_global_token_auth(self):
         args = argparse.Namespace(scope="global", with_teams=False)

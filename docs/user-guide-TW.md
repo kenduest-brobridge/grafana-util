@@ -58,21 +58,22 @@ grafana-access-utils <access-command> [options]
 - Dashboard：`dashboard export`、`dashboard list`、`dashboard list-data-sources`、`dashboard import`、`dashboard diff`、`dashboard inspect-export`、`dashboard inspect-live`
 - Alert：`alert export`、`alert import`、`alert diff`、`alert list-rules`、`alert list-contact-points`、`alert list-mute-timings`、`alert list-templates`
 - Datasource：`datasource list`、`datasource export`、`datasource import`、`datasource diff`
-- Access：`access user list`、`access user add`、`access user modify`、`access user delete`、`access user export`、`access user import`、`access user diff`、`access team list`、`access team add`、`access team modify`、`access team delete`、`access team export`、`access team import`、`access team diff`、`access service-account list`、`access service-account add`、`access service-account export`、`access service-account import`、`access service-account diff`、`access service-account delete`、`access service-account token add`、`access service-account token delete`
+- Access：`access org list`、`access org add`、`access org modify`、`access org delete`、`access org export`、`access org import`、`access user list`、`access user add`、`access user modify`、`access user delete`、`access user export`、`access user import`、`access user diff`、`access team list`、`access team add`、`access team modify`、`access team delete`、`access team export`、`access team import`、`access team diff`、`access service-account list`、`access service-account add`、`access service-account export`、`access service-account import`、`access service-account diff`、`access service-account delete`、`access service-account token add`、`access service-account token delete`
 
 ### 指令功能矩陣 (Feature Matrix)
 
 本表可協助您快速確認各類 Grafana 資源的支援程度，以便選擇合適的指令執行資產盤點或狀態同步。
 
-| 資源類型 | List (列表) | Export (匯出) | Import (匯入) | Diff (差異) | Inspect (分析) | 管理 (Add/Del) | 備註 |
+| 資源類型 | List (列表) | Export (匯出) | Import (匯入) | Diff (差異) | Inspect (分析) | Add | Modify | Delete | 備註 |
 | --- | :---: | :---: | :---: | :---: | :---: | :---: | --- |
-| **Dashboard** | ✓ | ✓ | ✓ | ✓ | ✓ | - | 適合資產盤點、備份與環境遷移 |
-| **Datasource** | ✓ | ✓ | ✓ | ✓ | - | ✓ | 支援組態漂移檢查與環境同步 |
-| **Alerting** | ✓ | ✓ | ✓ | ✓ | - | - | 涵蓋 Rules, Contact Points, Mute Timings |
-| **User** | ✓ | ✓ | ✓ | ✓ | - | ✓ | 支援全域或組織範圍的使用者盤點 |
-| **Team / Group** | ✓ | ✓ | ✓ | ✓ | - | ✓ | 包含成員關係（Membership）同步 |
-| **Service Account** | ✓ | ✓ | ✓ | ✓ | - | ✓ | 生命週期管理與 Token 簽發 |
-| **SA Token** | ✓ | - | - | - | - | ✓ | Token 建立與撤銷 |
+| **Dashboard** | Yes | Yes | Yes | Yes | Yes | No | No | No | 適合資產盤點、備份與環境遷移 |
+| **Datasource** | Yes | Yes | Yes | Yes | No | No | No | No | 支援組態漂移檢查與環境同步 |
+| **Alerting** | Yes | Yes | Yes | Yes | No | No | No | No | 涵蓋 Rules, Contact Points, Mute Timings |
+| **Organization** | Yes | Yes | Yes | No | No | Yes | Yes | Yes | 支援 org 盤點與 membership replay |
+| **User** | Yes | Yes | Yes | Yes | No | Yes | Yes | Yes | 支援全域或組織範圍的使用者盤點 |
+| **Team / Group** | Yes | Yes | Yes | Yes | No | Yes | Yes | Yes | 包含成員關係（Membership）同步 |
+| **Service Account** | Yes | Yes | Yes | Yes | No | Yes | Yes | Yes | 生命週期管理與 Token 簽發 |
+| **SA Token** | Yes | No | No | No | No | Yes | No | Yes | Token 建立與撤銷 |
 
 認證互斥規則（由 Rust Parser 強制執行）:
 
@@ -664,7 +665,9 @@ ID   LOGIN      EMAIL                NAME             ORG_ROLE   GRAFANA_ADMIN
 | `--login` | login（必填） | 建立使用者 |
 | `--email` | email（必填） | 通訊 |
 | `--name` | 顯示名稱（必填） | 人員識別 |
-| `--password` | 初始密碼（必填） | 本地帳號 |
+| `--password` | 初始密碼 | 三選一其一 |
+| `--password-file` | 從檔案讀取初始密碼 | 較安全的非互動用法 |
+| `--prompt-user-password` | 互動式輸入初始密碼 | 較安全的互動用法 |
 | `--org-role` | 初始角色 |
 | `--grafana-admin` | `true/false` |
 | `--json` | JSON 回應 |
@@ -672,6 +675,15 @@ ID   LOGIN      EMAIL                NAME             ORG_ROLE   GRAFANA_ADMIN
 示例命令：
 ```bash
 cargo run --bin grafana-util -- access user add --url http://localhost:3000 --basic-user admin --basic-password admin --login bob --email bob@example.com --name "Bob Lin" --password '<SECRET>' --org-role Editor --json
+```
+
+補充：
+- `--password`、`--password-file`、`--prompt-user-password` 只能擇一。
+- `--password-file` 會去掉最後一個換行，方便直接讀常見 secret 檔。
+
+使用密碼檔示例：
+```bash
+cargo run --bin grafana-util -- access user add --url http://localhost:3000 --basic-user admin --basic-password admin --login bob --email bob@example.com --name "Bob Lin" --password-file ./secrets/bob-password.txt --org-role Editor --json
 ```
 
 示例輸出：
@@ -696,7 +708,9 @@ cargo run --bin grafana-util -- access user add --url http://localhost:3000 --ba
 | `--set-login` | 更新 login |
 | `--set-email` | 更新 email |
 | `--set-name` | 更新名稱 |
-| `--set-password` | 重設密碼 |
+| `--set-password` | 重設密碼 | 三選一其一 |
+| `--set-password-file` | 從檔案讀取新密碼 | 較安全的非互動輪替 |
+| `--prompt-set-password` | 互動式輸入新密碼 | 較安全的互動輪替 |
 | `--set-org-role` | 更新角色 |
 | `--set-grafana-admin` | 更新管理員身分 |
 | `--json` | JSON 回應 |
@@ -704,6 +718,14 @@ cargo run --bin grafana-util -- access user add --url http://localhost:3000 --ba
 示例命令：
 ```bash
 cargo run --bin grafana-util -- access user modify --url http://localhost:3000 --basic-user admin --basic-password admin --login alice --set-email alice@example.com --set-org-role Editor --json
+```
+
+補充：
+- `--set-password`、`--set-password-file`、`--prompt-set-password` 最多只能用一個。
+
+互動式改密碼示例：
+```bash
+cargo run --bin grafana-util -- access user modify --url http://localhost:3000 --basic-user admin --basic-password admin --login alice --prompt-set-password --set-org-role Editor --json
 ```
 
 示例輸出：

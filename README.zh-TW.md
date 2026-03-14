@@ -22,7 +22,7 @@
 ## 🚀 核心功能與優勢
 
 ### 1. 環境深度盤點 (Environment Inventory)
-- 支援 Dashboard、Datasource、Alerting、User、Team 與 Service Account 的全面掃描。
+- 支援 Dashboard、Datasource、Alerting、Organization、User、Team 與 Service Account 的全面掃描。
 - 提供 Table、CSV、JSON 多種輸出模式，方便人工審查或串接自動化腳本。
 
 ### 2. 安全的變更管理 (Safe Change Management)
@@ -36,6 +36,18 @@
 ### 4. 治理導向的分析 (Governance Inspection)
 - 深入分析 Dashboard 結構、資料源使用情況與查詢語句盤點，識別冗餘資源。
 - 專為大規模環境設計的分頁抓取與效能優化（由 Rust 核心補強）。
+
+### 支援矩陣 (Support Matrix)
+
+| Domain | 盤點 / 檢視 | 新增 / 修改 / 刪除 | 匯出 / 匯入 / Diff | 備註 |
+| --- | --- | --- | --- | --- |
+| Dashboard | Yes | No | Yes | 以 import 驅動變更，支援 folder-aware 遷移與 dry-run |
+| Alerting | Yes | No | Yes | 以 import 驅動 rule / contact point 工作流 |
+| Datasource | Yes | Yes | Yes | 支援 dry-run 與 diff |
+| Access User | Yes | Yes | Yes | 支援 `--password-file` / `--prompt-user-password` 與 `--set-password-file` / `--prompt-set-password` |
+| Access Org | Yes | Yes | Yes | 匯入時可重播 org membership |
+| Access Team | Yes | Yes | Yes | 成員關係可匯出 / 匯入 / diff |
+| Access Service Account | Yes | Yes | Yes | 包含 token lifecycle |
 
 ---
 

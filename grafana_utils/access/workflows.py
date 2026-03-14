@@ -86,17 +86,30 @@ def validate_user_add_auth(auth_mode):
 
 
 def validate_user_modify_args(args):
+    password_inputs = [
+        bool(args.set_password),
+        bool(getattr(args, "set_password_file", None)),
+        bool(getattr(args, "prompt_set_password", False)),
+    ]
+    if sum(1 for enabled in password_inputs if enabled) > 1:
+        raise GrafanaError(
+            "Choose only one of --set-password, --set-password-file, or "
+            "--prompt-set-password."
+        )
     if not (
         args.set_login
         or args.set_email
         or args.set_name
         or args.set_password
+        or getattr(args, "set_password_file", None)
+        or getattr(args, "prompt_set_password", False)
         or args.set_org_role
         or args.set_grafana_admin is not None
     ):
         raise GrafanaError(
             "User modify requires at least one of --set-login, --set-email, "
-            "--set-name, --set-password, --set-org-role, or --set-grafana-admin."
+            "--set-name, --set-password, --set-password-file, "
+            "--prompt-set-password, --set-org-role, or --set-grafana-admin."
         )
 
 

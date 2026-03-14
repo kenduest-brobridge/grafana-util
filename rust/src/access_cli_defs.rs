@@ -199,8 +199,25 @@ pub struct UserAddArgs {
     pub email: String,
     #[arg(long, help = "Display name for the new Grafana user.")]
     pub name: String,
-    #[arg(long = "password", help = "Initial password for the new Grafana user.")]
-    pub new_user_password: String,
+    #[arg(
+        long = "password",
+        conflicts_with_all = ["new_user_password_file", "prompt_user_password"],
+        help = "Initial password for the new Grafana user."
+    )]
+    pub new_user_password: Option<String>,
+    #[arg(
+        long = "password-file",
+        conflicts_with_all = ["new_user_password", "prompt_user_password"],
+        help = "Read the initial user password from this file."
+    )]
+    pub new_user_password_file: Option<PathBuf>,
+    #[arg(
+        long = "prompt-user-password",
+        default_value_t = false,
+        conflicts_with_all = ["new_user_password", "new_user_password_file"],
+        help = "Prompt for the initial user password without echo."
+    )]
+    pub prompt_user_password: bool,
     #[arg(
         long = "org-role",
         help = "Optional initial org role such as Viewer, Editor, or Admin."
@@ -232,8 +249,25 @@ pub struct UserModifyArgs {
     pub set_email: Option<String>,
     #[arg(long, help = "Replace the user's display name with this new value.")]
     pub set_name: Option<String>,
-    #[arg(long, help = "Replace the user's password with this new value.")]
+    #[arg(
+        long,
+        conflicts_with_all = ["set_password_file", "prompt_set_password"],
+        help = "Replace the user's password with this new value."
+    )]
     pub set_password: Option<String>,
+    #[arg(
+        long = "set-password-file",
+        conflicts_with_all = ["set_password", "prompt_set_password"],
+        help = "Read the replacement user password from this file."
+    )]
+    pub set_password_file: Option<PathBuf>,
+    #[arg(
+        long = "prompt-set-password",
+        default_value_t = false,
+        conflicts_with_all = ["set_password", "set_password_file"],
+        help = "Prompt for the replacement user password without echo."
+    )]
+    pub prompt_set_password: bool,
     #[arg(long, help = "Change the user's org role to this value.")]
     pub set_org_role: Option<String>,
     #[arg(long, value_parser = parse_bool_text, help = "Change whether the user is a Grafana server admin.")]

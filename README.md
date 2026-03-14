@@ -22,7 +22,7 @@ While the official Grafana UI and CLI are excellent for day-to-day interactions,
 ## 🚀 Key Capabilities & Advantages
 
 ### 1. Deep Environment Inventory
-- Full-spectrum scanning of Dashboards, Datasources, Alerting rules, Users, Teams, and Service Accounts.
+- Full-spectrum scanning of Dashboards, Datasources, Alerting rules, Organizations, Users, Teams, and Service Accounts.
 - Multiple output modes (Table, CSV, JSON) for human review or CI/CD integration.
 
 ### 2. Safe Change Management
@@ -36,6 +36,18 @@ While the official Grafana UI and CLI are excellent for day-to-day interactions,
 ### 4. Governance-Oriented Inspection
 - Analyze dashboard structures and query inventory to identify redundant or inefficient resources.
 - Optimized for large-scale instances using high-performance pagination and processing (powered by Rust).
+
+### Support Matrix
+
+| Domain | List / Inspect | Add / Modify / Delete | Export / Import / Diff | Notes |
+| --- | --- | --- | --- | --- |
+| Dashboard | Yes | No | Yes | Import-driven changes, folder-aware migration, and dry-run support |
+| Alerting | Yes | No | Yes | Import-driven rule and contact-point workflows |
+| Datasource | Yes | Yes | Yes | Dry-run and diff supported |
+| Access User | Yes | Yes | Yes | Supports `--password-file` / `--prompt-user-password` and `--set-password-file` / `--prompt-set-password` |
+| Access Org | Yes | Yes | Yes | Includes org membership replay during import |
+| Access Team | Yes | Yes | Yes | Membership-aware export/import/diff |
+| Access Service Account | Yes | Yes | Yes | Token lifecycle included |
 
 ---
 

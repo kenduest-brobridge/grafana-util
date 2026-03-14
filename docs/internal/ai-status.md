@@ -5,6 +5,13 @@ Historical note:
 - Older entries describe the repo state and `TODO.md` backlog as they existed on the entry date.
 - `TODO.md` now tracks only the active backlog; completed or superseded TODO items moved to `docs/internal/todo-archive.md`.
 
+## 2026-03-15 - Task: Add Safer Access User Password Input
+- State: Done
+- Scope: `grafana_utils/access/parser.py`, `grafana_utils/access/workflows.py`, `grafana_utils/access_cli.py`, `tests/test_python_access_cli.py`, `rust/src/access_cli_defs.rs`, `rust/src/access_user.rs`, `rust/src/access_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: `access user add --password` and `access user modify --set-password` currently take cleartext passwords directly from CLI flags, and user import only accepts inline `password` fields when creating missing global users. There is no prompt-based or file-based password input path for access user lifecycle commands.
+- Current Update: Added prompt/file-based password input for Python and Rust `access user add` and `access user modify`, kept existing explicit `--password` and `--set-password` behavior, and resolved password values before user lifecycle requests are sent.
+- Result: Operators can now use `--password-file` or `--prompt-user-password` on create and `--set-password-file` or `--prompt-set-password` on modify, reducing the need to pass cleartext passwords directly on the command line.
+
 ## 2026-03-15 - Task: Add Access Org Management
 - State: Done
 - Scope: `grafana_utils/access/parser.py`, `grafana_utils/access/workflows.py`, `grafana_utils/clients/access_client.py`, `grafana_utils/access_cli.py`, `tests/test_python_access_cli.py`, `rust/src/access.rs`, `rust/src/access_cli_defs.rs`, `rust/src/access_org.rs`, `rust/src/access_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

@@ -689,11 +689,23 @@ def add_user_add_cli_args(parser):
         required=True,
         help="Display name for the new Grafana user.",
     )
-    parser.add_argument(
+    password_group = parser.add_mutually_exclusive_group(required=True)
+    password_group.add_argument(
         "--password",
         dest="new_user_password",
-        required=True,
+        default=None,
         help="Password for the new local Grafana user.",
+    )
+    password_group.add_argument(
+        "--password-file",
+        dest="new_user_password_file",
+        default=None,
+        help="Read the new local Grafana user password from this file.",
+    )
+    password_group.add_argument(
+        "--prompt-user-password",
+        action="store_true",
+        help="Prompt for the new local Grafana user password without echo.",
     )
     parser.add_argument(
         "--org-role",
@@ -746,10 +758,21 @@ def add_user_modify_cli_args(parser):
         default=None,
         help="Set a new display name for the target user.",
     )
-    parser.add_argument(
+    password_group = parser.add_mutually_exclusive_group()
+    password_group.add_argument(
         "--set-password",
         default=None,
         help="Set a new local password for the target user.",
+    )
+    password_group.add_argument(
+        "--set-password-file",
+        default=None,
+        help="Read the new local password for the target user from this file.",
+    )
+    password_group.add_argument(
+        "--prompt-set-password",
+        action="store_true",
+        help="Prompt for the target user's new local password without echo.",
     )
     parser.add_argument(
         "--set-org-role",
