@@ -1703,6 +1703,103 @@ class ExporterTests(unittest.TestCase):
             self.assertIn("5m", output)
             self.assertIn('{job="varlogs",app=~"api|web"} |= "error" | json [5m]', output)
 
+    def test_inspect_export_report_table_renders_loki_analysis_columns(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import_dir = Path(tmpdir)
+            exporter.write_json_document(
+                exporter.build_export_metadata(
+                    variant=exporter.RAW_EXPORT_SUBDIR,
+                    dashboard_count=1,
+                    format_name="grafana-web-import-preserve-uid",
+                    folders_file=exporter.FOLDER_INVENTORY_FILENAME,
+                    datasources_file=exporter.DATASOURCE_INVENTORY_FILENAME,
+                ),
+                import_dir / exporter.EXPORT_METADATA_FILENAME,
+            )
+            exporter.write_json_document(
+                [
+                    {
+                        "uid": "logs",
+                        "title": "Logs",
+                        "parentUid": "",
+                        "path": "Logs",
+                        "org": "Main Org.",
+                        "orgId": "1",
+                    }
+                ],
+                import_dir / exporter.FOLDER_INVENTORY_FILENAME,
+            )
+            exporter.write_json_document(
+                [
+                    {
+                        "uid": "loki-main",
+                        "name": "Loki Main",
+                        "type": "loki",
+                        "access": "proxy",
+                        "url": "http://loki.local",
+                        "isDefault": "false",
+                        "org": "Main Org.",
+                        "orgId": "1",
+                    }
+                ],
+                import_dir / exporter.DATASOURCE_INVENTORY_FILENAME,
+            )
+            exporter.write_json_document(
+                {
+                    "dashboard": {
+                        "id": None,
+                        "uid": "logs-main",
+                        "title": "Logs Main",
+                        "panels": [
+                            {
+                                "id": 11,
+                                "title": "Errors",
+                                "type": "logs",
+                                "datasource": {"type": "loki", "uid": "loki-main"},
+                                "targets": [
+                                    {
+                                        "refId": "A",
+                                        "expr": 'sum by (job) (count_over_time({job="varlogs",app=~"api|web"} |= "error" | json [5m]))',
+                                        "datasource": {
+                                            "type": "loki",
+                                            "uid": "loki-main",
+                                        },
+                                    }
+                                ],
+                            }
+                        ],
+                    },
+                    "meta": {"folderUid": "logs"},
+                },
+                import_dir / "Logs" / "Logs_Main__logs-main.json",
+            )
+
+            args = exporter.parse_args(
+                [
+                    "inspect-export",
+                    "--import-dir",
+                    str(import_dir),
+                    "--report",
+                    "table",
+                    "--report-columns",
+                    "panel_id,datasource,metrics,measurements,buckets,query",
+                ]
+            )
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = exporter.inspect_export(args)
+
+            output = stdout.getvalue()
+            self.assertEqual(result, 0)
+            self.assertIn("Export inspection report: %s" % import_dir, output)
+            self.assertIn("PANEL_ID  DATASOURCE  METRICS", output)
+            self.assertIn("11", output)
+            self.assertIn("loki-main", output)
+            self.assertIn("sum,count_over_time,filter_eq,json", output)
+            self.assertIn('job="varlogs",app=~"api|web"', output)
+            self.assertIn("5m", output)
+            self.assertIn('{job="varlogs",app=~"api|web"} |= "error" | json [5m]', output)
+
     def test_render_dashboard_summary_table_uses_headers_and_defaults(self):
         lines = exporter.render_dashboard_summary_table(
             [
