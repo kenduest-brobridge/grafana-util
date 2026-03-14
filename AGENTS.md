@@ -72,12 +72,13 @@ Run the smallest relevant test target first, then the full suite when behavior c
 ## Commit & Pull Request Guidelines
 
 - Default commit message format for agents is:
-  - first line: short imperative title
+  - first line: short imperative title with a type prefix such as `feature:`, `bugfix:`, `refactor:`, `docs:`, or `test:`
   - blank line
   - flat `- ...` sub-items with concrete details
+  - do not insert empty blank lines between detail bullets
 - Prefer 2-4 detail bullets that describe the main code, test, or doc changes in the commit.
 - Example:
-  - `Split Rust dashboard module internals`
+  - `refactor: split Rust dashboard module internals`
   - blank line
   - `- Extract dashboard CLI definitions, list rendering, and export orchestration into dedicated modules.`
   - `- Keep the existing crate::dashboard public API stable through re-exports.`
