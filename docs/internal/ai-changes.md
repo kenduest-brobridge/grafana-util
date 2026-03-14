@@ -1,5 +1,21 @@
 # ai-changes.md
 
+## 2026-03-14 - Split Python Dashboard Inspection Analyzers
+- Summary: Moved the active Prometheus, Flux, and SQL query-analysis heuristics out of `grafana_utils/dashboards/inspection_report.py` into `grafana_utils/dashboards/inspection_analyzers/`. The report module now uses the analyzer dispatcher plus the shared query-field chooser from the analyzer package, while the analyzer modules own datasource-family-specific metric, measurement, bucket, and SQL-source extraction behavior.
+- Tests: Added a focused dashboard CLI mixed-family report JSON case that exercises Prometheus, Flux, and SQL analysis through `inspect-export --report json` and confirms the extracted values stay stable after the analyzer split.
+- Test Run: `python3 -m unittest -v tests/test_python_dashboard_cli.py`
+- Validation: Verified the updated inspection report and analyzer modules compile, kept Rust untouched, and confirmed the focused dashboard CLI suite still passes after routing family-specific analysis through `inspection_analyzers/`.
+- Impact: `grafana_utils/dashboards/inspection_report.py`, `grafana_utils/dashboards/inspection_analyzers/contract.py`, `grafana_utils/dashboards/inspection_analyzers/prometheus.py`, `grafana_utils/dashboards/inspection_analyzers/flux.py`, `grafana_utils/dashboards/inspection_analyzers/sql.py`, `tests/test_python_dashboard_cli.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low to moderate. This is intended to preserve the current inspection contract, but future datasource-family changes should now stay in `inspection_analyzers/` so the report layer does not re-accumulate family-specific parsing logic.
+
+## 2026-03-14 - Split Python Dashboard Inspection Renderers
+- Summary: Extracted the Python dashboard inspection CSV/table/tree/tree-table render helpers out of `grafana_utils/dashboards/inspection_report.py` into `grafana_utils/dashboards/inspection_render.py`. The inspection report module now focuses on canonical report documents and grouped document building, the renderer module owns column formatting and all report output paths, and `inspection_summary.py` now uses the shared table-section helper from the renderer boundary instead of reaching back through the report module.
+- Tests: Added Python 3.6 syntax coverage for the new `grafana_utils/dashboards/inspection_render.py` module, kept a focused grouped tree-table renderer test that exercises the preserved facade surface through `grafana_utils.dashboard_cli`, and added focused execution coverage for `inspect-export --json` plus `inspect-export --report json`.
+- Test Run: `python3 -m unittest -v tests/test_python_dashboard_cli.py`
+- Validation: Verified the reduced inspection report module and new renderer module both compile, preserved the existing helper names re-exported through `inspection_report.py`, confirmed the JSON summary and per-query report outputs stay stable from a minimal raw export fixture, and kept Rust untouched.
+- Impact: `grafana_utils/dashboards/inspection_report.py`, `grafana_utils/dashboards/inspection_render.py`, `grafana_utils/dashboards/inspection_summary.py`, `tests/test_python_dashboard_cli.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low. This is intended to be behavior-preserving, but future inspection output changes should stay in `grafana_utils/dashboards/inspection_render.py` so document-building and rendering do not drift back into one module.
+
 ## 2026-03-13 - Split Python Dashboard Output Support Helpers
 - Summary: Extracted the remaining Python dashboard export/output helper block out of `grafana_utils/dashboard_cli.py` into `grafana_utils/dashboards/output_support.py`. The new module owns path sanitizing, output-path and per-org export directory building, dashboard/JSON file writers, and export index/metadata builders, while `dashboard_cli.py` now keeps the stable facade names through thin constant-aware wrappers used by tests and workflow dependency bundles.
 - Tests: Added focused Python 3.6 syntax coverage for the new `grafana_utils/dashboards/output_support.py` module and revalidated the dashboard CLI suite against the preserved facade helper surface.

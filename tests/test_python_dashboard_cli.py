@@ -35,8 +35,29 @@ IMPORT_WORKFLOW_MODULE_PATH = (
 INSPECTION_WORKFLOW_MODULE_PATH = (
     REPO_ROOT / "grafana_utils" / "dashboards" / "inspection_workflow.py"
 )
+INSPECTION_ANALYZERS_PACKAGE_PATH = (
+    REPO_ROOT / "grafana_utils" / "dashboards" / "inspection_analyzers" / "__init__.py"
+)
+INSPECTION_ANALYZER_CONTRACT_MODULE_PATH = (
+    REPO_ROOT / "grafana_utils" / "dashboards" / "inspection_analyzers" / "contract.py"
+)
+INSPECTION_ANALYZER_DISPATCHER_MODULE_PATH = (
+    REPO_ROOT / "grafana_utils" / "dashboards" / "inspection_analyzers" / "dispatcher.py"
+)
+INSPECTION_ANALYZER_PROMETHEUS_MODULE_PATH = (
+    REPO_ROOT / "grafana_utils" / "dashboards" / "inspection_analyzers" / "prometheus.py"
+)
+INSPECTION_ANALYZER_FLUX_MODULE_PATH = (
+    REPO_ROOT / "grafana_utils" / "dashboards" / "inspection_analyzers" / "flux.py"
+)
+INSPECTION_ANALYZER_SQL_MODULE_PATH = (
+    REPO_ROOT / "grafana_utils" / "dashboards" / "inspection_analyzers" / "sql.py"
+)
 INSPECTION_REPORT_MODULE_PATH = (
     REPO_ROOT / "grafana_utils" / "dashboards" / "inspection_report.py"
+)
+INSPECTION_RENDER_MODULE_PATH = (
+    REPO_ROOT / "grafana_utils" / "dashboards" / "inspection_render.py"
 )
 INSPECTION_SUMMARY_MODULE_PATH = (
     REPO_ROOT / "grafana_utils" / "dashboards" / "inspection_summary.py"
@@ -52,6 +73,9 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 transport_module = importlib.import_module("grafana_utils.http_transport")
 exporter = importlib.import_module("grafana_utils.dashboard_cli")
+inspection_dispatcher = importlib.import_module(
+    "grafana_utils.dashboards.inspection_analyzers.dispatcher"
+)
 
 
 class FakeGrafanaClient(exporter.GrafanaClient):
@@ -133,6 +157,75 @@ class FakeDashboardWorkflowClient:
 
 
 class ExporterTests(unittest.TestCase):
+    def _write_minimal_inspection_export(self, import_dir):
+        exporter.write_json_document(
+            exporter.build_export_metadata(
+                variant=exporter.RAW_EXPORT_SUBDIR,
+                dashboard_count=1,
+                format_name="grafana-web-import-preserve-uid",
+                folders_file=exporter.FOLDER_INVENTORY_FILENAME,
+                datasources_file=exporter.DATASOURCE_INVENTORY_FILENAME,
+            ),
+            import_dir / exporter.EXPORT_METADATA_FILENAME,
+        )
+        exporter.write_json_document(
+            [
+                {
+                    "uid": "infra",
+                    "title": "Infra",
+                    "parentUid": "",
+                    "path": "Infra",
+                    "org": "Main Org.",
+                    "orgId": "1",
+                }
+            ],
+            import_dir / exporter.FOLDER_INVENTORY_FILENAME,
+        )
+        exporter.write_json_document(
+            [
+                {
+                    "uid": "prom-main",
+                    "name": "Prometheus Main",
+                    "type": "prometheus",
+                    "access": "proxy",
+                    "url": "http://prometheus.local",
+                    "isDefault": "false",
+                    "org": "Main Org.",
+                    "orgId": "1",
+                }
+            ],
+            import_dir / exporter.DATASOURCE_INVENTORY_FILENAME,
+        )
+        exporter.write_json_document(
+            {
+                "dashboard": {
+                    "id": None,
+                    "uid": "cpu-main",
+                    "title": "CPU Main",
+                    "panels": [
+                        {
+                            "id": 7,
+                            "title": "CPU Usage",
+                            "type": "timeseries",
+                            "datasource": {"uid": "prom-main", "type": "prometheus"},
+                            "targets": [
+                                {
+                                    "refId": "A",
+                                    "expr": "sum(rate(node_cpu_seconds_total[5m]))",
+                                    "datasource": {
+                                        "uid": "prom-main",
+                                        "type": "prometheus",
+                                    },
+                                }
+                            ],
+                        }
+                    ],
+                },
+                "meta": {"folderUid": "infra"},
+            },
+            import_dir / "Infra" / "CPU_Main__cpu-main.json",
+        )
+
     def test_dashboard_script_parses_as_python36_syntax(self):
         source = MODULE_PATH.read_text(encoding="utf-8")
 
@@ -208,12 +301,75 @@ class ExporterTests(unittest.TestCase):
             feature_version=(3, 6),
         )
 
+    def test_dashboard_inspection_analyzers_package_parses_as_python36_syntax(self):
+        source = INSPECTION_ANALYZERS_PACKAGE_PATH.read_text(encoding="utf-8")
+
+        ast.parse(
+            source,
+            filename=str(INSPECTION_ANALYZERS_PACKAGE_PATH),
+            feature_version=(3, 6),
+        )
+
+    def test_dashboard_inspection_analyzer_contract_module_parses_as_python36_syntax(self):
+        source = INSPECTION_ANALYZER_CONTRACT_MODULE_PATH.read_text(encoding="utf-8")
+
+        ast.parse(
+            source,
+            filename=str(INSPECTION_ANALYZER_CONTRACT_MODULE_PATH),
+            feature_version=(3, 6),
+        )
+
+    def test_dashboard_inspection_analyzer_dispatcher_module_parses_as_python36_syntax(self):
+        source = INSPECTION_ANALYZER_DISPATCHER_MODULE_PATH.read_text(encoding="utf-8")
+
+        ast.parse(
+            source,
+            filename=str(INSPECTION_ANALYZER_DISPATCHER_MODULE_PATH),
+            feature_version=(3, 6),
+        )
+
+    def test_dashboard_inspection_analyzer_prometheus_module_parses_as_python36_syntax(self):
+        source = INSPECTION_ANALYZER_PROMETHEUS_MODULE_PATH.read_text(encoding="utf-8")
+
+        ast.parse(
+            source,
+            filename=str(INSPECTION_ANALYZER_PROMETHEUS_MODULE_PATH),
+            feature_version=(3, 6),
+        )
+
+    def test_dashboard_inspection_analyzer_flux_module_parses_as_python36_syntax(self):
+        source = INSPECTION_ANALYZER_FLUX_MODULE_PATH.read_text(encoding="utf-8")
+
+        ast.parse(
+            source,
+            filename=str(INSPECTION_ANALYZER_FLUX_MODULE_PATH),
+            feature_version=(3, 6),
+        )
+
+    def test_dashboard_inspection_analyzer_sql_module_parses_as_python36_syntax(self):
+        source = INSPECTION_ANALYZER_SQL_MODULE_PATH.read_text(encoding="utf-8")
+
+        ast.parse(
+            source,
+            filename=str(INSPECTION_ANALYZER_SQL_MODULE_PATH),
+            feature_version=(3, 6),
+        )
+
     def test_dashboard_inspection_report_module_parses_as_python36_syntax(self):
         source = INSPECTION_REPORT_MODULE_PATH.read_text(encoding="utf-8")
 
         ast.parse(
             source,
             filename=str(INSPECTION_REPORT_MODULE_PATH),
+            feature_version=(3, 6),
+        )
+
+    def test_dashboard_inspection_render_module_parses_as_python36_syntax(self):
+        source = INSPECTION_RENDER_MODULE_PATH.read_text(encoding="utf-8")
+
+        ast.parse(
+            source,
+            filename=str(INSPECTION_RENDER_MODULE_PATH),
             feature_version=(3, 6),
         )
 
@@ -670,6 +826,84 @@ class ExporterTests(unittest.TestCase):
             ["dashboardUid", "panelTitle", "queryField", "datasourceUid"],
         )
 
+    def test_dispatch_query_analysis_uses_prometheus_analyzer(self):
+        analysis = inspection_dispatcher.dispatch_query_analysis(
+            panel={"datasource": {"type": "prometheus", "uid": "prom-main"}},
+            target={"datasource": {"type": "prometheus", "uid": "prom-main"}},
+            query_field="expr",
+            query_text='sum(rate(node_cpu_seconds_total{job="node"}[5m]))',
+        )
+
+        self.assertEqual(analysis["metrics"], ["node_cpu_seconds_total"])
+        self.assertEqual(analysis["measurements"], [])
+        self.assertEqual(analysis["buckets"], [])
+
+    def test_dispatch_query_analysis_uses_flux_analyzer(self):
+        analysis = inspection_dispatcher.dispatch_query_analysis(
+            panel={"datasource": {"type": "influxdb", "uid": "flux-main"}},
+            target={"datasource": {"type": "influxdb", "uid": "flux-main"}},
+            query_field="query",
+            query_text='from(bucket: "ops") |> range(start: -1h) |> filter(fn: (r) => r._measurement == "cpu")',
+        )
+
+        self.assertEqual(analysis["metrics"], ["from", "range", "filter"])
+        self.assertEqual(analysis["measurements"], ["cpu"])
+        self.assertEqual(analysis["buckets"], ["ops"])
+
+    def test_dispatch_query_analysis_uses_sql_analyzer(self):
+        analysis = inspection_dispatcher.dispatch_query_analysis(
+            panel={"datasource": {"type": "postgres", "uid": "pg-main"}},
+            target={"datasource": {"type": "postgres", "uid": "pg-main"}},
+            query_field="rawSql",
+            query_text="select count(*) from public.cpu_metrics where host = 'web-01'",
+        )
+
+        self.assertEqual(analysis["metrics"], ["select", "where"])
+        self.assertEqual(analysis["measurements"], ["public.cpu_metrics"])
+        self.assertEqual(analysis["buckets"], [])
+
+    def test_render_export_inspection_tree_tables_uses_grouped_document(self):
+        grouped_document = exporter.build_grouped_export_inspection_report_document(
+            {
+                "queries": [
+                    {
+                        "dashboardUid": "cpu-main",
+                        "dashboardTitle": "CPU Main",
+                        "folderPath": "Platform / Infra",
+                        "panelId": "7",
+                        "panelTitle": "CPU Usage",
+                        "panelType": "timeseries",
+                        "refId": "A",
+                        "datasource": "prom-main",
+                        "queryField": "expr",
+                        "metrics": ["node_cpu_seconds_total"],
+                        "measurements": [],
+                        "buckets": [],
+                        "query": "sum(rate(node_cpu_seconds_total[5m]))",
+                        "file": "Infra/CPU_Main__cpu-main.json",
+                    }
+                ]
+            }
+        )
+
+        lines = exporter.render_export_inspection_tree_tables(
+            grouped_document,
+            Path("dashboards/raw"),
+            selected_columns=["dashboardUid", "panelTitle", "datasource", "query"],
+        )
+
+        output = "\n".join(lines)
+        self.assertIn("Export inspection tree-table report: dashboards/raw", output)
+        self.assertIn("# Dashboard sections", output)
+        self.assertIn("[1] Dashboard cpu-main", output)
+        self.assertIn(
+            "DASHBOARD_UID  PANEL_TITLE  DATASOURCE  QUERY",
+            output,
+        )
+        self.assertIn("cpu-main", output)
+        self.assertIn("CPU Usage", output)
+        self.assertIn("prom-main", output)
+
     def test_parse_args_supports_ensure_folders(self):
         args = exporter.parse_args(
             ["import-dashboard", "--import-dir", "dashboards/raw", "--ensure-folders"]
@@ -1120,6 +1354,182 @@ class ExporterTests(unittest.TestCase):
             self.assertEqual(result, 0)
             self.assertIn("# Summary", output)
             self.assertNotIn("METRIC", output)
+
+    def test_inspect_export_json_renders_structured_summary_document(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import_dir = Path(tmpdir)
+            self._write_minimal_inspection_export(import_dir)
+
+            args = exporter.parse_args(
+                ["inspect-export", "--import-dir", str(import_dir), "--json"]
+            )
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = exporter.inspect_export(args)
+
+            self.assertEqual(result, 0)
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(payload["summary"]["dashboardCount"], 1)
+            self.assertEqual(payload["summary"]["queryCount"], 1)
+            self.assertEqual(payload["summary"]["datasourceInventoryCount"], 1)
+            self.assertEqual(payload["dashboards"][0]["uid"], "cpu-main")
+            self.assertEqual(payload["dashboards"][0]["folderPath"], "Infra")
+            self.assertEqual(payload["datasources"][0]["name"], "prom-main")
+            self.assertEqual(payload["datasourceInventory"][0]["uid"], "prom-main")
+
+    def test_inspect_export_report_json_renders_per_query_document(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import_dir = Path(tmpdir)
+            self._write_minimal_inspection_export(import_dir)
+
+            args = exporter.parse_args(
+                ["inspect-export", "--import-dir", str(import_dir), "--report", "json"]
+            )
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = exporter.inspect_export(args)
+
+            self.assertEqual(result, 0)
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(payload["summary"]["dashboardCount"], 1)
+            self.assertEqual(payload["summary"]["queryRecordCount"], 1)
+            self.assertEqual(len(payload["queries"]), 1)
+            self.assertEqual(payload["queries"][0]["dashboardUid"], "cpu-main")
+            self.assertEqual(payload["queries"][0]["panelId"], "7")
+            self.assertEqual(payload["queries"][0]["queryField"], "expr")
+            self.assertEqual(payload["queries"][0]["datasource"], "prom-main")
+            self.assertEqual(
+                payload["queries"][0]["metrics"],
+                ["node_cpu_seconds_total"],
+            )
+
+    def test_inspect_export_report_json_uses_family_specific_query_analysis(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import_dir = Path(tmpdir)
+            exporter.write_json_document(
+                exporter.build_export_metadata(
+                    variant=exporter.RAW_EXPORT_SUBDIR,
+                    dashboard_count=1,
+                    format_name="grafana-web-import-preserve-uid",
+                    folders_file=exporter.FOLDER_INVENTORY_FILENAME,
+                    datasources_file=exporter.DATASOURCE_INVENTORY_FILENAME,
+                ),
+                import_dir / exporter.EXPORT_METADATA_FILENAME,
+            )
+            exporter.write_json_document(
+                [
+                    {
+                        "uid": "infra",
+                        "title": "Infra",
+                        "parentUid": "",
+                        "path": "Infra",
+                        "org": "Main Org.",
+                        "orgId": "1",
+                    }
+                ],
+                import_dir / exporter.FOLDER_INVENTORY_FILENAME,
+            )
+            exporter.write_json_document(
+                [
+                    {
+                        "uid": "prom-main",
+                        "name": "Prometheus Main",
+                        "type": "prometheus",
+                        "access": "proxy",
+                        "url": "http://prometheus.local",
+                        "isDefault": "false",
+                        "org": "Main Org.",
+                        "orgId": "1",
+                    },
+                    {
+                        "uid": "influx-main",
+                        "name": "Influx Main",
+                        "type": "influxdb",
+                        "access": "proxy",
+                        "url": "http://influx.local",
+                        "isDefault": "false",
+                        "org": "Main Org.",
+                        "orgId": "1",
+                    },
+                    {
+                        "uid": "mysql-main",
+                        "name": "MySQL Main",
+                        "type": "mysql",
+                        "access": "proxy",
+                        "url": "http://mysql.local",
+                        "isDefault": "false",
+                        "org": "Main Org.",
+                        "orgId": "1",
+                    },
+                ],
+                import_dir / exporter.DATASOURCE_INVENTORY_FILENAME,
+            )
+            exporter.write_json_document(
+                {
+                    "dashboard": {
+                        "id": None,
+                        "uid": "infra-main",
+                        "title": "Infra Main",
+                        "panels": [
+                            {
+                                "id": 7,
+                                "title": "CPU Usage",
+                                "type": "timeseries",
+                                "datasource": {"type": "prometheus", "uid": "prom-main"},
+                                "targets": [
+                                    {
+                                        "refId": "A",
+                                        "expr": 'sum(rate(node_cpu_seconds_total{job="node"}[5m]))',
+                                    }
+                                ],
+                            },
+                            {
+                                "id": 8,
+                                "title": "Flux Query",
+                                "type": "table",
+                                "datasource": {"type": "influxdb", "uid": "influx-main"},
+                                "targets": [
+                                    {
+                                        "refId": "B",
+                                        "query": 'from(bucket: "prod") |> filter(fn: (r) => r._measurement == "cpu")',
+                                    }
+                                ],
+                            },
+                            {
+                                "id": 9,
+                                "title": "SQL Query",
+                                "type": "table",
+                                "datasource": {"type": "mysql", "uid": "mysql-main"},
+                                "targets": [
+                                    {
+                                        "refId": "C",
+                                        "rawSql": "select count(*) from metrics.cpu where host = 'node-1'",
+                                    }
+                                ],
+                            },
+                        ],
+                    },
+                    "meta": {"folderUid": "infra"},
+                },
+                import_dir / "Infra" / "Infra_Main__infra-main.json",
+            )
+
+            args = exporter.parse_args(
+                ["inspect-export", "--import-dir", str(import_dir), "--report", "json"]
+            )
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = exporter.inspect_export(args)
+
+            self.assertEqual(result, 0)
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(payload["queries"][0]["metrics"], ["node_cpu_seconds_total"])
+            self.assertEqual(payload["queries"][1]["metrics"], ["from", "filter"])
+            self.assertEqual(payload["queries"][1]["measurements"], ["cpu"])
+            self.assertEqual(payload["queries"][1]["buckets"], ["prod"])
+            self.assertEqual(payload["queries"][2]["metrics"], ["select", "where"])
+            self.assertEqual(payload["queries"][2]["measurements"], ["metrics.cpu"])
+            self.assertEqual(payload["queries"][2]["buckets"], [])
 
     def test_render_dashboard_summary_table_uses_headers_and_defaults(self):
         lines = exporter.render_dashboard_summary_table(

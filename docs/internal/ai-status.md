@@ -1,5 +1,19 @@
 # ai-status.md
 
+## 2026-03-14 - Task: Split Python Dashboard Inspection Analyzers
+- State: Done
+- Scope: `grafana_utils/dashboards/inspection_report.py`, `grafana_utils/dashboards/inspection_analyzers/contract.py`, `grafana_utils/dashboards/inspection_analyzers/prometheus.py`, `grafana_utils/dashboards/inspection_analyzers/flux.py`, `grafana_utils/dashboards/inspection_analyzers/sql.py`, `tests/test_python_dashboard_cli.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: `grafana_utils/dashboards/inspection_report.py` still carried datasource-family dispatch plus Prometheus, Flux, and SQL-specific query heuristics inline even after the renderer split. The `inspection_analyzers/` package existed, but most of the real family-specific logic still lived in the report module instead of behind the analyzer boundary.
+- Current Update: Moved the active Prometheus, Flux, and SQL query-analysis heuristics into `inspection_analyzers/` and rewired `inspection_report.py` to use `dispatch_query_analysis()` plus the shared `build_query_field_and_text()` helper from the analyzer package. Added focused dashboard CLI coverage for one mixed Prometheus/Flux/SQL report JSON fixture so the analyzer split keeps the current inspection contract and values stable.
+- Result: Python inspection analysis is now actually decomposed by datasource family instead of only having a placeholder analyzer package, while `inspection_report.py` focuses more narrowly on row/document construction and preserves the existing CLI/report surface.
+
+## 2026-03-14 - Task: Split Python Dashboard Inspection Renderers
+- State: Done
+- Scope: `grafana_utils/dashboards/inspection_report.py`, `grafana_utils/dashboards/inspection_render.py`, `grafana_utils/dashboards/inspection_summary.py`, `tests/test_python_dashboard_cli.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: `grafana_utils/dashboards/inspection_report.py` still mixed the canonical inspection document builders with CSV/table/tree/tree-table output rendering. That kept report modeling and output formatting coupled inside one 1100+ line module even after earlier dashboard facade reductions, and the focused CLI suite did not yet pin the `inspect-export --json` or `inspect-export --report json` output contracts.
+- Current Update: Extracted the inspection report render helpers into `grafana_utils/dashboards/inspection_render.py` and rewired `inspection_report.py` to re-export the stable renderer names already used by `dashboard_cli.py` and the inspection workflow dependency bundle. `inspection_summary.py` now imports the shared table-section helper from the renderer module directly. Added Python 3.6 syntax coverage for the new module, kept the grouped tree-table renderer test, and added focused execution coverage for `inspect-export --json` plus `inspect-export --report json`.
+- Result: Python dashboard inspection now has a clearer boundary between report document building and output rendering, while the existing CLI wiring and helper surface stay behavior-compatible and the inspect JSON contracts are now covered before deeper analyzer refactors.
+
 ## 2026-03-13 - Task: Split Python Dashboard Output Support Helpers
 - State: Done
 - Scope: `grafana_utils/dashboard_cli.py`, `grafana_utils/dashboards/output_support.py`, `tests/test_python_dashboard_cli.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

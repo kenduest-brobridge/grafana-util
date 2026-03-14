@@ -9,9 +9,9 @@ from .common import (
     DEFAULT_FOLDER_TITLE,
     DEFAULT_UNKNOWN_UID,
 )
+from .inspection_render import render_export_inspection_table_section
 from .inspection_report import (
     describe_export_datasource_ref,
-    render_export_inspection_table_section,
 )
 
 

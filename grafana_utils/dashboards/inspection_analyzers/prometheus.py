@@ -1,5 +1,60 @@
-from typing import Any, Dict
-from .contract import extract_buckets, extract_measurements, extract_prometheus_metric_names, normalize_query_analysis
+import re
+from typing import Any, Dict, List
+
+from .contract import (
+    PROMETHEUS_RESERVED_WORDS,
+    extract_buckets,
+    extract_measurements,
+    extract_string_values,
+    normalize_query_analysis,
+    unique_strings,
+)
+
+
+def extract_prometheus_metric_names(query: str) -> List[str]:
+    if not query:
+        return []
+    values = extract_string_values(
+        query,
+        r'__name__\s*=\s*"([A-Za-z_:][A-Za-z0-9_:]*)"',
+    )
+    sanitized_query = re.sub(r'"(?:\\.|[^"\\])*"', '""', query)
+    sanitized_query = re.sub(
+        r"\b(?:by|without|on|ignoring)\s*\(\s*[^)]*\)",
+        " ",
+        sanitized_query,
+    )
+    sanitized_query = re.sub(
+        r"\b(?:group_left|group_right)\s*(?:\(\s*[^)]*\))?",
+        " ",
+        sanitized_query,
+    )
+    sanitized_query = re.sub(r"\{[^{}]*\}", "{}", sanitized_query)
+    candidates = re.finditer(
+        r"(?<![A-Za-z0-9_:])([A-Za-z_:][A-Za-z0-9_:]*)",
+        sanitized_query,
+    )
+    for matched in candidates:
+        candidate = matched.group(1)
+        if candidate.lower() in PROMETHEUS_RESERVED_WORDS:
+            continue
+        if candidate.startswith("$"):
+            continue
+        trailing = sanitized_query[matched.end() :].lstrip()
+        if trailing.startswith("("):
+            continue
+        if trailing.startswith(("=", "!=", "=~", "!~")):
+            continue
+        values.append(candidate)
+    return unique_strings(values)
+
+
 def analyze_query(panel: Dict[str, Any], target: Dict[str, Any], query_field: str, query_text: str) -> Dict[str, Any]:
     del panel, target, query_field
-    return normalize_query_analysis({"metrics": extract_prometheus_metric_names(query_text), "measurements": extract_measurements(query_text), "buckets": extract_buckets(query_text)})
+    return normalize_query_analysis(
+        {
+            "metrics": extract_prometheus_metric_names(query_text),
+            "measurements": extract_measurements(query_text),
+            "buckets": extract_buckets(query_text),
+        }
+    )
