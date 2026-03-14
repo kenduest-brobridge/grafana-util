@@ -710,6 +710,16 @@ python3 python/grafana-utils.py dashboard import \
   --replace-existing
 ```
 
+Only update existing dashboards when the raw source folder path matches the current Grafana folder path:
+
+```bash
+python3 python/grafana-utils.py dashboard import \
+  --url http://127.0.0.1:3000 \
+  --import-dir ./dashboards/raw \
+  --replace-existing \
+  --require-matching-folder-path
+```
+
 Important rules:
 
 - point `--import-dir` at `dashboards/raw/`, not the combined `dashboards/` root
@@ -724,6 +734,10 @@ Important rules:
 - `--dry-run --json` renders one machine-readable JSON document with the active import mode, folder inventory checks, per-dashboard actions, destination folder paths, and summary counts
 - `--update-existing-only` changes import mode from `create-or-update` to `update-or-skip-missing`, keyed by dashboard `uid`
 - when updating an existing dashboard by `uid`, import preserves the destination Grafana folder by default unless you explicitly pass `--import-folder-uid`
+- `--require-matching-folder-path` only affects updates to existing dashboards; missing dashboards still follow the active create or skip mode
+- `--require-matching-folder-path` compares the raw source folder path against the current destination Grafana folder path and skips updates that drifted to a different folder path
+- `--require-matching-folder-path` adds `source_folder_path` and `destination_folder_path` details to dry-run table and JSON output when relevant
+- do not combine `--require-matching-folder-path` with `--import-folder-uid`
 - `diff` compares local raw files with the live Grafana dashboard payload and returns exit code `1` when differences are found
 
 Dashboard export also writes small versioned manifest files named `export-metadata.json` at the root and per-variant directories. The raw export additionally writes `raw/folders.json` with folder `uid`, `title`, `parentUid`, `path`, `org`, and `orgId` records plus `raw/datasources.json` with datasource `uid`, `name`, `type`, `access`, `url`, `isDefault`, `org`, and `orgId` records so later offline inspection can compare usage against the exported Grafana datasource inventory.

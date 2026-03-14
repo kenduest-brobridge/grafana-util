@@ -1,5 +1,12 @@
 # ai-status.md
 
+## 2026-03-14 - Task: Add Dashboard Import Folder-Path Guard
+- State: Done
+- Scope: `grafana_utils/dashboard_cli.py`, `grafana_utils/dashboards/folder_path_match.py`, `grafana_utils/dashboards/import_support.py`, `grafana_utils/dashboards/import_workflow.py`, `grafana_utils/dashboards/progress.py`, `tests/test_python_dashboard_cli.py`, `tests/test_python_dashboard_folder_path_match.py`, `rust/src/dashboard_cli_defs.rs`, `rust/src/dashboard_import.rs`, `rust/src/dashboard_rust_tests.rs`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Dashboard import already supported create-only, create-or-update, and update-or-skip-missing modes keyed by dashboard `uid`, but it had no way to protect existing dashboards that had drifted into a different destination folder path. Operators could preserve or override destination folder UIDs, but they could not require the exported raw folder path to match the current Grafana folder path before updating an existing dashboard.
+- Current Update: Added `--require-matching-folder-path` in both Python and Rust dashboard import flows. The new guard compares the raw source folder path against the current destination Grafana folder path only for existing dashboards, rewrites update actions to `skip-folder-mismatch` when those paths differ, extends dry-run table/json output with source and destination folder-path columns/details, and rejects the guard when combined with `--import-folder-uid`.
+- Result: Operators can now keep the existing batch import workflow while safely blocking updates to dashboards that have moved to a different folder path in the target Grafana, and they can see the exact source/destination path mismatch in dry-run output before running a live import.
+
 ## 2026-03-14 - Task: Strengthen Loki Inspection Analyzers
 - State: Done
 - Scope: `grafana_utils/dashboards/inspection_analyzers/loki.py`, `rust/src/dashboard_inspect_analyzer_loki.rs`, `rust/src/dashboard_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
