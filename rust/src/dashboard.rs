@@ -24,10 +24,10 @@ mod dashboard_inspect_analyzer_loki;
 mod dashboard_inspect_analyzer_prometheus;
 #[path = "dashboard_inspect_analyzer_sql.rs"]
 mod dashboard_inspect_analyzer_sql;
-#[path = "dashboard_inspect_report.rs"]
-mod dashboard_inspect_report;
 #[path = "dashboard_inspect_render.rs"]
 mod dashboard_inspect_render;
+#[path = "dashboard_inspect_report.rs"]
+mod dashboard_inspect_report;
 #[path = "dashboard_list.rs"]
 mod dashboard_list;
 #[path = "dashboard_prompt.rs"]
@@ -63,9 +63,9 @@ pub(crate) use dashboard_files::{
 };
 #[cfg(test)]
 pub(crate) use dashboard_import::{
-    describe_dashboard_import_mode, diff_dashboards_with_request, format_import_progress_line,
-    format_import_verbose_line, import_dashboards_with_request, render_import_dry_run_json,
-    render_import_dry_run_table,
+    build_import_auth_context, describe_dashboard_import_mode, diff_dashboards_with_request,
+    format_import_progress_line, format_import_verbose_line, import_dashboards_with_org_clients,
+    import_dashboards_with_request, render_import_dry_run_json, render_import_dry_run_table,
 };
 pub(crate) use dashboard_inspect::inspect_live_dashboards_with_request;
 #[cfg(test)]
@@ -77,13 +77,13 @@ pub(crate) use dashboard_inspect::{
 pub(crate) use dashboard_inspect_render::{
     render_csv, render_grouped_query_report, render_grouped_query_table_report,
 };
+#[cfg(test)]
+pub(crate) use dashboard_inspect_report::normalize_query_report;
 pub(crate) use dashboard_inspect_report::{
     build_query_report, refresh_filtered_query_report_summary, render_query_report_column,
     report_column_header, report_format_supports_columns, resolve_report_column_ids,
     ExportInspectionQueryReport, ExportInspectionQueryRow,
 };
-#[cfg(test)]
-pub(crate) use dashboard_inspect_report::normalize_query_report;
 #[cfg(test)]
 pub(crate) use dashboard_inspect_report::{QueryReportSummary, DEFAULT_REPORT_COLUMN_IDS};
 #[cfg(test)]
@@ -968,8 +968,7 @@ pub fn run_dashboard_cli(args: DashboardCliArgs) -> Result<()> {
             Ok(())
         }
         DashboardCommand::Import(import_args) => {
-            let client = build_http_client(&import_args.common)?;
-            let _ = import_dashboards_with_client(&client, &import_args)?;
+            let _ = dashboard_import::import_dashboards_with_org_clients(&import_args)?;
             Ok(())
         }
         DashboardCommand::Diff(diff_args) => {

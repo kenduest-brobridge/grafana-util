@@ -1,19 +1,20 @@
 use super::{
     attach_dashboard_folder_paths_with_request, build_export_metadata, build_export_variant_dirs,
     build_external_export_document, build_folder_inventory_status, build_folder_path,
-    build_import_payload, build_output_path, build_preserved_web_import_document,
-    build_root_export_index, diff_dashboards_with_request, discover_dashboard_files,
-    export_dashboards_with_request, format_dashboard_summary_line, format_data_source_line,
-    format_export_progress_line, format_export_verbose_line, format_folder_inventory_status_line,
-    format_import_progress_line, format_import_verbose_line, import_dashboards_with_request,
+    build_import_auth_context, build_import_payload, build_output_path,
+    build_preserved_web_import_document, build_root_export_index, diff_dashboards_with_request,
+    discover_dashboard_files, export_dashboards_with_request, format_dashboard_summary_line,
+    format_data_source_line, format_export_progress_line, format_export_verbose_line,
+    format_folder_inventory_status_line, format_import_progress_line, format_import_verbose_line,
+    import_dashboards_with_org_clients, import_dashboards_with_request,
     list_dashboards_with_request, list_data_sources_with_request, parse_cli_from,
     render_dashboard_summary_csv, render_dashboard_summary_json, render_dashboard_summary_table,
     render_data_source_csv, render_data_source_json, render_data_source_table,
     render_import_dry_run_json, render_import_dry_run_table, CommonCliArgs, DashboardCliArgs,
     DashboardCommand, DiffArgs, ExportArgs, FolderInventoryStatusKind, ImportArgs,
-    InspectExportArgs, InspectExportReportFormat, InspectLiveArgs, ListArgs,
-    ListDataSourcesArgs, DATASOURCE_INVENTORY_FILENAME, EXPORT_METADATA_FILENAME,
-    FOLDER_INVENTORY_FILENAME, TOOL_SCHEMA_VERSION,
+    InspectExportArgs, InspectExportReportFormat, InspectLiveArgs, ListArgs, ListDataSourcesArgs,
+    DATASOURCE_INVENTORY_FILENAME, EXPORT_METADATA_FILENAME, FOLDER_INVENTORY_FILENAME,
+    TOOL_SCHEMA_VERSION,
 };
 use crate::common::api_response;
 use clap::{CommandFactory, Parser};
@@ -28,6 +29,18 @@ fn make_common_args(base_url: String) -> CommonCliArgs {
         api_token: Some("token".to_string()),
         username: None,
         password: None,
+        prompt_password: false,
+        timeout: 30,
+        verify_ssl: false,
+    }
+}
+
+fn make_basic_common_args(base_url: String) -> CommonCliArgs {
+    CommonCliArgs {
+        url: base_url,
+        api_token: None,
+        username: Some("admin".to_string()),
+        password: Some("admin".to_string()),
         prompt_password: false,
         timeout: 30,
         verify_ssl: false,
@@ -360,6 +373,8 @@ fn import_help_explains_common_operator_flags() {
     assert!(help.contains("skipped/blocked"));
     assert!(help.contains("folder check is also shown in table form"));
     assert!(help.contains("source raw folder path matches"));
+    assert!(help.contains("--org-id"));
+    assert!(help.contains("requires Basic auth"));
 }
 
 #[test]
@@ -478,6 +493,25 @@ fn parse_cli_supports_import_require_matching_folder_path_flag() {
     match args.command {
         DashboardCommand::Import(import_args) => {
             assert!(import_args.require_matching_folder_path);
+        }
+        _ => panic!("expected import command"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_import_org_scope_flag() {
+    let args = parse_cli_from([
+        "grafana-utils",
+        "import",
+        "--import-dir",
+        "./dashboards/raw",
+        "--org-id",
+        "7",
+    ]);
+
+    match args.command {
+        DashboardCommand::Import(import_args) => {
+            assert_eq!(import_args.org_id, Some(7));
         }
         _ => panic!("expected import command"),
     }
@@ -1114,8 +1148,14 @@ fn render_import_dry_run_json_returns_structured_document() {
     assert_eq!(value["mode"], "create-or-update");
     assert_eq!(value["folders"][0]["uid"], "infra");
     assert_eq!(value["dashboards"][0]["folderPath"], "Platform / Infra");
-    assert_eq!(value["dashboards"][0]["sourceFolderPath"], "Platform / Infra");
-    assert_eq!(value["dashboards"][0]["destinationFolderPath"], "Platform / Infra");
+    assert_eq!(
+        value["dashboards"][0]["sourceFolderPath"],
+        "Platform / Infra"
+    );
+    assert_eq!(
+        value["dashboards"][0]["destinationFolderPath"],
+        "Platform / Infra"
+    );
     assert_eq!(value["summary"]["dashboardCount"], 1);
 }
 
@@ -3488,8 +3528,7 @@ fn render_grouped_query_table_report_includes_loki_analysis_columns() {
             datasource: "loki-main".to_string(),
             datasource_uid: "loki-main".to_string(),
             query_field: "expr".to_string(),
-            query_text:
-                "{job=\"varlogs\",app=~\"api|web\"} |= \"error\" | json [5m]".to_string(),
+            query_text: "{job=\"varlogs\",app=~\"api|web\"} |= \"error\" | json [5m]".to_string(),
             metrics: vec![
                 "sum".to_string(),
                 "count_over_time".to_string(),
@@ -3676,6 +3715,7 @@ fn import_dashboards_with_client_imports_discovered_files() {
     .unwrap();
     let args = ImportArgs {
         common: make_common_args("http://127.0.0.1:3000".to_string()),
+        org_id: None,
         import_dir: raw_dir,
         import_folder_uid: Some("new-folder".to_string()),
         ensure_folders: false,
@@ -3708,6 +3748,64 @@ fn import_dashboards_with_client_imports_discovered_files() {
 }
 
 #[test]
+fn import_dashboards_with_org_id_requires_basic_auth() {
+    let temp = tempdir().unwrap();
+    let args = ImportArgs {
+        common: make_common_args("http://127.0.0.1:3000".to_string()),
+        org_id: Some(7),
+        import_dir: temp.path().join("raw"),
+        import_folder_uid: None,
+        ensure_folders: false,
+        replace_existing: false,
+        update_existing_only: false,
+        require_matching_folder_path: false,
+        import_message: "sync dashboards".to_string(),
+        dry_run: true,
+        table: false,
+        json: false,
+        no_header: false,
+        progress: false,
+        verbose: false,
+    };
+
+    let error = import_dashboards_with_org_clients(&args).unwrap_err();
+
+    assert!(error
+        .to_string()
+        .contains("Dashboard import with --org-id requires Basic auth"));
+}
+
+#[test]
+fn build_import_auth_context_adds_org_header_for_basic_auth_imports() {
+    let temp = tempdir().unwrap();
+    let args = ImportArgs {
+        common: make_basic_common_args("http://127.0.0.1:3000".to_string()),
+        org_id: Some(7),
+        import_dir: temp.path().join("raw"),
+        import_folder_uid: None,
+        ensure_folders: false,
+        replace_existing: false,
+        update_existing_only: false,
+        require_matching_folder_path: false,
+        import_message: "sync dashboards".to_string(),
+        dry_run: true,
+        table: false,
+        json: false,
+        no_header: false,
+        progress: false,
+        verbose: false,
+    };
+
+    let context = build_import_auth_context(&args).unwrap();
+
+    assert_eq!(context.auth_mode, "basic");
+    assert!(context
+        .headers
+        .iter()
+        .any(|(name, value)| { name == "X-Grafana-Org-Id" && value == "7" }));
+}
+
+#[test]
 fn import_dashboards_with_dry_run_skips_post_requests() {
     let temp = tempdir().unwrap();
     let raw_dir = temp.path().join("raw");
@@ -3735,6 +3833,7 @@ fn import_dashboards_with_dry_run_skips_post_requests() {
     .unwrap();
     let args = ImportArgs {
         common: make_common_args("http://127.0.0.1:3000".to_string()),
+        org_id: None,
         import_dir: raw_dir,
         import_folder_uid: None,
         ensure_folders: false,
@@ -3786,6 +3885,7 @@ fn import_dashboards_rejects_unsupported_export_schema_version() {
     .unwrap();
     let args = ImportArgs {
         common: make_common_args("http://127.0.0.1:3000".to_string()),
+        org_id: None,
         import_dir: raw_dir,
         import_folder_uid: None,
         ensure_folders: false,
@@ -3845,6 +3945,7 @@ fn import_dashboards_with_update_existing_only_skips_missing_dashboards() {
     .unwrap();
     let args = ImportArgs {
         common: make_common_args("http://127.0.0.1:3000".to_string()),
+        org_id: None,
         import_dir: raw_dir,
         import_folder_uid: None,
         ensure_folders: false,
@@ -3914,6 +4015,7 @@ fn import_dashboards_with_update_existing_only_table_marks_missing_dashboards_as
     .unwrap();
     let args = ImportArgs {
         common: make_common_args("http://127.0.0.1:3000".to_string()),
+        org_id: None,
         import_dir: raw_dir,
         import_folder_uid: None,
         ensure_folders: false,
@@ -3975,6 +4077,7 @@ fn import_dashboards_replace_existing_preserves_destination_folder() {
     .unwrap();
     let args = ImportArgs {
         common: make_common_args("http://127.0.0.1:3000".to_string()),
+        org_id: None,
         import_dir: raw_dir,
         import_folder_uid: None,
         ensure_folders: false,
@@ -4041,6 +4144,7 @@ fn import_dashboards_rejects_ensure_folders_with_import_folder_override() {
     .unwrap();
     let args = ImportArgs {
         common: make_common_args("http://127.0.0.1:3000".to_string()),
+        org_id: None,
         import_dir: raw_dir,
         import_folder_uid: Some("override-folder".to_string()),
         ensure_folders: true,
@@ -4092,6 +4196,7 @@ fn import_dashboards_rejects_matching_folder_path_with_import_folder_uid() {
     .unwrap();
     let args = ImportArgs {
         common: make_common_args("http://127.0.0.1:3000".to_string()),
+        org_id: None,
         import_dir: raw_dir,
         import_folder_uid: Some("override-folder".to_string()),
         ensure_folders: false,
@@ -4107,9 +4212,8 @@ fn import_dashboards_rejects_matching_folder_path_with_import_folder_uid() {
         verbose: false,
     };
 
-    let error =
-        import_dashboards_with_request(|_method, _path, _params, _payload| Ok(None), &args)
-            .unwrap_err();
+    let error = import_dashboards_with_request(|_method, _path, _params, _payload| Ok(None), &args)
+        .unwrap_err();
 
     assert!(error
         .to_string()
@@ -4202,6 +4306,7 @@ fn import_dashboards_with_matching_folder_path_skips_live_update_mismatch() {
     .unwrap();
     let args = ImportArgs {
         common: make_common_args("http://127.0.0.1:3000".to_string()),
+        org_id: None,
         import_dir: raw_dir,
         import_folder_uid: None,
         ensure_folders: false,
@@ -4263,6 +4368,7 @@ fn import_dashboards_rejects_json_without_dry_run() {
     .unwrap();
     let args = ImportArgs {
         common: make_common_args("http://127.0.0.1:3000".to_string()),
+        org_id: None,
         import_dir: raw_dir,
         import_folder_uid: None,
         ensure_folders: false,
@@ -4339,6 +4445,7 @@ fn import_dashboards_with_ensure_folders_creates_missing_folder_chain_from_raw_i
     .unwrap();
     let args = ImportArgs {
         common: make_common_args("http://127.0.0.1:3000".to_string()),
+        org_id: None,
         import_dir: raw_dir,
         import_folder_uid: None,
         ensure_folders: true,
@@ -4463,6 +4570,7 @@ fn import_dashboards_with_dry_run_and_ensure_folders_checks_folder_inventory() {
     .unwrap();
     let args = ImportArgs {
         common: make_common_args("http://127.0.0.1:3000".to_string()),
+        org_id: None,
         import_dir: raw_dir,
         import_folder_uid: None,
         ensure_folders: true,
@@ -4549,6 +4657,7 @@ fn import_dashboards_with_ensure_folders_requires_inventory_manifest() {
     .unwrap();
     let args = ImportArgs {
         common: make_common_args("http://127.0.0.1:3000".to_string()),
+        org_id: None,
         import_dir: raw_dir,
         import_folder_uid: None,
         ensure_folders: true,

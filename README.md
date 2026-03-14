@@ -536,7 +536,7 @@ Use `prompt/` when you want:
 | `--url` | Grafana base URL. Default: `http://localhost:3000` |
 | `--export-dir` | Root export directory. Default: `dashboards/` |
 | `--page-size` | Dashboard search page size. Default: `500` |
-| `--org-id ORG_ID` | For `dashboard list` or `dashboard export`, switch to one explicit Grafana org ID; requires Basic auth |
+| `--org-id ORG_ID` | For `dashboard list`, `dashboard export`, or `dashboard import`, switch the whole command to one explicit Grafana org ID; requires Basic auth |
 | `--all-orgs` | For `dashboard list` or `dashboard export`, enumerate visible Grafana orgs and aggregate list output or export each org; requires Basic auth |
 | `--with-sources` | For `dashboard list` table or CSV output, fetch each dashboard payload and include datasource names used by that dashboard; JSON already includes datasource names and best-effort datasource UIDs by default |
 | `--no-header` | For `dashboard list`, `dashboard list-data-sources`, `dashboard import --dry-run --table`, or `dashboard inspect-export --table`, omit the table header row |
@@ -587,6 +587,7 @@ For dashboard export:
 - `dashboard import -v --progress` uses verbose output and suppresses the concise progress form
 - `dashboard import --dry-run --table` prints a final table with `uid`, `destination`, `action`, `folder_path`, and `file`
 - `dashboard import --dry-run --table --no-header` omits the dry-run table header row
+- `dashboard import --org-id <ID>` imports the whole run into that explicit destination org instead of the current auth context and requires Basic auth
 - `dashboard import --update-existing-only` updates only existing dashboard UIDs, skips missing dashboards, and implies `--replace-existing`
 - `dashboard import` now prints an `Import mode: ...` line up front so you can see whether the run is `create-only`, `create-or-update`, or `update-or-skip-missing`
 - `dashboard inspect-export` analyzes a raw export directory offline and summarizes dashboard count, folder paths, panels, queries, datasource usage, datasource inventory, orphaned datasources, and mixed-datasource dashboards
@@ -681,6 +682,18 @@ python3 python/grafana-utils.py dashboard import \
   --replace-existing
 ```
 
+Import into one explicit Grafana org:
+
+```bash
+python3 python/grafana-utils.py dashboard import \
+  --url http://127.0.0.1:3000 \
+  --basic-user "$GRAFANA_USERNAME" \
+  --basic-password "$GRAFANA_PASSWORD" \
+  --org-id 2 \
+  --import-dir ./dashboards/raw \
+  --replace-existing
+```
+
 Dry-run import as a table:
 
 ```bash
@@ -732,6 +745,7 @@ Important rules:
 - `--dry-run --ensure-folders` also checks the exported folder inventory against destination Grafana and reports which folders are missing, matching, or mismatched before any real import run
 - `--dry-run --table` renders the same predictions as a summary table, including each dashboard's destination folder path, and `--no-header` suppresses that table's header row
 - `--dry-run --json` renders one machine-readable JSON document with the active import mode, folder inventory checks, per-dashboard actions, destination folder paths, and summary counts
+- `--org-id <ID>` switches the whole import run to one explicit destination Grafana org and requires Basic auth; the raw export's recorded `orgId` is not used automatically for routing
 - `--update-existing-only` changes import mode from `create-or-update` to `update-or-skip-missing`, keyed by dashboard `uid`
 - when updating an existing dashboard by `uid`, import preserves the destination Grafana folder by default unless you explicitly pass `--import-folder-uid`
 - `--require-matching-folder-path` only affects updates to existing dashboards; missing dashboards still follow the active create or skip mode

@@ -26,6 +26,14 @@ def run_import_dashboards(args, deps):
             "--require-matching-folder-path cannot be combined with --import-folder-uid."
         )
     client = deps["build_client"](args)
+    org_id = getattr(args, "org_id", None)
+    auth_header = client.headers.get("Authorization", "")
+    if org_id and not auth_header.startswith("Basic "):
+        raise grafana_error(
+            "Dashboard org switching requires Basic auth. Use --basic-user and --basic-password."
+        )
+    if org_id:
+        client = client.with_org_id(str(org_id))
     import_dir = Path(args.import_dir)
     metadata = deps["load_export_metadata"](
         import_dir, expected_variant=deps["RAW_EXPORT_SUBDIR"]

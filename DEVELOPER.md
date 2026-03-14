@@ -95,6 +95,7 @@ Commit message default for this repo:
 - The export subcommand intentionally uses `--export-dir` instead of `--output-dir` to avoid mixing export terminology with import behavior.
 - `export-dashboard --org-id <ID>` rebuilds the dashboard client with `X-Grafana-Org-Id` and is Basic-auth-only because org switching is a server-admin-style workflow rather than a token-bound current-org workflow.
 - `export-dashboard --all-orgs` lists `/api/orgs`, rebuilds one scoped export client per org, and exports each org into an `org_<id>_<name>/` subtree to avoid cross-org file collisions on disk.
+- `import-dashboard --org-id <ID>` rebuilds the dashboard client with `X-Grafana-Org-Id` for the whole import run and is Basic-auth-only because explicit org switching remains a server-admin-style workflow rather than a token-bound current-org workflow.
 - Multi-org export still writes aggregate root-level `raw/index.json` and `prompt/index.json` files under the chosen export root so the top-level manifest points at one coherent variant index.
 - Top-level dashboard help and `export-dashboard -h` now include both a local Basic-auth example and a token example so operators can see both auth styles directly from the CLI.
 - The `list-dashboard` subcommand is read-only and now defaults to table output with `UID`, `NAME`, `FOLDER`, `FOLDER_UID`, `FOLDER_PATH`, `ORG`, and `ORG_ID` columns.
@@ -221,6 +222,8 @@ This is why prompt export needs live datasource metadata while raw export does n
 - Import `--dry-run` predicts `would-create`, `would-update`, or `would-fail-existing` by checking the live Grafana UID first.
 - Import `--dry-run --table` renders those predictions as `UID`, `DESTINATION`, `ACTION`, `FOLDER_PATH`, and `FILE`, and `--no-header` can suppress the header row only in that mode.
 - Import `--dry-run --json` renders one JSON document with `mode`, `folders`, `dashboards`, and `summary`, and suppresses the normal human-readable progress/summary lines so scripts can parse it safely.
+- Import `--org-id <ID>` switches the whole run to one explicit destination Grafana org, reusing the same Basic-auth-only org scoping model as `list` and `export`.
+- Import `--org-id` intentionally does not read the raw export's recorded `orgId` for routing; it is a manual explicit-target override for the whole run.
 - Import `--update-existing-only` switches the workflow to `update-or-skip-missing` by dashboard `uid`, implies overwrite-on-existing behavior, and never creates missing dashboards.
 - When import updates an existing dashboard by `uid`, it preserves the destination Grafana folder by default; only an explicit `--import-folder-uid` overrides that folder placement.
 - Import `--require-matching-folder-path` adds an update-only guard that compares the raw source folder path with the current destination Grafana folder path and skips existing-dashboard updates when those full paths differ.

@@ -395,6 +395,14 @@ def add_import_cli_args(parser: argparse.ArgumentParser) -> None:
         ),
     )
     parser.add_argument(
+        "--org-id",
+        default=None,
+        help=(
+            "Import dashboards into this explicit Grafana organization ID instead "
+            "of the current org context. Requires Basic auth."
+        ),
+    )
+    parser.add_argument(
         "--replace-existing",
         action="store_true",
         help="Update an existing destination dashboard when the imported dashboard UID already exists. Without this flag, existing UIDs are blocked.",

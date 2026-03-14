@@ -457,6 +457,8 @@ class ExporterTests(unittest.TestCase):
         help_text = stream.getvalue()
         self.assertIn("combined", help_text)
         self.assertIn("export root", help_text)
+        self.assertIn("--org-id", help_text)
+        self.assertIn("Requires Basic auth", help_text)
         self.assertIn("missing/match/mismatch", help_text)
         self.assertIn("skipped/blocked", help_text)
         self.assertIn("table form", help_text)
@@ -523,6 +525,13 @@ class ExporterTests(unittest.TestCase):
 
         self.assertEqual(args.import_dir, "dashboards")
         self.assertEqual(args.command, "import-dashboard")
+
+    def test_parse_args_supports_import_org_id(self):
+        args = exporter.parse_args(
+            ["import-dashboard", "--import-dir", "dashboards/raw", "--org-id", "2"]
+        )
+
+        self.assertEqual(args.org_id, "2")
 
     def test_parse_args_supports_preferred_auth_aliases(self):
         args = exporter.parse_args(
@@ -3228,6 +3237,127 @@ class ExporterTests(unittest.TestCase):
         with mock.patch.object(exporter, "build_client", return_value=client):
             with self.assertRaisesRegex(exporter.GrafanaError, "Basic auth"):
                 exporter.export_dashboards(args)
+
+    def test_import_dashboards_rejects_org_switch_with_token_auth(self):
+        client = FakeDashboardWorkflowClient(headers={"Authorization": "Bearer token"})
+        args = exporter.parse_args(
+            [
+                "import-dashboard",
+                "--import-dir",
+                "dashboards/raw",
+                "--org-id",
+                "2",
+            ]
+        )
+
+        with mock.patch.object(exporter, "build_client", return_value=client):
+            with self.assertRaisesRegex(exporter.GrafanaError, "Basic auth"):
+                exporter.import_dashboards(args)
+
+    def test_import_dashboards_dry_run_with_org_id_uses_scoped_client(self):
+        scoped_client = FakeDashboardWorkflowClient(
+            dashboards={
+                "abc": {
+                    "dashboard": {"id": 7, "uid": "abc", "title": "CPU", "panels": []},
+                    "meta": {"folderUid": "infra"},
+                }
+            },
+            org={"id": 2, "name": "Org Two"},
+            headers={"Authorization": "Basic test"},
+        )
+        client = FakeDashboardWorkflowClient(
+            org_clients={"2": scoped_client},
+            headers={"Authorization": "Basic test"},
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import_dir = Path(tmpdir)
+            exporter.write_json_document(
+                exporter.build_export_metadata(
+                    variant=exporter.RAW_EXPORT_SUBDIR,
+                    dashboard_count=1,
+                    format_name="grafana-web-import-preserve-uid",
+                ),
+                import_dir / exporter.EXPORT_METADATA_FILENAME,
+            )
+            exporter.write_json_document(
+                {"dashboard": {"id": None, "uid": "abc", "title": "CPU", "panels": []}},
+                import_dir / "cpu__abc.json",
+            )
+            args = exporter.parse_args(
+                [
+                    "import-dashboard",
+                    "--import-dir",
+                    str(import_dir),
+                    "--org-id",
+                    "2",
+                    "--dry-run",
+                    "--verbose",
+                ]
+            )
+
+            with mock.patch.object(exporter, "build_client", return_value=client):
+                stdout = io.StringIO()
+                with redirect_stdout(stdout):
+                    result = exporter.import_dashboards(args)
+
+            self.assertEqual(result, 0)
+            self.assertEqual(client.imported_payloads, [])
+            self.assertEqual(scoped_client.imported_payloads, [])
+            self.assertEqual(
+                stdout.getvalue().splitlines(),
+                [
+                    "Import mode: create-only",
+                    "Dry-run import uid=abc dest=exists action=blocked-existing folderPath=General file=%s"
+                    % (import_dir / "cpu__abc.json"),
+                    "Dry-run checked 1 dashboard files from %s" % import_dir,
+                ],
+            )
+
+    def test_import_dashboards_live_with_org_id_uses_scoped_client(self):
+        scoped_client = FakeDashboardWorkflowClient(
+            org={"id": 2, "name": "Org Two"},
+            headers={"Authorization": "Basic test"},
+        )
+        client = FakeDashboardWorkflowClient(
+            org_clients={"2": scoped_client},
+            headers={"Authorization": "Basic test"},
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import_dir = Path(tmpdir)
+            exporter.write_json_document(
+                exporter.build_export_metadata(
+                    variant=exporter.RAW_EXPORT_SUBDIR,
+                    dashboard_count=1,
+                    format_name="grafana-web-import-preserve-uid",
+                ),
+                import_dir / exporter.EXPORT_METADATA_FILENAME,
+            )
+            exporter.write_json_document(
+                {"dashboard": {"id": None, "uid": "abc", "title": "CPU", "panels": []}},
+                import_dir / "cpu__abc.json",
+            )
+            args = exporter.parse_args(
+                [
+                    "import-dashboard",
+                    "--import-dir",
+                    str(import_dir),
+                    "--org-id",
+                    "2",
+                ]
+            )
+
+            with mock.patch.object(exporter, "build_client", return_value=client):
+                result = exporter.import_dashboards(args)
+
+            self.assertEqual(result, 0)
+            self.assertEqual(client.imported_payloads, [])
+            self.assertEqual(len(scoped_client.imported_payloads), 1)
+            self.assertEqual(
+                scoped_client.imported_payloads[0]["dashboard"]["uid"],
+                "abc",
+            )
 
     def test_import_dashboards_dry_run_skips_api_write(self):
         client = FakeDashboardWorkflowClient(

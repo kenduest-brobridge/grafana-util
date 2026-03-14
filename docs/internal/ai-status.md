@@ -1,5 +1,12 @@
 # ai-status.md
 
+## 2026-03-14 - Task: Add Dashboard Import Org Scoping
+- State: Done
+- Scope: `grafana_utils/dashboard_cli.py`, `grafana_utils/dashboards/import_workflow.py`, `tests/test_python_dashboard_cli.py`, `rust/src/dashboard.rs`, `rust/src/dashboard_cli_defs.rs`, `rust/src/dashboard_import.rs`, `rust/src/dashboard_rust_tests.rs`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Dashboard list and export already supported explicit org switching through `--org-id` and used a Basic-auth-only org-scoped client model, but dashboard import still always ran in the current org context. Raw exports recorded `org` and `orgId`, yet import had no way to target one explicit destination org for the whole run.
+- Current Update: Added `--org-id` to both Python and Rust dashboard import flows. The new flag scopes the entire import run, including dry-run checks and live writes, to one explicit destination Grafana org, requires Basic auth, and keeps raw export `orgId` metadata as informational only rather than automatic routing input.
+- Result: Operators can now re-import one raw dashboard batch directly into a chosen Grafana org without manually switching org context first, while preserving the existing import behavior when `--org-id` is not set.
+
 ## 2026-03-14 - Task: Add Dashboard Import Folder-Path Guard
 - State: Done
 - Scope: `grafana_utils/dashboard_cli.py`, `grafana_utils/dashboards/folder_path_match.py`, `grafana_utils/dashboards/import_support.py`, `grafana_utils/dashboards/import_workflow.py`, `grafana_utils/dashboards/progress.py`, `tests/test_python_dashboard_cli.py`, `tests/test_python_dashboard_folder_path_match.py`, `rust/src/dashboard_cli_defs.rs`, `rust/src/dashboard_import.rs`, `rust/src/dashboard_rust_tests.rs`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

@@ -179,6 +179,11 @@ pub struct ImportArgs {
     pub common: CommonCliArgs,
     #[arg(
         long,
+        help = "Import dashboards into this Grafana org ID instead of the current org. This switches the whole import run to one explicit destination org and requires Basic auth."
+    )]
+    pub org_id: Option<i64>,
+    #[arg(
+        long,
         help = "Import dashboards from this directory. Point this to the raw/ export directory explicitly, not the combined export root."
     )]
     pub import_dir: PathBuf,
@@ -470,6 +475,7 @@ pub struct DashboardAuthContext {
     pub url: String,
     pub timeout: u64,
     pub verify_ssl: bool,
+    pub auth_mode: String,
     pub headers: Vec<(String, String)>,
 }
 
@@ -482,16 +488,29 @@ where
 }
 
 pub fn build_auth_context(common: &CommonCliArgs) -> Result<DashboardAuthContext> {
+    let headers = resolve_auth_headers(
+        common.api_token.as_deref(),
+        common.username.as_deref(),
+        common.password.as_deref(),
+        common.prompt_password,
+    )?;
+    let auth_mode = headers
+        .iter()
+        .find(|(name, _)| name == "Authorization")
+        .map(|(_, value)| {
+            if value.starts_with("Basic ") {
+                "basic".to_string()
+            } else {
+                "token".to_string()
+            }
+        })
+        .unwrap_or_else(|| "unknown".to_string());
     Ok(DashboardAuthContext {
         url: common.url.clone(),
         timeout: common.timeout,
         verify_ssl: common.verify_ssl,
-        headers: resolve_auth_headers(
-            common.api_token.as_deref(),
-            common.username.as_deref(),
-            common.password.as_deref(),
-            common.prompt_password,
-        )?,
+        auth_mode,
+        headers,
     })
 }
 

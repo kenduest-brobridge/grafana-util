@@ -5,9 +5,29 @@ use std::fmt::Write as _;
 use std::path::Path;
 
 use crate::common::{message, object_field, string_field, value_as_object, Result};
-use crate::http::JsonHttpClient;
+use crate::http::{JsonHttpClient, JsonHttpClientConfig};
 
 use super::*;
+
+fn validate_import_org_auth(context: &DashboardAuthContext, org_id: Option<i64>) -> Result<()> {
+    if org_id.is_some() && context.auth_mode != "basic" {
+        return Err(message(
+            "Dashboard import with --org-id requires Basic auth (--basic-user / --basic-password).",
+        ));
+    }
+    Ok(())
+}
+
+pub(crate) fn build_import_auth_context(args: &ImportArgs) -> Result<DashboardAuthContext> {
+    let mut context = build_auth_context(&args.common)?;
+    validate_import_org_auth(&context, args.org_id)?;
+    if let Some(org_id) = args.org_id {
+        context
+            .headers
+            .push(("X-Grafana-Org-Id".to_string(), org_id.to_string()));
+    }
+    Ok(context)
+}
 
 fn build_compare_document(dashboard: &Map<String, Value>, folder_uid: Option<&str>) -> Value {
     let mut compare = Map::new();
@@ -179,8 +199,7 @@ fn resolve_source_dashboard_folder_path(
     import_dir: &Path,
     folders_by_uid: &BTreeMap<String, FolderInventoryItem>,
 ) -> Result<String> {
-    let document_object =
-        value_as_object(document, "Dashboard payload must be a JSON object.")?;
+    let document_object = value_as_object(document, "Dashboard payload must be a JSON object.")?;
     if let Some(folder_uid) = object_field(document_object, "meta")
         .and_then(|meta| meta.get("folderUid"))
         .and_then(Value::as_str)
@@ -229,7 +248,8 @@ where
     if uid.is_empty() {
         return Ok(None);
     }
-    let Some(existing_payload) = fetch_dashboard_if_exists_with_request(&mut request_json, uid)? else {
+    let Some(existing_payload) = fetch_dashboard_if_exists_with_request(&mut request_json, uid)?
+    else {
         return Ok(None);
     };
     let object = value_as_object(
@@ -264,7 +284,8 @@ fn build_folder_path_match_result(
     require_matching_folder_path: bool,
 ) -> (bool, &'static str, String, Option<String>) {
     let normalized_source = normalize_folder_path(source_folder_path);
-    let normalized_destination = destination_folder_path.map(|path| normalize_folder_path(Some(path)));
+    let normalized_destination =
+        destination_folder_path.map(|path| normalize_folder_path(Some(path)));
     if !require_matching_folder_path || !destination_exists {
         return (true, "", normalized_source, normalized_destination);
     }
@@ -364,9 +385,17 @@ pub(crate) fn render_import_dry_run_table(
         headers.push("DESTINATION_FOLDER_PATH");
     }
     headers.push("FILE");
-    let mut widths = headers.iter().map(|header| header.len()).collect::<Vec<usize>>();
+    let mut widths = headers
+        .iter()
+        .map(|header| header.len())
+        .collect::<Vec<usize>>();
     for row in records {
-        let mut visible = vec![row[0].as_str(), row[1].as_str(), row[2].as_str(), row[3].as_str()];
+        let mut visible = vec![
+            row[0].as_str(),
+            row[1].as_str(),
+            row[2].as_str(),
+            row[3].as_str(),
+        ];
         if include_source_folder {
             visible.push(row[4].as_str());
         }
@@ -388,8 +417,14 @@ pub(crate) fn render_import_dry_run_table(
     };
     let mut lines = Vec::new();
     if include_header {
-        let header_values = headers.iter().map(|item| item.to_string()).collect::<Vec<String>>();
-        let divider_values = widths.iter().map(|width| "-".repeat(*width)).collect::<Vec<String>>();
+        let header_values = headers
+            .iter()
+            .map(|item| item.to_string())
+            .collect::<Vec<String>>();
+        let divider_values = widths
+            .iter()
+            .map(|width| "-".repeat(*width))
+            .collect::<Vec<String>>();
         lines.push(format_row(&header_values));
         lines.push(format_row(&divider_values));
     }
@@ -705,18 +740,23 @@ where
         } else {
             None
         };
-        let (folder_paths_match, _folder_match_reason, normalized_source_folder_path, normalized_destination_folder_path) =
-            if args.require_matching_folder_path {
-                build_folder_path_match_result(
-                    source_folder_path.as_deref(),
-                    destination_folder_path.as_deref(),
-                    destination_folder_path.is_some(),
-                    true,
-                )
-            } else {
-                (true, "", String::new(), None)
-            };
-        let action = action.map(|value| apply_folder_path_guard_to_action(value, folder_paths_match));
+        let (
+            folder_paths_match,
+            _folder_match_reason,
+            normalized_source_folder_path,
+            normalized_destination_folder_path,
+        ) = if args.require_matching_folder_path {
+            build_folder_path_match_result(
+                source_folder_path.as_deref(),
+                destination_folder_path.as_deref(),
+                destination_folder_path.is_some(),
+                true,
+            )
+        } else {
+            (true, "", String::new(), None)
+        };
+        let action =
+            action.map(|value| apply_folder_path_guard_to_action(value, folder_paths_match));
         if args.dry_run {
             let folder_path = resolve_dashboard_import_folder_path_with_request(
                 &mut request_json,
@@ -938,6 +978,20 @@ where
 }
 
 pub fn import_dashboards_with_client(client: &JsonHttpClient, args: &ImportArgs) -> Result<usize> {
+    import_dashboards_with_request(
+        |method, path, params, payload| client.request_json(method, path, params, payload),
+        args,
+    )
+}
+
+pub(crate) fn import_dashboards_with_org_clients(args: &ImportArgs) -> Result<usize> {
+    let context = build_import_auth_context(args)?;
+    let client = JsonHttpClient::new(JsonHttpClientConfig {
+        base_url: context.url,
+        headers: context.headers,
+        timeout_secs: context.timeout,
+        verify_ssl: context.verify_ssl,
+    })?;
     import_dashboards_with_request(
         |method, path, params, payload| client.request_json(method, path, params, payload),
         args,
