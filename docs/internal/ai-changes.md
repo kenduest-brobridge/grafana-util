@@ -1,5 +1,13 @@
 # ai-changes.md
 
+## 2026-03-14 - Strengthen Loki Inspection Analyzers
+- Summary: Replaced the placeholder Loki analyzer behavior with conservative LogQL extraction in both Python and Rust. Python now reports stream matchers plus common range/aggregation functions and pipeline/filter stages through the existing inspection fields, while Rust now extracts Loki stream selectors, label matchers, pipeline/function metadata, and range windows through the same stable `metrics` / `measurements` / `buckets` contract.
+- Tests: Reused the focused Python dashboard CLI suite and added Rust coverage for a Loki inspection fixture that asserts extracted metrics, measurements, and buckets from a representative LogQL query.
+- Test Run: `python3 -m unittest -v tests/test_python_dashboard_cli.py`; `cargo test dashboard --manifest-path rust/Cargo.toml --quiet`
+- Validation: Confirmed both runtimes keep the existing inspection schema unchanged while materially improving Loki rows, and kept the work isolated to the dedicated Loki analyzer paths instead of widening generic inspection code.
+- Impact: `grafana_utils/dashboards/inspection_analyzers/loki.py`, `rust/src/dashboard_inspect_analyzer_loki.rs`, `rust/src/dashboard_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Moderate. The extraction is intentionally heuristic rather than a full LogQL parser, so operators should treat the reported selectors, matchers, functions, and stages as best-effort inspection metadata.
+
 ## 2026-03-14 - Split Rust Dashboard Inspection Renderers
 - Summary: Extracted the Rust dashboard inspection CSV/table/tree/tree-table renderers out of `rust/src/dashboard_inspect.rs` into `rust/src/dashboard_inspect_render.rs`. The Rust inspection path now keeps orchestration/filtering in `dashboard_inspect.rs`, report models and grouped normalization in `dashboard_inspect_report.rs`, and output rendering in the new renderer module.
 - Tests: Reused the existing Rust dashboard inspection coverage that exercises CSV, table, tree, and tree-table output through the public CLI/report helpers after the renderer split.

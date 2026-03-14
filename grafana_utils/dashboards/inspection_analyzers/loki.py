@@ -1,5 +1,93 @@
-from typing import Any, Dict
-from .contract import normalize_query_analysis
-def analyze_query(panel: Dict[str, Any], target: Dict[str, Any], query_field: str, query_text: str) -> Dict[str, Any]:
-    del panel, target, query_field, query_text
-    return normalize_query_analysis({})
+import re
+from typing import Any, Dict, List
+
+from .contract import normalize_query_analysis, unique_strings
+
+
+def extract_stream_matchers(query: str) -> List[str]:
+    if not query:
+        return []
+    values = []
+    for selector in re.findall(r"\{([^{}]+)\}", query):
+        for matcher in re.findall(
+            r'([A-Za-z_][A-Za-z0-9_]*)\s*(=~|!~|=|!=)\s*("(?:\\.|[^"\\])*")',
+            selector,
+        ):
+            values.append("%s%s%s" % matcher)
+    return unique_strings(values)
+
+
+def extract_pipeline_stage_names(query: str) -> List[str]:
+    if not query:
+        return []
+    values = []
+    filter_stage_map = {
+        "|=": "filter_eq",
+        "!=": "filter_neq",
+        "|~": "filter_regex",
+        "!~": "filter_not_regex",
+    }
+    for operator in re.findall(r"\s(\|=|!=|\|~|!~)\s", query):
+        stage_name = filter_stage_map.get(operator)
+        if stage_name:
+            values.append(stage_name)
+    for stage in re.findall(r"\s\|\s*([A-Za-z_][A-Za-z0-9_]*)\s*(?:\(|\b)", query):
+        values.append(stage)
+    return unique_strings(values)
+
+
+def extract_range_and_aggregation_functions(query: str) -> List[str]:
+    if not query:
+        return []
+    allowed = {
+        "rate",
+        "bytes_rate",
+        "count_over_time",
+        "rate_counter",
+        "bytes_over_time",
+        "avg_over_time",
+        "min_over_time",
+        "max_over_time",
+        "sum_over_time",
+        "quantile_over_time",
+        "absent_over_time",
+        "first_over_time",
+        "last_over_time",
+        "stddev_over_time",
+        "stdvar_over_time",
+        "sum",
+        "avg",
+        "min",
+        "max",
+        "count",
+        "topk",
+        "bottomk",
+        "sort",
+        "sort_desc",
+        "quantile",
+    }
+    values = []
+    for name in re.findall(
+        r"\b([A-Za-z_][A-Za-z0-9_]*)\b(?=\s*\(|\s+(?:by|without)\b)",
+        query,
+    ):
+        if name.lower() in allowed:
+            values.append(name)
+    return unique_strings(values)
+
+
+def analyze_query(
+    panel: Dict[str, Any],
+    target: Dict[str, Any],
+    query_field: str,
+    query_text: str,
+) -> Dict[str, Any]:
+    del panel, target, query_field
+    return normalize_query_analysis(
+        {
+            "metrics": extract_range_and_aggregation_functions(query_text)
+            + extract_pipeline_stage_names(query_text),
+            "measurements": extract_stream_matchers(query_text),
+            "buckets": [],
+        }
+    )

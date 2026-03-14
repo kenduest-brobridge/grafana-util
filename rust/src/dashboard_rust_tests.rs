@@ -2891,6 +2891,73 @@ fn build_export_inspection_query_report_extracts_metrics_measurements_and_bucket
 }
 
 #[test]
+fn build_export_inspection_query_report_extracts_loki_query_details() {
+    let temp = tempdir().unwrap();
+    let raw_dir = temp.path().join("raw");
+    fs::create_dir_all(raw_dir.join("Logs")).unwrap();
+    fs::write(
+        raw_dir.join(EXPORT_METADATA_FILENAME),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-dashboard-export-index",
+            "schemaVersion": TOOL_SCHEMA_VERSION,
+            "variant": "raw",
+            "dashboardCount": 1,
+            "indexFile": "index.json",
+            "format": "grafana-web-import-preserve-uid"
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        raw_dir.join("Logs").join("loki.json"),
+        serde_json::to_string_pretty(&json!({
+            "dashboard": {
+                "uid": "logs-main",
+                "title": "Logs Main",
+                "panels": [
+                    {
+                        "id": 11,
+                        "title": "Errors",
+                        "type": "logs",
+                        "targets": [
+                            {
+                                "refId": "A",
+                                "datasource": {"uid": "loki-main", "type": "loki"},
+                                "expr": "sum by (level) (count_over_time({job=\"grafana\",level=~\"error|warn\"} |= \"timeout\" | json | level=\"error\" [5m]))"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+
+    let report = super::build_export_inspection_query_report(&raw_dir).unwrap();
+
+    assert_eq!(report.queries.len(), 1);
+    assert_eq!(
+        report.queries[0].metrics,
+        vec![
+            "sum".to_string(),
+            "count_over_time".to_string(),
+            "json".to_string(),
+        ]
+    );
+    assert_eq!(
+        report.queries[0].measurements,
+        vec![
+            "{job=\"grafana\",level=~\"error|warn\"}".to_string(),
+            "job=\"grafana\"".to_string(),
+            "level=~\"error|warn\"".to_string(),
+            "level=\"error\"".to_string(),
+        ]
+    );
+    assert_eq!(report.queries[0].buckets, vec!["5m".to_string()]);
+}
+
+#[test]
 fn build_export_inspection_query_report_keeps_prometheus_metrics_and_skips_label_tokens() {
     let temp = tempdir().unwrap();
     let raw_dir = temp.path().join("raw");

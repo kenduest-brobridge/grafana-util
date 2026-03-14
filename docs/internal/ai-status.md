@@ -1,5 +1,12 @@
 # ai-status.md
 
+## 2026-03-14 - Task: Strengthen Loki Inspection Analyzers
+- State: Done
+- Scope: `grafana_utils/dashboards/inspection_analyzers/loki.py`, `rust/src/dashboard_inspect_analyzer_loki.rs`, `rust/src/dashboard_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Loki already had dedicated analyzer boundaries in both Python and Rust, but Python still returned an empty placeholder analysis and Rust did not yet extract Loki-specific inspection signals beyond the generic report flow. That left Loki inspection rows structurally present but materially less informative than Prometheus, Flux, or SQL rows.
+- Current Update: Implemented conservative Loki heuristics in both runtimes. Python now extracts stream matchers into `measurements` and common LogQL range/aggregation functions plus pipeline/filter stages into `metrics` without widening the existing report contract. Rust now extracts stream selectors, label matchers, common functions/stages, and range windows into the existing `metrics` / `measurements` / `buckets` fields, with focused regression coverage for a real Loki query fixture.
+- Result: Loki inspection rows now expose useful best-effort query signals in both Python and Rust while preserving the established inspection schema and keeping future Loki refinement isolated behind dedicated analyzer modules.
+
 ## 2026-03-14 - Task: Split Rust Dashboard Inspection Renderers
 - State: Done
 - Scope: `rust/src/dashboard.rs`, `rust/src/dashboard_inspect.rs`, `rust/src/dashboard_inspect_render.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
