@@ -561,12 +561,20 @@ Use `prompt/` when you want:
 | `--dry-run` | Preview export output without writing files |
 | `--verify-ssl` | Enable TLS certificate verification |
 
+Dashboard auth scope rules:
+
+- `--token` works inside the token's current Grafana org context
+- `--token` may be used for current-org `dashboard list`, `dashboard export`, and `dashboard import`
+- `--token` does not unlock explicit org switching in dashboard commands
+- `dashboard list --org-id`, `dashboard export --org-id`, `dashboard export --all-orgs`, and `dashboard import --org-id` all require Basic auth
+
 For dashboard listing:
 
 - default `dashboard list` output is a table showing `uid`, `name`, `folder`, `folderUid`, resolved folder tree path, `org`, and `orgId`
 - `dashboard list --no-header` omits the table header row
 - `dashboard list --org-id <ID>` reads dashboards from that explicit org instead of the current auth context and requires Basic auth
 - `dashboard list --all-orgs` aggregates dashboards across every visible org and requires Basic auth
+- plain `dashboard list --token ...` stays in the token's current org context
 - `dashboard list --json` includes datasource names and a best-effort `sourceUids` array by default
 - `dashboard list --with-sources` remains useful for table or CSV output, where datasource expansion stays opt-in to keep the default list view compact
 - `dashboard list --with-sources --csv` adds `sources` plus a `sourceUids` column with best-effort datasource UIDs
@@ -577,6 +585,7 @@ For dashboard export:
 - `dashboard export --org-id <ID>` exports dashboards from that explicit org instead of the current auth context and requires Basic auth
 - `dashboard export --all-orgs` exports dashboards from every visible org and requires Basic auth
 - `dashboard export --all-orgs` writes per-org trees such as `org_2_Org_Two/raw/...` and `org_2_Org_Two/prompt/...` to avoid cross-org file collisions
+- plain `dashboard export --token ...` exports only from the token's current org context
 - `dashboard export` stays quiet by default except for the final summary
 - `dashboard export --progress` prints one concise progress line per exported dashboard, such as `Exporting dashboard 3/10: cpu-main`
 - `dashboard export -v` prints detailed per-variant output such as `Exported raw    cpu-main -> dashboards/raw/Infra/CPU__cpu-main.json`
@@ -588,6 +597,7 @@ For dashboard export:
 - `dashboard import --dry-run --table` prints a final table with `uid`, `destination`, `action`, `folder_path`, and `file`
 - `dashboard import --dry-run --table --no-header` omits the dry-run table header row
 - `dashboard import --org-id <ID>` imports the whole run into that explicit destination org instead of the current auth context and requires Basic auth
+- plain `dashboard import --token ...` imports into the token's current org context
 - `dashboard import --update-existing-only` updates only existing dashboard UIDs, skips missing dashboards, and implies `--replace-existing`
 - `dashboard import` now prints an `Import mode: ...` line up front so you can see whether the run is `create-only`, `create-or-update`, or `update-or-skip-missing`
 - `dashboard inspect-export` analyzes a raw export directory offline and summarizes dashboard count, folder paths, panels, queries, datasource usage, datasource inventory, orphaned datasources, and mixed-datasource dashboards
@@ -746,6 +756,7 @@ Important rules:
 - `--dry-run --table` renders the same predictions as a summary table, including each dashboard's destination folder path, and `--no-header` suppresses that table's header row
 - `--dry-run --json` renders one machine-readable JSON document with the active import mode, folder inventory checks, per-dashboard actions, destination folder paths, and summary counts
 - `--org-id <ID>` switches the whole import run to one explicit destination Grafana org and requires Basic auth; the raw export's recorded `orgId` is not used automatically for routing
+- plain `--token` import still works, but only in the token's current org context
 - `--update-existing-only` changes import mode from `create-or-update` to `update-or-skip-missing`, keyed by dashboard `uid`
 - when updating an existing dashboard by `uid`, import preserves the destination Grafana folder by default unless you explicitly pass `--import-folder-uid`
 - `--require-matching-folder-path` only affects updates to existing dashboards; missing dashboards still follow the active create or skip mode

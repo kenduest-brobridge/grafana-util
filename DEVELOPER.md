@@ -93,6 +93,7 @@ Commit message default for this repo:
 - `grafana-utils access team modify ...` changes Grafana team membership and admin assignments.
 - `grafana-utils access service-account ...` handles org-scoped service-account operations.
 - The export subcommand intentionally uses `--export-dir` instead of `--output-dir` to avoid mixing export terminology with import behavior.
+- Dashboard `--token` auth should be treated as already scoped to one current org context. It is valid for current-org list/export/import operations, but it is not the mechanism for explicit org switching.
 - `export-dashboard --org-id <ID>` rebuilds the dashboard client with `X-Grafana-Org-Id` and is Basic-auth-only because org switching is a server-admin-style workflow rather than a token-bound current-org workflow.
 - `export-dashboard --all-orgs` lists `/api/orgs`, rebuilds one scoped export client per org, and exports each org into an `org_<id>_<name>/` subtree to avoid cross-org file collisions on disk.
 - `import-dashboard --org-id <ID>` rebuilds the dashboard client with `X-Grafana-Org-Id` for the whole import run and is Basic-auth-only because explicit org switching remains a server-admin-style workflow rather than a token-bound current-org workflow.
@@ -224,6 +225,7 @@ This is why prompt export needs live datasource metadata while raw export does n
 - Import `--dry-run --json` renders one JSON document with `mode`, `folders`, `dashboards`, and `summary`, and suppresses the normal human-readable progress/summary lines so scripts can parse it safely.
 - Import `--org-id <ID>` switches the whole run to one explicit destination Grafana org, reusing the same Basic-auth-only org scoping model as `list` and `export`.
 - Import `--org-id` intentionally does not read the raw export's recorded `orgId` for routing; it is a manual explicit-target override for the whole run.
+- Plain token-auth import remains supported, but only in the token's current org context and without any explicit org switch semantics.
 - Import `--update-existing-only` switches the workflow to `update-or-skip-missing` by dashboard `uid`, implies overwrite-on-existing behavior, and never creates missing dashboards.
 - When import updates an existing dashboard by `uid`, it preserves the destination Grafana folder by default; only an explicit `--import-folder-uid` overrides that folder placement.
 - Import `--require-matching-folder-path` adds an update-only guard that compares the raw source folder path with the current destination Grafana folder path and skips existing-dashboard updates when those full paths differ.
