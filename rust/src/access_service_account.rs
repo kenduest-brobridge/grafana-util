@@ -6,7 +6,9 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::Path;
 
-use crate::common::{load_json_object_file, message, string_field, value_as_object, write_json_file, Result};
+use crate::common::{
+    load_json_object_file, message, string_field, value_as_object, write_json_file, Result,
+};
 
 use super::access_render::{
     format_table, map_get_text, normalize_service_account_row, render_csv, render_objects_json,
@@ -16,8 +18,8 @@ use super::access_render::{
 use super::{
     request_object, ServiceAccountAddArgs, ServiceAccountDiffArgs, ServiceAccountExportArgs,
     ServiceAccountImportArgs, ServiceAccountListArgs, ServiceAccountTokenAddArgs,
-    ACCESS_EXPORT_KIND_SERVICE_ACCOUNTS, ACCESS_EXPORT_METADATA_FILENAME,
-    ACCESS_EXPORT_VERSION, ACCESS_SERVICE_ACCOUNT_EXPORT_FILENAME, DEFAULT_PAGE_SIZE,
+    ACCESS_EXPORT_KIND_SERVICE_ACCOUNTS, ACCESS_EXPORT_METADATA_FILENAME, ACCESS_EXPORT_VERSION,
+    ACCESS_SERVICE_ACCOUNT_EXPORT_FILENAME, DEFAULT_PAGE_SIZE,
 };
 
 fn list_service_accounts_with_request<F>(
@@ -136,7 +138,8 @@ where
     let mut page = 1usize;
     let mut rows = Vec::new();
     loop {
-        let batch = list_service_accounts_with_request(&mut request_json, None, page, DEFAULT_PAGE_SIZE)?;
+        let batch =
+            list_service_accounts_with_request(&mut request_json, None, page, DEFAULT_PAGE_SIZE)?;
         if batch.is_empty() {
             break;
         }
@@ -152,11 +155,21 @@ where
 
 fn normalize_service_account_for_diff(record: &Map<String, Value>) -> Map<String, Value> {
     Map::from_iter(vec![
-        ("name".to_string(), Value::String(string_field(record, "name", ""))),
-        ("role".to_string(), Value::String(string_field(record, "role", ""))),
+        (
+            "name".to_string(),
+            Value::String(string_field(record, "name", "")),
+        ),
+        (
+            "role".to_string(),
+            Value::String(string_field(record, "role", "")),
+        ),
         (
             "disabled".to_string(),
-            Value::Bool(value_bool(record.get("disabled")).or_else(|| value_bool(record.get("isDisabled"))).unwrap_or(false)),
+            Value::Bool(
+                value_bool(record.get("disabled"))
+                    .or_else(|| value_bool(record.get("isDisabled")))
+                    .unwrap_or(false),
+            ),
         ),
     ])
 }
@@ -171,7 +184,11 @@ fn assert_not_overwrite(path: &Path, dry_run: bool, overwrite: bool) -> Result<(
     )))
 }
 
-fn build_service_account_export_metadata(source_url: &str, source_dir: &Path, record_count: usize) -> Map<String, Value> {
+fn build_service_account_export_metadata(
+    source_url: &str,
+    source_dir: &Path,
+    record_count: usize,
+) -> Map<String, Value> {
     Map::from_iter(vec![
         (
             "kind".to_string(),
@@ -181,7 +198,10 @@ fn build_service_account_export_metadata(source_url: &str, source_dir: &Path, re
             "version".to_string(),
             Value::Number(ACCESS_EXPORT_VERSION.into()),
         ),
-        ("sourceUrl".to_string(), Value::String(source_url.to_string())),
+        (
+            "sourceUrl".to_string(),
+            Value::String(source_url.to_string()),
+        ),
         (
             "recordCount".to_string(),
             Value::Number((record_count as i64).into()),
@@ -193,10 +213,16 @@ fn build_service_account_export_metadata(source_url: &str, source_dir: &Path, re
     ])
 }
 
-fn load_service_account_import_records(import_dir: &Path, expected_kind: &str) -> Result<Vec<Map<String, Value>>> {
+fn load_service_account_import_records(
+    import_dir: &Path,
+    expected_kind: &str,
+) -> Result<Vec<Map<String, Value>>> {
     let path = import_dir.join(ACCESS_SERVICE_ACCOUNT_EXPORT_FILENAME);
     if !path.is_file() {
-        return Err(message(format!("Access import file not found: {}", path.display())));
+        return Err(message(format!(
+            "Access import file not found: {}",
+            path.display()
+        )));
     }
     let raw = fs::read_to_string(&path)?;
     let payload: Value = serde_json::from_str(&raw)?;
@@ -223,19 +249,30 @@ fn load_service_account_import_records(import_dir: &Path, expected_kind: &str) -
                     )));
                 }
             }
-            object.get("records").cloned().ok_or_else(|| {
-                message(format!("Access import bundle is missing records list: {}", path.display()))
-            })?
-            .as_array()
-            .ok_or_else(|| {
-                message(format!(
-                    "Access import records must be a list in {}",
-                    path.display()
-                ))
-            })?
-            .to_vec()
+            object
+                .get("records")
+                .cloned()
+                .ok_or_else(|| {
+                    message(format!(
+                        "Access import bundle is missing records list: {}",
+                        path.display()
+                    ))
+                })?
+                .as_array()
+                .ok_or_else(|| {
+                    message(format!(
+                        "Access import records must be a list in {}",
+                        path.display()
+                    ))
+                })?
+                .to_vec()
         }
-        _ => return Err(message(format!("Unsupported access import payload in {}", path.display()))),
+        _ => {
+            return Err(message(format!(
+                "Unsupported access import payload in {}",
+                path.display()
+            )))
+        }
     };
     let metadata_path = import_dir.join(ACCESS_EXPORT_METADATA_FILENAME);
     if metadata_path.is_file() {
@@ -244,7 +281,11 @@ fn load_service_account_import_records(import_dir: &Path, expected_kind: &str) -
     let mut normalized = Vec::new();
     for value in records {
         normalized.push(
-            value_as_object(&value, &format!("Access import entry in {}", path.display()))?.clone(),
+            value_as_object(
+                &value,
+                &format!("Access import entry in {}", path.display()),
+            )?
+            .clone(),
         );
     }
     Ok(normalized)
@@ -325,7 +366,10 @@ fn build_service_account_diff_map(
                 source, name
             )));
         }
-        indexed.insert(key, (name.clone(), normalize_service_account_for_diff(record)));
+        indexed.insert(
+            key,
+            (name.clone(), normalize_service_account_for_diff(record)),
+        );
     }
     Ok(indexed)
 }
@@ -469,7 +513,11 @@ where
             args.overwrite,
         )?;
     }
-    let action = if args.dry_run { "Would export" } else { "Exported" };
+    let action = if args.dry_run {
+        "Would export"
+    } else {
+        "Exported"
+    };
     println!(
         "{} {} service-account(s) from {} -> {} and {}",
         action,
@@ -508,18 +556,33 @@ where
                 args.import_dir.display()
             )));
         }
-        let existing = list_service_accounts_with_request(&mut request_json, Some(&identity), 1, DEFAULT_PAGE_SIZE)?
-            .into_iter()
-            .find(|item| string_field(item, "name", "") == identity);
+        let existing = list_service_accounts_with_request(
+            &mut request_json,
+            Some(&identity),
+            1,
+            DEFAULT_PAGE_SIZE,
+        )?
+        .into_iter()
+        .find(|item| string_field(item, "name", "") == identity);
 
         if existing.is_none() {
             if !args.replace_existing {
                 skipped += 1;
                 let detail = "missing and --replace-existing was not set.";
                 if structured_output {
-                    dry_run_rows.push(build_service_account_import_dry_run_row(index + 1, &identity, "skip", detail));
+                    dry_run_rows.push(build_service_account_import_dry_run_row(
+                        index + 1,
+                        &identity,
+                        "skip",
+                        detail,
+                    ));
                 } else {
-                    println!("Skipped service-account {} ({}): {}", identity, index + 1, detail);
+                    println!(
+                        "Skipped service-account {} ({}): {}",
+                        identity,
+                        index + 1,
+                        detail
+                    );
                 }
                 continue;
             }
@@ -552,7 +615,11 @@ where
                 ),
                 (
                     "isDisabled".to_string(),
-                    Value::Bool(value_bool(record.get("disabled")).or_else(|| value_bool(record.get("isDisabled"))).unwrap_or(false)),
+                    Value::Bool(
+                        value_bool(record.get("disabled"))
+                            .or_else(|| value_bool(record.get("isDisabled")))
+                            .unwrap_or(false),
+                    ),
                 ),
             ]));
             let _ = create_service_account_with_request(&mut request_json, &payload)?;
@@ -566,18 +633,30 @@ where
             skipped += 1;
             let detail = "existing and --replace-existing was not set.";
             if structured_output {
-                dry_run_rows.push(build_service_account_import_dry_run_row(index + 1, &identity, "skip", detail));
+                dry_run_rows.push(build_service_account_import_dry_run_row(
+                    index + 1,
+                    &identity,
+                    "skip",
+                    detail,
+                ));
             } else {
-                println!("Skipped existing service-account {} ({})", identity, index + 1);
+                println!(
+                    "Skipped existing service-account {} ({})",
+                    identity,
+                    index + 1
+                );
             }
             continue;
         }
 
         let desired_role = string_field(record, "role", "");
         let existing_role = string_field(&existing, "role", "");
-        let desired_disabled = value_bool(record.get("disabled")).or_else(|| value_bool(record.get("isDisabled")));
-        let existing_disabled = value_bool(existing.get("disabled")).or_else(|| value_bool(existing.get("isDisabled")));
-        let mut update_payload = Map::from_iter(vec![("name".to_string(), Value::String(identity.clone()))]);
+        let desired_disabled =
+            value_bool(record.get("disabled")).or_else(|| value_bool(record.get("isDisabled")));
+        let existing_disabled =
+            value_bool(existing.get("disabled")).or_else(|| value_bool(existing.get("isDisabled")));
+        let mut update_payload =
+            Map::from_iter(vec![("name".to_string(), Value::String(identity.clone()))]);
         let mut changed = Vec::new();
         if !desired_role.is_empty() && desired_role != existing_role {
             update_payload.insert(
@@ -597,9 +676,19 @@ where
             skipped += 1;
             let detail = "already matched live state.";
             if structured_output {
-                dry_run_rows.push(build_service_account_import_dry_run_row(index + 1, &identity, "skip", detail));
+                dry_run_rows.push(build_service_account_import_dry_run_row(
+                    index + 1,
+                    &identity,
+                    "skip",
+                    detail,
+                ));
             } else {
-                println!("Skipped service-account {} ({}): {}", identity, index + 1, detail);
+                println!(
+                    "Skipped service-account {} ({}): {}",
+                    identity,
+                    index + 1,
+                    detail
+                );
             }
             continue;
         }
@@ -607,7 +696,12 @@ where
             updated += 1;
             let detail = format!("would update fields={}", changed.join(","));
             if structured_output {
-                dry_run_rows.push(build_service_account_import_dry_run_row(index + 1, &identity, "update", &detail));
+                dry_run_rows.push(build_service_account_import_dry_run_row(
+                    index + 1,
+                    &identity,
+                    "update",
+                    &detail,
+                ));
             } else {
                 println!("Would update service-account {} {}", identity, detail);
             }
@@ -641,10 +735,22 @@ where
                     (
                         "summary".to_string(),
                         Value::Object(Map::from_iter(vec![
-                            ("processed".to_string(), Value::Number((processed as i64).into())),
-                            ("created".to_string(), Value::Number((created as i64).into())),
-                            ("updated".to_string(), Value::Number((updated as i64).into())),
-                            ("skipped".to_string(), Value::Number((skipped as i64).into())),
+                            (
+                                "processed".to_string(),
+                                Value::Number((processed as i64).into())
+                            ),
+                            (
+                                "created".to_string(),
+                                Value::Number((created as i64).into())
+                            ),
+                            (
+                                "updated".to_string(),
+                                Value::Number((updated as i64).into())
+                            ),
+                            (
+                                "skipped".to_string(),
+                                Value::Number((skipped as i64).into())
+                            ),
                             (
                                 "source".to_string(),
                                 Value::String(args.import_dir.to_string_lossy().to_string()),
