@@ -1,5 +1,9 @@
 # ai-changes.md
 
+Historical note:
+
+- Older entries preserve the reasoning and follow-up state as of the entry date.
+- Active backlog now lives in `TODO.md`, while completed or superseded TODO items moved to `docs/internal/todo-archive.md`.
 ## 2026-03-14 - Block Datasource Name-Match UID Drift Updates
 - Summary: Tightened datasource update safety so `--replace-existing` no longer updates a live datasource by exact `name` when the exported datasource `uid` and live datasource `uid` disagree. Python and Rust now both classify that case as `would-fail-uid-mismatch` instead of a normal update, which keeps one datasource identity from silently overwriting another same-name datasource.
 - Tests: Added focused Python import coverage and Rust match-resolution coverage for same-name different-UID datasource updates.
@@ -785,7 +789,7 @@
 - Validation: Verified Python 3.6 syntax compatibility and parser behavior, confirmed `team add -h` exposes the expected auth and argument surface, and exercised the create flow in unit tests including seeded member/admin updates.
 - Impact: `grafana_utils/access_cli.py`, `tests/test_python_access_cli.py`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`, `TODO.md`
 - Rollback/Risk: Low to moderate. The new command is additive, but seeded admin assignment still depends on the same org-user identity resolution and team-member update semantics as `team modify`, so Grafana version differences in those APIs remain the main compatibility risk.
-- Follow-up: Continue with the remaining access-management plan: `team delete` and the `group` alias.
+- Follow-up: Completed later on 2026-03-14 by the `Finish Access Delete Commands And Group Alias` entry.
 
 ## 2026-03-12 - Add Access Utility User Delete
 - Summary: Added Python `grafana-access-utils user delete` support, including parser/help wiring, explicit confirmation with `--yes`, exact target selection by id/login/email, and aligned public/maintainer docs. The command supports global deletion through the admin API and org-scoped removal through the org user API, with auth rules that match those two paths.
@@ -795,7 +799,7 @@
 - Validation: Verified Python 3.6 syntax compatibility and parser behavior, then ran Docker-backed Grafana `12.4.1` smoke tests that deleted one user globally with Basic auth and removed another user through the org-scoped path with a token. In the default single-org Grafana setup used for validation, the org-scoped removal also left the user absent from global listing afterward.
 - Impact: `grafana_utils/access_cli.py`, `tests/test_python_access_cli.py`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`, `TODO.md`
 - Rollback/Risk: Moderate. The new command is destructive by design, though it requires explicit confirmation and was live-validated on Grafana `12.4.1`. The global and org delete paths have different auth/permission models, and org-scoped behavior may vary in multi-org setups compared with the single-org validation environment.
-- Follow-up: Continue with the remaining access-management plan: `team add`, `team delete`, and the `group` alias.
+- Follow-up: Completed later in stages, with the remaining access delete and alias work closed on 2026-03-14 by the `Finish Access Delete Commands And Group Alias` entry.
 
 ## 2026-03-12 - Add Access Utility User Modify
 - Summary: Added Python `grafana-access-utils user modify` support, including parser/help wiring, exact target selection by id/login/email, explicit setters for login/email/name/password/org role/Grafana-admin state, and aligned public/maintainer docs. The command is Basic-auth-only and splits updates across the appropriate Grafana user, admin-password, org-role, and permission APIs.
@@ -805,7 +809,7 @@
 - Validation: Verified Python 3.6 syntax compatibility and parser behavior, then ran a Docker-backed Grafana `12.4.1` smoke test that created a user, updated login/email/name/password/org role/Grafana-admin state, and verified the result through both global and org-scoped user listing. As with the earlier user flows, Grafana’s global list API reflected Grafana-admin state while the org-scoped list API reflected org role.
 - Impact: `grafana_utils/access_cli.py`, `tests/test_python_access_cli.py`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`, `TODO.md`
 - Rollback/Risk: Low to moderate. The new command is additive and live-validated on Grafana `12.4.1`, but it depends on multiple server-admin/global endpoints with slightly different visibility of user fields, so operator verification still benefits from checking both global and org-scoped list output when changing both org role and Grafana-admin state in one run.
-- Follow-up: Continue with the remaining access-management plan: `user delete`, `team add`, `team delete`, and the `group` alias.
+- Follow-up: Completed later in stages, with the remaining access delete and alias work closed on 2026-03-14 by the `Finish Access Delete Commands And Group Alias` entry.
 
 ## 2026-03-11 - Add Access Utility Team Modify
 - Summary: Added Python `grafana-access-utils team modify` support, including parser/help wiring, exact team lookup by id or name, exact user lookup by login or email, member add/remove operations, admin add/remove operations, and aligned public/maintainer docs. The command uses direct member add/delete calls for member changes and the documented bulk update payload for admin changes after reading current member permission metadata.
@@ -815,7 +819,7 @@
 - Validation: Verified Python 3.6 syntax compatibility and parser behavior, then ran Docker-backed Grafana `12.4.1` smoke tests that created users and a team, exercised member add/remove with Basic auth, exercised admin promote/demote with Basic auth, and exercised member add with a service-account token. Live Grafana returned team-member `permission` metadata (`4` for admin, `0` for member), which the command now uses to preserve existing admin assignments during bulk admin updates.
 - Impact: `grafana_utils/access_cli.py`, `tests/test_python_access_cli.py`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`, `TODO.md`
 - Rollback/Risk: Moderate. The new command is additive and live-validated on Grafana `12.4.1`, but admin updates depend on current team-member responses exposing permission/admin metadata; when that metadata is missing, the command fails instead of guessing and risking an overwrite of current admin assignments.
-- Follow-up: Continue with the remaining access-management plan: `user modify`, `user delete`, `team add`, `team delete`, and the `group` alias.
+- Follow-up: Completed later in stages, with the remaining access delete and alias work closed on 2026-03-14 by the `Finish Access Delete Commands And Group Alias` entry.
 
 ## 2026-03-11 - Add Access Utility User Add
 - Summary: Added Python `grafana-access-utils user add` support, including parser/help wiring, Basic-auth-only validation, Grafana admin API user creation, optional org-role and Grafana-admin follow-up updates, and aligned public/maintainer docs. The command now distinguishes Grafana auth `--basic-password` from the new user’s required `--password` cleanly in both parsing and help output.
@@ -825,7 +829,7 @@
 - Validation: Verified Python 3.6 syntax compatibility, corrected an argparse destination collision between auth password and the new-user password flag, ensured explicit CLI Basic auth wins over an ambient token env var, and ran a Docker-backed Grafana `12.4.1` smoke test that created a user and verified it through both global and org-scoped listing.
 - Impact: `grafana_utils/access_cli.py`, `tests/test_python_access_cli.py`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`, `TODO.md`
 - Rollback/Risk: Low to moderate. The new command is additive, but Grafana user-creation and follow-up admin/org APIs are Basic-auth server-admin workflows and may expose different fields across Grafana versions; live validation showed the global list API does not echo org role even after the org-role update, while org-scoped listing does.
-- Follow-up: Continue with the remaining access-management plan: `team modify`, `user modify`, `user delete`, and the remaining team/group mutating workflow.
+- Follow-up: Completed later in stages, with the remaining access delete and alias work closed on 2026-03-14 by the `Finish Access Delete Commands And Group Alias` entry.
 
 ## 2026-03-11 - Add Access Utility Team List
 - Summary: Added Python `grafana-access-utils team list` support, including parser/help wiring, Grafana team search and member lookup client calls, normalization/rendering for text/table/CSV/JSON output, and aligned public/maintainer docs. The command is org-scoped and follows the same auth model as the other org-scoped access commands.
@@ -835,7 +839,7 @@
 - Validation: Verified Python 3.6 syntax compatibility, incomplete-command help behavior, and the new team list output surfaces. Also fixed a pagination issue during review so team listing now iterates server pages before local filtering/pagination.
 - Impact: `grafana_utils/access_cli.py`, `tests/test_python_access_cli.py`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`, `TODO.md`
 - Rollback/Risk: Low to moderate. The new command is additive, but Grafana team search payloads can vary by version; member lookup remains best-effort and depends on the org-scoped team APIs returning the expected fields.
-- Follow-up: Continue with the remaining access-management plan: `team modify`, `user add`, and the rest of the team/group mutating workflow.
+- Follow-up: Completed later in stages, with the remaining access delete and alias work closed on 2026-03-14 by the `Finish Access Delete Commands And Group Alias` entry.
 
 ## 2026-03-11 - Add Access Utility User List
 - Summary: Added a new Python `grafana-access-utils` command with an initial access-management surface covering `user list`, `service-account list`, `service-account add`, and `service-account token add`. The first cut introduces `grafana_utils/access_cli.py`, the console-script entrypoint, a thin `cmd/grafana-access-utils.py` wrapper, packaging coverage, dedicated access-CLI unit tests, and public/maintainer docs that scope the feature to Python only for now.
