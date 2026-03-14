@@ -14,6 +14,53 @@ class AuthConfigError(RuntimeError):
     """Raised when auth inputs are incomplete or mutually exclusive."""
 
 
+def format_cli_auth_error_message(message: str) -> str:
+    """Map shared auth validation errors to CLI-facing help text."""
+
+    if message == "Choose either token auth or Basic auth, not both.":
+        return (
+            "Choose either token auth (--token / --api-token) or Basic auth "
+            "(--basic-user / --username with --basic-password / --password / "
+            "--prompt-password), not both."
+        )
+    if (
+        message
+        == "Choose either an explicit Basic auth password or --prompt-password, not both."
+    ):
+        return (
+            "Choose either --basic-password / --password or "
+            "--prompt-password, not both."
+        )
+    if (
+        message
+        == "Basic auth requires both username and password or --prompt-password."
+    ):
+        return (
+            "Basic auth requires both --basic-user / --username and "
+            "--basic-password / --password or --prompt-password."
+        )
+    if message == "--prompt-password requires a Basic auth username.":
+        return "--prompt-password requires --basic-user / --username."
+    if (
+        message
+        == "Basic auth environment configuration requires both GRAFANA_USERNAME and GRAFANA_PASSWORD."
+    ):
+        return (
+            "Basic auth requires both --basic-user / --username and "
+            "--basic-password / --password or --prompt-password."
+        )
+    if (
+        message
+        == "Authentication required. Provide a token or Basic auth credentials."
+    ):
+        return (
+            "Authentication required. Set --token / --api-token / "
+            "GRAFANA_API_TOKEN or --basic-user and --basic-password / "
+            "--prompt-password / GRAFANA_USERNAME and GRAFANA_PASSWORD."
+        )
+    return message
+
+
 def _first_present(args: Any, names: Iterable[str]) -> Optional[str]:
     for name in names:
         value = getattr(args, name, None)
@@ -139,3 +186,30 @@ def resolve_auth_from_namespace(
     )
     org_id = getattr(args, org_id_attr, None)
     return add_org_id_header(headers, org_id), auth_mode
+
+
+def resolve_cli_auth_from_namespace(
+    args: Any,
+    prompt_reader=None,
+    token_attr: str = "api_token",
+    username_attrs: Optional[Iterable[str]] = None,
+    password_attrs: Optional[Iterable[str]] = None,
+    prompt_attr: str = "prompt_password",
+    org_id_attr: str = "org_id",
+    env: Optional[Dict[str, str]] = None,
+) -> Tuple[Dict[str, str], str]:
+    """Resolve auth or raise AuthConfigError with CLI-facing wording."""
+
+    try:
+        return resolve_auth_from_namespace(
+            args,
+            token_attr=token_attr,
+            username_attrs=username_attrs,
+            password_attrs=password_attrs,
+            prompt_attr=prompt_attr,
+            org_id_attr=org_id_attr,
+            env=env,
+            prompt_reader=prompt_reader,
+        )
+    except AuthConfigError as exc:
+        raise AuthConfigError(format_cli_auth_error_message(str(exc)))

@@ -77,6 +77,31 @@ class AuthStagingTests(unittest.TestCase):
                 env={"GRAFANA_USERNAME": "ops"},
             )
 
+    def test_format_cli_auth_error_message_rewrites_basic_auth_requirement(self):
+        message = auth_staging.format_cli_auth_error_message(
+            "Basic auth requires both username and password or --prompt-password."
+        )
+
+        self.assertEqual(
+            message,
+            "Basic auth requires both --basic-user / --username and "
+            "--basic-password / --password or --prompt-password.",
+        )
+
+    def test_resolve_cli_auth_from_namespace_rewrites_auth_errors(self):
+        args = argparse.Namespace(
+            api_token=None,
+            username=None,
+            password=None,
+            prompt_password=True,
+        )
+
+        with self.assertRaisesRegex(
+            auth_staging.AuthConfigError,
+            "--prompt-password requires --basic-user / --username.",
+        ):
+            auth_staging.resolve_cli_auth_from_namespace(args)
+
     def test_add_org_id_header_returns_copy(self):
         original = {"Authorization": "Bearer token"}
 

@@ -80,7 +80,7 @@ from .access.pending_cli_staging import (
     resolve_team_id,
     validate_destructive_confirmed,
 )
-from .auth_staging import AuthConfigError, resolve_auth_from_namespace
+from .auth_staging import AuthConfigError, resolve_cli_auth_from_namespace
 from .clients.access_client import GrafanaAccessClient
 
 
@@ -819,54 +819,12 @@ def _normalize_output_format_args(
 
 def resolve_auth(args: argparse.Namespace) -> Tuple[Dict[str, str], str]:
     try:
-        return resolve_auth_from_namespace(
+        return resolve_cli_auth_from_namespace(
             args,
             prompt_reader=getpass.getpass,
         )
     except AuthConfigError as exc:
-        message = str(exc)
-        if message == "Choose either token auth or Basic auth, not both.":
-            message = (
-                "Choose either token auth (--token / --api-token) or Basic auth "
-                "(--basic-user / --username with --basic-password / --password / "
-                "--prompt-password), not both."
-            )
-        elif (
-            message
-            == "Choose either an explicit Basic auth password or --prompt-password, not both."
-        ):
-            message = (
-                "Choose either --basic-password / --password or "
-                "--prompt-password, not both."
-            )
-        elif (
-            message
-            == "Basic auth requires both username and password or --prompt-password."
-        ):
-            message = (
-                "Basic auth requires both --basic-user / --username and "
-                "--basic-password / --password or --prompt-password."
-            )
-        elif message == "--prompt-password requires a Basic auth username.":
-            message = "--prompt-password requires --basic-user / --username."
-        elif (
-            message
-            == "Basic auth environment configuration requires both GRAFANA_USERNAME and GRAFANA_PASSWORD."
-        ):
-            message = (
-                "Basic auth requires both --basic-user / --username and "
-                "--basic-password / --password or --prompt-password."
-            )
-        elif (
-            message
-            == "Authentication required. Provide a token or Basic auth credentials."
-        ):
-            message = (
-                "Authentication required. Set --token / --api-token / "
-                "GRAFANA_API_TOKEN or --basic-user and --basic-password / "
-                "--prompt-password / GRAFANA_USERNAME and GRAFANA_PASSWORD."
-            )
-        raise GrafanaError(message)
+        raise GrafanaError(str(exc))
 
 
 def build_request_headers(args: argparse.Namespace) -> Tuple[Dict[str, str], str]:

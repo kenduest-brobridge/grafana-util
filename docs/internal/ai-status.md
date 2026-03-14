@@ -1,5 +1,19 @@
 # ai-status.md
 
+## 2026-03-14 - Task: Consolidate Python CLI Auth Error Resolution
+- State: Done
+- Scope: `grafana_utils/auth_staging.py`, `grafana_utils/dashboard_cli.py`, `grafana_utils/alert_cli.py`, `grafana_utils/access_cli.py`, `tests/test_python_auth_staging.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The Python dashboard, alert, and access CLIs already delegated the raw token-vs-Basic auth decision to `auth_staging.resolve_auth_from_namespace()`, but each CLI still carried its own copy of the same `AuthConfigError` to operator-facing `GrafanaError` message mapping. That left three near-identical `resolve_auth()` implementations to keep in sync whenever auth wording changed.
+- Current Update: Added shared CLI-facing auth error formatting and a `resolve_cli_auth_from_namespace()` helper in `auth_staging.py`, then rewired the dashboard, alert, and access CLIs to use that shared helper while preserving each module's existing `GrafanaError` wrapper and return shape.
+- Result: Python auth resolution now has one shared source of truth for CLI-facing error wording across dashboard, alert, and access commands, which removes duplicated message-mapping logic without changing the operator-visible auth behavior.
+
+## 2026-03-14 - Task: Fill Rust Access CLI Help Text
+- State: Done
+- Scope: `rust/src/access_cli_defs.rs`, `rust/src/access_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The Rust access CLI already exposed a broad user/team/service-account command surface, but many `--...` flags in `access_cli_defs.rs` still relied on bare `#[arg(long)]` declarations with no operator-facing help text. That made `-h` output inconsistent with the more fully described dashboard, datasource, and alert command families.
+- Current Update: Added concrete help text for the previously bare access list, add, modify, delete, and token-creation flags, and added focused help-output tests so the most important user/team/service-account subcommands now assert the presence of those descriptions.
+- Result: Rust access `-h` output is now much closer to the rest of the repo: most operator-facing flags explain what they target, what they filter, or what they change instead of only listing the flag names.
+
 ## 2026-03-14 - Task: Add Import Dry-Run Output Columns
 - State: Done
 - Scope: `grafana_utils/dashboard_cli.py`, `grafana_utils/dashboards/import_support.py`, `grafana_utils/dashboards/import_workflow.py`, `grafana_utils/datasource_cli.py`, `tests/test_python_dashboard_cli.py`, `tests/test_python_datasource_cli.py`, `rust/src/dashboard_cli_defs.rs`, `rust/src/dashboard_import.rs`, `rust/src/dashboard_rust_tests.rs`, `rust/src/datasource.rs`, `rust/src/datasource_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
