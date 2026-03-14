@@ -27,6 +27,7 @@ Compatibility:
 - [Overview](#overview)
 - [Architecture](#architecture)
 - [Choose Python or Rust](#choose-python-or-rust)
+- [Complete Command Guides](#complete-command-guides)
 - [Quick Start](#quick-start)
 - [Dashboard Utility](#dashboard-utility)
 - [Datasource Utility](#datasource-utility)
@@ -73,11 +74,23 @@ Maintainer architecture overviews:
 
 - Python architecture: [`docs/overview-python.md`](docs/overview-python.md)
 - Rust architecture: [`docs/overview-rust.md`](docs/overview-rust.md)
+- Full command references:
+  - Python-first: [`docs/user-guide-python-first.md`](docs/user-guide-python-first.md)
+  - Rust-first: [`docs/user-guide-rust.md`](docs/user-guide-rust.md)
 
 ## Architecture
 
 - [Python architecture notes](docs/overview-python.md)
 - [Rust architecture notes](docs/overview-rust.md)
+- [Python-first complete guide](docs/user-guide-python-first.md)
+- [Rust-first complete guide](docs/user-guide-rust.md)
+
+Command-line mapping (same operator verbs, same feature groups):
+
+- Dashboard: `grafana-util dashboard ...` ↔ `cargo run --bin grafana-util -- dashboard ...`
+- Datasource: `grafana-util datasource ...` ↔ `cargo run --bin grafana-util -- datasource ...`
+- Alerting: `grafana-util alert ...` ↔ `cargo run --bin grafana-util -- alert ...`
+- Access management: `grafana-util access ...` ↔ `cargo run --bin grafana-util -- access ...`
 
 Compatibility notes:
 
@@ -98,13 +111,90 @@ Use the path that matches how you want to operate the repo.
 | --- | --- | --- |
 | Installed Python package | Best default for normal usage | `grafana-util dashboard ...`, `grafana-util datasource ...`, `grafana-util alert ...`, `grafana-util access ...` |
 | Python from git checkout | Best when editing or testing the repo directly | `python3 -m grafana_utils dashboard ...`, `python3 -m grafana_utils datasource ...`, `python3 -m grafana_utils alert ...`, `python3 -m grafana_utils access ...` |
-| Rust from git checkout | Best when validating or developing the Rust implementation | `cargo run --bin grafana-util -- dashboard ...`, `cargo run --bin grafana-util -- alert ...`, `cargo run --bin grafana-util -- access ...` |
+| Rust from git checkout | Best when validating or developing the Rust implementation | `cargo run --bin grafana-util -- dashboard ...`, `cargo run --bin grafana-util -- datasource ...`, `cargo run --bin grafana-util -- alert ...`, `cargo run --bin grafana-util -- access ...` |
 
 Notes:
 
 - the Python package is the normal install path from this repository
 - the Rust binaries are built from [`rust/`](rust/) and are not installed by `python3 -m pip install .`
 - both implementations use the same command names and the same operator concepts
+
+## Complete Command Guides
+
+- Python-first user guide: [`docs/user-guide-python-first.md`](docs/user-guide-python-first.md)
+- Rust-first user guide: [`docs/user-guide-rust.md`](docs/user-guide-rust.md)
+
+Fast CLI map (same operators, different entrypoint):
+
+| Command group | Installed (`grafana-util`) | Python source-tree | Rust source-tree |
+| --- | --- | --- | --- |
+| Dashboard | `grafana-util dashboard ...` | `python3 -m grafana_utils dashboard ...` | `cd rust && cargo run --bin grafana-util -- dashboard ...` |
+| Datasource | `grafana-util datasource ...` | `python3 -m grafana_utils datasource ...` | `cd rust && cargo run --bin grafana-util -- datasource ...` |
+| Alerting | `grafana-util alert ...` | `python3 -m grafana_utils alert ...` | `cd rust && cargo run --bin grafana-util -- alert ...` |
+| Access | `grafana-util access ...` | `python3 -m grafana_utils access ...` | `cd rust && cargo run --bin grafana-util -- access ...` |
+
+Common quick commands:
+
+| Area | Core read | Core export/import | Common compare |
+| --- | --- | --- | --- |
+| Dashboard | `dashboard list` | `dashboard export` / `dashboard import` | `dashboard diff` |
+| Datasource | `datasource list` | `datasource export` / `datasource import` | `datasource diff` |
+| Alerting | `alert list-rules` | `alert export` / `alert import` | `alert diff` |
+| Access | `access user list`, `access team list` | `access user add`, `access team add`, `access service-account add` | n/a |
+
+Minimal copy-ready examples:
+
+```bash
+python3 -m grafana_utils dashboard list --url http://localhost:3000 --basic-user admin --basic-password admin
+cd rust && cargo run --bin grafana-util -- dashboard list --url http://localhost:3000 --basic-user admin --basic-password admin
+```
+
+```bash
+python3 -m grafana_utils datasource export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./datasources
+cd rust && cargo run --bin grafana-util -- datasource export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./datasources
+```
+
+Most-used command skeletons (add auth, paths, and output flags as needed):
+
+| Area | Installed (`grafana-util`) | Python (`python3 -m grafana_utils`) | Rust (`cd rust && cargo run --bin grafana-util --`) |
+| --- | --- | --- | --- |
+| Dashboard | `grafana-util dashboard list` | `python3 -m grafana_utils dashboard list` | `cargo run --bin grafana-util -- dashboard list` |
+| Dashboard | `grafana-util dashboard export` | `python3 -m grafana_utils dashboard export` | `cargo run --bin grafana-util -- dashboard export` |
+| Dashboard | `grafana-util dashboard import` | `python3 -m grafana_utils dashboard import` | `cargo run --bin grafana-util -- dashboard import` |
+| Dashboard | `grafana-util dashboard diff` | `python3 -m grafana_utils dashboard diff` | `cargo run --bin grafana-util -- dashboard diff` |
+| Dashboard | `grafana-util dashboard inspect-export` | `python3 -m grafana_utils dashboard inspect-export` | `cargo run --bin grafana-util -- dashboard inspect-export` |
+| Dashboard | `grafana-util dashboard inspect-live` | `python3 -m grafana_utils dashboard inspect-live` | `cargo run --bin grafana-util -- dashboard inspect-live` |
+| Datasource | `grafana-util datasource list` | `python3 -m grafana_utils datasource list` | `cargo run --bin grafana-util -- datasource list` |
+| Datasource | `grafana-util datasource export` | `python3 -m grafana_utils datasource export` | `cargo run --bin grafana-util -- datasource export` |
+| Datasource | `grafana-util datasource import` | `python3 -m grafana_utils datasource import` | `cargo run --bin grafana-util -- datasource import` |
+| Datasource | `grafana-util datasource diff` | `python3 -m grafana_utils datasource diff` | `cargo run --bin grafana-util -- datasource diff` |
+| Alerting | `grafana-util alert list-rules` | `python3 -m grafana_utils alert list-rules` | `cargo run --bin grafana-util -- alert list-rules` |
+| Alerting | `grafana-util alert list-contact-points` | `python3 -m grafana_utils alert list-contact-points` | `cargo run --bin grafana-util -- alert list-contact-points` |
+| Alerting | `grafana-util alert list-mute-timings` | `python3 -m grafana_utils alert list-mute-timings` | `cargo run --bin grafana-util -- alert list-mute-timings` |
+| Alerting | `grafana-util alert list-templates` | `python3 -m grafana_utils alert list-templates` | `cargo run --bin grafana-util -- alert list-templates` |
+| Alerting | `grafana-util alert export` | `python3 -m grafana_utils alert export` | `cargo run --bin grafana-util -- alert export` |
+| Alerting | `grafana-util alert import` | `python3 -m grafana_utils alert import` | `cargo run --bin grafana-util -- alert import` |
+| Alerting | `grafana-util alert diff` | `python3 -m grafana_utils alert diff` | `cargo run --bin grafana-util -- alert diff` |
+| Access | `grafana-util access user list` | `python3 -m grafana_utils access user list` | `cargo run --bin grafana-util -- access user list` |
+| Access | `grafana-util access user add` | `python3 -m grafana_utils access user add` | `cargo run --bin grafana-util -- access user add` |
+| Access | `grafana-util access team list` | `python3 -m grafana_utils access team list` | `cargo run --bin grafana-util -- access team list` |
+
+SOP 版精簡 12 筆（常用頻率最高）:
+
+| # | Installed (`grafana-util`) | Python (`python3 -m grafana_utils`) | Rust (`cargo run --bin grafana-util --`) |
+| --- | --- | --- | --- |
+| 1 | `grafana-util dashboard list` | `python3 -m grafana_utils dashboard list` | `cd rust && cargo run --bin grafana-util -- dashboard list` |
+| 2 | `grafana-util dashboard export` | `python3 -m grafana_utils dashboard export` | `cd rust && cargo run --bin grafana-util -- dashboard export` |
+| 3 | `grafana-util dashboard import` | `python3 -m grafana_utils dashboard import` | `cd rust && cargo run --bin grafana-util -- dashboard import` |
+| 4 | `grafana-util dashboard diff` | `python3 -m grafana_utils dashboard diff` | `cd rust && cargo run --bin grafana-util -- dashboard diff` |
+| 5 | `grafana-util datasource list` | `python3 -m grafana_utils datasource list` | `cd rust && cargo run --bin grafana-util -- datasource list` |
+| 6 | `grafana-util datasource export` | `python3 -m grafana_utils datasource export` | `cd rust && cargo run --bin grafana-util -- datasource export` |
+| 7 | `grafana-util datasource import` | `python3 -m grafana_utils datasource import` | `cd rust && cargo run --bin grafana-util -- datasource import` |
+| 8 | `grafana-util datasource diff` | `python3 -m grafana_utils datasource diff` | `cd rust && cargo run --bin grafana-util -- datasource diff` |
+| 9 | `grafana-util alert list-rules` | `python3 -m grafana_utils alert list-rules` | `cd rust && cargo run --bin grafana-util -- alert list-rules` |
+| 10 | `grafana-util alert export` | `python3 -m grafana_utils alert export` | `cd rust && cargo run --bin grafana-util -- alert export` |
+| 11 | `grafana-util alert import` | `python3 -m grafana_utils alert import` | `cd rust && cargo run --bin grafana-util -- alert import` |
+| 12 | `grafana-util alert diff` | `python3 -m grafana_utils alert diff` | `cd rust && cargo run --bin grafana-util -- alert diff` |
 
 ## Quick Start
 
@@ -181,7 +271,7 @@ Inspect the same raw export directory as JSON:
 ```bash
 python3 -m grafana_utils dashboard inspect-export \
   --import-dir ./dashboards/raw \
-  --json
+  --output-format json
 ```
 
 Inspect the same raw export directory as tables:
@@ -189,7 +279,7 @@ Inspect the same raw export directory as tables:
 ```bash
 python3 -m grafana_utils dashboard inspect-export \
   --import-dir ./dashboards/raw \
-  --table
+  --output-format table
 ```
 
 Inspect the same raw export directory as a full per-query report:
@@ -197,7 +287,7 @@ Inspect the same raw export directory as a full per-query report:
 ```bash
 python3 -m grafana_utils dashboard inspect-export \
   --import-dir ./dashboards/raw \
-  --report
+  --output-format report-table
 ```
 
 Inspect the same query report as CSV and explicitly include datasource UIDs:
@@ -205,7 +295,7 @@ Inspect the same query report as CSV and explicitly include datasource UIDs:
 ```bash
 python3 -m grafana_utils dashboard inspect-export \
   --import-dir ./dashboards/raw \
-  --report csv \
+  --output-format report-csv \
   --report-columns dashboard_uid,panel_id,datasource_uid,datasource,query
 ```
 
@@ -214,7 +304,7 @@ Inspect the same query report tree by dashboard and panel:
 ```bash
 python3 -m grafana_utils dashboard inspect-export \
   --import-dir ./dashboards/raw \
-  --report tree \
+  --output-format report-tree \
   --report-filter-panel-id 7
 ```
 
@@ -223,7 +313,7 @@ Inspect the same query report as per-dashboard tables:
 ```bash
 python3 -m grafana_utils dashboard inspect-export \
   --import-dir ./dashboards/raw \
-  --report tree-table \
+  --output-format report-tree-table \
   --report-columns panel_id,panel_title,datasource,query
 ```
 
@@ -234,7 +324,7 @@ python3 -m grafana_utils dashboard inspect-live \
   --url http://localhost:3000 \
   --basic-user admin \
   --basic-password admin \
-  --report json \
+  --output-format report-json \
   --report-filter-panel-id 7
 ```
 
@@ -584,15 +674,13 @@ Use `prompt/` when you want:
 | `--progress` | For `dashboard export` or `dashboard import`, print concise per-dashboard `current/total` progress lines while the command runs |
 | `-v, --verbose` | For `dashboard export` or `dashboard import`, print detailed per-item output including variants, paths, and import results; overrides `--progress` |
 | `dashboard import --dry-run --table` | Render dry-run import predictions as a table showing `uid`, destination state, action, destination folder path, and file |
-| `inspect-export --json` | Analyze a raw export directory and emit machine-readable structure summary including folder paths, panels, queries, datasource usage, datasource inventory, orphaned datasources, and mixed dashboards |
-| `inspect-export --table` | Analyze a raw export directory and render multi-section tables for summary, folder paths, datasource usage, datasource inventory, orphaned datasources, and mixed dashboards |
 | `inspect-export --output-format <mode>` | Alternative single-flag selector for inspect output using `text`, `table`, `json`, `report-table`, `report-csv`, `report-json`, `report-tree`, `report-tree-table`, `governance`, or `governance-json` |
-| `inspect-export --report[=table|json|tree|tree-table]` | Emit one full per-query inspection report; default `table` output stays flat row-per-query, `tree` renders the same records as a dashboard -> panel -> query tree, and `tree-table` renders per-dashboard grouped tables |
-| `inspect-live --json|--table|--report[=table|csv|json|tree|tree-table]` | Inspect live Grafana dashboards by materializing a temporary raw-style snapshot and then rendering the same summary/report outputs as `inspect-export` |
+| `inspect-export --output-format report-...` | Emit one full per-query inspection report; `report-table` stays flat row-per-query, `report-tree` renders the same records as a dashboard -> panel -> query tree, and `report-tree-table` renders per-dashboard grouped tables |
+| `inspect-live --output-format ...` | Inspect live Grafana dashboards by materializing a temporary raw-style snapshot and then rendering the same summary/report outputs as `inspect-export` |
 | `inspect-export --help-full` / `inspect-live --help-full` | Show the normal inspect help plus a short extended examples section for report modes, filters, and `--report-columns` |
-| `inspect-export --report-columns ...` | With `--report` table, csv, or tree-table output, limit the query report to selected columns such as `dashboard_uid,panel_title,datasource,metrics,query` or add optional fields such as `datasource_uid` |
-| `inspect-export --report-filter-datasource ...` | With `--report`, include only rows whose datasource label exactly matches the requested value |
-| `inspect-export --report-filter-panel-id ...` | With `--report`, include only rows whose panel id exactly matches the requested value |
+| `inspect-export --report-columns ...` | With `report-table`, `report-csv`, or `report-tree-table`, limit the query report to selected columns such as `dashboard_uid,panel_title,datasource,metrics,query` or add optional fields such as `datasource_uid` |
+| `inspect-export --report-filter-datasource ...` | With report-like `--output-format` values, include only rows whose datasource label exactly matches the requested value |
+| `inspect-export --report-filter-panel-id ...` | With report-like `--output-format` values, include only rows whose panel id exactly matches the requested value |
 | `--update-existing-only` | For `dashboard import`, update only dashboards whose UID already exists in Grafana and skip missing dashboards instead of creating them |
 | `--ensure-folders` | For `dashboard import`, read `raw/folders.json` and create any missing destination folder chain before importing dashboards |
 | `--require-matching-export-org` | For `dashboard import`, verify that the raw export's recorded `orgId` matches the target Grafana org for this run before dry-run or live import |
@@ -646,20 +734,20 @@ For dashboard export:
 - `dashboard import --update-existing-only` updates only existing dashboard UIDs, skips missing dashboards, and implies `--replace-existing`
 - `dashboard import` now prints an `Import mode: ...` line up front so you can see whether the run is `create-only`, `create-or-update`, or `update-or-skip-missing`
 - `dashboard inspect-export` analyzes a raw export directory offline and summarizes dashboard count, folder paths, panels, queries, datasource usage, datasource inventory, orphaned datasources, and mixed-datasource dashboards
-- `dashboard inspect-export --json` emits the same analysis as one JSON document for scripts or CI checks
-- `dashboard inspect-export --table` renders the same analysis as multiple tables for summary, folder paths, datasource usage, datasource inventory, orphaned datasources, and mixed dashboards
-- `dashboard inspect-export --output-format text|table|json|report-table|report-csv|report-json|report-tree|report-tree-table|governance|governance-json` is the newer single-flag alternative when you do not want to remember whether a mode currently lives under `--json`, `--table`, or `--report`
-- `dashboard inspect-export --report` emits one row per query target with dashboard uid/title, folder path, panel id/title/type, datasource, query field, extracted metrics/measurements/buckets, and the raw query text
-- `dashboard inspect-export --report json` emits the same per-query inspection model as one machine-readable JSON document, including `datasourceUid` when the raw export carries a concrete datasource uid
-- `dashboard inspect-export --report tree` keeps the same underlying query records but renders them as a dashboard -> panel -> query tree when you want to read one dashboard at a time instead of scanning a wide flat table
-- `dashboard inspect-export --report tree-table` keeps the same dashboard-first grouping but renders each dashboard section as a compact table, which is easier to scan when you still want columns
+- `dashboard inspect-export --output-format json` emits the same analysis as one JSON document for scripts or CI checks
+- `dashboard inspect-export --output-format table` renders the same analysis as multiple tables for summary, folder paths, datasource usage, datasource inventory, orphaned datasources, and mixed dashboards
+- `dashboard inspect-export --output-format text|table|json|report-table|report-csv|report-json|report-tree|report-tree-table|governance|governance-json` is the primary single-flag selector for inspect output
+- `dashboard inspect-export --output-format report-table` emits one row per query target with dashboard uid/title, folder path, panel id/title/type, datasource, query field, extracted metrics/measurements/buckets, and the raw query text
+- `dashboard inspect-export --output-format report-json` emits the same per-query inspection model as one machine-readable JSON document, including `datasourceUid` when the raw export carries a concrete datasource uid
+- `dashboard inspect-export --output-format report-tree` keeps the same underlying query records but renders them as a dashboard -> panel -> query tree when you want to read one dashboard at a time instead of scanning a wide flat table
+- `dashboard inspect-export --output-format report-tree-table` keeps the same dashboard-first grouping but renders each dashboard section as a compact table, which is easier to scan when you still want columns
 - `dashboard inspect-export --report-columns dashboard_uid,panel_title,datasource,metrics,query` trims the table report down to the columns you care about most
 - `dashboard inspect-export --report-columns dashboard_uid,panel_id,datasource_uid,datasource,query` opts `datasource_uid` into table or csv output without widening the default report
 - `dashboard inspect-export --report-filter-datasource <label>` narrows table or JSON report output to one datasource label, which is useful when checking migration leftovers or datasource retirement impact
 - `dashboard inspect-export --report-filter-panel-id <id>` narrows table or JSON report output to one panel id when one dashboard contains many panels and you only want one panel's queries
-- `--output-format` cannot be combined with `--json`, `--table`, or `--report`
+- `--output-format` cannot be combined with legacy output flags
 - `dashboard inspect-live` reuses the same summary/report flags as `dashboard inspect-export`, but sources the dashboards, folders, and datasource inventory directly from Grafana instead of a pre-existing raw export directory
-- `dashboard inspect-export --table --no-header` suppresses each section's header row when you need compact copy/paste output
+- `dashboard inspect-export --output-format table --no-header` suppresses each section's header row when you need compact copy/paste output
 
 For datasource listing:
 
@@ -1420,5 +1508,8 @@ make test-access-live
 
 - English README: [`README.md`](README.md)
 - Traditional Chinese README: [`README.zh-TW.md`](README.zh-TW.md)
+- Complete command references:
+  - Python-first: [`docs/user-guide-python-first.md`](docs/user-guide-python-first.md)
+  - Rust-first: [`docs/user-guide-rust.md`](docs/user-guide-rust.md)
 - recent change history: [`CHANGELOG.md`](CHANGELOG.md)
 - maintainer and implementation notes: [`DEVELOPER.md`](DEVELOPER.md)
