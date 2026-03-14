@@ -3,15 +3,15 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
-ACCESS_BIN="${ROOT_DIR}/python/grafana-utils.py"
+ACCESS_BIN="${ROOT_DIR}/python/grafana-util.py"
 GRAFANA_IMAGE="${GRAFANA_IMAGE:-grafana/grafana:12.4.1}"
 GRAFANA_PORT="${GRAFANA_PORT:-}"
 GRAFANA_USER="${GRAFANA_USER:-admin}"
 GRAFANA_PASSWORD="${GRAFANA_PASSWORD:-admin}"
 GRAFANA_API_TOKEN="${GRAFANA_API_TOKEN:-}"
 GRAFANA_URL=""
-CONTAINER_NAME="${GRAFANA_CONTAINER_NAME:-grafana-utils-python-access-live-$$}"
-WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/grafana-utils-python-access-live.XXXXXX")"
+CONTAINER_NAME="${GRAFANA_CONTAINER_NAME:-grafana-util-python-access-live-$$}"
+WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/grafana-util-python-access-live.XXXXXX")"
 
 cleanup() {
   docker rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
@@ -95,7 +95,7 @@ create_api_token() {
   fi
 
   if response="$(api POST "/api/auth/keys" '{
-    "name": "grafana-utils-python-access-live",
+    "name": "grafana-util-python-access-live",
     "role": "Admin",
     "secondsToLive": 3600
   }' 2>/dev/null)"; then
@@ -107,7 +107,7 @@ create_api_token() {
   fi
 
   response="$(api POST "/api/serviceaccounts" '{
-    "name": "grafana-utils-python-access-live",
+    "name": "grafana-util-python-access-live",
     "role": "Admin",
     "isDisabled": false
   }')"
@@ -115,7 +115,7 @@ create_api_token() {
   [[ -n "${service_account_id}" ]] || fail "failed to create Grafana service account for token auth"
 
   response="$(api POST "/api/serviceaccounts/${service_account_id}/tokens" '{
-    "name": "grafana-utils-python-access-live",
+    "name": "grafana-util-python-access-live",
     "secondsToLive": 3600
   }')"
   GRAFANA_API_TOKEN="$(printf '%s' "${response}" | json_field key)"

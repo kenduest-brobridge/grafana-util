@@ -43,9 +43,9 @@ pub const POLICIES_KIND: &str = "grafana-notification-policies";
 pub const TEMPLATE_KIND: &str = "grafana-notification-template";
 pub const TOOL_API_VERSION: i64 = 1;
 pub const TOOL_SCHEMA_VERSION: i64 = 1;
-pub const ROOT_INDEX_KIND: &str = "grafana-utils-alert-export-index";
+pub const ROOT_INDEX_KIND: &str = "grafana-util-alert-export-index";
 
-pub const ALERT_HELP_TEXT: &str = "Examples:\n\n  Export alerting resources with an API token:\n    export GRAFANA_API_TOKEN='your-token'\n    grafana-utils alert export --url https://grafana.example.com --output-dir ./alerts --overwrite\n\n  Import back into Grafana and update existing resources:\n    grafana-utils alert import --url https://grafana.example.com --import-dir ./alerts/raw --replace-existing\n\n  Import linked alert rules with dashboard and panel remapping:\n    grafana-utils alert import --url https://grafana.example.com --import-dir ./alerts/raw --replace-existing --dashboard-uid-map ./dashboard-map.json --panel-id-map ./panel-map.json";
+pub const ALERT_HELP_TEXT: &str = "Examples:\n\n  Export alerting resources with an API token:\n    export GRAFANA_API_TOKEN='your-token'\n    grafana-util alert export --url https://grafana.example.com --output-dir ./alerts --overwrite\n\n  Import back into Grafana and update existing resources:\n    grafana-util alert import --url https://grafana.example.com --import-dir ./alerts/raw --replace-existing\n\n  Import linked alert rules with dashboard and panel remapping:\n    grafana-util alert import --url https://grafana.example.com --import-dir ./alerts/raw --replace-existing --dashboard-uid-map ./dashboard-map.json --panel-id-map ./panel-map.json";
 
 pub fn resource_subdir_by_kind() -> BTreeMap<&'static str, &'static str> {
     BTreeMap::from([
@@ -367,7 +367,7 @@ pub fn reject_provisioning_export(document: &Map<String, Value>) -> Result<()> {
         || document.contains_key("templates")
     {
         return Err(message(
-            "Grafana provisioning export format is not supported for API import. Use files exported by grafana-utils alert export.",
+            "Grafana provisioning export format is not supported for API import. Use files exported by grafana-util alert export.",
         ));
     }
     Ok(())

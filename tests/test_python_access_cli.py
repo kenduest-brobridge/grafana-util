@@ -15,7 +15,7 @@ PARSER_MODULE_PATH = REPO_ROOT / "grafana_utils" / "access" / "parser.py"
 WORKFLOWS_MODULE_PATH = REPO_ROOT / "grafana_utils" / "access" / "workflows.py"
 CLIENT_MODULE_PATH = REPO_ROOT / "grafana_utils" / "clients" / "access_client.py"
 MODELS_MODULE_PATH = REPO_ROOT / "grafana_utils" / "access" / "models.py"
-WRAPPER_PATH = REPO_ROOT / "python" / "grafana-utils.py"
+WRAPPER_PATH = REPO_ROOT / "python" / "grafana-util.py"
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 access_utils = importlib.import_module("grafana_utils.access_cli")

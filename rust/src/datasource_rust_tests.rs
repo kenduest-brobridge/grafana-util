@@ -60,7 +60,7 @@ fn import_help_explains_common_operator_flags() {
 #[test]
 fn parse_datasource_list_supports_output_format_json() {
     let args = DatasourceCliArgs::parse_normalized_from([
-        "grafana-utils",
+        "grafana-util",
         "list",
         "--output-format",
         "json",
@@ -205,7 +205,7 @@ fn render_import_table_honors_selected_columns() {
 #[test]
 fn parse_datasource_import_preserves_requested_path() {
     let args = DatasourceCliArgs::parse_normalized_from([
-        "grafana-utils",
+        "grafana-util",
         "import",
         "--import-dir",
         "./datasources",
@@ -229,7 +229,7 @@ fn parse_datasource_import_preserves_requested_path() {
 #[test]
 fn parse_datasource_import_supports_output_format_table() {
     let args = DatasourceCliArgs::parse_normalized_from([
-        "grafana-utils",
+        "grafana-util",
         "import",
         "--import-dir",
         "./datasources",
@@ -251,7 +251,7 @@ fn parse_datasource_import_supports_output_format_table() {
 #[test]
 fn parse_datasource_import_supports_output_columns() {
     let args = DatasourceCliArgs::parse_normalized_from([
-        "grafana-utils",
+        "grafana-util",
         "import",
         "--import-dir",
         "./datasources",
@@ -334,7 +334,7 @@ fn datasource_import_rejects_output_columns_without_table_output() {
 
     let error = run_datasource_cli(
         DatasourceCliArgs::parse_normalized_from([
-            "grafana-utils",
+            "grafana-util",
             "import",
             "--import-dir",
             import_dir.to_str().unwrap(),
@@ -418,7 +418,7 @@ fn diff_help_explains_diff_dir_flag() {
 #[test]
 fn parse_datasource_diff_preserves_requested_path() {
     let args =
-        DatasourceCliArgs::parse_from(["grafana-utils", "diff", "--diff-dir", "./datasources"]);
+        DatasourceCliArgs::parse_from(["grafana-util", "diff", "--diff-dir", "./datasources"]);
 
     match args.command {
         super::DatasourceGroupCommand::Diff(inner) => {
@@ -497,7 +497,7 @@ fn write_diff_fixture(records: &[Value]) -> std::path::PathBuf {
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_nanos();
-    let dir = std::env::temp_dir().join(format!("grafana-utils-datasource-diff-{unique}"));
+    let dir = std::env::temp_dir().join(format!("grafana-util-datasource-diff-{unique}"));
     fs::create_dir_all(&dir).unwrap();
     fs::write(
         dir.join("export-metadata.json"),

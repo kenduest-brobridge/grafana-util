@@ -26,6 +26,6 @@ mkdir -p "${OUTPUT_DIR}"
   cargo zigbuild --release --target "${TARGET_TRIPLE}"
 )
 
-cp "${RUST_DIR}/target/${TARGET_TRIPLE}/release/grafana-utils" "${OUTPUT_DIR}/grafana-utils"
+cp "${RUST_DIR}/target/${TARGET_TRIPLE}/release/grafana-util" "${OUTPUT_DIR}/grafana-util"
 echo "Built Linux amd64 Rust binaries with zig:"
-echo "  ${OUTPUT_DIR}/grafana-utils"
+echo "  ${OUTPUT_DIR}/grafana-util"

@@ -7,7 +7,7 @@
 - `grafana_utils/access_cli.py`: packaged access-management implementation.
 - `grafana_utils/unified_cli.py`: unified Python CLI dispatcher.
 - `grafana_utils/http_transport.py`: shared replaceable HTTP transport layer.
-- `python/grafana-utils.py`: thin wrapper for running the unified CLI directly from the repo checkout.
+- `python/grafana-util.py`: thin wrapper for running the unified CLI directly from the repo checkout.
 - `pyproject.toml`: package metadata and console-script entrypoints.
 - `rust/src/`: Rust implementation for dashboard, alerting, access, and unified dispatch.
 - `tests/`: Python unit tests.
@@ -28,11 +28,11 @@ Keep implementation code in `grafana_utils/` and keep `python/` wrappers thin un
 - `make build`: build both the Python wheel and the Rust release binaries.
 - `make test`: run both the Python and Rust test suites.
 - `make test-rust-live`: start Docker Grafana and run the Rust live smoke test script.
-- `grafana-utils -h`: show installed unified CLI help.
-- `python3 python/grafana-utils.py -h`: show unified source-tree CLI help.
-- `python3 python/grafana-utils.py dashboard list -h`: show dashboard list help.
-- `python3 python/grafana-utils.py alert -h`: show alerting help.
-- `python3 python/grafana-utils.py access user list -h`: show access-management help.
+- `grafana-util -h`: show installed unified CLI help.
+- `python3 python/grafana-util.py -h`: show unified source-tree CLI help.
+- `python3 python/grafana-util.py dashboard list -h`: show dashboard list help.
+- `python3 python/grafana-util.py alert -h`: show alerting help.
+- `python3 python/grafana-util.py access user list -h`: show access-management help.
 - `python3 -m unittest -v`: run the full test suite.
 - `python3 -m unittest -v tests/test_python_alert_cli.py`: run alerting Python tests only.
 - `python3 -m unittest -v tests/test_python_dashboard_cli.py`: run dashboard Python tests only.
@@ -49,9 +49,9 @@ Run the smallest relevant test target first, then the full suite when behavior c
 - Keep CLI help text concrete and operator-focused.
 - Use `apply_patch` for edits; do not rewrite files with ad hoc scripts.
 - Prefer the unified CLI shape in docs and examples:
-  - `grafana-utils dashboard ...`
-  - `grafana-utils alert ...`
-  - `grafana-utils access ...`
+  - `grafana-util dashboard ...`
+  - `grafana-util alert ...`
+  - `grafana-util access ...`
 
 ## Testing Guidelines
 

@@ -203,7 +203,7 @@ fn parse_cli_supports_import_subcommand() {
 
 #[test]
 fn parse_cli_supports_list_rules_subcommand() {
-    let args: AlertCliArgs = parse_cli_from(["grafana-utils alert", "list-rules", "--json"]);
+    let args: AlertCliArgs = parse_cli_from(["grafana-util alert", "list-rules", "--json"]);
     assert_eq!(args.list_kind, Some(super::AlertListKind::Rules));
     assert!(args.json);
     assert!(!args.csv);
@@ -212,7 +212,7 @@ fn parse_cli_supports_list_rules_subcommand() {
 #[test]
 fn parse_cli_supports_list_rules_output_format_csv() {
     let args: AlertCliArgs = parse_cli_from([
-        "grafana-utils alert",
+        "grafana-util alert",
         "list-rules",
         "--output-format",
         "csv",

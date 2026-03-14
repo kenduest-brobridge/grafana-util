@@ -3,7 +3,7 @@ requires = ["setuptools>=59", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "grafana-utils"
+name = "grafana-util"
 version = "0.1.0"
 description = "Grafana dashboard and alerting export/import utilities."
 readme = "README.md"
@@ -20,10 +20,10 @@ http2 = [
 ]
 
 [project.scripts]
-grafana-utils = "grafana_utils.unified_cli:main"
+grafana-util = "grafana_utils.unified_cli:main"
 
 [tool.setuptools]
 include-package-data = false
 
 [tool.setuptools.packages.find]
-include = ["grafana_utils"]
+include = ["grafana_utils", "grafana_utils.*"]

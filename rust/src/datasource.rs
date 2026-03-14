@@ -209,7 +209,7 @@ pub enum DatasourceGroupCommand {
 
 #[derive(Debug, Clone, Parser)]
 #[command(
-    name = "grafana-utils datasource",
+    name = "grafana-util datasource",
     about = "List, export, import, and diff Grafana datasources."
 )]
 pub struct DatasourceCliArgs {

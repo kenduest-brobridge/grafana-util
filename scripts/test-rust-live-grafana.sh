@@ -10,8 +10,8 @@ GRAFANA_USER="${GRAFANA_USER:-admin}"
 GRAFANA_PASSWORD="${GRAFANA_PASSWORD:-admin}"
 GRAFANA_API_TOKEN="${GRAFANA_API_TOKEN:-}"
 GRAFANA_URL=""
-CONTAINER_NAME="${GRAFANA_CONTAINER_NAME:-grafana-utils-rust-live-$$}"
-WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/grafana-utils-rust-live.XXXXXX")"
+CONTAINER_NAME="${GRAFANA_CONTAINER_NAME:-grafana-util-rust-live-$$}"
+WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/grafana-util-rust-live.XXXXXX")"
 DASHBOARD_EXPORT_DIR="${WORK_DIR}/dashboards"
 DASHBOARD_DRY_RUN_DIR="${WORK_DIR}/dashboards-dry-run"
 ALERT_EXPORT_DIR="${WORK_DIR}/alerts"
@@ -84,7 +84,7 @@ create_api_token() {
   fi
 
   if response="$(api POST "/api/auth/keys" '{
-    "name": "grafana-utils-rust-live",
+    "name": "grafana-util-rust-live",
     "role": "Admin",
     "secondsToLive": 3600
   }' 2>/dev/null)"; then
@@ -96,7 +96,7 @@ create_api_token() {
   fi
 
   response="$(api POST "/api/serviceaccounts" '{
-    "name": "grafana-utils-rust-live",
+    "name": "grafana-util-rust-live",
     "role": "Admin",
     "isDisabled": false
   }')"
@@ -104,7 +104,7 @@ create_api_token() {
   [[ -n "${service_account_id}" ]] || fail "failed to create Grafana service account for token auth"
 
   response="$(api POST "/api/serviceaccounts/${service_account_id}/tokens" '{
-    "name": "grafana-utils-rust-live",
+    "name": "grafana-util-rust-live",
     "secondsToLive": 3600
   }')"
   GRAFANA_API_TOKEN="$(printf '%s' "${response}" | json_field key)"
@@ -138,8 +138,8 @@ start_grafana() {
 build_rust_bins() {
   "${CARGO_BIN}" build --quiet \
     --manifest-path "${RUST_DIR}/Cargo.toml" \
-    --bin grafana-utils \
-    --bin grafana-utils
+    --bin grafana-util \
+    --bin grafana-util
 }
 
 seed_datasource() {
@@ -212,11 +212,11 @@ seed_contact_point() {
 }
 
 dashboard_bin() {
-  printf '%s\n' "${RUST_DIR}/target/debug/grafana-utils"
+  printf '%s\n' "${RUST_DIR}/target/debug/grafana-util"
 }
 
 alert_bin() {
-  printf '%s\n' "${RUST_DIR}/target/debug/grafana-utils"
+  printf '%s\n' "${RUST_DIR}/target/debug/grafana-util"
 }
 
 run_dashboard_smoke() {

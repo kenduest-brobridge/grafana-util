@@ -200,7 +200,7 @@ fn collect_folder_inventory_with_request_records_parent_chain() {
 #[test]
 fn parse_cli_supports_list_mode() {
     let args = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "list",
         "--url",
         "https://grafana.example.com",
@@ -227,7 +227,7 @@ fn parse_cli_supports_list_mode() {
 #[test]
 fn parse_cli_supports_list_with_sources() {
     let args = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "list",
         "--url",
         "https://grafana.example.com",
@@ -251,7 +251,7 @@ fn parse_cli_supports_list_with_sources() {
 #[test]
 fn parse_cli_supports_list_output_format_csv() {
     let args = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "list",
         "--url",
         "https://grafana.example.com",
@@ -274,7 +274,7 @@ fn parse_cli_supports_list_output_format_csv() {
 #[test]
 fn parse_cli_supports_list_data_sources_mode() {
     let args = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "list-data-sources",
         "--url",
         "https://grafana.example.com",
@@ -296,7 +296,7 @@ fn parse_cli_supports_list_data_sources_mode() {
 #[test]
 fn parse_cli_supports_list_data_sources_output_format_json() {
     let args = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "list-data-sources",
         "--output-format",
         "json",
@@ -315,7 +315,7 @@ fn parse_cli_supports_list_data_sources_output_format_json() {
 #[test]
 fn parse_cli_supports_preferred_auth_aliases() {
     let args = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "export",
         "--token",
         "abc123",
@@ -339,7 +339,7 @@ fn parse_cli_supports_preferred_auth_aliases() {
 #[test]
 fn parse_cli_supports_prompt_password() {
     let args = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "export",
         "--basic-user",
         "user",
@@ -358,7 +358,7 @@ fn parse_cli_supports_prompt_password() {
 
 #[test]
 fn parse_cli_supports_prompt_token() {
-    let args = parse_cli_from(["grafana-utils", "export", "--prompt-token"]);
+    let args = parse_cli_from(["grafana-util", "export", "--prompt-token"]);
 
     match args.command {
         DashboardCommand::Export(export_args) => {
@@ -372,8 +372,8 @@ fn parse_cli_supports_prompt_token() {
 
 #[test]
 fn parse_cli_supports_export_org_scope_flags() {
-    let org_args = parse_cli_from(["grafana-utils", "export", "--org-id", "7"]);
-    let all_orgs_args = parse_cli_from(["grafana-utils", "export", "--all-orgs"]);
+    let org_args = parse_cli_from(["grafana-util", "export", "--org-id", "7"]);
+    let all_orgs_args = parse_cli_from(["grafana-util", "export", "--all-orgs"]);
 
     match org_args.command {
         DashboardCommand::Export(export_args) => {
@@ -395,7 +395,7 @@ fn parse_cli_supports_export_org_scope_flags() {
 #[test]
 fn parse_cli_rejects_conflicting_export_org_scope_flags() {
     let error = DashboardCliArgs::try_parse_from([
-        "grafana-utils",
+        "grafana-util",
         "export",
         "--org-id",
         "7",
@@ -444,14 +444,14 @@ fn top_level_help_includes_examples() {
     let help = render_dashboard_help();
     assert!(help.contains("Export dashboards from local Grafana with Basic auth"));
     assert!(help.contains("Export dashboards with an API token"));
-    assert!(help.contains("grafana-utils export"));
-    assert!(help.contains("grafana-utils diff"));
+    assert!(help.contains("grafana-util export"));
+    assert!(help.contains("grafana-util diff"));
 }
 
 #[test]
 fn parse_cli_supports_list_csv_mode() {
     let args = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "list",
         "--url",
         "https://grafana.example.com",
@@ -472,7 +472,7 @@ fn parse_cli_supports_list_csv_mode() {
 
 #[test]
 fn parse_cli_supports_export_progress_and_verbose_flags() {
-    let args = parse_cli_from(["grafana-utils", "export", "--progress", "--verbose"]);
+    let args = parse_cli_from(["grafana-util", "export", "--progress", "--verbose"]);
 
     match args.command {
         DashboardCommand::Export(export_args) => {
@@ -486,7 +486,7 @@ fn parse_cli_supports_export_progress_and_verbose_flags() {
 #[test]
 fn parse_cli_supports_import_progress_and_verbose_flags() {
     let args = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "import",
         "--import-dir",
         "./dashboards/raw",
@@ -506,7 +506,7 @@ fn parse_cli_supports_import_progress_and_verbose_flags() {
 #[test]
 fn parse_cli_supports_import_dry_run_json_flag() {
     let args = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "import",
         "--import-dir",
         "./dashboards/raw",
@@ -526,7 +526,7 @@ fn parse_cli_supports_import_dry_run_json_flag() {
 #[test]
 fn parse_cli_supports_import_dry_run_output_format_table() {
     let args = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "import",
         "--import-dir",
         "./dashboards/raw",
@@ -548,7 +548,7 @@ fn parse_cli_supports_import_dry_run_output_format_table() {
 #[test]
 fn parse_cli_supports_import_dry_run_output_columns() {
     let args = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "import",
         "--import-dir",
         "./dashboards/raw",
@@ -581,7 +581,7 @@ fn parse_cli_supports_import_dry_run_output_columns() {
 #[test]
 fn parse_cli_supports_import_update_existing_only_flag() {
     let args = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "import",
         "--import-dir",
         "./dashboards/raw",
@@ -600,7 +600,7 @@ fn parse_cli_supports_import_update_existing_only_flag() {
 #[test]
 fn parse_cli_supports_import_require_matching_folder_path_flag() {
     let args = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "import",
         "--import-dir",
         "./dashboards/raw",
@@ -618,7 +618,7 @@ fn parse_cli_supports_import_require_matching_folder_path_flag() {
 #[test]
 fn parse_cli_supports_import_org_scope_flag() {
     let args = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "import",
         "--import-dir",
         "./dashboards/raw",
@@ -637,7 +637,7 @@ fn parse_cli_supports_import_org_scope_flag() {
 #[test]
 fn parse_cli_supports_import_require_matching_export_org_flag() {
     let args = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "import",
         "--import-dir",
         "./dashboards/raw",
@@ -655,7 +655,7 @@ fn parse_cli_supports_import_require_matching_export_org_flag() {
 #[test]
 fn parse_cli_supports_inspect_export_json_flag() {
     let args = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "inspect-export",
         "--import-dir",
         "./dashboards/raw",
@@ -675,7 +675,7 @@ fn parse_cli_supports_inspect_export_json_flag() {
 #[test]
 fn parse_cli_supports_inspect_export_output_format_flag() {
     let args = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "inspect-export",
         "--import-dir",
         "./dashboards/raw",
@@ -701,7 +701,7 @@ fn parse_cli_supports_inspect_export_output_format_flag() {
 #[test]
 fn parse_cli_supports_inspect_export_report_json_flag() {
     let args = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "inspect-export",
         "--import-dir",
         "./dashboards/raw",
@@ -723,7 +723,7 @@ fn parse_cli_supports_inspect_export_report_json_flag() {
 #[test]
 fn parse_cli_supports_inspect_export_report_csv_flag() {
     let args = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "inspect-export",
         "--import-dir",
         "./dashboards/raw",
@@ -745,7 +745,7 @@ fn parse_cli_supports_inspect_export_report_csv_flag() {
 #[test]
 fn parse_cli_supports_inspect_export_report_tree_flag() {
     let args = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "inspect-export",
         "--import-dir",
         "./dashboards/raw",
@@ -767,7 +767,7 @@ fn parse_cli_supports_inspect_export_report_tree_flag() {
 #[test]
 fn parse_cli_supports_inspect_export_report_tree_table_flag() {
     let args = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "inspect-export",
         "--import-dir",
         "./dashboards/raw",
@@ -792,7 +792,7 @@ fn parse_cli_supports_inspect_export_report_tree_table_flag() {
 #[test]
 fn parse_cli_supports_inspect_export_report_governance_flag() {
     let args = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "inspect-export",
         "--import-dir",
         "./dashboards/raw",
@@ -817,7 +817,7 @@ fn parse_cli_supports_inspect_export_report_governance_flag() {
 #[test]
 fn parse_cli_supports_inspect_export_help_full_flag() {
     let args = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "inspect-export",
         "--import-dir",
         "./dashboards/raw",
@@ -836,7 +836,7 @@ fn parse_cli_supports_inspect_export_help_full_flag() {
 #[test]
 fn parse_cli_supports_inspect_export_report_columns_and_filter() {
     let args = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "inspect-export",
         "--import-dir",
         "./dashboards/raw",
@@ -873,7 +873,7 @@ fn parse_cli_supports_inspect_export_report_columns_and_filter() {
 #[test]
 fn parse_cli_supports_inspect_live_report_json_flag() {
     let args = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "inspect-live",
         "--url",
         "https://grafana.example.com",
@@ -895,7 +895,7 @@ fn parse_cli_supports_inspect_live_report_json_flag() {
 #[test]
 fn parse_cli_supports_inspect_live_output_format_flag() {
     let args = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "inspect-live",
         "--url",
         "https://grafana.example.com",
@@ -921,7 +921,7 @@ fn parse_cli_supports_inspect_live_output_format_flag() {
 #[test]
 fn parse_cli_supports_inspect_live_report_tree_table_flag() {
     let args = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "inspect-live",
         "--url",
         "https://grafana.example.com",
@@ -946,7 +946,7 @@ fn parse_cli_supports_inspect_live_report_tree_table_flag() {
 #[test]
 fn parse_cli_supports_inspect_live_report_governance_json_flag() {
     let args = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "inspect-live",
         "--url",
         "https://grafana.example.com",
@@ -971,7 +971,7 @@ fn parse_cli_supports_inspect_live_report_governance_json_flag() {
 #[test]
 fn parse_cli_supports_inspect_live_help_full_flag() {
     let args = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "inspect-live",
         "--url",
         "https://grafana.example.com",
@@ -1038,7 +1038,7 @@ fn inspect_live_help_full_includes_extended_examples() {
 #[test]
 fn maybe_render_dashboard_help_full_from_os_args_handles_missing_required_args() {
     let help = super::maybe_render_dashboard_help_full_from_os_args([
-        "grafana-utils",
+        "grafana-util",
         "dashboard",
         "inspect-export",
         "--help-full",
@@ -1053,7 +1053,7 @@ fn maybe_render_dashboard_help_full_from_os_args_handles_missing_required_args()
 #[test]
 fn maybe_render_dashboard_help_full_from_os_args_ignores_other_commands() {
     let help = super::maybe_render_dashboard_help_full_from_os_args([
-        "grafana-utils",
+        "grafana-util",
         "export",
         "--help-full",
     ]);
@@ -1064,7 +1064,7 @@ fn maybe_render_dashboard_help_full_from_os_args_ignores_other_commands() {
 #[test]
 fn parse_cli_supports_list_json_mode() {
     let args = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "list",
         "--url",
         "https://grafana.example.com",
@@ -1086,7 +1086,7 @@ fn parse_cli_supports_list_json_mode() {
 #[test]
 fn parse_cli_rejects_conflicting_list_output_modes() {
     let error = DashboardCliArgs::try_parse_from([
-        "grafana-utils",
+        "grafana-util",
         "list",
         "--url",
         "https://grafana.example.com",
@@ -1101,8 +1101,8 @@ fn parse_cli_rejects_conflicting_list_output_modes() {
 
 #[test]
 fn parse_cli_supports_list_org_scope_flags() {
-    let org_args = parse_cli_from(["grafana-utils", "list", "--org-id", "7"]);
-    let all_orgs_args = parse_cli_from(["grafana-utils", "list", "--all-orgs"]);
+    let org_args = parse_cli_from(["grafana-util", "list", "--org-id", "7"]);
+    let all_orgs_args = parse_cli_from(["grafana-util", "list", "--all-orgs"]);
 
     match org_args.command {
         DashboardCommand::List(list_args) => {
@@ -1124,7 +1124,7 @@ fn parse_cli_supports_list_org_scope_flags() {
 #[test]
 fn parse_cli_rejects_conflicting_list_org_scope_flags() {
     let error =
-        DashboardCliArgs::try_parse_from(["grafana-utils", "list", "--org-id", "7", "--all-orgs"])
+        DashboardCliArgs::try_parse_from(["grafana-util", "list", "--org-id", "7", "--all-orgs"])
             .unwrap_err();
 
     assert!(error.to_string().contains("--org-id"));
@@ -1133,7 +1133,7 @@ fn parse_cli_rejects_conflicting_list_org_scope_flags() {
 
 #[test]
 fn parse_cli_supports_legacy_list_alias() {
-    let args = parse_cli_from(["grafana-utils", "list-dashboard", "--json"]);
+    let args = parse_cli_from(["grafana-util", "list-dashboard", "--json"]);
 
     match args.command {
         DashboardCommand::List(list_args) => assert!(list_args.json),
@@ -1144,7 +1144,7 @@ fn parse_cli_supports_legacy_list_alias() {
 #[test]
 fn parse_cli_rejects_conflicting_list_data_sources_output_modes() {
     let error = DashboardCliArgs::try_parse_from([
-        "grafana-utils",
+        "grafana-util",
         "list-data-sources",
         "--table",
         "--json",

@@ -23,6 +23,6 @@ mkdir -p "${OUTPUT_DIR}"
   cargo build --release
 )
 
-cp "${RUST_DIR}/target/release/grafana-utils" "${OUTPUT_DIR}/grafana-utils"
+cp "${RUST_DIR}/target/release/grafana-util" "${OUTPUT_DIR}/grafana-util"
 echo "Built macOS arm64 Rust binaries:"
-echo "  ${OUTPUT_DIR}/grafana-utils"
+echo "  ${OUTPUT_DIR}/grafana-util"

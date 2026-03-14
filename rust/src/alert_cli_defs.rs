@@ -7,7 +7,7 @@ use super::{ALERT_HELP_TEXT, DEFAULT_OUTPUT_DIR, DEFAULT_TIMEOUT, DEFAULT_URL};
 
 #[derive(Debug, Clone, Parser)]
 #[command(
-    name = "grafana-utils alert",
+    name = "grafana-util alert",
     about = "Export, import, or diff Grafana alerting resources.",
     after_help = ALERT_HELP_TEXT
 )]

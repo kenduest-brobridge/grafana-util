@@ -6,7 +6,7 @@ Export, back up, migrate, and re-import Grafana dashboards, datasource inventory
 
 This repository provides one primary unified CLI in two implementations:
 
-- `grafana-utils`: unified dashboard, datasource, alerting, and access-management CLI
+- `grafana-util`: unified dashboard, datasource, alerting, and access-management CLI
 - packaged Python implementation under [`grafana_utils/`](grafana_utils/)
 - Rust implementation under [`rust/`](rust/)
 
@@ -41,38 +41,38 @@ Compatibility:
 
 The repo now uses one primary command name with explicit areas underneath it.
 
-- `grafana-utils dashboard export ...`
-- `grafana-utils dashboard list ...`
-- `grafana-utils datasource list ...`
-- `grafana-utils datasource export ...`
-- `grafana-utils datasource import ...`
-- `grafana-utils datasource diff ...`
-- `grafana-utils dashboard inspect-live ...`
-- `grafana-utils dashboard import ...`
-- `grafana-utils dashboard diff ...`
-- `grafana-utils alert export ...`
-- `grafana-utils alert import ...`
-- `grafana-utils alert diff ...`
-- `grafana-utils alert list-rules ...`
-- `grafana-utils alert list-contact-points ...`
-- `grafana-utils alert list-mute-timings ...`
-- `grafana-utils alert list-templates ...`
-- `grafana-utils access user list ...`
-- `grafana-utils access user add ...`
-- `grafana-utils access user modify ...`
-- `grafana-utils access user delete ...`
-- `grafana-utils access team list ...`
-- `grafana-utils access team add ...`
-- `grafana-utils access team modify ...`
-- `grafana-utils access team delete ...`
-- `grafana-utils access group ...`
-- `grafana-utils access service-account ...`
+- `grafana-util dashboard export ...`
+- `grafana-util dashboard list ...`
+- `grafana-util datasource list ...`
+- `grafana-util datasource export ...`
+- `grafana-util datasource import ...`
+- `grafana-util datasource diff ...`
+- `grafana-util dashboard inspect-live ...`
+- `grafana-util dashboard import ...`
+- `grafana-util dashboard diff ...`
+- `grafana-util alert export ...`
+- `grafana-util alert import ...`
+- `grafana-util alert diff ...`
+- `grafana-util alert list-rules ...`
+- `grafana-util alert list-contact-points ...`
+- `grafana-util alert list-mute-timings ...`
+- `grafana-util alert list-templates ...`
+- `grafana-util access user list ...`
+- `grafana-util access user add ...`
+- `grafana-util access user modify ...`
+- `grafana-util access user delete ...`
+- `grafana-util access team list ...`
+- `grafana-util access team add ...`
+- `grafana-util access team modify ...`
+- `grafana-util access team delete ...`
+- `grafana-util access group ...`
+- `grafana-util access service-account ...`
 
 Compatibility notes:
 
-- old dashboard direct forms such as `grafana-utils export-dashboard ...` and `grafana-utils list-dashboard ...` still work
-- alert direct forms such as `grafana-utils export-alert ...` and `grafana-utils list-alert-rules ...` still work
-- Rust still keeps `grafana-access-utils ...` as a compatibility binary, but Python now uses only `grafana-utils access ...`
+- old dashboard direct forms such as `grafana-util export-dashboard ...` and `grafana-util list-dashboard ...` still work
+- alert direct forms such as `grafana-util export-alert ...` and `grafana-util list-alert-rules ...` still work
+- Rust still keeps `grafana-access-utils ...` as a compatibility binary, but Python now uses only `grafana-util access ...`
 
 The most important distinction in this repo is dashboard export format:
 
@@ -85,9 +85,9 @@ Use the path that matches how you want to operate the repo.
 
 | Option | When to use it | Commands |
 | --- | --- | --- |
-| Installed Python package | Best default for normal usage | `grafana-utils dashboard ...`, `grafana-utils datasource ...`, `grafana-utils alert ...`, `grafana-utils access ...` |
-| Python from git checkout | Best when editing or testing the repo directly | `python3 python/grafana-utils.py dashboard ...`, `python3 python/grafana-utils.py datasource ...`, `python3 python/grafana-utils.py alert ...`, `python3 python/grafana-utils.py access ...` |
-| Rust from git checkout | Best when validating or developing the Rust implementation | `cargo run --bin grafana-utils -- dashboard ...`, `cargo run --bin grafana-utils -- alert ...`, `cargo run --bin grafana-utils -- access ...` |
+| Installed Python package | Best default for normal usage | `grafana-util dashboard ...`, `grafana-util datasource ...`, `grafana-util alert ...`, `grafana-util access ...` |
+| Python from git checkout | Best when editing or testing the repo directly | `python3 python/grafana-util.py dashboard ...`, `python3 python/grafana-util.py datasource ...`, `python3 python/grafana-util.py alert ...`, `python3 python/grafana-util.py access ...` |
+| Rust from git checkout | Best when validating or developing the Rust implementation | `cargo run --bin grafana-util -- dashboard ...`, `cargo run --bin grafana-util -- alert ...`, `cargo run --bin grafana-util -- access ...` |
 
 Notes:
 
@@ -100,7 +100,7 @@ Notes:
 Dashboard export, writing both `raw/` and `prompt/` variants:
 
 ```bash
-python3 python/grafana-utils.py dashboard export \
+python3 python/grafana-util.py dashboard export \
   --url http://localhost:3000 \
   --basic-user admin \
   --basic-password admin \
@@ -111,7 +111,7 @@ python3 python/grafana-utils.py dashboard export \
 Dashboard export from one explicit Grafana org:
 
 ```bash
-python3 python/grafana-utils.py dashboard export \
+python3 python/grafana-util.py dashboard export \
   --url http://localhost:3000 \
   --basic-user "$GRAFANA_USERNAME" \
   --basic-password "$GRAFANA_PASSWORD" \
@@ -123,7 +123,7 @@ python3 python/grafana-utils.py dashboard export \
 Dashboard export across every visible Grafana org:
 
 ```bash
-python3 python/grafana-utils.py dashboard export \
+python3 python/grafana-util.py dashboard export \
   --url http://localhost:3000 \
   --basic-user "$GRAFANA_USERNAME" \
   --basic-password "$GRAFANA_PASSWORD" \
@@ -135,7 +135,7 @@ python3 python/grafana-utils.py dashboard export \
 Datasource inventory export from the current Grafana org:
 
 ```bash
-python3 python/grafana-utils.py datasource export \
+python3 python/grafana-util.py datasource export \
   --url http://localhost:3000 \
   --basic-user admin \
   --basic-password admin \
@@ -146,7 +146,7 @@ python3 python/grafana-utils.py datasource export \
 Datasource inventory dry-run import into one explicit Grafana org:
 
 ```bash
-python3 python/grafana-utils.py datasource import \
+python3 python/grafana-util.py datasource import \
   --url http://localhost:3000 \
   --basic-user admin \
   --basic-password admin \
@@ -161,14 +161,14 @@ python3 python/grafana-utils.py datasource import \
 Inspect one raw export directory and summarize its structure:
 
 ```bash
-python3 python/grafana-utils.py dashboard inspect-export \
+python3 python/grafana-util.py dashboard inspect-export \
   --import-dir ./dashboards/raw
 ```
 
 Inspect the same raw export directory as JSON:
 
 ```bash
-python3 python/grafana-utils.py dashboard inspect-export \
+python3 python/grafana-util.py dashboard inspect-export \
   --import-dir ./dashboards/raw \
   --json
 ```
@@ -176,7 +176,7 @@ python3 python/grafana-utils.py dashboard inspect-export \
 Inspect the same raw export directory as tables:
 
 ```bash
-python3 python/grafana-utils.py dashboard inspect-export \
+python3 python/grafana-util.py dashboard inspect-export \
   --import-dir ./dashboards/raw \
   --table
 ```
@@ -184,7 +184,7 @@ python3 python/grafana-utils.py dashboard inspect-export \
 Inspect the same raw export directory as a full per-query report:
 
 ```bash
-python3 python/grafana-utils.py dashboard inspect-export \
+python3 python/grafana-util.py dashboard inspect-export \
   --import-dir ./dashboards/raw \
   --report
 ```
@@ -192,7 +192,7 @@ python3 python/grafana-utils.py dashboard inspect-export \
 Inspect the same query report as CSV and explicitly include datasource UIDs:
 
 ```bash
-python3 python/grafana-utils.py dashboard inspect-export \
+python3 python/grafana-util.py dashboard inspect-export \
   --import-dir ./dashboards/raw \
   --report csv \
   --report-columns dashboard_uid,panel_id,datasource_uid,datasource,query
@@ -201,7 +201,7 @@ python3 python/grafana-utils.py dashboard inspect-export \
 Inspect the same query report tree by dashboard and panel:
 
 ```bash
-python3 python/grafana-utils.py dashboard inspect-export \
+python3 python/grafana-util.py dashboard inspect-export \
   --import-dir ./dashboards/raw \
   --report tree \
   --report-filter-panel-id 7
@@ -210,7 +210,7 @@ python3 python/grafana-utils.py dashboard inspect-export \
 Inspect the same query report as per-dashboard tables:
 
 ```bash
-python3 python/grafana-utils.py dashboard inspect-export \
+python3 python/grafana-util.py dashboard inspect-export \
   --import-dir ./dashboards/raw \
   --report tree-table \
   --report-columns panel_id,panel_title,datasource,query
@@ -219,7 +219,7 @@ python3 python/grafana-utils.py dashboard inspect-export \
 Inspect live Grafana dashboards with the same report contract:
 
 ```bash
-python3 python/grafana-utils.py dashboard inspect-live \
+python3 python/grafana-util.py dashboard inspect-live \
   --url http://localhost:3000 \
   --basic-user admin \
   --basic-password admin \
@@ -230,7 +230,7 @@ python3 python/grafana-utils.py dashboard inspect-live \
 Dashboard list, including resolved datasource names per dashboard:
 
 ```bash
-python3 python/grafana-utils.py dashboard list \
+python3 python/grafana-util.py dashboard list \
   --url http://localhost:3000 \
   --basic-user admin \
   --basic-password admin \
@@ -241,7 +241,7 @@ python3 python/grafana-utils.py dashboard list \
 List dashboards from one explicit Grafana org:
 
 ```bash
-python3 python/grafana-utils.py dashboard list \
+python3 python/grafana-util.py dashboard list \
   --url http://localhost:3000 \
   --basic-user "$GRAFANA_USERNAME" \
   --basic-password "$GRAFANA_PASSWORD" \
@@ -252,7 +252,7 @@ python3 python/grafana-utils.py dashboard list \
 List dashboards across every visible Grafana org:
 
 ```bash
-python3 python/grafana-utils.py dashboard list \
+python3 python/grafana-util.py dashboard list \
   --url http://localhost:3000 \
   --basic-user "$GRAFANA_USERNAME" \
   --basic-password "$GRAFANA_PASSWORD" \
@@ -263,7 +263,7 @@ python3 python/grafana-utils.py dashboard list \
 List live dashboards without writing export files:
 
 ```bash
-python3 python/grafana-utils.py dashboard list \
+python3 python/grafana-util.py dashboard list \
   --url http://localhost:3000 \
   --basic-user admin \
   --basic-password admin
@@ -272,7 +272,7 @@ python3 python/grafana-utils.py dashboard list \
 List live dashboards as a table with folder tree path:
 
 ```bash
-python3 python/grafana-utils.py dashboard list \
+python3 python/grafana-util.py dashboard list \
   --table \
   --url http://localhost:3000 \
   --basic-user admin \
@@ -282,7 +282,7 @@ python3 python/grafana-utils.py dashboard list \
 List live dashboards as CSV:
 
 ```bash
-python3 python/grafana-utils.py dashboard list \
+python3 python/grafana-util.py dashboard list \
   --csv \
   --url http://localhost:3000 \
   --basic-user admin \
@@ -292,7 +292,7 @@ python3 python/grafana-utils.py dashboard list \
 List live dashboards as JSON:
 
 ```bash
-python3 python/grafana-utils.py dashboard list \
+python3 python/grafana-util.py dashboard list \
   --json \
   --url http://localhost:3000 \
   --basic-user admin \
@@ -302,7 +302,7 @@ python3 python/grafana-utils.py dashboard list \
 List live Grafana data sources as a table:
 
 ```bash
-python3 python/grafana-utils.py dashboard list-data-sources \
+python3 python/grafana-util.py dashboard list-data-sources \
   --table \
   --url http://localhost:3000 \
   --basic-user admin \
@@ -312,7 +312,7 @@ python3 python/grafana-utils.py dashboard list-data-sources \
 Dashboard API import from the raw export:
 
 ```bash
-python3 python/grafana-utils.py dashboard import \
+python3 python/grafana-util.py dashboard import \
   --url http://localhost:3000 \
   --basic-user admin \
   --basic-password admin \
@@ -323,7 +323,7 @@ python3 python/grafana-utils.py dashboard import \
 Dashboard diff against the current Grafana state:
 
 ```bash
-python3 python/grafana-utils.py dashboard diff \
+python3 python/grafana-util.py dashboard diff \
   --url http://localhost:3000 \
   --basic-user admin \
   --basic-password admin \
@@ -333,7 +333,7 @@ python3 python/grafana-utils.py dashboard diff \
 Alerting export:
 
 ```bash
-python3 python/grafana-utils.py alert export \
+python3 python/grafana-util.py alert export \
   --url http://localhost:3000 \
   --basic-user admin \
   --basic-password admin \
@@ -344,7 +344,7 @@ python3 python/grafana-utils.py alert export \
 Alerting import:
 
 ```bash
-python3 python/grafana-utils.py alert import \
+python3 python/grafana-util.py alert import \
   --url http://localhost:3000 \
   --basic-user admin \
   --basic-password admin \
@@ -355,7 +355,7 @@ python3 python/grafana-utils.py alert import \
 Alerting diff against the current Grafana state:
 
 ```bash
-python3 python/grafana-utils.py alert diff \
+python3 python/grafana-util.py alert diff \
   --url http://localhost:3000 \
   --basic-user admin \
   --basic-password admin \
@@ -365,7 +365,7 @@ python3 python/grafana-utils.py alert diff \
 Access-management user listing, org scope with token auth:
 
 ```bash
-python3 python/grafana-utils.py access user list \
+python3 python/grafana-util.py access user list \
   --url http://127.0.0.1:3000 \
   --scope org \
   --token "$GRAFANA_API_TOKEN" \
@@ -375,7 +375,7 @@ python3 python/grafana-utils.py access user list \
 Access-management user listing, global scope with Basic auth:
 
 ```bash
-python3 python/grafana-utils.py access user list \
+python3 python/grafana-util.py access user list \
   --url http://127.0.0.1:3000 \
   --scope global \
   --basic-user "$GRAFANA_USERNAME" \
@@ -386,7 +386,7 @@ python3 python/grafana-utils.py access user list \
 Access-management user creation, global scope with Basic auth:
 
 ```bash
-python3 python/grafana-utils.py access user add \
+python3 python/grafana-util.py access user add \
   --url http://127.0.0.1:3000 \
   --basic-user "$GRAFANA_USERNAME" \
   --basic-password "$GRAFANA_PASSWORD" \
@@ -400,7 +400,7 @@ python3 python/grafana-utils.py access user add \
 Access-management user update, global scope with Basic auth:
 
 ```bash
-python3 python/grafana-utils.py access user modify \
+python3 python/grafana-util.py access user modify \
   --url http://127.0.0.1:3000 \
   --basic-user "$GRAFANA_USERNAME" \
   --basic-password "$GRAFANA_PASSWORD" \
@@ -415,7 +415,7 @@ python3 python/grafana-utils.py access user modify \
 Access-management user delete, global scope with Basic auth:
 
 ```bash
-python3 python/grafana-utils.py access user delete \
+python3 python/grafana-util.py access user delete \
   --url http://127.0.0.1:3000 \
   --basic-user "$GRAFANA_USERNAME" \
   --basic-password "$GRAFANA_PASSWORD" \
@@ -428,7 +428,7 @@ python3 python/grafana-utils.py access user delete \
 Access-management team listing, org scope with token auth:
 
 ```bash
-python3 python/grafana-utils.py access team list \
+python3 python/grafana-util.py access team list \
   --url http://127.0.0.1:3000 \
   --token "$GRAFANA_API_TOKEN" \
   --table
@@ -437,7 +437,7 @@ python3 python/grafana-utils.py access team list \
 Access-management team membership change, org scope with token auth:
 
 ```bash
-python3 python/grafana-utils.py access team modify \
+python3 python/grafana-util.py access team modify \
   --url http://127.0.0.1:3000 \
   --token "$GRAFANA_API_TOKEN" \
   --name Ops \
@@ -449,7 +449,7 @@ python3 python/grafana-utils.py access team modify \
 Access-management team creation, org scope with token auth:
 
 ```bash
-python3 python/grafana-utils.py access team add \
+python3 python/grafana-util.py access team add \
   --url http://127.0.0.1:3000 \
   --token "$GRAFANA_API_TOKEN" \
   --name platform-operators \
@@ -461,7 +461,7 @@ python3 python/grafana-utils.py access team add \
 Access-management team deletion, org scope with token auth:
 
 ```bash
-python3 python/grafana-utils.py access group delete \
+python3 python/grafana-util.py access group delete \
   --url http://127.0.0.1:3000 \
   --token "$GRAFANA_API_TOKEN" \
   --name platform-operators \
@@ -472,7 +472,7 @@ python3 python/grafana-utils.py access group delete \
 Access-management service-account listing, org scope with token auth:
 
 ```bash
-python3 python/grafana-utils.py access service-account list \
+python3 python/grafana-util.py access service-account list \
   --url http://127.0.0.1:3000 \
   --token "$GRAFANA_API_TOKEN" \
   --table
@@ -481,7 +481,7 @@ python3 python/grafana-utils.py access service-account list \
 Access-management service-account creation:
 
 ```bash
-python3 python/grafana-utils.py access service-account add \
+python3 python/grafana-util.py access service-account add \
   --url http://127.0.0.1:3000 \
   --token "$GRAFANA_API_TOKEN" \
   --name automation-bot \
@@ -492,7 +492,7 @@ python3 python/grafana-utils.py access service-account add \
 Access-management service-account token creation:
 
 ```bash
-python3 python/grafana-utils.py access service-account token add \
+python3 python/grafana-util.py access service-account token add \
   --url http://127.0.0.1:3000 \
   --token "$GRAFANA_API_TOKEN" \
   --name automation-bot \
@@ -504,7 +504,7 @@ python3 python/grafana-utils.py access service-account token add \
 Rust access-management user listing from the repo checkout:
 
 ```bash
-cd rust && cargo run --quiet --bin grafana-utils -- access user list \
+cd rust && cargo run --quiet --bin grafana-util -- access user list \
   --url http://127.0.0.1:3000 \
   --scope org \
   --token "$GRAFANA_API_TOKEN" \
@@ -514,7 +514,7 @@ cd rust && cargo run --quiet --bin grafana-utils -- access user list \
 Rust access-management user creation from the repo checkout:
 
 ```bash
-cd rust && cargo run --quiet --bin grafana-utils -- access user add \
+cd rust && cargo run --quiet --bin grafana-util -- access user add \
   --url http://127.0.0.1:3000 \
   --basic-user "$GRAFANA_USERNAME" \
   --basic-password "$GRAFANA_PASSWORD" \
@@ -527,7 +527,7 @@ cd rust && cargo run --quiet --bin grafana-utils -- access user add \
 
 ## Dashboard Utility
 
-`grafana-utils dashboard` has explicit subcommands:
+`grafana-util dashboard` has explicit subcommands:
 
 - `list`
 - `export`
@@ -550,7 +550,7 @@ Use `raw/` when you want:
 
 - the same dashboard `uid`
 - minimal transformation
-- API re-import through `grafana-utils dashboard import`
+- API re-import through `grafana-util dashboard import`
 
 Use `prompt/` when you want:
 
@@ -659,7 +659,7 @@ For datasource listing:
 
 ## Datasource Utility
 
-`grafana-utils datasource` currently provides:
+`grafana-util datasource` currently provides:
 
 - `list`
 - `export`
@@ -704,7 +704,7 @@ Raw export preserves the Grafana dashboard identity as much as possible:
 If you only want the prompt variant:
 
 ```bash
-python3 python/grafana-utils.py dashboard export \
+python3 python/grafana-util.py dashboard export \
   --export-dir ./dashboards \
   --without-dashboard-raw
 ```
@@ -727,7 +727,7 @@ Important notes:
 If you only want the raw variant:
 
 ```bash
-python3 python/grafana-utils.py dashboard export \
+python3 python/grafana-util.py dashboard export \
   --export-dir ./dashboards \
   --without-dashboard-prompt
 ```
@@ -739,7 +739,7 @@ Dashboard import reads normal dashboard JSON through the Grafana API.
 Example:
 
 ```bash
-python3 python/grafana-utils.py dashboard import \
+python3 python/grafana-util.py dashboard import \
   --url http://127.0.0.1:3000 \
   --import-dir ./dashboards/raw \
   --replace-existing
@@ -748,7 +748,7 @@ python3 python/grafana-utils.py dashboard import \
 Import into one explicit Grafana org:
 
 ```bash
-python3 python/grafana-utils.py dashboard import \
+python3 python/grafana-util.py dashboard import \
   --url http://127.0.0.1:3000 \
   --basic-user "$GRAFANA_USERNAME" \
   --basic-password "$GRAFANA_PASSWORD" \
@@ -760,7 +760,7 @@ python3 python/grafana-utils.py dashboard import \
 Dry-run import as a table:
 
 ```bash
-python3 python/grafana-utils.py dashboard import \
+python3 python/grafana-util.py dashboard import \
   --url http://127.0.0.1:3000 \
   --import-dir ./dashboards/raw \
   --dry-run \
@@ -770,7 +770,7 @@ python3 python/grafana-utils.py dashboard import \
 Dry-run import with only the folder mismatch review columns:
 
 ```bash
-python3 python/grafana-utils.py dashboard import \
+python3 python/grafana-util.py dashboard import \
   --url http://127.0.0.1:3000 \
   --import-dir ./dashboards/raw \
   --dry-run \
@@ -781,7 +781,7 @@ python3 python/grafana-utils.py dashboard import \
 Update only dashboards that already exist in Grafana:
 
 ```bash
-python3 python/grafana-utils.py dashboard import \
+python3 python/grafana-util.py dashboard import \
   --url http://127.0.0.1:3000 \
   --import-dir ./dashboards/raw \
   --update-existing-only
@@ -790,7 +790,7 @@ python3 python/grafana-utils.py dashboard import \
 Ensure exported folder UIDs exist before importing dashboards:
 
 ```bash
-python3 python/grafana-utils.py dashboard import \
+python3 python/grafana-util.py dashboard import \
   --url http://127.0.0.1:3000 \
   --import-dir ./dashboards/raw \
   --ensure-folders \
@@ -800,7 +800,7 @@ python3 python/grafana-utils.py dashboard import \
 Only update existing dashboards when the raw source folder path matches the current Grafana folder path:
 
 ```bash
-python3 python/grafana-utils.py dashboard import \
+python3 python/grafana-util.py dashboard import \
   --url http://127.0.0.1:3000 \
   --import-dir ./dashboards/raw \
   --replace-existing \
@@ -810,7 +810,7 @@ python3 python/grafana-utils.py dashboard import \
 Fail early when the raw export org does not match the import target org:
 
 ```bash
-python3 python/grafana-utils.py dashboard import \
+python3 python/grafana-util.py dashboard import \
   --url http://127.0.0.1:3000 \
   --token "$GRAFANA_API_TOKEN" \
   --import-dir ./dashboards/raw \
@@ -847,7 +847,7 @@ Dashboard export also writes small versioned manifest files named `export-metada
 
 ## Alerting Utility
 
-`grafana-utils alert` handles Grafana alerting resources separately from dashboards.
+`grafana-util alert` handles Grafana alerting resources separately from dashboards.
 
 Supported resources:
 
@@ -859,27 +859,27 @@ Supported resources:
 
 Read-only alert listing:
 
-- `grafana-utils alert list-rules`
-- `grafana-utils alert list-contact-points`
-- `grafana-utils alert list-mute-timings`
-- `grafana-utils alert list-templates`
+- `grafana-util alert list-rules`
+- `grafana-util alert list-contact-points`
+- `grafana-util alert list-mute-timings`
+- `grafana-util alert list-templates`
 
 Direct alert aliases:
 
-- `grafana-utils export-alert`
-- `grafana-utils import-alert`
-- `grafana-utils diff-alert`
-- `grafana-utils list-alert-rules`
-- `grafana-utils list-alert-contact-points`
-- `grafana-utils list-alert-mute-timings`
-- `grafana-utils list-alert-templates`
+- `grafana-util export-alert`
+- `grafana-util import-alert`
+- `grafana-util diff-alert`
+- `grafana-util list-alert-rules`
+- `grafana-util list-alert-contact-points`
+- `grafana-util list-alert-mute-timings`
+- `grafana-util list-alert-templates`
 
 ### Alerting Export
 
 Example:
 
 ```bash
-python3 python/grafana-utils.py alert export \
+python3 python/grafana-util.py alert export \
   --url http://localhost:3000 \
   --output-dir ./alerts \
   --overwrite
@@ -888,7 +888,7 @@ python3 python/grafana-utils.py alert export \
 Use `--flat` if you want a flatter directory layout:
 
 ```bash
-python3 python/grafana-utils.py alert export --output-dir ./alerts --flat
+python3 python/grafana-util.py alert export --output-dir ./alerts --flat
 ```
 
 ### Alerting Import
@@ -896,7 +896,7 @@ python3 python/grafana-utils.py alert export --output-dir ./alerts --flat
 Example:
 
 ```bash
-python3 python/grafana-utils.py alert import \
+python3 python/grafana-util.py alert import \
   --url http://localhost:3000 \
   --import-dir ./alerts/raw \
   --replace-existing
@@ -905,7 +905,7 @@ python3 python/grafana-utils.py alert import \
 Import with linked dashboard or panel remapping:
 
 ```bash
-python3 python/grafana-utils.py alert import \
+python3 python/grafana-util.py alert import \
   --url https://grafana.example.com \
   --import-dir ./alerts/raw \
   --replace-existing \
@@ -916,7 +916,7 @@ python3 python/grafana-utils.py alert import \
 Alerting diff:
 
 ```bash
-python3 python/grafana-utils.py alert diff \
+python3 python/grafana-util.py alert diff \
   --url https://grafana.example.com \
   --diff-dir ./alerts/raw \
   --dashboard-uid-map ./dashboard-map.json \
@@ -958,7 +958,7 @@ Example `panel-map.json`:
 Important limitation:
 
 - Grafana official alert provisioning `/export` output is not a supported import format for this tool
-- this tool only guarantees round-trip import for files exported by `grafana-utils alert export`
+- this tool only guarantees round-trip import for files exported by `grafana-util alert export`
 
 Why this happens:
 
@@ -973,11 +973,11 @@ For linked alert rules:
 
 ## Access Utility
 
-`grafana-utils access ...` is the primary access-management CLI track.
+`grafana-util access ...` is the primary access-management CLI track.
 
 Compatibility shims:
 
-- Python source-tree and package usage now use only `grafana-utils access ...`
+- Python source-tree and package usage now use only `grafana-util access ...`
 
 Current implementation scope:
 
@@ -1112,7 +1112,7 @@ Run the Rust dashboard CLI from the repo and export dashboards from local Grafan
 
 ```bash
 cd rust
-cargo run --bin grafana-utils -- dashboard export \
+cargo run --bin grafana-util -- dashboard export \
   --url http://localhost:3000 \
   --basic-user admin \
   --basic-password admin \
@@ -1123,7 +1123,7 @@ List dashboards from local Grafana with the Rust CLI:
 
 ```bash
 cd rust
-cargo run --bin grafana-utils -- dashboard list \
+cargo run --bin grafana-util -- dashboard list \
   --url http://localhost:3000 \
   --basic-user admin \
   --basic-password admin \
@@ -1134,7 +1134,7 @@ Compare raw dashboard exports with local Grafana using the Rust CLI:
 
 ```bash
 cd rust
-cargo run --bin grafana-utils -- dashboard diff \
+cargo run --bin grafana-util -- dashboard diff \
   --url http://localhost:3000 \
   --basic-user admin \
   --basic-password admin \
@@ -1145,7 +1145,7 @@ Show Rust dashboard CLI help:
 
 ```bash
 cd rust
-cargo run --bin grafana-utils -- dashboard -h
+cargo run --bin grafana-util -- dashboard -h
 ```
 
 Linux `amd64` build notes:
@@ -1154,14 +1154,14 @@ Linux `amd64` build notes:
 - `make build-rust-linux-amd64` uses Docker with the official Rust image
 - `make build-rust-linux-amd64-zig` uses local `zig`, `cargo-zigbuild`, and a `rustup` target instead of Docker
 - output binaries are written to `dist/linux-amd64/`
-- current output name is `dist/linux-amd64/grafana-utils`
+- current output name is `dist/linux-amd64/grafana-util`
 - this path is intended for macOS hosts that need Linux release artifacts without installing a local cross-linker
 
 Run the Rust alerting CLI from the repo:
 
 ```bash
 cd rust
-cargo run --bin grafana-utils -- alert -h
+cargo run --bin grafana-util -- alert -h
 ```
 
 Run the Docker-backed Rust live smoke test:
@@ -1236,24 +1236,24 @@ Auth note:
 - the CLIs reject partial Basic auth input such as only `--basic-user` without `--basic-password` or `--prompt-password`
 - `--prompt-password` hides the password input instead of putting it in shell history or process arguments
 - `GRAFANA_API_TOKEN`, `GRAFANA_USERNAME`, and `GRAFANA_PASSWORD` still work as environment fallbacks
-- for `grafana-utils access user list`, org-scoped listing can use token auth or Basic auth
-- for `grafana-utils access user list --scope global`, Basic auth is required
-- for `grafana-utils access user add`, Basic auth is required
-- for `grafana-utils access user modify`, Basic auth is required
-- for `grafana-utils access user delete --scope global`, Basic auth is required
-- for `grafana-utils access user delete --scope org`, token auth or Basic auth can be used
-- for `grafana-utils access team list`, token auth or Basic auth can be used
-- for `grafana-utils access team add`, token auth or Basic auth can be used
-- for `grafana-utils access team modify`, token auth or Basic auth can be used
-- for `grafana-utils access team delete`, token auth or Basic auth can be used
-- for `grafana-utils access service-account ...`, token auth or Basic auth can be used
+- for `grafana-util access user list`, org-scoped listing can use token auth or Basic auth
+- for `grafana-util access user list --scope global`, Basic auth is required
+- for `grafana-util access user add`, Basic auth is required
+- for `grafana-util access user modify`, Basic auth is required
+- for `grafana-util access user delete --scope global`, Basic auth is required
+- for `grafana-util access user delete --scope org`, token auth or Basic auth can be used
+- for `grafana-util access team list`, token auth or Basic auth can be used
+- for `grafana-util access team add`, token auth or Basic auth can be used
+- for `grafana-util access team modify`, token auth or Basic auth can be used
+- for `grafana-util access team delete`, token auth or Basic auth can be used
+- for `grafana-util access service-account ...`, token auth or Basic auth can be used
 
 Username/password example:
 
 ```bash
 export GRAFANA_USERNAME='admin'
 export GRAFANA_PASSWORD='admin'
-python3 python/grafana-utils.py dashboard export \
+python3 python/grafana-util.py dashboard export \
   --url http://localhost:3000 \
   --basic-user "$GRAFANA_USERNAME" \
   --basic-password "$GRAFANA_PASSWORD" \
@@ -1263,7 +1263,7 @@ python3 python/grafana-utils.py dashboard export \
 Prompted password example:
 
 ```bash
-python3 python/grafana-utils.py dashboard export \
+python3 python/grafana-util.py dashboard export \
   --url http://localhost:3000 \
   --basic-user admin \
   --prompt-password \
@@ -1273,7 +1273,7 @@ python3 python/grafana-utils.py dashboard export \
 Prompted token example:
 
 ```bash
-python3 python/grafana-utils.py dashboard export \
+python3 python/grafana-util.py dashboard export \
   --url http://localhost:3000 \
   --prompt-token \
   --export-dir ./dashboards
@@ -1287,7 +1287,7 @@ TLS note:
 Example:
 
 ```bash
-python3 python/grafana-utils.py dashboard export --verify-ssl
+python3 python/grafana-util.py dashboard export --verify-ssl
 ```
 
 ## Output Directory Layout
@@ -1329,49 +1329,49 @@ Common validation commands:
 ```bash
 make test
 python3 -m unittest -v
-python3 python/grafana-utils.py -h
-python3 python/grafana-utils.py dashboard -h
-python3 python/grafana-utils.py dashboard export -h
-python3 python/grafana-utils.py dashboard list -h
-python3 python/grafana-utils.py dashboard import -h
-python3 python/grafana-utils.py alert -h
-python3 python/grafana-utils.py access -h
-python3 python/grafana-utils.py access user list -h
-python3 python/grafana-utils.py access user add -h
-python3 python/grafana-utils.py access user modify -h
-python3 python/grafana-utils.py access user delete -h
-python3 python/grafana-utils.py access team list -h
-python3 python/grafana-utils.py access team add -h
-python3 python/grafana-utils.py access team modify -h
-python3 python/grafana-utils.py access team delete -h
-python3 python/grafana-utils.py access group delete -h
-python3 python/grafana-utils.py access service-account list -h
-python3 python/grafana-utils.py access service-account add -h
-python3 python/grafana-utils.py access service-account delete -h
-python3 python/grafana-utils.py access service-account token add -h
-python3 python/grafana-utils.py access service-account token delete -h
+python3 python/grafana-util.py -h
+python3 python/grafana-util.py dashboard -h
+python3 python/grafana-util.py dashboard export -h
+python3 python/grafana-util.py dashboard list -h
+python3 python/grafana-util.py dashboard import -h
+python3 python/grafana-util.py alert -h
+python3 python/grafana-util.py access -h
+python3 python/grafana-util.py access user list -h
+python3 python/grafana-util.py access user add -h
+python3 python/grafana-util.py access user modify -h
+python3 python/grafana-util.py access user delete -h
+python3 python/grafana-util.py access team list -h
+python3 python/grafana-util.py access team add -h
+python3 python/grafana-util.py access team modify -h
+python3 python/grafana-util.py access team delete -h
+python3 python/grafana-util.py access group delete -h
+python3 python/grafana-util.py access service-account list -h
+python3 python/grafana-util.py access service-account add -h
+python3 python/grafana-util.py access service-account delete -h
+python3 python/grafana-util.py access service-account token add -h
+python3 python/grafana-util.py access service-account token delete -h
 cd rust && cargo test
-cd rust && cargo run --quiet --bin grafana-utils -- -h
-cd rust && cargo run --quiet --bin grafana-utils -- dashboard -h
-cd rust && cargo run --quiet --bin grafana-utils -- dashboard export -h
-cd rust && cargo run --quiet --bin grafana-utils -- dashboard list -h
-cd rust && cargo run --quiet --bin grafana-utils -- dashboard import -h
-cd rust && cargo run --quiet --bin grafana-utils -- alert -h
-cd rust && cargo run --quiet --bin grafana-utils -- access -h
-cd rust && cargo run --quiet --bin grafana-utils -- access user list -h
-cd rust && cargo run --quiet --bin grafana-utils -- access user add -h
-cd rust && cargo run --quiet --bin grafana-utils -- access user modify -h
-cd rust && cargo run --quiet --bin grafana-utils -- access user delete -h
-cd rust && cargo run --quiet --bin grafana-utils -- access team list -h
-cd rust && cargo run --quiet --bin grafana-utils -- access team add -h
-cd rust && cargo run --quiet --bin grafana-utils -- access team modify -h
-cd rust && cargo run --quiet --bin grafana-utils -- access team delete -h
-cd rust && cargo run --quiet --bin grafana-utils -- access group delete -h
-cd rust && cargo run --quiet --bin grafana-utils -- access service-account list -h
-cd rust && cargo run --quiet --bin grafana-utils -- access service-account add -h
-cd rust && cargo run --quiet --bin grafana-utils -- access service-account delete -h
-cd rust && cargo run --quiet --bin grafana-utils -- access service-account token add -h
-cd rust && cargo run --quiet --bin grafana-utils -- access service-account token delete -h
+cd rust && cargo run --quiet --bin grafana-util -- -h
+cd rust && cargo run --quiet --bin grafana-util -- dashboard -h
+cd rust && cargo run --quiet --bin grafana-util -- dashboard export -h
+cd rust && cargo run --quiet --bin grafana-util -- dashboard list -h
+cd rust && cargo run --quiet --bin grafana-util -- dashboard import -h
+cd rust && cargo run --quiet --bin grafana-util -- alert -h
+cd rust && cargo run --quiet --bin grafana-util -- access -h
+cd rust && cargo run --quiet --bin grafana-util -- access user list -h
+cd rust && cargo run --quiet --bin grafana-util -- access user add -h
+cd rust && cargo run --quiet --bin grafana-util -- access user modify -h
+cd rust && cargo run --quiet --bin grafana-util -- access user delete -h
+cd rust && cargo run --quiet --bin grafana-util -- access team list -h
+cd rust && cargo run --quiet --bin grafana-util -- access team add -h
+cd rust && cargo run --quiet --bin grafana-util -- access team modify -h
+cd rust && cargo run --quiet --bin grafana-util -- access team delete -h
+cd rust && cargo run --quiet --bin grafana-util -- access group delete -h
+cd rust && cargo run --quiet --bin grafana-util -- access service-account list -h
+cd rust && cargo run --quiet --bin grafana-util -- access service-account add -h
+cd rust && cargo run --quiet --bin grafana-util -- access service-account delete -h
+cd rust && cargo run --quiet --bin grafana-util -- access service-account token add -h
+cd rust && cargo run --quiet --bin grafana-util -- access service-account token delete -h
 make test-rust-live
 make test-access-live
 ```

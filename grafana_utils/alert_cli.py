@@ -68,13 +68,13 @@ HELP_EPILOG = """Examples:
 
   Export alerting resources with an API token:
     export GRAFANA_API_TOKEN='your-token'
-    grafana-utils alert export --url https://grafana.example.com --output-dir ./alerts --overwrite
+    grafana-util alert export --url https://grafana.example.com --output-dir ./alerts --overwrite
 
   Import back into Grafana and update existing resources:
-    grafana-utils alert import --url https://grafana.example.com --import-dir ./alerts/raw --replace-existing
+    grafana-util alert import --url https://grafana.example.com --import-dir ./alerts/raw --replace-existing
 
   Import linked alert rules with dashboard and panel remapping:
-    grafana-utils alert import --url https://grafana.example.com --import-dir ./alerts/raw --replace-existing --dashboard-uid-map ./dashboard-map.json --panel-id-map ./panel-map.json
+    grafana-util alert import --url https://grafana.example.com --import-dir ./alerts/raw --replace-existing --dashboard-uid-map ./dashboard-map.json --panel-id-map ./panel-map.json
 """
 
 def add_common_args(parser: argparse.ArgumentParser) -> None:

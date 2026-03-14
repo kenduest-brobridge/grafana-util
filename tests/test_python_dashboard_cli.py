@@ -71,7 +71,7 @@ OUTPUT_SUPPORT_MODULE_PATH = (
 )
 PROGRESS_MODULE_PATH = REPO_ROOT / "grafana_utils" / "dashboards" / "progress.py"
 TRANSFORMER_MODULE_PATH = REPO_ROOT / "grafana_utils" / "dashboards" / "transformer.py"
-WRAPPER_PATH = REPO_ROOT / "python" / "grafana-utils.py"
+WRAPPER_PATH = REPO_ROOT / "python" / "grafana-util.py"
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 transport_module = importlib.import_module("grafana_utils.http_transport")

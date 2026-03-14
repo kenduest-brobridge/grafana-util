@@ -6,7 +6,7 @@
 
 這裡提供一個主要 CLI，而且同時有兩種實作：
 
-- `grafana-utils`：統一的 dashboard、datasource、alerting、access-management CLI
+- `grafana-util`：統一的 dashboard、datasource、alerting、access-management CLI
 - packaged Python 實作位於 [`grafana_utils/`](grafana_utils/)
 - Rust 實作位於 [`rust/`](rust/)
 
@@ -41,37 +41,37 @@
 
 這個 repo 現在使用一個主要命令名稱，底下再分 dashboard、datasource、alert、access 等區域：
 
-- `grafana-utils dashboard export ...`
-- `grafana-utils dashboard list ...`
-- `grafana-utils datasource list ...`
-- `grafana-utils dashboard inspect-export ...`
-- `grafana-utils dashboard inspect-live ...`
-- `grafana-utils dashboard import ...`
-- `grafana-utils dashboard diff ...`
-- `grafana-utils datasource export ...`
-- `grafana-utils datasource import ...`
-- `grafana-utils datasource diff ...`
-- `grafana-utils alert export ...`
-- `grafana-utils alert import ...`
-- `grafana-utils alert diff ...`
-- `grafana-utils alert list-rules ...`
-- `grafana-utils alert list-contact-points ...`
-- `grafana-utils alert list-mute-timings ...`
-- `grafana-utils alert list-templates ...`
-- `grafana-utils access user list ...`
-- `grafana-utils access user add ...`
-- `grafana-utils access user modify ...`
-- `grafana-utils access user delete ...`
-- `grafana-utils access team list ...`
-- `grafana-utils access team add ...`
-- `grafana-utils access team modify ...`
-- `grafana-utils access service-account ...`
+- `grafana-util dashboard export ...`
+- `grafana-util dashboard list ...`
+- `grafana-util datasource list ...`
+- `grafana-util dashboard inspect-export ...`
+- `grafana-util dashboard inspect-live ...`
+- `grafana-util dashboard import ...`
+- `grafana-util dashboard diff ...`
+- `grafana-util datasource export ...`
+- `grafana-util datasource import ...`
+- `grafana-util datasource diff ...`
+- `grafana-util alert export ...`
+- `grafana-util alert import ...`
+- `grafana-util alert diff ...`
+- `grafana-util alert list-rules ...`
+- `grafana-util alert list-contact-points ...`
+- `grafana-util alert list-mute-timings ...`
+- `grafana-util alert list-templates ...`
+- `grafana-util access user list ...`
+- `grafana-util access user add ...`
+- `grafana-util access user modify ...`
+- `grafana-util access user delete ...`
+- `grafana-util access team list ...`
+- `grafana-util access team add ...`
+- `grafana-util access team modify ...`
+- `grafana-util access service-account ...`
 
 相容性說明：
 
-- 舊的 dashboard direct form，例如 `grafana-utils export-dashboard ...`、`grafana-utils list-dashboard ...` 仍可使用
-- 舊的 alert direct form，例如 `grafana-utils export-alert ...`、`grafana-utils list-alert-rules ...` 仍可使用
-- Rust 仍保留 `grafana-access-utils ...` 作為相容 binary，但 Python 主要只使用 `grafana-utils access ...`
+- 舊的 dashboard direct form，例如 `grafana-util export-dashboard ...`、`grafana-util list-dashboard ...` 仍可使用
+- 舊的 alert direct form，例如 `grafana-util export-alert ...`、`grafana-util list-alert-rules ...` 仍可使用
+- Rust 仍保留 `grafana-access-utils ...` 作為相容 binary，但 Python 主要只使用 `grafana-util access ...`
 
 這個 repo 最重要的差別是 dashboard 匯出格式分成兩種：
 
@@ -84,9 +84,9 @@
 
 | 選項 | 適合情境 | 指令 |
 | --- | --- | --- |
-| 已安裝的 Python package | 一般使用的預設路徑 | `grafana-utils dashboard ...`、`grafana-utils datasource ...`、`grafana-utils alert ...`、`grafana-utils access ...` |
-| 直接從 git checkout 執行 Python | 開發或直接在 repo 內測試 | `python3 python/grafana-utils.py dashboard ...`、`python3 python/grafana-utils.py datasource ...`、`python3 python/grafana-utils.py alert ...`、`python3 python/grafana-utils.py access ...` |
-| 直接從 git checkout 執行 Rust | 驗證或開發 Rust 實作 | `cargo run --bin grafana-utils -- dashboard ...`、`cargo run --bin grafana-utils -- alert ...`、`cargo run --bin grafana-utils -- access ...` |
+| 已安裝的 Python package | 一般使用的預設路徑 | `grafana-util dashboard ...`、`grafana-util datasource ...`、`grafana-util alert ...`、`grafana-util access ...` |
+| 直接從 git checkout 執行 Python | 開發或直接在 repo 內測試 | `python3 python/grafana-util.py dashboard ...`、`python3 python/grafana-util.py datasource ...`、`python3 python/grafana-util.py alert ...`、`python3 python/grafana-util.py access ...` |
+| 直接從 git checkout 執行 Rust | 驗證或開發 Rust 實作 | `cargo run --bin grafana-util -- dashboard ...`、`cargo run --bin grafana-util -- alert ...`、`cargo run --bin grafana-util -- access ...` |
 
 說明：
 
@@ -99,7 +99,7 @@
 Dashboard 匯出，同時產生 `raw/` 與 `prompt/`：
 
 ```bash
-python3 python/grafana-utils.py dashboard export \
+python3 python/grafana-util.py dashboard export \
   --url http://127.0.0.1:3000 \
   --basic-user admin \
   --basic-password admin \
@@ -110,7 +110,7 @@ python3 python/grafana-utils.py dashboard export \
 列出目前 Grafana 上的 dashboard，不寫出匯出檔：
 
 ```bash
-python3 python/grafana-utils.py dashboard list \
+python3 python/grafana-util.py dashboard list \
   --url http://127.0.0.1:3000 \
   --basic-user admin \
   --basic-password admin
@@ -119,7 +119,7 @@ python3 python/grafana-utils.py dashboard list \
 用 table 顯示 dashboard，並帶出 folder tree path：
 
 ```bash
-python3 python/grafana-utils.py dashboard list \
+python3 python/grafana-util.py dashboard list \
   --table \
   --url http://127.0.0.1:3000 \
   --basic-user admin \
@@ -129,7 +129,7 @@ python3 python/grafana-utils.py dashboard list \
 用 JSON 做 raw export summary inspection：
 
 ```bash
-python3 python/grafana-utils.py dashboard inspect-export \
+python3 python/grafana-util.py dashboard inspect-export \
   --import-dir ./dashboards/raw \
   --json
 ```
@@ -143,7 +143,7 @@ python3 python/grafana-utils.py dashboard inspect-export \
 從 raw 匯出結果做 dashboard API 匯入：
 
 ```bash
-python3 python/grafana-utils.py dashboard import \
+python3 python/grafana-util.py dashboard import \
   --url http://127.0.0.1:3000 \
   --basic-user admin \
   --basic-password admin \
@@ -154,7 +154,7 @@ python3 python/grafana-utils.py dashboard import \
 將 dashboard 匯出檔與目前 Grafana 狀態做比對：
 
 ```bash
-python3 python/grafana-utils.py dashboard diff \
+python3 python/grafana-util.py dashboard diff \
   --url http://127.0.0.1:3000 \
   --basic-user admin \
   --basic-password admin \
@@ -164,7 +164,7 @@ python3 python/grafana-utils.py dashboard diff \
 Datasource inventory 匯出：
 
 ```bash
-python3 python/grafana-utils.py datasource export \
+python3 python/grafana-util.py datasource export \
   --url http://127.0.0.1:3000 \
   --basic-user admin \
   --basic-password admin \
@@ -175,7 +175,7 @@ python3 python/grafana-utils.py datasource export \
 Alerting 匯出：
 
 ```bash
-python3 python/grafana-utils.py alert export \
+python3 python/grafana-util.py alert export \
   --url http://127.0.0.1:3000 \
   --basic-user admin \
   --basic-password admin \
@@ -186,7 +186,7 @@ python3 python/grafana-utils.py alert export \
 Alerting 匯入：
 
 ```bash
-python3 python/grafana-utils.py alert import \
+python3 python/grafana-util.py alert import \
   --url http://127.0.0.1:3000 \
   --basic-user admin \
   --basic-password admin \
@@ -197,7 +197,7 @@ python3 python/grafana-utils.py alert import \
 Access user list：
 
 ```bash
-python3 python/grafana-utils.py access user list \
+python3 python/grafana-util.py access user list \
   --url http://127.0.0.1:3000 \
   --basic-user admin \
   --basic-password admin
@@ -205,7 +205,7 @@ python3 python/grafana-utils.py access user list \
 
 ## Dashboard 工具
 
-`grafana-utils dashboard` 使用明確的子命令：
+`grafana-util dashboard` 使用明確的子命令：
 
 - `list`
 - `export`
@@ -264,7 +264,7 @@ Raw 匯出會盡量保留 Grafana dashboard identity：
 如果你只要 prompt 格式：
 
 ```bash
-python3 python/grafana-utils.py dashboard export \
+python3 python/grafana-util.py dashboard export \
   --export-dir ./dashboards \
   --without-dashboard-raw
 ```
@@ -287,7 +287,7 @@ Prompt 匯出會把 dashboard 改寫成 Grafana Web import 比較能直接理解
 如果你只要 raw 格式：
 
 ```bash
-python3 python/grafana-utils.py dashboard export \
+python3 python/grafana-util.py dashboard export \
   --export-dir ./dashboards \
   --without-dashboard-prompt
 ```
@@ -299,7 +299,7 @@ Dashboard 匯入會透過 Grafana API 讀取一般 dashboard JSON。
 範例：
 
 ```bash
-python3 python/grafana-utils.py dashboard import \
+python3 python/grafana-util.py dashboard import \
   --url http://127.0.0.1:3000 \
   --import-dir ./dashboards/raw \
   --replace-existing
@@ -308,7 +308,7 @@ python3 python/grafana-utils.py dashboard import \
 只看 folder mismatch 相關欄位的 dry-run table：
 
 ```bash
-python3 python/grafana-utils.py dashboard import \
+python3 python/grafana-util.py dashboard import \
   --url http://127.0.0.1:3000 \
   --import-dir ./dashboards/raw \
   --dry-run \
@@ -331,7 +331,7 @@ Dashboard 匯出時也會在根目錄與各 variant 目錄額外寫入 `export-m
 
 ## Datasource 工具
 
-`grafana-utils datasource` 目前提供：
+`grafana-util datasource` 目前提供：
 
 - `list`
 - `export`
@@ -340,15 +340,15 @@ Dashboard 匯出時也會在根目錄與各 variant 目錄額外寫入 `export-m
 
 常用形式：
 
-- `python3 python/grafana-utils.py datasource list ...`
-- `python3 python/grafana-utils.py datasource export ...`
-- `python3 python/grafana-utils.py datasource import ...`
-- `python3 python/grafana-utils.py datasource diff ...`
+- `python3 python/grafana-util.py datasource list ...`
+- `python3 python/grafana-util.py datasource export ...`
+- `python3 python/grafana-util.py datasource import ...`
+- `python3 python/grafana-util.py datasource diff ...`
 
 常用 dry-run table 範例：
 
 ```bash
-python3 python/grafana-utils.py datasource import \
+python3 python/grafana-util.py datasource import \
   --url http://127.0.0.1:3000 \
   --basic-user admin \
   --basic-password admin \
@@ -360,7 +360,7 @@ python3 python/grafana-utils.py datasource import \
 
 ## Alerting 工具
 
-`grafana-utils alert` 專門處理 Grafana alerting 資源。
+`grafana-util alert` 專門處理 Grafana alerting 資源。
 
 支援的資源：
 
@@ -375,7 +375,7 @@ python3 python/grafana-utils.py datasource import \
 範例：
 
 ```bash
-python3 python/grafana-utils.py alert export \
+python3 python/grafana-util.py alert export \
   --url http://127.0.0.1:3000 \
   --basic-user admin \
   --basic-password admin \
@@ -386,7 +386,7 @@ python3 python/grafana-utils.py alert export \
 若你想使用較平面的目錄結構：
 
 ```bash
-python3 python/grafana-utils.py alert export --output-dir ./alerts --flat
+python3 python/grafana-util.py alert export --output-dir ./alerts --flat
 ```
 
 ### Alerting 匯入
@@ -394,7 +394,7 @@ python3 python/grafana-utils.py alert export --output-dir ./alerts --flat
 範例：
 
 ```bash
-python3 python/grafana-utils.py alert import \
+python3 python/grafana-util.py alert import \
   --url http://127.0.0.1:3000 \
   --basic-user admin \
   --basic-password admin \
@@ -405,7 +405,7 @@ python3 python/grafana-utils.py alert import \
 若 linked dashboard 或 panel 需要重對應：
 
 ```bash
-python3 python/grafana-utils.py alert import \
+python3 python/grafana-util.py alert import \
   --url https://grafana.example.com \
   --basic-user admin \
   --basic-password admin \
@@ -417,7 +417,7 @@ python3 python/grafana-utils.py alert import \
 
 ## Access 工具
 
-`grafana-utils access` 目前支援：
+`grafana-util access` 目前支援：
 
 - `user list`
 - `user add`
@@ -432,9 +432,9 @@ python3 python/grafana-utils.py alert import \
 
 常用形式：
 
-- `python3 python/grafana-utils.py access user list ...`
-- `python3 python/grafana-utils.py access team list ...`
-- `python3 python/grafana-utils.py access service-account list ...`
+- `python3 python/grafana-util.py access user list ...`
+- `python3 python/grafana-util.py access team list ...`
+- `python3 python/grafana-util.py access service-account list ...`
 
 `dashboard-map.json` 範例：
 
@@ -471,7 +471,7 @@ python3 python/grafana-utils.py alert import \
 重要限制：
 
 - Grafana 官方 alert provisioning `/export` 匯出的檔案，不是本工具支援的匯入格式
-- 本工具只保證由 `grafana-utils alert export` 匯出的檔案可以再匯入
+- 本工具只保證由 `grafana-util alert export` 匯出的檔案可以再匯入
 
 原因說明：
 
@@ -536,14 +536,14 @@ make build-rust
 
 ```bash
 cd rust
-cargo run --bin grafana-utils -- dashboard -h
+cargo run --bin grafana-util -- dashboard -h
 ```
 
 直接從 repo 執行 Rust alerting CLI：
 
 ```bash
 cd rust
-cargo run --bin grafana-utils -- alert -h
+cargo run --bin grafana-util -- alert -h
 ```
 
 執行 Docker-backed 的 Rust live smoke test：
@@ -573,13 +573,13 @@ API token 範例：
 
 ```bash
 export GRAFANA_API_TOKEN='your-token'
-python3 python/grafana-utils.py dashboard export --export-dir ./dashboards
+python3 python/grafana-util.py dashboard export --export-dir ./dashboards
 ```
 
 互動式輸入 API token 範例：
 
 ```bash
-python3 python/grafana-utils.py dashboard export \
+python3 python/grafana-util.py dashboard export \
   --prompt-token \
   --export-dir ./dashboards
 ```
@@ -589,7 +589,7 @@ python3 python/grafana-utils.py dashboard export \
 ```bash
 export GRAFANA_USERNAME='your-user'
 export GRAFANA_PASSWORD='your-pass'
-python3 python/grafana-utils.py dashboard export --export-dir ./dashboards
+python3 python/grafana-util.py dashboard export --export-dir ./dashboards
 ```
 
 補充：
@@ -606,7 +606,7 @@ TLS 說明：
 範例：
 
 ```bash
-python3 python/grafana-utils.py dashboard export --verify-ssl
+python3 python/grafana-util.py dashboard export --verify-ssl
 ```
 
 ## 輸出目錄結構

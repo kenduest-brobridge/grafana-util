@@ -326,8 +326,8 @@ class AlertUtilsTests(unittest.TestCase):
         help_text = alert_utils.build_parser().format_help()
 
         self.assertIn("Examples:", help_text)
-        self.assertIn("grafana-utils alert export --url https://grafana.example.com", help_text)
-        self.assertIn("grafana-utils alert import --url https://grafana.example.com", help_text)
+        self.assertIn("grafana-util alert export --url https://grafana.example.com", help_text)
+        self.assertIn("grafana-util alert import --url https://grafana.example.com", help_text)
         self.assertIn("export", help_text)
         self.assertIn("import", help_text)
         self.assertIn("diff", help_text)

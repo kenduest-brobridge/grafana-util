@@ -5,12 +5,26 @@ Historical note:
 - Older entries describe the repo state and `TODO.md` backlog as they existed on the entry date.
 - `TODO.md` now tracks only the active backlog; completed or superseded TODO items moved to `docs/internal/todo-archive.md`.
 
+## 2026-03-15 - Task: Rename Unified CLI To grafana-util
+- State: Done
+- Scope: `pyproject.toml`, `python/grafana-util.py`, `grafana_utils/unified_cli.py`, `tests/test_python_packaging.py`, `tests/test_python_unified_cli.py`, `tests/test_python_access_cli.py`, `tests/test_python_dashboard_cli.py`, `tests/test_python_alert_cli.py`, `README.md`, `README.zh-TW.md`, `DEVELOPER.md`, `AGENTS.md`, `rust/src/bin/grafana-util.rs`, `rust/src/cli.rs`, `rust/src/alert.rs`, `rust/src/alert_cli_defs.rs`, `rust/src/dashboard_cli_defs.rs`, `rust/src/dashboard_help.rs`, `rust/src/datasource.rs`, `rust/src/cli_rust_tests.rs`, `rust/src/alert_rust_tests.rs`, `rust/src/dashboard_rust_tests.rs`, `rust/src/datasource_rust_tests.rs`, `scripts/test-python-access-live-grafana.sh`, `scripts/test-rust-live-grafana.sh`, `scripts/build-rust-linux-amd64.sh`, `scripts/build-rust-linux-amd64-zig.sh`, `scripts/build-rust-macos-arm64.sh`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The unified Python and Rust CLIs, repo-local wrapper path, packaging metadata, tests, and current docs all still present the primary tool name as `grafana-utils`, while Python packaging also still only includes the top-level `grafana_utils` package and would omit newly added subpackages on install.
+- Current Update: Renamed the unified installed command and repo-local wrapper usage to `grafana-util`, renamed the Rust unified binary source entrypoint to `rust/src/bin/grafana-util.rs`, updated help text, tests, scripts, and current docs to the singular command name, and widened the Python setuptools package discovery to include `grafana_utils.*` so the split access and datasource subpackages remain installable.
+- Result: The repo now presents one singular unified command name, `grafana-util`, across Python packaging, source-tree wrapper usage, Rust unified binary/help, tests, and current operator docs, while keeping existing export/import metadata kinds unchanged for compatibility and keeping Python subpackages included in packaged installs.
+
 ## 2026-03-15 - Task: Split Python Access CLI Facade
 - State: Done
 - Scope: `grafana_utils/access_cli.py`, `grafana_utils/access/parser.py`, `grafana_utils/access/workflows.py`, `tests/test_python_access_cli.py`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
 - Baseline: `grafana_utils/access_cli.py` is still the largest Python CLI facade in the repo and currently mixes argparse wiring, auth validation, identity lookup helpers, user/team/service-account workflows, and top-level dispatch in one file even after earlier support-module extractions.
 - Current Update: Split the argparse and CLI-shape wiring into `grafana_utils/access/parser.py`, moved access validation/lookup/workflow logic into `grafana_utils/access/workflows.py`, and reduced `grafana_utils/access_cli.py` to a stable facade that re-exports the tested helper surface while keeping auth prompting and top-level client dispatch local. Extended focused access tests with Python 3.6 syntax coverage for the new modules and updated maintainer notes to document the new boundaries.
 - Result: Python access code now has a real `grafana_utils/access/` submodule layout instead of one oversized facade, while `grafana_utils.access_cli` and the unified CLI still expose the same external command and helper API expected by the existing tests.
+
+## 2026-03-15 - Task: Split Python Datasource CLI Facade
+- State: Done
+- Scope: `grafana_utils/datasource_cli.py`, `grafana_utils/datasource/__init__.py`, `grafana_utils/datasource/parser.py`, `grafana_utils/datasource/workflows.py`, `tests/test_python_datasource_cli.py`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: `grafana_utils/datasource_cli.py` still mixes argparse wiring, export/import/diff workflow logic, JSON/file bundle helpers, and top-level dispatch in one module even though the repo already uses subpackage boundaries for dashboard and access code.
+- Current Update: Split datasource argparse wiring and dry-run column metadata into `grafana_utils/datasource/parser.py`, moved export/import/diff execution plus datasource bundle helpers into `grafana_utils/datasource/workflows.py`, and reduced `grafana_utils/datasource_cli.py` to a stable facade that re-exports the existing helper surface while forwarding execution through the submodules. Extended focused datasource tests with Python 3.6 syntax coverage for the new modules and updated maintainer notes to describe the datasource package layout.
+- Result: Python datasource code now has a real `grafana_utils/datasource/` submodule boundary, while `grafana_utils.datasource_cli` and unified CLI dispatch still preserve the existing parser/help and helper behavior expected by the focused tests.
 
 ## 2026-03-15 - Task: Split Rust Dashboard Import Dry-Run Helpers
 - State: Done

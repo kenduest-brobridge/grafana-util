@@ -15,7 +15,7 @@ fn render_unified_help() -> String {
 #[test]
 fn parse_cli_supports_dashboard_group_command() {
     let args: CliArgs = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "dashboard",
         "export",
         "--export-dir",
@@ -36,7 +36,7 @@ fn parse_cli_supports_dashboard_group_command() {
 #[test]
 fn parse_cli_supports_datasource_group_command() {
     let args: CliArgs = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "datasource",
         "import",
         "--import-dir",
@@ -59,7 +59,7 @@ fn parse_cli_supports_datasource_group_command() {
 #[test]
 fn parse_cli_supports_datasource_diff_group_command() {
     let args: CliArgs = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "datasource",
         "diff",
         "--diff-dir",
@@ -80,7 +80,7 @@ fn parse_cli_supports_datasource_diff_group_command() {
 #[test]
 fn parse_cli_supports_dashboard_group_inspect_export_command() {
     let args: CliArgs = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "dashboard",
         "inspect-export",
         "--import-dir",
@@ -103,7 +103,7 @@ fn parse_cli_supports_dashboard_group_inspect_export_command() {
 #[test]
 fn parse_cli_supports_dashboard_group_inspect_live_command() {
     let args: CliArgs = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "dashboard",
         "inspect-live",
         "--url",
@@ -129,7 +129,7 @@ fn parse_cli_supports_dashboard_group_inspect_live_command() {
 
 #[test]
 fn parse_cli_supports_legacy_dashboard_command() {
-    let args: CliArgs = parse_cli_from(["grafana-utils", "list", "--json"]);
+    let args: CliArgs = parse_cli_from(["grafana-util", "list", "--json"]);
 
     match args.command {
         UnifiedCommand::List(inner) => {
@@ -142,7 +142,7 @@ fn parse_cli_supports_legacy_dashboard_command() {
 #[test]
 fn parse_cli_supports_alert_group() {
     let args: CliArgs = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "alert",
         "export",
         "--output-dir",
@@ -164,7 +164,7 @@ fn parse_cli_supports_alert_group() {
 
 #[test]
 fn parse_cli_supports_legacy_alert_alias() {
-    let args: CliArgs = parse_cli_from(["grafana-utils", "list-alert-rules", "--json"]);
+    let args: CliArgs = parse_cli_from(["grafana-util", "list-alert-rules", "--json"]);
 
     match args.command {
         UnifiedCommand::ListAlertRules(inner) => {
@@ -177,7 +177,7 @@ fn parse_cli_supports_legacy_alert_alias() {
 #[test]
 fn parse_cli_supports_access_group() {
     let args: CliArgs = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "access",
         "user",
         "list",
@@ -204,7 +204,7 @@ fn parse_cli_supports_access_group() {
 #[test]
 fn unified_help_mentions_alert_access_and_shims() {
     let help = render_unified_help();
-    assert!(help.contains("grafana-utils access user list"));
+    assert!(help.contains("grafana-util access user list"));
     assert!(help.contains("grafana-access-utils"));
     assert!(help.contains("Run datasource list, export, import, and diff workflows."));
 }
@@ -212,7 +212,7 @@ fn unified_help_mentions_alert_access_and_shims() {
 #[test]
 fn dispatch_routes_dashboard_group_to_dashboard_handler() {
     let args: CliArgs = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "dashboard",
         "diff",
         "--import-dir",
@@ -250,7 +250,7 @@ fn dispatch_routes_dashboard_group_to_dashboard_handler() {
 #[test]
 fn dispatch_routes_access_group_to_access_handler() {
     let args: CliArgs = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "access",
         "service-account",
         "list",
@@ -287,7 +287,7 @@ fn dispatch_routes_access_group_to_access_handler() {
 #[test]
 fn dispatch_routes_datasource_group_to_datasource_handler() {
     let args: CliArgs = parse_cli_from([
-        "grafana-utils",
+        "grafana-util",
         "datasource",
         "list",
         "--json",

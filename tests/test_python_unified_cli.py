@@ -10,7 +10,7 @@ from unittest import mock
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MODULE_PATH = REPO_ROOT / "grafana_utils" / "unified_cli.py"
-WRAPPER_PATH = REPO_ROOT / "python" / "grafana-utils.py"
+WRAPPER_PATH = REPO_ROOT / "python" / "grafana-util.py"
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 unified_cli = importlib.import_module("grafana_utils.unified_cli")
@@ -47,7 +47,7 @@ class UnifiedCliTests(unittest.TestCase):
 
         self.assertEqual(exc.exception.code, 0)
         help_text = stdout.getvalue()
-        self.assertIn("grafana-utils dashboard", help_text)
+        self.assertIn("grafana-util dashboard", help_text)
         self.assertIn("list-data-sources", help_text)
 
     def test_parse_args_alert_without_subcommand_prints_alert_help(self):
@@ -58,7 +58,7 @@ class UnifiedCliTests(unittest.TestCase):
 
         self.assertEqual(exc.exception.code, 0)
         help_text = stdout.getvalue()
-        self.assertIn("grafana-utils alert", help_text)
+        self.assertIn("grafana-util alert", help_text)
         self.assertIn("export", help_text)
         self.assertIn("import", help_text)
         self.assertIn("diff", help_text)
@@ -71,7 +71,7 @@ class UnifiedCliTests(unittest.TestCase):
 
         self.assertEqual(exc.exception.code, 0)
         help_text = stdout.getvalue()
-        self.assertIn("grafana-utils access", help_text)
+        self.assertIn("grafana-util access", help_text)
         self.assertIn("{user,team,service-account}", help_text)
 
     def test_parse_args_datasource_without_subcommand_prints_datasource_help(self):
@@ -82,7 +82,7 @@ class UnifiedCliTests(unittest.TestCase):
 
         self.assertEqual(exc.exception.code, 0)
         help_text = stdout.getvalue()
-        self.assertIn("grafana-utils datasource", help_text)
+        self.assertIn("grafana-util datasource", help_text)
         self.assertIn("{list,export,import,diff}", help_text)
 
     def test_parse_args_supports_dashboard_passthrough(self):

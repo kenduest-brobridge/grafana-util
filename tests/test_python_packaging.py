@@ -15,13 +15,18 @@ class PackagingTests(unittest.TestCase):
         content = PYPROJECT_PATH.read_text(encoding="utf-8")
 
         self.assertRegex(content, r'(?m)^\[project\.scripts\]$')
-        self.assertRegex(content, r'(?m)^grafana-utils = "grafana_utils\.unified_cli:main"$')
+        self.assertRegex(content, r'(?m)^grafana-util = "grafana_utils\.unified_cli:main"$')
         self.assertNotRegex(content, r'(?m)^grafana-access-utils = ')
 
     def test_pyproject_declares_base_requests_dependency(self):
         content = PYPROJECT_PATH.read_text(encoding="utf-8")
 
         self.assertIn('requests>=2.27,<3', content)
+
+    def test_pyproject_finds_package_submodules(self):
+        content = PYPROJECT_PATH.read_text(encoding="utf-8")
+
+        self.assertIn('include = ["grafana_utils", "grafana_utils.*"]', content)
 
 
 if __name__ == "__main__":
