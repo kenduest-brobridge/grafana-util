@@ -50,10 +50,10 @@ pub use dashboard_help::{
     render_inspect_live_help_full,
 };
 pub use dashboard_import::{diff_dashboards_with_client, import_dashboards_with_client};
+pub use dashboard_list::{list_dashboards_with_client, list_data_sources_with_client};
 pub use dashboard_live::{
     fetch_dashboard, import_dashboard_request, list_dashboard_summaries, list_datasources,
 };
-pub use dashboard_list::{list_dashboards_with_client, list_data_sources_with_client};
 pub use dashboard_prompt::build_external_export_document;
 
 use dashboard_export::export_dashboards_with_org_clients;
@@ -78,16 +78,6 @@ pub(crate) use dashboard_import::{
     import_dashboards_with_request, render_folder_inventory_dry_run_table,
     render_import_dry_run_json, render_import_dry_run_table,
 };
-pub(crate) use dashboard_live::{
-    build_datasource_inventory_record, build_folder_path,
-    collect_folder_inventory_statuses_with_request, collect_folder_inventory_with_request,
-    ensure_folder_inventory_entry_with_request, fetch_dashboard_if_exists_with_request,
-    fetch_dashboard_with_request, fetch_folder_if_exists_with_request,
-    format_folder_inventory_status_line, import_dashboard_request_with_request,
-    list_dashboard_summaries_with_request, list_datasources_with_request,
-};
-#[cfg(test)]
-pub(crate) use dashboard_live::build_folder_inventory_status;
 pub(crate) use dashboard_inspect::inspect_live_dashboards_with_request;
 #[cfg(test)]
 pub(crate) use dashboard_inspect::{
@@ -118,6 +108,16 @@ pub(crate) use dashboard_list::{
     list_data_sources_with_request, render_dashboard_summary_csv, render_dashboard_summary_json,
     render_dashboard_summary_table, render_data_source_csv, render_data_source_json,
     render_data_source_table,
+};
+#[cfg(test)]
+pub(crate) use dashboard_live::build_folder_inventory_status;
+pub(crate) use dashboard_live::{
+    build_datasource_inventory_record, build_folder_path,
+    collect_folder_inventory_statuses_with_request, collect_folder_inventory_with_request,
+    ensure_folder_inventory_entry_with_request, fetch_dashboard_if_exists_with_request,
+    fetch_dashboard_with_request, fetch_folder_if_exists_with_request,
+    format_folder_inventory_status_line, import_dashboard_request_with_request,
+    list_dashboard_summaries_with_request, list_datasources_with_request,
 };
 pub(crate) use dashboard_prompt::{
     build_datasource_catalog, collect_datasource_refs, datasource_type_alias,

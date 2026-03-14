@@ -5,8 +5,8 @@ use crate::common::{message, string_field, value_as_object, Result};
 use crate::http::JsonHttpClient;
 
 use super::{
-    DatasourceInventoryItem, FolderInventoryItem, FolderInventoryStatus,
-    FolderInventoryStatusKind, DEFAULT_FOLDER_TITLE, DEFAULT_ORG_ID, DEFAULT_ORG_NAME,
+    DatasourceInventoryItem, FolderInventoryItem, FolderInventoryStatus, FolderInventoryStatusKind,
+    DEFAULT_FOLDER_TITLE, DEFAULT_ORG_ID, DEFAULT_ORG_NAME,
 };
 
 pub(crate) fn list_dashboard_summaries_with_request<F>(
@@ -453,7 +453,9 @@ pub fn import_dashboard_request(client: &JsonHttpClient, payload: &Value) -> Res
     )
 }
 
-pub(crate) fn list_datasources_with_request<F>(mut request_json: F) -> Result<Vec<Map<String, Value>>>
+pub(crate) fn list_datasources_with_request<F>(
+    mut request_json: F,
+) -> Result<Vec<Map<String, Value>>>
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
