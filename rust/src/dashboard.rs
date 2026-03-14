@@ -26,6 +26,8 @@ mod dashboard_inspect_analyzer_prometheus;
 mod dashboard_inspect_analyzer_sql;
 #[path = "dashboard_inspect_report.rs"]
 mod dashboard_inspect_report;
+#[path = "dashboard_inspect_render.rs"]
+mod dashboard_inspect_render;
 #[path = "dashboard_list.rs"]
 mod dashboard_list;
 #[path = "dashboard_prompt.rs"]
@@ -69,14 +71,19 @@ pub(crate) use dashboard_inspect::inspect_live_dashboards_with_request;
 #[cfg(test)]
 pub(crate) use dashboard_inspect::{
     apply_query_report_filters, build_export_inspection_query_report,
-    build_export_inspection_summary, render_csv, render_grouped_query_report,
-    render_grouped_query_table_report, validate_inspect_export_report_args,
+    build_export_inspection_summary, validate_inspect_export_report_args,
+};
+#[cfg(test)]
+pub(crate) use dashboard_inspect_render::{
+    render_csv, render_grouped_query_report, render_grouped_query_table_report,
 };
 pub(crate) use dashboard_inspect_report::{
-    build_query_report, normalize_query_report, refresh_filtered_query_report_summary,
-    render_query_report_column, report_column_header, report_format_supports_columns,
-    resolve_report_column_ids, ExportInspectionQueryReport, ExportInspectionQueryRow,
+    build_query_report, refresh_filtered_query_report_summary, render_query_report_column,
+    report_column_header, report_format_supports_columns, resolve_report_column_ids,
+    ExportInspectionQueryReport, ExportInspectionQueryRow,
 };
+#[cfg(test)]
+pub(crate) use dashboard_inspect_report::normalize_query_report;
 #[cfg(test)]
 pub(crate) use dashboard_inspect_report::{QueryReportSummary, DEFAULT_REPORT_COLUMN_IDS};
 #[cfg(test)]

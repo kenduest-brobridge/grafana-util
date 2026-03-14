@@ -53,6 +53,9 @@ INSPECTION_ANALYZER_FLUX_MODULE_PATH = (
 INSPECTION_ANALYZER_SQL_MODULE_PATH = (
     REPO_ROOT / "grafana_utils" / "dashboards" / "inspection_analyzers" / "sql.py"
 )
+INSPECTION_ANALYZER_GENERIC_MODULE_PATH = (
+    REPO_ROOT / "grafana_utils" / "dashboards" / "inspection_analyzers" / "generic.py"
+)
 INSPECTION_REPORT_MODULE_PATH = (
     REPO_ROOT / "grafana_utils" / "dashboards" / "inspection_report.py"
 )
@@ -352,6 +355,15 @@ class ExporterTests(unittest.TestCase):
         ast.parse(
             source,
             filename=str(INSPECTION_ANALYZER_SQL_MODULE_PATH),
+            feature_version=(3, 6),
+        )
+
+    def test_dashboard_inspection_analyzer_generic_module_parses_as_python36_syntax(self):
+        source = INSPECTION_ANALYZER_GENERIC_MODULE_PATH.read_text(encoding="utf-8")
+
+        ast.parse(
+            source,
+            filename=str(INSPECTION_ANALYZER_GENERIC_MODULE_PATH),
             feature_version=(3, 6),
         )
 
@@ -860,6 +872,30 @@ class ExporterTests(unittest.TestCase):
 
         self.assertEqual(analysis["metrics"], ["select", "where"])
         self.assertEqual(analysis["measurements"], ["public.cpu_metrics"])
+        self.assertEqual(analysis["buckets"], [])
+
+    def test_dispatch_query_analysis_uses_loki_analyzer_boundary(self):
+        analysis = inspection_dispatcher.dispatch_query_analysis(
+            panel={"datasource": {"type": "loki", "uid": "loki-main"}},
+            target={"datasource": {"type": "loki", "uid": "loki-main"}},
+            query_field="logql",
+            query_text='{job="varlogs"} |= "error"',
+        )
+
+        self.assertEqual(analysis["metrics"], [])
+        self.assertEqual(analysis["measurements"], [])
+        self.assertEqual(analysis["buckets"], [])
+
+    def test_dispatch_query_analysis_uses_generic_fallback_analyzer(self):
+        analysis = inspection_dispatcher.dispatch_query_analysis(
+            panel={"datasource": {"type": "custom-plugin", "uid": "custom-main"}},
+            target={"datasource": {"type": "custom-plugin", "uid": "custom-main"}},
+            query_field="query",
+            query_text='cpu_total{host="web-01"}',
+        )
+
+        self.assertEqual(analysis["metrics"], ["cpu_total"])
+        self.assertEqual(analysis["measurements"], [])
         self.assertEqual(analysis["buckets"], [])
 
     def test_render_export_inspection_tree_tables_uses_grouped_document(self):

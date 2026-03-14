@@ -1,5 +1,21 @@
 # ai-changes.md
 
+## 2026-03-14 - Split Rust Dashboard Inspection Renderers
+- Summary: Extracted the Rust dashboard inspection CSV/table/tree/tree-table renderers out of `rust/src/dashboard_inspect.rs` into `rust/src/dashboard_inspect_render.rs`. The Rust inspection path now keeps orchestration/filtering in `dashboard_inspect.rs`, report models and grouped normalization in `dashboard_inspect_report.rs`, and output rendering in the new renderer module.
+- Tests: Reused the existing Rust dashboard inspection coverage that exercises CSV, table, tree, and tree-table output through the public CLI/report helpers after the renderer split.
+- Test Run: `cargo test dashboard --manifest-path rust/Cargo.toml --quiet`
+- Validation: Verified the Rust dashboard inspection suite still passes after the renderer extraction, kept the CLI/help/output contract unchanged, and aligned the Rust inspection ownership boundaries more closely with the current Python analyzer/report/renderer structure.
+- Impact: `rust/src/dashboard.rs`, `rust/src/dashboard_inspect.rs`, `rust/src/dashboard_inspect_render.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low. This is intended to be behavior-preserving, but future Rust inspection output changes should stay in `rust/src/dashboard_inspect_render.rs` so orchestration and rendering do not drift back together.
+
+## 2026-03-14 - Split Python Loki And Generic Inspection Analyzers
+- Summary: Added an explicit generic inspection analyzer module and routed unknown datasource families through it in `inspection_analyzers/dispatcher.py`, while keeping Loki behind its own analyzer boundary instead of leaving the fallback behavior implicit. This completes the initial analyzer-package ownership map after the earlier Prometheus / Flux / SQL split.
+- Tests: Added focused dashboard CLI syntax/dispatcher coverage for the new generic analyzer path and preserved the existing Loki and generic fallback expectations.
+- Test Run: `python3 -m unittest -v tests/test_python_dashboard_cli.py`
+- Validation: Verified the updated analyzer package compiles, kept the report/output contract unchanged for Loki and fallback cases, and confirmed the focused dashboard CLI suite still passes.
+- Impact: `grafana_utils/dashboards/inspection_analyzers/__init__.py`, `grafana_utils/dashboards/inspection_analyzers/dispatcher.py`, `grafana_utils/dashboards/inspection_analyzers/generic.py`, `grafana_utils/dashboards/inspection_analyzers/loki.py`, `tests/test_python_dashboard_cli.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low. This is an ownership/completeness refactor, but future unknown-family or Loki parsing work should continue landing in `inspection_analyzers/` so fallback behavior does not become implicit again.
+
 ## 2026-03-14 - Split Python Dashboard Inspection Analyzers
 - Summary: Moved the active Prometheus, Flux, and SQL query-analysis heuristics out of `grafana_utils/dashboards/inspection_report.py` into `grafana_utils/dashboards/inspection_analyzers/`. The report module now uses the analyzer dispatcher plus the shared query-field chooser from the analyzer package, while the analyzer modules own datasource-family-specific metric, measurement, bucket, and SQL-source extraction behavior.
 - Tests: Added a focused dashboard CLI mixed-family report JSON case that exercises Prometheus, Flux, and SQL analysis through `inspect-export --report json` and confirms the extracted values stay stable after the analyzer split.

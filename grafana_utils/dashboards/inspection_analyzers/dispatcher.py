@@ -1,7 +1,24 @@
 from typing import Any, Dict, Iterable, Optional
-from . import flux, loki, prometheus, sql
-from .contract import DATASOURCE_FAMILY_FLUX, DATASOURCE_FAMILY_LOKI, DATASOURCE_FAMILY_PROMETHEUS, DATASOURCE_FAMILY_SQL, DATASOURCE_FAMILY_UNKNOWN, build_default_query_analysis, normalize_query_analysis
-FAMILY_ANALYZERS = {DATASOURCE_FAMILY_PROMETHEUS: prometheus.analyze_query, DATASOURCE_FAMILY_LOKI: loki.analyze_query, DATASOURCE_FAMILY_FLUX: flux.analyze_query, DATASOURCE_FAMILY_SQL: sql.analyze_query}
+
+from . import flux, generic, loki, prometheus, sql
+from .contract import (
+    DATASOURCE_FAMILY_FLUX,
+    DATASOURCE_FAMILY_LOKI,
+    DATASOURCE_FAMILY_PROMETHEUS,
+    DATASOURCE_FAMILY_SQL,
+    DATASOURCE_FAMILY_UNKNOWN,
+    normalize_query_analysis,
+)
+
+FAMILY_ANALYZERS = {
+    DATASOURCE_FAMILY_PROMETHEUS: prometheus.analyze_query,
+    DATASOURCE_FAMILY_LOKI: loki.analyze_query,
+    DATASOURCE_FAMILY_FLUX: flux.analyze_query,
+    DATASOURCE_FAMILY_SQL: sql.analyze_query,
+    DATASOURCE_FAMILY_UNKNOWN: generic.analyze_query,
+}
+
+
 def iter_datasource_ref_parts(ref: Any) -> Iterable[str]:
     if isinstance(ref, str):
         text = ref.strip().lower()
@@ -46,9 +63,30 @@ def resolve_query_analyzer_family(panel: Dict[str, Any], target: Dict[str, Any],
     if "mysql" in hints or "postgres" in hints or "postgresql" in hints or "mssql" in hints or field_hint in ("rawsql", "sql"):
         return DATASOURCE_FAMILY_SQL
     return DATASOURCE_FAMILY_UNKNOWN
-def dispatch_query_analysis(panel: Dict[str, Any], target: Dict[str, Any], query_field: str, query_text: str, datasources_by_uid: Optional[Dict[str, Dict[str, str]]] = None, datasources_by_name: Optional[Dict[str, Dict[str, str]]] = None) -> Dict[str, Any]:
-    family = resolve_query_analyzer_family(panel, target, query_field, query_text, datasources_by_uid=datasources_by_uid, datasources_by_name=datasources_by_name)
+def dispatch_query_analysis(
+    panel: Dict[str, Any],
+    target: Dict[str, Any],
+    query_field: str,
+    query_text: str,
+    datasources_by_uid: Optional[Dict[str, Dict[str, str]]] = None,
+    datasources_by_name: Optional[Dict[str, Dict[str, str]]] = None,
+) -> Dict[str, Any]:
+    family = resolve_query_analyzer_family(
+        panel,
+        target,
+        query_field,
+        query_text,
+        datasources_by_uid=datasources_by_uid,
+        datasources_by_name=datasources_by_name,
+    )
     analyzer = FAMILY_ANALYZERS.get(family)
     if analyzer is None:
-        return build_default_query_analysis(target, query_text)
-    return normalize_query_analysis(analyzer(panel=panel, target=target, query_field=query_field, query_text=query_text))
+        analyzer = generic.analyze_query
+    return normalize_query_analysis(
+        analyzer(
+            panel=panel,
+            target=target,
+            query_field=query_field,
+            query_text=query_text,
+        )
+    )

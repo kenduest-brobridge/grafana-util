@@ -1,5 +1,19 @@
 # ai-status.md
 
+## 2026-03-14 - Task: Split Rust Dashboard Inspection Renderers
+- State: Done
+- Scope: `rust/src/dashboard.rs`, `rust/src/dashboard_inspect.rs`, `rust/src/dashboard_inspect_render.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust already had separate inspection report-model and analyzer modules, but `rust/src/dashboard_inspect.rs` still owned the shared CSV/table rendering helpers plus the grouped tree and tree-table report renderers. That kept inspection orchestration and output formatting coupled in one large Rust module even after earlier inspection splits.
+- Current Update: Extracted the Rust inspection CSV/table/tree/tree-table renderers into `rust/src/dashboard_inspect_render.rs`, rewired `rust/src/dashboard.rs` to re-export the renderer helpers, and updated `rust/src/dashboard_inspect.rs` to consume the new renderer boundary without changing CLI/help/output behavior.
+- Result: Rust inspection now has a clearer three-way ownership split across orchestration (`dashboard_inspect.rs`), report-model helpers (`dashboard_inspect_report.rs`), and renderers (`dashboard_inspect_render.rs`), which is closer to the current Python structure.
+
+## 2026-03-14 - Task: Split Python Loki And Generic Inspection Analyzers
+- State: Done
+- Scope: `grafana_utils/dashboards/inspection_analyzers/__init__.py`, `grafana_utils/dashboards/inspection_analyzers/dispatcher.py`, `grafana_utils/dashboards/inspection_analyzers/generic.py`, `grafana_utils/dashboards/inspection_analyzers/loki.py`, `tests/test_python_dashboard_cli.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: After the Prometheus / Flux / SQL analyzer split, `inspection_analyzers/` still lacked a real explicit fallback boundary and Loki analysis was only represented by an empty placeholder. That left the analyzer package incomplete even though `inspection_report.py` was already dispatching through it.
+- Current Update: Added an explicit `generic` analyzer module, wired unknown datasource families through it in the dispatcher, and kept Loki analysis behind its own dedicated analyzer boundary. Added focused syntax and dispatcher coverage for the new generic path and preserved the existing Loki/generic inspection contract expectations in the dashboard CLI suite.
+- Result: The Python inspection analyzer package now has an explicit ownership path for every routed datasource family, including Loki and the generic fallback, so future family-specific work can keep shrinking `inspection_report.py` without routing unknown cases back through the report layer.
+
 ## 2026-03-14 - Task: Split Python Dashboard Inspection Analyzers
 - State: Done
 - Scope: `grafana_utils/dashboards/inspection_report.py`, `grafana_utils/dashboards/inspection_analyzers/contract.py`, `grafana_utils/dashboards/inspection_analyzers/prometheus.py`, `grafana_utils/dashboards/inspection_analyzers/flux.py`, `grafana_utils/dashboards/inspection_analyzers/sql.py`, `tests/test_python_dashboard_cli.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
