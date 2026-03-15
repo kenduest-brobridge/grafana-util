@@ -138,9 +138,10 @@ Target outcome:
 
 Priority items:
 
-- design a declarative sync command such as `grafana-util sync` around an explicit export/import/diff contract
+- expand the shipped `grafana-util sync` surface beyond the current staged/local-first baseline
 - define a narrow supported state model for dashboards, datasources, folders, and selected alert resources
 - require reviewable plan/dry-run output before live mutation
+- decide which live fetch and live apply bridges belong in the stable sync contract versus staying explicitly limited
 - keep sync semantics compatible with existing normalized export formats wherever practical
 - document where declarative sync complements rather than replaces Terraform/native Grafana provisioning
 
@@ -151,7 +152,7 @@ Why this phase is later:
 
 Definition of done for this phase:
 
-- operators can declare a supported subset of Grafana state in versioned files and reconcile drift through one explicit workflow
+- operators can use one explicit sync workflow for a supported subset of Grafana state without dropping back to ad hoc scripts
 - sync results are reviewable, predictable, and fail closed on unsupported ambiguity
 - the feature reuses existing contracts instead of inventing a second incompatible resource model
 

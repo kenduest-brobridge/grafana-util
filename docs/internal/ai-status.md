@@ -209,18 +209,11 @@ Historical note:
 - Result: Python and Rust now both expose explicit organization management in the access domain, and the current user-management semantics remain available for direct global user creation plus org-scoped role/removal targeting.
 
 ## 2026-03-15 - Task: Add Service-Account Snapshot Export Import Diff
-- State: In Progress
+- State: Done
 - Scope: `grafana_utils/access/parser.py`, `grafana_utils/access/workflows.py`, `grafana_utils/clients/access_client.py`, `grafana_utils/access_cli.py`, `tests/test_python_access_cli.py`, `rust/src/access.rs`, `rust/src/access_cli_defs.rs`, `rust/src/access_service_account.rs`, `rust/src/access_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
 - Baseline: `access service-account` only supported list/add/delete and token lifecycle operations. There was no snapshot bundle for service accounts, no import replay path, and no live-vs-file drift command in either implementation.
 - Current Update: Added CLI surface and request/client plumbing for `access service-account export`, `import`, and `diff`. The new snapshot contract uses `service-accounts.json` plus `export-metadata.json`, keys records by service-account name, and treats `role` plus `disabled` as the mutable reconciliation fields for import and diff.
 - Result: Python and Rust now expose matching service-account snapshot workflows in the access domain, with create/update replay, dry-run import reporting, and drift summary output designed to mirror the existing access snapshot model.
-
-## 2026-03-15 - Task: Add Service-Account Snapshot Export Import And Diff
-- State: Planned
-- Scope: `grafana_utils/access/parser.py`, `grafana_utils/access/workflows.py`, `grafana_utils/access_cli.py`, `grafana_utils/clients/access_client.py`, `tests/test_python_access_cli.py`, `rust/src/access.rs`, `rust/src/access_cli_defs.rs`, `rust/src/access_service_account.rs`, `rust/src/access_rust_tests.rs`, `README.md`, `README.zh-TW.md`, `docs/user-guide.md`, `docs/user-guide-TW.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
-- Baseline: `access service-account` currently supports list/add/delete and token add/delete, but does not provide snapshot-style export/import/diff workflows like `access user` and `access team`. The public docs and support tables still describe service accounts as lifecycle-only resources.
-- Current Update: Scoping Python and Rust changes so service-account snapshots follow the same bundle metadata, dry-run import, and drift diff model already used by user/team workflows.
-- Result: Pending implementation.
 
 ## 2026-03-15 - Task: Align Rust Inspect JSON Contract With Python
 - State: Done
@@ -1247,3 +1240,10 @@ Historical note:
 - Baseline: The Python quality script hard-coded `grafana_utils tests python` into compile, ruff, mypy, and black invocations. In CI this made the quality gate brittle when a path was missing or differently laid out, and the test suite also contained an immediate duplicate test definition plus an unused import that surfaced as Python lint failures.
 - Current Update: Changed the quality script to build its target path list dynamically from existing repo paths before invoking compileall, ruff, mypy, or black. Removed the duplicate `test_dashboard_progress_module_parses_as_python39_syntax` definition and the unused `re` import from the packaging test module.
 - Result: The Python quality gate no longer assumes every repo checkout exposes the same fixed source-path set, and the immediate duplicate-test / unused-import failures shown by CI are removed.
+
+## 2026-03-15 - Task: Clarify Rust Sync Contracts And Operator Workflow
+- State: Done
+- Scope: `rust/src/sync_workbench.rs`, `rust/src/sync_preflight.rs`, `rust/src/sync_bundle_preflight.rs`, `rust/src/sync_rust_tests.rs`, `rust/src/sync_cli_rust_tests.rs`, `README.md`, `docs/user-guide.md`, `docs/DEVELOPER.md`, `docs/overview-rust.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust `sync` already had a broad staged surface plus limited live hooks, but the operator story and maintainer contract were still hard to read. Plan/apply artifacts did not spell out managed scope and prune semantics directly, while preflight and bundle-preflight summaries surfaced only coarse blocking counts that hid the split between dependency blockers and alert policy blockers.
+- Current Update: Added a first-class `scope` block to Rust sync plan/apply-intent documents so managed resource kinds, alert ownership mode, prune behavior, and mutating vs non-mutating actions are explicit in the artifacts themselves. Expanded sync preflight and bundle-preflight summaries to report resource counts, create-planned counts, dependency-vs-policy blocking splits, alert policy counts, and total bundle blocking counts. Added targeted Rust tests for the new contract fields and summary rendering. Wrote new operator-facing Rust `sync` guidance in `README.md` and `docs/user-guide.md`, plus maintainer-focused architecture and contract notes in `docs/DEVELOPER.md` and `docs/overview-rust.md`.
+- Result: Rust `sync` now has a more self-describing staged contract and a documented local/document-first workflow that is easier to review, demo, and maintain without inferring critical scope or gating rules from code alone.

@@ -1,9 +1,9 @@
-# GitOps Sync (Unwired)
+# GitOps Sync
 
 ## Purpose
 
-This note tracks the isolated declarative sync planning scaffold before any
-CLI wiring or live Grafana mutation path lands.
+This note tracks the declarative sync planning surface and the remaining gaps
+between the shipped staged CLI and a broader Git-managed workflow.
 
 ## Scope
 
@@ -28,16 +28,38 @@ CLI wiring or live Grafana mutation path lands.
   - Refuses live apply intent until the plan is both reviewed and explicitly
     approved.
 
-## Not Yet Wired
+## Wired Surface
 
-- No argparse or unified CLI integration yet.
-- No live Grafana client or filesystem/Git integration yet.
-- No external secret-provider integration yet.
-- No Rust parity yet.
+- `grafana-util sync plan`
+  - Builds one review-required sync plan from local desired/live JSON files.
+  - Can also fetch live inventory directly from Grafana instead of `--live-file`.
+- `grafana-util sync review`
+  - Marks a staged plan reviewed and preserves the review token in the emitted
+    JSON document.
+- `grafana-util sync apply`
+  - Builds a gated apply-intent document from a reviewed plan and can bridge to
+    limited live execution only after explicit approval.
+- `grafana-util sync preflight`
+  - Builds staged dependency and policy checks from desired-state inputs plus
+    availability hints or optional live fetches.
+- `grafana-util sync bundle-preflight`
+  - Aggregates staged promotion/sync checks plus datasource secret/provider
+    availability into one reviewable bundle gate.
+- `grafana-util sync assess-alerts`
+  - Renders the staged alert-ownership assessment contract directly from local
+    alert specs.
+
+## Still Not Wired
+
+- No end-to-end Git workspace automation; operators still assemble and review
+  the staged JSON artifacts explicitly.
+- No broad always-on reconcile loop or controller model.
+- No external secret-provider resolution in the sync CLI itself.
+- No full Python/Rust parity for the same staged sync contract surface.
 
 ## Future Wire Points
 
-- `grafana_utils/unified_cli.py`
-- `grafana_utils/dashboard_cli.py`
-- `grafana_utils/datasource_cli.py`
-- `grafana_utils/alert_cli.py`
+- `grafana_utils/gitops_sync.py`
+- `grafana_utils/sync_cli.py`
+- `grafana_utils/sync_preflight_workbench.py`
+- `grafana_utils/bundle_preflight.py`
