@@ -77,6 +77,8 @@ cd rust && cargo build --release
 
 Tagged GitHub releases publish prebuilt Rust packages under **Assets**:
 
+- [Browse GitHub Releases](../../releases)
+
 - `grafana-utils-rust-linux-amd64-vX.Y.Z.tar.gz`
 - `grafana-utils-rust-macos-arm64-vX.Y.Z.tar.gz`
 

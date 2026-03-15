@@ -77,6 +77,8 @@ cd rust && cargo build --release
 
 GitHub 的 tag release 會在 **Assets** 提供預先建好的 Rust 封裝檔：
 
+- [瀏覽 GitHub Releases](../../releases)
+
 - `grafana-utils-rust-linux-amd64-vX.Y.Z.tar.gz`
 - `grafana-utils-rust-macos-arm64-vX.Y.Z.tar.gz`
 
