@@ -145,6 +145,11 @@ pub struct SyncPreflightArgs {
     pub availability_file: Option<PathBuf>,
     #[arg(
         long,
+        help = "Optional stable trace id to carry through staged preflight files."
+    )]
+    pub trace_id: Option<String>,
+    #[arg(
+        long,
         value_enum,
         default_value_t = SyncOutputFormat::Text,
         help = "Render the preflight document as text or json."
@@ -160,6 +165,11 @@ pub struct SyncBundlePreflightArgs {
     pub target_inventory: PathBuf,
     #[arg(long, help = "Optional JSON object file containing staged availability hints.")]
     pub availability_file: Option<PathBuf>,
+    #[arg(
+        long,
+        help = "Optional stable trace id to carry through staged bundle-preflight files."
+    )]
+    pub trace_id: Option<String>,
     #[arg(
         long,
         value_enum,
@@ -655,6 +665,7 @@ fn validate_apply_preflight(document: &Value) -> Result<Value> {
         }
         _ => return Err(message("Sync preflight document kind is not supported.")),
     };
+    require_optional_stage(document, "Sync preflight document", "preflight", 2, None)?;
     if blocking > 0 {
         return Err(message(format!(
             "Refusing local sync apply intent because preflight reports {blocking} blocking checks."
@@ -687,6 +698,13 @@ fn validate_apply_bundle_preflight(document: &Value) -> Result<Value> {
         .get("providerBlockingCount")
         .and_then(Value::as_i64)
         .ok_or_else(|| message("Sync bundle preflight summary is missing providerBlockingCount."))?;
+    require_optional_stage(
+        document,
+        "Sync bundle preflight document",
+        "bundle-preflight",
+        2,
+        None,
+    )?;
     let blocking_count = sync_blocking_count + provider_blocking_count;
     if blocking_count > 0 {
         return Err(message(format!(
@@ -900,7 +918,15 @@ pub fn run_sync_cli(command: SyncGroupCommand) -> Result<()> {
                 args.availability_file.as_ref(),
                 "Sync availability input",
             )?;
-            let document = build_sync_preflight_document(&desired, availability.as_ref())?;
+            let document = attach_lineage(
+                &attach_trace_id(
+                    &build_sync_preflight_document(&desired, availability.as_ref())?,
+                    args.trace_id.as_deref(),
+                )?,
+                "preflight",
+                2,
+                None,
+            )?;
             emit_text_or_json(
                 &document,
                 render_sync_preflight_text(&document)?,
@@ -915,10 +941,18 @@ pub fn run_sync_cli(command: SyncGroupCommand) -> Result<()> {
                 args.availability_file.as_ref(),
                 "Sync availability input",
             )?;
-            let document = build_sync_bundle_preflight_document(
-                &source_bundle,
-                &target_inventory,
-                availability.as_ref(),
+            let document = attach_lineage(
+                &attach_trace_id(
+                    &build_sync_bundle_preflight_document(
+                        &source_bundle,
+                        &target_inventory,
+                        availability.as_ref(),
+                    )?,
+                    args.trace_id.as_deref(),
+                )?,
+                "bundle-preflight",
+                2,
+                None,
             )?;
             emit_text_or_json(
                 &document,
