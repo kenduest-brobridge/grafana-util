@@ -773,6 +773,20 @@ Historical note:
 - Current Update: Extended the Docker-backed Python access smoke script to export service-account snapshots, validate delete and token-delete flows, replay the exported snapshot through dry-run and live import, rewrite the exported role to force a diff, confirm dry-run/live update import behavior, and finish with a no-drift diff check.
 - Result: The checked-in live access smoke now exercises the service-account snapshot lifecycle end to end in addition to the earlier create/list flows.
 
+## 2026-03-15 - Task: Expand Rust Datasource Live Smoke
+- State: Done
+- Scope: `scripts/test-rust-live-grafana.sh`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The Rust live smoke already validated datasource export/import and routed multi-org replay, but it did not exercise datasource add/delete against a real Grafana instance.
+- Current Update: Extended the Rust Docker smoke script to create a second datasource through the Rust `datasource add` path, validate dry-run JSON output for add/delete, verify the created datasource through the Grafana API, and then remove it through the Rust `datasource delete` path before continuing with the existing export/import coverage.
+- Result: The checked-in Rust live smoke now covers datasource add/delete in addition to the earlier datasource export/import and multi-org routing paths.
+
+## 2026-03-15 - Task: Add Python Datasource Live Smoke
+- State: Done
+- Scope: `scripts/test-python-datasource-live-grafana.sh`, `Makefile`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Datasource real-Grafana validation had become Rust-heavy. The repo had no checked-in Python datasource live smoke path for add/delete/export/import or the new multi-org routed datasource replay flow.
+- Current Update: Added a Docker-backed Python datasource smoke script and a `make test-python-datasource-live` target. The script bootstraps Grafana, validates datasource add/delete dry-run and live CRUD, validates single-org export/import dry-run, validates `export --all-orgs`, and validates `import --use-export-org --only-org-id --create-missing-orgs` dry-run/live replay.
+- Result: The repo now has a repeatable Python datasource live validation path that complements the existing Rust datasource smoke coverage.
+
 ## 2026-03-12 - Task: Add Access Utility Team Add
 - State: Done
 - Scope: `grafana_utils/access_cli.py`, `tests/test_python_access_cli.py`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`, `TODO.md`

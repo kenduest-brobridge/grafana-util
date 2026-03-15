@@ -942,6 +942,22 @@ Historical note:
 - Impact: `scripts/test-python-access-live-grafana.sh`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
 - Rollback/Risk: Low to moderate. The new checks only affect the opt-in Docker smoke path, but they now depend on the service-account snapshot APIs and delete endpoints remaining stable in the Grafana image used by the script.
 
+## 2026-03-15 - Expand Rust Datasource Live Smoke
+- Summary: Extended `scripts/test-rust-live-grafana.sh` so the datasource path now validates live add/delete behavior in addition to the previously added export/import and routed multi-org replay coverage.
+- Tests: Added live-script coverage for `datasource add` dry-run/live create and `datasource delete` dry-run/live delete, with API verification before continuing into the existing datasource export/import smoke flow.
+- Test Run: `bash -n scripts/test-rust-live-grafana.sh`; `make test-rust-live`
+- Validation: The script now creates a Loki datasource through the Rust CLI, confirms dry-run JSON summaries for add/delete, verifies the live datasource exists or is removed through Grafana's datasource API, and then completes the existing datasource export/import/routed-import smoke on Grafana `12.4.1`.
+- Impact: `scripts/test-rust-live-grafana.sh`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low to moderate. This only affects the opt-in Docker smoke path, but it adds another live dependency on Grafana datasource CRUD behavior and the current dry-run JSON summary contract.
+
+## 2026-03-15 - Add Python Datasource Live Smoke
+- Summary: Added `scripts/test-python-datasource-live-grafana.sh` plus a `make test-python-datasource-live` target so Python datasource flows now have the same style of Docker-backed real Grafana validation that access and Rust domains already use.
+- Tests: Added live-script coverage for datasource add/delete dry-run and live CRUD, single-org export/import dry-run, multi-org export, routed `--use-export-org --only-org-id` dry-run preview, routed `--create-missing-orgs --dry-run` preview, and live recreate/import.
+- Test Run: `bash -n scripts/test-python-datasource-live-grafana.sh`; `make test-python-datasource-live`
+- Validation: The script now bootstraps Grafana `12.4.1`, seeds datasource state, confirms Python datasource add/delete behavior against live API state, and validates both single-org and multi-org datasource export/import replay paths through the Python CLI.
+- Impact: `scripts/test-python-datasource-live-grafana.sh`, `Makefile`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low to moderate. The new script is opt-in and isolated to Docker live validation, but it adds another path that depends on current Grafana datasource CRUD and org-admin APIs staying stable.
+
 ## 2026-03-12 - Add Access Utility Team Add
 - Summary: Added Python `grafana-access-utils team add` support, including parser/help wiring, Grafana team creation through the org-scoped API, optional initial member/admin seeding, and aligned public/maintainer docs. The command creates the team first, then reuses the existing exact org-user resolution and guarded membership/admin update flow so initial admins are applied consistently with `team modify`.
 - Tests: Extended `tests/test_python_access_cli.py` with parser/help coverage plus create-flow tests for initial members/admins and the failure path when an initial user cannot be resolved.

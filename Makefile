@@ -1,4 +1,4 @@
-.PHONY: help poetry-install poetry-lock poetry-test poetry-quality-python build build-python build-rust build-rust-macos-arm64 build-rust-linux-amd64 build-rust-linux-amd64-zig seed-grafana-sample-data destroy-grafana-sample-data reset-grafana-all-data test test-python test-rust fmt-rust-check lint-rust quality quality-python quality-rust test-rust-live test-access-live
+.PHONY: help poetry-install poetry-lock poetry-test poetry-quality-python build build-python build-rust build-rust-macos-arm64 build-rust-linux-amd64 build-rust-linux-amd64-zig seed-grafana-sample-data destroy-grafana-sample-data reset-grafana-all-data test test-python test-rust fmt-rust-check lint-rust quality quality-python quality-rust test-rust-live test-access-live test-python-datasource-live
 
 PYTHON ?= python3
 PIP ?= $(PYTHON) -m pip
@@ -32,7 +32,8 @@ help:
 		'  make quality-python  Run the Python quality gate script' \
 		'  make quality-rust  Run the Rust quality gate script' \
 		'  make test-rust-live Start Grafana in Docker and run the Rust live smoke test' \
-		'  make test-access-live Start Grafana in Docker and run the Python access live smoke test'
+		'  make test-access-live Start Grafana in Docker and run the Python access live smoke test' \
+		'  make test-python-datasource-live Start Grafana in Docker and run the Python datasource live smoke test'
 
 poetry-install:
 	$(POETRY) install --with dev
@@ -99,3 +100,6 @@ test-rust-live:
 
 test-access-live:
 	./scripts/test-python-access-live-grafana.sh
+
+test-python-datasource-live:
+	bash ./scripts/test-python-datasource-live-grafana.sh

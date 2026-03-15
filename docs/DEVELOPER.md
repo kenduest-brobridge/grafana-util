@@ -541,6 +541,7 @@ make build-rust
 make test
 make test-rust-live
 make test-access-live
+make test-python-datasource-live
 python3 -m pip install --no-deps --target /tmp/grafana-util-install .
 python3 -m unittest tests.test_python_dashboard_cli
 python3 -m unittest tests.test_python_alert_cli
@@ -560,6 +561,7 @@ Rust live smoke test notes:
 - `make test-rust-live` runs `scripts/test-rust-live-grafana.sh`
 - the script defaults to `grafana/grafana:12.4.1` and binds Grafana to a random localhost port unless `GRAFANA_PORT` is set explicitly
 - the script seeds one Prometheus datasource, one dashboard, one additional org-scoped dashboard, and one webhook contact point
+- datasource coverage: add dry-run/live create, delete dry-run/live delete, export, single-org import dry-run, multi-org export, routed `--use-export-org --only-org-id` dry-run preview, routed `--create-missing-orgs --dry-run` preview, and live missing-org recreate/import
 - dashboard coverage: export, prompt export datasource rewrite, diff same, diff drifted, dry-run export, dry-run import, delete-and-import restore, multi-org export, routed `--use-export-org --only-org-id` dry-run preview, routed `--create-missing-orgs --dry-run` preview, and live missing-org recreate/import
 - alerting coverage: export, diff same, diff changed, dry-run import, update import
 - useful overrides: `GRAFANA_IMAGE`, `GRAFANA_PORT`, `GRAFANA_USER`, `GRAFANA_PASSWORD`, `CARGO_BIN`
@@ -571,6 +573,13 @@ Python access live smoke test notes:
 - user coverage: add, modify, global delete, org delete, global list, org list
 - team coverage: add, list, modify
 - service-account coverage: add, export, import dry-run/live replay, diff changed/same, delete, token add, token delete, list
+- useful overrides: `GRAFANA_IMAGE`, `GRAFANA_PORT`, `GRAFANA_USER`, `GRAFANA_PASSWORD`, `PYTHON_BIN`
+
+Python datasource live smoke test notes:
+
+- `make test-python-datasource-live` runs `scripts/test-python-datasource-live-grafana.sh`
+- the script defaults to `grafana/grafana:12.4.1` and binds Grafana to a random localhost port unless `GRAFANA_PORT` is set explicitly
+- datasource coverage: add dry-run/live create, delete dry-run/live delete, export, single-org import dry-run, multi-org export, routed `--use-export-org --only-org-id` dry-run preview, routed `--create-missing-orgs --dry-run` preview, and live missing-org recreate/import
 - useful overrides: `GRAFANA_IMAGE`, `GRAFANA_PORT`, `GRAFANA_USER`, `GRAFANA_PASSWORD`, `PYTHON_BIN`
 
 Developer sample-data seed notes:

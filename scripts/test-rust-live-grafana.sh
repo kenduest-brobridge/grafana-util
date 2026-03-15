@@ -309,11 +309,58 @@ datasource_bin() {
 }
 
 run_datasource_smoke() {
+  local add_dry_run_log="${WORK_DIR}/datasource-add-dry-run.json"
+  local delete_dry_run_log="${WORK_DIR}/datasource-delete-dry-run.json"
   local dry_run_log="${WORK_DIR}/datasource-import-dry-run.json"
   local routed_dry_run_log="${WORK_DIR}/datasource-routed-import-dry-run.json"
   local recreate_dry_run_log="${WORK_DIR}/datasource-routed-recreate-dry-run.json"
   local org_two_id=""
   local recreated_org_id=""
+
+  "$(datasource_bin)" datasource add \
+    --url "${GRAFANA_URL}" \
+    --token "${GRAFANA_API_TOKEN}" \
+    --uid smoke-prometheus-extra \
+    --name "Smoke Prometheus Extra" \
+    --type prometheus \
+    --access proxy \
+    --datasource-url "http://prometheus-extra.invalid" \
+    --dry-run \
+    --json | tee "${add_dry_run_log}" >/dev/null
+
+  jq -e '.summary.createCount == 1' "${add_dry_run_log}" >/dev/null \
+    || fail "datasource add dry-run did not predict one create"
+
+  "$(datasource_bin)" datasource add \
+    --url "${GRAFANA_URL}" \
+    --token "${GRAFANA_API_TOKEN}" \
+    --uid smoke-prometheus-extra \
+    --name "Smoke Prometheus Extra" \
+    --type prometheus \
+    --access proxy \
+    --datasource-url "http://prometheus-extra.invalid" >/dev/null
+
+  api GET "/api/datasources" | jq -e '.[] | select(.uid == "smoke-prometheus-extra")' >/dev/null \
+    || fail "datasource add did not create the smoke-prometheus-extra datasource"
+
+  "$(datasource_bin)" datasource delete \
+    --url "${GRAFANA_URL}" \
+    --token "${GRAFANA_API_TOKEN}" \
+    --uid smoke-prometheus-extra \
+    --dry-run \
+    --json | tee "${delete_dry_run_log}" >/dev/null
+
+  jq -e '.summary.deleteCount == 1' "${delete_dry_run_log}" >/dev/null \
+    || fail "datasource delete dry-run did not predict one delete"
+
+  "$(datasource_bin)" datasource delete \
+    --url "${GRAFANA_URL}" \
+    --token "${GRAFANA_API_TOKEN}" \
+    --uid smoke-prometheus-extra >/dev/null
+
+  if api GET "/api/datasources" | jq -e '.[] | select(.uid == "smoke-prometheus-extra")' >/dev/null; then
+    fail "datasource delete did not remove the smoke-prometheus-extra datasource"
+  fi
 
   "$(datasource_bin)" datasource export \
     --url "${GRAFANA_URL}" \
