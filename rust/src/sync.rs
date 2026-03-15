@@ -665,7 +665,6 @@ fn validate_apply_preflight(document: &Value) -> Result<Value> {
         }
         _ => return Err(message("Sync preflight document kind is not supported.")),
     };
-    require_optional_stage(document, "Sync preflight document", "preflight", 2, None)?;
     if blocking > 0 {
         return Err(message(format!(
             "Refusing local sync apply intent because preflight reports {blocking} blocking checks."
@@ -698,13 +697,6 @@ fn validate_apply_bundle_preflight(document: &Value) -> Result<Value> {
         .get("providerBlockingCount")
         .and_then(Value::as_i64)
         .ok_or_else(|| message("Sync bundle preflight summary is missing providerBlockingCount."))?;
-    require_optional_stage(
-        document,
-        "Sync bundle preflight document",
-        "bundle-preflight",
-        2,
-        None,
-    )?;
     let blocking_count = sync_blocking_count + provider_blocking_count;
     if blocking_count > 0 {
         return Err(message(format!(
