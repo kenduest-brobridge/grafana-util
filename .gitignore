@@ -1,0 +1,12 @@
+.DS_Store
+__pycache__/
+old/
+dashboards/
+!grafana_utils/dashboards/
+!grafana_utils/dashboards/__init__.py
+!grafana_utils/dashboards/common.py
+!grafana_utils/dashboards/transformer.py
+build/
+dist/
+*.egg-info/
+tmp/

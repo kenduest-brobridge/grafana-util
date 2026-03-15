@@ -1,0 +1,120 @@
+[
+  {
+    "name": "prometheus_secret_token",
+    "rawDatasource": {
+      "uid": "prom-main",
+      "name": "Prometheus Main",
+      "type": "prometheus",
+      "access": "proxy",
+      "url": "http://prometheus:9090",
+      "isDefault": true,
+      "org": "Observability",
+      "orgId": 7,
+      "jsonData": {
+        "httpMethod": "POST",
+        "timeInterval": "30s"
+      },
+      "secureJsonData": {
+        "httpHeaderValue1": "Bearer secret-token"
+      },
+      "secureJsonFields": {
+        "httpHeaderValue1": true
+      }
+    },
+    "expectedNormalizedRecord": {
+      "uid": "prom-main",
+      "name": "Prometheus Main",
+      "type": "prometheus",
+      "access": "proxy",
+      "url": "http://prometheus:9090",
+      "isDefault": "true",
+      "org": "Observability",
+      "orgId": "7"
+    },
+    "expectedImportPayload": {
+      "uid": "prom-main",
+      "name": "Prometheus Main",
+      "type": "prometheus",
+      "access": "proxy",
+      "url": "http://prometheus:9090",
+      "isDefault": true
+    }
+  },
+  {
+    "name": "loki_basic_auth",
+    "rawDatasource": {
+      "uid": "loki-main",
+      "name": "Loki Logs",
+      "type": "loki",
+      "access": "proxy",
+      "url": "http://loki:3100",
+      "isDefault": "false",
+      "org": "Observability",
+      "orgId": "7",
+      "basicAuth": true,
+      "basicAuthUser": "loki-user",
+      "secureJsonData": {
+        "basicAuthPassword": "secret-password"
+      }
+    },
+    "expectedNormalizedRecord": {
+      "uid": "loki-main",
+      "name": "Loki Logs",
+      "type": "loki",
+      "access": "proxy",
+      "url": "http://loki:3100",
+      "isDefault": "false",
+      "org": "Observability",
+      "orgId": "7"
+    },
+    "expectedImportPayload": {
+      "uid": "loki-main",
+      "name": "Loki Logs",
+      "type": "loki",
+      "access": "proxy",
+      "url": "http://loki:3100",
+      "isDefault": false
+    }
+  },
+  {
+    "name": "influxdb_numeric_bool",
+    "rawDatasource": {
+      "uid": "influx-main",
+      "name": "Influx Metrics",
+      "type": "influxdb",
+      "access": "proxy",
+      "url": "http://influxdb:8086",
+      "isDefault": 1,
+      "org": "Metrics Org",
+      "orgId": 12,
+      "database": "metrics",
+      "user": "influx-user",
+      "password": "influx-password",
+      "jsonData": {
+        "version": "Flux",
+        "organization": "acme"
+      },
+      "secureJsonData": {
+        "token": "influx-secret"
+      }
+    },
+    "expectedNormalizedRecord": {
+      "uid": "influx-main",
+      "name": "Influx Metrics",
+      "type": "influxdb",
+      "access": "proxy",
+      "url": "http://influxdb:8086",
+      "isDefault": "true",
+      "org": "Metrics Org",
+      "orgId": "12"
+    },
+    "expectedImportPayload": {
+      "uid": "influx-main",
+      "name": "Influx Metrics",
+      "type": "influxdb",
+      "access": "proxy",
+      "url": "http://influxdb:8086",
+      "isDefault": true
+    }
+  }
+]
