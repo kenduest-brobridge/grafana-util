@@ -5,6 +5,13 @@ Historical note:
 - Older entries describe the repo state and `TODO.md` backlog as they existed on the entry date.
 - `TODO.md` now tracks only the active backlog; completed or superseded TODO items moved to `docs/internal/todo-archive.md`.
 
+## 2026-03-15 - Task: Propagate Rust Sync Preflight Lineage Metadata
+- State: Done
+- Scope: `rust/src/sync.rs`, `rust/src/sync_cli_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust `sync plan`, `review`, and `apply` already emitted staged lineage metadata, and `apply` enforced lineage on reviewed plans. However, `sync preflight` and `sync bundle-preflight` emitted only a `traceId` bridge, so apply-time validation for those staged files could only compare traces and could not fail closed on a wrong staged `stage` or `stepIndex`.
+- Current Update: Extended Rust `sync preflight` and `sync bundle-preflight` emission so the generated documents now carry first-class staged lineage metadata alongside `traceId`. Tightened `sync apply` so optional preflight and bundle-preflight files now validate the expected `preflight` or `bundle-preflight` stage, the shared step index, and the expected parent trace whenever lineage metadata is present, while older staged files without lineage still remain compatible.
+- Result: Rust staged sync artifacts now describe lineage consistently across `plan`, `preflight`, `bundle-preflight`, `review`, and `apply`, and local apply gating rejects mismatched staged preflight lineage instead of relying on trace comparison alone.
+
 ## 2026-03-15 - Task: Add Canonical Version Sync Workflow
 - State: Done
 - Scope: `VERSION`, `Makefile`, `scripts/set-version.sh`, `scripts/build-rust-macos-arm64.sh`, `scripts/build-rust-linux-amd64.sh`, `scripts/build-rust-linux-amd64-zig.sh`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
@@ -1198,3 +1205,10 @@ Historical note:
 - Baseline: Rust staged sync artifacts already carried `stage`, `stepIndex`, and `parentTraceId`, but `sync review`/`sync apply` still trusted supplied staged files without checking whether any present lineage metadata actually matched the current plan trace chain.
 - Current Update: Added fail-closed lineage validation to Rust `sync review` and `sync apply`. Review now rejects staged plan files whose lineage metadata claims a non-plan stage, wrong step index, or unexpected parent trace. Apply now rejects reviewed plan files with inconsistent review lineage and rejects optional preflight or bundle-preflight inputs when they carry a mismatched `traceId`. The staged step indexes were also aligned to `1/2/3` for `plan/review/apply` so emitted metadata matches the documented flow.
 - Result: Local/document-only Rust sync gates now protect against mixing staged artifacts from different traces or stages when lineage metadata is present, while remaining backward compatible with older staged documents that omit the new fields.
+
+## 2026-03-15 - Task: Add Rust Sync Preflight Lineage Metadata
+- State: Done
+- Scope: `rust/src/sync.rs`, `rust/src/sync_cli_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust `sync preflight` and `sync bundle-preflight` could already carry a `traceId`, but they did not emit first-class stage lineage metadata. `sync apply` therefore only matched those auxiliary staged documents by trace id, not by expected staged role.
+- Current Update: Added optional `--trace-id` support to Rust `sync preflight` and `sync bundle-preflight`, and both commands now emit lineage metadata as `stage=preflight|bundle-preflight` with `stepIndex=2`. `sync apply` now fail-closes when those documents carry the wrong lineage stage or step index, while still accepting older preflight documents that omit lineage metadata.
+- Result: Rust staged sync gates can now distinguish plan/review/apply artifacts from auxiliary preflight artifacts, which reduces the chance of cross-wiring staged files from the same trace into the wrong apply gate.

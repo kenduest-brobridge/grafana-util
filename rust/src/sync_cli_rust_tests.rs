@@ -159,6 +159,70 @@ fn parse_sync_cli_supports_apply_command_with_reason_and_note() {
 }
 
 #[test]
+fn parse_sync_cli_supports_preflight_command_with_trace_id() {
+    let args = SyncCliArgs::parse_from([
+        "grafana-util",
+        "preflight",
+        "--desired-file",
+        "./desired.json",
+        "--availability-file",
+        "./availability.json",
+        "--trace-id",
+        "trace-preflight",
+        "--output",
+        "json",
+    ]);
+
+    match args.command {
+        SyncGroupCommand::Preflight(inner) => {
+            assert_eq!(inner.desired_file, Path::new("./desired.json"));
+            assert_eq!(
+                inner.availability_file,
+                Some(Path::new("./availability.json").to_path_buf())
+            );
+            assert_eq!(inner.trace_id, Some("trace-preflight".to_string()));
+            assert_eq!(inner.output, SyncOutputFormat::Json);
+        }
+        _ => panic!("expected preflight"),
+    }
+}
+
+#[test]
+fn parse_sync_cli_supports_bundle_preflight_command_with_trace_id() {
+    let args = SyncCliArgs::parse_from([
+        "grafana-util",
+        "bundle-preflight",
+        "--source-bundle",
+        "./source.json",
+        "--target-inventory",
+        "./target.json",
+        "--availability-file",
+        "./availability.json",
+        "--trace-id",
+        "trace-bundle-preflight",
+        "--output",
+        "json",
+    ]);
+
+    match args.command {
+        SyncGroupCommand::BundlePreflight(inner) => {
+            assert_eq!(inner.source_bundle, Path::new("./source.json"));
+            assert_eq!(inner.target_inventory, Path::new("./target.json"));
+            assert_eq!(
+                inner.availability_file,
+                Some(Path::new("./availability.json").to_path_buf())
+            );
+            assert_eq!(
+                inner.trace_id,
+                Some("trace-bundle-preflight".to_string())
+            );
+            assert_eq!(inner.output, SyncOutputFormat::Json);
+        }
+        _ => panic!("expected bundle-preflight"),
+    }
+}
+
+#[test]
 fn render_sync_summary_text_renders_counts() {
     let lines = render_sync_summary_text(&json!({
         "kind": "grafana-utils-sync-summary",
@@ -822,6 +886,10 @@ fn run_sync_cli_apply_accepts_non_blocking_preflight_file() {
         &preflight_file,
         serde_json::to_string_pretty(&json!({
             "kind": "grafana-utils-sync-preflight",
+            "traceId": "sync-trace-apply",
+            "stage": "preflight",
+            "stepIndex": 2,
+            "parentTraceId": "sync-trace-apply",
             "summary": {
                 "checkCount": 3,
                 "okCount": 3,
@@ -846,6 +914,74 @@ fn run_sync_cli_apply_accepts_non_blocking_preflight_file() {
     }));
 
     assert!(result.is_ok());
+}
+
+#[test]
+fn run_sync_cli_apply_rejects_preflight_with_wrong_lineage_stage() {
+    let temp = tempdir().unwrap();
+    let plan_file = temp.path().join("plan.json");
+    let preflight_file = temp.path().join("preflight.json");
+    fs::write(
+        &plan_file,
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-sync-plan",
+            "traceId": "sync-trace-apply",
+            "stage": "review",
+            "stepIndex": 2,
+            "parentTraceId": "sync-trace-apply",
+            "summary": {
+                "would_create": 1,
+                "would_update": 0,
+                "would_delete": 0,
+                "noop": 0,
+                "unmanaged": 0,
+                "alert_candidate": 0,
+                "alert_plan_only": 0,
+                "alert_blocked": 0
+            },
+            "reviewRequired": true,
+            "reviewed": true,
+            "operations": [
+                {"kind":"folder","identity":"ops","action":"would-create"}
+            ]
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        &preflight_file,
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-sync-preflight",
+            "traceId": "sync-trace-apply",
+            "stage": "bundle-preflight",
+            "stepIndex": 2,
+            "parentTraceId": "sync-trace-apply",
+            "summary": {
+                "checkCount": 3,
+                "okCount": 3,
+                "blockingCount": 0
+            },
+            "checks": []
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+
+    let error = run_sync_cli(SyncGroupCommand::Apply(SyncApplyArgs {
+        plan_file,
+        preflight_file: Some(preflight_file),
+        bundle_preflight_file: None,
+        approve: true,
+        output: SyncOutputFormat::Json,
+        applied_by: None,
+        applied_at: None,
+        approval_reason: None,
+        apply_note: None,
+    }))
+    .unwrap_err()
+    .to_string();
+
+    assert!(error.contains("unexpected lineage stage"));
 }
 
 #[test]
@@ -1186,6 +1322,10 @@ fn run_sync_cli_apply_accepts_non_blocking_bundle_preflight_file() {
         &bundle_preflight_file,
         serde_json::to_string_pretty(&json!({
             "kind": "grafana-utils-sync-bundle-preflight",
+            "traceId": "sync-trace-apply",
+            "stage": "bundle-preflight",
+            "stepIndex": 2,
+            "parentTraceId": "sync-trace-apply",
             "summary": {
                 "resourceCount": 4,
                 "syncBlockingCount": 0,
@@ -1209,6 +1349,73 @@ fn run_sync_cli_apply_accepts_non_blocking_bundle_preflight_file() {
     }));
 
     assert!(result.is_ok());
+}
+
+#[test]
+fn run_sync_cli_apply_rejects_bundle_preflight_with_wrong_lineage_step() {
+    let temp = tempdir().unwrap();
+    let plan_file = temp.path().join("plan.json");
+    let bundle_preflight_file = temp.path().join("bundle-preflight.json");
+    fs::write(
+        &plan_file,
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-sync-plan",
+            "traceId": "sync-trace-apply",
+            "stage": "review",
+            "stepIndex": 2,
+            "parentTraceId": "sync-trace-apply",
+            "summary": {
+                "would_create": 1,
+                "would_update": 0,
+                "would_delete": 0,
+                "noop": 0,
+                "unmanaged": 0,
+                "alert_candidate": 0,
+                "alert_plan_only": 0,
+                "alert_blocked": 0
+            },
+            "reviewRequired": true,
+            "reviewed": true,
+            "operations": [
+                {"kind":"folder","identity":"ops","action":"would-create"}
+            ]
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        &bundle_preflight_file,
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-sync-bundle-preflight",
+            "traceId": "sync-trace-apply",
+            "stage": "bundle-preflight",
+            "stepIndex": 3,
+            "parentTraceId": "sync-trace-apply",
+            "summary": {
+                "resourceCount": 4,
+                "syncBlockingCount": 0,
+                "providerBlockingCount": 0
+            }
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+
+    let error = run_sync_cli(SyncGroupCommand::Apply(SyncApplyArgs {
+        plan_file,
+        preflight_file: None,
+        bundle_preflight_file: Some(bundle_preflight_file),
+        approve: true,
+        output: SyncOutputFormat::Json,
+        applied_by: None,
+        applied_at: None,
+        approval_reason: None,
+        apply_note: None,
+    }))
+    .unwrap_err()
+    .to_string();
+
+    assert!(error.contains("unexpected lineage stepIndex"));
 }
 
 #[test]
@@ -1341,8 +1548,7 @@ fn run_sync_cli_apply_rejects_lineage_aware_bundle_preflight_with_mismatched_par
     .unwrap_err()
     .to_string();
 
-    assert!(error.contains("parentTraceId"));
-    assert!(error.contains("does not match sync plan traceId"));
+    assert!(error.contains("unexpected lineage parentTraceId"));
 }
 
 #[test]
@@ -1510,6 +1716,7 @@ fn run_sync_cli_preflight_rejects_non_object_availability_file() {
     let error = run_sync_cli(SyncGroupCommand::Preflight(SyncPreflightArgs {
         desired_file,
         availability_file: Some(availability_file),
+        trace_id: None,
         output: SyncOutputFormat::Text,
     }))
     .unwrap_err()
@@ -1540,6 +1747,7 @@ fn run_sync_cli_bundle_preflight_accepts_local_bundle_inputs() {
         source_bundle,
         target_inventory,
         availability_file: None,
+        trace_id: None,
         output: SyncOutputFormat::Json,
     }));
 

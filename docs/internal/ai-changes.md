@@ -1425,6 +1425,15 @@ Historical note:
 - Rollback/Risk: Low risk. This only adds optional staged metadata and does not change review/apply gating semantics.
 - Follow-up: The next useful staged extension is to propagate plan/review/apply file lineage metadata such as parent trace references or step counters.
 
+## 2026-03-15 - Propagate Rust Sync Preflight Lineage Metadata
+- Summary: Extended the Rust staged `sync` CLI so emitted `preflight` and `bundle-preflight` documents now carry first-class lineage metadata in addition to `traceId`. `sync apply` now validates those staged files against the expected lineage contract when they include lineage fields: `preflight` must be `stage=preflight, stepIndex=2, parentTraceId=<plan trace>`, and `bundle-preflight` must be `stage=bundle-preflight, stepIndex=2, parentTraceId=<plan trace>`.
+- Tests: Updated apply acceptance coverage to use lineage-aware preflight and bundle-preflight inputs, and added focused rejection coverage for wrong preflight stage and wrong bundle-preflight step index. Existing compatibility coverage for older staged files without lineage remains in place.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet sync` (pass)
+- Validation: Focused Rust `sync` tests passed. The staged flow remains local/document-only, but apply-time consistency checks now fail closed on mismatched preflight lineage rather than relying on trace matching alone.
+- Impact: `rust/src/sync.rs`, `rust/src/sync_cli_rust_tests.rs`, `docs/internal/ai-status.md`
+- Rollback/Risk: Low to moderate risk. Newly emitted preflight artifacts are stricter and can expose previously hidden lineage mismatches, but older staged files that omit lineage metadata continue to work.
+- Follow-up: The next useful parity step is to render lineage explicitly in Rust preflight text output so operators can inspect staged preflight ancestry without opening the raw JSON.
+
 ## 2026-03-15 - Add Rust Sync Staged Lineage Metadata
 - Summary: Added automatic staged lineage metadata to the Rust sync CLI. `sync plan` now stamps staged artifacts with `stage=plan` and `stepIndex=1`, while `sync review` and `sync apply` attach `stage=review|apply`, advance the step index, and preserve `parentTraceId` to describe the local artifact lineage on top of the existing shared `traceId`.
 - Tests: Added renderer coverage for lineage lines in both plan and apply text output, plus default-lineage rendering coverage when older staged documents do not contain the new fields. Existing sync/cli suites were re-run to confirm additive compatibility.
@@ -1442,6 +1451,15 @@ Historical note:
 - Impact: `rust/src/sync.rs`, `rust/src/sync_cli_rust_tests.rs`, `docs/internal/ai-status.md`
 - Rollback/Risk: Low to moderate risk. The stricter checks can reject previously accepted staged files if they contain inconsistent lineage metadata, but the compatibility path for older files without lineage metadata remains intact.
 - Follow-up: The next useful tightening is to propagate lineage metadata onto staged preflight/bundle-preflight documents as first-class fields so apply-time consistency checks can move beyond trace-only matching.
+
+## 2026-03-15 - Add Rust Sync Preflight Lineage Metadata
+- Summary: Extended the Rust sync CLI so `sync preflight` and `sync bundle-preflight` now accept optional `--trace-id` and emit first-class staged lineage metadata. Preflight documents are stamped with `stage=preflight` and bundle-preflight documents with `stage=bundle-preflight`, both using `stepIndex=2`. `sync apply` now enforces those expected lineage values when auxiliary staged documents carry lineage metadata, instead of only matching them by trace id.
+- Tests: Added parser coverage for the new `--trace-id` flags on both commands. Updated apply-path coverage so accepted non-blocking preflight documents use the new emitted lineage shape, and kept fail-closed execution coverage for wrong preflight stage, wrong bundle-preflight step, and unexpected auxiliary `parentTraceId`.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet sync`; `cargo test --manifest-path rust/Cargo.toml --quiet cli` (pass)
+- Validation: Local Rust sync/cli suites passed. Older auxiliary staged documents without lineage fields still remain compatible, but any supplied lineage on preflight inputs is now validated against the expected auxiliary stage.
+- Impact: `rust/src/sync.rs`, `rust/src/sync_cli_rust_tests.rs`, `docs/internal/ai-status.md`
+- Rollback/Risk: Low risk. This is additive metadata on emitted preflight artifacts plus tighter validation only when lineage metadata is present.
+- Follow-up: The next useful parity step is to surface auxiliary staged lineage in preflight text rendering and, if desired, carry explicit parent linkage rules once plan-generated preflight flows are formalized.
 
 ## 2026-03-10 - Export Grafana Dashboards
 - Summary: Added a standalone Python utility to export Grafana dashboards by UID into local JSON files, extended it with import support for recursively loading exported dashboard JSON back into Grafana, and added datasource-prompt export behavior that now follows the import-critical pattern from the provided `1-prompt.json`. Current architecture writes both `dashboards/raw/` and `dashboards/prompt/` by default, with `raw/` intended for preserved-UID/API-safe imports and `prompt/` intended for Grafana web imports that ask for datasource mapping. Latest change: added `--without-raw` and `--without-prompt` so one export run can still be selective when needed, while rejecting the invalid case where both are disabled.

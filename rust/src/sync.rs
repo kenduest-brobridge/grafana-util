@@ -859,6 +859,13 @@ pub fn run_sync_cli(command: SyncGroupCommand) -> Result<()> {
                 None => None,
                 Some(path) => {
                     let preflight = load_json_value(path, "Sync preflight input")?;
+                    require_optional_stage(
+                        &preflight,
+                        "Sync preflight document",
+                        "preflight",
+                        2,
+                        Some(&trace_id),
+                    )?;
                     require_matching_optional_trace_id(
                         &preflight,
                         "Sync preflight document",
@@ -871,6 +878,13 @@ pub fn run_sync_cli(command: SyncGroupCommand) -> Result<()> {
                 None => None,
                 Some(path) => {
                     let bundle_preflight = load_json_value(path, "Sync bundle preflight input")?;
+                    require_optional_stage(
+                        &bundle_preflight,
+                        "Sync bundle preflight document",
+                        "bundle-preflight",
+                        2,
+                        Some(&trace_id),
+                    )?;
                     require_matching_optional_trace_id(
                         &bundle_preflight,
                         "Sync bundle preflight document",
@@ -918,15 +932,12 @@ pub fn run_sync_cli(command: SyncGroupCommand) -> Result<()> {
                 args.availability_file.as_ref(),
                 "Sync availability input",
             )?;
-            let document = attach_lineage(
-                &attach_trace_id(
-                    &build_sync_preflight_document(&desired, availability.as_ref())?,
-                    args.trace_id.as_deref(),
-                )?,
-                "preflight",
-                2,
-                None,
+            let document = attach_trace_id(
+                &build_sync_preflight_document(&desired, availability.as_ref())?,
+                args.trace_id.as_deref(),
             )?;
+            let trace_id = require_trace_id(&document, "Sync preflight document")?;
+            let document = attach_lineage(&document, "preflight", 2, Some(&trace_id))?;
             emit_text_or_json(
                 &document,
                 render_sync_preflight_text(&document)?,
@@ -941,19 +952,16 @@ pub fn run_sync_cli(command: SyncGroupCommand) -> Result<()> {
                 args.availability_file.as_ref(),
                 "Sync availability input",
             )?;
-            let document = attach_lineage(
-                &attach_trace_id(
-                    &build_sync_bundle_preflight_document(
-                        &source_bundle,
-                        &target_inventory,
-                        availability.as_ref(),
-                    )?,
-                    args.trace_id.as_deref(),
+            let document = attach_trace_id(
+                &build_sync_bundle_preflight_document(
+                    &source_bundle,
+                    &target_inventory,
+                    availability.as_ref(),
                 )?,
-                "bundle-preflight",
-                2,
-                None,
+                args.trace_id.as_deref(),
             )?;
+            let trace_id = require_trace_id(&document, "Sync bundle preflight document")?;
+            let document = attach_lineage(&document, "bundle-preflight", 2, Some(&trace_id))?;
             emit_text_or_json(
                 &document,
                 render_sync_bundle_preflight_text(&document)?,
