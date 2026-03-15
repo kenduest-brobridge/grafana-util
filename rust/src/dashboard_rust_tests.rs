@@ -11,15 +11,14 @@ use super::{
     format_folder_inventory_status_line, format_import_progress_line, format_import_verbose_line,
     import_dashboards_with_org_clients, import_dashboards_with_request,
     list_dashboards_with_request, list_data_sources_with_request, parse_cli_from,
-    try_normalize_dashboard_cli_args,
     render_dashboard_summary_csv, render_dashboard_summary_json, render_dashboard_summary_table,
     render_data_source_csv, render_data_source_json, render_data_source_table,
-    render_import_dry_run_json, render_import_dry_run_table, CommonCliArgs, DashboardCliArgs,
-    DashboardCommand, DiffArgs, ExportArgs, FolderInventoryStatusKind, ImportArgs,
-    InspectExportArgs, InspectExportReportFormat, InspectLayout, InspectLiveArgs,
-    InspectOutputFormat, InspectRenderFormat, InspectView, ListArgs, ListDataSourcesArgs,
-    DATASOURCE_INVENTORY_FILENAME, EXPORT_METADATA_FILENAME, FOLDER_INVENTORY_FILENAME,
-    TOOL_SCHEMA_VERSION,
+    render_import_dry_run_json, render_import_dry_run_table, try_normalize_dashboard_cli_args,
+    CommonCliArgs, DashboardCliArgs, DashboardCommand, DiffArgs, ExportArgs,
+    FolderInventoryStatusKind, ImportArgs, InspectExportArgs, InspectExportReportFormat,
+    InspectLayout, InspectLiveArgs, InspectOutputFormat, InspectRenderFormat, InspectView,
+    ListArgs, ListDataSourcesArgs, DATASOURCE_INVENTORY_FILENAME, EXPORT_METADATA_FILENAME,
+    FOLDER_INVENTORY_FILENAME, TOOL_SCHEMA_VERSION,
 };
 use crate::common::api_response;
 use clap::{CommandFactory, Parser};
@@ -76,6 +75,7 @@ fn make_import_args(import_dir: PathBuf) -> ImportArgs {
         no_header: false,
         output_columns: Vec::new(),
         progress: false,
+        continue_on_error: false,
         verbose: false,
     }
 }
@@ -425,14 +425,9 @@ fn parse_cli_supports_export_org_scope_flags() {
 
 #[test]
 fn parse_cli_rejects_conflicting_export_org_scope_flags() {
-    let error = DashboardCliArgs::try_parse_from([
-        "grafana-util",
-        "export",
-        "--org-id",
-        "7",
-        "--all-orgs",
-    ])
-    .unwrap_err();
+    let error =
+        DashboardCliArgs::try_parse_from(["grafana-util", "export", "--org-id", "7", "--all-orgs"])
+            .unwrap_err();
 
     assert!(error.to_string().contains("--org-id"));
     assert!(error.to_string().contains("--all-orgs"));
@@ -481,11 +476,15 @@ fn import_help_explains_common_operator_flags() {
 fn list_and_diff_help_include_examples() {
     let list_help = render_dashboard_subcommand_help("list");
     assert!(list_help.contains("Examples:"));
-    assert!(list_help.contains("grafana-util dashboard list --url http://localhost:3000 --table --show-folder-path"));
+    assert!(list_help.contains(
+        "grafana-util dashboard list --url http://localhost:3000 --table --show-folder-path"
+    ));
 
     let diff_help = render_dashboard_subcommand_help("diff");
     assert!(diff_help.contains("Examples:"));
-    assert!(diff_help.contains("grafana-util dashboard diff --url http://localhost:3000 --import-dir ./dashboards/raw"));
+    assert!(diff_help.contains(
+        "grafana-util dashboard diff --url http://localhost:3000 --import-dir ./dashboards/raw"
+    ));
 }
 
 #[test]
@@ -622,6 +621,24 @@ fn parse_cli_supports_import_dry_run_output_columns() {
                     "file",
                 ]
             );
+        }
+        _ => panic!("expected import command"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_import_continue_on_error_flag() {
+    let args = parse_cli_from([
+        "grafana-util",
+        "import",
+        "--import-dir",
+        "./dashboards/raw",
+        "--continue-on-error",
+    ]);
+
+    match args.command {
+        DashboardCommand::Import(import_args) => {
+            assert!(import_args.continue_on_error);
         }
         _ => panic!("expected import command"),
     }
@@ -3314,10 +3331,8 @@ fn build_export_inspection_summary_reports_structure_and_datasources() {
     assert_eq!(summary.orphaned_datasources[0].uid, "unused-main");
     assert_eq!(summary.mixed_dashboards[0].uid, "mixed");
 
-    let summary_json = serde_json::to_value(super::build_export_inspection_summary_document(
-        &summary,
-    ))
-    .unwrap();
+    let summary_json =
+        serde_json::to_value(super::build_export_inspection_summary_document(&summary)).unwrap();
     assert_eq!(summary_json["summary"]["dashboardCount"], Value::from(2));
     assert_eq!(summary_json["summary"]["folderCount"], Value::from(2));
     assert_eq!(summary_json["summary"]["queryCount"], Value::from(3));
@@ -4796,6 +4811,7 @@ fn import_dashboards_with_client_imports_discovered_files() {
         no_header: false,
         output_columns: Vec::new(),
         progress: false,
+        continue_on_error: false,
         verbose: false,
     };
     let mut posted_payloads = Vec::new();
@@ -4813,6 +4829,138 @@ fn import_dashboards_with_client_imports_discovered_files() {
     assert_eq!(posted_payloads.len(), 1);
     assert_eq!(posted_payloads[0]["folderUid"], "new-folder");
     assert_eq!(posted_payloads[0]["dashboard"]["id"], Value::Null);
+}
+
+#[test]
+fn import_dashboards_with_request_continues_on_parse_error_with_continue_on_error_enabled() {
+    let temp = tempdir().unwrap();
+    let raw_dir = temp.path().join("raw");
+    fs::create_dir_all(&raw_dir).unwrap();
+    fs::write(raw_dir.join("a-bad.json"), "not-json".as_bytes()).unwrap();
+    fs::write(
+        raw_dir.join("z-good.json"),
+        serde_json::to_string_pretty(&json!({
+            "dashboard": {"id": 7, "uid": "good", "title": "CPU"},
+            "meta": {"folderUid": "general"}
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let mut args = make_import_args(raw_dir.clone());
+    args.dry_run = true;
+    args.continue_on_error = true;
+    let mut calls = 0usize;
+
+    let error = import_dashboards_with_request(
+        |_method, path, _params, _payload| {
+            calls += 1;
+            if path == "/api/dashboards/uid/good" {
+                Ok(Some(json!({
+                    "dashboard": {"uid": "good"}
+                })))
+            } else {
+                Err(super::message(format!("unexpected path {path}")))
+            }
+        },
+        &args,
+    )
+    .unwrap_err();
+
+    assert_eq!(calls, 1);
+    assert!(error.to_string().contains("1"));
+    assert!(error.to_string().contains("dashboard file"));
+    assert!(error.to_string().contains("--continue-on-error"));
+}
+
+#[test]
+fn import_dashboards_with_request_fails_fast_without_continue_on_error_on_parse_error() {
+    let temp = tempdir().unwrap();
+    let raw_dir = temp.path().join("raw");
+    fs::create_dir_all(&raw_dir).unwrap();
+    fs::write(raw_dir.join("a-bad.json"), "not-json".as_bytes()).unwrap();
+    fs::write(
+        raw_dir.join("z-good.json"),
+        serde_json::to_string_pretty(&json!({
+            "dashboard": {"id": 7, "uid": "good", "title": "CPU"}
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let mut args = make_import_args(raw_dir.clone());
+    args.dry_run = true;
+    args.continue_on_error = false;
+    let mut calls = 0usize;
+
+    let error = import_dashboards_with_request(
+        |_method, _path, _params, _payload| {
+            calls += 1;
+            Ok(None)
+        },
+        &args,
+    )
+    .unwrap_err();
+
+    assert_eq!(calls, 0);
+    assert!(error
+        .to_string()
+        .contains("JSON error: expected ident at line 1 column 2"));
+}
+
+#[test]
+fn import_dashboards_with_request_continues_on_api_error_and_reports_failed_count() {
+    let temp = tempdir().unwrap();
+    let raw_dir = temp.path().join("raw");
+    fs::create_dir_all(&raw_dir).unwrap();
+    fs::write(
+        raw_dir.join("alpha.json"),
+        serde_json::to_string_pretty(&json!({
+            "dashboard": {"id": 7, "uid": "alpha", "title": "Alpha"}
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        raw_dir.join("zeta.json"),
+        serde_json::to_string_pretty(&json!({
+            "dashboard": {"id": 8, "uid": "zeta", "title": "Zeta"}
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let mut args = make_import_args(raw_dir.clone());
+    args.continue_on_error = true;
+    args.dry_run = false;
+    let mut calls = Vec::new();
+
+    let error = import_dashboards_with_request(
+        |_method, path, _params, payload| {
+            calls.push(path.to_string());
+            let payload_object = payload
+                .and_then(|value| value.as_object())
+                .and_then(|value| value.get("dashboard"))
+                .and_then(|value| value.as_object());
+            let uid = payload_object
+                .and_then(|dashboard| dashboard.get("uid"))
+                .and_then(Value::as_str)
+                .unwrap_or("");
+            if path == "/api/dashboards/db" && uid == "zeta" {
+                Err(api_response(
+                    500,
+                    format!("http://127.0.0.1:3000{path}"),
+                    "{\"message\":\"boom\"}",
+                ))
+            } else {
+                Ok(Some(json!({"status": "success"})))
+            }
+        },
+        &args,
+    )
+    .unwrap_err();
+
+    assert_eq!(calls, vec!["/api/dashboards/db", "/api/dashboards/db"]);
+    assert!(error.to_string().contains(
+        "Dashboard import encountered 1 failed dashboard file(s) with --continue-on-error"
+    ));
 }
 
 #[test]
@@ -4839,6 +4987,7 @@ fn import_dashboards_with_org_id_requires_basic_auth() {
         no_header: false,
         output_columns: Vec::new(),
         progress: false,
+        continue_on_error: false,
         verbose: false,
     };
 
@@ -4940,12 +5089,16 @@ fn import_dashboards_with_create_missing_orgs_during_dry_run_previews_org_creati
     .unwrap();
 
     assert_eq!(count, 0);
-    assert_eq!(admin_calls, vec![("GET".to_string(), "/api/orgs".to_string())]);
+    assert_eq!(
+        admin_calls,
+        vec![("GET".to_string(), "/api/orgs".to_string())]
+    );
     assert!(import_calls.is_empty());
 }
 
 #[test]
-fn import_dashboards_with_use_export_org_dry_run_filters_selected_orgs_without_creating_missing_targets() {
+fn import_dashboards_with_use_export_org_dry_run_filters_selected_orgs_without_creating_missing_targets(
+) {
     let temp = tempdir().unwrap();
     let export_root = temp.path().join("exports");
     let org_two_raw = export_root.join("org_2_Org_Two").join("raw");
@@ -5014,7 +5167,11 @@ fn import_dashboards_with_use_export_org_dry_run_filters_selected_orgs_without_c
             }
         },
         |target_org_id, scoped_args| {
-            import_calls.push((target_org_id, scoped_args.import_dir.clone(), scoped_args.org_id));
+            import_calls.push((
+                target_org_id,
+                scoped_args.import_dir.clone(),
+                scoped_args.org_id,
+            ));
             Ok(0)
         },
         |_target_org_id, scoped_args| {
@@ -5135,7 +5292,11 @@ fn build_routed_import_dry_run_json_with_request_reports_orgs_and_dashboards() {
                         "".to_string(),
                         "".to_string(),
                         "".to_string(),
-                        scoped_args.import_dir.join("dash.json").display().to_string(),
+                        scoped_args
+                            .import_dir
+                            .join("dash.json")
+                            .display()
+                            .to_string(),
                     ]],
                     skipped_missing_count: 0,
                     skipped_folder_mismatch_count: 0,
@@ -5288,6 +5449,7 @@ fn build_import_auth_context_adds_org_header_for_basic_auth_imports() {
         no_header: false,
         output_columns: Vec::new(),
         progress: false,
+        continue_on_error: false,
         verbose: false,
     };
 
@@ -5370,16 +5532,25 @@ fn import_dashboards_with_use_export_org_filters_selected_orgs_and_creates_missi
                 (reqwest::Method::GET, "/api/orgs") => Ok(Some(json!([]))),
                 (reqwest::Method::POST, "/api/orgs") => {
                     assert_eq!(
-                        payload.and_then(|value| value.as_object()).unwrap().get("name"),
+                        payload
+                            .and_then(|value| value.as_object())
+                            .unwrap()
+                            .get("name"),
                         Some(&json!("Org Two"))
                     );
                     Ok(Some(json!({"orgId": "9"})))
                 }
-                _ => Err(super::message(format!("unexpected request {method} {path}"))),
+                _ => Err(super::message(format!(
+                    "unexpected request {method} {path}"
+                ))),
             }
         },
         |target_org_id, scoped_args| {
-            import_calls.push((target_org_id, scoped_args.import_dir.clone(), scoped_args.org_id));
+            import_calls.push((
+                target_org_id,
+                scoped_args.import_dir.clone(),
+                scoped_args.org_id,
+            ));
             assert!(!scoped_args.use_export_org);
             assert!(scoped_args.only_org_id.is_empty());
             assert!(!scoped_args.create_missing_orgs);
@@ -5407,10 +5578,7 @@ fn import_dashboards_with_use_export_org_filters_selected_orgs_and_creates_missi
             ("POST".to_string(), "/api/orgs".to_string()),
         ]
     );
-    assert_eq!(
-        import_calls,
-        vec![(9, org_two_raw.clone(), Some(9))]
-    );
+    assert_eq!(import_calls, vec![(9, org_two_raw.clone(), Some(9))]);
 }
 
 #[test]
@@ -5475,6 +5643,7 @@ fn import_dashboards_rejects_mismatched_export_org_with_explicit_org_id() {
         no_header: false,
         output_columns: Vec::new(),
         progress: false,
+        continue_on_error: false,
         verbose: false,
     };
 
@@ -5548,6 +5717,7 @@ fn import_dashboards_rejects_mismatched_export_org_with_current_token_org() {
         no_header: false,
         output_columns: Vec::new(),
         progress: false,
+        continue_on_error: false,
         verbose: false,
     };
 
@@ -5627,6 +5797,7 @@ fn import_dashboards_allows_matching_export_org_with_current_org_lookup() {
         no_header: false,
         output_columns: Vec::new(),
         progress: false,
+        continue_on_error: false,
         verbose: false,
     };
     let mut calls = Vec::new();
@@ -5700,6 +5871,7 @@ fn import_dashboards_with_dry_run_skips_post_requests() {
         no_header: false,
         output_columns: Vec::new(),
         progress: false,
+        continue_on_error: false,
         verbose: false,
     };
 
@@ -5758,6 +5930,7 @@ fn import_dashboards_rejects_unsupported_export_schema_version() {
         no_header: false,
         output_columns: Vec::new(),
         progress: false,
+        continue_on_error: false,
         verbose: false,
     };
 
@@ -5824,6 +5997,7 @@ fn import_dashboards_with_update_existing_only_skips_missing_dashboards() {
         no_header: false,
         output_columns: Vec::new(),
         progress: false,
+        continue_on_error: false,
         verbose: false,
     };
     let mut posted_payloads = Vec::new();
@@ -5900,6 +6074,7 @@ fn import_dashboards_with_update_existing_only_table_marks_missing_dashboards_as
         no_header: true,
         output_columns: Vec::new(),
         progress: false,
+        continue_on_error: false,
         verbose: false,
     };
 
@@ -5968,6 +6143,7 @@ fn import_dashboards_replace_existing_preserves_destination_folder() {
         no_header: false,
         output_columns: Vec::new(),
         progress: false,
+        continue_on_error: false,
         verbose: false,
     };
     let mut posted_payloads = Vec::new();
@@ -6041,6 +6217,7 @@ fn import_dashboards_rejects_ensure_folders_with_import_folder_override() {
         no_header: false,
         output_columns: Vec::new(),
         progress: false,
+        continue_on_error: false,
         verbose: false,
     };
 
@@ -6099,6 +6276,7 @@ fn import_dashboards_rejects_matching_folder_path_with_import_folder_uid() {
         no_header: false,
         output_columns: Vec::new(),
         progress: false,
+        continue_on_error: false,
         verbose: false,
     };
 
@@ -6223,6 +6401,7 @@ fn import_dashboards_with_matching_folder_path_skips_live_update_mismatch() {
         no_header: false,
         output_columns: Vec::new(),
         progress: false,
+        continue_on_error: false,
         verbose: false,
     };
     let mut posted_payloads = Vec::new();
@@ -6291,6 +6470,7 @@ fn import_dashboards_rejects_json_without_dry_run() {
         no_header: false,
         output_columns: Vec::new(),
         progress: false,
+        continue_on_error: false,
         verbose: false,
     };
 
@@ -6341,6 +6521,7 @@ fn import_dashboards_reject_output_columns_without_table_output() {
         no_header: false,
         output_columns: vec!["uid".to_string()],
         progress: false,
+        continue_on_error: false,
         verbose: false,
     };
 
@@ -6424,6 +6605,7 @@ fn import_dashboards_with_ensure_folders_creates_missing_folder_chain_from_raw_i
         no_header: false,
         output_columns: Vec::new(),
         progress: false,
+        continue_on_error: false,
         verbose: false,
     };
     let mut calls = Vec::new();
@@ -6555,6 +6737,7 @@ fn import_dashboards_with_dry_run_and_ensure_folders_checks_folder_inventory() {
         no_header: false,
         output_columns: Vec::new(),
         progress: false,
+        continue_on_error: false,
         verbose: false,
     };
     let mut calls = Vec::new();
@@ -6648,6 +6831,7 @@ fn import_dashboards_with_ensure_folders_requires_inventory_manifest() {
         no_header: false,
         output_columns: Vec::new(),
         progress: false,
+        continue_on_error: false,
         verbose: false,
     };
 
