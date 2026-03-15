@@ -1455,15 +1455,29 @@ class ExporterTests(unittest.TestCase):
         self.assertEqual(type(transport).__name__, expected)
 
     def test_build_json_http_transport_supports_httpx(self):
-        transport = exporter.build_json_http_transport(
-            base_url="http://127.0.0.1:3000",
-            headers={},
-            timeout=30,
-            verify_ssl=False,
-            transport_name="httpx",
-        )
+        if transport_module.httpx_is_available():
+            transport = exporter.build_json_http_transport(
+                base_url="http://127.0.0.1:3000",
+                headers={},
+                timeout=30,
+                verify_ssl=False,
+                transport_name="httpx",
+            )
 
-        self.assertEqual(type(transport).__name__, "HttpxJsonHttpTransport")
+            self.assertEqual(type(transport).__name__, "HttpxJsonHttpTransport")
+            return
+
+        with self.assertRaisesRegex(
+            transport_module.HttpTransportError,
+            "httpx is not installed",
+        ):
+            exporter.build_json_http_transport(
+                base_url="http://127.0.0.1:3000",
+                headers={},
+                timeout=30,
+                verify_ssl=False,
+                transport_name="httpx",
+            )
 
     def test_http2_capability_helper_returns_boolean(self):
         self.assertIsInstance(transport_module.http2_is_available(), bool)

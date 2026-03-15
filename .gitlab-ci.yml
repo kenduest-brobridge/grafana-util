@@ -49,7 +49,7 @@ else:
 print(f"version-policy OK: python={python_version} rust={rust_version} branch={branch or '-'} tag={tag or '-'}")
 '
 
-python-static-analysis:
+python-quality-base:
   stage: quality
   image: python:3.12-slim
   rules:
@@ -58,13 +58,22 @@ python-static-analysis:
     - if: '$CI_COMMIT_BRANCH == "main"'
   before_script:
     - python3 -m pip install --upgrade pip
-    - python3 -m pip install requests black mypy ruff
+    - python3 -m pip install . black mypy ruff
   script:
-    # 僅執行編譯檢查與 Lint，不執行 unittest
-    - python3 -m compileall -q grafana_utils python
-    - python3 -m ruff check grafana_utils python
-    - python3 -m mypy grafana_utils python
-    - python3 -m black --check grafana_utils python
+    - make quality-python
+
+python-quality-http2:
+  stage: quality
+  image: python:3.12-slim
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/'
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  before_script:
+    - python3 -m pip install --upgrade pip
+    - python3 -m pip install '.[http2]' black mypy ruff
+  script:
+    - make quality-python
 
 rust-static-analysis:
   stage: quality
@@ -86,7 +95,8 @@ python-package-preview:
   image: python:3.12-slim
   needs:
     - version-policy
-    - python-static-analysis
+    - python-quality-base
+    - python-quality-http2
   rules:
     - if: '$CI_COMMIT_BRANCH == "dev"'
     - if: '$CI_COMMIT_BRANCH == "main"'
@@ -108,7 +118,8 @@ python-package-release:
   image: python:3.12-slim
   needs:
     - version-policy
-    - python-static-analysis
+    - python-quality-base
+    - python-quality-http2
   rules:
     - if: '$CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/'
   before_script:

@@ -12,6 +12,13 @@ Historical note:
 - Current Update: Switched shared user-guide examples to the neutral `grafana-util ...` / `grafana-access-utils ...` command shape, refreshed unified CLI help text to describe legacy entrypoints as compatibility forms without runtime warnings, expanded datasource root/subcommand help examples, and repaired the malformed Markdown tables plus terminology in the Traditional Chinese guide.
 - Result: Operators now see one shared CLI shape in the public guides, datasource help output includes actionable examples at both the group and subcommand level, and the compatibility-path wording stays visible in help/docs without changing legacy command behavior.
 
+## 2026-03-15 - Task: Split Python CI Dependency Modes And Refresh GitHub Actions Runtimes
+- State: Done
+- Scope: `.gitlab-ci.yml`, `.github/workflows/ci.yml`, `tests/test_python_dashboard_cli.py`, `tests/test_python_alert_cli.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: GitLab only ran one Python job with hand-written static-analysis commands and no explicit split between base dependency coverage and the optional `http2` extra. The Python quality gate could therefore miss either the base-install fallback contract or the `httpx` path depending on how dependencies were installed in CI. GitHub Actions also still pinned `actions/checkout@v4` and `actions/setup-python@v5`, which triggered the Node 20 deprecation warning ahead of the forced Node 24 runtime switch.
+- Current Update: Replaced the single GitLab Python static-analysis job with two `make quality-python` jobs, one installing the base package and one installing `.[http2]`, while keeping package jobs gated on both Python dependency modes. Tightened the two transport tests so explicit `transport_name=\"httpx\"` succeeds only when `httpx` is installed and otherwise asserts the documented `HttpTransportError`. Updated GitHub Actions to `actions/checkout@v5` and `actions/setup-python@v6` so the workflow tracks the Node 24 action runtime line instead of the deprecated Node 20 line.
+- Result: GitLab now exercises the Python quality gate under both supported dependency contracts, base installs still validate the `requests` fallback path, extra-enabled installs validate the `httpx` transport path without treating `httpx` as a hidden required dependency, and GitHub Actions no longer relies on deprecated Node 20 action majors.
+
 ## 2026-03-15 - Task: Add Python Datasource Org-Scoped Export And Routed Import
 - State: Done
 - Scope: `grafana_utils/datasource/parser.py`, `grafana_utils/datasource_cli.py`, `grafana_utils/datasource/workflows.py`, `tests/test_python_datasource_cli.py`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
