@@ -55,11 +55,15 @@ Rust crate 提供四個 CLI domain 的核心執行能力：
 - `rust/src/access.rs`
   - 處理 access 命令入口與巢狀 dispatch（user/team/service-account）。
   - `run_access_cli_with_request` 可注入 request 函式，這是測試時 decouple transport 的主要入口。
-  - `run_access_cli` 主要負責 normalize 與 client 注入。
+  - `run_access_cli` 主要負責 normalize，並透過小型 helper 從各 command 擷取 `common` 設定後建立正確 client，再交給 request-injection runner。
 
 - `rust/src/datasource.rs`
   - 管理 list/export/import/diff 四類流程與輸出模式（table/csv/json）。
   - `run_datasource_cli` 先 normalize 再 build client，接著進入對應 handler。
+
+- `rust/src/sync.rs`
+  - 管理 local/document-only `sync` namespace，包含 summary/plan/review/apply/preflight/bundle-preflight。
+  - 穩定 sync contract 匯入應以 `crate::sync_contracts` 為主；`sync_workbench` 只保留相容用途。
 
 ### 2.4 Domain 子模組（實作重點）
 
@@ -67,6 +71,7 @@ Rust crate 提供四個 CLI domain 的核心執行能力：
 - `rust/src/alert_*`：`alert_cli_defs`, `alert_client`, `alert_list`。
 - `rust/src/access_*`：`access_cli_defs`, `access_render`, `access_user`, `access_team`, `access_service_account`, `access_pending_delete`。
 - `rust/src/datasource_diff.rs`：diff 合併/欄位對齊與結果摘要模型。
+- `rust/src/sync_workbench.rs`：`crate::sync_contracts` 背後的相容實作檔，保留舊路徑但不再作為首選匯入名稱。
 - `rust/src/http.rs`：HTTP transport 實作、query/url 建構、錯誤對映。
 - `rust/src/common.rs`：錯誤型別、訊息、解析工具與共用 helper。
 

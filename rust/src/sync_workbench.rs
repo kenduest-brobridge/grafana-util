@@ -1,8 +1,11 @@
-//! Staged declarative sync resource helpers.
+//! Compatibility implementation behind the canonical `crate::sync_contracts` path.
 //!
 //! Purpose:
-//! - Normalize reviewable sync resource specs before any Rust CLI wiring lands.
+//! - Normalize reviewable sync resource specs for staged Rust sync planning.
 //! - Keep staged sync summary contracts import-safe and free of Grafana I/O.
+//!
+//! New stable imports should prefer `crate::sync_contracts`. This module name is
+//! kept to avoid breaking older internal paths and existing change history.
 
 use crate::common::{message, Result};
 use serde::Serialize;

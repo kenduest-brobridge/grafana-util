@@ -1,4 +1,4 @@
-//! Unwired bundle-level preflight helpers.
+//! Staged bundle-level preflight helpers.
 //!
 //! Purpose:
 //! - Stage one combined preflight view across dashboards, datasources, folders,
@@ -9,7 +9,7 @@ use crate::alert_sync::assess_alert_sync_specs;
 use crate::common::{message, Result};
 use crate::datasource_provider::{build_provider_plan, iter_provider_names, summarize_provider_plan};
 use crate::sync_preflight::build_sync_preflight_document;
-use crate::sync_workbench::build_sync_summary_document;
+use crate::sync_contracts::build_sync_summary_document;
 use serde_json::{json, Map, Value};
 use std::collections::BTreeSet;
 

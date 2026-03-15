@@ -3065,6 +3065,48 @@ class AccessCliTests(unittest.TestCase):
         self.assertEqual(result, 11)
         diff_service_accounts.assert_called_once_with(args, client)
 
+    def test_dispatch_access_command_routes_service_account_token_commands(self):
+        client = FakeAccessClient()
+        args = argparse.Namespace(
+            resource="service-account",
+            command="token",
+            token_command="add",
+            service_account="robot",
+            name="nightly",
+        )
+        with mock.patch(
+            "grafana_utils.access.workflows.add_service_account_token_with_client",
+            return_value=21,
+        ) as add_token:
+            result = access_utils.dispatch_access_command(args, client, "basic")
+        self.assertEqual(result, 21)
+        add_token.assert_called_once_with(args, client)
+
+        args = argparse.Namespace(
+            resource="service-account",
+            command="token",
+            token_command="delete",
+            service_account="robot",
+            token="nightly",
+        )
+        with mock.patch(
+            "grafana_utils.access.workflows.validate_service_account_token_delete_auth"
+        ) as validate_delete, mock.patch(
+            "grafana_utils.access.workflows.delete_service_account_token_with_client",
+            return_value=22,
+        ) as delete_token:
+            result = access_utils.dispatch_access_command(args, client, "basic")
+        self.assertEqual(result, 22)
+        validate_delete.assert_called_once_with("basic")
+        delete_token.assert_called_once_with(args, client)
+
+    def test_dispatch_access_command_rejects_unsupported_command(self):
+        client = FakeAccessClient()
+        args = argparse.Namespace(resource="team", command="archive")
+        with self.assertRaises(access_utils.GrafanaError) as ctx:
+            access_utils.dispatch_access_command(args, client, "basic")
+        self.assertEqual(str(ctx.exception), "Unsupported command.")
+
     def test_main_returns_one_on_auth_error(self):
         stderr = io.StringIO()
         with redirect_stderr(stderr):

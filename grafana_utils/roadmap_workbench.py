@@ -1,9 +1,8 @@
-"""Unwired workbench for roadmap features that are not ready for CLI exposure.
+"""Compatibility implementation for the canonical `roadmap_contracts` module.
 
-This module exists to let roadmap work start in one isolated file before the
-implementation is threaded through the current dashboard/datasource/alert
-command paths. Keep it import-safe and side-effect free until the public
-contract is ready.
+The file name is kept for backward-compatible imports. New code should import
+these staged dependency-graph and promotion/preflight helpers from
+`grafana_utils.roadmap_contracts`.
 """
 
 from dataclasses import dataclass

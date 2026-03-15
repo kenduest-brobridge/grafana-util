@@ -29,7 +29,7 @@ from .alert_sync_workbench import (
     assess_alert_sync_specs,
     render_alert_sync_assessment_text,
 )
-from .bundle_preflight_workbench import (
+from .bundle_preflight import (
     build_bundle_preflight_document,
     render_bundle_preflight_text,
 )

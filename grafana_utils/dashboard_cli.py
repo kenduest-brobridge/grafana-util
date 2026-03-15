@@ -112,6 +112,7 @@ from .dashboards.import_runtime import (
     build_import_workflow_deps as build_import_workflow_deps_from_runtime,
 )
 from .dashboards.inspection_runtime import (
+    InspectionWorkflowDeps,
     build_inspection_workflow_deps as build_inspection_workflow_deps_from_runtime,
     iter_dashboard_panels as iter_dashboard_panels_from_runtime,
 )
@@ -173,7 +174,7 @@ from .dashboards.inspection_workflow import (
     materialize_live_inspection_export as run_materialize_live_inspection_export,
 )
 from .dashboards.inspection_workflow import run_inspect_export, run_inspect_live
-from .roadmap_workbench import (
+from .roadmap_contracts import (
     build_preflight_check_document,
     build_promotion_plan_document,
     render_preflight_check_text,
@@ -1357,7 +1358,7 @@ def list_data_sources(args: argparse.Namespace) -> int:
     return run_list_data_sources(args, build_client=build_client)
 
 
-def _build_inspection_workflow_deps() -> dict[str, Any]:
+def _build_inspection_workflow_deps() -> InspectionWorkflowDeps:
     return build_inspection_workflow_deps_from_runtime(
         {
             "DATASOURCE_INVENTORY_FILENAME": DATASOURCE_INVENTORY_FILENAME,

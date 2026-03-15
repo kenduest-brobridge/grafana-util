@@ -9,7 +9,8 @@ use super::{
     import_service_accounts_with_request, import_teams_with_request, list_orgs_with_request,
     list_service_accounts_command_with_request, list_teams_command_with_request,
     list_users_with_request, modify_org_with_request, modify_team_with_request,
-    modify_user_with_request, parse_cli_from, run_access_cli_with_request, AccessCommand,
+    modify_user_with_request, org_command_common, parse_cli_from, run_access_cli_with_request,
+    service_account_command_common, team_command_common, user_command_common, AccessCommand,
     CommonCliArgs, DryRunOutputFormat, OrgCommand, OrgDeleteArgs,
     OrgListArgs, OrgModifyArgs, Scope, ServiceAccountAddArgs, ServiceAccountCommand,
     ServiceAccountDeleteArgs, ServiceAccountDiffArgs, ServiceAccountExportArgs,
@@ -109,6 +110,81 @@ fn parse_cli_supports_user_list() {
             assert!(!list_args.json);
         }
         _ => panic!("expected user list"),
+    }
+}
+
+#[test]
+fn command_common_helpers_return_expected_common_args() {
+    let user_args = parse_cli_from([
+        "grafana-access-utils",
+        "user",
+        "list",
+        "--url",
+        "http://user.example",
+        "--token",
+        "abc",
+    ]);
+    match &user_args.command {
+        AccessCommand::User { command } => {
+            assert_eq!(user_command_common(command).url, "http://user.example");
+        }
+        _ => panic!("expected user command"),
+    }
+
+    let team_args = parse_cli_from([
+        "grafana-access-utils",
+        "team",
+        "delete",
+        "--url",
+        "http://team.example",
+        "--name",
+        "platform",
+        "--yes",
+    ]);
+    match &team_args.command {
+        AccessCommand::Team { command } => {
+            assert_eq!(team_command_common(command).url, "http://team.example");
+        }
+        _ => panic!("expected team command"),
+    }
+
+    let org_args = parse_cli_from([
+        "grafana-access-utils",
+        "org",
+        "list",
+        "--url",
+        "http://org.example",
+    ]);
+    match &org_args.command {
+        AccessCommand::Org { command } => {
+            assert_eq!(org_command_common(command).url, "http://org.example");
+        }
+        _ => panic!("expected org command"),
+    }
+}
+
+#[test]
+fn service_account_common_helper_supports_nested_token_commands() {
+    let args = parse_cli_from([
+        "grafana-access-utils",
+        "service-account",
+        "token",
+        "add",
+        "--url",
+        "http://service-account.example",
+        "--name",
+        "automation",
+        "--token-name",
+        "ci-token",
+    ]);
+    match &args.command {
+        AccessCommand::ServiceAccount { command } => {
+            assert_eq!(
+                service_account_command_common(command).url,
+                "http://service-account.example"
+            );
+        }
+        _ => panic!("expected service-account command"),
     }
 }
 

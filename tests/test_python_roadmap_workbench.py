@@ -1,6 +1,6 @@
 import unittest
 
-from grafana_utils import roadmap_workbench
+from grafana_utils import roadmap_contracts as roadmap_workbench
 
 
 class RoadmapWorkbenchTests(unittest.TestCase):

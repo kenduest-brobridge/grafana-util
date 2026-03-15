@@ -5,10 +5,8 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-MODULE_PATH = REPO_ROOT / "grafana_utils" / "bundle_preflight_workbench.py"
-bundle_preflight_workbench = importlib.import_module(
-    "grafana_utils.bundle_preflight_workbench"
-)
+MODULE_PATH = REPO_ROOT / "grafana_utils" / "bundle_preflight.py"
+bundle_preflight_workbench = importlib.import_module("grafana_utils.bundle_preflight")
 GrafanaError = importlib.import_module("grafana_utils.dashboard_cli").GrafanaError
 
 

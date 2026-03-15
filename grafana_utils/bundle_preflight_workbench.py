@@ -1,13 +1,4 @@
-"""Unwired bundle-level preflight helpers.
-
-Purpose:
-- Stage one combined preflight view across dashboards, datasources, and alerts.
-- Reuse existing staged contracts without wiring them into current CLIs.
-
-Caveats:
-- This module is import-safe and side-effect free.
-- It consumes staged documents and explicit availability hints only.
-"""
+"""Compatibility wrapper for the canonical `bundle_preflight` module."""
 
 from typing import Mapping
 
@@ -21,7 +12,7 @@ from .datasource_secret_workbench import (
     collect_secret_placeholders,
     iter_secret_placeholder_names,
 )
-from .roadmap_workbench import build_preflight_check_document, build_promotion_plan_document
+from .roadmap_contracts import build_preflight_check_document, build_promotion_plan_document
 from .sync_preflight_workbench import build_sync_preflight_document
 
 BUNDLE_PREFLIGHT_KIND = "grafana-utils-bundle-preflight"

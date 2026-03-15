@@ -16,6 +16,14 @@ pub mod sync;
 pub mod sync_bundle_preflight;
 pub mod sync_preflight;
 pub mod sync_workbench;
+pub mod sync_contracts {
+    //! Canonical staged sync contract re-exports.
+    //!
+    //! New stable code should prefer `crate::sync_contracts`. The older
+    //! `crate::sync_workbench` path remains as a compatibility module.
+
+    pub use super::sync_workbench::*;
+}
 
 #[cfg(test)]
 mod bundle_preflight_rust_tests;

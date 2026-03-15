@@ -10,6 +10,16 @@ from tests.test_python_dashboard_cli import FakeDashboardWorkflowClient, build_e
 
 
 class DashboardInspectionTests(unittest.TestCase):
+    def test_inspection_runtime_builds_explicit_dependency_object(self):
+        deps = exporter._build_inspection_workflow_deps()
+
+        self.assertFalse(isinstance(deps, dict))
+        self.assertTrue(callable(deps.build_export_inspection_document))
+        self.assertTrue(callable(deps.build_export_inspection_report_document))
+        self.assertTrue(callable(deps.parse_report_columns))
+        self.assertIs(deps["GrafanaError"], exporter.GrafanaError)
+        self.assertEqual(deps["RAW_EXPORT_SUBDIR"], exporter.RAW_EXPORT_SUBDIR)
+
     def write_summary_fixture(
         self,
         import_dir,

@@ -17,7 +17,7 @@ use crate::sync_bundle_preflight::{
 use crate::sync_preflight::{
     build_sync_preflight_document, render_sync_preflight_text, SYNC_PREFLIGHT_KIND,
 };
-use crate::sync_workbench::{
+use crate::sync_contracts::{
     build_sync_apply_intent_document, build_sync_plan_document, build_sync_summary_document,
 };
 

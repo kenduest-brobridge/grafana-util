@@ -2937,83 +2937,106 @@ def delete_team_with_client(args, client):
 
 
 
+def _validate_noop(_args, _auth_mode):
+    return None
+
+
+def _validate_org_command(_args, auth_mode):
+    validate_org_auth(auth_mode)
+
+
+def _validate_user_list_command(args, auth_mode):
+    validate_user_list_auth(args, auth_mode)
+
+
+def _validate_user_add_command(_args, auth_mode):
+    validate_user_add_auth(auth_mode)
+
+
+def _validate_user_modify_command(_args, auth_mode):
+    validate_user_modify_auth(auth_mode)
+
+
+def _validate_user_delete_command(args, auth_mode):
+    validate_user_delete_auth(args, auth_mode)
+
+
+def _validate_team_delete_command(_args, auth_mode):
+    validate_team_delete_auth(auth_mode)
+
+
+def _validate_service_account_delete_command(_args, auth_mode):
+    validate_service_account_delete_auth(auth_mode)
+
+
+def _validate_service_account_token_delete_command(_args, auth_mode):
+    validate_service_account_token_delete_auth(auth_mode)
+
+
+ACCESS_COMMAND_DISPATCH = {
+    ("org", "list", None): ("_validate_org_command", "list_orgs_with_client"),
+    ("org", "add", None): ("_validate_org_command", "add_org_with_client"),
+    ("org", "modify", None): ("_validate_org_command", "modify_org_with_client"),
+    ("org", "delete", None): ("_validate_org_command", "delete_org_with_client"),
+    ("org", "export", None): ("_validate_org_command", "export_orgs_with_client"),
+    ("org", "import", None): ("_validate_org_command", "import_orgs_with_client"),
+    ("user", "list", None): ("_validate_user_list_command", "list_users_with_client"),
+    ("user", "export", None): ("_validate_noop", "export_users_with_client"),
+    ("user", "import", None): ("_validate_noop", "import_users_with_client"),
+    ("user", "add", None): ("_validate_user_add_command", "add_user_with_client"),
+    ("user", "modify", None): ("_validate_user_modify_command", "modify_user_with_client"),
+    ("user", "delete", None): ("_validate_user_delete_command", "delete_user_with_client"),
+    ("user", "diff", None): ("_validate_user_list_command", "diff_users_with_client"),
+    ("team", "list", None): ("_validate_noop", "list_teams_with_client"),
+    ("team", "add", None): ("_validate_noop", "add_team_with_client"),
+    ("team", "modify", None): ("_validate_noop", "modify_team_with_client"),
+    ("team", "delete", None): ("_validate_team_delete_command", "delete_team_with_client"),
+    ("team", "diff", None): ("_validate_noop", "diff_teams_with_client"),
+    ("team", "export", None): ("_validate_noop", "export_teams_with_client"),
+    ("team", "import", None): ("_validate_noop", "import_teams_with_client"),
+    ("service-account", "list", None): ("_validate_noop", "list_service_accounts_with_client"),
+    ("service-account", "add", None): ("_validate_noop", "add_service_account_with_client"),
+    ("service-account", "export", None): (
+        "_validate_noop",
+        "export_service_accounts_with_client",
+    ),
+    ("service-account", "import", None): (
+        "_validate_noop",
+        "import_service_accounts_with_client",
+    ),
+    ("service-account", "diff", None): (
+        "_validate_noop",
+        "diff_service_accounts_with_client",
+    ),
+    ("service-account", "delete", None): (
+        "_validate_service_account_delete_command",
+        "delete_service_account_with_client",
+    ),
+    ("service-account", "token", "add"): (
+        "_validate_noop",
+        "add_service_account_token_with_client",
+    ),
+    ("service-account", "token", "delete"): (
+        "_validate_service_account_token_delete_command",
+        "delete_service_account_token_with_client",
+    ),
+}
+
+
+def _build_access_command_key(args):
+    if (
+        getattr(args, "resource", None) == "service-account"
+        and getattr(args, "command", None) == "token"
+    ):
+        return ("service-account", "token", getattr(args, "token_command", None))
+    return (getattr(args, "resource", None), getattr(args, "command", None), None)
+
+
 def dispatch_access_command(args, client, auth_mode):
-    if args.resource == "org" and args.command == "list":
-        validate_org_auth(auth_mode)
-        return list_orgs_with_client(args, client)
-    if args.resource == "org" and args.command == "add":
-        validate_org_auth(auth_mode)
-        return add_org_with_client(args, client)
-    if args.resource == "org" and args.command == "modify":
-        validate_org_auth(auth_mode)
-        return modify_org_with_client(args, client)
-    if args.resource == "org" and args.command == "delete":
-        validate_org_auth(auth_mode)
-        return delete_org_with_client(args, client)
-    if args.resource == "org" and args.command == "export":
-        validate_org_auth(auth_mode)
-        return export_orgs_with_client(args, client)
-    if args.resource == "org" and args.command == "import":
-        validate_org_auth(auth_mode)
-        return import_orgs_with_client(args, client)
-    if args.resource == "user" and args.command == "list":
-        validate_user_list_auth(args, auth_mode)
-        return list_users_with_client(args, client)
-    if args.resource == "user" and args.command == "export":
-        return export_users_with_client(args, client)
-    if args.resource == "user" and args.command == "import":
-        return import_users_with_client(args, client)
-    if args.resource == "user" and args.command == "add":
-        validate_user_add_auth(auth_mode)
-        return add_user_with_client(args, client)
-    if args.resource == "user" and args.command == "modify":
-        validate_user_modify_auth(auth_mode)
-        return modify_user_with_client(args, client)
-    if args.resource == "user" and args.command == "delete":
-        validate_user_delete_auth(args, auth_mode)
-        return delete_user_with_client(args, client)
-    if args.resource == "user" and args.command == "diff":
-        validate_user_list_auth(args, auth_mode)
-        return diff_users_with_client(args, client)
-    if args.resource == "team" and args.command == "list":
-        return list_teams_with_client(args, client)
-    if args.resource == "team" and args.command == "add":
-        return add_team_with_client(args, client)
-    if args.resource == "team" and args.command == "modify":
-        return modify_team_with_client(args, client)
-    if args.resource == "team" and args.command == "delete":
-        validate_team_delete_auth(auth_mode)
-        return delete_team_with_client(args, client)
-    if args.resource == "team" and args.command == "diff":
-        return diff_teams_with_client(args, client)
-    if args.resource == "team" and args.command == "export":
-        return export_teams_with_client(args, client)
-    if args.resource == "team" and args.command == "import":
-        return import_teams_with_client(args, client)
-    if args.resource == "service-account" and args.command == "list":
-        return list_service_accounts_with_client(args, client)
-    if args.resource == "service-account" and args.command == "add":
-        return add_service_account_with_client(args, client)
-    if args.resource == "service-account" and args.command == "export":
-        return export_service_accounts_with_client(args, client)
-    if args.resource == "service-account" and args.command == "import":
-        return import_service_accounts_with_client(args, client)
-    if args.resource == "service-account" and args.command == "diff":
-        return diff_service_accounts_with_client(args, client)
-    if args.resource == "service-account" and args.command == "delete":
-        validate_service_account_delete_auth(auth_mode)
-        return delete_service_account_with_client(args, client)
-    if (
-        args.resource == "service-account"
-        and args.command == "token"
-        and args.token_command == "add"
-    ):
-        return add_service_account_token_with_client(args, client)
-    if (
-        args.resource == "service-account"
-        and args.command == "token"
-        and args.token_command == "delete"
-    ):
-        validate_service_account_token_delete_auth(auth_mode)
-        return delete_service_account_token_with_client(args, client)
-    raise GrafanaError("Unsupported command.")
+    key = _build_access_command_key(args)
+    dispatch_entry = ACCESS_COMMAND_DISPATCH.get(key)
+    if dispatch_entry is None:
+        raise GrafanaError("Unsupported command.")
+    validator_name, handler_name = dispatch_entry
+    globals()[validator_name](args, auth_mode)
+    return globals()[handler_name](args, client)

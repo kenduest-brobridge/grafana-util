@@ -7,7 +7,7 @@
 //!   any Rust CLI or Grafana transport wiring.
 
 use crate::common::{message, Result};
-use crate::sync_workbench::{normalize_resource_specs, SyncResourceSpec};
+use crate::sync_contracts::{normalize_resource_specs, SyncResourceSpec};
 use serde::Serialize;
 use serde_json::{Map, Value};
 use std::collections::BTreeSet;
