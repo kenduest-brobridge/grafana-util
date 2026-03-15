@@ -4,15 +4,6 @@
 
 `grafana-utils` 是一套專為 Grafana 管理者與 SRE 打造的維運治理工具集。
 
-## 專案狀態
-
-本專案目前仍處於持續開發階段。
-
-- CLI 介面、作業流程與文件內容仍會持續調整與補強。
-- 歡迎回報 bug、邊界案例與實際維運情境中的使用回饋。
-- 建議透過 GitHub issues 或 pull requests 進行回報與討論。
-- 維護者：`Kenduest`
-
 ### 💡 設計初衷：為什麼需要這個工具？
 
 **「官方工具是給使用者用的，Grafana Utilities 是給管理員用的。」**
@@ -118,3 +109,12 @@ grafana-util dashboard import \
 - 支援 RHEL 8 / macOS 等作業系統。
 - Python 執行環境：3.9+。
 - Grafana 版本：支援 8.x, 9.x, 10.x+。
+
+## 專案狀態
+
+本專案目前仍處於持續開發階段。
+
+- CLI 介面、作業流程與文件內容仍會持續調整與補強。
+- 歡迎回報 bug、邊界案例與實際維運情境中的使用回饋。
+- 建議透過 GitHub issues 或 pull requests 進行回報與討論。
+- 維護者：`Kenduest`
