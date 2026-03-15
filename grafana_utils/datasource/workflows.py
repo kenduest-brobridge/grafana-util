@@ -12,6 +12,7 @@ from typing import Any, Optional
 from urllib import parse
 
 from ..clients.dashboard_client import GrafanaClient
+from ..datasource_secret_workbench import build_datasource_secret_plan
 from ..dashboard_cli import (
     GrafanaError,
     build_client as build_dashboard_client,
@@ -152,6 +153,17 @@ def load_json_document(path):
         raise GrafanaError("Failed to read %s: %s" % (path, exc))
     except ValueError as exc:
         raise GrafanaError("Invalid JSON in %s: %s" % (path, exc))
+
+
+def parse_key_value_argument(raw, label):
+    text = str(raw or "")
+    if "=" not in text:
+        raise GrafanaError("%s requires NAME=VALUE form. Invalid value: %r." % (label, raw))
+    name, value = text.split("=", 1)
+    name = str(name).strip()
+    if not name:
+        raise GrafanaError("%s requires a non-empty name. Invalid value: %r." % (label, raw))
+    return name, value
 
 
 def load_json_object_argument(value, label):
@@ -491,6 +503,10 @@ def determine_datasource_action(args, record, match):
 
 
 def build_import_payload(record, existing=None):
+    return build_import_payload_with_secrets(record, existing=existing, secure_json_data=None)
+
+
+def build_import_payload_with_secrets(record, existing=None, secure_json_data=None):
     payload = {
         "name": record.get("name") or "",
         "type": record.get("type") or "",
@@ -505,7 +521,104 @@ def build_import_payload(record, existing=None):
         datasource_id = existing.get("id")
         if datasource_id is not None:
             payload["id"] = datasource_id
+    if secure_json_data:
+        payload["secureJsonData"] = dict(secure_json_data)
     return payload
+
+
+def _load_cli_secret_values(args):
+    secret_values = {}
+    secret_file = getattr(args, "secret_file", None)
+    if secret_file:
+        data = load_json_document(Path(secret_file))
+        if not isinstance(data, dict):
+            raise GrafanaError(
+                "Datasource secret file must contain one JSON object mapping placeholder names to strings."
+            )
+        for key, value in data.items():
+            name = str(key).strip()
+            if not name:
+                raise GrafanaError("Datasource secret file contains an empty placeholder name.")
+            if not isinstance(value, str) or not value:
+                raise GrafanaError(
+                    "Datasource secret file value for %r must be a non-empty string."
+                    % name
+                )
+            secret_values[name] = value
+    for item in getattr(args, "secret", None) or []:
+        name, value = parse_key_value_argument(item, "--secret")
+        if not value:
+            raise GrafanaError(
+                "--secret values must be non-empty strings. Invalid value: %r." % item
+            )
+        secret_values[name] = value
+    return secret_values
+
+
+def _parse_secret_placeholder_assignment(raw):
+    target_and_field, placeholder_token = parse_key_value_argument(
+        raw,
+        "--secret-placeholder",
+    )
+    if ":" not in target_and_field:
+        raise GrafanaError(
+            "--secret-placeholder requires DATASOURCE:FIELD=${secret:NAME} form. Invalid value: %r."
+            % raw
+        )
+    datasource_key, field_name = target_and_field.split(":", 1)
+    datasource_key = datasource_key.strip()
+    field_name = field_name.strip()
+    if not datasource_key or not field_name:
+        raise GrafanaError(
+            "--secret-placeholder requires DATASOURCE:FIELD=${secret:NAME} form. Invalid value: %r."
+            % raw
+        )
+    return datasource_key, field_name, placeholder_token
+
+
+def _build_secret_placeholder_index(args):
+    index = {}
+    for item in getattr(args, "secret_placeholder", None) or []:
+        datasource_key, field_name, placeholder_token = _parse_secret_placeholder_assignment(
+            item
+        )
+        field_map = index.setdefault(datasource_key, {})
+        if field_name in field_map:
+            raise GrafanaError(
+                "Duplicate datasource secret placeholder for %s:%s."
+                % (datasource_key, field_name)
+            )
+        field_map[field_name] = placeholder_token
+    return index
+
+
+def resolve_import_secure_json_data(args, record):
+    placeholder_index = _build_secret_placeholder_index(args)
+    if not placeholder_index:
+        return None
+    field_placeholders = {}
+    for datasource_key in (record.get("uid") or "", record.get("name") or ""):
+        if not datasource_key:
+            continue
+        for field_name, placeholder_token in placeholder_index.get(datasource_key, {}).items():
+            if field_name in field_placeholders:
+                raise GrafanaError(
+                    "Conflicting datasource secret placeholders resolved for datasource %s field %s."
+                    % ((record.get("uid") or record.get("name") or "?"), field_name)
+                )
+            field_placeholders[field_name] = placeholder_token
+    if not field_placeholders:
+        return None
+    plan = build_datasource_secret_plan(
+        {
+            "uid": record.get("uid"),
+            "name": record.get("name"),
+            "type": record.get("type"),
+            "secureJsonDataPlaceholders": field_placeholders,
+        },
+        _load_cli_secret_values(args),
+    )
+    return dict(plan.resolved_secure_json_data)
 
 
 def parse_import_dry_run_columns(value):
@@ -1485,6 +1598,7 @@ def _run_import_datasources_for_single_org(args):
     for index, record in enumerate(bundle["records"], 1):
         match = resolve_datasource_match(record, lookups)
         action = determine_datasource_action(args, record, match)
+        secure_json_data = resolve_import_secure_json_data(args, record)
         dry_run_record = {
             "uid": record.get("uid") or "",
             "name": record.get("name") or "",
@@ -1533,7 +1647,11 @@ def _run_import_datasources_for_single_org(args):
                 "Datasource import blocked for uid=%s name=%s action=%s"
                 % (record.get("uid") or "-", record.get("name") or "-", action)
             )
-        payload = build_import_payload(record, match.get("target"))
+        payload = build_import_payload_with_secrets(
+            record,
+            existing=match.get("target"),
+            secure_json_data=secure_json_data,
+        )
         if action == "would-update":
             datasource_id = payload.get("id")
             if datasource_id is None:

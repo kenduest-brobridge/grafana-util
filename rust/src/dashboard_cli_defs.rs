@@ -10,6 +10,21 @@ use super::{
     DEFAULT_EXPORT_DIR, DEFAULT_IMPORT_MESSAGE, DEFAULT_PAGE_SIZE, DEFAULT_TIMEOUT, DEFAULT_URL,
 };
 
+const DASHBOARD_LIST_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Table output with folder paths:\n    grafana-util dashboard list --url http://localhost:3000 --table --show-folder-path\n\n  JSON output for scripting:\n    grafana-util dashboard list --url http://localhost:3000 --output-format json\n\n  CSV output without a header row:\n    grafana-util dashboard list --url http://localhost:3000 --csv --no-header";
+const DASHBOARD_LIST_DATASOURCES_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Preferred datasource namespace:\n    grafana-util datasource list --url http://localhost:3000 --table\n\n  Compatibility dashboard form:\n    grafana-util dashboard list-data-sources --url http://localhost:3000 --table";
+const DASHBOARD_EXPORT_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Export dashboards into raw/ and prompt/ variants:\n    grafana-util dashboard export --url http://localhost:3000 --export-dir ./dashboards --overwrite\n\n  Export every visible org into per-org directories:\n    grafana-util dashboard export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --export-dir ./dashboards --overwrite";
+const DASHBOARD_IMPORT_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Preview import actions as a table:\n    grafana-util dashboard import --url http://localhost:3000 --import-dir ./dashboards/raw --replace-existing --dry-run --output-format table\n\n  Replay routed exports and create missing orgs:\n    grafana-util dashboard import --url http://localhost:3000 --import-dir ./dashboards --use-export-org --create-missing-orgs --replace-existing";
+const DASHBOARD_DIFF_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Compare local raw exports against live Grafana:\n    grafana-util dashboard diff --url http://localhost:3000 --import-dir ./dashboards/raw\n\n  Compare only one explicit org:\n    grafana-util dashboard diff --url http://localhost:3000 --import-dir ./dashboards --org-id 2";
+const DASHBOARD_INSPECT_EXPORT_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Render a query inventory table:\n    grafana-util dashboard inspect-export --import-dir ./dashboards/raw --view query --format table\n\n  Render governance JSON:\n    grafana-util dashboard inspect-export --import-dir ./dashboards/raw --view governance --format json";
+const DASHBOARD_INSPECT_LIVE_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Analyze live dashboards as a summary table:\n    grafana-util dashboard inspect-live --url http://localhost:3000 --view summary --format table\n\n  Render live query inventory as tree-table output:\n    grafana-util dashboard inspect-live --url http://localhost:3000 --view query --format table --layout tree";
+
 #[derive(Debug, Clone, Copy, ValueEnum, PartialEq, Eq)]
 pub enum SimpleOutputFormat {
     Table,
@@ -609,33 +624,45 @@ pub enum DashboardCommand {
     #[command(
         name = "list",
         visible_alias = "list-dashboard",
-        about = "List dashboard summaries without writing export files."
+        about = "List dashboard summaries without writing export files.",
+        after_help = DASHBOARD_LIST_HELP_EXAMPLES
     )]
     List(ListArgs),
-    #[command(name = "list-data-sources", about = "List Grafana data sources.")]
+    #[command(
+        name = "list-data-sources",
+        about = "List Grafana data sources.",
+        after_help = DASHBOARD_LIST_DATASOURCES_HELP_EXAMPLES
+    )]
     ListDataSources(ListDataSourcesArgs),
     #[command(
         name = "export",
         visible_alias = "export-dashboard",
-        about = "Export dashboards to raw/ and prompt/ JSON files."
+        about = "Export dashboards to raw/ and prompt/ JSON files.",
+        after_help = DASHBOARD_EXPORT_HELP_EXAMPLES
     )]
     Export(ExportArgs),
     #[command(
         name = "import",
         visible_alias = "import-dashboard",
-        about = "Import dashboard JSON files through the Grafana API."
+        about = "Import dashboard JSON files through the Grafana API.",
+        after_help = DASHBOARD_IMPORT_HELP_EXAMPLES
     )]
     Import(ImportArgs),
-    #[command(about = "Compare local raw dashboard files against live Grafana dashboards.")]
+    #[command(
+        about = "Compare local raw dashboard files against live Grafana dashboards.",
+        after_help = DASHBOARD_DIFF_HELP_EXAMPLES
+    )]
     Diff(DiffArgs),
     #[command(
         name = "inspect-export",
-        about = "Analyze a raw dashboard export directory and summarize its structure."
+        about = "Analyze a raw dashboard export directory and summarize its structure.",
+        after_help = DASHBOARD_INSPECT_EXPORT_HELP_EXAMPLES
     )]
     InspectExport(InspectExportArgs),
     #[command(
         name = "inspect-live",
-        about = "Analyze live Grafana dashboards via a temporary raw-export snapshot."
+        about = "Analyze live Grafana dashboards via a temporary raw-export snapshot.",
+        after_help = DASHBOARD_INSPECT_LIVE_HELP_EXAMPLES
     )]
     InspectLive(InspectLiveArgs),
 }

@@ -16,7 +16,7 @@
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use reqwest::Method;
 use serde_json::{Map, Value};
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -31,6 +31,9 @@ use crate::datasource::datasource_diff::{
     build_datasource_diff_report, normalize_export_records, normalize_live_records,
     DatasourceDiffEntry, DatasourceDiffReport, DatasourceDiffStatus,
 };
+use crate::datasource_provider::{
+    build_provider_plan, iter_provider_names, summarize_provider_plan, DatasourceSecretProviderPlan,
+};
 use crate::http::JsonHttpClient;
 
 const DEFAULT_EXPORT_DIR: &str = "datasources";
@@ -38,6 +41,8 @@ const DATASOURCE_EXPORT_FILENAME: &str = "datasources.json";
 const EXPORT_METADATA_FILENAME: &str = "export-metadata.json";
 const ROOT_INDEX_KIND: &str = "grafana-utils-datasource-export-index";
 const TOOL_SCHEMA_VERSION: i64 = 1;
+const SECRET_PLACEHOLDER_PREFIX: &str = "${secret:";
+const SECRET_PLACEHOLDER_SUFFIX: &str = "}";
 const DATASOURCE_CONTRACT_FIELDS: &[&str] = &[
     "uid",
     "name",
@@ -47,7 +52,24 @@ const DATASOURCE_CONTRACT_FIELDS: &[&str] = &[
     "isDefault",
     "org",
     "orgId",
+    "secureJsonDataProviders",
 ];
+const DATASOURCE_ROOT_HELP_EXAMPLES: &str =
+    "Examples:\n\n  List datasource inventory as a table:\n    grafana-util datasource list --url http://localhost:3000 --table\n\n  Export datasource inventory:\n    grafana-util datasource export --url http://localhost:3000 --export-dir ./datasources --overwrite\n\n  Preview datasource import changes:\n    grafana-util datasource import --url http://localhost:3000 --import-dir ./datasources --replace-existing --dry-run --output-format table";
+const DATASOURCE_LIST_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Table output:\n    grafana-util datasource list --url http://localhost:3000 --table\n\n  JSON output:\n    grafana-util datasource list --url http://localhost:3000 --output-format json\n\n  CSV output without a header row:\n    grafana-util datasource list --url http://localhost:3000 --csv --no-header";
+const DATASOURCE_ADD_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Preview a new Prometheus datasource:\n    grafana-util datasource add --url http://localhost:3000 --name prom-main --type prometheus --datasource-url http://prometheus:9090 --access proxy --dry-run --output-format table\n\n  Create the datasource live:\n    grafana-util datasource add --url http://localhost:3000 --name prom-main --type prometheus --datasource-url http://prometheus:9090 --access proxy";
+const DATASOURCE_MODIFY_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Preview a URL and default change:\n    grafana-util datasource modify --url http://localhost:3000 --uid prom-main --set-url http://prometheus-v2:9090 --set-default true --dry-run --output-format table\n\n  Apply a live update:\n    grafana-util datasource modify --url http://localhost:3000 --uid prom-main --set-access direct --set-default false";
+const DATASOURCE_DELETE_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Preview a delete by uid:\n    grafana-util datasource delete --url http://localhost:3000 --uid prom-main --dry-run --output-format table\n\n  Delete by exact name:\n    grafana-util datasource delete --url http://localhost:3000 --name \"Prometheus Main\"";
+const DATASOURCE_EXPORT_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Export one org's datasource inventory:\n    grafana-util datasource export --url http://localhost:3000 --export-dir ./datasources --overwrite\n\n  Export every visible org into routed bundles:\n    grafana-util datasource export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --export-dir ./datasources --overwrite";
+const DATASOURCE_IMPORT_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Preview import actions as a table:\n    grafana-util datasource import --url http://localhost:3000 --import-dir ./datasources --replace-existing --dry-run --output-format table\n\n  Replay routed exports and create missing orgs:\n    grafana-util datasource import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./datasources --use-export-org --create-missing-orgs --replace-existing";
+const DATASOURCE_DIFF_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Compare local export files against live Grafana:\n    grafana-util datasource diff --url http://localhost:3000 --diff-dir ./datasources\n\n  Compare one explicit org from a routed export:\n    grafana-util datasource diff --url http://localhost:3000 --basic-user admin --basic-password admin --diff-dir ./datasources --org-id 2";
 
 #[path = "datasource_diff.rs"]
 mod datasource_diff;
@@ -176,6 +198,21 @@ pub struct DatasourceImportArgs {
         help = "Update an existing destination datasource when the imported datasource identity already exists. Without this flag, existing matches are blocked."
     )]
     pub replace_existing: bool,
+    #[arg(
+        long = "secret-placeholder",
+        help = "Attach one datasource import placeholder in DATASOURCE:FIELD=${secret:NAME} form. DATASOURCE matches an imported datasource uid or name, and FIELD targets one secureJsonData field. Repeat the flag for multiple mappings."
+    )]
+    pub secret_placeholder: Vec<String>,
+    #[arg(
+        long = "secret",
+        help = "Resolve one datasource import placeholder value in NAME=VALUE form. Repeat the flag for multiple placeholders."
+    )]
+    pub secrets: Vec<String>,
+    #[arg(
+        long = "secret-file",
+        help = "Load datasource import placeholder values from a JSON object file mapping placeholder names to secret strings."
+    )]
+    pub secret_file: Option<PathBuf>,
     #[arg(
         long,
         default_value_t = false,
@@ -410,26 +447,48 @@ pub struct DatasourceModifyArgs {
 
 #[derive(Debug, Clone, Subcommand)]
 pub enum DatasourceGroupCommand {
-    #[command(about = "List live Grafana datasource inventory.")]
+    #[command(
+        about = "List live Grafana datasource inventory.",
+        after_help = DATASOURCE_LIST_HELP_EXAMPLES
+    )]
     List(DatasourceListArgs),
-    #[command(about = "Create one live Grafana datasource through the Grafana API.")]
+    #[command(
+        about = "Create one live Grafana datasource through the Grafana API.",
+        after_help = DATASOURCE_ADD_HELP_EXAMPLES
+    )]
     Add(DatasourceAddArgs),
-    #[command(about = "Modify one live Grafana datasource through the Grafana API.")]
+    #[command(
+        about = "Modify one live Grafana datasource through the Grafana API.",
+        after_help = DATASOURCE_MODIFY_HELP_EXAMPLES
+    )]
     Modify(DatasourceModifyArgs),
-    #[command(about = "Delete one live Grafana datasource through the Grafana API.")]
+    #[command(
+        about = "Delete one live Grafana datasource through the Grafana API.",
+        after_help = DATASOURCE_DELETE_HELP_EXAMPLES
+    )]
     Delete(DatasourceDeleteArgs),
-    #[command(about = "Export live Grafana datasource inventory as normalized JSON files.")]
+    #[command(
+        about = "Export live Grafana datasource inventory as normalized JSON files.",
+        after_help = DATASOURCE_EXPORT_HELP_EXAMPLES
+    )]
     Export(DatasourceExportArgs),
-    #[command(about = "Import datasource inventory through the Grafana API.")]
+    #[command(
+        about = "Import datasource inventory through the Grafana API.",
+        after_help = DATASOURCE_IMPORT_HELP_EXAMPLES
+    )]
     Import(DatasourceImportArgs),
-    #[command(about = "Compare local datasource export files against live Grafana datasources.")]
+    #[command(
+        about = "Compare local datasource export files against live Grafana datasources.",
+        after_help = DATASOURCE_DIFF_HELP_EXAMPLES
+    )]
     Diff(DatasourceDiffArgs),
 }
 
 #[derive(Debug, Clone, Parser)]
 #[command(
     name = "grafana-util datasource",
-    about = "List, add, modify, delete, export, import, and diff Grafana datasources."
+    about = "List, add, modify, delete, export, import, and diff Grafana datasources.",
+    after_help = DATASOURCE_ROOT_HELP_EXAMPLES
 )]
 pub struct DatasourceCliArgs {
     #[command(subcommand)]
@@ -552,6 +611,7 @@ struct DatasourceImportRecord {
     url: String,
     is_default: bool,
     org_id: String,
+    secure_json_data_providers: Map<String, Value>,
 }
 
 #[derive(Debug, Clone)]
@@ -592,6 +652,13 @@ struct DatasourceImportDryRunReport {
     would_update: usize,
     would_skip: usize,
     would_block: usize,
+    provider_plans: Vec<DatasourceSecretProviderPlan>,
+}
+
+#[derive(Debug, Clone)]
+struct DatasourceImportSecretContext {
+    placeholder_index: BTreeMap<String, BTreeMap<String, String>>,
+    secret_values: BTreeMap<String, String>,
 }
 
 fn fetch_current_org(client: &JsonHttpClient) -> Result<Map<String, Value>> {
@@ -689,6 +756,174 @@ fn describe_datasource_import_mode(
     }
 }
 
+fn parse_key_value_argument(raw: &str, label: &str) -> Result<(String, String)> {
+    let Some((name, value)) = raw.split_once('=') else {
+        return Err(message(format!(
+            "{label} requires NAME=VALUE form. Invalid value: {raw:?}."
+        )));
+    };
+    let name = name.trim().to_string();
+    if name.is_empty() {
+        return Err(message(format!(
+            "{label} requires a non-empty name before '='. Invalid value: {raw:?}."
+        )));
+    }
+    Ok((name, value.to_string()))
+}
+
+fn load_import_secret_values(args: &DatasourceImportArgs) -> Result<BTreeMap<String, String>> {
+    let mut secret_values = BTreeMap::new();
+    if let Some(path) = &args.secret_file {
+        let value = load_json_object_file(path, "Datasource import secret file")?;
+        let object = value.as_object().ok_or_else(|| {
+            message(
+                "Datasource import secret file must contain a JSON object mapping placeholder names to strings.",
+            )
+        })?;
+        for (key, value) in object {
+            let name = key.trim();
+            if name.is_empty() {
+                return Err(message(
+                    "Datasource import secret file contains an empty placeholder name.",
+                ));
+            }
+            let secret = value.as_str().ok_or_else(|| {
+                message(format!(
+                    "Datasource import secret file value for '{name}' must be a string."
+                ))
+            })?;
+            if secret.is_empty() {
+                return Err(message(format!(
+                    "Datasource import secret file value for '{name}' must be a non-empty string."
+                )));
+            }
+            secret_values.insert(name.to_string(), secret.to_string());
+        }
+    }
+    for item in &args.secrets {
+        let (name, value) = parse_key_value_argument(item, "--secret")?;
+        if value.is_empty() {
+            return Err(message(format!(
+                "--secret values must be non-empty strings. Invalid value: {item:?}."
+            )));
+        }
+        secret_values.insert(name, value);
+    }
+    Ok(secret_values)
+}
+
+fn parse_secret_placeholder_token(field_name: &str, token: &str) -> Result<String> {
+    if !token.starts_with(SECRET_PLACEHOLDER_PREFIX) || !token.ends_with(SECRET_PLACEHOLDER_SUFFIX)
+    {
+        return Err(message(format!(
+            "Datasource secret field '{field_name}' must use ${{secret:...}} placeholders; opaque replay is not allowed."
+        )));
+    }
+    let placeholder_name =
+        token[SECRET_PLACEHOLDER_PREFIX.len()..token.len() - SECRET_PLACEHOLDER_SUFFIX.len()]
+            .trim();
+    if placeholder_name.is_empty() {
+        return Err(message(format!(
+            "Datasource secret field '{field_name}' must not use an empty placeholder name."
+        )));
+    }
+    Ok(placeholder_name.to_string())
+}
+
+fn parse_secret_placeholder_assignment(raw: &str) -> Result<(String, String, String)> {
+    let (target_and_field, placeholder_token) =
+        parse_key_value_argument(raw, "--secret-placeholder")?;
+    let Some((datasource_key, field_name)) = target_and_field.split_once(':') else {
+        return Err(message(format!(
+            "--secret-placeholder requires DATASOURCE:FIELD=${{secret:NAME}} form. Invalid value: {raw:?}."
+        )));
+    };
+    let datasource_key = datasource_key.trim();
+    let field_name = field_name.trim();
+    if datasource_key.is_empty() || field_name.is_empty() {
+        return Err(message(format!(
+            "--secret-placeholder requires DATASOURCE:FIELD=${{secret:NAME}} form. Invalid value: {raw:?}."
+        )));
+    }
+    let placeholder_name = parse_secret_placeholder_token(field_name, &placeholder_token)?;
+    Ok((
+        datasource_key.to_string(),
+        field_name.to_string(),
+        placeholder_name,
+    ))
+}
+
+fn build_import_secret_context(args: &DatasourceImportArgs) -> Result<DatasourceImportSecretContext> {
+    let mut placeholder_index: BTreeMap<String, BTreeMap<String, String>> = BTreeMap::new();
+    for item in &args.secret_placeholder {
+        let (datasource_key, field_name, placeholder_name) =
+            parse_secret_placeholder_assignment(item)?;
+        let field_map = placeholder_index.entry(datasource_key.clone()).or_default();
+        if field_map.contains_key(&field_name) {
+            return Err(message(format!(
+                "Duplicate datasource secret placeholder for {datasource_key}:{field_name}."
+            )));
+        }
+        field_map.insert(field_name, placeholder_name);
+    }
+    Ok(DatasourceImportSecretContext {
+        placeholder_index,
+        secret_values: load_import_secret_values(args)?,
+    })
+}
+
+fn resolve_import_secure_json_data(
+    context: &DatasourceImportSecretContext,
+    record: &DatasourceImportRecord,
+) -> Result<Option<Map<String, Value>>> {
+    if context.placeholder_index.is_empty() {
+        return Ok(None);
+    }
+    let mut resolved_fields: BTreeMap<String, String> = BTreeMap::new();
+    for datasource_key in [&record.uid, &record.name] {
+        if datasource_key.trim().is_empty() {
+            continue;
+        }
+        if let Some(field_map) = context.placeholder_index.get(datasource_key) {
+            for (field_name, placeholder_name) in field_map {
+                if let Some(existing) = resolved_fields.get(field_name) {
+                    if existing != placeholder_name {
+                        return Err(message(format!(
+                            "Conflicting datasource secret placeholders resolved for datasource {} field {}.",
+                            if record.uid.is_empty() {
+                                &record.name
+                            } else {
+                                &record.uid
+                            },
+                            field_name
+                        )));
+                    }
+                } else {
+                    resolved_fields.insert(field_name.clone(), placeholder_name.clone());
+                }
+            }
+        }
+    }
+    if resolved_fields.is_empty() {
+        return Ok(None);
+    }
+    let mut secure_json_data = Map::new();
+    for (field_name, placeholder_name) in resolved_fields {
+        let secret_value = context.secret_values.get(&placeholder_name).ok_or_else(|| {
+            message(format!(
+                "Missing datasource secret placeholder '{placeholder_name}'."
+            ))
+        })?;
+        if secret_value.is_empty() {
+            return Err(message(format!(
+                "Resolved datasource secret '{placeholder_name}' must be a non-empty string."
+            )));
+        }
+        secure_json_data.insert(field_name, Value::String(secret_value.clone()));
+    }
+    Ok(Some(secure_json_data))
+}
+
 fn build_datasource_export_metadata(count: usize) -> Value {
     Value::Object(Map::from_iter(vec![
         (
@@ -721,6 +956,43 @@ fn build_datasource_export_metadata(count: usize) -> Value {
             Value::String("grafana-datasource-inventory-v1".to_string()),
         ),
     ]))
+}
+
+fn provider_plan_for_import_record(
+    record: &DatasourceImportRecord,
+) -> Result<Option<DatasourceSecretProviderPlan>> {
+    if record.secure_json_data_providers.is_empty() {
+        return Ok(None);
+    }
+    let mut datasource_spec = Map::new();
+    datasource_spec.insert("name".to_string(), Value::String(record.name.clone()));
+    datasource_spec.insert(
+        "type".to_string(),
+        Value::String(record.datasource_type.clone()),
+    );
+    if !record.uid.is_empty() {
+        datasource_spec.insert("uid".to_string(), Value::String(record.uid.clone()));
+    }
+    datasource_spec.insert(
+        "secureJsonDataProviders".to_string(),
+        Value::Object(record.secure_json_data_providers.clone()),
+    );
+    build_provider_plan(&datasource_spec).map(Some)
+}
+
+fn ensure_live_import_provider_free(record: &DatasourceImportRecord) -> Result<()> {
+    if let Some(plan) = provider_plan_for_import_record(record)? {
+        let identity = plan
+            .datasource_uid
+            .clone()
+            .filter(|value| !value.is_empty())
+            .unwrap_or_else(|| plan.datasource_name.clone());
+        return Err(message(format!(
+            "Datasource import does not resolve secureJsonDataProviders for {} during live apply; run --dry-run to review provider plans first.",
+            identity
+        )));
+    }
+    Ok(())
 }
 
 fn build_data_source_record(datasource: &Map<String, Value>) -> Vec<String> {
@@ -1121,6 +1393,18 @@ fn load_import_records(
             url: string_field(object, "url", ""),
             is_default: string_field(object, "isDefault", "false") == "true",
             org_id: string_field(object, "orgId", ""),
+            secure_json_data_providers: object
+                .get("secureJsonDataProviders")
+                .map(|value| {
+                    value.as_object().cloned().ok_or_else(|| {
+                        message(format!(
+                            "Datasource import secureJsonDataProviders in {} must be a JSON object.",
+                            datasources_path.display()
+                        ))
+                    })
+                })
+                .transpose()?
+                .unwrap_or_default(),
         });
     }
     Ok((metadata, records))
@@ -1530,6 +1814,7 @@ fn collect_datasource_import_dry_run_report(
     client: &JsonHttpClient,
     args: &DatasourceImportArgs,
 ) -> Result<DatasourceImportDryRunReport> {
+    let secret_context = build_import_secret_context(args)?;
     let replace_existing = args.replace_existing || args.update_existing_only;
     let (metadata, records) = load_import_records(&args.import_dir)?;
     validate_matching_export_org(client, args, &args.import_dir, &metadata)?;
@@ -1545,7 +1830,12 @@ fn collect_datasource_import_dry_run_report(
     let mut updated = 0usize;
     let mut skipped = 0usize;
     let mut blocked = 0usize;
+    let mut provider_plans = Vec::new();
     for (index, record) in records.iter().enumerate() {
+        resolve_import_secure_json_data(&secret_context, record)?;
+        if let Some(plan) = provider_plan_for_import_record(record)? {
+            provider_plans.push(plan);
+        }
         let matching = resolve_match(record, &live, replace_existing, args.update_existing_only);
         let file_ref = format!("{}#{}", metadata.datasources_file, index);
         rows.push(vec![
@@ -1579,10 +1869,18 @@ fn collect_datasource_import_dry_run_report(
         would_update: updated,
         would_skip: skipped,
         would_block: blocked,
+        provider_plans,
     })
 }
 
 fn build_datasource_import_dry_run_json_value(report: &DatasourceImportDryRunReport) -> Value {
+    let provider_names = report
+        .provider_plans
+        .iter()
+        .flat_map(|plan| iter_provider_names(&plan.references).map(str::to_string))
+        .collect::<BTreeSet<String>>()
+        .into_iter()
+        .collect::<Vec<String>>();
     Value::Object(Map::from_iter(vec![
         ("mode".to_string(), Value::String(report.mode.clone())),
         (
@@ -1600,7 +1898,7 @@ fn build_datasource_import_dry_run_json_value(report: &DatasourceImportDryRunRep
                     .rows
                     .iter()
                     .map(|row| {
-                        Value::Object(Map::from_iter(vec![
+                        let mut item = Map::from_iter(vec![
                             ("uid".to_string(), Value::String(row[0].clone())),
                             ("name".to_string(), Value::String(row[1].clone())),
                             ("type".to_string(), Value::String(row[2].clone())),
@@ -1608,8 +1906,30 @@ fn build_datasource_import_dry_run_json_value(report: &DatasourceImportDryRunRep
                             ("action".to_string(), Value::String(row[4].clone())),
                             ("orgId".to_string(), Value::String(row[5].clone())),
                             ("file".to_string(), Value::String(row[6].clone())),
-                        ]))
+                        ]);
+                        if let Some(plan) = report.provider_plans.iter().find(|plan| {
+                            plan.datasource_uid.as_deref().unwrap_or("") == row[0]
+                                || (plan.datasource_uid.is_none()
+                                    && plan.datasource_name == row[1]
+                                    && plan.datasource_type == row[2])
+                        }) {
+                            item.insert(
+                                "providerSummary".to_string(),
+                                summarize_provider_plan(plan),
+                            );
+                        }
+                        Value::Object(item)
                     })
+                    .collect(),
+            ),
+        ),
+        (
+            "providerPlans".to_string(),
+            Value::Array(
+                report
+                    .provider_plans
+                    .iter()
+                    .map(summarize_provider_plan)
                     .collect(),
             ),
         ),
@@ -1636,9 +1956,59 @@ fn build_datasource_import_dry_run_json_value(report: &DatasourceImportDryRunRep
                     "wouldBlock".to_string(),
                     Value::Number((report.would_block as i64).into()),
                 ),
+                (
+                    "providerPlanCount".to_string(),
+                    Value::Number((report.provider_plans.len() as i64).into()),
+                ),
+                (
+                    "providerReferenceCount".to_string(),
+                    Value::Number(
+                        (report
+                            .provider_plans
+                            .iter()
+                            .map(|plan| plan.references.len())
+                            .sum::<usize>() as i64)
+                            .into(),
+                    ),
+                ),
+                (
+                    "providerNames".to_string(),
+                    Value::Array(
+                        provider_names
+                            .into_iter()
+                            .map(Value::String)
+                            .collect::<Vec<Value>>(),
+                    ),
+                ),
             ])),
         ),
     ]))
+}
+
+fn render_datasource_import_provider_review_lines(
+    report: &DatasourceImportDryRunReport,
+) -> Vec<String> {
+    report
+        .provider_plans
+        .iter()
+        .map(|plan| {
+            let identity = plan
+                .datasource_uid
+                .clone()
+                .filter(|value| !value.is_empty())
+                .unwrap_or_else(|| plan.datasource_name.clone());
+            let provider_names = iter_provider_names(&plan.references)
+                .collect::<Vec<&str>>()
+                .join(",");
+            format!(
+                "Dry-run provider plan datasource={} providers={} refs={} action={}",
+                identity,
+                provider_names,
+                plan.references.len(),
+                plan.action
+            )
+        })
+        .collect()
 }
 
 fn print_datasource_import_dry_run_report(
@@ -1667,6 +2037,9 @@ fn print_datasource_import_dry_run_report(
             report.datasource_count,
             report.import_dir.display()
         );
+        for line in render_datasource_import_provider_review_lines(report) {
+            println!("{line}");
+        }
     } else {
         println!("Import mode: {}", report.mode);
         for row in &report.rows {
@@ -1674,6 +2047,9 @@ fn print_datasource_import_dry_run_report(
                 "Dry-run datasource uid={} name={} dest={} action={} file={}",
                 row[0], row[1], row[3], row[4], row[6]
             );
+        }
+        for line in render_datasource_import_provider_review_lines(report) {
+            println!("{line}");
         }
         println!(
             "Dry-run checked {} datasource(s) from {}",
@@ -1693,6 +2069,7 @@ fn import_datasources_with_client(
         print_datasource_import_dry_run_report(&report, args)?;
         return Ok(0);
     }
+    let secret_context = build_import_secret_context(args)?;
     let replace_existing = args.replace_existing || args.update_existing_only;
     let (metadata, records) = load_import_records(&args.import_dir)?;
     validate_matching_export_org(client, args, &args.import_dir, &metadata)?;
@@ -1702,6 +2079,8 @@ fn import_datasources_with_client(
     let mut skipped = 0usize;
     let blocked = 0usize;
     for record in &records {
+        ensure_live_import_provider_free(record)?;
+        let secure_json_data = resolve_import_secure_json_data(&secret_context, record)?;
         let matching = resolve_match(record, &live, replace_existing, args.update_existing_only);
         match matching.action {
             "would-create" => {
@@ -1709,7 +2088,10 @@ fn import_datasources_with_client(
                     Method::POST,
                     "/api/datasources",
                     &[],
-                    Some(&build_import_payload(record)),
+                    Some(&build_import_payload_with_secrets(
+                        record,
+                        secure_json_data.as_ref(),
+                    )),
                 )?;
                 created += 1;
             }
@@ -1720,7 +2102,8 @@ fn import_datasources_with_client(
                         matching.target_name
                     ))
                 })?;
-                let payload = build_import_payload(record);
+                let payload =
+                    build_import_payload_with_secrets(record, secure_json_data.as_ref());
                 client.request_json(
                     Method::PUT,
                     &format!("/api/datasources/{target_id}"),
@@ -2020,8 +2403,16 @@ fn resolve_match(
     }
 }
 
+#[cfg_attr(not(test), allow(dead_code))]
 fn build_import_payload(record: &DatasourceImportRecord) -> Value {
-    Value::Object(Map::from_iter(vec![
+    build_import_payload_with_secrets(record, None)
+}
+
+fn build_import_payload_with_secrets(
+    record: &DatasourceImportRecord,
+    secure_json_data: Option<&Map<String, Value>>,
+) -> Value {
+    let mut payload = Map::from_iter(vec![
         ("name".to_string(), Value::String(record.name.clone())),
         (
             "type".to_string(),
@@ -2031,7 +2422,16 @@ fn build_import_payload(record: &DatasourceImportRecord) -> Value {
         ("access".to_string(), Value::String(record.access.clone())),
         ("uid".to_string(), Value::String(record.uid.clone())),
         ("isDefault".to_string(), Value::Bool(record.is_default)),
-    ]))
+    ]);
+    if let Some(secure_json_data) = secure_json_data {
+        if !secure_json_data.is_empty() {
+            payload.insert(
+                "secureJsonData".to_string(),
+                Value::Object(secure_json_data.clone()),
+            );
+        }
+    }
+    Value::Object(payload)
 }
 
 fn parse_json_object_argument(

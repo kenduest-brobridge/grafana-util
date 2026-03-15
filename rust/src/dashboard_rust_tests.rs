@@ -443,6 +443,8 @@ fn export_help_explains_flat_layout() {
     let help = render_dashboard_subcommand_help("export");
     assert!(help.contains("Write dashboard files directly into each export variant directory"));
     assert!(help.contains("folder-based subdirectories on disk"));
+    assert!(help.contains("Examples:"));
+    assert!(help.contains("grafana-util dashboard export --url http://localhost:3000 --export-dir ./dashboards --overwrite"));
 }
 
 #[test]
@@ -471,6 +473,19 @@ fn import_help_explains_common_operator_flags() {
     assert!(help.contains("requires Basic auth"));
     assert!(help.contains("--require-matching-export-org"));
     assert!(help.contains("--output-columns"));
+    assert!(help.contains("Examples:"));
+    assert!(help.contains("grafana-util dashboard import --url http://localhost:3000 --import-dir ./dashboards/raw --replace-existing --dry-run --output-format table"));
+}
+
+#[test]
+fn list_and_diff_help_include_examples() {
+    let list_help = render_dashboard_subcommand_help("list");
+    assert!(list_help.contains("Examples:"));
+    assert!(list_help.contains("grafana-util dashboard list --url http://localhost:3000 --table --show-folder-path"));
+
+    let diff_help = render_dashboard_subcommand_help("diff");
+    assert!(diff_help.contains("Examples:"));
+    assert!(diff_help.contains("grafana-util dashboard diff --url http://localhost:3000 --import-dir ./dashboards/raw"));
 }
 
 #[test]

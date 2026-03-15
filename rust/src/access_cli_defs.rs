@@ -27,6 +27,74 @@ pub const ACCESS_TEAM_EXPORT_FILENAME: &str = "teams.json";
 pub const ACCESS_ORG_EXPORT_FILENAME: &str = "orgs.json";
 pub const ACCESS_SERVICE_ACCOUNT_EXPORT_FILENAME: &str = "service-accounts.json";
 pub const ACCESS_EXPORT_METADATA_FILENAME: &str = "export-metadata.json";
+const ACCESS_HELP_EXAMPLES: &str =
+    "Examples:\n\n  List org-scoped users as a table:\n    grafana-util access user list --url http://localhost:3000 --table\n\n  Export organizations with membership data:\n    grafana-util access org export --url http://localhost:3000 --with-users --export-dir ./access-orgs --overwrite\n\n  Create a service-account token:\n    grafana-util access service-account token add --url http://localhost:3000 --name automation --token-name ci-token --seconds-to-live 3600";
+const ACCESS_USER_GROUP_HELP_EXAMPLES: &str =
+    "Examples:\n\n  List org users as a table:\n    grafana-util access user list --url http://localhost:3000 --table\n\n  Export global users with team memberships:\n    grafana-util access user export --url http://localhost:3000 --scope global --with-teams --export-dir ./access-users --overwrite";
+const ACCESS_ORG_GROUP_HELP_EXAMPLES: &str =
+    "Examples:\n\n  List organizations with memberships:\n    grafana-util access org list --url http://localhost:3000 --with-users --table\n\n  Preview org import changes:\n    grafana-util access org import --url http://localhost:3000 --import-dir ./access-orgs --replace-existing --dry-run";
+const ACCESS_TEAM_GROUP_HELP_EXAMPLES: &str =
+    "Examples:\n\n  List teams with members:\n    grafana-util access team list --url http://localhost:3000 --with-members --table\n\n  Apply a team import:\n    grafana-util access team import --url http://localhost:3000 --import-dir ./access-teams --replace-existing --yes";
+const ACCESS_SERVICE_ACCOUNT_GROUP_HELP_EXAMPLES: &str =
+    "Examples:\n\n  List service accounts as a table:\n    grafana-util access service-account list --url http://localhost:3000 --table\n\n  Create one token:\n    grafana-util access service-account token add --url http://localhost:3000 --name automation --token-name ci-token --seconds-to-live 3600";
+const ACCESS_SERVICE_ACCOUNT_TOKEN_GROUP_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Create a service-account token:\n    grafana-util access service-account token add --url http://localhost:3000 --name automation --token-name ci-token --seconds-to-live 3600\n\n  Delete a service-account token:\n    grafana-util access service-account token delete --url http://localhost:3000 --name automation --token-name ci-token --yes";
+const ACCESS_USER_LIST_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Table output for org users:\n    grafana-util access user list --url http://localhost:3000 --scope org --table\n\n  Global user JSON with team memberships:\n    grafana-util access user list --url http://localhost:3000 --scope global --with-teams --output-format json";
+const ACCESS_USER_ADD_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Create a new user with an explicit password:\n    grafana-util access user add --url http://localhost:3000 --login alice --email alice@example.com --name Alice --password change-me\n\n  Prompt for the initial password and set org role:\n    grafana-util access user add --url http://localhost:3000 --login bob --email bob@example.com --name Bob --prompt-user-password --org-role Editor";
+const ACCESS_USER_MODIFY_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Change a user email by login:\n    grafana-util access user modify --url http://localhost:3000 --login alice --set-email alice+grafana@example.com\n\n  Promote a user and reset the password:\n    grafana-util access user modify --url http://localhost:3000 --login alice --set-org-role Admin --prompt-set-password";
+const ACCESS_USER_EXPORT_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Export current-org users:\n    grafana-util access user export --url http://localhost:3000 --export-dir ./access-users --overwrite\n\n  Export global users with team memberships:\n    grafana-util access user export --url http://localhost:3000 --scope global --with-teams --export-dir ./access-users --overwrite";
+const ACCESS_USER_IMPORT_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Preview user import actions as a table:\n    grafana-util access user import --url http://localhost:3000 --import-dir ./access-users --replace-existing --dry-run --output-format table\n\n  Apply the import and acknowledge destructive sync:\n    grafana-util access user import --url http://localhost:3000 --import-dir ./access-users --replace-existing --yes";
+const ACCESS_USER_DIFF_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Compare local user exports against the current org:\n    grafana-util access user diff --url http://localhost:3000 --diff-dir ./access-users\n\n  Compare the global user registry:\n    grafana-util access user diff --url http://localhost:3000 --scope global --diff-dir ./access-users";
+const ACCESS_USER_DELETE_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Remove a user from the current org by login:\n    grafana-util access user delete --url http://localhost:3000 --login alice --scope org --yes\n\n  Delete a global user by email:\n    grafana-util access user delete --url http://localhost:3000 --email alice@example.com --scope global --yes";
+const ACCESS_ORG_LIST_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Table output for all orgs:\n    grafana-util access org list --url http://localhost:3000 --table\n\n  JSON output with org users included:\n    grafana-util access org list --url http://localhost:3000 --with-users --output-format json";
+const ACCESS_ORG_ADD_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Create a new organization:\n    grafana-util access org add --url http://localhost:3000 --name \"QA Org\"\n\n  Render the create response as JSON:\n    grafana-util access org add --url http://localhost:3000 --name \"Audit Org\" --json";
+const ACCESS_ORG_MODIFY_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Rename one org by id:\n    grafana-util access org modify --url http://localhost:3000 --org-id 2 --set-name \"QA Org\"\n\n  Rename one org by exact name:\n    grafana-util access org modify --url http://localhost:3000 --name \"Audit Org\" --set-name \"Audit Org Archived\"";
+const ACCESS_ORG_EXPORT_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Export org inventory:\n    grafana-util access org export --url http://localhost:3000 --export-dir ./access-orgs --overwrite\n\n  Export one org with its users:\n    grafana-util access org export --url http://localhost:3000 --org-id 2 --with-users --export-dir ./access-orgs --overwrite";
+const ACCESS_ORG_IMPORT_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Preview org import changes:\n    grafana-util access org import --url http://localhost:3000 --import-dir ./access-orgs --replace-existing --dry-run\n\n  Apply the org import:\n    grafana-util access org import --url http://localhost:3000 --import-dir ./access-orgs --replace-existing --yes";
+const ACCESS_ORG_DELETE_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Delete an org by id:\n    grafana-util access org delete --url http://localhost:3000 --org-id 4 --yes\n\n  Delete an org by exact name:\n    grafana-util access org delete --url http://localhost:3000 --name \"Audit Org\" --yes";
+const ACCESS_TEAM_LIST_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Table output for teams:\n    grafana-util access team list --url http://localhost:3000 --table\n\n  JSON output with team members included:\n    grafana-util access team list --url http://localhost:3000 --with-members --output-format json";
+const ACCESS_TEAM_ADD_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Create a team with initial members:\n    grafana-util access team add --url http://localhost:3000 --name platform --member alice --member bob\n\n  Create a team with an initial admin and email:\n    grafana-util access team add --url http://localhost:3000 --name sre --email sre@example.com --admin alice@example.com";
+const ACCESS_TEAM_MODIFY_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Add a member by team name:\n    grafana-util access team modify --url http://localhost:3000 --name platform --add-member alice\n\n  Promote one member to team admin:\n    grafana-util access team modify --url http://localhost:3000 --team-id 7 --add-admin alice@example.com";
+const ACCESS_TEAM_EXPORT_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Export teams with members:\n    grafana-util access team export --url http://localhost:3000 --export-dir ./access-teams --overwrite\n\n  Preview export paths only:\n    grafana-util access team export --url http://localhost:3000 --export-dir ./access-teams --dry-run";
+const ACCESS_TEAM_IMPORT_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Preview team import changes as a table:\n    grafana-util access team import --url http://localhost:3000 --import-dir ./access-teams --replace-existing --dry-run --output-format table\n\n  Apply the import and acknowledge membership sync:\n    grafana-util access team import --url http://localhost:3000 --import-dir ./access-teams --replace-existing --yes";
+const ACCESS_TEAM_DIFF_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Compare local team exports against Grafana:\n    grafana-util access team diff --url http://localhost:3000 --diff-dir ./access-teams";
+const ACCESS_TEAM_DELETE_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Delete a team by id:\n    grafana-util access team delete --url http://localhost:3000 --team-id 7 --yes\n\n  Delete a team by exact name:\n    grafana-util access team delete --url http://localhost:3000 --name platform --yes";
+const ACCESS_SERVICE_ACCOUNT_LIST_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Table output for service accounts:\n    grafana-util access service-account list --url http://localhost:3000 --table\n\n  JSON output for scripting:\n    grafana-util access service-account list --url http://localhost:3000 --output-format json";
+const ACCESS_SERVICE_ACCOUNT_ADD_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Create a Viewer service account:\n    grafana-util access service-account add --url http://localhost:3000 --name automation --role Viewer\n\n  Create a disabled Editor service account:\n    grafana-util access service-account add --url http://localhost:3000 --name qa-robot --role Editor --disabled true";
+const ACCESS_SERVICE_ACCOUNT_EXPORT_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Export service accounts:\n    grafana-util access service-account export --url http://localhost:3000 --export-dir ./access-service-accounts --overwrite";
+const ACCESS_SERVICE_ACCOUNT_IMPORT_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Preview service-account import actions as JSON:\n    grafana-util access service-account import --url http://localhost:3000 --import-dir ./access-service-accounts --replace-existing --dry-run --output-format json\n\n  Apply the import:\n    grafana-util access service-account import --url http://localhost:3000 --import-dir ./access-service-accounts --replace-existing --yes";
+const ACCESS_SERVICE_ACCOUNT_DIFF_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Compare local service-account exports against Grafana:\n    grafana-util access service-account diff --url http://localhost:3000 --diff-dir ./access-service-accounts";
+const ACCESS_SERVICE_ACCOUNT_DELETE_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Delete a service account by id:\n    grafana-util access service-account delete --url http://localhost:3000 --service-account-id 9 --yes\n\n  Delete a service account by exact name:\n    grafana-util access service-account delete --url http://localhost:3000 --name automation --yes";
+const ACCESS_SERVICE_ACCOUNT_TOKEN_ADD_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Create a token by service-account name:\n    grafana-util access service-account token add --url http://localhost:3000 --name automation --token-name ci-token --seconds-to-live 3600\n\n  Render the token response as JSON:\n    grafana-util access service-account token add --url http://localhost:3000 --service-account-id 9 --token-name bootstrap --json";
+const ACCESS_SERVICE_ACCOUNT_TOKEN_DELETE_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Delete a token by service-account name:\n    grafana-util access service-account token delete --url http://localhost:3000 --name automation --token-id 11 --yes\n\n  Delete a token by service-account id:\n    grafana-util access service-account token delete --url http://localhost:3000 --service-account-id 9 --token-id 11 --yes";
 
 #[derive(Debug, Clone, Args)]
 pub struct CommonCliArgs {
@@ -898,18 +966,27 @@ pub struct ServiceAccountTokenAddArgs {
 
 #[derive(Debug, Clone, Subcommand)]
 pub enum ServiceAccountTokenCommand {
+    #[command(after_help = ACCESS_SERVICE_ACCOUNT_TOKEN_ADD_HELP_EXAMPLES)]
     Add(ServiceAccountTokenAddArgs),
+    #[command(after_help = ACCESS_SERVICE_ACCOUNT_TOKEN_DELETE_HELP_EXAMPLES)]
     Delete(ServiceAccountTokenDeleteArgs),
 }
 
 #[derive(Debug, Clone, Subcommand)]
 pub enum ServiceAccountCommand {
+    #[command(after_help = ACCESS_SERVICE_ACCOUNT_LIST_HELP_EXAMPLES)]
     List(ServiceAccountListArgs),
+    #[command(after_help = ACCESS_SERVICE_ACCOUNT_ADD_HELP_EXAMPLES)]
     Add(ServiceAccountAddArgs),
+    #[command(after_help = ACCESS_SERVICE_ACCOUNT_EXPORT_HELP_EXAMPLES)]
     Export(ServiceAccountExportArgs),
+    #[command(after_help = ACCESS_SERVICE_ACCOUNT_IMPORT_HELP_EXAMPLES)]
     Import(ServiceAccountImportArgs),
+    #[command(after_help = ACCESS_SERVICE_ACCOUNT_DIFF_HELP_EXAMPLES)]
     Diff(ServiceAccountDiffArgs),
+    #[command(after_help = ACCESS_SERVICE_ACCOUNT_DELETE_HELP_EXAMPLES)]
     Delete(ServiceAccountDeleteArgs),
+    #[command(after_help = ACCESS_SERVICE_ACCOUNT_TOKEN_GROUP_HELP_EXAMPLES)]
     Token {
         #[command(subcommand)]
         command: ServiceAccountTokenCommand,
@@ -918,52 +995,77 @@ pub enum ServiceAccountCommand {
 
 #[derive(Debug, Clone, Subcommand)]
 pub enum OrgCommand {
+    #[command(after_help = ACCESS_ORG_LIST_HELP_EXAMPLES)]
     List(OrgListArgs),
+    #[command(after_help = ACCESS_ORG_ADD_HELP_EXAMPLES)]
     Add(OrgAddArgs),
+    #[command(after_help = ACCESS_ORG_MODIFY_HELP_EXAMPLES)]
     Modify(OrgModifyArgs),
+    #[command(after_help = ACCESS_ORG_EXPORT_HELP_EXAMPLES)]
     Export(OrgExportArgs),
+    #[command(after_help = ACCESS_ORG_IMPORT_HELP_EXAMPLES)]
     Import(OrgImportArgs),
+    #[command(after_help = ACCESS_ORG_DELETE_HELP_EXAMPLES)]
     Delete(OrgDeleteArgs),
 }
 
 #[derive(Debug, Clone, Subcommand)]
 pub enum TeamCommand {
+    #[command(after_help = ACCESS_TEAM_LIST_HELP_EXAMPLES)]
     List(TeamListArgs),
+    #[command(after_help = ACCESS_TEAM_ADD_HELP_EXAMPLES)]
     Add(TeamAddArgs),
+    #[command(after_help = ACCESS_TEAM_MODIFY_HELP_EXAMPLES)]
     Modify(TeamModifyArgs),
+    #[command(after_help = ACCESS_TEAM_EXPORT_HELP_EXAMPLES)]
     Export(TeamExportArgs),
+    #[command(after_help = ACCESS_TEAM_IMPORT_HELP_EXAMPLES)]
     Import(TeamImportArgs),
+    #[command(after_help = ACCESS_TEAM_DIFF_HELP_EXAMPLES)]
     Diff(TeamDiffArgs),
+    #[command(after_help = ACCESS_TEAM_DELETE_HELP_EXAMPLES)]
     Delete(TeamDeleteArgs),
 }
 
 #[derive(Debug, Clone, Subcommand)]
 pub enum UserCommand {
+    #[command(after_help = ACCESS_USER_LIST_HELP_EXAMPLES)]
     List(UserListArgs),
+    #[command(after_help = ACCESS_USER_ADD_HELP_EXAMPLES)]
     Add(UserAddArgs),
+    #[command(after_help = ACCESS_USER_MODIFY_HELP_EXAMPLES)]
     Modify(UserModifyArgs),
+    #[command(after_help = ACCESS_USER_EXPORT_HELP_EXAMPLES)]
     Export(UserExportArgs),
+    #[command(after_help = ACCESS_USER_IMPORT_HELP_EXAMPLES)]
     Import(UserImportArgs),
+    #[command(after_help = ACCESS_USER_DIFF_HELP_EXAMPLES)]
     Diff(UserDiffArgs),
+    #[command(after_help = ACCESS_USER_DELETE_HELP_EXAMPLES)]
     Delete(UserDeleteArgs),
 }
 
 #[derive(Debug, Clone, Subcommand)]
 pub enum AccessCommand {
+    #[command(after_help = ACCESS_USER_GROUP_HELP_EXAMPLES)]
     User {
         #[command(subcommand)]
         command: UserCommand,
     },
+    #[command(after_help = ACCESS_ORG_GROUP_HELP_EXAMPLES)]
     Org {
         #[command(subcommand)]
         command: OrgCommand,
     },
-    #[command(visible_alias = "group")]
+    #[command(visible_alias = "group", after_help = ACCESS_TEAM_GROUP_HELP_EXAMPLES)]
     Team {
         #[command(subcommand)]
         command: TeamCommand,
     },
-    #[command(name = "service-account")]
+    #[command(
+        name = "service-account",
+        after_help = ACCESS_SERVICE_ACCOUNT_GROUP_HELP_EXAMPLES
+    )]
     ServiceAccount {
         #[command(subcommand)]
         command: ServiceAccountCommand,
@@ -973,7 +1075,8 @@ pub enum AccessCommand {
 #[derive(Debug, Clone, Parser)]
 #[command(
     name = "grafana-access-utils",
-    about = "List and manage Grafana users, orgs, teams, and service accounts."
+    about = "List and manage Grafana users, orgs, teams, and service accounts.",
+    after_help = ACCESS_HELP_EXAMPLES
 )]
 pub(crate) struct AccessCliRoot {
     #[command(flatten)]

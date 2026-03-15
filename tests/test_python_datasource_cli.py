@@ -191,6 +191,28 @@ class DatasourceCliTests(unittest.TestCase):
         self.assertTrue(args.dry_run)
         self.assertTrue(args.table)
 
+    def test_parse_args_supports_import_secret_flags(self):
+        args = datasource_cli.parse_args(
+            [
+                "import",
+                "--import-dir",
+                "./datasources",
+                "--secret-placeholder",
+                "prom-main:httpHeaderValue1=${secret:metrics-token}",
+                "--secret",
+                "metrics-token=Bearer tenant-a",
+                "--secret-file",
+                "./secrets.json",
+            ]
+        )
+
+        self.assertEqual(
+            args.secret_placeholder,
+            ["prom-main:httpHeaderValue1=${secret:metrics-token}"],
+        )
+        self.assertEqual(args.secret, ["metrics-token=Bearer tenant-a"])
+        self.assertEqual(args.secret_file, "./secrets.json")
+
     def test_parse_args_supports_add_mode(self):
         args = datasource_cli.parse_args(
             [
@@ -1415,6 +1437,139 @@ class DatasourceCliTests(unittest.TestCase):
                     "Raw export orgId 1 does not match target Grafana org id 2",
                 ):
                     datasource_cli.import_datasources(args)
+
+    def test_import_datasources_rejects_missing_placeholder_secret(self):
+        args = datasource_cli.parse_args(
+            [
+                "import",
+                "--import-dir",
+                "ignored",
+                "--secret-placeholder",
+                "prom_uid:httpHeaderValue1=${secret:metrics-token}",
+            ]
+        )
+        client = FakeDatasourceClient(datasources=[])
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args.import_dir = tmpdir
+            self._write_datasource_bundle(
+                Path(tmpdir),
+                [
+                    {
+                        "uid": "prom_uid",
+                        "name": "Prometheus Main",
+                        "type": "prometheus",
+                        "access": "proxy",
+                        "url": "http://prometheus:9090",
+                        "isDefault": "true",
+                        "org": "Main Org.",
+                        "orgId": "1",
+                    }
+                ],
+            )
+
+            with mock.patch.object(datasource_cli, "build_client", return_value=client):
+                with self.assertRaisesRegex(
+                    datasource_cli.GrafanaError,
+                    "Missing datasource secret placeholder 'metrics-token'",
+                ):
+                    datasource_cli.import_datasources(args)
+
+    def test_import_datasources_dry_run_json_does_not_expose_resolved_secrets(self):
+        args = datasource_cli.parse_args(
+            [
+                "import",
+                "--import-dir",
+                "ignored",
+                "--dry-run",
+                "--json",
+                "--secret-placeholder",
+                "prom_uid:httpHeaderValue1=${secret:metrics-token}",
+                "--secret",
+                "metrics-token=Bearer tenant-a",
+            ]
+        )
+        client = FakeDatasourceClient(datasources=[])
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args.import_dir = tmpdir
+            self._write_datasource_bundle(
+                Path(tmpdir),
+                [
+                    {
+                        "uid": "prom_uid",
+                        "name": "Prometheus Main",
+                        "type": "prometheus",
+                        "access": "proxy",
+                        "url": "http://prometheus:9090",
+                        "isDefault": "true",
+                        "org": "Main Org.",
+                        "orgId": "1",
+                    }
+                ],
+            )
+
+            with mock.patch.object(datasource_cli, "build_client", return_value=client):
+                stdout = io.StringIO()
+                with redirect_stdout(stdout):
+                    result = datasource_cli.import_datasources(args)
+
+            self.assertEqual(result, 0)
+            output = stdout.getvalue()
+            self.assertIn('"action": "would-create"', output)
+            self.assertNotIn("Bearer tenant-a", output)
+            self.assertNotIn("metrics-token", output)
+
+    def test_import_datasources_injects_resolved_secure_json_data(self):
+        args = datasource_cli.parse_args(
+            [
+                "import",
+                "--import-dir",
+                "ignored",
+                "--secret-placeholder",
+                "prom_uid:httpHeaderValue1=${secret:metrics-token}",
+                "--secret-placeholder",
+                "prom_uid:basicAuthPassword=${secret:metrics-pass}",
+                "--secret",
+                "metrics-token=Bearer tenant-a",
+                "--secret",
+                "metrics-pass=super-secret",
+            ]
+        )
+        client = FakeDatasourceClient(datasources=[])
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args.import_dir = tmpdir
+            self._write_datasource_bundle(
+                Path(tmpdir),
+                [
+                    {
+                        "uid": "prom_uid",
+                        "name": "Prometheus Main",
+                        "type": "prometheus",
+                        "access": "proxy",
+                        "url": "http://prometheus:9090",
+                        "isDefault": "true",
+                        "org": "Main Org.",
+                        "orgId": "1",
+                    }
+                ],
+            )
+
+            with mock.patch.object(datasource_cli, "build_client", return_value=client):
+                stdout = io.StringIO()
+                with redirect_stdout(stdout):
+                    result = datasource_cli.import_datasources(args)
+
+            self.assertEqual(result, 0)
+            self.assertEqual(len(client.imported_payloads), 1)
+            self.assertEqual(
+                client.imported_payloads[0]["payload"]["secureJsonData"],
+                {
+                    "basicAuthPassword": "super-secret",
+                    "httpHeaderValue1": "Bearer tenant-a",
+                },
+            )
 
     def test_import_datasources_dry_run_uses_org_scoped_client(self):
         scoped_client = FakeDatasourceClient(

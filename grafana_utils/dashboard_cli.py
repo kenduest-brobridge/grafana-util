@@ -973,6 +973,16 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     list_parser = subparsers.add_parser(
         "list-dashboard",
         help="List live dashboard summaries from Grafana.",
+        epilog=(
+            "Examples:\n\n"
+            "  List dashboards in a table:\n"
+            "    grafana-util dashboard list --url http://localhost:3000 --table\n\n"
+            "  List dashboards with datasource names:\n"
+            "    grafana-util dashboard list --url http://localhost:3000 --with-sources --table\n\n"
+            "  List dashboards as JSON:\n"
+            "    grafana-util dashboard list --url http://localhost:3000 --output-format json"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     add_common_cli_args(list_parser)
     add_list_cli_args(list_parser)
@@ -980,6 +990,16 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     list_data_sources_parser = subparsers.add_parser(
         "list-data-sources",
         help="List live Grafana data sources.",
+        epilog=(
+            "Examples:\n\n"
+            "  Preferred namespaced form:\n"
+            "    grafana-util datasource list --url http://localhost:3000 --table\n\n"
+            "  Compatibility dashboard form:\n"
+            "    grafana-util dashboard list-data-sources --url http://localhost:3000 --table\n\n"
+            "  JSON output:\n"
+            "    grafana-util dashboard list-data-sources --url http://localhost:3000 --output-format json"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     add_common_cli_args(list_data_sources_parser)
     add_list_data_sources_cli_args(list_data_sources_parser)
@@ -987,6 +1007,16 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     import_parser = subparsers.add_parser(
         "import-dashboard",
         help="Import dashboards from exported raw JSON files.",
+        epilog=(
+            "Examples:\n\n"
+            "  Preview a dashboard import in table form:\n"
+            "    grafana-util dashboard import --url http://localhost:3000 "
+            "--basic-user admin --basic-password admin --import-dir ./dashboards/raw --replace-existing --dry-run --output-format table\n\n"
+            "  Route a combined multi-org export by recorded org ids:\n"
+            "    grafana-util dashboard import --url http://localhost:3000 "
+            "--basic-user admin --basic-password admin --import-dir ./dashboards --use-export-org --create-missing-orgs --dry-run"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     add_common_cli_args(import_parser)
     add_import_cli_args(import_parser)
@@ -994,6 +1024,17 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     diff_parser = subparsers.add_parser(
         "diff",
         help="Compare exported raw dashboards with the current Grafana state.",
+        epilog=(
+            "Examples:\n\n"
+            "  Compare one raw export directory against Grafana:\n"
+            "    grafana-util dashboard diff --url http://localhost:3000 "
+            "--basic-user admin --basic-password admin --import-dir ./dashboards/raw\n\n"
+            "  Override the destination folder UID while diffing one export set:\n"
+            "    grafana-util dashboard diff --url http://localhost:3000 "
+            "--basic-user admin --basic-password admin --import-dir ./dashboards/raw "
+            "--import-folder-uid shared-folder"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     add_common_cli_args(diff_parser)
     add_diff_cli_args(diff_parser)
@@ -1001,12 +1042,32 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     promote_plan_parser = subparsers.add_parser(
         "promote-plan",
         help="Build a staged dashboard/datasource promotion plan from local JSON inputs.",
+        epilog=(
+            "Examples:\n\n"
+            "  Build one staged promotion plan:\n"
+            "    grafana-util dashboard promote-plan --source-bundle ./source-bundle.json "
+            "--target-inventory ./target-inventory.json\n\n"
+            "  Render the plan as JSON with datasource remaps:\n"
+            "    grafana-util dashboard promote-plan --source-bundle ./source-bundle.json "
+            "--target-inventory ./target-inventory.json "
+            "--datasource-uid-map-file ./datasource-uid-map.json --output-format json"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     add_promote_plan_cli_args(promote_plan_parser)
 
     preflight_plan_parser = subparsers.add_parser(
         "preflight-plan",
         help="Run staged promotion preflight checks from a local promotion plan JSON input.",
+        epilog=(
+            "Examples:\n\n"
+            "  Run one staged preflight review:\n"
+            "    grafana-util dashboard preflight-plan --plan-file ./promotion-plan.json\n\n"
+            "  Include destination availability data and emit JSON:\n"
+            "    grafana-util dashboard preflight-plan --plan-file ./promotion-plan.json "
+            "--availability-file ./availability.json --output-format json"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     add_preflight_plan_cli_args(preflight_plan_parser)
 

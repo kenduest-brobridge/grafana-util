@@ -630,7 +630,41 @@ class AccessCliTests(unittest.TestCase):
         self.assertIn("--basic-user USERNAME", help_text)
         self.assertIn("--basic-password PASSWORD", help_text)
         self.assertIn("--with-users", help_text)
+        self.assertIn("Examples:", help_text)
+        self.assertIn("grafana-util access org list --url http://localhost:3000", help_text)
         self.assertNotIn("--token", help_text)
+
+    def test_access_root_and_service_account_group_help_include_examples(self):
+        parser = access_utils.build_parser()
+        root_help = parser.format_help()
+        service_account_help = (
+            parser._subparsers._group_actions[0].choices["service-account"].format_help()
+        )
+
+        self.assertIn("Examples:", root_help)
+        self.assertIn("grafana-util access user list", root_help)
+        self.assertIn("grafana-util access org export", root_help)
+        self.assertIn("Examples:", service_account_help)
+        self.assertIn("grafana-util access service-account list", service_account_help)
+        self.assertIn("grafana-util access service-account token add", service_account_help)
+
+    def test_user_and_service_account_token_group_help_include_examples(self):
+        parser = access_utils.build_parser()
+        user_help = parser._subparsers._group_actions[0].choices["user"].format_help()
+        token_help = (
+            parser._subparsers._group_actions[0]
+            .choices["service-account"]
+            ._subparsers._group_actions[0]
+            .choices["token"]
+            .format_help()
+        )
+
+        self.assertIn("Examples:", user_help)
+        self.assertIn("grafana-util access user list", user_help)
+        self.assertIn("grafana-util access user export", user_help)
+        self.assertIn("Examples:", token_help)
+        self.assertIn("grafana-util access service-account token add", token_help)
+        self.assertIn("grafana-util access service-account token delete", token_help)
 
     def test_parse_args_supports_user_add_mode(self):
         args = access_utils.parse_args(
@@ -948,6 +982,8 @@ class AccessCliTests(unittest.TestCase):
         self.assertIn("--password NEW_USER_PASSWORD", help_text)
         self.assertIn("--password-file NEW_USER_PASSWORD_FILE", help_text)
         self.assertIn("--prompt-user-password", help_text)
+        self.assertIn("Examples:", help_text)
+        self.assertIn("grafana-util access user add --url http://localhost:3000", help_text)
         self.assertNotIn("--token", help_text)
 
     def test_user_modify_help_uses_basic_auth_only(self):
@@ -1069,6 +1105,28 @@ class AccessCliTests(unittest.TestCase):
         self.assertIn("--email EMAIL", help_text)
         self.assertIn("--member LOGIN_OR_EMAIL", help_text)
         self.assertIn("--admin LOGIN_OR_EMAIL", help_text)
+        self.assertIn("Examples:", help_text)
+        self.assertIn("grafana-util access team add --url http://localhost:3000", help_text)
+
+    def test_service_account_token_add_help_includes_examples(self):
+        parser = access_utils.build_parser()
+        token_add_parser = (
+            parser._subparsers._group_actions[0]
+            .choices["service-account"]
+            ._subparsers._group_actions[0]
+            .choices["token"]
+            ._subparsers._group_actions[0]
+            .choices["add"]
+        )
+        help_text = token_add_parser.format_help()
+
+        self.assertIn("--token-name TOKEN_NAME", help_text)
+        self.assertIn("--seconds-to-live SECONDS_TO_LIVE", help_text)
+        self.assertIn("Examples:", help_text)
+        self.assertIn(
+            "grafana-util access service-account token add --url http://localhost:3000",
+            help_text,
+        )
 
     def test_parse_args_supports_team_add_mode(self):
         args = access_utils.parse_args(

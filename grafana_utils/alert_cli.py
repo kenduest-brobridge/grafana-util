@@ -96,6 +96,14 @@ HELP_EPILOG = """Examples:
     grafana-util alert import --url https://grafana.example.com --import-dir ./alerts/raw --replace-existing --dashboard-uid-map ./dashboard-map.json --panel-id-map ./panel-map.json
 """
 
+
+def build_subcommand_examples(*sections: tuple[str, str]) -> str:
+    blocks = []
+    for title, command in sections:
+        blocks.append("%s:\n  %s" % (title, command))
+    return "Examples:\n\n" + "\n\n".join(blocks)
+
+
 def add_common_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--url",
@@ -333,6 +341,12 @@ def build_parser(prog: Optional[str] = None) -> argparse.ArgumentParser:
     export_parser = subparsers.add_parser(
         "export",
         help="Export alerting resources into raw/ JSON files.",
+        epilog=build_subcommand_examples(
+            (
+                "Export alerting resources into raw files",
+                "grafana-util alert export --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output-dir ./alerts --overwrite",
+            ),
+        ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     add_common_args(export_parser)
@@ -350,6 +364,16 @@ def build_parser(prog: Optional[str] = None) -> argparse.ArgumentParser:
     import_parser = subparsers.add_parser(
         "import",
         help="Import alerting resource JSON files through the Grafana API.",
+        epilog=build_subcommand_examples(
+            (
+                "Preview an alert import before writing",
+                "grafana-util alert import --url http://localhost:3000 --import-dir ./alerts/raw --replace-existing --dry-run",
+            ),
+            (
+                "Repair linked dashboard and panel references during import",
+                "grafana-util alert import --url http://localhost:3000 --import-dir ./alerts/raw --replace-existing --dashboard-uid-map ./dashboard-map.json --panel-id-map ./panel-map.json",
+            ),
+        ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     add_common_args(import_parser)
@@ -359,6 +383,12 @@ def build_parser(prog: Optional[str] = None) -> argparse.ArgumentParser:
     diff_parser = subparsers.add_parser(
         "diff",
         help="Compare local alerting export files against live Grafana resources.",
+        epilog=build_subcommand_examples(
+            (
+                "Compare exported alerting files with Grafana",
+                "grafana-util alert diff --url http://localhost:3000 --diff-dir ./alerts/raw",
+            ),
+        ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     add_common_args(diff_parser)
@@ -374,6 +404,18 @@ def build_parser(prog: Optional[str] = None) -> argparse.ArgumentParser:
         list_parser = subparsers.add_parser(
             command_name,
             help=help_text,
+            epilog=build_subcommand_examples(
+                (
+                    "Render %s as a table" % command_name,
+                    "grafana-util alert %s --url http://localhost:3000 --output-format table"
+                    % command_name,
+                ),
+                (
+                    "Render %s as JSON" % command_name,
+                    "grafana-util alert %s --url http://localhost:3000 --output-format json"
+                    % command_name,
+                ),
+            ),
             formatter_class=argparse.RawDescriptionHelpFormatter,
         )
         add_common_args(list_parser)

@@ -40,6 +40,13 @@ fn render_access_subcommand_help(path: &[&str]) -> String {
     String::from_utf8(output).unwrap()
 }
 
+fn render_access_help() -> String {
+    let mut command = AccessCliRoot::command();
+    let mut output = Vec::new();
+    command.write_long_help(&mut output).unwrap();
+    String::from_utf8(output).unwrap()
+}
+
 fn make_token_common() -> CommonCliArgs {
     CommonCliArgs {
         url: "http://127.0.0.1:3000".to_string(),
@@ -158,6 +165,24 @@ fn parse_cli_supports_safer_user_password_inputs() {
 }
 
 #[test]
+fn access_root_and_group_help_include_examples() {
+    let root_help = render_access_help();
+    assert!(root_help.contains("Examples:"));
+    assert!(root_help.contains("grafana-util access user list"));
+    assert!(root_help.contains("grafana-util access org export"));
+
+    let service_account_group_help = render_access_subcommand_help(&["service-account"]);
+    assert!(service_account_group_help.contains("Examples:"));
+    assert!(service_account_group_help.contains("grafana-util access service-account list"));
+    assert!(service_account_group_help.contains("grafana-util access service-account token add"));
+
+    let token_group_help = render_access_subcommand_help(&["service-account", "token"]);
+    assert!(token_group_help.contains("Examples:"));
+    assert!(token_group_help.contains("grafana-util access service-account token add"));
+    assert!(token_group_help.contains("grafana-util access service-account token delete"));
+}
+
+#[test]
 fn user_help_mentions_filter_and_output_flags() {
     let help = render_access_subcommand_help(&["user", "list"]);
     assert!(help.contains("--scope"));
@@ -165,6 +190,8 @@ fn user_help_mentions_filter_and_output_flags() {
     assert!(help.contains("--with-teams"));
     assert!(help.contains("Include each user's current team memberships"));
     assert!(help.contains("--output-format"));
+    assert!(help.contains("Examples:"));
+    assert!(help.contains("grafana-util access user list --url http://localhost:3000 --scope org --table"));
 }
 
 #[test]
@@ -197,25 +224,43 @@ fn team_and_service_account_help_mentions_membership_and_token_flags() {
     let org_help = render_access_subcommand_help(&["org", "list"]);
     assert!(org_help.contains("--with-users"));
     assert!(org_help.contains("Include org users and org roles"));
+    assert!(org_help.contains("Examples:"));
+    assert!(org_help.contains("grafana-util access org list --url http://localhost:3000 --table"));
 
     let team_add_help = render_access_subcommand_help(&["team", "add"]);
     assert!(team_add_help.contains("--member"));
     assert!(team_add_help.contains("Add one or more members"));
+    assert!(team_add_help.contains("Examples:"));
+    assert!(team_add_help.contains("grafana-util access team add --url http://localhost:3000 --name platform --member alice --member bob"));
 
     let team_help = render_access_subcommand_help(&["team", "modify"]);
     assert!(team_help.contains("--add-member"));
     assert!(team_help.contains("Add one or more members"));
     assert!(team_help.contains("--remove-admin"));
     assert!(team_help.contains("Remove team-admin status"));
+    assert!(team_help.contains("Examples:"));
 
     let service_account_help = render_access_subcommand_help(&["service-account", "add"]);
     assert!(service_account_help.contains("--role"));
     assert!(service_account_help.contains("Initial org role for the service account"));
+    assert!(service_account_help.contains("Examples:"));
+    assert!(service_account_help.contains("grafana-util access service-account add --url http://localhost:3000 --name automation --role Viewer"));
 
     let token_help = render_access_subcommand_help(&["service-account", "token", "add"]);
     assert!(token_help.contains("--token-name"));
     assert!(token_help.contains("Name for the new service-account token"));
     assert!(token_help.contains("--seconds-to-live"));
+    assert!(token_help.contains("Examples:"));
+    assert!(token_help.contains("grafana-util access service-account token add --url http://localhost:3000 --name automation --token-name ci-token --seconds-to-live 3600"));
+}
+
+#[test]
+fn access_top_level_help_includes_examples() {
+    let help = render_access_help();
+    assert!(help.contains("Examples:"));
+    assert!(help.contains("grafana-util access user list --url http://localhost:3000 --table"));
+    assert!(help.contains("grafana-util access org export --url http://localhost:3000 --with-users --export-dir ./access-orgs --overwrite"));
+    assert!(help.contains("grafana-util access service-account token add --url http://localhost:3000 --name automation --token-name ci-token --seconds-to-live 3600"));
 }
 
 #[test]

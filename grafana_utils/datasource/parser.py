@@ -279,6 +279,35 @@ def add_import_cli_args(parser):
         help="Update an existing destination datasource when the imported datasource already exists.",
     )
     parser.add_argument(
+        "--secret-placeholder",
+        action="append",
+        default=None,
+        help=(
+            "Attach one placeholder declaration to datasource import in "
+            "DATASOURCE:FIELD=${secret:NAME} form. DATASOURCE matches the "
+            "imported datasource uid or name, and FIELD targets one "
+            "secureJsonData field such as basicAuthPassword or "
+            "httpHeaderValue1. Repeat for multiple datasource secret fields."
+        ),
+    )
+    parser.add_argument(
+        "--secret",
+        action="append",
+        default=None,
+        help=(
+            "Resolve one datasource secret placeholder in NAME=VALUE form. "
+            "Repeat for multiple placeholders."
+        ),
+    )
+    parser.add_argument(
+        "--secret-file",
+        default=None,
+        help=(
+            "Load datasource secret placeholder values from a JSON object file "
+            "mapping placeholder names to secret strings."
+        ),
+    )
+    parser.add_argument(
         "--update-existing-only",
         action="store_true",
         help="Only update existing destination datasources. Missing datasources are skipped instead of created.",

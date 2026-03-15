@@ -18,6 +18,7 @@ Completed items that were previously listed here now live in `docs/internal/todo
 - dashboard `prompt` export should align `__requires` names and versions with Grafana external export where possible
 - dashboard `prompt` export should add broader mixed-type and same-type datasource validation coverage beyond the current Prometheus/Loki cases
 - add a broader import dependency preflight that checks datasource existence, plugin availability, and alert/contact references before mutating target Grafana
+- add dashboard and folder ACL permission export/import support so user/team/service-account/role permissions can be reviewed and promoted alongside dashboard content
 - extend dashboard offline inspection from counts and datasource usage into richer dependency analysis, including per-query extracted metrics/buckets/measurements where the datasource format is understood
 - refactor query report extraction behind datasource-type-specific analyzers so Prometheus, Loki, Flux/Influx, SQL, and future datasource families can evolve independently without bloating one generic parser path
 - extend query report extraction for Loki-style log queries so inspection can report stream selectors, label matchers, pipeline stages, filters, and range/aggregation functions instead of leaving Loki queries as empty `metrics`
@@ -45,6 +46,7 @@ Completed items that were previously listed here now live in `docs/internal/todo
 - start in a separate development file first and avoid wiring promotion/preflight code into existing import flows until reviewable dry-run contracts are stable
 - design a first-class `promote --from <env> --to <env>` workflow around the current export/import/diff contract
 - expand import preflight to check datasources, plugins, alerts, contact points, library panels, and other common target prerequisites before mutation
+- expand promotion planning to include dashboard/folder ACL permission prerequisites and explicit permission drift visibility
 - support datasource and dashboard UID/name remap rules as explicit reviewable inputs
 - keep dry-run and diff outputs trustworthy enough for team review before live mutation
 

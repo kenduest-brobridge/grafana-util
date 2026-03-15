@@ -647,6 +647,45 @@ class ExporterTests(unittest.TestCase):
         self.assertIn("missing/match/mismatch", help_text)
         self.assertIn("skipped/blocked", help_text)
         self.assertIn("table form", help_text)
+        self.assertIn("Examples:", help_text)
+        self.assertIn("grafana-util dashboard import --url http://localhost:3000", help_text)
+        self.assertIn("--use-export-org --create-missing-orgs --dry-run", help_text)
+
+    def test_diff_help_includes_usage_examples(self):
+        stream = io.StringIO()
+
+        with redirect_stdout(stream):
+            with self.assertRaises(SystemExit):
+                exporter.parse_args(["diff", "-h"])
+
+        help_text = stream.getvalue()
+        self.assertIn("Examples:", help_text)
+        self.assertIn("grafana-util dashboard diff --url http://localhost:3000", help_text)
+        self.assertIn("--import-folder-uid shared-folder", help_text)
+
+    def test_promote_plan_help_includes_usage_examples(self):
+        stream = io.StringIO()
+
+        with redirect_stdout(stream):
+            with self.assertRaises(SystemExit):
+                exporter.parse_args(["promote-plan", "-h"])
+
+        help_text = stream.getvalue()
+        self.assertIn("Examples:", help_text)
+        self.assertIn("grafana-util dashboard promote-plan --source-bundle ./source-bundle.json", help_text)
+        self.assertIn("--datasource-uid-map-file ./datasource-uid-map.json --output-format json", help_text)
+
+    def test_preflight_plan_help_includes_usage_examples(self):
+        stream = io.StringIO()
+
+        with redirect_stdout(stream):
+            with self.assertRaises(SystemExit):
+                exporter.parse_args(["preflight-plan", "-h"])
+
+        help_text = stream.getvalue()
+        self.assertIn("Examples:", help_text)
+        self.assertIn("grafana-util dashboard preflight-plan --plan-file ./promotion-plan.json", help_text)
+        self.assertIn("--availability-file ./availability.json --output-format json", help_text)
 
     def test_inspect_export_help_mentions_raw_export_directory(self):
         stream = io.StringIO()
@@ -1200,6 +1239,28 @@ class ExporterTests(unittest.TestCase):
         self.assertEqual(args.command, "preflight-plan")
         self.assertEqual(args.plan_file, "plan.json")
         self.assertEqual(args.output_format, "json")
+
+    def test_promote_and_preflight_plan_help_include_examples(self):
+        stream = io.StringIO()
+
+        with redirect_stdout(stream):
+            with self.assertRaises(SystemExit):
+                exporter.parse_args(["promote-plan", "-h"])
+
+        promote_help = stream.getvalue()
+        self.assertIn("Examples:", promote_help)
+        self.assertIn("grafana-util dashboard promote-plan", promote_help)
+        self.assertIn("--source-bundle", promote_help)
+
+        stream = io.StringIO()
+        with redirect_stdout(stream):
+            with self.assertRaises(SystemExit):
+                exporter.parse_args(["preflight-plan", "-h"])
+
+        preflight_help = stream.getvalue()
+        self.assertIn("Examples:", preflight_help)
+        self.assertIn("grafana-util dashboard preflight-plan", preflight_help)
+        self.assertIn("--plan-file", preflight_help)
 
     def test_parse_args_supports_inspect_export_view_format_layout(self):
         args = exporter.parse_args(

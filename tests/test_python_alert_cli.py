@@ -334,6 +334,33 @@ class AlertUtilsTests(unittest.TestCase):
         self.assertIn("list-rules", help_text)
         self.assertIn("--dashboard-uid-map ./dashboard-map.json", help_text)
 
+    def test_list_rules_help_includes_subcommand_examples(self):
+        parser = alert_utils.build_parser()
+        list_rules_parser = parser._subparsers._group_actions[0].choices["list-rules"]
+        help_text = list_rules_parser.format_help()
+
+        self.assertIn("Examples:", help_text)
+        self.assertIn(
+            "grafana-util alert list-rules --url http://localhost:3000 --output-format table",
+            help_text,
+        )
+        self.assertIn(
+            "grafana-util alert list-rules --url http://localhost:3000 --output-format json",
+            help_text,
+        )
+
+    def test_import_help_includes_subcommand_examples(self):
+        parser = alert_utils.build_parser()
+        import_parser = parser._subparsers._group_actions[0].choices["import"]
+        help_text = import_parser.format_help()
+
+        self.assertIn("Examples:", help_text)
+        self.assertIn(
+            "grafana-util alert import --url http://localhost:3000 --import-dir ./alerts/raw --replace-existing --dry-run",
+            help_text,
+        )
+        self.assertIn("--dashboard-uid-map ./dashboard-map.json", help_text)
+
     def test_parse_args_defaults_output_dir_to_alerts(self):
         args = alert_utils.parse_args([])
 

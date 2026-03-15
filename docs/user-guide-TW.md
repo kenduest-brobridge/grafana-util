@@ -600,6 +600,14 @@ grafana-util datasource add \
   --dry-run --table
 ```
 
+範例輸出（table dry-run）：
+```text
+UID         NAME               TYPE         ACTION  URL
+prom-main   prometheus-main    prometheus   create  http://prometheus:9090
+
+Dry-run checked 1 datasource(s): create=1 update=0 skip=0
+```
+
 範例：Loki + tenant header
 ```bash
 grafana-util datasource add \
@@ -612,6 +620,25 @@ grafana-util datasource add \
   --datasource-url http://loki:3100 \
   --http-header X-Scope-OrgID=tenant-a \
   --dry-run --json
+```
+
+範例輸出（JSON dry-run）：
+```json
+{
+  "summary": {
+    "createCount": 1,
+    "updateCount": 0,
+    "skipCount": 0
+  },
+  "items": [
+    {
+      "uid": "loki-main",
+      "name": "loki-main",
+      "type": "loki",
+      "action": "create"
+    }
+  ]
+}
 ```
 
 範例：InfluxDB + 額外 plugin 設定
@@ -633,33 +660,172 @@ grafana-util datasource add \
 6) Access (存取控制) 指令模組
 -------------
 
-這是本工具的核心功能，專為大規模環境的**權限治理與狀態同步**設計。
+這是本工具中最偏向治理與狀態同步的模組，涵蓋 org、user、team、service account 與 token 操作。
 
-### 6.1 使用者管理 (User Operations)
-- `access user list`: 支援 `org` 與 `global` 範圍的權限盤點。
-- `access user export`: 建立使用者快照，包含其組織角色與團隊成員關係。
-- `access user import`: **宣告式還原**使用者狀態。
-- **`--with-teams`**: 匯出/匯入時包含 Team 成員關係同步（還原權限時必備）。
+### `access org list`
 
-### 6.2 團隊管理 (Team Operations)
-- `access team import`: 執行確定性（Deterministic）的成員同步。
-- **組態漂移檢查**: 使用 `access team diff` 識別本地快照與線上環境的成員差異。
-- **安全警告**: 若匯入操作會移除現有成員，必需加上 `--yes` 以避免非預期的權限丟失。
+**用途**：列出 organizations，必要時包含目前成員數。
 
----
+| 參數 | 用途 | 差異 / 情境 |
+| --- | --- | --- |
+| `--query` | 模糊搜尋 org 名稱 | 大量 org 盤點 |
+| `--name` | 精準 org 名稱 | 已知名稱時快速查詢 |
+| `--with-members` | 顯示目前 org 成員數 | 權限審計 |
+| `--table` / `--csv` / `--json` | 輸出模式 | 人工或自動化 |
+| `--output-format table/csv/json` | 統一輸出切換 | 取代傳統三旗標 |
 
-8) 常見維運情境 SOP (Best Practices)
-------------------
+範例指令：
+```bash
+grafana-util access org list --url http://localhost:3000 --basic-user admin --basic-password admin --table
+```
 
-### 8.1 跨環境 Dashboard 遷移 (Promote to Prod)
-1. **備份與提交**: 在來源環境執行 `export` 並將產出的 JSON 提交至 Git 倉庫。
-2. **差異預覽**: 在目標環境執行 `import --dry-run --table --import-dir <DIR>/raw`。
-3. **安全更新**: 確認無誤後，執行 `import --replace-existing` 完成同步。
+範例輸出：
+```text
+ID   NAME         MEMBERS
+1    Main Org     5
+2    Org Two      2
+3    QA Org       2
+4    Audit Org    2
+```
 
-### 8.2 資產稽核與漂移盤點
-1. **線上掃描**: 定期執行 `dashboard inspect-live --output-format governance-json` 識別孤立資源。
-2. **組態比對**：利用 `datasource diff` 確保線上資料來源設定與標準庫一致。
-3. **權限稽核**: 執行 `access user list --scope global --csv` 產出年度審計報表。
+### `access org add`
+
+**用途**：建立 organization，必要時順便加入初始成員。
+
+| 參數 | 用途 | 差異 / 情境 |
+| --- | --- | --- |
+| `--name` | org 名稱 | 必填 |
+| `--user` | 加入一位 org member（login 或 email） | 可重複指定 |
+| `--role` | 搭配 `--user` 的 org role | 用於初始化 membership |
+| `--json` | JSON 回應 | 便於自動化後續處理 |
+
+範例指令：
+```bash
+grafana-util access org add --url http://localhost:3000 --basic-user admin --basic-password admin --name staging --user alice@example.com --role Editor --json
+```
+
+範例輸出：
+```json
+{
+  "id": 5,
+  "name": "staging",
+  "membersAdded": 1
+}
+```
+
+### `access org modify`
+
+**用途**：修改 organization 名稱或 org membership。
+
+| 參數 | 用途 | 差異 / 情境 |
+| --- | --- | --- |
+| `--org-id` / `--name` | org 定位 | 二擇一 |
+| `--set-name` | 重新命名 org | 清理命名 |
+| `--add-user` / `--remove-user` | 成員增刪 | 可重複指定 |
+| `--set-role` | 更新對應使用者的 org role | membership replay |
+| `--json` | JSON 回應 | 便於自動化後續處理 |
+
+範例指令：
+```bash
+grafana-util access org modify --url http://localhost:3000 --basic-user admin --basic-password admin --name staging --add-user bob@example.com --set-role Viewer --json
+```
+
+範例輸出：
+```json
+{
+  "id": 5,
+  "name": "staging",
+  "membersAdded": 1,
+  "membersUpdated": 0
+}
+```
+
+### `access org delete`
+
+**用途**：刪除 organization。
+
+| 參數 | 用途 | 差異 / 情境 |
+| --- | --- | --- |
+| `--org-id` / `--name` | org 定位 | 二擇一 |
+| `--yes` | 跳過確認 | 自動化常用 |
+| `--json` | JSON 回應 | 便於自動化後續處理 |
+
+範例指令：
+```bash
+grafana-util access org delete --url http://localhost:3000 --basic-user admin --basic-password admin --name staging --yes --json
+```
+
+範例輸出：
+```json
+{
+  "id": 5,
+  "name": "staging",
+  "result": "deleted"
+}
+```
+
+### `access org export`
+
+**用途**：匯出 organization 快照，必要時包含 membership 狀態。
+
+| 參數 | 用途 | 差異 / 情境 |
+| --- | --- | --- |
+| `--export-dir` | 輸出 `orgs.json` 與 `export-metadata.json` 的目錄 | 預設 `access-orgs` |
+| `--overwrite` | 覆蓋既有輸出檔 | 重複備份 |
+| `--with-members` | 在每個 org record 內包含 membership | 做 replay 時建議開啟 |
+
+範例指令：
+```bash
+grafana-util access org export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./access-orgs --with-members --overwrite
+```
+
+範例輸出：
+```text
+Exported organizations from http://localhost:3000 -> access-orgs/orgs.json and access-orgs/export-metadata.json
+```
+
+### `access org import`
+
+**用途**：把 organization 快照 replay 回 Grafana。
+
+| 參數 | 用途 | 差異 / 情境 |
+| --- | --- | --- |
+| `--import-dir` | 包含 `orgs.json` 與 `export-metadata.json` 的目錄 | 必須沿用 export 結構 |
+| `--replace-existing` | 更新既有 org 與 membership | 重複同步時必備 |
+| `--dry-run` | 只預覽，不實際變更 | 建議先跑 |
+| `--table`、`--json`、`--output-format table/json` | dry-run 輸出模式 | 人工審查或自動化判讀 |
+
+範例指令：
+```bash
+grafana-util access org import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./access-orgs --replace-existing --dry-run --output-format table
+```
+
+範例輸出：
+```text
+INDEX  IDENTITY    ACTION   DETAIL
+1      Main Org    skip     already matched live state.
+2      Org Two     update   would update memberships
+3      staging     create   would create organization
+
+Import summary: processed=3 created=1 updated=1 skipped=1 source=./access-orgs
+```
+
+### 6.1 `access user list`
+
+**用途**：列出 `org` 或 `global` 範圍的 users。
+
+| 參數 | 用途 | 差異 / 情境 |
+| --- | --- | --- |
+| `--scope` | `org` 或 `global` | 切換查詢範圍 |
+| `--query` | 依 login / email / name 模糊搜尋 | 大量使用者盤點 |
+| `--login` | 精準 login 匹配 | 已知 login 時快速查詢 |
+| `--email` | 精準 email 匹配 | 已知 email 時快速查詢 |
+| `--org-role` | 依 org role 篩選 | 權限審計 |
+| `--grafana-admin` | 依 server admin 狀態篩選 | 管理員盤點 |
+| `--with-teams` | 顯示 team memberships | team 關聯盤點 |
+| `--page` / `--per-page` | 分頁 | 大量資料時控制輸出 |
+| `--table` / `--csv` / `--json` | 輸出模式 | 人工或自動化 |
+| `--output-format table/csv/json` | 統一輸出切換 | 取代傳統三旗標 |
 
 範例指令：
 ```bash
@@ -1293,6 +1459,9 @@ grafana-util datasource import --url <URL> --basic-user <USER> --basic-password 
 grafana-util datasource diff --url <URL> --basic-user <USER> --basic-password <PASS> --diff-dir <DIR>
 
 # access
+grafana-util access org list --url <URL> --basic-user <USER> --basic-password <PASS> --table
+grafana-util access org export --url <URL> --basic-user <USER> --basic-password <PASS> --export-dir ./access-orgs [--with-members]
+grafana-util access org import --url <URL> --basic-user <USER> --basic-password <PASS> --import-dir ./access-orgs --replace-existing [--dry-run] [--output-format text|table|json]
 grafana-util access user list --url <URL> --token <TOKEN> --scope org [--table|--csv|--json]
 grafana-util access user add --url <URL> --basic-user <USER> --basic-password <PASS> --login <LOGIN> --email <EMAIL> --name <NAME> --password <PWD> [--org-role Editor] [--grafana-admin true|false]
 grafana-util access user modify --url <URL> --basic-user <USER> --basic-password <PASS> --login <LOGIN> --set-email <EMAIL> [--set-name <NAME>] [--set-org-role Viewer|Editor|Admin|None] [--set-grafana-admin true|false]

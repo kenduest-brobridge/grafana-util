@@ -632,7 +632,7 @@ Notes:
 
 Example: Prometheus with basic auth
 ```bash
-python3 -m grafana_utils datasource add \
+grafana-util datasource add \
   --url http://localhost:3000 \
   --token <TOKEN> \
   --uid prom-main \
@@ -646,9 +646,17 @@ python3 -m grafana_utils datasource add \
   --dry-run --table
 ```
 
+Example output (table dry-run):
+```text
+UID         NAME               TYPE         ACTION  URL
+prom-main   prometheus-main    prometheus   create  http://prometheus:9090
+
+Dry-run checked 1 datasource(s): create=1 update=0 skip=0
+```
+
 Example: Loki with tenant header
 ```bash
-python3 -m grafana_utils datasource add \
+grafana-util datasource add \
   --url http://localhost:3000 \
   --token <TOKEN> \
   --uid loki-main \
@@ -660,9 +668,28 @@ python3 -m grafana_utils datasource add \
   --dry-run --json
 ```
 
+Example output (JSON dry-run):
+```json
+{
+  "summary": {
+    "createCount": 1,
+    "updateCount": 0,
+    "skipCount": 0
+  },
+  "items": [
+    {
+      "uid": "loki-main",
+      "name": "loki-main",
+      "type": "loki",
+      "action": "create"
+    }
+  ]
+}
+```
+
 Example: InfluxDB with extra plugin settings
 ```bash
-python3 -m grafana_utils datasource add \
+grafana-util datasource add \
   --url http://localhost:3000 \
   --token <TOKEN> \
   --uid influx-main \
@@ -680,6 +707,154 @@ python3 -m grafana_utils datasource add \
 ------------------
 
 `group` is an alias for `team`.
+
+### `access org list`
+
+Purpose: list organizations and optionally include their current member counts.
+
+| Option | Purpose | Difference / scenario |
+| --- | --- | --- |
+| `--query` | Fuzzy match on org name | Broad discovery |
+| `--name` | Exact org name match | Precise lookup |
+| `--with-members` | Include current org membership counts | Permission review |
+| `--table`, `--csv`, `--json` | Output mode | Human vs automation |
+| `--output-format table\|csv\|json` | Unified output selector | Replaces the legacy trio |
+
+Example command:
+```bash
+grafana-util access org list --url http://localhost:3000 --basic-user admin --basic-password admin --table
+```
+
+Example output:
+```text
+ID   NAME         MEMBERS
+1    Main Org     5
+2    Org Two      2
+3    QA Org       2
+4    Audit Org    2
+```
+
+### `access org add`
+
+Purpose: create a new organization and optionally seed initial memberships.
+
+| Option | Purpose | Difference / scenario |
+| --- | --- | --- |
+| `--name` | Organization name | Required |
+| `--user` | Add one org member by exact login/email | Repeatable |
+| `--role` | Role paired with `--user` | Repeatable membership seed |
+| `--json` | JSON output | Automation |
+
+Example command:
+```bash
+grafana-util access org add --url http://localhost:3000 --basic-user admin --basic-password admin --name staging --user alice@example.com --role Editor --json
+```
+
+Example output:
+```json
+{
+  "id": 5,
+  "name": "staging",
+  "membersAdded": 1
+}
+```
+
+### `access org modify`
+
+Purpose: rename an organization or adjust its memberships.
+
+| Option | Purpose | Difference / scenario |
+| --- | --- | --- |
+| `--org-id` / `--name` | Org locator | Choose one |
+| `--set-name` | Rename the organization | Metadata cleanup |
+| `--add-user` / `--remove-user` | Membership changes | Repeatable |
+| `--set-role` | Update the paired user's org role | Membership replay |
+| `--json` | JSON output | Automation |
+
+Example command:
+```bash
+grafana-util access org modify --url http://localhost:3000 --basic-user admin --basic-password admin --name staging --add-user bob@example.com --set-role Viewer --json
+```
+
+Example output:
+```json
+{
+  "id": 5,
+  "name": "staging",
+  "membersAdded": 1,
+  "membersUpdated": 0
+}
+```
+
+### `access org delete`
+
+Purpose: delete an organization.
+
+| Option | Purpose | Difference / scenario |
+| --- | --- | --- |
+| `--org-id` / `--name` | Org locator | Choose one |
+| `--yes` | Skip confirmation | Typical for automation |
+| `--json` | JSON output | Automation |
+
+Example command:
+```bash
+grafana-util access org delete --url http://localhost:3000 --basic-user admin --basic-password admin --name staging --yes --json
+```
+
+Example output:
+```json
+{
+  "id": 5,
+  "name": "staging",
+  "result": "deleted"
+}
+```
+
+### `access org export`
+
+Purpose: export organization snapshots, including optional membership state.
+
+| Option | Purpose | Difference / scenario |
+| --- | --- | --- |
+| `--export-dir` | Directory to write `orgs.json` and `export-metadata.json` | Default `access-orgs` |
+| `--overwrite` | Replace existing output files | Repeatable backups |
+| `--with-members` | Include org memberships in each record | Required for replay |
+
+Example command:
+```bash
+grafana-util access org export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./access-orgs --with-members --overwrite
+```
+
+Example output:
+```text
+Exported organizations from http://localhost:3000 -> access-orgs/orgs.json and access-orgs/export-metadata.json
+```
+
+### `access org import`
+
+Purpose: replay organization snapshots into Grafana.
+
+| Option | Purpose | Difference / scenario |
+| --- | --- | --- |
+| `--import-dir` | Directory containing `orgs.json` and `export-metadata.json` | Must match export layout |
+| `--replace-existing` | Update existing org records and memberships | Required for repeated sync |
+| `--dry-run` | Plan actions only, no API mutation | Recommended first pass |
+| `--table`, `--json`, `--output-format table/json` | Dry-run output mode | Human vs automation review |
+
+Example command:
+```bash
+grafana-util access org import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./access-orgs --replace-existing --dry-run --output-format table
+```
+
+Example output:
+```text
+INDEX  IDENTITY    ACTION   DETAIL
+1      Main Org    skip     already matched live state.
+2      Org Two     update   would update memberships
+3      staging     create   would create organization
+
+Import summary: processed=3 created=1 updated=1 skipped=1 source=./access-orgs
+```
 
 ### 6.1 `access user list`
 
@@ -1318,11 +1493,14 @@ grafana-util alert import --url <URL> --basic-user <USER> --basic-password <PASS
 grafana-util alert diff --url <URL> --basic-user <USER> --basic-password <PASS> --diff-dir <DIR>/raw
 
 grafana-util datasource list --url <URL> --token <TOKEN> [--table|--csv|--json]
-python3 -m grafana_utils datasource add --url <URL> --token <TOKEN> --name <NAME> --type <TYPE> [--uid <UID>] [--access proxy|direct] [--datasource-url <URL>] [--basic-auth] [--basic-auth-user <USER>] [--basic-auth-password <PASS>] [--user <USER>] [--password <PASS>] [--with-credentials] [--http-header NAME=VALUE] [--tls-skip-verify] [--server-name <NAME>] [--json-data <JSON>] [--secure-json-data <JSON>] [--dry-run] [--table|--json|--output-format text|table|json]
+grafana-util datasource add --url <URL> --token <TOKEN> --name <NAME> --type <TYPE> [--uid <UID>] [--access proxy|direct] [--datasource-url <URL>] [--basic-auth] [--basic-auth-user <USER>] [--basic-auth-password <PASS>] [--user <USER>] [--password <PASS>] [--with-credentials] [--http-header NAME=VALUE] [--tls-skip-verify] [--server-name <NAME>] [--json-data <JSON>] [--secure-json-data <JSON>] [--dry-run] [--table|--json|--output-format text|table|json]
 grafana-util datasource export --url <URL> --basic-user <USER> --basic-password <PASS> --export-dir <DIR> [--overwrite] [--org-id <ORG_ID>|--all-orgs]
 grafana-util datasource import --url <URL> --basic-user <USER> --basic-password <PASS> --import-dir <DIR> --replace-existing [--org-id <ORG_ID>] [--use-export-org [--only-org-id <ORG_ID>]... [--create-missing-orgs]] [--dry-run]
 grafana-util datasource diff --url <URL> --basic-user <USER> --basic-password <PASS> --diff-dir <DIR>
 
+grafana-util access org list --url <URL> --basic-user <USER> --basic-password <PASS> --table
+grafana-util access org export --url <URL> --basic-user <USER> --basic-password <PASS> --export-dir ./access-orgs [--with-members]
+grafana-util access org import --url <URL> --basic-user <USER> --basic-password <PASS> --import-dir ./access-orgs --replace-existing --dry-run --output-format table
 grafana-util access user list --url <URL> --basic-user <USER> --basic-password <PASS> --scope global --table
 grafana-util access team list --url <URL> --token <TOKEN> --table
 grafana-util access user export --url <URL> --token <TOKEN> --export-dir ./access-users

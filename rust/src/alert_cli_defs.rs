@@ -7,6 +7,21 @@ use crate::common::{resolve_auth_headers, Result};
 
 use super::{ALERT_HELP_TEXT, DEFAULT_OUTPUT_DIR, DEFAULT_TIMEOUT, DEFAULT_URL};
 
+const ALERT_EXPORT_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Export alerting resources into raw/:\n    grafana-util alert export --url http://localhost:3000 --output-dir ./alerts --overwrite\n\n  Export using Basic auth:\n    grafana-util alert export --url http://localhost:3000 --basic-user admin --basic-password admin --output-dir ./alerts --overwrite";
+const ALERT_IMPORT_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Preview alert imports:\n    grafana-util alert import --url http://localhost:3000 --import-dir ./alerts/raw --replace-existing --dry-run\n\n  Repair linked dashboard references during import:\n    grafana-util alert import --url http://localhost:3000 --import-dir ./alerts/raw --replace-existing --dashboard-uid-map ./dashboard-map.json --panel-id-map ./panel-map.json";
+const ALERT_DIFF_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Compare local alert exports against live Grafana:\n    grafana-util alert diff --url http://localhost:3000 --diff-dir ./alerts/raw\n\n  Compare with Basic auth:\n    grafana-util alert diff --url http://localhost:3000 --basic-user admin --basic-password admin --diff-dir ./alerts/raw";
+const ALERT_LIST_RULES_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Table output:\n    grafana-util alert list-rules --url http://localhost:3000 --table\n\n  JSON output for scripting:\n    grafana-util alert list-rules --url http://localhost:3000 --output-format json";
+const ALERT_LIST_CONTACT_POINTS_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Table output:\n    grafana-util alert list-contact-points --url http://localhost:3000 --table\n\n  CSV output without a header row:\n    grafana-util alert list-contact-points --url http://localhost:3000 --csv --no-header";
+const ALERT_LIST_MUTE_TIMINGS_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Table output:\n    grafana-util alert list-mute-timings --url http://localhost:3000 --table\n\n  JSON output for scripting:\n    grafana-util alert list-mute-timings --url http://localhost:3000 --output-format json";
+const ALERT_LIST_TEMPLATES_HELP_EXAMPLES: &str =
+    "Examples:\n\n  Table output:\n    grafana-util alert list-templates --url http://localhost:3000 --table\n\n  JSON output for scripting:\n    grafana-util alert list-templates --url http://localhost:3000 --output-format json";
+
 #[derive(Debug, Clone, Parser)]
 #[command(
     name = "grafana-util alert",
@@ -238,24 +253,43 @@ pub struct AlertListArgs {
 
 #[derive(Debug, Clone, Subcommand)]
 pub enum AlertGroupCommand {
-    #[command(about = "Export alerting resources into raw/ JSON files.")]
+    #[command(
+        about = "Export alerting resources into raw/ JSON files.",
+        after_help = ALERT_EXPORT_HELP_EXAMPLES
+    )]
     Export(AlertExportArgs),
-    #[command(about = "Import alerting resource JSON files through the Grafana API.")]
+    #[command(
+        about = "Import alerting resource JSON files through the Grafana API.",
+        after_help = ALERT_IMPORT_HELP_EXAMPLES
+    )]
     Import(AlertImportArgs),
-    #[command(about = "Compare local alerting export files against live Grafana resources.")]
+    #[command(
+        about = "Compare local alerting export files against live Grafana resources.",
+        after_help = ALERT_DIFF_HELP_EXAMPLES
+    )]
     Diff(AlertDiffArgs),
-    #[command(name = "list-rules", about = "List live Grafana alert rules.")]
+    #[command(
+        name = "list-rules",
+        about = "List live Grafana alert rules.",
+        after_help = ALERT_LIST_RULES_HELP_EXAMPLES
+    )]
     ListRules(AlertListArgs),
     #[command(
         name = "list-contact-points",
-        about = "List live Grafana alert contact points."
+        about = "List live Grafana alert contact points.",
+        after_help = ALERT_LIST_CONTACT_POINTS_HELP_EXAMPLES
     )]
     ListContactPoints(AlertListArgs),
-    #[command(name = "list-mute-timings", about = "List live Grafana mute timings.")]
+    #[command(
+        name = "list-mute-timings",
+        about = "List live Grafana mute timings.",
+        after_help = ALERT_LIST_MUTE_TIMINGS_HELP_EXAMPLES
+    )]
     ListMuteTimings(AlertListArgs),
     #[command(
         name = "list-templates",
-        about = "List live Grafana notification templates."
+        about = "List live Grafana notification templates.",
+        after_help = ALERT_LIST_TEMPLATES_HELP_EXAMPLES
     )]
     ListTemplates(AlertListArgs),
 }

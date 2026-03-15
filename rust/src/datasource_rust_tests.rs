@@ -1,14 +1,20 @@
 // Datasource domain test suite.
 // Exercises parsing + import/export/diff helpers, including mocked datasource matching and contract fixtures.
 use super::{
-    build_add_payload, build_import_payload, build_modify_payload, build_modify_updates,
+    build_add_payload, build_import_payload, build_import_payload_with_secrets,
+    build_datasource_import_dry_run_json_value, build_import_secret_context, build_modify_payload,
+    build_modify_updates, ensure_live_import_provider_free,
     diff_datasources_with_live, discover_export_org_import_scopes, load_import_records,
-    parse_json_object_argument, render_import_table, render_live_mutation_json,
-    render_live_mutation_table, resolve_delete_match, resolve_live_mutation_match,
-    resolve_match, run_datasource_cli, CommonCliArgs, DatasourceCliArgs,
-    DatasourceImportArgs, DatasourceImportRecord,
+    parse_json_object_argument, render_datasource_import_provider_review_lines, render_import_table,
+    render_live_mutation_json, render_live_mutation_table, resolve_delete_match,
+    resolve_import_secure_json_data, resolve_live_mutation_match, resolve_match,
+    run_datasource_cli, CommonCliArgs, DatasourceCliArgs, DatasourceImportArgs,
+    DatasourceImportRecord,
 };
 use clap::{CommandFactory, Parser};
+use crate::datasource_provider::{
+    build_provider_plan, collect_provider_references, summarize_provider_plan,
+};
 use serde_json::{json, Value};
 use std::fs;
 use std::path::Path;
@@ -69,6 +75,9 @@ fn import_help_explains_common_operator_flags() {
     assert!(help.contains("--create-missing-orgs"));
     assert!(help.contains("--require-matching-export-org"));
     assert!(help.contains("--replace-existing"));
+    assert!(help.contains("--secret-placeholder"));
+    assert!(help.contains("--secret"));
+    assert!(help.contains("--secret-file"));
     assert!(help.contains("--update-existing-only"));
     assert!(help.contains("--dry-run"));
     assert!(help.contains("--table"));
@@ -77,6 +86,8 @@ fn import_help_explains_common_operator_flags() {
     assert!(help.contains("--output-columns"));
     assert!(help.contains("--progress"));
     assert!(help.contains("--verbose"));
+    assert!(help.contains("Examples:"));
+    assert!(help.contains("grafana-util datasource import --url http://localhost:3000 --import-dir ./datasources --replace-existing --dry-run --output-format table"));
 }
 
 #[test]
@@ -93,6 +104,8 @@ fn export_help_explains_org_scope_flags() {
     assert!(help.contains("--all-orgs"));
     assert!(help.contains("--overwrite"));
     assert!(help.contains("--dry-run"));
+    assert!(help.contains("Examples:"));
+    assert!(help.contains("grafana-util datasource export --url http://localhost:3000 --export-dir ./datasources --overwrite"));
 }
 
 #[test]
@@ -111,6 +124,8 @@ fn add_help_explains_live_mutation_flags() {
     assert!(help.contains("--json-data"));
     assert!(help.contains("--secure-json-data"));
     assert!(help.contains("--dry-run"));
+    assert!(help.contains("Examples:"));
+    assert!(help.contains("grafana-util datasource add --url http://localhost:3000 --name prom-main --type prometheus --datasource-url http://prometheus:9090 --access proxy --dry-run --output-format table"));
 }
 
 #[test]
@@ -126,6 +141,8 @@ fn delete_help_explains_live_mutation_flags() {
     assert!(help.contains("--uid"));
     assert!(help.contains("--name"));
     assert!(help.contains("--dry-run"));
+    assert!(help.contains("Examples:"));
+    assert!(help.contains("grafana-util datasource delete --url http://localhost:3000 --uid prom-main --dry-run --output-format table"));
 }
 
 #[test]
@@ -145,6 +162,8 @@ fn modify_help_explains_live_mutation_flags() {
     assert!(help.contains("--json-data"));
     assert!(help.contains("--secure-json-data"));
     assert!(help.contains("--dry-run"));
+    assert!(help.contains("Examples:"));
+    assert!(help.contains("grafana-util datasource modify --url http://localhost:3000 --uid prom-main --set-url http://prometheus-v2:9090 --set-default true --dry-run --output-format table"));
 }
 
 #[test]
@@ -249,6 +268,7 @@ fn resolve_match_marks_multiple_name_matches_as_ambiguous() {
         url: "http://prometheus:9090".to_string(),
         is_default: true,
         org_id: "1".to_string(),
+        secure_json_data_providers: serde_json::Map::new(),
     };
     let live = vec![
         live_datasource(1, "prom-a", "Prometheus Main", "prometheus"),
@@ -305,6 +325,7 @@ fn resolve_match_allows_update_when_uid_exists_and_replace_existing_is_enabled()
         url: "http://prometheus:9090".to_string(),
         is_default: true,
         org_id: "1".to_string(),
+        secure_json_data_providers: serde_json::Map::new(),
     };
     let live = vec![live_datasource(
         9,
@@ -331,6 +352,7 @@ fn resolve_match_blocks_name_match_when_uid_differs() {
         url: "http://prometheus:9090".to_string(),
         is_default: true,
         org_id: "1".to_string(),
+        secure_json_data_providers: serde_json::Map::new(),
     };
     let live = vec![live_datasource(
         9,
@@ -470,6 +492,34 @@ fn parse_datasource_import_supports_output_columns() {
 }
 
 #[test]
+fn parse_datasource_import_supports_secret_sidecar_flags() {
+    let args = DatasourceCliArgs::parse_normalized_from([
+        "grafana-util",
+        "import",
+        "--import-dir",
+        "./datasources",
+        "--secret-placeholder",
+        "prom-main:httpHeaderValue1=${secret:metrics-token}",
+        "--secret",
+        "metrics-token=Bearer tenant-a",
+        "--secret-file",
+        "./secrets.json",
+    ]);
+
+    match args.command {
+        super::DatasourceGroupCommand::Import(inner) => {
+            assert_eq!(
+                inner.secret_placeholder,
+                vec!["prom-main:httpHeaderValue1=${secret:metrics-token}"]
+            );
+            assert_eq!(inner.secrets, vec!["metrics-token=Bearer tenant-a"]);
+            assert_eq!(inner.secret_file, Some(Path::new("./secrets.json").into()));
+        }
+        _ => panic!("expected datasource import"),
+    }
+}
+
+#[test]
 fn parse_datasource_export_supports_org_scope_flags() {
     let args = DatasourceCliArgs::parse_normalized_from([
         "grafana-util",
@@ -588,6 +638,7 @@ fn build_import_payload_matches_shared_contract_fixtures() {
                 .and_then(Value::as_str)
                 .unwrap()
                 .to_string(),
+            secure_json_data_providers: serde_json::Map::new(),
         };
 
         assert_eq!(build_import_payload(&record), expected_payload);
@@ -705,6 +756,163 @@ fn build_modify_payload_merges_existing_json_data() {
     assert_eq!(payload["jsonData"]["httpMethod"], json!("POST"));
     assert_eq!(payload["jsonData"]["timeInterval"], json!("30s"));
     assert_eq!(payload["secureJsonData"]["token"], json!("abc123"));
+}
+
+#[test]
+fn resolve_import_secure_json_data_rejects_missing_placeholder_value() {
+    let args = DatasourceImportArgs {
+        common: test_common_args(),
+        import_dir: Path::new("./datasources").into(),
+        org_id: None,
+        use_export_org: false,
+        only_org_id: vec![],
+        create_missing_orgs: false,
+        require_matching_export_org: false,
+        replace_existing: false,
+        secret_placeholder: vec!["prom-main:httpHeaderValue1=${secret:metrics-token}".to_string()],
+        secrets: vec![],
+        secret_file: None,
+        update_existing_only: false,
+        dry_run: true,
+        table: false,
+        json: false,
+        output_format: None,
+        no_header: false,
+        output_columns: Vec::new(),
+        progress: false,
+        verbose: false,
+    };
+    let record = DatasourceImportRecord {
+        uid: "prom-main".to_string(),
+        name: "Prometheus Main".to_string(),
+        datasource_type: "prometheus".to_string(),
+        access: "proxy".to_string(),
+        url: "http://prometheus:9090".to_string(),
+        is_default: true,
+        org_id: "1".to_string(),
+        secure_json_data_providers: serde_json::Map::new(),
+    };
+
+    let error = resolve_import_secure_json_data(&build_import_secret_context(&args).unwrap(), &record)
+        .unwrap_err();
+
+    assert!(error
+        .to_string()
+        .contains("Missing datasource secret placeholder 'metrics-token'"));
+}
+
+#[test]
+fn build_import_payload_with_secrets_includes_resolved_secure_json_data() {
+    let args = DatasourceImportArgs {
+        common: test_common_args(),
+        import_dir: Path::new("./datasources").into(),
+        org_id: None,
+        use_export_org: false,
+        only_org_id: vec![],
+        create_missing_orgs: false,
+        require_matching_export_org: false,
+        replace_existing: false,
+        secret_placeholder: vec![
+            "prom-main:httpHeaderValue1=${secret:metrics-token}".to_string(),
+            "prom-main:basicAuthPassword=${secret:metrics-pass}".to_string(),
+        ],
+        secrets: vec![
+            "metrics-token=Bearer tenant-a".to_string(),
+            "metrics-pass=super-secret".to_string(),
+        ],
+        secret_file: None,
+        update_existing_only: false,
+        dry_run: false,
+        table: false,
+        json: false,
+        output_format: None,
+        no_header: false,
+        output_columns: Vec::new(),
+        progress: false,
+        verbose: false,
+    };
+    let record = DatasourceImportRecord {
+        uid: "prom-main".to_string(),
+        name: "Prometheus Main".to_string(),
+        datasource_type: "prometheus".to_string(),
+        access: "proxy".to_string(),
+        url: "http://prometheus:9090".to_string(),
+        is_default: true,
+        org_id: "1".to_string(),
+        secure_json_data_providers: serde_json::Map::new(),
+    };
+
+    let context = build_import_secret_context(&args).unwrap();
+    let secure_json_data = resolve_import_secure_json_data(&context, &record).unwrap();
+    let payload = build_import_payload_with_secrets(&record, secure_json_data.as_ref());
+
+    assert_eq!(
+        payload["secureJsonData"],
+        json!({
+            "basicAuthPassword": "super-secret",
+            "httpHeaderValue1": "Bearer tenant-a"
+        })
+    );
+}
+
+#[test]
+fn collect_provider_references_rejects_opaque_secret_replay() {
+    let object = json!({
+        "basicAuthPassword": "already-a-secret"
+    })
+    .as_object()
+    .unwrap()
+    .clone();
+
+    let error = collect_provider_references(Some(&object)).unwrap_err();
+
+    assert!(error
+        .to_string()
+        .contains("opaque replay is not allowed"));
+}
+
+#[test]
+fn build_provider_plan_shapes_review_summary() {
+    let datasource_spec = json!({
+        "uid": "loki-main",
+        "name": "Loki Main",
+        "type": "loki",
+        "secureJsonDataProviders": {
+            "basicAuthPassword": "${provider:vault:secret/data/loki/basic-auth}",
+            "httpHeaderValue1": "${provider:aws-sm:prod/loki/token}"
+        }
+    })
+    .as_object()
+    .unwrap()
+    .clone();
+
+    let plan = build_provider_plan(&datasource_spec).unwrap();
+
+    assert_eq!(plan.provider_kind, "external-provider-reference");
+    assert!(plan.review_required);
+    assert_eq!(
+        summarize_provider_plan(&plan),
+        json!({
+            "datasourceUid": "loki-main",
+            "datasourceName": "Loki Main",
+            "datasourceType": "loki",
+            "providerKind": "external-provider-reference",
+            "action": "resolve-provider-secrets",
+            "reviewRequired": true,
+            "providers": [
+                {
+                    "fieldName": "basicAuthPassword",
+                    "providerName": "vault",
+                    "secretPath": "secret/data/loki/basic-auth"
+                },
+                {
+                    "fieldName": "httpHeaderValue1",
+                    "providerName": "aws-sm",
+                    "secretPath": "prod/loki/token"
+                }
+            ]
+        })
+    );
 }
 
 #[test]
@@ -866,6 +1074,168 @@ fn datasource_import_rejects_extra_secret_or_server_managed_fields() {
 }
 
 #[test]
+fn datasource_import_allows_staged_secure_json_data_providers_field() {
+    let temp = tempdir().unwrap();
+    let import_dir = temp.path().join("datasources");
+    fs::create_dir_all(&import_dir).unwrap();
+    fs::write(
+        import_dir.join("export-metadata.json"),
+        serde_json::to_string_pretty(&json!({
+            "schemaVersion": 1,
+            "kind": "grafana-utils-datasource-export-index",
+            "variant": "root",
+            "resource": "datasource",
+            "datasourcesFile": "datasources.json",
+            "indexFile": "index.json",
+            "datasourceCount": 1,
+            "format": "grafana-datasource-inventory-v1"
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        import_dir.join("datasources.json"),
+        serde_json::to_string_pretty(&json!([{
+            "uid": "loki-main",
+            "name": "Loki Main",
+            "type": "loki",
+            "access": "proxy",
+            "url": "http://loki:3100",
+            "isDefault": false,
+            "org": "Main Org.",
+            "orgId": "1",
+            "secureJsonDataProviders": {
+                "basicAuthPassword": "${provider:vault:secret/data/loki/basic-auth}"
+            }
+        }]))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        import_dir.join("index.json"),
+        serde_json::to_string_pretty(&json!({"items": []})).unwrap(),
+    )
+    .unwrap();
+
+    let (_, records) = load_import_records(&import_dir).unwrap();
+
+    assert_eq!(records.len(), 1);
+    assert_eq!(
+        records[0].secure_json_data_providers["basicAuthPassword"],
+        json!("${provider:vault:secret/data/loki/basic-auth}")
+    );
+}
+
+#[test]
+fn datasource_import_dry_run_json_includes_provider_summary() {
+    let report = super::DatasourceImportDryRunReport {
+        mode: "create-or-update".to_string(),
+        import_dir: Path::new("/tmp/datasources").to_path_buf(),
+        source_org_id: "1".to_string(),
+        target_org_id: "1".to_string(),
+        rows: vec![vec![
+            "loki-main".to_string(),
+            "Loki Main".to_string(),
+            "loki".to_string(),
+            "missing".to_string(),
+            "would-create".to_string(),
+            "1".to_string(),
+            "datasources.json#0".to_string(),
+        ]],
+        datasource_count: 1,
+        would_create: 1,
+        would_update: 0,
+        would_skip: 0,
+        would_block: 0,
+        provider_plans: vec![build_provider_plan(
+            json!({
+                "uid": "loki-main",
+                "name": "Loki Main",
+                "type": "loki",
+                "secureJsonDataProviders": {
+                    "basicAuthPassword": "${provider:vault:secret/data/loki/basic-auth}",
+                    "httpHeaderValue1": "${provider:aws-sm:prod/loki/token}"
+                }
+            })
+            .as_object()
+            .unwrap(),
+        )
+        .unwrap()],
+    };
+
+    let value = build_datasource_import_dry_run_json_value(&report);
+
+    assert_eq!(value["summary"]["providerPlanCount"], json!(1));
+    assert_eq!(value["summary"]["providerReferenceCount"], json!(2));
+    assert_eq!(value["summary"]["providerNames"], json!(["aws-sm", "vault"]));
+    assert_eq!(
+        value["datasources"][0]["providerSummary"]["providerKind"],
+        json!("external-provider-reference")
+    );
+    assert_eq!(value["providerPlans"].as_array().unwrap().len(), 1);
+}
+
+#[test]
+fn datasource_import_provider_review_lines_render_deduplicated_names() {
+    let report = super::DatasourceImportDryRunReport {
+        mode: "create-or-update".to_string(),
+        import_dir: Path::new("/tmp/datasources").to_path_buf(),
+        source_org_id: "1".to_string(),
+        target_org_id: "1".to_string(),
+        rows: Vec::new(),
+        datasource_count: 0,
+        would_create: 0,
+        would_update: 0,
+        would_skip: 0,
+        would_block: 0,
+        provider_plans: vec![build_provider_plan(
+            json!({
+                "name": "Prometheus Main",
+                "type": "prometheus",
+                "secureJsonDataProviders": {
+                    "password": "${provider:vault:secret/a}",
+                    "httpHeaderValue1": "${provider:vault:secret/b}",
+                    "httpHeaderValue2": "${provider:aws-sm:secret/c}"
+                }
+            })
+            .as_object()
+            .unwrap(),
+        )
+        .unwrap()],
+    };
+
+    let lines = render_datasource_import_provider_review_lines(&report);
+
+    assert_eq!(lines.len(), 1);
+    assert!(lines[0].contains("providers=vault,aws-sm"));
+    assert!(lines[0].contains("refs=3"));
+}
+
+#[test]
+fn ensure_live_import_provider_free_rejects_provider_backed_records() {
+    let record = DatasourceImportRecord {
+        uid: "loki-main".to_string(),
+        name: "Loki Main".to_string(),
+        datasource_type: "loki".to_string(),
+        access: "proxy".to_string(),
+        url: "http://loki:3100".to_string(),
+        is_default: false,
+        org_id: "1".to_string(),
+        secure_json_data_providers: json!({
+            "basicAuthPassword": "${provider:vault:secret/data/loki/basic-auth}"
+        })
+        .as_object()
+        .unwrap()
+        .clone(),
+    };
+
+    let error = ensure_live_import_provider_free(&record).unwrap_err().to_string();
+
+    assert!(error.contains("does not resolve secureJsonDataProviders"));
+    assert!(error.contains("loki-main"));
+}
+
+#[test]
 fn discover_export_org_import_scopes_reads_selected_multi_org_root() {
     let temp = tempdir().unwrap();
     let import_root = write_multi_org_import_fixture(
@@ -884,6 +1254,9 @@ fn discover_export_org_import_scopes_reads_selected_multi_org_root() {
         create_missing_orgs: false,
         require_matching_export_org: false,
         replace_existing: false,
+        secret_placeholder: vec![],
+        secrets: vec![],
+        secret_file: None,
         update_existing_only: false,
         dry_run: true,
         table: false,
@@ -918,6 +1291,9 @@ fn discover_export_org_import_scopes_errors_when_selected_org_missing() {
         create_missing_orgs: false,
         require_matching_export_org: false,
         replace_existing: false,
+        secret_placeholder: vec![],
+        secrets: vec![],
+        secret_file: None,
         update_existing_only: false,
         dry_run: true,
         table: false,
@@ -978,6 +1354,8 @@ fn diff_help_explains_diff_dir_flag() {
 
     assert!(help.contains("--diff-dir"));
     assert!(help.contains("Compare datasource inventory"));
+    assert!(help.contains("Examples:"));
+    assert!(help.contains("grafana-util datasource diff --url http://localhost:3000 --diff-dir ./datasources"));
 }
 
 #[test]
