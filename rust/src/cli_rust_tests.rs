@@ -288,7 +288,10 @@ fn parse_cli_supports_sync_plan_group_command() {
         UnifiedCommand::Sync { command } => match command {
             SyncGroupCommand::Plan(inner) => {
                 assert_eq!(inner.desired_file, Path::new("./desired.json"));
-                assert_eq!(inner.live_file, Path::new("./live.json"));
+                assert_eq!(
+                    inner.live_file,
+                    Some(Path::new("./live.json").to_path_buf())
+                );
                 assert_eq!(inner.trace_id, Some("trace-explicit".to_string()));
                 assert_eq!(inner.output, SyncOutputFormat::Json);
             }
@@ -359,7 +362,10 @@ fn parse_cli_supports_sync_apply_group_command_with_reason_and_note() {
         UnifiedCommand::Sync { command } => match command {
             SyncGroupCommand::Apply(inner) => {
                 assert_eq!(inner.approval_reason, Some("change-approved".to_string()));
-                assert_eq!(inner.apply_note, Some("local apply intent only".to_string()));
+                assert_eq!(
+                    inner.apply_note,
+                    Some("local apply intent only".to_string())
+                );
             }
             _ => panic!("expected sync apply"),
         },
@@ -412,7 +418,10 @@ fn parse_cli_supports_sync_review_group_command_with_note() {
     match args.command {
         UnifiedCommand::Sync { command } => match command {
             SyncGroupCommand::Review(inner) => {
-                assert_eq!(inner.review_note, Some("manual review complete".to_string()));
+                assert_eq!(
+                    inner.review_note,
+                    Some("manual review complete".to_string())
+                );
             }
             _ => panic!("expected sync review"),
         },

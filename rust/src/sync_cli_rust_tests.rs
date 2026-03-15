@@ -1,7 +1,7 @@
 use super::{
     render_sync_apply_intent_text, render_sync_plan_text, render_sync_summary_text, run_sync_cli,
-    SyncApplyArgs, SyncBundlePreflightArgs, SyncCliArgs, SyncGroupCommand, SyncOutputFormat,
-    SyncPlanArgs, SyncPreflightArgs, SyncReviewArgs, SyncSummaryArgs, DEFAULT_REVIEW_TOKEN,
+    SyncApplyArgs, SyncCliArgs, SyncGroupCommand, SyncOutputFormat, SyncReviewArgs,
+    SyncSummaryArgs, DEFAULT_REVIEW_TOKEN,
 };
 use clap::Parser;
 use serde_json::json;
@@ -48,10 +48,49 @@ fn parse_sync_cli_supports_plan_command() {
     match args.command {
         SyncGroupCommand::Plan(inner) => {
             assert_eq!(inner.desired_file, Path::new("./desired.json"));
-            assert_eq!(inner.live_file, Path::new("./live.json"));
+            assert_eq!(
+                inner.live_file,
+                Some(Path::new("./live.json").to_path_buf())
+            );
             assert!(inner.allow_prune);
+            assert!(!inner.fetch_live);
+            assert_eq!(inner.page_size, 500);
             assert_eq!(inner.output, SyncOutputFormat::Json);
             assert_eq!(inner.trace_id, Some("trace-explicit".to_string()));
+        }
+        _ => panic!("expected plan"),
+    }
+}
+
+#[test]
+fn parse_sync_cli_supports_plan_command_with_fetch_live_and_auth_flags() {
+    let args = SyncCliArgs::parse_from([
+        "grafana-util",
+        "plan",
+        "--desired-file",
+        "./desired.json",
+        "--fetch-live",
+        "--url",
+        "http://grafana.example.local",
+        "--token",
+        "abc123",
+        "--org-id",
+        "3",
+        "--page-size",
+        "250",
+    ]);
+
+    match args.command {
+        SyncGroupCommand::Plan(inner) => {
+            assert_eq!(inner.desired_file, Path::new("./desired.json"));
+            assert_eq!(inner.live_file, None);
+            assert!(inner.fetch_live);
+            assert_eq!(inner.org_id, Some(3));
+            assert_eq!(inner.page_size, 250);
+            assert_eq!(inner.common.url, "http://grafana.example.local");
+            assert_eq!(inner.common.api_token, Some("abc123".to_string()));
+            assert_eq!(inner.output, SyncOutputFormat::Text);
+            assert_eq!(inner.trace_id, None);
         }
         _ => panic!("expected plan"),
     }
@@ -94,7 +133,10 @@ fn parse_sync_cli_supports_review_command_with_note() {
 
     match args.command {
         SyncGroupCommand::Review(inner) => {
-            assert_eq!(inner.review_note, Some("manual review complete".to_string()));
+            assert_eq!(
+                inner.review_note,
+                Some("manual review complete".to_string())
+            );
         }
         _ => panic!("expected review"),
     }
@@ -119,7 +161,10 @@ fn parse_sync_cli_supports_apply_command() {
     match args.command {
         SyncGroupCommand::Apply(inner) => {
             assert_eq!(inner.plan_file, Path::new("./plan.json"));
-            assert_eq!(inner.preflight_file, Some(Path::new("./preflight.json").to_path_buf()));
+            assert_eq!(
+                inner.preflight_file,
+                Some(Path::new("./preflight.json").to_path_buf())
+            );
             assert_eq!(
                 inner.bundle_preflight_file,
                 Some(Path::new("./bundle-preflight.json").to_path_buf())
@@ -152,7 +197,10 @@ fn parse_sync_cli_supports_apply_command_with_reason_and_note() {
     match args.command {
         SyncGroupCommand::Apply(inner) => {
             assert_eq!(inner.approval_reason, Some("change-approved".to_string()));
-            assert_eq!(inner.apply_note, Some("local apply intent only".to_string()));
+            assert_eq!(
+                inner.apply_note,
+                Some("local apply intent only".to_string())
+            );
         }
         _ => panic!("expected apply"),
     }
@@ -176,6 +224,7 @@ fn parse_sync_cli_supports_preflight_command_with_trace_id() {
     match args.command {
         SyncGroupCommand::Preflight(inner) => {
             assert_eq!(inner.desired_file, Path::new("./desired.json"));
+            assert!(!inner.fetch_live);
             assert_eq!(
                 inner.availability_file,
                 Some(Path::new("./availability.json").to_path_buf())
@@ -184,6 +233,49 @@ fn parse_sync_cli_supports_preflight_command_with_trace_id() {
             assert_eq!(inner.output, SyncOutputFormat::Json);
         }
         _ => panic!("expected preflight"),
+    }
+}
+
+#[test]
+fn parse_sync_cli_supports_preflight_command_with_fetch_live() {
+    let args = SyncCliArgs::parse_from([
+        "grafana-util",
+        "preflight",
+        "--desired-file",
+        "./desired.json",
+        "--fetch-live",
+        "--url",
+        "http://grafana.example.local",
+    ]);
+
+    match args.command {
+        SyncGroupCommand::Preflight(inner) => {
+            assert_eq!(inner.desired_file, Path::new("./desired.json"));
+            assert!(inner.fetch_live);
+            assert_eq!(inner.availability_file, None);
+            assert_eq!(inner.common.url, "http://grafana.example.local");
+        }
+        _ => panic!("expected preflight"),
+    }
+}
+
+#[test]
+fn parse_sync_cli_supports_assess_alerts_command() {
+    let args = SyncCliArgs::parse_from([
+        "grafana-util",
+        "assess-alerts",
+        "--alerts-file",
+        "./alerts.json",
+        "--output",
+        "json",
+    ]);
+
+    match args.command {
+        SyncGroupCommand::AssessAlerts(inner) => {
+            assert_eq!(inner.alerts_file, Path::new("./alerts.json"));
+            assert_eq!(inner.output, SyncOutputFormat::Json);
+        }
+        _ => panic!("expected assess-alerts"),
     }
 }
 
@@ -208,15 +300,39 @@ fn parse_sync_cli_supports_bundle_preflight_command_with_trace_id() {
         SyncGroupCommand::BundlePreflight(inner) => {
             assert_eq!(inner.source_bundle, Path::new("./source.json"));
             assert_eq!(inner.target_inventory, Path::new("./target.json"));
+            assert!(!inner.fetch_live);
             assert_eq!(
                 inner.availability_file,
                 Some(Path::new("./availability.json").to_path_buf())
             );
-            assert_eq!(
-                inner.trace_id,
-                Some("trace-bundle-preflight".to_string())
-            );
+            assert_eq!(inner.trace_id, Some("trace-bundle-preflight".to_string()));
             assert_eq!(inner.output, SyncOutputFormat::Json);
+        }
+        _ => panic!("expected bundle-preflight"),
+    }
+}
+
+#[test]
+fn parse_sync_cli_supports_bundle_preflight_command_with_fetch_live() {
+    let args = SyncCliArgs::parse_from([
+        "grafana-util",
+        "bundle-preflight",
+        "--source-bundle",
+        "./source.json",
+        "--target-inventory",
+        "./target.json",
+        "--fetch-live",
+        "--url",
+        "http://grafana.example.local",
+    ]);
+
+    match args.command {
+        SyncGroupCommand::BundlePreflight(inner) => {
+            assert_eq!(inner.source_bundle, Path::new("./source.json"));
+            assert_eq!(inner.target_inventory, Path::new("./target.json"));
+            assert!(inner.fetch_live);
+            assert_eq!(inner.availability_file, None);
+            assert_eq!(inner.common.url, "http://grafana.example.local");
         }
         _ => panic!("expected bundle-preflight"),
     }
@@ -410,13 +526,20 @@ fn run_sync_cli_plan_accepts_local_inputs() {
     .unwrap();
     fs::write(&live_file, "[]").unwrap();
 
-    let result = run_sync_cli(SyncGroupCommand::Plan(SyncPlanArgs {
-        desired_file,
-        live_file,
-        allow_prune: false,
-        output: SyncOutputFormat::Json,
-        trace_id: None,
-    }));
+    let args = SyncCliArgs::parse_from([
+        "grafana-util",
+        "plan",
+        "--desired-file",
+        desired_file.to_str().unwrap(),
+        "--live-file",
+        live_file.to_str().unwrap(),
+        "--output",
+        "json",
+    ]);
+    let result = match args.command {
+        SyncGroupCommand::Plan(inner) => run_sync_cli(SyncGroupCommand::Plan(inner)),
+        _ => panic!("expected plan"),
+    };
 
     assert!(result.is_ok());
 }
@@ -806,7 +929,6 @@ fn run_sync_cli_apply_rejects_unreviewed_plan_file() {
     assert!(error.contains("marked reviewed"));
 }
 
-
 #[test]
 fn run_sync_cli_apply_requires_explicit_approval() {
     let temp = tempdir().unwrap();
@@ -1064,15 +1186,54 @@ fn run_sync_cli_plan_accepts_explicit_trace_id() {
     .unwrap();
     fs::write(&live_file, "[]").unwrap();
 
-    let result = run_sync_cli(SyncGroupCommand::Plan(SyncPlanArgs {
-        desired_file,
-        live_file,
-        allow_prune: false,
-        output: SyncOutputFormat::Json,
-        trace_id: Some("trace-explicit".to_string()),
-    }));
+    let args = SyncCliArgs::parse_from([
+        "grafana-util",
+        "plan",
+        "--desired-file",
+        desired_file.to_str().unwrap(),
+        "--live-file",
+        live_file.to_str().unwrap(),
+        "--trace-id",
+        "trace-explicit",
+        "--output",
+        "json",
+    ]);
+    let result = match args.command {
+        SyncGroupCommand::Plan(inner) => run_sync_cli(SyncGroupCommand::Plan(inner)),
+        _ => panic!("expected plan"),
+    };
 
     assert!(result.is_ok());
+}
+
+#[test]
+fn run_sync_cli_plan_rejects_missing_live_file_without_fetch_live() {
+    let temp = tempdir().unwrap();
+    let desired_file = temp.path().join("desired.json");
+    fs::write(
+        &desired_file,
+        serde_json::to_string_pretty(&json!([
+            {"kind":"folder","uid":"ops","title":"Operations","body":{"title":"Operations"}}
+        ]))
+        .unwrap(),
+    )
+    .unwrap();
+
+    let args = SyncCliArgs::parse_from([
+        "grafana-util",
+        "plan",
+        "--desired-file",
+        desired_file.to_str().unwrap(),
+        "--output",
+        "json",
+    ]);
+    let error = match args.command {
+        SyncGroupCommand::Plan(inner) => run_sync_cli(SyncGroupCommand::Plan(inner)).unwrap_err(),
+        _ => panic!("expected plan"),
+    };
+
+    let message = error.to_string();
+    assert!(message.contains("Sync plan requires --live-file unless --fetch-live is used."));
 }
 
 #[test]
@@ -1713,16 +1874,61 @@ fn run_sync_cli_preflight_rejects_non_object_availability_file() {
     .unwrap();
     fs::write(&availability_file, "[]").unwrap();
 
-    let error = run_sync_cli(SyncGroupCommand::Preflight(SyncPreflightArgs {
-        desired_file,
-        availability_file: Some(availability_file),
-        trace_id: None,
-        output: SyncOutputFormat::Text,
-    }))
+    let args = SyncCliArgs::parse_from([
+        "grafana-util",
+        "preflight",
+        "--desired-file",
+        desired_file.to_str().unwrap(),
+        "--availability-file",
+        availability_file.to_str().unwrap(),
+        "--output",
+        "text",
+    ]);
+    let error = match args.command {
+        SyncGroupCommand::Preflight(inner) => run_sync_cli(SyncGroupCommand::Preflight(inner)),
+        _ => panic!("expected preflight"),
+    }
     .unwrap_err()
     .to_string();
 
     assert!(error.contains("Sync availability input file must contain a JSON object"));
+}
+
+#[test]
+fn run_sync_cli_assess_alerts_accepts_local_input() {
+    let temp = tempdir().unwrap();
+    let alerts_file = temp.path().join("alerts.json");
+    fs::write(
+        &alerts_file,
+        serde_json::to_string_pretty(&json!([
+            {
+                "kind": "alert",
+                "uid": "cpu-high",
+                "title": "CPU High",
+                "managedFields": ["condition", "contactPoints"],
+                "body": {"condition": "A > 90", "contactPoints": ["pagerduty-primary"]}
+            }
+        ]))
+        .unwrap(),
+    )
+    .unwrap();
+
+    let args = SyncCliArgs::parse_from([
+        "grafana-util",
+        "assess-alerts",
+        "--alerts-file",
+        alerts_file.to_str().unwrap(),
+        "--output",
+        "json",
+    ]);
+    let result = match args.command {
+        SyncGroupCommand::AssessAlerts(inner) => {
+            run_sync_cli(SyncGroupCommand::AssessAlerts(inner))
+        }
+        _ => panic!("expected assess-alerts"),
+    };
+
+    assert!(result.is_ok());
 }
 
 #[test]
@@ -1741,15 +1947,28 @@ fn run_sync_cli_bundle_preflight_accepts_local_bundle_inputs() {
         .unwrap(),
     )
     .unwrap();
-    fs::write(&target_inventory, serde_json::to_string_pretty(&json!({})).unwrap()).unwrap();
+    fs::write(
+        &target_inventory,
+        serde_json::to_string_pretty(&json!({})).unwrap(),
+    )
+    .unwrap();
 
-    let result = run_sync_cli(SyncGroupCommand::BundlePreflight(SyncBundlePreflightArgs {
-        source_bundle,
-        target_inventory,
-        availability_file: None,
-        trace_id: None,
-        output: SyncOutputFormat::Json,
-    }));
+    let args = SyncCliArgs::parse_from([
+        "grafana-util",
+        "bundle-preflight",
+        "--source-bundle",
+        source_bundle.to_str().unwrap(),
+        "--target-inventory",
+        target_inventory.to_str().unwrap(),
+        "--output",
+        "json",
+    ]);
+    let result = match args.command {
+        SyncGroupCommand::BundlePreflight(inner) => {
+            run_sync_cli(SyncGroupCommand::BundlePreflight(inner))
+        }
+        _ => panic!("expected bundle-preflight"),
+    };
 
     assert!(result.is_ok());
 }
