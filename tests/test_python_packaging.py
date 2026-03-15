@@ -44,7 +44,7 @@ class PackagingTests(unittest.TestCase):
         self.assertIn('build = ">=1.2,<2"', content)
         self.assertIn('mypy = ">=1.10,<2"', content)
         self.assertIn('ruff = ">=0.11,<1"', content)
-        self.assertIn('setuptools = ">=59"', content)
+        self.assertIn('setuptools = ">=80.9"', content)
         self.assertIn('wheel = ">=0.45,<1"', content)
 
     def test_package_declares_module_entrypoint(self):
