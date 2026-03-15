@@ -41,13 +41,13 @@
 
 | Domain | 盤點 / 檢視 | 新增 / 修改 / 刪除 | 匯出 / 匯入 / Diff | 備註 |
 | --- | --- | --- | --- | --- |
-| Dashboard | Yes | No | Yes | 以 import 驅動變更，支援 folder-aware 遷移與 dry-run |
+| Dashboard | Yes | No | Yes | 以 import 驅動變更，支援 folder-aware 遷移、dry-run，以及 routed multi-org 匯出/匯入與缺 org 自動建立 |
 | Alerting | Yes | No | Yes | 以 import 驅動 rule / contact point 工作流 |
-| Datasource | Yes | Yes | Yes | 支援 dry-run 與 diff |
+| Datasource | Yes | Yes | Yes | 支援 dry-run、diff、all-org 匯出，以及 routed multi-org 匯入與缺 org 自動建立 |
 | Access User | Yes | Yes | Yes | 支援 `--password-file` / `--prompt-user-password` 與 `--set-password-file` / `--prompt-set-password` |
 | Access Org | Yes | Yes | Yes | 匯入時可重播 org membership |
 | Access Team | Yes | Yes | Yes | 成員關係可匯出 / 匯入 / diff |
-| Access Service Account | Yes | Yes | Yes | 包含 token lifecycle |
+| Access Service Account | Yes | Yes | Yes | 支援 snapshot export/import/diff，以及 token add/delete 工作流 |
 
 ---
 

@@ -41,13 +41,13 @@ While the official Grafana UI and CLI are excellent for day-to-day interactions,
 
 | Domain | List / Inspect | Add / Modify / Delete | Export / Import / Diff | Notes |
 | --- | --- | --- | --- | --- |
-| Dashboard | Yes | No | Yes | Import-driven changes, folder-aware migration, and dry-run support |
+| Dashboard | Yes | No | Yes | Import-driven changes, folder-aware migration, dry-run support, and routed multi-org export/import with missing-org creation |
 | Alerting | Yes | No | Yes | Import-driven rule and contact-point workflows |
-| Datasource | Yes | Yes | Yes | Dry-run and diff supported |
+| Datasource | Yes | Yes | Yes | Dry-run and diff supported, plus all-org export and routed multi-org import with missing-org creation |
 | Access User | Yes | Yes | Yes | Supports `--password-file` / `--prompt-user-password` and `--set-password-file` / `--prompt-set-password` |
 | Access Org | Yes | Yes | Yes | Includes org membership replay during import |
 | Access Team | Yes | Yes | Yes | Membership-aware export/import/diff |
-| Access Service Account | Yes | Yes | Yes | Token lifecycle included |
+| Access Service Account | Yes | Yes | Yes | Snapshot export/import/diff plus token add/delete workflows |
 
 ---
 

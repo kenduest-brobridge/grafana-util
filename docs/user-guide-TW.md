@@ -470,6 +470,8 @@ tempo-prod         tempo-prod         tempo        http://tempo:3200
 | 參數 | 用途 | 差異 / 情境 |
 | --- | --- | --- |
 | `--export-dir`（預設 `datasources`） | 匯出目錄 | 含 `datasources.json` + metadata |
+| `--org-id` | 匯出指定 org | 僅 Basic Auth 支援明確 org 匯出 |
+| `--all-orgs` | 匯出所有可見 org | 每個 org 會寫入 `org_<id>_<name>/` 子目錄 |
 | `--overwrite` | 覆蓋既有輸出 |
 | `--dry-run` | 僅列預期輸出，不落地 |
 
@@ -485,14 +487,20 @@ Exported metadata            -> datasources/export-metadata.json
 Datasource export completed: 3 item(s)
 ```
 
+實跑註記：
+- 上面的命令型態已在 `make test-python-datasource-live` 與 `make test-rust-live` 中，對真實 Grafana `12.4.1` Docker 服務驗證過。
+
 ### 5.3 `datasource import`
 
 **用途**：匯入 datasource inventory。
 
 | 參數 | 用途 | 差異 / 情境 |
 | --- | --- | --- |
-| `--import-dir`（必需） | 指向 export root（含 `datasources.json`） | |
+| `--import-dir`（必需） | 指向 export root（含 `datasources.json`）或 combined export root | 搭配 `--use-export-org` 時要指向整個 multi-org 匯出根目錄 |
 | `--org-id` | 匯入目標 org | org 變更時必用 |
+| `--use-export-org` | 依 export 內 org 路由回 Grafana | 匯入 `--all-orgs` 產生的整體匯出根目錄 |
+| `--only-org-id` | 限制 `--use-export-org` 只匯入指定 source org | 可重複指定多個 org |
+| `--create-missing-orgs` | 路由匯入前自動建立缺少的目標 org | 僅限 `--use-export-org`；搭配 `--dry-run` 時只預覽 `would-create-org`，不真的建立 |
 | `--require-matching-export-org` | 匯入前比對 orgId |
 | `--replace-existing` | 已存在時更新 |
 | `--update-existing-only` | 只更新已有，不建立 |
@@ -516,6 +524,9 @@ UID         NAME               TYPE         ACTION   DESTINATION
 prom-main   prometheus-main    prometheus   update   existing
 loki-prod   loki-prod          loki         create   missing
 ```
+
+實跑註記：
+- 真機 Docker 測試也會驗證 routed datasource replay：`--use-export-org`、可重複的 `--only-org-id`、以及 `--create-missing-orgs`。在 routed dry-run JSON 中，會先看到 org-level 的 `exists`、`missing-org`、或 `would-create-org`，再進入每筆 datasource action。
 
 ### 5.4 `datasource diff`
 
@@ -1079,6 +1090,9 @@ cargo run --bin grafana-util -- access service-account export --url http://local
 Exported 3 service-account(s) from http://localhost:3000 -> access-service-accounts/service-accounts.json and access-service-accounts/export-metadata.json
 ```
 
+實跑註記：
+- 這條 snapshot 流程已由 `make test-access-live` 在 Grafana `12.4.1` 上驗證，包含 export、diff、dry-run import、live replay、delete，以及 token lifecycle。
+
 ### 6.16 `access service-account import`
 
 **用途**：把 service-account 快照回放到 Grafana。
@@ -1103,6 +1117,9 @@ INDEX  IDENTITY     ACTION  DETAIL
 
 Import summary: processed=2 created=1 updated=1 skipped=0 source=./access-service-accounts
 ```
+
+實跑註記：
+- live smoke 會先改寫匯出的 snapshot，確認 dry-run update preview，再把同一份檔案真正 replay 回 Grafana，驗證 live update 路徑。
 
 ### 6.17 `access service-account diff`
 
@@ -1267,8 +1284,8 @@ cargo run --bin grafana-util -- alert list-rules --url <URL> --token <TOKEN> [--
 # datasource
 cargo run --bin grafana-util -- datasource list --url <URL> --token <TOKEN> [--table|--csv|--json]
 python3 -m grafana_utils datasource add --url <URL> --token <TOKEN> --name <NAME> --type <TYPE> [--uid <UID>] [--access proxy|direct] [--datasource-url <URL>] [--basic-auth] [--basic-auth-user <USER>] [--basic-auth-password <PASS>] [--user <USER>] [--password <PASS>] [--with-credentials] [--http-header NAME=VALUE] [--tls-skip-verify] [--server-name <NAME>] [--json-data <JSON>] [--secure-json-data <JSON>] [--dry-run] [--table|--json|--output-format text|table|json]
-cargo run --bin grafana-util -- datasource export --url <URL> --basic-user <USER> --basic-password <PASS> --export-dir <DIR> [--overwrite] [--dry-run]
-cargo run --bin grafana-util -- datasource import --url <URL> --basic-user <USER> --basic-password <PASS> --import-dir <DIR> --replace-existing [--dry-run] [--output-format table|text|json] [--output-columns uid,name,type,destination,action,org_id,file]
+cargo run --bin grafana-util -- datasource export --url <URL> --basic-user <USER> --basic-password <PASS> --export-dir <DIR> [--overwrite] [--dry-run] [--org-id <ORG_ID>|--all-orgs]
+cargo run --bin grafana-util -- datasource import --url <URL> --basic-user <USER> --basic-password <PASS> --import-dir <DIR> --replace-existing [--org-id <ORG_ID>] [--use-export-org [--only-org-id <ORG_ID>]... [--create-missing-orgs]] [--dry-run] [--output-format table|text|json] [--output-columns uid,name,type,destination,action,org_id,file]
 cargo run --bin grafana-util -- datasource diff --url <URL> --basic-user <USER> --basic-password <PASS> --diff-dir <DIR>
 
 # access
@@ -1309,7 +1326,7 @@ cargo run --bin grafana-util -- access service-account token delete --url <URL> 
 | alert list-* | table/csv/json | 不可 | list 命令共用 |
 | datasource list | table/csv/json | 不可 | 同上 |
 | datasource add | text/table/json | 不可（僅 text/table/json） | dry-run 可用，僅 Python CLI |
-| datasource import | text/table/json | 不可（僅 text/table/json） | text 為 dry-run 摘要 |
+| datasource import | text/table/json | 不可（僅 text/table/json） | text 為 dry-run 摘要，也支援 routed org-level preview |
 | access user list | table/csv/json | 不可 | 同上 |
 | access team list | table/csv/json | 不可 | 同上 |
 | access user import | text/table/json | 不可（僅 text/table/json） | text 為 dry-run 摘要 |
@@ -1337,7 +1354,7 @@ cargo run --bin grafana-util -- access service-account token delete --url <URL> 
 | dashboard list | 可用（不可用 token，需 Grafana 帳號密碼） | 可用（不可用 token，需 Grafana 帳號密碼） |
 | dashboard export | 可用（不可用 token，需 Grafana 帳號密碼） | 可用（不可用 token，需 Grafana 帳號密碼） |
 | dashboard import | 可用（不可用 token，需 Grafana 帳號密碼） | 不可 |
+| datasource export | 可用（不可用 token，需 Grafana 帳號密碼） | 可用（不可用 token，需 Grafana 帳號密碼） |
 | datasource import | 可用（不可用 token，需 Grafana 帳號密碼） | 不可 |
-| datasource list/export | 不在 parser 暴露（使用共用的 dashboard default 行為） | 不在 parser 暴露 |
 | alert 全部 | 不支援 `org-id`/`all-orgs` | 不支援 |
 | access 全部 | 用 `--scope` 替代 | 不支援 |

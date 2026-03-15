@@ -509,6 +509,8 @@ Purpose: export datasource inventory as normalized JSON.
 | Option | Purpose | Difference / scenario |
 | --- | --- | --- |
 | `--export-dir` | Export directory | Default `datasources` |
+| `--org-id` | Export from one explicit org | Basic-auth only explicit org export |
+| `--all-orgs` | Export from all visible orgs | Writes one `org_<id>_<name>/` subtree per org |
 | `--overwrite` | Replace existing export files | Repeatable export runs |
 | `--dry-run` | Preview only | Validate destination first |
 
@@ -524,14 +526,20 @@ Exported metadata            -> datasources/export-metadata.json
 Datasource export completed: 3 item(s)
 ```
 
+Live note:
+- The command shape above is exercised against a real Grafana `12.4.1` Docker server in `make test-python-datasource-live` and `make test-rust-live`.
+
 ### 5.3 `datasource import`
 
 Purpose: import datasource inventory into live Grafana.
 
 | Option | Purpose | Difference / scenario |
 | --- | --- | --- |
-| `--import-dir` | Export root with `datasources.json` | Not a `raw/` tree |
+| `--import-dir` | Export root with `datasources.json` or combined export root | Use the combined root with `--use-export-org` |
 | `--org-id` | Target org | Explicit org restore |
+| `--use-export-org` | Route each exported org back into Grafana | Import a combined `--all-orgs` export root |
+| `--only-org-id` | Restrict `--use-export-org` to selected source orgs | Repeat the flag to import multiple orgs |
+| `--create-missing-orgs` | Create missing destination orgs before routed import | Only for `--use-export-org`; with `--dry-run` it reports `would-create-org` without creating anything |
 | `--require-matching-export-org` | Enforce export org match | Safer multi-org restore |
 | `--replace-existing` | Update existing datasources | Standard restore mode |
 | `--update-existing-only` | Only touch existing datasources | Safer reconcile mode |
@@ -555,6 +563,9 @@ UID         NAME               TYPE         ACTION   DESTINATION
 prom-main   prometheus-main    prometheus   update   existing
 loki-prod   loki-prod          loki         create   missing
 ```
+
+Live note:
+- Real Docker-backed runs also validate routed datasource replay with `--use-export-org`, repeated `--only-org-id`, and `--create-missing-orgs`; in routed dry-run JSON the org preview reports `exists`, `missing-org`, or `would-create-org` before per-datasource actions.
 
 How to read it:
 - `UID` and `NAME` both matter, but automation should prefer `UID`.
@@ -1124,6 +1135,9 @@ Example output:
 Exported 3 service-account(s) from http://localhost:3000 -> access-service-accounts/service-accounts.json and access-service-accounts/export-metadata.json
 ```
 
+Live note:
+- This snapshot flow is covered by `make test-access-live` against Grafana `12.4.1`, including export, diff, dry-run import, live replay, delete, and token lifecycle commands.
+
 ### 6.16 `access service-account import`
 
 Purpose: replay service-account snapshot files into Grafana.
@@ -1148,6 +1162,9 @@ INDEX  IDENTITY     ACTION  DETAIL
 
 Import summary: processed=2 created=1 updated=1 skipped=0 source=./access-service-accounts
 ```
+
+Live note:
+- The live smoke rewrites an exported snapshot, confirms the dry-run update preview, then replays the same file into Grafana to verify the live update path.
 
 ### 6.17 `access service-account diff`
 
@@ -1295,8 +1312,8 @@ cargo run --bin grafana-util -- alert diff --url <URL> --basic-user <USER> --bas
 
 cargo run --bin grafana-util -- datasource list --url <URL> --token <TOKEN> [--table|--csv|--json]
 python3 -m grafana_utils datasource add --url <URL> --token <TOKEN> --name <NAME> --type <TYPE> [--uid <UID>] [--access proxy|direct] [--datasource-url <URL>] [--basic-auth] [--basic-auth-user <USER>] [--basic-auth-password <PASS>] [--user <USER>] [--password <PASS>] [--with-credentials] [--http-header NAME=VALUE] [--tls-skip-verify] [--server-name <NAME>] [--json-data <JSON>] [--secure-json-data <JSON>] [--dry-run] [--table|--json|--output-format text|table|json]
-cargo run --bin grafana-util -- datasource export --url <URL> --basic-user <USER> --basic-password <PASS> --export-dir <DIR> [--overwrite]
-cargo run --bin grafana-util -- datasource import --url <URL> --basic-user <USER> --basic-password <PASS> --import-dir <DIR> --replace-existing [--dry-run]
+cargo run --bin grafana-util -- datasource export --url <URL> --basic-user <USER> --basic-password <PASS> --export-dir <DIR> [--overwrite] [--org-id <ORG_ID>|--all-orgs]
+cargo run --bin grafana-util -- datasource import --url <URL> --basic-user <USER> --basic-password <PASS> --import-dir <DIR> --replace-existing [--org-id <ORG_ID>] [--use-export-org [--only-org-id <ORG_ID>]... [--create-missing-orgs]] [--dry-run]
 cargo run --bin grafana-util -- datasource diff --url <URL> --basic-user <USER> --basic-password <PASS> --diff-dir <DIR>
 
 cargo run --bin grafana-util -- access user list --url <URL> --basic-user <USER> --basic-password <PASS> --scope global --table
@@ -1323,7 +1340,7 @@ cargo run --bin grafana-util -- access service-account list --url <URL> --token 
 | `alert list-*` | `table/csv/json` | Shared across list commands |
 | `datasource list` | `table/csv/json` | Shared list pattern |
 | `datasource add` | `text/table/json` | Dry-run capable, Python CLI only |
-| `datasource import` | `text/table/json` | Dry-run focused |
+| `datasource import` | `text/table/json` | Dry-run supports single-org previews plus routed org-summary preview |
 | `access list` commands | `table/csv/json` | Shared list pattern |
 | `access user import` | `text/table/json` | Dry-run table/json/ text summary |
 | `access team import` | `text/table/json` | Dry-run table/json/text summary |
@@ -1337,6 +1354,7 @@ cargo run --bin grafana-util -- access service-account list --url <URL> --token 
 | `dashboard list` | Yes | Yes |
 | `dashboard export` | Yes | Yes |
 | `dashboard import` | Yes | No |
+| `datasource export` | Yes | Yes |
 | `datasource import` | Yes | No |
 | `alert` commands | No | No |
 | `access` commands | No | No |
