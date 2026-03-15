@@ -28,6 +28,12 @@ from .inspection_summary import (
     render_export_inspection_summary,
     render_export_inspection_tables,
 )
+from ..roadmap_workbench import (
+    build_dependency_graph_document,
+    build_dependency_graph_governance_summary,
+    render_dependency_graph_dot,
+    render_dependency_graph_governance_text,
+)
 from .listing import attach_dashboard_org, build_datasource_inventory_record
 from .output_support import (
     build_dashboard_index_item,
@@ -134,6 +140,10 @@ def build_inspection_workflow_deps(config):
         "build_export_inspection_governance_document": (
             build_export_inspection_governance_document
         ),
+        "build_dependency_graph_document": build_dependency_graph_document,
+        "build_dependency_graph_governance_summary": (
+            build_dependency_graph_governance_summary
+        ),
         "build_export_inspection_report_document": (
             lambda import_dir: build_export_inspection_report_document(
                 import_dir,
@@ -173,6 +183,10 @@ def build_inspection_workflow_deps(config):
         "parse_report_columns": parse_report_columns,
         "render_export_inspection_governance_tables": (
             render_export_inspection_governance_tables
+        ),
+        "render_dependency_graph_dot": render_dependency_graph_dot,
+        "render_dependency_graph_governance_text": (
+            render_dependency_graph_governance_text
         ),
         "render_export_inspection_grouped_report": (
             render_export_inspection_grouped_report

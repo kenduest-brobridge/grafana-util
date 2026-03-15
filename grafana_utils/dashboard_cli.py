@@ -173,6 +173,12 @@ from .dashboards.inspection_workflow import (
     materialize_live_inspection_export as run_materialize_live_inspection_export,
 )
 from .dashboards.inspection_workflow import run_inspect_export, run_inspect_live
+from .roadmap_workbench import (
+    build_preflight_check_document,
+    build_promotion_plan_document,
+    render_preflight_check_text,
+    render_promotion_plan_text,
+)
 from .dashboards.transformer import (
     build_datasource_catalog,
     build_external_export_document,
@@ -196,6 +202,7 @@ TOOL_SCHEMA_VERSION = 1
 ROOT_INDEX_KIND = "grafana-utils-dashboard-export-index"
 LIST_OUTPUT_FORMAT_CHOICES = ("table", "csv", "json")
 IMPORT_DRY_RUN_OUTPUT_FORMAT_CHOICES = ("text", "table", "json")
+PLAN_OUTPUT_FORMAT_CHOICES = ("text", "json")
 INSPECT_OUTPUT_FORMAT_CHOICES = (
     "text",
     "table",
@@ -207,6 +214,10 @@ INSPECT_OUTPUT_FORMAT_CHOICES = (
     "report-tree-table",
     "governance",
     "governance-json",
+    "graph-json",
+    "graph-dot",
+    "graph-governance",
+    "graph-governance-json",
 )
 INSPECT_VIEW_CHOICES = ("summary", "query", "governance")
 INSPECT_FORMAT_CHOICES = ("text", "table", "csv", "json")
@@ -613,6 +624,69 @@ def add_diff_cli_args(parser: argparse.ArgumentParser) -> None:
     )
 
 
+def add_promote_plan_cli_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--source-bundle",
+        required=True,
+        help="Path to the source promotion bundle JSON document.",
+    )
+    parser.add_argument(
+        "--target-inventory",
+        required=True,
+        help="Path to the target inventory JSON document.",
+    )
+    parser.add_argument(
+        "--dashboard-uid-map-file",
+        default=None,
+        help="Optional JSON object file that remaps source dashboard UID to target dashboard UID.",
+    )
+    parser.add_argument(
+        "--dashboard-name-map-file",
+        default=None,
+        help="Optional JSON object file that remaps source dashboard UID to target dashboard name.",
+    )
+    parser.add_argument(
+        "--datasource-uid-map-file",
+        default=None,
+        help="Optional JSON object file that remaps source datasource UID to target datasource UID.",
+    )
+    parser.add_argument(
+        "--datasource-name-map-file",
+        default=None,
+        help="Optional JSON object file that remaps source datasource name to target datasource name.",
+    )
+    parser.add_argument(
+        "--output-format",
+        choices=PLAN_OUTPUT_FORMAT_CHOICES,
+        default="text",
+        help="Render the promotion plan as text or json (default: text).",
+    )
+    parser.add_argument(
+        "--skip-preflight",
+        action="store_true",
+        help="Mark plan items as not requiring preflight in the staged plan document.",
+    )
+
+
+def add_preflight_plan_cli_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--plan-file",
+        required=True,
+        help="Path to the promotion plan JSON document to validate.",
+    )
+    parser.add_argument(
+        "--availability-file",
+        default=None,
+        help="Optional JSON document describing destination availability and required dependencies.",
+    )
+    parser.add_argument(
+        "--output-format",
+        choices=PLAN_OUTPUT_FORMAT_CHOICES,
+        default="text",
+        help="Render the preflight check as text or json (default: text).",
+    )
+
+
 def add_inspect_export_cli_args(parser: argparse.ArgumentParser) -> None:
     parser.set_defaults(_help_full_examples=INSPECT_EXPORT_HELP_FULL_EXAMPLES)
     parser.add_argument(
@@ -644,7 +718,8 @@ def add_inspect_export_cli_args(parser: argparse.ArgumentParser) -> None:
         help=(
             "Legacy single-flag output selector for inspect output. "
             "Use text, table, json, report-table, report-csv, report-json, "
-            "report-tree, report-tree-table, governance, or governance-json. "
+            "report-tree, report-tree-table, governance, governance-json, "
+            "graph-json, graph-dot, graph-governance, or graph-governance-json. "
             "Prefer --view with --format and optional --layout for new usage. "
             "This cannot be combined with hidden legacy output flags."
         ),
@@ -758,7 +833,8 @@ def add_inspect_live_cli_args(parser: argparse.ArgumentParser) -> None:
         help=(
             "Legacy single-flag output selector for inspect output. "
             "Use text, table, json, report-table, report-csv, report-json, "
-            "report-tree, report-tree-table, governance, or governance-json. "
+            "report-tree, report-tree-table, governance, governance-json, "
+            "graph-json, graph-dot, graph-governance, or graph-governance-json. "
             "Prefer --view with --format and optional --layout for new usage. "
             "This cannot be combined with hidden legacy output flags."
         ),
@@ -922,6 +998,18 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     add_common_cli_args(diff_parser)
     add_diff_cli_args(diff_parser)
 
+    promote_plan_parser = subparsers.add_parser(
+        "promote-plan",
+        help="Build a staged dashboard/datasource promotion plan from local JSON inputs.",
+    )
+    add_promote_plan_cli_args(promote_plan_parser)
+
+    preflight_plan_parser = subparsers.add_parser(
+        "preflight-plan",
+        help="Run staged promotion preflight checks from a local promotion plan JSON input.",
+    )
+    add_preflight_plan_cli_args(preflight_plan_parser)
+
     inspect_export_parser = subparsers.add_parser(
         "inspect-export",
         help="Inspect one raw dashboard export directory and summarize its structure.",
@@ -949,6 +1037,9 @@ INSPECT_EXPORT_HELP_EXAMPLES = (
     "  Show one machine-readable summary document:\n"
     "    grafana-util dashboard inspect-export --import-dir ./dashboards/raw "
     "--view summary --format json\n\n"
+    "  Show one dependency graph JSON document:\n"
+    "    grafana-util dashboard inspect-export --import-dir ./dashboards/raw "
+    "--output-format graph-json\n\n"
     "  Render grouped dashboard-first query tables:\n"
     "    grafana-util dashboard inspect-export --import-dir ./dashboards/raw "
     "--view query --layout tree --format table\n\n"
@@ -962,6 +1053,9 @@ INSPECT_LIVE_HELP_EXAMPLES = (
     "  Inspect live dashboards as a report JSON document:\n"
     "    grafana-util dashboard inspect-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" "
     "--view query --format json\n\n"
+    "  Inspect live dashboards as dependency graph DOT:\n"
+    "    grafana-util dashboard inspect-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" "
+    "--output-format graph-dot\n\n"
     "  Filter to one panel in dashboard/panel/query tree output:\n"
     "    grafana-util dashboard inspect-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" "
     "--view query --layout tree --format text --report-filter-panel-id 7\n\n"
@@ -1130,6 +1224,24 @@ def _validate_import_routing_args(
             "--use-export-org cannot be combined with --require-matching-export-org for import-dashboard."
         )
 
+
+def _load_json_object_file(path_value: str, description: str) -> dict[str, Any]:
+    path = Path(path_value)
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        raise GrafanaError("Failed to read %s %s: %s" % (description, path, exc)) from exc
+    except json.JSONDecodeError as exc:
+        raise GrafanaError("Invalid JSON in %s %s: %s" % (description, path, exc)) from exc
+    if not isinstance(payload, dict):
+        raise GrafanaError("%s must contain a JSON object: %s" % (description, path))
+    return payload
+
+
+def _render_json_document(document: dict[str, Any]) -> int:
+    print(json.dumps(document, indent=2, sort_keys=False, ensure_ascii=False))
+    return 0
+
 def resolve_auth(args: argparse.Namespace) -> dict[str, str]:
     try:
         headers, _auth_mode = resolve_cli_auth_from_namespace(
@@ -1212,6 +1324,55 @@ def inspect_live(args: argparse.Namespace) -> int:
 def inspect_export(args: argparse.Namespace) -> int:
     """Inspect one raw export directory and summarize dashboards, folders, and datasources."""
     return run_inspect_export(args, _build_inspection_workflow_deps())
+
+
+def promote_plan(args: argparse.Namespace) -> int:
+    """Build a staged promotion plan from local source/target JSON documents."""
+    source_bundle = _load_json_object_file(args.source_bundle, "source bundle")
+    target_inventory = _load_json_object_file(args.target_inventory, "target inventory")
+    options = {
+        "requirePreflight": not bool(getattr(args, "skip_preflight", False)),
+        "dashboardUidMap": (
+            _load_json_object_file(args.dashboard_uid_map_file, "dashboard UID map")
+            if getattr(args, "dashboard_uid_map_file", None)
+            else {}
+        ),
+        "dashboardNameMap": (
+            _load_json_object_file(args.dashboard_name_map_file, "dashboard name map")
+            if getattr(args, "dashboard_name_map_file", None)
+            else {}
+        ),
+        "datasourceUidMap": (
+            _load_json_object_file(args.datasource_uid_map_file, "datasource UID map")
+            if getattr(args, "datasource_uid_map_file", None)
+            else {}
+        ),
+        "datasourceNameMap": (
+            _load_json_object_file(args.datasource_name_map_file, "datasource name map")
+            if getattr(args, "datasource_name_map_file", None)
+            else {}
+        ),
+    }
+    document = build_promotion_plan_document(source_bundle, target_inventory, options=options)
+    if getattr(args, "output_format", "text") == "json":
+        return _render_json_document(document)
+    for line in render_promotion_plan_text(document):
+        print(line)
+    return 0
+
+
+def preflight_plan(args: argparse.Namespace) -> int:
+    """Build a staged preflight check document from a promotion plan JSON file."""
+    plan_document = _load_json_object_file(args.plan_file, "promotion plan")
+    availability = {}
+    if getattr(args, "availability_file", None):
+        availability = _load_json_object_file(args.availability_file, "availability document")
+    document = build_preflight_check_document(plan_document, availability=availability)
+    if getattr(args, "output_format", "text") == "json":
+        return _render_json_document(document)
+    for line in render_preflight_check_text(document):
+        print(line)
+    return 0
 
 
 def _build_import_workflow_deps() -> dict[str, Any]:
@@ -1303,6 +1464,10 @@ def main(argv: Optional[list[str]] = None) -> int:
             return inspect_export(args)
         if args.command == "inspect-live":
             return inspect_live(args)
+        if args.command == "promote-plan":
+            return promote_plan(args)
+        if args.command == "preflight-plan":
+            return preflight_plan(args)
         if args.command == "import-dashboard":
             return import_dashboards(args)
         if args.command == "diff":

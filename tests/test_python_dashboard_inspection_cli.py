@@ -751,6 +751,74 @@ class DashboardInspectionTests(unittest.TestCase):
             self.assertIn("RECOMMENDATION", output)
             self.assertIn("Normalize the datasource type mapping", output)
 
+    def test_inspect_export_renders_graph_json(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import_dir = Path(tmpdir)
+            self.write_governance_fixture(import_dir)
+
+            args = exporter.parse_args(
+                [
+                    "inspect-export",
+                    "--import-dir",
+                    str(import_dir),
+                    "--output-format",
+                    "graph-json",
+                ]
+            )
+            result, output = self.run_inspect(args)
+            payload = json.loads(output)
+
+            self.assertEqual(result, 0)
+            self.assertEqual(
+                payload["kind"], "grafana-utils-resource-dependency-graph"
+            )
+            self.assertEqual(payload["summary"]["dashboardCount"], 2)
+            node_ids = {item["id"] for item in payload["nodes"]}
+            self.assertIn("datasource:unused-main", node_ids)
+
+    def test_inspect_export_renders_graph_dot(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import_dir = Path(tmpdir)
+            self.write_governance_fixture(import_dir)
+
+            args = exporter.parse_args(
+                [
+                    "inspect-export",
+                    "--import-dir",
+                    str(import_dir),
+                    "--output-format",
+                    "graph-dot",
+                ]
+            )
+            result, output = self.run_inspect(args)
+
+            self.assertEqual(result, 0)
+            self.assertIn("digraph grafana_dependency_graph {", output)
+            self.assertIn('"datasource:unused-main" [label="Unused Main"', output)
+            self.assertIn('"panel:cpu-main:7" -> "datasource:prom-main"', output)
+
+    def test_inspect_export_renders_graph_governance_json(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import_dir = Path(tmpdir)
+            self.write_governance_fixture(import_dir)
+
+            args = exporter.parse_args(
+                [
+                    "inspect-export",
+                    "--import-dir",
+                    str(import_dir),
+                    "--output-format",
+                    "graph-governance-json",
+                ]
+            )
+            result, output = self.run_inspect(args)
+            payload = json.loads(output)
+
+            self.assertEqual(result, 0)
+            self.assertEqual(payload["summary"]["orphanedDatasourceCount"], 1)
+            self.assertEqual(payload["orphanedDatasources"][0]["datasourceUid"], "unused-main")
+            self.assertEqual(payload["datasourceBlastRadius"][0]["dashboardCount"], 1)
+
     def test_inspect_export_renders_tree_and_tree_table_reports(self):
         dashboard = {
             "id": None,

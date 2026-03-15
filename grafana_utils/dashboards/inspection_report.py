@@ -55,6 +55,10 @@ INSPECT_REPORT_FORMAT_CHOICES = (
     "tree-table",
     "governance",
     "governance-json",
+    "graph-json",
+    "graph-dot",
+    "graph-governance",
+    "graph-governance-json",
 )
 NORMALIZED_QUERY_REPORT_FIELDS = (
     "dashboardUid",
@@ -84,6 +88,12 @@ INSPECT_EXPORT_HELP_FULL_EXAMPLES = (
     "  Inspect one raw export as datasource governance JSON:\n"
     "    grafana-util dashboard inspect-export --import-dir ./dashboards/raw "
     "--output-format governance-json\n\n"
+    "  Inspect one raw export as dependency graph JSON:\n"
+    "    grafana-util dashboard inspect-export --import-dir ./dashboards/raw "
+    "--output-format graph-json\n\n"
+    "  Inspect one raw export as dependency graph DOT:\n"
+    "    grafana-util dashboard inspect-export --import-dir ./dashboards/raw "
+    "--output-format graph-dot\n\n"
     "  Inspect one raw export as dashboard-first grouped tables:\n"
     "    grafana-util dashboard inspect-export --import-dir ./dashboards/raw "
     "--output-format report-tree-table\n\n"
@@ -107,6 +117,12 @@ INSPECT_LIVE_HELP_FULL_EXAMPLES = (
     "  Inspect live dashboards as datasource governance JSON:\n"
     "    grafana-util dashboard inspect-live --url http://localhost:3000 --basic-user admin "
     "--basic-password admin --output-format governance-json\n\n"
+    "  Inspect live dashboards as dependency graph JSON:\n"
+    "    grafana-util dashboard inspect-live --url http://localhost:3000 --basic-user admin "
+    "--basic-password admin --output-format graph-json\n\n"
+    "  Inspect live dashboards as dependency graph DOT:\n"
+    "    grafana-util dashboard inspect-live --url http://localhost:3000 --basic-user admin "
+    "--basic-password admin --output-format graph-dot\n\n"
     "  Inspect live dashboards as dashboard-first grouped tables:\n"
     "    grafana-util dashboard inspect-live --url http://localhost:3000 --basic-user admin "
     "--basic-password admin --output-format report-tree-table\n\n"

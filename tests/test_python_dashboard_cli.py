@@ -1157,6 +1157,50 @@ class ExporterTests(unittest.TestCase):
         self.assertFalse(args.json)
         self.assertFalse(args.table)
 
+    def test_parse_args_supports_inspect_export_graph_output_format(self):
+        args = exporter.parse_args(
+            [
+                "inspect-export",
+                "--import-dir",
+                "dashboards/raw",
+                "--output-format",
+                "graph-json",
+            ]
+        )
+
+        self.assertEqual(args.command, "inspect-export")
+        self.assertEqual(args.output_format, "graph-json")
+
+    def test_parse_args_supports_promote_plan_command(self):
+        args = exporter.parse_args(
+            [
+                "promote-plan",
+                "--source-bundle",
+                "source.json",
+                "--target-inventory",
+                "target.json",
+            ]
+        )
+        self.assertEqual(args.command, "promote-plan")
+        self.assertEqual(args.output_format, "text")
+        self.assertFalse(args.skip_preflight)
+
+    def test_parse_args_supports_preflight_plan_command(self):
+        args = exporter.parse_args(
+            [
+                "preflight-plan",
+                "--plan-file",
+                "plan.json",
+                "--availability-file",
+                "availability.json",
+                "--output-format",
+                "json",
+            ]
+        )
+        self.assertEqual(args.command, "preflight-plan")
+        self.assertEqual(args.plan_file, "plan.json")
+        self.assertEqual(args.output_format, "json")
+
     def test_parse_args_supports_inspect_export_view_format_layout(self):
         args = exporter.parse_args(
             [
@@ -6528,6 +6572,129 @@ class ExporterTests(unittest.TestCase):
 
         self.assertEqual(document["panels"][0]["datasource"], "-- Grafana --")
         self.assertEqual(document["__inputs"], [])
+
+    def test_promote_plan_command_renders_text(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_path = Path(tmpdir)
+            source_path = tmp_path / "source.json"
+            target_path = tmp_path / "target.json"
+            source_path.write_text(
+                json.dumps(
+                    {
+                        "environment": "staging",
+                        "dashboards": [
+                            {"uid": "cpu-main", "title": "CPU Main", "folderPath": "General"}
+                        ],
+                        "datasources": [
+                            {
+                                "uid": "prom-main",
+                                "name": "Prometheus Main",
+                                "type": "prometheus",
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            target_path.write_text(
+                json.dumps(
+                    {
+                        "environment": "production",
+                        "dashboards": [{"uid": "prod-cpu-main", "title": "CPU Main Prod"}],
+                        "datasources": [
+                            {
+                                "uid": "prom-prod",
+                                "name": "Prometheus Production",
+                                "type": "prometheus",
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            uid_map_path = tmp_path / "dashboard-uid-map.json"
+            uid_map_path.write_text(
+                json.dumps({"cpu-main": "prod-cpu-main"}),
+                encoding="utf-8",
+            )
+            datasource_uid_map_path = tmp_path / "datasource-uid-map.json"
+            datasource_uid_map_path.write_text(
+                json.dumps({"prom-main": "prom-prod"}),
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = exporter.main(
+                    [
+                        "promote-plan",
+                        "--source-bundle",
+                        str(source_path),
+                        "--target-inventory",
+                        str(target_path),
+                        "--dashboard-uid-map-file",
+                        str(uid_map_path),
+                        "--datasource-uid-map-file",
+                        str(datasource_uid_map_path),
+                    ]
+                )
+            output = stdout.getvalue()
+            self.assertEqual(result, 0)
+            self.assertIn("Promotion plan: staging -> production", output)
+            self.assertIn("dashboard uid=cpu-main target=prod-cpu-main action=update", output)
+            self.assertIn("datasource uid=prom-main target=prom-prod action=update", output)
+
+    def test_preflight_plan_command_renders_json(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_path = Path(tmpdir)
+            plan_path = tmp_path / "plan.json"
+            availability_path = tmp_path / "availability.json"
+            plan_path.write_text(
+                json.dumps(
+                    {
+                        "kind": "grafana-utils-promotion-plan",
+                        "schemaVersion": 1,
+                        "section": "environment-promotion-and-preflight-safety",
+                        "summary": {},
+                        "planItems": [
+                            {
+                                "resourceType": "datasource",
+                                "targetUid": "prom-prod",
+                                "action": "update",
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            availability_path.write_text(
+                json.dumps(
+                    {
+                        "datasourceUids": [],
+                        "requiredPluginIds": ["grafana-clock-panel"],
+                        "pluginIds": [],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = exporter.main(
+                    [
+                        "preflight-plan",
+                        "--plan-file",
+                        str(plan_path),
+                        "--availability-file",
+                        str(availability_path),
+                        "--output-format",
+                        "json",
+                    ]
+                )
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(result, 0)
+            self.assertEqual(payload["summary"]["checkCount"], 2)
+            self.assertEqual(payload["summary"]["missingCount"], 2)
+            self.assertEqual(payload["checks"][0]["kind"], "datasource")
+            self.assertEqual(payload["checks"][1]["kind"], "plugin")
 
 
 if __name__ == "__main__":

@@ -28,6 +28,42 @@ Completed items that were previously listed here now live in `docs/internal/todo
 - clean repo workflow noise by keeping local scratch files, temp exports, and ad hoc notes out of normal review/commit paths
 - evaluate streaming or lower-memory dashboard listing/export paths only if large-instance validation shows the current full-materialization approach is a real bottleneck
 - evaluate semantic alert diff normalization for equivalent values such as duration aliases after the current structural diff behavior is otherwise stable
+- extend `grafana-util sync` beyond the current Grafana-aware plan fetch and limited live apply subset so alerts, richer preflight checks, and broader dependency validation can use the same review contract
+- extend datasource import placeholder secret handling from the current Python/Rust inline/file sidecars into a shared external-provider contract without weakening fail-closed behavior
+
+### Roadmap Workbench: Inspection And Dependency Governance
+
+- start in a separate development file first and avoid wiring the new paths into the current CLI until the contracts settle
+- add dashboard-to-datasource dependency summaries that operators can review without custom scripts
+- add blast-radius and orphan-detection reporting for dashboard and datasource governance
+- add resource dependency graph export with at least JSON first, then evaluate DOT and SVG renderers on top of the same graph model
+- keep datasource-type-specific query analyzers as the extension point for Prometheus, Loki, Flux/Influx, SQL, and later families
+- add a static HTML inspection report only if it reuses the same canonical summary/report document
+
+### Roadmap Workbench: Environment Promotion And Preflight Safety
+
+- start in a separate development file first and avoid wiring promotion/preflight code into existing import flows until reviewable dry-run contracts are stable
+- design a first-class `promote --from <env> --to <env>` workflow around the current export/import/diff contract
+- expand import preflight to check datasources, plugins, alerts, contact points, library panels, and other common target prerequisites before mutation
+- support datasource and dashboard UID/name remap rules as explicit reviewable inputs
+- keep dry-run and diff outputs trustworthy enough for team review before live mutation
+
+### Roadmap Workbench: Declarative Sync And GitOps
+
+- start from the new `grafana_utils.gitops_sync` contract and keep CLI wiring secondary until the plan/apply surface is reviewable
+- the public Python CLI now exists as `grafana-util sync plan|review|apply`, and it can fetch live Grafana state for planning plus execute a limited live apply path for folders, dashboards, and datasources
+- keep managed state explicitly scoped to dashboards, datasources, folders, and partial-alert ownership instead of implying full Grafana takeover
+- require dry-run, review, and explicit apply acknowledgement before any future live mutation path is allowed
+- keep alert sync in plan-only mode until partial ownership and safe mutation semantics are explicit enough to review
+- decide how prune and unmanaged live resources are surfaced so Git-managed scope stays auditable in reviews
+
+### Roadmap Workbench: Secret Handling And Redaction
+
+- start from the new `grafana_utils.datasource_secret_workbench` contract and keep provider integrations unwired until placeholder semantics settle
+- datasource import now accepts placeholder sidecar mappings from CLI/file inputs in both Python and Rust, but the export bundle contract still intentionally excludes secrets
+- use placeholder-based datasource secret references and reject opaque `secureJsonData` replay
+- keep missing or empty secret resolution fail-closed rather than silently dropping or clearing secret-bearing fields
+- align Python and Rust password/token/secret semantics before adding external secret providers
 
 ## Shared Access Parameters
 

@@ -15,10 +15,20 @@ INSPECT_OUTPUT_FORMAT_TO_MODE = {
     "report-tree-table": ("tree-table", False, False),
     "governance": ("governance", False, False),
     "governance-json": ("governance-json", False, False),
+    "graph-json": ("graph-json", False, False),
+    "graph-dot": ("graph-dot", False, False),
+    "graph-governance": ("graph-governance", False, False),
+    "graph-governance-json": ("graph-governance-json", False, False),
 }
 
 REPORT_FORMATS_WITH_COLUMN_SUPPORT = ("table", "csv", "tree-table")
 GOVERNANCE_REPORT_FORMATS = ("governance", "governance-json")
+GRAPH_REPORT_FORMATS = (
+    "graph-json",
+    "graph-dot",
+    "graph-governance",
+    "graph-governance-json",
+)
 
 
 def resolve_inspect_output_mode(args, grafana_error):
@@ -160,6 +170,30 @@ def _render_report_output(import_dir, deps, settings):
         return 0
 
     report_document = build_filtered_report_document(import_dir, deps, settings)
+    if report_format in GRAPH_REPORT_FORMATS:
+        graph_document = deps["build_dependency_graph_document"](
+            deps["build_export_inspection_document"](import_dir),
+            report_document,
+        )
+        if report_format == "graph-json":
+            print(json.dumps(graph_document, indent=2, sort_keys=False, ensure_ascii=False))
+            return 0
+        if report_format == "graph-dot":
+            print(deps["render_dependency_graph_dot"](graph_document))
+            return 0
+        if report_format == "graph-governance-json":
+            print(
+                json.dumps(
+                    deps["build_dependency_graph_governance_summary"](graph_document),
+                    indent=2,
+                    sort_keys=False,
+                    ensure_ascii=False,
+                )
+            )
+            return 0
+        for line in deps["render_dependency_graph_governance_text"](graph_document):
+            print(line)
+        return 0
     governance_document = deps["build_export_inspection_governance_document"](
         deps["build_export_inspection_document"](import_dir),
         report_document,
