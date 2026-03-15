@@ -1305,7 +1305,9 @@ fn resolve_user_modify_password(args: &UserModifyArgs) -> Result<Option<String>>
     if args.prompt_set_password {
         let password = prompt_password("Replacement Grafana user password: ")?;
         if password.is_empty() {
-            return Err(message("Prompted replacement user password cannot be empty."));
+            return Err(message(
+                "Prompted replacement user password cannot be empty.",
+            ));
         }
         return Ok(Some(password));
     }

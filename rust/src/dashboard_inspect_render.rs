@@ -220,7 +220,9 @@ pub(crate) fn render_datasource_summary_report(
     include_header: bool,
 ) -> Vec<String> {
     let mut lines = Vec::new();
-    lines.push(format!("Export inspection datasource summary: {import_dir}"));
+    lines.push(format!(
+        "Export inspection datasource summary: {import_dir}"
+    ));
     lines.push(String::new());
     lines.push("# Summary".to_string());
     let summary_rows = vec![

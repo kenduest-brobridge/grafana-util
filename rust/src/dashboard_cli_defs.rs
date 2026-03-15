@@ -39,7 +39,7 @@ pub enum DryRunOutputFormat {
     Json,
 }
 
-#[derive(Debug, Clone, Args)]
+#[derive(Debug, Clone, Args, Default)]
 pub struct CommonCliArgs {
     #[arg(long, default_value = DEFAULT_URL, help = "Grafana base URL.")]
     pub url: String,
@@ -326,6 +326,12 @@ pub struct ImportArgs {
         help = "For --dry-run --table only, omit the table header row."
     )]
     pub no_header: bool,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Keep processing remaining dashboards if one item fails; return a non-zero exit status when any item fails."
+    )]
+    pub continue_on_error: bool,
     #[arg(
         long,
         value_delimiter = ',',
@@ -769,9 +775,9 @@ fn inspect_report_from_view_format_layout(
                 InspectRenderFormat::Text => Ok((false, false, None)),
                 InspectRenderFormat::Table => Ok((false, true, None)),
                 InspectRenderFormat::Json => Ok((true, false, None)),
-                InspectRenderFormat::Csv => Err(
-                    "--view summary supports only --format text, table, or json.".to_string(),
-                ),
+                InspectRenderFormat::Csv => {
+                    Err("--view summary supports only --format text, table, or json.".to_string())
+                }
             }
         }
         InspectView::Query => match (chosen_format, chosen_layout) {
@@ -790,9 +796,9 @@ fn inspect_report_from_view_format_layout(
             (InspectRenderFormat::Text, InspectLayout::Tree) => {
                 Ok((false, false, Some(InspectExportReportFormat::Tree)))
             }
-            (InspectRenderFormat::Text, InspectLayout::Flat) => Err(
-                "--view query with --format text requires --layout tree.".to_string(),
-            ),
+            (InspectRenderFormat::Text, InspectLayout::Flat) => {
+                Err("--view query with --format text requires --layout tree.".to_string())
+            }
             (InspectRenderFormat::Csv | InspectRenderFormat::Json, InspectLayout::Tree) => Err(
                 "--layout tree is only supported with --format table or text for --view query."
                     .to_string(),
@@ -813,9 +819,9 @@ fn inspect_report_from_view_format_layout(
                     false,
                     Some(InspectExportReportFormat::DatasourceSummaryJson),
                 )),
-                InspectRenderFormat::Text | InspectRenderFormat::Csv => Err(
-                    "--view datasource supports only --format table or json.".to_string(),
-                ),
+                InspectRenderFormat::Text | InspectRenderFormat::Csv => {
+                    Err("--view datasource supports only --format table or json.".to_string())
+                }
             }
         }
         InspectView::Governance => {
@@ -823,19 +829,17 @@ fn inspect_report_from_view_format_layout(
                 return Err("--layout is only supported with --view query.".to_string());
             }
             match chosen_format {
-                InspectRenderFormat::Table => Ok((
-                    false,
-                    false,
-                    Some(InspectExportReportFormat::Governance),
-                )),
+                InspectRenderFormat::Table => {
+                    Ok((false, false, Some(InspectExportReportFormat::Governance)))
+                }
                 InspectRenderFormat::Json => Ok((
                     false,
                     false,
                     Some(InspectExportReportFormat::GovernanceJson),
                 )),
-                InspectRenderFormat::Text | InspectRenderFormat::Csv => Err(
-                    "--view governance supports only --format table or json.".to_string(),
-                ),
+                InspectRenderFormat::Text | InspectRenderFormat::Csv => {
+                    Err("--view governance supports only --format table or json.".to_string())
+                }
             }
         }
     }

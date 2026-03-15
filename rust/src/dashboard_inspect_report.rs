@@ -255,7 +255,9 @@ pub(crate) fn build_export_inspection_datasource_summary_document(
         buckets: Vec<String>,
     }
 
-    let datasource_filter = datasource_filter.map(str::trim).filter(|value| !value.is_empty());
+    let datasource_filter = datasource_filter
+        .map(str::trim)
+        .filter(|value| !value.is_empty());
     let mut by_key = std::collections::BTreeMap::<String, RowState>::new();
 
     for row in &report.queries {
@@ -357,10 +359,7 @@ pub(crate) fn build_export_inspection_datasource_summary_document(
             .cmp(&right.datasource)
             .then(left.datasource_uid.cmp(&right.datasource_uid))
     });
-    let active_count = rows
-        .iter()
-        .filter(|item| item.orphaned != "true")
-        .count();
+    let active_count = rows.iter().filter(|item| item.orphaned != "true").count();
     let orphaned_count = rows.iter().filter(|item| item.orphaned == "true").count();
 
     ExportInspectionDatasourceSummaryDocument {

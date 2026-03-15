@@ -20,11 +20,11 @@ use super::dashboard_inspect_analyzer_sql;
 use super::dashboard_inspect_governance::{
     build_export_inspection_governance_document, render_governance_table_report,
 };
-use super::dashboard_inspect_report::build_export_inspection_datasource_summary_document;
 use super::dashboard_inspect_render::{
     render_csv, render_datasource_summary_report, render_grouped_query_report,
     render_grouped_query_table_report, render_simple_table,
 };
+use super::dashboard_inspect_report::build_export_inspection_datasource_summary_document;
 use super::*;
 
 pub(crate) const DATASOURCE_FAMILY_PROMETHEUS: &str = "prometheus";
@@ -850,7 +850,9 @@ fn map_output_format_to_report(
         InspectOutputFormat::ReportJson => Some(InspectExportReportFormat::Json),
         InspectOutputFormat::ReportTree => Some(InspectExportReportFormat::Tree),
         InspectOutputFormat::ReportTreeTable => Some(InspectExportReportFormat::TreeTable),
-        InspectOutputFormat::DatasourceSummary => Some(InspectExportReportFormat::DatasourceSummary),
+        InspectOutputFormat::DatasourceSummary => {
+            Some(InspectExportReportFormat::DatasourceSummary)
+        }
         InspectOutputFormat::DatasourceSummaryJson => {
             Some(InspectExportReportFormat::DatasourceSummaryJson)
         }
@@ -1272,7 +1274,15 @@ pub(crate) fn analyze_export_dir(args: &InspectExportArgs) -> Result<usize> {
             })
             .collect::<Vec<Vec<String>>>();
         for line in render_simple_table(
-            &["ORG_ID", "UID", "NAME", "TYPE", "ACCESS", "URL", "IS_DEFAULT"],
+            &[
+                "ORG_ID",
+                "UID",
+                "NAME",
+                "TYPE",
+                "ACCESS",
+                "URL",
+                "IS_DEFAULT",
+            ],
             &orphaned_rows,
             !args.no_header,
         ) {
@@ -1503,8 +1513,7 @@ where
         materialize_live_inspection_export_with_request(&mut request_json, args, &temp_dir.path)?
     } else {
         let export_args = build_live_export_args(args, temp_dir.path.clone());
-        let _ =
-            dashboard_export::export_dashboards_with_request(&mut request_json, &export_args)?;
+        let _ = dashboard_export::export_dashboards_with_request(&mut request_json, &export_args)?;
         temp_dir.path.join(RAW_EXPORT_SUBDIR)
     };
     let inspect_args = build_export_inspect_args_from_live(args, import_dir);
