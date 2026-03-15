@@ -27,10 +27,6 @@ Keep implementation code in `grafana_utils/` and keep `python/` wrappers thin un
 ## Build, Test, and Development Commands
 
 - `poetry install --with dev`: create the standard Python development environment for this repo.
-- `poetry run python -m unittest -v`: run the full Python test suite from the Poetry-managed environment.
-- `poetry run python -m unittest -v tests/test_python_alert_cli.py`: run alerting Python tests only from the Poetry-managed environment.
-- `poetry run python -m unittest -v tests/test_python_dashboard_cli.py`: run dashboard Python tests only from the Poetry-managed environment.
-- `poetry run python -m unittest -v tests/test_python_access_cli.py`: run access Python tests only from the Poetry-managed environment.
 - `python3 -m pip install .`: install the package into the active Python environment.
 - `python3 -m pip install --user .`: install the package into the current user's Python environment.
 - `python3 -m pip install '.[http2]'`: install the optional HTTP/2 transport dependencies on Python 3.9+.
@@ -73,7 +69,6 @@ For external command usage and operator examples, prefer `README.md`, `README.zh
 ## Testing Guidelines
 
 - Keep Rust unit tests in `rust/src/*_rust_tests.rs` when the filename needs to distinguish them from Python tests.
-- Add or update tests for every user-visible behavior change.
 - For CLI UX changes, test parser behavior or `format_help()` output directly.
 
 ## Commit & Pull Request Guidelines
@@ -90,6 +85,9 @@ For external command usage and operator examples, prefer `README.md`, `README.zh
   - `- Extract dashboard CLI definitions, list rendering, and export orchestration into dedicated modules.`
   - `- Keep the existing crate::dashboard public API stable through re-exports.`
   - `- Record the refactor in maintainer docs and revalidate the full Rust suite.`
+- Git pre-check rule for this format only:
+  - Enable repo hooks with `git config core.hooksPath .githooks`.
+  - The `.githooks/commit-msg` check enforces `type: subject`, requires a blank second line, requires 2-4 contiguous `- ...` detail bullets, and rejects empty lines between detail bullets.
 - Group related code, tests, and doc updates in the same commit.
 - PRs should describe the operator-facing change, validation run, and any Grafana version assumptions.
 
