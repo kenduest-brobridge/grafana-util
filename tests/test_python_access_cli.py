@@ -21,6 +21,7 @@ MODULE_ENTRYPOINT_PATH = REPO_ROOT / "grafana_utils" / "__main__.py"
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 access_utils = importlib.import_module("grafana_utils.access_cli")
+access_client_module = importlib.import_module("grafana_utils.clients.access_client")
 
 
 class FakeAccessClient:
@@ -330,6 +331,33 @@ class AccessCliTests(unittest.TestCase):
     def test_access_client_module_parses_as_python39_syntax(self):
         source = CLIENT_MODULE_PATH.read_text(encoding="utf-8")
         ast.parse(source, filename=str(CLIENT_MODULE_PATH), feature_version=(3, 9))
+
+    def test_access_client_update_service_account_uses_patch(self):
+        transport = mock.Mock()
+        transport.request_json.return_value = {
+            "id": 9,
+            "name": "deploy-bot",
+            "role": "Viewer",
+            "isDisabled": False,
+        }
+        client = access_client_module.GrafanaAccessClient(
+            base_url="http://grafana.example",
+            headers={},
+            timeout=30,
+            verify_ssl=False,
+            transport=transport,
+        )
+
+        payload = {"name": "deploy-bot", "role": "Viewer"}
+        result = client.update_service_account(9, payload)
+
+        self.assertEqual(result["id"], 9)
+        transport.request_json.assert_called_once_with(
+            path="/api/serviceaccounts/9",
+            params=None,
+            method="PATCH",
+            payload=payload,
+        )
 
     def test_access_parser_module_parses_as_python39_syntax(self):
         source = PARSER_MODULE_PATH.read_text(encoding="utf-8")

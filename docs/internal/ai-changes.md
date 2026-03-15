@@ -934,6 +934,14 @@ Historical note:
 - Rollback/Risk: Low to moderate. The new script is opt-in and isolated to local Docker validation, but like the Rust smoke test it depends on Docker daemon access and current Grafana API behavior.
 - Follow-up: Run the script live on this machine when Docker access is available and, if it stays stable, consider adding one make target that runs both Rust and access live smoke tests together.
 
+## 2026-03-15 - Expand Python Access Service-Account Live Smoke
+- Summary: Extended `scripts/test-python-access-live-grafana.sh` so the service-account path now validates the full snapshot and cleanup lifecycle against Docker Grafana instead of stopping at add/token/list.
+- Tests: Added live-script coverage for `service-account export`, `service-account import` dry-run/live replay, `service-account diff`, `service-account delete`, and `service-account token delete`, plus a rewritten export role to force an update/diff path.
+- Test Run: `bash -n scripts/test-python-access-live-grafana.sh`; `make test-access-live`
+- Validation: The script now creates a service account and token, exports the snapshot, deletes both live objects, verifies dry-run/live import recreate them, rewrites the exported role to force a drift, verifies dry-run/live update import, and finishes with a clean diff check on Grafana `12.4.1`.
+- Impact: `scripts/test-python-access-live-grafana.sh`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low to moderate. The new checks only affect the opt-in Docker smoke path, but they now depend on the service-account snapshot APIs and delete endpoints remaining stable in the Grafana image used by the script.
+
 ## 2026-03-12 - Add Access Utility Team Add
 - Summary: Added Python `grafana-access-utils team add` support, including parser/help wiring, Grafana team creation through the org-scoped API, optional initial member/admin seeding, and aligned public/maintainer docs. The command creates the team first, then reuses the existing exact org-user resolution and guarded membership/admin update flow so initial admins are applied consistently with `team modify`.
 - Tests: Extended `tests/test_python_access_cli.py` with parser/help coverage plus create-flow tests for initial members/admins and the failure path when an initial user cannot be resolved.

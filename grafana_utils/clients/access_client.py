@@ -487,7 +487,7 @@ class GrafanaAccessClient:
     ) -> dict[str, Any]:
         data = self.request_json(
             "/api/serviceaccounts/%s" % parse.quote(str(service_account_id), safe=""),
-            method="PUT",
+            method="PATCH",
             payload=payload,
         )
         if not isinstance(data, dict):

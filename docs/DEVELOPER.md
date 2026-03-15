@@ -570,7 +570,7 @@ Python access live smoke test notes:
 - the script defaults to `grafana/grafana:12.4.1` and binds Grafana to a random localhost port unless `GRAFANA_PORT` is set explicitly
 - user coverage: add, modify, global delete, org delete, global list, org list
 - team coverage: add, list, modify
-- service-account coverage: add, token add, list
+- service-account coverage: add, export, import dry-run/live replay, diff changed/same, delete, token add, token delete, list
 - useful overrides: `GRAFANA_IMAGE`, `GRAFANA_PORT`, `GRAFANA_USER`, `GRAFANA_PASSWORD`, `PYTHON_BIN`
 
 Developer sample-data seed notes:

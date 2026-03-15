@@ -88,7 +88,7 @@ where
 {
     request_object(
         &mut request_json,
-        Method::PUT,
+        Method::PATCH,
         &format!("/api/serviceaccounts/{service_account_id}"),
         &[],
         Some(payload),

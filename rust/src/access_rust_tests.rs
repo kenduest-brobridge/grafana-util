@@ -1841,7 +1841,7 @@ fn service_account_import_with_request_updates_existing() {
                         {"id": 4, "name": "svc", "login": "sa-svc", "role": "Viewer", "isDisabled": false, "tokens": 0, "orgId": 1}
                     ]
                 }))),
-                "/api/serviceaccounts/4" if method == Method::PUT => Ok(Some(json!({
+                "/api/serviceaccounts/4" if method == Method::PATCH => Ok(Some(json!({
                     "id": 4, "name": "svc", "login": "sa-svc", "role": "Editor", "isDisabled": true, "tokens": 0, "orgId": 1
                 }))),
                 _ => panic!("unexpected path {path}"),
@@ -1852,7 +1852,7 @@ fn service_account_import_with_request_updates_existing() {
     assert!(result.is_ok());
     assert!(calls
         .iter()
-        .any(|(method, path, _, _)| method == "PUT" && path == "/api/serviceaccounts/4"));
+        .any(|(method, path, _, _)| method == "PATCH" && path == "/api/serviceaccounts/4"));
 }
 
 #[test]

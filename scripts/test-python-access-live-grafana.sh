@@ -3,7 +3,6 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
-ACCESS_BIN="${ROOT_DIR}/python/grafana-util.py"
 GRAFANA_IMAGE="${GRAFANA_IMAGE:-grafana/grafana:12.4.1}"
 GRAFANA_PORT="${GRAFANA_PORT:-}"
 GRAFANA_USER="${GRAFANA_USER:-admin}"
@@ -12,6 +11,7 @@ GRAFANA_API_TOKEN="${GRAFANA_API_TOKEN:-}"
 GRAFANA_URL=""
 CONTAINER_NAME="${GRAFANA_CONTAINER_NAME:-grafana-util-python-access-live-$$}"
 WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/grafana-util-python-access-live.XXXXXX")"
+SERVICE_ACCOUNT_EXPORT_DIR="${WORK_DIR}/access-service-accounts"
 
 cleanup() {
   docker rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
@@ -123,7 +123,7 @@ create_api_token() {
 }
 
 access_cli() {
-  "${PYTHON_BIN}" "${ACCESS_BIN}" access "$@"
+  "${PYTHON_BIN}" -m grafana_utils access "$@"
 }
 
 run_user_smoke() {
@@ -299,7 +299,7 @@ run_team_smoke() {
 }
 
 run_service_account_smoke() {
-  local service_account_json token_json
+  local service_account_json token_json diff_log delete_json token_delete_json
 
   service_account_json="$(
     access_cli service-account add \
@@ -334,6 +334,125 @@ run_service_account_smoke() {
   )"
   [[ "$(printf '%s' "${service_account_json}" | jq -r '.[] | select(.name=="access-cli-service-account") | .role')" == "Admin" ]] \
     || fail "service-account list did not show the created service account"
+
+  access_cli service-account export \
+    --url "${GRAFANA_URL}" \
+    --token "${GRAFANA_API_TOKEN}" \
+    --export-dir "${SERVICE_ACCOUNT_EXPORT_DIR}" \
+    --overwrite >/dev/null
+
+  [[ -f "${SERVICE_ACCOUNT_EXPORT_DIR}/service-accounts.json" ]] \
+    || fail "service-account export did not write service-accounts.json"
+  [[ -f "${SERVICE_ACCOUNT_EXPORT_DIR}/export-metadata.json" ]] \
+    || fail "service-account export did not write export-metadata.json"
+
+  token_delete_json="$(
+    access_cli service-account token delete \
+      --url "${GRAFANA_URL}" \
+      --basic-user "${GRAFANA_USER}" \
+      --basic-password "${GRAFANA_PASSWORD}" \
+      --name access-cli-service-account \
+      --token-name access-cli-token \
+      --yes \
+      --json
+  )"
+  [[ "$(printf '%s' "${token_delete_json}" | jq -r '.tokenName')" == "access-cli-token" ]] \
+    || fail "service-account token delete did not remove the created token"
+
+  delete_json="$(
+    access_cli service-account delete \
+      --url "${GRAFANA_URL}" \
+      --basic-user "${GRAFANA_USER}" \
+      --basic-password "${GRAFANA_PASSWORD}" \
+      --name access-cli-service-account \
+      --yes \
+      --json
+  )"
+  [[ "$(printf '%s' "${delete_json}" | jq -r '.name')" == "access-cli-service-account" ]] \
+    || fail "service-account delete did not remove the created service account"
+
+  service_account_json="$(
+    access_cli service-account import \
+      --url "${GRAFANA_URL}" \
+      --token "${GRAFANA_API_TOKEN}" \
+      --import-dir "${SERVICE_ACCOUNT_EXPORT_DIR}" \
+      --replace-existing \
+      --dry-run \
+      --json
+  )"
+  [[ "$(printf '%s' "${service_account_json}" | jq -r '.summary.created')" == "1" ]] \
+    || fail "service-account dry-run import did not predict one create"
+
+  access_cli service-account import \
+    --url "${GRAFANA_URL}" \
+    --token "${GRAFANA_API_TOKEN}" \
+    --import-dir "${SERVICE_ACCOUNT_EXPORT_DIR}" \
+    --replace-existing >/dev/null
+
+  service_account_json="$(
+    access_cli service-account list \
+      --url "${GRAFANA_URL}" \
+      --token "${GRAFANA_API_TOKEN}" \
+      --json
+  )"
+  [[ "$(printf '%s' "${service_account_json}" | jq -r '.[] | select(.name=="access-cli-service-account") | .role')" == "Admin" ]] \
+    || fail "service-account import did not recreate the exported service account"
+
+  jq '
+    .records = (
+      .records
+      | map(
+          if .name == "access-cli-service-account"
+          then .role = "Viewer"
+          else .
+          end
+        )
+    )
+  ' "${SERVICE_ACCOUNT_EXPORT_DIR}/service-accounts.json" > "${SERVICE_ACCOUNT_EXPORT_DIR}/service-accounts.json.tmp" \
+    || fail "failed to rewrite service-account export role for diff/import smoke"
+  mv "${SERVICE_ACCOUNT_EXPORT_DIR}/service-accounts.json.tmp" "${SERVICE_ACCOUNT_EXPORT_DIR}/service-accounts.json"
+
+  diff_log="${WORK_DIR}/service-account-diff.log"
+  if access_cli service-account diff \
+    --url "${GRAFANA_URL}" \
+    --token "${GRAFANA_API_TOKEN}" \
+    --diff-dir "${SERVICE_ACCOUNT_EXPORT_DIR}" >"${diff_log}" 2>&1; then
+    fail "service-account diff should have detected the rewritten export role"
+  fi
+  grep -q 'Diff different service-account access-cli-service-account fields=role' "${diff_log}" \
+    || fail "service-account diff did not report the changed role"
+
+  service_account_json="$(
+    access_cli service-account import \
+      --url "${GRAFANA_URL}" \
+      --token "${GRAFANA_API_TOKEN}" \
+      --import-dir "${SERVICE_ACCOUNT_EXPORT_DIR}" \
+      --replace-existing \
+      --dry-run \
+      --json
+  )"
+  [[ "$(printf '%s' "${service_account_json}" | jq -r '.summary.updated')" == "1" ]] \
+    || fail "service-account dry-run import did not predict one update"
+
+  access_cli service-account import \
+    --url "${GRAFANA_URL}" \
+    --token "${GRAFANA_API_TOKEN}" \
+    --import-dir "${SERVICE_ACCOUNT_EXPORT_DIR}" \
+    --replace-existing >/dev/null
+
+  service_account_json="$(
+    access_cli service-account list \
+      --url "${GRAFANA_URL}" \
+      --token "${GRAFANA_API_TOKEN}" \
+      --json
+  )"
+  [[ "$(printf '%s' "${service_account_json}" | jq -r '.[] | select(.name=="access-cli-service-account") | .role')" == "Viewer" ]] \
+    || fail "service-account import did not apply the rewritten role"
+
+  access_cli service-account diff \
+    --url "${GRAFANA_URL}" \
+    --token "${GRAFANA_API_TOKEN}" \
+    --diff-dir "${SERVICE_ACCOUNT_EXPORT_DIR}" >/dev/null
 }
 
 main() {
@@ -343,7 +462,6 @@ main() {
   command -v curl >/dev/null || fail "curl is required"
   command -v jq >/dev/null || fail "jq is required"
   command -v "${PYTHON_BIN}" >/dev/null || fail "${PYTHON_BIN} is required"
-  [[ -f "${ACCESS_BIN}" ]] || fail "access CLI wrapper not found at ${ACCESS_BIN}"
 
   start_grafana
   create_api_token

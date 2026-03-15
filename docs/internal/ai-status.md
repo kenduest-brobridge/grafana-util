@@ -766,6 +766,13 @@ Historical note:
 - Current Update: Added a Docker-backed smoke script for the Python access CLI and a `make test-access-live` target. The script starts Grafana, bootstraps a token, then validates user add/modify/delete, team add/list/modify, and service-account add/token/list flows with the auth modes each command expects.
 - Result: The repo now has a repeatable live validation path for the Python access CLI instead of relying only on ad hoc one-off Docker checks.
 
+## 2026-03-15 - Task: Expand Python Access Service-Account Live Smoke
+- State: Done
+- Scope: `scripts/test-python-access-live-grafana.sh`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The checked-in Python access live smoke covered service-account add, token add, and list, but it did not validate the newer snapshot workflows or destructive cleanup flows against a real Grafana instance.
+- Current Update: Extended the Docker-backed Python access smoke script to export service-account snapshots, validate delete and token-delete flows, replay the exported snapshot through dry-run and live import, rewrite the exported role to force a diff, confirm dry-run/live update import behavior, and finish with a no-drift diff check.
+- Result: The checked-in live access smoke now exercises the service-account snapshot lifecycle end to end in addition to the earlier create/list flows.
+
 ## 2026-03-12 - Task: Add Access Utility Team Add
 - State: Done
 - Scope: `grafana_utils/access_cli.py`, `tests/test_python_access_cli.py`, `README.md`, `DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`, `TODO.md`
