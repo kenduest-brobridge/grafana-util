@@ -20,6 +20,33 @@ Commit message default for this repo:
 - Treat deprecated/legacy option text as cleanup debt: replace `--table/--csv/--json` and other legacy aliases with `--output-format` guidance where implementation supports it, and remove stale "old options" notes from README/examples.
 - For PR-ready changes, include a brief mention in `docs/DEVELOPER.md` whenever docs structure is updated so future contributors know whether behavior, parser compatibility, or only docs shape changed.
 
+## Branch, Version, And Tag Workflow
+
+- `dev` is the preview branch. Keep package versions there in dev form:
+  - Python: `X.Y.Z.devN`
+  - Rust: `X.Y.Z-dev.N`
+- `main` is the release branch. Keep both package versions there in plain release form `X.Y.Z`.
+- Release tags must use `vX.Y.Z` and must be created from `main`, not from `dev`.
+- `.gitlab-ci.yml` enforces this policy in `version-policy`, so a mismatched branch/version/tag combination will fail before packaging jobs run.
+
+### Recommended Maintainer Flow
+
+1. Do ongoing work on `dev`.
+2. When opening a new release line, bump both package versions on `dev` to the matching dev form, such as Python `0.2.0.dev1` and Rust `0.2.0-dev.1`.
+3. Push `dev` and let the preview pipeline build branch artifacts.
+4. When the release candidate is ready, promote `dev` into `main`.
+5. On `main`, change both package versions to the plain release number `X.Y.Z`.
+6. Commit that release-version bump as a dedicated commit on `main`.
+7. Push `main` and confirm the branch pipeline is acceptable.
+8. Create `vX.Y.Z` from that exact `main` commit and push the tag.
+9. Use the tag pipeline artifacts as the formal release output.
+
+### Operational Notes
+
+- Keep `pyproject.toml`, `rust/Cargo.toml`, and the release tag aligned at all times.
+- If local branch history was intentionally rewritten and the remote branch still points to the old chain, use `git push --force-with-lease origin <branch>` instead of `--force`.
+- If `main` started from a placeholder or unrelated initial history, the first promotion from `dev` may require an unrelated-histories merge. After that point, continue with normal merges.
+
 ## Repository Scope
 
 - `grafana_utils/dashboard_cli.py`: packaged dashboard export/import utility
