@@ -1,7 +1,14 @@
 # Rust Sync Artifacts
 
 This note is the maintainer reference for the canonical Rust `sync` staged
-artifact shapes and the fixture files that demos/tests should reuse.
+artifact shapes, the machine-readable schema contracts under
+`docs/internal/schemas/`, and the fixture files that demos/tests should reuse.
+
+The JSON Schema files below are the canonical machine-readable contracts for
+Rust `sync` staged artifacts. When docs, fixtures, or future validators need a
+source of truth for artifact shape, use these schema files first and treat this
+note as the human-oriented index. For tooling that needs a single manifest,
+consume `docs/internal/schemas/index.json`.
 
 ## Artifact kinds
 
@@ -9,23 +16,38 @@ artifact shapes and the fixture files that demos/tests should reuse.
   - Purpose: normalized desired-state inventory for the constrained managed
     slice.
   - Producer: `crate::sync_contracts::build_sync_summary_document(...)`
+  - Schema: `docs/internal/schemas/grafana-utils-sync-summary.schema.json`
 - `grafana-utils-sync-plan`
   - Purpose: review-required desired-vs-live diff with `create/update/delete/noop/unmanaged`
     operations, alert assessment, and explicit `scope`.
   - Producer: `crate::sync_contracts::build_sync_plan_document(...)`
+  - Schema: `docs/internal/schemas/grafana-utils-sync-plan.schema.json`
 - `grafana-utils-sync-preflight`
   - Purpose: staged dependency/policy checks for datasource, dashboard, folder,
     and alert sync before apply.
   - Producer: `crate::sync_preflight::build_sync_preflight_document(...)`
+  - Schema: `docs/internal/schemas/grafana-utils-sync-preflight.schema.json`
 - `grafana-utils-sync-bundle-preflight`
   - Purpose: aggregate sync preflight plus provider-related blocking checks for
     one multi-resource bundle.
   - Producer: `crate::sync_bundle_preflight::build_sync_bundle_preflight_document(...)`
+  - Schema: `docs/internal/schemas/grafana-utils-sync-bundle-preflight.schema.json`
 - `grafana-utils-sync-apply-intent`
   - Purpose: reviewed/approved apply surface that filters to executable
     operations while preserving staged metadata such as `scope`, lineage, and
     optional preflight summaries.
   - Producer: `crate::sync_contracts::build_sync_apply_intent_document(...)`
+  - Schema: `docs/internal/schemas/grafana-utils-sync-apply-intent.schema.json`
+
+## Canonical schema rules
+
+- All Rust `sync` artifact schemas use JSON Schema draft 2020-12.
+- Every schema file pins `kind` with `const` and `schemaVersion` with `const: 1`.
+- Staged artifacts also pin machine-readable lineage fields:
+  `traceId`, `stage`, `stepIndex`, and `parentTraceId` where that artifact
+  contract requires them.
+- If artifact structure changes, update the schema file first, then align
+  fixtures, docs, and Rust code/tests that claim the same contract.
 
 ## Canonical demo fixtures
 
