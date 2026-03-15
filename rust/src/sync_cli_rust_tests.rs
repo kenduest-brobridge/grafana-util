@@ -181,6 +181,37 @@ fn parse_sync_cli_supports_apply_command() {
 }
 
 #[test]
+fn parse_sync_cli_supports_apply_command_with_live_options() {
+    let args = SyncCliArgs::parse_from([
+        "grafana-util",
+        "apply",
+        "--plan-file",
+        "./plan.json",
+        "--execute-live",
+        "--allow-folder-delete",
+        "--org-id",
+        "3",
+        "--url",
+        "http://grafana.example.local",
+        "--output",
+        "json",
+    ]);
+
+    match args.command {
+        SyncGroupCommand::Apply(inner) => {
+            assert_eq!(inner.plan_file, Path::new("./plan.json"));
+            assert!(inner.execute_live);
+            assert!(inner.allow_folder_delete);
+            assert_eq!(inner.org_id, Some(3));
+            assert_eq!(inner.common.url, "http://grafana.example.local");
+            assert_eq!(inner.output, SyncOutputFormat::Json);
+            assert!(!inner.approve);
+        }
+        _ => panic!("expected apply"),
+    }
+}
+
+#[test]
 fn parse_sync_cli_supports_apply_command_with_reason_and_note() {
     let args = SyncCliArgs::parse_from([
         "grafana-util",
@@ -828,6 +859,7 @@ fn run_sync_cli_apply_accepts_reviewed_plan_file() {
         applied_at: None,
         approval_reason: None,
         apply_note: None,
+        ..Default::default()
     }));
 
     assert!(result.is_ok());
@@ -876,6 +908,7 @@ fn run_sync_cli_apply_rejects_reviewed_plan_with_wrong_lineage_parent() {
         applied_at: None,
         approval_reason: None,
         apply_note: None,
+        ..Default::default()
     }))
     .unwrap_err()
     .to_string();
@@ -922,6 +955,7 @@ fn run_sync_cli_apply_rejects_unreviewed_plan_file() {
         applied_at: None,
         approval_reason: None,
         apply_note: None,
+        ..Default::default()
     }))
     .unwrap_err()
     .to_string();
@@ -968,6 +1002,7 @@ fn run_sync_cli_apply_requires_explicit_approval() {
         applied_at: None,
         approval_reason: None,
         apply_note: None,
+        ..Default::default()
     }))
     .unwrap_err()
     .to_string();
@@ -1033,6 +1068,7 @@ fn run_sync_cli_apply_accepts_non_blocking_preflight_file() {
         applied_at: None,
         approval_reason: None,
         apply_note: None,
+        ..Default::default()
     }));
 
     assert!(result.is_ok());
@@ -1099,6 +1135,7 @@ fn run_sync_cli_apply_rejects_preflight_with_wrong_lineage_stage() {
         applied_at: None,
         approval_reason: None,
         apply_note: None,
+        ..Default::default()
     }))
     .unwrap_err()
     .to_string();
@@ -1164,6 +1201,7 @@ fn run_sync_cli_apply_rejects_preflight_with_mismatched_trace_id() {
         applied_at: None,
         approval_reason: None,
         apply_note: None,
+        ..Default::default()
     }))
     .unwrap_err()
     .to_string();
@@ -1290,6 +1328,7 @@ fn run_sync_cli_apply_rejects_blocking_preflight_file() {
         applied_at: None,
         approval_reason: None,
         apply_note: None,
+        ..Default::default()
     }))
     .unwrap_err()
     .to_string();
@@ -1350,6 +1389,7 @@ fn run_sync_cli_apply_rejects_blocking_bundle_preflight_file() {
         applied_at: None,
         approval_reason: None,
         apply_note: None,
+        ..Default::default()
     }))
     .unwrap_err()
     .to_string();
@@ -1395,6 +1435,7 @@ fn run_sync_cli_apply_rejects_missing_trace_id() {
         applied_at: None,
         approval_reason: None,
         apply_note: None,
+        ..Default::default()
     }))
     .unwrap_err()
     .to_string();
@@ -1443,6 +1484,7 @@ fn run_sync_cli_apply_rejects_plan_with_non_review_lineage() {
         applied_at: None,
         approval_reason: None,
         apply_note: None,
+        ..Default::default()
     }))
     .unwrap_err()
     .to_string();
@@ -1507,6 +1549,7 @@ fn run_sync_cli_apply_accepts_non_blocking_bundle_preflight_file() {
         applied_at: None,
         approval_reason: None,
         apply_note: None,
+        ..Default::default()
     }));
 
     assert!(result.is_ok());
@@ -1572,6 +1615,7 @@ fn run_sync_cli_apply_rejects_bundle_preflight_with_wrong_lineage_step() {
         applied_at: None,
         approval_reason: None,
         apply_note: None,
+        ..Default::default()
     }))
     .unwrap_err()
     .to_string();
@@ -1638,6 +1682,7 @@ fn run_sync_cli_apply_rejects_lineage_aware_preflight_without_trace_id() {
         applied_at: None,
         approval_reason: None,
         apply_note: None,
+        ..Default::default()
     }))
     .unwrap_err()
     .to_string();
@@ -1705,6 +1750,7 @@ fn run_sync_cli_apply_rejects_lineage_aware_bundle_preflight_with_mismatched_par
         applied_at: None,
         approval_reason: None,
         apply_note: None,
+        ..Default::default()
     }))
     .unwrap_err()
     .to_string();
@@ -1769,6 +1815,7 @@ fn run_sync_cli_apply_rejects_bundle_preflight_with_mismatched_trace_id() {
         applied_at: None,
         approval_reason: None,
         apply_note: None,
+        ..Default::default()
     }))
     .unwrap_err()
     .to_string();
@@ -1854,6 +1901,7 @@ fn run_sync_cli_apply_accepts_explicit_audit_metadata() {
         applied_at: Some("manual-apply".to_string()),
         approval_reason: Some("approved-change".to_string()),
         apply_note: Some("staged only".to_string()),
+        ..Default::default()
     }));
 
     assert!(result.is_ok());

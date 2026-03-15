@@ -27,8 +27,9 @@ use crate::sync_preflight::{
 
 pub const DEFAULT_REVIEW_TOKEN: &str = "reviewed-sync-plan";
 
-#[derive(Debug, Clone, Copy, ValueEnum, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, ValueEnum, PartialEq, Eq, Default)]
 pub enum SyncOutputFormat {
+    #[default]
     Text,
     Json,
 }
@@ -132,7 +133,7 @@ pub struct SyncReviewArgs {
     pub review_note: Option<String>,
 }
 
-#[derive(Debug, Clone, Args)]
+#[derive(Debug, Clone, Args, Default)]
 pub struct SyncApplyArgs {
     #[arg(long, help = "JSON file containing the reviewed sync plan document.")]
     pub plan_file: PathBuf,
@@ -152,6 +153,25 @@ pub struct SyncApplyArgs {
         help = "Explicit acknowledgement required before a local apply intent is emitted."
     )]
     pub approve: bool,
+    #[command(flatten)]
+    pub common: CommonCliArgs,
+    #[arg(
+        long,
+        help = "Optional Grafana org id used when --execute-live is active."
+    )]
+    pub org_id: Option<i64>,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Apply supported sync operations to Grafana after review and approval checks pass."
+    )]
+    pub execute_live: bool,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Allow live deletion of folders when a reviewed plan includes would-delete folder operations."
+    )]
+    pub allow_folder_delete: bool,
     #[arg(
         long,
         value_enum,
@@ -1310,6 +1330,573 @@ fn attach_apply_audit(
     Ok(Value::Object(object))
 }
 
+fn encode_path_segment(value: &str) -> String {
+    let mut encoded = String::with_capacity(value.len());
+    for byte in value.bytes() {
+        if byte.is_ascii_alphanumeric()
+            || matches!(
+                byte,
+                b'-' | b'.'
+                    | b'_'
+                    | b'~'
+                    | b'!'
+                    | b'$'
+                    | b'&'
+                    | b'\''
+                    | b'('
+                    | b')'
+                    | b'*'
+                    | b'+'
+                    | b','
+                    | b';'
+                    | b'='
+                    | b':'
+                    | b'@'
+            )
+        {
+            encoded.push(char::from(byte));
+        } else {
+            encoded.push_str(&format!("%{byte:02X}"));
+        }
+    }
+    encoded
+}
+
+fn response_or_null(response: Option<Value>) -> Value {
+    response.unwrap_or(Value::Null)
+}
+
+fn parse_operation_field(operation: &Map<String, Value>, field: &str) -> Result<String> {
+    operation
+        .get(field)
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToString::to_string)
+        .ok_or_else(|| message(format!("Sync apply operation is missing {field}.")))
+}
+
+fn parse_optional_operation_field(
+    operation: &Map<String, Value>,
+    field: &str,
+    fallback: &str,
+) -> String {
+    operation
+        .get(field)
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or(fallback)
+        .to_string()
+}
+
+fn parse_operation_body(operation: &Map<String, Value>, label: &str) -> Result<Map<String, Value>> {
+    operation
+        .get("desired")
+        .and_then(Value::as_object)
+        .cloned()
+        .ok_or_else(|| message(format!("{label} must be a JSON object.")))
+}
+
+struct SyncApplyOperation {
+    kind: String,
+    identity: String,
+    title: String,
+    action: String,
+    body: Map<String, Value>,
+}
+
+fn parse_sync_apply_operation(operation: &Value) -> Result<SyncApplyOperation> {
+    let operation = value_as_object(operation, "Sync apply operation")?;
+    let kind = parse_operation_field(operation, "kind")?.to_lowercase();
+    let identity = parse_operation_field(operation, "identity")?;
+    let action = parse_operation_field(operation, "action")?;
+    let title = parse_optional_operation_field(operation, "title", &identity);
+    let body = parse_operation_body(operation, "Sync apply desired body")?;
+    Ok(SyncApplyOperation {
+        kind,
+        identity,
+        title,
+        action,
+        body,
+    })
+}
+
+fn extract_datasource_target_id(datasource: &Map<String, Value>) -> Option<String> {
+    datasource
+        .get("id")
+        .and_then(Value::as_i64)
+        .map(|value| value.to_string())
+        .or_else(|| {
+            datasource
+                .get("id")
+                .and_then(Value::as_u64)
+                .map(|value| value.to_string())
+        })
+        .or_else(|| {
+            datasource
+                .get("id")
+                .and_then(Value::as_f64)
+                .map(|value| value as i64)
+                .map(|value| value.to_string())
+        })
+        .or_else(|| {
+            datasource
+                .get("id")
+                .and_then(Value::as_str)
+                .map(ToString::to_string)
+        })
+}
+
+fn resolve_datasource_target<'a>(
+    live_datasources: &'a [Map<String, Value>],
+    identity: &str,
+) -> Result<&'a Map<String, Value>> {
+    let mut uid_count = 0usize;
+    let mut uid_match: Option<&Map<String, Value>> = None;
+    let mut name_count = 0usize;
+    let mut name_match: Option<&Map<String, Value>> = None;
+    for datasource in live_datasources {
+        if string_field(datasource, "uid", "") == identity {
+            uid_count += 1;
+            uid_match = Some(datasource);
+        }
+        if string_field(datasource, "name", "") == identity {
+            name_count += 1;
+            name_match = Some(datasource);
+        }
+    }
+    if uid_count > 1 {
+        return Err(message(format!(
+            "Could not resolve live datasource target {identity}: ambiguous uid."
+        )));
+    }
+    if let Some(target) = uid_match {
+        return Ok(target);
+    }
+    if name_count > 1 {
+        return Err(message(format!(
+            "Could not resolve live datasource target {identity}: ambiguous name."
+        )));
+    }
+    name_match.ok_or_else(|| {
+        message(format!(
+            "Could not resolve live datasource target {identity}."
+        ))
+    })
+}
+
+fn build_datasource_add_payload(operation: &SyncApplyOperation) -> Result<Map<String, Value>> {
+    let name = parse_optional_operation_field(&operation.body, "name", &operation.identity);
+    let datasource_type = operation
+        .body
+        .get("type")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .trim()
+        .to_string();
+    if name.trim().is_empty() {
+        return Err(message(format!(
+            "Datasource sync add requires desired name for {}.",
+            operation.identity
+        )));
+    }
+    if datasource_type.trim().is_empty() {
+        return Err(message(format!(
+            "Datasource sync add requires desired type for {}.",
+            operation.identity
+        )));
+    }
+    let mut payload = Map::from_iter(vec![
+        ("name".to_string(), Value::String(name)),
+        ("type".to_string(), Value::String(datasource_type)),
+    ]);
+    for field in [
+        "uid",
+        "access",
+        "url",
+        "isDefault",
+        "jsonData",
+        "secureJsonData",
+    ] {
+        if let Some(value) = operation.body.get(field) {
+            payload.insert(field.to_string(), value.clone());
+        }
+    }
+    Ok(payload)
+}
+
+fn build_datasource_modify_payload(
+    target: &Map<String, Value>,
+    desired: &Map<String, Value>,
+) -> Map<String, Value> {
+    let mut payload = Map::from_iter(vec![
+        (
+            "id".to_string(),
+            target.get("id").cloned().unwrap_or(Value::Null),
+        ),
+        (
+            "uid".to_string(),
+            Value::String(string_field(target, "uid", "")),
+        ),
+        (
+            "name".to_string(),
+            Value::String(string_field(target, "name", "")),
+        ),
+        (
+            "type".to_string(),
+            Value::String(string_field(target, "type", "")),
+        ),
+        (
+            "access".to_string(),
+            Value::String(string_field(target, "access", "")),
+        ),
+        (
+            "url".to_string(),
+            Value::String(string_field(target, "url", "")),
+        ),
+        (
+            "isDefault".to_string(),
+            Value::Bool(
+                target
+                    .get("isDefault")
+                    .and_then(Value::as_bool)
+                    .unwrap_or(false),
+            ),
+        ),
+    ]);
+    for field in [
+        "orgId",
+        "basicAuth",
+        "basicAuthUser",
+        "user",
+        "database",
+        "withCredentials",
+    ] {
+        if let Some(value) = target.get(field) {
+            payload.insert((*field).to_string(), value.clone());
+        }
+    }
+    if let Some(value) = target.get("jsonData").or_else(|| desired.get("jsonData")) {
+        payload.insert("jsonData".to_string(), value.clone());
+    }
+    for field in [
+        "url",
+        "access",
+        "isDefault",
+        "basicAuth",
+        "basicAuthUser",
+        "user",
+        "withCredentials",
+    ] {
+        if let Some(value) = desired.get(field) {
+            payload.insert(field.to_string(), value.clone());
+        }
+    }
+    if let Some(value) = desired.get("jsonData") {
+        if let Some(desired_json) = value.as_object() {
+            let merged_json_data = payload
+                .get("jsonData")
+                .and_then(Value::as_object)
+                .unwrap_or(&Map::new())
+                .iter()
+                .chain(desired_json.iter())
+                .fold(Map::new(), |mut merged, (key, value)| {
+                    merged.insert(key.clone(), value.clone());
+                    merged
+                });
+            payload.insert("jsonData".to_string(), Value::Object(merged_json_data));
+        } else {
+            payload.insert("jsonData".to_string(), value.clone());
+        }
+    }
+    if let Some(value) = desired.get("secureJsonData") {
+        payload.insert("secureJsonData".to_string(), value.clone());
+    }
+    payload
+}
+
+fn apply_folder_operation<F>(
+    request_json: &mut F,
+    operation: &SyncApplyOperation,
+    allow_folder_delete: bool,
+) -> Result<Value>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    let title = parse_optional_operation_field(&operation.body, "title", &operation.title);
+    let parent_uid = parse_optional_operation_field(&operation.body, "parentUid", "");
+    let response = match operation.action.as_str() {
+        "would-create" => {
+            let mut payload = Map::from_iter(vec![
+                ("uid".to_string(), Value::String(operation.identity.clone())),
+                ("title".to_string(), Value::String(title)),
+            ]);
+            if !parent_uid.is_empty() {
+                payload.insert("parentUid".to_string(), Value::String(parent_uid));
+            }
+            request_json(
+                Method::POST,
+                "/api/folders",
+                &[],
+                Some(&Value::Object(payload)),
+            )?
+        }
+        "would-update" => {
+            let mut payload = Map::from_iter(vec![
+                ("uid".to_string(), Value::String(operation.identity.clone())),
+                ("title".to_string(), Value::String(title)),
+            ]);
+            if !parent_uid.is_empty() {
+                payload.insert("parentUid".to_string(), Value::String(parent_uid));
+            }
+            request_json(
+                Method::PUT,
+                &format!("/api/folders/{}", encode_path_segment(&operation.identity)),
+                &[],
+                Some(&Value::Object(payload)),
+            )?
+        }
+        "would-delete" => {
+            if !allow_folder_delete {
+                return Err(message(format!(
+                    "Refusing live folder delete for {} without --allow-folder-delete.",
+                    operation.identity
+                )));
+            }
+            request_json(
+                Method::DELETE,
+                &format!("/api/folders/{}", encode_path_segment(&operation.identity)),
+                &vec![("forceDeleteRules".to_string(), "false".to_string())],
+                None,
+            )?
+        }
+        _ => {
+            return Err(message(format!(
+                "Unsupported folder sync action {}.",
+                operation.action
+            )));
+        }
+    };
+    Ok(response_or_null(response))
+}
+
+fn apply_dashboard_operation<F>(
+    request_json: &mut F,
+    operation: &SyncApplyOperation,
+) -> Result<Value>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    match operation.action.as_str() {
+        "would-delete" => {
+            let response = request_json(
+                Method::DELETE,
+                &format!(
+                    "/api/dashboards/uid/{}",
+                    encode_path_segment(&operation.identity)
+                ),
+                &[],
+                None,
+            )?;
+            Ok(response_or_null(response))
+        }
+        "would-create" | "would-update" => {
+            let mut body = operation.body.clone();
+            body.insert("uid".to_string(), Value::String(operation.identity.clone()));
+            body.insert(
+                "title".to_string(),
+                Value::String(parse_optional_operation_field(
+                    &body,
+                    "title",
+                    &operation.title,
+                )),
+            );
+            body.remove("id");
+            let payload = serde_json::json!({
+                "dashboard": Value::Object(body),
+                "overwrite": operation.action == "would-update",
+            });
+            let response = request_json(Method::POST, "/api/dashboards/db", &[], Some(&payload))?;
+            Ok(response_or_null(response))
+        }
+        _ => Err(message(format!(
+            "Unsupported dashboard sync action {}.",
+            operation.action
+        ))),
+    }
+}
+
+fn apply_datasource_operation<F>(
+    request_json: &mut F,
+    operation: &SyncApplyOperation,
+    live_datasources: &[Map<String, Value>],
+) -> Result<Value>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    match operation.action.as_str() {
+        "would-create" => {
+            let payload = build_datasource_add_payload(operation)?;
+            let response = request_json(
+                Method::POST,
+                "/api/datasources",
+                &[],
+                Some(&Value::Object(payload)),
+            )?;
+            Ok(response_or_null(response))
+        }
+        "would-update" => {
+            let target = resolve_datasource_target(live_datasources, &operation.identity)?;
+            let datasource_id = extract_datasource_target_id(target).ok_or_else(|| {
+                message(format!(
+                    "Datasource sync update requires a live datasource id for {}.",
+                    operation.identity
+                ))
+            })?;
+            let payload = build_datasource_modify_payload(target, &operation.body);
+            let response = request_json(
+                Method::PUT,
+                &format!("/api/datasources/{datasource_id}"),
+                &[],
+                Some(&Value::Object(payload)),
+            )?;
+            Ok(response_or_null(response))
+        }
+        "would-delete" => {
+            let target = resolve_datasource_target(live_datasources, &operation.identity)?;
+            let datasource_id = extract_datasource_target_id(target).ok_or_else(|| {
+                message(format!(
+                    "Datasource sync delete requires a live datasource id for {}.",
+                    operation.identity
+                ))
+            })?;
+            let response = request_json(
+                Method::DELETE,
+                &format!("/api/datasources/{datasource_id}"),
+                &[],
+                None,
+            )?;
+            Ok(response_or_null(response))
+        }
+        _ => Err(message(format!(
+            "Unsupported datasource sync action {}.",
+            operation.action
+        ))),
+    }
+}
+
+fn run_sync_apply_operations<F>(
+    operations: &[Value],
+    allow_folder_delete: bool,
+    request_json: &mut F,
+    live_datasources: &[Map<String, Value>],
+) -> Result<Value>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    let mut results = Vec::new();
+    for operation in operations {
+        let operation = parse_sync_apply_operation(operation)?;
+        let response = match operation.kind.as_str() {
+            "folder" => {
+                apply_folder_operation(request_json, &operation, allow_folder_delete)?
+            }
+            "dashboard" => apply_dashboard_operation(request_json, &operation)?,
+            "datasource" => {
+                apply_datasource_operation(request_json, &operation, live_datasources)?
+            }
+            "alert" => {
+                return Err(message(
+                    "Live sync apply does not support alert operations yet; keep alerts in plan-only mode.",
+                ))
+            }
+            _ => {
+                return Err(message(format!(
+                    "Unsupported sync resource kind {}.",
+                    operation.kind
+                )));
+            }
+        };
+        results.push(serde_json::json!({
+            "kind": operation.kind,
+            "identity": operation.identity,
+            "action": operation.action,
+            "response": response,
+        }));
+    }
+    Ok(serde_json::json!({
+        "mode": "live-apply",
+        "appliedCount": results.len(),
+        "results": results,
+    }))
+}
+
+fn build_sync_apply_live_text(document: &Value) -> Result<Vec<String>> {
+    if document.get("kind").and_then(Value::as_str) != Some("grafana-utils-sync-apply-intent") {
+        return Err(message("Sync apply intent document kind is not supported."));
+    }
+    let operations = document
+        .get("operations")
+        .and_then(Value::as_array)
+        .cloned()
+        .ok_or_else(|| message("Sync apply intent document is missing operations."))?;
+    let mut lines = Vec::new();
+    lines.push("Sync apply intent".to_string());
+    lines.push(format!("Mode: local apply"));
+    lines.push(format!("Operations: {}", operations.len()));
+    if !operations.is_empty() {
+        for operation in operations {
+            let object = value_as_object(&operation, "Sync apply operation")?;
+            let kind = object
+                .get("kind")
+                .and_then(Value::as_str)
+                .unwrap_or("unknown");
+            let identity = object
+                .get("identity")
+                .and_then(Value::as_str)
+                .unwrap_or("unknown");
+            let action = object
+                .get("action")
+                .and_then(Value::as_str)
+                .unwrap_or("unknown");
+            lines.push(format!("{kind} {identity} {action}"));
+        }
+    }
+    Ok(lines)
+}
+
+fn build_sync_live_apply_text(document: &Value) -> Result<Vec<String>> {
+    if document.get("mode").and_then(Value::as_str) != Some("live-apply") {
+        return Err(message("Sync live apply document kind is not supported."));
+    }
+    let results = document
+        .get("results")
+        .and_then(Value::as_array)
+        .ok_or_else(|| message("Sync live apply document is missing results."))?;
+    let mut lines = vec![
+        "Sync live apply".to_string(),
+        format!("AppliedCount: {}", results.len()),
+    ];
+    for item in results {
+        let item = value_as_object(item, "Sync live apply result item")?;
+        let kind = item
+            .get("kind")
+            .and_then(Value::as_str)
+            .unwrap_or("unknown");
+        let identity = item
+            .get("identity")
+            .and_then(Value::as_str)
+            .unwrap_or("unknown");
+        let action = item
+            .get("action")
+            .and_then(Value::as_str)
+            .unwrap_or("unknown");
+        lines.push(format!("{kind} {identity} {action}"));
+    }
+    Ok(lines)
+}
+
 fn emit_text_or_json(document: &Value, lines: Vec<String>, output: SyncOutputFormat) -> Result<()> {
     match output {
         SyncOutputFormat::Json => println!("{}", serde_json::to_string_pretty(document)?),
@@ -1420,11 +2007,31 @@ pub fn run_sync_cli(command: SyncGroupCommand) -> Result<()> {
                 3,
                 Some(&trace_id),
             )?;
-            emit_text_or_json(
-                &document,
-                render_sync_apply_intent_text(&document)?,
-                args.output,
-            )
+            if args.execute_live {
+                let client = fetch_live_client(&args.common, args.org_id)?;
+                let operations = document
+                    .get("operations")
+                    .and_then(Value::as_array)
+                    .ok_or_else(|| message("Sync apply intent document is missing operations."))?
+                    .clone();
+                let live_datasources = list_datasources(&client)?;
+                let results = run_sync_apply_operations(
+                    &operations,
+                    args.allow_folder_delete,
+                    &mut |method, path, params, payload| {
+                        client.request_json(method, path, params, payload)
+                    },
+                    &live_datasources,
+                )?;
+                emit_text_or_json(&results, build_sync_live_apply_text(&results)?, args.output)?
+            } else {
+                emit_text_or_json(
+                    &document,
+                    build_sync_apply_live_text(&document)?,
+                    args.output,
+                )?
+            }
+            Ok(())
         }
         SyncGroupCommand::Summary(args) => {
             let desired = load_json_array_file(&args.desired_file, "Sync desired input")?;
