@@ -5,6 +5,97 @@ Historical note:
 - Older entries describe the repo state and `TODO.md` backlog as they existed on the entry date.
 - `TODO.md` now tracks only the active backlog; completed or superseded TODO items moved to `docs/internal/todo-archive.md`.
 
+## 2026-03-15 - Task: Expand Grafana Sample Seed Coverage
+- State: Done
+- Scope: `Makefile`, `scripts/seed-grafana-sample-data.sh`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The reusable sample-data script covered multi-org dashboards, folders, and datasources, but it did not seed representative access resources such as users, teams, or service accounts. It also lacked richer dashboard examples for chained variables, a sibling stage folder branch, and additional multi-datasource panel layouts.
+- Current Update: Expanded the developer sample-data seed to create deterministic sample users, org memberships, teams, and service accounts alongside the existing datasource/folder/dashboard topology. Added richer dashboard samples for variable-driven views, API mixed-datasource panels, and a stage folder branch, wired `--destroy` cleanup so the new seeded resources are removed explicitly, added a read-only `--verify` mode that checks the expected sample resources already exist, and exposed that workflow through a dedicated `make verify-grafana-sample-data` target.
+- Result: The reusable Grafana sample-data script now covers access, multi-org, folder-tree, and richer dashboard reference scenarios in one idempotent seed/destroy workflow, can verify those sample resources without mutating Grafana, and now has consistent `make` entrypoints for seed/verify/destroy.
+
+## 2026-03-15 - Task: Wire Rust Sync CLI To Staged Local Contracts
+- State: Done
+- Scope: `rust/src/cli.rs`, `rust/src/cli_rust_tests.rs`, `rust/src/lib.rs`, `rust/src/sync.rs`, `rust/src/sync_cli_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust already had staged `sync_workbench`, `sync_preflight`, and `sync_bundle_preflight` modules, but there was no stable `grafana-util sync ...` namespace in the unified Rust CLI. The repo also had drift between an unfinished `sync` CLI scaffold and the staged module contracts, so there was no clear local/document-only command surface for operators or tests to target.
+- Current Update: Added a unified Rust `sync` namespace with `summary`, `preflight`, and `bundle-preflight` subcommands that only read local JSON files and render staged text/JSON documents. Rebuilt `rust/src/sync.rs` around the current staged modules, normalized the output mode to one `--output text|json` contract, wired unified dispatch through `rust/src/cli.rs`, and updated focused sync/unified CLI tests to lock in parsing, help text, dispatch, local file validation, and successful staged command execution.
+- Result: Rust now exposes a minimal `grafana-util sync` CLI surface for staged local summary/preflight workflows, with no Grafana I/O and no live apply behavior.
+
+## 2026-03-15 - Task: Stage Rust Bundle Preflight Contract
+- State: Done
+- Scope: `rust/src/lib.rs`, `rust/src/alert_sync.rs`, `rust/src/bundle_preflight.rs`, `rust/src/bundle_preflight_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust now had staged sync summary and sync preflight modules, but it still lacked any bundle-level contract that could aggregate those staged checks with alert policy assessment or datasource provider availability review. There was no Rust-side equivalent to the Python bundle preflight workbench, and no import-safe Rust alert assessment helper existed yet.
+- Current Update: Added a staged Rust `alert_sync` module that mirrors the Python alert assessment contract for candidate, plan-only, and blocked alert sync states. Added a staged Rust `bundle_preflight` module that builds one pure bundle-level preflight document by aggregating source-bundle sync summaries, sync preflight checks, alert assessments, optional target-inventory summaries, and datasource provider assessments derived from the existing Rust provider contract. Added focused Rust tests that lock in bundle summary counts, provider blocking behavior, and text rendering without introducing any CLI wiring or Grafana I/O.
+- Result: Rust now has an import-safe staged bundle preflight surface that can summarize sync, alert, and provider readiness for a multi-resource bundle before any future CLI integration.
+
+## 2026-03-15 - Task: Stage Rust Sync Summary And Preflight Contracts
+- State: Done
+- Scope: `rust/src/lib.rs`, `rust/src/sync_workbench.rs`, `rust/src/sync_preflight.rs`, `rust/src/sync_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Python already had staged sync resource normalization and sync preflight workbench modules, but Rust still lacked any parallel pure-contract surface for declarative sync planning. There was no Rust-side shape for normalized sync resources, no summary document for staged desired state, and no preflight document that could model datasource plugin availability, dashboard datasource dependency checks, or alert contact-point/live-apply blocking without adding CLI wiring.
+- Current Update: Added a new Rust `sync_workbench` module that normalizes staged `dashboard` / `datasource` / `folder` / `alert` specs into one typed resource contract and builds a summary document with stable resource counts. Added a new Rust `sync_preflight` module that consumes those normalized specs plus explicit availability hints to build one staged preflight document covering datasource existence/plugin checks, dashboard datasource dependency checks, folder no-op checks, and alert live-apply plus contact-point blocking checks, along with a deterministic text renderer. Added focused Rust tests to lock in alert managed-field validation, summary counts, preflight blocking output, and text rendering behavior.
+- Result: Rust now has an import-safe staged sync/preflight contract surface analogous to the existing Python workbench modules, ready for later CLI or bundle wiring without introducing any Grafana I/O.
+
+## 2026-03-15 - Task: Stage Rust Bundle-Level Sync Preflight Contract
+- State: Done
+- Scope: `rust/src/lib.rs`, `rust/src/sync_bundle_preflight.rs`, `rust/src/sync_bundle_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust had staged sync summary/preflight modules plus a staged datasource provider contract, but no aggregate bundle-level document that could combine those checks into one reviewable Rust-side contract. That left Rust behind Python on multi-resource bundle planning even though the component checks already existed.
+- Current Update: Added a new Rust `sync_bundle_preflight` module that aggregates staged desired resources into one bundle-level review document, reuses `sync_preflight` for dependency/policy blocking, and adds datasource provider assessment blocks with provider availability checks from explicit `providerNames` input. Added a deterministic text renderer and focused Rust tests for aggregate blocking counts, provider summary exposure, and wrong-kind rejection.
+- Result: Rust now has a staged bundle-level sync preflight contract that mirrors the current Python direction closely enough to wire into future CLI or bundle review flows without first inventing a new JSON shape.
+
+## 2026-03-15 - Task: Add Local-Only Rust Sync CLI Namespace
+- State: Done
+- Scope: `rust/src/lib.rs`, `rust/src/sync.rs`, `rust/src/cli.rs`, `rust/src/cli_rust_tests.rs`, `rust/src/sync_cli_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust already had staged sync summary, preflight, and bundle-preflight modules, but there was still no operator-facing Rust `sync` command surface. That meant all Rust sync work stayed library-only, and the unified Rust CLI could not exercise or validate the staged contract through local JSON inputs.
+- Current Update: Added a new Rust `sync` module with local/document-only `summary`, `preflight`, and `bundle-preflight` subcommands, each loading local JSON files and rendering staged documents as text or JSON. Wired the new namespace into the unified Rust CLI dispatcher and expanded focused CLI tests for parsing, help text, and dispatch routing.
+- Result: Rust now exposes a first operator-facing `grafana-util sync ...` namespace for staged review documents, while still avoiding any Grafana I/O or live apply semantics.
+
+## 2026-03-15 - Task: Extend Rust Sync CLI With Local Plan Support
+- State: Done
+- Scope: `rust/src/sync.rs`, `rust/src/sync_workbench.rs`, `rust/src/cli_rust_tests.rs`, `rust/src/sync_cli_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The new Rust `sync` CLI already exposed `summary`, `preflight`, and `bundle-preflight`, but it still had no local plan command. That left the staged Rust sync plan contract inaccessible from the operator-facing CLI even though the unified namespace already existed.
+- Current Update: Added a staged `build_sync_plan_document(...)` helper to `sync_workbench`, including local create/update/delete/noop/unmanaged summaries plus embedded alert assessment counts, and wired it into a new `grafana-util sync plan --desired-file ... --live-file ...` command in `sync.rs`. Also normalized the Rust sync CLI to the shared `--output text|json` style and expanded focused parser/render tests.
+- Result: Rust `grafana-util sync` now covers summary, plan, preflight, and bundle-preflight as one coherent local/document-only review surface.
+
+## 2026-03-15 - Task: Extend Rust Sync CLI With Local Review Flow
+- State: Done
+- Scope: `rust/src/sync.rs`, `rust/src/cli_rust_tests.rs`, `rust/src/sync_cli_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust `grafana-util sync` already exposed local `plan`, but there was still no persisted plan review step. That meant plan documents could be generated from local JSON, but not round-tripped through a distinct `review` command the way the Python sync surface already supports.
+- Current Update: Added `grafana-util sync review --plan-file ...` in `sync.rs`, implemented as a local JSON document round-trip that validates the plan kind and sets `reviewed=true`, then renders the updated document as text or JSON. Expanded unified CLI parse/dispatch tests and focused sync CLI tests to cover `review`.
+- Result: Rust `sync` now has a full local staged review loop for `plan` documents without adding any live apply behavior.
+
+## 2026-03-15 - Task: Stage Dashboard Permission ACL Workbench Contract
+- State: Done
+- Scope: `grafana_utils/dashboard_permission_workbench.py`, `tests/test_python_dashboard_permission_workbench.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The repo did not yet expose any dashboard/folder ACL permission export or diff contract, even though Grafana dashboard and folder permissions are a known promotion and governance gap in `TODO.md`. There was no isolated staging module for normalizing user/team/service-account/role ACL rows before any later live API wiring.
+- Current Update: Added an unwired `dashboard_permission_workbench` module that normalizes dashboard/folder ACL rows into one staged export shape, maps permission levels into stable numeric/string pairs, derives reviewable diff summaries for missing/changed/extra live permissions, renders deterministic text summaries, builds staged permission preflight and promotion/drift-summary documents, groups multiple dashboard/folder ACL exports into one bundle contract plus bundle-level drift summaries, and now also defines a reviewable resource remap plan for source-to-target dashboard/folder UID/title/path rewrites. Added focused unit coverage for subject normalization, export summaries, diff results, preflight summaries, promotion drift summaries, bundle summaries, bundle drift summaries, remap summaries, and text rendering.
+- Result: Dashboard and folder ACL handling now has one isolated Python contract surface for export, diff, preflight, promotion-drift review, multi-resource bundle packaging, and resource remap planning that can be wired later without first inventing those shapes inside the live dashboard CLI path.
+
+## 2026-03-15 - Task: Expand Sync Preflight Wiring With Live Availability And Bundle Secret Assessments
+- State: Done
+- Scope: `grafana_utils/sync_cli.py`, `grafana_utils/bundle_preflight_workbench.py`, `tests/test_python_sync_cli.py`, `tests/test_python_bundle_preflight_workbench.py`, `docs/internal/sync-preflight-unwired.md`, `docs/internal/bundle-preflight-unwired.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The staged sync CLI already exposed `preflight`, `assess-alerts`, and `bundle-preflight`, but `preflight` and `bundle-preflight` only consumed local availability files and bundle-level checks still ignored datasource secret placeholders plus external provider references. The internal notes also still described those surfaces as unwired even after the first CLI integration landed.
+- Current Update: Added `--fetch-live` support to both `sync preflight` and `sync bundle-preflight` so they can probe Grafana datasource UIDs, plugin IDs, and alert contact points directly from Grafana. Extended bundle preflight aggregation so datasource `secureJsonDataPlaceholders` and `secureJsonDataProviders` now produce explicit secret/provider assessment blocks with reviewable blocking counts driven by availability-file provider and placeholder name inventories.
+- Result: The sync preflight surface now mixes file-backed hints with a conservative live availability probe, and bundle preflight now exposes missing secret/provider prerequisites as first-class review blockers instead of leaving those datasource dependencies implicit.
+
+## 2026-03-15 - Task: Fold Alert Assessment Back Into Sync Plan Documents
+- State: Done
+- Scope: `grafana_utils/gitops_sync.py`, `grafana_utils/sync_cli.py`, `tests/test_python_gitops_sync.py`, `tests/test_python_sync_cli.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: `grafana-util sync assess-alerts` already exposed the staged alert ownership contract, but `sync plan` documents still only carried generic operation counts. That left alert plan-only or blocked states detached from the primary review document and forced callers to run a second command to see the alert-specific staging result.
+- Current Update: Extended sync operations to persist `managedFields` and taught `plan_to_document(...)` to derive an embedded `alertAssessment` block plus `alert_candidate`, `alert_plan_only`, and `alert_blocked` summary counters directly from desired alert operations. Updated CLI tests so `sync plan` now locks in those extra plan-document fields.
+- Result: Reviewable sync plans now surface alert staging directly in the same JSON document that operators already review, without changing the existing operation list or gating model.
+
+## 2026-03-15 - Task: Add Rust Datasource Secret Provider Contract Parity
+- State: Done
+- Scope: `rust/src/lib.rs`, `rust/src/datasource_provider.rs`, `rust/src/datasource_provider_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Python already had a staged `datasource_secret_provider_workbench` contract for `${provider:NAME:PATH}` references, but Rust only supported the inline `${secret:NAME}` import sidecar flow. That left future provider-backed datasource secret handling without any Rust-side parser or review-summary contract to align against.
+- Current Update: Added a new Rust `datasource_provider` module for parsing fail-closed provider references, collecting them from `secureJsonDataProviders`, building a review-required provider plan, and rendering a redacted provider summary. Added focused Rust tests that lock in opaque-replay rejection plus the review summary shape, and exported the new module from the crate root.
+- Result: Rust now has the same staged provider-reference contract surface as Python for datasource secrets, even though no provider IO or CLI wiring has been added yet.
+
+## 2026-03-15 - Task: Wire Rust Provider Plans Into Datasource Import Dry-Run
+- State: Done
+- Scope: `rust/src/datasource.rs`, `rust/src/datasource_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust had a staged provider-reference module, but datasource import dry-run still had no way to surface provider plans from import bundles, and live import could only ignore those staged references if they were ever admitted into the import contract.
+- Current Update: Extended the Rust datasource import contract to admit `secureJsonDataProviders` as a staged-only field, collect provider plans during `datasource import --dry-run`, emit redacted provider summaries in dry-run JSON plus text review lines, and fail closed for live import when provider-backed records are present. Added focused Rust tests for staged import-record loading, provider summary output, and the live-import safety gate.
+- Result: Rust datasource import now exposes provider-backed secret references through its staged review surface while still refusing to perform any provider resolution during live apply.
+
 ## 2026-03-15 - Task: Extend Sync Into Grafana-Aware Planning And Add Rust Secret Sidecar Parity
 - State: Done
 - Scope: `grafana_utils/sync_cli.py`, `grafana_utils/unified_cli.py`, `grafana_utils/datasource/parser.py`, `grafana_utils/datasource/workflows.py`, `rust/src/datasource.rs`, `rust/src/datasource_rust_tests.rs`, `tests/test_python_sync_cli.py`, `tests/test_python_unified_cli.py`, `tests/test_python_datasource_cli.py`, `TODO.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
@@ -1037,3 +1128,59 @@ Historical note:
 - Baseline: The Python access workflows already had `diff_users_with_client` and `diff_teams_with_client`, but the top-level Python facade did not re-export those helpers and the public docs still described Python access snapshots and drift comparison as Rust-only.
 - Current Update: Re-exported Python access export/import/diff helpers from `grafana_utils.access_cli`, added dispatch coverage for `access user diff` and `access team diff`, and updated the English/Traditional Chinese README plus both user guides so access user/team export, import, and diff are documented as supported Python workflows.
 - Result: Python and Rust now present the same supported access command surface for user/team snapshot export, import, and diff in the operator docs, and the Python facade/tests explicitly cover the diff entrypoints.
+
+## 2026-03-15 - Task: Add Rust Sync Apply Intent CLI Flow
+- State: Done
+- Scope: `rust/src/sync.rs`, `rust/src/sync_workbench.rs`, `rust/src/sync_rust_tests.rs`, `rust/src/sync_cli_rust_tests.rs`, `rust/src/cli_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The Rust `sync` namespace already exposed local `summary`, `plan`, `review`, `preflight`, and `bundle-preflight`, but there was no persisted-plan `apply` step, so reviewed plans could not be promoted into a deterministic apply-intent document.
+- Current Update: Added a local-only `sync apply` subcommand, introduced a staged `grafana-utils-sync-apply-intent` document builder in the Rust sync workbench, and gated apply-intent generation on both `reviewed=true` and explicit `--approve`. The intent filters out `noop` and `unmanaged` operations and keeps the flow free of Grafana I/O.
+- Result: Rust `sync` now has the full local review pipeline from `plan` to `review` to `apply` intent, with fail-closed approval checks and unit coverage around parser, execution, and document filtering behavior.
+
+## 2026-03-15 - Task: Add Rust Sync Review Token Gating
+- State: Done
+- Scope: `rust/src/sync.rs`, `rust/src/sync_cli_rust_tests.rs`, `rust/src/cli_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust `sync review` only flipped `reviewed=true` when given a plan document, so any caller could mark a staged plan reviewed without presenting an explicit token.
+- Current Update: Added `DEFAULT_REVIEW_TOKEN` parity to the Rust sync CLI, exposed `--review-token` on `sync review`, and made the review path fail-closed when the token does not match `reviewed-sync-plan`. Parser and execution coverage now assert both the default token shape and wrong-token rejection.
+- Result: Rust `sync review` now matches the existing Python review-token gate closely enough for staged plan/review/apply flows to share the same explicit acknowledgement model.
+
+## 2026-03-15 - Task: Bridge Rust Sync Apply With Preflight
+- State: Done
+- Scope: `rust/src/sync.rs`, `rust/src/sync_cli_rust_tests.rs`, `rust/src/cli_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust `sync apply` only consumed a reviewed plan and approval flag, so operators could build a local apply intent without referencing a staged preflight result or blocking on known preflight failures.
+- Current Update: Added optional `--preflight-file` support to Rust `sync apply`, validated the file as a sync preflight document, rejected apply-intent generation when `blockingCount > 0`, and attached the accepted preflight summary to the emitted apply-intent document and text rendering.
+- Result: Rust `sync apply` can now reuse staged preflight output as a deterministic local gate, which tightens the review/apply pipeline without introducing Grafana I/O.
+
+## 2026-03-15 - Task: Add Rust Sync Trace Id Metadata
+- State: Done
+- Scope: `rust/src/sync.rs`, `rust/src/sync_cli_rust_tests.rs`, `rust/src/cli_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust `sync plan`, `review`, and `apply` produced related staged documents, but there was no shared trace identifier to tie those files together across a multi-step review flow.
+- Current Update: Added optional `--trace-id` support to Rust `sync plan`, derived a deterministic fallback trace id from the generated plan document when the caller does not supply one, and carried `traceId` forward through `sync review` and `sync apply`. Text renderers now surface the trace id for both plan and apply intent output.
+- Result: Rust staged sync artifacts now have a stable cross-step trace handle, which makes local review/apply pipelines easier to correlate without changing the local-only execution model.
+
+## 2026-03-15 - Task: Bridge Rust Sync Apply With Bundle Preflight
+- State: Done
+- Scope: `rust/src/sync.rs`, `rust/src/sync_cli_rust_tests.rs`, `rust/src/cli_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust `sync apply` could already reuse a staged sync preflight file, but bundle-level staged checks still flowed through the generic preflight path and were not surfaced as a separate apply-intent summary.
+- Current Update: Added explicit `--bundle-preflight-file` support to Rust `sync apply`, validated bundle-preflight documents independently, blocked apply-intent generation when bundle-level sync/provider blocking counts were non-zero, and attached a dedicated `bundlePreflightSummary` to the emitted apply-intent document and text output.
+- Result: Rust `sync apply` now has separate staged bridges for resource preflight and bundle preflight, which makes the local review/apply gate clearer without introducing Grafana I/O.
+
+## 2026-03-15 - Task: Add Rust Sync Review And Apply Audit Metadata
+- State: Done
+- Scope: `rust/src/sync.rs`, `rust/src/sync_cli_rust_tests.rs`, `rust/src/cli_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust staged sync artifacts already carried trace ids and staged preflight metadata, but reviewed plans and apply intents did not record reviewer/apply actor identity or a deterministic staged timestamp marker.
+- Current Update: Added optional `--reviewed-by` / `--reviewed-at` support to `sync review` and optional `--applied-by` / `--applied-at` support to `sync apply`. When the timestamp-like fields are omitted, the CLI now derives deterministic staged markers from the trace id instead of using wall clock time. Reviewed plans and apply intents both surface the new audit fields in JSON and text output.
+- Result: Rust staged sync flows now carry explicit local audit metadata for review and apply steps, improving traceability without introducing nondeterministic time dependencies or Grafana I/O.
+
+## 2026-03-15 - Task: Add Rust Sync Review And Apply Notes
+- State: Done
+- Scope: `rust/src/sync.rs`, `rust/src/sync_cli_rust_tests.rs`, `rust/src/cli_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust staged sync review/apply artifacts already recorded who/when metadata, but they still lacked a place to persist a human review note, approval reason, or apply note alongside the rest of the staged audit data.
+- Current Update: Added optional `--review-note` to `sync review` plus optional `--approval-reason` and `--apply-note` to `sync apply`. The CLI now writes these fields into reviewed-plan/apply-intent JSON and surfaces them in text rendering without affecting existing gating behavior.
+- Result: Rust staged sync artifacts now carry both structural audit metadata and concise human rationale for review and approval decisions, while remaining fully local/document-only.
+
+## 2026-03-15 - Task: Add Rust Sync Staged Lineage Metadata
+- State: Done
+- Scope: `rust/src/sync.rs`, `rust/src/sync_cli_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust staged sync artifacts already carried a shared `traceId`, but they did not explicitly describe which stage produced the artifact or which earlier staged artifact it derived from.
+- Current Update: Added automatic staged lineage metadata to Rust `sync` artifacts. `sync plan` now emits `stage=plan` and `stepIndex=1`, while `sync review` and `sync apply` stamp `stage=review|apply`, increment `stepIndex`, and carry `parentTraceId` so downstream artifacts clearly reference the staged plan lineage. Text rendering now surfaces the lineage summary alongside the existing trace id.
+- Result: Local/document-only Rust sync artifacts now encode both correlation (`traceId`) and stage progression (`stage`, `stepIndex`, `parentTraceId`), which makes plan/review/apply chains easier to audit and less likely to be mixed up.

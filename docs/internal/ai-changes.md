@@ -5,6 +5,103 @@ Historical note:
 - Older entries preserve the reasoning and follow-up state as of the entry date.
 - Active backlog now lives in `TODO.md`, while completed or superseded TODO items moved to `docs/internal/todo-archive.md`.
 
+## 2026-03-15 - Expand Grafana Sample Seed Coverage
+- Summary: Expanded `scripts/seed-grafana-sample-data.sh` from a dashboard/datasource-focused sample loader into a broader reusable Grafana developer seed. The script now creates deterministic sample global users, org memberships, teams, and service accounts in addition to the existing multi-org datasource and dashboard content. It also adds a sibling `Stage` folder branch plus richer dashboard samples for chained variables and mixed datasource references in the API area, updates `--destroy` so the new access and dashboard resources are explicitly removed again, adds a read-only `--verify` mode that validates the expected sample resources already exist, and exposes that verification path through a new `make verify-grafana-sample-data` target.
+- Tests: Not applicable
+- Test Run: `bash -n scripts/seed-grafana-sample-data.sh`
+- Reason: The change targets a shell seed script that talks to a live Grafana API; there is no existing automated unit-test target for this script in the repo.
+- Validation: Performed static shell syntax validation, manually cross-checked the new team, user, org, and service-account request paths against the existing access client and live smoke scripts already used elsewhere in the repo, verified the `seed -> verify -> destroy` flow against a temporary local Grafana 12.4.1 Docker container, and confirmed the new `make verify-grafana-sample-data` target expands to the expected script invocation.
+- Impact: `Makefile`, `scripts/seed-grafana-sample-data.sh`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Moderate. The script now seeds more identities and org-scoped access resources, so future changes should keep the fixed names and destroy paths aligned to avoid leaving sample users or teams behind in shared developer Grafana instances.
+
+## 2026-03-15 - Wire Rust Sync CLI To Staged Local Contracts
+- Summary: Added a minimal Rust `grafana-util sync` namespace that stays local/document-only and delegates to the staged sync modules already present in the crate. The rebuilt `rust/src/sync.rs` now exposes `sync summary`, `sync preflight`, and `sync bundle-preflight`, each loading local JSON inputs, validating array/object file shapes, and rendering the staged summary/preflight documents as either text or JSON via one `--output text|json` switch. Unified CLI dispatch in `rust/src/cli.rs` now routes the new `sync` group alongside the existing dashboard/datasource/alert/access domains.
+- Tests: Added and updated focused Rust tests for the local sync CLI parser, summary renderer, local file validation, bundle-preflight execution, unified CLI parsing/help output, and unified dispatch into the `sync` handler.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet sync`; `cargo test --manifest-path rust/Cargo.toml --quiet cli`
+- Validation: Confirmed `sync summary` parses and accepts local desired arrays, confirmed `sync preflight` rejects non-object availability files, confirmed `sync bundle-preflight` accepts local source/target JSON files, confirmed unified help now mentions the `sync preflight` example and `sync` workflow group, and confirmed unified dispatch reaches the new sync runner without touching Grafana APIs.
+- Impact: `rust/src/cli.rs`, `rust/src/cli_rust_tests.rs`, `rust/src/lib.rs`, `rust/src/sync.rs`, `rust/src/sync_cli_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low to moderate. The new commands are local/document-only and do not affect live Grafana behavior, but they do establish a public Rust CLI shape for `sync summary`, `sync preflight`, and `sync bundle-preflight` that later work should preserve or evolve deliberately.
+
+## 2026-03-15 - Stage Rust Bundle Preflight Contract
+- Summary: Added a staged Rust bundle preflight surface without wiring any CLI commands. The new `rust/src/alert_sync.rs` module mirrors the Python alert sync assessment contract for `candidate`, `plan-only`, and `blocked` alert states. The new `rust/src/bundle_preflight.rs` module aggregates the existing Rust staged sync summary and sync preflight documents with alert assessment results, optional target-inventory summaries, and datasource provider availability checks derived from the existing Rust provider contract. The resulting bundle document stays pure and import-safe and includes a deterministic text renderer for later wiring.
+- Tests: Added focused Rust bundle-preflight tests for alert assessment counts, aggregated bundle summary/blocking behavior, provider blocking output, and text rendering.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet bundle_preflight`
+- Validation: Confirmed staged alert assessment reports plan-only and blocked states consistently, confirmed bundle preflight documents include source/target summary sections plus sync, alert, and provider assessment blocks, confirmed missing provider names become explicit blocking counts, and confirmed the text renderer emits a stable summary without any CLI or Grafana transport involvement.
+- Impact: `rust/src/lib.rs`, `rust/src/alert_sync.rs`, `rust/src/bundle_preflight.rs`, `rust/src/bundle_preflight_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low. The new contract is staged-only and does not affect current Rust runtime behavior; the main risk is future contract drift if later CLI wiring bypasses these staged document shapes.
+
+## 2026-03-15 - Stage Rust Sync Summary And Preflight Contracts
+- Summary: Added two staged Rust modules for declarative sync planning without wiring any CLI surface. The new `rust/src/sync_workbench.rs` module normalizes desired sync resources into one typed contract and emits a stable summary document for `dashboard`, `datasource`, `folder`, and `alert` specs. The new `rust/src/sync_preflight.rs` module builds a pure preflight document from those desired specs plus explicit availability hints, covering datasource existence/plugin checks, dashboard datasource dependency checks, folder no-op checks, and alert live-apply/contact-point blocking, and also renders deterministic text output for later wiring.
+- Tests: Added focused Rust unit coverage for alert managed-field validation, summary counting, staged preflight blocking output, and deterministic text rendering.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet sync_`
+- Validation: Confirmed Rust rejects alert specs that omit `managedFields`, confirmed sync summary documents count all four supported resource kinds correctly, confirmed preflight marks missing datasource plugins, missing dashboard datasource dependencies, and alert contact-point/live-apply checks as blocking, and confirmed the text renderer emits a stable summary/check listing without any CLI involvement.
+- Impact: `rust/src/lib.rs`, `rust/src/sync_workbench.rs`, `rust/src/sync_preflight.rs`, `rust/src/sync_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low. The new modules are staged-only and import-safe, so current Rust operator behavior is unchanged; the main compatibility risk is future drift if later Rust sync wiring invents different field names instead of reusing this contract.
+
+## 2026-03-15 - Stage Rust Bundle-Level Sync Preflight Contract
+- Summary: Added a Rust-side staged bundle preflight aggregator so multi-resource sync review no longer stops at per-resource summary and preflight documents. The new `rust/src/sync_bundle_preflight.rs` module reuses the staged Rust sync preflight contract for dependency and alert policy checks, aggregates desired bundle resources into one reviewable document, and adds datasource provider assessment blocks with availability-driven blocking counts derived from explicit `providerNames` input.
+- Tests: Added focused Rust bundle-preflight tests for aggregate sync/provider blocking output, redacted provider-summary exposure, deterministic text rendering, and wrong-kind rejection.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet`
+- Validation: Confirmed bundle documents now expose `syncPreflight` plus `providerAssessment`, confirmed missing provider availability becomes an explicit blocking count, confirmed datasource provider summaries stay redacted while preserving provider names and secret paths, and confirmed the full Rust suite still passes after adding the new staged module.
+- Impact: `rust/src/lib.rs`, `rust/src/sync_bundle_preflight.rs`, `rust/src/sync_bundle_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low to moderate. The new module is staged-only and does not change any operator-facing CLI path yet, but it establishes a Rust bundle-preflight JSON shape that future CLI wiring should preserve rather than reinvent.
+
+## 2026-03-15 - Add Local-Only Rust Sync CLI Namespace
+- Summary: Promoted the staged Rust sync contract into a first operator-facing CLI namespace without adding Grafana I/O. The new `rust/src/sync.rs` module exposes local/document-only `grafana-util sync summary`, `grafana-util sync preflight`, and `grafana-util sync bundle-preflight` commands that load local JSON files, call the staged sync builders, and render either text or JSON output. The unified Rust CLI in `rust/src/cli.rs` now routes the new `sync` group through a dedicated sync handler instead of treating it as a compatibility alias.
+- Tests: Added focused Rust sync CLI tests for help text and local JSON execution, and extended the unified Rust CLI tests for `sync` parsing, help text, and dispatch routing.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet`
+- Validation: Confirmed the new Rust `sync` commands execute successfully from local JSON inputs, confirmed unified CLI help now mentions the `sync` namespace, confirmed `grafana-util sync ...` parses into the expected group command variants, and confirmed the full Rust suite still passes after widening the unified dispatch path.
+- Impact: `rust/src/lib.rs`, `rust/src/sync.rs`, `rust/src/cli.rs`, `rust/src/cli_rust_tests.rs`, `rust/src/sync_cli_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Moderate. This adds a new public Rust CLI namespace and widens the unified dispatcher signature, so future CLI changes should preserve the new `sync` command names and local JSON argument shape unless compatibility breaks are deliberate.
+
+## 2026-03-15 - Extend Rust Sync CLI With Local Plan Support
+- Summary: Extended the new Rust `sync` namespace beyond summary and preflight documents so it now exposes a local staged plan path as well. `rust/src/sync_workbench.rs` now builds a reviewable sync plan document from desired and live JSON inputs, including create/update/delete/noop/unmanaged counts plus embedded alert assessment summary counts, and `rust/src/sync.rs` now exposes that through `grafana-util sync plan` with the same `--output text|json` rendering model used by the other Rust sync commands.
+- Tests: Added focused Rust sync CLI tests for `plan` parsing, local plan execution, and text rendering, and updated unified Rust CLI tests for the normalized `--output json` sync argument shape.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet`
+- Validation: Confirmed `grafana-util sync plan` accepts local desired/live JSON files, confirmed plan text rendering surfaces operation and alert summary counts, confirmed alert-managed fields survive into the staged plan document, and confirmed the full Rust suite still passes after expanding the sync workbench and CLI surface.
+- Impact: `rust/src/sync.rs`, `rust/src/sync_workbench.rs`, `rust/src/cli_rust_tests.rs`, `rust/src/sync_cli_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Moderate. This extends the public Rust `sync` CLI shape and adds a new staged plan document contract, so future Rust sync wiring should preserve the new `plan` command and its document field names unless compatibility changes are intentional.
+
+## 2026-03-15 - Stage Dashboard Permission ACL Workbench Contract
+- Summary: Added an isolated `grafana_utils/dashboard_permission_workbench.py` module to stage dashboard/folder ACL export and review behavior without touching the current dashboard CLI wiring. The contract now normalizes user/team/service-account/role permission rows, maps Grafana permission values into stable `view`/`edit`/`admin` semantics, builds reviewable export documents, derives diff summaries for changed/missing/extra live permissions, renders deterministic text output, exposes staged permission preflight and promotion-drift summary documents, bundles multiple dashboard/folder ACL exports into one reviewable container with bundle-level drift summaries, and now also stages a resource remap plan for dashboard/folder UID, title, and path rewrites.
+- Tests: Added focused Python unit coverage for ACL export normalization, permission diff results, permission preflight checks, promotion drift summaries, bundle summaries, bundle drift summaries, remap summaries, and text rendering.
+- Test Run: `python3 -m unittest -v tests/test_python_dashboard_permission_workbench.py`
+- Validation: Confirmed user, team, service-account, and role rows normalize into stable subject keys, confirmed permission integers and names converge onto the same canonical labels, confirmed diff output distinguishes `same`, `changed`, `missing-live`, and `extra-live`, confirmed preflight output marks missing users/teams/service accounts/roles as blocking, confirmed bundle summaries count dashboard/folder resources and permission totals correctly, confirmed bundle drift summaries distinguish changed/missing/extra resources, confirmed remap plans expose source-to-target UID/title/path rewrites deterministically, and confirmed the text renderers emit stable summary and row output without any CLI wiring.
+- Impact: `grafana_utils/dashboard_permission_workbench.py`, `tests/test_python_dashboard_permission_workbench.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low. The new module is staged-only and unwired, so current dashboard export/import behavior is unchanged; the main risk is future drift if permission export/diff wiring later bypasses this contract instead of reusing it.
+
+## 2026-03-15 - Expand Sync Preflight Wiring With Live Availability And Bundle Secret Assessments
+- Summary: Extended the staged sync preflight CLI surface so `grafana-util sync preflight` and `grafana-util sync bundle-preflight` can now merge local availability hints with a conservative live Grafana probe for datasource UIDs, plugin IDs, and alert contact points. Also extended bundle preflight aggregation so datasource secret placeholders and staged external provider references appear as explicit reviewable assessment blocks with blocking counts when required provider names or placeholder names are absent from the availability input.
+- Tests: Added focused Python coverage for `bundle-preflight` provider/secret assessment output and for the new live availability probe path on both `preflight` and `bundle-preflight`, while keeping unified sync routing coverage in place.
+- Test Run: `python3 -m unittest -v tests/test_python_bundle_preflight_workbench.py tests/test_python_sync_cli.py tests/test_python_unified_cli.py`
+- Validation: Confirmed `sync preflight --fetch-live` and `sync bundle-preflight --fetch-live` can derive datasource/plugin/contact-point availability from a Grafana client stub, confirmed bundle preflight now emits `providerAssessment` and `secretAssessment` sections, and confirmed missing provider or placeholder availability becomes an explicit blocking result instead of remaining implicit in datasource specs.
+- Impact: `grafana_utils/sync_cli.py`, `grafana_utils/bundle_preflight_workbench.py`, `tests/test_python_sync_cli.py`, `tests/test_python_bundle_preflight_workbench.py`, `docs/internal/sync-preflight-unwired.md`, `docs/internal/bundle-preflight-unwired.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low to moderate. The new live probe is read-only, but it increases the expectation that sync preflight output reflects current Grafana inventory. The new provider/secret assessment blocks also raise the contract surface for bundle documents, so future changes should preserve those summary keys or treat shape changes as deliberate compatibility decisions.
+
+## 2026-03-15 - Fold Alert Assessment Back Into Sync Plan Documents
+- Summary: Extended the declarative sync plan document so desired alert operations now carry `managedFields`, and `plan_to_document(...)` derives an embedded `alertAssessment` plus alert-specific summary counters from those desired alert resources. This closes the gap where alert staging lived only in `sync assess-alerts` and was invisible in the main review document emitted by `sync plan`.
+- Tests: Added focused Python coverage for embedded alert assessment output in both the pure `gitops_sync` document renderer and the wired `sync plan` CLI path.
+- Test Run: `python3 -m unittest -v tests/test_python_gitops_sync.py tests/test_python_sync_cli.py tests/test_python_unified_cli.py`
+- Validation: Confirmed sync plans with no alerts emit zeroed alert summary counters, confirmed alert plans with routed fields such as `contactPoints` show `plan-only` in the embedded assessment, and confirmed persisted plan operations now retain `managedFields` so the assessment survives round-tripping through the plan document.
+- Impact: `grafana_utils/gitops_sync.py`, `grafana_utils/sync_cli.py`, `tests/test_python_gitops_sync.py`, `tests/test_python_sync_cli.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low to moderate. The change is additive, but it expands the public sync plan JSON shape with new summary keys and operation metadata, so downstream tooling should treat those fields as stable once consumed.
+
+## 2026-03-15 - Add Rust Datasource Secret Provider Contract Parity
+- Summary: Added Rust-side staged parity for Python's datasource secret provider contract. The new `rust/src/datasource_provider.rs` module accepts only `${provider:NAME:PATH}` references, rejects opaque replay, builds a review-required provider plan from `secureJsonDataProviders`, and renders a redacted provider summary suitable for later CLI or bundle wiring.
+- Tests: Added focused Rust provider-contract tests for opaque-replay rejection, provider-plan summary shaping, and provider-name deduplication.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet datasource`
+- Validation: Confirmed Rust rejects non-placeholder provider values, confirmed it preserves provider name and secret path in a redacted summary without exposing secret material, confirmed provider names deduplicate in first-seen order, and confirmed the new helpers stay staged-only with no runtime datasource import behavior change.
+- Impact: `rust/src/lib.rs`, `rust/src/datasource_provider.rs`, `rust/src/datasource_provider_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low. This is currently pure staged contract code, but it establishes provider-summary field names and fail-closed parsing semantics that future Rust wiring should keep aligned with Python.
+
+## 2026-03-15 - Wire Rust Provider Plans Into Datasource Import Dry-Run
+- Summary: Extended Rust datasource import so staged provider-backed secret references can now flow into the import review surface without changing live mutation behavior. Import bundles may now carry `secureJsonDataProviders` as a staged-only field, `datasource import --dry-run` collects provider plans and emits redacted provider summaries in JSON plus text review lines, and non-dry-run import now fails closed instead of silently ignoring provider-backed records.
+- Tests: Added focused Rust datasource tests for staged `secureJsonDataProviders` record loading, dry-run provider summary output, provider review-line rendering, and the live-import provider block.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet datasource`
+- Validation: Confirmed staged import loading accepts `secureJsonDataProviders` while still rejecting real secret-bearing fields such as `secureJsonData`, confirmed dry-run JSON now includes per-item `providerSummary` plus aggregate provider counts/names, confirmed text dry-run emits provider review lines, and confirmed live import now errors before mutation when provider-backed records are present.
+- Impact: `rust/src/datasource.rs`, `rust/src/datasource_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Moderate. This expands the Rust datasource import bundle contract and dry-run JSON shape, so downstream consumers should treat the new provider fields as stable. The live fail-closed gate is intentional and may block existing experimental bundles that carried provider references without a review-only workflow.
+
 ## 2026-03-15 - Extend Sync Into Grafana-Aware Planning And Add Rust Secret Sidecar Parity
 - Summary: Extended the new Python `grafana-util sync` surface beyond local-file planning so it can now fetch live Grafana folders, dashboards, and datasource inventory during `sync plan`, and can execute a gated live apply subset for folders, dashboards, and datasources when `sync apply --execute-live` is used after review and approval. Also added Rust datasource import secret-sidecar parity so both Python and Rust now support repeatable placeholder mappings plus inline/file-backed secret values without changing the exported datasource bundle contract.
 - Tests: Added Python sync CLI coverage for live Grafana-backed planning and gated live apply execution, kept unified CLI sync routing coverage in place, and added Rust datasource tests for placeholder parsing, unresolved-secret failures, dry-run redaction, and live payload secret injection.
@@ -1257,6 +1354,78 @@ Historical note:
 - Impact: `grafana-alert-utils.py`, `tests/test_grafana_alert_utils.py`, `README.md`, `docs/internal/ai-status.md`
 - Rollback/Risk: Low to moderate risk. The new tool is isolated from `grafana-utils.py`, but import still depends on the target Grafana having any referenced folders and other alerting dependencies available or being restored in the same import set.
 - Follow-up: If needed later, extend the separate alert CLI to cover message templates and other remaining Grafana alerting resources without folding that logic into the dashboard utility.
+
+## 2026-03-15 - Add Rust Sync Apply Intent CLI Flow
+- Summary: Extended the Rust `sync` namespace with a local-only `apply` step that consumes a persisted plan JSON document and emits a deterministic `grafana-utils-sync-apply-intent` document. The new builder lives in `rust/src/sync_workbench.rs`, while `rust/src/sync.rs` wires the CLI parser, approval gating, and text/json rendering.
+- Tests: Added Rust unit coverage for apply parser shape, apply text rendering, reviewed-plan execution, unreviewed-plan rejection, and apply-intent filtering of non-mutating operations. Existing sync and unified CLI tests were updated to recognize the new subcommand.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet` (pass)
+- Validation: Local Rust test suite passed with the new `sync apply` flow; the command remains local/document-only and does not perform Grafana I/O.
+- Impact: `rust/src/sync.rs`, `rust/src/sync_workbench.rs`, `rust/src/sync_rust_tests.rs`, `rust/src/sync_cli_rust_tests.rs`, `rust/src/cli_rust_tests.rs`, `docs/internal/ai-status.md`
+- Rollback/Risk: Low risk. The new behavior is isolated to the Rust staged sync path, and the command fail-closes unless the plan is already reviewed and `--approve` is set.
+- Follow-up: The next Rust sync increment should add explicit review-token semantics or live/apply preflight bridging if parity with the Python CLI is needed.
+
+## 2026-03-15 - Add Rust Sync Review Token Gating
+- Summary: Tightened the Rust `sync review` flow so it now requires an explicit review token, using the same default token string as the Python implementation: `reviewed-sync-plan`. The CLI parser now accepts `--review-token`, and the review path rejects mismatched tokens instead of unconditionally marking plans reviewed.
+- Tests: Added parser coverage for the review token flag and execution coverage that rejects a wrong token while preserving the existing happy path with the default token.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet` (pass)
+- Validation: Local Rust test suite passed; `sync review` now fail-closes on token mismatch while keeping the command local/document-only.
+- Impact: `rust/src/sync.rs`, `rust/src/sync_cli_rust_tests.rs`, `rust/src/cli_rust_tests.rs`, `docs/internal/ai-status.md`
+- Rollback/Risk: Low risk. The only operator-facing change is that callers using non-default review flows must now pass the expected token explicitly.
+- Follow-up: The next parity gap is review-token propagation into any future persisted review metadata or live apply bridge.
+
+## 2026-03-15 - Bridge Rust Sync Apply With Preflight
+- Summary: Extended Rust `sync apply` so it can consume an optional staged preflight document via `--preflight-file`. The CLI now validates the document kind, blocks apply-intent generation when the preflight summary reports blocking checks, and copies the accepted preflight summary into the emitted apply-intent document and text output.
+- Tests: Added parser coverage for the new `--preflight-file` flag plus execution tests for accepted non-blocking preflight input and rejected blocking preflight input.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet` (pass)
+- Validation: Local Rust test suite passed; the new bridge remains local/document-only and simply reuses staged preflight output as an apply gate.
+- Impact: `rust/src/sync.rs`, `rust/src/sync_cli_rust_tests.rs`, `rust/src/cli_rust_tests.rs`, `docs/internal/ai-status.md`
+- Rollback/Risk: Low risk. The change only tightens the Rust staged sync path by refusing local apply intents when preflight already reports blocking issues.
+- Follow-up: The next useful bridge is bundle-preflight metadata reuse in `sync apply` or plan/apply trace ids for multi-step staged workflows.
+
+## 2026-03-15 - Add Rust Sync Trace Id Metadata
+- Summary: Added staged trace metadata to the Rust sync CLI. `sync plan` now accepts an optional `--trace-id`; otherwise it derives a deterministic fallback trace id from the generated plan document. `sync review` and `sync apply` preserve that `traceId`, and the text renderers for plan/apply now print it explicitly.
+- Tests: Added parser coverage for `--trace-id`, renderer coverage for plan/apply trace lines, and local execution coverage for explicit trace-id plan generation.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet` (pass)
+- Validation: Local Rust test suite passed; the trace metadata stays entirely in staged JSON/text output and does not introduce Grafana I/O.
+- Impact: `rust/src/sync.rs`, `rust/src/sync_cli_rust_tests.rs`, `rust/src/cli_rust_tests.rs`, `docs/internal/ai-status.md`
+- Rollback/Risk: Low risk. The new field is additive and only affects local/document-only staged sync artifacts.
+- Follow-up: The next useful parity step is to propagate bundle-preflight metadata or trace-aware review/apply audit fields into the staged documents.
+
+## 2026-03-15 - Bridge Rust Sync Apply With Bundle Preflight
+- Summary: Extended Rust `sync apply` with an explicit `--bundle-preflight-file` bridge. The CLI now validates staged `grafana-utils-sync-bundle-preflight` documents independently from normal preflight input, blocks apply-intent generation when bundle-level sync/provider blocking counts are non-zero, and copies a dedicated `bundlePreflightSummary` into the emitted apply-intent document and text output.
+- Tests: Added parser coverage for `--bundle-preflight-file`, renderer coverage for bundle-preflight text lines, and execution coverage for both accepted non-blocking bundle-preflight input and rejected blocking bundle-preflight input.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet` (pass)
+- Validation: Local Rust test suite passed; the new bridge remains local/document-only and keeps bundle-level staged checks separate from resource-level preflight metadata.
+- Impact: `rust/src/sync.rs`, `rust/src/sync_cli_rust_tests.rs`, `rust/src/cli_rust_tests.rs`, `docs/internal/ai-status.md`
+- Rollback/Risk: Low risk. This is an additive staged CLI bridge that only tightens local apply gating when bundle-preflight already reports blocking issues.
+- Follow-up: The next useful step is to carry review/apply audit metadata such as reviewer identity or staged timestamps alongside the existing trace id.
+
+## 2026-03-15 - Add Rust Sync Review And Apply Audit Metadata
+- Summary: Added staged audit metadata to the Rust sync CLI. `sync review` now accepts optional `--reviewed-by` and `--reviewed-at`, while `sync apply` accepts optional `--applied-by` and `--applied-at`. When the timestamp-like fields are omitted, the CLI derives deterministic staged markers from the existing trace id so the flow stays testable and clock-free.
+- Tests: Added renderer coverage for reviewed/applied audit lines and execution coverage for review/apply commands that supply explicit audit metadata. Existing parser/CLI tests were also updated for the new optional fields.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet` (pass)
+- Validation: Local Rust test suite passed; reviewed plans and apply intents now carry local audit metadata in both JSON and text output without introducing Grafana I/O or wall-clock dependence.
+- Impact: `rust/src/sync.rs`, `rust/src/sync_cli_rust_tests.rs`, `rust/src/cli_rust_tests.rs`, `docs/internal/ai-status.md`
+- Rollback/Risk: Low risk. The new metadata is additive and only affects staged local sync artifacts.
+- Follow-up: The next useful staged parity step is to add operator-supplied review/apply notes or approval reasons alongside the audit fields.
+
+## 2026-03-15 - Add Rust Sync Review And Apply Notes
+- Summary: Extended the Rust staged sync audit surface with human rationale fields. `sync review` now accepts `--review-note`, while `sync apply` accepts `--approval-reason` and `--apply-note`. These values are preserved in the reviewed-plan/apply-intent documents and rendered in text output.
+- Tests: Added parser/struct default coverage for the new optional fields, renderer coverage for note/reason lines, and execution coverage for review/apply commands that supply explicit notes.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet` (pass)
+- Validation: Local Rust test suite passed; the new fields are additive and stay fully within the staged local sync flow.
+- Impact: `rust/src/sync.rs`, `rust/src/sync_cli_rust_tests.rs`, `rust/src/cli_rust_tests.rs`, `docs/internal/ai-status.md`
+- Rollback/Risk: Low risk. This only adds optional staged metadata and does not change review/apply gating semantics.
+- Follow-up: The next useful staged extension is to propagate plan/review/apply file lineage metadata such as parent trace references or step counters.
+
+## 2026-03-15 - Add Rust Sync Staged Lineage Metadata
+- Summary: Added automatic staged lineage metadata to the Rust sync CLI. `sync plan` now stamps staged artifacts with `stage=plan` and `stepIndex=1`, while `sync review` and `sync apply` attach `stage=review|apply`, advance the step index, and preserve `parentTraceId` to describe the local artifact lineage on top of the existing shared `traceId`.
+- Tests: Added renderer coverage for lineage lines in both plan and apply text output, plus default-lineage rendering coverage when older staged documents do not contain the new fields. Existing sync/cli suites were re-run to confirm additive compatibility.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet sync`; `cargo test --manifest-path rust/Cargo.toml --quiet cli`; `cargo test --manifest-path rust/Cargo.toml --quiet` (pass)
+- Validation: Local Rust test suite passed; the new fields are emitted automatically by the local/document-only sync CLI and do not change review/apply gate semantics.
+- Impact: `rust/src/sync.rs`, `rust/src/sync_cli_rust_tests.rs`, `docs/internal/ai-status.md`
+- Rollback/Risk: Low risk. The new lineage fields are additive metadata on staged artifacts and text output.
+- Follow-up: The next useful staged step is to carry lineage-aware validation into review/apply gates, such as rejecting mismatched parent lineage when multiple staged artifacts are supplied together.
 
 ## 2026-03-10 - Export Grafana Dashboards
 - Summary: Added a standalone Python utility to export Grafana dashboards by UID into local JSON files, extended it with import support for recursively loading exported dashboard JSON back into Grafana, and added datasource-prompt export behavior that now follows the import-critical pattern from the provided `1-prompt.json`. Current architecture writes both `dashboards/raw/` and `dashboards/prompt/` by default, with `raw/` intended for preserved-UID/API-safe imports and `prompt/` intended for Grafana web imports that ask for datasource mapping. Latest change: added `--without-raw` and `--without-prompt` so one export run can still be selective when needed, while rejecting the invalid case where both are disabled.
