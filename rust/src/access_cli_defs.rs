@@ -98,46 +98,63 @@ const ACCESS_SERVICE_ACCOUNT_TOKEN_DELETE_HELP_EXAMPLES: &str =
 
 #[derive(Debug, Clone, Args)]
 pub struct CommonCliArgs {
-    #[arg(long, default_value = DEFAULT_URL, help = "Grafana base URL.")]
+    #[arg(
+        long,
+        default_value = DEFAULT_URL,
+        help_heading = "Connection And Auth",
+        help = "Grafana base URL."
+    )]
     pub url: String,
     #[arg(
         long = "token",
         visible_alias = "api-token",
+        help_heading = "Connection And Auth",
         help = "Grafana API token. Preferred flag: --token. Falls back to GRAFANA_API_TOKEN."
     )]
     pub api_token: Option<String>,
     #[arg(
         long = "basic-user",
+        help_heading = "Connection And Auth",
         help = "Grafana Basic auth username. Preferred flag: --basic-user. Falls back to GRAFANA_USERNAME."
     )]
     pub username: Option<String>,
     #[arg(
         long = "basic-password",
+        help_heading = "Connection And Auth",
         help = "Grafana Basic auth password. Preferred flag: --basic-password. Falls back to GRAFANA_PASSWORD."
     )]
     pub password: Option<String>,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Connection And Auth",
         help = "Prompt for the Grafana Basic auth password."
     )]
     pub prompt_password: bool,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Connection And Auth",
         help = "Prompt for the Grafana API token without echo instead of passing --token on the command line."
     )]
     pub prompt_token: bool,
     #[arg(
         long,
+        help_heading = "Connection And Auth",
         help = "Grafana organization id to send through X-Grafana-Org-Id."
     )]
     pub org_id: Option<i64>,
-    #[arg(long, default_value_t = DEFAULT_TIMEOUT, help = "HTTP timeout in seconds.")]
+    #[arg(
+        long,
+        default_value_t = DEFAULT_TIMEOUT,
+        help_heading = "Connection And Auth",
+        help = "HTTP timeout in seconds."
+    )]
     pub timeout: u64,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Connection And Auth",
         help = "Enable TLS certificate verification. Verification is disabled by default."
     )]
     pub verify_ssl: bool,
@@ -145,41 +162,57 @@ pub struct CommonCliArgs {
 
 #[derive(Debug, Clone, Args)]
 pub struct CommonCliArgsNoOrgId {
-    #[arg(long, default_value = DEFAULT_URL, help = "Grafana base URL.")]
+    #[arg(
+        long,
+        default_value = DEFAULT_URL,
+        help_heading = "Connection And Auth",
+        help = "Grafana base URL."
+    )]
     pub url: String,
     #[arg(
         long = "token",
         visible_alias = "api-token",
+        help_heading = "Connection And Auth",
         help = "Grafana API token. Preferred flag: --token. Falls back to GRAFANA_API_TOKEN."
     )]
     pub api_token: Option<String>,
     #[arg(
         long = "basic-user",
+        help_heading = "Connection And Auth",
         help = "Grafana Basic auth username. Preferred flag: --basic-user. Falls back to GRAFANA_USERNAME."
     )]
     pub username: Option<String>,
     #[arg(
         long = "basic-password",
+        help_heading = "Connection And Auth",
         help = "Grafana Basic auth password. Preferred flag: --basic-password. Falls back to GRAFANA_PASSWORD."
     )]
     pub password: Option<String>,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Connection And Auth",
         help = "Prompt for the Grafana Basic auth password."
     )]
     pub prompt_password: bool,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Connection And Auth",
         help = "Prompt for the Grafana API token without echo instead of passing --token on the command line."
     )]
     pub prompt_token: bool,
-    #[arg(long, default_value_t = DEFAULT_TIMEOUT, help = "HTTP timeout in seconds.")]
+    #[arg(
+        long,
+        default_value_t = DEFAULT_TIMEOUT,
+        help_heading = "Connection And Auth",
+        help = "HTTP timeout in seconds."
+    )]
     pub timeout: u64,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Connection And Auth",
         help = "Enable TLS certificate verification. Verification is disabled by default."
     )]
     pub verify_ssl: bool,

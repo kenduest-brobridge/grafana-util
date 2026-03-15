@@ -348,6 +348,7 @@ class AlertUtilsTests(unittest.TestCase):
         list_rules_parser = parser._subparsers._group_actions[0].choices["list-rules"]
         help_text = list_rules_parser.format_help()
 
+        self.assertIn("Connection And Auth:", help_text)
         self.assertIn("Examples:", help_text)
         self.assertIn(
             "grafana-util alert list-rules --url http://localhost:3000 --output-format table",
@@ -363,6 +364,7 @@ class AlertUtilsTests(unittest.TestCase):
         import_parser = parser._subparsers._group_actions[0].choices["import"]
         help_text = import_parser.format_help()
 
+        self.assertIn("Connection And Auth:", help_text)
         self.assertIn("Examples:", help_text)
         self.assertIn(
             "grafana-util alert import --url http://localhost:3000 --import-dir ./alerts/raw --replace-existing --dry-run",

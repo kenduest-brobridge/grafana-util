@@ -83,7 +83,7 @@ pub struct CommonCliArgs {
 
 #[derive(Debug, Clone, Args)]
 pub struct ExportArgs {
-    #[command(flatten)]
+    #[command(flatten, next_help_heading = "Connection And Auth")]
     pub common: CommonCliArgs,
     #[arg(
         long,
@@ -153,7 +153,7 @@ pub struct ExportArgs {
 
 #[derive(Debug, Clone, Args)]
 pub struct ListArgs {
-    #[command(flatten)]
+    #[command(flatten, next_help_heading = "Connection And Auth")]
     pub common: CommonCliArgs,
     #[arg(long, default_value_t = DEFAULT_PAGE_SIZE, help = "Dashboard search page size.")]
     pub page_size: usize,
@@ -199,7 +199,7 @@ pub struct ListArgs {
 
 #[derive(Debug, Clone, Args)]
 pub struct ListDataSourcesArgs {
-    #[command(flatten)]
+    #[command(flatten, next_help_heading = "Connection And Auth")]
     pub common: CommonCliArgs,
     #[arg(long, default_value_t = false, conflicts_with_all = ["csv", "json"], help = "Render datasource summaries as a table.")]
     pub table: bool,
@@ -224,11 +224,12 @@ pub struct ListDataSourcesArgs {
 
 #[derive(Debug, Clone, Args)]
 pub struct ImportArgs {
-    #[command(flatten)]
+    #[command(flatten, next_help_heading = "Connection And Auth")]
     pub common: CommonCliArgs,
     #[arg(
         long,
         conflicts_with = "use_export_org",
+        help_heading = "Import Input And Org Routing",
         help = "Import dashboards into this Grafana org ID instead of the current org. This switches the whole import run to one explicit destination org and requires Basic auth."
     )]
     pub org_id: Option<i64>,
@@ -236,6 +237,7 @@ pub struct ImportArgs {
         long,
         default_value_t = false,
         conflicts_with = "require_matching_export_org",
+        help_heading = "Import Input And Org Routing",
         help = "Import a combined multi-org export root by routing each org-specific raw export back into the matching Grafana org. This requires Basic auth."
     )]
     pub use_export_org: bool,
@@ -243,6 +245,7 @@ pub struct ImportArgs {
         long = "only-org-id",
         requires = "use_export_org",
         conflicts_with = "org_id",
+        help_heading = "Import Input And Org Routing",
         help = "With --use-export-org, import only these exported source org IDs. Repeat the flag to select multiple orgs."
     )]
     pub only_org_id: Vec<i64>,
@@ -250,66 +253,82 @@ pub struct ImportArgs {
         long,
         default_value_t = false,
         requires = "use_export_org",
+        help_heading = "Import Input And Org Routing",
         help = "With --use-export-org, create a missing destination org when an exported source org ID does not exist in Grafana. The new org is created from the exported org name and then used as the import target."
     )]
     pub create_missing_orgs: bool,
     #[arg(
         long,
+        help_heading = "Import Input And Org Routing",
         help = "Import dashboards from this directory. Use the raw/ export directory for single-org import, or the combined export root when --use-export-org is enabled."
     )]
     pub import_dir: PathBuf,
     #[arg(
         long,
+        help_heading = "Import Behavior",
         help = "Force every imported dashboard into one destination Grafana folder UID. This overrides any folder UID carried by the exported dashboard files."
     )]
     pub import_folder_uid: Option<String>,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Import Behavior",
         help = "Use the exported raw folder inventory to create any missing destination folders before import. In dry-run mode, also report folder missing/match/mismatch state first."
     )]
     pub ensure_folders: bool,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Import Behavior",
         help = "Update an existing destination dashboard when the imported dashboard UID already exists. Without this flag, existing UIDs are blocked."
     )]
     pub replace_existing: bool,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Import Behavior",
         help = "Reconcile only dashboards whose UID already exists in Grafana. Missing destination UIDs are skipped instead of created."
     )]
     pub update_existing_only: bool,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Import Behavior",
         help = "Only update an existing dashboard when the source raw folder path matches the destination Grafana folder path exactly. Missing dashboards still follow the active create/skip mode."
     )]
     pub require_matching_folder_path: bool,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Import Safety",
         help = "Fail the import when the raw export orgId metadata does not match the target Grafana org for this run. This is a safety check for accidental cross-org imports."
     )]
     pub require_matching_export_org: bool,
-    #[arg(long, default_value = DEFAULT_IMPORT_MESSAGE, help = "Version-history message to attach to each imported dashboard revision in Grafana.")]
+    #[arg(
+        long,
+        default_value = DEFAULT_IMPORT_MESSAGE,
+        help_heading = "Import Behavior",
+        help = "Version-history message to attach to each imported dashboard revision in Grafana."
+    )]
     pub import_message: String,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Dry-Run Output",
         help = "Preview what import would do without changing Grafana. This reports whether each dashboard would create, update, or be skipped/blocked."
     )]
     pub dry_run: bool,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Dry-Run Output",
         help = "For --dry-run only, render a compact table instead of per-dashboard log lines. With --ensure-folders, the folder check is also shown in table form."
     )]
     pub table: bool,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Dry-Run Output",
         help = "For --dry-run only, render one JSON document with mode, folder checks, dashboard actions, and summary counts."
     )]
     pub json: bool,
@@ -317,18 +336,21 @@ pub struct ImportArgs {
         long,
         value_enum,
         conflicts_with_all = ["table", "json"],
+        help_heading = "Dry-Run Output",
         help = "Alternative single-flag output selector for --dry-run output. Use text, table, or json."
     )]
     pub output_format: Option<DryRunOutputFormat>,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Dry-Run Output",
         help = "For --dry-run --table only, omit the table header row."
     )]
     pub no_header: bool,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Import Safety",
         help = "Keep processing remaining dashboards if one item fails; return a non-zero exit status when any item fails."
     )]
     pub continue_on_error: bool,
@@ -337,12 +359,14 @@ pub struct ImportArgs {
         value_delimiter = ',',
         requires = "dry_run",
         value_parser = parse_dashboard_import_output_column,
+        help_heading = "Dry-Run Output",
         help = "For --dry-run --table only, render only these comma-separated columns. Supported values: uid, destination, action, folder_path, source_folder_path, destination_folder_path, reason, file."
     )]
     pub output_columns: Vec<String>,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Progress And Logging",
         help = "Show concise per-dashboard import progress in <current>/<total> form while processing files. Use this for long-running batch imports."
     )]
     pub progress: bool,
@@ -350,6 +374,7 @@ pub struct ImportArgs {
         short = 'v',
         long,
         default_value_t = false,
+        help_heading = "Progress And Logging",
         help = "Show detailed per-item import output, including target paths, dry-run actions, and folder status details. Overrides --progress output."
     )]
     pub verbose: bool,
@@ -357,7 +382,7 @@ pub struct ImportArgs {
 
 #[derive(Debug, Clone, Args)]
 pub struct DiffArgs {
-    #[command(flatten)]
+    #[command(flatten, next_help_heading = "Connection And Auth")]
     pub common: CommonCliArgs,
     #[arg(
         long,
@@ -523,7 +548,7 @@ pub struct InspectExportArgs {
 
 #[derive(Debug, Clone, Args)]
 pub struct InspectLiveArgs {
-    #[command(flatten)]
+    #[command(flatten, next_help_heading = "Connection And Auth")]
     pub common: CommonCliArgs,
     #[arg(long, default_value_t = DEFAULT_PAGE_SIZE, help = "Dashboard search page size.")]
     pub page_size: usize,

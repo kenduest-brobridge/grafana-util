@@ -260,6 +260,7 @@ fn access_root_and_group_help_include_examples() {
 #[test]
 fn user_help_mentions_filter_and_output_flags() {
     let help = render_access_subcommand_help(&["user", "list"]);
+    assert!(help.contains("Connection And Auth:"));
     assert!(help.contains("--scope"));
     assert!(help.contains("current org scope"));
     assert!(help.contains("--with-teams"));
@@ -273,6 +274,7 @@ fn user_help_mentions_filter_and_output_flags() {
 #[test]
 fn user_mutation_help_mentions_target_and_json_flags() {
     let add_help = render_access_subcommand_help(&["user", "add"]);
+    assert!(add_help.contains("Connection And Auth:"));
     assert!(add_help.contains("--login"));
     assert!(add_help.contains("Login name for the new Grafana user"));
     assert!(add_help.contains("--grafana-admin"));
@@ -298,6 +300,7 @@ fn user_mutation_help_mentions_target_and_json_flags() {
 #[test]
 fn team_and_service_account_help_mentions_membership_and_token_flags() {
     let org_help = render_access_subcommand_help(&["org", "list"]);
+    assert!(org_help.contains("Connection And Auth:"));
     assert!(org_help.contains("--with-users"));
     assert!(org_help.contains("Include org users and org roles"));
     assert!(org_help.contains("Examples:"));
@@ -317,12 +320,14 @@ fn team_and_service_account_help_mentions_membership_and_token_flags() {
     assert!(team_help.contains("Examples:"));
 
     let service_account_help = render_access_subcommand_help(&["service-account", "add"]);
+    assert!(service_account_help.contains("Connection And Auth:"));
     assert!(service_account_help.contains("--role"));
     assert!(service_account_help.contains("Initial org role for the service account"));
     assert!(service_account_help.contains("Examples:"));
     assert!(service_account_help.contains("grafana-util access service-account add --url http://localhost:3000 --name automation --role Viewer"));
 
     let token_help = render_access_subcommand_help(&["service-account", "token", "add"]);
+    assert!(token_help.contains("Connection And Auth:"));
     assert!(token_help.contains("--token-name"));
     assert!(token_help.contains("Name for the new service-account token"));
     assert!(token_help.contains("--seconds-to-live"));

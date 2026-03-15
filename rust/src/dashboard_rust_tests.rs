@@ -445,6 +445,7 @@ fn export_help_explains_flat_layout() {
 #[test]
 fn export_help_describes_progress_and_verbose_modes() {
     let help = render_dashboard_subcommand_help("export");
+    assert!(help.contains("Connection And Auth:"));
     assert!(help.contains("--progress"));
     assert!(help.contains("<current>/<total>"));
     assert!(help.contains("-v, --verbose"));
@@ -468,6 +469,12 @@ fn import_help_explains_common_operator_flags() {
     assert!(help.contains("requires Basic auth"));
     assert!(help.contains("--require-matching-export-org"));
     assert!(help.contains("--output-columns"));
+    assert!(help.contains("Connection And Auth:"));
+    assert!(help.contains("Import Input And Org Routing:"));
+    assert!(help.contains("Import Behavior:"));
+    assert!(help.contains("Import Safety:"));
+    assert!(help.contains("Dry-Run Output:"));
+    assert!(help.contains("Progress And Logging:"));
     assert!(help.contains("Examples:"));
     assert!(help.contains("grafana-util dashboard import --url http://localhost:3000 --import-dir ./dashboards/raw --replace-existing --dry-run --output-format table"));
 }
@@ -475,12 +482,14 @@ fn import_help_explains_common_operator_flags() {
 #[test]
 fn list_and_diff_help_include_examples() {
     let list_help = render_dashboard_subcommand_help("list");
+    assert!(list_help.contains("Connection And Auth:"));
     assert!(list_help.contains("Examples:"));
     assert!(list_help.contains(
         "grafana-util dashboard list --url http://localhost:3000 --table --show-folder-path"
     ));
 
     let diff_help = render_dashboard_subcommand_help("diff");
+    assert!(diff_help.contains("Connection And Auth:"));
     assert!(diff_help.contains("Examples:"));
     assert!(diff_help.contains(
         "grafana-util dashboard diff --url http://localhost:3000 --import-dir ./dashboards/raw"
@@ -1295,6 +1304,7 @@ fn normalize_dashboard_cli_args_rejects_query_text_without_tree_layout() {
 #[test]
 fn inspect_live_help_mentions_report_and_panel_filter_flags() {
     let help = render_dashboard_subcommand_help("inspect-live");
+    assert!(help.contains("Connection And Auth:"));
 
     assert!(help.contains("--report"));
     assert!(help.contains("--output-format"));

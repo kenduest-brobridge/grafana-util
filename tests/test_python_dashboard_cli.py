@@ -622,6 +622,7 @@ class ExporterTests(unittest.TestCase):
         self.assertIn("Export dashboards from local Grafana with Basic auth", help_text)
         self.assertIn("Export dashboards with an API token", help_text)
         self.assertIn("--basic-user admin --basic-password admin", help_text)
+        self.assertIn("Connection And Auth:", help_text)
 
     def test_import_help_explains_common_operator_flags(self):
         stream = io.StringIO()
@@ -642,6 +643,11 @@ class ExporterTests(unittest.TestCase):
         self.assertIn("missing/match/mismatch", help_text)
         self.assertIn("skipped/blocked", help_text)
         self.assertIn("table form", help_text)
+        self.assertIn("Import Input And Org Routing:", help_text)
+        self.assertIn("Connection And Auth:", help_text)
+        self.assertIn("Import Behavior:", help_text)
+        self.assertIn("Dry-Run Output:", help_text)
+        self.assertIn("Progress And Logging:", help_text)
         self.assertIn("Examples:", help_text)
         self.assertIn("grafana-util dashboard import --url http://localhost:3000", help_text)
         self.assertIn("--use-export-org --create-missing-orgs --dry-run", help_text)
@@ -654,6 +660,7 @@ class ExporterTests(unittest.TestCase):
                 exporter.parse_args(["diff", "-h"])
 
         help_text = stream.getvalue()
+        self.assertIn("Connection And Auth:", help_text)
         self.assertIn("Examples:", help_text)
         self.assertIn("grafana-util dashboard diff --url http://localhost:3000", help_text)
         self.assertIn("--import-folder-uid shared-folder", help_text)
@@ -729,6 +736,7 @@ class ExporterTests(unittest.TestCase):
                 exporter.parse_args(["inspect-live", "-h"])
 
         help_text = stream.getvalue()
+        self.assertIn("Connection And Auth:", help_text)
         self.assertIn("--url", help_text)
         self.assertIn("--page-size", help_text)
         self.assertIn("--output-format", help_text)

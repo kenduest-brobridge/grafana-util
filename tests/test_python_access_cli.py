@@ -663,6 +663,7 @@ class AccessCliTests(unittest.TestCase):
         org_list_parser = parser._subparsers._group_actions[0].choices["org"]._subparsers._group_actions[0].choices["list"]
         help_text = org_list_parser.format_help()
 
+        self.assertIn("Connection And Auth:", help_text)
         self.assertIn("--basic-user USERNAME", help_text)
         self.assertIn("--basic-password PASSWORD", help_text)
         self.assertIn("--with-users", help_text)
@@ -1013,6 +1014,7 @@ class AccessCliTests(unittest.TestCase):
         user_add_parser = parser._subparsers._group_actions[0].choices["user"]._subparsers._group_actions[0].choices["add"]
         help_text = user_add_parser.format_help()
 
+        self.assertIn("Connection And Auth:", help_text)
         self.assertIn("--basic-user USERNAME", help_text)
         self.assertIn("--basic-password PASSWORD", help_text)
         self.assertIn("--password NEW_USER_PASSWORD", help_text)
@@ -1156,6 +1158,7 @@ class AccessCliTests(unittest.TestCase):
         )
         help_text = token_add_parser.format_help()
 
+        self.assertIn("Connection And Auth:", help_text)
         self.assertIn("--token-name TOKEN_NAME", help_text)
         self.assertIn("--seconds-to-live SECONDS_TO_LIVE", help_text)
         self.assertIn("Examples:", help_text)

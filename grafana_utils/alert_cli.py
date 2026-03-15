@@ -114,12 +114,13 @@ def build_subcommand_examples(*sections: tuple[str, str]) -> str:
 
 
 def add_common_args(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument(
+    connection_group = parser.add_argument_group("Connection And Auth")
+    connection_group.add_argument(
         "--url",
         default=DEFAULT_URL,
         help=f"Grafana base URL (default: {DEFAULT_URL})",
     )
-    parser.add_argument(
+    connection_group.add_argument(
         "--token",
         "--api-token",
         dest="api_token",
@@ -129,7 +130,7 @@ def add_common_args(parser: argparse.ArgumentParser) -> None:
             "Falls back to GRAFANA_API_TOKEN."
         ),
     )
-    parser.add_argument(
+    connection_group.add_argument(
         "--prompt-token",
         action="store_true",
         help=(
@@ -137,7 +138,7 @@ def add_common_args(parser: argparse.ArgumentParser) -> None:
             "--token on the command line."
         ),
     )
-    parser.add_argument(
+    connection_group.add_argument(
         "--basic-user",
         dest="username",
         default=None,
@@ -146,7 +147,7 @@ def add_common_args(parser: argparse.ArgumentParser) -> None:
             "Falls back to GRAFANA_USERNAME."
         ),
     )
-    parser.add_argument(
+    connection_group.add_argument(
         "--basic-password",
         dest="password",
         default=None,
@@ -155,7 +156,7 @@ def add_common_args(parser: argparse.ArgumentParser) -> None:
             "Falls back to GRAFANA_PASSWORD."
         ),
     )
-    parser.add_argument(
+    connection_group.add_argument(
         "--prompt-password",
         action="store_true",
         help=(
@@ -163,18 +164,18 @@ def add_common_args(parser: argparse.ArgumentParser) -> None:
             "passing --basic-password on the command line."
         ),
     )
-    parser.add_argument(
+    connection_group.add_argument(
         "--timeout",
         type=int,
         default=DEFAULT_TIMEOUT,
         help=f"HTTP timeout in seconds (default: {DEFAULT_TIMEOUT}).",
     )
-    parser.add_argument(
+    connection_group.add_argument(
         "--verify-ssl",
         action="store_true",
         help="Enable TLS certificate verification. Verification is disabled by default.",
     )
-    parser.add_argument(
+    connection_group.add_argument(
         "--http-transport",
         choices=HTTP_TRANSPORT_CHOICES,
         default=DEFAULT_HTTP_TRANSPORT,

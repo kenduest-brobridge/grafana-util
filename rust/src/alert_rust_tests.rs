@@ -200,12 +200,14 @@ fn help_explains_flat_layout() {
 #[test]
 fn alert_subcommand_help_includes_examples() {
     let export_help = render_alert_subcommand_help("export");
+    assert!(export_help.contains("Connection And Auth:"));
     assert!(export_help.contains("Examples:"));
     assert!(export_help.contains(
         "grafana-util alert export --url http://localhost:3000 --output-dir ./alerts --overwrite"
     ));
 
     let list_help = render_alert_subcommand_help("list-rules");
+    assert!(list_help.contains("Connection And Auth:"));
     assert!(list_help.contains("Examples:"));
     assert!(list_help.contains("grafana-util alert list-rules --url http://localhost:3000 --table"));
 }

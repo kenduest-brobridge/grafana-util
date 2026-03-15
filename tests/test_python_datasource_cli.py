@@ -504,6 +504,7 @@ class DatasourceCliTests(unittest.TestCase):
                 datasource_cli.parse_args(["import", "-h"])
 
         help_text = stream.getvalue()
+        self.assertIn("Connection And Auth:", help_text)
         self.assertIn("--import-dir", help_text)
         self.assertIn("--org-id", help_text)
         self.assertIn("--use-export-org", help_text)

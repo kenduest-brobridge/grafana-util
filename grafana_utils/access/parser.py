@@ -758,14 +758,16 @@ def add_common_cli_args(
     username_dest="username",
     password_dest="password",
     include_org_id=True,
+    group_name="Connection And Auth",
 ):
-    parser.add_argument(
+    target = parser.add_argument_group(group_name) if group_name else parser
+    target.add_argument(
         "--url",
         default=DEFAULT_URL,
         help="Grafana base URL (default: %s)" % DEFAULT_URL,
     )
     if allow_token_auth:
-        parser.add_argument(
+        target.add_argument(
             "--token",
             "--api-token",
             dest="api_token",
@@ -776,7 +778,7 @@ def add_common_cli_args(
                 "Falls back to GRAFANA_API_TOKEN."
             ),
         )
-        parser.add_argument(
+        target.add_argument(
             "--prompt-token",
             action="store_true",
             help=(
@@ -784,7 +786,7 @@ def add_common_cli_args(
                 "passing --token on the command line."
             ),
         )
-    parser.add_argument(
+    target.add_argument(
         "--basic-user",
         dest=username_dest,
         default=None,
@@ -794,7 +796,7 @@ def add_common_cli_args(
             "Falls back to GRAFANA_USERNAME."
         ),
     )
-    parser.add_argument(
+    target.add_argument(
         "--basic-password",
         dest=password_dest,
         default=None,
@@ -804,7 +806,7 @@ def add_common_cli_args(
             "Falls back to GRAFANA_PASSWORD."
         ),
     )
-    parser.add_argument(
+    target.add_argument(
         "--prompt-password",
         action="store_true",
         help=(
@@ -813,23 +815,23 @@ def add_common_cli_args(
         ),
     )
     if include_org_id:
-        parser.add_argument(
+        target.add_argument(
             "--org-id",
             default=None,
             help="Grafana organization id to send through X-Grafana-Org-Id.",
         )
-    parser.add_argument(
+    target.add_argument(
         "--timeout",
         type=positive_int,
         default=DEFAULT_TIMEOUT,
         help="HTTP timeout in seconds (default: %s)." % DEFAULT_TIMEOUT,
     )
-    parser.add_argument(
+    target.add_argument(
         "--verify-ssl",
         action="store_true",
         help="Enable TLS certificate verification. Verification is disabled by default.",
     )
-    parser.add_argument(
+    target.add_argument(
         "--http-transport",
         choices=HTTP_TRANSPORT_CHOICES,
         default=DEFAULT_HTTP_TRANSPORT,

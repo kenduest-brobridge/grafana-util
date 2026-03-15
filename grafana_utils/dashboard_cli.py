@@ -242,13 +242,16 @@ class HelpFullAction(argparse.Action):
         parser.exit()
 
 
-def add_common_cli_args(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument(
+def add_common_cli_args(
+    parser: argparse.ArgumentParser, group_name: Optional[str] = "Connection And Auth"
+) -> None:
+    target = parser.add_argument_group(group_name) if group_name else parser
+    target.add_argument(
         "--url",
         default=DEFAULT_URL,
         help=f"Grafana base URL (default: {DEFAULT_URL})",
     )
-    parser.add_argument(
+    target.add_argument(
         "--token",
         "--api-token",
         dest="api_token",
@@ -258,7 +261,7 @@ def add_common_cli_args(parser: argparse.ArgumentParser) -> None:
             "Falls back to GRAFANA_API_TOKEN."
         ),
     )
-    parser.add_argument(
+    target.add_argument(
         "--prompt-token",
         action="store_true",
         help=(
@@ -266,7 +269,7 @@ def add_common_cli_args(parser: argparse.ArgumentParser) -> None:
             "--token on the command line."
         ),
     )
-    parser.add_argument(
+    target.add_argument(
         "--basic-user",
         dest="username",
         default=None,
@@ -275,7 +278,7 @@ def add_common_cli_args(parser: argparse.ArgumentParser) -> None:
             "Falls back to GRAFANA_USERNAME."
         ),
     )
-    parser.add_argument(
+    target.add_argument(
         "--basic-password",
         dest="password",
         default=None,
@@ -284,7 +287,7 @@ def add_common_cli_args(parser: argparse.ArgumentParser) -> None:
             "Falls back to GRAFANA_PASSWORD."
         ),
     )
-    parser.add_argument(
+    target.add_argument(
         "--prompt-password",
         action="store_true",
         help=(
@@ -292,18 +295,18 @@ def add_common_cli_args(parser: argparse.ArgumentParser) -> None:
             "passing --basic-password on the command line."
         ),
     )
-    parser.add_argument(
+    target.add_argument(
         "--timeout",
         type=int,
         default=DEFAULT_TIMEOUT,
         help=f"HTTP timeout in seconds (default: {DEFAULT_TIMEOUT}).",
     )
-    parser.add_argument(
+    target.add_argument(
         "--verify-ssl",
         action="store_true",
         help="Enable TLS certificate verification. Verification is disabled by default.",
     )
-    parser.add_argument(
+    target.add_argument(
         "--http-transport",
         choices=HTTP_TRANSPORT_CHOICES,
         default=DEFAULT_HTTP_TRANSPORT,
@@ -478,7 +481,8 @@ def add_list_data_sources_cli_args(parser: argparse.ArgumentParser) -> None:
 
 
 def add_import_cli_args(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument(
+    input_group = parser.add_argument_group("Import Input And Org Routing")
+    input_group.add_argument(
         "--import-dir",
         required=True,
         help=(
@@ -487,7 +491,7 @@ def add_import_cli_args(parser: argparse.ArgumentParser) -> None:
             "When --use-export-org is enabled, point this to the combined multi-org export root instead."
         ),
     )
-    parser.add_argument(
+    input_group.add_argument(
         "--org-id",
         default=None,
         help=(
@@ -496,7 +500,7 @@ def add_import_cli_args(parser: argparse.ArgumentParser) -> None:
             "use Grafana username/password login."
         ),
     )
-    parser.add_argument(
+    input_group.add_argument(
         "--use-export-org",
         action="store_true",
         help=(
@@ -505,7 +509,7 @@ def add_import_cli_args(parser: argparse.ArgumentParser) -> None:
             "API token auth is not supported here; use Grafana username/password login."
         ),
     )
-    parser.add_argument(
+    input_group.add_argument(
         "--only-org-id",
         action="append",
         default=None,
@@ -514,7 +518,7 @@ def add_import_cli_args(parser: argparse.ArgumentParser) -> None:
             "Repeat this flag to include multiple orgs."
         ),
     )
-    parser.add_argument(
+    input_group.add_argument(
         "--create-missing-orgs",
         action="store_true",
         help=(
@@ -522,7 +526,8 @@ def add_import_cli_args(parser: argparse.ArgumentParser) -> None:
             "from the exported org name when the exported orgId does not exist yet."
         ),
     )
-    parser.add_argument(
+    behavior_group = parser.add_argument_group("Import Behavior")
+    behavior_group.add_argument(
         "--require-matching-export-org",
         action="store_true",
         help=(
@@ -531,32 +536,32 @@ def add_import_cli_args(parser: argparse.ArgumentParser) -> None:
             "accidental cross-org import."
         ),
     )
-    parser.add_argument(
+    behavior_group.add_argument(
         "--replace-existing",
         action="store_true",
         help="Update an existing destination dashboard when the imported dashboard UID already exists. Without this flag, existing UIDs are blocked.",
     )
-    parser.add_argument(
+    behavior_group.add_argument(
         "--update-existing-only",
         action="store_true",
         help="Reconcile only dashboards whose UID already exists in Grafana. Missing destination UIDs are skipped instead of created.",
     )
-    parser.add_argument(
+    behavior_group.add_argument(
         "--import-folder-uid",
         default=None,
         help="Force every imported dashboard into one destination Grafana folder UID. This overrides any folder UID carried by the exported dashboard files.",
     )
-    parser.add_argument(
+    behavior_group.add_argument(
         "--ensure-folders",
         action="store_true",
         help="Use the exported raw folder inventory to create any missing destination folders before import. In dry-run mode, also report folder missing/match/mismatch state first.",
     )
-    parser.add_argument(
+    behavior_group.add_argument(
         "--import-message",
         default="Imported by grafana-utils",
         help="Version-history message to attach to each imported dashboard revision in Grafana.",
     )
-    parser.add_argument(
+    behavior_group.add_argument(
         "--require-matching-folder-path",
         action="store_true",
         help=(
@@ -565,27 +570,28 @@ def add_import_cli_args(parser: argparse.ArgumentParser) -> None:
             "follow the active create/skip mode."
         ),
     )
-    parser.add_argument(
+    dry_run_group = parser.add_argument_group("Dry-Run Output")
+    dry_run_group.add_argument(
         "--dry-run",
         action="store_true",
         help="Preview what import would do without changing Grafana. This reports whether each dashboard would create, update, or be skipped/blocked.",
     )
-    parser.add_argument(
+    dry_run_group.add_argument(
         "--table",
         action="store_true",
         help="For --dry-run only, render a compact table instead of per-dashboard log lines. With --ensure-folders, the folder check is also shown in table form.",
     )
-    parser.add_argument(
+    dry_run_group.add_argument(
         "--json",
         action="store_true",
         help="For --dry-run only, render one JSON document with mode, folder checks, dashboard actions, and summary counts.",
     )
-    parser.add_argument(
+    dry_run_group.add_argument(
         "--no-header",
         action="store_true",
         help="For --dry-run --table only, omit the table header row.",
     )
-    parser.add_argument(
+    dry_run_group.add_argument(
         "--output-format",
         choices=IMPORT_DRY_RUN_OUTPUT_FORMAT_CHOICES,
         default=None,
@@ -595,7 +601,7 @@ def add_import_cli_args(parser: argparse.ArgumentParser) -> None:
             "or --json."
         ),
     )
-    parser.add_argument(
+    dry_run_group.add_argument(
         "--output-columns",
         default=None,
         help=(
@@ -604,12 +610,13 @@ def add_import_cli_args(parser: argparse.ArgumentParser) -> None:
             "source_folder_path, destination_folder_path, reason, file."
         ),
     )
-    parser.add_argument(
+    runtime_group = parser.add_argument_group("Progress And Logging")
+    runtime_group.add_argument(
         "--progress",
         action="store_true",
         help="Show concise per-dashboard import progress as current/total while processing files. Use this for long-running batch imports.",
     )
-    parser.add_argument(
+    runtime_group.add_argument(
         "-v",
         "--verbose",
         action="store_true",
@@ -1034,7 +1041,7 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    add_common_cli_args(import_parser)
+    add_common_cli_args(import_parser, group_name="Connection And Auth")
     add_import_cli_args(import_parser)
     add_error_policy_argument(import_parser, "dashboard")
 

@@ -97,6 +97,15 @@ class SyncCliTests(unittest.TestCase):
         source = MODULE_PATH.read_text(encoding="utf-8")
         ast.parse(source, filename=str(MODULE_PATH), feature_version=(3, 9))
 
+    def test_plan_help_includes_connection_and_auth_group(self):
+        parser = sync_cli.build_parser()
+        plan_parser = parser._subparsers._group_actions[0].choices["plan"]
+        help_text = plan_parser.format_help()
+
+        self.assertIn("Connection And Auth:", help_text)
+        self.assertIn("--url", help_text)
+        self.assertIn("--basic-user", help_text)
+
     def test_plan_builds_review_required_document_and_writes_plan_file(self):
         desired = [
             {

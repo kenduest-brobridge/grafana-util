@@ -77,7 +77,7 @@ pub struct AlertCommonArgs {
 
 #[derive(Debug, Clone, Args)]
 pub struct AlertLegacyArgs {
-    #[command(flatten)]
+    #[command(flatten, next_help_heading = "Connection And Auth")]
     pub common: AlertCommonArgs,
     #[arg(
         long,
@@ -141,7 +141,7 @@ pub struct AlertLegacyArgs {
 
 #[derive(Debug, Clone, Args)]
 pub struct AlertExportArgs {
-    #[command(flatten)]
+    #[command(flatten, next_help_heading = "Connection And Auth")]
     pub common: AlertCommonArgs,
     #[arg(
         long,
@@ -165,7 +165,7 @@ pub struct AlertExportArgs {
 
 #[derive(Debug, Clone, Args)]
 pub struct AlertImportArgs {
-    #[command(flatten)]
+    #[command(flatten, next_help_heading = "Connection And Auth")]
     pub common: AlertCommonArgs,
     #[arg(
         long,
@@ -204,7 +204,7 @@ pub struct AlertImportArgs {
 
 #[derive(Debug, Clone, Args)]
 pub struct AlertDiffArgs {
-    #[command(flatten)]
+    #[command(flatten, next_help_heading = "Connection And Auth")]
     pub common: AlertCommonArgs,
     #[arg(
         long,
@@ -240,7 +240,7 @@ pub enum AlertListOutputFormat {
 
 #[derive(Debug, Clone, Args)]
 pub struct AlertListArgs {
-    #[command(flatten)]
+    #[command(flatten, next_help_heading = "Connection And Auth")]
     pub common: AlertCommonArgs,
     #[arg(
         long,
