@@ -18,8 +18,7 @@ jobs:
         run: python3 -m pip install --upgrade pip poetry
       - name: Install Python dependencies
         run: |
-          poetry install --with dev --no-root
-          poetry run python -m pip install '.[http2]'
+          poetry install --with dev --extras http2 --no-root
       - name: Run Python quality gate
         run: make poetry-quality-python
 
