@@ -1,7 +1,7 @@
 use super::{
-    render_sync_apply_intent_text, render_sync_plan_text, render_sync_summary_text, run_sync_cli,
-    SyncApplyArgs, SyncCliArgs, SyncGroupCommand, SyncOutputFormat, SyncReviewArgs,
-    SyncSummaryArgs, DEFAULT_REVIEW_TOKEN,
+    build_sync_live_apply_text, render_sync_apply_intent_text, render_sync_plan_text,
+    render_sync_summary_text, run_sync_apply_operations, run_sync_cli, SyncApplyArgs, SyncCliArgs,
+    SyncGroupCommand, SyncOutputFormat, SyncReviewArgs, SyncSummaryArgs, DEFAULT_REVIEW_TOKEN,
 };
 use clap::Parser;
 use serde_json::json;
@@ -206,6 +206,30 @@ fn parse_sync_cli_supports_apply_command_with_live_options() {
             assert_eq!(inner.common.url, "http://grafana.example.local");
             assert_eq!(inner.output, SyncOutputFormat::Json);
             assert!(!inner.approve);
+            assert!(!inner.continue_on_error);
+        }
+        _ => panic!("expected apply"),
+    }
+}
+
+#[test]
+fn parse_sync_cli_supports_apply_command_with_continue_on_error() {
+    let args = SyncCliArgs::parse_from([
+        "grafana-util",
+        "apply",
+        "--plan-file",
+        "./plan.json",
+        "--execute-live",
+        "--continue-on-error",
+        "--url",
+        "http://grafana.example.local",
+    ]);
+
+    match args.command {
+        SyncGroupCommand::Apply(inner) => {
+            assert!(inner.execute_live);
+            assert!(inner.continue_on_error);
+            assert_eq!(inner.common.url, "http://grafana.example.local");
         }
         _ => panic!("expected apply"),
     }
@@ -505,6 +529,99 @@ fn render_sync_plan_text_defaults_lineage_when_missing() {
     assert!(lines[2].contains("stage=missing"));
     assert!(lines[2].contains("step=0"));
     assert!(lines[2].contains("parent=none"));
+}
+
+#[test]
+fn build_sync_live_apply_text_reports_status_counts_and_errors() {
+    let lines = build_sync_live_apply_text(&json!({
+        "mode": "live-apply",
+        "appliedCount": 1,
+        "failedCount": 1,
+        "results": [
+            {
+                "status": "ok",
+                "kind": "folder",
+                "identity": "ops",
+                "action": "would-create",
+                "response": {"status":"ok"}
+            },
+            {
+                "status": "error",
+                "kind": "dashboard",
+                "identity": "bad",
+                "action": "would-update",
+                "error": "missing identity mapping"
+            }
+        ]
+    }))
+    .unwrap();
+
+    assert_eq!(lines[0], "Sync live apply");
+    assert_eq!(lines[1], "AppliedCount: 1");
+    assert_eq!(lines[2], "FailedCount: 1");
+    assert_eq!(lines[3], "folder ops would-create [ok]");
+    assert_eq!(
+        lines[4],
+        "dashboard bad would-update [error] missing identity mapping"
+    );
+}
+
+#[test]
+fn run_sync_apply_operations_fails_fast_without_continue_on_error() {
+    let operations = vec![
+        json!({"kind":"folder","identity":"ops","action":"would-create","desired":{}}),
+        json!({"identity":"bad","action":"would-create","desired":{}}),
+        json!({"kind":"folder","identity":"after","action":"would-create","desired":{}}),
+    ];
+    let mut request_count = 0u32;
+    let error = run_sync_apply_operations(
+        &operations,
+        false,
+        false,
+        &mut |_method, _path, _params, _payload| {
+            request_count += 1;
+            Ok(Some(json!({"ok": true})))
+        },
+        &[],
+    )
+    .unwrap_err()
+    .to_string();
+
+    assert!(error.contains("Sync apply operation is missing kind."));
+    assert_eq!(request_count, 1);
+}
+
+#[test]
+fn run_sync_apply_operations_continues_when_enabled() {
+    let operations = vec![
+        json!({"kind":"folder","identity":"ops","action":"would-create","desired":{}}),
+        json!({"identity":"bad","action":"would-create","desired":{}}),
+        json!({"kind":"folder","identity":"after","action":"would-create","desired":{}}),
+    ];
+    let result = run_sync_apply_operations(
+        &operations,
+        false,
+        true,
+        &mut |_method, _path, _params, _payload| Ok(Some(json!({"ok": true}))),
+        &[],
+    )
+    .unwrap();
+
+    assert_eq!(result["mode"], json!("live-apply"));
+    assert_eq!(result["appliedCount"], json!(2));
+    assert_eq!(result["failedCount"], json!(1));
+    let results = result["results"].as_array().unwrap();
+    assert_eq!(results.len(), 3);
+    assert_eq!(results[0]["status"], json!("ok"));
+    assert_eq!(results[0]["kind"], json!("folder"));
+    assert_eq!(results[0]["identity"], json!("ops"));
+    assert_eq!(results[1]["status"], json!("error"));
+    assert!(results[1]["error"]
+        .as_str()
+        .unwrap()
+        .contains("missing kind"));
+    assert_eq!(results[2]["status"], json!("ok"));
+    assert_eq!(results[2]["identity"], json!("after"));
 }
 
 #[test]

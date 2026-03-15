@@ -169,6 +169,12 @@ pub struct SyncApplyArgs {
     #[arg(
         long,
         default_value_t = false,
+        help = "Continue applying later operations if a prior live apply operation fails."
+    )]
+    pub continue_on_error: bool,
+    #[arg(
+        long,
+        default_value_t = false,
         help = "Allow live deletion of folders when a reviewed plan includes would-delete folder operations."
     )]
     pub allow_folder_delete: bool,
@@ -1789,6 +1795,7 @@ where
 fn run_sync_apply_operations<F>(
     operations: &[Value],
     allow_folder_delete: bool,
+    continue_on_error: bool,
     request_json: &mut F,
     live_datasources: &[Map<String, Value>],
 ) -> Result<Value>
@@ -1796,38 +1803,137 @@ where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
     let mut results = Vec::new();
+    let mut applied_count = 0;
+    let mut failed_count = 0;
+
     for operation in operations {
-        let operation = parse_sync_apply_operation(operation)?;
-        let response = match operation.kind.as_str() {
-            "folder" => {
-                apply_folder_operation(request_json, &operation, allow_folder_delete)?
+        let operation = match parse_sync_apply_operation(operation) {
+            Ok(operation) => operation,
+            Err(error) => {
+                if !continue_on_error {
+                    return Err(error);
+                }
+                failed_count += 1;
+                results.push(serde_json::json!({
+                    "status": "error",
+                    "kind": "",
+                    "identity": "",
+                    "action": "",
+                    "error": error.to_string(),
+                }));
+                continue;
             }
-            "dashboard" => apply_dashboard_operation(request_json, &operation)?,
+        };
+
+        let response = match operation.kind.as_str() {
+            "folder" => match apply_folder_operation(request_json, &operation, allow_folder_delete)
+            {
+                Ok(response) => Some(response),
+                Err(error) => {
+                    if continue_on_error {
+                        failed_count += 1;
+                        results.push(serde_json::json!({
+                            "status": "error",
+                            "kind": operation.kind,
+                            "identity": operation.identity,
+                            "action": operation.action,
+                            "error": error.to_string(),
+                        }));
+                        None
+                    } else {
+                        return Err(error);
+                    }
+                }
+            },
+            "dashboard" => match apply_dashboard_operation(request_json, &operation) {
+                Ok(response) => Some(response),
+                Err(error) => {
+                    if continue_on_error {
+                        failed_count += 1;
+                        results.push(serde_json::json!({
+                            "status": "error",
+                            "kind": operation.kind,
+                            "identity": operation.identity,
+                            "action": operation.action,
+                            "error": error.to_string(),
+                        }));
+                        None
+                    } else {
+                        return Err(error);
+                    }
+                }
+            },
             "datasource" => {
-                apply_datasource_operation(request_json, &operation, live_datasources)?
+                match apply_datasource_operation(request_json, &operation, live_datasources) {
+                    Ok(response) => Some(response),
+                    Err(error) => {
+                        if continue_on_error {
+                            failed_count += 1;
+                            results.push(serde_json::json!({
+                                "status": "error",
+                                "kind": operation.kind,
+                                "identity": operation.identity,
+                                "action": operation.action,
+                                "error": error.to_string(),
+                            }));
+                            None
+                        } else {
+                            return Err(error);
+                        }
+                    }
+                }
             }
             "alert" => {
+                if continue_on_error {
+                    failed_count += 1;
+                    results.push(serde_json::json!({
+                        "status": "error",
+                        "kind": operation.kind,
+                        "identity": operation.identity,
+                        "action": operation.action,
+                        "error": "Live sync apply does not support alert operations yet; keep alerts in plan-only mode.",
+                    }));
+                    continue;
+                }
                 return Err(message(
                     "Live sync apply does not support alert operations yet; keep alerts in plan-only mode.",
-                ))
+                ));
             }
             _ => {
+                if continue_on_error {
+                    failed_count += 1;
+                    results.push(serde_json::json!({
+                        "status": "error",
+                        "kind": operation.kind,
+                        "identity": operation.identity,
+                        "action": operation.action,
+                        "error": format!("Unsupported sync resource kind {}.", operation.kind),
+                    }));
+                    continue;
+                }
                 return Err(message(format!(
                     "Unsupported sync resource kind {}.",
                     operation.kind
                 )));
             }
         };
-        results.push(serde_json::json!({
-            "kind": operation.kind,
-            "identity": operation.identity,
-            "action": operation.action,
-            "response": response,
-        }));
+
+        if let Some(response) = response {
+            applied_count += 1;
+            results.push(serde_json::json!({
+                "status": "ok",
+                "kind": operation.kind,
+                "identity": operation.identity,
+                "action": operation.action,
+                "response": response,
+            }));
+        }
     }
+
     Ok(serde_json::json!({
         "mode": "live-apply",
-        "appliedCount": results.len(),
+        "appliedCount": applied_count,
+        "failedCount": failed_count,
         "results": results,
     }))
 }
@@ -1874,9 +1980,18 @@ fn build_sync_live_apply_text(document: &Value) -> Result<Vec<String>> {
         .get("results")
         .and_then(Value::as_array)
         .ok_or_else(|| message("Sync live apply document is missing results."))?;
+    let applied_count = document
+        .get("appliedCount")
+        .and_then(Value::as_u64)
+        .unwrap_or(results.len() as u64);
+    let failed_count = document
+        .get("failedCount")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
     let mut lines = vec![
         "Sync live apply".to_string(),
-        format!("AppliedCount: {}", results.len()),
+        format!("AppliedCount: {}", applied_count),
+        format!("FailedCount: {}", failed_count),
     ];
     for item in results {
         let item = value_as_object(item, "Sync live apply result item")?;
@@ -1892,7 +2007,16 @@ fn build_sync_live_apply_text(document: &Value) -> Result<Vec<String>> {
             .get("action")
             .and_then(Value::as_str)
             .unwrap_or("unknown");
-        lines.push(format!("{kind} {identity} {action}"));
+        let status = item.get("status").and_then(Value::as_str).unwrap_or("ok");
+        if status.eq_ignore_ascii_case("error") {
+            let error = item
+                .get("error")
+                .and_then(Value::as_str)
+                .unwrap_or("unknown");
+            lines.push(format!("{kind} {identity} {action} [{status}] {error}"));
+        } else {
+            lines.push(format!("{kind} {identity} {action} [{status}]"));
+        }
     }
     Ok(lines)
 }
@@ -2018,6 +2142,7 @@ pub fn run_sync_cli(command: SyncGroupCommand) -> Result<()> {
                 let results = run_sync_apply_operations(
                     &operations,
                     args.allow_folder_delete,
+                    args.continue_on_error,
                     &mut |method, path, params, payload| {
                         client.request_json(method, path, params, payload)
                     },
