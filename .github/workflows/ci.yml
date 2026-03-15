@@ -14,10 +14,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Install Poetry
+        run: python3 -m pip install --upgrade pip poetry
       - name: Install Python dependencies
-        run: python3 -m pip install --upgrade pip requests httpx black mypy ruff
+        run: |
+          poetry install --with dev
+          poetry run python -m pip install '.[http2]'
       - name: Run Python quality gate
-        run: make quality-python
+        run: make poetry-quality-python
 
   rust-quality:
     runs-on: ubuntu-latest
