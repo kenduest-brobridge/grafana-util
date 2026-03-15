@@ -295,37 +295,54 @@ pub struct UserListArgs {
 pub struct UserAddArgs {
     #[command(flatten)]
     pub common: CommonCliArgs,
-    #[arg(long, help = "Login name for the new Grafana user.")]
+    #[arg(
+        long,
+        help_heading = "User Identity",
+        help = "Login name for the new Grafana user."
+    )]
     pub login: String,
-    #[arg(long, help = "Email address for the new Grafana user.")]
+    #[arg(
+        long,
+        help_heading = "User Identity",
+        help = "Email address for the new Grafana user."
+    )]
     pub email: String,
-    #[arg(long, help = "Display name for the new Grafana user.")]
+    #[arg(
+        long,
+        help_heading = "User Identity",
+        help = "Display name for the new Grafana user."
+    )]
     pub name: String,
     #[arg(
         long = "password",
+        help_heading = "Credentials",
         conflicts_with_all = ["new_user_password_file", "prompt_user_password"],
         help = "Initial password for the new Grafana user."
     )]
     pub new_user_password: Option<String>,
     #[arg(
         long = "password-file",
+        help_heading = "Credentials",
         conflicts_with_all = ["new_user_password", "prompt_user_password"],
         help = "Read the initial user password from this file."
     )]
     pub new_user_password_file: Option<PathBuf>,
     #[arg(
         long = "prompt-user-password",
+        help_heading = "Credentials",
         default_value_t = false,
         conflicts_with_all = ["new_user_password", "new_user_password_file"],
         help = "Prompt for the initial user password without echo."
     )]
     pub prompt_user_password: bool,
-    #[arg(
-        long = "org-role",
-        help = "Optional initial org role such as Viewer, Editor, or Admin."
-    )]
+    #[arg(long = "org-role", help_heading = "Privileges", help = "Optional initial org role such as Viewer, Editor, or Admin.")]
     pub org_role: Option<String>,
-    #[arg(long = "grafana-admin", value_parser = parse_bool_text, help = "Set whether the new user should be a Grafana server admin.")]
+    #[arg(
+        long = "grafana-admin",
+        value_parser = parse_bool_text,
+        help_heading = "Privileges",
+        help = "Set whether the new user should be a Grafana server admin."
+    )]
     pub grafana_admin: Option<bool>,
     #[arg(
         long,

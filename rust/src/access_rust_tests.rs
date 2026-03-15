@@ -275,6 +275,9 @@ fn user_help_mentions_filter_and_output_flags() {
 fn user_mutation_help_mentions_target_and_json_flags() {
     let add_help = render_access_subcommand_help(&["user", "add"]);
     assert!(add_help.contains("Connection And Auth:"));
+    assert!(add_help.contains("User Identity:"));
+    assert!(add_help.contains("Credentials:"));
+    assert!(add_help.contains("Privileges:"));
     assert!(add_help.contains("--login"));
     assert!(add_help.contains("Login name for the new Grafana user"));
     assert!(add_help.contains("--grafana-admin"));

@@ -95,7 +95,7 @@ pub enum UnifiedCommand {
         command: DatasourceGroupCommand,
     },
     #[command(
-        about = "Sync [summary|preflight|plan|apply|review|assess].",
+        about = "Sync [summary|preflight|plan|review|assess-alerts|bundle-preflight|apply].",
         alias = "sy"
     )]
     Sync {
@@ -107,7 +107,10 @@ pub enum UnifiedCommand {
         alias = "al"
     )]
     Alert(AlertNamespaceArgs),
-    #[command(about = "List and manage Grafana users, teams, and service accounts.", alias = "ac")]
+    #[command(
+        about = "Access [user|team|org|service-account].",
+        alias = "ac"
+    )]
     Access(AccessCliArgs),
 }
 
@@ -130,7 +133,21 @@ where
     I: IntoIterator<Item = T>,
     T: Into<std::ffi::OsString> + Clone,
 {
-    CliArgs::parse_from(iter)
+    let mut argv = iter
+        .into_iter()
+        .map(|value| value.into())
+        .collect::<Vec<std::ffi::OsString>>();
+    // Keep compatibility for the removed dashboard alias and route callers onto
+    // the canonical datasource namespace.
+    if argv.len() > 2 {
+        let command = argv[1].to_string_lossy();
+        let subcommand = argv[2].to_string_lossy();
+        if (command == "dashboard" || command == "db") && subcommand == "list-data-sources" {
+            argv[1] = std::ffi::OsString::from("datasource");
+            argv[2] = std::ffi::OsString::from("list");
+        }
+    }
+    CliArgs::parse_from(argv)
 }
 
 fn wrap_dashboard(command: DashboardCommand) -> DashboardCliArgs {
