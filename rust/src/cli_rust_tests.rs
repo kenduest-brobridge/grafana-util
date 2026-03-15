@@ -50,6 +50,69 @@ fn parse_cli_supports_dashboard_group_command() {
 }
 
 #[test]
+fn parse_cli_supports_dashboard_shortcut_alias_db() {
+    let args: CliArgs = parse_cli_from(["grafana-util", "db", "list", "--table"]);
+
+    match args.command {
+        UnifiedCommand::Dashboard { command } => match command {
+            super::DashboardGroupCommand::List(inner) => {
+                assert!(inner.table);
+            }
+            _ => panic!("expected dashboard list"),
+        },
+        _ => panic!("expected dashboard alias db"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_datasource_shortcut_alias_ds() {
+    let args: CliArgs = parse_cli_from(["grafana-util", "ds", "list", "--table"]);
+
+    match args.command {
+        UnifiedCommand::Datasource { command } => match command {
+            DatasourceGroupCommand::List(inner) => {
+                assert!(inner.table);
+            }
+            _ => panic!("expected datasource list"),
+        },
+        _ => panic!("expected datasource alias ds"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_alert_shortcut_alias_al() {
+    let args: CliArgs = parse_cli_from(["grafana-util", "al", "list-rules", "--json"]);
+
+    match args.command {
+        UnifiedCommand::Alert(inner) => match inner.command {
+            Some(crate::alert::AlertGroupCommand::ListRules(inner)) => {
+                assert!(inner.json);
+            }
+            _ => panic!("expected alert list-rules"),
+        },
+        _ => panic!("expected alert alias al"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_access_shortcut_alias_ac() {
+    let args: CliArgs = parse_cli_from(["grafana-util", "ac", "user", "list", "--json"]);
+
+    match args.command {
+        UnifiedCommand::Access(inner) => match inner.command {
+            crate::access::AccessCommand::User { command } => match command {
+                crate::access::UserCommand::List(inner) => {
+                    assert!(inner.json);
+                }
+                _ => panic!("expected access user list"),
+            },
+            _ => panic!("expected access user"),
+        },
+        _ => panic!("expected access alias ac"),
+    }
+}
+
+#[test]
 fn parse_cli_supports_datasource_group_command() {
     let args: CliArgs = parse_cli_from([
         "grafana-util",

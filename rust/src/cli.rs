@@ -78,12 +78,18 @@ pub enum DashboardGroupCommand {
 
 #[derive(Debug, Clone, Subcommand)]
 pub enum UnifiedCommand {
-    #[command(about = "Dashboard [list|export|import|diff|inspect-export|inspect-live].")]
+    #[command(
+        about = "Dashboard [list|export|import|diff|inspect-export|inspect-live].",
+        alias = "db"
+    )]
     Dashboard {
         #[command(subcommand)]
         command: DashboardGroupCommand,
     },
-    #[command(about = "Datasource [list|add|modify|delete|export|import|diff].")]
+    #[command(
+        about = "Datasource [list|add|modify|delete|export|import|diff].",
+        alias = "ds"
+    )]
     Datasource {
         #[command(subcommand)]
         command: DatasourceGroupCommand,
@@ -93,9 +99,12 @@ pub enum UnifiedCommand {
         #[command(subcommand)]
         command: SyncGroupCommand,
     },
-    #[command(about = "Alert [export|import|diff|list-rules|list-contact-points|list-mute-timings|list-templates].")]
+    #[command(
+        about = "Alert [export|import|diff|list-rules|list-contact-points|list-mute-timings|list-templates].",
+        alias = "al"
+    )]
     Alert(AlertNamespaceArgs),
-    #[command(about = "List and manage Grafana users, teams, and service accounts.")]
+    #[command(about = "List and manage Grafana users, teams, and service accounts.", alias = "ac")]
     Access(AccessCliArgs),
 }
 
