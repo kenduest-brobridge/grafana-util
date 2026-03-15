@@ -1184,3 +1184,10 @@ Historical note:
 - Baseline: Rust staged sync artifacts already carried a shared `traceId`, but they did not explicitly describe which stage produced the artifact or which earlier staged artifact it derived from.
 - Current Update: Added automatic staged lineage metadata to Rust `sync` artifacts. `sync plan` now emits `stage=plan` and `stepIndex=1`, while `sync review` and `sync apply` stamp `stage=review|apply`, increment `stepIndex`, and carry `parentTraceId` so downstream artifacts clearly reference the staged plan lineage. Text rendering now surfaces the lineage summary alongside the existing trace id.
 - Result: Local/document-only Rust sync artifacts now encode both correlation (`traceId`) and stage progression (`stage`, `stepIndex`, `parentTraceId`), which makes plan/review/apply chains easier to audit and less likely to be mixed up.
+
+## 2026-03-15 - Task: Add Rust Sync Lineage-Aware Gating
+- State: Done
+- Scope: `rust/src/sync.rs`, `rust/src/sync_cli_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust staged sync artifacts already carried `stage`, `stepIndex`, and `parentTraceId`, but `sync review`/`sync apply` still trusted supplied staged files without checking whether any present lineage metadata actually matched the current plan trace chain.
+- Current Update: Added fail-closed lineage validation to Rust `sync review` and `sync apply`. Review now rejects staged plan files whose lineage metadata claims a non-plan stage, wrong step index, or unexpected parent trace. Apply now rejects reviewed plan files with inconsistent review lineage and rejects optional preflight or bundle-preflight inputs when they carry a mismatched `traceId`. The staged step indexes were also aligned to `1/2/3` for `plan/review/apply` so emitted metadata matches the documented flow.
+- Result: Local/document-only Rust sync gates now protect against mixing staged artifacts from different traces or stages when lineage metadata is present, while remaining backward compatible with older staged documents that omit the new fields.
