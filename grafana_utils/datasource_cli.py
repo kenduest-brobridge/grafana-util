@@ -146,6 +146,28 @@ def _parse_import_output_columns(args, parser):
         parser.error(str(exc))
 
 
+def _validate_datasource_org_routing_args(args, parser):
+    """Validate datasource org-routing flags after argparse normalization."""
+    command = getattr(args, "command", None)
+    if command == "export":
+        if bool(getattr(args, "all_orgs", False)) and getattr(args, "org_id", None):
+            parser.error("--all-orgs cannot be combined with --org-id for datasource export.")
+        return
+    if command != "import":
+        return
+    use_export_org = bool(getattr(args, "use_export_org", False))
+    if getattr(args, "only_org_id", None) and not use_export_org:
+        parser.error("--only-org-id requires --use-export-org for datasource import.")
+    if bool(getattr(args, "create_missing_orgs", False)) and not use_export_org:
+        parser.error("--create-missing-orgs requires --use-export-org for datasource import.")
+    if use_export_org and getattr(args, "org_id", None):
+        parser.error("--use-export-org cannot be combined with --org-id for datasource import.")
+    if use_export_org and bool(getattr(args, "require_matching_export_org", False)):
+        parser.error(
+            "--use-export-org cannot be combined with --require-matching-export-org for datasource import."
+        )
+
+
 def parse_args(argv=None):
     """Parse datasource CLI args then normalize legacy-compatible output options.
 
@@ -158,6 +180,7 @@ def parse_args(argv=None):
     args = parser.parse_args(argv)
     _normalize_output_format_args(args, parser)
     _parse_import_output_columns(args, parser)
+    _validate_datasource_org_routing_args(args, parser)
     return args
 
 

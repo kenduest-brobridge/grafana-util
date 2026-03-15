@@ -20,7 +20,9 @@ use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::common::{load_json_object_file, message, string_field, write_json_file, Result};
+use crate::common::{
+    load_json_object_file, message, sanitize_path_component, string_field, write_json_file, Result,
+};
 use crate::dashboard::{
     build_auth_context, build_http_client, build_http_client_for_org, list_datasources,
     CommonCliArgs, DEFAULT_ORG_ID,
@@ -101,6 +103,19 @@ pub struct DatasourceExportArgs {
     pub export_dir: PathBuf,
     #[arg(
         long,
+        conflicts_with = "all_orgs",
+        help = "Export datasource inventory from this explicit Grafana org ID instead of the current org. Requires Basic auth."
+    )]
+    pub org_id: Option<i64>,
+    #[arg(
+        long,
+        default_value_t = false,
+        conflicts_with = "org_id",
+        help = "Enumerate all visible Grafana orgs and export one datasource inventory bundle per org under the export root. Requires Basic auth."
+    )]
+    pub all_orgs: bool,
+    #[arg(
+        long,
         default_value_t = false,
         help = "Replace existing export files in the target directory instead of failing."
     )]
@@ -124,9 +139,31 @@ pub struct DatasourceImportArgs {
     pub import_dir: PathBuf,
     #[arg(
         long,
+        conflicts_with = "use_export_org",
         help = "Import datasources into this Grafana org ID instead of the current org context. Requires Basic auth."
     )]
     pub org_id: Option<i64>,
+    #[arg(
+        long,
+        default_value_t = false,
+        conflicts_with = "require_matching_export_org",
+        help = "Import a combined multi-org datasource export root by routing each org-scoped datasource bundle back into the matching Grafana org. Requires Basic auth."
+    )]
+    pub use_export_org: bool,
+    #[arg(
+        long = "only-org-id",
+        requires = "use_export_org",
+        conflicts_with = "org_id",
+        help = "With --use-export-org, import only these exported source org IDs. Repeat the flag to select multiple orgs."
+    )]
+    pub only_org_id: Vec<i64>,
+    #[arg(
+        long,
+        default_value_t = false,
+        requires = "use_export_org",
+        help = "With --use-export-org, create a missing destination org when an exported source org ID does not exist in Grafana. The new org is created from the exported org name and then used as the import target."
+    )]
+    pub create_missing_orgs: bool,
     #[arg(
         long,
         default_value_t = false,
@@ -527,6 +564,36 @@ struct MatchResult {
     target_id: Option<i64>,
 }
 
+#[derive(Debug, Clone)]
+struct DatasourceExportOrgScope {
+    source_org_id: i64,
+    source_org_name: String,
+    import_dir: PathBuf,
+}
+
+#[derive(Debug, Clone)]
+struct DatasourceExportOrgTargetPlan {
+    source_org_id: i64,
+    source_org_name: String,
+    target_org_id: Option<i64>,
+    org_action: &'static str,
+    import_dir: PathBuf,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct DatasourceImportDryRunReport {
+    mode: String,
+    import_dir: PathBuf,
+    source_org_id: String,
+    target_org_id: String,
+    rows: Vec<Vec<String>>,
+    datasource_count: usize,
+    would_create: usize,
+    would_update: usize,
+    would_skip: usize,
+    would_block: usize,
+}
+
 fn fetch_current_org(client: &JsonHttpClient) -> Result<Map<String, Value>> {
     match client.request_json(Method::GET, "/api/org", &[], None)? {
         Some(value) => value
@@ -535,6 +602,50 @@ fn fetch_current_org(client: &JsonHttpClient) -> Result<Map<String, Value>> {
             .ok_or_else(|| message("Unexpected current-org payload from Grafana.")),
         None => Err(message("Grafana did not return current-org metadata.")),
     }
+}
+
+fn list_orgs(client: &JsonHttpClient) -> Result<Vec<Map<String, Value>>> {
+    match client.request_json(Method::GET, "/api/orgs", &[], None)? {
+        Some(Value::Array(items)) => items
+            .into_iter()
+            .map(|item| {
+                item.as_object()
+                    .cloned()
+                    .ok_or_else(|| message("Unexpected org entry in /api/orgs response."))
+            })
+            .collect(),
+        Some(_) => Err(message("Unexpected /api/orgs payload from Grafana.")),
+        None => Ok(Vec::new()),
+    }
+}
+
+fn create_org(client: &JsonHttpClient, org_name: &str) -> Result<Map<String, Value>> {
+    let payload = Value::Object(Map::from_iter(vec![(
+        "name".to_string(),
+        Value::String(org_name.to_string()),
+    )]));
+    match client.request_json(Method::POST, "/api/orgs", &[], Some(&payload))? {
+        Some(Value::Object(object)) => Ok(object),
+        Some(_) => Err(message("Unexpected create-org payload from Grafana.")),
+        None => Err(message("Grafana did not return create-org metadata.")),
+    }
+}
+
+fn org_id_string_from_value(value: Option<&Value>) -> String {
+    match value {
+        Some(Value::String(text)) => text.trim().to_string(),
+        Some(Value::Number(number)) => number.to_string(),
+        _ => String::new(),
+    }
+}
+
+fn build_all_orgs_output_dir(output_dir: &Path, org: &Map<String, Value>) -> PathBuf {
+    let org_id = org
+        .get("id")
+        .map(|value| sanitize_path_component(&value.to_string()))
+        .unwrap_or_else(|| DEFAULT_ORG_ID.to_string());
+    let org_name = sanitize_path_component(&string_field(org, "name", "org"));
+    output_dir.join(format!("org_{org_id}_{org_name}"))
 }
 
 fn resolve_target_client(common: &CommonCliArgs, org_id: Option<i64>) -> Result<JsonHttpClient> {
@@ -548,6 +659,33 @@ fn resolve_target_client(common: &CommonCliArgs, org_id: Option<i64>) -> Result<
         build_http_client_for_org(common, org_id)
     } else {
         build_http_client(common)
+    }
+}
+
+fn validate_import_org_auth(common: &CommonCliArgs, args: &DatasourceImportArgs) -> Result<()> {
+    let context = build_auth_context(common)?;
+    if (args.org_id.is_some() || args.use_export_org) && context.auth_mode != "basic" {
+        return Err(message(
+            if args.use_export_org {
+                "Datasource import with --use-export-org requires Basic auth (--basic-user / --basic-password)."
+            } else {
+                "Datasource import with --org-id requires Basic auth (--basic-user / --basic-password)."
+            },
+        ));
+    }
+    Ok(())
+}
+
+fn describe_datasource_import_mode(
+    replace_existing: bool,
+    update_existing_only: bool,
+) -> &'static str {
+    if update_existing_only {
+        "update-or-skip-missing"
+    } else if replace_existing {
+        "create-or-update"
+    } else {
+        "create-only"
     }
 }
 
@@ -727,6 +865,68 @@ fn build_export_index(records: &[Map<String, Value>]) -> Value {
     ]))
 }
 
+fn build_all_orgs_export_index(items: &[Map<String, Value>]) -> Value {
+    Value::Object(Map::from_iter(vec![
+        (
+            "kind".to_string(),
+            Value::String(ROOT_INDEX_KIND.to_string()),
+        ),
+        (
+            "schemaVersion".to_string(),
+            Value::Number(TOOL_SCHEMA_VERSION.into()),
+        ),
+        (
+            "variant".to_string(),
+            Value::String("all-orgs-root".to_string()),
+        ),
+        (
+            "count".to_string(),
+            Value::Number((items.len() as i64).into()),
+        ),
+        (
+            "items".to_string(),
+            Value::Array(items.iter().cloned().map(Value::Object).collect()),
+        ),
+    ]))
+}
+
+fn build_all_orgs_export_metadata(org_count: usize, datasource_count: usize) -> Value {
+    Value::Object(Map::from_iter(vec![
+        (
+            "schemaVersion".to_string(),
+            Value::Number(TOOL_SCHEMA_VERSION.into()),
+        ),
+        (
+            "kind".to_string(),
+            Value::String(ROOT_INDEX_KIND.to_string()),
+        ),
+        (
+            "variant".to_string(),
+            Value::String("all-orgs-root".to_string()),
+        ),
+        (
+            "resource".to_string(),
+            Value::String("datasource".to_string()),
+        ),
+        (
+            "orgCount".to_string(),
+            Value::Number((org_count as i64).into()),
+        ),
+        (
+            "datasourceCount".to_string(),
+            Value::Number((datasource_count as i64).into()),
+        ),
+        (
+            "indexFile".to_string(),
+            Value::String("index.json".to_string()),
+        ),
+        (
+            "format".to_string(),
+            Value::String("grafana-datasource-inventory-v1".to_string()),
+        ),
+    ]))
+}
+
 fn build_export_records(client: &JsonHttpClient) -> Result<Vec<Map<String, Value>>> {
     let org = fetch_current_org(client)?;
     let org_name = string_field(&org, "name", "");
@@ -779,6 +979,40 @@ fn build_export_records(client: &JsonHttpClient) -> Result<Vec<Map<String, Value
             record
         })
         .collect())
+}
+
+fn export_datasource_scope(
+    client: &JsonHttpClient,
+    output_dir: &Path,
+    overwrite: bool,
+    dry_run: bool,
+) -> Result<usize> {
+    let records = build_export_records(client)?;
+    let datasources_path = output_dir.join(DATASOURCE_EXPORT_FILENAME);
+    let index_path = output_dir.join("index.json");
+    let metadata_path = output_dir.join(EXPORT_METADATA_FILENAME);
+    if !dry_run {
+        write_json_file(
+            &datasources_path,
+            &Value::Array(records.clone().into_iter().map(Value::Object).collect()),
+            overwrite,
+        )?;
+        write_json_file(&index_path, &build_export_index(&records), overwrite)?;
+        write_json_file(
+            &metadata_path,
+            &build_datasource_export_metadata(records.len()),
+            overwrite,
+        )?;
+    }
+    let summary_verb = if dry_run { "Would export" } else { "Exported" };
+    println!(
+        "{summary_verb} {} datasource(s). Datasources: {} Index: {} Manifest: {}",
+        records.len(),
+        datasources_path.display(),
+        index_path.display(),
+        metadata_path.display()
+    );
+    Ok(records.len())
 }
 
 // Parse and validate datasource export metadata before importing any inventory data.
@@ -985,6 +1219,275 @@ fn collect_source_org_ids(
     Ok(org_ids)
 }
 
+fn collect_source_org_names(
+    import_dir: &Path,
+    metadata: &DatasourceExportMetadata,
+) -> Result<BTreeSet<String>> {
+    let mut org_names = BTreeSet::new();
+    let datasources_path = import_dir.join(&metadata.datasources_file);
+    if datasources_path.is_file() {
+        let raw = fs::read_to_string(&datasources_path)?;
+        let value: Value = serde_json::from_str(&raw)?;
+        if let Some(items) = value.as_array() {
+            for item in items {
+                if let Some(object) = item.as_object() {
+                    let org_name = string_field(object, "org", "");
+                    if !org_name.is_empty() {
+                        org_names.insert(org_name);
+                    }
+                }
+            }
+        }
+    }
+    let index_path = import_dir.join(&metadata.index_file);
+    if index_path.is_file() {
+        let raw = fs::read_to_string(&index_path)?;
+        let value: Value = serde_json::from_str(&raw)?;
+        if let Some(items) = value.get("items").and_then(Value::as_array) {
+            for item in items {
+                if let Some(object) = item.as_object() {
+                    let org_name = string_field(object, "org", "");
+                    if !org_name.is_empty() {
+                        org_names.insert(org_name);
+                    }
+                }
+            }
+        }
+    }
+    Ok(org_names)
+}
+
+fn parse_export_org_scope(import_root: &Path, scope_dir: &Path) -> Result<DatasourceExportOrgScope> {
+    let metadata = parse_export_metadata(&scope_dir.join(EXPORT_METADATA_FILENAME))?;
+    let export_org_ids = collect_source_org_ids(scope_dir, &metadata)?;
+    let (source_org_id, source_org_name_from_dir) = if export_org_ids.is_empty() {
+        let scope_name = scope_dir
+            .file_name()
+            .and_then(|item| item.to_str())
+            .unwrap_or_default();
+        if let Some(rest) = scope_name.strip_prefix("org_") {
+            let mut parts = rest.splitn(2, '_');
+            let source_org_id_text = parts.next().unwrap_or_default();
+            let source_org_name = parts
+                .next()
+                .unwrap_or_default()
+                .replace('_', " ")
+                .trim()
+                .to_string();
+            let source_org_id = source_org_id_text.parse::<i64>().map_err(|_| {
+                message(format!(
+                    "Cannot route datasource import by export org for {}: export orgId '{}' from the org directory name is not a valid integer.",
+                    scope_dir.display(),
+                    source_org_id_text
+                ))
+            })?;
+            (source_org_id, source_org_name)
+        } else {
+            return Err(message(format!(
+                "Cannot route datasource import by export org for {}: export orgId metadata was not found in datasources.json or index.json.",
+                scope_dir.display()
+            )));
+        }
+    } else {
+        if export_org_ids.len() > 1 {
+            return Err(message(format!(
+                "Cannot route datasource import by export org for {}: found multiple export orgIds ({}).",
+                scope_dir.display(),
+                export_org_ids.into_iter().collect::<Vec<String>>().join(", ")
+            )));
+        }
+        let source_org_id_text = export_org_ids.into_iter().next().unwrap_or_default();
+        let source_org_id = source_org_id_text.parse::<i64>().map_err(|_| {
+            message(format!(
+                "Cannot route datasource import by export org for {}: export orgId '{}' is not a valid integer.",
+                scope_dir.display(),
+                source_org_id_text
+            ))
+        })?;
+        (source_org_id, String::new())
+    };
+    let org_names = collect_source_org_names(scope_dir, &metadata)?;
+    if org_names.len() > 1 {
+        return Err(message(format!(
+            "Cannot route datasource import by export org for {}: found multiple export org names ({}).",
+            scope_dir.display(),
+            org_names.into_iter().collect::<Vec<String>>().join(", ")
+        )));
+    }
+    let source_org_name = org_names
+        .into_iter()
+        .next()
+        .filter(|name| !name.trim().is_empty())
+        .unwrap_or_else(|| {
+            if !source_org_name_from_dir.is_empty() {
+                source_org_name_from_dir
+            } else {
+                import_root
+                    .file_name()
+                    .and_then(|name| name.to_str())
+                    .unwrap_or("org")
+                    .to_string()
+            }
+        });
+    Ok(DatasourceExportOrgScope {
+        source_org_id,
+        source_org_name,
+        import_dir: scope_dir.to_path_buf(),
+    })
+}
+
+fn discover_export_org_import_scopes(
+    args: &DatasourceImportArgs,
+) -> Result<Vec<DatasourceExportOrgScope>> {
+    if !args.use_export_org {
+        return Ok(Vec::new());
+    }
+    let selected_org_ids: BTreeSet<i64> = args.only_org_id.iter().copied().collect();
+    let mut scopes = Vec::new();
+    let mut matched_source_org_ids = BTreeSet::new();
+    for entry in fs::read_dir(&args.import_dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if !path.is_dir() {
+            continue;
+        }
+        let Some(name) = path.file_name().and_then(|item| item.to_str()) else {
+            continue;
+        };
+        if !name.starts_with("org_") {
+            continue;
+        }
+        if !path.join(EXPORT_METADATA_FILENAME).is_file() {
+            continue;
+        }
+        let scope = parse_export_org_scope(&path, &path)?;
+        if !selected_org_ids.is_empty() && !selected_org_ids.contains(&scope.source_org_id) {
+            continue;
+        }
+        matched_source_org_ids.insert(scope.source_org_id);
+        scopes.push(scope);
+    }
+    scopes.sort_by(|left, right| left.source_org_id.cmp(&right.source_org_id));
+    if !selected_org_ids.is_empty() {
+        let missing: Vec<String> = selected_org_ids
+            .difference(&matched_source_org_ids)
+            .map(|item| item.to_string())
+            .collect();
+        if !missing.is_empty() {
+            return Err(message(format!(
+                "Selected exported org IDs were not found in {}: {}",
+                args.import_dir.display(),
+                missing.join(", ")
+            )));
+        }
+    }
+    if scopes.is_empty() {
+        if args.import_dir.join(EXPORT_METADATA_FILENAME).is_file() {
+            return Err(message(
+                "Datasource import with --use-export-org expects the combined export root, not one org export directory.",
+            ));
+        }
+        if !selected_org_ids.is_empty() {
+            return Err(message(format!(
+                "Datasource import with --use-export-org did not find the selected exported org IDs ({}) under {}.",
+                selected_org_ids
+                    .into_iter()
+                    .map(|id| id.to_string())
+                    .collect::<Vec<String>>()
+                    .join(", "),
+                args.import_dir.display()
+            )));
+        }
+        return Err(message(format!(
+            "Datasource import with --use-export-org did not find any org-scoped datasource exports under {}.",
+            args.import_dir.display()
+        )));
+    }
+    let found_org_ids: BTreeSet<i64> = scopes.iter().map(|scope| scope.source_org_id).collect();
+    let missing_org_ids: Vec<String> = selected_org_ids
+        .difference(&found_org_ids)
+        .map(|id| id.to_string())
+        .collect();
+    if !missing_org_ids.is_empty() {
+        return Err(message(format!(
+            "Datasource import with --use-export-org did not find the selected exported org IDs ({}).",
+            missing_org_ids.join(", ")
+        )));
+    }
+    Ok(scopes)
+}
+
+fn resolve_export_org_target_plan(
+    admin_client: &JsonHttpClient,
+    args: &DatasourceImportArgs,
+    scope: &DatasourceExportOrgScope,
+) -> Result<DatasourceExportOrgTargetPlan> {
+    let orgs = list_orgs(admin_client)?;
+    for org in orgs {
+        let org_id_text = org_id_string_from_value(org.get("id"));
+        if org_id_text == scope.source_org_id.to_string() {
+            return Ok(DatasourceExportOrgTargetPlan {
+                source_org_id: scope.source_org_id,
+                source_org_name: scope.source_org_name.clone(),
+                target_org_id: Some(scope.source_org_id),
+                org_action: "exists",
+                import_dir: scope.import_dir.clone(),
+            });
+        }
+    }
+    if args.dry_run && !args.create_missing_orgs {
+        return Ok(DatasourceExportOrgTargetPlan {
+            source_org_id: scope.source_org_id,
+            source_org_name: scope.source_org_name.clone(),
+            target_org_id: None,
+            org_action: "missing",
+            import_dir: scope.import_dir.clone(),
+        });
+    }
+    if args.dry_run && args.create_missing_orgs {
+        return Ok(DatasourceExportOrgTargetPlan {
+            source_org_id: scope.source_org_id,
+            source_org_name: scope.source_org_name.clone(),
+            target_org_id: None,
+            org_action: "would-create",
+            import_dir: scope.import_dir.clone(),
+        });
+    }
+    if !args.create_missing_orgs {
+        return Err(message(format!(
+            "Datasource import source orgId {} was not found in destination Grafana. Use --create-missing-orgs to create it from export metadata.",
+            scope.source_org_id
+        )));
+    }
+    if scope.source_org_name.trim().is_empty() {
+        return Err(message(format!(
+            "Datasource import with --create-missing-orgs could not determine an exported org name for source orgId {}.",
+            scope.source_org_id
+        )));
+    }
+    let created = create_org(admin_client, &scope.source_org_name)?;
+    let created_org_id = org_id_string_from_value(created.get("orgId").or_else(|| created.get("id")));
+    if created_org_id.is_empty() {
+        return Err(message(format!(
+            "Grafana did not return a usable orgId after creating destination org '{}' for exported org {}.",
+            scope.source_org_name, scope.source_org_id
+        )));
+    }
+    let parsed_org_id = created_org_id.parse::<i64>().map_err(|_| {
+        message(format!(
+            "Grafana returned non-numeric orgId '{}' after creating destination org '{}' for exported org {}.",
+            created_org_id, scope.source_org_name, scope.source_org_id
+        ))
+    })?;
+    Ok(DatasourceExportOrgTargetPlan {
+        source_org_id: scope.source_org_id,
+        source_org_name: scope.source_org_name.clone(),
+        target_org_id: Some(parsed_org_id),
+        org_action: "created",
+        import_dir: scope.import_dir.clone(),
+    })
+}
+
 fn validate_matching_export_org(
     client: &JsonHttpClient,
     args: &DatasourceImportArgs,
@@ -1021,6 +1524,426 @@ fn validate_matching_export_org(
         )));
     }
     Ok(())
+}
+
+fn collect_datasource_import_dry_run_report(
+    client: &JsonHttpClient,
+    args: &DatasourceImportArgs,
+) -> Result<DatasourceImportDryRunReport> {
+    let replace_existing = args.replace_existing || args.update_existing_only;
+    let (metadata, records) = load_import_records(&args.import_dir)?;
+    validate_matching_export_org(client, args, &args.import_dir, &metadata)?;
+    let live = list_datasources(client)?;
+    let target_org = fetch_current_org(client)?;
+    let target_org_id = target_org
+        .get("id")
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| DEFAULT_ORG_ID.to_string());
+    let mode = describe_datasource_import_mode(args.replace_existing, args.update_existing_only);
+    let mut rows = Vec::new();
+    let mut created = 0usize;
+    let mut updated = 0usize;
+    let mut skipped = 0usize;
+    let mut blocked = 0usize;
+    for (index, record) in records.iter().enumerate() {
+        let matching = resolve_match(record, &live, replace_existing, args.update_existing_only);
+        let file_ref = format!("{}#{}", metadata.datasources_file, index);
+        rows.push(vec![
+            record.uid.clone(),
+            record.name.clone(),
+            record.datasource_type.clone(),
+            matching.destination.to_string(),
+            matching.action.to_string(),
+            target_org_id.clone(),
+            file_ref,
+        ]);
+        match matching.action {
+            "would-create" => created += 1,
+            "would-update" => updated += 1,
+            "would-skip-missing" => skipped += 1,
+            _ => blocked += 1,
+        }
+    }
+    Ok(DatasourceImportDryRunReport {
+        mode: mode.to_string(),
+        import_dir: args.import_dir.clone(),
+        source_org_id: records
+            .iter()
+            .find(|item| !item.org_id.is_empty())
+            .map(|item| item.org_id.clone())
+            .unwrap_or_default(),
+        target_org_id,
+        rows,
+        datasource_count: records.len(),
+        would_create: created,
+        would_update: updated,
+        would_skip: skipped,
+        would_block: blocked,
+    })
+}
+
+fn build_datasource_import_dry_run_json_value(report: &DatasourceImportDryRunReport) -> Value {
+    Value::Object(Map::from_iter(vec![
+        ("mode".to_string(), Value::String(report.mode.clone())),
+        (
+            "sourceOrgId".to_string(),
+            Value::String(report.source_org_id.clone()),
+        ),
+        (
+            "targetOrgId".to_string(),
+            Value::String(report.target_org_id.clone()),
+        ),
+        (
+            "datasources".to_string(),
+            Value::Array(
+                report
+                    .rows
+                    .iter()
+                    .map(|row| {
+                        Value::Object(Map::from_iter(vec![
+                            ("uid".to_string(), Value::String(row[0].clone())),
+                            ("name".to_string(), Value::String(row[1].clone())),
+                            ("type".to_string(), Value::String(row[2].clone())),
+                            ("destination".to_string(), Value::String(row[3].clone())),
+                            ("action".to_string(), Value::String(row[4].clone())),
+                            ("orgId".to_string(), Value::String(row[5].clone())),
+                            ("file".to_string(), Value::String(row[6].clone())),
+                        ]))
+                    })
+                    .collect(),
+            ),
+        ),
+        (
+            "summary".to_string(),
+            Value::Object(Map::from_iter(vec![
+                (
+                    "datasourceCount".to_string(),
+                    Value::Number((report.datasource_count as i64).into()),
+                ),
+                (
+                    "wouldCreate".to_string(),
+                    Value::Number((report.would_create as i64).into()),
+                ),
+                (
+                    "wouldUpdate".to_string(),
+                    Value::Number((report.would_update as i64).into()),
+                ),
+                (
+                    "wouldSkip".to_string(),
+                    Value::Number((report.would_skip as i64).into()),
+                ),
+                (
+                    "wouldBlock".to_string(),
+                    Value::Number((report.would_block as i64).into()),
+                ),
+            ])),
+        ),
+    ]))
+}
+
+fn print_datasource_import_dry_run_report(
+    report: &DatasourceImportDryRunReport,
+    args: &DatasourceImportArgs,
+) -> Result<()> {
+    if args.json {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&build_datasource_import_dry_run_json_value(report))?
+        );
+    } else if args.table {
+        for line in render_import_table(
+            &report.rows,
+            !args.no_header,
+            if args.output_columns.is_empty() {
+                None
+            } else {
+                Some(args.output_columns.as_slice())
+            },
+        ) {
+            println!("{line}");
+        }
+        println!(
+            "Dry-run checked {} datasource(s) from {}",
+            report.datasource_count,
+            report.import_dir.display()
+        );
+    } else {
+        println!("Import mode: {}", report.mode);
+        for row in &report.rows {
+            println!(
+                "Dry-run datasource uid={} name={} dest={} action={} file={}",
+                row[0], row[1], row[3], row[4], row[6]
+            );
+        }
+        println!(
+            "Dry-run checked {} datasource(s) from {}",
+            report.datasource_count,
+            report.import_dir.display()
+        );
+    }
+    Ok(())
+}
+
+fn import_datasources_with_client(
+    client: &JsonHttpClient,
+    args: &DatasourceImportArgs,
+) -> Result<usize> {
+    if args.dry_run {
+        let report = collect_datasource_import_dry_run_report(client, args)?;
+        print_datasource_import_dry_run_report(&report, args)?;
+        return Ok(0);
+    }
+    let replace_existing = args.replace_existing || args.update_existing_only;
+    let (metadata, records) = load_import_records(&args.import_dir)?;
+    validate_matching_export_org(client, args, &args.import_dir, &metadata)?;
+    let live = list_datasources(client)?;
+    let mut created = 0usize;
+    let mut updated = 0usize;
+    let mut skipped = 0usize;
+    let blocked = 0usize;
+    for record in &records {
+        let matching = resolve_match(record, &live, replace_existing, args.update_existing_only);
+        match matching.action {
+            "would-create" => {
+                client.request_json(
+                    Method::POST,
+                    "/api/datasources",
+                    &[],
+                    Some(&build_import_payload(record)),
+                )?;
+                created += 1;
+            }
+            "would-update" => {
+                let target_id = matching.target_id.ok_or_else(|| {
+                    message(format!(
+                        "Matched datasource {} does not expose a usable numeric id for update.",
+                        matching.target_name
+                    ))
+                })?;
+                let payload = build_import_payload(record);
+                client.request_json(
+                    Method::PUT,
+                    &format!("/api/datasources/{target_id}"),
+                    &[],
+                    Some(&payload),
+                )?;
+                updated += 1;
+            }
+            "would-skip-missing" => {
+                skipped += 1;
+            }
+            _ => {
+                return Err(message(format!(
+                    "Datasource import blocked for {}: destination={} action={}.",
+                    if record.uid.is_empty() {
+                        &record.name
+                    } else {
+                        &record.uid
+                    },
+                    matching.destination,
+                    matching.action
+                )));
+            }
+        }
+    }
+    println!(
+        "Imported {} datasource(s) from {}; updated {}, skipped {}, blocked {}",
+        created + updated,
+        args.import_dir.display(),
+        updated,
+        skipped,
+        blocked
+    );
+    Ok(created + updated)
+}
+
+fn build_routed_datasource_import_org_row(
+    plan: &DatasourceExportOrgTargetPlan,
+    datasource_count: usize,
+) -> Vec<String> {
+    vec![
+        plan.source_org_id.to_string(),
+        if plan.source_org_name.is_empty() {
+            "-".to_string()
+        } else {
+            plan.source_org_name.clone()
+        },
+        plan.org_action.to_string(),
+        plan.target_org_id
+            .map(|value| value.to_string())
+            .unwrap_or_else(|| "-".to_string()),
+        datasource_count.to_string(),
+        plan.import_dir.display().to_string(),
+    ]
+}
+
+fn render_routed_datasource_import_org_table(
+    rows: &[Vec<String>],
+    include_header: bool,
+) -> Vec<String> {
+    let headers = vec![
+        "SOURCE_ORG_ID".to_string(),
+        "SOURCE_ORG_NAME".to_string(),
+        "ORG_ACTION".to_string(),
+        "TARGET_ORG_ID".to_string(),
+        "DATASOURCE_COUNT".to_string(),
+        "IMPORT_DIR".to_string(),
+    ];
+    let mut widths: Vec<usize> = headers.iter().map(|item| item.len()).collect();
+    for row in rows {
+        for (index, value) in row.iter().enumerate() {
+            widths[index] = widths[index].max(value.len());
+        }
+    }
+    let format_row = |values: &[String]| -> String {
+        values
+            .iter()
+            .enumerate()
+            .map(|(index, value)| format!("{:<width$}", value, width = widths[index]))
+            .collect::<Vec<String>>()
+            .join("  ")
+    };
+    let separator = widths
+        .iter()
+        .map(|width| "-".repeat(*width))
+        .collect::<Vec<String>>();
+    let mut lines = Vec::new();
+    if include_header {
+        lines.push(format_row(&headers));
+        lines.push(format_row(&separator));
+    }
+    lines.extend(rows.iter().map(|row| format_row(row)));
+    lines
+}
+
+fn build_routed_datasource_import_dry_run_json(args: &DatasourceImportArgs) -> Result<String> {
+    let admin_client = build_http_client(&args.common)?;
+    let scopes = discover_export_org_import_scopes(args)?;
+    let mut orgs = Vec::new();
+    let mut imports = Vec::new();
+    for scope in scopes {
+        let plan = resolve_export_org_target_plan(&admin_client, args, &scope)?;
+        let datasource_count = load_import_records(&plan.import_dir)?.1.len();
+        orgs.push(serde_json::json!({
+            "sourceOrgId": plan.source_org_id,
+            "sourceOrgName": plan.source_org_name,
+            "orgAction": plan.org_action,
+            "targetOrgId": plan.target_org_id,
+            "datasourceCount": datasource_count,
+            "importDir": plan.import_dir.display().to_string(),
+        }));
+        let preview = if let Some(target_org_id) = plan.target_org_id {
+            let mut scoped_args = args.clone();
+            scoped_args.org_id = Some(target_org_id);
+            scoped_args.use_export_org = false;
+            scoped_args.only_org_id = Vec::new();
+            scoped_args.create_missing_orgs = false;
+            scoped_args.import_dir = plan.import_dir.clone();
+            let scoped_client = build_http_client_for_org(&args.common, target_org_id)?;
+            build_datasource_import_dry_run_json_value(
+                &collect_datasource_import_dry_run_report(&scoped_client, &scoped_args)?,
+            )
+        } else {
+            serde_json::json!({
+                "mode": describe_datasource_import_mode(args.replace_existing, args.update_existing_only),
+                "sourceOrgId": plan.source_org_id.to_string(),
+                "targetOrgId": Value::Null,
+                "datasources": [],
+                "summary": {
+                    "datasourceCount": datasource_count,
+                    "wouldCreate": 0,
+                    "wouldUpdate": 0,
+                    "wouldSkip": 0,
+                    "wouldBlock": 0
+                }
+            })
+        };
+        let mut import_entry = serde_json::Map::new();
+        import_entry.insert("sourceOrgId".to_string(), Value::from(plan.source_org_id));
+        import_entry.insert(
+            "sourceOrgName".to_string(),
+            Value::from(plan.source_org_name.clone()),
+        );
+        import_entry.insert("orgAction".to_string(), Value::from(plan.org_action));
+        import_entry.insert(
+            "targetOrgId".to_string(),
+            plan.target_org_id.map(Value::from).unwrap_or(Value::Null),
+        );
+        if let Some(object) = preview.as_object() {
+            for (key, value) in object {
+                import_entry.insert(key.clone(), value.clone());
+            }
+        }
+        imports.push(Value::Object(import_entry));
+    }
+    let summary = serde_json::json!({
+        "orgCount": orgs.len(),
+        "existingOrgCount": orgs.iter().filter(|entry| entry.get("orgAction") == Some(&Value::String("exists".to_string()))).count(),
+        "missingOrgCount": orgs.iter().filter(|entry| entry.get("orgAction") == Some(&Value::String("missing".to_string()))).count(),
+        "wouldCreateOrgCount": orgs.iter().filter(|entry| entry.get("orgAction") == Some(&Value::String("would-create".to_string()))).count(),
+        "datasourceCount": imports.iter().filter_map(|entry| entry.get("summary").and_then(|summary| summary.get("datasourceCount")).and_then(Value::as_i64)).sum::<i64>(),
+    });
+    serde_json::to_string_pretty(&serde_json::json!({
+        "mode": describe_datasource_import_mode(args.replace_existing, args.update_existing_only),
+        "orgs": orgs,
+        "imports": imports,
+        "summary": summary,
+    }))
+    .map_err(Into::into)
+}
+
+fn import_datasources_by_export_org(args: &DatasourceImportArgs) -> Result<usize> {
+    let admin_client = build_http_client(&args.common)?;
+    let scopes = discover_export_org_import_scopes(args)?;
+    if args.dry_run && args.json {
+        println!("{}", build_routed_datasource_import_dry_run_json(args)?);
+        return Ok(0);
+    }
+    let mut org_rows = Vec::new();
+    let mut plans = Vec::new();
+    for scope in scopes {
+        let plan = resolve_export_org_target_plan(&admin_client, args, &scope)?;
+        let datasource_count = load_import_records(&plan.import_dir)?.1.len();
+        org_rows.push(build_routed_datasource_import_org_row(&plan, datasource_count));
+        plans.push(plan);
+    }
+    if args.dry_run && args.table {
+        for line in render_routed_datasource_import_org_table(&org_rows, !args.no_header) {
+            println!("{line}");
+        }
+        return Ok(0);
+    }
+    let mut imported_count = 0usize;
+    for plan in plans {
+        let target_org_id_label = plan
+            .target_org_id
+            .map(|value| value.to_string())
+            .unwrap_or_else(|| "-".to_string());
+        println!(
+            "Importing export orgId={} name={} orgAction={} targetOrgId={} from {}",
+            plan.source_org_id,
+            if plan.source_org_name.is_empty() {
+                "-"
+            } else {
+                &plan.source_org_name
+            },
+            plan.org_action,
+            target_org_id_label,
+            plan.import_dir.display()
+        );
+        let Some(target_org_id) = plan.target_org_id else {
+            continue;
+        };
+        let mut scoped_args = args.clone();
+        scoped_args.org_id = Some(target_org_id);
+        scoped_args.use_export_org = false;
+        scoped_args.only_org_id = Vec::new();
+        scoped_args.create_missing_orgs = false;
+        scoped_args.import_dir = plan.import_dir.clone();
+        let scoped_client = build_http_client_for_org(&args.common, target_org_id)?;
+        imported_count += import_datasources_with_client(&scoped_client, &scoped_args)?;
+    }
+    Ok(imported_count)
 }
 
 fn resolve_match(
@@ -1932,40 +2855,97 @@ pub fn run_datasource_cli(command: DatasourceGroupCommand) -> Result<()> {
             Ok(())
         }
         DatasourceGroupCommand::Export(args) => {
-            let client = build_http_client(&args.common)?;
-            let records = build_export_records(&client)?;
-            let output_dir = args.export_dir;
-            let datasources_path = output_dir.join(DATASOURCE_EXPORT_FILENAME);
-            let index_path = output_dir.join("index.json");
-            let metadata_path = output_dir.join(EXPORT_METADATA_FILENAME);
-            if !args.dry_run {
-                write_json_file(
-                    &datasources_path,
-                    &Value::Array(records.clone().into_iter().map(Value::Object).collect()),
-                    args.overwrite,
-                )?;
-                write_json_file(&index_path, &build_export_index(&records), args.overwrite)?;
-                write_json_file(
-                    &metadata_path,
-                    &build_datasource_export_metadata(records.len()),
-                    args.overwrite,
-                )?;
+            if args.all_orgs {
+                let context = build_auth_context(&args.common)?;
+                if context.auth_mode != "basic" {
+                    return Err(message(
+                        "Datasource export with --all-orgs requires Basic auth (--basic-user / --basic-password).",
+                    ));
+                }
+                let admin_client = build_http_client(&args.common)?;
+                let mut total = 0usize;
+                let mut org_count = 0usize;
+                let mut root_items = Vec::new();
+                for org in list_orgs(&admin_client)? {
+                    let org_id = org
+                        .get("id")
+                        .and_then(Value::as_i64)
+                        .ok_or_else(|| message("Grafana org list entry is missing numeric id."))?;
+                    let org_client = build_http_client_for_org(&args.common, org_id)?;
+                    let records = build_export_records(&org_client)?;
+                    let scoped_output_dir = build_all_orgs_output_dir(&args.export_dir, &org);
+                    let datasources_path = scoped_output_dir.join(DATASOURCE_EXPORT_FILENAME);
+                    let index_path = scoped_output_dir.join("index.json");
+                    let metadata_path = scoped_output_dir.join(EXPORT_METADATA_FILENAME);
+                    if !args.dry_run {
+                        write_json_file(
+                            &datasources_path,
+                            &Value::Array(records.clone().into_iter().map(Value::Object).collect()),
+                            args.overwrite,
+                        )?;
+                        write_json_file(&index_path, &build_export_index(&records), args.overwrite)?;
+                        write_json_file(
+                            &metadata_path,
+                            &build_datasource_export_metadata(records.len()),
+                            args.overwrite,
+                        )?;
+                    }
+                    let summary_verb = if args.dry_run {
+                        "Would export"
+                    } else {
+                        "Exported"
+                    };
+                    println!(
+                        "{summary_verb} {} datasource(s). Datasources: {} Index: {} Manifest: {}",
+                        records.len(),
+                        datasources_path.display(),
+                        index_path.display(),
+                        metadata_path.display()
+                    );
+                    for item in build_export_index(&records)
+                        .get("items")
+                        .and_then(Value::as_array)
+                        .into_iter()
+                        .flatten()
+                    {
+                        if let Some(object) = item.as_object() {
+                            let mut entry = object.clone();
+                            entry.insert(
+                                "exportDir".to_string(),
+                                Value::String(scoped_output_dir.display().to_string()),
+                            );
+                            root_items.push(entry);
+                        }
+                    }
+                    total += records.len();
+                    org_count += 1;
+                }
+                if !args.dry_run {
+                    write_json_file(
+                        &args.export_dir.join("index.json"),
+                        &build_all_orgs_export_index(&root_items),
+                        args.overwrite,
+                    )?;
+                    write_json_file(
+                        &args.export_dir.join(EXPORT_METADATA_FILENAME),
+                        &build_all_orgs_export_metadata(org_count, total),
+                        args.overwrite,
+                    )?;
+                }
+                println!(
+                    "{} datasource(s) across {} exported org(s) under {}",
+                    total,
+                    org_count,
+                    args.export_dir.display()
+                );
+                return Ok(());
             }
-            let summary_verb = if args.dry_run {
-                "Would export"
-            } else {
-                "Exported"
-            };
-            println!(
-                "{summary_verb} {} datasource(s). Datasources: {} Index: {} Manifest: {}",
-                records.len(),
-                datasources_path.display(),
-                index_path.display(),
-                metadata_path.display()
-            );
+            let client = resolve_target_client(&args.common, args.org_id)?;
+            export_datasource_scope(&client, &args.export_dir, args.overwrite, args.dry_run)?;
             Ok(())
         }
         DatasourceGroupCommand::Import(args) => {
+            validate_import_org_auth(&args.common, &args)?;
             if args.table && !args.dry_run {
                 return Err(message(
                     "--table is only supported with --dry-run for datasource import.",
@@ -1991,211 +2971,17 @@ pub fn run_datasource_cli(command: DatasourceGroupCommand) -> Result<()> {
                     "--output-columns is only supported with --dry-run --table or table-like --output-format for datasource import.",
                 ));
             }
-            let replace_existing = args.replace_existing || args.update_existing_only;
-            let client = resolve_target_client(&args.common, args.org_id)?;
-            let (metadata, records) = load_import_records(&args.import_dir)?;
-            validate_matching_export_org(&client, &args, &args.import_dir, &metadata)?;
-            let live = list_datasources(&client)?;
-            let target_org = fetch_current_org(&client)?;
-            let target_org_id = target_org
-                .get("id")
-                .map(|value| value.to_string())
-                .unwrap_or_else(|| DEFAULT_ORG_ID.to_string());
-            let mode = if args.update_existing_only {
-                "update-or-skip-missing"
-            } else if args.replace_existing {
-                "create-or-update"
-            } else {
-                "create-only"
-            };
-            if !args.json {
-                println!("Import mode: {mode}");
-            }
-            let mut dry_run_rows = Vec::new();
-            let mut created = 0usize;
-            let mut updated = 0usize;
-            let mut skipped = 0usize;
-            let mut blocked = 0usize;
-            for (index, record) in records.iter().enumerate() {
-                let matching =
-                    resolve_match(record, &live, replace_existing, args.update_existing_only);
-                let file_ref = format!("{}#{}", metadata.datasources_file, index);
-                if args.dry_run {
-                    if args.table || args.json {
-                        dry_run_rows.push(vec![
-                            record.uid.clone(),
-                            record.name.clone(),
-                            record.datasource_type.clone(),
-                            matching.destination.to_string(),
-                            matching.action.to_string(),
-                            target_org_id.clone(),
-                            file_ref.clone(),
-                        ]);
-                    } else {
-                        println!(
-                            "Dry-run datasource uid={} name={} dest={} action={} file={}",
-                            record.uid,
-                            record.name,
-                            matching.destination,
-                            matching.action,
-                            file_ref
-                        );
-                    }
-                    match matching.action {
-                        "would-create" => created += 1,
-                        "would-update" => updated += 1,
-                        "would-skip-missing" => skipped += 1,
-                        _ => blocked += 1,
-                    }
-                    continue;
+            if args.use_export_org {
+                if !args.output_columns.is_empty() {
+                    return Err(message(
+                        "--output-columns is not supported with --use-export-org for datasource import.",
+                    ));
                 }
-                match matching.action {
-                    "would-create" => {
-                        client.request_json(
-                            Method::POST,
-                            "/api/datasources",
-                            &[],
-                            Some(&build_import_payload(record)),
-                        )?;
-                        created += 1;
-                    }
-                    "would-update" => {
-                        let target_id = matching.target_id.ok_or_else(|| {
-                            message(format!(
-                                "Matched datasource {} does not expose a usable numeric id for update.",
-                                matching.target_name
-                            ))
-                        })?;
-                        let payload = build_import_payload(record);
-                        client.request_json(
-                            Method::PUT,
-                            &format!("/api/datasources/{target_id}"),
-                            &[],
-                            Some(&payload),
-                        )?;
-                        updated += 1;
-                    }
-                    "would-skip-missing" => {
-                        skipped += 1;
-                    }
-                    _ => {
-                        return Err(message(format!(
-                            "Datasource import blocked for {}: destination={} action={}.",
-                            if record.uid.is_empty() {
-                                &record.name
-                            } else {
-                                &record.uid
-                            },
-                            matching.destination,
-                            matching.action
-                        )));
-                    }
-                }
-            }
-            if args.dry_run {
-                if args.json {
-                    let summary = Value::Object(Map::from_iter(vec![
-                        (
-                            "datasourceCount".to_string(),
-                            Value::Number((records.len() as i64).into()),
-                        ),
-                        (
-                            "wouldCreate".to_string(),
-                            Value::Number((created as i64).into()),
-                        ),
-                        (
-                            "wouldUpdate".to_string(),
-                            Value::Number((updated as i64).into()),
-                        ),
-                        (
-                            "wouldSkip".to_string(),
-                            Value::Number((skipped as i64).into()),
-                        ),
-                        (
-                            "wouldBlock".to_string(),
-                            Value::Number((blocked as i64).into()),
-                        ),
-                    ]));
-                    println!(
-                        "{}",
-                        serde_json::to_string_pretty(&Value::Object(Map::from_iter(vec![
-                            ("mode".to_string(), Value::String(mode.to_string())),
-                            (
-                                "sourceOrgId".to_string(),
-                                Value::String(
-                                    records
-                                        .iter()
-                                        .find(|item| !item.org_id.is_empty())
-                                        .map(|item| item.org_id.clone())
-                                        .unwrap_or_default(),
-                                ),
-                            ),
-                            ("targetOrgId".to_string(), Value::String(target_org_id)),
-                            (
-                                "datasources".to_string(),
-                                Value::Array(
-                                    dry_run_rows
-                                        .into_iter()
-                                        .map(|row| {
-                                            Value::Object(Map::from_iter(vec![
-                                                ("uid".to_string(), Value::String(row[0].clone())),
-                                                ("name".to_string(), Value::String(row[1].clone())),
-                                                ("type".to_string(), Value::String(row[2].clone())),
-                                                (
-                                                    "destination".to_string(),
-                                                    Value::String(row[3].clone()),
-                                                ),
-                                                (
-                                                    "action".to_string(),
-                                                    Value::String(row[4].clone()),
-                                                ),
-                                                (
-                                                    "orgId".to_string(),
-                                                    Value::String(row[5].clone()),
-                                                ),
-                                                ("file".to_string(), Value::String(row[6].clone())),
-                                            ]))
-                                        })
-                                        .collect(),
-                                ),
-                            ),
-                            ("summary".to_string(), summary),
-                        ])))?
-                    );
-                } else if args.table {
-                    for line in render_import_table(
-                        &dry_run_rows,
-                        !args.no_header,
-                        if args.output_columns.is_empty() {
-                            None
-                        } else {
-                            Some(args.output_columns.as_slice())
-                        },
-                    ) {
-                        println!("{line}");
-                    }
-                    println!(
-                        "Dry-run checked {} datasource(s) from {}",
-                        records.len(),
-                        args.import_dir.display()
-                    );
-                } else {
-                    println!(
-                        "Dry-run checked {} datasource(s) from {}",
-                        records.len(),
-                        args.import_dir.display()
-                    );
-                }
+                import_datasources_by_export_org(&args)?;
                 return Ok(());
             }
-            println!(
-                "Imported {} datasource(s) from {}; updated {}, skipped {}, blocked {}",
-                created + updated,
-                args.import_dir.display(),
-                updated,
-                skipped,
-                blocked
-            );
+            let client = resolve_target_client(&args.common, args.org_id)?;
+            import_datasources_with_client(&client, &args)?;
             Ok(())
         }
         DatasourceGroupCommand::Diff(args) => {

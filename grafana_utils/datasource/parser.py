@@ -123,6 +123,24 @@ def add_export_cli_args(parser):
         ),
     )
     parser.add_argument(
+        "--org-id",
+        default=None,
+        help=(
+            "Export datasource inventory from this explicit Grafana organization "
+            "ID instead of the current org context. API token auth is not "
+            "supported here; use Grafana username/password login."
+        ),
+    )
+    parser.add_argument(
+        "--all-orgs",
+        action="store_true",
+        help=(
+            "Export datasource inventory from every visible Grafana organization "
+            "into org-prefixed subdirectories. API token auth is not supported "
+            "here; use Grafana username/password login."
+        ),
+    )
+    parser.add_argument(
         "--overwrite",
         action="store_true",
         help="Replace existing export files in the target directory instead of failing.",
@@ -150,6 +168,35 @@ def add_import_cli_args(parser):
             "Import datasources into this explicit Grafana organization ID instead "
             "of the current org context. API token auth is not supported here; "
             "use Grafana username/password login."
+        ),
+    )
+    parser.add_argument(
+        "--use-export-org",
+        action="store_true",
+        help=(
+            "Route each exported datasource org back into Grafana using the "
+            "combined multi-org export root produced by datasource export "
+            "--all-orgs. API token auth is not supported here; use Grafana "
+            "username/password login."
+        ),
+    )
+    parser.add_argument(
+        "--only-org-id",
+        action="append",
+        default=None,
+        help=(
+            "With --use-export-org, only import datasource exports whose "
+            "recorded source orgId matches this value. Repeat the flag to "
+            "select multiple orgs."
+        ),
+    )
+    parser.add_argument(
+        "--create-missing-orgs",
+        action="store_true",
+        help=(
+            "With --use-export-org, create a missing destination Grafana org "
+            "from the exported org name before importing its datasource bundle. "
+            "With --dry-run this previews would-create-org without changing Grafana."
         ),
     )
     parser.add_argument(

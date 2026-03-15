@@ -14,6 +14,8 @@ CONTAINER_NAME="${GRAFANA_CONTAINER_NAME:-grafana-util-rust-live-$$}"
 WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/grafana-util-rust-live.XXXXXX")"
 DASHBOARD_EXPORT_DIR="${WORK_DIR}/dashboards"
 DASHBOARD_DRY_RUN_DIR="${WORK_DIR}/dashboards-dry-run"
+DATASOURCE_EXPORT_DIR="${WORK_DIR}/datasources"
+DATASOURCE_MULTI_ORG_EXPORT_DIR="${WORK_DIR}/datasources-all-orgs"
 ALERT_EXPORT_DIR="${WORK_DIR}/alerts"
 MULTI_ORG_EXPORT_DIR="${WORK_DIR}/dashboards-all-orgs"
 
@@ -85,6 +87,32 @@ wait_for_grafana() {
   done
 }
 
+check_requested_grafana_port() {
+  if [[ -z "${GRAFANA_PORT}" ]]; then
+    return
+  fi
+
+  if command -v lsof >/dev/null 2>&1; then
+    if lsof -nP -iTCP:"${GRAFANA_PORT}" -sTCP:LISTEN >/dev/null 2>&1; then
+      fail "GRAFANA_PORT ${GRAFANA_PORT} is already in use by another listening service"
+    fi
+    return
+  fi
+
+  if command -v ss >/dev/null 2>&1; then
+    if ss -ltn "sport = :${GRAFANA_PORT}" | tail -n +2 | grep -q .; then
+      fail "GRAFANA_PORT ${GRAFANA_PORT} is already in use by another listening service"
+    fi
+    return
+  fi
+
+  if command -v netstat >/dev/null 2>&1; then
+    if netstat -an | grep -E "[\\.:]${GRAFANA_PORT}[[:space:]].*LISTEN" >/dev/null 2>&1; then
+      fail "GRAFANA_PORT ${GRAFANA_PORT} is already in use by another listening service"
+    fi
+  fi
+}
+
 json_field() {
   local field="$1"
   jq -r --arg field "${field}" '.[$field] // empty'
@@ -140,6 +168,7 @@ start_grafana() {
   local publish_args=()
 
   if [[ -n "${GRAFANA_PORT}" ]]; then
+    check_requested_grafana_port
     publish_args=(-p "127.0.0.1:${GRAFANA_PORT}:3000")
   else
     publish_args=(-p "127.0.0.1::3000")
@@ -168,13 +197,21 @@ build_rust_bins() {
 }
 
 seed_datasource() {
-  api POST "/api/datasources" '{
-    "name": "Smoke Prometheus",
-    "type": "prometheus",
-    "access": "proxy",
-    "url": "http://prometheus.invalid",
-    "isDefault": true
-  }' >/dev/null
+  local org_id="${1:-}"
+  local name="${2:-Smoke Prometheus}"
+  local uid="${3:-smoke-prometheus}"
+  local api_runner="api"
+  if [[ -n "${org_id}" ]]; then
+    api_runner="api_org ${org_id}"
+  fi
+  ${api_runner} POST "/api/datasources" "{
+    \"uid\": \"${uid}\",
+    \"name\": \"${name}\",
+    \"type\": \"prometheus\",
+    \"access\": \"proxy\",
+    \"url\": \"http://prometheus.invalid\",
+    \"isDefault\": true
+  }" >/dev/null
 }
 
 seed_dashboard() {
@@ -267,6 +304,104 @@ alert_bin() {
   printf '%s\n' "${RUST_DIR}/target/debug/grafana-util"
 }
 
+datasource_bin() {
+  printf '%s\n' "${RUST_DIR}/target/debug/grafana-util"
+}
+
+run_datasource_smoke() {
+  local dry_run_log="${WORK_DIR}/datasource-import-dry-run.json"
+  local routed_dry_run_log="${WORK_DIR}/datasource-routed-import-dry-run.json"
+  local recreate_dry_run_log="${WORK_DIR}/datasource-routed-recreate-dry-run.json"
+  local org_two_id=""
+  local recreated_org_id=""
+
+  "$(datasource_bin)" datasource export \
+    --url "${GRAFANA_URL}" \
+    --token "${GRAFANA_API_TOKEN}" \
+    --export-dir "${DATASOURCE_EXPORT_DIR}" \
+    --overwrite >/dev/null
+
+  [[ -f "${DATASOURCE_EXPORT_DIR}/datasources.json" ]] || fail "datasource export did not write datasources.json"
+  [[ -f "${DATASOURCE_EXPORT_DIR}/index.json" ]] || fail "datasource export did not write index.json"
+  [[ -f "${DATASOURCE_EXPORT_DIR}/export-metadata.json" ]] || fail "datasource export did not write export-metadata.json"
+
+  "$(datasource_bin)" datasource import \
+    --url "${GRAFANA_URL}" \
+    --token "${GRAFANA_API_TOKEN}" \
+    --import-dir "${DATASOURCE_EXPORT_DIR}" \
+    --replace-existing \
+    --dry-run \
+    --json | tee "${dry_run_log}" >/dev/null
+
+  jq -e '.summary.wouldUpdate >= 1' "${dry_run_log}" >/dev/null \
+    || fail "datasource dry-run import did not predict an update"
+
+  org_two_id="$(create_org "Datasource Org Two")"
+  [[ -n "${org_two_id}" ]] || fail "failed to create datasource org two"
+  seed_datasource "${org_two_id}" "Org Two Prometheus" "org-two-prometheus"
+
+  "$(datasource_bin)" datasource export \
+    --url "${GRAFANA_URL}" \
+    --basic-user "${GRAFANA_USER}" \
+    --basic-password "${GRAFANA_PASSWORD}" \
+    --export-dir "${DATASOURCE_MULTI_ORG_EXPORT_DIR}" \
+    --overwrite \
+    --all-orgs >/dev/null
+
+  [[ -f "${DATASOURCE_MULTI_ORG_EXPORT_DIR}/index.json" ]] || fail "datasource multi-org export did not write root index"
+  [[ -f "${DATASOURCE_MULTI_ORG_EXPORT_DIR}/export-metadata.json" ]] || fail "datasource multi-org export did not write root metadata"
+  [[ -d "${DATASOURCE_MULTI_ORG_EXPORT_DIR}/org_1_Main_Org" ]] || fail "datasource multi-org export did not include main org bundle"
+  [[ -d "${DATASOURCE_MULTI_ORG_EXPORT_DIR}/org_${org_two_id}_Datasource_Org_Two" ]] || fail "datasource multi-org export did not include org two bundle"
+
+  "$(datasource_bin)" datasource import \
+    --url "${GRAFANA_URL}" \
+    --basic-user "${GRAFANA_USER}" \
+    --basic-password "${GRAFANA_PASSWORD}" \
+    --import-dir "${DATASOURCE_MULTI_ORG_EXPORT_DIR}" \
+    --use-export-org \
+    --only-org-id "${org_two_id}" \
+    --replace-existing \
+    --dry-run \
+    --json | tee "${routed_dry_run_log}" >/dev/null
+
+  jq -e '.orgs | any(.orgAction == "exists")' "${routed_dry_run_log}" >/dev/null \
+    || fail "datasource routed dry-run did not report an existing org"
+  jq -e '.imports | any(.datasources[]?.uid == "org-two-prometheus")' "${routed_dry_run_log}" >/dev/null \
+    || fail "datasource routed dry-run did not preview the selected org datasource"
+
+  delete_org "${org_two_id}"
+
+  "$(datasource_bin)" datasource import \
+    --url "${GRAFANA_URL}" \
+    --basic-user "${GRAFANA_USER}" \
+    --basic-password "${GRAFANA_PASSWORD}" \
+    --import-dir "${DATASOURCE_MULTI_ORG_EXPORT_DIR}" \
+    --use-export-org \
+    --only-org-id "${org_two_id}" \
+    --replace-existing \
+    --create-missing-orgs \
+    --dry-run \
+    --json | tee "${recreate_dry_run_log}" >/dev/null
+
+  jq -e '.orgs | any(.orgAction == "would-create")' "${recreate_dry_run_log}" >/dev/null \
+    || fail "datasource routed dry-run did not preview missing-org creation"
+
+  "$(datasource_bin)" datasource import \
+    --url "${GRAFANA_URL}" \
+    --basic-user "${GRAFANA_USER}" \
+    --basic-password "${GRAFANA_PASSWORD}" \
+    --import-dir "${DATASOURCE_MULTI_ORG_EXPORT_DIR}" \
+    --use-export-org \
+    --only-org-id "${org_two_id}" \
+    --replace-existing \
+    --create-missing-orgs >/dev/null
+
+  recreated_org_id="$(find_org_id_by_name "Datasource Org Two")"
+  [[ -n "${recreated_org_id}" ]] || fail "datasource routed import did not recreate org two"
+  api_org "${recreated_org_id}" GET "/api/datasources" | jq -e '.[] | select(.uid == "org-two-prometheus")' >/dev/null \
+    || fail "datasource routed import did not restore the org-two datasource"
+}
+
 run_dashboard_smoke() {
   local diff_log="${WORK_DIR}/dashboard-diff.log"
   local dry_run_log="${WORK_DIR}/dashboard-import-dry-run.log"
@@ -289,8 +424,10 @@ run_dashboard_smoke() {
 
   prompt_file="$(find "${DASHBOARD_EXPORT_DIR}/prompt" -type f -name '*.json' ! -name 'index.json' ! -name 'export-metadata.json' | head -n 1)"
   [[ -n "${prompt_file}" ]] || fail "dashboard prompt export did not produce a dashboard file"
-  grep -q '"__inputs"' "${prompt_file}" || fail "dashboard prompt export did not include __inputs"
-  grep -q 'DS_PROMETHEUS_' "${prompt_file}" || fail "dashboard prompt export did not rewrite datasource inputs"
+  jq -e '.__inputs | length > 0' "${prompt_file}" >/dev/null \
+    || fail "dashboard prompt export did not include __inputs"
+  jq -e '.__inputs | map(.name) | any(startswith("DS_PROMETHEUS"))' "${prompt_file}" >/dev/null \
+    || fail "dashboard prompt export did not rewrite datasource inputs"
 
   "$(dashboard_bin)" diff \
     --url "${GRAFANA_URL}" \
@@ -357,9 +494,12 @@ run_dashboard_smoke() {
     --import-dir "${MULTI_ORG_EXPORT_DIR}" \
     --use-export-org \
     --only-org-id "${multi_org_org_two_id}" \
-    --dry-run | tee "${routed_dry_run_log}" >/dev/null
-  grep -q "orgAction=exists" "${routed_dry_run_log}" || fail "routed dashboard dry-run did not report an existing org"
-  grep -q "org-two-smoke-dashboard" "${routed_dry_run_log}" || fail "routed dashboard dry-run did not preview the selected org dashboard"
+    --dry-run \
+    --json | tee "${routed_dry_run_log}" >/dev/null
+  jq -e '.orgs | any(.orgAction == "exists")' "${routed_dry_run_log}" >/dev/null \
+    || fail "routed dashboard dry-run did not report an existing org"
+  jq -e '.imports | any(.dashboards[]?.uid == "org-two-smoke-dashboard")' "${routed_dry_run_log}" >/dev/null \
+    || fail "routed dashboard dry-run did not preview the selected org dashboard"
 
   delete_org "${multi_org_org_two_id}"
 
@@ -371,8 +511,10 @@ run_dashboard_smoke() {
     --use-export-org \
     --only-org-id "${multi_org_org_two_id}" \
     --create-missing-orgs \
-    --dry-run | tee "${recreate_dry_run_log}" >/dev/null
-  grep -q "orgAction=would-create" "${recreate_dry_run_log}" || fail "routed dashboard dry-run did not preview missing-org creation"
+    --dry-run \
+    --json | tee "${recreate_dry_run_log}" >/dev/null
+  jq -e '.orgs | any(.orgAction == "would-create")' "${recreate_dry_run_log}" >/dev/null \
+    || fail "routed dashboard dry-run did not preview missing-org creation"
 
   "$(dashboard_bin)" import \
     --url "${GRAFANA_URL}" \
@@ -395,6 +537,7 @@ run_alert_smoke() {
   local contact_file
 
   "$(alert_bin)" \
+    alert export \
     --url "${GRAFANA_URL}" \
     --token "${GRAFANA_API_TOKEN}" \
     --output-dir "${ALERT_EXPORT_DIR}" \
@@ -406,6 +549,7 @@ run_alert_smoke() {
   [[ -n "${contact_file}" ]] || fail "alert export did not write the seeded contact point"
 
   "$(alert_bin)" \
+    alert diff \
     --url "${GRAFANA_URL}" \
     --token "${GRAFANA_API_TOKEN}" \
     --diff-dir "${ALERT_EXPORT_DIR}/raw" >/dev/null
@@ -413,6 +557,7 @@ run_alert_smoke() {
   rewrite_contact_point_url "${contact_file}" "http://127.0.0.1/updated"
 
   if "$(alert_bin)" \
+    alert diff \
     --url "${GRAFANA_URL}" \
     --token "${GRAFANA_API_TOKEN}" \
     --diff-dir "${ALERT_EXPORT_DIR}/raw" >"${diff_log}" 2>&1; then
@@ -421,6 +566,7 @@ run_alert_smoke() {
   grep -q 'Diff different' "${diff_log}" || fail "alert diff did not report a changed resource"
 
   "$(alert_bin)" \
+    alert import \
     --url "${GRAFANA_URL}" \
     --token "${GRAFANA_API_TOKEN}" \
     --import-dir "${ALERT_EXPORT_DIR}/raw" \
@@ -429,12 +575,14 @@ run_alert_smoke() {
   grep -q 'action=would-update' "${dry_run_log}" || fail "alert dry-run import did not predict an update"
 
   "$(alert_bin)" \
+    alert import \
     --url "${GRAFANA_URL}" \
     --token "${GRAFANA_API_TOKEN}" \
     --import-dir "${ALERT_EXPORT_DIR}/raw" \
     --replace-existing >/dev/null
 
   "$(alert_bin)" \
+    alert diff \
     --url "${GRAFANA_URL}" \
     --token "${GRAFANA_API_TOKEN}" \
     --diff-dir "${ALERT_EXPORT_DIR}/raw" >/dev/null
@@ -453,6 +601,7 @@ main() {
   create_api_token
   run_dashboard_smoke
   run_alert_smoke
+  run_datasource_smoke
   printf 'Rust live Grafana smoke test passed against %s using %s\n' "${GRAFANA_URL}" "${GRAFANA_IMAGE}"
 }
 

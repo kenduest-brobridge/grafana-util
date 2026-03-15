@@ -21,11 +21,21 @@ datasource_cli = importlib.import_module("grafana_utils.datasource_cli")
 
 
 class FakeDatasourceClient(object):
-    def __init__(self, datasources=None, org=None, headers=None, org_clients=None):
+    def __init__(
+        self,
+        datasources=None,
+        org=None,
+        headers=None,
+        org_clients=None,
+        orgs=None,
+        created_orgs=None,
+    ):
         self._datasources = list(datasources or [])
         self._org = dict(org or {"id": 1, "name": "Main Org."})
         self.headers = dict(headers or {"Authorization": "Basic test"})
         self._org_clients = dict(org_clients or {})
+        self._orgs = list(orgs or [self._org])
+        self.created_orgs = created_orgs if created_orgs is not None else []
         self.imported_payloads = []
         self.deleted_paths = []
 
@@ -41,6 +51,12 @@ class FakeDatasourceClient(object):
             raise AssertionError("Unexpected org id %s" % key)
         return self._org_clients[key]
 
+    def list_orgs(self):
+        return [dict(item) for item in self._orgs]
+
+    def create_organization(self, payload):
+        return self.request_json("/api/orgs", method="POST", payload=payload)
+
     def request_json(self, path, params=None, method="GET", payload=None):
         if path == "/api/datasources" and method == "GET":
             return list(self._datasources)
@@ -53,6 +69,14 @@ class FakeDatasourceClient(object):
             raise error_type(404, path, '{"message":"not found"}')
         if path == "/api/org":
             return dict(self._org)
+        if path == "/api/orgs" and method == "GET":
+            return [dict(item) for item in self._orgs]
+        if path == "/api/orgs" and method == "POST":
+            next_id = str(len(self._orgs) + 1)
+            org = {"id": next_id, "name": payload.get("name") or ""}
+            self._orgs.append(org)
+            self.created_orgs.append(dict(org))
+            return {"orgId": next_id}
         if method in ("POST", "PUT"):
             self.imported_payloads.append(
                 {
@@ -72,6 +96,36 @@ class FakeDatasourceClient(object):
 class DatasourceCliTests(unittest.TestCase):
     def _load_contract_cases(self):
         return json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
+
+    def _write_datasource_bundle(self, import_dir, records, metadata=None, index=None):
+        if metadata is None:
+            metadata = {
+                "kind": datasource_cli.ROOT_INDEX_KIND,
+                "schemaVersion": datasource_cli.TOOL_SCHEMA_VERSION,
+                "variant": "root",
+                "resource": "datasource",
+                "datasourceCount": len(records),
+                "datasourcesFile": datasource_cli.DATASOURCE_EXPORT_FILENAME,
+                "indexFile": "index.json",
+                "format": "grafana-datasource-inventory-v1",
+            }
+        if index is None:
+            index = datasource_cli.build_export_index(
+                records,
+                datasource_cli.DATASOURCE_EXPORT_FILENAME,
+            )
+        (import_dir / datasource_cli.EXPORT_METADATA_FILENAME).write_text(
+            json.dumps(metadata, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        (import_dir / datasource_cli.DATASOURCE_EXPORT_FILENAME).write_text(
+            json.dumps(records, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        (import_dir / "index.json").write_text(
+            json.dumps(index, indent=2) + "\n",
+            encoding="utf-8",
+        )
 
     def test_datasource_module_parses_as_python39_syntax(self):
         source = MODULE_PATH.read_text(encoding="utf-8")
@@ -109,6 +163,15 @@ class DatasourceCliTests(unittest.TestCase):
         self.assertEqual(args.export_dir, "./datasources")
         self.assertTrue(args.overwrite)
         self.assertFalse(args.dry_run)
+
+    def test_parse_args_supports_export_org_scoping(self):
+        org_args = datasource_cli.parse_args(["export", "--org-id", "7"])
+        all_args = datasource_cli.parse_args(["export", "--all-orgs"])
+
+        self.assertEqual(org_args.org_id, "7")
+        self.assertFalse(org_args.all_orgs)
+        self.assertIsNone(all_args.org_id)
+        self.assertTrue(all_args.all_orgs)
 
     def test_parse_args_supports_import_mode(self):
         args = datasource_cli.parse_args(
@@ -265,6 +328,25 @@ class DatasourceCliTests(unittest.TestCase):
         self.assertEqual(args.org_id, "7")
         self.assertTrue(args.require_matching_export_org)
 
+    def test_parse_args_supports_import_org_routing_flags(self):
+        args = datasource_cli.parse_args(
+            [
+                "import",
+                "--import-dir",
+                "./datasources",
+                "--use-export-org",
+                "--only-org-id",
+                "2",
+                "--only-org-id",
+                "5",
+                "--create-missing-orgs",
+            ]
+        )
+
+        self.assertTrue(args.use_export_org)
+        self.assertEqual(args.only_org_id, ["2", "5"])
+        self.assertTrue(args.create_missing_orgs)
+
     def test_parse_args_supports_diff_mode(self):
         args = datasource_cli.parse_args(
             ["diff", "--diff-dir", "./datasources", "--url", "http://127.0.0.1:3000"]
@@ -306,6 +388,47 @@ class DatasourceCliTests(unittest.TestCase):
                 ]
             )
 
+    def test_parse_args_rejects_export_all_orgs_with_org_id(self):
+        with self.assertRaises(SystemExit):
+            datasource_cli.parse_args(["export", "--org-id", "7", "--all-orgs"])
+
+    def test_parse_args_rejects_only_org_id_without_use_export_org(self):
+        with self.assertRaises(SystemExit):
+            datasource_cli.parse_args(
+                ["import", "--import-dir", "./datasources", "--only-org-id", "7"]
+            )
+
+    def test_parse_args_rejects_create_missing_orgs_without_use_export_org(self):
+        with self.assertRaises(SystemExit):
+            datasource_cli.parse_args(
+                ["import", "--import-dir", "./datasources", "--create-missing-orgs"]
+            )
+
+    def test_parse_args_rejects_use_export_org_with_org_id(self):
+        with self.assertRaises(SystemExit):
+            datasource_cli.parse_args(
+                [
+                    "import",
+                    "--import-dir",
+                    "./datasources",
+                    "--use-export-org",
+                    "--org-id",
+                    "7",
+                ]
+            )
+
+    def test_parse_args_rejects_use_export_org_with_require_matching_export_org(self):
+        with self.assertRaises(SystemExit):
+            datasource_cli.parse_args(
+                [
+                    "import",
+                    "--import-dir",
+                    "./datasources",
+                    "--use-export-org",
+                    "--require-matching-export-org",
+                ]
+            )
+
     def test_parse_args_rejects_live_mutation_output_format_with_legacy_flags(self):
         with self.assertRaises(SystemExit):
             datasource_cli.parse_args(
@@ -344,6 +467,9 @@ class DatasourceCliTests(unittest.TestCase):
         help_text = stream.getvalue()
         self.assertIn("--import-dir", help_text)
         self.assertIn("--org-id", help_text)
+        self.assertIn("--use-export-org", help_text)
+        self.assertIn("--only-org-id", help_text)
+        self.assertIn("--create-missing-orgs", help_text)
         self.assertIn("--require-matching-export-org", help_text)
         self.assertIn("--replace-existing", help_text)
         self.assertIn("--update-existing-only", help_text)
@@ -1001,6 +1127,103 @@ class DatasourceCliTests(unittest.TestCase):
                 datasource_cli.DATASOURCE_EXPORT_FILENAME,
             )
 
+    def test_export_datasources_uses_org_scoped_client(self):
+        scoped_client = FakeDatasourceClient(
+            datasources=[
+                {
+                    "uid": "prom_org7",
+                    "name": "Prometheus Org Seven",
+                    "type": "prometheus",
+                    "access": "proxy",
+                    "url": "http://prometheus-7:9090",
+                    "isDefault": True,
+                }
+            ],
+            org={"id": 7, "name": "Observability"},
+            headers={"Authorization": "Basic scoped"},
+        )
+        client = FakeDatasourceClient(
+            datasources=[],
+            headers={"Authorization": "Basic root"},
+            org_clients={"7": scoped_client},
+        )
+        args = datasource_cli.parse_args(
+            ["export", "--export-dir", "ignored", "--org-id", "7"]
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args.export_dir = tmpdir
+            with mock.patch.object(datasource_cli, "build_client", return_value=client):
+                stdout = io.StringIO()
+                with redirect_stdout(stdout):
+                    result = datasource_cli.export_datasources(args)
+
+            self.assertEqual(result, 0)
+            self.assertIn("Exported 1 datasource(s).", stdout.getvalue())
+            datasources_document = json.loads(
+                (Path(tmpdir) / datasource_cli.DATASOURCE_EXPORT_FILENAME).read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(datasources_document[0]["orgId"], "7")
+            self.assertEqual(datasources_document[0]["org"], "Observability")
+
+    def test_export_datasources_with_all_orgs_writes_org_prefixed_dirs(self):
+        org_one_client = FakeDatasourceClient(
+            datasources=[
+                {
+                    "uid": "prom_org1",
+                    "name": "Prometheus Main",
+                    "type": "prometheus",
+                    "access": "proxy",
+                    "url": "http://prometheus-1:9090",
+                    "isDefault": True,
+                }
+            ],
+            org={"id": 1, "name": "Main Org."},
+            headers={"Authorization": "Basic org1"},
+        )
+        org_two_client = FakeDatasourceClient(
+            datasources=[
+                {
+                    "uid": "loki_org2",
+                    "name": "Loki Org Two",
+                    "type": "loki",
+                    "access": "proxy",
+                    "url": "http://loki-2:3100",
+                    "isDefault": False,
+                }
+            ],
+            org={"id": 2, "name": "Org Two"},
+            headers={"Authorization": "Basic org2"},
+        )
+        client = FakeDatasourceClient(
+            datasources=[],
+            headers={"Authorization": "Basic root"},
+            orgs=[{"id": 1, "name": "Main Org."}, {"id": 2, "name": "Org Two"}],
+            org_clients={"1": org_one_client, "2": org_two_client},
+        )
+        args = datasource_cli.parse_args(
+            ["export", "--export-dir", "ignored", "--all-orgs"]
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args.export_dir = tmpdir
+            with mock.patch.object(datasource_cli, "build_client", return_value=client):
+                stdout = io.StringIO()
+                with redirect_stdout(stdout):
+                    result = datasource_cli.export_datasources(args)
+
+            self.assertEqual(result, 0)
+            self.assertIn("across 2 org(s)", stdout.getvalue())
+            org_one_dir = Path(tmpdir) / "org_1_Main_Org"
+            org_two_dir = Path(tmpdir) / "org_2_Org_Two"
+            self.assertTrue((org_one_dir / datasource_cli.DATASOURCE_EXPORT_FILENAME).exists())
+            self.assertTrue((org_two_dir / datasource_cli.DATASOURCE_EXPORT_FILENAME).exists())
+            root_index = json.loads((Path(tmpdir) / "index.json").read_text(encoding="utf-8"))
+            self.assertEqual(root_index["variant"], "all-orgs-root")
+            self.assertEqual(root_index["count"], 2)
+
     def test_normalize_datasource_record_matches_shared_contract_fixtures(self):
         for case in self._load_contract_cases():
             with self.subTest(case=case["name"]):
@@ -1279,6 +1502,191 @@ class DatasourceCliTests(unittest.TestCase):
             self.assertEqual(client.imported_payloads, [])
             self.assertEqual(scoped_client.imported_payloads, [])
             self.assertIn("Import mode: create-only", stdout.getvalue())
+
+    def test_import_datasources_with_use_export_org_filters_selected_orgs(self):
+        org_two_client = FakeDatasourceClient(
+            datasources=[],
+            org={"id": 2, "name": "Org Two"},
+            headers={"Authorization": "Basic org2"},
+        )
+        client = FakeDatasourceClient(
+            datasources=[],
+            headers={"Authorization": "Basic root"},
+            orgs=[{"id": 1, "name": "Main Org."}, {"id": 2, "name": "Org Two"}],
+            org_clients={"2": org_two_client},
+        )
+        args = datasource_cli.parse_args(
+            [
+                "import",
+                "--import-dir",
+                "ignored",
+                "--use-export-org",
+                "--only-org-id",
+                "2",
+                "--dry-run",
+                "--json",
+            ]
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args.import_dir = tmpdir
+            org_one_dir = Path(tmpdir) / "org_1_Main_Org"
+            org_two_dir = Path(tmpdir) / "org_2_Org_Two"
+            org_one_dir.mkdir(parents=True)
+            org_two_dir.mkdir(parents=True)
+            self._write_datasource_bundle(
+                org_one_dir,
+                [
+                    {
+                        "uid": "prom_org1",
+                        "name": "Prometheus Org One",
+                        "type": "prometheus",
+                        "access": "proxy",
+                        "url": "http://prometheus-1:9090",
+                        "isDefault": "true",
+                        "org": "Main Org.",
+                        "orgId": "1",
+                    }
+                ],
+            )
+            self._write_datasource_bundle(
+                org_two_dir,
+                [
+                    {
+                        "uid": "prom_org2",
+                        "name": "Prometheus Org Two",
+                        "type": "prometheus",
+                        "access": "proxy",
+                        "url": "http://prometheus-2:9090",
+                        "isDefault": "true",
+                        "org": "Org Two",
+                        "orgId": "2",
+                    }
+                ],
+            )
+
+            with mock.patch.object(datasource_cli, "build_client", return_value=client):
+                stdout = io.StringIO()
+                with redirect_stdout(stdout):
+                    result = datasource_cli.import_datasources(args)
+
+            self.assertEqual(result, 0)
+            payload = json.loads(stdout.getvalue())
+            self.assertEqual(payload["mode"], "routed-import-preview")
+            self.assertEqual(len(payload["orgs"]), 1)
+            self.assertEqual(payload["orgs"][0]["sourceOrgId"], "2")
+            self.assertEqual(payload["orgs"][0]["orgAction"], "exists")
+            self.assertEqual(payload["imports"][0]["summary"]["datasourceCount"], 1)
+
+    def test_import_datasources_with_use_export_org_dry_run_previews_missing_org(self):
+        client = FakeDatasourceClient(
+            datasources=[],
+            headers={"Authorization": "Basic root"},
+            orgs=[{"id": 1, "name": "Main Org."}],
+            org_clients={},
+        )
+        args = datasource_cli.parse_args(
+            [
+                "import",
+                "--import-dir",
+                "ignored",
+                "--use-export-org",
+                "--only-org-id",
+                "2",
+                "--create-missing-orgs",
+                "--dry-run",
+                "--table",
+            ]
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args.import_dir = tmpdir
+            org_two_dir = Path(tmpdir) / "org_2_Org_Two"
+            org_two_dir.mkdir(parents=True)
+            self._write_datasource_bundle(
+                org_two_dir,
+                [
+                    {
+                        "uid": "prom_org2",
+                        "name": "Prometheus Org Two",
+                        "type": "prometheus",
+                        "access": "proxy",
+                        "url": "http://prometheus-2:9090",
+                        "isDefault": "true",
+                        "org": "Org Two",
+                        "orgId": "2",
+                    }
+                ],
+            )
+
+            with mock.patch.object(datasource_cli, "build_client", return_value=client):
+                stdout = io.StringIO()
+                with redirect_stdout(stdout):
+                    result = datasource_cli.import_datasources(args)
+
+            self.assertEqual(result, 0)
+            output = stdout.getvalue()
+            self.assertIn("SOURCE_ORG_ID", output)
+            self.assertIn("would-create-org", output)
+            self.assertIn("<new>", output)
+
+    def test_import_datasources_with_use_export_org_creates_missing_orgs(self):
+        org_two_client = FakeDatasourceClient(
+            datasources=[],
+            org={"id": 2, "name": "Org Two"},
+            headers={"Authorization": "Basic org2"},
+        )
+        client = FakeDatasourceClient(
+            datasources=[],
+            headers={"Authorization": "Basic root"},
+            orgs=[{"id": 1, "name": "Main Org."}],
+            org_clients={"2": org_two_client},
+            created_orgs=[],
+        )
+        args = datasource_cli.parse_args(
+            [
+                "import",
+                "--import-dir",
+                "ignored",
+                "--use-export-org",
+                "--create-missing-orgs",
+                "--replace-existing",
+            ]
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args.import_dir = tmpdir
+            org_two_dir = Path(tmpdir) / "org_9_Org_Two"
+            org_two_dir.mkdir(parents=True)
+            self._write_datasource_bundle(
+                org_two_dir,
+                [
+                    {
+                        "uid": "prom_org2",
+                        "name": "Prometheus Org Two",
+                        "type": "prometheus",
+                        "access": "proxy",
+                        "url": "http://prometheus-2:9090",
+                        "isDefault": "true",
+                        "org": "Org Two",
+                        "orgId": "9",
+                    }
+                ],
+            )
+
+            with mock.patch.object(datasource_cli, "build_client", return_value=client):
+                stdout = io.StringIO()
+                with redirect_stdout(stdout):
+                    result = datasource_cli.import_datasources(args)
+
+            self.assertEqual(result, 0)
+            self.assertEqual(client.created_orgs, [{"id": "2", "name": "Org Two"}])
+            self.assertEqual(len(org_two_client.imported_payloads), 1)
+            self.assertEqual(org_two_client.imported_payloads[0]["method"], "POST")
+            self.assertIn(
+                "Created destination org from export orgId=9 name=Org Two -> targetOrgId=2",
+                stdout.getvalue(),
+            )
 
     def test_import_datasources_rejects_name_match_with_different_uid(self):
         args = datasource_cli.parse_args(

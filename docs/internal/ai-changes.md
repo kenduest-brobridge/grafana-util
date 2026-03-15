@@ -5,6 +5,14 @@ Historical note:
 - Older entries preserve the reasoning and follow-up state as of the entry date.
 - Active backlog now lives in `TODO.md`, while completed or superseded TODO items moved to `docs/internal/todo-archive.md`.
 
+## 2026-03-15 - Add Python Datasource Org-Scoped Export And Routed Import
+- Summary: Extended the Python datasource CLI so export and import now understand explicit-org and multi-org routing workflows instead of staying current-org-only. Python datasource export now supports Basic-auth-only `--org-id` and `--all-orgs`, with multi-org exports written into `org_<id>_<name>/` subdirectories plus an aggregate root manifest. Python datasource import now supports Basic-auth-only `--use-export-org`, repeatable `--only-org-id`, and `--create-missing-orgs`, including dry-run org preview for `missing-org` and `would-create-org`.
+- Tests: Added focused Python parser/help/runtime coverage for datasource export `--org-id`, datasource export `--all-orgs`, routed datasource import selection, routed dry-run org preview, live missing-org creation, and incompatible flag combinations.
+- Test Run: `python3 -m unittest -v tests/test_python_datasource_cli.py`
+- Validation: Confirmed the Python datasource suite passes and confirmed multi-org export writes org-prefixed subdirectories, explicit `--org-id` export scopes through the selected client, routed import filters selected source orgs, dry-run routed import emits org-level preview state, and live `--create-missing-orgs` remaps replay into the created destination org.
+- Impact: `grafana_utils/datasource/parser.py`, `grafana_utils/datasource_cli.py`, `grafana_utils/datasource/workflows.py`, `tests/test_python_datasource_cli.py`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Moderate. Routed datasource import now depends on org enumeration, combined export-root layout, and optional destination-org creation semantics; the main remaining risk is live Grafana variance around server-admin org APIs, which this Python-only change does not verify against a real instance in this worker turn.
+
 ## 2026-03-15 - Add Routed Dashboard Import Live Smoke Coverage
 - Summary: Extended the Rust Docker-backed Grafana smoke script so it now exercises routed dashboard import from a combined multi-org export root in addition to the existing single-org dashboard checks. The script now creates a second org and dashboard, exports dashboards with `--all-orgs`, verifies routed `--use-export-org --only-org-id` dry-run preview, verifies routed `--create-missing-orgs --dry-run` reports a would-create org state after deleting the org, and verifies live routed import recreates the org and restores its dashboard.
 - Tests: Updated the Rust live smoke script coverage and maintainer notes for the new routed dashboard import path.

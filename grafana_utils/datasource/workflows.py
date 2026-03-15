@@ -1,9 +1,12 @@
 """Workflow and helper logic for the Python datasource CLI."""
 
+import argparse
 import csv
 import difflib
 import json
 import sys
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
 from typing import Any, Optional
 from urllib import parse
@@ -35,6 +38,7 @@ from .live_mutation_safe import (
     add_datasource as add_live_datasource,
     delete_datasource as delete_live_datasource,
 )
+from ..dashboards.output_support import sanitize_path_component
 from .parser import (
     DATASOURCE_EXPORT_FILENAME,
     EXPORT_METADATA_FILENAME,
@@ -81,12 +85,41 @@ def build_export_metadata(datasource_count, datasources_file):
     }
 
 
+def build_all_orgs_export_index(items):
+    return {
+        "kind": ROOT_INDEX_KIND,
+        "schemaVersion": TOOL_SCHEMA_VERSION,
+        "variant": "all-orgs-root",
+        "count": len(items),
+        "items": items,
+    }
+
+
+def build_all_orgs_export_metadata(org_count, datasource_count):
+    return {
+        "schemaVersion": TOOL_SCHEMA_VERSION,
+        "kind": ROOT_INDEX_KIND,
+        "variant": "all-orgs-root",
+        "resource": "datasource",
+        "orgCount": org_count,
+        "datasourceCount": datasource_count,
+        "indexFile": "index.json",
+        "format": "grafana-datasource-inventory-v1",
+    }
+
+
 def build_export_records(client):
     org = client.fetch_current_org()
     return [
         build_datasource_inventory_record(item, org)
         for item in client.list_datasources()
     ]
+
+
+def build_all_orgs_output_dir(output_dir, org):
+    org_id = sanitize_path_component(str(org.get("id") or "unknown"))
+    org_name = sanitize_path_component(str(org.get("name") or "org"))
+    return output_dir / ("org_%s_%s" % (org_id, org_name))
 
 
 def fetch_datasource_by_uid_if_exists(client, uid):
@@ -256,6 +289,101 @@ def resolve_export_org_id(bundle):
             % ", ".join(sorted(org_ids))
         )
     return list(org_ids)[0]
+
+
+def resolve_export_org_name(bundle):
+    org_names = set()
+    index_document = bundle.get("index")
+    if isinstance(index_document, dict):
+        for item in index_document.get("items") or []:
+            if isinstance(item, dict):
+                org_name = str(item.get("org") or "").strip()
+                if org_name:
+                    org_names.add(org_name)
+    for record in bundle.get("records") or []:
+        org_name = str(record.get("org") or "").strip()
+        if org_name:
+            org_names.add(org_name)
+    if not org_names:
+        return None
+    if len(org_names) > 1:
+        raise GrafanaError(
+            "Datasource export metadata spans multiple org names (%s). Point "
+            "--import-dir at one org-specific export."
+            % ", ".join(sorted(org_names))
+        )
+    return list(org_names)[0]
+
+
+def _normalize_org_id(org):
+    if not isinstance(org, dict):
+        return None
+    value = org.get("id")
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _clone_import_args(args, **overrides):
+    values = dict(vars(args))
+    values.update(overrides)
+    return argparse.Namespace(**values)
+
+
+def _resolve_existing_orgs_by_id(client):
+    orgs_by_id = {}
+    for item in client.list_orgs():
+        org_id = _normalize_org_id(item)
+        if org_id:
+            orgs_by_id[org_id] = dict(item)
+    return orgs_by_id
+
+
+def _resolve_created_org_id(created_payload):
+    if not isinstance(created_payload, dict):
+        return None
+    org_id = created_payload.get("orgId")
+    if org_id is None:
+        org_id = created_payload.get("id")
+    if org_id is None:
+        return None
+    text = str(org_id).strip()
+    return text or None
+
+
+def create_organization(client, name):
+    return client.create_organization({"name": name})
+
+
+def _discover_org_export_dirs(import_dir):
+    if not import_dir.exists():
+        raise GrafanaError("Import directory does not exist: %s" % import_dir)
+    if not import_dir.is_dir():
+        raise GrafanaError("Import path is not a directory: %s" % import_dir)
+    org_dirs = []
+    for child in sorted(import_dir.iterdir(), key=lambda item: item.name):
+        if not child.is_dir():
+            continue
+        if not child.name.startswith("org_"):
+            continue
+        metadata_path = child / EXPORT_METADATA_FILENAME
+        datasources_path = child / DATASOURCE_EXPORT_FILENAME
+        index_path = child / "index.json"
+        if metadata_path.is_file() and datasources_path.is_file() and index_path.is_file():
+            org_dirs.append(child)
+    if org_dirs:
+        return org_dirs
+    if (import_dir / DATASOURCE_EXPORT_FILENAME).is_file():
+        raise GrafanaError(
+            "Datasource import with --use-export-org expects the combined export root, "
+            "not one org-specific datasource export directory."
+        )
+    raise GrafanaError(
+        "Datasource import with --use-export-org could not find any org-prefixed "
+        "datasource export directories under %s."
+        % import_dir
+    )
 
 
 def build_effective_import_client(args, client):
@@ -886,37 +1014,124 @@ def list_datasources(args):
 
 def export_datasources(args):
     client = build_client(args)
-    records = build_export_records(client)
-    output_dir = Path(args.export_dir)
-    datasources_path = output_dir / DATASOURCE_EXPORT_FILENAME
-    index_path = output_dir / "index.json"
-    metadata_path = output_dir / EXPORT_METADATA_FILENAME
-
-    existing_paths = [path for path in [datasources_path, index_path, metadata_path] if path.exists()]
-    if existing_paths and not args.overwrite:
+    auth_header = client.headers.get("Authorization", "")
+    all_orgs = bool(getattr(args, "all_orgs", False))
+    org_id = getattr(args, "org_id", None)
+    if (all_orgs or org_id) and not auth_header.startswith("Basic "):
         raise GrafanaError(
-            "Refusing to overwrite existing file: %s. Use --overwrite."
-            % existing_paths[0]
+            "Datasource org switching does not support API token auth. Use Grafana "
+            "username/password login with --basic-user and --basic-password."
         )
 
-    index_document = build_export_index(records, DATASOURCE_EXPORT_FILENAME)
-    metadata_document = build_export_metadata(
-        datasource_count=len(records),
-        datasources_file=DATASOURCE_EXPORT_FILENAME,
-    )
+    output_dir = Path(args.export_dir)
+    clients = []
+    if all_orgs:
+        for org in client.list_orgs():
+            scoped_org_id = _normalize_org_id(org)
+            if scoped_org_id:
+                clients.append((dict(org), client.with_org_id(scoped_org_id)))
+    elif org_id:
+        scoped_client = client.with_org_id(str(org_id))
+        clients.append((scoped_client.fetch_current_org(), scoped_client))
+    else:
+        clients.append((client.fetch_current_org(), client))
+
+    total_count = 0
+    index_items = []
+    export_targets = []
+    for org, scoped_client in clients:
+        scoped_output_dir = output_dir
+        if all_orgs:
+            scoped_output_dir = build_all_orgs_output_dir(output_dir, org)
+        records = build_export_records(scoped_client)
+        datasources_path = scoped_output_dir / DATASOURCE_EXPORT_FILENAME
+        index_path = scoped_output_dir / "index.json"
+        metadata_path = scoped_output_dir / EXPORT_METADATA_FILENAME
+        existing_paths = [
+            path
+            for path in [datasources_path, index_path, metadata_path]
+            if path.exists()
+        ]
+        if existing_paths and not args.overwrite:
+            raise GrafanaError(
+                "Refusing to overwrite existing file: %s. Use --overwrite."
+                % existing_paths[0]
+            )
+        total_count += len(records)
+        export_targets.append(
+            {
+                "org": dict(org),
+                "records": records,
+                "datasources_path": datasources_path,
+                "index_path": index_path,
+                "metadata_path": metadata_path,
+            }
+        )
+        if all_orgs:
+            for item in build_export_index(records, DATASOURCE_EXPORT_FILENAME)["items"]:
+                aggregate_item = dict(item)
+                aggregate_item["exportDir"] = str(scoped_output_dir)
+                index_items.append(aggregate_item)
+
+    if all_orgs:
+        root_index_path = output_dir / "index.json"
+        root_metadata_path = output_dir / EXPORT_METADATA_FILENAME
+        existing_paths = [
+            path for path in [root_index_path, root_metadata_path] if path.exists()
+        ]
+        if existing_paths and not args.overwrite:
+            raise GrafanaError(
+                "Refusing to overwrite existing file: %s. Use --overwrite."
+                % existing_paths[0]
+            )
     if not args.dry_run:
-        write_json_document(records, datasources_path)
-        write_json_document(index_document, index_path)
-        write_json_document(metadata_document, metadata_path)
+        for item in export_targets:
+            write_json_document(item["records"], item["datasources_path"])
+            write_json_document(
+                build_export_index(item["records"], DATASOURCE_EXPORT_FILENAME),
+                item["index_path"],
+            )
+            write_json_document(
+                build_export_metadata(
+                    datasource_count=len(item["records"]),
+                    datasources_file=DATASOURCE_EXPORT_FILENAME,
+                ),
+                item["metadata_path"],
+            )
+        if all_orgs:
+            write_json_document(
+                build_all_orgs_export_index(index_items),
+                output_dir / "index.json",
+            )
+            write_json_document(
+                build_all_orgs_export_metadata(
+                    org_count=len(export_targets),
+                    datasource_count=total_count,
+                ),
+                output_dir / EXPORT_METADATA_FILENAME,
+            )
     summary_verb = "Would export" if args.dry_run else "Exported"
+    if all_orgs:
+        print(
+            "%s %s datasource(s) across %s org(s). Root index: %s Manifest: %s"
+            % (
+                summary_verb,
+                total_count,
+                len(export_targets),
+                output_dir / "index.json",
+                output_dir / EXPORT_METADATA_FILENAME,
+            )
+        )
+        return 0
+    target = export_targets[0]
     print(
         "%s %s datasource(s). Datasources: %s Index: %s Manifest: %s"
         % (
             summary_verb,
-            len(records),
-            datasources_path,
-            index_path,
-            metadata_path,
+            len(target["records"]),
+            target["datasources_path"],
+            target["index_path"],
+            target["metadata_path"],
         )
     )
     return 0
@@ -994,7 +1209,258 @@ def diff_datasources(args):
     return 0
 
 
-def import_datasources(args):
+def _resolve_multi_org_import_targets(args, client):
+    import_dir = Path(args.import_dir)
+    selected_org_ids = set(
+        str(item).strip()
+        for item in (getattr(args, "only_org_id", None) or [])
+        if str(item).strip()
+    )
+    create_missing_orgs = bool(getattr(args, "create_missing_orgs", False))
+    dry_run = bool(getattr(args, "dry_run", False))
+    orgs_by_id = _resolve_existing_orgs_by_id(client)
+    targets = []
+    matched_source_org_ids = set()
+    for org_dir in _discover_org_export_dirs(import_dir):
+        bundle = load_import_bundle(org_dir)
+        source_org_id = resolve_export_org_id(bundle)
+        if not source_org_id:
+            raise GrafanaError(
+                "Could not determine one source export orgId from %s while "
+                "--use-export-org is active."
+                % org_dir
+            )
+        if selected_org_ids and source_org_id not in selected_org_ids:
+            continue
+        matched_source_org_ids.add(source_org_id)
+        source_org_name = resolve_export_org_name(bundle) or ""
+        target_org_id = source_org_id
+        org_action = "exists"
+        created_org = False
+        preview_only = False
+        if source_org_id not in orgs_by_id:
+            if dry_run:
+                preview_only = True
+                if create_missing_orgs:
+                    org_action = "would-create-org"
+                    target_org_id = "<new>"
+                else:
+                    org_action = "missing-org"
+                    target_org_id = ""
+            elif not create_missing_orgs:
+                raise GrafanaError(
+                    "Export orgId %s was not found in the destination Grafana org list. "
+                    "Use --create-missing-orgs to create it from the export metadata."
+                    % source_org_id
+                )
+            elif not source_org_name:
+                raise GrafanaError(
+                    "Cannot create missing destination org for export orgId %s because "
+                    "the datasource export does not contain one stable org name."
+                    % source_org_id
+                )
+            else:
+                created_payload = create_organization(client, source_org_name)
+                target_org_id = _resolve_created_org_id(created_payload)
+                if not target_org_id:
+                    raise GrafanaError(
+                        "Created organization for export orgId %s did not return a usable id."
+                        % source_org_id
+                    )
+                orgs_by_id[target_org_id] = {
+                    "id": target_org_id,
+                    "name": source_org_name,
+                }
+                created_org = True
+                org_action = "created-org"
+        targets.append(
+            {
+                "bundle_dir": org_dir,
+                "bundle": bundle,
+                "source_org_id": source_org_id,
+                "source_org_name": source_org_name,
+                "target_org_id": target_org_id,
+                "org_action": org_action,
+                "created_org": created_org,
+                "preview_only": preview_only,
+                "datasource_count": len(bundle["records"]),
+            }
+        )
+    if selected_org_ids:
+        missing_org_ids = sorted(selected_org_ids - matched_source_org_ids)
+        if missing_org_ids:
+            raise GrafanaError(
+                "Selected export orgIds were not found in %s: %s"
+                % (import_dir, ", ".join(missing_org_ids))
+            )
+    if not targets:
+        raise GrafanaError(
+            "No org-scoped datasource exports matched %s under %s."
+            % (
+                "--only-org-id selection"
+                if selected_org_ids
+                else "the combined multi-org export root",
+                import_dir,
+            )
+        )
+    return targets
+
+
+def _render_routed_datasource_import_table(args, targets):
+    headers = [
+        "SOURCE_ORG_ID",
+        "SOURCE_ORG_NAME",
+        "ORG_ACTION",
+        "TARGET_ORG_ID",
+        "DATASOURCE_COUNT",
+    ]
+    rows = [
+        [
+            str(item["source_org_id"]),
+            item["source_org_name"] or "-",
+            item["org_action"],
+            item["target_org_id"] or "-",
+            str(item["datasource_count"]),
+        ]
+        for item in targets
+    ]
+    widths = [len(item) for item in headers]
+    for row in rows:
+        for index, value in enumerate(row):
+            widths[index] = max(widths[index], len(value))
+
+    def render_row(values):
+        return "  ".join(
+            [
+                "%-*s" % (widths[index], value)
+                for index, value in enumerate(values)
+            ]
+        )
+
+    lines = []
+    if not bool(getattr(args, "no_header", False)):
+        lines.append(render_row(headers))
+        lines.append(render_row(["-" * width for width in widths]))
+    for row in rows:
+        lines.append(render_row(row))
+    return lines
+
+
+def _run_import_datasources_by_export_org(args, client):
+    auth_header = client.headers.get("Authorization", "")
+    if not auth_header.startswith("Basic "):
+        raise GrafanaError(
+            "Datasource import with --use-export-org does not support API token auth. "
+            "Use Grafana username/password login with --basic-user and --basic-password."
+        )
+    targets = _resolve_multi_org_import_targets(args, client)
+    if bool(getattr(args, "dry_run", False)) and bool(getattr(args, "json", False)):
+        org_entries = []
+        import_entries = []
+        for target in targets:
+            org_entry = {
+                "sourceOrgId": target["source_org_id"],
+                "sourceOrgName": target["source_org_name"],
+                "orgAction": target["org_action"],
+                "targetOrgId": target["target_org_id"] or "",
+                "datasourceCount": target["datasource_count"],
+                "importDir": str(target["bundle_dir"]),
+            }
+            org_entries.append(org_entry)
+            import_entry = dict(org_entry)
+            import_entry.update(
+                {
+                    "mode": None,
+                    "datasources": [],
+                    "summary": {
+                        "datasourceCount": target["datasource_count"],
+                        "importDir": str(target["bundle_dir"]),
+                    },
+                }
+            )
+            if not target["preview_only"]:
+                scoped_args = _clone_import_args(
+                    args,
+                    import_dir=str(target["bundle_dir"]),
+                    org_id=target["target_org_id"],
+                    use_export_org=False,
+                    only_org_id=None,
+                    create_missing_orgs=False,
+                    require_matching_export_org=False,
+                )
+                stream = StringIO()
+                with redirect_stdout(stream):
+                    _run_import_datasources_for_single_org(scoped_args)
+                import_entry.update(json.loads(stream.getvalue()))
+            import_entries.append(import_entry)
+        summary = {
+            "orgCount": len(org_entries),
+            "existingOrgCount": len(
+                [item for item in org_entries if item["orgAction"] == "exists"]
+            ),
+            "missingOrgCount": len(
+                [item for item in org_entries if item["orgAction"] == "missing-org"]
+            ),
+            "wouldCreateOrgCount": len(
+                [item for item in org_entries if item["orgAction"] == "would-create-org"]
+            ),
+            "datasourceCount": sum([item["datasourceCount"] for item in org_entries]),
+        }
+        print(
+            json.dumps(
+                {
+                    "mode": "routed-import-preview",
+                    "orgs": org_entries,
+                    "imports": import_entries,
+                    "summary": summary,
+                },
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        return 0
+    if bool(getattr(args, "dry_run", False)) and bool(getattr(args, "table", False)):
+        for line in _render_routed_datasource_import_table(args, targets):
+            print(line)
+        return 0
+    for target in targets:
+        if bool(getattr(args, "dry_run", False)):
+            print(
+                "Dry-run export orgId=%s name=%s orgAction=%s targetOrgId=%s datasources=%s from %s"
+                % (
+                    target["source_org_id"],
+                    target["source_org_name"] or "-",
+                    target["org_action"],
+                    target["target_org_id"] or "-",
+                    target["datasource_count"],
+                    target["bundle_dir"],
+                )
+            )
+            if target["preview_only"]:
+                continue
+        elif target["created_org"]:
+            print(
+                "Created destination org from export orgId=%s name=%s -> targetOrgId=%s"
+                % (
+                    target["source_org_id"],
+                    target["source_org_name"] or "-",
+                    target["target_org_id"],
+                )
+            )
+        scoped_args = _clone_import_args(
+            args,
+            import_dir=str(target["bundle_dir"]),
+            org_id=target["target_org_id"],
+            use_export_org=False,
+            only_org_id=None,
+            create_missing_orgs=False,
+            require_matching_export_org=False,
+        )
+        _run_import_datasources_for_single_org(scoped_args)
+    return 0
+
+
+def _run_import_datasources_for_single_org(args):
     if getattr(args, "table", False) and not args.dry_run:
         raise GrafanaError("--table is only supported with --dry-run for datasource import.")
     if getattr(args, "json", False) and not args.dry_run:
@@ -1120,6 +1586,12 @@ def import_datasources(args):
     else:
         print("Imported %s datasource(s) from %s" % (imported_count, args.import_dir))
     return 0
+
+
+def import_datasources(args):
+    if bool(getattr(args, "use_export_org", False)):
+        return _run_import_datasources_by_export_org(args, build_client(args))
+    return _run_import_datasources_for_single_org(args)
 
 
 def dispatch_datasource_command(args):

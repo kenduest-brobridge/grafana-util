@@ -5,6 +5,13 @@ Historical note:
 - Older entries describe the repo state and `TODO.md` backlog as they existed on the entry date.
 - `TODO.md` now tracks only the active backlog; completed or superseded TODO items moved to `docs/internal/todo-archive.md`.
 
+## 2026-03-15 - Task: Add Python Datasource Org-Scoped Export And Routed Import
+- State: Done
+- Scope: `grafana_utils/datasource/parser.py`, `grafana_utils/datasource_cli.py`, `grafana_utils/datasource/workflows.py`, `tests/test_python_datasource_cli.py`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Python datasource export stayed current-org-only, and datasource import only supported the current org or one explicit `--org-id`. There was no Python support for `datasource export --org-id`, `datasource export --all-orgs`, `datasource import --use-export-org`, repeatable `--only-org-id`, or `--create-missing-orgs`.
+- Current Update: Added Python datasource export org scoping with Basic-auth-only `--org-id` and `--all-orgs`, writing `org_<id>_<name>/` subdirectories plus one aggregate root manifest for multi-org exports. Added Python datasource routed import with `--use-export-org`, repeatable `--only-org-id`, and `--create-missing-orgs`, including org-level dry-run preview for `missing-org` and `would-create-org`.
+- Result: The Python datasource CLI now supports the same explicit-org and routed-org operator model already used by dashboard import/export, while preserving the existing single-org datasource export/import behavior when the new flags are not used.
+
 ## 2026-03-15 - Task: Add Routed Dashboard Import Live Smoke Coverage
 - State: Done
 - Scope: `scripts/test-rust-live-grafana.sh`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

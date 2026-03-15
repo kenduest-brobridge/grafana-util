@@ -2,10 +2,11 @@
 // Exercises parsing + import/export/diff helpers, including mocked datasource matching and contract fixtures.
 use super::{
     build_add_payload, build_import_payload, build_modify_payload, build_modify_updates,
-    diff_datasources_with_live, load_import_records, parse_json_object_argument,
-    render_import_table, render_live_mutation_json, render_live_mutation_table,
-    resolve_delete_match, resolve_live_mutation_match, resolve_match, run_datasource_cli,
-    DatasourceCliArgs, DatasourceImportRecord,
+    diff_datasources_with_live, discover_export_org_import_scopes, load_import_records,
+    parse_json_object_argument, render_import_table, render_live_mutation_json,
+    render_live_mutation_table, resolve_delete_match, resolve_live_mutation_match,
+    resolve_match, run_datasource_cli, CommonCliArgs, DatasourceCliArgs,
+    DatasourceImportArgs, DatasourceImportRecord,
 };
 use clap::{CommandFactory, Parser};
 use serde_json::{json, Value};
@@ -38,6 +39,19 @@ fn load_contract_cases() -> Vec<Value> {
     .unwrap()
 }
 
+fn test_common_args() -> CommonCliArgs {
+    CommonCliArgs {
+        url: "http://grafana.example".to_string(),
+        api_token: None,
+        username: None,
+        password: None,
+        prompt_password: false,
+        prompt_token: false,
+        timeout: 30,
+        verify_ssl: false,
+    }
+}
+
 #[test]
 fn import_help_explains_common_operator_flags() {
     let mut command = DatasourceCliArgs::command();
@@ -50,6 +64,9 @@ fn import_help_explains_common_operator_flags() {
 
     assert!(help.contains("--import-dir"));
     assert!(help.contains("--org-id"));
+    assert!(help.contains("--use-export-org"));
+    assert!(help.contains("--only-org-id"));
+    assert!(help.contains("--create-missing-orgs"));
     assert!(help.contains("--require-matching-export-org"));
     assert!(help.contains("--replace-existing"));
     assert!(help.contains("--update-existing-only"));
@@ -60,6 +77,22 @@ fn import_help_explains_common_operator_flags() {
     assert!(help.contains("--output-columns"));
     assert!(help.contains("--progress"));
     assert!(help.contains("--verbose"));
+}
+
+#[test]
+fn export_help_explains_org_scope_flags() {
+    let mut command = DatasourceCliArgs::command();
+    let subcommand = command
+        .find_subcommand_mut("export")
+        .unwrap_or_else(|| panic!("missing datasource export help"));
+    let mut output = Vec::new();
+    subcommand.write_long_help(&mut output).unwrap();
+    let help = String::from_utf8(output).unwrap();
+
+    assert!(help.contains("--org-id"));
+    assert!(help.contains("--all-orgs"));
+    assert!(help.contains("--overwrite"));
+    assert!(help.contains("--dry-run"));
 }
 
 #[test]
@@ -437,6 +470,84 @@ fn parse_datasource_import_supports_output_columns() {
 }
 
 #[test]
+fn parse_datasource_export_supports_org_scope_flags() {
+    let args = DatasourceCliArgs::parse_normalized_from([
+        "grafana-util",
+        "export",
+        "--export-dir",
+        "./datasources",
+        "--org-id",
+        "7",
+    ]);
+
+    match args.command {
+        super::DatasourceGroupCommand::Export(inner) => {
+            assert_eq!(inner.export_dir, Path::new("./datasources"));
+            assert_eq!(inner.org_id, Some(7));
+            assert!(!inner.all_orgs);
+        }
+        _ => panic!("expected datasource export"),
+    }
+}
+
+#[test]
+fn parse_datasource_export_supports_all_orgs_flag() {
+    let args =
+        DatasourceCliArgs::parse_normalized_from(["grafana-util", "export", "--all-orgs"]);
+
+    match args.command {
+        super::DatasourceGroupCommand::Export(inner) => {
+            assert!(inner.all_orgs);
+            assert_eq!(inner.org_id, None);
+        }
+        _ => panic!("expected datasource export"),
+    }
+}
+
+#[test]
+fn parse_datasource_import_supports_use_export_org_flags() {
+    let args = DatasourceCliArgs::parse_normalized_from([
+        "grafana-util",
+        "import",
+        "--import-dir",
+        "./datasources",
+        "--use-export-org",
+        "--only-org-id",
+        "2",
+        "--only-org-id",
+        "5",
+        "--create-missing-orgs",
+    ]);
+
+    match args.command {
+        super::DatasourceGroupCommand::Import(inner) => {
+            assert!(inner.use_export_org);
+            assert_eq!(inner.only_org_id, vec![2, 5]);
+            assert!(inner.create_missing_orgs);
+            assert_eq!(inner.org_id, None);
+        }
+        _ => panic!("expected datasource import"),
+    }
+}
+
+#[test]
+fn parse_datasource_import_rejects_org_id_with_use_export_org() {
+    let error = DatasourceCliArgs::try_parse_from([
+        "grafana-util",
+        "import",
+        "--import-dir",
+        "./datasources",
+        "--org-id",
+        "7",
+        "--use-export-org",
+    ])
+    .unwrap_err();
+
+    assert!(error.to_string().contains("--org-id"));
+    assert!(error.to_string().contains("--use-export-org"));
+}
+
+#[test]
 fn build_import_payload_matches_shared_contract_fixtures() {
     for case in load_contract_cases() {
         let object = case.as_object().unwrap();
@@ -689,6 +800,8 @@ fn datasource_import_rejects_output_columns_without_table_output() {
             "import",
             "--import-dir",
             import_dir.to_str().unwrap(),
+            "--token",
+            "token",
             "--dry-run",
             "--output-columns",
             "uid",
@@ -750,6 +863,107 @@ fn datasource_import_rejects_extra_secret_or_server_managed_fields() {
     assert!(error
         .to_string()
         .contains("unsupported datasource field(s): id, secureJsonData"));
+}
+
+#[test]
+fn discover_export_org_import_scopes_reads_selected_multi_org_root() {
+    let temp = tempdir().unwrap();
+    let import_root = write_multi_org_import_fixture(
+        temp.path(),
+        &[
+            (1, "Main Org", vec![json!({"uid":"prom-main","name":"Prometheus Main","type":"prometheus","access":"proxy","url":"http://prometheus:9090","isDefault":"true","org":"Main Org","orgId":"1"})]),
+            (2, "Org Two", vec![json!({"uid":"prom-two","name":"Prometheus Two","type":"prometheus","access":"proxy","url":"http://prometheus-2:9090","isDefault":"false","org":"Org Two","orgId":"2"})]),
+        ],
+    );
+    let args = DatasourceImportArgs {
+        common: test_common_args(),
+        import_dir: import_root,
+        org_id: None,
+        use_export_org: true,
+        only_org_id: vec![2],
+        create_missing_orgs: false,
+        require_matching_export_org: false,
+        replace_existing: false,
+        update_existing_only: false,
+        dry_run: true,
+        table: false,
+        json: false,
+        output_format: None,
+        no_header: false,
+        output_columns: Vec::new(),
+        progress: false,
+        verbose: false,
+    };
+
+    let scopes = discover_export_org_import_scopes(&args).unwrap();
+
+    assert_eq!(scopes.len(), 1);
+    assert_eq!(scopes[0].source_org_id, 2);
+    assert_eq!(scopes[0].source_org_name, "Org Two");
+}
+
+#[test]
+fn discover_export_org_import_scopes_errors_when_selected_org_missing() {
+    let temp = tempdir().unwrap();
+    let import_root = write_multi_org_import_fixture(
+        temp.path(),
+        &[(1, "Main Org", vec![json!({"uid":"prom-main","name":"Prometheus Main","type":"prometheus","access":"proxy","url":"http://prometheus:9090","isDefault":"true","org":"Main Org","orgId":"1"})])],
+    );
+    let args = DatasourceImportArgs {
+        common: test_common_args(),
+        import_dir: import_root,
+        org_id: None,
+        use_export_org: true,
+        only_org_id: vec![9],
+        create_missing_orgs: false,
+        require_matching_export_org: false,
+        replace_existing: false,
+        update_existing_only: false,
+        dry_run: true,
+        table: false,
+        json: false,
+        output_format: None,
+        no_header: false,
+        output_columns: Vec::new(),
+        progress: false,
+        verbose: false,
+    };
+
+    let error = discover_export_org_import_scopes(&args).unwrap_err();
+
+    assert!(error
+        .to_string()
+        .contains("Selected exported org IDs were not found"));
+}
+
+#[test]
+fn datasource_import_with_use_export_org_requires_basic_auth() {
+    let temp = tempdir().unwrap();
+    let import_root = write_multi_org_import_fixture(
+        temp.path(),
+        &[(1, "Main Org", vec![json!({"uid":"prom-main","name":"Prometheus Main","type":"prometheus","access":"proxy","url":"http://prometheus:9090","isDefault":"true","org":"Main Org","orgId":"1"})])],
+    );
+
+    let error = run_datasource_cli(
+        DatasourceCliArgs::parse_normalized_from([
+            "grafana-util",
+            "import",
+            "--url",
+            "http://grafana.example",
+            "--token",
+            "token",
+            "--import-dir",
+            import_root.to_str().unwrap(),
+            "--use-export-org",
+            "--dry-run",
+        ])
+        .command,
+    )
+    .unwrap_err();
+
+    assert!(error
+        .to_string()
+        .contains("Datasource import with --use-export-org requires Basic auth"));
 }
 
 #[test]
@@ -876,4 +1090,66 @@ fn write_diff_fixture(records: &[Value]) -> std::path::PathBuf {
     )
     .unwrap();
     dir
+}
+
+fn write_multi_org_import_fixture(
+    root: &Path,
+    orgs: &[(i64, &str, Vec<Value>)],
+) -> std::path::PathBuf {
+    let import_root = root.join("datasource-export-all-orgs");
+    fs::create_dir_all(&import_root).unwrap();
+    for (org_id, org_name, records) in orgs {
+        let org_dir = import_root.join(format!(
+            "org_{}_{}",
+            org_id,
+            org_name.replace(' ', "_")
+        ));
+        fs::create_dir_all(&org_dir).unwrap();
+        fs::write(
+            org_dir.join("export-metadata.json"),
+            serde_json::to_vec_pretty(&json!({
+                "schemaVersion": 1,
+                "kind": "grafana-utils-datasource-export-index",
+                "variant": "root",
+                "resource": "datasource",
+                "datasourcesFile": "datasources.json",
+                "indexFile": "index.json",
+                "datasourceCount": records.len(),
+                "format": "grafana-datasource-inventory-v1"
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        fs::write(
+            org_dir.join("datasources.json"),
+            serde_json::to_vec_pretty(&Value::Array(records.clone())).unwrap(),
+        )
+        .unwrap();
+        let index_items = records
+            .iter()
+            .map(|record| {
+                let object = record.as_object().unwrap();
+                json!({
+                    "uid": object.get("uid").cloned().unwrap_or(Value::String(String::new())),
+                    "name": object.get("name").cloned().unwrap_or(Value::String(String::new())),
+                    "type": object.get("type").cloned().unwrap_or(Value::String(String::new())),
+                    "org": object.get("org").cloned().unwrap_or(Value::String(org_name.to_string())),
+                    "orgId": object.get("orgId").cloned().unwrap_or(Value::String(org_id.to_string())),
+                })
+            })
+            .collect::<Vec<Value>>();
+        fs::write(
+            org_dir.join("index.json"),
+            serde_json::to_vec_pretty(&json!({
+                "kind": "grafana-utils-datasource-export-index",
+                "schemaVersion": 1,
+                "datasourcesFile": "datasources.json",
+                "count": records.len(),
+                "items": index_items
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+    }
+    import_root
 }
