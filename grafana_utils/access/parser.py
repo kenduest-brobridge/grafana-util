@@ -5,6 +5,7 @@ import sys
 from typing import List, Optional
 
 from ..batch_error_policy import add_error_policy_argument
+from ..http_transport import DEFAULT_HTTP_TRANSPORT, HTTP_TRANSPORT_CHOICES
 from .common import DEFAULT_PAGE_SIZE
 from .pending_cli_staging import (
     add_service_account_delete_cli_args,
@@ -827,6 +828,15 @@ def add_common_cli_args(
         "--verify-ssl",
         action="store_true",
         help="Enable TLS certificate verification. Verification is disabled by default.",
+    )
+    parser.add_argument(
+        "--http-transport",
+        choices=HTTP_TRANSPORT_CHOICES,
+        default=DEFAULT_HTTP_TRANSPORT,
+        help=(
+            "Select the HTTP transport implementation. "
+            "Use auto, requests, or httpx."
+        ),
     )
 
 

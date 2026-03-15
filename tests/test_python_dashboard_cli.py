@@ -1672,6 +1672,13 @@ class ExporterTests(unittest.TestCase):
 
         self.assertTrue(args.verify_ssl)
 
+    def test_parse_args_supports_http_transport_selection(self):
+        args = exporter.parse_args(
+            ["export-dashboard", "--http-transport", "requests"]
+        )
+
+        self.assertEqual(args.http_transport, "requests")
+
     def test_parse_args_rejects_old_list_subcommand_name(self):
         with self.assertRaises(SystemExit):
             exporter.parse_args(["list", "--json"])
@@ -1692,15 +1699,28 @@ class ExporterTests(unittest.TestCase):
         self.assertEqual(type(transport).__name__, expected)
 
     def test_build_json_http_transport_supports_httpx(self):
-        transport = exporter.build_json_http_transport(
-            base_url="http://127.0.0.1:3000",
-            headers={},
-            timeout=30,
-            verify_ssl=False,
-            transport_name="httpx",
-        )
+        if transport_module.httpx_is_available():
+            transport = exporter.build_json_http_transport(
+                base_url="http://127.0.0.1:3000",
+                headers={},
+                timeout=30,
+                verify_ssl=False,
+                transport_name="httpx",
+            )
 
-        self.assertEqual(type(transport).__name__, "HttpxJsonHttpTransport")
+            self.assertEqual(type(transport).__name__, "HttpxJsonHttpTransport")
+            return
+
+        with self.assertRaises(transport_module.HttpTransportError) as exc:
+            exporter.build_json_http_transport(
+                base_url="http://127.0.0.1:3000",
+                headers={},
+                timeout=30,
+                verify_ssl=False,
+                transport_name="httpx",
+            )
+
+        self.assertIn("httpx is not installed", str(exc.exception))
 
     def test_http2_capability_helper_returns_boolean(self):
         self.assertIsInstance(transport_module.http2_is_available(), bool)
@@ -1721,6 +1741,30 @@ class ExporterTests(unittest.TestCase):
         result = client.fetch_dashboard("abc")
 
         self.assertEqual(result["dashboard"]["uid"], "abc")
+
+    def test_build_client_passes_http_transport_selection(self):
+        args = argparse.Namespace(
+            url="http://127.0.0.1:3000",
+            api_token="abc123",
+            prompt_token=False,
+            username=None,
+            password=None,
+            prompt_password=False,
+            timeout=30,
+            verify_ssl=False,
+            http_transport="requests",
+        )
+
+        with mock.patch.object(exporter, "GrafanaClient") as client_cls:
+            exporter.build_client(args)
+
+        client_cls.assert_called_once_with(
+            base_url="http://127.0.0.1:3000",
+            headers={"Authorization": "Bearer abc123"},
+            timeout=30,
+            verify_ssl=False,
+            transport_name="requests",
+        )
 
     def test_resolve_auth_supports_token_auth(self):
         args = argparse.Namespace(

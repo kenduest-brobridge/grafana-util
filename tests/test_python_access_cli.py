@@ -389,6 +389,42 @@ class AccessCliTests(unittest.TestCase):
         self.assertIn("team", stdout.getvalue())
         self.assertIn("service-account", stdout.getvalue())
 
+    def test_parse_args_supports_http_transport_selection(self):
+        args = access_utils.parse_args(
+            ["user", "list", "--http-transport", "requests"]
+        )
+
+        self.assertEqual(args.http_transport, "requests")
+
+    def test_run_passes_http_transport_selection(self):
+        args = argparse.Namespace(
+            url="http://127.0.0.1:3000",
+            api_token="abc123",
+            prompt_token=False,
+            username=None,
+            password=None,
+            prompt_password=False,
+            timeout=30,
+            verify_ssl=False,
+            http_transport="requests",
+        )
+
+        with mock.patch.object(access_utils, "GrafanaAccessClient") as client_cls:
+            with mock.patch.object(
+                access_utils, "dispatch_access_command", return_value=0
+            ) as dispatch:
+                access_utils.run(args)
+
+        client = client_cls.return_value
+        client_cls.assert_called_once_with(
+            base_url="http://127.0.0.1:3000",
+            headers={"Authorization": "Bearer abc123"},
+            timeout=30,
+            verify_ssl=False,
+            transport_name="requests",
+        )
+        dispatch.assert_called_once_with(args, client, "token")
+
     def test_parse_args_user_without_subcommand_prints_user_help(self):
         stdout = io.StringIO()
         with redirect_stdout(stdout):

@@ -188,7 +188,11 @@ from .dashboards.transformer import (
     collect_datasource_refs,
     is_builtin_datasource_ref,
 )
-from .http_transport import build_json_http_transport
+from .http_transport import (
+    DEFAULT_HTTP_TRANSPORT,
+    HTTP_TRANSPORT_CHOICES,
+    build_json_http_transport,
+)
 
 
 DEFAULT_URL = "http://localhost:3000"
@@ -298,6 +302,15 @@ def add_common_cli_args(parser: argparse.ArgumentParser) -> None:
         "--verify-ssl",
         action="store_true",
         help="Enable TLS certificate verification. Verification is disabled by default.",
+    )
+    parser.add_argument(
+        "--http-transport",
+        choices=HTTP_TRANSPORT_CHOICES,
+        default=DEFAULT_HTTP_TRANSPORT,
+        help=(
+            "Select the HTTP transport implementation. "
+            "Use auto, requests, or httpx."
+        ),
     )
 
 
@@ -1508,6 +1521,7 @@ def build_client(args: argparse.Namespace) -> GrafanaClient:
         headers=headers,
         timeout=args.timeout,
         verify_ssl=args.verify_ssl,
+        transport_name=args.http_transport,
     )
 
 

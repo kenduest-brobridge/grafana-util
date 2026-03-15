@@ -192,6 +192,7 @@ def run(args):
         headers=headers,
         timeout=args.timeout,
         verify_ssl=args.verify_ssl,
+        transport_name=args.http_transport,
     )
     return dispatch_access_command(args, client, auth_mode)
 

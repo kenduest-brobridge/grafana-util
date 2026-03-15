@@ -164,6 +164,11 @@ class DatasourceCliTests(unittest.TestCase):
         self.assertTrue(args.overwrite)
         self.assertFalse(args.dry_run)
 
+    def test_parse_args_supports_http_transport_selection(self):
+        args = datasource_cli.parse_args(["list", "--http-transport", "requests"])
+
+        self.assertEqual(args.http_transport, "requests")
+
     def test_parse_args_supports_export_org_scoping(self):
         org_args = datasource_cli.parse_args(["export", "--org-id", "7"])
         all_args = datasource_cli.parse_args(["export", "--all-orgs"])
