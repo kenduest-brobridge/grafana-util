@@ -68,10 +68,12 @@ Commit message default for this repo:
 - `tests/test_python_alert_cli.py`: alerting Python unit tests
 - `tests/test_python_packaging.py`: Python package metadata and console-script tests
 - `Makefile`: shared developer shortcuts for Python wheel builds, Rust release builds, and test runs
+- `VERSION`: canonical repo version source used to sync Python and Rust package metadata before builds
 - `.github/workflows/ci.yml`: baseline CI gates for Python tests plus Rust tests/format/lint checks
 - `scripts/build-rust-macos-arm64.sh`: native Apple Silicon Rust release build helper that copies binaries into `dist/macos-arm64/`
 - `scripts/build-rust-linux-amd64.sh`: Docker-based Linux `amd64` Rust build helper for macOS or other non-Linux hosts
 - `scripts/build-rust-linux-amd64-zig.sh`: non-Docker Linux `amd64` Rust build helper using local `zig` and `cargo-zigbuild`
+- `scripts/set-version.sh`: version sync helper that updates `VERSION`, `pyproject.toml`, and `rust/Cargo.toml` from one requested version or tag
 - `scripts/seed-grafana-sample-data.sh`: idempotent developer seed helper for sample orgs, datasources, folders, and dashboards in a running Grafana
 - `scripts/test-rust-live-grafana.sh`: Docker-backed Grafana smoke test for the Rust CLIs
 
@@ -88,6 +90,17 @@ Commit message default for this repo:
 - Prefer Python 3.9 built-in generics such as `list[str]`, `dict[str, Any]`, and `tuple[str, ...]` in touched code.
 - Avoid Python 3.10 union syntax such as `str | None`.
 - Keep using `typing.Optional`, `typing.Any`, `typing.Iterable`, and similar helpers where Python 3.9 still needs them.
+
+## Version Workflow
+
+- `VERSION` is the canonical repo version source for both Python and Rust packaging metadata.
+- Run `make version-show` to inspect the canonical version plus the current source-file versions.
+- Run `make sync-version` after switching branches if `pyproject.toml` or `rust/Cargo.toml` drift from `VERSION`.
+- Run `make version-dev VERSION=0.2.9.dev1` to validate and set preview metadata for `dev` branch work.
+- Run `make version-release VERSION=0.2.9` to validate and set release metadata for `main` or release-prep work.
+- Run `make release-tag VERSION=0.2.9` only after the source version files already match the release you intend to tag; it verifies `VERSION`, `pyproject.toml`, and `rust/Cargo.toml` first, then creates `v0.2.9`.
+- `make set-version ...` and `make git-tag ...` still exist as lower-level escape hatches, but prefer the `version-dev`, `version-release`, and `release-tag` targets for normal maintainer workflows.
+- Rust build helper scripts now call `scripts/set-version.sh --sync-from-file` before `cargo build` so direct script-based builds do not accidentally reuse stale package metadata after a branch switch.
 
 ## Dashboard Utility
 

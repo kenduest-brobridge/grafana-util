@@ -1,4 +1,4 @@
-.PHONY: help poetry-install poetry-lock poetry-test poetry-quality-python build build-python build-rust build-rust-macos-arm64 build-rust-linux-amd64 build-rust-linux-amd64-zig seed-grafana-sample-data verify-grafana-sample-data destroy-grafana-sample-data reset-grafana-all-data test test-python test-rust fmt-rust-check lint-rust quality quality-python quality-rust test-rust-live test-access-live test-python-datasource-live
+.PHONY: help poetry-install poetry-lock poetry-test poetry-quality-python version-show sync-version set-version version-dev version-release git-tag release-tag build build-python build-rust build-rust-macos-arm64 build-rust-linux-amd64 build-rust-linux-amd64-zig seed-grafana-sample-data verify-grafana-sample-data destroy-grafana-sample-data reset-grafana-all-data test test-python test-rust fmt-rust-check lint-rust quality quality-python quality-rust test-rust-live test-access-live test-python-datasource-live
 
 PYTHON ?= python3
 PIP ?= $(PYTHON) -m pip
@@ -14,6 +14,13 @@ help:
 		'  make poetry-lock   Refresh poetry.lock from pyproject.toml' \
 		'  make poetry-test   Run the Python unittest suite inside Poetry' \
 		'  make poetry-quality-python  Run Python quality checks inside Poetry' \
+		'  make version-show  Print the canonical VERSION file plus Python/Rust source versions' \
+		'  make sync-version  Sync pyproject.toml and rust/Cargo.toml from the VERSION file' \
+		'  make set-version VERSION=0.2.9.dev1  Update VERSION and sync Python/Rust source versions (also accepts TAG=v0.2.9)' \
+		'  make version-dev VERSION=0.2.9.dev1  Validate and set preview versions for dev branch work' \
+		'  make version-release VERSION=0.2.9  Validate and set release versions for main/release prep' \
+		'  make git-tag TAG=v0.2.9  Create a local annotated git tag after version files are ready' \
+		'  make release-tag VERSION=0.2.9  Verify source versions match and create v0.2.9' \
 		'  make build         Build both Python and Rust artifacts' \
 		'  make build-python  Build the Python wheel and sdist into dist/' \
 		'  make build-rust    Build Rust release binaries in rust/target/release/' \
@@ -48,21 +55,92 @@ poetry-test:
 poetry-quality-python:
 	$(POETRY) run env PYTHON=python ./scripts/check-python-quality.sh
 
-build: build-python build-rust
+version-show:
+	bash ./scripts/set-version.sh --print-current
 
-build-python:
+sync-version:
+	bash ./scripts/set-version.sh --sync-from-file
+
+set-version:
+	@if [ -n "$(VERSION)" ]; then \
+		bash ./scripts/set-version.sh --version "$(VERSION)"; \
+	elif [ -n "$(TAG)" ]; then \
+		bash ./scripts/set-version.sh --tag "$(TAG)"; \
+	else \
+		echo "Error: set-version requires VERSION=... or TAG=..."; \
+		exit 1; \
+	fi
+
+version-dev:
+	@if [ -z "$(VERSION)" ]; then \
+		echo "Error: version-dev requires VERSION=X.Y.Z.devN"; \
+		exit 1; \
+	fi
+	@if ! printf '%s\n' "$(VERSION)" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+\.dev[0-9]+$$'; then \
+		echo "Error: version-dev requires Python dev format X.Y.Z.devN"; \
+		exit 1; \
+	fi
+	bash ./scripts/set-version.sh --version "$(VERSION)"
+
+version-release:
+	@if [ -z "$(VERSION)" ]; then \
+		echo "Error: version-release requires VERSION=X.Y.Z"; \
+		exit 1; \
+	fi
+	@if ! printf '%s\n' "$(VERSION)" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$$'; then \
+		echo "Error: version-release requires release format X.Y.Z"; \
+		exit 1; \
+	fi
+	bash ./scripts/set-version.sh --version "$(VERSION)"
+
+git-tag:
+	@if [ -z "$(TAG)" ]; then \
+		echo "Error: git-tag requires TAG=vX.Y.Z"; \
+		exit 1; \
+	fi
+	git tag -a "$(TAG)" -m "Release $(TAG)"
+
+release-tag:
+	@if [ -z "$(VERSION)" ]; then \
+		echo "Error: release-tag requires VERSION=X.Y.Z"; \
+		exit 1; \
+	fi
+	@if ! printf '%s\n' "$(VERSION)" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$$'; then \
+		echo "Error: release-tag requires release format X.Y.Z"; \
+		exit 1; \
+	fi
+	@CANONICAL="$$(tr -d '[:space:]' < VERSION)"; \
+	PYTHON_VERSION="$$(sed -n 's/^version = \"\\(.*\\)\"$$/\\1/p' pyproject.toml | head -n 1)"; \
+	RUST_VERSION="$$(sed -n 's/^version = \"\\(.*\\)\"$$/\\1/p' rust/Cargo.toml | head -n 1)"; \
+	if [ "$$CANONICAL" != "$(VERSION)" ]; then \
+		echo "Error: VERSION file is $$CANONICAL but expected $(VERSION)"; \
+		exit 1; \
+	fi; \
+	if [ "$$PYTHON_VERSION" != "$(VERSION)" ]; then \
+		echo "Error: pyproject.toml version is $$PYTHON_VERSION but expected $(VERSION)"; \
+		exit 1; \
+	fi; \
+	if [ "$$RUST_VERSION" != "$(VERSION)" ]; then \
+		echo "Error: rust/Cargo.toml version is $$RUST_VERSION but expected $(VERSION)"; \
+		exit 1; \
+	fi
+	git tag -a "v$(VERSION)" -m "Release v$(VERSION)"
+
+build: sync-version build-python build-rust
+
+build-python: sync-version
 	$(POETRY) run python -m build --sdist --wheel --no-isolation --outdir $(PYTHON_DIST_DIR) .
 
-build-rust:
+build-rust: sync-version
 	cd $(RUST_DIR) && $(CARGO) build --release
 
-build-rust-macos-arm64:
+build-rust-macos-arm64: sync-version
 	bash ./scripts/build-rust-macos-arm64.sh
 
-build-rust-linux-amd64:
+build-rust-linux-amd64: sync-version
 	bash ./scripts/build-rust-linux-amd64.sh
 
-build-rust-linux-amd64-zig:
+build-rust-linux-amd64-zig: sync-version
 	bash ./scripts/build-rust-linux-amd64-zig.sh
 
 seed-grafana-sample-data:

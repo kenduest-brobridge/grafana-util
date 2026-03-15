@@ -5,6 +5,13 @@ Historical note:
 - Older entries describe the repo state and `TODO.md` backlog as they existed on the entry date.
 - `TODO.md` now tracks only the active backlog; completed or superseded TODO items moved to `docs/internal/todo-archive.md`.
 
+## 2026-03-15 - Task: Add Canonical Version Sync Workflow
+- State: Done
+- Scope: `VERSION`, `Makefile`, `scripts/set-version.sh`, `scripts/build-rust-macos-arm64.sh`, `scripts/build-rust-linux-amd64.sh`, `scripts/build-rust-linux-amd64-zig.sh`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Python and Rust package metadata were versioned independently in `pyproject.toml` and `rust/Cargo.toml`, and both had drifted far behind the release tags on `main`. Direct build scripts read those stale source versions, so branch switches or manual tag prep did not give maintainers one canonical version source to review or update.
+- Current Update: Added a root `VERSION` file as the canonical version source, added `scripts/set-version.sh` to print, sync, or update canonical/source versions from one requested version or release tag, exposed that workflow through `make version-show`, `make sync-version`, `make set-version`, and `make git-tag`, and updated Rust build helper scripts plus `Makefile` build targets to sync package metadata from `VERSION` before building.
+- Result: The repo now has one explicit version source, one sync path for both package manifests, and one maintainable pre-release/release workflow that is no longer dependent on branch names or stale metadata lingering in source files.
+
 ## 2026-03-15 - Task: Expand Grafana Sample Seed Coverage
 - State: Done
 - Scope: `Makefile`, `scripts/seed-grafana-sample-data.sh`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

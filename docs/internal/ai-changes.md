@@ -1,5 +1,12 @@
 # ai-changes.md
 
+## 2026-03-15 - Canonical Version Sync Workflow
+- Added a tracked root `VERSION` file to act as the canonical version source for both Python and Rust package metadata.
+- Added `scripts/set-version.sh` to print the current canonical/source versions, sync source manifests from `VERSION`, or update `VERSION` and both manifests from either a shared version string or a release tag such as `v0.2.9`.
+- Added `make version-show`, `make sync-version`, `make set-version`, and `make git-tag` so maintainers can inspect, sync, bump, and tag versions without editing multiple files manually.
+- Added `make version-dev`, `make version-release`, and `make release-tag` as higher-level guarded workflows so preview and release bumps use explicit version formats instead of relying on branch names or ad hoc tagging.
+- Updated direct Rust build helper scripts and `Makefile` build targets to sync `pyproject.toml` and `rust/Cargo.toml` from `VERSION` before building, so script-driven builds no longer reuse stale package versions after a branch switch.
+
 Historical note:
 
 - Older entries preserve the reasoning and follow-up state as of the entry date.
