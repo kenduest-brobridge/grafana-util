@@ -1462,9 +1462,7 @@ fn parse_cli_rejects_unrecognized_command_list_data_sources() {
     .unwrap_err();
 
     assert!(error.to_string().contains("list-data-sources"));
-    assert!(error
-        .to_string()
-        .contains("unrecognized subcommand"));
+    assert!(error.to_string().contains("unrecognized subcommand"));
 }
 
 #[test]

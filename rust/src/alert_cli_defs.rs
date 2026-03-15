@@ -35,41 +35,57 @@ struct AlertCliRoot {
 
 #[derive(Debug, Clone, Args)]
 pub struct AlertCommonArgs {
-    #[arg(long, default_value = DEFAULT_URL, help = "Grafana base URL.")]
+    #[arg(
+        long,
+        help_heading = "Connection And Auth",
+        default_value = DEFAULT_URL,
+        help = "Grafana base URL."
+    )]
     pub url: String,
     #[arg(
         long = "token",
         visible_alias = "api-token",
+        help_heading = "Connection And Auth",
         help = "Grafana API token. Preferred flag: --token. Falls back to GRAFANA_API_TOKEN."
     )]
     pub api_token: Option<String>,
     #[arg(
         long = "basic-user",
+        help_heading = "Connection And Auth",
         help = "Grafana Basic auth username. Preferred flag: --basic-user. Falls back to GRAFANA_USERNAME."
     )]
     pub username: Option<String>,
     #[arg(
         long = "basic-password",
+        help_heading = "Connection And Auth",
         help = "Grafana Basic auth password. Preferred flag: --basic-password. Falls back to GRAFANA_PASSWORD."
     )]
     pub password: Option<String>,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Connection And Auth",
         help = "Prompt for the Grafana Basic auth password without echo instead of passing --basic-password on the command line."
     )]
     pub prompt_password: bool,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Connection And Auth",
         help = "Prompt for the Grafana API token without echo instead of passing --token on the command line."
     )]
     pub prompt_token: bool,
-    #[arg(long, default_value_t = DEFAULT_TIMEOUT, help = "HTTP timeout in seconds.")]
+    #[arg(
+        long,
+        help_heading = "Connection And Auth",
+        default_value_t = DEFAULT_TIMEOUT,
+        help = "HTTP timeout in seconds."
+    )]
     pub timeout: u64,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Connection And Auth",
         help = "Enable TLS certificate verification. Verification is disabled by default."
     )]
     pub verify_ssl: bool,
@@ -81,6 +97,7 @@ pub struct AlertLegacyArgs {
     pub common: AlertCommonArgs,
     #[arg(
         long,
+        help_heading = "Legacy Mode",
         default_value = DEFAULT_OUTPUT_DIR,
         help = "Directory to write exported alerting resources into. Export writes files under raw/."
     )]
@@ -88,52 +105,61 @@ pub struct AlertLegacyArgs {
     #[arg(
         long,
         conflicts_with = "diff_dir",
+        help_heading = "Legacy Mode",
         help = "Import alerting resource JSON from this directory instead of exporting. Point this to the raw/ export directory explicitly."
     )]
     pub import_dir: Option<PathBuf>,
     #[arg(
         long,
         conflicts_with = "import_dir",
+        help_heading = "Legacy Mode",
         help = "Compare alerting resource JSON from this directory against Grafana. Point this to the raw/ export directory explicitly."
     )]
     pub diff_dir: Option<PathBuf>,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Legacy Export",
         help = "Write rule, contact-point, mute-timing, and template files directly into their resource directories instead of nested subdirectories."
     )]
     pub flat: bool,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Legacy Export",
         help = "Overwrite existing exported files."
     )]
     pub overwrite: bool,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Legacy Import",
         help = "Update existing resources with the same identity instead of failing on import."
     )]
     pub replace_existing: bool,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Legacy Safety",
         help = "Show whether each import file would create or update resources without changing Grafana."
     )]
     pub dry_run: bool,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Legacy Safety",
         help = "Continue processing other alerting resource files after one fails; still exit non-zero if any file failed."
     )]
     pub continue_on_error: bool,
     #[arg(
         long,
+        help_heading = "Legacy Repair",
         help = "JSON file that maps source dashboard UIDs to target dashboard UIDs for linked alert-rule repair during import."
     )]
     pub dashboard_uid_map: Option<PathBuf>,
     #[arg(
         long,
+        help_heading = "Legacy Repair",
         help = "JSON file that maps source dashboard UID and source panel ID to a target panel ID for linked alert-rule repair during import."
     )]
     pub panel_id_map: Option<PathBuf>,
@@ -145,6 +171,7 @@ pub struct AlertExportArgs {
     pub common: AlertCommonArgs,
     #[arg(
         long,
+        help_heading = "Export Options",
         default_value = DEFAULT_OUTPUT_DIR,
         help = "Directory to write exported alerting resources into. Export writes files under raw/."
     )]
@@ -152,12 +179,14 @@ pub struct AlertExportArgs {
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Export Options",
         help = "Write rule, contact-point, mute-timing, and template files directly into their resource directories instead of nested subdirectories."
     )]
     pub flat: bool,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Export Options",
         help = "Overwrite existing exported files."
     )]
     pub overwrite: bool,
@@ -169,34 +198,40 @@ pub struct AlertImportArgs {
     pub common: AlertCommonArgs,
     #[arg(
         long,
+        help_heading = "Import Input",
         help = "Import alerting resource JSON from this directory instead of exporting. Point this to the raw/ export directory explicitly."
     )]
     pub import_dir: PathBuf,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Import Behavior",
         help = "Update existing resources with the same identity instead of failing on import."
     )]
     pub replace_existing: bool,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Import Safety",
         help = "Show whether each import file would create or update resources without changing Grafana."
     )]
     pub dry_run: bool,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Import Safety",
         help = "Continue processing other alerting resource files after one fails; still exit non-zero if any file failed."
     )]
     pub continue_on_error: bool,
     #[arg(
         long,
+        help_heading = "Import Repair",
         help = "JSON file that maps source dashboard UIDs to target dashboard UIDs for linked alert-rule repair during import."
     )]
     pub dashboard_uid_map: Option<PathBuf>,
     #[arg(
         long,
+        help_heading = "Import Repair",
         help = "JSON file that maps source dashboard UID and source panel ID to a target panel ID for linked alert-rule repair during import."
     )]
     pub panel_id_map: Option<PathBuf>,
@@ -208,16 +243,19 @@ pub struct AlertDiffArgs {
     pub common: AlertCommonArgs,
     #[arg(
         long,
+        help_heading = "Diff Input",
         help = "Compare alerting resource JSON from this directory against Grafana. Point this to the raw/ export directory explicitly."
     )]
     pub diff_dir: PathBuf,
     #[arg(
         long,
+        help_heading = "Diff Repair",
         help = "JSON file that maps source dashboard UIDs to target dashboard UIDs for linked alert-rule repair during import."
     )]
     pub dashboard_uid_map: Option<PathBuf>,
     #[arg(
         long,
+        help_heading = "Diff Repair",
         help = "JSON file that maps source dashboard UID and source panel ID to a target panel ID for linked alert-rule repair during import."
     )]
     pub panel_id_map: Option<PathBuf>,

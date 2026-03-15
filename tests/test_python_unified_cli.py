@@ -34,24 +34,24 @@ class UnifiedCliTests(unittest.TestCase):
         self.assertEqual(exc.exception.code, 0)
         help_text = stdout.getvalue()
         self.assertIn("Commands:", help_text)
-        self.assertIn("Dashboard:", help_text)
-        self.assertIn("Compatibility aliases:", help_text)
+        self.assertIn("dashboard (db):", help_text)
+        self.assertIn("datasource (ds):", help_text)
+        self.assertIn("alert (al):", help_text)
+        self.assertIn("access (ac):", help_text)
+        self.assertIn("sync (sy):", help_text)
         self.assertIn("dashboard", help_text)
         self.assertIn("export", help_text)
         self.assertIn("alert", help_text)
         self.assertIn("access", help_text)
         self.assertIn("datasource", help_text)
         self.assertIn("sync", help_text)
-        self.assertIn("Compatibility alias. Prefer `grafana-util", help_text)
         self.assertIn("grafana-util dashboard", help_text)
-        self.assertIn("export`.", help_text)
-        self.assertIn("export-alert", help_text)
-        self.assertIn("Compatibility alias. Prefer `grafana-util alert", help_text)
+        self.assertNotIn("Compatibility", help_text)
+        self.assertNotIn("export-alert", help_text)
         self.assertIn("--basic-user admin --basic-password admin --all-orgs", help_text)
         self.assertIn("grafana-util dashboard inspect-export", help_text)
         self.assertIn("grafana-util access org list", help_text)
         self.assertIn("grafana-util access team list", help_text)
-        self.assertNotIn("Compatibility shim remains available", help_text)
         self.assertNotIn("grafana-access-utils", help_text)
 
     def test_parse_args_dashboard_without_subcommand_prints_dashboard_help(self):
@@ -63,8 +63,7 @@ class UnifiedCliTests(unittest.TestCase):
         self.assertEqual(exc.exception.code, 0)
         help_text = stdout.getvalue()
         self.assertIn("grafana-util dashboard", help_text)
-        self.assertIn("list-data-sources", help_text)
-        self.assertIn("prefer `grafana-util datasource list`", help_text)
+        self.assertNotIn("list-data-sources", help_text)
         self.assertIn("Examples:", help_text)
         self.assertIn("grafana-util dashboard list --url http://localhost:3000 --table", help_text)
 
@@ -114,11 +113,9 @@ class UnifiedCliTests(unittest.TestCase):
         self.assertIn("grafana-util sync", help_text)
         self.assertIn("{plan,review,preflight,assess-alerts,bundle-preflight,apply}", help_text)
 
-    def test_parse_args_supports_dashboard_passthrough(self):
-        args = unified_cli.parse_args(["diff", "--import-dir", "dashboards/raw"])
-
-        self.assertEqual(args.entrypoint, "dashboard")
-        self.assertEqual(args.forwarded_argv, ["diff", "--import-dir", "dashboards/raw"])
+    def test_parse_args_rejects_top_level_legacy_dashboard_alias(self):
+        with self.assertRaises(SystemExit):
+            unified_cli.parse_args(["diff", "--import-dir", "dashboards/raw"])
 
     def test_parse_args_supports_dashboard_namespace(self):
         args = unified_cli.parse_args(["dashboard", "export", "--export-dir", "dashboards"])
@@ -137,6 +134,14 @@ class UnifiedCliTests(unittest.TestCase):
             args.forwarded_argv,
             ["diff", "--import-dir", "dashboards/raw"],
         )
+
+    def test_parse_args_supports_dashboard_list_data_sources_to_datasource_list(self):
+        args = unified_cli.parse_args(
+            ["dashboard", "list-data-sources", "--table"]
+        )
+
+        self.assertEqual(args.entrypoint, "datasource")
+        self.assertEqual(args.forwarded_argv, ["list", "--table"])
 
     def test_parse_args_supports_dashboard_inspect_live_namespace(self):
         args = unified_cli.parse_args(
@@ -176,12 +181,6 @@ class UnifiedCliTests(unittest.TestCase):
             args.forwarded_argv,
             ["export", "--output-dir", "./alerts", "--overwrite"],
         )
-
-    def test_parse_args_supports_legacy_alert_alias(self):
-        args = unified_cli.parse_args(["list-alert-rules", "--json"])
-
-        self.assertEqual(args.entrypoint, "alert")
-        self.assertEqual(args.forwarded_argv, ["list-rules", "--json"])
 
     def test_parse_args_supports_access_namespace(self):
         args = unified_cli.parse_args(
@@ -244,6 +243,13 @@ class UnifiedCliTests(unittest.TestCase):
             ["modify", "--uid", "prom-main", "--set-url", "http://prometheus-v2:9090"],
         )
 
+    def test_main_dispatches_dashboard_namespace(self):
+        with mock.patch.object(unified_cli.dashboard_cli, "main", return_value=7) as mocked:
+            result = unified_cli.main(["dashboard", "list", "--json"])
+
+        self.assertEqual(result, 7)
+        mocked.assert_called_once_with(["list-dashboard", "--json"])
+
     def test_parse_args_supports_datasource_diff_namespace(self):
         args = unified_cli.parse_args(
             ["datasource", "diff", "--diff-dir", "./datasources"]
@@ -288,13 +294,6 @@ class UnifiedCliTests(unittest.TestCase):
     def test_parse_args_rejects_unknown_top_level_command(self):
         with self.assertRaises(SystemExit):
             unified_cli.parse_args(["unknown-command"])
-
-    def test_main_dispatches_dashboard_passthrough(self):
-        with mock.patch.object(unified_cli.dashboard_cli, "main", return_value=7) as mocked:
-            result = unified_cli.main(["list-dashboard", "--json"])
-
-        self.assertEqual(result, 7)
-        mocked.assert_called_once_with(["list-dashboard", "--json"])
 
     def test_main_dispatches_dashboard_shortcut(self):
         with mock.patch.object(unified_cli.dashboard_cli, "main", return_value=7) as mocked:

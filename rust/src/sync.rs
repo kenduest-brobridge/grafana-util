@@ -46,7 +46,11 @@ pub struct SyncCliArgs {
 
 #[derive(Debug, Clone, Args)]
 pub struct SyncSummaryArgs {
-    #[arg(long, help = "JSON file containing the desired sync resource list.")]
+    #[arg(
+        long,
+        help_heading = "Input Source",
+        help = "JSON file containing the desired sync resource list."
+    )]
     pub desired_file: PathBuf,
     #[arg(
         long,
@@ -60,13 +64,22 @@ pub struct SyncSummaryArgs {
 
 #[derive(Debug, Clone, Args)]
 pub struct SyncPlanArgs {
-    #[arg(long, help = "JSON file containing the desired sync resource list.")]
+    #[arg(
+        long,
+        help_heading = "Input Source",
+        help = "JSON file containing the desired sync resource list."
+    )]
     pub desired_file: PathBuf,
-    #[arg(long, help = "JSON file containing the live sync resource list.")]
+    #[arg(
+        long,
+        help_heading = "Input Source",
+        help = "JSON file containing the live sync resource list."
+    )]
     pub live_file: Option<PathBuf>,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Live Sync",
         help = "Read the live state directly from Grafana instead of --live-file."
     )]
     pub fetch_live: bool,
@@ -74,18 +87,21 @@ pub struct SyncPlanArgs {
     pub common: CommonCliArgs,
     #[arg(
         long,
+        help_heading = "Live Sync",
         help = "Optional Grafana org id used when --fetch-live is active."
     )]
     pub org_id: Option<i64>,
     #[arg(
         long,
         default_value_t = 500,
+        help_heading = "Live Sync",
         help = "Dashboard search page size when --fetch-live is active."
     )]
     pub page_size: usize,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Behavior",
         help = "Mark live-only resources as would-delete instead of unmanaged."
     )]
     pub allow_prune: bool,
@@ -99,6 +115,7 @@ pub struct SyncPlanArgs {
     pub output: SyncOutputFormat,
     #[arg(
         long,
+        help_heading = "Output Options",
         help = "Optional stable trace id to carry through staged plan/review/apply files."
     )]
     pub trace_id: Option<String>,
@@ -106,11 +123,16 @@ pub struct SyncPlanArgs {
 
 #[derive(Debug, Clone, Args)]
 pub struct SyncReviewArgs {
-    #[arg(long, help = "JSON file containing the staged sync plan document.")]
+    #[arg(
+        long,
+        help_heading = "Input Source",
+        help = "JSON file containing the staged sync plan document."
+    )]
     pub plan_file: PathBuf,
     #[arg(
         long,
         default_value = DEFAULT_REVIEW_TOKEN,
+        help_heading = "Review Control",
         help = "Explicit review token required to mark the plan reviewed."
     )]
     pub review_token: String,
@@ -124,35 +146,48 @@ pub struct SyncReviewArgs {
     pub output: SyncOutputFormat,
     #[arg(
         long,
+        help_heading = "Review Metadata",
         help = "Optional reviewer identity to record in the reviewed plan."
     )]
     pub reviewed_by: Option<String>,
     #[arg(
         long,
+        help_heading = "Review Metadata",
         help = "Optional staged reviewed-at value to record in the reviewed plan."
     )]
     pub reviewed_at: Option<String>,
-    #[arg(long, help = "Optional review note to record in the reviewed plan.")]
+    #[arg(
+        long,
+        help_heading = "Review Metadata",
+        help = "Optional review note to record in the reviewed plan."
+    )]
     pub review_note: Option<String>,
 }
 
 #[derive(Debug, Clone, Args, Default)]
 pub struct SyncApplyArgs {
-    #[arg(long, help = "JSON file containing the reviewed sync plan document.")]
+    #[arg(
+        long,
+        help_heading = "Input Source",
+        help = "JSON file containing the reviewed sync plan document."
+    )]
     pub plan_file: PathBuf,
     #[arg(
         long,
+        help_heading = "Input Source",
         help = "Optional JSON file containing a staged sync preflight document."
     )]
     pub preflight_file: Option<PathBuf>,
     #[arg(
         long,
+        help_heading = "Input Source",
         help = "Optional JSON file containing a staged sync bundle-preflight document."
     )]
     pub bundle_preflight_file: Option<PathBuf>,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Execution Control",
         help = "Explicit acknowledgement required before a local apply intent is emitted."
     )]
     pub approve: bool,
@@ -160,24 +195,28 @@ pub struct SyncApplyArgs {
     pub common: CommonCliArgs,
     #[arg(
         long,
+        help_heading = "Live Execution",
         help = "Optional Grafana org id used when --execute-live is active."
     )]
     pub org_id: Option<i64>,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Execution Behavior",
         help = "Apply supported sync operations to Grafana after review and approval checks pass."
     )]
     pub execute_live: bool,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Execution Behavior",
         help = "Continue applying later operations if a prior live apply operation fails."
     )]
     pub continue_on_error: bool,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Execution Behavior",
         help = "Allow live deletion of folders when a reviewed plan includes would-delete folder operations."
     )]
     pub allow_folder_delete: bool,
@@ -191,32 +230,48 @@ pub struct SyncApplyArgs {
     pub output: SyncOutputFormat,
     #[arg(
         long,
+        help_heading = "Apply Metadata",
         help = "Optional apply actor identity to record in the apply intent."
     )]
     pub applied_by: Option<String>,
     #[arg(
         long,
+        help_heading = "Apply Metadata",
         help = "Optional staged applied-at value to record in the apply intent."
     )]
     pub applied_at: Option<String>,
-    #[arg(long, help = "Optional approval reason to record in the apply intent.")]
+    #[arg(
+        long,
+        help_heading = "Apply Metadata",
+        help = "Optional approval reason to record in the apply intent."
+    )]
     pub approval_reason: Option<String>,
-    #[arg(long, help = "Optional apply note to record in the apply intent.")]
+    #[arg(
+        long,
+        help_heading = "Apply Metadata",
+        help = "Optional apply note to record in the apply intent."
+    )]
     pub apply_note: Option<String>,
 }
 
 #[derive(Debug, Clone, Args)]
 pub struct SyncPreflightArgs {
-    #[arg(long, help = "JSON file containing the desired sync resource list.")]
+    #[arg(
+        long,
+        help_heading = "Input Source",
+        help = "JSON file containing the desired sync resource list."
+    )]
     pub desired_file: PathBuf,
     #[arg(
         long,
+        help_heading = "Input Source",
         help = "Optional JSON object file containing staged availability hints."
     )]
     pub availability_file: Option<PathBuf>,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Live Input",
         help = "Fetch live availability hints from Grafana instead of relying only on --availability-file."
     )]
     pub fetch_live: bool,
@@ -224,11 +279,13 @@ pub struct SyncPreflightArgs {
     pub common: CommonCliArgs,
     #[arg(
         long,
+        help_heading = "Live Input",
         help = "Optional Grafana org id used when --fetch-live is active."
     )]
     pub org_id: Option<i64>,
     #[arg(
         long,
+        help_heading = "Output Control",
         help = "Optional stable trace id to carry through staged preflight files."
     )]
     pub trace_id: Option<String>,
@@ -244,7 +301,11 @@ pub struct SyncPreflightArgs {
 
 #[derive(Debug, Clone, Args)]
 pub struct SyncAssessAlertsArgs {
-    #[arg(long, help = "JSON file containing alert sync resource list.")]
+    #[arg(
+        long,
+        help_heading = "Input Source",
+        help = "JSON file containing alert sync resource list."
+    )]
     pub alerts_file: PathBuf,
     #[arg(
         long,
@@ -260,22 +321,26 @@ pub struct SyncAssessAlertsArgs {
 pub struct SyncBundlePreflightArgs {
     #[arg(
         long,
+        help_heading = "Input Source",
         help = "JSON file containing the staged multi-resource source bundle."
     )]
     pub source_bundle: PathBuf,
     #[arg(
         long,
+        help_heading = "Input Source",
         help = "JSON file containing the staged target inventory snapshot."
     )]
     pub target_inventory: PathBuf,
     #[arg(
         long,
+        help_heading = "Input Source",
         help = "Optional JSON object file containing staged availability hints."
     )]
     pub availability_file: Option<PathBuf>,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Live Input",
         help = "Fetch live availability hints from Grafana instead of relying only on --availability-file."
     )]
     pub fetch_live: bool,
@@ -283,11 +348,13 @@ pub struct SyncBundlePreflightArgs {
     pub common: CommonCliArgs,
     #[arg(
         long,
+        help_heading = "Live Input",
         help = "Optional Grafana org id used when --fetch-live is active."
     )]
     pub org_id: Option<i64>,
     #[arg(
         long,
+        help_heading = "Output Control",
         help = "Optional stable trace id to carry through staged bundle-preflight files."
     )]
     pub trace_id: Option<String>,

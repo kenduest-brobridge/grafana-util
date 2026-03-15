@@ -243,37 +243,61 @@ pub enum DryRunOutputFormat {
 pub struct UserListArgs {
     #[command(flatten)]
     pub common: CommonCliArgs,
-    #[arg(long, value_enum, default_value_t = Scope::Org, help = "List users from the current org scope or from the Grafana global admin scope.")]
+    #[arg(
+        long,
+        help_heading = "Selection",
+        value_enum,
+        default_value_t = Scope::Org,
+        help = "List users from the current org scope or from the Grafana global admin scope."
+    )]
     pub scope: Scope,
     #[arg(
         long,
+        help_heading = "Filters",
         help = "Filter users by a free-text search across login, email, or display name."
     )]
     pub query: Option<String>,
-    #[arg(long, help = "Filter users by exact login.")]
+    #[arg(long, help_heading = "Filters", help = "Filter users by exact login.")]
     pub login: Option<String>,
-    #[arg(long, help = "Filter users by exact email address.")]
+    #[arg(
+        long,
+        help_heading = "Filters",
+        help = "Filter users by exact email address."
+    )]
     pub email: Option<String>,
     #[arg(
         long,
+        help_heading = "Filters",
         help = "Filter org users by exact Grafana org role such as Viewer, Editor, or Admin."
     )]
     pub org_role: Option<String>,
-    #[arg(long, value_parser = parse_bool_text, help = "Filter global users by Grafana server-admin status.")]
+    #[arg(
+        long,
+        help_heading = "Filters",
+        value_parser = parse_bool_text,
+        help = "Filter global users by Grafana server-admin status."
+    )]
     pub grafana_admin: Option<bool>,
     #[arg(
         long,
+        help_heading = "Output Controls",
         default_value_t = false,
         help = "Include each user's current team memberships in the list output."
     )]
     pub with_teams: bool,
     #[arg(
         long,
+        help_heading = "Pagination",
         default_value_t = 1,
         help = "Result page number for paginated Grafana list APIs."
     )]
     pub page: usize,
-    #[arg(long, default_value_t = DEFAULT_PAGE_SIZE, help = "Number of users to request per page.")]
+    #[arg(
+        long,
+        help_heading = "Pagination",
+        default_value_t = DEFAULT_PAGE_SIZE,
+        help = "Number of users to request per page."
+    )]
     pub per_page: usize,
     #[arg(long, default_value_t = false, conflicts_with_all = ["csv", "json"], help_heading = "Output Options", help = "Render user summaries as a table.")]
     pub table: bool,
@@ -335,7 +359,11 @@ pub struct UserAddArgs {
         help = "Prompt for the initial user password without echo."
     )]
     pub prompt_user_password: bool,
-    #[arg(long = "org-role", help_heading = "Privileges", help = "Optional initial org role such as Viewer, Editor, or Admin.")]
+    #[arg(
+        long = "org-role",
+        help_heading = "Privileges",
+        help = "Optional initial org role such as Viewer, Editor, or Admin."
+    )]
     pub org_role: Option<String>,
     #[arg(
         long = "grafana-admin",
@@ -357,40 +385,79 @@ pub struct UserAddArgs {
 pub struct UserModifyArgs {
     #[command(flatten)]
     pub common: CommonCliArgs,
-    #[arg(long, conflicts_with_all = ["login", "email"], help = "Target one user by numeric Grafana user id.")]
+    #[arg(
+        long,
+        help_heading = "Target Selection",
+        conflicts_with_all = ["login", "email"],
+        help = "Target one user by numeric Grafana user id."
+    )]
     pub user_id: Option<String>,
-    #[arg(long, conflicts_with_all = ["user_id", "email"], help = "Target one user by exact login.")]
+    #[arg(
+        long,
+        help_heading = "Target Selection",
+        conflicts_with_all = ["user_id", "email"],
+        help = "Target one user by exact login."
+    )]
     pub login: Option<String>,
-    #[arg(long, conflicts_with_all = ["user_id", "login"], help = "Target one user by exact email address.")]
+    #[arg(
+        long,
+        help_heading = "Target Selection",
+        conflicts_with_all = ["user_id", "login"],
+        help = "Target one user by exact email address."
+    )]
     pub email: Option<String>,
-    #[arg(long, help = "Replace the user's login with this new value.")]
+    #[arg(
+        long,
+        help_heading = "Profile",
+        help = "Replace the user's login with this new value."
+    )]
     pub set_login: Option<String>,
-    #[arg(long, help = "Replace the user's email address with this new value.")]
+    #[arg(
+        long,
+        help_heading = "Profile",
+        help = "Replace the user's email address with this new value."
+    )]
     pub set_email: Option<String>,
-    #[arg(long, help = "Replace the user's display name with this new value.")]
+    #[arg(
+        long,
+        help_heading = "Profile",
+        help = "Replace the user's display name with this new value."
+    )]
     pub set_name: Option<String>,
     #[arg(
         long,
+        help_heading = "Security",
         conflicts_with_all = ["set_password_file", "prompt_set_password"],
         help = "Replace the user's password with this new value."
     )]
     pub set_password: Option<String>,
     #[arg(
         long = "set-password-file",
+        help_heading = "Security",
         conflicts_with_all = ["set_password", "prompt_set_password"],
         help = "Read the replacement user password from this file."
     )]
     pub set_password_file: Option<PathBuf>,
     #[arg(
         long = "prompt-set-password",
+        help_heading = "Security",
         default_value_t = false,
         conflicts_with_all = ["set_password", "set_password_file"],
         help = "Prompt for the replacement user password without echo."
     )]
     pub prompt_set_password: bool,
-    #[arg(long, help = "Change the user's org role to this value.")]
+    #[arg(
+        long,
+        help_heading = "Privileges",
+        help = "Change the user's org role to this value."
+    )]
     pub set_org_role: Option<String>,
-    #[arg(long, value_parser = parse_bool_text, help = "Change whether the user is a Grafana server admin.")]
+    #[arg(
+        long,
+        help_heading = "Privileges",
+        value_parser = parse_bool_text,
+        help = "Change whether the user is a Grafana server admin."
+    )]
     pub set_grafana_admin: Option<bool>,
     #[arg(
         long,
@@ -405,16 +472,38 @@ pub struct UserModifyArgs {
 pub struct UserDeleteArgs {
     #[command(flatten)]
     pub common: CommonCliArgs,
-    #[arg(long, conflicts_with_all = ["login", "email"], help = "Delete one user by numeric Grafana user id.")]
+    #[arg(
+        long,
+        help_heading = "Target Selection",
+        conflicts_with_all = ["login", "email"],
+        help = "Delete one user by numeric Grafana user id."
+    )]
     pub user_id: Option<String>,
-    #[arg(long, conflicts_with_all = ["user_id", "email"], help = "Delete one user by exact login.")]
+    #[arg(
+        long,
+        help_heading = "Target Selection",
+        conflicts_with_all = ["user_id", "email"],
+        help = "Delete one user by exact login."
+    )]
     pub login: Option<String>,
-    #[arg(long, conflicts_with_all = ["user_id", "login"], help = "Delete one user by exact email address.")]
+    #[arg(
+        long,
+        help_heading = "Target Selection",
+        conflicts_with_all = ["user_id", "login"],
+        help = "Delete one user by exact email address."
+    )]
     pub email: Option<String>,
-    #[arg(long, value_enum, default_value_t = Scope::Global, help = "Delete from the org membership only or from the Grafana global user registry.")]
+    #[arg(
+        long,
+        help_heading = "Target Selection",
+        value_enum,
+        default_value_t = Scope::Global,
+        help = "Delete from the org membership only or from the Grafana global user registry."
+    )]
     pub scope: Scope,
     #[arg(
         long,
+        help_heading = "Safety",
         default_value_t = false,
         help = "Skip the interactive confirmation prompt."
     )]
@@ -434,24 +523,28 @@ pub struct UserExportArgs {
     pub common: CommonCliArgs,
     #[arg(
         long,
+        help_heading = "Export Source",
         default_value = DEFAULT_ACCESS_USER_EXPORT_DIR,
         help = "Directory to write users.json and export-metadata.json."
     )]
     pub export_dir: PathBuf,
     #[arg(
         long,
+        help_heading = "Export Controls",
         default_value_t = false,
         help = "Replace existing export files in the target directory instead of failing."
     )]
     pub overwrite: bool,
     #[arg(
         long,
+        help_heading = "Export Controls",
         default_value_t = false,
         help = "Preview export paths without writing files."
     )]
     pub dry_run: bool,
     #[arg(
         long,
+        help_heading = "Export Source",
         value_enum,
         default_value_t = Scope::Org,
         help = "Export org-scoped or global users (default: org)."
@@ -459,6 +552,7 @@ pub struct UserExportArgs {
     pub scope: Scope,
     #[arg(
         long,
+        help_heading = "Export Controls",
         default_value_t = false,
         help = "Include each user's current team memberships in the export file."
     )]
@@ -471,11 +565,13 @@ pub struct UserImportArgs {
     pub common: CommonCliArgs,
     #[arg(
         long,
+        help_heading = "Import Source",
         help = "Import directory that contains users.json and export-metadata.json."
     )]
     pub import_dir: PathBuf,
     #[arg(
         long,
+        help_heading = "Import Source",
         value_enum,
         default_value_t = Scope::Org,
         help = "Import match strategy for users: global or org scope (default: org)."
@@ -483,12 +579,14 @@ pub struct UserImportArgs {
     pub scope: Scope,
     #[arg(
         long,
+        help_heading = "Import Behavior",
         default_value_t = false,
         help = "Update matching existing items instead of failing import on duplicates."
     )]
     pub replace_existing: bool,
     #[arg(
         long,
+        help_heading = "Import Behavior",
         default_value_t = false,
         help = "Preview import changes without writing to Grafana."
     )]
@@ -520,6 +618,7 @@ pub struct UserImportArgs {
     pub output_format: DryRunOutputFormat,
     #[arg(
         long,
+        help_heading = "Import Behavior",
         default_value_t = false,
         help = "Acknowledge destructive import operations (remove/missing sync)."
     )]
@@ -532,12 +631,14 @@ pub struct UserDiffArgs {
     pub common: CommonCliArgs,
     #[arg(
         long,
+        help_heading = "Diff Source",
         default_value = "access-users",
         help = "Diff directory that contains users.json and export-metadata.json."
     )]
     pub diff_dir: PathBuf,
     #[arg(
         long,
+        help_heading = "Diff Scope",
         value_enum,
         default_value_t = Scope::Org,
         help = "Compare against org-scoped or global users (default: org)."
@@ -549,23 +650,38 @@ pub struct UserDiffArgs {
 pub struct TeamListArgs {
     #[command(flatten)]
     pub common: CommonCliArgs,
-    #[arg(long, help = "Filter teams by a free-text search.")]
+    #[arg(
+        long,
+        help_heading = "Filters",
+        help = "Filter teams by a free-text search."
+    )]
     pub query: Option<String>,
-    #[arg(long, help = "Filter teams by exact team name.")]
+    #[arg(
+        long,
+        help_heading = "Filters",
+        help = "Filter teams by exact team name."
+    )]
     pub name: Option<String>,
     #[arg(
         long,
+        help_heading = "Membership",
         default_value_t = false,
         help = "Include team members and admins in the rendered output."
     )]
     pub with_members: bool,
     #[arg(
         long,
+        help_heading = "Pagination",
         default_value_t = 1,
         help = "Result page number for paginated Grafana list APIs."
     )]
     pub page: usize,
-    #[arg(long, default_value_t = DEFAULT_PAGE_SIZE, help = "Number of teams to request per page.")]
+    #[arg(
+        long,
+        help_heading = "Pagination",
+        default_value_t = DEFAULT_PAGE_SIZE,
+        help = "Number of teams to request per page."
+    )]
     pub per_page: usize,
     #[arg(long, default_value_t = false, conflicts_with_all = ["csv", "json"], help_heading = "Output Options", help = "Render team summaries as a table.")]
     pub table: bool,
@@ -587,17 +703,27 @@ pub struct TeamListArgs {
 pub struct TeamAddArgs {
     #[command(flatten)]
     pub common: CommonCliArgs,
-    #[arg(long, help = "Name for the new Grafana team.")]
+    #[arg(
+        long,
+        help_heading = "Team Definition",
+        help = "Name for the new Grafana team."
+    )]
     pub name: String,
-    #[arg(long, help = "Optional contact email for the new Grafana team.")]
+    #[arg(
+        long,
+        help_heading = "Team Definition",
+        help = "Optional contact email for the new Grafana team."
+    )]
     pub email: Option<String>,
     #[arg(
         long = "member",
+        help_heading = "Team Membership",
         help = "Add one or more members by user id, exact login, or exact email as part of team creation."
     )]
     pub members: Vec<String>,
     #[arg(
         long = "admin",
+        help_heading = "Team Membership",
         help = "Add one or more team admins by user id, exact login, or exact email as part of team creation."
     )]
     pub admins: Vec<String>,
@@ -616,24 +742,28 @@ pub struct TeamExportArgs {
     pub common: CommonCliArgs,
     #[arg(
         long,
+        help_heading = "Export Source",
         default_value = DEFAULT_ACCESS_TEAM_EXPORT_DIR,
         help = "Directory to write teams.json and export-metadata.json."
     )]
     pub export_dir: PathBuf,
     #[arg(
         long,
+        help_heading = "Export Controls",
         default_value_t = false,
         help = "Replace existing export files in the target directory instead of failing."
     )]
     pub overwrite: bool,
     #[arg(
         long,
+        help_heading = "Export Controls",
         default_value_t = false,
         help = "Preview export paths without writing files."
     )]
     pub dry_run: bool,
     #[arg(
         long,
+        help_heading = "Export Controls",
         default_value_t = true,
         help = "Include team members and admins in exported team records."
     )]
@@ -646,17 +776,20 @@ pub struct TeamImportArgs {
     pub common: CommonCliArgs,
     #[arg(
         long,
+        help_heading = "Import Source",
         help = "Import directory that contains teams.json and export-metadata.json."
     )]
     pub import_dir: PathBuf,
     #[arg(
         long,
+        help_heading = "Import Behavior",
         default_value_t = false,
         help = "Update matching existing teams instead of failing on duplicates."
     )]
     pub replace_existing: bool,
     #[arg(
         long,
+        help_heading = "Import Behavior",
         default_value_t = false,
         help = "Preview import changes without writing to Grafana."
     )]
@@ -688,6 +821,7 @@ pub struct TeamImportArgs {
     pub output_format: DryRunOutputFormat,
     #[arg(
         long,
+        help_heading = "Import Behavior",
         default_value_t = false,
         help = "Acknowledge destructive team-member synchronization operations."
     )]
@@ -700,6 +834,7 @@ pub struct TeamDiffArgs {
     pub common: CommonCliArgs,
     #[arg(
         long,
+        help_heading = "Diff Source",
         default_value = "access-teams",
         help = "Diff directory that contains teams.json and export-metadata.json."
     )]
@@ -712,33 +847,39 @@ pub struct TeamModifyArgs {
     pub common: CommonCliArgs,
     #[arg(
         long,
+        help_heading = "Target Selection",
         conflicts_with = "name",
         help = "Target one team by numeric Grafana team id."
     )]
     pub team_id: Option<String>,
     #[arg(
         long,
+        help_heading = "Target Selection",
         conflicts_with = "team_id",
         help = "Target one team by exact team name."
     )]
     pub name: Option<String>,
     #[arg(
         long = "add-member",
+        help_heading = "Membership",
         help = "Add one or more members by user id, exact login, or exact email."
     )]
     pub add_member: Vec<String>,
     #[arg(
         long = "remove-member",
+        help_heading = "Membership",
         help = "Remove one or more members by user id, exact login, or exact email."
     )]
     pub remove_member: Vec<String>,
     #[arg(
         long = "add-admin",
+        help_heading = "Membership",
         help = "Promote one or more members to team admin by user id, exact login, or exact email."
     )]
     pub add_admin: Vec<String>,
     #[arg(
         long = "remove-admin",
+        help_heading = "Membership",
         help = "Remove team-admin status from one or more members by user id, exact login, or exact email."
     )]
     pub remove_admin: Vec<String>,
@@ -755,14 +896,27 @@ pub struct TeamModifyArgs {
 pub struct OrgListArgs {
     #[command(flatten)]
     pub common: CommonCliArgsNoOrgId,
-    #[arg(long = "org-id", help = "Filter to one exact organization id.")]
+    #[arg(
+        long = "org-id",
+        help_heading = "Selection",
+        help = "Filter to one exact organization id."
+    )]
     pub org_id: Option<i64>,
-    #[arg(long, help = "Filter organizations by exact name.")]
+    #[arg(
+        long,
+        help_heading = "Selection",
+        help = "Filter organizations by exact name."
+    )]
     pub name: Option<String>,
-    #[arg(long, help = "Filter organizations by a free-text search.")]
+    #[arg(
+        long,
+        help_heading = "Selection",
+        help = "Filter organizations by a free-text search."
+    )]
     pub query: Option<String>,
     #[arg(
         long,
+        help_heading = "Selection",
         default_value_t = false,
         help = "Include org users and org roles in the rendered output."
     )]
@@ -787,7 +941,11 @@ pub struct OrgListArgs {
 pub struct OrgAddArgs {
     #[command(flatten)]
     pub common: CommonCliArgsNoOrgId,
-    #[arg(long, help = "Name for the new Grafana organization.")]
+    #[arg(
+        long,
+        help_heading = "Org Identity",
+        help = "Name for the new Grafana organization."
+    )]
     pub name: String,
     #[arg(
         long,
@@ -804,17 +962,23 @@ pub struct OrgModifyArgs {
     pub common: CommonCliArgsNoOrgId,
     #[arg(
         long = "org-id",
+        help_heading = "Target Selection",
         conflicts_with = "name",
         help = "Target one organization by numeric Grafana org id."
     )]
     pub org_id: Option<i64>,
     #[arg(
         long,
+        help_heading = "Target Selection",
         conflicts_with = "org_id",
         help = "Target one organization by exact name."
     )]
     pub name: Option<String>,
-    #[arg(long, help = "Replace the organization name with this new value.")]
+    #[arg(
+        long,
+        help_heading = "Org Updates",
+        help = "Replace the organization name with this new value."
+    )]
     pub set_name: String,
     #[arg(
         long,
@@ -831,18 +995,21 @@ pub struct OrgDeleteArgs {
     pub common: CommonCliArgsNoOrgId,
     #[arg(
         long = "org-id",
+        help_heading = "Target Selection",
         conflicts_with = "name",
         help = "Delete one organization by numeric Grafana org id."
     )]
     pub org_id: Option<i64>,
     #[arg(
         long,
+        help_heading = "Target Selection",
         conflicts_with = "org_id",
         help = "Delete one organization by exact name."
     )]
     pub name: Option<String>,
     #[arg(
         long,
+        help_heading = "Safety",
         default_value_t = false,
         help = "Skip the interactive confirmation prompt."
     )]
@@ -860,30 +1027,42 @@ pub struct OrgDeleteArgs {
 pub struct OrgExportArgs {
     #[command(flatten)]
     pub common: CommonCliArgsNoOrgId,
-    #[arg(long = "org-id", help = "Filter export to one exact organization id.")]
+    #[arg(
+        long = "org-id",
+        help_heading = "Export Scope",
+        help = "Filter export to one exact organization id."
+    )]
     pub org_id: Option<i64>,
     #[arg(
         long,
+        help_heading = "Export Source",
         default_value = DEFAULT_ACCESS_ORG_EXPORT_DIR,
         help = "Directory to write orgs.json and export-metadata.json."
     )]
     pub export_dir: PathBuf,
     #[arg(
         long,
+        help_heading = "Export Controls",
         default_value_t = false,
         help = "Overwrite existing export files instead of failing."
     )]
     pub overwrite: bool,
     #[arg(
         long,
+        help_heading = "Export Controls",
         default_value_t = false,
         help = "Preview export paths without writing files."
     )]
     pub dry_run: bool,
-    #[arg(long, help = "Filter export to one exact organization name.")]
+    #[arg(
+        long,
+        help_heading = "Export Scope",
+        help = "Filter export to one exact organization name."
+    )]
     pub name: Option<String>,
     #[arg(
         long,
+        help_heading = "Export Controls",
         default_value_t = false,
         help = "Include org users and org roles in the export bundle."
     )]
@@ -896,23 +1075,27 @@ pub struct OrgImportArgs {
     pub common: CommonCliArgsNoOrgId,
     #[arg(
         long,
+        help_heading = "Import Source",
         help = "Import directory that contains orgs.json and export-metadata.json."
     )]
     pub import_dir: PathBuf,
     #[arg(
         long,
+        help_heading = "Import Behavior",
         default_value_t = false,
         help = "Update matching existing orgs or create missing orgs instead of skipping them."
     )]
     pub replace_existing: bool,
     #[arg(
         long,
+        help_heading = "Import Behavior",
         default_value_t = false,
         help = "Preview import changes without writing to Grafana."
     )]
     pub dry_run: bool,
     #[arg(
         long,
+        help_heading = "Safety",
         default_value_t = false,
         help = "Acknowledge destructive import operations when required."
     )]
@@ -923,15 +1106,25 @@ pub struct OrgImportArgs {
 pub struct ServiceAccountListArgs {
     #[command(flatten)]
     pub common: CommonCliArgs,
-    #[arg(long, help = "Filter service accounts by a free-text search.")]
+    #[arg(
+        long,
+        help_heading = "Filters",
+        help = "Filter service accounts by a free-text search."
+    )]
     pub query: Option<String>,
     #[arg(
         long,
+        help_heading = "Pagination",
         default_value_t = 1,
         help = "Result page number for paginated Grafana list APIs."
     )]
     pub page: usize,
-    #[arg(long, default_value_t = DEFAULT_PAGE_SIZE, help = "Number of service accounts to request per page.")]
+    #[arg(
+        long,
+        help_heading = "Pagination",
+        default_value_t = DEFAULT_PAGE_SIZE,
+        help = "Number of service accounts to request per page."
+    )]
     pub per_page: usize,
     #[arg(long, default_value_t = false, conflicts_with_all = ["csv", "json"], help_heading = "Output Options", help = "Render service-account summaries as a table.")]
     pub table: bool,
@@ -953,16 +1146,27 @@ pub struct ServiceAccountListArgs {
 pub struct ServiceAccountAddArgs {
     #[command(flatten)]
     pub common: CommonCliArgs,
-    #[arg(long, help = "Name for the new Grafana service account.")]
+    #[arg(
+        long,
+        help_heading = "Service Account Identity",
+        help = "Name for the new Grafana service account."
+    )]
     pub name: String,
     #[arg(
         long,
+        help_heading = "Service Account Identity",
         default_value = "Viewer",
         value_parser = parse_service_account_role,
         help = "Initial org role for the service account."
     )]
     pub role: String,
-    #[arg(long, value_parser = parse_bool_text, default_value = "false", help = "Create the service account in a disabled state.")]
+    #[arg(
+        long,
+        help_heading = "Service Account Identity",
+        value_parser = parse_bool_text,
+        default_value = "false",
+        help = "Create the service account in a disabled state."
+    )]
     pub disabled: bool,
     #[arg(
         long,
@@ -979,18 +1183,21 @@ pub struct ServiceAccountExportArgs {
     pub common: CommonCliArgs,
     #[arg(
         long,
+        help_heading = "Export Source",
         default_value = DEFAULT_ACCESS_SERVICE_ACCOUNT_EXPORT_DIR,
         help = "Directory to write service-accounts.json and export-metadata.json."
     )]
     pub export_dir: PathBuf,
     #[arg(
         long,
+        help_heading = "Export Controls",
         default_value_t = false,
         help = "Overwrite existing export files instead of failing."
     )]
     pub overwrite: bool,
     #[arg(
         long,
+        help_heading = "Export Controls",
         default_value_t = false,
         help = "Preview export paths without writing files."
     )]
@@ -1003,17 +1210,20 @@ pub struct ServiceAccountImportArgs {
     pub common: CommonCliArgs,
     #[arg(
         long,
+        help_heading = "Import Source",
         help = "Import directory that contains service-accounts.json and export-metadata.json."
     )]
     pub import_dir: PathBuf,
     #[arg(
         long,
+        help_heading = "Import Behavior",
         default_value_t = false,
         help = "Update matching existing service accounts instead of failing on duplicates."
     )]
     pub replace_existing: bool,
     #[arg(
         long,
+        help_heading = "Import Behavior",
         default_value_t = false,
         help = "Preview import changes without writing to Grafana."
     )]
@@ -1045,6 +1255,7 @@ pub struct ServiceAccountImportArgs {
     pub output_format: DryRunOutputFormat,
     #[arg(
         long,
+        help_heading = "Import Behavior",
         default_value_t = false,
         help = "Acknowledge destructive import operations when required."
     )]
@@ -1057,6 +1268,7 @@ pub struct ServiceAccountDiffArgs {
     pub common: CommonCliArgs,
     #[arg(
         long,
+        help_heading = "Diff Source",
         default_value = DEFAULT_ACCESS_SERVICE_ACCOUNT_EXPORT_DIR,
         help = "Diff directory that contains service-accounts.json and export-metadata.json."
     )]
@@ -1069,20 +1281,27 @@ pub struct ServiceAccountTokenAddArgs {
     pub common: CommonCliArgs,
     #[arg(
         long,
+        help_heading = "Target Selection",
         conflicts_with = "name",
         help = "Target one service account by numeric id."
     )]
     pub service_account_id: Option<String>,
     #[arg(
         long,
+        help_heading = "Target Selection",
         conflicts_with = "service_account_id",
         help = "Target one service account by exact name."
     )]
     pub name: Option<String>,
-    #[arg(long, help = "Name for the new service-account token.")]
+    #[arg(
+        long,
+        help_heading = "Token Settings",
+        help = "Name for the new service-account token."
+    )]
     pub token_name: String,
     #[arg(
         long,
+        help_heading = "Token Settings",
         value_parser = parse_positive_usize,
         help = "Optional token lifetime in seconds. Omit for a non-expiring token if Grafana allows it."
     )]
@@ -1189,7 +1408,7 @@ pub enum AccessCommand {
         #[command(subcommand)]
         command: OrgCommand,
     },
-    #[command(visible_alias = "group", after_help = ACCESS_TEAM_GROUP_HELP_EXAMPLES)]
+    #[command(after_help = ACCESS_TEAM_GROUP_HELP_EXAMPLES)]
     Team {
         #[command(subcommand)]
         command: TeamCommand,

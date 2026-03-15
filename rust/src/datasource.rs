@@ -121,12 +121,14 @@ pub struct DatasourceExportArgs {
     pub common: CommonCliArgs,
     #[arg(
         long,
+        help_heading = "Export Options",
         default_value = DEFAULT_EXPORT_DIR,
         help = "Directory to write exported datasource inventory into. Export writes datasources.json plus index/manifest files at that root."
     )]
     pub export_dir: PathBuf,
     #[arg(
         long,
+        help_heading = "Export Scope",
         conflicts_with = "all_orgs",
         help = "Export datasource inventory from this explicit Grafana org ID instead of the current org. Requires Basic auth."
     )]
@@ -134,6 +136,7 @@ pub struct DatasourceExportArgs {
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Export Scope",
         conflicts_with = "org_id",
         help = "Enumerate all visible Grafana orgs and export one datasource inventory bundle per org under the export root. Requires Basic auth."
     )]
@@ -141,12 +144,14 @@ pub struct DatasourceExportArgs {
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Output Options",
         help = "Replace existing export files in the target directory instead of failing."
     )]
     pub overwrite: bool,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Output Options",
         help = "Preview the datasource export files that would be written without changing disk."
     )]
     pub dry_run: bool,
@@ -158,11 +163,13 @@ pub struct DatasourceImportArgs {
     pub common: CommonCliArgs,
     #[arg(
         long,
+        help_heading = "Import Options",
         help = "Import datasource inventory from this directory. Point this at the datasource export root that contains datasources.json and export-metadata.json."
     )]
     pub import_dir: PathBuf,
     #[arg(
         long,
+        help_heading = "Import Routing",
         conflicts_with = "use_export_org",
         help = "Import datasources into this Grafana org ID instead of the current org context. Requires Basic auth."
     )]
@@ -170,12 +177,14 @@ pub struct DatasourceImportArgs {
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Import Routing",
         conflicts_with = "require_matching_export_org",
         help = "Import a combined multi-org datasource export root by routing each org-scoped datasource bundle back into the matching Grafana org. Requires Basic auth."
     )]
     pub use_export_org: bool,
     #[arg(
         long = "only-org-id",
+        help_heading = "Import Routing",
         requires = "use_export_org",
         conflicts_with = "org_id",
         help = "With --use-export-org, import only these exported source org IDs. Repeat the flag to select multiple orgs."
@@ -184,6 +193,7 @@ pub struct DatasourceImportArgs {
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Import Routing",
         requires = "use_export_org",
         help = "With --use-export-org, create a missing destination org when an exported source org ID does not exist in Grafana. The new org is created from the exported org name and then used as the import target."
     )]
@@ -191,45 +201,53 @@ pub struct DatasourceImportArgs {
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Import Routing",
         help = "Require the datasource export orgId to match the target Grafana org before dry-run or live import."
     )]
     pub require_matching_export_org: bool,
     #[arg(
         long,
+        help_heading = "Update Control",
         default_value_t = false,
         help = "Update an existing destination datasource when the imported datasource identity already exists. Without this flag, existing matches are blocked."
     )]
     pub replace_existing: bool,
     #[arg(
         long = "secret-placeholder",
+        help_heading = "Secret Handling",
         help = "Attach one datasource import placeholder in DATASOURCE:FIELD=${secret:NAME} form. DATASOURCE matches an imported datasource uid or name, and FIELD targets one secureJsonData field. Repeat the flag for multiple mappings."
     )]
     pub secret_placeholder: Vec<String>,
     #[arg(
         long = "secret",
+        help_heading = "Secret Handling",
         help = "Resolve one datasource import placeholder value in NAME=VALUE form. Repeat the flag for multiple placeholders."
     )]
     pub secrets: Vec<String>,
     #[arg(
         long = "secret-file",
+        help_heading = "Secret Handling",
         help = "Load datasource import placeholder values from a JSON object file mapping placeholder names to secret strings."
     )]
     pub secret_file: Option<PathBuf>,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Update Control",
         help = "Reconcile only datasources that already exist in Grafana. Missing destination identities are skipped instead of created."
     )]
     pub update_existing_only: bool,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Dry-Run Output",
         help = "Preview what datasource import would do without changing Grafana."
     )]
     pub dry_run: bool,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Dry-Run Output",
         help = "Continue processing other datasource files after one fails; still exit non-zero if any file failed."
     )]
     pub continue_on_error: bool,
@@ -273,6 +291,7 @@ pub struct DatasourceImportArgs {
     pub output_columns: Vec<String>,
     #[arg(
         long,
+        help_heading = "Execution",
         default_value_t = false,
         help = "Show concise per-datasource progress in <current>/<total> form while processing files."
     )]
@@ -280,6 +299,7 @@ pub struct DatasourceImportArgs {
     #[arg(
         short = 'v',
         long,
+        help_heading = "Execution",
         default_value_t = false,
         help = "Show detailed per-item import output. Overrides --progress output."
     )]
@@ -292,6 +312,7 @@ pub struct DatasourceDiffArgs {
     pub common: CommonCliArgs,
     #[arg(
         long,
+        help_heading = "Diff Source",
         help = "Compare datasource inventory from this directory against live Grafana. Point this at the datasource export root that contains datasources.json and export-metadata.json."
     )]
     pub diff_dir: PathBuf,
@@ -303,33 +324,57 @@ pub struct DatasourceAddArgs {
     pub common: CommonCliArgs,
     #[arg(
         long,
+        help_heading = "Target Identity",
         help = "Datasource UID to create. Optional but recommended for stable identity."
     )]
     pub uid: Option<String>,
-    #[arg(long, help = "Datasource name to create.")]
+    #[arg(
+        long,
+        help_heading = "Target Identity",
+        help = "Datasource name to create."
+    )]
     pub name: String,
-    #[arg(long = "type", help = "Grafana datasource plugin type id to create.")]
+    #[arg(
+        long = "type",
+        help_heading = "Target Identity",
+        help = "Grafana datasource plugin type id to create."
+    )]
     pub datasource_type: String,
-    #[arg(long, help = "Datasource access mode such as proxy or direct.")]
+    #[arg(
+        long,
+        help_heading = "Target Identity",
+        help = "Datasource access mode such as proxy or direct."
+    )]
     pub access: Option<String>,
-    #[arg(long, help = "Datasource target URL to store in Grafana.")]
+    #[arg(
+        long,
+        help_heading = "Target Identity",
+        help = "Datasource target URL to store in Grafana."
+    )]
     pub datasource_url: Option<String>,
     #[arg(
         long = "default",
         default_value_t = false,
+        help_heading = "Target Identity",
         help = "Mark the new datasource as the default datasource."
     )]
     pub is_default: bool,
-    #[arg(long, help = "Inline JSON object string for datasource jsonData.")]
+    #[arg(
+        long,
+        help_heading = "Payload",
+        help = "Inline JSON object string for datasource jsonData."
+    )]
     pub json_data: Option<String>,
     #[arg(
         long,
+        help_heading = "Payload",
         help = "Inline JSON object string for datasource secureJsonData."
     )]
     pub secure_json_data: Option<String>,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Dry-Run Output",
         help = "Preview what datasource add would do without changing Grafana."
     )]
     pub dry_run: bool,
@@ -366,6 +411,7 @@ pub struct DatasourceDeleteArgs {
         long,
         required_unless_present = "name",
         conflicts_with = "name",
+        help_heading = "Target Selection",
         help = "Datasource UID to delete."
     )]
     pub uid: Option<String>,
@@ -373,12 +419,14 @@ pub struct DatasourceDeleteArgs {
         long,
         required_unless_present = "uid",
         conflicts_with = "uid",
+        help_heading = "Target Selection",
         help = "Datasource name to delete when UID is not available."
     )]
     pub name: Option<String>,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Dry-Run Output",
         help = "Preview what datasource delete would do without changing Grafana."
     )]
     pub dry_run: bool,
@@ -411,34 +459,47 @@ pub struct DatasourceDeleteArgs {
 pub struct DatasourceModifyArgs {
     #[command(flatten)]
     pub common: CommonCliArgs,
-    #[arg(long, help = "Datasource UID to modify.")]
+    #[arg(
+        long,
+        help_heading = "Target Identity",
+        help = "Datasource UID to modify."
+    )]
     pub uid: String,
-    #[arg(long, help = "Replace the datasource URL stored in Grafana.")]
+    #[arg(
+        long,
+        help_heading = "Input Updates",
+        help = "Replace the datasource URL stored in Grafana."
+    )]
     pub set_url: Option<String>,
     #[arg(
         long,
+        help_heading = "Input Updates",
         help = "Replace the datasource access mode such as proxy or direct."
     )]
     pub set_access: Option<String>,
     #[arg(
         long,
         value_parser = parse_bool_choice,
+        help_heading = "Input Updates",
         help = "Set whether Grafana treats this datasource as default. Use true or false."
     )]
     pub set_default: Option<bool>,
     #[arg(
         long,
+        help_heading = "Payload",
         help = "Inline JSON object string to merge into datasource jsonData."
     )]
     pub json_data: Option<String>,
     #[arg(
         long,
+        help_heading = "Payload",
         help = "Inline JSON object string to send in datasource secureJsonData."
     )]
     pub secure_json_data: Option<String>,
     #[arg(
         long,
         default_value_t = false,
+        help_heading = "Dry-Run Output",
         help = "Preview what datasource modify would do without changing Grafana."
     )]
     pub dry_run: bool,

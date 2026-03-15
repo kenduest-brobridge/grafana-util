@@ -208,13 +208,8 @@ fn parse_datasource_list_supports_table_mode() {
 
 #[test]
 fn parse_datasource_list_rejects_conflicting_output_modes() {
-    let error = DatasourceCliArgs::try_parse_from([
-        "grafana-util",
-        "list",
-        "--table",
-        "--json",
-    ])
-    .unwrap_err();
+    let error = DatasourceCliArgs::try_parse_from(["grafana-util", "list", "--table", "--json"])
+        .unwrap_err();
 
     assert!(error.to_string().contains("--table"));
     assert!(error.to_string().contains("--json"));

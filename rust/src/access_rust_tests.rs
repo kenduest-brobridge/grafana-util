@@ -589,10 +589,10 @@ fn parse_cli_supports_service_account_export_import_and_diff() {
 }
 
 #[test]
-fn parse_cli_supports_group_delete_alias() {
+fn parse_cli_supports_team_delete_command() {
     let args = parse_cli_from([
         "grafana-access-utils",
-        "group",
+        "team",
         "delete",
         "--team-id",
         "7",
@@ -606,7 +606,7 @@ fn parse_cli_supports_group_delete_alias() {
             assert_eq!(delete_args.team_id.as_deref(), Some("7"));
             assert!(delete_args.yes);
         }
-        _ => panic!("expected group alias delete"),
+        _ => panic!("expected team delete"),
     }
 }
 

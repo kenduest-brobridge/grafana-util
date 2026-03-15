@@ -187,7 +187,8 @@ def add_common_args(parser: argparse.ArgumentParser) -> None:
 
 
 def add_export_args(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument(
+    export_group = parser.add_argument_group("Export Settings")
+    export_group.add_argument(
         "--output-dir",
         default=DEFAULT_OUTPUT_DIR,
         help=(
@@ -195,7 +196,7 @@ def add_export_args(parser: argparse.ArgumentParser) -> None:
             f"under {RAW_EXPORT_SUBDIR}/."
         ),
     )
-    parser.add_argument(
+    export_group.add_argument(
         "--flat",
         action="store_true",
         help=(
@@ -203,7 +204,7 @@ def add_export_args(parser: argparse.ArgumentParser) -> None:
             "resource directories instead of nested folder/group directories."
         ),
     )
-    parser.add_argument(
+    export_group.add_argument(
         "--overwrite",
         action="store_true",
         help="Overwrite existing exported files if they already exist.",
@@ -211,27 +212,28 @@ def add_export_args(parser: argparse.ArgumentParser) -> None:
 
 
 def add_list_args(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument(
+    output_group = parser.add_argument_group("Output Options")
+    output_group.add_argument(
         "--table",
         action="store_true",
         help="Render list output as a table. This is the default.",
     )
-    parser.add_argument(
+    output_group.add_argument(
         "--csv",
         action="store_true",
         help="Render list output as CSV.",
     )
-    parser.add_argument(
+    output_group.add_argument(
         "--json",
         action="store_true",
         help="Render list output as JSON.",
     )
-    parser.add_argument(
+    output_group.add_argument(
         "--no-header",
         action="store_true",
         help="Omit the table header row.",
     )
-    parser.add_argument(
+    output_group.add_argument(
         "--output-format",
         choices=LIST_OUTPUT_FORMAT_CHOICES,
         default=None,
@@ -246,7 +248,8 @@ def add_list_args(parser: argparse.ArgumentParser) -> None:
 def add_import_args(parser: argparse.ArgumentParser, diff_mode: bool = False) -> None:
     dir_flag = "--diff-dir" if diff_mode else "--import-dir"
     verb = "Compare" if diff_mode else "Import"
-    parser.add_argument(
+    input_group = parser.add_argument_group("Input")
+    input_group.add_argument(
         dir_flag,
         dest="diff_dir" if diff_mode else "import_dir",
         required=True,
@@ -257,18 +260,19 @@ def add_import_args(parser: argparse.ArgumentParser, diff_mode: bool = False) ->
         )
         + f"Point this to the {RAW_EXPORT_SUBDIR}/ export directory explicitly.",
     )
+    behavior_group = parser.add_argument_group("Behavior")
     if not diff_mode:
-        parser.add_argument(
+        behavior_group.add_argument(
             "--replace-existing",
             action="store_true",
             help="Update existing resources with the same identity instead of failing on import.",
         )
-        parser.add_argument(
+        behavior_group.add_argument(
             "--dry-run",
             action="store_true",
             help="Show whether each import file would create or update resources without changing Grafana.",
         )
-    parser.add_argument(
+    behavior_group.add_argument(
         "--dashboard-uid-map",
         default=None,
         help=(
@@ -276,7 +280,7 @@ def add_import_args(parser: argparse.ArgumentParser, diff_mode: bool = False) ->
             "for linked alert-rule repair during import."
         ),
     )
-    parser.add_argument(
+    behavior_group.add_argument(
         "--panel-id-map",
         default=None,
         help=(
@@ -300,7 +304,8 @@ def build_legacy_parser(prog: Optional[str] = None) -> argparse.ArgumentParser:
     )
     add_common_args(parser)
     add_export_args(parser)
-    mode_group = parser.add_mutually_exclusive_group()
+    mode_group = parser.add_argument_group("Input Source")
+    mode_group = mode_group.add_mutually_exclusive_group()
     mode_group.add_argument(
         "--import-dir",
         default=None,
@@ -317,17 +322,18 @@ def build_legacy_parser(prog: Optional[str] = None) -> argparse.ArgumentParser:
             f"Point this to the {RAW_EXPORT_SUBDIR}/ export directory explicitly."
         ),
     )
-    parser.add_argument(
+    behavior_group = parser.add_argument_group("Legacy Import Behavior")
+    behavior_group.add_argument(
         "--replace-existing",
         action="store_true",
         help="Update existing resources with the same identity instead of failing on import.",
     )
-    parser.add_argument(
+    behavior_group.add_argument(
         "--dry-run",
         action="store_true",
         help="Show whether each import file would create or update resources without changing Grafana.",
     )
-    parser.add_argument(
+    behavior_group.add_argument(
         "--dashboard-uid-map",
         default=None,
         help=(
@@ -335,7 +341,7 @@ def build_legacy_parser(prog: Optional[str] = None) -> argparse.ArgumentParser:
             "for linked alert-rule repair during import."
         ),
     )
-    parser.add_argument(
+    behavior_group.add_argument(
         "--panel-id-map",
         default=None,
         help=(
