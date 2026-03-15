@@ -25,7 +25,7 @@ fi
 
 details="$(sed -n '3,$p' "$msg_file")"
 if [ -z "$details" ]; then
-  echo "commit-msg pre-check failed: add 2-4 detail bullets after the blank line." >&2
+  echo "commit-msg pre-check failed: add one or more detail bullets after the blank line." >&2
   exit 1
 fi
 
@@ -41,11 +41,5 @@ fi
 
 if printf '%s\n' "$details" | grep -Evq '^- .+'; then
   echo "commit-msg pre-check failed: only '- ...' detail bullets are allowed after line 2." >&2
-  exit 1
-fi
-
-detail_count="$(printf '%s\n' "$details" | wc -l | tr -d ' ')"
-if [ "$detail_count" -lt 2 ] || [ "$detail_count" -gt 4 ]; then
-  echo "commit-msg pre-check failed: provide 2-4 detail bullets." >&2
   exit 1
 fi

@@ -78,7 +78,7 @@ For external command usage and operator examples, prefer `README.md`, `README.zh
   - blank line
   - flat `- ...` sub-items with concrete details
   - do not insert empty blank lines between detail bullets
-- Prefer 2-4 detail bullets that describe the main code, test, or doc changes in the commit.
+- Use concise detail bullets that describe the main code, test, or doc changes in the commit.
 - Example:
   - `refactor: split Rust dashboard module internals`
   - blank line
@@ -87,7 +87,7 @@ For external command usage and operator examples, prefer `README.md`, `README.zh
   - `- Record the refactor in maintainer docs and revalidate the full Rust suite.`
 - Git pre-check rule for this format only:
   - Enable repo hooks with `git config core.hooksPath .githooks`.
-  - The `.githooks/commit-msg` check enforces `type: subject`, requires a blank second line, requires 2-4 contiguous `- ...` detail bullets, and rejects empty lines between detail bullets.
+  - The `.githooks/commit-msg` check enforces `type: subject`, requires a blank second line, requires contiguous `- ...` detail bullets, and rejects empty lines between detail bullets.
 - Group related code, tests, and doc updates in the same commit.
 - PRs should describe the operator-facing change, validation run, and any Grafana version assumptions.
 
