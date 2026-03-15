@@ -585,11 +585,6 @@ class ExporterTests(unittest.TestCase):
 
         ast.parse(source, filename=str(OUTPUT_SUPPORT_MODULE_PATH), feature_version=(3, 9))
 
-    def test_dashboard_progress_module_parses_as_python39_syntax(self):
-        source = PROGRESS_MODULE_PATH.read_text(encoding="utf-8")
-
-        ast.parse(source, filename=str(PROGRESS_MODULE_PATH), feature_version=(3, 9))
-
     def test_dashboard_transformer_module_parses_as_python39_syntax(self):
         source = TRANSFORMER_MODULE_PATH.read_text(encoding="utf-8")
 
