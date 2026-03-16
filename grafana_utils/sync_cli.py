@@ -95,6 +95,32 @@ BUNDLE_HELP_EXAMPLES = (
     "  grafana-util sync bundle --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts/raw --output-file ./sync-source-bundle.json\n"
     "  grafana-util sync bundle --dashboard-export-dir ./dashboards/raw --datasource-export-file ./datasources/datasources.json --metadata-file ./metadata.json --output json"
 )
+SYNC_ROOT_HELP_EXAMPLES = (
+    "Examples:\n\n"
+    "  grafana-util sync summary --desired-file ./desired.json\n"
+    "  grafana-util sync plan --desired-file ./desired.json --fetch-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\"\n"
+    "  grafana-util sync apply --plan-file ./sync-plan-reviewed.json --approve --execute-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\""
+)
+
+
+def add_document_input_group(parser, *definitions):
+    group = parser.add_argument_group("Input Options")
+    for definition in definitions:
+        flags = definition[0]
+        kwargs = definition[1]
+        group.add_argument(*flags, **kwargs)
+
+
+def add_runtime_group(parser):
+    return parser.add_argument_group("Runtime Options")
+
+
+def add_output_group(parser):
+    return parser.add_argument_group("Output Options")
+
+
+def add_apply_control_group(parser):
+    return parser.add_argument_group("Apply Control Options")
 
 
 def build_parser(prog=None):
@@ -105,6 +131,7 @@ def build_parser(prog=None):
             "Build, review, and gate declarative Grafana sync plans with "
             "optional live Grafana fetch/apply paths."
         ),
+        epilog=SYNC_ROOT_HELP_EXAMPLES,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     subparsers = parser.add_subparsers(dest="command")
@@ -116,12 +143,11 @@ def build_parser(prog=None):
         epilog=SUMMARY_HELP_EXAMPLES,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    summary_parser.add_argument(
-        "--desired-file",
-        required=True,
-        help="JSON file containing the desired managed resource list.",
+    add_document_input_group(
+        summary_parser,
+        (("--desired-file",), {"required": True, "help": "JSON file containing the desired managed resource list."}),
     )
-    summary_parser.add_argument(
+    add_output_group(summary_parser).add_argument(
         "--output",
         choices=("text", "json"),
         default="text",
@@ -134,39 +160,35 @@ def build_parser(prog=None):
         epilog=PLAN_HELP_EXAMPLES,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    plan_parser.add_argument(
-        "--desired-file",
-        required=True,
-        help="JSON file containing the desired managed resource list.",
+    add_document_input_group(
+        plan_parser,
+        (("--desired-file",), {"required": True, "help": "JSON file containing the desired managed resource list."}),
+        (("--live-file",), {"default": None, "help": "JSON file containing the current live resource list."}),
     )
-    plan_parser.add_argument(
-        "--live-file",
-        default=None,
-        help="JSON file containing the current live resource list.",
-    )
-    plan_parser.add_argument(
+    runtime_group = add_runtime_group(plan_parser)
+    runtime_group.add_argument(
         "--fetch-live",
         action="store_true",
         help="Read the current live state directly from Grafana instead of --live-file.",
     )
     add_common_cli_args(plan_parser)
-    plan_parser.add_argument(
+    runtime_group.add_argument(
         "--org-id",
         default=None,
         help="Optional Grafana org id used when --fetch-live is active.",
     )
-    plan_parser.add_argument(
+    runtime_group.add_argument(
         "--page-size",
         type=int,
         default=500,
         help="Dashboard search page size when --fetch-live is active.",
     )
-    plan_parser.add_argument(
+    add_apply_control_group(plan_parser).add_argument(
         "--allow-prune",
         action="store_true",
         help="Treat live resources missing from desired state as would-delete instead of unmanaged.",
     )
-    plan_parser.add_argument(
+    add_output_group(plan_parser).add_argument(
         "--plan-file",
         default=None,
         help="Optional JSON file path to write the generated plan document.",
@@ -178,17 +200,16 @@ def build_parser(prog=None):
         epilog=REVIEW_HELP_EXAMPLES,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    review_parser.add_argument(
-        "--plan-file",
-        required=True,
-        help="Input JSON plan document produced by `grafana-util sync plan`.",
+    add_document_input_group(
+        review_parser,
+        (("--plan-file",), {"required": True, "help": "Input JSON plan document produced by `grafana-util sync plan`."}),
     )
-    review_parser.add_argument(
+    add_apply_control_group(review_parser).add_argument(
         "--review-token",
         default=DEFAULT_REVIEW_TOKEN,
         help="Explicit review token required to mark the plan reviewed.",
     )
-    review_parser.add_argument(
+    add_output_group(review_parser).add_argument(
         "--output-file",
         default=None,
         help="Optional JSON file path to write the reviewed plan document.",
@@ -200,28 +221,24 @@ def build_parser(prog=None):
         epilog=PREFLIGHT_HELP_EXAMPLES,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    preflight_parser.add_argument(
-        "--desired-file",
-        required=True,
-        help="JSON file containing the desired managed resource list.",
+    add_document_input_group(
+        preflight_parser,
+        (("--desired-file",), {"required": True, "help": "JSON file containing the desired managed resource list."}),
+        (("--availability-file",), {"default": None, "help": "Optional JSON object file containing availability hints such as datasourceUids, pluginIds, and contactPoints."}),
     )
-    preflight_parser.add_argument(
-        "--availability-file",
-        default=None,
-        help="Optional JSON object file containing availability hints such as datasourceUids, pluginIds, and contactPoints.",
-    )
-    preflight_parser.add_argument(
+    runtime_group = add_runtime_group(preflight_parser)
+    runtime_group.add_argument(
         "--fetch-live",
         action="store_true",
         help="Fetch availability hints from Grafana instead of relying only on --availability-file.",
     )
     add_common_cli_args(preflight_parser)
-    preflight_parser.add_argument(
+    runtime_group.add_argument(
         "--org-id",
         default=None,
         help="Optional Grafana org id used when --fetch-live is active.",
     )
-    preflight_parser.add_argument(
+    add_output_group(preflight_parser).add_argument(
         "--output",
         choices=("text", "json"),
         default="text",
@@ -234,12 +251,11 @@ def build_parser(prog=None):
         epilog=ASSESS_ALERTS_HELP_EXAMPLES,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    assess_alerts_parser.add_argument(
-        "--alerts-file",
-        required=True,
-        help="JSON file containing the alert sync resource list.",
+    add_document_input_group(
+        assess_alerts_parser,
+        (("--alerts-file",), {"required": True, "help": "JSON file containing the alert sync resource list."}),
     )
-    assess_alerts_parser.add_argument(
+    add_output_group(assess_alerts_parser).add_argument(
         "--output",
         choices=("text", "json"),
         default="text",
@@ -252,33 +268,25 @@ def build_parser(prog=None):
         epilog=BUNDLE_PREFLIGHT_HELP_EXAMPLES,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    bundle_preflight_parser.add_argument(
-        "--source-bundle",
-        required=True,
-        help="JSON file containing the staged multi-resource source bundle.",
+    add_document_input_group(
+        bundle_preflight_parser,
+        (("--source-bundle",), {"required": True, "help": "JSON file containing the staged multi-resource source bundle."}),
+        (("--target-inventory",), {"required": True, "help": "JSON file containing the staged target inventory snapshot."}),
+        (("--availability-file",), {"default": None, "help": "Optional JSON object file containing staged availability hints."}),
     )
-    bundle_preflight_parser.add_argument(
-        "--target-inventory",
-        required=True,
-        help="JSON file containing the staged target inventory snapshot.",
-    )
-    bundle_preflight_parser.add_argument(
-        "--availability-file",
-        default=None,
-        help="Optional JSON object file containing staged availability hints.",
-    )
-    bundle_preflight_parser.add_argument(
+    runtime_group = add_runtime_group(bundle_preflight_parser)
+    runtime_group.add_argument(
         "--fetch-live",
         action="store_true",
         help="Fetch availability hints from Grafana instead of relying only on --availability-file.",
     )
     add_common_cli_args(bundle_preflight_parser)
-    bundle_preflight_parser.add_argument(
+    runtime_group.add_argument(
         "--org-id",
         default=None,
         help="Optional Grafana org id used when --fetch-live is active.",
     )
-    bundle_preflight_parser.add_argument(
+    add_output_group(bundle_preflight_parser).add_argument(
         "--output",
         choices=("text", "json"),
         default="text",
@@ -291,32 +299,19 @@ def build_parser(prog=None):
         epilog=BUNDLE_HELP_EXAMPLES,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    bundle_parser.add_argument(
-        "--dashboard-export-dir",
-        default=None,
-        help="Path to one existing dashboard raw export directory such as ./dashboards/raw.",
+    add_document_input_group(
+        bundle_parser,
+        (("--dashboard-export-dir",), {"default": None, "help": "Path to one existing dashboard raw export directory such as ./dashboards/raw."}),
+        (("--alert-export-dir",), {"default": None, "help": "Path to one existing alert raw export directory such as ./alerts/raw."}),
+        (("--datasource-export-file",), {"default": None, "help": "Optional standalone datasource inventory JSON file to include or prefer over dashboards/raw/datasources.json."}),
+        (("--metadata-file",), {"default": None, "help": "Optional JSON object file containing extra bundle metadata."}),
     )
-    bundle_parser.add_argument(
-        "--alert-export-dir",
-        default=None,
-        help="Path to one existing alert raw export directory such as ./alerts/raw.",
-    )
-    bundle_parser.add_argument(
-        "--datasource-export-file",
-        default=None,
-        help="Optional standalone datasource inventory JSON file to include or prefer over dashboards/raw/datasources.json.",
-    )
-    bundle_parser.add_argument(
-        "--metadata-file",
-        default=None,
-        help="Optional JSON object file containing extra bundle metadata.",
-    )
-    bundle_parser.add_argument(
+    add_output_group(bundle_parser).add_argument(
         "--output-file",
         default=None,
         help="Optional JSON file path to write the source bundle artifact.",
     )
-    bundle_parser.add_argument(
+    add_output_group(bundle_parser).add_argument(
         "--output",
         choices=("text", "json"),
         default="text",
@@ -329,33 +324,34 @@ def build_parser(prog=None):
         epilog=APPLY_HELP_EXAMPLES,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    apply_parser.add_argument(
-        "--plan-file",
-        required=True,
-        help="Input JSON plan document, typically already marked reviewed.",
+    add_document_input_group(
+        apply_parser,
+        (("--plan-file",), {"required": True, "help": "Input JSON plan document, typically already marked reviewed."}),
     )
-    apply_parser.add_argument(
+    control_group = add_apply_control_group(apply_parser)
+    control_group.add_argument(
         "--approve",
         action="store_true",
         help="Explicit acknowledgement required before an apply intent or live execution is emitted.",
     )
     add_common_cli_args(apply_parser)
-    apply_parser.add_argument(
+    runtime_group = add_runtime_group(apply_parser)
+    runtime_group.add_argument(
         "--org-id",
         default=None,
         help="Optional Grafana org id used when --execute-live is active.",
     )
-    apply_parser.add_argument(
+    control_group.add_argument(
         "--execute-live",
         action="store_true",
         help="Apply supported sync operations to Grafana after review and approval checks pass.",
     )
-    apply_parser.add_argument(
+    control_group.add_argument(
         "--allow-folder-delete",
         action="store_true",
         help="Allow live deletion of folders when a reviewed plan includes would-delete folder operations.",
     )
-    apply_parser.add_argument(
+    add_output_group(apply_parser).add_argument(
         "--output-file",
         default=None,
         help="Optional JSON file path to write the apply intent document.",

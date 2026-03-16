@@ -28,6 +28,15 @@ use crate::sync_workbench::{
 };
 
 pub const DEFAULT_REVIEW_TOKEN: &str = "reviewed-sync-plan";
+const SYNC_ROOT_HELP_TEXT: &str = "Examples:\n\n  Summarize desired resources:\n    grafana-util sync summary --desired-file ./desired.json\n\n  Build a live-backed sync plan:\n    grafana-util sync plan --desired-file ./desired.json --fetch-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\"\n\n  Apply a reviewed plan back to Grafana:\n    grafana-util sync apply --plan-file ./sync-plan-reviewed.json --approve --execute-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\"";
+const SYNC_SUMMARY_HELP_TEXT: &str = "Examples:\n\n  grafana-util sync summary --desired-file ./desired.json\n  grafana-util sync summary --desired-file ./desired.json --output json";
+const SYNC_PLAN_HELP_TEXT: &str = "Examples:\n\n  grafana-util sync plan --desired-file ./desired.json --live-file ./live.json\n  grafana-util sync plan --desired-file ./desired.json --fetch-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --allow-prune --output json";
+const SYNC_REVIEW_HELP_TEXT: &str = "Examples:\n\n  grafana-util sync review --plan-file ./sync-plan.json\n  grafana-util sync review --plan-file ./sync-plan.json --review-note 'peer-reviewed' --output json";
+const SYNC_APPLY_HELP_TEXT: &str = "Examples:\n\n  grafana-util sync apply --plan-file ./sync-plan-reviewed.json --approve\n  grafana-util sync apply --plan-file ./sync-plan-reviewed.json --approve --execute-live --allow-folder-delete --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\"";
+const SYNC_PREFLIGHT_HELP_TEXT: &str = "Examples:\n\n  grafana-util sync preflight --desired-file ./desired.json --availability-file ./availability.json\n  grafana-util sync preflight --desired-file ./desired.json --fetch-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output json";
+const SYNC_ASSESS_ALERTS_HELP_TEXT: &str = "Examples:\n\n  grafana-util sync assess-alerts --alerts-file ./alerts.json\n  grafana-util sync assess-alerts --alerts-file ./alerts.json --output json";
+const SYNC_BUNDLE_PREFLIGHT_HELP_TEXT: &str = "Examples:\n\n  grafana-util sync bundle-preflight --source-bundle ./bundle.json --target-inventory ./target.json\n  grafana-util sync bundle-preflight --source-bundle ./bundle.json --target-inventory ./target.json --fetch-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output json";
+const SYNC_BUNDLE_HELP_TEXT: &str = "Examples:\n\n  grafana-util sync bundle --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts/raw --output-file ./sync-source-bundle.json\n  grafana-util sync bundle --dashboard-export-dir ./dashboards/raw --datasource-export-file ./datasources/datasources.json --output json";
 
 #[derive(Debug, Clone, Copy, ValueEnum, PartialEq, Eq)]
 pub enum SyncOutputFormat {
@@ -38,7 +47,8 @@ pub enum SyncOutputFormat {
 #[derive(Debug, Clone, Parser)]
 #[command(
     name = "grafana-util sync",
-    about = "Local/document-only sync workflows."
+    about = "Reviewable sync workflows with optional live Grafana fetch/apply paths.",
+    after_help = SYNC_ROOT_HELP_TEXT
 )]
 pub struct SyncCliArgs {
     #[command(subcommand)]
@@ -47,53 +57,59 @@ pub struct SyncCliArgs {
 
 #[derive(Debug, Clone, Args)]
 pub struct SyncSummaryArgs {
-    #[arg(long, help = "JSON file containing the desired sync resource list.")]
+    #[arg(long, help = "JSON file containing the desired sync resource list.", help_heading = "Input Options")]
     pub desired_file: PathBuf,
     #[arg(
         long,
         value_enum,
         default_value_t = SyncOutputFormat::Text,
-        help = "Render the summary document as text or json."
+        help = "Render the summary document as text or json.",
+        help_heading = "Output Options"
     )]
     pub output: SyncOutputFormat,
 }
 
 #[derive(Debug, Clone, Args)]
 pub struct SyncPlanArgs {
-    #[arg(long, help = "JSON file containing the desired sync resource list.")]
+    #[arg(long, help = "JSON file containing the desired sync resource list.", help_heading = "Input Options")]
     pub desired_file: PathBuf,
-    #[arg(long, help = "JSON file containing the live sync resource list.")]
+    #[arg(long, help = "JSON file containing the live sync resource list.", help_heading = "Input Options")]
     pub live_file: Option<PathBuf>,
     #[arg(
         long,
         default_value_t = false,
-        help = "Read the current live state directly from Grafana instead of --live-file."
+        help = "Read the current live state directly from Grafana instead of --live-file.",
+        help_heading = "Live Options"
     )]
     pub fetch_live: bool,
     #[command(flatten)]
     pub common: CommonCliArgs,
     #[arg(
         long,
-        help = "Optional Grafana org id used when --fetch-live is active."
+        help = "Optional Grafana org id used when --fetch-live is active.",
+        help_heading = "Live Options"
     )]
     pub org_id: Option<i64>,
     #[arg(
         long,
         default_value_t = 500usize,
-        help = "Dashboard search page size when --fetch-live is active."
+        help = "Dashboard search page size when --fetch-live is active.",
+        help_heading = "Live Options"
     )]
     pub page_size: usize,
     #[arg(
         long,
         default_value_t = false,
-        help = "Mark live-only resources as would-delete instead of unmanaged."
+        help = "Mark live-only resources as would-delete instead of unmanaged.",
+        help_heading = "Planning Options"
     )]
     pub allow_prune: bool,
     #[arg(
         long,
         value_enum,
         default_value_t = SyncOutputFormat::Text,
-        help = "Render the plan document as text or json."
+        help = "Render the plan document as text or json.",
+        help_heading = "Output Options"
     )]
     pub output: SyncOutputFormat,
     #[arg(
@@ -105,19 +121,21 @@ pub struct SyncPlanArgs {
 
 #[derive(Debug, Clone, Args)]
 pub struct SyncReviewArgs {
-    #[arg(long, help = "JSON file containing the staged sync plan document.")]
+    #[arg(long, help = "JSON file containing the staged sync plan document.", help_heading = "Input Options")]
     pub plan_file: PathBuf,
     #[arg(
         long,
         default_value = DEFAULT_REVIEW_TOKEN,
-        help = "Explicit review token required to mark the plan reviewed."
+        help = "Explicit review token required to mark the plan reviewed.",
+        help_heading = "Review Options"
     )]
     pub review_token: String,
     #[arg(
         long,
         value_enum,
         default_value_t = SyncOutputFormat::Text,
-        help = "Render the reviewed plan document as text or json."
+        help = "Render the reviewed plan document as text or json.",
+        help_heading = "Output Options"
     )]
     pub output: SyncOutputFormat,
     #[arg(
@@ -136,7 +154,7 @@ pub struct SyncReviewArgs {
 
 #[derive(Debug, Clone, Args)]
 pub struct SyncApplyArgs {
-    #[arg(long, help = "JSON file containing the reviewed sync plan document.")]
+    #[arg(long, help = "JSON file containing the reviewed sync plan document.", help_heading = "Input Options")]
     pub plan_file: PathBuf,
     #[arg(
         long,
@@ -151,33 +169,38 @@ pub struct SyncApplyArgs {
     #[arg(
         long,
         default_value_t = false,
-        help = "Explicit acknowledgement required before a local apply intent is emitted."
+        help = "Explicit acknowledgement required before a local apply intent is emitted.",
+        help_heading = "Approval Options"
     )]
     pub approve: bool,
     #[command(flatten)]
     pub common: CommonCliArgs,
     #[arg(
         long,
-        help = "Optional Grafana org id used when --execute-live is active."
+        help = "Optional Grafana org id used when --execute-live is active.",
+        help_heading = "Live Options"
     )]
     pub org_id: Option<i64>,
     #[arg(
         long,
         default_value_t = false,
-        help = "Apply supported sync operations to Grafana after review and approval checks pass."
+        help = "Apply supported sync operations to Grafana after review and approval checks pass.",
+        help_heading = "Live Options"
     )]
     pub execute_live: bool,
     #[arg(
         long,
         default_value_t = false,
-        help = "Allow live deletion of folders when a reviewed plan includes would-delete folder operations."
+        help = "Allow live deletion of folders when a reviewed plan includes would-delete folder operations.",
+        help_heading = "Approval Options"
     )]
     pub allow_folder_delete: bool,
     #[arg(
         long,
         value_enum,
         default_value_t = SyncOutputFormat::Text,
-        help = "Render the apply intent document as text or json."
+        help = "Render the apply intent document as text or json.",
+        help_heading = "Output Options"
     )]
     pub output: SyncOutputFormat,
     #[arg(
@@ -198,7 +221,7 @@ pub struct SyncApplyArgs {
 
 #[derive(Debug, Clone, Args)]
 pub struct SyncPreflightArgs {
-    #[arg(long, help = "JSON file containing the desired sync resource list.")]
+    #[arg(long, help = "JSON file containing the desired sync resource list.", help_heading = "Input Options")]
     pub desired_file: PathBuf,
     #[arg(
         long,
@@ -208,14 +231,16 @@ pub struct SyncPreflightArgs {
     #[arg(
         long,
         default_value_t = false,
-        help = "Fetch availability hints from Grafana instead of relying only on --availability-file."
+        help = "Fetch availability hints from Grafana instead of relying only on --availability-file.",
+        help_heading = "Live Options"
     )]
     pub fetch_live: bool,
     #[command(flatten)]
     pub common: CommonCliArgs,
     #[arg(
         long,
-        help = "Optional Grafana org id used when --fetch-live is active."
+        help = "Optional Grafana org id used when --fetch-live is active.",
+        help_heading = "Live Options"
     )]
     pub org_id: Option<i64>,
     #[arg(
@@ -229,7 +254,7 @@ pub struct SyncPreflightArgs {
 
 #[derive(Debug, Clone, Args)]
 pub struct SyncAssessAlertsArgs {
-    #[arg(long, help = "JSON file containing the alert sync resource list.")]
+    #[arg(long, help = "JSON file containing the alert sync resource list.", help_heading = "Input Options")]
     pub alerts_file: PathBuf,
     #[arg(
         long,
@@ -317,22 +342,23 @@ pub struct SyncBundleArgs {
 
 #[derive(Debug, Clone, Subcommand)]
 pub enum SyncGroupCommand {
-    #[command(about = "Build a staged sync plan from local desired and live JSON files.")]
+    #[command(about = "Build a staged sync plan from local desired and live JSON files.", after_help = SYNC_PLAN_HELP_TEXT)]
     Plan(SyncPlanArgs),
-    #[command(about = "Mark a staged sync plan JSON document reviewed.")]
+    #[command(about = "Mark a staged sync plan JSON document reviewed.", after_help = SYNC_REVIEW_HELP_TEXT)]
     Review(SyncReviewArgs),
-    #[command(about = "Build a gated local apply intent from a reviewed sync plan.")]
+    #[command(about = "Build a gated local apply intent from a reviewed sync plan.", after_help = SYNC_APPLY_HELP_TEXT)]
     Apply(SyncApplyArgs),
-    #[command(about = "Summarize local desired sync resources from JSON.")]
+    #[command(about = "Summarize local desired sync resources from JSON.", after_help = SYNC_SUMMARY_HELP_TEXT)]
     Summary(SyncSummaryArgs),
-    #[command(about = "Build a staged sync preflight document from local JSON.")]
+    #[command(about = "Build a staged sync preflight document from local JSON.", after_help = SYNC_PREFLIGHT_HELP_TEXT)]
     Preflight(SyncPreflightArgs),
-    #[command(about = "Assess alert sync specs for candidate, plan-only, and blocked states.")]
+    #[command(about = "Assess alert sync specs for candidate, plan-only, and blocked states.", after_help = SYNC_ASSESS_ALERTS_HELP_TEXT)]
     AssessAlerts(SyncAssessAlertsArgs),
-    #[command(about = "Build a staged bundle-level sync preflight document from local JSON.")]
+    #[command(about = "Build a staged bundle-level sync preflight document from local JSON.", after_help = SYNC_BUNDLE_PREFLIGHT_HELP_TEXT)]
     BundlePreflight(SyncBundlePreflightArgs),
     #[command(
-        about = "Package exported dashboards, alerting resources, datasource inventory, and metadata into one local source bundle."
+        about = "Package exported dashboards, alerting resources, datasource inventory, and metadata into one local source bundle.",
+        after_help = SYNC_BUNDLE_HELP_TEXT
     )]
     Bundle(SyncBundleArgs),
 }

@@ -127,6 +127,22 @@ class SyncCliTests(unittest.TestCase):
         source = MODULE_PATH.read_text(encoding="utf-8")
         ast.parse(source, filename=str(MODULE_PATH), feature_version=(3, 9))
 
+    def test_root_help_includes_examples(self):
+        help_text = sync_cli.build_parser().format_help()
+
+        self.assertIn("Examples:", help_text)
+        self.assertIn("grafana-util sync plan", help_text)
+        self.assertIn("grafana-util sync apply", help_text)
+
+    def test_apply_help_groups_controls_and_examples(self):
+        help_text = sync_cli.build_parser()._subparsers._group_actions[0].choices["apply"].format_help()
+
+        self.assertIn("Apply Control Options", help_text)
+        self.assertIn("Runtime Options", help_text)
+        self.assertIn("Examples:", help_text)
+        self.assertIn("--approve", help_text)
+        self.assertIn("--execute-live", help_text)
+
     def test_summary_renders_text_counts(self):
         desired = [
             {

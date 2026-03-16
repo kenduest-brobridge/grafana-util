@@ -971,6 +971,8 @@ class AccessCliTests(unittest.TestCase):
         self.assertIn("--basic-user USERNAME", help_text)
         self.assertIn("--scope {org,global}", help_text)
         self.assertIn("--yes", help_text)
+        self.assertIn("Examples:", help_text)
+        self.assertIn("grafana-util access user delete", help_text)
 
     def test_parse_args_supports_team_list_mode(self):
         args = access_utils.parse_args(
@@ -1070,6 +1072,31 @@ class AccessCliTests(unittest.TestCase):
         self.assertIn("--email EMAIL", help_text)
         self.assertIn("--member LOGIN_OR_EMAIL", help_text)
         self.assertIn("--admin LOGIN_OR_EMAIL", help_text)
+        self.assertIn("Examples:", help_text)
+        self.assertIn("grafana-util access team add", help_text)
+
+    def test_root_help_includes_examples(self):
+        help_text = access_utils.build_parser().format_help()
+
+        self.assertIn("Examples:", help_text)
+        self.assertIn("grafana-util access user list", help_text)
+        self.assertIn("grafana-util access service-account token add", help_text)
+
+    def test_service_account_token_delete_help_includes_confirmation_example(self):
+        parser = access_utils.build_parser()
+        token_delete_parser = (
+            parser._subparsers._group_actions[0]
+            .choices["service-account"]
+            ._subparsers._group_actions[0]
+            .choices["token"]
+            ._subparsers._group_actions[0]
+            .choices["delete"]
+        )
+        help_text = token_delete_parser.format_help()
+
+        self.assertIn("--yes", help_text)
+        self.assertIn("Examples:", help_text)
+        self.assertIn("grafana-util access service-account token delete", help_text)
 
     def test_parse_args_supports_team_add_mode(self):
         args = access_utils.parse_args(

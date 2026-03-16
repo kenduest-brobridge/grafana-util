@@ -238,12 +238,14 @@ class HelpFullAction(argparse.Action):
 
 
 def add_common_cli_args(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument(
+    connection_group = parser.add_argument_group("Connection Options")
+    auth_group = parser.add_argument_group("Auth Options")
+    connection_group.add_argument(
         "--url",
         default=DEFAULT_URL,
         help=f"Grafana base URL (default: {DEFAULT_URL})",
     )
-    parser.add_argument(
+    auth_group.add_argument(
         "--token",
         "--api-token",
         dest="api_token",
@@ -253,7 +255,7 @@ def add_common_cli_args(parser: argparse.ArgumentParser) -> None:
             "Falls back to GRAFANA_API_TOKEN."
         ),
     )
-    parser.add_argument(
+    auth_group.add_argument(
         "--prompt-token",
         action="store_true",
         help=(
@@ -261,7 +263,7 @@ def add_common_cli_args(parser: argparse.ArgumentParser) -> None:
             "--token on the command line."
         ),
     )
-    parser.add_argument(
+    auth_group.add_argument(
         "--basic-user",
         dest="username",
         default=None,
@@ -270,7 +272,7 @@ def add_common_cli_args(parser: argparse.ArgumentParser) -> None:
             "Falls back to GRAFANA_USERNAME."
         ),
     )
-    parser.add_argument(
+    auth_group.add_argument(
         "--basic-password",
         dest="password",
         default=None,
@@ -279,7 +281,7 @@ def add_common_cli_args(parser: argparse.ArgumentParser) -> None:
             "Falls back to GRAFANA_PASSWORD."
         ),
     )
-    parser.add_argument(
+    auth_group.add_argument(
         "--prompt-password",
         action="store_true",
         help=(
@@ -287,13 +289,13 @@ def add_common_cli_args(parser: argparse.ArgumentParser) -> None:
             "passing --basic-password on the command line."
         ),
     )
-    parser.add_argument(
+    connection_group.add_argument(
         "--timeout",
         type=int,
         default=DEFAULT_TIMEOUT,
         help=f"HTTP timeout in seconds (default: {DEFAULT_TIMEOUT}).",
     )
-    parser.add_argument(
+    connection_group.add_argument(
         "--verify-ssl",
         action="store_true",
         help="Enable TLS certificate verification. Verification is disabled by default.",
@@ -368,18 +370,21 @@ def add_export_cli_args(parser: argparse.ArgumentParser) -> None:
 
 
 def add_list_cli_args(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument(
+    input_group = parser.add_argument_group("Input Options")
+    target_group = parser.add_argument_group("Target Options")
+    output_group = parser.add_argument_group("Output Options")
+    input_group.add_argument(
         "--page-size",
         type=int,
         default=DEFAULT_PAGE_SIZE,
         help=f"Dashboard search page size (default: {DEFAULT_PAGE_SIZE}).",
     )
-    parser.add_argument(
+    target_group.add_argument(
         "--org-id",
         default=None,
         help="List dashboards from this Grafana organization ID instead of the current org context.",
     )
-    parser.add_argument(
+    target_group.add_argument(
         "--all-orgs",
         action="store_true",
         help=(
@@ -387,7 +392,7 @@ def add_list_cli_args(parser: argparse.ArgumentParser) -> None:
             "supported here; use Grafana username/password login."
         ),
     )
-    parser.add_argument(
+    output_group.add_argument(
         "--with-sources",
         action="store_true",
         help=(
@@ -396,28 +401,28 @@ def add_list_cli_args(parser: argparse.ArgumentParser) -> None:
             "This is slower because it makes extra API calls per dashboard."
         ),
     )
-    output_group = parser.add_mutually_exclusive_group()
-    output_group.add_argument(
+    render_group = output_group.add_mutually_exclusive_group()
+    render_group.add_argument(
         "--table",
         action="store_true",
         help="Render dashboard summaries as a table.",
     )
-    output_group.add_argument(
+    render_group.add_argument(
         "--csv",
         action="store_true",
         help="Render dashboard summaries as CSV.",
     )
-    output_group.add_argument(
+    render_group.add_argument(
         "--json",
         action="store_true",
         help="Render dashboard summaries as JSON.",
     )
-    parser.add_argument(
+    output_group.add_argument(
         "--no-header",
         action="store_true",
         help="Do not print table headers when rendering the default table output.",
     )
-    parser.add_argument(
+    output_group.add_argument(
         "--output-format",
         choices=LIST_OUTPUT_FORMAT_CHOICES,
         default=None,
@@ -430,28 +435,29 @@ def add_list_cli_args(parser: argparse.ArgumentParser) -> None:
 
 
 def add_list_data_sources_cli_args(parser: argparse.ArgumentParser) -> None:
-    output_group = parser.add_mutually_exclusive_group()
-    output_group.add_argument(
+    output_group = parser.add_argument_group("Output Options")
+    render_group = output_group.add_mutually_exclusive_group()
+    render_group.add_argument(
         "--table",
         action="store_true",
         help="Render datasource summaries as a table.",
     )
-    output_group.add_argument(
+    render_group.add_argument(
         "--csv",
         action="store_true",
         help="Render datasource summaries as CSV.",
     )
-    output_group.add_argument(
+    render_group.add_argument(
         "--json",
         action="store_true",
         help="Render datasource summaries as JSON.",
     )
-    parser.add_argument(
+    output_group.add_argument(
         "--no-header",
         action="store_true",
         help="Do not print table headers when rendering the default table output.",
     )
-    parser.add_argument(
+    output_group.add_argument(
         "--output-format",
         choices=LIST_OUTPUT_FORMAT_CHOICES,
         default=None,
@@ -464,7 +470,12 @@ def add_list_data_sources_cli_args(parser: argparse.ArgumentParser) -> None:
 
 
 def add_import_cli_args(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument(
+    input_group = parser.add_argument_group("Input Options")
+    target_group = parser.add_argument_group("Target Options")
+    mutation_group = parser.add_argument_group("Mutation Options")
+    safety_group = parser.add_argument_group("Safety Options")
+    output_group = parser.add_argument_group("Output Options")
+    input_group.add_argument(
         "--import-dir",
         required=True,
         help=(
@@ -473,7 +484,7 @@ def add_import_cli_args(parser: argparse.ArgumentParser) -> None:
             "When --use-export-org is enabled, point this to the combined multi-org export root instead."
         ),
     )
-    parser.add_argument(
+    target_group.add_argument(
         "--org-id",
         default=None,
         help=(
@@ -482,7 +493,7 @@ def add_import_cli_args(parser: argparse.ArgumentParser) -> None:
             "use Grafana username/password login."
         ),
     )
-    parser.add_argument(
+    target_group.add_argument(
         "--use-export-org",
         action="store_true",
         help=(
@@ -491,7 +502,7 @@ def add_import_cli_args(parser: argparse.ArgumentParser) -> None:
             "API token auth is not supported here; use Grafana username/password login."
         ),
     )
-    parser.add_argument(
+    target_group.add_argument(
         "--only-org-id",
         action="append",
         default=None,
@@ -500,7 +511,7 @@ def add_import_cli_args(parser: argparse.ArgumentParser) -> None:
             "Repeat this flag to include multiple orgs."
         ),
     )
-    parser.add_argument(
+    target_group.add_argument(
         "--create-missing-orgs",
         action="store_true",
         help=(
@@ -508,7 +519,7 @@ def add_import_cli_args(parser: argparse.ArgumentParser) -> None:
             "from the exported org name when the exported orgId does not exist yet."
         ),
     )
-    parser.add_argument(
+    target_group.add_argument(
         "--require-matching-export-org",
         action="store_true",
         help=(
@@ -517,32 +528,32 @@ def add_import_cli_args(parser: argparse.ArgumentParser) -> None:
             "accidental cross-org import."
         ),
     )
-    parser.add_argument(
+    mutation_group.add_argument(
         "--replace-existing",
         action="store_true",
         help="Update an existing destination dashboard when the imported dashboard UID already exists. Without this flag, existing UIDs are blocked.",
     )
-    parser.add_argument(
+    mutation_group.add_argument(
         "--update-existing-only",
         action="store_true",
         help="Reconcile only dashboards whose UID already exists in Grafana. Missing destination UIDs are skipped instead of created.",
     )
-    parser.add_argument(
+    mutation_group.add_argument(
         "--import-folder-uid",
         default=None,
         help="Force every imported dashboard into one destination Grafana folder UID. This overrides any folder UID carried by the exported dashboard files.",
     )
-    parser.add_argument(
+    mutation_group.add_argument(
         "--ensure-folders",
         action="store_true",
         help="Use the exported raw folder inventory to create any missing destination folders before import. In dry-run mode, also report folder missing/match/mismatch state first.",
     )
-    parser.add_argument(
+    mutation_group.add_argument(
         "--import-message",
         default="Imported by grafana-utils",
         help="Version-history message to attach to each imported dashboard revision in Grafana.",
     )
-    parser.add_argument(
+    mutation_group.add_argument(
         "--require-matching-folder-path",
         action="store_true",
         help=(
@@ -551,27 +562,32 @@ def add_import_cli_args(parser: argparse.ArgumentParser) -> None:
             "follow the active create/skip mode."
         ),
     )
-    parser.add_argument(
+    safety_group.add_argument(
+        "--approve",
+        action="store_true",
+        help="Explicit acknowledgement required before live dashboard import runs. Not required with --dry-run.",
+    )
+    safety_group.add_argument(
         "--dry-run",
         action="store_true",
         help="Preview what import would do without changing Grafana. This reports whether each dashboard would create, update, or be skipped/blocked.",
     )
-    parser.add_argument(
+    output_group.add_argument(
         "--table",
         action="store_true",
         help="For --dry-run only, render a compact table instead of per-dashboard log lines. With --ensure-folders, the folder check is also shown in table form.",
     )
-    parser.add_argument(
+    output_group.add_argument(
         "--json",
         action="store_true",
         help="For --dry-run only, render one JSON document with mode, folder checks, dashboard actions, and summary counts.",
     )
-    parser.add_argument(
+    output_group.add_argument(
         "--no-header",
         action="store_true",
         help="For --dry-run --table only, omit the table header row.",
     )
-    parser.add_argument(
+    output_group.add_argument(
         "--output-format",
         choices=IMPORT_DRY_RUN_OUTPUT_FORMAT_CHOICES,
         default=None,
@@ -581,7 +597,7 @@ def add_import_cli_args(parser: argparse.ArgumentParser) -> None:
             "or --json."
         ),
     )
-    parser.add_argument(
+    output_group.add_argument(
         "--output-columns",
         default=None,
         help=(
@@ -590,12 +606,12 @@ def add_import_cli_args(parser: argparse.ArgumentParser) -> None:
             "source_folder_path, destination_folder_path, reason, file."
         ),
     )
-    parser.add_argument(
+    output_group.add_argument(
         "--progress",
         action="store_true",
         help="Show concise per-dashboard import progress as current/total while processing files. Use this for long-running batch imports.",
     )
-    parser.add_argument(
+    output_group.add_argument(
         "-v",
         "--verbose",
         action="store_true",
@@ -604,7 +620,10 @@ def add_import_cli_args(parser: argparse.ArgumentParser) -> None:
 
 
 def add_diff_cli_args(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument(
+    input_group = parser.add_argument_group("Input Options")
+    target_group = parser.add_argument_group("Target Options")
+    output_group = parser.add_argument_group("Output Options")
+    input_group.add_argument(
         "--import-dir",
         required=True,
         help=(
@@ -612,12 +631,12 @@ def add_diff_cli_args(parser: argparse.ArgumentParser) -> None:
             f"Point this to the {RAW_EXPORT_SUBDIR}/ export directory explicitly."
         ),
     )
-    parser.add_argument(
+    target_group.add_argument(
         "--import-folder-uid",
         default=None,
         help="Override the destination Grafana folder UID when building the comparison payload.",
     )
-    parser.add_argument(
+    output_group.add_argument(
         "--context-lines",
         type=int,
         default=3,
@@ -806,33 +825,35 @@ def add_inspect_live_cli_args(parser: argparse.ArgumentParser) -> None:
 
 def add_inspect_vars_cli_args(parser: argparse.ArgumentParser) -> None:
     add_common_cli_args(parser)
-    parser.add_argument(
+    target_group = parser.add_argument_group("Target Options")
+    output_group = parser.add_argument_group("Output Options")
+    target_group.add_argument(
         "--dashboard-uid",
         default=None,
         help="Grafana dashboard UID whose templating variables should be listed. Required unless --dashboard-url is provided.",
     )
-    parser.add_argument(
+    target_group.add_argument(
         "--dashboard-url",
         default=None,
         help="Full Grafana dashboard URL. When provided, the runtime can derive the dashboard UID from the URL path.",
     )
-    parser.add_argument(
+    target_group.add_argument(
         "--vars-query",
         default=None,
         help="Grafana variable query-string fragment, for example 'var-env=prod&var-host=web01'. This overlays current values in inspect-vars output.",
     )
-    parser.add_argument(
+    target_group.add_argument(
         "--org-id",
         default=None,
         help="Scope the variable inspection to this Grafana org ID by sending X-Grafana-Org-Id.",
     )
-    parser.add_argument(
+    output_group.add_argument(
         "--output-format",
         choices=VARIABLE_OUTPUT_FORMAT_CHOICES,
         default="table",
         help="Render dashboard variables as table, csv, or json (default: table).",
     )
-    parser.add_argument(
+    output_group.add_argument(
         "--no-header",
         action="store_true",
         help="Do not print table or CSV headers when rendering inspect-vars output.",
@@ -841,132 +862,137 @@ def add_inspect_vars_cli_args(parser: argparse.ArgumentParser) -> None:
 
 def add_screenshot_cli_args(parser: argparse.ArgumentParser) -> None:
     add_common_cli_args(parser)
-    parser.add_argument(
+    target_group = parser.add_argument_group("Target Options")
+    state_group = parser.add_argument_group("State Options")
+    rendering_group = parser.add_argument_group("Rendering Options")
+    output_group = parser.add_argument_group("Output Options")
+    header_group = parser.add_argument_group("Header Options")
+    target_group.add_argument(
         "--dashboard-uid",
         default=None,
         help="Grafana dashboard UID to capture from the browser-rendered UI. Required unless --dashboard-url is provided.",
     )
-    parser.add_argument(
+    target_group.add_argument(
         "--dashboard-url",
         default=None,
         help="Full Grafana dashboard URL. When provided, the runtime can reuse URL state such as var-*, from, to, orgId, and panelId.",
     )
-    parser.add_argument(
+    target_group.add_argument(
         "--slug",
         default=None,
         help="Optional dashboard slug. When omitted, the runtime falls back to the dashboard UID.",
     )
-    parser.add_argument(
+    output_group.add_argument(
         "--output",
         required=True,
         help="Write the captured browser output to this file path.",
     )
-    parser.add_argument(
+    target_group.add_argument(
         "--panel-id",
         default=None,
         help="Capture only this Grafana panel ID through the solo dashboard route.",
     )
-    parser.add_argument(
+    target_group.add_argument(
         "--org-id",
         default=None,
         help="Scope the browser session to this Grafana org ID by sending X-Grafana-Org-Id.",
     )
-    parser.add_argument(
+    state_group.add_argument(
         "--from",
         dest="from_value",
         default=None,
         help="Grafana time range start, for example now-6h.",
     )
-    parser.add_argument(
+    state_group.add_argument(
         "--to",
         default=None,
         help="Grafana time range end, for example now.",
     )
-    parser.add_argument(
+    state_group.add_argument(
         "--vars-query",
         default=None,
         help="Grafana variable query-string fragment, for example 'var-env=prod&var-host=web01'.",
     )
-    parser.add_argument(
+    state_group.add_argument(
         "--var",
         dest="vars",
         action="append",
         default=None,
         help="Repeatable Grafana template variable assignment. Example: --var env=prod --var region=us-east-1.",
     )
-    parser.add_argument(
+    rendering_group.add_argument(
         "--theme",
         choices=SCREENSHOT_THEME_CHOICES,
         default="dark",
         help="Override the Grafana UI theme used for the browser capture (default: dark).",
     )
-    parser.add_argument(
+    output_group.add_argument(
         "--output-format",
         choices=SCREENSHOT_OUTPUT_FORMAT_CHOICES,
         default=None,
         help="Force the output format instead of inferring it from the output filename.",
     )
-    parser.add_argument(
+    rendering_group.add_argument(
         "--width",
         type=int,
         default=1440,
         help="Browser viewport width in pixels.",
     )
-    parser.add_argument(
+    rendering_group.add_argument(
         "--height",
         type=int,
         default=1024,
         help="Browser viewport height in pixels.",
     )
-    parser.add_argument(
+    rendering_group.add_argument(
         "--device-scale-factor",
         type=float,
         default=1.0,
         help="Browser device scale factor for higher-density raster capture (default: 1.0).",
     )
-    parser.add_argument(
+    rendering_group.add_argument(
         "--full-page",
         action="store_true",
         help="Capture the full scrollable page instead of only the initial viewport.",
     )
-    parser.add_argument(
+    output_group.add_argument(
         "--full-page-output",
         choices=SCREENSHOT_FULL_PAGE_OUTPUT_CHOICES,
         default="single",
         help="When --full-page is enabled, write one stitched file, a tiles directory, or a tiles directory plus manifest metadata.",
     )
-    parser.add_argument(
+    rendering_group.add_argument(
         "--wait-ms",
         type=int,
         default=5000,
         help="Extra wait time in milliseconds after navigation so Grafana panels can finish rendering.",
     )
-    parser.add_argument(
+    rendering_group.add_argument(
         "--browser-path",
         default=None,
         help="Optional Chromium or Chrome executable path for browser-driven capture.",
     )
-    parser.add_argument(
+    output_group.add_argument(
         "--print-capture-url",
         action="store_true",
         help="Print the resolved Grafana capture URL before the browser capture starts.",
     )
-    parser.add_argument(
+    header_group.add_argument(
         "--header-title",
         default=None,
         help="Optional header title text to prepend above PNG/JPEG captures. Use __auto__ to derive a title from the dashboard metadata.",
     )
-    parser.add_argument(
+    header_group.add_argument(
         "--header-url",
         default=None,
         help="Optional header URL line to prepend above PNG/JPEG captures. Use __auto__ to render the resolved Grafana capture URL.",
     )
-    parser.add_argument(
+    header_group.add_argument(
         "--header-captured-at",
         action="store_true",
         help="Append one capture timestamp line in the generated PNG/JPEG header block.",
     )
-    parser.add_argument(
+    header_group.add_argument(
         "--header-text",
         default=None,
         help="Optional free-form note text to append below other generated PNG/JPEG header lines.",
@@ -1028,6 +1054,8 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     list_parser = subparsers.add_parser(
         "list-dashboard",
         help="List live dashboard summaries from Grafana.",
+        epilog=LIST_HELP_EXAMPLES,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     add_common_cli_args(list_parser)
     add_list_cli_args(list_parser)
@@ -1035,6 +1063,8 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     list_data_sources_parser = subparsers.add_parser(
         "list-data-sources",
         help="List live Grafana data sources.",
+        epilog=LIST_DATASOURCES_HELP_EXAMPLES,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     add_common_cli_args(list_data_sources_parser)
     add_list_data_sources_cli_args(list_data_sources_parser)
@@ -1042,6 +1072,8 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     import_parser = subparsers.add_parser(
         "import-dashboard",
         help="Import dashboards from exported raw JSON files.",
+        epilog=IMPORT_HELP_EXAMPLES,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     add_common_cli_args(import_parser)
     add_import_cli_args(import_parser)
@@ -1049,6 +1081,8 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     diff_parser = subparsers.add_parser(
         "diff",
         help="Compare exported raw dashboards with the current Grafana state.",
+        epilog=DIFF_HELP_EXAMPLES,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     add_common_cli_args(diff_parser)
     add_diff_cli_args(diff_parser)
@@ -1070,11 +1104,15 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     inspect_vars_parser = subparsers.add_parser(
         "inspect-vars",
         help="List dashboard templating variables and datasource-like choices from live Grafana.",
+        epilog=INSPECT_VARS_HELP_EXAMPLES,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     add_inspect_vars_cli_args(inspect_vars_parser)
     screenshot_parser = subparsers.add_parser(
         "screenshot",
         help="Capture one Grafana dashboard or panel through a browser backend.",
+        epilog=SCREENSHOT_HELP_EXAMPLES,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     add_screenshot_cli_args(screenshot_parser)
 
@@ -1108,6 +1146,56 @@ INSPECT_LIVE_HELP_EXAMPLES = (
     "--output-format report-tree --report-filter-panel-id 7\n\n"
     "  Show full inspect help with extended report examples:\n"
     "    grafana-util dashboard inspect-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --help-full"
+)
+
+LIST_HELP_EXAMPLES = (
+    "Examples:\n\n"
+    "  List dashboards as JSON for scripting:\n"
+    "    grafana-util dashboard list-dashboard --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json\n\n"
+    "  List dashboards from all orgs in table output:\n"
+    "    grafana-util dashboard list-dashboard --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --table"
+)
+
+LIST_DATASOURCES_HELP_EXAMPLES = (
+    "Examples:\n\n"
+    "  List Grafana datasources as JSON:\n"
+    "    grafana-util dashboard list-data-sources --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json\n\n"
+    "  Render datasource inventory as CSV without headers:\n"
+    "    grafana-util dashboard list-data-sources --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output-format csv --no-header"
+)
+
+IMPORT_HELP_EXAMPLES = (
+    "Examples:\n\n"
+    "  Preview a dashboard import without changing Grafana:\n"
+    "    grafana-util dashboard import-dashboard --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/raw --dry-run --table\n\n"
+    "  Apply a reviewed dashboard import into one org:\n"
+    "    grafana-util dashboard import-dashboard --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/raw --replace-existing --approve\n\n"
+    "  Route a combined multi-org export back by exported org id:\n"
+    "    grafana-util dashboard import-dashboard --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards --use-export-org --only-org-id 2 --dry-run --json"
+)
+
+DIFF_HELP_EXAMPLES = (
+    "Examples:\n\n"
+    "  Compare raw dashboard exports against Grafana:\n"
+    "    grafana-util dashboard diff --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/raw\n\n"
+    "  Compare the same export against one destination folder:\n"
+    "    grafana-util dashboard diff --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/raw --import-folder-uid infra-folder"
+)
+
+INSPECT_VARS_HELP_EXAMPLES = (
+    "Examples:\n\n"
+    "  List dashboard variables from a UID:\n"
+    "    grafana-util dashboard inspect-vars --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --dashboard-uid cpu-main\n\n"
+    "  Overlay current variable values from a dashboard URL:\n"
+    "    grafana-util dashboard inspect-vars --dashboard-url 'https://grafana.example.com/d/cpu-main/cpu-overview?var-cluster=prod-a' --token \"$GRAFANA_API_TOKEN\" --output-format json"
+)
+
+SCREENSHOT_HELP_EXAMPLES = (
+    "Examples:\n\n"
+    "  Capture a full dashboard screenshot:\n"
+    "    grafana-util dashboard screenshot --dashboard-url 'https://grafana.example.com/d/cpu-main/cpu-overview?var-cluster=prod-a' --token \"$GRAFANA_API_TOKEN\" --output ./cpu-main.png --full-page\n\n"
+    "  Capture a solo panel with a custom header:\n"
+    "    grafana-util dashboard screenshot --url https://grafana.example.com --dashboard-uid rYdddlPWk --panel-id 20 --token \"$GRAFANA_API_TOKEN\" --output ./panel.png --header-title 'CPU Busy'"
 )
 
 
@@ -1387,6 +1475,12 @@ def main(argv: Optional[list[str]] = None) -> int:
         if args.command == "screenshot":
             return screenshot_dashboard(args)
         if args.command == "import-dashboard":
+            if not bool(getattr(args, "dry_run", False)) and not bool(
+                getattr(args, "approve", False)
+            ):
+                raise GrafanaError(
+                    "Dashboard import requires --approve unless --dry-run is active."
+                )
             return import_dashboards(args)
         if args.command == "diff":
             return diff_dashboards(args)

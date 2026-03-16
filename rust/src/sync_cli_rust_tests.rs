@@ -7,7 +7,7 @@ use super::{
     SyncSummaryArgs, DEFAULT_REVIEW_TOKEN,
 };
 use crate::dashboard::CommonCliArgs;
-use clap::Parser;
+use clap::{CommandFactory, Parser};
 use reqwest::Method;
 use serde_json::json;
 use std::fs;
@@ -25,6 +25,64 @@ fn sync_common_args() -> CommonCliArgs {
         timeout: 30,
         verify_ssl: false,
     }
+}
+
+fn render_sync_subcommand_help(name: &str) -> String {
+    let mut command = SyncCliArgs::command();
+    let subcommand = command
+        .find_subcommand_mut(name)
+        .unwrap_or_else(|| panic!("missing sync subcommand help for {name}"));
+    let mut output = Vec::new();
+    subcommand.write_long_help(&mut output).unwrap();
+    String::from_utf8(output).unwrap()
+}
+
+#[test]
+fn sync_summary_help_includes_examples_and_output_heading() {
+    let help = render_sync_subcommand_help("summary");
+    assert!(help.contains("Examples:"));
+    assert!(help.contains("Output Options"));
+}
+
+#[test]
+fn sync_plan_help_includes_examples_and_live_heading() {
+    let help = render_sync_subcommand_help("plan");
+    assert!(help.contains("Examples:"));
+    assert!(help.contains("Input Options"));
+    assert!(help.contains("Live Options"));
+    assert!(help.contains("--fetch-live"));
+}
+
+#[test]
+fn sync_apply_help_includes_examples_and_approval_flags() {
+    let help = render_sync_subcommand_help("apply");
+    assert!(help.contains("Examples:"));
+    assert!(help.contains("Approval Options"));
+    assert!(help.contains("Live Options"));
+    assert!(help.contains("--approve"));
+    assert!(help.contains("--execute-live"));
+    assert!(help.contains("--allow-folder-delete"));
+}
+
+#[test]
+fn sync_bundle_preflight_help_includes_examples_and_grouped_headings() {
+    let help = render_sync_subcommand_help("bundle-preflight");
+    assert!(help.contains("Examples:"));
+    assert!(help.contains("Input Options"));
+    assert!(help.contains("Live Options"));
+}
+
+#[test]
+fn sync_root_help_includes_examples() {
+    let mut command = SyncCliArgs::command();
+    let mut output = Vec::new();
+    command.write_long_help(&mut output).unwrap();
+    let help = String::from_utf8(output).unwrap();
+
+    assert!(help.contains("Examples:"));
+    assert!(help.contains("grafana-util sync summary"));
+    assert!(help.contains("grafana-util sync plan"));
+    assert!(help.contains("grafana-util sync apply"));
 }
 
 #[test]

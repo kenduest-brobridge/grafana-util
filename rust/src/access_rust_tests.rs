@@ -39,6 +39,13 @@ fn render_access_subcommand_help(path: &[&str]) -> String {
     String::from_utf8(output).unwrap()
 }
 
+fn render_access_root_help() -> String {
+    let mut command = AccessCliRoot::command();
+    let mut output = Vec::new();
+    command.write_long_help(&mut output).unwrap();
+    String::from_utf8(output).unwrap()
+}
+
 fn make_token_common() -> CommonCliArgs {
     CommonCliArgs {
         url: "http://127.0.0.1:3000".to_string(),
@@ -108,6 +115,60 @@ fn parse_cli_supports_user_list() {
         }
         _ => panic!("expected user list"),
     }
+}
+
+#[test]
+fn access_root_help_includes_examples() {
+    let mut command = AccessCliRoot::command();
+    let mut output = Vec::new();
+    command.write_long_help(&mut output).unwrap();
+    let help = String::from_utf8(output).unwrap();
+
+    assert!(help.contains("Examples:"));
+    assert!(help.contains("grafana-util access user list"));
+    assert!(help.contains("grafana-util access team import"));
+}
+
+#[test]
+fn access_user_add_help_includes_examples_and_grouped_auth_headings() {
+    let help = render_access_subcommand_help(&["user", "add"]);
+    assert!(help.contains("Examples:"));
+    assert!(help.contains("Authentication Options"));
+    assert!(help.contains("Transport Options"));
+}
+
+#[test]
+fn access_team_import_help_includes_examples_and_yes_flag() {
+    let help = render_access_subcommand_help(&["team", "import"]);
+    assert!(help.contains("Examples:"));
+    assert!(help.contains("--yes"));
+    assert!(help.contains("Authentication Options"));
+}
+
+#[test]
+fn access_org_delete_help_includes_examples_and_yes_flag() {
+    let help = render_access_subcommand_help(&["org", "delete"]);
+    assert!(help.contains("Examples:"));
+    assert!(help.contains("--yes"));
+}
+
+#[test]
+fn access_service_account_token_add_help_includes_examples() {
+    let help = render_access_subcommand_help(&["service-account", "token", "add"]);
+    assert!(help.contains("Examples:"));
+    assert!(help.contains("--token-name"));
+}
+
+#[test]
+fn access_root_help_includes_examples_and_grouped_options() {
+    let help = render_access_root_help();
+    let user_add_help = render_access_subcommand_help(&["user", "add"]);
+
+    assert!(help.contains("Examples:"));
+    assert!(help.contains("grafana-util access user list"));
+    assert!(help.contains("grafana-util access service-account token add"));
+    assert!(user_add_help.contains("Authentication Options"));
+    assert!(user_add_help.contains("Transport Options"));
 }
 
 #[test]

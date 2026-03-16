@@ -1,5 +1,13 @@
 # ai-changes.md
 
+## 2026-03-16 - Audit CLI Help Examples And Grouped Parameters
+- Summary: Started a command-surface audit focused on help usability rather than execution logic. Python `access` now has root and per-subcommand `Examples:` blocks, Python `alert` now documents examples on leaf subcommands instead of only the root parser, and Python `sync` now documents root examples plus grouped input/runtime/output/apply-control sections on the key planning/apply commands. Rust `access`, `datasource`, and `sync` roots now also advertise real operator examples, and Rust access auth/transport options now render under grouped help headings instead of one flat flag list.
+- Tests: Added focused Python help assertions for access root/help-heavy mutation commands, alert import/list subcommands, and sync root/apply grouping. Added focused Rust help assertions for access, datasource, and sync root examples.
+- Test Run: `python3 -m unittest -v tests/test_python_access_cli.py tests/test_python_alert_cli.py tests/test_python_sync_cli.py`; `cargo test --manifest-path rust/Cargo.toml --quiet access_root_help_includes_examples_and_grouped_options`; `cargo test --manifest-path rust/Cargo.toml --quiet datasource_root_help_includes_examples`; `cargo test --manifest-path rust/Cargo.toml --quiet sync_root_help_includes_examples`
+- Validation: Confirmed the Python help-focused suites still pass after the parser refactor, and confirmed the new focused Rust help tests pass for the root example coverage.
+- Impact: `grafana_utils/access/parser.py`, `grafana_utils/alert_cli.py`, `grafana_utils/sync_cli.py`, `tests/test_python_access_cli.py`, `tests/test_python_alert_cli.py`, `tests/test_python_sync_cli.py`, `rust/src/access_cli_defs.rs`, `rust/src/access_rust_tests.rs`, `rust/src/datasource.rs`, `rust/src/datasource_rust_tests.rs`, `rust/src/sync.rs`, `rust/src/sync_cli_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low to moderate. The Python parser changes are help-surface only but do rearrange argument groups, so any tests or docs that depend on exact help output ordering may need small follow-up updates. The Rust side currently improves root help coverage first; a full leaf-by-leaf `after_help` pass remains separate work.
+
 Historical note:
 
 - Older entries preserve the reasoning and follow-up state as of the entry date.

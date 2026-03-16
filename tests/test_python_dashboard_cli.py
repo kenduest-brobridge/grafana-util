@@ -7,7 +7,7 @@ import json
 import sys
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest import mock
 
@@ -653,6 +653,44 @@ class ExporterTests(unittest.TestCase):
         self.assertIn("missing/match/mismatch", help_text)
         self.assertIn("skipped/blocked", help_text)
         self.assertIn("table form", help_text)
+        self.assertIn("Examples:", help_text)
+        self.assertIn("--approve", help_text)
+        self.assertIn("Connection Options", help_text)
+        self.assertIn("Auth Options", help_text)
+        self.assertIn("Target Options", help_text)
+        self.assertIn("Mutation Options", help_text)
+        self.assertIn("Safety Options", help_text)
+        self.assertIn("Output Options", help_text)
+
+    def test_list_help_includes_examples_and_grouped_sections(self):
+        stream = io.StringIO()
+
+        with redirect_stdout(stream):
+            with self.assertRaises(SystemExit):
+                exporter.parse_args(["list-dashboard", "-h"])
+
+        help_text = stream.getvalue()
+        self.assertIn("Examples:", help_text)
+        self.assertIn("grafana-util dashboard list-dashboard", help_text)
+        self.assertIn("Input Options", help_text)
+        self.assertIn("Target Options", help_text)
+        self.assertIn("Output Options", help_text)
+
+    def test_screenshot_help_includes_examples_and_grouped_sections(self):
+        stream = io.StringIO()
+
+        with redirect_stdout(stream):
+            with self.assertRaises(SystemExit):
+                exporter.parse_args(["screenshot", "-h"])
+
+        help_text = stream.getvalue()
+        self.assertIn("Examples:", help_text)
+        self.assertIn("grafana-util dashboard screenshot", help_text)
+        self.assertIn("Target Options", help_text)
+        self.assertIn("State Options", help_text)
+        self.assertIn("Rendering Options", help_text)
+        self.assertIn("Output Options", help_text)
+        self.assertIn("Header Options", help_text)
 
     def test_inspect_export_help_mentions_raw_export_directory(self):
         stream = io.StringIO()
@@ -757,6 +795,15 @@ class ExporterTests(unittest.TestCase):
         )
 
         self.assertEqual(args.org_id, "2")
+
+    def test_main_requires_approve_for_live_import(self):
+        stream = io.StringIO()
+
+        with redirect_stderr(stream):
+            result = exporter.main(["import-dashboard", "--import-dir", "dashboards/raw"])
+
+        self.assertEqual(result, 1)
+        self.assertIn("requires --approve", stream.getvalue())
 
     def test_parse_args_supports_require_matching_export_org(self):
         args = exporter.parse_args(

@@ -27,118 +27,144 @@ pub const ACCESS_TEAM_EXPORT_FILENAME: &str = "teams.json";
 pub const ACCESS_ORG_EXPORT_FILENAME: &str = "orgs.json";
 pub const ACCESS_SERVICE_ACCOUNT_EXPORT_FILENAME: &str = "service-accounts.json";
 pub const ACCESS_EXPORT_METADATA_FILENAME: &str = "export-metadata.json";
+const ACCESS_ROOT_HELP_TEXT: &str = "Examples:\n\n  List org users as JSON:\n    grafana-util access user list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json\n\n  Create a Grafana user with Basic auth:\n    grafana-util access user add --url http://localhost:3000 --basic-user admin --basic-password admin --login alice --email alice@example.com --name Alice --password secret\n\n  Import teams with destructive sync acknowledgement:\n    grafana-util access team import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./access-teams --replace-existing --yes\n\n  Create a service-account token:\n    grafana-util access service-account token add --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --name deploy-bot --token-name nightly";
+const ACCESS_USER_HELP_TEXT: &str = "Examples:\n\n  grafana-util access user list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json\n  grafana-util access user add --url http://localhost:3000 --basic-user admin --basic-password admin --login alice --email alice@example.com --name Alice --password secret";
+const ACCESS_TEAM_HELP_TEXT: &str = "Examples:\n\n  grafana-util access team list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json\n  grafana-util access team import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./access-teams --replace-existing --yes";
+const ACCESS_ORG_HELP_TEXT: &str = "Examples:\n\n  grafana-util access org list --url http://localhost:3000 --basic-user admin --basic-password admin --json\n  grafana-util access org delete --url http://localhost:3000 --basic-user admin --basic-password admin --name platform --yes";
+const ACCESS_SERVICE_ACCOUNT_HELP_TEXT: &str = "Examples:\n\n  grafana-util access service-account list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json\n  grafana-util access service-account token add --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --name deploy-bot --token-name nightly";
+const ACCESS_USER_ADD_HELP_TEXT: &str = "Examples:\n\n  grafana-util access user add --basic-user admin --basic-password admin --login alice --email alice@example.com --name Alice --password secret\n  grafana-util access user add --basic-user admin --basic-password admin --login bob --email bob@example.com --name Bob --prompt-user-password";
+const ACCESS_TEAM_IMPORT_HELP_TEXT: &str = "Examples:\n\n  grafana-util access team import --basic-user admin --basic-password admin --import-dir ./access-teams --dry-run --output-format table\n  grafana-util access team import --basic-user admin --basic-password admin --import-dir ./access-teams --replace-existing --yes";
+const ACCESS_ORG_DELETE_HELP_TEXT: &str = "Examples:\n\n  grafana-util access org delete --basic-user admin --basic-password admin --name platform --yes\n  grafana-util access org delete --basic-user admin --basic-password admin --org-id 7 --yes --json";
+const ACCESS_SERVICE_ACCOUNT_TOKEN_ADD_HELP_TEXT: &str = "Examples:\n\n  grafana-util access service-account token add --token \"$GRAFANA_API_TOKEN\" --name deploy-bot --token-name nightly\n  grafana-util access service-account token add --token \"$GRAFANA_API_TOKEN\" --service-account-id 7 --token-name nightly --seconds-to-live 3600";
 
 #[derive(Debug, Clone, Args)]
 pub struct CommonCliArgs {
-    #[arg(long, default_value = DEFAULT_URL, help = "Grafana base URL.")]
+    #[arg(long, default_value = DEFAULT_URL, help = "Grafana base URL.", help_heading = "Authentication Options")]
     pub url: String,
     #[arg(
         long = "token",
         visible_alias = "api-token",
-        help = "Grafana API token. Preferred flag: --token. Falls back to GRAFANA_API_TOKEN."
+        help = "Grafana API token. Preferred flag: --token. Falls back to GRAFANA_API_TOKEN.",
+        help_heading = "Authentication Options"
     )]
     pub api_token: Option<String>,
     #[arg(
         long = "basic-user",
-        help = "Grafana Basic auth username. Preferred flag: --basic-user. Falls back to GRAFANA_USERNAME."
+        help = "Grafana Basic auth username. Preferred flag: --basic-user. Falls back to GRAFANA_USERNAME.",
+        help_heading = "Authentication Options"
     )]
     pub username: Option<String>,
     #[arg(
         long = "basic-password",
-        help = "Grafana Basic auth password. Preferred flag: --basic-password. Falls back to GRAFANA_PASSWORD."
+        help = "Grafana Basic auth password. Preferred flag: --basic-password. Falls back to GRAFANA_PASSWORD.",
+        help_heading = "Authentication Options"
     )]
     pub password: Option<String>,
     #[arg(
         long,
         default_value_t = false,
-        help = "Prompt for the Grafana Basic auth password."
+        help = "Prompt for the Grafana Basic auth password.",
+        help_heading = "Authentication Options"
     )]
     pub prompt_password: bool,
     #[arg(
         long,
         default_value_t = false,
-        help = "Prompt for the Grafana API token without echo instead of passing --token on the command line."
+        help = "Prompt for the Grafana API token without echo instead of passing --token on the command line.",
+        help_heading = "Authentication Options"
     )]
     pub prompt_token: bool,
     #[arg(
         long,
-        help = "Grafana organization id to send through X-Grafana-Org-Id."
+        help = "Grafana organization id to send through X-Grafana-Org-Id.",
+        help_heading = "Authentication Options"
     )]
     pub org_id: Option<i64>,
-    #[arg(long, default_value_t = DEFAULT_TIMEOUT, help = "HTTP timeout in seconds.")]
+    #[arg(long, default_value_t = DEFAULT_TIMEOUT, help = "HTTP timeout in seconds.", help_heading = "Transport Options")]
     pub timeout: u64,
     #[arg(
         long,
         default_value_t = false,
-        help = "Enable TLS certificate verification. Verification is disabled by default."
+        help = "Enable TLS certificate verification. Verification is disabled by default.",
+        help_heading = "Transport Options"
     )]
     pub verify_ssl: bool,
     #[arg(
         long,
         default_value_t = false,
         conflicts_with_all = ["verify_ssl", "ca_cert"],
-        help = "Disable TLS certificate verification explicitly."
+        help = "Disable TLS certificate verification explicitly.",
+        help_heading = "Transport Options"
     )]
     pub insecure: bool,
     #[arg(
         long = "ca-cert",
         value_name = "PATH",
-        help = "PEM bundle file to trust for Grafana TLS verification."
+        help = "PEM bundle file to trust for Grafana TLS verification.",
+        help_heading = "Transport Options"
     )]
     pub ca_cert: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone, Args)]
 pub struct CommonCliArgsNoOrgId {
-    #[arg(long, default_value = DEFAULT_URL, help = "Grafana base URL.")]
+    #[arg(long, default_value = DEFAULT_URL, help = "Grafana base URL.", help_heading = "Authentication Options")]
     pub url: String,
     #[arg(
         long = "token",
         visible_alias = "api-token",
-        help = "Grafana API token. Preferred flag: --token. Falls back to GRAFANA_API_TOKEN."
+        help = "Grafana API token. Preferred flag: --token. Falls back to GRAFANA_API_TOKEN.",
+        help_heading = "Authentication Options"
     )]
     pub api_token: Option<String>,
     #[arg(
         long = "basic-user",
-        help = "Grafana Basic auth username. Preferred flag: --basic-user. Falls back to GRAFANA_USERNAME."
+        help = "Grafana Basic auth username. Preferred flag: --basic-user. Falls back to GRAFANA_USERNAME.",
+        help_heading = "Authentication Options"
     )]
     pub username: Option<String>,
     #[arg(
         long = "basic-password",
-        help = "Grafana Basic auth password. Preferred flag: --basic-password. Falls back to GRAFANA_PASSWORD."
+        help = "Grafana Basic auth password. Preferred flag: --basic-password. Falls back to GRAFANA_PASSWORD.",
+        help_heading = "Authentication Options"
     )]
     pub password: Option<String>,
     #[arg(
         long,
         default_value_t = false,
-        help = "Prompt for the Grafana Basic auth password."
+        help = "Prompt for the Grafana Basic auth password.",
+        help_heading = "Authentication Options"
     )]
     pub prompt_password: bool,
     #[arg(
         long,
         default_value_t = false,
-        help = "Prompt for the Grafana API token without echo instead of passing --token on the command line."
+        help = "Prompt for the Grafana API token without echo instead of passing --token on the command line.",
+        help_heading = "Authentication Options"
     )]
     pub prompt_token: bool,
-    #[arg(long, default_value_t = DEFAULT_TIMEOUT, help = "HTTP timeout in seconds.")]
+    #[arg(long, default_value_t = DEFAULT_TIMEOUT, help = "HTTP timeout in seconds.", help_heading = "Transport Options")]
     pub timeout: u64,
     #[arg(
         long,
         default_value_t = false,
-        help = "Enable TLS certificate verification. Verification is disabled by default."
+        help = "Enable TLS certificate verification. Verification is disabled by default.",
+        help_heading = "Transport Options"
     )]
     pub verify_ssl: bool,
     #[arg(
         long,
         default_value_t = false,
         conflicts_with_all = ["verify_ssl", "ca_cert"],
-        help = "Disable TLS certificate verification explicitly."
+        help = "Disable TLS certificate verification explicitly.",
+        help_heading = "Transport Options"
     )]
     pub insecure: bool,
     #[arg(
         long = "ca-cert",
         value_name = "PATH",
-        help = "PEM bundle file to trust for Grafana TLS verification."
+        help = "PEM bundle file to trust for Grafana TLS verification.",
+        help_heading = "Transport Options"
     )]
     pub ca_cert: Option<PathBuf>,
 }
@@ -983,6 +1009,7 @@ pub struct ServiceAccountTokenAddArgs {
 
 #[derive(Debug, Clone, Subcommand)]
 pub enum ServiceAccountTokenCommand {
+    #[command(after_help = ACCESS_SERVICE_ACCOUNT_TOKEN_ADD_HELP_TEXT)]
     Add(ServiceAccountTokenAddArgs),
     Delete(ServiceAccountTokenDeleteArgs),
 }
@@ -1008,6 +1035,7 @@ pub enum OrgCommand {
     Modify(OrgModifyArgs),
     Export(OrgExportArgs),
     Import(OrgImportArgs),
+    #[command(after_help = ACCESS_ORG_DELETE_HELP_TEXT)]
     Delete(OrgDeleteArgs),
 }
 
@@ -1017,6 +1045,7 @@ pub enum TeamCommand {
     Add(TeamAddArgs),
     Modify(TeamModifyArgs),
     Export(TeamExportArgs),
+    #[command(after_help = ACCESS_TEAM_IMPORT_HELP_TEXT)]
     Import(TeamImportArgs),
     Diff(TeamDiffArgs),
     Delete(TeamDeleteArgs),
@@ -1025,6 +1054,7 @@ pub enum TeamCommand {
 #[derive(Debug, Clone, Subcommand)]
 pub enum UserCommand {
     List(UserListArgs),
+    #[command(after_help = ACCESS_USER_ADD_HELP_TEXT)]
     Add(UserAddArgs),
     Modify(UserModifyArgs),
     Export(UserExportArgs),
@@ -1035,20 +1065,22 @@ pub enum UserCommand {
 
 #[derive(Debug, Clone, Subcommand)]
 pub enum AccessCommand {
+    #[command(after_help = ACCESS_USER_HELP_TEXT)]
     User {
         #[command(subcommand)]
         command: UserCommand,
     },
+    #[command(after_help = ACCESS_ORG_HELP_TEXT)]
     Org {
         #[command(subcommand)]
         command: OrgCommand,
     },
-    #[command(visible_alias = "group")]
+    #[command(visible_alias = "group", after_help = ACCESS_TEAM_HELP_TEXT)]
     Team {
         #[command(subcommand)]
         command: TeamCommand,
     },
-    #[command(name = "service-account")]
+    #[command(name = "service-account", after_help = ACCESS_SERVICE_ACCOUNT_HELP_TEXT)]
     ServiceAccount {
         #[command(subcommand)]
         command: ServiceAccountCommand,
@@ -1058,7 +1090,8 @@ pub enum AccessCommand {
 #[derive(Debug, Clone, Parser)]
 #[command(
     name = "grafana-access-utils",
-    about = "List and manage Grafana users, orgs, teams, and service accounts."
+    about = "List and manage Grafana users, orgs, teams, and service accounts.",
+    after_help = ACCESS_ROOT_HELP_TEXT
 )]
 pub(crate) struct AccessCliRoot {
     #[command(flatten)]
