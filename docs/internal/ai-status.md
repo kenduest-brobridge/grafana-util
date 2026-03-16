@@ -6,11 +6,11 @@ Historical note:
 - `TODO.md` now tracks only the active backlog; completed or superseded TODO items moved to `docs/internal/todo-archive.md`.
 
 ## 2026-03-16 - Task: Wire Live Sync Fetch And Apply Across Python And Rust
-- State: Planned
-- Scope: `grafana_utils/sync_cli.py`, `grafana_utils/clients/alert_client.py`, `tests/test_python_sync_cli.py`, `rust/src/sync.rs`, `rust/src/cli.rs`, `rust/src/sync_cli_rust_tests.rs`, `rust/src/cli_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- State: Done
+- Scope: `grafana_utils/sync_cli.py`, `tests/test_python_sync_cli.py`, `rust/src/sync.rs`, `rust/src/cli.rs`, `rust/src/sync_cli_rust_tests.rs`, `rust/src/cli_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
 - Baseline: Python `sync` can already fetch live dashboard/folder/datasource state and can execute live apply for those resource kinds, but it still rejects `alert` operations during live apply. Rust `sync` currently remains local/document-only: plan/preflight/bundle-preflight do not support `--fetch-live`, apply emits only a staged intent with no `--execute-live` path, and alert sync stays staged only in both runtimes.
-- Current Update: Recorded the pre-change trace entry and confirmed the current tree still shows the old baseline: Python advertises `--fetch-live` / `--execute-live` but still rejects alert live apply, while Rust `sync` still describes itself as local/document-only. Completion notes should be appended only after the runtime and test changes land in the tree.
-- Result: Pending.
+- Current Update: Extended Python live planning to fetch alert rules and extended Python live apply to create, update, and delete alert rules through the provisioning API when the sync operation carries a complete rule payload. Extended Rust `sync` to accept `--fetch-live` on plan/preflight/bundle-preflight, added `--execute-live` plus `--allow-folder-delete` / `--org-id` on apply, implemented live fetch for folders/dashboards/datasources/alert rules plus live availability probing, and wired live apply for folders/dashboards/datasources/alert rules. Updated unified Rust help/tests to advertise and parse the live sync flags.
+- Result: Python and Rust `sync` now both support live-backed planning plus live apply for the same core resource kinds, including alert rules. The alert path still fails closed when a sync alert spec is only a partial ownership document and cannot satisfy the full rule payload required by Grafana provisioning APIs.
 
 ## 2026-03-16 - Task: Expose Dashboard Dependency Contracts As First-Class Inspect Output
 - State: Done

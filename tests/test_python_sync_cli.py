@@ -18,12 +18,21 @@ sync_cli = importlib.import_module("grafana_utils.sync_cli")
 
 
 class FakeSyncGrafanaClient(object):
-    def __init__(self, folders=None, dashboards=None, datasources=None, plugins=None, contact_points=None):
+    def __init__(
+        self,
+        folders=None,
+        dashboards=None,
+        datasources=None,
+        plugins=None,
+        contact_points=None,
+        alert_rules=None,
+    ):
         self._folders = list(folders or [])
         self._dashboards = list(dashboards or [])
         self._datasources = list(datasources or [])
         self._plugins = list(plugins or [])
         self._contact_points = list(contact_points or [])
+        self._alert_rules = [dict(item) for item in (alert_rules or [])]
         self.calls = []
 
     def with_org_id(self, org_id):
@@ -50,6 +59,26 @@ class FakeSyncGrafanaClient(object):
             return list(self._plugins)
         if path == "/api/v1/provisioning/contact-points" and method == "GET":
             return list(self._contact_points)
+        if path == "/api/v1/provisioning/alert-rules" and method == "GET":
+            return [dict(item) for item in self._alert_rules]
+        if path == "/api/v1/provisioning/alert-rules" and method == "POST":
+            created = dict(payload or {})
+            self._alert_rules.append(created)
+            return created
+        if path.startswith("/api/v1/provisioning/alert-rules/") and method == "PUT":
+            uid = path.rsplit("/", 1)[-1]
+            updated = dict(payload or {})
+            for index, item in enumerate(self._alert_rules):
+                if str(item.get("uid") or "") == uid:
+                    self._alert_rules[index] = updated
+                    return updated
+            raise AssertionError("Unexpected sync alert update target %s" % uid)
+        if path.startswith("/api/v1/provisioning/alert-rules/") and method == "DELETE":
+            uid = path.rsplit("/", 1)[-1]
+            self._alert_rules = [
+                item for item in self._alert_rules if str(item.get("uid") or "") != uid
+            ]
+            return {"status": "deleted"}
         if path == "/api/datasources" and method == "POST":
             return {"status": "created"}
         if path.startswith("/api/datasources/") and method in ("PUT", "DELETE"):
@@ -267,6 +296,51 @@ class SyncCliTests(unittest.TestCase):
             self.assertEqual(result, 0)
             document = json.loads(stdout.getvalue())
             self.assertEqual(document["summary"]["noop"], 2)
+
+    def test_plan_fetch_live_includes_alert_rules(self):
+        desired = [
+            {
+                "kind": "alert",
+                "uid": "cpu-high",
+                "title": "CPU High",
+                "managedFields": ["condition"],
+                "body": {"condition": "A"},
+            }
+        ]
+        client = FakeSyncGrafanaClient(
+            alert_rules=[
+                {
+                    "uid": "cpu-high",
+                    "title": "CPU High",
+                    "folderUID": "ops",
+                    "ruleGroup": "cpu",
+                    "condition": "A",
+                    "data": [],
+                }
+            ]
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            desired_path = Path(tmpdir) / "desired.json"
+            desired_path.write_text(json.dumps(desired), encoding="utf-8")
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                with unittest.mock.patch.object(sync_cli, "build_client", return_value=client):
+                    result = sync_cli.main(
+                        [
+                            "plan",
+                            "--desired-file",
+                            str(desired_path),
+                            "--fetch-live",
+                            "--url",
+                            "http://127.0.0.1:3000",
+                        ]
+                    )
+
+            self.assertEqual(result, 0)
+            document = json.loads(stdout.getvalue())
+            self.assertEqual(document["summary"]["noop"], 1)
+            self.assertEqual(document["summary"]["alert_candidate"], 1)
 
     def test_plan_includes_alert_assessment_summary(self):
         desired = [
@@ -975,6 +1049,136 @@ class SyncCliTests(unittest.TestCase):
                     and item["method"] == "POST"
                     for item in client.calls
                 )
+            )
+
+    def test_apply_execute_live_creates_alert_rule(self):
+        reviewed_document = {
+            "dryRun": False,
+            "reviewRequired": True,
+            "reviewed": True,
+            "allowPrune": False,
+            "summary": {
+                "would_create": 1,
+                "would_update": 0,
+                "would_delete": 0,
+                "noop": 0,
+                "unmanaged": 0,
+            },
+            "operations": [
+                {
+                    "kind": "alert",
+                    "identity": "cpu-high",
+                    "title": "CPU High",
+                    "action": "would-create",
+                    "reason": "missing-live",
+                    "changedFields": [
+                        "uid",
+                        "title",
+                        "folderUID",
+                        "ruleGroup",
+                        "condition",
+                        "data",
+                    ],
+                    "managedFields": ["condition"],
+                    "desired": {
+                        "uid": "cpu-high",
+                        "title": "CPU High",
+                        "folderUID": "ops",
+                        "ruleGroup": "cpu",
+                        "condition": "A",
+                        "data": [],
+                    },
+                    "live": None,
+                    "sourcePath": "alerts/cpu-high.json",
+                }
+            ],
+        }
+        client = FakeSyncGrafanaClient()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            plan_path = Path(tmpdir) / "reviewed-plan.json"
+            plan_path.write_text(json.dumps(reviewed_document), encoding="utf-8")
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                with unittest.mock.patch.object(sync_cli, "build_client", return_value=client):
+                    result = sync_cli.main(
+                        [
+                            "apply",
+                            "--plan-file",
+                            str(plan_path),
+                            "--approve",
+                            "--execute-live",
+                            "--url",
+                            "http://127.0.0.1:3000",
+                        ]
+                    )
+
+            self.assertEqual(result, 0)
+            document = json.loads(stdout.getvalue())
+            self.assertEqual(document["mode"], "live-apply")
+            self.assertEqual(document["appliedCount"], 1)
+            self.assertTrue(
+                any(
+                    item["kind"] == "request"
+                    and item["path"] == "/api/v1/provisioning/alert-rules"
+                    and item["method"] == "POST"
+                    for item in client.calls
+                )
+            )
+
+    def test_apply_execute_live_rejects_partial_alert_spec(self):
+        reviewed_document = {
+            "dryRun": False,
+            "reviewRequired": True,
+            "reviewed": True,
+            "allowPrune": False,
+            "summary": {
+                "would_create": 1,
+                "would_update": 0,
+                "would_delete": 0,
+                "noop": 0,
+                "unmanaged": 0,
+            },
+            "operations": [
+                {
+                    "kind": "alert",
+                    "identity": "cpu-high",
+                    "title": "CPU High",
+                    "action": "would-create",
+                    "reason": "missing-live",
+                    "changedFields": ["condition"],
+                    "managedFields": ["condition"],
+                    "desired": {"condition": "A"},
+                    "live": None,
+                    "sourcePath": "alerts/cpu-high.json",
+                }
+            ],
+        }
+        client = FakeSyncGrafanaClient()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            plan_path = Path(tmpdir) / "reviewed-plan.json"
+            plan_path.write_text(json.dumps(reviewed_document), encoding="utf-8")
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+            with redirect_stdout(stdout), redirect_stderr(stderr):
+                with unittest.mock.patch.object(sync_cli, "build_client", return_value=client):
+                    result = sync_cli.main(
+                        [
+                            "apply",
+                            "--plan-file",
+                            str(plan_path),
+                            "--approve",
+                            "--execute-live",
+                            "--url",
+                            "http://127.0.0.1:3000",
+                        ]
+                    )
+
+            self.assertEqual(result, 1)
+            self.assertIn(
+                "Alert-rule import document is missing required fields",
+                stderr.getvalue(),
             )
 
 

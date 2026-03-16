@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Public Python CLI facade for conservative declarative sync planning.
+"""Public Python CLI facade for conservative declarative sync workflows.
 
 Purpose:
 - Expose the existing GitOps sync planning scaffold through `grafana-util sync`.
-- Keep the current public surface local-file based and non-live so reviewable
-  plan/apply contracts can settle before any Grafana API mutation is wired in.
+- Keep reviewable plan/apply contracts first-class while also supporting
+  conservative live fetch/apply paths for supported resource kinds.
 
 Architecture:
 - Parse and validate one local JSON input/output flow per subcommand.
@@ -26,6 +26,8 @@ from .dashboard_cli import (
 )
 from .datasource.live_mutation_safe import build_add_payload as build_datasource_add_payload
 from .datasource.workflows import build_modify_datasource_payload
+from .alerts.common import GrafanaError as AlertGrafanaError
+from .alerts.provisioning import build_rule_import_payload
 from .alert_sync_workbench import (
     assess_alert_sync_specs,
     render_alert_sync_assessment_text,
@@ -100,8 +102,8 @@ def build_parser(prog=None):
     parser = argparse.ArgumentParser(
         prog=prog or "grafana-util sync",
         description=(
-            "Build, review, and gate a local declarative Grafana sync plan "
-            "without talking to Grafana."
+            "Build, review, and gate declarative Grafana sync plans with "
+            "optional live Grafana fetch/apply paths."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -323,7 +325,7 @@ def build_parser(prog=None):
 
     apply_parser = subparsers.add_parser(
         "apply",
-        help="Build a gated apply intent from a reviewed plan without live mutation.",
+        help="Build a gated apply intent from a reviewed plan, optionally executing it live.",
         epilog=APPLY_HELP_EXAMPLES,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -335,7 +337,7 @@ def build_parser(prog=None):
     apply_parser.add_argument(
         "--approve",
         action="store_true",
-        help="Explicit acknowledgement required before a non-live apply intent is emitted.",
+        help="Explicit acknowledgement required before an apply intent or live execution is emitted.",
     )
     add_common_cli_args(apply_parser)
     apply_parser.add_argument(
@@ -583,6 +585,39 @@ def fetch_live_resource_specs(client, page_size=500):
                 "name": name or uid,
                 "title": name or uid,
                 "body": body,
+            }
+        )
+    alert_rules = client.request_json("/api/v1/provisioning/alert-rules")
+    if not isinstance(alert_rules, list):
+        raise GrafanaError("Unexpected alert-rule list response from Grafana.")
+    for rule in alert_rules:
+        if not isinstance(rule, dict):
+            continue
+        uid = _normalize_string(rule.get("uid"))
+        if not uid:
+            continue
+        body = build_rule_import_payload(rule)
+        body["uid"] = _normalize_string(body.get("uid"), uid) or uid
+        specs.append(
+            {
+                "kind": "alert",
+                "uid": uid,
+                "title": _normalize_string(body.get("title"), uid),
+                "body": body,
+                "managedFields": [
+                    field
+                    for field in (
+                        "condition",
+                        "labels",
+                        "annotations",
+                        "contactPoints",
+                        "for",
+                        "noDataState",
+                        "execErrState",
+                    )
+                    if field in body
+                ]
+                or ["condition"],
             }
         )
     return specs
@@ -1148,6 +1183,41 @@ def _apply_datasource_operation(client, operation):
     raise GrafanaError("Unsupported datasource sync action %s." % operation.action)
 
 
+def _apply_alert_operation(client, operation):
+    uid = _normalize_string(operation.identity)
+    if not uid:
+        raise GrafanaError("Alert sync operations require a stable uid identity.")
+    if operation.action == "would-delete":
+        return client.request_json(
+            "/api/v1/provisioning/alert-rules/%s" % parse.quote(uid, safe=""),
+            method="DELETE",
+        )
+    body = _copy_mapping(operation.desired, "Alert desired body")
+    body["uid"] = _normalize_string(body.get("uid"), uid) or uid
+    if body["uid"] != uid:
+        raise GrafanaError(
+            "Alert sync body uid %s does not match operation identity %s."
+            % (body["uid"], uid)
+        )
+    try:
+        payload = build_rule_import_payload(body)
+    except AlertGrafanaError as exc:
+        raise GrafanaError(str(exc))
+    if operation.action == "would-create":
+        return client.request_json(
+            "/api/v1/provisioning/alert-rules",
+            method="POST",
+            payload=payload,
+        )
+    if operation.action == "would-update":
+        return client.request_json(
+            "/api/v1/provisioning/alert-rules/%s" % parse.quote(uid, safe=""),
+            method="PUT",
+            payload=payload,
+        )
+    raise GrafanaError("Unsupported alert sync action %s." % operation.action)
+
+
 def execute_live_apply(client, operations, allow_folder_delete=False):
     """Apply one gated sync intent to Grafana for supported resource kinds."""
     results = []
@@ -1163,9 +1233,7 @@ def execute_live_apply(client, operations, allow_folder_delete=False):
         elif operation.kind == "datasource":
             response = _apply_datasource_operation(client, operation)
         elif operation.kind == "alert":
-            raise GrafanaError(
-                "Live sync apply does not support alert operations yet; keep alerts in plan-only mode."
-            )
+            response = _apply_alert_operation(client, operation)
         else:
             raise GrafanaError("Unsupported sync resource kind %s." % operation.kind)
         results.append(
