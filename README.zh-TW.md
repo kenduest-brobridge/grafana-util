@@ -72,6 +72,23 @@
 
 ### 安裝方式
 
+**GitHub Releases：**
+已發佈版本的安裝檔可從以下頁面下載：
+`https://github.com/kenduest-brobridge/grafana-utils/releases`
+
+範例：
+```bash
+# 安裝已發佈的 Python wheel
+python3 -m pip install \
+  https://github.com/kenduest-brobridge/grafana-utils/releases/download/vX.Y.Z/grafana_util-X.Y.Z-py3-none-any.whl
+
+# 或安裝已發佈的 source distribution
+python3 -m pip install \
+  https://github.com/kenduest-brobridge/grafana-utils/releases/download/vX.Y.Z/grafana_util-X.Y.Z.tar.gz
+```
+
+若有建立正式 tag release，也可從同一個 Releases 頁面下載對應平台的 Rust 預編譯執行檔。
+
 **Python 套件：**
 ```bash
 python3 -m pip install .

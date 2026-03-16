@@ -72,6 +72,23 @@ This project leverages a hybrid approach for efficiency:
 
 ### Installation
 
+**GitHub Releases:**
+Published release assets are available at:
+`https://github.com/kenduest-brobridge/grafana-utils/releases`
+
+Examples:
+```bash
+# Install a published Python wheel
+python3 -m pip install \
+  https://github.com/kenduest-brobridge/grafana-utils/releases/download/vX.Y.Z/grafana_util-X.Y.Z-py3-none-any.whl
+
+# Or install the published source distribution
+python3 -m pip install \
+  https://github.com/kenduest-brobridge/grafana-utils/releases/download/vX.Y.Z/grafana_util-X.Y.Z.tar.gz
+```
+
+Download the prebuilt Rust binaries for your target platform from the same Releases page when a tagged release is published.
+
 **Python Package:**
 ```bash
 python3 -m pip install .
