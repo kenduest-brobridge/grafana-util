@@ -1336,15 +1336,18 @@ python3 scripts/check_dashboard_governance.py \
   --policy examples/dashboard-governance-policy.json \
   --governance governance.json \
   --queries queries.json \
-  --import-dir ./dashboards/raw \
   --json-output governance-check.json
 ```
 
-4. 第一版 checker 目前可阻擋：
+4. 只有在你餵的是較舊的 governance artifact、還沒有把 dashboard dependency facts 帶進 `governance.json` 時，才需要額外加 `--import-dir ./dashboards/raw` 當 fallback。
+
+5. governance-json-first checker 目前可阻擋：
    - 不在 allowlist 的 datasource family / uid
    - 無法識別的 datasource
    - mixed-datasource dashboard
    - 不在 allowlist 的 panel plugin
+   - 不在 allowlist 的 library panel
+   - 不允許的 dashboard folder prefix / routing 邊界
    - dashboard panel / query 引用但未定義的 datasource 變數
    - dashboard / panel query 數超標
    - query / dashboard complexity 分數超標

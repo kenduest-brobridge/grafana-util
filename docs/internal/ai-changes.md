@@ -5,6 +5,14 @@ Historical note:
 - Older entries preserve the reasoning and follow-up state as of the entry date.
 - Active backlog now lives in `TODO.md`, while completed or superseded TODO items moved to `docs/internal/todo-archive.md`.
 
+## 2026-03-16 - Shift Dashboard Governance Gate Toward Governance-Json-First Inputs
+- Summary: Added Python governance JSON `dashboardDependencies` rows so the governance gate can prefer dependency facts directly from `governance.json` instead of rescanning raw dashboards in the common case. The dependency rows now carry plugin ids, datasource variables, datasource variable references, and dashboard file/folder context. The gate was updated to merge those governance facts with `--import-dir` fallback data only when older artifacts lack the needed fields, and the safe rule surface now also includes library panel allowlists plus explicit folder-prefix routing rules.
+- Tests: Added focused Python governance-report assertions for `dashboardDependencies`, plus governance-gate coverage for governance-json-first plugin/library/variable checks and folder-prefix routing violations.
+- Test Run: `python3 -m unittest -v tests.test_python_dashboard_governance_gate tests.test_python_dashboard_inspection_cli tests.test_python_dashboard_cli`
+- Validation: Confirmed Python governance JSON now emits `dashboardDependencies`, confirmed the gate can block plugin/library panel/undefined datasource-variable violations from governance/query JSON alone, and confirmed `--import-dir` remains available as a fallback for older artifacts.
+- Impact: `grafana_utils/dashboards/inspection_governance.py`, `grafana_utils/dashboard_governance_gate.py`, `tests/test_python_dashboard_inspection_cli.py`, `tests/test_python_dashboard_governance_gate.py`, `docs/DEVELOPER.md`, `docs/user-guide.md`, `docs/user-guide-TW.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`, `examples/dashboard-governance-policy.json`
+- Rollback/Risk: Low to moderate. The governance-json-first shift simplifies CI inputs, but library panel and folder-prefix routing checks are only as strong as the dependency facts emitted by current Python governance JSON and the team's explicit policy configuration.
+
 ## 2026-03-16 - Add External Dashboard Governance Gate For CI
 - Summary: Added a first-pass external governance gate on top of the existing dashboard inspect outputs. The new Python module and thin script wrapper read a policy JSON plus `inspect-export --report governance-json` and `inspect-export --report json` artifacts, and can optionally read one raw export directory for plugin and datasource-variable checks, then emit CI-friendly text or JSON results with nonzero exit codes when blocking governance violations are present.
 - Tests: Added focused Python coverage for policy evaluation, plugin and datasource-variable checks, query-count/complexity thresholds, text rendering, and CLI JSON-output behavior.

@@ -87,6 +87,16 @@ class DashboardInspectionTests(unittest.TestCase):
                         "id": None,
                         "uid": "cpu-main",
                         "title": "CPU Main",
+                        "templating": {
+                            "list": [
+                                {
+                                    "name": "prom_ds",
+                                    "type": "datasource",
+                                    "query": "prometheus",
+                                    "current": {},
+                                }
+                            ]
+                        },
                         "panels": [
                             {
                                 "id": 7,
@@ -107,15 +117,22 @@ class DashboardInspectionTests(unittest.TestCase):
                         "id": None,
                         "uid": "mixed-main",
                         "title": "Mixed Main",
+                        "templating": {
+                            "list": [
+                                {
+                                    "name": "logs_ds",
+                                    "type": "datasource",
+                                    "query": "loki",
+                                    "current": {},
+                                }
+                            ]
+                        },
                         "panels": [
                             {
                                 "id": 8,
                                 "title": "Logs",
                                 "type": "logs",
-                                "datasource": {
-                                    "type": "datasource",
-                                    "uid": "-- Mixed --",
-                                },
+                                "datasource": "$logs_ds",
                                 "targets": [
                                     {
                                         "refId": "A",
@@ -690,6 +707,28 @@ class DashboardInspectionTests(unittest.TestCase):
             self.assertEqual(payload["summary"]["queryRecordCount"], 1)
             self.assertEqual(payload["summary"]["datasourceFamilyCount"], 1)
             self.assertEqual(payload["datasourceFamilies"][0]["family"], "loki")
+            self.assertEqual(len(payload["dashboardDependencies"]), 2)
+            self.assertEqual(payload["dashboardDependencies"][0]["dashboardUid"], "cpu-main")
+            self.assertEqual(
+                payload["dashboardDependencies"][0]["pluginIds"],
+                ["timeseries"],
+            )
+            self.assertEqual(
+                payload["dashboardDependencies"][0]["datasourceVariables"],
+                ["prom_ds"],
+            )
+            self.assertEqual(
+                payload["dashboardDependencies"][1]["pluginIds"],
+                ["logs"],
+            )
+            self.assertEqual(
+                payload["dashboardDependencies"][1]["datasourceVariables"],
+                ["logs_ds"],
+            )
+            self.assertEqual(
+                payload["dashboardDependencies"][1]["datasourceVariableRefs"],
+                ["logs_ds"],
+            )
             self.assertEqual(payload["datasources"][0]["datasourceUid"], "logs-main")
             self.assertEqual(len(payload["riskRecords"]), 2)
             self.assertEqual(payload["riskRecords"][0]["kind"], "orphaned-datasource")

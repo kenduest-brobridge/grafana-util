@@ -566,17 +566,20 @@ Dashboard governance gate notes:
 - keep inspect extraction and policy evaluation as separate layers:
   - `grafana-util dashboard inspect-export --report governance-json` and `--report json` extract facts
   - `scripts/check_dashboard_governance.py` applies team-specific policy and returns a CI-friendly exit code
-- the first-pass gate consumes:
+- prefer one governance-json-first gate contract:
   - one policy JSON such as `examples/dashboard-governance-policy.json`
   - one governance report from `dashboard inspect-export --report governance-json`
   - one flat query report from `dashboard inspect-export --report json`
-  - optionally one raw export directory through `--import-dir` when policy rules need panel plugin ids or datasource-variable-definition checks
+  - keep `--import-dir` only as a fallback for older governance artifacts that do not yet carry the dependency facts the checker wants
+- when present, the checker should prefer dependency facts from governance JSON `dashboardDependencies` rows over rescanning raw dashboards
 - the first-pass blocking rules are:
   - datasource family allowlist
   - datasource uid allowlist
   - unknown datasource identity
   - mixed-datasource dashboards reported by governance risk records
   - panel plugin allowlist
+  - library panel allowlist
+  - allowed dashboard folder prefixes for routing/governance boundaries
   - undefined datasource variables referenced in panel/query datasource fields
   - max queries per dashboard
   - max queries per panel
@@ -587,6 +590,7 @@ Dashboard governance gate notes:
   - broad Loki selectors and regexes
 - raw governance `riskRecords` are surfaced as warnings in the checker result. Set `enforcement.failOnWarnings=true` in the policy file if CI should fail when those warnings are present.
 - keep the gate external until the policy contract settles across teams; that lets operators change policy without forcing a new CLI/runtime contract.
+- current safe ownership/routing subset is explicit folder-prefix policy via `routing.allowedFolderPrefixes`. Do not infer team ownership from dashboard titles, tags, or free-form folder names until inspect/governance outputs expose a stable owner/team field.
 
 Example CI flow:
 
@@ -599,6 +603,16 @@ grafana-util dashboard inspect-export \
   --import-dir ./dashboards/raw \
   --report json > queries.json
 
+python3 scripts/check_dashboard_governance.py \
+  --policy examples/dashboard-governance-policy.json \
+  --governance governance.json \
+  --queries queries.json \
+  --json-output governance-check.json
+```
+
+Fallback CI flow for older exports:
+
+```bash
 python3 scripts/check_dashboard_governance.py \
   --policy examples/dashboard-governance-policy.json \
   --governance governance.json \

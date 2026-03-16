@@ -1380,15 +1380,18 @@ python3 scripts/check_dashboard_governance.py \
   --policy examples/dashboard-governance-policy.json \
   --governance governance.json \
   --queries queries.json \
-  --import-dir ./dashboards/raw \
   --json-output governance-check.json
 ```
 
-4. Review `governance-check.json` in CI artifacts when the gate fails. The first-pass checker can block on:
+4. Use `--import-dir ./dashboards/raw` only as a fallback when you are feeding older governance artifacts that do not yet carry dashboard dependency facts in `governance.json`.
+
+5. Review `governance-check.json` in CI artifacts when the gate fails. The governance-json-first checker can block on:
    - datasource family or uid allowlists
    - unknown datasource identity
    - mixed-datasource dashboards
    - panel plugin allowlists
+   - library panel allowlists
+   - disallowed dashboard folder prefixes for routing boundaries
    - undefined datasource variables referenced by dashboard panels
    - query count thresholds
    - query or dashboard complexity thresholds

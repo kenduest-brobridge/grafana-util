@@ -22,6 +22,12 @@ class DashboardGovernanceGateTests(unittest.TestCase):
             "plugins": {
                 "allowedPluginIds": ["timeseries", "logs"],
             },
+            "libraries": {
+                "allowedLibraryPanelUids": ["libcpu"],
+            },
+            "routing": {
+                "allowedFolderPrefixes": ["General", "Platform / Infra"],
+            },
             "variables": {
                 "forbidUndefinedDatasourceVariables": True,
             },
@@ -58,6 +64,18 @@ class DashboardGovernanceGateTests(unittest.TestCase):
                 {"datasourceUid": "prom-main", "datasource": "prom-main", "family": "prometheus"},
                 {"datasourceUid": "logs-main", "datasource": "logs-main", "family": "loki"},
                 {"datasourceUid": "pg-main", "datasource": "pg-main", "family": "postgres"},
+            ],
+            "dashboardDependencies": [
+                {
+                    "dashboardUid": "cpu-main",
+                    "dashboardTitle": "CPU Main",
+                    "file": "/tmp/raw/cpu-main.json",
+                    "pluginIds": ["timeseries", "geomap"],
+                    "libraryPanelUids": ["libgeo"],
+                    "variableNames": ["defined_ds"],
+                    "datasourceVariables": ["defined_ds"],
+                    "datasourceVariableRefs": ["defined_ds", "missing_ds"],
+                }
             ],
             "riskRecords": [
                 {
@@ -123,6 +141,7 @@ class DashboardGovernanceGateTests(unittest.TestCase):
                             "id": 8,
                             "title": "Geomap",
                             "type": "geomap",
+                            "libraryPanel": {"uid": "libgeo"},
                             "targets": [],
                         },
                     ],
@@ -139,6 +158,7 @@ class DashboardGovernanceGateTests(unittest.TestCase):
                 {
                     "dashboardUid": "cpu-main",
                     "dashboardTitle": "CPU Main",
+                    "folderPath": "General",
                     "panelId": "7",
                     "panelTitle": "CPU Usage",
                     "refId": "A",
@@ -151,6 +171,7 @@ class DashboardGovernanceGateTests(unittest.TestCase):
                 {
                     "dashboardUid": "logs-main",
                     "dashboardTitle": "Logs Main",
+                    "folderPath": "Security / Logs",
                     "panelId": "8",
                     "panelTitle": "Logs",
                     "refId": "A",
@@ -163,6 +184,7 @@ class DashboardGovernanceGateTests(unittest.TestCase):
                 {
                     "dashboardUid": "sql-main",
                     "dashboardTitle": "SQL Main",
+                    "folderPath": "Platform / Infra",
                     "panelId": "9",
                     "panelTitle": "Latency",
                     "refId": "A",
@@ -175,6 +197,7 @@ class DashboardGovernanceGateTests(unittest.TestCase):
                 {
                     "dashboardUid": "sql-main",
                     "dashboardTitle": "SQL Main",
+                    "folderPath": "Platform / Infra",
                     "panelId": "9",
                     "panelTitle": "Latency",
                     "refId": "B",
@@ -263,6 +286,8 @@ class DashboardGovernanceGateTests(unittest.TestCase):
         policy = self.build_policy(
             datasources={},
             plugins={},
+            libraries={},
+            routing={},
             variables={},
             queries={},
             enforcement={"failOnWarnings": True},
@@ -290,6 +315,7 @@ class DashboardGovernanceGateTests(unittest.TestCase):
 
             self.assertEqual(len(context), 1)
             self.assertEqual(context[0]["pluginIds"], ["geomap", "timeseries"])
+            self.assertEqual(context[0]["libraryPanelUids"], ["libgeo"])
             self.assertEqual(context[0]["datasourceVariableRefs"], ["defined_ds", "missing_ds"])
             self.assertEqual(context[0]["datasourceVariables"], ["defined_ds"])
 
@@ -307,7 +333,36 @@ class DashboardGovernanceGateTests(unittest.TestCase):
 
             codes = [item["code"] for item in result["violations"]]
             self.assertIn("PLUGIN_NOT_ALLOWED", codes)
+            self.assertIn("LIBRARY_PANEL_NOT_ALLOWED", codes)
             self.assertIn("UNDEFINED_DATASOURCE_VARIABLE", codes)
+
+    def test_evaluate_policy_prefers_governance_dashboard_dependencies(self):
+        result = dashboard_governance_gate.evaluate_dashboard_governance_policy(
+            self.build_policy(),
+            self.build_governance_document(),
+            {"summary": {"dashboardCount": 0, "queryRecordCount": 0}, "queries": []},
+        )
+
+        codes = [item["code"] for item in result["violations"]]
+        self.assertIn("PLUGIN_NOT_ALLOWED", codes)
+        self.assertIn("LIBRARY_PANEL_NOT_ALLOWED", codes)
+        self.assertIn("UNDEFINED_DATASOURCE_VARIABLE", codes)
+
+    def test_evaluate_policy_reports_routing_folder_violation(self):
+        result = dashboard_governance_gate.evaluate_dashboard_governance_policy(
+            self.build_policy(
+                datasources={},
+                plugins={},
+                libraries={},
+                variables={},
+                queries={},
+            ),
+            {"summary": {}, "riskRecords": []},
+            self.build_query_document(),
+        )
+
+        codes = [item["code"] for item in result["violations"]]
+        self.assertIn("ROUTING_FOLDER_NOT_ALLOWED", codes)
 
     def test_main_writes_json_and_returns_failure_for_violations(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -316,7 +371,6 @@ class DashboardGovernanceGateTests(unittest.TestCase):
             governance_path = root / "governance.json"
             queries_path = root / "queries.json"
             output_path = root / "result.json"
-            import_dir = root / "raw"
             policy_path.write_text(
                 json.dumps(self.build_policy(), ensure_ascii=False),
                 encoding="utf-8",
@@ -329,7 +383,6 @@ class DashboardGovernanceGateTests(unittest.TestCase):
                 json.dumps(self.build_query_document(), ensure_ascii=False),
                 encoding="utf-8",
             )
-            self.write_raw_dashboard_fixture(import_dir)
 
             buffer = io.StringIO()
             with redirect_stdout(buffer):
@@ -341,8 +394,6 @@ class DashboardGovernanceGateTests(unittest.TestCase):
                         str(governance_path),
                         "--queries",
                         str(queries_path),
-                        "--import-dir",
-                        str(import_dir),
                         "--output-format",
                         "json",
                         "--json-output",

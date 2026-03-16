@@ -215,14 +215,25 @@ def _build_dashboard_context(import_dir: Path) -> list[dict[str, Any]]:
         )
         panels = iter_dashboard_panels(dashboard.get("panels"))
         plugin_ids = set()
+        library_panel_uids = set()
         datasource_variable_refs = set()
         for panel in panels:
             panel_type = str(panel.get("type") or "").strip()
             panel_plugin_id = str(panel.get("pluginId") or "").strip()
+            library_panel = panel.get("libraryPanel")
             if panel_type and panel_type != "row":
                 plugin_ids.add(panel_type)
             if panel_plugin_id:
                 plugin_ids.add(panel_plugin_id)
+            if isinstance(library_panel, dict):
+                library_panel_uid = str(
+                    library_panel.get("uid")
+                    or library_panel.get("libraryPanelUid")
+                    or library_panel.get("name")
+                    or ""
+                ).strip()
+                if library_panel_uid:
+                    library_panel_uids.add(library_panel_uid)
             for datasource_value in (panel.get("datasource"),):
                 if isinstance(datasource_value, dict):
                     for field in ("uid", "name", "type"):
@@ -257,6 +268,7 @@ def _build_dashboard_context(import_dir: Path) -> list[dict[str, Any]]:
                 "dashboardTitle": str(dashboard.get("title") or ""),
                 "file": str(dashboard_file),
                 "pluginIds": sorted(plugin_ids),
+                "libraryPanelUids": sorted(library_panel_uids),
                 "variables": variable_rows,
                 "variableNames": sorted(
                     {
@@ -279,6 +291,80 @@ def _build_dashboard_context(import_dir: Path) -> list[dict[str, Any]]:
     return dashboards
 
 
+def _build_dashboard_context_from_governance_document(
+    governance_document: dict[str, Any],
+) -> list[dict[str, Any]]:
+    dashboards = []
+    for record in list(governance_document.get("dashboardDependencies") or []):
+        if not isinstance(record, dict):
+            continue
+        dashboards.append(
+            {
+                "dashboardUid": str(record.get("dashboardUid") or "").strip(),
+                "dashboardTitle": str(record.get("dashboardTitle") or "").strip(),
+                "file": str(record.get("file") or "").strip(),
+                "pluginIds": sorted(_normalize_string_set(record.get("pluginIds"))),
+                "libraryPanelUids": sorted(
+                    _normalize_string_set(record.get("libraryPanelUids"))
+                ),
+                "variableNames": sorted(_normalize_string_set(record.get("variableNames"))),
+                "datasourceVariables": sorted(
+                    _normalize_string_set(record.get("datasourceVariables"))
+                ),
+                "datasourceVariableRefs": sorted(
+                    _normalize_string_set(record.get("datasourceVariableRefs"))
+                ),
+            }
+        )
+    return dashboards
+
+
+def _merge_dashboard_context(
+    governance_context: list[dict[str, Any]],
+    fallback_context: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    merged = {}
+    for record in list(governance_context or []) + list(fallback_context or []):
+        dashboard_uid = str(record.get("dashboardUid") or "").strip()
+        if not dashboard_uid:
+            continue
+        current = merged.setdefault(
+            dashboard_uid,
+            {
+                "dashboardUid": dashboard_uid,
+                "dashboardTitle": "",
+                "file": "",
+                "pluginIds": set(),
+                "libraryPanelUids": set(),
+                "variableNames": set(),
+                "datasourceVariables": set(),
+                "datasourceVariableRefs": set(),
+            },
+        )
+        if str(record.get("dashboardTitle") or "").strip() and not current["dashboardTitle"]:
+            current["dashboardTitle"] = str(record.get("dashboardTitle") or "").strip()
+        if str(record.get("file") or "").strip() and not current["file"]:
+            current["file"] = str(record.get("file") or "").strip()
+        current["pluginIds"].update(record.get("pluginIds") or [])
+        current["libraryPanelUids"].update(record.get("libraryPanelUids") or [])
+        current["variableNames"].update(record.get("variableNames") or [])
+        current["datasourceVariables"].update(record.get("datasourceVariables") or [])
+        current["datasourceVariableRefs"].update(record.get("datasourceVariableRefs") or [])
+    return [
+        {
+            "dashboardUid": record["dashboardUid"],
+            "dashboardTitle": record["dashboardTitle"],
+            "file": record["file"],
+            "pluginIds": sorted(record["pluginIds"]),
+            "libraryPanelUids": sorted(record["libraryPanelUids"]),
+            "variableNames": sorted(record["variableNames"]),
+            "datasourceVariables": sorted(record["datasourceVariables"]),
+            "datasourceVariableRefs": sorted(record["datasourceVariableRefs"]),
+        }
+        for _, record in sorted(merged.items())
+    ]
+
+
 def evaluate_dashboard_governance_policy(
     policy_document: dict[str, Any],
     governance_document: dict[str, Any],
@@ -291,8 +377,10 @@ def evaluate_dashboard_governance_policy(
 
     datasource_policy = dict(policy_document.get("datasources") or {})
     plugin_policy = dict(policy_document.get("plugins") or {})
+    library_policy = dict(policy_document.get("libraries") or {})
     variable_policy = dict(policy_document.get("variables") or {})
     query_policy = dict(policy_document.get("queries") or {})
+    routing_policy = dict(policy_document.get("routing") or {})
     enforcement_policy = dict(policy_document.get("enforcement") or {})
 
     allowed_families = _normalize_string_set(datasource_policy.get("allowedFamilies"))
@@ -302,6 +390,12 @@ def evaluate_dashboard_governance_policy(
         datasource_policy.get("forbidMixedFamilies"), default=False
     )
     allowed_plugin_ids = _normalize_string_set(plugin_policy.get("allowedPluginIds"))
+    allowed_library_panel_uids = _normalize_string_set(
+        library_policy.get("allowedLibraryPanelUids")
+    )
+    allowed_folder_prefixes = tuple(
+        sorted(_normalize_string_set(routing_policy.get("allowedFolderPrefixes")))
+    )
     forbid_undefined_datasource_variables = _normalize_bool(
         variable_policy.get("forbidUndefinedDatasourceVariables"),
         default=False,
@@ -334,16 +428,24 @@ def evaluate_dashboard_governance_policy(
 
     violations = []
     warnings = []
-    dashboard_context = list(dashboard_context or [])
+    dashboard_context = _merge_dashboard_context(
+        _build_dashboard_context_from_governance_document(governance_document),
+        list(dashboard_context or []),
+    )
 
     dashboard_counts = {}
     dashboard_complexity_scores = {}
+    dashboard_folder_paths = {}
     panel_counts = {}
     for query in queries:
         dashboard_counts[_dashboard_key(query)] = (
             int(dashboard_counts.get(_dashboard_key(query), 0)) + 1
         )
         panel_counts[_panel_key(query)] = int(panel_counts.get(_panel_key(query), 0)) + 1
+        dashboard_folder_paths.setdefault(
+            _dashboard_key(query),
+            str(query.get("folderPath") or "").strip(),
+        )
 
         family = _query_family(query)
         datasource_uid = str(query.get("datasourceUid") or "").strip()
@@ -493,6 +595,28 @@ def evaluate_dashboard_governance_policy(
                 )
             )
 
+    if allowed_folder_prefixes:
+        for key, folder_path in sorted(dashboard_folder_paths.items()):
+            if any(
+                folder_path == prefix or folder_path.startswith(prefix + " /")
+                for prefix in allowed_folder_prefixes
+            ):
+                continue
+            dashboard_uid, dashboard_title = key
+            violations.append(
+                _build_finding(
+                    "error",
+                    "ROUTING_FOLDER_NOT_ALLOWED",
+                    "Dashboard folderPath %s is not allowed by policy."
+                    % (folder_path or "unknown"),
+                    extra={
+                        "dashboardUid": dashboard_uid,
+                        "dashboardTitle": dashboard_title,
+                        "folderPath": folder_path,
+                    },
+                )
+            )
+
     if forbid_mixed_families and "mixed-datasource-dashboard" in governance_risk_kinds:
         for record in governance_document.get("riskRecords") or []:
             if not isinstance(record, dict):
@@ -526,6 +650,23 @@ def evaluate_dashboard_governance_policy(
                             "dashboardUid": dashboard_uid,
                             "dashboardTitle": dashboard_title,
                             "pluginId": plugin_id,
+                        },
+                    )
+                )
+        for library_panel_uid in list(dashboard.get("libraryPanelUids") or []):
+            if (
+                allowed_library_panel_uids
+                and library_panel_uid not in allowed_library_panel_uids
+            ):
+                violations.append(
+                    _build_finding(
+                        "error",
+                        "LIBRARY_PANEL_NOT_ALLOWED",
+                        "Library panel %s is not allowed by policy." % library_panel_uid,
+                        extra={
+                            "dashboardUid": dashboard_uid,
+                            "dashboardTitle": dashboard_title,
+                            "libraryPanelUid": library_panel_uid,
                         },
                     )
                 )
@@ -580,6 +721,8 @@ def evaluate_dashboard_governance_policy(
                 "datasourceAllowedFamilies": sorted(allowed_families),
                 "datasourceAllowedUids": sorted(allowed_uids),
                 "allowedPluginIds": sorted(allowed_plugin_ids),
+                "allowedLibraryPanelUids": sorted(allowed_library_panel_uids),
+                "allowedFolderPrefixes": list(allowed_folder_prefixes),
                 "forbidUnknown": forbid_unknown,
                 "forbidMixedFamilies": forbid_mixed_families,
                 "forbidUndefinedDatasourceVariables": forbid_undefined_datasource_variables,

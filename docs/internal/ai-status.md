@@ -5,6 +5,13 @@ Historical note:
 - Older entries describe the repo state and `TODO.md` backlog as they existed on the entry date.
 - `TODO.md` now tracks only the active backlog; completed or superseded TODO items moved to `docs/internal/todo-archive.md`.
 
+## 2026-03-16 - Task: Shift Dashboard Governance Gate Toward Governance-Json-First Inputs
+- State: Done
+- Scope: `grafana_utils/dashboards/inspection_governance.py`, `grafana_utils/dashboard_governance_gate.py`, `tests/test_python_dashboard_inspection_cli.py`, `tests/test_python_dashboard_governance_gate.py`, `docs/DEVELOPER.md`, `docs/user-guide.md`, `docs/user-guide-TW.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The initial governance gate still depended on raw export rescans for plugin and datasource-variable checks because Python governance JSON did not yet carry `dashboardDependencies`-style dependency facts.
+- Current Update: Added Python governance JSON `dashboardDependencies` rows with plugin ids, datasource variables, datasource variable references, and file/folder dependency context. Updated the governance gate to prefer those facts directly from `governance.json`, leaving `--import-dir` only as a compatibility fallback, and extended the safe rule set with library panel allowlists plus explicit folder-prefix routing rules.
+- Result: The preferred governance gate contract is now `policy + governance-json + report-json`, and the checker can enforce plugin, library-panel, datasource-variable, and folder-routing policies without rescanning raw dashboards in the common case.
+
 ## 2026-03-16 - Task: Add External Dashboard Governance Gate For CI
 - State: Done
 - Scope: `grafana_utils/dashboard_governance_gate.py`, `scripts/check_dashboard_governance.py`, `examples/dashboard-governance-policy.json`, `tests/test_python_dashboard_governance_gate.py`, `docs/DEVELOPER.md`, `docs/user-guide.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
