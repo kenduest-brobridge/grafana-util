@@ -54,12 +54,14 @@ UNIFIED_DASHBOARD_COMMAND_MAP = {
 DATASOURCE_COMMAND_HELP = {
     "list": "List live Grafana datasource inventory.",
     "add": "Create one live Grafana datasource through the Grafana API.",
+    "modify": "Modify one live Grafana datasource through the Grafana API.",
     "delete": "Delete one live Grafana datasource through the Grafana API.",
     "export": "Export live Grafana datasource inventory as normalized JSON files.",
     "import": "Import datasource inventory JSON through the Grafana API.",
     "diff": "Compare exported datasource inventory with the current Grafana state.",
 }
 SYNC_COMMAND_HELP = {
+    "summary": "Summarize local desired sync resources from JSON.",
     "plan": "Build one reviewable sync plan from desired/live JSON files.",
     "review": "Mark one sync plan document as reviewed.",
     "preflight": "Build one staged sync preflight document from local JSON inputs.",
@@ -208,6 +210,9 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
         if len(argv) == 1 or argv[1] in ("-h", "--help"):
             datasource_cli.build_parser(prog="grafana-util datasource").print_help()
             raise SystemExit(0)
+        if argv[1] not in DATASOURCE_COMMAND_HELP:
+            parser.parse_args(argv)
+            raise AssertionError("argparse should have exited for unsupported datasource command")
         # Keep datasource facade entrypoint aligned with dashboard-style split:
         # parse + normalize first, then delegate to workflow layer.
         return argparse.Namespace(

@@ -301,11 +301,11 @@ Purpose: analyze exported dashboards offline without calling Grafana.
 | `--import-dir` | `raw/` directory | Offline analysis only |
 | `--json` | JSON output | Script-friendly |
 | `--table` | Table output | Operator-friendly |
-| `--report` | Shortcut report mode | Faster report selection |
-| `--output-format ...` | Select report family explicitly | Most flexible reporting |
-| `--report-columns` | Column whitelist | Narrow report views |
-| `--report-filter-datasource` | Filter by datasource | Dependency analysis |
-| `--report-filter-panel-id` | Filter by panel id | Single-panel troubleshooting |
+| `--report` | Shortcut report mode | Empty `--report` means flat table; explicit values include `csv`, `json`, `tree`, `tree-table`, `dependency`, `dependency-json`, `governance`, and `governance-json` |
+| `--output-format ...` | Select report family explicitly | Use `text`, `table`, `json`, `report-table`, `report-csv`, `report-json`, `report-tree`, `report-tree-table`, `dependency`, `dependency-json`, `report-dependency`, `report-dependency-json`, `governance`, or `governance-json` |
+| `--report-columns` | Column whitelist | Only valid with `report-table`, `report-csv`, `report-tree-table`, or the equivalent `--report` modes |
+| `--report-filter-datasource` | Filter by datasource | Exact match on datasource label, uid, type, or normalized family |
+| `--report-filter-panel-id` | Filter by panel id | Report-only filter for single-panel troubleshooting |
 | `--help-full` | Show richer examples | Useful for report discovery |
 | `--no-header` | Hide table header | Cleaner scripting |
 
@@ -331,7 +331,7 @@ Purpose: run the same report logic directly against live dashboards.
 | `--page-size` | Live pagination size | Lower it if the server is slow |
 | `--org-id` | Restrict to one org | Explicit org inspection |
 | `--all-orgs` | Aggregate visible orgs | Cross-org inspection |
-| `--json` / `--table` / `--report` / `--output-format` | Same meaning as `inspect-export` | Same reporting, but live |
+| `--json` / `--table` / `--report` / `--output-format` | Same meaning as `inspect-export` | Includes `dependency` / `dependency-json` and governance modes |
 | `--help-full` | Show report details | Useful during report design |
 | `--no-header` | Hide table header | Cleaner scripting |
 
@@ -342,15 +342,28 @@ grafana-util dashboard inspect-live --url http://localhost:3000 --basic-user adm
 
 Example output:
 ```json
-[
-  {
-    "uid": "cpu-main",
-    "title": "CPU Overview",
-    "datasource_count": 1,
-    "status": "ok"
-  }
-]
+{
+  "kind": "grafana-utils-dashboard-governance",
+  "summary": {
+    "dashboardCount": 1,
+    "mixedDashboardCount": 0
+  },
+  "dashboardDependencies": [
+    {
+      "dashboardUid": "cpu-main",
+      "dashboardTitle": "CPU Overview",
+      "datasources": ["prom-main"],
+      "datasourceFamilies": ["prometheus"],
+      "pluginIds": ["timeseries"]
+    }
+  ]
+}
 ```
+
+Notes:
+- `--report-columns` is only valid with flat or grouped table-style report modes; it is rejected for summary JSON, dependency contracts, and governance output.
+- `--report-filter-datasource` matches datasource label, uid, type, or normalized family exactly.
+- `--report-filter-panel-id` is a report-only filter.
 
 ### 3.8 `dashboard inspect-vars`
 
@@ -659,9 +672,12 @@ uid=loki-prod
 + url=http://loki-prod:3100
 ```
 
-### 5.5 `datasource add` (Python CLI)
+### 5.5 `datasource add`
 
 Purpose: create one live datasource directly in Grafana without using a local export bundle.
+
+Note:
+- `datasource add`, `datasource modify`, and `datasource delete` are now exposed in both the Python CLI and the Rust CLI command surfaces.
 
 | Option | Purpose | Difference / scenario |
 | --- | --- | --- |
@@ -1441,7 +1457,7 @@ grafana-util access service-account list --url <URL> --token <TOKEN> --table
 | `dashboard import` | `text/table/json` | Dry-run focused |
 | `alert list-*` | `table/csv/json` | Shared across list commands |
 | `datasource list` | `table/csv/json` | Shared list pattern |
-| `datasource add` | `text/table/json` | Dry-run capable, Python CLI only |
+| `datasource add` | `text/table/json` | Dry-run capable |
 | `datasource import` | `text/table/json` | Dry-run supports single-org previews plus routed org-summary preview |
 | `access list` commands | `table/csv/json` | Shared list pattern |
 | `access user import` | `text/table/json` | Dry-run table/json/ text summary |

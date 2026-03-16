@@ -10,6 +10,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::alert::build_rule_import_payload;
+use crate::alert_sync::{assess_alert_sync_specs, ALERT_SYNC_KIND};
 use crate::common::{message, Result};
 use crate::sync_bundle_preflight::{
     build_sync_bundle_preflight_document, render_sync_bundle_preflight_text,
@@ -173,6 +174,19 @@ pub struct SyncPreflightArgs {
 }
 
 #[derive(Debug, Clone, Args)]
+pub struct SyncAssessAlertsArgs {
+    #[arg(long, help = "JSON file containing the alert sync resource list.")]
+    pub alerts_file: PathBuf,
+    #[arg(
+        long,
+        value_enum,
+        default_value_t = SyncOutputFormat::Text,
+        help = "Render the alert assessment document as text or json."
+    )]
+    pub output: SyncOutputFormat,
+}
+
+#[derive(Debug, Clone, Args)]
 pub struct SyncBundlePreflightArgs {
     #[arg(
         long,
@@ -246,6 +260,8 @@ pub enum SyncGroupCommand {
     Summary(SyncSummaryArgs),
     #[command(about = "Build a staged sync preflight document from local JSON.")]
     Preflight(SyncPreflightArgs),
+    #[command(about = "Assess alert sync specs for candidate, plan-only, and blocked states.")]
+    AssessAlerts(SyncAssessAlertsArgs),
     #[command(about = "Build a staged bundle-level sync preflight document from local JSON.")]
     BundlePreflight(SyncBundlePreflightArgs),
     #[command(
@@ -1031,6 +1047,71 @@ pub fn render_sync_summary_text(document: &Value) -> Result<Vec<String>> {
     ])
 }
 
+pub fn render_alert_sync_assessment_text(document: &Value) -> Result<Vec<String>> {
+    if document.get("kind").and_then(Value::as_str) != Some(ALERT_SYNC_KIND) {
+        return Err(message(
+            "Alert sync assessment document kind is not supported.",
+        ));
+    }
+    let summary = document
+        .get("summary")
+        .and_then(Value::as_object)
+        .cloned()
+        .ok_or_else(|| message("Alert sync assessment document is missing summary."))?;
+    let mut lines = vec![
+        "Alert sync assessment".to_string(),
+        format!(
+            "Alerts: {} total, {} candidate, {} plan-only, {} blocked",
+            summary
+                .get("alertCount")
+                .and_then(Value::as_i64)
+                .unwrap_or(0),
+            summary
+                .get("candidateCount")
+                .and_then(Value::as_i64)
+                .unwrap_or(0),
+            summary
+                .get("planOnlyCount")
+                .and_then(Value::as_i64)
+                .unwrap_or(0),
+            summary
+                .get("blockedCount")
+                .and_then(Value::as_i64)
+                .unwrap_or(0),
+        ),
+        String::new(),
+        "# Alerts".to_string(),
+    ];
+    if let Some(items) = document.get("alerts").and_then(Value::as_array) {
+        for item in items {
+            if let Some(object) = item.as_object() {
+                lines.push(format!(
+                    "- {} status={} liveApplyAllowed={} detail={}",
+                    object
+                        .get("identity")
+                        .and_then(Value::as_str)
+                        .unwrap_or("unknown"),
+                    object
+                        .get("status")
+                        .and_then(Value::as_str)
+                        .unwrap_or("unknown"),
+                    if object
+                        .get("liveApplyAllowed")
+                        .and_then(Value::as_bool)
+                        .unwrap_or(false)
+                    {
+                        "true"
+                    } else {
+                        "false"
+                    },
+                    object.get("detail").and_then(Value::as_str).unwrap_or(""),
+                ));
+            }
+        }
+    }
+    Ok(lines)
+}
+
 pub fn render_sync_plan_text(document: &Value) -> Result<Vec<String>> {
     if document.get("kind").and_then(Value::as_str) != Some("grafana-utils-sync-plan") {
         return Err(message("Sync plan document kind is not supported."));
@@ -1634,6 +1715,15 @@ pub fn run_sync_cli(command: SyncGroupCommand) -> Result<()> {
             emit_text_or_json(
                 &document,
                 render_sync_preflight_text(&document)?,
+                args.output,
+            )
+        }
+        SyncGroupCommand::AssessAlerts(args) => {
+            let alerts = load_json_array_file(&args.alerts_file, "Alert sync input")?;
+            let document = assess_alert_sync_specs(&alerts)?;
+            emit_text_or_json(
+                &document,
+                render_alert_sync_assessment_text(&document)?,
                 args.output,
             )
         }

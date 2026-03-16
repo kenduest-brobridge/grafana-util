@@ -42,6 +42,7 @@ from .gitops_sync import (
     build_sync_source_bundle_document,
     build_sync_plan,
     mark_plan_reviewed,
+    normalize_resource_spec,
     plan_to_document,
     render_sync_source_bundle_text,
 )
@@ -56,6 +57,11 @@ PLAN_HELP_EXAMPLES = (
     "  grafana-util sync plan --desired-file ./desired.json --live-file ./live.json\n"
     "  grafana-util sync plan --desired-file ./desired.json --live-file ./live.json "
     "--allow-prune --plan-file ./sync-plan.json"
+)
+SUMMARY_HELP_EXAMPLES = (
+    "Examples:\n\n"
+    "  grafana-util sync summary --desired-file ./desired.json\n"
+    "  grafana-util sync summary --desired-file ./desired.json --output json"
 )
 REVIEW_HELP_EXAMPLES = (
     "Examples:\n\n"
@@ -101,6 +107,24 @@ def build_parser(prog=None):
     )
     subparsers = parser.add_subparsers(dest="command")
     subparsers.required = True
+
+    summary_parser = subparsers.add_parser(
+        "summary",
+        help="Summarize local desired sync resources from JSON.",
+        epilog=SUMMARY_HELP_EXAMPLES,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    summary_parser.add_argument(
+        "--desired-file",
+        required=True,
+        help="JSON file containing the desired managed resource list.",
+    )
+    summary_parser.add_argument(
+        "--output",
+        choices=("text", "json"),
+        default="text",
+        help="Render the summary document as text or json (default: text).",
+    )
 
     plan_parser = subparsers.add_parser(
         "plan",
@@ -379,6 +403,51 @@ def _require_resource_list(document, label):
     return document
 
 
+def build_sync_summary_document(raw_specs):
+    specs = [normalize_resource_spec(item) for item in raw_specs]
+    return {
+        "kind": "grafana-utils-sync-summary",
+        "schemaVersion": 1,
+        "summary": {
+            "resourceCount": len(specs),
+            "dashboardCount": len([item for item in specs if item.kind == "dashboard"]),
+            "datasourceCount": len([item for item in specs if item.kind == "datasource"]),
+            "folderCount": len([item for item in specs if item.kind == "folder"]),
+            "alertCount": len([item for item in specs if item.kind == "alert"]),
+        },
+        "resources": [
+            {
+                "kind": item.kind,
+                "identity": item.identity,
+                "title": item.title,
+                "managedFields": list(item.managed_fields),
+                "bodyFieldCount": len(item.body),
+                "sourcePath": item.source_path,
+            }
+            for item in specs
+        ],
+    }
+
+
+def render_sync_summary_text(document):
+    if document.get("kind") != "grafana-utils-sync-summary":
+        raise GrafanaError("Sync summary document kind is not supported.")
+    summary = _require_object(document.get("summary"), "Sync summary document summary")
+    return "\n".join(
+        [
+            "Sync summary",
+            "Resources: %s total, %s dashboards, %s datasources, %s folders, %s alerts"
+            % (
+                int(summary.get("resourceCount") or 0),
+                int(summary.get("dashboardCount") or 0),
+                int(summary.get("datasourceCount") or 0),
+                int(summary.get("folderCount") or 0),
+                int(summary.get("alertCount") or 0),
+            ),
+        ]
+    )
+
+
 def _coerce_operation(item, index):
     if not isinstance(item, dict):
         raise GrafanaError("Sync plan operation #%s must be a JSON object." % index)
@@ -545,6 +614,19 @@ def run_plan(args):
     )
     document = plan_to_document(plan)
     emit_document(document, output_file=getattr(args, "plan_file", None))
+    return 0
+
+
+def run_summary(args):
+    desired_specs = _require_resource_list(
+        load_json_document(args.desired_file),
+        "Desired sync input",
+    )
+    document = build_sync_summary_document(desired_specs)
+    if args.output == "json":
+        emit_document(document)
+        return 0
+    print(render_sync_summary_text(document))
     return 0
 
 
@@ -1138,6 +1220,8 @@ def parse_args(argv=None):
 def main(argv=None):
     args = parse_args(argv)
     try:
+        if args.command == "summary":
+            return run_summary(args)
         if args.command == "plan":
             return run_plan(args)
         if args.command == "review":
@@ -1158,6 +1242,7 @@ def main(argv=None):
 
 __all__ = [
     "build_parser",
+    "build_sync_summary_document",
     "emit_document",
     "load_json_document",
     "load_plan_document",
@@ -1170,5 +1255,7 @@ __all__ = [
     "run_plan",
     "run_preflight",
     "run_review",
+    "run_summary",
+    "render_sync_summary_text",
     "write_json_document",
 ]

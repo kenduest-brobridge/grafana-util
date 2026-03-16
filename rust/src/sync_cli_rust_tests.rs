@@ -1,8 +1,8 @@
 use super::{
-    render_sync_apply_intent_text, render_sync_plan_text, render_sync_summary_text, run_sync_cli,
-    SyncApplyArgs, SyncBundleArgs, SyncBundlePreflightArgs, SyncCliArgs, SyncGroupCommand,
-    SyncOutputFormat, SyncPlanArgs, SyncPreflightArgs, SyncReviewArgs, SyncSummaryArgs,
-    DEFAULT_REVIEW_TOKEN,
+    render_alert_sync_assessment_text, render_sync_apply_intent_text, render_sync_plan_text,
+    render_sync_summary_text, run_sync_cli, SyncApplyArgs, SyncAssessAlertsArgs, SyncBundleArgs,
+    SyncBundlePreflightArgs, SyncCliArgs, SyncGroupCommand, SyncOutputFormat, SyncPlanArgs,
+    SyncPreflightArgs, SyncReviewArgs, SyncSummaryArgs, DEFAULT_REVIEW_TOKEN,
 };
 use clap::Parser;
 use serde_json::json;
@@ -27,6 +27,26 @@ fn parse_sync_cli_supports_summary_command() {
             assert_eq!(inner.output, SyncOutputFormat::Json);
         }
         _ => panic!("expected summary"),
+    }
+}
+
+#[test]
+fn parse_sync_cli_supports_assess_alerts_command() {
+    let args = SyncCliArgs::parse_from([
+        "grafana-util",
+        "assess-alerts",
+        "--alerts-file",
+        "./alerts.json",
+        "--output",
+        "json",
+    ]);
+
+    match args.command {
+        SyncGroupCommand::AssessAlerts(inner) => {
+            assert_eq!(inner.alerts_file, Path::new("./alerts.json"));
+            assert_eq!(inner.output, SyncOutputFormat::Json);
+        }
+        _ => panic!("expected assess-alerts"),
     }
 }
 
@@ -234,6 +254,32 @@ fn render_sync_summary_text_renders_counts() {
 }
 
 #[test]
+fn render_alert_sync_assessment_text_renders_status_lines() {
+    let lines = render_alert_sync_assessment_text(&json!({
+        "kind": "grafana-utils-alert-sync-plan",
+        "summary": {
+            "alertCount": 1,
+            "candidateCount": 0,
+            "planOnlyCount": 1,
+            "blockedCount": 0
+        },
+        "alerts": [
+            {
+                "identity": "cpu-high",
+                "status": "plan-only",
+                "liveApplyAllowed": false,
+                "detail": "detail text"
+            }
+        ]
+    }))
+    .unwrap();
+
+    assert_eq!(lines[0], "Alert sync assessment");
+    assert!(lines[1].contains("plan-only"));
+    assert!(lines[4].contains("cpu-high"));
+}
+
+#[test]
 fn render_sync_plan_text_renders_counts() {
     let lines = render_sync_plan_text(&json!({
         "kind": "grafana-utils-sync-plan",
@@ -409,6 +455,35 @@ fn run_sync_cli_plan_accepts_local_inputs() {
         allow_prune: false,
         output: SyncOutputFormat::Json,
         trace_id: None,
+    }));
+
+    assert!(result.is_ok());
+}
+
+#[test]
+fn run_sync_cli_assess_alerts_accepts_local_inputs() {
+    let temp = tempdir().unwrap();
+    let alerts_file = temp.path().join("alerts.json");
+    fs::write(
+        &alerts_file,
+        serde_json::to_string_pretty(&json!([
+            {
+                "kind": "alert",
+                "uid": "cpu-high",
+                "managedFields": ["condition", "contactPoints"],
+                "body": {
+                    "condition": "A > 90",
+                    "contactPoints": ["pagerduty-primary"]
+                }
+            }
+        ]))
+        .unwrap(),
+    )
+    .unwrap();
+
+    let result = run_sync_cli(SyncGroupCommand::AssessAlerts(SyncAssessAlertsArgs {
+        alerts_file,
+        output: SyncOutputFormat::Json,
     }));
 
     assert!(result.is_ok());

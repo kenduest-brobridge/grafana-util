@@ -98,6 +98,76 @@ class SyncCliTests(unittest.TestCase):
         source = MODULE_PATH.read_text(encoding="utf-8")
         ast.parse(source, filename=str(MODULE_PATH), feature_version=(3, 9))
 
+    def test_summary_renders_text_counts(self):
+        desired = [
+            {
+                "kind": "folder",
+                "uid": "ops",
+                "title": "Operations",
+                "body": {"title": "Operations"},
+                "sourcePath": "folders/ops.json",
+            },
+            {
+                "kind": "datasource",
+                "uid": "prom-main",
+                "name": "Prometheus Main",
+                "body": {"type": "prometheus"},
+                "sourcePath": "datasources/prom-main.json",
+            },
+            {
+                "kind": "dashboard",
+                "uid": "cpu-main",
+                "title": "CPU Main",
+                "body": {"datasourceUids": ["prom-main"]},
+                "sourcePath": "dashboards/cpu-main.json",
+            },
+            {
+                "kind": "alert",
+                "uid": "cpu-high",
+                "title": "CPU High",
+                "managedFields": ["condition", "contactPoints"],
+                "body": {"condition": "A > 90", "contactPoints": ["pagerduty-primary"]},
+                "sourcePath": "alerts/cpu-high.json",
+            },
+        ]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            desired_path = Path(tmpdir) / "desired.json"
+            desired_path.write_text(json.dumps(desired), encoding="utf-8")
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = sync_cli.main(["summary", "--desired-file", str(desired_path)])
+
+            self.assertEqual(result, 0)
+            output = stdout.getvalue()
+            self.assertIn("Sync summary", output)
+            self.assertIn("4 total, 1 dashboards, 1 datasources, 1 folders, 1 alerts", output)
+
+    def test_summary_renders_json_document(self):
+        desired = [
+            {
+                "kind": "folder",
+                "uid": "ops",
+                "title": "Operations",
+                "body": {"title": "Operations"},
+                "sourcePath": "folders/ops.json",
+            }
+        ]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            desired_path = Path(tmpdir) / "desired.json"
+            desired_path.write_text(json.dumps(desired), encoding="utf-8")
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = sync_cli.main(
+                    ["summary", "--desired-file", str(desired_path), "--output", "json"]
+                )
+
+            self.assertEqual(result, 0)
+            document = json.loads(stdout.getvalue())
+            self.assertEqual(document["kind"], "grafana-utils-sync-summary")
+            self.assertEqual(document["summary"]["resourceCount"], 1)
+            self.assertEqual(document["summary"]["folderCount"], 1)
+            self.assertEqual(document["resources"][0]["identity"], "ops")
+
     def test_plan_builds_review_required_document_and_writes_plan_file(self):
         desired = [
             {

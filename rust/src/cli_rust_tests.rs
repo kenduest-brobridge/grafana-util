@@ -274,6 +274,30 @@ fn parse_cli_supports_sync_group_alias() {
 }
 
 #[test]
+fn parse_cli_supports_sync_assess_alerts_group_command() {
+    let args: CliArgs = parse_cli_from([
+        "grafana-util",
+        "sync",
+        "assess-alerts",
+        "--alerts-file",
+        "./alerts.json",
+        "--output",
+        "json",
+    ]);
+
+    match args.command {
+        UnifiedCommand::Sync { command } => match command {
+            SyncGroupCommand::AssessAlerts(inner) => {
+                assert_eq!(inner.alerts_file, Path::new("./alerts.json"));
+                assert_eq!(inner.output, SyncOutputFormat::Json);
+            }
+            _ => panic!("expected sync assess-alerts"),
+        },
+        _ => panic!("expected sync group"),
+    }
+}
+
+#[test]
 fn parse_cli_supports_sync_plan_group_command() {
     let args: CliArgs = parse_cli_from([
         "grafana-util",
