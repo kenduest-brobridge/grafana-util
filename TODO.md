@@ -20,7 +20,7 @@ Completed items that were previously listed here now live in `docs/internal/todo
 - refactor query report extraction behind datasource-type-specific analyzers so Prometheus, Loki, Flux/Influx, SQL, and future datasource families can evolve independently without bloating one generic parser path
 - extend query report extraction for Loki-style log queries so inspection can report stream selectors, label matchers, pipeline stages, filters, and range/aggregation functions instead of leaving Loki queries as empty `metrics`
 - add report modes for datasource usage, orphaned datasource detection, and dashboard-to-datasource dependency summaries that can feed governance and cleanup work
-- add an export package/bundle workflow that can snapshot dashboards, alerting resources, datasource inventory, and metadata as one portable migration artifact
+- extend the Rust export package/bundle workflow beyond normalized alert-rule specs so contact points, mute timings, policies, and templates can also participate in top-level sync/preflight contracts where that is safe
 - gradually replace ad hoc dashboard and alert datasource reference maps with typed structs where the shape is stable enough to justify it
 - extract repeated dashboard and alert fallback strings into shared constants where they still appear in multiple places
 - clean repo workflow noise by keeping local scratch files, temp exports, and ad hoc notes out of normal review/commit paths
@@ -81,5 +81,5 @@ Rules to keep:
 6. extend inspection into richer dependency analysis and datasource usage/orphan reports
 7. typed datasource reference structs in the Rust dashboard and alert paths
 8. clean repo workflow noise and local scratch artifacts
-9. export package/bundle workflow
+9. extend Rust bundle normalization beyond alert-rule specs
 10. semantic alert diff normalization for equivalent values

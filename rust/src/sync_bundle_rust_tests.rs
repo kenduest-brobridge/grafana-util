@@ -112,6 +112,7 @@ fn build_sync_bundle_preflight_document_reads_provider_metadata_from_source_bund
             }
         })],
         &[],
+        &[],
         None,
         None,
     )
@@ -137,4 +138,177 @@ fn build_sync_bundle_preflight_document_reads_provider_metadata_from_source_bund
         document["providerAssessment"]["plans"][0]["providers"][0]["providerName"],
         json!("vault")
     );
+}
+
+#[test]
+fn build_sync_source_bundle_document_keeps_normalized_alert_specs() {
+    let source_bundle = build_sync_source_bundle_document(
+        &[],
+        &[],
+        &[],
+        &[json!({
+            "kind": "alert",
+            "uid": "cpu-high",
+            "title": "CPU High",
+            "managedFields": ["condition", "datasourceUids"],
+            "body": {
+                "condition": "A",
+                "datasourceUids": ["prom-main"]
+            },
+            "sourcePath": "rules/infra/cpu-high.json"
+        })],
+        Some(&json!({"summary": {"ruleCount": 1}})),
+        None,
+    )
+    .unwrap();
+
+    assert_eq!(source_bundle["alerts"].as_array().unwrap().len(), 1);
+    assert_eq!(source_bundle["alerts"][0]["uid"], json!("cpu-high"));
+    assert_eq!(
+        source_bundle["alerts"][0]["body"]["datasourceUids"][0],
+        json!("prom-main")
+    );
+}
+
+#[test]
+fn build_sync_bundle_preflight_document_falls_back_to_alerting_rule_documents() {
+    let source_bundle = json!({
+        "dashboards": [],
+        "datasources": [],
+        "folders": [],
+        "alerting": {
+            "rules": [
+                {
+                    "sourcePath": "rules/infra/cpu-high.json",
+                    "document": {
+                        "kind": "grafana-alert-rule",
+                        "metadata": {
+                            "uid": "cpu-high",
+                            "title": "CPU High"
+                        },
+                        "spec": {
+                            "uid": "cpu-high",
+                            "title": "CPU High",
+                            "folderUID": "infra",
+                            "ruleGroup": "CPU Alerts",
+                            "condition": "A",
+                            "data": [
+                                {
+                                    "refId": "A",
+                                    "datasourceUid": "prom-main",
+                                    "datasourceName": "Prometheus Main"
+                                }
+                            ],
+                            "notificationSettings": {
+                                "receiver": "pagerduty-primary"
+                            }
+                        }
+                    }
+                }
+            ]
+        }
+    });
+    let availability = json!({
+        "pluginIds": [],
+        "datasourceUids": [],
+        "datasourceNames": [],
+        "contactPoints": [],
+        "providerNames": []
+    });
+
+    let document =
+        build_sync_bundle_preflight_document(&source_bundle, &json!({}), Some(&availability))
+            .unwrap();
+
+    assert_eq!(document["summary"]["resourceCount"], json!(1));
+    assert!(document["syncPreflight"]["checks"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|item| item["kind"] == "alert-datasource"
+            && item["identity"] == "cpu-high->prom-main"
+            && item["status"] == "missing"));
+    assert!(document["syncPreflight"]["checks"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|item| item["kind"] == "alert-contact-point"
+            && item["identity"] == "cpu-high->pagerduty-primary"
+            && item["status"] == "missing"));
+}
+
+#[test]
+fn build_sync_bundle_preflight_document_counts_top_level_alert_specs_from_source_bundle() {
+    let source_bundle = build_sync_source_bundle_document(
+        &[json!({
+            "kind": "dashboard",
+            "uid": "cpu-main",
+            "title": "CPU Main",
+            "body": {"datasourceUids": ["prom-main"]},
+        })],
+        &[json!({
+            "kind": "datasource",
+            "uid": "prom-main",
+            "name": "Prometheus Main",
+            "title": "Prometheus Main",
+            "body": {"uid": "prom-main", "name": "Prometheus Main", "type": "prometheus"},
+        })],
+        &[],
+        &[json!({
+            "kind": "alert",
+            "uid": "cpu-high",
+            "title": "CPU High",
+            "managedFields": ["condition", "contactPoints", "datasourceUids"],
+            "body": {
+                "condition": "A",
+                "contactPoints": ["pagerduty-primary"],
+                "datasourceUids": ["prom-main"]
+            }
+        })],
+        Some(&json!({
+            "rules": [{
+                "sourcePath": "rules/cpu-high.json",
+                "document": {
+                    "groups": [{
+                        "name": "CPU Alerts",
+                        "rules": [{"uid": "cpu-high", "title": "CPU High"}]
+                    }]
+                }
+            }],
+            "summary": {"ruleCount": 1}
+        })),
+        None,
+    )
+    .unwrap();
+    let target_inventory = json!({"dashboards": [], "datasources": []});
+    let availability = json!({
+        "pluginIds": ["prometheus"],
+        "datasourceUids": ["prom-main"],
+        "datasourceNames": [],
+        "contactPoints": ["pagerduty-primary"],
+        "providerNames": []
+    });
+
+    let document = build_sync_bundle_preflight_document(
+        &source_bundle,
+        &target_inventory,
+        Some(&availability),
+    )
+    .unwrap();
+
+    assert_eq!(document["summary"]["resourceCount"], json!(3));
+    assert!(document["syncPreflight"]["checks"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|item| item["kind"] == "alert-datasource"
+            && item["identity"] == "cpu-high->prom-main"
+            && item["status"] == "ok"));
+    assert!(document["syncPreflight"]["checks"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|item| item["kind"] == "alert-contact-point"
+            && item["identity"] == "cpu-high->pagerduty-primary"
+            && item["status"] == "ok"));
 }

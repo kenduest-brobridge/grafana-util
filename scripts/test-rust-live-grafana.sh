@@ -19,6 +19,9 @@ DATASOURCE_MULTI_ORG_EXPORT_DIR="${WORK_DIR}/datasources-all-orgs"
 ALERT_EXPORT_DIR="${WORK_DIR}/alerts"
 MULTI_ORG_EXPORT_DIR="${WORK_DIR}/dashboards-all-orgs"
 ACCESS_SERVICE_ACCOUNT_EXPORT_DIR="${WORK_DIR}/access-service-accounts"
+SYNC_BUNDLE_FILE="${WORK_DIR}/sync-source-bundle.json"
+SYNC_TARGET_INVENTORY_FILE="${WORK_DIR}/sync-target-inventory.json"
+SYNC_BUNDLE_PREFLIGHT_FILE="${WORK_DIR}/sync-bundle-preflight.json"
 
 cleanup() {
   docker rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
@@ -310,6 +313,10 @@ datasource_bin() {
 }
 
 access_bin() {
+  printf '%s\n' "${RUST_DIR}/target/debug/grafana-util"
+}
+
+sync_bin() {
   printf '%s\n' "${RUST_DIR}/target/debug/grafana-util"
 }
 
@@ -883,6 +890,36 @@ run_alert_smoke() {
     --diff-dir "${ALERT_EXPORT_DIR}/raw" >/dev/null
 }
 
+run_sync_smoke() {
+  "$(sync_bin)" sync bundle \
+    --dashboard-export-dir "${DASHBOARD_EXPORT_DIR}/raw" \
+    --alert-export-dir "${ALERT_EXPORT_DIR}/raw" \
+    --output-file "${SYNC_BUNDLE_FILE}" \
+    --output json >/dev/null
+
+  [[ -f "${SYNC_BUNDLE_FILE}" ]] || fail "sync bundle did not write source bundle output"
+  jq -e '.kind == "grafana-utils-sync-source-bundle"' "${SYNC_BUNDLE_FILE}" >/dev/null \
+    || fail "sync bundle did not emit the expected source bundle kind"
+  jq -e '.summary.alertRuleCount >= 1' "${SYNC_BUNDLE_FILE}" >/dev/null \
+    || fail "sync bundle did not record exported alert rule count"
+  jq -e '.alerts | length >= 1' "${SYNC_BUNDLE_FILE}" >/dev/null \
+    || fail "sync bundle did not normalize top-level alert specs"
+  jq -e '.alerts[] | select(.kind == "alert" and .uid == "smoke-alert-rule" and (.managedFields | index("condition")) != null)' "${SYNC_BUNDLE_FILE}" >/dev/null \
+    || fail "sync bundle did not preserve normalized alert spec fields"
+
+  printf '{}\n' >"${SYNC_TARGET_INVENTORY_FILE}"
+
+  "$(sync_bin)" sync bundle-preflight \
+    --source-bundle "${SYNC_BUNDLE_FILE}" \
+    --target-inventory "${SYNC_TARGET_INVENTORY_FILE}" \
+    --output json >"${SYNC_BUNDLE_PREFLIGHT_FILE}"
+
+  jq -e '.kind == "grafana-utils-sync-bundle-preflight"' "${SYNC_BUNDLE_PREFLIGHT_FILE}" >/dev/null \
+    || fail "sync bundle-preflight did not emit the expected document kind"
+  jq -e '.summary.resourceCount >= 3' "${SYNC_BUNDLE_PREFLIGHT_FILE}" >/dev/null \
+    || fail "sync bundle-preflight did not count bundled dashboard, datasource, and alert specs"
+}
+
 main() {
   command -v docker >/dev/null || fail "docker is required"
   command -v curl >/dev/null || fail "curl is required"
@@ -897,6 +934,7 @@ main() {
   run_access_smoke
   run_dashboard_smoke
   run_alert_smoke
+  run_sync_smoke
   run_datasource_smoke
   printf 'Rust live Grafana smoke test passed against %s using %s\n' "${GRAFANA_URL}" "${GRAFANA_IMAGE}"
 }

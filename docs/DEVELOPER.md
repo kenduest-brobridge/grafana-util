@@ -57,6 +57,8 @@ Commit message default for this repo:
 - `rust/src/dashboard_list.rs`: Rust dashboard and datasource list rendering plus multi-org list orchestration
 - `rust/src/dashboard_export.rs`: Rust dashboard export pathing and multi-org export orchestration
 - `rust/src/dashboard_prompt.rs`: Rust dashboard prompt-export datasource resolution and template-rewrite logic
+- `rust/src/sync.rs`: Rust staged sync CLI, source-bundle builder, and local plan/review/apply orchestration
+- `rust/src/sync_bundle_preflight.rs`: Rust bundle-level dependency/provider assessment helpers that consume portable source-bundle artifacts
 - `grafana_utils/http_transport.py`: shared HTTP transport adapters and transport selection
 - `grafana_utils/unified_cli.py`: unified Python entrypoint that dispatches canonical namespaced dashboard, datasource, alert, access, and sync workflows
 - `grafana_utils/__main__.py`: source-tree module entrypoint for the packaged unified CLI
@@ -81,6 +83,7 @@ Commit message default for this repo:
 - `grafana_utils.dashboard_cli`, `grafana_utils.alert_cli`, `grafana_utils.access_cli`, and `grafana_utils.datasource_cli` are stable facades: parser wiring, output-mode normalization, auth/client bootstrap, and dispatch stay here, while heavier execution remains in dedicated workflow/parser modules.
 - [Python overview for maintainers](docs/overview-python.md) provides a longer architecture walkthrough.
 - [Rust overview for maintainers](docs/overview-rust.md) provides a longer architecture walkthrough.
+- Rust `sync bundle` now produces a portable source-bundle document that carries dashboards, folders, datasource inventory, top-level normalized alert-rule sync specs, raw `alerting` sections, and bundle metadata. The main remaining alert-side gap is whether additional alerting artifact types such as contact points, mute timings, policies, and templates should also gain safe top-level sync/preflight representations.
 
 ## Python Baseline
 

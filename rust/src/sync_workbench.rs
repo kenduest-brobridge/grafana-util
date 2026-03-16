@@ -190,6 +190,7 @@ pub fn build_sync_source_bundle_document(
     dashboards: &[Value],
     datasources: &[Value],
     folders: &[Value],
+    alerts: &[Value],
     alerting: Option<&Value>,
     metadata: Option<&Value>,
 ) -> Result<Value> {
@@ -220,7 +221,7 @@ pub fn build_sync_source_bundle_document(
         "dashboards": dashboards,
         "datasources": datasources,
         "folders": folders,
-        "alerts": Vec::<Value>::new(),
+        "alerts": alerts,
         "alerting": alerting,
         "metadata": metadata,
     }))

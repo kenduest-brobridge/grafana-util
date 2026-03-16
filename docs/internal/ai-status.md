@@ -5,12 +5,40 @@ Historical note:
 - Older entries describe the repo state and `TODO.md` backlog as they existed on the entry date.
 - `TODO.md` now tracks only the active backlog; completed or superseded TODO items moved to `docs/internal/todo-archive.md`.
 
+## 2026-03-16 - Task: Let Rust Bundle Preflight Fall Back To Raw Alert Rule Documents
+- State: Done
+- Scope: `rust/src/sync_bundle_preflight.rs`, `rust/src/sync_bundle_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust bundle-preflight only consumed top-level `alerts` from a source bundle. When a bundle still carried alert exports only under `alerting.rules[*].document`, the staged sync-preflight path ignored those alert rules entirely and missed alert datasource and contact-point dependency checks.
+- Current Update: Added a Rust bundle-preflight fallback that derives minimal staged alert sync specs from raw alert rule export documents under `alerting.rules`, while still preferring explicit top-level `alerts` when those are already present.
+- Result: Rust bundle-preflight now surfaces alert dependency failures from bundled raw alert rule exports even before the source-bundle builder fully materializes top-level alert specs, which closes most of the remaining alert-dependency blind spot in the current bundle contract.
+
+## 2026-03-16 - Task: Normalize Rust Source Bundle Alert Specs
+- State: Done
+- Scope: `rust/src/sync.rs`, `rust/src/sync_workbench.rs`, `rust/src/sync_cli_rust_tests.rs`, `rust/src/sync_bundle_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust `sync bundle` already carried raw `alerting.rules[*].document` exports, but the emitted source bundle still left top-level `alerts` empty. That meant downstream staged sync flows had to rely on bundle-preflight fallbacks instead of receiving normalized alert sync specs directly from the source-bundle artifact.
+- Current Update: Added Rust alert normalization that derives top-level alert sync specs from bundled alert rule exports, supports both `grafana-alert-rule` tool documents and raw `groups[].rules[]` documents, carries safe dependency-oriented fields such as `condition`, `annotations`, `contactPoints`, `datasourceUids`, `datasourceNames`, `pluginIds`, and `data`, and passes those normalized alerts into `build_sync_source_bundle_document(...)`.
+- Result: Rust source bundles now emit non-empty top-level `alerts` when the alert export contains enough rule detail, which lets downstream bundle review and staged sync paths consume normalized alert specs directly instead of depending solely on raw `alerting` documents.
+
+## 2026-03-16 - Task: Clarify Remaining Rust Sync Bundle Alert Gap
+- State: Done
+- Scope: `TODO.md`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The active backlog still described the Rust export package/bundle work as if the whole workflow were missing, even though the current tree already packages dashboards, folders, datasource inventory, bundle metadata, and raw `alerting` sections. That wording no longer pointed maintainers at the actual remaining alert-side gap.
+- Current Update: Narrowed the backlog and maintainer notes to the real remaining Rust sync bundle problem: deriving safe normalized top-level alert sync specs from raw alert exports so bundle-preflight and downstream sync stages can consume `alerts` directly instead of relying only on raw `alerting` documents.
+- Result: The maintainer docs and active backlog now describe the bundle workflow as partially complete and identify the remaining alert normalization step as the next focused Rust gap.
+
 ## 2026-03-16 - Task: Tighten Rust Sync Bundle And Preflight Dependency Coverage
 - State: Done
 - Scope: `rust/src/sync.rs`, `rust/src/sync_preflight.rs`, `rust/src/sync_workbench.rs`, `rust/src/sync_rust_tests.rs`, `rust/src/sync_cli_rust_tests.rs`, `rust/src/sync_bundle_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
 - Baseline: Rust sync preflight already checked datasource uid/name availability plus datasource plugin types for datasource resources, and the first-pass Rust `sync bundle` workflow could package dashboards, datasource inventory, and raw alerting sections. But dashboard/alert specs could not declare their own plugin dependencies in preflight, bundled datasource inventory dropped secret-provider metadata needed by provider assessment, and the bundle CLI tests did not prove that provider metadata survived into downstream bundle-preflight evaluation.
 - Current Update: Added optional dashboard and alert `pluginIds` checks to Rust sync preflight so staged specs can block on missing plugin availability before mutation. Preserved `secureJsonDataProviders` and `secureJsonDataPlaceholders` when normalizing datasource inventory into the Rust source bundle, recorded `alertExportDir` in bundle metadata, and added focused Rust tests that verify bundle output preserves provider metadata and that bundle-preflight can read provider references back out of a source-bundle document.
 - Result: Rust sync preflight now covers one broader class of non-datasource plugin dependencies, and the Rust source-bundle workflow now carries enough datasource provider metadata for bundle-preflight/provider assessment to work against bundle artifacts instead of only hand-built fixture documents.
+
+## 2026-03-16 - Task: Exercise Rust Sync Bundle Alert Normalization Paths
+- State: Done
+- Scope: `rust/src/sync_cli_rust_tests.rs`, `rust/src/sync_bundle_rust_tests.rs`, `scripts/test-rust-live-grafana.sh`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The Rust sync bundle and bundle-preflight coverage already proved datasource provider metadata and alert export directory provenance, but they still did not exercise the expected top-level `alerts` normalization path end to end. The live smoke harness also had no `grafana-util sync ...` path at all.
+- Current Update: Added bundle CLI test coverage with a realistic raw alert-rule export fixture that asserts the source bundle carries a normalized top-level alert spec, added bundle-preflight coverage that counts a source bundle containing alert specs alongside dashboard and datasource records, and extended the Rust live smoke script to package the seeded dashboard/alert exports through `grafana-util sync bundle` plus `sync bundle-preflight`.
+- Result: Once the source-bundle normalization path is present, the checked-in Rust tests and live smoke harness now exercise it directly instead of only validating adjacent alerting summary/provider metadata behavior.
 
 ## 2026-03-16 - Task: Add Rust Dashboard Screenshot Command
 - State: Done

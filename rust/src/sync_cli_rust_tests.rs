@@ -378,7 +378,7 @@ fn run_sync_cli_summary_accepts_local_desired_file() {
         output: SyncOutputFormat::Json,
     }));
 
-    assert!(result.is_ok());
+    assert!(result.is_ok(), "{result:?}");
 }
 
 #[test]
@@ -452,7 +452,33 @@ fn run_sync_cli_bundle_writes_source_bundle_artifact() {
     fs::write(
         alert_export_dir.join("rules").join("cpu-high.json"),
         serde_json::to_string_pretty(&json!({
-            "groups": [{"name": "CPU Alerts"}]
+            "groups": [{
+                "name": "CPU Alerts",
+                "folderUid": "general",
+                "rules": [{
+                    "uid": "cpu-high",
+                    "title": "CPU High",
+                    "condition": "A",
+                    "data": [{
+                        "refId": "A",
+                        "datasourceUid": "prom-main",
+                        "model": {
+                            "expr": "up",
+                            "refId": "A"
+                        }
+                    }],
+                    "for": "5m",
+                    "noDataState": "NoData",
+                    "execErrState": "Alerting",
+                    "annotations": {
+                        "__dashboardUid__": "cpu-main",
+                        "__panelId__": "1"
+                    },
+                    "notification_settings": {
+                        "receiver": "pagerduty-primary"
+                    }
+                }]
+            }]
         }))
         .unwrap(),
     )
@@ -485,6 +511,33 @@ fn run_sync_cli_bundle_writes_source_bundle_artifact() {
     assert_eq!(bundle["summary"]["datasourceCount"], json!(1));
     assert_eq!(bundle["summary"]["folderCount"], json!(1));
     assert_eq!(bundle["summary"]["alertRuleCount"], json!(1));
+    assert_eq!(bundle["alerts"].as_array().unwrap().len(), 1);
+    assert_eq!(bundle["alerts"][0]["kind"], json!("alert"));
+    assert_eq!(bundle["alerts"][0]["uid"], json!("cpu-high"));
+    assert_eq!(bundle["alerts"][0]["title"], json!("CPU High"));
+    assert_eq!(
+        bundle["alerts"][0]["managedFields"],
+        json!([
+            "condition",
+            "annotations",
+            "contactPoints",
+            "datasourceUids",
+            "data"
+        ])
+    );
+    assert_eq!(bundle["alerts"][0]["body"]["condition"], json!("A"));
+    assert_eq!(
+        bundle["alerts"][0]["body"]["contactPoints"],
+        json!(["pagerduty-primary"])
+    );
+    assert_eq!(
+        bundle["alerts"][0]["body"]["datasourceUids"],
+        json!(["prom-main"])
+    );
+    assert_eq!(
+        bundle["alerts"][0]["body"]["annotations"]["__dashboardUid__"],
+        json!("cpu-main")
+    );
     assert_eq!(bundle["metadata"]["bundleLabel"], json!("smoke-bundle"));
     assert_eq!(
         bundle["metadata"]["dashboardExportDir"],
@@ -548,6 +601,95 @@ fn run_sync_cli_bundle_preserves_datasource_provider_metadata_from_inventory_fil
     assert_eq!(
         bundle["datasources"][0]["secureJsonDataPlaceholders"]["basicAuthPassword"],
         json!("${secret:loki-basic-auth}")
+    );
+}
+
+#[test]
+fn run_sync_cli_bundle_normalizes_tool_rule_export_into_top_level_alert_spec() {
+    let temp = tempdir().unwrap();
+    let alert_export_dir = temp.path().join("alerts").join("raw");
+    fs::create_dir_all(alert_export_dir.join("rules")).unwrap();
+    fs::write(
+        alert_export_dir.join("rules").join("cpu-high.json"),
+        serde_json::to_string_pretty(&json!({
+            "schemaVersion": 1,
+            "apiVersion": 1,
+            "kind": "grafana-alert-rule",
+            "metadata": {
+                "uid": "cpu-high",
+                "title": "CPU High",
+                "folderUID": "general",
+                "ruleGroup": "CPU Alerts"
+            },
+            "spec": {
+                "uid": "cpu-high",
+                "title": "CPU High",
+                "folderUID": "general",
+                "ruleGroup": "CPU Alerts",
+                "condition": "A",
+                "data": [{
+                    "refId": "A",
+                    "datasourceUid": "prom-main",
+                    "model": {
+                        "datasource": {
+                            "uid": "prom-main",
+                            "name": "Prometheus Main",
+                            "type": "prometheus"
+                        },
+                        "expr": "up",
+                        "refId": "A"
+                    }
+                }],
+                "notificationSettings": {
+                    "receiver": "pagerduty-primary"
+                }
+            }
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let output_file = temp.path().join("bundle.json");
+
+    let result = run_sync_cli(SyncGroupCommand::Bundle(SyncBundleArgs {
+        dashboard_export_dir: None,
+        alert_export_dir: Some(alert_export_dir.clone()),
+        datasource_export_file: None,
+        metadata_file: None,
+        output_file: Some(output_file.clone()),
+        output: SyncOutputFormat::Json,
+    }));
+
+    assert!(result.is_ok());
+    let bundle: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&output_file).unwrap()).unwrap();
+    assert_eq!(bundle["summary"]["alertRuleCount"], json!(1));
+    assert_eq!(bundle["alerts"].as_array().unwrap().len(), 1);
+    assert_eq!(
+        bundle["alerts"][0]["managedFields"],
+        json!([
+            "condition",
+            "contactPoints",
+            "datasourceUids",
+            "datasourceNames",
+            "pluginIds",
+            "data"
+        ])
+    );
+    assert_eq!(
+        bundle["alerts"][0]["body"]["contactPoints"],
+        json!(["pagerduty-primary"])
+    );
+    assert_eq!(
+        bundle["alerts"][0]["body"]["datasourceNames"],
+        json!(["Prometheus Main"])
+    );
+    assert_eq!(
+        bundle["alerts"][0]["body"]["pluginIds"],
+        json!(["prometheus"])
+    );
+    assert_eq!(
+        bundle["metadata"]["alertExportDir"],
+        json!(alert_export_dir.display().to_string())
     );
 }
 
