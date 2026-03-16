@@ -11,6 +11,7 @@ requires-python = ">=3.9"
 license = "Apache-2.0"
 authors = [{ name = "kenduest" }]
 dependencies = [
+  "Pillow>=10,<13",
   "requests>=2.27,<3",
 ]
 

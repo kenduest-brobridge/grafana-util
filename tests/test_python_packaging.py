@@ -23,6 +23,7 @@ class PackagingTests(unittest.TestCase):
     def test_pyproject_declares_base_requests_dependency(self):
         content = PYPROJECT_PATH.read_text(encoding="utf-8")
 
+        self.assertIn('Pillow>=10,<13', content)
         self.assertIn('requests>=2.27,<3', content)
 
     def test_pyproject_requires_python39_or_newer(self):
