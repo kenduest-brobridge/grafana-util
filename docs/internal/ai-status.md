@@ -5,6 +5,20 @@ Historical note:
 - Older entries describe the repo state and `TODO.md` backlog as they existed on the entry date.
 - `TODO.md` now tracks only the active backlog; completed or superseded TODO items moved to `docs/internal/todo-archive.md`.
 
+## 2026-03-16 - Task: Wire Live Sync Fetch And Apply Across Python And Rust
+- State: Planned
+- Scope: `grafana_utils/sync_cli.py`, `grafana_utils/clients/alert_client.py`, `tests/test_python_sync_cli.py`, `rust/src/sync.rs`, `rust/src/cli.rs`, `rust/src/sync_cli_rust_tests.rs`, `rust/src/cli_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Python `sync` can already fetch live dashboard/folder/datasource state and can execute live apply for those resource kinds, but it still rejects `alert` operations during live apply. Rust `sync` currently remains local/document-only: plan/preflight/bundle-preflight do not support `--fetch-live`, apply emits only a staged intent with no `--execute-live` path, and alert sync stays staged only in both runtimes.
+- Current Update: Recorded the pre-change trace entry and confirmed the current tree still shows the old baseline: Python advertises `--fetch-live` / `--execute-live` but still rejects alert live apply, while Rust `sync` still describes itself as local/document-only. Completion notes should be appended only after the runtime and test changes land in the tree.
+- Result: Pending.
+
+## 2026-03-16 - Task: Expose Dashboard Dependency Contracts As First-Class Inspect Output
+- State: Done
+- Scope: `grafana_utils/dashboard_cli.py`, `grafana_utils/dashboards/inspection_dispatch.py`, `grafana_utils/dashboards/inspection_report.py`, `grafana_utils/dashboards/inspection_runtime.py`, `tests/test_python_dashboard_cli.py`, `tests/test_python_dashboard_inspection_cli.py`, `rust/src/dashboard.rs`, `rust/src/dashboard_cli_defs.rs`, `rust/src/dashboard_inspect.rs`, `rust/src/lib.rs`, `rust/src/dashboard_rust_tests.rs`, `docs/DEVELOPER.md`, `docs/user-guide.md`, `docs/user-guide-TW.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Inspect summary, flat query reports, grouped tree reports, and governance outputs were already documented, but the newer dependency-contract path was only implicit in code and newer tests. User-facing docs still described `--output-format` too narrowly and did not spell out the current validation rules around report columns and datasource filters.
+- Current Update: Added Python and Rust inspect support for `dependency` / `dependency-json` via `--report` and `report-dependency` / `report-dependency-json` via `--output-format`, wired offline dependency-contract rendering through the shared datasource inventory path, and documented the stricter report validation rules. The docs now describe dependency output as a maintained contract rather than an internal side path.
+- Result: Operators can discover dependency-contract output directly from the docs, and maintainers have an explicit trace entry for the Python/Rust inspect surface expansion and shared dependency model split.
+
 ## 2026-03-16 - Task: Shift Dashboard Governance Gate Toward Governance-Json-First Inputs
 - State: Done
 - Scope: `grafana_utils/dashboards/inspection_governance.py`, `grafana_utils/dashboard_governance_gate.py`, `tests/test_python_dashboard_inspection_cli.py`, `tests/test_python_dashboard_governance_gate.py`, `docs/DEVELOPER.md`, `docs/user-guide.md`, `docs/user-guide-TW.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
