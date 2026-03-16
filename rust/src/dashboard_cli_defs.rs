@@ -448,6 +448,33 @@ pub struct ScreenshotArgs {
     )]
     pub print_capture_url: bool,
     #[arg(
+        long,
+        value_name = "TITLE",
+        num_args = 0..=1,
+        default_missing_value = "__auto__",
+        help = "Add a header title block above PNG/JPEG output. Pass no value to auto-detect the dashboard or panel title."
+    )]
+    pub header_title: Option<String>,
+    #[arg(
+        long,
+        value_name = "URL",
+        num_args = 0..=1,
+        default_missing_value = "__auto__",
+        help = "Add a header URL line above PNG/JPEG output. Pass no value to reuse the resolved capture URL."
+    )]
+    pub header_url: Option<String>,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Add a header capture timestamp above PNG/JPEG output using local time formatted as YYYY-MM-DD HH:MM:SS."
+    )]
+    pub header_captured_at: bool,
+    #[arg(
+        long,
+        help = "Add a free-form header text line above PNG/JPEG output."
+    )]
+    pub header_text: Option<String>,
+    #[arg(
         long = "var",
         value_name = "NAME=VALUE",
         help = "Repeatable Grafana template variable assignment. Example: --var env=prod --var region=us-east-1."

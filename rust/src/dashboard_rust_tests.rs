@@ -134,6 +134,12 @@ fn parse_cli_supports_screenshot_mode() {
         "9000",
         "--browser-path",
         "/Applications/Chromium.app/Contents/MacOS/Chromium",
+        "--header-title",
+        "--header-url",
+        "https://grafana.example.com/rendered/cpu-main",
+        "--header-captured-at",
+        "--header-text",
+        "Nightly capture",
         "--prompt-token",
     ]);
 
@@ -150,6 +156,13 @@ fn parse_cli_supports_screenshot_mode() {
             assert_eq!(screenshot_args.to.as_deref(), Some("now"));
             assert_eq!(screenshot_args.vars_query, None);
             assert!(!screenshot_args.print_capture_url);
+            assert_eq!(screenshot_args.header_title.as_deref(), Some("__auto__"));
+            assert_eq!(
+                screenshot_args.header_url.as_deref(),
+                Some("https://grafana.example.com/rendered/cpu-main")
+            );
+            assert!(screenshot_args.header_captured_at);
+            assert_eq!(screenshot_args.header_text.as_deref(), Some("Nightly capture"));
             assert_eq!(
                 screenshot_args.vars,
                 vec!["env=prod".to_string(), "region=us-east-1".to_string()]
@@ -202,6 +215,10 @@ fn parse_cli_screenshot_defaults_match_browser_capture_defaults() {
             assert!(!screenshot_args.full_page);
             assert_eq!(screenshot_args.wait_ms, 5000);
             assert_eq!(screenshot_args.browser_path, None);
+            assert_eq!(screenshot_args.header_title, None);
+            assert_eq!(screenshot_args.header_url, None);
+            assert!(!screenshot_args.header_captured_at);
+            assert_eq!(screenshot_args.header_text, None);
         }
         other => panic!("expected screenshot args, got {other:?}"),
     }
@@ -220,6 +237,10 @@ fn screenshot_help_mentions_capture_options() {
     assert!(help.contains("--panel-id"));
     assert!(help.contains("--vars-query"));
     assert!(help.contains("--print-capture-url"));
+    assert!(help.contains("--header-title"));
+    assert!(help.contains("--header-url"));
+    assert!(help.contains("--header-captured-at"));
+    assert!(help.contains("--header-text"));
     assert!(help.contains("--var"));
     assert!(help.contains("--browser-path"));
 }
@@ -411,6 +432,30 @@ fn parse_screenshot_args_accepts_print_capture_url() {
     };
 
     assert!(args.print_capture_url);
+}
+
+#[test]
+fn parse_screenshot_args_supports_auto_header_url_and_title_flags() {
+    let args = match parse_cli_from([
+        "grafana-util",
+        "screenshot",
+        "--dashboard-uid",
+        "infra-main",
+        "--header-title",
+        "--header-url",
+        "--output",
+        "./infra-main.png",
+        "--token",
+        "secret",
+    ])
+    .command
+    {
+        DashboardCommand::Screenshot(args) => args,
+        other => panic!("expected screenshot args, got {other:?}"),
+    };
+
+    assert_eq!(args.header_title.as_deref(), Some("__auto__"));
+    assert_eq!(args.header_url.as_deref(), Some("__auto__"));
 }
 
 #[test]

@@ -7,7 +7,9 @@ description = "Rust rewrite scaffold for Grafana dashboard and alerting utilitie
 
 [dependencies]
 base64 = "0.22"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 clap = { version = "4.5", features = ["derive"] }
+font8x8 = "0.3"
 headless_chrome = "1"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
 regex = "1"
