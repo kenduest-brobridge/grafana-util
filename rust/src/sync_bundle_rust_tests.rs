@@ -2,6 +2,7 @@ use crate::sync_bundle_preflight::{
     build_sync_bundle_preflight_document, render_sync_bundle_preflight_text,
     SYNC_BUNDLE_PREFLIGHT_KIND,
 };
+use crate::sync_workbench::build_sync_source_bundle_document;
 use serde_json::json;
 
 #[test]
@@ -86,4 +87,54 @@ fn render_sync_bundle_preflight_rejects_wrong_kind() {
         .to_string();
 
     assert!(error.contains("kind is not supported"));
+}
+
+#[test]
+fn build_sync_bundle_preflight_document_reads_provider_metadata_from_source_bundle_document() {
+    let source_bundle = build_sync_source_bundle_document(
+        &[json!({
+            "kind": "dashboard",
+            "uid": "cpu-main",
+            "title": "CPU Main",
+            "body": {"datasourceUids": ["loki-main"]},
+        })],
+        &[json!({
+            "kind": "datasource",
+            "uid": "loki-main",
+            "name": "Loki Main",
+            "title": "Loki Main",
+            "body": {"uid": "loki-main", "name": "Loki Main", "type": "loki"},
+            "secureJsonDataProviders": {
+                "httpHeaderValue1": "${provider:vault:secret/data/loki/token}"
+            },
+            "secureJsonDataPlaceholders": {
+                "basicAuthPassword": "${secret:loki-basic-auth}"
+            }
+        })],
+        &[],
+        None,
+        None,
+    )
+    .unwrap();
+    let target_inventory = json!({"dashboards": [], "datasources": []});
+    let availability = json!({
+        "pluginIds": ["loki"],
+        "datasourceUids": [],
+        "datasourceNames": [],
+        "contactPoints": [],
+        "providerNames": ["vault"],
+    });
+
+    let document = build_sync_bundle_preflight_document(
+        &source_bundle,
+        &target_inventory,
+        Some(&availability),
+    )
+    .unwrap();
+
+    assert_eq!(document["summary"]["providerBlockingCount"], json!(0));
+    assert_eq!(
+        document["providerAssessment"]["plans"][0]["providers"][0]["providerName"],
+        json!("vault")
+    );
 }

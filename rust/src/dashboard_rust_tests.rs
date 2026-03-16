@@ -3400,6 +3400,134 @@ fn build_external_export_document_deduplicates_same_type_datasource_requires() {
 }
 
 #[test]
+fn build_external_export_document_uses_grafana_style_plugin_names_for_inputs_and_requires() {
+    let payload = json!({
+        "dashboard": {
+            "id": 19,
+            "title": "Search And SQL",
+            "panels": [
+                {"type": "table", "datasource": "logs-search"},
+                {"type": "stat", "datasource": "reporting-db"}
+            ]
+        }
+    });
+    let catalog = super::build_datasource_catalog(&[
+        json!({
+            "uid": "search_uid",
+            "name": "logs-search",
+            "type": "grafana-opensearch-datasource",
+            "pluginVersion": "2.25.0"
+        })
+        .as_object()
+        .unwrap()
+        .clone(),
+        json!({
+            "uid": "sql_uid",
+            "name": "reporting-db",
+            "type": "postgres",
+            "meta": {"info": {"version": "1.0.0"}}
+        })
+        .as_object()
+        .unwrap()
+        .clone(),
+    ]);
+
+    let document = build_external_export_document(&payload, &catalog).unwrap();
+
+    assert_eq!(document["__inputs"][0]["label"], "logs-search");
+    assert_eq!(document["__inputs"][0]["pluginName"], "OpenSearch");
+    assert_eq!(document["__inputs"][1]["label"], "reporting-db");
+    assert_eq!(document["__inputs"][1]["pluginName"], "PostgreSQL");
+    assert_eq!(
+        document["__requires"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|item| item["type"] == "datasource")
+            .map(|item| (
+                item["id"].as_str().unwrap(),
+                item["name"].as_str().unwrap(),
+                item["version"].as_str().unwrap()
+            ))
+            .collect::<Vec<_>>(),
+        vec![
+            ("grafana-opensearch-datasource", "OpenSearch", "2.25.0"),
+            ("postgres", "PostgreSQL", "1.0.0"),
+        ]
+    );
+}
+
+#[test]
+fn build_external_export_document_keeps_distinct_same_type_object_reference_names() {
+    let payload = json!({
+        "dashboard": {
+            "id": 20,
+            "title": "Same Type Object References",
+            "panels": [
+                {
+                    "type": "timeseries",
+                    "datasource": {"type": "datasource", "uid": "-- Mixed --"},
+                    "targets": [
+                        {
+                            "refId": "A",
+                            "datasource": {
+                                "type": "prometheus",
+                                "uid": "prom_uid_1",
+                                "name": "Regional Prometheus"
+                            },
+                            "expr": "up"
+                        },
+                        {
+                            "refId": "B",
+                            "datasource": {
+                                "type": "prometheus",
+                                "uid": "prom_uid_2",
+                                "name": "Infra Prometheus"
+                            },
+                            "expr": "up"
+                        }
+                    ]
+                }
+            ]
+        }
+    });
+    let catalog = super::build_datasource_catalog(&[
+        json!({
+            "uid": "prom_uid_1",
+            "name": "Regional Prometheus",
+            "type": "prometheus",
+            "pluginVersion": "11.0.0"
+        })
+        .as_object()
+        .unwrap()
+        .clone(),
+        json!({
+            "uid": "prom_uid_2",
+            "name": "Infra Prometheus",
+            "type": "prometheus"
+        })
+        .as_object()
+        .unwrap()
+        .clone(),
+    ]);
+
+    let document = build_external_export_document(&payload, &catalog).unwrap();
+
+    assert_eq!(document["__inputs"][0]["label"], "Infra Prometheus");
+    assert_eq!(document["__inputs"][0]["name"], "DS_INFRA_PROMETHEUS");
+    assert_eq!(document["__inputs"][1]["label"], "Regional Prometheus");
+    assert_eq!(document["__inputs"][1]["name"], "DS_REGIONAL_PROMETHEUS");
+    assert_eq!(
+        document["panels"][0]["targets"][0]["datasource"]["uid"],
+        "${DS_REGIONAL_PROMETHEUS}"
+    );
+    assert_eq!(
+        document["panels"][0]["targets"][1]["datasource"]["uid"],
+        "${DS_INFRA_PROMETHEUS}"
+    );
+}
+
+#[test]
 fn export_dashboards_with_client_writes_prompt_variant_and_indexes() {
     let temp = tempdir().unwrap();
     let args = ExportArgs {
@@ -4341,6 +4469,71 @@ fn apply_query_report_filters_keep_matching_rows_only() {
 }
 
 #[test]
+fn apply_query_report_filters_match_datasource_uid_type_and_family() {
+    let report = super::ExportInspectionQueryReport {
+        import_dir: "/tmp/raw".to_string(),
+        summary: super::QueryReportSummary {
+            dashboard_count: 2,
+            panel_count: 2,
+            query_count: 2,
+            report_row_count: 2,
+        },
+        queries: vec![
+            super::ExportInspectionQueryRow {
+                dashboard_uid: "main".to_string(),
+                dashboard_title: "Main".to_string(),
+                folder_path: "General".to_string(),
+                panel_id: "1".to_string(),
+                panel_title: "CPU".to_string(),
+                panel_type: "timeseries".to_string(),
+                ref_id: "A".to_string(),
+                datasource: "prom-main".to_string(),
+                datasource_uid: "prom-uid".to_string(),
+                datasource_type: "prometheus".to_string(),
+                datasource_family: "prometheus".to_string(),
+                query_field: "expr".to_string(),
+                query_text: "up".to_string(),
+                metrics: vec!["up".to_string()],
+                measurements: Vec::new(),
+                buckets: Vec::new(),
+                file_path: "/tmp/raw/main.json".to_string(),
+            },
+            super::ExportInspectionQueryRow {
+                dashboard_uid: "logs".to_string(),
+                dashboard_title: "Logs".to_string(),
+                folder_path: "General".to_string(),
+                panel_id: "2".to_string(),
+                panel_title: "Logs".to_string(),
+                panel_type: "logs".to_string(),
+                ref_id: "A".to_string(),
+                datasource: "logs-main".to_string(),
+                datasource_uid: "logs-uid".to_string(),
+                datasource_type: "loki".to_string(),
+                datasource_family: "loki".to_string(),
+                query_field: "expr".to_string(),
+                query_text: "{job=\"grafana\"}".to_string(),
+                metrics: Vec::new(),
+                measurements: Vec::new(),
+                buckets: Vec::new(),
+                file_path: "/tmp/raw/logs.json".to_string(),
+            },
+        ],
+    };
+
+    let filtered_uid = super::apply_query_report_filters(report.clone(), Some("prom-uid"), None);
+    assert_eq!(filtered_uid.queries.len(), 1);
+    assert_eq!(filtered_uid.queries[0].dashboard_uid, "main");
+
+    let filtered_type = super::apply_query_report_filters(report.clone(), Some("loki"), None);
+    assert_eq!(filtered_type.queries.len(), 1);
+    assert_eq!(filtered_type.queries[0].dashboard_uid, "logs");
+
+    let filtered_family = super::apply_query_report_filters(report, Some("prometheus"), None);
+    assert_eq!(filtered_family.queries.len(), 1);
+    assert_eq!(filtered_family.queries[0].dashboard_uid, "main");
+}
+
+#[test]
 fn normalize_query_report_groups_rows_by_dashboard_then_panel() {
     let report = super::ExportInspectionQueryReport {
         import_dir: "/tmp/raw".to_string(),
@@ -4417,8 +4610,29 @@ fn normalize_query_report_groups_rows_by_dashboard_then_panel() {
     assert_eq!(normalized.summary, report.summary);
     assert_eq!(normalized.dashboards.len(), 2);
     assert_eq!(normalized.dashboards[0].dashboard_uid, "main");
+    assert_eq!(normalized.dashboards[0].file_path, "/tmp/raw/main.json");
+    assert_eq!(
+        normalized.dashboards[0].datasources,
+        vec!["prom-main".to_string()]
+    );
+    assert_eq!(
+        normalized.dashboards[0].datasource_families,
+        vec!["prometheus".to_string()]
+    );
     assert_eq!(normalized.dashboards[0].panels.len(), 2);
     assert_eq!(normalized.dashboards[0].panels[0].panel_id, "1");
+    assert_eq!(
+        normalized.dashboards[0].panels[0].datasources,
+        vec!["prom-main".to_string()]
+    );
+    assert_eq!(
+        normalized.dashboards[0].panels[0].datasource_families,
+        vec!["prometheus".to_string()]
+    );
+    assert_eq!(
+        normalized.dashboards[0].panels[0].query_fields,
+        vec!["expr".to_string()]
+    );
     assert_eq!(normalized.dashboards[0].panels[0].queries.len(), 1);
     assert_eq!(normalized.dashboards[1].dashboard_uid, "logs");
     assert_eq!(normalized.dashboards[1].panels[0].panel_title, "Errors");
@@ -4597,9 +4811,10 @@ fn render_grouped_query_report_displays_dashboard_panel_and_query_tree() {
 
     assert!(output.contains("Export inspection report: /tmp/raw"));
     assert!(output.contains("# Dashboard tree"));
-    assert!(output.contains("[1] Dashboard: Main (uid=main, folder=General, panels=2, queries=2)"));
-    assert!(output.contains("  Panel: CPU (id=7, type=timeseries, queries=1)"));
-    assert!(output.contains("  Panel: Logs (id=8, type=logs, queries=1)"));
+    assert!(output.contains("[1] Dashboard: Main (uid=main, folder=General, panels=2, queries=2, datasources=prom-main,loki-main, families=prometheus,loki)"));
+    assert!(output.contains("  File: /tmp/raw/main.json"));
+    assert!(output.contains("  Panel: CPU (id=7, type=timeseries, queries=1, datasources=prom-main, families=prometheus, fields=expr)"));
+    assert!(output.contains("  Panel: Logs (id=8, type=logs, queries=1, datasources=loki-main, families=loki, fields=expr)"));
     assert!(output.contains(
         "    Query: refId=A datasource=prom-main datasourceUid=prom-main datasourceType=prometheus datasourceFamily=prometheus field=expr metrics=up"
     ));
@@ -4675,7 +4890,8 @@ fn render_grouped_query_table_report_displays_dashboard_sections_with_tables() {
     let output = lines.join("\n");
 
     assert!(output.contains("# Dashboard sections"));
-    assert!(output.contains("[1] Dashboard: Main (uid=main, folder=General, panels=2, queries=2)"));
+    assert!(output.contains("[1] Dashboard: Main (uid=main, folder=General, panels=2, queries=2, datasources=prom-main,loki-main, families=prometheus,loki)"));
+    assert!(output.contains("File: /tmp/raw/main.json"));
     assert!(output.contains("PANEL_ID  PANEL_TITLE  DATASOURCE  QUERY"));
     assert!(output.contains("7         CPU          prom-main   up"));
     assert!(output.contains("8         Logs         loki-main   {job=\"grafana\"}"));
@@ -4882,6 +5098,12 @@ fn build_export_inspection_governance_document_summarizes_families_and_risks() {
     assert_eq!(document.summary.query_record_count, 2);
     assert_eq!(document.summary.datasource_family_count, 2);
     assert_eq!(document.summary.risk_record_count, 4);
+    assert_eq!(document.dashboard_dependencies.len(), 2);
+    assert_eq!(document.dashboard_dependencies[0].dashboard_uid, "cpu-main");
+    assert_eq!(
+        document.dashboard_dependencies[1].datasource_families,
+        vec!["unknown".to_string()]
+    );
     assert_eq!(document.datasource_families[0].family, "prometheus");
     assert_eq!(document.datasource_families[1].family, "unknown");
     let unused = document
@@ -5006,8 +5228,11 @@ fn render_governance_table_report_displays_sections() {
     assert!(output.contains("Export inspection governance: /tmp/raw"));
     assert!(output.contains("# Summary"));
     assert!(output.contains("# Datasource Families"));
+    assert!(output.contains("# Dashboard Dependencies"));
     assert!(output.contains("# Datasources"));
     assert!(output.contains("# Risks"));
+    assert!(output.contains("DASHBOARD_UID"));
+    assert!(output.contains("/tmp/raw/logs-main.json"));
     assert!(output.contains("CATEGORY"));
     assert!(output.contains("RECOMMENDATION"));
     assert!(output.contains("logs-main"));
@@ -5419,12 +5644,119 @@ fn import_dashboards_with_use_export_org_dry_run_filters_selected_orgs_without_c
 
     assert_eq!(
         admin_calls,
-        vec![
-            ("GET".to_string(), "/api/orgs".to_string()),
-            ("GET".to_string(), "/api/orgs".to_string()),
-        ]
+        vec![("GET".to_string(), "/api/orgs".to_string())]
     );
     assert_eq!(import_calls, vec![(2, org_two_raw.clone(), Some(2))]);
+}
+
+#[test]
+fn build_routed_import_dry_run_json_with_request_reuses_org_inventory_lookup() {
+    let temp = tempdir().unwrap();
+    let export_root = temp.path().join("exports");
+    let org_two_raw = export_root.join("org_2_Org_Two").join("raw");
+    let org_nine_raw = export_root.join("org_9_Ops_Org").join("raw");
+    fs::create_dir_all(&org_two_raw).unwrap();
+    fs::create_dir_all(&org_nine_raw).unwrap();
+
+    for (raw_dir, org_id, org_name, uid) in [
+        (&org_two_raw, "2", "Org Two", "cpu-two"),
+        (&org_nine_raw, "9", "Ops Org", "ops-main"),
+    ] {
+        fs::write(
+            raw_dir.join(EXPORT_METADATA_FILENAME),
+            serde_json::to_string_pretty(&json!({
+                "kind": "grafana-utils-dashboard-export-index",
+                "schemaVersion": TOOL_SCHEMA_VERSION,
+                "variant": "raw",
+                "dashboardCount": 1,
+                "indexFile": "index.json",
+                "format": "grafana-web-import-preserve-uid"
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        fs::write(
+            raw_dir.join("index.json"),
+            serde_json::to_string_pretty(&json!([
+                {
+                    "uid": uid,
+                    "title": "CPU",
+                    "path": "dash.json",
+                    "format": "grafana-web-import-preserve-uid",
+                    "org": org_name,
+                    "orgId": org_id
+                }
+            ]))
+            .unwrap(),
+        )
+        .unwrap();
+        fs::write(
+            raw_dir.join("dash.json"),
+            serde_json::to_string_pretty(&json!({
+                "dashboard": {"id": null, "uid": uid, "title": "CPU"}
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+    }
+
+    let mut args = make_import_args(export_root);
+    args.common = make_basic_common_args("http://127.0.0.1:3000".to_string());
+    args.use_export_org = true;
+    args.create_missing_orgs = true;
+    args.dry_run = true;
+    args.json = true;
+
+    let mut admin_calls = Vec::new();
+    let payload: Value = serde_json::from_str(
+        &super::dashboard_import::build_routed_import_dry_run_json_with_request(
+            |method, path, _params, _payload| {
+                admin_calls.push((method.to_string(), path.to_string()));
+                match (method, path) {
+                    (reqwest::Method::GET, "/api/orgs") => Ok(Some(json!([
+                        {"id": 2, "name": "Org Two"}
+                    ]))),
+                    _ => Err(super::message(format!("unexpected request {path}"))),
+                }
+            },
+            |target_org_id, scoped_args| {
+                Ok(super::dashboard_import::ImportDryRunReport {
+                    mode: "create-only".to_string(),
+                    import_dir: scoped_args.import_dir.clone(),
+                    folder_statuses: Vec::new(),
+                    dashboard_records: vec![[
+                        if target_org_id == 2 {
+                            "cpu-two".to_string()
+                        } else {
+                            "ops-main".to_string()
+                        },
+                        "missing".to_string(),
+                        "create".to_string(),
+                        "General".to_string(),
+                        "".to_string(),
+                        "".to_string(),
+                        "".to_string(),
+                        scoped_args
+                            .import_dir
+                            .join("dash.json")
+                            .display()
+                            .to_string(),
+                    ]],
+                    skipped_missing_count: 0,
+                    skipped_folder_mismatch_count: 0,
+                })
+            },
+            &args,
+        )
+        .unwrap(),
+    )
+    .unwrap();
+
+    assert_eq!(
+        admin_calls,
+        vec![("GET".to_string(), "/api/orgs".to_string())]
+    );
+    assert_eq!(payload["orgs"].as_array().unwrap().len(), 2);
 }
 
 #[test]

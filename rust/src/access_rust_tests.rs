@@ -605,6 +605,96 @@ fn parse_cli_supports_insecure_and_ca_cert_flags() {
 }
 
 #[test]
+fn parse_cli_supports_insecure_on_destructive_commands() {
+    let args = parse_cli_from([
+        "grafana-access-utils",
+        "team",
+        "delete",
+        "--name",
+        "ops",
+        "--insecure",
+        "--yes",
+    ]);
+    match args.command {
+        AccessCommand::Team {
+            command: TeamCommand::Delete(delete_args),
+        } => {
+            assert!(delete_args.common.insecure);
+            assert_eq!(delete_args.name.as_deref(), Some("ops"));
+            assert!(delete_args.yes);
+        }
+        _ => panic!("expected team delete"),
+    }
+
+    let args = parse_cli_from([
+        "grafana-access-utils",
+        "org",
+        "delete",
+        "--name",
+        "ops",
+        "--insecure",
+        "--yes",
+    ]);
+    match args.command {
+        AccessCommand::Org {
+            command: OrgCommand::Delete(delete_args),
+        } => {
+            assert!(delete_args.common.insecure);
+            assert_eq!(delete_args.name.as_deref(), Some("ops"));
+            assert!(delete_args.yes);
+        }
+        _ => panic!("expected org delete"),
+    }
+
+    let args = parse_cli_from([
+        "grafana-access-utils",
+        "service-account",
+        "delete",
+        "--name",
+        "svc",
+        "--insecure",
+        "--yes",
+    ]);
+    match args.command {
+        AccessCommand::ServiceAccount {
+            command: ServiceAccountCommand::Delete(delete_args),
+        } => {
+            assert!(delete_args.common.insecure);
+            assert_eq!(delete_args.name.as_deref(), Some("svc"));
+            assert!(delete_args.yes);
+        }
+        _ => panic!("expected service-account delete"),
+    }
+
+    let args = parse_cli_from([
+        "grafana-access-utils",
+        "service-account",
+        "token",
+        "delete",
+        "--name",
+        "svc",
+        "--token-name",
+        "automation",
+        "--insecure",
+        "--yes",
+    ]);
+    match args.command {
+        AccessCommand::ServiceAccount {
+            command:
+                ServiceAccountCommand::Token {
+                    command: ServiceAccountTokenCommand::Delete(delete_args),
+                },
+        } => {
+            assert!(delete_args.common.insecure);
+            assert_eq!(delete_args.name.as_deref(), Some("svc"));
+            assert_eq!(delete_args.token_name.as_deref(), Some("automation"));
+            assert!(delete_args.yes);
+        }
+        _ => panic!("expected service-account token delete"),
+    }
+}
+
+#[test]
 fn build_auth_context_enables_verification_for_ca_cert() {
     let mut common = make_token_common();
     common.ca_cert = Some("/tmp/grafana-ca.pem".into());

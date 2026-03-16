@@ -6,8 +6,6 @@ Completed items that were previously listed here now live in `docs/internal/todo
 
 ## In Progress
 
-- shared access TLS/auth parameter expansion is still incomplete for Python and Rust parity
-- live validation coverage still needs follow-through for the newer destructive access commands
 - Python packaging, docs, and syntax-floor tests now target Python 3.9+, but optional formatter/lint/static-check coverage still depends on tool availability in the active environment
 
 ## Next
@@ -38,15 +36,12 @@ Currently implemented:
 - `--basic-user`
 - `--basic-password`
 - `--prompt-password`
+- `--insecure`
+- `--ca-cert`
 - `--org-id`
 - `--json`
 - `--csv`
 - `--table`
-
-Still not implemented:
-
-- `--insecure`
-- `--ca-cert`
 
 ## Authentication Rules
 

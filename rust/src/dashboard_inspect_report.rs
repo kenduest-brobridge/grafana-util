@@ -78,6 +78,9 @@ pub(crate) struct GroupedQueryPanel {
     pub(crate) panel_id: String,
     pub(crate) panel_title: String,
     pub(crate) panel_type: String,
+    pub(crate) datasources: Vec<String>,
+    pub(crate) datasource_families: Vec<String>,
+    pub(crate) query_fields: Vec<String>,
     pub(crate) queries: Vec<ExportInspectionQueryRow>,
 }
 
@@ -86,6 +89,9 @@ pub(crate) struct GroupedQueryDashboard {
     pub(crate) dashboard_uid: String,
     pub(crate) dashboard_title: String,
     pub(crate) folder_path: String,
+    pub(crate) file_path: String,
+    pub(crate) datasources: Vec<String>,
+    pub(crate) datasource_families: Vec<String>,
     pub(crate) panels: Vec<GroupedQueryPanel>,
 }
 
@@ -294,10 +300,36 @@ pub(crate) fn normalize_query_report(
                     dashboard_uid: row.dashboard_uid.clone(),
                     dashboard_title: row.dashboard_title.clone(),
                     folder_path: row.folder_path.clone(),
+                    file_path: row.file_path.clone(),
+                    datasources: Vec::new(),
+                    datasource_families: Vec::new(),
                     panels: Vec::new(),
                 });
                 dashboards.len() - 1
             });
+        if !row.file_path.is_empty() && dashboards[dashboard_index].file_path.is_empty() {
+            dashboards[dashboard_index].file_path = row.file_path.clone();
+        }
+        if !row.datasource.is_empty()
+            && !dashboards[dashboard_index]
+                .datasources
+                .iter()
+                .any(|value| value == &row.datasource)
+        {
+            dashboards[dashboard_index]
+                .datasources
+                .push(row.datasource.clone());
+        }
+        if !row.datasource_family.is_empty()
+            && !dashboards[dashboard_index]
+                .datasource_families
+                .iter()
+                .any(|value| value == &row.datasource_family)
+        {
+            dashboards[dashboard_index]
+                .datasource_families
+                .push(row.datasource_family.clone());
+        }
         let panels = &mut dashboards[dashboard_index].panels;
         let panel_index = panels
             .iter()
@@ -311,10 +343,41 @@ pub(crate) fn normalize_query_report(
                     panel_id: row.panel_id.clone(),
                     panel_title: row.panel_title.clone(),
                     panel_type: row.panel_type.clone(),
+                    datasources: Vec::new(),
+                    datasource_families: Vec::new(),
+                    query_fields: Vec::new(),
                     queries: Vec::new(),
                 });
                 panels.len() - 1
             });
+        if !row.datasource.is_empty()
+            && !panels[panel_index]
+                .datasources
+                .iter()
+                .any(|value| value == &row.datasource)
+        {
+            panels[panel_index].datasources.push(row.datasource.clone());
+        }
+        if !row.datasource_family.is_empty()
+            && !panels[panel_index]
+                .datasource_families
+                .iter()
+                .any(|value| value == &row.datasource_family)
+        {
+            panels[panel_index]
+                .datasource_families
+                .push(row.datasource_family.clone());
+        }
+        if !row.query_field.is_empty()
+            && !panels[panel_index]
+                .query_fields
+                .iter()
+                .any(|value| value == &row.query_field)
+        {
+            panels[panel_index]
+                .query_fields
+                .push(row.query_field.clone());
+        }
         panels[panel_index].queries.push(row.clone());
     }
     NormalizedQueryReport {

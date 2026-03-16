@@ -127,6 +127,10 @@ fn build_dashboard_checks(
         spec.body.get("datasourceNames"),
         "dashboard datasourceNames",
     )?;
+    let available_plugin_ids = require_string_list(availability.get("pluginIds"), "pluginIds")?
+        .into_iter()
+        .collect::<BTreeSet<String>>();
+    let plugin_ids = require_string_list(spec.body.get("pluginIds"), "dashboard pluginIds")?;
     let mut checks = datasource_uids
         .into_iter()
         .map(|datasource_uid| {
@@ -155,6 +159,21 @@ fn build_dashboard_checks(
                 "Referenced datasource name is available for dashboard sync."
             } else {
                 "Referenced datasource name is missing for dashboard sync."
+            }
+            .to_string(),
+            blocking: !available,
+        }
+    }));
+    checks.extend(plugin_ids.into_iter().map(|plugin_id| {
+        let available = available_plugin_ids.contains(&plugin_id);
+        SyncPreflightCheck {
+            kind: "dashboard-plugin".to_string(),
+            identity: format!("{}->{}", spec.identity, plugin_id),
+            status: if available { "ok" } else { "missing" }.to_string(),
+            detail: if available {
+                "Dashboard plugin dependency is available."
+            } else {
+                "Dashboard plugin dependency is missing."
             }
             .to_string(),
             blocking: !available,
@@ -257,7 +276,11 @@ fn build_alert_checks(
         require_string_list(availability.get("contactPoints"), "contactPoints")?
             .into_iter()
             .collect::<BTreeSet<String>>();
+    let available_plugin_ids = require_string_list(availability.get("pluginIds"), "pluginIds")?
+        .into_iter()
+        .collect::<BTreeSet<String>>();
     let body = require_object(Some(&Value::Object(spec.body.clone())), "alert body")?;
+    let plugin_ids = require_string_list(body.get("pluginIds"), "alert pluginIds")?;
     let mut checks = vec![SyncPreflightCheck {
         kind: "alert-live-apply".to_string(),
         identity: spec.identity.clone(),
@@ -292,6 +315,21 @@ fn build_alert_checks(
                 "Alert datasource name is available."
             } else {
                 "Alert datasource name is missing."
+            }
+            .to_string(),
+            blocking: !available,
+        });
+    }
+    for plugin_id in plugin_ids {
+        let available = available_plugin_ids.contains(&plugin_id);
+        checks.push(SyncPreflightCheck {
+            kind: "alert-plugin".to_string(),
+            identity: format!("{}->{}", spec.identity, plugin_id),
+            status: if available { "ok" } else { "missing" }.to_string(),
+            detail: if available {
+                "Alert plugin dependency is available."
+            } else {
+                "Alert plugin dependency is missing."
             }
             .to_string(),
             blocking: !available,

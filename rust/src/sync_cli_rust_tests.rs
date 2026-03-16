@@ -494,6 +494,61 @@ fn run_sync_cli_bundle_writes_source_bundle_artifact() {
         bundle["alerting"]["exportDir"],
         json!(alert_export_dir.display().to_string())
     );
+    assert_eq!(
+        bundle["metadata"]["alertExportDir"],
+        json!(alert_export_dir.display().to_string())
+    );
+}
+
+#[test]
+fn run_sync_cli_bundle_preserves_datasource_provider_metadata_from_inventory_file() {
+    let temp = tempdir().unwrap();
+    let datasource_export_file = temp.path().join("datasources.json");
+    fs::write(
+        &datasource_export_file,
+        serde_json::to_string_pretty(&json!([
+            {
+                "uid": "loki-main",
+                "name": "Loki Main",
+                "type": "loki",
+                "secureJsonDataProviders": {
+                    "httpHeaderValue1": "${provider:vault:secret/data/loki/token}"
+                },
+                "secureJsonDataPlaceholders": {
+                    "basicAuthPassword": "${secret:loki-basic-auth}"
+                }
+            }
+        ]))
+        .unwrap(),
+    )
+    .unwrap();
+    let output_file = temp.path().join("bundle.json");
+
+    let result = run_sync_cli(SyncGroupCommand::Bundle(SyncBundleArgs {
+        dashboard_export_dir: None,
+        alert_export_dir: None,
+        datasource_export_file: Some(datasource_export_file.clone()),
+        metadata_file: None,
+        output_file: Some(output_file.clone()),
+        output: SyncOutputFormat::Json,
+    }));
+
+    assert!(result.is_ok());
+    let bundle: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&output_file).unwrap()).unwrap();
+    assert_eq!(bundle["summary"]["datasourceCount"], json!(1));
+    assert_eq!(
+        bundle["metadata"]["datasourceExportFile"],
+        json!(datasource_export_file.display().to_string())
+    );
+    assert_eq!(
+        bundle["datasources"][0]["secureJsonDataProviders"]["httpHeaderValue1"],
+        json!("${provider:vault:secret/data/loki/token}")
+    );
+    assert_eq!(
+        bundle["datasources"][0]["secureJsonDataPlaceholders"]["basicAuthPassword"],
+        json!("${secret:loki-basic-auth}")
+    );
 }
 
 #[test]

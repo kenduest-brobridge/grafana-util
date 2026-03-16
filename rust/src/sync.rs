@@ -423,6 +423,8 @@ fn normalize_datasource_bundle_item(document: &Value) -> Result<Value> {
             "url": object.get("url").cloned().unwrap_or(Value::String(String::new())),
             "isDefault": object.get("isDefault").cloned().unwrap_or(Value::Bool(false)),
         },
+        "secureJsonDataProviders": object.get("secureJsonDataProviders").cloned().unwrap_or(Value::Object(Map::new())),
+        "secureJsonDataPlaceholders": object.get("secureJsonDataPlaceholders").cloned().unwrap_or(Value::Object(Map::new())),
         "sourcePath": object.get("sourcePath").cloned().unwrap_or(Value::String(String::new())),
     }))
 }
@@ -1223,7 +1225,13 @@ fn run_sync_bundle(args: SyncBundleArgs) -> Result<()> {
         );
     }
     let alerting = match args.alert_export_dir.as_ref() {
-        Some(export_dir) => load_alerting_bundle_section(export_dir)?,
+        Some(export_dir) => {
+            metadata.insert(
+                "alertExportDir".to_string(),
+                Value::String(export_dir.display().to_string()),
+            );
+            load_alerting_bundle_section(export_dir)?
+        }
         None => Value::Object(Map::new()),
     };
     if let Some(extra_metadata) =

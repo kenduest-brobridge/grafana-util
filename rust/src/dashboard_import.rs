@@ -17,6 +17,8 @@ use super::*;
 struct ImportLookupCache {
     dashboards_by_uid: BTreeMap<String, Option<Value>>,
     folders_by_uid: BTreeMap<String, Option<Map<String, Value>>>,
+    current_org_id: Option<String>,
+    orgs: Option<Vec<Map<String, Value>>>,
 }
 
 fn fetch_dashboard_if_exists_cached<F>(
@@ -407,7 +409,8 @@ where
 }
 
 fn resolve_import_target_org_id_with_request<F>(
-    mut request_json: F,
+    request_json: &mut F,
+    cache: &mut ImportLookupCache,
     args: &ImportArgs,
 ) -> Result<String>
 where
@@ -416,12 +419,33 @@ where
     if let Some(org_id) = args.org_id {
         return Ok(org_id.to_string());
     }
-    let org = super::dashboard_list::fetch_current_org_with_request(&mut request_json)?;
-    Ok(super::dashboard_list::org_id_value(&org)?.to_string())
+    if let Some(org_id) = cache.current_org_id.as_ref() {
+        return Ok(org_id.clone());
+    }
+    let org = super::dashboard_list::fetch_current_org_with_request(&mut *request_json)?;
+    let org_id = super::dashboard_list::org_id_value(&org)?.to_string();
+    cache.current_org_id = Some(org_id.clone());
+    Ok(org_id)
+}
+
+fn list_orgs_cached<F>(
+    request_json: &mut F,
+    cache: &mut ImportLookupCache,
+) -> Result<Vec<Map<String, Value>>>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    if let Some(orgs) = cache.orgs.as_ref() {
+        return Ok(orgs.clone());
+    }
+    let orgs = super::dashboard_list::list_orgs_with_request(&mut *request_json)?;
+    cache.orgs = Some(orgs.clone());
+    Ok(orgs)
 }
 
 fn validate_matching_export_org_with_request<F>(
-    mut request_json: F,
+    request_json: &mut F,
+    cache: &mut ImportLookupCache,
     args: &ImportArgs,
     import_dir: &Path,
     metadata: Option<&ExportMetadata>,
@@ -451,7 +475,7 @@ where
     let export_org_id = export_org_ids.into_iter().next().unwrap_or_default();
     let target_org_id = match target_org_id_override {
         Some(org_id) => org_id.to_string(),
-        None => resolve_import_target_org_id_with_request(&mut request_json, args)?,
+        None => resolve_import_target_org_id_with_request(request_json, cache, args)?,
     };
     if export_org_id != target_org_id {
         return Err(message(format!(
@@ -462,14 +486,15 @@ where
 }
 
 fn resolve_target_org_plan_for_export_scope_with_request<F>(
-    mut request_json: F,
+    request_json: &mut F,
+    cache: &mut ImportLookupCache,
     args: &ImportArgs,
     scope: &ExportOrgImportScope,
 ) -> Result<ExportOrgTargetPlan>
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
-    let orgs = super::dashboard_list::list_orgs_with_request(&mut request_json)?;
+    let orgs = list_orgs_cached(request_json, cache)?;
     for org in &orgs {
         let org_id_text = org_id_string_from_value(org.get("id"));
         if org_id_text == scope.source_org_id.to_string() {
@@ -512,7 +537,7 @@ where
             import_dir: scope.import_dir.clone(),
         });
     }
-    let created = create_org_with_request(&mut request_json, &scope.source_org_name)?;
+    let created = create_org_with_request(&mut *request_json, &scope.source_org_name)?;
     let created_org_id =
         org_id_string_from_value(created.get("orgId").or_else(|| created.get("id")));
     if created_org_id.is_empty() {
@@ -1391,6 +1416,7 @@ where
     let metadata = load_export_metadata(&args.import_dir, Some(RAW_EXPORT_SUBDIR))?;
     validate_matching_export_org_with_request(
         &mut request_json,
+        &mut lookup_cache,
         args,
         &args.import_dir,
         metadata.as_ref(),
@@ -1630,6 +1656,7 @@ where
     let metadata = load_export_metadata(&args.import_dir, Some(RAW_EXPORT_SUBDIR))?;
     validate_matching_export_org_with_request(
         &mut request_json,
+        &mut lookup_cache,
         args,
         &args.import_dir,
         metadata.as_ref(),
@@ -2039,11 +2066,16 @@ where
     G: FnMut(i64, &ImportArgs) -> Result<ImportDryRunReport>,
 {
     let scopes = discover_export_org_import_scopes(args)?;
+    let mut lookup_cache = ImportLookupCache::default();
     let mut orgs = Vec::new();
     let mut imports = Vec::new();
     for scope in scopes {
-        let target_plan =
-            resolve_target_org_plan_for_export_scope_with_request(&mut request_json, args, &scope)?;
+        let target_plan = resolve_target_org_plan_for_export_scope_with_request(
+            &mut request_json,
+            &mut lookup_cache,
+            args,
+            &scope,
+        )?;
         let dashboard_count = discover_dashboard_files(&target_plan.import_dir)?
             .into_iter()
             .filter(|path| {
@@ -2122,6 +2154,7 @@ where
     H: FnMut(i64, &ImportArgs) -> Result<ImportDryRunReport>,
 {
     let scopes = discover_export_org_import_scopes(args)?;
+    let mut lookup_cache = ImportLookupCache::default();
     if args.dry_run && args.json {
         println!(
             "{}",
@@ -2137,8 +2170,12 @@ where
     let mut org_rows = Vec::new();
     let mut resolved_plans = Vec::new();
     for scope in scopes {
-        let target_plan =
-            resolve_target_org_plan_for_export_scope_with_request(&mut request_json, args, &scope)?;
+        let target_plan = resolve_target_org_plan_for_export_scope_with_request(
+            &mut request_json,
+            &mut lookup_cache,
+            args,
+            &scope,
+        )?;
         let dashboard_count = discover_dashboard_files(&target_plan.import_dir)?
             .into_iter()
             .filter(|path| {

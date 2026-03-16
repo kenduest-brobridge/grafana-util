@@ -36,6 +36,7 @@ struct ResolvedDatasource {
     key: String,
     input_label: String,
     ds_type: String,
+    plugin_name: String,
     plugin_version: String,
 }
 
@@ -162,6 +163,15 @@ fn make_input_name(label: &str) -> String {
 }
 
 fn format_plugin_name(datasource_type: &str) -> String {
+    match datasource_type_alias(datasource_type) {
+        "cloudwatch" => return "CloudWatch".to_string(),
+        "grafana-opensearch-datasource" => return "OpenSearch".to_string(),
+        "influxdb" => return "InfluxDB".to_string(),
+        "mssql" => return "Microsoft SQL Server".to_string(),
+        "mysql" => return "MySQL".to_string(),
+        "postgres" => return "PostgreSQL".to_string(),
+        _ => {}
+    }
     datasource_type_alias(datasource_type)
         .replace(['-', '_'], " ")
         .split_whitespace()
@@ -190,10 +200,12 @@ fn build_resolved_datasource(
     ds_type: String,
     input_label: String,
 ) -> ResolvedDatasource {
+    let plugin_name = format_plugin_name(&ds_type);
     ResolvedDatasource {
         key,
         input_label,
         ds_type,
+        plugin_name,
         plugin_version: String::new(),
     }
 }
@@ -397,7 +409,7 @@ fn allocate_input_mapping(
         return mapping.clone();
     }
     let input_label = if resolved.input_label.is_empty() {
-        format_plugin_name(&resolved.ds_type)
+        resolved.plugin_name.clone()
     } else {
         resolved.input_label.clone()
     };
@@ -415,7 +427,7 @@ fn allocate_input_mapping(
         } else {
             resolved.input_label.clone()
         },
-        plugin_name: format_plugin_name(&resolved.ds_type),
+        plugin_name: resolved.plugin_name.clone(),
         ds_type: resolved.ds_type.clone(),
         plugin_version: resolved.plugin_version.clone(),
     };

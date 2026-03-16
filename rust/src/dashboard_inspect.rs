@@ -854,7 +854,12 @@ pub(crate) fn apply_query_report_filters(
     }
     report.queries.retain(|row| {
         let datasource_match = datasource_filter
-            .map(|value| row.datasource == value)
+            .map(|value| {
+                row.datasource == value
+                    || row.datasource_uid == value
+                    || row.datasource_type == value
+                    || row.datasource_family == value
+            })
             .unwrap_or(true);
         let panel_match = panel_id_filter
             .map(|value| row.panel_id == value)

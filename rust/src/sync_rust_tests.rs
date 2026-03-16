@@ -108,7 +108,8 @@ fn build_sync_preflight_document_reports_plugin_dependency_and_alert_blocks() {
             "title": "CPU Main",
             "body": {
                 "datasourceUids": ["loki-main", "prom-main"],
-                "datasourceNames": ["Prometheus Main"]
+                "datasourceNames": ["Prometheus Main"],
+                "pluginIds": ["timeseries", "geomap"]
             }
         }),
         json!({
@@ -120,13 +121,14 @@ fn build_sync_preflight_document_reports_plugin_dependency_and_alert_blocks() {
                 "condition": "A > 90",
                 "datasourceUid": "loki-main",
                 "datasourceName": "Prometheus Main",
+                "pluginIds": ["grafana-oncall-app"],
                 "contactPoints": ["pagerduty-primary"],
                 "notificationSettings": {"receiver": "slack-primary"}
             }
         }),
     ];
     let availability = json!({
-        "pluginIds": ["prometheus"],
+        "pluginIds": ["prometheus", "timeseries"],
         "datasourceUids": ["prom-main"],
         "datasourceNames": [],
         "contactPoints": []
@@ -135,8 +137,8 @@ fn build_sync_preflight_document_reports_plugin_dependency_and_alert_blocks() {
     let document = build_sync_preflight_document(&desired_specs, Some(&availability)).unwrap();
 
     assert_eq!(document["kind"], json!(SYNC_PREFLIGHT_KIND));
-    assert_eq!(document["summary"]["checkCount"], json!(10));
-    assert_eq!(document["summary"]["blockingCount"], json!(8));
+    assert_eq!(document["summary"]["checkCount"], json!(13));
+    assert_eq!(document["summary"]["blockingCount"], json!(10));
     assert!(document["checks"]
         .as_array()
         .unwrap()
@@ -160,6 +162,20 @@ fn build_sync_preflight_document_reports_plugin_dependency_and_alert_blocks() {
         .as_array()
         .unwrap()
         .iter()
+        .any(|item| item["kind"] == "dashboard-plugin"
+            && item["identity"] == "cpu-main->timeseries"
+            && item["status"] == "ok"));
+    assert!(document["checks"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|item| item["kind"] == "dashboard-plugin"
+            && item["identity"] == "cpu-main->geomap"
+            && item["status"] == "missing"));
+    assert!(document["checks"]
+        .as_array()
+        .unwrap()
+        .iter()
         .any(|item| item["kind"] == "alert-live-apply" && item["status"] == "blocked"));
     assert!(document["checks"]
         .as_array()
@@ -174,6 +190,13 @@ fn build_sync_preflight_document_reports_plugin_dependency_and_alert_blocks() {
         .iter()
         .any(|item| item["kind"] == "alert-datasource-name"
             && item["identity"] == "cpu-high->Prometheus Main"
+            && item["status"] == "missing"));
+    assert!(document["checks"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|item| item["kind"] == "alert-plugin"
+            && item["identity"] == "cpu-high->grafana-oncall-app"
             && item["status"] == "missing"));
     assert!(document["checks"]
         .as_array()
