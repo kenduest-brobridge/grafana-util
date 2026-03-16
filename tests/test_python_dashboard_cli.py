@@ -662,6 +662,10 @@ class ExporterTests(unittest.TestCase):
         self.assertIn("Examples:", help_text)
         self.assertIn("grafana-util dashboard inspect-export", help_text)
         self.assertIn("--help-full", help_text)
+        self.assertIn("datasourceType", help_text)
+        self.assertIn("datasourceFamily", help_text)
+        self.assertIn("datasource label, uid, type,", help_text)
+        self.assertIn("or family exactly matches this value", help_text)
         self.assertNotIn("\n  --json", help_text)
         self.assertNotIn("\n  --table", help_text)
         self.assertNotIn("\n  --report ", help_text)
@@ -681,7 +685,10 @@ class ExporterTests(unittest.TestCase):
         self.assertIn("--report tree-table", help_text)
         self.assertIn("--report-filter-datasource prom-main", help_text)
         self.assertIn("--report-filter-panel-id 7", help_text)
-        self.assertIn("--report-columns panel_id,panel_title,datasource,query", help_text)
+        self.assertIn(
+            "--report-columns dashboard_uid,datasource_uid,datasource_family,query,file",
+            help_text,
+        )
         self.assertNotIn("grafana-utils inspect-export", help_text)
 
     def test_inspect_live_help_mentions_live_report_flags(self):
@@ -701,6 +708,10 @@ class ExporterTests(unittest.TestCase):
         self.assertIn("Examples:", help_text)
         self.assertIn("grafana-util dashboard inspect-live", help_text)
         self.assertIn("--help-full", help_text)
+        self.assertIn("datasourceType", help_text)
+        self.assertIn("datasourceFamily", help_text)
+        self.assertIn("datasource label, uid, type,", help_text)
+        self.assertIn("or family exactly matches this value", help_text)
         self.assertNotIn("\n  --report ", help_text)
         self.assertNotIn("\n  --json", help_text)
         self.assertNotIn("\n  --table", help_text)
@@ -720,7 +731,10 @@ class ExporterTests(unittest.TestCase):
         self.assertIn("--token \"$GRAFANA_API_TOKEN\"", help_text)
         self.assertIn("--report tree-table", help_text)
         self.assertIn("--report-filter-panel-id 7", help_text)
-        self.assertIn("--report-columns panel_id,panel_title,datasource,query", help_text)
+        self.assertIn(
+            "--report-columns dashboard_uid,datasource_uid,datasource_family,query,file",
+            help_text,
+        )
         self.assertNotIn("grafana-utils inspect-live", help_text)
 
     def test_parse_args_supports_import_mode(self):

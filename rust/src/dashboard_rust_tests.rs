@@ -1762,6 +1762,11 @@ fn inspect_export_help_lists_datasource_uid_report_column() {
         .to_string();
 
     assert!(help.contains("datasource_uid"));
+    assert!(help.contains("datasource_type"));
+    assert!(help.contains("datasource_family"));
+    assert!(help.contains("file"));
+    assert!(help.contains("dashboardUid"));
+    assert!(help.contains("datasource label, uid, type, or family"));
     assert!(help.contains("--output-format"));
 }
 
@@ -1775,6 +1780,9 @@ fn inspect_export_help_full_includes_extended_examples() {
     assert!(help.contains("--report-filter-datasource"));
     assert!(help.contains("--report-filter-panel-id 7"));
     assert!(help.contains("--report-columns"));
+    assert!(
+        help.contains("--report-columns dashboard_uid,datasource_uid,datasource_family,query,file")
+    );
 }
 
 #[test]
@@ -1787,6 +1795,9 @@ fn inspect_live_help_full_includes_extended_examples() {
     assert!(help.contains("--report tree-table"));
     assert!(help.contains("--report-filter-panel-id"));
     assert!(help.contains("--report-columns"));
+    assert!(
+        help.contains("--report-columns dashboard_uid,datasource_uid,datasource_family,query,file")
+    );
 }
 
 #[test]
@@ -4469,6 +4480,30 @@ fn resolve_report_column_ids_include_file_by_default_and_allow_datasource_uid() 
             "datasource_family".to_string(),
             "file".to_string(),
             "query".to_string(),
+        ]
+    );
+}
+
+#[test]
+fn resolve_report_column_ids_accepts_json_style_aliases() {
+    let selected = super::resolve_report_column_ids(&[
+        "dashboardUid".to_string(),
+        "datasourceUid".to_string(),
+        "datasourceType".to_string(),
+        "datasourceFamily".to_string(),
+        "queryField".to_string(),
+        "file".to_string(),
+    ])
+    .unwrap();
+    assert_eq!(
+        selected,
+        vec![
+            "dashboard_uid".to_string(),
+            "datasource_uid".to_string(),
+            "datasource_type".to_string(),
+            "datasource_family".to_string(),
+            "query_field".to_string(),
+            "file".to_string(),
         ]
     );
 }

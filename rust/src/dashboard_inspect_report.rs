@@ -141,6 +141,23 @@ pub(crate) const SUPPORTED_REPORT_COLUMN_IDS: &[&str] = &[
     "file",
 ];
 
+fn normalize_report_column_id(value: &str) -> &str {
+    match value {
+        "dashboardUid" => "dashboard_uid",
+        "dashboardTitle" => "dashboard_title",
+        "folderPath" => "folder_path",
+        "panelId" => "panel_id",
+        "panelTitle" => "panel_title",
+        "panelType" => "panel_type",
+        "refId" => "ref_id",
+        "datasourceUid" => "datasource_uid",
+        "datasourceType" => "datasource_type",
+        "datasourceFamily" => "datasource_family",
+        "queryField" => "query_field",
+        _ => value,
+    }
+}
+
 pub(crate) fn build_query_report(
     import_dir: String,
     dashboard_count: usize,
@@ -204,7 +221,7 @@ pub(crate) fn resolve_report_column_ids(selected: &[String]) -> Result<Vec<Strin
     }
     let mut result = Vec::new();
     for value in selected {
-        let normalized = value.trim();
+        let normalized = normalize_report_column_id(value.trim());
         if normalized.is_empty() {
             continue;
         }

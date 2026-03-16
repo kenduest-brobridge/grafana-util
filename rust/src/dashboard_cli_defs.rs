@@ -656,12 +656,12 @@ pub struct InspectExportArgs {
     #[arg(
         long,
         value_delimiter = ',',
-        help = "For --report table, csv, or tree-table output, or the equivalent report-like --output-format values, limit the query report to the selected columns. Supported values: dashboard_uid, dashboard_title, folder_path, panel_id, panel_title, panel_type, ref_id, datasource, datasource_uid, query_field, metrics, measurements, buckets, query."
+        help = "For --report table, csv, or tree-table output, or the equivalent report-like --output-format values, limit the query report to the selected columns. Supported values: dashboard_uid, dashboard_title, folder_path, panel_id, panel_title, panel_type, ref_id, datasource, datasource_uid, datasource_type, datasource_family, query_field, metrics, measurements, buckets, query, file. JSON-style aliases like dashboardUid, datasourceType, and datasourceFamily are also accepted."
     )]
     pub report_columns: Vec<String>,
     #[arg(
         long,
-        help = "For --report output or report-like --output-format values, include only rows whose datasource label exactly matches this value."
+        help = "For --report output or report-like --output-format values, include only rows whose datasource label, uid, type, or family exactly matches this value."
     )]
     pub report_filter_datasource: Option<String>,
     #[arg(
@@ -737,12 +737,12 @@ pub struct InspectLiveArgs {
     #[arg(
         long,
         value_delimiter = ',',
-        help = "For --report table, csv, or tree-table output, or the equivalent report-like --output-format values, limit the query report to the selected columns. Supported values: dashboard_uid, dashboard_title, folder_path, panel_id, panel_title, panel_type, ref_id, datasource, datasource_uid, query_field, metrics, measurements, buckets, query."
+        help = "For --report table, csv, or tree-table output, or the equivalent report-like --output-format values, limit the query report to the selected columns. Supported values: dashboard_uid, dashboard_title, folder_path, panel_id, panel_title, panel_type, ref_id, datasource, datasource_uid, datasource_type, datasource_family, query_field, metrics, measurements, buckets, query, file. JSON-style aliases like dashboardUid, datasourceType, and datasourceFamily are also accepted."
     )]
     pub report_columns: Vec<String>,
     #[arg(
         long,
-        help = "For --report output or report-like --output-format values, include only rows whose datasource label exactly matches this value."
+        help = "For --report output or report-like --output-format values, include only rows whose datasource label, uid, type, or family exactly matches this value."
     )]
     pub report_filter_datasource: Option<String>,
     #[arg(

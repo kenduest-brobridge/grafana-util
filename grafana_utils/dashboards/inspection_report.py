@@ -51,6 +51,10 @@ REPORT_COLUMN_ALIASES = {
 SUPPORTED_REPORT_COLUMN_HEADERS = OrderedDict(
     list(REPORT_COLUMN_HEADERS.items()) + list(OPTIONAL_REPORT_COLUMN_HEADERS.items())
 )
+SUPPORTED_REPORT_COLUMN_VALUES = tuple(
+    list(REPORT_COLUMN_ALIASES.keys())
+    + list(SUPPORTED_REPORT_COLUMN_HEADERS.keys())
+)
 INSPECT_REPORT_FORMAT_CHOICES = (
     "table",
     "json",
@@ -100,7 +104,7 @@ INSPECT_EXPORT_HELP_FULL_EXAMPLES = (
     "  Trim the per-query columns for flat or tree-table output:\n"
     "    grafana-util dashboard inspect-export --import-dir ./dashboards/raw "
     "--report tree-table "
-    "--report-columns panel_id,panel_title,datasource,query"
+    "--report-columns dashboard_uid,datasource_uid,datasource_family,query,file"
 )
 INSPECT_LIVE_HELP_FULL_EXAMPLES = (
     "Extended examples:\n\n"
@@ -123,8 +127,13 @@ INSPECT_LIVE_HELP_FULL_EXAMPLES = (
     "  Trim the per-query columns for flat or tree-table output:\n"
     "    grafana-util dashboard inspect-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" "
     "--report tree-table "
-    "--report-columns panel_id,panel_title,datasource,query"
+    "--report-columns dashboard_uid,datasource_uid,datasource_family,query,file"
 )
+
+
+def format_supported_report_column_values() -> str:
+    """Render supported report column ids for CLI help and parser errors."""
+    return ", ".join(SUPPORTED_REPORT_COLUMN_VALUES)
 
 
 def build_export_inspection_report_document(
@@ -413,18 +422,7 @@ def parse_report_columns(value: Optional[str]) -> Optional[list[str]]:
             % (
                 ", ".join(unknown),
                 ", ".join(
-                    list(REPORT_COLUMN_ALIASES.keys())
-                    + [
-                        "datasourceUid",
-                        "datasourceType",
-                        "datasourceFamily",
-                        "datasource",
-                        "metrics",
-                        "measurements",
-                        "buckets",
-                        "query",
-                        "file",
-                    ]
+                    SUPPORTED_REPORT_COLUMN_VALUES
                 ),
             )
         )
@@ -439,12 +437,26 @@ def filter_export_inspection_report_document(
     """Filter one flat inspection report document to narrower query rows."""
     if not datasource_label and not panel_id:
         return document
+    normalized_datasource_filter = str(datasource_label or "").strip()
+    normalized_panel_id_filter = str(panel_id or "").strip()
     filtered_records = [
         dict(record)
         for record in list(document.get("queries") or [])
         if (
-            (not datasource_label or str(record.get("datasource") or "") == datasource_label)
-            and (not panel_id or str(record.get("panelId") or "") == panel_id)
+            (
+                not normalized_datasource_filter
+                or normalized_datasource_filter
+                in {
+                    str(record.get("datasource") or "").strip(),
+                    str(record.get("datasourceUid") or "").strip(),
+                    str(record.get("datasourceType") or "").strip(),
+                    str(record.get("datasourceFamily") or "").strip(),
+                }
+            )
+            and (
+                not normalized_panel_id_filter
+                or str(record.get("panelId") or "") == normalized_panel_id_filter
+            )
         )
     ]
     return {

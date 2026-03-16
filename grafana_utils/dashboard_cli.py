@@ -119,7 +119,7 @@ from .dashboards.inspection_report import (
     INSPECT_EXPORT_HELP_FULL_EXAMPLES,
     INSPECT_LIVE_HELP_FULL_EXAMPLES,
     INSPECT_REPORT_FORMAT_CHOICES,
-    REPORT_COLUMN_ALIASES,
+    SUPPORTED_REPORT_COLUMN_VALUES,
     build_export_inspection_report_document,
     build_grouped_export_inspection_report_document,
     filter_export_inspection_report_document,
@@ -663,17 +663,17 @@ def add_inspect_export_cli_args(parser: argparse.ArgumentParser) -> None:
         help=(
             "With report-table, report-csv, or report-tree-table --output-format values, "
             "render only these comma-separated report columns. "
-            "Supported values: %s."
-            % ", ".join(
-                list(REPORT_COLUMN_ALIASES.keys())
-                + [
-                    "datasource",
-                    "metrics",
-                    "measurements",
-                    "buckets",
-                    "query",
-                    "file",
-                ]
+            "Supported values: %s. Snake_case aliases like %s are also accepted."
+            % (
+                ", ".join(SUPPORTED_REPORT_COLUMN_VALUES),
+                ", ".join(
+                    [
+                        "dashboard_uid",
+                        "datasource_uid",
+                        "datasource_type",
+                        "datasource_family",
+                    ]
+                ),
             )
         ),
     )
@@ -681,8 +681,8 @@ def add_inspect_export_cli_args(parser: argparse.ArgumentParser) -> None:
         "--report-filter-datasource",
         default=None,
         help=(
-            "With report-like --output-format values, only include query report rows whose datasource label "
-            "exactly matches this value."
+            "With report-like --output-format values, only include query report rows whose datasource label, "
+            "uid, type, or family exactly matches this value."
         ),
     )
     parser.add_argument(
@@ -751,17 +751,17 @@ def add_inspect_live_cli_args(parser: argparse.ArgumentParser) -> None:
         help=(
             "With report-table, report-csv, or report-tree-table --output-format values, "
             "render only these comma-separated report columns. "
-            "Supported values: %s."
-            % ", ".join(
-                list(REPORT_COLUMN_ALIASES.keys())
-                + [
-                    "datasource",
-                    "metrics",
-                    "measurements",
-                    "buckets",
-                    "query",
-                    "file",
-                ]
+            "Supported values: %s. Snake_case aliases like %s are also accepted."
+            % (
+                ", ".join(SUPPORTED_REPORT_COLUMN_VALUES),
+                ", ".join(
+                    [
+                        "dashboard_uid",
+                        "datasource_uid",
+                        "datasource_type",
+                        "datasource_family",
+                    ]
+                ),
             )
         ),
     )
@@ -769,8 +769,8 @@ def add_inspect_live_cli_args(parser: argparse.ArgumentParser) -> None:
         "--report-filter-datasource",
         default=None,
         help=(
-            "With report-like --output-format values, only include query report rows whose datasource label "
-            "exactly matches this value."
+            "With report-like --output-format values, only include query report rows whose datasource label, "
+            "uid, type, or family exactly matches this value."
         ),
     )
     parser.add_argument(
