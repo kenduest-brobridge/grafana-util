@@ -231,6 +231,7 @@ Commit message default for this repo:
 
 - `make build-rust-macos-arm64` runs `scripts/build-rust-macos-arm64.sh`.
 - That script is the explicit native release path for Apple Silicon Macs and copies binaries into `dist/macos-arm64/`.
+- `make build-rust` writes the default repo-local Rust release build into `build/rust/release/` by setting `CARGO_TARGET_DIR`.
 - `make build-rust-linux-amd64` runs `scripts/build-rust-linux-amd64.sh`.
 - The script uses Docker plus the official Rust image to build `x86_64-unknown-linux-gnu` binaries from macOS.
 - `make build-rust-linux-amd64-zig` runs `scripts/build-rust-linux-amd64-zig.sh`.

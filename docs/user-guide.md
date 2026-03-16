@@ -14,10 +14,10 @@ To build the `grafana-util` binary from the source repository, ensure you have t
 cargo build --release --manifest-path rust/Cargo.toml --bin grafana-util
 ```
 
-The compiled binary will be located at `rust/target/release/grafana-util`. Verify the installation by displaying the help menu:
+When you build through `make build-rust`, the compiled binary is written to `build/rust/release/grafana-util`. Verify the installation by displaying the help menu:
 
 ```bash
-./rust/target/release/grafana-util --help
+grafana-util --help
 ```
 
 ### 1.2 Authentication & Shared Options

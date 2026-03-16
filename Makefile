@@ -6,6 +6,7 @@ POETRY ?= poetry
 CARGO ?= cargo
 RUST_DIR ?= rust
 PYTHON_DIST_DIR ?= dist
+RUST_TARGET_DIR ?= $(CURDIR)/build/rust
 
 help:
 	@printf '%s\n' \
@@ -23,7 +24,7 @@ help:
 		'  make release-tag VERSION=0.2.9  Verify source versions match and create v0.2.9' \
 		'  make build         Build both Python and Rust artifacts' \
 		'  make build-python  Build the Python wheel and sdist into dist/' \
-		'  make build-rust    Build Rust release binaries in rust/target/release/' \
+		'  make build-rust    Build Rust release binaries in build/rust/release/' \
 		'  make build-rust-macos-arm64  Build native macOS Apple Silicon (M1/M2/M3) Rust release binaries into dist/macos-arm64/' \
 		'  make build-rust-linux-amd64  Build Linux amd64 Rust release binaries with Docker into dist/linux-amd64/ (containerized Linux build)' \
 		'  make build-rust-linux-amd64-zig  Build Linux amd64 Rust release binaries with local zig into dist/linux-amd64/ (no Docker)' \
@@ -132,7 +133,7 @@ build-python: sync-version
 	$(POETRY) run python -m build --sdist --wheel --no-isolation --outdir $(PYTHON_DIST_DIR) .
 
 build-rust: sync-version
-	cd $(RUST_DIR) && $(CARGO) build --release
+	cd $(RUST_DIR) && CARGO_TARGET_DIR="$(RUST_TARGET_DIR)" $(CARGO) build --release
 
 build-rust-macos-arm64: sync-version
 	bash ./scripts/build-rust-macos-arm64.sh
