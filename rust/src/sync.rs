@@ -269,12 +269,14 @@ pub struct SyncAssessAlertsArgs {
 pub struct SyncBundlePreflightArgs {
     #[arg(
         long,
-        help = "JSON file containing the staged multi-resource source bundle."
+        help = "JSON file containing the staged multi-resource source bundle.",
+        help_heading = "Input Options"
     )]
     pub source_bundle: PathBuf,
     #[arg(
         long,
-        help = "JSON file containing the staged target inventory snapshot."
+        help = "JSON file containing the staged target inventory snapshot.",
+        help_heading = "Input Options"
     )]
     pub target_inventory: PathBuf,
     #[arg(
@@ -285,7 +287,8 @@ pub struct SyncBundlePreflightArgs {
     #[arg(
         long,
         default_value_t = false,
-        help = "Fetch availability hints from Grafana instead of relying only on --availability-file."
+        help = "Fetch availability hints from Grafana instead of relying only on --availability-file.",
+        help_heading = "Live Options"
     )]
     pub fetch_live: bool,
     #[command(flatten)]

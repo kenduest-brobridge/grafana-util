@@ -144,7 +144,8 @@ pub struct DatasourceImportArgs {
     pub common: CommonCliArgs,
     #[arg(
         long,
-        help = "Import datasource inventory from this directory. Point this at the datasource export root that contains datasources.json and export-metadata.json."
+        help = "Import datasource inventory from this directory. Point this at the datasource export root that contains datasources.json and export-metadata.json.",
+        help_heading = "Input Options"
     )]
     pub import_dir: PathBuf,
     #[arg(
