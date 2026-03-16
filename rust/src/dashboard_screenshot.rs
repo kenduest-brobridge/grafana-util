@@ -1131,7 +1131,7 @@ Math.max(
         args.height as f64,
     )?;
     let viewport_height = args.height as f64;
-    let viewport_width = args.width as u32;
+    let viewport_width = args.width;
     let crop_top = capture_offsets.hidden_top_height.max(0.0).ceil() as u32;
     let crop_left = capture_offsets.hidden_left_width.max(0.0).ceil() as u32;
     let target_width = viewport_width.saturating_sub(crop_left).max(1);
