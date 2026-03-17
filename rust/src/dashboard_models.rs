@@ -21,6 +21,10 @@ pub(crate) struct ExportMetadata {
     pub folders_file: Option<String>,
     #[serde(rename = "datasourcesFile", skip_serializing_if = "Option::is_none")]
     pub datasources_file: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub org: Option<String>,
+    #[serde(rename = "orgId", skip_serializing_if = "Option::is_none")]
+    pub org_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

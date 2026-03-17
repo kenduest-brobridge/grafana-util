@@ -760,6 +760,8 @@ fn build_export_metadata_serializes_expected_shape() {
         Some("grafana-web-import-preserve-uid"),
         Some(FOLDER_INVENTORY_FILENAME),
         Some(DATASOURCE_INVENTORY_FILENAME),
+        Some("Main Org."),
+        Some("1"),
     ))
     .unwrap();
 
@@ -773,7 +775,9 @@ fn build_export_metadata_serializes_expected_shape() {
             "indexFile": "index.json",
             "format": "grafana-web-import-preserve-uid",
             "foldersFile": "folders.json",
-            "datasourcesFile": "datasources.json"
+            "datasourcesFile": "datasources.json",
+            "org": "Main Org.",
+            "orgId": "1"
         })
     );
 }
@@ -901,6 +905,7 @@ fn parse_cli_supports_list_mode() {
             assert_eq!(list_args.org_id, None);
             assert!(!list_args.all_orgs);
             assert!(!list_args.with_sources);
+            assert!(list_args.output_columns.is_empty());
             assert!(!list_args.table);
             assert!(!list_args.csv);
             assert!(!list_args.json);
@@ -926,9 +931,33 @@ fn parse_cli_supports_list_with_sources() {
             assert_eq!(list_args.org_id, None);
             assert!(!list_args.all_orgs);
             assert!(list_args.with_sources);
+            assert!(list_args.output_columns.is_empty());
             assert!(list_args.json);
             assert!(!list_args.table);
             assert!(!list_args.csv);
+        }
+        _ => panic!("expected list command"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_list_output_columns_with_aliases() {
+    let args = parse_cli_from([
+        "grafana-util",
+        "list",
+        "--url",
+        "https://grafana.example.com",
+        "--output-columns",
+        "uid,folderUid,orgId,sources,sourceUids",
+    ]);
+
+    match args.command {
+        DashboardCommand::List(list_args) => {
+            assert_eq!(
+                list_args.output_columns,
+                vec!["uid", "folder_uid", "org_id", "sources", "source_uids"]
+            );
+            assert!(!list_args.with_sources);
         }
         _ => panic!("expected list command"),
     }
@@ -1091,6 +1120,9 @@ fn parse_cli_rejects_conflicting_export_org_scope_flags() {
 #[test]
 fn export_help_explains_flat_layout() {
     let help = render_dashboard_subcommand_help("export");
+    assert!(help.contains("--all-orgs"));
+    assert!(help.contains("Prefer Basic auth when you need cross-org export"));
+    assert!(help.contains("Export dashboards across all visible orgs with Basic auth"));
     assert!(help.contains("Write dashboard files directly into each export variant directory"));
     assert!(help.contains("folder-based subdirectories on disk"));
 }
@@ -1127,9 +1159,22 @@ fn import_help_explains_common_operator_flags() {
 fn top_level_help_includes_examples() {
     let help = render_dashboard_help();
     assert!(help.contains("Export dashboards from local Grafana with Basic auth"));
-    assert!(help.contains("Export dashboards with an API token"));
+    assert!(help.contains("Export dashboards across all visible orgs with Basic auth"));
+    assert!(help.contains("List dashboards across all visible orgs with Basic auth"));
+    assert!(help.contains("Export dashboards with an API token from the current org"));
     assert!(help.contains("grafana-util export"));
+    assert!(help.contains("--all-orgs"));
     assert!(help.contains("grafana-util diff"));
+}
+
+#[test]
+fn list_help_mentions_cross_org_basic_auth_examples() {
+    let help = render_dashboard_subcommand_help("list");
+    assert!(help.contains("--all-orgs"));
+    assert!(help.contains("Prefer Basic auth when you need cross-org listing"));
+    assert!(help.contains("List dashboards across all visible orgs with Basic auth"));
+    assert!(help.contains("List dashboards from one explicit org ID"));
+    assert!(help.contains("List dashboards from the current org with an API token"));
 }
 
 #[test]
@@ -1670,7 +1715,7 @@ fn parse_cli_supports_inspect_export_report_columns_and_filter() {
         "./dashboards/raw",
         "--report",
         "--report-columns",
-        "dashboard_uid,datasource,query",
+        "org,orgId,dashboard_uid,datasource,query",
         "--report-filter-datasource",
         "prom-main",
         "--report-filter-panel-id",
@@ -1683,6 +1728,8 @@ fn parse_cli_supports_inspect_export_report_columns_and_filter() {
             assert_eq!(
                 inspect_args.report_columns,
                 vec![
+                    "org".to_string(),
+                    "org_id".to_string(),
                     "dashboard_uid".to_string(),
                     "datasource".to_string(),
                     "query".to_string()
@@ -2658,7 +2705,7 @@ fn render_dashboard_summary_table_uses_headers_and_defaults() {
         .clone(),
     ];
 
-    let lines = render_dashboard_summary_table(&summaries, true);
+    let lines = render_dashboard_summary_table(&summaries, &[], true);
     assert!(lines[0].contains("ORG"));
     assert!(lines[0].contains("ORG_ID"));
     assert!(lines[2].contains("Main Org"));
@@ -2682,7 +2729,7 @@ fn render_dashboard_summary_table_includes_sources_column_when_present() {
     .unwrap()
     .clone()];
 
-    let lines = render_dashboard_summary_table(&summaries, true);
+    let lines = render_dashboard_summary_table(&summaries, &[], true);
     assert!(lines[0].contains("ORG"));
     assert!(lines[0].contains("SOURCES"));
     assert!(lines[2].starts_with("abc  CPU   Infra   infra"));
@@ -2705,7 +2752,7 @@ fn render_dashboard_summary_table_can_omit_header() {
     .unwrap()
     .clone()];
 
-    let lines = render_dashboard_summary_table(&summaries, false);
+    let lines = render_dashboard_summary_table(&summaries, &[], false);
     assert_eq!(lines.len(), 1);
     assert!(lines[0].starts_with("abc"));
 }
@@ -2757,7 +2804,7 @@ fn render_dashboard_summary_csv_uses_headers_and_escaping() {
         .clone(),
     ];
 
-    let lines = render_dashboard_summary_csv(&summaries);
+    let lines = render_dashboard_summary_csv(&summaries, &[]);
     assert_eq!(lines[0], "uid,name,folder,folderUid,path,org,orgId");
     assert_eq!(lines[1], "abc,CPU,Infra,infra,Platform / Infra,Main Org,1");
     assert_eq!(
@@ -2783,7 +2830,7 @@ fn render_dashboard_summary_csv_includes_sources_column_when_present() {
     .unwrap()
     .clone()];
 
-    let lines = render_dashboard_summary_csv(&summaries);
+    let lines = render_dashboard_summary_csv(&summaries, &[]);
     assert_eq!(
         lines[0],
         "uid,name,folder,folderUid,path,org,orgId,sources,sourceUids"
@@ -2820,7 +2867,7 @@ fn render_dashboard_summary_json_returns_objects() {
         .clone(),
     ];
 
-    let value = render_dashboard_summary_json(&summaries);
+    let value = render_dashboard_summary_json(&summaries, &[]);
     assert_eq!(
         value,
         json!([
@@ -2863,7 +2910,7 @@ fn render_dashboard_summary_json_includes_sources_when_present() {
     .unwrap()
     .clone()];
 
-    let value = render_dashboard_summary_json(&summaries);
+    let value = render_dashboard_summary_json(&summaries, &[]);
     assert_eq!(
         value,
         json!([
@@ -2876,6 +2923,72 @@ fn render_dashboard_summary_json_includes_sources_when_present() {
                 "org": "Main Org",
                 "orgId": "1",
                 "sources": ["Loki Logs", "Prom Main"],
+                "sourceUids": ["loki_uid", "prom_uid"]
+            }
+        ])
+    );
+}
+
+#[test]
+fn render_dashboard_summary_table_respects_selected_columns() {
+    let summaries = vec![json!({
+        "uid": "abc",
+        "folderUid": "infra",
+        "folderPath": "Platform / Infra",
+        "folderTitle": "Infra",
+        "orgId": 1,
+        "orgName": "Main Org",
+        "title": "CPU",
+        "sources": ["Prom Main"]
+    })
+    .as_object()
+    .unwrap()
+    .clone()];
+
+    let lines = render_dashboard_summary_table(
+        &summaries,
+        &["uid".to_string(), "name".to_string(), "sources".to_string()],
+        true,
+    );
+    assert!(lines[0].contains("UID"));
+    assert!(lines[0].contains("NAME"));
+    assert!(lines[0].contains("SOURCES"));
+    assert!(lines[2].contains("abc"));
+    assert!(lines[2].contains("CPU"));
+    assert!(lines[2].contains("Prom Main"));
+}
+
+#[test]
+fn render_dashboard_summary_json_respects_selected_columns() {
+    let summaries = vec![json!({
+        "uid": "abc",
+        "folderUid": "infra",
+        "folderPath": "Platform / Infra",
+        "folderTitle": "Infra",
+        "orgId": 1,
+        "orgName": "Main Org",
+        "title": "CPU",
+        "sources": ["Loki Logs", "Prom Main"],
+        "sourceUids": ["loki_uid", "prom_uid"]
+    })
+    .as_object()
+    .unwrap()
+    .clone()];
+
+    let value = render_dashboard_summary_json(
+        &summaries,
+        &[
+            "uid".to_string(),
+            "org_id".to_string(),
+            "source_uids".to_string(),
+        ],
+    );
+    assert_eq!(
+        value,
+        json!([
+            {
+                "uid": "abc",
+                "orgId": "1",
                 "sourceUids": ["loki_uid", "prom_uid"]
             }
         ])
@@ -2937,6 +3050,7 @@ fn list_dashboards_with_request_returns_dashboard_count() {
         org_id: None,
         all_orgs: false,
         with_sources: false,
+        output_columns: Vec::new(),
         table: false,
         csv: false,
         json: false,
@@ -3034,6 +3148,7 @@ fn list_dashboards_with_request_json_fetches_dashboards_and_datasources_by_defau
         org_id: None,
         all_orgs: false,
         with_sources: false,
+        output_columns: Vec::new(),
         table: false,
         csv: false,
         json: true,
@@ -3088,6 +3203,64 @@ fn list_dashboards_with_request_json_fetches_dashboards_and_datasources_by_defau
 }
 
 #[test]
+fn list_dashboards_with_request_output_columns_sources_fetches_dashboard_sources() {
+    let args = ListArgs {
+        common: make_common_args("http://127.0.0.1:3000".to_string()),
+        page_size: 500,
+        org_id: None,
+        all_orgs: false,
+        with_sources: false,
+        output_columns: vec!["uid".to_string(), "sources".to_string()],
+        table: true,
+        csv: false,
+        json: false,
+        output_format: None,
+        no_header: false,
+    };
+    let mut calls = Vec::new();
+
+    let count = list_dashboards_with_request(
+        |method, path, _params, _payload| {
+            calls.push((method.to_string(), path.to_string()));
+            match path {
+                "/api/search" => Ok(Some(json!([
+                    {"uid": "abc", "title": "CPU", "folderTitle": "Infra", "folderUid": "infra"}
+                ]))),
+                "/api/org" => Ok(Some(json!({
+                    "id": 1,
+                    "name": "Main Org"
+                }))),
+                "/api/folders/infra" => Ok(Some(json!({
+                    "title": "Infra",
+                    "parents": [{"title": "Platform"}]
+                }))),
+                "/api/datasources" => Ok(Some(json!([
+                    {"uid": "prom_uid", "name": "Prom Main", "type": "prometheus"}
+                ]))),
+                "/api/dashboards/uid/abc" => Ok(Some(json!({
+                    "dashboard": {
+                        "uid": "abc",
+                        "title": "CPU",
+                        "panels": [
+                            {"datasource": {"uid": "prom_uid", "type": "prometheus"}}
+                        ]
+                    }
+                }))),
+                _ => Err(super::message(format!("unexpected path {path}"))),
+            }
+        },
+        &args,
+    )
+    .unwrap();
+
+    assert_eq!(count, 1);
+    assert!(calls.iter().any(|(_, path)| path == "/api/datasources"));
+    assert!(calls
+        .iter()
+        .any(|(_, path)| path == "/api/dashboards/uid/abc"));
+}
+
+#[test]
 fn list_dashboards_with_request_with_org_id_scopes_requests() {
     let args = ListArgs {
         common: make_common_args("http://127.0.0.1:3000".to_string()),
@@ -3095,6 +3268,7 @@ fn list_dashboards_with_request_with_org_id_scopes_requests() {
         org_id: Some(7),
         all_orgs: false,
         with_sources: false,
+        output_columns: Vec::new(),
         table: false,
         csv: false,
         json: true,
@@ -3182,6 +3356,7 @@ fn list_dashboards_with_request_all_orgs_aggregates_results() {
         org_id: None,
         all_orgs: true,
         with_sources: false,
+        output_columns: Vec::new(),
         table: false,
         csv: false,
         json: true,
@@ -3391,6 +3566,18 @@ fn export_dashboards_with_client_writes_raw_variant_and_indexes() {
     assert!(args.export_dir.join("raw/export-metadata.json").is_file());
     assert!(args.export_dir.join("index.json").is_file());
     assert!(args.export_dir.join("export-metadata.json").is_file());
+    let raw_metadata: Value = serde_json::from_str(
+        &fs::read_to_string(args.export_dir.join("raw/export-metadata.json")).unwrap(),
+    )
+    .unwrap();
+    let root_metadata: Value = serde_json::from_str(
+        &fs::read_to_string(args.export_dir.join("export-metadata.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(raw_metadata["org"], Value::String("Main Org.".to_string()));
+    assert_eq!(raw_metadata["orgId"], Value::String("1".to_string()));
+    assert_eq!(root_metadata["org"], Value::String("Main Org.".to_string()));
+    assert_eq!(root_metadata["orgId"], Value::String("1".to_string()));
     assert_eq!(calls.len(), 4);
 }
 
@@ -3941,6 +4128,32 @@ fn export_dashboards_with_request_all_orgs_aggregates_results() {
         .export_dir
         .join("org_2_Ops_Org/raw/index.json")
         .is_file());
+    let org_one_metadata: Value = serde_json::from_str(
+        &fs::read_to_string(
+            args.export_dir
+                .join("org_1_Main_Org/raw/export-metadata.json"),
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    let org_two_metadata: Value = serde_json::from_str(
+        &fs::read_to_string(
+            args.export_dir
+                .join("org_2_Ops_Org/raw/export-metadata.json"),
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(
+        org_one_metadata["org"],
+        Value::String("Main Org".to_string())
+    );
+    assert_eq!(org_one_metadata["orgId"], Value::String("1".to_string()));
+    assert_eq!(
+        org_two_metadata["org"],
+        Value::String("Ops Org".to_string())
+    );
+    assert_eq!(org_two_metadata["orgId"], Value::String("2".to_string()));
     assert_eq!(
         calls
             .iter()
@@ -4026,7 +4239,9 @@ fn build_export_inspection_summary_reports_structure_and_datasources() {
             "indexFile": "index.json",
             "format": "grafana-web-import-preserve-uid",
             "foldersFile": FOLDER_INVENTORY_FILENAME,
-            "datasourcesFile": DATASOURCE_INVENTORY_FILENAME
+            "datasourcesFile": DATASOURCE_INVENTORY_FILENAME,
+            "org": "Main Org.",
+            "orgId": "1"
         }))
         .unwrap(),
     )
@@ -4129,6 +4344,8 @@ fn build_export_inspection_summary_reports_structure_and_datasources() {
 
     let summary = super::build_export_inspection_summary(&raw_dir).unwrap();
 
+    assert_eq!(summary.export_org, Some("Main Org.".to_string()));
+    assert_eq!(summary.export_org_id, Some("1".to_string()));
     assert_eq!(summary.dashboard_count, 2);
     assert_eq!(summary.folder_count, 2);
     assert_eq!(summary.panel_count, 2);
@@ -4159,6 +4376,14 @@ fn build_export_inspection_summary_reports_structure_and_datasources() {
 
     let summary_json =
         serde_json::to_value(super::build_export_inspection_summary_document(&summary)).unwrap();
+    assert_eq!(
+        summary_json["summary"]["exportOrg"],
+        Value::String("Main Org.".to_string())
+    );
+    assert_eq!(
+        summary_json["summary"]["exportOrgId"],
+        Value::String("1".to_string())
+    );
     assert_eq!(summary_json["summary"]["dashboardCount"], Value::from(2));
     assert_eq!(summary_json["summary"]["folderCount"], Value::from(2));
     assert_eq!(summary_json["summary"]["queryCount"], Value::from(3));
@@ -4174,6 +4399,33 @@ fn build_export_inspection_summary_reports_structure_and_datasources() {
         summary_json["mixedDatasourceDashboards"][0]["folderPath"],
         Value::String("Platform / Team / Apps / Prod".to_string())
     );
+}
+
+#[test]
+fn build_export_inspection_summary_rows_include_export_org_metadata() {
+    let summary = super::ExportInspectionSummary {
+        import_dir: "/tmp/raw".to_string(),
+        export_org: Some("Main Org.".to_string()),
+        export_org_id: Some("1".to_string()),
+        dashboard_count: 2,
+        folder_count: 2,
+        panel_count: 3,
+        query_count: 4,
+        datasource_inventory_count: 3,
+        orphaned_datasource_count: 1,
+        mixed_dashboard_count: 1,
+        folder_paths: Vec::new(),
+        datasource_usage: Vec::new(),
+        datasource_inventory: Vec::new(),
+        orphaned_datasources: Vec::new(),
+        mixed_dashboards: Vec::new(),
+    };
+
+    let rows = super::build_export_inspection_summary_rows(&summary);
+
+    assert!(rows.contains(&vec!["export_org".to_string(), "Main Org.".to_string()]));
+    assert!(rows.contains(&vec!["export_org_id".to_string(), "1".to_string()]));
+    assert!(rows.contains(&vec!["dashboard_count".to_string(), "2".to_string()]));
 }
 
 #[test]
@@ -4638,6 +4890,8 @@ fn resolve_report_column_ids_accepts_json_style_aliases() {
 #[test]
 fn export_inspection_query_row_json_keeps_datasource_uid_and_file_fields() {
     let row = super::ExportInspectionQueryRow {
+        org: "Main Org.".to_string(),
+        org_id: "1".to_string(),
         dashboard_uid: "main".to_string(),
         dashboard_title: "Main".to_string(),
         folder_path: "General".to_string(),
@@ -4659,6 +4913,8 @@ fn export_inspection_query_row_json_keeps_datasource_uid_and_file_fields() {
 
     let value = serde_json::to_value(&row).unwrap();
 
+    assert_eq!(value["org"], Value::String("Main Org.".to_string()));
+    assert_eq!(value["orgId"], Value::String("1".to_string()));
     assert_eq!(value["datasourceUid"], Value::String(String::new()));
     assert_eq!(
         value["datasourceType"],
@@ -4713,6 +4969,8 @@ fn apply_query_report_filters_keep_matching_rows_only() {
         },
         queries: vec![
             super::ExportInspectionQueryRow {
+                org: "Main Org.".to_string(),
+                org_id: "1".to_string(),
                 dashboard_uid: "main".to_string(),
                 dashboard_title: "Main".to_string(),
                 folder_path: "General".to_string(),
@@ -4732,6 +4990,8 @@ fn apply_query_report_filters_keep_matching_rows_only() {
                 file_path: "/tmp/raw/main.json".to_string(),
             },
             super::ExportInspectionQueryRow {
+                org: "Main Org.".to_string(),
+                org_id: "1".to_string(),
                 dashboard_uid: "logs".to_string(),
                 dashboard_title: "Logs".to_string(),
                 folder_path: "General".to_string(),
@@ -4776,6 +5036,8 @@ fn apply_query_report_filters_match_datasource_uid_type_and_family() {
         },
         queries: vec![
             super::ExportInspectionQueryRow {
+                org: "Main Org.".to_string(),
+                org_id: "1".to_string(),
                 dashboard_uid: "main".to_string(),
                 dashboard_title: "Main".to_string(),
                 folder_path: "General".to_string(),
@@ -4795,6 +5057,8 @@ fn apply_query_report_filters_match_datasource_uid_type_and_family() {
                 file_path: "/tmp/raw/main.json".to_string(),
             },
             super::ExportInspectionQueryRow {
+                org: "Main Org.".to_string(),
+                org_id: "1".to_string(),
                 dashboard_uid: "logs".to_string(),
                 dashboard_title: "Logs".to_string(),
                 folder_path: "General".to_string(),
@@ -4841,6 +5105,8 @@ fn normalize_query_report_groups_rows_by_dashboard_then_panel() {
         },
         queries: vec![
             super::ExportInspectionQueryRow {
+                org: "Main Org.".to_string(),
+                org_id: "1".to_string(),
                 dashboard_uid: "main".to_string(),
                 dashboard_title: "Main".to_string(),
                 folder_path: "General".to_string(),
@@ -4860,6 +5126,8 @@ fn normalize_query_report_groups_rows_by_dashboard_then_panel() {
                 file_path: "/tmp/raw/main.json".to_string(),
             },
             super::ExportInspectionQueryRow {
+                org: "Main Org.".to_string(),
+                org_id: "1".to_string(),
                 dashboard_uid: "main".to_string(),
                 dashboard_title: "Main".to_string(),
                 folder_path: "General".to_string(),
@@ -4879,6 +5147,8 @@ fn normalize_query_report_groups_rows_by_dashboard_then_panel() {
                 file_path: "/tmp/raw/main.json".to_string(),
             },
             super::ExportInspectionQueryRow {
+                org: "Main Org.".to_string(),
+                org_id: "1".to_string(),
                 dashboard_uid: "logs".to_string(),
                 dashboard_title: "Logs".to_string(),
                 folder_path: "Platform / Logs".to_string(),
@@ -4905,6 +5175,8 @@ fn normalize_query_report_groups_rows_by_dashboard_then_panel() {
     assert_eq!(normalized.import_dir, "/tmp/raw");
     assert_eq!(normalized.summary, report.summary);
     assert_eq!(normalized.dashboards.len(), 2);
+    assert_eq!(normalized.dashboards[0].org, "Main Org.");
+    assert_eq!(normalized.dashboards[0].org_id, "1");
     assert_eq!(normalized.dashboards[0].dashboard_uid, "main");
     assert_eq!(normalized.dashboards[0].file_path, "/tmp/raw/main.json");
     assert_eq!(
@@ -5083,6 +5355,8 @@ fn render_grouped_query_report_displays_dashboard_panel_and_query_tree() {
         },
         queries: vec![
             super::ExportInspectionQueryRow {
+                org: "Main Org.".to_string(),
+                org_id: "1".to_string(),
                 dashboard_uid: "main".to_string(),
                 dashboard_title: "Main".to_string(),
                 folder_path: "General".to_string(),
@@ -5102,6 +5376,8 @@ fn render_grouped_query_report_displays_dashboard_panel_and_query_tree() {
                 file_path: "/tmp/raw/main.json".to_string(),
             },
             super::ExportInspectionQueryRow {
+                org: "Main Org.".to_string(),
+                org_id: "1".to_string(),
                 dashboard_uid: "main".to_string(),
                 dashboard_title: "Main".to_string(),
                 folder_path: "General".to_string(),
@@ -5128,7 +5404,7 @@ fn render_grouped_query_report_displays_dashboard_panel_and_query_tree() {
 
     assert!(output.contains("Export inspection report: /tmp/raw"));
     assert!(output.contains("# Dashboard tree"));
-    assert!(output.contains("[1] Dashboard: Main (uid=main, folder=General, panels=2, queries=2, datasources=prom-main,loki-main, families=prometheus,loki)"));
+    assert!(output.contains("[1] Dashboard: Main (uid=main, folder=General, panels=2, queries=2, datasources=prom-main,loki-main, families=prometheus,loki, org=Main Org., orgId=1)"));
     assert!(output.contains("  File: /tmp/raw/main.json"));
     assert!(output.contains("  Panel: CPU (id=7, type=timeseries, queries=1, datasources=prom-main, families=prometheus, fields=expr)"));
     assert!(output.contains("  Panel: Logs (id=8, type=logs, queries=1, datasources=loki-main, families=loki, fields=expr)"));
@@ -5154,6 +5430,8 @@ fn render_grouped_query_table_report_displays_dashboard_sections_with_tables() {
         },
         queries: vec![
             super::ExportInspectionQueryRow {
+                org: "Main Org.".to_string(),
+                org_id: "1".to_string(),
                 dashboard_uid: "main".to_string(),
                 dashboard_title: "Main".to_string(),
                 folder_path: "General".to_string(),
@@ -5173,6 +5451,8 @@ fn render_grouped_query_table_report_displays_dashboard_sections_with_tables() {
                 file_path: "/tmp/raw/main.json".to_string(),
             },
             super::ExportInspectionQueryRow {
+                org: "Main Org.".to_string(),
+                org_id: "1".to_string(),
                 dashboard_uid: "main".to_string(),
                 dashboard_title: "Main".to_string(),
                 folder_path: "General".to_string(),
@@ -5207,11 +5487,41 @@ fn render_grouped_query_table_report_displays_dashboard_sections_with_tables() {
     let output = lines.join("\n");
 
     assert!(output.contains("# Dashboard sections"));
-    assert!(output.contains("[1] Dashboard: Main (uid=main, folder=General, panels=2, queries=2, datasources=prom-main,loki-main, families=prometheus,loki)"));
+    assert!(output.contains("[1] Dashboard: Main (uid=main, folder=General, panels=2, queries=2, datasources=prom-main,loki-main, families=prometheus,loki, org=Main Org., orgId=1)"));
     assert!(output.contains("File: /tmp/raw/main.json"));
     assert!(output.contains("PANEL_ID  PANEL_TITLE  DATASOURCE  QUERY"));
     assert!(output.contains("7         CPU          prom-main   up"));
     assert!(output.contains("8         Logs         loki-main   {job=\"grafana\"}"));
+}
+
+#[test]
+fn render_query_report_column_supports_org_columns() {
+    let row = super::ExportInspectionQueryRow {
+        org: "Main Org.".to_string(),
+        org_id: "1".to_string(),
+        dashboard_uid: "main".to_string(),
+        dashboard_title: "Main".to_string(),
+        folder_path: "General".to_string(),
+        panel_id: "1".to_string(),
+        panel_title: "CPU".to_string(),
+        panel_type: "timeseries".to_string(),
+        ref_id: "A".to_string(),
+        datasource: "prom-main".to_string(),
+        datasource_uid: "prom-main".to_string(),
+        datasource_type: "prometheus".to_string(),
+        datasource_family: "prometheus".to_string(),
+        query_field: "expr".to_string(),
+        query_text: "up".to_string(),
+        metrics: vec!["up".to_string()],
+        measurements: Vec::new(),
+        buckets: Vec::new(),
+        file_path: "/tmp/raw/main.json".to_string(),
+    };
+
+    assert_eq!(super::report_column_header("org"), "ORG");
+    assert_eq!(super::report_column_header("org_id"), "ORG_ID");
+    assert_eq!(super::render_query_report_column(&row, "org"), "Main Org.");
+    assert_eq!(super::render_query_report_column(&row, "org_id"), "1");
 }
 
 #[test]
@@ -5225,6 +5535,8 @@ fn render_grouped_query_table_report_includes_loki_analysis_columns() {
             report_row_count: 1,
         },
         queries: vec![super::ExportInspectionQueryRow {
+            org: "Main Org.".to_string(),
+            org_id: "1".to_string(),
             dashboard_uid: "logs-main".to_string(),
             dashboard_title: "Logs Main".to_string(),
             folder_path: "Logs".to_string(),
@@ -5292,6 +5604,8 @@ fn render_grouped_query_table_report_uses_default_column_set_when_requested() {
 fn build_export_inspection_governance_document_summarizes_families_and_risks() {
     let summary = super::ExportInspectionSummary {
         import_dir: "/tmp/raw".to_string(),
+        export_org: None,
+        export_org_id: None,
         dashboard_count: 2,
         folder_count: 2,
         panel_count: 3,
@@ -5369,6 +5683,8 @@ fn build_export_inspection_governance_document_summarizes_families_and_risks() {
         },
         queries: vec![
             super::ExportInspectionQueryRow {
+                org: "Main Org.".to_string(),
+                org_id: "1".to_string(),
                 dashboard_uid: "cpu-main".to_string(),
                 dashboard_title: "CPU Main".to_string(),
                 folder_path: "General".to_string(),
@@ -5388,6 +5704,8 @@ fn build_export_inspection_governance_document_summarizes_families_and_risks() {
                 file_path: "/tmp/raw/cpu-main.json".to_string(),
             },
             super::ExportInspectionQueryRow {
+                org: "Main Org.".to_string(),
+                org_id: "1".to_string(),
                 dashboard_uid: "mixed-main".to_string(),
                 dashboard_title: "Mixed Main".to_string(),
                 folder_path: "Platform / Infra".to_string(),
@@ -5460,6 +5778,8 @@ fn build_export_inspection_governance_document_summarizes_families_and_risks() {
 fn render_governance_table_report_displays_sections() {
     let summary = super::ExportInspectionSummary {
         import_dir: "/tmp/raw".to_string(),
+        export_org: None,
+        export_org_id: None,
         dashboard_count: 1,
         folder_count: 1,
         panel_count: 1,
@@ -5518,6 +5838,8 @@ fn render_governance_table_report_displays_sections() {
             report_row_count: 1,
         },
         queries: vec![super::ExportInspectionQueryRow {
+            org: "Main Org.".to_string(),
+            org_id: "1".to_string(),
             dashboard_uid: "logs-main".to_string(),
             dashboard_title: "Logs Main".to_string(),
             folder_path: "Logs".to_string(),

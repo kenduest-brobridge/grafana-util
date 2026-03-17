@@ -113,6 +113,11 @@ where
         Some(org) => org.clone(),
         None => fetch_current_org_with_request(&mut scoped_request)?,
     };
+    let current_org_name = string_field(&current_org, "name", "org");
+    let current_org_id = current_org
+        .get("id")
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| DEFAULT_UNKNOWN_UID.to_string());
     let scope_output_dir = if args.all_orgs {
         build_all_orgs_output_dir(&args.export_dir, &current_org)
     } else {
@@ -226,6 +231,8 @@ where
                     Some("grafana-web-import-preserve-uid"),
                     Some(FOLDER_INVENTORY_FILENAME),
                     Some(DATASOURCE_INVENTORY_FILENAME),
+                    Some(&current_org_name),
+                    Some(&current_org_id),
                 ),
                 &metadata_path,
             )?;
@@ -257,6 +264,8 @@ where
                     Some("grafana-web-import-with-datasource-inputs"),
                     None,
                     None,
+                    Some(&current_org_name),
+                    Some(&current_org_id),
                 ),
                 &metadata_path,
             )?;
@@ -274,7 +283,15 @@ where
             &args.export_dir.join("index.json"),
         )?;
         write_json_document(
-            &build_export_metadata("root", index_items.len(), None, None, None),
+            &build_export_metadata(
+                "root",
+                index_items.len(),
+                None,
+                None,
+                None,
+                Some(&current_org_name),
+                Some(&current_org_id),
+            ),
             &args.export_dir.join(EXPORT_METADATA_FILENAME),
         )?;
     }

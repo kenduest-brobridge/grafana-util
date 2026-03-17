@@ -38,8 +38,8 @@ const DATASOURCE_EXPORT_FILENAME: &str = "datasources.json";
 const EXPORT_METADATA_FILENAME: &str = "export-metadata.json";
 const ROOT_INDEX_KIND: &str = "grafana-utils-datasource-export-index";
 const TOOL_SCHEMA_VERSION: i64 = 1;
-const DATASOURCE_ROOT_HELP_TEXT: &str = "Examples:\n\n  List datasources as JSON:\n    grafana-util datasource list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json\n\n  Dry-run a live datasource create:\n    grafana-util datasource add --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --name prometheus-main --type prometheus --datasource-url http://prometheus:9090 --dry-run --table\n\n  Dry-run a datasource import:\n    grafana-util datasource import --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --import-dir ./datasources --dry-run --json";
-const DATASOURCE_LIST_HELP_TEXT: &str = "Examples:\n\n  grafana-util datasource list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json\n  grafana-util datasource list --url http://localhost:3000 --output-format csv";
+const DATASOURCE_ROOT_HELP_TEXT: &str = "Examples:\n\n  List datasources from the current org as JSON:\n    grafana-util datasource list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json\n\n  List datasources across all visible orgs with Basic auth:\n    grafana-util datasource list --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --json\n\n  Dry-run a live datasource create:\n    grafana-util datasource add --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --name prometheus-main --type prometheus --datasource-url http://prometheus:9090 --dry-run --table\n\n  Dry-run a datasource import:\n    grafana-util datasource import --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --import-dir ./datasources --dry-run --json";
+const DATASOURCE_LIST_HELP_TEXT: &str = "Examples:\n\n  grafana-util datasource list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json\n  grafana-util datasource list --url http://localhost:3000 --basic-user admin --basic-password admin --org-id 2 --output-format csv\n  grafana-util datasource list --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --json";
 const DATASOURCE_EXPORT_HELP_TEXT: &str = "Examples:\n\n  grafana-util datasource export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./datasources --overwrite\n  grafana-util datasource export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --export-dir ./datasources";
 const DATASOURCE_IMPORT_HELP_TEXT: &str = "Examples:\n\n  grafana-util datasource import --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --import-dir ./datasources --dry-run --table\n  grafana-util datasource import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./datasources --use-export-org --only-org-id 2 --create-missing-orgs --dry-run --json";
 const DATASOURCE_DIFF_HELP_TEXT: &str = "Examples:\n\n  grafana-util datasource diff --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --diff-dir ./datasources";
@@ -78,6 +78,19 @@ pub enum DryRunOutputFormat {
 pub struct DatasourceListArgs {
     #[command(flatten)]
     pub common: CommonCliArgs,
+    #[arg(
+        long,
+        conflicts_with = "all_orgs",
+        help = "List datasources from one explicit Grafana org ID instead of the current org. Requires Basic auth."
+    )]
+    pub org_id: Option<i64>,
+    #[arg(
+        long,
+        default_value_t = false,
+        conflicts_with = "org_id",
+        help = "Enumerate all visible Grafana orgs and aggregate datasource inventory across them. Requires Basic auth."
+    )]
+    pub all_orgs: bool,
     #[arg(long, default_value_t = false, conflicts_with_all = ["csv", "json"], help = "Render datasource summaries as a table.", help_heading = "Output Options")]
     pub table: bool,
     #[arg(long, default_value_t = false, conflicts_with_all = ["table", "json"], help = "Render datasource summaries as CSV.", help_heading = "Output Options")]
@@ -336,7 +349,12 @@ pub struct DatasourceDeleteArgs {
         help_heading = "Target Options"
     )]
     pub name: Option<String>,
-    #[arg(long, default_value_t = false, help = "Acknowledge the live datasource delete. Required unless --dry-run is set.", help_heading = "Safety Options")]
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Acknowledge the live datasource delete. Required unless --dry-run is set.",
+        help_heading = "Safety Options"
+    )]
     pub yes: bool,
     #[arg(
         long,
@@ -741,8 +759,18 @@ fn build_datasource_export_metadata(count: usize) -> Value {
     ]))
 }
 
-fn build_data_source_record(datasource: &Map<String, Value>) -> Vec<String> {
-    vec![
+fn data_source_rows_include_org_scope(datasources: &[Map<String, Value>]) -> bool {
+    datasources.iter().any(|datasource| {
+        !string_field(datasource, "org", "").is_empty()
+            || !string_field(datasource, "orgId", "").is_empty()
+    })
+}
+
+fn build_data_source_record(
+    datasource: &Map<String, Value>,
+    include_org_scope: bool,
+) -> Vec<String> {
+    let mut row = vec![
         string_field(datasource, "uid", ""),
         string_field(datasource, "name", ""),
         string_field(datasource, "type", ""),
@@ -756,21 +784,34 @@ fn build_data_source_record(datasource: &Map<String, Value>) -> Vec<String> {
         } else {
             "false".to_string()
         },
-    ]
+    ];
+    if include_org_scope {
+        row.push(string_field(datasource, "org", ""));
+        row.push(string_field(datasource, "orgId", ""));
+    }
+    row
 }
 
 fn render_data_source_table(
     datasources: &[Map<String, Value>],
     include_header: bool,
 ) -> Vec<String> {
-    let headers = vec![
+    let include_org_scope = data_source_rows_include_org_scope(datasources);
+    let mut headers = vec![
         "UID".to_string(),
         "NAME".to_string(),
         "TYPE".to_string(),
         "URL".to_string(),
         "IS_DEFAULT".to_string(),
     ];
-    let rows: Vec<Vec<String>> = datasources.iter().map(build_data_source_record).collect();
+    if include_org_scope {
+        headers.push("ORG".to_string());
+        headers.push("ORG_ID".to_string());
+    }
+    let rows: Vec<Vec<String>> = datasources
+        .iter()
+        .map(|datasource| build_data_source_record(datasource, include_org_scope))
+        .collect();
     let mut widths: Vec<usize> = headers.iter().map(|header| header.len()).collect();
     for row in &rows {
         for (index, value) in row.iter().enumerate() {
@@ -795,9 +836,14 @@ fn render_data_source_table(
 }
 
 fn render_data_source_csv(datasources: &[Map<String, Value>]) -> Vec<String> {
-    let mut lines = vec!["uid,name,type,url,isDefault".to_string()];
+    let include_org_scope = data_source_rows_include_org_scope(datasources);
+    let mut lines = vec![if include_org_scope {
+        "uid,name,type,url,isDefault,org,orgId".to_string()
+    } else {
+        "uid,name,type,url,isDefault".to_string()
+    }];
     lines.extend(datasources.iter().map(|datasource| {
-        build_data_source_record(datasource)
+        build_data_source_record(datasource, include_org_scope)
             .into_iter()
             .map(|value| {
                 if value.contains(',') || value.contains('"') || value.contains('\n') {
@@ -813,21 +859,45 @@ fn render_data_source_csv(datasources: &[Map<String, Value>]) -> Vec<String> {
 }
 
 fn render_data_source_json(datasources: &[Map<String, Value>]) -> Value {
+    let include_org_scope = data_source_rows_include_org_scope(datasources);
     Value::Array(
         datasources
             .iter()
             .map(|datasource| {
-                let row = build_data_source_record(datasource);
-                Value::Object(Map::from_iter(vec![
+                let row = build_data_source_record(datasource, include_org_scope);
+                let mut object = Map::from_iter(vec![
                     ("uid".to_string(), Value::String(row[0].clone())),
                     ("name".to_string(), Value::String(row[1].clone())),
                     ("type".to_string(), Value::String(row[2].clone())),
                     ("url".to_string(), Value::String(row[3].clone())),
                     ("isDefault".to_string(), Value::String(row[4].clone())),
-                ]))
+                ]);
+                if include_org_scope {
+                    object.insert("org".to_string(), Value::String(row[5].clone()));
+                    object.insert("orgId".to_string(), Value::String(row[6].clone()));
+                }
+                Value::Object(object)
             })
             .collect(),
     )
+}
+
+fn build_list_records(client: &JsonHttpClient) -> Result<Vec<Map<String, Value>>> {
+    let org = fetch_current_org(client)?;
+    let org_name = string_field(&org, "name", "");
+    let org_id = org
+        .get("id")
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| DEFAULT_ORG_ID.to_string());
+    let datasources = list_datasources(client)?;
+    Ok(datasources
+        .into_iter()
+        .map(|mut datasource| {
+            datasource.insert("org".to_string(), Value::String(org_name.clone()));
+            datasource.insert("orgId".to_string(), Value::String(org_id.clone()));
+            datasource
+        })
+        .collect())
 }
 
 fn build_export_index(records: &[Map<String, Value>]) -> Value {
@@ -2621,8 +2691,43 @@ pub fn run_datasource_cli(command: DatasourceGroupCommand) -> Result<()> {
     let command = normalize_datasource_group_command(command);
     match command {
         DatasourceGroupCommand::List(args) => {
-            let client = build_http_client(&args.common)?;
-            let datasources = list_datasources(&client)?;
+            let datasources = if args.all_orgs {
+                let context = build_auth_context(&args.common)?;
+                if context.auth_mode != "basic" {
+                    return Err(message(
+                        "Datasource list with --all-orgs requires Basic auth (--basic-user / --basic-password).",
+                    ));
+                }
+                let admin_client = build_http_client(&args.common)?;
+                let mut rows = Vec::new();
+                for org in list_orgs(&admin_client)? {
+                    let org_id = org
+                        .get("id")
+                        .and_then(Value::as_i64)
+                        .ok_or_else(|| message("Grafana org list entry is missing numeric id."))?;
+                    let org_client = build_http_client_for_org(&args.common, org_id)?;
+                    rows.extend(build_list_records(&org_client)?);
+                }
+                rows.sort_by(|left, right| {
+                    let left_org_id = string_field(left, "orgId", "");
+                    let right_org_id = string_field(right, "orgId", "");
+                    left_org_id
+                        .cmp(&right_org_id)
+                        .then_with(|| {
+                            string_field(left, "name", "").cmp(&string_field(right, "name", ""))
+                        })
+                        .then_with(|| {
+                            string_field(left, "uid", "").cmp(&string_field(right, "uid", ""))
+                        })
+                });
+                rows
+            } else if args.org_id.is_some() {
+                let client = resolve_target_client(&args.common, args.org_id)?;
+                build_list_records(&client)?
+            } else {
+                let client = build_http_client(&args.common)?;
+                list_datasources(&client)?
+            };
             if args.json {
                 println!(
                     "{}",
@@ -2847,7 +2952,9 @@ pub fn run_datasource_cli(command: DatasourceGroupCommand) -> Result<()> {
                 return Ok(());
             }
             if !args.yes {
-                return Err(message("Datasource delete requires --yes unless --dry-run is set."));
+                return Err(message(
+                    "Datasource delete requires --yes unless --dry-run is set.",
+                ));
             }
             if matching.action != "would-delete" {
                 return Err(message(format!(

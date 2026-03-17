@@ -88,7 +88,7 @@ pub struct ExportArgs {
         long,
         default_value_t = false,
         conflicts_with = "org_id",
-        help = "Enumerate all visible Grafana orgs and export dashboards from each org into per-org subdirectories under the export root."
+        help = "Enumerate all visible Grafana orgs and export dashboards from each org into per-org subdirectories under the export root. Prefer Basic auth when you need cross-org export because API tokens are often scoped to one org."
     )]
     pub all_orgs: bool,
     #[arg(
@@ -145,14 +145,14 @@ pub struct ListArgs {
     #[arg(
         long,
         conflicts_with = "all_orgs",
-        help = "List dashboards from this Grafana org ID."
+        help = "List dashboards from one explicit Grafana org ID instead of the current org. Use this when the same Basic auth credentials can reach multiple orgs."
     )]
     pub org_id: Option<i64>,
     #[arg(
         long,
         default_value_t = false,
         conflicts_with = "org_id",
-        help = "Enumerate all visible Grafana orgs and aggregate dashboard list output across them."
+        help = "Enumerate all visible Grafana orgs and aggregate dashboard list output across them. Prefer Basic auth when you need cross-org listing because API tokens are often scoped to one org."
     )]
     pub all_orgs: bool,
     #[arg(
@@ -161,6 +161,13 @@ pub struct ListArgs {
         help = "For table or CSV output, fetch each dashboard payload and include resolved datasource names in the list output. JSON already includes datasource names and UIDs by default. This is slower because it makes extra API calls per dashboard."
     )]
     pub with_sources: bool,
+    #[arg(
+        long,
+        value_delimiter = ',',
+        value_parser = parse_dashboard_list_output_column,
+        help = "Render only these comma-separated list columns. Supported values: uid, name, folder, folder_uid, path, org, org_id, sources, source_uids. JSON-style aliases like folderUid, orgId, and sourceUids are also accepted. Selecting sources or source_uids also enables datasource resolution."
+    )]
+    pub output_columns: Vec<String>,
     #[arg(long, default_value_t = false, conflicts_with_all = ["csv", "json"], help = "Render dashboard summaries as a table.")]
     pub table: bool,
     #[arg(long, default_value_t = false, conflicts_with_all = ["table", "json"], help = "Render dashboard summaries as CSV.")]
@@ -660,7 +667,8 @@ pub struct InspectExportArgs {
     #[arg(
         long,
         value_delimiter = ',',
-        help = "For --report table, csv, or tree-table output, or the equivalent report-like --output-format values, limit the query report to the selected columns. Supported values: dashboard_uid, dashboard_title, folder_path, panel_id, panel_title, panel_type, ref_id, datasource, datasource_uid, datasource_type, datasource_family, query_field, metrics, measurements, buckets, query, file. JSON-style aliases like dashboardUid, datasourceType, and datasourceFamily are also accepted."
+        value_parser = parse_inspect_report_column,
+        help = "For --report table, csv, or tree-table output, or the equivalent report-like --output-format values, limit the query report to the selected columns. Supported values: org, org_id, dashboard_uid, dashboard_title, folder_path, panel_id, panel_title, panel_type, ref_id, datasource, datasource_uid, datasource_type, datasource_family, query_field, metrics, measurements, buckets, query, file. JSON-style aliases like orgId, dashboardUid, datasourceType, and datasourceFamily are also accepted."
     )]
     pub report_columns: Vec<String>,
     #[arg(
@@ -741,7 +749,8 @@ pub struct InspectLiveArgs {
     #[arg(
         long,
         value_delimiter = ',',
-        help = "For --report table, csv, or tree-table output, or the equivalent report-like --output-format values, limit the query report to the selected columns. Supported values: dashboard_uid, dashboard_title, folder_path, panel_id, panel_title, panel_type, ref_id, datasource, datasource_uid, datasource_type, datasource_family, query_field, metrics, measurements, buckets, query, file. JSON-style aliases like dashboardUid, datasourceType, and datasourceFamily are also accepted."
+        value_parser = parse_inspect_report_column,
+        help = "For --report table, csv, or tree-table output, or the equivalent report-like --output-format values, limit the query report to the selected columns. Supported values: org, org_id, dashboard_uid, dashboard_title, folder_path, panel_id, panel_title, panel_type, ref_id, datasource, datasource_uid, datasource_type, datasource_family, query_field, metrics, measurements, buckets, query, file. JSON-style aliases like orgId, dashboardUid, datasourceType, and datasourceFamily are also accepted."
     )]
     pub report_columns: Vec<String>,
     #[arg(
@@ -772,14 +781,16 @@ pub struct InspectLiveArgs {
 pub enum DashboardCommand {
     #[command(
         name = "list",
-        about = "List dashboard summaries without writing export files."
+        about = "List dashboard summaries without writing export files.",
+        after_help = "Examples:\n\n  List dashboards from the current org with Basic auth:\n    grafana-util list --url http://localhost:3000 --basic-user admin --basic-password admin\n\n  List dashboards across all visible orgs with Basic auth:\n    grafana-util list --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --json\n\n  List dashboards from one explicit org ID:\n    grafana-util list --url http://localhost:3000 --basic-user admin --basic-password admin --org-id 2 --csv\n\n  List dashboards from the current org with an API token:\n    grafana-util list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json"
     )]
     List(ListArgs),
     #[command(name = "list-data-sources", about = "List Grafana data sources.")]
     ListDataSources(ListDataSourcesArgs),
     #[command(
         name = "export",
-        about = "Export dashboards to raw/ and prompt/ JSON files."
+        about = "Export dashboards to raw/ and prompt/ JSON files.",
+        after_help = "Examples:\n\n  Export dashboards from the current org with Basic auth:\n    grafana-util export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./dashboards --overwrite\n\n  Export dashboards across all visible orgs with Basic auth:\n    grafana-util export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --export-dir ./dashboards --overwrite\n\n  Export dashboards from one explicit org ID:\n    grafana-util export --url http://localhost:3000 --basic-user admin --basic-password admin --org-id 2 --export-dir ./dashboards --overwrite\n\n  Export dashboards from the current org with an API token:\n    export GRAFANA_API_TOKEN='your-token'\n    grafana-util export --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --export-dir ./dashboards --overwrite"
     )]
     Export(ExportArgs),
     #[command(
@@ -815,7 +826,7 @@ pub enum DashboardCommand {
 #[derive(Debug, Clone, Parser)]
 #[command(
     about = "Export or import Grafana dashboards.",
-    after_help = "Examples:\n\n  Export dashboards from local Grafana with Basic auth:\n    grafana-util export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./dashboards --overwrite\n\n  Export dashboards with an API token:\n    export GRAFANA_API_TOKEN='your-token'\n    grafana-util export --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --export-dir ./dashboards --overwrite\n\n  Export into a flat directory layout instead of per-folder subdirectories:\n    grafana-util export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./dashboards --flat\n\n  Compare raw dashboard exports against local Grafana:\n    grafana-util diff --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/raw\n\n  Capture a browser-rendered dashboard screenshot:\n    grafana-util screenshot --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --dashboard-uid cpu-main --output ./cpu-main.png --from now-6h --to now"
+    after_help = "Examples:\n\n  Export dashboards from local Grafana with Basic auth:\n    grafana-util export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./dashboards --overwrite\n\n  Export dashboards across all visible orgs with Basic auth:\n    grafana-util export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --export-dir ./dashboards --overwrite\n\n  List dashboards across all visible orgs with Basic auth:\n    grafana-util list --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --json\n\n  Export dashboards with an API token from the current org:\n    export GRAFANA_API_TOKEN='your-token'\n    grafana-util export --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --export-dir ./dashboards --overwrite\n\n  Compare raw dashboard exports against local Grafana:\n    grafana-util diff --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/raw\n\n  Capture a browser-rendered dashboard screenshot:\n    grafana-util screenshot --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --dashboard-uid cpu-main --output ./cpu-main.png --from now-6h --to now"
 )]
 pub struct DashboardCliArgs {
     #[command(subcommand)]
@@ -857,6 +868,50 @@ fn parse_dashboard_import_output_column(value: &str) -> std::result::Result<Stri
         "file" => Ok("file".to_string()),
         _ => Err(format!(
             "Unsupported --output-columns value '{value}'. Supported values: uid, destination, action, folder_path, source_folder_path, destination_folder_path, reason, file."
+        )),
+    }
+}
+
+fn parse_dashboard_list_output_column(value: &str) -> std::result::Result<String, String> {
+    match value {
+        "uid" => Ok("uid".to_string()),
+        "name" => Ok("name".to_string()),
+        "folder" => Ok("folder".to_string()),
+        "folder_uid" | "folderUid" => Ok("folder_uid".to_string()),
+        "path" => Ok("path".to_string()),
+        "org" => Ok("org".to_string()),
+        "org_id" | "orgId" => Ok("org_id".to_string()),
+        "sources" => Ok("sources".to_string()),
+        "source_uids" | "sourceUids" => Ok("source_uids".to_string()),
+        _ => Err(format!(
+            "Unsupported --output-columns value '{value}'. Supported values: uid, name, folder, folder_uid, path, org, org_id, sources, source_uids."
+        )),
+    }
+}
+
+fn parse_inspect_report_column(value: &str) -> std::result::Result<String, String> {
+    match value {
+        "org" => Ok("org".to_string()),
+        "org_id" | "orgId" => Ok("org_id".to_string()),
+        "dashboard_uid" | "dashboardUid" => Ok("dashboard_uid".to_string()),
+        "dashboard_title" | "dashboardTitle" => Ok("dashboard_title".to_string()),
+        "folder_path" | "folderPath" => Ok("folder_path".to_string()),
+        "panel_id" | "panelId" => Ok("panel_id".to_string()),
+        "panel_title" | "panelTitle" => Ok("panel_title".to_string()),
+        "panel_type" | "panelType" => Ok("panel_type".to_string()),
+        "ref_id" | "refId" => Ok("ref_id".to_string()),
+        "datasource" => Ok("datasource".to_string()),
+        "datasource_uid" | "datasourceUid" => Ok("datasource_uid".to_string()),
+        "datasource_type" | "datasourceType" => Ok("datasource_type".to_string()),
+        "datasource_family" | "datasourceFamily" => Ok("datasource_family".to_string()),
+        "query_field" | "queryField" => Ok("query_field".to_string()),
+        "metrics" => Ok("metrics".to_string()),
+        "measurements" => Ok("measurements".to_string()),
+        "buckets" => Ok("buckets".to_string()),
+        "query" => Ok("query".to_string()),
+        "file" => Ok("file".to_string()),
+        _ => Err(format!(
+            "Unsupported --report-columns value '{value}'. Supported values: org, org_id, dashboard_uid, dashboard_title, folder_path, panel_id, panel_title, panel_type, ref_id, datasource, datasource_uid, datasource_type, datasource_family, query_field, metrics, measurements, buckets, query, file."
         )),
     }
 }

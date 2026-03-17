@@ -10,6 +10,7 @@ use std::process;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::common::{message, object_field, string_field, value_as_object, Result};
+use crate::dashboard_inspection_dependency_contract::build_offline_dependency_contract;
 
 use super::dashboard_inspect_analyzer_flux;
 use super::dashboard_inspect_analyzer_loki;
@@ -22,7 +23,6 @@ use super::dashboard_inspect_governance::{
 use super::dashboard_inspect_render::{
     render_csv, render_grouped_query_report, render_grouped_query_table_report, render_simple_table,
 };
-use super::dashboard_inspection_dependency_contract::build_offline_dependency_contract;
 use super::*;
 
 pub(crate) const DATASOURCE_FAMILY_PROMETHEUS: &str = "prometheus";
@@ -702,6 +702,8 @@ pub(crate) fn extract_sql_query_shape_hints(query_text: &str) -> Vec<String> {
 
 fn collect_query_report_rows(
     panels: &[Value],
+    export_org: &str,
+    export_org_id: &str,
     dashboard_uid: &str,
     dashboard_title: &str,
     folder_path: &str,
@@ -756,6 +758,8 @@ fn collect_query_report_rows(
                     query_text: &query_text,
                 });
                 rows.push(ExportInspectionQueryRow {
+                    org: export_org.to_string(),
+                    org_id: export_org_id.to_string(),
                     dashboard_uid: dashboard_uid.to_string(),
                     dashboard_title: dashboard_title.to_string(),
                     folder_path: folder_path.to_string(),
@@ -779,6 +783,8 @@ fn collect_query_report_rows(
         if let Some(children) = panel_object.get("panels").and_then(Value::as_array) {
             collect_query_report_rows(
                 children,
+                export_org,
+                export_org_id,
                 dashboard_uid,
                 dashboard_title,
                 folder_path,
@@ -803,6 +809,8 @@ pub(crate) fn build_export_inspection_query_report(
         .map(|item| (item.uid.clone(), item))
         .collect::<std::collections::BTreeMap<String, FolderInventoryItem>>();
     let mut rows = Vec::new();
+    let export_org = summary.export_org.clone().unwrap_or_default();
+    let export_org_id = summary.export_org_id.clone().unwrap_or_default();
 
     for dashboard_file in &dashboard_files {
         let document = load_json_file(dashboard_file)?;
@@ -820,6 +828,8 @@ pub(crate) fn build_export_inspection_query_report(
         if let Some(panels) = dashboard.get("panels").and_then(Value::as_array) {
             collect_query_report_rows(
                 panels,
+                &export_org,
+                &export_org_id,
                 &dashboard_uid,
                 &dashboard_title,
                 &folder_path,
@@ -954,6 +964,8 @@ pub(crate) fn build_export_inspection_summary(
     import_dir: &Path,
 ) -> Result<ExportInspectionSummary> {
     let metadata = load_export_metadata(import_dir, Some(RAW_EXPORT_SUBDIR))?;
+    let export_org = metadata.as_ref().and_then(|item| item.org.clone());
+    let export_org_id = metadata.as_ref().and_then(|item| item.org_id.clone());
     let dashboard_files = discover_dashboard_files(import_dir)?;
     let folder_inventory = load_folder_inventory(import_dir, metadata.as_ref())?;
     let datasource_inventory = load_datasource_inventory(import_dir, metadata.as_ref())?;
@@ -1093,6 +1105,8 @@ pub(crate) fn build_export_inspection_summary(
 
     Ok(ExportInspectionSummary {
         import_dir: import_dir.display().to_string(),
+        export_org,
+        export_org_id,
         dashboard_count: dashboard_files.len(),
         folder_count: folder_paths.len(),
         panel_count: total_panels,
@@ -1106,6 +1120,40 @@ pub(crate) fn build_export_inspection_summary(
         orphaned_datasources: orphaned_datasource_summary,
         mixed_dashboards,
     })
+}
+
+pub(crate) fn build_export_inspection_summary_rows(
+    summary: &ExportInspectionSummary,
+) -> Vec<Vec<String>> {
+    let mut rows = Vec::new();
+    if let Some(export_org) = &summary.export_org {
+        rows.push(vec!["export_org".to_string(), export_org.clone()]);
+    }
+    if let Some(export_org_id) = &summary.export_org_id {
+        rows.push(vec!["export_org_id".to_string(), export_org_id.clone()]);
+    }
+    rows.extend([
+        vec![
+            "dashboard_count".to_string(),
+            summary.dashboard_count.to_string(),
+        ],
+        vec!["folder_count".to_string(), summary.folder_count.to_string()],
+        vec!["panel_count".to_string(), summary.panel_count.to_string()],
+        vec!["query_count".to_string(), summary.query_count.to_string()],
+        vec![
+            "datasource_inventory_count".to_string(),
+            summary.datasource_inventory_count.to_string(),
+        ],
+        vec![
+            "orphaned_datasource_count".to_string(),
+            summary.orphaned_datasource_count.to_string(),
+        ],
+        vec![
+            "mixed_datasource_dashboard_count".to_string(),
+            summary.mixed_dashboard_count.to_string(),
+        ],
+    ]);
+    rows
 }
 
 pub(crate) fn analyze_export_dir(args: &InspectExportArgs) -> Result<usize> {
@@ -1211,31 +1259,17 @@ pub(crate) fn analyze_export_dir(args: &InspectExportArgs) -> Result<usize> {
     if effective_inspect_table(args) {
         println!();
         println!("# Summary");
-        let summary_rows = vec![
-            vec![
-                "dashboard_count".to_string(),
-                summary.dashboard_count.to_string(),
-            ],
-            vec!["folder_count".to_string(), summary.folder_count.to_string()],
-            vec!["panel_count".to_string(), summary.panel_count.to_string()],
-            vec!["query_count".to_string(), summary.query_count.to_string()],
-            vec![
-                "datasource_inventory_count".to_string(),
-                summary.datasource_inventory_count.to_string(),
-            ],
-            vec![
-                "orphaned_datasource_count".to_string(),
-                summary.orphaned_datasource_count.to_string(),
-            ],
-            vec![
-                "mixed_datasource_dashboard_count".to_string(),
-                summary.mixed_dashboard_count.to_string(),
-            ],
-        ];
+        let summary_rows = build_export_inspection_summary_rows(&summary);
         for line in render_simple_table(&["METRIC", "VALUE"], &summary_rows, !args.no_header) {
             println!("{line}");
         }
     } else {
+        if let Some(export_org) = &summary.export_org {
+            println!("Export org: {}", export_org);
+        }
+        if let Some(export_org_id) = &summary.export_org_id {
+            println!("Export orgId: {}", export_org_id);
+        }
         println!("Dashboards: {}", summary.dashboard_count);
         println!("Folders: {}", summary.folder_count);
         println!("Panels: {}", summary.panel_count);

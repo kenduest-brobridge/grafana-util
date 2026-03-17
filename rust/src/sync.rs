@@ -57,7 +57,11 @@ pub struct SyncCliArgs {
 
 #[derive(Debug, Clone, Args)]
 pub struct SyncSummaryArgs {
-    #[arg(long, help = "JSON file containing the desired sync resource list.", help_heading = "Input Options")]
+    #[arg(
+        long,
+        help = "JSON file containing the desired sync resource list.",
+        help_heading = "Input Options"
+    )]
     pub desired_file: PathBuf,
     #[arg(
         long,
@@ -71,9 +75,17 @@ pub struct SyncSummaryArgs {
 
 #[derive(Debug, Clone, Args)]
 pub struct SyncPlanArgs {
-    #[arg(long, help = "JSON file containing the desired sync resource list.", help_heading = "Input Options")]
+    #[arg(
+        long,
+        help = "JSON file containing the desired sync resource list.",
+        help_heading = "Input Options"
+    )]
     pub desired_file: PathBuf,
-    #[arg(long, help = "JSON file containing the live sync resource list.", help_heading = "Input Options")]
+    #[arg(
+        long,
+        help = "JSON file containing the live sync resource list.",
+        help_heading = "Input Options"
+    )]
     pub live_file: Option<PathBuf>,
     #[arg(
         long,
@@ -121,7 +133,11 @@ pub struct SyncPlanArgs {
 
 #[derive(Debug, Clone, Args)]
 pub struct SyncReviewArgs {
-    #[arg(long, help = "JSON file containing the staged sync plan document.", help_heading = "Input Options")]
+    #[arg(
+        long,
+        help = "JSON file containing the staged sync plan document.",
+        help_heading = "Input Options"
+    )]
     pub plan_file: PathBuf,
     #[arg(
         long,
@@ -154,7 +170,11 @@ pub struct SyncReviewArgs {
 
 #[derive(Debug, Clone, Args)]
 pub struct SyncApplyArgs {
-    #[arg(long, help = "JSON file containing the reviewed sync plan document.", help_heading = "Input Options")]
+    #[arg(
+        long,
+        help = "JSON file containing the reviewed sync plan document.",
+        help_heading = "Input Options"
+    )]
     pub plan_file: PathBuf,
     #[arg(
         long,
@@ -221,7 +241,11 @@ pub struct SyncApplyArgs {
 
 #[derive(Debug, Clone, Args)]
 pub struct SyncPreflightArgs {
-    #[arg(long, help = "JSON file containing the desired sync resource list.", help_heading = "Input Options")]
+    #[arg(
+        long,
+        help = "JSON file containing the desired sync resource list.",
+        help_heading = "Input Options"
+    )]
     pub desired_file: PathBuf,
     #[arg(
         long,
@@ -254,7 +278,11 @@ pub struct SyncPreflightArgs {
 
 #[derive(Debug, Clone, Args)]
 pub struct SyncAssessAlertsArgs {
-    #[arg(long, help = "JSON file containing the alert sync resource list.", help_heading = "Input Options")]
+    #[arg(
+        long,
+        help = "JSON file containing the alert sync resource list.",
+        help_heading = "Input Options"
+    )]
     pub alerts_file: PathBuf,
     #[arg(
         long,

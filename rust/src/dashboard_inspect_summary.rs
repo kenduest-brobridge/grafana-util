@@ -46,6 +46,8 @@ pub(crate) struct MixedDashboardSummary {
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub(crate) struct ExportInspectionSummary {
     pub(crate) import_dir: String,
+    pub(crate) export_org: Option<String>,
+    pub(crate) export_org_id: Option<String>,
     pub(crate) dashboard_count: usize,
     pub(crate) folder_count: usize,
     pub(crate) panel_count: usize,
@@ -62,6 +64,10 @@ pub(crate) struct ExportInspectionSummary {
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub(crate) struct ExportInspectionSummaryJsonSummary {
+    #[serde(rename = "exportOrg", skip_serializing_if = "Option::is_none")]
+    pub(crate) export_org: Option<String>,
+    #[serde(rename = "exportOrgId", skip_serializing_if = "Option::is_none")]
+    pub(crate) export_org_id: Option<String>,
     #[serde(rename = "dashboardCount")]
     pub(crate) dashboard_count: usize,
     #[serde(rename = "folderCount")]
@@ -124,6 +130,8 @@ pub(crate) fn build_export_inspection_summary_document(
 ) -> ExportInspectionSummaryDocument {
     ExportInspectionSummaryDocument {
         summary: ExportInspectionSummaryJsonSummary {
+            export_org: summary.export_org.clone(),
+            export_org_id: summary.export_org_id.clone(),
             dashboard_count: summary.dashboard_count,
             folder_count: summary.folder_count,
             panel_count: summary.panel_count,

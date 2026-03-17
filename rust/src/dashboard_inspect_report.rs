@@ -20,6 +20,9 @@ pub(crate) struct QueryReportSummary {
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub(crate) struct ExportInspectionQueryRow {
+    pub(crate) org: String,
+    #[serde(rename = "orgId")]
+    pub(crate) org_id: String,
     #[serde(rename = "dashboardUid")]
     pub(crate) dashboard_uid: String,
     #[serde(rename = "dashboardTitle")]
@@ -86,6 +89,8 @@ pub(crate) struct GroupedQueryPanel {
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GroupedQueryDashboard {
+    pub(crate) org: String,
+    pub(crate) org_id: String,
     pub(crate) dashboard_uid: String,
     pub(crate) dashboard_title: String,
     pub(crate) folder_path: String,
@@ -103,6 +108,8 @@ pub(crate) struct NormalizedQueryReport {
 }
 
 pub(crate) const DEFAULT_REPORT_COLUMN_IDS: &[&str] = &[
+    "org",
+    "org_id",
     "dashboard_uid",
     "dashboard_title",
     "folder_path",
@@ -122,6 +129,8 @@ pub(crate) const DEFAULT_REPORT_COLUMN_IDS: &[&str] = &[
 ];
 
 pub(crate) const SUPPORTED_REPORT_COLUMN_IDS: &[&str] = &[
+    "org",
+    "org_id",
     "dashboard_uid",
     "dashboard_title",
     "folder_path",
@@ -143,6 +152,7 @@ pub(crate) const SUPPORTED_REPORT_COLUMN_IDS: &[&str] = &[
 
 fn normalize_report_column_id(value: &str) -> &str {
     match value {
+        "orgId" => "org_id",
         "dashboardUid" => "dashboard_uid",
         "dashboardTitle" => "dashboard_title",
         "folderPath" => "folder_path",
@@ -247,6 +257,8 @@ pub(crate) fn resolve_report_column_ids(selected: &[String]) -> Result<Vec<Strin
 
 pub(crate) fn report_column_header(column_id: &str) -> &'static str {
     match column_id {
+        "org" => "ORG",
+        "org_id" => "ORG_ID",
         "dashboard_uid" => "DASHBOARD_UID",
         "dashboard_title" => "DASHBOARD_TITLE",
         "folder_path" => "FOLDER_PATH",
@@ -273,6 +285,8 @@ pub(crate) fn render_query_report_column(
     column_id: &str,
 ) -> String {
     match column_id {
+        "org" => row.org.clone(),
+        "org_id" => row.org_id.clone(),
         "dashboard_uid" => row.dashboard_uid.clone(),
         "dashboard_title" => row.dashboard_title.clone(),
         "folder_path" => row.folder_path.clone(),
@@ -314,6 +328,8 @@ pub(crate) fn normalize_query_report(
             .position(|item: &GroupedQueryDashboard| item.dashboard_uid == row.dashboard_uid)
             .unwrap_or_else(|| {
                 dashboards.push(GroupedQueryDashboard {
+                    org: row.org.clone(),
+                    org_id: row.org_id.clone(),
                     dashboard_uid: row.dashboard_uid.clone(),
                     dashboard_title: row.dashboard_title.clone(),
                     folder_path: row.folder_path.clone(),
@@ -326,6 +342,12 @@ pub(crate) fn normalize_query_report(
             });
         if !row.file_path.is_empty() && dashboards[dashboard_index].file_path.is_empty() {
             dashboards[dashboard_index].file_path = row.file_path.clone();
+        }
+        if dashboards[dashboard_index].org.is_empty() {
+            dashboards[dashboard_index].org = row.org.clone();
+        }
+        if dashboards[dashboard_index].org_id.is_empty() {
+            dashboards[dashboard_index].org_id = row.org_id.clone();
         }
         if !row.datasource.is_empty()
             && !dashboards[dashboard_index]

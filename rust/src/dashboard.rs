@@ -47,8 +47,6 @@ mod dashboard_inspect_render;
 mod dashboard_inspect_report;
 #[path = "dashboard_inspect_summary.rs"]
 mod dashboard_inspect_summary;
-#[path = "dashboard_inspection_dependency_contract.rs"]
-mod dashboard_inspection_dependency_contract;
 #[path = "dashboard_list.rs"]
 mod dashboard_list;
 #[path = "dashboard_live.rs"]
@@ -57,8 +55,6 @@ mod dashboard_live;
 mod dashboard_models;
 #[path = "dashboard_prompt.rs"]
 mod dashboard_prompt;
-#[path = "dashboard_reference_models.rs"]
-mod dashboard_reference_models;
 #[path = "dashboard_screenshot.rs"]
 mod dashboard_screenshot;
 #[path = "dashboard_vars.rs"]
@@ -114,7 +110,8 @@ pub(crate) use dashboard_inspect::inspect_live_dashboards_with_request;
 #[cfg(test)]
 pub(crate) use dashboard_inspect::{
     apply_query_report_filters, build_export_inspection_query_report,
-    build_export_inspection_summary, validate_inspect_export_report_args,
+    build_export_inspection_summary, build_export_inspection_summary_rows,
+    validate_inspect_export_report_args,
 };
 #[cfg(test)]
 pub(crate) use dashboard_inspect_governance::{

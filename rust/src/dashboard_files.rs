@@ -64,6 +64,8 @@ pub(crate) fn build_export_metadata(
     format_name: Option<&str>,
     folders_file: Option<&str>,
     datasources_file: Option<&str>,
+    org_name: Option<&str>,
+    org_id: Option<&str>,
 ) -> ExportMetadata {
     ExportMetadata {
         schema_version: TOOL_SCHEMA_VERSION,
@@ -74,6 +76,8 @@ pub(crate) fn build_export_metadata(
         format: format_name.map(str::to_owned),
         folders_file: folders_file.map(str::to_owned),
         datasources_file: datasources_file.map(str::to_owned),
+        org: org_name.map(str::to_owned),
+        org_id: org_id.map(str::to_owned),
     }
 }
 

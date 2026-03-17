@@ -113,8 +113,17 @@ pub(crate) fn render_grouped_query_report(report: &ExportInspectionQueryReport) 
         } else {
             dashboard.datasource_families.join(",")
         };
+        let org_segment = if dashboard.org.is_empty() && dashboard.org_id.is_empty() {
+            String::new()
+        } else if dashboard.org.is_empty() {
+            format!(", orgId={}", dashboard.org_id)
+        } else if dashboard.org_id.is_empty() {
+            format!(", org={}", dashboard.org)
+        } else {
+            format!(", org={}, orgId={}", dashboard.org, dashboard.org_id)
+        };
         lines.push(format!(
-            "[{}] Dashboard: {} (uid={}, folder={}, panels={}, queries={}, datasources={}, families={})",
+            "[{}] Dashboard: {} (uid={}, folder={}, panels={}, queries={}, datasources={}, families={}{})",
             index + 1,
             dashboard.dashboard_title,
             dashboard.dashboard_uid,
@@ -122,7 +131,8 @@ pub(crate) fn render_grouped_query_report(report: &ExportInspectionQueryReport) 
             panel_count,
             query_count,
             dashboard_datasources,
-            dashboard_families
+            dashboard_families,
+            org_segment
         ));
         if !dashboard.file_path.is_empty() {
             lines.push(format!("  File: {}", dashboard.file_path));
@@ -232,8 +242,17 @@ pub(crate) fn render_grouped_query_table_report(
         } else {
             dashboard.datasource_families.join(",")
         };
+        let org_segment = if dashboard.org.is_empty() && dashboard.org_id.is_empty() {
+            String::new()
+        } else if dashboard.org.is_empty() {
+            format!(", orgId={}", dashboard.org_id)
+        } else if dashboard.org_id.is_empty() {
+            format!(", org={}", dashboard.org)
+        } else {
+            format!(", org={}, orgId={}", dashboard.org, dashboard.org_id)
+        };
         lines.push(format!(
-            "[{}] Dashboard: {} (uid={}, folder={}, panels={}, queries={}, datasources={}, families={})",
+            "[{}] Dashboard: {} (uid={}, folder={}, panels={}, queries={}, datasources={}, families={}{})",
             index + 1,
             dashboard.dashboard_title,
             dashboard.dashboard_uid,
@@ -241,7 +260,8 @@ pub(crate) fn render_grouped_query_table_report(
             panel_count,
             query_count,
             dashboard_datasources,
-            dashboard_families
+            dashboard_families,
+            org_segment
         ));
         if !dashboard.file_path.is_empty() {
             lines.push(format!("File: {}", dashboard.file_path));

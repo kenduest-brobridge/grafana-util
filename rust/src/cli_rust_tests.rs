@@ -18,6 +18,10 @@ fn render_unified_help() -> String {
 #[test]
 fn unified_help_mentions_screenshot_and_inspect_vars_examples() {
     let help = render_unified_help();
+    assert!(help.contains("Export dashboards with Basic auth"));
+    assert!(help.contains("Export dashboards across all visible orgs"));
+    assert!(help.contains("--basic-user admin --basic-password admin"));
+    assert!(help.contains("--all-orgs"));
     assert!(help.contains("dashboard screenshot"));
     assert!(help.contains("dashboard inspect-vars"));
     assert!(help.contains("--dashboard-url"));
@@ -323,7 +327,10 @@ fn parse_cli_supports_sync_plan_group_command() {
         UnifiedCommand::Sync { command } => match command {
             SyncGroupCommand::Plan(inner) => {
                 assert_eq!(inner.desired_file, Path::new("./desired.json"));
-                assert_eq!(inner.live_file, Some(Path::new("./live.json").to_path_buf()));
+                assert_eq!(
+                    inner.live_file,
+                    Some(Path::new("./live.json").to_path_buf())
+                );
                 assert_eq!(inner.trace_id, Some("trace-explicit".to_string()));
                 assert_eq!(inner.output, SyncOutputFormat::Json);
             }
