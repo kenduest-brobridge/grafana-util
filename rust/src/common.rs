@@ -228,9 +228,9 @@ pub fn object_field<'a>(
 
 /// string field.
 pub fn string_field(object: &Map<String, Value>, key: &str, default: &str) -> String {
-// Call graph (hierarchy): this function is used in related modules.
-// Upstream callers: 無
-// Downstream callees: 無
+    // Call graph (hierarchy): this function is used in related modules.
+    // Upstream callers: 無
+    // Downstream callees: 無
 
     object
         .get(key)

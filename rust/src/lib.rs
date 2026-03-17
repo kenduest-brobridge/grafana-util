@@ -31,17 +31,15 @@ pub mod http;
 /// Module definition for sync.
 pub mod sync;
 /// Module definition for sync_bundle_alert_contracts.
-pub mod sync_bundle_alert_contracts;
+pub use sync::bundle_alert_contracts as sync_bundle_alert_contracts;
 /// Module definition for sync_bundle_preflight.
-pub mod sync_bundle_preflight;
+pub use sync::bundle_preflight as sync_bundle_preflight;
 /// Module definition for sync_preflight.
-pub mod sync_preflight;
+pub use sync::preflight as sync_preflight;
 /// Module definition for sync_workbench.
-pub mod sync_workbench;
+pub use sync::workbench as sync_workbench;
 
 #[cfg(test)]
 mod bundle_preflight_rust_tests;
 #[cfg(test)]
 mod datasource_provider_rust_tests;
-#[cfg(test)]
-mod sync_rust_tests;

@@ -80,9 +80,9 @@ fn normalize_managed_fields(value: Option<&Value>) -> Result<Vec<String>> {
 
 /// assess alert sync specs.
 pub fn assess_alert_sync_specs(alert_specs: &[Value]) -> Result<Value> {
-// Call graph (hierarchy): this function is used in related modules.
-// Upstream callers: bundle_preflight.rs:build_bundle_preflight_document, bundle_preflight_rust_tests.rs:assess_alert_sync_specs_reports_plan_only_and_blocked_states, sync.rs:run_sync_cli
-// Downstream callees: alert_sync.rs:normalize_managed_fields, alert_sync.rs:normalize_text, alert_sync.rs:require_object, common.rs:message
+    // Call graph (hierarchy): this function is used in related modules.
+    // Upstream callers: bundle_preflight.rs:build_bundle_preflight_document, bundle_preflight_rust_tests.rs:assess_alert_sync_specs_reports_plan_only_and_blocked_states, sync.rs:run_sync_cli
+    // Downstream callees: alert_sync.rs:normalize_managed_fields, alert_sync.rs:normalize_text, alert_sync.rs:require_object, common.rs:message
 
     let mut assessments = Vec::new();
     for raw_spec in alert_specs {

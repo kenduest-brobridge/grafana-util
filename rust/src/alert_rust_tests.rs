@@ -197,7 +197,6 @@ fn load_panel_id_map_parses_nested_dashboard_panel_mapping() {
 
 #[test]
 fn parse_cli_supports_diff_dir_and_dry_run() {
-
     let args: AlertCliArgs = parse_cli_from([
         "grafana-alert-utils",
         "diff",
@@ -214,7 +213,6 @@ fn parse_cli_supports_diff_dir_and_dry_run() {
 
 #[test]
 fn parse_cli_supports_preferred_auth_aliases() {
-
     let args: AlertCliArgs = parse_cli_from([
         "grafana-alert-utils",
         "--token",
@@ -232,7 +230,6 @@ fn parse_cli_supports_preferred_auth_aliases() {
 
 #[test]
 fn parse_cli_supports_prompt_password() {
-
     let args: AlertCliArgs = parse_cli_from([
         "grafana-alert-utils",
         "--basic-user",
@@ -246,7 +243,6 @@ fn parse_cli_supports_prompt_password() {
 
 #[test]
 fn parse_cli_supports_prompt_token() {
-
     let args: AlertCliArgs = parse_cli_from(["grafana-alert-utils", "--prompt-token"]);
     assert_eq!(args.api_token.as_deref(), None);
     assert!(args.prompt_token);
@@ -267,7 +263,6 @@ fn help_explains_flat_layout() {
 
 #[test]
 fn parse_cli_supports_import_subcommand() {
-
     let args: AlertCliArgs = parse_cli_from([
         "grafana-alert-utils",
         "import",
@@ -284,7 +279,6 @@ fn parse_cli_supports_import_subcommand() {
 
 #[test]
 fn parse_cli_supports_list_rules_subcommand() {
-
     let args: AlertCliArgs = parse_cli_from(["grafana-util alert", "list-rules", "--json"]);
     assert_eq!(args.list_kind, Some(super::AlertListKind::Rules));
     assert!(args.json);
@@ -295,7 +289,6 @@ fn parse_cli_supports_list_rules_subcommand() {
 
 #[test]
 fn parse_cli_supports_list_rules_output_format_csv() {
-
     let args: AlertCliArgs =
         parse_cli_from(["grafana-util alert", "list-rules", "--output-format", "csv"]);
     assert_eq!(args.list_kind, Some(super::AlertListKind::Rules));
@@ -306,9 +299,13 @@ fn parse_cli_supports_list_rules_output_format_csv() {
 
 #[test]
 fn parse_cli_supports_list_rules_org_routing_flags() {
-
-    let org_args: AlertCliArgs =
-        parse_cli_from(["grafana-util alert", "list-rules", "--org-id", "7", "--json"]);
+    let org_args: AlertCliArgs = parse_cli_from([
+        "grafana-util alert",
+        "list-rules",
+        "--org-id",
+        "7",
+        "--json",
+    ]);
     assert_eq!(org_args.org_id, Some(7));
     assert!(!org_args.all_orgs);
 
@@ -320,7 +317,6 @@ fn parse_cli_supports_list_rules_org_routing_flags() {
 
 #[test]
 fn parse_cli_rejects_list_rules_org_id_with_all_orgs() {
-
     let error = root_command()
         .try_get_matches_from([
             "grafana-util alert",

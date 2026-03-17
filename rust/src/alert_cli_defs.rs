@@ -392,18 +392,18 @@ where
     I: IntoIterator<Item = T>,
     T: Into<std::ffi::OsString> + Clone,
 {
-// Call graph (hierarchy): this function is used in related modules.
-// Upstream callers: 無
-// Downstream callees: alert_cli_defs.rs:normalize_alert_namespace_args
+    // Call graph (hierarchy): this function is used in related modules.
+    // Upstream callers: 無
+    // Downstream callees: alert_cli_defs.rs:normalize_alert_namespace_args
 
     normalize_alert_namespace_args(AlertCliRoot::parse_from(iter).args)
 }
 
 /// root command.
 pub fn root_command() -> Command {
-// Call graph (hierarchy): this function is used in related modules.
-// Upstream callers: 無
-// Downstream callees: 無
+    // Call graph (hierarchy): this function is used in related modules.
+    // Upstream callers: 無
+    // Downstream callees: 無
 
     AlertCliRoot::command()
 }
@@ -527,9 +527,9 @@ pub fn normalize_alert_namespace_args(args: AlertNamespaceArgs) -> AlertCliArgs 
 /// Small adapter for callers that already have a concrete group command and need
 /// the full normalized AlertCliArgs form.
 pub fn normalize_alert_group_command(command: AlertGroupCommand) -> AlertCliArgs {
-// Call graph (hierarchy): this function is used in related modules.
-// Upstream callers: 無
-// Downstream callees: alert_cli_defs.rs:empty_legacy_args, alert_cli_defs.rs:normalize_alert_namespace_args
+    // Call graph (hierarchy): this function is used in related modules.
+    // Upstream callers: 無
+    // Downstream callees: alert_cli_defs.rs:empty_legacy_args, alert_cli_defs.rs:normalize_alert_namespace_args
 
     normalize_alert_namespace_args(AlertNamespaceArgs {
         command: Some(command),
@@ -542,9 +542,9 @@ pub fn normalize_alert_group_command(command: AlertGroupCommand) -> AlertCliArgs
 /// Args: see function signature.
 /// Returns: see implementation.
 pub fn build_auth_context(args: &AlertCliArgs) -> Result<AlertAuthContext> {
-// Call graph (hierarchy): this function is used in related modules.
-// Upstream callers: 無
-// Downstream callees: common.rs:resolve_auth_headers
+    // Call graph (hierarchy): this function is used in related modules.
+    // Upstream callers: 無
+    // Downstream callees: common.rs:resolve_auth_headers
 
     Ok(AlertAuthContext {
         url: args.url.clone(),

@@ -48,9 +48,9 @@ pub fn parse_provider_reference(
     value: &Value,
     field_name: &str,
 ) -> Result<SecretProviderReference> {
-// Call graph (hierarchy): this function is used in related modules.
-// Upstream callers: datasource_provider.rs:collect_provider_references
-// Downstream callees: common.rs:message
+    // Call graph (hierarchy): this function is used in related modules.
+    // Upstream callers: datasource_provider.rs:collect_provider_references
+    // Downstream callees: common.rs:message
 
     let field_name = field_name.trim().to_string();
     if field_name.is_empty() {
@@ -117,9 +117,9 @@ pub fn collect_provider_references(
 pub fn build_provider_plan(
     datasource_spec: &Map<String, Value>,
 ) -> Result<DatasourceSecretProviderPlan> {
-// Call graph (hierarchy): this function is used in related modules.
-// Upstream callers: bundle_preflight.rs:build_provider_assessment, datasource_provider_rust_tests.rs:build_provider_plan_rejects_missing_datasource_name, datasource_provider_rust_tests.rs:build_provider_plan_shapes_review_summary, datasource_provider_rust_tests.rs:iter_provider_names_deduplicates_names, sync_bundle_preflight.rs:build_provider_assessment
-// Downstream callees: common.rs:message, datasource_provider.rs:collect_provider_references, datasource_provider.rs:normalize_text
+    // Call graph (hierarchy): this function is used in related modules.
+    // Upstream callers: bundle_preflight.rs:build_provider_assessment, datasource_provider_rust_tests.rs:build_provider_plan_rejects_missing_datasource_name, datasource_provider_rust_tests.rs:build_provider_plan_shapes_review_summary, datasource_provider_rust_tests.rs:iter_provider_names_deduplicates_names, sync_bundle_preflight.rs:build_provider_assessment
+    // Downstream callees: common.rs:message, datasource_provider.rs:collect_provider_references, datasource_provider.rs:normalize_text
 
     let datasource_name = normalize_text(datasource_spec.get("name").and_then(Value::as_str));
     let datasource_type = normalize_text(datasource_spec.get("type").and_then(Value::as_str));

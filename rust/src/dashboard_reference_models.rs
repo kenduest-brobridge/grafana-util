@@ -39,9 +39,9 @@ pub struct DatasourceReference {
 impl DatasourceReference {
     /// from value.
     pub fn from_value(value: &Value) -> Option<Self> {
-    // Call graph (hierarchy): this function is used in related modules.
-    // Upstream callers: 無
-    // Downstream callees: dashboard_reference_models.rs:normalize_text
+        // Call graph (hierarchy): this function is used in related modules.
+        // Upstream callers: 無
+        // Downstream callees: dashboard_reference_models.rs:normalize_text
 
         let object = value.as_object()?;
         let uid = normalize_text(object.get("uid").or_else(|| object.get("identity")));
@@ -92,9 +92,9 @@ pub struct DashboardReference {
 impl DashboardReference {
     /// from value.
     pub fn from_value(value: &Value) -> Option<Self> {
-    // Call graph (hierarchy): this function is used in related modules.
-    // Upstream callers: 無
-    // Downstream callees: dashboard_reference_models.rs:normalize_text
+        // Call graph (hierarchy): this function is used in related modules.
+        // Upstream callers: 無
+        // Downstream callees: dashboard_reference_models.rs:normalize_text
 
         let object = value.as_object()?;
         let uid = normalize_text(object.get("uid"));
@@ -186,9 +186,9 @@ pub struct QueryFeatureSet {
 impl QueryFeatureSet {
     /// blank.
     pub fn blank() -> Self {
-    // Call graph (hierarchy): this function is used in related modules.
-    // Upstream callers: 無
-    // Downstream callees: 無
+        // Call graph (hierarchy): this function is used in related modules.
+        // Upstream callers: 無
+        // Downstream callees: 無
 
         Self {
             metrics: Vec::new(),
@@ -248,9 +248,9 @@ pub fn normalize_family_name(raw_type: &str) -> String {
 /// Args: see function signature.
 /// Returns: see implementation.
 pub fn build_query_reference_payload(row: &Value) -> Option<DashboardQueryReference> {
-// Call graph (hierarchy): this function is used in related modules.
-// Upstream callers: 無
-// Downstream callees: dashboard_reference_models.rs:normalize_family_name, dashboard_reference_models.rs:normalize_text
+    // Call graph (hierarchy): this function is used in related modules.
+    // Upstream callers: 無
+    // Downstream callees: dashboard_reference_models.rs:normalize_family_name, dashboard_reference_models.rs:normalize_text
 
     let object = row.as_object()?;
     let dashboard_uid = normalize_text(object.get("dashboardUid"));
@@ -278,8 +278,8 @@ pub fn build_query_reference_payload(row: &Value) -> Option<DashboardQueryRefere
         } else {
             panel_id
         },
-        panel_title: panel_title,
-        panel_type: panel_type,
+        panel_title,
+        panel_type,
         ref_id: normalize_text(object.get("refId")),
         datasource_uid: datasource_uid.clone(),
         datasource_name: if !datasource_name.is_empty() {
@@ -287,7 +287,7 @@ pub fn build_query_reference_payload(row: &Value) -> Option<DashboardQueryRefere
         } else {
             datasource_uid
         },
-        datasource_type: datasource_type,
+        datasource_type,
         datasource_family,
         file: normalize_text(object.get("file")),
         query_field: normalize_text(object.get("queryField")),
@@ -316,9 +316,9 @@ pub fn dedupe_strings(values: &[String]) -> Vec<String> {
 pub fn build_dependency_lookup(
     datasource_inventory: &[Value],
 ) -> BTreeMap<String, DatasourceReference> {
-// Call graph (hierarchy): this function is used in related modules.
-// Upstream callers: 無
-// Downstream callees: dashboard_reference_models.rs:identity
+    // Call graph (hierarchy): this function is used in related modules.
+    // Upstream callers: 無
+    // Downstream callees: dashboard_reference_models.rs:identity
 
     let mut lookup = BTreeMap::new();
     for value in datasource_inventory {

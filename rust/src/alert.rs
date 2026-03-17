@@ -267,9 +267,9 @@ pub fn derive_dashboard_slug(value: &Value) -> String {
 
 /// load string map.
 pub fn load_string_map(path: Option<&Path>, label: &str) -> Result<BTreeMap<String, String>> {
-// Call graph (hierarchy): this function is used in related modules.
-// Upstream callers: alert.rs:load, alert_rust_tests.rs:load_string_map_returns_empty_map_without_input_file
-// Downstream callees: alert.rs:value_to_string, common.rs:load_json_object_file, common.rs:value_as_object
+    // Call graph (hierarchy): this function is used in related modules.
+    // Upstream callers: alert.rs:load, alert_rust_tests.rs:load_string_map_returns_empty_map_without_input_file
+    // Downstream callees: alert.rs:value_to_string, common.rs:load_json_object_file, common.rs:value_as_object
 
     let Some(path) = path else {
         return Ok(BTreeMap::new());
@@ -286,9 +286,9 @@ pub fn load_string_map(path: Option<&Path>, label: &str) -> Result<BTreeMap<Stri
 pub fn load_panel_id_map(
     path: Option<&Path>,
 ) -> Result<BTreeMap<String, BTreeMap<String, String>>> {
-// Call graph (hierarchy): this function is used in related modules.
-// Upstream callers: alert.rs:load, alert_rust_tests.rs:load_panel_id_map_parses_nested_dashboard_panel_mapping
-// Downstream callees: alert.rs:value_to_string, common.rs:load_json_object_file, common.rs:value_as_object
+    // Call graph (hierarchy): this function is used in related modules.
+    // Upstream callers: alert.rs:load, alert_rust_tests.rs:load_panel_id_map_parses_nested_dashboard_panel_mapping
+    // Downstream callees: alert.rs:value_to_string, common.rs:load_json_object_file, common.rs:value_as_object
 
     let Some(path) = path else {
         return Ok(BTreeMap::new());
@@ -420,9 +420,9 @@ fn build_tool_document(kind: &str, spec: Map<String, Value>, metadata: Value) ->
 /// Args: see function signature.
 /// Returns: see implementation.
 pub fn build_rule_export_document(rule: &Map<String, Value>) -> Value {
-// Call graph (hierarchy): this function is used in related modules.
-// Upstream callers: alert.rs:export_alerting_resources, alert_rust_tests.rs:build_rule_export_document_strips_server_managed_fields
-// Downstream callees: alert.rs:build_rule_metadata, alert.rs:build_tool_document, alert.rs:strip_server_managed_fields
+    // Call graph (hierarchy): this function is used in related modules.
+    // Upstream callers: alert.rs:export_alerting_resources, alert_rust_tests.rs:build_rule_export_document_strips_server_managed_fields
+    // Downstream callees: alert.rs:build_rule_metadata, alert.rs:build_tool_document, alert.rs:strip_server_managed_fields
 
     let mut normalized = strip_server_managed_fields(RULE_KIND, rule);
     let linked_dashboard = normalized.remove("__linkedDashboardMetadata__");
@@ -447,9 +447,9 @@ pub fn build_rule_export_document(rule: &Map<String, Value>) -> Value {
 /// Args: see function signature.
 /// Returns: see implementation.
 pub fn build_contact_point_export_document(contact_point: &Map<String, Value>) -> Value {
-// Call graph (hierarchy): this function is used in related modules.
-// Upstream callers: alert.rs:export_alerting_resources, alert_rust_tests.rs:build_contact_point_export_document_wraps_tool_document
-// Downstream callees: alert.rs:build_contact_point_metadata, alert.rs:build_tool_document, alert.rs:strip_server_managed_fields
+    // Call graph (hierarchy): this function is used in related modules.
+    // Upstream callers: alert.rs:export_alerting_resources, alert_rust_tests.rs:build_contact_point_export_document_wraps_tool_document
+    // Downstream callees: alert.rs:build_contact_point_metadata, alert.rs:build_tool_document, alert.rs:strip_server_managed_fields
 
     let normalized = strip_server_managed_fields(CONTACT_POINT_KIND, contact_point);
     build_tool_document(
@@ -464,9 +464,9 @@ pub fn build_contact_point_export_document(contact_point: &Map<String, Value>) -
 /// Args: see function signature.
 /// Returns: see implementation.
 pub fn build_mute_timing_export_document(mute_timing: &Map<String, Value>) -> Value {
-// Call graph (hierarchy): this function is used in related modules.
-// Upstream callers: alert.rs:export_alerting_resources
-// Downstream callees: alert.rs:build_mute_timing_metadata, alert.rs:build_tool_document, alert.rs:strip_server_managed_fields
+    // Call graph (hierarchy): this function is used in related modules.
+    // Upstream callers: alert.rs:export_alerting_resources
+    // Downstream callees: alert.rs:build_mute_timing_metadata, alert.rs:build_tool_document, alert.rs:strip_server_managed_fields
 
     let normalized = strip_server_managed_fields(MUTE_TIMING_KIND, mute_timing);
     build_tool_document(
@@ -481,9 +481,9 @@ pub fn build_mute_timing_export_document(mute_timing: &Map<String, Value>) -> Va
 /// Args: see function signature.
 /// Returns: see implementation.
 pub fn build_policies_export_document(policies: &Map<String, Value>) -> Value {
-// Call graph (hierarchy): this function is used in related modules.
-// Upstream callers: alert.rs:export_alerting_resources
-// Downstream callees: alert.rs:build_policies_metadata, alert.rs:build_tool_document, alert.rs:strip_server_managed_fields
+    // Call graph (hierarchy): this function is used in related modules.
+    // Upstream callers: alert.rs:export_alerting_resources
+    // Downstream callees: alert.rs:build_policies_metadata, alert.rs:build_tool_document, alert.rs:strip_server_managed_fields
 
     let normalized = strip_server_managed_fields(POLICIES_KIND, policies);
     build_tool_document(
@@ -498,9 +498,9 @@ pub fn build_policies_export_document(policies: &Map<String, Value>) -> Value {
 /// Args: see function signature.
 /// Returns: see implementation.
 pub fn build_template_export_document(template: &Map<String, Value>) -> Value {
-// Call graph (hierarchy): this function is used in related modules.
-// Upstream callers: alert.rs:export_alerting_resources
-// Downstream callees: alert.rs:build_template_metadata, alert.rs:build_tool_document, alert.rs:strip_server_managed_fields
+    // Call graph (hierarchy): this function is used in related modules.
+    // Upstream callers: alert.rs:export_alerting_resources
+    // Downstream callees: alert.rs:build_template_metadata, alert.rs:build_tool_document, alert.rs:strip_server_managed_fields
 
     let normalized = strip_server_managed_fields(TEMPLATE_KIND, template);
     build_tool_document(
@@ -615,9 +615,9 @@ fn extract_tool_spec(
 /// Args: see function signature.
 /// Returns: see implementation.
 pub fn build_rule_import_payload(document: &Map<String, Value>) -> Result<Map<String, Value>> {
-// Call graph (hierarchy): this function is used in related modules.
-// Upstream callers: alert.rs:build_import_operation, sync.rs:apply_alert_operation_with_request, sync.rs:fetch_live_resource_specs_with_request, sync.rs:normalize_alert_rule_sync_spec
-// Downstream callees: alert.rs:extract_tool_spec, alert.rs:reject_provisioning_export, alert.rs:strip_server_managed_fields, common.rs:message
+    // Call graph (hierarchy): this function is used in related modules.
+    // Upstream callers: alert.rs:build_import_operation, sync.rs:apply_alert_operation_with_request, sync.rs:fetch_live_resource_specs_with_request, sync.rs:normalize_alert_rule_sync_spec
+    // Downstream callees: alert.rs:extract_tool_spec, alert.rs:reject_provisioning_export, alert.rs:strip_server_managed_fields, common.rs:message
 
     reject_provisioning_export(document)?;
     let payload = strip_server_managed_fields(RULE_KIND, &extract_tool_spec(document, RULE_KIND)?);
@@ -641,9 +641,9 @@ pub fn build_rule_import_payload(document: &Map<String, Value>) -> Result<Map<St
 pub fn build_contact_point_import_payload(
     document: &Map<String, Value>,
 ) -> Result<Map<String, Value>> {
-// Call graph (hierarchy): this function is used in related modules.
-// Upstream callers: alert.rs:build_import_operation
-// Downstream callees: alert.rs:extract_tool_spec, alert.rs:reject_provisioning_export, alert.rs:strip_server_managed_fields, common.rs:message
+    // Call graph (hierarchy): this function is used in related modules.
+    // Upstream callers: alert.rs:build_import_operation
+    // Downstream callees: alert.rs:extract_tool_spec, alert.rs:reject_provisioning_export, alert.rs:strip_server_managed_fields, common.rs:message
 
     reject_provisioning_export(document)?;
     let payload = strip_server_managed_fields(
@@ -674,9 +674,9 @@ pub fn build_contact_point_import_payload(
 pub fn build_mute_timing_import_payload(
     document: &Map<String, Value>,
 ) -> Result<Map<String, Value>> {
-// Call graph (hierarchy): this function is used in related modules.
-// Upstream callers: alert.rs:build_import_operation
-// Downstream callees: alert.rs:extract_tool_spec, alert.rs:reject_provisioning_export, alert.rs:strip_server_managed_fields, common.rs:message
+    // Call graph (hierarchy): this function is used in related modules.
+    // Upstream callers: alert.rs:build_import_operation
+    // Downstream callees: alert.rs:extract_tool_spec, alert.rs:reject_provisioning_export, alert.rs:strip_server_managed_fields, common.rs:message
 
     reject_provisioning_export(document)?;
     let payload = strip_server_managed_fields(
@@ -716,9 +716,9 @@ pub fn build_policies_import_payload(document: &Map<String, Value>) -> Result<Ma
 /// Args: see function signature.
 /// Returns: see implementation.
 pub fn build_template_import_payload(document: &Map<String, Value>) -> Result<Map<String, Value>> {
-// Call graph (hierarchy): this function is used in related modules.
-// Upstream callers: alert.rs:build_import_operation
-// Downstream callees: alert.rs:extract_tool_spec, alert.rs:reject_provisioning_export, alert.rs:strip_server_managed_fields, common.rs:message
+    // Call graph (hierarchy): this function is used in related modules.
+    // Upstream callers: alert.rs:build_import_operation
+    // Downstream callees: alert.rs:extract_tool_spec, alert.rs:reject_provisioning_export, alert.rs:strip_server_managed_fields, common.rs:message
 
     reject_provisioning_export(document)?;
     let payload =
@@ -738,9 +738,9 @@ pub fn build_template_import_payload(document: &Map<String, Value>) -> Result<Ma
 /// Args: see function signature.
 /// Returns: see implementation.
 pub fn build_import_operation(document: &Value) -> Result<(String, Map<String, Value>)> {
-// Call graph (hierarchy): this function is used in related modules.
-// Upstream callers: alert.rs:diff_alerting_resources, alert.rs:import_alerting_resources, alert_rust_tests.rs:build_import_operation_accepts_legacy_tool_document_without_schema_version, alert_rust_tests.rs:build_import_operation_accepts_plain_rule_document, alert_rust_tests.rs:build_import_operation_rejects_unsupported_schema_version
-// Downstream callees: alert.rs:build_contact_point_import_payload, alert.rs:build_mute_timing_import_payload, alert.rs:build_policies_import_payload, alert.rs:build_rule_import_payload, alert.rs:build_template_import_payload, alert.rs:detect_document_kind, common.rs:value_as_object
+    // Call graph (hierarchy): this function is used in related modules.
+    // Upstream callers: alert.rs:diff_alerting_resources, alert.rs:import_alerting_resources, alert_rust_tests.rs:build_import_operation_accepts_legacy_tool_document_without_schema_version, alert_rust_tests.rs:build_import_operation_accepts_plain_rule_document, alert_rust_tests.rs:build_import_operation_rejects_unsupported_schema_version
+    // Downstream callees: alert.rs:build_contact_point_import_payload, alert.rs:build_mute_timing_import_payload, alert.rs:build_policies_import_payload, alert.rs:build_rule_import_payload, alert.rs:build_template_import_payload, alert.rs:detect_document_kind, common.rs:value_as_object
 
     let object = value_as_object(document, "Alerting import document must be a JSON object.")?;
     let kind = detect_document_kind(object)?;
@@ -1760,9 +1760,9 @@ fn diff_alerting_resources(args: &AlertCliArgs) -> Result<()> {
 /// Dispatches by checking argument exclusivity (`list`, `import`, `diff`, else export) and
 /// forwarding to the corresponding handler.
 pub fn run_alert_cli(args: AlertCliArgs) -> Result<()> {
-// Call graph (hierarchy): this function is used in related modules.
-// Upstream callers: 無
-// Downstream callees: alert.rs:diff_alerting_resources, alert.rs:export_alerting_resources, alert.rs:import_alerting_resources, alert_list.rs:list_alert_resources
+    // Call graph (hierarchy): this function is used in related modules.
+    // Upstream callers: 無
+    // Downstream callees: alert.rs:diff_alerting_resources, alert.rs:export_alerting_resources, alert.rs:import_alerting_resources, alert_list.rs:list_alert_resources
 
     if args.list_kind.is_some() {
         return list_alert_resources(&args);

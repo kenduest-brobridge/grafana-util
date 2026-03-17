@@ -26,9 +26,9 @@ pub struct DependencyUsageSummary {
 impl DependencyUsageSummary {
     /// as json.
     pub fn as_json(&self) -> Value {
-    // Call graph (hierarchy): this function is used in related modules.
-    // Upstream callers: 無
-    // Downstream callees: 無
+        // Call graph (hierarchy): this function is used in related modules.
+        // Upstream callers: 無
+        // Downstream callees: 無
 
         json!({
             "datasource": self.datasource_identity,
@@ -54,9 +54,9 @@ pub struct OfflineDependencyReportDocument {
 impl OfflineDependencyReportDocument {
     /// as json.
     pub fn as_json(&self) -> Value {
-    // Call graph (hierarchy): this function is used in related modules.
-    // Upstream callers: 無
-    // Downstream callees: dashboard_inspection_dependency_contract.rs:query_signature_key
+        // Call graph (hierarchy): this function is used in related modules.
+        // Upstream callers: 無
+        // Downstream callees: dashboard_inspection_dependency_contract.rs:query_signature_key
 
         let queries: Vec<Value> = self
             .queries
@@ -151,9 +151,9 @@ fn query_signature_key(row: &DashboardQueryReference) -> String {
 }
 
 fn parse_query_text_families(row: &DashboardQueryReference) -> QueryFeatureHints {
-// Call graph (hierarchy): this function is used in related modules.
-// Upstream callers: 無
-// Downstream callees: dashboard_reference_models.rs:dedupe_strings, dashboard_reference_models.rs:normalize_family_name
+    // Call graph (hierarchy): this function is used in related modules.
+    // Upstream callers: 無
+    // Downstream callees: dashboard_reference_models.rs:dedupe_strings, dashboard_reference_models.rs:normalize_family_name
 
     let family = normalize_family_name(&row.datasource_type);
     let query = row.query.to_lowercase();

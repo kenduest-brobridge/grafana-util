@@ -7,7 +7,9 @@ use std::fmt::Write as _;
 
 use crate::common::{message, string_field, Result};
 
-use super::{build_auth_context, AlertAuthContext, AlertCliArgs, AlertListKind, GrafanaAlertClient};
+use super::{
+    build_auth_context, AlertAuthContext, AlertCliArgs, AlertListKind, GrafanaAlertClient,
+};
 
 const ALERT_RULE_LIST_FIELDS: [&str; 4] = ["uid", "title", "folderUID", "ruleGroup"];
 const CONTACT_POINT_LIST_FIELDS: [&str; 3] = ["uid", "name", "type"];
@@ -21,7 +23,10 @@ fn auth_header_is_basic(headers: &[(String, String)]) -> bool {
     })
 }
 
-fn build_alert_client_for_org(context: &AlertAuthContext, org_id: i64) -> Result<GrafanaAlertClient> {
+fn build_alert_client_for_org(
+    context: &AlertAuthContext,
+    org_id: i64,
+) -> Result<GrafanaAlertClient> {
     let mut scoped = context.clone();
     scoped
         .headers
@@ -198,7 +203,8 @@ fn append_org_scope(
     items: Vec<Map<String, Value>>,
     org: &Map<String, Value>,
 ) -> Vec<Map<String, Value>> {
-    items.into_iter()
+    items
+        .into_iter()
         .map(|mut item| {
             item.insert("org".to_string(), Value::Object(org.clone()));
             item
@@ -254,9 +260,9 @@ fn list_items_for_kind(
 /// Args: see function signature.
 /// Returns: see implementation.
 pub fn list_alert_resources(args: &AlertCliArgs) -> Result<()> {
-// Call graph (hierarchy): this function is used in related modules.
-// Upstream callers: alert.rs:run_alert_cli
-// Downstream callees: alert_list.rs:append_org_scope, alert_list.rs:auth_header_is_basic, alert_list.rs:build_alert_client_for_org, alert_list.rs:fields_with_org_scope, alert_list.rs:headers_with_org_scope, alert_list.rs:list_items_for_kind, alert_list.rs:org_id_value, alert_list.rs:render_alert_csv, alert_list.rs:render_alert_table, alert_list.rs:rows_include_org_scope, alert_list.rs:serialize_contact_point_list_rows, alert_list.rs:serialize_mute_timing_list_rows ...
+    // Call graph (hierarchy): this function is used in related modules.
+    // Upstream callers: alert.rs:run_alert_cli
+    // Downstream callees: alert_list.rs:append_org_scope, alert_list.rs:auth_header_is_basic, alert_list.rs:build_alert_client_for_org, alert_list.rs:fields_with_org_scope, alert_list.rs:headers_with_org_scope, alert_list.rs:list_items_for_kind, alert_list.rs:org_id_value, alert_list.rs:render_alert_csv, alert_list.rs:render_alert_table, alert_list.rs:rows_include_org_scope, alert_list.rs:serialize_contact_point_list_rows, alert_list.rs:serialize_mute_timing_list_rows ...
 
     let kind = args
         .list_kind
@@ -273,7 +279,10 @@ pub fn list_alert_resources(args: &AlertCliArgs) -> Result<()> {
         for org in admin_client.list_orgs()? {
             let org_id = org_id_value(&org)?;
             let org_client = build_alert_client_for_org(&context, org_id)?;
-            rows.extend(append_org_scope(list_items_for_kind(&org_client, kind)?, &org));
+            rows.extend(append_org_scope(
+                list_items_for_kind(&org_client, kind)?,
+                &org,
+            ));
         }
         rows
     } else if let Some(org_id) = args.org_id {
@@ -309,12 +318,7 @@ pub fn list_alert_resources(args: &AlertCliArgs) -> Result<()> {
             } else {
                 println!(
                     "{}",
-                    render_alert_table(
-                        &rows,
-                        &fields,
-                        &headers,
-                        !args.no_header,
-                    )
+                    render_alert_table(&rows, &fields, &headers, !args.no_header,)
                 );
             }
         }
@@ -333,12 +337,7 @@ pub fn list_alert_resources(args: &AlertCliArgs) -> Result<()> {
             } else {
                 println!(
                     "{}",
-                    render_alert_table(
-                        &rows,
-                        &fields,
-                        &headers,
-                        !args.no_header,
-                    )
+                    render_alert_table(&rows, &fields, &headers, !args.no_header,)
                 );
             }
         }
@@ -346,8 +345,10 @@ pub fn list_alert_resources(args: &AlertCliArgs) -> Result<()> {
             let rows = serialize_mute_timing_list_rows(&items);
             let include_org_scope = rows_include_org_scope(&rows);
             let fields = fields_with_org_scope(&MUTE_TIMING_LIST_FIELDS, include_org_scope);
-            let headers =
-                headers_with_org_scope(&[("name", "NAME"), ("intervals", "INTERVALS")], include_org_scope);
+            let headers = headers_with_org_scope(
+                &[("name", "NAME"), ("intervals", "INTERVALS")],
+                include_org_scope,
+            );
             if args.json {
                 println!("{}", serde_json::to_string_pretty(&rows)?);
             } else if args.csv {
@@ -355,12 +356,7 @@ pub fn list_alert_resources(args: &AlertCliArgs) -> Result<()> {
             } else {
                 println!(
                     "{}",
-                    render_alert_table(
-                        &rows,
-                        &fields,
-                        &headers,
-                        !args.no_header,
-                    )
+                    render_alert_table(&rows, &fields, &headers, !args.no_header,)
                 );
             }
         }
@@ -376,12 +372,7 @@ pub fn list_alert_resources(args: &AlertCliArgs) -> Result<()> {
             } else {
                 println!(
                     "{}",
-                    render_alert_table(
-                        &rows,
-                        &fields,
-                        &headers,
-                        !args.no_header,
-                    )
+                    render_alert_table(&rows, &fields, &headers, !args.no_header,)
                 );
             }
         }

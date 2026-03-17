@@ -77,9 +77,9 @@ impl JsonHttpClient {
         params: &[(String, String)],
         payload: Option<&Value>,
     ) -> Result<Option<Value>> {
-    // Call graph (hierarchy): this function is used in related modules.
-    // Upstream callers: 無
-    // Downstream callees: common.rs:api_response, dashboard_list.rs:header, http.rs:build_url
+        // Call graph (hierarchy): this function is used in related modules.
+        // Upstream callers: 無
+        // Downstream callees: common.rs:api_response, dashboard_list.rs:header, http.rs:build_url
 
         let url = self.build_url(path, params)?;
         let mut request = self.client.request(method, url.clone());

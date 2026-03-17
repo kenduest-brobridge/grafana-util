@@ -55,9 +55,9 @@ impl GrafanaAlertClient {
     /// Args: see function signature.
     /// Returns: see implementation.
     pub fn list_orgs(&self) -> Result<Vec<Map<String, Value>>> {
-    // Call graph (hierarchy): this function is used in related modules.
-    // Upstream callers: 無
-    // Downstream callees: alert_client.rs:expect_object_list, alert_client.rs:request_json
+        // Call graph (hierarchy): this function is used in related modules.
+        // Upstream callers: 無
+        // Downstream callees: alert_client.rs:expect_object_list, alert_client.rs:request_json
 
         expect_object_list(
             self.request_json(Method::GET, "/api/orgs", &[], None)?,
@@ -359,9 +359,9 @@ pub fn expect_object_list(
 /// Interpret Grafana template-list responses in the one supported shape for
 /// alerting imports: either empty/null or a JSON array of template objects.
 pub fn parse_template_list_response(value: Option<Value>) -> Result<Vec<Map<String, Value>>> {
-// Call graph (hierarchy): this function is used in related modules.
-// Upstream callers: alert_client.rs:list_templates, alert_rust_tests.rs:template_list_null_is_treated_as_empty_in_live_client_path
-// Downstream callees: alert_client.rs:expect_object_list, alert_client.rs:new
+    // Call graph (hierarchy): this function is used in related modules.
+    // Upstream callers: alert_client.rs:list_templates, alert_rust_tests.rs:template_list_null_is_treated_as_empty_in_live_client_path
+    // Downstream callees: alert_client.rs:expect_object_list, alert_client.rs:new
 
     match value {
         None | Some(Value::Null) => Ok(Vec::new()),
