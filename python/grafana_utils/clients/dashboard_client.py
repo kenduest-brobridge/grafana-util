@@ -166,6 +166,24 @@ class GrafanaClient:
             raise GrafanaError("Unexpected dashboard payload for UID %s." % uid)
         return data
 
+    def fetch_dashboard_permissions(self, uid: str) -> list[dict[str, Any]]:
+        """Fetch dashboard ACL rows for one dashboard UID."""
+        data = self.request_json(
+            "/api/dashboards/uid/%s/permissions" % parse.quote(uid, safe="")
+        )
+        if not isinstance(data, list):
+            raise GrafanaError(
+                "Unexpected dashboard permissions payload for UID %s." % uid
+            )
+        return [item for item in data if isinstance(item, dict)]
+
+    def fetch_folder_permissions(self, uid: str) -> list[dict[str, Any]]:
+        """Fetch folder ACL rows for one folder UID."""
+        data = self.request_json("/api/folders/%s/permissions" % parse.quote(uid, safe=""))
+        if not isinstance(data, list):
+            raise GrafanaError("Unexpected folder permissions payload for UID %s." % uid)
+        return [item for item in data if isinstance(item, dict)]
+
     def import_dashboard(self, payload: dict[str, Any]) -> dict[str, Any]:
         """Create or update a dashboard through POST /api/dashboards/db."""
         # Call graph: see callers/callees.

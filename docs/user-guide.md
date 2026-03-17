@@ -123,12 +123,13 @@ Exported raw    cpu-main -> dashboards/raw/Infra/CPU__cpu-main.json
 Exported prompt cpu-main -> dashboards/prompt/Infra/CPU__cpu-main.json
 Exported raw    mem-main -> dashboards/raw/Infra/MEM__mem-main.json
 Exported prompt mem-main -> dashboards/prompt/Infra/MEM__mem-main.json
-Dashboard export completed: 2 dashboard(s), 4 file(s) written
+Exported 2 dashboards. Raw index: dashboards/raw/index.json Raw manifest: dashboards/raw/export-metadata.json Raw datasources: dashboards/raw/datasources.json Raw permissions: dashboards/raw/permissions.json Prompt index: dashboards/prompt/index.json Prompt manifest: dashboards/prompt/export-metadata.json Root index: dashboards/index.json Root manifest: dashboards/export-metadata.json
 ```
 
 How to read it:
 - `raw` is the API-friendly reversible export.
 - `prompt` is the UI-import-friendly variant.
+- `raw/permissions.json` captures dashboard and folder permission metadata for backup and review.
 - The final summary is the fastest check for missing dashboards.
 
 ### 3.2 `dashboard list`
@@ -243,6 +244,9 @@ Example command:
 ```bash
 grafana-util dashboard import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/raw --replace-existing --dry-run --table
 ```
+
+Current note:
+- `dashboard import` ignores the exported `raw/permissions.json` bundle today. The permission bundle is backed up by default for later review or future restore flows, but the current import path still restores dashboard content, folder placement, and related raw inventory only.
 
 Example output:
 ```text

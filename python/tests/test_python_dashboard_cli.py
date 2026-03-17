@@ -114,7 +114,12 @@ inspection_output_dispatch = importlib.import_module(
 
 
 def build_export_metadata(
-    variant, dashboard_count, format_name=None, folders_file=None, datasources_file=None
+    variant,
+    dashboard_count,
+    format_name=None,
+    folders_file=None,
+    datasources_file=None,
+    permissions_file=None,
 ):
     return output_support.build_export_metadata(
         variant,
@@ -124,6 +129,7 @@ def build_export_metadata(
         format_name=format_name,
         folders_file=folders_file,
         datasources_file=datasources_file,
+        permissions_file=permissions_file,
     )
 
 
@@ -171,6 +177,7 @@ def discover_dashboard_files(import_dir):
         exporter.EXPORT_METADATA_FILENAME,
         exporter.FOLDER_INVENTORY_FILENAME,
         exporter.DATASOURCE_INVENTORY_FILENAME,
+        exporter.DASHBOARD_PERMISSION_BUNDLE_FILENAME,
     )
 
 
@@ -229,6 +236,8 @@ class FakeDashboardWorkflowClient:
         dashboards=None,
         datasources=None,
         folders=None,
+        dashboard_permissions=None,
+        folder_permissions=None,
         org=None,
         orgs=None,
         org_clients=None,
@@ -238,6 +247,8 @@ class FakeDashboardWorkflowClient:
         self.dashboards = dashboards or {}
         self.datasources = datasources or []
         self.folders = folders or {}
+        self.dashboard_permissions = dashboard_permissions or {}
+        self.folder_permissions = folder_permissions or {}
         self.org = org or {"id": 1, "name": "Main Org."}
         self.orgs = orgs or [self.org]
         self.org_clients = org_clients or {}
@@ -261,6 +272,12 @@ class FakeDashboardWorkflowClient:
 
     def fetch_folder_if_exists(self, uid):
         return self.folders.get(uid)
+
+    def fetch_dashboard_permissions(self, uid):
+        return list(self.dashboard_permissions.get(uid, []))
+
+    def fetch_folder_permissions(self, uid):
+        return list(self.folder_permissions.get(uid, []))
 
     def create_folder(self, uid, title, parent_uid=None):
         record = {"uid": uid, "title": title}
@@ -3410,6 +3427,20 @@ class ExporterTests(unittest.TestCase):
 
             self.assertEqual(files, [dashboard_path])
 
+    def test_dashboard_discover_dashboard_files_ignores_permission_bundle(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / exporter.DASHBOARD_PERMISSION_BUNDLE_FILENAME).write_text(
+                "{}", encoding="utf-8"
+            )
+            dashboard_path = root / "team" / "dash.json"
+            dashboard_path.parent.mkdir(parents=True, exist_ok=True)
+            dashboard_path.write_text('{"dashboard": {"uid": "x"}}', encoding="utf-8")
+
+            files = discover_dashboard_files(root)
+
+            self.assertEqual(files, [dashboard_path])
+
     def test_dashboard_discover_dashboard_files_rejects_combined_export_root(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
@@ -3786,6 +3817,25 @@ class ExporterTests(unittest.TestCase):
                     "parents": [],
                 },
             },
+            dashboard_permissions={
+                "abc": [
+                    {
+                        "userId": 7,
+                        "userLogin": "alice@example.com",
+                        "permission": 1,
+                    }
+                ]
+            },
+            folder_permissions={
+                "infra": [
+                    {
+                        "teamId": 9,
+                        "team": "sre",
+                        "permission": 2,
+                    }
+                ],
+                "platform": [{"roleName": "Viewer", "permission": 1}],
+            },
         )
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -3826,6 +3876,10 @@ class ExporterTests(unittest.TestCase):
             self.assertEqual(
                 raw_metadata["datasourcesFile"], exporter.DATASOURCE_INVENTORY_FILENAME
             )
+            self.assertEqual(
+                raw_metadata["permissionsFile"],
+                exporter.DASHBOARD_PERMISSION_BUNDLE_FILENAME,
+            )
             folder_inventory = json.loads(
                 (
                     Path(tmpdir)
@@ -3844,6 +3898,20 @@ class ExporterTests(unittest.TestCase):
             )
             self.assertEqual(datasource_inventory[0]["uid"], "prom-main")
             self.assertEqual(datasource_inventory[0]["type"], "prometheus")
+            permission_bundle = json.loads(
+                (
+                    Path(tmpdir)
+                    / exporter.RAW_EXPORT_SUBDIR
+                    / exporter.DASHBOARD_PERMISSION_BUNDLE_FILENAME
+                ).read_text(encoding="utf-8")
+            )
+            self.assertEqual(
+                permission_bundle["summary"]["resourceCount"],
+                3,
+            )
+            self.assertEqual(permission_bundle["summary"]["dashboardCount"], 1)
+            self.assertEqual(permission_bundle["summary"]["folderCount"], 2)
+            self.assertEqual(permission_bundle["summary"]["permissionCount"], 3)
 
     def test_dashboard_export_dashboards_progress_is_opt_in(self):
         summary = {"uid": "abc", "title": "CPU", "folderTitle": "Infra"}
@@ -3877,7 +3945,7 @@ class ExporterTests(unittest.TestCase):
                 stdout.getvalue().splitlines(),
                 [
                     "Exporting dashboard 1/1: abc",
-                    "Exported 1 dashboards. Raw index: %s Raw manifest: %s Raw datasources: %s Root index: %s Root manifest: %s"
+                    "Exported 1 dashboards. Raw index: %s Raw manifest: %s Raw datasources: %s Raw permissions: %s Root index: %s Root manifest: %s"
                     % (
                         Path(tmpdir) / exporter.RAW_EXPORT_SUBDIR / "index.json",
                         Path(tmpdir)
@@ -3886,6 +3954,9 @@ class ExporterTests(unittest.TestCase):
                         Path(tmpdir)
                         / exporter.RAW_EXPORT_SUBDIR
                         / exporter.DATASOURCE_INVENTORY_FILENAME,
+                        Path(tmpdir)
+                        / exporter.RAW_EXPORT_SUBDIR
+                        / exporter.DASHBOARD_PERMISSION_BUNDLE_FILENAME,
                         Path(tmpdir) / "index.json",
                         Path(tmpdir) / exporter.EXPORT_METADATA_FILENAME,
                     ),
@@ -3930,7 +4001,7 @@ class ExporterTests(unittest.TestCase):
                         / "Infra"
                         / "CPU__abc.json"
                     ),
-                    "Exported 1 dashboards. Raw index: %s Raw manifest: %s Raw datasources: %s Root index: %s Root manifest: %s"
+                    "Exported 1 dashboards. Raw index: %s Raw manifest: %s Raw datasources: %s Raw permissions: %s Root index: %s Root manifest: %s"
                     % (
                         Path(tmpdir) / exporter.RAW_EXPORT_SUBDIR / "index.json",
                         Path(tmpdir)
@@ -3939,6 +4010,9 @@ class ExporterTests(unittest.TestCase):
                         Path(tmpdir)
                         / exporter.RAW_EXPORT_SUBDIR
                         / exporter.DATASOURCE_INVENTORY_FILENAME,
+                        Path(tmpdir)
+                        / exporter.RAW_EXPORT_SUBDIR
+                        / exporter.DASHBOARD_PERMISSION_BUNDLE_FILENAME,
                         Path(tmpdir) / "index.json",
                         Path(tmpdir) / exporter.EXPORT_METADATA_FILENAME,
                     ),
@@ -3984,7 +4058,7 @@ class ExporterTests(unittest.TestCase):
                         / "Infra"
                         / "CPU__abc.json"
                     ),
-                    "Exported 1 dashboards. Raw index: %s Raw manifest: %s Raw datasources: %s Root index: %s Root manifest: %s"
+                    "Exported 1 dashboards. Raw index: %s Raw manifest: %s Raw datasources: %s Raw permissions: %s Root index: %s Root manifest: %s"
                     % (
                         Path(tmpdir) / exporter.RAW_EXPORT_SUBDIR / "index.json",
                         Path(tmpdir)
@@ -3993,6 +4067,9 @@ class ExporterTests(unittest.TestCase):
                         Path(tmpdir)
                         / exporter.RAW_EXPORT_SUBDIR
                         / exporter.DATASOURCE_INVENTORY_FILENAME,
+                        Path(tmpdir)
+                        / exporter.RAW_EXPORT_SUBDIR
+                        / exporter.DASHBOARD_PERMISSION_BUNDLE_FILENAME,
                         Path(tmpdir) / "index.json",
                         Path(tmpdir) / exporter.EXPORT_METADATA_FILENAME,
                     ),

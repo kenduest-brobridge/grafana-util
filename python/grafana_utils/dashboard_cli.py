@@ -148,6 +148,7 @@ from .dashboards.variable_inspection import (
 
 __all__ = [
     "DATASOURCE_INVENTORY_FILENAME",
+    "DASHBOARD_PERMISSION_BUNDLE_FILENAME",
     "DEFAULT_DASHBOARD_TITLE",
     "DEFAULT_FOLDER_TITLE",
     "DEFAULT_FOLDER_UID",
@@ -221,6 +222,7 @@ PROMPT_EXPORT_SUBDIR = "prompt"
 EXPORT_METADATA_FILENAME = "export-metadata.json"
 FOLDER_INVENTORY_FILENAME = "folders.json"
 DATASOURCE_INVENTORY_FILENAME = "datasources.json"
+DASHBOARD_PERMISSION_BUNDLE_FILENAME = "permissions.json"
 TOOL_SCHEMA_VERSION = 1
 ROOT_INDEX_KIND = "grafana-utils-dashboard-export-index"
 LIST_OUTPUT_FORMAT_CHOICES = ("table", "csv", "json")
@@ -1339,6 +1341,7 @@ def _build_export_workflow_deps() -> dict[str, Any]:
         {
             "GrafanaError": GrafanaError,
             "DATASOURCE_INVENTORY_FILENAME": DATASOURCE_INVENTORY_FILENAME,
+            "DASHBOARD_PERMISSION_BUNDLE_FILENAME": DASHBOARD_PERMISSION_BUNDLE_FILENAME,
             "DEFAULT_DASHBOARD_TITLE": DEFAULT_DASHBOARD_TITLE,
             "DEFAULT_FOLDER_TITLE": DEFAULT_FOLDER_TITLE,
             "DEFAULT_ORG_ID": DEFAULT_ORG_ID,
@@ -1381,6 +1384,7 @@ def _build_inspection_workflow_deps() -> dict[str, Any]:
     """Internal helper for build inspection workflow deps."""
     return build_inspection_workflow_deps_from_runtime(
         {
+            "DASHBOARD_PERMISSION_BUNDLE_FILENAME": DASHBOARD_PERMISSION_BUNDLE_FILENAME,
             "DATASOURCE_INVENTORY_FILENAME": DATASOURCE_INVENTORY_FILENAME,
             "DEFAULT_DASHBOARD_TITLE": DEFAULT_DASHBOARD_TITLE,
             "DEFAULT_FOLDER_TITLE": DEFAULT_FOLDER_TITLE,
@@ -1444,6 +1448,7 @@ def _build_import_workflow_deps() -> dict[str, Any]:
     return build_import_workflow_deps_from_runtime(
         {
             "DEFAULT_UNKNOWN_UID": DEFAULT_UNKNOWN_UID,
+            "DASHBOARD_PERMISSION_BUNDLE_FILENAME": DASHBOARD_PERMISSION_BUNDLE_FILENAME,
             "DATASOURCE_INVENTORY_FILENAME": DATASOURCE_INVENTORY_FILENAME,
             "EXPORT_METADATA_FILENAME": EXPORT_METADATA_FILENAME,
             "FOLDER_INVENTORY_FILENAME": FOLDER_INVENTORY_FILENAME,
@@ -1478,6 +1483,7 @@ def _build_diff_workflow_deps() -> dict[str, Any]:
                 EXPORT_METADATA_FILENAME,
                 FOLDER_INVENTORY_FILENAME,
                 DATASOURCE_INVENTORY_FILENAME,
+                DASHBOARD_PERMISSION_BUNDLE_FILENAME,
             )
         ),
         "load_export_metadata": (

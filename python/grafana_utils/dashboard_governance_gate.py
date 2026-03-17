@@ -222,6 +222,7 @@ def _build_dashboard_context(import_dir: Path) -> list[dict[str, Any]]:
         "export-metadata.json",
         "folders.json",
         "datasources.json",
+        "permissions.json",
     )
     dashboards = []
     for dashboard_file in dashboard_files:

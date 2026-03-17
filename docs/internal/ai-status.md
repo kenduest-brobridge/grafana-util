@@ -5,6 +5,13 @@ Historical note:
 - Older entries describe the repo state and `TODO.md` backlog as they existed on the entry date.
 - `TODO.md` now tracks only the active backlog; completed or superseded TODO items moved to `docs/internal/todo-archive.md`.
 
+## 2026-03-17 - Task: Export Dashboard Permission Metadata By Default
+- State: Done
+- Scope: `python/grafana_utils/dashboard_cli.py`, `python/grafana_utils/clients/dashboard_client.py`, `python/grafana_utils/dashboards/export_runtime.py`, `python/grafana_utils/dashboards/export_workflow.py`, `python/grafana_utils/dashboards/export_inventory.py`, `python/tests/test_python_dashboard_cli.py`, `docs/user-guide.md`, `README.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Python dashboard export already wrote raw dashboard JSON, prompt dashboard JSON, `folders.json`, `datasources.json`, and `export-metadata.json`, but it did not persist dashboard or folder ACL state anywhere. The repo had an unwired permission workbench, so operators could not capture dashboard/folder permission metadata as part of a normal backup/export run.
+- Current Update: Wired the staged dashboard/folder permission bundle into the live Python dashboard export path so raw exports now write a default `permissions.json` bundle plus a `permissionsFile` pointer in raw export metadata. Updated raw-export discovery paths to ignore the extra metadata file during dashboard import and offline governance scans, and extended the dashboard Python tests to lock the new export contract in place.
+- Result: Python `dashboard export` now backs up dashboard and folder ACL metadata by default without changing the current restore semantics. Operators get a reviewable `raw/permissions.json` artifact in the same export root, while `dashboard import` continues to restore content only and ignores the permission bundle for now.
+
 ## 2026-03-17 - Task: Add Alert List Org Routing And Finish Inspect-Live Multi-Org Support
 - State: Done
 - Scope: `grafana_utils/alert_cli.py`, `python/tests/test_python_alert_cli.py`, `rust/src/alert_cli_defs.rs`, `rust/src/alert.rs`, `rust/src/alert_client.rs`, `rust/src/alert_list.rs`, `rust/src/alert_rust_tests.rs`, `rust/src/dashboard_inspect.rs`, `rust/src/dashboard_rust_tests.rs`, `docs/user-guide.md`, `docs/user-guide-TW.md`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
