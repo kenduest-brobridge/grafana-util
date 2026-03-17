@@ -1,5 +1,13 @@
 # ai-changes.md
 
+## 2026-03-17 - Avoid Hard Pillow Dependency During Python CLI Import
+- Summary: Removed the eager top-level `PIL` import from the dashboard screenshot helper so higher-level Python CLI modules can import successfully when Pillow is not installed. The existing `_pil_modules()` lazy loader remains responsible for raising a runtime screenshot-specific error only when image composition is actually invoked.
+- Tests: Added a focused Python regression test that imports `grafana_utils.dashboards.screenshot` while `PIL` imports are intentionally blocked.
+- Test Run: `PYTHONPATH=python python3 -m unittest -v python/tests/test_python_dashboard_screenshot_import.py`; `PYTHONPATH=python python3 -m unittest -v python/tests/test_python_unified_cli.py`; `PYTHONPATH=python python3 -m unittest -v python/tests/test_python_sync_cli.py`; `PYTHONPATH=python python3 -m unittest discover -s python/tests -v`
+- Validation: Confirmed the new regression test passes, confirmed previously failing import-driven CLI suites pass, and confirmed the full Python unittest discovery suite passes with 824 tests.
+- Impact: `python/grafana_utils/dashboards/screenshot.py`, `python/tests/test_python_dashboard_screenshot_import.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low. This narrows the import-time dependency surface without changing screenshot runtime behavior, and the lazy loader still produces the existing operator-facing Pillow installation error when screenshot composition is used.
+
 ## 2026-03-17 - Export Dashboard Permission Metadata By Default
 - Summary: Extended the Python dashboard export flow so raw exports now capture dashboard and folder ACL metadata by default in `raw/permissions.json`. The raw `export-metadata.json` contract now records `permissionsFile` alongside the existing `foldersFile` and `datasourcesFile` pointers, and discovery paths that scan raw dashboard exports now ignore the extra permission bundle instead of mistaking it for a dashboard document.
 - Tests: Updated the Python dashboard export tests to cover permission bundle writes, raw manifest `permissionsFile` metadata, export-summary output, fake-client ACL fetch behavior, and file discovery ignoring `permissions.json`.

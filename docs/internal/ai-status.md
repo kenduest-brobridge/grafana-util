@@ -5,6 +5,13 @@ Historical note:
 - Older entries describe the repo state and `TODO.md` backlog as they existed on the entry date.
 - `TODO.md` now tracks only the active backlog; completed or superseded TODO items moved to `docs/internal/todo-archive.md`.
 
+## 2026-03-17 - Task: Avoid Hard Pillow Dependency During Python CLI Import
+- State: Done
+- Scope: `python/grafana_utils/dashboards/screenshot.py`, `python/tests/test_python_dashboard_screenshot_import.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The Python screenshot helper already had a lazy `_pil_modules()` loader for Pillow, but the module still imported `PIL` at file import time. CI `python-quality` installs only the base package, so importing `dashboard_cli` and any higher-level CLI modules failed early with `ModuleNotFoundError: No module named 'PIL'` even when screenshot functionality was not being used.
+- Current Update: Removed the eager Pillow import and added a regression test that proves the screenshot helper can be imported while `PIL` is unavailable, preserving the existing runtime-only failure path for actual screenshot composition calls.
+- Result: Full Python unittest discovery now passes again without requiring Pillow for generic CLI imports, which aligns local behavior with the intended lazy screenshot dependency contract.
+
 ## 2026-03-17 - Task: Export Dashboard Permission Metadata By Default
 - State: Done
 - Scope: `python/grafana_utils/dashboard_cli.py`, `python/grafana_utils/clients/dashboard_client.py`, `python/grafana_utils/dashboards/export_runtime.py`, `python/grafana_utils/dashboards/export_workflow.py`, `python/grafana_utils/dashboards/export_inventory.py`, `python/tests/test_python_dashboard_cli.py`, `docs/user-guide.md`, `README.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

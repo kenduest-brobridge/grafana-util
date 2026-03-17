@@ -21,8 +21,6 @@ from types import SimpleNamespace
 from urllib import request as urllib_request
 from urllib import parse
 
-from PIL import Image, ImageDraw, ImageFont
-
 from .common import GrafanaError
 from .variable_inspection import resolve_dashboard_uid
 
