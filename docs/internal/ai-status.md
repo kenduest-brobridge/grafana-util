@@ -12,6 +12,13 @@ Historical note:
 - Current Update: Removed the eager Pillow import and added a regression test that proves the screenshot helper can be imported while `PIL` is unavailable, preserving the existing runtime-only failure path for actual screenshot composition calls.
 - Result: Full Python unittest discovery now passes again without requiring Pillow for generic CLI imports, which aligns local behavior with the intended lazy screenshot dependency contract.
 
+## 2026-03-17 - Task: Install Pillow For Python Quality Screenshot Tests
+- State: Done
+- Scope: `.github/workflows/ci.yml`, `python/tests/test_python_packaging.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: After removing the hard import from the screenshot helper, the broad CLI import failures were fixed, but the CI `python-quality` job still installed only the base package. The screenshot helper test suite imports `PIL` directly, so the GitHub Actions run still failed on `test_python_dashboard_screenshot_helper` before reaching the rest of the suite.
+- Current Update: Updating the CI quality install step to include Pillow explicitly and extending the packaging test to lock that workflow dependency into the repo contract.
+- Result: The CI quality workflow now provisions Pillow for screenshot-helper tests without changing the published base package dependency set, and the local full Python discovery suite still passes end to end.
+
 ## 2026-03-17 - Task: Export Dashboard Permission Metadata By Default
 - State: Done
 - Scope: `python/grafana_utils/dashboard_cli.py`, `python/grafana_utils/clients/dashboard_client.py`, `python/grafana_utils/dashboards/export_runtime.py`, `python/grafana_utils/dashboards/export_workflow.py`, `python/grafana_utils/dashboards/export_inventory.py`, `python/tests/test_python_dashboard_cli.py`, `docs/user-guide.md`, `README.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

@@ -26,6 +26,7 @@ class PackagingTests(unittest.TestCase):
         content = CI_WORKFLOW_PATH.read_text(encoding="utf-8")
 
         self.assertIn("python3 -m pip install --upgrade pip .", content)
+        self.assertIn('"Pillow>=10,<12"', content)
 
     def test_packaging_pyproject_declares_console_scripts(self):
         content = PYPROJECT_PATH.read_text(encoding="utf-8")

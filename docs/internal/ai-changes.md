@@ -1,5 +1,13 @@
 # ai-changes.md
 
+## 2026-03-17 - Install Pillow For Python Quality Screenshot Tests
+- Summary: Updated the GitHub Actions `python-quality` job to install Pillow alongside the base package so the screenshot helper tests can import `PIL` during the full unittest discovery run. Extended the packaging test to assert that the CI workflow now includes the explicit Pillow install.
+- Tests: Updated the Python packaging test that locks the CI workflow install contract.
+- Test Run: `PYTHONPATH=python python3 -m unittest -v python/tests/test_python_packaging.py`; `PYTHONPATH=python python3 -m unittest -v python/tests/test_python_dashboard_screenshot_helper.py`; `PYTHONPATH=python python3 -m unittest discover -s python/tests -v`
+- Validation: Confirmed the packaging workflow-contract test passes, confirmed the Pillow-dependent screenshot helper suite passes, and confirmed the full Python unittest discovery suite still passes with 824 tests.
+- Impact: `.github/workflows/ci.yml`, `python/tests/test_python_packaging.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low. This changes only the CI quality environment, not the published runtime dependency set, and it matches the existing screenshot-helper test requirement.
+
 ## 2026-03-17 - Avoid Hard Pillow Dependency During Python CLI Import
 - Summary: Removed the eager top-level `PIL` import from the dashboard screenshot helper so higher-level Python CLI modules can import successfully when Pillow is not installed. The existing `_pil_modules()` lazy loader remains responsible for raising a runtime screenshot-specific error only when image composition is actually invoked.
 - Tests: Added a focused Python regression test that imports `grafana_utils.dashboards.screenshot` while `PIL` imports are intentionally blocked.
