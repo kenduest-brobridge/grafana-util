@@ -42,6 +42,8 @@ use alert_client::GrafanaAlertClient;
 #[cfg(test)]
 pub(crate) use alert_client::{expect_object_list, parse_template_list_response};
 use alert_list::list_alert_resources;
+#[cfg(test)]
+pub(crate) use alert_list::serialize_rule_list_rows;
 
 pub const DEFAULT_URL: &str = "http://127.0.0.1:3000";
 pub const DEFAULT_TIMEOUT: u64 = 30;

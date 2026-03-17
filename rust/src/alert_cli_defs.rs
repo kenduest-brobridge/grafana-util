@@ -218,6 +218,19 @@ pub struct AlertListArgs {
     pub common: AlertCommonArgs,
     #[arg(
         long,
+        conflicts_with = "all_orgs",
+        help = "List alerting resources from this Grafana org ID. This requires Basic auth."
+    )]
+    pub org_id: Option<i64>,
+    #[arg(
+        long,
+        default_value_t = false,
+        conflicts_with = "org_id",
+        help = "Enumerate all visible Grafana orgs and aggregate alerting inventory across them. This requires Basic auth."
+    )]
+    pub all_orgs: bool,
+    #[arg(
+        long,
         default_value_t = false,
         help = "Render list output as a table. This is the default."
     )]
@@ -289,6 +302,8 @@ pub struct AlertCliArgs {
     pub dashboard_uid_map: Option<PathBuf>,
     pub panel_id_map: Option<PathBuf>,
     pub verify_ssl: bool,
+    pub org_id: Option<i64>,
+    pub all_orgs: bool,
     pub list_kind: Option<AlertListKind>,
     pub table: bool,
     pub csv: bool,
@@ -315,6 +330,8 @@ pub fn cli_args_from_common(common: AlertCommonArgs) -> AlertCliArgs {
         dashboard_uid_map: None,
         panel_id_map: None,
         verify_ssl: common.verify_ssl,
+        org_id: None,
+        all_orgs: false,
         list_kind: None,
         table: false,
         csv: false,
@@ -408,6 +425,8 @@ pub fn normalize_alert_namespace_args(args: AlertNamespaceArgs) -> AlertCliArgs 
         Some(AlertGroupCommand::ListRules(inner)) => {
             let mut args = cli_args_from_common(inner.common);
             args.list_kind = Some(AlertListKind::Rules);
+            args.org_id = inner.org_id;
+            args.all_orgs = inner.all_orgs;
             args.table = inner.table;
             args.csv = inner.csv;
             args.json = inner.json;
@@ -418,6 +437,8 @@ pub fn normalize_alert_namespace_args(args: AlertNamespaceArgs) -> AlertCliArgs 
         Some(AlertGroupCommand::ListContactPoints(inner)) => {
             let mut args = cli_args_from_common(inner.common);
             args.list_kind = Some(AlertListKind::ContactPoints);
+            args.org_id = inner.org_id;
+            args.all_orgs = inner.all_orgs;
             args.table = inner.table;
             args.csv = inner.csv;
             args.json = inner.json;
@@ -428,6 +449,8 @@ pub fn normalize_alert_namespace_args(args: AlertNamespaceArgs) -> AlertCliArgs 
         Some(AlertGroupCommand::ListMuteTimings(inner)) => {
             let mut args = cli_args_from_common(inner.common);
             args.list_kind = Some(AlertListKind::MuteTimings);
+            args.org_id = inner.org_id;
+            args.all_orgs = inner.all_orgs;
             args.table = inner.table;
             args.csv = inner.csv;
             args.json = inner.json;
@@ -438,6 +461,8 @@ pub fn normalize_alert_namespace_args(args: AlertNamespaceArgs) -> AlertCliArgs 
         Some(AlertGroupCommand::ListTemplates(inner)) => {
             let mut args = cli_args_from_common(inner.common);
             args.list_kind = Some(AlertListKind::Templates);
+            args.org_id = inner.org_id;
+            args.all_orgs = inner.all_orgs;
             args.table = inner.table;
             args.csv = inner.csv;
             args.json = inner.json;
@@ -465,6 +490,8 @@ pub fn normalize_alert_namespace_args(args: AlertNamespaceArgs) -> AlertCliArgs 
                 dashboard_uid_map: legacy.dashboard_uid_map,
                 panel_id_map: legacy.panel_id_map,
                 verify_ssl: legacy.common.verify_ssl,
+                org_id: None,
+                all_orgs: false,
                 list_kind: None,
                 table: false,
                 csv: false,

@@ -149,6 +149,10 @@ def _parse_import_output_columns(args, parser):
 def _validate_datasource_org_routing_args(args, parser):
     """Validate datasource org-routing flags after argparse normalization."""
     command = getattr(args, "command", None)
+    if command == "list":
+        if bool(getattr(args, "all_orgs", False)) and getattr(args, "org_id", None):
+            parser.error("--all-orgs cannot be combined with --org-id for datasource list.")
+        return
     if command == "export":
         if bool(getattr(args, "all_orgs", False)) and getattr(args, "org_id", None):
             parser.error("--all-orgs cannot be combined with --org-id for datasource export.")

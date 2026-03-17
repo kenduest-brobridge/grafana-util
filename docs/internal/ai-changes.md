@@ -1,5 +1,22 @@
 # ai-changes.md
 
+## 2026-03-17 - Add Alert List Org Routing And Finish Inspect-Live Multi-Org Support
+- Summary: Added Basic-auth-only `--org-id` and `--all-orgs` support to Python and Rust alert list commands so `list-rules`, `list-contact-points`, `list-mute-timings`, and `list-templates` can enumerate one explicit org or aggregate all visible orgs while carrying `org` / `orgId` in scoped output. Completed the remaining Rust `dashboard inspect-live --all-orgs` path by exporting all visible orgs into a temporary multi-org raw layout, merging the per-org inventories, and reusing the existing inspect-export analyzer instead of rejecting the flag.
+- Tests: Added focused Python alert list org-routing coverage, focused Rust alert parser/runtime coverage, and focused Rust dashboard inspect-live coverage for `--all-orgs`.
+- Test Run: `python3 -m unittest -v tests/test_python_alert_cli.py tests/test_python_datasource_cli.py`; `cargo test --manifest-path rust/Cargo.toml --quiet alert`; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard`
+- Validation: Confirmed the Python alert and datasource focused suites pass, confirmed the Rust alert suite passes with the new list routing behavior, and confirmed the Rust dashboard suite passes with the live multi-org inspect path.
+- Impact: `grafana_utils/alert_cli.py`, `tests/test_python_alert_cli.py`, `rust/src/alert_cli_defs.rs`, `rust/src/alert.rs`, `rust/src/alert_client.rs`, `rust/src/alert_list.rs`, `rust/src/alert_rust_tests.rs`, `rust/src/dashboard_inspect.rs`, `rust/src/dashboard_rust_tests.rs`, `docs/user-guide.md`, `docs/user-guide-TW.md`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Moderate. Cross-org alert inventory now depends on Grafana org enumeration and scoped admin-style requests, and the Rust inspect-live path now performs a temporary multi-org export/merge step before analysis, so the remaining risk is mostly around Grafana org visibility variance and export metadata assumptions rather than parser shape.
+
+## 2026-03-17 - Align Python Datasource List Org Routing With Advertised CLI
+- Summary: Extended the Python datasource list path so it now accepts `--org-id` and `--all-orgs` instead of remaining current-org-only. The runtime now enforces Basic-auth-only org switching, scopes list requests per org as needed, and enriches list output with `org` / `orgId` when the returned rows carry explicit org scope.
+- Tests: Added focused Python parser coverage for datasource list org-routing flags and a runtime test that exercises `--all-orgs` table output with org columns.
+- Test Run: `python3 -m unittest -v tests.test_python_datasource_cli` (pass)
+- Validation: Confirmed the Python parser now accepts `datasource list --org-id` and `--all-orgs`, rejects combining them, and renders org-aware datasource list output for aggregated multi-org runs.
+- Impact: `grafana_utils/datasource/parser.py`, `grafana_utils/datasource_cli.py`, `grafana_utils/datasource/workflows.py`, `grafana_utils/dashboards/listing.py`, `tests/test_python_datasource_cli.py`, `docs/user-guide.md`, `docs/user-guide-TW.md`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low. The change is additive and aligns Python behavior with existing docs and the Rust CLI, but scripts that parse datasource list output should tolerate the extra `org` / `orgId` fields when multi-org or explicit-org scoping is used.
+- Follow-up: None.
+
 ## 2026-03-17 - Add Unified Root Help-Full Rendering
 - Summary: Expanded Rust unified help-full support beyond the root command. The CLI now intercepts `grafana-util --help-full` plus top-level `grafana-util alert|datasource|access|sync --help-full`, reuses each command's normal help output, and appends an `Extended Examples:` block instead of letting clap reject `--help-full` as unknown. The bracketed extended-example labels now also participate in the same domain color-highlighting used for existing root examples when output is attached to a TTY.
 - Tests: Updated the Rust unified CLI tests to cover root and top-level domain `--help-full` interception, plus ANSI colorization of extended example labels.

@@ -443,13 +443,28 @@ def format_data_source_line(datasource: dict[str, Any]) -> str:
 
 def build_data_source_record(datasource: dict[str, Any]) -> dict[str, str]:
     """Normalize one datasource into a stable output record."""
-    return {
+    record = {
         "uid": str(datasource.get("uid") or ""),
         "name": str(datasource.get("name") or ""),
         "type": str(datasource.get("type") or ""),
         "url": str(datasource.get("url") or ""),
         "isDefault": "true" if bool(datasource.get("isDefault")) else "false",
     }
+    org = str(datasource.get("org") or "")
+    org_id = str(datasource.get("orgId") or "")
+    if org or org_id:
+        record["org"] = org
+        record["orgId"] = org_id
+    return record
+
+
+def data_source_rows_include_org_scope(datasources: list[dict[str, Any]]) -> bool:
+    """Return whether any datasource row includes explicit org metadata."""
+    return any(
+        bool(str(datasource.get("org") or "").strip())
+        or bool(str(datasource.get("orgId") or "").strip())
+        for datasource in datasources
+    )
 
 
 def build_datasource_inventory_record(
@@ -469,18 +484,22 @@ def render_data_source_table(
     include_header: bool = True,
 ) -> list[str]:
     """Render datasource summaries as a fixed-width table."""
+    include_org_scope = data_source_rows_include_org_scope(datasources)
     headers = ["UID", "NAME", "TYPE", "URL", "IS_DEFAULT"]
+    if include_org_scope:
+        headers.extend(["ORG", "ORG_ID"])
     rows = []
     for record in [build_data_source_record(item) for item in datasources]:
-        rows.append(
-            [
-                record["uid"],
-                record["name"],
-                record["type"],
-                record["url"],
-                record["isDefault"],
-            ]
-        )
+        row = [
+            record["uid"],
+            record["name"],
+            record["type"],
+            record["url"],
+            record["isDefault"],
+        ]
+        if include_org_scope:
+            row.extend([record.get("org", ""), record.get("orgId", "")])
+        rows.append(row)
     widths = [len(header) for header in headers]
     for row in rows:
         for index, value in enumerate(row):
@@ -500,9 +519,13 @@ def render_data_source_table(
 
 def render_data_source_csv(datasources: list[dict[str, Any]]) -> None:
     """Render datasource summaries as CSV records."""
+    include_org_scope = data_source_rows_include_org_scope(datasources)
+    fieldnames = ["uid", "name", "type", "url", "isDefault"]
+    if include_org_scope:
+        fieldnames.extend(["org", "orgId"])
     writer = csv.DictWriter(
         sys.stdout,
-        fieldnames=["uid", "name", "type", "url", "isDefault"],
+        fieldnames=fieldnames,
         lineterminator="\n",
     )
     writer.writeheader()

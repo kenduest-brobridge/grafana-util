@@ -995,7 +995,45 @@ def delete_datasource(args):
 
 def list_datasources(args):
     client = build_client(args)
-    datasources = client.list_datasources()
+    all_orgs = bool(getattr(args, "all_orgs", False))
+    org_id = getattr(args, "org_id", None)
+    auth_header = client.headers.get("Authorization", "")
+    if (all_orgs or org_id) and not auth_header.startswith("Basic "):
+        raise GrafanaError(
+            "Datasource org switching does not support API token auth. Use Grafana "
+            "username/password login with --basic-user and --basic-password."
+        )
+
+    datasources = []
+    if all_orgs:
+        for org in client.list_orgs():
+            scoped_org_id = _normalize_org_id(org)
+            if not scoped_org_id:
+                continue
+            scoped_client = client.with_org_id(scoped_org_id)
+            scoped_org = scoped_client.fetch_current_org()
+            for datasource in scoped_client.list_datasources():
+                item = dict(datasource)
+                item["org"] = str(scoped_org.get("name") or "")
+                item["orgId"] = str(scoped_org.get("id") or "")
+                datasources.append(item)
+        datasources.sort(
+            key=lambda item: (
+                str(item.get("orgId") or ""),
+                str(item.get("name") or ""),
+                str(item.get("uid") or ""),
+            )
+        )
+    elif org_id:
+        scoped_client = client.with_org_id(str(org_id))
+        scoped_org = scoped_client.fetch_current_org()
+        for datasource in scoped_client.list_datasources():
+            item = dict(datasource)
+            item["org"] = str(scoped_org.get("name") or "")
+            item["orgId"] = str(scoped_org.get("id") or "")
+            datasources.append(item)
+    else:
+        datasources = client.list_datasources()
     if args.csv:
         render_data_source_csv(datasources)
         return 0

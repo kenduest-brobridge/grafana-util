@@ -154,6 +154,10 @@ Commit message default for this repo:
 - `list-data-sources --csv` emits header `uid,name,type,url,isDefault`.
 - `list-data-sources --json` emits an array of objects with keys `uid`, `name`, `type`, `url`, and `isDefault`.
 - `datasource list` is the preferred datasource inventory surface and mirrors the same human/CSV/JSON output contract as the older `dashboard list-data-sources` compatibility path.
+- `datasource list --org-id <ID>` rebuilds the datasource client with `X-Grafana-Org-Id` and is Basic-auth-only because explicit org listing is a server-admin-style workflow rather than a token-bound current-org workflow.
+- `datasource list --all-orgs` lists `/api/orgs`, rebuilds one scoped client per org, aggregates the combined datasource output, and adds `org` / `orgId` fields or columns when the results span explicit org scope. This is also Basic-auth-only.
+- `alert list-* --org-id <ID>` rebuilds the alert client with `X-Grafana-Org-Id` and is Basic-auth-only because explicit org listing is a server-admin-style workflow rather than a token-bound current-org workflow.
+- `alert list-* --all-orgs` lists `/api/orgs`, rebuilds one scoped alert client per org, aggregates the combined alert inventory output, and adds `org` / `orgId` fields or columns when the results span explicit org scope. This is also Basic-auth-only.
 - `datasource export` writes one normalized datasource inventory rooted at `datasources.json`, `index.json`, and `export-metadata.json`, and each exported record carries `uid`, `name`, `type`, `access`, `url`, `isDefault`, `org`, and `orgId`.
 - `datasource export --org-id <ID>` rebuilds the datasource client with `X-Grafana-Org-Id` and is Basic-auth-only because explicit org export is a server-admin-style workflow rather than a token-bound current-org workflow.
 - `datasource export --all-orgs` lists `/api/orgs`, rebuilds one scoped export client per org, writes each org into an `org_<id>_<name>/` subtree, and also writes one aggregate root `index.json` / `export-metadata.json` without a top-level `datasources.json`.
@@ -229,6 +233,8 @@ The Python and Rust dashboard CLIs also have `inspect-export` for offline raw-ex
 `inspect-export` and `inspect-live` use `--output-format` as the primary explicit output selector. `text`, `table`, and `json` cover summary modes, while `report-table`, `report-csv`, `report-json`, `report-tree`, `report-tree-table`, `dependency`, `dependency-json`, `report-dependency`, `report-dependency-json`, `governance`, and `governance-json` cover the corresponding report/governance/dependency-contract modes. Legacy `--json`, `--table`, and `--report` spellings still exist for compatibility, but help and examples should prefer `--output-format`.
 
 The Python CLI also has `inspect-live`, which accepts the normal live dashboard auth/common args, materializes a temporary raw-export-like directory from live dashboard payloads plus current folder and datasource inventories, and then reuses the same summary/report inspection pipeline as `inspect-export`. This keeps the operator-facing output contract aligned while avoiding a second inspection implementation.
+
+Rust `inspect-live --all-orgs` now follows the same broad pattern by exporting each org into a temporary multi-org raw layout, merging the per-org folder and datasource inventories into one temporary inspect root, and then handing that combined root to the existing inspect-export analysis path.
 
 The Rust unified CLI now exposes `--help-full` at the root and at the top-level domain roots `alert`, `datasource`, `access`, and `sync`, so commands such as `grafana-util --help-full` and `grafana-util datasource --help-full` print the normal help followed by extra focused examples. `inspect-export` and `inspect-live` additionally expose subcommand-level `--help-full` on both the Python and Rust CLIs. Normal `-h/--help` stays concise, while `--help-full` prints the same base help followed by extra focused examples.
 

@@ -132,6 +132,8 @@ class FakeAlertClient:
         policies=None,
         templates=None,
         existing_rules=None,
+        orgs=None,
+        current_org=None,
     ):
         self.rules = [dict(rule) for rule in (rules or [])]
         self.contact_points = [dict(item) for item in (contact_points or [])]
@@ -141,6 +143,8 @@ class FakeAlertClient:
         self.existing_rules = {
             uid: dict(rule) for uid, rule in (existing_rules or {}).items()
         }
+        self.orgs = [dict(item) for item in (orgs or [{"id": 1, "name": "Main Org"}])]
+        self.current_org = dict(current_org or self.orgs[0])
         self.created_rules = []
         self.updated_rules = []
         self.rule_lookups = []
@@ -152,6 +156,7 @@ class FakeAlertClient:
         self.updated_templates = []
         self.dashboard_by_uid = {}
         self.dashboard_search_results = []
+        self.org_scope_requests = []
 
     def list_alert_rules(self):
         return [dict(rule) for rule in self.rules]
@@ -220,6 +225,29 @@ class FakeAlertClient:
 
     def search_dashboards(self, query):
         return [dict(item) for item in self.dashboard_search_results]
+
+    def request_json(self, path, params=None, method="GET", payload=None):
+        if path == "/api/orgs":
+            return [dict(item) for item in self.orgs]
+        if path == "/api/org":
+            return dict(self.current_org)
+        raise AssertionError(f"Unexpected request_json path: {path}")
+
+    def with_org_id(self, org_id):
+        self.org_scope_requests.append(str(org_id))
+        for org in self.orgs:
+            if str(org.get("id")) == str(org_id):
+                return FakeAlertClient(
+                    rules=self.rules,
+                    contact_points=self.contact_points,
+                    mute_timings=self.mute_timings,
+                    policies=self.policies,
+                    templates=self.templates,
+                    existing_rules=self.existing_rules,
+                    orgs=self.orgs,
+                    current_org=org,
+                )
+        raise AssertionError(f"Unexpected org_id: {org_id}")
 
 
 class AlertUtilsTests(unittest.TestCase):
@@ -686,7 +714,11 @@ class AlertUtilsTests(unittest.TestCase):
         fake_client = FakeAlertClient(rules=[sample_rule()])
 
         stdout = io.StringIO()
-        with mock.patch.object(alert_utils, "build_client", return_value=fake_client):
+        with mock.patch.object(
+            alert_utils,
+            "_build_alert_list_plan",
+            return_value=[({"id": 1, "name": "Main Org"}, fake_client)],
+        ):
             with redirect_stdout(stdout):
                 result = alert_utils.list_alert_resources(args)
 
@@ -701,7 +733,11 @@ class AlertUtilsTests(unittest.TestCase):
         fake_client = FakeAlertClient(contact_points=[sample_contact_point()])
 
         stdout = io.StringIO()
-        with mock.patch.object(alert_utils, "build_client", return_value=fake_client):
+        with mock.patch.object(
+            alert_utils,
+            "_build_alert_list_plan",
+            return_value=[({"id": 1, "name": "Main Org"}, fake_client)],
+        ):
             with redirect_stdout(stdout):
                 result = alert_utils.list_alert_resources(args)
 
@@ -709,6 +745,83 @@ class AlertUtilsTests(unittest.TestCase):
         payload = json.loads(stdout.getvalue())
         self.assertEqual(payload[0]["uid"], "cp-uid")
         self.assertEqual(payload[0]["type"], "webhook")
+
+    def test_parse_list_rules_supports_org_id_and_all_orgs(self):
+        org_args = alert_utils.parse_args(["list-rules", "--org-id", "7", "--json"])
+        all_args = alert_utils.parse_args(["list-rules", "--all-orgs", "--json"])
+
+        self.assertEqual(org_args.org_id, "7")
+        self.assertFalse(org_args.all_orgs)
+        self.assertIsNone(all_args.org_id)
+        self.assertTrue(all_args.all_orgs)
+
+    def test_parse_list_rules_rejects_org_id_with_all_orgs(self):
+        with self.assertRaises(SystemExit):
+            alert_utils.parse_args(["list-rules", "--org-id", "7", "--all-orgs"])
+
+    def test_list_rules_with_all_orgs_renders_org_columns(self):
+        args = alert_utils.parse_args(["list-rules", "--all-orgs", "--table"])
+        args.username = "admin"
+        args.password = "secret"
+        fake_client = FakeAlertClient(
+            rules=[sample_rule()],
+            orgs=[{"id": 1, "name": "Main Org"}, {"id": 2, "name": "Platform"}],
+            current_org={"id": 1, "name": "Main Org"},
+        )
+
+        def build_client_for_org(_args, org_id):
+            return fake_client.with_org_id(org_id)
+
+        stdout = io.StringIO()
+        with mock.patch.object(
+            alert_utils, "list_visible_orgs", return_value=fake_client.orgs
+        ):
+            with mock.patch.object(
+                alert_utils, "build_client_for_org", side_effect=build_client_for_org
+            ):
+                with redirect_stdout(stdout):
+                    result = alert_utils.list_alert_resources(args)
+
+        self.assertEqual(result, 0)
+        output = stdout.getvalue()
+        self.assertIn("Org ID", output)
+        self.assertIn("Main Org", output)
+        self.assertIn("Platform", output)
+        self.assertEqual(fake_client.org_scope_requests, ["1", "2"])
+
+    def test_list_contact_points_with_org_id_renders_org_fields_in_json(self):
+        args = alert_utils.parse_args(["list-contact-points", "--org-id", "7", "--json"])
+        args.username = "admin"
+        args.password = "secret"
+        scoped_client = FakeAlertClient(
+            contact_points=[sample_contact_point()],
+            orgs=[{"id": 7, "name": "Platform"}],
+            current_org={"id": 7, "name": "Platform"},
+        )
+
+        stdout = io.StringIO()
+        with mock.patch.object(
+            alert_utils,
+            "_build_alert_list_plan",
+            return_value=[({"id": 7, "name": "Platform"}, scoped_client)],
+        ):
+            with redirect_stdout(stdout):
+                result = alert_utils.list_alert_resources(args)
+
+        self.assertEqual(result, 0)
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload[0]["orgId"], "7")
+        self.assertEqual(payload[0]["org"], "Platform")
+
+    def test_list_rules_rejects_all_orgs_with_api_token_auth(self):
+        args = alert_utils.parse_args(["list-rules", "--all-orgs", "--json"])
+        args.api_token = "abc123"
+
+        with self.assertRaisesRegex(
+            alert_utils.GrafanaError,
+            "Alert org switching does not support API token auth",
+        ):
+            alert_utils.list_alert_resources(args)
 
     def test_build_mute_timing_output_path_uses_name(self):
         path = alert_utils.build_mute_timing_output_path(

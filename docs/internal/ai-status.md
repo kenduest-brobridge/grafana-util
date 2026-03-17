@@ -5,6 +5,20 @@ Historical note:
 - Older entries describe the repo state and `TODO.md` backlog as they existed on the entry date.
 - `TODO.md` now tracks only the active backlog; completed or superseded TODO items moved to `docs/internal/todo-archive.md`.
 
+## 2026-03-17 - Task: Add Alert List Org Routing And Finish Inspect-Live Multi-Org Support
+- State: Done
+- Scope: `grafana_utils/alert_cli.py`, `tests/test_python_alert_cli.py`, `rust/src/alert_cli_defs.rs`, `rust/src/alert.rs`, `rust/src/alert_client.rs`, `rust/src/alert_list.rs`, `rust/src/alert_rust_tests.rs`, `rust/src/dashboard_inspect.rs`, `rust/src/dashboard_rust_tests.rs`, `docs/user-guide.md`, `docs/user-guide-TW.md`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The guides already described cross-org alert inventory, but Python and Rust alert list commands still only supported current-org scope. Rust `dashboard inspect-live` also exposed `--all-orgs` in parser/help while the runtime still rejected it and told operators to export first.
+- Current Update: Added `--org-id` and `--all-orgs` to Python and Rust alert list commands with Basic-auth-only org switching, per-org client rebuilding, and `org` / `orgId` output enrichment when rows carry explicit org scope. Reworked Rust `inspect-live --all-orgs` to reuse the existing live export flow, merge multi-org raw inventories into one temporary inspect root, and feed that combined root back through the existing inspect-export analysis path.
+- Result: Cross-org alert inventory now works in both runtimes, and Rust `dashboard inspect-live --all-orgs` now behaves consistently with its documented CLI contract instead of failing at runtime.
+
+## 2026-03-17 - Task: Align Python Datasource List Org Routing With Advertised CLI
+- State: Done
+- Scope: `grafana_utils/datasource/parser.py`, `grafana_utils/datasource_cli.py`, `grafana_utils/datasource/workflows.py`, `grafana_utils/dashboards/listing.py`, `tests/test_python_datasource_cli.py`, `docs/user-guide.md`, `docs/user-guide-TW.md`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The repo help text and Rust implementation already advertised `grafana-util datasource list --org-id` and `--all-orgs`, but the Python datasource parser and workflow only supported current-org listing. That caused Python/unified CLI users to hit parser errors or lose org metadata even though the docs implied the flags were available.
+- Current Update: Added Python datasource-list parsing and validation for `--org-id` and `--all-orgs`, enforced the same Basic-auth-only org-switching rule already used by other admin-style workflows, and extended datasource list rendering so table/CSV/JSON outputs automatically include `org` and `orgId` when rows carry explicit org scope.
+- Result: Python datasource list now matches the advertised CLI contract and the Rust behavior for explicit-org and multi-org inventory runs, including enriched org-aware output for aggregated results. Focused validation passed with `python3 -m unittest -v tests.test_python_datasource_cli`.
+
 ## 2026-03-17 - Task: Aggregate Rust Build Outputs Across Current Target Set
 - State: Done
 - Scope: `Makefile`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

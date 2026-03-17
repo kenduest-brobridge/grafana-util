@@ -1484,6 +1484,120 @@ fn build_export_inspect_args_from_live(
     }
 }
 
+fn load_json_array_file(path: &Path, error_context: &str) -> Result<Vec<Value>> {
+    let raw = fs::read_to_string(path)
+        .map_err(|error| message(format!("Failed to read {error_context} {}: {error}", path.display())))?;
+    let value: Value = serde_json::from_str(&raw).map_err(|error| {
+        message(format!(
+            "Invalid JSON in {error_context} {}: {error}",
+            path.display()
+        ))
+    })?;
+    match value {
+        Value::Array(items) => Ok(items),
+        _ => Err(message(format!(
+            "{error_context} must be a JSON array: {}",
+            path.display()
+        ))),
+    }
+}
+
+fn copy_dir_recursive(source: &Path, destination: &Path) -> Result<()> {
+    fs::create_dir_all(destination)?;
+    for entry in fs::read_dir(source)? {
+        let entry = entry?;
+        let source_path = entry.path();
+        let destination_path = destination.join(entry.file_name());
+        if source_path.is_dir() {
+            copy_dir_recursive(&source_path, &destination_path)?;
+        } else {
+            if let Some(parent) = destination_path.parent() {
+                fs::create_dir_all(parent)?;
+            }
+            fs::copy(&source_path, &destination_path).map_err(|error| {
+                message(format!(
+                    "Failed to copy {} to {}: {error}",
+                    source_path.display(),
+                    destination_path.display()
+                ))
+            })?;
+        }
+    }
+    Ok(())
+}
+
+fn prepare_inspect_live_import_dir(temp_root: &Path, args: &InspectLiveArgs) -> Result<PathBuf> {
+    if !args.all_orgs {
+        return Ok(temp_root.join(RAW_EXPORT_SUBDIR));
+    }
+
+    let inspect_raw_dir = temp_root.join("inspect-live-all-orgs").join(RAW_EXPORT_SUBDIR);
+    fs::create_dir_all(&inspect_raw_dir)?;
+
+    let mut folder_inventory = Vec::new();
+    let mut datasource_inventory = Vec::new();
+    let mut dashboard_count = 0usize;
+
+    for entry in fs::read_dir(temp_root)? {
+        let entry = entry?;
+        let org_root = entry.path();
+        if !org_root.is_dir() {
+            continue;
+        }
+        let org_name = entry.file_name();
+        let org_name = org_name.to_string_lossy();
+        if !org_name.starts_with("org_") {
+            continue;
+        }
+
+        let org_raw_dir = org_root.join(RAW_EXPORT_SUBDIR);
+        if !org_raw_dir.is_dir() {
+            continue;
+        }
+
+        let relative_target = inspect_raw_dir.join(org_name.as_ref());
+        copy_dir_recursive(&org_raw_dir, &relative_target)?;
+
+        folder_inventory.extend(load_json_array_file(
+            &org_raw_dir.join(FOLDER_INVENTORY_FILENAME),
+            "Dashboard folder inventory",
+        )?);
+        datasource_inventory.extend(load_json_array_file(
+            &org_raw_dir.join(DATASOURCE_INVENTORY_FILENAME),
+            "Dashboard datasource inventory",
+        )?);
+
+        if let Some(metadata) =
+            load_export_metadata(&org_raw_dir, Some(RAW_EXPORT_SUBDIR))?
+        {
+            dashboard_count += metadata.dashboard_count as usize;
+        }
+    }
+
+    write_json_document(
+        &build_export_metadata(
+            RAW_EXPORT_SUBDIR,
+            dashboard_count,
+            Some("grafana-web-import-preserve-uid"),
+            Some(FOLDER_INVENTORY_FILENAME),
+            Some(DATASOURCE_INVENTORY_FILENAME),
+            None,
+            None,
+        ),
+        &inspect_raw_dir.join(EXPORT_METADATA_FILENAME),
+    )?;
+    write_json_document(
+        &folder_inventory,
+        &inspect_raw_dir.join(FOLDER_INVENTORY_FILENAME),
+    )?;
+    write_json_document(
+        &datasource_inventory,
+        &inspect_raw_dir.join(DATASOURCE_INVENTORY_FILENAME),
+    )?;
+
+    Ok(inspect_raw_dir)
+}
+
 pub(crate) fn inspect_live_dashboards_with_request<F>(
     mut request_json: F,
     args: &InspectLiveArgs,
@@ -1491,15 +1605,10 @@ pub(crate) fn inspect_live_dashboards_with_request<F>(
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
-    if args.all_orgs {
-        return Err(message(
-            "inspect-live does not yet support --all-orgs. Export dashboards first or inspect one org at a time.",
-        ));
-    }
     let temp_dir = TempInspectLiveDir::new()?;
     let export_args = build_live_export_args(args, temp_dir.path.clone());
     let _ = dashboard_export::export_dashboards_with_request(&mut request_json, &export_args)?;
-    let inspect_args =
-        build_export_inspect_args_from_live(args, temp_dir.path.join(RAW_EXPORT_SUBDIR));
+    let inspect_import_dir = prepare_inspect_live_import_dir(&temp_dir.path, args)?;
+    let inspect_args = build_export_inspect_args_from_live(args, inspect_import_dir);
     analyze_export_dir(&inspect_args)
 }

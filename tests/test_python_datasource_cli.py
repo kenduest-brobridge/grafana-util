@@ -156,6 +156,15 @@ class DatasourceCliTests(unittest.TestCase):
         self.assertFalse(args.table)
         self.assertFalse(args.json)
 
+    def test_parse_args_supports_list_org_scoping(self):
+        org_args = datasource_cli.parse_args(["list", "--org-id", "7"])
+        all_args = datasource_cli.parse_args(["list", "--all-orgs"])
+
+        self.assertEqual(org_args.org_id, "7")
+        self.assertFalse(org_args.all_orgs)
+        self.assertIsNone(all_args.org_id)
+        self.assertTrue(all_args.all_orgs)
+
     def test_parse_args_supports_export_mode(self):
         args = datasource_cli.parse_args(["export", "--export-dir", "./datasources", "--overwrite"])
 
@@ -358,6 +367,10 @@ class DatasourceCliTests(unittest.TestCase):
     def test_parse_args_rejects_multiple_list_output_modes(self):
         with self.assertRaises(SystemExit):
             datasource_cli.parse_args(["list", "--table", "--csv"])
+
+    def test_parse_args_rejects_list_all_orgs_with_org_id(self):
+        with self.assertRaises(SystemExit):
+            datasource_cli.parse_args(["list", "--org-id", "7", "--all-orgs"])
 
         with self.assertRaises(SystemExit):
             datasource_cli.parse_args(["list", "--table", "--json"])
@@ -595,6 +608,56 @@ class DatasourceCliTests(unittest.TestCase):
                 "Listed 1 data source(s) from http://127.0.0.1:3000",
             ],
         )
+
+    def test_list_datasources_with_all_orgs_renders_org_columns(self):
+        org_one_client = FakeDatasourceClient(
+            datasources=[
+                {
+                    "uid": "prom_org1",
+                    "name": "Prometheus Main",
+                    "type": "prometheus",
+                    "url": "http://prometheus-1:9090",
+                    "isDefault": True,
+                }
+            ],
+            org={"id": 1, "name": "Main Org."},
+            headers={"Authorization": "Basic org1"},
+        )
+        org_two_client = FakeDatasourceClient(
+            datasources=[
+                {
+                    "uid": "loki_org2",
+                    "name": "Loki Org Two",
+                    "type": "loki",
+                    "url": "http://loki-2:3100",
+                    "isDefault": False,
+                }
+            ],
+            org={"id": 2, "name": "Org Two"},
+            headers={"Authorization": "Basic org2"},
+        )
+        client = FakeDatasourceClient(
+            datasources=[],
+            headers={"Authorization": "Basic root"},
+            orgs=[{"id": 1, "name": "Main Org."}, {"id": 2, "name": "Org Two"}],
+            org_clients={"1": org_one_client, "2": org_two_client},
+        )
+        args = datasource_cli.parse_args(
+            ["list", "--url", "http://127.0.0.1:3000", "--all-orgs", "--table"]
+        )
+
+        with mock.patch.object(datasource_cli, "build_client", return_value=client):
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = datasource_cli.list_datasources(args)
+
+        self.assertEqual(result, 0)
+        lines = stdout.getvalue().splitlines()
+        self.assertIn("ORG", lines[0])
+        self.assertIn("ORG_ID", lines[0])
+        self.assertIn("Main Org.", lines[2])
+        self.assertIn("Org Two", lines[3])
+        self.assertEqual(lines[-1], "Listed 2 data source(s) from http://127.0.0.1:3000")
 
     def test_add_datasource_dry_run_renders_table(self):
         args = datasource_cli.parse_args(

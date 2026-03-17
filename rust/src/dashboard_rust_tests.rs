@@ -1914,12 +1914,27 @@ fn parse_cli_supports_inspect_live_help_full_flag() {
 }
 
 #[test]
+fn parse_cli_supports_inspect_live_all_orgs_flag() {
+    let args = parse_cli_from(["grafana-util", "inspect-live", "--all-orgs", "--table"]);
+
+    match args.command {
+        DashboardCommand::InspectLive(inspect_args) => {
+            assert!(inspect_args.all_orgs);
+            assert!(inspect_args.table);
+            assert!(inspect_args.org_id.is_none());
+        }
+        _ => panic!("expected inspect-live command"),
+    }
+}
+
+#[test]
 fn inspect_live_help_mentions_report_and_panel_filter_flags() {
     let help = render_dashboard_subcommand_help("inspect-live");
 
     assert!(help.contains("--report"));
     assert!(help.contains("--output-format"));
     assert!(help.contains("--report-filter-panel-id"));
+    assert!(help.contains("--all-orgs"));
     assert!(help.contains("--help-full"));
     assert!(help.contains("tree"));
     assert!(help.contains("tree-table"));
@@ -5988,6 +6003,145 @@ fn inspect_live_dashboards_with_request_reports_live_json_via_temp_raw_export() 
     .unwrap();
 
     assert_eq!(count, 1);
+}
+
+#[test]
+fn inspect_live_dashboards_with_request_all_orgs_aggregates_multiple_org_exports() {
+    let args = InspectLiveArgs {
+        common: make_common_args("https://grafana.example.com".to_string()),
+        page_size: 100,
+        org_id: None,
+        all_orgs: true,
+        json: false,
+        table: false,
+        report: Some(InspectExportReportFormat::Json),
+        output_format: None,
+        report_columns: Vec::new(),
+        report_filter_datasource: None,
+        report_filter_panel_id: None,
+        help_full: false,
+        no_header: false,
+    };
+
+    let count = super::inspect_live_dashboards_with_request(
+        |method, path, params, _payload| match (method, path) {
+            (reqwest::Method::GET, "/api/orgs") => Ok(Some(json!([
+                {"id": 1, "name": "Main Org."},
+                {"id": 2, "name": "Org Two"}
+            ]))),
+            (reqwest::Method::GET, "/api/org") => {
+                let scoped_org = params
+                    .iter()
+                    .find(|(key, _)| key == "orgId")
+                    .map(|(_, value)| value.as_str())
+                    .unwrap_or("1");
+                match scoped_org {
+                    "1" => Ok(Some(json!({"id": 1, "name": "Main Org."}))),
+                    "2" => Ok(Some(json!({"id": 2, "name": "Org Two"}))),
+                    other => panic!("unexpected org context {other}"),
+                }
+            }
+            (reqwest::Method::GET, "/api/datasources") => {
+                let scoped_org = params
+                    .iter()
+                    .find(|(key, _)| key == "orgId")
+                    .map(|(_, value)| value.as_str())
+                    .unwrap_or("1");
+                match scoped_org {
+                    "1" => Ok(Some(json!([
+                        {
+                            "uid": "prom-main",
+                            "name": "Prometheus Main",
+                            "type": "prometheus",
+                            "access": "proxy",
+                            "url": "http://prometheus:9090",
+                            "isDefault": true
+                        }
+                    ]))),
+                    "2" => Ok(Some(json!([
+                        {
+                            "uid": "prom-two",
+                            "name": "Prometheus Two",
+                            "type": "prometheus",
+                            "access": "proxy",
+                            "url": "http://prometheus-two:9090",
+                            "isDefault": true
+                        }
+                    ]))),
+                    other => panic!("unexpected org context {other}"),
+                }
+            }
+            (reqwest::Method::GET, "/api/search") => {
+                let scoped_org = params
+                    .iter()
+                    .find(|(key, _)| key == "orgId")
+                    .map(|(_, value)| value.as_str())
+                    .unwrap_or("1");
+                match scoped_org {
+                    "1" => Ok(Some(json!([
+                        {
+                            "uid": "cpu-main",
+                            "title": "CPU Main",
+                            "type": "dash-db",
+                            "folderUid": "general",
+                            "folderTitle": "General"
+                        }
+                    ]))),
+                    "2" => Ok(Some(json!([
+                        {
+                            "uid": "latency-main",
+                            "title": "Latency Main",
+                            "type": "dash-db",
+                            "folderUid": "ops",
+                            "folderTitle": "Ops"
+                        }
+                    ]))),
+                    other => panic!("unexpected org context {other}"),
+                }
+            }
+            (reqwest::Method::GET, "/api/folders/general") => {
+                Ok(Some(json!({"uid": "general", "title": "General"})))
+            }
+            (reqwest::Method::GET, "/api/folders/ops") => {
+                Ok(Some(json!({"uid": "ops", "title": "Ops"})))
+            }
+            (reqwest::Method::GET, "/api/dashboards/uid/cpu-main") => Ok(Some(json!({
+                "dashboard": {
+                    "id": 11,
+                    "uid": "cpu-main",
+                    "title": "CPU Main",
+                    "panels": [{
+                        "id": 7,
+                        "title": "CPU Query",
+                        "type": "timeseries",
+                        "datasource": {"uid": "prom-main", "type": "prometheus"},
+                        "targets": [{"refId": "A", "expr": "up"}]
+                    }]
+                },
+                "meta": {"folderUid": "general", "folderTitle": "General"}
+            }))),
+            (reqwest::Method::GET, "/api/dashboards/uid/latency-main") => Ok(Some(json!({
+                "dashboard": {
+                    "id": 12,
+                    "uid": "latency-main",
+                    "title": "Latency Main",
+                    "panels": [{
+                        "id": 8,
+                        "title": "Latency Query",
+                        "type": "timeseries",
+                        "datasource": {"uid": "prom-two", "type": "prometheus"},
+                        "targets": [{"refId": "A", "expr": "rate(http_requests_total[5m])"}]
+                    }]
+                },
+                "meta": {"folderUid": "ops", "folderTitle": "Ops"}
+            }))),
+            (method, path) => panic!("unexpected request {method} {path}"),
+        },
+        &args,
+    )
+    .unwrap();
+
+    assert_eq!(count, 2);
 }
 
 #[test]

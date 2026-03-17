@@ -146,6 +146,24 @@ DELETE_HELP_EXAMPLES = (
 
 
 def add_list_cli_args(parser):
+    parser.add_argument(
+        "--org-id",
+        default=None,
+        help=(
+            "List datasource inventory from this explicit Grafana organization "
+            "ID instead of the current org context. API token auth is not "
+            "supported here; use Grafana username/password login."
+        ),
+    )
+    parser.add_argument(
+        "--all-orgs",
+        action="store_true",
+        help=(
+            "Aggregate datasource inventory from every visible Grafana "
+            "organization. API token auth is not supported here; use Grafana "
+            "username/password login."
+        ),
+    )
     output_group = parser.add_mutually_exclusive_group()
     output_group.add_argument(
         "--table",

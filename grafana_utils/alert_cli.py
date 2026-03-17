@@ -223,6 +223,24 @@ def add_export_args(parser: argparse.ArgumentParser) -> None:
 
 
 def add_list_args(parser: argparse.ArgumentParser) -> None:
+    org_group = parser.add_argument_group("Organization Options")
+    org_scope = org_group.add_mutually_exclusive_group()
+    org_scope.add_argument(
+        "--org-id",
+        default=None,
+        help=(
+            "List alerting resources from this explicit Grafana org ID instead of "
+            "the current org context. This requires Basic auth."
+        ),
+    )
+    org_scope.add_argument(
+        "--all-orgs",
+        action="store_true",
+        help=(
+            "List alerting resources from every visible Grafana organization and "
+            "aggregate the output. This requires Basic auth."
+        ),
+    )
     output_group = parser.add_argument_group("Output Options")
     output_group.add_argument(
         "--table",
@@ -1217,6 +1235,13 @@ def diff_alerting_resources(args: argparse.Namespace) -> int:
 def build_client(args: argparse.Namespace) -> GrafanaAlertClient:
     """Build the alerting API client from parsed CLI arguments."""
     headers = resolve_auth(args)
+    return _build_alert_client_for_headers(args, headers)
+
+
+def _build_alert_client_for_headers(
+    args: argparse.Namespace,
+    headers: dict[str, str],
+) -> GrafanaAlertClient:
     return GrafanaAlertClient(
         base_url=args.url,
         headers=headers,
@@ -1225,11 +1250,96 @@ def build_client(args: argparse.Namespace) -> GrafanaAlertClient:
     )
 
 
-def list_alert_resources(args: argparse.Namespace) -> int:
+def build_client_for_org(
+    args: argparse.Namespace,
+    org_id: str,
+) -> GrafanaAlertClient:
+    headers = resolve_auth(args)
+    headers["X-Grafana-Org-Id"] = str(org_id)
+    return _build_alert_client_for_headers(args, headers)
+
+
+def list_visible_orgs(args: argparse.Namespace) -> list[dict[str, Any]]:
     client = build_client(args)
+    data = client.request_json("/api/orgs")
+    if not isinstance(data, list):
+        raise GrafanaError("Unexpected org list response from Grafana.")
+    return [item for item in data if isinstance(item, dict)]
+
+
+def fetch_current_org(client: GrafanaAlertClient) -> dict[str, Any]:
+    data = client.request_json("/api/org")
+    if not isinstance(data, dict):
+        raise GrafanaError("Unexpected current org response from Grafana.")
+    return data
+
+
+def _normalize_alert_org_id(org: dict[str, Any]) -> str:
+    value = org.get("id")
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def _build_alert_list_plan(
+    args: argparse.Namespace,
+) -> list[tuple[dict[str, Any], GrafanaAlertClient]]:
+    headers = resolve_auth(args)
+    all_orgs = bool(getattr(args, "all_orgs", False))
+    org_id = str(getattr(args, "org_id", "") or "").strip()
+    if (all_orgs or org_id) and not headers.get("Authorization", "").startswith("Basic "):
+        raise GrafanaError(
+            "Alert org switching does not support API token auth. Use Grafana "
+            "Basic auth with --basic-user and --basic-password."
+        )
+
+    base_client = _build_alert_client_for_headers(args, headers)
+    if all_orgs:
+        plans: list[tuple[dict[str, Any], GrafanaAlertClient]] = []
+        for org in list_visible_orgs(args):
+            scoped_org_id = _normalize_alert_org_id(org)
+            if not scoped_org_id:
+                continue
+            scoped_client = build_client_for_org(args, scoped_org_id)
+            plans.append((fetch_current_org(scoped_client), scoped_client))
+        return plans
+    if org_id:
+        scoped_client = build_client_for_org(args, org_id)
+        return [(fetch_current_org(scoped_client), scoped_client)]
+    return [(fetch_current_org(base_client), base_client)]
+
+
+def _attach_alert_org_scope(
+    rows: list[dict[str, Any]],
+    org: dict[str, Any],
+) -> list[dict[str, Any]]:
+    scoped_rows = []
+    org_name = str(org.get("name") or "")
+    org_id = str(org.get("id") or "")
+    for row in rows:
+        scoped_row = dict(row)
+        scoped_row["org"] = org_name
+        scoped_row["orgId"] = org_id
+        scoped_rows.append(scoped_row)
+    return scoped_rows
+
+
+def _expand_alert_list_fields_with_org_scope(
+    rows: list[dict[str, Any]],
+    fields: list[str],
+    headers: dict[str, str],
+) -> tuple[list[str], dict[str, str]]:
+    if not any(str(row.get("orgId") or "").strip() for row in rows):
+        return fields, headers
+    expanded_fields = ["orgId", "org", *fields]
+    expanded_headers = {"orgId": "Org ID", "org": "Org", **headers}
+    return expanded_fields, expanded_headers
+
+
+def list_alert_resources(args: argparse.Namespace) -> int:
     command = getattr(args, "alert_command", "")
     if command == "list-rules":
-        rows = serialize_rule_list_rows(client.list_alert_rules())
+        serializer = serialize_rule_list_rows
         fields = ALERT_RULE_LIST_FIELDS
         headers = {
             "uid": "UID",
@@ -1238,20 +1348,37 @@ def list_alert_resources(args: argparse.Namespace) -> int:
             "ruleGroup": "Rule Group",
         }
     elif command == "list-contact-points":
-        rows = serialize_contact_point_list_rows(client.list_contact_points())
+        serializer = serialize_contact_point_list_rows
         fields = CONTACT_POINT_LIST_FIELDS
         headers = {"uid": "UID", "name": "Name", "type": "Type"}
     elif command == "list-mute-timings":
-        rows = serialize_mute_timing_list_rows(client.list_mute_timings())
+        serializer = serialize_mute_timing_list_rows
         fields = MUTE_TIMING_LIST_FIELDS
         headers = {"name": "Name", "intervals": "Intervals"}
     elif command == "list-templates":
-        rows = serialize_template_list_rows(client.list_templates())
+        serializer = serialize_template_list_rows
         fields = TEMPLATE_LIST_FIELDS
         headers = {"name": "Name"}
     else:
         raise GrafanaError("Unsupported alert list command.")
 
+    rows: list[dict[str, Any]] = []
+    for org, client in _build_alert_list_plan(args):
+        if command == "list-rules":
+            scoped_rows = serializer(client.list_alert_rules())
+        elif command == "list-contact-points":
+            scoped_rows = serializer(client.list_contact_points())
+        elif command == "list-mute-timings":
+            scoped_rows = serializer(client.list_mute_timings())
+        else:
+            scoped_rows = serializer(client.list_templates())
+        if bool(getattr(args, "all_orgs", False)) or str(
+            getattr(args, "org_id", "") or ""
+        ).strip():
+            scoped_rows = _attach_alert_org_scope(scoped_rows, org)
+        rows.extend(scoped_rows)
+
+    fields, headers = _expand_alert_list_fields_with_org_scope(rows, fields, headers)
     if args.json:
         print(render_alert_list_json(rows))
         return 0

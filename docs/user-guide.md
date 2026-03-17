@@ -510,6 +510,8 @@ Common output options:
 
 | Option | Purpose | Difference / scenario |
 | --- | --- | --- |
+| `--org-id` | Restrict to one org | Explicit org selection with Basic auth |
+| `--all-orgs` | Aggregate visible orgs | Cross-org inventory with Basic auth |
 | `--table` | Table output | Operators |
 | `--csv` | CSV output | Spreadsheet export |
 | `--json` | JSON output | Automation |
@@ -550,6 +552,9 @@ default_message    Alert: {{ .CommonLabels.alertname }}
 ops_summary        [{{ .Status }}] {{ .CommonLabels.severity }}
 ```
 
+Cross-org note:
+- `--org-id` and `--all-orgs` are Basic-auth-only for alert list commands because Grafana org switching requires a server-admin-style org scope change.
+
 5) Datasource Commands
 ----------------------
 
@@ -577,6 +582,9 @@ prom-main          prometheus-main    prometheus   http://prometheus:9090
 loki-prod          loki-prod          loki         http://loki:3100
 tempo-prod         tempo-prod         tempo        http://tempo:3200
 ```
+
+Cross-org note:
+- `--org-id` and `--all-orgs` are Basic-auth-only because datasource list must switch org context through Grafana admin APIs.
 
 ### 5.2 `datasource export`
 
@@ -1424,8 +1432,10 @@ grafana-util dashboard diff --url <URL> --basic-user <USER> --basic-password <PA
 grafana-util alert export --url <URL> --basic-user <USER> --basic-password <PASS> --output-dir <DIR> [--overwrite]
 grafana-util alert import --url <URL> --basic-user <USER> --basic-password <PASS> --import-dir <DIR>/raw --replace-existing [--dry-run]
 grafana-util alert diff --url <URL> --basic-user <USER> --basic-password <PASS> --diff-dir <DIR>/raw
+grafana-util alert list-rules --url <URL> --basic-user <USER> --basic-password <PASS> [--org-id <ORG_ID>|--all-orgs] [--table|--csv|--json]
 
 grafana-util datasource list --url <URL> --token <TOKEN> [--table|--csv|--json]
+grafana-util datasource list --url <URL> --basic-user <USER> --basic-password <PASS> [--org-id <ORG_ID>|--all-orgs] [--table|--csv|--json]
 python3 -m grafana_utils datasource add --url <URL> --token <TOKEN> --name <NAME> --type <TYPE> [--uid <UID>] [--access proxy|direct] [--datasource-url <URL>] [--basic-auth] [--basic-auth-user <USER>] [--basic-auth-password <PASS>] [--user <USER>] [--password <PASS>] [--with-credentials] [--http-header NAME=VALUE] [--tls-skip-verify] [--server-name <NAME>] [--json-data <JSON>] [--secure-json-data <JSON>] [--dry-run] [--table|--json|--output-format text|table|json]
 grafana-util datasource export --url <URL> --basic-user <USER> --basic-password <PASS> --export-dir <DIR> [--overwrite] [--org-id <ORG_ID>|--all-orgs]
 grafana-util datasource import --url <URL> --basic-user <USER> --basic-password <PASS> --import-dir <DIR> --replace-existing [--org-id <ORG_ID>] [--use-export-org [--only-org-id <ORG_ID>]... [--create-missing-orgs]] [--dry-run]
@@ -1469,7 +1479,9 @@ grafana-util access service-account list --url <URL> --token <TOKEN> --table
 | `dashboard list` | Yes | Yes |
 | `dashboard export` | Yes | Yes |
 | `dashboard import` | Yes | No |
+| `datasource list` | Yes | Yes |
 | `datasource export` | Yes | Yes |
 | `datasource import` | Yes | No |
-| `alert` commands | No | No |
+| `alert list-*` | Yes | Yes |
+| `alert export/import/diff` | No | No |
 | `access` commands | No | No |

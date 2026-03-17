@@ -41,6 +41,13 @@ impl GrafanaAlertClient {
         )
     }
 
+    pub fn list_orgs(&self) -> Result<Vec<Map<String, Value>>> {
+        expect_object_list(
+            self.request_json(Method::GET, "/api/orgs", &[], None)?,
+            "Unexpected /api/orgs payload from Grafana.",
+        )
+    }
+
     pub fn search_dashboards(&self, query: &str) -> Result<Vec<Map<String, Value>>> {
         expect_object_list(
             self.request_json(
