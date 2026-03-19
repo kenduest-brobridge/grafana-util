@@ -1,6 +1,7 @@
 """Dashboard inspection report model and document helpers."""
 
 from collections import OrderedDict
+import re
 from pathlib import Path
 from typing import Any, Optional
 
@@ -11,6 +12,7 @@ from .common import (
     GrafanaError,
 )
 from .inspection_analyzers import build_query_field_and_text, dispatch_query_analysis
+from .inspection_analyzers.contract import unique_strings
 from .transformer import is_builtin_datasource_ref, is_placeholder_string
 
 INSPECT_SOURCE_ROOT_FILENAME = ".inspect-source-root"
@@ -19,12 +21,18 @@ REPORT_COLUMN_HEADERS = OrderedDict(
     [
         ("dashboardUid", "DASHBOARD_UID"),
         ("dashboardTitle", "DASHBOARD_TITLE"),
+        ("dashboardTags", "DASHBOARD_TAGS"),
         ("folderPath", "FOLDER_PATH"),
+        ("folderFullPath", "FOLDER_FULL_PATH"),
+        ("folderLevel", "FOLDER_LEVEL"),
         ("folderUid", "FOLDER_UID"),
         ("parentFolderUid", "PARENT_FOLDER_UID"),
         ("panelId", "PANEL_ID"),
         ("panelTitle", "PANEL_TITLE"),
         ("panelType", "PANEL_TYPE"),
+        ("panelTargetCount", "PANEL_TARGET_COUNT"),
+        ("panelQueryCount", "PANEL_EFFECTIVE_QUERY_COUNT"),
+        ("panelDatasourceCount", "PANEL_TOTAL_DATASOURCE_COUNT"),
         ("refId", "REF_ID"),
         ("datasource", "DATASOURCE"),
         ("datasourceName", "DATASOURCE_NAME"),
@@ -37,6 +45,10 @@ REPORT_COLUMN_HEADERS = OrderedDict(
         ("datasourceType", "DATASOURCE_TYPE"),
         ("datasourceFamily", "DATASOURCE_FAMILY"),
         ("queryField", "QUERY_FIELD"),
+        ("targetHidden", "TARGET_HIDDEN"),
+        ("targetDisabled", "TARGET_DISABLED"),
+        ("queryVariables", "QUERY_VARIABLES"),
+        ("panelVariables", "PANEL_VARIABLES"),
         ("metrics", "METRICS"),
         ("functions", "FUNCTIONS"),
         ("measurements", "MEASUREMENTS"),
@@ -46,15 +58,49 @@ REPORT_COLUMN_HEADERS = OrderedDict(
     ]
 )
 OPTIONAL_REPORT_COLUMN_HEADERS = OrderedDict([("datasourceUid", "DATASOURCE_UID")])
+DEFAULT_REPORT_COLUMN_IDS = (
+    "dashboardUid",
+    "dashboardTitle",
+    "folderPath",
+    "folderUid",
+    "parentFolderUid",
+    "panelId",
+    "panelTitle",
+    "panelType",
+    "refId",
+    "datasource",
+    "datasourceName",
+    "datasourceOrg",
+    "datasourceOrgId",
+    "datasourceDatabase",
+    "datasourceBucket",
+    "datasourceOrganization",
+    "datasourceIndexPattern",
+    "datasourceType",
+    "datasourceFamily",
+    "queryField",
+    "metrics",
+    "functions",
+    "measurements",
+    "buckets",
+    "query",
+    "file",
+)
 REPORT_COLUMN_ALIASES = {
     "dashboard_uid": "dashboardUid",
     "dashboard_title": "dashboardTitle",
+    "dashboard_tags": "dashboardTags",
     "folder_path": "folderPath",
+    "folder_full_path": "folderFullPath",
+    "folder_level": "folderLevel",
     "folder_uid": "folderUid",
     "parent_folder_uid": "parentFolderUid",
     "panel_id": "panelId",
     "panel_title": "panelTitle",
     "panel_type": "panelType",
+    "panel_target_count": "panelTargetCount",
+    "panel_query_count": "panelQueryCount",
+    "panel_datasource_count": "panelDatasourceCount",
     "ref_id": "refId",
     "datasource_name": "datasourceName",
     "datasource_org": "datasourceOrg",
@@ -64,6 +110,10 @@ REPORT_COLUMN_ALIASES = {
     "datasource_organization": "datasourceOrganization",
     "datasource_index_pattern": "datasourceIndexPattern",
     "query_field": "queryField",
+    "target_hidden": "targetHidden",
+    "target_disabled": "targetDisabled",
+    "query_variables": "queryVariables",
+    "panel_variables": "panelVariables",
     "datasource_uid": "datasourceUid",
     "datasource_type": "datasourceType",
     "datasource_family": "datasourceFamily",
@@ -89,12 +139,18 @@ INSPECT_REPORT_FORMAT_CHOICES = (
 NORMALIZED_QUERY_REPORT_FIELDS = (
     "dashboardUid",
     "dashboardTitle",
+    "dashboardTags",
     "folderPath",
+    "folderFullPath",
+    "folderLevel",
     "folderUid",
     "parentFolderUid",
     "panelId",
     "panelTitle",
     "panelType",
+    "panelTargetCount",
+    "panelQueryCount",
+    "panelDatasourceCount",
     "refId",
     "datasource",
     "datasourceName",
@@ -108,6 +164,10 @@ NORMALIZED_QUERY_REPORT_FIELDS = (
     "datasourceType",
     "datasourceFamily",
     "queryField",
+    "targetHidden",
+    "targetDisabled",
+    "queryVariables",
+    "panelVariables",
     "query",
     "metrics",
     "functions",
@@ -140,10 +200,15 @@ INSPECT_EXPORT_HELP_FULL_EXAMPLES = (
     "    grafana-util dashboard inspect-export --import-dir ./dashboards/raw "
     "--report csv --report-columns "
     "panel_id,ref_id,datasource_name,metrics,functions,buckets,query\n\n"
-    "  Compare Grafana folder identity with source file paths:\n"
+    "  Inspect dashboard tags and per-panel variable and datasource counts:\n"
     "    grafana-util dashboard inspect-export --import-dir ./dashboards/raw "
     "--report csv --report-columns "
-    "dashboard_uid,folder_path,folder_uid,parent_folder_uid,file\n\n"
+    "dashboard_tags,panel_id,panel_query_count,panel_datasource_count,"
+    "query_variables,panel_variables\n\n"
+    "  Compare Grafana folder identity, slash paths, depth, and source file paths:\n"
+    "    grafana-util dashboard inspect-export --import-dir ./dashboards/raw "
+    "--report csv --report-columns "
+    "dashboard_uid,folder_path,folder_full_path,folder_level,folder_uid,parent_folder_uid,file\n\n"
     "  Inspect datasource-level org, database, bucket, or index-pattern fields:\n"
     "    grafana-util dashboard inspect-export --import-dir ./dashboards/raw "
     "--report csv --report-columns "
@@ -176,10 +241,15 @@ INSPECT_LIVE_HELP_FULL_EXAMPLES = (
     "    grafana-util dashboard inspect-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" "
     "--report csv --report-columns "
     "panel_id,ref_id,datasource_name,metrics,functions,buckets,query\n\n"
-    "  Compare Grafana folder identity with source file paths:\n"
+    "  Inspect dashboard tags and per-panel variable and datasource counts:\n"
     "    grafana-util dashboard inspect-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" "
     "--report csv --report-columns "
-    "dashboard_uid,folder_path,folder_uid,parent_folder_uid,file\n\n"
+    "dashboard_tags,panel_id,panel_query_count,panel_datasource_count,"
+    "query_variables,panel_variables\n\n"
+    "  Compare Grafana folder identity, slash paths, depth, and source file paths:\n"
+    "    grafana-util dashboard inspect-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" "
+    "--report csv --report-columns "
+    "dashboard_uid,folder_path,folder_full_path,folder_level,folder_uid,parent_folder_uid,file\n\n"
     "  Inspect datasource-level org, database, bucket, or index-pattern fields:\n"
     "    grafana-util dashboard inspect-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" "
     "--report csv --report-columns "
@@ -198,7 +268,127 @@ def format_supported_report_column_values() -> str:
     #   Upstream callers: 無
     #   Downstream callees: 無
 
-    return ", ".join(SUPPORTED_REPORT_COLUMN_VALUES)
+    return ", ".join(["all"] + list(SUPPORTED_REPORT_COLUMN_VALUES))
+
+
+VARIABLE_TOKEN_PATTERN = re.compile(
+    r"""
+    \$\{([A-Za-z_][A-Za-z0-9_]*)[^}]*\}
+    |\$([A-Za-z_][A-Za-z0-9_]*)
+    |\[\[([A-Za-z_][A-Za-z0-9_]*)\]\]
+    """,
+    re.VERBOSE,
+)
+QUERY_TEXT_FIELDS = {
+    "expr",
+    "expression",
+    "query",
+    "rawSql",
+    "sql",
+    "rawQuery",
+    "jql",
+    "logql",
+    "search",
+    "definition",
+    "command",
+}
+
+
+def extract_dashboard_tags(dashboard: dict[str, Any]) -> list[str]:
+    """Collect stable dashboard tags from the top-level dashboard object."""
+    tags = dashboard.get("tags")
+    if not isinstance(tags, list):
+        return []
+    return unique_strings(
+        [str(tag).strip() for tag in tags if str(tag).strip()]
+    )
+
+
+def extract_query_variable_names(query_text: str) -> list[str]:
+    """Collect Grafana template variables referenced by one query string."""
+    if not query_text:
+        return []
+    names = []
+    for match in VARIABLE_TOKEN_PATTERN.finditer(query_text):
+        for group in match.groups():
+            if group:
+                names.append(group)
+                break
+    return unique_strings(names)
+
+
+def _collect_panel_variable_names(value: Any, names: list[str]) -> None:
+    """Recursively collect non-query panel variable references."""
+    if isinstance(value, str):
+        names.extend(extract_query_variable_names(value))
+        return
+    if isinstance(value, list):
+        for item in value:
+            _collect_panel_variable_names(item, names)
+        return
+    if not isinstance(value, dict):
+        return
+    for key, item in value.items():
+        if key in QUERY_TEXT_FIELDS:
+            continue
+        _collect_panel_variable_names(item, names)
+
+
+def extract_panel_variables(panel: dict[str, Any]) -> list[str]:
+    """Collect template variable references from one panel object."""
+    names: list[str] = []
+    _collect_panel_variable_names(panel, names)
+    return unique_strings(names)
+
+
+def build_panel_report_context(
+    panel: dict[str, Any],
+    targets: list[dict[str, Any]],
+    datasources_by_uid: dict[str, dict[str, str]],
+    datasources_by_name: dict[str, dict[str, str]],
+) -> dict[str, Any]:
+    """Build panel-level counts and variable references for query rows."""
+    datasource_labels = []
+    active_query_count = 0
+    for target in targets:
+        if not _is_target_disabled(target):
+            query_field, query_text = build_query_field_and_text(target)
+            if query_field and query_text.strip():
+                active_query_count += 1
+        label = describe_panel_datasource(
+            panel,
+            target,
+            datasources_by_uid,
+            datasources_by_name,
+        )
+        if label and not _is_target_disabled(target) and label not in datasource_labels:
+            datasource_labels.append(label)
+    return {
+        "panelVariables": extract_panel_variables(panel),
+        "panelTargetCount": str(len(targets)),
+        "panelQueryCount": str(active_query_count),
+        "panelDatasourceCount": str(len(datasource_labels)),
+    }
+
+
+def _is_truthy_flag(value: Any) -> bool:
+    """Normalize Grafana boolean-like target flags."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    text = str(value or "").strip().lower()
+    return text in {"true", "1", "yes"}
+
+
+def _is_target_hidden(target: dict[str, Any]) -> bool:
+    """Check whether one target is hidden."""
+    return _is_truthy_flag(target.get("hide"))
+
+
+def _is_target_disabled(target: dict[str, Any]) -> bool:
+    """Check whether one target is disabled."""
+    return _is_truthy_flag(target.get("disabled"))
 
 
 def resolve_inspection_source_file_path(import_dir: Path, dashboard_file: Path) -> str:
@@ -252,6 +442,22 @@ def resolve_inspection_folder_path(
     return folder_path or DEFAULT_FOLDER_TITLE
 
 
+def calculate_folder_level(folder_path: str) -> str:
+    """Count the visible Grafana folder depth from one logical folder path."""
+    segments = [segment.strip() for segment in str(folder_path or "").split(" / ")]
+    level = len([segment for segment in segments if segment])
+    return str(level) if level else ""
+
+
+def calculate_folder_full_path(folder_path: str) -> str:
+    """Render one stable slash-prefixed folder path for CSV and JSON output."""
+    segments = [segment.strip() for segment in str(folder_path or "").split(" / ")]
+    normalized = [segment for segment in segments if segment]
+    if not normalized or normalized == [DEFAULT_FOLDER_TITLE]:
+        return "/"
+    return "/" + "/".join(normalized)
+
+
 def build_export_inspection_report_document(
     import_dir: Path,
     deps: dict[str, Any],
@@ -284,6 +490,7 @@ def build_export_inspection_report_document(
         dashboard = deps["extract_dashboard_object"](
             document, "Dashboard payload must be a JSON object."
         )
+        dashboard_tags = extract_dashboard_tags(dashboard)
         folder_record = deps["resolve_folder_inventory_record_for_dashboard"](
             document,
             dashboard_file,
@@ -299,9 +506,14 @@ def build_export_inspection_report_document(
             targets = panel.get("targets")
             if not isinstance(targets, list):
                 continue
-            for target in targets:
-                if not isinstance(target, dict):
-                    continue
+            target_records = [target for target in targets if isinstance(target, dict)]
+            panel_context = build_panel_report_context(
+                panel,
+                target_records,
+                datasources_by_uid,
+                datasources_by_name,
+            )
+            for target in target_records:
                 records.append(
                     build_query_report_record(
                         import_dir,
@@ -313,6 +525,8 @@ def build_export_inspection_report_document(
                         dashboard_file,
                         datasources_by_uid,
                         datasources_by_name,
+                        dashboard_tags=dashboard_tags,
+                        panel_context=panel_context,
                     )
                 )
 
@@ -521,6 +735,8 @@ def build_query_report_record(
     dashboard_file: Path,
     datasources_by_uid: dict[str, dict[str, str]],
     datasources_by_name: dict[str, dict[str, str]],
+    dashboard_tags: Optional[list[str]] = None,
+    panel_context: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
     """Build one canonical per-query inspection row."""
     # Call graph: see callers/callees.
@@ -545,12 +761,20 @@ def build_query_report_record(
     record = {
         "dashboardUid": str(dashboard.get("uid") or DEFAULT_UNKNOWN_UID),
         "dashboardTitle": str(dashboard.get("title") or DEFAULT_DASHBOARD_TITLE),
+        "dashboardTags": list(dashboard_tags or []),
         "folderPath": str(folder_path or DEFAULT_FOLDER_TITLE),
+        "folderFullPath": calculate_folder_full_path(folder_path),
+        "folderLevel": calculate_folder_level(folder_path),
         "folderUid": str((folder_record or {}).get("uid") or ""),
         "parentFolderUid": str((folder_record or {}).get("parentUid") or ""),
         "panelId": str(panel.get("id") or ""),
         "panelTitle": str(panel.get("title") or ""),
         "panelType": str(panel.get("type") or ""),
+        "panelTargetCount": str((panel_context or {}).get("panelTargetCount") or ""),
+        "panelQueryCount": str((panel_context or {}).get("panelQueryCount") or ""),
+        "panelDatasourceCount": str(
+            (panel_context or {}).get("panelDatasourceCount") or ""
+        ),
         "refId": str(target.get("refId") or ""),
         "datasource": describe_panel_datasource(
             panel,
@@ -582,7 +806,11 @@ def build_query_report_record(
             datasources_by_name,
         ),
         "queryField": query_field,
+        "targetHidden": str(_is_target_hidden(target)).lower(),
+        "targetDisabled": str(_is_target_disabled(target)).lower(),
         "query": query_text,
+        "queryVariables": extract_query_variable_names(query_text),
+        "panelVariables": list((panel_context or {}).get("panelVariables") or []),
         "metrics": analysis["metrics"],
         "functions": analysis["functions"],
         "measurements": analysis["measurements"],
@@ -619,6 +847,8 @@ def parse_report_columns(value: Optional[str]) -> Optional[list[str]]:
         raise GrafanaError(
             "--report-columns requires one or more comma-separated column ids."
         )
+    if "all" in columns:
+        return list(SUPPORTED_REPORT_COLUMN_HEADERS.keys())
     unknown = [
         column for column in columns if column not in SUPPORTED_REPORT_COLUMN_HEADERS
     ]
@@ -627,9 +857,7 @@ def parse_report_columns(value: Optional[str]) -> Optional[list[str]]:
             "Unsupported report column(s): %s. Supported values: %s."
             % (
                 ", ".join(unknown),
-                ", ".join(
-                    SUPPORTED_REPORT_COLUMN_VALUES
-                ),
+                ", ".join(["all"] + list(SUPPORTED_REPORT_COLUMN_VALUES)),
             )
         )
     return columns
@@ -723,15 +951,28 @@ def build_grouped_export_inspection_report_document(
                 "panelId": panel_key[0],
                 "panelTitle": panel_key[1],
                 "panelType": panel_key[2],
+                "panelTargetCount": 0,
+                "panelQueryCount": 0,
                 "datasources": [],
                 "queryCount": 0,
                 "queries": [],
             }
             dashboard_entry["panels"][panel_key] = panel_entry
+        panel_entry["panelTargetCount"] = max(
+            int(panel_entry.get("panelTargetCount") or 0),
+            int(record.get("panelTargetCount") or 0),
+        )
         datasource_label = str(record.get("datasource") or "")
         if datasource_label and datasource_label not in panel_entry["datasources"]:
             panel_entry["datasources"].append(datasource_label)
-        panel_entry["queryCount"] = int(panel_entry.get("queryCount") or 0) + 1
+        panel_entry["queryCount"] = max(
+            int(panel_entry.get("queryCount") or 0),
+            int(record.get("panelQueryCount") or 0),
+        )
+        panel_entry["panelQueryCount"] = max(
+            int(panel_entry.get("panelQueryCount") or 0),
+            int(record.get("panelQueryCount") or 0),
+        )
         panel_entry["queries"].append(dict(record))
 
     dashboard_records = []

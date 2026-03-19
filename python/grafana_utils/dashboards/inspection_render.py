@@ -12,6 +12,7 @@ from .common import (
     DEFAULT_UNKNOWN_UID,
 )
 from .inspection_report import (
+    DEFAULT_REPORT_COLUMN_IDS,
     REPORT_COLUMN_ALIASES,
     REPORT_COLUMN_HEADERS,
     SUPPORTED_REPORT_COLUMN_HEADERS,
@@ -36,7 +37,7 @@ def render_export_inspection_report_csv(
     #   Upstream callers: 無
     #   Downstream callees: 21
 
-    selected_columns = list(selected_columns or REPORT_COLUMN_HEADERS.keys())
+    selected_columns = list(selected_columns or SUPPORTED_REPORT_COLUMN_HEADERS.keys())
     rows = []
     if include_header:
         rows.append(
@@ -102,7 +103,7 @@ def render_export_inspection_report_tables(
 
     summary = document.get("summary") or {}
     query_records = list(document.get("queries") or [])
-    selected_columns = list(selected_columns or REPORT_COLUMN_HEADERS.keys())
+    selected_columns = list(selected_columns or DEFAULT_REPORT_COLUMN_IDS)
     lines = ["Export inspection report: %s" % import_dir, ""]
 
     lines.append("# Summary")
@@ -195,17 +196,23 @@ def render_export_inspection_grouped_report(
             )
             for panel in list(dashboard.get("panels") or []):
                 datasource_text = ",".join(panel.get("datasources") or []) or "-"
+                query_rows = list(panel.get("queries") or [])
+                target_count = int(panel.get("panelTargetCount") or 0) or len(query_rows)
+                query_count = int(
+                    panel.get("panelQueryCount") or panel.get("queryCount") or 0
+                ) or len(query_rows)
                 lines.append(
-                    "  Panel %s title=%s type=%s datasources=%s queries=%s"
+                    "  Panel %s title=%s type=%s datasources=%s targets=%s, queries=%s"
                     % (
                         str(panel.get("panelId") or ""),
                         str(panel.get("panelTitle") or ""),
                         str(panel.get("panelType") or ""),
                         datasource_text,
-                        int(panel.get("queryCount") or 0),
+                        target_count,
+                        query_count,
                     )
                 )
-                for query in list(panel.get("queries") or []):
+                for query in query_rows:
                     detail_parts = [
                         "datasource=%s" % str(query.get("datasource") or "-"),
                         "datasourceName=%s" % str(query.get("datasourceName") or "-"),
@@ -247,7 +254,7 @@ def render_export_inspection_tree_tables(
 
     summary = document.get("summary") or {}
     dashboard_records = list(document.get("dashboards") or [])
-    selected_columns = list(selected_columns or REPORT_COLUMN_HEADERS.keys())
+    selected_columns = list(selected_columns or DEFAULT_REPORT_COLUMN_IDS)
     lines = ["Export inspection tree-table report: %s" % import_dir, ""]
 
     lines.append("# Summary")
@@ -295,8 +302,13 @@ def render_export_inspection_tree_tables(
                 datasource_text = ",".join(panel.get("datasources") or []) or "-"
                 family_text = ",".join(panel.get("datasourceFamilies") or []) or "-"
                 field_text = ",".join(panel.get("queryFields") or []) or "-"
+                query_records = list(panel.get("queries") or [])
+                target_count = int(panel.get("panelTargetCount") or 0) or len(query_records)
+                query_count = int(
+                    panel.get("panelQueryCount") or panel.get("queryCount") or 0
+                ) or len(query_records)
                 lines.append(
-                    "Panel %s title=%s type=%s datasources=%s families=%s fields=%s queries=%s"
+                    "Panel %s title=%s type=%s datasources=%s families=%s fields=%s targets=%s, queries=%s"
                     % (
                         str(panel.get("panelId") or ""),
                         str(panel.get("panelTitle") or ""),
@@ -304,10 +316,10 @@ def render_export_inspection_tree_tables(
                         datasource_text,
                         family_text,
                         field_text,
-                        int(panel.get("queryCount") or 0),
+                        target_count,
+                        query_count,
                     )
                 )
-                query_records = list(panel.get("queries") or [])
                 if query_records:
                     lines.extend(
                         render_export_inspection_table_section(

@@ -155,6 +155,16 @@ pub(crate) fn render_grouped_query_report(report: &ExportInspectionQueryReport) 
             lines.push(format!("  File: {}", dashboard.file_path));
         }
         for panel in dashboard.panels {
+            let panel_target_count = if panel.panel_target_count == 0 {
+                panel.queries.len()
+            } else {
+                panel.panel_target_count
+            };
+            let panel_query_count = if panel.panel_query_count == 0 {
+                panel.queries.len()
+            } else {
+                panel.panel_query_count
+            };
             let panel_datasources = if panel.datasources.is_empty() {
                 "none".to_string()
             } else {
@@ -171,11 +181,12 @@ pub(crate) fn render_grouped_query_report(report: &ExportInspectionQueryReport) 
                 panel.query_fields.join(",")
             };
             lines.push(format!(
-                "  Panel: {} (id={}, type={}, queries={}, datasources={}, families={}, fields={})",
+                "  Panel: {} (id={}, type={}, targets={}, queries={}, datasources={}, families={}, fields={})",
                 panel.panel_title,
                 panel.panel_id,
                 panel.panel_type,
-                panel.queries.len(),
+                panel_target_count,
+                panel_query_count,
                 panel_datasources,
                 panel_families,
                 query_fields
@@ -305,6 +316,16 @@ pub(crate) fn render_grouped_query_table_report(
             lines.push(format!("File: {}", dashboard.file_path));
         }
         for panel in dashboard.panels {
+            let panel_target_count = if panel.panel_target_count == 0 {
+                panel.queries.len()
+            } else {
+                panel.panel_target_count
+            };
+            let panel_query_count = if panel.panel_query_count == 0 {
+                panel.queries.len()
+            } else {
+                panel.panel_query_count
+            };
             let panel_datasources = if panel.datasources.is_empty() {
                 "none".to_string()
             } else {
@@ -321,11 +342,12 @@ pub(crate) fn render_grouped_query_table_report(
                 panel.query_fields.join(",")
             };
             lines.push(format!(
-                "Panel: {} (id={}, type={}, queries={}, datasources={}, families={}, fields={})",
+                "Panel: {} (id={}, type={}, targets={}, queries={}, datasources={}, families={}, fields={})",
                 panel.panel_title,
                 panel.panel_id,
                 panel.panel_type,
-                panel.queries.len(),
+                panel_target_count,
+                panel_query_count,
                 panel_datasources,
                 panel_families,
                 panel_query_fields

@@ -770,6 +770,8 @@ class ExporterTests(unittest.TestCase):
         self.assertIn("--help-full", help_text)
         self.assertIn("datasourceType", help_text)
         self.assertIn("datasourceFamily", help_text)
+        self.assertIn("folderLevel", help_text)
+        self.assertIn("all, dashboard_uid", help_text)
         self.assertIn("datasource label, uid, type,", help_text)
         self.assertIn("or family exactly matches this value", help_text)
         self.assertNotIn("\n  --json", help_text)
@@ -796,7 +798,11 @@ class ExporterTests(unittest.TestCase):
             help_text,
         )
         self.assertIn(
-            "--report-columns dashboard_uid,folder_path,folder_uid,parent_folder_uid,file",
+            "--report-columns dashboard_tags,panel_id,panel_query_count,panel_datasource_count,query_variables,panel_variables",
+            help_text,
+        )
+        self.assertIn(
+            "--report-columns dashboard_uid,folder_path,folder_full_path,folder_level,folder_uid,parent_folder_uid,file",
             help_text,
         )
         self.assertIn(
@@ -825,6 +831,8 @@ class ExporterTests(unittest.TestCase):
         self.assertIn("--help-full", help_text)
         self.assertIn("datasourceType", help_text)
         self.assertIn("datasourceFamily", help_text)
+        self.assertIn("folderLevel", help_text)
+        self.assertIn("all, dashboard_uid", help_text)
         self.assertIn("datasource label, uid, type,", help_text)
         self.assertIn("or family exactly matches this value", help_text)
         self.assertNotIn("\n  --report ", help_text)
@@ -851,7 +859,11 @@ class ExporterTests(unittest.TestCase):
             help_text,
         )
         self.assertIn(
-            "--report-columns dashboard_uid,folder_path,folder_uid,parent_folder_uid,file",
+            "--report-columns dashboard_tags,panel_id,panel_query_count,panel_datasource_count,query_variables,panel_variables",
+            help_text,
+        )
+        self.assertIn(
+            "--report-columns dashboard_uid,folder_path,folder_full_path,folder_level,folder_uid,parent_folder_uid,file",
             help_text,
         )
         self.assertIn(
@@ -1560,17 +1572,29 @@ class ExporterTests(unittest.TestCase):
     def test_dashboard_parse_report_columns_accepts_snake_case_aliases(self):
         self.assertEqual(
             exporter.parse_report_columns(
-                "dashboard_uid,panel_title,query_field,datasource_uid,datasource_type,datasource_family"
+                "dashboard_uid,dashboard_tags,panel_title,query_field,target_hidden,target_disabled,query_variables,panel_variables,panel_target_count,panel_query_count,panel_datasource_count,datasource_uid,datasource_type,datasource_family"
             ),
             [
                 "dashboardUid",
+                "dashboardTags",
                 "panelTitle",
                 "queryField",
+                "targetHidden",
+                "targetDisabled",
+                "queryVariables",
+                "panelVariables",
+                "panelTargetCount",
+                "panelQueryCount",
+                "panelDatasourceCount",
                 "datasourceUid",
                 "datasourceType",
                 "datasourceFamily",
             ],
         )
+        self.assertIn("dashboardTags", exporter.parse_report_columns("all"))
+        self.assertIn("panelVariables", exporter.parse_report_columns("all"))
+        self.assertIn("panelTargetCount", exporter.parse_report_columns("all"))
+        self.assertIn("targetHidden", exporter.parse_report_columns("all"))
 
     def test_dashboard_dispatch_query_analysis_uses_prometheus_analyzer(self):
         analysis = inspection_dispatcher.dispatch_query_analysis(
@@ -1650,6 +1674,57 @@ class ExporterTests(unittest.TestCase):
         self.assertEqual(analysis["measurements"], [])
         self.assertEqual(analysis["buckets"], [])
 
+    def test_dashboard_build_query_field_and_text_synthesizes_influx_builder_query(self):
+        contract = importlib.import_module(
+            "grafana_utils.dashboards.inspection_analyzers.contract"
+        )
+
+        query_field, query_text = contract.build_query_field_and_text(
+            {
+                "measurement": "cpu_total",
+                "select": [
+                    [
+                        {"type": "field", "params": ["user"]},
+                        {"type": "mean", "params": []},
+                    ]
+                ],
+                "groupBy": [
+                    {"type": "time", "params": ["$__interval"]},
+                    {"type": "fill", "params": ["null"]},
+                ],
+                "tags": [
+                    {"key": "host", "operator": "=~", "value": "/^$LINUXHOST$/"},
+                ],
+            }
+        )
+
+        self.assertEqual(query_field, "builder")
+        self.assertEqual(
+            query_text,
+            'SELECT mean("user") FROM "cpu_total" WHERE "host" =~ /^$LINUXHOST$/ GROUP BY time($__interval), fill(null)',
+        )
+
+    def test_dashboard_build_panel_report_context_distinguishes_target_count_from_query_count(
+        self,
+    ):
+        report = importlib.import_module(
+            "grafana_utils.dashboards.inspection_report"
+        )
+
+        context = report.build_panel_report_context(
+            panel={"datasource": {"type": "prometheus", "uid": "prom-main"}},
+            targets=[
+                {"refId": "A", "expr": "up"},
+                {"refId": "B", "expr": "rate(http_requests_total[5m])", "hide": True},
+                {"refId": "C", "expr": "ignored_metric", "disabled": True},
+            ],
+            datasources_by_uid={},
+            datasources_by_name={},
+        )
+
+        self.assertEqual(context["panelTargetCount"], "3")
+        self.assertEqual(context["panelQueryCount"], "2")
+
     def test_dashboard_render_export_inspection_tree_tables_uses_grouped_document(self):
         grouped_document = exporter.build_grouped_export_inspection_report_document(
             {
@@ -1688,6 +1763,7 @@ class ExporterTests(unittest.TestCase):
             "Panel 7 title=CPU Usage type=timeseries datasources=prom-main",
             output,
         )
+        self.assertIn("targets=1, queries=1", output)
         self.assertIn(
             "DASHBOARD_UID  PANEL_TITLE  DATASOURCE  QUERY",
             output,

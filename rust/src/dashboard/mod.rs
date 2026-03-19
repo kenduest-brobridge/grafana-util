@@ -104,11 +104,13 @@ pub(crate) use inspect_report::normalize_query_report;
 pub(crate) use inspect_report::{
     build_export_inspection_query_report_document, build_query_report,
     refresh_filtered_query_report_summary, render_query_report_column, report_column_header,
-    report_format_supports_columns, resolve_report_column_ids, ExportInspectionQueryReport,
-    ExportInspectionQueryRow,
+    report_format_supports_columns, resolve_report_column_ids_for_format,
+    ExportInspectionQueryReport, ExportInspectionQueryRow,
 };
 #[cfg(test)]
-pub(crate) use inspect_report::{QueryReportSummary, DEFAULT_REPORT_COLUMN_IDS};
+pub(crate) use inspect_report::{QueryReportSummary, DEFAULT_REPORT_COLUMN_IDS, SUPPORTED_REPORT_COLUMN_IDS};
+#[cfg(test)]
+pub(crate) use inspect_report::resolve_report_column_ids;
 pub(crate) use inspect_summary::{
     build_export_inspection_summary_document, DatasourceInventorySummary, ExportDatasourceUsage,
     ExportFolderUsage, ExportInspectionSummary, MixedDashboardSummary,

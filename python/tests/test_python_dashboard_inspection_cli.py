@@ -1,6 +1,8 @@
 import argparse
+import importlib
 import io
 import json
+import re
 import tempfile
 import unittest
 from contextlib import redirect_stdout
@@ -11,6 +13,10 @@ from tests.test_python_dashboard_cli import (
     FakeDashboardWorkflowClient,
     build_export_metadata,
     exporter,
+)
+
+inspection_report = importlib.import_module(
+    "grafana_utils.dashboards.inspection_report"
 )
 
 
@@ -116,7 +122,15 @@ class DashboardInspectionTests(unittest.TestCase):
                                     "type": "prometheus",
                                     "uid": "prom-main",
                                 },
-                                "targets": [{"refId": "A", "expr": "up"}],
+                                "targets": [
+                                    {"refId": "A", "expr": "up"},
+                                    {"refId": "B", "expr": "up[1m]"},
+                                    {
+                                        "refId": "C",
+                                        "expr": "up[5m]",
+                                        "disabled": True,
+                                    },
+                                ],
                             }
                         ],
                     },
@@ -741,6 +755,8 @@ class DashboardInspectionTests(unittest.TestCase):
             self.assertEqual(payload["summary"]["queryRecordCount"], 5)
             self.assertEqual(query_by_panel["7"]["dashboardUid"], "infra-main")
             self.assertEqual(query_by_panel["7"]["panelId"], "7")
+            self.assertEqual(query_by_panel["7"]["folderFullPath"], "/")
+            self.assertEqual(query_by_panel["7"]["folderLevel"], "1")
             self.assertEqual(query_by_panel["7"]["datasourceUid"], "prom-main")
             self.assertEqual(query_by_panel["7"]["datasourceType"], "prometheus")
             self.assertEqual(query_by_panel["7"]["datasourceFamily"], "prometheus")
@@ -775,6 +791,104 @@ class DashboardInspectionTests(unittest.TestCase):
                 query_by_panel["11"]["datasourceIndexPattern"], "[logs-]YYYY.MM.DD"
             )
             self.assertEqual(query_by_panel["11"]["datasourceType"], "elasticsearch")
+
+    def test_dashboard_inspection_inspect_export_renders_dashboard_and_panel_context_columns(
+        self,
+    ):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import_dir = Path(tmpdir)
+            self.write_report_fixture(
+                import_dir,
+                {
+                    "id": None,
+                    "uid": "vars-main",
+                    "title": "Vars Main",
+                    "tags": ["ops", "production"],
+                    "panels": [
+                        {
+                            "id": 7,
+                            "title": "CPU Usage",
+                            "type": "timeseries",
+                            "description": "owned by $team for ${env}",
+                            "datasource": {
+                                "type": "prometheus",
+                                "uid": "prom-main",
+                            },
+                            "targets": [
+                                {
+                                    "refId": "A",
+                                    "expr": 'sum(rate(node_cpu_seconds_total{cluster="$cluster"}[5m])) * $__interval',
+                                    "datasource": {
+                                        "type": "prometheus",
+                                        "uid": "prom-main",
+                                    },
+                                },
+                                {
+                                    "refId": "B",
+                                    "expr": 'count_over_time({job="grafana",cluster="$cluster"}[5m])',
+                                    "hide": True,
+                                    "datasource": {
+                                        "type": "loki",
+                                        "uid": "logs-main",
+                                    },
+                                },
+                                {
+                                    "refId": "C",
+                                    "expr": 'ignored_metric{cluster="$cluster"}',
+                                    "disabled": True,
+                                    "datasource": {
+                                        "type": "prometheus",
+                                        "uid": "prom-main",
+                                    },
+                                },
+                            ],
+                        }
+                    ],
+                },
+                datasources=[
+                    {
+                        "uid": "prom-main",
+                        "name": "Prometheus Main",
+                        "type": "prometheus",
+                    },
+                    {
+                        "uid": "logs-main",
+                        "name": "Logs Main",
+                        "type": "loki",
+                    },
+                ],
+            )
+
+            args = exporter.parse_args(
+                ["inspect-export", "--import-dir", str(import_dir), "--report", "json"]
+            )
+            result, output = self.run_inspect(args)
+            payload = json.loads(output)
+            rows = {item["refId"]: item for item in payload["queries"]}
+
+            self.assertEqual(result, 0)
+            self.assertEqual(payload["summary"]["dashboardCount"], 1)
+            self.assertEqual(payload["summary"]["queryRecordCount"], 3)
+            self.assertEqual(rows["A"]["dashboardTags"], ["ops", "production"])
+            self.assertEqual(rows["B"]["dashboardTags"], ["ops", "production"])
+            self.assertEqual(rows["A"]["panelTargetCount"], "3")
+            self.assertEqual(rows["A"]["panelQueryCount"], "2")
+            self.assertEqual(rows["A"]["panelDatasourceCount"], "2")
+            self.assertEqual(rows["B"]["panelTargetCount"], "3")
+            self.assertEqual(rows["B"]["panelQueryCount"], "2")
+            self.assertEqual(rows["B"]["panelDatasourceCount"], "2")
+            self.assertEqual(rows["A"]["targetHidden"], "false")
+            self.assertEqual(rows["A"]["targetDisabled"], "false")
+            self.assertEqual(rows["B"]["targetHidden"], "true")
+            self.assertEqual(rows["B"]["targetDisabled"], "false")
+            self.assertEqual(rows["C"]["panelTargetCount"], "3")
+            self.assertEqual(rows["C"]["panelQueryCount"], "2")
+            self.assertEqual(rows["C"]["targetHidden"], "false")
+            self.assertEqual(rows["C"]["targetDisabled"], "true")
+            self.assertEqual(rows["A"]["queryVariables"], ["cluster", "__interval"])
+            self.assertEqual(rows["B"]["queryVariables"], ["cluster"])
+            self.assertEqual(rows["A"]["panelVariables"], ["team", "env"])
+            self.assertEqual(rows["B"]["panelVariables"], ["team", "env"])
 
     def test_dashboard_inspection_parse_args_supports_governance_report_formats(self):
         args = exporter.parse_args(
@@ -1009,6 +1123,15 @@ class DashboardInspectionTests(unittest.TestCase):
                         {
                             "refId": "A",
                             "expr": 'sum(rate(node_cpu_seconds_total{job="node"}[5m]))',
+                        },
+                        {
+                            "refId": "B",
+                            "expr": 'sum(rate(node_cpu_seconds_total{job="node"}[1m]))',
+                        },
+                        {
+                            "refId": "C",
+                            "expr": 'sum(rate(node_cpu_seconds_total{job="node"}[15m]))',
+                            "disabled": True,
                         }
                     ],
                 },
@@ -1033,6 +1156,7 @@ class DashboardInspectionTests(unittest.TestCase):
             self.assertIn("Export inspection tree report:", tree_output)
             self.assertIn("[1] Dashboard infra-main", tree_output)
             self.assertIn("Panel 7 title=CPU Usage", tree_output)
+            self.assertIn("targets=3, queries=2", tree_output)
 
             table_args = exporter.parse_args(
                 [
@@ -1051,7 +1175,9 @@ class DashboardInspectionTests(unittest.TestCase):
                 "Panel 7 title=CPU Usage type=timeseries datasources=prom-main",
                 table_output,
             )
+            self.assertIn("targets=3, queries=2", table_output)
             self.assertIn("DASHBOARD_UID", table_output)
+            self.assertNotIn("DATASOURCE_UID", table_output)
             self.assertIn('{job="grafana"}', table_output)
 
     def test_dashboard_inspection_inspect_export_tree_and_tree_table_filters_and_columns(
@@ -1141,10 +1267,16 @@ class DashboardInspectionTests(unittest.TestCase):
                 ["inspect-export", "--import-dir", str(import_dir), "--report", "csv"]
             )
             _, csv_output = self.run_inspect(csv_args)
-            self.assertIn(
-                "dashboard_uid,dashboard_title,folder_path,panel_id", csv_output
+            expected_default_header = ",".join(
+                inspection_report.REPORT_COLUMN_ALIASES.get(
+                    column_id,
+                    re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", column_id).lower(),
+                )
+                for column_id in inspection_report.SUPPORTED_REPORT_COLUMN_HEADERS.keys()
             )
-            self.assertIn("infra-main,Infra Main,General,7", csv_output)
+            self.assertEqual(csv_output.splitlines()[0], expected_default_header)
+            self.assertIn("datasource_uid", csv_output.splitlines()[0])
+            self.assertIn("infra-main,Infra Main,,General,/,1,general,,7", csv_output)
 
             table_args = exporter.parse_args(
                 [
@@ -1168,18 +1300,35 @@ class DashboardInspectionTests(unittest.TestCase):
                     "--report",
                     "csv",
                     "--report-columns",
-                    "dashboard_uid,datasource_uid,datasource,datasource_family,query",
+                    "dashboard_uid,folder_level,datasource_uid,datasource,datasource_family,query",
                 ]
             )
             _, csv_columns_output = self.run_inspect(csv_columns_args)
             self.assertIn(
-                "dashboard_uid,datasource_uid,datasource,datasource_family,query",
+                "dashboard_uid,folder_level,datasource_uid,datasource,datasource_family,query",
                 csv_columns_output.splitlines()[0],
             )
             self.assertIn(
-                "infra-main,prom-main,prom-main,prometheus,up",
+                "infra-main,1,prom-main,prom-main,prometheus,up",
                 csv_columns_output,
             )
+
+            all_columns_args = exporter.parse_args(
+                [
+                    "inspect-export",
+                    "--import-dir",
+                    str(import_dir),
+                    "--report",
+                    "csv",
+                    "--report-columns",
+                    "all",
+                ]
+            )
+            _, csv_all_output = self.run_inspect(all_columns_args)
+            self.assertIn("folder_level", csv_all_output.splitlines()[0])
+            self.assertIn("folder_full_path", csv_all_output.splitlines()[0])
+            self.assertIn("datasource_uid", csv_all_output.splitlines()[0])
+            self.assertIn("file", csv_all_output.splitlines()[0])
 
     def test_dashboard_inspection_inspect_export_filters_query_report(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1536,6 +1685,8 @@ class DashboardInspectionTests(unittest.TestCase):
         self.assertEqual(result, 0)
         self.assertEqual(payload["summary"]["dashboardCount"], 1)
         self.assertEqual(payload["queries"][0]["folderPath"], "Platform / Infra")
+        self.assertEqual(payload["queries"][0]["folderFullPath"], "/Platform/Infra")
+        self.assertEqual(payload["queries"][0]["folderLevel"], "2")
         self.assertEqual(payload["queries"][0]["metrics"], ["up"])
 
     def test_dashboard_inspection_inspect_export_validation_errors(self):

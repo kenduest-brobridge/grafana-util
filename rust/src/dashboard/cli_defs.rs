@@ -684,7 +684,7 @@ pub struct InspectExportArgs {
         long,
         value_delimiter = ',',
         value_parser = parse_inspect_report_column,
-        help = "For --report table, csv, or tree-table output, or the equivalent report-like --output-format values, limit the query report to the selected columns. Supported values: org, org_id, dashboard_uid, dashboard_title, folder_path, folder_uid, parent_folder_uid, panel_id, panel_title, panel_type, ref_id, datasource, datasource_name, datasource_uid, datasource_org, datasource_org_id, datasource_database, datasource_bucket, datasource_organization, datasource_index_pattern, datasource_type, datasource_family, query_field, metrics, functions, measurements, buckets, query, file. JSON-style aliases like orgId, dashboardUid, folderUid, parentFolderUid, datasourceName, datasourceUid, datasourceOrg, datasourceOrgId, datasourceDatabase, datasourceBucket, datasourceOrganization, datasourceIndexPattern, datasourceType, and datasourceFamily are also accepted."
+        help = "For --report table, csv, or tree-table output, or the equivalent report-like --output-format values, limit the query report to the selected columns. Use all to expand every supported column. Supported values: org, org_id, dashboard_uid, dashboard_title, dashboard_tags, folder_path, folder_full_path, folder_level, folder_uid, parent_folder_uid, panel_id, panel_title, panel_type, panel_target_count, panel_query_count, panel_datasource_count, panel_variables, ref_id, datasource, datasource_name, datasource_uid, datasource_org, datasource_org_id, datasource_database, datasource_bucket, datasource_organization, datasource_index_pattern, datasource_type, datasource_family, query_field, target_hidden, target_disabled, query_variables, metrics, functions, measurements, buckets, query, file. JSON-style aliases like orgId, dashboardUid, dashboardTags, folderFullPath, folderLevel, folderUid, parentFolderUid, panelTargetCount, panelQueryCount, panelDatasourceCount, panelVariables, datasourceName, datasourceUid, datasourceOrg, datasourceOrgId, datasourceDatabase, datasourceBucket, datasourceOrganization, datasourceIndexPattern, datasourceType, datasourceFamily, targetHidden, targetDisabled, and queryVariables are also accepted."
     )]
     pub report_columns: Vec<String>,
     #[arg(
@@ -767,7 +767,7 @@ pub struct InspectLiveArgs {
         long,
         value_delimiter = ',',
         value_parser = parse_inspect_report_column,
-        help = "For --report table, csv, or tree-table output, or the equivalent report-like --output-format values, limit the query report to the selected columns. Supported values: org, org_id, dashboard_uid, dashboard_title, folder_path, folder_uid, parent_folder_uid, panel_id, panel_title, panel_type, ref_id, datasource, datasource_name, datasource_uid, datasource_org, datasource_org_id, datasource_database, datasource_bucket, datasource_organization, datasource_index_pattern, datasource_type, datasource_family, query_field, metrics, functions, measurements, buckets, query, file. JSON-style aliases like orgId, dashboardUid, folderUid, parentFolderUid, datasourceName, datasourceUid, datasourceOrg, datasourceOrgId, datasourceDatabase, datasourceBucket, datasourceOrganization, datasourceIndexPattern, datasourceType, and datasourceFamily are also accepted."
+        help = "For --report table, csv, or tree-table output, or the equivalent report-like --output-format values, limit the query report to the selected columns. Use all to expand every supported column. Supported values: org, org_id, dashboard_uid, dashboard_title, dashboard_tags, folder_path, folder_full_path, folder_level, folder_uid, parent_folder_uid, panel_id, panel_title, panel_type, panel_target_count, panel_query_count, panel_datasource_count, panel_variables, ref_id, datasource, datasource_name, datasource_uid, datasource_org, datasource_org_id, datasource_database, datasource_bucket, datasource_organization, datasource_index_pattern, datasource_type, datasource_family, query_field, target_hidden, target_disabled, query_variables, metrics, functions, measurements, buckets, query, file. JSON-style aliases like orgId, dashboardUid, dashboardTags, folderFullPath, folderLevel, folderUid, parentFolderUid, panelTargetCount, panelQueryCount, panelDatasourceCount, panelVariables, datasourceName, datasourceUid, datasourceOrg, datasourceOrgId, datasourceDatabase, datasourceBucket, datasourceOrganization, datasourceIndexPattern, datasourceType, datasourceFamily, targetHidden, targetDisabled, and queryVariables are also accepted."
     )]
     pub report_columns: Vec<String>,
     #[arg(
@@ -928,16 +928,26 @@ fn parse_inspect_report_column(value: &str) -> std::result::Result<String, Strin
     // Downstream callees: 無
 
     match value {
+        "all" => Ok("all".to_string()),
         "org" => Ok("org".to_string()),
         "org_id" | "orgId" => Ok("org_id".to_string()),
         "dashboard_uid" | "dashboardUid" => Ok("dashboard_uid".to_string()),
         "dashboard_title" | "dashboardTitle" => Ok("dashboard_title".to_string()),
+        "dashboard_tags" | "dashboardTags" => Ok("dashboard_tags".to_string()),
         "folder_path" | "folderPath" => Ok("folder_path".to_string()),
+        "folder_full_path" | "folderFullPath" => Ok("folder_full_path".to_string()),
+        "folder_level" | "folderLevel" => Ok("folder_level".to_string()),
         "folder_uid" | "folderUid" => Ok("folder_uid".to_string()),
         "parent_folder_uid" | "parentFolderUid" => Ok("parent_folder_uid".to_string()),
         "panel_id" | "panelId" => Ok("panel_id".to_string()),
         "panel_title" | "panelTitle" => Ok("panel_title".to_string()),
         "panel_type" | "panelType" => Ok("panel_type".to_string()),
+        "panel_target_count" | "panelTargetCount" => Ok("panel_target_count".to_string()),
+        "panel_query_count" | "panelQueryCount" => Ok("panel_query_count".to_string()),
+        "panel_datasource_count" | "panelDatasourceCount" => {
+            Ok("panel_datasource_count".to_string())
+        }
+        "panel_variables" | "panelVariables" => Ok("panel_variables".to_string()),
         "ref_id" | "refId" => Ok("ref_id".to_string()),
         "datasource" => Ok("datasource".to_string()),
         "datasource_name" | "datasourceName" => Ok("datasource_name".to_string()),
@@ -955,6 +965,9 @@ fn parse_inspect_report_column(value: &str) -> std::result::Result<String, Strin
         "datasource_type" | "datasourceType" => Ok("datasource_type".to_string()),
         "datasource_family" | "datasourceFamily" => Ok("datasource_family".to_string()),
         "query_field" | "queryField" => Ok("query_field".to_string()),
+        "target_hidden" | "targetHidden" => Ok("target_hidden".to_string()),
+        "target_disabled" | "targetDisabled" => Ok("target_disabled".to_string()),
+        "query_variables" | "queryVariables" => Ok("query_variables".to_string()),
         "metrics" => Ok("metrics".to_string()),
         "functions" => Ok("functions".to_string()),
         "measurements" => Ok("measurements".to_string()),
@@ -962,7 +975,7 @@ fn parse_inspect_report_column(value: &str) -> std::result::Result<String, Strin
         "query" => Ok("query".to_string()),
         "file" => Ok("file".to_string()),
         _ => Err(format!(
-            "Unsupported --report-columns value '{value}'. Supported values: org, org_id, dashboard_uid, dashboard_title, folder_path, folder_uid, parent_folder_uid, panel_id, panel_title, panel_type, ref_id, datasource, datasource_name, datasource_uid, datasource_org, datasource_org_id, datasource_database, datasource_bucket, datasource_organization, datasource_index_pattern, datasource_type, datasource_family, query_field, metrics, functions, measurements, buckets, query, file."
+            "Unsupported --report-columns value '{value}'. Supported values: all, org, org_id, dashboard_uid, dashboard_title, dashboard_tags, folder_path, folder_full_path, folder_level, folder_uid, parent_folder_uid, panel_id, panel_title, panel_type, panel_target_count, panel_query_count, panel_datasource_count, panel_variables, ref_id, datasource, datasource_name, datasource_uid, datasource_org, datasource_org_id, datasource_database, datasource_bucket, datasource_organization, datasource_index_pattern, datasource_type, datasource_family, query_field, target_hidden, target_disabled, query_variables, metrics, functions, measurements, buckets, query, file."
         )),
     }
 }

@@ -56,6 +56,7 @@ pub(crate) struct QueryExtractionContext<'a> {
 struct QueryReportContext<'a> {
     export_org: &'a str,
     export_org_id: &'a str,
+    dashboard: &'a Map<String, Value>,
     dashboard_uid: &'a str,
     dashboard_title: &'a str,
     folder_path: &'a str,
@@ -63,6 +64,91 @@ struct QueryReportContext<'a> {
     parent_folder_uid: &'a str,
     dashboard_file_display: &'a str,
     datasource_inventory: &'a [DatasourceInventoryItem],
+}
+
+fn calculate_folder_level(folder_path: &str) -> String {
+    let level = folder_path
+        .split(" / ")
+        .map(str::trim)
+        .filter(|segment| !segment.is_empty())
+        .count();
+    if level == 0 {
+        String::new()
+    } else {
+        level.to_string()
+    }
+}
+
+fn calculate_folder_full_path(folder_path: &str) -> String {
+    let segments = folder_path
+        .split(" / ")
+        .map(str::trim)
+        .filter(|segment| !segment.is_empty())
+        .collect::<Vec<&str>>();
+    if segments.is_empty()
+        || (segments.len() == 1 && segments[0] == DEFAULT_FOLDER_TITLE)
+    {
+        "/".to_string()
+    } else {
+        format!("/{}", segments.join("/"))
+    }
+}
+
+fn extract_dashboard_tags(dashboard: &Map<String, Value>) -> Vec<String> {
+    dashboard
+        .get("tags")
+        .and_then(Value::as_array)
+        .map(|tags| {
+            let mut values = Vec::new();
+            for tag in tags {
+                if let Some(value) = tag.as_str().map(str::trim).filter(|value| !value.is_empty()) {
+                    ordered_unique_push(&mut values, value);
+                }
+            }
+            values
+        })
+        .unwrap_or_default()
+}
+
+fn extract_query_variables(query_text: &str) -> Vec<String> {
+    let patterns = [
+        r"\$\{([A-Za-z_][A-Za-z0-9_]*)(?::[^}]*)?\}",
+        r"\$([A-Za-z_][A-Za-z0-9_]*)",
+        r"\[\[([A-Za-z_][A-Za-z0-9_]*)(?::[^\]]*)?\]\]",
+    ];
+    let mut values = Vec::new();
+    for pattern in patterns {
+        let regex = Regex::new(pattern).expect("invalid hard-coded variable regex");
+        for capture in regex.captures_iter(query_text) {
+            let Some(value) = capture.get(1).map(|item| item.as_str().trim()) else {
+                continue;
+            };
+            if value.is_empty() {
+                continue;
+            }
+            ordered_unique_push(&mut values, value);
+        }
+    }
+    values
+}
+
+fn value_is_truthy(value: Option<&Value>) -> bool {
+    match value {
+        Some(Value::Bool(boolean)) => *boolean,
+        Some(Value::Number(number)) => number.as_i64().unwrap_or(0) != 0,
+        Some(Value::String(text)) => {
+            matches!(text.trim().to_ascii_lowercase().as_str(), "true" | "1" | "yes")
+        }
+        _ => false,
+    }
+}
+
+fn target_is_hidden(target: &Map<String, Value>) -> bool {
+    value_is_truthy(target.get("hide"))
+}
+
+fn target_is_disabled(target: &Map<String, Value>) -> bool {
+    value_is_truthy(target.get("disabled"))
 }
 
 fn normalize_relative_dashboard_path(path: &Path) -> String {
@@ -671,6 +757,84 @@ fn string_list_field(target: &Map<String, Value>, key: &str) -> Vec<String> {
         .unwrap_or_default()
 }
 
+fn extract_template_variable_names_from_text(text: &str) -> Vec<String> {
+    let regex = Regex::new(
+        r#"(?m)(?:^|[^A-Za-z0-9_])\$(?:\{([A-Za-z_][A-Za-z0-9_]*)\}|([A-Za-z_][A-Za-z0-9_]*))"#,
+    )
+    .expect("invalid hard-coded dashboard template variable regex");
+    let mut values = Vec::new();
+    for captures in regex.captures_iter(text) {
+        let value = captures
+            .get(1)
+            .or_else(|| captures.get(2))
+            .map(|item| item.as_str())
+            .unwrap_or_default();
+        ordered_unique_push(&mut values, value);
+    }
+    values
+}
+
+fn extract_template_variable_names_from_value(
+    value: &Value,
+    skip_keys: &[&str],
+) -> Vec<String> {
+    fn visit(value: &Value, skip_keys: &[&str], values: &mut Vec<String>) {
+        match value {
+            Value::String(text) => {
+                for variable in extract_template_variable_names_from_text(text) {
+                    ordered_unique_push(values, &variable);
+                }
+            }
+            Value::Array(items) => {
+                for item in items {
+                    visit(item, skip_keys, values);
+                }
+            }
+            Value::Object(object) => {
+                for (key, item) in object {
+                    if skip_keys.iter().any(|skip_key| skip_key == &key.as_str()) {
+                        continue;
+                    }
+                    visit(item, skip_keys, values);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    let mut values = Vec::new();
+    visit(value, skip_keys, &mut values);
+    values
+}
+
+fn summarize_panel_datasource_key(reference: &Value) -> Option<String> {
+    if reference.is_null() {
+        return None;
+    }
+    match reference {
+        Value::String(text) => {
+            let normalized = text.trim();
+            if normalized.is_empty() {
+                None
+            } else {
+                Some(normalized.to_string())
+            }
+        }
+        Value::Object(object) => {
+            for key in ["uid", "name", "type"] {
+                if let Some(value) = object.get(key).and_then(Value::as_str) {
+                    let normalized = value.trim();
+                    if !normalized.is_empty() && !is_placeholder_string(normalized) {
+                        return Some(normalized.to_string());
+                    }
+                }
+            }
+            None
+        }
+        _ => None,
+    }
+}
+
 fn quoted_captures(text: &str, pattern: &str) -> Vec<String> {
     let regex = Regex::new(pattern).expect("invalid hard-coded query report regex");
     let mut values = std::collections::BTreeSet::new();
@@ -724,7 +888,152 @@ pub(crate) fn extract_query_field_and_text(target: &Map<String, Value>) -> (Stri
             }
         }
     }
+    let synthesized = synthesize_influx_builder_query(target);
+    if !synthesized.is_empty() {
+        return ("builder".to_string(), synthesized);
+    }
     (String::new(), String::new())
+}
+
+fn first_step_param(step: &Map<String, Value>) -> String {
+    step.get("params")
+        .and_then(Value::as_array)
+        .and_then(|params| params.first())
+        .map(|value| match value {
+            Value::String(text) => text.trim().to_string(),
+            other => other.to_string(),
+        })
+        .unwrap_or_default()
+}
+
+fn render_influx_select_chain(chain: &Value) -> String {
+    let Some(steps) = chain.as_array() else {
+        return String::new();
+    };
+    let mut expression = String::new();
+    for step in steps {
+        let Some(step_object) = step.as_object() else {
+            continue;
+        };
+        let step_type = string_field(step_object, "type", "");
+        let param = first_step_param(step_object);
+        match step_type.as_str() {
+            "field" => {
+                if !param.is_empty() {
+                    expression = format!("\"{param}\"");
+                }
+            }
+            "math" => {
+                if !param.is_empty() {
+                    if expression.is_empty() {
+                        expression = param;
+                    } else {
+                        expression.push_str(&param);
+                    }
+                }
+            }
+            "alias" => {}
+            "" => {}
+            _ => {
+                if !expression.is_empty() {
+                    expression = format!("{step_type}({expression})");
+                } else if !param.is_empty() {
+                    expression = format!("{step_type}({param})");
+                } else {
+                    expression = format!("{step_type}()");
+                }
+            }
+        }
+    }
+    expression.trim().to_string()
+}
+
+fn render_influx_group_by_clause(group_by: Option<&Value>) -> String {
+    let Some(items) = group_by.and_then(Value::as_array) else {
+        return String::new();
+    };
+    let mut parts = Vec::new();
+    for item in items {
+        let Some(group_object) = item.as_object() else {
+            continue;
+        };
+        let group_type = string_field(group_object, "type", "");
+        let param = first_step_param(group_object);
+        let rendered = match group_type.as_str() {
+            "time" if !param.is_empty() => format!("time({param})"),
+            "fill" if !param.is_empty() => format!("fill({param})"),
+            "tag" if !param.is_empty() => format!("\"{param}\""),
+            _ if !group_type.is_empty() && !param.is_empty() => format!("{group_type}({param})"),
+            _ if !group_type.is_empty() => group_type,
+            _ => String::new(),
+        };
+        if !rendered.is_empty() {
+            parts.push(rendered);
+        }
+    }
+    parts.join(", ")
+}
+
+fn render_influx_where_clause(tags: Option<&Value>) -> String {
+    let Some(items) = tags.and_then(Value::as_array) else {
+        return String::new();
+    };
+    let mut parts = Vec::new();
+    for item in items {
+        let Some(tag_object) = item.as_object() else {
+            continue;
+        };
+        let key = string_field(tag_object, "key", "");
+        let operator = string_field(tag_object, "operator", "=");
+        let value = string_field(tag_object, "value", "");
+        if key.is_empty() || value.is_empty() {
+            continue;
+        }
+        let condition = string_field(tag_object, "condition", "").to_ascii_uppercase();
+        if !parts.is_empty() && (condition == "AND" || condition == "OR") {
+            parts.push(condition);
+        }
+        parts.push(format!("\"{key}\" {operator} {value}"));
+    }
+    parts.join(" ")
+}
+
+fn synthesize_influx_builder_query(target: &Map<String, Value>) -> String {
+    let measurement = string_field(target, "measurement", "");
+    let select_parts = target
+        .get("select")
+        .and_then(Value::as_array)
+        .map(|chains| {
+            chains
+                .iter()
+                .map(render_influx_select_chain)
+                .filter(|value| !value.is_empty())
+                .collect::<Vec<String>>()
+        })
+        .unwrap_or_default();
+    if measurement.is_empty() && select_parts.is_empty() {
+        return String::new();
+    }
+    let mut query = format!(
+        "SELECT {}",
+        if select_parts.is_empty() {
+            "*".to_string()
+        } else {
+            select_parts.join(", ")
+        }
+    );
+    if !measurement.is_empty() {
+        query.push_str(&format!(" FROM \"{measurement}\""));
+    }
+    let where_clause = render_influx_where_clause(target.get("tags"));
+    if !where_clause.is_empty() {
+        query.push_str(&format!(" WHERE {where_clause}"));
+    }
+    let group_by_clause = render_influx_group_by_clause(target.get("groupBy"));
+    if !group_by_clause.is_empty() {
+        query.push_str(&format!(" GROUP BY {group_by_clause}"));
+    }
+    query
 }
 
 fn extract_metric_names(query_text: &str) -> Vec<String> {
@@ -1136,6 +1445,7 @@ fn collect_query_report_rows(
         let Some(panel_object) = panel.as_object() else {
             continue;
         };
+        let dashboard_tags = extract_dashboard_tags(context.dashboard);
         let panel_id = panel_object
             .get("id")
             .map(|value| match value {
@@ -1147,7 +1457,41 @@ fn collect_query_report_rows(
         let panel_title = string_field(panel_object, "title", "");
         let panel_type = string_field(panel_object, "type", "");
         let panel_datasource = panel_object.get("datasource");
+        let panel_variables = extract_template_variable_names_from_value(
+            &Value::Object(panel_object.clone()),
+            &["targets", "panels"],
+        );
         if let Some(targets) = panel_object.get("targets").and_then(Value::as_array) {
+            let panel_target_count = targets
+                .iter()
+                .filter(|target| target.as_object().is_some())
+                .count();
+            let panel_query_count = targets
+                .iter()
+                .filter_map(Value::as_object)
+                .filter(|target_object| {
+                    !target_is_disabled(target_object)
+                        && !extract_query_field_and_text(target_object).1.trim().is_empty()
+                })
+                .count();
+            let mut panel_datasource_keys = std::collections::BTreeSet::new();
+            for target in targets {
+                let Some(target_object) = target.as_object() else {
+                    continue;
+                };
+                if target_is_disabled(target_object) {
+                    continue;
+                }
+                let panel_datasource_label = target_object
+                    .get("datasource")
+                    .or(panel_datasource)
+                    .and_then(summarize_panel_datasource_key)
+                    .unwrap_or_default();
+                if !panel_datasource_label.is_empty() {
+                    panel_datasource_keys.insert(panel_datasource_label);
+                }
+            }
+            let panel_datasource_count = panel_datasource_keys.len();
             for target in targets {
                 let Some(target_object) = target.as_object() else {
                     continue;
@@ -1195,6 +1539,13 @@ fn collect_query_report_rows(
                         })
                     });
                 let (query_field, query_text) = extract_query_field_and_text(target_object);
+                let mut query_variables = extract_query_variables(&query_text);
+                if query_variables.is_empty() {
+                    query_variables = extract_template_variable_names_from_value(
+                        &Value::Object(target_object.clone()),
+                        &[],
+                    );
+                }
                 let analysis = dispatch_query_analysis(&QueryExtractionContext {
                     panel: panel_object,
                     target: target_object,
@@ -1206,12 +1557,19 @@ fn collect_query_report_rows(
                     org_id: context.export_org_id.to_string(),
                     dashboard_uid: context.dashboard_uid.to_string(),
                     dashboard_title: context.dashboard_title.to_string(),
+                    dashboard_tags: dashboard_tags.clone(),
                     folder_path: context.folder_path.to_string(),
+                    folder_full_path: calculate_folder_full_path(context.folder_path),
+                    folder_level: calculate_folder_level(context.folder_path),
                     folder_uid: context.folder_uid.to_string(),
                     parent_folder_uid: context.parent_folder_uid.to_string(),
                     panel_id: panel_id.clone(),
                     panel_title: panel_title.clone(),
                     panel_type: panel_type.clone(),
+                    panel_target_count,
+                    panel_query_count,
+                    panel_datasource_count,
+                    panel_variables: panel_variables.clone(),
                     ref_id: string_field(target_object, "refId", ""),
                     datasource,
                     datasource_name,
@@ -1237,7 +1595,10 @@ fn collect_query_report_rows(
                     datasource_family: normalize_family_name(&datasource_type),
                     datasource_type,
                     query_field,
+                    target_hidden: target_is_hidden(target_object).to_string(),
+                    target_disabled: target_is_disabled(target_object).to_string(),
                     query_text,
+                    query_variables,
                     metrics: analysis.metrics,
                     functions: analysis.functions,
                     measurements: analysis.measurements,
@@ -1324,6 +1685,7 @@ pub(crate) fn build_export_inspection_query_report(
         let context = QueryReportContext {
             export_org: &dashboard_org,
             export_org_id: &dashboard_org_id,
+            dashboard,
             dashboard_uid: &dashboard_uid,
             dashboard_title: &dashboard_title,
             folder_path: &folder_path,
@@ -1427,7 +1789,7 @@ pub(crate) fn validate_inspect_export_report_args(args: &InspectExportArgs) -> R
             "--report-columns is only supported with report-table, report-csv, report-tree-table, or the equivalent --report modes.",
         ));
     }
-    let _ = resolve_report_column_ids(&args.report_columns)?;
+    let _ = resolve_report_column_ids_for_format(report_format, &args.report_columns)?;
     Ok(())
 }
 
@@ -1719,7 +2081,8 @@ fn analyze_export_dir_at_path(args: &InspectExportArgs, import_dir: &Path) -> Re
             return Ok(report.summary.dashboard_count);
         }
 
-        let column_ids = resolve_report_column_ids(&args.report_columns)?;
+        let column_ids =
+            resolve_report_column_ids_for_format(Some(report_format), &args.report_columns)?;
         if report_format == InspectExportReportFormat::TreeTable {
             for line in render_grouped_query_table_report(&report, &column_ids, !args.no_header) {
                 println!("{line}");

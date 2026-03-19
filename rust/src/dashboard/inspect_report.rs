@@ -7,7 +7,7 @@ use crate::common::{message, Result};
 use super::InspectExportReportFormat;
 
 /// Struct definition for QueryReportSummary.
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize)]
 pub(crate) struct QueryReportSummary {
     #[serde(rename = "dashboardCount")]
     pub(crate) dashboard_count: usize,
@@ -20,7 +20,7 @@ pub(crate) struct QueryReportSummary {
 }
 
 /// Struct definition for ExportInspectionQueryRow.
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize)]
 pub(crate) struct ExportInspectionQueryRow {
     pub(crate) org: String,
     #[serde(rename = "orgId")]
@@ -29,8 +29,14 @@ pub(crate) struct ExportInspectionQueryRow {
     pub(crate) dashboard_uid: String,
     #[serde(rename = "dashboardTitle")]
     pub(crate) dashboard_title: String,
+    #[serde(rename = "dashboardTags")]
+    pub(crate) dashboard_tags: Vec<String>,
     #[serde(rename = "folderPath")]
     pub(crate) folder_path: String,
+    #[serde(rename = "folderFullPath")]
+    pub(crate) folder_full_path: String,
+    #[serde(rename = "folderLevel")]
+    pub(crate) folder_level: String,
     #[serde(rename = "folderUid")]
     pub(crate) folder_uid: String,
     #[serde(rename = "parentFolderUid")]
@@ -41,6 +47,14 @@ pub(crate) struct ExportInspectionQueryRow {
     pub(crate) panel_title: String,
     #[serde(rename = "panelType")]
     pub(crate) panel_type: String,
+    #[serde(rename = "panelTargetCount")]
+    pub(crate) panel_target_count: usize,
+    #[serde(rename = "panelQueryCount")]
+    pub(crate) panel_query_count: usize,
+    #[serde(rename = "panelDatasourceCount")]
+    pub(crate) panel_datasource_count: usize,
+    #[serde(rename = "panelVariables")]
+    pub(crate) panel_variables: Vec<String>,
     #[serde(rename = "refId")]
     pub(crate) ref_id: String,
     pub(crate) datasource: String,
@@ -66,8 +80,14 @@ pub(crate) struct ExportInspectionQueryRow {
     pub(crate) datasource_family: String,
     #[serde(rename = "queryField")]
     pub(crate) query_field: String,
+    #[serde(rename = "targetHidden")]
+    pub(crate) target_hidden: String,
+    #[serde(rename = "targetDisabled")]
+    pub(crate) target_disabled: String,
     #[serde(rename = "query")]
     pub(crate) query_text: String,
+    #[serde(rename = "queryVariables")]
+    pub(crate) query_variables: Vec<String>,
     pub(crate) metrics: Vec<String>,
     pub(crate) functions: Vec<String>,
     pub(crate) measurements: Vec<String>,
@@ -106,6 +126,8 @@ pub(crate) struct GroupedQueryPanel {
     pub(crate) panel_id: String,
     pub(crate) panel_title: String,
     pub(crate) panel_type: String,
+    pub(crate) panel_target_count: usize,
+    pub(crate) panel_query_count: usize,
     pub(crate) datasources: Vec<String>,
     pub(crate) datasource_families: Vec<String>,
     pub(crate) query_fields: Vec<String>,
@@ -142,12 +164,18 @@ pub(crate) const DEFAULT_REPORT_COLUMN_IDS: &[&str] = &[
     "org_id",
     "dashboard_uid",
     "dashboard_title",
+    "dashboard_tags",
     "folder_path",
+    "folder_full_path",
+    "folder_level",
     "folder_uid",
     "parent_folder_uid",
     "panel_id",
     "panel_title",
     "panel_type",
+    "panel_query_count",
+    "panel_datasource_count",
+    "panel_variables",
     "ref_id",
     "datasource",
     "datasource_name",
@@ -160,6 +188,7 @@ pub(crate) const DEFAULT_REPORT_COLUMN_IDS: &[&str] = &[
     "datasource_type",
     "datasource_family",
     "query_field",
+    "query_variables",
     "metrics",
     "functions",
     "measurements",
@@ -174,12 +203,19 @@ pub(crate) const SUPPORTED_REPORT_COLUMN_IDS: &[&str] = &[
     "org_id",
     "dashboard_uid",
     "dashboard_title",
+    "dashboard_tags",
     "folder_path",
+    "folder_full_path",
+    "folder_level",
     "folder_uid",
     "parent_folder_uid",
     "panel_id",
     "panel_title",
     "panel_type",
+    "panel_target_count",
+    "panel_query_count",
+    "panel_datasource_count",
+    "panel_variables",
     "ref_id",
     "datasource",
     "datasource_name",
@@ -193,6 +229,9 @@ pub(crate) const SUPPORTED_REPORT_COLUMN_IDS: &[&str] = &[
     "datasource_type",
     "datasource_family",
     "query_field",
+    "target_hidden",
+    "target_disabled",
+    "query_variables",
     "metrics",
     "functions",
     "measurements",
@@ -206,12 +245,19 @@ fn normalize_report_column_id(value: &str) -> &str {
         "orgId" => "org_id",
         "dashboardUid" => "dashboard_uid",
         "dashboardTitle" => "dashboard_title",
+        "dashboardTags" => "dashboard_tags",
         "folderPath" => "folder_path",
+        "folderFullPath" => "folder_full_path",
+        "folderLevel" => "folder_level",
         "folderUid" => "folder_uid",
         "parentFolderUid" => "parent_folder_uid",
         "panelId" => "panel_id",
         "panelTitle" => "panel_title",
         "panelType" => "panel_type",
+        "panelTargetCount" => "panel_target_count",
+        "panelQueryCount" => "panel_query_count",
+        "panelDatasourceCount" => "panel_datasource_count",
+        "panelVariables" => "panel_variables",
         "refId" => "ref_id",
         "datasourceName" => "datasource_name",
         "datasourceUid" => "datasource_uid",
@@ -224,6 +270,9 @@ fn normalize_report_column_id(value: &str) -> &str {
         "datasourceType" => "datasource_type",
         "datasourceFamily" => "datasource_family",
         "queryField" => "query_field",
+        "targetHidden" => "target_hidden",
+        "targetDisabled" => "target_disabled",
+        "queryVariables" => "query_variables",
         "functions" => "functions",
         _ => value,
     }
@@ -286,13 +335,24 @@ pub(crate) fn refresh_filtered_query_report_summary(report: &mut ExportInspectio
     report.summary.report_row_count = report.queries.len();
 }
 
+#[cfg_attr(not(test), allow(dead_code))]
 /// Purpose: implementation note.
 pub(crate) fn resolve_report_column_ids(selected: &[String]) -> Result<Vec<String>> {
+    resolve_report_column_ids_for_format(None, selected)
+}
+
+/// Purpose: implementation note.
+pub(crate) fn resolve_report_column_ids_for_format(
+    report_format: Option<InspectExportReportFormat>,
+    selected: &[String],
+) -> Result<Vec<String>> {
     if selected.is_empty() {
-        return Ok(DEFAULT_REPORT_COLUMN_IDS
-            .iter()
-            .map(|value| value.to_string())
-            .collect());
+        let defaults = if matches!(report_format, Some(InspectExportReportFormat::Csv)) {
+            SUPPORTED_REPORT_COLUMN_IDS
+        } else {
+            DEFAULT_REPORT_COLUMN_IDS
+        };
+        return Ok(defaults.iter().map(|value| value.to_string()).collect());
     }
     let mut result = Vec::new();
     for value in selected {
@@ -300,11 +360,20 @@ pub(crate) fn resolve_report_column_ids(selected: &[String]) -> Result<Vec<Strin
         if normalized.is_empty() {
             continue;
         }
+        if normalized == "all" {
+            return Ok(SUPPORTED_REPORT_COLUMN_IDS
+                .iter()
+                .map(|value| value.to_string())
+                .collect());
+        }
         if !SUPPORTED_REPORT_COLUMN_IDS.contains(&normalized) {
             return Err(message(format!(
                 "Unsupported --report-columns value {:?}. Supported columns: {}",
                 normalized,
-                SUPPORTED_REPORT_COLUMN_IDS.join(",")
+                std::iter::once("all")
+                    .chain(SUPPORTED_REPORT_COLUMN_IDS.iter().copied())
+                    .collect::<Vec<&str>>()
+                    .join(",")
             )));
         }
         if !result.iter().any(|item| item == normalized) {
@@ -314,7 +383,10 @@ pub(crate) fn resolve_report_column_ids(selected: &[String]) -> Result<Vec<Strin
     if result.is_empty() {
         return Err(message(format!(
             "--report-columns did not include any supported columns. Supported columns: {}",
-            SUPPORTED_REPORT_COLUMN_IDS.join(",")
+            std::iter::once("all")
+                .chain(SUPPORTED_REPORT_COLUMN_IDS.iter().copied())
+                .collect::<Vec<&str>>()
+                .join(",")
         )));
     }
     Ok(result)
@@ -327,12 +399,19 @@ pub(crate) fn report_column_header(column_id: &str) -> &'static str {
         "org_id" => "ORG_ID",
         "dashboard_uid" => "DASHBOARD_UID",
         "dashboard_title" => "DASHBOARD_TITLE",
+        "dashboard_tags" => "DASHBOARD_TAGS",
         "folder_path" => "FOLDER_PATH",
+        "folder_full_path" => "FOLDER_FULL_PATH",
+        "folder_level" => "FOLDER_LEVEL",
         "folder_uid" => "FOLDER_UID",
         "parent_folder_uid" => "PARENT_FOLDER_UID",
         "panel_id" => "PANEL_ID",
         "panel_title" => "PANEL_TITLE",
         "panel_type" => "PANEL_TYPE",
+        "panel_target_count" => "PANEL_TARGET_COUNT",
+        "panel_query_count" => "PANEL_EFFECTIVE_QUERY_COUNT",
+        "panel_datasource_count" => "PANEL_TOTAL_DATASOURCE_COUNT",
+        "panel_variables" => "PANEL_VARIABLES",
         "ref_id" => "REF_ID",
         "datasource" => "DATASOURCE",
         "datasource_name" => "DATASOURCE_NAME",
@@ -346,6 +425,9 @@ pub(crate) fn report_column_header(column_id: &str) -> &'static str {
         "datasource_type" => "DATASOURCE_TYPE",
         "datasource_family" => "DATASOURCE_FAMILY",
         "query_field" => "QUERY_FIELD",
+        "target_hidden" => "TARGET_HIDDEN",
+        "target_disabled" => "TARGET_DISABLED",
+        "query_variables" => "QUERY_VARIABLES",
         "metrics" => "METRICS",
         "functions" => "FUNCTIONS",
         "measurements" => "MEASUREMENTS",
@@ -366,12 +448,19 @@ pub(crate) fn render_query_report_column(
         "org_id" => row.org_id.clone(),
         "dashboard_uid" => row.dashboard_uid.clone(),
         "dashboard_title" => row.dashboard_title.clone(),
+        "dashboard_tags" => row.dashboard_tags.join(","),
         "folder_path" => row.folder_path.clone(),
+        "folder_full_path" => row.folder_full_path.clone(),
+        "folder_level" => row.folder_level.clone(),
         "folder_uid" => row.folder_uid.clone(),
         "parent_folder_uid" => row.parent_folder_uid.clone(),
         "panel_id" => row.panel_id.clone(),
         "panel_title" => row.panel_title.clone(),
         "panel_type" => row.panel_type.clone(),
+        "panel_target_count" => row.panel_target_count.to_string(),
+        "panel_query_count" => row.panel_query_count.to_string(),
+        "panel_datasource_count" => row.panel_datasource_count.to_string(),
+        "panel_variables" => row.panel_variables.join(","),
         "ref_id" => row.ref_id.clone(),
         "datasource" => row.datasource.clone(),
         "datasource_name" => row.datasource_name.clone(),
@@ -385,6 +474,9 @@ pub(crate) fn render_query_report_column(
         "datasource_type" => row.datasource_type.clone(),
         "datasource_family" => row.datasource_family.clone(),
         "query_field" => row.query_field.clone(),
+        "target_hidden" => row.target_hidden.clone(),
+        "target_disabled" => row.target_disabled.clone(),
+        "query_variables" => row.query_variables.join(","),
         "metrics" => row.metrics.join(","),
         "functions" => row.functions.join(","),
         "measurements" => row.measurements.join(","),
@@ -479,6 +571,8 @@ pub(crate) fn normalize_query_report(
                     panel_id: row.panel_id.clone(),
                     panel_title: row.panel_title.clone(),
                     panel_type: row.panel_type.clone(),
+                    panel_target_count: row.panel_target_count,
+                    panel_query_count: row.panel_query_count,
                     datasources: Vec::new(),
                     datasource_families: Vec::new(),
                     query_fields: Vec::new(),
@@ -486,6 +580,10 @@ pub(crate) fn normalize_query_report(
                 });
                 panels.len() - 1
             });
+        panels[panel_index].panel_target_count =
+            panels[panel_index].panel_target_count.max(row.panel_target_count);
+        panels[panel_index].panel_query_count =
+            panels[panel_index].panel_query_count.max(row.panel_query_count);
         if !row.datasource.is_empty()
             && !panels[panel_index]
                 .datasources
