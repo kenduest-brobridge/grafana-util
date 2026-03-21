@@ -47,6 +47,7 @@ Commit message default for this repo:
 - `rust/src/access/user.rs`: Rust access user list/add/modify/delete flows
 - `rust/src/access/team.rs`: Rust access team list/add/modify flows
 - `rust/src/access/service_account.rs`: Rust access service-account list/add/token-add flows
+- `rust/src/access/org.rs`: Rust access org list/add/modify/delete/export/import/diff flows
 - `rust/src/alert.rs`: Rust alert orchestration entrypoint plus shared alert import/export/diff helpers
 - `rust/src/alert_cli_defs.rs`: Rust alert CLI arg definitions and auth-context builders
 - `rust/src/alert_client.rs`: Rust Grafana alert provisioning HTTP client wrapper and shared response parsers
@@ -174,7 +175,7 @@ Commit message default for this repo:
 - The Rust dashboard implementation follows the same boundary at a crate-module level: `dashboard/mod.rs` stays as the public facade and top-level entrypoint/re-export surface; `dashboard/models.rs` owns export/index/inventory payload structs; `dashboard/files.rs` owns raw-export discovery plus inventory/manifest validation helpers; `dashboard/inspect_report.rs` owns the query-report contract and grouped renderers; `dashboard/inspect_summary.rs` owns the inspection summary payload structs; and the import/inspect orchestration stays in the dedicated dashboard submodules.
 - The Rust dashboard implementation is intentionally split by responsibility: `dashboard/cli_defs.rs` owns clap/auth/client setup, `dashboard/list.rs` owns list/datasource renderers and org-aware list orchestration, `dashboard/export.rs` owns export pathing and multi-org export orchestration, `dashboard/prompt.rs` owns datasource resolution plus prompt-export template rewrites, and `dashboard/mod.rs` now keeps only the remaining shared constants, CLI entrypoints, and re-exports needed by the dedicated helper modules.
 - Rust `dashboard screenshot --full-page` also supports `--full-page-output single|tiles|manifest`. `single` preserves the old stitched image behavior, while `tiles` and `manifest` derive an output directory from the `--output` file stem such as `./cpu-main.png -> ./cpu-main/part-0001.png`; `manifest` adds `manifest.json` with viewport, crop, step, and per-segment offsets. Split output stays raster-only and still requires `--full-page`.
-- The Rust access implementation is intentionally split by responsibility: `access/cli_defs.rs` owns clap/auth/client setup, `access/render.rs` owns output formatting and row normalization, `access/user.rs` owns user flows, `access/team.rs` owns team flows, `access/service_account.rs` owns service-account flows, and `access/mod.rs` keeps shared request wrappers plus top-level dispatch.
+- The Rust access implementation is intentionally split by responsibility: `access/cli_defs.rs` owns clap/auth/client setup, `access/render.rs` owns output formatting and row normalization, `access/user.rs` owns user flows, `access/org.rs` owns org flows, `access/team.rs` owns team flows, `access/service_account.rs` owns service-account flows, and `access/mod.rs` keeps shared request wrappers plus top-level dispatch.
 - The Python access implementation follows the same pattern at a smaller scale: `access_cli.py` stays as the stable facade, `grafana_utils/access/parser.py` owns argparse wiring and CLI-shape helpers, `grafana_utils/access/workflows.py` owns auth validation plus user/team/service-account orchestration, `grafana_utils/clients/access_client.py` owns HTTP calls, and `grafana_utils/access/models.py` owns normalization and rendering helpers.
 - The Python datasource implementation now follows the same facade pattern: `datasource_cli.py` stays as the stable facade and test-facing helper surface, `grafana_utils/datasource/parser.py` owns argparse wiring plus import dry-run column metadata, and `grafana_utils/datasource/workflows.py` owns export/import/diff execution plus datasource bundle/file helpers.
 
@@ -191,6 +192,10 @@ Commit message default for this repo:
 - `make quality` is the baseline local gate and now delegates to `scripts/check-quality.sh`.
 - `make quality-python` delegates to `scripts/check-python-quality.sh`, which always runs Python bytecode compilation plus `unittest` and only runs optional tools such as `ruff`, `mypy`, and `black --check` when they are installed.
 - `make quality-rust` delegates to `scripts/check-rust-quality.sh`, which always runs `cargo test` and conditionally runs `cargo fmt --check` and `cargo clippy --all-targets -- -D warnings` when those cargo components are available.
+- `make quality-alert-rust` is the focused Rust alert gate: it runs alert-specific Rust tests, the sync alert-export artifact regression, `cargo fmt --check`, and `cargo check`.
+- `make quality-sync-rust` is the focused Rust sync gate: it runs sync-specific Rust tests plus the cross-domain source-bundle summary contract, the alert replay artifact preservation/ignore regressions, `cargo fmt --check`, and `cargo check`.
+- `make test-alert-live-artifact` runs only the Rust alert artifact live smoke path against Docker Grafana.
+- `make test-alert-live-replay` runs only the Rust alert replay/recreate live smoke path against Docker Grafana.
 - `.github/workflows/ci.yml` now calls the same `make quality-python` and `make quality-rust` targets so local and CI quality behavior stays centralized in the scripts instead of being duplicated in workflow YAML.
 
 ### Rust cross-build notes
@@ -559,8 +564,11 @@ make build-python
 make build-rust
 make test
 make test-rust-live
+make test-alert-live
 make test-access-live
 make test-python-datasource-live
+make test-datasource-live
+make quality-alert-rust
 python3 -m pip install --no-deps --target /tmp/grafana-util-install .
 python3 -m unittest tests.test_python_dashboard_cli
 python3 -m unittest tests.test_python_alert_cli
@@ -638,12 +646,15 @@ python3 scripts/check_dashboard_governance.py \
 Rust live smoke test notes:
 
 - `make test-rust-live` runs `scripts/test-rust-live-grafana.sh`
+- `make test-sync-live` runs the Rust sync-only Docker smoke path, which prepares a minimal dashboard + alert export fixture and then exercises `sync bundle` plus `sync bundle-preflight`
+- `make test-alert-live` runs the combined alert-only Rust Docker smoke, and the narrower `make test-alert-live-artifact` / `make test-alert-live-replay` targets are available when you only need one half of the alert contract.
 - the script defaults to `grafana/grafana:12.4.1` and binds Grafana to a random localhost port unless `GRAFANA_PORT` is set explicitly
-- the script seeds one Prometheus datasource, one dashboard, one additional org-scoped dashboard, and one webhook contact point
-- access coverage: user org/global delete, team add/list/modify/delete, org add/delete/list, and service-account add/export/token-delete/delete/list
-- datasource coverage: add dry-run/live create, delete dry-run/live delete, export, single-org import dry-run, multi-org export, routed `--use-export-org --only-org-id` dry-run preview, routed `--create-missing-orgs --dry-run` preview, and live missing-org recreate/import
-- dashboard coverage: export, prompt export datasource rewrite, diff same, diff drifted, dry-run export, dry-run import, delete-and-import restore, multi-org export, routed `--use-export-org --only-org-id` dry-run preview, routed `--create-missing-orgs --dry-run` preview, and live missing-org recreate/import
-- alerting coverage: export, diff same, diff changed, dry-run import, update import
+- the script seeds one Prometheus datasource, additional Loki/InfluxDB/PostgreSQL/Elasticsearch/Tempo datasources for inspection coverage, one simple dashboard, one broader core-family inspection dashboard, one additional org-scoped dashboard, and one webhook contact point
+- access coverage: user org/global delete plus global/org export/diff/import dry-run/live replay with structured dry-run JSON and export artifact metadata checks, team add/list/modify/delete plus export/import dry-run/live replay with artifact metadata checks, org add/delete/list plus export/diff/import dry-run/live replay with artifact metadata checks, and service-account add/export/import dry-run/live replay/diff changed-same/token-delete/delete/list with artifact metadata checks
+- datasource coverage: add dry-run/live create, secret-bearing add/modify persisted-state checks for `secureJsonFields`, delete dry-run/live delete, export, single-org import dry-run, multi-org export, routed `--use-export-org --only-org-id` dry-run preview, routed existing/missing/`would-create` status-matrix dry-run preview, and live missing-org recreate/import
+- dashboard coverage: export, prompt export datasource rewrite, offline `inspect-export` report/governance JSON, live `inspect-live` report/governance JSON, normalized `inspect-export` vs `inspect-live` parity checks for report/governance JSON, datasource-family report filtering, diff same, diff drifted, dry-run export, dry-run import, delete-and-import restore, multi-org export, routed `--use-export-org --only-org-id` dry-run preview, routed existing/missing/`would-create` status-matrix dry-run preview, and live missing-org recreate/import
+- alerting coverage: export artifact/index sanity checks, structured `alert diff --json` and `alert import --dry-run --json` previews, fixture-driven recreate runtime regressions for rules/contact-points/mute-timings/templates, fixture-driven policies update-only parity, diff same, diff changed, live update replay, missing-remote diff after contact-point deletion, and recreate import back to same-state
+- sync coverage: `sync bundle` source-bundle contract checks, alert replay artifact preservation/ignore checks, cross-domain summary/text contract checks, and bundle-preflight sanity against a locally generated source bundle
 - destructive-path transport coverage: the live script now runs representative Rust access delete commands with `--insecure` against the local HTTP Grafana smoke environment; `--ca-cert` remains covered at parser/runtime unit level because the script does not start Grafana over TLS
 - useful overrides: `GRAFANA_IMAGE`, `GRAFANA_PORT`, `GRAFANA_USER`, `GRAFANA_PASSWORD`, `CARGO_BIN`
 
@@ -662,8 +673,15 @@ Python datasource live smoke test notes:
 
 - `make test-python-datasource-live` runs `scripts/test-python-datasource-live-grafana.sh`
 - the script defaults to `grafana/grafana:12.4.1` and binds Grafana to a random localhost port unless `GRAFANA_PORT` is set explicitly
-- datasource coverage: add dry-run/live create, delete dry-run/live delete, export, single-org import dry-run, multi-org export, routed `--use-export-org --only-org-id` dry-run preview, routed `--create-missing-orgs --dry-run` preview, and live missing-org recreate/import
+- datasource coverage: add dry-run/live create, secret-bearing add/modify persisted-state checks for `secureJsonFields`, delete dry-run/live delete, export, single-org import dry-run, multi-org export, routed `--use-export-org --only-org-id` dry-run preview, routed `--create-missing-orgs --dry-run` preview, and live missing-org recreate/import
+- Grafana secret persistence note: these smoke checks intentionally verify durable `secureJsonFields` markers rather than assuming Grafana will echo request-payload replacement semantics for `secureJsonData` on modify.
 - useful overrides: `GRAFANA_IMAGE`, `GRAFANA_PORT`, `GRAFANA_USER`, `GRAFANA_PASSWORD`, `PYTHON_BIN`
+
+Combined datasource live smoke notes:
+
+- `make test-datasource-live` runs `scripts/test-combined-live-grafana.sh`
+- the wrapper is fail-fast and runs the Rust live smoke first, then the Python datasource live smoke
+- use this combined gate when you want one command that rechecks datasource-related runtime behavior across both runtimes against local Docker Grafana
 
 Developer sample-data seed notes:
 

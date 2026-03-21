@@ -88,6 +88,13 @@ For external command usage and operator examples, prefer `README.md`, `README.zh
 - Add or update tests for every user-visible behavior change.
 - For CLI UX changes, test parser behavior or `format_help()` output directly.
 
+## Agent Routing
+
+- Planner tasks should use `gpt-5.4`.
+- General worker tasks should use `gpt-5.4-mini` with `high` reasoning.
+- Validation tasks should use `gpt-5.4` with `high` reasoning.
+- Bulk or repetitive tasks should prefer `gpt-5.4-mini`.
+
 ## Commit & Pull Request Guidelines
 
 - Default commit message format for agents is:

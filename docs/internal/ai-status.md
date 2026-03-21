@@ -5,6 +5,321 @@ Historical note:
 - Older entries describe the repo state and `TODO.md` backlog as they existed on the entry date.
 - `TODO.md` now tracks only the active backlog; completed or superseded TODO items moved to `docs/internal/todo-archive.md`.
 
+## 2026-03-21 - Task: Broaden Rust Sync Contract Gates And Sync-Only Live Entry Point
+- State: Done
+- Scope: `fixtures/sync_source_bundle_contract_cases.json`, `fixtures/alert_export_contract_cases.json`, `fixtures/alert_recreate_contract_cases.json`, `rust/src/sync/bundle_rust_tests.rs`, `rust/src/sync/cli_rust_tests.rs`, `rust/src/sync/mod.rs`, `rust/src/cli.rs`, `rust/src/cli_rust_tests.rs`, `rust/src/alert_rust_tests.rs`, `scripts/test-rust-live-grafana.sh`, `scripts/test-rust-sync-live-grafana.sh`, `Makefile`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust alerting had become denser and the full Rust live smoke was green again, but the broader sync surface still lacked one explicit cross-domain source-bundle contract and one narrower sync-only live entrypoint. `sync` help-full examples also still emphasized only summary/plan/review/apply, while `bundle` and `bundle-preflight` remained underrepresented in top-level sync/operator discovery.
+- Current Update: Added a checked-in cross-domain sync source-bundle contract fixture, upgraded sync bundle tests to assert stable dashboard/datasource/folder/alerting summary/text output, moved more alert replay expectations into shared fixtures, added `make quality-sync-rust`, added `scripts/test-rust-sync-live-grafana.sh` plus `make test-sync-live`, and expanded sync root/help-full examples so `bundle` and `bundle-preflight` are part of the stable operator-facing surface.
+- Result: Rust sync now has a clearer domain-level quality gate, a focused Docker live entrypoint, broader source-bundle contract coverage across domains, and a more accurate operator help surface for bundle-oriented workflows.
+
+## 2026-03-21 - Task: Fix Rust Alert Replay Live Rule Seed And Template Drift Parity
+- State: Done
+- Scope: `rust/src/alert.rs`, `rust/src/alert_rust_tests.rs`, `scripts/test-rust-live-grafana.sh`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The expanded Rust alert replay live smoke had a real gap between focused runtime coverage and live Grafana behavior. The new alert rule seed payload was too minimal for Grafana `12.4.1` provisioning, template replay left one persistent diff because live template versions drifted after update, and the full Rust live smoke still assumed the sync smoke fixture had zero alert rules even though the new alert replay seed now provisions one.
+- Current Update: Reworked the alert replay seed to create a dedicated alert folder and provision the smoke alert rule with a fuller Grafana-compatible payload shape. Normalized Rust template compare/export/import handling to strip template `version` as a server-managed field, aligned the recreate matrix expectation with that normalization, and updated the full sync smoke assertion so the combined Rust live gate expects the seeded `cpu-high` alert rule in the sync source bundle instead of rejecting it.
+- Result: The alert replay split smoke, alert artifact split smoke, `quality-alert-rust`, and the full Rust Docker live smoke now all pass together against Grafana `12.4.1`, and the new alert replay fixture is consistent across focused tests, scoped alert live gates, and the full sync/live path.
+
+## 2026-03-21 - Task: Expand Rust Alert Recreate Matrix And Split Alert Live Artifact Replay Gates
+- State: Done
+- Scope: `rust/src/alert.rs`, `rust/src/alert_rust_tests.rs`, `rust/src/sync/bundle_rust_tests.rs`, `scripts/test-rust-live-grafana.sh`, `scripts/test-rust-alert-artifact-live-grafana.sh`, `scripts/test-rust-alert-replay-live-grafana.sh`, `Makefile`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust alerting had one focused contact-point recreate regression and one combined alert-only Docker smoke, but the recreate runtime contract still did not cover rules, mute timings, templates, or policies, and the live alert path was still effectively one combined artifact+replay stage. Sync tests also knew about non-rule alert artifacts only at the narrow contact-point/policies fallback edge, not as one broader replay-artifact surface.
+- Current Update: Generalized the test-only alert request seam so focused runtime tests can cover rule/contact-point/mute-timing/template recreate decisions plus policies update-only parity through the same helper path. Replaced the single contact-point recreate unit coverage with a broader recreate matrix, added sync focused regressions that preserve non-rule alert replay artifact summary/path data while still ignoring those items as top-level bundle-preflight resources, and split the Docker alert-only smoke into explicit artifact and replay scopes with standalone wrapper scripts and Make targets.
+- Result: Rust alerting now has one broader recreate matrix contract, sync is more explicit about alert replay artifacts vs sync resources, and maintainers can run alert artifact or alert replay live smoke independently instead of treating alert-only validation as one opaque stage.
+
+## 2026-03-21 - Task: Add Focused Rust Alert Recreate Runtime Regressions
+- State: Done
+- Scope: `rust/src/alert.rs`, `rust/src/alert_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust alerting already had a stronger replay line and Docker live smoke that covered contact-point delete/recreate, but that recreate path still lived only in the live gate. There was no focused Rust runtime regression proving the import logic prefers create over update when a previously exported contact-point UID disappears remotely, or that the replay returns to same-state after recreate.
+- Current Update: Added a minimal test-only alert request seam for contact-point compare/import helpers and two stateful Rust regressions that drive the missing-remote recreate path without Docker. The new tests prove the recreate flow transitions from `missing-remote` to `would-create` to same-state, and they explicitly lock that replay does not try a `PUT` update when the remote UID is gone.
+- Result: The highest-value live-only alert recreate behavior now has focused Rust runtime coverage, so regressions in the contact-point recreate decision path should surface before Docker smoke.
+
+## 2026-03-21 - Task: Expand Rust Alert Contract Surface And Split Alert-Only Live Gate
+- State: Done
+- Scope: `fixtures/alert_export_contract_cases.json`, `rust/src/alert_rust_tests.rs`, `rust/src/alert_list.rs`, `rust/src/sync/bundle_rust_tests.rs`, `rust/src/cli_rust_tests.rs`, `scripts/test-rust-live-grafana.sh`, `scripts/test-rust-alert-live-grafana.sh`, `Makefile`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust alerting already had structured import/diff JSON and broader live replay coverage, but the surrounding contract surface still had several shallow spots. Alert export artifact shape was only asserted in hand-written tests, list/export parity only covered contact points, sync bundle-preflight still lacked a focused regression around non-rule raw alert artifacts, and `make test-alert-live` was still just an alias for the full Rust smoke.
+- Current Update: Added a checked-in alert export contract fixture and focused regressions for root index/resource-subdir parity, mute-timing/template/rule list-export identity parity, and diff/import action correspondence for update vs recreate semantics. Added a sync bundle-preflight regression proving non-rule raw alert export artifacts do not incorrectly become top-level sync resources, strengthened unified help-full coverage for the new alert JSON examples, and split the live smoke into a true alert-only path via `scripts/test-rust-alert-live-grafana.sh` plus `RUST_LIVE_SCOPE=alert`.
+- Result: Rust alerting now has a denser focused contract layer around artifacts, list/export parity, and sync fallback behavior, and maintainers can run an actual alert-only Docker smoke instead of always paying for the full Rust live gate.
+
+## 2026-03-21 - Task: Tighten Rust Alert And Sync Artifact Contracts
+- State: Done
+- Scope: `rust/src/alert.rs`, `rust/src/alert_cli_defs.rs`, `rust/src/alert_list.rs`, `rust/src/alert_rust_tests.rs`, `rust/src/sync/cli_rust_tests.rs`, `rust/src/cli.rs`, `Makefile`, `docs/user-guide.md`, `docs/user-guide-TW.md`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust alerting already had its first structured dry-run import preview and a stronger live replay path, but the surrounding contracts were still looser than the other main Rust domains. `alert diff` remained text-only, alert export/list identity parity was not pinned in focused tests, sync bundle tests did not explicitly prove that alert export artifact metadata survived into the bundled `alerting` section, and there was no narrower Rust quality entrypoint for alert-only iteration.
+- Current Update: Added `alert diff --json` with a structured `summary + rows` document and matching parser/help/helper tests, plus a focused contact-point list/export identity parity regression. Added a sync CLI regression that verifies the source bundle preserves alert export artifact summary counts, export metadata, and `sourcePath` entries for contact points and policies. Updated the Rust alert help examples, the user guides, and the Makefile with narrower `quality-alert-rust` and `test-alert-live` entrypoints.
+- Result: Rust alerting now has a more coherent operator contract across export/list/diff/import/sync, and maintainers have a focused alert-only quality gate in addition to the full Rust suite and Docker smoke.
+
+## 2026-03-21 - Task: Add Rust Alert Replay And Dry-Run Json Contract
+- State: Done
+- Scope: `rust/src/alert.rs`, `rust/src/alert_cli_defs.rs`, `rust/src/alert_rust_tests.rs`, `scripts/test-rust-live-grafana.sh`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust alerting already supported export/import/diff and the Docker smoke covered a basic export -> local drift -> dry-run -> update replay flow, but the operator-facing preview still only existed as line-oriented text and the live gate did not validate alert export artifact indexes or recreate a missing remote resource from the exported bundle.
+- Current Update: Added `alert import --dry-run --json` in Rust with a structured `summary + rows` document for dry-run import actions, plus focused parser/help/helper regressions that lock the new JSON contract. Extended the Rust Docker alert smoke with artifact sanity checks for the export root index, contact-point index, and notification-policies document; switched dry-run validation to structured JSON; and added a delete/recreate replay path that removes the exported contact point, verifies `Diff missing-remote`, previews `would-create`, and re-imports the bundle back to same-state.
+- Result: Rust alerting now has a clearer replay contract: artifact sanity, structured dry-run preview, update replay, missing-remote detection, and recreate import are all covered end to end in the Docker live gate.
+
+## 2026-03-21 - Task: Add Rust Access Live Artifact Sanity Gate
+- State: Done
+- Scope: `scripts/test-rust-live-grafana.sh`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust access already had replay-heavy Docker live coverage and focused Rust bundle-contract tests, but the live smoke itself only checked that the exported files existed and could be replayed. It did not yet validate that user, team, org, and service-account exports wrote bundle and `export-metadata.json` artifacts that still matched the checked-in access bundle contract.
+- Current Update: Added a shared access export metadata helper to the Rust Docker smoke and switched all four access export paths to validate bundle filename, bundle `kind`, bundle `version`, minimum record count, metadata `kind`, metadata `version`, metadata `recordCount`, `sourceUrl`, and `sourceDir` before continuing into replay and diff checks. Updated the maintainer note so the access live gate description now explicitly includes artifact metadata sanity checks.
+- Result: Rust access live smoke now verifies artifact contract plus replay flow together, so bundle metadata drift surfaces in the Docker gate instead of only in focused Rust unit tests.
+
+## 2026-03-21 - Task: Tighten Rust Access Artifact Contract
+- State: Done
+- Scope: `fixtures/access_bundle_contract_cases.json`, `rust/src/access/rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust access replay coverage had grown substantially, but the access bundle artifacts themselves still did not have one broader contract layer that pinned `kind`, `version`, metadata `recordCount`, and import rejection of mismatched `kind` or future `version` consistently across user, team, org, and service-account.
+- Current Update: Added focused Rust bundle-contract regressions that verify each access export writes the expected bundle and `export-metadata.json` shape, including stable `kind`, `version`, `recordCount`, `sourceUrl`, and `sourceDir` where applicable. Added matching import-side regressions that prove user, team, org, and service-account all fail closed on bundle kind mismatch and future bundle version instead of silently accepting drifted artifacts.
+- Result: Rust access artifacts now have a clearer contract layer above replay coverage, and the focused plus grouped Rust access tests passed after tightening the bundle/metadata assertions.
+
+## 2026-03-21 - Task: Add Rust User Structured Dry-Run Parity
+- State: Done
+- Scope: `rust/src/access/mod.rs`, `rust/src/access/user.rs`, `rust/src/access/rust_tests.rs`, `scripts/test-rust-live-grafana.sh`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust user replay now covered both global and org scopes, but the operator-facing dry-run preview still lagged behind team and service-account. `access user import --dry-run --json` only emitted a bare row array with no structured summary, and the Docker live smoke still verified user dry-run behavior with grep against text output instead of one stable JSON contract.
+- Current Update: Added a dedicated Rust helper for user dry-run JSON documents and switched `access user import --dry-run --json` to emit `summary + rows` like the team surface. Added focused helper coverage for the summary document and revalidated the broader `user_` suite. Updated the Rust Docker smoke so both global and org-scoped user replay flows now validate structured dry-run JSON instead of plain-text grep, while still allowing full exported bundles to carry more than one user record.
+- Result: Rust user replay now exposes a stable structured dry-run JSON contract across both scopes, and the full Rust Docker live smoke passed against Grafana `12.4.1` after aligning the live assertions with bundle-wide preview semantics.
+
+## 2026-03-21 - Task: Tighten Rust Access User Org-Scope Replay Contract
+- State: Done
+- Scope: `rust/src/access/user.rs`, `rust/src/access/rust_tests.rs`, `scripts/test-rust-live-grafana.sh`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust access user already had a global replay contract, but the org-scoped half still stopped short of a real replay line. There was no focused contract for org-role plus team-membership replay, no guard proving `--yes` blocks team-removal mutations before they start, and the Docker live smoke still skipped org-scoped user export/diff/import replay entirely.
+- Current Update: Added focused Rust regressions for org-scoped user export with teams, same-state org diff with teams, `--yes` enforcement before team-removal replay, dry-run preview of org-role plus team drift, and live replay of org-role plus team-membership changes. Extended the Rust Docker smoke with a dedicated org-scoped user replay section that exports one real org bundle with teams, mutates `orgRole` plus the team set, verifies changed-state diff, previews add/remove team actions in dry-run import, replays it live, and confirms same-state diff after replay. Tightening this path also exposed one runtime issue: org-scoped import used to apply earlier mutations before failing on missing `--yes` for team removals. The runtime now computes the removal set first and fails closed before any live mutation.
+- Result: Org-scoped user replay is now locked through focused tests plus Docker live smoke, and the full Rust live gate passed against Grafana `12.4.1` after isolating the adjacent replay-team bundle to keep the broader access smoke deterministic.
+
+## 2026-03-21 - Task: Tighten Rust Access User Export Diff Import Replay Contract
+- State: Done
+- Scope: `rust/src/access/mod.rs`, `rust/src/access/user.rs`, `rust/src/access/rust_tests.rs`, `scripts/test-rust-live-grafana.sh`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust access user already supported export, diff, and import in both global and org scopes, but it did not yet have a service-account-style replay contract. The focused suite did not lock global export -> diff -> dry-run import -> live import -> delete -> recreate behavior, and the Docker live smoke still stopped at add/list/delete checks instead of replaying a real exported user bundle.
+- Current Update: Added focused Rust regressions for global user export bundle writes, same-state diff, dry-run preview for profile plus Grafana-admin drift, live replay update of an existing global user, and recreate import of a missing global user when the bundle carries a password. Extended the Rust Docker smoke with a dedicated global user replay section that exports a real user bundle, mutates stable global-surface fields (`name`, `grafanaAdmin`, and recreate-only `password`), checks same/different diff states, previews dry-run import, replays it live, deletes the replay user, and recreates it from the same bundle. Live validation also exposed a real runtime bug: existing-user replay was sending a partial profile payload to `PUT /api/users/{id}`, which Grafana `12.4.1` rejects. The runtime now sends a merged full `login`/`email`/`name` payload when any profile field changes.
+- Result: User runtime/tests are validated and the full Rust Docker live smoke passed against Grafana `12.4.1` after aligning the replay gate with the true global-user diff surface and fixing the full-profile update payload requirement.
+
+## 2026-03-21 - Task: Tighten Rust Access Org Export Diff Import Replay Contract
+- State: Done
+- Scope: `rust/src/access/cli_defs.rs`, `rust/src/access/mod.rs`, `rust/src/access/org.rs`, `rust/src/access/rust_tests.rs`, `scripts/test-rust-live-grafana.sh`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust access org already supported list/add/modify/delete/export/import, but it did not have an org diff command, focused replay coverage for exported org users, or a Docker live smoke path that exercised org export -> diff -> import replay end to end.
+- Current Update: Added the org diff command and the supporting diff runtime, plus focused tests for same-state diff, user-role drift, dry-run preview, existing-org replay update, and missing-org create replay. The Rust live smoke now exports the full org bundle with users so diff stays truthful against global live state, mutates one replay-org user role, verifies same/different diff states, previews the additive org-user dry-run shape the runtime currently emits, replays it live, recreates the deleted replay org from the same bundle, and then deletes that temporary org again so later all-org dashboard smoke is not contaminated.
+- Result: Org runtime/tests are validated and the full Rust Docker live smoke passed against Grafana `12.4.1` after aligning the org replay path to the global org diff contract.
+
+## 2026-03-21 - Task: Tighten Rust Access Team Replay Contract
+- State: Done
+- Scope: `rust/src/access/team.rs`, `rust/src/access/rust_tests.rs`, `scripts/test-rust-live-grafana.sh`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust access team already supported export, diff, import, and live CRUD/membership flows, but the contract stopped short of a service-account-style replay gate. Dry-run JSON output was not structured like service-account, and the live smoke did not prove export -> diff same -> mutate bundle -> diff changed -> dry-run preview -> live replay -> diff same -> delete -> recreate import for a real team bundle.
+- Current Update: Added a structured dry-run JSON document helper for team import, added focused Rust regressions for team export with members/admins, same-state diff, membership-drift diff, and structured dry-run preview, and extended the Rust Docker live smoke with a dedicated replay team flow that exports a real team bundle, mutates its membership payload, previews the structured dry-run JSON, replays it live, deletes the replay team, and recreates it from the same exported bundle. The live smoke intentionally avoids exact team diff assertions on the freshly exported bundle because Grafana's live team membership surface is not stable enough there, while the Rust unit tests still lock the team diff contract directly.
+- Result: Team runtime/tests are validated and the full Rust Docker live smoke passed against Grafana `12.4.1` using the stable replay-only live contract for team bundles.
+
+## 2026-03-21 - Task: Tighten Rust Dashboard All-Orgs Import Preflight Routing Contract
+- State: Done
+- Scope: `rust/src/dashboard/rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust already had single-org import dependency preflight plus combined export-root routing and round-trip coverage, but it did not yet prove that `--use-export-org` applies dependency preflight per routed org scope, stops on a failing scoped preflight, and completely skips unselected org scopes under `--only-org-id`.
+- Current Update: Added focused Rust regressions that seed a two-org combined export root, route it through `import_dashboards_by_export_org_with_request(...)`, and then run real scoped imports with per-org live datasource/plugin inventories. One regression confirms the first scoped import can succeed while a later org is blocked by preflight before POST. The other confirms `--only-org-id` prevents any preflight or import attempt for unselected exported org scopes.
+- Result: The all-org import path is now pinned through org-scoped dependency preflight and stop/skip semantics instead of relying only on single-org preflight tests plus general routing coverage.
+
+## 2026-03-21 - Task: Tighten Rust Dashboard All-Orgs Routed Import Failure Reporting
+- State: Done
+- Scope: `rust/src/dashboard/import.rs`, `rust/src/dashboard/rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust already stopped routed `--use-export-org` imports on the first failing scoped import, but the propagated error text only reflected the inner failure. Operators could not tell which exported org scope, target org, or raw import directory failed without rerunning with extra context.
+- Current Update: Wrapped routed import failures with explicit source-org / target-org / import-dir context in `import_dashboards_by_export_org_with_request(...)`, and tightened the main scoped-preflight regression into a three-org fail-fast case so it now proves the first failing scoped import surfaces the routed-org context and prevents any later org scope from running.
+- Result: Multi-org routed dashboard import failures now report the failing exported org and scoped raw path directly, while the Rust suite locks the fail-fast behavior as part of the all-org contract.
+
+## 2026-03-21 - Task: Align Rust Routed Import Dry-Run And Live Failure Scope Identity
+- State: Done
+- Scope: `rust/src/dashboard/import.rs`, `rust/src/dashboard/rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Routed dry-run JSON already exposed stable scope identity fields like `sourceOrgId`, `sourceOrgName`, `orgAction`, `targetOrgId`, and `importDir`, but the live routed-import output built its own freeform status/error text separately. That left room for dry-run and live failure surfaces to drift even when they referred to the same routed org scope.
+- Current Update: Added a shared formatter for routed import scope identity in the Rust import path and used it for the live progress line plus routed failure wrapping. Added a focused regression that compares the dry-run routed preview entries for one exported org scope with the corresponding live routed failure string and locks the shared identifiers across both surfaces.
+- Result: Dry-run preview and live routed failure reporting now speak about the same exported org scope with the same stable identity fields, which tightens the operator-facing `--use-export-org` contract beyond simple success/failure coverage.
+
+## 2026-03-21 - Task: Align Rust Routed Import Table Json And Progress Scope Labels
+- State: Done
+- Scope: `rust/src/dashboard/import.rs`, `rust/src/dashboard/rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust routed import already exposed stable scope identity in dry-run JSON and used the same wording for live routed failures, but the table surface and live progress line still had their own target-org label handling. In particular, missing target orgs showed `<new>` in the table while live progress used `-`.
+- Current Update: Promoted the routed target-org label formatting into a shared helper and reused it from both the routed-org table and the live progress/failure summary path. Added a focused regression that builds a routed dry-run JSON preview, renders the routed org table, and checks both against the shared routed progress summary format for existing and would-create org scopes.
+- Result: Routed import table, dry-run JSON, and live progress/failure wording now share the same scope vocabulary, including a consistent `<new>` label for missing target orgs.
+
+## 2026-03-21 - Task: Tighten Rust Routed Import Selected-Scope Status Contract
+- State: Done
+- Scope: `rust/src/dashboard/rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust already had focused routed-import parity checks for existing and would-create scopes plus separate coverage for `--only-org-id`, but it did not yet lock a broader selected-scope contract that covered filtered export scopes, mixed `exists`/`missing` org actions, summary counts, table rows, and shared scope-summary wording in one place.
+- Current Update: Added one larger routed dry-run regression that seeds three exported org scopes, filters down to two with `--only-org-id`, and verifies the selected routed scopes produce consistent `exists`/`missing` status across JSON summary counts, routed org rows, rendered table labels, and the shared scope-summary formatter. The unselected exported org is explicitly checked to stay out of the routed dry-run payload.
+- Result: The Rust routed-import contract now pins selected-scope filtering and mixed routed-org statuses as one broader operator-facing surface instead of a few narrower spot checks.
+
+## 2026-03-21 - Task: Align Rust Routed Would-Create And Created Org Contract
+- State: Done
+- Scope: `rust/src/dashboard/rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust already had separate coverage for dry-run `would-create` preview and live `created` org creation under `--use-export-org`, but the two paths were not locked together as one contract. That left room for the exported-org identity, import-dir continuity, or create-missing-org semantics to drift between dry-run and live mutation.
+- Current Update: Added a focused parity regression that uses the same exported org scope to compare dry-run `would-create` routed preview with live `created` org import routing. The test checks dry-run `orgAction`/`targetOrgId` semantics, verifies the live path issues `POST /api/orgs` and routes the scoped import to the newly created org ID, and confirms both paths preserve the same exported org identity and raw import directory.
+- Result: The Rust routed-import contract now explicitly ties together dry-run org creation preview and live org creation routing for `--create-missing-orgs`.
+
+## 2026-03-21 - Task: Add Rust Routed Import Status Matrix Contract
+- State: Done
+- Scope: `rust/src/dashboard/rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust already had parity checks for selected routed-import statuses, but they were still spread across separate regressions for `exists`/`missing`, `would-create`, and `created`. There was not yet one focused test that pinned the full org-level status matrix and the corresponding `targetOrgId` semantics in one place.
+- Current Update: Added a matrix regression that reuses the same exported org scopes to compare dry-run `missing` and `would-create` payloads with the live `created` routing path, while keeping an `exists` org in the same matrix. The test now checks summary counts, `orgAction`, `targetOrgId`, and shared scope-summary wording for all four statuses together.
+- Result: Rust `--use-export-org` now has one broader org-status matrix contract covering `exists`, `missing`, `would-create`, and `created`.
+
+## 2026-03-21 - Task: Add Rust Datasource Routed Import Status Matrix And Live Gate
+- State: Done
+- Scope: `rust/src/datasource.rs`, `rust/src/datasource_rust_tests.rs`, `scripts/test-rust-live-grafana.sh`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust datasource routed import already supported `--use-export-org` and `--create-missing-orgs`, but its status semantics were not pinned to the same depth as dashboard. Table/live wording still used a different missing-target label, unit coverage lacked a broader status matrix contract, and the Docker live smoke only asserted coarse existing/would-create behavior.
+- Current Update: Added shared routed datasource scope formatters in the Rust runtime so table/progress/failure wording uses one scope vocabulary and a consistent `<new>` target-org label. Added focused datasource contract tests for scope-identity parity and the org-level status matrix covering `exists`, `missing`, `would-create`, and `created`. Extended the Rust Docker smoke so datasource routed import now asserts selected-org filtering plus the existing/missing/would-create matrix before verifying the live recreated-org import.
+- Result: Datasource routed import now matches dashboard on contract depth: unit parity, broader status-matrix coverage, and Docker-backed live validation all cover the same operator-facing org-status surface.
+
+## 2026-03-21 - Task: Validate Rust Dashboard Routed Import Status Matrix In Live Smoke
+- State: Done
+- Scope: `scripts/test-rust-live-grafana.sh`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The Rust Docker smoke already covered routed dashboard import at a coarse level, but it only checked one selected existing-org preview, one `would-create` preview, and the final missing-org recreate/import. It did not yet validate the full routed status matrix or assert the summary and `targetOrgId` semantics for `exists`, `missing`, and `would-create` in live-smoke form.
+- Current Update: Extended the dashboard live smoke to assert the routed `--use-export-org` status matrix end to end: selected existing-org dry-run preview, missing-org dry-run preview after deleting the target org, `--create-missing-orgs --dry-run` `would-create` preview, and the final live recreate/import path. The smoke now checks summary counts, selected-org filtering, `orgAction`, and `targetOrgId` semantics in the routed dry-run JSON before verifying the recreated org and restored dashboard.
+- Result: The Rust Docker gate now exercises the routed dashboard import status matrix, so the contract is verified not only in unit tests but also against a live Grafana 12.4.1 container.
+
+## 2026-03-21 - Task: Tighten Rust Dashboard All-Orgs Import Diff Round-Trip Contract
+- State: Done
+- Scope: `rust/src/dashboard/rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust already had combined export-root inspection parity and `--use-export-org` routing coverage, but it did not yet prove that one combined `export --all-orgs` root could be routed into org-scoped imports and then diff cleanly against the per-org live state.
+- Current Update: Added a focused Rust round-trip regression that seeds a two-org combined export root, routes it through `import_dashboards_by_export_org_with_request(...)`, performs real scoped imports through `import_dashboards_with_request(...)`, captures the resulting per-org stored dashboard payloads, and then runs `diff_dashboards_with_request(...)` against each routed raw scope with the matching destination folder context.
+- Result: The all-org import/export path is now pinned through org routing, scoped mutation, and scoped diff instead of stopping at dry-run routing or inspect-only parity.
+
+## 2026-03-21 - Task: Tighten Rust Dashboard Multi-Org Dependency Json Contract
+- State: Done
+- Scope: `rust/src/dashboard/rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The merged multi-org inspect-export / inspect-live path already had broad report and governance parity coverage, but the `dependency-json` artifact still lacked a focused contract check for its stable top-level shape and row usage/orphaned semantics.
+- Current Update: Tightened the existing multi-org inspection regression so it now also checks the `dependency-json` contract from a combined export root, including the stable `kind`, summary counts, per-query stable fields, datasource usage query fields, and orphaned datasource count.
+- Result: The merged multi-org dependency artifact is now pinned by a focused Rust contract test instead of relying only on broad document equality.
+
+## 2026-03-21 - Task: Validate Rust Dashboard Inspect Export Vs Live Parity In Live Smoke
+- State: Done
+- Scope: `scripts/test-rust-live-grafana.sh`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The Rust live smoke already exercised `inspect-export` and `inspect-live` against the same seeded Grafana instance, but it only checked for coarse family coverage and governance presence. It did not compare the normalized operator-facing report/governance projections across the two paths.
+- Current Update: Added normalized projection helpers to the Rust live smoke so `inspect-export` and `inspect-live` can be compared on stable report/governance fields without depending on file paths or array ordering. Kept the coarse family-coverage assertions in place so the gate still reads clearly to operators.
+- Result: The Rust live smoke now validates projected report/governance parity instead of full-document equality, which keeps the maintainer gate stable while still surfacing operator-visible inspect-export vs inspect-live drift.
+
+## 2026-03-21 - Task: Restore Rust All-Orgs Dashboard Root Export Bundle In Org-Client Mode
+- State: Done
+- Scope: `rust/src/dashboard/export.rs`, `scripts/test-rust-live-grafana.sh`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust dashboard export already wrote the aggregate root `index.json` and `export-metadata.json` when `--all-orgs` ran through the request-injected path, but the real binary path that rebuilds org-scoped HTTP clients did not mirror that behavior. Live multi-org `inspect-export` against the combined dashboard export root therefore skipped the intended merge path and lost per-row `org` / `orgId`.
+- Current Update: Moved the aggregate root export write into a shared helper and reused it from both `export_dashboards_with_request(...)` and `export_dashboards_with_org_clients(...)`. The Rust Docker live smoke now reaches the multi-org `inspect-export` root assertion again, and the root export bundle is present in the real CLI path instead of only in unit-tested request injection.
+- Result: Rust `dashboard export --all-orgs` now emits the same aggregate root manifest/index in the real org-client path as it does in the injected test path, so multi-org inspection keeps org-scoped rows instead of degrading them to blank org metadata.
+
+## 2026-03-21 - Task: Tighten Rust Dashboard Export Row Core Family Contract
+- State: Done
+- Scope: `rust/src/dashboard/rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust dashboard export-row coverage was split across several family-specific raw-export tests, which made the current Prometheus, Loki, Flux, SQL, search, and tracing contract harder to reuse and easier to drift.
+- Current Update: Consolidated the raw-export query-row coverage into one table-driven inventory-backed fixture that exercises the supported core families with pattern-based Prometheus/Loki/Flux/SQL/search/tracing expectations. The test now checks the shared row contract, datasource inventory fields, folder identity, and render-document summary values from one reusable raw-export fixture.
+- Result: Export inspection row coverage now reads as a single reusable core-family contract instead of several one-off family spot checks, while staying aligned with the current analyzer behavior.
+
+## 2026-03-21 - Task: Accept Preserved Raw Dashboard Documents In Rust Source Metadata Collection
+- State: Done
+- Scope: `rust/src/dashboard/list.rs`, `rust/src/dashboard/rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust dashboard source-metadata extraction still assumed Grafana-style wrapped payloads with a top-level `dashboard` object. That was fine for live API responses, but Rust raw export intentionally writes preserved web-import dashboard objects without the wrapper, so import-side dependency preflight could fail against its own raw export files with `Unexpected dashboard payload from Grafana.`
+- Current Update: Switched `collect_dashboard_source_metadata(...)` to reuse `extract_dashboard_object(...)`, which already accepts either wrapped Grafana payloads or preserved raw dashboard objects. Added a focused Rust regression that feeds the helper a preserved raw document and asserts the datasource names and UIDs are still extracted correctly.
+- Result: Rust import/dependency-preflight paths now accept the same raw dashboard document shape that Rust export writes, which closes the self-round-trip contract gap instead of relying on wrapped live payload assumptions.
+
+## 2026-03-21 - Task: Expand Rust Dashboard Live Smoke Into Inspect And Governance
+- State: Done
+- Scope: `scripts/test-rust-live-grafana.sh`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The Rust live smoke already covered dashboard export/import/diff and multi-org replay, but it did not exercise the newer `inspect-export` / `inspect-live` report and governance surfaces against a real Grafana instance. Recent Rust inspection work for Prometheus, Loki, Flux, SQL, search, and tracing was still mostly guarded by unit tests and offline fixtures.
+- Current Update: Expanded the Docker-backed Rust smoke fixture with additional Loki, InfluxDB, PostgreSQL, Elasticsearch, and Tempo datasources plus one mixed core-family dashboard, then added live checks for offline `inspect-export --output-format report-json`, offline `governance-json`, datasource-family filtering, live `inspect-live --output-format report-json`, and live `governance-json`.
+- Result: The Rust live smoke now validates the broader operator-facing inspection contract end-to-end, including core-family family labeling and governance output, instead of stopping at export/import mechanics.
+
+## 2026-03-21 - Task: Tighten Rust Dashboard Inspection Core Family Fixture
+- State: Done
+- Scope: `fixtures/dashboard_inspection_analyzer_cases.json`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The shared Rust dashboard inspection fixture still had thin or ambiguous coverage for the core non-cloud families even though the analyzers already supported Prometheus, Loki, Flux, SQL, search, and tracing.
+- Current Update: Expanded the shared contract with representative operator-facing rows for Prometheus histogram quantiles, Loki pipeline stages, Flux aggregateWindow pipelines, SQL CTE/join normalization, the Grafana OpenSearch datasource alias, and tracing `resource.service.name` hints, while keeping the fixture aligned with current analyzer output rather than adding new parsing behavior.
+- Result: The shared fixture now pins a clearer family boundary across the core Rust inspection families without changing the analyzer implementation.
+
+## 2026-03-21 - Task: Add Explicit Tracing Inspection Routing
+- State: Done
+- Scope: `rust/src/dashboard/inspect.rs`, `rust/src/dashboard/mod.rs`, `rust/src/dashboard/rust_tests.rs`, `fixtures/dashboard_inspection_analyzer_cases.json`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Tempo, Jaeger, and Zipkin datasource types still dropped into the generic unknown-family fallback during dashboard inspection, so trace-oriented queries had no dedicated routing contract.
+- Current Update: Added a dedicated `tracing` inspection family for Tempo/Jaeger/Zipkin aliases and a narrow analyzer that only keeps obvious field-shaped trace hints such as `service.name`, `span.name`, and trace-id fields. The analyzer stays conservative and returns empty analysis for plain text or other non-obvious shapes, and the shared fixture now covers all three datasource aliases.
+- Result: Trace datasources now route through an explicit inspection family instead of the unknown fallback, while the analyzer contract remains narrow enough to avoid speculative parsing.
+
+## 2026-03-21 - Task: Add Explicit Elasticsearch/OpenSearch Inspection Routing
+- State: Done
+- Scope: `rust/src/dashboard/inspect.rs`, `rust/src/dashboard/inspect_analyzer_search.rs`, `rust/src/dashboard/inspect_governance.rs`, `rust/src/dashboard/mod.rs`, `rust/src/dashboard/rust_tests.rs`, `fixtures/dashboard_inspection_analyzer_cases.json`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The Rust dashboard inspection resolver already classified Prometheus, Loki, Flux, and SQL families, but Elasticsearch/OpenSearch datasource types still fell through to the generic fallback path and were treated as unknown for inspection routing.
+- Current Update: Added a dedicated `search` inspection family plus a conservative Elasticsearch/OpenSearch analyzer that extracts Lucene-style field references, skips obvious JSON Query DSL payloads, and now recognizes `@timestamp` field clauses. The relevant datasource aliases route into that family ahead of panel/target/query fallbacks, and the report/filter/governance surfaces now normalize search-family labels consistently. Shared analyzer fixtures and focused Rust tests were expanded to cover analyzer output, export inspection rows, report filtering, and governance grouping.
+- Result: Elasticsearch and OpenSearch now follow an explicit inspection routing path instead of relying on unknown-family fallback, their query reports use a consistent `search` family label, and operator-visible report/governance output no longer mixes raw datasource-type labels back in.
+
+## 2026-03-21 - Task: Normalize Tracing Inspect Governance Families
+- State: Done
+- Scope: `rust/src/dashboard/inspect_governance.rs`, `rust/src/dashboard/rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Dashboard inspection governance normalized search aliases, but `tempo`, `jaeger`, and `zipkin` still behaved like separate raw datasource labels in family coverage and could fall back to `unknown` when no inventory row was available.
+- Current Update: Mapped Tempo/Jaeger/Zipkin into the shared `tracing` family, preserved tracing datasource identity during governance fallback, and added focused Rust regressions for query-report filtering plus governance family grouping across all three tracing plugins.
+- Result: Tracing datasource rows now group under one operator-visible family label in query report filters and governance coverage, without changing the existing search family behavior.
+
+## 2026-03-20 - Task: Tighten Rust Dashboard Inspection Analyzer Boundaries
+- State: Done
+- Scope: `rust/src/dashboard/inspect.rs`, `rust/src/dashboard/mod.rs`, `rust/src/dashboard/rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust dashboard inspection already had family-specific analyzers, but the family resolver still mixed datasource-type checks and query-shape fallbacks in one block, and there was no focused table-driven coverage for the routing boundary itself.
+- Current Update: Split the resolver into explicit datasource-type and query-signature helpers, kept the `resolved_datasource_type` fast path in front of target/panel/query fallbacks, re-exported the inspect family helpers for test visibility, and added table-driven Rust tests that lock alias-to-family mapping, query-signature fallback mapping, and resolver precedence.
+- Result: The dashboard inspection boundary is clearer now: datasource-type routing is isolated from query-shape inference, and the precedence rules are pinned by focused Rust tests without touching Python.
+
+## 2026-03-20 - Task: Add Rust Dashboard Import Dependency Preflight
+- State: Done
+- Scope: `rust/src/dashboard/import.rs`, `rust/src/dashboard/rust_tests.rs`, `TODO.md`, `docs/internal/todo-archive.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust dashboard import only validated export metadata, folder layout, and existing dashboard lookup behavior before mutating Grafana. It did not preflight live datasource existence or plugin availability, so a live import could still reach POST even when the imported dashboard clearly referenced missing dependencies.
+- Current Update: Added a live-import-only preflight that scans raw dashboard exports for datasource references and panel plugin types, resolves them against live datasource/plugin inventories, and fails closed before any live POST when required datasources or plugins are missing. The dry-run path remains preview-only.
+- Result: Rust dashboard import now blocks earlier on missing live datasource/plugin dependencies while preserving dry-run behavior and the existing import flow for dashboards that do not expose dependency signals.
+
+## 2026-03-20 - Task: Improve Dashboard Prompt Export Fidelity
+- State: Done
+- Scope: `python/grafana_utils/dashboards/transformer.py`, `python/tests/test_python_dashboard_cli.py`, `rust/src/dashboard/prompt.rs`, `rust/src/dashboard/rust_tests.rs`, `fixtures/dashboard_prompt_export_cases.json`, `TODO.md`, `docs/internal/todo-archive.md`
+- Baseline: Dashboard prompt export already rewrote datasource references into Grafana-style `__inputs`, but the active backlog still called out two fidelity gaps: datasource labels / datasource `__requires` names still drifted from Grafana external export for some families, and the mixed-type / same-type prompt surface was not locked by one shared cross-runtime contract.
+- Current Update: Added a shared prompt-export fixture that both runtimes use to check mixed Prometheus/Loki, same-type PostgreSQL, and mixed OpenSearch/PostgreSQL cases. Tightened Python prompt-export plugin naming for canonical datasource display names such as `OpenSearch`, `PostgreSQL`, and `Microsoft SQL Server`, and taught both runtimes to render Grafana-style panel display names like `Time series` in panel `__requires`.
+- Result: Prompt export fidelity for datasource labels, datasource `__requires`, and panel `__requires` is now locked by one broader shared contract, and the backlog can move on from this prompt-export item to the next dashboard/import/inspection tasks.
+
+## 2026-03-20 - Task: Reduce Python Dashboard Import Org Lookup Repetition
+- State: Done
+- Scope: `python/grafana_utils/dashboards/import_workflow.py`, `python/tests/test_python_dashboard_cli.py`
+- Baseline: Python dashboard import already cached per-dashboard and per-folder lookups during one import run, but it still proxied `fetch_current_org()` and `list_orgs()` directly to the underlying client. Multi-org routing and export-org guard paths could therefore reissue the same live org reads within a single import flow.
+- Current Update: Extended the Python per-import cached client wrapper to cache current-org and org-list responses alongside the existing dashboard/folder caches, and added focused tests that prove repeated wrapper calls only hit the underlying client once for each org lookup type.
+- Result: Python import/dry-run now matches the Rust import path more closely for org-level lookup reuse, trimming repeated live Grafana reads on multi-org and matching-org flows without changing operator-visible behavior.
+
+## 2026-03-20 - Task: Add Dashboard Import Dependency Preflight
+- State: Done
+- Scope: `python/grafana_utils/dashboards/import_support.py`, `python/grafana_utils/dashboards/import_runtime.py`, `python/grafana_utils/dashboards/import_workflow.py`, `python/tests/test_python_dashboard_cli.py`, `rust/src/dashboard/import.rs`, `rust/src/dashboard/rust_tests.rs`
+- Baseline: Dashboard import only validated export metadata and folder layout before mutating Grafana. It did not preflight live datasource existence or plugin availability across runtimes, and Python/Rust had no checked import-side guard that could stop known-missing dependencies before the write path.
+- Current Update: Added import-side dependency preflight in both runtimes before live dashboard mutation. Python scans raw dashboard documents for datasource refs, panel plugin types, and alert/contact references, then checks the live datasource, plugin, and contact-point inventories only when those signals are present. Rust now stages dashboard datasource/plugin dependencies through the existing sync-preflight contract before import write calls and blocks when the staged checks report blocking items.
+- Result: Dashboard import now fails earlier on missing live dependencies instead of reaching mutation first. Python covers datasource, plugin, alert datasource, and contact-point references; Rust now covers dashboard datasource/plugin dependencies with checked preflight coverage while preserving dry-run behavior.
+
+## 2026-03-20 - Task: Add Combined Datasource Live Smoke Gate
+- State: Done
+- Scope: `scripts/test-combined-live-grafana.sh`, `Makefile`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Datasource live validation existed as two separate Docker smoke entrypoints, one for Rust and one for Python, so maintainers had to run them independently to recheck runtime parity.
+- Current Update: Added a combined fail-fast datasource live smoke wrapper and a `make test-datasource-live` shortcut that runs the Rust live smoke first and then the Python datasource live smoke against the same local Docker Grafana instance.
+- Result: One command now rechecks datasource runtime behavior across both runtimes, which makes it easier to validate the shared datasource contracts and catch drift without running two separate live smoke commands by hand.
+
+## 2026-03-19 - Task: Add Python Datasource Preset Profiles
+- State: Done
+- Scope: `python/grafana_utils/datasource/catalog.py`, `python/grafana_utils/datasource/parser.py`, `python/grafana_utils/datasource/workflows.py`, `python/tests/test_python_datasource_cli.py`
+- Baseline: Python `datasource add` only exposed the legacy `--apply-supported-defaults` switch, which always applied the same starter scaffold for supported types.
+- Current Update: Added `--preset-profile starter|full` to Python `datasource add`, kept `--apply-supported-defaults` as the starter-profile alias, and taught the catalog/workflow path to resolve defaults by type plus profile before merging user `--json-data` overrides.
+- Result: Operators can now opt into a fuller datasource scaffold when the catalog has one, while the old starter behavior remains unchanged for existing `--apply-supported-defaults` calls.
+
+## 2026-03-19 - Task: Fix Python Datasource Nested JsonData Deep Merge
+- State: Done
+- Scope: `python/grafana_utils/datasource/workflows.py`, `python/tests/test_python_datasource_cli.py`
+- Baseline: Python `datasource add` merged preset/default `jsonData` with user `--json-data` using a shallow top-level update, so nested scaffolds such as Tempo `tracesToLogsV2` lost sibling keys when one nested field was overridden.
+- Current Update: Switched the add-path `jsonData` merge to a recursive object merge that preserves preset sibling keys while still keeping the derived top-level flag conflict checks intact, and added a Tempo regression test for a nested `tracesToLogsV2.datasourceUid` override.
+- Result: Python add now matches the Rust nested merge behavior for preset/default `jsonData` scaffolds, including the Tempo full-profile case that previously flattened nested objects.
+
+## 2026-03-19 - Task: Fix Python Datasource Modify Nested JsonData Deep Merge
+- State: Done
+- Scope: `python/grafana_utils/datasource/workflows.py`, `python/tests/test_python_datasource_cli.py`
+- Baseline: Python `datasource modify` still merged existing `jsonData` with explicit `--json-data` using a shallow top-level update, so nested objects such as Tempo `tracesToLogsV2` lost sibling keys when one nested field was overridden.
+- Current Update: Switched the modify-path payload builder to reuse the same recursive object merge used by datasource add, and added a Tempo regression test that overrides only `tracesToLogsV2.datasourceUid`.
+- Result: Python modify now preserves nested scaffold siblings during partial `jsonData` overrides, matching the Rust nested merge behavior for the same shape.
+
+## 2026-03-19 - Task: Add Datasource Secure Json Merge Coverage
+- State: Done
+- Scope: `fixtures/datasource_secure_json_merge_cases.json`, `rust/src/datasource_rust_tests.rs`
+- Baseline: `secureJsonData` add/modify behavior was covered by ad hoc tests, but there was no shared fixture that explicitly locked merge-versus-replace semantics for secrets.
+- Current Update: Added a dedicated shared fixture with one add case that preserves explicit `secureJsonData` unchanged and one modify case that confirms the secure secret object is replaced wholesale rather than merged with existing keys.
+- Result: Rust now has fixture-driven coverage for the current secure secret semantics, making the replace-on-modify behavior explicit and regression-tested.
+
+## 2026-03-19 - Task: Preserve Rust Datasource Auth Metadata During Modify
+- State: Done
+- Scope: `rust/src/datasource.rs`, `rust/src/datasource_rust_tests.rs`
+- Baseline: Rust `datasource modify` carried `jsonData` and `secureJsonData` forward, but it dropped existing top-level auth metadata such as `basicAuth`, `basicAuthUser`, `user`, and `withCredentials` unless the same flags were repeated on the edit command.
+- Current Update: Taught the modify-path payload builder to preserve those auth fields from the existing datasource when no explicit replacement flag is present, and added regressions that keep the auth metadata intact during unrelated edits while rejecting password-only modify payloads that have no `basicAuthUser` to bind to.
+- Result: Rust datasource modify now behaves like a partial update for auth metadata instead of silently clearing it during unrelated edits, and it still fails closed on password updates that cannot be associated with a user.
+
 ## 2026-03-18 - Task: Align Rust Dashboard Permission Export Docs And Tests
 - State: Done
 - Scope: `README.md`, `docs/user-guide.md`, `docs/overview-rust.md`, `rust/src/dashboard/export.rs`, `rust/src/dashboard/files.rs`, `rust/src/dashboard/live.rs`, `rust/src/dashboard/inspect.rs`, `rust/src/dashboard/mod.rs`, `rust/src/dashboard/models.rs`, `rust/src/dashboard/rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
@@ -562,6 +877,13 @@ Historical note:
 - Baseline: Dashboard import already supported create-only, create-or-update, and update-or-skip-missing modes keyed by dashboard `uid`, but it had no way to protect existing dashboards that had drifted into a different destination folder path. Operators could preserve or override destination folder UIDs, but they could not require the exported raw folder path to match the current Grafana folder path before updating an existing dashboard.
 - Current Update: Added `--require-matching-folder-path` in both Python and Rust dashboard import flows. The new guard compares the raw source folder path against the current destination Grafana folder path only for existing dashboards, rewrites update actions to `skip-folder-mismatch` when those paths differ, extends dry-run table/json output with source and destination folder-path columns/details, and rejects the guard when combined with `--import-folder-uid`.
 - Result: Operators can now keep the existing batch import workflow while safely blocking updates to dashboards that have moved to a different folder path in the target Grafana, and they can see the exact source/destination path mismatch in dry-run output before running a live import.
+
+## 2026-03-21 - Task: Tighten Loki Inspection Contract
+- State: Done
+- Scope: `rust/src/dashboard/inspect_analyzer_loki.rs`, `rust/src/dashboard/rust_tests.rs`, `fixtures/dashboard_inspection_analyzer_cases.json`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Loki inspection already had its own analyzer boundary, but the Rust contract still stopped at selectors, label matchers, and generic pipeline names. That left obvious LogQL filter intent less visible in the report rows, especially for `|=` and `|~` style pipeline filters.
+- Current Update: Added conservative Loki line-filter hints to the existing `functions` field, kept the stream-selector scanner quote-aware so `line_format` templates do not become fake selectors, and expanded the shared fixture plus report-level Rust coverage to pin the richer Loki row shape.
+- Result: Loki inspection rows now expose a clearer operator-facing LogQL shape without widening the report schema or attempting a full parser.
 
 ## 2026-03-14 - Task: Strengthen Loki Inspection Analyzers
 - State: Done
@@ -1295,3 +1617,68 @@ Historical note:
 - Baseline: `dashboard inspect-export` only accepted one org-scoped `raw/` directory. Pointing it at a multi-org dashboard export root failed on the root manifest, and Rust report rows on merged multi-org data could surface empty `ORG` / `ORG_ID` cells when raw index paths were absolute.
 - Current Update: Added multi-org export-root detection to both Python and Rust inspect workflows, materialized a temporary merged raw inspect directory from `org_*/raw` children, carried merged folder/datasource/index inventories forward, and normalized Rust raw-index paths so per-query report rows recover `org` / `orgId` from real export metadata.
 - Result: Operators can now point `grafana-util dashboard inspect-export` at a combined `--all-orgs` dashboard export root directly, while Rust report/table output preserves populated org scope columns on the merged multi-org path.
+## 2026-03-19 - Task: Add Rust Datasource Auth Flags Parity
+- State: Done
+- Scope: `rust/src/datasource.rs`, `rust/src/datasource_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust datasource live mutation commands already supported `--json-data` and `--secure-json-data`, but they did not expose the datasource-oriented auth and transport flags that Python had, such as `--basic-auth`, `--basic-auth-user`, `--basic-auth-password`, `--user`, `--password`, `--with-credentials`, `--http-header`, `--tls-skip-verify`, and `--server-name`.
+- Current Update: Added those datasource auth/header/TLS flags to Rust `datasource add` and `datasource modify`, translated them into the correct top-level, `jsonData`, and `secureJsonData` payload fields, preserved the existing explicit-object collision guards, and extended the Rust tests to cover parser/help behavior plus payload shaping and the `--basic-auth-password requires --basic-auth-user` guard.
+- Result: Rust can now exercise the same datasource auth configuration surface as Python for add/modify flows, including live Prometheus-style auth/header cases, while keeping request-payload validation and test coverage explicit.
+## 2026-03-20 - Task: Add Live Smoke Coverage For Datasource Secret Persistence
+- State: Done
+- Scope: `scripts/test-python-datasource-live-grafana.sh`, `scripts/test-rust-live-grafana.sh`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The datasource live smoke scripts covered add/delete/export/import flows, but they did not assert the Grafana-managed persisted-state behavior for secret-bearing datasource mutations. The Python datasource smoke script also still assumed repo-local `python -m grafana_utils` worked without setting `PYTHONPATH=python`.
+- Current Update: Added focused live checks in both datasource smoke scripts that create a secret-bearing Prometheus datasource, verify `basicAuthUser`, `jsonData.httpHeaderName1`, and durable `secureJsonFields` markers after add, then verify that modify keeps the prior secret flags instead of treating `secureJsonData` as a direct persisted-state echo. The Python script now invokes the repo-local CLI with `PYTHONPATH` set explicitly.
+- Result: The checked-in datasource live smoke paths now cover the real Grafana secret-persistence contract for add/modify, and the Python datasource smoke script matches the current repo layout instead of depending on an installed package.
+## 2026-03-20 - Task: Re-Align Python Datasource Export With Strict Contract
+- State: Done
+- Scope: `python/grafana_utils/datasource/workflows.py`, `python/tests/test_python_datasource_cli.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Python datasource export was reusing the broader dashboard datasource inventory helper, so `datasources.json` could contain extra fields such as `database`, `defaultBucket`, `organization`, and `indexPattern`. The Python importer was intentionally strict and rejected those fields, which broke the checked-in full datasource live smoke on its own export/import round-trip.
+- Current Update: Normalized datasource export records back down to the strict datasource contract at the export boundary, and added a regression test that seeds those extra dashboard-style fields but asserts the written `datasources.json` still contains only `uid`, `name`, `type`, `access`, `url`, `isDefault`, `org`, and `orgId`.
+- Result: Python datasource export/import are aligned again on one stable contract, and the full Python datasource Docker smoke passes against Grafana 12.4.1 instead of failing on its own exported records.
+## 2026-03-20 - Task: Normalize Python Datasource Export Records
+- State: In progress
+- Scope: `python/grafana_utils/datasource/workflows.py`, `python/tests/test_python_datasource_cli.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Python datasource export reused the dashboard inventory record builder, so exported `datasources.json` could carry dashboard-oriented fields such as `database`, `defaultBucket`, `organization`, and `indexPattern` even though datasource import/diff only accepts the strict contract fields.
+- Current Update: Switched datasource export to normalize each record into the strict datasource contract before writing `datasources.json`, and extended the export regression test to seed live records with the dashboard-only fields so the exporter is forced to drop them.
+- Result: The Python datasource export/import contract is now aligned again, and the live datasource smoke path should stop failing on unsupported dashboard-only fields during export replay.
+## 2026-03-21 - Task: Tighten Dashboard Inspect JSON Output-File Parity
+- State: In Progress
+- Scope: `rust/src/dashboard/rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Current Update: Added a shared Rust parity test that writes and rereads inspect-export and inspect-live `report-json`, `governance-json`, and `dependency-json` output files from the same seeded core-family fixture, with newline-terminated file checks and stable row-field assertions.
+- Result: Pending focused Rust validation.
+## 2026-03-20 - Task: Ignore Dashboard Permission Bundles In Sync Discovery
+- State: Done
+- Scope: `rust/src/sync/mod.rs`, `rust/src/sync/cli_rust_tests.rs`, `scripts/test-rust-live-grafana.sh`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: `sync bundle` walked the dashboard export tree with its own JSON discovery and treated `permissions.json` like a dashboard document, which caused the live smoke to fail on `Dashboard export document is missing dashboard.uid: permissions.json`.
+- Current Update: Added `permissions.json` to the sync dashboard discovery ignore list, added a focused regression that keeps `sync bundle` green when the file is present, and aligned the Rust live smoke script with the actual smoke fixture by checking the exported contact point count, the zero-alert-rule case, and the current cleanup semantics.
+- Result: Rust sync bundle discovery now ignores dashboard permission bundles consistently with dashboard import, and the full Rust Docker live smoke passes again against Grafana 12.4.1.
+## 2026-03-20 - Task: Share Datasource Types Catalog Contract Across Python And Rust
+- State: Done
+- Scope: `fixtures/datasource_supported_types_catalog.json`, `python/grafana_utils/datasource/catalog.py`, `python/tests/test_python_datasource_cli.py`, `rust/src/datasource_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Python and Rust each had their own datasource catalog assertions for `datasource types --json`, but they were duplicated and could drift independently. There was no single checked-in contract proving both runtimes emitted the same stable catalog surface for `suggestedFlags`, `presetProfiles`, `addDefaults`, and `fullAddDefaults`.
+- Current Update: Added a shared catalog fixture and switched both Python and Rust datasource catalog tests to project the live catalog JSON down to the stable operator-facing keys before comparing it to that one fixture. The new shared contract immediately surfaced a real parity bug: Python was marking `sqlite` as requiring `--datasource-url`, so the Python catalog entry was corrected to `requiresDatasourceUrl=false` to match Rust and the intended file-backed datasource behavior.
+- Result: The datasource supported-types catalog now has one cross-language contract, and Python/Rust stay aligned on the operator-facing introspection fields instead of relying on separate duplicated expectations.
+## 2026-03-20 - Task: Share Preset-Profile Payload Contracts Across Python And Rust
+- State: Done
+- Scope: `fixtures/datasource_preset_profile_add_payload_cases.json`, `python/tests/test_python_datasource_cli.py`, `rust/src/datasource_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Preset-profile payload behavior was covered by a mix of one-off Python and Rust assertions plus the older nested/secure fixtures, but there was no single shared fixture for add-path preset scaffolds. That left the most active parity surface, `starter` / `full` payload generation, open to Python/Rust drift.
+- Current Update: Added a shared add-path preset-profile payload fixture covering `prometheus` starter, `loki` full, `tempo` full with nested override, and `postgresql` full, then wired both Python and Rust tests to consume it. Kept the existing nested `jsonData` and `secureJsonData` shared fixtures in place for modify-path deep-merge, array-replace, and secret replacement semantics.
+- Result: Preset-profile payload parity is now split into one stable add-path fixture plus the existing modify/secure fixtures, so Python and Rust are checked against the same contract for the payload-builder behavior that has been changing the most.
+## 2026-03-20 - Task: Add A Combined Datasource Live Smoke Gate
+- State: Done
+- Scope: `scripts/test-combined-live-grafana.sh`, `Makefile`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The repo already had separate Docker-backed live smokes for Rust and Python datasource flows, but there was no single entrypoint to run both back-to-back. Rechecking cross-runtime datasource behavior still required remembering and sequencing two separate commands.
+- Current Update: Added a thin fail-fast wrapper script that runs the Rust live smoke first and the Python datasource live smoke second, then wired a new `make test-datasource-live` target to that wrapper and documented the combined gate in maintainer notes.
+- Result: There is now one combined datasource live-smoke command that revalidates both runtimes against local Docker Grafana without manually chaining separate targets.
+## 2026-03-20 - Task: Share Datasource Preset Payload Modify Fixtures In Python
+- State: Done
+- Scope: `fixtures/datasource_preset_profile_payload_cases.json`, `python/tests/test_python_datasource_cli.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Python preset-profile modify and secure JSON assertions were split across separate fixture files, which made the payload contract harder to extend and harder to keep aligned across Loki, Tempo, and secure JSON semantics.
+- Current Update: Added one shared preset-profile payload fixture covering Loki array replacement, Tempo nested JSON merge, and secure JSON add/modify semantics, then switched the Python tests to consume that shared contract directly.
+- Result: Python now exercises the preset-profile payload cases from one shared fixture, reducing drift and making it easier to add more payload cases without duplicating case data.
+## 2026-03-21 - Task: Expand Rust Access Service-Account Replay Contract
+- State: Done
+- Scope: `rust/src/access/rust_tests.rs`, `scripts/test-rust-live-grafana.sh`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust service-account coverage stopped at add/export/token-delete/delete/list. The runtime already had import and diff handlers, but there was no focused contract for missing-account create replay, same-state diff, or the live export -> mutate -> dry-run import -> replay -> recreate path.
+- Current Update: Added focused Rust service-account tests for the structured-output dry-run guard, missing-account create replay, and no-difference diff behavior. Extended the Rust Docker live smoke so the service-account section now verifies export same-state diff, mutated bundle drift, dry-run import update preview, live replay, same-state diff after replay, delete, and recreate import.
+- Result: Focused Rust service-account contract tests and the full Rust Docker live smoke now pass, so the Rust access service-account line has export/diff/import/replay coverage instead of stopping at CRUD/token smoke.

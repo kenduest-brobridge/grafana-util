@@ -446,20 +446,45 @@ Alert export completed: 3 resource(s) written
 | `--import-dir`（必須） | 指向 alert `raw/` 目錄 | 不能指向上層目錄 |
 | `--replace-existing` | 已存在則更新 | 常見於正式匯入覆寫 |
 | `--dry-run` | 僅模擬執行，不真的送 API | 建議先確認變更範圍 |
+| `--json` | 結構化 dry-run 預覽 | 適合自動化 |
 | `--dashboard-uid-map` | dashboard uid 對照檔 | linked rule 在目標系統 UID 變更時必備 |
 | `--panel-id-map` | panel id 對照檔 | 修復 linked alert 內 panel 參考 |
 
 範例指令：
 ```bash
-grafana-util alert import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./alerts/raw --replace-existing --dry-run
+grafana-util alert import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./alerts/raw --replace-existing --dry-run --json
 ```
 
 範例輸出：
-```text
-kind=contact-point name=oncall-webhook action=would-update
-kind=rule-group name=linux-hosts action=would-create
-kind=template name=default_message action=no-change
+```json
+{
+  "summary": {
+    "processed": 2,
+    "wouldCreate": 1,
+    "wouldUpdate": 1,
+    "wouldFailExisting": 0
+  },
+  "rows": [
+    {
+      "path": "alerts/raw/contact-points/Smoke_Webhook/Smoke_Webhook__smoke-webhook.json",
+      "kind": "grafana-contact-point",
+      "identity": "smoke-webhook",
+      "action": "would-update"
+    },
+    {
+      "path": "alerts/raw/policies/notification-policies.json",
+      "kind": "grafana-notification-policies",
+      "identity": "grafana-default-email",
+      "action": "would-create"
+    }
+  ]
+}
 ```
+
+如何判讀：
+- `summary` 是 replay 前最快的安全檢查。
+- `would-*` 是 dry-run 預測結果。
+- `kind` 可快速看出哪一類 alert 資源會變動。
 
 ### 4.3 `alert diff`（legacy `diff-alert`）
 
@@ -468,21 +493,39 @@ kind=template name=default_message action=no-change
 | 參數 | 用途 | 差異 / 情境 |
 | --- | --- | --- |
 | `--diff-dir`（必須） | 指向 raw 目錄 | 比對本地匯出與線上狀態的基準目錄 |
+| `--json` | 結構化 diff 輸出 | 適合自動化 |
 | `--dashboard-uid-map` | dashboard 對映，確保跨環境比對一致 | 跨環境 UID 不一致時使用 |
 | `--panel-id-map` | panel 對映，修正 linked path | panel 編號差異時使用 |
 
 範例指令：
 ```bash
-grafana-util alert diff --url http://localhost:3000 --basic-user admin --basic-password admin --diff-dir ./alerts/raw
+grafana-util alert diff --url http://localhost:3000 --basic-user admin --basic-password admin --diff-dir ./alerts/raw --json
 ```
 
 範例輸出：
-```text
-Diff different
-
-resource=contact-point name=oncall-webhook
-- url=http://127.0.0.1/notify
-+ url=http://127.0.0.1/updated
+```json
+{
+  "summary": {
+    "checked": 2,
+    "same": 1,
+    "different": 1,
+    "missingRemote": 0
+  },
+  "rows": [
+    {
+      "path": "alerts/raw/contact-points/Smoke_Webhook/Smoke_Webhook__smoke-webhook.json",
+      "kind": "grafana-contact-point",
+      "identity": "smoke-webhook",
+      "action": "different"
+    },
+    {
+      "path": "alerts/raw/policies/notification-policies.json",
+      "kind": "grafana-notification-policies",
+      "identity": "grafana-default-email",
+      "action": "same"
+    }
+  ]
+}
 ```
 
 ### 4.4 `alert list-rules`（legacy `list-alert-rules`）
@@ -1423,8 +1466,8 @@ grafana-util dashboard inspect-live --url <URL> --basic-user <USER> --basic-pass
 
 # alert
 grafana-util alert export --url <URL> --token <TOKEN> --output-dir <DIR> [--flat] [--overwrite]
-grafana-util alert import --url <URL> --basic-user <USER> --basic-password <PASS> --import-dir <DIR>/raw --replace-existing [--dry-run] [--dashboard-uid-map <FILE>] [--panel-id-map <FILE>]
-grafana-util alert diff --url <URL> --basic-user <USER> --basic-password <PASS> --diff-dir <DIR>/raw [--dashboard-uid-map <FILE>] [--panel-id-map <FILE>]
+grafana-util alert import --url <URL> --basic-user <USER> --basic-password <PASS> --import-dir <DIR>/raw --replace-existing [--dry-run] [--json] [--dashboard-uid-map <FILE>] [--panel-id-map <FILE>]
+grafana-util alert diff --url <URL> --basic-user <USER> --basic-password <PASS> --diff-dir <DIR>/raw [--json] [--dashboard-uid-map <FILE>] [--panel-id-map <FILE>]
 grafana-util alert list-rules --url <URL> --token <TOKEN> [--table|--csv|--json]
 grafana-util alert list-rules --url <URL> --basic-user <USER> --basic-password <PASS> [--org-id <ORG_ID>|--all-orgs] [--table|--csv|--json]
 

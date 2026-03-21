@@ -15,6 +15,7 @@ top of the file.
 - `ai-changes.md`
 - `project-roadmap.md`
 - `project-value-assessment.md`
+- `future-feature-proposals.md`
 - `competitor-analysis.md`
 - `market-analysis-report.zh-TW.md`
 - `todo-archive.md`

@@ -484,22 +484,43 @@ Purpose: import alerting resources from a `raw/` directory.
 | `--import-dir` | Alert `raw/` directory | Must point to `raw/` |
 | `--replace-existing` | Update existing resources | Standard restore mode |
 | `--dry-run` | Preview only | Best first pass |
+| `--json` | Structured dry-run preview | Best for automation |
 | `--dashboard-uid-map` | Dashboard UID map | Fix linked alert references |
 | `--panel-id-map` | Panel id map | Fix linked panel references |
 
 Example command:
 ```bash
-grafana-util alert import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./alerts/raw --replace-existing --dry-run
+grafana-util alert import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./alerts/raw --replace-existing --dry-run --json
 ```
 
 Example output:
-```text
-kind=contact-point name=oncall-webhook action=would-update
-kind=rule-group name=linux-hosts action=would-create
-kind=template name=default_message action=no-change
+```json
+{
+  "summary": {
+    "processed": 2,
+    "wouldCreate": 1,
+    "wouldUpdate": 1,
+    "wouldFailExisting": 0
+  },
+  "rows": [
+    {
+      "path": "alerts/raw/contact-points/Smoke_Webhook/Smoke_Webhook__smoke-webhook.json",
+      "kind": "grafana-contact-point",
+      "identity": "smoke-webhook",
+      "action": "would-update"
+    },
+    {
+      "path": "alerts/raw/policies/notification-policies.json",
+      "kind": "grafana-notification-policies",
+      "identity": "grafana-default-email",
+      "action": "would-create"
+    }
+  ]
+}
 ```
 
 How to read it:
+- `summary` is the fastest safety check before replaying a bundle.
 - `would-*` values are dry-run predictions.
 - `kind` tells you which resource family would change.
 
@@ -510,21 +531,39 @@ Purpose: compare local alert exports against live Grafana.
 | Option | Purpose | Difference / scenario |
 | --- | --- | --- |
 | `--diff-dir` | Raw alert directory | Read-only comparison |
+| `--json` | Structured diff output | Best for automation |
 | `--dashboard-uid-map` | Dashboard mapping | Stable cross-environment compare |
 | `--panel-id-map` | Panel mapping | Stable cross-environment compare |
 
 Example command:
 ```bash
-grafana-util alert diff --url http://localhost:3000 --basic-user admin --basic-password admin --diff-dir ./alerts/raw
+grafana-util alert diff --url http://localhost:3000 --basic-user admin --basic-password admin --diff-dir ./alerts/raw --json
 ```
 
 Example output:
-```text
-Diff different
-
-resource=contact-point name=oncall-webhook
-- url=http://127.0.0.1/notify
-+ url=http://127.0.0.1/updated
+```json
+{
+  "summary": {
+    "checked": 2,
+    "same": 1,
+    "different": 1,
+    "missingRemote": 0
+  },
+  "rows": [
+    {
+      "path": "alerts/raw/contact-points/Smoke_Webhook/Smoke_Webhook__smoke-webhook.json",
+      "kind": "grafana-contact-point",
+      "identity": "smoke-webhook",
+      "action": "different"
+    },
+    {
+      "path": "alerts/raw/policies/notification-policies.json",
+      "kind": "grafana-notification-policies",
+      "identity": "grafana-default-email",
+      "action": "same"
+    }
+  ]
+}
 ```
 
 ### 4.4 `alert list-rules`
@@ -1458,8 +1497,8 @@ grafana-util dashboard import --url <URL> --basic-user <USER> --basic-password <
 grafana-util dashboard diff --url <URL> --basic-user <USER> --basic-password <PASS> --import-dir <DIR>/raw
 
 grafana-util alert export --url <URL> --basic-user <USER> --basic-password <PASS> --output-dir <DIR> [--overwrite]
-grafana-util alert import --url <URL> --basic-user <USER> --basic-password <PASS> --import-dir <DIR>/raw --replace-existing [--dry-run]
-grafana-util alert diff --url <URL> --basic-user <USER> --basic-password <PASS> --diff-dir <DIR>/raw
+grafana-util alert import --url <URL> --basic-user <USER> --basic-password <PASS> --import-dir <DIR>/raw --replace-existing [--dry-run] [--json]
+grafana-util alert diff --url <URL> --basic-user <USER> --basic-password <PASS> --diff-dir <DIR>/raw [--json]
 grafana-util alert list-rules --url <URL> --basic-user <USER> --basic-password <PASS> [--org-id <ORG_ID>|--all-orgs] [--table|--csv|--json]
 
 grafana-util datasource list --url <URL> --token <TOKEN> [--table|--csv|--json]
