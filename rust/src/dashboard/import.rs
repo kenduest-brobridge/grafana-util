@@ -2048,16 +2048,22 @@ where
         let action =
             action.map(|value| apply_folder_path_guard_to_action(value, folder_paths_match));
         if args.dry_run {
-            let prefer_live_folder_path = folder_uid_override.is_some()
-                && args.import_folder_uid.is_none()
-                && !uid.is_empty();
-            let folder_path = resolve_dashboard_import_folder_path_with_request(
-                &mut request_json,
-                &mut lookup_cache,
-                &payload,
-                &folders_by_uid,
-                prefer_live_folder_path,
-            )?;
+            let needs_dry_run_folder_path =
+                args.table || args.json || args.verbose || args.progress;
+            let folder_path = if needs_dry_run_folder_path {
+                let prefer_live_folder_path = folder_uid_override.is_some()
+                    && args.import_folder_uid.is_none()
+                    && !uid.is_empty();
+                Some(resolve_dashboard_import_folder_path_with_request(
+                    &mut request_json,
+                    &mut lookup_cache,
+                    &payload,
+                    &folders_by_uid,
+                    prefer_live_folder_path,
+                )?)
+            } else {
+                None
+            };
             let payload_object =
                 value_as_object(&payload, "Dashboard import payload must be a JSON object.")?;
             let dashboard = payload_object
@@ -2070,7 +2076,7 @@ where
                     dashboard_file,
                     &uid,
                     action.unwrap_or(DEFAULT_UNKNOWN_UID),
-                    &folder_path,
+                    folder_path.as_deref().unwrap_or(""),
                     &normalized_source_folder_path,
                     normalized_destination_folder_path.as_deref(),
                     folder_match_reason,
@@ -2083,7 +2089,7 @@ where
                         true,
                         Some(&uid),
                         Some(action.unwrap_or(DEFAULT_UNKNOWN_UID)),
-                        Some(&folder_path),
+                        folder_path.as_deref(),
                     )
                 );
             } else if args.progress {
@@ -2095,7 +2101,7 @@ where
                         &uid,
                         true,
                         Some(action.unwrap_or(DEFAULT_UNKNOWN_UID)),
-                        Some(&folder_path),
+                        folder_path.as_deref(),
                     )
                 );
             }

@@ -10260,6 +10260,8 @@ fn build_export_inspection_governance_document_rolls_up_dashboard_dependency_ana
         json!(["job=\"grafana\"", "service.name"])
     );
     assert_eq!(dependency_row["buckets"], json!(["1h", "5m"]));
+    assert_eq!(dependency_row["datasourceCount"], Value::from(1));
+    assert_eq!(dependency_row["datasourceFamilyCount"], Value::from(1));
     assert_eq!(dependency_row["datasourceFamilies"], json!(["prometheus"]));
 }
 
@@ -10470,6 +10472,8 @@ fn render_governance_table_report_displays_sections() {
     assert!(output.contains("# Risks"));
     assert!(output.contains("DASHBOARD_UID"));
     assert!(output.contains("QUERY_FIELDS"));
+    assert!(output.contains("DATASOURCE_COUNT"));
+    assert!(output.contains("DATASOURCE_FAMILY_COUNT"));
     assert!(output.contains("METRICS"));
     assert!(output.contains("FUNCTIONS"));
     assert!(output.contains("MEASUREMENTS"));
@@ -11088,6 +11092,14 @@ fn inspect_live_dashboards_with_request_matches_export_output_files_for_core_fam
     assert_eq!(
         export_governance_document["dashboardDependencies"][0]["datasourceFamilies"],
         json!(["prometheus", "loki", "flux", "sql", "search", "tracing"])
+    );
+    assert_eq!(
+        export_governance_document["dashboardDependencies"][0]["datasourceCount"],
+        Value::from(6)
+    );
+    assert_eq!(
+        export_governance_document["dashboardDependencies"][0]["datasourceFamilyCount"],
+        Value::from(6)
     );
 
     assert_eq!(export_dependency_count, 1);
@@ -14372,7 +14384,8 @@ fn import_dashboards_with_shared_folder_lookup_reuses_folder_fetch_in_dry_run() 
     )
     .unwrap();
 
-    let args = make_import_args(raw_dir);
+    let mut args = make_import_args(raw_dir);
+    args.table = true;
     let calls: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let calls_for_request = Rc::clone(&calls);
 
@@ -14418,6 +14431,71 @@ fn import_dashboards_with_shared_folder_lookup_reuses_folder_fetch_in_dry_run() 
             .count(),
         1
     );
+}
+
+#[test]
+fn import_dashboards_with_dry_run_summary_skips_unneeded_folder_lookup() {
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    let temp = tempdir().unwrap();
+    let raw_dir = temp.path().join("raw");
+    fs::create_dir_all(&raw_dir).unwrap();
+    fs::write(
+        raw_dir.join(EXPORT_METADATA_FILENAME),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-dashboard-export-index",
+            "schemaVersion": TOOL_SCHEMA_VERSION,
+            "variant": "raw",
+            "dashboardCount": 1,
+            "indexFile": "index.json",
+            "format": "grafana-web-import-preserve-uid"
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        raw_dir.join("dash.json"),
+        serde_json::to_string_pretty(&json!({
+            "dashboard": {
+                "id": 7,
+                "uid": "abc",
+                "title": "CPU"
+            },
+            "meta": {
+                "folderUid": "old-folder"
+            }
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+
+    let mut args = make_import_args(raw_dir);
+    args.replace_existing = true;
+    args.dry_run = true;
+
+    let calls: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
+    let calls_for_request = Rc::clone(&calls);
+
+    let count = import_dashboards_with_request(
+        move |method, path, _params, _payload| {
+            calls_for_request
+                .borrow_mut()
+                .push(format!("{} {}", method.as_str(), path));
+            match (method, path) {
+                (reqwest::Method::GET, "/api/dashboards/uid/abc") => Ok(Some(json!({
+                    "dashboard": {"id": 7, "uid": "abc", "title": "CPU"},
+                    "meta": {"folderUid": "new-folder"}
+                }))),
+                _ => Err(super::message(format!("unexpected path {path}"))),
+            }
+        },
+        &args,
+    )
+    .unwrap();
+
+    assert_eq!(count, 1);
+    assert_eq!(calls.borrow().as_slice(), ["GET /api/dashboards/uid/abc"]);
 }
 
 #[test]

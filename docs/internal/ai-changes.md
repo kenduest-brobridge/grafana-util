@@ -1,5 +1,13 @@
 # ai-changes.md
 
+## 2026-03-21 - Add Dashboard Dependency Count Fields In Rust Governance
+- Summary: Added explicit `datasourceCount` and `datasourceFamilyCount` fields to each Rust governance dashboard dependency row so operators can gauge blast radius without manually counting the listed datasources and families. The governance table now shows those counts alongside the existing datasource and family lists.
+- Tests: Extended the governance regression to assert the new count fields in JSON output, added table-header coverage for the new count columns, and pinned the multi-datasource live/export parity case to the new dashboard-level counts.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet build_export_inspection`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`
+- Validation: The focused Rust dashboard inspection tests passed and the formatter check passed.
+- Impact: `rust/src/dashboard/inspect_governance.rs`, `rust/src/dashboard/rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low. The change is additive and only exposes counts already derivable from the existing governance rows.
+
 ## 2026-03-21 - Surface Datasource Blast Radius In Rust Governance
 - Summary: Expanded the Rust governance datasource section so each datasource coverage row now carries the dashboard UID list behind its count, and the summary table now shows mixed-dashboard and orphaned-datasource counts alongside the existing governance totals.
 - Tests: Added a focused governance regression that asserts the new `dashboardUids`, `panelCount`, and `queryCount` fields for a datasource row, plus table-output coverage for the widened summary and datasource blast-radius headers. Kept the existing build-export inspection contract tests aligned with the current analyzer output.

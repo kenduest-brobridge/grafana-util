@@ -79,6 +79,10 @@ pub(crate) struct DashboardDependencyRow {
     pub(crate) panel_count: usize,
     #[serde(rename = "queryCount")]
     pub(crate) query_count: usize,
+    #[serde(rename = "datasourceCount")]
+    pub(crate) datasource_count: usize,
+    #[serde(rename = "datasourceFamilyCount")]
+    pub(crate) datasource_family_count: usize,
     pub(crate) datasources: Vec<String>,
     #[serde(rename = "datasourceFamilies")]
     pub(crate) datasource_families: Vec<String>,
@@ -475,6 +479,8 @@ pub(crate) fn build_dashboard_dependency_rows(
                 file_path,
                 panel_count,
                 query_count,
+                datasource_count: datasources.len(),
+                datasource_family_count: datasource_families.len(),
                 datasources,
                 datasource_families,
                 query_fields,
@@ -701,6 +707,8 @@ pub(crate) fn render_governance_table_report(
                 row.folder_path.clone(),
                 row.panel_count.to_string(),
                 row.query_count.to_string(),
+                row.datasource_count.to_string(),
+                row.datasource_family_count.to_string(),
                 row.datasources.join(","),
                 row.datasource_families.join(","),
                 row.query_fields.join(","),
@@ -722,6 +730,8 @@ pub(crate) fn render_governance_table_report(
                 "FOLDER_PATH",
                 "PANELS",
                 "QUERIES",
+                "DATASOURCE_COUNT",
+                "DATASOURCE_FAMILY_COUNT",
                 "DATASOURCES",
                 "FAMILIES",
                 "QUERY_FIELDS",

@@ -12,6 +12,13 @@ Historical note:
 - Current Update: Added a narrow Flux-only bucket extractor that records concrete `every:` durations from Flux pipelines while ignoring quoted text, then updated the shared analyzer fixture and the core-family query-row contract to expect the extra `5m` hint alongside the datasource bucket.
 - Result: Flux query inspection now carries one more stable, family-specific bucket hint without broadening the analyzer beyond the existing conservative contract.
 
+## 2026-03-21 - Task: Add Dashboard Dependency Count Fields In Rust Governance
+- State: Done
+- Scope: `rust/src/dashboard/inspect_governance.rs`, `rust/src/dashboard/rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust governance already showed per-dashboard datasource and family lists, but operators still had to count those lists by hand to judge dependency blast radius.
+- Current Update: Added explicit `datasourceCount` and `datasourceFamilyCount` fields to each dashboard dependency row and surfaced those counts in the governance table output.
+- Result: Rust dashboard governance now exposes explicit dependency counts alongside the datasource and family lists, which makes dashboard blast-radius review faster without changing scope.
+
 ## 2026-03-21 - Task: Surface Datasource Blast Radius In Rust Governance
 - State: Done
 - Scope: `rust/src/dashboard/inspect_governance.rs`, `rust/src/dashboard/rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
