@@ -76,7 +76,8 @@
         "sum",
         "count_over_time",
         "json",
-        "line_filter_contains"
+        "line_filter_contains",
+        "line_filter_contains:timeout"
       ],
       "measurements": [
         "{job=\"grafana\",level=~\"error|warn\"}",
@@ -110,7 +111,8 @@
         "count_over_time",
         "json",
         "logfmt",
-        "line_filter_contains"
+        "line_filter_contains",
+        "line_filter_contains:timeout"
       ],
       "measurements": [
         "{job=\"grafana\",namespace!=\"kube-system\",cluster=~\"prod|stage\"}",
@@ -145,7 +147,9 @@
         "json",
         "line_format",
         "line_filter_contains",
-        "line_filter_regex"
+        "line_filter_contains:timeout",
+        "line_filter_regex",
+        "line_filter_regex:panic|fatal"
       ],
       "measurements": [
         "{job=\"grafana\",namespace!=\"kube-system\",cluster=~\"prod|stage\"}",

@@ -1451,66 +1451,60 @@ fn collect_dashboard_panel_types(panels: &[Value], panel_types: &mut BTreeSet<St
     }
 }
 
+fn build_dashboard_import_availability_from_datasources(
+    datasources: &[Map<String, Value>],
+) -> Map<String, Value> {
+    let mut availability = Map::new();
+    let mut datasource_uids = BTreeSet::new();
+    let mut datasource_names = BTreeSet::new();
+    for datasource in datasources {
+        if let Some(uid) = datasource
+            .get("uid")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+        {
+            datasource_uids.insert(uid.to_string());
+        }
+        if let Some(name) = datasource
+            .get("name")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+        {
+            datasource_names.insert(name.to_string());
+        }
+    }
+    availability.insert(
+        "datasourceUids".to_string(),
+        Value::Array(
+            datasource_uids
+                .into_iter()
+                .map(Value::String)
+                .collect::<Vec<_>>(),
+        ),
+    );
+    availability.insert(
+        "datasourceNames".to_string(),
+        Value::Array(
+            datasource_names
+                .into_iter()
+                .map(Value::String)
+                .collect::<Vec<_>>(),
+        ),
+    );
+    availability.insert("pluginIds".to_string(), Value::Array(Vec::new()));
+    availability
+}
+
 fn build_dashboard_import_availability_with_request<F>(
     mut request_json: F,
+    datasources: &[Map<String, Value>],
 ) -> Result<Map<String, Value>>
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
-    let mut availability = Map::new();
-    availability.insert("datasourceUids".to_string(), Value::Array(Vec::new()));
-    availability.insert("datasourceNames".to_string(), Value::Array(Vec::new()));
-    availability.insert("pluginIds".to_string(), Value::Array(Vec::new()));
-
-    match request_json(Method::GET, "/api/datasources", &[], None)? {
-        Some(Value::Array(datasources)) => {
-            let mut datasource_uids = BTreeSet::new();
-            let mut datasource_names = BTreeSet::new();
-            for datasource in datasources {
-                let object = value_as_object(
-                    &datasource,
-                    "Unexpected datasource list response from Grafana.",
-                )?;
-                if let Some(uid) = object
-                    .get("uid")
-                    .and_then(Value::as_str)
-                    .map(str::trim)
-                    .filter(|value| !value.is_empty())
-                {
-                    datasource_uids.insert(uid.to_string());
-                }
-                if let Some(name) = object
-                    .get("name")
-                    .and_then(Value::as_str)
-                    .map(str::trim)
-                    .filter(|value| !value.is_empty())
-                {
-                    datasource_names.insert(name.to_string());
-                }
-            }
-            availability.insert(
-                "datasourceUids".to_string(),
-                Value::Array(
-                    datasource_uids
-                        .into_iter()
-                        .map(Value::String)
-                        .collect::<Vec<_>>(),
-                ),
-            );
-            availability.insert(
-                "datasourceNames".to_string(),
-                Value::Array(
-                    datasource_names
-                        .into_iter()
-                        .map(Value::String)
-                        .collect::<Vec<_>>(),
-                ),
-            );
-        }
-        Some(_) => return Err(message("Unexpected datasource list response from Grafana.")),
-        None => {}
-    }
-
+    let mut availability = build_dashboard_import_availability_from_datasources(datasources);
     match request_json(Method::GET, "/api/plugins", &[], None)? {
         Some(Value::Array(plugins)) => {
             let plugin_ids = plugins
@@ -1582,10 +1576,11 @@ fn validate_dashboard_import_dependencies_with_request<F>(
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
-    let datasource_catalog =
-        build_datasource_catalog(&list_datasources_with_request(&mut request_json)?);
+    let datasources = list_datasources_with_request(&mut request_json)?;
+    let datasource_catalog = build_datasource_catalog(&datasources);
     let desired_specs = build_dashboard_import_dependency_specs(import_dir, &datasource_catalog)?;
-    let availability = build_dashboard_import_availability_with_request(&mut request_json)?;
+    let availability =
+        build_dashboard_import_availability_with_request(&mut request_json, &datasources)?;
     let document =
         build_sync_preflight_document(&desired_specs, Some(&Value::Object(availability)))?;
     let blocking = document

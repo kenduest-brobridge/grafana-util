@@ -80,6 +80,12 @@ pub(crate) struct DashboardDependencyRow {
     pub(crate) datasources: Vec<String>,
     #[serde(rename = "datasourceFamilies")]
     pub(crate) datasource_families: Vec<String>,
+    #[serde(rename = "queryFields")]
+    pub(crate) query_fields: Vec<String>,
+    pub(crate) metrics: Vec<String>,
+    pub(crate) functions: Vec<String>,
+    pub(crate) measurements: Vec<String>,
+    pub(crate) buckets: Vec<String>,
 }
 
 /// Struct definition for GovernanceRiskRow.
@@ -141,6 +147,15 @@ fn normalize_family_list(families: &[String]) -> Vec<String> {
         }
     }
     normalized
+}
+
+fn collect_unique_strings(values: impl IntoIterator<Item = String>) -> Vec<String> {
+    values
+        .into_iter()
+        .filter(|value| !value.trim().is_empty())
+        .collect::<BTreeSet<String>>()
+        .into_iter()
+        .collect()
 }
 
 type InventoryIdentity = (String, String, String);
@@ -399,19 +414,65 @@ pub(crate) fn build_dashboard_dependency_rows(
     normalized
         .dashboards
         .into_iter()
-        .map(|dashboard| DashboardDependencyRow {
-            dashboard_uid: dashboard.dashboard_uid,
-            dashboard_title: dashboard.dashboard_title,
-            folder_path: dashboard.folder_path,
-            file_path: dashboard.file_path,
-            panel_count: dashboard.panels.len(),
-            query_count: dashboard
+        .map(|dashboard| {
+            let dashboard_uid = dashboard.dashboard_uid;
+            let dashboard_title = dashboard.dashboard_title;
+            let folder_path = dashboard.folder_path;
+            let file_path = dashboard.file_path;
+            let panel_count = dashboard.panels.len();
+            let query_count = dashboard
                 .panels
                 .iter()
                 .map(|panel| panel.queries.len())
-                .sum::<usize>(),
-            datasources: dashboard.datasources,
-            datasource_families: normalize_family_list(&dashboard.datasource_families),
+                .sum::<usize>();
+            let datasources = dashboard.datasources;
+            let datasource_families = normalize_family_list(&dashboard.datasource_families);
+            let query_fields = collect_unique_strings(
+                dashboard
+                    .panels
+                    .iter()
+                    .flat_map(|panel| panel.query_fields.iter().cloned()),
+            );
+            let metrics = collect_unique_strings(dashboard.panels.iter().flat_map(|panel| {
+                panel
+                    .queries
+                    .iter()
+                    .flat_map(|row| row.metrics.iter().cloned())
+            }));
+            let functions = collect_unique_strings(dashboard.panels.iter().flat_map(|panel| {
+                panel
+                    .queries
+                    .iter()
+                    .flat_map(|row| row.functions.iter().cloned())
+            }));
+            let measurements = collect_unique_strings(dashboard.panels.iter().flat_map(|panel| {
+                panel
+                    .queries
+                    .iter()
+                    .flat_map(|row| row.measurements.iter().cloned())
+            }));
+            let buckets = collect_unique_strings(dashboard.panels.iter().flat_map(|panel| {
+                panel
+                    .queries
+                    .iter()
+                    .flat_map(|row| row.buckets.iter().cloned())
+            }));
+
+            DashboardDependencyRow {
+                dashboard_uid,
+                dashboard_title,
+                folder_path,
+                file_path,
+                panel_count,
+                query_count,
+                datasources,
+                datasource_families,
+                query_fields,
+                metrics,
+                functions,
+                measurements,
+                buckets,
+            }
         })
         .collect()
 }
@@ -619,6 +680,11 @@ pub(crate) fn render_governance_table_report(
                 row.query_count.to_string(),
                 row.datasources.join(","),
                 row.datasource_families.join(","),
+                row.query_fields.join(","),
+                row.metrics.join(","),
+                row.functions.join(","),
+                row.measurements.join(","),
+                row.buckets.join(","),
                 row.file_path.clone(),
             ]
         })
@@ -635,6 +701,11 @@ pub(crate) fn render_governance_table_report(
                 "QUERIES",
                 "DATASOURCES",
                 "FAMILIES",
+                "QUERY_FIELDS",
+                "METRICS",
+                "FUNCTIONS",
+                "MEASUREMENTS",
+                "BUCKETS",
                 "FILE",
             ],
             &dashboard_rows,

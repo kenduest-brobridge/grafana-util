@@ -1,5 +1,21 @@
 # ai-changes.md
 
+## 2026-03-21 - Roll Up Rust Dashboard Dependency Analysis In Governance
+- Summary: Added dashboard-level dependency rollups to the Rust governance document. Each `dashboardDependencies` row now carries deduped `queryFields`, `metrics`, `functions`, `measurements`, and `buckets`, so operators can see the extracted query facts behind a dashboard's datasource blast radius.
+- Tests: Extended `rust/src/dashboard/rust_tests.rs` with a focused rollup regression plus table-header coverage, and updated the Loki analyzer contract expectations where existing tests had only asserted the generic `line_filter_contains` token.
+- Test Run: `cd rust && cargo test --quiet build_export_inspection`; `cd rust && cargo fmt --all --check`
+- Validation: The focused `build_export_inspection` filter passed after the dashboard-governance rollup and contract expectations were updated, and the Rust formatter check passed cleanly.
+- Impact: `rust/src/dashboard/inspect_governance.rs`, `rust/src/dashboard/rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low. The change is additive to the governance JSON/table surface and only summarizes facts already emitted by the query analyzers.
+
+# 2026-03-21 - Tighten Rust Loki Line Filter Extraction
+- Summary: Made the Rust Loki analyzer more useful without broadening it beyond the existing conservative family contract. Loki queries now keep the current generic line-filter hints and also surface literal-specific markers for obvious `|=` and `|~` stages, while quoted `line_format` template text stays out of the selector/filter path.
+- Tests: Updated the Loki shared analyzer fixture, extended the existing Loki report regression with literal filter expectations, and added a focused regression that puts `|=` / `|~` substrings inside a `line_format` template to prove they are not mistaken for selectors or filters.
+- Test Run: `cd rust && cargo test --quiet build_export_inspection_query_report_extracts_loki_query_details`; `cd rust && cargo test --quiet dispatch_query_analysis_matches_shared_analyzer_fixture_cases`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`
+- Validation: The focused Rust Loki tests passed and the Rust formatter check passed.
+- Impact: `rust/src/dashboard/inspect_analyzer_loki.rs`, `rust/src/dashboard/rust_tests.rs`, `fixtures/dashboard_inspection_analyzer_cases.json`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low. The change is intentionally narrow to Loki inspection output, but downstream consumers that compare Loki function arrays exactly will need to accept the added literal-filter markers.
+
 # 2026-03-21 - Broaden Rust Sync Contract Gates And Sync-Only Live Entry Point
 - Summary: Elevated Rust sync from an implicit byproduct of the full live smoke into a clearer domain. Added a checked-in cross-domain source-bundle contract, made more alert replay and sync artifact expectations fixture-driven, added a dedicated `quality-sync-rust` gate, added a dedicated `test-sync-live` Docker entrypoint, and expanded the sync help surface so `bundle` and `bundle-preflight` are first-class examples in both root and `--help-full` paths.
 - Tests: Added `fixtures/sync_source_bundle_contract_cases.json`, expanded `rust/src/sync/bundle_rust_tests.rs` with a cross-domain summary/text contract and fixture-driven alerting artifact checks, upgraded `rust/src/sync/cli_rust_tests.rs` and `rust/src/cli_rust_tests.rs` for sync bundle/help-full coverage, fixture-driven `policies` parity in `rust/src/alert_rust_tests.rs`, added sync scope handling to `scripts/test-rust-live-grafana.sh`, added `scripts/test-rust-sync-live-grafana.sh`, and wired `make quality-sync-rust` plus `make test-sync-live`.

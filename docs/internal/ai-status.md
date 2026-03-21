@@ -5,6 +5,20 @@ Historical note:
 - Older entries describe the repo state and `TODO.md` backlog as they existed on the entry date.
 - `TODO.md` now tracks only the active backlog; completed or superseded TODO items moved to `docs/internal/todo-archive.md`.
 
+## 2026-03-21 - Task: Roll Up Rust Dashboard Dependency Analysis In Governance
+- State: Done
+- Scope: `rust/src/dashboard/inspect_governance.rs`, `rust/src/dashboard/rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust dashboard governance rows summarized datasource names, families, panel counts, and query counts, but the extracted query facts that drive operator review stayed split across the flat per-query report rows.
+- Current Update: Added dashboard-level rollups for `queryFields`, `metrics`, `functions`, `measurements`, and `buckets` in the governance dependency rows and widened the governance table output to show the same facts. Tightened the Rust governance tests to pin the new rollup shape and aligned the Loki line-filter expectations with the current analyzer output.
+- Result: Rust dashboard governance now exposes a clearer, operator-facing dependency summary from the existing analyzer facts without expanding into cloud datasource coverage.
+
+## 2026-03-21 - Task: Tighten Rust Loki Line Filter Extraction
+- State: Done
+- Scope: `rust/src/dashboard/inspect_analyzer_loki.rs`, `rust/src/dashboard/rust_tests.rs`, `fixtures/dashboard_inspection_analyzer_cases.json`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The Loki dashboard analyzer already kept family routing conservative, but it only surfaced generic line-filter hints for `|=` / `|~` stages and did not retain the literal filter text. That left Loki inspection thinner than the other core families even though the query text already contained stable, obvious filter literals.
+- Current Update: Added a narrow Loki line-filter scanner that records both the existing generic hint and a literal-specific marker for obvious `|=` and `|~` stages while preserving the current stream-selector/label-matcher contract. The scanner stays quote-aware so `line_format` template strings are ignored instead of being misread as selectors or filters, and the shared fixture plus focused Rust tests now cover the richer Loki output.
+- Result: Rust dashboard inspection now exposes more useful Loki filter signal without widening the analyzer beyond the current conservative family-routing contract.
+
 ## 2026-03-21 - Task: Broaden Rust Sync Contract Gates And Sync-Only Live Entry Point
 - State: Done
 - Scope: `fixtures/sync_source_bundle_contract_cases.json`, `fixtures/alert_export_contract_cases.json`, `fixtures/alert_recreate_contract_cases.json`, `rust/src/sync/bundle_rust_tests.rs`, `rust/src/sync/cli_rust_tests.rs`, `rust/src/sync/mod.rs`, `rust/src/cli.rs`, `rust/src/cli_rust_tests.rs`, `rust/src/alert_rust_tests.rs`, `scripts/test-rust-live-grafana.sh`, `scripts/test-rust-sync-live-grafana.sh`, `Makefile`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

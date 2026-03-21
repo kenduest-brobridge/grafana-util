@@ -112,32 +112,117 @@ fn extract_loki_pipeline_metrics(query_text: &str) -> Vec<String> {
 }
 
 fn extract_loki_line_filter_hints(query_text: &str) -> Vec<String> {
-    let quoted_regex =
-        Regex::new(r#""(?:\\.|[^"\\])*""#).expect("invalid hard-coded loki quoted regex");
-    let sanitized_query = quoted_regex.replace_all(query_text, "\"\"");
-    let regex = Regex::new(r#"\|\s*(=|~)\s*"(?:\\.|[^"\\])*""#)
-        .expect("invalid hard-coded loki line filter regex");
     let mut values = Vec::new();
-    for captures in regex.captures_iter(&sanitized_query) {
-        let Some(operator) = captures.get(1).map(|item| item.as_str()) else {
+    let bytes = query_text.as_bytes();
+    let mut index = 0;
+    let mut in_quotes = false;
+    let mut escaped = false;
+    while index < bytes.len() {
+        let byte = bytes[index];
+        if escaped {
+            escaped = false;
+            index += 1;
             continue;
-        };
-        let hint = match operator {
-            "=" => "line_filter_contains",
-            "~" => "line_filter_regex",
-            _ => continue,
-        };
-        ordered_unique_push(&mut values, hint);
+        }
+        match byte {
+            b'\\' if in_quotes => {
+                escaped = true;
+                index += 1;
+            }
+            b'"' => {
+                in_quotes = !in_quotes;
+                index += 1;
+            }
+            b'|' if !in_quotes => {
+                let mut cursor = index + 1;
+                while cursor < bytes.len() && bytes[cursor].is_ascii_whitespace() {
+                    cursor += 1;
+                }
+                let Some(operator) = bytes.get(cursor).copied() else {
+                    index += 1;
+                    continue;
+                };
+                let hint = match operator {
+                    b'=' => "line_filter_contains",
+                    b'~' => "line_filter_regex",
+                    _ => {
+                        index += 1;
+                        continue;
+                    }
+                };
+                cursor += 1;
+                while cursor < bytes.len() && bytes[cursor].is_ascii_whitespace() {
+                    cursor += 1;
+                }
+                if bytes.get(cursor) != Some(&b'"') {
+                    index += 1;
+                    continue;
+                }
+                let literal_start = cursor + 1;
+                cursor += 1;
+                let mut literal_escaped = false;
+                while cursor < bytes.len() {
+                    let current = bytes[cursor];
+                    if literal_escaped {
+                        literal_escaped = false;
+                        cursor += 1;
+                        continue;
+                    }
+                    match current {
+                        b'\\' => {
+                            literal_escaped = true;
+                        }
+                        b'"' => {
+                            ordered_unique_push(&mut values, hint);
+                            let literal = &query_text[literal_start..cursor];
+                            if !literal.trim().is_empty() {
+                                ordered_unique_push(&mut values, &format!("{hint}:{literal}"));
+                            }
+                            index = cursor + 1;
+                            break;
+                        }
+                        _ => {}
+                    }
+                    cursor += 1;
+                }
+                if cursor >= bytes.len() {
+                    break;
+                }
+            }
+            _ => {
+                index += 1;
+            }
+        }
     }
     values
 }
 
 fn extract_loki_range_windows(query_text: &str) -> Vec<String> {
-    let regex = Regex::new(r"\[([^\]]+)\]").expect("invalid hard-coded loki range window regex");
     let mut values = Vec::new();
-    for captures in regex.captures_iter(query_text) {
-        if let Some(value) = captures.get(1) {
-            ordered_unique_push(&mut values, value.as_str());
+    let mut in_quotes = false;
+    let mut escaped = false;
+    let mut capture_start: Option<usize> = None;
+    for (index, character) in query_text.char_indices() {
+        if escaped {
+            escaped = false;
+            continue;
+        }
+        match character {
+            '\\' if in_quotes => {
+                escaped = true;
+            }
+            '"' => {
+                in_quotes = !in_quotes;
+            }
+            '[' if !in_quotes => {
+                capture_start = Some(index + character.len_utf8());
+            }
+            ']' if !in_quotes => {
+                if let Some(start) = capture_start.take() {
+                    ordered_unique_push(&mut values, &query_text[start..index]);
+                }
+            }
+            _ => {}
         }
     }
     values

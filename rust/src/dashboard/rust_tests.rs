@@ -6360,6 +6360,7 @@ fn build_export_inspection_query_report_matches_core_family_query_row_contract()
                 "json",
                 "logfmt",
                 "line_filter_contains",
+                "line_filter_contains:timeout",
             ],
             measurements: &[
                 "{job=\"grafana\",namespace!=\"kube-system\",cluster=~\"prod|stage\"}",
@@ -6602,7 +6603,8 @@ fn build_export_inspection_query_report_matches_core_family_query_row_contract()
             "count_over_time",
             "json",
             "logfmt",
-            "line_filter_contains"
+            "line_filter_contains",
+            "line_filter_contains:timeout"
         ])
     );
     assert_eq!(
@@ -7417,6 +7419,7 @@ fn build_export_inspection_query_report_emits_prometheus_and_loki_families_for_i
             "count_over_time".to_string(),
             "json".to_string(),
             "line_filter_contains".to_string(),
+            "line_filter_contains:timeout".to_string(),
         ]
     );
     assert_eq!(
@@ -7655,7 +7658,9 @@ fn build_export_inspection_query_report_extracts_loki_query_details() {
             "json".to_string(),
             "line_format".to_string(),
             "line_filter_contains".to_string(),
+            "line_filter_contains:timeout".to_string(),
             "line_filter_regex".to_string(),
+            "line_filter_regex:panic|fatal".to_string(),
         ]
     );
     assert_eq!(
@@ -7664,6 +7669,94 @@ fn build_export_inspection_query_report_extracts_loki_query_details() {
             "{job=\"grafana\",level=~\"error|warn\"}".to_string(),
             "job=\"grafana\"".to_string(),
             "level=~\"error|warn\"".to_string(),
+        ]
+    );
+    assert_eq!(report.queries[0].buckets, vec!["5m".to_string()]);
+}
+
+#[test]
+fn build_export_inspection_query_report_ignores_loki_line_format_templates_when_extracting_filters()
+{
+    let temp = tempdir().unwrap();
+    let raw_dir = temp.path().join("raw");
+    write_basic_raw_export(
+        &raw_dir,
+        "1",
+        "Main Org.",
+        "loki-main",
+        "Logs Main",
+        "loki-main",
+        "loki",
+        "logs",
+        "folder-1",
+        "Logs",
+        "expr",
+        "sum by (namespace) (count_over_time({job=\"grafana\",namespace!~\"kube-system\"} | line_format \"{{.msg}} |= {{.status}} |~ {{.level}}\" |= \"timeout\" |~ \"panic|fatal\" [10m]))",
+    );
+
+    let report = super::build_export_inspection_query_report(&raw_dir).unwrap();
+
+    assert_eq!(report.queries.len(), 1);
+    assert_eq!(
+        report.queries[0].functions,
+        vec![
+            "sum".to_string(),
+            "count_over_time".to_string(),
+            "line_format".to_string(),
+            "line_filter_contains".to_string(),
+            "line_filter_contains:timeout".to_string(),
+            "line_filter_regex".to_string(),
+            "line_filter_regex:panic|fatal".to_string(),
+        ]
+    );
+    assert_eq!(
+        report.queries[0].measurements,
+        vec![
+            "{job=\"grafana\",namespace!~\"kube-system\"}".to_string(),
+            "job=\"grafana\"".to_string(),
+            "namespace!~\"kube-system\"".to_string(),
+        ]
+    );
+    assert_eq!(report.queries[0].buckets, vec!["10m".to_string()]);
+}
+
+#[test]
+fn build_export_inspection_query_report_ignores_loki_regex_character_classes_when_extracting_buckets(
+) {
+    let temp = tempdir().unwrap();
+    let raw_dir = temp.path().join("raw");
+    write_basic_raw_export(
+        &raw_dir,
+        "1",
+        "Main Org.",
+        "loki-main",
+        "Logs Main",
+        "loki-main",
+        "loki",
+        "logs",
+        "folder-1",
+        "Logs",
+        "expr",
+        "sum(count_over_time({job=\"grafana\"} |~ \"panic[0-9]+\" [5m]))",
+    );
+
+    let report = super::build_export_inspection_query_report(&raw_dir).unwrap();
+
+    assert_eq!(report.queries.len(), 1);
+    assert_eq!(
+        report.queries[0].functions,
+        vec![
+            "sum".to_string(),
+            "count_over_time".to_string(),
+            "line_filter_regex".to_string(),
+            "line_filter_regex:panic[0-9]+".to_string(),
+        ]
+    );
+    assert_eq!(
+        report.queries[0].measurements,
+        vec![
+            "{job=\"grafana\"}".to_string(),
+            "job=\"grafana\"".to_string(),
         ]
     );
     assert_eq!(report.queries[0].buckets, vec!["5m".to_string()]);
@@ -9985,8 +10078,115 @@ fn build_export_inspection_governance_document_groups_core_family_dependency_row
             document.dashboard_dependencies[0].datasource_families,
             vec![family.to_string()]
         );
+        assert_eq!(
+            document.dashboard_dependencies[0].query_fields,
+            vec!["query".to_string()]
+        );
+        assert!(document.dashboard_dependencies[0].metrics.is_empty());
+        assert!(document.dashboard_dependencies[0].functions.is_empty());
         assert!(document.risk_records.is_empty());
     }
+}
+
+#[test]
+fn build_export_inspection_governance_document_rolls_up_dashboard_dependency_analysis() {
+    let summary = super::ExportInspectionSummary {
+        import_dir: "/tmp/raw".to_string(),
+        export_org: Some("Main Org.".to_string()),
+        export_org_id: Some("1".to_string()),
+        dashboard_count: 1,
+        folder_count: 1,
+        panel_count: 2,
+        query_count: 2,
+        datasource_inventory_count: 1,
+        orphaned_datasource_count: 0,
+        mixed_dashboard_count: 0,
+        folder_paths: Vec::new(),
+        datasource_usage: Vec::new(),
+        datasource_inventory: vec![super::DatasourceInventorySummary {
+            uid: "prom-main".to_string(),
+            name: "Prometheus Main".to_string(),
+            datasource_type: "prometheus".to_string(),
+            access: "proxy".to_string(),
+            url: "http://prometheus:9090".to_string(),
+            is_default: "true".to_string(),
+            org: "Main Org.".to_string(),
+            org_id: "1".to_string(),
+            reference_count: 2,
+            dashboard_count: 1,
+        }],
+        orphaned_datasources: Vec::new(),
+        mixed_dashboards: Vec::new(),
+    };
+    let mut query_a = make_core_family_report_row(
+        "core-main",
+        "7",
+        "A",
+        "prom-main",
+        "Prometheus Main",
+        "prometheus",
+        "prometheus",
+        "sum(rate(http_requests_total[5m]))",
+        &["job=\"grafana\""],
+    );
+    query_a.query_field = "expr".to_string();
+    query_a.metrics = vec!["http_requests_total".to_string()];
+    query_a.functions = vec!["rate".to_string()];
+    query_a.measurements = vec!["job=\"grafana\"".to_string()];
+    query_a.buckets = vec!["5m".to_string()];
+
+    let mut query_b = make_core_family_report_row(
+        "core-main",
+        "8",
+        "B",
+        "prom-main",
+        "Prometheus Main",
+        "prometheus",
+        "prometheus",
+        "sum(rate(process_cpu_seconds_total[1h]))",
+        &["service.name"],
+    );
+    query_b.query_field = "query".to_string();
+    query_b.metrics = vec![
+        "http_requests_total".to_string(),
+        "process_cpu_seconds_total".to_string(),
+    ];
+    query_b.functions = vec!["rate".to_string(), "sum".to_string()];
+    query_b.measurements = vec!["service.name".to_string(), "job=\"grafana\"".to_string()];
+    query_b.buckets = vec!["1h".to_string(), "5m".to_string()];
+
+    let report = super::ExportInspectionQueryReport {
+        import_dir: "/tmp/raw".to_string(),
+        summary: super::QueryReportSummary {
+            dashboard_count: 1,
+            panel_count: 2,
+            query_count: 2,
+            report_row_count: 2,
+        },
+        queries: vec![query_a, query_b],
+    };
+
+    let document = super::build_export_inspection_governance_document(&summary, &report);
+    let document_json = serde_json::to_value(&document).unwrap();
+    let dependency_row = &document_json["dashboardDependencies"][0];
+
+    assert_eq!(document.summary.dashboard_count, 1);
+    assert_eq!(document.summary.query_record_count, 2);
+    assert_eq!(document.summary.datasource_family_count, 1);
+    assert_eq!(document.summary.datasource_coverage_count, 1);
+    assert_eq!(document.summary.risk_record_count, 0);
+    assert_eq!(dependency_row["queryFields"], json!(["expr", "query"]));
+    assert_eq!(
+        dependency_row["metrics"],
+        json!(["http_requests_total", "process_cpu_seconds_total"])
+    );
+    assert_eq!(dependency_row["functions"], json!(["rate", "sum"]));
+    assert_eq!(
+        dependency_row["measurements"],
+        json!(["job=\"grafana\"", "service.name"])
+    );
+    assert_eq!(dependency_row["buckets"], json!(["1h", "5m"]));
+    assert_eq!(dependency_row["datasourceFamilies"], json!(["prometheus"]));
 }
 
 #[test]
@@ -10106,6 +10306,11 @@ fn render_governance_table_report_displays_sections() {
     assert!(output.contains("# Datasources"));
     assert!(output.contains("# Risks"));
     assert!(output.contains("DASHBOARD_UID"));
+    assert!(output.contains("QUERY_FIELDS"));
+    assert!(output.contains("METRICS"));
+    assert!(output.contains("FUNCTIONS"));
+    assert!(output.contains("MEASUREMENTS"));
+    assert!(output.contains("BUCKETS"));
     assert!(output.contains("/tmp/raw/logs-main.json"));
     assert!(output.contains("CATEGORY"));
     assert!(output.contains("RECOMMENDATION"));
@@ -13926,9 +14131,127 @@ fn import_dashboards_rejects_missing_dependencies_before_dashboard_lookup() {
         calls,
         vec![
             "GET /api/datasources".to_string(),
-            "GET /api/datasources".to_string(),
             "GET /api/plugins".to_string()
         ]
+    );
+}
+
+#[test]
+fn import_dashboards_with_shared_folder_lookup_reuses_folder_fetch_in_dry_run() {
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    let temp = tempdir().unwrap();
+    let raw_dir = temp.path().join("raw");
+    fs::create_dir_all(&raw_dir).unwrap();
+    fs::write(
+        raw_dir.join(EXPORT_METADATA_FILENAME),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-dashboard-export-index",
+            "schemaVersion": TOOL_SCHEMA_VERSION,
+            "variant": "raw",
+            "dashboardCount": 2,
+            "indexFile": "index.json",
+            "format": "grafana-web-import-preserve-uid"
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        raw_dir.join("index.json"),
+        serde_json::to_string_pretty(&json!([
+            {
+                "uid": "abc",
+                "title": "CPU",
+                "path": "dash-a.json",
+                "format": "grafana-web-import-preserve-uid"
+            },
+            {
+                "uid": "def",
+                "title": "Memory",
+                "path": "dash-b.json",
+                "format": "grafana-web-import-preserve-uid"
+            }
+        ]))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        raw_dir.join("dash-a.json"),
+        serde_json::to_string_pretty(&json!({
+            "dashboard": {
+                "id": 7,
+                "uid": "abc",
+                "title": "CPU"
+            },
+            "meta": {
+                "folderUid": "old-folder"
+            }
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        raw_dir.join("dash-b.json"),
+        serde_json::to_string_pretty(&json!({
+            "dashboard": {
+                "id": 8,
+                "uid": "def",
+                "title": "Memory"
+            },
+            "meta": {
+                "folderUid": "old-folder"
+            }
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+
+    let args = make_import_args(raw_dir);
+    let calls: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
+    let calls_for_request = Rc::clone(&calls);
+
+    let count = import_dashboards_with_request(
+        move |method, path, _params, _payload| {
+            calls_for_request
+                .borrow_mut()
+                .push(format!("{} {}", method.as_str(), path));
+            match (method, path) {
+                (reqwest::Method::GET, "/api/datasources") => Ok(Some(json!([]))),
+                (reqwest::Method::GET, "/api/plugins") => Ok(Some(json!([]))),
+                (reqwest::Method::GET, "/api/dashboards/uid/abc") => Err(api_response(
+                    404,
+                    "http://127.0.0.1:3000/api/dashboards/uid/abc",
+                    "{\"message\":\"not found\"}",
+                )),
+                (reqwest::Method::GET, "/api/dashboards/uid/def") => Err(api_response(
+                    404,
+                    "http://127.0.0.1:3000/api/dashboards/uid/def",
+                    "{\"message\":\"not found\"}",
+                )),
+                (reqwest::Method::GET, "/api/folders/old-folder") => Ok(Some(json!({
+                    "uid": "old-folder",
+                    "title": "Old Folder",
+                    "parents": []
+                }))),
+                (reqwest::Method::POST, "/api/dashboards/db") => {
+                    Err(super::message("dry-run must not post dashboards"))
+                }
+                _ => Err(super::message(format!("unexpected path {path}"))),
+            }
+        },
+        &args,
+    )
+    .unwrap();
+
+    assert_eq!(count, 2);
+    assert_eq!(
+        calls
+            .borrow()
+            .iter()
+            .filter(|entry| entry.as_str() == "GET /api/folders/old-folder")
+            .count(),
+        1
     );
 }
 
