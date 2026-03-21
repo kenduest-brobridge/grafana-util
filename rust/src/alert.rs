@@ -14,6 +14,8 @@
 //! - Avoid adding transport policy here; retry/pagination behavior should stay in shared HTTP
 //!   layers and alert handlers.
 //! - Keep diff/import/export payload transforms next to their handlers, not in dispatcher code.
+#[cfg(test)]
+use reqwest::Method;
 use serde_json::{json, Map, Value};
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
@@ -81,7 +83,7 @@ pub const TOOL_SCHEMA_VERSION: i64 = 1;
 pub const ROOT_INDEX_KIND: &str = "grafana-util-alert-export-index";
 
 /// Constant for alert help text.
-pub const ALERT_HELP_TEXT: &str = "Examples:\n\n  Export alerting resources with an API token:\n    export GRAFANA_API_TOKEN='your-token'\n    grafana-util alert export --url https://grafana.example.com --output-dir ./alerts --overwrite\n\n  Import back into Grafana and update existing resources:\n    grafana-util alert import --url https://grafana.example.com --import-dir ./alerts/raw --replace-existing\n\n  Import linked alert rules with dashboard and panel remapping:\n    grafana-util alert import --url https://grafana.example.com --import-dir ./alerts/raw --replace-existing --dashboard-uid-map ./dashboard-map.json --panel-id-map ./panel-map.json";
+pub const ALERT_HELP_TEXT: &str = "Examples:\n\n  Export alerting resources with an API token:\n    export GRAFANA_API_TOKEN='your-token'\n    grafana-util alert export --url https://grafana.example.com --output-dir ./alerts --overwrite\n\n  Import back into Grafana and update existing resources:\n    grafana-util alert import --url https://grafana.example.com --import-dir ./alerts/raw --replace-existing\n\n  Preview alert import as structured JSON before execution:\n    grafana-util alert import --url https://grafana.example.com --import-dir ./alerts/raw --replace-existing --dry-run --json\n\n  Compare a local alert export against Grafana as structured JSON:\n    grafana-util alert diff --url https://grafana.example.com --diff-dir ./alerts/raw --json\n\n  Import linked alert rules with dashboard and panel remapping:\n    grafana-util alert import --url https://grafana.example.com --import-dir ./alerts/raw --replace-existing --dashboard-uid-map ./dashboard-map.json --panel-id-map ./panel-map.json";
 
 /// resource subdir by kind.
 pub fn resource_subdir_by_kind() -> BTreeMap<&'static str, &'static str> {
@@ -365,7 +367,7 @@ pub fn strip_server_managed_fields(kind: &str, payload: &Map<String, Value>) -> 
         CONTACT_POINT_KIND => ["provenance"].as_slice(),
         MUTE_TIMING_KIND => ["version", "provenance"].as_slice(),
         POLICIES_KIND => ["provenance"].as_slice(),
-        TEMPLATE_KIND => ["provenance"].as_slice(),
+        TEMPLATE_KIND => ["version", "provenance"].as_slice(),
         _ => [].as_slice(),
     };
 
@@ -1364,6 +1366,401 @@ fn determine_contact_point_import_action(
     }
 }
 
+#[cfg(test)]
+fn request_object_with_request<F>(
+    mut request_json: F,
+    method: Method,
+    path: &str,
+    payload: Option<&Value>,
+    error_message: &str,
+) -> Result<Map<String, Value>>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    let value = request_json(method, path, &[], payload)?
+        .ok_or_else(|| message(error_message.to_string()))?;
+    Ok(value_as_object(&value, error_message)?.clone())
+}
+
+#[cfg(test)]
+fn request_array_with_request<F>(
+    mut request_json: F,
+    method: Method,
+    path: &str,
+    payload: Option<&Value>,
+    error_message: &str,
+) -> Result<Vec<Map<String, Value>>>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    alert_client::expect_object_list(request_json(method, path, &[], payload)?, error_message)
+}
+
+#[cfg(test)]
+fn request_optional_object_with_request<F>(
+    mut request_json: F,
+    method: Method,
+    path: &str,
+    payload: Option<&Value>,
+) -> Result<Option<Map<String, Value>>>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    let Some(value) = request_json(method, path, &[], payload)? else {
+        return Ok(None);
+    };
+    Ok(Some(
+        value_as_object(&value, "Unexpected alert request object response.")?.clone(),
+    ))
+}
+
+#[cfg(test)]
+pub(crate) fn fetch_live_compare_document_with_request<F>(
+    mut request_json: F,
+    kind: &str,
+    payload: &Map<String, Value>,
+) -> Result<Option<Value>>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    match kind {
+        RULE_KIND => {
+            let uid = string_field(payload, "uid", "");
+            if uid.is_empty() {
+                return Ok(None);
+            }
+            Ok(request_optional_object_with_request(
+                &mut request_json,
+                Method::GET,
+                &format!("/api/v1/provisioning/alert-rules/{uid}"),
+                None,
+            )?
+            .map(|remote| {
+                build_compare_document(kind, &strip_server_managed_fields(kind, &remote))
+            }))
+        }
+        CONTACT_POINT_KIND => {
+            let uid = string_field(payload, "uid", "");
+            let remote = request_array_with_request(
+                &mut request_json,
+                Method::GET,
+                "/api/v1/provisioning/contact-points",
+                None,
+                "Unexpected contact-point list response from Grafana.",
+            )?
+            .into_iter()
+            .find(|item| string_field(item, "uid", "") == uid);
+            Ok(remote.map(|item| {
+                build_compare_document(kind, &strip_server_managed_fields(kind, &item))
+            }))
+        }
+        MUTE_TIMING_KIND => {
+            let name = string_field(payload, "name", "");
+            let remote = request_array_with_request(
+                &mut request_json,
+                Method::GET,
+                "/api/v1/provisioning/mute-timings",
+                None,
+                "Unexpected mute-timing list response from Grafana.",
+            )?
+            .into_iter()
+            .find(|item| string_field(item, "name", "") == name);
+            Ok(remote.map(|item| {
+                build_compare_document(kind, &strip_server_managed_fields(kind, &item))
+            }))
+        }
+        TEMPLATE_KIND => {
+            let name = string_field(payload, "name", "");
+            Ok(request_optional_object_with_request(
+                &mut request_json,
+                Method::GET,
+                &format!("/api/v1/provisioning/templates/{name}"),
+                None,
+            )?
+            .map(|remote| {
+                build_compare_document(kind, &strip_server_managed_fields(kind, &remote))
+            }))
+        }
+        POLICIES_KIND => Ok(request_optional_object_with_request(
+            &mut request_json,
+            Method::GET,
+            "/api/v1/provisioning/policies",
+            None,
+        )?
+        .map(|remote| build_compare_document(kind, &strip_server_managed_fields(kind, &remote)))),
+        _ => unreachable!(),
+    }
+}
+
+#[cfg(test)]
+pub(crate) fn determine_import_action_with_request<F>(
+    mut request_json: F,
+    kind: &str,
+    payload: &Map<String, Value>,
+    replace_existing: bool,
+) -> Result<&'static str>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    match kind {
+        RULE_KIND => {
+            let uid = string_field(payload, "uid", "");
+            if uid.is_empty() {
+                return Ok("would-create");
+            }
+            if request_optional_object_with_request(
+                &mut request_json,
+                Method::GET,
+                &format!("/api/v1/provisioning/alert-rules/{uid}"),
+                None,
+            )?
+            .is_some()
+            {
+                if replace_existing {
+                    Ok("would-update")
+                } else {
+                    Ok("would-fail-existing")
+                }
+            } else {
+                Ok("would-create")
+            }
+        }
+        CONTACT_POINT_KIND => {
+            let uid = string_field(payload, "uid", "");
+            let exists = request_array_with_request(
+                &mut request_json,
+                Method::GET,
+                "/api/v1/provisioning/contact-points",
+                None,
+                "Unexpected contact-point list response from Grafana.",
+            )?
+            .into_iter()
+            .any(|item| string_field(&item, "uid", "") == uid);
+            if exists {
+                if replace_existing {
+                    Ok("would-update")
+                } else {
+                    Ok("would-fail-existing")
+                }
+            } else {
+                Ok("would-create")
+            }
+        }
+        MUTE_TIMING_KIND => {
+            let name = string_field(payload, "name", "");
+            let exists = request_array_with_request(
+                &mut request_json,
+                Method::GET,
+                "/api/v1/provisioning/mute-timings",
+                None,
+                "Unexpected mute-timing list response from Grafana.",
+            )?
+            .into_iter()
+            .any(|item| string_field(&item, "name", "") == name);
+            if exists {
+                if replace_existing {
+                    Ok("would-update")
+                } else {
+                    Ok("would-fail-existing")
+                }
+            } else {
+                Ok("would-create")
+            }
+        }
+        TEMPLATE_KIND => {
+            let name = string_field(payload, "name", "");
+            let exists = request_optional_object_with_request(
+                &mut request_json,
+                Method::GET,
+                &format!("/api/v1/provisioning/templates/{name}"),
+                None,
+            )?
+            .is_some();
+            if exists {
+                if replace_existing {
+                    Ok("would-update")
+                } else {
+                    Ok("would-fail-existing")
+                }
+            } else {
+                Ok("would-create")
+            }
+        }
+        POLICIES_KIND => Ok("would-update"),
+        _ => unreachable!(),
+    }
+}
+
+#[cfg(test)]
+pub(crate) fn import_resource_document_with_request<F>(
+    mut request_json: F,
+    kind: &str,
+    payload: &Map<String, Value>,
+    replace_existing: bool,
+) -> Result<(String, String)>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    match kind {
+        RULE_KIND => {
+            let uid = string_field(payload, "uid", "");
+            if replace_existing
+                && !uid.is_empty()
+                && request_optional_object_with_request(
+                    &mut request_json,
+                    Method::GET,
+                    &format!("/api/v1/provisioning/alert-rules/{uid}"),
+                    None,
+                )?
+                .is_some()
+            {
+                let result = request_object_with_request(
+                    &mut request_json,
+                    Method::PUT,
+                    &format!("/api/v1/provisioning/alert-rules/{uid}"),
+                    Some(&Value::Object(payload.clone())),
+                    "Unexpected alert-rule update response from Grafana.",
+                )?;
+                return Ok(("updated".to_string(), string_field(&result, "uid", &uid)));
+            }
+            let result = request_object_with_request(
+                &mut request_json,
+                Method::POST,
+                "/api/v1/provisioning/alert-rules",
+                Some(&Value::Object(payload.clone())),
+                "Unexpected alert-rule create response from Grafana.",
+            )?;
+            Ok(("created".to_string(), string_field(&result, "uid", &uid)))
+        }
+        CONTACT_POINT_KIND => {
+            let uid = string_field(payload, "uid", "");
+            if replace_existing && !uid.is_empty() {
+                let existing: Vec<String> = request_array_with_request(
+                    &mut request_json,
+                    Method::GET,
+                    "/api/v1/provisioning/contact-points",
+                    None,
+                    "Unexpected contact-point list response from Grafana.",
+                )?
+                .into_iter()
+                .map(|item| string_field(&item, "uid", ""))
+                .collect();
+                if existing.iter().any(|item| item == &uid) {
+                    let result = request_object_with_request(
+                        &mut request_json,
+                        Method::PUT,
+                        &format!("/api/v1/provisioning/contact-points/{uid}"),
+                        Some(&Value::Object(payload.clone())),
+                        "Unexpected contact-point update response from Grafana.",
+                    )?;
+                    return Ok(("updated".to_string(), string_field(&result, "uid", &uid)));
+                }
+            }
+            let result = request_object_with_request(
+                &mut request_json,
+                Method::POST,
+                "/api/v1/provisioning/contact-points",
+                Some(&Value::Object(payload.clone())),
+                "Unexpected contact-point create response from Grafana.",
+            )?;
+            Ok(("created".to_string(), string_field(&result, "uid", &uid)))
+        }
+        MUTE_TIMING_KIND => {
+            let name = string_field(payload, "name", "");
+            if replace_existing && !name.is_empty() {
+                let existing: Vec<String> = request_array_with_request(
+                    &mut request_json,
+                    Method::GET,
+                    "/api/v1/provisioning/mute-timings",
+                    None,
+                    "Unexpected mute-timing list response from Grafana.",
+                )?
+                .into_iter()
+                .map(|item| string_field(&item, "name", ""))
+                .collect();
+                if existing.iter().any(|item| item == &name) {
+                    let result = request_object_with_request(
+                        &mut request_json,
+                        Method::PUT,
+                        &format!("/api/v1/provisioning/mute-timings/{name}"),
+                        Some(&Value::Object(payload.clone())),
+                        "Unexpected mute-timing update response from Grafana.",
+                    )?;
+                    return Ok(("updated".to_string(), string_field(&result, "name", &name)));
+                }
+            }
+            let result = request_object_with_request(
+                &mut request_json,
+                Method::POST,
+                "/api/v1/provisioning/mute-timings",
+                Some(&Value::Object(payload.clone())),
+                "Unexpected mute-timing create response from Grafana.",
+            )?;
+            Ok(("created".to_string(), string_field(&result, "name", &name)))
+        }
+        TEMPLATE_KIND => {
+            let name = string_field(payload, "name", "");
+            let existing = request_optional_object_with_request(
+                &mut request_json,
+                Method::GET,
+                &format!("/api/v1/provisioning/templates/{name}"),
+                None,
+            )?;
+            if existing.is_some() && !replace_existing {
+                return Err(message(format!(
+                    "Template {name:?} already exists. Use --replace-existing."
+                )));
+            }
+            let mut template_payload = payload.clone();
+            if let Some(current) = existing {
+                template_payload.insert(
+                    "version".to_string(),
+                    Value::String(string_field(&current, "version", "")),
+                );
+            } else {
+                template_payload.insert("version".to_string(), Value::String(String::new()));
+            }
+            let mut body = template_payload.clone();
+            body.remove("name");
+            let result = request_object_with_request(
+                &mut request_json,
+                Method::PUT,
+                &format!("/api/v1/provisioning/templates/{name}"),
+                Some(&Value::Object(body)),
+                "Unexpected template update response from Grafana.",
+            )?;
+            Ok((
+                (if template_payload
+                    .get("version")
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .is_empty()
+                {
+                    "created"
+                } else {
+                    "updated"
+                })
+                .to_string(),
+                string_field(&result, "name", &name),
+            ))
+        }
+        POLICIES_KIND => {
+            let result = request_object_with_request(
+                &mut request_json,
+                Method::PUT,
+                "/api/v1/provisioning/policies",
+                Some(&Value::Object(payload.clone())),
+                "Unexpected notification policy update response from Grafana.",
+            )?;
+            Ok((
+                "updated".to_string(),
+                string_field(&result, "receiver", "root"),
+            ))
+        }
+        _ => unreachable!(),
+    }
+}
+
 fn determine_mute_timing_import_action(
     client: &GrafanaAlertClient,
     payload: &Map<String, Value>,
@@ -1422,6 +1819,58 @@ fn determine_import_action(
         POLICIES_KIND => Ok("would-update"),
         _ => unreachable!(),
     }
+}
+
+pub fn build_alert_import_dry_run_document(rows: &[Value]) -> Value {
+    let processed = rows.len();
+    let would_create = rows
+        .iter()
+        .filter(|row| row.get("action").and_then(Value::as_str) == Some("would-create"))
+        .count();
+    let would_update = rows
+        .iter()
+        .filter(|row| row.get("action").and_then(Value::as_str) == Some("would-update"))
+        .count();
+    let would_fail_existing = rows
+        .iter()
+        .filter(|row| row.get("action").and_then(Value::as_str) == Some("would-fail-existing"))
+        .count();
+
+    json!({
+        "summary": {
+            "processed": processed,
+            "wouldCreate": would_create,
+            "wouldUpdate": would_update,
+            "wouldFailExisting": would_fail_existing,
+        },
+        "rows": rows,
+    })
+}
+
+pub fn build_alert_diff_document(rows: &[Value]) -> Value {
+    let checked = rows.len();
+    let same = rows
+        .iter()
+        .filter(|row| row.get("action").and_then(Value::as_str) == Some("same"))
+        .count();
+    let different = rows
+        .iter()
+        .filter(|row| row.get("action").and_then(Value::as_str) == Some("different"))
+        .count();
+    let missing_remote = rows
+        .iter()
+        .filter(|row| row.get("action").and_then(Value::as_str) == Some("missing-remote"))
+        .count();
+
+    json!({
+        "summary": {
+            "checked": checked,
+            "same": same,
+            "different": different,
+            "missingRemote": missing_remote,
+        },
+        "rows": rows,
+    })
 }
 
 fn fetch_live_compare_document(
@@ -1621,6 +2070,13 @@ fn import_alerting_resources(args: &AlertCliArgs) -> Result<()> {
         args.panel_id_map.as_deref(),
     )?;
     let mut policies_seen = 0usize;
+    let mut dry_run_rows: Vec<Value> = Vec::new();
+
+    if args.json && !args.dry_run {
+        return Err(message(
+            "--json for alert import is only supported with --dry-run.",
+        ));
+    }
 
     for resource_file in &resource_files {
         let document = load_json_object_file(resource_file, "Alerting resource")?;
@@ -1636,6 +2092,15 @@ fn import_alerting_resources(args: &AlertCliArgs) -> Result<()> {
         let identity = build_resource_identity(&kind, &payload);
         if args.dry_run {
             let action = determine_import_action(&client, &kind, &payload, args.replace_existing)?;
+            if args.json {
+                dry_run_rows.push(json!({
+                    "path": resource_file.to_string_lossy().to_string(),
+                    "kind": kind,
+                    "identity": identity,
+                    "action": action,
+                }));
+                continue;
+            }
             println!(
                 "Dry-run {} -> kind={} id={} action={}",
                 resource_file.display(),
@@ -1657,6 +2122,13 @@ fn import_alerting_resources(args: &AlertCliArgs) -> Result<()> {
     }
 
     if args.dry_run {
+        if args.json {
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&build_alert_import_dry_run_document(&dry_run_rows))?
+            );
+            return Ok(());
+        }
         println!(
             "Dry-run checked {} alerting resource files from {}",
             resource_files.len(),
@@ -1685,6 +2157,7 @@ fn diff_alerting_resources(args: &AlertCliArgs) -> Result<()> {
     )?;
     let mut policies_seen = 0usize;
     let mut differences = 0usize;
+    let mut diff_rows: Vec<Value> = Vec::new();
 
     for resource_file in &resource_files {
         let document = load_json_object_file(resource_file, "Alerting resource")?;
@@ -1705,6 +2178,15 @@ fn diff_alerting_resources(args: &AlertCliArgs) -> Result<()> {
             if serialize_compare_document(&local_compare)?
                 == serialize_compare_document(&remote_compare)?
             {
+                if args.json {
+                    diff_rows.push(json!({
+                        "path": resource_file.to_string_lossy().to_string(),
+                        "kind": kind,
+                        "identity": identity,
+                        "action": "same",
+                    }));
+                    continue;
+                }
                 println!(
                     "Diff same {} -> kind={} id={}",
                     resource_file.display(),
@@ -1714,6 +2196,16 @@ fn diff_alerting_resources(args: &AlertCliArgs) -> Result<()> {
                 continue;
             }
 
+            if args.json {
+                diff_rows.push(json!({
+                    "path": resource_file.to_string_lossy().to_string(),
+                    "kind": kind,
+                    "identity": identity,
+                    "action": "different",
+                }));
+                differences += 1;
+                continue;
+            }
             println!(
                 "Diff different {} -> kind={} id={}",
                 resource_file.display(),
@@ -1728,6 +2220,16 @@ fn diff_alerting_resources(args: &AlertCliArgs) -> Result<()> {
             continue;
         }
 
+        if args.json {
+            diff_rows.push(json!({
+                "path": resource_file.to_string_lossy().to_string(),
+                "kind": kind,
+                "identity": identity,
+                "action": "missing-remote",
+            }));
+            differences += 1;
+            continue;
+        }
         println!(
             "Diff missing-remote {} -> kind={} id={}",
             resource_file.display(),
@@ -1739,6 +2241,13 @@ fn diff_alerting_resources(args: &AlertCliArgs) -> Result<()> {
             build_compare_diff_text(&json!({}), &local_compare, &identity, resource_file)?
         );
         differences += 1;
+    }
+
+    if args.json {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&build_alert_diff_document(&diff_rows))?
+        );
     }
 
     if differences > 0 {

@@ -1,0 +1,32 @@
+{
+  "cases": [
+    {
+      "domain": "user",
+      "bundleFile": "users.json",
+      "expectedKind": "grafana-utils-access-user-export-index",
+      "mismatchedKind": "grafana-utils-access-team-export-index",
+      "supportsSourceMetadata": true
+    },
+    {
+      "domain": "team",
+      "bundleFile": "teams.json",
+      "expectedKind": "grafana-utils-access-team-export-index",
+      "mismatchedKind": "grafana-utils-access-user-export-index",
+      "supportsSourceMetadata": true
+    },
+    {
+      "domain": "org",
+      "bundleFile": "orgs.json",
+      "expectedKind": "grafana-utils-access-org-export-index",
+      "mismatchedKind": "grafana-utils-access-user-export-index",
+      "supportsSourceMetadata": true
+    },
+    {
+      "domain": "service-account",
+      "bundleFile": "service-accounts.json",
+      "expectedKind": "grafana-utils-access-service-account-export-index",
+      "mismatchedKind": "grafana-utils-access-team-export-index",
+      "supportsSourceMetadata": true
+    }
+  ]
+}

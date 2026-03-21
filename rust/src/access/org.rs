@@ -2,16 +2,19 @@
 //! Handles org CRUD plus snapshot export/import behind shared access-request wrappers.
 use reqwest::Method;
 use serde_json::{Map, Value};
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::Path;
 
 use crate::common::{message, string_field, value_as_object, write_json_file, Result};
 
-use super::render::{format_table, render_csv, render_objects_json, scalar_text};
+use super::render::{
+    format_table, normalize_org_role, render_csv, render_objects_json, scalar_text,
+};
 use super::{
-    request_array, request_object, OrgAddArgs, OrgDeleteArgs, OrgExportArgs, OrgImportArgs,
-    OrgListArgs, OrgModifyArgs, ACCESS_EXPORT_KIND_ORGS, ACCESS_EXPORT_METADATA_FILENAME,
-    ACCESS_EXPORT_VERSION, ACCESS_ORG_EXPORT_FILENAME,
+    request_array, request_object, OrgAddArgs, OrgDeleteArgs, OrgDiffArgs, OrgExportArgs,
+    OrgImportArgs, OrgListArgs, OrgModifyArgs, ACCESS_EXPORT_KIND_ORGS,
+    ACCESS_EXPORT_METADATA_FILENAME, ACCESS_EXPORT_VERSION, ACCESS_ORG_EXPORT_FILENAME,
 };
 use crate::access::cli_defs::{build_auth_context_no_org_id, CommonCliArgsNoOrgId};
 
@@ -185,11 +188,9 @@ fn normalize_org_user_row(user: &Map<String, Value>) -> Map<String, Value> {
         ),
         (
             "orgRole".to_string(),
-            Value::String(
-                string_field(user, "role", "")
-                    .trim()
-                    .replace("NoBasicRole", "None"),
-            ),
+            Value::String(normalize_org_role(
+                user.get("role").or_else(|| user.get("orgRole")),
+            )),
         ),
     ])
 }
@@ -228,6 +229,146 @@ fn normalize_org_row(org: &Map<String, Value>) -> Map<String, Value> {
         ("userCount".to_string(), Value::String(user_count)),
         ("users".to_string(), Value::Array(users)),
     ])
+}
+
+fn normalize_org_user_for_diff(user: &Map<String, Value>) -> Map<String, Value> {
+    Map::from_iter(vec![
+        (
+            "login".to_string(),
+            Value::String(string_field(user, "login", "")),
+        ),
+        (
+            "email".to_string(),
+            Value::String(string_field(user, "email", "")),
+        ),
+        (
+            "name".to_string(),
+            Value::String(string_field(user, "name", "")),
+        ),
+        (
+            "orgRole".to_string(),
+            Value::String(normalize_org_role(
+                user.get("role").or_else(|| user.get("orgRole")),
+            )),
+        ),
+    ])
+}
+
+fn org_user_identity(user: &Map<String, Value>) -> String {
+    let login = string_field(user, "login", "");
+    if !login.is_empty() {
+        return login;
+    }
+    let email = string_field(user, "email", "");
+    if !email.is_empty() {
+        return email;
+    }
+    let user_id = scalar_text(user.get("userId"));
+    if !user_id.is_empty() {
+        return user_id;
+    }
+    scalar_text(user.get("id"))
+}
+
+fn build_org_user_diff_array(users: &[Map<String, Value>], source: &str) -> Result<Vec<Value>> {
+    let mut indexed = BTreeMap::new();
+    for user in users {
+        let identity = org_user_identity(user);
+        if identity.trim().is_empty() {
+            return Err(message(format!(
+                "Organization user diff record in {} does not include login, email, or id.",
+                source
+            )));
+        }
+        let key = identity.trim().to_ascii_lowercase();
+        if indexed.contains_key(&key) {
+            return Err(message(format!(
+                "Duplicate organization user identity in {}: {}",
+                source, identity
+            )));
+        }
+        indexed.insert(key, (identity, normalize_org_user_for_diff(user)));
+    }
+    Ok(indexed
+        .into_values()
+        .map(|(_, payload)| Value::Object(payload))
+        .collect())
+}
+
+fn build_org_diff_map(
+    records: &[Map<String, Value>],
+    source: &str,
+    include_users: bool,
+) -> Result<BTreeMap<String, (String, Map<String, Value>)>> {
+    let mut indexed = BTreeMap::new();
+    for record in records {
+        let org_name = string_field(record, "name", "");
+        if org_name.trim().is_empty() {
+            return Err(message(format!(
+                "Organization diff record in {} does not include name.",
+                source
+            )));
+        }
+        let key = org_name.trim().to_ascii_lowercase();
+        if indexed.contains_key(&key) {
+            return Err(message(format!(
+                "Duplicate organization name in {}: {}",
+                source, org_name
+            )));
+        }
+        let mut payload =
+            Map::from_iter(vec![("name".to_string(), Value::String(org_name.clone()))]);
+        let users = if include_users {
+            match record.get("users") {
+                Some(Value::Array(values)) => {
+                    let users = values
+                        .iter()
+                        .map(|value| {
+                            value_as_object(value, "Unexpected org user record.")
+                                .map(|map| map.clone())
+                        })
+                        .collect::<Result<Vec<Map<String, Value>>>>()?;
+                    build_org_user_diff_array(&users, source)?
+                }
+                _ => Vec::new(),
+            }
+        } else {
+            Vec::new()
+        };
+        payload.insert("users".to_string(), Value::Array(users));
+        indexed.insert(key, (org_name, payload));
+    }
+    Ok(indexed)
+}
+
+fn build_org_live_records_for_diff<F>(
+    mut request_json: F,
+    include_users: bool,
+) -> Result<Vec<Map<String, Value>>>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    let orgs = list_organizations_with_request(&mut request_json)?;
+    let mut records = Vec::new();
+    for org in orgs {
+        let mut row = Map::from_iter(vec![(
+            "name".to_string(),
+            Value::String(string_field(&org, "name", "")),
+        )]);
+        if include_users {
+            let org_id = scalar_text(org.get("id"));
+            let users = list_org_users_with_request(&mut request_json, &org_id)?
+                .into_iter()
+                .map(|user| normalize_org_user_for_diff(&user))
+                .collect::<Vec<Map<String, Value>>>();
+            let users = build_org_user_diff_array(&users, "Grafana live org users")?;
+            row.insert("users".to_string(), Value::Array(users));
+        } else {
+            row.insert("users".to_string(), Value::Array(Vec::new()));
+        }
+        records.push(row);
+    }
+    Ok(records)
 }
 
 fn org_matches(org: &Map<String, Value>, args: &OrgListArgs) -> bool {
@@ -271,6 +412,20 @@ fn org_summary_line(row: &Map<String, Value>) -> String {
         string_field(row, "name", ""),
         scalar_text(row.get("userCount"))
     )
+}
+
+fn build_record_diff_fields(left: &Map<String, Value>, right: &Map<String, Value>) -> Vec<String> {
+    let mut keys = BTreeSet::new();
+    for key in left.keys().chain(right.keys()) {
+        keys.insert(key.clone());
+    }
+    let mut changed = Vec::new();
+    for key in keys {
+        if left.get(&key) != right.get(&key) {
+            changed.push(key);
+        }
+    }
+    changed
 }
 
 fn assert_not_overwrite(path: &Path, dry_run: bool, overwrite: bool) -> Result<()> {
@@ -825,4 +980,67 @@ where
         args.import_dir.display()
     );
     Ok(0)
+}
+
+/// Purpose: implementation note.
+pub(crate) fn diff_orgs_with_request<F>(mut request_json: F, args: &OrgDiffArgs) -> Result<usize>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    validate_basic_auth_only(&args.common)?;
+    let local_records = load_org_import_records(&args.diff_dir)?;
+    let include_users = local_records
+        .iter()
+        .any(|record| record.contains_key("users"));
+    let local_map = build_org_diff_map(
+        &local_records,
+        &args.diff_dir.to_string_lossy(),
+        include_users,
+    )?;
+    let live_records = build_org_live_records_for_diff(&mut request_json, include_users)?;
+    let live_map = build_org_diff_map(&live_records, "Grafana live orgs", include_users)?;
+
+    let mut differences = 0usize;
+    let mut checked = 0usize;
+    for key in local_map.keys() {
+        checked += 1;
+        let (local_identity, local_payload) = &local_map[key];
+        match live_map.get(key) {
+            None => {
+                println!("Diff missing-live org {}", local_identity);
+                differences += 1;
+            }
+            Some((_live_identity, live_payload)) => {
+                let changed = build_record_diff_fields(local_payload, live_payload);
+                if changed.is_empty() {
+                    println!("Diff same org {}", local_identity);
+                } else {
+                    differences += 1;
+                    println!(
+                        "Diff different org {} fields={}",
+                        local_identity,
+                        changed.join(",")
+                    );
+                }
+            }
+        }
+    }
+    for key in live_map.keys() {
+        if local_map.contains_key(key) {
+            continue;
+        }
+        checked += 1;
+        differences += 1;
+        let (identity, _) = &live_map[key];
+        println!("Diff extra-live org {}", identity);
+    }
+    if differences > 0 {
+        println!(
+            "Diff checked {} org(s); {} difference(s) found.",
+            checked, differences
+        );
+    } else {
+        println!("No org differences across {} org(s).", checked);
+    }
+    Ok(differences)
 }

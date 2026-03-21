@@ -1,0 +1,99 @@
+{
+  "recreateCases": [
+    {
+      "kind": "grafana-alert-rule",
+      "identity": "cpu-high",
+      "expectedDryRunAction": "would-create",
+      "expectedReplayAction": "created",
+      "requestContract": {
+        "createRequestPrefix": "POST /api/v1/provisioning/alert-rules",
+        "createRequestCount": 1,
+        "disallowUpdatePrefix": "PUT /api/v1/provisioning/alert-rules/"
+      },
+      "payload": {
+        "uid": "cpu-high",
+        "title": "CPU High",
+        "folderUID": "infra",
+        "ruleGroup": "CPU Alerts",
+        "condition": "A",
+        "data": []
+      }
+    },
+    {
+      "kind": "grafana-contact-point",
+      "identity": "smoke-webhook",
+      "expectedDryRunAction": "would-create",
+      "expectedReplayAction": "created",
+      "requestContract": {
+        "createRequestPrefix": "POST /api/v1/provisioning/contact-points",
+        "createRequestCount": 1,
+        "disallowUpdatePrefix": "PUT /api/v1/provisioning/contact-points/"
+      },
+      "payload": {
+        "uid": "smoke-webhook",
+        "name": "Smoke Webhook",
+        "type": "webhook",
+        "settings": {
+          "url": "http://127.0.0.1/notify"
+        }
+      }
+    },
+    {
+      "kind": "grafana-mute-timing",
+      "identity": "Off Hours",
+      "expectedDryRunAction": "would-create",
+      "expectedReplayAction": "created",
+      "requestContract": {
+        "createRequestPrefix": "POST /api/v1/provisioning/mute-timings",
+        "createRequestCount": 1,
+        "disallowUpdatePrefix": "PUT /api/v1/provisioning/mute-timings/"
+      },
+      "payload": {
+        "name": "Off Hours",
+        "time_intervals": [
+          {
+            "times": [
+              {
+                "start_time": "00:00",
+                "end_time": "06:00"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "kind": "grafana-notification-template",
+      "identity": "slack.default",
+      "expectedDryRunAction": "would-create",
+      "expectedReplayAction": "created",
+      "requestContract": {
+        "createRequestPrefix": "PUT /api/v1/provisioning/templates/",
+        "createRequestCount": 1
+      },
+      "payload": {
+        "name": "slack.default",
+        "template": "{{ define \"slack.default\" }}ok{{ end }}",
+        "version": ""
+      }
+    }
+  ],
+  "policiesCase": {
+    "kind": "grafana-notification-policies",
+    "identity": "grafana-default-email",
+    "expectedDryRunAction": "would-update",
+    "expectedReplayAction": "updated",
+    "requestContract": {
+      "updateRequestPrefix": "PUT /api/v1/provisioning/policies",
+      "updateRequestCount": 1
+    },
+    "payload": {
+      "receiver": "grafana-default-email",
+      "routes": [
+        {
+          "receiver": "grafana-default-email"
+        }
+      ]
+    }
+  }
+}

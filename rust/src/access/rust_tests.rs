@@ -3,27 +3,31 @@
 //! request closures.
 use super::{
     add_service_account_token_with_request, add_service_account_with_request,
-    add_team_with_request, add_user_with_request, delete_org_with_request,
+    add_team_with_request, add_user_with_request, build_team_import_dry_run_document,
+    build_user_import_dry_run_document, delete_org_with_request,
     delete_service_account_token_with_request, delete_service_account_with_request,
-    delete_team_with_request, delete_user_with_request, diff_service_accounts_with_request,
-    diff_teams_with_request, diff_users_with_request, export_service_accounts_with_request,
-    import_service_accounts_with_request, import_teams_with_request, list_orgs_with_request,
+    delete_team_with_request, delete_user_with_request, diff_orgs_with_request,
+    diff_service_accounts_with_request, diff_teams_with_request, diff_users_with_request,
+    export_orgs_with_request, export_service_accounts_with_request, export_teams_with_request,
+    export_users_with_request, import_orgs_with_request, import_service_accounts_with_request,
+    import_teams_with_request, import_users_with_request, list_orgs_with_request,
     list_service_accounts_command_with_request, list_teams_command_with_request,
     list_users_with_request, modify_org_with_request, modify_team_with_request,
     modify_user_with_request, parse_cli_from, run_access_cli_with_request, AccessCommand,
-    CommonCliArgs, DryRunOutputFormat, OrgCommand, OrgDeleteArgs, OrgListArgs, OrgModifyArgs,
-    Scope, ServiceAccountAddArgs, ServiceAccountCommand, ServiceAccountDeleteArgs,
-    ServiceAccountDiffArgs, ServiceAccountExportArgs, ServiceAccountImportArgs,
-    ServiceAccountListArgs, ServiceAccountTokenAddArgs, ServiceAccountTokenCommand,
-    ServiceAccountTokenDeleteArgs, TeamAddArgs, TeamCommand, TeamDeleteArgs, TeamDiffArgs,
-    TeamImportArgs, TeamListArgs, TeamModifyArgs, UserAddArgs, UserCommand, UserDeleteArgs,
-    UserDiffArgs, UserListArgs, UserModifyArgs,
+    CommonCliArgs, DryRunOutputFormat, OrgCommand, OrgDeleteArgs, OrgDiffArgs, OrgExportArgs,
+    OrgImportArgs, OrgListArgs, OrgModifyArgs, Scope, ServiceAccountAddArgs, ServiceAccountCommand,
+    ServiceAccountDeleteArgs, ServiceAccountDiffArgs, ServiceAccountExportArgs,
+    ServiceAccountImportArgs, ServiceAccountListArgs, ServiceAccountTokenAddArgs,
+    ServiceAccountTokenCommand, ServiceAccountTokenDeleteArgs, TeamAddArgs, TeamCommand,
+    TeamDeleteArgs, TeamDiffArgs, TeamExportArgs, TeamImportArgs, TeamListArgs, TeamModifyArgs,
+    UserAddArgs, UserCommand, UserDeleteArgs, UserDiffArgs, UserExportArgs, UserImportArgs,
+    UserListArgs, UserModifyArgs,
 };
 use crate::access::cli_defs::AccessCliRoot;
 use crate::access::cli_defs::CommonCliArgsNoOrgId;
 use clap::{CommandFactory, Parser};
 use reqwest::Method;
-use serde_json::json;
+use serde_json::{json, Value};
 use std::fs;
 use tempfile::tempdir;
 
@@ -94,6 +98,21 @@ fn make_basic_common_no_org_id() -> CommonCliArgsNoOrgId {
     }
 }
 
+fn read_json_file(path: &std::path::Path) -> Value {
+    serde_json::from_str(&fs::read_to_string(path).unwrap()).unwrap()
+}
+
+fn load_access_bundle_contract_cases() -> Vec<Value> {
+    serde_json::from_str::<Value>(include_str!(
+        "../../../fixtures/access_bundle_contract_cases.json"
+    ))
+    .unwrap()
+    .get("cases")
+    .and_then(Value::as_array)
+    .cloned()
+    .unwrap_or_default()
+}
+
 #[test]
 fn parse_cli_supports_user_list() {
     let args = parse_cli_from([
@@ -115,6 +134,47 @@ fn parse_cli_supports_user_list() {
             assert!(!list_args.json);
         }
         _ => panic!("expected user list"),
+    }
+}
+
+#[test]
+fn access_bundle_contract_fixture_matches_access_constants() {
+    let cases = load_access_bundle_contract_cases();
+    assert_eq!(cases.len(), 4);
+
+    for case in cases {
+        let domain = case.get("domain").and_then(Value::as_str).unwrap_or("");
+        let bundle_file = case.get("bundleFile").and_then(Value::as_str).unwrap_or("");
+        let expected_kind = case
+            .get("expectedKind")
+            .and_then(Value::as_str)
+            .unwrap_or("");
+        let supports_source_metadata = case
+            .get("supportsSourceMetadata")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
+
+        match domain {
+            "user" => {
+                assert_eq!(bundle_file, super::ACCESS_USER_EXPORT_FILENAME);
+                assert_eq!(expected_kind, super::ACCESS_EXPORT_KIND_USERS);
+            }
+            "team" => {
+                assert_eq!(bundle_file, super::ACCESS_TEAM_EXPORT_FILENAME);
+                assert_eq!(expected_kind, super::ACCESS_EXPORT_KIND_TEAMS);
+            }
+            "org" => {
+                assert_eq!(bundle_file, super::ACCESS_ORG_EXPORT_FILENAME);
+                assert_eq!(expected_kind, super::ACCESS_EXPORT_KIND_ORGS);
+            }
+            "service-account" => {
+                assert_eq!(bundle_file, super::ACCESS_SERVICE_ACCOUNT_EXPORT_FILENAME);
+                assert_eq!(expected_kind, super::ACCESS_EXPORT_KIND_SERVICE_ACCOUNTS);
+            }
+            other => panic!("unexpected access bundle contract fixture domain {other}"),
+        }
+
+        assert!(supports_source_metadata);
     }
 }
 
@@ -151,6 +211,13 @@ fn org_delete_help_includes_examples_and_yes_flag() {
     let help = render_access_subcommand_help(&["org", "delete"]);
     assert!(help.contains("Examples:"));
     assert!(help.contains("--yes"));
+}
+
+#[test]
+fn org_diff_help_includes_examples() {
+    let help = render_access_subcommand_help(&["org", "diff"]);
+    assert!(help.contains("Examples:"));
+    assert!(help.contains("--diff-dir"));
 }
 
 #[test]
@@ -381,6 +448,22 @@ fn parse_cli_supports_org_commands() {
             assert_eq!(import_args.import_dir.to_string_lossy(), "/tmp/access-orgs");
         }
         _ => panic!("expected org import"),
+    }
+
+    let args = parse_cli_from([
+        "grafana-util access",
+        "org",
+        "diff",
+        "--diff-dir",
+        "/tmp/access-orgs",
+    ]);
+    match args.command {
+        AccessCommand::Org {
+            command: OrgCommand::Diff(diff_args),
+        } => {
+            assert_eq!(diff_args.diff_dir.to_string_lossy(), "/tmp/access-orgs");
+        }
+        _ => panic!("expected org diff"),
     }
 }
 
@@ -1236,6 +1319,419 @@ fn run_access_cli_with_request_routes_org_import() {
 }
 
 #[test]
+fn run_access_cli_with_request_routes_org_diff() {
+    let temp = tempdir().unwrap();
+    let diff_dir = temp.path().join("access-orgs");
+    fs::create_dir_all(&diff_dir).unwrap();
+    fs::write(
+        diff_dir.join("orgs.json"),
+        r#"{
+            "kind":"grafana-utils-access-org-export-index",
+            "version":1,
+            "records":[
+                {
+                    "name":"Main Org",
+                    "users":[
+                        {"login":"alice","email":"alice@example.com","orgRole":"Editor"}
+                    ]
+                }
+            ]
+        }"#,
+    )
+    .unwrap();
+    let args = parse_cli_from([
+        "grafana-util access",
+        "org",
+        "diff",
+        "--basic-user",
+        "admin",
+        "--basic-password",
+        "admin",
+        "--diff-dir",
+        diff_dir.to_str().unwrap(),
+    ]);
+    let result = run_access_cli_with_request(
+        |method, path, _params, _payload| match (method, path) {
+            (Method::GET, "/api/orgs") => Ok(Some(json!([{"id": 1, "name": "Main Org"}]))),
+            (Method::GET, "/api/orgs/1/users") => Ok(Some(json!([
+                {"userId": 7, "login": "alice", "email": "alice@example.com", "name": "Alice", "role": "Editor"}
+            ]))),
+            _ => panic!("unexpected path {path}"),
+        },
+        args,
+    );
+    assert!(result.is_ok());
+}
+
+#[test]
+fn org_diff_with_request_reports_same_state() {
+    let temp = tempdir().unwrap();
+    let diff_dir = temp.path().join("access-orgs");
+    fs::create_dir_all(&diff_dir).unwrap();
+    let bundle = json!({
+        "kind": "grafana-utils-access-org-export-index",
+        "version": 1,
+        "records": [
+            {
+                "name": "Main Org",
+                "users": [
+                    {"login": "alice", "email": "alice@example.com", "name": "Alice", "orgRole": "Viewer"}
+                ]
+            }
+        ]
+    });
+    fs::write(
+        diff_dir.join("orgs.json"),
+        serde_json::to_string_pretty(&bundle).unwrap(),
+    )
+    .unwrap();
+    let args = OrgDiffArgs {
+        common: make_basic_common_no_org_id(),
+        diff_dir: diff_dir.clone(),
+    };
+    let result = diff_orgs_with_request(
+        |method, path, _params, _payload| match (method, path) {
+            (Method::GET, "/api/orgs") => Ok(Some(json!([{"id": 1, "name": "Main Org"}]))),
+            (Method::GET, "/api/orgs/1/users") => Ok(Some(json!([
+                {"userId": 7, "login": "alice", "email": "alice@example.com", "name": "Alice", "role": "Viewer"}
+            ]))),
+            _ => panic!("unexpected path {path}"),
+        },
+        &args,
+    )
+    .unwrap();
+    assert_eq!(result, 0);
+}
+
+#[test]
+fn org_diff_with_request_reports_user_role_drift() {
+    let temp = tempdir().unwrap();
+    let diff_dir = temp.path().join("access-orgs");
+    fs::create_dir_all(&diff_dir).unwrap();
+    let bundle = json!({
+        "kind": "grafana-utils-access-org-export-index",
+        "version": 1,
+        "records": [
+            {
+                "name": "Main Org",
+                "users": [
+                    {"login": "alice", "email": "alice@example.com", "name": "Alice", "orgRole": "Editor"}
+                ]
+            }
+        ]
+    });
+    fs::write(
+        diff_dir.join("orgs.json"),
+        serde_json::to_string_pretty(&bundle).unwrap(),
+    )
+    .unwrap();
+    let args = OrgDiffArgs {
+        common: make_basic_common_no_org_id(),
+        diff_dir: diff_dir.clone(),
+    };
+    let result = diff_orgs_with_request(
+        |method, path, _params, _payload| match (method, path) {
+            (Method::GET, "/api/orgs") => Ok(Some(json!([{"id": 1, "name": "Main Org"}]))),
+            (Method::GET, "/api/orgs/1/users") => Ok(Some(json!([
+                {"userId": 7, "login": "alice", "email": "alice@example.com", "name": "Alice", "role": "Viewer"}
+            ]))),
+            _ => panic!("unexpected path {path}"),
+        },
+        &args,
+    )
+    .unwrap();
+    assert_eq!(result, 1);
+}
+
+#[test]
+fn org_export_with_request_writes_bundle_with_users() {
+    let temp_dir = tempdir().unwrap();
+    let args = OrgExportArgs {
+        common: make_basic_common_no_org_id(),
+        org_id: None,
+        export_dir: temp_dir.path().to_path_buf(),
+        overwrite: true,
+        dry_run: false,
+        name: Some("Main Org".to_string()),
+        with_users: true,
+    };
+    let result = export_orgs_with_request(
+        |method, path, _params, _payload| match (method, path) {
+            (Method::GET, "/api/orgs") => Ok(Some(json!([
+                {"id": 1, "name": "Main Org"},
+                {"id": 2, "name": "Other Org"}
+            ]))),
+            (Method::GET, "/api/orgs/1/users") => Ok(Some(json!([
+                {"userId": 7, "login": "alice", "email": "alice@example.com", "name": "Alice", "role": "Editor"}
+            ]))),
+            _ => panic!("unexpected path {path}"),
+        },
+        &args,
+    );
+
+    assert!(result.is_ok());
+    let bundle: Value =
+        serde_json::from_str(&fs::read_to_string(temp_dir.path().join("orgs.json")).unwrap())
+            .unwrap();
+    assert_eq!(
+        bundle.get("kind"),
+        Some(&json!("grafana-utils-access-org-export-index"))
+    );
+    let records = bundle
+        .get("records")
+        .and_then(Value::as_array)
+        .expect("expected org export records");
+    assert_eq!(records.len(), 1);
+    assert_eq!(records[0].get("name"), Some(&json!("Main Org")));
+    assert_eq!(
+        records[0]
+            .get("users")
+            .and_then(Value::as_array)
+            .map(Vec::len),
+        Some(1)
+    );
+    assert_eq!(
+        records[0]
+            .get("users")
+            .and_then(Value::as_array)
+            .and_then(|users| users.first())
+            .and_then(|user| user.get("orgRole")),
+        Some(&json!("Editor"))
+    );
+    let metadata = read_json_file(&temp_dir.path().join("export-metadata.json"));
+    assert_eq!(
+        metadata.get("kind"),
+        Some(&json!("grafana-utils-access-org-export-index"))
+    );
+    assert_eq!(metadata.get("version"), Some(&json!(1)));
+    assert_eq!(metadata.get("recordCount"), Some(&json!(1)));
+    assert_eq!(
+        metadata.get("sourceUrl"),
+        Some(&json!("http://127.0.0.1:3000"))
+    );
+    assert_eq!(
+        metadata.get("sourceDir"),
+        Some(&json!(temp_dir.path().to_string_lossy().to_string()))
+    );
+}
+
+#[test]
+fn org_import_rejects_kind_mismatch_and_future_version_bundle_contract() {
+    let temp = tempdir().unwrap();
+    fs::write(
+        temp.path().join("orgs.json"),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-access-user-export-index",
+            "version": 1,
+            "records": []
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let args = OrgImportArgs {
+        common: make_basic_common_no_org_id(),
+        import_dir: temp.path().to_path_buf(),
+        replace_existing: true,
+        dry_run: true,
+        yes: false,
+    };
+    let error =
+        import_orgs_with_request(|_method, _path, _params, _payload| Ok(None), &args).unwrap_err();
+    assert!(error.to_string().contains("Access import kind mismatch"));
+
+    fs::write(
+        temp.path().join("orgs.json"),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-access-org-export-index",
+            "version": 99,
+            "records": []
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let error =
+        import_orgs_with_request(|_method, _path, _params, _payload| Ok(None), &args).unwrap_err();
+    assert!(error
+        .to_string()
+        .contains("Unsupported access import version"));
+}
+
+#[test]
+fn org_import_with_request_dry_run_reports_user_role_update_without_mutating() {
+    let temp = tempdir().unwrap();
+    let import_dir = temp.path().join("access-orgs");
+    fs::create_dir_all(&import_dir).unwrap();
+    let bundle = json!({
+        "kind": "grafana-utils-access-org-export-index",
+        "version": 1,
+        "records": [
+            {
+                "name": "Main Org",
+                "users": [
+                    {"login": "alice", "email": "alice@example.com", "name": "Alice", "orgRole": "Editor"}
+                ]
+            }
+        ]
+    });
+    fs::write(
+        import_dir.join("orgs.json"),
+        serde_json::to_string_pretty(&bundle).unwrap(),
+    )
+    .unwrap();
+    let args = OrgImportArgs {
+        common: make_basic_common_no_org_id(),
+        import_dir: import_dir.clone(),
+        replace_existing: true,
+        dry_run: true,
+        yes: true,
+    };
+    let mut calls = Vec::new();
+    let result = import_orgs_with_request(
+        |method, path, _params, payload| {
+            calls.push((method.to_string(), path.to_string(), payload.cloned()));
+            match (method, path) {
+                (Method::GET, "/api/orgs") => Ok(Some(json!([{"id": 1, "name": "Main Org"}]))),
+                (Method::GET, "/api/orgs/1/users") => Ok(Some(json!([
+                    {"userId": 7, "login": "alice", "email": "alice@example.com", "name": "Alice", "role": "Viewer"}
+                ]))),
+                (Method::GET, "/api/org/users") => Ok(Some(json!([
+                    {"userId": 7, "login": "alice", "email": "alice@example.com", "name": "Alice", "role": "Viewer"}
+                ]))),
+                _ => panic!("unexpected path {path}"),
+            }
+        },
+        &args,
+    )
+    .unwrap();
+    assert_eq!(result, 0);
+    assert!(calls
+        .iter()
+        .any(|(method, path, _)| method == "GET" && path == "/api/orgs"));
+    assert!(!calls
+        .iter()
+        .any(|(method, path, _)| method == "PATCH" && path == "/api/orgs/1/users/7"));
+    assert!(!calls
+        .iter()
+        .any(|(method, path, _)| method == "POST" && path == "/api/orgs"));
+}
+
+#[test]
+fn org_import_with_request_updates_existing_org_users() {
+    let temp = tempdir().unwrap();
+    let import_dir = temp.path().join("access-orgs");
+    fs::create_dir_all(&import_dir).unwrap();
+    let bundle = json!({
+        "kind": "grafana-utils-access-org-export-index",
+        "version": 1,
+        "records": [
+            {
+                "name": "Main Org",
+                "users": [
+                    {"login": "alice", "email": "alice@example.com", "name": "Alice", "orgRole": "Editor"}
+                ]
+            }
+        ]
+    });
+    fs::write(
+        import_dir.join("orgs.json"),
+        serde_json::to_string_pretty(&bundle).unwrap(),
+    )
+    .unwrap();
+    let args = OrgImportArgs {
+        common: make_basic_common_no_org_id(),
+        import_dir: import_dir.clone(),
+        replace_existing: true,
+        dry_run: false,
+        yes: true,
+    };
+    let mut calls = Vec::new();
+    let result = import_orgs_with_request(
+        |method, path, _params, payload| {
+            calls.push((method.to_string(), path.to_string(), payload.cloned()));
+            match (method, path) {
+                (Method::GET, "/api/orgs") => Ok(Some(json!([{"id": 1, "name": "Main Org"}]))),
+                (Method::GET, "/api/orgs/1/users") => Ok(Some(json!([
+                    {"userId": 7, "login": "alice", "email": "alice@example.com", "name": "Alice", "role": "Viewer"}
+                ]))),
+                (Method::GET, "/api/org/users") => Ok(Some(json!([
+                    {"userId": 7, "login": "alice", "email": "alice@example.com", "name": "Alice", "role": "Viewer"}
+                ]))),
+                (Method::PATCH, "/api/orgs/1/users/7") => Ok(Some(json!({"message": "ok"}))),
+                _ => panic!("unexpected path {path}"),
+            }
+        },
+        &args,
+    )
+    .unwrap();
+    assert_eq!(result, 0);
+    assert!(calls
+        .iter()
+        .any(|(method, path, _)| method == "PATCH" && path == "/api/orgs/1/users/7"));
+}
+
+#[test]
+fn org_import_with_request_creates_missing_org_and_users_when_replace_existing_is_set() {
+    let temp = tempdir().unwrap();
+    let import_dir = temp.path().join("access-orgs");
+    fs::create_dir_all(&import_dir).unwrap();
+    let bundle = json!({
+        "kind": "grafana-utils-access-org-export-index",
+        "version": 1,
+        "records": [
+            {
+                "name": "New Org",
+                "users": [
+                    {"login": "alice", "email": "alice@example.com", "name": "Alice", "orgRole": "Editor"}
+                ]
+            }
+        ]
+    });
+    fs::write(
+        import_dir.join("orgs.json"),
+        serde_json::to_string_pretty(&bundle).unwrap(),
+    )
+    .unwrap();
+    let args = OrgImportArgs {
+        common: make_basic_common_no_org_id(),
+        import_dir: import_dir.clone(),
+        replace_existing: true,
+        dry_run: false,
+        yes: true,
+    };
+    let mut calls = Vec::new();
+    let result = import_orgs_with_request(
+        |method, path, _params, payload| {
+            calls.push((method.to_string(), path.to_string(), payload.cloned()));
+            match (method, path) {
+                (Method::GET, "/api/orgs") => Ok(Some(json!([]))),
+                (Method::POST, "/api/orgs") => {
+                    assert_eq!(
+                        payload
+                            .and_then(|value| value.as_object())
+                            .unwrap()
+                            .get("name"),
+                        Some(&json!("New Org"))
+                    );
+                    Ok(Some(json!({"orgId": "3"})))
+                }
+                (Method::GET, "/api/orgs/3/users") => Ok(Some(json!([]))),
+                (Method::POST, "/api/orgs/3/users") => Ok(Some(json!({"message": "added"}))),
+                _ => panic!("unexpected path {path}"),
+            }
+        },
+        &args,
+    )
+    .unwrap();
+    assert_eq!(result, 0);
+    assert!(calls
+        .iter()
+        .any(|(method, path, _)| method == "POST" && path == "/api/orgs"));
+    assert!(calls
+        .iter()
+        .any(|(method, path, _)| method == "POST" && path == "/api/orgs/3/users"));
+}
+
+#[test]
 fn run_access_cli_with_request_routes_user_diff() {
     let temp = tempdir().unwrap();
     let diff_dir = temp.path().join("access-users");
@@ -1353,6 +1849,677 @@ fn diff_users_with_request_returns_expected_difference_count() {
 }
 
 #[test]
+fn user_export_with_request_writes_global_bundle() {
+    let temp_dir = tempdir().unwrap();
+    let args = UserExportArgs {
+        common: make_basic_common(),
+        export_dir: temp_dir.path().to_path_buf(),
+        overwrite: true,
+        dry_run: false,
+        scope: Scope::Global,
+        with_teams: false,
+    };
+    let result = export_users_with_request(
+        |method, path, params, _payload| match (method, path) {
+            (Method::GET, "/api/users") => {
+                assert_eq!(params[0], ("page".to_string(), "1".to_string()));
+                Ok(Some(json!([
+                    {"id": 7, "login": "alice", "email": "alice@example.com", "name": "Alice", "isGrafanaAdmin": false}
+                ])))
+            }
+            _ => panic!("unexpected path {path}"),
+        },
+        &args,
+    );
+
+    assert!(result.is_ok());
+    let bundle: Value =
+        serde_json::from_str(&fs::read_to_string(temp_dir.path().join("users.json")).unwrap())
+            .unwrap();
+    assert_eq!(
+        bundle.get("kind"),
+        Some(&json!("grafana-utils-access-user-export-index"))
+    );
+    let records = bundle
+        .get("records")
+        .and_then(Value::as_array)
+        .expect("expected user export records");
+    assert_eq!(records.len(), 1);
+    assert_eq!(records[0].get("login"), Some(&json!("alice")));
+    let metadata = read_json_file(&temp_dir.path().join("export-metadata.json"));
+    assert_eq!(
+        metadata.get("kind"),
+        Some(&json!("grafana-utils-access-user-export-index"))
+    );
+    assert_eq!(metadata.get("version"), Some(&json!(1)));
+    assert_eq!(metadata.get("recordCount"), Some(&json!(1)));
+    assert_eq!(
+        metadata.get("sourceUrl"),
+        Some(&json!("http://127.0.0.1:3000"))
+    );
+    assert_eq!(
+        metadata.get("sourceDir"),
+        Some(&json!(temp_dir.path().to_string_lossy().to_string()))
+    );
+}
+
+#[test]
+fn user_import_rejects_kind_mismatch_and_future_version_bundle_contract() {
+    let temp_dir = tempdir().unwrap();
+    fs::write(
+        temp_dir.path().join("users.json"),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-access-team-export-index",
+            "version": 1,
+            "records": []
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let args = UserImportArgs {
+        common: make_basic_common(),
+        import_dir: temp_dir.path().to_path_buf(),
+        scope: Scope::Global,
+        replace_existing: true,
+        dry_run: true,
+        table: false,
+        json: false,
+        output_format: DryRunOutputFormat::Text,
+        yes: false,
+    };
+    let error =
+        import_users_with_request(|_method, _path, _params, _payload| Ok(None), &args).unwrap_err();
+    assert!(error.to_string().contains("Access import kind mismatch"));
+
+    fs::write(
+        temp_dir.path().join("users.json"),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-access-user-export-index",
+            "version": 99,
+            "records": []
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let error =
+        import_users_with_request(|_method, _path, _params, _payload| Ok(None), &args).unwrap_err();
+    assert!(error
+        .to_string()
+        .contains("Unsupported access import version"));
+}
+
+#[test]
+fn user_diff_with_request_reports_same_state_for_global_bundle() {
+    let temp_dir = tempdir().unwrap();
+    fs::write(
+        temp_dir.path().join("users.json"),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-access-user-export-index",
+            "version": 1,
+            "records": [
+                {"login": "alice", "email": "alice@example.com", "name": "Alice", "orgRole": "Viewer", "grafanaAdmin": false}
+            ]
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let args = UserDiffArgs {
+        common: make_basic_common(),
+        diff_dir: temp_dir.path().to_path_buf(),
+        scope: Scope::Global,
+    };
+    let result = diff_users_with_request(
+        |method, path, params, _payload| match (method, path) {
+            (Method::GET, "/api/users") => {
+                assert_eq!(params[0], ("page".to_string(), "1".to_string()));
+                Ok(Some(json!([
+                    {"id": 7, "login": "alice", "email": "alice@example.com", "name": "Alice", "role": "Viewer", "isGrafanaAdmin": false}
+                ])))
+            }
+            _ => panic!("unexpected path {path}"),
+        },
+        &args,
+    );
+
+    assert_eq!(result.unwrap(), 0);
+}
+
+#[test]
+fn user_import_with_request_dry_run_reports_global_profile_and_admin_drift() {
+    let temp_dir = tempdir().unwrap();
+    fs::write(
+        temp_dir.path().join("users.json"),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-access-user-export-index",
+            "version": 1,
+            "records": [
+                {"login": "alice", "email": "alice@example.com", "name": "Alice Two", "orgRole": "Editor", "grafanaAdmin": true}
+            ]
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let args = UserImportArgs {
+        common: make_basic_common(),
+        import_dir: temp_dir.path().to_path_buf(),
+        scope: Scope::Global,
+        replace_existing: true,
+        dry_run: true,
+        table: false,
+        json: false,
+        output_format: DryRunOutputFormat::Text,
+        yes: false,
+    };
+    let mut calls = Vec::new();
+    let result = import_users_with_request(
+        |method, path, params, payload| {
+            calls.push((
+                method.to_string(),
+                path.to_string(),
+                params.to_vec(),
+                payload.cloned(),
+            ));
+            match (method, path) {
+                (Method::GET, "/api/users") => Ok(Some(json!([
+                    {"id": 7, "login": "alice", "email": "alice@example.com", "name": "Alice", "role": "Viewer", "isGrafanaAdmin": false}
+                ]))),
+                _ => panic!("unexpected path {path}"),
+            }
+        },
+        &args,
+    )
+    .unwrap();
+
+    assert_eq!(result, 1);
+    assert!(calls
+        .iter()
+        .all(|(method, path, _, _)| !(method == "PUT" && path == "/api/users/7")));
+    assert!(
+        calls
+            .iter()
+            .all(|(method, path, _, _)| !(method == "PUT"
+                && path == "/api/admin/users/7/permissions"))
+    );
+}
+
+#[test]
+fn user_import_with_request_dry_run_json_reports_global_summary_and_rows() {
+    let temp_dir = tempdir().unwrap();
+    fs::write(
+        temp_dir.path().join("users.json"),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-access-user-export-index",
+            "version": 1,
+            "records": [
+                {"login": "alice", "email": "alice@example.com", "name": "Alice Two", "orgRole": "Editor", "grafanaAdmin": true}
+            ]
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let args = UserImportArgs {
+        common: make_basic_common(),
+        import_dir: temp_dir.path().to_path_buf(),
+        scope: Scope::Global,
+        replace_existing: true,
+        dry_run: true,
+        table: false,
+        json: true,
+        output_format: DryRunOutputFormat::Json,
+        yes: false,
+    };
+
+    let result = import_users_with_request(
+        |method, path, _params, _payload| match (method, path) {
+            (Method::GET, "/api/users") => Ok(Some(json!([
+                {"id": 7, "login": "alice", "email": "alice@example.com", "name": "Alice", "role": "Viewer", "isGrafanaAdmin": false}
+            ]))),
+            _ => panic!("unexpected path {path}"),
+        },
+        &args,
+    )
+    .unwrap();
+
+    assert_eq!(result, 0);
+}
+
+#[test]
+fn user_import_with_request_updates_existing_global_user() {
+    let temp_dir = tempdir().unwrap();
+    fs::write(
+        temp_dir.path().join("users.json"),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-access-user-export-index",
+            "version": 1,
+            "records": [
+                {"login": "alice", "email": "alice@example.com", "name": "Alice Two", "orgRole": "Editor", "grafanaAdmin": true}
+            ]
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let args = UserImportArgs {
+        common: make_basic_common(),
+        import_dir: temp_dir.path().to_path_buf(),
+        scope: Scope::Global,
+        replace_existing: true,
+        dry_run: false,
+        table: false,
+        json: false,
+        output_format: DryRunOutputFormat::Text,
+        yes: false,
+    };
+    let mut calls = Vec::new();
+    let result = import_users_with_request(
+        |method, path, params, payload| {
+            calls.push((
+                method.to_string(),
+                path.to_string(),
+                params.to_vec(),
+                payload.cloned(),
+            ));
+            match (method, path) {
+                (Method::GET, "/api/users") => Ok(Some(json!([
+                    {"id": 7, "login": "alice", "email": "alice@example.com", "name": "Alice", "role": "Viewer", "isGrafanaAdmin": false}
+                ]))),
+                (Method::PUT, "/api/users/7") => Ok(Some(json!({"message": "ok"}))),
+                (Method::PATCH, "/api/org/users/7") => Ok(Some(json!({"message": "ok"}))),
+                (Method::PUT, "/api/admin/users/7/permissions") => Ok(Some(json!({"message": "ok"}))),
+                _ => panic!("unexpected path {path}"),
+            }
+        },
+        &args,
+    )
+    .unwrap();
+
+    assert_eq!(result, 1);
+    assert!(calls
+        .iter()
+        .any(|(method, path, _, _)| method == "PUT" && path == "/api/users/7"));
+    assert!(calls
+        .iter()
+        .any(|(method, path, _, _)| method == "PATCH" && path == "/api/org/users/7"));
+    assert!(calls
+        .iter()
+        .any(|(method, path, _, _)| method == "PUT" && path == "/api/admin/users/7/permissions"));
+    let update_payload = calls
+        .iter()
+        .find(|(method, path, _, _)| method == "PUT" && path == "/api/users/7")
+        .and_then(|(_, _, _, payload)| payload.as_ref())
+        .expect("expected user update payload");
+    assert_eq!(update_payload.get("login"), Some(&json!("alice")));
+    assert_eq!(
+        update_payload.get("email"),
+        Some(&json!("alice@example.com"))
+    );
+    assert_eq!(update_payload.get("name"), Some(&json!("Alice Two")));
+}
+
+#[test]
+fn user_import_with_request_creates_missing_global_user_when_password_present() {
+    let temp_dir = tempdir().unwrap();
+    fs::write(
+        temp_dir.path().join("users.json"),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-access-user-export-index",
+            "version": 1,
+            "records": [
+                {"login": "alice", "email": "alice@example.com", "name": "Alice", "password": "secret123", "orgRole": "Editor", "grafanaAdmin": true}
+            ]
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let args = UserImportArgs {
+        common: make_basic_common(),
+        import_dir: temp_dir.path().to_path_buf(),
+        scope: Scope::Global,
+        replace_existing: true,
+        dry_run: false,
+        table: false,
+        json: false,
+        output_format: DryRunOutputFormat::Text,
+        yes: false,
+    };
+    let mut calls = Vec::new();
+    let result = import_users_with_request(
+        |method, path, params, payload| {
+            calls.push((
+                method.to_string(),
+                path.to_string(),
+                params.to_vec(),
+                payload.cloned(),
+            ));
+            match (method, path) {
+                (Method::GET, "/api/users") => Ok(Some(json!([]))),
+                (Method::POST, "/api/admin/users") => Ok(Some(json!({"id": 7}))),
+                (Method::PATCH, "/api/org/users/7") => Ok(Some(json!({"message": "ok"}))),
+                (Method::PUT, "/api/admin/users/7/permissions") => {
+                    Ok(Some(json!({"message": "ok"})))
+                }
+                _ => panic!("unexpected path {path}"),
+            }
+        },
+        &args,
+    )
+    .unwrap();
+
+    assert_eq!(result, 1);
+    let create_payload = calls
+        .iter()
+        .find(|(method, path, _, _)| method == "POST" && path == "/api/admin/users")
+        .and_then(|(_, _, _, payload)| payload.as_ref())
+        .expect("expected user create payload");
+    assert_eq!(create_payload.get("password"), Some(&json!("secret123")));
+}
+
+#[test]
+fn user_export_with_request_writes_org_bundle_with_teams() {
+    let temp_dir = tempdir().unwrap();
+    let args = UserExportArgs {
+        common: make_basic_common(),
+        export_dir: temp_dir.path().to_path_buf(),
+        overwrite: true,
+        dry_run: false,
+        scope: Scope::Org,
+        with_teams: true,
+    };
+    let result = export_users_with_request(
+        |method, path, _params, _payload| match (method, path) {
+            (Method::GET, "/api/org/users") => Ok(Some(json!([
+                {"userId": "7", "login": "alice", "email": "alice@example.com", "name": "Alice", "role": "Viewer"}
+            ]))),
+            (Method::GET, "/api/users/7/teams") => Ok(Some(json!([
+                {"id": 11, "name": "ops"},
+                {"id": 12, "name": "db"}
+            ]))),
+            _ => panic!("unexpected path {path}"),
+        },
+        &args,
+    );
+
+    assert!(result.is_ok());
+    let bundle: Value =
+        serde_json::from_str(&fs::read_to_string(temp_dir.path().join("users.json")).unwrap())
+            .unwrap();
+    let records = bundle
+        .get("records")
+        .and_then(Value::as_array)
+        .expect("expected user export records");
+    assert_eq!(records.len(), 1);
+    assert_eq!(records[0].get("login"), Some(&json!("alice")));
+    assert_eq!(records[0].get("teams"), Some(&json!(["db", "ops"])));
+    let metadata = read_json_file(&temp_dir.path().join("export-metadata.json"));
+    assert_eq!(
+        metadata.get("kind"),
+        Some(&json!("grafana-utils-access-user-export-index"))
+    );
+    assert_eq!(metadata.get("version"), Some(&json!(1)));
+    assert_eq!(metadata.get("recordCount"), Some(&json!(1)));
+}
+
+#[test]
+fn user_diff_with_request_reports_same_state_for_org_bundle_with_teams() {
+    let temp_dir = tempdir().unwrap();
+    fs::write(
+        temp_dir.path().join("users.json"),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-access-user-export-index",
+            "version": 1,
+            "records": [
+                {"login": "alice", "email": "alice@example.com", "name": "Alice", "orgRole": "Viewer", "teams": ["db", "ops"]}
+            ]
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let args = UserDiffArgs {
+        common: make_basic_common(),
+        diff_dir: temp_dir.path().to_path_buf(),
+        scope: Scope::Org,
+    };
+    let result = diff_users_with_request(
+        |method, path, _params, _payload| match (method, path) {
+            (Method::GET, "/api/org/users") => Ok(Some(json!([
+                {"userId": "7", "login": "alice", "email": "alice@example.com", "name": "Alice", "role": "Viewer"}
+            ]))),
+            (Method::GET, "/api/users/7/teams") => Ok(Some(json!([
+                {"id": 11, "name": "ops"},
+                {"id": 12, "name": "db"}
+            ]))),
+            _ => panic!("unexpected path {path}"),
+        },
+        &args,
+    );
+
+    assert_eq!(result.unwrap(), 0);
+}
+
+#[test]
+fn user_import_with_request_org_scope_requires_yes_for_team_removal() {
+    let temp_dir = tempdir().unwrap();
+    fs::write(
+        temp_dir.path().join("users.json"),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-access-user-export-index",
+            "version": 1,
+            "records": [
+                {"login": "alice", "email": "alice@example.com", "name": "Alice", "orgRole": "Editor", "teams": ["ops"]}
+            ]
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let args = UserImportArgs {
+        common: make_basic_common(),
+        import_dir: temp_dir.path().to_path_buf(),
+        scope: Scope::Org,
+        replace_existing: true,
+        dry_run: false,
+        table: false,
+        json: false,
+        output_format: DryRunOutputFormat::Text,
+        yes: false,
+    };
+    let err = import_users_with_request(
+        |method, path, _params, _payload| match (method, path) {
+            (Method::GET, "/api/org/users") => Ok(Some(json!([
+                {"userId": "7", "login": "alice", "email": "alice@example.com", "name": "Alice", "role": "Viewer"}
+            ]))),
+            (Method::GET, "/api/users/7/teams") => Ok(Some(json!([
+                {"id": 12, "name": "legacy"}
+            ]))),
+            (Method::GET, "/api/teams/search") => Ok(Some(json!({
+                "teams": [{"id": 11, "name": "ops"}]
+            }))),
+            _ => panic!("unexpected path {path}"),
+        },
+        &args,
+    )
+    .unwrap_err();
+
+    assert!(err.to_string().contains("would remove team memberships"));
+}
+
+#[test]
+fn user_import_with_request_dry_run_reports_org_role_and_team_drift() {
+    let temp_dir = tempdir().unwrap();
+    fs::write(
+        temp_dir.path().join("users.json"),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-access-user-export-index",
+            "version": 1,
+            "records": [
+                {"login": "alice", "email": "alice@example.com", "name": "Alice", "orgRole": "Editor", "teams": ["ops"]}
+            ]
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let args = UserImportArgs {
+        common: make_basic_common(),
+        import_dir: temp_dir.path().to_path_buf(),
+        scope: Scope::Org,
+        replace_existing: true,
+        dry_run: true,
+        table: false,
+        json: false,
+        output_format: DryRunOutputFormat::Text,
+        yes: true,
+    };
+    let mut calls = Vec::new();
+    let result = import_users_with_request(
+        |method, path, params, payload| {
+            calls.push((
+                method.to_string(),
+                path.to_string(),
+                params.to_vec(),
+                payload.cloned(),
+            ));
+            match (method, path) {
+                (Method::GET, "/api/org/users") => Ok(Some(json!([
+                    {"userId": "7", "login": "alice", "email": "alice@example.com", "name": "Alice", "role": "Viewer"}
+                ]))),
+                (Method::GET, "/api/users/7/teams") => Ok(Some(json!([
+                    {"id": 12, "name": "legacy"}
+                ]))),
+                (Method::GET, "/api/teams/search") => Ok(Some(json!({
+                    "teams": [{"id": 11, "name": "ops"}]
+                }))),
+                _ => panic!("unexpected path {path}"),
+            }
+        },
+        &args,
+    )
+    .unwrap();
+
+    assert_eq!(result, 1);
+    assert!(calls
+        .iter()
+        .all(|(method, path, _, _)| !(method == "PATCH" && path == "/api/org/users/7")));
+    assert!(calls
+        .iter()
+        .all(|(method, path, _, _)| !(method == "POST" && path == "/api/teams/11/members")));
+    assert!(calls
+        .iter()
+        .all(|(method, path, _, _)| !(method == "DELETE" && path == "/api/teams/12/members/7")));
+}
+
+#[test]
+fn user_import_with_request_dry_run_json_reports_org_summary_and_rows() {
+    let temp_dir = tempdir().unwrap();
+    fs::write(
+        temp_dir.path().join("users.json"),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-access-user-export-index",
+            "version": 1,
+            "records": [
+                {"login": "alice", "email": "alice@example.com", "name": "Alice", "orgRole": "Editor", "teams": ["ops"]}
+            ]
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let args = UserImportArgs {
+        common: make_basic_common(),
+        import_dir: temp_dir.path().to_path_buf(),
+        scope: Scope::Org,
+        replace_existing: true,
+        dry_run: true,
+        table: false,
+        json: true,
+        output_format: DryRunOutputFormat::Json,
+        yes: true,
+    };
+
+    let result = import_users_with_request(
+        |method, path, _params, _payload| match (method, path) {
+            (Method::GET, "/api/org/users") => Ok(Some(json!([
+                {"userId": "7", "login": "alice", "email": "alice@example.com", "name": "Alice", "role": "Viewer"}
+            ]))),
+            (Method::GET, "/api/users/7/teams") => Ok(Some(json!([
+                {"id": 12, "name": "legacy"}
+            ]))),
+            (Method::GET, "/api/teams/search") => Ok(Some(json!({
+                "teams": [{"id": 11, "name": "ops"}]
+            }))),
+            _ => panic!("unexpected path {path}"),
+        },
+        &args,
+    )
+    .unwrap();
+
+    assert_eq!(result, 0);
+}
+
+#[test]
+fn user_import_with_request_updates_existing_org_user_role_and_team_membership() {
+    let temp_dir = tempdir().unwrap();
+    fs::write(
+        temp_dir.path().join("users.json"),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-access-user-export-index",
+            "version": 1,
+            "records": [
+                {"login": "alice", "email": "alice@example.com", "name": "Alice", "orgRole": "Editor", "teams": ["ops"]}
+            ]
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let args = UserImportArgs {
+        common: make_basic_common(),
+        import_dir: temp_dir.path().to_path_buf(),
+        scope: Scope::Org,
+        replace_existing: true,
+        dry_run: false,
+        table: false,
+        json: false,
+        output_format: DryRunOutputFormat::Text,
+        yes: true,
+    };
+    let mut calls = Vec::new();
+    let result = import_users_with_request(
+        |method, path, params, payload| {
+            calls.push((
+                method.to_string(),
+                path.to_string(),
+                params.to_vec(),
+                payload.cloned(),
+            ));
+            match (method, path) {
+                (Method::GET, "/api/org/users") => Ok(Some(json!([
+                    {"userId": "7", "login": "alice", "email": "alice@example.com", "name": "Alice", "role": "Viewer"}
+                ]))),
+                (Method::GET, "/api/users/7/teams") => Ok(Some(json!([
+                    {"id": 12, "name": "legacy"}
+                ]))),
+                (Method::GET, "/api/teams/search") => Ok(Some(json!({
+                    "teams": [{"id": 11, "name": "ops"}]
+                }))),
+                (Method::PATCH, "/api/org/users/7") => Ok(Some(json!({"message": "ok"}))),
+                (Method::POST, "/api/teams/11/members") => Ok(Some(json!({"message": "ok"}))),
+                (Method::DELETE, "/api/teams/12/members/7") => Ok(Some(json!({"message": "ok"}))),
+                _ => panic!("unexpected path {path}"),
+            }
+        },
+        &args,
+    )
+    .unwrap();
+
+    assert_eq!(result, 1);
+    assert!(calls
+        .iter()
+        .any(|(method, path, _, _)| method == "PATCH" && path == "/api/org/users/7"));
+    assert!(calls
+        .iter()
+        .any(|(method, path, _, _)| method == "POST" && path == "/api/teams/11/members"));
+    assert!(calls
+        .iter()
+        .any(|(method, path, _, _)| method == "DELETE" && path == "/api/teams/12/members/7"));
+}
+
+#[test]
 fn diff_teams_with_request_returns_expected_difference_count() {
     let temp = tempdir().unwrap();
     let diff_dir = temp.path().join("access-teams");
@@ -1385,6 +2552,333 @@ fn diff_teams_with_request_returns_expected_difference_count() {
     )
     .unwrap();
     assert_eq!(result, 3);
+}
+
+#[test]
+fn team_export_with_request_writes_bundle_with_members_and_admins() {
+    let temp_dir = tempdir().unwrap();
+    let args = TeamExportArgs {
+        common: make_token_common(),
+        export_dir: temp_dir.path().to_path_buf(),
+        overwrite: true,
+        dry_run: false,
+        with_members: true,
+    };
+    let result = export_teams_with_request(
+        |_method, path, _params, _payload| match path {
+            "/api/teams/search" => Ok(Some(json!({
+                "teams": [
+                    {"id": 3, "name": "Ops", "email": "ops@example.com", "memberCount": 2}
+                ]
+            }))),
+            "/api/teams/3/members" => Ok(Some(json!([
+                {"userId": 7, "login": "alice@example.com", "email": "alice@example.com", "isAdmin": false},
+                {"userId": 8, "login": "bob@example.com", "email": "bob@example.com", "isAdmin": true}
+            ]))),
+            _ => panic!("unexpected path {path}"),
+        },
+        &args,
+    );
+
+    assert!(result.is_ok());
+    let bundle: Value =
+        serde_json::from_str(&fs::read_to_string(temp_dir.path().join("teams.json")).unwrap())
+            .unwrap();
+    assert_eq!(
+        bundle.get("kind"),
+        Some(&json!("grafana-utils-access-team-export-index"))
+    );
+    let records = bundle
+        .get("records")
+        .and_then(Value::as_array)
+        .expect("expected team export records");
+    assert_eq!(records.len(), 1);
+    assert_eq!(records[0].get("name"), Some(&json!("Ops")));
+    assert_eq!(
+        records[0].get("members"),
+        Some(&json!(["alice@example.com", "bob@example.com"]))
+    );
+    assert_eq!(records[0].get("admins"), Some(&json!(["bob@example.com"])));
+    let metadata = read_json_file(&temp_dir.path().join("export-metadata.json"));
+    assert_eq!(
+        metadata.get("kind"),
+        Some(&json!("grafana-utils-access-team-export-index"))
+    );
+    assert_eq!(metadata.get("version"), Some(&json!(1)));
+    assert_eq!(metadata.get("recordCount"), Some(&json!(1)));
+    assert_eq!(
+        metadata.get("sourceUrl"),
+        Some(&json!("http://127.0.0.1:3000"))
+    );
+    assert_eq!(
+        metadata.get("sourceDir"),
+        Some(&json!(temp_dir.path().to_string_lossy().to_string()))
+    );
+}
+
+#[test]
+fn team_import_rejects_kind_mismatch_and_future_version_bundle_contract() {
+    let temp_dir = tempdir().unwrap();
+    fs::write(
+        temp_dir.path().join("teams.json"),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-access-user-export-index",
+            "version": 1,
+            "records": []
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let args = TeamImportArgs {
+        common: make_token_common(),
+        import_dir: temp_dir.path().to_path_buf(),
+        replace_existing: true,
+        dry_run: true,
+        table: false,
+        json: false,
+        output_format: DryRunOutputFormat::Text,
+        yes: false,
+    };
+    let error =
+        import_teams_with_request(|_method, _path, _params, _payload| Ok(None), &args).unwrap_err();
+    assert!(error.to_string().contains("Access import kind mismatch"));
+
+    fs::write(
+        temp_dir.path().join("teams.json"),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-access-team-export-index",
+            "version": 99,
+            "records": []
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let error =
+        import_teams_with_request(|_method, _path, _params, _payload| Ok(None), &args).unwrap_err();
+    assert!(error
+        .to_string()
+        .contains("Unsupported access import version"));
+}
+
+#[test]
+fn team_diff_with_request_reports_same_state_for_members_and_admins() {
+    let temp_dir = tempdir().unwrap();
+    let export_args = TeamExportArgs {
+        common: make_token_common(),
+        export_dir: temp_dir.path().to_path_buf(),
+        overwrite: true,
+        dry_run: false,
+        with_members: false,
+    };
+    export_teams_with_request(
+        |_method, path, _params, _payload| match path {
+            "/api/teams/search" => Ok(Some(json!({
+                "teams": [
+                    {"id": 3, "name": "Ops", "email": "ops@example.com", "memberCount": 2}
+                ]
+            }))),
+            _ => panic!("unexpected path {path}"),
+        },
+        &export_args,
+    )
+    .unwrap();
+    let args = TeamDiffArgs {
+        common: make_token_common(),
+        diff_dir: temp_dir.path().to_path_buf(),
+    };
+    let result = diff_teams_with_request(
+        |_method, path, _params, _payload| match path {
+            "/api/teams/search" => Ok(Some(json!({
+                "teams": [
+                    {"id": 3, "name": "Ops", "email": "ops@example.com"}
+                ]
+            }))),
+            _ => panic!("unexpected path {path}"),
+        },
+        &args,
+    );
+
+    assert_eq!(result.unwrap(), 0);
+}
+
+#[test]
+fn team_diff_with_request_reports_membership_drift() {
+    let temp_dir = tempdir().unwrap();
+    let export_args = TeamExportArgs {
+        common: make_token_common(),
+        export_dir: temp_dir.path().to_path_buf(),
+        overwrite: true,
+        dry_run: false,
+        with_members: true,
+    };
+    export_teams_with_request(
+        |_method, path, _params, _payload| match path {
+            "/api/teams/search" => Ok(Some(json!({
+                "teams": [
+                    {"id": 3, "name": "Ops", "email": "ops@example.com", "memberCount": 2}
+                ]
+            }))),
+            "/api/teams/3/members" => Ok(Some(json!([
+                {"userId": 7, "login": "alice@example.com", "email": "alice@example.com", "isAdmin": false},
+                {"userId": 8, "login": "bob@example.com", "email": "bob@example.com", "isAdmin": true}
+            ]))),
+            _ => panic!("unexpected path {path}"),
+        },
+        &export_args,
+    )
+    .unwrap();
+    let mut bundle: Value =
+        serde_json::from_str(&fs::read_to_string(temp_dir.path().join("teams.json")).unwrap())
+            .unwrap();
+    if let Some(records) = bundle.get_mut("records").and_then(Value::as_array_mut) {
+        if let Some(team) = records.get_mut(0).and_then(Value::as_object_mut) {
+            team.insert(
+                "members".to_string(),
+                Value::Array(vec![Value::String("alice@example.com".to_string())]),
+            );
+            team.insert("admins".to_string(), Value::Array(Vec::new()));
+        }
+    }
+    fs::write(
+        temp_dir.path().join("teams.json"),
+        serde_json::to_string_pretty(&bundle).unwrap(),
+    )
+    .unwrap();
+    let args = TeamDiffArgs {
+        common: make_token_common(),
+        diff_dir: temp_dir.path().to_path_buf(),
+    };
+    let result = diff_teams_with_request(
+        |_method, path, _params, _payload| match path {
+            "/api/teams/search" => Ok(Some(json!({
+                "teams": [
+                    {"id": 3, "name": "Ops", "email": "ops@example.com"}
+                ]
+            }))),
+            "/api/teams/3/members" => Ok(Some(json!([
+                {"userId": 7, "login": "alice@example.com", "email": "alice@example.com", "isAdmin": false},
+                {"userId": 8, "login": "bob@example.com", "email": "bob@example.com", "isAdmin": true}
+            ]))),
+            _ => panic!("unexpected path {path}"),
+        },
+        &args,
+    );
+
+    assert_eq!(result.unwrap(), 1);
+}
+
+#[test]
+fn team_import_dry_run_document_reports_summary_and_rows() {
+    let rows = vec![
+        serde_json::from_value::<serde_json::Map<String, Value>>(json!({
+            "index": "1",
+            "identity": "Ops",
+            "action": "remove-member",
+            "detail": "would remove team member bob@example.com"
+        }))
+        .unwrap(),
+        serde_json::from_value::<serde_json::Map<String, Value>>(json!({
+            "index": "1",
+            "identity": "Ops",
+            "action": "updated",
+            "detail": "would update team"
+        }))
+        .unwrap(),
+    ];
+    let document = build_team_import_dry_run_document(
+        &rows,
+        1,
+        0,
+        1,
+        0,
+        std::path::Path::new("/tmp/access-teams"),
+    );
+
+    assert_eq!(
+        document
+            .get("summary")
+            .and_then(|summary| summary.get("processed")),
+        Some(&json!(1))
+    );
+    assert_eq!(
+        document
+            .get("summary")
+            .and_then(|summary| summary.get("created")),
+        Some(&json!(0))
+    );
+    assert_eq!(
+        document
+            .get("summary")
+            .and_then(|summary| summary.get("updated")),
+        Some(&json!(1))
+    );
+    assert_eq!(
+        document
+            .get("summary")
+            .and_then(|summary| summary.get("skipped")),
+        Some(&json!(0))
+    );
+    assert_eq!(
+        document
+            .get("summary")
+            .and_then(|summary| summary.get("source")),
+        Some(&json!("/tmp/access-teams"))
+    );
+    assert_eq!(
+        document.get("rows").and_then(Value::as_array).map(Vec::len),
+        Some(2)
+    );
+}
+
+#[test]
+fn user_import_dry_run_document_reports_summary_and_rows() {
+    let rows = vec![
+        serde_json::from_value::<serde_json::Map<String, Value>>(json!({
+            "index": "1",
+            "identity": "alice",
+            "action": "update-org-role",
+            "detail": "would update orgRole -> Editor"
+        }))
+        .unwrap(),
+        serde_json::from_value::<serde_json::Map<String, Value>>(json!({
+            "index": "1",
+            "identity": "alice",
+            "action": "updated",
+            "detail": "would update user"
+        }))
+        .unwrap(),
+    ];
+    let document = build_user_import_dry_run_document(
+        &rows,
+        1,
+        0,
+        1,
+        0,
+        std::path::Path::new("/tmp/access-users"),
+    );
+
+    assert_eq!(
+        document
+            .get("summary")
+            .and_then(|summary| summary.get("processed")),
+        Some(&json!(1))
+    );
+    assert_eq!(
+        document
+            .get("summary")
+            .and_then(|summary| summary.get("updated")),
+        Some(&json!(1))
+    );
+    assert_eq!(
+        document
+            .get("summary")
+            .and_then(|summary| summary.get("source")),
+        Some(&json!("/tmp/access-users"))
+    );
+    assert_eq!(
+        document.get("rows").and_then(Value::as_array).map(Vec::len),
+        Some(2)
+    );
 }
 
 #[test]
@@ -1834,6 +3328,12 @@ fn team_add_with_request_creates_team_and_members() {
 
     assert!(result.is_ok());
     assert!(calls.iter().any(|(_, path, _, _)| path == "/api/teams"));
+    let member_post_payload = calls
+        .iter()
+        .find(|(method, path, _, _)| method == "POST" && path == "/api/teams/3/members")
+        .and_then(|(_, _, _, payload)| payload.as_ref())
+        .expect("expected add-member payload");
+    assert_eq!(member_post_payload.get("userId"), Some(&json!(7)));
     assert!(calls
         .iter()
         .any(|(method, path, _, _)| method == "PUT" && path == "/api/teams/3/members"));
@@ -2007,8 +3507,345 @@ fn service_account_export_with_request_writes_bundle() {
         &args,
     );
     assert!(result.is_ok());
-    let bundle = fs::read_to_string(temp_dir.path().join("service-accounts.json")).unwrap();
-    assert!(bundle.contains("\"grafana-utils-access-service-account-export-index\""));
+    let bundle = read_json_file(&temp_dir.path().join("service-accounts.json"));
+    assert_eq!(
+        bundle.get("kind"),
+        Some(&json!("grafana-utils-access-service-account-export-index"))
+    );
+    assert_eq!(bundle.get("version"), Some(&json!(1)));
+    assert_eq!(
+        bundle
+            .get("records")
+            .and_then(Value::as_array)
+            .map(Vec::len),
+        Some(1)
+    );
+    let metadata = read_json_file(&temp_dir.path().join("export-metadata.json"));
+    assert_eq!(
+        metadata.get("kind"),
+        Some(&json!("grafana-utils-access-service-account-export-index"))
+    );
+    assert_eq!(metadata.get("version"), Some(&json!(1)));
+    assert_eq!(metadata.get("recordCount"), Some(&json!(1)));
+    assert_eq!(
+        metadata.get("sourceUrl"),
+        Some(&json!("http://127.0.0.1:3000"))
+    );
+    assert_eq!(
+        metadata.get("sourceDir"),
+        Some(&json!(temp_dir.path().to_string_lossy().to_string()))
+    );
+}
+
+#[test]
+fn service_account_import_rejects_kind_mismatch_and_future_version_bundle_contract() {
+    let temp_dir = tempdir().unwrap();
+    fs::write(
+        temp_dir.path().join("service-accounts.json"),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-access-team-export-index",
+            "version": 1,
+            "records": []
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let args = ServiceAccountImportArgs {
+        common: make_token_common(),
+        import_dir: temp_dir.path().to_path_buf(),
+        replace_existing: true,
+        dry_run: true,
+        table: false,
+        json: false,
+        output_format: DryRunOutputFormat::Text,
+        yes: false,
+    };
+    let error =
+        import_service_accounts_with_request(|_method, _path, _params, _payload| Ok(None), &args)
+            .unwrap_err();
+    assert!(error.to_string().contains("Access import kind mismatch"));
+
+    fs::write(
+        temp_dir.path().join("service-accounts.json"),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-access-service-account-export-index",
+            "version": 99,
+            "records": []
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let error =
+        import_service_accounts_with_request(|_method, _path, _params, _payload| Ok(None), &args)
+            .unwrap_err();
+    assert!(error
+        .to_string()
+        .contains("Unsupported access import version"));
+}
+
+#[test]
+fn access_import_rejects_kind_mismatch_and_future_version_from_shared_fixture() {
+    for case in load_access_bundle_contract_cases() {
+        let domain = case.get("domain").and_then(Value::as_str).unwrap_or("");
+        let bundle_file = case.get("bundleFile").and_then(Value::as_str).unwrap_or("");
+        let expected_kind = case
+            .get("expectedKind")
+            .and_then(Value::as_str)
+            .unwrap_or("");
+        let mismatched_kind = case
+            .get("mismatchedKind")
+            .and_then(Value::as_str)
+            .unwrap_or("");
+
+        let temp_dir = tempdir().unwrap();
+        fs::write(
+            temp_dir.path().join(bundle_file),
+            serde_json::to_string_pretty(&json!({
+                "kind": mismatched_kind,
+                "version": 1,
+                "records": []
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+
+        let mismatched_error = match domain {
+            "user" => import_users_with_request(
+                |_method, _path, _params, _payload| Ok(None),
+                &UserImportArgs {
+                    common: make_basic_common(),
+                    import_dir: temp_dir.path().to_path_buf(),
+                    scope: Scope::Global,
+                    replace_existing: true,
+                    dry_run: true,
+                    table: false,
+                    json: false,
+                    output_format: DryRunOutputFormat::Text,
+                    yes: false,
+                },
+            )
+            .unwrap_err()
+            .to_string(),
+            "team" => import_teams_with_request(
+                |_method, _path, _params, _payload| Ok(None),
+                &TeamImportArgs {
+                    common: make_token_common(),
+                    import_dir: temp_dir.path().to_path_buf(),
+                    replace_existing: true,
+                    dry_run: true,
+                    table: false,
+                    json: false,
+                    output_format: DryRunOutputFormat::Text,
+                    yes: false,
+                },
+            )
+            .unwrap_err()
+            .to_string(),
+            "org" => import_orgs_with_request(
+                |_method, _path, _params, _payload| Ok(None),
+                &OrgImportArgs {
+                    common: make_basic_common_no_org_id(),
+                    import_dir: temp_dir.path().to_path_buf(),
+                    replace_existing: true,
+                    dry_run: true,
+                    yes: false,
+                },
+            )
+            .unwrap_err()
+            .to_string(),
+            "service-account" => import_service_accounts_with_request(
+                |_method, _path, _params, _payload| Ok(None),
+                &ServiceAccountImportArgs {
+                    common: make_token_common(),
+                    import_dir: temp_dir.path().to_path_buf(),
+                    replace_existing: true,
+                    dry_run: true,
+                    table: false,
+                    json: false,
+                    output_format: DryRunOutputFormat::Text,
+                    yes: false,
+                },
+            )
+            .unwrap_err()
+            .to_string(),
+            other => panic!("unexpected access bundle contract fixture domain {other}"),
+        };
+        assert!(mismatched_error.contains("Access import kind mismatch"));
+
+        fs::write(
+            temp_dir.path().join(bundle_file),
+            serde_json::to_string_pretty(&json!({
+                "kind": expected_kind,
+                "version": 99,
+                "records": []
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+
+        let future_version_error = match domain {
+            "user" => import_users_with_request(
+                |_method, _path, _params, _payload| Ok(None),
+                &UserImportArgs {
+                    common: make_basic_common(),
+                    import_dir: temp_dir.path().to_path_buf(),
+                    scope: Scope::Global,
+                    replace_existing: true,
+                    dry_run: true,
+                    table: false,
+                    json: false,
+                    output_format: DryRunOutputFormat::Text,
+                    yes: false,
+                },
+            )
+            .unwrap_err()
+            .to_string(),
+            "team" => import_teams_with_request(
+                |_method, _path, _params, _payload| Ok(None),
+                &TeamImportArgs {
+                    common: make_token_common(),
+                    import_dir: temp_dir.path().to_path_buf(),
+                    replace_existing: true,
+                    dry_run: true,
+                    table: false,
+                    json: false,
+                    output_format: DryRunOutputFormat::Text,
+                    yes: false,
+                },
+            )
+            .unwrap_err()
+            .to_string(),
+            "org" => import_orgs_with_request(
+                |_method, _path, _params, _payload| Ok(None),
+                &OrgImportArgs {
+                    common: make_basic_common_no_org_id(),
+                    import_dir: temp_dir.path().to_path_buf(),
+                    replace_existing: true,
+                    dry_run: true,
+                    yes: false,
+                },
+            )
+            .unwrap_err()
+            .to_string(),
+            "service-account" => import_service_accounts_with_request(
+                |_method, _path, _params, _payload| Ok(None),
+                &ServiceAccountImportArgs {
+                    common: make_token_common(),
+                    import_dir: temp_dir.path().to_path_buf(),
+                    replace_existing: true,
+                    dry_run: true,
+                    table: false,
+                    json: false,
+                    output_format: DryRunOutputFormat::Text,
+                    yes: false,
+                },
+            )
+            .unwrap_err()
+            .to_string(),
+            other => panic!("unexpected access bundle contract fixture domain {other}"),
+        };
+        assert!(future_version_error.contains("Unsupported access import version"));
+    }
+}
+
+#[test]
+fn service_account_import_rejects_structured_output_without_dry_run() {
+    let temp_dir = tempdir().unwrap();
+    fs::write(
+        temp_dir.path().join("service-accounts.json"),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-access-service-account-export-index",
+            "version": 1,
+            "records": [
+                {"name": "svc", "role": "Viewer", "disabled": false}
+            ]
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let args = ServiceAccountImportArgs {
+        common: make_token_common(),
+        import_dir: temp_dir.path().to_path_buf(),
+        replace_existing: true,
+        dry_run: false,
+        table: false,
+        json: true,
+        output_format: DryRunOutputFormat::Text,
+        yes: false,
+    };
+
+    let error =
+        import_service_accounts_with_request(|_method, _path, _params, _payload| Ok(None), &args)
+            .unwrap_err();
+
+    assert!(error
+        .to_string()
+        .contains("--table/--json for service-account import are only supported with --dry-run."));
+}
+
+#[test]
+fn service_account_import_with_request_creates_missing_when_replace_existing_is_set() {
+    let temp_dir = tempdir().unwrap();
+    fs::write(
+        temp_dir.path().join("service-accounts.json"),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-access-service-account-export-index",
+            "version": 1,
+            "records": [
+                {"name": "svc-create", "role": "Editor", "disabled": true}
+            ]
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let args = ServiceAccountImportArgs {
+        common: make_token_common(),
+        import_dir: temp_dir.path().to_path_buf(),
+        replace_existing: true,
+        dry_run: false,
+        table: false,
+        json: false,
+        output_format: DryRunOutputFormat::Text,
+        yes: false,
+    };
+    let mut calls = Vec::new();
+    let result = import_service_accounts_with_request(
+        |method, path, params, payload| {
+            calls.push((
+                method.to_string(),
+                path.to_string(),
+                params.to_vec(),
+                payload.cloned(),
+            ));
+            match path {
+                "/api/serviceaccounts/search" => Ok(Some(json!({"serviceAccounts": []}))),
+                "/api/serviceaccounts" if method == Method::POST => Ok(Some(json!({
+                    "id": 7,
+                    "name": "svc-create",
+                    "login": "sa-svc-create",
+                    "role": "Editor",
+                    "isDisabled": true,
+                    "tokens": 0,
+                    "orgId": 1
+                }))),
+                _ => panic!("unexpected path {path}"),
+            }
+        },
+        &args,
+    );
+
+    assert!(result.is_ok());
+    let create_call = calls
+        .iter()
+        .find(|(method, path, _, _)| method == "POST" && path == "/api/serviceaccounts")
+        .expect("expected service-account create call");
+    let payload = create_call
+        .3
+        .as_ref()
+        .expect("expected service-account create payload");
+    assert_eq!(payload.get("name"), Some(&json!("svc-create")));
+    assert_eq!(payload.get("role"), Some(&json!("Editor")));
+    assert_eq!(payload.get("isDisabled"), Some(&json!(true)));
 }
 
 #[test]
@@ -2063,6 +3900,40 @@ fn service_account_import_with_request_updates_existing() {
     assert!(calls
         .iter()
         .any(|(method, path, _, _)| method == "PATCH" && path == "/api/serviceaccounts/4"));
+}
+
+#[test]
+fn service_account_diff_with_request_reports_same_state() {
+    let temp_dir = tempdir().unwrap();
+    fs::write(
+        temp_dir.path().join("service-accounts.json"),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-access-service-account-export-index",
+            "version": 1,
+            "records": [
+                {"name": "svc", "role": "Viewer", "disabled": false}
+            ]
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let args = ServiceAccountDiffArgs {
+        common: make_token_common(),
+        diff_dir: temp_dir.path().to_path_buf(),
+    };
+    let result = diff_service_accounts_with_request(
+        |_method, path, _params, _payload| match path {
+            "/api/serviceaccounts/search" => Ok(Some(json!({
+                "serviceAccounts": [
+                    {"id": 4, "name": "svc", "login": "sa-svc", "role": "Viewer", "isDisabled": false, "tokens": 0, "orgId": 1}
+                ]
+            }))),
+            _ => panic!("unexpected path {path}"),
+        },
+        &args,
+    );
+
+    assert_eq!(result.unwrap(), 0);
 }
 
 #[test]

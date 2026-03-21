@@ -1,0 +1,77 @@
+{
+  "rootIndex": {
+    "kind": "grafana-util-alert-export-index",
+    "schemaVersion": 1,
+    "apiVersion": 1,
+    "requiredSections": [
+      "rules",
+      "contact-points",
+      "mute-timings",
+      "policies",
+      "templates"
+    ]
+  },
+  "cases": [
+    {
+      "kind": "grafana-alert-rule",
+      "subdir": "rules"
+    },
+    {
+      "kind": "grafana-contact-point",
+      "subdir": "contact-points"
+    },
+    {
+      "kind": "grafana-mute-timing",
+      "subdir": "mute-timings"
+    },
+    {
+      "kind": "grafana-notification-policies",
+      "subdir": "policies"
+    },
+    {
+      "kind": "grafana-notification-template",
+      "subdir": "templates"
+    }
+  ],
+  "syncAlertingArtifacts": {
+    "summary": {
+      "ruleCount": 1,
+      "contactPointCount": 1,
+      "muteTimingCount": 1,
+      "policyCount": 1,
+      "templateCount": 1
+    },
+    "artifacts": [
+      {
+        "section": "rules",
+        "identityField": "uid",
+        "identity": "cpu-high",
+        "sourcePath": "rules/smoke-alerts/CPU_Alerts/CPU_High__cpu-high.json"
+      },
+      {
+        "section": "contactPoints",
+        "identityField": "uid",
+        "identity": "smoke-webhook",
+        "sourcePath": "contact-points/Smoke_Webhook/Smoke_Webhook__smoke-webhook.json"
+      },
+      {
+        "section": "muteTimings",
+        "identityField": "name",
+        "identity": "Off Hours",
+        "sourcePath": "mute-timings/Off_Hours.json"
+      },
+      {
+        "section": "policies",
+        "identityField": "receiver",
+        "identity": "grafana-default-email",
+        "sourcePath": "policies/notification-policies.json"
+      },
+      {
+        "section": "templates",
+        "identityField": "name",
+        "identity": "slack.default",
+        "sourcePath": "templates/slack.default.json"
+      }
+    ]
+  }
+}

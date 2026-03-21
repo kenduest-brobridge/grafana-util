@@ -139,7 +139,7 @@ pub(crate) fn serialize_rule_list_rows(
         .collect()
 }
 
-fn serialize_contact_point_list_rows(
+pub(crate) fn serialize_contact_point_list_rows(
     items: &[Map<String, Value>],
 ) -> Vec<BTreeMap<&'static str, String>> {
     items
@@ -159,7 +159,7 @@ fn serialize_contact_point_list_rows(
         .collect()
 }
 
-fn serialize_mute_timing_list_rows(
+pub(crate) fn serialize_mute_timing_list_rows(
     items: &[Map<String, Value>],
 ) -> Vec<BTreeMap<&'static str, String>> {
     items
@@ -183,7 +183,7 @@ fn serialize_mute_timing_list_rows(
         .collect()
 }
 
-fn serialize_template_list_rows(
+pub(crate) fn serialize_template_list_rows(
     items: &[Map<String, Value>],
 ) -> Vec<BTreeMap<&'static str, String>> {
     items

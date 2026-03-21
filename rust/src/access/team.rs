@@ -38,6 +38,13 @@ fn user_id_from_record(record: &Map<String, Value>) -> String {
     }
 }
 
+fn user_id_json_value(user_id: &str) -> Value {
+    match user_id.trim().parse::<u64>() {
+        Ok(value) => Value::Number(value.into()),
+        Err(_) => Value::String(user_id.to_string()),
+    }
+}
+
 fn sorted_membership_union(members: &[String], admins: &[String]) -> Vec<String> {
     let mut seen = BTreeSet::new();
     let mut merged = Vec::new();
@@ -331,6 +338,47 @@ fn build_team_import_dry_run_rows(rows: &[Map<String, Value>]) -> Vec<Vec<String
         .collect()
 }
 
+pub(crate) fn build_team_import_dry_run_document(
+    rows: &[Map<String, Value>],
+    processed: usize,
+    created: usize,
+    updated: usize,
+    skipped: usize,
+    source: &Path,
+) -> Value {
+    Value::Object(Map::from_iter(vec![
+        (
+            "rows".to_string(),
+            Value::Array(rows.iter().cloned().map(Value::Object).collect()),
+        ),
+        (
+            "summary".to_string(),
+            Value::Object(Map::from_iter(vec![
+                (
+                    "processed".to_string(),
+                    Value::Number((processed as i64).into()),
+                ),
+                (
+                    "created".to_string(),
+                    Value::Number((created as i64).into()),
+                ),
+                (
+                    "updated".to_string(),
+                    Value::Number((updated as i64).into()),
+                ),
+                (
+                    "skipped".to_string(),
+                    Value::Number((skipped as i64).into()),
+                ),
+                (
+                    "source".to_string(),
+                    Value::String(source.to_string_lossy().to_string()),
+                ),
+            ])),
+        ),
+    ]))
+}
+
 fn validate_team_import_dry_run_output(args: &TeamImportArgs) -> Result<()> {
     if (args.table || args.json) && !args.dry_run {
         return Err(message(
@@ -558,7 +606,7 @@ where
         &[],
         Some(&Value::Object(Map::from_iter(vec![(
             "userId".to_string(),
-            Value::String(user_id.to_string()),
+            user_id_json_value(user_id),
         )]))),
         &format!("Unexpected add-member response for Grafana team {team_id}."),
     )
@@ -1330,6 +1378,20 @@ where
     }
 
     if args.dry_run && is_dry_run_table_or_json {
+        if args.json {
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&build_team_import_dry_run_document(
+                    &dry_run_rows,
+                    processed,
+                    created,
+                    updated,
+                    skipped,
+                    &args.import_dir,
+                ))?
+            );
+            return Ok(0);
+        }
         if args.table {
             for line in format_table(
                 &["INDEX", "IDENTITY", "ACTION", "DETAIL"],
@@ -1337,8 +1399,6 @@ where
             ) {
                 println!("{line}");
             }
-        } else if args.json {
-            println!("{}", render_objects_json(&dry_run_rows)?);
         }
     }
 
