@@ -1,0 +1,208 @@
+[
+  {
+    "name": "tempo_full_add_nested_json_data_override",
+    "operation": "add",
+    "args": [
+      "grafana-util",
+      "add",
+      "--name",
+      "Tempo Main",
+      "--type",
+      "tempo",
+      "--preset-profile",
+      "full",
+      "--json-data",
+      "{\"tracesToLogsV2\":{\"datasourceUid\":\"custom-loki\"}}"
+    ],
+    "expected": {
+      "type": "tempo",
+      "access": "proxy",
+      "jsonData": {
+        "nodeGraph": {
+          "enabled": true
+        },
+        "search": {
+          "hide": false
+        },
+        "traceQuery": {
+          "timeShiftEnabled": true,
+          "spanStartTimeShift": "-1h",
+          "spanEndTimeShift": "1h"
+        },
+        "streamingEnabled": {
+          "search": true
+        },
+        "serviceMap": {
+          "datasourceUid": "prometheus"
+        },
+        "tracesToLogsV2": {
+          "datasourceUid": "custom-loki",
+          "spanStartTimeShift": "-1h",
+          "spanEndTimeShift": "1h"
+        },
+        "tracesToMetrics": {
+          "datasourceUid": "prometheus",
+          "spanStartTimeShift": "-1h",
+          "spanEndTimeShift": "1h"
+        }
+      }
+    }
+  },
+  {
+    "name": "loki_full_add_derived_fields_replace_array",
+    "operation": "add",
+    "args": [
+      "grafana-util",
+      "add",
+      "--name",
+      "Loki Main",
+      "--type",
+      "loki",
+      "--preset-profile",
+      "full",
+      "--json-data",
+      "{\"derivedFields\":[{\"name\":\"custom_trace\",\"datasourceUid\":\"tempo-alt\"}]}"
+    ],
+    "expected": {
+      "type": "loki",
+      "access": "proxy",
+      "jsonData": {
+        "maxLines": 1000,
+        "timeout": 60,
+        "derivedFields": [
+          {
+            "name": "custom_trace",
+            "datasourceUid": "tempo-alt"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "loki_full_modify_derived_fields_replace_array",
+    "operation": "modify",
+    "args": [
+      "grafana-util",
+      "modify",
+      "--uid",
+      "loki-main",
+      "--json-data",
+      "{\"derivedFields\":[{\"name\":\"custom_trace\",\"datasourceUid\":\"tempo-alt\"}]}"
+    ],
+    "existing": {
+      "id": 10,
+      "uid": "loki-main",
+      "name": "Loki Main",
+      "type": "loki",
+      "access": "proxy",
+      "url": "http://loki:3100",
+      "isDefault": false,
+      "jsonData": {
+        "maxLines": 1000,
+        "timeout": 60,
+        "derivedFields": [
+          {
+            "name": "TraceID",
+            "matcherRegex": "traceID=(\\w+)",
+            "datasourceUid": "tempo",
+            "url": "$${__value.raw}",
+            "urlDisplayLabel": "View Trace"
+          }
+        ]
+      }
+    },
+    "expected": {
+      "jsonData": {
+        "maxLines": 1000,
+        "timeout": 60,
+        "derivedFields": [
+          {
+            "name": "custom_trace",
+            "datasourceUid": "tempo-alt"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "tempo_full_modify_nested_json_data_override",
+    "operation": "modify",
+    "args": [
+      "grafana-util",
+      "modify",
+      "--uid",
+      "tempo-main",
+      "--json-data",
+      "{\"tracesToLogsV2\":{\"datasourceUid\":\"custom-loki\"}}"
+    ],
+    "existing": {
+      "id": 9,
+      "uid": "tempo-main",
+      "name": "Tempo Main",
+      "type": "tempo",
+      "access": "proxy",
+      "url": "http://tempo:3200",
+      "isDefault": false,
+      "jsonData": {
+        "nodeGraph": {
+          "enabled": true
+        },
+        "search": {
+          "hide": false
+        },
+        "traceQuery": {
+          "timeShiftEnabled": true,
+          "spanStartTimeShift": "-1h",
+          "spanEndTimeShift": "1h"
+        },
+        "streamingEnabled": {
+          "search": true
+        },
+        "serviceMap": {
+          "datasourceUid": "prometheus"
+        },
+        "tracesToLogsV2": {
+          "datasourceUid": "loki",
+          "spanStartTimeShift": "-1h",
+          "spanEndTimeShift": "1h"
+        },
+        "tracesToMetrics": {
+          "datasourceUid": "prometheus",
+          "spanStartTimeShift": "-1h",
+          "spanEndTimeShift": "1h"
+        }
+      }
+    },
+    "expected": {
+      "jsonData": {
+        "nodeGraph": {
+          "enabled": true
+        },
+        "search": {
+          "hide": false
+        },
+        "traceQuery": {
+          "timeShiftEnabled": true,
+          "spanStartTimeShift": "-1h",
+          "spanEndTimeShift": "1h"
+        },
+        "streamingEnabled": {
+          "search": true
+        },
+        "serviceMap": {
+          "datasourceUid": "prometheus"
+        },
+        "tracesToLogsV2": {
+          "datasourceUid": "custom-loki",
+          "spanStartTimeShift": "-1h",
+          "spanEndTimeShift": "1h"
+        },
+        "tracesToMetrics": {
+          "datasourceUid": "prometheus",
+          "spanStartTimeShift": "-1h",
+          "spanEndTimeShift": "1h"
+        }
+      }
+    }
+  }
+]

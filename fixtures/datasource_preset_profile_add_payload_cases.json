@@ -1,0 +1,130 @@
+{
+  "kind": "grafana-utils-datasource-preset-profile-add-payload-cases",
+  "cases": [
+    {
+      "name": "prometheus_starter",
+      "args": [
+        "grafana-util",
+        "add",
+        "--name",
+        "Prometheus Main",
+        "--type",
+        "prometheus",
+        "--preset-profile",
+        "starter"
+      ],
+      "expectedSubset": {
+        "type": "prometheus",
+        "access": "proxy",
+        "jsonData": {
+          "httpMethod": "POST"
+        }
+      }
+    },
+    {
+      "name": "loki_full",
+      "args": [
+        "grafana-util",
+        "add",
+        "--name",
+        "Loki Main",
+        "--type",
+        "loki",
+        "--preset-profile",
+        "full"
+      ],
+      "expectedSubset": {
+        "type": "loki",
+        "access": "proxy",
+        "jsonData": {
+          "maxLines": 1000,
+          "timeout": 60,
+          "derivedFields": [
+            {
+              "name": "TraceID",
+              "matcherRegex": "traceID=(\\w+)",
+              "datasourceUid": "tempo",
+              "url": "$${__value.raw}",
+              "urlDisplayLabel": "View Trace"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "tempo_full_nested_override",
+      "args": [
+        "grafana-util",
+        "add",
+        "--name",
+        "Tempo Main",
+        "--type",
+        "tempo",
+        "--preset-profile",
+        "full",
+        "--json-data",
+        "{\"tracesToLogsV2\":{\"datasourceUid\":\"custom-loki\"}}"
+      ],
+      "expectedSubset": {
+        "type": "tempo",
+        "access": "proxy",
+        "jsonData": {
+          "nodeGraph": {
+            "enabled": true
+          },
+          "search": {
+            "hide": false
+          },
+          "traceQuery": {
+            "timeShiftEnabled": true,
+            "spanStartTimeShift": "-1h",
+            "spanEndTimeShift": "1h"
+          },
+          "streamingEnabled": {
+            "search": true
+          },
+          "serviceMap": {
+            "datasourceUid": "prometheus"
+          },
+          "tracesToLogsV2": {
+            "datasourceUid": "custom-loki",
+            "spanStartTimeShift": "-1h",
+            "spanEndTimeShift": "1h"
+          },
+          "tracesToMetrics": {
+            "datasourceUid": "prometheus",
+            "spanStartTimeShift": "-1h",
+            "spanEndTimeShift": "1h"
+          }
+        }
+      }
+    },
+    {
+      "name": "postgresql_full",
+      "args": [
+        "grafana-util",
+        "add",
+        "--name",
+        "Postgres Main",
+        "--type",
+        "postgresql",
+        "--preset-profile",
+        "full"
+      ],
+      "expectedSubset": {
+        "type": "postgresql",
+        "access": "proxy",
+        "jsonData": {
+          "database": "grafana",
+          "sslmode": "disable",
+          "maxOpenConns": 100,
+          "maxIdleConns": 100,
+          "maxIdleConnsAuto": true,
+          "connMaxLifetime": 14400,
+          "postgresVersion": 903,
+          "timescaledb": false
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,536 @@
+{
+  "kind": "grafana-utils-datasource-supported-types",
+  "categories": [
+    {
+      "category": "Metrics",
+      "types": [
+        {
+          "type": "prometheus",
+          "profile": "metrics-http",
+          "queryLanguage": "promql",
+          "requiresDatasourceUrl": true,
+          "suggestedFlags": [
+            "--basic-auth",
+            "--basic-auth-user",
+            "--basic-auth-password",
+            "--with-credentials",
+            "--http-header",
+            "--tls-skip-verify",
+            "--server-name"
+          ],
+          "presetProfiles": [
+            "starter"
+          ],
+          "addDefaults": {
+            "access": "proxy",
+            "jsonData": {
+              "httpMethod": "POST"
+            }
+          },
+          "fullAddDefaults": {
+            "access": "proxy",
+            "jsonData": {
+              "httpMethod": "POST"
+            }
+          }
+        },
+        {
+          "type": "influxdb",
+          "profile": "metrics-http",
+          "queryLanguage": "flux-or-influxql",
+          "requiresDatasourceUrl": true,
+          "suggestedFlags": [
+            "--user",
+            "--password",
+            "--http-header",
+            "--tls-skip-verify",
+            "--server-name"
+          ],
+          "presetProfiles": [
+            "starter"
+          ],
+          "addDefaults": {
+            "access": "proxy",
+            "jsonData": {
+              "version": "Flux",
+              "organization": "main-org",
+              "defaultBucket": "metrics"
+            }
+          },
+          "fullAddDefaults": {
+            "access": "proxy",
+            "jsonData": {
+              "version": "Flux",
+              "organization": "main-org",
+              "defaultBucket": "metrics"
+            }
+          }
+        },
+        {
+          "type": "graphite",
+          "profile": "metrics-http",
+          "queryLanguage": "graphite",
+          "requiresDatasourceUrl": true,
+          "suggestedFlags": [
+            "--basic-auth",
+            "--basic-auth-user",
+            "--basic-auth-password",
+            "--tls-skip-verify",
+            "--server-name"
+          ],
+          "presetProfiles": [
+            "starter"
+          ],
+          "addDefaults": {
+            "access": "proxy",
+            "jsonData": {
+              "graphiteVersion": "1.1"
+            }
+          },
+          "fullAddDefaults": {
+            "access": "proxy",
+            "jsonData": {
+              "graphiteVersion": "1.1"
+            }
+          }
+        },
+        {
+          "type": "opentsdb",
+          "profile": "metrics-http",
+          "queryLanguage": "opentsdb",
+          "requiresDatasourceUrl": true,
+          "suggestedFlags": [
+            "--basic-auth",
+            "--basic-auth-user",
+            "--basic-auth-password",
+            "--http-header",
+            "--tls-skip-verify",
+            "--server-name"
+          ],
+          "presetProfiles": [
+            "starter"
+          ],
+          "addDefaults": {
+            "access": "proxy",
+            "jsonData": {
+              "tsdbVersion": 2
+            }
+          },
+          "fullAddDefaults": {
+            "access": "proxy",
+            "jsonData": {
+              "tsdbVersion": 2
+            }
+          }
+        }
+      ]
+    },
+    {
+      "category": "Logs",
+      "types": [
+        {
+          "type": "loki",
+          "profile": "logs-http",
+          "queryLanguage": "logql",
+          "requiresDatasourceUrl": true,
+          "suggestedFlags": [
+            "--basic-auth",
+            "--basic-auth-user",
+            "--basic-auth-password",
+            "--http-header",
+            "--tls-skip-verify",
+            "--server-name"
+          ],
+          "presetProfiles": [
+            "starter",
+            "full"
+          ],
+          "addDefaults": {
+            "access": "proxy",
+            "jsonData": {
+              "maxLines": 1000,
+              "timeout": 60
+            }
+          },
+          "fullAddDefaults": {
+            "access": "proxy",
+            "jsonData": {
+              "maxLines": 1000,
+              "timeout": 60,
+              "derivedFields": [
+                {
+                  "name": "TraceID",
+                  "matcherRegex": "traceID=(\\w+)",
+                  "datasourceUid": "tempo",
+                  "url": "$${__value.raw}",
+                  "urlDisplayLabel": "View Trace"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "elasticsearch",
+          "profile": "logs-search-api",
+          "queryLanguage": "lucene-or-query-dsl",
+          "requiresDatasourceUrl": true,
+          "suggestedFlags": [
+            "--basic-auth",
+            "--basic-auth-user",
+            "--basic-auth-password",
+            "--user",
+            "--password",
+            "--with-credentials",
+            "--http-header",
+            "--tls-skip-verify",
+            "--server-name"
+          ],
+          "presetProfiles": [
+            "starter"
+          ],
+          "addDefaults": {
+            "access": "proxy",
+            "jsonData": {
+              "timeField": "@timestamp"
+            }
+          },
+          "fullAddDefaults": {
+            "access": "proxy",
+            "jsonData": {
+              "timeField": "@timestamp"
+            }
+          }
+        },
+        {
+          "type": "opensearch",
+          "profile": "logs-search-api",
+          "queryLanguage": "ppl-or-query-dsl",
+          "requiresDatasourceUrl": true,
+          "suggestedFlags": [
+            "--basic-auth",
+            "--basic-auth-user",
+            "--basic-auth-password",
+            "--user",
+            "--password",
+            "--with-credentials",
+            "--http-header",
+            "--tls-skip-verify",
+            "--server-name"
+          ],
+          "presetProfiles": [
+            "starter"
+          ],
+          "addDefaults": {
+            "access": "proxy",
+            "jsonData": {
+              "timeField": "@timestamp"
+            }
+          },
+          "fullAddDefaults": {
+            "access": "proxy",
+            "jsonData": {
+              "timeField": "@timestamp"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "category": "Tracing",
+      "types": [
+        {
+          "type": "jaeger",
+          "profile": "tracing-http",
+          "queryLanguage": "trace-search",
+          "requiresDatasourceUrl": true,
+          "suggestedFlags": [
+            "--basic-auth",
+            "--basic-auth-user",
+            "--basic-auth-password",
+            "--http-header",
+            "--tls-skip-verify",
+            "--server-name"
+          ],
+          "presetProfiles": [
+            "starter"
+          ],
+          "addDefaults": {
+            "access": "proxy",
+            "jsonData": {
+              "nodeGraph": {
+                "enabled": true
+              },
+              "traceQuery": {
+                "timeShiftEnabled": true
+              }
+            }
+          },
+          "fullAddDefaults": {
+            "access": "proxy",
+            "jsonData": {
+              "nodeGraph": {
+                "enabled": true
+              },
+              "traceQuery": {
+                "timeShiftEnabled": true
+              }
+            }
+          }
+        },
+        {
+          "type": "zipkin",
+          "profile": "tracing-http",
+          "queryLanguage": "trace-search",
+          "requiresDatasourceUrl": true,
+          "suggestedFlags": [
+            "--basic-auth",
+            "--basic-auth-user",
+            "--basic-auth-password",
+            "--http-header",
+            "--tls-skip-verify",
+            "--server-name"
+          ],
+          "presetProfiles": [
+            "starter"
+          ],
+          "addDefaults": {
+            "access": "proxy",
+            "jsonData": {
+              "nodeGraph": {
+                "enabled": true
+              },
+              "traceQuery": {
+                "timeShiftEnabled": true
+              }
+            }
+          },
+          "fullAddDefaults": {
+            "access": "proxy",
+            "jsonData": {
+              "nodeGraph": {
+                "enabled": true
+              },
+              "traceQuery": {
+                "timeShiftEnabled": true
+              }
+            }
+          }
+        },
+        {
+          "type": "tempo",
+          "profile": "tracing-http",
+          "queryLanguage": "traceql",
+          "requiresDatasourceUrl": true,
+          "suggestedFlags": [
+            "--basic-auth",
+            "--basic-auth-user",
+            "--basic-auth-password",
+            "--http-header",
+            "--tls-skip-verify",
+            "--server-name"
+          ],
+          "presetProfiles": [
+            "starter",
+            "full"
+          ],
+          "addDefaults": {
+            "access": "proxy",
+            "jsonData": {
+              "nodeGraph": {
+                "enabled": true
+              },
+              "traceQuery": {
+                "timeShiftEnabled": true,
+                "spanStartTimeShift": "-1h",
+                "spanEndTimeShift": "1h"
+              },
+              "search": {
+                "hide": false
+              },
+              "streamingEnabled": {
+                "search": true
+              }
+            }
+          },
+          "fullAddDefaults": {
+            "access": "proxy",
+            "jsonData": {
+              "nodeGraph": {
+                "enabled": true
+              },
+              "traceQuery": {
+                "timeShiftEnabled": true,
+                "spanStartTimeShift": "-1h",
+                "spanEndTimeShift": "1h"
+              },
+              "search": {
+                "hide": false
+              },
+              "streamingEnabled": {
+                "search": true
+              },
+              "serviceMap": {
+                "datasourceUid": "prometheus"
+              },
+              "tracesToLogsV2": {
+                "datasourceUid": "loki",
+                "spanStartTimeShift": "-1h",
+                "spanEndTimeShift": "1h"
+              },
+              "tracesToMetrics": {
+                "datasourceUid": "prometheus",
+                "spanStartTimeShift": "-1h",
+                "spanEndTimeShift": "1h"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "category": "Databases",
+      "types": [
+        {
+          "type": "mysql",
+          "profile": "sql-database",
+          "queryLanguage": "sql",
+          "requiresDatasourceUrl": true,
+          "suggestedFlags": [
+            "--user",
+            "--password",
+            "--tls-skip-verify",
+            "--server-name"
+          ],
+          "presetProfiles": [
+            "starter",
+            "full"
+          ],
+          "addDefaults": {
+            "access": "proxy",
+            "jsonData": {
+              "maxOpenConns": 100,
+              "maxIdleConns": 100,
+              "maxIdleConnsAuto": true,
+              "connMaxLifetime": 14400,
+              "database": "grafana"
+            }
+          },
+          "fullAddDefaults": {
+            "access": "proxy",
+            "jsonData": {
+              "maxOpenConns": 100,
+              "maxIdleConns": 100,
+              "maxIdleConnsAuto": true,
+              "connMaxLifetime": 14400,
+              "database": "grafana",
+              "tlsAuth": true,
+              "tlsSkipVerify": true
+            }
+          }
+        },
+        {
+          "type": "postgresql",
+          "profile": "sql-database",
+          "queryLanguage": "sql",
+          "requiresDatasourceUrl": true,
+          "suggestedFlags": [
+            "--user",
+            "--password",
+            "--tls-skip-verify",
+            "--server-name"
+          ],
+          "presetProfiles": [
+            "starter",
+            "full"
+          ],
+          "addDefaults": {
+            "access": "proxy",
+            "jsonData": {
+              "maxOpenConns": 100,
+              "maxIdleConns": 100,
+              "maxIdleConnsAuto": true,
+              "connMaxLifetime": 14400,
+              "database": "grafana",
+              "sslmode": "disable"
+            }
+          },
+          "fullAddDefaults": {
+            "access": "proxy",
+            "jsonData": {
+              "maxOpenConns": 100,
+              "maxIdleConns": 100,
+              "maxIdleConnsAuto": true,
+              "connMaxLifetime": 14400,
+              "database": "grafana",
+              "sslmode": "disable",
+              "postgresVersion": 903,
+              "timescaledb": false
+            }
+          }
+        },
+        {
+          "type": "mssql",
+          "profile": "sql-database",
+          "queryLanguage": "sql",
+          "requiresDatasourceUrl": true,
+          "suggestedFlags": [
+            "--user",
+            "--password",
+            "--tls-skip-verify",
+            "--server-name"
+          ],
+          "presetProfiles": [
+            "starter"
+          ],
+          "addDefaults": {
+            "access": "proxy",
+            "jsonData": {
+              "maxOpenConns": 100,
+              "maxIdleConns": 100,
+              "maxIdleConnsAuto": true,
+              "connMaxLifetime": 14400,
+              "database": "grafana",
+              "connectionTimeout": 0
+            }
+          },
+          "fullAddDefaults": {
+            "access": "proxy",
+            "jsonData": {
+              "maxOpenConns": 100,
+              "maxIdleConns": 100,
+              "maxIdleConnsAuto": true,
+              "connMaxLifetime": 14400,
+              "database": "grafana",
+              "connectionTimeout": 0
+            }
+          }
+        },
+        {
+          "type": "sqlite",
+          "profile": "sql-database",
+          "queryLanguage": "sql",
+          "requiresDatasourceUrl": false,
+          "suggestedFlags": [
+            "--user",
+            "--password"
+          ],
+          "presetProfiles": [
+            "starter"
+          ],
+          "addDefaults": {
+            "access": "proxy",
+            "jsonData": {
+              "path": "/var/lib/sqlite/grafana.db"
+            }
+          },
+          "fullAddDefaults": {
+            "access": "proxy",
+            "jsonData": {
+              "path": "/var/lib/sqlite/grafana.db"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -148,7 +148,8 @@ create_api_token() {
 }
 
 datasource_cli() {
-  "${PYTHON_BIN}" -m grafana_utils datasource "$@"
+  PYTHONPATH="${ROOT_DIR}/python${PYTHONPATH:+:${PYTHONPATH}}" \
+    "${PYTHON_BIN}" -m grafana_utils datasource "$@"
 }
 
 seed_datasource() {
@@ -192,6 +193,9 @@ run_datasource_smoke() {
   local import_dry_run_log="${WORK_DIR}/python-datasource-import-dry-run.json"
   local routed_dry_run_log="${WORK_DIR}/python-datasource-routed-import-dry-run.json"
   local recreate_dry_run_log="${WORK_DIR}/python-datasource-routed-recreate-dry-run.json"
+  local secret_uid="py-smoke-prometheus-secret"
+  local secret_after_add=""
+  local secret_after_modify=""
   local org_two_id=""
   local recreated_org_id=""
 
@@ -221,6 +225,47 @@ run_datasource_smoke() {
   api GET "/api/datasources" | jq -e '.[] | select(.uid == "py-smoke-prometheus-extra")' >/dev/null \
     || fail "python datasource add did not create the py-smoke-prometheus-extra datasource"
 
+  datasource_cli add \
+    --url "${GRAFANA_URL}" \
+    --token "${GRAFANA_API_TOKEN}" \
+    --uid "${secret_uid}" \
+    --name "Py Smoke Prometheus Secret" \
+    --type prometheus \
+    --datasource-url "http://prometheus-secret.invalid" \
+    --apply-supported-defaults \
+    --basic-auth \
+    --basic-auth-user "metrics-user" \
+    --basic-auth-password "metrics-pass" \
+    --http-header "X-Scope-OrgID=tenant-a" >/dev/null
+
+  secret_after_add="$(api GET "/api/datasources/uid/${secret_uid}")"
+  [[ "$(printf '%s' "${secret_after_add}" | jq -r '.basicAuthUser')" == "metrics-user" ]] \
+    || fail "python datasource secret add did not persist basicAuthUser"
+  [[ "$(printf '%s' "${secret_after_add}" | jq -r '.jsonData.httpMethod')" == "POST" ]] \
+    || fail "python datasource secret add did not keep prometheus preset httpMethod"
+  [[ "$(printf '%s' "${secret_after_add}" | jq -r '.jsonData.httpHeaderName1')" == "X-Scope-OrgID" ]] \
+    || fail "python datasource secret add did not persist httpHeaderName1"
+  [[ "$(printf '%s' "${secret_after_add}" | jq -r '.secureJsonFields.basicAuthPassword')" == "true" ]] \
+    || fail "python datasource secret add did not mark basicAuthPassword as server-managed secret"
+  [[ "$(printf '%s' "${secret_after_add}" | jq -r '.secureJsonFields.httpHeaderValue1')" == "true" ]] \
+    || fail "python datasource secret add did not mark httpHeaderValue1 as server-managed secret"
+
+  datasource_cli modify \
+    --url "${GRAFANA_URL}" \
+    --token "${GRAFANA_API_TOKEN}" \
+    --uid "${secret_uid}" \
+    --basic-auth-password "override-pass" >/dev/null
+
+  secret_after_modify="$(api GET "/api/datasources/uid/${secret_uid}")"
+  [[ "$(printf '%s' "${secret_after_modify}" | jq -r '.basicAuthUser')" == "metrics-user" ]] \
+    || fail "python datasource secret modify did not preserve basicAuthUser"
+  [[ "$(printf '%s' "${secret_after_modify}" | jq -r '.jsonData.httpHeaderName1')" == "X-Scope-OrgID" ]] \
+    || fail "python datasource secret modify did not preserve httpHeaderName1"
+  [[ "$(printf '%s' "${secret_after_modify}" | jq -r '.secureJsonFields.basicAuthPassword')" == "true" ]] \
+    || fail "python datasource secret modify did not keep basicAuthPassword server-managed secret flag"
+  [[ "$(printf '%s' "${secret_after_modify}" | jq -r '.secureJsonFields.httpHeaderValue1')" == "true" ]] \
+    || fail "python datasource secret modify unexpectedly cleared the existing httpHeaderValue1 secret flag"
+
   datasource_cli delete \
     --url "${GRAFANA_URL}" \
     --token "${GRAFANA_API_TOKEN}" \
@@ -236,8 +281,16 @@ run_datasource_smoke() {
     --token "${GRAFANA_API_TOKEN}" \
     --uid py-smoke-prometheus-extra >/dev/null
 
+  datasource_cli delete \
+    --url "${GRAFANA_URL}" \
+    --token "${GRAFANA_API_TOKEN}" \
+    --uid "${secret_uid}" >/dev/null
+
   if api GET "/api/datasources" | jq -e '.[] | select(.uid == "py-smoke-prometheus-extra")' >/dev/null; then
     fail "python datasource delete did not remove the py-smoke-prometheus-extra datasource"
+  fi
+  if api GET "/api/datasources" | jq -e --arg uid "${secret_uid}" '.[] | select(.uid == $uid)' >/dev/null; then
+    fail "python datasource delete did not remove the ${secret_uid} datasource"
   fi
 
   datasource_cli export \

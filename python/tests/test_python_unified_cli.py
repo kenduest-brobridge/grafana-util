@@ -67,10 +67,8 @@ class UnifiedCliTests(unittest.TestCase):
         self.assertEqual(exc.exception.code, 0)
         help_text = stdout.getvalue()
         self.assertIn("grafana-util dashboard", help_text)
-        self.assertIn("list-data-sources", help_text)
-        self.assertIn(
-            "List datasource inventory under the dashboard command surface.", help_text
-        )
+        self.assertIn("list", help_text)
+        self.assertIn("inspect-export", help_text)
 
     def test_unified_parse_args_alert_without_subcommand_prints_alert_help(self):
         stdout = io.StringIO()
@@ -107,7 +105,7 @@ class UnifiedCliTests(unittest.TestCase):
         self.assertEqual(exc.exception.code, 0)
         help_text = stdout.getvalue()
         self.assertIn("grafana-util datasource", help_text)
-        self.assertIn("{list,export,import,diff,add,modify,delete}", help_text)
+        self.assertIn("{types,list,export,import,diff,add,modify,delete}", help_text)
 
     def test_unified_build_parser_registers_datasource_modify_subcommand(self):
         parser = unified_cli.build_parser()
@@ -115,6 +113,7 @@ class UnifiedCliTests(unittest.TestCase):
         datasource_parser = entrypoint_action.choices["datasource"]
         datasource_action = datasource_parser._subparsers._group_actions[0]
 
+        self.assertIn("types", datasource_action.choices)
         self.assertIn("modify", datasource_action.choices)
 
     def test_unified_parse_args_supports_dashboard_namespace(self):
@@ -177,6 +176,12 @@ class UnifiedCliTests(unittest.TestCase):
             args.forwarded_argv,
             ["export", "--export-dir", "./datasources", "--overwrite"],
         )
+
+    def test_unified_parse_args_supports_datasource_types_namespace(self):
+        args = unified_cli.parse_args(["datasource", "types", "--json"])
+
+        self.assertEqual(args.entrypoint, "datasource")
+        self.assertEqual(args.forwarded_argv, ["types", "--json"])
 
     def test_unified_parse_args_supports_datasource_alias(self):
         args = unified_cli.parse_args(["ds", "list", "--json"])

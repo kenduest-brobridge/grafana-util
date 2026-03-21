@@ -4,6 +4,7 @@ import argparse
 import csv
 import difflib
 import json
+from copy import deepcopy
 import sys
 from contextlib import redirect_stdout
 from io import StringIO
@@ -44,6 +45,12 @@ from .parser import (
     IMPORT_DRY_RUN_COLUMN_HEADERS,
     ROOT_INDEX_KIND,
     TOOL_SCHEMA_VERSION,
+)
+from .catalog import (
+    build_supported_datasource_catalog_document,
+    build_add_defaults_for_supported_type,
+    normalize_supported_datasource_type,
+    render_supported_datasource_catalog_text,
 )
 
 
@@ -115,7 +122,7 @@ def build_export_records(client):
     """Build export records implementation."""
     org = client.fetch_current_org()
     return [
-        build_datasource_inventory_record(item, org)
+        normalize_datasource_record(build_datasource_inventory_record(item, org))
         for item in client.list_datasources()
     ]
 
@@ -187,6 +194,18 @@ def merge_json_object_fields(base, extra, label):
                 % (label, key)
             )
         merged[key] = value
+    return merged
+
+
+def merge_json_object_defaults(existing, incoming):
+    """Merge json object defaults implementation."""
+    merged = deepcopy(existing or {})
+    for key, value in (incoming or {}).items():
+        current = merged.get(key)
+        if isinstance(current, dict) and isinstance(value, dict):
+            merged[key] = merge_json_object_defaults(current, value)
+        else:
+            merged[key] = value
     return merged
 
 
@@ -677,10 +696,23 @@ def build_add_datasource_spec(args):
     #   Upstream callers: 880
     #   Downstream callees: 167, 180, 195
 
+    normalized_type = normalize_supported_datasource_type(args.type)
     spec = {
         "name": args.name,
-        "type": args.type,
+        "type": normalized_type,
     }
+    preset_profile = getattr(args, "preset_profile", None)
+    if preset_profile is None and bool(getattr(args, "apply_supported_defaults", False)):
+        preset_profile = "starter"
+    if preset_profile is not None:
+        defaults = build_add_defaults_for_supported_type(
+            normalized_type,
+            preset_profile=preset_profile,
+        )
+        if "access" in defaults and not getattr(args, "access", None):
+            spec["access"] = defaults["access"]
+        if defaults.get("jsonData"):
+            spec["jsonData"] = dict(defaults["jsonData"])
     if getattr(args, "uid", None):
         spec["uid"] = args.uid
     if getattr(args, "access", None):
@@ -721,7 +753,7 @@ def build_add_datasource_spec(args):
     derived_json_data.update(header_json_data)
     json_data = merge_json_object_fields(json_data, derived_json_data, "--json-data")
     if json_data:
-        spec["jsonData"] = json_data
+        spec["jsonData"] = merge_json_object_defaults(spec.get("jsonData"), json_data)
 
     derived_secure_json_data = {}
     if getattr(args, "basic_auth_password", None):
@@ -845,7 +877,7 @@ def build_modify_datasource_payload(existing, updates):
         if key in existing and existing.get(key) is not None:
             payload[key] = existing.get(key)
     existing_json_data = existing.get("jsonData")
-    payload["jsonData"] = dict(existing_json_data or {})
+    payload["jsonData"] = deepcopy(existing_json_data or {})
 
     for key in (
         "url",
@@ -860,9 +892,9 @@ def build_modify_datasource_payload(existing, updates):
             payload[key] = updates[key]
 
     if "jsonData" in updates:
-        merged_json_data = dict(payload.get("jsonData") or {})
-        merged_json_data.update(updates["jsonData"])
-        payload["jsonData"] = merged_json_data
+        payload["jsonData"] = merge_json_object_defaults(
+            payload.get("jsonData"), updates["jsonData"]
+        )
 
     if "secureJsonData" in updates:
         payload["secureJsonData"] = dict(updates["secureJsonData"])
@@ -1812,6 +1844,15 @@ def dispatch_datasource_command(args):
     #   Upstream callers: 無
     #   Downstream callees: 1044, 1102, 1250, 1690, 880, 934, 994
 
+    if args.command == "types":
+        if getattr(args, "output_format", None) == "json" or bool(
+            getattr(args, "json", False)
+        ):
+            print(json.dumps(build_supported_datasource_catalog_document(), indent=2))
+            return 0
+        for line in render_supported_datasource_catalog_text():
+            print(line)
+        return 0
     if args.command == "list":
         return list_datasources(args)
     if args.command == "export":

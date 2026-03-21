@@ -31,7 +31,6 @@ from . import access_cli, alert_cli, dashboard_cli, datasource_cli, sync_cli
 DASHBOARD_COMMAND_HELP = {
     "export": "Export dashboards into raw/ and prompt/ variants.",
     "list": "List live dashboard summaries from Grafana.",
-    "list-data-sources": "List live Grafana data sources.",
     "import": "Import dashboards from exported raw JSON files.",
     "diff": "Compare exported raw dashboards with the current Grafana state.",
     "inspect-export": "Analyze a raw dashboard export directory offline.",
@@ -44,13 +43,13 @@ UNIFIED_DASHBOARD_COMMAND_MAP = {
     "list": "list-dashboard",
     "import": "import-dashboard",
     "diff": "diff",
-    "list-data-sources": "list-data-sources",
     "inspect-export": "inspect-export",
     "inspect-live": "inspect-live",
     "inspect-vars": "inspect-vars",
     "screenshot": "screenshot",
 }
 DATASOURCE_COMMAND_HELP = {
+    "types": "Show the built-in supported datasource type catalog.",
     "list": "List live Grafana datasource inventory.",
     "add": "Create one live Grafana datasource through the Grafana API.",
     "modify": "Modify one live Grafana datasource through the Grafana API.",
@@ -77,7 +76,6 @@ def _print_dashboard_group_help() -> None:
         "Commands:\n"
         "  export             Export dashboards into raw/ and prompt/ variants.\n"
         "  list               List live dashboard summaries from Grafana.\n"
-        "  list-data-sources  List datasource inventory under the dashboard command surface.\n"
         "  import             Import dashboards from exported raw JSON files.\n"
         "  diff               Compare exported raw dashboards with the current Grafana state.\n"
         "  inspect-export     Analyze a raw dashboard export directory offline.\n"
