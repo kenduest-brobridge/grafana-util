@@ -23,6 +23,10 @@ from .dashboard_cli import GrafanaError
 
 RESOURCE_KINDS = ("dashboard", "datasource", "folder", "alert")
 DEFAULT_REVIEW_TOKEN = "reviewed-sync-plan"
+SYNC_PLAN_KIND = "grafana-utils-sync-plan"
+SYNC_PLAN_SCHEMA_VERSION = 1
+SYNC_APPLY_INTENT_KIND = "grafana-utils-sync-apply-intent"
+SYNC_APPLY_INTENT_SCHEMA_VERSION = 1
 SYNC_SOURCE_BUNDLE_KIND = "grafana-utils-sync-source-bundle"
 SYNC_SOURCE_BUNDLE_SCHEMA_VERSION = 1
 
@@ -401,27 +405,164 @@ def build_apply_intent(plan, approve=False):
     #   Upstream callers: 無
     #   Downstream callees: 無
 
-    if plan.dry_run:
-        return {
-            "mode": "dry-run",
-            "reviewed": plan.reviewed,
-            "operations": list(plan.operations),
-        }
     if plan.review_required and not plan.reviewed:
         raise GrafanaError(
             "Refusing live sync intent before the reviewable plan is marked reviewed."
         )
     if not approve:
         raise GrafanaError("Refusing live sync intent without explicit approval.")
+    alert_assessment = summarize_alert_operations(plan.operations)
     return {
+        "kind": SYNC_APPLY_INTENT_KIND,
+        "schemaVersion": SYNC_APPLY_INTENT_SCHEMA_VERSION,
         "mode": "apply",
         "reviewed": plan.reviewed,
+        "reviewRequired": plan.review_required,
+        "allowPrune": plan.allow_prune,
+        "approved": True,
+        "summary": dict(plan.summary),
+        "alertAssessment": alert_assessment,
         "operations": [
             operation
             for operation in plan.operations
             if operation.action in ("would-create", "would-update", "would-delete")
         ],
     }
+
+
+def _normalize_text(value):
+    """Internal helper for normalize text."""
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def _strict_int(value, default=0):
+    """Internal helper for strict JSON integer coercion."""
+    if isinstance(value, int) and not isinstance(value, bool):
+        return value
+    return default
+
+
+def render_sync_plan_text(document):
+    """Render one staged sync plan as deterministic operator text."""
+    if not isinstance(document, Mapping):
+        raise GrafanaError("Sync plan document must be a JSON object.")
+    if document.get("kind") != SYNC_PLAN_KIND:
+        raise GrafanaError("Sync plan document kind is not supported.")
+    summary = document.get("summary")
+    if not isinstance(summary, Mapping):
+        raise GrafanaError("Sync plan document is missing summary.")
+    return [
+        "Sync plan",
+        "Trace: %s" % _normalize_text(document.get("traceId") or "missing"),
+        "Lineage: stage=%s step=%s parent=%s"
+        % (
+            _normalize_text(document.get("stage") or "missing"),
+            _strict_int(document.get("stepIndex")),
+            _normalize_text(document.get("parentTraceId") or "none"),
+        ),
+        "Summary: create=%s update=%s delete=%s noop=%s unmanaged=%s"
+        % (
+            _strict_int(summary.get("would_create")),
+            _strict_int(summary.get("would_update")),
+            _strict_int(summary.get("would_delete")),
+            _strict_int(summary.get("noop")),
+            _strict_int(summary.get("unmanaged")),
+        ),
+        "Alerts: candidate=%s plan-only=%s blocked=%s"
+        % (
+            _strict_int(summary.get("alert_candidate")),
+            _strict_int(summary.get("alert_plan_only")),
+            _strict_int(summary.get("alert_blocked")),
+        ),
+        "Review: required=%s reviewed=%s"
+        % (
+            "true" if bool(document.get("reviewRequired")) else "false",
+            "true" if bool(document.get("reviewed")) else "false",
+        ),
+    ] + (
+        ["Reviewed by: %s" % _normalize_text(document.get("reviewedBy"))]
+        if _normalize_text(document.get("reviewedBy"))
+        else []
+    ) + (
+        ["Reviewed at: %s" % _normalize_text(document.get("reviewedAt"))]
+        if _normalize_text(document.get("reviewedAt"))
+        else []
+    ) + (
+        ["Review note: %s" % _normalize_text(document.get("reviewNote"))]
+        if _normalize_text(document.get("reviewNote"))
+        else []
+    )
+
+
+def render_sync_apply_intent_text(document):
+    """Render one staged sync apply intent as deterministic operator text."""
+    if not isinstance(document, Mapping):
+        raise GrafanaError("Sync apply intent document must be a JSON object.")
+    if document.get("kind") != SYNC_APPLY_INTENT_KIND:
+        raise GrafanaError("Sync apply intent document kind is not supported.")
+    summary = document.get("summary")
+    if not isinstance(summary, Mapping):
+        raise GrafanaError("Sync apply intent document is missing summary.")
+    operations = document.get("operations")
+    if not isinstance(operations, list):
+        raise GrafanaError("Sync apply intent document is missing operations.")
+    lines = [
+        "Sync apply intent",
+        "Trace: %s" % _normalize_text(document.get("traceId") or "missing"),
+        "Lineage: stage=%s step=%s parent=%s"
+        % (
+            _normalize_text(document.get("stage") or "missing"),
+            _strict_int(document.get("stepIndex")),
+            _normalize_text(document.get("parentTraceId") or "none"),
+        ),
+        "Summary: create=%s update=%s delete=%s executable=%s"
+        % (
+            _strict_int(summary.get("would_create")),
+            _strict_int(summary.get("would_update")),
+            _strict_int(summary.get("would_delete")),
+            len(operations),
+        ),
+        "Review: required=%s reviewed=%s approved=%s"
+        % (
+            "true" if bool(document.get("reviewRequired")) else "false",
+            "true" if bool(document.get("reviewed")) else "false",
+            "true" if bool(document.get("approved")) else "false",
+        ),
+    ]
+    preflight_summary = document.get("preflightSummary")
+    if isinstance(preflight_summary, Mapping):
+        lines.append(
+            "Preflight: kind=%s checks=%s ok=%s blocking=%s"
+            % (
+                _normalize_text(preflight_summary.get("kind") or "unknown"),
+                _strict_int(preflight_summary.get("checkCount")),
+                _strict_int(preflight_summary.get("okCount")),
+                _strict_int(preflight_summary.get("blockingCount")),
+            )
+        )
+    bundle_preflight_summary = document.get("bundlePreflightSummary")
+    if isinstance(bundle_preflight_summary, Mapping):
+        lines.append(
+            "Bundle preflight: resources=%s sync-blocking=%s provider-blocking=%s"
+            % (
+                _strict_int(bundle_preflight_summary.get("resourceCount")),
+                _strict_int(bundle_preflight_summary.get("syncBlockingCount")),
+                _strict_int(bundle_preflight_summary.get("providerBlockingCount")),
+            )
+        )
+    if _normalize_text(document.get("appliedBy")):
+        lines.append("Applied by: %s" % _normalize_text(document.get("appliedBy")))
+    if _normalize_text(document.get("appliedAt")):
+        lines.append("Applied at: %s" % _normalize_text(document.get("appliedAt")))
+    if _normalize_text(document.get("approvalReason")):
+        lines.append(
+            "Approval reason: %s" % _normalize_text(document.get("approvalReason"))
+        )
+    if _normalize_text(document.get("applyNote")):
+        lines.append("Apply note: %s" % _normalize_text(document.get("applyNote")))
+    return lines
 
 
 def plan_to_document(plan):
@@ -442,6 +583,8 @@ def plan_to_document(plan):
         (alert_assessment.get("summary") or {}).get("blockedCount") or 0
     )
     return {
+        "kind": SYNC_PLAN_KIND,
+        "schemaVersion": SYNC_PLAN_SCHEMA_VERSION,
         "dryRun": plan.dry_run,
         "reviewRequired": plan.review_required,
         "reviewed": plan.reviewed,
@@ -536,6 +679,10 @@ def render_sync_source_bundle_text(document):
 __all__ = [
     "DEFAULT_REVIEW_TOKEN",
     "RESOURCE_KINDS",
+    "SYNC_PLAN_KIND",
+    "SYNC_PLAN_SCHEMA_VERSION",
+    "SYNC_APPLY_INTENT_KIND",
+    "SYNC_APPLY_INTENT_SCHEMA_VERSION",
     "SYNC_SOURCE_BUNDLE_KIND",
     "SYNC_SOURCE_BUNDLE_SCHEMA_VERSION",
     "SyncOperation",
@@ -548,6 +695,8 @@ __all__ = [
     "mark_plan_reviewed",
     "normalize_resource_spec",
     "plan_to_document",
+    "render_sync_apply_intent_text",
+    "render_sync_plan_text",
     "render_sync_source_bundle_text",
     "summarize_alert_operations",
     "summarize_operations",

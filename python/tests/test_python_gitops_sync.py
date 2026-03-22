@@ -214,9 +214,152 @@ class GitopsSyncTests(unittest.TestCase):
         self.assertIn("explicit approval", str(not_approved_error.exception))
 
         intent = gitops_sync.build_apply_intent(reviewed_plan, approve=True)
+        self.assertEqual(intent["kind"], gitops_sync.SYNC_APPLY_INTENT_KIND)
+        self.assertEqual(
+            intent["schemaVersion"], gitops_sync.SYNC_APPLY_INTENT_SCHEMA_VERSION
+        )
         self.assertEqual(intent["mode"], "apply")
         self.assertEqual(len(intent["operations"]), 1)
         self.assertEqual(intent["operations"][0].action, "would-create")
+
+    def test_gitops_sync_build_apply_intent_filters_non_mutating_operations(self):
+        plan = gitops_sync.build_sync_plan(
+            desired_specs=[
+                {
+                    "kind": "folder",
+                    "uid": "ops",
+                    "title": "Operations",
+                    "body": {"title": "Operations"},
+                },
+                {
+                    "kind": "datasource",
+                    "uid": "prom",
+                    "name": "Prometheus",
+                    "body": {
+                        "type": "prometheus",
+                        "url": "http://prometheus:9090",
+                    },
+                },
+                {
+                    "kind": "alert",
+                    "uid": "cpu-high",
+                    "title": "CPU High",
+                    "managedFields": ["condition"],
+                    "body": {"condition": "A"},
+                },
+            ],
+            live_specs=[
+                {
+                    "kind": "folder",
+                    "uid": "ops",
+                    "title": "Operations",
+                    "body": {"title": "Operations"},
+                },
+                {
+                    "kind": "datasource",
+                    "uid": "prom",
+                    "name": "Prometheus",
+                    "body": {
+                        "type": "prometheus",
+                        "url": "http://prometheus:9090",
+                    },
+                },
+            ],
+            dry_run=False,
+            review_required=True,
+        )
+        reviewed_plan = gitops_sync.mark_plan_reviewed(plan)
+        intent = gitops_sync.build_apply_intent(reviewed_plan, approve=True)
+
+        self.assertEqual(intent["kind"], gitops_sync.SYNC_APPLY_INTENT_KIND)
+        self.assertEqual(
+            intent["schemaVersion"], gitops_sync.SYNC_APPLY_INTENT_SCHEMA_VERSION
+        )
+        actions = {
+            operation.action for operation in intent["operations"]
+        }
+        self.assertEqual(actions, {"would-create"})
+        self.assertEqual(len(actions), 1)
+
+    def test_gitops_sync_render_sync_plan_text_renders_summary(self):
+        lines = gitops_sync.render_sync_plan_text(
+            {
+                "kind": gitops_sync.SYNC_PLAN_KIND,
+                "summary": {
+                    "would_create": 1,
+                    "would_update": 2,
+                    "would_delete": 0,
+                    "noop": 3,
+                    "unmanaged": 1,
+                    "alert_candidate": 0,
+                    "alert_plan_only": 1,
+                    "alert_blocked": 0,
+                },
+                "reviewRequired": True,
+                "reviewed": False,
+                "traceId": "sync-trace-demo",
+            }
+        )
+
+        self.assertEqual(lines[0], "Sync plan")
+        self.assertIn("sync-trace-demo", lines[1])
+        self.assertIn("stage=missing", lines[2])
+        self.assertIn("step=0", lines[2])
+        self.assertIn("parent=none", lines[2])
+        self.assertIn("create=1", lines[3])
+        self.assertIn("plan-only=1", lines[4])
+        self.assertIn("reviewed=false", lines[5])
+
+    def test_gitops_sync_render_sync_apply_intent_text_renders_summary(self):
+        lines = gitops_sync.render_sync_apply_intent_text(
+            {
+                "kind": gitops_sync.SYNC_APPLY_INTENT_KIND,
+                "summary": {
+                    "would_create": 1,
+                    "would_update": 2,
+                    "would_delete": 1,
+                },
+                "operations": [
+                    {"action": "would-create"},
+                    {"action": "would-update"},
+                ],
+                "preflightSummary": {
+                    "kind": "grafana-utils-sync-preflight",
+                    "checkCount": 4,
+                    "okCount": 4,
+                    "blockingCount": 0,
+                },
+                "bundlePreflightSummary": {
+                    "kind": "grafana-utils-sync-bundle-preflight",
+                    "resourceCount": 4,
+                    "syncBlockingCount": 0,
+                    "providerBlockingCount": 0,
+                },
+                "reviewRequired": True,
+                "approved": True,
+                "reviewed": True,
+                "traceId": "sync-trace-demo",
+                "stage": "apply",
+                "stepIndex": 3,
+                "parentTraceId": "sync-trace-demo",
+                "appliedBy": "bob",
+                "appliedAt": "staged:sync-trace-demo:applied",
+                "approvalReason": "change-approved",
+                "applyNote": "local apply intent only",
+            }
+        )
+
+        self.assertEqual(lines[0], "Sync apply intent")
+        self.assertIn("sync-trace-demo", lines[1])
+        self.assertIn("stage=apply", lines[2])
+        self.assertIn("step=3", lines[2])
+        self.assertIn("parent=sync-trace-demo", lines[2])
+        self.assertIn("executable=2", lines[3])
+        self.assertIn("approved=true", lines[4])
+        self.assertIn("blocking=0", lines[5])
+        self.assertIn("sync-blocking=0", lines[6])
+        self.assertIn("bob", lines[7])
+        self.assertIn("change-approved", lines[9])
 
     def test_gitops_sync_mark_plan_reviewed_rejects_unexpected_token(self):
         plan = gitops_sync.build_sync_plan(

@@ -144,9 +144,24 @@ class SyncCliTests(unittest.TestCase):
 
         self.assertIn("Apply Control Options", help_text)
         self.assertIn("Runtime Options", help_text)
+        self.assertIn("Output Options", help_text)
         self.assertIn("Examples:", help_text)
         self.assertIn("--approve", help_text)
         self.assertIn("--execute-live", help_text)
+        self.assertIn("--output", help_text)
+
+    def test_sync_review_help_groups_controls_and_examples(self):
+        help_text = (
+            sync_cli.build_parser()
+            ._subparsers._group_actions[0]
+            .choices["review"]
+            .format_help()
+        )
+
+        self.assertIn("Apply Control Options", help_text)
+        self.assertIn("Output Options", help_text)
+        self.assertIn("Examples:", help_text)
+        self.assertIn("--output", help_text)
 
     def test_sync_summary_renders_text_counts(self):
         desired = [
@@ -220,6 +235,26 @@ class SyncCliTests(unittest.TestCase):
             self.assertEqual(document["summary"]["folderCount"], 1)
             self.assertEqual(document["resources"][0]["identity"], "ops")
 
+    @staticmethod
+    def _ensure_review_stage(document, trace_id="sync-trace-test"):
+        document["traceId"] = document.get("traceId", trace_id)
+        document["stage"] = "review"
+        document["stepIndex"] = 2
+        document["parentTraceId"] = document["traceId"]
+        return document
+
+    @staticmethod
+    def _ensure_lineage(document, stage, parent_trace_id=None):
+        trace_id = document.get("traceId") or "sync-trace-test"
+        document["traceId"] = trace_id
+        document["stage"] = stage
+        document["stepIndex"] = document.get("stepIndex", 1)
+        if parent_trace_id:
+            document["parentTraceId"] = parent_trace_id
+        else:
+            document.pop("parentTraceId", None)
+        return document
+
     def test_sync_plan_builds_review_required_document_and_writes_plan_file(self):
         desired = [
             {
@@ -248,6 +283,8 @@ class SyncCliTests(unittest.TestCase):
                         str(live_path),
                         "--plan-file",
                         str(plan_path),
+                        "--output",
+                        "json",
                     ]
                 )
 
@@ -264,6 +301,39 @@ class SyncCliTests(unittest.TestCase):
             self.assertEqual(
                 json.loads(plan_path.read_text(encoding="utf-8")), document
             )
+
+    def test_sync_plan_renders_text_output_by_default(self):
+        desired = [
+            {
+                "kind": "folder",
+                "uid": "ops",
+                "title": "Operations",
+                "body": {"title": "Operations"},
+            }
+        ]
+        live = []
+        with tempfile.TemporaryDirectory() as tmpdir:
+            desired_path = Path(tmpdir) / "desired.json"
+            live_path = Path(tmpdir) / "live.json"
+            desired_path.write_text(json.dumps(desired), encoding="utf-8")
+            live_path.write_text(json.dumps(live), encoding="utf-8")
+
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = sync_cli.main(
+                    [
+                        "plan",
+                        "--desired-file",
+                        str(desired_path),
+                        "--live-file",
+                        str(live_path),
+                    ]
+                )
+
+            self.assertEqual(result, 0)
+            output = stdout.getvalue()
+            self.assertIn("Sync plan", output)
+            self.assertIn("Summary: create=1 update=0 delete=0 noop=0 unmanaged=0", output)
 
     def test_sync_plan_can_fetch_live_state_from_grafana(self):
         desired = [
@@ -317,6 +387,8 @@ class SyncCliTests(unittest.TestCase):
                             "--fetch-live",
                             "--url",
                             "http://127.0.0.1:3000",
+                            "--output",
+                            "json",
                         ]
                     )
 
@@ -363,6 +435,8 @@ class SyncCliTests(unittest.TestCase):
                             "--fetch-live",
                             "--url",
                             "http://127.0.0.1:3000",
+                            "--output",
+                            "json",
                         ]
                     )
 
@@ -399,6 +473,8 @@ class SyncCliTests(unittest.TestCase):
                         str(desired_path),
                         "--live-file",
                         str(live_path),
+                        "--output",
+                        "json",
                     ]
                 )
 
@@ -785,6 +861,93 @@ class SyncCliTests(unittest.TestCase):
                 "missing",
             )
 
+    def test_sync_apply_rejects_boolean_bundle_preflight_counts(self):
+        reviewed_document = {
+            "kind": "grafana-utils-sync-plan",
+            "schemaVersion": 1,
+            "dryRun": False,
+            "traceId": "sync-trace-apply",
+            "stage": "review",
+            "stepIndex": 2,
+            "parentTraceId": "sync-trace-apply",
+            "reviewRequired": True,
+            "reviewed": True,
+            "allowPrune": False,
+            "summary": {
+                "would_create": 1,
+                "would_update": 0,
+                "would_delete": 0,
+                "noop": 0,
+                "unmanaged": 0,
+            },
+            "alertAssessment": {
+                "summary": {
+                    "alertCount": 0,
+                    "candidateCount": 0,
+                    "planOnlyCount": 0,
+                    "blockedCount": 0,
+                },
+                "alerts": [],
+            },
+            "operations": [
+                {
+                    "kind": "folder",
+                    "identity": "ops",
+                    "title": "Operations",
+                    "action": "would-create",
+                    "reason": "missing-live",
+                    "changedFields": ["title"],
+                    "managedFields": [],
+                    "desired": {"title": "Operations"},
+                    "live": None,
+                    "sourcePath": "folders/ops.json",
+                }
+            ],
+        }
+        bundle_preflight_document = {
+            "kind": "grafana-utils-sync-bundle-preflight",
+            "traceId": "sync-trace-apply",
+            "stage": "bundle-preflight",
+            "stepIndex": 4,
+            "parentTraceId": "sync-trace-apply",
+            "summary": {
+                "resourceCount": True,
+                "syncBlockingCount": 0,
+                "providerBlockingCount": 0,
+            },
+            "syncPreflight": {
+                "summary": {
+                    "checkCount": 0,
+                    "okCount": 0,
+                    "blockingCount": 0,
+                }
+            },
+        }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            plan_path = Path(tmpdir) / "plan.json"
+            bundle_preflight_path = Path(tmpdir) / "bundle-preflight.json"
+            plan_path.write_text(json.dumps(reviewed_document), encoding="utf-8")
+            bundle_preflight_path.write_text(
+                json.dumps(bundle_preflight_document), encoding="utf-8"
+            )
+
+            stderr = io.StringIO()
+            with redirect_stderr(stderr):
+                result = sync_cli.main(
+                    [
+                        "apply",
+                        "--plan-file",
+                        str(plan_path),
+                        "--bundle-preflight-file",
+                        str(bundle_preflight_path),
+                        "--approve",
+                    ]
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("missing resourceCount", stderr.getvalue())
+
     def test_sync_bundle_packages_dashboard_and_alert_exports(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
@@ -941,11 +1104,342 @@ class SyncCliTests(unittest.TestCase):
 
             stdout = io.StringIO()
             with redirect_stdout(stdout):
-                result = sync_cli.main(["review", "--plan-file", str(plan_path)])
+                result = sync_cli.main(
+                    ["review", "--plan-file", str(plan_path), "--output", "json"]
+                )
 
             self.assertEqual(result, 0)
             document = json.loads(stdout.getvalue())
             self.assertTrue(document["reviewed"])
+
+    def test_sync_review_accepts_explicit_audit_metadata(self):
+        desired = [
+            {
+                "kind": "folder",
+                "uid": "ops",
+                "title": "Operations",
+                "body": {"title": "Operations"},
+            }
+        ]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            desired_path = Path(tmpdir) / "desired.json"
+            live_path = Path(tmpdir) / "live.json"
+            plan_path = Path(tmpdir) / "plan.json"
+            desired_path.write_text(json.dumps(desired), encoding="utf-8")
+            live_path.write_text("[]", encoding="utf-8")
+            sync_cli.main(
+                [
+                    "plan",
+                    "--desired-file",
+                    str(desired_path),
+                    "--live-file",
+                    str(live_path),
+                    "--plan-file",
+                    str(plan_path),
+                ]
+            )
+
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = sync_cli.main(
+                    [
+                        "review",
+                        "--plan-file",
+                        str(plan_path),
+                        "--output",
+                        "json",
+                        "--reviewed-by",
+                        "alice",
+                        "--reviewed-at",
+                        "manual-review",
+                        "--review-note",
+                        "peer-reviewed",
+                    ]
+                )
+
+            self.assertEqual(result, 0)
+            document = json.loads(stdout.getvalue())
+            self.assertEqual(document["reviewedBy"], "alice")
+            self.assertEqual(document["reviewedAt"], "manual-review")
+            self.assertEqual(document["reviewNote"], "peer-reviewed")
+
+    def test_sync_review_renders_text_output_when_not_json(self):
+        desired = [
+            {
+                "kind": "folder",
+                "uid": "ops",
+                "title": "Operations",
+                "body": {"title": "Operations"},
+            }
+        ]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            desired_path = Path(tmpdir) / "desired.json"
+            live_path = Path(tmpdir) / "live.json"
+            plan_path = Path(tmpdir) / "plan.json"
+            desired_path.write_text(json.dumps(desired), encoding="utf-8")
+            live_path.write_text("[]", encoding="utf-8")
+            sync_cli.main(
+                [
+                    "plan",
+                    "--desired-file",
+                    str(desired_path),
+                    "--live-file",
+                    str(live_path),
+                    "--plan-file",
+                    str(plan_path),
+                    "--output",
+                    "json",
+                ]
+            )
+
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = sync_cli.main(
+                    [
+                        "review",
+                        "--plan-file",
+                        str(plan_path),
+                        "--reviewed-by",
+                        "alice",
+                        "--review-note",
+                        "peer-reviewed",
+                    ]
+                )
+
+            self.assertEqual(result, 0)
+            output = stdout.getvalue()
+            self.assertIn("Sync plan", output)
+            self.assertIn("Reviewed by: alice", output)
+            self.assertIn("Review note: peer-reviewed", output)
+
+    def test_sync_apply_renders_text_output_for_non_live_by_default(self):
+        desired = [
+            {
+                "kind": "folder",
+                "uid": "ops",
+                "title": "Operations",
+                "body": {"title": "Operations"},
+            }
+        ]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            desired_path = Path(tmpdir) / "desired.json"
+            live_path = Path(tmpdir) / "live.json"
+            reviewed_path = Path(tmpdir) / "reviewed-plan.json"
+            desired_path.write_text(json.dumps(desired), encoding="utf-8")
+            live_path.write_text("[]", encoding="utf-8")
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                sync_cli.main(
+                    [
+                        "plan",
+                        "--desired-file",
+                        str(desired_path),
+                        "--live-file",
+                        str(live_path),
+                        "--output",
+                        "json",
+                    ]
+                )
+            plan_document = json.loads(stdout.getvalue())
+            reviewed_document = dict(plan_document)
+            reviewed_document["reviewed"] = True
+            reviewed_document["dryRun"] = False
+            reviewed_document = self._ensure_review_stage(reviewed_document)
+            reviewed_path.write_text(json.dumps(reviewed_document), encoding="utf-8")
+
+            apply_stdout = io.StringIO()
+            with redirect_stdout(apply_stdout):
+                result = sync_cli.main(
+                    ["apply", "--plan-file", str(reviewed_path), "--approve"]
+                )
+
+            self.assertEqual(result, 0)
+            output = apply_stdout.getvalue()
+            self.assertIn("Sync apply intent", output)
+            self.assertIn("Summary: create=1 update=0 delete=0 executable=1", output)
+
+    def test_sync_review_renders_text_output_by_default(self):
+        desired = [
+            {
+                "kind": "folder",
+                "uid": "ops",
+                "title": "Operations",
+                "body": {"title": "Operations"},
+            }
+        ]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            desired_path = Path(tmpdir) / "desired.json"
+            live_path = Path(tmpdir) / "live.json"
+            plan_path = Path(tmpdir) / "plan.json"
+            desired_path.write_text(json.dumps(desired), encoding="utf-8")
+            live_path.write_text("[]", encoding="utf-8")
+            sync_cli.main(
+                [
+                    "plan",
+                    "--desired-file",
+                    str(desired_path),
+                    "--live-file",
+                    str(live_path),
+                    "--plan-file",
+                    str(plan_path),
+                ]
+            )
+
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = sync_cli.main(["review", "--plan-file", str(plan_path)])
+
+            self.assertEqual(result, 0)
+            output = stdout.getvalue()
+            self.assertIn("Sync plan", output)
+            self.assertIn("Review: required=true reviewed=true", output)
+
+    def test_sync_review_rejects_plan_missing_trace_id(self):
+        reviewed_document = {
+            "kind": "grafana-utils-sync-plan",
+            "schemaVersion": 1,
+            "dryRun": True,
+            "reviewRequired": True,
+            "reviewed": False,
+            "allowPrune": False,
+            "summary": {
+                "would_create": 1,
+                "would_update": 0,
+                "would_delete": 0,
+                "noop": 0,
+                "unmanaged": 0,
+            },
+            "alertAssessment": {
+                "summary": {
+                    "alertCount": 0,
+                    "candidateCount": 0,
+                    "planOnlyCount": 0,
+                    "blockedCount": 0,
+                },
+                "alerts": [],
+            },
+            "operations": [
+                {
+                    "kind": "folder",
+                    "identity": "ops",
+                    "title": "Operations",
+                    "action": "would-create",
+                    "reason": "missing-live",
+                    "changedFields": ["title"],
+                    "managedFields": [],
+                    "desired": {"title": "Operations"},
+                    "live": None,
+                    "sourcePath": "folders/ops.json",
+                }
+            ],
+        }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            plan_path = Path(tmpdir) / "plan.json"
+            plan_path.write_text(json.dumps(reviewed_document), encoding="utf-8")
+
+            stderr = io.StringIO()
+            with redirect_stderr(stderr):
+                result = sync_cli.main(["review", "--plan-file", str(plan_path)])
+
+            self.assertEqual(result, 1)
+            self.assertIn("missing traceId", stderr.getvalue())
+
+    def test_sync_review_rejects_plan_with_wrong_lineage_stage(self):
+        reviewed_document = {
+            "kind": "grafana-utils-sync-plan",
+            "schemaVersion": 1,
+            "dryRun": True,
+            "traceId": "sync-trace-review",
+            "stage": "apply",
+            "stepIndex": 3,
+            "parentTraceId": "sync-trace-review",
+            "reviewRequired": True,
+            "reviewed": False,
+            "allowPrune": False,
+            "summary": {
+                "would_create": 1,
+                "would_update": 0,
+                "would_delete": 0,
+                "noop": 0,
+                "unmanaged": 0,
+            },
+            "alertAssessment": {
+                "summary": {
+                    "alertCount": 0,
+                    "candidateCount": 0,
+                    "planOnlyCount": 0,
+                    "blockedCount": 0,
+                },
+                "alerts": [],
+            },
+            "operations": [
+                {
+                    "kind": "folder",
+                    "identity": "ops",
+                    "title": "Operations",
+                    "action": "would-create",
+                    "reason": "missing-live",
+                    "changedFields": ["title"],
+                    "managedFields": [],
+                    "desired": {"title": "Operations"},
+                    "live": None,
+                    "sourcePath": "folders/ops.json",
+                }
+            ],
+        }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            plan_path = Path(tmpdir) / "plan.json"
+            plan_path.write_text(json.dumps(reviewed_document), encoding="utf-8")
+
+            stderr = io.StringIO()
+            with redirect_stderr(stderr):
+                result = sync_cli.main(["review", "--plan-file", str(plan_path)])
+
+            self.assertEqual(result, 1)
+            self.assertIn("unexpected lineage stage", stderr.getvalue())
+
+    def test_sync_review_rejects_boolean_lineage_step_index(self):
+        reviewed_document = {
+            "kind": "grafana-utils-sync-plan",
+            "schemaVersion": 1,
+            "dryRun": True,
+            "traceId": "sync-trace-review",
+            "stage": "plan",
+            "stepIndex": True,
+            "reviewRequired": True,
+            "reviewed": False,
+            "allowPrune": False,
+            "summary": {
+                "would_create": 1,
+                "would_update": 0,
+                "would_delete": 0,
+                "noop": 0,
+                "unmanaged": 0,
+            },
+            "alertAssessment": {
+                "summary": {
+                    "alertCount": 0,
+                    "candidateCount": 0,
+                    "planOnlyCount": 0,
+                    "blockedCount": 0,
+                },
+                "alerts": [],
+            },
+            "operations": [],
+        }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            plan_path = Path(tmpdir) / "plan.json"
+            plan_path.write_text(json.dumps(reviewed_document), encoding="utf-8")
+
+            stderr = io.StringIO()
+            with redirect_stderr(stderr):
+                result = sync_cli.main(["review", "--plan-file", str(plan_path)])
+
+            self.assertEqual(result, 1)
+            self.assertIn("missing lineage stepIndex metadata", stderr.getvalue())
 
     def test_sync_apply_rejects_unreviewed_plan_without_live_mutation(self):
         desired = [
@@ -973,6 +1467,11 @@ class SyncCliTests(unittest.TestCase):
                     str(plan_path),
                 ]
             )
+
+            with open(plan_path, "r", encoding="utf-8") as handle:
+                plan_document = json.load(handle)
+            self._ensure_review_stage(plan_document)
+            plan_path.write_text(json.dumps(plan_document), encoding="utf-8")
 
             stderr = io.StringIO()
             with redirect_stderr(stderr):
@@ -1008,12 +1507,76 @@ class SyncCliTests(unittest.TestCase):
                         str(desired_path),
                         "--live-file",
                         str(live_path),
+                        "--output",
+                        "json",
                     ]
                 )
             plan_document = json.loads(stdout.getvalue())
             reviewed_document = json.loads(json.dumps(plan_document))
             reviewed_document["reviewed"] = True
             reviewed_document["dryRun"] = False
+            reviewed_document = self._ensure_review_stage(reviewed_document)
+            reviewed_path.write_text(
+                json.dumps(reviewed_document),
+                encoding="utf-8",
+            )
+
+            apply_stdout = io.StringIO()
+            with redirect_stdout(apply_stdout):
+                result = sync_cli.main(
+                    [
+                        "apply",
+                        "--plan-file",
+                        str(reviewed_path),
+                        "--approve",
+                        "--output",
+                        "json",
+                    ]
+                )
+
+            self.assertEqual(result, 0)
+            intent = json.loads(apply_stdout.getvalue())
+            self.assertEqual(intent["mode"], "apply")
+            self.assertTrue(intent["reviewed"])
+            self.assertEqual(len(intent["operations"]), 1)
+            self.assertEqual(intent["operations"][0]["action"], "would-create")
+            self.assertNotIn("reviewedBy", intent)
+            self.assertNotIn("appliedBy", intent)
+
+    def test_sync_apply_renders_text_output_by_default(self):
+        desired = [
+            {
+                "kind": "folder",
+                "uid": "ops",
+                "title": "Operations",
+                "body": {"title": "Operations"},
+            }
+        ]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            desired_path = Path(tmpdir) / "desired.json"
+            live_path = Path(tmpdir) / "live.json"
+            reviewed_path = Path(tmpdir) / "reviewed-plan.json"
+            desired_path.write_text(json.dumps(desired), encoding="utf-8")
+            live_path.write_text("[]", encoding="utf-8")
+
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                sync_cli.main(
+                    [
+                        "plan",
+                        "--desired-file",
+                        str(desired_path),
+                        "--live-file",
+                        str(live_path),
+                        "--output",
+                        "json",
+                    ]
+                )
+            plan_document = json.loads(stdout.getvalue())
+            reviewed_document = json.loads(json.dumps(plan_document))
+            reviewed_document["reviewed"] = True
+            reviewed_document["dryRun"] = False
+            reviewed_document = self._ensure_review_stage(reviewed_document)
             reviewed_path.write_text(
                 json.dumps(reviewed_document),
                 encoding="utf-8",
@@ -1026,24 +1589,37 @@ class SyncCliTests(unittest.TestCase):
                 )
 
             self.assertEqual(result, 0)
-            intent = json.loads(apply_stdout.getvalue())
-            self.assertEqual(intent["mode"], "apply")
-            self.assertTrue(intent["reviewed"])
-            self.assertEqual(len(intent["operations"]), 1)
-            self.assertEqual(intent["operations"][0]["action"], "would-create")
+            output = apply_stdout.getvalue()
+            self.assertIn("Sync apply intent", output)
+            self.assertIn("Review: required=true reviewed=true approved=true", output)
 
     def test_sync_apply_execute_live_runs_supported_operations(self):
         reviewed_document = {
+            "kind": "grafana-utils-sync-plan",
+            "schemaVersion": 1,
             "dryRun": False,
             "reviewRequired": True,
             "reviewed": True,
             "allowPrune": False,
+            "traceId": "sync-trace-live-apply",
+            "stage": "review",
+            "stepIndex": 2,
+            "parentTraceId": "sync-trace-live-apply",
             "summary": {
                 "would_create": 2,
                 "would_update": 0,
                 "would_delete": 0,
                 "noop": 0,
                 "unmanaged": 0,
+            },
+            "alertAssessment": {
+                "summary": {
+                    "alertCount": 0,
+                    "candidateCount": 0,
+                    "planOnlyCount": 0,
+                    "blockedCount": 0,
+                },
+                "alerts": [],
             },
             "operations": [
                 {
@@ -1093,6 +1669,8 @@ class SyncCliTests(unittest.TestCase):
                             "--execute-live",
                             "--url",
                             "http://127.0.0.1:3000",
+                            "--output",
+                            "json",
                         ]
                     )
 
@@ -1120,16 +1698,31 @@ class SyncCliTests(unittest.TestCase):
 
     def test_sync_apply_execute_live_creates_alert_rule(self):
         reviewed_document = {
+            "kind": "grafana-utils-sync-plan",
+            "schemaVersion": 1,
             "dryRun": False,
             "reviewRequired": True,
             "reviewed": True,
             "allowPrune": False,
+            "traceId": "sync-trace-live-apply",
+            "stage": "review",
+            "stepIndex": 2,
+            "parentTraceId": "sync-trace-live-apply",
             "summary": {
                 "would_create": 1,
                 "would_update": 0,
                 "would_delete": 0,
                 "noop": 0,
                 "unmanaged": 0,
+            },
+            "alertAssessment": {
+                "summary": {
+                    "alertCount": 0,
+                    "candidateCount": 0,
+                    "planOnlyCount": 0,
+                    "blockedCount": 0,
+                },
+                "alerts": [],
             },
             "operations": [
                 {
@@ -1179,6 +1772,8 @@ class SyncCliTests(unittest.TestCase):
                             "--execute-live",
                             "--url",
                             "http://127.0.0.1:3000",
+                            "--output",
+                            "json",
                         ]
                     )
 
@@ -1197,16 +1792,31 @@ class SyncCliTests(unittest.TestCase):
 
     def test_sync_apply_execute_live_rejects_partial_alert_spec(self):
         reviewed_document = {
+            "kind": "grafana-utils-sync-plan",
+            "schemaVersion": 1,
             "dryRun": False,
             "reviewRequired": True,
             "reviewed": True,
             "allowPrune": False,
+            "traceId": "sync-trace-live-apply",
+            "stage": "review",
+            "stepIndex": 2,
+            "parentTraceId": "sync-trace-live-apply",
             "summary": {
                 "would_create": 1,
                 "would_update": 0,
                 "would_delete": 0,
                 "noop": 0,
                 "unmanaged": 0,
+            },
+            "alertAssessment": {
+                "summary": {
+                    "alertCount": 0,
+                    "candidateCount": 0,
+                    "planOnlyCount": 0,
+                    "blockedCount": 0,
+                },
+                "alerts": [],
             },
             "operations": [
                 {
@@ -1251,6 +1861,298 @@ class SyncCliTests(unittest.TestCase):
                 "Alert-rule import document is missing required fields",
                 stderr.getvalue(),
             )
+
+    def test_sync_apply_rejects_wrong_review_lineage_parent(self):
+        reviewed_document = {
+            "kind": "grafana-utils-sync-plan",
+            "schemaVersion": 1,
+            "dryRun": False,
+            "traceId": "sync-trace-apply",
+            "stage": "review",
+            "stepIndex": 2,
+            "parentTraceId": "other-trace",
+            "reviewRequired": True,
+            "reviewed": True,
+            "allowPrune": False,
+            "summary": {
+                "would_create": 1,
+                "would_update": 0,
+                "would_delete": 0,
+                "noop": 0,
+                "unmanaged": 0,
+            },
+            "alertAssessment": {
+                "summary": {
+                    "alertCount": 0,
+                    "candidateCount": 0,
+                    "planOnlyCount": 0,
+                    "blockedCount": 0,
+                },
+                "alerts": [],
+            },
+            "operations": [
+                {
+                    "kind": "folder",
+                    "identity": "ops",
+                    "title": "Operations",
+                    "action": "would-create",
+                    "reason": "missing-live",
+                    "changedFields": ["title"],
+                    "managedFields": [],
+                    "desired": {"title": "Operations"},
+                    "live": None,
+                    "sourcePath": "folders/ops.json",
+                }
+            ],
+        }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            plan_path = Path(tmpdir) / "plan.json"
+            plan_path.write_text(json.dumps(reviewed_document), encoding="utf-8")
+
+            stderr = io.StringIO()
+            with redirect_stderr(stderr):
+                result = sync_cli.main(["apply", "--plan-file", str(plan_path), "--approve"])
+
+            self.assertEqual(result, 1)
+            self.assertIn("unexpected lineage parentTraceId", stderr.getvalue())
+
+    def test_sync_apply_rejects_blocking_preflight_file(self):
+        reviewed_document = {
+            "kind": "grafana-utils-sync-plan",
+            "schemaVersion": 1,
+            "dryRun": False,
+            "traceId": "sync-trace-apply",
+            "stage": "review",
+            "stepIndex": 2,
+            "parentTraceId": "sync-trace-apply",
+            "reviewRequired": True,
+            "reviewed": True,
+            "allowPrune": False,
+            "summary": {
+                "would_create": 1,
+                "would_update": 0,
+                "would_delete": 0,
+                "noop": 0,
+                "unmanaged": 0,
+            },
+            "alertAssessment": {
+                "summary": {
+                    "alertCount": 0,
+                    "candidateCount": 0,
+                    "planOnlyCount": 0,
+                    "blockedCount": 0,
+                },
+                "alerts": [],
+            },
+            "operations": [
+                {
+                    "kind": "folder",
+                    "identity": "ops",
+                    "title": "Operations",
+                    "action": "would-create",
+                    "reason": "missing-live",
+                    "changedFields": ["title"],
+                    "managedFields": [],
+                    "desired": {"title": "Operations"},
+                    "live": None,
+                    "sourcePath": "folders/ops.json",
+                }
+            ],
+        }
+        preflight_document = {
+            "kind": "grafana-utils-sync-preflight",
+            "traceId": "sync-trace-apply",
+            "stage": "preflight",
+            "stepIndex": 2,
+            "parentTraceId": "sync-trace-apply",
+            "summary": {
+                "checkCount": 3,
+                "okCount": 1,
+                "blockingCount": 2,
+            },
+            "checks": [],
+        }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            plan_path = Path(tmpdir) / "plan.json"
+            preflight_path = Path(tmpdir) / "preflight.json"
+            plan_path.write_text(json.dumps(reviewed_document), encoding="utf-8")
+            preflight_path.write_text(json.dumps(preflight_document), encoding="utf-8")
+
+            stderr = io.StringIO()
+            with redirect_stderr(stderr):
+                result = sync_cli.main(
+                    [
+                        "apply",
+                        "--plan-file",
+                        str(plan_path),
+                        "--preflight-file",
+                        str(preflight_path),
+                        "--approve",
+                    ]
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("blocking checks", stderr.getvalue())
+
+    def test_sync_apply_rejects_preflight_trace_mismatch(self):
+        reviewed_document = {
+            "kind": "grafana-utils-sync-plan",
+            "schemaVersion": 1,
+            "dryRun": False,
+            "traceId": "sync-trace-apply",
+            "stage": "review",
+            "stepIndex": 2,
+            "parentTraceId": "sync-trace-apply",
+            "reviewRequired": True,
+            "reviewed": True,
+            "allowPrune": False,
+            "summary": {
+                "would_create": 1,
+                "would_update": 0,
+                "would_delete": 0,
+                "noop": 0,
+                "unmanaged": 0,
+            },
+            "alertAssessment": {
+                "summary": {
+                    "alertCount": 0,
+                    "candidateCount": 0,
+                    "planOnlyCount": 0,
+                    "blockedCount": 0,
+                },
+                "alerts": [],
+            },
+            "operations": [
+                {
+                    "kind": "folder",
+                    "identity": "ops",
+                    "title": "Operations",
+                    "action": "would-create",
+                    "reason": "missing-live",
+                    "changedFields": ["title"],
+                    "managedFields": [],
+                    "desired": {"title": "Operations"},
+                    "live": None,
+                    "sourcePath": "folders/ops.json",
+                }
+            ],
+        }
+        preflight_document = {
+            "kind": "grafana-utils-sync-preflight",
+            "traceId": "other-trace",
+            "stage": "preflight",
+            "stepIndex": 2,
+            "parentTraceId": "sync-trace-apply",
+            "summary": {
+                "checkCount": 3,
+                "okCount": 3,
+                "blockingCount": 0,
+            },
+            "checks": [],
+        }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            plan_path = Path(tmpdir) / "plan.json"
+            preflight_path = Path(tmpdir) / "preflight.json"
+            plan_path.write_text(json.dumps(reviewed_document), encoding="utf-8")
+            preflight_path.write_text(json.dumps(preflight_document), encoding="utf-8")
+
+            stderr = io.StringIO()
+            with redirect_stderr(stderr):
+                result = sync_cli.main(
+                    [
+                        "apply",
+                        "--plan-file",
+                        str(plan_path),
+                        "--preflight-file",
+                        str(preflight_path),
+                        "--approve",
+                    ]
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("does not match sync plan traceId", stderr.getvalue())
+
+    def test_sync_apply_rejects_boolean_preflight_counts(self):
+        reviewed_document = {
+            "kind": "grafana-utils-sync-plan",
+            "schemaVersion": 1,
+            "dryRun": False,
+            "traceId": "sync-trace-apply",
+            "stage": "review",
+            "stepIndex": 2,
+            "parentTraceId": "sync-trace-apply",
+            "reviewRequired": True,
+            "reviewed": True,
+            "allowPrune": False,
+            "summary": {
+                "would_create": 1,
+                "would_update": 0,
+                "would_delete": 0,
+                "noop": 0,
+                "unmanaged": 0,
+            },
+            "alertAssessment": {
+                "summary": {
+                    "alertCount": 0,
+                    "candidateCount": 0,
+                    "planOnlyCount": 0,
+                    "blockedCount": 0,
+                },
+                "alerts": [],
+            },
+            "operations": [
+                {
+                    "kind": "folder",
+                    "identity": "ops",
+                    "title": "Operations",
+                    "action": "would-create",
+                    "reason": "missing-live",
+                    "changedFields": ["title"],
+                    "managedFields": [],
+                    "desired": {"title": "Operations"},
+                    "live": None,
+                    "sourcePath": "folders/ops.json",
+                }
+            ],
+        }
+        preflight_document = {
+            "kind": "grafana-utils-sync-preflight",
+            "traceId": "sync-trace-apply",
+            "stage": "preflight",
+            "stepIndex": 2,
+            "parentTraceId": "sync-trace-apply",
+            "summary": {
+                "checkCount": True,
+                "okCount": 1,
+                "blockingCount": 0,
+            },
+            "checks": [],
+        }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            plan_path = Path(tmpdir) / "plan.json"
+            preflight_path = Path(tmpdir) / "preflight.json"
+            plan_path.write_text(json.dumps(reviewed_document), encoding="utf-8")
+            preflight_path.write_text(json.dumps(preflight_document), encoding="utf-8")
+
+            stderr = io.StringIO()
+            with redirect_stderr(stderr):
+                result = sync_cli.main(
+                    [
+                        "apply",
+                        "--plan-file",
+                        str(plan_path),
+                        "--preflight-file",
+                        str(preflight_path),
+                        "--approve",
+                    ]
+                )
+
+            self.assertEqual(result, 1)
+            self.assertIn("missing checkCount", stderr.getvalue())
 
 
 if __name__ == "__main__":

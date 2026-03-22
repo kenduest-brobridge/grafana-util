@@ -36,6 +36,7 @@ from .alert_sync_workbench import (
 )
 from .bundle_preflight_workbench import (
     build_bundle_preflight_document,
+    BUNDLE_PREFLIGHT_KIND,
     render_bundle_preflight_text,
 )
 from .gitops_sync import (
@@ -48,9 +49,12 @@ from .gitops_sync import (
     mark_plan_reviewed,
     normalize_resource_spec,
     plan_to_document,
+    render_sync_apply_intent_text,
+    render_sync_plan_text,
     render_sync_source_bundle_text,
 )
 from .sync_preflight_workbench import (
+    SYNC_PREFLIGHT_KIND,
     build_sync_preflight_document,
     render_sync_preflight_text,
 )
@@ -69,7 +73,7 @@ SUMMARY_HELP_EXAMPLES = (
 REVIEW_HELP_EXAMPLES = (
     "Examples:\n\n"
     "  grafana-util sync review --plan-file ./sync-plan.json\n"
-    "  grafana-util sync review --plan-file ./sync-plan.json --output-file ./sync-plan-reviewed.json"
+    "  grafana-util sync review --plan-file ./sync-plan.json --output json"
 )
 APPLY_HELP_EXAMPLES = (
     "Examples:\n\n"
@@ -211,9 +215,20 @@ def build_parser(prog=None):
         help="Dashboard search page size when --fetch-live is active.",
     )
     add_apply_control_group(plan_parser).add_argument(
+        "--trace-id",
+        default=None,
+        help="Optional stable trace id to carry through staged plan/review/apply files.",
+    )
+    add_apply_control_group(plan_parser).add_argument(
         "--allow-prune",
         action="store_true",
         help="Treat live resources missing from desired state as would-delete instead of unmanaged.",
+    )
+    add_output_group(plan_parser).add_argument(
+        "--output",
+        choices=("text", "json"),
+        default="text",
+        help="Render the plan document as text or json (default: text).",
     )
     add_output_group(plan_parser).add_argument(
         "--plan-file",
@@ -241,6 +256,27 @@ def build_parser(prog=None):
         "--review-token",
         default=DEFAULT_REVIEW_TOKEN,
         help="Explicit review token required to mark the plan reviewed.",
+    )
+    add_apply_control_group(review_parser).add_argument(
+        "--reviewed-by",
+        default=None,
+        help="Optional reviewer identity to record in the reviewed plan.",
+    )
+    add_apply_control_group(review_parser).add_argument(
+        "--reviewed-at",
+        default=None,
+        help="Optional staged reviewed-at value to record in the reviewed plan.",
+    )
+    add_apply_control_group(review_parser).add_argument(
+        "--review-note",
+        default=None,
+        help="Optional review note to record in the reviewed plan.",
+    )
+    add_output_group(review_parser).add_argument(
+        "--output",
+        choices=("text", "json"),
+        default="text",
+        help="Render the reviewed plan document as text or json (default: text).",
     )
     add_output_group(review_parser).add_argument(
         "--output-file",
@@ -429,6 +465,16 @@ def build_parser(prog=None):
     )
     control_group = add_apply_control_group(apply_parser)
     control_group.add_argument(
+        "--preflight-file",
+        default=None,
+        help="Optional JSON file containing a staged sync preflight document.",
+    )
+    control_group.add_argument(
+        "--bundle-preflight-file",
+        default=None,
+        help="Optional JSON file containing a staged sync bundle-preflight document.",
+    )
+    control_group.add_argument(
         "--approve",
         action="store_true",
         help="Explicit acknowledgement required before an apply intent or live execution is emitted.",
@@ -449,6 +495,32 @@ def build_parser(prog=None):
         "--allow-folder-delete",
         action="store_true",
         help="Allow live deletion of folders when a reviewed plan includes would-delete folder operations.",
+    )
+    control_group.add_argument(
+        "--applied-by",
+        default=None,
+        help="Optional apply actor identity to record in the apply intent.",
+    )
+    control_group.add_argument(
+        "--applied-at",
+        default=None,
+        help="Optional staged applied-at value to record in the apply intent.",
+    )
+    control_group.add_argument(
+        "--approval-reason",
+        default=None,
+        help="Optional approval reason to record in the apply intent.",
+    )
+    control_group.add_argument(
+        "--apply-note",
+        default=None,
+        help="Optional apply note to record in the apply intent.",
+    )
+    add_output_group(apply_parser).add_argument(
+        "--output",
+        choices=("text", "json"),
+        default="text",
+        help="Render the apply intent document as text or json (default: text).",
     )
     add_output_group(apply_parser).add_argument(
         "--output-file",
@@ -493,6 +565,11 @@ def _require_object(document, label):
     if not isinstance(document, dict):
         raise GrafanaError("%s must be a JSON object." % label)
     return document
+
+
+def _is_json_int(value):
+    """Internal helper for strict JSON integer checks."""
+    return isinstance(value, int) and not isinstance(value, bool)
 
 
 def _require_resource_list(document, label):
@@ -569,26 +646,218 @@ def _coerce_operation(item, index):
     )
 
 
+
+
+def _normalize_optional_text(value):
+    """Internal helper for normalize optional text."""
+    if value is None:
+        return ""
+    normalized = str(value).strip()
+    if normalized:
+        return normalized
+    return ""
+
+
+def _normalize_trace_id(value):
+    """Internal helper for normalize optional trace id."""
+    return _normalize_optional_text(value)
+
+
+def _fnv1a64_hex(text):
+    """Internal helper for 64-bit FNV-1a hex digest."""
+    if text is None:
+        text = ""
+    digest = 0xCBF29CE484222325
+    for raw in str(text).encode("utf-8"):
+        digest ^= raw
+        digest = (digest * 0x100000001B3) & 0xFFFFFFFFFFFFFFFF
+    return f"{digest:016x}"
+
+
+def _derive_trace_id(document):
+    """Internal helper for derive trace id from document shape."""
+    return "sync-trace-" + _fnv1a64_hex(json.dumps(document, separators=(",", "")))
+
+
+def _attach_trace_id(document, trace_id=None):
+    """Internal helper for attach trace id."""
+    resolved = _normalize_optional_text(trace_id)
+    if not resolved:
+        resolved = _derive_trace_id(document)
+    payload = dict(document)
+    payload["traceId"] = resolved
+    return payload
+
+
+def _require_trace_id(document, label):
+    """Internal helper for require trace id."""
+    trace_id = _normalize_trace_id(document.get("traceId"))
+    if not trace_id:
+        raise GrafanaError(f"{label} is missing traceId.")
+    return trace_id
+
+
+def _deterministic_stage_marker(trace_id, stage):
+    """Internal helper for deterministic marker text."""
+    return f"staged:{_normalize_optional_text(trace_id)}:{_normalize_optional_text(stage)}"
+
+
+def _attach_lineage(document, stage, step_index, parent_trace_id=None):
+    """Internal helper for attach staged lineage."""
+    payload = dict(document)
+    payload["stage"] = str(stage)
+    payload["stepIndex"] = int(step_index)
+    parent_trace_id = _normalize_optional_text(parent_trace_id)
+    if parent_trace_id:
+        payload["parentTraceId"] = parent_trace_id
+    else:
+        payload.pop("parentTraceId", None)
+    return payload
+
+
+def _has_lineage_metadata(document):
+    """Internal helper for lineage metadata check."""
+    return any(
+        key in document
+        for key in ("stage", "stepIndex", "parentTraceId")
+    )
+
+
+def _require_optional_stage(document, label, expected_stage, expected_step_index, expected_parent_trace_id=None):
+    """Internal helper for optional lineage validation."""
+    if not isinstance(document, dict):
+        raise GrafanaError(f"{label} must be a JSON object.")
+    if not _has_lineage_metadata(document):
+        return
+    stage = _normalize_optional_text(document.get("stage"))
+    if not stage:
+        raise GrafanaError(f"{label} is missing lineage stage metadata.")
+    if stage != expected_stage:
+        raise GrafanaError(
+            f"{label} has unexpected lineage stage {stage!r}; expected {expected_stage!r}."
+        )
+    step_index = document.get("stepIndex")
+    if not _is_json_int(step_index):
+        raise GrafanaError(f"{label} is missing lineage stepIndex metadata.")
+    if step_index != expected_step_index:
+        raise GrafanaError(
+            f"{label} has unexpected lineage stepIndex {step_index}; expected {expected_step_index}."
+        )
+    actual_parent_trace_id = _normalize_optional_text(document.get("parentTraceId"))
+    expected_parent_trace_id = _normalize_optional_text(expected_parent_trace_id)
+    if actual_parent_trace_id and not expected_parent_trace_id:
+        raise GrafanaError(
+            f"{label} has unexpected lineage parentTraceId {actual_parent_trace_id!r}; expected no parent trace."
+        )
+    if expected_parent_trace_id and (not actual_parent_trace_id or actual_parent_trace_id != expected_parent_trace_id):
+        raise GrafanaError(
+            f"{label} has unexpected lineage parentTraceId {actual_parent_trace_id!r}; expected {expected_parent_trace_id!r}."
+        )
+
+
+def _require_matching_optional_trace_id(document, label, expected_trace_id):
+    """Internal helper for optional lineage-aware trace consistency checks."""
+    if not isinstance(document, dict):
+        raise GrafanaError(f"{label} must be a JSON object.")
+    if _has_lineage_metadata(document):
+        if not _normalize_optional_text(document.get("stage")):
+            raise GrafanaError(f"{label} is missing lineage stage metadata.")
+        step_index = document.get("stepIndex")
+        if not _is_json_int(step_index):
+            raise GrafanaError(f"{label} is missing lineage stepIndex metadata.")
+    trace_id = _normalize_trace_id(document.get("traceId"))
+    if not trace_id:
+        if _has_lineage_metadata(document):
+            raise GrafanaError(
+                f"{label} is missing traceId for lineage-aware staged validation."
+            )
+        return
+    if trace_id != expected_trace_id:
+        raise GrafanaError(
+            f"{label} traceId {trace_id!r} does not match sync plan traceId {expected_trace_id!r}."
+        )
+    parent_trace_id = _normalize_optional_text(document.get("parentTraceId"))
+    if parent_trace_id and parent_trace_id != expected_trace_id:
+        raise GrafanaError(
+            f"{label} parentTraceId {parent_trace_id!r} does not match sync plan traceId {expected_trace_id!r}."
+        )
+
+
+def _validate_apply_preflight(document):
+    """Internal helper for preflight validation used by sync apply."""
+    if not isinstance(document, dict):
+        raise GrafanaError("Sync preflight document must be a JSON object.")
+    if document.get("kind") != "grafana-utils-sync-preflight":
+        if document.get("kind") == "grafana-utils-sync-bundle-preflight":
+            raise GrafanaError(
+                "Sync bundle preflight document is not supported via --preflight-file; use --bundle-preflight-file."
+            )
+        raise GrafanaError("Sync preflight document kind is not supported.")
+    summary = document.get("summary")
+    if not isinstance(summary, dict):
+        raise GrafanaError("Sync preflight document is missing summary.")
+    check_count = summary.get("checkCount")
+    if not _is_json_int(check_count):
+        raise GrafanaError("Sync preflight summary is missing checkCount.")
+    ok_count = summary.get("okCount")
+    if not _is_json_int(ok_count):
+        raise GrafanaError("Sync preflight summary is missing okCount.")
+    blocking_count = summary.get("blockingCount")
+    if not _is_json_int(blocking_count):
+        raise GrafanaError("Sync preflight summary is missing blockingCount.")
+    if blocking_count > 0:
+        raise GrafanaError(
+            f"Refusing local sync apply intent because preflight reports {blocking_count} blocking checks."
+        )
+    return {
+        "kind": document.get("kind"),
+        "checkCount": check_count,
+        "okCount": ok_count,
+        "blockingCount": blocking_count,
+    }
+
+
+def _validate_apply_bundle_preflight(document):
+    """Internal helper for bundle preflight validation used by sync apply."""
+    if not isinstance(document, dict):
+        raise GrafanaError("Sync bundle preflight document must be a JSON object.")
+    if document.get("kind") != "grafana-utils-sync-bundle-preflight":
+        raise GrafanaError("Sync bundle preflight document kind is not supported.")
+    summary = document.get("summary")
+    if not isinstance(summary, dict):
+        raise GrafanaError("Sync bundle preflight document is missing summary.")
+    resource_count = summary.get("resourceCount")
+    if not _is_json_int(resource_count):
+        raise GrafanaError("Sync bundle preflight summary is missing resourceCount.")
+    sync_blocking_count = summary.get("syncBlockingCount")
+    if not _is_json_int(sync_blocking_count):
+        raise GrafanaError("Sync bundle preflight summary is missing syncBlockingCount.")
+    provider_blocking_count = summary.get("providerBlockingCount")
+    if not _is_json_int(provider_blocking_count):
+        raise GrafanaError("Sync bundle preflight summary is missing providerBlockingCount.")
+    blocking_count = sync_blocking_count + provider_blocking_count
+    if blocking_count > 0:
+        raise GrafanaError(
+            f"Refusing local sync apply intent because bundle preflight reports {blocking_count} blocking checks."
+        )
+    return {
+        "kind": document.get("kind"),
+        "resourceCount": resource_count,
+        "checkCount": resource_count,
+        "okCount": (resource_count - blocking_count) if resource_count - blocking_count > 0 else 0,
+        "blockingCount": blocking_count,
+        "syncBlockingCount": sync_blocking_count,
+        "providerBlockingCount": provider_blocking_count,
+    }
+
 def load_plan_document(path):
     """Load one persisted sync plan document back into a SyncPlan."""
     # Call graph: see callers/callees.
     #   Upstream callers: 1286, 677
     #   Downstream callees: 366, 396, 457
 
-    document = _require_object(load_json_document(path), "Sync plan document")
-    operations = []
-    for index, item in enumerate(document.get("operations") or (), 1):
-        operations.append(_coerce_operation(item, index))
-    summary = document.get("summary") or {}
-    if not isinstance(summary, dict):
-        raise GrafanaError("Sync plan summary must be a JSON object.")
-    return SyncPlan(
-        dry_run=bool(document.get("dryRun")),
-        review_required=bool(document.get("reviewRequired")),
-        reviewed=bool(document.get("reviewed")),
-        allow_prune=bool(document.get("allowPrune")),
-        summary=dict(summary),
-        operations=tuple(operations),
+    return _coerce_plan_document(
+        _require_object(load_json_document(path), "Sync plan document")
     )
 
 
@@ -597,6 +866,17 @@ def emit_document(document, output_file=None):
     if output_file:
         write_json_document(output_file, document)
     print(json.dumps(document, indent=2, sort_keys=False))
+
+
+def emit_document_with_output(document, lines, output, output_file=None):
+    """Emit one document as text or json while keeping optional file writes."""
+    if output == "json":
+        emit_document(document, output_file=output_file)
+        return
+    if output_file:
+        write_json_document(output_file, document)
+    for line in lines:
+        print(line)
 
 
 def _normalize_string(value, default=""):
@@ -764,8 +1044,21 @@ def run_plan(args):
         dry_run=True,
         review_required=True,
     )
-    document = plan_to_document(plan)
-    emit_document(document, output_file=getattr(args, "plan_file", None))
+    document = _attach_lineage(
+        _attach_trace_id(
+            plan_to_document(plan),
+            trace_id=getattr(args, "trace_id", None),
+        ),
+        "plan",
+        1,
+        None,
+    )
+    emit_document_with_output(
+        document,
+        render_sync_plan_text(document),
+        getattr(args, "output", "text"),
+        output_file=getattr(args, "plan_file", None),
+    )
     return 0
 
 
@@ -793,13 +1086,38 @@ def run_review(args):
     #   Upstream callers: 1322
     #   Downstream callees: 475, 494
 
-    plan = load_plan_document(args.plan_file)
+    plan_document = _require_object(
+        load_json_document(args.plan_file),
+        "Sync plan document",
+    )
+    if plan_document.get("kind") != "grafana-utils-sync-plan":
+        raise GrafanaError("Sync plan document kind is not supported.")
+    trace_id = _require_trace_id(plan_document, "Sync plan document")
+    _require_optional_stage(plan_document, "Sync plan document", "plan", 1, None)
+    plan = _coerce_plan_document(plan_document)
     reviewed_plan = mark_plan_reviewed(
         plan,
         review_token=getattr(args, "review_token", DEFAULT_REVIEW_TOKEN),
     )
-    emit_document(
-        plan_to_document(reviewed_plan),
+    document = _attach_lineage(
+        _attach_review_audit(
+            _attach_trace_id(
+                plan_to_document(reviewed_plan),
+                trace_id,
+            ),
+            trace_id,
+            getattr(args, "reviewed_by", None),
+            getattr(args, "reviewed_at", None),
+            getattr(args, "review_note", None),
+        ),
+        "review",
+        2,
+        trace_id,
+    )
+    emit_document_with_output(
+        document,
+        render_sync_plan_text(document),
+        getattr(args, "output", "text"),
         output_file=getattr(args, "output_file", None),
     )
     return 0
@@ -1230,9 +1548,20 @@ def run_bundle_preflight(args):
 
 def _serialize_apply_intent(intent):
     """Internal helper for serialize apply intent."""
-    return {
+    payload = {
+        "kind": intent.get("kind"),
+        "schemaVersion": intent.get("schemaVersion"),
         "mode": intent.get("mode"),
+        "reviewRequired": bool(intent.get("reviewRequired")),
         "reviewed": bool(intent.get("reviewed")),
+        "allowPrune": bool(intent.get("allowPrune")),
+        "approved": bool(intent.get("approved")),
+        "summary": intent.get("summary"),
+        "alertAssessment": intent.get("alertAssessment"),
+        "traceId": intent.get("traceId"),
+        "stage": intent.get("stage"),
+        "stepIndex": intent.get("stepIndex"),
+        "parentTraceId": intent.get("parentTraceId"),
         "operations": [
             {
                 "kind": operation.kind,
@@ -1249,6 +1578,99 @@ def _serialize_apply_intent(intent):
             for operation in intent.get("operations") or ()
         ],
     }
+    for key in (
+        "preflightSummary",
+        "bundlePreflightSummary",
+        "reviewedBy",
+        "reviewedAt",
+        "reviewNote",
+        "appliedBy",
+        "appliedAt",
+        "approvalReason",
+        "applyNote",
+    ):
+        value = intent.get(key)
+        if value is not None:
+            payload[key] = value
+    return payload
+
+
+def _attach_review_audit(document, trace_id, reviewed_by, reviewed_at, review_note):
+    """Internal helper for attach review audit fields."""
+    payload = dict(document)
+    reviewed_by = _normalize_optional_text(reviewed_by)
+    if reviewed_by:
+        payload["reviewedBy"] = reviewed_by
+    payload["reviewedAt"] = _normalize_optional_text(reviewed_at) or _deterministic_stage_marker(
+        trace_id,
+        "reviewed",
+    )
+    review_note = _normalize_optional_text(review_note)
+    if review_note:
+        payload["reviewNote"] = review_note
+    return payload
+
+
+def _attach_apply_audit(
+    document,
+    trace_id,
+    applied_by,
+    applied_at,
+    approval_reason,
+    apply_note,
+):
+    """Internal helper for attach apply audit fields."""
+    payload = dict(document)
+    applied_by = _normalize_optional_text(applied_by)
+    if applied_by:
+        payload["appliedBy"] = applied_by
+    payload["appliedAt"] = _normalize_optional_text(applied_at) or _deterministic_stage_marker(
+        trace_id,
+        "applied",
+    )
+    approval_reason = _normalize_optional_text(approval_reason)
+    if approval_reason:
+        payload["approvalReason"] = approval_reason
+    apply_note = _normalize_optional_text(apply_note)
+    if apply_note:
+        payload["applyNote"] = apply_note
+    return payload
+
+
+def _attach_preflight_summary(document, summary):
+    """Internal helper for attach preflight summary metadata."""
+    payload = dict(document)
+    if summary is not None:
+        payload["preflightSummary"] = summary
+    return payload
+
+
+def _attach_bundle_preflight_summary(document, summary):
+    """Internal helper for attach bundle preflight summary metadata."""
+    payload = dict(document)
+    if summary is not None:
+        payload["bundlePreflightSummary"] = summary
+    return payload
+
+
+def _coerce_plan_document(document):
+    """Internal helper for sync plan document to SyncPlan object."""
+    if not isinstance(document, dict):
+        raise GrafanaError("Sync plan document must be a JSON object.")
+    operations = []
+    for index, item in enumerate(document.get("operations") or (), 1):
+        operations.append(_coerce_operation(item, index))
+    summary = document.get("summary") or {}
+    if not isinstance(summary, dict):
+        raise GrafanaError("Sync plan summary must be a JSON object.")
+    return SyncPlan(
+        dry_run=bool(document.get("dryRun")),
+        review_required=bool(document.get("reviewRequired")),
+        reviewed=bool(document.get("reviewed")),
+        allow_prune=bool(document.get("allowPrune")),
+        summary=dict(summary),
+        operations=tuple(operations),
+    )
 
 
 def _resolve_datasource_target(client, operation):
@@ -1452,30 +1874,81 @@ def run_apply(args):
     #   Upstream callers: 1322
     #   Downstream callees: 1086, 1253, 387, 475, 494
 
-    plan = load_plan_document(args.plan_file)
-    if plan.dry_run:
-        plan = SyncPlan(
-            dry_run=False,
-            review_required=plan.review_required,
-            reviewed=plan.reviewed,
-            allow_prune=plan.allow_prune,
-            summary=dict(plan.summary),
-            operations=tuple(plan.operations),
+    plan_document = _require_object(
+        load_json_document(args.plan_file),
+        "Sync plan document",
+    )
+    if plan_document.get("kind") != "grafana-utils-sync-plan":
+        raise GrafanaError("Sync plan document kind is not supported.")
+    trace_id = _require_trace_id(plan_document, "Sync plan document")
+    _require_optional_stage(plan_document, "Sync plan document", "review", 2, trace_id)
+    plan = _coerce_plan_document(plan_document)
+    preflight_summary = None
+    if getattr(args, "preflight_file", None):
+        preflight = _require_object(
+            load_json_document(getattr(args, "preflight_file")),
+            "Sync preflight input",
         )
+        _require_matching_optional_trace_id(
+            preflight,
+            "Sync preflight document",
+            trace_id,
+        )
+        preflight_summary = _validate_apply_preflight(preflight)
+
+    bundle_preflight_summary = None
+    if getattr(args, "bundle_preflight_file", None):
+        bundle_preflight = _require_object(
+            load_json_document(getattr(args, "bundle_preflight_file")),
+            "Sync bundle preflight input",
+        )
+        _require_matching_optional_trace_id(
+            bundle_preflight,
+            "Sync bundle preflight document",
+            trace_id,
+        )
+        bundle_preflight_summary = _validate_apply_bundle_preflight(
+            bundle_preflight
+        )
+
     intent = build_apply_intent(plan, approve=bool(getattr(args, "approve", False)))
+    intent = _attach_preflight_summary(intent, preflight_summary)
+    intent = _attach_bundle_preflight_summary(intent, bundle_preflight_summary)
+    intent = _attach_apply_audit(
+        intent,
+        trace_id,
+        getattr(args, "applied_by", None),
+        getattr(args, "applied_at", None),
+        getattr(args, "approval_reason", None),
+        getattr(args, "apply_note", None),
+    )
+    intent = _attach_trace_id(intent, trace_id)
+    intent = _attach_lineage(
+        intent,
+        "apply",
+        3,
+        trace_id,
+    )
     if bool(getattr(args, "execute_live", False)):
         live_result = execute_live_apply(
             build_client(args),
             intent.get("operations") or (),
             allow_folder_delete=bool(getattr(args, "allow_folder_delete", False)),
         )
-        emit_document(
+        emit_document_with_output(
             live_result,
+            [
+                "Sync live apply",
+                "Applied: %s" % int(live_result.get("appliedCount") or 0),
+            ],
+            getattr(args, "output", "text"),
             output_file=getattr(args, "output_file", None),
         )
         return 0
-    emit_document(
+    emit_document_with_output(
         _serialize_apply_intent(intent),
+        render_sync_apply_intent_text(intent),
+        getattr(args, "output", "text"),
         output_file=getattr(args, "output_file", None),
     )
     return 0
