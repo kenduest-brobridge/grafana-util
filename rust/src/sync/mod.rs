@@ -1872,7 +1872,7 @@ pub fn render_sync_apply_intent_text(document: &Value) -> Result<Vec<String>> {
         .and_then(Value::as_object)
     {
         lines.push(format!(
-            "Bundle preflight: resources={} sync-blocking={} provider-blocking={} alert-artifact-blocking={}",
+            "Bundle preflight: resources={} sync-blocking={} provider-blocking={} alert-artifacts={} plan-only={} blocking={}",
             bundle_summary
                 .get("resourceCount")
                 .and_then(Value::as_i64)
@@ -1883,6 +1883,14 @@ pub fn render_sync_apply_intent_text(document: &Value) -> Result<Vec<String>> {
                 .unwrap_or(0),
             bundle_summary
                 .get("providerBlockingCount")
+                .and_then(Value::as_i64)
+                .unwrap_or(0),
+            bundle_summary
+                .get("alertArtifactCount")
+                .and_then(Value::as_i64)
+                .unwrap_or(0),
+            bundle_summary
+                .get("alertArtifactPlanOnlyCount")
                 .and_then(Value::as_i64)
                 .unwrap_or(0),
             bundle_summary
@@ -2400,6 +2408,22 @@ fn validate_apply_bundle_preflight(document: &Value) -> Result<Value> {
         .and_then(|summary| summary.get("blockedCount"))
         .and_then(Value::as_i64)
         .unwrap_or(0);
+    let alert_artifact_plan_only_count = object
+        .get("alertArtifactAssessment")
+        .and_then(Value::as_object)
+        .and_then(|assessment| assessment.get("summary"))
+        .and_then(Value::as_object)
+        .and_then(|summary| summary.get("planOnlyCount"))
+        .and_then(Value::as_i64)
+        .unwrap_or(0);
+    let alert_artifact_count = object
+        .get("alertArtifactAssessment")
+        .and_then(Value::as_object)
+        .and_then(|assessment| assessment.get("summary"))
+        .and_then(Value::as_object)
+        .and_then(|summary| summary.get("resourceCount"))
+        .and_then(Value::as_i64)
+        .unwrap_or(0);
     let blocking_count =
         sync_blocking_count + provider_blocking_count + alert_artifact_blocking_count;
     if blocking_count > 0 {
@@ -2416,6 +2440,8 @@ fn validate_apply_bundle_preflight(document: &Value) -> Result<Value> {
         "syncBlockingCount": sync_blocking_count,
         "providerBlockingCount": provider_blocking_count,
         "alertArtifactBlockingCount": alert_artifact_blocking_count,
+        "alertArtifactPlanOnlyCount": alert_artifact_plan_only_count,
+        "alertArtifactCount": alert_artifact_count,
     }))
 }
 

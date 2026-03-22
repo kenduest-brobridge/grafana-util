@@ -10242,6 +10242,77 @@ fn build_export_inspection_governance_document_summarizes_families_and_risks() {
 }
 
 #[test]
+fn build_export_inspection_governance_document_flags_broad_loki_selectors() {
+    let summary = super::ExportInspectionSummary {
+        import_dir: "/tmp/raw".to_string(),
+        export_org: Some("Main Org.".to_string()),
+        export_org_id: Some("1".to_string()),
+        dashboard_count: 1,
+        folder_count: 1,
+        panel_count: 1,
+        query_count: 1,
+        datasource_inventory_count: 1,
+        orphaned_datasource_count: 0,
+        mixed_dashboard_count: 0,
+        folder_paths: Vec::new(),
+        datasource_usage: Vec::new(),
+        datasource_inventory: vec![super::DatasourceInventorySummary {
+            uid: "logs-main".to_string(),
+            name: "Logs Main".to_string(),
+            datasource_type: "loki".to_string(),
+            access: "proxy".to_string(),
+            url: "http://loki:3100".to_string(),
+            is_default: "false".to_string(),
+            org: "Main Org.".to_string(),
+            org_id: "1".to_string(),
+            reference_count: 1,
+            dashboard_count: 1,
+        }],
+        orphaned_datasources: Vec::new(),
+        mixed_dashboards: Vec::new(),
+    };
+    let mut query = make_core_family_report_row(
+        "logs-main",
+        "7",
+        "A",
+        "logs-main",
+        "Logs Main",
+        "loki",
+        "loki",
+        r#"{} |= "timeout""#,
+        &["{}"],
+    );
+    query.functions = vec!["line_filter_contains".to_string()];
+    query.measurements = vec!["{}".to_string()];
+
+    let report = super::ExportInspectionQueryReport {
+        import_dir: "/tmp/raw".to_string(),
+        summary: super::QueryReportSummary {
+            dashboard_count: 1,
+            panel_count: 1,
+            query_count: 1,
+            report_row_count: 1,
+        },
+        queries: vec![query],
+    };
+
+    let document = super::build_export_inspection_governance_document(&summary, &report);
+
+    assert_eq!(document.summary.risk_record_count, 1);
+    let risk = &document.risk_records[0];
+    assert_eq!(risk.kind, "broad-loki-selector");
+    assert_eq!(risk.category, "cost");
+    assert_eq!(risk.severity, "medium");
+    assert_eq!(risk.dashboard_uid, "logs-main");
+    assert_eq!(risk.panel_id, "7");
+    assert_eq!(risk.datasource, "Logs Main");
+    assert_eq!(risk.detail, "{}");
+    assert!(risk
+        .recommendation
+        .contains("Narrow the Loki stream selector"));
+}
+
+#[test]
 fn build_export_inspection_governance_document_groups_core_family_dependency_rows() {
     let cases = [
         (

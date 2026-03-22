@@ -2255,7 +2255,7 @@ fn run_sync_cli_apply_accepts_non_blocking_bundle_preflight_file() {
 }
 
 #[test]
-fn render_sync_apply_intent_text_includes_alert_artifact_bundle_blocking_count() {
+fn render_sync_apply_intent_text_includes_alert_artifact_bundle_counts() {
     let lines = render_sync_apply_intent_text(&json!({
         "kind": "grafana-utils-sync-apply-intent",
         "stage": "apply",
@@ -2282,13 +2282,17 @@ fn render_sync_apply_intent_text_includes_alert_artifact_bundle_blocking_count()
             "resourceCount": 4,
             "syncBlockingCount": 0,
             "providerBlockingCount": 0,
-            "alertArtifactBlockingCount": 1
+            "alertArtifactCount": 4,
+            "alertArtifactPlanOnlyCount": 1,
+            "alertArtifactBlockingCount": 3
         }
     }))
     .unwrap();
 
     let output = lines.join("\n");
-    assert!(output.contains("alert-artifact-blocking=1"));
+    assert!(output.contains("alert-artifacts=4"));
+    assert!(output.contains("plan-only=1"));
+    assert!(output.contains("blocking=3"));
 }
 
 #[test]

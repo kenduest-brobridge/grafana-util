@@ -313,12 +313,126 @@ fn build_risk_metadata(kind: &str) -> (&'static str, &'static str, &'static str)
             "low",
             "Review the query text and extend analyzer coverage if this datasource family should emit governance signals.",
         ),
+        "broad-loki-selector" => (
+            "cost",
+            "medium",
+            "Narrow the Loki stream selector before running expensive line filters or aggregations.",
+        ),
         _ => (
             "other",
             "low",
             "Review this governance finding and assign a follow-up owner if action is needed.",
         ),
     }
+}
+
+fn extract_loki_stream_selectors(query_text: &str) -> Vec<String> {
+    let mut values = Vec::new();
+    let mut in_quotes = false;
+    let mut escaped = false;
+    let mut capture_start: Option<usize> = None;
+    for (index, character) in query_text.char_indices() {
+        if escaped {
+            escaped = false;
+            continue;
+        }
+        match character {
+            '\\' if in_quotes => {
+                escaped = true;
+            }
+            '"' => {
+                in_quotes = !in_quotes;
+            }
+            '{' if !in_quotes => {
+                capture_start = Some(index);
+            }
+            '}' if !in_quotes => {
+                if let Some(start) = capture_start.take() {
+                    let selector = &query_text[start..index + character.len_utf8()];
+                    if !values.iter().any(|value| value == selector) {
+                        values.push(selector.to_string());
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    values
+}
+
+fn split_loki_selector_matchers(selector: &str) -> Vec<String> {
+    let mut matchers = Vec::new();
+    let mut start = 0usize;
+    let mut in_quotes = false;
+    let mut escaped = false;
+    for (index, character) in selector.char_indices() {
+        if escaped {
+            escaped = false;
+            continue;
+        }
+        match character {
+            '\\' if in_quotes => {
+                escaped = true;
+            }
+            '"' => {
+                in_quotes = !in_quotes;
+            }
+            ',' if !in_quotes => {
+                matchers.push(selector[start..index].trim().to_string());
+                start = index + character.len_utf8();
+            }
+            _ => {}
+        }
+    }
+    matchers.push(selector[start..].trim().to_string());
+    matchers
+}
+
+fn loki_regex_is_wildcard(value: &str) -> bool {
+    let trimmed = value.trim();
+    let unquoted = trimmed
+        .strip_prefix('"')
+        .and_then(|value| value.strip_suffix('"'))
+        .unwrap_or(trimmed);
+    matches!(unquoted.trim(), ".*" | "^.*$" | ".+" | "^.+$")
+}
+
+fn loki_selector_is_broad(selector: &str) -> bool {
+    let trimmed = selector.trim();
+    let Some(inner) = trimmed
+        .strip_prefix('{')
+        .and_then(|value| value.strip_suffix('}'))
+    else {
+        return false;
+    };
+    if inner.trim().is_empty() {
+        return true;
+    }
+    let mut saw_matcher = false;
+    for matcher in split_loki_selector_matchers(inner) {
+        let matcher = matcher.trim();
+        if matcher.is_empty() {
+            continue;
+        }
+        saw_matcher = true;
+        if let Some((_, value)) = matcher.split_once("=~") {
+            if !loki_regex_is_wildcard(value) {
+                return false;
+            }
+            continue;
+        }
+        if matcher.contains("!~") || matcher.contains("!=") || matcher.contains('=') {
+            return false;
+        }
+        return false;
+    }
+    saw_matcher
+}
+
+fn find_broad_loki_selector(query_text: &str) -> Option<String> {
+    extract_loki_stream_selectors(query_text)
+        .into_iter()
+        .find(|selector| loki_selector_is_broad(selector))
 }
 
 /// Purpose: implementation note.
@@ -720,6 +834,23 @@ pub(crate) fn build_governance_risk_rows(
             };
             if seen.insert(risk.clone()) {
                 risks.push(risk);
+            }
+        }
+        if normalize_family_name(&identity.datasource_type) == "loki" {
+            if let Some(selector) = find_broad_loki_selector(&row.query_text) {
+                let risk = GovernanceRiskRow {
+                    kind: "broad-loki-selector".to_string(),
+                    severity: build_risk_metadata("broad-loki-selector").1.to_string(),
+                    category: build_risk_metadata("broad-loki-selector").0.to_string(),
+                    dashboard_uid: row.dashboard_uid.clone(),
+                    panel_id: row.panel_id.clone(),
+                    datasource: identity.name.clone(),
+                    detail: selector,
+                    recommendation: build_risk_metadata("broad-loki-selector").2.to_string(),
+                };
+                if seen.insert(risk.clone()) {
+                    risks.push(risk);
+                }
             }
         }
         if row.metrics.is_empty()

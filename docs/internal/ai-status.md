@@ -5,12 +5,26 @@ Historical note:
 - Older entries describe the repo state and `TODO.md` backlog as they existed on the entry date.
 - `TODO.md` now tracks only the active backlog; completed or superseded TODO items moved to `docs/internal/todo-archive.md`.
 
+## 2026-03-23 - Task: Flag Broad Loki Selectors In Dashboard Governance
+- State: Done
+- Scope: `rust/src/dashboard/inspect_governance.rs`, `rust/src/dashboard/rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Governance already flags empty analyses, mixed dashboards, orphaned datasources, and unknown datasource families, but it still does not call out obviously broad Loki stream selectors that can drive expensive scans.
+- Current Update: Added a narrow Loki governance rule that flags broad selectors such as `{}` and regex-only wildcard selectors before downstream line filters or aggregations. The rule stays inside the existing governance risk contract and is pinned by a focused regression.
+- Result: Rust governance now surfaces one more cost-oriented Loki risk without changing the query-report schema or analyzer family routing.
+
 ## 2026-03-23 - Task: Gate Sync Apply On Blocked Bundle Alert Artifacts
 - State: Done
 - Scope: `rust/src/sync/mod.rs`, `rust/src/sync/cli_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
 - Baseline: Bundle preflight already surfaced blocked non-rule alert artifacts through `alertArtifactAssessment`, but `sync apply` still only gated on sync/provider blocking counts and could ignore blocked alert artifact review findings.
 - Current Update: Taught bundle-preflight validation to include `alertArtifactAssessment.summary.blockedCount` in apply gating, bridged that count into the attached apply-intent summary, and widened the text renderer plus focused CLI tests to show and enforce the new count.
 - Result: Rust `sync apply` now respects blocked bundle-level alert artifact findings instead of treating them as advisory-only metadata.
+
+## 2026-03-23 - Task: Surface Non-Rule Alert Artifact Counts In Sync Apply Summary
+- State: Done
+- Scope: `rust/src/sync/mod.rs`, `rust/src/sync/cli_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: The apply-intent bridge now blocked on non-rule alert artifacts, but the rendered bundle-preflight summary only exposed the blocking total and hid the remaining plan-only artifact counts.
+- Current Update: Carried alert-artifact total and plan-only counts through the bridged apply summary and printed them alongside the blocking count in `sync apply` text output.
+- Result: Rust sync apply now reflects the full non-rule alert artifact surface in its staged summary, which makes the remaining contact-point plan-only cases visible without changing live wiring.
 
 ## 2026-03-23 - Task: Surface Family-Level Orphaned Datasources In Governance
 - State: Done

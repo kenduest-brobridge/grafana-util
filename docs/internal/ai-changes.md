@@ -1,5 +1,21 @@
 # ai-changes.md
 
+## 2026-03-23 - Flag Broad Loki Selectors In Dashboard Governance
+- Summary: Added a narrow Rust governance risk for broad Loki stream selectors. Governance now flags selectors like `{}` and regex-only wildcard selectors as `broad-loki-selector` so expensive log scans show up in operator review output before deeper performance work lands. The risk stays inside the existing governance JSON/table contract and uses the selector text as the risk detail.
+- Tests: Added a focused governance regression that feeds a Loki query with a broad selector through the existing report contract and asserts the new risk kind, severity, category, datasource, detail, and recommendation.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet build_export_inspection_governance_document_flags_broad_loki_selectors`; `cargo test --manifest-path rust/Cargo.toml --quiet render_governance_table_report_displays_sections`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`
+- Validation: The focused Loki governance regression passed, the governance table report still renders cleanly, and the touched Rust files are formatted cleanly.
+- Impact: `rust/src/dashboard/inspect_governance.rs`, `rust/src/dashboard/rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low. This is an additive governance-only rule that reuses existing query text and does not change analyzer output or family classification.
+
+## 2026-03-23 - Surface Non-Rule Alert Artifact Counts In Sync Apply Summary
+- Summary: Extended the Rust sync apply bundle-preflight bridge so it now carries `alertArtifactCount` and `alertArtifactPlanOnlyCount` in addition to the existing blocking count. The staged apply-intent text now prints the total alert-artifact surface, plan-only artifacts, and blocking artifacts together, which makes the remaining non-rule alert review items visible without changing live mutation behavior.
+- Tests: Updated the focused sync apply-intent rendering regression to pin the new bundle-preflight summary fields and the expanded text line.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet render_sync_apply_intent_text_includes_alert_artifact_bundle_counts`; `cargo test --manifest-path rust/Cargo.toml --quiet run_sync_cli_apply_rejects_bundle_preflight_with_blocked_alert_artifacts`; `cargo test --manifest-path rust/Cargo.toml --quiet run_sync_cli_apply_accepts_non_blocking_bundle_preflight_file`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`
+- Validation: The focused sync apply regressions passed and the touched Rust files are formatted cleanly.
+- Impact: `rust/src/sync/mod.rs`, `rust/src/sync/cli_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low. This is an additive staged-summary change that only widens operator visibility into the existing bundle-preflight assessment.
+
 ## 2026-03-23 - Gate Sync Apply On Blocked Bundle Alert Artifacts
 - Summary: Updated Rust sync apply bundle-preflight validation so blocked non-rule alert artifacts now contribute to the gating decision instead of being carried as review-only metadata. The attached apply-intent bundle summary and text rendering now expose `alertArtifactBlockingCount` alongside the existing sync/provider counts.
 - Tests: Added focused CLI regressions that reject bundle preflight input when only alert artifact blocks remain and that pin the new apply-intent text summary field.
