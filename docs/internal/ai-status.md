@@ -12,6 +12,13 @@ Historical note:
 - Current Update: Added a summary-cache seam in `dashboard/import.rs` that preloads `/api/search` once per import run and reuses it for existence checks and summary `folderUid` lookups. Updated import and dry-run tests so action/path selection now validates cache-backed behavior, including missing-dashboard short-circuit, summary-folder fallback, and `update_existing_only` call reduction.
 - Result: Rust import dry-run and live decision paths now avoid unnecessary dashboard detail fetches, keep existing create/update semantics intact, and preserve action behavior for missing/existing checks while reducing redundant round-trips on large import sets.
 
+## 2026-03-23 - Task: Expand Rust Dashboard Dependency Features By Family
+- State: Done
+- Scope: `rust/src/dashboard_inspection_dependency_contract.rs`, `rust/src/dashboard/rust_tests.rs`
+- Baseline: Dependency-query parsing in Rust still relied on a coarse fallback path for many datasource families, with incomplete Loki/Flux/SQL extraction and limited shape hints for governance/report consumers.
+- Current Update: Reworked dependency contract parsing to dispatch by datasource family (Prometheus/Loki/Flux/SQL) and added richer extraction for Loki selectors/matchers/filters/range, Flux pipeline functions/buckets/source references, and SQL shape/source hints. Kept unknown-source fallback conservative and merged extracted hints with legacy `analysis` hints in the existing document shape.
+- Result: Rust offline dependency contracts now emit fuller family-specific query hints without changing public report schema, and focused dependency tests now cover Loki selector/function/filter/quote-safe behavior and SQL shape/source extraction.
+
 ## 2026-03-22 - Task: Start Typed Rust Dashboard Datasource Reference Parsing
 - State: Done
 - Scope: `rust/src/dashboard/inspect.rs`, `rust/src/dashboard/rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

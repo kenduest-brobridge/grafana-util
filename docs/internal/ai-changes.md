@@ -8,6 +8,14 @@
 - Impact: `rust/src/dashboard/import.rs`, `rust/src/dashboard/rust_tests.rs`
 - Rollback/Risk: Moderate. The behavior change is a query-reduction optimization; any incorrect cache keying or stale-state assumptions would misclassify dashboard existence or folder path, so regressions now pin the primary action/folder-path outcomes.
 
+## 2026-03-23 - Expand Rust Dashboard Dependency Family Parsing
+- Summary: Updated Rust offline dependency contract parsing so query hints are extracted through family-aware handlers instead of relying mainly on generic extraction. Added richer Prometheus/Loki/Flux/SQL parsing paths, including Loki selector/matcher/function/filter/range capture, Flux source/step/window extraction, and SQL shape/source extraction.
+- Tests: Added focused dependency-contract regressions for Loki selector/matcher/function/range/filter extraction with quote-safe filtering and for SQL shape/source hints. Re-ran `dashboard_inspection_dependency_contract` tests to cover the full local contract surface touched by these new extractors.
+- Test Run: `cd rust && cargo test --quiet dashboard_inspection_dependency_contract`
+- Validation: Focused Rust dependency-contract tests pass. The report schema remains unchanged while extractor richness is improved for supported families.
+- Impact: `rust/src/dashboard_inspection_dependency_contract.rs`, `rust/src/dashboard/rust_tests.rs`
+- Rollback/Risk: Low. This is primarily parser enrichment for existing output fields and should only increase observed hint values for supported families.
+
 ## 2026-03-22 - Start Typed Rust Dashboard Datasource Reference Parsing
 - Summary: Introduced a narrow internal typed datasource-reference model in `rust/src/dashboard/inspect.rs` so stable `uid`/`name`/`type` lookups now go through one parsed shape instead of repeated raw-map access. The raw panel datasource key path still uses the existing placeholder-aware behavior so dashboard source counts remain unchanged.
 - Tests: Added a focused dashboard inspection regression that proves a name-only datasource object resolves its inventory-backed name/type while still falling back to the panel datasource UID. Revalidated the dashboard Rust test target and the formatter check.
