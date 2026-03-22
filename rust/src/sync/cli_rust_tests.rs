@@ -594,7 +594,7 @@ fn render_sync_plan_text_defaults_lineage_when_missing() {
 }
 
 #[test]
-fn fetch_live_resource_specs_with_request_collects_alerts_and_dashboards() {
+fn fetch_live_resource_specs_with_request_collects_alerts_and_alerting_resources() {
     let mut calls = Vec::new();
     let specs = fetch_live_resource_specs_with_request(
         |method, path, params, payload| {
@@ -638,6 +638,30 @@ fn fetch_live_resource_specs_with_request_collects_alerts_and_dashboards() {
                         "data": [{"refId": "A"}]
                     }
                 ]))),
+                (Method::GET, "/api/v1/provisioning/contact-points") => Ok(Some(json!([
+                    {
+                        "uid": "cp-main",
+                        "name": "PagerDuty Primary",
+                        "type": "webhook",
+                        "settings": {"url": "http://127.0.0.1/notify"}
+                    }
+                ]))),
+                (Method::GET, "/api/v1/provisioning/mute-timings") => Ok(Some(json!([
+                    {
+                        "name": "Off Hours",
+                        "time_intervals": [{"times": [{"start_time": "00:00", "end_time": "06:00"}]}]
+                    }
+                ]))),
+                (Method::GET, "/api/v1/provisioning/policies") => Ok(Some(json!({
+                    "receiver": "grafana-default-email"
+                }))),
+                (Method::GET, "/api/v1/provisioning/templates") => Ok(Some(json!([
+                    {"name": "slack.default"}
+                ]))),
+                (Method::GET, "/api/v1/provisioning/templates/slack.default") => Ok(Some(json!({
+                    "name": "slack.default",
+                    "template": "{{ define \"slack.default\" }}ok{{ end }}"
+                }))),
                 _ => Err(crate::common::message(format!("unexpected {method} {path}"))),
             }
         },
@@ -649,9 +673,27 @@ fn fetch_live_resource_specs_with_request_collects_alerts_and_dashboards() {
     assert!(specs.iter().any(|item| item["kind"] == "dashboard"));
     assert!(specs.iter().any(|item| item["kind"] == "datasource"));
     assert!(specs.iter().any(|item| item["kind"] == "alert"));
+    assert!(specs
+        .iter()
+        .any(|item| item["kind"] == "alert-contact-point" && item["uid"] == "cp-main"));
+    assert!(specs
+        .iter()
+        .any(|item| item["kind"] == "alert-mute-timing" && item["name"] == "Off Hours"));
+    assert!(specs
+        .iter()
+        .any(|item| item["kind"] == "alert-policy" && item["title"] == "grafana-default-email"));
+    assert!(specs
+        .iter()
+        .any(|item| item["kind"] == "alert-template" && item["name"] == "slack.default"));
     assert!(calls
         .iter()
         .any(|(_, path, _, _)| path == "/api/v1/provisioning/alert-rules"));
+    assert!(calls
+        .iter()
+        .any(|(_, path, _, _)| path == "/api/v1/provisioning/contact-points"));
+    assert!(calls
+        .iter()
+        .any(|(_, path, _, _)| path == "/api/v1/provisioning/templates/slack.default"));
 }
 
 #[test]
@@ -714,6 +756,93 @@ fn execute_live_apply_with_request_supports_alert_create() {
     assert_eq!(calls.len(), 1);
     assert_eq!(calls[0].0, Method::POST);
     assert_eq!(calls[0].1, "/api/v1/provisioning/alert-rules");
+}
+
+#[test]
+fn execute_live_apply_with_request_supports_non_rule_alert_resources() {
+    let mut calls = Vec::new();
+    let result = execute_live_apply_with_request(
+        |method, path, _, payload| {
+            calls.push((method.clone(), path.to_string(), payload.cloned()));
+            match (method, path) {
+                (Method::PUT, "/api/v1/provisioning/contact-points/cp-main") => {
+                    Ok(Some(json!({"uid": "cp-main", "status": "updated"})))
+                }
+                (Method::PUT, "/api/v1/provisioning/mute-timings/Off Hours") => {
+                    Ok(Some(json!({"name": "Off Hours", "status": "updated"})))
+                }
+                (Method::PUT, "/api/v1/provisioning/policies") => Ok(Some(
+                    json!({"receiver": "grafana-default-email", "status": "updated"}),
+                )),
+                (Method::PUT, "/api/v1/provisioning/templates/slack.default") => {
+                    Ok(Some(json!({"name": "slack.default", "status": "updated"})))
+                }
+                _ => Err(crate::common::message("unexpected request")),
+            }
+        },
+        &[
+            json!({
+                "kind": "alert-contact-point",
+                "identity": "cp-main",
+                "action": "would-update",
+                "desired": {
+                    "uid": "cp-main",
+                    "name": "PagerDuty Primary",
+                    "type": "webhook",
+                    "settings": {"url": "http://127.0.0.1/notify"}
+                }
+            }),
+            json!({
+                "kind": "alert-mute-timing",
+                "identity": "Off Hours",
+                "action": "would-update",
+                "desired": {
+                    "name": "Off Hours",
+                    "time_intervals": [{"times": [{"start_time": "00:00", "end_time": "06:00"}]}]
+                }
+            }),
+            json!({
+                "kind": "alert-policy",
+                "identity": "grafana-default-email",
+                "action": "would-update",
+                "desired": {
+                    "receiver": "grafana-default-email"
+                }
+            }),
+            json!({
+                "kind": "alert-template",
+                "identity": "slack.default",
+                "action": "would-update",
+                "desired": {
+                    "name": "slack.default",
+                    "template": "{{ define \"slack.default\" }}ok{{ end }}"
+                }
+            }),
+        ],
+        false,
+    )
+    .unwrap();
+
+    assert_eq!(result["mode"], json!("live-apply"));
+    assert_eq!(result["appliedCount"], json!(4));
+    assert!(calls.iter().any(|(method, path, _)| *method == Method::PUT
+        && path == "/api/v1/provisioning/contact-points/cp-main"));
+    assert!(calls.iter().any(|(method, path, _)| *method == Method::PUT
+        && path == "/api/v1/provisioning/mute-timings/Off Hours"));
+    assert!(
+        calls
+            .iter()
+            .any(|(method, path, _)| *method == Method::PUT
+                && path == "/api/v1/provisioning/policies")
+    );
+    assert!(calls
+        .iter()
+        .any(|(method, path, payload)| *method == Method::PUT
+            && path == "/api/v1/provisioning/templates/slack.default"
+            && payload
+                .as_ref()
+                .and_then(|value| value.get("name"))
+                .is_none()));
 }
 
 #[test]
@@ -1074,6 +1203,27 @@ fn run_sync_cli_bundle_preserves_alert_export_artifact_metadata() {
     assert_eq!(bundle["alerting"]["summary"]["muteTimingCount"], json!(1));
     assert_eq!(bundle["alerting"]["summary"]["policyCount"], json!(1));
     assert_eq!(bundle["alerting"]["summary"]["templateCount"], json!(1));
+    assert_eq!(bundle["alerts"].as_array().unwrap().len(), 4);
+    assert!(bundle["alerts"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|item| item["kind"] == "alert-contact-point" && item["uid"] == "smoke-webhook"));
+    assert!(bundle["alerts"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|item| item["kind"] == "alert-mute-timing" && item["name"] == "Off Hours"));
+    assert!(bundle["alerts"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|item| item["kind"] == "alert-policy" && item["title"] == "grafana-default-email"));
+    assert!(bundle["alerts"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|item| item["kind"] == "alert-template" && item["name"] == "slack.default"));
     assert_eq!(
         bundle["alerting"]["exportMetadata"]["kind"],
         json!("grafana-util-alert-export-index")

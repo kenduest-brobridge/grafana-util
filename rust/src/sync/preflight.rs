@@ -267,6 +267,15 @@ fn build_alert_checks(
     spec: &SyncResourceSpec,
     availability: &Map<String, Value>,
 ) -> Result<Vec<SyncPreflightCheck>> {
+    if spec.kind != "alert" {
+        return Ok(vec![SyncPreflightCheck {
+            kind: "alert-live-apply".to_string(),
+            identity: spec.identity.clone(),
+            status: "ok".to_string(),
+            detail: "Alert provisioning resource is eligible for live apply.".to_string(),
+            blocking: false,
+        }]);
+    }
     let available_datasource_uids =
         require_string_list(availability.get("datasourceUids"), "datasourceUids")?
             .into_iter()
@@ -375,7 +384,11 @@ pub fn build_sync_preflight_document(
         match spec.kind.as_str() {
             "datasource" => checks.extend(build_datasource_checks(spec, &availability)?),
             "dashboard" => checks.extend(build_dashboard_checks(spec, &availability)?),
-            "alert" => checks.extend(build_alert_checks(spec, &availability)?),
+            "alert"
+            | "alert-contact-point"
+            | "alert-mute-timing"
+            | "alert-policy"
+            | "alert-template" => checks.extend(build_alert_checks(spec, &availability)?),
             "folder" => checks.push(SyncPreflightCheck {
                 kind: "folder".to_string(),
                 identity: spec.identity.clone(),

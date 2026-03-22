@@ -26,7 +26,16 @@ pub const SYNC_APPLY_INTENT_KIND: &str = "grafana-utils-sync-apply-intent";
 /// Constant for sync apply intent schema version.
 pub const SYNC_APPLY_INTENT_SCHEMA_VERSION: i64 = 1;
 /// Constant for resource kinds.
-pub const RESOURCE_KINDS: &[&str] = &["dashboard", "datasource", "folder", "alert"];
+pub const RESOURCE_KINDS: &[&str] = &[
+    "dashboard",
+    "datasource",
+    "folder",
+    "alert",
+    "alert-contact-point",
+    "alert-mute-timing",
+    "alert-policy",
+    "alert-template",
+];
 
 /// Struct definition for SyncResourceSpec.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -47,6 +56,20 @@ pub struct SyncSummary {
     pub datasource_count: usize,
     pub folder_count: usize,
     pub alert_count: usize,
+}
+
+fn is_alert_sync_kind(kind: &str) -> bool {
+    matches!(
+        kind,
+        "alert" | "alert-contact-point" | "alert-mute-timing" | "alert-policy" | "alert-template"
+    )
+}
+
+fn supports_prune_delete(kind: &str) -> bool {
+    !matches!(
+        kind,
+        "alert-contact-point" | "alert-mute-timing" | "alert-policy" | "alert-template"
+    )
 }
 
 fn normalize_text(value: Option<&Value>) -> String {
@@ -145,7 +168,7 @@ pub fn normalize_resource_spec(raw_spec: &Value) -> Result<SyncResourceSpec> {
         ));
     }
     let managed_fields = normalize_string_list(spec.get("managedFields"), "managedFields")?;
-    if kind == "alert" && managed_fields.is_empty() {
+    if is_alert_sync_kind(&kind) && managed_fields.is_empty() {
         return Err(message(
             "Alert sync specs must declare managedFields to keep partial ownership explicit.",
         ));
@@ -181,7 +204,10 @@ pub fn summarize_resource_specs(specs: &[SyncResourceSpec]) -> SyncSummary {
             .filter(|item| item.kind == "datasource")
             .count(),
         folder_count: specs.iter().filter(|item| item.kind == "folder").count(),
-        alert_count: specs.iter().filter(|item| item.kind == "alert").count(),
+        alert_count: specs
+            .iter()
+            .filter(|item| is_alert_sync_kind(&item.kind))
+            .count(),
     }
 }
 
@@ -390,7 +416,8 @@ fn build_alert_assessment_document(operations: &[Value]) -> Value {
         let Some(object) = item.as_object() else {
             continue;
         };
-        if object.get("kind").and_then(Value::as_str) != Some("alert") {
+        let kind = object.get("kind").and_then(Value::as_str).unwrap_or("");
+        if !is_alert_sync_kind(kind) {
             continue;
         }
         let managed_fields = object
@@ -406,39 +433,47 @@ fn build_alert_assessment_document(operations: &[Value]) -> Value {
             .and_then(Value::as_object)
             .cloned()
             .unwrap_or_default();
-        let has_condition = managed_fields.iter().any(|field| field == "condition");
-        let has_plan_only_fields = managed_fields
-            .iter()
-            .any(|field| field == "contactPoints" || field == "annotations");
-        let condition_text = desired
-            .get("condition")
-            .and_then(Value::as_str)
-            .unwrap_or("")
-            .trim()
-            .to_string();
-        let (status, live_apply_allowed, detail) = if !has_condition {
-            (
-                "blocked",
-                false,
-                "Alert sync must manage condition explicitly before live apply can be considered.",
-            )
-        } else if has_plan_only_fields {
-            (
-                "plan-only",
-                false,
-                "Alert sync includes linked routing or annotation fields and stays plan-only until mutation semantics settle.",
-            )
-        } else if condition_text.is_empty() {
-            (
-                "blocked",
-                false,
-                "Alert sync body must include a non-empty condition.",
-            )
+        let (status, live_apply_allowed, detail) = if kind == "alert" {
+            let has_condition = managed_fields.iter().any(|field| field == "condition");
+            let has_plan_only_fields = managed_fields
+                .iter()
+                .any(|field| field == "contactPoints" || field == "annotations");
+            let condition_text = desired
+                .get("condition")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .trim()
+                .to_string();
+            if !has_condition {
+                (
+                    "blocked",
+                    false,
+                    "Alert sync must manage condition explicitly before live apply can be considered.",
+                )
+            } else if has_plan_only_fields {
+                (
+                    "plan-only",
+                    false,
+                    "Alert sync includes linked routing or annotation fields and stays plan-only until mutation semantics settle.",
+                )
+            } else if condition_text.is_empty() {
+                (
+                    "blocked",
+                    false,
+                    "Alert sync body must include a non-empty condition.",
+                )
+            } else {
+                (
+                    "candidate",
+                    true,
+                    "Alert sync scope is narrow enough for future controlled live-apply experiments.",
+                )
+            }
         } else {
             (
                 "candidate",
                 true,
-                "Alert sync scope is narrow enough for future controlled live-apply experiments.",
+                "Alert provisioning resource is narrow enough for controlled live apply.",
             )
         };
         match status {
@@ -535,7 +570,7 @@ pub fn build_sync_plan_document(
         if desired_index.contains_key(key) {
             continue;
         }
-        let action = if allow_prune {
+        let action = if allow_prune && supports_prune_delete(&live_spec.kind) {
             would_delete += 1;
             "would-delete"
         } else {
@@ -547,7 +582,13 @@ pub fn build_sync_plan_document(
             "identity": live_spec.identity,
             "title": live_spec.title,
             "action": action,
-            "reason": if allow_prune { "missing-from-desired-state" } else { "prune-disabled" },
+            "reason": if allow_prune && supports_prune_delete(&live_spec.kind) {
+                "missing-from-desired-state"
+            } else if allow_prune {
+                "delete-not-supported"
+            } else {
+                "prune-disabled"
+            },
             "changedFields": Vec::<String>::new(),
             "managedFields": Vec::<String>::new(),
             "desired": Value::Null,

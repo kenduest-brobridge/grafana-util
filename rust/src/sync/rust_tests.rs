@@ -215,6 +215,33 @@ fn build_sync_preflight_document_reports_plugin_dependency_and_alert_blocks() {
 }
 
 #[test]
+fn build_sync_preflight_document_accepts_non_rule_alert_resources_for_live_apply() {
+    let desired_specs = vec![json!({
+        "kind": "alert-contact-point",
+        "uid": "cp-main",
+        "title": "PagerDuty Primary",
+        "managedFields": ["uid", "name", "type", "settings"],
+        "body": {
+            "uid": "cp-main",
+            "name": "PagerDuty Primary",
+            "type": "webhook",
+            "settings": {"url": "http://127.0.0.1/notify"}
+        }
+    })];
+
+    let document = build_sync_preflight_document(&desired_specs, None).unwrap();
+
+    assert_eq!(document["summary"]["blockingCount"], json!(0));
+    assert!(document["checks"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|item| item["kind"] == "alert-live-apply"
+            && item["identity"] == "cp-main"
+            && item["status"] == "ok"));
+}
+
+#[test]
 fn render_sync_preflight_text_renders_deterministic_summary() {
     let document = build_sync_preflight_document(
         &[json!({
@@ -317,4 +344,33 @@ fn build_sync_apply_intent_document_filters_non_mutating_operations() {
             item["action"].as_str(),
             Some("would-create" | "would-update" | "would-delete")
         )));
+}
+
+#[test]
+fn build_sync_plan_document_keeps_non_rule_alert_prune_unmanaged() {
+    let plan = build_sync_plan_document(
+        &[],
+        &[json!({
+            "kind": "alert-contact-point",
+            "uid": "cp-main",
+            "title": "PagerDuty Primary",
+            "managedFields": ["uid", "name", "type", "settings"],
+            "body": {
+                "uid": "cp-main",
+                "name": "PagerDuty Primary",
+                "type": "webhook",
+                "settings": {"url": "http://127.0.0.1/notify"}
+            }
+        })],
+        true,
+    )
+    .unwrap();
+
+    assert_eq!(plan["summary"]["would_delete"], json!(0));
+    assert_eq!(plan["summary"]["unmanaged"], json!(1));
+    assert_eq!(plan["operations"][0]["action"], json!("unmanaged"));
+    assert_eq!(
+        plan["operations"][0]["reason"],
+        json!("delete-not-supported")
+    );
 }

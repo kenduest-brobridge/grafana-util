@@ -5,6 +5,13 @@ Historical note:
 - Older entries describe the repo state and `TODO.md` backlog as they existed on the entry date.
 - `TODO.md` now tracks only the active backlog; completed or superseded TODO items moved to `docs/internal/todo-archive.md`.
 
+## 2026-03-23 - Task: Wire Non-Rule Alert Artifacts Into Rust Sync Runtime
+- State: Done
+- Scope: `rust/src/sync/mod.rs`, `rust/src/sync/workbench.rs`, `rust/src/sync/preflight.rs`, `rust/src/sync/cli_rust_tests.rs`, `rust/src/sync/rust_tests.rs`
+- Baseline: Rust sync only treated alert rules as first-class sync resources. Contact points, mute timings, policies, and templates were visible in source bundles and bundle preflight, but they did not flow through live fetch, sync planning, preflight, or live apply as real sync resources.
+- Current Update: Extended sync resource normalization and bundle extraction to include contact points, mute timings, policies, and templates as alert-plane sync resources. Live fetch now inventories those resources, sync planning keeps unsupported prune deletes unmanaged instead of fabricating delete operations, preflight now marks non-rule alert resources as live-apply eligible, and live apply now supports create/update wiring for contact points, mute timings, policies, and templates.
+- Result: Rust sync now has one broader alert runtime shape instead of stopping at staged bundle metadata for non-rule alert artifacts.
+
 ## 2026-03-23 - Task: Flag Broad Loki Selectors In Dashboard Governance
 - State: Done
 - Scope: `rust/src/dashboard/inspect_governance.rs`, `rust/src/dashboard/rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

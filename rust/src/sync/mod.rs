@@ -27,7 +27,12 @@ use self::workbench::{
     build_sync_apply_intent_document, build_sync_plan_document, build_sync_source_bundle_document,
     build_sync_summary_document, render_sync_source_bundle_text,
 };
-use crate::alert::build_rule_import_payload;
+use crate::alert::{
+    build_contact_point_import_payload, build_mute_timing_import_payload,
+    build_policies_import_payload, build_rule_import_payload, build_template_import_payload,
+    detect_document_kind, CONTACT_POINT_KIND, MUTE_TIMING_KIND, POLICIES_KIND, RULE_KIND,
+    TEMPLATE_KIND,
+};
 use crate::alert_sync::{assess_alert_sync_specs, ALERT_SYNC_KIND};
 use crate::common::{message, Result};
 use crate::dashboard::DASHBOARD_PERMISSION_BUNDLE_FILENAME;
@@ -518,6 +523,18 @@ fn fetch_live_resource_specs_with_request<F>(
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
+    fn build_live_alert_resource_spec(sync_kind: &str, body: Map<String, Value>) -> Result<Value> {
+        let (identity, title) = normalize_alert_resource_identity_and_title(sync_kind, &body)?;
+        Ok(serde_json::json!({
+            "kind": sync_kind,
+            "uid": if sync_kind == "alert-contact-point" { identity.clone() } else { String::new() },
+            "name": if matches!(sync_kind, "alert-mute-timing" | "alert-template") { identity.clone() } else { String::new() },
+            "title": title,
+            "managedFields": normalize_alert_managed_fields(&body),
+            "body": body,
+        }))
+    }
+
     let mut specs = Vec::new();
     match request_json(Method::GET, "/api/folders", &[], None)? {
         Some(Value::Array(folders)) => {
@@ -716,6 +733,92 @@ where
             }
         }
         Some(_) => return Err(message("Unexpected alert-rule list response from Grafana.")),
+        None => {}
+    }
+
+    match request_json(
+        Method::GET,
+        "/api/v1/provisioning/contact-points",
+        &[],
+        None,
+    )? {
+        Some(Value::Array(contact_points)) => {
+            for contact_point in contact_points {
+                let object = require_json_object(&contact_point, "Grafana contact-point payload")?;
+                specs.push(build_live_alert_resource_spec(
+                    "alert-contact-point",
+                    object.clone(),
+                )?);
+            }
+        }
+        Some(_) => {
+            return Err(message(
+                "Unexpected contact-point list response from Grafana.",
+            ))
+        }
+        None => {}
+    }
+
+    match request_json(Method::GET, "/api/v1/provisioning/mute-timings", &[], None)? {
+        Some(Value::Array(mute_timings)) => {
+            for mute_timing in mute_timings {
+                let object = require_json_object(&mute_timing, "Grafana mute-timing payload")?;
+                specs.push(build_live_alert_resource_spec(
+                    "alert-mute-timing",
+                    object.clone(),
+                )?);
+            }
+        }
+        Some(_) => {
+            return Err(message(
+                "Unexpected mute-timing list response from Grafana.",
+            ))
+        }
+        None => {}
+    }
+
+    match request_json(Method::GET, "/api/v1/provisioning/policies", &[], None)? {
+        Some(Value::Object(policies)) => {
+            specs.push(build_live_alert_resource_spec(
+                "alert-policy",
+                policies.clone(),
+            )?);
+        }
+        Some(_) => {
+            return Err(message(
+                "Unexpected notification policy response from Grafana.",
+            ))
+        }
+        None => {}
+    }
+
+    match request_json(Method::GET, "/api/v1/provisioning/templates", &[], None)? {
+        Some(Value::Array(templates)) => {
+            for template in templates {
+                let object = require_json_object(&template, "Grafana template summary payload")?;
+                let name = object
+                    .get("name")
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .ok_or_else(|| message("Live template payload is missing name."))?;
+                let template_payload = match request_json(
+                    Method::GET,
+                    &format!("/api/v1/provisioning/templates/{name}"),
+                    &[],
+                    None,
+                )? {
+                    Some(Value::Object(template_object)) => template_object,
+                    Some(_) => return Err(message("Unexpected template payload from Grafana.")),
+                    None => continue,
+                };
+                specs.push(build_live_alert_resource_spec(
+                    "alert-template",
+                    template_payload,
+                )?);
+            }
+        }
+        Some(_) => return Err(message("Unexpected template list response from Grafana.")),
         None => {}
     }
 
@@ -1229,6 +1332,69 @@ fn extract_rule_contact_points(rule: &Map<String, Value>) -> Vec<String> {
     contact_points.into_iter().collect()
 }
 
+fn normalize_alert_managed_fields(body: &Map<String, Value>) -> Vec<String> {
+    body.keys().cloned().collect()
+}
+
+fn normalize_alert_resource_identity_and_title(
+    sync_kind: &str,
+    payload: &Map<String, Value>,
+) -> Result<(String, String)> {
+    let identity = match sync_kind {
+        "alert" | "alert-contact-point" => payload
+            .get("uid")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .or_else(|| {
+                payload
+                    .get("name")
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+            })
+            .unwrap_or(""),
+        "alert-mute-timing" | "alert-template" => payload
+            .get("name")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .unwrap_or(""),
+        "alert-policy" => payload
+            .get("receiver")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .unwrap_or("root"),
+        _ => "",
+    };
+    if identity.is_empty() {
+        return Err(message(format!(
+            "Alert provisioning export document is missing a stable identity for {sync_kind}."
+        )));
+    }
+    let title = payload
+        .get("name")
+        .or_else(|| payload.get("title"))
+        .or_else(|| payload.get("receiver"))
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or(identity);
+    Ok((identity.to_string(), title.to_string()))
+}
+
+fn map_alert_document_kind_to_sync_kind(kind: &str) -> Option<&'static str> {
+    match kind {
+        RULE_KIND => Some("alert"),
+        CONTACT_POINT_KIND => Some("alert-contact-point"),
+        MUTE_TIMING_KIND => Some("alert-mute-timing"),
+        POLICIES_KIND => Some("alert-policy"),
+        TEMPLATE_KIND => Some("alert-template"),
+        _ => None,
+    }
+}
+
 fn normalize_rule_group_rule_document(
     group: &Map<String, Value>,
     rule: &Map<String, Value>,
@@ -1345,45 +1511,85 @@ fn normalize_alert_rule_sync_spec(
     }))
 }
 
-fn build_alert_sync_specs(alerting: &Value) -> Result<Vec<Value>> {
-    let Some(rules) = alerting.get("rules").and_then(Value::as_array) else {
-        return Ok(Vec::new());
+fn normalize_alert_resource_sync_spec(
+    document: &Map<String, Value>,
+    source_path: &str,
+) -> Result<Option<Value>> {
+    let document_kind = detect_document_kind(document)?;
+    let Some(sync_kind) = map_alert_document_kind_to_sync_kind(document_kind) else {
+        return Ok(None);
     };
+    if sync_kind == "alert" {
+        return Ok(Some(normalize_alert_rule_sync_spec(document, source_path)?));
+    }
+    let body = match document_kind {
+        CONTACT_POINT_KIND => build_contact_point_import_payload(document)?,
+        MUTE_TIMING_KIND => build_mute_timing_import_payload(document)?,
+        POLICIES_KIND => build_policies_import_payload(document)?,
+        TEMPLATE_KIND => build_template_import_payload(document)?,
+        _ => return Ok(None),
+    };
+    let (identity, title) = normalize_alert_resource_identity_and_title(sync_kind, &body)?;
+    Ok(Some(serde_json::json!({
+        "kind": sync_kind,
+        "uid": if sync_kind == "alert-contact-point" { identity.clone() } else { String::new() },
+        "name": if matches!(sync_kind, "alert-mute-timing" | "alert-template") { identity.clone() } else { String::new() },
+        "title": title,
+        "managedFields": normalize_alert_managed_fields(&body),
+        "body": body,
+        "sourcePath": source_path,
+    })))
+}
+
+fn build_alert_sync_specs(alerting: &Value) -> Result<Vec<Value>> {
     let mut alerts = Vec::new();
-    for item in rules {
-        let Some(object) = item.as_object() else {
+    let Some(alerting_object) = alerting.as_object() else {
+        return Ok(alerts);
+    };
+    for (section, items) in alerting_object {
+        let Some(items) = items.as_array() else {
             continue;
         };
-        let source_path = object
-            .get("sourcePath")
-            .and_then(Value::as_str)
-            .unwrap_or("");
-        let Some(document) = object.get("document").and_then(Value::as_object) else {
-            continue;
-        };
-        if let Some(groups) = document.get("groups").and_then(Value::as_array) {
-            for group in groups {
-                let Some(group_object) = group.as_object() else {
+        for item in items {
+            let Some(object) = item.as_object() else {
+                continue;
+            };
+            let source_path = object
+                .get("sourcePath")
+                .and_then(Value::as_str)
+                .unwrap_or("");
+            let Some(document) = object.get("document").and_then(Value::as_object) else {
+                continue;
+            };
+            if section == "rules" {
+                if let Some(groups) = document.get("groups").and_then(Value::as_array) {
+                    for group in groups {
+                        let Some(group_object) = group.as_object() else {
+                            continue;
+                        };
+                        let Some(group_rules) = group_object.get("rules").and_then(Value::as_array)
+                        else {
+                            continue;
+                        };
+                        for rule in group_rules {
+                            let Some(rule_object) = rule.as_object() else {
+                                continue;
+                            };
+                            let normalized_rule =
+                                normalize_rule_group_rule_document(group_object, rule_object);
+                            alerts.push(normalize_alert_rule_sync_spec(
+                                &normalized_rule,
+                                source_path,
+                            )?);
+                        }
+                    }
                     continue;
-                };
-                let Some(group_rules) = group_object.get("rules").and_then(Value::as_array) else {
-                    continue;
-                };
-                for rule in group_rules {
-                    let Some(rule_object) = rule.as_object() else {
-                        continue;
-                    };
-                    let normalized_rule =
-                        normalize_rule_group_rule_document(group_object, rule_object);
-                    alerts.push(normalize_alert_rule_sync_spec(
-                        &normalized_rule,
-                        source_path,
-                    )?);
                 }
             }
-            continue;
+            if let Some(resource) = normalize_alert_resource_sync_spec(document, source_path)? {
+                alerts.push(resource);
+            }
         }
-        alerts.push(normalize_alert_rule_sync_spec(document, source_path)?);
     }
     Ok(alerts)
 }
@@ -2187,6 +2393,7 @@ fn apply_alert_operation_with_request<F>(
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
+    let kind = operation.get("kind").and_then(Value::as_str).unwrap_or("");
     let action = operation
         .get("action")
         .and_then(Value::as_str)
@@ -2196,54 +2403,136 @@ where
         .and_then(Value::as_str)
         .map(str::trim)
         .unwrap_or("");
+    let desired = operation
+        .get("desired")
+        .and_then(Value::as_object)
+        .cloned()
+        .unwrap_or_default();
     match action {
-        "would-delete" => {
-            if identity.is_empty() {
-                return Err(message(
-                    "Alert sync delete requires a stable uid identity for live apply.",
-                ));
+        "would-delete" => match kind {
+            "alert" => {
+                if identity.is_empty() {
+                    return Err(message(
+                        "Alert sync delete requires a stable uid identity for live apply.",
+                    ));
+                }
+                Ok(request_json(
+                    Method::DELETE,
+                    &format!("/api/v1/provisioning/alert-rules/{identity}"),
+                    &[],
+                    None,
+                )?
+                .unwrap_or(Value::Null))
             }
-            Ok(request_json(
-                Method::DELETE,
-                &format!("/api/v1/provisioning/alert-rules/{identity}"),
-                &[],
-                None,
-            )?
-            .unwrap_or(Value::Null))
-        }
-        "would-create" | "would-update" => {
-            let desired = operation
-                .get("desired")
-                .and_then(Value::as_object)
-                .cloned()
-                .unwrap_or_default();
-            let mut payload = build_rule_import_payload(&desired)?;
-            if !identity.is_empty() && !payload.contains_key("uid") {
-                payload.insert("uid".to_string(), Value::String(identity.to_string()));
+            "alert-contact-point" | "alert-mute-timing" | "alert-policy" | "alert-template" => {
+                Err(message(format!(
+                    "Sync live delete is not wired for {kind} resources yet."
+                )))
             }
-            let uid = payload
-                .get("uid")
-                .and_then(Value::as_str)
-                .map(str::trim)
-                .filter(|value| !value.is_empty())
-                .ok_or_else(|| {
-                    message("Alert sync live apply requires alert rule payloads with a uid.")
-                })?;
-            let method = if action == "would-create" {
-                Method::POST
-            } else {
-                Method::PUT
-            };
-            let path = if action == "would-create" {
-                "/api/v1/provisioning/alert-rules".to_string()
-            } else {
-                format!("/api/v1/provisioning/alert-rules/{uid}")
-            };
-            Ok(
-                request_json(method, &path, &[], Some(&Value::Object(payload)))?
-                    .unwrap_or(Value::Null),
-            )
-        }
+            _ => Err(message(format!("Unsupported alert sync kind {kind}."))),
+        },
+        "would-create" | "would-update" => match kind {
+            "alert" => {
+                let mut payload = build_rule_import_payload(&desired)?;
+                if !identity.is_empty() && !payload.contains_key("uid") {
+                    payload.insert("uid".to_string(), Value::String(identity.to_string()));
+                }
+                let uid = payload
+                    .get("uid")
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .ok_or_else(|| {
+                        message("Alert sync live apply requires alert rule payloads with a uid.")
+                    })?;
+                let method = if action == "would-create" {
+                    Method::POST
+                } else {
+                    Method::PUT
+                };
+                let path = if action == "would-create" {
+                    "/api/v1/provisioning/alert-rules".to_string()
+                } else {
+                    format!("/api/v1/provisioning/alert-rules/{uid}")
+                };
+                Ok(
+                    request_json(method, &path, &[], Some(&Value::Object(payload)))?
+                        .unwrap_or(Value::Null),
+                )
+            }
+            "alert-contact-point" => {
+                let mut payload = build_contact_point_import_payload(&desired)?;
+                if !identity.is_empty() && !payload.contains_key("uid") {
+                    payload.insert("uid".to_string(), Value::String(identity.to_string()));
+                }
+                let method = if action == "would-create" {
+                    Method::POST
+                } else {
+                    Method::PUT
+                };
+                let path = if action == "would-create" {
+                    "/api/v1/provisioning/contact-points".to_string()
+                } else {
+                    format!("/api/v1/provisioning/contact-points/{identity}")
+                };
+                Ok(
+                    request_json(method, &path, &[], Some(&Value::Object(payload)))?
+                        .unwrap_or(Value::Null),
+                )
+            }
+            "alert-mute-timing" => {
+                let payload = build_mute_timing_import_payload(&desired)?;
+                let name = payload
+                    .get("name")
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .unwrap_or(identity);
+                let method = if action == "would-create" {
+                    Method::POST
+                } else {
+                    Method::PUT
+                };
+                let path = if action == "would-create" {
+                    "/api/v1/provisioning/mute-timings".to_string()
+                } else {
+                    format!("/api/v1/provisioning/mute-timings/{name}")
+                };
+                Ok(
+                    request_json(method, &path, &[], Some(&Value::Object(payload)))?
+                        .unwrap_or(Value::Null),
+                )
+            }
+            "alert-policy" => {
+                let payload = build_policies_import_payload(&desired)?;
+                Ok(request_json(
+                    Method::PUT,
+                    "/api/v1/provisioning/policies",
+                    &[],
+                    Some(&Value::Object(payload)),
+                )?
+                .unwrap_or(Value::Null))
+            }
+            "alert-template" => {
+                let mut payload = build_template_import_payload(&desired)?;
+                let name = payload
+                    .get("name")
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .unwrap_or(identity)
+                    .to_string();
+                payload.remove("name");
+                Ok(request_json(
+                    Method::PUT,
+                    &format!("/api/v1/provisioning/templates/{name}"),
+                    &[],
+                    Some(&Value::Object(payload)),
+                )?
+                .unwrap_or(Value::Null))
+            }
+            _ => Err(message(format!("Unsupported alert sync kind {kind}."))),
+        },
         _ => Err(message(format!("Unsupported alert sync action {action}."))),
     }
 }
@@ -2272,7 +2561,11 @@ where
             }
             "dashboard" => apply_dashboard_operation_with_request(&mut request_json, object)?,
             "datasource" => apply_datasource_operation_with_request(&mut request_json, object)?,
-            "alert" => apply_alert_operation_with_request(&mut request_json, object)?,
+            "alert"
+            | "alert-contact-point"
+            | "alert-mute-timing"
+            | "alert-policy"
+            | "alert-template" => apply_alert_operation_with_request(&mut request_json, object)?,
             _ => return Err(message(format!("Unsupported sync resource kind {kind}."))),
         };
         results.push(serde_json::json!({
