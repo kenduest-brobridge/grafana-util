@@ -18,8 +18,8 @@ use super::{
     GovernanceGateArgs, GovernanceGateOutputFormat, ImportArgs, InspectExportArgs,
     InspectExportReportFormat, InspectLiveArgs, InspectOutputFormat, ListArgs,
     ScreenshotFullPageOutput, ScreenshotOutputFormat, ScreenshotTheme, SimpleOutputFormat,
-    DASHBOARD_PERMISSION_BUNDLE_FILENAME, DATASOURCE_INVENTORY_FILENAME, EXPORT_METADATA_FILENAME,
-    FOLDER_INVENTORY_FILENAME, TOOL_SCHEMA_VERSION,
+    ValidationOutputFormat, DASHBOARD_PERMISSION_BUNDLE_FILENAME, DATASOURCE_INVENTORY_FILENAME,
+    EXPORT_METADATA_FILENAME, FOLDER_INVENTORY_FILENAME, TOOL_SCHEMA_VERSION,
 };
 use crate::common::api_response;
 use crate::dashboard::inspect::{
@@ -119,6 +119,8 @@ fn make_import_args(import_dir: PathBuf) -> ImportArgs {
         update_existing_only: false,
         require_matching_folder_path: false,
         require_matching_export_org: false,
+        strict_schema: false,
+        target_schema_version: None,
         import_message: "sync dashboards".to_string(),
         dry_run: true,
         table: false,
@@ -2784,6 +2786,39 @@ fn governance_gate_help_mentions_policy_and_queries_inputs() {
 }
 
 #[test]
+fn parse_cli_supports_dashboard_validate_export_command() {
+    let args = parse_cli_from([
+        "grafana-util",
+        "validate-export",
+        "--import-dir",
+        "./dashboards/raw",
+        "--reject-custom-plugins",
+        "--reject-legacy-properties",
+        "--target-schema-version",
+        "39",
+        "--output-format",
+        "json",
+        "--output-file",
+        "./dashboard-validation.json",
+    ]);
+
+    match args.command {
+        DashboardCommand::ValidateExport(validate_args) => {
+            assert_eq!(validate_args.import_dir, Path::new("./dashboards/raw"));
+            assert!(validate_args.reject_custom_plugins);
+            assert!(validate_args.reject_legacy_properties);
+            assert_eq!(validate_args.target_schema_version, Some(39));
+            assert_eq!(validate_args.output_format, ValidationOutputFormat::Json);
+            assert_eq!(
+                validate_args.output_file,
+                Some(PathBuf::from("./dashboard-validation.json"))
+            );
+        }
+        _ => panic!("expected validate-export command"),
+    }
+}
+
+#[test]
 fn inspect_live_help_mentions_report_and_panel_filter_flags() {
     let help = render_dashboard_subcommand_help("inspect-live");
 
@@ -2791,6 +2826,8 @@ fn inspect_live_help_mentions_report_and_panel_filter_flags() {
     assert!(help.contains("--output-format"));
     assert!(help.contains("--report-filter-panel-id"));
     assert!(help.contains("--all-orgs"));
+    assert!(help.contains("--concurrency"));
+    assert!(help.contains("--progress"));
     assert!(help.contains("--help-full"));
     assert!(help.contains("tree"));
     assert!(help.contains("tree-table"));
@@ -2875,6 +2912,120 @@ fn inspect_live_help_full_includes_extended_examples() {
             "--report-columns datasource_name,datasource_org,datasource_org_id,datasource_database,datasource_bucket,datasource_index_pattern,query"
         )
     );
+}
+
+#[test]
+fn validate_dashboard_export_dir_detects_custom_plugin_legacy_layout_and_schema_migration() {
+    let temp = tempdir().unwrap();
+    let raw_dir = temp.path().join("raw");
+    fs::create_dir_all(&raw_dir).unwrap();
+    fs::write(
+        raw_dir.join("legacy.json"),
+        serde_json::to_string_pretty(&json!({
+            "dashboard": {
+                "uid": "legacy-main",
+                "title": "Legacy Main",
+                "schemaVersion": 30,
+                "rows": [],
+                "panels": [
+                    {"id": 7, "type": "acme-panel", "datasource": {"type": "acme-ds"}}
+                ]
+            },
+            "__inputs": [{"name": "DS_PROM"}]
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+
+    let result = super::validate_dashboard_export_dir(&raw_dir, true, true, Some(39)).unwrap();
+    let output = super::render_validation_result_json(&result).unwrap();
+
+    assert_eq!(result.dashboard_count, 1);
+    assert!(result.error_count >= 4);
+    assert!(output.contains("custom-panel-plugin"));
+    assert!(output.contains("custom-datasource-plugin"));
+    assert!(output.contains("legacy-row-layout"));
+    assert!(output.contains("schema-migration-required"));
+}
+
+#[test]
+fn snapshot_live_dashboard_export_with_fetcher_writes_dashboards_in_parallel() {
+    let temp = tempdir().unwrap();
+    let raw_dir = temp.path().join("raw");
+    let summaries = vec![
+        json!({"uid": "cpu-main", "title": "CPU Main", "folderTitle": "Infra"})
+            .as_object()
+            .unwrap()
+            .clone(),
+        json!({"uid": "logs-main", "title": "Logs Main", "folderTitle": "Ops"})
+            .as_object()
+            .unwrap()
+            .clone(),
+    ];
+
+    let count =
+        super::snapshot_live_dashboard_export_with_fetcher(&raw_dir, &summaries, 4, false, |uid| {
+            Ok(json!({
+                "dashboard": {
+                    "uid": uid,
+                    "title": uid,
+                    "schemaVersion": 39,
+                    "panels": []
+                },
+                "meta": {}
+            }))
+        })
+        .unwrap();
+
+    assert_eq!(count, 2);
+    assert!(raw_dir.join("Infra/CPU_Main__cpu-main.json").is_file());
+    assert!(raw_dir.join("Ops/Logs_Main__logs-main.json").is_file());
+}
+
+#[test]
+fn import_dashboards_with_strict_schema_rejects_custom_plugins_before_live_write() {
+    let temp = tempdir().unwrap();
+    let raw_dir = temp.path().join("raw");
+    fs::create_dir_all(&raw_dir).unwrap();
+    fs::write(
+        raw_dir.join(EXPORT_METADATA_FILENAME),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-dashboard-export-index",
+            "schemaVersion": TOOL_SCHEMA_VERSION,
+            "variant": "raw",
+            "dashboardCount": 1,
+            "indexFile": "index.json",
+            "format": "grafana-web-import-preserve-uid"
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        raw_dir.join("custom.json"),
+        serde_json::to_string_pretty(&json!({
+            "dashboard": {
+                "uid": "custom-main",
+                "title": "Custom Main",
+                "schemaVersion": 39,
+                "panels": [
+                    {"id": 7, "type": "acme-panel", "datasource": {"type": "prometheus"}}
+                ]
+            }
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+
+    let mut args = make_import_args(raw_dir);
+    args.strict_schema = true;
+    args.dry_run = true;
+    let error =
+        super::import_dashboards_with_request(|_method, _path, _params, _payload| Ok(None), &args)
+            .unwrap_err()
+            .to_string();
+
+    assert!(error.contains("custom-panel-plugin"));
+    assert!(error.contains("unsupported custom panel plugin type"));
 }
 
 #[test]
@@ -11656,6 +11807,7 @@ fn inspect_live_dashboards_with_request_reports_live_json_via_temp_raw_export() 
     let args = InspectLiveArgs {
         common: make_common_args("https://grafana.example.com".to_string()),
         page_size: 100,
+        concurrency: 1,
         org_id: None,
         all_orgs: false,
         json: false,
@@ -11665,6 +11817,7 @@ fn inspect_live_dashboards_with_request_reports_live_json_via_temp_raw_export() 
         report_columns: Vec::new(),
         report_filter_datasource: Some("prom-main".to_string()),
         report_filter_panel_id: Some("7".to_string()),
+        progress: false,
         help_full: false,
         no_header: false,
         output_file: None,
@@ -11752,6 +11905,7 @@ fn inspect_live_dashboards_with_request_writes_governance_json_to_output_file() 
     let args = InspectLiveArgs {
         common: make_common_args("https://grafana.example.com".to_string()),
         page_size: 100,
+        concurrency: 1,
         org_id: None,
         all_orgs: false,
         json: false,
@@ -11761,6 +11915,7 @@ fn inspect_live_dashboards_with_request_writes_governance_json_to_output_file() 
         report_columns: Vec::new(),
         report_filter_datasource: Some("prom-main".to_string()),
         report_filter_panel_id: Some("7".to_string()),
+        progress: false,
         help_full: false,
         no_header: false,
         output_file: Some(output_file.clone()),
@@ -12078,6 +12233,7 @@ fn inspect_live_dashboards_with_request_matches_export_output_files_for_core_fam
     let args = InspectLiveArgs {
         common: make_common_args("https://grafana.example.com".to_string()),
         page_size: 100,
+        concurrency: 1,
         org_id: None,
         all_orgs: false,
         json: false,
@@ -12087,6 +12243,7 @@ fn inspect_live_dashboards_with_request_matches_export_output_files_for_core_fam
         report_columns: Vec::new(),
         report_filter_datasource: None,
         report_filter_panel_id: None,
+        progress: false,
         help_full: false,
         no_header: false,
         output_file: Some(live_report_output.clone()),
@@ -12143,6 +12300,7 @@ fn inspect_live_dashboards_with_request_matches_export_output_files_for_core_fam
     let live_governance_args = InspectLiveArgs {
         common: make_common_args("https://grafana.example.com".to_string()),
         page_size: 100,
+        concurrency: 1,
         org_id: None,
         all_orgs: false,
         json: false,
@@ -12152,6 +12310,7 @@ fn inspect_live_dashboards_with_request_matches_export_output_files_for_core_fam
         report_columns: Vec::new(),
         report_filter_datasource: None,
         report_filter_panel_id: None,
+        progress: false,
         help_full: false,
         no_header: false,
         output_file: Some(live_governance_output.clone()),
@@ -12187,6 +12346,7 @@ fn inspect_live_dashboards_with_request_matches_export_output_files_for_core_fam
     let live_dependency_args = InspectLiveArgs {
         common: make_common_args("https://grafana.example.com".to_string()),
         page_size: 100,
+        concurrency: 1,
         org_id: None,
         all_orgs: false,
         json: false,
@@ -12196,6 +12356,7 @@ fn inspect_live_dashboards_with_request_matches_export_output_files_for_core_fam
         report_columns: Vec::new(),
         report_filter_datasource: None,
         report_filter_panel_id: None,
+        progress: false,
         help_full: false,
         no_header: false,
         output_file: Some(live_dependency_output.clone()),
@@ -12508,6 +12669,7 @@ fn inspect_live_dashboards_with_request_all_orgs_aggregates_multiple_org_exports
     let live_report_args = InspectLiveArgs {
         common: make_common_args("https://grafana.example.com".to_string()),
         page_size: 100,
+        concurrency: 1,
         org_id: None,
         all_orgs: true,
         json: false,
@@ -12517,6 +12679,7 @@ fn inspect_live_dashboards_with_request_all_orgs_aggregates_multiple_org_exports
         report_columns: Vec::new(),
         report_filter_datasource: None,
         report_filter_panel_id: None,
+        progress: false,
         help_full: false,
         no_header: false,
         output_file: Some(live_report_output.clone()),
@@ -12549,6 +12712,7 @@ fn inspect_live_dashboards_with_request_all_orgs_aggregates_multiple_org_exports
     let live_governance_args = InspectLiveArgs {
         common: make_common_args("https://grafana.example.com".to_string()),
         page_size: 100,
+        concurrency: 1,
         org_id: None,
         all_orgs: true,
         json: false,
@@ -12558,6 +12722,7 @@ fn inspect_live_dashboards_with_request_all_orgs_aggregates_multiple_org_exports
         report_columns: Vec::new(),
         report_filter_datasource: None,
         report_filter_panel_id: None,
+        progress: false,
         help_full: false,
         no_header: false,
         output_file: Some(live_governance_output.clone()),
@@ -12590,6 +12755,7 @@ fn inspect_live_dashboards_with_request_all_orgs_aggregates_multiple_org_exports
     let live_dependency_args = InspectLiveArgs {
         common: make_common_args("https://grafana.example.com".to_string()),
         page_size: 100,
+        concurrency: 1,
         org_id: None,
         all_orgs: true,
         json: false,
@@ -12599,6 +12765,7 @@ fn inspect_live_dashboards_with_request_all_orgs_aggregates_multiple_org_exports
         report_columns: Vec::new(),
         report_filter_datasource: None,
         report_filter_panel_id: None,
+        progress: false,
         help_full: false,
         no_header: false,
         output_file: Some(live_dependency_output.clone()),
@@ -12945,6 +13112,7 @@ fn inspect_live_dashboards_with_request_all_orgs_matches_export_root_governance_
     let live_governance_args = InspectLiveArgs {
         common: make_common_args("https://grafana.example.com".to_string()),
         page_size: 100,
+        concurrency: 1,
         org_id: None,
         all_orgs: true,
         json: false,
@@ -12954,6 +13122,7 @@ fn inspect_live_dashboards_with_request_all_orgs_matches_export_root_governance_
         report_columns: Vec::new(),
         report_filter_datasource: None,
         report_filter_panel_id: None,
+        progress: false,
         help_full: false,
         no_header: false,
         output_file: Some(live_governance_output.clone()),
@@ -12984,6 +13153,7 @@ fn inspect_live_dashboards_with_request_all_orgs_matches_export_root_governance_
     let live_report_args = InspectLiveArgs {
         common: make_common_args("https://grafana.example.com".to_string()),
         page_size: 100,
+        concurrency: 1,
         org_id: None,
         all_orgs: true,
         json: false,
@@ -12993,6 +13163,7 @@ fn inspect_live_dashboards_with_request_all_orgs_matches_export_root_governance_
         report_columns: Vec::new(),
         report_filter_datasource: None,
         report_filter_panel_id: None,
+        progress: false,
         help_full: false,
         no_header: false,
         output_file: Some(live_report_output.clone()),
@@ -13023,6 +13194,7 @@ fn inspect_live_dashboards_with_request_all_orgs_matches_export_root_governance_
     let live_dependency_args = InspectLiveArgs {
         common: make_common_args("https://grafana.example.com".to_string()),
         page_size: 100,
+        concurrency: 1,
         org_id: None,
         all_orgs: true,
         json: false,
@@ -13032,6 +13204,7 @@ fn inspect_live_dashboards_with_request_all_orgs_matches_export_root_governance_
         report_columns: Vec::new(),
         report_filter_datasource: None,
         report_filter_panel_id: None,
+        progress: false,
         help_full: false,
         no_header: false,
         output_file: Some(live_dependency_output.clone()),
@@ -13209,6 +13382,8 @@ fn import_dashboards_with_client_imports_discovered_files() {
         update_existing_only: false,
         require_matching_folder_path: false,
         require_matching_export_org: false,
+        strict_schema: false,
+        target_schema_version: None,
         import_message: "sync dashboards".to_string(),
         dry_run: false,
         table: false,
@@ -13256,6 +13431,8 @@ fn import_dashboards_with_org_id_requires_basic_auth() {
         update_existing_only: false,
         require_matching_folder_path: false,
         require_matching_export_org: false,
+        strict_schema: false,
+        target_schema_version: None,
         import_message: "sync dashboards".to_string(),
         dry_run: true,
         table: false,
@@ -14198,6 +14375,8 @@ fn build_import_auth_context_adds_org_header_for_basic_auth_imports() {
         update_existing_only: false,
         require_matching_folder_path: false,
         require_matching_export_org: false,
+        strict_schema: false,
+        target_schema_version: None,
         import_message: "sync dashboards".to_string(),
         dry_run: true,
         table: false,
@@ -15103,6 +15282,8 @@ fn import_dashboards_rejects_mismatched_export_org_with_explicit_org_id() {
         update_existing_only: false,
         require_matching_folder_path: false,
         require_matching_export_org: true,
+        strict_schema: false,
+        target_schema_version: None,
         import_message: "sync dashboards".to_string(),
         dry_run: true,
         table: false,
@@ -15176,6 +15357,8 @@ fn import_dashboards_rejects_mismatched_export_org_with_current_token_org() {
         update_existing_only: false,
         require_matching_folder_path: false,
         require_matching_export_org: true,
+        strict_schema: false,
+        target_schema_version: None,
         import_message: "sync dashboards".to_string(),
         dry_run: true,
         table: false,
@@ -15255,6 +15438,8 @@ fn import_dashboards_allows_matching_export_org_with_current_org_lookup() {
         update_existing_only: false,
         require_matching_folder_path: false,
         require_matching_export_org: true,
+        strict_schema: false,
+        target_schema_version: None,
         import_message: "sync dashboards".to_string(),
         dry_run: true,
         table: false,
@@ -15329,6 +15514,8 @@ fn import_dashboards_with_dry_run_skips_post_requests() {
         update_existing_only: false,
         require_matching_folder_path: false,
         require_matching_export_org: false,
+        strict_schema: false,
+        target_schema_version: None,
         import_message: "sync dashboards".to_string(),
         dry_run: true,
         table: false,
@@ -15418,6 +15605,8 @@ fn import_dashboards_rejects_missing_dependencies_before_dashboard_lookup() {
         update_existing_only: false,
         require_matching_folder_path: false,
         require_matching_export_org: false,
+        strict_schema: false,
+        target_schema_version: None,
         import_message: "sync dashboards".to_string(),
         dry_run: false,
         table: false,
@@ -15505,6 +15694,8 @@ fn import_dashboards_skips_dependency_preflight_for_dependency_free_dashboards()
         update_existing_only: false,
         require_matching_folder_path: false,
         require_matching_export_org: false,
+        strict_schema: false,
+        target_schema_version: None,
         import_message: "sync dashboards".to_string(),
         dry_run: false,
         table: false,
@@ -15916,6 +16107,8 @@ fn import_dashboards_with_matching_dependencies_posts_after_preflight() {
         update_existing_only: false,
         require_matching_folder_path: false,
         require_matching_export_org: false,
+        strict_schema: false,
+        target_schema_version: None,
         import_message: "sync dashboards".to_string(),
         dry_run: false,
         table: false,
@@ -15993,6 +16186,8 @@ fn import_dashboards_rejects_unsupported_export_schema_version() {
         update_existing_only: false,
         require_matching_folder_path: false,
         require_matching_export_org: false,
+        strict_schema: false,
+        target_schema_version: None,
         import_message: "sync dashboards".to_string(),
         dry_run: false,
         table: false,
@@ -16059,6 +16254,8 @@ fn import_dashboards_with_update_existing_only_skips_missing_dashboards() {
         update_existing_only: true,
         require_matching_folder_path: false,
         require_matching_export_org: false,
+        strict_schema: false,
+        target_schema_version: None,
         import_message: "sync dashboards".to_string(),
         dry_run: false,
         table: false,
@@ -16148,6 +16345,8 @@ fn import_dashboards_with_update_existing_only_table_marks_missing_dashboards_as
         update_existing_only: true,
         require_matching_folder_path: false,
         require_matching_export_org: false,
+        strict_schema: false,
+        target_schema_version: None,
         import_message: "sync dashboards".to_string(),
         dry_run: true,
         table: true,
@@ -16219,6 +16418,8 @@ fn import_dashboards_replace_existing_preserves_destination_folder() {
         update_existing_only: false,
         require_matching_folder_path: false,
         require_matching_export_org: false,
+        strict_schema: false,
+        target_schema_version: None,
         import_message: "sync dashboards".to_string(),
         dry_run: false,
         table: false,
@@ -16297,6 +16498,8 @@ fn import_dashboards_rejects_ensure_folders_with_import_folder_override() {
         update_existing_only: false,
         require_matching_folder_path: false,
         require_matching_export_org: false,
+        strict_schema: false,
+        target_schema_version: None,
         import_message: "sync dashboards".to_string(),
         dry_run: false,
         table: false,
@@ -16355,6 +16558,8 @@ fn import_dashboards_rejects_matching_folder_path_with_import_folder_uid() {
         update_existing_only: false,
         require_matching_folder_path: true,
         require_matching_export_org: false,
+        strict_schema: false,
+        target_schema_version: None,
         import_message: "sync dashboards".to_string(),
         dry_run: false,
         table: false,
@@ -16495,6 +16700,8 @@ fn collect_import_dry_run_report_uses_export_folder_inventory_for_target_paths()
         update_existing_only: false,
         require_matching_folder_path: false,
         require_matching_export_org: false,
+        strict_schema: false,
+        target_schema_version: None,
         import_message: "sync dashboards".to_string(),
         dry_run: true,
         table: false,
@@ -16591,6 +16798,8 @@ fn collect_import_dry_run_report_prefers_live_folder_path_for_existing_dashboard
         update_existing_only: false,
         require_matching_folder_path: false,
         require_matching_export_org: false,
+        strict_schema: false,
+        target_schema_version: None,
         import_message: "sync dashboards".to_string(),
         dry_run: true,
         table: false,
@@ -16675,6 +16884,8 @@ fn import_dashboards_with_matching_folder_path_skips_live_update_mismatch() {
         update_existing_only: false,
         require_matching_folder_path: true,
         require_matching_export_org: false,
+        strict_schema: false,
+        target_schema_version: None,
         import_message: "sync dashboards".to_string(),
         dry_run: false,
         table: false,
@@ -16748,6 +16959,8 @@ fn import_dashboards_rejects_json_without_dry_run() {
         update_existing_only: false,
         require_matching_folder_path: false,
         require_matching_export_org: false,
+        strict_schema: false,
+        target_schema_version: None,
         import_message: "sync dashboards".to_string(),
         dry_run: false,
         table: false,
@@ -16798,6 +17011,8 @@ fn import_dashboards_reject_output_columns_without_table_output() {
         update_existing_only: false,
         require_matching_folder_path: false,
         require_matching_export_org: false,
+        strict_schema: false,
+        target_schema_version: None,
         import_message: "sync dashboards".to_string(),
         dry_run: true,
         table: false,
@@ -16881,6 +17096,8 @@ fn import_dashboards_with_ensure_folders_creates_missing_folder_chain_from_raw_i
         update_existing_only: false,
         require_matching_folder_path: false,
         require_matching_export_org: false,
+        strict_schema: false,
+        target_schema_version: None,
         import_message: "sync dashboards".to_string(),
         dry_run: false,
         table: false,
@@ -17009,6 +17226,8 @@ fn import_dashboards_with_dry_run_and_ensure_folders_checks_folder_inventory() {
         update_existing_only: false,
         require_matching_folder_path: false,
         require_matching_export_org: false,
+        strict_schema: false,
+        target_schema_version: None,
         import_message: "sync dashboards".to_string(),
         dry_run: true,
         table: false,
@@ -17097,6 +17316,8 @@ fn import_dashboards_with_ensure_folders_requires_inventory_manifest() {
         update_existing_only: false,
         require_matching_folder_path: false,
         require_matching_export_org: false,
+        strict_schema: false,
+        target_schema_version: None,
         import_message: "sync dashboards".to_string(),
         dry_run: false,
         table: false,

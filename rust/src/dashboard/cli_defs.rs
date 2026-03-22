@@ -33,6 +33,13 @@ pub enum GovernanceGateOutputFormat {
     Json,
 }
 
+/// Enum definition for ValidationOutputFormat.
+#[derive(Debug, Clone, Copy, ValueEnum, PartialEq, Eq)]
+pub enum ValidationOutputFormat {
+    Text,
+    Json,
+}
+
 /// Struct definition for CommonCliArgs.
 #[derive(Debug, Clone, Args)]
 pub struct CommonCliArgs {
@@ -273,6 +280,18 @@ pub struct ImportArgs {
         help = "Fail the import when the raw export orgId metadata does not match the target Grafana org for this run. This is a safety check for accidental cross-org imports."
     )]
     pub require_matching_export_org: bool,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Enable strict dashboard schema validation before import. This rejects unsupported custom plugins, legacy layout shapes, and other preflight issues before any live write."
+    )]
+    pub strict_schema: bool,
+    #[arg(
+        long,
+        requires = "strict_schema",
+        help = "Optional target dashboard schemaVersion required by strict validation. Dashboards below this version are blocked as migration-required."
+    )]
+    pub target_schema_version: Option<i64>,
     #[arg(long, default_value = DEFAULT_IMPORT_MESSAGE, help = "Version-history message to attach to each imported dashboard revision in Grafana.")]
     pub import_message: String,
     #[arg(
@@ -711,6 +730,12 @@ pub struct InspectLiveArgs {
     pub page_size: usize,
     #[arg(
         long,
+        default_value_t = 8usize,
+        help = "Maximum parallel dashboard fetch workers used for live inspect when supported."
+    )]
+    pub concurrency: usize,
+    #[arg(
+        long,
         conflicts_with = "all_orgs",
         help = "Inspect dashboards from this Grafana org ID."
     )]
@@ -774,6 +799,12 @@ pub struct InspectLiveArgs {
     #[arg(
         long,
         default_value_t = false,
+        help = "Show a progress bar while live dashboards are fetched for inspection."
+    )]
+    pub progress: bool,
+    #[arg(
+        long,
+        default_value_t = false,
         help = "Show extended help with report examples for inspect-live."
     )]
     pub help_full: bool,
@@ -811,6 +842,42 @@ pub struct GovernanceGateArgs {
         help = "Optional path to also write the normalized governance gate result JSON."
     )]
     pub json_output: Option<PathBuf>,
+}
+
+/// Struct definition for ValidateExportArgs.
+#[derive(Debug, Clone, Args)]
+pub struct ValidateExportArgs {
+    #[arg(
+        long,
+        help = "Validate dashboards from this raw export directory. Point this to the raw/ export directory explicitly."
+    )]
+    pub import_dir: PathBuf,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Reject unsupported custom panel and datasource plugin types."
+    )]
+    pub reject_custom_plugins: bool,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Reject legacy dashboard properties such as row layouts or web-import scaffolding."
+    )]
+    pub reject_legacy_properties: bool,
+    #[arg(
+        long,
+        help = "Optional target dashboard schemaVersion required for this export set."
+    )]
+    pub target_schema_version: Option<i64>,
+    #[arg(
+        long,
+        value_enum,
+        default_value_t = ValidationOutputFormat::Text,
+        help = "Render the validation result as text or JSON."
+    )]
+    pub output_format: ValidationOutputFormat,
+    #[arg(long, help = "Optional path to also write the validation JSON result.")]
+    pub output_file: Option<PathBuf>,
 }
 
 /// Enum definition for DashboardCommand.
@@ -856,6 +923,12 @@ pub enum DashboardCommand {
         after_help = "Examples:\n\n  Evaluate governance policy with text output:\n    grafana-util dashboard governance-gate --policy ./policy.json --governance ./governance.json --queries ./queries.json\n\n  Write the normalized result JSON while also printing machine-readable output:\n    grafana-util dashboard governance-gate --policy ./policy.json --governance ./governance.json --queries ./queries.json --output-format json --json-output ./governance-check.json"
     )]
     GovernanceGate(GovernanceGateArgs),
+    #[command(
+        name = "validate-export",
+        about = "Run strict schema validation against dashboard raw export files before GitOps sync.",
+        after_help = "Examples:\n\n  Validate a raw export and fail on migration or plugin issues:\n    grafana-util dashboard validate-export --import-dir ./dashboards/raw --reject-custom-plugins --reject-legacy-properties --target-schema-version 39\n\n  Write the validation report as JSON:\n    grafana-util dashboard validate-export --import-dir ./dashboards/raw --output-format json --output-file ./dashboard-validation.json"
+    )]
+    ValidateExport(ValidateExportArgs),
     #[command(
         name = "screenshot",
         about = "Open one Grafana dashboard in a headless browser and capture PNG, JPEG, or PDF output.",

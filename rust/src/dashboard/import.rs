@@ -1659,6 +1659,8 @@ where
 fn build_dashboard_import_dependency_specs(
     import_dir: &Path,
     datasource_catalog: &super::prompt::DatasourceCatalog,
+    strict_schema: bool,
+    target_schema_version: Option<i64>,
 ) -> Result<Vec<Value>> {
     let mut dashboard_files = discover_dashboard_files(import_dir)?;
     dashboard_files.retain(|path| {
@@ -1667,6 +1669,12 @@ fn build_dashboard_import_dependency_specs(
     let mut desired_specs = Vec::new();
     for dashboard_file in dashboard_files {
         let document = load_json_file(&dashboard_file)?;
+        super::validate::validate_dashboard_import_document(
+            &document,
+            &dashboard_file,
+            strict_schema,
+            target_schema_version,
+        )?;
         let document_object =
             value_as_object(&document, "Dashboard payload must be a JSON object.")?;
         let dashboard = extract_dashboard_object(document_object)?;
@@ -1696,6 +1704,8 @@ fn build_dashboard_import_dependency_specs(
 fn validate_dashboard_import_dependencies_with_request<F>(
     mut request_json: F,
     import_dir: &Path,
+    strict_schema: bool,
+    target_schema_version: Option<i64>,
 ) -> Result<()>
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
@@ -1708,7 +1718,12 @@ where
         Vec::new()
     };
     let datasource_catalog = build_datasource_catalog(&datasources);
-    let desired_specs = build_dashboard_import_dependency_specs(import_dir, &datasource_catalog)?;
+    let desired_specs = build_dashboard_import_dependency_specs(
+        import_dir,
+        &datasource_catalog,
+        strict_schema,
+        target_schema_version,
+    )?;
     let availability = build_dashboard_import_availability_with_request(
         &mut request_json,
         &datasources,
@@ -1804,6 +1819,14 @@ where
     let mut dashboard_records: Vec<[String; 8]> = Vec::new();
     for dashboard_file in &dashboard_files {
         let document = load_json_file(dashboard_file)?;
+        if args.strict_schema {
+            super::validate::validate_dashboard_import_document(
+                &document,
+                dashboard_file,
+                true,
+                args.target_schema_version,
+            )?;
+        }
         let document_object =
             value_as_object(&document, "Dashboard payload must be a JSON object.")?;
         let dashboard = extract_dashboard_object(document_object)?;
@@ -2043,7 +2066,12 @@ where
         .map(|item| (item.uid.clone(), item))
         .collect();
     if !args.dry_run {
-        validate_dashboard_import_dependencies_with_request(&mut request_json, &args.import_dir)?;
+        validate_dashboard_import_dependencies_with_request(
+            &mut request_json,
+            &args.import_dir,
+            args.strict_schema,
+            args.target_schema_version,
+        )?;
     }
     let mut dashboard_files = discover_dashboard_files(&args.import_dir)?;
     dashboard_files.retain(|path| {
@@ -2105,6 +2133,14 @@ where
             continue;
         }
         let document = load_json_file(dashboard_file)?;
+        if args.strict_schema {
+            super::validate::validate_dashboard_import_document(
+                &document,
+                dashboard_file,
+                true,
+                args.target_schema_version,
+            )?;
+        }
         let document_object =
             value_as_object(&document, "Dashboard payload must be a JSON object.")?;
         let dashboard = extract_dashboard_object(document_object)?;
@@ -2744,7 +2780,8 @@ mod tests {
 
         let datasource_catalog = build_datasource_catalog(&[]);
         let desired_specs =
-            build_dashboard_import_dependency_specs(&raw_dir, &datasource_catalog).unwrap();
+            build_dashboard_import_dependency_specs(&raw_dir, &datasource_catalog, false, None)
+                .unwrap();
 
         assert_eq!(desired_specs.len(), 1);
         assert_eq!(

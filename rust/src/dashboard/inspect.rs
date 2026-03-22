@@ -1,5 +1,8 @@
 //! Dashboard inspection pipeline for live systems and export directories.
 //! Coordinates query extraction, filtering, report assembly, and table/JSON rendering entry points.
+use indicatif::{ProgressBar, ProgressStyle};
+use rayon::prelude::*;
+use rayon::ThreadPoolBuilder;
 use regex::Regex;
 use reqwest::Method;
 use serde_json::{Map, Value};
@@ -2498,12 +2501,12 @@ pub(crate) fn analyze_export_dir(args: &InspectExportArgs) -> Result<usize> {
     analyze_export_dir_at_path(args, &import_dir)
 }
 
-struct TempInspectDir {
-    path: PathBuf,
+pub(crate) struct TempInspectDir {
+    pub(crate) path: PathBuf,
 }
 
 impl TempInspectDir {
-    fn new(prefix: &str) -> Result<Self> {
+    pub(crate) fn new(prefix: &str) -> Result<Self> {
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_err(|error| message(format!("Failed to build {prefix} temp path: {error}")))?
@@ -2535,9 +2538,112 @@ fn build_live_export_args(args: &InspectLiveArgs, export_dir: PathBuf) -> Export
         without_dashboard_raw: false,
         without_dashboard_prompt: true,
         dry_run: false,
-        progress: false,
+        progress: args.progress,
         verbose: false,
     }
+}
+
+fn build_live_scan_progress_bar(total: usize) -> ProgressBar {
+    let bar = ProgressBar::new(total as u64);
+    let style = ProgressStyle::with_template(
+        "{spinner:.green} dashboards {pos}/{len} [{bar:40.cyan/blue}] {msg}",
+    )
+    .unwrap_or_else(|_| ProgressStyle::default_bar());
+    bar.set_style(style.progress_chars("##-"));
+    bar
+}
+
+pub(crate) fn snapshot_live_dashboard_export_with_fetcher<F>(
+    raw_dir: &Path,
+    summaries: &[Map<String, Value>],
+    concurrency: usize,
+    progress: bool,
+    fetch_dashboard: F,
+) -> Result<usize>
+where
+    F: Fn(&str) -> Result<Value> + Sync,
+{
+    fs::create_dir_all(raw_dir)?;
+    let progress_bar = if progress {
+        Some(build_live_scan_progress_bar(summaries.len()))
+    } else {
+        None
+    };
+    let thread_count = concurrency.max(1);
+    let pool = ThreadPoolBuilder::new()
+        .num_threads(thread_count)
+        .build()
+        .map_err(|error| {
+            message(format!(
+                "Failed to build dashboard scan worker pool: {error}"
+            ))
+        })?;
+    let results = pool.install(|| {
+        summaries
+            .par_iter()
+            .map(|summary| {
+                let uid = string_field(summary, "uid", "");
+                let output_path = build_output_path(raw_dir, summary, false);
+                let payload = fetch_dashboard(&uid)?;
+                write_dashboard(&payload, &output_path, false)?;
+                if let Some(bar) = progress_bar.as_ref() {
+                    bar.inc(1);
+                    bar.set_message(uid);
+                }
+                Ok::<(), crate::common::GrafanaCliError>(())
+            })
+            .collect::<Vec<_>>()
+    });
+    if let Some(bar) = progress_bar.as_ref() {
+        bar.finish_and_clear();
+    }
+    for result in results {
+        result?;
+    }
+    Ok(summaries.len())
+}
+
+pub(crate) fn inspect_live_dashboards_with_client(
+    client: &JsonHttpClient,
+    args: &InspectLiveArgs,
+) -> Result<usize> {
+    if args.all_orgs || args.concurrency <= 1 {
+        return inspect_live_dashboards_with_request(
+            |method, path, params, payload| client.request_json(method, path, params, payload),
+            args,
+        );
+    }
+
+    let temp_dir = TempInspectDir::new("inspect-live")?;
+    let raw_dir = temp_dir.path.join(RAW_EXPORT_SUBDIR);
+    let summaries = list_dashboard_summaries(client, args.page_size)?;
+    let datasource_items = list_datasources(client)?;
+    let org_value = client
+        .request_json(Method::GET, "/api/org", &[], None)?
+        .unwrap_or_else(|| serde_json::json!({"id": 1, "name": "Main Org."}));
+    let org = value_as_object(&org_value, "Unexpected current org payload from Grafana.")?;
+    let datasource_inventory = datasource_items
+        .iter()
+        .map(|item| build_datasource_inventory_record(item, org))
+        .collect::<Vec<_>>();
+    snapshot_live_dashboard_export_with_fetcher(
+        &raw_dir,
+        &summaries,
+        args.concurrency,
+        args.progress,
+        |uid| fetch_dashboard(client, uid),
+    )?;
+    write_json_document(
+        &datasource_inventory,
+        &raw_dir.join(DATASOURCE_INVENTORY_FILENAME),
+    )?;
+    let folder_inventory = collect_folder_inventory_with_request(
+        |method, path, params, payload| client.request_json(method, path, params, payload),
+        &summaries,
+    )?;
+    write_json_document(&folder_inventory, &raw_dir.join(FOLDER_INVENTORY_FILENAME))?;
+    let inspect_args = build_export_inspect_args_from_live(args, raw_dir);
+    analyze_export_dir(&inspect_args)
 }
 
 fn build_export_inspect_args_from_live(

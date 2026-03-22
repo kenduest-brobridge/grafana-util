@@ -40,6 +40,7 @@ mod live;
 mod models;
 mod prompt;
 mod screenshot;
+mod validate;
 mod vars;
 
 pub use cli_defs::{
@@ -48,7 +49,7 @@ pub use cli_defs::{
     DiffArgs, ExportArgs, GovernanceGateArgs, GovernanceGateOutputFormat, ImportArgs,
     InspectExportArgs, InspectExportReportFormat, InspectLiveArgs, InspectOutputFormat,
     InspectVarsArgs, ListArgs, ScreenshotArgs, ScreenshotFullPageOutput, ScreenshotOutputFormat,
-    ScreenshotTheme, SimpleOutputFormat,
+    ScreenshotTheme, SimpleOutputFormat, ValidateExportArgs, ValidationOutputFormat,
 };
 pub use export::{build_export_variant_dirs, build_output_path, export_dashboards_with_client};
 pub use help::{
@@ -63,9 +64,10 @@ pub use live::{
 pub use prompt::build_external_export_document;
 
 use export::export_dashboards_with_org_clients;
-use inspect::analyze_export_dir;
+use inspect::{analyze_export_dir, inspect_live_dashboards_with_client};
 use list::list_dashboards_with_org_clients;
 use screenshot::capture_dashboard_screenshot;
+use validate::run_dashboard_validate_export;
 use vars::inspect_dashboard_variables;
 
 #[cfg(test)]
@@ -92,6 +94,7 @@ pub(crate) use import::{
     import_dashboards_with_request, render_folder_inventory_dry_run_table,
     render_import_dry_run_json, render_import_dry_run_table,
 };
+#[cfg(test)]
 pub(crate) use inspect::inspect_live_dashboards_with_request;
 #[cfg(test)]
 pub(crate) use inspect::{
@@ -99,7 +102,8 @@ pub(crate) use inspect::{
     build_export_inspection_summary, build_export_inspection_summary_rows, dispatch_query_analysis,
     prepare_inspect_export_import_dir, resolve_query_analyzer_family,
     resolve_query_analyzer_family_from_datasource_type,
-    resolve_query_analyzer_family_from_query_signature, validate_inspect_export_report_args,
+    resolve_query_analyzer_family_from_query_signature,
+    snapshot_live_dashboard_export_with_fetcher, validate_inspect_export_report_args,
     QueryExtractionContext, DATASOURCE_FAMILY_FLUX, DATASOURCE_FAMILY_LOKI,
     DATASOURCE_FAMILY_PROMETHEUS, DATASOURCE_FAMILY_SEARCH, DATASOURCE_FAMILY_SQL,
     DATASOURCE_FAMILY_TRACING, DATASOURCE_FAMILY_UNKNOWN,
@@ -163,6 +167,8 @@ pub(crate) use screenshot::{
     build_dashboard_capture_url, infer_screenshot_output_format, resolve_manifest_title,
     validate_screenshot_args,
 };
+#[cfg(test)]
+pub(crate) use validate::{render_validation_result_json, validate_dashboard_export_dir};
 #[cfg(test)]
 pub(crate) use vars::extract_dashboard_variables;
 
@@ -281,10 +287,7 @@ pub fn run_dashboard_cli_with_client(
                 print!("{}", render_inspect_live_help_full());
                 return Ok(());
             }
-            let _ = inspect_live_dashboards_with_request(
-                |method, path, params, payload| client.request_json(method, path, params, payload),
-                &inspect_args,
-            )?;
+            let _ = inspect_live_dashboards_with_client(client, &inspect_args)?;
             Ok(())
         }
         DashboardCommand::InspectVars(inspect_vars_args) => {
@@ -292,6 +295,9 @@ pub fn run_dashboard_cli_with_client(
         }
         DashboardCommand::GovernanceGate(governance_gate_args) => {
             governance_gate::run_dashboard_governance_gate(&governance_gate_args)
+        }
+        DashboardCommand::ValidateExport(validate_args) => {
+            run_dashboard_validate_export(&validate_args)
         }
         DashboardCommand::Screenshot(screenshot_args) => {
             capture_dashboard_screenshot(&screenshot_args)
@@ -354,10 +360,7 @@ pub fn run_dashboard_cli(args: DashboardCliArgs) -> Result<()> {
                 return Ok(());
             }
             let client = build_http_client(&inspect_args.common)?;
-            let _ = inspect_live_dashboards_with_request(
-                |method, path, params, payload| client.request_json(method, path, params, payload),
-                &inspect_args,
-            )?;
+            let _ = inspect_live_dashboards_with_client(&client, &inspect_args)?;
             Ok(())
         }
         DashboardCommand::InspectVars(inspect_vars_args) => {
@@ -365,6 +368,9 @@ pub fn run_dashboard_cli(args: DashboardCliArgs) -> Result<()> {
         }
         DashboardCommand::GovernanceGate(governance_gate_args) => {
             governance_gate::run_dashboard_governance_gate(&governance_gate_args)
+        }
+        DashboardCommand::ValidateExport(validate_args) => {
+            run_dashboard_validate_export(&validate_args)
         }
         DashboardCommand::Screenshot(screenshot_args) => {
             capture_dashboard_screenshot(&screenshot_args)

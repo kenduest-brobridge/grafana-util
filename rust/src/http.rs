@@ -19,6 +19,7 @@ pub struct JsonHttpClientConfig {
 }
 
 /// Struct definition for JsonHttpClient.
+#[derive(Clone)]
 pub struct JsonHttpClient {
     base_url: String,
     client: Client,

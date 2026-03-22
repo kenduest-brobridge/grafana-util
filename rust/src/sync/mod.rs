@@ -14,6 +14,7 @@ use std::path::{Path, PathBuf};
 pub mod bundle_alert_contracts;
 pub mod bundle_preflight;
 pub mod preflight;
+pub mod review_tui;
 pub mod workbench;
 
 use self::bundle_preflight::{
@@ -24,7 +25,8 @@ use self::preflight::{
     build_sync_preflight_document, render_sync_preflight_text, SYNC_PREFLIGHT_KIND,
 };
 use self::workbench::{
-    build_sync_apply_intent_document, build_sync_plan_document, build_sync_source_bundle_document,
+    build_sync_alert_assessment_document, build_sync_apply_intent_document,
+    build_sync_plan_document, build_sync_plan_summary_document, build_sync_source_bundle_document,
     build_sync_summary_document, render_sync_source_bundle_text,
 };
 use crate::alert::{
@@ -184,6 +186,12 @@ pub struct SyncReviewArgs {
     pub reviewed_at: Option<String>,
     #[arg(long, help = "Optional review note to record in the reviewed plan.")]
     pub review_note: Option<String>,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Open an interactive terminal review to select which actionable sync operations stay enabled before the plan is marked reviewed."
+    )]
+    pub interactive: bool,
 }
 
 /// Struct definition for SyncApplyArgs.
@@ -2982,9 +2990,14 @@ pub fn run_sync_cli(command: SyncGroupCommand) -> Result<()> {
             let plan = load_json_value(&args.plan_file, "Sync plan input")?;
             let trace_id = require_trace_id(&plan, "Sync plan document")?;
             require_optional_stage(&plan, "Sync plan document", "plan", 1, None)?;
+            let reviewed_plan_input = if args.interactive {
+                review_tui::run_sync_review_tui(&plan)?
+            } else {
+                plan
+            };
             let document = attach_lineage(
                 &attach_review_audit(
-                    &mark_plan_reviewed(&plan, &args.review_token)?,
+                    &mark_plan_reviewed(&reviewed_plan_input, &args.review_token)?,
                     &trace_id,
                     args.reviewed_by.as_deref(),
                     args.reviewed_at.as_deref(),

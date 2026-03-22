@@ -404,7 +404,7 @@ fn compare_body(desired: &SyncResourceSpec, live: &SyncResourceSpec) -> Vec<Stri
         .collect()
 }
 
-fn build_alert_assessment_document(operations: &[Value]) -> Value {
+pub(crate) fn build_sync_alert_assessment_document(operations: &[Value]) -> Value {
     let mut alerts = Vec::new();
     let mut candidate_count = 0i64;
     let mut plan_only_count = 0i64;
@@ -500,6 +500,39 @@ fn build_alert_assessment_document(operations: &[Value]) -> Value {
     })
 }
 
+pub(crate) fn build_sync_plan_summary_document(operations: &[Value]) -> Value {
+    let mut would_create = 0usize;
+    let mut would_update = 0usize;
+    let mut would_delete = 0usize;
+    let mut noop = 0usize;
+    let mut unmanaged = 0usize;
+    for item in operations {
+        match item
+            .get("action")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+        {
+            "would-create" => would_create += 1,
+            "would-update" => would_update += 1,
+            "would-delete" => would_delete += 1,
+            "noop" => noop += 1,
+            "unmanaged" => unmanaged += 1,
+            _ => {}
+        }
+    }
+    let alert_assessment = build_sync_alert_assessment_document(operations);
+    serde_json::json!({
+        "would_create": would_create,
+        "would_update": would_update,
+        "would_delete": would_delete,
+        "noop": noop,
+        "unmanaged": unmanaged,
+        "alert_candidate": alert_assessment["summary"]["candidateCount"],
+        "alert_plan_only": alert_assessment["summary"]["planOnlyCount"],
+        "alert_blocked": alert_assessment["summary"]["blockedCount"],
+    })
+}
+
 /// Purpose: implementation note.
 ///
 /// Args: see function signature.
@@ -518,20 +551,13 @@ pub fn build_sync_plan_document(
     let desired_index = build_index(&desired)?;
     let live_index = build_index(&live)?;
     let mut operations = Vec::new();
-    let mut would_create = 0i64;
-    let mut would_update = 0i64;
-    let mut would_delete = 0i64;
-    let mut noop = 0i64;
-    let mut unmanaged = 0i64;
 
     for (key, desired_spec) in &desired_index {
         if let Some(live_spec) = live_index.get(key) {
             let changed_fields = compare_body(desired_spec, live_spec);
             let action = if changed_fields.is_empty() {
-                noop += 1;
                 "noop"
             } else {
-                would_update += 1;
                 "would-update"
             };
             operations.push(serde_json::json!({
@@ -547,7 +573,6 @@ pub fn build_sync_plan_document(
                 "sourcePath": desired_spec.source_path,
             }));
         } else {
-            would_create += 1;
             operations.push(serde_json::json!({
                 "kind": desired_spec.kind,
                 "identity": desired_spec.identity,
@@ -568,10 +593,8 @@ pub fn build_sync_plan_document(
             continue;
         }
         let action = if allow_prune && supports_prune_delete(&live_spec.kind) {
-            would_delete += 1;
             "would-delete"
         } else {
-            unmanaged += 1;
             "unmanaged"
         };
         operations.push(serde_json::json!({
@@ -594,7 +617,7 @@ pub fn build_sync_plan_document(
         }));
     }
 
-    let alert_assessment = build_alert_assessment_document(&operations);
+    let alert_assessment = build_sync_alert_assessment_document(&operations);
     Ok(serde_json::json!({
         "kind": SYNC_PLAN_KIND,
         "schemaVersion": SYNC_PLAN_SCHEMA_VERSION,
@@ -602,16 +625,7 @@ pub fn build_sync_plan_document(
         "reviewRequired": true,
         "reviewed": false,
         "allowPrune": allow_prune,
-        "summary": {
-            "would_create": would_create,
-            "would_update": would_update,
-            "would_delete": would_delete,
-            "noop": noop,
-            "unmanaged": unmanaged,
-            "alert_candidate": alert_assessment["summary"]["candidateCount"],
-            "alert_plan_only": alert_assessment["summary"]["planOnlyCount"],
-            "alert_blocked": alert_assessment["summary"]["blockedCount"],
-        },
+        "summary": build_sync_plan_summary_document(&operations),
         "alertAssessment": alert_assessment,
         "operations": operations,
     }))

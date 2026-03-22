@@ -68,6 +68,12 @@ fn sync_apply_help_includes_examples_and_approval_flags() {
 }
 
 #[test]
+fn sync_review_help_mentions_interactive_review() {
+    let help = render_sync_subcommand_help("review");
+    assert!(help.contains("--interactive"));
+}
+
+#[test]
 fn sync_bundle_preflight_help_includes_examples_and_grouped_headings() {
     let help = render_sync_subcommand_help("bundle-preflight");
     assert!(help.contains("Examples:"));
@@ -1582,6 +1588,7 @@ fn run_sync_cli_review_marks_plan_reviewed() {
         reviewed_by: None,
         reviewed_at: None,
         review_note: None,
+        interactive: false,
     }));
 
     assert!(result.is_ok());
@@ -1620,6 +1627,7 @@ fn run_sync_cli_review_rejects_wrong_review_token() {
         reviewed_by: None,
         reviewed_at: None,
         review_note: None,
+        interactive: false,
     }))
     .unwrap_err()
     .to_string();
@@ -1659,6 +1667,7 @@ fn run_sync_cli_review_rejects_missing_trace_id() {
         reviewed_by: None,
         reviewed_at: None,
         review_note: None,
+        interactive: false,
     }))
     .unwrap_err()
     .to_string();
@@ -1700,6 +1709,7 @@ fn run_sync_cli_review_rejects_partial_lineage_metadata() {
         reviewed_by: None,
         reviewed_at: None,
         review_note: None,
+        interactive: false,
     }))
     .unwrap_err()
     .to_string();
@@ -1743,6 +1753,7 @@ fn run_sync_cli_review_rejects_non_plan_lineage_stage() {
         reviewed_by: None,
         reviewed_at: None,
         review_note: None,
+        interactive: false,
     }))
     .unwrap_err()
     .to_string();
@@ -1786,6 +1797,7 @@ fn run_sync_cli_review_rejects_plan_with_wrong_lineage_stage() {
         reviewed_by: None,
         reviewed_at: None,
         review_note: None,
+        interactive: false,
     }))
     .unwrap_err()
     .to_string();
@@ -2818,9 +2830,49 @@ fn run_sync_cli_review_accepts_explicit_audit_metadata() {
         reviewed_by: Some("alice".to_string()),
         reviewed_at: Some("manual-review".to_string()),
         review_note: Some("peer-reviewed".to_string()),
+        interactive: false,
     }));
 
     assert!(result.is_ok());
+}
+
+#[test]
+fn filter_review_plan_operations_recalculates_summary_and_alert_assessment() {
+    let plan = json!({
+        "kind": "grafana-utils-sync-plan",
+        "traceId": "sync-trace-review",
+        "summary": {
+            "would_create": 2,
+            "would_update": 1,
+            "would_delete": 0,
+            "noop": 0,
+            "unmanaged": 0,
+            "alert_candidate": 1,
+            "alert_plan_only": 0,
+            "alert_blocked": 0
+        },
+        "reviewRequired": true,
+        "reviewed": false,
+        "operations": [
+            {"kind":"datasource","identity":"prom-main","action":"would-update"},
+            {"kind":"alert-contact-point","identity":"ops-email","action":"would-create"},
+            {"kind":"folder","identity":"infra","action":"noop"}
+        ]
+    });
+    let selected = ["alert-contact-point::ops-email".to_string()]
+        .into_iter()
+        .collect();
+
+    let filtered = super::review_tui::filter_review_plan_operations(&plan, &selected).unwrap();
+
+    assert_eq!(filtered["summary"]["would_create"], json!(1));
+    assert_eq!(filtered["summary"]["would_update"], json!(0));
+    assert_eq!(filtered["summary"]["noop"], json!(1));
+    assert_eq!(
+        filtered["alertAssessment"]["summary"]["candidateCount"],
+        json!(1)
+    );
+    assert_eq!(filtered["operations"].as_array().unwrap().len(), 2);
 }
 
 #[test]

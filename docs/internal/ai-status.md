@@ -5,6 +5,13 @@ Historical note:
 - Older entries describe the repo state and `TODO.md` backlog as they existed on the entry date.
 - `TODO.md` now tracks only the active backlog; completed or superseded TODO items moved to `docs/internal/todo-archive.md`.
 
+## 2026-03-23 - Task: Add Rust Schema Validation, Interactive Sync Review, And Concurrent Dashboard Scan
+- State: Done
+- Scope: `rust/Cargo.toml`, `rust/src/dashboard/cli_defs.rs`, `rust/src/dashboard/import.rs`, `rust/src/dashboard/inspect.rs`, `rust/src/dashboard/mod.rs`, `rust/src/dashboard/validate.rs`, `rust/src/dashboard/rust_tests.rs`, `rust/src/http.rs`, `rust/src/sync/cli_rust_tests.rs`, `rust/src/sync/mod.rs`, `rust/src/sync/review_tui.rs`, `rust/src/sync/workbench.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust already had dashboard inspection, governance-gate, and staged sync review/apply flows, but it still lacked three larger operator-facing capabilities from the backlog: strict dashboard schema preflight, an interactive sync review surface, and a high-concurrency live dashboard scan path with progress reporting.
+- Current Update: Added a new Rust `dashboard validate-export` command plus shared strict validator logic that checks raw dashboard exports for migration-required `schemaVersion`, web-import placeholders, legacy row layouts, and unsupported custom panel/datasource plugin types. Added `dashboard import --strict-schema [--target-schema-version N]` so the same validation can block dashboard import before dry-run/live writes. Added `sync review --interactive`, backed by a small `ratatui`/`crossterm` review UI that lets operators deselect actionable plan operations before the reviewed plan is stamped, while keeping summary and alert-assessment counts consistent. Added `dashboard inspect-live --concurrency N --progress`, backed by a parallel raw-snapshot writer using `rayon` and `indicatif`, so current-org live inspect can fetch many dashboards concurrently and show a progress bar before the existing report/governance analysis runs.
+- Result: Rust now has first-pass implementations for the three larger architecture items instead of only incremental governance rules. Schema validation is available as both a standalone preflight and an import gate, sync review now has an interactive control point before apply, and live dashboard inspection has a parallel scan path with operator-visible progress.
+
 ## 2026-03-23 - Task: Add Rust Dashboard Governance Gate Command
 - State: Done
 - Scope: `rust/src/dashboard/cli_defs.rs`, `rust/src/dashboard/governance_gate.rs`, `rust/src/dashboard/mod.rs`, `rust/src/dashboard/rust_tests.rs`, `rust/src/cli.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
