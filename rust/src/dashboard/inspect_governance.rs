@@ -24,6 +24,8 @@ pub(crate) struct GovernanceSummary {
     pub(crate) dashboard_datasource_edge_count: usize,
     #[serde(rename = "datasourceRiskCoverageCount")]
     pub(crate) datasource_risk_coverage_count: usize,
+    #[serde(rename = "dashboardRiskCoverageCount")]
+    pub(crate) dashboard_risk_coverage_count: usize,
     #[serde(rename = "mixedDatasourceDashboardCount")]
     pub(crate) mixed_datasource_dashboard_count: usize,
     #[serde(rename = "orphanedDatasourceCount")]
@@ -151,6 +153,34 @@ pub(crate) struct DashboardDatasourceEdgeRow {
     pub(crate) buckets: Vec<String>,
 }
 
+/// Struct definition for DashboardGovernanceRow.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub(crate) struct DashboardGovernanceRow {
+    #[serde(rename = "dashboardUid")]
+    pub(crate) dashboard_uid: String,
+    #[serde(rename = "dashboardTitle")]
+    pub(crate) dashboard_title: String,
+    #[serde(rename = "folderPath")]
+    pub(crate) folder_path: String,
+    #[serde(rename = "panelCount")]
+    pub(crate) panel_count: usize,
+    #[serde(rename = "queryCount")]
+    pub(crate) query_count: usize,
+    #[serde(rename = "datasourceCount")]
+    pub(crate) datasource_count: usize,
+    #[serde(rename = "datasourceFamilyCount")]
+    pub(crate) datasource_family_count: usize,
+    pub(crate) datasources: Vec<String>,
+    #[serde(rename = "datasourceFamilies")]
+    pub(crate) datasource_families: Vec<String>,
+    #[serde(rename = "mixedDatasource")]
+    pub(crate) mixed_datasource: bool,
+    #[serde(rename = "riskCount")]
+    pub(crate) risk_count: usize,
+    #[serde(rename = "riskKinds")]
+    pub(crate) risk_kinds: Vec<String>,
+}
+
 /// Struct definition for GovernanceRiskRow.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 pub(crate) struct GovernanceRiskRow {
@@ -166,6 +196,74 @@ pub(crate) struct GovernanceRiskRow {
     pub(crate) recommendation: String,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct GovernanceRiskSpec {
+    category: &'static str,
+    severity: &'static str,
+    recommendation: &'static str,
+}
+
+const GOVERNANCE_RISK_KIND_MIXED_DASHBOARD: &str = "mixed-datasource-dashboard";
+const GOVERNANCE_RISK_KIND_ORPHANED_DATASOURCE: &str = "orphaned-datasource";
+const GOVERNANCE_RISK_KIND_UNKNOWN_DATASOURCE_FAMILY: &str = "unknown-datasource-family";
+const GOVERNANCE_RISK_KIND_EMPTY_QUERY_ANALYSIS: &str = "empty-query-analysis";
+const GOVERNANCE_RISK_KIND_BROAD_LOKI_SELECTOR: &str = "broad-loki-selector";
+
+const GOVERNANCE_RISK_DEFAULT_SPEC: GovernanceRiskSpec = GovernanceRiskSpec {
+    category: "other",
+    severity: "low",
+    recommendation:
+        "Review this governance finding and assign a follow-up owner if action is needed.",
+};
+
+const GOVERNANCE_RISK_SPECS: [(&str, GovernanceRiskSpec); 5] = [
+    (
+        GOVERNANCE_RISK_KIND_MIXED_DASHBOARD,
+        GovernanceRiskSpec {
+            category: "topology",
+            severity: "medium",
+            recommendation:
+                "Split panel queries by datasource or document why mixed datasource composition is required.",
+        },
+    ),
+    (
+        GOVERNANCE_RISK_KIND_ORPHANED_DATASOURCE,
+        GovernanceRiskSpec {
+            category: "inventory",
+            severity: "low",
+            recommendation:
+                "Remove the unused datasource or reattach it to retained dashboards before the next cleanup cycle.",
+        },
+    ),
+    (
+        GOVERNANCE_RISK_KIND_UNKNOWN_DATASOURCE_FAMILY,
+        GovernanceRiskSpec {
+            category: "coverage",
+            severity: "medium",
+            recommendation:
+                "Map this datasource plugin type to a known governance family or extend analyzer support for it.",
+        },
+    ),
+    (
+        GOVERNANCE_RISK_KIND_EMPTY_QUERY_ANALYSIS,
+        GovernanceRiskSpec {
+            category: "coverage",
+            severity: "low",
+            recommendation:
+                "Review the query text and extend analyzer coverage if this datasource family should emit governance signals.",
+        },
+    ),
+    (
+        GOVERNANCE_RISK_KIND_BROAD_LOKI_SELECTOR,
+        GovernanceRiskSpec {
+            category: "cost",
+            severity: "medium",
+            recommendation:
+                "Narrow the Loki stream selector before running expensive line filters or aggregations.",
+        },
+    ),
+];
+
 /// Struct definition for ExportInspectionGovernanceDocument.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub(crate) struct ExportInspectionGovernanceDocument {
@@ -174,6 +272,8 @@ pub(crate) struct ExportInspectionGovernanceDocument {
     pub(crate) datasource_families: Vec<DatasourceFamilyCoverageRow>,
     #[serde(rename = "dashboardDependencies")]
     pub(crate) dashboard_dependencies: Vec<DashboardDependencyRow>,
+    #[serde(rename = "dashboardGovernance")]
+    pub(crate) dashboard_governance: Vec<DashboardGovernanceRow>,
     #[serde(rename = "dashboardDatasourceEdges")]
     pub(crate) dashboard_datasource_edges: Vec<DashboardDatasourceEdgeRow>,
     #[serde(rename = "datasourceGovernance")]
@@ -262,6 +362,15 @@ fn build_inventory_lookup(summary: &ExportInspectionSummary) -> (InventoryLookup
     (by_uid, by_name)
 }
 
+fn lookup_governance_risk_spec(kind: &str) -> GovernanceRiskSpec {
+    GOVERNANCE_RISK_SPECS
+        .iter()
+        .copied()
+        .find(|(registered_kind, _)| *registered_kind == kind)
+        .map(|(_, spec)| spec)
+        .unwrap_or(GOVERNANCE_RISK_DEFAULT_SPEC)
+}
+
 fn resolve_datasource_identity(
     row: &ExportInspectionQueryRow,
     inventory_by_uid: &BTreeMap<String, (String, String, String)>,
@@ -319,39 +428,10 @@ fn resolve_datasource_identity(
     }
 }
 
+#[cfg(test)]
 pub(crate) fn governance_risk_spec(kind: &str) -> (&'static str, &'static str, &'static str) {
-    match kind {
-        "mixed-datasource-dashboard" => (
-            "topology",
-            "medium",
-            "Split panel queries by datasource or document why mixed datasource composition is required.",
-        ),
-        "orphaned-datasource" => (
-            "inventory",
-            "low",
-            "Remove the unused datasource or reattach it to retained dashboards before the next cleanup cycle.",
-        ),
-        "unknown-datasource-family" => (
-            "coverage",
-            "medium",
-            "Map this datasource plugin type to a known governance family or extend analyzer support for it.",
-        ),
-        "empty-query-analysis" => (
-            "coverage",
-            "low",
-            "Review the query text and extend analyzer coverage if this datasource family should emit governance signals.",
-        ),
-        "broad-loki-selector" => (
-            "cost",
-            "medium",
-            "Narrow the Loki stream selector before running expensive line filters or aggregations.",
-        ),
-        _ => (
-            "other",
-            "low",
-            "Review this governance finding and assign a follow-up owner if action is needed.",
-        ),
-    }
+    let spec = lookup_governance_risk_spec(kind);
+    (spec.category, spec.severity, spec.recommendation)
 }
 
 fn build_governance_risk_row(
@@ -361,16 +441,16 @@ fn build_governance_risk_row(
     datasource: String,
     detail: String,
 ) -> GovernanceRiskRow {
-    let (category, severity, recommendation) = governance_risk_spec(kind);
+    let spec = lookup_governance_risk_spec(kind);
     GovernanceRiskRow {
         kind: kind.to_string(),
-        severity: severity.to_string(),
-        category: category.to_string(),
+        severity: spec.severity.to_string(),
+        category: spec.category.to_string(),
         dashboard_uid,
         panel_id,
         datasource,
         detail,
-        recommendation: recommendation.to_string(),
+        recommendation: spec.recommendation.to_string(),
     }
 }
 
@@ -692,11 +772,13 @@ pub(crate) fn build_datasource_governance_rows(
         record.7 = orphaned;
         if orphaned {
             record.5.insert((
-                "orphaned-datasource".to_string(),
+                GOVERNANCE_RISK_KIND_ORPHANED_DATASOURCE.to_string(),
                 String::new(),
                 String::new(),
             ));
-            record.6.insert("orphaned-datasource".to_string());
+            record
+                .6
+                .insert(GOVERNANCE_RISK_KIND_ORPHANED_DATASOURCE.to_string());
         }
     }
 
@@ -726,27 +808,33 @@ pub(crate) fn build_datasource_governance_rows(
 
         if mixed_dashboard_uids.contains(&row.dashboard_uid) {
             record.5.insert((
-                "mixed-datasource-dashboard".to_string(),
+                GOVERNANCE_RISK_KIND_MIXED_DASHBOARD.to_string(),
                 row.dashboard_uid.clone(),
                 String::new(),
             ));
-            record.6.insert("mixed-datasource-dashboard".to_string());
+            record
+                .6
+                .insert(GOVERNANCE_RISK_KIND_MIXED_DASHBOARD.to_string());
         }
         if family == "unknown" {
             record.5.insert((
-                "unknown-datasource-family".to_string(),
+                GOVERNANCE_RISK_KIND_UNKNOWN_DATASOURCE_FAMILY.to_string(),
                 row.dashboard_uid.clone(),
                 row.panel_id.clone(),
             ));
-            record.6.insert("unknown-datasource-family".to_string());
+            record
+                .6
+                .insert(GOVERNANCE_RISK_KIND_UNKNOWN_DATASOURCE_FAMILY.to_string());
         }
         if family == "loki" && find_broad_loki_selector(&row.query_text).is_some() {
             record.5.insert((
-                "broad-loki-selector".to_string(),
+                GOVERNANCE_RISK_KIND_BROAD_LOKI_SELECTOR.to_string(),
                 row.dashboard_uid.clone(),
                 row.panel_id.clone(),
             ));
-            record.6.insert("broad-loki-selector".to_string());
+            record
+                .6
+                .insert(GOVERNANCE_RISK_KIND_BROAD_LOKI_SELECTOR.to_string());
         }
         if row.metrics.is_empty()
             && row.functions.is_empty()
@@ -754,11 +842,13 @@ pub(crate) fn build_datasource_governance_rows(
             && row.buckets.is_empty()
         {
             record.5.insert((
-                "empty-query-analysis".to_string(),
+                GOVERNANCE_RISK_KIND_EMPTY_QUERY_ANALYSIS.to_string(),
                 row.dashboard_uid.clone(),
                 row.panel_id.clone(),
             ));
-            record.6.insert("empty-query-analysis".to_string());
+            record
+                .6
+                .insert(GOVERNANCE_RISK_KIND_EMPTY_QUERY_ANALYSIS.to_string());
         }
     }
 
@@ -787,7 +877,7 @@ pub(crate) fn build_datasource_governance_rows(
                 panel_count: panel_keys.len(),
                 mixed_dashboard_count: risk_occurrences
                     .iter()
-                    .filter(|(kind, _, _)| kind == "mixed-datasource-dashboard")
+                    .filter(|(kind, _, _)| kind == GOVERNANCE_RISK_KIND_MIXED_DASHBOARD)
                     .count(),
                 risk_count: risk_occurrences.len(),
                 risk_kinds: risk_kinds.into_iter().collect(),
@@ -879,6 +969,60 @@ pub(crate) fn build_dashboard_dependency_rows(
             }
         })
         .collect()
+}
+
+/// Purpose: implementation note.
+pub(crate) fn build_dashboard_governance_rows(
+    report: &ExportInspectionQueryReport,
+    risk_records: &[GovernanceRiskRow],
+) -> Vec<DashboardGovernanceRow> {
+    let mut risk_by_dashboard = BTreeMap::<String, (BTreeSet<String>, usize)>::new();
+    for risk in risk_records {
+        if risk.dashboard_uid.trim().is_empty() {
+            continue;
+        }
+        let entry = risk_by_dashboard
+            .entry(risk.dashboard_uid.clone())
+            .or_insert_with(|| (BTreeSet::new(), 0usize));
+        entry.0.insert(risk.kind.clone());
+        entry.1 += 1;
+    }
+
+    let mut rows = build_dashboard_dependency_rows(report)
+        .into_iter()
+        .map(|row| {
+            let (risk_kinds, risk_count) = risk_by_dashboard
+                .remove(&row.dashboard_uid)
+                .map(|(kinds, count)| (kinds.into_iter().collect::<Vec<String>>(), count))
+                .unwrap_or_else(|| (Vec::new(), 0usize));
+            DashboardGovernanceRow {
+                dashboard_uid: row.dashboard_uid,
+                dashboard_title: row.dashboard_title,
+                folder_path: row.folder_path,
+                panel_count: row.panel_count,
+                query_count: row.query_count,
+                datasource_count: row.datasource_count,
+                datasource_family_count: row.datasource_family_count,
+                datasources: row.datasources,
+                datasource_families: row.datasource_families,
+                mixed_datasource: risk_kinds
+                    .iter()
+                    .any(|kind| kind == GOVERNANCE_RISK_KIND_MIXED_DASHBOARD),
+                risk_count,
+                risk_kinds,
+            }
+        })
+        .collect::<Vec<DashboardGovernanceRow>>();
+
+    rows.sort_by(|left, right| {
+        right
+            .risk_count
+            .cmp(&left.risk_count)
+            .then(right.mixed_datasource.cmp(&left.mixed_datasource))
+            .then(right.query_count.cmp(&left.query_count))
+            .then(left.dashboard_uid.cmp(&right.dashboard_uid))
+    });
+    rows
 }
 
 /// Purpose: implementation note.
@@ -985,7 +1129,7 @@ pub(crate) fn build_governance_risk_rows(
 
     for dashboard in &summary.mixed_dashboards {
         let risk = build_governance_risk_row(
-            "mixed-datasource-dashboard",
+            GOVERNANCE_RISK_KIND_MIXED_DASHBOARD,
             dashboard.uid.clone(),
             String::new(),
             dashboard.datasources.join(","),
@@ -1000,7 +1144,7 @@ pub(crate) fn build_governance_risk_rows(
             continue;
         }
         let risk = build_governance_risk_row(
-            "orphaned-datasource",
+            GOVERNANCE_RISK_KIND_ORPHANED_DATASOURCE,
             String::new(),
             String::new(),
             if datasource.uid.trim().is_empty() {
@@ -1018,7 +1162,7 @@ pub(crate) fn build_governance_risk_rows(
         let identity = resolve_datasource_identity(row, &inventory_by_uid, &inventory_by_name);
         if normalize_family_name(&identity.datasource_type) == "unknown" {
             let risk = build_governance_risk_row(
-                "unknown-datasource-family",
+                GOVERNANCE_RISK_KIND_UNKNOWN_DATASOURCE_FAMILY,
                 row.dashboard_uid.clone(),
                 row.panel_id.clone(),
                 identity.name.clone(),
@@ -1031,7 +1175,7 @@ pub(crate) fn build_governance_risk_rows(
         if normalize_family_name(&identity.datasource_type) == "loki" {
             if let Some(selector) = find_broad_loki_selector(&row.query_text) {
                 let risk = build_governance_risk_row(
-                    "broad-loki-selector",
+                    GOVERNANCE_RISK_KIND_BROAD_LOKI_SELECTOR,
                     row.dashboard_uid.clone(),
                     row.panel_id.clone(),
                     identity.name.clone(),
@@ -1048,7 +1192,7 @@ pub(crate) fn build_governance_risk_rows(
             && row.buckets.is_empty()
         {
             let risk = build_governance_risk_row(
-                "empty-query-analysis",
+                GOVERNANCE_RISK_KIND_EMPTY_QUERY_ANALYSIS,
                 row.dashboard_uid.clone(),
                 row.panel_id.clone(),
                 identity.name,
@@ -1077,10 +1221,11 @@ pub(crate) fn build_export_inspection_governance_document(
 ) -> ExportInspectionGovernanceDocument {
     let datasource_families = build_datasource_family_coverage_rows(summary, report);
     let dashboard_dependencies = build_dashboard_dependency_rows(report);
+    let risk_records = build_governance_risk_rows(summary, report);
+    let dashboard_governance = build_dashboard_governance_rows(report, &risk_records);
     let dashboard_datasource_edges = build_dashboard_datasource_edge_rows(summary, report);
     let datasource_governance = build_datasource_governance_rows(summary, report);
     let datasources = build_datasource_coverage_rows(summary, report);
-    let risk_records = build_governance_risk_rows(summary, report);
     ExportInspectionGovernanceDocument {
         summary: GovernanceSummary {
             dashboard_count: summary.dashboard_count,
@@ -1090,6 +1235,10 @@ pub(crate) fn build_export_inspection_governance_document(
             datasource_coverage_count: datasources.len(),
             dashboard_datasource_edge_count: dashboard_datasource_edges.len(),
             datasource_risk_coverage_count: datasource_governance
+                .iter()
+                .filter(|row| row.risk_count != 0)
+                .count(),
+            dashboard_risk_coverage_count: dashboard_governance
                 .iter()
                 .filter(|row| row.risk_count != 0)
                 .count(),
@@ -1103,6 +1252,7 @@ pub(crate) fn build_export_inspection_governance_document(
         },
         datasource_families,
         dashboard_dependencies,
+        dashboard_governance,
         dashboard_datasource_edges,
         datasource_governance,
         datasources,
@@ -1129,6 +1279,7 @@ pub(crate) fn render_governance_table_report(
             "DATASOURCES",
             "DASHBOARD_DATASOURCE_EDGES",
             "DATASOURCES_WITH_RISKS",
+            "DASHBOARDS_WITH_RISKS",
             "MIXED_DASHBOARDS",
             "ORPHANED_DATASOURCES",
             "RISKS",
@@ -1140,6 +1291,7 @@ pub(crate) fn render_governance_table_report(
             document.summary.datasource_coverage_count.to_string(),
             document.summary.dashboard_datasource_edge_count.to_string(),
             document.summary.datasource_risk_coverage_count.to_string(),
+            document.summary.dashboard_risk_coverage_count.to_string(),
             document
                 .summary
                 .mixed_datasource_dashboard_count
@@ -1232,6 +1384,70 @@ pub(crate) fn render_governance_table_report(
                 "FILE",
             ],
             &dashboard_rows,
+            true,
+        ));
+    }
+
+    lines.push(String::new());
+    lines.push("# Dashboard Governance".to_string());
+    let dashboard_governance_rows = document
+        .dashboard_governance
+        .iter()
+        .map(|row| {
+            let datasources = if row.datasources.is_empty() {
+                "(none)".to_string()
+            } else {
+                row.datasources.join(",")
+            };
+            let datasource_families = if row.datasource_families.is_empty() {
+                "(none)".to_string()
+            } else {
+                row.datasource_families.join(",")
+            };
+            let risk_kinds = if row.risk_kinds.is_empty() {
+                "(none)".to_string()
+            } else {
+                row.risk_kinds.join(",")
+            };
+            vec![
+                row.dashboard_uid.clone(),
+                row.dashboard_title.clone(),
+                row.folder_path.clone(),
+                row.panel_count.to_string(),
+                row.query_count.to_string(),
+                row.datasource_count.to_string(),
+                row.datasource_family_count.to_string(),
+                datasources,
+                datasource_families,
+                if row.mixed_datasource {
+                    "true".to_string()
+                } else {
+                    "false".to_string()
+                },
+                row.risk_count.to_string(),
+                risk_kinds,
+            ]
+        })
+        .collect::<Vec<Vec<String>>>();
+    if dashboard_governance_rows.is_empty() {
+        lines.push("(none)".to_string());
+    } else {
+        lines.extend(render_simple_table(
+            &[
+                "DASHBOARD_UID",
+                "TITLE",
+                "FOLDER_PATH",
+                "PANELS",
+                "QUERIES",
+                "DATASOURCE_COUNT",
+                "DATASOURCE_FAMILY_COUNT",
+                "DATASOURCES",
+                "FAMILIES",
+                "MIXED_DATASOURCE",
+                "RISKS",
+                "RISK_KINDS",
+            ],
+            &dashboard_governance_rows,
             true,
         ));
     }

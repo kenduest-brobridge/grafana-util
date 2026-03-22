@@ -5,6 +5,13 @@ Historical note:
 - Older entries describe the repo state and `TODO.md` backlog as they existed on the entry date.
 - `TODO.md` now tracks only the active backlog; completed or superseded TODO items moved to `docs/internal/todo-archive.md`.
 
+## 2026-03-23 - Task: Expand Rust Dashboard Governance Gate Contract
+- State: Done
+- Scope: `rust/src/dashboard/inspect_governance.rs`, `rust/src/dashboard/rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust dashboard inspection already emitted governance-oriented JSON and table reports, but downstream gate consumers still had to reconstruct dashboard-level risk rollups from flat `riskRecords`, and governance risk metadata was still maintained through stringly lookup logic instead of one explicit registry.
+- Current Update: Added a governance risk spec registry and reused it in the Rust governance builder/tests, then expanded the governance contract with `dashboardGovernance` rows and `dashboardRiskCoverageCount`. The new dashboard rollup summarizes datasource families, datasource counts, mixed-datasource status, risk counts, and risk kinds per dashboard, while the text report now prints a dedicated `# Dashboard Governance` section and surfaces dashboard/datasource risk coverage counts in the summary table.
+- Result: Rust governance output is now a stronger gate input without embedding team-specific policy in the CLI. External policy checkers can consume stable dashboard-level and datasource-level rollups directly instead of rebuilding them from low-level dependency and risk rows.
+
 ## 2026-03-23 - Task: Add Datasource Governance Rollups To Rust Dashboard Inspection
 - State: Done
 - Scope: `rust/src/dashboard/inspect_governance.rs`, `rust/src/dashboard/rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

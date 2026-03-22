@@ -10184,8 +10184,10 @@ fn build_export_inspection_governance_document_summarizes_families_and_risks() {
     assert_eq!(document.summary.datasource_family_count, 3);
     assert_eq!(document.summary.dashboard_datasource_edge_count, 2);
     assert_eq!(document.summary.datasource_risk_coverage_count, 2);
+    assert_eq!(document.summary.dashboard_risk_coverage_count, 1);
     assert_eq!(document.summary.risk_record_count, 4);
     assert_eq!(document.dashboard_dependencies.len(), 2);
+    assert_eq!(document.dashboard_governance.len(), 2);
     assert_eq!(document.dashboard_datasource_edges.len(), 2);
     assert_eq!(document.datasource_governance.len(), 4);
     assert_eq!(document.dashboard_dependencies[0].dashboard_uid, "cpu-main");
@@ -10210,6 +10212,21 @@ fn build_export_inspection_governance_document_summarizes_families_and_risks() {
     assert_eq!(
         document.dashboard_dependencies[1].datasource_families,
         vec!["unknown".to_string()]
+    );
+    let mixed_dashboard = document
+        .dashboard_governance
+        .iter()
+        .find(|item| item.dashboard_uid == "mixed-main")
+        .unwrap();
+    assert!(mixed_dashboard.mixed_datasource);
+    assert_eq!(mixed_dashboard.risk_count, 3);
+    assert_eq!(
+        mixed_dashboard.risk_kinds,
+        vec![
+            "empty-query-analysis".to_string(),
+            "mixed-datasource-dashboard".to_string(),
+            "unknown-datasource-family".to_string()
+        ]
     );
     let unused = document
         .datasources
@@ -10266,6 +10283,22 @@ fn build_export_inspection_governance_document_summarizes_families_and_risks() {
         .unwrap();
     assert_eq!(unknown.category, "coverage");
     assert!(unknown.recommendation.contains("extend analyzer support"));
+    let mixed = document
+        .risk_records
+        .iter()
+        .find(|item| item.kind == "mixed-datasource-dashboard")
+        .unwrap();
+    assert_eq!(mixed.category, "topology");
+    assert_eq!(mixed.severity, "medium");
+    assert!(mixed.recommendation.contains("Split panel queries"));
+    let empty = document
+        .risk_records
+        .iter()
+        .find(|item| item.kind == "empty-query-analysis")
+        .unwrap();
+    assert_eq!(empty.category, "coverage");
+    assert_eq!(empty.severity, "low");
+    assert!(empty.recommendation.contains("extend analyzer coverage"));
 }
 
 #[test]
@@ -10577,6 +10610,7 @@ fn build_export_inspection_governance_document_rolls_up_dashboard_dependency_ana
     assert_eq!(document.summary.datasource_coverage_count, 1);
     assert_eq!(document.summary.dashboard_datasource_edge_count, 1);
     assert_eq!(document.summary.datasource_risk_coverage_count, 0);
+    assert_eq!(document.summary.dashboard_risk_coverage_count, 0);
     assert_eq!(document.summary.risk_record_count, 0);
     assert_eq!(dependency_row["queryFields"], json!(["expr", "query"]));
     assert_eq!(
@@ -10670,6 +10704,7 @@ fn build_export_inspection_governance_document_surfaces_datasource_blast_radius_
     assert_eq!(document.summary.datasource_coverage_count, 1);
     assert_eq!(document.summary.dashboard_datasource_edge_count, 1);
     assert_eq!(document.summary.datasource_risk_coverage_count, 0);
+    assert_eq!(document.summary.dashboard_risk_coverage_count, 0);
     assert_eq!(document.summary.risk_record_count, 0);
     assert_eq!(datasource_row["dashboardUids"], json!(["core-main"]));
     assert_eq!(datasource_row["dashboardCount"], Value::from(1));
@@ -10811,6 +10846,7 @@ fn render_governance_table_report_displays_sections() {
     assert!(output.contains("# Summary"));
     assert!(output.contains("# Datasource Families"));
     assert!(output.contains("# Dashboard Dependencies"));
+    assert!(output.contains("# Dashboard Governance"));
     assert!(output.contains("# Dashboard Datasource Edges"));
     assert!(output.contains("# Datasource Governance"));
     assert!(output.contains("# Datasources"));
@@ -10821,10 +10857,12 @@ fn render_governance_table_report_displays_sections() {
     assert!(output.contains("DATASOURCE_FAMILY_COUNT"));
     assert!(output.contains("DASHBOARD_DATASOURCE_EDGES"));
     assert!(output.contains("DATASOURCES_WITH_RISKS"));
+    assert!(output.contains("DASHBOARDS_WITH_RISKS"));
     assert!(output.contains("METRICS"));
     assert!(output.contains("FUNCTIONS"));
     assert!(output.contains("MEASUREMENTS"));
     assert!(output.contains("BUCKETS"));
+    assert!(output.contains("MIXED_DATASOURCE"));
     assert!(output.contains("RISK_KINDS"));
     assert!(output.contains("/tmp/raw/logs-main.json"));
     assert!(output.contains("CATEGORY"));
@@ -10957,8 +10995,11 @@ fn build_export_inspection_governance_document_adds_dashboard_datasource_edges()
 
     assert_eq!(document.summary.dashboard_datasource_edge_count, 2);
     assert_eq!(document.summary.datasource_risk_coverage_count, 2);
+    assert_eq!(document.summary.dashboard_risk_coverage_count, 1);
     assert_eq!(edges.len(), 2);
     assert_eq!(datasource_governance.len(), 2);
+    let dashboard_governance = document_json["dashboardGovernance"].as_array().unwrap();
+    assert_eq!(dashboard_governance.len(), 1);
 
     let prom_edge = edges
         .iter()
@@ -11005,6 +11046,14 @@ fn build_export_inspection_governance_document_adds_dashboard_datasource_edges()
         .unwrap();
     assert_eq!(
         loki_governance["riskKinds"],
+        json!(["mixed-datasource-dashboard"])
+    );
+
+    let dashboard_governance_row = &dashboard_governance[0];
+    assert_eq!(dashboard_governance_row["dashboardUid"], json!("core-main"));
+    assert_eq!(dashboard_governance_row["mixedDatasource"], json!(true));
+    assert_eq!(
+        dashboard_governance_row["riskKinds"],
         json!(["mixed-datasource-dashboard"])
     );
 }
