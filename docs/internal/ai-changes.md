@@ -1,5 +1,13 @@
 # ai-changes.md
 
+## 2026-03-23 - Optimize Rust Dashboard Import Action Resolution With Summary Cache
+- Summary: Added a shared dashboard-summary cache in `rust/src/dashboard/import.rs` to avoid per-dashboard `GET /api/dashboards/uid/{uid}` calls during import and dry-run action calculation. The cache now backs `update_existing_only` and replace decisions for missing/existing checks and also reuses summary `folderUid` to resolve existing folder paths before fetching full dashboard payloads.
+- Tests: Added new dry-run/import regressions for search-summary reuse (missing and present dashboards), summary-backed folder UID reuse for replace-existing, and updated existing import preview assertions that now explicitly expect one summary fetch instead of dashboard-by-dashboard probes in dry-run paths.
+- Test Run: `cd rust && cargo test --quiet` (623 passed), `cargo fmt --manifest-path rust/Cargo.toml --all --check`
+- Validation: Full Rust suite passes after adjusting request-mocking expectations for `GET /api/search` behavior in affected dry-run/import tests.
+- Impact: `rust/src/dashboard/import.rs`, `rust/src/dashboard/rust_tests.rs`
+- Rollback/Risk: Moderate. The behavior change is a query-reduction optimization; any incorrect cache keying or stale-state assumptions would misclassify dashboard existence or folder path, so regressions now pin the primary action/folder-path outcomes.
+
 ## 2026-03-22 - Start Typed Rust Dashboard Datasource Reference Parsing
 - Summary: Introduced a narrow internal typed datasource-reference model in `rust/src/dashboard/inspect.rs` so stable `uid`/`name`/`type` lookups now go through one parsed shape instead of repeated raw-map access. The raw panel datasource key path still uses the existing placeholder-aware behavior so dashboard source counts remain unchanged.
 - Tests: Added a focused dashboard inspection regression that proves a name-only datasource object resolves its inventory-backed name/type while still falling back to the panel datasource UID. Revalidated the dashboard Rust test target and the formatter check.

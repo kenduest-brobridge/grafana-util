@@ -96,6 +96,9 @@ where
         if method == reqwest::Method::GET && path == "/api/plugins" {
             return Ok(Some(preflight_plugins.clone()));
         }
+        if method == reqwest::Method::GET && path == "/api/search" {
+            return Ok(Some(json!([])));
+        }
         handler(method, path, params, payload)
     }
 }
@@ -14211,9 +14214,10 @@ fn import_dashboards_allows_matching_export_org_with_current_org_lookup() {
     let count = import_dashboards_with_request(
         |method, path, _params, _payload| {
             calls.push(format!("{} {}", method.as_str(), path));
-            match path {
-                "/api/org" => Ok(Some(json!({"id": 2, "name": "Ops Org"}))),
-                "/api/dashboards/uid/abc" => Err(api_response(
+            match (method, path) {
+                (reqwest::Method::GET, "/api/search") => Ok(Some(json!([]))),
+                (reqwest::Method::GET, "/api/org") => Ok(Some(json!({"id": 2, "name": "Ops Org"}))),
+                (reqwest::Method::GET, "/api/dashboards/uid/abc") => Err(api_response(
                     404,
                     "http://127.0.0.1:3000/api/dashboards/uid/abc",
                     "{\"message\":\"not found\"}",
@@ -14227,7 +14231,7 @@ fn import_dashboards_allows_matching_export_org_with_current_org_lookup() {
 
     assert_eq!(count, 1);
     assert!(calls.contains(&"GET /api/org".to_string()));
-    assert!(calls.contains(&"GET /api/dashboards/uid/abc".to_string()));
+    assert!(calls.contains(&"GET /api/search".to_string()));
 }
 
 #[test]
@@ -14564,6 +14568,7 @@ fn import_dashboards_with_shared_folder_lookup_reuses_folder_fetch_in_dry_run() 
                 .borrow_mut()
                 .push(format!("{} {}", method.as_str(), path));
             match (method, path) {
+                (reqwest::Method::GET, "/api/search") => Ok(Some(json!([]))),
                 (reqwest::Method::GET, "/api/datasources") => Ok(Some(json!([]))),
                 (reqwest::Method::GET, "/api/plugins") => Ok(Some(json!([]))),
                 (reqwest::Method::GET, "/api/dashboards/uid/abc") => Err(api_response(
@@ -14652,6 +14657,7 @@ fn import_dashboards_with_dry_run_summary_skips_unneeded_folder_lookup() {
                 .borrow_mut()
                 .push(format!("{} {}", method.as_str(), path));
             match (method, path) {
+                (reqwest::Method::GET, "/api/search") => Ok(Some(json!([]))),
                 (reqwest::Method::GET, "/api/dashboards/uid/abc") => Ok(Some(json!({
                     "dashboard": {"id": 7, "uid": "abc", "title": "CPU"},
                     "meta": {"folderUid": "new-folder"}
@@ -14664,7 +14670,137 @@ fn import_dashboards_with_dry_run_summary_skips_unneeded_folder_lookup() {
     .unwrap();
 
     assert_eq!(count, 1);
-    assert_eq!(calls.borrow().as_slice(), ["GET /api/dashboards/uid/abc"]);
+    assert_eq!(calls.borrow().as_slice(), ["GET /api/search"]);
+}
+
+#[test]
+fn import_dashboards_with_dry_run_uses_search_summary_for_missing_action_lookup() {
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    let temp = tempdir().unwrap();
+    let raw_dir = temp.path().join("raw");
+    fs::create_dir_all(&raw_dir).unwrap();
+    fs::write(
+        raw_dir.join(EXPORT_METADATA_FILENAME),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-dashboard-export-index",
+            "schemaVersion": TOOL_SCHEMA_VERSION,
+            "variant": "raw",
+            "dashboardCount": 2,
+            "indexFile": "index.json"
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        raw_dir.join("dash-a.json"),
+        serde_json::to_string_pretty(&json!({"dashboard":{"uid":"abc","title":"CPU"}})).unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        raw_dir.join("dash-b.json"),
+        serde_json::to_string_pretty(&json!({"dashboard":{"uid":"def","title":"Mem"}})).unwrap(),
+    )
+    .unwrap();
+
+    let args = make_import_args(raw_dir);
+    let calls: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
+    let calls_for_request = Rc::clone(&calls);
+
+    let count = import_dashboards_with_request(
+        move |_method, path, _params, _payload| {
+            calls_for_request.borrow_mut().push(format!("GET {path}"));
+            match path {
+                "/api/search" => Ok(Some(json!([]))),
+                "/api/dashboards/db" => Err(super::message("dry-run must not post dashboards")),
+                _ => Err(super::message(format!("unexpected path {path}"))),
+            }
+        },
+        &args,
+    )
+    .unwrap();
+
+    assert_eq!(count, 2);
+    assert_eq!(
+        calls
+            .borrow()
+            .iter()
+            .filter(|entry| entry.starts_with("GET /api/dashboards/uid/"))
+            .count(),
+        0
+    );
+    assert_eq!(
+        calls
+            .borrow()
+            .iter()
+            .filter(|entry| entry == &"GET /api/search")
+            .count(),
+        1
+    );
+}
+
+#[test]
+fn import_dashboards_with_dry_run_replace_existing_reuses_summary_folder_uid() {
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    let temp = tempdir().unwrap();
+    let raw_dir = temp.path().join("raw");
+    fs::create_dir_all(&raw_dir).unwrap();
+    fs::write(
+        raw_dir.join(EXPORT_METADATA_FILENAME),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-dashboard-export-index",
+            "schemaVersion": TOOL_SCHEMA_VERSION,
+            "variant": "raw",
+            "dashboardCount": 2,
+            "indexFile": "index.json"
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        raw_dir.join("dash-a.json"),
+        serde_json::to_string_pretty(&json!({"dashboard":{"uid":"abc","title":"CPU"}})).unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        raw_dir.join("dash-b.json"),
+        serde_json::to_string_pretty(&json!({"dashboard":{"uid":"def","title":"Mem"}})).unwrap(),
+    )
+    .unwrap();
+
+    let mut args = make_import_args(raw_dir);
+    args.replace_existing = true;
+    let calls: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
+    let calls_for_request = Rc::clone(&calls);
+
+    let count = import_dashboards_with_request(
+        move |_method, path, _params, _payload| {
+            calls_for_request.borrow_mut().push(format!("GET {path}"));
+            match path {
+                "/api/search" => Ok(Some(json!([
+                    {"uid":"abc","folderUid":"folder-a"},
+                    {"uid":"def","folderUid":"folder-b"}
+                ]))),
+                "/api/dashboards/db" => Err(super::message("dry-run must not post dashboards")),
+                _ => Err(super::message(format!("unexpected path {path}"))),
+            }
+        },
+        &args,
+    )
+    .unwrap();
+
+    assert_eq!(count, 2);
+    assert_eq!(
+        calls
+            .borrow()
+            .iter()
+            .filter(|entry| entry.starts_with("GET /api/dashboards/uid/"))
+            .count(),
+        0
+    );
 }
 
 #[test]
@@ -14743,14 +14879,17 @@ fn import_dashboards_with_matching_dependencies_posts_after_preflight() {
             json!([{ "id": "row" }, { "id": "timeseries" }]),
             |method, path, _params, payload| {
                 calls.push(format!("{} {}", method.as_str(), path));
-                match path {
-                    "/api/org" => Ok(Some(json!({"id": 1, "name": "Main Org."}))),
-                    "/api/dashboards/uid/abc" => Err(api_response(
+                match (method, path) {
+                    (reqwest::Method::GET, "/api/search") => Ok(Some(json!([]))),
+                    (reqwest::Method::GET, "/api/org") => {
+                        Ok(Some(json!({"id": 1, "name": "Main Org."})))
+                    }
+                    (reqwest::Method::GET, "/api/dashboards/uid/abc") => Err(api_response(
                         404,
                         "http://127.0.0.1:3000/api/dashboards/uid/abc",
                         "{\"message\":\"not found\"}",
                     )),
-                    "/api/dashboards/db" => {
+                    (reqwest::Method::POST, "/api/dashboards/db") => {
                         posted_payloads.push(payload.cloned().unwrap());
                         Ok(Some(json!({"status": "success"})))
                     }
@@ -14875,31 +15014,40 @@ fn import_dashboards_with_update_existing_only_skips_missing_dashboards() {
         verbose: false,
     };
     let mut posted_payloads = Vec::new();
+    let mut calls = Vec::new();
     let count = import_dashboards_with_request(
-        with_dashboard_import_live_preflight(
-            json!([]),
-            json!([]),
-            |_method, path, _params, payload| match path {
-                "/api/dashboards/uid/abc" => Ok(Some(json!({
+        |method, path, _params, payload| {
+            calls.push(format!("{} {}", method.as_str(), path));
+            match (method, path) {
+                (reqwest::Method::GET, "/api/datasources") => Ok(Some(json!([]))),
+                (reqwest::Method::GET, "/api/plugins") => Ok(Some(json!([]))),
+                (reqwest::Method::GET, "/api/search") => {
+                    Ok(Some(json!([{"uid": "abc", "folderUid": "source-folder"}])))
+                }
+                (reqwest::Method::GET, "/api/dashboards/uid/abc") => Ok(Some(json!({
                     "dashboard": {"id": 7, "uid": "abc", "title": "CPU"}
                 }))),
-                "/api/dashboards/uid/xyz" => Err(api_response(
+                (reqwest::Method::GET, "/api/dashboards/uid/xyz") => Err(api_response(
                     404,
                     "http://127.0.0.1:3000/api/dashboards/uid/xyz",
                     "{\"message\":\"not found\"}",
                 )),
-                "/api/dashboards/db" => {
+                (reqwest::Method::POST, "/api/dashboards/db") => {
                     posted_payloads.push(payload.cloned().unwrap());
                     Ok(Some(json!({"status": "success"})))
                 }
                 _ => Err(super::message(format!("unexpected path {path}"))),
-            },
-        ),
+            }
+        },
         &args,
     )
     .unwrap();
 
-    assert_eq!(count, 1);
+    assert_eq!(
+        count, 1,
+        "calls: {:?}, posted: {:?}",
+        calls, posted_payloads
+    );
     assert_eq!(posted_payloads.len(), 1);
     assert_eq!(posted_payloads[0]["dashboard"]["uid"], "abc");
     assert_eq!(posted_payloads[0]["overwrite"], true);
@@ -14956,13 +15104,16 @@ fn import_dashboards_with_update_existing_only_table_marks_missing_dashboards_as
     };
 
     let count = import_dashboards_with_request(
-        |_method, path, _params, _payload| match path {
-            "/api/dashboards/uid/xyz" => Err(api_response(
+        |method, path, _params, _payload| match (method, path) {
+            (reqwest::Method::GET, "/api/search") => Ok(Some(json!([]))),
+            (reqwest::Method::GET, "/api/dashboards/uid/xyz") => Err(api_response(
                 404,
                 "http://127.0.0.1:3000/api/dashboards/uid/xyz",
                 "{\"message\":\"not found\"}",
             )),
-            "/api/dashboards/db" => Err(super::message("dry-run must not post dashboards")),
+            (reqwest::Method::POST, "/api/dashboards/db") => {
+                Err(super::message("dry-run must not post dashboards"))
+            }
             _ => Err(super::message(format!("unexpected path {path}"))),
         },
         &args,
@@ -15024,21 +15175,22 @@ fn import_dashboards_replace_existing_preserves_destination_folder() {
     };
     let mut posted_payloads = Vec::new();
     let count = import_dashboards_with_request(
-        with_dashboard_import_live_preflight(
-            json!([]),
-            json!([]),
-            |_method, path, _params, payload| match path {
-                "/api/dashboards/uid/abc" => Ok(Some(json!({
-                    "dashboard": {"id": 7, "uid": "abc", "title": "CPU"},
-                    "meta": {"folderUid": "dest-folder"}
-                }))),
-                "/api/dashboards/db" => {
-                    posted_payloads.push(payload.cloned().unwrap());
-                    Ok(Some(json!({"status": "success"})))
-                }
-                _ => Err(super::message(format!("unexpected path {path}"))),
-            },
-        ),
+        |method, path, _params, payload| match (method, path) {
+            (reqwest::Method::GET, "/api/datasources") => Ok(Some(json!([]))),
+            (reqwest::Method::GET, "/api/plugins") => Ok(Some(json!([]))),
+            (reqwest::Method::GET, "/api/search") => {
+                Ok(Some(json!([{"uid":"abc","folderUid":"dest-folder"}])))
+            }
+            (reqwest::Method::GET, "/api/dashboards/uid/abc") => Ok(Some(json!({
+                "dashboard": {"id": 7, "uid": "abc", "title": "CPU"},
+                "meta": {"folderUid": "dest-folder"}
+            }))),
+            (reqwest::Method::POST, "/api/dashboards/db") => {
+                posted_payloads.push(payload.cloned().unwrap());
+                Ok(Some(json!({"status": "success"})))
+            }
+            _ => Err(super::message(format!("unexpected path {path}"))),
+        },
         &args,
     )
     .unwrap();
@@ -15306,6 +15458,7 @@ fn collect_import_dry_run_report_uses_export_folder_inventory_for_target_paths()
          _payload: Option<&Value>| {
             calls.push(format!("{} {}", method.as_str(), path));
             match (method, path) {
+                (reqwest::Method::GET, "/api/search") => Ok(Some(json!([]))),
                 (reqwest::Method::GET, "/api/dashboards/uid/abc") => Err(api_response(
                     404,
                     "http://127.0.0.1:3000/api/dashboards/uid/abc",
@@ -15321,7 +15474,7 @@ fn collect_import_dry_run_report_uses_export_folder_inventory_for_target_paths()
     )
     .unwrap();
 
-    assert_eq!(calls, vec!["GET /api/dashboards/uid/abc"]);
+    assert_eq!(calls, vec!["GET /api/search"]);
     assert_eq!(report.dashboard_records.len(), 1);
     assert_eq!(report.dashboard_records[0][3], "Platform / Child");
 }
@@ -15401,6 +15554,9 @@ fn collect_import_dry_run_report_prefers_live_folder_path_for_existing_dashboard
          _payload: Option<&Value>| {
             calls.push(format!("{} {}", method.as_str(), path));
             match (method, path) {
+                (reqwest::Method::GET, "/api/search") => {
+                    Ok(Some(json!([{"uid": "abc", "folderUid": "dest-folder"}])))
+                }
                 (reqwest::Method::GET, "/api/dashboards/uid/abc") => Ok(Some(json!({
                     "dashboard": {"id": 7, "uid": "abc", "title": "CPU"},
                     "meta": {"folderUid": "dest-folder"}
@@ -15417,6 +15573,7 @@ fn collect_import_dry_run_report_prefers_live_folder_path_for_existing_dashboard
     )
     .unwrap();
 
+    assert!(calls.contains(&"GET /api/search".to_string()));
     assert!(calls.contains(&"GET /api/folders/dest-folder".to_string()));
     assert_eq!(report.dashboard_records.len(), 1);
     assert_eq!(report.dashboard_records[0][3], "Platform / Ops");
@@ -15475,26 +15632,27 @@ fn import_dashboards_with_matching_folder_path_skips_live_update_mismatch() {
     let mut posted_payloads = Vec::new();
 
     let count = import_dashboards_with_request(
-        with_dashboard_import_live_preflight(
-            json!([]),
-            json!([]),
-            |_method, path, _params, payload| match path {
-                "/api/dashboards/uid/abc" => Ok(Some(json!({
-                    "dashboard": {"id": 7, "uid": "abc", "title": "CPU"},
-                    "meta": {"folderUid": "dest-folder"}
-                }))),
-                "/api/folders/dest-folder" => Ok(Some(json!({
-                    "uid": "dest-folder",
-                    "title": "Ops",
-                    "parents": [{"uid": "platform", "title": "Platform"}]
-                }))),
-                "/api/dashboards/db" => {
-                    posted_payloads.push(payload.cloned().unwrap());
-                    Ok(Some(json!({"status": "success"})))
-                }
-                _ => Err(super::message(format!("unexpected path {path}"))),
-            },
-        ),
+        |method, path, _params, payload| match (method, path) {
+            (reqwest::Method::GET, "/api/datasources") => Ok(Some(json!([]))),
+            (reqwest::Method::GET, "/api/plugins") => Ok(Some(json!([]))),
+            (reqwest::Method::GET, "/api/search") => {
+                Ok(Some(json!([{"uid": "abc", "folderUid": "dest-folder"}])))
+            }
+            (reqwest::Method::GET, "/api/dashboards/uid/abc") => Ok(Some(json!({
+                "dashboard": {"id": 7, "uid": "abc", "title": "CPU"},
+                "meta": {"folderUid": "dest-folder"}
+            }))),
+            (reqwest::Method::GET, "/api/folders/dest-folder") => Ok(Some(json!({
+                "uid": "dest-folder",
+                "title": "Ops",
+                "parents": [{"uid": "platform", "title": "Platform"}]
+            }))),
+            (reqwest::Method::POST, "/api/dashboards/db") => {
+                posted_payloads.push(payload.cloned().unwrap());
+                Ok(Some(json!({"status": "success"})))
+            }
+            _ => Err(super::message(format!("unexpected path {path}"))),
+        },
         &args,
     )
     .unwrap();
@@ -15687,11 +15845,7 @@ fn import_dashboards_with_ensure_folders_creates_missing_folder_chain_from_raw_i
             |method, path, _params, payload| {
                 calls.push(format!("{} {}", method.as_str(), path));
                 match (method, path) {
-                    (reqwest::Method::GET, "/api/dashboards/uid/abc") => Err(api_response(
-                        404,
-                        "http://127.0.0.1:3000/api/dashboards/uid/abc",
-                        "{\"message\":\"not found\"}",
-                    )),
+                    (reqwest::Method::GET, "/api/search") => Ok(Some(json!([]))),
                     (reqwest::Method::GET, "/api/folders/child") => Ok(None),
                     (reqwest::Method::GET, "/api/folders/platform") => Ok(None),
                     (reqwest::Method::POST, "/api/folders") => {
@@ -15727,7 +15881,6 @@ fn import_dashboards_with_ensure_folders_creates_missing_folder_chain_from_raw_i
     assert_eq!(
         calls,
         vec![
-            "GET /api/dashboards/uid/abc",
             "GET /api/folders/child",
             "GET /api/folders/platform",
             "POST /api/folders",
@@ -15816,17 +15969,13 @@ fn import_dashboards_with_dry_run_and_ensure_folders_checks_folder_inventory() {
         |method, path, _params, _payload| {
             calls.push(format!("{} {}", method.as_str(), path));
             match (method, path) {
+                (reqwest::Method::GET, "/api/search") => Ok(Some(json!([]))),
                 (reqwest::Method::GET, "/api/folders/platform") => Ok(Some(json!({
                     "uid": "platform",
                     "title": "Platform",
                     "parents": []
                 }))),
                 (reqwest::Method::GET, "/api/folders/child") => Ok(None),
-                (reqwest::Method::GET, "/api/dashboards/uid/abc") => Err(api_response(
-                    404,
-                    "http://127.0.0.1:3000/api/dashboards/uid/abc",
-                    "{\"message\":\"not found\"}",
-                )),
                 (reqwest::Method::POST, "/api/folders") => {
                     Err(super::message("dry-run must not create folders"))
                 }
@@ -15846,7 +15995,7 @@ fn import_dashboards_with_dry_run_and_ensure_folders_checks_folder_inventory() {
         vec![
             "GET /api/folders/platform",
             "GET /api/folders/child",
-            "GET /api/dashboards/uid/abc"
+            "GET /api/search"
         ]
     );
 }

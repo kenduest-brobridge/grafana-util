@@ -5,6 +5,13 @@ Historical note:
 - Older entries describe the repo state and `TODO.md` backlog as they existed on the entry date.
 - `TODO.md` now tracks only the active backlog; completed or superseded TODO items moved to `docs/internal/todo-archive.md`.
 
+## 2026-03-23 - Task: Optimize Rust Dashboard Import Action Resolution With Summary Cache
+- State: Done
+- Scope: `rust/src/dashboard/import.rs`, `rust/src/dashboard/rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Dashboard import dry-run and update paths still issued `GET /api/dashboards/uid/{uid}` for most files to determine existence and folder path, creating duplicate round-trips on large imports and preventing clean `update_existing_only` skips without per-dashboard fetches.
+- Current Update: Added a summary-cache seam in `dashboard/import.rs` that preloads `/api/search` once per import run and reuses it for existence checks and summary `folderUid` lookups. Updated import and dry-run tests so action/path selection now validates cache-backed behavior, including missing-dashboard short-circuit, summary-folder fallback, and `update_existing_only` call reduction.
+- Result: Rust import dry-run and live decision paths now avoid unnecessary dashboard detail fetches, keep existing create/update semantics intact, and preserve action behavior for missing/existing checks while reducing redundant round-trips on large import sets.
+
 ## 2026-03-22 - Task: Start Typed Rust Dashboard Datasource Reference Parsing
 - State: Done
 - Scope: `rust/src/dashboard/inspect.rs`, `rust/src/dashboard/rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
