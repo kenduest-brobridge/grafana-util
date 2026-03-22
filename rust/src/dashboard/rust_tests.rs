@@ -10180,18 +10180,34 @@ fn build_export_inspection_governance_document_summarizes_families_and_risks() {
 
     assert_eq!(document.summary.dashboard_count, 2);
     assert_eq!(document.summary.query_record_count, 2);
-    assert_eq!(document.summary.datasource_family_count, 2);
+    assert_eq!(document.summary.datasource_family_count, 3);
     assert_eq!(document.summary.dashboard_datasource_edge_count, 2);
     assert_eq!(document.summary.risk_record_count, 4);
     assert_eq!(document.dashboard_dependencies.len(), 2);
     assert_eq!(document.dashboard_datasource_edges.len(), 2);
     assert_eq!(document.dashboard_dependencies[0].dashboard_uid, "cpu-main");
+    let datasource_families = document.datasource_families.iter().collect::<Vec<_>>();
+    assert_eq!(datasource_families.len(), 3);
+    let prometheus_family = datasource_families
+        .iter()
+        .find(|row| row.family == "prometheus")
+        .unwrap();
+    assert_eq!(prometheus_family.orphaned_datasource_count, 0);
+    let tracing_family = datasource_families
+        .iter()
+        .find(|row| row.family == "tracing")
+        .unwrap();
+    assert_eq!(tracing_family.orphaned_datasource_count, 1);
+    assert_eq!(tracing_family.datasource_types, vec!["tempo".to_string()]);
+    let unknown_family = datasource_families
+        .iter()
+        .find(|row| row.family == "unknown")
+        .unwrap();
+    assert_eq!(unknown_family.orphaned_datasource_count, 0);
     assert_eq!(
         document.dashboard_dependencies[1].datasource_families,
         vec!["unknown".to_string()]
     );
-    assert_eq!(document.datasource_families[0].family, "prometheus");
-    assert_eq!(document.datasource_families[1].family, "unknown");
     let unused = document
         .datasources
         .iter()
@@ -10495,18 +10511,30 @@ fn build_export_inspection_governance_document_surfaces_datasource_blast_radius_
     let document = super::build_export_inspection_governance_document(&summary, &report);
     let document_json = serde_json::to_value(&document).unwrap();
     let datasource_row = &document_json["datasources"][0];
+    let datasource_families = document_json["datasourceFamilies"].as_array().unwrap();
 
     assert_eq!(document.summary.dashboard_count, 1);
     assert_eq!(document.summary.query_record_count, 2);
-    assert_eq!(document.summary.datasource_family_count, 1);
+    assert_eq!(document.summary.datasource_family_count, 2);
     assert_eq!(document.summary.datasource_coverage_count, 1);
     assert_eq!(document.summary.dashboard_datasource_edge_count, 1);
-    assert_eq!(document.summary.risk_record_count, 0);
+    assert_eq!(document.summary.risk_record_count, 1);
     assert_eq!(datasource_row["dashboardUids"], json!(["core-main"]));
     assert_eq!(datasource_row["dashboardCount"], Value::from(1));
     assert_eq!(datasource_row["panelCount"], Value::from(2));
     assert_eq!(datasource_row["queryCount"], Value::from(2));
     assert_eq!(datasource_row["queryFields"], json!(["expr", "query"]));
+    assert_eq!(datasource_families.len(), 2);
+    let tempo_family = datasource_families
+        .iter()
+        .find(|row| row["family"] == Value::String("tempo".to_string()))
+        .unwrap();
+    assert_eq!(tempo_family["datasourceTypes"], json!(["tempo"]));
+    assert_eq!(tempo_family["datasourceCount"], Value::from(0));
+    assert_eq!(tempo_family["orphanedDatasourceCount"], Value::from(1));
+    assert_eq!(tempo_family["dashboardCount"], Value::from(0));
+    assert_eq!(tempo_family["panelCount"], Value::from(0));
+    assert_eq!(tempo_family["queryCount"], Value::from(0));
 
     let lines = super::render_governance_table_report("/tmp/raw", &document);
     let output = lines.join("\n");

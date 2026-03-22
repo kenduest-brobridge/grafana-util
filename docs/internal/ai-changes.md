@@ -1,5 +1,21 @@
 # ai-changes.md
 
+## 2026-03-23 - Gate Sync Apply On Blocked Bundle Alert Artifacts
+- Summary: Updated Rust sync apply bundle-preflight validation so blocked non-rule alert artifacts now contribute to the gating decision instead of being carried as review-only metadata. The attached apply-intent bundle summary and text rendering now expose `alertArtifactBlockingCount` alongside the existing sync/provider counts.
+- Tests: Added focused CLI regressions that reject bundle preflight input when only alert artifact blocks remain and that pin the new apply-intent text summary field.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet run_sync_cli_apply_rejects_bundle_preflight_with_blocked_alert_artifacts`; `cargo test --manifest-path rust/Cargo.toml --quiet render_sync_apply_intent_text_includes_alert_artifact_bundle_blocking_count`; `cargo test --manifest-path rust/Cargo.toml --quiet run_sync_cli_apply_accepts_non_blocking_bundle_preflight_file`
+- Validation: The focused sync CLI tests passed, and the touched Rust files still format cleanly.
+- Impact: `rust/src/sync/mod.rs`, `rust/src/sync/cli_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low. This only tightens staged apply gating around already-reported blocked bundle findings and does not add new live mutation behavior.
+
+## 2026-03-23 - Surface Family-Level Orphaned Datasources In Governance
+- Summary: Added an `orphanedDatasourceCount` field to the Rust dashboard governance family coverage rows and table output, and included orphan-only inventory families in the family coverage section so unused families remain visible even when no dashboard queries reference them.
+- Tests: Extended the governance regression to pin the new orphaned family count and an orphan-only tempo family row, and kept the existing governance table report assertions aligned with the updated output shape.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet build_export_inspection_governance_document_summarizes_families_and_risks`; `cargo test --manifest-path rust/Cargo.toml --quiet render_governance_table_report`
+- Validation: The targeted governance tests pass with the new family-level orphan counts, and the touched Rust files are formatted cleanly.
+- Impact: `rust/src/dashboard/inspect_governance.rs`, `rust/src/dashboard/rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low. This is an additive governance/reporting change that only widens visibility into orphaned inventory families and does not alter the underlying dashboard query analysis.
+
 ## 2026-03-23 - Stage Non-Rule Alert Artifact Assessment In Sync Bundle Preflight
 - Summary: Added a staged alert-artifact assessment to the Rust sync bundle preflight document so contact points, mute timings, policies, and templates now show up as explicit review items alongside the existing sync preflight and provider assessment output. Contact points are marked plan-only, while mute timings, policies, and templates are surfaced as blocked review items without wiring the sync path to live artifact operations.
 - Tests: Added focused sync bundle preflight regressions that assert the new non-rule alert artifact counts, per-kind checks, and rendered summary text, and kept the existing source-bundle alert contract test aligned with the full alert replay artifact surface.

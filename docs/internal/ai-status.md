@@ -5,6 +5,20 @@ Historical note:
 - Older entries describe the repo state and `TODO.md` backlog as they existed on the entry date.
 - `TODO.md` now tracks only the active backlog; completed or superseded TODO items moved to `docs/internal/todo-archive.md`.
 
+## 2026-03-23 - Task: Gate Sync Apply On Blocked Bundle Alert Artifacts
+- State: Done
+- Scope: `rust/src/sync/mod.rs`, `rust/src/sync/cli_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Bundle preflight already surfaced blocked non-rule alert artifacts through `alertArtifactAssessment`, but `sync apply` still only gated on sync/provider blocking counts and could ignore blocked alert artifact review findings.
+- Current Update: Taught bundle-preflight validation to include `alertArtifactAssessment.summary.blockedCount` in apply gating, bridged that count into the attached apply-intent summary, and widened the text renderer plus focused CLI tests to show and enforce the new count.
+- Result: Rust `sync apply` now respects blocked bundle-level alert artifact findings instead of treating them as advisory-only metadata.
+
+## 2026-03-23 - Task: Surface Family-Level Orphaned Datasources In Governance
+- State: Done
+- Scope: `rust/src/dashboard/inspect_governance.rs`, `rust/src/dashboard/rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Governance output already flagged orphaned datasources in the summary and risk rows, but the family coverage table still only showed query-derived counts, which made orphan-only families harder to spot at a glance.
+- Current Update: Added an `orphanedDatasourceCount` field to the family coverage rows and table output, and taught the coverage builder to include orphan-only families from inventory so their family rows stay visible even when no queries reference them.
+- Result: Rust dashboard governance now exposes orphan pressure directly in the family coverage surface, which makes unused family cleanup easier without changing the broader report schema.
+
 ## 2026-03-23 - Task: Stage Non-Rule Alert Artifact Assessment In Sync Bundle Preflight
 - State: Done
 - Scope: `rust/src/sync/bundle_preflight.rs`, `rust/src/sync/bundle_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

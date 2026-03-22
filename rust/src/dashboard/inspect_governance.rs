@@ -38,6 +38,8 @@ pub(crate) struct DatasourceFamilyCoverageRow {
     pub(crate) datasource_types: Vec<String>,
     #[serde(rename = "datasourceCount")]
     pub(crate) datasource_count: usize,
+    #[serde(rename = "orphanedDatasourceCount")]
+    pub(crate) orphaned_datasource_count: usize,
     #[serde(rename = "dashboardCount")]
     pub(crate) dashboard_count: usize,
     #[serde(rename = "panelCount")]
@@ -204,6 +206,14 @@ fn collect_unique_strings(values: impl IntoIterator<Item = String>) -> Vec<Strin
 
 type InventoryIdentity = (String, String, String);
 type InventoryLookup = BTreeMap<String, InventoryIdentity>;
+type FamilyCoverage = (
+    BTreeSet<String>,
+    BTreeSet<String>,
+    BTreeSet<String>,
+    BTreeSet<String>,
+    usize,
+    usize,
+);
 
 fn build_inventory_lookup(summary: &ExportInspectionSummary) -> (InventoryLookup, InventoryLookup) {
     let mut by_uid = BTreeMap::new();
@@ -317,16 +327,7 @@ pub(crate) fn build_datasource_family_coverage_rows(
     report: &ExportInspectionQueryReport,
 ) -> Vec<DatasourceFamilyCoverageRow> {
     let (inventory_by_uid, inventory_by_name) = build_inventory_lookup(summary);
-    let mut coverage = BTreeMap::<
-        String,
-        (
-            BTreeSet<String>,
-            BTreeSet<String>,
-            BTreeSet<String>,
-            BTreeSet<String>,
-            usize,
-        ),
-    >::new();
+    let mut coverage = BTreeMap::<String, FamilyCoverage>::new();
     for row in &report.queries {
         let identity = resolve_datasource_identity(row, &inventory_by_uid, &inventory_by_name);
         let family = normalize_family_name(&identity.datasource_type);
@@ -336,6 +337,7 @@ pub(crate) fn build_datasource_family_coverage_rows(
                 BTreeSet::new(),
                 BTreeSet::new(),
                 BTreeSet::new(),
+                0usize,
                 0usize,
             )
         });
@@ -347,17 +349,45 @@ pub(crate) fn build_datasource_family_coverage_rows(
             .insert(format!("{}:{}", row.dashboard_uid, row.panel_id));
         record.4 += 1;
     }
+    for datasource in &summary.datasource_inventory {
+        if datasource.reference_count != 0 || datasource.dashboard_count != 0 {
+            continue;
+        }
+        let family = normalize_family_name(&datasource.datasource_type);
+        let record = coverage.entry(family).or_insert_with(|| {
+            (
+                BTreeSet::new(),
+                BTreeSet::new(),
+                BTreeSet::new(),
+                BTreeSet::new(),
+                0usize,
+                0usize,
+            )
+        });
+        if !datasource.datasource_type.trim().is_empty() {
+            record.0.insert(datasource.datasource_type.clone());
+        }
+        record.5 += 1;
+    }
     coverage
         .into_iter()
         .map(
             |(
                 family,
-                (datasource_types, datasource_uids, dashboard_uids, panel_keys, query_count),
+                (
+                    datasource_types,
+                    datasource_uids,
+                    dashboard_uids,
+                    panel_keys,
+                    query_count,
+                    orphaned_count,
+                ),
             )| {
                 DatasourceFamilyCoverageRow {
                     family,
                     datasource_types: datasource_types.into_iter().collect(),
                     datasource_count: datasource_uids.len(),
+                    orphaned_datasource_count: orphaned_count,
                     dashboard_count: dashboard_uids.len(),
                     panel_count: panel_keys.len(),
                     query_count,
@@ -805,6 +835,7 @@ pub(crate) fn render_governance_table_report(
                 row.family.clone(),
                 row.datasource_types.join(","),
                 row.datasource_count.to_string(),
+                row.orphaned_datasource_count.to_string(),
                 row.dashboard_count.to_string(),
                 row.panel_count.to_string(),
                 row.query_count.to_string(),
@@ -819,6 +850,7 @@ pub(crate) fn render_governance_table_report(
                 "FAMILY",
                 "TYPES",
                 "DATASOURCES",
+                "ORPHANED_DATASOURCES",
                 "DASHBOARDS",
                 "PANELS",
                 "QUERIES",

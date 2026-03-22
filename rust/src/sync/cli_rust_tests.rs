@@ -2023,6 +2023,75 @@ fn run_sync_cli_apply_rejects_blocking_bundle_preflight_file() {
 }
 
 #[test]
+fn run_sync_cli_apply_rejects_bundle_preflight_with_blocked_alert_artifacts() {
+    let temp = tempdir().unwrap();
+    let plan_file = temp.path().join("plan.json");
+    let bundle_preflight_file = temp.path().join("bundle-preflight.json");
+    fs::write(
+        &plan_file,
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-sync-plan",
+            "traceId": "sync-trace-apply",
+            "summary": {
+                "would_create": 1,
+                "would_update": 0,
+                "would_delete": 0,
+                "noop": 0,
+                "unmanaged": 0,
+                "alert_candidate": 0,
+                "alert_plan_only": 0,
+                "alert_blocked": 0
+            },
+            "reviewRequired": true,
+            "reviewed": true,
+            "operations": [
+                {"kind":"folder","identity":"ops","action":"would-create"}
+            ]
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        &bundle_preflight_file,
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-sync-bundle-preflight",
+            "summary": {
+                "resourceCount": 4,
+                "syncBlockingCount": 0,
+                "providerBlockingCount": 0
+            },
+            "alertArtifactAssessment": {
+                "summary": {
+                    "blockedCount": 2
+                }
+            }
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+
+    let error = run_sync_cli(SyncGroupCommand::Apply(SyncApplyArgs {
+        plan_file,
+        preflight_file: None,
+        bundle_preflight_file: Some(bundle_preflight_file),
+        approve: true,
+        common: sync_common_args(),
+        org_id: None,
+        execute_live: false,
+        allow_folder_delete: false,
+        output: SyncOutputFormat::Text,
+        applied_by: None,
+        applied_at: None,
+        approval_reason: None,
+        apply_note: None,
+    }))
+    .unwrap_err()
+    .to_string();
+
+    assert!(error.contains("bundle preflight reports 2 blocking checks"));
+}
+
+#[test]
 fn run_sync_cli_apply_rejects_missing_trace_id() {
     let temp = tempdir().unwrap();
     let plan_file = temp.path().join("plan.json");
@@ -2183,6 +2252,43 @@ fn run_sync_cli_apply_accepts_non_blocking_bundle_preflight_file() {
     }));
 
     assert!(result.is_ok());
+}
+
+#[test]
+fn render_sync_apply_intent_text_includes_alert_artifact_bundle_blocking_count() {
+    let lines = render_sync_apply_intent_text(&json!({
+        "kind": "grafana-utils-sync-apply-intent",
+        "stage": "apply",
+        "stepIndex": 3,
+        "traceId": "sync-trace-demo",
+        "parentTraceId": "sync-trace-demo",
+        "mode": "apply",
+        "reviewed": true,
+        "reviewRequired": true,
+        "allowPrune": false,
+        "approved": true,
+        "summary": {
+            "would_create": 1,
+            "would_update": 0,
+            "would_delete": 0,
+            "noop": 0,
+            "unmanaged": 0,
+            "alert_candidate": 0,
+            "alert_plan_only": 0,
+            "alert_blocked": 0
+        },
+        "operations": [],
+        "bundlePreflightSummary": {
+            "resourceCount": 4,
+            "syncBlockingCount": 0,
+            "providerBlockingCount": 0,
+            "alertArtifactBlockingCount": 1
+        }
+    }))
+    .unwrap();
+
+    let output = lines.join("\n");
+    assert!(output.contains("alert-artifact-blocking=1"));
 }
 
 #[test]
