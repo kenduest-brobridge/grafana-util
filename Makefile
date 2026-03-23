@@ -7,6 +7,7 @@ CARGO ?= cargo
 RUST_DIR ?= rust
 PYTHON_DIST_DIR ?= dist
 DEV_ITERATION ?= 1
+RUST_RELEASE_RUSTFLAGS ?= -C debuginfo=0
 
 help:
 	@printf '%s\n' \
@@ -90,18 +91,18 @@ build-rust: build-rust-native build-rust-linux-amd64
 	@printf '%s\n' "dist/linux-amd64/grafana-util"
 
 build-rust-native:
-	cd $(RUST_DIR) && $(CARGO) build --release
+	cd $(RUST_DIR) && RUSTFLAGS="$(RUST_RELEASE_RUSTFLAGS)" $(CARGO) build --release
 	@printf '%s\n' 'Rust native build outputs:'
 	@find $(RUST_DIR)/target/release -maxdepth 1 -type f -perm -111 | sort
 
 build-rust-macos-arm64:
-	bash ./scripts/build-rust-macos-arm64.sh
+	RUSTFLAGS="$(RUST_RELEASE_RUSTFLAGS)" bash ./scripts/build-rust-macos-arm64.sh
 
 build-rust-linux-amd64:
-	bash ./scripts/build-rust-linux-amd64.sh
+	RUSTFLAGS="$(RUST_RELEASE_RUSTFLAGS)" bash ./scripts/build-rust-linux-amd64.sh
 
 build-rust-linux-amd64-zig:
-	bash ./scripts/build-rust-linux-amd64-zig.sh
+	RUSTFLAGS="$(RUST_RELEASE_RUSTFLAGS)" bash ./scripts/build-rust-linux-amd64-zig.sh
 
 seed-grafana-sample-data:
 	bash ./scripts/seed-grafana-sample-data.sh

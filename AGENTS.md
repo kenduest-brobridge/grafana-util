@@ -95,6 +95,16 @@ For external command usage and operator examples, prefer `README.md`, `README.zh
 - Validation tasks should use `gpt-5.4` with `high` reasoning.
 - Bulk or repetitive tasks should prefer `gpt-5.4-mini`.
 
+## Worker Delegation
+
+- Write a short mini-spec before delegating: goal, owned files, non-goals, acceptance criteria, and focused validation commands.
+- Give workers only the minimum context needed for the assigned slice; do not pass full thread history by default.
+- Keep architecture, schema/contract changes, risky runtime wiring, migrations, and cross-language parity decisions on the main agent unless a stronger worker is clearly justified.
+- Prefer one worker per disjoint write scope. Avoid overlapping ownership unless the work is intentionally sequential.
+- Good worker slices in this repo are local module work, CLI/parser/help updates, renderer or TUI slices, focused tests, and repetitive repo tasks.
+- Poor worker slices in this repo are broad Rust/Python parity efforts, sync/apply semantics across resource kinds, and contract redesign without a settled main-agent plan.
+- The main agent owns final architecture decisions, cross-slice integration, final validation, and commits.
+
 ## Commit & Pull Request Guidelines
 
 - Default commit message format for agents is:
