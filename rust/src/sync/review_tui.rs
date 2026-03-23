@@ -49,6 +49,20 @@ pub(crate) enum DiffPaneFocus {
     Desired,
 }
 
+type HighlightRange = Option<(usize, usize)>;
+
+pub(crate) struct DiffControlsState {
+    pub selected: usize,
+    pub total: usize,
+    pub diff_focus: DiffPaneFocus,
+    pub live_wrap_lines: bool,
+    pub desired_wrap_lines: bool,
+    pub live_diff_cursor: usize,
+    pub live_horizontal_offset: usize,
+    pub desired_diff_cursor: usize,
+    pub desired_horizontal_offset: usize,
+}
+
 fn operation_key(operation: &serde_json::Map<String, Value>) -> String {
     format!(
         "{}::{}",
@@ -341,10 +355,7 @@ fn numbered_line(index: usize, content: String) -> String {
     format!("{:>3} | {content}", index + 1)
 }
 
-fn diff_highlight_ranges(
-    left: &str,
-    right: &str,
-) -> (Option<(usize, usize)>, Option<(usize, usize)>) {
+fn diff_highlight_ranges(left: &str, right: &str) -> (HighlightRange, HighlightRange) {
     if left == right {
         return (None, None);
     }
@@ -614,59 +625,60 @@ pub(crate) fn diff_scroll_max(model: &ReviewDiffModel, focus: DiffPaneFocus) -> 
     }
 }
 
-pub(crate) fn build_diff_controls_lines(
-    selected: usize,
-    total: usize,
-    diff_focus: DiffPaneFocus,
-    live_wrap_lines: bool,
-    desired_wrap_lines: bool,
-    live_diff_cursor: usize,
-    live_horizontal_offset: usize,
-    desired_diff_cursor: usize,
-    desired_horizontal_offset: usize,
-) -> Vec<Line<'static>> {
-    let focus = match diff_focus {
+pub(crate) fn build_diff_controls_lines(state: &DiffControlsState) -> Vec<Line<'static>> {
+    let focus = match state.diff_focus {
         DiffPaneFocus::Live => "LIVE",
         DiffPaneFocus::Desired => "DESIRED",
     };
     vec![
         Line::from(vec![
             Span::styled(
-                format!("Item {}/{}", selected + 1, total),
+                format!("Item {}/{}", state.selected + 1, state.total),
                 Style::default().add_modifier(Modifier::BOLD),
             ),
             Span::raw("  "),
             Span::styled(format!("Focus {focus}"), Style::default().fg(Color::Cyan)),
             Span::raw("  "),
             Span::styled(
-                format!("Live wrap {}", if live_wrap_lines { "ON" } else { "OFF" }),
+                format!(
+                    "Live wrap {}",
+                    if state.live_wrap_lines { "ON" } else { "OFF" }
+                ),
                 Style::default().fg(Color::Red),
             ),
             Span::raw("  "),
             Span::styled(
                 format!(
                     "Desired wrap {}",
-                    if desired_wrap_lines { "ON" } else { "OFF" }
+                    if state.desired_wrap_lines {
+                        "ON"
+                    } else {
+                        "OFF"
+                    }
                 ),
                 Style::default().fg(Color::Green),
             ),
             Span::raw("  "),
             Span::styled(
-                format!("w active  W both"),
+                "w active  W both".to_string(),
                 Style::default().fg(Color::Yellow),
             ),
             Span::raw("  "),
             Span::styled("Left/Right pan", Style::default().fg(Color::Yellow)),
             Span::styled(
-                format!("Live {} @{}", live_diff_cursor + 1, live_horizontal_offset),
+                format!(
+                    "Live {} @{}",
+                    state.live_diff_cursor + 1,
+                    state.live_horizontal_offset
+                ),
                 Style::default().fg(Color::Red),
             ),
             Span::raw("  "),
             Span::styled(
                 format!(
                     "Desired {} @{}",
-                    desired_diff_cursor + 1,
-                    desired_horizontal_offset
+                    state.desired_diff_cursor + 1,
+                    state.desired_horizontal_offset
                 ),
                 Style::default().fg(Color::Green),
             ),
@@ -823,9 +835,9 @@ pub(crate) fn run_sync_review_tui(plan: &Value) -> Result<Value> {
                         )),
                 );
                 frame.render_widget(preview, outer[2]);
-                let help = Paragraph::new(build_diff_controls_lines(
+                let help = Paragraph::new(build_diff_controls_lines(&DiffControlsState {
                     selected,
-                    items.len(),
+                    total: items.len(),
                     diff_focus,
                     live_wrap_lines,
                     desired_wrap_lines,
@@ -833,7 +845,7 @@ pub(crate) fn run_sync_review_tui(plan: &Value) -> Result<Value> {
                     live_horizontal_offset,
                     desired_diff_cursor,
                     desired_horizontal_offset,
-                ))
+                }))
                 .block(Block::default().borders(Borders::ALL).title("Diff Controls"));
                 frame.render_widget(help, outer[3]);
             } else {

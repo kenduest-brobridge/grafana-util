@@ -2986,17 +2986,18 @@ fn review_operation_preview_uses_readable_action_labels() {
         super::review_tui::diff_pane_title("Live", "would-update", "datasource prom-main", 0, 3),
         "Live 1/3 [would-update] datasource prom-main"
     );
-    let controls = super::review_tui::build_diff_controls_lines(
-        0,
-        3,
-        super::review_tui::DiffPaneFocus::Live,
-        false,
-        true,
-        2,
-        12,
-        1,
-        0,
-    );
+    let controls =
+        super::review_tui::build_diff_controls_lines(&super::review_tui::DiffControlsState {
+            selected: 0,
+            total: 3,
+            diff_focus: super::review_tui::DiffPaneFocus::Live,
+            live_wrap_lines: false,
+            desired_wrap_lines: true,
+            live_diff_cursor: 2,
+            live_horizontal_offset: 12,
+            desired_diff_cursor: 1,
+            desired_horizontal_offset: 0,
+        });
     assert_eq!(controls.len(), 3);
     assert!(controls[0].to_string().contains("Item 1/3"));
     assert!(controls[0].to_string().contains("Live wrap OFF"));

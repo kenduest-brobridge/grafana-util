@@ -40,6 +40,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use tempfile::tempdir;
 
+type TestRequestResult = crate::common::Result<Option<Value>>;
+
 fn make_common_args(base_url: String) -> CommonCliArgs {
     CommonCliArgs {
         url: base_url,
@@ -128,23 +130,14 @@ fn sample_topology_tui_document() -> TopologyDocument {
     build_topology_document(&governance, Some(&alert_contract)).unwrap()
 }
 
+#[allow(clippy::type_complexity)]
 fn with_dashboard_import_live_preflight<F>(
     preflight_datasources: Value,
     preflight_plugins: Value,
     mut handler: F,
-) -> impl FnMut(
-    reqwest::Method,
-    &str,
-    &[(String, String)],
-    Option<&Value>,
-) -> crate::common::Result<Option<Value>>
+) -> impl FnMut(reqwest::Method, &str, &[(String, String)], Option<&Value>) -> TestRequestResult
 where
-    F: FnMut(
-        reqwest::Method,
-        &str,
-        &[(String, String)],
-        Option<&Value>,
-    ) -> crate::common::Result<Option<Value>>,
+    F: FnMut(reqwest::Method, &str, &[(String, String)], Option<&Value>) -> TestRequestResult,
 {
     move |method, path, params, payload| {
         if method == reqwest::Method::GET && path == "/api/datasources" {
@@ -188,6 +181,7 @@ fn make_import_args(import_dir: PathBuf) -> ImportArgs {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn write_basic_raw_export(
     raw_dir: &Path,
     org_id: &str,
@@ -273,6 +267,7 @@ fn write_basic_raw_export(
                 "id": null,
                 "uid": dashboard_uid,
                 "title": dashboard_title,
+                "schemaVersion": 38,
                 "panels": [{
                     "id": 7,
                     "title": dashboard_title,
@@ -473,15 +468,11 @@ fn assert_all_orgs_export_live_documents_match(
     assert_governance_documents_match(export_governance_document, live_governance_document);
 }
 
+#[allow(clippy::type_complexity)]
 fn core_family_inspect_live_request_fixture(
     datasource_inventory: Value,
     dashboard_payload: Value,
-) -> impl FnMut(
-    reqwest::Method,
-    &str,
-    &[(String, String)],
-    Option<&Value>,
-) -> crate::common::Result<Option<Value>> {
+) -> impl FnMut(reqwest::Method, &str, &[(String, String)], Option<&Value>) -> TestRequestResult {
     move |method, path, params, _payload| {
         let method_name = method.to_string();
         match (method, path) {
@@ -517,12 +508,9 @@ fn core_family_inspect_live_request_fixture(
     }
 }
 
-fn all_orgs_inspect_live_request_fixture() -> impl FnMut(
-    reqwest::Method,
-    &str,
-    &[(String, String)],
-    Option<&Value>,
-) -> crate::common::Result<Option<Value>> {
+#[allow(clippy::type_complexity)]
+fn all_orgs_inspect_live_request_fixture(
+) -> impl FnMut(reqwest::Method, &str, &[(String, String)], Option<&Value>) -> TestRequestResult {
     move |method, path, params, _payload| {
         let method_name = method.to_string();
         match (method, path) {
@@ -662,7 +650,7 @@ fn export_query_row<'a>(
         .unwrap()
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 struct CoreFamilyQueryRowExpectation<'a> {
     dashboard_uid: &'a str,
     dashboard_title: &'a str,
@@ -692,41 +680,6 @@ struct CoreFamilyQueryRowExpectation<'a> {
     functions: &'a [&'a str],
     measurements: &'a [&'a str],
     buckets: &'a [&'a str],
-}
-
-impl<'a> Default for CoreFamilyQueryRowExpectation<'a> {
-    fn default() -> Self {
-        Self {
-            dashboard_uid: "",
-            dashboard_title: "",
-            panel_id: "",
-            panel_title: "",
-            panel_type: "",
-            ref_id: "",
-            datasource: "",
-            datasource_name: "",
-            datasource_uid: "",
-            datasource_type: "",
-            datasource_family: "",
-            query_field: "",
-            query_text: "",
-            folder_path: "",
-            folder_full_path: "",
-            folder_level: "",
-            folder_uid: "",
-            parent_folder_uid: "",
-            datasource_org: "",
-            datasource_org_id: "",
-            datasource_database: "",
-            datasource_bucket: "",
-            datasource_organization: "",
-            datasource_index_pattern: "",
-            metrics: &[],
-            functions: &[],
-            measurements: &[],
-            buckets: &[],
-        }
-    }
 }
 
 fn assert_core_family_query_row(
@@ -5893,6 +5846,7 @@ fn export_dashboards_with_client_writes_raw_variant_and_indexes() {
                             "id": 7,
                             "uid": "abc",
                             "title": "CPU",
+                            "schemaVersion": 38,
                             "panels": [
                                 {
                                     "id": 7,
@@ -6023,6 +5977,7 @@ fn export_dashboards_with_client_writes_raw_variant_and_indexes() {
                     "id": 7,
                     "uid": "abc",
                     "title": "CPU",
+                    "schemaVersion": 38,
                     "panels": [
                         {
                             "id": 7,
@@ -9818,6 +9773,7 @@ fn normalize_family_name_covers_core_family_aliases() {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn make_core_family_report_row(
     dashboard_uid: &str,
     panel_id: &str,
@@ -15093,7 +15049,7 @@ fn import_dashboards_with_client_imports_discovered_files() {
     fs::write(
         raw_dir.join("dash.json"),
         serde_json::to_string_pretty(&json!({
-            "dashboard": {"id": 7, "uid": "abc", "title": "CPU"},
+            "dashboard": {"id": 7, "uid": "abc", "title": "CPU", "schemaVersion": 38},
             "meta": {"folderUid": "old-folder"}
         }))
         .unwrap(),
@@ -16399,6 +16355,7 @@ fn import_dashboards_with_use_export_org_round_trips_combined_export_root_into_s
                     "id": null,
                     "uid": dashboard_uid,
                     "title": dashboard_title,
+                    "schemaVersion": 38,
                     "panels": [{
                         "id": 7,
                         "title": dashboard_title,
@@ -16994,7 +16951,7 @@ fn import_dashboards_rejects_mismatched_export_org_with_explicit_org_id() {
     fs::write(
         raw_dir.join("dash.json"),
         serde_json::to_string_pretty(&json!({
-            "dashboard": {"id": 7, "uid": "abc", "title": "CPU"}
+            "dashboard": {"id": 7, "uid": "abc", "title": "CPU", "schemaVersion": 38}
         }))
         .unwrap(),
     )
@@ -17069,7 +17026,7 @@ fn import_dashboards_rejects_mismatched_export_org_with_current_token_org() {
     fs::write(
         raw_dir.join("dash.json"),
         serde_json::to_string_pretty(&json!({
-            "dashboard": {"id": 7, "uid": "abc", "title": "CPU"}
+            "dashboard": {"id": 7, "uid": "abc", "title": "CPU", "schemaVersion": 38}
         }))
         .unwrap(),
     )
@@ -17150,7 +17107,7 @@ fn import_dashboards_allows_matching_export_org_with_current_org_lookup() {
     fs::write(
         raw_dir.join("dash.json"),
         serde_json::to_string_pretty(&json!({
-            "dashboard": {"id": 7, "uid": "abc", "title": "CPU"}
+            "dashboard": {"id": 7, "uid": "abc", "title": "CPU", "schemaVersion": 38}
         }))
         .unwrap(),
     )
@@ -17303,6 +17260,7 @@ fn import_dashboards_rejects_missing_dependencies_before_dashboard_lookup() {
                 "id": 7,
                 "uid": "abc",
                 "title": "CPU",
+                "schemaVersion": 38,
                 "panels": [
                     {
                         "type": "row",
@@ -17405,7 +17363,8 @@ fn import_dashboards_skips_dependency_preflight_for_dependency_free_dashboards()
             "dashboard": {
                 "id": 7,
                 "uid": "abc",
-                "title": "CPU"
+                "title": "CPU",
+                "schemaVersion": 38
             }
         }))
         .unwrap(),
@@ -17805,6 +17764,7 @@ fn import_dashboards_with_matching_dependencies_posts_after_preflight() {
                 "id": 7,
                 "uid": "abc",
                 "title": "CPU",
+                "schemaVersion": 38,
                 "panels": [
                     {
                         "type": "row",
@@ -17958,7 +17918,7 @@ fn import_dashboards_with_update_existing_only_skips_missing_dashboards() {
     fs::write(
         raw_dir.join("exists.json"),
         serde_json::to_string_pretty(&json!({
-            "dashboard": {"id": 7, "uid": "abc", "title": "CPU"}
+            "dashboard": {"id": 7, "uid": "abc", "title": "CPU", "schemaVersion": 38}
         }))
         .unwrap(),
     )
@@ -17966,7 +17926,7 @@ fn import_dashboards_with_update_existing_only_skips_missing_dashboards() {
     fs::write(
         raw_dir.join("missing.json"),
         serde_json::to_string_pretty(&json!({
-            "dashboard": {"id": 8, "uid": "xyz", "title": "Memory"}
+            "dashboard": {"id": 8, "uid": "xyz", "title": "Memory", "schemaVersion": 38}
         }))
         .unwrap(),
     )
@@ -18129,7 +18089,7 @@ fn import_dashboards_replace_existing_preserves_destination_folder() {
     fs::write(
         raw_dir.join("exists.json"),
         serde_json::to_string_pretty(&json!({
-            "dashboard": {"id": 7, "uid": "abc", "title": "CPU"},
+            "dashboard": {"id": 7, "uid": "abc", "title": "CPU", "schemaVersion": 38},
             "meta": {"folderUid": "source-folder"}
         }))
         .unwrap(),
@@ -18169,7 +18129,7 @@ fn import_dashboards_replace_existing_preserves_destination_folder() {
                 Ok(Some(json!([{"uid":"abc","folderUid":"dest-folder"}])))
             }
             (reqwest::Method::GET, "/api/dashboards/uid/abc") => Ok(Some(json!({
-                "dashboard": {"id": 7, "uid": "abc", "title": "CPU"},
+                "dashboard": {"id": 7, "uid": "abc", "title": "CPU", "schemaVersion": 38},
                 "meta": {"folderUid": "dest-folder"}
             }))),
             (reqwest::Method::POST, "/api/dashboards/db") => {
@@ -18595,7 +18555,7 @@ fn import_dashboards_with_matching_folder_path_skips_live_update_mismatch() {
     fs::write(
         raw_dir.join("Platform").join("Source").join("dash.json"),
         serde_json::to_string_pretty(&json!({
-            "dashboard": {"id": 7, "uid": "abc", "title": "CPU"},
+            "dashboard": {"id": 7, "uid": "abc", "title": "CPU", "schemaVersion": 38},
             "meta": {"folderUid": "source-folder"}
         }))
         .unwrap(),
@@ -18636,7 +18596,7 @@ fn import_dashboards_with_matching_folder_path_skips_live_update_mismatch() {
                 Ok(Some(json!([{"uid": "abc", "folderUid": "dest-folder"}])))
             }
             (reqwest::Method::GET, "/api/dashboards/uid/abc") => Ok(Some(json!({
-                "dashboard": {"id": 7, "uid": "abc", "title": "CPU"},
+                "dashboard": {"id": 7, "uid": "abc", "title": "CPU", "schemaVersion": 38},
                 "meta": {"folderUid": "dest-folder"}
             }))),
             (reqwest::Method::GET, "/api/folders/dest-folder") => Ok(Some(json!({
@@ -18807,7 +18767,7 @@ fn import_dashboards_with_ensure_folders_creates_missing_folder_chain_from_raw_i
     fs::write(
         raw_dir.join("dash.json"),
         serde_json::to_string_pretty(&json!({
-            "dashboard": {"id": 7, "uid": "abc", "title": "CPU"},
+            "dashboard": {"id": 7, "uid": "abc", "title": "CPU", "schemaVersion": 38},
             "meta": {"folderUid": "child"}
         }))
         .unwrap(),
@@ -18874,7 +18834,7 @@ fn import_dashboards_with_ensure_folders_creates_missing_folder_chain_from_raw_i
             json!({"uid": "platform", "title": "Platform"}),
             json!({"uid": "child", "title": "Child", "parentUid": "platform"}),
             json!({
-                "dashboard": {"id": null, "uid": "abc", "title": "CPU"},
+                "dashboard": {"id": null, "uid": "abc", "title": "CPU", "schemaVersion": 38},
                 "overwrite": false,
                 "message": "sync dashboards",
                 "folderUid": "child"

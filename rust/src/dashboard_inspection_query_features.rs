@@ -134,9 +134,7 @@ fn extract_quoted_aware_enclosed(query_text: &str, open: char, close: char) -> V
                 depth += 1;
             }
             c if c == close && !in_quotes => {
-                if depth > 0 {
-                    depth -= 1;
-                }
+                depth = depth.saturating_sub(1);
                 if depth == 0 {
                     if let Some(start) = begin.take() {
                         ordered_unique_push(&mut values, &query_text[start..index]);

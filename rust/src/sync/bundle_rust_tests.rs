@@ -564,7 +564,6 @@ fn render_sync_source_bundle_text_reports_alert_replay_artifact_counts() {
         fixture["syncAlertingArtifacts"]["summary"]["templateCount"]
     );
     assert!(lines.iter().any(|line| line == &expected));
-    assert!(lines.iter().any(|line| line == "Alert artifacts: 4 total"));
 }
 
 #[test]

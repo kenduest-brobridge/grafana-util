@@ -103,7 +103,7 @@ fn walk_panels<'a>(panels: &'a [Value], collected: &mut Vec<&'a Map<String, Valu
     }
 }
 
-fn collect_dashboard_panels<'a>(dashboard: &'a Map<String, Value>) -> Vec<&'a Map<String, Value>> {
+fn collect_dashboard_panels(dashboard: &Map<String, Value>) -> Vec<&Map<String, Value>> {
     let mut panels = Vec::new();
     if let Some(items) = dashboard.get("panels").and_then(Value::as_array) {
         walk_panels(items, &mut panels);

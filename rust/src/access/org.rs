@@ -18,6 +18,9 @@ use super::{
 };
 use crate::access::cli_defs::{build_auth_context_no_org_id, CommonCliArgsNoOrgId};
 
+type OrgDiffRecord = (String, Map<String, Value>);
+type OrgDiffMap = BTreeMap<String, OrgDiffRecord>;
+
 fn validate_basic_auth_only(common: &CommonCliArgsNoOrgId) -> Result<()> {
     let auth_mode = build_auth_context_no_org_id(common)?.auth_mode;
     if auth_mode != "basic" {
@@ -299,7 +302,7 @@ fn build_org_diff_map(
     records: &[Map<String, Value>],
     source: &str,
     include_users: bool,
-) -> Result<BTreeMap<String, (String, Map<String, Value>)>> {
+) -> Result<OrgDiffMap> {
     let mut indexed = BTreeMap::new();
     for record in records {
         let org_name = string_field(record, "name", "");
@@ -323,10 +326,7 @@ fn build_org_diff_map(
                 Some(Value::Array(values)) => {
                     let users = values
                         .iter()
-                        .map(|value| {
-                            value_as_object(value, "Unexpected org user record.")
-                                .map(|map| map.clone())
-                        })
+                        .map(|value| value_as_object(value, "Unexpected org user record.").cloned())
                         .collect::<Result<Vec<Map<String, Value>>>>()?;
                     build_org_user_diff_array(&users, source)?
                 }

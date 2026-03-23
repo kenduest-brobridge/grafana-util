@@ -1231,7 +1231,7 @@ pub(crate) fn evaluate_dashboard_governance_gate(
         })
         .collect::<Vec<DashboardGovernanceGateFinding>>();
 
-    let ok = violations.is_empty() && !(policy.fail_on_warnings && !warnings.is_empty());
+    let ok = violations.is_empty() && (!policy.fail_on_warnings || warnings.is_empty());
     Ok(DashboardGovernanceGateResult {
         ok,
         summary: DashboardGovernanceGateSummary {

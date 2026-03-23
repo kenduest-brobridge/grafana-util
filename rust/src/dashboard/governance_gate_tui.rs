@@ -113,9 +113,9 @@ pub(crate) fn build_governance_gate_tui_items(
     kind: &str,
 ) -> Vec<BrowserItem> {
     let mut violations = result.violations.iter().collect::<Vec<_>>();
-    violations.sort_by_key(|record| finding_sort_key(*record));
+    violations.sort_by_key(|record| finding_sort_key(record));
     let mut warnings = result.warnings.iter().collect::<Vec<_>>();
-    warnings.sort_by_key(|record| finding_sort_key(*record));
+    warnings.sort_by_key(|record| finding_sort_key(record));
 
     let mut items = Vec::new();
     if kind == "all" || kind == "violation" {

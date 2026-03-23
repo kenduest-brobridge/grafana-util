@@ -1282,7 +1282,7 @@ fn format_routed_import_scope_summary(plan: &ExportOrgTargetPlan) -> String {
     format_routed_import_scope_summary_fields(
         plan.source_org_id,
         &plan.source_org_name,
-        &plan.org_action,
+        plan.org_action,
         plan.target_org_id,
         &plan.import_dir,
     )
@@ -2758,6 +2758,7 @@ mod tests {
                     "id": 7,
                     "uid": "abc",
                     "title": "CPU",
+                    "schemaVersion": 38,
                     "panels": [
                         {
                             "type": "row",

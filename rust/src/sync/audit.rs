@@ -82,7 +82,7 @@ fn build_lock_specs_from_managed_specs(
         .collect())
 }
 
-fn parse_lock_resources<'a>(lock_document: &'a Value) -> Result<&'a Vec<Value>> {
+fn parse_lock_resources(lock_document: &Value) -> Result<&Vec<Value>> {
     if lock_document.get("kind").and_then(Value::as_str) != Some(SYNC_LOCK_KIND) {
         return Err(message("Sync lock document kind is not supported."));
     }

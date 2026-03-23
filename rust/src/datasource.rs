@@ -2052,7 +2052,7 @@ fn format_routed_datasource_scope_summary(plan: &DatasourceExportOrgTargetPlan) 
     format_routed_datasource_scope_summary_fields(
         plan.source_org_id,
         &plan.source_org_name,
-        &plan.org_action,
+        plan.org_action,
         plan.target_org_id,
         &plan.import_dir,
     )
