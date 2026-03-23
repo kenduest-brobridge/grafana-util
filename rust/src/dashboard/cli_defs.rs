@@ -33,6 +33,22 @@ pub enum GovernanceGateOutputFormat {
     Json,
 }
 
+/// Enum definition for TopologyOutputFormat.
+#[derive(Debug, Clone, Copy, ValueEnum, PartialEq, Eq)]
+pub enum TopologyOutputFormat {
+    Text,
+    Json,
+    Mermaid,
+    Dot,
+}
+
+/// Enum definition for ImpactOutputFormat.
+#[derive(Debug, Clone, Copy, ValueEnum, PartialEq, Eq)]
+pub enum ImpactOutputFormat {
+    Text,
+    Json,
+}
+
 /// Enum definition for ValidationOutputFormat.
 #[derive(Debug, Clone, Copy, ValueEnum, PartialEq, Eq)]
 pub enum ValidationOutputFormat {
@@ -844,6 +860,52 @@ pub struct GovernanceGateArgs {
     pub json_output: Option<PathBuf>,
 }
 
+/// Struct definition for TopologyArgs.
+#[derive(Debug, Clone, Args)]
+pub struct TopologyArgs {
+    #[arg(long, help = "Path to dashboard governance JSON.")]
+    pub governance: PathBuf,
+    #[arg(
+        long = "alert-contract",
+        help = "Optional path to a sync alert contract JSON document."
+    )]
+    pub alert_contract: Option<PathBuf>,
+    #[arg(
+        long,
+        value_enum,
+        help = "Render the topology as text, json, mermaid, or dot."
+    )]
+    pub output_format: TopologyOutputFormat,
+    #[arg(
+        long,
+        help = "Optional path to also write the rendered topology output."
+    )]
+    pub output_file: Option<PathBuf>,
+}
+
+/// Struct definition for ImpactArgs.
+#[derive(Debug, Clone, Args)]
+pub struct ImpactArgs {
+    #[arg(long, help = "Path to dashboard governance JSON.")]
+    pub governance: PathBuf,
+    #[arg(
+        long = "datasource-uid",
+        help = "Datasource UID to analyze for downstream dashboard and alert impact."
+    )]
+    pub datasource_uid: String,
+    #[arg(
+        long = "alert-contract",
+        help = "Optional path to a sync alert contract JSON document."
+    )]
+    pub alert_contract: Option<PathBuf>,
+    #[arg(
+        long,
+        value_enum,
+        help = "Render the blast radius summary as text or json."
+    )]
+    pub output_format: ImpactOutputFormat,
+}
+
 /// Struct definition for ValidateExportArgs.
 #[derive(Debug, Clone, Args)]
 pub struct ValidateExportArgs {
@@ -923,6 +985,18 @@ pub enum DashboardCommand {
         after_help = "Examples:\n\n  Evaluate governance policy with text output:\n    grafana-util dashboard governance-gate --policy ./policy.json --governance ./governance.json --queries ./queries.json\n\n  Write the normalized result JSON while also printing machine-readable output:\n    grafana-util dashboard governance-gate --policy ./policy.json --governance ./governance.json --queries ./queries.json --output-format json --json-output ./governance-check.json"
     )]
     GovernanceGate(GovernanceGateArgs),
+    #[command(
+        name = "topology",
+        about = "Build a deterministic dashboard, datasource, and alert topology from JSON artifacts.",
+        after_help = "Examples:\n\n  Render a dashboard topology graph in Mermaid:\n    grafana-util dashboard topology --governance ./governance.json --alert-contract ./alert-contract.json --output-format mermaid\n\n  Render the same graph as DOT while also writing it to disk:\n    grafana-util dashboard topology --governance ./governance.json --alert-contract ./alert-contract.json --output-format dot --output-file ./dashboard-topology.dot"
+    )]
+    Topology(TopologyArgs),
+    #[command(
+        name = "impact",
+        about = "Summarize dashboard and alert blast radius for one datasource from JSON artifacts.",
+        after_help = "Examples:\n\n  Summarize blast radius as text:\n    grafana-util dashboard impact --governance ./governance.json --datasource-uid prom-main --alert-contract ./alert-contract.json --output-format text\n\n  Render the same blast radius as JSON:\n    grafana-util dashboard impact --governance ./governance.json --datasource-uid prom-main --output-format json"
+    )]
+    Impact(ImpactArgs),
     #[command(
         name = "validate-export",
         about = "Run strict schema validation against dashboard raw export files before GitOps sync.",

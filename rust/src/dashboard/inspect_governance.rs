@@ -1,7 +1,9 @@
 //! Governance report builder for inspect mode.
 //! Computes datasource-family coverage and risk summaries from the shared query inspection data.
 use serde::Serialize;
+use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
+use std::fs;
 
 use super::inspect_render::render_simple_table;
 use super::inspect_report::{ExportInspectionQueryReport, ExportInspectionQueryRow};
@@ -208,6 +210,12 @@ const GOVERNANCE_RISK_KIND_ORPHANED_DATASOURCE: &str = "orphaned-datasource";
 const GOVERNANCE_RISK_KIND_UNKNOWN_DATASOURCE_FAMILY: &str = "unknown-datasource-family";
 const GOVERNANCE_RISK_KIND_EMPTY_QUERY_ANALYSIS: &str = "empty-query-analysis";
 const GOVERNANCE_RISK_KIND_BROAD_LOKI_SELECTOR: &str = "broad-loki-selector";
+const GOVERNANCE_RISK_KIND_BROAD_PROMETHEUS_SELECTOR: &str = "broad-prometheus-selector";
+const GOVERNANCE_RISK_KIND_PROMETHEUS_REGEX_HEAVY: &str = "prometheus-regex-heavy";
+const GOVERNANCE_RISK_KIND_LARGE_PROMETHEUS_RANGE: &str = "large-prometheus-range";
+const GOVERNANCE_RISK_KIND_UNSCOPED_LOKI_SEARCH: &str = "unscoped-loki-search";
+const GOVERNANCE_RISK_KIND_DASHBOARD_PANEL_PRESSURE: &str = "dashboard-panel-pressure";
+const GOVERNANCE_RISK_KIND_DASHBOARD_REFRESH_PRESSURE: &str = "dashboard-refresh-pressure";
 
 const GOVERNANCE_RISK_DEFAULT_SPEC: GovernanceRiskSpec = GovernanceRiskSpec {
     category: "other",
@@ -216,7 +224,7 @@ const GOVERNANCE_RISK_DEFAULT_SPEC: GovernanceRiskSpec = GovernanceRiskSpec {
         "Review this governance finding and assign a follow-up owner if action is needed.",
 };
 
-const GOVERNANCE_RISK_SPECS: [(&str, GovernanceRiskSpec); 5] = [
+const GOVERNANCE_RISK_SPECS: [(&str, GovernanceRiskSpec); 11] = [
     (
         GOVERNANCE_RISK_KIND_MIXED_DASHBOARD,
         GovernanceRiskSpec {
@@ -260,6 +268,60 @@ const GOVERNANCE_RISK_SPECS: [(&str, GovernanceRiskSpec); 5] = [
             severity: "medium",
             recommendation:
                 "Narrow the Loki stream selector before running expensive line filters or aggregations.",
+        },
+    ),
+    (
+        GOVERNANCE_RISK_KIND_BROAD_PROMETHEUS_SELECTOR,
+        GovernanceRiskSpec {
+            category: "cost",
+            severity: "medium",
+            recommendation:
+                "Add label filters to the Prometheus selector before promoting this dashboard to shared or high-refresh use.",
+        },
+    ),
+    (
+        GOVERNANCE_RISK_KIND_PROMETHEUS_REGEX_HEAVY,
+        GovernanceRiskSpec {
+            category: "cost",
+            severity: "medium",
+            recommendation:
+                "Reduce Prometheus regex matcher scope or replace it with exact labels where possible.",
+        },
+    ),
+    (
+        GOVERNANCE_RISK_KIND_LARGE_PROMETHEUS_RANGE,
+        GovernanceRiskSpec {
+            category: "cost",
+            severity: "medium",
+            recommendation:
+                "Shorten the Prometheus range window or pre-aggregate the series before using long lookback queries in dashboards.",
+        },
+    ),
+    (
+        GOVERNANCE_RISK_KIND_UNSCOPED_LOKI_SEARCH,
+        GovernanceRiskSpec {
+            category: "cost",
+            severity: "high",
+            recommendation:
+                "Add at least one concrete Loki label matcher before running full-text or regex log search.",
+        },
+    ),
+    (
+        GOVERNANCE_RISK_KIND_DASHBOARD_PANEL_PRESSURE,
+        GovernanceRiskSpec {
+            category: "dashboard-load",
+            severity: "medium",
+            recommendation:
+                "Split the dashboard into smaller views or collapse low-value panels before broad rollout.",
+        },
+    ),
+    (
+        GOVERNANCE_RISK_KIND_DASHBOARD_REFRESH_PRESSURE,
+        GovernanceRiskSpec {
+            category: "dashboard-load",
+            severity: "medium",
+            recommendation:
+                "Increase the dashboard refresh interval to reduce repeated load on Grafana and backing datasources.",
         },
     ),
 ];
@@ -330,6 +392,136 @@ fn collect_unique_strings(values: impl IntoIterator<Item = String>) -> Vec<Strin
         .collect::<BTreeSet<String>>()
         .into_iter()
         .collect()
+}
+
+fn parse_duration_seconds(value: &str) -> Option<u64> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() || trimmed.eq_ignore_ascii_case("off") {
+        return None;
+    }
+    let mut digits = String::new();
+    let mut suffix = String::new();
+    for character in trimmed.chars() {
+        if character.is_ascii_digit() && suffix.is_empty() {
+            digits.push(character);
+        } else if !character.is_ascii_whitespace() {
+            suffix.push(character);
+        }
+    }
+    let number = digits.parse::<u64>().ok()?;
+    let multiplier = match suffix.to_ascii_lowercase().as_str() {
+        "ms" => 0,
+        "s" | "" => 1,
+        "m" => 60,
+        "h" => 60 * 60,
+        "d" => 60 * 60 * 24,
+        "w" => 60 * 60 * 24 * 7,
+        _ => return None,
+    };
+    Some(number.saturating_mul(multiplier))
+}
+
+fn query_uses_broad_prometheus_selector(row: &ExportInspectionQueryRow) -> bool {
+    if normalize_family_name(&row.datasource_type) != "prometheus" {
+        return false;
+    }
+    let query_text = row.query_text.trim();
+    if query_text.is_empty() || !row.measurements.is_empty() || query_text.contains('{') {
+        return false;
+    }
+    if row.metrics.len() != 1
+        || query_text.contains(' ')
+        || query_text.contains('(')
+        || query_text.contains('[')
+    {
+        return false;
+    }
+    row.metrics[0].trim() == query_text
+}
+
+fn query_uses_prometheus_regex(row: &ExportInspectionQueryRow) -> bool {
+    normalize_family_name(&row.datasource_type) == "prometheus"
+        && (row.query_text.contains("=~") || row.query_text.contains("!~"))
+}
+
+fn largest_bucket_seconds(row: &ExportInspectionQueryRow) -> Option<u64> {
+    row.buckets
+        .iter()
+        .filter_map(|value| parse_duration_seconds(value))
+        .max()
+}
+
+fn loki_selector_has_concrete_matcher(selector: &str) -> bool {
+    let inner = selector
+        .trim()
+        .trim_start_matches('{')
+        .trim_end_matches('}')
+        .trim();
+    if inner.is_empty() {
+        return false;
+    }
+    inner.split(',').any(|matcher| {
+        let matcher = matcher.trim();
+        if matcher.is_empty() {
+            return false;
+        }
+        let Some((_, value)) = matcher.split_once('=') else {
+            return false;
+        };
+        let value = value.trim().trim_matches('"');
+        !(value.is_empty() || value == ".*" || value == ".+" || value == "*")
+    })
+}
+
+fn query_uses_unscoped_loki_search(row: &ExportInspectionQueryRow) -> bool {
+    if normalize_family_name(&row.datasource_type) != "loki" {
+        return false;
+    }
+    let has_line_filter = row.functions.iter().any(|function| {
+        function.starts_with("line_filter_")
+            || function.contains("pattern")
+            || function.contains("regexp")
+    });
+    if !has_line_filter {
+        return false;
+    }
+    let selectors = extract_loki_stream_selectors(&row.query_text);
+    !selectors.is_empty()
+        && selectors
+            .iter()
+            .all(|selector| !loki_selector_has_concrete_matcher(selector))
+}
+
+fn load_dashboard_refresh_by_uid(report: &ExportInspectionQueryReport) -> BTreeMap<String, String> {
+    let mut refresh_by_uid = BTreeMap::new();
+    let mut file_by_uid = BTreeMap::new();
+    for row in &report.queries {
+        if !row.dashboard_uid.trim().is_empty() && !row.file_path.trim().is_empty() {
+            file_by_uid
+                .entry(row.dashboard_uid.clone())
+                .or_insert(row.file_path.clone());
+        }
+    }
+    for (dashboard_uid, file_path) in file_by_uid {
+        let Ok(raw) = fs::read_to_string(&file_path) else {
+            continue;
+        };
+        let Ok(document) = serde_json::from_str::<Value>(&raw) else {
+            continue;
+        };
+        let refresh = document
+            .get("dashboard")
+            .and_then(|dashboard| dashboard.get("refresh"))
+            .or_else(|| document.get("refresh"))
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(str::to_string);
+        if let Some(refresh) = refresh {
+            refresh_by_uid.insert(dashboard_uid, refresh);
+        }
+    }
+    refresh_by_uid
 }
 
 type InventoryIdentity = (String, String, String);
@@ -729,6 +921,11 @@ pub(crate) fn build_datasource_governance_rows(
     report: &ExportInspectionQueryReport,
 ) -> Vec<DatasourceGovernanceRow> {
     let (inventory_by_uid, inventory_by_name) = build_inventory_lookup(summary);
+    let pressured_dashboard_uids = build_dashboard_dependency_rows(report)
+        .into_iter()
+        .filter(|row| row.panel_count > 30)
+        .map(|row| row.dashboard_uid)
+        .collect::<BTreeSet<String>>();
     let mixed_dashboard_uids = summary
         .mixed_dashboards
         .iter()
@@ -835,6 +1032,16 @@ pub(crate) fn build_datasource_governance_rows(
             record
                 .6
                 .insert(GOVERNANCE_RISK_KIND_BROAD_LOKI_SELECTOR.to_string());
+        }
+        if pressured_dashboard_uids.contains(&row.dashboard_uid) {
+            record.5.insert((
+                GOVERNANCE_RISK_KIND_DASHBOARD_PANEL_PRESSURE.to_string(),
+                row.dashboard_uid.clone(),
+                String::new(),
+            ));
+            record
+                .6
+                .insert(GOVERNANCE_RISK_KIND_DASHBOARD_PANEL_PRESSURE.to_string());
         }
         if row.metrics.is_empty()
             && row.functions.is_empty()
@@ -1124,6 +1331,7 @@ pub(crate) fn build_governance_risk_rows(
     report: &ExportInspectionQueryReport,
 ) -> Vec<GovernanceRiskRow> {
     let (inventory_by_uid, inventory_by_name) = build_inventory_lookup(summary);
+    let refresh_by_dashboard = load_dashboard_refresh_by_uid(report);
     let mut seen = BTreeSet::new();
     let mut risks = Vec::new();
 
@@ -1186,6 +1394,59 @@ pub(crate) fn build_governance_risk_rows(
                 }
             }
         }
+        if query_uses_broad_prometheus_selector(row) {
+            let risk = build_governance_risk_row(
+                GOVERNANCE_RISK_KIND_BROAD_PROMETHEUS_SELECTOR,
+                row.dashboard_uid.clone(),
+                row.panel_id.clone(),
+                identity.name.clone(),
+                row.query_text.clone(),
+            );
+            if seen.insert(risk.clone()) {
+                risks.push(risk);
+            }
+        }
+        if query_uses_prometheus_regex(row) {
+            let risk = build_governance_risk_row(
+                GOVERNANCE_RISK_KIND_PROMETHEUS_REGEX_HEAVY,
+                row.dashboard_uid.clone(),
+                row.panel_id.clone(),
+                identity.name.clone(),
+                row.query_text.clone(),
+            );
+            if seen.insert(risk.clone()) {
+                risks.push(risk);
+            }
+        }
+        if let Some(bucket_seconds) = largest_bucket_seconds(row) {
+            if normalize_family_name(&identity.datasource_type) == "prometheus"
+                && bucket_seconds >= 60 * 60
+            {
+                let risk = build_governance_risk_row(
+                    GOVERNANCE_RISK_KIND_LARGE_PROMETHEUS_RANGE,
+                    row.dashboard_uid.clone(),
+                    row.panel_id.clone(),
+                    identity.name.clone(),
+                    row.buckets.join(","),
+                );
+                if seen.insert(risk.clone()) {
+                    risks.push(risk);
+                }
+            }
+        }
+        if query_uses_unscoped_loki_search(row) {
+            let selectors = extract_loki_stream_selectors(&row.query_text);
+            let risk = build_governance_risk_row(
+                GOVERNANCE_RISK_KIND_UNSCOPED_LOKI_SEARCH,
+                row.dashboard_uid.clone(),
+                row.panel_id.clone(),
+                identity.name.clone(),
+                selectors.join(","),
+            );
+            if seen.insert(risk.clone()) {
+                risks.push(risk);
+            }
+        }
         if row.metrics.is_empty()
             && row.functions.is_empty()
             && row.measurements.is_empty()
@@ -1200,6 +1461,36 @@ pub(crate) fn build_governance_risk_rows(
             );
             if seen.insert(risk.clone()) {
                 risks.push(risk);
+            }
+        }
+    }
+    for dashboard in build_dashboard_dependency_rows(report) {
+        if dashboard.panel_count > 30 {
+            let risk = build_governance_risk_row(
+                GOVERNANCE_RISK_KIND_DASHBOARD_PANEL_PRESSURE,
+                dashboard.dashboard_uid.clone(),
+                String::new(),
+                dashboard.dashboard_title.clone(),
+                dashboard.panel_count.to_string(),
+            );
+            if seen.insert(risk.clone()) {
+                risks.push(risk);
+            }
+        }
+        if let Some(refresh) = refresh_by_dashboard.get(&dashboard.dashboard_uid) {
+            if let Some(refresh_seconds) = parse_duration_seconds(refresh) {
+                if refresh_seconds != 0 && refresh_seconds < 30 {
+                    let risk = build_governance_risk_row(
+                        GOVERNANCE_RISK_KIND_DASHBOARD_REFRESH_PRESSURE,
+                        dashboard.dashboard_uid.clone(),
+                        String::new(),
+                        dashboard.dashboard_title.clone(),
+                        refresh.clone(),
+                    );
+                    if seen.insert(risk.clone()) {
+                        risks.push(risk);
+                    }
+                }
             }
         }
     }

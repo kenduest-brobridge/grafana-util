@@ -40,16 +40,18 @@ mod live;
 mod models;
 mod prompt;
 mod screenshot;
+mod topology;
 mod validate;
 mod vars;
 
 pub use cli_defs::{
     build_auth_context, build_http_client, build_http_client_for_org, normalize_dashboard_cli_args,
     parse_cli_from, CommonCliArgs, DashboardAuthContext, DashboardCliArgs, DashboardCommand,
-    DiffArgs, ExportArgs, GovernanceGateArgs, GovernanceGateOutputFormat, ImportArgs,
-    InspectExportArgs, InspectExportReportFormat, InspectLiveArgs, InspectOutputFormat,
-    InspectVarsArgs, ListArgs, ScreenshotArgs, ScreenshotFullPageOutput, ScreenshotOutputFormat,
-    ScreenshotTheme, SimpleOutputFormat, ValidateExportArgs, ValidationOutputFormat,
+    DiffArgs, ExportArgs, GovernanceGateArgs, GovernanceGateOutputFormat, ImpactArgs,
+    ImpactOutputFormat, ImportArgs, InspectExportArgs, InspectExportReportFormat, InspectLiveArgs,
+    InspectOutputFormat, InspectVarsArgs, ListArgs, ScreenshotArgs, ScreenshotFullPageOutput,
+    ScreenshotOutputFormat, ScreenshotTheme, SimpleOutputFormat, TopologyArgs,
+    TopologyOutputFormat, ValidateExportArgs, ValidationOutputFormat,
 };
 pub use export::{build_export_variant_dirs, build_output_path, export_dashboards_with_client};
 pub use help::{
@@ -67,6 +69,7 @@ use export::export_dashboards_with_org_clients;
 use inspect::{analyze_export_dir, inspect_live_dashboards_with_client};
 use list::list_dashboards_with_org_clients;
 use screenshot::capture_dashboard_screenshot;
+use topology::{run_dashboard_impact, run_dashboard_topology};
 use validate::run_dashboard_validate_export;
 use vars::inspect_dashboard_variables;
 
@@ -166,6 +169,11 @@ pub(crate) use prompt::{
 pub(crate) use screenshot::{
     build_dashboard_capture_url, infer_screenshot_output_format, resolve_manifest_title,
     validate_screenshot_args,
+};
+#[cfg(test)]
+pub(crate) use topology::{
+    build_impact_document, build_topology_document, render_impact_text, render_topology_dot,
+    render_topology_mermaid,
 };
 #[cfg(test)]
 pub(crate) use validate::{render_validation_result_json, validate_dashboard_export_dir};
@@ -296,6 +304,8 @@ pub fn run_dashboard_cli_with_client(
         DashboardCommand::GovernanceGate(governance_gate_args) => {
             governance_gate::run_dashboard_governance_gate(&governance_gate_args)
         }
+        DashboardCommand::Topology(topology_args) => run_dashboard_topology(&topology_args),
+        DashboardCommand::Impact(impact_args) => run_dashboard_impact(&impact_args),
         DashboardCommand::ValidateExport(validate_args) => {
             run_dashboard_validate_export(&validate_args)
         }
@@ -369,6 +379,8 @@ pub fn run_dashboard_cli(args: DashboardCliArgs) -> Result<()> {
         DashboardCommand::GovernanceGate(governance_gate_args) => {
             governance_gate::run_dashboard_governance_gate(&governance_gate_args)
         }
+        DashboardCommand::Topology(topology_args) => run_dashboard_topology(&topology_args),
+        DashboardCommand::Impact(impact_args) => run_dashboard_impact(&impact_args),
         DashboardCommand::ValidateExport(validate_args) => {
             run_dashboard_validate_export(&validate_args)
         }

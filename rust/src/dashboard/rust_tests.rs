@@ -4,22 +4,24 @@
 use super::{
     attach_dashboard_folder_paths_with_request, build_dashboard_capture_url, build_export_metadata,
     build_export_variant_dirs, build_external_export_document, build_folder_inventory_status,
-    build_folder_path, build_import_auth_context, build_import_payload, build_output_path,
-    build_preserved_web_import_document, build_root_export_index, diff_dashboards_with_request,
-    discover_dashboard_files, export_dashboards_with_request, extract_dashboard_variables,
-    format_dashboard_summary_line, format_export_progress_line, format_export_verbose_line,
-    format_folder_inventory_status_line, format_import_progress_line, format_import_verbose_line,
-    import_dashboards_with_org_clients, import_dashboards_with_request,
-    infer_screenshot_output_format, list_dashboards_with_request, parse_cli_from,
-    render_dashboard_governance_gate_result, render_dashboard_summary_csv,
-    render_dashboard_summary_json, render_dashboard_summary_table, render_import_dry_run_json,
-    render_import_dry_run_table, resolve_manifest_title, validate_screenshot_args, CommonCliArgs,
+    build_folder_path, build_impact_document, build_import_auth_context, build_import_payload,
+    build_output_path, build_preserved_web_import_document, build_root_export_index,
+    build_topology_document, diff_dashboards_with_request, discover_dashboard_files,
+    export_dashboards_with_request, extract_dashboard_variables, format_dashboard_summary_line,
+    format_export_progress_line, format_export_verbose_line, format_folder_inventory_status_line,
+    format_import_progress_line, format_import_verbose_line, import_dashboards_with_org_clients,
+    import_dashboards_with_request, infer_screenshot_output_format, list_dashboards_with_request,
+    parse_cli_from, render_dashboard_governance_gate_result, render_dashboard_summary_csv,
+    render_dashboard_summary_json, render_dashboard_summary_table, render_impact_text,
+    render_import_dry_run_json, render_import_dry_run_table, render_topology_dot,
+    render_topology_mermaid, resolve_manifest_title, validate_screenshot_args, CommonCliArgs,
     DashboardCliArgs, DashboardCommand, DiffArgs, ExportArgs, FolderInventoryStatusKind,
-    GovernanceGateArgs, GovernanceGateOutputFormat, ImportArgs, InspectExportArgs,
-    InspectExportReportFormat, InspectLiveArgs, InspectOutputFormat, ListArgs,
+    GovernanceGateArgs, GovernanceGateOutputFormat, ImpactOutputFormat, ImportArgs,
+    InspectExportArgs, InspectExportReportFormat, InspectLiveArgs, InspectOutputFormat, ListArgs,
     ScreenshotFullPageOutput, ScreenshotOutputFormat, ScreenshotTheme, SimpleOutputFormat,
-    ValidationOutputFormat, DASHBOARD_PERMISSION_BUNDLE_FILENAME, DATASOURCE_INVENTORY_FILENAME,
-    EXPORT_METADATA_FILENAME, FOLDER_INVENTORY_FILENAME, TOOL_SCHEMA_VERSION,
+    TopologyOutputFormat, ValidationOutputFormat, DASHBOARD_PERMISSION_BUNDLE_FILENAME,
+    DATASOURCE_INVENTORY_FILENAME, EXPORT_METADATA_FILENAME, FOLDER_INVENTORY_FILENAME,
+    TOOL_SCHEMA_VERSION,
 };
 use crate::common::api_response;
 use crate::dashboard::inspect::{
@@ -2783,6 +2785,349 @@ fn governance_gate_help_mentions_policy_and_queries_inputs() {
     assert!(help.contains("--json-output"));
     assert!(help.contains("--output-format"));
     assert!(help.contains("governance-gate"));
+}
+
+#[test]
+fn parse_cli_supports_dashboard_topology_command() {
+    let args = parse_cli_from([
+        "grafana-util",
+        "topology",
+        "--governance",
+        "./governance.json",
+        "--alert-contract",
+        "./alert-contract.json",
+        "--output-format",
+        "mermaid",
+        "--output-file",
+        "./dashboard-topology.mmd",
+    ]);
+
+    match args.command {
+        DashboardCommand::Topology(topology_args) => {
+            assert_eq!(topology_args.governance, Path::new("./governance.json"));
+            assert_eq!(
+                topology_args.alert_contract,
+                Some(PathBuf::from("./alert-contract.json"))
+            );
+            assert_eq!(topology_args.output_format, TopologyOutputFormat::Mermaid);
+            assert_eq!(
+                topology_args.output_file,
+                Some(PathBuf::from("./dashboard-topology.mmd"))
+            );
+        }
+        _ => panic!("expected topology command"),
+    }
+}
+
+#[test]
+fn topology_help_mentions_alert_contract_and_visual_formats() {
+    let help = render_dashboard_subcommand_help("topology");
+
+    assert!(help.contains("--governance"));
+    assert!(help.contains("--alert-contract"));
+    assert!(help.contains("--output-format"));
+    assert!(help.contains("--output-file"));
+    assert!(help.contains("mermaid"));
+    assert!(help.contains("dot"));
+    assert!(help.contains("topology"));
+}
+
+#[test]
+fn parse_cli_supports_dashboard_impact_command() {
+    let args = parse_cli_from([
+        "grafana-util",
+        "impact",
+        "--governance",
+        "./governance.json",
+        "--datasource-uid",
+        "prom-main",
+        "--alert-contract",
+        "./alert-contract.json",
+        "--output-format",
+        "json",
+    ]);
+
+    match args.command {
+        DashboardCommand::Impact(impact_args) => {
+            assert_eq!(impact_args.governance, Path::new("./governance.json"));
+            assert_eq!(impact_args.datasource_uid, "prom-main");
+            assert_eq!(
+                impact_args.alert_contract,
+                Some(PathBuf::from("./alert-contract.json"))
+            );
+            assert_eq!(impact_args.output_format, ImpactOutputFormat::Json);
+        }
+        _ => panic!("expected impact command"),
+    }
+}
+
+#[test]
+fn impact_help_mentions_datasource_uid_and_output_format() {
+    let help = render_dashboard_subcommand_help("impact");
+
+    assert!(help.contains("--governance"));
+    assert!(help.contains("--datasource-uid"));
+    assert!(help.contains("--alert-contract"));
+    assert!(help.contains("--output-format"));
+    assert!(help.contains("blast radius"));
+}
+
+#[test]
+fn build_topology_document_renders_mermaid_and_dot_edges() {
+    let governance = json!({
+        "dashboardGovernance": [
+            {
+                "dashboardUid": "cpu-main",
+                "dashboardTitle": "CPU Main",
+                "folderPath": "Platform",
+                "panelCount": 2,
+                "queryCount": 3
+            }
+        ],
+        "dashboardDatasourceEdges": [
+            {
+                "dashboardUid": "cpu-main",
+                "dashboardTitle": "CPU Main",
+                "folderPath": "Platform",
+                "datasourceUid": "prom-main",
+                "datasource": "Prometheus Main",
+                "family": "prometheus",
+                "panelCount": 2,
+                "queryCount": 3
+            }
+        ]
+    });
+    let alert_contract = json!({
+        "resources": [
+            {
+                "kind": "grafana-alert-rule",
+                "identity": "cpu-high",
+                "title": "CPU High",
+                "sourcePath": "rules/cpu-high.json",
+                "references": ["prom-main", "slack.default"]
+            },
+            {
+                "kind": "grafana-notification-template",
+                "identity": "slack.default",
+                "title": "Slack Default",
+                "sourcePath": "templates/slack.default.json",
+                "references": []
+            }
+        ]
+    });
+
+    let document = build_topology_document(&governance, Some(&alert_contract)).unwrap();
+    assert_eq!(document.summary.datasource_count, 1);
+    assert_eq!(document.summary.dashboard_count, 1);
+    assert_eq!(document.summary.alert_resource_count, 2);
+    assert!(document
+        .edges
+        .iter()
+        .any(|edge| edge.from == "datasource:prom-main" && edge.to == "dashboard:cpu-main"));
+    assert!(document
+        .edges
+        .iter()
+        .any(|edge| edge.from == "datasource:prom-main"
+            && edge.to == "alert:grafana-alert-rule:cpu-high"));
+
+    let mermaid = render_topology_mermaid(&document);
+    assert!(mermaid.contains("graph TD"));
+    assert!(mermaid.contains("datasource_prom_main"));
+    assert!(mermaid.contains("alert_grafana_alert_rule_cpu_high"));
+
+    let dot = render_topology_dot(&document);
+    assert!(dot.contains("digraph grafana_topology"));
+    assert!(dot.contains("\"datasource:prom-main\" -> \"dashboard:cpu-main\""));
+}
+
+#[test]
+fn build_impact_document_summarizes_dashboards_and_alert_resources() {
+    let governance = json!({
+        "dashboardGovernance": [
+            {
+                "dashboardUid": "cpu-main",
+                "dashboardTitle": "CPU Main",
+                "folderPath": "Platform",
+                "panelCount": 2,
+                "queryCount": 3
+            },
+            {
+                "dashboardUid": "logs-main",
+                "dashboardTitle": "Logs Main",
+                "folderPath": "Platform",
+                "panelCount": 1,
+                "queryCount": 1
+            }
+        ],
+        "dashboardDatasourceEdges": [
+            {
+                "dashboardUid": "cpu-main",
+                "dashboardTitle": "CPU Main",
+                "folderPath": "Platform",
+                "datasourceUid": "prom-main",
+                "datasource": "Prometheus Main",
+                "family": "prometheus",
+                "panelCount": 2,
+                "queryCount": 3
+            },
+            {
+                "dashboardUid": "logs-main",
+                "dashboardTitle": "Logs Main",
+                "folderPath": "Platform",
+                "datasourceUid": "logs-main",
+                "datasource": "Logs Main",
+                "family": "loki",
+                "panelCount": 1,
+                "queryCount": 1
+            }
+        ]
+    });
+    let alert_contract = json!({
+        "resources": [
+            {
+                "kind": "grafana-alert-rule",
+                "identity": "cpu-high",
+                "title": "CPU High",
+                "sourcePath": "rules/cpu-high.json",
+                "references": ["prom-main"]
+            },
+            {
+                "kind": "grafana-alert-rule",
+                "identity": "logs-high",
+                "title": "Logs High",
+                "sourcePath": "rules/logs-high.json",
+                "references": ["logs-main"]
+            }
+        ]
+    });
+
+    let document = build_impact_document(&governance, Some(&alert_contract), "prom-main").unwrap();
+    assert_eq!(document.summary.dashboard_count, 1);
+    assert_eq!(document.summary.alert_resource_count, 1);
+    assert_eq!(document.dashboards[0].dashboard_uid, "cpu-main");
+    assert_eq!(document.alert_resources[0].identity, "cpu-high");
+
+    let rendered = render_impact_text(&document);
+    assert!(rendered.contains("Datasource impact: prom-main"));
+    assert!(rendered.contains("cpu-main"));
+    assert!(rendered.contains("cpu-high"));
+}
+
+#[test]
+fn build_dashboard_topology_document_renders_mermaid_and_dot() {
+    let governance = json!({
+        "dashboardGovernance": [
+            {
+                "dashboardUid": "cpu-main",
+                "dashboardTitle": "CPU Main"
+            }
+        ],
+        "dashboardDatasourceEdges": [
+            {
+                "dashboardUid": "cpu-main",
+                "dashboardTitle": "CPU Main",
+                "datasourceUid": "prom-main",
+                "datasource": "Prometheus Main"
+            }
+        ]
+    });
+    let alert_contract = json!({
+        "kind": "grafana-utils-sync-alert-contract",
+        "resources": [
+            {
+                "kind": "grafana-alert-rule",
+                "identity": "cpu-high",
+                "title": "CPU High",
+                "references": ["prom-main", "cpu-main"]
+            }
+        ]
+    });
+
+    let document = build_topology_document(&governance, Some(&alert_contract)).unwrap();
+    assert_eq!(document.summary.datasource_count, 1);
+    assert_eq!(document.summary.dashboard_count, 1);
+    assert_eq!(document.summary.alert_resource_count, 1);
+    assert_eq!(document.summary.edge_count, 3);
+    assert_eq!(document.summary.node_count, 3);
+    assert_eq!(document.nodes.len(), 3);
+    assert_eq!(document.edges.len(), 3);
+
+    let mermaid = render_topology_mermaid(&document);
+    assert!(mermaid.starts_with("graph TD"));
+    assert!(mermaid.contains("dashboard_cpu_main"));
+    assert!(mermaid.contains("datasource_prom_main"));
+    assert!(mermaid.contains("alert_grafana_alert_rule_cpu_high"));
+    assert!(mermaid.contains("dashboard_cpu_main -->|backs| alert_grafana_alert_rule_cpu_high"));
+    assert!(
+        mermaid.contains("datasource_prom_main -->|alerts-on| alert_grafana_alert_rule_cpu_high")
+    );
+    assert!(mermaid.contains("datasource_prom_main -->|feeds| dashboard_cpu_main"));
+
+    let dot = render_topology_dot(&document);
+    assert!(dot.contains("digraph grafana_topology {"));
+    assert!(dot.contains("\"dashboard:cpu-main\" [label=\"CPU Main\\ndashboard\"]"));
+    assert!(dot.contains("\"datasource:prom-main\" [label=\"Prometheus Main\\ndatasource\"]"));
+    assert!(dot.contains(
+        "\"alert:grafana-alert-rule:cpu-high\" [label=\"grafana-alert-rule: CPU High\\nalert-resource\"]"
+    ));
+    assert!(dot.contains(
+        "\"dashboard:cpu-main\" -> \"alert:grafana-alert-rule:cpu-high\" [label=\"backs\"]"
+    ));
+    assert!(dot.contains(
+        "\"datasource:prom-main\" -> \"alert:grafana-alert-rule:cpu-high\" [label=\"alerts-on\"]"
+    ));
+    assert!(dot.contains("\"datasource:prom-main\" -> \"dashboard:cpu-main\" [label=\"feeds\"]"));
+}
+
+#[test]
+fn build_dashboard_impact_document_reports_reachable_dashboards_and_alerts() {
+    let governance = json!({
+        "dashboardGovernance": [
+            {
+                "dashboardUid": "cpu-main",
+                "dashboardTitle": "CPU Main"
+            }
+        ],
+        "dashboardDatasourceEdges": [
+            {
+                "dashboardUid": "cpu-main",
+                "dashboardTitle": "CPU Main",
+                "datasourceUid": "prom-main",
+                "datasource": "Prometheus Main"
+            }
+        ]
+    });
+    let alert_contract = json!({
+        "kind": "grafana-utils-sync-alert-contract",
+        "resources": [
+            {
+                "kind": "grafana-alert-rule",
+                "identity": "cpu-high",
+                "title": "CPU High",
+                "references": ["prom-main", "cpu-main"]
+            },
+            {
+                "kind": "grafana-contact-point",
+                "identity": "pagerduty-primary",
+                "title": "PagerDuty Primary",
+                "references": ["pagerduty-primary"]
+            }
+        ]
+    });
+
+    let document = build_impact_document(&governance, Some(&alert_contract), "prom-main").unwrap();
+    assert_eq!(document.summary.datasource_uid, "prom-main");
+    assert_eq!(document.summary.dashboard_count, 1);
+    assert_eq!(document.summary.alert_resource_count, 1);
+    assert_eq!(document.dashboards[0].dashboard_uid, "cpu-main");
+    assert_eq!(document.alert_resources[0].identity, "cpu-high");
+
+    let output = render_impact_text(&document);
+    assert!(output.contains("Datasource impact"));
+    assert!(output.contains("Datasource impact: prom-main dashboards=1 alert-resources=1"));
+    assert!(output.contains("Alert resources:"));
+    assert!(output.contains("grafana-alert-rule:cpu-high"));
+    assert!(!output.contains("pagerduty-primary"));
 }
 
 #[test]
@@ -9189,7 +9534,7 @@ fn apply_query_report_filters_keep_matching_rows_only() {
                 query_field: "expr".to_string(),
                 target_hidden: "false".to_string(),
                 target_disabled: "false".to_string(),
-                query_text: "up".to_string(),
+                query_text: "up{job=\"grafana\"}".to_string(),
                 query_variables: Vec::new(),
                 metrics: vec!["up".to_string()],
                 functions: Vec::new(),
@@ -10569,6 +10914,169 @@ fn build_export_inspection_governance_document_flags_broad_loki_selectors() {
 }
 
 #[test]
+fn build_export_inspection_governance_document_flags_query_quality_and_dashboard_pressure() {
+    let temp = tempdir().unwrap();
+    let dashboard_path = temp.path().join("cpu-main.json");
+    fs::write(
+        &dashboard_path,
+        serde_json::to_vec_pretty(&json!({
+            "dashboard": {
+                "uid": "cpu-main",
+                "title": "CPU Main",
+                "refresh": "5s"
+            }
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+
+    let summary = super::ExportInspectionSummary {
+        import_dir: temp.path().display().to_string(),
+        export_org: Some("Main Org.".to_string()),
+        export_org_id: Some("1".to_string()),
+        dashboard_count: 1,
+        folder_count: 1,
+        panel_count: 31,
+        query_count: 4,
+        datasource_inventory_count: 2,
+        orphaned_datasource_count: 0,
+        mixed_dashboard_count: 0,
+        folder_paths: Vec::new(),
+        datasource_usage: Vec::new(),
+        datasource_inventory: vec![
+            super::DatasourceInventorySummary {
+                uid: "prom-main".to_string(),
+                name: "Prometheus Main".to_string(),
+                datasource_type: "prometheus".to_string(),
+                access: "proxy".to_string(),
+                url: "http://prometheus:9090".to_string(),
+                is_default: "true".to_string(),
+                org: "Main Org.".to_string(),
+                org_id: "1".to_string(),
+                reference_count: 3,
+                dashboard_count: 1,
+            },
+            super::DatasourceInventorySummary {
+                uid: "logs-main".to_string(),
+                name: "Logs Main".to_string(),
+                datasource_type: "loki".to_string(),
+                access: "proxy".to_string(),
+                url: "http://loki:3100".to_string(),
+                is_default: "false".to_string(),
+                org: "Main Org.".to_string(),
+                org_id: "1".to_string(),
+                reference_count: 1,
+                dashboard_count: 1,
+            },
+        ],
+        orphaned_datasources: Vec::new(),
+        mixed_dashboards: Vec::new(),
+    };
+
+    let mut broad = make_core_family_report_row(
+        "cpu-main",
+        "7",
+        "A",
+        "prom-main",
+        "Prometheus Main",
+        "prometheus",
+        "prometheus",
+        "up",
+        &[],
+    );
+    broad.file_path = dashboard_path.display().to_string();
+    broad.metrics = vec!["up".to_string()];
+
+    let mut regex = make_core_family_report_row(
+        "cpu-main",
+        "8",
+        "B",
+        "prom-main",
+        "Prometheus Main",
+        "prometheus",
+        "prometheus",
+        r#"sum(rate(http_requests_total{job=~"api|web"}[5m]))"#,
+        &["job=~\"api|web\""],
+    );
+    regex.file_path = dashboard_path.display().to_string();
+    regex.metrics = vec!["http_requests_total".to_string()];
+    regex.functions = vec!["sum".to_string(), "rate".to_string()];
+    regex.buckets = vec!["5m".to_string()];
+
+    let mut large_range = make_core_family_report_row(
+        "cpu-main",
+        "9",
+        "C",
+        "prom-main",
+        "Prometheus Main",
+        "prometheus",
+        "prometheus",
+        "sum(rate(process_cpu_seconds_total[6h]))",
+        &[],
+    );
+    large_range.file_path = dashboard_path.display().to_string();
+    large_range.metrics = vec!["process_cpu_seconds_total".to_string()];
+    large_range.functions = vec!["sum".to_string(), "rate".to_string()];
+    large_range.buckets = vec!["6h".to_string()];
+
+    let mut loki = make_core_family_report_row(
+        "cpu-main",
+        "10",
+        "D",
+        "logs-main",
+        "Logs Main",
+        "loki",
+        "loki",
+        r#"{} |= "error""#,
+        &["{}"],
+    );
+    loki.file_path = dashboard_path.display().to_string();
+    loki.functions = vec!["line_filter_contains".to_string()];
+    loki.measurements = vec!["{}".to_string()];
+
+    let mut queries = vec![broad, regex, large_range, loki];
+    for panel in 11..=37 {
+        let mut extra = make_core_family_report_row(
+            "cpu-main",
+            &panel.to_string(),
+            "Z",
+            "prom-main",
+            "Prometheus Main",
+            "prometheus",
+            "prometheus",
+            "up",
+            &[],
+        );
+        extra.file_path = dashboard_path.display().to_string();
+        extra.metrics = vec!["up".to_string()];
+        queries.push(extra);
+    }
+    let report = super::ExportInspectionQueryReport {
+        import_dir: temp.path().display().to_string(),
+        summary: super::QueryReportSummary {
+            dashboard_count: 1,
+            panel_count: 31,
+            query_count: queries.len(),
+            report_row_count: queries.len(),
+        },
+        queries,
+    };
+
+    let document = super::build_export_inspection_governance_document(&summary, &report);
+    let kinds = document
+        .risk_records
+        .iter()
+        .map(|item| item.kind.as_str())
+        .collect::<Vec<_>>();
+    assert!(kinds.contains(&"broad-prometheus-selector"));
+    assert!(kinds.contains(&"prometheus-regex-heavy"));
+    assert!(kinds.contains(&"large-prometheus-range"));
+    assert!(kinds.contains(&"unscoped-loki-search"));
+    assert!(kinds.contains(&"dashboard-panel-pressure"));
+    assert!(kinds.contains(&"dashboard-refresh-pressure"));
+}
+
+#[test]
 fn governance_risk_metadata_registry_covers_known_kinds() {
     let cases = [
         (
@@ -10600,6 +11108,42 @@ fn governance_risk_metadata_registry_covers_known_kinds() {
             "cost",
             "medium",
             "Narrow the Loki stream selector before running expensive line filters or aggregations.",
+        ),
+        (
+            "broad-prometheus-selector",
+            "cost",
+            "medium",
+            "Add label filters to the Prometheus selector before promoting this dashboard to shared or high-refresh use.",
+        ),
+        (
+            "prometheus-regex-heavy",
+            "cost",
+            "medium",
+            "Reduce Prometheus regex matcher scope or replace it with exact labels where possible.",
+        ),
+        (
+            "large-prometheus-range",
+            "cost",
+            "medium",
+            "Shorten the Prometheus range window or pre-aggregate the series before using long lookback queries in dashboards.",
+        ),
+        (
+            "unscoped-loki-search",
+            "cost",
+            "high",
+            "Add at least one concrete Loki label matcher before running full-text or regex log search.",
+        ),
+        (
+            "dashboard-panel-pressure",
+            "dashboard-load",
+            "medium",
+            "Split the dashboard into smaller views or collapse low-value panels before broad rollout.",
+        ),
+        (
+            "dashboard-refresh-pressure",
+            "dashboard-load",
+            "medium",
+            "Increase the dashboard refresh interval to reduce repeated load on Grafana and backing datasources.",
         ),
     ];
 
@@ -10695,6 +11239,12 @@ fn evaluate_dashboard_governance_gate_enforces_query_thresholds_and_warning_poli
             "forbidSelectStar": false,
             "requireSqlTimeFilter": false,
             "forbidBroadLokiRegex": false,
+            "forbidBroadPrometheusSelectors": false,
+            "forbidRegexHeavyPrometheus": false,
+            "maxPrometheusRangeWindowSeconds": null,
+            "forbidUnscopedLokiSearch": false,
+            "maxPanelsPerDashboard": null,
+            "minRefreshIntervalSeconds": null,
             "maxQueryComplexityScore": null,
             "maxDashboardComplexityScore": null,
             "maxQueriesPerDashboard": 1,
@@ -10705,6 +11255,127 @@ fn evaluate_dashboard_governance_gate_enforces_query_thresholds_and_warning_poli
     assert_eq!(result.violations[0].code, "max-queries-per-dashboard");
     assert_eq!(result.violations[1].code, "max-queries-per-panel");
     assert_eq!(result.warnings[0].risk_kind, "broad-loki-selector");
+}
+
+#[test]
+fn evaluate_dashboard_governance_gate_enforces_perf_and_dashboard_pressure_rules() {
+    let policy = json!({
+        "version": 1,
+        "queries": {
+            "forbidBroadPrometheusSelectors": true,
+            "forbidRegexHeavyPrometheus": true,
+            "maxPrometheusRangeWindowSeconds": 3600,
+            "forbidUnscopedLokiSearch": true
+        },
+        "dashboards": {
+            "maxPanelsPerDashboard": 30,
+            "minRefreshIntervalSeconds": 30
+        }
+    });
+    let governance = json!({
+        "dashboardGovernance": [
+            {
+                "dashboardUid": "cpu-main",
+                "dashboardTitle": "CPU Main",
+                "panelCount": 31,
+                "queryCount": 4,
+                "datasourceFamilies": ["prometheus", "loki"],
+                "mixedDatasource": false
+            }
+        ],
+        "riskRecords": [
+            {
+                "kind": "dashboard-refresh-pressure",
+                "dashboardUid": "cpu-main",
+                "panelId": "",
+                "datasource": "CPU Main",
+                "detail": "5s",
+                "recommendation": "Increase refresh."
+            }
+        ]
+    });
+    let queries = json!({
+        "summary": {
+            "dashboardCount": 1,
+            "queryRecordCount": 4
+        },
+        "queries": [
+            {
+                "dashboardUid": "cpu-main",
+                "dashboardTitle": "CPU Main",
+                "panelId": "7",
+                "panelTitle": "CPU",
+                "refId": "A",
+                "datasource": "Prometheus Main",
+                "datasourceUid": "prom-main",
+                "datasourceFamily": "prometheus",
+                "query": "up",
+                "refresh": "5s",
+                "metrics": ["up"],
+                "functions": [],
+                "measurements": [],
+                "buckets": []
+            },
+            {
+                "dashboardUid": "cpu-main",
+                "dashboardTitle": "CPU Main",
+                "panelId": "8",
+                "panelTitle": "Regex",
+                "refId": "B",
+                "datasource": "Prometheus Main",
+                "datasourceUid": "prom-main",
+                "datasourceFamily": "prometheus",
+                "query": "sum(rate(http_requests_total{job=~\"api|web\"}[5m]))",
+                "metrics": ["http_requests_total"],
+                "functions": ["sum", "rate"],
+                "measurements": ["job=~\"api|web\""],
+                "buckets": ["5m"]
+            },
+            {
+                "dashboardUid": "cpu-main",
+                "dashboardTitle": "CPU Main",
+                "panelId": "9",
+                "panelTitle": "Long",
+                "refId": "C",
+                "datasource": "Prometheus Main",
+                "datasourceUid": "prom-main",
+                "datasourceFamily": "prometheus",
+                "query": "sum(rate(process_cpu_seconds_total[6h]))",
+                "metrics": ["process_cpu_seconds_total"],
+                "functions": ["sum", "rate"],
+                "measurements": [],
+                "buckets": ["6h"]
+            },
+            {
+                "dashboardUid": "cpu-main",
+                "dashboardTitle": "CPU Main",
+                "panelId": "10",
+                "panelTitle": "Logs",
+                "refId": "D",
+                "datasource": "Logs Main",
+                "datasourceUid": "logs-main",
+                "datasourceFamily": "loki",
+                "query": "{} |= \"error\"",
+                "metrics": [],
+                "functions": ["line_filter_contains"],
+                "measurements": ["{}"],
+                "buckets": []
+            }
+        ]
+    });
+
+    let result = super::evaluate_dashboard_governance_gate(&policy, &governance, &queries).unwrap();
+    let codes = result
+        .violations
+        .iter()
+        .map(|item| item.code.as_str())
+        .collect::<Vec<_>>();
+    assert!(codes.contains(&"prometheus-broad-selector"));
+    assert!(codes.contains(&"prometheus-regex-heavy"));
+    assert!(codes.contains(&"prometheus-range-window-too-large"));
+    assert!(codes.contains(&"loki-unscoped-search"));
+    assert!(codes.contains(&"max-panels-per-dashboard"));
+    assert!(codes.contains(&"min-refresh-interval-seconds"));
 }
 
 #[test]
@@ -10725,6 +11396,12 @@ fn render_dashboard_governance_gate_result_lists_violations_and_warnings() {
                 "forbidSelectStar": false,
                 "requireSqlTimeFilter": false,
                 "forbidBroadLokiRegex": false,
+                "forbidBroadPrometheusSelectors": false,
+                "forbidRegexHeavyPrometheus": false,
+                "maxPrometheusRangeWindowSeconds": null,
+                "forbidUnscopedLokiSearch": false,
+                "maxPanelsPerDashboard": null,
+                "minRefreshIntervalSeconds": null,
                 "maxQueryComplexityScore": null,
                 "maxDashboardComplexityScore": null,
                 "maxQueriesPerDashboard": 1,
@@ -10861,6 +11538,14 @@ fn run_dashboard_governance_gate_writes_json_output_file() {
             "forbidSelectStar": false,
             "requireSqlTimeFilter": false,
             "forbidBroadLokiRegex": false,
+            "forbidBroadPrometheusSelectors": false,
+            "forbidRegexHeavyPrometheus": false,
+            "maxPrometheusRangeWindowSeconds": null,
+            "forbidUnscopedLokiSearch": false,
+            "maxPanelsPerDashboard": null,
+            "minRefreshIntervalSeconds": null,
+            "maxQueryComplexityScore": null,
+            "maxDashboardComplexityScore": null,
             "maxQueriesPerDashboard": 4,
             "maxQueriesPerPanel": 2,
             "failOnWarnings": false
@@ -10952,6 +11637,12 @@ fn evaluate_dashboard_governance_gate_enforces_datasource_policy_rules() {
             "forbidSelectStar": false,
             "requireSqlTimeFilter": false,
             "forbidBroadLokiRegex": false,
+            "forbidBroadPrometheusSelectors": false,
+            "forbidRegexHeavyPrometheus": false,
+            "maxPrometheusRangeWindowSeconds": null,
+            "forbidUnscopedLokiSearch": false,
+            "maxPanelsPerDashboard": null,
+            "minRefreshIntervalSeconds": null,
             "maxQueryComplexityScore": null,
             "maxDashboardComplexityScore": null,
             "maxQueriesPerDashboard": null,
@@ -11051,6 +11742,12 @@ fn evaluate_dashboard_governance_gate_enforces_routing_sql_and_loki_policy_rules
             "forbidSelectStar": true,
             "requireSqlTimeFilter": true,
             "forbidBroadLokiRegex": true,
+            "forbidBroadPrometheusSelectors": false,
+            "forbidRegexHeavyPrometheus": false,
+            "maxPrometheusRangeWindowSeconds": null,
+            "forbidUnscopedLokiSearch": false,
+            "maxPanelsPerDashboard": null,
+            "minRefreshIntervalSeconds": null,
             "maxQueryComplexityScore": null,
             "maxDashboardComplexityScore": null,
             "maxQueriesPerDashboard": null,
@@ -11137,6 +11834,12 @@ fn evaluate_dashboard_governance_gate_enforces_query_and_dashboard_complexity_ru
             "forbidSelectStar": false,
             "requireSqlTimeFilter": false,
             "forbidBroadLokiRegex": false,
+            "forbidBroadPrometheusSelectors": false,
+            "forbidRegexHeavyPrometheus": false,
+            "maxPrometheusRangeWindowSeconds": null,
+            "forbidUnscopedLokiSearch": false,
+            "maxPanelsPerDashboard": null,
+            "minRefreshIntervalSeconds": null,
             "maxQueryComplexityScore": 3,
             "maxDashboardComplexityScore": 6,
             "maxQueriesPerDashboard": null,

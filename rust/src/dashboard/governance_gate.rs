@@ -20,6 +20,12 @@ struct QueryThresholdPolicy {
     forbid_select_star: bool,
     require_sql_time_filter: bool,
     forbid_broad_loki_regex: bool,
+    forbid_broad_prometheus_selectors: bool,
+    forbid_regex_heavy_prometheus: bool,
+    max_prometheus_range_window_seconds: Option<usize>,
+    forbid_unscoped_loki_search: bool,
+    max_panels_per_dashboard: Option<usize>,
+    min_refresh_interval_seconds: Option<usize>,
     max_query_complexity_score: Option<usize>,
     max_dashboard_complexity_score: Option<usize>,
     max_queries_per_dashboard: Option<usize>,
@@ -158,6 +164,11 @@ fn parse_query_threshold_policy(policy: &Value) -> Result<QueryThresholdPolicy> 
         .and_then(Value::as_object)
         .cloned()
         .unwrap_or_default();
+    let dashboards = policy_object
+        .get("dashboards")
+        .and_then(Value::as_object)
+        .cloned()
+        .unwrap_or_default();
     Ok(QueryThresholdPolicy {
         allowed_families: value_to_string_set(datasources.get("allowedFamilies"))?,
         allowed_uids: value_to_string_set(datasources.get("allowedUids"))?,
@@ -169,6 +180,20 @@ fn parse_query_threshold_policy(policy: &Value) -> Result<QueryThresholdPolicy> 
         forbid_select_star: value_to_bool(queries.get("forbidSelectStar"), false)?,
         require_sql_time_filter: value_to_bool(queries.get("requireSqlTimeFilter"), false)?,
         forbid_broad_loki_regex: value_to_bool(queries.get("forbidBroadLokiRegex"), false)?,
+        forbid_broad_prometheus_selectors: value_to_bool(
+            queries.get("forbidBroadPrometheusSelectors"),
+            false,
+        )?,
+        forbid_regex_heavy_prometheus: value_to_bool(
+            queries.get("forbidRegexHeavyPrometheus"),
+            false,
+        )?,
+        max_prometheus_range_window_seconds: value_to_usize(
+            queries.get("maxPrometheusRangeWindowSeconds"),
+        )?,
+        forbid_unscoped_loki_search: value_to_bool(queries.get("forbidUnscopedLokiSearch"), false)?,
+        max_panels_per_dashboard: value_to_usize(dashboards.get("maxPanelsPerDashboard"))?,
+        min_refresh_interval_seconds: value_to_usize(dashboards.get("minRefreshIntervalSeconds"))?,
         max_query_complexity_score: value_to_usize(queries.get("maxQueryComplexityScore"))?,
         max_dashboard_complexity_score: value_to_usize(queries.get("maxDashboardComplexityScore"))?,
         max_queries_per_dashboard: value_to_usize(queries.get("maxQueriesPerDashboard"))?,
@@ -197,6 +222,12 @@ fn build_checked_rules(policy: QueryThresholdPolicy) -> Value {
         "forbidSelectStar": policy.forbid_select_star,
         "requireSqlTimeFilter": policy.require_sql_time_filter,
         "forbidBroadLokiRegex": policy.forbid_broad_loki_regex,
+        "forbidBroadPrometheusSelectors": policy.forbid_broad_prometheus_selectors,
+        "forbidRegexHeavyPrometheus": policy.forbid_regex_heavy_prometheus,
+        "maxPrometheusRangeWindowSeconds": policy.max_prometheus_range_window_seconds,
+        "forbidUnscopedLokiSearch": policy.forbid_unscoped_loki_search,
+        "maxPanelsPerDashboard": policy.max_panels_per_dashboard,
+        "minRefreshIntervalSeconds": policy.min_refresh_interval_seconds,
         "maxQueryComplexityScore": policy.max_query_complexity_score,
         "maxDashboardComplexityScore": policy.max_dashboard_complexity_score,
         "maxQueriesPerDashboard": policy.max_queries_per_dashboard,
@@ -217,6 +248,115 @@ fn query_uses_time_filter(query_text: &str) -> bool {
     lowered.contains("$__timefilter(")
         || lowered.contains("$__unixepochfilter(")
         || lowered.contains("$timefilter")
+}
+
+fn parse_duration_seconds(value: &str) -> Option<usize> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() || trimmed.eq_ignore_ascii_case("off") {
+        return None;
+    }
+    let mut digits = String::new();
+    let mut suffix = String::new();
+    for character in trimmed.chars() {
+        if character.is_ascii_digit() && suffix.is_empty() {
+            digits.push(character);
+        } else if !character.is_ascii_whitespace() {
+            suffix.push(character);
+        }
+    }
+    let number = digits.parse::<usize>().ok()?;
+    let multiplier = match suffix.to_ascii_lowercase().as_str() {
+        "ms" => 0,
+        "s" | "" => 1,
+        "m" => 60,
+        "h" => 60 * 60,
+        "d" => 60 * 60 * 24,
+        "w" => 60 * 60 * 24 * 7,
+        _ => return None,
+    };
+    Some(number.saturating_mul(multiplier))
+}
+
+fn prometheus_query_is_broad(query: &Value) -> bool {
+    let query_text = string_field(query, "query");
+    let family = string_field(query, "datasourceFamily");
+    if !family.eq_ignore_ascii_case("prometheus")
+        || query_text.is_empty()
+        || query_text.contains('{')
+        || query_text.contains(' ')
+        || query_text.contains('(')
+        || query_text.contains('[')
+    {
+        return false;
+    }
+    let metrics = query
+        .get("metrics")
+        .and_then(Value::as_array)
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(Value::as_str)
+                .collect::<Vec<&str>>()
+        })
+        .unwrap_or_default();
+    metrics.len() == 1 && metrics[0] == query_text
+}
+
+fn query_uses_regex_matchers(query_text: &str) -> bool {
+    query_text.contains("=~") || query_text.contains("!~")
+}
+
+fn query_uses_unscoped_loki_search(query: &Value) -> bool {
+    if !string_field(query, "datasourceFamily").eq_ignore_ascii_case("loki") {
+        return false;
+    }
+    let functions = query
+        .get("functions")
+        .and_then(Value::as_array)
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(Value::as_str)
+                .collect::<Vec<&str>>()
+        })
+        .unwrap_or_default();
+    let has_line_filter = functions
+        .iter()
+        .any(|value| value.starts_with("line_filter_"));
+    if !has_line_filter {
+        return false;
+    }
+    let measurements = query
+        .get("measurements")
+        .and_then(Value::as_array)
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(Value::as_str)
+                .collect::<Vec<&str>>()
+        })
+        .unwrap_or_default();
+    !measurements.is_empty()
+        && measurements
+            .iter()
+            .all(|value| *value == "{}" || !value.contains('=') || value.contains(".*"))
+}
+
+fn query_dashboard_refresh_seconds(query: &Value) -> Option<usize> {
+    for key in [
+        "dashboardRefreshSeconds",
+        "refreshIntervalSeconds",
+        "refreshSeconds",
+    ] {
+        if let Some(seconds) = query.get(key).and_then(Value::as_u64) {
+            return Some(seconds as usize);
+        }
+    }
+    match query.get("refresh") {
+        Some(Value::Number(number)) => number.as_u64().map(|value| value as usize),
+        Some(Value::String(value)) => parse_duration_seconds(value),
+        _ => None,
+    }
 }
 
 fn loki_query_is_broad(query_text: &str) -> bool {
@@ -309,6 +449,28 @@ fn build_dashboard_violation(
     }
 }
 
+fn build_dashboard_violation_from_fields(
+    code: &str,
+    message_text: String,
+    dashboard_uid: String,
+    dashboard_title: String,
+) -> DashboardGovernanceGateFinding {
+    DashboardGovernanceGateFinding {
+        severity: "error".to_string(),
+        code: code.to_string(),
+        message: message_text,
+        dashboard_uid,
+        dashboard_title,
+        panel_id: String::new(),
+        panel_title: String::new(),
+        ref_id: String::new(),
+        datasource: String::new(),
+        datasource_uid: String::new(),
+        datasource_family: String::new(),
+        risk_kind: String::new(),
+    }
+}
+
 pub(crate) fn evaluate_dashboard_governance_gate(
     policy: &Value,
     governance_document: &Value,
@@ -336,6 +498,7 @@ pub(crate) fn evaluate_dashboard_governance_gate(
         .unwrap_or(queries.len() as u64) as usize;
 
     let mut dashboard_counts = BTreeMap::<String, (String, usize)>::new();
+    let mut dashboard_refresh_seconds = BTreeMap::<String, (String, usize)>::new();
     let mut dashboard_complexity_scores = BTreeMap::<(String, String), usize>::new();
     let mut panel_counts = BTreeMap::<(String, String), (String, String, usize)>::new();
     let mut violations = Vec::new();
@@ -357,6 +520,14 @@ pub(crate) fn evaluate_dashboard_governance_gate(
         *dashboard_complexity_scores
             .entry((dashboard_uid.clone(), dashboard_title.clone()))
             .or_insert(0usize) += complexity_score;
+        if let Some(refresh_seconds) = query_dashboard_refresh_seconds(query) {
+            let entry = dashboard_refresh_seconds
+                .entry(dashboard_uid.clone())
+                .or_insert((dashboard_title.clone(), refresh_seconds));
+            if refresh_seconds != 0 {
+                entry.1 = entry.1.min(refresh_seconds);
+            }
+        }
         let panel_entry = panel_counts.entry((dashboard_uid, panel_id)).or_insert((
             dashboard_title,
             panel_title,
@@ -444,6 +615,55 @@ pub(crate) fn evaluate_dashboard_governance_gate(
             violations.push(build_query_violation(
                 "loki-broad-regex",
                 "Loki query contains a broad match or empty selector.".to_string(),
+                query,
+            ));
+        }
+        if policy.forbid_broad_prometheus_selectors && prometheus_query_is_broad(query) {
+            violations.push(build_query_violation(
+                "prometheus-broad-selector",
+                "Prometheus query uses a broad selector without label filters.".to_string(),
+                query,
+            ));
+        }
+        if policy.forbid_regex_heavy_prometheus
+            && datasource_family.eq_ignore_ascii_case("prometheus")
+            && query_uses_regex_matchers(&query_text)
+        {
+            violations.push(build_query_violation(
+                "prometheus-regex-heavy",
+                "Prometheus query uses regex label matchers and violates the policy.".to_string(),
+                query,
+            ));
+        }
+        if let Some(limit) = policy.max_prometheus_range_window_seconds {
+            if datasource_family.eq_ignore_ascii_case("prometheus") {
+                let max_bucket = query
+                    .get("buckets")
+                    .and_then(Value::as_array)
+                    .map(|values| {
+                        values
+                            .iter()
+                            .filter_map(Value::as_str)
+                            .filter_map(parse_duration_seconds)
+                            .max()
+                            .unwrap_or(0)
+                    })
+                    .unwrap_or(0);
+                if max_bucket > limit {
+                    violations.push(build_query_violation(
+                        "prometheus-range-window-too-large",
+                        format!(
+                            "Prometheus range window {max_bucket}s exceeds policy maxPrometheusRangeWindowSeconds={limit}."
+                        ),
+                        query,
+                    ));
+                }
+            }
+        }
+        if policy.forbid_unscoped_loki_search && query_uses_unscoped_loki_search(query) {
+            violations.push(build_query_violation(
+                "loki-unscoped-search",
+                "Loki query performs line filtering without concrete label scoping.".to_string(),
                 query,
             ));
         }
@@ -562,6 +782,62 @@ pub(crate) fn evaluate_dashboard_governance_gate(
                     ),
                     dashboard,
                 ));
+            }
+        }
+    }
+    if policy.max_panels_per_dashboard.is_some() || policy.min_refresh_interval_seconds.is_some() {
+        let dashboards = governance_document
+            .get("dashboardGovernance")
+            .and_then(Value::as_array)
+            .ok_or_else(|| {
+                message("Dashboard governance JSON must contain a dashboardGovernance array.")
+            })?;
+        if let Some(limit) = policy.max_panels_per_dashboard {
+            for dashboard in dashboards {
+                let panel_count = dashboard
+                    .get("panelCount")
+                    .and_then(Value::as_u64)
+                    .unwrap_or(0) as usize;
+                if panel_count > limit {
+                    violations.push(build_dashboard_violation(
+                        "max-panels-per-dashboard",
+                        format!(
+                            "Dashboard panel count {panel_count} exceeds policy maxPanelsPerDashboard={limit}."
+                        ),
+                        dashboard,
+                    ));
+                }
+            }
+        }
+        if let Some(limit) = policy.min_refresh_interval_seconds {
+            let mut refresh_by_dashboard = BTreeMap::<String, (String, usize)>::new();
+            for query in queries {
+                let Some(refresh_seconds) = query_dashboard_refresh_seconds(query) else {
+                    continue;
+                };
+                let dashboard_uid = string_field(query, "dashboardUid");
+                if dashboard_uid.is_empty() {
+                    continue;
+                }
+                let dashboard_title = string_field(query, "dashboardTitle");
+                let entry = refresh_by_dashboard
+                    .entry(dashboard_uid)
+                    .or_insert((dashboard_title, refresh_seconds));
+                if refresh_seconds != 0 {
+                    entry.1 = entry.1.min(refresh_seconds);
+                }
+            }
+            for (dashboard_uid, (dashboard_title, refresh_seconds)) in refresh_by_dashboard {
+                if refresh_seconds != 0 && refresh_seconds < limit {
+                    violations.push(build_dashboard_violation_from_fields(
+                        "min-refresh-interval-seconds",
+                        format!(
+                            "Dashboard refresh interval {refresh_seconds}s is below policy minRefreshIntervalSeconds={limit}."
+                        ),
+                        dashboard_uid,
+                        dashboard_title,
+                    ));
+                }
             }
         }
     }
