@@ -96,6 +96,9 @@ PROGRESS_MODULE_PATH = PYTHON_ROOT / "grafana_utils" / "dashboards" / "progress.
 TRANSFORMER_MODULE_PATH = (
     PYTHON_ROOT / "grafana_utils" / "dashboards" / "transformer.py"
 )
+PROMPT_EXPORT_CASES_FIXTURE_PATH = (
+    REPO_ROOT / "fixtures" / "dashboard_prompt_export_cases.json"
+)
 MODULE_ENTRYPOINT_PATH = PYTHON_ROOT / "grafana_utils" / "__main__.py"
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(PYTHON_ROOT))
@@ -111,6 +114,13 @@ inspection_dispatcher = importlib.import_module(
 inspection_output_dispatch = importlib.import_module(
     "grafana_utils.dashboards.inspection_dispatch"
 )
+dashboard_import_workflow = importlib.import_module(
+    "grafana_utils.dashboards.import_workflow"
+)
+
+
+def load_prompt_export_cases():
+    return json.loads(PROMPT_EXPORT_CASES_FIXTURE_PATH.read_text())
 
 
 def build_export_metadata(
@@ -235,6 +245,8 @@ class FakeDashboardWorkflowClient:
         summaries=None,
         dashboards=None,
         datasources=None,
+        plugins=None,
+        contact_points=None,
         folders=None,
         dashboard_permissions=None,
         folder_permissions=None,
@@ -246,6 +258,8 @@ class FakeDashboardWorkflowClient:
         self.summaries = summaries or []
         self.dashboards = dashboards or {}
         self.datasources = datasources or []
+        self.plugins = plugins or []
+        self.contact_points = contact_points or []
         self.folders = folders or {}
         self.dashboard_permissions = dashboard_permissions or {}
         self.folder_permissions = folder_permissions or {}
@@ -256,6 +270,8 @@ class FakeDashboardWorkflowClient:
         self.imported_payloads = []
         self.created_folders = []
         self.created_orgs = []
+        self.fetch_current_org_calls = 0
+        self.list_orgs_calls = 0
 
     def iter_dashboard_summaries(self, page_size):
         return list(self.summaries)
@@ -291,9 +307,11 @@ class FakeDashboardWorkflowClient:
         return list(self.datasources)
 
     def fetch_current_org(self):
+        self.fetch_current_org_calls += 1
         return dict(self.org)
 
     def list_orgs(self):
+        self.list_orgs_calls += 1
         return list(self.orgs)
 
     def with_org_id(self, org_id):
@@ -303,6 +321,10 @@ class FakeDashboardWorkflowClient:
         return self.org_clients[key]
 
     def request_json(self, path, params=None, method="GET", payload=None):
+        if path == "/api/plugins":
+            return list(self.plugins)
+        if path == "/api/v1/provisioning/contact-points":
+            return list(self.contact_points)
         if path == "/api/orgs" and method == "POST":
             next_org_id = 1
             existing_ids = []
@@ -332,6 +354,24 @@ class FakeDashboardWorkflowClient:
 
 
 class ExporterTests(unittest.TestCase):
+    def test_dashboard_import_cached_client_caches_fetch_current_org(self):
+        client = FakeDashboardWorkflowClient()
+        cached = dashboard_import_workflow._CachedDashboardImportClient(client)
+
+        self.assertEqual(cached.fetch_current_org()["id"], 1)
+        self.assertEqual(cached.fetch_current_org()["id"], 1)
+        self.assertEqual(client.fetch_current_org_calls, 1)
+
+    def test_dashboard_import_cached_client_caches_list_orgs(self):
+        client = FakeDashboardWorkflowClient(
+            orgs=[{"id": 1, "name": "Main Org."}, {"id": 2, "name": "Ops"}]
+        )
+        cached = dashboard_import_workflow._CachedDashboardImportClient(client)
+
+        self.assertEqual(len(cached.list_orgs()), 2)
+        self.assertEqual(len(cached.list_orgs()), 2)
+        self.assertEqual(client.list_orgs_calls, 1)
+
     def _write_multi_org_import_root(self, root_dir, org_exports):
         for item in org_exports:
             org_id = str(item["org_id"])
@@ -443,6 +483,20 @@ class ExporterTests(unittest.TestCase):
                 "meta": {"folderUid": "infra"},
             },
             import_dir / "Infra" / "CPU_Main__cpu-main.json",
+        )
+
+    def _write_dependency_preflight_import(self, import_dir, dashboard):
+        exporter.write_json_document(
+            build_export_metadata(
+                variant=exporter.RAW_EXPORT_SUBDIR,
+                dashboard_count=1,
+                format_name="grafana-web-import-preserve-uid",
+            ),
+            import_dir / exporter.EXPORT_METADATA_FILENAME,
+        )
+        exporter.write_json_document(
+            {"dashboard": dashboard},
+            import_dir / "cpu__abc.json",
         )
 
     def test_dashboard_script_parses_as_python39_syntax(self):
@@ -770,6 +824,8 @@ class ExporterTests(unittest.TestCase):
         self.assertIn("--help-full", help_text)
         self.assertIn("datasourceType", help_text)
         self.assertIn("datasourceFamily", help_text)
+        self.assertIn("folderLevel", help_text)
+        self.assertIn("dashboard_uid", help_text)
         self.assertIn("datasource label, uid, type,", help_text)
         self.assertIn("or family exactly matches this value", help_text)
         self.assertNotIn("\n  --json", help_text)
@@ -792,7 +848,19 @@ class ExporterTests(unittest.TestCase):
         self.assertIn("--report-filter-datasource prom-main", help_text)
         self.assertIn("--report-filter-panel-id 7", help_text)
         self.assertIn(
-            "--report-columns dashboard_uid,datasource_uid,datasource_family,query,file",
+            "--report-columns panel_id,ref_id,datasource_name,metrics,functions,buckets,query",
+            help_text,
+        )
+        self.assertIn(
+            "--report-columns dashboard_tags,panel_id,panel_query_count,panel_datasource_count,query_variables,panel_variables",
+            help_text,
+        )
+        self.assertIn(
+            "--report-columns dashboard_uid,folder_path,folder_full_path,folder_level,folder_uid,parent_folder_uid,file",
+            help_text,
+        )
+        self.assertIn(
+            "--report-columns datasource_name,datasource_org,datasource_org_id,datasource_database,datasource_bucket,datasource_index_pattern,query",
             help_text,
         )
         self.assertNotIn("grafana-utils inspect-export", help_text)
@@ -817,6 +885,8 @@ class ExporterTests(unittest.TestCase):
         self.assertIn("--help-full", help_text)
         self.assertIn("datasourceType", help_text)
         self.assertIn("datasourceFamily", help_text)
+        self.assertIn("folderLevel", help_text)
+        self.assertIn("dashboard_uid", help_text)
         self.assertIn("datasource label, uid, type,", help_text)
         self.assertIn("or family exactly matches this value", help_text)
         self.assertNotIn("\n  --report ", help_text)
@@ -839,7 +909,19 @@ class ExporterTests(unittest.TestCase):
         self.assertIn("--report tree-table", help_text)
         self.assertIn("--report-filter-panel-id 7", help_text)
         self.assertIn(
-            "--report-columns dashboard_uid,datasource_uid,datasource_family,query,file",
+            "--report-columns panel_id,ref_id,datasource_name,metrics,functions,buckets,query",
+            help_text,
+        )
+        self.assertIn(
+            "--report-columns dashboard_tags,panel_id,panel_query_count,panel_datasource_count,query_variables,panel_variables",
+            help_text,
+        )
+        self.assertIn(
+            "--report-columns dashboard_uid,folder_path,folder_full_path,folder_level,folder_uid,parent_folder_uid,file",
+            help_text,
+        )
+        self.assertIn(
+            "--report-columns datasource_name,datasource_org,datasource_org_id,datasource_database,datasource_bucket,datasource_index_pattern,query",
             help_text,
         )
         self.assertNotIn("grafana-utils inspect-live", help_text)
@@ -1047,26 +1129,19 @@ class ExporterTests(unittest.TestCase):
         self.assertTrue(all_args.all_orgs)
         self.assertIsNone(all_args.org_id)
 
-    def test_dashboard_parse_args_supports_list_data_sources_mode(self):
-        args = exporter.parse_args(["list-data-sources"])
+    def test_dashboard_parse_args_rejects_list_data_sources_command(self):
+        with self.assertRaises(SystemExit):
+            exporter.parse_args(["list-data-sources"])
 
-        self.assertEqual(args.command, "list-data-sources")
-        self.assertFalse(args.table)
-        self.assertFalse(args.csv)
-        self.assertFalse(args.json)
-        self.assertFalse(args.no_header)
+        with self.assertRaises(SystemExit):
+            exporter.parse_args(["list-datasources"])
 
     def test_dashboard_parse_args_supports_list_output_format(self):
         list_args = exporter.parse_args(["list-dashboard", "--output-format", "csv"])
-        data_source_args = exporter.parse_args(
-            ["list-data-sources", "--output-format", "json"]
-        )
 
         self.assertEqual(list_args.output_format, "csv")
         self.assertTrue(list_args.csv)
         self.assertFalse(list_args.table)
-        self.assertTrue(data_source_args.json)
-        self.assertFalse(data_source_args.csv)
 
     def test_dashboard_parse_args_supports_list_csv_and_json_modes(self):
         csv_args = exporter.parse_args(["list-dashboard", "--csv"])
@@ -1108,25 +1183,10 @@ class ExporterTests(unittest.TestCase):
         with self.assertRaises(SystemExit):
             exporter.parse_args(["list-dashboard", "--csv", "--json"])
 
-    def test_dashboard_parse_args_rejects_multiple_list_data_sources_output_modes(self):
-        with self.assertRaises(SystemExit):
-            exporter.parse_args(["list-data-sources", "--table", "--csv"])
-
-        with self.assertRaises(SystemExit):
-            exporter.parse_args(["list-data-sources", "--table", "--json"])
-
-        with self.assertRaises(SystemExit):
-            exporter.parse_args(["list-data-sources", "--csv", "--json"])
-
     def test_dashboard_parse_args_rejects_list_output_format_with_legacy_flags(self):
         with self.assertRaises(SystemExit):
             exporter.parse_args(
                 ["list-dashboard", "--output-format", "table", "--json"]
-            )
-
-        with self.assertRaises(SystemExit):
-            exporter.parse_args(
-                ["list-data-sources", "--output-format", "csv", "--table"]
             )
 
     def test_dashboard_parse_args_supports_diff_mode(self):
@@ -1544,17 +1604,29 @@ class ExporterTests(unittest.TestCase):
     def test_dashboard_parse_report_columns_accepts_snake_case_aliases(self):
         self.assertEqual(
             exporter.parse_report_columns(
-                "dashboard_uid,panel_title,query_field,datasource_uid,datasource_type,datasource_family"
+                "dashboard_uid,dashboard_tags,panel_title,query_field,target_hidden,target_disabled,query_variables,panel_variables,panel_target_count,panel_query_count,panel_datasource_count,datasource_uid,datasource_type,datasource_family"
             ),
             [
                 "dashboardUid",
+                "dashboardTags",
                 "panelTitle",
                 "queryField",
+                "targetHidden",
+                "targetDisabled",
+                "queryVariables",
+                "panelVariables",
+                "panelTargetCount",
+                "panelQueryCount",
+                "panelDatasourceCount",
                 "datasourceUid",
                 "datasourceType",
                 "datasourceFamily",
             ],
         )
+        self.assertIn("dashboardTags", exporter.parse_report_columns("all"))
+        self.assertIn("panelVariables", exporter.parse_report_columns("all"))
+        self.assertIn("panelTargetCount", exporter.parse_report_columns("all"))
+        self.assertIn("targetHidden", exporter.parse_report_columns("all"))
 
     def test_dashboard_dispatch_query_analysis_uses_prometheus_analyzer(self):
         analysis = inspection_dispatcher.dispatch_query_analysis(
@@ -1566,7 +1638,7 @@ class ExporterTests(unittest.TestCase):
 
         self.assertEqual(analysis["metrics"], ["node_cpu_seconds_total"])
         self.assertEqual(analysis["measurements"], [])
-        self.assertEqual(analysis["buckets"], [])
+        self.assertEqual(analysis["buckets"], ["5m"])
 
     def test_dashboard_dispatch_query_analysis_uses_flux_analyzer(self):
         analysis = inspection_dispatcher.dispatch_query_analysis(
@@ -1576,9 +1648,23 @@ class ExporterTests(unittest.TestCase):
             query_text='from(bucket: "ops") |> range(start: -1h) |> filter(fn: (r) => r._measurement == "cpu")',
         )
 
-        self.assertEqual(analysis["metrics"], ["from", "range", "filter"])
+        self.assertEqual(analysis["metrics"], [])
+        self.assertEqual(analysis["functions"], ["from", "range", "filter"])
         self.assertEqual(analysis["measurements"], ["cpu"])
         self.assertEqual(analysis["buckets"], ["ops"])
+
+    def test_dashboard_dispatch_query_analysis_extracts_influxql_time_buckets(self):
+        analysis = inspection_dispatcher.dispatch_query_analysis(
+            panel={"datasource": {"type": "influxdb", "uid": "influx-main"}},
+            target={"datasource": {"type": "influxdb", "uid": "influx-main"}},
+            query_field="query",
+            query_text='SELECT mean("usage") FROM "cpu" WHERE $timeFilter GROUP BY time(2m) fill(null)',
+        )
+
+        self.assertEqual(analysis["metrics"], ["usage"])
+        self.assertEqual(analysis["functions"], ["mean"])
+        self.assertEqual(analysis["measurements"], [])
+        self.assertEqual(analysis["buckets"], ["2m"])
 
     def test_dashboard_dispatch_query_analysis_uses_sql_analyzer(self):
         analysis = inspection_dispatcher.dispatch_query_analysis(
@@ -1588,7 +1674,8 @@ class ExporterTests(unittest.TestCase):
             query_text="select count(*) from public.cpu_metrics where host = 'web-01'",
         )
 
-        self.assertEqual(analysis["metrics"], ["select", "where"])
+        self.assertEqual(analysis["metrics"], [])
+        self.assertEqual(analysis["functions"], ["select", "where"])
         self.assertEqual(analysis["measurements"], ["public.cpu_metrics"])
         self.assertEqual(analysis["buckets"], [])
 
@@ -1600,15 +1687,16 @@ class ExporterTests(unittest.TestCase):
             query_text='sum by (job) (count_over_time({job="varlogs",app=~"api|web"} |= "error" | json [5m]))',
         )
 
+        self.assertEqual(analysis["metrics"], [])
         self.assertEqual(
-            analysis["metrics"],
+            analysis["functions"],
             ["sum", "count_over_time", "filter_eq", "json"],
         )
         self.assertEqual(
             analysis["measurements"],
             ['job="varlogs"', 'app=~"api|web"'],
         )
-        self.assertEqual(analysis["buckets"], [])
+        self.assertEqual(analysis["buckets"], ["5m"])
 
     def test_dashboard_dispatch_query_analysis_uses_generic_fallback_analyzer(self):
         analysis = inspection_dispatcher.dispatch_query_analysis(
@@ -1621,6 +1709,57 @@ class ExporterTests(unittest.TestCase):
         self.assertEqual(analysis["metrics"], ["cpu_total"])
         self.assertEqual(analysis["measurements"], [])
         self.assertEqual(analysis["buckets"], [])
+
+    def test_dashboard_build_query_field_and_text_synthesizes_influx_builder_query(self):
+        contract = importlib.import_module(
+            "grafana_utils.dashboards.inspection_analyzers.contract"
+        )
+
+        query_field, query_text = contract.build_query_field_and_text(
+            {
+                "measurement": "cpu_total",
+                "select": [
+                    [
+                        {"type": "field", "params": ["user"]},
+                        {"type": "mean", "params": []},
+                    ]
+                ],
+                "groupBy": [
+                    {"type": "time", "params": ["$__interval"]},
+                    {"type": "fill", "params": ["null"]},
+                ],
+                "tags": [
+                    {"key": "host", "operator": "=~", "value": "/^$LINUXHOST$/"},
+                ],
+            }
+        )
+
+        self.assertEqual(query_field, "builder")
+        self.assertEqual(
+            query_text,
+            'SELECT mean("user") FROM "cpu_total" WHERE "host" =~ /^$LINUXHOST$/ GROUP BY time($__interval), fill(null)',
+        )
+
+    def test_dashboard_build_panel_report_context_distinguishes_target_count_from_query_count(
+        self,
+    ):
+        report = importlib.import_module(
+            "grafana_utils.dashboards.inspection_report"
+        )
+
+        context = report.build_panel_report_context(
+            panel={"datasource": {"type": "prometheus", "uid": "prom-main"}},
+            targets=[
+                {"refId": "A", "expr": "up"},
+                {"refId": "B", "expr": "rate(http_requests_total[5m])", "hide": True},
+                {"refId": "C", "expr": "ignored_metric", "disabled": True},
+            ],
+            datasources_by_uid={},
+            datasources_by_name={},
+        )
+
+        self.assertEqual(context["panelTargetCount"], "3")
+        self.assertEqual(context["panelQueryCount"], "2")
 
     def test_dashboard_render_export_inspection_tree_tables_uses_grouped_document(self):
         grouped_document = exporter.build_grouped_export_inspection_report_document(
@@ -1656,6 +1795,11 @@ class ExporterTests(unittest.TestCase):
         self.assertIn("Export inspection tree-table report: dashboards/raw", output)
         self.assertIn("# Dashboard sections", output)
         self.assertIn("[1] Dashboard cpu-main", output)
+        self.assertIn(
+            "Panel 7 title=CPU Usage type=timeseries datasources=prom-main",
+            output,
+        )
+        self.assertIn("targets=1, queries=1", output)
         self.assertIn(
             "DASHBOARD_UID  PANEL_TITLE  DATASOURCE  QUERY",
             output,
@@ -2196,6 +2340,41 @@ class ExporterTests(unittest.TestCase):
             ],
         )
 
+    def test_dashboard_build_datasource_inventory_record_keeps_config_fields(self):
+        record = exporter.build_datasource_inventory_record(
+            {
+                "uid": "influx-main",
+                "name": "Influx Main",
+                "type": "influxdb",
+                "access": "proxy",
+                "url": "http://influxdb:8086",
+                "jsonData": {
+                    "dbName": "metrics_v1",
+                    "defaultBucket": "prod-default",
+                    "organization": "acme-observability",
+                },
+            },
+            {"id": 1, "name": "Main Org."},
+        )
+
+        self.assertEqual(record["database"], "metrics_v1")
+        self.assertEqual(record["defaultBucket"], "prod-default")
+        self.assertEqual(record["organization"], "acme-observability")
+
+        elastic = exporter.build_datasource_inventory_record(
+            {
+                "uid": "elastic-main",
+                "name": "Elastic Main",
+                "type": "elasticsearch",
+                "access": "proxy",
+                "url": "http://elasticsearch:9200",
+                "jsonData": {"indexPattern": "[logs-]YYYY.MM.DD"},
+            },
+            {"id": 1, "name": "Main Org."},
+        )
+
+        self.assertEqual(elastic["indexPattern"], "[logs-]YYYY.MM.DD")
+
     def test_dashboard_inspect_export_table_can_omit_header(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             import_dir = Path(tmpdir)
@@ -2403,6 +2582,21 @@ class ExporterTests(unittest.TestCase):
                                 ],
                             },
                             {
+                                "id": 9_1,
+                                "title": "InfluxQL Query",
+                                "type": "table",
+                                "datasource": {
+                                    "type": "influxdb",
+                                    "uid": "influx-ql-main",
+                                },
+                                "targets": [
+                                    {
+                                        "refId": "B3",
+                                        "query": 'SELECT mean("usage") FROM "cpu" WHERE $timeFilter GROUP BY time($__interval) fill(null)',
+                                    }
+                                ],
+                            },
+                            {
                                 "id": 9,
                                 "title": "SQL Query",
                                 "type": "table",
@@ -2433,21 +2627,31 @@ class ExporterTests(unittest.TestCase):
             self.assertEqual(
                 payload["queries"][0]["metrics"], ["node_cpu_seconds_total"]
             )
-            self.assertEqual(payload["queries"][1]["metrics"], ["from", "filter"])
+            self.assertEqual(payload["queries"][1]["metrics"], [])
+            self.assertEqual(payload["queries"][1]["functions"], ["from", "filter"])
             self.assertEqual(payload["queries"][1]["measurements"], ["cpu"])
             self.assertEqual(payload["queries"][1]["buckets"], ["prod"])
             self.assertEqual(
                 payload["queries"][2]["metrics"],
+                [],
+            )
+            self.assertEqual(
+                payload["queries"][2]["functions"],
                 ["sum", "count_over_time", "filter_eq", "json"],
             )
             self.assertEqual(
                 payload["queries"][2]["measurements"],
                 ['job="varlogs"', 'app=~"api|web"'],
             )
-            self.assertEqual(payload["queries"][2]["buckets"], [])
-            self.assertEqual(payload["queries"][3]["metrics"], ["select", "where"])
+            self.assertEqual(payload["queries"][2]["buckets"], ["5m"])
+            self.assertEqual(payload["queries"][3]["metrics"], [])
+            self.assertEqual(payload["queries"][3]["functions"], ["select", "where"])
             self.assertEqual(payload["queries"][3]["measurements"], ["metrics.cpu"])
             self.assertEqual(payload["queries"][3]["buckets"], [])
+            self.assertEqual(payload["queries"][4]["functions"], ["mean"])
+            self.assertEqual(payload["queries"][4]["metrics"], ["usage"])
+            self.assertEqual(payload["queries"][4]["measurements"], [])
+            self.assertEqual(payload["queries"][4]["buckets"], ["$__interval"])
 
     def test_dashboard_inspect_export_report_tree_table_renders_loki_analysis_columns(
         self,
@@ -2530,7 +2734,7 @@ class ExporterTests(unittest.TestCase):
                     "--report",
                     "tree-table",
                     "--report-columns",
-                    "panel_id,datasource,metrics,measurements,buckets,query",
+                    "panel_id,datasource,functions,measurements,buckets,query",
                 ]
             )
             stdout = io.StringIO()
@@ -2542,7 +2746,7 @@ class ExporterTests(unittest.TestCase):
             self.assertIn(
                 "Export inspection tree-table report: %s" % import_dir, output
             )
-            self.assertIn("PANEL_ID  DATASOURCE  METRICS", output)
+            self.assertIn("PANEL_ID  DATASOURCE  FUNCTIONS", output)
             self.assertIn("11", output)
             self.assertIn("loki-main", output)
             self.assertIn("sum,count_over_time,filter_eq,json", output)
@@ -2631,7 +2835,7 @@ class ExporterTests(unittest.TestCase):
                     "--report",
                     "table",
                     "--report-columns",
-                    "panel_id,datasource,metrics,measurements,buckets,query",
+                    "panel_id,datasource,functions,measurements,buckets,query",
                 ]
             )
             stdout = io.StringIO()
@@ -2641,7 +2845,7 @@ class ExporterTests(unittest.TestCase):
             output = stdout.getvalue()
             self.assertEqual(result, 0)
             self.assertIn("Export inspection report: %s" % import_dir, output)
-            self.assertIn("PANEL_ID  DATASOURCE  METRICS", output)
+            self.assertIn("PANEL_ID  DATASOURCE  FUNCTIONS", output)
             self.assertIn("11", output)
             self.assertIn("loki-main", output)
             self.assertIn("sum,count_over_time,filter_eq,json", output)
@@ -3287,98 +3491,6 @@ class ExporterTests(unittest.TestCase):
         with mock.patch.object(exporter, "build_client", return_value=client):
             with self.assertRaises(exporter.GrafanaError):
                 exporter.list_dashboards(args)
-
-    def test_dashboard_list_data_sources_prints_table_by_default(self):
-        args = argparse.Namespace(
-            command="list-data-sources",
-            url="http://127.0.0.1:3000",
-            api_token=None,
-            username=None,
-            password=None,
-            timeout=30,
-            verify_ssl=False,
-            table=False,
-            csv=False,
-            json=False,
-            no_header=False,
-        )
-        client = FakeDashboardWorkflowClient(
-            datasources=[
-                {
-                    "uid": "prom_uid",
-                    "name": "Prometheus Main",
-                    "type": "prometheus",
-                    "url": "http://prometheus:9090",
-                    "isDefault": True,
-                },
-                {
-                    "uid": "loki_uid",
-                    "name": "Loki Logs",
-                    "type": "loki",
-                    "url": "http://loki:3100",
-                    "isDefault": False,
-                },
-            ]
-        )
-
-        with mock.patch.object(exporter, "build_client", return_value=client):
-            stdout = io.StringIO()
-            with redirect_stdout(stdout):
-                result = exporter.list_data_sources(args)
-
-        self.assertEqual(result, 0)
-        self.assertEqual(
-            stdout.getvalue().splitlines(),
-            [
-                "UID       NAME             TYPE        URL                     IS_DEFAULT",
-                "--------  ---------------  ----------  ----------------------  ----------",
-                "prom_uid  Prometheus Main  prometheus  http://prometheus:9090  true      ",
-                "loki_uid  Loki Logs        loki        http://loki:3100        false     ",
-                "",
-                "Listed 2 data source(s) from http://127.0.0.1:3000",
-            ],
-        )
-
-    def test_dashboard_list_data_sources_no_header_hides_table_header(self):
-        args = argparse.Namespace(
-            command="list-data-sources",
-            url="http://127.0.0.1:3000",
-            api_token=None,
-            username=None,
-            password=None,
-            timeout=30,
-            verify_ssl=False,
-            table=False,
-            csv=False,
-            json=False,
-            no_header=True,
-        )
-        client = FakeDashboardWorkflowClient(
-            datasources=[
-                {
-                    "uid": "prom_uid",
-                    "name": "Prometheus Main",
-                    "type": "prometheus",
-                    "url": "http://prometheus:9090",
-                    "isDefault": True,
-                }
-            ]
-        )
-
-        with mock.patch.object(exporter, "build_client", return_value=client):
-            stdout = io.StringIO()
-            with redirect_stdout(stdout):
-                result = exporter.list_data_sources(args)
-
-        self.assertEqual(result, 0)
-        self.assertEqual(
-            stdout.getvalue().splitlines(),
-            [
-                "prom_uid  Prometheus Main  prometheus  http://prometheus:9090  true      ",
-                "",
-                "Listed 1 data source(s) from http://127.0.0.1:3000",
-            ],
-        )
 
     def test_dashboard_write_dashboard_obeys_overwrite_flag(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -4137,28 +4249,47 @@ class ExporterTests(unittest.TestCase):
             root_index = json.loads(
                 (Path(tmpdir) / "index.json").read_text(encoding="utf-8")
             )
+            root_metadata = json.loads(
+                (Path(tmpdir) / "export-metadata.json").read_text(encoding="utf-8")
+            )
             self.assertEqual(root_index["items"][0]["org"], "Org Two")
             self.assertEqual(root_index["items"][0]["orgId"], "2")
+            self.assertEqual(root_metadata["org"], "Org Two")
+            self.assertEqual(root_metadata["orgId"], "2")
 
     def test_dashboard_export_dashboards_with_all_orgs_uses_org_prefix_dirs(self):
         org_one_summary = {"uid": "abc", "title": "CPU", "folderTitle": "Infra"}
         org_two_summary = {"uid": "abc", "title": "CPU", "folderTitle": "Infra"}
         org_one_dashboard = {
-            "dashboard": {"id": 7, "uid": "abc", "title": "CPU", "panels": []},
+            "dashboard": {
+                "id": 7,
+                "uid": "abc",
+                "title": "CPU",
+                "panels": [{"datasource": {"uid": "prom-1", "type": "prometheus"}}],
+            },
             "meta": {"folderUid": "infra"},
         }
         org_two_dashboard = {
-            "dashboard": {"id": 8, "uid": "abc", "title": "CPU", "panels": []},
+            "dashboard": {
+                "id": 8,
+                "uid": "abc",
+                "title": "CPU",
+                "panels": [{"datasource": {"uid": "logs-2", "type": "loki"}}],
+            },
             "meta": {"folderUid": "infra"},
         }
         org_one_client = FakeDashboardWorkflowClient(
             summaries=[org_one_summary],
             dashboards={"abc": org_one_dashboard},
+            datasources=[
+                {"uid": "prom-1", "name": "Prometheus Main", "type": "prometheus"}
+            ],
             org={"id": 1, "name": "Main Org."},
         )
         org_two_client = FakeDashboardWorkflowClient(
             summaries=[org_two_summary],
             dashboards={"abc": org_two_dashboard},
+            datasources=[{"uid": "logs-2", "name": "Logs Main", "type": "loki"}],
             org={"id": 2, "name": "Org Two"},
         )
         client = FakeDashboardWorkflowClient(
@@ -4191,9 +4322,41 @@ class ExporterTests(unittest.TestCase):
             root_index = json.loads(
                 (Path(tmpdir) / "index.json").read_text(encoding="utf-8")
             )
+            root_metadata = json.loads(
+                (Path(tmpdir) / "export-metadata.json").read_text(encoding="utf-8")
+            )
+            raw_metadata = json.loads(
+                (Path(tmpdir) / "raw/export-metadata.json").read_text(
+                    encoding="utf-8"
+                )
+            )
             self.assertEqual(len(root_index["items"]), 2)
             self.assertEqual(
                 sorted(item["orgId"] for item in root_index["items"]),
+                ["1", "2"],
+            )
+            self.assertEqual(root_metadata["orgCount"], 2)
+            self.assertEqual(
+                sorted(item["orgId"] for item in root_metadata["orgs"]),
+                ["1", "2"],
+            )
+            self.assertTrue(
+                all("exportDir" in item for item in root_metadata["orgs"])
+            )
+            metadata_by_org = {
+                item["orgId"]: item for item in root_metadata["orgs"]
+            }
+            self.assertEqual(metadata_by_org["1"]["usedDatasourceCount"], 1)
+            self.assertEqual(
+                metadata_by_org["1"]["usedDatasources"][0]["uid"], "prom-1"
+            )
+            self.assertEqual(metadata_by_org["2"]["usedDatasourceCount"], 1)
+            self.assertEqual(
+                metadata_by_org["2"]["usedDatasources"][0]["uid"], "logs-2"
+            )
+            self.assertEqual(raw_metadata["orgCount"], 2)
+            self.assertEqual(
+                sorted(item["orgId"] for item in raw_metadata["orgs"]),
                 ["1", "2"],
             )
             self.assertTrue(
@@ -4990,6 +5153,232 @@ class ExporterTests(unittest.TestCase):
                 scoped_client.imported_payloads[0]["dashboard"]["uid"],
                 "abc",
             )
+
+    def test_dashboard_import_dashboards_live_preflights_dependencies_before_import(
+        self,
+    ):
+        client = FakeDashboardWorkflowClient(
+            datasources=[{"uid": "prom-main", "name": "Prometheus Main"}],
+            plugins=[{"id": "timeseries"}],
+            contact_points=[{"name": "alerts-team"}],
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import_dir = Path(tmpdir)
+            self._write_dependency_preflight_import(
+                import_dir,
+                {
+                    "id": None,
+                    "uid": "abc",
+                    "title": "CPU",
+                    "panels": [
+                        {
+                            "id": 7,
+                            "type": "timeseries",
+                            "datasource": {
+                                "uid": "prom-main",
+                                "type": "prometheus",
+                            },
+                            "targets": [
+                                {
+                                    "refId": "A",
+                                    "expr": "sum(rate(node_cpu_seconds_total[5m]))",
+                                    "datasource": {
+                                        "uid": "prom-main",
+                                        "type": "prometheus",
+                                    },
+                                }
+                            ],
+                            "alert": {
+                                "name": "CPU alert",
+                                "datasourceUid": "prom-main",
+                                "receiver": "alerts-team",
+                            },
+                        }
+                    ],
+                },
+            )
+            args = exporter.parse_args(
+                ["import-dashboard", "--import-dir", str(import_dir)]
+            )
+
+            with mock.patch.object(exporter, "build_client", return_value=client):
+                result = exporter.import_dashboards(args)
+
+        self.assertEqual(result, 0)
+        self.assertEqual(len(client.imported_payloads), 1)
+        self.assertEqual(client.imported_payloads[0]["dashboard"]["uid"], "abc")
+
+    def test_dashboard_import_dashboards_live_preflight_rejects_missing_datasource(
+        self,
+    ):
+        client = FakeDashboardWorkflowClient(
+            plugins=[{"id": "timeseries"}],
+            contact_points=[{"name": "alerts-team"}],
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import_dir = Path(tmpdir)
+            self._write_dependency_preflight_import(
+                import_dir,
+                {
+                    "id": None,
+                    "uid": "abc",
+                    "title": "CPU",
+                    "panels": [
+                        {
+                            "id": 7,
+                            "type": "timeseries",
+                            "datasource": {
+                                "uid": "prom-main",
+                                "type": "prometheus",
+                            },
+                            "targets": [
+                                {
+                                    "refId": "A",
+                                    "expr": "sum(rate(node_cpu_seconds_total[5m]))",
+                                    "datasource": {
+                                        "uid": "prom-main",
+                                        "type": "prometheus",
+                                    },
+                                }
+                            ],
+                            "alert": {
+                                "name": "CPU alert",
+                                "datasourceUid": "prom-main",
+                                "receiver": "alerts-team",
+                            },
+                        }
+                    ],
+                },
+            )
+            args = exporter.parse_args(
+                ["import-dashboard", "--import-dir", str(import_dir)]
+            )
+
+            with mock.patch.object(exporter, "build_client", return_value=client):
+                with self.assertRaisesRegex(
+                    exporter.GrafanaError,
+                    "Dashboard import dependency preflight failed",
+                ) as exc:
+                    exporter.import_dashboards(args)
+
+        self.assertIn("datasource=", str(exc.exception))
+        self.assertEqual(client.imported_payloads, [])
+
+    def test_dashboard_import_dashboards_live_preflight_rejects_missing_plugin(
+        self,
+    ):
+        client = FakeDashboardWorkflowClient(
+            datasources=[{"uid": "prom-main", "name": "Prometheus Main"}],
+            contact_points=[{"name": "alerts-team"}],
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import_dir = Path(tmpdir)
+            self._write_dependency_preflight_import(
+                import_dir,
+                {
+                    "id": None,
+                    "uid": "abc",
+                    "title": "CPU",
+                    "panels": [
+                        {
+                            "id": 7,
+                            "type": "timeseries",
+                            "datasource": {
+                                "uid": "prom-main",
+                                "type": "prometheus",
+                            },
+                            "targets": [
+                                {
+                                    "refId": "A",
+                                    "expr": "sum(rate(node_cpu_seconds_total[5m]))",
+                                    "datasource": {
+                                        "uid": "prom-main",
+                                        "type": "prometheus",
+                                    },
+                                }
+                            ],
+                            "alert": {
+                                "name": "CPU alert",
+                                "datasourceUid": "prom-main",
+                                "receiver": "alerts-team",
+                            },
+                        }
+                    ],
+                },
+            )
+            args = exporter.parse_args(
+                ["import-dashboard", "--import-dir", str(import_dir)]
+            )
+
+            with mock.patch.object(exporter, "build_client", return_value=client):
+                with self.assertRaisesRegex(
+                    exporter.GrafanaError,
+                    "Dashboard import dependency preflight failed",
+                ) as exc:
+                    exporter.import_dashboards(args)
+
+        self.assertIn("panel-plugin=timeseries", str(exc.exception))
+        self.assertEqual(client.imported_payloads, [])
+
+    def test_dashboard_import_dashboards_live_preflight_rejects_missing_contact_point(
+        self,
+    ):
+        client = FakeDashboardWorkflowClient(
+            datasources=[{"uid": "prom-main", "name": "Prometheus Main"}],
+            plugins=[{"id": "timeseries"}],
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            import_dir = Path(tmpdir)
+            self._write_dependency_preflight_import(
+                import_dir,
+                {
+                    "id": None,
+                    "uid": "abc",
+                    "title": "CPU",
+                    "panels": [
+                        {
+                            "id": 7,
+                            "type": "timeseries",
+                            "datasource": {
+                                "uid": "prom-main",
+                                "type": "prometheus",
+                            },
+                            "targets": [
+                                {
+                                    "refId": "A",
+                                    "expr": "sum(rate(node_cpu_seconds_total[5m]))",
+                                    "datasource": {
+                                        "uid": "prom-main",
+                                        "type": "prometheus",
+                                    },
+                                }
+                            ],
+                            "alert": {
+                                "name": "CPU alert",
+                                "datasourceUid": "prom-main",
+                                "receiver": "alerts-team",
+                            },
+                        }
+                    ],
+                },
+            )
+            args = exporter.parse_args(
+                ["import-dashboard", "--import-dir", str(import_dir)]
+            )
+
+            with mock.patch.object(exporter, "build_client", return_value=client):
+                with self.assertRaisesRegex(
+                    exporter.GrafanaError,
+                    "Dashboard import dependency preflight failed",
+                ) as exc:
+                    exporter.import_dashboards(args)
+
+        self.assertIn("alert-contact-point=alerts-team", str(exc.exception))
+        self.assertEqual(client.imported_payloads, [])
 
     def test_dashboard_import_dashboards_dry_run_skips_api_write(self):
         client = FakeDashboardWorkflowClient(
@@ -7053,6 +7442,49 @@ class ExporterTests(unittest.TestCase):
             [("prometheus", "Prometheus", "11.0.0")],
         )
         self.assertNotIn("templating", document)
+
+    def test_dashboard_build_external_export_document_shared_prompt_export_cases(self):
+        for case in load_prompt_export_cases():
+            with self.subTest(case=case["name"]):
+                document = exporter.build_external_export_document(
+                    case["payload"],
+                    exporter.build_datasource_catalog(case["catalog"]),
+                )
+
+                self.assertEqual(
+                    document["__inputs"],
+                    case["expectedInputs"],
+                )
+                self.assertEqual(
+                    [
+                        (item["id"], item["name"], item["version"])
+                        for item in document["__requires"]
+                        if item["type"] == "datasource"
+                    ],
+                    [
+                        (
+                            item["id"],
+                            item["name"],
+                            item["version"],
+                        )
+                        for item in case["expectedDatasourceRequires"]
+                    ],
+                )
+                self.assertEqual(
+                    [
+                        (item["id"], item["name"], item["version"])
+                        for item in document["__requires"]
+                        if item["type"] == "panel"
+                    ],
+                    [
+                        (
+                            item["id"],
+                            item["name"],
+                            item["version"],
+                        )
+                        for item in case["expectedPanelRequires"]
+                    ],
+                )
 
     def test_dashboard_build_external_export_document_resolves_string_datasource_uid(
         self,

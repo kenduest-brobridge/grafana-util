@@ -18,16 +18,22 @@ pub mod common;
 pub mod dashboard;
 /// Module definition for dashboard_inspection_dependency_contract.
 pub mod dashboard_inspection_dependency_contract;
+/// Module definition for dashboard_inspection_query_features.
+pub(crate) mod dashboard_inspection_query_features;
 /// Module definition for dashboard_reference_models.
 pub mod dashboard_reference_models;
 /// Module definition for datasource.
 pub mod datasource;
+/// Module definition for datasource_catalog.
+pub mod datasource_catalog;
 /// Module definition for datasource_provider.
 pub mod datasource_provider;
 /// Module definition for help_styles.
 pub mod help_styles;
 /// Module definition for http.
 pub mod http;
+/// Module definition for interactive_browser.
+pub(crate) mod interactive_browser;
 /// Module definition for sync.
 pub mod sync;
 /// Module definition for sync_bundle_alert_contracts.

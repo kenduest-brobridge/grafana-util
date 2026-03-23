@@ -47,7 +47,8 @@ pub const ACCESS_EXPORT_METADATA_FILENAME: &str = "export-metadata.json";
 const ACCESS_ROOT_HELP_TEXT: &str = "Examples:\n\n  List org users as JSON:\n    grafana-util access user list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json\n\n  Create a Grafana user with Basic auth:\n    grafana-util access user add --url http://localhost:3000 --basic-user admin --basic-password admin --login alice --email alice@example.com --name Alice --password secret\n\n  Import teams with destructive sync acknowledgement:\n    grafana-util access team import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./access-teams --replace-existing --yes\n\n  Create a service-account token:\n    grafana-util access service-account token add --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --name deploy-bot --token-name nightly";
 const ACCESS_USER_HELP_TEXT: &str = "Examples:\n\n  grafana-util access user list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json\n  grafana-util access user add --url http://localhost:3000 --basic-user admin --basic-password admin --login alice --email alice@example.com --name Alice --password secret";
 const ACCESS_TEAM_HELP_TEXT: &str = "Examples:\n\n  grafana-util access team list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json\n  grafana-util access team import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./access-teams --replace-existing --yes";
-const ACCESS_ORG_HELP_TEXT: &str = "Examples:\n\n  grafana-util access org list --url http://localhost:3000 --basic-user admin --basic-password admin --json\n  grafana-util access org delete --url http://localhost:3000 --basic-user admin --basic-password admin --name platform --yes";
+const ACCESS_ORG_HELP_TEXT: &str = "Examples:\n\n  grafana-util access org list --url http://localhost:3000 --basic-user admin --basic-password admin --json\n  grafana-util access org diff --url http://localhost:3000 --basic-user admin --basic-password admin --diff-dir ./access-orgs\n  grafana-util access org delete --url http://localhost:3000 --basic-user admin --basic-password admin --name platform --yes";
+const ACCESS_ORG_DIFF_HELP_TEXT: &str = "Examples:\n\n  grafana-util access org diff --basic-user admin --basic-password admin --diff-dir ./access-orgs";
 const ACCESS_SERVICE_ACCOUNT_HELP_TEXT: &str = "Examples:\n\n  grafana-util access service-account list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json\n  grafana-util access service-account token add --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --name deploy-bot --token-name nightly";
 const ACCESS_USER_ADD_HELP_TEXT: &str = "Examples:\n\n  grafana-util access user add --basic-user admin --basic-password admin --login alice --email alice@example.com --name Alice --password secret\n  grafana-util access user add --basic-user admin --basic-password admin --login bob --email bob@example.com --name Bob --prompt-user-password";
 const ACCESS_TEAM_IMPORT_HELP_TEXT: &str = "Examples:\n\n  grafana-util access team import --basic-user admin --basic-password admin --import-dir ./access-teams --dry-run --output-format table\n  grafana-util access team import --basic-user admin --basic-password admin --import-dir ./access-teams --replace-existing --yes";
@@ -877,6 +878,19 @@ pub struct OrgImportArgs {
     pub yes: bool,
 }
 
+/// Struct definition for OrgDiffArgs.
+#[derive(Debug, Clone, Args)]
+pub struct OrgDiffArgs {
+    #[command(flatten)]
+    pub common: CommonCliArgsNoOrgId,
+    #[arg(
+        long,
+        default_value = DEFAULT_ACCESS_ORG_EXPORT_DIR,
+        help = "Diff directory that contains orgs.json and export-metadata.json."
+    )]
+    pub diff_dir: PathBuf,
+}
+
 /// Struct definition for ServiceAccountListArgs.
 #[derive(Debug, Clone, Args)]
 pub struct ServiceAccountListArgs {
@@ -1085,6 +1099,8 @@ pub enum OrgCommand {
     Modify(OrgModifyArgs),
     Export(OrgExportArgs),
     Import(OrgImportArgs),
+    #[command(after_help = ACCESS_ORG_DIFF_HELP_TEXT)]
+    Diff(OrgDiffArgs),
     #[command(after_help = ACCESS_ORG_DELETE_HELP_TEXT)]
     Delete(OrgDeleteArgs),
 }

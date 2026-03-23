@@ -11,7 +11,7 @@ DATASOURCE_FAMILY_LOKI = "loki"
 DATASOURCE_FAMILY_FLUX = "flux"
 DATASOURCE_FAMILY_SQL = "sql"
 DATASOURCE_FAMILY_UNKNOWN = "unknown"
-QUERY_ANALYSIS_FIELDS = ("metrics", "measurements", "buckets")
+QUERY_ANALYSIS_FIELDS = ("metrics", "functions", "measurements", "buckets")
 
 
 def extract_string_values(query: str, pattern: str) -> list[str]:
@@ -82,7 +82,115 @@ def build_query_field_and_text(target: dict[str, Any]) -> list[str]:
         text = str(value).strip()
         if text:
             return [field, text]
+    synthesized = synthesize_influx_builder_query(target)
+    if synthesized:
+        return ["builder", synthesized]
     return ["", ""]
+
+
+def _first_param(step: dict[str, Any]) -> str:
+    """Return the first string-like step param."""
+    params = step.get("params")
+    if not isinstance(params, list) or not params:
+        return ""
+    return str(params[0] or "").strip()
+
+
+def _render_select_chain(chain: Any) -> str:
+    """Render one Grafana Influx target select-chain into readable InfluxQL-ish text."""
+    if not isinstance(chain, list):
+        return ""
+    expression = ""
+    for step in chain:
+        if not isinstance(step, dict):
+            continue
+        step_type = str(step.get("type") or "").strip()
+        param = _first_param(step)
+        if step_type == "field":
+            if param:
+                expression = f'"{param}"'
+        elif step_type == "math":
+            if param:
+                expression = f"{expression}{param}" if expression else param
+        elif step_type == "alias":
+            continue
+        elif step_type:
+            if expression:
+                expression = f"{step_type}({expression})"
+            elif param:
+                expression = f"{step_type}({param})"
+            else:
+                expression = f"{step_type}()"
+    return expression.strip()
+
+
+def _render_group_by_clause(group_by: Any) -> str:
+    """Render Grafana groupBy builder nodes into one GROUP BY clause."""
+    if not isinstance(group_by, list):
+        return ""
+    parts = []
+    for item in group_by:
+        if not isinstance(item, dict):
+            continue
+        group_type = str(item.get("type") or "").strip()
+        param = _first_param(item)
+        if group_type == "time" and param:
+            parts.append(f"time({param})")
+        elif group_type == "fill" and param:
+            parts.append(f"fill({param})")
+        elif group_type == "tag" and param:
+            parts.append(f'"{param}"')
+        elif group_type and param:
+            parts.append(f"{group_type}({param})")
+        elif group_type:
+            parts.append(group_type)
+    return ", ".join(parts)
+
+
+def _render_tag_filters(tags: Any) -> str:
+    """Render Grafana tag filters into one readable WHERE predicate."""
+    if not isinstance(tags, list):
+        return ""
+    rendered = []
+    for item in tags:
+        if not isinstance(item, dict):
+            continue
+        key = str(item.get("key") or "").strip()
+        operator = str(item.get("operator") or "=").strip()
+        value = str(item.get("value") or "").strip()
+        if not key or not value:
+            continue
+        clause = f'"{key}" {operator} {value}'
+        condition = str(item.get("condition") or "").strip().upper()
+        if rendered and condition in {"AND", "OR"}:
+            rendered.append(condition)
+        rendered.append(clause)
+    return " ".join(rendered)
+
+
+def synthesize_influx_builder_query(target: dict[str, Any]) -> str:
+    """Rebuild a readable query string from Grafana Influx builder fields."""
+    measurement = str(target.get("measurement") or "").strip()
+    select = target.get("select")
+    if not measurement and not isinstance(select, list):
+        return ""
+    select_parts = []
+    if isinstance(select, list):
+        for chain in select:
+            rendered = _render_select_chain(chain)
+            if rendered:
+                select_parts.append(rendered)
+    select_clause = ", ".join(select_parts) or "*"
+    query = f'SELECT {select_clause}'
+    if measurement:
+        query += f' FROM "{measurement}"'
+    where_clause = _render_tag_filters(target.get("tags"))
+    if where_clause:
+        query += f" WHERE {where_clause}"
+    group_by_clause = _render_group_by_clause(target.get("groupBy"))
+    if group_by_clause:
+        query += f" GROUP BY {group_by_clause}"
+    return query
 
 
 PROMETHEUS_RESERVED_WORDS = {
@@ -196,6 +304,61 @@ def extract_buckets(query: str) -> list[str]:
     )
 
 
+def extract_range_windows(query: str) -> list[str]:
+    """Extract Prometheus or Loki range-window selectors from a query."""
+    return unique_strings(
+        extract_string_values(
+            query,
+            r"\[([^\]]+)\]",
+        )
+    )
+
+
+def extract_influxql_time_buckets(query: str) -> list[str]:
+    """Extract InfluxQL time-bucket window sizes from grouped queries."""
+    return unique_strings(
+        extract_string_values(
+            query,
+            r"(?is)\bgroup\s+by\b[\s\S]*?\btime\s*\(\s*([^)]+?)\s*\)",
+        )
+    )
+
+
+def extract_influxql_select_metrics(query: str) -> list[str]:
+    """Extract InfluxQL field references from the SELECT clause."""
+    if not query:
+        return []
+    query = re.sub(r"/\*.*?\*/", " ", query, flags=re.DOTALL)
+    query = re.sub(r"--[^\n]*", " ", query)
+    match = re.search(r"(?is)^\s*select\s+(.*?)\s+\bfrom\b", query)
+    if not match:
+        return []
+    select_clause = str(match.group(1) or "").strip()
+    if not select_clause:
+        return []
+    select_clause = re.sub(r'(?i)\bas\s+"[^"]+"', " ", select_clause)
+    return unique_strings(
+        extract_string_values(select_clause, r'"([^"]+)"')
+    )
+
+
+def extract_influxql_select_functions(query: str) -> list[str]:
+    """Extract InfluxQL function names from the SELECT clause."""
+    if not query:
+        return []
+    query = re.sub(r"/\*.*?\*/", " ", query, flags=re.DOTALL)
+    query = re.sub(r"--[^\n]*", " ", query)
+    match = re.search(r"(?is)^\s*select\s+(.*?)\s+\bfrom\b", query)
+    if not match:
+        return []
+    select_clause = str(match.group(1) or "").strip()
+    if not select_clause:
+        return []
+    return unique_strings(
+        extract_string_values(select_clause, r"\b([A-Za-z_][A-Za-z0-9_]*)\s*\(")
+    )
+
+
 def build_default_query_analysis(target: dict[str, Any], query_text: str) -> dict[str, list[str]]:
     """Build normalized query-analysis fields for an unknown analyzer family."""
     # Call graph: see callers/callees.
@@ -206,7 +369,10 @@ def build_default_query_analysis(target: dict[str, Any], query_text: str) -> dic
     return normalize_query_analysis(
         {
             "metrics": extract_metric_names(query_text),
+            "functions": [],
             "measurements": extract_measurements(query_text),
-            "buckets": extract_buckets(query_text),
+            "buckets": extract_buckets(query_text)
+            + extract_range_windows(query_text)
+            + extract_influxql_time_buckets(query_text),
         }
     )

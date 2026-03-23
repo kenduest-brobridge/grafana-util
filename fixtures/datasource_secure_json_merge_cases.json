@@ -1,0 +1,57 @@
+[
+  {
+    "name": "secure_add_preserves_explicit_secure_json_data",
+    "operation": "add",
+    "args": [
+      "grafana-util",
+      "add",
+      "--name",
+      "Secure Prometheus",
+      "--type",
+      "prometheus",
+      "--json-data",
+      "{\"httpMethod\":\"POST\"}",
+      "--secure-json-data",
+      "{\"token\":\"abc123\",\"basicAuthPassword\":\"metrics-pass\"}"
+    ],
+    "expected": {
+      "secureJsonData": {
+        "token": "abc123",
+        "basicAuthPassword": "metrics-pass"
+      }
+    }
+  },
+  {
+    "name": "secure_modify_replaces_entire_secure_json_data_object",
+    "operation": "modify",
+    "args": [
+      "grafana-util",
+      "modify",
+      "--uid",
+      "secure-main",
+      "--secure-json-data",
+      "{\"basicAuthPassword\":\"override-pass\"}"
+    ],
+    "existing": {
+      "id": 11,
+      "uid": "secure-main",
+      "name": "Secure Prometheus",
+      "type": "prometheus",
+      "access": "proxy",
+      "url": "http://prometheus:9090",
+      "isDefault": false,
+      "basicAuth": true,
+      "basicAuthUser": "metrics-user",
+      "secureJsonData": {
+        "token": "old-token",
+        "basicAuthPassword": "old-pass",
+        "httpHeaderValue1": "tenant-a"
+      }
+    },
+    "expected": {
+      "secureJsonData": {
+        "basicAuthPassword": "override-pass"
+      }
+    }
+  }
+]

@@ -176,6 +176,8 @@ pub struct QueryFeatureSet {
     #[serde(default)]
     pub metrics: Vec<String>,
     #[serde(default)]
+    pub functions: Vec<String>,
+    #[serde(default)]
     pub measurements: Vec<String>,
     #[serde(default)]
     pub buckets: Vec<String>,
@@ -192,6 +194,7 @@ impl QueryFeatureSet {
 
         Self {
             metrics: Vec::new(),
+            functions: Vec::new(),
             measurements: Vec::new(),
             buckets: Vec::new(),
             labels: Vec::new(),

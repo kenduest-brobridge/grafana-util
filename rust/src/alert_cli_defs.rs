@@ -170,6 +170,12 @@ pub struct AlertImportArgs {
     pub dry_run: bool,
     #[arg(
         long,
+        default_value_t = false,
+        help = "Render dry-run import output as structured JSON. Only supported with --dry-run."
+    )]
+    pub json: bool,
+    #[arg(
+        long,
         help = "JSON file that maps source dashboard UIDs to target dashboard UIDs for linked alert-rule repair during import."
     )]
     pub dashboard_uid_map: Option<PathBuf>,
@@ -190,6 +196,12 @@ pub struct AlertDiffArgs {
         help = "Compare alerting resource JSON from this directory against Grafana. Point this to the raw/ export directory explicitly."
     )]
     pub diff_dir: PathBuf,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Render diff output as structured JSON."
+    )]
+    pub json: bool,
     #[arg(
         long,
         help = "JSON file that maps source dashboard UIDs to target dashboard UIDs for linked alert-rule repair during import."
@@ -433,6 +445,7 @@ pub fn normalize_alert_namespace_args(args: AlertNamespaceArgs) -> AlertCliArgs 
             args.import_dir = Some(inner.import_dir);
             args.replace_existing = inner.replace_existing;
             args.dry_run = inner.dry_run;
+            args.json = inner.json;
             args.dashboard_uid_map = inner.dashboard_uid_map;
             args.panel_id_map = inner.panel_id_map;
             args
@@ -440,6 +453,7 @@ pub fn normalize_alert_namespace_args(args: AlertNamespaceArgs) -> AlertCliArgs 
         Some(AlertGroupCommand::Diff(inner)) => {
             let mut args = cli_args_from_common(inner.common);
             args.diff_dir = Some(inner.diff_dir);
+            args.json = inner.json;
             args.dashboard_uid_map = inner.dashboard_uid_map;
             args.panel_id_map = inner.panel_id_map;
             args

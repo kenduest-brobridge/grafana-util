@@ -39,8 +39,8 @@ mod user;
 pub use cli_defs::{
     build_auth_context, build_http_client, build_http_client_no_org_id, normalize_access_cli_args,
     parse_cli_from, root_command, AccessAuthContext, AccessCliArgs, AccessCommand, CommonCliArgs,
-    DryRunOutputFormat, OrgAddArgs, OrgCommand, OrgDeleteArgs, OrgExportArgs, OrgImportArgs,
-    OrgListArgs, OrgModifyArgs, Scope, ServiceAccountAddArgs, ServiceAccountCommand,
+    DryRunOutputFormat, OrgAddArgs, OrgCommand, OrgDeleteArgs, OrgDiffArgs, OrgExportArgs,
+    OrgImportArgs, OrgListArgs, OrgModifyArgs, Scope, ServiceAccountAddArgs, ServiceAccountCommand,
     ServiceAccountDiffArgs, ServiceAccountExportArgs, ServiceAccountImportArgs,
     ServiceAccountListArgs, ServiceAccountTokenAddArgs, ServiceAccountTokenCommand, TeamAddArgs,
     TeamCommand, TeamDiffArgs, TeamExportArgs, TeamImportArgs, TeamListArgs, TeamModifyArgs,
@@ -56,7 +56,10 @@ pub use pending_delete::{
 };
 
 #[cfg(test)]
-pub(crate) use org::{delete_org_with_request, list_orgs_with_request, modify_org_with_request};
+pub(crate) use org::{
+    delete_org_with_request, diff_orgs_with_request, export_orgs_with_request,
+    import_orgs_with_request, list_orgs_with_request, modify_org_with_request,
+};
 #[cfg(test)]
 pub(crate) use pending_delete::{
     delete_service_account_token_with_request, delete_service_account_with_request,
@@ -70,12 +73,14 @@ pub(crate) use service_account::{
 };
 #[cfg(test)]
 pub(crate) use team::{
-    add_team_with_request, diff_teams_with_request, import_teams_with_request,
-    list_teams_command_with_request, modify_team_with_request,
+    add_team_with_request, build_team_import_dry_run_document, diff_teams_with_request,
+    export_teams_with_request, import_teams_with_request, list_teams_command_with_request,
+    modify_team_with_request,
 };
 #[cfg(test)]
 pub(crate) use user::{
-    add_user_with_request, delete_user_with_request, diff_users_with_request,
+    add_user_with_request, build_user_import_dry_run_document, delete_user_with_request,
+    diff_users_with_request, export_users_with_request, import_users_with_request,
     list_users_with_request, modify_user_with_request,
 };
 
@@ -180,6 +185,9 @@ where
             }
             OrgCommand::Import(args) => {
                 let _ = org::import_orgs_with_request(&mut request_json, &args)?;
+            }
+            OrgCommand::Diff(args) => {
+                let _ = org::diff_orgs_with_request(&mut request_json, &args)?;
             }
             OrgCommand::Delete(args) => {
                 let _ = org::delete_org_with_request(&mut request_json, &args)?;
@@ -317,6 +325,10 @@ pub fn run_access_cli(args: AccessCliArgs) -> Result<()> {
                 run_access_cli_with_client(&client, args)
             }
             OrgCommand::Import(inner) => {
+                let client = build_http_client_no_org_id(&inner.common)?;
+                run_access_cli_with_client(&client, args)
+            }
+            OrgCommand::Diff(inner) => {
                 let client = build_http_client_no_org_id(&inner.common)?;
                 run_access_cli_with_client(&client, args)
             }

@@ -3,22 +3,90 @@
 //! through the shared dashboard HTTP/auth context.
 use reqwest::Method;
 use serde_json::{Map, Value};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::common::{message, object_field, string_field, value_as_object, Result};
 use crate::http::{JsonHttpClient, JsonHttpClientConfig};
+use crate::sync::preflight::build_sync_preflight_document;
 
+use super::list::collect_dashboard_source_metadata;
 use super::*;
 
 #[derive(Default)]
 struct ImportLookupCache {
     dashboards_by_uid: BTreeMap<String, Option<Value>>,
+    dashboard_uids_from_search: Option<BTreeSet<String>>,
+    dashboard_summary_folder_uids: BTreeMap<String, String>,
     folders_by_uid: BTreeMap<String, Option<Map<String, Value>>>,
     current_org_id: Option<String>,
     orgs: Option<Vec<Map<String, Value>>>,
+}
+
+fn load_dashboard_uid_summary_cache<F>(
+    request_json: &mut F,
+    cache: &mut ImportLookupCache,
+) -> Result<()>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    if cache.dashboard_uids_from_search.is_some() {
+        return Ok(());
+    }
+    let summaries = list_dashboard_summaries_with_request(request_json, super::DEFAULT_PAGE_SIZE)?;
+    let mut dashboard_uids = BTreeSet::new();
+    let mut folder_uids = BTreeMap::new();
+    for summary in summaries {
+        let uid = string_field(&summary, "uid", "");
+        if uid.is_empty() {
+            continue;
+        }
+        dashboard_uids.insert(uid.clone());
+        let folder_uid = string_field(&summary, "folderUid", "");
+        if !folder_uid.is_empty() {
+            folder_uids.insert(uid, folder_uid);
+        }
+    }
+    cache.dashboard_uids_from_search = Some(dashboard_uids);
+    cache.dashboard_summary_folder_uids = folder_uids;
+    Ok(())
+}
+
+fn dashboard_exists_with_summary<F>(
+    request_json: &mut F,
+    cache: &mut ImportLookupCache,
+    uid: &str,
+) -> Result<bool>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    if cache.dashboards_by_uid.contains_key(uid) {
+        let result = cache
+            .dashboards_by_uid
+            .get(uid)
+            .is_some_and(|value| value.is_some());
+        return Ok(result);
+    }
+    load_dashboard_uid_summary_cache(request_json, cache)?;
+    let exists = cache
+        .dashboard_uids_from_search
+        .as_ref()
+        .is_some_and(|known| known.contains(uid));
+    Ok(exists)
+}
+
+fn dashboard_summary_folder_uid<F>(
+    request_json: &mut F,
+    cache: &mut ImportLookupCache,
+    uid: &str,
+) -> Result<Option<String>>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    load_dashboard_uid_summary_cache(request_json, cache)?;
+    Ok(cache.dashboard_summary_folder_uids.get(uid).cloned())
 }
 
 fn fetch_dashboard_if_exists_cached<F>(
@@ -34,6 +102,12 @@ where
     }
     if let Some(cached) = cache.dashboards_by_uid.get(uid) {
         return Ok(cached.clone());
+    }
+    if let Ok(exists) = dashboard_exists_with_summary(request_json, cache, uid) {
+        if !exists {
+            cache.dashboards_by_uid.insert(uid.to_string(), None);
+            return Ok(None);
+        }
     }
     let fetched = fetch_dashboard_if_exists_with_request(&mut *request_json, uid)?;
     cache
@@ -655,7 +729,7 @@ where
     if uid.is_empty() {
         return Ok("would-create");
     }
-    if fetch_dashboard_if_exists_cached(request_json, cache, &uid)?.is_none() {
+    if !dashboard_exists_with_summary(request_json, cache, &uid)? {
         if update_existing_only {
             return Ok("would-skip-missing");
         }
@@ -683,6 +757,11 @@ where
     }
     if !preserve_existing_folder || uid.is_empty() {
         return Ok(None);
+    }
+    if let Some(folder_uid) = dashboard_summary_folder_uid(request_json, cache, uid)? {
+        if !folder_uid.is_empty() {
+            return Ok(Some(folder_uid));
+        }
     }
     let Some(existing_payload) = fetch_dashboard_if_exists_cached(request_json, cache, uid)? else {
         return Ok(None);
@@ -864,6 +943,7 @@ fn resolve_dashboard_import_folder_path_with_request<F>(
     cache: &mut ImportLookupCache,
     payload: &Value,
     folders_by_uid: &std::collections::BTreeMap<String, FolderInventoryItem>,
+    prefer_live_lookup: bool,
 ) -> Result<String>
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
@@ -879,9 +959,11 @@ where
     if folder_uid.is_empty() || folder_uid == DEFAULT_FOLDER_UID {
         return Ok(DEFAULT_FOLDER_TITLE.to_string());
     }
-    if let Some(folder) = fetch_folder_if_exists_cached(request_json, cache, &folder_uid)? {
-        let fallback_title = string_field(&folder, "title", &folder_uid);
-        return Ok(build_folder_path(&folder, &fallback_title));
+    if prefer_live_lookup {
+        if let Some(folder) = fetch_folder_if_exists_cached(request_json, cache, &folder_uid)? {
+            let fallback_title = string_field(&folder, "title", &folder_uid);
+            return Ok(build_folder_path(&folder, &fallback_title));
+        }
     }
     if let Some(folder) = folders_by_uid.get(&folder_uid) {
         if !folder.path.is_empty() {
@@ -890,6 +972,10 @@ where
         if !folder.title.is_empty() {
             return Ok(folder.title.clone());
         }
+    }
+    if let Some(folder) = fetch_folder_if_exists_cached(request_json, cache, &folder_uid)? {
+        let fallback_title = string_field(&folder, "title", &folder_uid);
+        return Ok(build_folder_path(&folder, &fallback_title));
     }
     Ok(folder_uid)
 }
@@ -1149,6 +1235,12 @@ pub(crate) fn render_import_dry_run_table(
     lines
 }
 
+pub(crate) fn format_routed_import_target_org_label(target_org_id: Option<i64>) -> String {
+    target_org_id
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "<new>".to_string())
+}
+
 fn build_routed_import_org_row(plan: &ExportOrgTargetPlan, dashboard_count: usize) -> [String; 5] {
     [
         plan.source_org_id.to_string(),
@@ -1158,11 +1250,42 @@ fn build_routed_import_org_row(plan: &ExportOrgTargetPlan, dashboard_count: usiz
             plan.source_org_name.clone()
         },
         plan.org_action.to_string(),
-        plan.target_org_id
-            .map(|value| value.to_string())
-            .unwrap_or_else(|| "<new>".to_string()),
+        format_routed_import_target_org_label(plan.target_org_id),
         dashboard_count.to_string(),
     ]
+}
+
+pub(crate) fn format_routed_import_scope_summary_fields(
+    source_org_id: i64,
+    source_org_name: &str,
+    org_action: &str,
+    target_org_id: Option<i64>,
+    import_dir: &Path,
+) -> String {
+    let source_org_name = if source_org_name.is_empty() {
+        "-".to_string()
+    } else {
+        source_org_name.to_string()
+    };
+    let target_org_id = format_routed_import_target_org_label(target_org_id);
+    format!(
+        "export orgId={} name={} orgAction={} targetOrgId={} from {}",
+        source_org_id,
+        source_org_name,
+        org_action,
+        target_org_id,
+        import_dir.display()
+    )
+}
+
+fn format_routed_import_scope_summary(plan: &ExportOrgTargetPlan) -> String {
+    format_routed_import_scope_summary_fields(
+        plan.source_org_id,
+        &plan.source_org_name,
+        plan.org_action,
+        plan.target_org_id,
+        &plan.import_dir,
+    )
 }
 
 /// Purpose: implementation note.
@@ -1392,9 +1515,234 @@ fn build_import_dry_run_json_value(report: &ImportDryRunReport) -> Value {
             "dashboardCount": report.dashboard_records.len(),
             "missingDashboards": report.dashboard_records.iter().filter(|row| row[1] == "missing").count(),
             "skippedMissingDashboards": report.skipped_missing_count,
-            "skippedFolderMismatchDashboards": report.skipped_folder_mismatch_count,
+        "skippedFolderMismatchDashboards": report.skipped_folder_mismatch_count,
         }
     })
+}
+
+fn collect_dashboard_panel_types(panels: &[Value], panel_types: &mut BTreeSet<String>) {
+    for panel in panels {
+        let Some(panel_object) = panel.as_object() else {
+            continue;
+        };
+        let panel_type = string_field(panel_object, "type", "");
+        if !panel_type.is_empty() {
+            panel_types.insert(panel_type);
+        }
+        if let Some(nested) = panel_object.get("panels").and_then(Value::as_array) {
+            collect_dashboard_panel_types(nested, panel_types);
+        }
+    }
+}
+
+fn dashboard_import_dependency_availability_requirements(
+    import_dir: &Path,
+) -> Result<(bool, bool)> {
+    let mut dashboard_files = discover_dashboard_files(import_dir)?;
+    dashboard_files.retain(|path| {
+        path.file_name().and_then(|name| name.to_str()) != Some(FOLDER_INVENTORY_FILENAME)
+    });
+    let mut needs_datasource_availability = false;
+    let mut needs_plugin_availability = false;
+    for dashboard_file in dashboard_files {
+        let document = load_json_file(&dashboard_file)?;
+        let document_object =
+            value_as_object(&document, "Dashboard payload must be a JSON object.")?;
+        let dashboard = extract_dashboard_object(document_object)?;
+        let mut refs = Vec::new();
+        collect_datasource_refs(&Value::Object(dashboard.clone()), &mut refs);
+        if refs
+            .iter()
+            .any(|reference| !is_builtin_datasource_ref(reference))
+        {
+            needs_datasource_availability = true;
+        }
+        if let Some(panels) = dashboard.get("panels").and_then(Value::as_array) {
+            let mut panel_types = BTreeSet::new();
+            collect_dashboard_panel_types(panels, &mut panel_types);
+            if !panel_types.is_empty() {
+                needs_plugin_availability = true;
+            }
+        }
+        if needs_datasource_availability && needs_plugin_availability {
+            break;
+        }
+    }
+    Ok((needs_datasource_availability, needs_plugin_availability))
+}
+
+fn build_dashboard_import_availability_from_datasources(
+    datasources: &[Map<String, Value>],
+) -> Map<String, Value> {
+    let mut availability = Map::new();
+    let mut datasource_uids = BTreeSet::new();
+    let mut datasource_names = BTreeSet::new();
+    for datasource in datasources {
+        if let Some(uid) = datasource
+            .get("uid")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+        {
+            datasource_uids.insert(uid.to_string());
+        }
+        if let Some(name) = datasource
+            .get("name")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+        {
+            datasource_names.insert(name.to_string());
+        }
+    }
+    availability.insert(
+        "datasourceUids".to_string(),
+        Value::Array(
+            datasource_uids
+                .into_iter()
+                .map(Value::String)
+                .collect::<Vec<_>>(),
+        ),
+    );
+    availability.insert(
+        "datasourceNames".to_string(),
+        Value::Array(
+            datasource_names
+                .into_iter()
+                .map(Value::String)
+                .collect::<Vec<_>>(),
+        ),
+    );
+    availability.insert("pluginIds".to_string(), Value::Array(Vec::new()));
+    availability
+}
+
+fn build_dashboard_import_availability_with_request<F>(
+    mut request_json: F,
+    datasources: &[Map<String, Value>],
+    fetch_plugins: bool,
+) -> Result<Map<String, Value>>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    let mut availability = build_dashboard_import_availability_from_datasources(datasources);
+    if !fetch_plugins {
+        return Ok(availability);
+    }
+    match request_json(Method::GET, "/api/plugins", &[], None)? {
+        Some(Value::Array(plugins)) => {
+            let plugin_ids = plugins
+                .iter()
+                .filter_map(Value::as_object)
+                .filter_map(|plugin| plugin.get("id").and_then(Value::as_str))
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .map(str::to_string)
+                .collect::<BTreeSet<String>>();
+            availability.insert(
+                "pluginIds".to_string(),
+                Value::Array(
+                    plugin_ids
+                        .into_iter()
+                        .map(Value::String)
+                        .collect::<Vec<_>>(),
+                ),
+            );
+        }
+        Some(_) => return Err(message("Unexpected plugin list response from Grafana.")),
+        None => {}
+    }
+
+    Ok(availability)
+}
+
+fn build_dashboard_import_dependency_specs(
+    import_dir: &Path,
+    datasource_catalog: &super::prompt::DatasourceCatalog,
+    strict_schema: bool,
+    target_schema_version: Option<i64>,
+) -> Result<Vec<Value>> {
+    let mut dashboard_files = discover_dashboard_files(import_dir)?;
+    dashboard_files.retain(|path| {
+        path.file_name().and_then(|name| name.to_str()) != Some(FOLDER_INVENTORY_FILENAME)
+    });
+    let mut desired_specs = Vec::new();
+    for dashboard_file in dashboard_files {
+        let document = load_json_file(&dashboard_file)?;
+        super::validate::validate_dashboard_import_document(
+            &document,
+            &dashboard_file,
+            strict_schema,
+            target_schema_version,
+        )?;
+        let document_object =
+            value_as_object(&document, "Dashboard payload must be a JSON object.")?;
+        let dashboard = extract_dashboard_object(document_object)?;
+        let uid = string_field(dashboard, "uid", "");
+        let title = string_field(dashboard, "title", DEFAULT_DASHBOARD_TITLE);
+        let (datasource_names, datasource_uids) =
+            collect_dashboard_source_metadata(&document, datasource_catalog)?;
+        let mut panel_types = BTreeSet::new();
+        if let Some(panels) = dashboard.get("panels").and_then(Value::as_array) {
+            collect_dashboard_panel_types(panels, &mut panel_types);
+        }
+        desired_specs.push(serde_json::json!({
+            "kind": "dashboard",
+            "uid": uid,
+            "title": title,
+            "body": {
+                "datasourceNames": datasource_names,
+                "datasourceUids": datasource_uids,
+                "pluginIds": panel_types.into_iter().collect::<Vec<String>>(),
+            },
+            "sourcePath": dashboard_file.display().to_string(),
+        }));
+    }
+    Ok(desired_specs)
+}
+
+fn validate_dashboard_import_dependencies_with_request<F>(
+    mut request_json: F,
+    import_dir: &Path,
+    strict_schema: bool,
+    target_schema_version: Option<i64>,
+) -> Result<()>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    let (needs_datasource_availability, needs_plugin_availability) =
+        dashboard_import_dependency_availability_requirements(import_dir)?;
+    let datasources = if needs_datasource_availability {
+        list_datasources_with_request(&mut request_json)?
+    } else {
+        Vec::new()
+    };
+    let datasource_catalog = build_datasource_catalog(&datasources);
+    let desired_specs = build_dashboard_import_dependency_specs(
+        import_dir,
+        &datasource_catalog,
+        strict_schema,
+        target_schema_version,
+    )?;
+    let availability = build_dashboard_import_availability_with_request(
+        &mut request_json,
+        &datasources,
+        needs_plugin_availability,
+    )?;
+    let document =
+        build_sync_preflight_document(&desired_specs, Some(&Value::Object(availability)))?;
+    let blocking = document
+        .get("summary")
+        .and_then(Value::as_object)
+        .and_then(|summary| summary.get("blockingCount"))
+        .and_then(Value::as_i64)
+        .unwrap_or(0);
+    if blocking > 0 {
+        return Err(message(format!(
+            "Refusing dashboard import because preflight reports {blocking} blocking checks."
+        )));
+    }
+    Ok(())
 }
 
 /// Purpose: implementation note.
@@ -1435,7 +1783,7 @@ where
         metadata.as_ref(),
         None,
     )?;
-    let folder_inventory = if args.ensure_folders {
+    let folder_inventory = if args.ensure_folders || args.dry_run {
         load_folder_inventory(&args.import_dir, metadata.as_ref())?
     } else {
         Vec::new()
@@ -1471,6 +1819,14 @@ where
     let mut dashboard_records: Vec<[String; 8]> = Vec::new();
     for dashboard_file in &dashboard_files {
         let document = load_json_file(dashboard_file)?;
+        if args.strict_schema {
+            super::validate::validate_dashboard_import_document(
+                &document,
+                dashboard_file,
+                true,
+                args.target_schema_version,
+            )?;
+        }
         let document_object =
             value_as_object(&document, "Dashboard payload must be a JSON object.")?;
         let dashboard = extract_dashboard_object(document_object)?;
@@ -1530,11 +1886,14 @@ where
             (true, "", String::new(), None)
         };
         let action = apply_folder_path_guard_to_action(action, folder_paths_match);
+        let prefer_live_folder_path =
+            folder_uid_override.is_some() && args.import_folder_uid.is_none() && !uid.is_empty();
         let folder_path = resolve_dashboard_import_folder_path_with_request(
             &mut request_json,
             &mut lookup_cache,
             &payload,
             &folders_by_uid,
+            prefer_live_folder_path,
         )?;
         dashboard_records.push(build_import_dry_run_record(
             dashboard_file,
@@ -1678,7 +2037,7 @@ where
         metadata.as_ref(),
         None,
     )?;
-    let folder_inventory = if args.ensure_folders {
+    let folder_inventory = if args.ensure_folders || args.dry_run {
         load_folder_inventory(&args.import_dir, metadata.as_ref())?
     } else {
         Vec::new()
@@ -1706,6 +2065,14 @@ where
         .into_iter()
         .map(|item| (item.uid.clone(), item))
         .collect();
+    if !args.dry_run {
+        validate_dashboard_import_dependencies_with_request(
+            &mut request_json,
+            &args.import_dir,
+            args.strict_schema,
+            args.target_schema_version,
+        )?;
+    }
     let mut dashboard_files = discover_dashboard_files(&args.import_dir)?;
     dashboard_files.retain(|path| {
         path.file_name().and_then(|name| name.to_str()) != Some(FOLDER_INVENTORY_FILENAME)
@@ -1766,6 +2133,14 @@ where
             continue;
         }
         let document = load_json_file(dashboard_file)?;
+        if args.strict_schema {
+            super::validate::validate_dashboard_import_document(
+                &document,
+                dashboard_file,
+                true,
+                args.target_schema_version,
+            )?;
+        }
         let document_object =
             value_as_object(&document, "Dashboard payload must be a JSON object.")?;
         let dashboard = extract_dashboard_object(document_object)?;
@@ -1835,12 +2210,22 @@ where
         let action =
             action.map(|value| apply_folder_path_guard_to_action(value, folder_paths_match));
         if args.dry_run {
-            let folder_path = resolve_dashboard_import_folder_path_with_request(
-                &mut request_json,
-                &mut lookup_cache,
-                &payload,
-                &folders_by_uid,
-            )?;
+            let needs_dry_run_folder_path =
+                args.table || args.json || args.verbose || args.progress;
+            let folder_path = if needs_dry_run_folder_path {
+                let prefer_live_folder_path = folder_uid_override.is_some()
+                    && args.import_folder_uid.is_none()
+                    && !uid.is_empty();
+                Some(resolve_dashboard_import_folder_path_with_request(
+                    &mut request_json,
+                    &mut lookup_cache,
+                    &payload,
+                    &folders_by_uid,
+                    prefer_live_folder_path,
+                )?)
+            } else {
+                None
+            };
             let payload_object =
                 value_as_object(&payload, "Dashboard import payload must be a JSON object.")?;
             let dashboard = payload_object
@@ -1853,7 +2238,7 @@ where
                     dashboard_file,
                     &uid,
                     action.unwrap_or(DEFAULT_UNKNOWN_UID),
-                    &folder_path,
+                    folder_path.as_deref().unwrap_or(""),
                     &normalized_source_folder_path,
                     normalized_destination_folder_path.as_deref(),
                     folder_match_reason,
@@ -1866,7 +2251,7 @@ where
                         true,
                         Some(&uid),
                         Some(action.unwrap_or(DEFAULT_UNKNOWN_UID)),
-                        Some(&folder_path),
+                        folder_path.as_deref(),
                     )
                 );
             } else if args.progress {
@@ -1878,7 +2263,7 @@ where
                         &uid,
                         true,
                         Some(action.unwrap_or(DEFAULT_UNKNOWN_UID)),
-                        Some(&folder_path),
+                        folder_path.as_deref(),
                     )
                 );
             }
@@ -2214,22 +2599,10 @@ where
         return Ok(0);
     }
     for target_plan in resolved_plans {
-        let target_org_id_label = target_plan
-            .target_org_id
-            .map(|value| value.to_string())
-            .unwrap_or_else(|| "-".to_string());
         if !args.table {
             println!(
-                "Importing export orgId={} name={} orgAction={} targetOrgId={} from {}",
-                target_plan.source_org_id,
-                if target_plan.source_org_name.is_empty() {
-                    "-"
-                } else {
-                    &target_plan.source_org_name
-                },
-                target_plan.org_action,
-                target_org_id_label,
-                target_plan.import_dir.display()
+                "Importing {}",
+                format_routed_import_scope_summary(&target_plan)
             );
         }
         let Some(target_org_id) = target_plan.target_org_id else {
@@ -2241,7 +2614,13 @@ where
         scoped_args.only_org_id = Vec::new();
         scoped_args.create_missing_orgs = false;
         scoped_args.import_dir = target_plan.import_dir.clone();
-        imported_count += import_for_org(target_org_id, &scoped_args)?;
+        imported_count += import_for_org(target_org_id, &scoped_args).map_err(|error| {
+            message(format!(
+                "Dashboard routed import failed for {}: {}",
+                format_routed_import_scope_summary(&target_plan),
+                error
+            ))
+        })?;
     }
     Ok(imported_count)
 }
@@ -2345,4 +2724,82 @@ pub fn diff_dashboards_with_client(client: &JsonHttpClient, args: &DiffArgs) -> 
         |method, path, params, payload| client.request_json(method, path, params, payload),
         args,
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::sync::preflight::build_sync_preflight_document;
+    use serde_json::json;
+    use tempfile::tempdir;
+
+    #[test]
+    fn build_dashboard_import_dependency_specs_detects_datasource_and_panel_dependencies() {
+        let temp = tempdir().unwrap();
+        let raw_dir = temp.path().join("raw");
+        std::fs::create_dir_all(&raw_dir).unwrap();
+        std::fs::write(
+            raw_dir.join(EXPORT_METADATA_FILENAME),
+            serde_json::to_string_pretty(&json!({
+                "kind": "grafana-utils-dashboard-export-index",
+                "schemaVersion": TOOL_SCHEMA_VERSION,
+                "variant": "raw",
+                "dashboardCount": 1,
+                "indexFile": "index.json",
+                "format": "grafana-web-import-preserve-uid"
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        std::fs::write(
+            raw_dir.join("dash.json"),
+            serde_json::to_string_pretty(&json!({
+                "dashboard": {
+                    "id": 7,
+                    "uid": "abc",
+                    "title": "CPU",
+                    "schemaVersion": 38,
+                    "panels": [
+                        {
+                            "type": "row",
+                            "panels": [
+                                {
+                                    "type": "timeseries",
+                                    "datasource": {
+                                        "uid": "prom-main",
+                                        "name": "Prometheus Main"
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+
+        let datasource_catalog = build_datasource_catalog(&[]);
+        let desired_specs =
+            build_dashboard_import_dependency_specs(&raw_dir, &datasource_catalog, false, None)
+                .unwrap();
+
+        assert_eq!(desired_specs.len(), 1);
+        assert_eq!(
+            desired_specs[0]["body"]["datasourceUids"],
+            json!(["prom-main"])
+        );
+        assert_eq!(
+            desired_specs[0]["body"]["pluginIds"],
+            json!(["row", "timeseries"])
+        );
+
+        let availability = json!({
+            "datasourceUids": ["other"],
+            "datasourceNames": ["Other"],
+            "pluginIds": ["row"]
+        });
+        let document = build_sync_preflight_document(&desired_specs, Some(&availability)).unwrap();
+        assert_eq!(document["summary"]["blockingCount"], json!(3));
+    }
 }

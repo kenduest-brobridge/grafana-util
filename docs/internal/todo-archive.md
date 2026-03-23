@@ -10,6 +10,16 @@ Historical note:
 - Current preferred user-facing commands use `grafana-util ...`; older `grafana-utils ...`, wrapper-path, and compatibility-binary references below should be read as historical context, not current primary guidance.
 - Current source-tree Python guidance is the unified module entrypoint `python3 -m grafana_utils ...`, not an older wrapper path.
 
+## Completed Import And Dependency Work
+
+- added a broader dashboard import dependency preflight for datasource existence and plugin availability before live mutating imports
+- the dashboard import live path now fails closed before POSTing when referenced datasources or panel plugins are missing from Grafana
+
+## Completed Dashboard Prompt Coverage
+
+- aligned dashboard prompt export datasource input labels and datasource `__requires` names/versions more closely with Grafana external export
+- expanded shared fixture-based dashboard prompt export coverage to lock datasource input labels, datasource `__requires` names/versions, and mixed-type/same-type cases beyond the original Prometheus/Loki-only examples
+
 ## Completed Access And CLI Shape Work
 
 - unified primary CLI is now `grafana-util`

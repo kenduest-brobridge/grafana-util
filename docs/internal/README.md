@@ -15,6 +15,7 @@ top of the file.
 - `ai-changes.md`
 - `project-roadmap.md`
 - `project-value-assessment.md`
+- `future-feature-proposals.md`
 - `competitor-analysis.md`
 - `market-analysis-report.zh-TW.md`
 - `todo-archive.md`
@@ -24,6 +25,7 @@ top of the file.
 - `datasource-import-plan.md`
 - `datasource-import-plan-python.md`
 - `datasource-import-plan-rust.md`
+- `dashboard-permission-import-plan.md`
 - `datasource-live-mutation-unwired.md`
 - `folder-path-match-feature-plan.md`
 - `gitops-sync-unwired.md`

@@ -182,12 +182,40 @@ pub(crate) fn build_datasource_inventory_record(
     datasource: &Map<String, Value>,
     org: &Map<String, Value>,
 ) -> DatasourceInventoryItem {
+    let json_data = datasource.get("jsonData").and_then(Value::as_object);
+    let database = {
+        let value = string_field(datasource, "database", "");
+        if !value.is_empty() {
+            value
+        } else {
+            json_data
+                .map(|item| string_field(item, "dbName", ""))
+                .unwrap_or_default()
+        }
+    };
     DatasourceInventoryItem {
         uid: string_field(datasource, "uid", ""),
         name: string_field(datasource, "name", ""),
         datasource_type: string_field(datasource, "type", ""),
         access: string_field(datasource, "access", ""),
         url: string_field(datasource, "url", ""),
+        database,
+        default_bucket: json_data
+            .map(|item| string_field(item, "defaultBucket", ""))
+            .unwrap_or_default(),
+        organization: json_data
+            .map(|item| string_field(item, "organization", ""))
+            .unwrap_or_default(),
+        index_pattern: json_data
+            .map(|item| {
+                let value = string_field(item, "indexPattern", "");
+                if value.is_empty() {
+                    string_field(item, "index", "")
+                } else {
+                    value
+                }
+            })
+            .unwrap_or_default(),
         is_default: if datasource
             .get("isDefault")
             .and_then(Value::as_bool)
@@ -364,6 +392,60 @@ pub fn fetch_dashboard(client: &JsonHttpClient, uid: &str) -> Result<Value> {
         |method, path, params, payload| client.request_json(method, path, params, payload),
         uid,
     )
+}
+
+/// fetch dashboard permissions with request.
+pub(crate) fn fetch_dashboard_permissions_with_request<F>(
+    mut request_json: F,
+    uid: &str,
+) -> Result<Vec<Map<String, Value>>>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    let path = format!("/api/dashboards/uid/{uid}/permissions");
+    match request_json(Method::GET, &path, &[], None)? {
+        Some(Value::Array(items)) => items
+            .into_iter()
+            .map(|item| {
+                value_as_object(
+                    &item,
+                    &format!("Unexpected dashboard permissions payload for UID {uid}."),
+                )
+                .cloned()
+            })
+            .collect(),
+        Some(_) => Err(message(format!(
+            "Unexpected dashboard permissions payload for UID {uid}."
+        ))),
+        None => Ok(Vec::new()),
+    }
+}
+
+/// fetch folder permissions with request.
+pub(crate) fn fetch_folder_permissions_with_request<F>(
+    mut request_json: F,
+    uid: &str,
+) -> Result<Vec<Map<String, Value>>>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    let path = format!("/api/folders/{uid}/permissions");
+    match request_json(Method::GET, &path, &[], None)? {
+        Some(Value::Array(items)) => items
+            .into_iter()
+            .map(|item| {
+                value_as_object(
+                    &item,
+                    &format!("Unexpected folder permissions payload for UID {uid}."),
+                )
+                .cloned()
+            })
+            .collect(),
+        Some(_) => Err(message(format!(
+            "Unexpected folder permissions payload for UID {uid}."
+        ))),
+        None => Ok(Vec::new()),
+    }
 }
 
 /// fetch dashboard if exists with request.

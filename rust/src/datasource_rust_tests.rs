@@ -10,6 +10,7 @@ use super::{
     run_datasource_cli, CommonCliArgs, DatasourceCliArgs, DatasourceImportArgs,
     DatasourceImportRecord,
 };
+use crate::datasource_catalog::render_supported_datasource_catalog_json;
 use clap::{CommandFactory, Parser};
 use serde_json::{json, Value};
 use std::fs;
@@ -41,6 +42,94 @@ fn load_contract_cases() -> Vec<Value> {
     .unwrap()
 }
 
+fn load_nested_json_data_merge_cases() -> Vec<Value> {
+    serde_json::from_str(include_str!(
+        "../../fixtures/datasource_nested_json_data_merge_cases.json"
+    ))
+    .unwrap()
+}
+
+fn load_secure_json_merge_cases() -> Vec<Value> {
+    serde_json::from_str(include_str!(
+        "../../fixtures/datasource_secure_json_merge_cases.json"
+    ))
+    .unwrap()
+}
+
+fn load_preset_profile_add_payload_cases() -> Vec<Value> {
+    let document: Value = serde_json::from_str(include_str!(
+        "../../fixtures/datasource_preset_profile_add_payload_cases.json"
+    ))
+    .unwrap();
+    document["cases"].as_array().cloned().unwrap()
+}
+
+fn load_supported_types_catalog_fixture() -> Value {
+    serde_json::from_str(include_str!(
+        "../../fixtures/datasource_supported_types_catalog.json"
+    ))
+    .unwrap()
+}
+
+fn project_supported_types_catalog(document: &Value) -> Value {
+    json!({
+        "kind": document["kind"].clone(),
+        "categories": document["categories"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|category| {
+                json!({
+                    "category": category["category"].clone(),
+                    "types": category["types"]
+                        .as_array()
+                        .unwrap()
+                        .iter()
+                        .map(|datasource_type| {
+                            json!({
+                                "type": datasource_type["type"].clone(),
+                                "profile": datasource_type["profile"].clone(),
+                                "queryLanguage": datasource_type["queryLanguage"].clone(),
+                                "requiresDatasourceUrl": datasource_type["requiresDatasourceUrl"].clone(),
+                                "suggestedFlags": datasource_type["suggestedFlags"].clone(),
+                                "presetProfiles": datasource_type["presetProfiles"].clone(),
+                                "addDefaults": datasource_type["addDefaults"].clone(),
+                                "fullAddDefaults": datasource_type["fullAddDefaults"].clone(),
+                            })
+                        })
+                        .collect::<Vec<_>>(),
+                })
+            })
+            .collect::<Vec<_>>(),
+    })
+}
+
+fn assert_json_subset(actual: &Value, expected: &Value) {
+    match expected {
+        Value::Object(expected_object) => {
+            let actual_object = actual
+                .as_object()
+                .unwrap_or_else(|| panic!("expected object, got {actual:?}"));
+            for (key, expected_value) in expected_object {
+                let actual_value = actual_object
+                    .get(key)
+                    .unwrap_or_else(|| panic!("missing key {key} in {actual:?}"));
+                assert_json_subset(actual_value, expected_value);
+            }
+        }
+        Value::Array(expected_items) => {
+            let actual_items = actual
+                .as_array()
+                .unwrap_or_else(|| panic!("expected array, got {actual:?}"));
+            assert_eq!(actual_items.len(), expected_items.len());
+            for (actual_item, expected_item) in actual_items.iter().zip(expected_items.iter()) {
+                assert_json_subset(actual_item, expected_item);
+            }
+        }
+        _ => assert_eq!(actual, expected),
+    }
+}
+
 fn test_datasource_common_args() -> CommonCliArgs {
     CommonCliArgs {
         url: "http://grafana.example".to_string(),
@@ -62,10 +151,26 @@ fn datasource_root_help_includes_examples() {
     let help = String::from_utf8(output).unwrap();
 
     assert!(help.contains("Examples:"));
+    assert!(help.contains("grafana-util datasource types"));
     assert!(help.contains("grafana-util datasource list"));
     assert!(help.contains("--all-orgs"));
     assert!(help.contains("grafana-util datasource add"));
     assert!(help.contains("grafana-util datasource import"));
+}
+
+#[test]
+fn types_help_includes_examples() {
+    let mut command = DatasourceCliArgs::command();
+    let subcommand = command
+        .find_subcommand_mut("types")
+        .unwrap_or_else(|| panic!("missing datasource types help"));
+    let mut output = Vec::new();
+    subcommand.write_long_help(&mut output).unwrap();
+    let help = String::from_utf8(output).unwrap();
+
+    assert!(help.contains("--json"));
+    assert!(help.contains("--output-format"));
+    assert!(help.contains("grafana-util datasource types"));
 }
 
 #[test]
@@ -142,11 +247,679 @@ fn add_help_explains_live_mutation_flags() {
 
     assert!(help.contains("--name"));
     assert!(help.contains("--type"));
+    assert!(help.contains("--apply-supported-defaults"));
+    assert!(help.contains("--preset-profile"));
+    assert!(help.contains("starter"));
+    assert!(help.contains("full"));
     assert!(help.contains("--datasource-url"));
+    assert!(help.contains("--basic-auth"));
+    assert!(help.contains("--basic-auth-user"));
+    assert!(help.contains("--basic-auth-password"));
+    assert!(help.contains("--user"));
+    assert!(help.contains("--password"));
+    assert!(help.contains("--with-credentials"));
+    assert!(help.contains("--http-header"));
+    assert!(help.contains("--tls-skip-verify"));
+    assert!(help.contains("--server-name"));
     assert!(help.contains("--json-data"));
     assert!(help.contains("--secure-json-data"));
     assert!(help.contains("--dry-run"));
     assert!(help.contains("Examples:"));
+}
+
+#[test]
+fn build_add_payload_normalizes_supported_type_alias() {
+    let args = DatasourceCliArgs::parse_normalized_from([
+        "grafana-util",
+        "add",
+        "--name",
+        "Prometheus Main",
+        "--type",
+        "grafana-prometheus-datasource",
+        "--dry-run",
+    ]);
+
+    match args.command {
+        super::DatasourceGroupCommand::Add(inner) => {
+            let payload = build_add_payload(&inner).unwrap();
+            assert_eq!(payload["type"], json!("prometheus"));
+        }
+        _ => panic!("expected datasource add"),
+    }
+}
+
+#[test]
+fn build_add_payload_applies_supported_defaults_when_requested() {
+    let args = DatasourceCliArgs::parse_normalized_from([
+        "grafana-util",
+        "add",
+        "--name",
+        "Prometheus Main",
+        "--type",
+        "prometheus",
+        "--apply-supported-defaults",
+        "--json-data",
+        "{\"httpMethod\":\"GET\",\"timeInterval\":\"30s\"}",
+        "--dry-run",
+    ]);
+
+    match args.command {
+        super::DatasourceGroupCommand::Add(inner) => {
+            let payload = build_add_payload(&inner).unwrap();
+            assert_eq!(payload["access"], json!("proxy"));
+            assert!(!payload.as_object().unwrap().contains_key("httpMethod"));
+            assert_eq!(payload["jsonData"]["httpMethod"], json!("GET"));
+            assert_eq!(payload["jsonData"]["timeInterval"], json!("30s"));
+        }
+        _ => panic!("expected datasource add"),
+    }
+}
+
+#[test]
+fn build_add_payload_applies_full_preset_profile_defaults() {
+    let args = DatasourceCliArgs::parse_normalized_from([
+        "grafana-util",
+        "add",
+        "--name",
+        "Prometheus Main",
+        "--type",
+        "prometheus",
+        "--preset-profile",
+        "full",
+        "--json-data",
+        "{\"httpMethod\":\"GET\",\"timeInterval\":\"30s\"}",
+        "--dry-run",
+    ]);
+
+    match args.command {
+        super::DatasourceGroupCommand::Add(inner) => {
+            let payload = build_add_payload(&inner).unwrap();
+            assert_eq!(payload["access"], json!("proxy"));
+            assert_eq!(payload["httpMethod"], json!("POST"));
+            assert_eq!(payload["jsonData"]["httpMethod"], json!("GET"));
+            assert_eq!(payload["jsonData"]["timeInterval"], json!("30s"));
+        }
+        _ => panic!("expected datasource add"),
+    }
+}
+
+#[test]
+fn build_add_payload_applies_full_preset_profile_scaffold_for_loki() {
+    let args = DatasourceCliArgs::parse_normalized_from([
+        "grafana-util",
+        "add",
+        "--name",
+        "Loki Main",
+        "--type",
+        "loki",
+        "--preset-profile",
+        "full",
+        "--dry-run",
+    ]);
+
+    match args.command {
+        super::DatasourceGroupCommand::Add(inner) => {
+            let payload = build_add_payload(&inner).unwrap();
+            assert_eq!(payload["type"], json!("loki"));
+            assert_eq!(payload["access"], json!("proxy"));
+            assert_eq!(payload["jsonData"]["maxLines"], json!(1000));
+            assert_eq!(payload["jsonData"]["timeout"], json!(60));
+            assert_eq!(
+                payload["jsonData"]["derivedFields"][0]["name"],
+                json!("TraceID")
+            );
+            assert_eq!(
+                payload["jsonData"]["derivedFields"][0]["matcherRegex"],
+                json!("traceID=(\\w+)")
+            );
+            assert_eq!(
+                payload["jsonData"]["derivedFields"][0]["datasourceUid"],
+                json!("tempo")
+            );
+            assert_eq!(
+                payload["jsonData"]["derivedFields"][0]["urlDisplayLabel"],
+                json!("View Trace")
+            );
+            assert_eq!(
+                payload["jsonData"]["derivedFields"][0]["url"],
+                json!("$${__value.raw}")
+            );
+        }
+        _ => panic!("expected datasource add"),
+    }
+}
+
+#[test]
+fn build_add_payload_applies_full_preset_profile_scaffold_for_tempo() {
+    let args = DatasourceCliArgs::parse_normalized_from([
+        "grafana-util",
+        "add",
+        "--name",
+        "Tempo Main",
+        "--type",
+        "tempo",
+        "--preset-profile",
+        "full",
+        "--dry-run",
+    ]);
+
+    match args.command {
+        super::DatasourceGroupCommand::Add(inner) => {
+            let payload = build_add_payload(&inner).unwrap();
+            assert_eq!(payload["type"], json!("tempo"));
+            assert_eq!(payload["access"], json!("proxy"));
+            assert_eq!(
+                payload["jsonData"]["serviceMap"]["datasourceUid"],
+                json!("prometheus")
+            );
+            assert_eq!(
+                payload["jsonData"]["tracesToLogsV2"]["datasourceUid"],
+                json!("loki")
+            );
+            assert_eq!(
+                payload["jsonData"]["tracesToLogsV2"]["spanStartTimeShift"],
+                json!("-1h")
+            );
+            assert_eq!(
+                payload["jsonData"]["tracesToLogsV2"]["spanEndTimeShift"],
+                json!("1h")
+            );
+            assert_eq!(
+                payload["jsonData"]["tracesToMetrics"]["datasourceUid"],
+                json!("prometheus")
+            );
+            assert_eq!(
+                payload["jsonData"]["tracesToMetrics"]["spanStartTimeShift"],
+                json!("-1h")
+            );
+            assert_eq!(
+                payload["jsonData"]["tracesToMetrics"]["spanEndTimeShift"],
+                json!("1h")
+            );
+            assert_eq!(payload["jsonData"]["nodeGraph"]["enabled"], json!(true));
+            assert_eq!(payload["jsonData"]["search"]["hide"], json!(false));
+        }
+        _ => panic!("expected datasource add"),
+    }
+}
+
+#[test]
+fn build_add_payload_applies_full_preset_profile_scaffold_for_mysql() {
+    let args = DatasourceCliArgs::parse_normalized_from([
+        "grafana-util",
+        "add",
+        "--name",
+        "MySQL Main",
+        "--type",
+        "mysql",
+        "--preset-profile",
+        "full",
+        "--dry-run",
+    ]);
+
+    match args.command {
+        super::DatasourceGroupCommand::Add(inner) => {
+            let payload = build_add_payload(&inner).unwrap();
+            assert_eq!(payload["type"], json!("mysql"));
+            assert_eq!(payload["access"], json!("proxy"));
+            assert_eq!(payload["jsonData"]["database"], json!("grafana"));
+            assert_eq!(payload["jsonData"]["maxOpenConns"], json!(100));
+            assert_eq!(payload["jsonData"]["maxIdleConns"], json!(100));
+            assert_eq!(payload["jsonData"]["maxIdleConnsAuto"], json!(true));
+            assert_eq!(payload["jsonData"]["connMaxLifetime"], json!(14400));
+            assert_eq!(payload["jsonData"]["tlsAuth"], json!(true));
+            assert_eq!(payload["jsonData"]["tlsSkipVerify"], json!(true));
+        }
+        _ => panic!("expected datasource add"),
+    }
+}
+
+#[test]
+fn build_add_payload_applies_full_preset_profile_scaffold_for_postgresql() {
+    let args = DatasourceCliArgs::parse_normalized_from([
+        "grafana-util",
+        "add",
+        "--name",
+        "Postgres Main",
+        "--type",
+        "postgresql",
+        "--preset-profile",
+        "full",
+        "--dry-run",
+    ]);
+
+    match args.command {
+        super::DatasourceGroupCommand::Add(inner) => {
+            let payload = build_add_payload(&inner).unwrap();
+            assert_eq!(payload["type"], json!("postgresql"));
+            assert_eq!(payload["access"], json!("proxy"));
+            assert_eq!(payload["jsonData"]["database"], json!("grafana"));
+            assert_eq!(payload["jsonData"]["sslmode"], json!("disable"));
+            assert_eq!(payload["jsonData"]["maxOpenConns"], json!(100));
+            assert_eq!(payload["jsonData"]["maxIdleConns"], json!(100));
+            assert_eq!(payload["jsonData"]["maxIdleConnsAuto"], json!(true));
+            assert_eq!(payload["jsonData"]["connMaxLifetime"], json!(14400));
+            assert_eq!(payload["jsonData"]["postgresVersion"], json!(903));
+            assert_eq!(payload["jsonData"]["timescaledb"], json!(false));
+        }
+        _ => panic!("expected datasource add"),
+    }
+}
+
+#[test]
+fn build_add_payload_matches_shared_preset_profile_fixture() {
+    for case in load_preset_profile_add_payload_cases() {
+        let args = case["args"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|value| value.as_str().unwrap())
+            .collect::<Vec<_>>();
+        let parsed = DatasourceCliArgs::parse_normalized_from(args);
+        let add_args = match parsed.command {
+            super::DatasourceGroupCommand::Add(inner) => inner,
+            _ => panic!("expected datasource add"),
+        };
+
+        let payload = build_add_payload(&add_args).unwrap();
+        assert_json_subset(&payload, &case["expectedSubset"]);
+    }
+}
+
+#[test]
+fn build_add_payload_applies_full_preset_profile_time_field_defaults() {
+    let args = DatasourceCliArgs::parse_normalized_from([
+        "grafana-util",
+        "add",
+        "--name",
+        "Elastic Main",
+        "--type",
+        "elasticsearch",
+        "--preset-profile",
+        "full",
+        "--dry-run",
+    ]);
+
+    match args.command {
+        super::DatasourceGroupCommand::Add(inner) => {
+            let payload = build_add_payload(&inner).unwrap();
+            assert_eq!(payload["access"], json!("proxy"));
+            assert_eq!(payload["timeField"], json!("@timestamp"));
+            assert_eq!(payload["jsonData"]["timeField"], json!("@timestamp"));
+        }
+        _ => panic!("expected datasource add"),
+    }
+}
+
+#[test]
+fn build_add_payload_applies_supported_defaults_for_elasticsearch() {
+    let args = DatasourceCliArgs::parse_normalized_from([
+        "grafana-util",
+        "add",
+        "--name",
+        "Elastic Main",
+        "--type",
+        "elasticsearch",
+        "--apply-supported-defaults",
+        "--dry-run",
+    ]);
+
+    match args.command {
+        super::DatasourceGroupCommand::Add(inner) => {
+            let payload = build_add_payload(&inner).unwrap();
+            assert_eq!(payload["type"], json!("elasticsearch"));
+            assert_eq!(payload["access"], json!("proxy"));
+            assert_eq!(payload["jsonData"]["timeField"], json!("@timestamp"));
+        }
+        _ => panic!("expected datasource add"),
+    }
+}
+
+#[test]
+fn build_add_payload_applies_supported_defaults_for_influxdb() {
+    let args = DatasourceCliArgs::parse_normalized_from([
+        "grafana-util",
+        "add",
+        "--name",
+        "Influx Main",
+        "--type",
+        "influxdb",
+        "--apply-supported-defaults",
+        "--dry-run",
+    ]);
+
+    match args.command {
+        super::DatasourceGroupCommand::Add(inner) => {
+            let payload = build_add_payload(&inner).unwrap();
+            assert_eq!(payload["type"], json!("influxdb"));
+            assert_eq!(payload["access"], json!("proxy"));
+            assert_eq!(payload["jsonData"]["version"], json!("Flux"));
+            assert_eq!(payload["jsonData"]["organization"], json!("main-org"));
+            assert_eq!(payload["jsonData"]["defaultBucket"], json!("metrics"));
+        }
+        _ => panic!("expected datasource add"),
+    }
+}
+
+#[test]
+fn build_add_payload_applies_supported_defaults_for_loki() {
+    let args = DatasourceCliArgs::parse_normalized_from([
+        "grafana-util",
+        "add",
+        "--name",
+        "Loki Main",
+        "--type",
+        "loki",
+        "--apply-supported-defaults",
+        "--json-data",
+        "{\"maxLines\":250}",
+        "--dry-run",
+    ]);
+
+    match args.command {
+        super::DatasourceGroupCommand::Add(inner) => {
+            let payload = build_add_payload(&inner).unwrap();
+            assert_eq!(payload["type"], json!("loki"));
+            assert_eq!(payload["access"], json!("proxy"));
+            assert_eq!(payload["jsonData"]["maxLines"], json!(250));
+            assert_eq!(payload["jsonData"]["timeout"], json!(60));
+        }
+        _ => panic!("expected datasource add"),
+    }
+}
+
+#[test]
+fn build_add_payload_applies_supported_defaults_for_tempo() {
+    let args = DatasourceCliArgs::parse_normalized_from([
+        "grafana-util",
+        "add",
+        "--name",
+        "Tempo Main",
+        "--type",
+        "tempo",
+        "--apply-supported-defaults",
+        "--dry-run",
+    ]);
+
+    match args.command {
+        super::DatasourceGroupCommand::Add(inner) => {
+            let payload = build_add_payload(&inner).unwrap();
+            assert_eq!(payload["type"], json!("tempo"));
+            assert_eq!(payload["access"], json!("proxy"));
+            assert_eq!(payload["jsonData"]["nodeGraph"]["enabled"], json!(true));
+            assert_eq!(payload["jsonData"]["search"]["hide"], json!(false));
+            assert_eq!(
+                payload["jsonData"]["traceQuery"]["timeShiftEnabled"],
+                json!(true)
+            );
+            assert_eq!(
+                payload["jsonData"]["traceQuery"]["spanStartTimeShift"],
+                json!("-1h")
+            );
+            assert_eq!(
+                payload["jsonData"]["traceQuery"]["spanEndTimeShift"],
+                json!("1h")
+            );
+            assert_eq!(
+                payload["jsonData"]["streamingEnabled"]["search"],
+                json!(true)
+            );
+        }
+        _ => panic!("expected datasource add"),
+    }
+}
+
+#[test]
+fn build_add_payload_applies_supported_defaults_for_postgresql() {
+    let args = DatasourceCliArgs::parse_normalized_from([
+        "grafana-util",
+        "add",
+        "--name",
+        "Postgres Main",
+        "--type",
+        "postgres",
+        "--apply-supported-defaults",
+        "--dry-run",
+    ]);
+
+    match args.command {
+        super::DatasourceGroupCommand::Add(inner) => {
+            let payload = build_add_payload(&inner).unwrap();
+            assert_eq!(payload["type"], json!("postgresql"));
+            assert_eq!(payload["access"], json!("proxy"));
+            assert_eq!(payload["jsonData"]["database"], json!("grafana"));
+            assert_eq!(payload["jsonData"]["sslmode"], json!("disable"));
+            assert_eq!(payload["jsonData"]["maxOpenConns"], json!(100));
+            assert_eq!(payload["jsonData"]["maxIdleConns"], json!(100));
+            assert_eq!(payload["jsonData"]["maxIdleConnsAuto"], json!(true));
+            assert_eq!(payload["jsonData"]["connMaxLifetime"], json!(14400));
+        }
+        _ => panic!("expected datasource add"),
+    }
+}
+
+#[test]
+fn supported_catalog_json_includes_prometheus_profile_metadata() {
+    let document = render_supported_datasource_catalog_json();
+    let prometheus = document["categories"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|row| row["category"] == json!("Metrics"))
+        .and_then(|row| row["types"].as_array())
+        .and_then(|rows| rows.iter().find(|row| row["type"] == json!("prometheus")))
+        .unwrap();
+
+    assert_eq!(prometheus["profile"], json!("metrics-http"));
+    assert_eq!(prometheus["queryLanguage"], json!("promql"));
+    assert_eq!(prometheus["requiresDatasourceUrl"], json!(true));
+    assert!(prometheus["suggestedFlags"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|item| item == "--basic-auth"));
+    assert_eq!(prometheus["presetProfiles"], json!(["starter"]));
+    assert_eq!(prometheus["addDefaults"]["access"], json!("proxy"));
+    assert_eq!(
+        prometheus["addDefaults"]["jsonData"]["httpMethod"],
+        json!("POST")
+    );
+    assert_eq!(prometheus["fullAddDefaults"], prometheus["addDefaults"]);
+}
+
+#[test]
+fn supported_catalog_json_matches_shared_supported_types_fixture() {
+    let document = render_supported_datasource_catalog_json();
+
+    assert_eq!(
+        project_supported_types_catalog(&document),
+        load_supported_types_catalog_fixture()
+    );
+}
+
+#[test]
+fn supported_catalog_json_includes_database_profile_metadata() {
+    let document = render_supported_datasource_catalog_json();
+    let sqlite = document["categories"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|row| row["category"] == json!("Databases"))
+        .and_then(|row| row["types"].as_array())
+        .and_then(|rows| rows.iter().find(|row| row["type"] == json!("sqlite")))
+        .unwrap();
+
+    assert_eq!(sqlite["profile"], json!("sql-database"));
+    assert_eq!(sqlite["queryLanguage"], json!("sql"));
+    assert_eq!(sqlite["requiresDatasourceUrl"], json!(false));
+    assert!(sqlite["suggestedFlags"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|item| item == "--user"));
+    assert_eq!(sqlite["presetProfiles"], json!(["starter"]));
+}
+
+#[test]
+fn supported_catalog_json_includes_family_level_json_data_defaults() {
+    let document = render_supported_datasource_catalog_json();
+    let metrics_types = document["categories"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|row| row["category"] == json!("Metrics"))
+        .and_then(|row| row["types"].as_array())
+        .unwrap();
+    let influxdb = metrics_types
+        .iter()
+        .find(|row| row["type"] == json!("influxdb"))
+        .unwrap();
+    assert_eq!(influxdb["addDefaults"]["access"], json!("proxy"));
+    assert_eq!(
+        influxdb["addDefaults"]["jsonData"]["version"],
+        json!("Flux")
+    );
+    assert_eq!(
+        influxdb["addDefaults"]["jsonData"]["organization"],
+        json!("main-org")
+    );
+    assert_eq!(
+        influxdb["addDefaults"]["jsonData"]["defaultBucket"],
+        json!("metrics")
+    );
+    let graphite = metrics_types
+        .iter()
+        .find(|row| row["type"] == json!("graphite"))
+        .unwrap();
+    assert_eq!(
+        graphite["addDefaults"]["jsonData"]["graphiteVersion"],
+        json!("1.1")
+    );
+
+    let logs_types = document["categories"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|row| row["category"] == json!("Logs"))
+        .and_then(|row| row["types"].as_array())
+        .unwrap();
+    let loki = logs_types
+        .iter()
+        .find(|row| row["type"] == json!("loki"))
+        .unwrap();
+    assert_eq!(loki["addDefaults"]["access"], json!("proxy"));
+    assert_eq!(loki["presetProfiles"], json!(["starter", "full"]));
+    assert_eq!(loki["addDefaults"]["jsonData"]["maxLines"], json!(1000));
+    assert_eq!(loki["addDefaults"]["jsonData"]["timeout"], json!(60));
+    assert_eq!(
+        loki["fullAddDefaults"]["jsonData"]["derivedFields"][0]["datasourceUid"],
+        json!("tempo")
+    );
+
+    let tracing_types = document["categories"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|row| row["category"] == json!("Tracing"))
+        .and_then(|row| row["types"].as_array())
+        .unwrap();
+    let tempo = tracing_types
+        .iter()
+        .find(|row| row["type"] == json!("tempo"))
+        .unwrap();
+    assert_eq!(tempo["presetProfiles"], json!(["starter", "full"]));
+    assert_eq!(
+        tempo["addDefaults"]["jsonData"]["nodeGraph"]["enabled"],
+        json!(true)
+    );
+    assert_eq!(
+        tempo["addDefaults"]["jsonData"]["search"]["hide"],
+        json!(false)
+    );
+    assert_eq!(
+        tempo["addDefaults"]["jsonData"]["traceQuery"]["timeShiftEnabled"],
+        json!(true)
+    );
+    assert_eq!(
+        tempo["fullAddDefaults"]["jsonData"]["serviceMap"]["datasourceUid"],
+        json!("prometheus")
+    );
+    assert_eq!(
+        tempo["fullAddDefaults"]["jsonData"]["tracesToLogsV2"]["datasourceUid"],
+        json!("loki")
+    );
+
+    let database_types = document["categories"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|row| row["category"] == json!("Databases"))
+        .and_then(|row| row["types"].as_array())
+        .unwrap();
+    let postgresql = database_types
+        .iter()
+        .find(|row| row["type"] == json!("postgresql"))
+        .unwrap();
+    assert_eq!(postgresql["presetProfiles"], json!(["starter", "full"]));
+    assert_eq!(
+        postgresql["addDefaults"]["jsonData"]["database"],
+        json!("grafana")
+    );
+    assert_eq!(
+        postgresql["addDefaults"]["jsonData"]["sslmode"],
+        json!("disable")
+    );
+    let mysql = database_types
+        .iter()
+        .find(|row| row["type"] == json!("mysql"))
+        .unwrap();
+    assert_eq!(mysql["presetProfiles"], json!(["starter", "full"]));
+    assert_eq!(mysql["fullAddDefaults"]["jsonData"]["tlsAuth"], json!(true));
+}
+
+#[test]
+fn supported_catalog_text_mentions_profile_and_flags() {
+    let lines = crate::datasource_catalog::render_supported_datasource_catalog_text();
+    let prometheus_line = lines
+        .iter()
+        .find(|line| line.contains("Prometheus (prometheus)"))
+        .unwrap();
+    assert!(prometheus_line.contains("profile=metrics-http"));
+    assert!(prometheus_line.contains("query=promql"));
+    assert!(prometheus_line.contains("flags: --basic-auth"));
+}
+
+#[test]
+fn supported_catalog_text_mentions_family_level_defaults() {
+    let lines = crate::datasource_catalog::render_supported_datasource_catalog_text();
+    let influxdb_line = lines
+        .iter()
+        .find(|line| line.contains("InfluxDB (influxdb)"))
+        .unwrap();
+    assert!(influxdb_line.contains("defaults: access=proxy, jsonData.version=Flux"));
+    assert!(influxdb_line.contains("jsonData.organization=main-org"));
+    assert!(influxdb_line.contains("jsonData.defaultBucket=metrics"));
+
+    let loki_line = lines
+        .iter()
+        .find(|line| line.contains("Loki (loki)"))
+        .unwrap();
+    assert!(loki_line.contains("jsonData.maxLines=1000"));
+    assert!(loki_line.contains("jsonData.timeout=60"));
+
+    let tempo_line = lines
+        .iter()
+        .find(|line| line.contains("Tempo (tempo)"))
+        .unwrap();
+    assert!(tempo_line.contains("jsonData.nodeGraph.enabled=true"));
+    assert!(tempo_line.contains("jsonData.traceQuery.timeShiftEnabled=true"));
+
+    let postgresql_line = lines
+        .iter()
+        .find(|line| line.contains("PostgreSQL (postgresql)"))
+        .unwrap();
+    assert!(postgresql_line.contains("jsonData.database=grafana"));
+    assert!(postgresql_line.contains("jsonData.sslmode=disable"));
 }
 
 #[test]
@@ -181,6 +954,15 @@ fn modify_help_explains_live_mutation_flags() {
     assert!(help.contains("--set-url"));
     assert!(help.contains("--set-access"));
     assert!(help.contains("--set-default"));
+    assert!(help.contains("--basic-auth"));
+    assert!(help.contains("--basic-auth-user"));
+    assert!(help.contains("--basic-auth-password"));
+    assert!(help.contains("--user"));
+    assert!(help.contains("--password"));
+    assert!(help.contains("--with-credentials"));
+    assert!(help.contains("--http-header"));
+    assert!(help.contains("--tls-skip-verify"));
+    assert!(help.contains("--server-name"));
     assert!(help.contains("--json-data"));
     assert!(help.contains("--secure-json-data"));
     assert!(help.contains("--dry-run"));
@@ -203,6 +985,23 @@ fn parse_datasource_list_supports_output_format_json() {
             assert!(!inner.csv);
         }
         _ => panic!("expected datasource list"),
+    }
+}
+
+#[test]
+fn parse_datasource_types_supports_output_format_json() {
+    let args = DatasourceCliArgs::parse_normalized_from([
+        "grafana-util",
+        "types",
+        "--output-format",
+        "json",
+    ]);
+
+    match args.command {
+        super::DatasourceGroupCommand::Types(inner) => {
+            assert!(inner.json);
+        }
+        _ => panic!("expected datasource types"),
     }
 }
 
@@ -324,6 +1123,48 @@ fn parse_datasource_add_supports_output_format_table() {
 }
 
 #[test]
+fn parse_datasource_add_supports_datasource_auth_flags() {
+    let args = DatasourceCliArgs::parse_normalized_from([
+        "grafana-util",
+        "add",
+        "--name",
+        "Prometheus Main",
+        "--type",
+        "prometheus",
+        "--basic-auth",
+        "--basic-auth-user",
+        "metrics-user",
+        "--basic-auth-password",
+        "metrics-pass",
+        "--user",
+        "query-user",
+        "--password",
+        "query-pass",
+        "--with-credentials",
+        "--http-header",
+        "X-Scope-OrgID=tenant-a",
+        "--tls-skip-verify",
+        "--server-name",
+        "prometheus.internal",
+    ]);
+
+    match args.command {
+        super::DatasourceGroupCommand::Add(inner) => {
+            assert!(inner.basic_auth);
+            assert_eq!(inner.basic_auth_user.as_deref(), Some("metrics-user"));
+            assert_eq!(inner.basic_auth_password.as_deref(), Some("metrics-pass"));
+            assert_eq!(inner.user.as_deref(), Some("query-user"));
+            assert_eq!(inner.datasource_password.as_deref(), Some("query-pass"));
+            assert!(inner.with_credentials);
+            assert_eq!(inner.http_header, vec!["X-Scope-OrgID=tenant-a"]);
+            assert!(inner.tls_skip_verify);
+            assert_eq!(inner.server_name.as_deref(), Some("prometheus.internal"));
+        }
+        _ => panic!("expected datasource add"),
+    }
+}
+
+#[test]
 fn parse_datasource_delete_supports_output_format_json() {
     let args = DatasourceCliArgs::parse_normalized_from([
         "grafana-util",
@@ -387,6 +1228,46 @@ fn parse_datasource_modify_supports_output_format_table() {
             assert!(inner.dry_run);
             assert!(inner.table);
             assert!(!inner.json);
+        }
+        _ => panic!("expected datasource modify"),
+    }
+}
+
+#[test]
+fn parse_datasource_modify_supports_datasource_auth_flags() {
+    let args = DatasourceCliArgs::parse_normalized_from([
+        "grafana-util",
+        "modify",
+        "--uid",
+        "prom-main",
+        "--basic-auth",
+        "--basic-auth-user",
+        "metrics-user",
+        "--basic-auth-password",
+        "metrics-pass",
+        "--user",
+        "query-user",
+        "--password",
+        "query-pass",
+        "--with-credentials",
+        "--http-header",
+        "X-Scope-OrgID=tenant-b",
+        "--tls-skip-verify",
+        "--server-name",
+        "prometheus.internal",
+    ]);
+
+    match args.command {
+        super::DatasourceGroupCommand::Modify(inner) => {
+            assert!(inner.basic_auth);
+            assert_eq!(inner.basic_auth_user.as_deref(), Some("metrics-user"));
+            assert_eq!(inner.basic_auth_password.as_deref(), Some("metrics-pass"));
+            assert_eq!(inner.user.as_deref(), Some("query-user"));
+            assert_eq!(inner.datasource_password.as_deref(), Some("query-pass"));
+            assert!(inner.with_credentials);
+            assert_eq!(inner.http_header, vec!["X-Scope-OrgID=tenant-b"]);
+            assert!(inner.tls_skip_verify);
+            assert_eq!(inner.server_name.as_deref(), Some("prometheus.internal"));
         }
         _ => panic!("expected datasource modify"),
     }
@@ -790,6 +1671,114 @@ fn build_add_payload_keeps_optional_json_fields() {
 }
 
 #[test]
+fn build_add_payload_supports_datasource_auth_and_header_flags() {
+    let args = DatasourceCliArgs::parse_normalized_from([
+        "grafana-util",
+        "add",
+        "--uid",
+        "prom-main",
+        "--name",
+        "Prometheus Main",
+        "--type",
+        "prometheus",
+        "--datasource-url",
+        "http://prometheus:9090",
+        "--apply-supported-defaults",
+        "--basic-auth",
+        "--basic-auth-user",
+        "metrics-user",
+        "--basic-auth-password",
+        "metrics-pass",
+        "--user",
+        "query-user",
+        "--password",
+        "query-pass",
+        "--with-credentials",
+        "--http-header",
+        "X-Scope-OrgID=tenant-a",
+        "--tls-skip-verify",
+        "--server-name",
+        "prometheus.internal",
+    ]);
+    let add_args = match args.command {
+        super::DatasourceGroupCommand::Add(inner) => inner,
+        _ => panic!("expected datasource add"),
+    };
+
+    let payload = build_add_payload(&add_args).unwrap();
+
+    assert_eq!(payload["basicAuth"], json!(true));
+    assert_eq!(payload["basicAuthUser"], json!("metrics-user"));
+    assert_eq!(payload["user"], json!("query-user"));
+    assert_eq!(payload["withCredentials"], json!(true));
+    assert_eq!(payload["jsonData"]["httpMethod"], json!("POST"));
+    assert_eq!(
+        payload["jsonData"]["httpHeaderName1"],
+        json!("X-Scope-OrgID")
+    );
+    assert_eq!(payload["jsonData"]["tlsSkipVerify"], json!(true));
+    assert_eq!(
+        payload["jsonData"]["serverName"],
+        json!("prometheus.internal")
+    );
+    assert_eq!(
+        payload["secureJsonData"]["basicAuthPassword"],
+        json!("metrics-pass")
+    );
+    assert_eq!(payload["secureJsonData"]["password"], json!("query-pass"));
+    assert_eq!(
+        payload["secureJsonData"]["httpHeaderValue1"],
+        json!("tenant-a")
+    );
+}
+
+#[test]
+fn build_add_payload_rejects_basic_auth_password_without_user() {
+    let args = DatasourceCliArgs::parse_normalized_from([
+        "grafana-util",
+        "add",
+        "--name",
+        "Prometheus Main",
+        "--type",
+        "prometheus",
+        "--basic-auth-password",
+        "metrics-pass",
+    ]);
+    let add_args = match args.command {
+        super::DatasourceGroupCommand::Add(inner) => inner,
+        _ => panic!("expected datasource add"),
+    };
+
+    let error = build_add_payload(&add_args).unwrap_err().to_string();
+    assert!(error.contains("requires --basic-auth-user"));
+}
+
+#[test]
+fn build_add_payload_merges_nested_json_data_override_from_shared_fixture() {
+    for case in load_nested_json_data_merge_cases() {
+        if case["operation"] != json!("add") {
+            continue;
+        }
+        let args = case["args"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|value| value.as_str().unwrap())
+            .collect::<Vec<_>>();
+        let parsed = DatasourceCliArgs::parse_normalized_from(args);
+        let add_args = match parsed.command {
+            super::DatasourceGroupCommand::Add(inner) => inner,
+            _ => panic!("expected datasource add"),
+        };
+
+        let payload = build_add_payload(&add_args).unwrap();
+        let expected = case["expected"].as_object().unwrap();
+
+        assert_json_subset(&payload, &Value::Object(expected.clone()));
+    }
+}
+
+#[test]
 fn build_modify_updates_keeps_optional_json_fields() {
     let args = DatasourceCliArgs::parse_normalized_from([
         "grafana-util",
@@ -822,6 +1811,60 @@ fn build_modify_updates_keeps_optional_json_fields() {
 }
 
 #[test]
+fn build_modify_updates_supports_datasource_auth_and_header_flags() {
+    let args = DatasourceCliArgs::parse_normalized_from([
+        "grafana-util",
+        "modify",
+        "--uid",
+        "prom-main",
+        "--basic-auth",
+        "--basic-auth-user",
+        "metrics-user",
+        "--basic-auth-password",
+        "metrics-pass",
+        "--user",
+        "query-user",
+        "--password",
+        "query-pass",
+        "--with-credentials",
+        "--http-header",
+        "X-Scope-OrgID=tenant-b",
+        "--tls-skip-verify",
+        "--server-name",
+        "prometheus.internal",
+    ]);
+    let modify_args = match args.command {
+        super::DatasourceGroupCommand::Modify(inner) => inner,
+        _ => panic!("expected datasource modify"),
+    };
+
+    let updates = build_modify_updates(&modify_args).unwrap();
+
+    assert_eq!(updates["basicAuth"], json!(true));
+    assert_eq!(updates["basicAuthUser"], json!("metrics-user"));
+    assert_eq!(updates["user"], json!("query-user"));
+    assert_eq!(updates["withCredentials"], json!(true));
+    assert_eq!(
+        updates["jsonData"]["httpHeaderName1"],
+        json!("X-Scope-OrgID")
+    );
+    assert_eq!(updates["jsonData"]["tlsSkipVerify"], json!(true));
+    assert_eq!(
+        updates["jsonData"]["serverName"],
+        json!("prometheus.internal")
+    );
+    assert_eq!(
+        updates["secureJsonData"]["basicAuthPassword"],
+        json!("metrics-pass")
+    );
+    assert_eq!(updates["secureJsonData"]["password"], json!("query-pass"));
+    assert_eq!(
+        updates["secureJsonData"]["httpHeaderValue1"],
+        json!("tenant-b")
+    );
+}
+
+#[test]
 fn build_modify_payload_merges_existing_json_data() {
     let existing = json!({
         "id": 7,
@@ -831,6 +1874,10 @@ fn build_modify_payload_merges_existing_json_data() {
         "url": "http://prometheus:9090",
         "access": "proxy",
         "isDefault": false,
+        "basicAuth": true,
+        "basicAuthUser": "metrics-user",
+        "user": "query-user",
+        "withCredentials": true,
         "jsonData": {
             "httpMethod": "POST"
         }
@@ -851,12 +1898,130 @@ fn build_modify_payload_merges_existing_json_data() {
     .unwrap()
     .clone();
 
-    let payload = build_modify_payload(&existing, &updates);
+    let payload = build_modify_payload(&existing, &updates).unwrap();
 
     assert_eq!(payload["url"], json!("http://prometheus-v2:9090"));
+    assert_eq!(payload["basicAuth"], json!(true));
+    assert_eq!(payload["basicAuthUser"], json!("metrics-user"));
+    assert_eq!(payload["user"], json!("query-user"));
+    assert_eq!(payload["withCredentials"], json!(true));
     assert_eq!(payload["jsonData"]["httpMethod"], json!("POST"));
     assert_eq!(payload["jsonData"]["timeInterval"], json!("30s"));
     assert_eq!(payload["secureJsonData"]["token"], json!("abc123"));
+}
+
+#[test]
+fn build_modify_payload_rejects_basic_auth_password_without_basic_auth_user() {
+    let args = DatasourceCliArgs::parse_normalized_from([
+        "grafana-util",
+        "modify",
+        "--uid",
+        "prom-main",
+        "--basic-auth-password",
+        "metrics-pass",
+    ]);
+    let modify_args = match args.command {
+        super::DatasourceGroupCommand::Modify(inner) => inner,
+        _ => panic!("expected datasource modify"),
+    };
+    let updates = build_modify_updates(&modify_args).unwrap();
+    let existing = json!({
+        "id": 7,
+        "uid": "prom-main",
+        "name": "Prometheus Main",
+        "type": "prometheus",
+        "url": "http://prometheus:9090",
+        "access": "proxy",
+        "isDefault": false
+    })
+    .as_object()
+    .unwrap()
+    .clone();
+
+    let error = build_modify_payload(&existing, &updates).unwrap_err();
+
+    assert!(error
+        .to_string()
+        .contains("--basic-auth-password requires --basic-auth-user or an existing basicAuthUser"));
+}
+
+#[test]
+fn build_modify_payload_deep_merges_nested_json_data_override_from_shared_fixture() {
+    for case in load_nested_json_data_merge_cases() {
+        if case["operation"] != json!("modify") {
+            continue;
+        }
+        let args = case["args"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|value| value.as_str().unwrap())
+            .collect::<Vec<_>>();
+        let parsed = DatasourceCliArgs::parse_normalized_from(args);
+        let modify_args = match parsed.command {
+            super::DatasourceGroupCommand::Modify(inner) => inner,
+            _ => panic!("expected datasource modify"),
+        };
+
+        let updates = build_modify_updates(&modify_args).unwrap();
+        let existing = case["existing"].as_object().unwrap().clone();
+        let payload = build_modify_payload(&existing, &updates).unwrap();
+        let expected = case["expected"].as_object().unwrap();
+
+        assert_json_subset(&payload, &Value::Object(expected.clone()));
+    }
+}
+
+#[test]
+fn build_add_payload_preserves_explicit_secure_json_data_from_shared_fixture() {
+    for case in load_secure_json_merge_cases() {
+        if case["operation"] != json!("add") {
+            continue;
+        }
+        let args = case["args"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|value| value.as_str().unwrap())
+            .collect::<Vec<_>>();
+        let parsed = DatasourceCliArgs::parse_normalized_from(args);
+        let add_args = match parsed.command {
+            super::DatasourceGroupCommand::Add(inner) => inner,
+            _ => panic!("expected datasource add"),
+        };
+
+        let payload = build_add_payload(&add_args).unwrap();
+        let expected = case["expected"].as_object().unwrap();
+
+        assert_json_subset(&payload, &Value::Object(expected.clone()));
+    }
+}
+
+#[test]
+fn build_modify_payload_replaces_secure_json_data_from_shared_fixture() {
+    for case in load_secure_json_merge_cases() {
+        if case["operation"] != json!("modify") {
+            continue;
+        }
+        let args = case["args"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|value| value.as_str().unwrap())
+            .collect::<Vec<_>>();
+        let parsed = DatasourceCliArgs::parse_normalized_from(args);
+        let modify_args = match parsed.command {
+            super::DatasourceGroupCommand::Modify(inner) => inner,
+            _ => panic!("expected datasource modify"),
+        };
+
+        let updates = build_modify_updates(&modify_args).unwrap();
+        let existing = case["existing"].as_object().unwrap().clone();
+        let payload = build_modify_payload(&existing, &updates).unwrap();
+        let expected = case["expected"].as_object().unwrap();
+
+        assert_json_subset(&payload, &Value::Object(expected.clone()));
+    }
 }
 
 #[test]
@@ -933,6 +2098,222 @@ fn render_live_mutation_json_summarizes_actions() {
     assert_eq!(value["summary"]["updateCount"], json!(1));
     assert_eq!(value["summary"]["deleteCount"], json!(1));
     assert_eq!(value["summary"]["blockedCount"], json!(1));
+}
+
+#[test]
+fn routed_datasource_scope_identity_matches_table_json_and_progress_surfaces() {
+    let dry_run = json!({
+        "mode": "create-or-update",
+        "orgs": [
+            {
+                "sourceOrgId": 2,
+                "sourceOrgName": "Org Two",
+                "orgAction": "exists",
+                "targetOrgId": 2,
+                "datasourceCount": 1,
+                "importDir": "/tmp/datasource-export-all-orgs/org_2_Org_Two"
+            },
+            {
+                "sourceOrgId": 9,
+                "sourceOrgName": "Ops Org",
+                "orgAction": "would-create",
+                "targetOrgId": Value::Null,
+                "datasourceCount": 1,
+                "importDir": "/tmp/datasource-export-all-orgs/org_9_Ops_Org"
+            }
+        ],
+        "imports": [
+            {
+                "sourceOrgId": 2,
+                "sourceOrgName": "Org Two",
+                "orgAction": "exists",
+                "targetOrgId": 2
+            },
+            {
+                "sourceOrgId": 9,
+                "sourceOrgName": "Ops Org",
+                "orgAction": "would-create",
+                "targetOrgId": Value::Null
+            }
+        ]
+    });
+    let org_entries = dry_run["orgs"].as_array().unwrap();
+    let org_two = org_entries
+        .iter()
+        .find(|entry| entry["sourceOrgId"] == json!(2))
+        .unwrap();
+    let org_nine = org_entries
+        .iter()
+        .find(|entry| entry["sourceOrgId"] == json!(9))
+        .unwrap();
+    let rows: Vec<Vec<String>> = org_entries
+        .iter()
+        .map(|entry| {
+            vec![
+                entry["sourceOrgId"].as_i64().unwrap().to_string(),
+                entry["sourceOrgName"].as_str().unwrap().to_string(),
+                entry["orgAction"].as_str().unwrap().to_string(),
+                super::format_routed_datasource_target_org_label(entry["targetOrgId"].as_i64()),
+                entry["datasourceCount"].as_u64().unwrap().to_string(),
+                entry["importDir"].as_str().unwrap().to_string(),
+            ]
+        })
+        .collect();
+    let table_lines = super::render_routed_datasource_import_org_table(&rows, true);
+
+    let existing_summary = super::format_routed_datasource_scope_summary_fields(
+        2,
+        "Org Two",
+        "exists",
+        Some(2),
+        Path::new(org_two["importDir"].as_str().unwrap()),
+    );
+    let would_create_summary = super::format_routed_datasource_scope_summary_fields(
+        9,
+        "Ops Org",
+        "would-create",
+        None,
+        Path::new(org_nine["importDir"].as_str().unwrap()),
+    );
+
+    assert_eq!(org_two["targetOrgId"], json!(2));
+    assert_eq!(org_nine["targetOrgId"], Value::Null);
+    assert!(table_lines[2].contains("Org Two"));
+    assert!(table_lines[2].contains("2"));
+    assert!(table_lines[3].contains("Ops Org"));
+    assert!(table_lines[3].contains("<new>"));
+    assert!(existing_summary.contains("orgAction=exists"));
+    assert!(existing_summary.contains("targetOrgId=2"));
+    assert!(would_create_summary.contains("orgAction=would-create"));
+    assert!(would_create_summary.contains("targetOrgId=<new>"));
+}
+
+#[test]
+fn routed_datasource_status_matrix_covers_exists_missing_would_create_and_created() {
+    let missing_payload = json!({
+        "summary": {
+            "existingOrgCount": 1,
+            "missingOrgCount": 1,
+            "wouldCreateOrgCount": 0
+        },
+        "orgs": [
+            {
+                "sourceOrgId": 2,
+                "sourceOrgName": "Org Two",
+                "orgAction": "exists",
+                "targetOrgId": 2,
+                "importDir": "/tmp/datasource-export-all-orgs/org_2_Org_Two"
+            },
+            {
+                "sourceOrgId": 9,
+                "sourceOrgName": "Ops Org",
+                "orgAction": "missing",
+                "targetOrgId": Value::Null,
+                "importDir": "/tmp/datasource-export-all-orgs/org_9_Ops_Org"
+            }
+        ]
+    });
+    let would_create_payload = json!({
+        "summary": {
+            "existingOrgCount": 1,
+            "missingOrgCount": 0,
+            "wouldCreateOrgCount": 1
+        },
+        "orgs": [
+            {
+                "sourceOrgId": 2,
+                "sourceOrgName": "Org Two",
+                "orgAction": "exists",
+                "targetOrgId": 2,
+                "importDir": "/tmp/datasource-export-all-orgs/org_2_Org_Two"
+            },
+            {
+                "sourceOrgId": 9,
+                "sourceOrgName": "Ops Org",
+                "orgAction": "would-create",
+                "targetOrgId": Value::Null,
+                "importDir": "/tmp/datasource-export-all-orgs/org_9_Ops_Org"
+            }
+        ]
+    });
+
+    let missing_orgs = missing_payload["orgs"].as_array().unwrap();
+    let would_create_orgs = would_create_payload["orgs"].as_array().unwrap();
+    let missing_existing = missing_orgs
+        .iter()
+        .find(|entry| entry["sourceOrgId"] == json!(2))
+        .unwrap();
+    let missing_missing = missing_orgs
+        .iter()
+        .find(|entry| entry["sourceOrgId"] == json!(9))
+        .unwrap();
+    let would_create_existing = would_create_orgs
+        .iter()
+        .find(|entry| entry["sourceOrgId"] == json!(2))
+        .unwrap();
+    let would_create_missing = would_create_orgs
+        .iter()
+        .find(|entry| entry["sourceOrgId"] == json!(9))
+        .unwrap();
+
+    assert_eq!(missing_payload["summary"]["existingOrgCount"], json!(1));
+    assert_eq!(missing_payload["summary"]["missingOrgCount"], json!(1));
+    assert_eq!(missing_payload["summary"]["wouldCreateOrgCount"], json!(0));
+    assert_eq!(
+        would_create_payload["summary"]["existingOrgCount"],
+        json!(1)
+    );
+    assert_eq!(would_create_payload["summary"]["missingOrgCount"], json!(0));
+    assert_eq!(
+        would_create_payload["summary"]["wouldCreateOrgCount"],
+        json!(1)
+    );
+
+    assert_eq!(missing_existing["orgAction"], json!("exists"));
+    assert_eq!(missing_existing["targetOrgId"], json!(2));
+    assert_eq!(missing_missing["orgAction"], json!("missing"));
+    assert_eq!(missing_missing["targetOrgId"], Value::Null);
+    assert_eq!(would_create_existing["orgAction"], json!("exists"));
+    assert_eq!(would_create_existing["targetOrgId"], json!(2));
+    assert_eq!(would_create_missing["orgAction"], json!("would-create"));
+    assert_eq!(would_create_missing["targetOrgId"], Value::Null);
+
+    let existing_summary = super::format_routed_datasource_scope_summary_fields(
+        2,
+        "Org Two",
+        "exists",
+        Some(2),
+        Path::new(missing_existing["importDir"].as_str().unwrap()),
+    );
+    let missing_summary = super::format_routed_datasource_scope_summary_fields(
+        9,
+        "Ops Org",
+        "missing",
+        None,
+        Path::new(missing_missing["importDir"].as_str().unwrap()),
+    );
+    let would_create_summary = super::format_routed_datasource_scope_summary_fields(
+        9,
+        "Ops Org",
+        "would-create",
+        None,
+        Path::new(would_create_missing["importDir"].as_str().unwrap()),
+    );
+    let created_summary = super::format_routed_datasource_scope_summary_fields(
+        9,
+        "Ops Org",
+        "created",
+        Some(19),
+        Path::new(would_create_missing["importDir"].as_str().unwrap()),
+    );
+    assert!(existing_summary.contains("orgAction=exists"));
+    assert!(existing_summary.contains("targetOrgId=2"));
+    assert!(missing_summary.contains("orgAction=missing"));
+    assert!(missing_summary.contains("targetOrgId=<new>"));
+    assert!(would_create_summary.contains("orgAction=would-create"));
+    assert!(would_create_summary.contains("targetOrgId=<new>"));
+    assert!(created_summary.contains("orgAction=created"));
+    assert!(created_summary.contains("targetOrgId=19"));
 }
 
 #[test]

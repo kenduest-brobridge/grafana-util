@@ -215,6 +215,33 @@ fn build_sync_preflight_document_reports_plugin_dependency_and_alert_blocks() {
 }
 
 #[test]
+fn build_sync_preflight_document_accepts_non_rule_alert_resources_for_live_apply() {
+    let desired_specs = vec![json!({
+        "kind": "alert-contact-point",
+        "uid": "cp-main",
+        "title": "PagerDuty Primary",
+        "managedFields": ["uid", "name", "type", "settings"],
+        "body": {
+            "uid": "cp-main",
+            "name": "PagerDuty Primary",
+            "type": "webhook",
+            "settings": {"url": "http://127.0.0.1/notify"}
+        }
+    })];
+
+    let document = build_sync_preflight_document(&desired_specs, None).unwrap();
+
+    assert_eq!(document["summary"]["blockingCount"], json!(0));
+    assert!(document["checks"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|item| item["kind"] == "alert-live-apply"
+            && item["identity"] == "cp-main"
+            && item["status"] == "ok"));
+}
+
+#[test]
 fn render_sync_preflight_text_renders_deterministic_summary() {
     let document = build_sync_preflight_document(
         &[json!({
@@ -317,4 +344,56 @@ fn build_sync_apply_intent_document_filters_non_mutating_operations() {
             item["action"].as_str(),
             Some("would-create" | "would-update" | "would-delete")
         )));
+}
+
+#[test]
+fn build_sync_plan_document_prunes_alert_policy_when_requested() {
+    let plan = build_sync_plan_document(
+        &[],
+        &[json!({
+            "kind": "alert-policy",
+            "title": "grafana-default-email",
+            "managedFields": ["receiver"],
+            "body": {
+                "receiver": "grafana-default-email"
+            }
+        })],
+        true,
+    )
+    .unwrap();
+
+    assert_eq!(plan["summary"]["would_delete"], json!(1));
+    assert_eq!(plan["summary"]["unmanaged"], json!(0));
+    assert_eq!(plan["operations"][0]["action"], json!("would-delete"));
+    assert_eq!(
+        plan["operations"][0]["reason"],
+        json!("missing-from-desired-state")
+    );
+}
+
+#[test]
+fn build_sync_plan_document_prunes_non_rule_alert_delete_when_supported() {
+    let plan = build_sync_plan_document(
+        &[],
+        &[json!({
+            "kind": "alert-template",
+            "name": "slack.default",
+            "title": "slack.default",
+            "managedFields": ["name", "template"],
+            "body": {
+                "name": "slack.default",
+                "template": "{{ define \"slack.default\" }}ok{{ end }}"
+            }
+        })],
+        true,
+    )
+    .unwrap();
+
+    assert_eq!(plan["summary"]["would_delete"], json!(1));
+    assert_eq!(plan["summary"]["unmanaged"], json!(0));
+    assert_eq!(plan["operations"][0]["action"], json!("would-delete"));
+    assert_eq!(
+        plan["operations"][0]["reason"],
+        json!("missing-from-desired-state")
+    );
 }

@@ -26,6 +26,36 @@ pub enum DryRunOutputFormat {
     Json,
 }
 
+/// Enum definition for GovernanceGateOutputFormat.
+#[derive(Debug, Clone, Copy, ValueEnum, PartialEq, Eq)]
+pub enum GovernanceGateOutputFormat {
+    Text,
+    Json,
+}
+
+/// Enum definition for TopologyOutputFormat.
+#[derive(Debug, Clone, Copy, ValueEnum, PartialEq, Eq)]
+pub enum TopologyOutputFormat {
+    Text,
+    Json,
+    Mermaid,
+    Dot,
+}
+
+/// Enum definition for ImpactOutputFormat.
+#[derive(Debug, Clone, Copy, ValueEnum, PartialEq, Eq)]
+pub enum ImpactOutputFormat {
+    Text,
+    Json,
+}
+
+/// Enum definition for ValidationOutputFormat.
+#[derive(Debug, Clone, Copy, ValueEnum, PartialEq, Eq)]
+pub enum ValidationOutputFormat {
+    Text,
+    Json,
+}
+
 /// Struct definition for CommonCliArgs.
 #[derive(Debug, Clone, Args)]
 pub struct CommonCliArgs {
@@ -194,32 +224,6 @@ pub struct ListArgs {
     pub no_header: bool,
 }
 
-/// Struct definition for ListDataSourcesArgs.
-#[derive(Debug, Clone, Args)]
-pub struct ListDataSourcesArgs {
-    #[command(flatten)]
-    pub common: CommonCliArgs,
-    #[arg(long, default_value_t = false, conflicts_with_all = ["csv", "json"], help = "Render datasource summaries as a table.")]
-    pub table: bool,
-    #[arg(long, default_value_t = false, conflicts_with_all = ["table", "json"], help = "Render datasource summaries as CSV.")]
-    pub csv: bool,
-    #[arg(long, default_value_t = false, conflicts_with_all = ["table", "csv"], help = "Render datasource summaries as JSON.")]
-    pub json: bool,
-    #[arg(
-        long,
-        value_enum,
-        conflicts_with_all = ["table", "csv", "json"],
-        help = "Alternative single-flag output selector. Use table, csv, or json."
-    )]
-    pub output_format: Option<SimpleOutputFormat>,
-    #[arg(
-        long,
-        default_value_t = false,
-        help = "Do not print table headers when rendering the default table output."
-    )]
-    pub no_header: bool,
-}
-
 /// Struct definition for ImportArgs.
 #[derive(Debug, Clone, Args)]
 pub struct ImportArgs {
@@ -292,6 +296,18 @@ pub struct ImportArgs {
         help = "Fail the import when the raw export orgId metadata does not match the target Grafana org for this run. This is a safety check for accidental cross-org imports."
     )]
     pub require_matching_export_org: bool,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Enable strict dashboard schema validation before import. This rejects unsupported custom plugins, legacy layout shapes, and other preflight issues before any live write."
+    )]
+    pub strict_schema: bool,
+    #[arg(
+        long,
+        requires = "strict_schema",
+        help = "Optional target dashboard schemaVersion required by strict validation. Dashboards below this version are blocked as migration-required."
+    )]
+    pub target_schema_version: Option<i64>,
     #[arg(long, default_value = DEFAULT_IMPORT_MESSAGE, help = "Version-history message to attach to each imported dashboard revision in Grafana.")]
     pub import_message: String,
     #[arg(
@@ -638,6 +654,11 @@ pub struct InspectVarsArgs {
         help = "Do not print table or CSV headers when rendering inspect-vars output."
     )]
     pub no_header: bool,
+    #[arg(
+        long,
+        help = "Write inspect-vars output to this file while still printing to stdout."
+    )]
+    pub output_file: Option<PathBuf>,
 }
 
 /// Struct definition for InspectExportArgs.
@@ -684,7 +705,7 @@ pub struct InspectExportArgs {
         long,
         value_delimiter = ',',
         value_parser = parse_inspect_report_column,
-        help = "For --report table, csv, or tree-table output, or the equivalent report-like --output-format values, limit the query report to the selected columns. Supported values: org, org_id, dashboard_uid, dashboard_title, folder_path, panel_id, panel_title, panel_type, ref_id, datasource, datasource_uid, datasource_type, datasource_family, query_field, metrics, measurements, buckets, query, file. JSON-style aliases like orgId, dashboardUid, datasourceType, and datasourceFamily are also accepted."
+        help = "For --report table, csv, or tree-table output, or the equivalent report-like --output-format values, limit the query report to the selected columns. Use all to expand every supported column. Supported values: org, org_id, dashboard_uid, dashboard_title, dashboard_tags, folder_path, folder_full_path, folder_level, folder_uid, parent_folder_uid, panel_id, panel_title, panel_type, panel_target_count, panel_query_count, panel_datasource_count, panel_variables, ref_id, datasource, datasource_name, datasource_uid, datasource_org, datasource_org_id, datasource_database, datasource_bucket, datasource_organization, datasource_index_pattern, datasource_type, datasource_family, query_field, target_hidden, target_disabled, query_variables, metrics, functions, measurements, buckets, query, file. JSON-style aliases like orgId, dashboardUid, dashboardTags, folderFullPath, folderLevel, folderUid, parentFolderUid, panelTargetCount, panelQueryCount, panelDatasourceCount, panelVariables, datasourceName, datasourceUid, datasourceOrg, datasourceOrgId, datasourceDatabase, datasourceBucket, datasourceOrganization, datasourceIndexPattern, datasourceType, datasourceFamily, targetHidden, targetDisabled, and queryVariables are also accepted."
     )]
     pub report_columns: Vec<String>,
     #[arg(
@@ -709,6 +730,11 @@ pub struct InspectExportArgs {
         help = "Do not print table headers when rendering the table summary, table-like --report output, or compatible --output-format values."
     )]
     pub no_header: bool,
+    #[arg(
+        long,
+        help = "Write inspect output to this file while still printing to stdout."
+    )]
+    pub output_file: Option<PathBuf>,
 }
 
 /// Struct definition for InspectLiveArgs.
@@ -718,6 +744,12 @@ pub struct InspectLiveArgs {
     pub common: CommonCliArgs,
     #[arg(long, default_value_t = DEFAULT_PAGE_SIZE, help = "Dashboard search page size.")]
     pub page_size: usize,
+    #[arg(
+        long,
+        default_value_t = 8usize,
+        help = "Maximum parallel dashboard fetch workers used for live inspect when supported."
+    )]
+    pub concurrency: usize,
     #[arg(
         long,
         conflicts_with = "all_orgs",
@@ -767,7 +799,7 @@ pub struct InspectLiveArgs {
         long,
         value_delimiter = ',',
         value_parser = parse_inspect_report_column,
-        help = "For --report table, csv, or tree-table output, or the equivalent report-like --output-format values, limit the query report to the selected columns. Supported values: org, org_id, dashboard_uid, dashboard_title, folder_path, panel_id, panel_title, panel_type, ref_id, datasource, datasource_uid, datasource_type, datasource_family, query_field, metrics, measurements, buckets, query, file. JSON-style aliases like orgId, dashboardUid, datasourceType, and datasourceFamily are also accepted."
+        help = "For --report table, csv, or tree-table output, or the equivalent report-like --output-format values, limit the query report to the selected columns. Use all to expand every supported column. Supported values: org, org_id, dashboard_uid, dashboard_title, dashboard_tags, folder_path, folder_full_path, folder_level, folder_uid, parent_folder_uid, panel_id, panel_title, panel_type, panel_target_count, panel_query_count, panel_datasource_count, panel_variables, ref_id, datasource, datasource_name, datasource_uid, datasource_org, datasource_org_id, datasource_database, datasource_bucket, datasource_organization, datasource_index_pattern, datasource_type, datasource_family, query_field, target_hidden, target_disabled, query_variables, metrics, functions, measurements, buckets, query, file. JSON-style aliases like orgId, dashboardUid, dashboardTags, folderFullPath, folderLevel, folderUid, parentFolderUid, panelTargetCount, panelQueryCount, panelDatasourceCount, panelVariables, datasourceName, datasourceUid, datasourceOrg, datasourceOrgId, datasourceDatabase, datasourceBucket, datasourceOrganization, datasourceIndexPattern, datasourceType, datasourceFamily, targetHidden, targetDisabled, and queryVariables are also accepted."
     )]
     pub report_columns: Vec<String>,
     #[arg(
@@ -783,6 +815,12 @@ pub struct InspectLiveArgs {
     #[arg(
         long,
         default_value_t = false,
+        help = "Show a progress bar while live dashboards are fetched for inspection."
+    )]
+    pub progress: bool,
+    #[arg(
+        long,
+        default_value_t = false,
         help = "Show extended help with report examples for inspect-live."
     )]
     pub help_full: bool,
@@ -792,6 +830,152 @@ pub struct InspectLiveArgs {
         help = "Do not print headers when rendering table, csv, or tree-table inspection output, including compatible --output-format values."
     )]
     pub no_header: bool,
+    #[arg(
+        long,
+        help = "Write inspect output to this file while still printing to stdout."
+    )]
+    pub output_file: Option<PathBuf>,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Open an interactive terminal browser over the live inspection artifacts."
+    )]
+    pub interactive: bool,
+}
+
+/// Struct definition for GovernanceGateArgs.
+#[derive(Debug, Clone, Args)]
+pub struct GovernanceGateArgs {
+    #[arg(long, help = "Path to the dashboard governance policy JSON.")]
+    pub policy: PathBuf,
+    #[arg(long, help = "Path to dashboard inspect governance-json output.")]
+    pub governance: PathBuf,
+    #[arg(long, help = "Path to dashboard inspect report json output.")]
+    pub queries: PathBuf,
+    #[arg(
+        long,
+        value_enum,
+        default_value_t = GovernanceGateOutputFormat::Text,
+        help = "Render the governance gate result as text or JSON."
+    )]
+    pub output_format: GovernanceGateOutputFormat,
+    #[arg(
+        long,
+        help = "Optional path to also write the normalized governance gate result JSON."
+    )]
+    pub json_output: Option<PathBuf>,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Open an interactive terminal browser over governance findings."
+    )]
+    pub interactive: bool,
+}
+
+/// Struct definition for TopologyArgs.
+#[derive(Debug, Clone, Args)]
+pub struct TopologyArgs {
+    #[arg(long, help = "Path to dashboard governance JSON.")]
+    pub governance: PathBuf,
+    #[arg(
+        long,
+        help = "Optional path to dashboard query-report JSON so the graph can include variables and panels."
+    )]
+    pub queries: Option<PathBuf>,
+    #[arg(
+        long = "alert-contract",
+        help = "Optional path to a sync alert contract JSON document."
+    )]
+    pub alert_contract: Option<PathBuf>,
+    #[arg(
+        long,
+        value_enum,
+        default_value_t = TopologyOutputFormat::Text,
+        help = "Render the topology as text, json, mermaid, or dot."
+    )]
+    pub output_format: TopologyOutputFormat,
+    #[arg(
+        long,
+        help = "Optional path to also write the rendered topology output."
+    )]
+    pub output_file: Option<PathBuf>,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Open an interactive terminal browser over topology nodes and edges."
+    )]
+    pub interactive: bool,
+}
+
+/// Struct definition for ImpactArgs.
+#[derive(Debug, Clone, Args)]
+pub struct ImpactArgs {
+    #[arg(long, help = "Path to dashboard governance JSON.")]
+    pub governance: PathBuf,
+    #[arg(
+        long,
+        help = "Optional path to dashboard query-report JSON so blast radius can include variables and panels."
+    )]
+    pub queries: Option<PathBuf>,
+    #[arg(
+        long = "datasource-uid",
+        help = "Datasource UID to analyze for downstream dashboard and alert impact."
+    )]
+    pub datasource_uid: String,
+    #[arg(
+        long = "alert-contract",
+        help = "Optional path to a sync alert contract JSON document."
+    )]
+    pub alert_contract: Option<PathBuf>,
+    #[arg(
+        long,
+        value_enum,
+        default_value_t = ImpactOutputFormat::Text,
+        help = "Render the blast radius summary as text or json."
+    )]
+    pub output_format: ImpactOutputFormat,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Open an interactive terminal browser over the blast radius document."
+    )]
+    pub interactive: bool,
+}
+
+/// Struct definition for ValidateExportArgs.
+#[derive(Debug, Clone, Args)]
+pub struct ValidateExportArgs {
+    #[arg(
+        long,
+        help = "Validate dashboards from this raw export directory. Point this to the raw/ export directory explicitly."
+    )]
+    pub import_dir: PathBuf,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Reject unsupported custom panel and datasource plugin types."
+    )]
+    pub reject_custom_plugins: bool,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Reject legacy dashboard properties such as row layouts or web-import scaffolding."
+    )]
+    pub reject_legacy_properties: bool,
+    #[arg(
+        long,
+        help = "Optional target dashboard schemaVersion required for this export set."
+    )]
+    pub target_schema_version: Option<i64>,
+    #[arg(
+        long,
+        value_enum,
+        default_value_t = ValidationOutputFormat::Text,
+        help = "Render the validation result as text or JSON."
+    )]
+    pub output_format: ValidationOutputFormat,
+    #[arg(long, help = "Optional path to also write the validation JSON result.")]
+    pub output_file: Option<PathBuf>,
 }
 
 /// Enum definition for DashboardCommand.
@@ -803,8 +987,6 @@ pub enum DashboardCommand {
         after_help = "Examples:\n\n  List dashboards from the current org with Basic auth:\n    grafana-util list --url http://localhost:3000 --basic-user admin --basic-password admin\n\n  List dashboards across all visible orgs with Basic auth:\n    grafana-util list --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --json\n\n  List dashboards from one explicit org ID:\n    grafana-util list --url http://localhost:3000 --basic-user admin --basic-password admin --org-id 2 --csv\n\n  List dashboards from the current org with an API token:\n    grafana-util list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json"
     )]
     List(ListArgs),
-    #[command(name = "list-data-sources", about = "List Grafana data sources.")]
-    ListDataSources(ListDataSourcesArgs),
     #[command(
         name = "export",
         about = "Export dashboards to raw/ and prompt/ JSON files.",
@@ -833,6 +1015,31 @@ pub enum DashboardCommand {
         about = "List dashboard templating variables and datasource-like choices from live Grafana."
     )]
     InspectVars(InspectVarsArgs),
+    #[command(
+        name = "governance-gate",
+        about = "Evaluate a governance policy against dashboard governance-json and query-report JSON artifacts.",
+        after_help = "Examples:\n\n  Evaluate governance policy with text output:\n    grafana-util dashboard governance-gate --policy ./policy.json --governance ./governance.json --queries ./queries.json\n\n  Write the normalized result JSON while also printing machine-readable output:\n    grafana-util dashboard governance-gate --policy ./policy.json --governance ./governance.json --queries ./queries.json --output-format json --json-output ./governance-check.json"
+    )]
+    GovernanceGate(GovernanceGateArgs),
+    #[command(
+        name = "topology",
+        visible_alias = "graph",
+        about = "Build a deterministic dashboard, datasource, variable, and alert topology from JSON artifacts.",
+        after_help = "Examples:\n\n  Render a dashboard topology graph in Mermaid:\n    grafana-util dashboard topology --governance ./governance.json --queries ./queries.json --alert-contract ./alert-contract.json --output-format mermaid\n\n  Render the same graph through the graph alias as DOT while also writing it to disk:\n    grafana-util dashboard graph --governance ./governance.json --queries ./queries.json --alert-contract ./alert-contract.json --output-format dot --output-file ./dashboard-topology.dot"
+    )]
+    Topology(TopologyArgs),
+    #[command(
+        name = "impact",
+        about = "Summarize dashboard, variable, panel, and alert blast radius for one datasource from JSON artifacts.",
+        after_help = "Examples:\n\n  Summarize blast radius as text:\n    grafana-util dashboard impact --governance ./governance.json --queries ./queries.json --datasource-uid prom-main --alert-contract ./alert-contract.json --output-format text\n\n  Render the same blast radius as JSON:\n    grafana-util dashboard impact --governance ./governance.json --queries ./queries.json --datasource-uid prom-main --output-format json"
+    )]
+    Impact(ImpactArgs),
+    #[command(
+        name = "validate-export",
+        about = "Run strict schema validation against dashboard raw export files before GitOps sync.",
+        after_help = "Examples:\n\n  Validate a raw export and fail on migration or plugin issues:\n    grafana-util dashboard validate-export --import-dir ./dashboards/raw --reject-custom-plugins --reject-legacy-properties --target-schema-version 39\n\n  Write the validation report as JSON:\n    grafana-util dashboard validate-export --import-dir ./dashboards/raw --output-format json --output-file ./dashboard-validation.json"
+    )]
+    ValidateExport(ValidateExportArgs),
     #[command(
         name = "screenshot",
         about = "Open one Grafana dashboard in a headless browser and capture PNG, JPEG, or PDF output.",
@@ -928,27 +1135,54 @@ fn parse_inspect_report_column(value: &str) -> std::result::Result<String, Strin
     // Downstream callees: 無
 
     match value {
+        "all" => Ok("all".to_string()),
         "org" => Ok("org".to_string()),
         "org_id" | "orgId" => Ok("org_id".to_string()),
         "dashboard_uid" | "dashboardUid" => Ok("dashboard_uid".to_string()),
         "dashboard_title" | "dashboardTitle" => Ok("dashboard_title".to_string()),
+        "dashboard_tags" | "dashboardTags" => Ok("dashboard_tags".to_string()),
         "folder_path" | "folderPath" => Ok("folder_path".to_string()),
+        "folder_full_path" | "folderFullPath" => Ok("folder_full_path".to_string()),
+        "folder_level" | "folderLevel" => Ok("folder_level".to_string()),
+        "folder_uid" | "folderUid" => Ok("folder_uid".to_string()),
+        "parent_folder_uid" | "parentFolderUid" => Ok("parent_folder_uid".to_string()),
         "panel_id" | "panelId" => Ok("panel_id".to_string()),
         "panel_title" | "panelTitle" => Ok("panel_title".to_string()),
         "panel_type" | "panelType" => Ok("panel_type".to_string()),
+        "panel_target_count" | "panelTargetCount" => Ok("panel_target_count".to_string()),
+        "panel_query_count" | "panelQueryCount" => Ok("panel_query_count".to_string()),
+        "panel_datasource_count" | "panelDatasourceCount" => {
+            Ok("panel_datasource_count".to_string())
+        }
+        "panel_variables" | "panelVariables" => Ok("panel_variables".to_string()),
         "ref_id" | "refId" => Ok("ref_id".to_string()),
         "datasource" => Ok("datasource".to_string()),
+        "datasource_name" | "datasourceName" => Ok("datasource_name".to_string()),
         "datasource_uid" | "datasourceUid" => Ok("datasource_uid".to_string()),
+        "datasource_org" | "datasourceOrg" => Ok("datasource_org".to_string()),
+        "datasource_org_id" | "datasourceOrgId" => Ok("datasource_org_id".to_string()),
+        "datasource_database" | "datasourceDatabase" => Ok("datasource_database".to_string()),
+        "datasource_bucket" | "datasourceBucket" => Ok("datasource_bucket".to_string()),
+        "datasource_organization" | "datasourceOrganization" => {
+            Ok("datasource_organization".to_string())
+        }
+        "datasource_index_pattern" | "datasourceIndexPattern" => {
+            Ok("datasource_index_pattern".to_string())
+        }
         "datasource_type" | "datasourceType" => Ok("datasource_type".to_string()),
         "datasource_family" | "datasourceFamily" => Ok("datasource_family".to_string()),
         "query_field" | "queryField" => Ok("query_field".to_string()),
+        "target_hidden" | "targetHidden" => Ok("target_hidden".to_string()),
+        "target_disabled" | "targetDisabled" => Ok("target_disabled".to_string()),
+        "query_variables" | "queryVariables" => Ok("query_variables".to_string()),
         "metrics" => Ok("metrics".to_string()),
+        "functions" => Ok("functions".to_string()),
         "measurements" => Ok("measurements".to_string()),
         "buckets" => Ok("buckets".to_string()),
         "query" => Ok("query".to_string()),
         "file" => Ok("file".to_string()),
         _ => Err(format!(
-            "Unsupported --report-columns value '{value}'. Supported values: org, org_id, dashboard_uid, dashboard_title, folder_path, panel_id, panel_title, panel_type, ref_id, datasource, datasource_uid, datasource_type, datasource_family, query_field, metrics, measurements, buckets, query, file."
+            "Unsupported --report-columns value '{value}'. Supported values: all, org, org_id, dashboard_uid, dashboard_title, dashboard_tags, folder_path, folder_full_path, folder_level, folder_uid, parent_folder_uid, panel_id, panel_title, panel_type, panel_target_count, panel_query_count, panel_datasource_count, panel_variables, ref_id, datasource, datasource_name, datasource_uid, datasource_org, datasource_org_id, datasource_database, datasource_bucket, datasource_organization, datasource_index_pattern, datasource_type, datasource_family, query_field, target_hidden, target_disabled, query_variables, metrics, functions, measurements, buckets, query, file."
         )),
     }
 }
@@ -988,12 +1222,6 @@ fn normalize_dry_run_output_format(
 pub fn normalize_dashboard_cli_args(mut args: DashboardCliArgs) -> DashboardCliArgs {
     match &mut args.command {
         DashboardCommand::List(list_args) => normalize_simple_output_format(
-            &mut list_args.table,
-            &mut list_args.csv,
-            &mut list_args.json,
-            list_args.output_format,
-        ),
-        DashboardCommand::ListDataSources(list_args) => normalize_simple_output_format(
             &mut list_args.table,
             &mut list_args.csv,
             &mut list_args.json,

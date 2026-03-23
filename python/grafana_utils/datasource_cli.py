@@ -118,6 +118,13 @@ def _normalize_output_format_args(args, parser):
     output_format = getattr(args, "output_format", None)
     if output_format is None:
         return
+    if getattr(args, "command", None) == "types":
+        if bool(getattr(args, "json", False)):
+            parser.error(
+                "--output-format cannot be combined with --json for datasource types."
+            )
+        args.json = output_format == "json"
+        return
     if getattr(args, "command", None) == "list":
         if (
             bool(getattr(args, "table", False))

@@ -23,6 +23,13 @@ use super::{
     ACCESS_USER_EXPORT_FILENAME, DEFAULT_PAGE_SIZE,
 };
 
+fn user_id_json_value(user_id: &str) -> Value {
+    match user_id.trim().parse::<u64>() {
+        Ok(value) => Value::Number(value.into()),
+        Err(_) => Value::String(user_id.to_string()),
+    }
+}
+
 fn build_access_import_dry_run_row(
     index: usize,
     identity: &str,
@@ -48,6 +55,47 @@ fn build_access_import_dry_run_rows(rows: &[Map<String, Value>]) -> Vec<Vec<Stri
             ]
         })
         .collect()
+}
+
+pub(crate) fn build_user_import_dry_run_document(
+    rows: &[Map<String, Value>],
+    processed: usize,
+    created: usize,
+    updated: usize,
+    skipped: usize,
+    source: &Path,
+) -> Value {
+    Value::Object(Map::from_iter(vec![
+        (
+            "rows".to_string(),
+            Value::Array(rows.iter().cloned().map(Value::Object).collect()),
+        ),
+        (
+            "summary".to_string(),
+            Value::Object(Map::from_iter(vec![
+                (
+                    "processed".to_string(),
+                    Value::Number((processed as i64).into()),
+                ),
+                (
+                    "created".to_string(),
+                    Value::Number((created as i64).into()),
+                ),
+                (
+                    "updated".to_string(),
+                    Value::Number((updated as i64).into()),
+                ),
+                (
+                    "skipped".to_string(),
+                    Value::Number((skipped as i64).into()),
+                ),
+                (
+                    "source".to_string(),
+                    Value::String(source.to_string_lossy().to_string()),
+                ),
+            ])),
+        ),
+    ]))
 }
 
 fn validate_user_import_dry_run_output(args: &UserImportArgs) -> Result<()> {
@@ -269,7 +317,7 @@ where
         &[],
         Some(&Value::Object(Map::from_iter(vec![(
             "userId".to_string(),
-            Value::String(user_id.to_string()),
+            user_id_json_value(user_id),
         )]))),
         &format!("Unexpected team-member add response for team {team_id} user {user_id}"),
     )?;
@@ -565,18 +613,66 @@ where
             )));
         }
 
-        let mut profile_payload = Map::new();
-        if !login.is_empty() && login != string_field(&existing, "login", "") {
-            profile_payload.insert("login".to_string(), Value::String(login.clone()));
+        let mut current_members = std::collections::BTreeMap::<String, (String, String)>::new();
+        let mut remove_keys: Vec<String> = Vec::new();
+        if args.scope != Scope::Global && !target_teams.is_empty() {
+            current_members = list_user_teams_with_request(&mut request_json, &user_id)?
+                .into_iter()
+                .filter_map(|team| {
+                    let name = string_field(&team, "name", "");
+                    if name.is_empty() {
+                        None
+                    } else {
+                        let id = scalar_text(team.get("id"));
+                        Some((normalize_access_identity(&name), (name, id)))
+                    }
+                })
+                .collect::<std::collections::BTreeMap<String, (String, String)>>();
+            let desired_keys = target_teams
+                .iter()
+                .map(|value| normalize_access_identity(value))
+                .collect::<BTreeSet<_>>();
+            remove_keys = current_members
+                .keys()
+                .filter(|entry| !desired_keys.contains(*entry))
+                .cloned()
+                .collect();
+            if !remove_keys.is_empty() && !args.yes {
+                return Err(message(format!(
+                    "User import would remove team memberships for {}. Add --yes to confirm.",
+                    identity
+                )));
+            }
         }
-        if !email.is_empty() && email != string_field(&existing, "email", "") {
-            profile_payload.insert("email".to_string(), Value::String(email.clone()));
-        }
+
+        let existing_login = string_field(&existing, "login", "");
+        let existing_email = string_field(&existing, "email", "");
+        let existing_name = string_field(&existing, "name", "");
         let desired_name = string_field(record, "name", "");
-        if !desired_name.is_empty() && desired_name != string_field(&existing, "name", "") {
-            profile_payload.insert("name".to_string(), Value::String(desired_name));
-        }
-        if !profile_payload.is_empty() {
+        let resolved_login = if login.is_empty() {
+            existing_login.clone()
+        } else {
+            login.clone()
+        };
+        let resolved_email = if email.is_empty() {
+            existing_email.clone()
+        } else {
+            email.clone()
+        };
+        let resolved_name = if desired_name.is_empty() {
+            existing_name.clone()
+        } else {
+            desired_name
+        };
+        let profile_changed = resolved_login != existing_login
+            || resolved_email != existing_email
+            || resolved_name != existing_name;
+        if profile_changed {
+            let profile_payload = Map::from_iter(vec![
+                ("login".to_string(), Value::String(resolved_login)),
+                ("email".to_string(), Value::String(resolved_email)),
+                ("name".to_string(), Value::String(resolved_name)),
+            ]);
             if args.dry_run {
                 if is_dry_run_table_or_json {
                     dry_run_rows.push(build_access_import_dry_run_row(
@@ -662,35 +758,6 @@ where
         }
 
         if args.scope != Scope::Global && !target_teams.is_empty() {
-            let current_members = list_user_teams_with_request(&mut request_json, &user_id)?
-                .into_iter()
-                .filter_map(|team| {
-                    let name = string_field(&team, "name", "");
-                    if name.is_empty() {
-                        None
-                    } else {
-                        let id = scalar_text(team.get("id"));
-                        Some((normalize_access_identity(&name), (name, id)))
-                    }
-                })
-                .collect::<std::collections::BTreeMap<String, (String, String)>>();
-            let desired_keys = target_teams
-                .iter()
-                .map(|identity| normalize_access_identity(identity))
-                .collect::<BTreeSet<_>>();
-
-            let remove_keys: Vec<String> = current_members
-                .keys()
-                .filter(|identity| !desired_keys.contains(*identity))
-                .cloned()
-                .collect();
-            if !remove_keys.is_empty() && !args.yes {
-                return Err(message(format!(
-                    "User import would remove team memberships for {}. Add --yes to confirm.",
-                    identity
-                )));
-            }
-
             for target in &target_teams {
                 let key = normalize_access_identity(target);
                 if current_members.contains_key(&key) {
@@ -768,7 +835,18 @@ where
                 println!("{line}");
             }
         } else if args.json {
-            println!("{}", render_objects_json(&dry_run_rows)?);
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&build_user_import_dry_run_document(
+                    &dry_run_rows,
+                    processed,
+                    created,
+                    updated,
+                    skipped,
+                    &args.import_dir,
+                ))?
+            );
+            return Ok(0);
         }
     }
 

@@ -22,10 +22,47 @@ pub(crate) struct ExportMetadata {
     pub folders_file: Option<String>,
     #[serde(rename = "datasourcesFile", skip_serializing_if = "Option::is_none")]
     pub datasources_file: Option<String>,
+    #[serde(rename = "permissionsFile", skip_serializing_if = "Option::is_none")]
+    pub permissions_file: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub org: Option<String>,
     #[serde(rename = "orgId", skip_serializing_if = "Option::is_none")]
     pub org_id: Option<String>,
+    #[serde(rename = "orgCount", skip_serializing_if = "Option::is_none")]
+    pub org_count: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub orgs: Option<Vec<ExportOrgSummary>>,
+}
+
+/// Struct definition for ExportOrgSummary.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub(crate) struct ExportOrgSummary {
+    pub org: String,
+    #[serde(rename = "orgId")]
+    pub org_id: String,
+    #[serde(rename = "dashboardCount")]
+    pub dashboard_count: u64,
+    #[serde(rename = "datasourceCount", skip_serializing_if = "Option::is_none")]
+    pub datasource_count: Option<u64>,
+    #[serde(
+        rename = "usedDatasourceCount",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub used_datasource_count: Option<u64>,
+    #[serde(rename = "usedDatasources", skip_serializing_if = "Option::is_none")]
+    pub used_datasources: Option<Vec<ExportDatasourceUsageSummary>>,
+    #[serde(rename = "exportDir", skip_serializing_if = "Option::is_none")]
+    pub export_dir: Option<String>,
+}
+
+/// Struct definition for ExportDatasourceUsageSummary.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub(crate) struct ExportDatasourceUsageSummary {
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub uid: Option<String>,
+    #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
+    pub datasource_type: Option<String>,
 }
 
 /// Struct definition for DashboardIndexItem.
@@ -85,6 +122,14 @@ pub(crate) struct DatasourceInventoryItem {
     pub datasource_type: String,
     pub access: String,
     pub url: String,
+    #[serde(default)]
+    pub database: String,
+    #[serde(rename = "defaultBucket", default)]
+    pub default_bucket: String,
+    #[serde(default)]
+    pub organization: String,
+    #[serde(rename = "indexPattern", default)]
+    pub index_pattern: String,
     #[serde(rename = "isDefault")]
     pub is_default: String,
     pub org: String,

@@ -22,6 +22,10 @@ from ..dashboard_cli import (
     HelpFullAction,
     add_common_cli_args,
 )
+from .catalog import (
+    SUPPORTED_DATASOURCE_PRESET_PROFILES,
+    render_supported_datasource_catalog_text,
+)
 
 DEFAULT_EXPORT_DIR = "datasources"
 DATASOURCE_EXPORT_FILENAME = "datasources.json"
@@ -80,6 +84,7 @@ HELP_FULL_EXAMPLES = (
 )
 ROOT_HELP_EXAMPLES = (
     "Examples:\n\n"
+    "  grafana-util datasource types\n"
     "  grafana-util datasource list --url http://localhost:3000 --json\n"
     "  grafana-util datasource add --url http://localhost:3000 --name prometheus-main "
     "--type prometheus --datasource-url http://prometheus:9090 --dry-run --table\n"
@@ -126,6 +131,16 @@ ADD_HELP_EXAMPLES = (
     '--token "$GRAFANA_API_TOKEN" --name prometheus-main --type prometheus '
     "--datasource-url http://prometheus:9090 --dry-run --table\n"
     "  grafana-util datasource add --url http://localhost:3000 "
+    '--token "$GRAFANA_API_TOKEN" --name prometheus-main --type grafana-prometheus-datasource '
+    "--datasource-url http://prometheus:9090 --apply-supported-defaults --dry-run --json\n"
+    "  grafana-util datasource add --url http://localhost:3000 "
+    '--token "$GRAFANA_API_TOKEN" --name logs-main --type grafana-loki-datasource '
+    "--datasource-url http://loki:3100 --apply-supported-defaults --dry-run --json\n"
+    "  grafana-util datasource add --url http://localhost:3000 "
+    '--token "$GRAFANA_API_TOKEN" --name postgres-main --type postgres '
+    "--datasource-url postgresql://postgres:5432/metrics --preset-profile full "
+    "--dry-run --table\n"
+    "  grafana-util datasource add --url http://localhost:3000 "
     '--token "$GRAFANA_API_TOKEN" --uid loki-main --name loki-main --type loki '
     "--datasource-url http://loki:3100 --http-header X-Scope-OrgID=tenant-a --dry-run --json"
 )
@@ -144,6 +159,26 @@ DELETE_HELP_EXAMPLES = (
     "  grafana-util datasource delete --url http://localhost:3000 "
     '--token "$GRAFANA_API_TOKEN" --name prometheus-main --dry-run --table'
 )
+TYPES_HELP_EXAMPLES = "\n".join(render_supported_datasource_catalog_text())
+
+
+def add_types_cli_args(parser):
+    """Add datasource-types cli args implementation."""
+    output_group = parser.add_mutually_exclusive_group()
+    output_group.add_argument(
+        "--json",
+        action="store_true",
+        help="Render the supported datasource catalog as JSON.",
+    )
+    parser.add_argument(
+        "--output-format",
+        choices=("text", "json"),
+        default=None,
+        help=(
+            "Alternative single-flag output selector for datasource types output. "
+            "Use text or json. This cannot be combined with --json."
+        ),
+    )
 
 
 def add_list_cli_args(parser):
@@ -398,7 +433,27 @@ def add_add_cli_args(parser):
     parser.add_argument(
         "--type",
         required=True,
-        help="Grafana datasource plugin type id to create.",
+        help="Grafana datasource plugin type id to create. Supported aliases from `datasource types` are normalized to canonical type ids.",
+    )
+    parser.add_argument(
+        "--apply-supported-defaults",
+        action="store_true",
+        help=(
+            "Apply built-in add defaults for supported datasource types, such as "
+            "standard access mode or starter jsonData fields. This is a legacy "
+            "alias for `--preset-profile starter`. Use `datasource types --json` "
+            "to inspect each supported type profile."
+        ),
+    )
+    parser.add_argument(
+        "--preset-profile",
+        choices=SUPPORTED_DATASOURCE_PRESET_PROFILES,
+        default=None,
+        help=(
+            "Choose the built-in add scaffold profile for supported datasource "
+            "types. `starter` preserves the current `--apply-supported-defaults` "
+            "behavior; `full` applies a richer scaffold where available."
+        ),
     )
     parser.add_argument(
         "--access",
@@ -681,12 +736,27 @@ def build_parser(prog=None):
 
     parser = argparse.ArgumentParser(
         prog=prog or "grafana-util datasource",
-        description="List, export, import, or diff Grafana datasource inventory.",
+        description="List, inspect supported types, export, import, or diff Grafana datasource inventory.",
         epilog=ROOT_HELP_EXAMPLES,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     subparsers = parser.add_subparsers(dest="command")
     subparsers.required = True
+
+    types_parser = subparsers.add_parser(
+        "types",
+        help="Show the built-in supported datasource type catalog.",
+        epilog=TYPES_HELP_EXAMPLES,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    add_types_cli_args(types_parser)
+    types_parser.set_defaults(_help_full_examples=HELP_FULL_EXAMPLES)
+    types_parser.add_argument(
+        "--help-full",
+        nargs=0,
+        action=HelpFullAction,
+        help="Show normal help plus extended datasource examples.",
+    )
 
     list_parser = subparsers.add_parser(
         "list",

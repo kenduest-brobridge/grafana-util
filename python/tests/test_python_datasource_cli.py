@@ -15,6 +15,18 @@ MODULE_PATH = PYTHON_ROOT / "grafana_utils" / "datasource_cli.py"
 PARSER_MODULE_PATH = PYTHON_ROOT / "grafana_utils" / "datasource" / "parser.py"
 WORKFLOWS_MODULE_PATH = PYTHON_ROOT / "grafana_utils" / "datasource" / "workflows.py"
 FIXTURE_PATH = REPO_ROOT / "fixtures" / "datasource_contract_cases.json"
+SUPPORTED_DATASOURCE_TYPES_FIXTURE_PATH = (
+    REPO_ROOT / "fixtures" / "datasource_supported_types_catalog.json"
+)
+PRESET_PROFILE_PAYLOAD_FIXTURE_PATH = (
+    REPO_ROOT / "fixtures" / "datasource_preset_profile_add_payload_cases.json"
+)
+NESTED_JSONDATA_MERGE_FIXTURE_PATH = (
+    REPO_ROOT / "fixtures" / "datasource_nested_json_data_merge_cases.json"
+)
+SECURE_JSON_MERGE_FIXTURE_PATH = (
+    REPO_ROOT / "fixtures" / "datasource_secure_json_merge_cases.json"
+)
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(PYTHON_ROOT))
 datasource_cli = importlib.import_module("grafana_utils.datasource_cli")
@@ -97,6 +109,58 @@ class DatasourceCliTests(unittest.TestCase):
     def _load_contract_cases(self):
         return json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
 
+    def _load_supported_datasource_types_fixture(self):
+        return json.loads(
+            SUPPORTED_DATASOURCE_TYPES_FIXTURE_PATH.read_text(encoding="utf-8")
+        )
+
+    def _load_nested_json_data_merge_cases(self):
+        return json.loads(NESTED_JSONDATA_MERGE_FIXTURE_PATH.read_text(encoding="utf-8"))
+
+    def _load_preset_profile_payload_cases(self):
+        return json.loads(
+            PRESET_PROFILE_PAYLOAD_FIXTURE_PATH.read_text(encoding="utf-8")
+        )["cases"]
+
+    def _load_secure_json_merge_cases(self):
+        return json.loads(SECURE_JSON_MERGE_FIXTURE_PATH.read_text(encoding="utf-8"))
+
+    def _project_supported_datasource_catalog_document(self, document):
+        return {
+            "kind": document["kind"],
+            "categories": [
+                {
+                    "category": category["category"],
+                    "types": [
+                        {
+                            key: datasource_type[key]
+                            for key in (
+                                "type",
+                                "profile",
+                                "queryLanguage",
+                                "requiresDatasourceUrl",
+                                "suggestedFlags",
+                                "presetProfiles",
+                                "addDefaults",
+                                "fullAddDefaults",
+                            )
+                        }
+                        for datasource_type in category["types"]
+                    ],
+                }
+                for category in document["categories"]
+            ],
+        }
+
+    def _assert_json_subset(self, actual, expected):
+        if isinstance(expected, dict):
+            self.assertIsInstance(actual, dict)
+            for key, value in expected.items():
+                self.assertIn(key, actual)
+                self._assert_json_subset(actual[key], value)
+            return
+        self.assertEqual(actual, expected)
+
     def _write_datasource_bundle(self, import_dir, records, metadata=None, index=None):
         if metadata is None:
             metadata = {
@@ -147,6 +211,26 @@ class DatasourceCliTests(unittest.TestCase):
         self.assertFalse(args.csv)
         self.assertFalse(args.table)
         self.assertFalse(args.no_header)
+
+    def test_datasource_parse_args_supports_types_output_format(self):
+        args = datasource_cli.parse_args(["types", "--output-format", "json"])
+
+        self.assertEqual(args.command, "types")
+        self.assertTrue(args.json)
+
+    def test_datasource_types_command_renders_catalog_json(self):
+        args = datasource_cli.parse_args(["types", "--json"])
+
+        stdout = io.StringIO()
+        with redirect_stdout(stdout):
+            result = datasource_cli.dispatch_datasource_command(args)
+
+        self.assertEqual(result, 0)
+        document = json.loads(stdout.getvalue())
+        self.assertEqual(
+            self._project_supported_datasource_catalog_document(document),
+            self._load_supported_datasource_types_fixture(),
+        )
 
     def test_datasource_parse_args_supports_list_output_format(self):
         args = datasource_cli.parse_args(["list", "--output-format", "csv"])
@@ -223,6 +307,569 @@ class DatasourceCliTests(unittest.TestCase):
         self.assertEqual(args.datasource_url, "http://prometheus:9090")
         self.assertTrue(args.dry_run)
         self.assertTrue(args.table)
+
+    def test_datasource_parse_args_supports_add_preset_profile(self):
+        args = datasource_cli.parse_args(
+            [
+                "add",
+                "--name",
+                "Prometheus Main",
+                "--type",
+                "prometheus",
+                "--preset-profile",
+                "full",
+            ]
+        )
+
+        self.assertEqual(args.command, "add")
+        self.assertEqual(args.preset_profile, "full")
+        self.assertFalse(args.apply_supported_defaults)
+
+    def test_datasource_add_normalizes_supported_type_alias(self):
+        args = datasource_cli.parse_args(
+            [
+                "add",
+                "--name",
+                "Prometheus Main",
+                "--type",
+                "grafana-prometheus-datasource",
+                "--datasource-url",
+                "http://prometheus:9090",
+            ]
+        )
+        client = FakeDatasourceClient(datasources=[])
+
+        with mock.patch.object(
+            datasource_cli, "build_client", return_value=client
+        ):
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = datasource_cli.add_datasource(args)
+
+        self.assertEqual(result, 0)
+        self.assertEqual(client.imported_payloads[0]["payload"]["type"], "prometheus")
+
+    def test_datasource_add_with_supported_defaults_sets_default_access(self):
+        args = datasource_cli.parse_args(
+            [
+                "add",
+                "--name",
+                "Prometheus Main",
+                "--type",
+                "grafana-prometheus-datasource",
+                "--datasource-url",
+                "http://prometheus:9090",
+                "--apply-supported-defaults",
+            ]
+        )
+        client = FakeDatasourceClient(datasources=[])
+
+        with mock.patch.object(datasource_cli, "build_client", return_value=client):
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = datasource_cli.add_datasource(args)
+
+        self.assertEqual(result, 0)
+        self.assertEqual(client.imported_payloads[0]["payload"]["type"], "prometheus")
+        self.assertEqual(client.imported_payloads[0]["payload"]["access"], "proxy")
+        self.assertEqual(
+            client.imported_payloads[0]["payload"]["jsonData"], {"httpMethod": "POST"}
+        )
+
+    def test_datasource_add_with_supported_defaults_allows_explicit_json_override(self):
+        args = datasource_cli.parse_args(
+            [
+                "add",
+                "--name",
+                "Prometheus Main",
+                "--type",
+                "prometheus",
+                "--datasource-url",
+                "http://prometheus:9090",
+                "--apply-supported-defaults",
+                "--json-data",
+                '{"httpMethod":"GET","timeInterval":"30s"}',
+            ]
+        )
+        client = FakeDatasourceClient(datasources=[])
+
+        with mock.patch.object(datasource_cli, "build_client", return_value=client):
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = datasource_cli.add_datasource(args)
+
+        self.assertEqual(result, 0)
+        payload = client.imported_payloads[0]["payload"]
+        self.assertEqual(
+            payload["jsonData"],
+            {"httpMethod": "GET", "timeInterval": "30s"},
+        )
+
+    def test_datasource_add_with_supported_defaults_applies_elasticsearch_starter_field(
+        self,
+    ):
+        args = datasource_cli.parse_args(
+            [
+                "add",
+                "--name",
+                "Elastic Main",
+                "--type",
+                "elasticsearch",
+                "--datasource-url",
+                "http://elasticsearch:9200",
+                "--apply-supported-defaults",
+            ]
+        )
+        client = FakeDatasourceClient(datasources=[])
+
+        with mock.patch.object(datasource_cli, "build_client", return_value=client):
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = datasource_cli.add_datasource(args)
+
+        self.assertEqual(result, 0)
+        payload = client.imported_payloads[0]["payload"]
+        self.assertEqual(payload["type"], "elasticsearch")
+        self.assertEqual(payload["access"], "proxy")
+        self.assertEqual(payload["jsonData"], {"timeField": "@timestamp"})
+
+    def test_datasource_add_with_supported_defaults_applies_influxdb_family_preset(self):
+        args = datasource_cli.parse_args(
+            [
+                "add",
+                "--name",
+                "Influx Main",
+                "--type",
+                "influxdb",
+                "--datasource-url",
+                "http://influxdb:8086",
+                "--apply-supported-defaults",
+            ]
+        )
+        client = FakeDatasourceClient(datasources=[])
+
+        with mock.patch.object(datasource_cli, "build_client", return_value=client):
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = datasource_cli.add_datasource(args)
+
+        self.assertEqual(result, 0)
+        payload = client.imported_payloads[0]["payload"]
+        self.assertEqual(payload["type"], "influxdb")
+        self.assertEqual(payload["access"], "proxy")
+        self.assertEqual(
+            payload["jsonData"],
+            {
+                "version": "Flux",
+                "organization": "main-org",
+                "defaultBucket": "metrics",
+            },
+        )
+
+    def test_datasource_add_with_supported_defaults_applies_graphite_family_preset(self):
+        args = datasource_cli.parse_args(
+            [
+                "add",
+                "--name",
+                "Graphite Main",
+                "--type",
+                "graphite",
+                "--datasource-url",
+                "http://graphite:8080",
+                "--apply-supported-defaults",
+            ]
+        )
+        client = FakeDatasourceClient(datasources=[])
+
+        with mock.patch.object(datasource_cli, "build_client", return_value=client):
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = datasource_cli.add_datasource(args)
+
+        self.assertEqual(result, 0)
+        payload = client.imported_payloads[0]["payload"]
+        self.assertEqual(payload["type"], "graphite")
+        self.assertEqual(payload["access"], "proxy")
+        self.assertEqual(payload["jsonData"], {"graphiteVersion": "1.1"})
+
+    def test_datasource_add_with_supported_defaults_applies_loki_family_preset(self):
+        args = datasource_cli.parse_args(
+            [
+                "add",
+                "--name",
+                "Loki Main",
+                "--type",
+                "loki",
+                "--datasource-url",
+                "http://loki:3100",
+                "--apply-supported-defaults",
+            ]
+        )
+        client = FakeDatasourceClient(datasources=[])
+
+        with mock.patch.object(datasource_cli, "build_client", return_value=client):
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = datasource_cli.add_datasource(args)
+
+        self.assertEqual(result, 0)
+        payload = client.imported_payloads[0]["payload"]
+        self.assertEqual(payload["type"], "loki")
+        self.assertEqual(payload["access"], "proxy")
+        self.assertEqual(
+            payload["jsonData"],
+            {
+                "maxLines": 1000,
+                "timeout": 60,
+            },
+        )
+
+    def test_datasource_add_with_full_preset_profile_allows_loki_override(self):
+        args = datasource_cli.parse_args(
+            [
+                "add",
+                "--name",
+                "Loki Main",
+                "--type",
+                "loki",
+                "--datasource-url",
+                "http://loki:3100",
+                "--preset-profile",
+                "full",
+                "--json-data",
+                '{"derivedFields":[{"name":"custom_trace","datasourceUid":"tempo-alt"}]}',
+            ]
+        )
+        client = FakeDatasourceClient(datasources=[])
+
+        with mock.patch.object(datasource_cli, "build_client", return_value=client):
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = datasource_cli.add_datasource(args)
+
+        self.assertEqual(result, 0)
+        payload = client.imported_payloads[0]["payload"]
+        self.assertEqual(payload["jsonData"]["derivedFields"][0]["name"], "custom_trace")
+        self.assertEqual(payload["jsonData"]["derivedFields"][0]["datasourceUid"], "tempo-alt")
+
+    def test_datasource_add_with_supported_defaults_applies_tempo_family_preset(self):
+        args = datasource_cli.parse_args(
+            [
+                "add",
+                "--name",
+                "Tempo Main",
+                "--type",
+                "tempo",
+                "--datasource-url",
+                "http://tempo:3200",
+                "--apply-supported-defaults",
+            ]
+        )
+        client = FakeDatasourceClient(datasources=[])
+
+        with mock.patch.object(datasource_cli, "build_client", return_value=client):
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = datasource_cli.add_datasource(args)
+
+        self.assertEqual(result, 0)
+        payload = client.imported_payloads[0]["payload"]
+        self.assertEqual(payload["type"], "tempo")
+        self.assertEqual(payload["access"], "proxy")
+        self.assertEqual(
+            payload["jsonData"],
+            {
+                "nodeGraph": {"enabled": True},
+                "search": {"hide": False},
+                "traceQuery": {
+                    "timeShiftEnabled": True,
+                    "spanStartTimeShift": "-1h",
+                    "spanEndTimeShift": "1h",
+                },
+                "streamingEnabled": {"search": True},
+            },
+        )
+
+    def test_datasource_add_with_full_preset_profile_applies_tempo_scaffold(self):
+        args = datasource_cli.parse_args(
+            [
+                "add",
+                "--name",
+                "Tempo Main",
+                "--type",
+                "tempo",
+                "--datasource-url",
+                "http://tempo:3200",
+                "--preset-profile",
+                "full",
+            ]
+        )
+        client = FakeDatasourceClient(datasources=[])
+
+        with mock.patch.object(datasource_cli, "build_client", return_value=client):
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = datasource_cli.add_datasource(args)
+
+        self.assertEqual(result, 0)
+        payload = client.imported_payloads[0]["payload"]
+        self.assertEqual(payload["jsonData"]["serviceMap"]["datasourceUid"], "prometheus")
+        self.assertEqual(payload["jsonData"]["tracesToLogsV2"]["datasourceUid"], "loki")
+        self.assertEqual(
+            payload["jsonData"]["tracesToMetrics"]["datasourceUid"], "prometheus"
+        )
+
+    def test_datasource_add_with_full_preset_profile_allows_tempo_override(self):
+        args = datasource_cli.parse_args(
+            [
+                "add",
+                "--name",
+                "Tempo Main",
+                "--type",
+                "tempo",
+                "--datasource-url",
+                "http://tempo:3200",
+                "--preset-profile",
+                "full",
+                "--json-data",
+                '{"serviceMap":{"datasourceUid":"metrics-alt"}}',
+            ]
+        )
+        client = FakeDatasourceClient(datasources=[])
+
+        with mock.patch.object(datasource_cli, "build_client", return_value=client):
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = datasource_cli.add_datasource(args)
+
+        self.assertEqual(result, 0)
+        payload = client.imported_payloads[0]["payload"]
+        self.assertEqual(
+            payload["jsonData"],
+            {
+                "nodeGraph": {"enabled": True},
+                "search": {"hide": False},
+                "traceQuery": {
+                    "timeShiftEnabled": True,
+                    "spanStartTimeShift": "-1h",
+                    "spanEndTimeShift": "1h",
+                },
+                "streamingEnabled": {"search": True},
+                "serviceMap": {"datasourceUid": "metrics-alt"},
+                "tracesToLogsV2": {
+                    "datasourceUid": "loki",
+                    "spanStartTimeShift": "-1h",
+                    "spanEndTimeShift": "1h",
+                },
+                "tracesToMetrics": {
+                    "datasourceUid": "prometheus",
+                    "spanStartTimeShift": "-1h",
+                    "spanEndTimeShift": "1h",
+                },
+            },
+        )
+
+    def test_datasource_add_with_full_preset_profile_replaces_loki_derived_fields_array(
+        self,
+    ):
+        for case in self._load_nested_json_data_merge_cases():
+            if case["name"] != "loki_full_add_derived_fields_replace_array":
+                continue
+            with self.subTest(case=case["name"]):
+                args = datasource_cli.parse_args(case["args"][1:])
+                client = FakeDatasourceClient(datasources=[])
+
+                with mock.patch.object(
+                    datasource_cli, "build_client", return_value=client
+                ):
+                    stdout = io.StringIO()
+                    with redirect_stdout(stdout):
+                        result = datasource_cli.add_datasource(args)
+
+                self.assertEqual(result, 0)
+                payload = client.imported_payloads[0]["payload"]
+                self._assert_json_subset(payload, case["expected"])
+                self.assertEqual(
+                    payload["jsonData"]["derivedFields"],
+                    [
+                        {
+                            "name": "custom_trace",
+                            "datasourceUid": "tempo-alt",
+                        }
+                    ],
+                )
+
+    def test_datasource_add_with_supported_defaults_normalizes_postgres_alias(self):
+        args = datasource_cli.parse_args(
+            [
+                "add",
+                "--name",
+                "Postgres Main",
+                "--type",
+                "postgres",
+                "--datasource-url",
+                "postgresql://postgres:5432/metrics",
+                "--apply-supported-defaults",
+            ]
+        )
+        client = FakeDatasourceClient(datasources=[])
+
+        with mock.patch.object(datasource_cli, "build_client", return_value=client):
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = datasource_cli.add_datasource(args)
+
+        self.assertEqual(result, 0)
+        payload = client.imported_payloads[0]["payload"]
+        self.assertEqual(payload["type"], "postgresql")
+        self.assertEqual(payload["access"], "proxy")
+        self.assertEqual(
+            payload["jsonData"],
+            {
+                "database": "grafana",
+                "sslmode": "disable",
+                "maxOpenConns": 100,
+                "maxIdleConns": 100,
+                "maxIdleConnsAuto": True,
+                "connMaxLifetime": 14400,
+            },
+        )
+
+    def test_datasource_add_with_full_preset_profile_allows_explicit_json_override(self):
+        args = datasource_cli.parse_args(
+            [
+                "add",
+                "--name",
+                "Postgres Main",
+                "--type",
+                "postgres",
+                "--datasource-url",
+                "postgresql://postgres:5432/metrics",
+                "--preset-profile",
+                "full",
+                "--json-data",
+                '{"postgresVersion":1000,"timescaledb":true}',
+            ]
+        )
+        client = FakeDatasourceClient(datasources=[])
+
+        with mock.patch.object(datasource_cli, "build_client", return_value=client):
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = datasource_cli.add_datasource(args)
+
+        self.assertEqual(result, 0)
+        payload = client.imported_payloads[0]["payload"]
+        self.assertEqual(payload["jsonData"]["database"], "grafana")
+        self.assertEqual(payload["jsonData"]["postgresVersion"], 1000)
+        self.assertTrue(payload["jsonData"]["timescaledb"])
+
+    def test_datasource_add_with_supported_defaults_applies_mssql_family_preset(self):
+        args = datasource_cli.parse_args(
+            [
+                "add",
+                "--name",
+                "MSSQL Main",
+                "--type",
+                "mssql",
+                "--datasource-url",
+                "sqlserver://mssql:1433",
+                "--apply-supported-defaults",
+            ]
+        )
+        client = FakeDatasourceClient(datasources=[])
+
+        with mock.patch.object(datasource_cli, "build_client", return_value=client):
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = datasource_cli.add_datasource(args)
+
+        self.assertEqual(result, 0)
+        payload = client.imported_payloads[0]["payload"]
+        self.assertEqual(payload["type"], "mssql")
+        self.assertEqual(payload["access"], "proxy")
+        self.assertEqual(
+            payload["jsonData"],
+            {
+                "database": "grafana",
+                "maxOpenConns": 100,
+                "maxIdleConns": 100,
+                "maxIdleConnsAuto": True,
+                "connMaxLifetime": 14400,
+                "connectionTimeout": 0,
+            },
+        )
+
+    def test_datasource_add_with_full_preset_profile_applies_mysql_scaffold(self):
+        args = datasource_cli.parse_args(
+            [
+                "add",
+                "--name",
+                "MySQL Main",
+                "--type",
+                "mysql",
+                "--datasource-url",
+                "mysql://mysql:3306",
+                "--preset-profile",
+                "full",
+            ]
+        )
+        client = FakeDatasourceClient(datasources=[])
+
+        with mock.patch.object(datasource_cli, "build_client", return_value=client):
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = datasource_cli.add_datasource(args)
+
+        self.assertEqual(result, 0)
+        payload = client.imported_payloads[0]["payload"]
+        self.assertEqual(payload["type"], "mysql")
+        self.assertEqual(payload["access"], "proxy")
+        self.assertEqual(
+            payload["jsonData"],
+            {
+                "database": "grafana",
+                "maxOpenConns": 100,
+                "maxIdleConns": 100,
+                "maxIdleConnsAuto": True,
+                "connMaxLifetime": 14400,
+                "tlsAuth": True,
+                "tlsSkipVerify": True,
+            },
+        )
+
+    def test_datasource_add_with_full_preset_profile_allows_mysql_override(self):
+        args = datasource_cli.parse_args(
+            [
+                "add",
+                "--name",
+                "MySQL Main",
+                "--type",
+                "mysql",
+                "--datasource-url",
+                "mysql://mysql:3306",
+                "--preset-profile",
+                "full",
+                "--json-data",
+                '{"tlsAuth":false}',
+            ]
+        )
+        client = FakeDatasourceClient(datasources=[])
+
+        with mock.patch.object(datasource_cli, "build_client", return_value=client):
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = datasource_cli.add_datasource(args)
+
+        self.assertEqual(result, 0)
+        payload = client.imported_payloads[0]["payload"]
+        self.assertEqual(payload["jsonData"]["database"], "grafana")
+        self.assertFalse(payload["jsonData"]["tlsAuth"])
+        self.assertEqual(payload["jsonData"]["maxOpenConns"], 100)
+        self.assertEqual(payload["jsonData"]["maxIdleConns"], 100)
+        self.assertEqual(payload["jsonData"]["maxIdleConnsAuto"], True)
+        self.assertEqual(payload["jsonData"]["connMaxLifetime"], 14400)
+        self.assertTrue(payload["jsonData"]["tlsSkipVerify"])
 
     def test_datasource_parse_args_supports_add_auth_and_header_flags(self):
         args = datasource_cli.parse_args(
@@ -527,6 +1174,7 @@ class DatasourceCliTests(unittest.TestCase):
 
         help_text = stream.getvalue()
         self.assertIn("Examples:", help_text)
+        self.assertIn("grafana-util datasource types", help_text)
         self.assertIn("grafana-util datasource list", help_text)
         self.assertIn("grafana-util datasource add", help_text)
         self.assertIn("grafana-util datasource modify", help_text)
@@ -544,6 +1192,11 @@ class DatasourceCliTests(unittest.TestCase):
         self.assertIn("--name", help_text)
         self.assertIn("--type", help_text)
         self.assertIn("--datasource-url", help_text)
+        self.assertIn("--apply-supported-defaults", help_text)
+        self.assertIn("--preset-profile", help_text)
+        self.assertIn("starter", help_text)
+        self.assertIn("full", help_text)
+        self.assertIn("--preset-profile {starter,full}", help_text)
         self.assertIn("--basic-auth", help_text)
         self.assertIn("--basic-auth-user", help_text)
         self.assertIn("--basic-auth-password", help_text)
@@ -559,6 +1212,38 @@ class DatasourceCliTests(unittest.TestCase):
         self.assertIn("Examples:", help_text)
         self.assertIn("grafana-util datasource add", help_text)
         self.assertIn("--datasource-url http://prometheus:9090", help_text)
+        self.assertIn("--preset-profile full", help_text)
+
+    def test_datasource_types_help_mentions_catalog_entries(self):
+        stream = io.StringIO()
+
+        with redirect_stdout(stream):
+            with self.assertRaises(SystemExit):
+                datasource_cli.parse_args(["types", "-h"])
+
+        help_text = stream.getvalue()
+        self.assertIn("--json", help_text)
+        self.assertIn("--output-format", help_text)
+        self.assertIn("Grafana Data Sources Summary", help_text)
+        self.assertIn("Prometheus", help_text)
+        self.assertIn("profile=metrics-http query=promql", help_text)
+        self.assertIn("defaults: access=proxy, jsonData.httpMethod=POST", help_text)
+        self.assertIn("InfluxDB", help_text)
+        self.assertIn("jsonData.version=Flux", help_text)
+        self.assertIn("jsonData.organization=main-org", help_text)
+        self.assertIn("Graphite", help_text)
+        self.assertIn("jsonData.graphiteVersion=1.1", help_text)
+        self.assertIn("Loki", help_text)
+        self.assertIn("jsonData.maxLines=1000", help_text)
+        self.assertIn("jsonData.timeout=60", help_text)
+        self.assertIn("Tempo", help_text)
+        self.assertIn("jsonData.nodeGraph.enabled=True", help_text)
+        self.assertIn("jsonData.traceQuery.timeShiftEnabled=True", help_text)
+        self.assertIn("flags: --basic-auth", help_text)
+        self.assertIn("PostgreSQL", help_text)
+        self.assertIn("profile=sql-database query=sql", help_text)
+        self.assertIn("jsonData.database=grafana", help_text)
+        self.assertIn("jsonData.maxOpenConns=100", help_text)
 
     def test_datasource_delete_help_mentions_live_mutation_flags(self):
         stream = io.StringIO()
@@ -627,6 +1312,42 @@ class DatasourceCliTests(unittest.TestCase):
             [
                 "UID       NAME             TYPE        URL                     IS_DEFAULT",
                 "--------  ---------------  ----------  ----------------------  ----------",
+                "prom_uid  Prometheus Main  prometheus  http://prometheus:9090  true      ",
+                "",
+                "Listed 1 data source(s) from http://127.0.0.1:3000",
+            ],
+        )
+
+    def test_datasource_list_datasources_no_header_hides_table_header(self):
+        args = datasource_cli.parse_args(
+            [
+                "list",
+                "--url",
+                "http://127.0.0.1:3000",
+                "--no-header",
+            ]
+        )
+        client = FakeDatasourceClient(
+            datasources=[
+                {
+                    "uid": "prom_uid",
+                    "name": "Prometheus Main",
+                    "type": "prometheus",
+                    "url": "http://prometheus:9090",
+                    "isDefault": True,
+                }
+            ]
+        )
+
+        with mock.patch.object(datasource_cli, "build_client", return_value=client):
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = datasource_cli.list_datasources(args)
+
+        self.assertEqual(result, 0)
+        self.assertEqual(
+            stdout.getvalue().splitlines(),
+            [
                 "prom_uid  Prometheus Main  prometheus  http://prometheus:9090  true      ",
                 "",
                 "Listed 1 data source(s) from http://127.0.0.1:3000",
@@ -846,6 +1567,24 @@ class DatasourceCliTests(unittest.TestCase):
                 "httpHeaderValue1": "tenant-a",
             },
         )
+
+    def test_datasource_preset_profile_payload_shared_cases(self):
+        for case in self._load_preset_profile_payload_cases():
+            with self.subTest(case=case["name"]):
+                args = datasource_cli.parse_args(case["args"][1:])
+                args.dry_run = False
+                client = FakeDatasourceClient(datasources=[])
+
+                with mock.patch.object(
+                    datasource_cli, "build_client", return_value=client
+                ):
+                    stdout = io.StringIO()
+                    with redirect_stdout(stdout):
+                        result = datasource_cli.add_datasource(args)
+
+                self.assertEqual(result, 0)
+                payload = client.imported_payloads[0]["payload"]
+                self._assert_json_subset(payload, case["expectedSubset"])
 
     def test_datasource_delete_datasource_dry_run_renders_json(self):
         args = datasource_cli.parse_args(
@@ -1095,6 +1834,46 @@ class DatasourceCliTests(unittest.TestCase):
         ):
             datasource_cli.modify_datasource(args)
 
+    def test_datasource_modify_datasource_deep_merges_tempo_nested_json_data_override(
+        self,
+    ):
+        for case in self._load_nested_json_data_merge_cases():
+            if case["name"] != "tempo_full_modify_nested_json_data_override":
+                continue
+            with self.subTest(case=case["name"]):
+                args = datasource_cli.parse_args(case["args"][1:])
+                client = FakeDatasourceClient(datasources=[dict(case["existing"])])
+
+                with mock.patch.object(
+                    datasource_cli, "build_client", return_value=client
+                ):
+                    stdout = io.StringIO()
+                    with redirect_stdout(stdout):
+                        result = datasource_cli.modify_datasource(args)
+
+                self.assertEqual(result, 0)
+                payload = client.imported_payloads[0]["payload"]
+                self._assert_json_subset(payload, case["expected"])
+
+    def test_datasource_modify_datasource_replaces_loki_derived_fields_array(self):
+        for case in self._load_nested_json_data_merge_cases():
+            if case["name"] != "loki_full_modify_derived_fields_replace_array":
+                continue
+            with self.subTest(case=case["name"]):
+                args = datasource_cli.parse_args(case["args"][1:])
+                client = FakeDatasourceClient(datasources=[dict(case["existing"])])
+
+                with mock.patch.object(
+                    datasource_cli, "build_client", return_value=client
+                ):
+                    stdout = io.StringIO()
+                    with redirect_stdout(stdout):
+                        result = datasource_cli.modify_datasource(args)
+
+                self.assertEqual(result, 0)
+                payload = client.imported_payloads[0]["payload"]
+                self._assert_json_subset(payload, case["expected"])
+
     def test_datasource_modify_datasource_rejects_missing_target_without_live_write(
         self,
     ):
@@ -1208,6 +1987,10 @@ class DatasourceCliTests(unittest.TestCase):
                     "access": "proxy",
                     "url": "http://prometheus:9090",
                     "isDefault": True,
+                    "database": "metrics_v1",
+                    "defaultBucket": "prod-default",
+                    "organization": "acme-observability",
+                    "indexPattern": "[logs-]YYYY.MM.DD",
                 },
                 {
                     "uid": "loki_uid",
@@ -1216,6 +1999,10 @@ class DatasourceCliTests(unittest.TestCase):
                     "access": "proxy",
                     "url": "http://loki:3100",
                     "isDefault": False,
+                    "database": "logs_v1",
+                    "defaultBucket": "logs-default",
+                    "organization": "acme-observability",
+                    "indexPattern": "[logs-]YYYY.MM.DD",
                 },
             ],
             org={"id": 2, "name": "Observability"},
@@ -1327,6 +2114,55 @@ class DatasourceCliTests(unittest.TestCase):
             )
             self.assertEqual(datasources_document[0]["orgId"], "7")
             self.assertEqual(datasources_document[0]["org"], "Observability")
+
+    def test_datasource_export_datasources_writes_normalized_contract_only(self):
+        client = FakeDatasourceClient(
+            datasources=[
+                {
+                    "uid": "prom_uid",
+                    "name": "Prometheus Main",
+                    "type": "prometheus",
+                    "access": "proxy",
+                    "url": "http://prometheus:9090",
+                    "isDefault": True,
+                    "database": "metrics",
+                    "jsonData": {
+                        "defaultBucket": "main-bucket",
+                        "organization": "main-org",
+                        "indexPattern": "[metrics-]YYYY.MM.DD",
+                    },
+                }
+            ],
+            org={"id": 2, "name": "Observability"},
+        )
+        args = datasource_cli.parse_args(["export", "--export-dir", "ignored"])
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            args.export_dir = tmpdir
+            with mock.patch.object(datasource_cli, "build_client", return_value=client):
+                result = datasource_cli.export_datasources(args)
+
+            self.assertEqual(result, 0)
+            datasources_document = json.loads(
+                (Path(tmpdir) / datasource_cli.DATASOURCE_EXPORT_FILENAME).read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(
+                datasources_document,
+                [
+                    {
+                        "uid": "prom_uid",
+                        "name": "Prometheus Main",
+                        "type": "prometheus",
+                        "access": "proxy",
+                        "url": "http://prometheus:9090",
+                        "isDefault": "true",
+                        "org": "Observability",
+                        "orgId": "2",
+                    }
+                ],
+            )
 
     def test_datasource_export_datasources_with_all_orgs_writes_org_prefixed_dirs(self):
         org_one_client = FakeDatasourceClient(

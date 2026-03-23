@@ -1,7 +1,7 @@
 //! Dashboard domain orchestrator.
 //!
 //! Purpose:
-//! - Own the dashboard command surface (`list`, `list-data-sources`, `export`,
+//! - Own the dashboard command surface (`list`, `export`,
 //!   `import`, `diff`, `inspect`).
 //! - Re-export shared parser and helper APIs from sibling modules for consumers.
 //! - Keep transport setup, normalization, and execution branching in this module.
@@ -22,14 +22,19 @@ use crate::http::JsonHttpClient;
 mod cli_defs;
 mod export;
 mod files;
+mod governance_gate;
+mod governance_gate_tui;
 mod help;
+mod impact_tui;
 mod import;
 mod inspect;
 mod inspect_analyzer_flux;
 mod inspect_analyzer_loki;
 mod inspect_analyzer_prometheus;
+mod inspect_analyzer_search;
 mod inspect_analyzer_sql;
 mod inspect_governance;
+mod inspect_live_tui;
 mod inspect_render;
 mod inspect_report;
 mod inspect_summary;
@@ -38,15 +43,19 @@ mod live;
 mod models;
 mod prompt;
 mod screenshot;
+mod topology;
+mod topology_tui;
+mod validate;
 mod vars;
 
 pub use cli_defs::{
     build_auth_context, build_http_client, build_http_client_for_org, normalize_dashboard_cli_args,
     parse_cli_from, CommonCliArgs, DashboardAuthContext, DashboardCliArgs, DashboardCommand,
-    DiffArgs, ExportArgs, ImportArgs, InspectExportArgs, InspectExportReportFormat,
-    InspectLiveArgs, InspectOutputFormat, InspectVarsArgs, ListArgs, ListDataSourcesArgs,
-    ScreenshotArgs, ScreenshotFullPageOutput, ScreenshotOutputFormat, ScreenshotTheme,
-    SimpleOutputFormat,
+    DiffArgs, ExportArgs, GovernanceGateArgs, GovernanceGateOutputFormat, ImpactArgs,
+    ImpactOutputFormat, ImportArgs, InspectExportArgs, InspectExportReportFormat, InspectLiveArgs,
+    InspectOutputFormat, InspectVarsArgs, ListArgs, ScreenshotArgs, ScreenshotFullPageOutput,
+    ScreenshotOutputFormat, ScreenshotTheme, SimpleOutputFormat, TopologyArgs,
+    TopologyOutputFormat, ValidateExportArgs, ValidationOutputFormat,
 };
 pub use export::{build_export_variant_dirs, build_output_path, export_dashboards_with_client};
 pub use help::{
@@ -54,16 +63,18 @@ pub use help::{
     render_inspect_live_help_full,
 };
 pub use import::{diff_dashboards_with_client, import_dashboards_with_client};
-pub use list::{list_dashboards_with_client, list_data_sources_with_client};
+pub use list::list_dashboards_with_client;
 pub use live::{
     fetch_dashboard, import_dashboard_request, list_dashboard_summaries, list_datasources,
 };
 pub use prompt::build_external_export_document;
 
 use export::export_dashboards_with_org_clients;
-use inspect::analyze_export_dir;
+use inspect::{analyze_export_dir, inspect_live_dashboards_with_client};
 use list::list_dashboards_with_org_clients;
 use screenshot::capture_dashboard_screenshot;
+use topology::{run_dashboard_impact, run_dashboard_topology};
+use validate::run_dashboard_validate_export;
 use vars::inspect_dashboard_variables;
 
 #[cfg(test)]
@@ -78,37 +89,63 @@ pub(crate) use files::{
     write_json_document,
 };
 #[cfg(test)]
+pub(crate) use governance_gate::{
+    evaluate_dashboard_governance_gate, render_dashboard_governance_gate_result,
+    run_dashboard_governance_gate, DashboardGovernanceGateFinding, DashboardGovernanceGateResult,
+    DashboardGovernanceGateSummary,
+};
+#[cfg(test)]
+pub(crate) use governance_gate_tui::{
+    build_governance_gate_tui_groups, build_governance_gate_tui_items,
+};
+#[cfg(test)]
+pub(crate) use impact_tui::{build_impact_tui_groups, filter_impact_tui_items};
+#[cfg(test)]
 pub(crate) use import::{
     build_import_auth_context, describe_dashboard_import_mode, diff_dashboards_with_request,
     format_import_progress_line, format_import_verbose_line, import_dashboards_with_org_clients,
     import_dashboards_with_request, render_folder_inventory_dry_run_table,
     render_import_dry_run_json, render_import_dry_run_table,
 };
+#[cfg(test)]
 pub(crate) use inspect::inspect_live_dashboards_with_request;
 #[cfg(test)]
 pub(crate) use inspect::{
     apply_query_report_filters, build_export_inspection_query_report,
-    build_export_inspection_summary, build_export_inspection_summary_rows,
-    validate_inspect_export_report_args,
+    build_export_inspection_summary, build_export_inspection_summary_rows, dispatch_query_analysis,
+    prepare_inspect_export_import_dir, resolve_query_analyzer_family,
+    resolve_query_analyzer_family_from_datasource_type,
+    resolve_query_analyzer_family_from_query_signature,
+    snapshot_live_dashboard_export_with_fetcher, validate_inspect_export_report_args,
+    QueryExtractionContext, DATASOURCE_FAMILY_FLUX, DATASOURCE_FAMILY_LOKI,
+    DATASOURCE_FAMILY_PROMETHEUS, DATASOURCE_FAMILY_SEARCH, DATASOURCE_FAMILY_SQL,
+    DATASOURCE_FAMILY_TRACING, DATASOURCE_FAMILY_UNKNOWN,
 };
 #[cfg(test)]
 pub(crate) use inspect_governance::{
-    build_export_inspection_governance_document, render_governance_table_report,
+    build_export_inspection_governance_document, normalize_family_name,
+    render_governance_table_report,
 };
+#[cfg(test)]
+pub(crate) use inspect_live_tui::{build_inspect_live_tui_groups, filter_inspect_live_tui_items};
 #[cfg(test)]
 pub(crate) use inspect_render::{
     render_csv, render_grouped_query_report, render_grouped_query_table_report,
 };
 #[cfg(test)]
 pub(crate) use inspect_report::normalize_query_report;
+#[cfg(test)]
+pub(crate) use inspect_report::resolve_report_column_ids;
 pub(crate) use inspect_report::{
     build_export_inspection_query_report_document, build_query_report,
     refresh_filtered_query_report_summary, render_query_report_column, report_column_header,
-    report_format_supports_columns, resolve_report_column_ids, ExportInspectionQueryReport,
-    ExportInspectionQueryRow,
+    report_format_supports_columns, resolve_report_column_ids_for_format,
+    ExportInspectionQueryReport, ExportInspectionQueryRow,
 };
 #[cfg(test)]
-pub(crate) use inspect_report::{QueryReportSummary, DEFAULT_REPORT_COLUMN_IDS};
+pub(crate) use inspect_report::{
+    QueryReportSummary, DEFAULT_REPORT_COLUMN_IDS, SUPPORTED_REPORT_COLUMN_IDS,
+};
 pub(crate) use inspect_summary::{
     build_export_inspection_summary_document, DatasourceInventorySummary, ExportDatasourceUsage,
     ExportFolderUsage, ExportInspectionSummary, MixedDashboardSummary,
@@ -116,10 +153,8 @@ pub(crate) use inspect_summary::{
 #[cfg(test)]
 pub(crate) use list::{
     attach_dashboard_folder_paths_with_request, collect_dashboard_source_metadata,
-    format_dashboard_summary_line, format_data_source_line, list_dashboards_with_request,
-    list_data_sources_with_request, render_dashboard_summary_csv, render_dashboard_summary_json,
-    render_dashboard_summary_table, render_data_source_csv, render_data_source_json,
-    render_data_source_table,
+    format_dashboard_summary_line, list_dashboards_with_request, render_dashboard_summary_csv,
+    render_dashboard_summary_json, render_dashboard_summary_table,
 };
 #[cfg(test)]
 pub(crate) use live::build_folder_inventory_status;
@@ -127,14 +162,15 @@ pub(crate) use live::build_folder_inventory_status;
 pub(crate) use live::collect_folder_inventory_statuses_with_request;
 pub(crate) use live::{
     build_datasource_inventory_record, build_folder_path, collect_folder_inventory_with_request,
-    fetch_dashboard_if_exists_with_request, fetch_dashboard_with_request,
-    fetch_folder_if_exists_with_request, format_folder_inventory_status_line,
+    fetch_dashboard_if_exists_with_request, fetch_dashboard_permissions_with_request,
+    fetch_dashboard_with_request, fetch_folder_if_exists_with_request,
+    fetch_folder_permissions_with_request, format_folder_inventory_status_line,
     import_dashboard_request_with_request, list_dashboard_summaries_with_request,
     list_datasources_with_request,
 };
 pub(crate) use models::{
-    DashboardIndexItem, DatasourceInventoryItem, ExportMetadata, FolderInventoryItem,
-    RootExportIndex, RootExportVariants, VariantIndexEntry,
+    DashboardIndexItem, DatasourceInventoryItem, ExportDatasourceUsageSummary, ExportMetadata,
+    ExportOrgSummary, FolderInventoryItem, RootExportIndex, RootExportVariants, VariantIndexEntry,
 };
 pub(crate) use prompt::{
     build_datasource_catalog, collect_datasource_refs, datasource_type_alias,
@@ -146,6 +182,16 @@ pub(crate) use screenshot::{
     build_dashboard_capture_url, infer_screenshot_output_format, resolve_manifest_title,
     validate_screenshot_args,
 };
+#[cfg(test)]
+pub(crate) use topology::{
+    build_impact_browser_items, build_impact_document, build_topology_document, render_impact_text,
+    render_topology_dot, render_topology_mermaid, ImpactAlertResource, ImpactDashboard,
+    ImpactDocument, ImpactSummary, TopologyDocument,
+};
+#[cfg(test)]
+pub(crate) use topology_tui::{build_topology_tui_groups, filter_topology_tui_items};
+#[cfg(test)]
+pub(crate) use validate::{render_validation_result_json, validate_dashboard_export_dir};
 #[cfg(test)]
 pub(crate) use vars::extract_dashboard_variables;
 
@@ -185,6 +231,8 @@ pub const ROOT_INDEX_KIND: &str = "grafana-utils-dashboard-export-index";
 pub const FOLDER_INVENTORY_FILENAME: &str = "folders.json";
 /// Constant for datasource inventory filename.
 pub const DATASOURCE_INVENTORY_FILENAME: &str = "datasources.json";
+/// Constant for dashboard/folder permission bundle filename.
+pub const DASHBOARD_PERMISSION_BUNDLE_FILENAME: &str = "permissions.json";
 const BUILTIN_DATASOURCE_TYPES: &[&str] = &["__expr__", "grafana"];
 const BUILTIN_DATASOURCE_NAMES: &[&str] = &[
     "-- Dashboard --",
@@ -224,15 +272,11 @@ pub fn run_dashboard_cli_with_client(
 ) -> Result<()> {
     // Call graph (hierarchy): this function is used in related modules.
     // Upstream callers: 無
-    // Downstream callees: common.rs:message, dashboard_export.rs:export_dashboards_with_client, dashboard_help.rs:render_inspect_export_help_full, dashboard_help.rs:render_inspect_live_help_full, dashboard_import.rs:diff_dashboards_with_client, dashboard_import.rs:import_dashboards_with_client, dashboard_list.rs:list_dashboards_with_client, dashboard_list.rs:list_data_sources_with_client, dashboard_screenshot.rs:capture_dashboard_screenshot
+    // Downstream callees: common.rs:message, dashboard_export.rs:export_dashboards_with_client, dashboard_help.rs:render_inspect_export_help_full, dashboard_help.rs:render_inspect_live_help_full, dashboard_import.rs:diff_dashboards_with_client, dashboard_import.rs:import_dashboards_with_client, dashboard_list.rs:list_dashboards_with_client, dashboard_screenshot.rs:capture_dashboard_screenshot
 
     match args.command {
         DashboardCommand::List(list_args) => {
             let _ = list_dashboards_with_client(client, &list_args)?;
-            Ok(())
-        }
-        DashboardCommand::ListDataSources(list_data_sources_args) => {
-            let _ = list_data_sources_with_client(client, &list_data_sources_args)?;
             Ok(())
         }
         DashboardCommand::Export(export_args) => {
@@ -266,14 +310,19 @@ pub fn run_dashboard_cli_with_client(
                 print!("{}", render_inspect_live_help_full());
                 return Ok(());
             }
-            let _ = inspect_live_dashboards_with_request(
-                |method, path, params, payload| client.request_json(method, path, params, payload),
-                &inspect_args,
-            )?;
+            let _ = inspect_live_dashboards_with_client(client, &inspect_args)?;
             Ok(())
         }
         DashboardCommand::InspectVars(inspect_vars_args) => {
             inspect_dashboard_variables(&inspect_vars_args)
+        }
+        DashboardCommand::GovernanceGate(governance_gate_args) => {
+            governance_gate::run_dashboard_governance_gate(&governance_gate_args)
+        }
+        DashboardCommand::Topology(topology_args) => run_dashboard_topology(&topology_args),
+        DashboardCommand::Impact(impact_args) => run_dashboard_impact(&impact_args),
+        DashboardCommand::ValidateExport(validate_args) => {
+            run_dashboard_validate_export(&validate_args)
         }
         DashboardCommand::Screenshot(screenshot_args) => {
             capture_dashboard_screenshot(&screenshot_args)
@@ -290,17 +339,12 @@ pub fn run_dashboard_cli_with_client(
 pub fn run_dashboard_cli(args: DashboardCliArgs) -> Result<()> {
     // Call graph (hierarchy): this function is used in related modules.
     // Upstream callers: 無
-    // Downstream callees: common.rs:message, dashboard_cli_defs.rs:normalize_dashboard_cli_args, dashboard_help.rs:render_inspect_export_help_full, dashboard_help.rs:render_inspect_live_help_full, dashboard_import.rs:diff_dashboards_with_client, dashboard_list.rs:list_data_sources_with_client, dashboard_screenshot.rs:capture_dashboard_screenshot
+    // Downstream callees: common.rs:message, dashboard_cli_defs.rs:normalize_dashboard_cli_args, dashboard_help.rs:render_inspect_export_help_full, dashboard_help.rs:render_inspect_live_help_full, dashboard_import.rs:diff_dashboards_with_client, dashboard_screenshot.rs:capture_dashboard_screenshot
 
     let args = normalize_dashboard_cli_args(args);
     match args.command {
         DashboardCommand::List(list_args) => {
             let _ = list_dashboards_with_org_clients(&list_args)?;
-            Ok(())
-        }
-        DashboardCommand::ListDataSources(list_data_sources_args) => {
-            let client = build_http_client(&list_data_sources_args.common)?;
-            let _ = list_data_sources_with_client(&client, &list_data_sources_args)?;
             Ok(())
         }
         DashboardCommand::Export(export_args) => {
@@ -341,14 +385,19 @@ pub fn run_dashboard_cli(args: DashboardCliArgs) -> Result<()> {
                 return Ok(());
             }
             let client = build_http_client(&inspect_args.common)?;
-            let _ = inspect_live_dashboards_with_request(
-                |method, path, params, payload| client.request_json(method, path, params, payload),
-                &inspect_args,
-            )?;
+            let _ = inspect_live_dashboards_with_client(&client, &inspect_args)?;
             Ok(())
         }
         DashboardCommand::InspectVars(inspect_vars_args) => {
             inspect_dashboard_variables(&inspect_vars_args)
+        }
+        DashboardCommand::GovernanceGate(governance_gate_args) => {
+            governance_gate::run_dashboard_governance_gate(&governance_gate_args)
+        }
+        DashboardCommand::Topology(topology_args) => run_dashboard_topology(&topology_args),
+        DashboardCommand::Impact(impact_args) => run_dashboard_impact(&impact_args),
+        DashboardCommand::ValidateExport(validate_args) => {
+            run_dashboard_validate_export(&validate_args)
         }
         DashboardCommand::Screenshot(screenshot_args) => {
             capture_dashboard_screenshot(&screenshot_args)

@@ -8,14 +8,23 @@
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use reqwest::Method;
 use serde_json::{Map, Value};
+use std::cmp::Ordering;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+pub mod audit;
+pub mod audit_tui;
 pub mod bundle_alert_contracts;
 pub mod bundle_preflight;
 pub mod preflight;
+pub mod review_tui;
 pub mod workbench;
 
+use self::audit::{
+    build_sync_audit_document, build_sync_lock_document, build_sync_lock_document_from_lock,
+    render_sync_audit_text,
+};
+use self::audit_tui::run_sync_audit_interactive;
 use self::bundle_preflight::{
     build_sync_bundle_preflight_document, render_sync_bundle_preflight_text,
     SYNC_BUNDLE_PREFLIGHT_KIND,
@@ -24,21 +33,29 @@ use self::preflight::{
     build_sync_preflight_document, render_sync_preflight_text, SYNC_PREFLIGHT_KIND,
 };
 use self::workbench::{
-    build_sync_apply_intent_document, build_sync_plan_document, build_sync_source_bundle_document,
+    build_sync_alert_assessment_document, build_sync_apply_intent_document,
+    build_sync_plan_document, build_sync_plan_summary_document, build_sync_source_bundle_document,
     build_sync_summary_document, render_sync_source_bundle_text,
 };
-use crate::alert::build_rule_import_payload;
+use crate::alert::{
+    build_contact_point_import_payload, build_mute_timing_import_payload,
+    build_policies_import_payload, build_rule_import_payload, build_template_import_payload,
+    detect_document_kind, CONTACT_POINT_KIND, MUTE_TIMING_KIND, POLICIES_KIND, RULE_KIND,
+    TEMPLATE_KIND,
+};
 use crate::alert_sync::{assess_alert_sync_specs, ALERT_SYNC_KIND};
 use crate::common::{message, Result};
+use crate::dashboard::DASHBOARD_PERMISSION_BUNDLE_FILENAME;
 use crate::dashboard::{build_http_client, build_http_client_for_org, CommonCliArgs};
 
 /// Constant for default review token.
 pub const DEFAULT_REVIEW_TOKEN: &str = "reviewed-sync-plan";
-const SYNC_ROOT_HELP_TEXT: &str = "Examples:\n\n  Summarize desired resources:\n    grafana-util sync summary --desired-file ./desired.json\n\n  Build a live-backed sync plan:\n    grafana-util sync plan --desired-file ./desired.json --fetch-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\"\n\n  Apply a reviewed plan back to Grafana:\n    grafana-util sync apply --plan-file ./sync-plan-reviewed.json --approve --execute-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\"";
+const SYNC_ROOT_HELP_TEXT: &str = "Examples:\n\n  Summarize desired resources:\n    grafana-util sync summary --desired-file ./desired.json\n\n  Audit managed resources against a staged checksum lock:\n    grafana-util sync audit --lock-file ./sync-lock.json --fetch-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --fail-on-drift --output json\n\n  Package local exports into one source bundle:\n    grafana-util sync bundle --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts/raw --output-file ./sync-source-bundle.json\n\n  Compare a source bundle against target inventory before apply:\n    grafana-util sync bundle-preflight --source-bundle ./sync-source-bundle.json --target-inventory ./target-inventory.json --output json\n\n  Build a live-backed sync plan:\n    grafana-util sync plan --desired-file ./desired.json --fetch-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\"\n\n  Apply a reviewed plan back to Grafana:\n    grafana-util sync apply --plan-file ./sync-plan-reviewed.json --approve --execute-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\"";
 const SYNC_SUMMARY_HELP_TEXT: &str = "Examples:\n\n  grafana-util sync summary --desired-file ./desired.json\n  grafana-util sync summary --desired-file ./desired.json --output json";
 const SYNC_PLAN_HELP_TEXT: &str = "Examples:\n\n  grafana-util sync plan --desired-file ./desired.json --live-file ./live.json\n  grafana-util sync plan --desired-file ./desired.json --fetch-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --allow-prune --output json";
 const SYNC_REVIEW_HELP_TEXT: &str = "Examples:\n\n  grafana-util sync review --plan-file ./sync-plan.json\n  grafana-util sync review --plan-file ./sync-plan.json --review-note 'peer-reviewed' --output json";
-const SYNC_APPLY_HELP_TEXT: &str = "Examples:\n\n  grafana-util sync apply --plan-file ./sync-plan-reviewed.json --approve\n  grafana-util sync apply --plan-file ./sync-plan-reviewed.json --approve --execute-live --allow-folder-delete --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\"";
+const SYNC_APPLY_HELP_TEXT: &str = "Examples:\n\n  grafana-util sync apply --plan-file ./sync-plan-reviewed.json --approve\n  grafana-util sync apply --plan-file ./sync-plan-reviewed.json --approve --execute-live --allow-folder-delete --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\"\n  grafana-util sync apply --plan-file ./sync-plan-reviewed.json --approve --execute-live --allow-policy-reset --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\"";
+const SYNC_AUDIT_HELP_TEXT: &str = "Examples:\n\n  grafana-util sync audit --managed-file ./desired.json --live-file ./live.json --write-lock ./sync-lock.json\n  grafana-util sync audit --lock-file ./sync-lock.json --fetch-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --fail-on-drift --output json";
 const SYNC_PREFLIGHT_HELP_TEXT: &str = "Examples:\n\n  grafana-util sync preflight --desired-file ./desired.json --availability-file ./availability.json\n  grafana-util sync preflight --desired-file ./desired.json --fetch-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output json";
 const SYNC_ASSESS_ALERTS_HELP_TEXT: &str = "Examples:\n\n  grafana-util sync assess-alerts --alerts-file ./alerts.json\n  grafana-util sync assess-alerts --alerts-file ./alerts.json --output json";
 const SYNC_BUNDLE_PREFLIGHT_HELP_TEXT: &str = "Examples:\n\n  grafana-util sync bundle-preflight --source-bundle ./bundle.json --target-inventory ./target.json\n  grafana-util sync bundle-preflight --source-bundle ./bundle.json --target-inventory ./target.json --fetch-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output json";
@@ -63,6 +80,9 @@ pub struct SyncCliArgs {
     #[command(subcommand)]
     pub command: SyncGroupCommand,
 }
+
+#[cfg(test)]
+pub(crate) use audit_tui::{build_sync_audit_tui_groups, build_sync_audit_tui_rows};
 
 /// Struct definition for SyncSummaryArgs.
 #[derive(Debug, Clone, Args)]
@@ -178,6 +198,12 @@ pub struct SyncReviewArgs {
     pub reviewed_at: Option<String>,
     #[arg(long, help = "Optional review note to record in the reviewed plan.")]
     pub review_note: Option<String>,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Open an interactive terminal review to select which actionable sync operations stay enabled before the plan is marked reviewed."
+    )]
+    pub interactive: bool,
 }
 
 /// Struct definition for SyncApplyArgs.
@@ -230,6 +256,13 @@ pub struct SyncApplyArgs {
     pub allow_folder_delete: bool,
     #[arg(
         long,
+        default_value_t = false,
+        help = "Allow live reset of the notification policy tree when a reviewed plan includes would-delete alert-policy operations.",
+        help_heading = "Approval Options"
+    )]
+    pub allow_policy_reset: bool,
+    #[arg(
+        long,
         value_enum,
         default_value_t = SyncOutputFormat::Text,
         help = "Render the apply intent document as text or json.",
@@ -250,6 +283,78 @@ pub struct SyncApplyArgs {
     pub approval_reason: Option<String>,
     #[arg(long, help = "Optional apply note to record in the apply intent.")]
     pub apply_note: Option<String>,
+}
+
+#[derive(Debug, Clone, Args)]
+pub struct SyncAuditArgs {
+    #[arg(
+        long,
+        help = "Optional JSON file containing the managed desired sync resource list used to define audit scope and managed fields.",
+        help_heading = "Input Options"
+    )]
+    pub managed_file: Option<PathBuf>,
+    #[arg(
+        long,
+        help = "Optional JSON file containing a staged sync lock document to compare against.",
+        help_heading = "Input Options"
+    )]
+    pub lock_file: Option<PathBuf>,
+    #[arg(
+        long,
+        help = "Optional JSON file containing the current live sync resource list.",
+        help_heading = "Input Options"
+    )]
+    pub live_file: Option<PathBuf>,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Fetch the current live state directly from Grafana instead of --live-file.",
+        help_heading = "Live Options"
+    )]
+    pub fetch_live: bool,
+    #[command(flatten)]
+    pub common: CommonCliArgs,
+    #[arg(
+        long,
+        help = "Optional Grafana org id used when --fetch-live is active.",
+        help_heading = "Live Options"
+    )]
+    pub org_id: Option<i64>,
+    #[arg(
+        long,
+        default_value_t = 500usize,
+        help = "Dashboard search page size when --fetch-live is active.",
+        help_heading = "Live Options"
+    )]
+    pub page_size: usize,
+    #[arg(
+        long,
+        help = "Optional JSON file path to write the newly generated lock snapshot.",
+        help_heading = "Output Options"
+    )]
+    pub write_lock: Option<PathBuf>,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Fail the command when the audit detects drift.",
+        help_heading = "Output Options"
+    )]
+    pub fail_on_drift: bool,
+    #[arg(
+        long,
+        value_enum,
+        default_value_t = SyncOutputFormat::Text,
+        help = "Render the audit document as text or json.",
+        help_heading = "Output Options"
+    )]
+    pub output: SyncOutputFormat,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Open an interactive terminal browser over drift rows.",
+        help_heading = "Output Options"
+    )]
+    pub interactive: bool,
 }
 
 /// Struct definition for SyncPreflightArgs.
@@ -397,6 +502,8 @@ pub enum SyncGroupCommand {
     Review(SyncReviewArgs),
     #[command(about = "Build a gated local apply intent from a reviewed sync plan.", after_help = SYNC_APPLY_HELP_TEXT)]
     Apply(SyncApplyArgs),
+    #[command(about = "Audit managed Grafana resources against a checksum lock and current live state.", after_help = SYNC_AUDIT_HELP_TEXT)]
+    Audit(SyncAuditArgs),
     #[command(about = "Summarize local desired sync resources from JSON.", after_help = SYNC_SUMMARY_HELP_TEXT)]
     Summary(SyncSummaryArgs),
     #[command(about = "Build a staged sync preflight document from local JSON.", after_help = SYNC_PREFLIGHT_HELP_TEXT)]
@@ -517,6 +624,18 @@ fn fetch_live_resource_specs_with_request<F>(
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
+    fn build_live_alert_resource_spec(sync_kind: &str, body: Map<String, Value>) -> Result<Value> {
+        let (identity, title) = normalize_alert_resource_identity_and_title(sync_kind, &body)?;
+        Ok(serde_json::json!({
+            "kind": sync_kind,
+            "uid": if sync_kind == "alert-contact-point" { identity.clone() } else { String::new() },
+            "name": if matches!(sync_kind, "alert-mute-timing" | "alert-template") { identity.clone() } else { String::new() },
+            "title": title,
+            "managedFields": normalize_alert_managed_fields(&body),
+            "body": body,
+        }))
+    }
+
     let mut specs = Vec::new();
     match request_json(Method::GET, "/api/folders", &[], None)? {
         Some(Value::Array(folders)) => {
@@ -715,6 +834,92 @@ where
             }
         }
         Some(_) => return Err(message("Unexpected alert-rule list response from Grafana.")),
+        None => {}
+    }
+
+    match request_json(
+        Method::GET,
+        "/api/v1/provisioning/contact-points",
+        &[],
+        None,
+    )? {
+        Some(Value::Array(contact_points)) => {
+            for contact_point in contact_points {
+                let object = require_json_object(&contact_point, "Grafana contact-point payload")?;
+                specs.push(build_live_alert_resource_spec(
+                    "alert-contact-point",
+                    object.clone(),
+                )?);
+            }
+        }
+        Some(_) => {
+            return Err(message(
+                "Unexpected contact-point list response from Grafana.",
+            ))
+        }
+        None => {}
+    }
+
+    match request_json(Method::GET, "/api/v1/provisioning/mute-timings", &[], None)? {
+        Some(Value::Array(mute_timings)) => {
+            for mute_timing in mute_timings {
+                let object = require_json_object(&mute_timing, "Grafana mute-timing payload")?;
+                specs.push(build_live_alert_resource_spec(
+                    "alert-mute-timing",
+                    object.clone(),
+                )?);
+            }
+        }
+        Some(_) => {
+            return Err(message(
+                "Unexpected mute-timing list response from Grafana.",
+            ))
+        }
+        None => {}
+    }
+
+    match request_json(Method::GET, "/api/v1/provisioning/policies", &[], None)? {
+        Some(Value::Object(policies)) => {
+            specs.push(build_live_alert_resource_spec(
+                "alert-policy",
+                policies.clone(),
+            )?);
+        }
+        Some(_) => {
+            return Err(message(
+                "Unexpected notification policy response from Grafana.",
+            ))
+        }
+        None => {}
+    }
+
+    match request_json(Method::GET, "/api/v1/provisioning/templates", &[], None)? {
+        Some(Value::Array(templates)) => {
+            for template in templates {
+                let object = require_json_object(&template, "Grafana template summary payload")?;
+                let name = object
+                    .get("name")
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .ok_or_else(|| message("Live template payload is missing name."))?;
+                let template_payload = match request_json(
+                    Method::GET,
+                    &format!("/api/v1/provisioning/templates/{name}"),
+                    &[],
+                    None,
+                )? {
+                    Some(Value::Object(template_object)) => template_object,
+                    Some(_) => return Err(message("Unexpected template payload from Grafana.")),
+                    None => continue,
+                };
+                specs.push(build_live_alert_resource_spec(
+                    "alert-template",
+                    template_payload,
+                )?);
+            }
+        }
+        Some(_) => return Err(message("Unexpected template list response from Grafana.")),
         None => {}
     }
 
@@ -1023,6 +1228,7 @@ fn load_dashboard_bundle_sections(export_dir: &Path) -> Result<DashboardBundleSe
             "export-metadata.json",
             "folders.json",
             "datasources.json",
+            DASHBOARD_PERMISSION_BUNDLE_FILENAME,
         ],
     )? {
         let source_path = path
@@ -1227,6 +1433,69 @@ fn extract_rule_contact_points(rule: &Map<String, Value>) -> Vec<String> {
     contact_points.into_iter().collect()
 }
 
+fn normalize_alert_managed_fields(body: &Map<String, Value>) -> Vec<String> {
+    body.keys().cloned().collect()
+}
+
+fn normalize_alert_resource_identity_and_title(
+    sync_kind: &str,
+    payload: &Map<String, Value>,
+) -> Result<(String, String)> {
+    let identity = match sync_kind {
+        "alert" | "alert-contact-point" => payload
+            .get("uid")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .or_else(|| {
+                payload
+                    .get("name")
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+            })
+            .unwrap_or(""),
+        "alert-mute-timing" | "alert-template" => payload
+            .get("name")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .unwrap_or(""),
+        "alert-policy" => payload
+            .get("receiver")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .unwrap_or("root"),
+        _ => "",
+    };
+    if identity.is_empty() {
+        return Err(message(format!(
+            "Alert provisioning export document is missing a stable identity for {sync_kind}."
+        )));
+    }
+    let title = payload
+        .get("name")
+        .or_else(|| payload.get("title"))
+        .or_else(|| payload.get("receiver"))
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or(identity);
+    Ok((identity.to_string(), title.to_string()))
+}
+
+fn map_alert_document_kind_to_sync_kind(kind: &str) -> Option<&'static str> {
+    match kind {
+        RULE_KIND => Some("alert"),
+        CONTACT_POINT_KIND => Some("alert-contact-point"),
+        MUTE_TIMING_KIND => Some("alert-mute-timing"),
+        POLICIES_KIND => Some("alert-policy"),
+        TEMPLATE_KIND => Some("alert-template"),
+        _ => None,
+    }
+}
+
 fn normalize_rule_group_rule_document(
     group: &Map<String, Value>,
     rule: &Map<String, Value>,
@@ -1343,45 +1612,85 @@ fn normalize_alert_rule_sync_spec(
     }))
 }
 
-fn build_alert_sync_specs(alerting: &Value) -> Result<Vec<Value>> {
-    let Some(rules) = alerting.get("rules").and_then(Value::as_array) else {
-        return Ok(Vec::new());
+fn normalize_alert_resource_sync_spec(
+    document: &Map<String, Value>,
+    source_path: &str,
+) -> Result<Option<Value>> {
+    let document_kind = detect_document_kind(document)?;
+    let Some(sync_kind) = map_alert_document_kind_to_sync_kind(document_kind) else {
+        return Ok(None);
     };
+    if sync_kind == "alert" {
+        return Ok(Some(normalize_alert_rule_sync_spec(document, source_path)?));
+    }
+    let body = match document_kind {
+        CONTACT_POINT_KIND => build_contact_point_import_payload(document)?,
+        MUTE_TIMING_KIND => build_mute_timing_import_payload(document)?,
+        POLICIES_KIND => build_policies_import_payload(document)?,
+        TEMPLATE_KIND => build_template_import_payload(document)?,
+        _ => return Ok(None),
+    };
+    let (identity, title) = normalize_alert_resource_identity_and_title(sync_kind, &body)?;
+    Ok(Some(serde_json::json!({
+        "kind": sync_kind,
+        "uid": if sync_kind == "alert-contact-point" { identity.clone() } else { String::new() },
+        "name": if matches!(sync_kind, "alert-mute-timing" | "alert-template") { identity.clone() } else { String::new() },
+        "title": title,
+        "managedFields": normalize_alert_managed_fields(&body),
+        "body": body,
+        "sourcePath": source_path,
+    })))
+}
+
+fn build_alert_sync_specs(alerting: &Value) -> Result<Vec<Value>> {
     let mut alerts = Vec::new();
-    for item in rules {
-        let Some(object) = item.as_object() else {
+    let Some(alerting_object) = alerting.as_object() else {
+        return Ok(alerts);
+    };
+    for (section, items) in alerting_object {
+        let Some(items) = items.as_array() else {
             continue;
         };
-        let source_path = object
-            .get("sourcePath")
-            .and_then(Value::as_str)
-            .unwrap_or("");
-        let Some(document) = object.get("document").and_then(Value::as_object) else {
-            continue;
-        };
-        if let Some(groups) = document.get("groups").and_then(Value::as_array) {
-            for group in groups {
-                let Some(group_object) = group.as_object() else {
+        for item in items {
+            let Some(object) = item.as_object() else {
+                continue;
+            };
+            let source_path = object
+                .get("sourcePath")
+                .and_then(Value::as_str)
+                .unwrap_or("");
+            let Some(document) = object.get("document").and_then(Value::as_object) else {
+                continue;
+            };
+            if section == "rules" {
+                if let Some(groups) = document.get("groups").and_then(Value::as_array) {
+                    for group in groups {
+                        let Some(group_object) = group.as_object() else {
+                            continue;
+                        };
+                        let Some(group_rules) = group_object.get("rules").and_then(Value::as_array)
+                        else {
+                            continue;
+                        };
+                        for rule in group_rules {
+                            let Some(rule_object) = rule.as_object() else {
+                                continue;
+                            };
+                            let normalized_rule =
+                                normalize_rule_group_rule_document(group_object, rule_object);
+                            alerts.push(normalize_alert_rule_sync_spec(
+                                &normalized_rule,
+                                source_path,
+                            )?);
+                        }
+                    }
                     continue;
-                };
-                let Some(group_rules) = group_object.get("rules").and_then(Value::as_array) else {
-                    continue;
-                };
-                for rule in group_rules {
-                    let Some(rule_object) = rule.as_object() else {
-                        continue;
-                    };
-                    let normalized_rule =
-                        normalize_rule_group_rule_document(group_object, rule_object);
-                    alerts.push(normalize_alert_rule_sync_spec(
-                        &normalized_rule,
-                        source_path,
-                    )?);
                 }
             }
-            continue;
+            if let Some(resource) = normalize_alert_resource_sync_spec(document, source_path)? {
+                alerts.push(resource);
+            }
         }
-        alerts.push(normalize_alert_rule_sync_spec(document, source_path)?);
     }
     Ok(alerts)
 }
@@ -1870,7 +2179,7 @@ pub fn render_sync_apply_intent_text(document: &Value) -> Result<Vec<String>> {
         .and_then(Value::as_object)
     {
         lines.push(format!(
-            "Bundle preflight: resources={} sync-blocking={} provider-blocking={}",
+            "Bundle preflight: resources={} sync-blocking={} provider-blocking={} alert-artifacts={} plan-only={} blocking={}",
             bundle_summary
                 .get("resourceCount")
                 .and_then(Value::as_i64)
@@ -1881,6 +2190,18 @@ pub fn render_sync_apply_intent_text(document: &Value) -> Result<Vec<String>> {
                 .unwrap_or(0),
             bundle_summary
                 .get("providerBlockingCount")
+                .and_then(Value::as_i64)
+                .unwrap_or(0),
+            bundle_summary
+                .get("alertArtifactCount")
+                .and_then(Value::as_i64)
+                .unwrap_or(0),
+            bundle_summary
+                .get("alertArtifactPlanOnlyCount")
+                .and_then(Value::as_i64)
+                .unwrap_or(0),
+            bundle_summary
+                .get("alertArtifactBlockingCount")
                 .and_then(Value::as_i64)
                 .unwrap_or(0),
         ));
@@ -2173,6 +2494,7 @@ fn apply_alert_operation_with_request<F>(
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
+    let kind = operation.get("kind").and_then(Value::as_str).unwrap_or("");
     let action = operation
         .get("action")
         .and_then(Value::as_str)
@@ -2182,54 +2504,158 @@ where
         .and_then(Value::as_str)
         .map(str::trim)
         .unwrap_or("");
+    let desired = operation
+        .get("desired")
+        .and_then(Value::as_object)
+        .cloned()
+        .unwrap_or_default();
     match action {
-        "would-delete" => {
-            if identity.is_empty() {
-                return Err(message(
-                    "Alert sync delete requires a stable uid identity for live apply.",
-                ));
+        "would-delete" => match kind {
+            "alert" => {
+                if identity.is_empty() {
+                    return Err(message(
+                        "Alert sync delete requires a stable uid identity for live apply.",
+                    ));
+                }
+                Ok(request_json(
+                    Method::DELETE,
+                    &format!("/api/v1/provisioning/alert-rules/{identity}"),
+                    &[],
+                    None,
+                )?
+                .unwrap_or(Value::Null))
             }
-            Ok(request_json(
+            "alert-contact-point" => Ok(request_json(
                 Method::DELETE,
-                &format!("/api/v1/provisioning/alert-rules/{identity}"),
+                &format!("/api/v1/provisioning/contact-points/{identity}"),
                 &[],
                 None,
             )?
-            .unwrap_or(Value::Null))
-        }
-        "would-create" | "would-update" => {
-            let desired = operation
-                .get("desired")
-                .and_then(Value::as_object)
-                .cloned()
-                .unwrap_or_default();
-            let mut payload = build_rule_import_payload(&desired)?;
-            if !identity.is_empty() && !payload.contains_key("uid") {
-                payload.insert("uid".to_string(), Value::String(identity.to_string()));
+            .unwrap_or(Value::Null)),
+            "alert-mute-timing" => Ok(request_json(
+                Method::DELETE,
+                &format!("/api/v1/provisioning/mute-timings/{identity}"),
+                &[("version".to_string(), String::new())],
+                None,
+            )?
+            .unwrap_or(Value::Null)),
+            "alert-template" => Ok(request_json(
+                Method::DELETE,
+                &format!("/api/v1/provisioning/templates/{identity}"),
+                &[("version".to_string(), String::new())],
+                None,
+            )?
+            .unwrap_or(Value::Null)),
+            "alert-policy" => {
+                Ok(
+                    request_json(Method::DELETE, "/api/v1/provisioning/policies", &[], None)?
+                        .unwrap_or(Value::Null),
+                )
             }
-            let uid = payload
-                .get("uid")
-                .and_then(Value::as_str)
-                .map(str::trim)
-                .filter(|value| !value.is_empty())
-                .ok_or_else(|| {
-                    message("Alert sync live apply requires alert rule payloads with a uid.")
-                })?;
-            let method = if action == "would-create" {
-                Method::POST
-            } else {
-                Method::PUT
-            };
-            let path = if action == "would-create" {
-                "/api/v1/provisioning/alert-rules".to_string()
-            } else {
-                format!("/api/v1/provisioning/alert-rules/{uid}")
-            };
-            Ok(
-                request_json(method, &path, &[], Some(&Value::Object(payload)))?
-                    .unwrap_or(Value::Null),
-            )
-        }
+            _ => Err(message(format!("Unsupported alert sync kind {kind}."))),
+        },
+        "would-create" | "would-update" => match kind {
+            "alert" => {
+                let mut payload = build_rule_import_payload(&desired)?;
+                if !identity.is_empty() && !payload.contains_key("uid") {
+                    payload.insert("uid".to_string(), Value::String(identity.to_string()));
+                }
+                let uid = payload
+                    .get("uid")
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .ok_or_else(|| {
+                        message("Alert sync live apply requires alert rule payloads with a uid.")
+                    })?;
+                let method = if action == "would-create" {
+                    Method::POST
+                } else {
+                    Method::PUT
+                };
+                let path = if action == "would-create" {
+                    "/api/v1/provisioning/alert-rules".to_string()
+                } else {
+                    format!("/api/v1/provisioning/alert-rules/{uid}")
+                };
+                Ok(
+                    request_json(method, &path, &[], Some(&Value::Object(payload)))?
+                        .unwrap_or(Value::Null),
+                )
+            }
+            "alert-contact-point" => {
+                let mut payload = build_contact_point_import_payload(&desired)?;
+                if !identity.is_empty() && !payload.contains_key("uid") {
+                    payload.insert("uid".to_string(), Value::String(identity.to_string()));
+                }
+                let method = if action == "would-create" {
+                    Method::POST
+                } else {
+                    Method::PUT
+                };
+                let path = if action == "would-create" {
+                    "/api/v1/provisioning/contact-points".to_string()
+                } else {
+                    format!("/api/v1/provisioning/contact-points/{identity}")
+                };
+                Ok(
+                    request_json(method, &path, &[], Some(&Value::Object(payload)))?
+                        .unwrap_or(Value::Null),
+                )
+            }
+            "alert-mute-timing" => {
+                let payload = build_mute_timing_import_payload(&desired)?;
+                let name = payload
+                    .get("name")
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .unwrap_or(identity);
+                let method = if action == "would-create" {
+                    Method::POST
+                } else {
+                    Method::PUT
+                };
+                let path = if action == "would-create" {
+                    "/api/v1/provisioning/mute-timings".to_string()
+                } else {
+                    format!("/api/v1/provisioning/mute-timings/{name}")
+                };
+                Ok(
+                    request_json(method, &path, &[], Some(&Value::Object(payload)))?
+                        .unwrap_or(Value::Null),
+                )
+            }
+            "alert-policy" => {
+                let payload = build_policies_import_payload(&desired)?;
+                Ok(request_json(
+                    Method::PUT,
+                    "/api/v1/provisioning/policies",
+                    &[],
+                    Some(&Value::Object(payload)),
+                )?
+                .unwrap_or(Value::Null))
+            }
+            "alert-template" => {
+                let mut payload = build_template_import_payload(&desired)?;
+                let name = payload
+                    .get("name")
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .unwrap_or(identity)
+                    .to_string();
+                payload.remove("name");
+                Ok(request_json(
+                    Method::PUT,
+                    &format!("/api/v1/provisioning/templates/{name}"),
+                    &[],
+                    Some(&Value::Object(payload)),
+                )?
+                .unwrap_or(Value::Null))
+            }
+            _ => Err(message(format!("Unsupported alert sync kind {kind}."))),
+        },
         _ => Err(message(format!("Unsupported alert sync action {action}."))),
     }
 }
@@ -2238,6 +2664,7 @@ fn execute_live_apply_with_request<F>(
     mut request_json: F,
     operations: &[Value],
     allow_folder_delete: bool,
+    allow_policy_reset: bool,
 ) -> Result<Value>
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
@@ -2258,7 +2685,21 @@ where
             }
             "dashboard" => apply_dashboard_operation_with_request(&mut request_json, object)?,
             "datasource" => apply_datasource_operation_with_request(&mut request_json, object)?,
-            "alert" => apply_alert_operation_with_request(&mut request_json, object)?,
+            "alert"
+            | "alert-contact-point"
+            | "alert-mute-timing"
+            | "alert-policy"
+            | "alert-template" => {
+                if object.get("kind").and_then(Value::as_str) == Some("alert-policy")
+                    && object.get("action").and_then(Value::as_str) == Some("would-delete")
+                    && !allow_policy_reset
+                {
+                    return Err(message(
+                        "Refusing live notification policy reset without --allow-policy-reset.",
+                    ));
+                }
+                apply_alert_operation_with_request(&mut request_json, object)?
+            }
             _ => return Err(message(format!("Unsupported sync resource kind {kind}."))),
         };
         results.push(serde_json::json!({
@@ -2280,12 +2721,14 @@ fn execute_live_apply(
     org_id: Option<i64>,
     operations: &[Value],
     allow_folder_delete: bool,
+    allow_policy_reset: bool,
 ) -> Result<Value> {
     let client = build_sync_http_client(common, org_id)?;
     execute_live_apply_with_request(
         |method, path, params, payload| client.request_json(method, path, params, payload),
         operations,
         allow_folder_delete,
+        allow_policy_reset,
     )
 }
 
@@ -2386,7 +2829,32 @@ fn validate_apply_bundle_preflight(document: &Value) -> Result<Value> {
         .ok_or_else(|| {
             message("Sync bundle preflight summary is missing providerBlockingCount.")
         })?;
-    let blocking_count = sync_blocking_count + provider_blocking_count;
+    let alert_artifact_blocking_count = object
+        .get("alertArtifactAssessment")
+        .and_then(Value::as_object)
+        .and_then(|assessment| assessment.get("summary"))
+        .and_then(Value::as_object)
+        .and_then(|summary| summary.get("blockedCount"))
+        .and_then(Value::as_i64)
+        .unwrap_or(0);
+    let alert_artifact_plan_only_count = object
+        .get("alertArtifactAssessment")
+        .and_then(Value::as_object)
+        .and_then(|assessment| assessment.get("summary"))
+        .and_then(Value::as_object)
+        .and_then(|summary| summary.get("planOnlyCount"))
+        .and_then(Value::as_i64)
+        .unwrap_or(0);
+    let alert_artifact_count = object
+        .get("alertArtifactAssessment")
+        .and_then(Value::as_object)
+        .and_then(|assessment| assessment.get("summary"))
+        .and_then(Value::as_object)
+        .and_then(|summary| summary.get("resourceCount"))
+        .and_then(Value::as_i64)
+        .unwrap_or(0);
+    let blocking_count =
+        sync_blocking_count + provider_blocking_count + alert_artifact_blocking_count;
     if blocking_count > 0 {
         return Err(message(format!(
             "Refusing local sync apply intent because bundle preflight reports {blocking_count} blocking checks."
@@ -2400,6 +2868,9 @@ fn validate_apply_bundle_preflight(document: &Value) -> Result<Value> {
         "blockingCount": blocking_count,
         "syncBlockingCount": sync_blocking_count,
         "providerBlockingCount": provider_blocking_count,
+        "alertArtifactBlockingCount": alert_artifact_blocking_count,
+        "alertArtifactPlanOnlyCount": alert_artifact_plan_only_count,
+        "alertArtifactCount": alert_artifact_count,
     }))
 }
 
@@ -2496,6 +2967,162 @@ fn emit_text_or_json(document: &Value, lines: Vec<String>, output: SyncOutputFor
         }
     }
     Ok(())
+}
+
+fn sync_audit_field<'a>(row: &'a Value, key: &str) -> &'a str {
+    row.get(key).and_then(Value::as_str).unwrap_or("")
+}
+
+fn sync_audit_display<'a>(value: &'a str, fallback: &'a str) -> &'a str {
+    if value.is_empty() {
+        fallback
+    } else {
+        value
+    }
+}
+
+fn sync_audit_status_rank(status: &str) -> u8 {
+    match status {
+        "missing-live" => 0,
+        "missing-lock" => 1,
+        "drift-detected" => 2,
+        _ => 3,
+    }
+}
+
+fn sync_audit_drift_cmp(left: &Value, right: &Value) -> Ordering {
+    sync_audit_status_rank(sync_audit_field(left, "status"))
+        .cmp(&sync_audit_status_rank(sync_audit_field(right, "status")))
+        .then_with(|| sync_audit_field(left, "kind").cmp(sync_audit_field(right, "kind")))
+        .then_with(|| sync_audit_field(left, "identity").cmp(sync_audit_field(right, "identity")))
+        .then_with(|| sync_audit_field(left, "title").cmp(sync_audit_field(right, "title")))
+        .then_with(|| {
+            sync_audit_field(left, "sourcePath").cmp(sync_audit_field(right, "sourcePath"))
+        })
+}
+
+fn sync_audit_drift_title(drift: &Value) -> String {
+    format!(
+        "{} {}",
+        sync_audit_display(sync_audit_field(drift, "kind"), "unknown"),
+        sync_audit_display(sync_audit_field(drift, "identity"), "unknown"),
+    )
+}
+
+fn sync_audit_drift_meta(drift: &Value) -> String {
+    let baseline_status = sync_audit_display(sync_audit_field(drift, "baselineStatus"), "unknown");
+    let current_status = sync_audit_display(sync_audit_field(drift, "currentStatus"), "unknown");
+    format!(
+        "{} | base={} cur={}",
+        sync_audit_display(sync_audit_field(drift, "status"), "unknown"),
+        baseline_status,
+        current_status
+    )
+}
+
+fn sync_audit_drift_details(drift: &Value) -> Vec<String> {
+    let mut details = vec![
+        format!(
+            "Triage: {}",
+            sync_audit_display(sync_audit_field(drift, "status"), "(unknown)")
+        ),
+        format!(
+            "Baseline/current: {} -> {}",
+            sync_audit_display(sync_audit_field(drift, "baselineStatus"), "(unknown)"),
+            sync_audit_display(sync_audit_field(drift, "currentStatus"), "(unknown)")
+        ),
+        format!(
+            "Source: {}",
+            sync_audit_display(sync_audit_field(drift, "sourcePath"), "(not set)")
+        ),
+    ];
+
+    let drifted_fields = drift
+        .get("driftedFields")
+        .and_then(Value::as_array)
+        .map(|values| values.iter().filter_map(Value::as_str).collect::<Vec<_>>())
+        .unwrap_or_default();
+    details.push(format!(
+        "Fields: {}",
+        if drifted_fields.is_empty() {
+            "none".to_string()
+        } else {
+            drifted_fields.join(", ")
+        }
+    ));
+    let baseline_checksum = drift
+        .get("baselineChecksum")
+        .and_then(Value::as_str)
+        .filter(|value| !value.is_empty())
+        .unwrap_or("(none)");
+    let current_checksum = drift
+        .get("currentChecksum")
+        .and_then(Value::as_str)
+        .filter(|value| !value.is_empty())
+        .unwrap_or("(none)");
+    if baseline_checksum != "(none)" || current_checksum != "(none)" {
+        details.push(format!(
+            "Checksums: baseline={} current={}",
+            baseline_checksum, current_checksum
+        ));
+    }
+    details
+}
+
+fn run_sync_audit(args: SyncAuditArgs) -> Result<()> {
+    if args.managed_file.is_none() && args.lock_file.is_none() {
+        return Err(message(
+            "Sync audit requires --managed-file, --lock-file, or both.",
+        ));
+    }
+    let live = if args.fetch_live {
+        fetch_live_resource_specs(&args.common, args.org_id, args.page_size)?
+    } else {
+        let live_file = args.live_file.as_ref().ok_or_else(|| {
+            message("Sync audit requires --live-file unless --fetch-live is used.")
+        })?;
+        load_json_array_file(live_file, "Sync live input")?
+    };
+    let baseline_lock = match args.lock_file.as_ref() {
+        Some(path) => Some(load_json_value(path, "Sync lock input")?),
+        None => None,
+    };
+    let current_lock = match args.managed_file.as_ref() {
+        Some(path) => {
+            let managed = load_json_array_file(path, "Sync managed input")?;
+            build_sync_lock_document(&managed, &live)?
+        }
+        None => {
+            let baseline = baseline_lock
+                .as_ref()
+                .ok_or_else(|| message("Sync audit requires --managed-file or --lock-file."))?;
+            build_sync_lock_document_from_lock(baseline, &live)?
+        }
+    };
+    let audit = build_sync_audit_document(&current_lock, baseline_lock.as_ref())?;
+    let drift_count = audit
+        .get("summary")
+        .and_then(Value::as_object)
+        .and_then(|summary| summary.get("driftCount"))
+        .and_then(Value::as_i64)
+        .unwrap_or(0);
+    if let Some(path) = args.write_lock.as_ref() {
+        if !(args.fail_on_drift && drift_count > 0) {
+            fs::write(
+                path,
+                format!("{}\n", serde_json::to_string_pretty(&current_lock)?),
+            )?;
+        }
+    }
+    if args.fail_on_drift && drift_count > 0 {
+        return Err(message(format!(
+            "Sync audit detected {drift_count} drifted resource(s)."
+        )));
+    }
+    if args.interactive {
+        return run_sync_audit_interactive(&audit);
+    }
+    emit_text_or_json(&audit, render_sync_audit_text(&audit)?, args.output)
 }
 
 fn run_sync_bundle(args: SyncBundleArgs) -> Result<()> {
@@ -2605,9 +3232,14 @@ pub fn run_sync_cli(command: SyncGroupCommand) -> Result<()> {
             let plan = load_json_value(&args.plan_file, "Sync plan input")?;
             let trace_id = require_trace_id(&plan, "Sync plan document")?;
             require_optional_stage(&plan, "Sync plan document", "plan", 1, None)?;
+            let reviewed_plan_input = if args.interactive {
+                review_tui::run_sync_review_tui(&plan)?
+            } else {
+                plan
+            };
             let document = attach_lineage(
                 &attach_review_audit(
-                    &mark_plan_reviewed(&plan, &args.review_token)?,
+                    &mark_plan_reviewed(&reviewed_plan_input, &args.review_token)?,
                     &trace_id,
                     args.reviewed_by.as_deref(),
                     args.reviewed_at.as_deref(),
@@ -2680,6 +3312,7 @@ pub fn run_sync_cli(command: SyncGroupCommand) -> Result<()> {
                     args.org_id,
                     &operations,
                     args.allow_folder_delete,
+                    args.allow_policy_reset,
                 )?;
                 emit_text_or_json(
                     &live_result,
@@ -2703,6 +3336,7 @@ pub fn run_sync_cli(command: SyncGroupCommand) -> Result<()> {
                 )
             }
         }
+        SyncGroupCommand::Audit(args) => run_sync_audit(args),
         SyncGroupCommand::Summary(args) => {
             let desired = load_json_array_file(&args.desired_file, "Sync desired input")?;
             let document = build_sync_summary_document(&desired)?;
