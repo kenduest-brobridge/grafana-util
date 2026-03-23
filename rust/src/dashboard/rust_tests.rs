@@ -2829,7 +2829,138 @@ fn topology_help_mentions_alert_contract_and_visual_formats() {
     assert!(help.contains("--output-file"));
     assert!(help.contains("mermaid"));
     assert!(help.contains("dot"));
+    assert!(help.contains("graph"));
+    assert!(help.contains("variable"));
     assert!(help.contains("topology"));
+}
+
+#[test]
+fn build_dashboard_topology_document_renders_variable_and_panel_chain() {
+    let governance = json!({
+        "dashboardGovernance": [
+            {
+                "dashboardUid": "cpu-main",
+                "dashboardTitle": "CPU Main",
+                "folderPath": "Platform",
+                "panelCount": 1,
+                "queryCount": 1
+            }
+        ],
+        "dashboardDependencies": [
+            {
+                "dashboardUid": "cpu-main",
+                "dashboardTitle": "CPU Main",
+                "folderPath": "Platform",
+                "file": "dash.json",
+                "panelCount": 1,
+                "queryCount": 1,
+                "datasourceCount": 1,
+                "datasourceFamilyCount": 1,
+                "panelIds": ["7"],
+                "datasources": ["Prometheus Main"],
+                "datasourceFamilies": ["prometheus"],
+                "queryFields": ["expr"],
+                "panelVariables": ["cluster"],
+                "queryVariables": ["cluster"],
+                "metrics": ["up"],
+                "functions": [],
+                "measurements": [],
+                "buckets": []
+            }
+        ],
+        "dashboardDatasourceEdges": [
+            {
+                "dashboardUid": "cpu-main",
+                "dashboardTitle": "CPU Main",
+                "folderPath": "Platform",
+                "datasourceUid": "prom-main",
+                "datasource": "Prometheus Main",
+                "datasourceType": "prometheus",
+                "family": "prometheus",
+                "panelCount": 1,
+                "queryCount": 1,
+                "queryFields": ["expr"],
+                "queryVariables": ["cluster"],
+                "metrics": ["up"],
+                "functions": [],
+                "measurements": [],
+                "buckets": []
+            }
+        ]
+    });
+    let alert_contract = json!({
+        "resources": [
+            {
+                "kind": "grafana-alert-rule",
+                "identity": "cpu-high",
+                "title": "CPU High",
+                "sourcePath": "rules/cpu-high.json",
+                "references": ["prom-main", "cpu-main"]
+            }
+        ]
+    });
+
+    let document = build_topology_document(&governance, Some(&alert_contract)).unwrap();
+    assert_eq!(document.summary.datasource_count, 1);
+    assert_eq!(document.summary.dashboard_count, 1);
+    assert_eq!(document.summary.panel_count, 1);
+    assert_eq!(document.summary.variable_count, 1);
+    assert_eq!(document.summary.alert_resource_count, 1);
+    assert_eq!(document.summary.node_count, 5);
+    assert_eq!(document.summary.edge_count, 6);
+
+    let json_document = serde_json::to_value(&document).unwrap();
+    let node_kinds = json_document["nodes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|node| node["kind"].as_str().unwrap().to_string())
+        .collect::<Vec<String>>();
+    assert!(node_kinds.contains(&"datasource".to_string()));
+    assert!(node_kinds.contains(&"dashboard".to_string()));
+    assert!(node_kinds.contains(&"panel".to_string()));
+    assert!(node_kinds.contains(&"variable".to_string()));
+    assert!(node_kinds.contains(&"alert-rule".to_string()));
+
+    let edges = json_document["edges"].as_array().unwrap();
+    assert!(edges.iter().any(|edge| {
+        edge["from"] == json!("datasource:prom-main")
+            && edge["to"] == json!("variable:cpu-main:cluster")
+            && edge["relation"] == json!("feeds-variable")
+    }));
+    assert!(edges.iter().any(|edge| {
+        edge["from"] == json!("variable:cpu-main:cluster")
+            && edge["to"] == json!("panel:cpu-main:7")
+            && edge["relation"] == json!("used-by")
+    }));
+    assert!(edges.iter().any(|edge| {
+        edge["from"] == json!("panel:cpu-main:7")
+            && edge["to"] == json!("dashboard:cpu-main")
+            && edge["relation"] == json!("belongs-to")
+    }));
+    assert!(edges.iter().any(|edge| {
+        edge["from"] == json!("dashboard:cpu-main")
+            && edge["to"] == json!("alert:grafana-alert-rule:cpu-high")
+            && edge["relation"] == json!("backs")
+    }));
+
+    let mermaid = render_topology_mermaid(&document);
+    assert!(mermaid.contains("datasource_prom_main"));
+    assert!(mermaid.contains("panel_cpu_main_7"));
+    assert!(mermaid.contains("variable_cpu_main_cluster"));
+    assert!(mermaid.contains("datasource_prom_main -->|feeds-variable| variable_cpu_main_cluster"));
+    assert!(mermaid.contains("variable_cpu_main_cluster -->|used-by| panel_cpu_main_7"));
+
+    let dot = render_topology_dot(&document);
+    assert!(dot.contains("\"datasource:prom-main\" [label=\"Prometheus Main\\ndatasource\"]"));
+    assert!(dot.contains("\"panel:cpu-main:7\" [label=\"Panel 7\\npanel\"]"));
+    assert!(dot.contains("\"variable:cpu-main:cluster\" [label=\"cluster\\nvariable\"]"));
+    assert!(dot.contains(
+        "\"datasource:prom-main\" -> \"variable:cpu-main:cluster\" [label=\"feeds-variable\"]"
+    ));
+    assert!(
+        dot.contains("\"variable:cpu-main:cluster\" -> \"panel:cpu-main:7\" [label=\"used-by\"]")
+    );
 }
 
 #[test]
@@ -11095,12 +11226,12 @@ fn build_export_inspection_governance_document_flags_query_quality_and_dashboard
         "Prometheus Main",
         "prometheus",
         "prometheus",
-        r#"sum(rate(http_requests_total{job=~"api|web"}[5m]))"#,
-        &["job=~\"api|web\""],
+        r#"sum(max by(instance) (rate(http_requests_total{instance=~"api|web"}[5m])))"#,
+        &["instance=~\"api|web\""],
     );
     regex.file_path = dashboard_path.display().to_string();
     regex.metrics = vec!["http_requests_total".to_string()];
-    regex.functions = vec!["sum".to_string(), "rate".to_string()];
+    regex.functions = vec!["sum".to_string(), "max".to_string(), "rate".to_string()];
     regex.buckets = vec!["5m".to_string()];
 
     let mut large_range = make_core_family_report_row(
@@ -11172,6 +11303,21 @@ fn build_export_inspection_governance_document_flags_query_quality_and_dashboard
         .query_audits
         .iter()
         .any(|item| item.reasons.contains(&"unscoped-loki-search".to_string())));
+    let regex_audit = document
+        .query_audits
+        .iter()
+        .find(|item| item.ref_id == "B")
+        .unwrap();
+    assert_eq!(regex_audit.aggregation_depth, 2);
+    assert_eq!(regex_audit.regex_matcher_count, 1);
+    assert_eq!(regex_audit.estimated_series_risk, "high");
+    assert!(regex_audit.query_cost_score >= 2);
+    let long_audit = document
+        .query_audits
+        .iter()
+        .find(|item| item.ref_id == "C")
+        .unwrap();
+    assert_eq!(long_audit.query_cost_score, long_audit.score);
     assert_eq!(document.dashboard_audits.len(), 1);
     assert_eq!(
         document.dashboard_audits[0].reasons,
@@ -11187,6 +11333,8 @@ fn build_export_inspection_governance_document_flags_query_quality_and_dashboard
         .collect::<Vec<_>>();
     assert!(kinds.contains(&"broad-prometheus-selector"));
     assert!(kinds.contains(&"prometheus-regex-heavy"));
+    assert!(kinds.contains(&"prometheus-high-cardinality-regex"));
+    assert!(kinds.contains(&"prometheus-deep-aggregation"));
     assert!(kinds.contains(&"large-prometheus-range"));
     assert!(kinds.contains(&"unscoped-loki-search"));
     assert!(kinds.contains(&"dashboard-panel-pressure"));
@@ -11237,6 +11385,18 @@ fn governance_risk_metadata_registry_covers_known_kinds() {
             "cost",
             "medium",
             "Reduce Prometheus regex matcher scope or replace it with exact labels where possible.",
+        ),
+        (
+            "prometheus-high-cardinality-regex",
+            "cost",
+            "high",
+            "Avoid regex matchers on high-cardinality Prometheus labels such as instance, pod, or container unless the scope is already tightly bounded.",
+        ),
+        (
+            "prometheus-deep-aggregation",
+            "cost",
+            "medium",
+            "Reduce nested Prometheus aggregation layers or pre-aggregate upstream before adding more dashboard fanout.",
         ),
         (
             "large-prometheus-range",
@@ -11358,7 +11518,10 @@ fn evaluate_dashboard_governance_gate_enforces_query_thresholds_and_warning_poli
             "forbidBroadLokiRegex": false,
             "forbidBroadPrometheusSelectors": false,
             "forbidRegexHeavyPrometheus": false,
+            "forbidHighCardinalityRegex": false,
             "maxPrometheusRangeWindowSeconds": null,
+            "maxPrometheusAggregationDepth": null,
+            "maxPrometheusCostScore": null,
             "forbidUnscopedLokiSearch": false,
             "maxPanelsPerDashboard": null,
             "minRefreshIntervalSeconds": null,
@@ -11385,7 +11548,10 @@ fn evaluate_dashboard_governance_gate_enforces_perf_and_dashboard_pressure_rules
         "queries": {
             "forbidBroadPrometheusSelectors": true,
             "forbidRegexHeavyPrometheus": true,
+            "forbidHighCardinalityRegex": false,
             "maxPrometheusRangeWindowSeconds": 3600,
+            "maxPrometheusAggregationDepth": null,
+            "maxPrometheusCostScore": null,
             "forbidUnscopedLokiSearch": true
         },
         "dashboards": {
@@ -11537,6 +11703,10 @@ fn evaluate_dashboard_governance_gate_enforces_query_audit_contract_rules() {
                 "datasource": "Prometheus Main",
                 "datasourceUid": "prom-main",
                 "datasourceFamily": "prometheus",
+                "aggregationDepth": 1,
+                "regexMatcherCount": 1,
+                "estimatedSeriesRisk": "medium",
+                "queryCostScore": 3,
                 "score": 3,
                 "severity": "medium",
                 "reasons": ["broad-prometheus-selector", "prometheus-regex-heavy"],
@@ -11552,6 +11722,10 @@ fn evaluate_dashboard_governance_gate_enforces_query_audit_contract_rules() {
                 "datasource": "Logs Main",
                 "datasourceUid": "logs-main",
                 "datasourceFamily": "loki",
+                "aggregationDepth": 0,
+                "regexMatcherCount": 0,
+                "estimatedSeriesRisk": "low",
+                "queryCostScore": 4,
                 "score": 4,
                 "severity": "high",
                 "reasons": ["unscoped-loki-search"],
@@ -11594,6 +11768,64 @@ fn evaluate_dashboard_governance_gate_enforces_query_audit_contract_rules() {
 }
 
 #[test]
+fn evaluate_dashboard_governance_gate_enforces_prometheus_cost_policy_rules() {
+    let policy = json!({
+        "version": 1,
+        "queries": {
+            "forbidHighCardinalityRegex": true,
+            "maxPrometheusAggregationDepth": 1,
+            "maxPrometheusCostScore": 3
+        }
+    });
+    let governance = json!({
+        "summary": {
+            "dashboardCount": 1,
+            "queryRecordCount": 1
+        },
+        "riskRecords": [],
+        "queryAudits": [
+            {
+                "dashboardUid": "cpu-main",
+                "dashboardTitle": "CPU Main",
+                "folderPath": "Platform",
+                "panelId": "7",
+                "panelTitle": "CPU",
+                "refId": "A",
+                "datasource": "Prometheus Main",
+                "datasourceUid": "prom-main",
+                "datasourceFamily": "prometheus",
+                "aggregationDepth": 2,
+                "regexMatcherCount": 2,
+                "estimatedSeriesRisk": "high",
+                "queryCostScore": 5,
+                "score": 5,
+                "severity": "high",
+                "reasons": ["prometheus-high-cardinality-regex", "prometheus-deep-aggregation"],
+                "recommendations": ["scope it"]
+            }
+        ],
+        "dashboardAudits": []
+    });
+    let queries = json!({
+        "summary": {
+            "dashboardCount": 1,
+            "queryRecordCount": 1
+        },
+        "queries": []
+    });
+
+    let result = super::evaluate_dashboard_governance_gate(&policy, &governance, &queries).unwrap();
+    let codes = result
+        .violations
+        .iter()
+        .map(|item| item.code.as_str())
+        .collect::<Vec<_>>();
+    assert!(codes.contains(&"prometheus-high-cardinality-regex"));
+    assert!(codes.contains(&"prometheus-aggregation-depth-too-high"));
+    assert!(codes.contains(&"prometheus-cost-score-too-high"));
+}
+
+#[test]
 fn render_dashboard_governance_gate_result_lists_violations_and_warnings() {
     let result = super::DashboardGovernanceGateResult {
         ok: false,
@@ -11613,7 +11845,10 @@ fn render_dashboard_governance_gate_result_lists_violations_and_warnings() {
                 "forbidBroadLokiRegex": false,
                 "forbidBroadPrometheusSelectors": false,
                 "forbidRegexHeavyPrometheus": false,
+                "forbidHighCardinalityRegex": false,
                 "maxPrometheusRangeWindowSeconds": null,
+                "maxPrometheusAggregationDepth": null,
+                "maxPrometheusCostScore": null,
                 "forbidUnscopedLokiSearch": false,
                 "maxPanelsPerDashboard": null,
                 "minRefreshIntervalSeconds": null,
@@ -11759,7 +11994,10 @@ fn run_dashboard_governance_gate_writes_json_output_file() {
             "forbidBroadLokiRegex": false,
             "forbidBroadPrometheusSelectors": false,
             "forbidRegexHeavyPrometheus": false,
+            "forbidHighCardinalityRegex": false,
             "maxPrometheusRangeWindowSeconds": null,
+            "maxPrometheusAggregationDepth": null,
+            "maxPrometheusCostScore": null,
             "forbidUnscopedLokiSearch": false,
             "maxPanelsPerDashboard": null,
             "minRefreshIntervalSeconds": null,
@@ -11862,7 +12100,10 @@ fn evaluate_dashboard_governance_gate_enforces_datasource_policy_rules() {
             "forbidBroadLokiRegex": false,
             "forbidBroadPrometheusSelectors": false,
             "forbidRegexHeavyPrometheus": false,
+            "forbidHighCardinalityRegex": false,
             "maxPrometheusRangeWindowSeconds": null,
+            "maxPrometheusAggregationDepth": null,
+            "maxPrometheusCostScore": null,
             "forbidUnscopedLokiSearch": false,
             "maxPanelsPerDashboard": null,
             "minRefreshIntervalSeconds": null,
@@ -11971,7 +12212,10 @@ fn evaluate_dashboard_governance_gate_enforces_routing_sql_and_loki_policy_rules
             "forbidBroadLokiRegex": true,
             "forbidBroadPrometheusSelectors": false,
             "forbidRegexHeavyPrometheus": false,
+            "forbidHighCardinalityRegex": false,
             "maxPrometheusRangeWindowSeconds": null,
+            "maxPrometheusAggregationDepth": null,
+            "maxPrometheusCostScore": null,
             "forbidUnscopedLokiSearch": false,
             "maxPanelsPerDashboard": null,
             "minRefreshIntervalSeconds": null,
@@ -12067,7 +12311,10 @@ fn evaluate_dashboard_governance_gate_enforces_query_and_dashboard_complexity_ru
             "forbidBroadLokiRegex": false,
             "forbidBroadPrometheusSelectors": false,
             "forbidRegexHeavyPrometheus": false,
+            "forbidHighCardinalityRegex": false,
             "maxPrometheusRangeWindowSeconds": null,
+            "maxPrometheusAggregationDepth": null,
+            "maxPrometheusCostScore": null,
             "forbidUnscopedLokiSearch": false,
             "maxPanelsPerDashboard": null,
             "minRefreshIntervalSeconds": null,

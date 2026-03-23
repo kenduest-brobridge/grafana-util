@@ -25,7 +25,7 @@ use crate::common::Result;
 use crate::dashboard::{
     run_dashboard_cli, DashboardCliArgs, DashboardCommand, DiffArgs, ExportArgs,
     GovernanceGateArgs, ImportArgs, InspectExportArgs, InspectLiveArgs, InspectVarsArgs, ListArgs,
-    ScreenshotArgs,
+    ScreenshotArgs, TopologyArgs,
 };
 use crate::datasource::{run_datasource_cli, DatasourceCliArgs, DatasourceGroupCommand};
 use crate::sync::{run_sync_cli, SyncCliArgs, SyncGroupCommand};
@@ -230,6 +230,12 @@ pub enum DashboardGroupCommand {
     InspectVars(InspectVarsArgs),
     #[command(about = "Evaluate governance policy against dashboard inspect JSON artifacts.")]
     GovernanceGate(GovernanceGateArgs),
+    #[command(
+        name = "topology",
+        visible_alias = "graph",
+        about = "Build a deterministic dashboard topology graph from JSON artifacts."
+    )]
+    Topology(TopologyArgs),
     #[command(about = "Open one dashboard in a headless browser and capture image or PDF output.")]
     Screenshot(ScreenshotArgs),
 }
@@ -317,6 +323,7 @@ fn wrap_dashboard_group(command: DashboardGroupCommand) -> DashboardCliArgs {
         DashboardGroupCommand::GovernanceGate(inner) => {
             wrap_dashboard(DashboardCommand::GovernanceGate(inner))
         }
+        DashboardGroupCommand::Topology(inner) => wrap_dashboard(DashboardCommand::Topology(inner)),
         DashboardGroupCommand::Screenshot(inner) => {
             wrap_dashboard(DashboardCommand::Screenshot(inner))
         }

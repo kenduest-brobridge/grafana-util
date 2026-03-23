@@ -866,6 +866,11 @@ pub struct TopologyArgs {
     #[arg(long, help = "Path to dashboard governance JSON.")]
     pub governance: PathBuf,
     #[arg(
+        long,
+        help = "Optional path to dashboard query-report JSON so the graph can include variables and panels."
+    )]
+    pub queries: Option<PathBuf>,
+    #[arg(
         long = "alert-contract",
         help = "Optional path to a sync alert contract JSON document."
     )]
@@ -888,6 +893,11 @@ pub struct TopologyArgs {
 pub struct ImpactArgs {
     #[arg(long, help = "Path to dashboard governance JSON.")]
     pub governance: PathBuf,
+    #[arg(
+        long,
+        help = "Optional path to dashboard query-report JSON so blast radius can include variables and panels."
+    )]
+    pub queries: Option<PathBuf>,
     #[arg(
         long = "datasource-uid",
         help = "Datasource UID to analyze for downstream dashboard and alert impact."
@@ -987,14 +997,15 @@ pub enum DashboardCommand {
     GovernanceGate(GovernanceGateArgs),
     #[command(
         name = "topology",
-        about = "Build a deterministic dashboard, datasource, and alert topology from JSON artifacts.",
-        after_help = "Examples:\n\n  Render a dashboard topology graph in Mermaid:\n    grafana-util dashboard topology --governance ./governance.json --alert-contract ./alert-contract.json --output-format mermaid\n\n  Render the same graph as DOT while also writing it to disk:\n    grafana-util dashboard topology --governance ./governance.json --alert-contract ./alert-contract.json --output-format dot --output-file ./dashboard-topology.dot"
+        visible_alias = "graph",
+        about = "Build a deterministic dashboard, datasource, variable, and alert topology from JSON artifacts.",
+        after_help = "Examples:\n\n  Render a dashboard topology graph in Mermaid:\n    grafana-util dashboard topology --governance ./governance.json --queries ./queries.json --alert-contract ./alert-contract.json --output-format mermaid\n\n  Render the same graph through the graph alias as DOT while also writing it to disk:\n    grafana-util dashboard graph --governance ./governance.json --queries ./queries.json --alert-contract ./alert-contract.json --output-format dot --output-file ./dashboard-topology.dot"
     )]
     Topology(TopologyArgs),
     #[command(
         name = "impact",
-        about = "Summarize dashboard and alert blast radius for one datasource from JSON artifacts.",
-        after_help = "Examples:\n\n  Summarize blast radius as text:\n    grafana-util dashboard impact --governance ./governance.json --datasource-uid prom-main --alert-contract ./alert-contract.json --output-format text\n\n  Render the same blast radius as JSON:\n    grafana-util dashboard impact --governance ./governance.json --datasource-uid prom-main --output-format json"
+        about = "Summarize dashboard, variable, panel, and alert blast radius for one datasource from JSON artifacts.",
+        after_help = "Examples:\n\n  Summarize blast radius as text:\n    grafana-util dashboard impact --governance ./governance.json --queries ./queries.json --datasource-uid prom-main --alert-contract ./alert-contract.json --output-format text\n\n  Render the same blast radius as JSON:\n    grafana-util dashboard impact --governance ./governance.json --queries ./queries.json --datasource-uid prom-main --output-format json"
     )]
     Impact(ImpactArgs),
     #[command(

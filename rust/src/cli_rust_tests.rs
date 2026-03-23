@@ -178,6 +178,29 @@ fn parse_cli_supports_dashboard_group_alias() {
 }
 
 #[test]
+fn parse_cli_supports_dashboard_group_graph_alias() {
+    let args: CliArgs = parse_cli_from([
+        "grafana-util",
+        "dashboard",
+        "graph",
+        "--governance",
+        "./governance.json",
+        "--output-format",
+        "json",
+    ]);
+
+    match args.command {
+        UnifiedCommand::Dashboard { command } => match command {
+            super::DashboardGroupCommand::Topology(topology_args) => {
+                assert_eq!(topology_args.governance, Path::new("./governance.json"));
+            }
+            _ => panic!("expected dashboard topology"),
+        },
+        _ => panic!("expected dashboard group"),
+    }
+}
+
+#[test]
 fn parse_cli_rejects_dashboard_list_datasources_subcommand() {
     let error =
         CliArgs::try_parse_from(["grafana-util", "dashboard", "list-data-sources", "--json"])

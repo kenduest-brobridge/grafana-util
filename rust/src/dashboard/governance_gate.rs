@@ -22,7 +22,10 @@ struct QueryThresholdPolicy {
     forbid_broad_loki_regex: bool,
     forbid_broad_prometheus_selectors: bool,
     forbid_regex_heavy_prometheus: bool,
+    forbid_high_cardinality_regex: bool,
     max_prometheus_range_window_seconds: Option<usize>,
+    max_prometheus_aggregation_depth: Option<usize>,
+    max_prometheus_cost_score: Option<usize>,
     forbid_unscoped_loki_search: bool,
     max_panels_per_dashboard: Option<usize>,
     min_refresh_interval_seconds: Option<usize>,
@@ -192,9 +195,17 @@ fn parse_query_threshold_policy(policy: &Value) -> Result<QueryThresholdPolicy> 
             queries.get("forbidRegexHeavyPrometheus"),
             false,
         )?,
+        forbid_high_cardinality_regex: value_to_bool(
+            queries.get("forbidHighCardinalityRegex"),
+            false,
+        )?,
         max_prometheus_range_window_seconds: value_to_usize(
             queries.get("maxPrometheusRangeWindowSeconds"),
         )?,
+        max_prometheus_aggregation_depth: value_to_usize(
+            queries.get("maxPrometheusAggregationDepth"),
+        )?,
+        max_prometheus_cost_score: value_to_usize(queries.get("maxPrometheusCostScore"))?,
         forbid_unscoped_loki_search: value_to_bool(queries.get("forbidUnscopedLokiSearch"), false)?,
         max_panels_per_dashboard: value_to_usize(dashboards.get("maxPanelsPerDashboard"))?,
         min_refresh_interval_seconds: value_to_usize(dashboards.get("minRefreshIntervalSeconds"))?,
@@ -232,7 +243,10 @@ fn build_checked_rules(policy: QueryThresholdPolicy) -> Value {
         "forbidBroadLokiRegex": policy.forbid_broad_loki_regex,
         "forbidBroadPrometheusSelectors": policy.forbid_broad_prometheus_selectors,
         "forbidRegexHeavyPrometheus": policy.forbid_regex_heavy_prometheus,
+        "forbidHighCardinalityRegex": policy.forbid_high_cardinality_regex,
         "maxPrometheusRangeWindowSeconds": policy.max_prometheus_range_window_seconds,
+        "maxPrometheusAggregationDepth": policy.max_prometheus_aggregation_depth,
+        "maxPrometheusCostScore": policy.max_prometheus_cost_score,
         "forbidUnscopedLokiSearch": policy.forbid_unscoped_loki_search,
         "maxPanelsPerDashboard": policy.max_panels_per_dashboard,
         "minRefreshIntervalSeconds": policy.min_refresh_interval_seconds,
@@ -861,10 +875,21 @@ pub(crate) fn evaluate_dashboard_governance_gate(
         || policy.max_reason_count.is_some()
         || !policy.block_reasons.is_empty()
         || policy.max_dashboard_load_score.is_some()
+        || policy.forbid_high_cardinality_regex
+        || policy.max_prometheus_aggregation_depth.is_some()
+        || policy.max_prometheus_cost_score.is_some()
     {
         let query_audits = array_of_objects(governance_document, "queryAudits")?;
         for audit in query_audits {
             let score = audit.get("score").and_then(Value::as_u64).unwrap_or(0) as usize;
+            let query_cost_score = audit
+                .get("queryCostScore")
+                .and_then(Value::as_u64)
+                .unwrap_or(score as u64) as usize;
+            let aggregation_depth = audit
+                .get("aggregationDepth")
+                .and_then(Value::as_u64)
+                .unwrap_or(0) as usize;
             let reasons = audit
                 .get("reasons")
                 .and_then(Value::as_array)
@@ -914,6 +939,40 @@ pub(crate) fn evaluate_dashboard_governance_gate(
                     ),
                     audit,
                 ));
+            }
+            if policy.forbid_high_cardinality_regex
+                && reasons
+                    .iter()
+                    .any(|reason| reason == "prometheus-high-cardinality-regex")
+            {
+                violations.push(build_query_violation(
+                    "prometheus-high-cardinality-regex",
+                    "Prometheus query uses regex matchers on likely high-cardinality labels."
+                        .to_string(),
+                    audit,
+                ));
+            }
+            if let Some(limit) = policy.max_prometheus_aggregation_depth {
+                if aggregation_depth > limit {
+                    violations.push(build_query_violation(
+                        "prometheus-aggregation-depth-too-high",
+                        format!(
+                            "Prometheus aggregation depth {aggregation_depth} exceeds policy maxPrometheusAggregationDepth={limit}."
+                        ),
+                        audit,
+                    ));
+                }
+            }
+            if let Some(limit) = policy.max_prometheus_cost_score {
+                if query_cost_score > limit {
+                    violations.push(build_query_violation(
+                        "prometheus-cost-score-too-high",
+                        format!(
+                            "Prometheus query cost score {query_cost_score} exceeds policy maxPrometheusCostScore={limit}."
+                        ),
+                        audit,
+                    ));
+                }
             }
         }
         let dashboard_audits = array_of_objects(governance_document, "dashboardAudits")?;

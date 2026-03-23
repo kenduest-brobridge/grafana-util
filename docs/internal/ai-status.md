@@ -5,6 +5,20 @@ Historical note:
 - Older entries describe the repo state and `TODO.md` backlog as they existed on the entry date.
 - `TODO.md` now tracks only the active backlog; completed or superseded TODO items moved to `docs/internal/todo-archive.md`.
 
+## 2026-03-23 - Task: Add Rust Prometheus Query Cost Audit Signals
+- State: Done
+- Scope: `rust/src/dashboard/inspect_governance.rs`, `rust/src/dashboard/governance_gate.rs`, `rust/src/dashboard/rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust query audits already scored broad selectors, regex-heavy selectors, long range windows, and unscoped Loki search, but they still lacked more explicit Prometheus cost-shape signals such as aggregation depth, high-cardinality regex heuristics, or a stable query cost score that policies could enforce directly.
+- Current Update: Extended `queryAudits` with `aggregationDepth`, `regexMatcherCount`, `estimatedSeriesRisk`, and `queryCostScore`, and added additive Prometheus reasons for high-cardinality regex usage and deeper aggregation layers. Wired the governance gate to enforce those new signals via `queries.forbidHighCardinalityRegex`, `queries.maxPrometheusAggregationDepth`, and `queries.maxPrometheusCostScore` while keeping the design artifact-driven.
+- Result: Rust governance now carries a more operator-meaningful Prometheus query cost model, and CI policy can block queries that are structurally expensive even when they have not yet triggered live incidents.
+
+## 2026-03-23 - Task: Add Rust Dashboard Graph Alias And Variable-Aware Topology
+- State: Done
+- Scope: `rust/src/cli.rs`, `rust/src/cli_rust_tests.rs`, `rust/src/dashboard/cli_defs.rs`, `rust/src/dashboard/inspect_governance.rs`, `rust/src/dashboard/topology.rs`, `rust/src/dashboard/rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: Rust dashboard topology already rendered datasource, dashboard, and alert nodes from governance-json plus alert-contract artifacts, but it still lacked a unified `dashboard graph` entrypoint and had no variable-aware graph surface for panel/query variable extraction already present in inspect output.
+- Current Update: Added a unified `grafana-util dashboard graph` alias for the topology command, widened the governance contract with `panelIds`, `panelVariables`, and `queryVariables`, and taught the topology builder to render panel and variable nodes with datasource -> variable -> panel -> dashboard -> alert chains. Mermaid, DOT, and JSON output now surface those new node kinds and relations deterministically.
+- Result: The focused parser/help and topology regressions pass for the new graph surface. A broader `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_rust_tests` sweep still reports unrelated preexisting strict-schema import failures outside this graph work.
+
 ## 2026-03-23 - Task: Add Rust Sync Audit And Field-Level Review Diff
 - State: Done
 - Scope: `rust/src/cli.rs`, `rust/src/sync/audit.rs`, `rust/src/sync/cli_rust_tests.rs`, `rust/src/sync/mod.rs`, `rust/src/sync/review_tui.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

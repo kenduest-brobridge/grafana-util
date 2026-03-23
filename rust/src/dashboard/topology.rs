@@ -21,6 +21,10 @@ pub(crate) struct TopologySummary {
     pub(crate) datasource_count: usize,
     #[serde(rename = "dashboardCount")]
     pub(crate) dashboard_count: usize,
+    #[serde(rename = "panelCount")]
+    pub(crate) panel_count: usize,
+    #[serde(rename = "variableCount")]
+    pub(crate) variable_count: usize,
     #[serde(rename = "alertResourceCount")]
     pub(crate) alert_resource_count: usize,
     #[serde(rename = "alertRuleCount")]
@@ -213,6 +217,22 @@ fn string_field(record: &Value, key: &str) -> String {
         .to_string()
 }
 
+fn string_list_field(record: &Value, key: &str) -> Vec<String> {
+    record
+        .get(key)
+        .and_then(Value::as_array)
+        .map(|values| {
+            values
+                .iter()
+                .filter_map(Value::as_str)
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .map(str::to_string)
+                .collect::<Vec<String>>()
+        })
+        .unwrap_or_default()
+}
+
 fn push_unique_node(
     nodes: &mut BTreeMap<String, TopologyNode>,
     id: String,
@@ -248,6 +268,18 @@ fn slug_for_mermaid(value: &str) -> String {
         .collect()
 }
 
+fn escape_label(value: &str) -> String {
+    value.replace('\\', "\\\\").replace('"', "\\\"")
+}
+
+fn panel_node_id(dashboard_uid: &str, panel_id: &str) -> String {
+    format!("panel:{dashboard_uid}:{panel_id}")
+}
+
+fn variable_node_id(dashboard_uid: &str, variable: &str) -> String {
+    format!("variable:{dashboard_uid}:{variable}")
+}
+
 pub(crate) fn build_topology_document(
     governance_document: &Value,
     alert_contract_document: Option<&Value>,
@@ -267,7 +299,6 @@ pub(crate) fn build_topology_document(
 
     let mut nodes = BTreeMap::<String, TopologyNode>::new();
     let mut edges = BTreeSet::<(String, String, String)>::new();
-    let mut dashboard_lookup = BTreeMap::<String, (String, String, usize, usize)>::new();
     let mut alert_identity_to_node = BTreeMap::<String, String>::new();
     let mut alert_identity_to_kind = BTreeMap::<String, String>::new();
     let mut datasource_names_to_uid = BTreeMap::<String, String>::new();
@@ -278,24 +309,6 @@ pub(crate) fn build_topology_document(
             continue;
         }
         let dashboard_title = string_field(dashboard, "dashboardTitle");
-        let folder_path = string_field(dashboard, "folderPath");
-        let panel_count = dashboard
-            .get("panelCount")
-            .and_then(Value::as_u64)
-            .unwrap_or(0) as usize;
-        let query_count = dashboard
-            .get("queryCount")
-            .and_then(Value::as_u64)
-            .unwrap_or(0) as usize;
-        dashboard_lookup.insert(
-            dashboard_uid.clone(),
-            (
-                dashboard_title.clone(),
-                folder_path,
-                panel_count,
-                query_count,
-            ),
-        );
         push_unique_node(
             &mut nodes,
             format!("dashboard:{dashboard_uid}"),
@@ -332,6 +345,76 @@ pub(crate) fn build_topology_document(
             format!("dashboard:{dashboard_uid}"),
             "feeds",
         );
+        for variable in string_list_field(edge, "queryVariables") {
+            let variable_id = variable_node_id(&dashboard_uid, &variable);
+            push_unique_node(
+                &mut nodes,
+                variable_id.clone(),
+                "variable",
+                variable.clone(),
+            );
+            push_unique_edge(
+                &mut edges,
+                format!("datasource:{datasource_uid}"),
+                variable_id,
+                "feeds-variable",
+            );
+        }
+    }
+
+    let empty: &[Value] = &[];
+    let dashboard_dependencies = governance_document
+        .get("dashboardDependencies")
+        .and_then(Value::as_array)
+        .map(Vec::as_slice)
+        .unwrap_or(empty);
+    for dependency in dashboard_dependencies {
+        let dashboard_uid = string_field(dependency, "dashboardUid");
+        if dashboard_uid.is_empty() {
+            continue;
+        }
+        let panel_ids = string_list_field(dependency, "panelIds");
+        if panel_ids.is_empty() {
+            continue;
+        }
+        let mut variable_names = BTreeSet::<String>::new();
+        for variable in string_list_field(dependency, "panelVariables") {
+            variable_names.insert(variable);
+        }
+        for variable in string_list_field(dependency, "queryVariables") {
+            variable_names.insert(variable);
+        }
+        let dashboard_node_id = format!("dashboard:{dashboard_uid}");
+        for panel_id in panel_ids {
+            let panel_id = panel_id.trim();
+            if panel_id.is_empty() {
+                continue;
+            }
+            let panel_id_string = panel_id.to_string();
+            let panel_node = panel_node_id(&dashboard_uid, &panel_id_string);
+            push_unique_node(
+                &mut nodes,
+                panel_node.clone(),
+                "panel",
+                format!("Panel {panel_id_string}"),
+            );
+            push_unique_edge(
+                &mut edges,
+                panel_node.clone(),
+                dashboard_node_id.clone(),
+                "belongs-to",
+            );
+            for variable in &variable_names {
+                let variable_id = variable_node_id(&dashboard_uid, variable);
+                push_unique_node(
+                    &mut nodes,
+                    variable_id.clone(),
+                    "variable",
+                    variable.clone(),
+                );
+                push_unique_edge(&mut edges, variable_id, panel_node.clone(), "used-by");
+            }
+        }
     }
 
     let mut alert_resource_count = 0usize;
@@ -404,6 +487,8 @@ pub(crate) fn build_topology_document(
         .filter(|node| node.kind == "datasource")
         .count();
     let dashboard_count = nodes.iter().filter(|node| node.kind == "dashboard").count();
+    let panel_count = nodes.iter().filter(|node| node.kind == "panel").count();
+    let variable_count = nodes.iter().filter(|node| node.kind == "variable").count();
     let alert_rule_count = nodes
         .iter()
         .filter(|node| node.kind == "alert-rule")
@@ -428,6 +513,8 @@ pub(crate) fn build_topology_document(
             edge_count: edges.len(),
             datasource_count,
             dashboard_count,
+            panel_count,
+            variable_count,
             alert_resource_count,
             alert_rule_count,
             contact_point_count,
@@ -442,11 +529,13 @@ pub(crate) fn build_topology_document(
 
 pub(crate) fn render_topology_text(document: &TopologyDocument) -> String {
     let mut lines = vec![format!(
-        "Dashboard topology: nodes={} edges={} datasources={} dashboards={} alert-resources={} alert-rules={} contact-points={} mute-timings={} notification-policies={} templates={}",
+        "Dashboard topology: nodes={} edges={} datasources={} dashboards={} panels={} variables={} alert-resources={} alert-rules={} contact-points={} mute-timings={} notification-policies={} templates={}",
         document.summary.node_count,
         document.summary.edge_count,
         document.summary.datasource_count,
         document.summary.dashboard_count,
+        document.summary.panel_count,
+        document.summary.variable_count,
         document.summary.alert_resource_count,
         document.summary.alert_rule_count,
         document.summary.contact_point_count,
@@ -469,7 +558,7 @@ pub(crate) fn render_topology_mermaid(document: &TopologyDocument) -> String {
         lines.push(format!(
             "  {}[\"{}\"]",
             slug_for_mermaid(&node.id),
-            node.label.replace('"', "\\\"")
+            escape_label(&node.label)
         ));
     }
     for edge in &document.edges {
@@ -489,14 +578,16 @@ pub(crate) fn render_topology_dot(document: &TopologyDocument) -> String {
         lines.push(format!(
             "  \"{}\" [label=\"{}\\n{}\"] ;",
             node.id,
-            node.label.replace('"', "\\\""),
+            escape_label(&node.label),
             node.kind
         ));
     }
     for edge in &document.edges {
         lines.push(format!(
             "  \"{}\" -> \"{}\" [label=\"{}\"] ;",
-            edge.from, edge.to, edge.relation
+            escape_label(&edge.from),
+            escape_label(&edge.to),
+            escape_label(&edge.relation)
         ));
     }
     lines.push("}".to_string());

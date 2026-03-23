@@ -121,11 +121,17 @@ pub(crate) struct DashboardDependencyRow {
     pub(crate) datasource_count: usize,
     #[serde(rename = "datasourceFamilyCount")]
     pub(crate) datasource_family_count: usize,
+    #[serde(rename = "panelIds")]
+    pub(crate) panel_ids: Vec<String>,
     pub(crate) datasources: Vec<String>,
     #[serde(rename = "datasourceFamilies")]
     pub(crate) datasource_families: Vec<String>,
     #[serde(rename = "queryFields")]
     pub(crate) query_fields: Vec<String>,
+    #[serde(rename = "panelVariables")]
+    pub(crate) panel_variables: Vec<String>,
+    #[serde(rename = "queryVariables")]
+    pub(crate) query_variables: Vec<String>,
     pub(crate) metrics: Vec<String>,
     pub(crate) functions: Vec<String>,
     pub(crate) measurements: Vec<String>,
@@ -153,6 +159,8 @@ pub(crate) struct DashboardDatasourceEdgeRow {
     pub(crate) query_count: usize,
     #[serde(rename = "queryFields")]
     pub(crate) query_fields: Vec<String>,
+    #[serde(rename = "queryVariables")]
+    pub(crate) query_variables: Vec<String>,
     pub(crate) metrics: Vec<String>,
     pub(crate) functions: Vec<String>,
     pub(crate) measurements: Vec<String>,
@@ -222,6 +230,14 @@ pub(crate) struct QueryAuditRow {
     pub(crate) datasource_uid: String,
     #[serde(rename = "datasourceFamily")]
     pub(crate) datasource_family: String,
+    #[serde(rename = "aggregationDepth")]
+    pub(crate) aggregation_depth: usize,
+    #[serde(rename = "regexMatcherCount")]
+    pub(crate) regex_matcher_count: usize,
+    #[serde(rename = "estimatedSeriesRisk")]
+    pub(crate) estimated_series_risk: String,
+    #[serde(rename = "queryCostScore")]
+    pub(crate) query_cost_score: usize,
     pub(crate) score: usize,
     pub(crate) severity: String,
     pub(crate) reasons: Vec<String>,
@@ -263,6 +279,9 @@ const GOVERNANCE_RISK_KIND_EMPTY_QUERY_ANALYSIS: &str = "empty-query-analysis";
 const GOVERNANCE_RISK_KIND_BROAD_LOKI_SELECTOR: &str = "broad-loki-selector";
 const GOVERNANCE_RISK_KIND_BROAD_PROMETHEUS_SELECTOR: &str = "broad-prometheus-selector";
 const GOVERNANCE_RISK_KIND_PROMETHEUS_REGEX_HEAVY: &str = "prometheus-regex-heavy";
+const GOVERNANCE_RISK_KIND_PROMETHEUS_HIGH_CARDINALITY_REGEX: &str =
+    "prometheus-high-cardinality-regex";
+const GOVERNANCE_RISK_KIND_PROMETHEUS_DEEP_AGGREGATION: &str = "prometheus-deep-aggregation";
 const GOVERNANCE_RISK_KIND_LARGE_PROMETHEUS_RANGE: &str = "large-prometheus-range";
 const GOVERNANCE_RISK_KIND_UNSCOPED_LOKI_SEARCH: &str = "unscoped-loki-search";
 const GOVERNANCE_RISK_KIND_DASHBOARD_PANEL_PRESSURE: &str = "dashboard-panel-pressure";
@@ -275,7 +294,7 @@ const GOVERNANCE_RISK_DEFAULT_SPEC: GovernanceRiskSpec = GovernanceRiskSpec {
         "Review this governance finding and assign a follow-up owner if action is needed.",
 };
 
-const GOVERNANCE_RISK_SPECS: [(&str, GovernanceRiskSpec); 11] = [
+const GOVERNANCE_RISK_SPECS: [(&str, GovernanceRiskSpec); 13] = [
     (
         GOVERNANCE_RISK_KIND_MIXED_DASHBOARD,
         GovernanceRiskSpec {
@@ -337,6 +356,24 @@ const GOVERNANCE_RISK_SPECS: [(&str, GovernanceRiskSpec); 11] = [
             severity: "medium",
             recommendation:
                 "Reduce Prometheus regex matcher scope or replace it with exact labels where possible.",
+        },
+    ),
+    (
+        GOVERNANCE_RISK_KIND_PROMETHEUS_HIGH_CARDINALITY_REGEX,
+        GovernanceRiskSpec {
+            category: "cost",
+            severity: "high",
+            recommendation:
+                "Avoid regex matchers on high-cardinality Prometheus labels such as instance, pod, or container unless the scope is already tightly bounded.",
+        },
+    ),
+    (
+        GOVERNANCE_RISK_KIND_PROMETHEUS_DEEP_AGGREGATION,
+        GovernanceRiskSpec {
+            category: "cost",
+            severity: "medium",
+            recommendation:
+                "Reduce nested Prometheus aggregation layers or pre-aggregate upstream before adding more dashboard fanout.",
         },
     ),
     (
@@ -503,7 +540,13 @@ fn build_query_audit_row(
     let mut score = 0usize;
     let mut reasons = Vec::new();
     let mut recommendations = Vec::new();
-    if query_uses_broad_prometheus_selector(row) {
+    let broad_prometheus_selector = query_uses_broad_prometheus_selector(row);
+    let prometheus_regex = query_uses_prometheus_regex(row);
+    let regex_matcher_count = prometheus_regex_matcher_count(row);
+    let high_cardinality_regex = query_uses_high_cardinality_prometheus_regex(row);
+    let aggregation_depth = prometheus_aggregation_depth(row);
+    let max_bucket_seconds = largest_bucket_seconds(row);
+    if broad_prometheus_selector {
         score += 2;
         ordered_push(&mut reasons, GOVERNANCE_RISK_KIND_BROAD_PROMETHEUS_SELECTOR);
         ordered_push(
@@ -512,7 +555,7 @@ fn build_query_audit_row(
                 .recommendation,
         );
     }
-    if query_uses_prometheus_regex(row) {
+    if prometheus_regex {
         score += 1;
         ordered_push(&mut reasons, GOVERNANCE_RISK_KIND_PROMETHEUS_REGEX_HEAVY);
         ordered_push(
@@ -520,7 +563,31 @@ fn build_query_audit_row(
             lookup_governance_risk_spec(GOVERNANCE_RISK_KIND_PROMETHEUS_REGEX_HEAVY).recommendation,
         );
     }
-    if largest_bucket_seconds(row).unwrap_or(0) >= 60 * 60
+    if high_cardinality_regex {
+        score += 2;
+        ordered_push(
+            &mut reasons,
+            GOVERNANCE_RISK_KIND_PROMETHEUS_HIGH_CARDINALITY_REGEX,
+        );
+        ordered_push(
+            &mut recommendations,
+            lookup_governance_risk_spec(GOVERNANCE_RISK_KIND_PROMETHEUS_HIGH_CARDINALITY_REGEX)
+                .recommendation,
+        );
+    }
+    if aggregation_depth >= 2 {
+        score += 1;
+        ordered_push(
+            &mut reasons,
+            GOVERNANCE_RISK_KIND_PROMETHEUS_DEEP_AGGREGATION,
+        );
+        ordered_push(
+            &mut recommendations,
+            lookup_governance_risk_spec(GOVERNANCE_RISK_KIND_PROMETHEUS_DEEP_AGGREGATION)
+                .recommendation,
+        );
+    }
+    if max_bucket_seconds.unwrap_or(0) >= 60 * 60
         && normalize_family_name(&row.datasource_type) == "prometheus"
     {
         score += 2;
@@ -538,6 +605,14 @@ fn build_query_audit_row(
             lookup_governance_risk_spec(GOVERNANCE_RISK_KIND_UNSCOPED_LOKI_SEARCH).recommendation,
         );
     }
+    let query_cost_score = score;
+    let estimated_series_risk = prometheus_estimated_series_risk(
+        broad_prometheus_selector,
+        regex_matcher_count,
+        high_cardinality_regex,
+        aggregation_depth,
+        max_bucket_seconds,
+    );
     QueryAuditRow {
         dashboard_uid: row.dashboard_uid.clone(),
         dashboard_title: row.dashboard_title.clone(),
@@ -548,6 +623,10 @@ fn build_query_audit_row(
         datasource: datasource_name,
         datasource_uid,
         datasource_family,
+        aggregation_depth,
+        regex_matcher_count,
+        estimated_series_risk,
+        query_cost_score,
         score,
         severity: severity_for_score(score),
         reasons,
@@ -630,6 +709,86 @@ fn query_uses_broad_prometheus_selector(row: &ExportInspectionQueryRow) -> bool 
 fn query_uses_prometheus_regex(row: &ExportInspectionQueryRow) -> bool {
     normalize_family_name(&row.datasource_type) == "prometheus"
         && (row.query_text.contains("=~") || row.query_text.contains("!~"))
+}
+
+fn prometheus_regex_matcher_count(row: &ExportInspectionQueryRow) -> usize {
+    if normalize_family_name(&row.datasource_type) != "prometheus" {
+        return 0;
+    }
+    row.query_text.matches("=~").count() + row.query_text.matches("!~").count()
+}
+
+fn query_uses_high_cardinality_prometheus_regex(row: &ExportInspectionQueryRow) -> bool {
+    if normalize_family_name(&row.datasource_type) != "prometheus" {
+        return false;
+    }
+    const HIGH_CARDINALITY_LABELS: [&str; 8] = [
+        "instance",
+        "pod",
+        "container",
+        "endpoint",
+        "path",
+        "uri",
+        "name",
+        "id",
+    ];
+    HIGH_CARDINALITY_LABELS.iter().any(|label| {
+        row.query_text.contains(&format!("{label}=~"))
+            || row.query_text.contains(&format!("{label}!~"))
+    })
+}
+
+fn prometheus_aggregation_depth(row: &ExportInspectionQueryRow) -> usize {
+    if normalize_family_name(&row.datasource_type) != "prometheus" {
+        return 0;
+    }
+    const AGGREGATORS: [&str; 11] = [
+        "sum",
+        "avg",
+        "min",
+        "max",
+        "count",
+        "group",
+        "count_values",
+        "quantile",
+        "topk",
+        "bottomk",
+        "stddev",
+    ];
+    row.functions
+        .iter()
+        .filter(|function| AGGREGATORS.contains(&function.as_str()))
+        .count()
+}
+
+fn prometheus_estimated_series_risk(
+    broad_selector: bool,
+    regex_matcher_count: usize,
+    high_cardinality_regex: bool,
+    aggregation_depth: usize,
+    largest_bucket_seconds: Option<u64>,
+) -> String {
+    let mut score = 0usize;
+    if broad_selector {
+        score += 2;
+    }
+    if regex_matcher_count != 0 {
+        score += 1;
+    }
+    if high_cardinality_regex {
+        score += 2;
+    }
+    if aggregation_depth >= 2 {
+        score += 1;
+    }
+    if largest_bucket_seconds.unwrap_or(0) >= 60 * 60 {
+        score += 1;
+    }
+    match score {
+        0..=1 => "low".to_string(),
+        2..=3 => "medium".to_string(),
+        _ => "high".to_string(),
+    }
 }
 
 fn largest_bucket_seconds(row: &ExportInspectionQueryRow) -> Option<u64> {
@@ -1314,12 +1473,28 @@ pub(crate) fn build_dashboard_dependency_rows(
                 .sum::<usize>();
             let datasources = dashboard.datasources;
             let datasource_families = normalize_family_list(&dashboard.datasource_families);
+            let panel_ids =
+                collect_unique_strings(dashboard.panels.iter().map(|panel| panel.panel_id.clone()));
             let query_fields = collect_unique_strings(
                 dashboard
                     .panels
                     .iter()
                     .flat_map(|panel| panel.query_fields.iter().cloned()),
             );
+            let panel_variables =
+                collect_unique_strings(dashboard.panels.iter().flat_map(|panel| {
+                    panel
+                        .queries
+                        .iter()
+                        .flat_map(|row| row.panel_variables.iter().cloned())
+                }));
+            let query_variables =
+                collect_unique_strings(dashboard.panels.iter().flat_map(|panel| {
+                    panel
+                        .queries
+                        .iter()
+                        .flat_map(|row| row.query_variables.iter().cloned())
+                }));
             let metrics = collect_unique_strings(dashboard.panels.iter().flat_map(|panel| {
                 panel
                     .queries
@@ -1354,9 +1529,12 @@ pub(crate) fn build_dashboard_dependency_rows(
                 query_count,
                 datasource_count: datasources.len(),
                 datasource_family_count: datasource_families.len(),
+                panel_ids,
                 datasources,
                 datasource_families,
                 query_fields,
+                panel_variables,
+                query_variables,
                 metrics,
                 functions,
                 measurements,
@@ -1440,6 +1618,7 @@ pub(crate) fn build_dashboard_datasource_edge_rows(
             BTreeSet<String>,
             BTreeSet<String>,
             BTreeSet<String>,
+            BTreeSet<String>,
             usize,
         ),
     >::new();
@@ -1460,6 +1639,7 @@ pub(crate) fn build_dashboard_datasource_edge_rows(
                     BTreeSet::new(),
                     BTreeSet::new(),
                     BTreeSet::new(),
+                    BTreeSet::new(),
                     0usize,
                 )
             });
@@ -1468,11 +1648,12 @@ pub(crate) fn build_dashboard_datasource_edge_rows(
         if !row.query_field.trim().is_empty() {
             edge.6.insert(row.query_field.clone());
         }
-        edge.7.extend(row.metrics.iter().cloned());
-        edge.8.extend(row.functions.iter().cloned());
-        edge.9.extend(row.measurements.iter().cloned());
-        edge.10.extend(row.buckets.iter().cloned());
-        edge.11 += 1;
+        edge.7.extend(row.query_variables.iter().cloned());
+        edge.8.extend(row.metrics.iter().cloned());
+        edge.9.extend(row.functions.iter().cloned());
+        edge.10.extend(row.measurements.iter().cloned());
+        edge.11.extend(row.buckets.iter().cloned());
+        edge.12 += 1;
     }
     edges
         .into_iter()
@@ -1487,6 +1668,7 @@ pub(crate) fn build_dashboard_datasource_edge_rows(
                     family,
                     panel_keys,
                     query_fields,
+                    query_variables,
                     metrics,
                     functions,
                     measurements,
@@ -1504,6 +1686,7 @@ pub(crate) fn build_dashboard_datasource_edge_rows(
                 panel_count: panel_keys.len(),
                 query_count,
                 query_fields: query_fields.into_iter().collect(),
+                query_variables: query_variables.into_iter().collect(),
                 metrics: metrics.into_iter().collect(),
                 functions: functions.into_iter().collect(),
                 measurements: measurements.into_iter().collect(),
@@ -1597,6 +1780,30 @@ pub(crate) fn build_governance_risk_rows(
         if query_uses_prometheus_regex(row) {
             let risk = build_governance_risk_row(
                 GOVERNANCE_RISK_KIND_PROMETHEUS_REGEX_HEAVY,
+                row.dashboard_uid.clone(),
+                row.panel_id.clone(),
+                identity.name.clone(),
+                row.query_text.clone(),
+            );
+            if seen.insert(risk.clone()) {
+                risks.push(risk);
+            }
+        }
+        if query_uses_high_cardinality_prometheus_regex(row) {
+            let risk = build_governance_risk_row(
+                GOVERNANCE_RISK_KIND_PROMETHEUS_HIGH_CARDINALITY_REGEX,
+                row.dashboard_uid.clone(),
+                row.panel_id.clone(),
+                identity.name.clone(),
+                row.query_text.clone(),
+            );
+            if seen.insert(risk.clone()) {
+                risks.push(risk);
+            }
+        }
+        if prometheus_aggregation_depth(row) >= 2 {
+            let risk = build_governance_risk_row(
+                GOVERNANCE_RISK_KIND_PROMETHEUS_DEEP_AGGREGATION,
                 row.dashboard_uid.clone(),
                 row.panel_id.clone(),
                 identity.name.clone(),
