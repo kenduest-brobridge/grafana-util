@@ -1,5 +1,13 @@
 # ai-changes.md
 
+## 2026-03-17 - Formalize Version Sync Workflow
+- Summary: Promoted the existing but stale version helper into the supported maintainer workflow. `VERSION` now matches the current release line, `scripts/set-version.sh` now updates `pyproject.toml`, `rust/Cargo.toml`, and the root package entry in `rust/Cargo.lock`, and the root `Makefile` now exposes `print-version`, `sync-version`, `set-release-version`, and `set-dev-version` targets so release and preview bumps no longer require hand-editing multiple files.
+- Tests: Added focused Python coverage for the version script using isolated temporary files and added packaging assertions for the committed version workflow files and make targets.
+- Test Run: `python3 -m unittest -v tests/test_python_packaging.py tests/test_python_version_script.py`
+- Validation: Confirmed the new script tests pass for release bumps, preview bumps from `VERSION`, and dry-run mode, and confirmed the packaging tests see the committed `VERSION`, `scripts/set-version.sh`, and the new `Makefile` targets.
+- Impact: `VERSION`, `scripts/set-version.sh`, `Makefile`, `tests/test_python_packaging.py`, `tests/test_python_version_script.py`, `docs/DEVELOPER.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: Low to moderate. This reduces version-edit drift but does not eliminate merge conflicts by itself because `dev` and `main` still intentionally carry different version strings; maintainers should still combine this workflow with `git rerere` or a consistent release-merge ritual.
+
 ## 2026-03-23 - Specialize Rust Dashboard Inspect-Live Interactive TUI
 - Summary: Replaced the shared-browser path for `grafana-util dashboard inspect-live --interactive` with the dedicated live-inspect TUI already used for the other operator review surfaces. The TUI keeps the three-pane layout, groups dashboards/queries/risks on the left, filters the middle pane to the selected group, and now treats dashboard governance risk rows, query audits, and risk records as first-class risk items.
 - Tests: Added focused Rust regressions that pin the live-inspect group counts and the group-filtered item projection.
