@@ -7,10 +7,10 @@ Language: **English** | [繁體中文版](README.zh-TW.md)
 ## Contents
 
 - [What This Is](#what-this-is)
+- [Support Overview](#support-overview)
 - [Get The Binary](#get-the-binary)
 - [Quick Start](#quick-start)
 - [Command Map](#command-map)
-- [Support Matrix](#support-matrix)
 - [Documentation](#documentation)
 - [Compatibility](#compatibility)
 - [Project Status](#project-status)
@@ -28,6 +28,18 @@ Language: **English** | [繁體中文版](README.zh-TW.md)
 The current maintained CLI is the Rust-based `grafana-util` binary.
 - User-facing docs and releases target the Rust binary.
 - Python implementation details remain in maintainer docs for parity and validation work.
+
+## Support Overview
+
+Use this as a quick capability summary:
+
+- `Dashboard`: list, inspect, capture, export/import/diff. Import is workflow-driven with dry-run and folder-aware migration.
+- `Alerting`: list plus export/import/diff for rules and related alerting resources.
+- `Datasource`: list, export/import/diff, and live add/modify/delete. Includes dry-run and multi-org replay support.
+- `Access User`: list, add/modify/delete, export/import/diff for global and org-scoped user lifecycle.
+- `Access Org`: list, add/modify/delete, export/import for org lifecycle and membership replay.
+- `Access Team`: list, add/modify/delete, export/import/diff with membership-aware sync.
+- `Access Service Account`: list, add/delete, export/import/diff, plus token add/delete workflows.
 
 ## Get The Binary
 
@@ -130,18 +142,6 @@ Use this when you want the right entrypoint quickly.
 - `grafana-util sync ...`
   - staged bundle, preflight, review, and apply flows
 
-## Support Matrix
-
-Use this as a quick capability summary:
-
-- `Dashboard`: list, inspect, capture, export/import/diff. Import is workflow-driven with dry-run and folder-aware migration.
-- `Alerting`: list plus export/import/diff for rules and related alerting resources.
-- `Datasource`: list, export/import/diff, and live add/modify/delete. Includes dry-run and multi-org replay support.
-- `Access User`: list, add/modify/delete, export/import/diff for global and org-scoped user lifecycle.
-- `Access Org`: list, add/modify/delete, export/import for org lifecycle and membership replay.
-- `Access Team`: list, add/modify/delete, export/import/diff with membership-aware sync.
-- `Access Service Account`: list, add/delete, export/import/diff, plus token add/delete workflows.
-
 ## Documentation
 
 - **[Traditional Chinese Guide](docs/user-guide-TW.md)**: Detailed commands and authentication rules.
@@ -150,7 +150,7 @@ Use this as a quick capability summary:
 - **[Developer Guide](docs/DEVELOPER.md)**: Maintenance and contribution notes.
 
 ## Compatibility
-- **OS**: RHEL 8+, macOS (ARM/Intel), Linux.
+- **OS**: Linux, macOS.
 - **Runtime**: Rust release binary.
 - **Grafana**: Supports v8.x, v9.x, v10.x+.
 

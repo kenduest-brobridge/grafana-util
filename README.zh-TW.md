@@ -7,10 +7,10 @@
 ## 內容索引
 
 - [這個工具是做什麼的](#這個工具是做什麼的)
+- [功能支援總覽](#功能支援總覽)
 - [下載入口](#下載入口)
 - [快速開始](#快速開始)
 - [常用命令地圖](#常用命令地圖)
-- [支援矩陣](#支援矩陣-support-matrix)
 - [文件導航](#文件導航)
 - [相容性與目標](#相容性與目標)
 - [專案狀態](#專案狀態)
@@ -28,6 +28,18 @@
 目前維護中的 CLI 以 Rust `grafana-util` 二進位工具為主：
 - 對外使用與 release 下載以 Rust binary 為主。
 - Python 實作細節保留在 maintainer 文件中，供 parity 與驗證使用。
+
+## 功能支援總覽
+
+這裡用快速能力摘要呈現，比較適合 README 掃讀：
+
+- `Dashboard`：支援 list、inspect、capture、export/import/diff。匯入流程支援 dry-run 與資料夾感知遷移。
+- `Alerting`：支援 list，以及 rule 與相關 alerting 資源的 export/import/diff。
+- `Datasource`：支援 list、export/import/diff，以及線上 add/modify/delete；也支援 dry-run 與多 org 回放。
+- `Access User`：支援 list、add/modify/delete、export/import/diff，涵蓋全域與 org 範圍的使用者管理流程。
+- `Access Org`：支援 list、add/modify/delete、export/import，處理組織管理與成員關係重建。
+- `Access Team`：支援 list、add/modify/delete、export/import/diff，強調 membership-aware sync。
+- `Access Service Account`：支援 list、add/delete、export/import/diff，以及 token 建立與刪除流程。
 
 ## 下載入口
 
@@ -128,29 +140,17 @@ grafana-util dashboard import \
 - `grafana-util access ...`
   - org、user、team、service-account 的盤點與變更流程
 - `grafana-util sync ...`
-  - staged bundle、preflight、review、apply
-
-## 支援矩陣 (Support Matrix)
-
-這裡改成快速能力摘要，比較適合 README 掃讀：
-
-- `Dashboard`：支援 list、inspect、capture、export/import/diff。匯入流程支援 dry-run 與資料夾感知遷移。
-- `Alerting`：支援 list，以及 rule 與相關 alerting 資源的 export/import/diff。
-- `Datasource`：支援 list、export/import/diff，以及線上 add/modify/delete；也支援 dry-run 與多 org 回放。
-- `Access User`：支援 list、add/modify/delete、export/import/diff，涵蓋 global 與 org 範圍的使用者生命週期。
-- `Access Org`：支援 list、add/modify/delete、export/import，處理組織生命週期與 membership replay。
-- `Access Team`：支援 list、add/modify/delete、export/import/diff，強調 membership-aware sync。
-- `Access Service Account`：支援 list、add/delete、export/import/diff，以及 token add/delete 流程。
+  - 分階段 bundle、預檢、審查、套用
 
 ## 📄 文件導航
 
 - **[繁體中文使用者指南](docs/user-guide-TW.md)**：包含全域參數、認證規則與各模組指令詳解。
-- **[English User Guide](docs/user-guide.md)**: Standard operator instructions.
+- **[English User Guide](docs/user-guide.md)**：英文版操作說明。
 - **[技術細節 (Rust)](docs/overview-rust.md)**
 - **[開發者手冊](docs/DEVELOPER.md)**：維護與貢獻說明。
 
 ## 📈 相容性與目標
-- 支援 RHEL 8 / macOS 等作業系統。
+- 支援 Linux、macOS。
 - 執行型態：Rust release binary。
 - Grafana 版本：支援 8.x, 9.x, 10.x+。
 
