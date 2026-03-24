@@ -37,8 +37,8 @@ The current maintained CLI is the Rust-based `grafana-util` binary.
 ### Installation
 
 Download points:
-- Latest release page: `https://github.com/kenduest-brobridge/grafana-utils/releases/latest`
-- All releases: `https://github.com/kenduest-brobridge/grafana-utils/releases`
+- [Latest release page](https://github.com/kenduest-brobridge/grafana-utils/releases/latest)
+- [All releases](https://github.com/kenduest-brobridge/grafana-utils/releases)
 
 What to download:
 - Open the release page and expand `Assets`.

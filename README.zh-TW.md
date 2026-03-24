@@ -38,8 +38,8 @@
 ### 安裝方式
 
 下載入口：
-- 最新版 release：`https://github.com/kenduest-brobridge/grafana-utils/releases/latest`
-- 所有 releases：`https://github.com/kenduest-brobridge/grafana-utils/releases`
+- [最新版 release](https://github.com/kenduest-brobridge/grafana-utils/releases/latest)
+- [所有 releases](https://github.com/kenduest-brobridge/grafana-utils/releases)
 
 怎麼下載：
 - 進入 release 頁面後展開 `Assets`
