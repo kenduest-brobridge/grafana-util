@@ -97,10 +97,10 @@ Use this when you want the right entrypoint quickly.
 | Dashboard | Yes | No | Yes | Import-driven changes, folder-aware migration, dry-run support, and screenshot/PDF capture |
 | Alerting | Yes | No | Yes | Import-driven rule and contact-point workflows |
 | Datasource | Yes | Yes | Yes | Dry-run and diff supported, plus all-org export and routed multi-org import with missing-org creation |
-| Access User | Yes | Yes | Yes | Supports `--password-file` / `--prompt-user-password` and `--set-password-file` / `--prompt-set-password` |
-| Access Org | Yes | Yes | Yes | Includes org membership replay during import |
-| Access Team | Yes | Yes | Yes | Membership-aware export/import/diff |
-| Access Service Account | Yes | Yes | Yes | Snapshot export/import/diff plus token add/delete workflows |
+| Access User | Yes | Yes | Yes | Global and org-scoped user lifecycle plus snapshot replay |
+| Access Org | Yes | Yes | Yes | Org lifecycle management with membership replay |
+| Access Team | Yes | Yes | Yes | Membership-aware team sync and drift review |
+| Access Service Account | Yes | Yes | Yes | Service account lifecycle, snapshot replay, and token workflows |
 
 ## Documentation
 
