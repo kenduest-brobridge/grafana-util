@@ -5,6 +5,13 @@ Current AI-maintained status only.
 - Older trace history moved to [`archive/ai-status-archive-2026-03-24.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-03-24.md).
 - Keep this file short and current. Additive historical detail belongs in `docs/internal/archive/`.
 
+## 2026-03-24 - Task: Extract Dashboard Import Routed Orchestration
+- State: Done
+- Scope: `rust/src/dashboard/import.rs`, `rust/src/dashboard/import_routed.rs`, `rust/src/dashboard/mod.rs`
+- Baseline: `import.rs` still owns the export-org routing flow, including preview JSON assembly and routed import dispatch, alongside the main single-org import facade.
+- Current Update: moved the routed-org orchestration into a dedicated helper module so `import.rs` reads more like a facade over single-org import behavior.
+- Result: `import.rs` is smaller and the focused dashboard Rust tests still pass.
+
 ## 2026-03-24 - Split Dashboard Inspect Governance Risk Logic
 - State: Done
 - Scope: `rust/src/dashboard/inspect_governance.rs`, `rust/src/dashboard/inspect_governance_risk.rs`
@@ -17,7 +24,7 @@ Current AI-maintained status only.
 - Scope: Rust maintainability cleanup across `dashboard/`, `sync/`, and focused test splits.
 - Current Shape:
   - `rust/src/sync/workbench.rs` is now a facade over builder-oriented helpers in `summary_builder.rs`, `bundle_builder.rs`, `plan_builder.rs`, and `apply_builder.rs`.
-  - `rust/src/dashboard/import.rs` is now an orchestration layer over `import_lookup.rs`, `import_validation.rs`, `import_render.rs`, and `import_compare.rs`.
+  - `rust/src/dashboard/import.rs` is now an orchestration layer over `import_lookup.rs`, `import_validation.rs`, `import_render.rs`, `import_compare.rs`, and `import_routed.rs`.
   - Governance rule evaluation lives in `rust/src/dashboard/governance_gate_rules.rs`, with `governance_gate.rs` reduced to command/result orchestration.
   - Large dashboard test coverage has started moving out of `rust/src/dashboard/rust_tests.rs` into feature files such as `inspect_live_rust_tests.rs`, `inspect_query_rust_tests.rs`, `inspect_governance_rust_tests.rs`, `inspect_export_rust_tests.rs`, and `screenshot_rust_tests.rs`.
 - Result:

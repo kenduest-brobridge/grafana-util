@@ -5,6 +5,15 @@ Current AI change log only.
 - Older detailed history moved to [`archive/ai-changes-archive-2026-03-24.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-03-24.md).
 - Keep this file limited to the latest active architecture and maintenance changes.
 
+## 2026-03-24 - Extract Dashboard Import Routed Orchestration
+- Summary: moved the export-org routed import flow, including routed preview JSON assembly and routed dispatch, into `rust/src/dashboard/import_routed.rs` while keeping `rust/src/dashboard/import.rs` focused on the single-org import facade and shared import loop.
+- Tests: reused the existing dashboard import coverage; no new assertions were needed for the refactor.
+- Test Run: `cargo check --quiet --lib` (pass); `cargo test --quiet --lib dashboard_rust_tests` (pass)
+- Validation: confirmed the library checks and the focused dashboard Rust test target pass after the module split.
+- Impact: `rust/src/dashboard/import.rs`, `rust/src/dashboard/import_routed.rs`, `rust/src/dashboard/mod.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: low. This is an internal module split with no JSON contract or CLI behavior change; rollback is to inline the routed helper module again if needed.
+- Follow-up: none.
+
 ## 2026-03-24 - Extract Dashboard Screenshot Header Helpers
 - Summary: moved dashboard screenshot metadata resolution, header spec construction, header image composition, and manifest title resolution into `rust/src/dashboard/screenshot_header.rs`, leaving `rust/src/dashboard/screenshot.rs` focused on orchestration and browser capture flow.
 - Tests: reused the existing screenshot coverage; no new assertions were needed for the refactor.
