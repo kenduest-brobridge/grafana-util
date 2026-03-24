@@ -68,9 +68,9 @@
 
 ## 🏗️ 技術架構
 
-本專案結合了雙重語言優勢：
-- **Python (流程邏輯)**：負責 CLI 介面定義、複雜的業務邏輯與高度靈活的整合流程。
-- **Rust (效能引擎)**：負責高效能的資料解析、查詢驗證以及跨平台單一執行檔的建置。
+目前維護中的 CLI 以 Rust `grafana-util` 二進位工具為主：
+- **Rust CLI 引擎**：負責命令解析、作業流程協調、資料檢查與發佈產物。
+- **統一命令介面**：以單一 namespaced CLI 覆蓋 dashboard、datasource、alert、access、sync 等維運工作流。
 
 ---
 
@@ -82,25 +82,9 @@
 已發佈版本的安裝檔可從以下頁面下載：
 `https://github.com/kenduest-brobridge/grafana-utils/releases`
 
-範例：
-```bash
-# 安裝已發佈的 Python wheel
-python3 -m pip install \
-  https://github.com/kenduest-brobridge/grafana-utils/releases/download/vX.Y.Z/grafana_util-X.Y.Z-py3-none-any.whl
+若有建立正式 tag release，可從同一個 Releases 頁面下載對應平台的 Rust 預編譯執行檔。
 
-# 或安裝已發佈的 source distribution
-python3 -m pip install \
-  https://github.com/kenduest-brobridge/grafana-utils/releases/download/vX.Y.Z/grafana_util-X.Y.Z.tar.gz
-```
-
-若有建立正式 tag release，也可從同一個 Releases 頁面下載對應平台的 Rust 預編譯執行檔。
-
-**Python 套件：**
-```bash
-python3 -m pip install .
-```
-
-**Rust 二進位執行檔：**
+本地建置：
 ```bash
 cd rust && cargo build --release
 ```
@@ -132,12 +116,12 @@ grafana-util dashboard import \
 
 - **[繁體中文使用者指南](docs/user-guide-TW.md)**：包含全域參數、認證規則與各模組指令詳解。
 - **[English User Guide](docs/user-guide.md)**: Standard operator instructions.
-- **[技術細節 (Python)](docs/overview-python.md)** | **[技術細節 (Rust)](docs/overview-rust.md)**
+- **[技術細節 (Rust)](docs/overview-rust.md)**
 - **[開發者手冊](docs/DEVELOPER.md)**：維護與貢獻說明。
 
 ---
 
 ## 📈 相容性與目標
 - 支援 RHEL 8 / macOS 等作業系統。
-- Python 執行環境：3.9+。
+- 執行型態：Rust release binary。
 - Grafana 版本：支援 8.x, 9.x, 10.x+。

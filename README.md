@@ -67,9 +67,9 @@ While the official Grafana UI and CLI are excellent for day-to-day interactions,
 
 ## 🏗️ Technical Architecture
 
-This project leverages a hybrid approach for efficiency:
-- **Python (Workflow Logic)**: Handles CLI definitions, complex business logic, and flexible integration workflows.
-- **Rust (Performance Engine)**: Powers high-performance data parsing, query validation, and provides standalone binaries.
+The current maintained CLI is the Rust-based `grafana-util` binary.
+- **Rust CLI Engine**: Handles command parsing, workflow orchestration, data inspection, and release binaries.
+- **Unified Command Surface**: Keeps dashboard, datasource, alert, access, and sync workflows under one namespaced operator interface.
 
 ---
 
@@ -81,25 +81,9 @@ This project leverages a hybrid approach for efficiency:
 Published release assets are available at:
 `https://github.com/kenduest-brobridge/grafana-utils/releases`
 
-Examples:
-```bash
-# Install a published Python wheel
-python3 -m pip install \
-  https://github.com/kenduest-brobridge/grafana-utils/releases/download/vX.Y.Z/grafana_util-X.Y.Z-py3-none-any.whl
+Download the prebuilt Rust binary for your target platform from the same Releases page when a tagged release is published.
 
-# Or install the published source distribution
-python3 -m pip install \
-  https://github.com/kenduest-brobridge/grafana-utils/releases/download/vX.Y.Z/grafana_util-X.Y.Z.tar.gz
-```
-
-Download the prebuilt Rust binaries for your target platform from the same Releases page when a tagged release is published.
-
-**Python Package:**
-```bash
-python3 -m pip install .
-```
-
-**Rust Binary:**
+Build locally:
 ```bash
 cd rust && cargo build --release
 ```
@@ -135,12 +119,12 @@ grafana-util dashboard import \
 
 - **[Traditional Chinese Guide](docs/user-guide-TW.md)**: Detailed commands and authentication rules.
 - **[English User Guide](docs/user-guide.md)**: Standard operator instructions.
-- **[Technical Overview (Python)](docs/overview-python.md)** | **[Technical Overview (Rust)](docs/overview-rust.md)**
+- **[Technical Overview (Rust)](docs/overview-rust.md)**
 - **[Developer Guide](docs/DEVELOPER.md)**: Maintenance and contribution notes.
 
 ---
 
 ## 📈 Compatibility
 - **OS**: RHEL 8+, macOS (ARM/Intel), Linux.
-- **Runtime**: Python 3.9+.
+- **Runtime**: Rust release binary.
 - **Grafana**: Supports v8.x, v9.x, v10.x+.
