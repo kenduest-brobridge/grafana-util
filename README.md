@@ -132,15 +132,15 @@ Use this when you want the right entrypoint quickly.
 
 ## Support Matrix
 
-| Domain | List / Inspect / Capture | Add / Modify / Delete | Export / Import / Diff | Notes |
-| --- | --- | --- | --- | --- |
-| Dashboard | Yes | No | Yes | Import-driven changes, folder-aware migration, dry-run support, and screenshot/PDF capture |
-| Alerting | Yes | No | Yes | Import-driven rule and contact-point workflows |
-| Datasource | Yes | Yes | Yes | Dry-run and diff supported, plus all-org export and routed multi-org import with missing-org creation |
-| Access User | Yes | Yes | Yes | Global and org-scoped user lifecycle plus snapshot replay |
-| Access Org | Yes | Yes | Yes | Org lifecycle management with membership replay |
-| Access Team | Yes | Yes | Yes | Membership-aware team sync and drift review |
-| Access Service Account | Yes | Yes | Yes | Service account lifecycle, snapshot replay, and token workflows |
+Use this as a quick capability summary:
+
+- `Dashboard`: list, inspect, capture, export/import/diff. Import is workflow-driven with dry-run and folder-aware migration.
+- `Alerting`: list plus export/import/diff for rules and related alerting resources.
+- `Datasource`: list, export/import/diff, and live add/modify/delete. Includes dry-run and multi-org replay support.
+- `Access User`: list, add/modify/delete, export/import/diff for global and org-scoped user lifecycle.
+- `Access Org`: list, add/modify/delete, export/import for org lifecycle and membership replay.
+- `Access Team`: list, add/modify/delete, export/import/diff with membership-aware sync.
+- `Access Service Account`: list, add/delete, export/import/diff, plus token add/delete workflows.
 
 ## Documentation
 
