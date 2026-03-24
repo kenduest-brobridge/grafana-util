@@ -44,6 +44,13 @@ This document is for maintainers. Keep `README.md` and the user guides operator-
 - `docs/core-python-call-hierarchy.md`: Python call graph reference for maintainers.
 - `docs/unit-test-inventory.md`: Python and Rust test inventory reference for maintainers.
 
+## Shortest Modification Paths
+
+- `dashboard inspect` contract changes: start in `rust/src/dashboard/mod.rs`, then split between `rust/src/dashboard/inspect.rs`, `rust/src/dashboard/inspect_query.rs`, `rust/src/dashboard/inspect_live.rs`, and `rust/src/dashboard/inspect_live_tui.rs`; typed summary/report boundaries live in `rust/src/dashboard/inspect_summary.rs` and `rust/src/dashboard/inspect_report.rs`.
+- `dashboard inspect` test changes: keep parser/help coverage near the relevant `*_cli_defs.rs`, and keep contract regressions in `rust/src/dashboard/rust_tests.rs`.
+- `sync` contract changes: start in `rust/src/sync/mod.rs`, then route dispatch and helpers through `rust/src/sync/cli.rs`, `rust/src/sync/live.rs`, `rust/src/sync/json.rs`, `rust/src/sync/bundle_inputs.rs`, `rust/src/sync/staged_documents.rs`, and `rust/src/sync/workbench.rs`; `live.rs`, `staged_documents.rs`, and `workbench.rs` own the typed apply/live boundary.
+- `sync` test changes: keep CLI and live regressions in `rust/src/sync/cli_rust_tests.rs` and `rust/src/sync/rust_tests.rs`.
+
 ## Version Workflow
 
 - `dev` is the preview branch; `main` is the release branch.

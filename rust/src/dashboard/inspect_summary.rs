@@ -182,3 +182,38 @@ pub(crate) fn build_export_inspection_summary_document(
             .collect(),
     }
 }
+
+/// Build the table-friendly summary rows used by the inspect export renderer.
+pub(crate) fn build_export_inspection_summary_rows(
+    summary: &ExportInspectionSummary,
+) -> Vec<Vec<String>> {
+    let mut rows = Vec::new();
+    if let Some(export_org) = &summary.export_org {
+        rows.push(vec!["export_org".to_string(), export_org.clone()]);
+    }
+    if let Some(export_org_id) = &summary.export_org_id {
+        rows.push(vec!["export_org_id".to_string(), export_org_id.clone()]);
+    }
+    rows.extend([
+        vec![
+            "dashboard_count".to_string(),
+            summary.dashboard_count.to_string(),
+        ],
+        vec!["folder_count".to_string(), summary.folder_count.to_string()],
+        vec!["panel_count".to_string(), summary.panel_count.to_string()],
+        vec!["query_count".to_string(), summary.query_count.to_string()],
+        vec![
+            "datasource_inventory_count".to_string(),
+            summary.datasource_inventory_count.to_string(),
+        ],
+        vec![
+            "orphaned_datasource_count".to_string(),
+            summary.orphaned_datasource_count.to_string(),
+        ],
+        vec![
+            "mixed_datasource_dashboard_count".to_string(),
+            summary.mixed_dashboard_count.to_string(),
+        ],
+    ]);
+    rows
+}

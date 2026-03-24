@@ -2,7 +2,8 @@
 //! Derives source/shape hints and keeps non-flattened row model output for cross-report use.
 use serde_json::{Map, Value};
 
-use super::inspect::{extract_sql_query_shape_hints, extract_sql_source_references, QueryAnalysis};
+use super::inspect::{extract_sql_query_shape_hints, extract_sql_source_references};
+use super::inspect_query::QueryAnalysis;
 
 /// analyze query.
 pub(crate) fn analyze_query(

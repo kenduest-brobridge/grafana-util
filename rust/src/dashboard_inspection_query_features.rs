@@ -4,6 +4,7 @@ use crate::dashboard_reference_models::{
     dedupe_strings, normalize_family_name, DashboardQueryReference,
 };
 use regex::Regex;
+#[cfg(test)]
 use serde_json::Value;
 
 #[derive(Debug, Clone)]
@@ -15,6 +16,7 @@ pub(crate) struct QueryFeatureHints {
     pub(crate) labels: Vec<String>,
 }
 
+#[cfg(test)]
 pub(crate) fn build_query_features(
     row: &Value,
     reference: &DashboardQueryReference,
@@ -49,6 +51,7 @@ pub(crate) fn parse_query_text_families(row: &DashboardQueryReference) -> QueryF
     }
 }
 
+#[cfg(test)]
 fn merge_unique(target: &mut Vec<String>, values: Vec<String>) {
     for value in values {
         if !target.iter().any(|item| item == &value) {
@@ -730,6 +733,7 @@ fn extract_influxql_select_metrics(query_text: &str) -> Vec<String> {
     values
 }
 
+#[cfg(test)]
 fn parse_features_from_object(row: &Value) -> QueryFeatureHints {
     let mut metrics = Vec::new();
     let mut functions = Vec::new();

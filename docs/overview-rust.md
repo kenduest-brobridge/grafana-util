@@ -40,9 +40,10 @@ Rust crate 提供四個 CLI domain 的核心執行能力：
 
 ### 2.3 Domain orchestrator 層
 
-- `rust/src/dashboard.rs`
-  - 導出 dashboard 的 parser 型別、client helper、runner、以及 submodule 共用型別。
-  - `run_dashboard_cli` 是核心 runtime 執行入口：normalize、建 client、分派到 export/import/diff/inspect/list 的子流程。
+- `rust/src/dashboard/mod.rs`
+  - 導出 dashboard 的 parser 型別、client helper、runner、以及 `rust/src/dashboard/` 子模組共用型別。
+  - `run_dashboard_cli` 是核心 runtime 執行入口：normalize、建 client、分派到 export/import/diff/inspect/list/topology/impact/governance/screenshot/validate/vars 的子流程。
+  - inspect 的 query extraction 與 query analysis helper 主要落在 `inspect_query.rs`，live inspect 的 command 路由與 TUI 分工則分別落在 `inspect_live.rs` 與 `inspect_live_tui.rs`。
   - `run_dashboard_cli_with_client` 提供已有 client 的測試/整合替代路徑。
   - `dashboard export` 的 raw metadata contract 會備份 `permissions.json`，但 `dashboard import` 目前仍忽略權限 bundle，只還原 dashboard/folder 與既有 raw inventory。
 
@@ -50,10 +51,24 @@ Rust crate 提供四個 CLI domain 的核心執行能力：
   - 處理 alert 命令入口、legacy/namespaced normalization、`GrafanaAlertClient` 組裝與 routing。
   - `run_alert_cli` 依 `list` / `import` / `diff` / default-export 決定執行路徑。
 
-- `rust/src/access.rs`
-  - 處理 access 命令入口與巢狀 dispatch（user/team/service-account）。
+- `rust/src/access/mod.rs`
+  - 處理 access 命令入口與巢狀 dispatch（user/org/team/service-account）。
   - `run_access_cli_with_request` 可注入 request 函式，這是測試時 decouple transport 的主要入口。
   - `run_access_cli` 主要負責 normalize 與 client 注入。
+
+- `rust/src/sync/mod.rs`
+  - 處理 sync 命令入口、staged document builder、review/audit/bundle workflow，並把 JSON、bundle inputs、staged document、以及 live fetch/apply helpers 分別收在 `sync/json.rs`、`sync/bundle_inputs.rs`、`sync/staged_documents.rs`、`sync/cli.rs`、`sync/live.rs`。
+  - `run_sync_cli` 主要負責 normalize、document routing 與可選 live wiring 的分派。
+  - Sync data contract is intentionally narrow:
+    1. Input contract: the CLI accepts raw JSON arrays or objects from `--desired-file`, `--live-file`, `--lock-file`, `--availability-file`, `--source-bundle`, and `--target-inventory`; live-backed commands only consult Grafana when `--fetch-live` is set and they reuse `CommonCliArgs` plus optional `--org-id` / `--page-size`.
+    2. Normalized internal model: `normalize_resource_spec` collapses staged resources into `SyncResourceSpec { kind, identity, title, body, managed_fields, source_path }`; `kind` is lower-cased, `identity` is derived from `uid/name/title/path`, and alert-like resources must keep `managedFields` so ownership stays explicit.
+    3. Output contract: the staged builders emit stable JSON envelopes such as `grafana-utils-sync-summary`, `grafana-utils-sync-plan`, `grafana-utils-sync-apply-intent`, `grafana-utils-sync-source-bundle`, `grafana-utils-sync-preflight`, `grafana-utils-sync-lock`, and `grafana-utils-sync-audit`, each with fixed summary and lineage metadata that later stages validate.
+  - Shortest modification path:
+    - Change local resource shape or compare/apply semantics: start in `rust/src/sync/workbench.rs`.
+    - Change Grafana request mapping or live endpoint handling: start in `rust/src/sync/live_fetch.rs` or `rust/src/sync/live_apply.rs`.
+    - Change command routing or live-vs-local selection: start in `rust/src/sync/cli.rs`.
+    - Change staged lineage/review metadata: start in `rust/src/sync/staged_documents.rs`.
+    - Keep offline contract tests in `rust/src/sync/rust_tests.rs` and request-backed live tests in `rust/src/sync/live_rust_tests.rs`.
 
 - `rust/src/datasource.rs`
   - 管理 list/export/import/diff 四類流程與輸出模式（table/csv/json）。
@@ -61,12 +76,20 @@ Rust crate 提供四個 CLI domain 的核心執行能力：
 
 ### 2.4 Domain 子模組（實作重點）
 
-- `rust/src/dashboard_*`：`dashboard_*_defs`, `export`, `import`, `list`, `live`, `inspect`, `inspect_report`, `inspect_render`, `models`, `files`, `prompt`, `help`。
+- `rust/src/dashboard/`：`cli_defs`, `export`, `files`, `governance_gate`, `governance_gate_tui`, `help`, `impact_tui`, `import`, `inspect`, `inspect_analyzer_*`, `inspect_governance`, `inspect_live`, `inspect_live_tui`, `inspect_query`, `inspect_render`, `inspect_report`, `inspect_summary`, `list`, `live`, `models`, `prompt`, `screenshot`, `topology`, `topology_tui`, `validate`, `vars`；typed inspect summary/report contract surfaces are split across `inspect_summary.rs` and `inspect_report.rs`.
 - `rust/src/alert_*`：`alert_cli_defs`, `alert_client`, `alert_list`。
-- `rust/src/access_*`：`access_cli_defs`, `access_render`, `access_user`, `access_team`, `access_service_account`, `access_pending_delete`。
+- `rust/src/access/`：`cli_defs`, `org`, `pending_delete`, `render`, `service_account`, `team`, `user`。
+- `rust/src/sync/`：`audit`, `audit_tui`, `bundle_alert_contracts`, `bundle_inputs`, `bundle_preflight`, `cli`, `json`, `live`, `preflight`, `review_tui`, `staged_documents`, `workbench`；typed apply/live contract boundaries are split across `live.rs`, `staged_documents.rs`, and `workbench.rs`.
 - `rust/src/datasource_diff.rs`：diff 合併/欄位對齊與結果摘要模型。
 - `rust/src/http.rs`：HTTP transport 實作、query/url 建構、錯誤對映。
 - `rust/src/common.rs`：錯誤型別、訊息、解析工具與共用 helper。
+
+### 2.5 Contract 與 test split
+
+- `dashboard inspect` 的主要 contract 落在 `rust/src/dashboard/inspect.rs`, `rust/src/dashboard/inspect_query.rs`, `rust/src/dashboard/inspect_live.rs`, `rust/src/dashboard/inspect_live_tui.rs`，typed summary/report boundary 則分別在 `rust/src/dashboard/inspect_summary.rs` 與 `rust/src/dashboard/inspect_report.rs`。
+- `dashboard inspect` 的回歸測試主要落在 `rust/src/dashboard/rust_tests.rs`，parser/help 類變更則仍跟著對應的 `*_cli_defs.rs`。
+- `sync` 的主要 contract 落在 `rust/src/sync/mod.rs`, `rust/src/sync/cli.rs`, `rust/src/sync/live.rs`, `rust/src/sync/json.rs`, `rust/src/sync/bundle_inputs.rs`, `rust/src/sync/staged_documents.rs`, `rust/src/sync/workbench.rs`。
+- `sync` 的回歸測試主要落在 `rust/src/sync/cli_rust_tests.rs` 與 `rust/src/sync/rust_tests.rs`。
 
 ## 3) 執行資料流（可複製做 debug）
 
@@ -117,13 +140,17 @@ Rust crate 提供四個 CLI domain 的核心執行能力：
   - 先改 `*_cli_defs.rs`（例如 `dashboard_cli_defs.rs`）  
   - 再看 `cli.rs` 是否需要 alias/command 樹更新  
   - 最後補 parser/help/錯誤訊息對齊測試
+- 改 dashboard inspect 相關 contract：
+  - 先看 `dashboard/mod.rs`，再往 `dashboard/inspect.rs`、`dashboard/inspect_query.rs`、`dashboard/inspect_live.rs`、`dashboard/inspect_live_tui.rs` 分流。
+- 改 sync contract 或 live plumbing：
+  - 先看 `sync/mod.rs`，再按責任拆到 `sync/cli.rs`、`sync/live.rs`、`sync/json.rs`、`sync/bundle_inputs.rs`、`sync/staged_documents.rs`。
 - 改單一命令流程：
-  - 只改對應 domain orchestrator（如 `dashboard.rs` 或 `alert.rs`）中的 dispatch + runner。
+  - 只改對應 domain orchestrator（如 `dashboard/mod.rs` 或 `alert.rs`）中的 dispatch + runner。
 - 改 API 呼叫/傳輸：
   - 先看 `http.rs` 是否有可複用封裝；
   - 有限域特例改在 domain 子模組 handler。
 - 改輸出格式：
-  - dashboard/list/import/diff 常在 `dashboard_list.rs`, `dashboard_export.rs`, `dashboard_prompt.rs`, `datasource` 對應輸出路徑修改。
+  - dashboard/list/import/diff 常在 `rust/src/dashboard/list.rs`, `rust/src/dashboard/export.rs`, `rust/src/dashboard/import.rs`, `rust/src/dashboard/prompt.rs`, 以及 `datasource` 對應輸出路徑修改。
 - 加新 domain：
   - 先定義 CLI 入口（`*_cli_defs.rs`）  
   - 再加 runner 分派（`cli.rs`）  
@@ -156,7 +183,15 @@ Rust crate 提供四個 CLI domain 的核心執行能力：
 
 ## 8) 維護節點參考（Rust）
 
-- 新增/調整命令：先看 `cli.rs` 的統一 topology，再更新 `dashboard.rs|alert.rs|access.rs|datasource.rs` 的 runner。
+- 新增/調整命令：先看 `cli.rs` 的統一 topology，再更新 `dashboard/mod.rs|alert.rs|access/mod.rs|sync/mod.rs|datasource.rs` 的 runner。
+- 新增/調整 dashboard live inspect：優先看 `dashboard/mod.rs` 再往 `dashboard/inspect_live.rs` 與 `dashboard/inspect_live_tui.rs` 分流。
+- 新增/調整 dashboard query analysis：優先看 `dashboard/mod.rs` 再往 `dashboard/inspect.rs` 與 `dashboard/inspect_query.rs` 分流。
+- 新增/調整 dashboard inspect 資料契約時，先對齊這條最短修改路徑：
+  - input contract：`dashboard/inspect_live.rs` 先把 live fetch 轉成與 offline inspect 相同的 raw export tree；`dashboard/inspect.rs` 假設輸入已包含 `export-metadata.json`、`index.json`、folder inventory、datasource inventory 與 dashboard JSON。
+  - normalized internal model：`ExportInspectionSummary`、`ExportInspectionQueryReport`、`QueryAnalysis`，以及 governance document rows 是 downstream renderer 與 parity test 的共同中介形狀。
+  - output contract：`inspect_summary.rs` 與 `inspect_report.rs` 負責 typed summary/report document boundary；`inspect_governance.rs` 與 `inspect_render.rs` 分別擁有 governance 與 text-table-json 的輸出形狀。
+  - shortest modification path：改 query extraction 就看 `inspect.rs` + `inspect_query.rs`；改 live staging 就看 `inspect_live.rs`；改輸出形狀就看 summary/report/governance/render 模組；改回歸測試先看 `inspect_live_rust_tests.rs`，再看 `dashboard_rust_tests.rs` 中跨路徑的 parity case。
+- 新增/調整 sync live/apply boundary：優先看 `sync/mod.rs`，再分別調整 `sync/cli.rs`、`sync/live.rs`、`sync/json.rs`、`sync/bundle_inputs.rs`、`sync/staged_documents.rs`、`sync/workbench.rs`。
 - 改 parser：先改對應 `*_cli_defs.rs` 再補 test。
 - 改輸出：優先對應子模組的 render/report 檔案。
 - 需改 transport：優先 `http.rs` 與 `common.rs`。

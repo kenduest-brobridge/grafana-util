@@ -1,0 +1,454 @@
+//! Live dashboard inspection staging and export orchestration.
+//!
+//! This module turns live Grafana reads into the same raw export contract consumed by the
+//! offline inspect pipeline, so the exported files and the live request path can share the
+//! same summary/report/governance builders.
+use indicatif::{ProgressBar, ProgressStyle};
+use rayon::prelude::*;
+use rayon::ThreadPoolBuilder;
+use reqwest::Method;
+use serde_json::{Map, Value};
+use std::env;
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::process;
+use std::time::{SystemTime, UNIX_EPOCH};
+
+use crate::common::{message, string_field, value_as_object, Result};
+use crate::http::JsonHttpClient;
+
+use super::cli_defs::{ExportArgs, InspectExportArgs, InspectLiveArgs};
+use super::export::{build_output_path, export_dashboards_with_request};
+use super::files::{
+    build_export_metadata, load_export_metadata, write_dashboard, write_json_document,
+};
+use super::inspect::build_export_inspection_summary;
+use super::inspect::{analyze_export_dir, build_export_inspection_query_report};
+use super::inspect_governance::build_export_inspection_governance_document;
+use super::inspect_live_tui::run_inspect_live_interactive as run_inspect_live_tui;
+use super::live::{
+    build_datasource_inventory_record, collect_folder_inventory_with_request, fetch_dashboard,
+    list_dashboard_summaries, list_datasources,
+};
+use super::{
+    DATASOURCE_INVENTORY_FILENAME, EXPORT_METADATA_FILENAME, FOLDER_INVENTORY_FILENAME,
+    RAW_EXPORT_SUBDIR,
+};
+
+pub(crate) struct TempInspectDir {
+    pub(crate) path: PathBuf,
+}
+
+impl TempInspectDir {
+    pub(crate) fn new(prefix: &str) -> Result<Self> {
+        let timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_err(|error| message(format!("Failed to build {prefix} temp path: {error}")))?
+            .as_nanos();
+        let path = env::temp_dir().join(format!(
+            "grafana-utils-{prefix}-{}-{timestamp}",
+            process::id()
+        ));
+        fs::create_dir_all(&path)?;
+        Ok(Self { path })
+    }
+}
+
+impl Drop for TempInspectDir {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.path);
+    }
+}
+
+fn build_live_export_args(args: &InspectLiveArgs, export_dir: PathBuf) -> ExportArgs {
+    ExportArgs {
+        common: args.common.clone(),
+        export_dir,
+        page_size: args.page_size,
+        org_id: args.org_id,
+        all_orgs: args.all_orgs,
+        flat: false,
+        overwrite: false,
+        without_dashboard_raw: false,
+        without_dashboard_prompt: true,
+        dry_run: false,
+        progress: args.progress,
+        verbose: false,
+    }
+}
+
+fn build_live_scan_progress_bar(total: usize) -> ProgressBar {
+    let bar = ProgressBar::new(total as u64);
+    let style = ProgressStyle::with_template(
+        "{spinner:.green} dashboards {pos}/{len} [{bar:40.cyan/blue}] {msg}",
+    )
+    .unwrap_or_else(|_| ProgressStyle::default_bar());
+    bar.set_style(style.progress_chars("##-"));
+    bar
+}
+
+pub(crate) fn snapshot_live_dashboard_export_with_fetcher<F>(
+    raw_dir: &Path,
+    summaries: &[Map<String, Value>],
+    concurrency: usize,
+    progress: bool,
+    fetch_dashboard: F,
+) -> Result<usize>
+where
+    F: Fn(&str) -> Result<Value> + Sync,
+{
+    // Only dashboard fetches fan out; the file layout and progress semantics stay
+    // deterministic so the staged export remains comparable to offline export roots.
+    fs::create_dir_all(raw_dir)?;
+    let progress_bar = if progress {
+        Some(build_live_scan_progress_bar(summaries.len()))
+    } else {
+        None
+    };
+    let thread_count = concurrency.max(1);
+    let pool = ThreadPoolBuilder::new()
+        .num_threads(thread_count)
+        .build()
+        .map_err(|error| {
+            message(format!(
+                "Failed to build dashboard scan worker pool: {error}"
+            ))
+        })?;
+    let results = pool.install(|| {
+        summaries
+            .par_iter()
+            .map(|summary| {
+                let uid = string_field(summary, "uid", "");
+                let output_path = build_output_path(raw_dir, summary, false);
+                let payload = fetch_dashboard(&uid)?;
+                write_dashboard(&payload, &output_path, false)?;
+                if let Some(bar) = progress_bar.as_ref() {
+                    bar.inc(1);
+                    bar.set_message(uid);
+                }
+                Ok::<(), crate::common::GrafanaCliError>(())
+            })
+            .collect::<Vec<_>>()
+    });
+    if let Some(bar) = progress_bar.as_ref() {
+        bar.finish_and_clear();
+    }
+    for result in results {
+        result?;
+    }
+    Ok(summaries.len())
+}
+
+pub(crate) fn load_variant_index_entries(
+    import_dir: &Path,
+    metadata: Option<&super::models::ExportMetadata>,
+) -> Result<Vec<super::models::VariantIndexEntry>> {
+    let index_file = metadata
+        .map(|item| item.index_file.clone())
+        .unwrap_or_else(|| "index.json".to_string());
+    let index_path = import_dir.join(&index_file);
+    if !index_path.is_file() {
+        return Ok(Vec::new());
+    }
+    let raw = fs::read_to_string(&index_path)?;
+    serde_json::from_str(&raw).map_err(|error| {
+        message(format!(
+            "Invalid dashboard export index in {}: {error}",
+            index_path.display()
+        ))
+    })
+}
+
+fn run_interactive_inspect_live_tui_from_dir(import_dir: &Path) -> Result<usize> {
+    let summary = build_export_inspection_summary(import_dir)?;
+    let report = build_export_inspection_query_report(import_dir)?;
+    let governance = build_export_inspection_governance_document(&summary, &report);
+    run_inspect_live_tui(&summary, &governance, &report)?;
+    Ok(summary.dashboard_count)
+}
+
+pub(crate) fn inspect_live_dashboards_with_client(
+    client: &JsonHttpClient,
+    args: &InspectLiveArgs,
+) -> Result<usize> {
+    // Small or multi-org scans take the request-parity path; the threaded client path is
+    // only for the single-org case where live fetch fan-out is safe and useful.
+    if args.all_orgs || args.concurrency <= 1 {
+        return inspect_live_dashboards_with_request(
+            |method, path, params, payload| client.request_json(method, path, params, payload),
+            args,
+        );
+    }
+
+    let temp_dir = TempInspectDir::new("inspect-live")?;
+    let raw_dir = temp_dir.path.join(RAW_EXPORT_SUBDIR);
+    let summaries = list_dashboard_summaries(client, args.page_size)?;
+    let datasource_items = list_datasources(client)?;
+    let org_value = client
+        .request_json(Method::GET, "/api/org", &[], None)?
+        .unwrap_or_else(|| serde_json::json!({"id": 1, "name": "Main Org."}));
+    let org = value_as_object(&org_value, "Unexpected current org payload from Grafana.")?;
+    let datasource_inventory = datasource_items
+        .iter()
+        .map(|item| build_datasource_inventory_record(item, org))
+        .collect::<Vec<_>>();
+    snapshot_live_dashboard_export_with_fetcher(
+        &raw_dir,
+        &summaries,
+        args.concurrency,
+        args.progress,
+        |uid| fetch_dashboard(client, uid),
+    )?;
+    write_json_document(
+        &datasource_inventory,
+        &raw_dir.join(DATASOURCE_INVENTORY_FILENAME),
+    )?;
+    let folder_inventory = collect_folder_inventory_with_request(
+        |method, path, params, payload| client.request_json(method, path, params, payload),
+        &summaries,
+    )?;
+    write_json_document(&folder_inventory, &raw_dir.join(FOLDER_INVENTORY_FILENAME))?;
+    if args.interactive {
+        return run_interactive_inspect_live_tui_from_dir(&raw_dir);
+    }
+    let inspect_args = build_export_inspect_args_from_live(args, raw_dir);
+    analyze_export_dir(&inspect_args)
+}
+
+fn build_export_inspect_args_from_live(
+    args: &InspectLiveArgs,
+    import_dir: PathBuf,
+) -> InspectExportArgs {
+    InspectExportArgs {
+        import_dir,
+        json: args.json,
+        table: args.table,
+        report: args.report,
+        output_format: args.output_format,
+        output_file: args.output_file.clone(),
+        report_columns: args.report_columns.clone(),
+        report_filter_datasource: args.report_filter_datasource.clone(),
+        report_filter_panel_id: args.report_filter_panel_id.clone(),
+        help_full: args.help_full,
+        no_header: args.no_header,
+    }
+}
+
+fn load_json_array_file(path: &Path, error_context: &str) -> Result<Vec<Value>> {
+    let raw = fs::read_to_string(path).map_err(|error| {
+        message(format!(
+            "Failed to read {error_context} {}: {error}",
+            path.display()
+        ))
+    })?;
+    let value: Value = serde_json::from_str(&raw).map_err(|error| {
+        message(format!(
+            "Invalid JSON in {error_context} {}: {error}",
+            path.display()
+        ))
+    })?;
+    match value {
+        Value::Array(items) => Ok(items),
+        _ => Err(message(format!(
+            "{error_context} must be a JSON array: {}",
+            path.display()
+        ))),
+    }
+}
+
+fn discover_org_raw_export_dirs(import_dir: &Path) -> Result<Vec<(String, PathBuf)>> {
+    if !import_dir.exists() {
+        return Err(message(format!(
+            "Import directory does not exist: {}",
+            import_dir.display()
+        )));
+    }
+    if !import_dir.is_dir() {
+        return Err(message(format!(
+            "Import path is not a directory: {}",
+            import_dir.display()
+        )));
+    }
+    let mut org_raw_dirs = Vec::new();
+    for entry in fs::read_dir(import_dir)? {
+        let entry = entry?;
+        let org_root = entry.path();
+        if !org_root.is_dir() {
+            continue;
+        }
+        let org_name = entry.file_name().to_string_lossy().to_string();
+        if !org_name.starts_with("org_") {
+            continue;
+        }
+        let org_raw_dir = org_root.join(RAW_EXPORT_SUBDIR);
+        if org_raw_dir.is_dir() {
+            org_raw_dirs.push((org_name, org_raw_dir));
+        }
+    }
+    org_raw_dirs.sort_by(|left, right| left.0.cmp(&right.0));
+    if org_raw_dirs.is_empty() {
+        return Err(message(format!(
+            "Import path {} does not contain any org-scoped {}/ exports. Point --import-dir at a combined multi-org export root created with --all-orgs.",
+            import_dir.display(),
+            RAW_EXPORT_SUBDIR
+        )));
+    }
+    Ok(org_raw_dirs)
+}
+
+fn merge_org_raw_exports_into_dir(
+    org_raw_dirs: &[(String, PathBuf)],
+    inspect_raw_dir: &Path,
+    source_root: Option<&Path>,
+) -> Result<()> {
+    // Preserve each org's raw export content and rewrite the index paths so the merged
+    // tree still looks like one export root to the downstream inspect readers.
+    fs::create_dir_all(inspect_raw_dir)?;
+
+    let mut folder_inventory = Vec::new();
+    let mut datasource_inventory = Vec::new();
+    let mut index_entries = Vec::new();
+    let mut dashboard_count = 0usize;
+
+    for (org_name, org_raw_dir) in org_raw_dirs {
+        let relative_target = inspect_raw_dir.join(org_name);
+        copy_dir_recursive(org_raw_dir, &relative_target)?;
+
+        let metadata = load_export_metadata(org_raw_dir, Some(RAW_EXPORT_SUBDIR))?;
+        let org_index_entries = load_variant_index_entries(org_raw_dir, metadata.as_ref())?;
+        for mut entry in org_index_entries.clone() {
+            entry.path = format!("{org_name}/{}", entry.path);
+            index_entries.push(entry);
+        }
+
+        let folder_path = org_raw_dir.join(FOLDER_INVENTORY_FILENAME);
+        if folder_path.is_file() {
+            folder_inventory.extend(load_json_array_file(
+                &folder_path,
+                "Dashboard folder inventory",
+            )?);
+        }
+        let datasource_path = org_raw_dir.join(DATASOURCE_INVENTORY_FILENAME);
+        if datasource_path.is_file() {
+            datasource_inventory.extend(load_json_array_file(
+                &datasource_path,
+                "Dashboard datasource inventory",
+            )?);
+        }
+
+        dashboard_count += metadata
+            .as_ref()
+            .map(|item| item.dashboard_count as usize)
+            .unwrap_or(org_index_entries.len());
+    }
+
+    write_json_document(
+        &build_export_metadata(
+            RAW_EXPORT_SUBDIR,
+            dashboard_count,
+            Some("grafana-web-import-preserve-uid"),
+            Some(FOLDER_INVENTORY_FILENAME),
+            Some(DATASOURCE_INVENTORY_FILENAME),
+            None,
+            None,
+            None,
+            None,
+        ),
+        &inspect_raw_dir.join(EXPORT_METADATA_FILENAME),
+    )?;
+    write_json_document(&index_entries, &inspect_raw_dir.join("index.json"))?;
+    write_json_document(
+        &folder_inventory,
+        &inspect_raw_dir.join(FOLDER_INVENTORY_FILENAME),
+    )?;
+    write_json_document(
+        &datasource_inventory,
+        &inspect_raw_dir.join(DATASOURCE_INVENTORY_FILENAME),
+    )?;
+    if let Some(source_root) = source_root {
+        fs::write(
+            inspect_raw_dir.join(".inspect-source-root"),
+            source_root.display().to_string(),
+        )?;
+    }
+    Ok(())
+}
+
+fn copy_dir_recursive(source: &Path, destination: &Path) -> Result<()> {
+    fs::create_dir_all(destination)?;
+    for entry in fs::read_dir(source)? {
+        let entry = entry?;
+        let source_path = entry.path();
+        let destination_path = destination.join(entry.file_name());
+        if source_path.is_dir() {
+            copy_dir_recursive(&source_path, &destination_path)?;
+        } else {
+            if let Some(parent) = destination_path.parent() {
+                fs::create_dir_all(parent)?;
+            }
+            fs::copy(&source_path, &destination_path).map_err(|error| {
+                message(format!(
+                    "Failed to copy {} to {}: {error}",
+                    source_path.display(),
+                    destination_path.display()
+                ))
+            })?;
+        }
+    }
+    Ok(())
+}
+
+fn prepare_inspect_live_import_dir(temp_root: &Path, args: &InspectLiveArgs) -> Result<PathBuf> {
+    if !args.all_orgs {
+        return Ok(temp_root.join(RAW_EXPORT_SUBDIR));
+    }
+
+    let inspect_raw_dir = temp_root
+        .join("inspect-live-all-orgs")
+        .join(RAW_EXPORT_SUBDIR);
+    let org_raw_dirs = discover_org_raw_export_dirs(temp_root)?;
+    merge_org_raw_exports_into_dir(&org_raw_dirs, &inspect_raw_dir, None)?;
+    Ok(inspect_raw_dir)
+}
+
+pub(crate) fn prepare_inspect_export_import_dir(
+    temp_root: &Path,
+    import_dir: &Path,
+) -> Result<PathBuf> {
+    // Root exports need one synthetic raw tree so offline inspect sees the same layout
+    // whether the source was a live all-org fetch or a prebuilt export archive.
+    let metadata = load_export_metadata(import_dir, None)?;
+    if metadata
+        .as_ref()
+        .map(|item| item.variant.as_str() == "root")
+        .unwrap_or(false)
+    {
+        let inspect_raw_dir = temp_root
+            .join("inspect-export-all-orgs")
+            .join(RAW_EXPORT_SUBDIR);
+        let org_raw_dirs = discover_org_raw_export_dirs(import_dir)?;
+        merge_org_raw_exports_into_dir(&org_raw_dirs, &inspect_raw_dir, Some(import_dir))?;
+        return Ok(inspect_raw_dir);
+    }
+    Ok(import_dir.to_path_buf())
+}
+
+pub(crate) fn inspect_live_dashboards_with_request<F>(
+    mut request_json: F,
+    args: &InspectLiveArgs,
+) -> Result<usize>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    // Live inspect first stages a raw export tree, then reuses the offline analyzer so the
+    // live and export code paths stay behaviorally aligned.
+    let temp_dir = TempInspectDir::new("inspect-live")?;
+    let export_args = build_live_export_args(args, temp_dir.path.clone());
+    let _ = export_dashboards_with_request(&mut request_json, &export_args)?;
+    let inspect_import_dir = prepare_inspect_live_import_dir(&temp_dir.path, args)?;
+    if args.interactive {
+        return run_interactive_inspect_live_tui_from_dir(&inspect_import_dir);
+    }
+    let inspect_args = build_export_inspect_args_from_live(args, inspect_import_dir);
+    analyze_export_dir(&inspect_args)
+}
