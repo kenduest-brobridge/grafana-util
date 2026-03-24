@@ -1,7 +1,8 @@
 //! Sync preflight planning test suite.
 //! Validates plan/summary contracts and resource normalization behavior.
 use super::preflight::{
-    build_sync_preflight_document, render_sync_preflight_text, SYNC_PREFLIGHT_KIND,
+    build_sync_preflight_document, render_sync_preflight_text, SyncPreflightSummary,
+    SYNC_PREFLIGHT_KIND,
 };
 use super::workbench::{
     build_sync_apply_intent_document, build_sync_plan_document, build_sync_summary_document,
@@ -212,6 +213,25 @@ fn build_sync_preflight_document_reports_plugin_dependency_and_alert_blocks() {
         .any(|item| item["kind"] == "alert-contact-point"
             && item["identity"] == "cpu-high->slack-primary"
             && item["status"] == "missing"));
+}
+
+#[test]
+fn sync_preflight_summary_reads_counts_from_document() {
+    let document = build_sync_preflight_document(
+        &[json!({
+            "kind": "folder",
+            "uid": "ops",
+            "title": "Operations"
+        })],
+        None,
+    )
+    .unwrap();
+
+    let summary = SyncPreflightSummary::from_document(&document).unwrap();
+
+    assert_eq!(summary.check_count, 1);
+    assert_eq!(summary.ok_count, 1);
+    assert_eq!(summary.blocking_count, 0);
 }
 
 #[test]

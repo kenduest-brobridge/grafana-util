@@ -5,11 +5,12 @@
 //!   into one reviewable bundle document.
 //! - Keep Rust-side bundle planning pure and import-safe before any CLI wiring.
 
-use super::preflight::build_sync_preflight_document;
+use super::preflight::{build_sync_preflight_document, SyncPreflightSummary};
 use crate::common::{message, string_field, Result};
 use crate::datasource_provider::{
     build_provider_plan, iter_provider_names, summarize_provider_plan,
 };
+use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::collections::BTreeSet;
 
@@ -17,6 +18,112 @@ use std::collections::BTreeSet;
 pub const SYNC_BUNDLE_PREFLIGHT_KIND: &str = "grafana-utils-sync-bundle-preflight";
 /// Constant for sync bundle preflight schema version.
 pub const SYNC_BUNDLE_PREFLIGHT_SCHEMA_VERSION: i64 = 1;
+
+/// Struct definition for SyncBundlePreflightSummary.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase", default)]
+pub struct SyncBundlePreflightSummary {
+    pub resource_count: i64,
+    pub sync_blocking_count: i64,
+    pub provider_blocking_count: i64,
+    pub alert_artifact_count: i64,
+    pub alert_artifact_blocked_count: i64,
+    pub alert_artifact_plan_only_count: i64,
+}
+
+/// Struct definition for ProviderAssessmentSummary.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase", default)]
+pub(crate) struct ProviderAssessmentSummary {
+    blocking_count: i64,
+}
+
+/// Struct definition for AlertArtifactAssessmentSummary.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase", default)]
+pub(crate) struct AlertArtifactAssessmentSummary {
+    pub(crate) resource_count: i64,
+    pub(crate) blocked_count: i64,
+    pub(crate) plan_only_count: i64,
+}
+
+impl SyncBundlePreflightSummary {
+    pub(crate) fn from_document(document: &Value) -> Result<Self> {
+        let summary = document
+            .get("summary")
+            .ok_or_else(|| message("Sync bundle preflight document is missing summary."))?;
+        let summary = summary
+            .as_object()
+            .ok_or_else(|| message("Sync bundle preflight summary must be a JSON object."))?;
+        serde_json::from_value(Value::Object(summary.clone()))
+            .map_err(|error| message(format!("Sync bundle preflight summary is invalid: {error}")))
+    }
+}
+
+pub(crate) fn require_sync_bundle_preflight_summary(
+    document: &Value,
+) -> Result<SyncBundlePreflightSummary> {
+    let summary = document
+        .get("summary")
+        .and_then(Value::as_object)
+        .ok_or_else(|| message("Sync bundle preflight document is missing summary."))?;
+    let resource_count = summary
+        .get("resourceCount")
+        .and_then(Value::as_i64)
+        .ok_or_else(|| message("Sync bundle preflight summary is missing resourceCount."))?;
+    let sync_blocking_count = summary
+        .get("syncBlockingCount")
+        .and_then(Value::as_i64)
+        .ok_or_else(|| message("Sync bundle preflight summary is missing syncBlockingCount."))?;
+    let provider_blocking_count = summary
+        .get("providerBlockingCount")
+        .and_then(Value::as_i64)
+        .ok_or_else(|| {
+            message("Sync bundle preflight summary is missing providerBlockingCount.")
+        })?;
+    Ok(SyncBundlePreflightSummary {
+        resource_count,
+        sync_blocking_count,
+        provider_blocking_count,
+        alert_artifact_count: 0,
+        alert_artifact_blocked_count: 0,
+        alert_artifact_plan_only_count: 0,
+    })
+}
+
+fn provider_assessment_summary(document: &Value) -> Result<ProviderAssessmentSummary> {
+    let summary = document
+        .get("summary")
+        .ok_or_else(|| message("Sync provider assessment document is missing summary."))?;
+    let summary = summary
+        .as_object()
+        .ok_or_else(|| message("Sync provider assessment summary must be a JSON object."))?;
+    serde_json::from_value(Value::Object(summary.clone())).map_err(|error| {
+        message(format!(
+            "Sync provider assessment summary is invalid: {error}"
+        ))
+    })
+}
+
+fn alert_artifact_assessment_summary(document: &Value) -> Result<AlertArtifactAssessmentSummary> {
+    let summary = document
+        .get("summary")
+        .ok_or_else(|| message("Sync alert artifact assessment document is missing summary."))?;
+    let summary = summary
+        .as_object()
+        .ok_or_else(|| message("Sync alert artifact assessment summary must be a JSON object."))?;
+    serde_json::from_value(Value::Object(summary.clone())).map_err(|error| {
+        message(format!(
+            "Sync alert artifact assessment summary is invalid: {error}"
+        ))
+    })
+}
+
+pub(crate) fn alert_artifact_assessment_summary_or_default(
+    document: &Value,
+) -> AlertArtifactAssessmentSummary {
+    alert_artifact_assessment_summary(document).unwrap_or_default()
+}
 
 fn normalize_text(value: Option<&Value>) -> String {
     match value {
@@ -456,9 +563,8 @@ pub fn build_sync_bundle_preflight_document(
     target_inventory: &Value,
     availability: Option<&Value>,
 ) -> Result<Value> {
-    // Call graph (hierarchy): this function is used in related modules.
-    // Upstream callers: sync.rs:run_sync_cli, sync_bundle_rust_tests.rs:build_sync_bundle_preflight_document_aggregates_sync_and_provider_checks, sync_bundle_rust_tests.rs:build_sync_bundle_preflight_document_counts_top_level_alert_specs_from_source_bundle, sync_bundle_rust_tests.rs:build_sync_bundle_preflight_document_falls_back_to_alerting_rule_documents, sync_bundle_rust_tests.rs:build_sync_bundle_preflight_document_reads_provider_metadata_from_source_bundle_document, sync_bundle_rust_tests.rs:render_sync_bundle_preflight_text_renders_summary
-    // Downstream callees: sync_bundle_preflight.rs:build_provider_assessment, sync_bundle_preflight.rs:collect_alert_specs, sync_bundle_preflight.rs:require_array, sync_bundle_preflight.rs:require_object, sync_preflight.rs:build_sync_preflight_document
+    // Build the bundle preflight from staged bundle JSON so the sync-level and
+    // provider-level gates can share one normalized availability snapshot.
 
     let source_bundle = require_object(Some(source_bundle), "source bundle")?;
     let _target_inventory = require_object(Some(target_inventory), "target inventory")?;
@@ -484,18 +590,17 @@ pub fn build_sync_bundle_preflight_document(
             .unwrap_or(&[]),
         &availability,
     )?;
-    let sync_blocking_count = sync_preflight
-        .get("summary")
-        .and_then(Value::as_object)
-        .and_then(|summary| summary.get("blockingCount"))
-        .and_then(Value::as_i64)
-        .unwrap_or(0);
-    let provider_blocking_count = provider_assessment
-        .get("summary")
-        .and_then(Value::as_object)
-        .and_then(|summary| summary.get("blockingCount"))
-        .and_then(Value::as_i64)
-        .unwrap_or(0);
+    let sync_preflight_summary = SyncPreflightSummary::from_document(&sync_preflight)?;
+    let provider_summary = provider_assessment_summary(&provider_assessment)?;
+    let alert_artifact_summary = alert_artifact_assessment_summary(&alert_artifact_assessment)?;
+    let summary = SyncBundlePreflightSummary {
+        resource_count: desired_specs.len() as i64,
+        sync_blocking_count: sync_preflight_summary.blocking_count,
+        provider_blocking_count: provider_summary.blocking_count,
+        alert_artifact_count: alert_artifact_summary.resource_count,
+        alert_artifact_blocked_count: alert_artifact_summary.blocked_count,
+        alert_artifact_plan_only_count: alert_artifact_summary.plan_only_count,
+    };
     Ok(Value::Object(Map::from_iter(vec![
         (
             "kind".to_string(),
@@ -505,50 +610,7 @@ pub fn build_sync_bundle_preflight_document(
             "schemaVersion".to_string(),
             Value::Number(SYNC_BUNDLE_PREFLIGHT_SCHEMA_VERSION.into()),
         ),
-        (
-            "summary".to_string(),
-            Value::Object(Map::from_iter(vec![
-                (
-                    "resourceCount".to_string(),
-                    Value::Number((desired_specs.len() as i64).into()),
-                ),
-                (
-                    "syncBlockingCount".to_string(),
-                    Value::Number(sync_blocking_count.into()),
-                ),
-                (
-                    "providerBlockingCount".to_string(),
-                    Value::Number(provider_blocking_count.into()),
-                ),
-                (
-                    "alertArtifactCount".to_string(),
-                    Value::Number(
-                        alert_artifact_assessment["summary"]["resourceCount"]
-                            .as_i64()
-                            .unwrap_or(0)
-                            .into(),
-                    ),
-                ),
-                (
-                    "alertArtifactBlockedCount".to_string(),
-                    Value::Number(
-                        alert_artifact_assessment["summary"]["blockedCount"]
-                            .as_i64()
-                            .unwrap_or(0)
-                            .into(),
-                    ),
-                ),
-                (
-                    "alertArtifactPlanOnlyCount".to_string(),
-                    Value::Number(
-                        alert_artifact_assessment["summary"]["planOnlyCount"]
-                            .as_i64()
-                            .unwrap_or(0)
-                            .into(),
-                    ),
-                ),
-            ])),
-        ),
+        ("summary".to_string(), serde_json::to_value(&summary)?),
         ("syncPreflight".to_string(), sync_preflight),
         (
             "alertArtifactAssessment".to_string(),
@@ -563,9 +625,8 @@ pub fn build_sync_bundle_preflight_document(
 /// Args: see function signature.
 /// Returns: see implementation.
 pub fn render_sync_bundle_preflight_text(document: &Value) -> Result<Vec<String>> {
-    // Call graph (hierarchy): this function is used in related modules.
-    // Upstream callers: sync.rs:run_sync_cli, sync_bundle_rust_tests.rs:render_sync_bundle_preflight_rejects_wrong_kind, sync_bundle_rust_tests.rs:render_sync_bundle_preflight_text_renders_summary
-    // Downstream callees: common.rs:message, sync_bundle_preflight.rs:normalize_text, sync_bundle_preflight.rs:require_object
+    // Keep the renderer strict about kind/summary so output formatting cannot
+    // drift away from the staged bundle-preflight document contract.
 
     let kind = normalize_text(document.get("kind"));
     if kind != SYNC_BUNDLE_PREFLIGHT_KIND {
@@ -573,37 +634,13 @@ pub fn render_sync_bundle_preflight_text(document: &Value) -> Result<Vec<String>
             "Sync bundle preflight document kind is not supported.",
         ));
     }
-    let summary = require_object(document.get("summary"), "summary")?;
+    let summary = SyncBundlePreflightSummary::from_document(document)?;
     Ok(vec![
         "Sync bundle preflight summary".to_string(),
-        format!(
-            "Resources: {} total",
-            summary
-                .get("resourceCount")
-                .and_then(Value::as_i64)
-                .unwrap_or(0)
-        ),
-        format!(
-            "Sync blocking: {}",
-            summary
-                .get("syncBlockingCount")
-                .and_then(Value::as_i64)
-                .unwrap_or(0)
-        ),
-        format!(
-            "Provider blocking: {}",
-            summary
-                .get("providerBlockingCount")
-                .and_then(Value::as_i64)
-                .unwrap_or(0)
-        ),
-        format!(
-            "Alert artifacts: {} total",
-            summary
-                .get("alertArtifactCount")
-                .and_then(Value::as_i64)
-                .unwrap_or(0)
-        ),
+        format!("Resources: {} total", summary.resource_count),
+        format!("Sync blocking: {}", summary.sync_blocking_count),
+        format!("Provider blocking: {}", summary.provider_blocking_count),
+        format!("Alert artifacts: {} total", summary.alert_artifact_count),
     ])
 }
 
