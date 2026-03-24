@@ -25,8 +25,8 @@ help:
 		'  make build-rust    Build native Rust release binaries plus Linux amd64 artifacts' \
 		'  make build-rust-native  Build native Rust release binaries in rust/target/release/' \
 		'  make build-rust-macos-arm64  Build native macOS Apple Silicon (M1/M2/M3) Rust release binaries into dist/macos-arm64/' \
-		'  make build-rust-linux-amd64  Build Linux amd64 Rust release binaries with Docker into dist/linux-amd64/ (containerized Linux build)' \
-		'  make build-rust-linux-amd64-zig  Build Linux amd64 Rust release binaries with local zig into dist/linux-amd64/ (no Docker)' \
+		'  make build-rust-linux-amd64  Build Linux amd64 Rust release binaries with Docker into dist/linux-amd64/ (containerized Linux build; set CARGO_BUILD_JOBS to tune memory/parallelism)' \
+		'  make build-rust-linux-amd64-zig  Build Linux amd64 Rust release binaries with local zig into dist/linux-amd64/ (no Docker; set CARGO_BUILD_JOBS to tune memory/parallelism)' \
 		'  make seed-grafana-sample-data  Seed a local Grafana with reusable developer sample orgs, datasources, folders, and dashboards' \
 		'  make destroy-grafana-sample-data  Remove the developer sample orgs, datasources, folders, and dashboards seeded by the repo script' \
 		'  make reset-grafana-all-data  Danger: delete repo-relevant test data from a disposable local Grafana instance' \

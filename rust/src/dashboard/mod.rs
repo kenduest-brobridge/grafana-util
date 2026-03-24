@@ -15,6 +15,7 @@ mod import;
 mod import_compare;
 mod import_lookup;
 mod import_render;
+mod import_routed;
 mod import_validation;
 mod inspect;
 mod inspect_analyzer_flux;
@@ -273,31 +274,37 @@ pub fn run_dashboard_cli(args: DashboardCliArgs) -> Result<()> {
 }
 
 #[cfg(test)]
-#[path = "rust_tests.rs"]
-mod dashboard_rust_tests;
-#[cfg(test)]
 #[path = "dashboard_cli_rust_tests.rs"]
 mod dashboard_cli_rust_tests;
 #[cfg(test)]
-#[path = "inspect_live_rust_tests.rs"]
-mod inspect_live_rust_tests;
+#[path = "rust_tests.rs"]
+mod dashboard_rust_tests;
+#[cfg(test)]
+#[path = "import_rust_tests.rs"]
+mod import_rust_tests;
 #[cfg(test)]
 #[path = "inspect_export_rust_tests.rs"]
 mod inspect_export_rust_tests;
 #[cfg(test)]
-#[path = "inspect_vars_rust_tests.rs"]
-mod inspect_vars_rust_tests;
-#[cfg(test)]
-#[path = "topology_impact_rust_tests.rs"]
-mod topology_impact_rust_tests;
-#[cfg(test)]
-#[path = "topology_impact_document_rust_tests.rs"]
-mod topology_impact_document_rust_tests;
+#[path = "inspect_governance_document_rust_tests.rs"]
+mod inspect_governance_document_rust_tests;
 #[cfg(test)]
 #[path = "inspect_governance_rust_tests.rs"]
 mod inspect_governance_rust_tests;
+#[cfg(test)]
+#[path = "inspect_live_rust_tests.rs"]
+mod inspect_live_rust_tests;
+#[cfg(test)]
+#[path = "inspect_vars_rust_tests.rs"]
+mod inspect_vars_rust_tests;
 #[cfg(test)]
 #[path = "screenshot_rust_tests.rs"]
 mod screenshot_rust_tests;
 #[cfg(test)]
 mod test_support;
+#[cfg(test)]
+#[path = "topology_impact_document_rust_tests.rs"]
+mod topology_impact_document_rust_tests;
+#[cfg(test)]
+#[path = "topology_impact_rust_tests.rs"]
+mod topology_impact_rust_tests;

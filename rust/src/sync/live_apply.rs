@@ -344,7 +344,7 @@ where
         },
         "would-create" | "would-update" => match kind {
             "alert" => {
-                let mut payload = build_rule_import_payload(&desired)?;
+                let mut payload = build_rule_import_payload(desired)?;
                 if !identity.is_empty() && !payload.contains_key("uid") {
                     payload.insert("uid".to_string(), Value::String(identity.to_string()));
                 }
@@ -372,7 +372,7 @@ where
                 )
             }
             "alert-contact-point" => {
-                let mut payload = build_contact_point_import_payload(&desired)?;
+                let mut payload = build_contact_point_import_payload(desired)?;
                 if !identity.is_empty() && !payload.contains_key("uid") {
                     payload.insert("uid".to_string(), Value::String(identity.to_string()));
                 }
@@ -392,7 +392,7 @@ where
                 )
             }
             "alert-mute-timing" => {
-                let payload = build_mute_timing_import_payload(&desired)?;
+                let payload = build_mute_timing_import_payload(desired)?;
                 let name = payload
                     .get("name")
                     .and_then(Value::as_str)
@@ -415,7 +415,7 @@ where
                 )
             }
             "alert-policy" => {
-                let payload = build_policies_import_payload(&desired)?;
+                let payload = build_policies_import_payload(desired)?;
                 Ok(request_json(
                     Method::PUT,
                     "/api/v1/provisioning/policies",
@@ -425,7 +425,7 @@ where
                 .unwrap_or(Value::Null))
             }
             "alert-template" => {
-                let mut payload = build_template_import_payload(&desired)?;
+                let mut payload = build_template_import_payload(desired)?;
                 let name = payload
                     .get("name")
                     .and_then(Value::as_str)

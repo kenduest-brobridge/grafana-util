@@ -1,20 +1,20 @@
 //! Artifact-driven topology and impact analysis for dashboards and alert contracts.
 use serde::Serialize;
 use serde_json::Value;
-use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 
 use crate::common::{load_json_object_file, Result};
-use crate::interactive_browser::BrowserItem;
 
 use super::{
     write_json_document, ImpactArgs, ImpactOutputFormat, TopologyArgs, TopologyOutputFormat,
 };
 #[path = "topology_build.rs"]
 mod topology_build;
-use topology_build::compare_topology_nodes;
 pub(crate) use topology_build::{build_impact_document, build_topology_document};
+#[path = "topology_browser.rs"]
+mod topology_browser;
+pub(crate) use topology_browser::{build_impact_browser_items, build_topology_browser_items};
 
 #[cfg(not(test))]
 use super::impact_tui::run_impact_interactive;
@@ -163,23 +163,6 @@ fn escape_label(value: &str) -> String {
     value.replace('\\', "\\\\").replace('"', "\\\"")
 }
 
-fn sort_impact_resources(resources: &mut Vec<&ImpactAlertResource>) {
-    resources.sort_by(|left, right| {
-        left.title
-            .cmp(&right.title)
-            .then_with(|| left.identity.cmp(&right.identity))
-            .then_with(|| left.source_path.cmp(&right.source_path))
-    });
-}
-
-fn topology_node_display_label(node: &TopologyNode) -> String {
-    if node.label.is_empty() {
-        node.id.clone()
-    } else {
-        node.label.clone()
-    }
-}
-
 fn load_object(path: &Path) -> Result<Value> {
     load_json_object_file(path, "Topology/impact JSON")
 }
@@ -251,7 +234,6 @@ pub(crate) fn render_topology_dot(document: &TopologyDocument) -> String {
     lines.join("\n")
 }
 
-
 pub(crate) fn render_impact_text(document: &ImpactDocument) -> String {
     let mut lines = vec![format!(
         "Datasource impact: {} dashboards={} alert-resources={} alert-rules={} contact-points={} mute-timings={} notification-policies={} templates={}",
@@ -315,151 +297,6 @@ pub(crate) fn render_impact_text(document: &ImpactDocument) -> String {
     lines.join("\n")
 }
 
-pub(crate) fn build_impact_browser_items(document: &ImpactDocument) -> Vec<BrowserItem> {
-    let mut items = Vec::new();
-
-    let mut dashboards = document.dashboards.iter().collect::<Vec<_>>();
-    dashboards.sort_by(|left, right| {
-        left.folder_path
-            .cmp(&right.folder_path)
-            .then_with(|| left.dashboard_title.cmp(&right.dashboard_title))
-            .then_with(|| left.dashboard_uid.cmp(&right.dashboard_uid))
-    });
-    items.extend(dashboards.into_iter().map(build_impact_dashboard_item));
-
-    let mut alert_rules = document
-        .alert_resources
-        .iter()
-        .filter(|resource| resource.kind == "alert-rule")
-        .collect::<Vec<_>>();
-    sort_impact_resources(&mut alert_rules);
-    items.extend(alert_rules.into_iter().map(|resource| {
-        build_impact_resource_item(resource, &document.summary.datasource_uid, "Alert rules")
-    }));
-
-    let mut mute_timings = document
-        .alert_resources
-        .iter()
-        .filter(|resource| resource.kind == "mute-timing")
-        .collect::<Vec<_>>();
-    sort_impact_resources(&mut mute_timings);
-    items.extend(mute_timings.into_iter().map(|resource| {
-        build_impact_resource_item(resource, &document.summary.datasource_uid, "Mute timings")
-    }));
-
-    let mut alert_resources = document
-        .alert_resources
-        .iter()
-        .filter(|resource| {
-            !matches!(
-                resource.kind.as_str(),
-                "alert-rule" | "mute-timing" | "contact-point" | "notification-policy" | "template"
-            )
-        })
-        .collect::<Vec<_>>();
-    sort_impact_resources(&mut alert_resources);
-    items.extend(alert_resources.into_iter().map(|resource| {
-        build_impact_resource_item(
-            resource,
-            &document.summary.datasource_uid,
-            "Alert resources",
-        )
-    }));
-
-    let mut contact_points = document.affected_contact_points.iter().collect::<Vec<_>>();
-    sort_impact_resources(&mut contact_points);
-    items.extend(contact_points.into_iter().map(|resource| {
-        build_impact_resource_item(resource, &document.summary.datasource_uid, "Contact points")
-    }));
-
-    let mut policies = document.affected_policies.iter().collect::<Vec<_>>();
-    sort_impact_resources(&mut policies);
-    items.extend(policies.into_iter().map(|resource| {
-        build_impact_resource_item(resource, &document.summary.datasource_uid, "Policies")
-    }));
-
-    let mut templates = document.affected_templates.iter().collect::<Vec<_>>();
-    sort_impact_resources(&mut templates);
-    items.extend(templates.into_iter().map(|resource| {
-        build_impact_resource_item(resource, &document.summary.datasource_uid, "Templates")
-    }));
-
-    items
-}
-
-fn impact_item_title(title: &str, fallback: &str) -> String {
-    if title.is_empty() {
-        fallback.to_string()
-    } else {
-        title.to_string()
-    }
-}
-
-fn impact_display_value(value: &str) -> String {
-    if value.is_empty() {
-        "-".to_string()
-    } else {
-        value.to_string()
-    }
-}
-
-fn build_impact_dashboard_item(dashboard: &ImpactDashboard) -> BrowserItem {
-    let title = impact_item_title(&dashboard.dashboard_title, &dashboard.dashboard_uid);
-    let classification = if dashboard.folder_path.is_empty() {
-        "unfiled"
-    } else {
-        "folder-scoped"
-    };
-    BrowserItem {
-        kind: "dashboard".to_string(),
-        title,
-        meta: format!(
-            "folder={} | uid={} | p={} q={}",
-            impact_display_value(&dashboard.folder_path),
-            dashboard.dashboard_uid,
-            dashboard.panel_count,
-            dashboard.query_count
-        ),
-        details: vec![
-            format!("UID: {}", dashboard.dashboard_uid),
-            format!(
-                "Folder path: {}",
-                impact_display_value(&dashboard.folder_path)
-            ),
-            format!("Scope: {}", classification),
-            format!("Panels: {}", dashboard.panel_count),
-            format!("Queries: {}", dashboard.query_count),
-        ],
-    }
-}
-
-fn build_impact_resource_item(
-    resource: &ImpactAlertResource,
-    datasource_uid: &str,
-    section_label: &str,
-) -> BrowserItem {
-    let title = impact_item_title(&resource.title, &resource.identity);
-    BrowserItem {
-        kind: resource.kind.clone(),
-        title,
-        meta: format!("group={} | id={}", section_label, resource.identity),
-        details: vec![
-            format!("Kind: {}", resource.kind),
-            format!("Group: {}", section_label),
-            format!("Identity: {}", resource.identity),
-            format!(
-                "Title: {}",
-                impact_item_title(&resource.title, &resource.identity)
-            ),
-            format!(
-                "Source path: {}",
-                impact_display_value(&resource.source_path)
-            ),
-            format!("Datasource UID: {}", datasource_uid),
-        ],
-    }
-}
-
 #[cfg(test)]
 fn build_impact_summary_lines(document: &ImpactDocument) -> Vec<String> {
     vec![
@@ -482,112 +319,6 @@ fn build_impact_summary_lines(document: &ImpactDocument) -> Vec<String> {
 #[cfg(test)]
 fn build_impact_interactive_summary(document: &ImpactDocument) -> Vec<String> {
     build_impact_summary_lines(document)
-}
-
-pub(crate) fn build_topology_browser_items(document: &TopologyDocument) -> Vec<BrowserItem> {
-    let mut nodes = document.nodes.iter().collect::<Vec<_>>();
-    nodes.sort_by(|left, right| compare_topology_nodes(left, right));
-    let node_lookup = document
-        .nodes
-        .iter()
-        .map(|node| (node.id.clone(), topology_node_display_label(node)))
-        .collect::<BTreeMap<String, String>>();
-    nodes
-        .into_iter()
-        .map(|node| {
-            let display_label = if node.label.is_empty() {
-                node.id.clone()
-            } else {
-                node.label.clone()
-            };
-            let mut inbound_edges = document
-                .edges
-                .iter()
-                .filter(|edge| edge.to == node.id)
-                .collect::<Vec<_>>();
-            inbound_edges.sort_by(|left, right| {
-                left.relation
-                    .cmp(&right.relation)
-                    .then_with(|| {
-                        let left_label = node_lookup
-                            .get(left.from.as_str())
-                            .cloned()
-                            .unwrap_or_else(|| left.from.clone());
-                        let right_label = node_lookup
-                            .get(right.from.as_str())
-                            .cloned()
-                            .unwrap_or_else(|| right.from.clone());
-                        left_label.cmp(&right_label)
-                    })
-                    .then_with(|| left.from.cmp(&right.from))
-            });
-
-            let mut outbound_edges = document
-                .edges
-                .iter()
-                .filter(|edge| edge.from == node.id)
-                .collect::<Vec<_>>();
-            outbound_edges.sort_by(|left, right| {
-                left.relation
-                    .cmp(&right.relation)
-                    .then_with(|| {
-                        let left_label = node_lookup
-                            .get(left.to.as_str())
-                            .cloned()
-                            .unwrap_or_else(|| left.to.clone());
-                        let right_label = node_lookup
-                            .get(right.to.as_str())
-                            .cloned()
-                            .unwrap_or_else(|| right.to.clone());
-                        left_label.cmp(&right_label)
-                    })
-                    .then_with(|| left.to.cmp(&right.to))
-            });
-
-            let mut details = vec![
-                format!("Node ID: {}", node.id),
-                format!("Kind: {}", node.kind),
-                format!("Label: {}", display_label),
-                format!("Inbound edges: {}", inbound_edges.len()),
-                format!("Outbound edges: {}", outbound_edges.len()),
-            ];
-            let inbound_count = inbound_edges.len();
-            let outbound_count = outbound_edges.len();
-            if inbound_edges.is_empty() {
-                details.push("Inbound edge summary: none".to_string());
-            } else {
-                details.push("Inbound edge summary:".to_string());
-                for edge in &inbound_edges {
-                    let source_label = node_lookup
-                        .get(edge.from.as_str())
-                        .cloned()
-                        .unwrap_or_else(|| edge.from.clone());
-                    details.push(format!("  {} <- {}", edge.relation, source_label));
-                }
-            }
-            if outbound_edges.is_empty() {
-                details.push("Outbound edge summary: none".to_string());
-            } else {
-                details.push("Outbound edge summary:".to_string());
-                for edge in &outbound_edges {
-                    let target_label = node_lookup
-                        .get(edge.to.as_str())
-                        .cloned()
-                        .unwrap_or_else(|| edge.to.clone());
-                    details.push(format!("  {} -> {}", edge.relation, target_label));
-                }
-            }
-            BrowserItem {
-                kind: node.kind.clone(),
-                title: display_label,
-                meta: format!(
-                    "id={} | in={} out={}",
-                    node.id, inbound_count, outbound_count
-                ),
-                details,
-            }
-        })
-        .collect()
 }
 
 pub(crate) fn run_dashboard_topology(args: &TopologyArgs) -> Result<()> {

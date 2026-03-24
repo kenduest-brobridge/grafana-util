@@ -549,8 +549,32 @@ pub fn run_sync_cli(command: SyncGroupCommand) -> Result<()> {
 }
 
 #[cfg(test)]
+#[path = "cli_render_rust_tests.rs"]
+mod cli_render_rust_tests;
+
+#[cfg(test)]
 #[path = "cli_rust_tests.rs"]
 mod sync_cli_rust_tests;
+
+#[cfg(test)]
+#[path = "cli_apply_review_rust_tests.rs"]
+mod cli_apply_review_rust_tests;
+
+#[cfg(test)]
+#[path = "cli_apply_review_exec_rust_tests.rs"]
+mod cli_apply_review_exec_rust_tests;
+
+#[cfg(test)]
+#[path = "cli_review_tui_rust_tests.rs"]
+mod cli_review_tui_rust_tests;
+
+#[cfg(test)]
+#[path = "cli_audit_preflight_rust_tests.rs"]
+mod cli_audit_preflight_rust_tests;
+
+#[cfg(test)]
+#[path = "cli_help_rust_tests.rs"]
+mod cli_help_rust_tests;
 
 #[cfg(test)]
 #[path = "live_rust_tests.rs"]

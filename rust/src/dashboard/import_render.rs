@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use crate::common::Result;
 
-use super::{DEFAULT_UNKNOWN_UID, FolderInventoryStatus, FolderInventoryStatusKind};
+use super::{FolderInventoryStatus, FolderInventoryStatusKind, DEFAULT_UNKNOWN_UID};
 
 /// Struct definition for ImportDryRunReport.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -448,7 +448,9 @@ pub(crate) fn render_import_dry_run_json(
         skipped_missing_count,
         skipped_folder_mismatch_count,
     };
-    Ok(serde_json::to_string_pretty(&build_import_dry_run_json_value(&report))?)
+    Ok(serde_json::to_string_pretty(
+        &build_import_dry_run_json_value(&report),
+    )?)
 }
 
 pub(crate) fn format_import_progress_line(

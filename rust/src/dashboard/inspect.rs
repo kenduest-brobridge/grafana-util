@@ -20,18 +20,17 @@
 //! - adjust rendering in `inspect_render.rs`
 //! - adjust inspect regressions in `inspect_live_rust_tests.rs` first, then
 //!   `dashboard_rust_tests.rs` when a behavior spans multiple paths
+#[path = "inspect_extract.rs"]
+mod inspect_extract;
 #[path = "inspect_output.rs"]
 mod inspect_output;
 #[path = "inspect_query_report.rs"]
 mod inspect_query_report;
-#[path = "inspect_extract.rs"]
-mod inspect_extract;
 
 use serde_json::{Map, Value};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::common::{message, object_field, string_field, value_as_object, Result};
 use super::cli_defs::{InspectExportArgs, InspectExportReportFormat, InspectOutputFormat};
 use super::files::{
     discover_dashboard_files, extract_dashboard_object, load_datasource_inventory,
@@ -47,17 +46,6 @@ pub(crate) use super::inspect_query::{
     resolve_query_analyzer_family_from_query_signature, QueryExtractionContext,
     DATASOURCE_FAMILY_UNKNOWN,
 };
-pub(crate) use inspect_extract::{
-    extract_flux_pipeline_functions, extract_influxql_select_functions,
-    extract_influxql_select_metrics, extract_influxql_time_windows, extract_metric_names,
-    extract_prometheus_functions, extract_prometheus_metric_names,
-    extract_prometheus_range_windows, extract_query_buckets, extract_query_field_and_text,
-    extract_query_measurements, extract_sql_query_shape_hints, extract_sql_source_references,
-    resolve_datasource_inventory_item, resolve_query_analyzer_family, summarize_datasource_name,
-    summarize_datasource_ref, summarize_datasource_type, summarize_datasource_uid,
-    summarize_panel_datasource_key,
-};
-pub(crate) use inspect_query_report::build_export_inspection_query_report;
 use super::inspect_render::render_simple_table;
 use super::inspect_report::{
     refresh_filtered_query_report_summary, report_format_supports_columns,
@@ -71,14 +59,24 @@ use super::inspect_summary::{
 use super::models::{
     DatasourceInventoryItem, ExportMetadata, FolderInventoryItem, VariantIndexEntry,
 };
-use super::prompt::{
-    collect_datasource_refs,
-};
+use super::prompt::collect_datasource_refs;
 use super::{
     DEFAULT_DASHBOARD_TITLE, DEFAULT_FOLDER_TITLE, DEFAULT_FOLDER_UID, DEFAULT_UNKNOWN_UID,
     RAW_EXPORT_SUBDIR,
 };
+use crate::common::{message, object_field, string_field, value_as_object, Result};
+pub(crate) use inspect_extract::{
+    extract_flux_pipeline_functions, extract_influxql_select_functions,
+    extract_influxql_select_metrics, extract_influxql_time_windows, extract_metric_names,
+    extract_prometheus_functions, extract_prometheus_metric_names,
+    extract_prometheus_range_windows, extract_query_buckets, extract_query_field_and_text,
+    extract_query_measurements, extract_sql_query_shape_hints, extract_sql_source_references,
+    resolve_datasource_inventory_item, resolve_query_analyzer_family, summarize_datasource_name,
+    summarize_datasource_ref, summarize_datasource_type, summarize_datasource_uid,
+    summarize_panel_datasource_key,
+};
 use inspect_output::render_export_inspection_report_output;
+pub(crate) use inspect_query_report::build_export_inspection_query_report;
 
 pub(crate) use super::inspect_live::{prepare_inspect_export_import_dir, TempInspectDir};
 
@@ -677,7 +675,6 @@ pub(crate) fn build_export_inspection_summary(
         mixed_dashboards,
     })
 }
-
 
 fn render_export_inspection_summary_output(
     args: &InspectExportArgs,

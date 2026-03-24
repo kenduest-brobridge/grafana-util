@@ -8,8 +8,8 @@ use serde_json::{Map, Value};
 
 use crate::common::{message, object_field, string_field, value_as_object, Result};
 
-use super::parse_dashboard_url_state;
 use super::super::{build_http_client, fetch_dashboard, ScreenshotArgs};
+use super::parse_dashboard_url_state;
 
 #[derive(Debug, Clone, Default)]
 pub(crate) struct DashboardCaptureMetadata {
@@ -174,10 +174,7 @@ fn resolve_dashboard_uid(args: &ScreenshotArgs) -> Option<String> {
         })
 }
 
-fn find_panel_title(
-    dashboard: &Map<String, Value>,
-    panel_id: i64,
-) -> Option<String> {
+fn find_panel_title(dashboard: &Map<String, Value>, panel_id: i64) -> Option<String> {
     fn visit_panels(items: &[Value], panel_id: i64) -> Option<String> {
         for item in items {
             let object = item.as_object()?;

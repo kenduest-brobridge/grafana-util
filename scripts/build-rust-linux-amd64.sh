@@ -7,6 +7,7 @@ RUST_DIR="${REPO_ROOT}/rust"
 OUTPUT_DIR="${REPO_ROOT}/dist/linux-amd64"
 RUST_IMAGE="${RUST_IMAGE:-rust:1.89-bookworm}"
 TARGET_TRIPLE="x86_64-unknown-linux-gnu"
+CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-2}"
 
 if ! command -v docker >/dev/null 2>&1; then
   echo "Error: docker is required for Linux amd64 Rust builds." >&2
@@ -18,6 +19,7 @@ mkdir -p "${OUTPUT_DIR}"
 docker run --rm \
   --platform linux/amd64 \
   --user "$(id -u):$(id -g)" \
+  -e CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS}" \
   -v "${REPO_ROOT}:/workspace" \
   -w /workspace/rust \
   "${RUST_IMAGE}" \
@@ -27,7 +29,7 @@ docker run --rm \
     if command -v rustup >/dev/null 2>&1; then
       rustup target add ${TARGET_TRIPLE}
     fi
-    cargo build --release --target ${TARGET_TRIPLE}
+    cargo build --release --jobs \"\${CARGO_BUILD_JOBS}\" --target ${TARGET_TRIPLE}
   "
 
 cp "${RUST_DIR}/target/${TARGET_TRIPLE}/release/grafana-util" "${OUTPUT_DIR}/grafana-util"

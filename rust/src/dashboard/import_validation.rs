@@ -7,15 +7,20 @@ use std::path::{Path, PathBuf};
 use crate::common::{message, string_field, value_as_object, Result};
 use crate::sync::preflight::build_sync_preflight_document;
 
-use super::import_lookup::{list_orgs_cached, resolve_import_target_org_id_with_request, ImportLookupCache};
+use super::import_lookup::{
+    list_orgs_cached, resolve_import_target_org_id_with_request, ImportLookupCache,
+};
 use super::list::collect_dashboard_source_metadata;
 use super::{build_datasource_catalog, collect_datasource_refs, DEFAULT_DASHBOARD_TITLE};
 use super::{
-    discover_dashboard_files, load_datasource_inventory, load_export_metadata, load_folder_inventory,
-    ExportMetadata, FOLDER_INVENTORY_FILENAME, RAW_EXPORT_SUBDIR,
+    discover_dashboard_files, load_datasource_inventory, load_export_metadata,
+    load_folder_inventory, ExportMetadata, FOLDER_INVENTORY_FILENAME, RAW_EXPORT_SUBDIR,
 };
 
-fn validate_import_org_auth(context: &super::DashboardAuthContext, args: &super::ImportArgs) -> Result<()> {
+fn validate_import_org_auth(
+    context: &super::DashboardAuthContext,
+    args: &super::ImportArgs,
+) -> Result<()> {
     if args.org_id.is_some() && context.auth_mode != "basic" {
         return Err(message(
             "Dashboard import with --org-id requires Basic auth (--basic-user / --basic-password).",
@@ -30,7 +35,9 @@ fn validate_import_org_auth(context: &super::DashboardAuthContext, args: &super:
 }
 
 /// Purpose: implementation note.
-pub(crate) fn build_import_auth_context(args: &super::ImportArgs) -> Result<super::DashboardAuthContext> {
+pub(crate) fn build_import_auth_context(
+    args: &super::ImportArgs,
+) -> Result<super::DashboardAuthContext> {
     let mut context = super::build_auth_context(&args.common)?;
     validate_import_org_auth(&context, args)?;
     if let Some(org_id) = args.org_id {
@@ -52,12 +59,13 @@ fn load_export_org_ids(
     let index_path = import_dir.join(&index_file);
     if index_path.is_file() {
         let raw = fs::read_to_string(&index_path)?;
-        let entries: Vec<super::VariantIndexEntry> = serde_json::from_str(&raw).map_err(|error| {
-            message(format!(
-                "Invalid dashboard export index in {}: {error}",
-                index_path.display()
-            ))
-        })?;
+        let entries: Vec<super::VariantIndexEntry> =
+            serde_json::from_str(&raw).map_err(|error| {
+                message(format!(
+                    "Invalid dashboard export index in {}: {error}",
+                    index_path.display()
+                ))
+            })?;
         for entry in entries {
             let org_id = entry.org_id.trim();
             if !org_id.is_empty() {
@@ -92,12 +100,13 @@ fn load_export_org_names(
     let index_path = import_dir.join(&index_file);
     if index_path.is_file() {
         let raw = fs::read_to_string(&index_path)?;
-        let entries: Vec<super::VariantIndexEntry> = serde_json::from_str(&raw).map_err(|error| {
-            message(format!(
-                "Invalid dashboard export index in {}: {error}",
-                index_path.display()
-            ))
-        })?;
+        let entries: Vec<super::VariantIndexEntry> =
+            serde_json::from_str(&raw).map_err(|error| {
+                message(format!(
+                    "Invalid dashboard export index in {}: {error}",
+                    index_path.display()
+                ))
+            })?;
         for entry in entries {
             let org_name = entry.org.trim();
             if !org_name.is_empty() {
@@ -226,7 +235,11 @@ pub(crate) fn discover_export_org_import_scopes(
     }
     scopes.sort_by(|left, right| left.source_org_id.cmp(&right.source_org_id));
     if scopes.is_empty() {
-        if args.import_dir.join(super::EXPORT_METADATA_FILENAME).is_file() {
+        if args
+            .import_dir
+            .join(super::EXPORT_METADATA_FILENAME)
+            .is_file()
+        {
             return Err(message(
                 "Dashboard import with --use-export-org expects the combined export root, not one raw/ export directory.",
             ));

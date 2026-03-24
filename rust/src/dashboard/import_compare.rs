@@ -74,14 +74,12 @@ fn build_compare_diff_text(
     Ok(text)
 }
 
-pub(crate) fn diff_dashboards_with_request<F>(mut request_json: F, args: &super::DiffArgs) -> Result<usize>
+pub(crate) fn diff_dashboards_with_request<F>(
+    mut request_json: F,
+    args: &super::DiffArgs,
+) -> Result<usize>
 where
-    F: FnMut(
-        reqwest::Method,
-        &str,
-        &[(String, String)],
-        Option<&Value>,
-    ) -> Result<Option<Value>>,
+    F: FnMut(reqwest::Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
     let _ = super::load_export_metadata(&args.import_dir, Some(super::RAW_EXPORT_SUBDIR))?;
     let dashboard_files = super::discover_dashboard_files(&args.import_dir)?;
@@ -98,7 +96,8 @@ where
         let uid = string_field(dashboard, "uid", "");
         let local_compare =
             build_local_compare_document(&document, args.import_folder_uid.as_deref())?;
-        let Some(remote_payload) = super::fetch_dashboard_if_exists_with_request(&mut request_json, &uid)?
+        let Some(remote_payload) =
+            super::fetch_dashboard_if_exists_with_request(&mut request_json, &uid)?
         else {
             println!(
                 "Diff missing in Grafana for uid={} from {}",

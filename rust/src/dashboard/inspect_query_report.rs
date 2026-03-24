@@ -9,13 +9,10 @@ use std::path::Path;
 
 use crate::common::{string_field, value_as_object, Result};
 
-use super::extract_query_field_and_text;
-use super::resolve_datasource_inventory_item;
-use super::summarize_datasource_name;
-use super::summarize_datasource_ref;
-use super::summarize_datasource_type;
-use super::summarize_datasource_uid;
-use super::summarize_panel_datasource_key;
+use super::super::files::{
+    discover_dashboard_files, extract_dashboard_object, load_datasource_inventory,
+    load_export_metadata, load_folder_inventory, load_json_file,
+};
 use super::super::inspect_governance::normalize_family_name;
 use super::super::inspect_query::{
     dispatch_query_analysis, ordered_unique_push, QueryExtractionContext,
@@ -23,18 +20,20 @@ use super::super::inspect_query::{
 use super::super::inspect_report::{
     build_query_report, ExportInspectionQueryReport, ExportInspectionQueryRow,
 };
-use super::super::files::{
-    discover_dashboard_files, extract_dashboard_object, load_datasource_inventory,
-    load_export_metadata, load_folder_inventory, load_json_file,
-};
-use super::{
-    build_export_inspection_summary,
-    load_dashboard_org_scope_by_file, load_inspect_source_root,
-    resolve_dashboard_source_file_path, resolve_export_folder_inventory_item,
-    resolve_export_folder_path, DEFAULT_DASHBOARD_TITLE, DEFAULT_FOLDER_TITLE,
-    DEFAULT_UNKNOWN_UID, RAW_EXPORT_SUBDIR,
-};
 use super::super::models::{DatasourceInventoryItem, FolderInventoryItem};
+use super::extract_query_field_and_text;
+use super::resolve_datasource_inventory_item;
+use super::summarize_datasource_name;
+use super::summarize_datasource_ref;
+use super::summarize_datasource_type;
+use super::summarize_datasource_uid;
+use super::summarize_panel_datasource_key;
+use super::{
+    build_export_inspection_summary, load_dashboard_org_scope_by_file, load_inspect_source_root,
+    resolve_dashboard_source_file_path, resolve_export_folder_inventory_item,
+    resolve_export_folder_path, DEFAULT_DASHBOARD_TITLE, DEFAULT_FOLDER_TITLE, DEFAULT_UNKNOWN_UID,
+    RAW_EXPORT_SUBDIR,
+};
 
 struct QueryReportContext<'a> {
     export_org: &'a str,

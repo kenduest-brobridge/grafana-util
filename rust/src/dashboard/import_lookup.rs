@@ -6,12 +6,10 @@ use std::path::Path;
 use crate::common::{message, object_field, string_field, value_as_object, Result};
 
 use super::build_folder_path;
-use super::live::{
-    fetch_dashboard_if_exists_with_request, fetch_folder_if_exists_with_request,
-};
+use super::live::{fetch_dashboard_if_exists_with_request, fetch_folder_if_exists_with_request};
 use super::{
-    DEFAULT_FOLDER_TITLE, DEFAULT_FOLDER_UID, FolderInventoryItem,
-    FolderInventoryStatus, FolderInventoryStatusKind, ImportArgs,
+    FolderInventoryItem, FolderInventoryStatus, FolderInventoryStatusKind, ImportArgs,
+    DEFAULT_FOLDER_TITLE, DEFAULT_FOLDER_UID,
 };
 
 #[derive(Default)]
@@ -438,7 +436,10 @@ pub(crate) fn build_folder_path_match_result(
     }
 }
 
-pub(crate) fn apply_folder_path_guard_to_action(action: &'static str, matches: bool) -> &'static str {
+pub(crate) fn apply_folder_path_guard_to_action(
+    action: &'static str,
+    matches: bool,
+) -> &'static str {
     if action == "would-update" && !matches {
         "would-skip-folder-mismatch"
     } else {

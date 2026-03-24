@@ -8,8 +8,8 @@ use super::{
     build_dashboard_dependency_rows, build_inventory_lookup, normalize_family_name,
     resolve_datasource_identity, DashboardAuditRow, GovernanceRiskRow, QueryAuditRow,
 };
-use super::ExportInspectionSummary;
 use crate::dashboard::inspect_report::{ExportInspectionQueryReport, ExportInspectionQueryRow};
+use crate::dashboard::ExportInspectionSummary;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct GovernanceRiskSpec {
@@ -549,7 +549,9 @@ fn build_query_audit_row(
     }
 }
 
-pub(crate) fn build_dashboard_audit_rows(report: &ExportInspectionQueryReport) -> Vec<DashboardAuditRow> {
+pub(crate) fn build_dashboard_audit_rows(
+    report: &ExportInspectionQueryReport,
+) -> Vec<DashboardAuditRow> {
     let refresh_by_dashboard = load_dashboard_refresh_by_uid(report);
     build_dashboard_dependency_rows(report)
         .into_iter()

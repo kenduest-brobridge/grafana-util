@@ -210,7 +210,12 @@ pub(crate) fn build_topology_document(
         );
         for variable in string_list_field(edge, "queryVariables") {
             let variable_id = variable_node_id(&dashboard_uid, &variable);
-            push_unique_node(&mut nodes, variable_id.clone(), "variable", variable.clone());
+            push_unique_node(
+                &mut nodes,
+                variable_id.clone(),
+                "variable",
+                variable.clone(),
+            );
             push_unique_edge(
                 &mut edges,
                 format!("datasource:{datasource_uid}"),
@@ -264,7 +269,12 @@ pub(crate) fn build_topology_document(
             );
             for variable in &variable_names {
                 let variable_id = variable_node_id(&dashboard_uid, variable);
-                push_unique_node(&mut nodes, variable_id.clone(), "variable", variable.clone());
+                push_unique_node(
+                    &mut nodes,
+                    variable_id.clone(),
+                    "variable",
+                    variable.clone(),
+                );
                 push_unique_edge(&mut edges, variable_id, panel_node.clone(), "used-by");
             }
         }
@@ -335,13 +345,25 @@ pub(crate) fn build_topology_document(
         .into_iter()
         .map(|(from, to, relation)| TopologyEdge { from, to, relation })
         .collect::<Vec<_>>();
-    let datasource_count = nodes.iter().filter(|node| node.kind == "datasource").count();
+    let datasource_count = nodes
+        .iter()
+        .filter(|node| node.kind == "datasource")
+        .count();
     let dashboard_count = nodes.iter().filter(|node| node.kind == "dashboard").count();
     let panel_count = nodes.iter().filter(|node| node.kind == "panel").count();
     let variable_count = nodes.iter().filter(|node| node.kind == "variable").count();
-    let alert_rule_count = nodes.iter().filter(|node| node.kind == "alert-rule").count();
-    let contact_point_count = nodes.iter().filter(|node| node.kind == "contact-point").count();
-    let mute_timing_count = nodes.iter().filter(|node| node.kind == "mute-timing").count();
+    let alert_rule_count = nodes
+        .iter()
+        .filter(|node| node.kind == "alert-rule")
+        .count();
+    let contact_point_count = nodes
+        .iter()
+        .filter(|node| node.kind == "contact-point")
+        .count();
+    let mute_timing_count = nodes
+        .iter()
+        .filter(|node| node.kind == "mute-timing")
+        .count();
     let notification_policy_count = nodes
         .iter()
         .filter(|node| node.kind == "notification-policy")

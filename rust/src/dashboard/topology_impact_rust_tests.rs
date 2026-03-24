@@ -1,9 +1,9 @@
 use super::test_support::{
-    build_governance_gate_tui_groups, build_governance_gate_tui_items,
-    build_impact_tui_groups, filter_impact_tui_items, parse_cli_from, DashboardCliArgs,
-    DashboardCommand, DashboardGovernanceGateFinding, DashboardGovernanceGateResult,
-    DashboardGovernanceGateSummary, GovernanceGateOutputFormat, ImpactAlertResource,
-    ImpactDashboard, ImpactDocument, ImpactOutputFormat, ImpactSummary, TopologyOutputFormat,
+    build_governance_gate_tui_groups, build_governance_gate_tui_items, build_impact_tui_groups,
+    filter_impact_tui_items, parse_cli_from, DashboardCliArgs, DashboardCommand,
+    DashboardGovernanceGateFinding, DashboardGovernanceGateResult, DashboardGovernanceGateSummary,
+    GovernanceGateOutputFormat, ImpactAlertResource, ImpactDashboard, ImpactDocument,
+    ImpactOutputFormat, ImpactSummary, TopologyOutputFormat,
 };
 use clap::CommandFactory;
 use serde_json::json;
@@ -295,7 +295,9 @@ fn filter_impact_tui_items_limits_items_to_selected_group() {
     assert_eq!(dashboard_items.len(), 1);
     assert!(dashboard_items.iter().all(|item| item.kind == "dashboard"));
     assert_eq!(alert_rule_items.len(), 1);
-    assert!(alert_rule_items.iter().all(|item| item.kind == "alert-rule"));
+    assert!(alert_rule_items
+        .iter()
+        .all(|item| item.kind == "alert-rule"));
     assert_eq!(all_items.len(), 4);
 }
 

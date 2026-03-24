@@ -10,34 +10,32 @@ use crate::common::{message, string_field, value_as_object, Result};
 use crate::http::{JsonHttpClient, JsonHttpClientConfig};
 
 use super::import_lookup::{
-    apply_folder_path_guard_to_action, collect_folder_inventory_statuses_cached,
-    determine_dashboard_import_action_with_request,
+    apply_folder_path_guard_to_action, build_folder_path_match_result,
+    collect_folder_inventory_statuses_cached, determine_dashboard_import_action_with_request,
     determine_import_folder_uid_override_with_request, ensure_folder_inventory_entry_cached,
     resolve_dashboard_import_folder_path_with_request,
-    resolve_existing_dashboard_folder_path_with_request, build_folder_path_match_result,
-    ImportLookupCache,
+    resolve_existing_dashboard_folder_path_with_request, ImportLookupCache,
 };
-use super::import_render::{
-    build_folder_inventory_dry_run_record, build_import_dry_run_json_value,
-    build_import_dry_run_record,
-    build_routed_import_dry_run_json_document, build_routed_import_org_row,
-};
+use super::import_render::{build_folder_inventory_dry_run_record, build_import_dry_run_record};
 use super::import_validation::{
-    discover_export_org_import_scopes,
-    resolve_target_org_plan_for_export_scope_with_request,
     validate_dashboard_import_dependencies_with_request, validate_matching_export_org_with_request,
 };
 
 pub(crate) use super::import_compare::diff_dashboards_with_request;
+#[allow(unused_imports)]
+pub(crate) use super::import_routed::{
+    build_routed_import_dry_run_json_with_request, import_dashboards_by_export_org_with_request,
+};
 
+#[cfg(test)]
+pub(crate) use super::import_render::format_routed_import_target_org_label;
+#[allow(unused_imports)]
 pub(crate) use super::import_render::{
     describe_dashboard_import_mode, format_import_progress_line, format_import_verbose_line,
     format_routed_import_scope_summary_fields, render_folder_inventory_dry_run_table,
     render_import_dry_run_json, render_import_dry_run_table, render_routed_import_org_table,
     ImportDryRunReport,
 };
-#[cfg(test)]
-pub(crate) use super::import_render::format_routed_import_target_org_label;
 pub(crate) use super::import_validation::build_import_auth_context;
 
 fn dashboard_files_for_import(import_dir: &Path) -> Result<Vec<PathBuf>> {
@@ -345,7 +343,12 @@ where
         println!("Import mode: {}", mode);
     }
     if args.dry_run && args.ensure_folders {
-        folder_inventory_status_output_lines(&folder_statuses, args.no_header, args.json, args.table);
+        folder_inventory_status_output_lines(
+            &folder_statuses,
+            args.no_header,
+            args.json,
+            args.table,
+        );
         let missing_folder_count = folder_statuses
             .iter()
             .filter(|status| status.kind == super::FolderInventoryStatusKind::Missing)
@@ -691,182 +694,14 @@ where
 ///
 /// Args: see function signature.
 /// Returns: see implementation.
-pub fn import_dashboards_with_client(client: &JsonHttpClient, args: &super::ImportArgs) -> Result<usize> {
+pub fn import_dashboards_with_client(
+    client: &JsonHttpClient,
+    args: &super::ImportArgs,
+) -> Result<usize> {
     import_dashboards_with_request(
         |method, path, params, payload| client.request_json(method, path, params, payload),
         args,
     )
-}
-
-fn count_dashboard_files(import_dir: &Path) -> Result<usize> {
-    Ok(dashboard_files_for_import(import_dir)?.len())
-}
-
-/// Purpose: implementation note.
-pub(crate) fn build_routed_import_dry_run_json_with_request<F, G>(
-    mut request_json: F,
-    mut collect_preview_for_org: G,
-    args: &super::ImportArgs,
-) -> Result<String>
-where
-    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
-    G: FnMut(i64, &super::ImportArgs) -> Result<ImportDryRunReport>,
-{
-    let scopes = discover_export_org_import_scopes(args)?;
-    let mut lookup_cache = ImportLookupCache::default();
-    let mut orgs = Vec::new();
-    let mut imports = Vec::new();
-    for scope in scopes {
-        let target_plan = resolve_target_org_plan_for_export_scope_with_request(
-            &mut request_json,
-            &mut lookup_cache,
-            args,
-            &scope,
-        )?;
-        let dashboard_count = count_dashboard_files(&target_plan.import_dir)?;
-        orgs.push(serde_json::json!({
-            "sourceOrgId": target_plan.source_org_id,
-            "sourceOrgName": target_plan.source_org_name,
-            "orgAction": target_plan.org_action,
-            "targetOrgId": target_plan.target_org_id,
-            "dashboardCount": dashboard_count,
-            "importDir": target_plan.import_dir.display().to_string(),
-        }));
-        let preview = if let Some(target_org_id) = target_plan.target_org_id {
-            let mut scoped_args = args.clone();
-            scoped_args.org_id = Some(target_org_id);
-            scoped_args.use_export_org = false;
-            scoped_args.only_org_id = Vec::new();
-            scoped_args.create_missing_orgs = false;
-            scoped_args.import_dir = target_plan.import_dir.clone();
-            let report = collect_preview_for_org(target_org_id, &scoped_args)?;
-            build_import_dry_run_json_value(&report)
-        } else {
-            serde_json::json!({
-                "mode": describe_dashboard_import_mode(args.replace_existing, args.update_existing_only),
-                "folders": [],
-                "dashboards": [],
-                "summary": {
-                    "importDir": target_plan.import_dir.display().to_string(),
-                    "folderCount": 0,
-                    "missingFolders": 0,
-                    "mismatchedFolders": 0,
-                    "dashboardCount": dashboard_count,
-                    "missingDashboards": 0,
-                    "skippedMissingDashboards": 0,
-                    "skippedFolderMismatchDashboards": 0,
-                }
-            })
-        };
-        let mut import_entry = serde_json::Map::new();
-        import_entry.insert(
-            "sourceOrgId".to_string(),
-            Value::from(target_plan.source_org_id),
-        );
-        import_entry.insert(
-            "sourceOrgName".to_string(),
-            Value::from(target_plan.source_org_name.clone()),
-        );
-        import_entry.insert("orgAction".to_string(), Value::from(target_plan.org_action));
-        import_entry.insert(
-            "targetOrgId".to_string(),
-            target_plan
-                .target_org_id
-                .map(Value::from)
-                .unwrap_or(Value::Null),
-        );
-        if let Some(preview_object) = preview.as_object() {
-            for (key, value) in preview_object {
-                import_entry.insert(key.clone(), value.clone());
-            }
-        }
-        imports.push(Value::Object(import_entry));
-    }
-    build_routed_import_dry_run_json_document(&orgs, &imports)
-}
-
-/// Purpose: implementation note.
-pub(crate) fn import_dashboards_by_export_org_with_request<F, G, H>(
-    mut request_json: F,
-    mut import_for_org: G,
-    collect_preview_for_org: H,
-    args: &super::ImportArgs,
-) -> Result<usize>
-where
-    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
-    G: FnMut(i64, &super::ImportArgs) -> Result<usize>,
-    H: FnMut(i64, &super::ImportArgs) -> Result<ImportDryRunReport>,
-{
-    let scopes = discover_export_org_import_scopes(args)?;
-    let mut lookup_cache = ImportLookupCache::default();
-    if args.dry_run && args.json {
-        println!(
-            "{}",
-            build_routed_import_dry_run_json_with_request(
-                request_json,
-                collect_preview_for_org,
-                args,
-            )?
-        );
-        return Ok(0);
-    }
-    let mut imported_count = 0;
-    let mut org_rows = Vec::new();
-    let mut resolved_plans = Vec::new();
-    for scope in scopes {
-        let target_plan = resolve_target_org_plan_for_export_scope_with_request(
-            &mut request_json,
-            &mut lookup_cache,
-            args,
-            &scope,
-        )?;
-        let dashboard_count = count_dashboard_files(&target_plan.import_dir)?;
-        org_rows.push(build_routed_import_org_row(&target_plan, dashboard_count));
-        resolved_plans.push(target_plan);
-    }
-    if args.dry_run && args.table {
-        for line in render_routed_import_org_table(&org_rows, !args.no_header) {
-            println!("{line}");
-        }
-        return Ok(0);
-    }
-    for target_plan in resolved_plans {
-        if !args.table {
-            println!(
-                "Importing {}",
-                format_routed_import_scope_summary_fields(
-                    target_plan.source_org_id,
-                    &target_plan.source_org_name,
-                    target_plan.org_action,
-                    target_plan.target_org_id,
-                    &target_plan.import_dir,
-                )
-            );
-        }
-        let Some(target_org_id) = target_plan.target_org_id else {
-            continue;
-        };
-        let mut scoped_args = args.clone();
-        scoped_args.org_id = Some(target_org_id);
-        scoped_args.use_export_org = false;
-        scoped_args.only_org_id = Vec::new();
-        scoped_args.create_missing_orgs = false;
-        scoped_args.import_dir = target_plan.import_dir.clone();
-        imported_count += import_for_org(target_org_id, &scoped_args).map_err(|error| {
-            message(format!(
-                "Dashboard routed import failed for {}: {}",
-                format_routed_import_scope_summary_fields(
-                    target_plan.source_org_id,
-                    &target_plan.source_org_name,
-                    target_plan.org_action,
-                    target_plan.target_org_id,
-                    &target_plan.import_dir,
-                ),
-                error
-            ))
-        })?;
-    }
-    Ok(imported_count)
 }
 
 /// Purpose: implementation note.
@@ -884,7 +719,7 @@ pub(crate) fn import_dashboards_with_org_clients(args: &super::ImportArgs) -> Re
             args,
         );
     }
-    import_dashboards_by_export_org_with_request(
+    super::import_routed::import_dashboards_by_export_org_with_request(
         |method, path, params, payload| client.request_json(method, path, params, payload),
         |target_org_id, scoped_args| {
             let scoped_client = super::build_http_client_for_org(&args.common, target_org_id)?;

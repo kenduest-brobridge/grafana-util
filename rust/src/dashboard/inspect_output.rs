@@ -3,6 +3,7 @@ use std::path::Path;
 use crate::common::Result;
 use crate::dashboard_inspection_dependency_contract::build_offline_dependency_contract_from_report_rows;
 
+use super::{build_export_inspection_summary, RAW_EXPORT_SUBDIR};
 use crate::dashboard::cli_defs::{InspectExportArgs, InspectExportReportFormat};
 use crate::dashboard::files::{load_datasource_inventory, load_export_metadata};
 use crate::dashboard::inspect_governance::{
@@ -13,12 +14,11 @@ use crate::dashboard::inspect_render::{
     render_csv, render_grouped_query_report, render_grouped_query_table_report, render_simple_table,
 };
 use crate::dashboard::inspect_report::{
-    build_export_inspection_query_report_document, render_query_report_column, report_column_header,
-    resolve_report_column_ids_for_format, ExportInspectionQueryReport,
+    build_export_inspection_query_report_document, render_query_report_column,
+    report_column_header, resolve_report_column_ids_for_format, ExportInspectionQueryReport,
 };
 use crate::dashboard::inspect_summary::ExportInspectionSummary;
 use crate::dashboard::models::DatasourceInventoryItem;
-use super::{build_export_inspection_summary, RAW_EXPORT_SUBDIR};
 
 pub(super) struct ExportInspectionRenderedOutput {
     pub(super) output: String,
