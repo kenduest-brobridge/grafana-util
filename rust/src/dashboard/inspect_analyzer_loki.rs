@@ -3,7 +3,7 @@
 use regex::Regex;
 use serde_json::{Map, Value};
 
-use super::inspect::QueryAnalysis;
+use super::inspect_query::QueryAnalysis;
 
 fn ordered_unique_push(values: &mut Vec<String>, candidate: &str) {
     let trimmed = candidate.trim();

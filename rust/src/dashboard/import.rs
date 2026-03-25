@@ -2,1779 +2,74 @@
 //! Loads local export artifacts, computes target orgs, and applies idempotent upsert behavior
 //! through the shared dashboard HTTP/auth context.
 use reqwest::Method;
-use serde_json::{Map, Value};
-use std::collections::{BTreeMap, BTreeSet};
-use std::fmt::Write as _;
-use std::fs;
+use serde_json::Value;
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-use crate::common::{message, object_field, string_field, value_as_object, Result};
+use crate::common::{message, string_field, value_as_object, Result};
 use crate::http::{JsonHttpClient, JsonHttpClientConfig};
-use crate::sync::preflight::build_sync_preflight_document;
 
-use super::list::collect_dashboard_source_metadata;
-use super::*;
+use super::import_lookup::{
+    apply_folder_path_guard_to_action, build_folder_path_match_result,
+    collect_folder_inventory_statuses_cached, determine_dashboard_import_action_with_request,
+    determine_import_folder_uid_override_with_request, ensure_folder_inventory_entry_cached,
+    resolve_dashboard_import_folder_path_with_request,
+    resolve_existing_dashboard_folder_path_with_request, ImportLookupCache,
+};
+use super::import_render::{build_folder_inventory_dry_run_record, build_import_dry_run_record};
+use super::import_validation::{
+    validate_dashboard_import_dependencies_with_request, validate_matching_export_org_with_request,
+};
 
-#[derive(Default)]
-struct ImportLookupCache {
-    dashboards_by_uid: BTreeMap<String, Option<Value>>,
-    dashboard_uids_from_search: Option<BTreeSet<String>>,
-    dashboard_summary_folder_uids: BTreeMap<String, String>,
-    folders_by_uid: BTreeMap<String, Option<Map<String, Value>>>,
-    current_org_id: Option<String>,
-    orgs: Option<Vec<Map<String, Value>>>,
-}
+pub(crate) use super::import_compare::diff_dashboards_with_request;
+#[allow(unused_imports)]
+pub(crate) use super::import_routed::{
+    build_routed_import_dry_run_json_with_request, import_dashboards_by_export_org_with_request,
+};
 
-fn load_dashboard_uid_summary_cache<F>(
-    request_json: &mut F,
-    cache: &mut ImportLookupCache,
-) -> Result<()>
-where
-    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
-{
-    if cache.dashboard_uids_from_search.is_some() {
-        return Ok(());
-    }
-    let summaries = list_dashboard_summaries_with_request(request_json, super::DEFAULT_PAGE_SIZE)?;
-    let mut dashboard_uids = BTreeSet::new();
-    let mut folder_uids = BTreeMap::new();
-    for summary in summaries {
-        let uid = string_field(&summary, "uid", "");
-        if uid.is_empty() {
-            continue;
-        }
-        dashboard_uids.insert(uid.clone());
-        let folder_uid = string_field(&summary, "folderUid", "");
-        if !folder_uid.is_empty() {
-            folder_uids.insert(uid, folder_uid);
-        }
-    }
-    cache.dashboard_uids_from_search = Some(dashboard_uids);
-    cache.dashboard_summary_folder_uids = folder_uids;
-    Ok(())
-}
+#[cfg(test)]
+pub(crate) use super::import_render::format_routed_import_target_org_label;
+#[allow(unused_imports)]
+pub(crate) use super::import_render::{
+    describe_dashboard_import_mode, format_import_progress_line, format_import_verbose_line,
+    format_routed_import_scope_summary_fields, render_folder_inventory_dry_run_table,
+    render_import_dry_run_json, render_import_dry_run_table, render_routed_import_org_table,
+    ImportDryRunReport,
+};
+pub(crate) use super::import_validation::build_import_auth_context;
 
-fn dashboard_exists_with_summary<F>(
-    request_json: &mut F,
-    cache: &mut ImportLookupCache,
-    uid: &str,
-) -> Result<bool>
-where
-    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
-{
-    if cache.dashboards_by_uid.contains_key(uid) {
-        let result = cache
-            .dashboards_by_uid
-            .get(uid)
-            .is_some_and(|value| value.is_some());
-        return Ok(result);
-    }
-    load_dashboard_uid_summary_cache(request_json, cache)?;
-    let exists = cache
-        .dashboard_uids_from_search
-        .as_ref()
-        .is_some_and(|known| known.contains(uid));
-    Ok(exists)
-}
-
-fn dashboard_summary_folder_uid<F>(
-    request_json: &mut F,
-    cache: &mut ImportLookupCache,
-    uid: &str,
-) -> Result<Option<String>>
-where
-    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
-{
-    load_dashboard_uid_summary_cache(request_json, cache)?;
-    Ok(cache.dashboard_summary_folder_uids.get(uid).cloned())
-}
-
-fn fetch_dashboard_if_exists_cached<F>(
-    request_json: &mut F,
-    cache: &mut ImportLookupCache,
-    uid: &str,
-) -> Result<Option<Value>>
-where
-    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
-{
-    if uid.is_empty() {
-        return Ok(None);
-    }
-    if let Some(cached) = cache.dashboards_by_uid.get(uid) {
-        return Ok(cached.clone());
-    }
-    if let Ok(exists) = dashboard_exists_with_summary(request_json, cache, uid) {
-        if !exists {
-            cache.dashboards_by_uid.insert(uid.to_string(), None);
-            return Ok(None);
-        }
-    }
-    let fetched = fetch_dashboard_if_exists_with_request(&mut *request_json, uid)?;
-    cache
-        .dashboards_by_uid
-        .insert(uid.to_string(), fetched.clone());
-    Ok(fetched)
-}
-
-fn fetch_folder_if_exists_cached<F>(
-    request_json: &mut F,
-    cache: &mut ImportLookupCache,
-    uid: &str,
-) -> Result<Option<Map<String, Value>>>
-where
-    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
-{
-    if uid.is_empty() {
-        return Ok(None);
-    }
-    if let Some(cached) = cache.folders_by_uid.get(uid) {
-        return Ok(cached.clone());
-    }
-    let fetched = fetch_folder_if_exists_with_request(&mut *request_json, uid)?;
-    cache
-        .folders_by_uid
-        .insert(uid.to_string(), fetched.clone());
-    Ok(fetched)
-}
-
-fn create_folder_entry_with_request<F>(
-    request_json: &mut F,
-    title: &str,
-    uid: &str,
-    parent_uid: Option<&str>,
-) -> Result<()>
-where
-    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
-{
-    let mut payload = Map::new();
-    payload.insert("uid".to_string(), Value::String(uid.to_string()));
-    payload.insert("title".to_string(), Value::String(title.to_string()));
-    if let Some(parent_uid) = parent_uid.filter(|value| !value.is_empty()) {
-        payload.insert(
-            "parentUid".to_string(),
-            Value::String(parent_uid.to_string()),
-        );
-    }
-    let _ = request_json(
-        Method::POST,
-        "/api/folders",
-        &[],
-        Some(&Value::Object(payload)),
-    )?;
-    Ok(())
-}
-
-fn cached_parent_uid_from_folder(folder: &Map<String, Value>) -> Option<String> {
-    folder
-        .get("parents")
-        .and_then(Value::as_array)
-        .and_then(|parents| parents.last())
-        .and_then(Value::as_object)
-        .map(|parent| string_field(parent, "uid", ""))
-        .filter(|uid| !uid.is_empty())
-}
-
-fn build_cached_folder_inventory_status(
-    folder: &FolderInventoryItem,
-    destination_folder: Option<&Map<String, Value>>,
-) -> FolderInventoryStatus {
-    let expected_parent_uid = folder.parent_uid.clone();
-    let mut status = FolderInventoryStatus {
-        uid: folder.uid.clone(),
-        expected_title: folder.title.clone(),
-        expected_parent_uid,
-        expected_path: folder.path.clone(),
-        actual_title: None,
-        actual_parent_uid: None,
-        actual_path: None,
-        kind: FolderInventoryStatusKind::Missing,
-    };
-    let Some(destination_folder) = destination_folder else {
-        return status;
-    };
-
-    status.actual_title = Some(string_field(destination_folder, "title", ""));
-    status.actual_parent_uid = cached_parent_uid_from_folder(destination_folder);
-    status.actual_path = Some(build_folder_path(destination_folder, &folder.title));
-    let title_matches = status.actual_title.as_deref() == Some(folder.title.as_str());
-    let parent_matches = status.actual_parent_uid == folder.parent_uid;
-    let path_matches = status.actual_path.as_deref() == Some(folder.path.as_str());
-    status.kind = if title_matches && parent_matches && path_matches {
-        FolderInventoryStatusKind::Matches
-    } else {
-        FolderInventoryStatusKind::Mismatch
-    };
-    status
-}
-
-fn validate_import_org_auth(context: &DashboardAuthContext, args: &ImportArgs) -> Result<()> {
-    if args.org_id.is_some() && context.auth_mode != "basic" {
-        return Err(message(
-            "Dashboard import with --org-id requires Basic auth (--basic-user / --basic-password).",
-        ));
-    }
-    if args.use_export_org && context.auth_mode != "basic" {
-        return Err(message(
-            "Dashboard import with --use-export-org requires Basic auth (--basic-user / --basic-password).",
-        ));
-    }
-    Ok(())
-}
-
-/// Purpose: implementation note.
-pub(crate) fn build_import_auth_context(args: &ImportArgs) -> Result<DashboardAuthContext> {
-    let mut context = build_auth_context(&args.common)?;
-    validate_import_org_auth(&context, args)?;
-    if let Some(org_id) = args.org_id {
-        context
-            .headers
-            .push(("X-Grafana-Org-Id".to_string(), org_id.to_string()));
-    }
-    Ok(context)
-}
-
-fn load_export_org_ids(
-    import_dir: &Path,
-    metadata: Option<&ExportMetadata>,
-) -> Result<std::collections::BTreeSet<String>> {
-    let mut org_ids = std::collections::BTreeSet::new();
-    let index_file = metadata
-        .map(|item| item.index_file.clone())
-        .unwrap_or_else(|| "index.json".to_string());
-    let index_path = import_dir.join(&index_file);
-    if index_path.is_file() {
-        let raw = fs::read_to_string(&index_path)?;
-        let entries: Vec<VariantIndexEntry> = serde_json::from_str(&raw).map_err(|error| {
-            message(format!(
-                "Invalid dashboard export index in {}: {error}",
-                index_path.display()
-            ))
-        })?;
-        for entry in entries {
-            let org_id = entry.org_id.trim();
-            if !org_id.is_empty() {
-                org_ids.insert(org_id.to_string());
-            }
-        }
-    }
-
-    for folder in load_folder_inventory(import_dir, metadata)? {
-        let org_id = folder.org_id.trim();
-        if !org_id.is_empty() {
-            org_ids.insert(org_id.to_string());
-        }
-    }
-    for datasource in load_datasource_inventory(import_dir, metadata)? {
-        let org_id = datasource.org_id.trim();
-        if !org_id.is_empty() {
-            org_ids.insert(org_id.to_string());
-        }
-    }
-    Ok(org_ids)
-}
-
-fn load_export_org_names(
-    import_dir: &Path,
-    metadata: Option<&ExportMetadata>,
-) -> Result<std::collections::BTreeSet<String>> {
-    let mut org_names = std::collections::BTreeSet::new();
-    let index_file = metadata
-        .map(|item| item.index_file.clone())
-        .unwrap_or_else(|| "index.json".to_string());
-    let index_path = import_dir.join(&index_file);
-    if index_path.is_file() {
-        let raw = fs::read_to_string(&index_path)?;
-        let entries: Vec<VariantIndexEntry> = serde_json::from_str(&raw).map_err(|error| {
-            message(format!(
-                "Invalid dashboard export index in {}: {error}",
-                index_path.display()
-            ))
-        })?;
-        for entry in entries {
-            let org_name = entry.org.trim();
-            if !org_name.is_empty() {
-                org_names.insert(org_name.to_string());
-            }
-        }
-    }
-
-    for folder in load_folder_inventory(import_dir, metadata)? {
-        let org_name = folder.org.trim();
-        if !org_name.is_empty() {
-            org_names.insert(org_name.to_string());
-        }
-    }
-    for datasource in load_datasource_inventory(import_dir, metadata)? {
-        let org_name = datasource.org.trim();
-        if !org_name.is_empty() {
-            org_names.insert(org_name.to_string());
-        }
-    }
-    Ok(org_names)
-}
-
-#[derive(Debug, Clone)]
-struct ExportOrgImportScope {
-    source_org_id: i64,
-    source_org_name: String,
-    import_dir: PathBuf,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct ExportOrgTargetPlan {
-    source_org_id: i64,
-    source_org_name: String,
-    target_org_id: Option<i64>,
-    org_action: &'static str,
-    import_dir: PathBuf,
-}
-
-/// Struct definition for ImportDryRunReport.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct ImportDryRunReport {
-    pub mode: String,
-    pub import_dir: PathBuf,
-    pub folder_statuses: Vec<FolderInventoryStatus>,
-    pub dashboard_records: Vec<[String; 8]>,
-    pub skipped_missing_count: usize,
-    pub skipped_folder_mismatch_count: usize,
-}
-
-fn org_id_string_from_value(value: Option<&Value>) -> String {
-    match value {
-        Some(Value::String(text)) => text.trim().to_string(),
-        Some(Value::Number(number)) => number.to_string(),
-        _ => String::new(),
-    }
-}
-
-fn parse_export_org_scope(import_root: &Path, raw_dir: &Path) -> Result<ExportOrgImportScope> {
-    // Call graph (hierarchy): this function is used in related modules.
-    // Upstream callers: dashboard_import.rs:discover_export_org_import_scopes
-    // Downstream callees: common.rs:message, dashboard_import.rs:load_export_org_ids, dashboard_import.rs:load_export_org_names
-
-    let metadata = load_export_metadata(raw_dir, Some(RAW_EXPORT_SUBDIR))?;
-    let export_org_ids = load_export_org_ids(raw_dir, metadata.as_ref())?;
-    if export_org_ids.is_empty() {
-        return Err(message(format!(
-            "Cannot route import by export org for {}: raw export orgId metadata was not found in index.json, folders.json, or datasources.json.",
-            raw_dir.display()
-        )));
-    }
-    if export_org_ids.len() > 1 {
-        return Err(message(format!(
-            "Cannot route import by export org for {}: found multiple export orgIds ({}).",
-            raw_dir.display(),
-            export_org_ids
-                .into_iter()
-                .collect::<Vec<String>>()
-                .join(", ")
-        )));
-    }
-    let source_org_id_text = export_org_ids.into_iter().next().unwrap_or_default();
-    let source_org_id = source_org_id_text.parse::<i64>().map_err(|_| {
-        message(format!(
-            "Cannot route import by export org for {}: export orgId '{}' is not a valid integer.",
-            raw_dir.display(),
-            source_org_id_text
-        ))
-    })?;
-    let org_names = load_export_org_names(raw_dir, metadata.as_ref())?;
-    if org_names.len() > 1 {
-        return Err(message(format!(
-            "Cannot route import by export org for {}: found multiple export org names ({}).",
-            raw_dir.display(),
-            org_names.into_iter().collect::<Vec<String>>().join(", ")
-        )));
-    }
-    let source_org_name = org_names.into_iter().next().unwrap_or_else(|| {
-        import_root
-            .file_name()
-            .and_then(|name| name.to_str())
-            .unwrap_or("org")
-            .to_string()
-    });
-    Ok(ExportOrgImportScope {
-        source_org_id,
-        source_org_name,
-        import_dir: raw_dir.to_path_buf(),
-    })
-}
-
-fn discover_export_org_import_scopes(args: &ImportArgs) -> Result<Vec<ExportOrgImportScope>> {
-    if !args.use_export_org {
-        return Ok(Vec::new());
-    }
-    let selected_org_ids: std::collections::BTreeSet<i64> =
-        args.only_org_id.iter().copied().collect();
-    let mut scopes = Vec::new();
-    for entry in fs::read_dir(&args.import_dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        if !path.is_dir() {
-            continue;
-        }
-        let Some(name) = path.file_name().and_then(|item| item.to_str()) else {
-            continue;
-        };
-        if !name.starts_with("org_") {
-            continue;
-        }
-        let raw_dir = path.join(RAW_EXPORT_SUBDIR);
-        if !raw_dir.is_dir() {
-            continue;
-        }
-        let scope = parse_export_org_scope(&path, &raw_dir)?;
-        if !selected_org_ids.is_empty() && !selected_org_ids.contains(&scope.source_org_id) {
-            continue;
-        }
-        scopes.push(scope);
-    }
-    scopes.sort_by(|left, right| left.source_org_id.cmp(&right.source_org_id));
-    if scopes.is_empty() {
-        if args.import_dir.join(EXPORT_METADATA_FILENAME).is_file() {
-            return Err(message(
-                "Dashboard import with --use-export-org expects the combined export root, not one raw/ export directory.",
-            ));
-        }
-        if selected_org_ids.is_empty() {
-            return Err(message(format!(
-                "Dashboard import with --use-export-org did not find any org-specific raw exports under {}.",
-                args.import_dir.display()
-            )));
-        }
-        return Err(message(format!(
-            "Dashboard import with --use-export-org did not find the selected exported org IDs ({}) under {}.",
-            selected_org_ids
-                .into_iter()
-                .map(|id| id.to_string())
-                .collect::<Vec<String>>()
-                .join(", "),
-            args.import_dir.display()
-        )));
-    }
-    let found_org_ids: std::collections::BTreeSet<i64> =
-        scopes.iter().map(|scope| scope.source_org_id).collect();
-    let missing_org_ids: Vec<String> = selected_org_ids
-        .difference(&found_org_ids)
-        .map(|id| id.to_string())
-        .collect();
-    if !missing_org_ids.is_empty() {
-        return Err(message(format!(
-            "Dashboard import with --use-export-org did not find the selected exported org IDs ({}).",
-            missing_org_ids.join(", ")
-        )));
-    }
-    Ok(scopes)
-}
-
-fn create_org_with_request<F>(mut request_json: F, org_name: &str) -> Result<Map<String, Value>>
-where
-    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
-{
-    match request_json(
-        Method::POST,
-        "/api/orgs",
-        &[],
-        Some(&Value::Object(Map::from_iter(vec![(
-            "name".to_string(),
-            Value::String(org_name.to_string()),
-        )]))),
-    )? {
-        Some(Value::Object(object)) => Ok(object),
-        _ => Err(message(
-            "Unexpected organization create response from Grafana during dashboard import.",
-        )),
-    }
-}
-
-fn resolve_import_target_org_id_with_request<F>(
-    request_json: &mut F,
-    cache: &mut ImportLookupCache,
-    args: &ImportArgs,
-) -> Result<String>
-where
-    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
-{
-    if let Some(org_id) = args.org_id {
-        return Ok(org_id.to_string());
-    }
-    if let Some(org_id) = cache.current_org_id.as_ref() {
-        return Ok(org_id.clone());
-    }
-    let org = super::list::fetch_current_org_with_request(&mut *request_json)?;
-    let org_id = super::list::org_id_value(&org)?.to_string();
-    cache.current_org_id = Some(org_id.clone());
-    Ok(org_id)
-}
-
-fn list_orgs_cached<F>(
-    request_json: &mut F,
-    cache: &mut ImportLookupCache,
-) -> Result<Vec<Map<String, Value>>>
-where
-    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
-{
-    if let Some(orgs) = cache.orgs.as_ref() {
-        return Ok(orgs.clone());
-    }
-    let orgs = super::list::list_orgs_with_request(&mut *request_json)?;
-    cache.orgs = Some(orgs.clone());
-    Ok(orgs)
-}
-
-fn validate_matching_export_org_with_request<F>(
-    request_json: &mut F,
-    cache: &mut ImportLookupCache,
-    args: &ImportArgs,
-    import_dir: &Path,
-    metadata: Option<&ExportMetadata>,
-    target_org_id_override: Option<i64>,
-) -> Result<()>
-where
-    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
-{
-    if !args.require_matching_export_org {
-        return Ok(());
-    }
-    let export_org_ids = load_export_org_ids(import_dir, metadata)?;
-    if export_org_ids.is_empty() {
-        return Err(message(
-            "Cannot verify exported org for import: raw export orgId metadata was not found in index.json, folders.json, or datasources.json.",
-        ));
-    }
-    if export_org_ids.len() > 1 {
-        return Err(message(format!(
-            "Cannot verify exported org for import: found multiple export orgIds ({}).",
-            export_org_ids
-                .into_iter()
-                .collect::<Vec<String>>()
-                .join(", ")
-        )));
-    }
-    let export_org_id = export_org_ids.into_iter().next().unwrap_or_default();
-    let target_org_id = match target_org_id_override {
-        Some(org_id) => org_id.to_string(),
-        None => resolve_import_target_org_id_with_request(request_json, cache, args)?,
-    };
-    if export_org_id != target_org_id {
-        return Err(message(format!(
-            "Dashboard import export org mismatch: raw export orgId {export_org_id} does not match target org {target_org_id}. Use matching credentials/org selection or omit --require-matching-export-org."
-        )));
-    }
-    Ok(())
-}
-
-fn resolve_target_org_plan_for_export_scope_with_request<F>(
-    request_json: &mut F,
-    cache: &mut ImportLookupCache,
-    args: &ImportArgs,
-    scope: &ExportOrgImportScope,
-) -> Result<ExportOrgTargetPlan>
-where
-    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
-{
-    let orgs = list_orgs_cached(request_json, cache)?;
-    for org in &orgs {
-        let org_id_text = org_id_string_from_value(org.get("id"));
-        if org_id_text == scope.source_org_id.to_string() {
-            return Ok(ExportOrgTargetPlan {
-                source_org_id: scope.source_org_id,
-                source_org_name: scope.source_org_name.clone(),
-                target_org_id: Some(scope.source_org_id),
-                org_action: "exists",
-                import_dir: scope.import_dir.clone(),
-            });
-        }
-    }
-    if args.dry_run && !args.create_missing_orgs {
-        return Ok(ExportOrgTargetPlan {
-            source_org_id: scope.source_org_id,
-            source_org_name: scope.source_org_name.clone(),
-            target_org_id: None,
-            org_action: "missing",
-            import_dir: scope.import_dir.clone(),
-        });
-    }
-    if !args.create_missing_orgs {
-        return Err(message(format!(
-            "Dashboard import could not find destination Grafana org {} ({}) for --use-export-org. Use --create-missing-orgs to create it first.",
-            scope.source_org_id, scope.source_org_name
-        )));
-    }
-    if scope.source_org_name.trim().is_empty() {
-        return Err(message(format!(
-            "Dashboard import with --create-missing-orgs could not determine an exported org name for source orgId {}.",
-            scope.source_org_id
-        )));
-    }
-    if args.dry_run {
-        return Ok(ExportOrgTargetPlan {
-            source_org_id: scope.source_org_id,
-            source_org_name: scope.source_org_name.clone(),
-            target_org_id: None,
-            org_action: "would-create",
-            import_dir: scope.import_dir.clone(),
-        });
-    }
-    let created = create_org_with_request(&mut *request_json, &scope.source_org_name)?;
-    let created_org_id =
-        org_id_string_from_value(created.get("orgId").or_else(|| created.get("id")));
-    if created_org_id.is_empty() {
-        return Err(message(format!(
-            "Grafana did not return a usable orgId after creating destination org '{}' for exported org {}.",
-            scope.source_org_name, scope.source_org_id
-        )));
-    }
-    let parsed_org_id = created_org_id.parse::<i64>().map_err(|_| {
-        message(format!(
-            "Grafana returned non-numeric orgId '{}' after creating destination org '{}' for exported org {}.",
-            created_org_id, scope.source_org_name, scope.source_org_id
-        ))
-    })?;
-    Ok(ExportOrgTargetPlan {
-        source_org_id: scope.source_org_id,
-        source_org_name: scope.source_org_name.clone(),
-        target_org_id: Some(parsed_org_id),
-        org_action: "created",
-        import_dir: scope.import_dir.clone(),
-    })
-}
-
-fn build_compare_document(dashboard: &Map<String, Value>, folder_uid: Option<&str>) -> Value {
-    let mut compare = Map::new();
-    compare.insert("dashboard".to_string(), Value::Object(dashboard.clone()));
-    if let Some(folder_uid) = folder_uid.filter(|value| !value.is_empty()) {
-        compare.insert(
-            "folderUid".to_string(),
-            Value::String(folder_uid.to_string()),
-        );
-    }
-    Value::Object(compare)
-}
-
-fn build_local_compare_document(
-    document: &Value,
-    folder_uid_override: Option<&str>,
-) -> Result<Value> {
-    let payload = build_import_payload(document, folder_uid_override, false, "")?;
-    let payload_object =
-        value_as_object(&payload, "Dashboard import payload must be a JSON object.")?;
-    let dashboard = payload_object
-        .get("dashboard")
-        .and_then(Value::as_object)
-        .ok_or_else(|| message("Dashboard import payload is missing dashboard."))?;
-    let folder_uid = payload_object.get("folderUid").and_then(Value::as_str);
-    Ok(build_compare_document(dashboard, folder_uid))
-}
-
-fn build_remote_compare_document(
-    payload: &Value,
-    folder_uid_override: Option<&str>,
-) -> Result<Value> {
-    let dashboard = build_preserved_web_import_document(payload)?;
-    let dashboard_object =
-        value_as_object(&dashboard, "Unexpected dashboard payload from Grafana.")?;
-    let payload_object = value_as_object(payload, "Unexpected dashboard payload from Grafana.")?;
-    let folder_uid = folder_uid_override.or_else(|| {
-        object_field(payload_object, "meta")
-            .and_then(|meta| meta.get("folderUid"))
-            .and_then(Value::as_str)
-    });
-    Ok(build_compare_document(dashboard_object, folder_uid))
-}
-
-fn serialize_compare_document(document: &Value) -> Result<String> {
-    Ok(serde_json::to_string(document)?)
-}
-
-fn build_compare_diff_text(
-    remote_compare: &Value,
-    local_compare: &Value,
-    uid: &str,
-    dashboard_file: &Path,
-    _context_lines: usize,
-) -> Result<String> {
-    let remote_pretty = serde_json::to_string_pretty(remote_compare)?;
-    let local_pretty = serde_json::to_string_pretty(local_compare)?;
-    let mut text = String::new();
-    let _ = writeln!(&mut text, "--- grafana:{uid}");
-    let _ = writeln!(&mut text, "+++ {}", dashboard_file.display());
-    for line in remote_pretty.lines() {
-        let _ = writeln!(&mut text, "-{line}");
-    }
-    for line in local_pretty.lines() {
-        let _ = writeln!(&mut text, "+{line}");
-    }
-    Ok(text)
-}
-
-fn determine_dashboard_import_action_with_request<F>(
-    request_json: &mut F,
-    cache: &mut ImportLookupCache,
-    payload: &Value,
-    replace_existing: bool,
-    update_existing_only: bool,
-) -> Result<&'static str>
-where
-    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
-{
-    let payload_object =
-        value_as_object(payload, "Dashboard import payload must be a JSON object.")?;
-    let dashboard = payload_object
-        .get("dashboard")
-        .and_then(Value::as_object)
-        .ok_or_else(|| message("Dashboard import payload is missing dashboard."))?;
-    let uid = string_field(dashboard, "uid", "");
-    if uid.is_empty() {
-        return Ok("would-create");
-    }
-    if !dashboard_exists_with_summary(request_json, cache, &uid)? {
-        if update_existing_only {
-            return Ok("would-skip-missing");
-        }
-        return Ok("would-create");
-    }
-    if replace_existing || update_existing_only {
-        Ok("would-update")
-    } else {
-        Ok("would-fail-existing")
-    }
-}
-
-fn determine_import_folder_uid_override_with_request<F>(
-    request_json: &mut F,
-    cache: &mut ImportLookupCache,
-    uid: &str,
-    folder_uid_override: Option<&str>,
-    preserve_existing_folder: bool,
-) -> Result<Option<String>>
-where
-    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
-{
-    if let Some(value) = folder_uid_override {
-        return Ok(Some(value.to_string()));
-    }
-    if !preserve_existing_folder || uid.is_empty() {
-        return Ok(None);
-    }
-    if let Some(folder_uid) = dashboard_summary_folder_uid(request_json, cache, uid)? {
-        if !folder_uid.is_empty() {
-            return Ok(Some(folder_uid));
-        }
-    }
-    let Some(existing_payload) = fetch_dashboard_if_exists_cached(request_json, cache, uid)? else {
-        return Ok(None);
-    };
-    let object = value_as_object(
-        &existing_payload,
-        &format!("Unexpected dashboard payload for UID {uid}."),
-    )?;
-    let folder_uid = object_field(object, "meta")
-        .and_then(|meta| meta.get("folderUid"))
-        .and_then(Value::as_str)
-        .unwrap_or("")
-        .to_string();
-    Ok(Some(folder_uid))
-}
-
-/// describe dashboard import mode.
-pub(crate) fn describe_dashboard_import_mode(
-    replace_existing: bool,
-    update_existing_only: bool,
-) -> &'static str {
-    if update_existing_only {
-        "update-or-skip-missing"
-    } else if replace_existing {
-        "create-or-update"
-    } else {
-        "create-only"
-    }
-}
-
-fn describe_import_action(action: &str) -> (&'static str, &str) {
-    match action {
-        "would-create" => ("missing", "create"),
-        "would-update" => ("exists", "update"),
-        "would-skip-missing" => ("missing", "skip-missing"),
-        "would-skip-folder-mismatch" => ("exists", "skip-folder-mismatch"),
-        "would-fail-existing" => ("exists", "blocked-existing"),
-        _ => (DEFAULT_UNKNOWN_UID, action),
-    }
-}
-
-// Normalize a dashboard folder path from optional CLI input, defaulting to the
-// CLI convention "General" when empty or unset.
-fn normalize_folder_path(path: Option<&str>) -> String {
-    let value = path.unwrap_or("").trim();
-    if value.is_empty() {
-        DEFAULT_FOLDER_TITLE.to_string()
-    } else {
-        value.to_string()
-    }
-}
-
-fn resolve_source_dashboard_folder_path(
-    document: &Value,
-    dashboard_file: &Path,
-    import_dir: &Path,
-    folders_by_uid: &BTreeMap<String, FolderInventoryItem>,
-) -> Result<String> {
-    let document_object = value_as_object(document, "Dashboard payload must be a JSON object.")?;
-    if let Some(folder_uid) = object_field(document_object, "meta")
-        .and_then(|meta| meta.get("folderUid"))
-        .and_then(Value::as_str)
-        .map(str::trim)
-    {
-        if folder_uid.is_empty() || folder_uid == DEFAULT_FOLDER_UID {
-            return Ok(DEFAULT_FOLDER_TITLE.to_string());
-        }
-        if let Some(folder) = folders_by_uid.get(folder_uid) {
-            if !folder.path.is_empty() {
-                return Ok(folder.path.clone());
-            }
-            if !folder.title.is_empty() {
-                return Ok(folder.title.clone());
-            }
-        }
-    }
-    let relative = dashboard_file.strip_prefix(import_dir).map_err(|error| {
-        message(format!(
-            "Failed to resolve import-relative dashboard path for {}: {error}",
-            dashboard_file.display()
-        ))
-    })?;
-    let parts = relative
-        .parent()
-        .map(|path| {
-            path.iter()
-                .map(|part| part.to_string_lossy().into_owned())
-                .collect::<Vec<String>>()
-        })
-        .unwrap_or_default();
-    if parts.is_empty() {
-        Ok(DEFAULT_FOLDER_TITLE.to_string())
-    } else {
-        Ok(parts.join(" / "))
-    }
-}
-
-fn resolve_existing_dashboard_folder_path_with_request<F>(
-    request_json: &mut F,
-    cache: &mut ImportLookupCache,
-    uid: &str,
-) -> Result<Option<String>>
-where
-    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
-{
-    if uid.is_empty() {
-        return Ok(None);
-    }
-    let Some(existing_payload) = fetch_dashboard_if_exists_cached(request_json, cache, uid)? else {
-        return Ok(None);
-    };
-    let object = value_as_object(
-        &existing_payload,
-        &format!("Unexpected dashboard payload for UID {uid}."),
-    )?;
-    let folder_uid = object_field(object, "meta")
-        .and_then(|meta| meta.get("folderUid"))
-        .and_then(Value::as_str)
-        .unwrap_or("")
-        .trim()
-        .to_string();
-    if folder_uid.is_empty() || folder_uid == DEFAULT_FOLDER_UID {
-        return Ok(Some(DEFAULT_FOLDER_TITLE.to_string()));
-    }
-    let Some(folder) = fetch_folder_if_exists_cached(request_json, cache, &folder_uid)? else {
-        return Ok(None);
-    };
-    let title = string_field(&folder, "title", &folder_uid);
-    let path = build_folder_path(&folder, &title);
-    if path.trim().is_empty() {
-        Ok(None)
-    } else {
-        Ok(Some(path))
-    }
-}
-
-fn build_folder_path_match_result(
-    source_folder_path: Option<&str>,
-    destination_folder_path: Option<&str>,
-    destination_exists: bool,
-    require_matching_folder_path: bool,
-) -> (bool, &'static str, String, Option<String>) {
-    let normalized_source = normalize_folder_path(source_folder_path);
-    let normalized_destination =
-        destination_folder_path.map(|path| normalize_folder_path(Some(path)));
-    if !require_matching_folder_path || !destination_exists {
-        return (true, "", normalized_source, normalized_destination);
-    }
-    let Some(ref destination_path) = normalized_destination else {
-        return (
-            false,
-            "folder-path-unknown",
-            normalized_source,
-            normalized_destination,
-        );
-    };
-    if normalized_source == *destination_path {
-        (true, "", normalized_source, normalized_destination)
-    } else {
-        (
-            false,
-            "folder-path-mismatch",
-            normalized_source,
-            normalized_destination,
-        )
-    }
-}
-
-fn apply_folder_path_guard_to_action(action: &'static str, matches: bool) -> &'static str {
-    if action == "would-update" && !matches {
-        "would-skip-folder-mismatch"
-    } else {
-        action
-    }
-}
-
-fn resolve_dashboard_import_folder_path_with_request<F>(
-    request_json: &mut F,
-    cache: &mut ImportLookupCache,
-    payload: &Value,
-    folders_by_uid: &std::collections::BTreeMap<String, FolderInventoryItem>,
-    prefer_live_lookup: bool,
-) -> Result<String>
-where
-    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
-{
-    let payload_object =
-        value_as_object(payload, "Dashboard import payload must be a JSON object.")?;
-    let folder_uid = payload_object
-        .get("folderUid")
-        .and_then(Value::as_str)
-        .unwrap_or("")
-        .trim()
-        .to_string();
-    if folder_uid.is_empty() || folder_uid == DEFAULT_FOLDER_UID {
-        return Ok(DEFAULT_FOLDER_TITLE.to_string());
-    }
-    if prefer_live_lookup {
-        if let Some(folder) = fetch_folder_if_exists_cached(request_json, cache, &folder_uid)? {
-            let fallback_title = string_field(&folder, "title", &folder_uid);
-            return Ok(build_folder_path(&folder, &fallback_title));
-        }
-    }
-    if let Some(folder) = folders_by_uid.get(&folder_uid) {
-        if !folder.path.is_empty() {
-            return Ok(folder.path.clone());
-        }
-        if !folder.title.is_empty() {
-            return Ok(folder.title.clone());
-        }
-    }
-    if let Some(folder) = fetch_folder_if_exists_cached(request_json, cache, &folder_uid)? {
-        let fallback_title = string_field(&folder, "title", &folder_uid);
-        return Ok(build_folder_path(&folder, &fallback_title));
-    }
-    Ok(folder_uid)
-}
-
-fn collect_folder_inventory_statuses_cached<F>(
-    request_json: &mut F,
-    cache: &mut ImportLookupCache,
-    folder_inventory: &[FolderInventoryItem],
-) -> Result<Vec<FolderInventoryStatus>>
-where
-    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
-{
-    let mut statuses = Vec::new();
-    for folder in folder_inventory {
-        let destination_folder = fetch_folder_if_exists_cached(request_json, cache, &folder.uid)?;
-        statuses.push(build_cached_folder_inventory_status(
-            folder,
-            destination_folder.as_ref(),
-        ));
-    }
-    Ok(statuses)
-}
-
-fn ensure_folder_inventory_entry_cached<F>(
-    request_json: &mut F,
-    cache: &mut ImportLookupCache,
-    folders_by_uid: &BTreeMap<String, FolderInventoryItem>,
-    folder_uid: &str,
-) -> Result<()>
-where
-    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
-{
-    if folder_uid.is_empty() {
-        return Ok(());
-    }
-    let mut create_chain = Vec::new();
-    let mut current_uid = folder_uid.to_string();
-    loop {
-        if fetch_folder_if_exists_cached(request_json, cache, &current_uid)?.is_some() {
-            break;
-        }
-        let folder = folders_by_uid.get(&current_uid).ok_or_else(|| {
-            message(format!(
-                "Missing exported folder inventory for folderUid {current_uid}."
-            ))
-        })?;
-        create_chain.push(folder.clone());
-        let Some(parent_uid) = folder.parent_uid.as_deref() else {
-            break;
-        };
-        current_uid = parent_uid.to_string();
-    }
-    for folder in create_chain.into_iter().rev() {
-        if fetch_folder_if_exists_cached(request_json, cache, &folder.uid)?.is_some() {
-            continue;
-        }
-        create_folder_entry_with_request(
-            &mut *request_json,
-            &folder.title,
-            &folder.uid,
-            folder.parent_uid.as_deref(),
-        )?;
-        let mut created = Map::new();
-        created.insert("uid".to_string(), Value::String(folder.uid.clone()));
-        created.insert("title".to_string(), Value::String(folder.title.clone()));
-        if let Some(parent_uid) = folder.parent_uid.as_ref() {
-            let parents = if let Some(parent_folder) =
-                fetch_folder_if_exists_cached(request_json, cache, parent_uid)?
-            {
-                let parent_title = string_field(&parent_folder, "title", parent_uid);
-                vec![Value::Object(Map::from_iter(vec![
-                    ("uid".to_string(), Value::String(parent_uid.clone())),
-                    ("title".to_string(), Value::String(parent_title)),
-                ]))]
-            } else {
-                vec![Value::Object(Map::from_iter(vec![
-                    ("uid".to_string(), Value::String(parent_uid.clone())),
-                    ("title".to_string(), Value::String(parent_uid.clone())),
-                ]))]
-            };
-            created.insert("parents".to_string(), Value::Array(parents));
-        } else {
-            created.insert("parents".to_string(), Value::Array(Vec::new()));
-        }
-        cache
-            .folders_by_uid
-            .insert(folder.uid.clone(), Some(created));
-    }
-    Ok(())
-}
-
-fn build_import_dry_run_record(
-    dashboard_file: &Path,
-    uid: &str,
-    action: &str,
-    folder_path: &str,
-    source_folder_path: &str,
-    destination_folder_path: Option<&str>,
-    reason: &str,
-) -> [String; 8] {
-    let (destination, action_label) = describe_import_action(action);
-    [
-        uid.to_string(),
-        destination.to_string(),
-        action_label.to_string(),
-        folder_path.to_string(),
-        source_folder_path.to_string(),
-        destination_folder_path.unwrap_or("").to_string(),
-        reason.to_string(),
-        dashboard_file.display().to_string(),
-    ]
-}
-
-fn build_folder_inventory_dry_run_record(status: &FolderInventoryStatus) -> [String; 6] {
-    let destination = match status.kind {
-        FolderInventoryStatusKind::Missing => "missing",
-        _ => "exists",
-    };
-    let reason = match status.kind {
-        FolderInventoryStatusKind::Missing => "would-create".to_string(),
-        FolderInventoryStatusKind::Matches => String::new(),
-        FolderInventoryStatusKind::Mismatch => {
-            let mut reasons = Vec::new();
-            if status.actual_title.as_deref() != Some(status.expected_title.as_str()) {
-                reasons.push("title");
-            }
-            if status.actual_parent_uid != status.expected_parent_uid {
-                reasons.push("parentUid");
-            }
-            if status.actual_path.as_deref() != Some(status.expected_path.as_str()) {
-                reasons.push("path");
-            }
-            reasons.join(",")
-        }
-    };
-    [
-        status.uid.clone(),
-        destination.to_string(),
-        match status.kind {
-            FolderInventoryStatusKind::Missing => "missing",
-            FolderInventoryStatusKind::Matches => "match",
-            FolderInventoryStatusKind::Mismatch => "mismatch",
-        }
-        .to_string(),
-        reason,
-        status.expected_path.clone(),
-        status.actual_path.clone().unwrap_or_default(),
-    ]
-}
-
-/// Purpose: implementation note.
-pub(crate) fn render_folder_inventory_dry_run_table(
-    records: &[[String; 6]],
-    include_header: bool,
-) -> Vec<String> {
-    let headers = [
-        "UID",
-        "DESTINATION",
-        "STATUS",
-        "REASON",
-        "EXPECTED_PATH",
-        "ACTUAL_PATH",
-    ];
-    let mut widths = headers.map(str::len);
-    for row in records {
-        for (index, value) in row.iter().enumerate() {
-            widths[index] = widths[index].max(value.len());
-        }
-    }
-    let format_row = |values: &[String; 6]| -> String {
-        values
-            .iter()
-            .enumerate()
-            .map(|(index, value)| format!("{value:<width$}", width = widths[index]))
-            .collect::<Vec<String>>()
-            .join("  ")
-    };
-    let mut lines = Vec::new();
-    if include_header {
-        let header_values = [
-            headers[0].to_string(),
-            headers[1].to_string(),
-            headers[2].to_string(),
-            headers[3].to_string(),
-            headers[4].to_string(),
-            headers[5].to_string(),
-        ];
-        let divider_values = [
-            "-".repeat(widths[0]),
-            "-".repeat(widths[1]),
-            "-".repeat(widths[2]),
-            "-".repeat(widths[3]),
-            "-".repeat(widths[4]),
-            "-".repeat(widths[5]),
-        ];
-        lines.push(format_row(&header_values));
-        lines.push(format_row(&divider_values));
-    }
-    for row in records {
-        lines.push(format_row(row));
-    }
-    lines
-}
-
-/// Purpose: implementation note.
-pub(crate) fn render_import_dry_run_table(
-    records: &[[String; 8]],
-    include_header: bool,
-    selected_columns: Option<&[String]>,
-) -> Vec<String> {
-    let columns = resolve_dashboard_import_table_columns(records, selected_columns);
-    let headers = columns
-        .iter()
-        .map(|(_, header)| *header)
-        .collect::<Vec<&str>>();
-    let mut widths = headers
-        .iter()
-        .map(|header| header.len())
-        .collect::<Vec<usize>>();
-    for row in records {
-        let visible = columns
-            .iter()
-            .map(|(index, _)| row[*index].as_str())
-            .collect::<Vec<&str>>();
-        for (index, value) in visible.iter().enumerate() {
-            widths[index] = widths[index].max(value.len());
-        }
-    }
-    let format_row = |values: &[String]| -> String {
-        values
-            .iter()
-            .enumerate()
-            .map(|(index, value)| format!("{value:<width$}", width = widths[index]))
-            .collect::<Vec<String>>()
-            .join("  ")
-    };
-    let mut lines = Vec::new();
-    if include_header {
-        let header_values = headers
-            .iter()
-            .map(|item| item.to_string())
-            .collect::<Vec<String>>();
-        let divider_values = widths
-            .iter()
-            .map(|width| "-".repeat(*width))
-            .collect::<Vec<String>>();
-        lines.push(format_row(&header_values));
-        lines.push(format_row(&divider_values));
-    }
-    for row in records {
-        let visible = columns
-            .iter()
-            .map(|(index, _)| row[*index].clone())
-            .collect::<Vec<String>>();
-        lines.push(format_row(&visible));
-    }
-    lines
-}
-
-pub(crate) fn format_routed_import_target_org_label(target_org_id: Option<i64>) -> String {
-    target_org_id
-        .map(|value| value.to_string())
-        .unwrap_or_else(|| "<new>".to_string())
-}
-
-fn build_routed_import_org_row(plan: &ExportOrgTargetPlan, dashboard_count: usize) -> [String; 5] {
-    [
-        plan.source_org_id.to_string(),
-        if plan.source_org_name.is_empty() {
-            "-".to_string()
-        } else {
-            plan.source_org_name.clone()
-        },
-        plan.org_action.to_string(),
-        format_routed_import_target_org_label(plan.target_org_id),
-        dashboard_count.to_string(),
-    ]
-}
-
-pub(crate) fn format_routed_import_scope_summary_fields(
-    source_org_id: i64,
-    source_org_name: &str,
-    org_action: &str,
-    target_org_id: Option<i64>,
-    import_dir: &Path,
-) -> String {
-    let source_org_name = if source_org_name.is_empty() {
-        "-".to_string()
-    } else {
-        source_org_name.to_string()
-    };
-    let target_org_id = format_routed_import_target_org_label(target_org_id);
-    format!(
-        "export orgId={} name={} orgAction={} targetOrgId={} from {}",
-        source_org_id,
-        source_org_name,
-        org_action,
-        target_org_id,
-        import_dir.display()
-    )
-}
-
-fn format_routed_import_scope_summary(plan: &ExportOrgTargetPlan) -> String {
-    format_routed_import_scope_summary_fields(
-        plan.source_org_id,
-        &plan.source_org_name,
-        plan.org_action,
-        plan.target_org_id,
-        &plan.import_dir,
-    )
-}
-
-/// Purpose: implementation note.
-pub(crate) fn render_routed_import_org_table(
-    rows: &[[String; 5]],
-    include_header: bool,
-) -> Vec<String> {
-    let headers = [
-        "SOURCE_ORG_ID",
-        "SOURCE_ORG_NAME",
-        "ORG_ACTION",
-        "TARGET_ORG_ID",
-        "DASHBOARD_COUNT",
-    ];
-    let mut widths = headers.map(str::len);
-    for row in rows {
-        for (index, value) in row.iter().enumerate() {
-            widths[index] = widths[index].max(value.len());
-        }
-    }
-    let format_row = |values: &[String; 5]| -> String {
-        values
-            .iter()
-            .enumerate()
-            .map(|(index, value)| format!("{value:<width$}", width = widths[index]))
-            .collect::<Vec<String>>()
-            .join("  ")
-    };
-    let mut lines = Vec::new();
-    if include_header {
-        let header_values = [
-            headers[0].to_string(),
-            headers[1].to_string(),
-            headers[2].to_string(),
-            headers[3].to_string(),
-            headers[4].to_string(),
-        ];
-        let divider_values = [
-            "-".repeat(widths[0]),
-            "-".repeat(widths[1]),
-            "-".repeat(widths[2]),
-            "-".repeat(widths[3]),
-            "-".repeat(widths[4]),
-        ];
-        lines.push(format_row(&header_values));
-        lines.push(format_row(&divider_values));
-    }
-    for row in rows {
-        lines.push(format_row(row));
-    }
-    lines
-}
-
-fn resolve_dashboard_import_table_columns(
-    records: &[[String; 8]],
-    selected_columns: Option<&[String]>,
-) -> Vec<(usize, &'static str)> {
-    if let Some(columns) = selected_columns {
-        return columns
-            .iter()
-            .map(|column| match column.as_str() {
-                "uid" => (0usize, "UID"),
-                "destination" => (1usize, "DESTINATION"),
-                "action" => (2usize, "ACTION"),
-                "folder_path" => (3usize, "FOLDER_PATH"),
-                "source_folder_path" => (4usize, "SOURCE_FOLDER_PATH"),
-                "destination_folder_path" => (5usize, "DESTINATION_FOLDER_PATH"),
-                "reason" => (6usize, "REASON"),
-                "file" => (7usize, "FILE"),
-                _ => unreachable!("validated dashboard import output column"),
-            })
-            .collect();
-    }
-    let include_source_folder = records.iter().any(|row| !row[4].is_empty());
-    let include_destination_folder = records.iter().any(|row| !row[5].is_empty());
-    let include_reason = records.iter().any(|row| !row[6].is_empty());
-    let mut columns = vec![
-        (0usize, "UID"),
-        (1usize, "DESTINATION"),
-        (2usize, "ACTION"),
-        (3usize, "FOLDER_PATH"),
-    ];
-    if include_source_folder {
-        columns.push((4usize, "SOURCE_FOLDER_PATH"));
-    }
-    if include_destination_folder {
-        columns.push((5usize, "DESTINATION_FOLDER_PATH"));
-    }
-    if include_reason {
-        columns.push((6usize, "REASON"));
-    }
-    columns.push((7usize, "FILE"));
-    columns
-}
-
-/// Purpose: implementation note.
-pub(crate) fn render_import_dry_run_json(
-    mode: &str,
-    folder_statuses: &[FolderInventoryStatus],
-    dashboard_records: &[[String; 8]],
-    import_dir: &Path,
-    skipped_missing_count: usize,
-    skipped_folder_mismatch_count: usize,
-) -> Result<String> {
-    let mut folders = Vec::new();
-    for status in folder_statuses {
-        let (destination, status_label, reason) = match status.kind {
-            FolderInventoryStatusKind::Missing => {
-                ("missing", "missing", "would-create".to_string())
-            }
-            FolderInventoryStatusKind::Matches => ("exists", "match", String::new()),
-            FolderInventoryStatusKind::Mismatch => {
-                let mut reasons = Vec::new();
-                if status.actual_title.as_deref() != Some(status.expected_title.as_str()) {
-                    reasons.push("title");
-                }
-                if status.actual_parent_uid != status.expected_parent_uid {
-                    reasons.push("parentUid");
-                }
-                if status.actual_path.as_deref() != Some(status.expected_path.as_str()) {
-                    reasons.push("path");
-                }
-                ("exists", "mismatch", reasons.join(","))
-            }
-        };
-        folders.push(serde_json::json!({
-            "uid": status.uid,
-            "destination": destination,
-            "status": status_label,
-            "reason": reason,
-            "expectedPath": status.expected_path,
-            "actualPath": status.actual_path.clone().unwrap_or_default(),
-        }));
-    }
-    let dashboards = dashboard_records
-        .iter()
-        .map(|row| {
-            serde_json::json!({
-                "uid": row[0],
-                "destination": row[1],
-                "action": row[2],
-                "folderPath": row[3],
-                "sourceFolderPath": row[4],
-                "destinationFolderPath": row[5],
-                "reason": row[6],
-                "file": row[7],
-            })
-        })
-        .collect::<Vec<Value>>();
-    let payload = serde_json::json!({
-        "mode": mode,
-        "folders": folders,
-        "dashboards": dashboards,
-        "summary": {
-            "importDir": import_dir.display().to_string(),
-            "folderCount": folder_statuses.len(),
-            "missingFolders": folder_statuses.iter().filter(|status| status.kind == FolderInventoryStatusKind::Missing).count(),
-            "mismatchedFolders": folder_statuses.iter().filter(|status| status.kind == FolderInventoryStatusKind::Mismatch).count(),
-            "dashboardCount": dashboard_records.len(),
-            "missingDashboards": dashboard_records.iter().filter(|row| row[1] == "missing").count(),
-            "skippedMissingDashboards": skipped_missing_count,
-            "skippedFolderMismatchDashboards": skipped_folder_mismatch_count,
-        }
-    });
-    Ok(serde_json::to_string_pretty(&payload)?)
-}
-
-fn build_import_dry_run_json_value(report: &ImportDryRunReport) -> Value {
-    let folders = report
-        .folder_statuses
-        .iter()
-        .map(|status| {
-            let (destination, status_label, reason) = match status.kind {
-                FolderInventoryStatusKind::Missing => {
-                    ("missing", "missing", "would-create".to_string())
-                }
-                FolderInventoryStatusKind::Matches => ("exists", "match", String::new()),
-                FolderInventoryStatusKind::Mismatch => {
-                    let mut reasons = Vec::new();
-                    if status.actual_title.as_deref() != Some(status.expected_title.as_str()) {
-                        reasons.push("title");
-                    }
-                    if status.actual_parent_uid != status.expected_parent_uid {
-                        reasons.push("parentUid");
-                    }
-                    if status.actual_path.as_deref() != Some(status.expected_path.as_str()) {
-                        reasons.push("path");
-                    }
-                    ("exists", "mismatch", reasons.join(","))
-                }
-            };
-            serde_json::json!({
-                "uid": status.uid,
-                "destination": destination,
-                "status": status_label,
-                "reason": reason,
-                "expectedPath": status.expected_path,
-                "actualPath": status.actual_path.clone().unwrap_or_default(),
-            })
-        })
-        .collect::<Vec<Value>>();
-    let dashboards = report
-        .dashboard_records
-        .iter()
-        .map(|row| {
-            serde_json::json!({
-                "uid": row[0],
-                "destination": row[1],
-                "action": row[2],
-                "folderPath": row[3],
-                "sourceFolderPath": row[4],
-                "destinationFolderPath": row[5],
-                "reason": row[6],
-                "file": row[7],
-            })
-        })
-        .collect::<Vec<Value>>();
-    serde_json::json!({
-        "mode": report.mode,
-        "folders": folders,
-        "dashboards": dashboards,
-        "summary": {
-            "importDir": report.import_dir.display().to_string(),
-            "folderCount": report.folder_statuses.len(),
-            "missingFolders": report.folder_statuses.iter().filter(|status| status.kind == FolderInventoryStatusKind::Missing).count(),
-            "mismatchedFolders": report.folder_statuses.iter().filter(|status| status.kind == FolderInventoryStatusKind::Mismatch).count(),
-            "dashboardCount": report.dashboard_records.len(),
-            "missingDashboards": report.dashboard_records.iter().filter(|row| row[1] == "missing").count(),
-            "skippedMissingDashboards": report.skipped_missing_count,
-        "skippedFolderMismatchDashboards": report.skipped_folder_mismatch_count,
-        }
-    })
-}
-
-fn collect_dashboard_panel_types(panels: &[Value], panel_types: &mut BTreeSet<String>) {
-    for panel in panels {
-        let Some(panel_object) = panel.as_object() else {
-            continue;
-        };
-        let panel_type = string_field(panel_object, "type", "");
-        if !panel_type.is_empty() {
-            panel_types.insert(panel_type);
-        }
-        if let Some(nested) = panel_object.get("panels").and_then(Value::as_array) {
-            collect_dashboard_panel_types(nested, panel_types);
-        }
-    }
-}
-
-fn dashboard_import_dependency_availability_requirements(
-    import_dir: &Path,
-) -> Result<(bool, bool)> {
-    let mut dashboard_files = discover_dashboard_files(import_dir)?;
+fn dashboard_files_for_import(import_dir: &Path) -> Result<Vec<PathBuf>> {
+    let mut dashboard_files = super::discover_dashboard_files(import_dir)?;
     dashboard_files.retain(|path| {
-        path.file_name().and_then(|name| name.to_str()) != Some(FOLDER_INVENTORY_FILENAME)
+        path.file_name().and_then(|name| name.to_str()) != Some(super::FOLDER_INVENTORY_FILENAME)
     });
-    let mut needs_datasource_availability = false;
-    let mut needs_plugin_availability = false;
-    for dashboard_file in dashboard_files {
-        let document = load_json_file(&dashboard_file)?;
-        let document_object =
-            value_as_object(&document, "Dashboard payload must be a JSON object.")?;
-        let dashboard = extract_dashboard_object(document_object)?;
-        let mut refs = Vec::new();
-        collect_datasource_refs(&Value::Object(dashboard.clone()), &mut refs);
-        if refs
-            .iter()
-            .any(|reference| !is_builtin_datasource_ref(reference))
-        {
-            needs_datasource_availability = true;
-        }
-        if let Some(panels) = dashboard.get("panels").and_then(Value::as_array) {
-            let mut panel_types = BTreeSet::new();
-            collect_dashboard_panel_types(panels, &mut panel_types);
-            if !panel_types.is_empty() {
-                needs_plugin_availability = true;
-            }
-        }
-        if needs_datasource_availability && needs_plugin_availability {
-            break;
-        }
-    }
-    Ok((needs_datasource_availability, needs_plugin_availability))
-}
-
-fn build_dashboard_import_availability_from_datasources(
-    datasources: &[Map<String, Value>],
-) -> Map<String, Value> {
-    let mut availability = Map::new();
-    let mut datasource_uids = BTreeSet::new();
-    let mut datasource_names = BTreeSet::new();
-    for datasource in datasources {
-        if let Some(uid) = datasource
-            .get("uid")
-            .and_then(Value::as_str)
-            .map(str::trim)
-            .filter(|value| !value.is_empty())
-        {
-            datasource_uids.insert(uid.to_string());
-        }
-        if let Some(name) = datasource
-            .get("name")
-            .and_then(Value::as_str)
-            .map(str::trim)
-            .filter(|value| !value.is_empty())
-        {
-            datasource_names.insert(name.to_string());
-        }
-    }
-    availability.insert(
-        "datasourceUids".to_string(),
-        Value::Array(
-            datasource_uids
-                .into_iter()
-                .map(Value::String)
-                .collect::<Vec<_>>(),
-        ),
-    );
-    availability.insert(
-        "datasourceNames".to_string(),
-        Value::Array(
-            datasource_names
-                .into_iter()
-                .map(Value::String)
-                .collect::<Vec<_>>(),
-        ),
-    );
-    availability.insert("pluginIds".to_string(), Value::Array(Vec::new()));
-    availability
-}
-
-fn build_dashboard_import_availability_with_request<F>(
-    mut request_json: F,
-    datasources: &[Map<String, Value>],
-    fetch_plugins: bool,
-) -> Result<Map<String, Value>>
-where
-    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
-{
-    let mut availability = build_dashboard_import_availability_from_datasources(datasources);
-    if !fetch_plugins {
-        return Ok(availability);
-    }
-    match request_json(Method::GET, "/api/plugins", &[], None)? {
-        Some(Value::Array(plugins)) => {
-            let plugin_ids = plugins
-                .iter()
-                .filter_map(Value::as_object)
-                .filter_map(|plugin| plugin.get("id").and_then(Value::as_str))
-                .map(str::trim)
-                .filter(|value| !value.is_empty())
-                .map(str::to_string)
-                .collect::<BTreeSet<String>>();
-            availability.insert(
-                "pluginIds".to_string(),
-                Value::Array(
-                    plugin_ids
-                        .into_iter()
-                        .map(Value::String)
-                        .collect::<Vec<_>>(),
-                ),
-            );
-        }
-        Some(_) => return Err(message("Unexpected plugin list response from Grafana.")),
-        None => {}
-    }
-
-    Ok(availability)
-}
-
-fn build_dashboard_import_dependency_specs(
-    import_dir: &Path,
-    datasource_catalog: &super::prompt::DatasourceCatalog,
-    strict_schema: bool,
-    target_schema_version: Option<i64>,
-) -> Result<Vec<Value>> {
-    let mut dashboard_files = discover_dashboard_files(import_dir)?;
-    dashboard_files.retain(|path| {
-        path.file_name().and_then(|name| name.to_str()) != Some(FOLDER_INVENTORY_FILENAME)
-    });
-    let mut desired_specs = Vec::new();
-    for dashboard_file in dashboard_files {
-        let document = load_json_file(&dashboard_file)?;
-        super::validate::validate_dashboard_import_document(
-            &document,
-            &dashboard_file,
-            strict_schema,
-            target_schema_version,
-        )?;
-        let document_object =
-            value_as_object(&document, "Dashboard payload must be a JSON object.")?;
-        let dashboard = extract_dashboard_object(document_object)?;
-        let uid = string_field(dashboard, "uid", "");
-        let title = string_field(dashboard, "title", DEFAULT_DASHBOARD_TITLE);
-        let (datasource_names, datasource_uids) =
-            collect_dashboard_source_metadata(&document, datasource_catalog)?;
-        let mut panel_types = BTreeSet::new();
-        if let Some(panels) = dashboard.get("panels").and_then(Value::as_array) {
-            collect_dashboard_panel_types(panels, &mut panel_types);
-        }
-        desired_specs.push(serde_json::json!({
-            "kind": "dashboard",
-            "uid": uid,
-            "title": title,
-            "body": {
-                "datasourceNames": datasource_names,
-                "datasourceUids": datasource_uids,
-                "pluginIds": panel_types.into_iter().collect::<Vec<String>>(),
-            },
-            "sourcePath": dashboard_file.display().to_string(),
-        }));
-    }
-    Ok(desired_specs)
-}
-
-fn validate_dashboard_import_dependencies_with_request<F>(
-    mut request_json: F,
-    import_dir: &Path,
-    strict_schema: bool,
-    target_schema_version: Option<i64>,
-) -> Result<()>
-where
-    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
-{
-    let (needs_datasource_availability, needs_plugin_availability) =
-        dashboard_import_dependency_availability_requirements(import_dir)?;
-    let datasources = if needs_datasource_availability {
-        list_datasources_with_request(&mut request_json)?
-    } else {
-        Vec::new()
-    };
-    let datasource_catalog = build_datasource_catalog(&datasources);
-    let desired_specs = build_dashboard_import_dependency_specs(
-        import_dir,
-        &datasource_catalog,
-        strict_schema,
-        target_schema_version,
-    )?;
-    let availability = build_dashboard_import_availability_with_request(
-        &mut request_json,
-        &datasources,
-        needs_plugin_availability,
-    )?;
-    let document =
-        build_sync_preflight_document(&desired_specs, Some(&Value::Object(availability)))?;
-    let blocking = document
-        .get("summary")
-        .and_then(Value::as_object)
-        .and_then(|summary| summary.get("blockingCount"))
-        .and_then(Value::as_i64)
-        .unwrap_or(0);
-    if blocking > 0 {
-        return Err(message(format!(
-            "Refusing dashboard import because preflight reports {blocking} blocking checks."
-        )));
-    }
-    Ok(())
+    Ok(dashboard_files)
 }
 
 /// Purpose: implementation note.
-pub(crate) fn build_routed_import_dry_run_json_document(
-    orgs: &[Value],
-    imports: &[Value],
-) -> Result<String> {
-    let payload = serde_json::json!({
-        "mode": "routed-import-preview",
-        "orgs": orgs,
-        "imports": imports,
-        "summary": {
-            "orgCount": orgs.len(),
-            "existingOrgCount": orgs.iter().filter(|entry| entry.get("orgAction") == Some(&Value::String("exists".to_string()))).count(),
-            "missingOrgCount": orgs.iter().filter(|entry| entry.get("orgAction") == Some(&Value::String("missing".to_string()))).count(),
-            "wouldCreateOrgCount": orgs.iter().filter(|entry| entry.get("orgAction") == Some(&Value::String("would-create".to_string()))).count(),
-            "dashboardCount": orgs.iter().map(|entry| entry.get("dashboardCount").and_then(Value::as_u64).unwrap_or(0)).sum::<u64>(),
-        }
-    });
-    Ok(serde_json::to_string_pretty(&payload)?)
+///
+/// Args: see function signature.
+/// Returns: see implementation.
+pub fn diff_dashboards_with_client(
+    client: &JsonHttpClient,
+    args: &super::DiffArgs,
+) -> Result<usize> {
+    diff_dashboards_with_request(
+        |method, path, params, payload| client.request_json(method, path, params, payload),
+        args,
+    )
 }
 
 /// collect import dry run report with request.
 pub(crate) fn collect_import_dry_run_report_with_request<F>(
     mut request_json: F,
-    args: &ImportArgs,
+    args: &super::ImportArgs,
 ) -> Result<ImportDryRunReport>
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
     let mut lookup_cache = ImportLookupCache::default();
-    let metadata = load_export_metadata(&args.import_dir, Some(RAW_EXPORT_SUBDIR))?;
+    let metadata = super::load_export_metadata(&args.import_dir, Some(super::RAW_EXPORT_SUBDIR))?;
     validate_matching_export_org_with_request(
         &mut request_json,
         &mut lookup_cache,
@@ -1784,7 +79,7 @@ where
         None,
     )?;
     let folder_inventory = if args.ensure_folders || args.dry_run {
-        load_folder_inventory(&args.import_dir, metadata.as_ref())?
+        super::load_folder_inventory(&args.import_dir, metadata.as_ref())?
     } else {
         Vec::new()
     };
@@ -1792,7 +87,7 @@ where
         let folders_file = metadata
             .as_ref()
             .and_then(|item| item.folders_file.as_deref())
-            .unwrap_or(FOLDER_INVENTORY_FILENAME);
+            .unwrap_or(super::FOLDER_INVENTORY_FILENAME);
         return Err(message(format!(
             "Folder inventory file not found for --ensure-folders: {}. Re-export dashboards with raw folder inventory or omit --ensure-folders.",
             args.import_dir.join(folders_file).display()
@@ -1807,18 +102,15 @@ where
     } else {
         Vec::new()
     };
-    let folders_by_uid: BTreeMap<String, FolderInventoryItem> = folder_inventory
+    let folders_by_uid: BTreeMap<String, super::FolderInventoryItem> = folder_inventory
         .into_iter()
         .map(|item| (item.uid.clone(), item))
         .collect();
-    let mut dashboard_files = discover_dashboard_files(&args.import_dir)?;
-    dashboard_files.retain(|path| {
-        path.file_name().and_then(|name| name.to_str()) != Some(FOLDER_INVENTORY_FILENAME)
-    });
+    let dashboard_files = dashboard_files_for_import(&args.import_dir)?;
     let effective_replace_existing = args.replace_existing || args.update_existing_only;
     let mut dashboard_records: Vec<[String; 8]> = Vec::new();
     for dashboard_file in &dashboard_files {
-        let document = load_json_file(dashboard_file)?;
+        let document = super::load_json_file(dashboard_file)?;
         if args.strict_schema {
             super::validate::validate_dashboard_import_document(
                 &document,
@@ -1829,10 +121,10 @@ where
         }
         let document_object =
             value_as_object(&document, "Dashboard payload must be a JSON object.")?;
-        let dashboard = extract_dashboard_object(document_object)?;
+        let dashboard = super::extract_dashboard_object(document_object)?;
         let uid = string_field(dashboard, "uid", "");
         let source_folder_path = if args.require_matching_folder_path {
-            Some(resolve_source_dashboard_folder_path(
+            Some(super::import_lookup::resolve_source_dashboard_folder_path(
                 &document,
                 dashboard_file,
                 &args.import_dir,
@@ -1848,7 +140,7 @@ where
             args.import_folder_uid.as_deref(),
             effective_replace_existing,
         )?;
-        let payload = build_import_payload(
+        let payload = super::build_import_payload(
             &document,
             folder_uid_override.as_deref(),
             effective_replace_existing,
@@ -1926,68 +218,34 @@ where
     })
 }
 
-/// format import progress line.
-pub(crate) fn format_import_progress_line(
-    current: usize,
-    total: usize,
-    dashboard_target: &str,
-    dry_run: bool,
-    action: Option<&str>,
-    folder_path: Option<&str>,
-) -> String {
-    if dry_run {
-        let (destination, action_label) =
-            describe_import_action(action.unwrap_or(DEFAULT_UNKNOWN_UID));
-        let mut line = format!(
-            "Dry-run dashboard {current}/{total}: {dashboard_target} dest={destination} action={action_label}"
-        );
-        if let Some(path) = folder_path.filter(|value| !value.is_empty()) {
-            let _ = write!(&mut line, " folderPath={path}");
-        }
-        line
-    } else {
-        format!("Importing dashboard {current}/{total}: {dashboard_target}")
+fn folder_inventory_status_output_lines(
+    folder_statuses: &[super::FolderInventoryStatus],
+    no_header: bool,
+    json_output: bool,
+    table_output: bool,
+) {
+    if json_output {
+        return;
     }
-}
-
-/// format import verbose line.
-pub(crate) fn format_import_verbose_line(
-    dashboard_file: &Path,
-    dry_run: bool,
-    uid: Option<&str>,
-    action: Option<&str>,
-    folder_path: Option<&str>,
-) -> String {
-    if dry_run {
-        let (destination, action_label) =
-            describe_import_action(action.unwrap_or(DEFAULT_UNKNOWN_UID));
-        let mut line = format!(
-            "Dry-run import uid={} dest={} action={} file={}",
-            uid.unwrap_or(DEFAULT_UNKNOWN_UID),
-            destination,
-            action_label,
-            dashboard_file.display()
-        );
-        if let Some(path) = folder_path.filter(|value| !value.is_empty()) {
-            line = format!(
-                "Dry-run import uid={} dest={} action={} folderPath={} file={}",
-                uid.unwrap_or(DEFAULT_UNKNOWN_UID),
-                destination,
-                action_label,
-                path,
-                dashboard_file.display()
-            );
+    if table_output {
+        let records: Vec<[String; 6]> = folder_statuses
+            .iter()
+            .map(build_folder_inventory_dry_run_record)
+            .collect();
+        for line in render_folder_inventory_dry_run_table(&records, !no_header) {
+            println!("{line}");
         }
-        line
     } else {
-        format!("Imported {}", dashboard_file.display())
+        for status in folder_statuses {
+            println!("{}", super::format_folder_inventory_status_line(status));
+        }
     }
 }
 
 /// Purpose: implementation note.
 pub(crate) fn import_dashboards_with_request<F>(
     mut request_json: F,
-    args: &ImportArgs,
+    args: &super::ImportArgs,
 ) -> Result<usize>
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
@@ -2028,7 +286,7 @@ where
             "--ensure-folders cannot be combined with --import-folder-uid.",
         ));
     }
-    let metadata = load_export_metadata(&args.import_dir, Some(RAW_EXPORT_SUBDIR))?;
+    let metadata = super::load_export_metadata(&args.import_dir, Some(super::RAW_EXPORT_SUBDIR))?;
     validate_matching_export_org_with_request(
         &mut request_json,
         &mut lookup_cache,
@@ -2038,7 +296,7 @@ where
         None,
     )?;
     let folder_inventory = if args.ensure_folders || args.dry_run {
-        load_folder_inventory(&args.import_dir, metadata.as_ref())?
+        super::load_folder_inventory(&args.import_dir, metadata.as_ref())?
     } else {
         Vec::new()
     };
@@ -2046,7 +304,7 @@ where
         let folders_file = metadata
             .as_ref()
             .and_then(|item| item.folders_file.as_deref())
-            .unwrap_or(FOLDER_INVENTORY_FILENAME);
+            .unwrap_or(super::FOLDER_INVENTORY_FILENAME);
         return Err(message(format!(
             "Folder inventory file not found for --ensure-folders: {}. Re-export dashboards with raw folder inventory or omit --ensure-folders.",
             args.import_dir.join(folders_file).display()
@@ -2061,7 +319,7 @@ where
     } else {
         Vec::new()
     };
-    let folders_by_uid: BTreeMap<String, FolderInventoryItem> = folder_inventory
+    let folders_by_uid: BTreeMap<String, super::FolderInventoryItem> = folder_inventory
         .into_iter()
         .map(|item| (item.uid.clone(), item))
         .collect();
@@ -2073,10 +331,7 @@ where
             args.target_schema_version,
         )?;
     }
-    let mut dashboard_files = discover_dashboard_files(&args.import_dir)?;
-    dashboard_files.retain(|path| {
-        path.file_name().and_then(|name| name.to_str()) != Some(FOLDER_INVENTORY_FILENAME)
-    });
+    let dashboard_files = dashboard_files_for_import(&args.import_dir)?;
     let total = dashboard_files.len();
     let effective_replace_existing = args.replace_existing || args.update_existing_only;
     let mut dry_run_records: Vec<[String; 8]> = Vec::new();
@@ -2088,34 +343,24 @@ where
         println!("Import mode: {}", mode);
     }
     if args.dry_run && args.ensure_folders {
-        let folder_dry_run_records: Vec<[String; 6]> = folder_statuses
-            .iter()
-            .map(build_folder_inventory_dry_run_record)
-            .collect();
-        if args.json {
-        } else if args.table {
-            for line in
-                render_folder_inventory_dry_run_table(&folder_dry_run_records, !args.no_header)
-            {
-                println!("{line}");
-            }
-        } else {
-            for status in &folder_statuses {
-                println!("{}", format_folder_inventory_status_line(status));
-            }
-        }
+        folder_inventory_status_output_lines(
+            &folder_statuses,
+            args.no_header,
+            args.json,
+            args.table,
+        );
         let missing_folder_count = folder_statuses
             .iter()
-            .filter(|status| status.kind == FolderInventoryStatusKind::Missing)
+            .filter(|status| status.kind == super::FolderInventoryStatusKind::Missing)
             .count();
         let mismatched_folder_count = folder_statuses
             .iter()
-            .filter(|status| status.kind == FolderInventoryStatusKind::Mismatch)
+            .filter(|status| status.kind == super::FolderInventoryStatusKind::Mismatch)
             .count();
         let folders_file = metadata
             .as_ref()
             .and_then(|item| item.folders_file.as_deref())
-            .unwrap_or(FOLDER_INVENTORY_FILENAME);
+            .unwrap_or(super::FOLDER_INVENTORY_FILENAME);
         if !args.json {
             println!(
                 "Dry-run checked {} folder(s) from {}; {} missing, {} mismatched",
@@ -2127,12 +372,7 @@ where
         }
     }
     for (index, dashboard_file) in dashboard_files.iter().enumerate() {
-        if dashboard_file.file_name().and_then(|name| name.to_str())
-            == Some(FOLDER_INVENTORY_FILENAME)
-        {
-            continue;
-        }
-        let document = load_json_file(dashboard_file)?;
+        let document = super::load_json_file(dashboard_file)?;
         if args.strict_schema {
             super::validate::validate_dashboard_import_document(
                 &document,
@@ -2143,10 +383,10 @@ where
         }
         let document_object =
             value_as_object(&document, "Dashboard payload must be a JSON object.")?;
-        let dashboard = extract_dashboard_object(document_object)?;
+        let dashboard = super::extract_dashboard_object(document_object)?;
         let uid = string_field(dashboard, "uid", "");
         let source_folder_path = if args.require_matching_folder_path {
-            Some(resolve_source_dashboard_folder_path(
+            Some(super::import_lookup::resolve_source_dashboard_folder_path(
                 &document,
                 dashboard_file,
                 &args.import_dir,
@@ -2162,7 +402,7 @@ where
             args.import_folder_uid.as_deref(),
             effective_replace_existing,
         )?;
-        let payload = build_import_payload(
+        let payload = super::build_import_payload(
             &document,
             folder_uid_override.as_deref(),
             effective_replace_existing,
@@ -2232,12 +472,12 @@ where
                 .get("dashboard")
                 .and_then(Value::as_object)
                 .ok_or_else(|| message("Dashboard import payload is missing dashboard."))?;
-            let uid = string_field(dashboard, "uid", DEFAULT_UNKNOWN_UID);
+            let uid = string_field(dashboard, "uid", super::DEFAULT_UNKNOWN_UID);
             if args.table || args.json {
                 dry_run_records.push(build_import_dry_run_record(
                     dashboard_file,
                     &uid,
-                    action.unwrap_or(DEFAULT_UNKNOWN_UID),
+                    action.unwrap_or(super::DEFAULT_UNKNOWN_UID),
                     folder_path.as_deref().unwrap_or(""),
                     &normalized_source_folder_path,
                     normalized_destination_folder_path.as_deref(),
@@ -2250,7 +490,7 @@ where
                         dashboard_file,
                         true,
                         Some(&uid),
-                        Some(action.unwrap_or(DEFAULT_UNKNOWN_UID)),
+                        Some(action.unwrap_or(super::DEFAULT_UNKNOWN_UID)),
                         folder_path.as_deref(),
                     )
                 );
@@ -2262,7 +502,7 @@ where
                         total,
                         &uid,
                         true,
-                        Some(action.unwrap_or(DEFAULT_UNKNOWN_UID)),
+                        Some(action.unwrap_or(super::DEFAULT_UNKNOWN_UID)),
                         folder_path.as_deref(),
                     )
                 );
@@ -2276,7 +516,7 @@ where
                 .get("dashboard")
                 .and_then(Value::as_object)
                 .ok_or_else(|| message("Dashboard import payload is missing dashboard."))?;
-            let uid = string_field(dashboard, "uid", DEFAULT_UNKNOWN_UID);
+            let uid = string_field(dashboard, "uid", super::DEFAULT_UNKNOWN_UID);
             if action == Some("would-skip-missing") {
                 skipped_missing_count += 1;
                 if args.verbose {
@@ -2332,7 +572,7 @@ where
                 )?;
             }
         }
-        let _result = import_dashboard_request_with_request(&mut request_json, &payload)?;
+        let _result = super::import_dashboard_request_with_request(&mut request_json, &payload)?;
         imported_count += 1;
         if args.verbose {
             println!(
@@ -2454,7 +694,10 @@ where
 ///
 /// Args: see function signature.
 /// Returns: see implementation.
-pub fn import_dashboards_with_client(client: &JsonHttpClient, args: &ImportArgs) -> Result<usize> {
+pub fn import_dashboards_with_client(
+    client: &JsonHttpClient,
+    args: &super::ImportArgs,
+) -> Result<usize> {
     import_dashboards_with_request(
         |method, path, params, payload| client.request_json(method, path, params, payload),
         args,
@@ -2462,171 +705,7 @@ pub fn import_dashboards_with_client(client: &JsonHttpClient, args: &ImportArgs)
 }
 
 /// Purpose: implementation note.
-pub(crate) fn build_routed_import_dry_run_json_with_request<F, G>(
-    mut request_json: F,
-    mut collect_preview_for_org: G,
-    args: &ImportArgs,
-) -> Result<String>
-where
-    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
-    G: FnMut(i64, &ImportArgs) -> Result<ImportDryRunReport>,
-{
-    let scopes = discover_export_org_import_scopes(args)?;
-    let mut lookup_cache = ImportLookupCache::default();
-    let mut orgs = Vec::new();
-    let mut imports = Vec::new();
-    for scope in scopes {
-        let target_plan = resolve_target_org_plan_for_export_scope_with_request(
-            &mut request_json,
-            &mut lookup_cache,
-            args,
-            &scope,
-        )?;
-        let dashboard_count = discover_dashboard_files(&target_plan.import_dir)?
-            .into_iter()
-            .filter(|path| {
-                path.file_name().and_then(|name| name.to_str()) != Some(FOLDER_INVENTORY_FILENAME)
-            })
-            .count();
-        orgs.push(serde_json::json!({
-            "sourceOrgId": target_plan.source_org_id,
-            "sourceOrgName": target_plan.source_org_name,
-            "orgAction": target_plan.org_action,
-            "targetOrgId": target_plan.target_org_id,
-            "dashboardCount": dashboard_count,
-            "importDir": target_plan.import_dir.display().to_string(),
-        }));
-        let preview = if let Some(target_org_id) = target_plan.target_org_id {
-            let mut scoped_args = args.clone();
-            scoped_args.org_id = Some(target_org_id);
-            scoped_args.use_export_org = false;
-            scoped_args.only_org_id = Vec::new();
-            scoped_args.create_missing_orgs = false;
-            scoped_args.import_dir = target_plan.import_dir.clone();
-            build_import_dry_run_json_value(&collect_preview_for_org(target_org_id, &scoped_args)?)
-        } else {
-            serde_json::json!({
-                "mode": describe_dashboard_import_mode(args.replace_existing, args.update_existing_only),
-                "folders": [],
-                "dashboards": [],
-                "summary": {
-                    "importDir": target_plan.import_dir.display().to_string(),
-                    "folderCount": 0,
-                    "missingFolders": 0,
-                    "mismatchedFolders": 0,
-                    "dashboardCount": dashboard_count,
-                    "missingDashboards": 0,
-                    "skippedMissingDashboards": 0,
-                    "skippedFolderMismatchDashboards": 0,
-                }
-            })
-        };
-        let mut import_entry = serde_json::Map::new();
-        import_entry.insert(
-            "sourceOrgId".to_string(),
-            Value::from(target_plan.source_org_id),
-        );
-        import_entry.insert(
-            "sourceOrgName".to_string(),
-            Value::from(target_plan.source_org_name.clone()),
-        );
-        import_entry.insert("orgAction".to_string(), Value::from(target_plan.org_action));
-        import_entry.insert(
-            "targetOrgId".to_string(),
-            target_plan
-                .target_org_id
-                .map(Value::from)
-                .unwrap_or(Value::Null),
-        );
-        if let Some(preview_object) = preview.as_object() {
-            for (key, value) in preview_object {
-                import_entry.insert(key.clone(), value.clone());
-            }
-        }
-        imports.push(Value::Object(import_entry));
-    }
-    build_routed_import_dry_run_json_document(&orgs, &imports)
-}
-
-/// Purpose: implementation note.
-pub(crate) fn import_dashboards_by_export_org_with_request<F, G, H>(
-    mut request_json: F,
-    mut import_for_org: G,
-    collect_preview_for_org: H,
-    args: &ImportArgs,
-) -> Result<usize>
-where
-    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
-    G: FnMut(i64, &ImportArgs) -> Result<usize>,
-    H: FnMut(i64, &ImportArgs) -> Result<ImportDryRunReport>,
-{
-    let scopes = discover_export_org_import_scopes(args)?;
-    let mut lookup_cache = ImportLookupCache::default();
-    if args.dry_run && args.json {
-        println!(
-            "{}",
-            build_routed_import_dry_run_json_with_request(
-                request_json,
-                collect_preview_for_org,
-                args,
-            )?
-        );
-        return Ok(0);
-    }
-    let mut imported_count = 0;
-    let mut org_rows = Vec::new();
-    let mut resolved_plans = Vec::new();
-    for scope in scopes {
-        let target_plan = resolve_target_org_plan_for_export_scope_with_request(
-            &mut request_json,
-            &mut lookup_cache,
-            args,
-            &scope,
-        )?;
-        let dashboard_count = discover_dashboard_files(&target_plan.import_dir)?
-            .into_iter()
-            .filter(|path| {
-                path.file_name().and_then(|name| name.to_str()) != Some(FOLDER_INVENTORY_FILENAME)
-            })
-            .count();
-        org_rows.push(build_routed_import_org_row(&target_plan, dashboard_count));
-        resolved_plans.push(target_plan);
-    }
-    if args.dry_run && args.table {
-        for line in render_routed_import_org_table(&org_rows, !args.no_header) {
-            println!("{line}");
-        }
-        return Ok(0);
-    }
-    for target_plan in resolved_plans {
-        if !args.table {
-            println!(
-                "Importing {}",
-                format_routed_import_scope_summary(&target_plan)
-            );
-        }
-        let Some(target_org_id) = target_plan.target_org_id else {
-            continue;
-        };
-        let mut scoped_args = args.clone();
-        scoped_args.org_id = Some(target_org_id);
-        scoped_args.use_export_org = false;
-        scoped_args.only_org_id = Vec::new();
-        scoped_args.create_missing_orgs = false;
-        scoped_args.import_dir = target_plan.import_dir.clone();
-        imported_count += import_for_org(target_org_id, &scoped_args).map_err(|error| {
-            message(format!(
-                "Dashboard routed import failed for {}: {}",
-                format_routed_import_scope_summary(&target_plan),
-                error
-            ))
-        })?;
-    }
-    Ok(imported_count)
-}
-
-/// Purpose: implementation note.
-pub(crate) fn import_dashboards_with_org_clients(args: &ImportArgs) -> Result<usize> {
+pub(crate) fn import_dashboards_with_org_clients(args: &super::ImportArgs) -> Result<usize> {
     let context = build_import_auth_context(args)?;
     let client = JsonHttpClient::new(JsonHttpClientConfig {
         base_url: context.url.clone(),
@@ -2640,14 +719,14 @@ pub(crate) fn import_dashboards_with_org_clients(args: &ImportArgs) -> Result<us
             args,
         );
     }
-    import_dashboards_by_export_org_with_request(
+    super::import_routed::import_dashboards_by_export_org_with_request(
         |method, path, params, payload| client.request_json(method, path, params, payload),
         |target_org_id, scoped_args| {
-            let scoped_client = build_http_client_for_org(&args.common, target_org_id)?;
+            let scoped_client = super::build_http_client_for_org(&args.common, target_org_id)?;
             import_dashboards_with_client(&scoped_client, scoped_args)
         },
         |target_org_id, scoped_args| {
-            let scoped_client = build_http_client_for_org(&args.common, target_org_id)?;
+            let scoped_client = super::build_http_client_for_org(&args.common, target_org_id)?;
             collect_import_dry_run_report_with_request(
                 |method, path, params, payload| {
                     scoped_client.request_json(method, path, params, payload)
@@ -2657,149 +736,4 @@ pub(crate) fn import_dashboards_with_org_clients(args: &ImportArgs) -> Result<us
         },
         args,
     )
-}
-
-/// Purpose: implementation note.
-pub(crate) fn diff_dashboards_with_request<F>(mut request_json: F, args: &DiffArgs) -> Result<usize>
-where
-    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
-{
-    let _ = load_export_metadata(&args.import_dir, Some(RAW_EXPORT_SUBDIR))?;
-    let dashboard_files = discover_dashboard_files(&args.import_dir)?;
-    let mut differences = 0;
-    for dashboard_file in &dashboard_files {
-        let document = load_json_file(dashboard_file)?;
-        let payload = build_import_payload(&document, None, false, "")?;
-        let payload_object =
-            value_as_object(&payload, "Dashboard import payload must be a JSON object.")?;
-        let dashboard = payload_object
-            .get("dashboard")
-            .and_then(Value::as_object)
-            .ok_or_else(|| message("Dashboard import payload is missing dashboard."))?;
-        let uid = string_field(dashboard, "uid", "");
-        let local_compare =
-            build_local_compare_document(&document, args.import_folder_uid.as_deref())?;
-        let Some(remote_payload) = fetch_dashboard_if_exists_with_request(&mut request_json, &uid)?
-        else {
-            println!(
-                "Diff missing in Grafana for uid={} from {}",
-                uid,
-                dashboard_file.display()
-            );
-            differences += 1;
-            continue;
-        };
-        let remote_compare =
-            build_remote_compare_document(&remote_payload, args.import_folder_uid.as_deref())?;
-        if serialize_compare_document(&local_compare)?
-            != serialize_compare_document(&remote_compare)?
-        {
-            let diff_text = build_compare_diff_text(
-                &remote_compare,
-                &local_compare,
-                &uid,
-                dashboard_file,
-                args.context_lines,
-            )?;
-            println!("{diff_text}");
-            differences += 1;
-        } else {
-            println!("Diff matched uid={} for {}", uid, dashboard_file.display());
-        }
-    }
-    println!(
-        "Diff checked {} dashboard(s); {} difference(s) found.",
-        dashboard_files.len(),
-        differences
-    );
-    Ok(differences)
-}
-
-/// Purpose: implementation note.
-///
-/// Args: see function signature.
-/// Returns: see implementation.
-pub fn diff_dashboards_with_client(client: &JsonHttpClient, args: &DiffArgs) -> Result<usize> {
-    diff_dashboards_with_request(
-        |method, path, params, payload| client.request_json(method, path, params, payload),
-        args,
-    )
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::sync::preflight::build_sync_preflight_document;
-    use serde_json::json;
-    use tempfile::tempdir;
-
-    #[test]
-    fn build_dashboard_import_dependency_specs_detects_datasource_and_panel_dependencies() {
-        let temp = tempdir().unwrap();
-        let raw_dir = temp.path().join("raw");
-        std::fs::create_dir_all(&raw_dir).unwrap();
-        std::fs::write(
-            raw_dir.join(EXPORT_METADATA_FILENAME),
-            serde_json::to_string_pretty(&json!({
-                "kind": "grafana-utils-dashboard-export-index",
-                "schemaVersion": TOOL_SCHEMA_VERSION,
-                "variant": "raw",
-                "dashboardCount": 1,
-                "indexFile": "index.json",
-                "format": "grafana-web-import-preserve-uid"
-            }))
-            .unwrap(),
-        )
-        .unwrap();
-        std::fs::write(
-            raw_dir.join("dash.json"),
-            serde_json::to_string_pretty(&json!({
-                "dashboard": {
-                    "id": 7,
-                    "uid": "abc",
-                    "title": "CPU",
-                    "schemaVersion": 38,
-                    "panels": [
-                        {
-                            "type": "row",
-                            "panels": [
-                                {
-                                    "type": "timeseries",
-                                    "datasource": {
-                                        "uid": "prom-main",
-                                        "name": "Prometheus Main"
-                                    }
-                                }
-                            ]
-                        }
-                    ]
-                }
-            }))
-            .unwrap(),
-        )
-        .unwrap();
-
-        let datasource_catalog = build_datasource_catalog(&[]);
-        let desired_specs =
-            build_dashboard_import_dependency_specs(&raw_dir, &datasource_catalog, false, None)
-                .unwrap();
-
-        assert_eq!(desired_specs.len(), 1);
-        assert_eq!(
-            desired_specs[0]["body"]["datasourceUids"],
-            json!(["prom-main"])
-        );
-        assert_eq!(
-            desired_specs[0]["body"]["pluginIds"],
-            json!(["row", "timeseries"])
-        );
-
-        let availability = json!({
-            "datasourceUids": ["other"],
-            "datasourceNames": ["Other"],
-            "pluginIds": ["row"]
-        });
-        let document = build_sync_preflight_document(&desired_specs, Some(&availability)).unwrap();
-        assert_eq!(document["summary"]["blockingCount"], json!(3));
-    }
 }

@@ -1,0 +1,420 @@
+use super::test_support::{
+    build_governance_gate_tui_groups, build_governance_gate_tui_items, build_impact_tui_groups,
+    filter_impact_tui_items, parse_cli_from, DashboardCliArgs, DashboardCommand,
+    DashboardGovernanceGateFinding, DashboardGovernanceGateResult, DashboardGovernanceGateSummary,
+    GovernanceGateOutputFormat, ImpactAlertResource, ImpactDashboard, ImpactDocument,
+    ImpactOutputFormat, ImpactSummary, TopologyOutputFormat,
+};
+use clap::CommandFactory;
+use serde_json::json;
+use std::path::{Path, PathBuf};
+
+fn render_dashboard_subcommand_help(name: &str) -> String {
+    let mut command = DashboardCliArgs::command();
+    let subcommand = command
+        .find_subcommand_mut(name)
+        .unwrap_or_else(|| panic!("missing subcommand {name}"));
+    let mut output = Vec::new();
+    subcommand.write_long_help(&mut output).unwrap();
+    String::from_utf8(output).unwrap()
+}
+
+#[test]
+fn parse_cli_supports_dashboard_governance_gate_command() {
+    let args = parse_cli_from([
+        "grafana-util",
+        "governance-gate",
+        "--policy",
+        "./policy.json",
+        "--governance",
+        "./governance.json",
+        "--queries",
+        "./queries.json",
+        "--output-format",
+        "json",
+        "--json-output",
+        "./governance-check.json",
+    ]);
+
+    match args.command {
+        DashboardCommand::GovernanceGate(gate_args) => {
+            assert_eq!(gate_args.policy, Path::new("./policy.json"));
+            assert_eq!(gate_args.governance, Path::new("./governance.json"));
+            assert_eq!(gate_args.queries, Path::new("./queries.json"));
+            assert_eq!(gate_args.output_format, GovernanceGateOutputFormat::Json);
+            assert_eq!(
+                gate_args.json_output,
+                Some(PathBuf::from("./governance-check.json"))
+            );
+        }
+        _ => panic!("expected governance-gate command"),
+    }
+}
+
+#[test]
+fn governance_gate_help_mentions_policy_and_queries_inputs() {
+    let help = render_dashboard_subcommand_help("governance-gate");
+
+    assert!(help.contains("--policy"));
+    assert!(help.contains("--governance"));
+    assert!(help.contains("--queries"));
+    assert!(help.contains("--json-output"));
+    assert!(help.contains("--output-format"));
+    assert!(help.contains("governance-gate"));
+}
+
+#[test]
+fn governance_gate_help_mentions_interactive_browser() {
+    let help = render_dashboard_subcommand_help("governance-gate");
+    assert!(help.contains("--interactive"));
+}
+
+#[test]
+fn parse_cli_supports_dashboard_topology_command() {
+    let args = parse_cli_from([
+        "grafana-util",
+        "topology",
+        "--governance",
+        "./governance.json",
+        "--alert-contract",
+        "./alert-contract.json",
+        "--output-format",
+        "mermaid",
+        "--output-file",
+        "./dashboard-topology.mmd",
+        "--interactive",
+    ]);
+
+    match args.command {
+        DashboardCommand::Topology(topology_args) => {
+            assert_eq!(topology_args.governance, Path::new("./governance.json"));
+            assert_eq!(
+                topology_args.alert_contract,
+                Some(PathBuf::from("./alert-contract.json"))
+            );
+            assert_eq!(topology_args.output_format, TopologyOutputFormat::Mermaid);
+            assert_eq!(
+                topology_args.output_file,
+                Some(PathBuf::from("./dashboard-topology.mmd"))
+            );
+            assert!(topology_args.interactive);
+        }
+        _ => panic!("expected topology command"),
+    }
+}
+
+#[test]
+fn topology_help_mentions_alert_contract_and_visual_formats() {
+    let help = render_dashboard_subcommand_help("topology");
+
+    assert!(help.contains("--governance"));
+    assert!(help.contains("--alert-contract"));
+    assert!(help.contains("--output-format"));
+    assert!(help.contains("--output-file"));
+    assert!(help.contains("--interactive"));
+    assert!(help.contains("mermaid"));
+    assert!(help.contains("dot"));
+    assert!(help.contains("graph"));
+    assert!(help.contains("variable"));
+    assert!(help.contains("topology"));
+}
+
+#[test]
+fn parse_cli_supports_dashboard_impact_command() {
+    let args = parse_cli_from([
+        "grafana-util",
+        "impact",
+        "--governance",
+        "./governance.json",
+        "--datasource-uid",
+        "prom-main",
+        "--alert-contract",
+        "./alert-contract.json",
+        "--output-format",
+        "json",
+        "--interactive",
+    ]);
+
+    match args.command {
+        DashboardCommand::Impact(impact_args) => {
+            assert_eq!(impact_args.governance, Path::new("./governance.json"));
+            assert_eq!(impact_args.datasource_uid, "prom-main");
+            assert_eq!(
+                impact_args.alert_contract,
+                Some(PathBuf::from("./alert-contract.json"))
+            );
+            assert_eq!(impact_args.output_format, ImpactOutputFormat::Json);
+            assert!(impact_args.interactive);
+        }
+        _ => panic!("expected impact command"),
+    }
+}
+
+#[test]
+fn impact_help_mentions_datasource_uid_and_output_format() {
+    let help = render_dashboard_subcommand_help("impact");
+
+    assert!(help.contains("--governance"));
+    assert!(help.contains("--datasource-uid"));
+    assert!(help.contains("--alert-contract"));
+    assert!(help.contains("--output-format"));
+    assert!(help.contains("--interactive"));
+    assert!(help.contains("blast radius"));
+}
+
+#[test]
+fn build_impact_tui_groups_summarizes_operator_sections() {
+    let document = ImpactDocument {
+        summary: ImpactSummary {
+            datasource_uid: "prom-main".to_string(),
+            dashboard_count: 1,
+            alert_resource_count: 4,
+            alert_rule_count: 1,
+            contact_point_count: 1,
+            mute_timing_count: 1,
+            notification_policy_count: 1,
+            template_count: 0,
+        },
+        dashboards: vec![ImpactDashboard {
+            dashboard_uid: "cpu-main".to_string(),
+            dashboard_title: "CPU Main".to_string(),
+            folder_path: "Platform".to_string(),
+            panel_count: 2,
+            query_count: 3,
+        }],
+        alert_resources: vec![
+            ImpactAlertResource {
+                kind: "alert-rule".to_string(),
+                identity: "cpu-high".to_string(),
+                title: "CPU High".to_string(),
+                source_path: "rules/cpu-high.json".to_string(),
+            },
+            ImpactAlertResource {
+                kind: "mute-timing".to_string(),
+                identity: "weekday".to_string(),
+                title: "Weekday".to_string(),
+                source_path: "mute/weekday.yaml".to_string(),
+            },
+            ImpactAlertResource {
+                kind: "contact-point".to_string(),
+                identity: "ops-email".to_string(),
+                title: "Ops Email".to_string(),
+                source_path: "contact/ops-email.yaml".to_string(),
+            },
+            ImpactAlertResource {
+                kind: "notification-policy".to_string(),
+                identity: "default".to_string(),
+                title: "Default Policy".to_string(),
+                source_path: "policies/default.yaml".to_string(),
+            },
+        ],
+        affected_contact_points: vec![ImpactAlertResource {
+            kind: "contact-point".to_string(),
+            identity: "ops-email".to_string(),
+            title: "Ops Email".to_string(),
+            source_path: "contact/ops-email.yaml".to_string(),
+        }],
+        affected_policies: vec![ImpactAlertResource {
+            kind: "notification-policy".to_string(),
+            identity: "default".to_string(),
+            title: "Default Policy".to_string(),
+            source_path: "policies/default.yaml".to_string(),
+        }],
+        affected_templates: Vec::new(),
+    };
+    let groups = build_impact_tui_groups(&document);
+
+    assert_eq!(groups[0].label, "All");
+    assert_eq!(groups[0].count, 5);
+    assert_eq!(groups[1].label, "Dashboards");
+    assert_eq!(groups[1].count, 1);
+    assert_eq!(groups[2].label, "Alert Rules");
+    assert_eq!(groups[2].count, 1);
+    assert_eq!(groups[4].label, "Contact Points");
+    assert_eq!(groups[4].count, 1);
+}
+
+#[test]
+fn filter_impact_tui_items_limits_items_to_selected_group() {
+    let document = ImpactDocument {
+        summary: ImpactSummary {
+            datasource_uid: "prom-main".to_string(),
+            dashboard_count: 1,
+            alert_resource_count: 3,
+            alert_rule_count: 1,
+            contact_point_count: 1,
+            mute_timing_count: 0,
+            notification_policy_count: 1,
+            template_count: 0,
+        },
+        dashboards: vec![ImpactDashboard {
+            dashboard_uid: "cpu-main".to_string(),
+            dashboard_title: "CPU Main".to_string(),
+            folder_path: "Platform".to_string(),
+            panel_count: 2,
+            query_count: 3,
+        }],
+        alert_resources: vec![
+            ImpactAlertResource {
+                kind: "alert-rule".to_string(),
+                identity: "cpu-high".to_string(),
+                title: "CPU High".to_string(),
+                source_path: "rules/cpu-high.json".to_string(),
+            },
+            ImpactAlertResource {
+                kind: "contact-point".to_string(),
+                identity: "ops-email".to_string(),
+                title: "Ops Email".to_string(),
+                source_path: "contact/ops-email.yaml".to_string(),
+            },
+            ImpactAlertResource {
+                kind: "notification-policy".to_string(),
+                identity: "default".to_string(),
+                title: "Default Policy".to_string(),
+                source_path: "policies/default.yaml".to_string(),
+            },
+        ],
+        affected_contact_points: vec![ImpactAlertResource {
+            kind: "contact-point".to_string(),
+            identity: "ops-email".to_string(),
+            title: "Ops Email".to_string(),
+            source_path: "contact/ops-email.yaml".to_string(),
+        }],
+        affected_policies: vec![ImpactAlertResource {
+            kind: "notification-policy".to_string(),
+            identity: "default".to_string(),
+            title: "Default Policy".to_string(),
+            source_path: "policies/default.yaml".to_string(),
+        }],
+        affected_templates: Vec::new(),
+    };
+    let dashboard_items = filter_impact_tui_items(&document, "dashboard");
+    let alert_rule_items = filter_impact_tui_items(&document, "alert-rule");
+    let all_items = filter_impact_tui_items(&document, "all");
+
+    assert_eq!(dashboard_items.len(), 1);
+    assert!(dashboard_items.iter().all(|item| item.kind == "dashboard"));
+    assert_eq!(alert_rule_items.len(), 1);
+    assert!(alert_rule_items
+        .iter()
+        .all(|item| item.kind == "alert-rule"));
+    assert_eq!(all_items.len(), 4);
+}
+
+#[test]
+fn build_governance_gate_tui_groups_summarizes_findings() {
+    let result = DashboardGovernanceGateResult {
+        ok: false,
+        summary: DashboardGovernanceGateSummary {
+            dashboard_count: 2,
+            query_record_count: 5,
+            violation_count: 2,
+            warning_count: 1,
+            checked_rules: json!([]),
+        },
+        violations: vec![
+            DashboardGovernanceGateFinding {
+                severity: "error".to_string(),
+                code: "max-queries-per-dashboard".to_string(),
+                risk_kind: "".to_string(),
+                dashboard_uid: "cpu-main".to_string(),
+                dashboard_title: "CPU Main".to_string(),
+                panel_id: "".to_string(),
+                panel_title: "".to_string(),
+                ref_id: "".to_string(),
+                datasource: "".to_string(),
+                datasource_uid: "".to_string(),
+                datasource_family: "".to_string(),
+                message: "too many queries".to_string(),
+            },
+            DashboardGovernanceGateFinding {
+                severity: "error".to_string(),
+                code: "forbid-mixed-families".to_string(),
+                risk_kind: "".to_string(),
+                dashboard_uid: "logs-main".to_string(),
+                dashboard_title: "Logs Main".to_string(),
+                panel_id: "".to_string(),
+                panel_title: "".to_string(),
+                ref_id: "".to_string(),
+                datasource: "".to_string(),
+                datasource_uid: "".to_string(),
+                datasource_family: "".to_string(),
+                message: "mixed families".to_string(),
+            },
+        ],
+        warnings: vec![DashboardGovernanceGateFinding {
+            severity: "warning".to_string(),
+            code: "warning-risk".to_string(),
+            risk_kind: "broad-loki-selector".to_string(),
+            dashboard_uid: "logs-main".to_string(),
+            dashboard_title: "Logs Main".to_string(),
+            panel_id: "".to_string(),
+            panel_title: "".to_string(),
+            ref_id: "".to_string(),
+            datasource: "".to_string(),
+            datasource_uid: "".to_string(),
+            datasource_family: "loki".to_string(),
+            message: "wide query".to_string(),
+        }],
+    };
+
+    let groups = build_governance_gate_tui_groups(&result);
+    assert_eq!(groups[0].label, "All");
+    assert_eq!(groups[0].count, 3);
+    assert_eq!(groups[1].label, "Violations");
+    assert_eq!(groups[1].count, 2);
+    assert_eq!(groups[2].label, "Warnings");
+    assert_eq!(groups[2].count, 1);
+}
+
+#[test]
+fn build_governance_gate_tui_items_filters_by_kind() {
+    let result = DashboardGovernanceGateResult {
+        ok: false,
+        summary: DashboardGovernanceGateSummary {
+            dashboard_count: 2,
+            query_record_count: 5,
+            violation_count: 1,
+            warning_count: 1,
+            checked_rules: json!([]),
+        },
+        violations: vec![DashboardGovernanceGateFinding {
+            severity: "error".to_string(),
+            code: "max-queries-per-dashboard".to_string(),
+            risk_kind: "".to_string(),
+            dashboard_uid: "cpu-main".to_string(),
+            dashboard_title: "CPU Main".to_string(),
+            panel_id: "".to_string(),
+            panel_title: "".to_string(),
+            ref_id: "".to_string(),
+            datasource: "".to_string(),
+            datasource_uid: "".to_string(),
+            datasource_family: "".to_string(),
+            message: "too many queries".to_string(),
+        }],
+        warnings: vec![DashboardGovernanceGateFinding {
+            severity: "warning".to_string(),
+            code: "warning-risk".to_string(),
+            risk_kind: "broad-loki-selector".to_string(),
+            dashboard_uid: "logs-main".to_string(),
+            dashboard_title: "Logs Main".to_string(),
+            panel_id: "".to_string(),
+            panel_title: "".to_string(),
+            ref_id: "".to_string(),
+            datasource: "".to_string(),
+            datasource_uid: "".to_string(),
+            datasource_family: "loki".to_string(),
+            message: "wide query".to_string(),
+        }],
+    };
+
+    let violation_items = build_governance_gate_tui_items(&result, "violation");
+    let warning_items = build_governance_gate_tui_items(&result, "warning");
+    let all_items = build_governance_gate_tui_items(&result, "all");
+
+    assert_eq!(violation_items.len(), 1);
+    assert_eq!(violation_items[0].kind, "violation");
+    assert_eq!(warning_items.len(), 1);
+    assert_eq!(warning_items[0].kind, "warning");
+    assert_eq!(all_items.len(), 2);
+}

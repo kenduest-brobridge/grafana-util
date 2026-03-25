@@ -28,7 +28,7 @@ grafana-util <domain> <command> [options]
 ```
 
 ### 入口點說明：
-- **`grafana-util`**: 統一調度器（Unified Dispatcher），支援 `dashboard/alert/datasource/access`。
+- **`grafana-util`**：統一入口，支援 `dashboard/alert/datasource/access`。
 - 統一 CLI 請使用命名空間形式：`grafana-util <domain> <command>`。
 - `dashboard list-data-sources` 仍可使用，但新的資料來源盤點流程應優先改用 `datasource list`。
 
@@ -51,6 +51,14 @@ grafana-util <domain> <command> [options]
 | `--timeout` | HTTP 請求逾時時間 | 處理大規模資料或網路不穩時可調高（預設 30s） |
 | `--verify-ssl` | 啟用 TLS 憑證驗證 | 生產環境建議開啟（預設為關閉） |
 
+### 2.1 如何閱讀範例輸出
+
+- `範例指令` 代表實際可用的呼叫方式。
+- `範例輸出` 代表預期格式，不保證您的 UID、名稱、筆數、folder 一定完全相同。
+- 若段落帶有 `實跑註記`，代表命令形態與輸出片段已用本地 Docker Grafana `12.4.1` 服務驗證過。
+- 表格輸出適合人工操作。
+- JSON 輸出適合腳本、自動化與 CI。
+
 ### 命令分區（快速導覽）
 
 - Dashboard：`dashboard export`、`dashboard list`、`dashboard import`、`dashboard diff`、`dashboard inspect-export`、`dashboard inspect-live`、`dashboard inspect-vars`、`dashboard screenshot`
@@ -58,7 +66,7 @@ grafana-util <domain> <command> [options]
 - Datasource：`datasource list`、`datasource export`、`datasource import`、`datasource diff`
 - Access：`access org list`、`access org add`、`access org modify`、`access org delete`、`access org export`、`access org import`、`access user list`、`access user add`、`access user modify`、`access user delete`、`access user export`、`access user import`、`access user diff`、`access team list`、`access team add`、`access team modify`、`access team delete`、`access team export`、`access team import`、`access team diff`、`access service-account list`、`access service-account add`、`access service-account export`、`access service-account import`、`access service-account diff`、`access service-account delete`、`access service-account token add`、`access service-account token delete`
 
-### 指令功能矩陣 (Feature Matrix)
+### 指令功能總覽
 
 本表可協助您快速確認各類 Grafana 資源的支援程度，以便選擇合適的指令執行資產盤點或狀態同步。
 
@@ -67,7 +75,7 @@ grafana-util <domain> <command> [options]
 | **Dashboard** | Yes | Yes | Yes | Yes | Yes | No | No | No | 適合資產盤點、備份與環境遷移 |
 | **Datasource** | Yes | Yes | Yes | Yes | No | No | No | No | 支援組態漂移檢查與環境同步 |
 | **Alerting** | Yes | Yes | Yes | Yes | No | No | No | No | 涵蓋 Rules, Contact Points, Mute Timings |
-| **Organization** | Yes | Yes | Yes | No | No | Yes | Yes | Yes | 支援 org 盤點與 membership replay |
+| **Organization** | Yes | Yes | Yes | No | No | Yes | Yes | Yes | 支援 org 盤點與成員關係重建 |
 | **User** | Yes | Yes | Yes | Yes | No | Yes | Yes | Yes | 支援全域或組織範圍的使用者盤點 |
 | **Team / Group** | Yes | Yes | Yes | Yes | No | Yes | Yes | Yes | 包含成員關係（Membership）同步 |
 | **Service Account** | Yes | Yes | Yes | Yes | No | Yes | Yes | Yes | 生命週期管理與 Token 簽發 |
@@ -483,7 +491,7 @@ grafana-util alert import --url http://localhost:3000 --basic-user admin --basic
 ```
 
 如何判讀：
-- `summary` 是 replay 前最快的安全檢查。
+- `summary` 是回放前最快的安全檢查。
 - `would-*` 是 dry-run 預測結果。
 - `kind` 可快速看出哪一類 alert 資源會變動。
 
@@ -639,7 +647,7 @@ Datasource export completed: 3 item(s)
 ```
 
 實跑註記：
-- 上面的命令型態已在 Rust live smoke 流程中，對真實 Grafana `12.4.1` Docker 服務驗證過。
+- 上面的命令型態已在 Rust Docker 實測流程中，對真實 Grafana `12.4.1` 服務驗證過。
 
 ### 5.3 `datasource import`
 
@@ -677,7 +685,7 @@ loki-prod   loki-prod          loki         create   missing
 ```
 
 實跑註記：
-- 真實環境 Docker 測試也會驗證路由式資料來源重現 (routed datasource replay)：`--use-export-org`、可重複的 `--only-org-id`、以及 `--create-missing-orgs`。在路由式模擬執行 (routed dry-run) JSON 中，會先看到組織層級的 `exists`、`missing-org`、或 `would-create-org`，再進入每筆資料來源操作。
+- 真實環境 Docker 測試也會驗證依匯出來源 org 回放資料來源：`--use-export-org`、可重複的 `--only-org-id`、以及 `--create-missing-orgs`。在這種模擬執行 JSON 中，會先看到組織層級的 `exists`、`missing-org`、或 `would-create-org`，再進入每筆資料來源操作。
 
 ### 5.4 `datasource diff`
 
@@ -780,36 +788,36 @@ grafana-util datasource add \
   --dry-run --table
 ```
 
+範例輸出：
+```text
+INDEX  NAME          TYPE       ACTION  DETAIL
+1      influx-main   influxdb   create  would create datasource uid=influx-main
+```
+
+實跑註記：
+- datasource mutation 這組命令已在 Docker Grafana `12.4.1` 實測流程中驗證，包含 dry-run 預覽，以及線上 add/modify 後 secret 欄位的保留行為。
+
 6) Access (存取控制) 指令模組
 -------------
 
-這是本工具的核心功能，專為大規模環境的**權限治理與狀態同步**設計。
+`group` 是 `team` 的別名。
 
-### 6.1 使用者管理 (User Operations)
-- `access user list`: 支援 `org` 與 `global` 範圍的權限盤點。
-- `access user export`: 建立使用者快照，包含其組織角色與團隊成員關係。
-- `access user import`: **宣告式還原**使用者狀態。
-- **`--with-teams`**: 匯出/匯入時包含 Team 成員關係同步（還原權限時必備）。
+### 6.1 `access user list`
 
-### 6.2 團隊管理 (Team Operations)
-- `access team import`: 執行確定性（Deterministic）的成員同步。
-- **組態漂移檢查**: 使用 `access team diff` 識別本地快照與線上環境的成員差異。
-- **安全警告**: 若匯入操作會移除現有成員，必須加上 `--yes` 以避免非預期的權限丟失。
+**用途**：列出 org 或 global 範圍的使用者。
 
----
-
-8) 常見維運情境 SOP (Best Practices)
-------------------
-
-### 8.1 跨環境 Dashboard 遷移 (Promote to Prod)
-1. **備份與提交**: 在來源環境執行 `export` 並將產出的 JSON 提交至 Git 倉庫。
-2. **差異模擬執行**: 在目標環境執行 `import --dry-run --table --import-dir <DIR>/raw`。
-3. **安全更新**: 確認無誤後，執行 `import --replace-existing` 完成同步。
-
-### 8.2 資產稽核與漂移盤點
-1. **線上掃描**: 定期執行 `dashboard inspect-live --output-format governance-json` 識別孤立資源。
-2. **組態比對**：利用 `datasource diff` 確保線上資料來源設定與標準庫一致。
-3. **權限稽核**: 執行 `access user list --scope global --csv` 產出年度審計報表。
+| 參數 | 用途 | 差異 / 情境 |
+| --- | --- | --- |
+| `--scope` | `org` 或 `global` | 指定列舉範圍 |
+| `--query` | 模糊搜尋 login/email/name | 大範圍搜尋 |
+| `--login` | 精準比對 login | 精準定位 |
+| `--email` | 精準比對 email | 精準定位 |
+| `--org-role` | 依 org role 篩選 | 權限盤點 |
+| `--grafana-admin` | 依 server admin 身分篩選 | 管理員盤點 |
+| `--with-teams` | 顯示 team 成員資訊 | 檢查團隊歸屬 |
+| `--page`、`--per-page` | 分頁 | 大量使用者 |
+| `--table`、`--csv`、`--json` | 輸出模式 | 人工與自動化 |
+| `--output-format table\|csv\|json` | 單一輸出旗標 | 取代舊三旗標 |
 
 範例指令：
 ```bash
@@ -823,6 +831,10 @@ ID   LOGIN      EMAIL                NAME             ORG_ROLE   GRAFANA_ADMIN
 7    svc-ci     ci@example.com       CI Service       Editor     false
 9    alice      alice@example.com    Alice Chen       Viewer     false
 ```
+
+補充：
+- `ORG_ROLE` 是 org 內角色，不等於全域管理員權限。
+- `GRAFANA_ADMIN=true` 通常只應出現在少數維運帳號。
 
 ### 6.2 `access user add`
 
@@ -1154,7 +1166,7 @@ Exported teams from http://localhost:3000 -> /tmp/access-teams/teams.json and /t
 | 參數 | 用途 | 差異 / 情境 |
 | --- | --- | --- |
 | `--import-dir` | 包含 `teams.json` 與 `export-metadata.json` 的目錄 | 必須沿用 export 目錄結構 |
-| `--replace-existing` | 更新既有 team | 用於跨環境 replay |
+| `--replace-existing` | 更新既有 team | 用於跨環境回放 |
 | `--dry-run` | 僅模擬執行，不實際變更 | 建議先跑 |
 | `--yes` | 跳過 destructive 移除確認 | 當預期移除 team 成員時必須 |
 | `--table`、`--json`、`--output-format table/json` | dry-run 輸出模式 | 僅 `--dry-run` 可用，且互斥 |
@@ -1245,7 +1257,7 @@ Exported 3 service-account(s) from http://localhost:3000 -> access-service-accou
 ```
 
 實跑註記：
-- 這條 snapshot 流程已由 `make test-access-live` 在 Grafana `12.4.1` 上驗證，包含 export、diff、dry-run import、線上 replay、delete，以及 token lifecycle。
+- 這條 snapshot 流程已由 `make test-access-live` 在 Grafana `12.4.1` 上驗證，包含 export、diff、dry-run import、線上回放、delete，以及 token 建立與刪除流程。
 
 ### 6.16 `access service-account import`
 
@@ -1273,7 +1285,7 @@ Import summary: processed=2 created=1 updated=1 skipped=0 source=./access-servic
 ```
 
 實跑註記：
-- live smoke 測試會先改寫匯出的 snapshot，確認 dry-run update preview，再把同一份檔案實際 replay 回 Grafana，驗證線上更新路徑。
+- Docker 實測會先改寫匯出的 snapshot，確認 dry-run 更新預覽，再把同一份檔案實際回放到 Grafana，驗證線上更新路徑。
 
 ### 6.17 `access service-account diff`
 
@@ -1518,7 +1530,7 @@ grafana-util access service-account token delete --url <URL> --token <TOKEN> --n
 | alert list-* | table/csv/json | 不可 | list 命令共用 |
 | datasource list | table/csv/json | 不可 | 同上 |
 | datasource add | text/table/json | 不可（僅 text/table/json） | dry-run 可用 |
-| datasource import | text/table/json | 不可（僅 text/table/json） | text 為 dry-run 摘要，也支援 routed org-level preview |
+| datasource import | text/table/json | 不可（僅 text/table/json） | text 為 dry-run 摘要，也支援依來源 org 顯示預覽結果 |
 | access user list | table/csv/json | 不可 | 同上 |
 | access team list | table/csv/json | 不可 | 同上 |
 | access user import | text/table/json | 不可（僅 text/table/json） | text 為 dry-run 摘要 |
@@ -1536,8 +1548,8 @@ grafana-util access service-account token delete --url <URL> --token <TOKEN> --n
 | dashboard import | 僅模擬執行 `create/update/skip` |
 | datasource import | 僅模擬執行 `create/update/skip` |
 | alert import | 僅模擬執行 `create/update` |
-| access user import | 僅模擬執行 `create/update/skip`，以及 team 變更 preview |
-| access team import | 僅模擬執行 `create/update/skip`，以及 membership 變更 preview |
+| access user import | 僅模擬執行 `create/update/skip`，以及 team 變更預覽 |
+| access team import | 僅模擬執行 `create/update/skip`，以及成員變更預覽 |
 
 `ORG` 控制：
 

@@ -6,8 +6,9 @@ use serde_json::{Map, Value};
 use super::inspect::{
     extract_flux_pipeline_functions, extract_influxql_select_functions,
     extract_influxql_select_metrics, extract_influxql_time_windows, extract_query_buckets,
-    extract_query_measurements, ordered_unique_push, QueryAnalysis,
+    extract_query_measurements,
 };
+use super::inspect_query::{ordered_unique_push, QueryAnalysis};
 
 fn extract_flux_every_windows(query_text: &str) -> Vec<String> {
     let sanitized_query = Regex::new(r#""(?:\\.|[^"\\])*""#)

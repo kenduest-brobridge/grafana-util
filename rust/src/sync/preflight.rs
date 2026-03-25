@@ -8,7 +8,7 @@
 
 use super::workbench::{normalize_resource_specs, SyncResourceSpec};
 use crate::common::{message, Result};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::collections::BTreeSet;
 
@@ -25,6 +25,52 @@ pub struct SyncPreflightCheck {
     pub status: String,
     pub detail: String,
     pub blocking: bool,
+}
+
+/// Struct definition for SyncPreflightSummary.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase", default)]
+pub struct SyncPreflightSummary {
+    pub check_count: i64,
+    pub ok_count: i64,
+    pub blocking_count: i64,
+}
+
+impl SyncPreflightSummary {
+    pub(crate) fn from_document(document: &Value) -> Result<Self> {
+        let summary = document
+            .get("summary")
+            .ok_or_else(|| message("Sync preflight document is missing summary."))?;
+        let summary = summary
+            .as_object()
+            .ok_or_else(|| message("Sync preflight summary must be a JSON object."))?;
+        serde_json::from_value(Value::Object(summary.clone()))
+            .map_err(|error| message(format!("Sync preflight summary is invalid: {error}")))
+    }
+}
+
+pub(crate) fn require_sync_preflight_summary(document: &Value) -> Result<SyncPreflightSummary> {
+    let summary = document
+        .get("summary")
+        .and_then(Value::as_object)
+        .ok_or_else(|| message("Sync preflight document is missing summary."))?;
+    let check_count = summary
+        .get("checkCount")
+        .and_then(Value::as_i64)
+        .ok_or_else(|| message("Sync preflight summary is missing checkCount."))?;
+    let ok_count = summary
+        .get("okCount")
+        .and_then(Value::as_i64)
+        .ok_or_else(|| message("Sync preflight summary is missing okCount."))?;
+    let blocking_count = summary
+        .get("blockingCount")
+        .and_then(Value::as_i64)
+        .ok_or_else(|| message("Sync preflight summary is missing blockingCount."))?;
+    Ok(SyncPreflightSummary {
+        check_count,
+        ok_count,
+        blocking_count,
+    })
 }
 
 fn normalize_text(value: Option<&Value>) -> String {
@@ -373,9 +419,8 @@ pub fn build_sync_preflight_document(
     desired_specs: &[Value],
     availability: Option<&Value>,
 ) -> Result<Value> {
-    // Call graph (hierarchy): this function is used in related modules.
-    // Upstream callers: bundle_preflight.rs:build_bundle_preflight_document, sync.rs:run_sync_cli, sync_bundle_preflight.rs:build_sync_bundle_preflight_document, sync_rust_tests.rs:build_sync_preflight_document_reports_plugin_dependency_and_alert_blocks, sync_rust_tests.rs:render_sync_preflight_text_renders_deterministic_summary
-    // Downstream callees: common.rs:message, sync_preflight.rs:build_alert_checks, sync_preflight.rs:build_dashboard_checks, sync_preflight.rs:build_datasource_checks, sync_preflight.rs:require_object, sync_workbench.rs:normalize_resource_specs
+    // Normalize first so preflight checks stay a read-only overlay on the same
+    // staged resource contract used by plan and audit.
 
     let specs = normalize_resource_specs(desired_specs)?;
     let availability = require_object(availability, "availability")?;
@@ -402,11 +447,11 @@ pub fn build_sync_preflight_document(
     Ok(serde_json::json!({
         "kind": SYNC_PREFLIGHT_KIND,
         "schemaVersion": SYNC_PREFLIGHT_SCHEMA_VERSION,
-        "summary": {
-            "checkCount": checks.len(),
-            "okCount": checks.iter().filter(|item| item.status == "ok").count(),
-            "blockingCount": checks.iter().filter(|item| item.blocking).count(),
-        },
+        "summary": serde_json::to_value(SyncPreflightSummary {
+            check_count: checks.len() as i64,
+            ok_count: checks.iter().filter(|item| item.status == "ok").count() as i64,
+            blocking_count: checks.iter().filter(|item| item.blocking).count() as i64,
+        })?,
         "checks": checks.iter().map(|item| {
             serde_json::json!({
                 "kind": item.kind,
@@ -424,28 +469,19 @@ pub fn build_sync_preflight_document(
 /// Args: see function signature.
 /// Returns: see implementation.
 pub fn render_sync_preflight_text(document: &Value) -> Result<Vec<String>> {
-    // Call graph (hierarchy): this function is used in related modules.
-    // Upstream callers: sync.rs:run_sync_cli, sync_rust_tests.rs:render_sync_preflight_text_rejects_wrong_kind, sync_rust_tests.rs:render_sync_preflight_text_renders_deterministic_summary
-    // Downstream callees: common.rs:message, sync_preflight.rs:normalize_text, sync_preflight.rs:require_object
+    // Keep the text renderer strict about the document kind so the CLI can
+    // switch between text and JSON without special-casing the payload shape.
 
     let kind = normalize_text(document.get("kind"));
     if kind != SYNC_PREFLIGHT_KIND {
         return Err(message("Sync preflight document kind is not supported."));
     }
-    let summary = require_object(document.get("summary"), "summary")?;
+    let summary = SyncPreflightSummary::from_document(document)?;
     let mut lines = vec![
         "Sync preflight summary".to_string(),
         format!(
             "Checks: {} total, {} ok, {} blocking",
-            summary
-                .get("checkCount")
-                .and_then(Value::as_i64)
-                .unwrap_or(0),
-            summary.get("okCount").and_then(Value::as_i64).unwrap_or(0),
-            summary
-                .get("blockingCount")
-                .and_then(Value::as_i64)
-                .unwrap_or(0)
+            summary.check_count, summary.ok_count, summary.blocking_count
         ),
         String::new(),
         "# Checks".to_string(),

@@ -5,10 +5,13 @@
 //! document shapes.
 
 use crate::dashboard::DatasourceInventoryItem;
+use crate::dashboard::ExportInspectionQueryRow;
+#[cfg(test)]
 use crate::dashboard_inspection_query_features::build_query_features;
-use crate::dashboard_reference_models::{
-    build_query_reference_payload, DashboardQueryReference, QueryFeatureSet,
-};
+use crate::dashboard_inspection_query_features::parse_query_text_families;
+#[cfg(test)]
+use crate::dashboard_reference_models::build_query_reference_payload;
+use crate::dashboard_reference_models::{dedupe_strings, DashboardQueryReference, QueryFeatureSet};
 use serde_json::{json, Map, Value};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -194,14 +197,62 @@ struct DashboardDependencyAccumulator {
     buckets: BTreeSet<String>,
 }
 
+#[derive(Debug, Clone)]
+struct DependencyQueryInput {
+    reference: DashboardQueryReference,
+    feature: QueryFeatureSet,
+}
+
 fn query_signature_key(row: &DashboardQueryReference) -> String {
     format!("{}|{}|{}", row.dashboard_uid, row.panel_id, row.ref_id)
 }
 
-pub(crate) fn build_offline_dependency_contract(
-    query_report_rows: &[Value],
+#[cfg(test)]
+fn build_dependency_query_input_from_value(row: &Value) -> Option<DependencyQueryInput> {
+    let reference = build_query_reference_payload(row)?;
+    let feature = build_query_features(row, &reference);
+    Some(DependencyQueryInput { reference, feature })
+}
+
+fn build_dependency_query_input_from_report_row(
+    row: &ExportInspectionQueryRow,
+) -> DependencyQueryInput {
+    let reference = DashboardQueryReference {
+        dashboard_uid: row.dashboard_uid.clone(),
+        dashboard_title: row.dashboard_title.clone(),
+        panel_id: row.panel_id.clone(),
+        panel_title: row.panel_title.clone(),
+        panel_type: row.panel_type.clone(),
+        ref_id: row.ref_id.clone(),
+        datasource_uid: row.datasource_uid.clone(),
+        datasource_name: row.datasource_name.clone(),
+        datasource_type: row.datasource_type.clone(),
+        datasource_family: row.datasource_family.clone(),
+        file: row.file_path.clone(),
+        query_field: row.query_field.clone(),
+        query: row.query_text.clone(),
+    };
+    let mut hints = parse_query_text_families(&reference);
+    hints.metrics.extend(row.metrics.clone());
+    hints.functions.extend(row.functions.clone());
+    hints.measurements.extend(row.measurements.clone());
+    hints.buckets.extend(row.buckets.clone());
+    DependencyQueryInput {
+        reference,
+        feature: QueryFeatureSet {
+            metrics: dedupe_strings(&hints.metrics),
+            functions: dedupe_strings(&hints.functions),
+            measurements: dedupe_strings(&hints.measurements),
+            buckets: dedupe_strings(&hints.buckets),
+            labels: dedupe_strings(&hints.labels),
+        },
+    }
+}
+
+fn build_offline_dependency_contract_document(
+    query_inputs: Vec<DependencyQueryInput>,
     datasource_inventory: &[DatasourceInventoryItem],
-) -> Value {
+) -> OfflineDependencyReportDocument {
     let mut queries = Vec::new();
     let mut query_features = BTreeMap::new();
     let mut dashboard_dependencies = BTreeMap::<String, DashboardDependencyAccumulator>::new();
@@ -211,25 +262,22 @@ pub(crate) fn build_offline_dependency_contract(
     let mut dashboard_uids = BTreeSet::new();
     let mut panel_keys = BTreeSet::new();
 
-    for row in query_report_rows {
-        let Some(reference) = build_query_reference_payload(row) else {
-            continue;
-        };
+    for input in query_inputs {
+        let DependencyQueryInput { reference, feature } = input;
         let key = query_signature_key(&reference);
-        let hint = build_query_features(row, &reference);
         let QueryFeatureSet {
             metrics,
             functions,
             measurements,
             buckets,
             labels: _labels,
-        } = hint.clone();
+        } = feature.clone();
         dashboard_uids.insert(reference.dashboard_uid.clone());
         panel_keys.insert(format!(
             "{}:{}",
             reference.dashboard_uid, reference.panel_id
         ));
-        query_features.insert(key, hint);
+        query_features.insert(key, feature);
         let dashboard_entry = dashboard_dependencies
             .entry(reference.dashboard_uid.clone())
             .or_insert(DashboardDependencyAccumulator {
@@ -367,7 +415,29 @@ pub(crate) fn build_offline_dependency_contract(
         usage: usage_rows,
         orphaned,
     }
-    .as_json()
+}
+
+#[cfg(test)]
+pub(crate) fn build_offline_dependency_contract(
+    query_report_rows: &[Value],
+    datasource_inventory: &[DatasourceInventoryItem],
+) -> Value {
+    let query_inputs = query_report_rows
+        .iter()
+        .filter_map(build_dependency_query_input_from_value)
+        .collect::<Vec<DependencyQueryInput>>();
+    build_offline_dependency_contract_document(query_inputs, datasource_inventory).as_json()
+}
+
+pub(crate) fn build_offline_dependency_contract_from_report_rows(
+    query_report_rows: &[ExportInspectionQueryRow],
+    datasource_inventory: &[DatasourceInventoryItem],
+) -> Value {
+    let query_inputs = query_report_rows
+        .iter()
+        .map(build_dependency_query_input_from_report_row)
+        .collect::<Vec<DependencyQueryInput>>();
+    build_offline_dependency_contract_document(query_inputs, datasource_inventory).as_json()
 }
 
 #[cfg(test)]
