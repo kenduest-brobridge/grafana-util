@@ -13,6 +13,7 @@ use super::{
         delete_service_account_token_with_request, delete_service_account_with_request,
         delete_team_with_request,
     },
+    render::{user_summary_line, user_table_rows},
     run_access_cli_with_request,
     service_account::{
         add_service_account_token_with_request, add_service_account_with_request,
@@ -25,9 +26,9 @@ use super::{
         modify_team_with_request,
     },
     user::{
-        add_user_with_request, build_user_import_dry_run_document, delete_user_with_request,
-        diff_users_with_request, export_users_with_request, import_users_with_request,
-        list_users_with_request, modify_user_with_request,
+        add_user_with_request, annotate_user_account_scope, build_user_import_dry_run_document,
+        delete_user_with_request, diff_users_with_request, export_users_with_request,
+        import_users_with_request, list_users_with_request, modify_user_with_request,
     },
     AccessCommand, CommonCliArgs, DryRunOutputFormat, OrgCommand, OrgDeleteArgs, OrgDiffArgs,
     OrgExportArgs, OrgImportArgs, OrgListArgs, OrgModifyArgs, Scope, ServiceAccountAddArgs,
@@ -40,7 +41,7 @@ use super::{
 };
 use clap::{CommandFactory, Parser};
 use reqwest::Method;
-use serde_json::{json, Value};
+use serde_json::{json, Map, Value};
 use std::fs;
 use tempfile::tempdir;
 
@@ -132,8 +133,7 @@ fn parse_cli_supports_user_list() {
         "grafana-util access",
         "user",
         "list",
-        "--scope",
-        "global",
+        "--all-orgs",
         "--table",
     ]);
 
@@ -142,11 +142,68 @@ fn parse_cli_supports_user_list() {
             command: UserCommand::List(list_args),
         } => {
             assert_eq!(list_args.scope, Scope::Global);
+            assert!(list_args.all_orgs);
             assert!(list_args.table);
             assert!(!list_args.csv);
             assert!(!list_args.json);
         }
         _ => panic!("expected user list"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_user_browse() {
+    let args = parse_cli_from(["grafana-util access", "user", "browse"]);
+
+    match args.command {
+        AccessCommand::User {
+            command: UserCommand::Browse(browse_args),
+        } => {
+            assert_eq!(browse_args.scope, Scope::Global);
+            assert!(!browse_args.all_orgs);
+            assert!(!browse_args.current_org);
+            assert!(!browse_args.with_teams);
+        }
+        _ => panic!("expected user browse"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_user_browse_current_org() {
+    let args = parse_cli_from(["grafana-util access", "user", "browse", "--current-org"]);
+
+    match args.command {
+        AccessCommand::User {
+            command: UserCommand::Browse(browse_args),
+        } => {
+            assert_eq!(browse_args.scope, Scope::Org);
+            assert!(browse_args.current_org);
+            assert!(!browse_args.all_orgs);
+        }
+        _ => panic!("expected user browse"),
+    }
+}
+
+#[test]
+fn access_user_browse_help_hides_deprecated_with_teams_flag() {
+    let help = render_access_subcommand_help(&["user", "browse"]);
+    assert!(!help.contains("--with-teams"));
+    assert!(help.contains("--all-orgs"));
+    assert!(help.contains("--current-org"));
+    assert!(help.contains("--scope"));
+}
+
+#[test]
+fn parse_cli_supports_team_browse() {
+    let args = parse_cli_from(["grafana-util access", "team", "browse", "--with-members"]);
+
+    match args.command {
+        AccessCommand::Team {
+            command: TeamCommand::Browse(browse_args),
+        } => {
+            assert!(browse_args.with_members);
+        }
+        _ => panic!("expected team browse"),
     }
 }
 
@@ -200,6 +257,7 @@ fn access_root_help_includes_examples() {
 
     assert!(help.contains("Examples:"));
     assert!(help.contains("grafana-util access user list"));
+    assert!(help.contains("grafana-util access user browse"));
     assert!(help.contains("grafana-util access team import"));
 }
 
@@ -875,6 +933,7 @@ fn user_list_with_request_reads_org_users() {
     let args = UserListArgs {
         common: make_token_common(),
         scope: Scope::Org,
+        all_orgs: false,
         query: None,
         login: None,
         email: None,
@@ -906,6 +965,47 @@ fn user_list_with_request_reads_org_users() {
     assert_eq!(count, 1);
     assert_eq!(calls[0].0, Method::GET.to_string());
     assert_eq!(calls[0].1, "/api/org/users");
+}
+
+#[test]
+fn annotate_user_account_scope_marks_org_rows_as_global_shared_identity() {
+    let mut rows = vec![Map::from_iter(vec![
+        ("id".to_string(), Value::String("7".to_string())),
+        ("login".to_string(), Value::String("alice".to_string())),
+        ("scope".to_string(), Value::String("org".to_string())),
+    ])];
+
+    annotate_user_account_scope(&mut rows);
+
+    assert_eq!(
+        rows[0].get("accountScope"),
+        Some(&Value::String("global-shared".to_string()))
+    );
+}
+
+#[test]
+fn user_list_render_shows_account_scope_for_shared_global_identity() {
+    let mut rows = vec![Map::from_iter(vec![
+        ("id".to_string(), Value::String("7".to_string())),
+        ("login".to_string(), Value::String("alice".to_string())),
+        (
+            "email".to_string(),
+            Value::String("alice@example.com".to_string()),
+        ),
+        ("name".to_string(), Value::String("Alice".to_string())),
+        ("orgRole".to_string(), Value::String("Admin".to_string())),
+        (
+            "grafanaAdmin".to_string(),
+            Value::String("true".to_string()),
+        ),
+        ("scope".to_string(), Value::String("org".to_string())),
+        ("teams".to_string(), Value::String(String::new())),
+    ])];
+
+    annotate_user_account_scope(&mut rows);
+
+    assert_eq!(user_table_rows(&rows)[0][7], "global-shared");
+    assert!(user_summary_line(&rows[0]).contains("accountScope=global-shared"));
 }
 
 #[test]

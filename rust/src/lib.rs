@@ -2,47 +2,47 @@
 //!
 //! Maintainers should read the full architecture overview here:
 //! <docs/overview-rust.md>
-/// Module definition for access.
+/// Access-management domain: users, orgs, teams, and service accounts.
 pub mod access;
-/// Module definition for alert.
+/// Alerting export/import/diff/list workflows and shared alert models.
 pub mod alert;
-/// Module definition for alert_sync.
+/// Alert-specific sync assessment helpers used by preflight and sync flows.
 pub mod alert_sync;
-/// Module definition for bundle_preflight.
+/// Cross-resource bundle preflight assembly built above sync resource contracts.
 pub mod bundle_preflight;
-/// Module definition for cli.
+/// Unified top-level CLI parsing and dispatch for the Rust binary.
 pub mod cli;
-/// Module definition for common.
+/// Shared error, auth, JSON, and filesystem helpers reused across domains.
 pub mod common;
-/// Module definition for dashboard.
+/// Dashboard export/import/inspect/screenshot/topology workflows.
 pub mod dashboard;
-/// Module definition for dashboard_inspection_dependency_contract.
+/// Public contract types for dashboard dependency inspection documents.
 pub mod dashboard_inspection_dependency_contract;
-/// Module definition for dashboard_inspection_query_features.
+/// Internal query-feature analysis helpers for dashboard inspection flows.
 pub(crate) mod dashboard_inspection_query_features;
-/// Module definition for dashboard_reference_models.
+/// Shared dashboard reference and dependency summary models.
 pub mod dashboard_reference_models;
-/// Module definition for datasource.
+/// Datasource inventory and mutation workflows.
 pub mod datasource;
-/// Module definition for datasource_catalog.
+/// Built-in datasource type catalog and related metadata helpers.
 pub mod datasource_catalog;
-/// Module definition for datasource_provider.
+/// Datasource provider resolution helpers used by sync/bundle validation.
 pub mod datasource_provider;
-/// Module definition for help_styles.
+/// Centralized Clap help styling configuration.
 pub mod help_styles;
-/// Module definition for http.
+/// Replaceable JSON HTTP client used by all live Grafana operations.
 pub mod http;
-/// Module definition for interactive_browser.
+/// Internal browser/session helpers for screenshot and interactive flows.
 pub(crate) mod interactive_browser;
-/// Module definition for sync.
+/// Declarative sync planning, review, audit, and apply workflows.
 pub mod sync;
-/// Module definition for sync_bundle_alert_contracts.
+/// Re-exported alert bundle contract helpers for compatibility with older paths.
 pub use sync::bundle_alert_contracts as sync_bundle_alert_contracts;
-/// Module definition for sync_bundle_preflight.
+/// Re-exported sync bundle preflight helpers for compatibility with older paths.
 pub use sync::bundle_preflight as sync_bundle_preflight;
-/// Module definition for sync_preflight.
+/// Re-exported sync preflight helpers for compatibility with older paths.
 pub use sync::preflight as sync_preflight;
-/// Module definition for sync_workbench.
+/// Re-exported sync workbench helpers for compatibility with older paths.
 pub use sync::workbench as sync_workbench;
 
 #[cfg(test)]

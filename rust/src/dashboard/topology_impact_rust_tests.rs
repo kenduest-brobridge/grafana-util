@@ -5,6 +5,7 @@ use super::test_support::{
     GovernanceGateOutputFormat, ImpactAlertResource, ImpactDashboard, ImpactDocument,
     ImpactOutputFormat, ImpactSummary, TopologyOutputFormat,
 };
+use crate::dashboard::GovernancePolicySource;
 use clap::CommandFactory;
 use serde_json::json;
 use std::path::{Path, PathBuf};
@@ -24,6 +25,8 @@ fn parse_cli_supports_dashboard_governance_gate_command() {
     let args = parse_cli_from([
         "grafana-util",
         "governance-gate",
+        "--policy-source",
+        "file",
         "--policy",
         "./policy.json",
         "--governance",
@@ -38,7 +41,9 @@ fn parse_cli_supports_dashboard_governance_gate_command() {
 
     match args.command {
         DashboardCommand::GovernanceGate(gate_args) => {
-            assert_eq!(gate_args.policy, Path::new("./policy.json"));
+            assert_eq!(gate_args.policy_source, GovernancePolicySource::File);
+            assert_eq!(gate_args.policy, Some(PathBuf::from("./policy.json")));
+            assert!(gate_args.builtin_policy.is_none());
             assert_eq!(gate_args.governance, Path::new("./governance.json"));
             assert_eq!(gate_args.queries, Path::new("./queries.json"));
             assert_eq!(gate_args.output_format, GovernanceGateOutputFormat::Json);
@@ -55,12 +60,43 @@ fn parse_cli_supports_dashboard_governance_gate_command() {
 fn governance_gate_help_mentions_policy_and_queries_inputs() {
     let help = render_dashboard_subcommand_help("governance-gate");
 
+    assert!(help.contains("--policy-source"));
     assert!(help.contains("--policy"));
+    assert!(help.contains("--builtin-policy"));
+    assert!(help.contains("JSON or YAML"));
     assert!(help.contains("--governance"));
     assert!(help.contains("--queries"));
     assert!(help.contains("--json-output"));
     assert!(help.contains("--output-format"));
     assert!(help.contains("governance-gate"));
+}
+
+#[test]
+fn parse_cli_supports_dashboard_governance_gate_builtin_policy_command() {
+    let args = parse_cli_from([
+        "grafana-util",
+        "governance-gate",
+        "--policy-source",
+        "builtin",
+        "--builtin-policy",
+        "default",
+        "--governance",
+        "./governance.json",
+        "--queries",
+        "./queries.json",
+    ]);
+
+    match args.command {
+        DashboardCommand::GovernanceGate(gate_args) => {
+            assert_eq!(gate_args.policy_source, GovernancePolicySource::Builtin);
+            assert!(gate_args.policy.is_none());
+            assert_eq!(gate_args.builtin_policy.as_deref(), Some("default"));
+            assert_eq!(gate_args.governance, Path::new("./governance.json"));
+            assert_eq!(gate_args.queries, Path::new("./queries.json"));
+            assert_eq!(gate_args.output_format, GovernanceGateOutputFormat::Text);
+        }
+        _ => panic!("expected governance-gate command"),
+    }
 }
 
 #[test]

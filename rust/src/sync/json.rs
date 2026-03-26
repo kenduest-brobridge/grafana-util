@@ -96,3 +96,33 @@ pub(crate) fn require_json_object<'a>(
         .as_object()
         .ok_or_else(|| message(format!("{label} must be a JSON object.")))
 }
+
+pub(crate) fn require_json_array<'a>(document: &'a Value, label: &str) -> Result<&'a Vec<Value>> {
+    document
+        .as_array()
+        .ok_or_else(|| message(format!("{label} must be a JSON array.")))
+}
+
+pub(crate) fn require_json_object_field<'a>(
+    object: &'a Map<String, Value>,
+    key: &str,
+    label: &str,
+) -> Result<&'a Map<String, Value>> {
+    object
+        .get(key)
+        .ok_or_else(|| message(format!("{label} is missing {key}.")))?
+        .as_object()
+        .ok_or_else(|| message(format!("{label} {key} must be a JSON object.")))
+}
+
+pub(crate) fn require_json_array_field<'a>(
+    object: &'a Map<String, Value>,
+    key: &str,
+    label: &str,
+) -> Result<&'a Vec<Value>> {
+    object
+        .get(key)
+        .ok_or_else(|| message(format!("{label} is missing {key}.")))?
+        .as_array()
+        .ok_or_else(|| message(format!("{label} {key} must be a JSON array.")))
+}

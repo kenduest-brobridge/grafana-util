@@ -5,6 +5,7 @@ This directory mixes three kinds of maintainer notes:
 - current planning and assessment documents
 - historical design notes kept for implementation traceability
 - intentionally unwired scaffolds for work that is still not exposed
+- maintainer-only demo scripts for intentionally unwired APIs
 
 Before using an internal note, check the status block or historical note at the
 top of the file.
@@ -42,6 +43,11 @@ treated as the source of truth for whether the feature is now implemented.
 
 - `datasource-secret-handling-unwired.md`
 - `datasource-secret-provider-unwired.md`
+
+## Internal Examples
+
+- `examples/datasource_live_mutation_api_example.py`
+- `examples/datasource_live_mutation_safe_api_example.py`
 
 ## Removed Obsolete Drafts
 

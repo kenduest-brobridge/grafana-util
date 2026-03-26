@@ -83,6 +83,11 @@ pub(crate) fn user_scope_text(scope: &Scope) -> &'static str {
     }
 }
 
+/// User account identity scope text.
+pub(crate) fn user_account_scope_text() -> &'static str {
+    "global-shared"
+}
+
 /// format table.
 pub(crate) fn format_table(headers: &[&str], rows: &[Vec<String>]) -> Vec<String> {
     let mut widths: Vec<usize> = headers.iter().map(|header| header.len()).collect();
@@ -277,6 +282,7 @@ pub(crate) fn user_table_rows(rows: &[Map<String, Value>]) -> Vec<Vec<String>> {
                 map_get_text(row, "orgRole"),
                 map_get_text(row, "grafanaAdmin"),
                 map_get_text(row, "scope"),
+                map_get_text(row, "accountScope"),
                 map_get_text(row, "teams"),
             ]
         })
@@ -336,6 +342,10 @@ pub(crate) fn user_summary_line(row: &Map<String, Value>) -> String {
     let admin = map_get_text(row, "grafanaAdmin");
     if !admin.is_empty() {
         parts.push(format!("grafanaAdmin={admin}"));
+    }
+    let account_scope = map_get_text(row, "accountScope");
+    if !account_scope.is_empty() {
+        parts.push(format!("accountScope={account_scope}"));
     }
     let teams = map_get_text(row, "teams");
     if !teams.is_empty() {

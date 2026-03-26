@@ -12,9 +12,9 @@ use super::screenshot_header::{
     apply_header_if_requested, resolve_header_title, resolve_manifest_title,
     DashboardCaptureMetadata, HeaderSpec,
 };
+use super::screenshot_runtime::{CaptureOffsets, CapturedSegment, FullPageCapture};
 use super::{
-    read_numeric_expression, CaptureOffsets, FullPageCapture, ScreenshotArgs,
-    ScreenshotFullPageOutput, ScreenshotOutputFormat,
+    read_numeric_expression, ScreenshotArgs, ScreenshotFullPageOutput, ScreenshotOutputFormat,
 };
 
 pub(super) fn build_screenshot_clip(
@@ -200,7 +200,7 @@ Math.max(
         };
         let consumed_height = segments
             .iter()
-            .map(|segment: &super::CapturedSegment| segment.image.height())
+            .map(|segment: &CapturedSegment| segment.image.height())
             .fold(0_u32, |acc: u32, height: u32| acc.saturating_add(height));
         let remaining_height = final_total_height.saturating_sub(consumed_height);
         if remaining_height == 0 {
@@ -221,7 +221,7 @@ Math.max(
             copy_height,
         )
         .to_image();
-        segments.push(super::CapturedSegment {
+        segments.push(CapturedSegment {
             image: cropped,
             index: segments.len(),
             scroll_y: (current_y.floor().max(0.0) * device_scale_factor).ceil() as u32,
@@ -351,14 +351,7 @@ pub(super) fn write_full_page_output(
                     &capture,
                     manifest_segments,
                 );
-                fs::write(
-                    manifest_path,
-                    serde_json::to_vec_pretty(&manifest).map_err(|error| {
-                        message(format!(
-                            "Failed to encode screenshot segment manifest: {error}"
-                        ))
-                    })?,
-                )?;
+                fs::write(manifest_path, serde_json::to_vec_pretty(&manifest)?)?;
             }
             Ok(())
         }

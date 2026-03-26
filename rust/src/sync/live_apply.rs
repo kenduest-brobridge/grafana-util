@@ -47,10 +47,11 @@ impl SyncApplyOperation {
 
 pub(crate) fn load_apply_intent_operations(document: &Value) -> Result<Vec<SyncApplyOperation>> {
     let object = crate::sync::require_json_object(document, "Sync apply intent document")?;
-    let operations = object
-        .get("operations")
-        .and_then(Value::as_array)
-        .ok_or_else(|| message("Sync apply intent document is missing operations."))?;
+    let operations = super::super::json::require_json_array_field(
+        object,
+        "operations",
+        "Sync apply intent document",
+    )?;
     operations
         .iter()
         .map(SyncApplyOperation::from_value)

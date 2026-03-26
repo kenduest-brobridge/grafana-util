@@ -33,7 +33,7 @@ The current maintained CLI is the Rust-based `grafana-util` binary.
 
 Use this as a quick capability summary:
 
-- `Dashboard`: list, inspect, capture, export/import/diff. Import is workflow-driven with dry-run and folder-aware migration.
+- `Dashboard`: list, inspect, capture, export/import/delete/diff. Import is workflow-driven with dry-run and folder-aware migration; delete supports UID, folder-path subtree selection, and interactive preview.
 - `Alerting`: list plus export/import/diff for rules and related alerting resources.
 - `Datasource`: list, export/import/diff, and live add/modify/delete. Includes dry-run and multi-org replay support.
 - `Access User`: list, add/modify/delete, export/import/diff for global and org-scoped user lifecycle.
@@ -127,12 +127,22 @@ grafana-util dashboard import \
   --dry-run --table
 ```
 
+Preview a dashboard delete:
+```bash
+grafana-util dashboard delete \
+  --url http://localhost:3000 \
+  --basic-user admin \
+  --basic-password admin \
+  --path "Platform / Infra" \
+  --dry-run --table
+```
+
 ## Command Map
 
 Use this when you want the right entrypoint quickly.
 
 - `grafana-util dashboard ...`
-  - inventory, export/import/diff, inspect, screenshot, PDF capture
+  - inventory, export/import/delete/diff, inspect, screenshot, PDF capture
 - `grafana-util datasource ...`
   - inventory, export/import/diff, live add/modify/delete
 - `grafana-util alert ...`

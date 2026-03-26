@@ -1,23 +1,33 @@
 //! Dashboard screenshot runtime helpers.
+#![cfg_attr(not(any(feature = "browser", test)), allow(dead_code))]
 
+#[cfg(feature = "browser")]
 use headless_chrome::protocol::cdp::Emulation;
+#[cfg(feature = "browser")]
 use headless_chrome::{Browser, LaunchOptionsBuilder};
 use reqwest::Url;
+#[cfg(feature = "browser")]
 use std::collections::HashMap;
+#[cfg(feature = "browser")]
 use std::net::TcpListener;
+#[cfg(feature = "browser")]
 use std::thread;
+#[cfg(feature = "browser")]
 use std::time::Duration;
 
 use crate::common::{message, Result};
 
+#[cfg(feature = "browser")]
 use super::ScreenshotArgs;
 
+#[cfg(feature = "browser")]
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct CaptureOffsets {
     pub(crate) hidden_top_height: f64,
     pub(crate) hidden_left_width: f64,
 }
 
+#[cfg(feature = "browser")]
 #[derive(Debug, Clone)]
 pub(crate) struct CapturedSegment {
     pub(crate) image: image::RgbaImage,
@@ -26,6 +36,7 @@ pub(crate) struct CapturedSegment {
     pub(crate) source_top: u32,
 }
 
+#[cfg(feature = "browser")]
 #[derive(Debug, Clone)]
 pub(crate) struct FullPageCapture {
     pub(crate) total_height: u32,
@@ -51,6 +62,7 @@ pub(crate) struct DashboardUrlState {
     pub(crate) passthrough_pairs: Vec<(String, String)>,
 }
 
+#[cfg(feature = "browser")]
 pub(crate) fn wait_for_dashboard_ready(
     tab: &std::sync::Arc<headless_chrome::Tab>,
     wait_ms: u64,
@@ -120,6 +132,7 @@ pub(crate) fn wait_for_dashboard_ready(
     Ok(())
 }
 
+#[cfg(feature = "browser")]
 pub(crate) fn collapse_sidebar_if_present(
     tab: &std::sync::Arc<headless_chrome::Tab>,
 ) -> Result<()> {
@@ -156,6 +169,7 @@ pub(crate) fn collapse_sidebar_if_present(
     Ok(())
 }
 
+#[cfg(feature = "browser")]
 pub(crate) fn prepare_dashboard_capture_dom(
     tab: &std::sync::Arc<headless_chrome::Tab>,
 ) -> Result<CaptureOffsets> {
@@ -362,6 +376,7 @@ pub(crate) fn prepare_dashboard_capture_dom(
     })
 }
 
+#[cfg(feature = "browser")]
 pub(crate) fn read_numeric_expression(
     tab: &std::sync::Arc<headless_chrome::Tab>,
     expression: &str,
@@ -489,6 +504,7 @@ pub(crate) fn parse_dashboard_url_state(url: &Url) -> DashboardUrlState {
     state
 }
 
+#[cfg(feature = "browser")]
 pub(crate) fn build_browser_headers(headers: &[(String, String)]) -> HashMap<&str, &str> {
     let mut result = HashMap::new();
     for (name, value) in headers {
@@ -497,6 +513,7 @@ pub(crate) fn build_browser_headers(headers: &[(String, String)]) -> HashMap<&st
     result
 }
 
+#[cfg(feature = "browser")]
 pub(crate) fn build_browser(args: &ScreenshotArgs) -> Result<Browser> {
     let debug_port = reserve_debug_port()?;
     let mut builder = LaunchOptionsBuilder::default();
@@ -521,6 +538,7 @@ pub(crate) fn build_browser(args: &ScreenshotArgs) -> Result<Browser> {
     })
 }
 
+#[cfg(feature = "browser")]
 pub(crate) fn configure_capture_viewport(
     tab: &std::sync::Arc<headless_chrome::Tab>,
     args: &ScreenshotArgs,
@@ -549,6 +567,7 @@ pub(crate) fn configure_capture_viewport(
     Ok(())
 }
 
+#[cfg(feature = "browser")]
 fn reserve_debug_port() -> Result<u16> {
     let listener = TcpListener::bind(("127.0.0.1", 0))
         .map_err(|error| message(format!("Failed to reserve Chromium debug port: {error}")))?;

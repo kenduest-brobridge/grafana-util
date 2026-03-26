@@ -1,8 +1,9 @@
+#![cfg(feature = "tui")]
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use reqwest::Method;
 use serde_json::Value;
 
-use crate::common::Result;
+use crate::common::{message, Result};
 
 use super::browse_actions::{
     apply_dashboard_edit_save, begin_dashboard_edit, begin_dashboard_history, build_delete_preview,
@@ -11,10 +12,10 @@ use super::browse_actions::{
 };
 use super::browse_edit_dialog::EditDialogAction;
 use super::browse_history_dialog::HistoryDialogAction;
-use super::browse_state::BrowserState;
-use super::browse_support::DashboardBrowseNodeKind;
+use super::browse_state::{BrowserState, PaneFocus, SearchDirection, SearchState};
+use super::browse_support::{DashboardBrowseNode, DashboardBrowseNodeKind};
 use super::browse_terminal::TerminalSession;
-use super::BrowseArgs;
+use super::{build_http_client_for_org, BrowseArgs};
 
 pub(crate) enum BrowserLoopAction {
     Continue,
@@ -35,12 +36,26 @@ where
         handle_history_dialog_key(request_json, args, state, key)?;
         return Ok(BrowserLoopAction::Continue);
     }
+    if state.pending_search.is_some() {
+        handle_search_dialog_key(state, key)?;
+        return Ok(BrowserLoopAction::Continue);
+    }
     if state.pending_edit.is_some() {
         handle_edit_dialog_key(request_json, args, state, key)?;
         return Ok(BrowserLoopAction::Continue);
     }
 
     match key.code {
+        KeyCode::BackTab if state.pending_delete.is_none() => {
+            state.focus_previous_pane();
+            state.status = format!("Focused {} pane.", state.focus_label());
+            Ok(BrowserLoopAction::Continue)
+        }
+        KeyCode::Tab if state.pending_delete.is_none() => {
+            state.focus_next_pane();
+            state.status = format!("Focused {} pane.", state.focus_label());
+            Ok(BrowserLoopAction::Continue)
+        }
         KeyCode::Esc => {
             if state.pending_delete.is_some() {
                 state.pending_delete = None;
@@ -53,27 +68,43 @@ where
         }
         KeyCode::Char('q') => Ok(BrowserLoopAction::Exit),
         KeyCode::Up if state.pending_delete.is_none() => {
-            state.move_selection(-1);
-            state.detail_scroll = 0;
-            ensure_selected_dashboard_view(request_json, state, false)?;
+            if state.focus == PaneFocus::Tree {
+                state.move_selection(-1);
+                state.detail_scroll = 0;
+                ensure_selected_dashboard_view(request_json, args, state, false)?;
+            } else {
+                state.detail_scroll = state.detail_scroll.saturating_sub(1);
+            }
             Ok(BrowserLoopAction::Continue)
         }
         KeyCode::Down if state.pending_delete.is_none() => {
-            state.move_selection(1);
-            state.detail_scroll = 0;
-            ensure_selected_dashboard_view(request_json, state, false)?;
+            if state.focus == PaneFocus::Tree {
+                state.move_selection(1);
+                state.detail_scroll = 0;
+                ensure_selected_dashboard_view(request_json, args, state, false)?;
+            } else {
+                state.detail_scroll = state.detail_scroll.saturating_add(1);
+            }
             Ok(BrowserLoopAction::Continue)
         }
         KeyCode::Home if state.pending_delete.is_none() => {
-            state.select_first();
-            state.detail_scroll = 0;
-            ensure_selected_dashboard_view(request_json, state, false)?;
+            if state.focus == PaneFocus::Tree {
+                state.select_first();
+                state.detail_scroll = 0;
+                ensure_selected_dashboard_view(request_json, args, state, false)?;
+            } else {
+                state.detail_scroll = 0;
+            }
             Ok(BrowserLoopAction::Continue)
         }
         KeyCode::End if state.pending_delete.is_none() => {
-            state.select_last();
-            state.detail_scroll = 0;
-            ensure_selected_dashboard_view(request_json, state, false)?;
+            if state.focus == PaneFocus::Tree {
+                state.select_last();
+                state.detail_scroll = 0;
+                ensure_selected_dashboard_view(request_json, args, state, false)?;
+            } else {
+                state.detail_scroll = u16::MAX.saturating_sub(32);
+            }
             Ok(BrowserLoopAction::Continue)
         }
         KeyCode::PageUp => {
@@ -88,31 +119,43 @@ where
             let document = refresh_browser_document(request_json, args)?;
             state.replace_document(document);
             state.status = "Refreshed dashboard tree.".to_string();
-            ensure_selected_dashboard_view(request_json, state, false)?;
+            ensure_selected_dashboard_view(request_json, args, state, false)?;
+            Ok(BrowserLoopAction::Continue)
+        }
+        KeyCode::Char('/') if state.pending_delete.is_none() => {
+            state.start_search(SearchDirection::Forward);
+            Ok(BrowserLoopAction::Continue)
+        }
+        KeyCode::Char('?') if state.pending_delete.is_none() => {
+            state.start_search(SearchDirection::Backward);
+            Ok(BrowserLoopAction::Continue)
+        }
+        KeyCode::Char('n') if state.pending_delete.is_none() => {
+            repeat_search(request_json, args, state)?;
             Ok(BrowserLoopAction::Continue)
         }
         KeyCode::Char('v') if state.pending_delete.is_none() => {
-            refresh_selected_dashboard_view(request_json, state)?;
+            refresh_selected_dashboard_view(request_json, args, state)?;
             Ok(BrowserLoopAction::Continue)
         }
         KeyCode::Char('h') if state.pending_delete.is_none() => {
-            open_selected_dashboard_history(request_json, state)?;
+            open_selected_dashboard_history(request_json, args, state)?;
             Ok(BrowserLoopAction::Continue)
         }
         KeyCode::Char('r')
             if state.pending_delete.is_none() && !key.modifiers.contains(KeyModifiers::SHIFT) =>
         {
-            start_selected_dashboard_rename(request_json, state)?;
+            start_selected_dashboard_rename(request_json, args, state)?;
             Ok(BrowserLoopAction::Continue)
         }
         KeyCode::Char('m') if state.pending_delete.is_none() => {
-            start_selected_dashboard_move(request_json, state)?;
+            start_selected_dashboard_move(request_json, args, state)?;
             Ok(BrowserLoopAction::Continue)
         }
         KeyCode::Char('e')
             if state.pending_delete.is_none() && !key.modifiers.contains(KeyModifiers::SHIFT) =>
         {
-            start_selected_dashboard_edit(request_json, state)?;
+            start_selected_dashboard_edit(request_json, args, state)?;
             Ok(BrowserLoopAction::Continue)
         }
         KeyCode::Char('E') if state.pending_delete.is_none() => {
@@ -151,6 +194,49 @@ where
     }
 }
 
+fn handle_search_dialog_key(state: &mut BrowserState, key: &KeyEvent) -> Result<()> {
+    let mut search = state
+        .pending_search
+        .take()
+        .ok_or_else(|| message("Dashboard browse search state is missing."))?;
+    match key.code {
+        KeyCode::Esc | KeyCode::Char('q') if !key.modifiers.contains(KeyModifiers::CONTROL) => {
+            state.status = "Cancelled dashboard search.".to_string();
+        }
+        KeyCode::Enter => {
+            let query = search.query.trim().to_string();
+            if query.is_empty() {
+                state.status = "Search query is empty.".to_string();
+            } else if let Some(index) = state.find_match(&query, search.direction) {
+                state.select_index(index);
+                state.last_search = Some(SearchState {
+                    direction: search.direction,
+                    query: query.clone(),
+                });
+                state.status = format!("Matched '{query}' at tree row {}.", index + 1);
+            } else {
+                state.last_search = Some(SearchState {
+                    direction: search.direction,
+                    query: query.clone(),
+                });
+                state.status = format!("No org, folder, or dashboard matched '{query}'.");
+            }
+        }
+        KeyCode::Backspace => {
+            search.query.pop();
+            state.pending_search = Some(search);
+        }
+        KeyCode::Char(ch) if !key.modifiers.contains(KeyModifiers::CONTROL) => {
+            search.query.push(ch);
+            state.pending_search = Some(search);
+        }
+        _ => {
+            state.pending_search = Some(search);
+        }
+    }
+    Ok(())
+}
+
 fn handle_history_dialog_key<F>(
     request_json: &mut F,
     args: &BrowseArgs,
@@ -170,12 +256,26 @@ where
             state.status = "Closed dashboard history.".to_string();
         }
         HistoryDialogAction::Restore { uid, version } => {
-            restore_dashboard_history_version(request_json, &uid, version)?;
+            let Some(node) = state.selected_node().cloned() else {
+                return Ok(());
+            };
+            if let Some(client) = scoped_org_client(args, &node)? {
+                let mut scoped = |method: Method,
+                                  path: &str,
+                                  params: &[(String, String)],
+                                  payload: Option<&Value>|
+                 -> Result<Option<Value>> {
+                    client.request_json(method, path, params, payload)
+                };
+                restore_dashboard_history_version(&mut scoped, &uid, version)?;
+            } else {
+                restore_dashboard_history_version(request_json, &uid, version)?;
+            }
             state.pending_history = None;
             let document = refresh_browser_document(request_json, args)?;
             state.replace_document(document);
             state.status = format!("Restored dashboard {} to version {}.", uid, version);
-            ensure_selected_dashboard_view(request_json, state, false)?;
+            ensure_selected_dashboard_view(request_json, args, state, false)?;
         }
     }
     Ok(())
@@ -200,15 +300,30 @@ where
             state.status = "Cancelled dashboard edit.".to_string();
         }
         EditDialogAction::Save { draft, update } => {
+            let Some(node) = state.selected_node().cloned() else {
+                return Ok(());
+            };
             state.pending_edit = None;
-            if !apply_dashboard_edit_save(request_json, &state.document, &draft, &update)? {
+            let applied = if let Some(client) = scoped_org_client(args, &node)? {
+                let mut scoped = |method: Method,
+                                  path: &str,
+                                  params: &[(String, String)],
+                                  payload: Option<&Value>|
+                 -> Result<Option<Value>> {
+                    client.request_json(method, path, params, payload)
+                };
+                apply_dashboard_edit_save(&mut scoped, &state.document, &draft, &update)?
+            } else {
+                apply_dashboard_edit_save(request_json, &state.document, &draft, &update)?
+            };
+            if !applied {
                 state.status = format!("No dashboard changes to apply for {}.", draft.uid);
                 return Ok(());
             }
             let document = refresh_browser_document(request_json, args)?;
             state.replace_document(document);
             state.status = format!("Updated dashboard {}.", draft.uid);
-            ensure_selected_dashboard_view(request_json, state, false)?;
+            ensure_selected_dashboard_view(request_json, args, state, false)?;
         }
     }
     Ok(())
@@ -216,6 +331,7 @@ where
 
 pub(crate) fn ensure_selected_dashboard_view<F>(
     request_json: &mut F,
+    args: &BrowseArgs,
     state: &mut BrowserState,
     announce: bool,
 ) -> Result<()>
@@ -226,15 +342,32 @@ where
         return Ok(());
     };
     match node.kind {
+        DashboardBrowseNodeKind::Org => {
+            if announce {
+                state.status = "Org rows summarize browse scope. Select a folder or dashboard row."
+                    .to_string();
+            }
+        }
         DashboardBrowseNodeKind::Dashboard => {
-            if let Some(uid) = node.uid.as_ref() {
-                if state.live_view_cache.contains_key(uid) {
+            if let Some(cache_key) = live_view_cache_key(&node) {
+                if state.live_view_cache.contains_key(&cache_key) {
                     return Ok(());
                 }
             }
-            let lines = load_live_detail_lines(request_json, &node)?;
-            if let Some(uid) = node.uid.as_ref() {
-                state.live_view_cache.insert(uid.clone(), lines);
+            let lines = if let Some(client) = scoped_org_client(args, &node)? {
+                let mut scoped = |method: Method,
+                                  path: &str,
+                                  params: &[(String, String)],
+                                  payload: Option<&Value>|
+                 -> Result<Option<Value>> {
+                    client.request_json(method, path, params, payload)
+                };
+                load_live_detail_lines(&mut scoped, &node)?
+            } else {
+                load_live_detail_lines(request_json, &node)?
+            };
+            if let Some(cache_key) = live_view_cache_key(&node) {
+                state.live_view_cache.insert(cache_key, lines);
             }
             state.detail_scroll = 0;
             if announce {
@@ -250,20 +383,27 @@ where
     Ok(())
 }
 
-fn refresh_selected_dashboard_view<F>(request_json: &mut F, state: &mut BrowserState) -> Result<()>
+fn refresh_selected_dashboard_view<F>(
+    request_json: &mut F,
+    args: &BrowseArgs,
+    state: &mut BrowserState,
+) -> Result<()>
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
-    if let Some(uid) = state
-        .selected_node()
-        .and_then(|node| node.uid.as_ref().cloned())
-    {
-        state.live_view_cache.remove(&uid);
+    if let Some(node) = state.selected_node().cloned() {
+        if let Some(cache_key) = live_view_cache_key(&node) {
+            state.live_view_cache.remove(&cache_key);
+        }
     }
-    ensure_selected_dashboard_view(request_json, state, true)
+    ensure_selected_dashboard_view(request_json, args, state, true)
 }
 
-fn open_selected_dashboard_history<F>(request_json: &mut F, state: &mut BrowserState) -> Result<()>
+fn open_selected_dashboard_history<F>(
+    request_json: &mut F,
+    args: &BrowseArgs,
+    state: &mut BrowserState,
+) -> Result<()>
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
@@ -271,18 +411,33 @@ where
         return Ok(());
     };
     match node.kind {
-        DashboardBrowseNodeKind::Dashboard => {
-            state.pending_history = Some(begin_dashboard_history(request_json, &node)?);
-            state.status = format!("Viewing dashboard history for {}.", node.title);
-        }
-        DashboardBrowseNodeKind::Folder => {
+        DashboardBrowseNodeKind::Org | DashboardBrowseNodeKind::Folder => {
             state.status = "History is only available for dashboard rows.".to_string();
+        }
+        DashboardBrowseNodeKind::Dashboard => {
+            state.pending_history = Some(if let Some(client) = scoped_org_client(args, &node)? {
+                let mut scoped = |method: Method,
+                                  path: &str,
+                                  params: &[(String, String)],
+                                  payload: Option<&Value>|
+                 -> Result<Option<Value>> {
+                    client.request_json(method, path, params, payload)
+                };
+                begin_dashboard_history(&mut scoped, &node)?
+            } else {
+                begin_dashboard_history(request_json, &node)?
+            });
+            state.status = format!("Viewing dashboard history for {}.", node.title);
         }
     }
     Ok(())
 }
 
-fn start_selected_dashboard_edit<F>(request_json: &mut F, state: &mut BrowserState) -> Result<()>
+fn start_selected_dashboard_edit<F>(
+    request_json: &mut F,
+    args: &BrowseArgs,
+    state: &mut BrowserState,
+) -> Result<()>
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
@@ -290,20 +445,35 @@ where
         return Ok(());
     };
     match node.kind {
+        DashboardBrowseNodeKind::Org | DashboardBrowseNodeKind::Folder => {
+            state.status =
+                "Folder/org edit is not available in v2 yet. Select a dashboard row.".to_string();
+        }
         DashboardBrowseNodeKind::Dashboard => {
-            state.pending_edit = Some(begin_dashboard_edit(request_json, &state.document, &node)?);
+            state.pending_edit = Some(if let Some(client) = scoped_org_client(args, &node)? {
+                let mut scoped = |method: Method,
+                                  path: &str,
+                                  params: &[(String, String)],
+                                  payload: Option<&Value>|
+                 -> Result<Option<Value>> {
+                    client.request_json(method, path, params, payload)
+                };
+                begin_dashboard_edit(&mut scoped, &state.document, &node)?
+            } else {
+                begin_dashboard_edit(request_json, &state.document, &node)?
+            });
             state.status =
                 "Editing dashboard in TUI dialog. Ctrl+S saves, Esc cancels.".to_string();
         }
-        DashboardBrowseNodeKind::Folder => {
-            state.status =
-                "Folder edit is not available in v2 yet. Select a dashboard row.".to_string();
-        }
     }
     Ok(())
 }
 
-fn start_selected_dashboard_rename<F>(request_json: &mut F, state: &mut BrowserState) -> Result<()>
+fn start_selected_dashboard_rename<F>(
+    request_json: &mut F,
+    args: &BrowseArgs,
+    state: &mut BrowserState,
+) -> Result<()>
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
@@ -311,20 +481,35 @@ where
         return Ok(());
     };
     match node.kind {
+        DashboardBrowseNodeKind::Org | DashboardBrowseNodeKind::Folder => {
+            state.status = "Rename is only available for dashboard rows right now.".to_string();
+        }
         DashboardBrowseNodeKind::Dashboard => {
-            let mut dialog = begin_dashboard_edit(request_json, &state.document, &node)?;
+            let mut dialog = if let Some(client) = scoped_org_client(args, &node)? {
+                let mut scoped = |method: Method,
+                                  path: &str,
+                                  params: &[(String, String)],
+                                  payload: Option<&Value>|
+                 -> Result<Option<Value>> {
+                    client.request_json(method, path, params, payload)
+                };
+                begin_dashboard_edit(&mut scoped, &state.document, &node)?
+            } else {
+                begin_dashboard_edit(request_json, &state.document, &node)?
+            };
             dialog.focus_title_rename();
             state.pending_edit = Some(dialog);
             state.status = "Rename dashboard in TUI dialog. Ctrl+S saves, Esc cancels.".to_string();
         }
-        DashboardBrowseNodeKind::Folder => {
-            state.status = "Rename is only available for dashboard rows right now.".to_string();
-        }
     }
     Ok(())
 }
 
-fn start_selected_dashboard_move<F>(request_json: &mut F, state: &mut BrowserState) -> Result<()>
+fn start_selected_dashboard_move<F>(
+    request_json: &mut F,
+    args: &BrowseArgs,
+    state: &mut BrowserState,
+) -> Result<()>
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
@@ -332,15 +517,26 @@ where
         return Ok(());
     };
     match node.kind {
+        DashboardBrowseNodeKind::Org | DashboardBrowseNodeKind::Folder => {
+            state.status = "Move is only available for dashboard rows right now.".to_string();
+        }
         DashboardBrowseNodeKind::Dashboard => {
-            let mut dialog = begin_dashboard_edit(request_json, &state.document, &node)?;
+            let mut dialog = if let Some(client) = scoped_org_client(args, &node)? {
+                let mut scoped = |method: Method,
+                                  path: &str,
+                                  params: &[(String, String)],
+                                  payload: Option<&Value>|
+                 -> Result<Option<Value>> {
+                    client.request_json(method, path, params, payload)
+                };
+                begin_dashboard_edit(&mut scoped, &state.document, &node)?
+            } else {
+                begin_dashboard_edit(request_json, &state.document, &node)?
+            };
             dialog.focus_folder_move();
             state.pending_edit = Some(dialog);
             state.status =
                 "Move dashboard to another folder. Choose a folder, then Ctrl+S saves.".to_string();
-        }
-        DashboardBrowseNodeKind::Folder => {
-            state.status = "Move is only available for dashboard rows right now.".to_string();
         }
     }
     Ok(())
@@ -359,22 +555,33 @@ where
         return Ok(());
     };
     match node.kind {
+        DashboardBrowseNodeKind::Org | DashboardBrowseNodeKind::Folder => {
+            state.status = "Raw JSON edit is only available for dashboard rows.".to_string();
+        }
         DashboardBrowseNodeKind::Dashboard => {
             session.suspend()?;
-            let raw_result = run_external_dashboard_edit(request_json, &node);
+            let raw_result = if let Some(client) = scoped_org_client(args, &node)? {
+                let mut scoped = |method: Method,
+                                  path: &str,
+                                  params: &[(String, String)],
+                                  payload: Option<&Value>|
+                 -> Result<Option<Value>> {
+                    client.request_json(method, path, params, payload)
+                };
+                run_external_dashboard_edit(&mut scoped, &node)
+            } else {
+                run_external_dashboard_edit(request_json, &node)
+            };
             session.resume()?;
             let (uid, applied) = raw_result?;
             if applied {
                 let document = refresh_browser_document(request_json, args)?;
                 state.replace_document(document);
                 state.status = format!("Applied raw JSON edit for dashboard {}.", uid);
-                ensure_selected_dashboard_view(request_json, state, false)?;
+                ensure_selected_dashboard_view(request_json, args, state, false)?;
             } else {
                 state.status = format!("Raw JSON edit cancelled or unchanged for {}.", uid);
             }
-        }
-        DashboardBrowseNodeKind::Folder => {
-            state.status = "Raw JSON edit is only available for dashboard rows.".to_string();
         }
     }
     Ok(())
@@ -392,12 +599,23 @@ where
     let Some(node) = state.selected_node().cloned() else {
         return Ok(());
     };
-    state.pending_delete = Some(build_delete_preview(
-        request_json,
-        args,
-        &node,
-        include_folders,
-    )?);
+    if node.kind == DashboardBrowseNodeKind::Org {
+        state.status =
+            "Org rows do not support delete. Select a folder or dashboard row.".to_string();
+        return Ok(());
+    }
+    state.pending_delete = Some(if let Some(client) = scoped_org_client(args, &node)? {
+        let mut scoped = |method: Method,
+                          path: &str,
+                          params: &[(String, String)],
+                          payload: Option<&Value>|
+         -> Result<Option<Value>> {
+            client.request_json(method, path, params, payload)
+        };
+        build_delete_preview(&mut scoped, args, &node, include_folders)?
+    } else {
+        build_delete_preview(request_json, args, &node, include_folders)?
+    });
     state.detail_scroll = 0;
     state.status = delete_status_message(&node, include_folders);
     Ok(())
@@ -414,10 +632,68 @@ where
     let Some(plan) = state.pending_delete.take() else {
         return Ok(());
     };
-    let deleted = execute_delete_plan_with_request(request_json, &plan)?;
+    let Some(node) = state.selected_node().cloned() else {
+        return Ok(());
+    };
+    let deleted = if let Some(client) = scoped_org_client(args, &node)? {
+        let mut scoped = |method: Method,
+                          path: &str,
+                          params: &[(String, String)],
+                          payload: Option<&Value>|
+         -> Result<Option<Value>> {
+            client.request_json(method, path, params, payload)
+        };
+        execute_delete_plan_with_request(&mut scoped, &plan)?
+    } else {
+        execute_delete_plan_with_request(request_json, &plan)?
+    };
     let document = refresh_browser_document(request_json, args)?;
     state.replace_document(document);
     state.status = format!("Deleted {} item(s) from the live dashboard tree.", deleted);
-    ensure_selected_dashboard_view(request_json, state, false)?;
+    ensure_selected_dashboard_view(request_json, args, state, false)?;
     Ok(())
+}
+
+fn repeat_search<F>(request_json: &mut F, args: &BrowseArgs, state: &mut BrowserState) -> Result<()>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    let Some(search) = state.last_search.clone() else {
+        state.status = "No previous dashboard search. Use / or ? first.".to_string();
+        return Ok(());
+    };
+    if let Some(index) = state.repeat_last_search() {
+        state.select_index(index);
+        ensure_selected_dashboard_view(request_json, args, state, false)?;
+        state.status = format!(
+            "Next match for '{}' at tree row {}.",
+            search.query,
+            index + 1
+        );
+    } else {
+        state.status = format!("No more matches for '{}'.", search.query);
+    }
+    Ok(())
+}
+
+fn live_view_cache_key(node: &DashboardBrowseNode) -> Option<String> {
+    node.uid
+        .as_ref()
+        .map(|uid| format!("{}::{uid}", node.org_id))
+}
+
+fn scoped_org_client(
+    args: &BrowseArgs,
+    node: &DashboardBrowseNode,
+) -> Result<Option<crate::http::JsonHttpClient>> {
+    if !args.all_orgs {
+        return Ok(None);
+    }
+    let org_id = node.org_id.parse::<i64>().map_err(|_| {
+        message(format!(
+            "Dashboard browse could not parse org id '{}'.",
+            node.org_id
+        ))
+    })?;
+    Ok(Some(build_http_client_for_org(&args.common, org_id)?))
 }

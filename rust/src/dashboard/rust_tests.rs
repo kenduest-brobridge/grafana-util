@@ -18,6 +18,9 @@ use super::edit_external::{
 use super::history::{
     list_dashboard_history_versions_with_request, restore_dashboard_history_version_with_request,
 };
+use super::import_interactive::{
+    load_interactive_import_items, InteractiveImportAction, InteractiveImportState,
+};
 use super::test_support;
 use super::test_support::{
     attach_dashboard_folder_paths_with_request, build_dashboard_browse_document,
@@ -37,10 +40,10 @@ use super::test_support::{
     render_topology_dot, render_topology_mermaid, BrowseArgs, CommonCliArgs, DashboardCliArgs,
     DashboardCommand, DashboardGovernanceGateFinding, DashboardGovernanceGateResult,
     DashboardGovernanceGateSummary, DiffArgs, ExportArgs, FolderInventoryStatusKind,
-    GovernanceGateArgs, GovernanceGateOutputFormat, ImpactAlertResource, ImpactDashboard,
-    ImpactDocument, ImpactOutputFormat, ImpactSummary, ImportArgs, InspectExportArgs,
-    InspectExportReportFormat, InspectLiveArgs, InspectOutputFormat, ListArgs, SimpleOutputFormat,
-    TopologyDocument, TopologyOutputFormat, ValidationOutputFormat,
+    GovernanceGateArgs, GovernanceGateOutputFormat, GovernancePolicySource, ImpactAlertResource,
+    ImpactDashboard, ImpactDocument, ImpactOutputFormat, ImpactSummary, ImportArgs,
+    InspectExportArgs, InspectExportReportFormat, InspectLiveArgs, InspectOutputFormat, ListArgs,
+    SimpleOutputFormat, TopologyDocument, TopologyOutputFormat, ValidationOutputFormat,
     DASHBOARD_PERMISSION_BUNDLE_FILENAME, DATASOURCE_INVENTORY_FILENAME, EXPORT_METADATA_FILENAME,
     FOLDER_INVENTORY_FILENAME, TOOL_SCHEMA_VERSION,
 };
@@ -190,6 +193,7 @@ pub(crate) fn make_import_args(import_dir: PathBuf) -> ImportArgs {
         strict_schema: false,
         target_schema_version: None,
         import_message: "sync dashboards".to_string(),
+        interactive: false,
         dry_run: true,
         table: false,
         json: false,
@@ -2683,6 +2687,9 @@ fn dashboard_edit_fetch_draft_reads_current_live_title_and_tags() {
         meta: "uid=cpu-main".to_string(),
         details: Vec::new(),
         url: None,
+        org_name: "Main Org.".to_string(),
+        org_id: "1".to_string(),
+        child_count: 0,
     };
 
     let draft = fetch_dashboard_edit_draft_with_request(
@@ -2870,6 +2877,9 @@ fn dashboard_view_lines_include_recent_versions_when_history_exists() {
         meta: "uid=cpu-main".to_string(),
         details: vec!["Type: Dashboard".to_string()],
         url: None,
+        org_name: "Main Org.".to_string(),
+        org_id: "1".to_string(),
+        child_count: 0,
     };
 
     let lines = fetch_dashboard_view_lines_with_request(
@@ -2890,7 +2900,7 @@ fn dashboard_view_lines_include_recent_versions_when_history_exists() {
                     "canEdit": true
                 }
             }))),
-            (Method::GET, "/api/dashboards/id/42/versions") => {
+            (Method::GET, "/api/dashboards/uid/cpu-main/versions") => {
                 assert_eq!(params, &vec![("limit".to_string(), "5".to_string())]);
                 Ok(Some(json!([
                     {
@@ -2933,6 +2943,9 @@ fn dashboard_view_lines_ignore_missing_versions_endpoint() {
         meta: "uid=cpu-main".to_string(),
         details: vec!["Type: Dashboard".to_string()],
         url: None,
+        org_name: "Main Org.".to_string(),
+        org_id: "1".to_string(),
+        child_count: 0,
     };
 
     let lines = fetch_dashboard_view_lines_with_request(
@@ -2953,9 +2966,9 @@ fn dashboard_view_lines_ignore_missing_versions_endpoint() {
                     "canEdit": true
                 }
             }))),
-            (Method::GET, "/api/dashboards/id/42/versions") => Err(api_response(
+            (Method::GET, "/api/dashboards/uid/cpu-main/versions") => Err(api_response(
                 404,
-                "http://localhost:3000/api/dashboards/id/42/versions?limit=5",
+                "http://localhost:3000/api/dashboards/uid/cpu-main/versions?limit=5",
                 "{\"message\":\"Not found\"}",
             )),
             _ => Err(message("unexpected request")),
@@ -3172,6 +3185,87 @@ fn dashboard_history_dialog_escape_and_q_close_dialog() {
         q,
         crate::dashboard::browse_history_dialog::HistoryDialogAction::Close
     );
+}
+
+#[test]
+fn interactive_import_loads_dashboard_titles_and_folder_paths() {
+    let temp = tempdir().unwrap();
+    let raw_dir = temp.path().join("raw");
+    write_basic_raw_export(
+        &raw_dir,
+        "1",
+        "Main Org.",
+        "cpu-main",
+        "CPU Main",
+        "prom-main",
+        "prometheus",
+        "timeseries",
+        "infra",
+        "Infra",
+        "expr",
+        "rate(cpu[5m])",
+    );
+
+    let args = make_import_args(raw_dir);
+    let items = load_interactive_import_items(&args).unwrap();
+
+    assert_eq!(items.len(), 1);
+    assert_eq!(items[0].uid, "cpu-main");
+    assert_eq!(items[0].title, "CPU Main");
+    assert_eq!(items[0].folder_path, "Infra");
+}
+
+#[test]
+fn interactive_import_state_toggles_and_confirms_selected_files() {
+    let items = vec![
+        crate::dashboard::import_interactive::InteractiveImportItem {
+            path: PathBuf::from("a.json"),
+            uid: "a".to_string(),
+            title: "CPU".to_string(),
+            folder_path: "Infra".to_string(),
+            file_label: "a.json".to_string(),
+        },
+        crate::dashboard::import_interactive::InteractiveImportItem {
+            path: PathBuf::from("b.json"),
+            uid: "b".to_string(),
+            title: "Memory".to_string(),
+            folder_path: "Infra".to_string(),
+            file_label: "b.json".to_string(),
+        },
+    ];
+    let mut state = InteractiveImportState::new(items);
+
+    assert_eq!(
+        state.handle_key(KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE)),
+        InteractiveImportAction::Continue
+    );
+    assert_eq!(state.selected_files(), vec![PathBuf::from("a.json")]);
+    assert_eq!(
+        state.handle_key(KeyEvent::new(KeyCode::Char('a'), KeyModifiers::NONE)),
+        InteractiveImportAction::Continue
+    );
+    assert_eq!(
+        state.selected_files(),
+        vec![PathBuf::from("a.json"), PathBuf::from("b.json")]
+    );
+    assert_eq!(
+        state.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
+        InteractiveImportAction::Confirm(vec![PathBuf::from("a.json"), PathBuf::from("b.json")])
+    );
+}
+
+#[test]
+fn import_with_use_export_org_rejects_interactive_selection() {
+    let temp = tempdir().unwrap();
+    let mut args = make_import_args(temp.path().join("exports"));
+    args.use_export_org = true;
+    args.interactive = true;
+
+    let error = import_dashboards_with_org_clients(&args).unwrap_err();
+
+    assert!(error
+        .to_string()
+        .contains("Dashboard import --interactive does not support --use-export-org yet."));
 }
 
 #[test]

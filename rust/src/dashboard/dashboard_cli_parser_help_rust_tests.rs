@@ -241,6 +241,8 @@ fn import_help_explains_common_operator_flags() {
     assert!(help.contains("requires Basic auth"));
     assert!(help.contains("--require-matching-export-org"));
     assert!(help.contains("--output-columns"));
+    assert!(help.contains("--interactive"));
+    assert!(help.contains("choose which exported dashboards to import"));
 }
 
 #[test]
@@ -321,6 +323,24 @@ fn parse_cli_supports_import_progress_and_verbose_flags() {
 }
 
 #[test]
+fn parse_cli_supports_import_interactive_flag() {
+    let args = parse_cli_from([
+        "grafana-util",
+        "import",
+        "--import-dir",
+        "./dashboards/raw",
+        "--interactive",
+    ]);
+
+    match args.command {
+        DashboardCommand::Import(import_args) => {
+            assert!(import_args.interactive);
+        }
+        _ => panic!("expected import command"),
+    }
+}
+
+#[test]
 fn parse_cli_supports_import_dry_run_json_flag() {
     let args = parse_cli_from([
         "grafana-util",
@@ -379,6 +399,7 @@ fn parse_cli_supports_browse_with_path() {
         DashboardCommand::Browse(browse_args) => {
             assert_eq!(browse_args.common.url, "https://grafana.example.com");
             assert_eq!(browse_args.org_id, Some(2));
+            assert!(!browse_args.all_orgs);
             assert_eq!(browse_args.path.as_deref(), Some("Platform / Infra"));
             assert_eq!(browse_args.page_size, 500);
         }
@@ -392,7 +413,59 @@ fn browse_help_mentions_live_tree_controls() {
     assert!(help.contains("interactive terminal UI"));
     assert!(help.contains("--path"));
     assert!(help.contains("--org-id"));
+    assert!(help.contains("--all-orgs"));
     assert!(help.contains("Open the browser at one folder subtree"));
+    assert!(help.contains("Browse all visible orgs with Basic auth"));
+}
+
+#[test]
+fn parse_cli_supports_browse_all_orgs() {
+    let args = parse_cli_from(["grafana-util", "browse", "--all-orgs"]);
+
+    match args.command {
+        DashboardCommand::Browse(browse_args) => {
+            assert!(browse_args.all_orgs);
+            assert_eq!(browse_args.org_id, None);
+        }
+        _ => panic!("expected browse command"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_screenshot_command() {
+    let args = parse_cli_from([
+        "grafana-util",
+        "screenshot",
+        "--dashboard-uid",
+        "cpu-main",
+        "--output",
+        "./cpu-main.png",
+    ]);
+
+    match args.command {
+        DashboardCommand::Screenshot(screenshot_args) => {
+            assert_eq!(screenshot_args.dashboard_uid.as_deref(), Some("cpu-main"));
+            assert_eq!(
+                screenshot_args.output,
+                std::path::Path::new("./cpu-main.png")
+            );
+            assert_eq!(screenshot_args.dashboard_url, None);
+            assert!(!screenshot_args.full_page);
+        }
+        _ => panic!("expected screenshot command"),
+    }
+}
+
+#[test]
+fn screenshot_help_mentions_capture_options() {
+    let help = render_dashboard_subcommand_help("screenshot");
+    assert!(help.contains("--dashboard-uid"));
+    assert!(help.contains("--dashboard-url"));
+    assert!(help.contains("--output"));
+    assert!(help.contains("--full-page"));
+    assert!(help.contains("--browser-path"));
+    assert!(help.contains("Capture a full dashboard from a browser URL"));
+    assert!(help.contains("Capture a solo panel with a vars-query fragment"));
 }
 
 #[test]
