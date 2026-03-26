@@ -31,11 +31,13 @@ mod files;
 mod governance_gate;
 mod governance_gate_rules;
 mod governance_gate_tui;
+mod governance_policy;
 mod help;
 mod history;
 mod impact_tui;
 mod import;
 mod import_compare;
+mod import_interactive;
 mod import_lookup;
 mod import_render;
 mod import_routed;
@@ -67,10 +69,10 @@ pub use cli_defs::{
     build_auth_context, build_http_client, build_http_client_for_org, normalize_dashboard_cli_args,
     parse_cli_from, BrowseArgs, CommonCliArgs, DashboardAuthContext, DashboardCliArgs,
     DashboardCommand, DeleteArgs, DiffArgs, ExportArgs, GovernanceGateArgs,
-    GovernanceGateOutputFormat, ImpactArgs, ImpactOutputFormat, ImportArgs, InspectExportArgs,
-    InspectExportReportFormat, InspectLiveArgs, InspectOutputFormat, InspectVarsArgs, ListArgs,
-    ScreenshotArgs, ScreenshotFullPageOutput, ScreenshotOutputFormat, ScreenshotTheme,
-    SimpleOutputFormat, TopologyArgs, TopologyOutputFormat, ValidateExportArgs,
+    GovernanceGateOutputFormat, GovernancePolicySource, ImpactArgs, ImpactOutputFormat, ImportArgs,
+    InspectExportArgs, InspectExportReportFormat, InspectLiveArgs, InspectOutputFormat,
+    InspectVarsArgs, ListArgs, ScreenshotArgs, ScreenshotFullPageOutput, ScreenshotOutputFormat,
+    ScreenshotTheme, SimpleOutputFormat, TopologyArgs, TopologyOutputFormat, ValidateExportArgs,
     ValidationOutputFormat,
 };
 pub use export::{build_export_variant_dirs, build_output_path, export_dashboards_with_client};
@@ -104,6 +106,11 @@ pub(crate) use files::{
     load_export_metadata, load_folder_inventory, load_json_file, write_dashboard,
     write_json_document,
 };
+#[allow(unused_imports)]
+pub(crate) use governance_policy::{
+    load_builtin_governance_policy, load_governance_policy, load_governance_policy_file,
+    load_governance_policy_source,
+};
 pub(crate) use inspect_report::ExportInspectionQueryRow;
 pub(crate) use inspect_summary::ExportInspectionSummary;
 pub(crate) use live::{
@@ -123,6 +130,13 @@ pub(crate) use prompt::{
     is_builtin_datasource_ref, is_placeholder_string, lookup_datasource,
     resolve_datasource_type_alias,
 };
+
+#[cfg(not(feature = "tui"))]
+pub(crate) fn tui_not_built<T>(action: &str) -> Result<T> {
+    Err(message(format!(
+        "Dashboard {action} requires TUI support, but it was not built in."
+    )))
+}
 
 // Shared dashboard defaults and export filenames used across export/import/live flows.
 pub const DEFAULT_URL: &str = "http://localhost:3000";

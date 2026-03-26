@@ -1,3 +1,4 @@
+#![cfg(feature = "tui")]
 use serde_json::Value;
 
 use crate::common::{message, Result};
@@ -6,7 +7,7 @@ use reqwest::Method;
 use super::browse_edit_dialog::EditDialogState;
 use super::browse_history_dialog::HistoryDialogState;
 use super::browse_support::{
-    fetch_dashboard_view_lines_with_request, load_dashboard_browse_document_with_request,
+    fetch_dashboard_view_lines_with_request, load_dashboard_browse_document_for_args,
     DashboardBrowseDocument, DashboardBrowseNode, DashboardBrowseNodeKind,
 };
 use super::delete_support::{build_delete_plan_with_request, DeletePlan};
@@ -32,7 +33,7 @@ pub(crate) fn refresh_browser_document<F>(
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
-    load_dashboard_browse_document_with_request(request_json, args.page_size, args.path.as_deref())
+    load_dashboard_browse_document_for_args(request_json, args)
 }
 
 pub(crate) fn load_live_detail_lines<F>(
@@ -174,6 +175,9 @@ where
 
 pub(crate) fn delete_status_message(node: &DashboardBrowseNode, delete_folders: bool) -> String {
     match node.kind {
+        DashboardBrowseNodeKind::Org => {
+            "Org header rows are browse-only. Select a folder or dashboard row.".to_string()
+        }
         DashboardBrowseNodeKind::Dashboard => {
             format!(
                 "Previewing dashboard delete for {}. Press y to confirm.",
@@ -208,7 +212,11 @@ fn build_delete_args(
             verify_ssl: args.common.verify_ssl,
         },
         page_size: args.page_size,
-        org_id: args.org_id,
+        org_id: if args.all_orgs {
+            node.org_id.parse::<i64>().ok()
+        } else {
+            args.org_id
+        },
         uid: (node.kind == DashboardBrowseNodeKind::Dashboard)
             .then(|| node.uid.as_deref().unwrap_or_default().to_string()),
         path: (node.kind == DashboardBrowseNodeKind::Folder).then(|| node.path.clone()),

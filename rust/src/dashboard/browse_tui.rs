@@ -1,3 +1,4 @@
+#![cfg(feature = "tui")]
 use std::time::Duration;
 
 use crossterm::event::{self, Event, KeyEventKind};
@@ -20,7 +21,7 @@ where
     let document = refresh_browser_document(&mut request_json, args)?;
     let mut session = TerminalSession::enter()?;
     let mut state = BrowserState::new(document);
-    ensure_selected_dashboard_view(&mut request_json, &mut state, false)?;
+    ensure_selected_dashboard_view(&mut request_json, args, &mut state, false)?;
 
     loop {
         session

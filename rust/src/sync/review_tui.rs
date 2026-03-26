@@ -1,25 +1,45 @@
 //! Interactive sync review TUI.
 //! Allows operators to keep or drop actionable sync operations before the plan is marked reviewed.
+#[cfg(feature = "tui")]
+use crate::common::message;
+#[cfg(not(feature = "tui"))]
+use crate::common::tui;
+use crate::common::Result;
+
+#[cfg(any(feature = "tui", test))]
+use super::json::{require_json_array_field, require_json_object};
+#[cfg(any(feature = "tui", test))]
+use super::plan_builder::{build_sync_alert_assessment_document, build_sync_plan_summary_document};
+
+#[cfg(feature = "tui")]
 use crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers};
+#[cfg(feature = "tui")]
 use crossterm::execute;
+#[cfg(feature = "tui")]
 use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
 };
+#[cfg(feature = "tui")]
 use ratatui::backend::CrosstermBackend;
+#[cfg(feature = "tui")]
 use ratatui::layout::{Constraint, Direction, Layout};
+#[cfg(feature = "tui")]
 use ratatui::style::{Color, Modifier, Style};
+#[cfg(feature = "tui")]
 use ratatui::text::{Line, Span};
+#[cfg(feature = "tui")]
 use ratatui::widgets::{Block, Borders, List, ListItem, ListState, Paragraph};
+#[cfg(feature = "tui")]
 use ratatui::Terminal;
 use serde_json::Value;
+#[cfg(any(feature = "tui", test))]
 use std::collections::BTreeSet;
+#[cfg(feature = "tui")]
 use std::io::{self, Stdout};
+#[cfg(feature = "tui")]
 use std::time::Duration;
 
-use crate::common::{message, Result};
-
-use super::{build_sync_alert_assessment_document, build_sync_plan_summary_document};
-
+#[cfg(any(feature = "tui", test))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct ReviewableOperation {
     key: String,
@@ -27,6 +47,7 @@ pub(crate) struct ReviewableOperation {
     operation: Value,
 }
 
+#[cfg(any(feature = "tui", test))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct ReviewDiffLine {
     pub changed: bool,
@@ -35,6 +56,7 @@ pub(crate) struct ReviewDiffLine {
     pub highlight_range: Option<(usize, usize)>,
 }
 
+#[cfg(any(feature = "tui", test))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct ReviewDiffModel {
     pub title: String,
@@ -43,14 +65,17 @@ pub(crate) struct ReviewDiffModel {
     pub desired_lines: Vec<ReviewDiffLine>,
 }
 
+#[cfg(any(feature = "tui", test))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum DiffPaneFocus {
     Live,
     Desired,
 }
 
+#[cfg(any(feature = "tui", test))]
 type HighlightRange = Option<(usize, usize)>;
 
+#[cfg(any(feature = "tui", test))]
 pub(crate) struct DiffControlsState {
     pub selected: usize,
     pub total: usize,
@@ -63,6 +88,7 @@ pub(crate) struct DiffControlsState {
     pub desired_horizontal_offset: usize,
 }
 
+#[cfg(any(feature = "tui", test))]
 fn operation_key(operation: &serde_json::Map<String, Value>) -> String {
     format!(
         "{}::{}",
@@ -77,6 +103,7 @@ fn operation_key(operation: &serde_json::Map<String, Value>) -> String {
     )
 }
 
+#[cfg(any(feature = "tui", test))]
 fn operation_label(operation: &serde_json::Map<String, Value>) -> String {
     format!(
         "{} {}",
@@ -91,6 +118,7 @@ fn operation_label(operation: &serde_json::Map<String, Value>) -> String {
     )
 }
 
+#[cfg(any(feature = "tui", test))]
 fn operation_badge(action: &str) -> &'static str {
     match action {
         "would-create" => "CREATE",
@@ -100,6 +128,7 @@ fn operation_badge(action: &str) -> &'static str {
     }
 }
 
+#[cfg(feature = "tui")]
 fn operation_badge_color(action: &str) -> Color {
     match action {
         "would-create" => Color::Green,
@@ -109,6 +138,7 @@ fn operation_badge_color(action: &str) -> Color {
     }
 }
 
+#[cfg(feature = "tui")]
 fn operation_row_color(action: &str) -> Color {
     match action {
         "would-create" => Color::LightGreen,
@@ -118,6 +148,7 @@ fn operation_row_color(action: &str) -> Color {
     }
 }
 
+#[cfg(feature = "tui")]
 fn selection_mark(selected: bool) -> &'static str {
     if selected {
         "✓"
@@ -126,6 +157,7 @@ fn selection_mark(selected: bool) -> &'static str {
     }
 }
 
+#[cfg(any(feature = "tui", test))]
 pub(crate) fn operation_preview(item: &ReviewableOperation) -> Vec<String> {
     let object = match item.operation.as_object() {
         Some(object) => object,
@@ -163,18 +195,21 @@ pub(crate) fn operation_preview(item: &ReviewableOperation) -> Vec<String> {
     ]
 }
 
+#[cfg(any(feature = "tui", test))]
 pub(crate) fn operation_detail_line_count(item: &ReviewableOperation) -> usize {
     build_review_operation_diff_model(&item.operation)
         .map(|model| model.live_lines.len().max(model.desired_lines.len()))
         .unwrap_or(0)
 }
 
+#[cfg(any(feature = "tui", test))]
 pub(crate) fn operation_changed_count(item: &ReviewableOperation) -> usize {
     build_review_operation_diff_model(&item.operation)
         .map(|model| model.live_lines.iter().filter(|line| line.changed).count())
         .unwrap_or(0)
 }
 
+#[cfg(any(feature = "tui", test))]
 fn truncate_text(text: &str, max_chars: usize) -> String {
     let count = text.chars().count();
     if count <= max_chars {
@@ -187,6 +222,7 @@ fn truncate_text(text: &str, max_chars: usize) -> String {
     format!("{kept}…")
 }
 
+#[cfg(feature = "tui")]
 pub(crate) fn build_checklist_line(
     item: &ReviewableOperation,
     index: usize,
@@ -229,6 +265,7 @@ pub(crate) fn build_checklist_line(
     ])
 }
 
+#[cfg(any(feature = "tui", test))]
 pub(crate) fn selection_title_with_position(
     item: Option<&ReviewableOperation>,
     position: Option<usize>,
@@ -258,11 +295,10 @@ pub(crate) fn selection_title_with_position(
     }
 }
 
+#[cfg(any(feature = "tui", test))]
 pub(crate) fn collect_reviewable_operations(plan: &Value) -> Result<Vec<ReviewableOperation>> {
-    let operations = plan
-        .get("operations")
-        .and_then(Value::as_array)
-        .ok_or_else(|| message("Sync plan document is missing operations."))?;
+    let plan = require_json_object(plan, "Sync plan document")?;
+    let operations = require_json_array_field(plan, "operations", "Sync plan document")?;
     Ok(operations
         .iter()
         .filter_map(Value::as_object)
@@ -280,17 +316,13 @@ pub(crate) fn collect_reviewable_operations(plan: &Value) -> Result<Vec<Reviewab
         .collect())
 }
 
+#[cfg(any(feature = "tui", test))]
 pub(crate) fn filter_review_plan_operations(
     plan: &Value,
     selected_keys: &BTreeSet<String>,
 ) -> Result<Value> {
-    let plan_object = plan
-        .as_object()
-        .ok_or_else(|| message("Sync plan document must be a JSON object."))?;
-    let operations = plan_object
-        .get("operations")
-        .and_then(Value::as_array)
-        .ok_or_else(|| message("Sync plan document is missing operations."))?;
+    let plan_object = require_json_object(plan, "Sync plan document")?;
+    let operations = require_json_array_field(plan_object, "operations", "Sync plan document")?;
     let filtered_operations = operations
         .iter()
         .filter(|item| {
@@ -320,10 +352,12 @@ pub(crate) fn filter_review_plan_operations(
     Ok(Value::Object(filtered))
 }
 
+#[cfg(feature = "tui")]
 struct TerminalSession {
     terminal: Terminal<CrosstermBackend<Stdout>>,
 }
 
+#[cfg(feature = "tui")]
 impl TerminalSession {
     fn enter() -> Result<Self> {
         enable_raw_mode()?;
@@ -335,6 +369,7 @@ impl TerminalSession {
     }
 }
 
+#[cfg(feature = "tui")]
 impl Drop for TerminalSession {
     fn drop(&mut self) {
         let _ = disable_raw_mode();
@@ -343,6 +378,7 @@ impl Drop for TerminalSession {
     }
 }
 
+#[cfg(any(feature = "tui", test))]
 fn pretty_inline_json(value: Option<&Value>) -> String {
     match value {
         None | Some(Value::Null) => "null".to_string(),
@@ -351,10 +387,12 @@ fn pretty_inline_json(value: Option<&Value>) -> String {
     }
 }
 
+#[cfg(any(feature = "tui", test))]
 fn numbered_line(index: usize, content: String) -> String {
     format!("{:>3} | {content}", index + 1)
 }
 
+#[cfg(any(feature = "tui", test))]
 fn diff_highlight_ranges(left: &str, right: &str) -> (HighlightRange, HighlightRange) {
     if left == right {
         return (None, None);
@@ -390,10 +428,9 @@ fn diff_highlight_ranges(left: &str, right: &str) -> (HighlightRange, HighlightR
     (left_range, right_range)
 }
 
+#[cfg(any(feature = "tui", test))]
 pub(crate) fn build_review_operation_diff_model(operation: &Value) -> Result<ReviewDiffModel> {
-    let object = operation
-        .as_object()
-        .ok_or_else(|| message("Sync review operation must be a JSON object."))?;
+    let object = require_json_object(operation, "Sync review operation")?;
     let action = object
         .get("action")
         .and_then(Value::as_str)
@@ -498,6 +535,7 @@ pub(crate) fn build_review_operation_diff_model(operation: &Value) -> Result<Rev
     })
 }
 
+#[cfg(any(feature = "tui", test))]
 pub(crate) fn wrap_text_chunks(text: &str, width: usize) -> Vec<String> {
     if width == 0 {
         return vec![String::new()];
@@ -512,6 +550,7 @@ pub(crate) fn wrap_text_chunks(text: &str, width: usize) -> Vec<String> {
         .collect()
 }
 
+#[cfg(any(feature = "tui", test))]
 pub(crate) fn clip_text_window(text: &str, offset: usize, width: usize) -> String {
     if width == 0 {
         return String::new();
@@ -519,6 +558,8 @@ pub(crate) fn clip_text_window(text: &str, offset: usize, width: usize) -> Strin
     text.chars().skip(offset).take(width).collect::<String>()
 }
 
+#[cfg(feature = "tui")]
+#[cfg(any(feature = "tui", test))]
 fn render_diff_items(
     lines: &[ReviewDiffLine],
     color: Color,
@@ -608,6 +649,7 @@ fn render_diff_items(
         .collect()
 }
 
+#[cfg(any(feature = "tui", test))]
 pub(crate) fn diff_pane_title(
     pane: &str,
     action: &str,
@@ -618,6 +660,7 @@ pub(crate) fn diff_pane_title(
     format!("{pane} {}/{} [{}] {title}", position + 1, total, action)
 }
 
+#[cfg(any(feature = "tui", test))]
 pub(crate) fn diff_scroll_max(model: &ReviewDiffModel, focus: DiffPaneFocus) -> usize {
     match focus {
         DiffPaneFocus::Live => model.live_lines.len().saturating_sub(1),
@@ -625,6 +668,7 @@ pub(crate) fn diff_scroll_max(model: &ReviewDiffModel, focus: DiffPaneFocus) -> 
     }
 }
 
+#[cfg(feature = "tui")]
 pub(crate) fn build_diff_controls_lines(state: &DiffControlsState) -> Vec<Line<'static>> {
     let focus = match state.diff_focus {
         DiffPaneFocus::Live => "LIVE",
@@ -688,6 +732,7 @@ pub(crate) fn build_diff_controls_lines(state: &DiffControlsState) -> Vec<Line<'
     ]
 }
 
+#[cfg(feature = "tui")]
 pub(crate) fn run_sync_review_tui(plan: &Value) -> Result<Value> {
     let items = collect_reviewable_operations(plan)?;
     if items.is_empty() {
@@ -1144,4 +1189,27 @@ pub(crate) fn run_sync_review_tui(plan: &Value) -> Result<Value> {
             }
         }
     }
+}
+
+#[cfg(not(feature = "tui"))]
+pub(crate) fn run_sync_review_tui(plan: &Value) -> Result<Value> {
+    let _ = plan;
+    Err(tui(
+        "Sync review interactive TUI requires the `tui` feature.",
+    ))
+}
+
+#[cfg(not(feature = "tui"))]
+#[test]
+fn run_sync_review_tui_returns_tui_error_when_feature_disabled() {
+    let plan = serde_json::json!({
+        "kind": "grafana-utils-sync-plan",
+        "operations": []
+    });
+
+    let error = run_sync_review_tui(&plan).expect_err("feature-disabled review should error");
+    assert_eq!(
+        error.to_string(),
+        "Sync review interactive TUI requires the `tui` feature."
+    );
 }

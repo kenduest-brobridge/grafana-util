@@ -16,10 +16,11 @@ use super::render::{
     service_account_table_rows, value_bool,
 };
 use super::{
-    request_object, ServiceAccountAddArgs, ServiceAccountDiffArgs, ServiceAccountExportArgs,
-    ServiceAccountImportArgs, ServiceAccountListArgs, ServiceAccountTokenAddArgs,
-    ACCESS_EXPORT_KIND_SERVICE_ACCOUNTS, ACCESS_EXPORT_METADATA_FILENAME, ACCESS_EXPORT_VERSION,
-    ACCESS_SERVICE_ACCOUNT_EXPORT_FILENAME, DEFAULT_PAGE_SIZE,
+    request_object, request_object_list_field, ServiceAccountAddArgs, ServiceAccountDiffArgs,
+    ServiceAccountExportArgs, ServiceAccountImportArgs, ServiceAccountListArgs,
+    ServiceAccountTokenAddArgs, ACCESS_EXPORT_KIND_SERVICE_ACCOUNTS,
+    ACCESS_EXPORT_METADATA_FILENAME, ACCESS_EXPORT_VERSION, ACCESS_SERVICE_ACCOUNT_EXPORT_FILENAME,
+    DEFAULT_PAGE_SIZE,
 };
 
 type DiffPayload = (String, Map<String, Value>);
@@ -44,29 +45,16 @@ where
         ("page".to_string(), page.to_string()),
         ("perpage".to_string(), per_page.to_string()),
     ];
-    let object = request_object(
+    request_object_list_field(
         &mut request_json,
         Method::GET,
         "/api/serviceaccounts/search",
         &params,
         None,
+        "serviceAccounts",
         "Unexpected service-account list response from Grafana.",
-    )?;
-    match object.get("serviceAccounts") {
-        Some(Value::Array(values)) => values
-            .iter()
-            .map(|value| {
-                Ok(value_as_object(
-                    value,
-                    "Unexpected service-account list response from Grafana.",
-                )?
-                .clone())
-            })
-            .collect(),
-        _ => Err(message(
-            "Unexpected service-account list response from Grafana.",
-        )),
-    }
+        "Unexpected service-account list response from Grafana.",
+    )
 }
 
 fn create_service_account_with_request<F>(

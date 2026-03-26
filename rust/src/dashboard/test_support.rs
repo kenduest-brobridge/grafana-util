@@ -6,10 +6,11 @@ pub(crate) use crate::dashboard::cli_defs::{
     build_auth_context, build_http_client, build_http_client_for_org, normalize_dashboard_cli_args,
     parse_cli_from, BrowseArgs, CommonCliArgs, DashboardAuthContext, DashboardCliArgs,
     DashboardCommand, DiffArgs, ExportArgs, GovernanceGateArgs, GovernanceGateOutputFormat,
-    ImpactArgs, ImpactOutputFormat, ImportArgs, InspectExportArgs, InspectExportReportFormat,
-    InspectLiveArgs, InspectOutputFormat, InspectVarsArgs, ListArgs, ScreenshotArgs,
-    ScreenshotFullPageOutput, ScreenshotOutputFormat, ScreenshotTheme, SimpleOutputFormat,
-    TopologyArgs, TopologyOutputFormat, ValidateExportArgs, ValidationOutputFormat,
+    GovernancePolicySource, ImpactArgs, ImpactOutputFormat, ImportArgs, InspectExportArgs,
+    InspectExportReportFormat, InspectLiveArgs, InspectOutputFormat, InspectVarsArgs, ListArgs,
+    ScreenshotArgs, ScreenshotFullPageOutput, ScreenshotOutputFormat, ScreenshotTheme,
+    SimpleOutputFormat, TopologyArgs, TopologyOutputFormat, ValidateExportArgs,
+    ValidationOutputFormat,
 };
 pub(crate) use crate::dashboard::export::{
     build_export_variant_dirs, build_output_path, export_dashboards_with_client,
@@ -29,6 +30,10 @@ pub(crate) use crate::dashboard::governance_gate::{
 };
 pub(crate) use crate::dashboard::governance_gate_tui::{
     build_governance_gate_tui_groups, build_governance_gate_tui_items,
+};
+pub(crate) use crate::dashboard::governance_policy::{
+    load_builtin_governance_policy, load_governance_policy, load_governance_policy_file,
+    load_governance_policy_source,
 };
 pub(crate) use crate::dashboard::help::{
     maybe_render_dashboard_help_full_from_os_args, render_inspect_export_help_full,

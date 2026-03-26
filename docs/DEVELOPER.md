@@ -36,6 +36,7 @@ This document is for maintainers. Keep `README.md` and the user guides operator-
 
 - `Makefile`: maintainer shortcuts for build, test, lint, and version bump flows.
 - `.github/workflows/ci.yml`: CI entrypoint that should stay aligned with local quality gates.
+- `examples/`: user-facing example assets that public docs may reference directly.
 - `scripts/check-python-quality.sh`: centralized Python validation gate.
 - `scripts/check-rust-quality.sh`: centralized Rust validation gate.
 - `scripts/set-version.sh`: shared version bump helper for `VERSION`, `pyproject.toml`, `rust/Cargo.toml`, and `rust/Cargo.lock`.
@@ -43,6 +44,7 @@ This document is for maintainers. Keep `README.md` and the user guides operator-
 - `docs/overview-python.md`: Python maintainer architecture walkthrough.
 - `docs/core-python-call-hierarchy.md`: Python call graph reference for maintainers.
 - `docs/unit-test-inventory.md`: Python and Rust test inventory reference for maintainers.
+- `docs/internal/examples/`: maintainer-only demo scripts for intentionally unwired Python API flows.
 
 ## Shortest Modification Paths
 
@@ -98,6 +100,7 @@ This document is for maintainers. Keep `README.md` and the user guides operator-
 
 - Keep README and user guides free of Python installation or entrypoint guidance unless Python becomes a supported user distribution again.
 - Keep internal Python docs available for maintainers while the dual implementation still exists.
+- Keep `examples/` limited to operator-facing sample assets; place unwired demos and maintainer-only prototypes under `docs/internal/`.
 - If a workflow change affects operator behavior, update both user guides in the same change.
 - If a parity or validation rule changes, update this file and the relevant internal reference docs in the same change.
 - Historical notes in `docs/internal/` are archival and may still mention older Python/Rust rollout context.

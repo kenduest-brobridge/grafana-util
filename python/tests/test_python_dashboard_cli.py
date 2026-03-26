@@ -117,6 +117,9 @@ inspection_output_dispatch = importlib.import_module(
 dashboard_import_workflow = importlib.import_module(
     "grafana_utils.dashboards.import_workflow"
 )
+dashboard_delete_workflow = importlib.import_module(
+    "grafana_utils.dashboards.delete_workflow"
+)
 
 
 def load_prompt_export_cases():
@@ -270,6 +273,8 @@ class FakeDashboardWorkflowClient:
         self.imported_payloads = []
         self.created_folders = []
         self.created_orgs = []
+        self.deleted_dashboards = []
+        self.deleted_folders = []
         self.fetch_current_org_calls = 0
         self.list_orgs_calls = 0
 
@@ -351,6 +356,14 @@ class FakeDashboardWorkflowClient:
     def import_dashboard(self, payload):
         self.imported_payloads.append(payload)
         return {"status": "success", "uid": payload["dashboard"].get("uid")}
+
+    def delete_dashboard(self, uid):
+        self.deleted_dashboards.append(str(uid))
+        return {"status": "success", "uid": uid}
+
+    def delete_folder(self, uid):
+        self.deleted_folders.append(str(uid))
+        return {"status": "success", "uid": uid}
 
 
 class ExporterTests(unittest.TestCase):
@@ -1351,6 +1364,37 @@ class ExporterTests(unittest.TestCase):
         )
 
         self.assertTrue(args.update_existing_only)
+
+    def test_dashboard_parse_args_supports_delete_mode(self):
+        args = exporter.parse_args(["delete-dashboard", "--uid", "cpu-main"])
+
+        self.assertEqual(args.command, "delete-dashboard")
+        self.assertEqual(args.uid, "cpu-main")
+        self.assertFalse(args.delete_folders)
+        self.assertFalse(args.dry_run)
+
+    def test_dashboard_parse_args_supports_delete_output_format(self):
+        args = exporter.parse_args(
+            ["delete-dashboard", "--uid", "cpu-main", "--output-format", "json"]
+        )
+
+        self.assertTrue(args.json)
+        self.assertFalse(args.table)
+
+    def test_dashboard_parse_args_supports_delete_path_and_interactive(self):
+        args = exporter.parse_args(
+            [
+                "delete-dashboard",
+                "--path",
+                "Platform / Infra",
+                "--delete-folders",
+                "--interactive",
+            ]
+        )
+
+        self.assertEqual(args.path, "Platform / Infra")
+        self.assertTrue(args.delete_folders)
+        self.assertTrue(args.interactive)
 
     def test_dashboard_parse_args_supports_inspect_export_json(self):
         args = exporter.parse_args(
@@ -7675,6 +7719,139 @@ class ExporterTests(unittest.TestCase):
 
         self.assertEqual(document["panels"][0]["datasource"], "-- Grafana --")
         self.assertEqual(document["__inputs"], [])
+
+    def test_dashboard_delete_dashboards_dry_run_json_by_uid(self):
+        client = FakeDashboardWorkflowClient(
+            summaries=[
+                {
+                    "uid": "cpu-main",
+                    "title": "CPU",
+                    "folderUid": "infra",
+                    "folderTitle": "Infra",
+                }
+            ],
+            folders={"infra": {"uid": "infra", "title": "Infra"}},
+        )
+        args = exporter.parse_args(
+            ["delete-dashboard", "--uid", "cpu-main", "--dry-run", "--json"]
+        )
+
+        with mock.patch.object(exporter, "build_client", return_value=client):
+            stream = io.StringIO()
+            with redirect_stdout(stream):
+                result = exporter.delete_dashboards(args)
+
+        self.assertEqual(result, 0)
+        payload = json.loads(stream.getvalue())
+        self.assertEqual(payload["summary"]["dashboardCount"], 1)
+        self.assertEqual(payload["summary"]["folderCount"], 0)
+        self.assertEqual(payload["items"][0]["uid"], "cpu-main")
+        self.assertEqual(client.deleted_dashboards, [])
+
+    def test_dashboard_delete_dashboards_requires_yes_without_dry_run(self):
+        args = exporter.parse_args(["delete-dashboard", "--uid", "cpu-main"])
+
+        with self.assertRaisesRegex(exporter.GrafanaError, "requires --yes"):
+            exporter.validate_delete_args(args)
+
+    def test_dashboard_delete_dashboards_live_by_path_can_delete_folders(self):
+        client = FakeDashboardWorkflowClient(
+            summaries=[
+                {
+                    "uid": "cpu-main",
+                    "title": "CPU",
+                    "folderUid": "infra",
+                    "folderTitle": "Infra",
+                },
+                {
+                    "uid": "mem-main",
+                    "title": "Memory",
+                    "folderUid": "legacy",
+                    "folderTitle": "Legacy",
+                },
+            ],
+            folders={
+                "infra": {
+                    "uid": "infra",
+                    "title": "Infra",
+                    "parents": [{"uid": "platform", "title": "Platform"}],
+                },
+                "platform": {"uid": "platform", "title": "Platform"},
+                "legacy": {
+                    "uid": "legacy",
+                    "title": "Legacy",
+                    "parents": [{"uid": "ops", "title": "Ops"}],
+                },
+                "ops": {"uid": "ops", "title": "Ops"},
+            },
+            org={"id": 7, "name": "Platform Org"},
+        )
+        args = exporter.parse_args(
+            [
+                "delete-dashboard",
+                "--path",
+                "Platform / Infra",
+                "--delete-folders",
+                "--yes",
+            ]
+        )
+
+        with mock.patch.object(exporter, "build_client", return_value=client):
+            stream = io.StringIO()
+            with redirect_stdout(stream):
+                result = exporter.delete_dashboards(args)
+
+        self.assertEqual(result, 0)
+        self.assertEqual(client.deleted_dashboards, ["cpu-main"])
+        self.assertEqual(client.deleted_folders, ["infra"])
+        self.assertIn("Deleted dashboard uid=cpu-main", stream.getvalue())
+        self.assertIn("Deleted folder uid=infra", stream.getvalue())
+
+    def test_dashboard_delete_dashboards_interactive_prompts_and_executes(self):
+        client = FakeDashboardWorkflowClient(
+            summaries=[
+                {
+                    "uid": "cpu-main",
+                    "title": "CPU",
+                    "folderUid": "infra",
+                    "folderTitle": "Infra",
+                }
+            ],
+            folders={
+                "infra": {
+                    "uid": "infra",
+                    "title": "Infra",
+                    "parents": [{"uid": "platform", "title": "Platform"}],
+                },
+                "platform": {"uid": "platform", "title": "Platform"},
+            },
+        )
+        args = exporter.parse_args(["delete-dashboard", "--interactive"])
+        responses = iter(["path", "Platform / Infra", "n", "y"])
+        deps = exporter._build_delete_workflow_deps()
+        deps["build_client"] = lambda _args: client
+        deps["input_reader"] = lambda _prompt: next(responses)
+        deps["is_tty"] = lambda: True
+        output_lines = []
+        deps["output_writer"] = output_lines.append
+
+        result = dashboard_delete_workflow.run_delete_dashboards(args, deps)
+
+        self.assertEqual(result, 0)
+        self.assertEqual(client.deleted_dashboards, ["cpu-main"])
+        self.assertEqual(client.deleted_folders, [])
+        self.assertTrue(
+            any("Dry-run dashboard delete uid=cpu-main" in line for line in output_lines)
+        )
+
+    def test_dashboard_delete_dashboards_interactive_requires_tty(self):
+        args = exporter.parse_args(["delete-dashboard", "--interactive"])
+        deps = exporter._build_delete_workflow_deps()
+        deps["build_client"] = lambda _args: FakeDashboardWorkflowClient()
+        deps["is_tty"] = lambda: False
+
+        with self.assertRaisesRegex(exporter.GrafanaError, "requires a TTY"):
+            dashboard_delete_workflow.run_delete_dashboards(args, deps)
 
 
 if __name__ == "__main__":

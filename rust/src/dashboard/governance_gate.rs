@@ -2,16 +2,19 @@
 //! Consumes governance-json and query-report JSON artifacts plus a small policy JSON.
 use serde::Serialize;
 use serde_json::Value;
+#[cfg(any(feature = "tui", test))]
 use std::cmp::Reverse;
-use std::fs;
 
-use crate::common::{message, Result};
+use crate::common::{load_json_object_file, message, Result};
 
 use super::governance_gate_rules as rules;
+#[cfg(all(feature = "tui", not(test)))]
+use super::governance_gate_tui::run_governance_gate_interactive;
 use super::{
-    governance_gate_tui::run_governance_gate_interactive, write_json_document, GovernanceGateArgs,
-    GovernanceGateOutputFormat,
+    load_governance_policy, write_json_document, GovernanceGateArgs, GovernanceGateOutputFormat,
 };
+#[cfg(test)]
+use crate::interactive_browser::run_interactive_browser;
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub(crate) struct DashboardGovernanceGateSummary {
@@ -59,18 +62,11 @@ pub(crate) struct DashboardGovernanceGateResult {
     pub(crate) warnings: Vec<DashboardGovernanceGateFinding>,
 }
 
-fn load_object(path: &std::path::Path) -> Result<Value> {
-    let raw = fs::read_to_string(path)?;
-    let value: Value = serde_json::from_str(&raw)?;
-    if !value.is_object() {
-        return Err(message(format!(
-            "JSON document at {} must be an object.",
-            path.display()
-        )));
-    }
-    Ok(value)
+fn load_object(path: &std::path::Path, label: &str) -> Result<Value> {
+    load_json_object_file(path, label)
 }
 
+#[cfg(any(feature = "tui", test))]
 fn field_or_dash(value: &str) -> &str {
     let trimmed = value.trim();
     if trimmed.is_empty() {
@@ -80,6 +76,7 @@ fn field_or_dash(value: &str) -> &str {
     }
 }
 
+#[cfg(any(feature = "tui", test))]
 fn shorten_text(value: &str, max_chars: usize) -> String {
     let trimmed = value.trim();
     let mut chars = trimmed.chars();
@@ -91,6 +88,7 @@ fn shorten_text(value: &str, max_chars: usize) -> String {
     }
 }
 
+#[cfg(any(feature = "tui", test))]
 fn paired_label(value: &str, label_name: &str, label_value: &str) -> String {
     let value = value.trim();
     let label_value = label_value.trim();
@@ -102,6 +100,7 @@ fn paired_label(value: &str, label_name: &str, label_value: &str) -> String {
     }
 }
 
+#[cfg(any(feature = "tui", test))]
 fn datasource_label(record: &DashboardGovernanceGateFinding) -> String {
     let mut parts = Vec::new();
     if !record.datasource.is_empty() {
@@ -120,6 +119,7 @@ fn datasource_label(record: &DashboardGovernanceGateFinding) -> String {
     }
 }
 
+#[cfg(any(feature = "tui", test))]
 fn finding_context_score(record: &DashboardGovernanceGateFinding) -> usize {
     [
         !record.dashboard_uid.trim().is_empty(),
@@ -137,6 +137,7 @@ fn finding_context_score(record: &DashboardGovernanceGateFinding) -> usize {
     .count()
 }
 
+#[cfg(any(feature = "tui", test))]
 fn finding_scope_title(record: &DashboardGovernanceGateFinding) -> String {
     let mut parts = Vec::new();
     if !record.dashboard_title.trim().is_empty() || !record.dashboard_uid.trim().is_empty() {
@@ -163,6 +164,7 @@ fn finding_scope_title(record: &DashboardGovernanceGateFinding) -> String {
     parts.join(" / ")
 }
 
+#[cfg(any(feature = "tui", test))]
 pub(crate) fn finding_sort_key(
     record: &DashboardGovernanceGateFinding,
 ) -> (
@@ -194,10 +196,12 @@ pub(crate) fn finding_sort_key(
     )
 }
 
+#[cfg(any(feature = "tui", test))]
 fn finding_row_title(record: &DashboardGovernanceGateFinding) -> String {
     finding_scope_title(record)
 }
 
+#[cfg(any(feature = "tui", test))]
 fn finding_row_meta(record: &DashboardGovernanceGateFinding) -> String {
     let mut parts = Vec::new();
     if !record.severity.trim().is_empty() {
@@ -241,6 +245,7 @@ fn finding_row_meta(record: &DashboardGovernanceGateFinding) -> String {
     }
 }
 
+#[cfg(any(feature = "tui", test))]
 fn finding_row_details(record: &DashboardGovernanceGateFinding) -> Vec<String> {
     vec![
         format!("Scope: {}", finding_scope_title(record)),
@@ -261,6 +266,7 @@ fn finding_row_details(record: &DashboardGovernanceGateFinding) -> Vec<String> {
     ]
 }
 
+#[cfg(any(feature = "tui", test))]
 pub(crate) fn build_browser_item(
     kind: &str,
     record: &DashboardGovernanceGateFinding,
@@ -397,23 +403,49 @@ pub(crate) fn render_dashboard_governance_gate_result(
 }
 
 pub(crate) fn run_dashboard_governance_gate(args: &GovernanceGateArgs) -> Result<()> {
-    let policy = load_object(&args.policy)?;
-    let governance = load_object(&args.governance)?;
-    let queries = load_object(&args.queries)?;
+    let policy = load_governance_policy(args)?;
+    let governance = load_object(&args.governance, "Dashboard governance JSON")?;
+    let queries = load_object(&args.queries, "Dashboard query report JSON")?;
     let result = evaluate_dashboard_governance_gate(&policy, &governance, &queries)?;
 
     if let Some(output_path) = args.json_output.as_ref() {
         write_json_document(&result, output_path)?;
     }
     if args.interactive {
-        run_governance_gate_interactive(&result)?;
-        return if result.ok {
-            Ok(())
-        } else {
-            Err(message(
-                "Dashboard governance gate reported policy violations.",
-            ))
-        };
+        #[cfg(all(feature = "tui", not(test)))]
+        {
+            run_governance_gate_interactive(&result)?;
+            return if result.ok {
+                Ok(())
+            } else {
+                Err(message(
+                    "Dashboard governance gate reported policy violations.",
+                ))
+            };
+        }
+        #[cfg(test)]
+        {
+            let summary_lines = render_dashboard_governance_gate_result(&result)
+                .lines()
+                .map(|line| line.to_string())
+                .collect::<Vec<_>>();
+            run_interactive_browser(
+                "Dashboard Governance Gate",
+                &summary_lines,
+                &super::governance_gate_tui::build_governance_gate_tui_items(&result, "all"),
+            )?;
+            return if result.ok {
+                Ok(())
+            } else {
+                Err(message(
+                    "Dashboard governance gate reported policy violations.",
+                ))
+            };
+        }
+        #[cfg(not(feature = "tui"))]
+        {
+            return super::tui_not_built("governance-gate --interactive");
+        }
     }
     match args.output_format {
         GovernanceGateOutputFormat::Json => {

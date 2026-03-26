@@ -14,7 +14,7 @@ use std::path::{Path, PathBuf};
 use std::process;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::common::{message, string_field, value_as_object, Result};
+use crate::common::{message, string_field, validation, value_as_object, Result};
 use crate::http::JsonHttpClient;
 
 use super::cli_defs::{ExportArgs, InspectExportArgs, InspectLiveArgs};
@@ -22,9 +22,14 @@ use super::export::{build_output_path, export_dashboards_with_request};
 use super::files::{
     build_export_metadata, load_export_metadata, write_dashboard, write_json_document,
 };
+use super::inspect::analyze_export_dir;
+#[cfg(feature = "tui")]
+use super::inspect::build_export_inspection_query_report;
+#[cfg(feature = "tui")]
 use super::inspect::build_export_inspection_summary;
-use super::inspect::{analyze_export_dir, build_export_inspection_query_report};
+#[cfg(feature = "tui")]
 use super::inspect_governance::build_export_inspection_governance_document;
+#[cfg(feature = "tui")]
 use super::inspect_live_tui::run_inspect_live_interactive as run_inspect_live_tui;
 use super::live::{
     build_datasource_inventory_record, collect_folder_inventory_with_request, fetch_dashboard,
@@ -43,7 +48,7 @@ impl TempInspectDir {
     pub(crate) fn new(prefix: &str) -> Result<Self> {
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .map_err(|error| message(format!("Failed to build {prefix} temp path: {error}")))?
+            .map_err(|error| validation(format!("Failed to build {prefix} temp path: {error}")))?
             .as_nanos();
         let path = env::temp_dir().join(format!(
             "grafana-utils-{prefix}-{}-{timestamp}",
@@ -151,20 +156,22 @@ pub(crate) fn load_variant_index_entries(
         return Ok(Vec::new());
     }
     let raw = fs::read_to_string(&index_path)?;
-    serde_json::from_str(&raw).map_err(|error| {
-        message(format!(
-            "Invalid dashboard export index in {}: {error}",
-            index_path.display()
-        ))
-    })
+    let entries: Vec<super::models::VariantIndexEntry> = serde_json::from_str(&raw)?;
+    Ok(entries)
 }
 
+#[cfg(feature = "tui")]
 fn run_interactive_inspect_live_tui_from_dir(import_dir: &Path) -> Result<usize> {
     let summary = build_export_inspection_summary(import_dir)?;
     let report = build_export_inspection_query_report(import_dir)?;
     let governance = build_export_inspection_governance_document(&summary, &report);
     run_inspect_live_tui(&summary, &governance, &report)?;
     Ok(summary.dashboard_count)
+}
+
+#[cfg(not(feature = "tui"))]
+fn run_interactive_inspect_live_tui_from_dir(_import_dir: &Path) -> Result<usize> {
+    super::tui_not_built("inspect-live --interactive")
 }
 
 pub(crate) fn inspect_live_dashboards_with_client(
@@ -235,18 +242,8 @@ fn build_export_inspect_args_from_live(
 }
 
 fn load_json_array_file(path: &Path, error_context: &str) -> Result<Vec<Value>> {
-    let raw = fs::read_to_string(path).map_err(|error| {
-        message(format!(
-            "Failed to read {error_context} {}: {error}",
-            path.display()
-        ))
-    })?;
-    let value: Value = serde_json::from_str(&raw).map_err(|error| {
-        message(format!(
-            "Invalid JSON in {error_context} {}: {error}",
-            path.display()
-        ))
-    })?;
+    let raw = fs::read_to_string(path)?;
+    let value: Value = serde_json::from_str(&raw)?;
     match value {
         Value::Array(items) => Ok(items),
         _ => Err(message(format!(
@@ -386,13 +383,7 @@ fn copy_dir_recursive(source: &Path, destination: &Path) -> Result<()> {
             if let Some(parent) = destination_path.parent() {
                 fs::create_dir_all(parent)?;
             }
-            fs::copy(&source_path, &destination_path).map_err(|error| {
-                message(format!(
-                    "Failed to copy {} to {}: {error}",
-                    source_path.display(),
-                    destination_path.display()
-                ))
-            })?;
+            fs::copy(&source_path, &destination_path)?;
         }
     }
     Ok(())

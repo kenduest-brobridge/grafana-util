@@ -7,7 +7,7 @@ use reqwest::header::{HeaderMap, HeaderName, HeaderValue, ACCEPT, ACCEPT_ENCODIN
 use reqwest::{Certificate, Method, StatusCode, Url};
 use serde_json::Value;
 
-use crate::common::{api_response, message, Result};
+use crate::common::{api_response, invalid_header_name, invalid_header_value, invalid_url, Result};
 
 /// Struct definition for JsonHttpClientConfig.
 #[derive(Debug, Clone)]
@@ -43,10 +43,10 @@ impl JsonHttpClient {
         headers.insert(ACCEPT, HeaderValue::from_static("application/json"));
         headers.insert(ACCEPT_ENCODING, HeaderValue::from_static("identity"));
         for (name, value) in config.headers {
-            let header_name = HeaderName::from_bytes(name.as_bytes())
-                .map_err(|_| message(format!("Invalid header name: {name}")))?;
+            let header_name =
+                HeaderName::from_bytes(name.as_bytes()).map_err(|_| invalid_header_name(&name))?;
             let header_value = HeaderValue::from_str(&value)
-                .map_err(|_| message(format!("Invalid header value for {name}")))?;
+                .map_err(|error| invalid_header_value(&name, error))?;
             headers.insert(header_name, header_value);
         }
 
@@ -111,7 +111,7 @@ impl JsonHttpClient {
     // Accepts already-resolved base_url and enforces consistent param encoding.
     fn build_url(&self, path: &str, params: &[(String, String)]) -> Result<Url> {
         let mut url = Url::parse(&format!("{}{}", self.base_url, path))
-            .map_err(|error| message(format!("Invalid request URL {path}: {error}")))?;
+            .map_err(|error| invalid_url(format!("request path {path}"), error))?;
         if !params.is_empty() {
             let mut pairs = url.query_pairs_mut();
             for (key, value) in params {

@@ -1,3 +1,4 @@
+#![cfg(feature = "tui")]
 use std::io::{self, Stdout};
 
 use crossterm::execute;

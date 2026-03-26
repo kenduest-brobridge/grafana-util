@@ -32,6 +32,7 @@ DASHBOARD_COMMAND_HELP = {
     "export": "Export dashboards into raw/ and prompt/ variants.",
     "list": "List live dashboard summaries from Grafana.",
     "import": "Import dashboards from exported raw JSON files.",
+    "delete": "Delete live dashboards by UID or folder path.",
     "diff": "Compare exported raw dashboards with the current Grafana state.",
     "inspect-export": "Analyze a raw dashboard export directory offline.",
     "inspect-live": "Analyze live Grafana dashboards without writing a persistent export.",
@@ -42,6 +43,7 @@ UNIFIED_DASHBOARD_COMMAND_MAP = {
     "export": "export-dashboard",
     "list": "list-dashboard",
     "import": "import-dashboard",
+    "delete": "delete-dashboard",
     "diff": "diff",
     "inspect-export": "inspect-export",
     "inspect-live": "inspect-live",
@@ -75,9 +77,10 @@ def _print_dashboard_group_help() -> None:
         "Usage: grafana-util dashboard <COMMAND> [OPTIONS]\n\n"
         "Commands:\n"
         "  export             Export dashboards into raw/ and prompt/ variants.\n"
-        "  list               List live dashboard summaries from Grafana.\n"
-        "  import             Import dashboards from exported raw JSON files.\n"
-        "  diff               Compare exported raw dashboards with the current Grafana state.\n"
+            "  list               List live dashboard summaries from Grafana.\n"
+            "  import             Import dashboards from exported raw JSON files.\n"
+            "  delete             Delete live dashboards by UID or folder path.\n"
+            "  diff               Compare exported raw dashboards with the current Grafana state.\n"
         "  inspect-export     Analyze a raw dashboard export directory offline.\n"
         "  inspect-live       Analyze live Grafana dashboards without writing a persistent export.\n"
         "  inspect-vars       List dashboard templating variables from live Grafana.\n"

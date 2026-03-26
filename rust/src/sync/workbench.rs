@@ -119,14 +119,6 @@ pub fn render_sync_source_bundle_text(document: &Value) -> Result<Vec<String>> {
     bundle_builder::render_sync_source_bundle_text(document)
 }
 
-pub(crate) fn build_sync_alert_assessment_document(operations: &[Value]) -> Value {
-    plan_builder::build_sync_alert_assessment_document(operations)
-}
-
-pub(crate) fn build_sync_plan_summary_document(operations: &[Value]) -> Value {
-    plan_builder::build_sync_plan_summary_document(operations)
-}
-
 /// Purpose: implementation note.
 ///
 /// Args: see function signature.

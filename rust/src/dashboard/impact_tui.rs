@@ -1,4 +1,5 @@
-//! Specialized interactive browser for dashboard impact review.
+#![cfg(feature = "tui")]
+// Specialized interactive browser for dashboard impact review.
 #![cfg_attr(test, allow(dead_code))]
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use crossterm::execute;

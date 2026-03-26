@@ -59,13 +59,7 @@ fn load_export_org_ids(
     let index_path = import_dir.join(&index_file);
     if index_path.is_file() {
         let raw = fs::read_to_string(&index_path)?;
-        let entries: Vec<super::VariantIndexEntry> =
-            serde_json::from_str(&raw).map_err(|error| {
-                message(format!(
-                    "Invalid dashboard export index in {}: {error}",
-                    index_path.display()
-                ))
-            })?;
+        let entries: Vec<super::VariantIndexEntry> = serde_json::from_str(&raw)?;
         for entry in entries {
             let org_id = entry.org_id.trim();
             if !org_id.is_empty() {
@@ -100,13 +94,7 @@ fn load_export_org_names(
     let index_path = import_dir.join(&index_file);
     if index_path.is_file() {
         let raw = fs::read_to_string(&index_path)?;
-        let entries: Vec<super::VariantIndexEntry> =
-            serde_json::from_str(&raw).map_err(|error| {
-                message(format!(
-                    "Invalid dashboard export index in {}: {error}",
-                    index_path.display()
-                ))
-            })?;
+        let entries: Vec<super::VariantIndexEntry> = serde_json::from_str(&raw)?;
         for entry in entries {
             let org_name = entry.org.trim();
             if !org_name.is_empty() {

@@ -1,3 +1,5 @@
+#![cfg_attr(not(any(feature = "tui", test)), allow(dead_code))]
+
 use std::io::{self, Write};
 
 use crate::common::Result;

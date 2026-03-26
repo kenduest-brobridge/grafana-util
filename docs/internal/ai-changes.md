@@ -5,6 +5,35 @@ Current AI change log only.
 - Older detailed history moved to [`archive/ai-changes-archive-2026-03-24.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-03-24.md).
 - Keep this file limited to the latest active architecture and maintenance changes.
 
+## 2026-03-26 - Gate Sync Shared TUI Flows Behind Tui Feature
+- Summary: wrapped the shared interactive browser runner plus sync audit/review terminal entrypoints in `feature = "tui"` gates, added disabled-feature stubs that return a typed `tui` error, and kept the default feature-on behavior unchanged.
+- Tests: kept the existing sync audit/review helper coverage and added disabled-feature regression tests alongside the gated entrypoints for the browser, audit, and review runners.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet --lib cli_review_tui_rust_tests` (pass); `cargo test --manifest-path rust/Cargo.toml --quiet --lib cli_audit_preflight_rust_tests` (pass); `cargo test --manifest-path rust/Cargo.toml --quiet --no-default-features --lib cli_review_tui_rust_tests` (blocked)
+- Reason: the no-default-features compile is still blocked by unrelated unconditional dashboard TUI modules outside this task scope.
+- Validation: `cargo fmt --manifest-path rust/Cargo.toml --all`; focused default-feature sync test targets passed.
+- Impact: `rust/src/interactive_browser.rs`, `rust/src/sync/audit_tui.rs`, `rust/src/sync/review_tui.rs`, `rust/src/sync/cli_review_tui_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: low to medium. The runtime fallback only affects feature-disabled builds; rollback is to restore the previous unconditional terminal UI wiring if the feature gate needs to be removed.
+- Follow-up: gate the remaining dashboard TUI modules if full `--no-default-features` crate compilation becomes a requirement.
+
+## 2026-03-26 - Migrate Selected Rust Dashboard Modules To Unified Error Model
+- Summary: migrated dashboard URL parsing to the typed `Url` helper, turned import-path validation into the typed `Validation` helper, and kept local JSON decoding on the typed `Json` path for live inspect/import validation. Also switched the full-page screenshot manifest write to the typed JSON serializer path.
+- Tests: added focused regression coverage for invalid dashboard URLs, invalid import-relative dashboard paths, and invalid dashboard export index JSON.
+- Test Run: `cargo test --quiet --lib screenshot_rust_tests` (blocked)
+- Reason: the dirty worktree already contains unrelated compile errors in `rust/src/common.rs` and `rust/src/sync/preflight.rs`, so the targeted dashboard test run could not reach the modified code paths.
+- Validation: code review plus targeted regression tests were added; the compilation blocker is outside the owned dashboard slice.
+- Impact: `rust/src/dashboard/inspect_live.rs`, `rust/src/dashboard/import_validation.rs`, `rust/src/dashboard/import_lookup.rs`, `rust/src/dashboard/screenshot.rs`, `rust/src/dashboard/screenshot_full_page.rs`, `rust/src/dashboard/inspect_live_rust_tests.rs`, `rust/src/dashboard/import_rust_tests.rs`, `rust/src/dashboard/screenshot_rust_tests.rs`
+- Rollback/Risk: medium. The behavioral change is limited to error categorization and wording for local failures; command semantics and 404 handling are unchanged.
+- Follow-up: rerun the targeted dashboard tests once the unrelated `common.rs` / `sync/preflight.rs` compile breakage is resolved.
+
+## 2026-03-26 - Migrate Selected Rust Sync Modules To Unified Error Model
+- Summary: added shared JSON object/array/field helpers in `rust/src/sync/json.rs` and migrated the sync apply/audit/preflight/review/staged-document readers to use them for obvious document-shape and validation failures.
+- Tests: touched sync regression coverage was left in place; no new assertions were required for the helper migration.
+- Test Run: `cargo test --quiet --lib load_apply_intent_operations_requires_operations_array` (blocked by pre-existing unrelated compile errors in `src/common.rs` after the sync code compiled far enough to reach the shared library path).
+- Validation: `git diff --check` passed on the touched files; `rustfmt --edition 2021` was run on the edited Rust files.
+- Impact: `rust/src/sync/json.rs`, `rust/src/sync/apply_builder.rs`, `rust/src/sync/audit.rs`, `rust/src/sync/bundle_preflight.rs`, `rust/src/sync/live_apply.rs`, `rust/src/sync/preflight.rs`, `rust/src/sync/review_tui.rs`, `rust/src/sync/staged_documents.rs`, `rust/src/sync/summary_builder.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: low. The refactor only centralizes local validation checks; rollback is to restore the previous inline shape guards if a caller depends on the new helper wording.
+- Follow-up: resolve the unrelated `src/common.rs` `as_dyn_error` compile failure before relying on `cargo test` for repo-wide validation.
+
 ## 2026-03-24 - Extract Dashboard Import Routed Orchestration
 - Summary: moved the export-org routed import flow, including routed preview JSON assembly and routed dispatch, into `rust/src/dashboard/import_routed.rs` while keeping `rust/src/dashboard/import.rs` focused on the single-org import facade and shared import loop.
 - Tests: reused the existing dashboard import coverage; no new assertions were needed for the refactor.

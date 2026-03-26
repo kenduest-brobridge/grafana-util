@@ -43,10 +43,11 @@ const DATASOURCE_EXPORT_FILENAME: &str = "datasources.json";
 const EXPORT_METADATA_FILENAME: &str = "export-metadata.json";
 const ROOT_INDEX_KIND: &str = "grafana-utils-datasource-export-index";
 const TOOL_SCHEMA_VERSION: i64 = 1;
-const DATASOURCE_ROOT_HELP_TEXT: &str = "Examples:\n\n  Show the built-in datasource type catalog:\n    grafana-util datasource types\n\n  List datasources from the current org as JSON:\n    grafana-util datasource list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json\n\n  List datasources across all visible orgs with Basic auth:\n    grafana-util datasource list --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --json\n\n  Dry-run a live datasource create with the richer preset scaffold:\n    grafana-util datasource add --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --name prometheus-main --type prometheus --datasource-url http://prometheus:9090 --preset-profile full --dry-run --table\n\n  Dry-run a datasource import:\n    grafana-util datasource import --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --import-dir ./datasources --dry-run --json";
+const DATASOURCE_ROOT_HELP_TEXT: &str = "Examples:\n\n  Browse live datasources in a TUI:\n    grafana-util datasource browse --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\"\n\n  Show the built-in datasource type catalog:\n    grafana-util datasource types\n\n  List datasources from the current org as JSON:\n    grafana-util datasource list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json\n\n  List datasources across all visible orgs with Basic auth:\n    grafana-util datasource list --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --json\n\n  Dry-run a live datasource create with the richer preset scaffold:\n    grafana-util datasource add --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --name prometheus-main --type prometheus --datasource-url http://prometheus:9090 --preset-profile full --dry-run --table\n\n  Dry-run a datasource import:\n    grafana-util datasource import --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --import-dir ./datasources --dry-run --json";
 const DATASOURCE_TYPES_HELP_TEXT: &str =
     "Examples:\n\n  grafana-util datasource types\n  grafana-util datasource types --json";
 const DATASOURCE_LIST_HELP_TEXT: &str = "Examples:\n\n  grafana-util datasource list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json\n  grafana-util datasource list --url http://localhost:3000 --basic-user admin --basic-password admin --org-id 2 --output-format csv\n  grafana-util datasource list --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --json";
+const DATASOURCE_BROWSE_HELP_TEXT: &str = "Keys:\n\n  e edit selected datasource\n  d delete selected datasource\n  l refresh live inventory\n  q or Esc exit\n\nExamples:\n\n  grafana-util datasource browse --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\"\n  grafana-util datasource browse --url http://localhost:3000 --basic-user admin --basic-password admin --org-id 2\n  grafana-util datasource browse --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs";
 const DATASOURCE_EXPORT_HELP_TEXT: &str = "Examples:\n\n  grafana-util datasource export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./datasources --overwrite\n  grafana-util datasource export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --export-dir ./datasources";
 const DATASOURCE_IMPORT_HELP_TEXT: &str = "Examples:\n\n  grafana-util datasource import --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --import-dir ./datasources --dry-run --table\n  grafana-util datasource import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./datasources --use-export-org --only-org-id 2 --create-missing-orgs --dry-run --json";
 const DATASOURCE_DIFF_HELP_TEXT: &str = "Examples:\n\n  grafana-util datasource diff --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --diff-dir ./datasources";
@@ -64,10 +65,32 @@ const DATASOURCE_CONTRACT_FIELDS: &[&str] = &[
     "orgId",
 ];
 
+#[path = "datasource_browse.rs"]
+mod datasource_browse;
+#[cfg(feature = "tui")]
+#[path = "datasource_browse_edit_dialog.rs"]
+mod datasource_browse_edit_dialog;
+#[cfg(feature = "tui")]
+#[path = "datasource_browse_input.rs"]
+mod datasource_browse_input;
+#[cfg(feature = "tui")]
+#[path = "datasource_browse_render.rs"]
+mod datasource_browse_render;
+#[cfg(feature = "tui")]
+#[path = "datasource_browse_state.rs"]
+mod datasource_browse_state;
+#[path = "datasource_browse_support.rs"]
+mod datasource_browse_support;
+#[cfg(feature = "tui")]
+#[path = "datasource_browse_terminal.rs"]
+mod datasource_browse_terminal;
+#[cfg(feature = "tui")]
+#[path = "datasource_browse_tui.rs"]
+mod datasource_browse_tui;
 #[path = "datasource_diff.rs"]
 mod datasource_diff;
 
-/// Enum definition for ListOutputFormat.
+/// Output selectors for datasource inventory listing.
 #[derive(Debug, Clone, Copy, ValueEnum, PartialEq, Eq)]
 pub enum ListOutputFormat {
     Table,
@@ -75,7 +98,7 @@ pub enum ListOutputFormat {
     Json,
 }
 
-/// Enum definition for DryRunOutputFormat.
+/// Output selectors for datasource dry-run and mutation previews.
 #[derive(Debug, Clone, Copy, ValueEnum, PartialEq, Eq)]
 pub enum DryRunOutputFormat {
     Text,
@@ -83,14 +106,14 @@ pub enum DryRunOutputFormat {
     Json,
 }
 
-/// Enum definition for SupportOutputFormat.
+/// Output selectors for the supported datasource type catalog.
 #[derive(Debug, Clone, Copy, ValueEnum, PartialEq, Eq)]
 pub enum SupportOutputFormat {
     Text,
     Json,
 }
 
-/// Struct definition for DatasourceTypesArgs.
+/// Arguments for rendering the built-in datasource support catalog.
 #[derive(Debug, Clone, Args)]
 pub struct DatasourceTypesArgs {
     #[arg(
@@ -109,7 +132,7 @@ pub struct DatasourceTypesArgs {
     pub output_format: Option<SupportOutputFormat>,
 }
 
-/// Struct definition for DatasourceListArgs.
+/// Arguments for listing live datasource inventory.
 #[derive(Debug, Clone, Args)]
 pub struct DatasourceListArgs {
     #[command(flatten)]
@@ -150,7 +173,27 @@ pub struct DatasourceListArgs {
     pub no_header: bool,
 }
 
-/// Struct definition for DatasourceExportArgs.
+/// Arguments for browsing live datasource inventory in a TUI.
+#[derive(Debug, Clone, Args)]
+pub struct DatasourceBrowseArgs {
+    #[command(flatten)]
+    pub common: CommonCliArgs,
+    #[arg(
+        long,
+        conflicts_with = "all_orgs",
+        help = "Browse datasources from one explicit Grafana org ID instead of the current org. Requires Basic auth."
+    )]
+    pub org_id: Option<i64>,
+    #[arg(
+        long,
+        default_value_t = false,
+        conflicts_with = "org_id",
+        help = "Enumerate all visible Grafana orgs and browse datasource inventory across them. Requires Basic auth."
+    )]
+    pub all_orgs: bool,
+}
+
+/// Arguments for exporting datasource inventory to local JSON artifacts.
 #[derive(Debug, Clone, Args)]
 pub struct DatasourceExportArgs {
     #[command(flatten)]
@@ -188,7 +231,7 @@ pub struct DatasourceExportArgs {
     pub dry_run: bool,
 }
 
-/// Struct definition for DatasourceImportArgs.
+/// Arguments for importing datasource inventory from local JSON artifacts.
 #[derive(Debug, Clone, Args)]
 pub struct DatasourceImportArgs {
     #[command(flatten)]
@@ -593,6 +636,8 @@ pub enum DatasourceGroupCommand {
     Types(DatasourceTypesArgs),
     #[command(about = "List live Grafana datasource inventory.", after_help = DATASOURCE_LIST_HELP_TEXT)]
     List(DatasourceListArgs),
+    #[command(about = "Open a live datasource browser with in-place modify and delete actions.", after_help = DATASOURCE_BROWSE_HELP_TEXT)]
+    Browse(DatasourceBrowseArgs),
     #[command(about = "Create one live Grafana datasource through the Grafana API.", after_help = DATASOURCE_ADD_HELP_TEXT)]
     Add(DatasourceAddArgs),
     #[command(about = "Modify one live Grafana datasource through the Grafana API.", after_help = DATASOURCE_MODIFY_HELP_TEXT)]
@@ -610,7 +655,7 @@ pub enum DatasourceGroupCommand {
 #[derive(Debug, Clone, Parser)]
 #[command(
     name = "grafana-util datasource",
-    about = "List, add, modify, delete, export, import, and diff Grafana datasources.",
+    about = "List, browse, add, modify, delete, export, import, and diff Grafana datasources.",
     after_help = DATASOURCE_ROOT_HELP_TEXT,
     styles = crate::help_styles::CLI_HELP_STYLES
 )]
@@ -635,6 +680,7 @@ fn normalize_output_formats(args: &mut DatasourceCliArgs) {
             Some(ListOutputFormat::Json) => inner.json = true,
             None => {}
         },
+        DatasourceGroupCommand::Browse(_) => {}
         DatasourceGroupCommand::Import(inner) => match inner.output_format {
             Some(DryRunOutputFormat::Table) => inner.table = true,
             Some(DryRunOutputFormat::Json) => inner.json = true,
@@ -675,6 +721,7 @@ fn normalize_datasource_group_command(
             Some(ListOutputFormat::Json) => inner.json = true,
             None => {}
         },
+        DatasourceGroupCommand::Browse(_) => {}
         DatasourceGroupCommand::Import(inner) => match inner.output_format {
             Some(DryRunOutputFormat::Table) => inner.table = true,
             Some(DryRunOutputFormat::Json) => inner.json = true,
@@ -3199,6 +3246,10 @@ pub fn run_datasource_cli(command: DatasourceGroupCommand) -> Result<()> {
                 println!();
                 println!("Listed {} data source(s).", datasources.len());
             }
+            Ok(())
+        }
+        DatasourceGroupCommand::Browse(args) => {
+            let _ = datasource_browse::browse_datasources(&args)?;
             Ok(())
         }
         DatasourceGroupCommand::Add(args) => {

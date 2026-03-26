@@ -3,6 +3,7 @@ use super::test_support::{
     resolve_manifest_title, validate_screenshot_args, DashboardCliArgs, DashboardCommand,
     ScreenshotFullPageOutput, ScreenshotOutputFormat, ScreenshotTheme,
 };
+use crate::common::GrafanaCliError;
 use clap::{CommandFactory, Parser};
 use std::path::{Path, PathBuf};
 
@@ -323,6 +324,36 @@ fn build_dashboard_capture_url_reuses_full_dashboard_url_state() {
 }
 
 #[test]
+fn build_dashboard_capture_url_rejects_invalid_dashboard_url_as_url_error() {
+    let args = match parse_cli_from([
+        "grafana-util",
+        "screenshot",
+        "--url",
+        "https://grafana.example.com",
+        "--dashboard-uid",
+        "cpu-main",
+        "--dashboard-url",
+        "not a url",
+        "--output",
+        "./cpu-main.png",
+        "--token",
+        "secret",
+    ])
+    .command
+    {
+        DashboardCommand::Screenshot(args) => args,
+        other => panic!("expected screenshot args, got {other:?}"),
+    };
+
+    let error = build_dashboard_capture_url(&args).unwrap_err();
+    assert!(matches!(error, GrafanaCliError::Url { .. }));
+    assert_eq!(error.kind(), "url");
+    assert!(error
+        .to_string()
+        .contains("Invalid URL for --dashboard-url"));
+}
+
+#[test]
 fn build_dashboard_capture_url_merges_vars_query_between_url_and_explicit_vars() {
     let args = match parse_cli_from([
         "grafana-util",
@@ -582,4 +613,30 @@ fn resolve_manifest_title_prefers_panel_then_dashboard_then_uid_then_output_stem
         resolve_manifest_title(None, None, None, &args),
         Some("capture-name".to_string())
     );
+}
+
+#[cfg(not(feature = "browser"))]
+#[test]
+fn capture_dashboard_screenshot_reports_missing_browser_support() {
+    let args = match parse_cli_from([
+        "grafana-util",
+        "screenshot",
+        "--dashboard-uid",
+        "cpu-main",
+        "--output",
+        "./cpu-main.png",
+        "--token",
+        "secret",
+    ])
+    .command
+    {
+        DashboardCommand::Screenshot(args) => args,
+        other => panic!("expected screenshot args, got {other:?}"),
+    };
+
+    let error = crate::dashboard::capture_dashboard_screenshot(&args)
+        .unwrap_err()
+        .to_string();
+    assert!(error.contains("Dashboard screenshot support was not built in"));
+    assert!(error.contains("browser"));
 }

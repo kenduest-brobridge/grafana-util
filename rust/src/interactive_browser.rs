@@ -1,32 +1,43 @@
 //! Shared read-only TUI browser for list/detail artifact inspection.
-#[cfg(test)]
+#![cfg_attr(not(test), allow(dead_code))]
+#[cfg(all(test, not(feature = "tui")))]
+use crate::common::tui;
+#[cfg(any(feature = "tui", test))]
+use crate::common::Result;
+
+#[cfg(feature = "tui")]
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
-#[cfg(test)]
+#[cfg(feature = "tui")]
 use crossterm::execute;
-#[cfg(test)]
+#[cfg(feature = "tui")]
 use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
 };
-#[cfg(test)]
+#[cfg(feature = "tui")]
 use ratatui::backend::CrosstermBackend;
-#[cfg(test)]
+#[cfg(feature = "tui")]
 use ratatui::layout::{Constraint, Direction, Layout};
-#[cfg(test)]
+#[cfg(feature = "tui")]
 use ratatui::style::{Color, Modifier, Style};
-#[cfg(test)]
+#[cfg(feature = "tui")]
 use ratatui::text::{Line, Span};
-#[cfg(test)]
+#[cfg(feature = "tui")]
 use ratatui::widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Wrap};
-#[cfg(test)]
+#[cfg(feature = "tui")]
 use ratatui::Terminal;
-#[cfg(test)]
+#[cfg(feature = "tui")]
 use std::io::{self, Stdout};
-#[cfg(test)]
+#[cfg(feature = "tui")]
 use std::time::Duration;
 
-#[cfg(test)]
-use crate::common::Result;
+#[cfg(any(feature = "tui", test))]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum BrowserPane {
+    Items,
+    Detail,
+}
 
+#[cfg_attr(not(feature = "tui"), allow(dead_code))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct BrowserItem {
     pub(crate) kind: String,
@@ -35,12 +46,12 @@ pub(crate) struct BrowserItem {
     pub(crate) details: Vec<String>,
 }
 
-#[cfg(test)]
+#[cfg(any(feature = "tui", test))]
 struct TerminalSession {
     terminal: Terminal<CrosstermBackend<Stdout>>,
 }
 
-#[cfg(test)]
+#[cfg(any(feature = "tui", test))]
 impl TerminalSession {
     fn enter() -> Result<Self> {
         enable_raw_mode()?;
@@ -52,7 +63,7 @@ impl TerminalSession {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(feature = "tui", test))]
 impl Drop for TerminalSession {
     fn drop(&mut self) {
         let _ = disable_raw_mode();
@@ -61,12 +72,14 @@ impl Drop for TerminalSession {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(feature = "tui", test))]
 fn item_color(kind: &str) -> Color {
     match kind {
         "dashboard" => Color::Yellow,
         "alert" | "alert-rule" => Color::Red,
         "datasource" => Color::Cyan,
+        "user" => Color::Green,
+        "team" => Color::LightMagenta,
         "warning" => Color::Yellow,
         "violation" => Color::LightRed,
         "drift" => Color::LightRed,
@@ -75,7 +88,7 @@ fn item_color(kind: &str) -> Color {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(feature = "tui", test))]
 fn collect_kind_filters(items: &[BrowserItem]) -> Vec<String> {
     let mut filters = vec!["all".to_string()];
     for item in items {
@@ -86,7 +99,7 @@ fn collect_kind_filters(items: &[BrowserItem]) -> Vec<String> {
     filters
 }
 
-#[cfg(test)]
+#[cfg(any(feature = "tui", test))]
 fn visible_item_indexes(items: &[BrowserItem], filter_kind: &str) -> Vec<usize> {
     items
         .iter()
@@ -101,13 +114,13 @@ fn visible_item_indexes(items: &[BrowserItem], filter_kind: &str) -> Vec<usize> 
         .collect()
 }
 
-#[cfg(test)]
+#[cfg(any(feature = "tui", test))]
 fn selected_detail_line_count(item: Option<&BrowserItem>) -> usize {
     item.map(|candidate| candidate.details.len().max(1))
         .unwrap_or(1)
 }
 
-#[cfg(test)]
+#[cfg(any(feature = "tui", test))]
 pub(crate) fn run_interactive_browser(
     title: &str,
     summary_lines: &[String],
@@ -120,6 +133,7 @@ pub(crate) fn run_interactive_browser(
     let mut visible_indexes = visible_item_indexes(items, &kind_filters[active_filter]);
     state.select((!visible_indexes.is_empty()).then_some(0));
     let mut detail_scroll = 0u16;
+    let mut pane_focus = BrowserPane::Items;
 
     loop {
         session.terminal.draw(|frame| {
@@ -140,6 +154,16 @@ pub(crate) fn run_interactive_browser(
                 .get(selected_visible)
                 .and_then(|index| items.get(*index));
             let total_detail_lines = selected_detail_line_count(selected_item);
+            let detail_lines = selected_item
+                .map(|item| {
+                    if item.details.is_empty() {
+                        vec!["No detail lines.".to_string()]
+                    } else {
+                        item.details.clone()
+                    }
+                })
+                .unwrap_or_else(|| vec!["No item selected".to_string()]);
+            let detail_selected = (detail_scroll as usize).min(detail_lines.len().saturating_sub(1));
 
             let summary = Paragraph::new(summary_lines.join("\n"))
                 .wrap(Wrap { trim: false })
@@ -174,7 +198,13 @@ pub(crate) fn run_interactive_browser(
                     .collect::<Vec<_>>(),
             )
             .block(
-                Block::default().borders(Borders::ALL).title(format!(
+                pane_block(
+                    "Items",
+                    pane_focus == BrowserPane::Items,
+                    Color::Cyan,
+                    Color::Black,
+                )
+                .title(format!(
                     "Items {}/{}  filter:{}",
                     visible_indexes.len(),
                     items.len(),
@@ -191,9 +221,6 @@ pub(crate) fn run_interactive_browser(
             );
             frame.render_stateful_widget(list, panes[0], &mut state);
 
-            let detail_text = selected_item
-                .map(|item| item.details.join("\n"))
-                .unwrap_or_else(|| "No item selected".to_string());
             let detail_title = selected_item
                 .map(|item| {
                     let item_position = visible_indexes
@@ -210,11 +237,40 @@ pub(crate) fn run_interactive_browser(
                     )
                 })
                 .unwrap_or_else(|| "Detail".to_string());
-            let detail = Paragraph::new(detail_text)
-                .scroll((detail_scroll, 0))
-                .wrap(Wrap { trim: false })
-                .block(Block::default().borders(Borders::ALL).title(detail_title));
-            frame.render_widget(detail, panes[1]);
+            let detail_items = detail_lines
+                .iter()
+                .map(|line| {
+                    ListItem::new(Line::from(Span::styled(
+                        line.clone(),
+                        Style::default().fg(Color::White),
+                    )))
+                })
+                .collect::<Vec<_>>();
+            if pane_focus == BrowserPane::Detail {
+                let mut detail_state = ListState::default();
+                detail_state.select(Some(detail_selected));
+                let detail = List::new(detail_items)
+                    .block(
+                        pane_block("Detail", true, Color::LightBlue, Color::Black)
+                            .title(detail_title),
+                    )
+                    .highlight_symbol("▌ ")
+                    .repeat_highlight_symbol(true)
+                    .highlight_style(
+                        Style::default()
+                            .fg(Color::White)
+                            .bg(Color::Blue)
+                            .add_modifier(Modifier::BOLD),
+                    );
+                frame.render_stateful_widget(detail, panes[1], &mut detail_state);
+            } else {
+                let detail = List::new(detail_items)
+                    .block(
+                        pane_block("Detail", false, Color::LightBlue, Color::Black)
+                            .title(detail_title),
+                    );
+                frame.render_widget(detail, panes[1]);
+            }
 
             let footer = Paragraph::new(vec![
                 Line::from(vec![
@@ -231,11 +287,22 @@ pub(crate) fn run_interactive_browser(
                         format!("Filter {}", kind_filters[active_filter]),
                         Style::default().fg(Color::Yellow),
                     ),
+                    Span::raw("   "),
+                    Span::styled(
+                        format!(
+                            "Focus {}",
+                            match pane_focus {
+                                BrowserPane::Items => "items",
+                                BrowserPane::Detail => "detail",
+                            }
+                        ),
+                        Style::default().fg(Color::LightBlue),
+                    ),
                 ]),
                 Line::from(
-                    "Up/Down item  PgUp/PgDn detail  Home/End list  Enter reset detail  f next filter  F prev filter".to_string(),
+                    "Tab next pane  Shift+Tab prev pane  Up/Down move in focused pane  PgUp/PgDn detail  f next filter  F prev filter".to_string(),
                 ),
-                Line::from("q/Esc exit".to_string()),
+                Line::from("Home/End jump  Enter reset detail  q/Esc exit".to_string()),
             ])
             .block(Block::default().borders(Borders::ALL).title("Controls"));
             frame.render_widget(footer, outer[2]);
@@ -248,29 +315,72 @@ pub(crate) fn run_interactive_browser(
             if key.kind != KeyEventKind::Press {
                 continue;
             }
+            let selected_visible = state.selected().unwrap_or(0);
+            let selected_item = visible_indexes
+                .get(selected_visible)
+                .and_then(|index| items.get(*index));
+            let total_detail_lines = selected_detail_line_count(selected_item);
             match key.code {
-                KeyCode::Up => {
-                    let selected = state.selected().unwrap_or(0);
-                    state.select(Some(selected.saturating_sub(1)));
-                    detail_scroll = 0;
+                KeyCode::BackTab => {
+                    pane_focus = match pane_focus {
+                        BrowserPane::Items => BrowserPane::Detail,
+                        BrowserPane::Detail => BrowserPane::Items,
+                    };
                 }
-                KeyCode::Down => {
-                    let selected = state.selected().unwrap_or(0);
-                    state.select(Some(
-                        (selected + 1).min(visible_indexes.len().saturating_sub(1)),
-                    ));
-                    detail_scroll = 0;
+                KeyCode::Tab => {
+                    pane_focus = match pane_focus {
+                        BrowserPane::Items => BrowserPane::Detail,
+                        BrowserPane::Detail => BrowserPane::Items,
+                    };
                 }
-                KeyCode::PageUp => detail_scroll = detail_scroll.saturating_sub(10),
-                KeyCode::PageDown => detail_scroll = detail_scroll.saturating_add(10),
-                KeyCode::Home => {
-                    state.select(Some(0));
-                    detail_scroll = 0;
+                KeyCode::Up => match pane_focus {
+                    BrowserPane::Items => {
+                        let selected = state.selected().unwrap_or(0);
+                        state.select(Some(selected.saturating_sub(1)));
+                        detail_scroll = 0;
+                    }
+                    BrowserPane::Detail => {
+                        detail_scroll = detail_scroll.saturating_sub(1);
+                    }
+                },
+                KeyCode::Down => match pane_focus {
+                    BrowserPane::Items => {
+                        let selected = state.selected().unwrap_or(0);
+                        state.select(Some(
+                            (selected + 1).min(visible_indexes.len().saturating_sub(1)),
+                        ));
+                        detail_scroll = 0;
+                    }
+                    BrowserPane::Detail => {
+                        detail_scroll = detail_scroll
+                            .saturating_add(1)
+                            .min(total_detail_lines.saturating_sub(1) as u16);
+                    }
+                },
+                KeyCode::PageUp => {
+                    detail_scroll = detail_scroll.saturating_sub(10);
                 }
-                KeyCode::End => {
-                    state.select(Some(visible_indexes.len().saturating_sub(1)));
-                    detail_scroll = 0;
+                KeyCode::PageDown => {
+                    detail_scroll = detail_scroll
+                        .saturating_add(10)
+                        .min(total_detail_lines.saturating_sub(1) as u16);
                 }
+                KeyCode::Home => match pane_focus {
+                    BrowserPane::Items => {
+                        state.select(Some(0));
+                        detail_scroll = 0;
+                    }
+                    BrowserPane::Detail => detail_scroll = 0,
+                },
+                KeyCode::End => match pane_focus {
+                    BrowserPane::Items => {
+                        state.select(Some(visible_indexes.len().saturating_sub(1)));
+                        detail_scroll = 0;
+                    }
+                    BrowserPane::Detail => {
+                        detail_scroll = total_detail_lines.saturating_sub(1) as u16;
+                    }
+                },
                 KeyCode::Enter => detail_scroll = 0,
                 KeyCode::Char('f') => {
                     active_filter = (active_filter + 1) % kind_filters.len();
@@ -293,4 +403,55 @@ pub(crate) fn run_interactive_browser(
             }
         }
     }
+}
+
+#[cfg(any(feature = "tui", test))]
+fn pane_block(title: &str, focused: bool, accent: Color, bg: Color) -> Block<'static> {
+    Block::default()
+        .borders(Borders::ALL)
+        .title(if focused {
+            format!("{title} [Focused]")
+        } else {
+            title.to_string()
+        })
+        .style(Style::default().bg(bg))
+        .border_style(Style::default().fg(if focused { accent } else { Color::Gray }))
+        .title_style(
+            Style::default()
+                .fg(Color::White)
+                .bg(bg)
+                .add_modifier(Modifier::BOLD),
+        )
+}
+
+#[cfg(all(test, not(feature = "tui")))]
+pub(crate) fn run_interactive_browser(
+    _title: &str,
+    _summary_lines: &[String],
+    _items: &[BrowserItem],
+) -> Result<()> {
+    Err(tui(
+        "Shared interactive browser requires the `tui` feature.",
+    ))
+}
+
+#[cfg(all(test, not(feature = "tui")))]
+#[test]
+fn run_interactive_browser_returns_tui_error_when_feature_disabled() {
+    let error = run_interactive_browser(
+        "Test",
+        &[],
+        &[BrowserItem {
+            kind: "dashboard".to_string(),
+            title: "Example".to_string(),
+            meta: "meta".to_string(),
+            details: vec!["detail".to_string()],
+        }],
+    )
+    .expect_err("feature-disabled browser should return an error");
+
+    assert_eq!(
+        error.to_string(),
+        "Shared interactive browser requires the `tui` feature."
+    );
 }

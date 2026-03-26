@@ -1,12 +1,16 @@
 //! Dashboard screenshot header and capture metadata helpers.
+#![cfg_attr(not(any(feature = "browser", test)), allow(dead_code))]
 
 use chrono::Local;
+#[cfg(feature = "browser")]
 use font8x8::UnicodeFonts;
-use image::{DynamicImage, GenericImage, ImageFormat, Rgba, RgbaImage};
 use reqwest::Url;
 use serde_json::{Map, Value};
 
-use crate::common::{message, object_field, string_field, value_as_object, Result};
+use crate::common::{object_field, string_field, value_as_object, Result};
+
+#[cfg(feature = "browser")]
+use crate::common::message;
 
 use super::super::{build_http_client, fetch_dashboard, ScreenshotArgs};
 use super::parse_dashboard_url_state;
@@ -27,7 +31,7 @@ pub(crate) struct HeaderSpec {
 pub(crate) struct HeaderLine {
     text: String,
     scale: u32,
-    color: Rgba<u8>,
+    color: [u8; 4],
 }
 
 pub(crate) fn resolve_dashboard_metadata(
@@ -85,21 +89,21 @@ pub(crate) fn build_header_spec(
         lines.push(HeaderLine {
             text,
             scale: 2,
-            color: Rgba([240, 244, 252, 255]),
+            color: [240, 244, 252, 255],
         });
     }
     if let Some(text) = resolve_optional_header_field(args.header_url.as_deref(), resolved_url) {
         lines.push(HeaderLine {
             text,
             scale: 1,
-            color: Rgba([154, 169, 191, 255]),
+            color: [154, 169, 191, 255],
         });
     }
     if args.header_captured_at {
         lines.push(HeaderLine {
             text: format!("Captured at {}", Local::now().format("%Y-%m-%d %H:%M:%S")),
             scale: 1,
-            color: Rgba([154, 169, 191, 255]),
+            color: [154, 169, 191, 255],
         });
     }
     if let Some(text) = args
@@ -111,7 +115,7 @@ pub(crate) fn build_header_spec(
         lines.push(HeaderLine {
             text: text.to_string(),
             scale: 1,
-            color: Rgba([210, 218, 230, 255]),
+            color: [210, 218, 230, 255],
         });
     }
     if lines.is_empty() {
@@ -144,19 +148,6 @@ pub(crate) fn resolve_manifest_title(
         panel_title: panel_title.map(str::to_string),
     };
     resolve_auto_title(&metadata, args)
-}
-
-pub(crate) fn apply_header_if_requested(
-    bytes: Vec<u8>,
-    args: &ScreenshotArgs,
-    header_spec: &Option<HeaderSpec>,
-    format: ImageFormat,
-) -> Result<Vec<u8>> {
-    if matches!(format, ImageFormat::Png | ImageFormat::Jpeg) && header_spec.is_some() {
-        compose_header_image(bytes, args.width, header_spec.as_ref().unwrap(), format)
-    } else {
-        Ok(bytes)
-    }
 }
 
 fn resolve_dashboard_uid(args: &ScreenshotArgs) -> Option<String> {
@@ -232,6 +223,24 @@ fn resolve_optional_header_field(raw: Option<&str>, auto_value: &str) -> Option<
     }
 }
 
+#[cfg(feature = "browser")]
+use image::{DynamicImage, GenericImage, ImageFormat, Rgba, RgbaImage};
+
+#[cfg(feature = "browser")]
+pub(crate) fn apply_header_if_requested(
+    bytes: Vec<u8>,
+    args: &ScreenshotArgs,
+    header_spec: &Option<HeaderSpec>,
+    format: ImageFormat,
+) -> Result<Vec<u8>> {
+    if matches!(format, ImageFormat::Png | ImageFormat::Jpeg) && header_spec.is_some() {
+        compose_header_image(bytes, args.width, header_spec.as_ref().unwrap(), format)
+    } else {
+        Ok(bytes)
+    }
+}
+
+#[cfg(feature = "browser")]
 fn compose_header_image(
     bytes: Vec<u8>,
     target_width: u32,
@@ -267,6 +276,7 @@ fn compose_header_image(
     Ok(encoded.into_inner())
 }
 
+#[cfg(feature = "browser")]
 fn measure_header_height(spec: &HeaderSpec) -> u32 {
     const TOP_PADDING: u32 = 20;
     const BOTTOM_PADDING: u32 = 18;
@@ -279,6 +289,7 @@ fn measure_header_height(spec: &HeaderSpec) -> u32 {
     TOP_PADDING + BOTTOM_PADDING + content_height.saturating_sub(LINE_SPACING)
 }
 
+#[cfg(feature = "browser")]
 fn paint_header_background(image: &mut RgbaImage, width: u32, header_height: u32) {
     for x in 0..width {
         image.put_pixel(x, 0, Rgba([59, 130, 246, 255]));
@@ -304,6 +315,7 @@ fn paint_header_background(image: &mut RgbaImage, width: u32, header_height: u32
     }
 }
 
+#[cfg(feature = "browser")]
 fn draw_header_lines(image: &mut RgbaImage, spec: &HeaderSpec) {
     let mut y = 20_u32;
     for line in &spec.lines {
@@ -312,13 +324,14 @@ fn draw_header_lines(image: &mut RgbaImage, spec: &HeaderSpec) {
     }
 }
 
+#[cfg(feature = "browser")]
 fn draw_text_line(
     image: &mut RgbaImage,
     start_x: u32,
     start_y: u32,
     text: &str,
     scale: u32,
-    color: Rgba<u8>,
+    color: [u8; 4],
 ) {
     let mut cursor_x = start_x;
     for character in text.chars() {
@@ -330,13 +343,14 @@ fn draw_text_line(
     }
 }
 
+#[cfg(feature = "browser")]
 fn draw_glyph(
     image: &mut RgbaImage,
     start_x: u32,
     start_y: u32,
     character: char,
     scale: u32,
-    color: Rgba<u8>,
+    color: [u8; 4],
 ) {
     let glyph = font8x8::BASIC_FONTS
         .get(character)
@@ -352,7 +366,7 @@ fn draw_glyph(
                     let x = start_x + (column as u32 * scale) + dx;
                     let y = start_y + (row_index as u32 * scale) + dy;
                     if x < image.width() && y < image.height() {
-                        image.put_pixel(x, y, color);
+                        image.put_pixel(x, y, Rgba(color));
                     }
                 }
             }

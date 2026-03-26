@@ -33,6 +33,13 @@ pub enum GovernanceGateOutputFormat {
     Json,
 }
 
+/// Sources for dashboard governance policy input.
+#[derive(Debug, Clone, Copy, ValueEnum, PartialEq, Eq)]
+pub enum GovernancePolicySource {
+    File,
+    Builtin,
+}
+
 /// Output selectors for dashboard topology rendering.
 #[derive(Debug, Clone, Copy, ValueEnum, PartialEq, Eq)]
 pub enum TopologyOutputFormat {
@@ -313,6 +320,12 @@ pub struct ImportArgs {
     #[arg(
         long,
         default_value_t = false,
+        help = "Open an interactive picker to choose which exported dashboards to import from --import-dir."
+    )]
+    pub interactive: bool,
+    #[arg(
+        long,
+        default_value_t = false,
         help = "Preview what import would do without changing Grafana. This reports whether each dashboard would create, update, or be skipped/blocked."
     )]
     pub dry_run: bool,
@@ -464,9 +477,17 @@ pub struct BrowseArgs {
     pub page_size: usize,
     #[arg(
         long,
+        conflicts_with = "all_orgs",
         help = "Browse dashboards from one explicit Grafana org ID instead of the current org."
     )]
     pub org_id: Option<i64>,
+    #[arg(
+        long,
+        default_value_t = false,
+        conflicts_with = "org_id",
+        help = "Enumerate all visible Grafana orgs and browse the dashboard tree across them. Prefer Basic auth when you need cross-org browse because API tokens are often scoped to one org."
+    )]
+    pub all_orgs: bool,
     #[arg(
         long,
         help = "Optional folder path root to open instead of the full dashboard tree, for example 'Platform / Infra'."
@@ -956,8 +977,24 @@ pub struct InspectLiveArgs {
 /// Struct definition for GovernanceGateArgs.
 #[derive(Debug, Clone, Args)]
 pub struct GovernanceGateArgs {
-    #[arg(long, help = "Path to the dashboard governance policy JSON.")]
-    pub policy: PathBuf,
+    #[arg(
+        long,
+        value_enum,
+        default_value_t = GovernancePolicySource::File,
+        help = "Select the governance policy source. Use file with --policy, or builtin without --policy."
+    )]
+    pub policy_source: GovernancePolicySource,
+    #[arg(
+        long,
+        help = "Path to the dashboard governance policy file (JSON or YAML)."
+    )]
+    pub policy: Option<PathBuf>,
+    #[arg(
+        long = "builtin-policy",
+        conflicts_with = "policy",
+        help = "Built-in governance policy name. Use with --policy-source builtin."
+    )]
+    pub builtin_policy: Option<String>,
     #[arg(long, help = "Path to dashboard inspect governance-json output.")]
     pub governance: PathBuf,
     #[arg(long, help = "Path to dashboard inspect report json output.")]
@@ -1105,13 +1142,14 @@ pub enum DashboardCommand {
     Export(ExportArgs),
     #[command(
         name = "import",
-        about = "Import dashboard JSON files through the Grafana API."
+        about = "Import dashboard JSON files through the Grafana API.",
+        after_help = "Examples:\n\n  Import one raw export directory into the current org:\n    grafana-util dashboard import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/raw --replace-existing\n\n  Preview import actions without changing Grafana:\n    grafana-util dashboard import --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --import-dir ./dashboards/raw --dry-run --table\n\n  Interactively choose exported dashboards to restore/import:\n    grafana-util dashboard import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/raw --interactive --replace-existing"
     )]
     Import(ImportArgs),
     #[command(
         name = "browse",
         about = "Browse the live dashboard tree in an interactive terminal UI.",
-        after_help = "Examples:\n\n  Browse the full dashboard tree from the current org:\n    grafana-util dashboard browse --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\"\n\n  Open the browser at one folder subtree:\n    grafana-util dashboard browse --url http://localhost:3000 --basic-user admin --basic-password admin --path 'Platform / Infra'\n\n  Browse one explicit org:\n    grafana-util dashboard browse --url http://localhost:3000 --basic-user admin --basic-password admin --org-id 2"
+        after_help = "Examples:\n\n  Browse the full dashboard tree from the current org:\n    grafana-util dashboard browse --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\"\n\n  Open the browser at one folder subtree:\n    grafana-util dashboard browse --url http://localhost:3000 --basic-user admin --basic-password admin --path 'Platform / Infra'\n\n  Browse one explicit org:\n    grafana-util dashboard browse --url http://localhost:3000 --basic-user admin --basic-password admin --org-id 2\n\n  Browse all visible orgs with Basic auth:\n    grafana-util dashboard browse --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs"
     )]
     Browse(BrowseArgs),
     #[command(
@@ -1139,8 +1177,8 @@ pub enum DashboardCommand {
     InspectVars(InspectVarsArgs),
     #[command(
         name = "governance-gate",
-        about = "Evaluate a governance policy against dashboard governance-json and query-report JSON artifacts.",
-        after_help = "Examples:\n\n  Evaluate governance policy with text output:\n    grafana-util dashboard governance-gate --policy ./policy.json --governance ./governance.json --queries ./queries.json\n\n  Write the normalized result JSON while also printing machine-readable output:\n    grafana-util dashboard governance-gate --policy ./policy.json --governance ./governance.json --queries ./queries.json --output-format json --json-output ./governance-check.json"
+        about = "Evaluate a governance policy file or built-in policy against dashboard governance-json and query-report JSON artifacts.",
+        after_help = "Examples:\n\n  Evaluate a JSON/YAML policy file with text output:\n    grafana-util dashboard governance-gate --policy-source file --policy ./policy.yaml --governance ./governance.json --queries ./queries.json\n\n  Evaluate the built-in policy by name and write the normalized result JSON:\n    grafana-util dashboard governance-gate --policy-source builtin --builtin-policy default --governance ./governance.json --queries ./queries.json --output-format json --json-output ./governance-check.json"
     )]
     GovernanceGate(GovernanceGateArgs),
     #[command(

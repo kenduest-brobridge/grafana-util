@@ -1,4 +1,5 @@
-//! Specialized interactive TUI for dashboard topology exploration.
+#![cfg(feature = "tui")]
+// Specialized interactive TUI for dashboard topology exploration.
 #![cfg_attr(test, allow(dead_code))]
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use crossterm::execute;

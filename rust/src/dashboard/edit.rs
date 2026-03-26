@@ -1,3 +1,4 @@
+#![cfg(feature = "tui")]
 use reqwest::Method;
 use serde_json::{Map, Value};
 
