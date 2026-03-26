@@ -61,7 +61,7 @@ grafana-util <domain> <command> [options]
 
 ### 命令分區（快速導覽）
 
-- Dashboard：`dashboard export`、`dashboard list`、`dashboard import`、`dashboard diff`、`dashboard inspect-export`、`dashboard inspect-live`、`dashboard inspect-vars`、`dashboard screenshot`
+- Dashboard：`dashboard export`、`dashboard list`、`dashboard import`、`dashboard delete`、`dashboard diff`、`dashboard inspect-export`、`dashboard inspect-live`、`dashboard inspect-vars`、`dashboard screenshot`
 - Alert：`alert export`、`alert import`、`alert diff`、`alert list-rules`、`alert list-contact-points`、`alert list-mute-timings`、`alert list-templates`
 - Datasource：`datasource list`、`datasource export`、`datasource import`、`datasource diff`
 - Access：`access org list`、`access org add`、`access org modify`、`access org delete`、`access org export`、`access org import`、`access user list`、`access user add`、`access user modify`、`access user delete`、`access user export`、`access user import`、`access user diff`、`access team list`、`access team add`、`access team modify`、`access team delete`、`access team export`、`access team import`、`access team diff`、`access service-account list`、`access service-account add`、`access service-account export`、`access service-account import`、`access service-account diff`、`access service-account delete`、`access service-account token add`、`access service-account token delete`
@@ -237,6 +237,32 @@ mem-main     Memory Overview  create   missing       Infra
 
 Dry-run checked 2 dashboard(s)
 ```
+
+### 3.4a `dashboard delete`
+
+**用途**：依 dashboard UID 或 folder path 子樹刪除線上 dashboards。
+
+| 參數 | 用途 | 差異 / 情境 |
+| --- | --- | --- |
+| `--uid` | 依穩定 UID 刪除單一 dashboard | 自動化最安全 |
+| `--path` | 刪除某個 folder path 子樹下的 dashboards | 依階層整理清理 |
+| `--delete-folders` | 連同 matching folders 一起刪除 | 僅能搭配 `--path`；先刪 dashboard 再刪 folder |
+| `--interactive` | 互動式選擇、預覽、確認 | 手動維護最方便 |
+| `--yes` | 確認 live delete | 非互動式 live delete 必填 |
+| `--dry-run` | 只預覽不刪除 | 建議先跑 |
+| `--table` | dry-run 表格輸出 | 人工審查 |
+| `--json` | dry-run JSON 輸出 | 自動化串接 |
+| `--output-format text/table/json` | dry-run 單一輸出旗標 | 統一 selector |
+| `--org-id` | 指定單一 org | 比 cross-org 更安全 |
+
+範例指令：
+```bash
+grafana-util dashboard delete --url http://localhost:3000 --basic-user admin --basic-password admin --path "Platform / Infra" --dry-run --table
+```
+
+目前說明：
+- `--path` 會比對 Grafana 解析後的 folder path，並遞迴刪除該子樹下的 dashboards。
+- 不加 `--delete-folders` 時，只會刪 dashboard，folder 資源會保留。
 
 ### 3.5 `dashboard diff`
 
@@ -1473,6 +1499,7 @@ grafana-util dashboard export --url <URL> --token <TOKEN> --org-id <ORG_ID> --ex
 grafana-util dashboard list --url <URL> --basic-user <USER> --basic-password <PASS> [--org-id <ORG_ID>|--all-orgs] [--output-format table|csv|json] [--with-sources]
 grafana-util dashboard list-data-sources --url <URL> --basic-user <USER> --basic-password <PASS> [--output-format table|csv|json]
 grafana-util dashboard import --url <URL> --basic-user <USER> --basic-password <PASS> --import-dir <DIR>/raw --replace-existing [--dry-run] [--output-format text|table|json] [--output-columns uid,destination,action,folder_path,destination_folder_path,file]
+grafana-util dashboard delete --url <URL> --basic-user <USER> --basic-password <PASS> [--org-id <ORG_ID>] (--uid <UID>|--path <FOLDER_PATH>) [--delete-folders] [--dry-run|--yes]
 grafana-util dashboard diff --url <URL> --basic-user <USER> --basic-password <PASS> --import-dir <DIR>/raw [--import-folder-uid <UID>] [--context-lines 3]
 grafana-util dashboard inspect-export --import-dir <DIR>/raw --output-format report-tree
 grafana-util dashboard inspect-live --url <URL> --basic-user <USER> --basic-password <PASS> --output-format report-json
@@ -1527,6 +1554,7 @@ grafana-util access service-account token delete --url <URL> --token <TOKEN> --n
 | dashboard list | table/csv/json | 不可 | output-format 取代三旗標 |
 | dashboard list-data-sources | table/csv/json | 不可 | 相容命令；新流程優先 `datasource list` |
 | dashboard import | text/table/json | 不可（僅 text/table/json） | text 為 dry-run 匯總資訊 |
+| dashboard delete | text/table/json | 不可（僅 text/table/json） | text 為 dry-run 匯總資訊 |
 | alert list-* | table/csv/json | 不可 | list 命令共用 |
 | datasource list | table/csv/json | 不可 | 同上 |
 | datasource add | text/table/json | 不可（僅 text/table/json） | dry-run 可用 |
@@ -1558,6 +1586,7 @@ grafana-util access service-account token delete --url <URL> --token <TOKEN> --n
 | dashboard list | 可用（不可用 token，需 Grafana 帳號密碼） | 可用（不可用 token，需 Grafana 帳號密碼） |
 | dashboard export | 可用（不可用 token，需 Grafana 帳號密碼） | 可用（不可用 token，需 Grafana 帳號密碼） |
 | dashboard import | 可用（不可用 token，需 Grafana 帳號密碼） | 不可 |
+| dashboard delete | 可用（不可用 token，需 Grafana 帳號密碼） | 不可 |
 | datasource list | 可用（不可用 token，需 Grafana 帳號密碼） | 可用（不可用 token，需 Grafana 帳號密碼） |
 | datasource export | 可用（不可用 token，需 Grafana 帳號密碼） | 可用（不可用 token，需 Grafana 帳號密碼） |
 | datasource import | 可用（不可用 token，需 Grafana 帳號密碼） | 不可 |

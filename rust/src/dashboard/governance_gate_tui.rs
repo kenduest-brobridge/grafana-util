@@ -1,4 +1,5 @@
-//! Specialized interactive TUI for dashboard governance findings review.
+#![cfg(feature = "tui")]
+// Specialized interactive TUI for dashboard governance findings review.
 #![cfg_attr(test, allow(dead_code))]
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use crossterm::execute;

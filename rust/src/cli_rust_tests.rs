@@ -56,6 +56,32 @@ fn parse_cli_supports_dashboard_group_command() {
 }
 
 #[test]
+fn parse_cli_supports_dashboard_group_screenshot_command() {
+    let args: CliArgs = parse_cli_from([
+        "grafana-util",
+        "dashboard",
+        "screenshot",
+        "--dashboard-uid",
+        "cpu-main",
+        "--output",
+        "./cpu-main.png",
+    ]);
+
+    match args.command {
+        UnifiedCommand::Dashboard { command } => match command {
+            super::DashboardGroupCommand::Screenshot(inner) => {
+                assert_eq!(inner.dashboard_uid.as_deref(), Some("cpu-main"));
+                assert_eq!(inner.output, Path::new("./cpu-main.png"));
+                assert!(!inner.full_page);
+                assert_eq!(inner.output_format, None);
+            }
+            _ => panic!("expected dashboard screenshot"),
+        },
+        _ => panic!("expected dashboard group"),
+    }
+}
+
+#[test]
 fn parse_cli_supports_datasource_group_command() {
     let args: CliArgs = parse_cli_from([
         "grafana-util",
@@ -224,6 +250,38 @@ fn parse_cli_supports_datasource_list_command() {
 }
 
 #[test]
+fn parse_cli_supports_datasource_browse_command() {
+    let args: CliArgs = parse_cli_from(["grafana-util", "datasource", "browse", "--org-id", "4"]);
+
+    match args.command {
+        UnifiedCommand::Datasource { command } => match command {
+            DatasourceGroupCommand::Browse(inner) => {
+                assert_eq!(inner.org_id, Some(4));
+                assert!(!inner.all_orgs);
+            }
+            _ => panic!("expected datasource browse"),
+        },
+        _ => panic!("expected datasource group"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_datasource_browse_all_orgs() {
+    let args: CliArgs = parse_cli_from(["grafana-util", "datasource", "browse", "--all-orgs"]);
+
+    match args.command {
+        UnifiedCommand::Datasource { command } => match command {
+            DatasourceGroupCommand::Browse(inner) => {
+                assert!(inner.all_orgs);
+                assert_eq!(inner.org_id, None);
+            }
+            _ => panic!("expected datasource browse"),
+        },
+        _ => panic!("expected datasource group"),
+    }
+}
+
+#[test]
 fn parse_cli_supports_alert_group() {
     let args: CliArgs = parse_cli_from([
         "grafana-util",
@@ -279,11 +337,11 @@ fn unified_help_mentions_alert_access_and_shims() {
     assert!(help.contains("grafana-util access user list"));
     assert!(help.contains("[Alert Export]"));
     assert!(help.contains("[Datasource Inventory]"));
+    assert!(help.contains("Run datasource browse, list, export, import, and diff workflows."));
     assert!(help.contains("[Access Inventory]"));
     assert!(help.contains("[Sync Planning]"));
     assert!(help.contains("[Sync Apply]"));
     assert!(help.contains("datasource"));
-    assert!(help.contains("Run datasource list, export, import, and diff workflows."));
     assert!(help.contains("grafana-util sync plan --desired-file ./desired.json --fetch-live"));
     assert!(help.contains(
         "grafana-util sync apply --plan-file ./sync-plan-reviewed.json --approve --execute-live"

@@ -9,11 +9,11 @@ use super::pending_delete::{
 use crate::common::{resolve_auth_headers, Result};
 use crate::http::{JsonHttpClient, JsonHttpClientConfig};
 
-/// Constant for default url.
+/// Default Grafana base URL used by access commands.
 pub const DEFAULT_URL: &str = "http://127.0.0.1:3000";
-/// Constant for default timeout.
+/// Default HTTP timeout in seconds for access commands.
 pub const DEFAULT_TIMEOUT: u64 = 30;
-/// Constant for default page size.
+/// Default list pagination size for access inventory commands.
 pub const DEFAULT_PAGE_SIZE: usize = 100;
 /// Constant for default access user export dir.
 pub const DEFAULT_ACCESS_USER_EXPORT_DIR: &str = "access-users";
@@ -44,9 +44,9 @@ pub const ACCESS_ORG_EXPORT_FILENAME: &str = "orgs.json";
 pub const ACCESS_SERVICE_ACCOUNT_EXPORT_FILENAME: &str = "service-accounts.json";
 /// Constant for access export metadata filename.
 pub const ACCESS_EXPORT_METADATA_FILENAME: &str = "export-metadata.json";
-const ACCESS_ROOT_HELP_TEXT: &str = "Examples:\n\n  List org users as JSON:\n    grafana-util access user list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json\n\n  Create a Grafana user with Basic auth:\n    grafana-util access user add --url http://localhost:3000 --basic-user admin --basic-password admin --login alice --email alice@example.com --name Alice --password secret\n\n  Import teams with destructive sync acknowledgement:\n    grafana-util access team import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./access-teams --replace-existing --yes\n\n  Create a service-account token:\n    grafana-util access service-account token add --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --name deploy-bot --token-name nightly";
-const ACCESS_USER_HELP_TEXT: &str = "Examples:\n\n  grafana-util access user list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json\n  grafana-util access user add --url http://localhost:3000 --basic-user admin --basic-password admin --login alice --email alice@example.com --name Alice --password secret";
-const ACCESS_TEAM_HELP_TEXT: &str = "Examples:\n\n  grafana-util access team list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json\n  grafana-util access team import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./access-teams --replace-existing --yes";
+const ACCESS_ROOT_HELP_TEXT: &str = "Examples:\n\n  List org users as JSON:\n    grafana-util access user list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json\n\n  Browse users across organizations interactively:\n    grafana-util access user browse --url http://localhost:3000 --basic-user admin --basic-password admin\n\n  Browse only the current org interactively:\n    grafana-util access user browse --url http://localhost:3000 --basic-user admin --basic-password admin --current-org\n\n  Create a Grafana user with Basic auth:\n    grafana-util access user add --url http://localhost:3000 --basic-user admin --basic-password admin --login alice --email alice@example.com --name Alice --password secret\n\n  Import teams with destructive sync acknowledgement:\n    grafana-util access team import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./access-teams --replace-existing --yes\n\n  Create a service-account token:\n    grafana-util access service-account token add --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --name deploy-bot --token-name nightly";
+const ACCESS_USER_HELP_TEXT: &str = "Examples:\n\n  grafana-util access user list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json\n  grafana-util access user browse --url http://localhost:3000 --basic-user admin --basic-password admin\n  grafana-util access user browse --url http://localhost:3000 --basic-user admin --basic-password admin --current-org\n  grafana-util access user add --url http://localhost:3000 --basic-user admin --basic-password admin --login alice --email alice@example.com --name Alice --password secret";
+const ACCESS_TEAM_HELP_TEXT: &str = "Examples:\n\n  grafana-util access team list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json\n  grafana-util access team browse --url http://localhost:3000 --basic-user admin --basic-password admin --with-members\n  grafana-util access team import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./access-teams --replace-existing --yes";
 const ACCESS_ORG_HELP_TEXT: &str = "Examples:\n\n  grafana-util access org list --url http://localhost:3000 --basic-user admin --basic-password admin --json\n  grafana-util access org diff --url http://localhost:3000 --basic-user admin --basic-password admin --diff-dir ./access-orgs\n  grafana-util access org delete --url http://localhost:3000 --basic-user admin --basic-password admin --name platform --yes";
 const ACCESS_ORG_DIFF_HELP_TEXT: &str = "Examples:\n\n  grafana-util access org diff --basic-user admin --basic-password admin --diff-dir ./access-orgs";
 const ACCESS_SERVICE_ACCOUNT_HELP_TEXT: &str = "Examples:\n\n  grafana-util access service-account list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json\n  grafana-util access service-account token add --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --name deploy-bot --token-name nightly";
@@ -55,7 +55,7 @@ const ACCESS_TEAM_IMPORT_HELP_TEXT: &str = "Examples:\n\n  grafana-util access t
 const ACCESS_ORG_DELETE_HELP_TEXT: &str = "Examples:\n\n  grafana-util access org delete --basic-user admin --basic-password admin --name platform --yes\n  grafana-util access org delete --basic-user admin --basic-password admin --org-id 7 --yes --json";
 const ACCESS_SERVICE_ACCOUNT_TOKEN_ADD_HELP_TEXT: &str = "Examples:\n\n  grafana-util access service-account token add --token \"$GRAFANA_API_TOKEN\" --name deploy-bot --token-name nightly\n  grafana-util access service-account token add --token \"$GRAFANA_API_TOKEN\" --service-account-id 7 --token-name nightly --seconds-to-live 3600";
 
-/// Struct definition for CommonCliArgs.
+/// Shared Grafana connection/authentication arguments for org-scoped access commands.
 #[derive(Debug, Clone, Args)]
 pub struct CommonCliArgs {
     #[arg(long, default_value = DEFAULT_URL, help = "Grafana base URL.", help_heading = "Authentication Options")]
@@ -125,7 +125,7 @@ pub struct CommonCliArgs {
     pub ca_cert: Option<PathBuf>,
 }
 
-/// Struct definition for CommonCliArgsNoOrgId.
+/// Shared connection/authentication arguments for global access admin commands.
 #[derive(Debug, Clone, Args)]
 pub struct CommonCliArgsNoOrgId {
     #[arg(long, default_value = DEFAULT_URL, help = "Grafana base URL.", help_heading = "Authentication Options")]
@@ -189,14 +189,14 @@ pub struct CommonCliArgsNoOrgId {
     pub ca_cert: Option<PathBuf>,
 }
 
-/// Enum definition for Scope.
+/// Export/diff scope selectors for access inventory workflows.
 #[derive(Debug, Clone, ValueEnum, PartialEq, Eq)]
 pub enum Scope {
     Org,
     Global,
 }
 
-/// Enum definition for ListOutputFormat.
+/// Supported output formats for access listing commands.
 #[derive(Debug, Clone, ValueEnum, PartialEq, Eq)]
 pub enum ListOutputFormat {
     Text,
@@ -205,7 +205,7 @@ pub enum ListOutputFormat {
     Json,
 }
 
-/// Enum definition for DryRunOutputFormat.
+/// Supported output formats for destructive access dry-run flows.
 #[derive(Debug, Clone, ValueEnum, PartialEq, Eq)]
 pub enum DryRunOutputFormat {
     Text,
@@ -213,13 +213,19 @@ pub enum DryRunOutputFormat {
     Json,
 }
 
-/// Struct definition for UserListArgs.
+/// Arguments for listing Grafana users.
 #[derive(Debug, Clone, Args)]
 pub struct UserListArgs {
     #[command(flatten)]
     pub common: CommonCliArgs,
     #[arg(long, value_enum, default_value_t = Scope::Org, help = "List users from the current org scope or from the Grafana global admin scope.")]
     pub scope: Scope,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Human-friendly alias for --scope global when listing users across all organizations."
+    )]
+    pub all_orgs: bool,
     #[arg(
         long,
         help = "Filter users by a free-text search across login, email, or display name."
@@ -263,6 +269,59 @@ pub struct UserListArgs {
         help = "Alternative single-flag output selector. Use text, table, csv, or json."
     )]
     pub output_format: Option<ListOutputFormat>,
+}
+
+/// Arguments for interactive user browsing.
+#[derive(Debug, Clone, Args)]
+pub struct UserBrowseArgs {
+    #[command(flatten)]
+    pub common: CommonCliArgs,
+    #[arg(long, value_enum, default_value_t = Scope::Global, help = "Browse users from the current org scope or from the Grafana global admin scope.")]
+    pub scope: Scope,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Human-friendly alias for --scope global when browsing users across all organizations."
+    )]
+    pub all_orgs: bool,
+    #[arg(
+        long,
+        default_value_t = false,
+        conflicts_with = "all_orgs",
+        help = "Browse only the currently selected organization instead of the default cross-org view."
+    )]
+    pub current_org: bool,
+    #[arg(
+        long,
+        help = "Filter users by a free-text search across login, email, or display name."
+    )]
+    pub query: Option<String>,
+    #[arg(long, help = "Filter users by exact login.")]
+    pub login: Option<String>,
+    #[arg(long, help = "Filter users by exact email address.")]
+    pub email: Option<String>,
+    #[arg(
+        long,
+        help = "Filter org users by exact Grafana org role such as Viewer, Editor, or Admin."
+    )]
+    pub org_role: Option<String>,
+    #[arg(long, value_parser = parse_bool_text, help = "Filter global users by Grafana server-admin status.")]
+    pub grafana_admin: Option<bool>,
+    #[arg(
+        long,
+        default_value_t = false,
+        hide = true,
+        help = "Deprecated compatibility flag. User browse now always includes team memberships."
+    )]
+    pub with_teams: bool,
+    #[arg(
+        long,
+        default_value_t = 1,
+        help = "Result page number for paginated Grafana list APIs."
+    )]
+    pub page: usize,
+    #[arg(long, default_value_t = DEFAULT_PAGE_SIZE, help = "Number of users to request per page.")]
+    pub per_page: usize,
 }
 
 /// Struct definition for UserAddArgs.
@@ -538,6 +597,31 @@ pub struct TeamListArgs {
         help = "Alternative single-flag output selector. Use text, table, csv, or json."
     )]
     pub output_format: Option<ListOutputFormat>,
+}
+
+/// Arguments for interactive team browsing.
+#[derive(Debug, Clone, Args)]
+pub struct TeamBrowseArgs {
+    #[command(flatten)]
+    pub common: CommonCliArgs,
+    #[arg(long, help = "Filter teams by a free-text search.")]
+    pub query: Option<String>,
+    #[arg(long, help = "Filter teams by exact team name.")]
+    pub name: Option<String>,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Include team members and admins in the browse detail view."
+    )]
+    pub with_members: bool,
+    #[arg(
+        long,
+        default_value_t = 1,
+        help = "Result page number for paginated Grafana list APIs."
+    )]
+    pub page: usize,
+    #[arg(long, default_value_t = DEFAULT_PAGE_SIZE, help = "Number of teams to request per page.")]
+    pub per_page: usize,
 }
 
 /// Struct definition for TeamAddArgs.
@@ -1109,6 +1193,7 @@ pub enum OrgCommand {
 #[derive(Debug, Clone, Subcommand)]
 pub enum TeamCommand {
     List(TeamListArgs),
+    Browse(TeamBrowseArgs),
     Add(TeamAddArgs),
     Modify(TeamModifyArgs),
     Export(TeamExportArgs),
@@ -1122,6 +1207,7 @@ pub enum TeamCommand {
 #[derive(Debug, Clone, Subcommand)]
 pub enum UserCommand {
     List(UserListArgs),
+    Browse(UserBrowseArgs),
     #[command(after_help = ACCESS_USER_ADD_HELP_TEXT)]
     Add(UserAddArgs),
     Modify(UserModifyArgs),
@@ -1223,8 +1309,11 @@ fn apply_dry_run_output_format(
 /// canonical boolean state per command path.
 pub fn normalize_access_cli_args(mut args: AccessCliArgs) -> AccessCliArgs {
     match &mut args.command {
-        AccessCommand::User { command } => {
-            if let UserCommand::List(list_args) = command {
+        AccessCommand::User { command } => match command {
+            UserCommand::List(list_args) => {
+                if list_args.all_orgs {
+                    list_args.scope = Scope::Global;
+                }
                 apply_list_output_format(
                     &mut list_args.table,
                     &mut list_args.csv,
@@ -1232,14 +1321,22 @@ pub fn normalize_access_cli_args(mut args: AccessCliArgs) -> AccessCliArgs {
                     &list_args.output_format,
                 );
             }
-            if let UserCommand::Import(import_args) = command {
+            UserCommand::Browse(browse_args) => {
+                if browse_args.current_org {
+                    browse_args.scope = Scope::Org;
+                } else if browse_args.all_orgs {
+                    browse_args.scope = Scope::Global;
+                }
+            }
+            UserCommand::Import(import_args) => {
                 apply_dry_run_output_format(
                     &mut import_args.table,
                     &mut import_args.json,
                     &import_args.output_format,
                 );
             }
-        }
+            _ => {}
+        },
         AccessCommand::Org { command } => {
             if let OrgCommand::List(list_args) = command {
                 apply_list_output_format(

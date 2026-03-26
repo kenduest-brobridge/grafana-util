@@ -1,4 +1,5 @@
 //! Sync staged document lineage, validation, rendering, and audit helpers.
+#![cfg_attr(not(any(feature = "tui", test)), allow(dead_code))]
 
 use super::bundle_preflight::{
     alert_artifact_assessment_summary_or_default, require_sync_bundle_preflight_summary,
@@ -10,10 +11,12 @@ use crate::alert_sync::ALERT_SYNC_KIND;
 use crate::common::{message, Result};
 use crate::sync::DEFAULT_REVIEW_TOKEN;
 use serde_json::{Map, Value};
-use std::cmp::Ordering;
 
 use super::bundle_preflight::SYNC_BUNDLE_PREFLIGHT_KIND;
 use super::preflight::SYNC_PREFLIGHT_KIND;
+
+#[cfg(feature = "tui")]
+use std::cmp::Ordering;
 
 pub(crate) fn fnv1a64_hex(input: &str) -> String {
     let mut hash: u64 = 0xcbf29ce484222325;
@@ -39,10 +42,7 @@ pub(crate) fn derive_trace_id(document: &Value) -> Result<String> {
 }
 
 pub(crate) fn attach_trace_id(document: &Value, trace_id: Option<&str>) -> Result<Value> {
-    let mut object = document
-        .as_object()
-        .cloned()
-        .ok_or_else(|| message("Sync document must be a JSON object."))?;
+    let mut object = require_json_object(document, "Sync document")?.clone();
     let resolved = match normalize_trace_id(trace_id) {
         Some(value) => value,
         None => derive_trace_id(document)?,
@@ -78,10 +78,7 @@ pub(crate) fn attach_lineage(
     step_index: i64,
     parent_trace_id: Option<&str>,
 ) -> Result<Value> {
-    let mut object = document
-        .as_object()
-        .cloned()
-        .ok_or_else(|| message("Sync staged document must be a JSON object."))?;
+    let mut object = require_json_object(document, "Sync staged document")?.clone();
     object.insert("stage".to_string(), Value::String(stage.to_string()));
     object.insert("stepIndex".to_string(), Value::Number(step_index.into()));
     if let Some(parent) = normalize_optional_text(parent_trace_id) {
@@ -516,10 +513,7 @@ pub fn render_sync_apply_intent_text(document: &Value) -> Result<Vec<String>> {
 }
 
 pub(crate) fn mark_plan_reviewed(document: &Value, review_token: &str) -> Result<Value> {
-    let mut object = document
-        .as_object()
-        .cloned()
-        .ok_or_else(|| message("Sync plan document must be a JSON object."))?;
+    let mut object = require_json_object(document, "Sync plan document")?.clone();
     if object.get("kind").and_then(Value::as_str) != Some("grafana-utils-sync-plan") {
         return Err(message("Sync plan document kind is not supported."));
     }
@@ -533,10 +527,7 @@ pub(crate) fn mark_plan_reviewed(document: &Value, review_token: &str) -> Result
 }
 
 pub(crate) fn validate_apply_preflight(document: &Value) -> Result<Value> {
-    require_json_object(document, "Sync preflight document")?;
-    let object = document
-        .as_object()
-        .ok_or_else(|| message("Sync preflight document must be a JSON object."))?;
+    let object = require_json_object(document, "Sync preflight document")?;
     let kind = object
         .get("kind")
         .and_then(Value::as_str)
@@ -573,10 +564,7 @@ pub(crate) fn validate_apply_preflight(document: &Value) -> Result<Value> {
 }
 
 pub(crate) fn validate_apply_bundle_preflight(document: &Value) -> Result<Value> {
-    require_json_object(document, "Sync bundle preflight document")?;
-    let object = document
-        .as_object()
-        .ok_or_else(|| message("Sync bundle preflight document must be a JSON object."))?;
+    let object = require_json_object(document, "Sync bundle preflight document")?;
     if object.get("kind").and_then(Value::as_str) != Some(SYNC_BUNDLE_PREFLIGHT_KIND) {
         return Err(message(
             "Sync bundle preflight document kind is not supported.",
@@ -613,10 +601,7 @@ pub(crate) fn attach_preflight_summary(
     intent: &Value,
     preflight_summary: Option<Value>,
 ) -> Result<Value> {
-    let mut object = intent
-        .as_object()
-        .cloned()
-        .ok_or_else(|| message("Sync apply intent document must be a JSON object."))?;
+    let mut object = require_json_object(intent, "Sync apply intent document")?.clone();
     if let Some(summary) = preflight_summary {
         object.insert("preflightSummary".to_string(), summary);
     }
@@ -627,10 +612,7 @@ pub(crate) fn attach_bundle_preflight_summary(
     intent: &Value,
     bundle_preflight_summary: Option<Value>,
 ) -> Result<Value> {
-    let mut object = intent
-        .as_object()
-        .cloned()
-        .ok_or_else(|| message("Sync apply intent document must be a JSON object."))?;
+    let mut object = require_json_object(intent, "Sync apply intent document")?.clone();
     if let Some(summary) = bundle_preflight_summary {
         object.insert("bundlePreflightSummary".to_string(), summary);
     }
@@ -644,10 +626,7 @@ pub(crate) fn attach_review_audit(
     reviewed_at: Option<&str>,
     review_note: Option<&str>,
 ) -> Result<Value> {
-    let mut object = document
-        .as_object()
-        .cloned()
-        .ok_or_else(|| message("Sync reviewed plan document must be a JSON object."))?;
+    let mut object = require_json_object(document, "Sync reviewed plan document")?.clone();
     if let Some(actor) = normalize_optional_text(reviewed_by) {
         object.insert("reviewedBy".to_string(), Value::String(actor));
     }
@@ -672,10 +651,7 @@ pub(crate) fn attach_apply_audit(
     approval_reason: Option<&str>,
     apply_note: Option<&str>,
 ) -> Result<Value> {
-    let mut object = document
-        .as_object()
-        .cloned()
-        .ok_or_else(|| message("Sync apply intent document must be a JSON object."))?;
+    let mut object = require_json_object(document, "Sync apply intent document")?.clone();
     if let Some(actor) = normalize_optional_text(applied_by) {
         object.insert("appliedBy".to_string(), Value::String(actor));
     }
@@ -695,10 +671,12 @@ pub(crate) fn attach_apply_audit(
     Ok(Value::Object(object))
 }
 
+#[cfg(feature = "tui")]
 fn sync_audit_field<'a>(row: &'a Value, key: &str) -> &'a str {
     row.get(key).and_then(Value::as_str).unwrap_or("")
 }
 
+#[cfg(feature = "tui")]
 fn sync_audit_display<'a>(value: &'a str, fallback: &'a str) -> &'a str {
     if value.is_empty() {
         fallback
@@ -707,6 +685,7 @@ fn sync_audit_display<'a>(value: &'a str, fallback: &'a str) -> &'a str {
     }
 }
 
+#[cfg(feature = "tui")]
 fn sync_audit_status_rank(status: &str) -> u8 {
     match status {
         "missing-live" => 0,
@@ -716,6 +695,7 @@ fn sync_audit_status_rank(status: &str) -> u8 {
     }
 }
 
+#[cfg(feature = "tui")]
 pub(crate) fn sync_audit_drift_cmp(left: &Value, right: &Value) -> Ordering {
     sync_audit_status_rank(sync_audit_field(left, "status"))
         .cmp(&sync_audit_status_rank(sync_audit_field(right, "status")))
@@ -727,6 +707,7 @@ pub(crate) fn sync_audit_drift_cmp(left: &Value, right: &Value) -> Ordering {
         })
 }
 
+#[cfg(feature = "tui")]
 pub(crate) fn sync_audit_drift_title(drift: &Value) -> String {
     format!(
         "{} {}",
@@ -735,6 +716,7 @@ pub(crate) fn sync_audit_drift_title(drift: &Value) -> String {
     )
 }
 
+#[cfg(feature = "tui")]
 pub(crate) fn sync_audit_drift_meta(drift: &Value) -> String {
     let baseline_status = sync_audit_display(sync_audit_field(drift, "baselineStatus"), "unknown");
     let current_status = sync_audit_display(sync_audit_field(drift, "currentStatus"), "unknown");
@@ -746,6 +728,7 @@ pub(crate) fn sync_audit_drift_meta(drift: &Value) -> String {
     )
 }
 
+#[cfg(feature = "tui")]
 pub(crate) fn sync_audit_drift_details(drift: &Value) -> Vec<String> {
     let mut details = vec![
         format!(

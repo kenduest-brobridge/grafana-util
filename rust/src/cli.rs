@@ -23,9 +23,9 @@ use crate::alert::{
 };
 use crate::common::Result;
 use crate::dashboard::{
-    run_dashboard_cli, DashboardCliArgs, DashboardCommand, DiffArgs, ExportArgs,
-    GovernanceGateArgs, ImportArgs, InspectExportArgs, InspectLiveArgs, InspectVarsArgs, ListArgs,
-    ScreenshotArgs, TopologyArgs,
+    run_dashboard_cli, BrowseArgs, DashboardCliArgs, DashboardCommand, DeleteArgs, DiffArgs,
+    ExportArgs, GovernanceGateArgs, ImportArgs, InspectExportArgs, InspectLiveArgs,
+    InspectVarsArgs, ListArgs, ScreenshotArgs, TopologyArgs,
 };
 use crate::datasource::{run_datasource_cli, DatasourceCliArgs, DatasourceGroupCommand};
 use crate::sync::{run_sync_cli, SyncCliArgs, SyncGroupCommand};
@@ -35,7 +35,7 @@ const HELP_FULL_HINT: &str =
     "Extended Help:\n  --help-full\n          Print help with extended examples\n";
 const UNIFIED_HELP_FULL_TEXT: &str = "\nExtended Examples:\n\n  [Dashboard Inspect Export] Render a grouped dashboard dependency table from raw exports:\n    grafana-util dashboard inspect-export --import-dir ./dashboards/raw --output-format report-tree-table --report-columns dashboard_uid,panel_title,datasource_uid,query\n\n  [Dashboard Inspect Live] Render datasource governance JSON directly from live Grafana:\n    grafana-util dashboard inspect-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output-format governance-json\n\n  [Datasource Import] Dry-run a datasource import and keep the result machine-readable:\n    grafana-util datasource import --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --import-dir ./datasources --dry-run --json\n\n  [Access Team Import] Preview a destructive team sync before confirming:\n    grafana-util access team import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./access-teams --replace-existing --dry-run --output-format table\n\n  [Alert Import] Re-map linked alert dashboards during import:\n    grafana-util alert import --url http://localhost:3000 --import-dir ./alerts/raw --replace-existing --dashboard-uid-map ./dashboard-map.json --panel-id-map ./panel-map.json\n\n  [Sync Review] Stamp a plan as reviewed before apply:\n    grafana-util sync review --plan-file ./sync-plan.json --review-note 'peer-reviewed' --output json\n";
 const ALERT_HELP_FULL_TEXT: &str = "\nExtended Examples:\n\n  [Alert Export] Export alerting resources with overwrite enabled:\n    grafana-util alert export --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output-dir ./alerts --overwrite\n\n  [Alert Import] Preview a replace-existing import before execution as structured JSON:\n    grafana-util alert import --url http://localhost:3000 --import-dir ./alerts/raw --replace-existing --dry-run --json\n\n  [Alert Diff] Compare a local export against Grafana as structured JSON:\n    grafana-util alert diff --url http://localhost:3000 --diff-dir ./alerts/raw --json\n\n  [Alert Import] Re-map linked dashboards and panels during import:\n    grafana-util alert import --url http://localhost:3000 --import-dir ./alerts/raw --replace-existing --dashboard-uid-map ./dashboard-map.json --panel-id-map ./panel-map.json\n\n  [Alert List] Render live alert rules as JSON:\n    grafana-util alert list-rules --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json\n";
-const DATASOURCE_HELP_FULL_TEXT: &str = "\nExtended Examples:\n\n  [Datasource List] Enumerate all visible org datasources as CSV:\n    grafana-util datasource list --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --output-format csv\n\n  [Datasource Add] Preview a new datasource contract as JSON:\n    grafana-util datasource add --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --name prometheus-main --type prometheus --datasource-url http://prometheus:9090 --dry-run --json\n\n  [Datasource Import] Import one exported org bundle with create-missing-orgs:\n    grafana-util datasource import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./datasources --use-export-org --only-org-id 2 --create-missing-orgs --dry-run --json\n\n  [Datasource Diff] Compare a local export directory with live Grafana:\n    grafana-util datasource diff --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --diff-dir ./datasources\n";
+const DATASOURCE_HELP_FULL_TEXT: &str = "\nExtended Examples:\n\n  [Datasource Browse] Open a live datasource browser:\n    grafana-util datasource browse --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\"\n\n  [Datasource List] Enumerate all visible org datasources as CSV:\n    grafana-util datasource list --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --output-format csv\n\n  [Datasource Add] Preview a new datasource contract as JSON:\n    grafana-util datasource add --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --name prometheus-main --type prometheus --datasource-url http://prometheus:9090 --dry-run --json\n\n  [Datasource Import] Import one exported org bundle with create-missing-orgs:\n    grafana-util datasource import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./datasources --use-export-org --only-org-id 2 --create-missing-orgs --dry-run --json\n\n  [Datasource Diff] Compare a local export directory with live Grafana:\n    grafana-util datasource diff --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --diff-dir ./datasources\n";
 const ACCESS_HELP_FULL_TEXT: &str = "\nExtended Examples:\n\n  [Access User Diff] Compare exported users against the Grafana global scope:\n    grafana-util access user diff --url http://localhost:3000 --basic-user admin --basic-password admin --diff-dir ./access-users --scope global\n\n  [Access Team Import] Preview a destructive team sync as a table:\n    grafana-util access team import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./access-teams --replace-existing --dry-run --output-format table\n\n  [Access Org Delete] Delete one org by explicit org id:\n    grafana-util access org delete --url http://localhost:3000 --basic-user admin --basic-password admin --org-id 7 --yes --json\n\n  [Access Token Add] Issue a short-lived service-account token:\n    grafana-util access service-account token add --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --service-account-id 7 --token-name nightly --seconds-to-live 3600\n";
 const SYNC_HELP_FULL_TEXT: &str = "\nExtended Examples:\n\n  [Sync Summary] Render the desired resource summary as JSON:\n    grafana-util sync summary --desired-file ./desired.json --output json\n\n  [Sync Audit] Compare the current live state against a staged checksum lock:\n    grafana-util sync audit --lock-file ./sync-lock.json --fetch-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --fail-on-drift --output json\n\n  [Sync Bundle] Package exported dashboard and alert artifacts into one source bundle:\n    grafana-util sync bundle --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts/raw --output-file ./sync-source-bundle.json\n\n  [Sync Bundle Preflight] Compare a source bundle against a target inventory snapshot:\n    grafana-util sync bundle-preflight --source-bundle ./sync-source-bundle.json --target-inventory ./target-inventory.json --output json\n\n  [Sync Plan] Build a live-backed plan with prune candidates:\n    grafana-util sync plan --desired-file ./desired.json --fetch-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --allow-prune --output json\n\n  [Sync Review] Stamp a reviewed plan with reviewer metadata:\n    grafana-util sync review --plan-file ./sync-plan.json --review-note 'peer-reviewed' --reviewed-by ops-user --output json\n\n  [Sync Apply] Emit a reviewed local apply intent:\n    grafana-util sync apply --plan-file ./sync-plan-reviewed.json --approve\n";
 
@@ -101,15 +101,11 @@ fn inject_help_full_hint(help: String) -> String {
     help.replace("\nExamples:\n", &format!("\n{HELP_FULL_HINT}\nExamples:\n"))
 }
 
-/// Purpose: implementation note.
+/// Render unified help text and apply compact "full examples" markers.
 ///
-/// Args: see function signature.
-/// Returns: see implementation.
+/// This keeps default help stable while allowing operators to discover the
+/// extended example section when needed.
 pub fn render_unified_help_text(colorize: bool) -> String {
-    // Call graph (hierarchy): this function is used in related modules.
-    // Upstream callers: cli.rs:maybe_render_unified_help_from_os_args, cli.rs:render_unified_help_full_text, cli_rust_tests.rs:render_unified_help, cli_rust_tests.rs:render_unified_help_text_colorizes_bracketed_usage_tokens_when_requested, cli_rust_tests.rs:render_unified_help_text_colorizes_example_labels_when_requested
-    // Downstream callees: cli.rs:colorize_unified_help_examples, cli.rs:inject_help_full_hint, cli.rs:render_long_help_with_color_choice
-
     let mut command = CliArgs::command();
     let help = inject_help_full_hint(render_long_help_with_color_choice(&mut command, colorize));
     if colorize {
@@ -140,10 +136,7 @@ fn render_domain_help_full_text(
     help
 }
 
-/// Purpose: implementation note.
-///
-/// Args: see function signature.
-/// Returns: see implementation.
+/// Render the unified help text with the longer `--help-full` example block.
 pub fn render_unified_help_full_text(colorize: bool) -> String {
     let mut help = render_unified_help_text(colorize);
     if colorize {
@@ -160,10 +153,8 @@ where
     I: IntoIterator<Item = T>,
     T: Into<std::ffi::OsString> + Clone,
 {
-    // Call graph (hierarchy): this function is used in related modules.
-    // Upstream callers: cli_rust_tests.rs:maybe_render_unified_help_from_os_args_handles_root_help_and_help_full_flags
-    // Downstream callees: cli.rs:render_domain_help_full_text, cli.rs:render_domain_help_text, cli.rs:render_unified_help_full_text, cli.rs:render_unified_help_text
-
+    // Fast path for `-h/--help` and `--help-full` before command parsing.
+    // This avoids constructing a full `CliArgs` value for top-level help usage.
     let args = iter
         .into_iter()
         .map(|value| value.into().to_string_lossy().into_owned())
@@ -211,15 +202,19 @@ where
     }
 }
 
-/// Enum definition for DashboardGroupCommand.
+/// Dashboard subcommands exposed through the unified root CLI.
 #[derive(Debug, Clone, Subcommand)]
 pub enum DashboardGroupCommand {
+    #[command(about = "Browse the live dashboard tree in an interactive terminal UI.")]
+    Browse(BrowseArgs),
     #[command(about = "List dashboard summaries without writing export files.")]
     List(ListArgs),
     #[command(about = "Export dashboards to raw/ and prompt/ JSON files.")]
     Export(ExportArgs),
     #[command(about = "Import dashboard JSON files through the Grafana API.")]
     Import(ImportArgs),
+    #[command(about = "Delete live dashboards by UID or folder path.")]
+    Delete(DeleteArgs),
     #[command(about = "Compare local raw dashboard files against live Grafana dashboards.")]
     Diff(DiffArgs),
     #[command(about = "Analyze a raw dashboard export directory and summarize its structure.")]
@@ -240,7 +235,7 @@ pub enum DashboardGroupCommand {
     Screenshot(ScreenshotArgs),
 }
 
-/// Enum definition for UnifiedCommand.
+/// Namespaced root commands handled by the Rust `grafana-util` binary.
 #[derive(Debug, Clone, Subcommand)]
 pub enum UnifiedCommand {
     #[command(
@@ -252,7 +247,7 @@ pub enum UnifiedCommand {
         command: DashboardGroupCommand,
     },
     #[command(
-        about = "Run datasource list, export, import, and diff workflows.",
+        about = "Run datasource browse, list, export, import, and diff workflows.",
         visible_alias = "ds"
     )]
     Datasource {
@@ -280,7 +275,7 @@ pub enum UnifiedCommand {
     after_help = UNIFIED_HELP_TEXT,
     styles = crate::help_styles::CLI_HELP_STYLES
 )]
-/// Struct definition for CliArgs.
+/// Parsed root CLI arguments for the Rust unified binary.
 pub struct CliArgs {
     #[command(subcommand)]
     pub command: UnifiedCommand,
@@ -294,10 +289,8 @@ where
     I: IntoIterator<Item = T>,
     T: Into<std::ffi::OsString> + Clone,
 {
-    // Call graph (hierarchy): this function is used in related modules.
-    // Upstream callers: 無
-    // Downstream callees: 無
-
+    // Keep parser invocation in one place so runtime entrypoints all share identical
+    // argument normalization and Clap error handling.
     CliArgs::parse_from(iter)
 }
 
@@ -307,9 +300,11 @@ fn wrap_dashboard(command: DashboardCommand) -> DashboardCliArgs {
 
 fn wrap_dashboard_group(command: DashboardGroupCommand) -> DashboardCliArgs {
     match command {
+        DashboardGroupCommand::Browse(inner) => wrap_dashboard(DashboardCommand::Browse(inner)),
         DashboardGroupCommand::List(inner) => wrap_dashboard(DashboardCommand::List(inner)),
         DashboardGroupCommand::Export(inner) => wrap_dashboard(DashboardCommand::Export(inner)),
         DashboardGroupCommand::Import(inner) => wrap_dashboard(DashboardCommand::Import(inner)),
+        DashboardGroupCommand::Delete(inner) => wrap_dashboard(DashboardCommand::Delete(inner)),
         DashboardGroupCommand::Diff(inner) => wrap_dashboard(DashboardCommand::Diff(inner)),
         DashboardGroupCommand::InspectExport(inner) => {
             wrap_dashboard(DashboardCommand::InspectExport(inner))
@@ -332,6 +327,10 @@ fn wrap_dashboard_group(command: DashboardGroupCommand) -> DashboardCliArgs {
 
 // Centralized command fan-out before invoking domain runners.
 // Every unified CLI variant is normalized into one of dashboard/alert/datasource/access runners here.
+/// Dispatch the normalized root command into exactly one domain handler.
+///
+/// Handlers are injected as callables so tests can assert routing without
+/// triggering network-heavy domain execution.
 fn dispatch_with_handlers<FD, FS, FY, FA, FX>(
     args: CliArgs,
     mut run_dashboard: FD,
@@ -361,10 +360,7 @@ where
 /// Keeping handler execution injectable via `dispatch_with_handlers` allows tests to
 /// validate dispatch logic without touching network transport.
 pub fn run_cli(args: CliArgs) -> Result<()> {
-    // Call graph (hierarchy): this function is used in related modules.
-    // Upstream callers: 無
-    // Downstream callees: cli.rs:dispatch_with_handlers
-
+    // Keep one executable boundary: parse-independent dispatch + injected runners.
     dispatch_with_handlers(
         args,
         run_dashboard_cli,

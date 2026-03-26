@@ -42,6 +42,8 @@ The script is idempotent:
 Seeded sample layout:
 - Org 1 Main Org.
   - Datasources: Smoke Prometheus, Smoke Prometheus 2, Smoke Loki
+  - Users: browse-admin (Admin, grafanaAdmin), browse-editor (Editor), browse-viewer (Viewer), browse-auditor (Viewer)
+  - Teams: platform-ops, qa-observers, api-editors
   - Folders: Platform, Platform / Infra, Platform / Team / Apps / Prod, Platform / Team / Apps / API
   - Dashboards: smoke-main, smoke-prom-only, query-smoke, mixed-query-smoke, two-prom-query-smoke, subfolder-main, subfolder-chain-smoke
 - Org 2 Org Two
@@ -112,6 +114,185 @@ request_optional() {
 current_admin_login() {
   request_json GET "/api/user"
   printf '%s' "${HTTP_BODY}" | jq -r '.login // empty'
+}
+
+iter_global_users() {
+  local page=1
+  local batch_len
+  while true; do
+    request_json GET "/api/users?perpage=100&page=${page}"
+    batch_len="$(printf '%s' "${HTTP_BODY}" | jq 'length')"
+    printf '%s\n' "${HTTP_BODY}"
+    [[ "${batch_len}" -lt 100 ]] && break
+    page=$((page + 1))
+  done
+}
+
+lookup_user_id_by_login() {
+  local login="$1"
+  iter_global_users | jq -sr --arg login "${login}" 'add | map(select(.login == $login)) | .[0].id // empty'
+}
+
+resolve_user_ids_csv() {
+  local identities_csv="$1"
+  local resolved=()
+  local identity
+  local user_id
+
+  IFS=',' read -r -a raw_identities <<< "${identities_csv}"
+  for identity in "${raw_identities[@]}"; do
+    identity="$(printf '%s' "${identity}" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
+    [[ -n "${identity}" ]] || continue
+    user_id="$(lookup_user_id_by_login "${identity}")"
+    [[ -n "${user_id}" ]] || fail "failed to resolve user id for login ${identity}"
+    resolved+=("${user_id}")
+  done
+
+  printf '%s\n' "${resolved[@]}"
+}
+
+resolve_user_identities_json() {
+  local identities_csv="$1"
+  local identity
+  local resolved=()
+
+  IFS=',' read -r -a raw_identities <<< "${identities_csv}"
+  for identity in "${raw_identities[@]}"; do
+    identity="$(printf '%s' "${identity}" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
+    [[ -n "${identity}" ]] || continue
+    resolved+=("$(
+      iter_global_users | jq -sr --arg login "${identity}" 'add | map(select(.login == $login)) | .[0].email // .[0].login // empty'
+    )")
+  done
+
+  printf '%s\n' "${resolved[@]}" | jq -R 'select(length > 0)' | jq -s .
+}
+
+ensure_user() {
+  local login="$1"
+  local email="$2"
+  local name="$3"
+  local org_role="$4"
+  local grafana_admin="$5"
+  local user_id
+
+  user_id="$(lookup_user_id_by_login "${login}")"
+  if [[ -z "${user_id}" ]]; then
+    request_json POST "/api/admin/users" "$(
+      jq -cn \
+        --arg login "${login}" \
+        --arg email "${email}" \
+        --arg name "${name}" \
+        '{login: $login, email: $email, name: $name, password: "secret123!"}'
+    )"
+    user_id="$(printf '%s' "${HTTP_BODY}" | jq -r '.id // empty')"
+    [[ -n "${user_id}" ]] || fail "failed to create user ${login}"
+    printf 'Created user %s (id=%s)\n' "${login}" "${user_id}"
+  else
+    printf 'Reused user %s (id=%s)\n' "${login}" "${user_id}"
+  fi
+
+  request_json PATCH "/api/org/users/${user_id}" "$(
+    jq -cn --arg role "${org_role}" '{role: $role}'
+  )"
+  request_json PUT "/api/admin/users/${user_id}/permissions" "$(
+    jq -cn --argjson isGrafanaAdmin "${grafana_admin}" '{isGrafanaAdmin: $isGrafanaAdmin}'
+  )"
+  printf 'Configured user %s role=%s grafanaAdmin=%s\n' "${login}" "${org_role}" "${grafana_admin}"
+}
+
+delete_user_if_present() {
+  local login="$1"
+  local user_id
+
+  user_id="$(lookup_user_id_by_login "${login}")"
+  if [[ -z "${user_id}" ]]; then
+    printf 'Skipped user %s: not found\n' "${login}"
+    return
+  fi
+
+  request_json DELETE "/api/admin/users/${user_id}"
+  printf 'Deleted user %s (id=%s)\n' "${login}" "${user_id}"
+}
+
+lookup_team_id_by_name() {
+  local name="$1"
+  request_json GET "/api/teams/search?query=${name}&perpage=100&page=1"
+  printf '%s' "${HTTP_BODY}" | jq -r --arg name "${name}" '.teams[]? | select(.name == $name) | .id' | head -n 1
+}
+
+list_team_members() {
+  local team_id="$1"
+  request_json GET "/api/teams/${team_id}/members"
+  printf '%s' "${HTTP_BODY}"
+}
+
+ensure_team() {
+  local name="$1"
+  local email="$2"
+  local members_csv="$3"
+  local admins_csv="$4"
+  local team_id
+  local current_members_json
+  local target_member
+  local target_user_id
+  local target_member_identities
+  local target_admin_identities
+
+  team_id="$(lookup_team_id_by_name "${name}")"
+  if [[ -z "${team_id}" ]]; then
+    request_json POST "/api/teams" "$(
+      jq -cn --arg name "${name}" --arg email "${email}" '{name: $name, email: $email}'
+    )"
+    team_id="$(printf '%s' "${HTTP_BODY}" | jq -r '.teamId // .id // empty')"
+    [[ -n "${team_id}" ]] || fail "failed to create team ${name}"
+    printf 'Created team %s (id=%s)\n' "${name}" "${team_id}"
+  else
+    printf 'Reused team %s (id=%s)\n' "${name}" "${team_id}"
+  fi
+
+  current_members_json="$(list_team_members "${team_id}")"
+
+  while IFS= read -r target_member; do
+    [[ -n "${target_member}" ]] || continue
+    target_user_id="$(lookup_user_id_by_login "${target_member}")"
+    [[ -n "${target_user_id}" ]] || fail "failed to resolve user id for login ${target_member}"
+    if ! printf '%s' "${current_members_json}" | jq -e --arg login "${target_member}" '
+      .[]? | select((.login // "") == $login or (.email // "") == $login)
+    ' >/dev/null; then
+      request_json POST "/api/teams/${team_id}/members" "$(
+        jq -cn --argjson userId "${target_user_id}" '{userId: $userId}'
+      )"
+      printf 'Added team member %s -> %s\n' "${name}" "${target_member}"
+    fi
+  done < <(printf '%s' "${members_csv}" | tr ',' '\n' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' )
+
+  target_member_identities="$(resolve_user_identities_json "${members_csv}")"
+  target_admin_identities="$(resolve_user_identities_json "${admins_csv}")"
+  request_json PUT "/api/teams/${team_id}/members" "$(
+    jq -cn \
+      --argjson members "${target_member_identities:-[]}" \
+      --argjson admins "${target_admin_identities:-[]}" '
+      {
+        members: $members,
+        admins: $admins
+      }'
+  )"
+  printf 'Configured team %s members=[%s] admins=[%s]\n' "${name}" "${members_csv}" "${admins_csv}"
+}
+
+delete_team_if_present() {
+  local name="$1"
+  local team_id
+
+  team_id="$(lookup_team_id_by_name "${name}")"
+  if [[ -z "${team_id}" ]]; then
+    printf 'Skipped team %s: not found\n' "${name}"
+    return
+  fi
+
+  request_json DELETE "/api/teams/${team_id}"
+  printf 'Deleted team %s (id=%s)\n' "${name}" "${team_id}"
 }
 
 ensure_health() {
@@ -699,6 +880,13 @@ EOF
 
 seed_main_org() {
   local org_id="$1"
+  ensure_user "browse-admin" "browse-admin@example.com" "Browse Admin" "Admin" true
+  ensure_user "browse-editor" "browse-editor@example.com" "Browse Editor" "Editor" false
+  ensure_user "browse-viewer" "browse-viewer@example.com" "Browse Viewer" "Viewer" false
+  ensure_user "browse-auditor" "browse-auditor@example.com" "Browse Auditor" "Viewer" false
+  ensure_team "platform-ops" "platform-ops@example.com" "browse-admin,browse-editor" "browse-admin"
+  ensure_team "qa-observers" "qa-observers@example.com" "browse-viewer,browse-auditor" "browse-auditor"
+  ensure_team "api-editors" "api-editors@example.com" "browse-editor,browse-viewer" "browse-editor"
   ensure_datasource "${org_id}" "smoke-prom" "Smoke Prometheus" "prometheus" "http://prometheus:9090" true
   ensure_datasource "${org_id}" "smoke-prom-2" "Smoke Prometheus 2" "prometheus" "http://prometheus-two:9090" false
   ensure_datasource "${org_id}" "smoke-loki" "Smoke Loki" "loki" "http://loki:3100" false
@@ -719,6 +907,9 @@ seed_main_org() {
 
 destroy_main_org() {
   local org_id="$1"
+  delete_team_if_present "api-editors"
+  delete_team_if_present "qa-observers"
+  delete_team_if_present "platform-ops"
   delete_dashboard "${org_id}" "subfolder-chain-smoke"
   delete_dashboard "${org_id}" "subfolder-main"
   delete_dashboard "${org_id}" "two-prom-query-smoke"
@@ -735,6 +926,10 @@ destroy_main_org() {
   delete_datasource "${org_id}" "smoke-loki" "Smoke Loki"
   delete_datasource "${org_id}" "smoke-prom-2" "Smoke Prometheus 2"
   delete_datasource "${org_id}" "smoke-prom" "Smoke Prometheus"
+  delete_user_if_present "browse-auditor"
+  delete_user_if_present "browse-viewer"
+  delete_user_if_present "browse-editor"
+  delete_user_if_present "browse-admin"
 }
 
 seed_extra_org() {

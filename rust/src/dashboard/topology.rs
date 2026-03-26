@@ -12,13 +12,15 @@ use super::{
 #[path = "topology_build.rs"]
 mod topology_build;
 pub(crate) use topology_build::{build_impact_document, build_topology_document};
+#[cfg(any(feature = "tui", test))]
 #[path = "topology_browser.rs"]
 mod topology_browser;
+#[cfg(any(feature = "tui", test))]
 pub(crate) use topology_browser::{build_impact_browser_items, build_topology_browser_items};
 
-#[cfg(not(test))]
+#[cfg(all(feature = "tui", not(test)))]
 use super::impact_tui::run_impact_interactive;
-#[cfg(not(test))]
+#[cfg(all(feature = "tui", not(test)))]
 use super::topology_tui::run_topology_interactive;
 #[cfg(test)]
 use crate::interactive_browser::run_interactive_browser;
@@ -329,7 +331,7 @@ pub(crate) fn run_dashboard_topology(args: &TopologyArgs) -> Result<()> {
     };
     let document = build_topology_document(&governance, alert_contract.as_ref())?;
     if args.interactive {
-        #[cfg(not(test))]
+        #[cfg(all(feature = "tui", not(test)))]
         {
             return run_topology_interactive(&document);
         }
@@ -353,6 +355,10 @@ pub(crate) fn run_dashboard_topology(args: &TopologyArgs) -> Result<()> {
                 &summary,
                 &build_topology_browser_items(&document),
             );
+        }
+        #[cfg(not(feature = "tui"))]
+        {
+            return super::tui_not_built("topology --interactive");
         }
     }
     let rendered = match args.output_format {
@@ -381,7 +387,7 @@ pub(crate) fn run_dashboard_impact(args: &ImpactArgs) -> Result<()> {
     let document =
         build_impact_document(&governance, alert_contract.as_ref(), &args.datasource_uid)?;
     if args.interactive {
-        #[cfg(not(test))]
+        #[cfg(all(feature = "tui", not(test)))]
         {
             return run_impact_interactive(&document);
         }
@@ -392,6 +398,10 @@ pub(crate) fn run_dashboard_impact(args: &ImpactArgs) -> Result<()> {
                 &build_impact_interactive_summary(&document),
                 &build_impact_browser_items(&document),
             );
+        }
+        #[cfg(not(feature = "tui"))]
+        {
+            return super::tui_not_built("impact --interactive");
         }
     }
     match args.output_format {

@@ -64,6 +64,20 @@ from .dashboards.export_workflow import run_export_dashboards
 from .dashboards.export_runtime import (
     build_export_workflow_deps as build_export_workflow_deps_from_runtime,
 )
+from .dashboards.delete_render import (
+    format_live_dashboard_delete_line,
+    format_live_folder_delete_line,
+    render_dashboard_delete_json,
+    render_dashboard_delete_table,
+    render_dashboard_delete_text,
+)
+from .dashboards.delete_support import (
+    DELETE_OUTPUT_FORMAT_CHOICES,
+    build_delete_plan,
+    execute_delete_plan,
+    validate_delete_args,
+)
+from .dashboards.delete_workflow import run_delete_dashboards
 from .dashboards.diff_workflow import run_diff_dashboards
 from .dashboards.export_inventory import (
     discover_dashboard_files as discover_dashboard_files_from_export,
@@ -619,6 +633,79 @@ def add_import_cli_args(parser: argparse.ArgumentParser) -> None:
     )
 
 
+def add_delete_cli_args(parser: argparse.ArgumentParser) -> None:
+    """Add delete cli args implementation."""
+    input_group = parser.add_argument_group("Input Options")
+    target_group = parser.add_argument_group("Target Options")
+    safety_group = parser.add_argument_group("Safety Options")
+    output_group = parser.add_argument_group("Output Options")
+    input_group.add_argument(
+        "--page-size",
+        type=int,
+        default=DEFAULT_PAGE_SIZE,
+        help=f"Dashboard search page size used to resolve delete selectors (default: {DEFAULT_PAGE_SIZE}).",
+    )
+    target_group.add_argument(
+        "--org-id",
+        default=None,
+        help="Delete dashboards from this explicit Grafana organization ID instead of the current org context.",
+    )
+    target_group.add_argument(
+        "--uid",
+        default=None,
+        help="Dashboard UID to delete.",
+    )
+    target_group.add_argument(
+        "--path",
+        default=None,
+        help="Grafana folder path root to delete recursively, for example 'Platform / Infra'.",
+    )
+    target_group.add_argument(
+        "--delete-folders",
+        action="store_true",
+        help="With --path, also delete matched Grafana folders after deleting dashboards in the subtree.",
+    )
+    safety_group.add_argument(
+        "--yes",
+        action="store_true",
+        help="Explicit acknowledgement required before live dashboard delete runs. Not required with --dry-run or --interactive.",
+    )
+    safety_group.add_argument(
+        "--interactive",
+        action="store_true",
+        help="Prompt for the delete selector, preview the delete plan, and confirm interactively.",
+    )
+    safety_group.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Preview what dashboard delete would do without changing Grafana.",
+    )
+    output_group.add_argument(
+        "--table",
+        action="store_true",
+        help="For --dry-run only, render delete targets in table form.",
+    )
+    output_group.add_argument(
+        "--json",
+        action="store_true",
+        help="For --dry-run only, render one JSON document with delete targets and summary counts.",
+    )
+    output_group.add_argument(
+        "--no-header",
+        action="store_true",
+        help="For --dry-run --table only, omit the table header row.",
+    )
+    output_group.add_argument(
+        "--output-format",
+        choices=DELETE_OUTPUT_FORMAT_CHOICES,
+        default=None,
+        help=(
+            "Alternative single-flag output selector for dashboard delete dry-run output. "
+            "Use text, table, or json. This cannot be combined with --table or --json."
+        ),
+    )
+
+
 def add_diff_cli_args(parser: argparse.ArgumentParser) -> None:
     """Add diff cli args implementation."""
     input_group = parser.add_argument_group("Input Options")
@@ -1093,6 +1180,15 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     add_common_cli_args(import_parser)
     add_import_cli_args(import_parser)
 
+    delete_parser = subparsers.add_parser(
+        "delete-dashboard",
+        help="Delete live dashboards by UID or folder path.",
+        epilog=DELETE_HELP_EXAMPLES,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    add_common_cli_args(delete_parser)
+    add_delete_cli_args(delete_parser)
+
     diff_parser = subparsers.add_parser(
         "diff",
         help="Compare exported raw dashboards with the current Grafana state.",
@@ -1181,6 +1277,16 @@ IMPORT_HELP_EXAMPLES = (
     "    grafana-util dashboard import-dashboard --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards --use-export-org --only-org-id 2 --dry-run --json"
 )
 
+DELETE_HELP_EXAMPLES = (
+    "Examples:\n\n"
+    "  Dry-run one dashboard delete by UID:\n"
+    '    grafana-util dashboard delete-dashboard --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --uid cpu-main --dry-run --json\n\n'
+    "  Delete all dashboards under one folder subtree:\n"
+    '    grafana-util dashboard delete-dashboard --url http://localhost:3000 --basic-user admin --basic-password admin --path "Platform / Infra" --yes\n\n'
+    "  Interactively preview and confirm a folder delete:\n"
+    "    grafana-util dashboard delete-dashboard --url http://localhost:3000 --interactive"
+)
+
 DIFF_HELP_EXAMPLES = (
     "Examples:\n\n"
     "  Compare raw dashboard exports against Grafana:\n"
@@ -1232,6 +1338,14 @@ def _normalize_output_format_args(
         if bool(getattr(args, "table", False)) or bool(getattr(args, "json", False)):
             parser.error(
                 "--output-format cannot be combined with --table or --json for import-dashboard."
+            )
+        args.table = output_format == "table"
+        args.json = output_format == "json"
+        return
+    if command == "delete-dashboard":
+        if bool(getattr(args, "table", False)) or bool(getattr(args, "json", False)):
+            parser.error(
+                "--output-format cannot be combined with --table or --json for delete-dashboard."
             )
         args.table = output_format == "table"
         args.json = output_format == "json"
@@ -1431,6 +1545,30 @@ def import_dashboards(args: argparse.Namespace) -> int:
     return run_import_dashboards(args, _build_import_workflow_deps())
 
 
+def _build_delete_workflow_deps() -> dict[str, Any]:
+    """Internal helper for build delete workflow deps."""
+    return {
+        "GrafanaError": GrafanaError,
+        "build_client": build_client,
+        "build_delete_plan": build_delete_plan,
+        "execute_delete_plan": execute_delete_plan,
+        "format_live_dashboard_delete_line": format_live_dashboard_delete_line,
+        "format_live_folder_delete_line": format_live_folder_delete_line,
+        "input_reader": input,
+        "is_tty": lambda: sys.stdin.isatty() and sys.stdout.isatty(),
+        "output_writer": print,
+        "render_dashboard_delete_json": render_dashboard_delete_json,
+        "render_dashboard_delete_table": render_dashboard_delete_table,
+        "render_dashboard_delete_text": render_dashboard_delete_text,
+        "validate_delete_args": validate_delete_args,
+    }
+
+
+def delete_dashboards(args: argparse.Namespace) -> int:
+    """Delete live dashboards from Grafana."""
+    return run_delete_dashboards(args, _build_delete_workflow_deps())
+
+
 def _build_diff_workflow_deps() -> dict[str, Any]:
     """Internal helper for build diff workflow deps."""
     return {
@@ -1506,6 +1644,8 @@ def main(argv: Optional[list[str]] = None) -> int:
             return inspect_vars(args)
         if args.command == "screenshot":
             return screenshot_dashboard(args)
+        if args.command == "delete-dashboard":
+            return delete_dashboards(args)
         if args.command == "import-dashboard":
             if not bool(getattr(args, "dry_run", False)) and not bool(
                 getattr(args, "approve", False)

@@ -3,7 +3,7 @@ use serde_json::{Map, Value};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
-use crate::common::{message, object_field, string_field, value_as_object, Result};
+use crate::common::{message, object_field, string_field, validation, value_as_object, Result};
 
 use super::build_folder_path;
 use super::live::{fetch_dashboard_if_exists_with_request, fetch_folder_if_exists_with_request};
@@ -345,7 +345,7 @@ pub(crate) fn resolve_source_dashboard_folder_path(
         }
     }
     let relative = dashboard_file.strip_prefix(import_dir).map_err(|error| {
-        message(format!(
+        validation(format!(
             "Failed to resolve import-relative dashboard path for {}: {error}",
             dashboard_file.display()
         ))

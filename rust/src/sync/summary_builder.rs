@@ -1,3 +1,4 @@
+use super::json::require_json_object;
 use super::workbench::{
     SyncResourceSpec, SyncSummary, RESOURCE_KINDS, SYNC_SUMMARY_KIND, SYNC_SUMMARY_SCHEMA_VERSION,
 };
@@ -23,14 +24,6 @@ fn normalize_text(value: Option<&Value>) -> String {
             }
         }
         _ => String::new(),
-    }
-}
-
-fn require_object<'a>(value: Option<&'a Value>, label: &str) -> Result<&'a Map<String, Value>> {
-    match value {
-        None => Err(message(format!("{label} must be a JSON object."))),
-        Some(Value::Object(object)) => Ok(object),
-        Some(_) => Err(message(format!("{label} must be a JSON object."))),
     }
 }
 
@@ -74,16 +67,16 @@ fn extract_title(spec: &Map<String, Value>, fallback_identity: &str) -> String {
 
 fn extract_body(spec: &Map<String, Value>) -> Result<Map<String, Value>> {
     if let Some(body) = spec.get("body") {
-        return Ok(require_object(Some(body), "body")?.clone());
+        return Ok(require_json_object(body, "body")?.clone());
     }
     if let Some(body) = spec.get("spec") {
-        return Ok(require_object(Some(body), "spec")?.clone());
+        return Ok(require_json_object(body, "spec")?.clone());
     }
     Ok(Map::new())
 }
 
 pub fn normalize_resource_spec(raw_spec: &Value) -> Result<SyncResourceSpec> {
-    let spec = require_object(Some(raw_spec), "Sync resource spec")?;
+    let spec = require_json_object(raw_spec, "Sync resource spec")?;
     let kind = normalize_text(spec.get("kind")).to_lowercase();
     if !RESOURCE_KINDS.contains(&kind.as_str()) {
         return Err(message(format!(

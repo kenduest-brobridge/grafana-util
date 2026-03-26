@@ -10,7 +10,8 @@ use crate::common::{message, string_field, value_as_object, Result};
 
 use super::render::{map_get_text, normalize_service_account_row, scalar_text};
 use super::{
-    request_object, CommonCliArgs, TeamAddArgs, TeamListArgs, TeamModifyArgs, DEFAULT_PAGE_SIZE,
+    request_object, request_object_list_field, CommonCliArgs, TeamAddArgs, TeamListArgs,
+    TeamModifyArgs, DEFAULT_PAGE_SIZE,
 };
 
 /// CLI arguments for team delete.
@@ -137,23 +138,16 @@ where
         ("page".to_string(), page.to_string()),
         ("perpage".to_string(), per_page.to_string()),
     ];
-    let object = request_object(
+    request_object_list_field(
         &mut request_json,
         Method::GET,
         "/api/teams/search",
         &params,
         None,
+        "teams",
         "Unexpected team list response from Grafana.",
-    )?;
-    match object.get("teams") {
-        Some(Value::Array(values)) => values
-            .iter()
-            .map(|value| {
-                Ok(value_as_object(value, "Unexpected team list response from Grafana.")?.clone())
-            })
-            .collect(),
-        _ => Err(message("Unexpected team list response from Grafana.")),
-    }
+        "Unexpected team list response from Grafana.",
+    )
 }
 
 /// Find a team by exact name.
@@ -293,29 +287,16 @@ where
         ("page".to_string(), page.to_string()),
         ("perpage".to_string(), per_page.to_string()),
     ];
-    let object = request_object(
+    request_object_list_field(
         &mut request_json,
         Method::GET,
         "/api/serviceaccounts/search",
         &params,
         None,
+        "serviceAccounts",
         "Unexpected service-account list response from Grafana.",
-    )?;
-    match object.get("serviceAccounts") {
-        Some(Value::Array(values)) => values
-            .iter()
-            .map(|value| {
-                Ok(value_as_object(
-                    value,
-                    "Unexpected service-account list response from Grafana.",
-                )?
-                .clone())
-            })
-            .collect(),
-        _ => Err(message(
-            "Unexpected service-account list response from Grafana.",
-        )),
-    }
+        "Unexpected service-account list response from Grafana.",
+    )
 }
 
 /// Find a service account by exact name.
@@ -727,6 +708,25 @@ mod pending_delete_rust_tests {
         assert!(error
             .to_string()
             .contains("Service-account token delete requires one of --token-id or --token-name."));
+    }
+
+    #[test]
+    fn list_teams_with_request_rejects_non_array_team_list() {
+        let error = list_teams_with_request(
+            |_method, _path, _params, _payload| {
+                Ok(Some(Value::Object(Map::from_iter(vec![(
+                    "teams".to_string(),
+                    Value::String("unexpected".to_string()),
+                )]))))
+            },
+            Some("dev"),
+            1,
+            DEFAULT_PAGE_SIZE,
+        )
+        .unwrap_err();
+        assert!(error
+            .to_string()
+            .contains("Unexpected team list response from Grafana."));
     }
 
     #[test]
