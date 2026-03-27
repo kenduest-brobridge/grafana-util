@@ -14,6 +14,7 @@ top of the file.
 
 - `ai-status.md`
 - `ai-changes.md`
+- `rust-tui-improvement-proposal-2026-03-28.md`
 - `maintainer-backlog-2026-03-28.md`
 - `project-roadmap.md`
 - `project-value-assessment.md`
