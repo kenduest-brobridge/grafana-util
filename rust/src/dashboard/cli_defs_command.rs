@@ -225,7 +225,7 @@ pub struct ImportArgs {
     #[arg(
         long,
         default_value_t = false,
-        help = "Open an interactive review picker to choose which exported dashboards to import from --import-dir and preview each file's create/update/skip action."
+        help = "Open an interactive review picker to choose which exported dashboards to import from --import-dir and preview each file's create/update/skip action. With --dry-run, Enter runs the dry-run only for the selected dashboards."
     )]
     pub interactive: bool,
     #[arg(

@@ -95,6 +95,7 @@ pub(crate) struct InteractiveImportState {
     pub(crate) list_state: ListState,
     pub(crate) grouping: InteractiveImportGrouping,
     pub(crate) import_mode: String,
+    pub(crate) dry_run: bool,
     pub(crate) status: String,
     review_on_focus: bool,
 }
@@ -113,7 +114,11 @@ pub(crate) struct InteractiveImportSummaryCounts {
 }
 
 impl InteractiveImportState {
-    pub(crate) fn new(items: Vec<InteractiveImportItem>, import_mode: String) -> Self {
+    pub(crate) fn new(
+        items: Vec<InteractiveImportItem>,
+        import_mode: String,
+        dry_run: bool,
+    ) -> Self {
         let mut list_state = ListState::default();
         list_state.select((!items.is_empty()).then_some(0));
         Self {
@@ -122,7 +127,12 @@ impl InteractiveImportState {
             list_state,
             grouping: InteractiveImportGrouping::Folder,
             import_mode,
-            status: "Loaded local dashboards. Review follows focus; Enter imports the selected dashboards.".to_string(),
+            dry_run,
+            status: if dry_run {
+                "Loaded local dashboards. Review follows focus; Enter runs dry-run for the selected dashboards.".to_string()
+            } else {
+                "Loaded local dashboards. Review follows focus; Enter imports the selected dashboards.".to_string()
+            },
             review_on_focus: true,
         }
     }
@@ -402,7 +412,12 @@ impl InteractiveImportState {
             KeyCode::Enter => {
                 let files = self.selected_files();
                 if files.is_empty() {
-                    self.status = "Select at least one dashboard before importing.".to_string();
+                    self.status = if self.dry_run {
+                        "Select at least one dashboard before running interactive dry-run."
+                            .to_string()
+                    } else {
+                        "Select at least one dashboard before importing.".to_string()
+                    };
                 } else {
                     return InteractiveImportAction::Confirm(files);
                 }
@@ -468,6 +483,7 @@ where
         items,
         describe_dashboard_import_mode(args.replace_existing, args.update_existing_only)
             .to_string(),
+        args.dry_run,
     );
     loop {
         session.terminal.draw(|frame| {
@@ -490,9 +506,10 @@ where
                 "Interactive Dashboard Import",
                 vec![
                     Line::from(format!(
-                        "Import dir={}   Mode={}   Grouping={}   Selected={}/{}",
+                        "Import dir={}   Mode={}   ReviewMode={}   Grouping={}   Selected={}/{}",
                         import_dir_label,
                         state.import_mode,
+                        if state.dry_run { "dry-run" } else { "import" },
                         state.grouping.label(),
                         state.selected_paths.len(),
                         state.items.len()
@@ -709,7 +726,15 @@ where
                         ("Space", Color::Rgb(24, 106, 59), "toggle"),
                         ("a", Color::Rgb(24, 106, 59), "all/none"),
                         ("g", Color::Rgb(164, 116, 19), "grouping"),
-                        ("Enter", Color::Rgb(24, 106, 59), "import selected"),
+                        (
+                            "Enter",
+                            Color::Rgb(24, 106, 59),
+                            if state.dry_run {
+                                "dry-run selected"
+                            } else {
+                                "import selected"
+                            },
+                        ),
                         ("q", Color::Rgb(90, 98, 107), "cancel"),
                     ]),
                 ],

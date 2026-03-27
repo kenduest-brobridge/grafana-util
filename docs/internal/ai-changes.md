@@ -14,6 +14,14 @@ Current AI change log only.
 - Rollback/Risk: low. This changes operator-facing wording only and keeps browse state, input handling, and destructive behavior unchanged.
 - Follow-up: none.
 
+## 2026-03-28 - Interactive dashboard import dry-run review mode
+- Summary: made `dashboard import --interactive --dry-run` an explicit operator-facing mode by switching the interactive header, status copy, Enter action label, help text, and cancellation message over to dry-run review wording instead of reusing the import wording.
+- Tests: added a focused dry-run state regression for the interactive import workbench and extended the import help regression to assert the new dry-run wording.
+- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all` passed; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_browse_workflow_rust_tests` passed; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_cli_parser_help_rust_tests` passed; `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings` passed.
+- Impact: `rust/src/dashboard/import_interactive.rs`, `rust/src/dashboard/import_apply.rs`, `rust/src/dashboard/cli_defs_command.rs`, `rust/src/dashboard/dashboard_browse_workflow_rust_tests.rs`, `rust/src/dashboard/dashboard_cli_parser_help_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: low. This does not add a new command path; it only makes the existing interactive dry-run path explicit and less confusing for operators.
+- Follow-up: none.
+
 ## 2026-03-28 - Interactive dashboard import review workbench
 - Summary: upgraded `dashboard import --interactive` from a local file picker into a review-first TUI that reuses the existing import dry-run/import lookup semantics for the focused dashboard. The workbench now resolves review state on focus, caches create/update/skip/block outcomes, exposes folder/action/flat grouping, and keeps `Enter` as the direct import boundary for the selected files.
 - Tests: extended focused dashboard import workflow tests for grouping and on-focus review resolution, and added a parser/help regression for the updated `--interactive` wording.

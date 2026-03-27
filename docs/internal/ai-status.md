@@ -13,6 +13,13 @@ Current AI-maintained status only.
 - Current Update: aligned browse summaries and footers around `Mode=...`, `active-pane=...`, `next pane`, `previous pane`, `search`, `next match`, and consistent confirm-delete or cancel wording.
 - Result: the browse surfaces now read more like one Rust operator console even though their row models and actions remain domain-specific.
 
+## 2026-03-28 - Interactive dashboard import dry-run review mode
+- State: Done
+- Scope: `rust/src/dashboard/import_interactive.rs`, `rust/src/dashboard/import_apply.rs`, `rust/src/dashboard/cli_defs_command.rs`, focused dashboard import help/workflow tests
+- Baseline: `dashboard import --interactive` already acted as a review-first TUI, and `--dry-run` technically flowed through the same path, but the interactive wording still said `import selected` and cancellation still printed `Import cancelled.`, which made dry-run interactive use feel unofficial.
+- Current Update: made the interactive import workbench explicitly dry-run aware so the header, status text, footer Enter label, CLI help, and cancellation message all switch to dry-run review wording when `--dry-run` is active.
+- Result: `dashboard import --interactive --dry-run` is now a first-class interactive review mode instead of an implicit side effect of the normal import path.
+
 ## 2026-03-28 - Interactive dashboard import review workbench
 - State: Done
 - Scope: `rust/src/dashboard/import.rs`, `rust/src/dashboard/import_apply.rs`, `rust/src/dashboard/import_dry_run.rs`, `rust/src/dashboard/import_interactive.rs`, `rust/src/dashboard/cli_defs_command.rs`, focused dashboard import parser/workflow tests

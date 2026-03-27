@@ -135,7 +135,14 @@ where
     )? {
         Some(selected) => selected,
         None if args.interactive => {
-            println!("Import cancelled.");
+            println!(
+                "{} cancelled.",
+                if args.dry_run {
+                    "Interactive dry-run"
+                } else {
+                    "Import"
+                }
+            );
             return Ok(0);
         }
         None => discovered_dashboard_files,

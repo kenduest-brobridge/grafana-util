@@ -355,6 +355,7 @@ fn import_help_mentions_interactive_review_picker() {
 
     assert!(rendered.contains("interactive review picker"));
     assert!(rendered.contains("create/update/skip action"));
+    assert!(rendered.contains("With --dry-run"));
 }
 
 #[test]

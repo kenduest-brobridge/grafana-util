@@ -891,7 +891,7 @@ fn interactive_import_state_toggles_and_confirms_selected_files() {
             review: crate::dashboard::import_interactive::InteractiveImportReviewState::Pending,
         },
     ];
-    let mut state = InteractiveImportState::new(items, "create-only".to_string());
+    let mut state = InteractiveImportState::new(items, "create-only".to_string(), false);
 
     assert_eq!(
         state.handle_key(KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE)),
@@ -924,7 +924,7 @@ fn interactive_import_grouping_cycles_folder_action_flat() {
             review: crate::dashboard::import_interactive::InteractiveImportReviewState::Pending,
         },
     ];
-    let mut state = InteractiveImportState::new(items, "create-only".to_string());
+    let mut state = InteractiveImportState::new(items, "create-only".to_string(), false);
 
     assert_eq!(
         state.grouping,
@@ -991,6 +991,7 @@ fn interactive_import_summary_counts_track_pending_selected_and_reviewed_actions
             },
         ],
         "create-only".to_string(),
+        false,
     );
     state.selected_paths.insert(PathBuf::from("b.json"));
 
@@ -1001,6 +1002,27 @@ fn interactive_import_summary_counts_track_pending_selected_and_reviewed_actions
     assert_eq!(counts.pending, 1);
     assert_eq!(counts.reviewed, 1);
     assert_eq!(counts.update, 1);
+}
+
+#[test]
+fn interactive_import_dry_run_state_uses_dry_run_status_and_enter_copy() {
+    let state = InteractiveImportState::new(
+        vec![
+            crate::dashboard::import_interactive::InteractiveImportItem {
+                path: PathBuf::from("a.json"),
+                uid: "a".to_string(),
+                title: "CPU".to_string(),
+                folder_path: "Infra".to_string(),
+                file_label: "a.json".to_string(),
+                review: crate::dashboard::import_interactive::InteractiveImportReviewState::Pending,
+            },
+        ],
+        "create-only".to_string(),
+        true,
+    );
+
+    assert!(state.dry_run);
+    assert!(state.status.contains("dry-run"));
 }
 
 #[test]
@@ -1023,7 +1045,7 @@ fn interactive_import_resolves_focused_review_to_update_existing() {
     );
     let args = make_import_args(raw_dir.clone());
     let items = load_interactive_import_items(&args).unwrap();
-    let mut state = InteractiveImportState::new(items, "create-only".to_string());
+    let mut state = InteractiveImportState::new(items, "create-only".to_string(), false);
     let mut cache = crate::dashboard::import_lookup::ImportLookupCache::default();
 
     state.resolve_focused_review_with_request(
@@ -1085,7 +1107,7 @@ fn interactive_import_resolves_skip_missing_for_update_existing_only() {
     let mut args = make_import_args(raw_dir.clone());
     args.update_existing_only = true;
     let items = load_interactive_import_items(&args).unwrap();
-    let mut state = InteractiveImportState::new(items, "update-or-skip-missing".to_string());
+    let mut state = InteractiveImportState::new(items, "update-or-skip-missing".to_string(), false);
     let mut cache = crate::dashboard::import_lookup::ImportLookupCache::default();
 
     state.resolve_focused_review_with_request(
@@ -1129,7 +1151,7 @@ fn interactive_import_review_surfaces_changed_live_summary() {
     );
     let args = make_import_args(raw_dir.clone());
     let items = load_interactive_import_items(&args).unwrap();
-    let mut state = InteractiveImportState::new(items, "create-only".to_string());
+    let mut state = InteractiveImportState::new(items, "create-only".to_string(), false);
     let mut cache = crate::dashboard::import_lookup::ImportLookupCache::default();
 
     state.resolve_focused_review_with_request(
