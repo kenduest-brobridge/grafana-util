@@ -447,6 +447,7 @@ pub fn build_sync_promotion_preflight_document(
     let bundle_summary = require_sync_bundle_preflight_summary(&bundle_preflight)?;
     let bundle_blocking_count = bundle_summary.sync_blocking_count
         + bundle_summary.provider_blocking_count
+        + bundle_summary.secret_placeholder_blocking_count
         + bundle_summary.alert_artifact_blocked_count;
     let resource_count = source_bundle
         .get("summary")

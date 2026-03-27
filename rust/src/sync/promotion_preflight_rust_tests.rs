@@ -196,6 +196,7 @@ fn render_sync_promotion_preflight_text_renders_summary_and_bundle_context() {
                 "resourceCount": 1,
                 "syncBlockingCount": 0,
                 "providerBlockingCount": 0,
+                "secretPlaceholderBlockingCount": 0,
                 "alertArtifactCount": 0,
                 "alertArtifactBlockingCount": 0,
                 "alertArtifactPlanOnlyCount": 0

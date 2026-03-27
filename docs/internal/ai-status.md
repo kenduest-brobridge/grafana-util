@@ -6,6 +6,13 @@ Current AI-maintained status only.
 - Detailed 2026-03-27 entries moved to [`archive/ai-status-archive-2026-03-27.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-03-27.md).
 - Keep this file short and current. Additive historical detail belongs in `docs/internal/archive/`.
 
+## 2026-03-27 - Datasource secret placeholder preflight
+- State: Done
+- Scope: `rust/src/datasource_secret.rs`, `rust/src/sync/bundle_preflight.rs`, `rust/src/sync/staged_documents_apply.rs`, `rust/src/sync/staged_documents_render.rs`, focused sync datasource secret tests
+- Baseline: Rust sync source bundles preserved `secureJsonDataPlaceholders`, but bundle-preflight and apply gating only assessed sync checks, provider references, and alert artifacts. Missing datasource secret placeholder availability stayed invisible until a later manual step.
+- Current Update: added a Rust datasource secret placeholder helper, wired a staged `secretPlaceholderAssessment` into bundle-preflight, counted placeholder blockers in the bundle summary, and threaded that count into apply rejection and apply-intent text output.
+- Result: datasource secret handling now has a first fail-closed staged contract on the Rust path, so missing placeholder availability is reviewable and blocks apply before any live mutation path is considered.
+
 ## 2026-03-27 - Sync staged/live boundary split
 - State: Done
 - Scope: `rust/src/sync/cli.rs`, `rust/src/sync/live.rs`, `rust/src/sync/live_apply.rs`, `rust/src/sync/live_intent.rs`, `rust/src/sync/staged_documents.rs`, `rust/src/sync/staged_documents_apply.rs`, `rust/src/sync/staged_documents_render.rs`
@@ -62,5 +69,5 @@ Current AI-maintained status only.
 
 ## 2026-03-27 - Open Follow-Up
 - State: Planned
-- Scope: `rust/src/dashboard/governance_gate.rs`, related governance gate tests
-- Next Step: wire governance-gate runtime evaluation to support JSON, YAML, and built-in policy sources without changing the evaluator contract.
+- Scope: `rust/src/dashboard/`, `rust/src/datasource.rs`, related dashboard and datasource tests
+- Next Step: shift the next architecture pass toward dashboard subsystem boundaries and fuller datasource secret-handling workflow wiring instead of deeper promotion review artifacts.

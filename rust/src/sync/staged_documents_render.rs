@@ -298,7 +298,7 @@ pub fn render_sync_apply_intent_text(document: &Value) -> Result<Vec<String>> {
         .and_then(Value::as_object)
     {
         lines.push(format!(
-            "Bundle preflight: resources={} sync-blocking={} provider-blocking={} alert-artifacts={} plan-only={} blocking={}",
+            "Bundle preflight: resources={} sync-blocking={} provider-blocking={} secret-blocking={} alert-artifacts={} plan-only={} blocking={}",
             bundle_summary
                 .get("resourceCount")
                 .and_then(Value::as_i64)
@@ -309,6 +309,10 @@ pub fn render_sync_apply_intent_text(document: &Value) -> Result<Vec<String>> {
                 .unwrap_or(0),
             bundle_summary
                 .get("providerBlockingCount")
+                .and_then(Value::as_i64)
+                .unwrap_or(0),
+            bundle_summary
+                .get("secretPlaceholderBlockingCount")
                 .and_then(Value::as_i64)
                 .unwrap_or(0),
             bundle_summary
@@ -325,7 +329,7 @@ pub fn render_sync_apply_intent_text(document: &Value) -> Result<Vec<String>> {
                 .unwrap_or(0),
         ));
         lines.push(
-            "Reason: preflight and bundle-preflight blocking must be 0 before apply; plan-only alert artifacts stay staged."
+            "Reason: preflight and bundle-preflight blocking must be 0 before apply; missing provider or secret placeholder availability blocks apply; plan-only alert artifacts stay staged."
                 .to_string(),
         );
     }

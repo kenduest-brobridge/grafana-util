@@ -250,7 +250,8 @@ fn run_sync_cli_apply_rejects_blocking_bundle_preflight_file() {
             "summary": {
                 "resourceCount": 4,
                 "syncBlockingCount": 1,
-                "providerBlockingCount": 0
+                "providerBlockingCount": 0,
+                "secretPlaceholderBlockingCount": 0
             }
         }))
         .unwrap(),
@@ -315,7 +316,8 @@ fn run_sync_cli_apply_rejects_bundle_preflight_with_blocked_alert_artifacts() {
             "summary": {
                 "resourceCount": 4,
                 "syncBlockingCount": 0,
-                "providerBlockingCount": 0
+                "providerBlockingCount": 0,
+                "secretPlaceholderBlockingCount": 0
             },
             "alertArtifactAssessment": {
                 "summary": {
@@ -368,6 +370,88 @@ fn run_sync_cli_apply_rejects_bundle_preflight_with_blocked_alert_artifacts() {
 }
 
 #[test]
+fn run_sync_cli_apply_rejects_bundle_preflight_with_missing_secret_placeholder_availability() {
+    let temp = tempdir().unwrap();
+    let plan_file = temp.path().join("plan.json");
+    let bundle_preflight_file = temp.path().join("bundle-preflight.json");
+    fs::write(
+        &plan_file,
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-sync-plan",
+            "traceId": "sync-trace-apply",
+            "summary": {
+                "would_create": 1,
+                "would_update": 0,
+                "would_delete": 0,
+                "noop": 0,
+                "unmanaged": 0,
+                "alert_candidate": 0,
+                "alert_plan_only": 0,
+                "alert_blocked": 0
+            },
+            "reviewRequired": true,
+            "reviewed": true,
+            "operations": [
+                {"kind":"folder","identity":"ops","action":"would-create"}
+            ]
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        &bundle_preflight_file,
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-sync-bundle-preflight",
+            "summary": {
+                "resourceCount": 1,
+                "syncBlockingCount": 0,
+                "providerBlockingCount": 0,
+                "secretPlaceholderBlockingCount": 1
+            },
+            "secretPlaceholderAssessment": {
+                "summary": {
+                    "blockingCount": 1
+                },
+                "checks": [
+                    {
+                        "kind": "secret-placeholder",
+                        "identity": "loki-main->loki-basic-auth",
+                        "status": "missing",
+                        "detail": "Datasource secret placeholder is not available in explicit availability input.",
+                        "blocking": true
+                    }
+                ]
+            }
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+
+    let error = run_sync_cli(SyncGroupCommand::Apply(SyncApplyArgs {
+        plan_file,
+        preflight_file: None,
+        bundle_preflight_file: Some(bundle_preflight_file),
+        approve: true,
+        common: sync_common_args(),
+        org_id: None,
+        execute_live: false,
+        allow_folder_delete: false,
+        allow_policy_reset: false,
+        output: SyncOutputFormat::Text,
+        applied_by: None,
+        applied_at: None,
+        approval_reason: None,
+        apply_note: None,
+    }))
+    .unwrap_err()
+    .to_string();
+
+    assert!(error.contains("bundle preflight reports 1 blocking checks"));
+    assert!(error.contains("source=secretPlaceholderAssessment"));
+    assert!(error.contains("Datasource secret placeholder is not available"));
+}
+
+#[test]
 fn run_sync_cli_apply_accepts_non_blocking_bundle_preflight_file() {
     let temp = tempdir().unwrap();
     let plan_file = temp.path().join("plan.json");
@@ -403,7 +487,8 @@ fn run_sync_cli_apply_accepts_non_blocking_bundle_preflight_file() {
             "summary": {
                 "resourceCount": 4,
                 "syncBlockingCount": 0,
-                "providerBlockingCount": 0
+                "providerBlockingCount": 0,
+                "secretPlaceholderBlockingCount": 0
             }
         }))
         .unwrap(),
@@ -544,7 +629,8 @@ fn run_sync_cli_apply_rejects_lineage_aware_bundle_preflight_with_mismatched_par
             "summary": {
                 "resourceCount": 4,
                 "syncBlockingCount": 0,
-                "providerBlockingCount": 0
+                "providerBlockingCount": 0,
+                "secretPlaceholderBlockingCount": 0
             }
         }))
         .unwrap(),
@@ -614,7 +700,8 @@ fn run_sync_cli_apply_rejects_bundle_preflight_with_mismatched_trace_id() {
             "summary": {
                 "resourceCount": 4,
                 "syncBlockingCount": 0,
-                "providerBlockingCount": 0
+                "providerBlockingCount": 0,
+                "secretPlaceholderBlockingCount": 0
             }
         }))
         .unwrap(),

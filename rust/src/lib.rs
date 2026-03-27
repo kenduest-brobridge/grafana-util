@@ -30,6 +30,8 @@ pub mod datasource;
 pub mod datasource_catalog;
 /// Datasource provider resolution helpers used by sync/bundle validation.
 pub mod datasource_provider;
+/// Datasource secret placeholder planning helpers used by staged sync review.
+pub mod datasource_secret;
 /// Centralized Clap help styling configuration.
 pub mod help_styles;
 /// Replaceable JSON HTTP client used by all live Grafana operations.
@@ -51,3 +53,5 @@ pub use sync::workbench as sync_workbench;
 mod bundle_preflight_rust_tests;
 #[cfg(test)]
 mod datasource_provider_rust_tests;
+#[cfg(test)]
+mod datasource_secret_rust_tests;

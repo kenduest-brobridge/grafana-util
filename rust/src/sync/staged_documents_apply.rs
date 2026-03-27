@@ -31,6 +31,10 @@ const BUNDLE_PREFLIGHT_REASON_SOURCES: &[BlockingReasonSource] = &[
         path: &["providerAssessment", "checks"],
     },
     BlockingReasonSource {
+        label: "secretPlaceholderAssessment",
+        path: &["secretPlaceholderAssessment", "checks"],
+    },
+    BlockingReasonSource {
         label: "alertArtifactAssessment",
         path: &["alertArtifactAssessment", "checks"],
     },
@@ -104,6 +108,7 @@ pub(crate) fn validate_apply_bundle_preflight(document: &Value) -> Result<Value>
         .unwrap_or_default();
     let blocking_count = summary.sync_blocking_count
         + summary.provider_blocking_count
+        + summary.secret_placeholder_blocking_count
         + alert_artifact_summary.blocked_count;
     if blocking_count > 0 {
         let reasons = collect_blocking_reasons(document, BUNDLE_PREFLIGHT_REASON_SOURCES);
@@ -121,6 +126,7 @@ pub(crate) fn validate_apply_bundle_preflight(document: &Value) -> Result<Value>
         "blockingCount": blocking_count,
         "syncBlockingCount": summary.sync_blocking_count,
         "providerBlockingCount": summary.provider_blocking_count,
+        "secretPlaceholderBlockingCount": summary.secret_placeholder_blocking_count,
         "alertArtifactBlockingCount": alert_artifact_summary.blocked_count,
         "alertArtifactPlanOnlyCount": alert_artifact_summary.plan_only_count,
         "alertArtifactCount": alert_artifact_summary.resource_count,

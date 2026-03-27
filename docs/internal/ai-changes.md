@@ -6,6 +6,13 @@ Current AI change log only.
 - Detailed 2026-03-27 entries moved to [`archive/ai-changes-archive-2026-03-27.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-03-27.md).
 - Keep this file limited to the latest active architecture and maintenance changes.
 
+## 2026-03-27 - Datasource secret placeholder preflight
+- Summary: added `rust/src/datasource_secret.rs` for `${secret:...}` placeholder parsing and staged plan summaries, then wired `secretPlaceholderAssessment` into Rust sync bundle-preflight so missing placeholder availability becomes an explicit blocking check alongside provider and alert-artifact assessments.
+- Tests: added focused datasource secret helper coverage and extended sync bundle-preflight/apply/render/promotion regressions to assert the new `secretPlaceholderBlockingCount`, staged review output, and apply rejection reason source.
+- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all` passed; `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings` passed; `cargo test --manifest-path rust/Cargo.toml --quiet sync` passed with 131 sync tests.
+- Impact: `rust/src/datasource_secret.rs`, `rust/src/datasource_secret_rust_tests.rs`, `rust/src/lib.rs`, `rust/src/sync/bundle_preflight.rs`, `rust/src/sync/staged_documents_apply.rs`, `rust/src/sync/staged_documents_render.rs`, `rust/src/sync/promotion_preflight.rs`, `rust/src/sync/bundle_contract_preflight_rust_tests.rs`, `rust/src/sync/cli_apply_review_exec_apply_rust_tests.rs`, `rust/src/sync/cli_render_rust_tests.rs`, `rust/src/sync/bundle_exec_rust_tests.rs`, `rust/src/sync/promotion_preflight_rust_tests.rs`
+- Rollback/Risk: this is still staged-only secret handling and does not resolve secrets; revert the new assessment if the placeholder contract or availability naming needs to change before wiring later resolution flows.
+
 ## 2026-03-27 - Sync staged/live boundary split
 - Summary: split staged review/apply/preflight helper ownership out of `rust/src/sync/staged_documents.rs` into `rust/src/sync/staged_documents_apply.rs`, trimmed `rust/src/sync/staged_documents_render.rs` back to rendering and drift display, and moved live apply-intent parsing from `rust/src/sync/live_apply.rs` into `rust/src/sync/live_intent.rs`.
 - Tests: existing sync CLI, staged document, and live-apply coverage were reused; no new behavior-specific tests were needed for this boundary-only refactor.
@@ -59,6 +66,6 @@ Current AI change log only.
 - Impact: `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
 
 ## 2026-03-27 - Current Planned Follow-Up
-- Summary: next targeted maintainer change is to let dashboard governance-gate load policy from JSON, YAML, or built-in sources without changing the evaluator contract.
+- Summary: next targeted maintainer change is to keep shifting effort toward dashboard subsystem boundaries and fuller datasource secret-handling workflow wiring instead of narrower promotion-only refinements.
 - Validation: planning note only.
-- Impact: `rust/src/dashboard/governance_gate.rs`, related dashboard governance gate tests, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Impact: `rust/src/dashboard/`, `rust/src/datasource.rs`, related dashboard and datasource tests, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

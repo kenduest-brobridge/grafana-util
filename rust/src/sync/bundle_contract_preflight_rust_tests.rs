@@ -44,7 +44,8 @@ fn build_sync_bundle_preflight_document_aggregates_sync_and_provider_checks() {
         "pluginIds": [],
         "datasourceUids": [],
         "contactPoints": [],
-        "providerNames": []
+        "providerNames": [],
+        "secretPlaceholderNames": []
     });
 
     let document = build_sync_bundle_preflight_document(
@@ -57,6 +58,10 @@ fn build_sync_bundle_preflight_document_aggregates_sync_and_provider_checks() {
     assert_eq!(document["kind"], json!(SYNC_BUNDLE_PREFLIGHT_KIND));
     assert!(document["summary"]["syncBlockingCount"].as_i64().unwrap() >= 1);
     assert_eq!(document["summary"]["providerBlockingCount"], json!(1));
+    assert_eq!(
+        document["summary"]["secretPlaceholderBlockingCount"],
+        json!(0)
+    );
     assert_eq!(
         document["providerAssessment"]["plans"][0]["providerKind"],
         json!("external-provider-reference")
@@ -81,6 +86,7 @@ fn sync_bundle_preflight_summary_reads_counts_from_document() {
     assert_eq!(summary.resource_count, 1);
     assert_eq!(summary.sync_blocking_count, 0);
     assert_eq!(summary.provider_blocking_count, 0);
+    assert_eq!(summary.secret_placeholder_blocking_count, 0);
     assert_eq!(summary.alert_artifact_count, 0);
 }
 
@@ -102,7 +108,10 @@ fn render_sync_bundle_preflight_text_renders_summary() {
     assert!(output.contains("Alert artifacts: 0 total"));
     assert!(output.contains("Sync blocking:"));
     assert!(output.contains("Provider blocking:"));
-    assert!(output.contains("Reason: plan-only alert artifacts stay staged"));
+    assert!(output.contains("Secret placeholders blocking: 0"));
+    assert!(
+        output.contains("Reason: missing provider or secret placeholder availability blocks apply")
+    );
 }
 
 #[test]
@@ -149,6 +158,7 @@ fn build_sync_bundle_preflight_document_reads_provider_metadata_from_source_bund
         "datasourceNames": [],
         "contactPoints": [],
         "providerNames": ["vault"],
+        "secretPlaceholderNames": ["loki-basic-auth"],
     });
 
     let document = build_sync_bundle_preflight_document(
@@ -160,9 +170,69 @@ fn build_sync_bundle_preflight_document_reads_provider_metadata_from_source_bund
 
     assert_eq!(document["summary"]["providerBlockingCount"], json!(0));
     assert_eq!(
+        document["summary"]["secretPlaceholderBlockingCount"],
+        json!(0)
+    );
+    assert_eq!(
         document["providerAssessment"]["plans"][0]["providers"][0]["providerName"],
         json!("vault")
     );
+    assert_eq!(
+        document["secretPlaceholderAssessment"]["plans"][0]["placeholderNames"][0],
+        json!("loki-basic-auth")
+    );
+}
+
+#[test]
+fn build_sync_bundle_preflight_document_blocks_missing_secret_placeholder_availability() {
+    let source_bundle = build_sync_source_bundle_document(
+        &[],
+        &[json!({
+            "kind": "datasource",
+            "uid": "loki-main",
+            "name": "Loki Main",
+            "title": "Loki Main",
+            "body": {"uid": "loki-main", "name": "Loki Main", "type": "loki"},
+            "secureJsonDataPlaceholders": {
+                "basicAuthPassword": "${secret:loki-basic-auth}"
+            }
+        })],
+        &[],
+        &[],
+        None,
+        None,
+    )
+    .unwrap();
+
+    let document = build_sync_bundle_preflight_document(
+        &source_bundle,
+        &json!({"datasources": []}),
+        Some(&json!({
+            "pluginIds": ["loki"],
+            "datasourceUids": [],
+            "datasourceNames": [],
+            "contactPoints": [],
+            "providerNames": [],
+            "secretPlaceholderNames": [],
+        })),
+    )
+    .unwrap();
+
+    assert_eq!(
+        document["summary"]["secretPlaceholderBlockingCount"],
+        json!(1)
+    );
+    assert_eq!(
+        document["secretPlaceholderAssessment"]["plans"][0]["providerKind"],
+        json!("inline-placeholder-map")
+    );
+    assert!(document["secretPlaceholderAssessment"]["checks"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|item| item["kind"] == "secret-placeholder"
+            && item["identity"] == "loki-main->loki-basic-auth"
+            && item["status"] == "missing"));
 }
 
 #[test]

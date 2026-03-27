@@ -568,6 +568,7 @@ fn render_sync_apply_intent_text_includes_alert_artifact_bundle_counts() {
             "resourceCount": 4,
             "syncBlockingCount": 0,
             "providerBlockingCount": 0,
+            "secretPlaceholderBlockingCount": 1,
             "alertArtifactCount": 4,
             "alertArtifactPlanOnlyCount": 1,
             "alertArtifactBlockingCount": 3
@@ -576,6 +577,7 @@ fn render_sync_apply_intent_text_includes_alert_artifact_bundle_counts() {
     .unwrap();
 
     let output = lines.join("\n");
+    assert!(output.contains("secret-blocking=1"));
     assert!(output.contains("alert-artifacts=4"));
     assert!(output.contains("plan-only=1"));
     assert!(output.contains("blocking=3"));

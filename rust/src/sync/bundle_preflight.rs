@@ -11,6 +11,9 @@ use crate::common::{message, string_field, Result};
 use crate::datasource_provider::{
     build_provider_plan, iter_provider_names, summarize_provider_plan,
 };
+use crate::datasource_secret::{
+    build_secret_placeholder_plan, iter_secret_placeholder_names, summarize_secret_placeholder_plan,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::collections::BTreeSet;
@@ -27,6 +30,7 @@ pub struct SyncBundlePreflightSummary {
     pub resource_count: i64,
     pub sync_blocking_count: i64,
     pub provider_blocking_count: i64,
+    pub secret_placeholder_blocking_count: i64,
     pub alert_artifact_count: i64,
     pub alert_artifact_blocked_count: i64,
     pub alert_artifact_plan_only_count: i64,
@@ -36,6 +40,13 @@ pub struct SyncBundlePreflightSummary {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase", default)]
 pub(crate) struct ProviderAssessmentSummary {
+    blocking_count: i64,
+}
+
+/// Struct definition for SecretPlaceholderAssessmentSummary.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase", default)]
+pub(crate) struct SecretPlaceholderAssessmentSummary {
     blocking_count: i64,
 }
 
@@ -77,10 +88,15 @@ pub(crate) fn require_sync_bundle_preflight_summary(
         .ok_or_else(|| {
             message("Sync bundle preflight summary is missing providerBlockingCount.")
         })?;
+    let secret_placeholder_blocking_count = summary
+        .get("secretPlaceholderBlockingCount")
+        .and_then(Value::as_i64)
+        .unwrap_or(0);
     Ok(SyncBundlePreflightSummary {
         resource_count,
         sync_blocking_count,
         provider_blocking_count,
+        secret_placeholder_blocking_count,
         alert_artifact_count: 0,
         alert_artifact_blocked_count: 0,
         alert_artifact_plan_only_count: 0,
@@ -108,6 +124,22 @@ fn alert_artifact_assessment_summary(document: &Value) -> Result<AlertArtifactAs
     serde_json::from_value(Value::Object(summary.clone())).map_err(|error| {
         message(format!(
             "Sync alert artifact assessment summary is invalid: {error}"
+        ))
+    })
+}
+
+fn secret_placeholder_assessment_summary(
+    document: &Value,
+) -> Result<SecretPlaceholderAssessmentSummary> {
+    let document = require_json_object(document, "Sync secret placeholder assessment document")?;
+    let summary = require_json_object_field(
+        document,
+        "summary",
+        "Sync secret placeholder assessment document",
+    )?;
+    serde_json::from_value(Value::Object(summary.clone())).map_err(|error| {
+        message(format!(
+            "Sync secret placeholder assessment summary is invalid: {error}"
         ))
     })
 }
@@ -218,6 +250,130 @@ fn build_provider_assessment(
         .iter()
         .map(|plan| {
             plan.get("providers")
+                .and_then(Value::as_array)
+                .map(|items| items.len())
+                .unwrap_or(0)
+        })
+        .sum::<usize>();
+    let blocking_count = checks
+        .iter()
+        .filter(|item| item.get("blocking").and_then(Value::as_bool) == Some(true))
+        .count();
+    Ok(Value::Object(Map::from_iter(vec![
+        (
+            "summary".to_string(),
+            Value::Object(Map::from_iter(vec![
+                (
+                    "datasourceCount".to_string(),
+                    Value::Number((plans.len() as i64).into()),
+                ),
+                (
+                    "referenceCount".to_string(),
+                    Value::Number((reference_count as i64).into()),
+                ),
+                (
+                    "blockingCount".to_string(),
+                    Value::Number((blocking_count as i64).into()),
+                ),
+            ])),
+        ),
+        ("plans".to_string(), Value::Array(plans)),
+        ("checks".to_string(), Value::Array(checks)),
+    ])))
+}
+
+fn build_secret_placeholder_assessment(
+    datasource_specs: &[Value],
+    availability: &Map<String, Value>,
+) -> Result<Value> {
+    let placeholder_names = require_string_list(
+        availability
+            .get("secretPlaceholderNames")
+            .or_else(|| availability.get("secretNames")),
+        "secretPlaceholderNames",
+    )?
+    .into_iter()
+    .collect::<BTreeSet<String>>();
+    let mut plans = Vec::new();
+    let mut checks = Vec::new();
+    for datasource in datasource_specs {
+        let Some(object) = datasource.as_object() else {
+            continue;
+        };
+        let Some(Value::Object(_)) = object.get("secureJsonDataPlaceholders") else {
+            continue;
+        };
+        let mut datasource_spec = object.clone();
+        let body = object
+            .get("body")
+            .and_then(Value::as_object)
+            .cloned()
+            .unwrap_or_default();
+        if !datasource_spec.contains_key("uid") {
+            if let Some(value) = body.get("uid") {
+                datasource_spec.insert("uid".to_string(), value.clone());
+            }
+        }
+        if !datasource_spec.contains_key("name") {
+            if let Some(value) = body.get("name") {
+                datasource_spec.insert("name".to_string(), value.clone());
+            }
+        }
+        if !datasource_spec.contains_key("type") {
+            if let Some(value) = body.get("type") {
+                datasource_spec.insert("type".to_string(), value.clone());
+            }
+        }
+        let plan = build_secret_placeholder_plan(&datasource_spec)?;
+        let plan_summary = summarize_secret_placeholder_plan(&plan);
+        for placeholder_name in iter_secret_placeholder_names(&plan.placeholders) {
+            let missing = !placeholder_names.contains(placeholder_name);
+            checks.push(Value::Object(Map::from_iter(vec![
+                (
+                    "kind".to_string(),
+                    Value::String("secret-placeholder".to_string()),
+                ),
+                (
+                    "datasourceName".to_string(),
+                    Value::String(plan.datasource_name.clone()),
+                ),
+                (
+                    "identity".to_string(),
+                    Value::String(format!(
+                        "{}->{}",
+                        plan.datasource_uid
+                            .clone()
+                            .unwrap_or_else(|| plan.datasource_name.clone()),
+                        placeholder_name
+                    )),
+                ),
+                (
+                    "placeholderName".to_string(),
+                    Value::String(placeholder_name.to_string()),
+                ),
+                (
+                    "status".to_string(),
+                    Value::String(if missing { "missing" } else { "ok" }.to_string()),
+                ),
+                (
+                    "detail".to_string(),
+                    Value::String(if missing {
+                        "Datasource secret placeholder is not available in explicit availability input."
+                            .to_string()
+                    } else {
+                        "Datasource secret placeholder is available for staged review."
+                            .to_string()
+                    }),
+                ),
+                ("blocking".to_string(), Value::Bool(missing)),
+            ])));
+        }
+        plans.push(plan_summary);
+    }
+    let reference_count = plans
+        .iter()
+        .map(|plan| {
+            plan.get("placeholderNames")
                 .and_then(Value::as_array)
                 .map(|items| items.len())
                 .unwrap_or(0)
@@ -568,13 +724,24 @@ pub fn build_sync_bundle_preflight_document(
             .unwrap_or(&[]),
         &availability,
     )?;
+    let secret_placeholder_assessment = build_secret_placeholder_assessment(
+        source_bundle
+            .get("datasources")
+            .and_then(Value::as_array)
+            .map(Vec::as_slice)
+            .unwrap_or(&[]),
+        &availability,
+    )?;
     let sync_preflight_summary = SyncPreflightSummary::from_document(&sync_preflight)?;
     let provider_summary = provider_assessment_summary(&provider_assessment)?;
+    let secret_placeholder_summary =
+        secret_placeholder_assessment_summary(&secret_placeholder_assessment)?;
     let alert_artifact_summary = alert_artifact_assessment_summary(&alert_artifact_assessment)?;
     let summary = SyncBundlePreflightSummary {
         resource_count: desired_specs.len() as i64,
         sync_blocking_count: sync_preflight_summary.blocking_count,
         provider_blocking_count: provider_summary.blocking_count,
+        secret_placeholder_blocking_count: secret_placeholder_summary.blocking_count,
         alert_artifact_count: alert_artifact_summary.resource_count,
         alert_artifact_blocked_count: alert_artifact_summary.blocked_count,
         alert_artifact_plan_only_count: alert_artifact_summary.plan_only_count,
@@ -593,6 +760,10 @@ pub fn build_sync_bundle_preflight_document(
         (
             "alertArtifactAssessment".to_string(),
             alert_artifact_assessment.clone(),
+        ),
+        (
+            "secretPlaceholderAssessment".to_string(),
+            secret_placeholder_assessment,
         ),
         ("providerAssessment".to_string(), provider_assessment),
     ])))
@@ -618,8 +789,12 @@ pub fn render_sync_bundle_preflight_text(document: &Value) -> Result<Vec<String>
         format!("Resources: {} total", summary.resource_count),
         format!("Sync blocking: {}", summary.sync_blocking_count),
         format!("Provider blocking: {}", summary.provider_blocking_count),
+        format!(
+            "Secret placeholders blocking: {}",
+            summary.secret_placeholder_blocking_count
+        ),
         format!("Alert artifacts: {} total", summary.alert_artifact_count),
-        "Reason: plan-only alert artifacts stay staged; blocked artifacts prevent apply."
+        "Reason: missing provider or secret placeholder availability blocks apply; plan-only alert artifacts stay staged; blocked artifacts prevent apply."
             .to_string(),
     ])
 }
