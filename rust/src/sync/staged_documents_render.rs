@@ -298,7 +298,7 @@ pub fn render_sync_apply_intent_text(document: &Value) -> Result<Vec<String>> {
         .and_then(Value::as_object)
     {
         lines.push(format!(
-            "Bundle preflight: resources={} sync-blocking={} provider-blocking={} secret-blocking={} alert-artifacts={} plan-only={} blocking={}",
+            "Bundle preflight: resources={} sync-blocking={} provider-blocking={} secret-placeholder-blocking={} alert-artifacts={} plan-only={} blocking={}",
             bundle_summary
                 .get("resourceCount")
                 .and_then(Value::as_i64)

@@ -194,3 +194,8 @@ pub fn summarize_secret_placeholder_plan(plan: &DatasourceSecretPlaceholderPlan)
         "placeholderNames": iter_secret_placeholder_names(&plan.placeholders).collect::<Vec<_>>(),
     })
 }
+
+/// render secret placeholder plan.
+pub fn describe_secret_placeholder_plan(plan: &DatasourceSecretPlaceholderPlan) -> String {
+    summarize_secret_placeholder_plan(plan).to_string()
+}

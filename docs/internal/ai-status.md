@@ -13,6 +13,27 @@ Current AI-maintained status only.
 - Current Update: added a structured `handoffSummary` with review readiness and next-stage state, and rendered the same signal in the text output.
 - Result: the promotion preflight contract now carries a small staged handoff step that tells operators when the result is ready for review versus when blockers still need to be resolved.
 
+## 2026-03-28 - Dashboard inspect/workbench ownership cleanup
+- State: Done
+- Scope: `rust/src/dashboard/inspect_output.rs`, `rust/src/dashboard/inspect_output_report.rs`, `rust/src/dashboard/inspect_orchestration.rs`, `rust/src/dashboard/inspect_workbench_support.rs`, `rust/src/dashboard/inspect_workbench_content.rs`, `rust/src/dashboard/inspect_live_tui.rs`
+- Baseline: dashboard inspect summary rendering still lived beside the broader report renderer, and workbench document assembly still mixed high-level group wiring with all BrowserItem content builders in one support module.
+- Current Update: moved report-format rendering into `inspect_output_report.rs`, kept summary rendering in `inspect_output.rs`, and split workbench content builders into `inspect_workbench_content.rs` so `inspect_workbench_support.rs` stays focused on document/group construction and live-TUI item selection.
+- Result: the dashboard inspect surface now has clearer ownership between orchestration, report rendering, summary rendering, and workbench content assembly without changing CLI behavior.
+
+## 2026-03-28 - Datasource secret dry-run visibility and staged sync wording
+- State: Done
+- Scope: `rust/src/datasource_import_export.rs`, `rust/src/datasource_mutation_payload.rs`, `rust/src/datasource_secret.rs`, `rust/src/datasource_rust_tests.rs`, `rust/src/sync/bundle_preflight.rs`, `rust/src/sync/staged_documents_render.rs`, focused sync render/preflight tests
+- Baseline: datasource import dry-run did not expose any structured secret-placeholder visibility, mutation failures only said that secret values were missing, and sync staged text used shorter secret-blocking wording that did not match the datasource placeholder vocabulary.
+- Current Update: added import dry-run `secretVisibility` output plus summary counts, improved mutation/import missing-secret errors with compact placeholder-plan detail, and aligned staged sync text and bundle-preflight checks around `secretPlaceholderNames` and `secret-placeholder-blocking`.
+- Result: datasource and sync now speak a more consistent secret placeholder language, and operators can see secret-placeholder review signals earlier in the Rust-only flow.
+
+## 2026-03-28 - Safe crate boundary tightening
+- State: Done
+- Scope: `rust/src/lib.rs`
+- Baseline: several helper modules were already internal-only in practice, but the crate root still exposed them more broadly than needed.
+- Current Update: kept the CLI-facing crate surface intact while retaining only the safe internal modules as `pub(crate)` such as `alert_sync`, `cli_help_examples`, `dashboard_inspection_*`, `datasource_provider`, `datasource_secret`, `help_styles`, and `interactive_browser`.
+- Result: the crate boundary is narrower than before without collapsing the public CLI-oriented surface into dead-code errors.
+
 ## 2026-03-28 - Sync/promotion secret placeholder UX alignment
 - State: Done
 - Scope: `rust/src/sync/mod.rs`, `rust/src/sync/cli_help_rust_tests.rs`, `rust/src/sync/promotion_preflight_rust_tests.rs`

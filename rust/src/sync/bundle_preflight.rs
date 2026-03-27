@@ -358,10 +358,10 @@ fn build_secret_placeholder_assessment(
                 (
                     "detail".to_string(),
                     Value::String(if missing {
-                        "Datasource secret placeholder is not available in explicit availability input."
+                        "Datasource secret placeholder is not available in secretPlaceholderNames availability input."
                             .to_string()
                     } else {
-                        "Datasource secret placeholder is available for staged review."
+                        "Datasource secret placeholder is available for staged review via secretPlaceholderNames availability input."
                             .to_string()
                     }),
                 ),
@@ -784,11 +784,43 @@ pub fn render_sync_bundle_preflight_text(document: &Value) -> Result<Vec<String>
         ));
     }
     let summary = SyncBundlePreflightSummary::from_document(document)?;
+    let (
+        secret_placeholder_datasource_count,
+        secret_placeholder_reference_count,
+        secret_placeholder_blocking_count,
+    ) = if let Some(secret_assessment) = document
+        .get("secretPlaceholderAssessment")
+        .and_then(Value::as_object)
+    {
+        let summary = secret_assessment.get("summary").and_then(Value::as_object);
+        (
+            summary
+                .and_then(|item| item.get("datasourceCount"))
+                .and_then(Value::as_i64)
+                .unwrap_or(0),
+            summary
+                .and_then(|item| item.get("referenceCount"))
+                .and_then(Value::as_i64)
+                .unwrap_or(0),
+            summary
+                .and_then(|item| item.get("blockingCount"))
+                .and_then(Value::as_i64)
+                .unwrap_or(0),
+        )
+    } else {
+        (0, 0, summary.secret_placeholder_blocking_count)
+    };
     Ok(vec![
         "Sync bundle preflight summary".to_string(),
         format!("Resources: {} total", summary.resource_count),
         format!("Sync blocking: {}", summary.sync_blocking_count),
         format!("Provider blocking: {}", summary.provider_blocking_count),
+        format!(
+            "Secret placeholders: {} datasources, {} references, {} blocking",
+            secret_placeholder_datasource_count,
+            secret_placeholder_reference_count,
+            secret_placeholder_blocking_count
+        ),
         format!(
             "Secret placeholders blocking: {}",
             summary.secret_placeholder_blocking_count

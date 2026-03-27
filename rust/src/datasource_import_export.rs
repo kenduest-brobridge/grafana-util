@@ -1,12 +1,16 @@
 use reqwest::Method;
 use serde_json::{Map, Value};
+use std::path::Path;
 
 use crate::common::{message, Result};
 use crate::dashboard::{
     build_http_client, build_http_client_for_org, list_datasources, DEFAULT_ORG_ID,
 };
 use crate::datasource::{render_import_table, resolve_match, DatasourceImportArgs};
-use crate::datasource_secret::{build_secret_placeholder_plan, resolve_secret_placeholders};
+use crate::datasource_secret::{
+    build_secret_placeholder_plan, describe_secret_placeholder_plan, resolve_secret_placeholders,
+    summarize_secret_placeholder_plan,
+};
 use crate::http::JsonHttpClient;
 
 #[path = "datasource_export_support.rs"]
@@ -35,6 +39,59 @@ pub(crate) use datasource_import_export_support::{
     DatasourceExportOrgTargetPlan, DatasourceImportDryRunReport, DatasourceImportRecord,
     DATASOURCE_EXPORT_FILENAME, EXPORT_METADATA_FILENAME,
 };
+
+fn build_import_secret_visibility_entries(import_dir: &Path) -> Vec<Value> {
+    let Ok((_, records)) = load_import_records(import_dir) else {
+        return Vec::new();
+    };
+    let mut entries = Vec::new();
+    for record in records {
+        let Some(placeholders) = &record.secure_json_data_placeholders else {
+            continue;
+        };
+        let datasource_spec = Map::from_iter(vec![
+            ("uid".to_string(), Value::String(record.uid.clone())),
+            ("name".to_string(), Value::String(record.name.clone())),
+            (
+                "type".to_string(),
+                Value::String(record.datasource_type.clone()),
+            ),
+            (
+                "secureJsonDataPlaceholders".to_string(),
+                Value::Object(placeholders.clone()),
+            ),
+        ]);
+        match build_secret_placeholder_plan(&datasource_spec) {
+            Ok(plan) => entries.push(summarize_secret_placeholder_plan(&plan)),
+            Err(error) => entries.push(Value::Object(Map::from_iter(vec![
+                (
+                    "datasourceUid".to_string(),
+                    Value::String(record.uid.clone()),
+                ),
+                (
+                    "datasourceName".to_string(),
+                    Value::String(record.name.clone()),
+                ),
+                (
+                    "datasourceType".to_string(),
+                    Value::String(record.datasource_type.clone()),
+                ),
+                (
+                    "providerKind".to_string(),
+                    Value::String("inline-placeholder-map".to_string()),
+                ),
+                (
+                    "action".to_string(),
+                    Value::String("secret-plan-error".to_string()),
+                ),
+                ("reviewRequired".to_string(), Value::Bool(true)),
+                ("error".to_string(), Value::String(error.to_string())),
+            ]))),
+        }
+    }
+    entries
+}
+
 pub(crate) fn collect_datasource_import_dry_run_report(
     client: &JsonHttpClient,
     args: &DatasourceImportArgs,
@@ -94,6 +151,7 @@ pub(crate) fn collect_datasource_import_dry_run_report(
 pub(crate) fn build_datasource_import_dry_run_json_value(
     report: &DatasourceImportDryRunReport,
 ) -> Value {
+    let secret_visibility = build_import_secret_visibility_entries(&report.import_dir);
     Value::Object(Map::from_iter(vec![
         ("mode".to_string(), Value::String(report.mode.clone())),
         (
@@ -147,7 +205,15 @@ pub(crate) fn build_datasource_import_dry_run_json_value(
                     "wouldBlock".to_string(),
                     Value::Number((report.would_block as i64).into()),
                 ),
+                (
+                    "secretVisibilityCount".to_string(),
+                    Value::Number((secret_visibility.len() as i64).into()),
+                ),
             ])),
+        ),
+        (
+            "secretVisibility".to_string(),
+            Value::Array(secret_visibility),
         ),
     ]))
 }
@@ -178,6 +244,13 @@ pub(crate) fn print_datasource_import_dry_run_report(
             report.datasource_count,
             report.import_dir.display()
         );
+        let secret_visibility = build_import_secret_visibility_entries(&report.import_dir);
+        if !secret_visibility.is_empty() {
+            println!(
+                "Secret placeholder visibility: {}",
+                Value::Array(secret_visibility)
+            );
+        }
     } else {
         println!("Import mode: {}", report.mode);
         for row in &report.rows {
@@ -191,6 +264,13 @@ pub(crate) fn print_datasource_import_dry_run_report(
             report.datasource_count,
             report.import_dir.display()
         );
+        let secret_visibility = build_import_secret_visibility_entries(&report.import_dir);
+        if !secret_visibility.is_empty() {
+            println!(
+                "Secret placeholder visibility: {}",
+                Value::Array(secret_visibility)
+            );
+        }
     }
     Ok(())
 }
@@ -238,12 +318,6 @@ fn build_import_payload_with_secret_values_impl(
         ("isDefault".to_string(), Value::Bool(record.is_default)),
     ]);
     if let Some(placeholders) = &record.secure_json_data_placeholders {
-        let secret_values = secret_values.ok_or_else(|| {
-            message(format!(
-                "Datasource import for '{}' requires --secret-values because secureJsonDataPlaceholders are present.",
-                if record.uid.is_empty() { &record.name } else { &record.uid }
-            ))
-        })?;
         let datasource_spec = Map::from_iter(vec![
             ("uid".to_string(), Value::String(record.uid.clone())),
             ("name".to_string(), Value::String(record.name.clone())),
@@ -257,6 +331,13 @@ fn build_import_payload_with_secret_values_impl(
             ),
         ]);
         let plan = build_secret_placeholder_plan(&datasource_spec)?;
+        let secret_values = secret_values.ok_or_else(|| {
+            message(format!(
+                "Datasource import for '{}' requires --secret-values because secureJsonDataPlaceholders are present. {}",
+                if record.uid.is_empty() { &record.name } else { &record.uid },
+                describe_secret_placeholder_plan(&plan)
+            ))
+        })?;
         let resolved = resolve_secret_placeholders(&plan.placeholders, secret_values)?;
         if !resolved.is_empty() {
             payload.insert("secureJsonData".to_string(), Value::Object(resolved));

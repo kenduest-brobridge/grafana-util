@@ -74,6 +74,7 @@ fn sync_promotion_preflight_help_includes_mapping_input() {
     let help = render_sync_subcommand_help("promotion-preflight");
     assert!(help.contains("Examples:"));
     assert!(help.contains("Input Options"));
+    assert!(help.contains("staged review handoff"));
     assert!(help.contains("--mapping-file"));
     assert!(help.contains("--availability-file"));
     assert!(help.contains("grafana-utils-sync-promotion-mapping"));
@@ -104,6 +105,7 @@ fn sync_root_help_includes_examples() {
     assert!(help.contains("grafana-util sync audit"));
     assert!(help.contains("grafana-util sync bundle"));
     assert!(help.contains("grafana-util sync bundle-preflight"));
+    assert!(help.contains("Assess staged promotion review handoff"));
     assert!(help.contains("promotion-preflight"));
 }
 

@@ -98,6 +98,10 @@ fn build_sync_promotion_preflight_document_reports_direct_mapped_and_missing_ref
     );
     assert_eq!(document["handoffSummary"]["blockingCount"], json!(7));
     assert_eq!(
+        document["handoffSummary"]["reviewInstruction"],
+        json!("promotion handoff is blocked until the listed remaps and bundle issues are cleared")
+    );
+    assert_eq!(
         document["mappingSummary"]["mappingKind"],
         json!(SYNC_PROMOTION_MAPPING_KIND)
     );
@@ -190,7 +194,8 @@ fn render_sync_promotion_preflight_text_renders_summary_and_bundle_context() {
             "reviewRequired": true,
             "readyForReview": false,
             "nextStage": "resolve-blockers",
-            "blockingCount": 1
+            "blockingCount": 1,
+            "reviewInstruction": "promotion handoff is blocked until the listed remaps and bundle issues are cleared"
         },
         "checks": [{
             "kind": "folder-remap",
@@ -230,7 +235,7 @@ fn render_sync_promotion_preflight_text_renders_summary_and_bundle_context() {
     assert!(output.contains("folders=1"));
     assert!(output.contains("promotion stays blocked"));
     assert!(output.contains(
-        "Handoff: review-required=true ready-for-review=false next-stage=resolve-blockers blocking=1"
+        "Handoff: review-required=true ready-for-review=false next-stage=resolve-blockers blocking=1 instruction=promotion handoff is blocked until the listed remaps and bundle issues are cleared"
     ));
     assert!(output.contains("resolution=explicit-map"));
     assert!(output.contains("mapping-source=folders"));
@@ -293,6 +298,10 @@ fn build_sync_promotion_preflight_document_reports_review_handoff_when_clean() {
     assert_eq!(document["handoffSummary"]["readyForReview"], json!(true));
     assert_eq!(document["handoffSummary"]["nextStage"], json!("review"));
     assert_eq!(document["handoffSummary"]["blockingCount"], json!(0));
+    assert_eq!(
+        document["handoffSummary"]["reviewInstruction"],
+        json!("promotion handoff is ready to move into review")
+    );
 }
 
 #[test]

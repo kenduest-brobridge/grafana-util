@@ -105,6 +105,7 @@ fn render_sync_bundle_preflight_text_renders_summary() {
 
     assert!(output.contains("Sync bundle preflight summary"));
     assert!(output.contains("Resources: 1 total"));
+    assert!(output.contains("Secret placeholders: 0 datasources, 0 references, 0 blocking"));
     assert!(output.contains("Alert artifacts: 0 total"));
     assert!(output.contains("Sync blocking:"));
     assert!(output.contains("Provider blocking:"));
@@ -181,6 +182,12 @@ fn build_sync_bundle_preflight_document_reads_provider_metadata_from_source_bund
         document["secretPlaceholderAssessment"]["plans"][0]["placeholderNames"][0],
         json!("loki-basic-auth")
     );
+    assert_eq!(
+        document["secretPlaceholderAssessment"]["checks"][0]["detail"],
+        json!(
+            "Datasource secret placeholder is available for staged review via secretPlaceholderNames availability input."
+        )
+    );
 }
 
 #[test]
@@ -233,6 +240,12 @@ fn build_sync_bundle_preflight_document_blocks_missing_secret_placeholder_availa
         .any(|item| item["kind"] == "secret-placeholder"
             && item["identity"] == "loki-main->loki-basic-auth"
             && item["status"] == "missing"));
+    assert_eq!(
+        document["secretPlaceholderAssessment"]["checks"][0]["detail"],
+        json!(
+            "Datasource secret placeholder is not available in secretPlaceholderNames availability input."
+        )
+    );
 }
 
 #[test]

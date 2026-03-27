@@ -50,6 +50,7 @@ struct PromotionHandoffSummary {
     ready_for_review: bool,
     next_stage: String,
     blocking_count: i64,
+    review_instruction: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -116,6 +117,12 @@ fn summarize_promotion_handoff(blocking_count: i64) -> PromotionHandoffSummary {
             "resolve-blockers".to_string()
         },
         blocking_count,
+        review_instruction: if ready_for_review {
+            "promotion handoff is ready to move into review".to_string()
+        } else {
+            "promotion handoff is blocked until the listed remaps and bundle issues are cleared"
+                .to_string()
+        },
     }
 }
 
@@ -600,7 +607,7 @@ pub fn render_sync_promotion_preflight_text(document: &Value) -> Result<Vec<Stri
         ),
         "Reason: promotion stays blocked until bundle-preflight blockers are cleared and cross-environment mappings resolve to real target identifiers.".to_string(),
         format!(
-            "Handoff: review-required={} ready-for-review={} next-stage={} blocking={}",
+            "Handoff: review-required={} ready-for-review={} next-stage={} blocking={} instruction={}",
             handoff_summary
                 .get("reviewRequired")
                 .and_then(Value::as_bool)
@@ -614,6 +621,7 @@ pub fn render_sync_promotion_preflight_text(document: &Value) -> Result<Vec<Stri
                 .get("blockingCount")
                 .and_then(Value::as_i64)
                 .unwrap_or(0),
+            normalize_text(handoff_summary.get("reviewInstruction")),
         ),
         String::new(),
         "# Promotion checks".to_string(),

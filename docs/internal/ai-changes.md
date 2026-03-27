@@ -13,6 +13,27 @@ Current AI change log only.
 - Impact: `rust/src/sync/promotion_preflight.rs`, `rust/src/sync/promotion_preflight_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
 - Rollback/Risk: low. This is a staged-only contract addition and does not touch live apply wiring; revert the new `handoffSummary` field and render line if downstream consumers need the preflight document shape restored.
 
+## 2026-03-28 - Dashboard inspect/workbench ownership cleanup
+- Summary: moved dashboard inspect report-format rendering into a dedicated `inspect_output_report.rs` helper while keeping summary rendering in `inspect_output.rs`, then split the inspect workbench BrowserItem builders out of `inspect_workbench_support.rs` into `inspect_workbench_content.rs` so document/group wiring stays separate from content assembly.
+- Tests: kept the behavior pinned through focused `inspect_output` and `inspect_live_tui` Rust tests.
+- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all` passed; `cargo test --manifest-path rust/Cargo.toml --quiet inspect_output` passed; `cargo test --manifest-path rust/Cargo.toml --quiet inspect_live_tui` passed.
+- Impact: `rust/src/dashboard/inspect_output.rs`, `rust/src/dashboard/inspect_output_report.rs`, `rust/src/dashboard/inspect_orchestration.rs`, `rust/src/dashboard/inspect_workbench_support.rs`, `rust/src/dashboard/inspect_workbench_content.rs`, `rust/src/dashboard/inspect_live_tui.rs`
+- Rollback/Risk: low. This is internal ownership cleanup only; revert the helper extractions if future dashboard inspect changes need a different report/workbench module shape.
+
+## 2026-03-28 - Datasource secret dry-run visibility and staged sync wording
+- Summary: added `secretVisibility` and `secretVisibilityCount` to datasource import dry-run JSON, expanded missing-secret mutation/import errors with summarized placeholder-plan detail, and aligned staged sync bundle/apply wording around `secretPlaceholderNames` and `secret-placeholder-blocking`.
+- Tests: extended focused datasource and sync regressions to assert import dry-run visibility, richer secret-plan errors, updated bundle-preflight detail strings, and the new staged render labels.
+- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all` passed; `cargo test --manifest-path rust/Cargo.toml --quiet datasource_rust_tests` passed; `cargo test --manifest-path rust/Cargo.toml --quiet sync` passed.
+- Impact: `rust/src/datasource_import_export.rs`, `rust/src/datasource_mutation_payload.rs`, `rust/src/datasource_secret.rs`, `rust/src/datasource_rust_tests.rs`, `rust/src/sync/bundle_preflight.rs`, `rust/src/sync/staged_documents_render.rs`, `rust/src/sync/cli_render_rust_tests.rs`, `rust/src/sync/bundle_contract_preflight_rust_tests.rs`, `rust/src/sync/bundle_exec_rust_tests.rs`
+- Rollback/Risk: low-to-moderate. The flow stays staged-only and fail-closed, but the dry-run JSON and error text now expose more operator guidance, so downstream consumers should be checked if they parse those strings rigidly.
+
+## 2026-03-28 - Safe crate boundary tightening
+- Summary: kept the CLI-facing public crate surface intact while retaining only the clearly internal helper modules as `pub(crate)` in `lib.rs`, avoiding the broader dead-code fallout from shrinking every top-level module.
+- Tests: reused full Rust library and clippy validation to ensure the narrower boundary still compiles across test and non-test targets.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet --lib` passed with 804 tests; `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings` passed.
+- Impact: `rust/src/lib.rs`
+- Rollback/Risk: low. This keeps the prior public CLI-oriented surface and only narrows helper modules already used internally.
+
 ## 2026-03-28 - Sync/promotion secret placeholder UX alignment
 - Summary: aligned staged bundle/promotion help examples with the datasource secret contract by showing `secretPlaceholderNames` in the availability-file examples so sync and promotion expose the same secret vocabulary as datasource import/mutation.
 - Tests: updated focused Rust sync help and promotion render tests to pin the secret-placeholder example strings and placeholder-name expectations.

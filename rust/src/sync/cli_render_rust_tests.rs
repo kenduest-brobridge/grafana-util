@@ -141,7 +141,7 @@ fn render_sync_apply_intent_text_renders_counts() {
     assert!(lines[5].contains("kind=grafana-utils-sync-preflight"));
     assert!(lines[5].contains("blocking=0"));
     assert!(lines[6].contains("sync-blocking=0"));
-    assert!(lines[6].contains("secret-blocking=1"));
+    assert!(lines[6].contains("secret-placeholder-blocking=1"));
     assert!(
         lines[7].contains("Reason: preflight and bundle-preflight blocking must be 0 before apply")
     );

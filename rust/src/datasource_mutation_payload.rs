@@ -6,7 +6,9 @@ use crate::datasource_catalog::{
     build_add_defaults_for_supported_type, normalize_supported_datasource_type,
     DatasourcePresetProfile,
 };
-use crate::datasource_secret::{build_secret_placeholder_plan, resolve_secret_placeholders};
+use crate::datasource_secret::{
+    build_secret_placeholder_plan, describe_secret_placeholder_plan, resolve_secret_placeholders,
+};
 use crate::http::JsonHttpClient;
 
 use super::super::{DatasourceAddArgs, DatasourceModifyArgs};
@@ -102,9 +104,31 @@ fn resolve_secret_placeholder_map(
     let secret_values = parse_json_object_argument(secret_values, "--secret-values")?;
     match (placeholders, secret_values) {
         (None, None) => Ok(None),
-        (Some(_), None) => Err(message(
-            "--secure-json-data-placeholders requires --secret-values.",
-        )),
+        (Some(placeholders), None) => {
+            let datasource_spec = Map::from_iter(vec![
+                (
+                    "name".to_string(),
+                    Value::String(datasource_name.to_string()),
+                ),
+                (
+                    "type".to_string(),
+                    Value::String(datasource_type.to_string()),
+                ),
+                (
+                    "secureJsonDataPlaceholders".to_string(),
+                    Value::Object(placeholders),
+                ),
+                (
+                    "uid".to_string(),
+                    Value::String(datasource_uid.unwrap_or("").to_string()),
+                ),
+            ]);
+            let plan = build_secret_placeholder_plan(&datasource_spec)?;
+            Err(message(format!(
+                "--secure-json-data-placeholders requires --secret-values. {}",
+                describe_secret_placeholder_plan(&plan)
+            )))
+        }
         (None, Some(_)) => Err(message(
             "--secret-values requires --secure-json-data-placeholders.",
         )),

@@ -13,6 +13,7 @@ use crate::datasource_catalog::render_supported_datasource_catalog_json;
 use clap::{CommandFactory, Parser};
 use serde_json::{json, Value};
 use std::path::Path;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 fn live_datasource(
     id: i64,
@@ -558,6 +559,31 @@ fn build_add_payload_rejects_secret_values_without_placeholders() {
 }
 
 #[test]
+fn build_add_payload_rejects_missing_secret_values_with_visibility_summary() {
+    let args = DatasourceCliArgs::parse_normalized_from([
+        "grafana-util",
+        "add",
+        "--name",
+        "Loki Main",
+        "--type",
+        "loki",
+        "--secure-json-data-placeholders",
+        r#"{"basicAuthPassword":"${secret:loki-basic-auth}","httpHeaderValue1":"${secret:loki-tenant-token}"}"#,
+    ]);
+    let add_args = match args.command {
+        super::DatasourceGroupCommand::Add(inner) => inner,
+        _ => panic!("expected datasource add"),
+    };
+
+    let error = build_add_payload(&add_args).unwrap_err().to_string();
+
+    assert!(error.contains("--secure-json-data-placeholders requires --secret-values"));
+    assert!(error.contains("\"providerKind\":\"inline-placeholder-map\""));
+    assert!(error.contains("\"placeholderNames\":[\"loki-basic-auth\",\"loki-tenant-token\"]"));
+    assert!(error.contains("\"secretFields\":[\"basicAuthPassword\",\"httpHeaderValue1\"]"));
+}
+
+#[test]
 fn build_import_payload_resolves_secret_placeholders_into_secure_json_data() {
     let record = DatasourceImportRecord {
         uid: "loki-main".to_string(),
@@ -616,6 +642,89 @@ fn build_import_payload_rejects_missing_secret_values_for_placeholders() {
         .unwrap_err()
         .to_string();
     assert!(error.contains("requires --secret-values"));
+}
+
+#[test]
+fn build_datasource_import_dry_run_json_value_includes_secret_visibility() {
+    let unique_suffix = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let import_dir = std::env::temp_dir().join(format!(
+        "grafana-utils-datasource-secret-{}-{}",
+        std::process::id(),
+        unique_suffix
+    ));
+    std::fs::create_dir_all(&import_dir).unwrap();
+    std::fs::write(
+        import_dir.join(super::EXPORT_METADATA_FILENAME),
+        format!(
+            "{{\n  \"schemaVersion\": {},\n  \"kind\": \"{}\",\n  \"variant\": \"root\",\n  \"resource\": \"datasource\",\n  \"datasourceCount\": 1,\n  \"datasourcesFile\": \"{}\",\n  \"indexFile\": \"index.json\",\n  \"format\": \"grafana-datasource-inventory-v1\"\n}}\n",
+            1,
+            "grafana-utils-datasource-export-index",
+            super::DATASOURCE_EXPORT_FILENAME
+        ),
+    )
+    .unwrap();
+    std::fs::write(
+        import_dir.join(super::DATASOURCE_EXPORT_FILENAME),
+        r#"[
+  {
+    "uid": "loki-main",
+    "name": "Loki Main",
+    "type": "loki",
+    "access": "proxy",
+    "url": "http://loki:3100",
+    "isDefault": false,
+    "orgId": "1",
+    "secureJsonDataPlaceholders": {
+      "basicAuthPassword": "${secret:loki-basic-auth}",
+      "httpHeaderValue1": "${secret:loki-tenant-token}"
+    }
+  }
+]
+"#,
+    )
+    .unwrap();
+
+    let report = super::DatasourceImportDryRunReport {
+        mode: "create-or-update".to_string(),
+        import_dir: import_dir.clone(),
+        source_org_id: "1".to_string(),
+        target_org_id: "7".to_string(),
+        rows: vec![vec![
+            "loki-main".to_string(),
+            "Loki Main".to_string(),
+            "loki".to_string(),
+            "missing".to_string(),
+            "would-create".to_string(),
+            "7".to_string(),
+            "datasources.json#0".to_string(),
+        ]],
+        datasource_count: 1,
+        would_create: 1,
+        would_update: 0,
+        would_skip: 0,
+        would_block: 0,
+    };
+
+    let value =
+        super::datasource_import_export::build_datasource_import_dry_run_json_value(&report);
+
+    assert_eq!(value["summary"]["secretVisibilityCount"], json!(1));
+    assert_eq!(value["secretVisibility"].as_array().unwrap().len(), 1);
+    assert_eq!(
+        value["secretVisibility"][0]["providerKind"],
+        json!("inline-placeholder-map")
+    );
+    assert_eq!(
+        value["secretVisibility"][0]["placeholderNames"],
+        json!(["loki-basic-auth", "loki-tenant-token"])
+    );
+    assert_eq!(
+        value["secretVisibility"][0]["secretFields"],
+        json!(["basicAuthPassword", "httpHeaderValue1"])
+    );
 }
 
 #[test]
