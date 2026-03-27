@@ -14,6 +14,13 @@ Current AI change log only.
 - Rollback/Risk: the public sync behavior should remain stable; revert the helper splits if module visibility or staged helper reexports need to be collapsed again.
 - Follow-up: none.
 
+## 2026-03-27 - Sync explainability upgrade
+- Summary: added `rust/src/sync/blocked_reasons.rs` to pull concrete blocking reasons out of staged preflight and bundle-preflight check arrays, reused it in `staged_documents_apply.rs` for apply rejection messages, and added short operator guidance lines to the sync plan/apply/bundle-preflight text renderers.
+- Tests: updated focused sync render and apply regression tests to assert the new reason strings without changing CLI topology or staged JSON payload shapes.
+- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all --check` passed; `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings` passed; `cargo test --manifest-path rust/Cargo.toml --quiet sync` passed with 123 sync tests.
+- Impact: `rust/src/sync/blocked_reasons.rs`, `rust/src/sync/staged_documents_apply.rs`, `rust/src/sync/staged_documents_render.rs`, `rust/src/sync/bundle_preflight.rs`, `rust/src/sync/cli_apply_review_exec_apply_rust_tests.rs`, `rust/src/sync/cli_render_rust_tests.rs`, `rust/src/sync/bundle_contract_preflight_rust_tests.rs`, `rust/src/sync/bundle_exec_rust_tests.rs`
+- Rollback/Risk: the change is text-heavy and should not alter sync JSON contracts; revert the helper and focused render assertions if the extra operator guidance proves too noisy.
+
 ## 2026-03-27 - Unified CLI help/example source split
 - Summary: moved the unified root help/example blocks and help-label color table out of `rust/src/cli.rs` into a dedicated `rust/src/cli_help_examples.rs` helper so the dispatcher stays focused on rendering and routing.
 - Validation: `cargo fmt --manifest-path rust/Cargo.toml --all`; `cargo test --quiet unified_help`

@@ -180,6 +180,8 @@ pub fn render_sync_plan_text(document: &Value) -> Result<Vec<String>> {
                 .and_then(Value::as_i64)
                 .unwrap_or(0),
         ),
+        "Plan-only alert items stay review-only until this plan is approved and applied."
+            .to_string(),
         format!(
             "Review: required={} reviewed={}",
             document
@@ -322,6 +324,10 @@ pub fn render_sync_apply_intent_text(document: &Value) -> Result<Vec<String>> {
                 .and_then(Value::as_i64)
                 .unwrap_or(0),
         ));
+        lines.push(
+            "Reason: preflight and bundle-preflight blocking must be 0 before apply; plan-only alert artifacts stay staged."
+                .to_string(),
+        );
     }
     if let Some(applied_by) = document.get("appliedBy").and_then(Value::as_str) {
         lines.push(format!("Applied by: {applied_by}"));

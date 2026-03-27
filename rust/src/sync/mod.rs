@@ -17,6 +17,7 @@ use std::path::PathBuf;
 mod apply_builder;
 pub mod audit;
 pub mod audit_tui;
+pub(crate) mod blocked_reasons;
 pub mod bundle_alert_contracts;
 mod bundle_builder;
 mod bundle_inputs;

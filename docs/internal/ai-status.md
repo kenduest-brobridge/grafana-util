@@ -13,6 +13,13 @@ Current AI-maintained status only.
 - Current Update: split staged review/apply gating into `staged_documents_apply.rs`, kept `staged_documents_render.rs` focused on rendering and drift display, and moved live apply-intent parsing into `live_intent.rs` so `live_apply.rs` stays request-execution focused.
 - Result: the sync CLI now reads through clearer staged-vs-live boundaries without changing staged document contracts or live apply JSON output.
 
+## 2026-03-27 - Sync explainability upgrade
+- State: Done
+- Scope: `rust/src/sync/blocked_reasons.rs`, `rust/src/sync/staged_documents_apply.rs`, `rust/src/sync/staged_documents_render.rs`, `rust/src/sync/bundle_preflight.rs`, focused sync render/apply tests
+- Baseline: sync preflight and bundle-preflight apply rejections mostly surfaced aggregate blocking counts, while the text renderers gave operators limited context on why a plan stayed review-only or why apply stayed blocked.
+- Current Update: added a small blocked-reason helper that extracts concrete blocking details from staged check arrays, threaded those reasons into apply rejection messages, and added concise reason lines to plan/apply/bundle-preflight text output.
+- Result: operators now see specific blocking causes in sync apply failures and clearer review/apply guidance in the staged text renderers without redesigning the JSON contracts.
+
 ## 2026-03-27 - Unified CLI help/example source split
 - State: Done
 - Scope: `rust/src/cli.rs`, `rust/src/cli_help_examples.rs`, `rust/src/lib.rs`, focused unified CLI help tests

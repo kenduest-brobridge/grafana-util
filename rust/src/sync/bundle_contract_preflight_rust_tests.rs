@@ -102,6 +102,7 @@ fn render_sync_bundle_preflight_text_renders_summary() {
     assert!(output.contains("Alert artifacts: 0 total"));
     assert!(output.contains("Sync blocking:"));
     assert!(output.contains("Provider blocking:"));
+    assert!(output.contains("Reason: plan-only alert artifacts stay staged"));
 }
 
 #[test]

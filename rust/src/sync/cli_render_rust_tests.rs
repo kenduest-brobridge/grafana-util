@@ -83,10 +83,11 @@ fn render_sync_plan_text_renders_counts() {
     assert!(lines[2].contains("parent=sync-trace-demo"));
     assert!(lines[3].contains("create=1"));
     assert!(lines[4].contains("plan-only=1"));
-    assert!(lines[5].contains("reviewed=false"));
-    assert!(lines[6].contains("alice"));
-    assert!(lines[7].contains("staged:sync-trace-demo:reviewed"));
-    assert!(lines[8].contains("manual review complete"));
+    assert!(lines[5].contains("review-only"));
+    assert!(lines[6].contains("reviewed=false"));
+    assert!(lines[7].contains("alice"));
+    assert!(lines[8].contains("staged:sync-trace-demo:reviewed"));
+    assert!(lines[9].contains("manual review complete"));
 }
 
 #[test]
@@ -139,10 +140,13 @@ fn render_sync_apply_intent_text_renders_counts() {
     assert!(lines[5].contains("kind=grafana-utils-sync-preflight"));
     assert!(lines[5].contains("blocking=0"));
     assert!(lines[6].contains("sync-blocking=0"));
-    assert!(lines[7].contains("bob"));
-    assert!(lines[8].contains("staged:sync-trace-demo:applied"));
-    assert!(lines[9].contains("change-approved"));
-    assert!(lines[10].contains("local apply intent only"));
+    assert!(
+        lines[7].contains("Reason: preflight and bundle-preflight blocking must be 0 before apply")
+    );
+    assert!(lines[8].contains("bob"));
+    assert!(lines[9].contains("staged:sync-trace-demo:applied"));
+    assert!(lines[10].contains("change-approved"));
+    assert!(lines[11].contains("local apply intent only"));
 }
 
 #[test]

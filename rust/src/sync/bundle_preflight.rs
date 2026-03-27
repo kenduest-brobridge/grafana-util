@@ -619,6 +619,8 @@ pub fn render_sync_bundle_preflight_text(document: &Value) -> Result<Vec<String>
         format!("Sync blocking: {}", summary.sync_blocking_count),
         format!("Provider blocking: {}", summary.provider_blocking_count),
         format!("Alert artifacts: {} total", summary.alert_artifact_count),
+        "Reason: plan-only alert artifacts stay staged; blocked artifacts prevent apply."
+            .to_string(),
     ])
 }
 

@@ -177,13 +177,13 @@ fn run_sync_cli_apply_rejects_blocking_preflight_file() {
             "kind": "grafana-utils-sync-preflight",
             "traceId": "sync-trace-apply",
             "summary": {
-                "checkCount": 4,
-                "okCount": 3,
+                "checkCount": 2,
+                "okCount": 1,
                 "blockingCount": 1
             },
             "checks": [
-                {"kind":"resource","name":"ok-1","state":"ok"},
-                {"kind":"resource","name":"blocked-1","state":"blocked"}
+                {"kind":"resource","identity":"ok-1","status":"ok","blocking":false},
+                {"kind":"dashboard-plugin","identity":"cpu-main->geomap","status":"missing","detail":"Dashboard plugin dependency is missing.","blocking":true}
             ]
         }))
         .unwrap(),
@@ -210,6 +210,8 @@ fn run_sync_cli_apply_rejects_blocking_preflight_file() {
     .to_string();
 
     assert!(error.contains("preflight reports 1 blocking checks"));
+    assert!(error.contains("dashboard-plugin"));
+    assert!(error.contains("Dashboard plugin dependency is missing."));
 }
 
 #[test]
@@ -318,7 +320,23 @@ fn run_sync_cli_apply_rejects_bundle_preflight_with_blocked_alert_artifacts() {
             "alertArtifactAssessment": {
                 "summary": {
                     "blockedCount": 2
-                }
+                },
+                "checks": [
+                    {
+                        "kind": "alert-policy",
+                        "identity": "grafana-default-email",
+                        "status": "blocked",
+                        "detail": "Notification policies are staged in the source bundle but are not live-wired yet.",
+                        "blocking": true
+                    },
+                    {
+                        "kind": "alert-template",
+                        "identity": "slack.default",
+                        "status": "blocked",
+                        "detail": "Templates are staged in the source bundle but are not live-wired yet.",
+                        "blocking": true
+                    }
+                ]
             }
         }))
         .unwrap(),
@@ -345,6 +363,8 @@ fn run_sync_cli_apply_rejects_bundle_preflight_with_blocked_alert_artifacts() {
     .to_string();
 
     assert!(error.contains("bundle preflight reports 2 blocking checks"));
+    assert!(error.contains("source=alertArtifactAssessment"));
+    assert!(error.contains("Notification policies are staged in the source bundle"));
 }
 
 #[test]

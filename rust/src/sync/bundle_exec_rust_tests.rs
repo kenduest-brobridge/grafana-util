@@ -579,4 +579,7 @@ fn render_sync_apply_intent_text_includes_alert_artifact_bundle_counts() {
     assert!(output.contains("alert-artifacts=4"));
     assert!(output.contains("plan-only=1"));
     assert!(output.contains("blocking=3"));
+    assert!(
+        output.contains("Reason: preflight and bundle-preflight blocking must be 0 before apply")
+    );
 }

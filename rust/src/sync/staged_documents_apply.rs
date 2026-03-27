@@ -5,6 +5,9 @@ use crate::common::{message, Result};
 use crate::sync::DEFAULT_REVIEW_TOKEN;
 use serde_json::{Map, Value};
 
+use super::super::blocked_reasons::{
+    collect_blocking_reasons, format_blocking_rejection_message, BlockingReasonSource,
+};
 use super::super::bundle_preflight::SYNC_BUNDLE_PREFLIGHT_KIND;
 use super::super::bundle_preflight::{
     alert_artifact_assessment_summary_or_default, require_sync_bundle_preflight_summary,
@@ -12,6 +15,26 @@ use super::super::bundle_preflight::{
 use super::super::json::require_json_object;
 use super::super::preflight::{require_sync_preflight_summary, SYNC_PREFLIGHT_KIND};
 use super::{deterministic_stage_marker, normalize_optional_text, require_trace_id};
+
+const PREFLIGHT_REASON_SOURCES: &[BlockingReasonSource] = &[BlockingReasonSource {
+    label: "",
+    path: &["checks"],
+}];
+
+const BUNDLE_PREFLIGHT_REASON_SOURCES: &[BlockingReasonSource] = &[
+    BlockingReasonSource {
+        label: "syncPreflight",
+        path: &["syncPreflight", "checks"],
+    },
+    BlockingReasonSource {
+        label: "providerAssessment",
+        path: &["providerAssessment", "checks"],
+    },
+    BlockingReasonSource {
+        label: "alertArtifactAssessment",
+        path: &["alertArtifactAssessment", "checks"],
+    },
+];
 
 pub(crate) fn mark_plan_reviewed(document: &Value, review_token: &str) -> Result<Value> {
     let mut object = require_json_object(document, "Sync plan document")?.clone();
@@ -57,8 +80,11 @@ pub(crate) fn validate_apply_preflight(document: &Value) -> Result<Value> {
         _ => return Err(message("Sync preflight document kind is not supported.")),
     };
     if blocking > 0 {
-        return Err(message(format!(
-            "Refusing local sync apply intent because preflight reports {blocking} blocking checks."
+        let reasons = collect_blocking_reasons(document, PREFLIGHT_REASON_SOURCES);
+        return Err(message(format_blocking_rejection_message(
+            "preflight",
+            blocking,
+            &reasons,
         )));
     }
     Ok(Value::Object(bridged))
@@ -80,8 +106,11 @@ pub(crate) fn validate_apply_bundle_preflight(document: &Value) -> Result<Value>
         + summary.provider_blocking_count
         + alert_artifact_summary.blocked_count;
     if blocking_count > 0 {
-        return Err(message(format!(
-            "Refusing local sync apply intent because bundle preflight reports {blocking_count} blocking checks."
+        let reasons = collect_blocking_reasons(document, BUNDLE_PREFLIGHT_REASON_SOURCES);
+        return Err(message(format_blocking_rejection_message(
+            "bundle preflight",
+            blocking_count,
+            &reasons,
         )));
     }
     Ok(serde_json::json!({
