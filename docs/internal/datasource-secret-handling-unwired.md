@@ -1,9 +1,9 @@
-# Datasource Secret Handling (Unwired)
+# Datasource Secret Handling
 
 ## Purpose
 
-This note tracks the isolated placeholder-based datasource secret scaffold
-before fuller CLI, datasource, or provider wiring lands.
+This note tracks the placeholder-based datasource secret contract for
+datasource imports and live mutation payloads.
 
 ## Scope
 
@@ -13,12 +13,6 @@ before fuller CLI, datasource, or provider wiring lands.
   - `python/tests/test_python_datasource_secret_workbench.py`
 
 ## Current Behavior
-
-- Rust status:
-  - Rust now has staged `${secret:...}` placeholder parsing, bundle-preflight
-    blocking, and explicit placeholder resolution helpers.
-  - Rust still does not wire those resolved secrets into datasource import or
-    live mutation workflows.
 
 - `collect_secret_placeholders(...)`
   - Accepts only `${secret:...}` placeholder strings inside
@@ -32,13 +26,20 @@ before fuller CLI, datasource, or provider wiring lands.
   - Produces one review-required plan object with resolved `secureJsonData`.
   - Keeps provider behavior explicit as `inline-placeholder-map`.
 
-## Not Yet Wired
+- Datasource import contract:
+  - Import records can carry `secureJsonDataPlaceholders` in the exported
+    datasource JSON.
+  - Live import requires `--secret-values` when a record has placeholders.
+  - `--secret-values` is a JSON object that maps placeholder names to resolved
+    secret values before the payload is sent to Grafana.
+  - The resolved values are written into `secureJsonData` on import so the
+    placeholder contract stays explicit.
 
-- No argparse or unified CLI integration yet.
-- No datasource import/live-mutation workflow integration yet.
+## Remaining Limits
+
 - No external secret provider support yet.
-- Rust resolution is still contract-only and not yet wired into datasource
-  runtime workflows.
+- The contract is still placeholder-based; the CLI does not resolve secrets
+  from a provider or secrets manager automatically.
 
 ## Future Wire Points
 

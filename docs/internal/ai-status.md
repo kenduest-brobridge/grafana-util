@@ -6,6 +6,34 @@ Current AI-maintained status only.
 - Detailed 2026-03-27 entries moved to [`archive/ai-status-archive-2026-03-27.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-03-27.md).
 - Keep this file short and current. Additive historical detail belongs in `docs/internal/archive/`.
 
+## 2026-03-28 - Promotion preflight review handoff
+- State: Done
+- Scope: `rust/src/sync/promotion_preflight.rs`, `rust/src/sync/promotion_preflight_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: promotion preflight already reports remap checks, aggregate blocker counts, and bundle-preflight context, but it did not expose a staged handoff signal that tells operators whether the result was ready to move into review.
+- Current Update: added a structured `handoffSummary` with review readiness and next-stage state, and rendered the same signal in the text output.
+- Result: the promotion preflight contract now carries a small staged handoff step that tells operators when the result is ready for review versus when blockers still need to be resolved.
+
+## 2026-03-28 - Sync/promotion secret placeholder UX alignment
+- State: Done
+- Scope: `rust/src/sync/mod.rs`, `rust/src/sync/cli_help_rust_tests.rs`, `rust/src/sync/promotion_preflight_rust_tests.rs`
+- Baseline: bundle/promotion surfaces already tracked `secretPlaceholderNames`, but the visible help examples and Python bundle-preflight summary wording were not aligned with the datasource secret workflow vocabulary.
+- Current Update: aligned bundle/promotion help examples to show an explicit availability file with `secretPlaceholderNames`, and pinned the placeholder-name expectations in focused Rust sync help and promotion tests.
+- Result: the staged sync/promotion surfaces now make placeholder expectations visible in the same naming style as the datasource secret workflow without changing live semantics.
+
+## 2026-03-28 - Dashboard governance/render boundary and crate visibility cleanup
+- State: Done
+- Scope: `rust/src/dashboard/inspect_governance.rs`, `rust/src/dashboard/inspect_governance_render.rs`, `rust/src/lib.rs`
+- Baseline: the dashboard governance facade still mixed document/row exports with the full table renderer, and `lib.rs` still exposed several internal sync/datasource helper modules as effectively public surface.
+- Current Update: moved governance table rendering into a dedicated `inspect_governance_render.rs` helper and narrowed several internal helper modules in `lib.rs` from `pub` to `pub(crate)`.
+- Result: dashboard inspect/governance ownership is more explicit and the crate surface is less likely to grow accidental semi-public modules.
+
+## 2026-03-28 - Datasource secret operator contract follow-through
+- State: Done
+- Scope: `rust/src/datasource_cli_defs.rs`, `rust/src/datasource_cli_mutation_rust_tests.rs`, `docs/internal/datasource-secret-handling-unwired.md`
+- Baseline: Rust datasource import and mutation flows already accepted placeholder-based secret inputs, but the import-side operator help and the maintainer note still described the contract as partly unwired.
+- Current Update: documented `--secret-values` as part of datasource import help with explicit `secureJsonDataPlaceholders` wording, added focused CLI help assertions, and updated the maintainer note to describe the import/mutation contract as wired while calling out remaining provider limitations.
+- Result: datasource secret handling now has a clearer operator-facing contract for import and live mutation, even though provider-backed resolution and richer dry-run visibility are still follow-up work.
+
 ## 2026-03-27 - Datasource secret placeholder preflight
 - State: Done
 - Scope: `rust/src/datasource_secret.rs`, `rust/src/sync/bundle_preflight.rs`, `rust/src/sync/staged_documents_apply.rs`, `rust/src/sync/staged_documents_render.rs`, focused sync datasource secret tests

@@ -6,6 +6,34 @@ Current AI change log only.
 - Detailed 2026-03-27 entries moved to [`archive/ai-changes-archive-2026-03-27.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-03-27.md).
 - Keep this file limited to the latest active architecture and maintenance changes.
 
+## 2026-03-28 - Promotion preflight review handoff
+- Summary: added a structured `handoffSummary` to the staged sync promotion-preflight document so operators can see whether the result is ready to move into review, then rendered the same handoff state in the text output with a `review-required` and `next-stage` line.
+- Tests: extended promotion-preflight regression coverage to assert the new handoff summary in both blocked and clean cases, plus the rendered handoff line in the text output.
+- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all --check` passed; `cargo test --manifest-path rust/Cargo.toml --quiet sync` passed with 132 sync tests.
+- Impact: `rust/src/sync/promotion_preflight.rs`, `rust/src/sync/promotion_preflight_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: low. This is a staged-only contract addition and does not touch live apply wiring; revert the new `handoffSummary` field and render line if downstream consumers need the preflight document shape restored.
+
+## 2026-03-28 - Sync/promotion secret placeholder UX alignment
+- Summary: aligned staged bundle/promotion help examples with the datasource secret contract by showing `secretPlaceholderNames` in the availability-file examples so sync and promotion expose the same secret vocabulary as datasource import/mutation.
+- Tests: updated focused Rust sync help and promotion render tests to pin the secret-placeholder example strings and placeholder-name expectations.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet sync` passed with 132 sync tests.
+- Impact: `rust/src/sync/mod.rs`, `rust/src/sync/cli_help_rust_tests.rs`, `rust/src/sync/promotion_preflight_rust_tests.rs`
+- Rollback/Risk: low; this is help/render/test alignment only and does not alter live apply semantics or datasource runtime behavior.
+
+## 2026-03-28 - Dashboard governance/render boundary and crate visibility cleanup
+- Summary: moved the governance text renderer out of `rust/src/dashboard/inspect_governance.rs` into a dedicated `rust/src/dashboard/inspect_governance_render.rs` helper so the governance facade can stay focused on document/row ownership, and tightened several internal helper modules in `rust/src/lib.rs` from `pub` to `pub(crate)`.
+- Tests: reused focused bundle/datasource helper tests for the `lib.rs` visibility tightening and validated the dashboard boundary change through formatting, clippy, and focused dashboard inspect coverage.
+- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings`; `cargo test --manifest-path rust/Cargo.toml --quiet inspect_output`; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_inspection_dependency_contract`; `cargo test --manifest-path rust/Cargo.toml --quiet --lib bundle_preflight_rust_tests`; `cargo test --manifest-path rust/Cargo.toml --quiet --lib datasource_provider_rust_tests`; `cargo test --manifest-path rust/Cargo.toml --quiet --lib datasource_secret_rust_tests`
+- Impact: `rust/src/dashboard/inspect_governance.rs`, `rust/src/dashboard/inspect_governance_render.rs`, `rust/src/lib.rs`
+- Rollback/Risk: low. This is ownership/visibility cleanup around existing behavior; revert the renderer split or specific `pub(crate)` changes if a downstream internal call path still depends on the older surface.
+
+## 2026-03-28 - Datasource secret operator contract follow-through
+- Summary: clarified the wired Rust secret-placeholder flow for datasource import and live mutation by documenting `--secret-values` directly in datasource import help, adding focused help assertions for `secureJsonDataPlaceholders`, and updating the maintainer note so it no longer describes the import/mutation contract as unwired.
+- Tests: extended focused datasource CLI help coverage for the import-side secret wording and headings.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet datasource_cli_mutation_rust_tests` passed with 30 tests.
+- Impact: `rust/src/datasource_cli_defs.rs`, `rust/src/datasource_cli_mutation_rust_tests.rs`, `docs/internal/datasource-secret-handling-unwired.md`
+- Rollback/Risk: low. This is help/doc contract alignment only; revert if the import-side secret flag names or placeholder contract change again.
+
 ## 2026-03-27 - Datasource secret placeholder preflight
 - Summary: added `rust/src/datasource_secret.rs` for `${secret:...}` placeholder parsing and staged plan summaries, then wired `secretPlaceholderAssessment` into Rust sync bundle-preflight so missing placeholder availability becomes an explicit blocking check alongside provider and alert-artifact assessments.
 - Tests: added focused datasource secret helper coverage and extended sync bundle-preflight/apply/render/promotion regressions to assert the new `secretPlaceholderBlockingCount`, staged review output, and apply rejection reason source.

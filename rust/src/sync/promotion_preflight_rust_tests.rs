@@ -90,6 +90,13 @@ fn build_sync_promotion_preflight_document_reports_direct_mapped_and_missing_ref
     assert_eq!(document["summary"]["missingMappingCount"], json!(2));
     assert_eq!(document["summary"]["bundleBlockingCount"], json!(5));
     assert_eq!(document["summary"]["blockingCount"], json!(7));
+    assert_eq!(document["handoffSummary"]["reviewRequired"], json!(true));
+    assert_eq!(document["handoffSummary"]["readyForReview"], json!(false));
+    assert_eq!(
+        document["handoffSummary"]["nextStage"],
+        json!("resolve-blockers")
+    );
+    assert_eq!(document["handoffSummary"]["blockingCount"], json!(7));
     assert_eq!(
         document["mappingSummary"]["mappingKind"],
         json!(SYNC_PROMOTION_MAPPING_KIND)
@@ -179,6 +186,12 @@ fn render_sync_promotion_preflight_text_renders_summary_and_bundle_context() {
             "mappedCount": 1,
             "missingTargetCount": 0
         },
+        "handoffSummary": {
+            "reviewRequired": true,
+            "readyForReview": false,
+            "nextStage": "resolve-blockers",
+            "blockingCount": 1
+        },
         "checks": [{
             "kind": "folder-remap",
             "identity": "cpu-main",
@@ -216,9 +229,70 @@ fn render_sync_promotion_preflight_text_renders_summary_and_bundle_context() {
     assert!(output.contains("mapped=1"));
     assert!(output.contains("folders=1"));
     assert!(output.contains("promotion stays blocked"));
+    assert!(output.contains(
+        "Handoff: review-required=true ready-for-review=false next-stage=resolve-blockers blocking=1"
+    ));
     assert!(output.contains("resolution=explicit-map"));
     assert!(output.contains("mapping-source=folders"));
     assert!(output.contains("Sync bundle preflight summary"));
+    assert!(output.contains("Secret placeholders blocking: 0"));
+}
+
+#[test]
+fn build_sync_promotion_preflight_document_reports_review_handoff_when_clean() {
+    let source_bundle = json!({
+        "kind": "grafana-utils-sync-source-bundle",
+        "summary": {
+            "dashboardCount": 1,
+            "datasourceCount": 0,
+            "folderCount": 1,
+            "alertRuleCount": 0,
+            "contactPointCount": 0,
+            "muteTimingCount": 0,
+            "policyCount": 0,
+            "templateCount": 0
+        },
+        "dashboards": [{
+            "kind": "dashboard",
+            "uid": "cpu-main",
+            "title": "CPU Main",
+            "folderUid": "ops-src",
+            "body": {}
+        }],
+        "datasources": [],
+        "folders": [{"kind": "folder", "uid": "ops-src", "title": "Operations"}],
+        "alerts": [],
+        "alerting": {"summary": {}},
+        "metadata": {}
+    });
+    let target_inventory = json!({
+        "folders": [{"kind": "folder", "uid": "ops-dst", "title": "Operations"}],
+        "datasources": []
+    });
+    let mapping = json!({
+        "kind": SYNC_PROMOTION_MAPPING_KIND,
+        "schemaVersion": SYNC_PROMOTION_MAPPING_SCHEMA_VERSION,
+        "metadata": {
+            "sourceEnvironment": "staging",
+            "targetEnvironment": "prod"
+        },
+        "folders": {"ops-src": "ops-dst"},
+        "datasources": {}
+    });
+
+    let document = build_sync_promotion_preflight_document(
+        &source_bundle,
+        &target_inventory,
+        None,
+        Some(&mapping),
+    )
+    .unwrap();
+
+    assert_eq!(document["summary"]["blockingCount"], json!(0));
+    assert_eq!(document["handoffSummary"]["reviewRequired"], json!(true));
+    assert_eq!(document["handoffSummary"]["readyForReview"], json!(true));
+    assert_eq!(document["handoffSummary"]["nextStage"], json!("review"));
+    assert_eq!(document["handoffSummary"]["blockingCount"], json!(0));
 }
 
 #[test]

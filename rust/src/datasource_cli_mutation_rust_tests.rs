@@ -83,6 +83,7 @@ fn import_help_explains_common_operator_flags() {
     assert!(help.contains("--require-matching-export-org"));
     assert!(help.contains("--replace-existing"));
     assert!(help.contains("--update-existing-only"));
+    assert!(help.contains("--secret-values"));
     assert!(help.contains("--dry-run"));
     assert!(help.contains("--table"));
     assert!(help.contains("--json"));
@@ -90,6 +91,8 @@ fn import_help_explains_common_operator_flags() {
     assert!(help.contains("--output-columns"));
     assert!(help.contains("--progress"));
     assert!(help.contains("--verbose"));
+    assert!(help.contains("secureJsonDataPlaceholders"));
+    assert!(help.contains("Secrets"));
     assert!(help.contains("Examples:"));
     assert!(help.contains("Input Options"));
 }

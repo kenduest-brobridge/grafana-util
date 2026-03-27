@@ -64,6 +64,9 @@ fn sync_bundle_preflight_help_includes_examples_and_grouped_headings() {
     assert!(help.contains("Examples:"));
     assert!(help.contains("Input Options"));
     assert!(help.contains("Live Options"));
+    assert!(help.contains("--availability-file"));
+    assert!(help.contains("secretPlaceholderNames"));
+    assert!(help.contains("\"providerNames\": [\"vault\"]"));
 }
 
 #[test]
@@ -72,9 +75,11 @@ fn sync_promotion_preflight_help_includes_mapping_input() {
     assert!(help.contains("Examples:"));
     assert!(help.contains("Input Options"));
     assert!(help.contains("--mapping-file"));
+    assert!(help.contains("--availability-file"));
     assert!(help.contains("grafana-utils-sync-promotion-mapping"));
     assert!(help.contains("\"sourceEnvironment\": \"staging\""));
     assert!(help.contains("\"targetEnvironment\": \"prod\""));
+    assert!(help.contains("secretPlaceholderNames"));
 }
 
 #[test]

@@ -7,7 +7,7 @@ pub mod access;
 /// Alerting export/import/diff/list workflows and shared alert models.
 pub mod alert;
 /// Alert-specific sync assessment helpers used by preflight and sync flows.
-pub mod alert_sync;
+pub(crate) mod alert_sync;
 /// Cross-resource bundle preflight assembly built above sync resource contracts.
 pub mod bundle_preflight;
 /// Unified top-level CLI parsing and dispatch for the Rust binary.
@@ -29,11 +29,11 @@ pub mod datasource;
 /// Built-in datasource type catalog and related metadata helpers.
 pub mod datasource_catalog;
 /// Datasource provider resolution helpers used by sync/bundle validation.
-pub mod datasource_provider;
+pub(crate) mod datasource_provider;
 /// Datasource secret placeholder planning helpers used by staged sync review.
-pub mod datasource_secret;
+pub(crate) mod datasource_secret;
 /// Centralized Clap help styling configuration.
-pub mod help_styles;
+pub(crate) mod help_styles;
 /// Replaceable JSON HTTP client used by all live Grafana operations.
 pub mod http;
 /// Internal browser/session helpers for screenshot and interactive flows.

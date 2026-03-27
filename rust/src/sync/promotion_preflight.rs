@@ -43,6 +43,15 @@ struct PromotionCheckSummary {
     missing_target_count: i64,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase", default)]
+struct PromotionHandoffSummary {
+    review_required: bool,
+    ready_for_review: bool,
+    next_stage: String,
+    blocking_count: i64,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct PromotionCheck {
     kind: String,
@@ -93,6 +102,20 @@ fn summarize_promotion_checks(checks: &[PromotionCheck]) -> PromotionCheckSummar
             .iter()
             .filter(|item| item.status == "missing-target")
             .count() as i64,
+    }
+}
+
+fn summarize_promotion_handoff(blocking_count: i64) -> PromotionHandoffSummary {
+    let ready_for_review = blocking_count == 0;
+    PromotionHandoffSummary {
+        review_required: true,
+        ready_for_review,
+        next_stage: if ready_for_review {
+            "review".to_string()
+        } else {
+            "resolve-blockers".to_string()
+        },
+        blocking_count,
     }
 }
 
@@ -449,6 +472,7 @@ pub fn build_sync_promotion_preflight_document(
         + bundle_summary.provider_blocking_count
         + bundle_summary.secret_placeholder_blocking_count
         + bundle_summary.alert_artifact_blocked_count;
+    let blocking_count = bundle_blocking_count + missing_mapping_count;
     let resource_count = source_bundle
         .get("summary")
         .and_then(Value::as_object)
@@ -464,7 +488,7 @@ pub fn build_sync_promotion_preflight_document(
             mapped_count,
             missing_mapping_count,
             bundle_blocking_count,
-            blocking_count: bundle_blocking_count + missing_mapping_count,
+            blocking_count,
         },
         "bundlePreflight": bundle_preflight,
         "mappingSummary": {
@@ -477,6 +501,7 @@ pub fn build_sync_promotion_preflight_document(
             "datasourceNameMappingCount": datasource_name_mapping.len(),
         },
         "checkSummary": serde_json::to_value(check_summary)?,
+        "handoffSummary": serde_json::to_value(summarize_promotion_handoff(blocking_count))?,
         "checks": checks.iter().map(|item| serde_json::json!({
             "kind": item.kind,
             "identity": item.identity,
@@ -506,6 +531,11 @@ pub fn render_sync_promotion_preflight_text(document: &Value) -> Result<Vec<Stri
     let check_summary = require_json_object_field(
         require_json_object(document, "Sync promotion preflight document")?,
         "checkSummary",
+        "Sync promotion preflight document",
+    )?;
+    let handoff_summary = require_json_object_field(
+        require_json_object(document, "Sync promotion preflight document")?,
+        "handoffSummary",
         "Sync promotion preflight document",
     )?;
     let bundle_preflight = document
@@ -569,6 +599,22 @@ pub fn render_sync_promotion_preflight_text(document: &Value) -> Result<Vec<Stri
                 .unwrap_or(0),
         ),
         "Reason: promotion stays blocked until bundle-preflight blockers are cleared and cross-environment mappings resolve to real target identifiers.".to_string(),
+        format!(
+            "Handoff: review-required={} ready-for-review={} next-stage={} blocking={}",
+            handoff_summary
+                .get("reviewRequired")
+                .and_then(Value::as_bool)
+                .unwrap_or(false),
+            handoff_summary
+                .get("readyForReview")
+                .and_then(Value::as_bool)
+                .unwrap_or(false),
+            normalize_text(handoff_summary.get("nextStage")),
+            handoff_summary
+                .get("blockingCount")
+                .and_then(Value::as_i64)
+                .unwrap_or(0),
+        ),
         String::new(),
         "# Promotion checks".to_string(),
     ];
