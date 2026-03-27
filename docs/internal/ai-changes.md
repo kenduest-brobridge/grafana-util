@@ -28,6 +28,13 @@ Current AI change log only.
 - Impact: `rust/src/sync/promotion_preflight.rs`, `rust/src/sync/cli.rs`, `rust/src/sync/mod.rs`, `rust/src/sync/promotion_preflight_rust_tests.rs`, `rust/src/sync/cli_help_rust_tests.rs`, `rust/src/sync/bundle_contract_rust_tests.rs`
 - Rollback/Risk: this is intentionally a skeleton and only covers staged folder/datasource remap visibility; revert the command/module if the contract needs to be redesigned before broader promotion semantics are added.
 
+## 2026-03-27 - Promotion mapping help example
+- Summary: added a minimal `grafana-utils-sync-promotion-mapping` JSON example directly to `sync promotion-preflight --help` so the mapping file contract is discoverable from the CLI instead of only from tests and source.
+- Tests: extended focused sync help coverage to assert the mapping document kind and environment metadata snippet appear in the rendered help output.
+- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all --check` passed; `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings` passed; `cargo test --manifest-path rust/Cargo.toml --quiet sync` passed with 129 sync tests.
+- Impact: `rust/src/sync/mod.rs`, `rust/src/sync/cli_help_rust_tests.rs`
+- Rollback/Risk: low; revert the extra help block if the long-help output becomes too noisy or if the mapping contract changes again.
+
 ## 2026-03-27 - Unified CLI help/example source split
 - Summary: moved the unified root help/example blocks and help-label color table out of `rust/src/cli.rs` into a dedicated `rust/src/cli_help_examples.rs` helper so the dispatcher stays focused on rendering and routing.
 - Validation: `cargo fmt --manifest-path rust/Cargo.toml --all`; `cargo test --quiet unified_help`

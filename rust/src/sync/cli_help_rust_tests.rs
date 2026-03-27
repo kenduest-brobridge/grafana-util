@@ -72,6 +72,9 @@ fn sync_promotion_preflight_help_includes_mapping_input() {
     assert!(help.contains("Examples:"));
     assert!(help.contains("Input Options"));
     assert!(help.contains("--mapping-file"));
+    assert!(help.contains("grafana-utils-sync-promotion-mapping"));
+    assert!(help.contains("\"sourceEnvironment\": \"staging\""));
+    assert!(help.contains("\"targetEnvironment\": \"prod\""));
 }
 
 #[test]

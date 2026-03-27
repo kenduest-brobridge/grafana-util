@@ -27,6 +27,13 @@ Current AI-maintained status only.
 - Current Update: added a `sync promotion-preflight` command plus a staged `grafana-utils-sync-promotion-preflight` document that layers folder and datasource remap checks on top of the existing bundle-preflight assessment and optional mapping input.
 - Result: maintainers now have a concrete promotion entry point that surfaces direct matches, explicit remaps, missing mappings, and inherited bundle blockers without claiming a full promotion/apply workflow yet.
 
+## 2026-03-27 - Promotion mapping help example
+- State: Done
+- Scope: `rust/src/sync/mod.rs`, `rust/src/sync/cli_help_rust_tests.rs`
+- Baseline: the promotion mapping contract was enforced in code and focused tests, but operators still had to infer the file shape from source or test fixtures.
+- Current Update: embedded a minimal promotion mapping JSON example directly in `sync promotion-preflight --help` and locked the example strings in focused help tests.
+- Result: operators can discover the mapping file kind, schema version, and environment metadata shape directly from CLI help before reading source or maintainer docs.
+
 ## 2026-03-27 - Unified CLI help/example source split
 - State: Done
 - Scope: `rust/src/cli.rs`, `rust/src/cli_help_examples.rs`, `rust/src/lib.rs`, focused unified CLI help tests
