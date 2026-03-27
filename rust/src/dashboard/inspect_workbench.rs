@@ -55,7 +55,7 @@ pub(crate) fn run_inspect_workbench(document: InspectWorkbenchDocument) -> Resul
             if key.kind != KeyEventKind::Press {
                 continue;
             }
-            if state.full_detail_open {
+            if state.full_detail.open {
                 match key.code {
                     KeyCode::Up => state.move_full_detail_focus(-1),
                     KeyCode::Down => state.move_full_detail_focus(1),

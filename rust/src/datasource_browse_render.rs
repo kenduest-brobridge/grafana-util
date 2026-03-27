@@ -58,26 +58,7 @@ pub(crate) fn render_datasource_browser_frame(
         );
     frame.render_stateful_widget(list, panes[0], &mut state.list_state);
 
-    if state.pending_delete.is_some() {
-        render_focusable_lines(
-            frame,
-            panes[1],
-            detail_text(state)
-                .lines()
-                .map(|line| Line::from(line.to_string()))
-                .collect::<Vec<_>>(),
-            pane_block(
-                &detail_title(state),
-                state.focus != PaneFocus::List,
-                Color::Red,
-                Color::Rgb(20, 18, 22),
-            ),
-            state.focus != PaneFocus::List,
-            state.detail_scroll,
-        );
-    } else {
-        render_detail_panel(frame, panes[1], state);
-    }
+    render_detail_panel(frame, panes[1], state);
 
     let footer = tui_shell::build_footer(
         control_lines(state.pending_delete.is_some(), state.pending_edit.is_some()),
@@ -87,6 +68,17 @@ pub(crate) fn render_datasource_browser_frame(
 
     if let Some(edit_state) = state.pending_edit.as_ref() {
         edit_state.render(frame);
+    }
+    if state.pending_delete.is_some() {
+        tui_shell::render_overlay(
+            frame,
+            &detail_title(state),
+            detail_text(state)
+                .lines()
+                .map(|line| Line::from(line.to_string()))
+                .collect(),
+            Color::Red,
+        );
     }
     if let Some(search_state) = state.pending_search.as_ref() {
         render_search_prompt(frame, search_state.direction, &search_state.query);

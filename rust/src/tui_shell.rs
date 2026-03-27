@@ -2,7 +2,10 @@
 
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Borders, Paragraph, Wrap};
+use ratatui::{
+    layout::Rect,
+    widgets::{Block, Borders, Clear, Paragraph, Wrap},
+};
 
 pub(crate) fn header_block(title: &str) -> Block<'static> {
     Block::default()
@@ -85,4 +88,45 @@ pub(crate) fn build_footer(
         .wrap(Wrap { trim: false })
         .block(footer_block())
         .style(Style::default().bg(Color::Rgb(16, 22, 30)).fg(Color::White))
+}
+
+pub(crate) fn centered_rect(area: Rect, width_percent: u16, height_percent: u16) -> Rect {
+    let width = area.width.saturating_mul(width_percent).saturating_div(100);
+    let height = area
+        .height
+        .saturating_mul(height_percent)
+        .saturating_div(100);
+    let width = width.max(32).min(area.width);
+    let height = height.max(8).min(area.height);
+    Rect {
+        x: area.x + area.width.saturating_sub(width).saturating_div(2),
+        y: area.y + area.height.saturating_sub(height).saturating_div(2),
+        width,
+        height,
+    }
+}
+
+pub(crate) fn render_overlay(
+    frame: &mut ratatui::Frame,
+    title: &str,
+    lines: Vec<Line<'static>>,
+    accent: Color,
+) {
+    let area = centered_rect(frame.area(), 76, 48);
+    frame.render_widget(Clear, area);
+    frame.render_widget(
+        Paragraph::new(lines).wrap(Wrap { trim: false }).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(title.to_string())
+                .style(Style::default().bg(Color::Rgb(18, 20, 26)))
+                .border_style(Style::default().fg(accent))
+                .title_style(
+                    Style::default()
+                        .fg(Color::White)
+                        .add_modifier(Modifier::BOLD),
+                ),
+        ),
+        area,
+    );
 }

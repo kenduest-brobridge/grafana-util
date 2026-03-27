@@ -200,7 +200,7 @@ pub(crate) fn render_frame(frame: &mut ratatui::Frame, state: &mut InspectWorkbe
     if let Some(search) = state.pending_search.as_ref() {
         render_search_prompt(frame, search);
     }
-    if state.full_detail_open {
+    if state.full_detail.open {
         render_full_detail_viewer(frame, state);
     }
 }

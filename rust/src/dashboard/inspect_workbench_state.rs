@@ -29,6 +29,29 @@ pub(crate) struct SearchState {
     pub(crate) query: String,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct InspectFullDetailState {
+    pub(crate) open: bool,
+    pub(crate) scroll: usize,
+    pub(crate) active_logical: usize,
+    pub(crate) wrapped: bool,
+    pub(crate) row_logical_indexes: Vec<usize>,
+    pub(crate) pending_anchor_logical: Option<usize>,
+}
+
+impl Default for InspectFullDetailState {
+    fn default() -> Self {
+        Self {
+            open: false,
+            scroll: 0,
+            active_logical: 0,
+            wrapped: true,
+            row_logical_indexes: Vec::new(),
+            pending_anchor_logical: None,
+        }
+    }
+}
+
 pub(crate) struct InspectWorkbenchState {
     pub(crate) document: InspectWorkbenchDocument,
     pub(crate) group_state: ListState,
@@ -36,12 +59,7 @@ pub(crate) struct InspectWorkbenchState {
     pub(crate) focus: InspectPane,
     pub(crate) item_horizontal_offset: usize,
     pub(crate) detail_cursor: usize,
-    pub(crate) full_detail_open: bool,
-    pub(crate) full_detail_scroll: usize,
-    pub(crate) full_detail_active_logical: usize,
-    pub(crate) full_detail_wrapped: bool,
-    pub(crate) full_detail_row_logical_indexes: Vec<usize>,
-    pub(crate) full_detail_pending_anchor_logical: Option<usize>,
+    pub(crate) full_detail: InspectFullDetailState,
     pub(crate) status: String,
     pub(crate) pending_search: Option<SearchPromptState>,
     pub(crate) last_search: Option<SearchState>,
@@ -60,12 +78,7 @@ impl InspectWorkbenchState {
             focus: InspectPane::Groups,
             item_horizontal_offset: 0,
             detail_cursor: 0,
-            full_detail_open: false,
-            full_detail_scroll: 0,
-            full_detail_active_logical: 0,
-            full_detail_wrapped: true,
-            full_detail_row_logical_indexes: Vec::new(),
-            full_detail_pending_anchor_logical: None,
+            full_detail: InspectFullDetailState::default(),
             status: "Loaded inspect workbench. Tab panes, / search, g modes, v mode view."
                 .to_string(),
             pending_search: None,
@@ -156,12 +169,7 @@ impl InspectWorkbenchState {
             .select((!self.current_items().is_empty()).then_some(0));
         self.item_horizontal_offset = 0;
         self.detail_cursor = 0;
-        self.full_detail_open = false;
-        self.full_detail_scroll = 0;
-        self.full_detail_active_logical = 0;
-        self.full_detail_wrapped = true;
-        self.full_detail_row_logical_indexes.clear();
-        self.full_detail_pending_anchor_logical = None;
+        self.full_detail = InspectFullDetailState::default();
     }
 
     pub(crate) fn focus_next(&mut self) {
@@ -263,27 +271,27 @@ impl InspectWorkbenchState {
     }
 
     pub(crate) fn open_full_detail(&mut self) {
-        self.full_detail_open = true;
-        self.full_detail_scroll = 0;
-        self.full_detail_active_logical = 0;
-        self.full_detail_pending_anchor_logical = None;
+        self.full_detail.open = true;
+        self.full_detail.scroll = 0;
+        self.full_detail.active_logical = 0;
+        self.full_detail.pending_anchor_logical = None;
         self.status =
             "Opened full detail viewer. w toggles wrap; Esc, q, or Enter closes.".to_string();
     }
 
     pub(crate) fn close_full_detail(&mut self) {
-        self.full_detail_open = false;
-        self.full_detail_scroll = 0;
-        self.full_detail_active_logical = 0;
-        self.full_detail_row_logical_indexes.clear();
-        self.full_detail_pending_anchor_logical = None;
+        self.full_detail.open = false;
+        self.full_detail.scroll = 0;
+        self.full_detail.active_logical = 0;
+        self.full_detail.row_logical_indexes.clear();
+        self.full_detail.pending_anchor_logical = None;
         self.status = "Closed full detail viewer.".to_string();
     }
 
     pub(crate) fn toggle_full_detail_wrap(&mut self) {
-        self.full_detail_pending_anchor_logical = Some(self.full_detail_active_logical);
-        self.full_detail_wrapped = !self.full_detail_wrapped;
-        self.status = if self.full_detail_wrapped {
+        self.full_detail.pending_anchor_logical = Some(self.full_detail.active_logical);
+        self.full_detail.wrapped = !self.full_detail.wrapped;
+        self.status = if self.full_detail.wrapped {
             "Full detail viewer wrap enabled.".to_string()
         } else {
             "Full detail viewer wrap disabled.".to_string()
@@ -293,17 +301,17 @@ impl InspectWorkbenchState {
     pub(crate) fn move_full_detail_focus(&mut self, delta: isize) {
         let line_count = self.current_full_detail_lines().len();
         if line_count == 0 {
-            self.full_detail_active_logical = 0;
+            self.full_detail.active_logical = 0;
             return;
         }
-        let current = self.full_detail_active_logical as isize;
-        self.full_detail_active_logical =
+        let current = self.full_detail.active_logical as isize;
+        self.full_detail.active_logical =
             (current + delta).clamp(0, line_count.saturating_sub(1) as isize) as usize;
     }
 
     pub(crate) fn set_full_detail_focus(&mut self, index: usize) {
         let line_count = self.current_full_detail_lines().len();
-        self.full_detail_active_logical = if line_count == 0 {
+        self.full_detail.active_logical = if line_count == 0 {
             0
         } else {
             index.min(line_count.saturating_sub(1))
@@ -311,40 +319,41 @@ impl InspectWorkbenchState {
     }
 
     pub(crate) fn clamp_full_detail_scroll(&mut self, max_scroll: usize) {
-        self.full_detail_scroll = self.full_detail_scroll.min(max_scroll);
+        self.full_detail.scroll = self.full_detail.scroll.min(max_scroll);
     }
 
     pub(crate) fn sync_full_detail_row_mapping(&mut self, logical_indexes: Vec<usize>) {
-        self.full_detail_row_logical_indexes = logical_indexes;
-        if let Some(anchor) = self.full_detail_pending_anchor_logical.take() {
-            self.full_detail_active_logical = anchor;
+        self.full_detail.row_logical_indexes = logical_indexes;
+        if let Some(anchor) = self.full_detail.pending_anchor_logical.take() {
+            self.full_detail.active_logical = anchor;
         }
     }
 
     pub(crate) fn ensure_full_detail_focus_visible(&mut self, viewport_height: usize) {
         let mut first_match = None;
         let mut last_match = None;
-        for (index, logical_index) in self.full_detail_row_logical_indexes.iter().enumerate() {
-            if *logical_index == self.full_detail_active_logical {
+        for (index, logical_index) in self.full_detail.row_logical_indexes.iter().enumerate() {
+            if *logical_index == self.full_detail.active_logical {
                 first_match.get_or_insert(index);
                 last_match = Some(index);
             }
         }
         let Some(first) = first_match else {
-            self.full_detail_scroll = 0;
+            self.full_detail.scroll = 0;
             return;
         };
         let last = last_match.unwrap_or(first);
         let viewport_height = viewport_height.max(1);
-        if first < self.full_detail_scroll {
-            self.full_detail_scroll = first;
+        if first < self.full_detail.scroll {
+            self.full_detail.scroll = first;
             return;
         }
         let visible_end = self
-            .full_detail_scroll
+            .full_detail
+            .scroll
             .saturating_add(viewport_height.saturating_sub(1));
         if last > visible_end {
-            self.full_detail_scroll = last.saturating_add(1).saturating_sub(viewport_height);
+            self.full_detail.scroll = last.saturating_add(1).saturating_sub(viewport_height);
         }
     }
 
@@ -617,15 +626,15 @@ mod tests {
         let mut state = sample_state();
 
         state.open_full_detail();
-        assert!(state.full_detail_open);
-        assert_eq!(state.full_detail_scroll, 0);
-        assert!(state.full_detail_wrapped);
+        assert!(state.full_detail.open);
+        assert_eq!(state.full_detail.scroll, 0);
+        assert!(state.full_detail.wrapped);
 
         state.toggle_full_detail_wrap();
-        assert!(!state.full_detail_wrapped);
+        assert!(!state.full_detail.wrapped);
 
         state.toggle_full_detail_wrap();
-        assert!(state.full_detail_wrapped);
+        assert!(state.full_detail.wrapped);
     }
 
     #[test]
@@ -634,13 +643,13 @@ mod tests {
 
         state.open_full_detail();
         state.move_full_detail_focus(3);
-        assert_eq!(state.full_detail_active_logical, 3);
+        assert_eq!(state.full_detail.active_logical, 3);
 
         state.move_full_detail_focus(-1);
-        assert_eq!(state.full_detail_active_logical, 2);
+        assert_eq!(state.full_detail.active_logical, 2);
 
         state.set_full_detail_focus(0);
-        assert_eq!(state.full_detail_active_logical, 0);
+        assert_eq!(state.full_detail.active_logical, 0);
     }
 
     #[test]

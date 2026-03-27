@@ -6,6 +6,13 @@ Current AI change log only.
 - Detailed 2026-03-27 entries moved to [`archive/ai-changes-archive-2026-03-27.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-03-27.md).
 - Keep this file limited to the latest active architecture and maintenance changes.
 
+## 2026-03-28 - TUI overlay and workbench state cleanup
+- Summary: moved dashboard and datasource destructive confirmations off the detail pane into a shared centered overlay pattern, dropped the extra preview pane from sync review diff mode so the diff workspace stays dominant, and split inspect workbench full-detail viewer state into its own `InspectFullDetailState`.
+- Tests: kept the changes pinned with focused browse/review/inspect render-state tests.
+- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all --check` passed; `cargo test --manifest-path rust/Cargo.toml --quiet inspect_workbench_state` passed; `cargo test --manifest-path rust/Cargo.toml --quiet cli_review_tui_rust_tests` passed; `cargo test --manifest-path rust/Cargo.toml --quiet datasource_browse_render` passed; `cargo test --manifest-path rust/Cargo.toml --quiet browse_input` passed; `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings` passed.
+- Impact: `rust/src/tui_shell.rs`, `rust/src/dashboard/browse_render.rs`, `rust/src/datasource_browse_render.rs`, `rust/src/sync/review_tui.rs`, `rust/src/dashboard/inspect_workbench.rs`, `rust/src/dashboard/inspect_workbench_render.rs`, `rust/src/dashboard/inspect_workbench_render_modal_sections.rs`, `rust/src/dashboard/inspect_workbench_state.rs`
+- Rollback/Risk: low-to-moderate. These are TUI-only behavior and structure changes, but they do alter how destructive confirmation and diff review occupy terminal space.
+
 ## 2026-03-28 - Shared Rust TUI shell pass
 - Summary: introduced a crate-private `tui_shell` helper and moved the main Rust TUI surfaces onto a common shell grammar so `dashboard inspect workbench`, `sync review`, and `datasource browse` now share the same header/footer/control vocabulary and stronger active-workspace hierarchy.
 - Tests: added focused TUI assertions for sync review header state and datasource browse header mode text, while keeping existing inspect workbench summary tests green.

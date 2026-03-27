@@ -6,6 +6,13 @@ Current AI-maintained status only.
 - Detailed 2026-03-27 entries moved to [`archive/ai-status-archive-2026-03-27.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-03-27.md).
 - Keep this file short and current. Additive historical detail belongs in `docs/internal/archive/`.
 
+## 2026-03-28 - TUI overlay and workbench state cleanup
+- State: Done
+- Scope: `rust/src/tui_shell.rs`, `rust/src/dashboard/browse_render.rs`, `rust/src/datasource_browse_render.rs`, `rust/src/sync/review_tui.rs`, `rust/src/dashboard/inspect_workbench_state.rs`, related inspect/review/browse render paths
+- Baseline: dashboard and datasource destructive confirmations still reused the right-hand detail pane instead of a clear overlay surface, sync review diff mode still spent permanent space on secondary preview content, and inspect workbench kept full-detail viewer state flattened into the main workbench state.
+- Current Update: added a shared overlay helper to the crate-private TUI shell, moved dashboard and datasource delete confirmations into centered danger overlays, removed the extra diff-mode preview panel from sync review so the diff workspace stays primary, and extracted inspect full-detail viewer state into a dedicated `InspectFullDetailState`.
+- Result: terminal destructive actions now use a clearer shared pattern, sync review diff mode is denser and more task-focused, and inspect workbench state ownership is slightly cleaner for future viewer/search work.
+
 ## 2026-03-28 - Shared Rust TUI shell pass
 - State: Done
 - Scope: `rust/src/tui_shell.rs`, `rust/src/dashboard/inspect_workbench_render.rs`, `rust/src/dashboard/inspect_workbench_render_helpers.rs`, `rust/src/dashboard/inspect_workbench_support.rs`, `rust/src/sync/review_tui.rs`, `rust/src/datasource_browse_render.rs`, focused TUI tests

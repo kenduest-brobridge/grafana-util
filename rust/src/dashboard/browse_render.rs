@@ -1,4 +1,5 @@
 #![cfg(feature = "tui")]
+use crate::tui_shell;
 use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
@@ -57,26 +58,7 @@ pub(crate) fn render_dashboard_browser_frame(frame: &mut ratatui::Frame, state: 
         );
     frame.render_stateful_widget(list, panes[0], &mut state.list_state);
 
-    if state.pending_delete.is_some() {
-        render_focusable_lines(
-            frame,
-            panes[1],
-            build_detail_lines(state)
-                .into_iter()
-                .map(Line::from)
-                .collect::<Vec<_>>(),
-            pane_block(
-                "Delete Preview",
-                state.focus != PaneFocus::Tree,
-                Color::Red,
-                Color::Rgb(20, 18, 22),
-            ),
-            state.focus != PaneFocus::Tree,
-            state.detail_scroll,
-        );
-    } else {
-        render_detail_panel(frame, panes[1], state);
-    }
+    render_detail_panel(frame, panes[1], state);
 
     let footer = Paragraph::new(control_lines(
         state.pending_delete.is_some(),
@@ -98,6 +80,17 @@ pub(crate) fn render_dashboard_browser_frame(frame: &mut ratatui::Frame, state: 
     .style(Style::default().bg(Color::Rgb(16, 22, 30)).fg(Color::White));
     frame.render_widget(footer, outer[2]);
 
+    if let Some(plan) = state.pending_delete.as_ref() {
+        tui_shell::render_overlay(
+            frame,
+            "Delete Preview",
+            render_delete_dry_run_text(plan)
+                .into_iter()
+                .map(Line::from)
+                .collect(),
+            Color::Red,
+        );
+    }
     if let Some(edit_state) = state.pending_edit.as_ref() {
         edit_state.render(frame);
     }
@@ -180,16 +173,6 @@ fn build_tree_items(nodes: &[DashboardBrowseNode]) -> Vec<ListItem<'_>> {
         rendered.push(ListItem::new(line));
     }
     rendered
-}
-
-fn build_detail_lines(state: &BrowserState) -> Vec<String> {
-    match state.pending_delete.as_ref() {
-        Some(plan) => render_delete_dry_run_text(plan),
-        None => state
-            .selected_node()
-            .map(|node| detail_lines_for_node(node, &state.live_view_cache))
-            .unwrap_or_else(|| vec!["No item selected.".to_string()]),
-    }
 }
 
 fn render_detail_panel(
@@ -427,6 +410,11 @@ fn render_summary_lines(document: &DashboardBrowseDocument, status: &str) -> Vec
                     .as_deref()
                     .unwrap_or("all folders")
             )
+        },
+        if status.contains("Previewing") {
+            "Mode=confirm-delete   Confirm with y, cancel with Esc.".to_string()
+        } else {
+            "Mode=browse".to_string()
         },
         status.to_string(),
     ]

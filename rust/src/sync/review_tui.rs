@@ -149,7 +149,7 @@ pub(crate) fn run_sync_review_tui(plan: &Value) -> Result<Value> {
                 .constraints([
                     Constraint::Length(5),
                     Constraint::Min(1),
-                    Constraint::Length(4),
+                    Constraint::Length(if diff_mode { 0 } else { 4 }),
                     Constraint::Length(4),
                 ])
                 .split(frame.area());
@@ -249,32 +249,6 @@ pub(crate) fn run_sync_review_tui(plan: &Value) -> Result<Value> {
                     frame.render_stateful_widget(live, panes[0], &mut live_state);
                     frame.render_stateful_widget(desired, panes[1], &mut desired_state);
                 }
-                let preview = Paragraph::new(
-                    selected_item
-                        .map(operation_preview)
-                        .unwrap_or_else(|| vec!["No operation selected".to_string()])
-                        .join("\n"),
-                )
-                .block(
-                    Block::default()
-                        .borders(Borders::ALL)
-                        .title(selection_title_with_position(
-                            selected_item,
-                            state.selected(),
-                            Some(items.len()),
-                        ))
-                        .border_style(
-                            Style::default().fg(selected_item
-                                .and_then(|item| {
-                                    item.operation
-                                        .get("action")
-                                        .and_then(Value::as_str)
-                                        .map(operation_badge_color)
-                                })
-                                .unwrap_or(Color::Gray)),
-                        ),
-                );
-                frame.render_widget(preview, outer[2]);
                 frame.render_widget(
                     tui_shell::build_footer(
                         build_diff_controls_lines(&DiffControlsState {
@@ -288,9 +262,14 @@ pub(crate) fn run_sync_review_tui(plan: &Value) -> Result<Value> {
                             desired_diff_cursor,
                             desired_horizontal_offset,
                         }),
-                        review_status(true),
+                        selected_item
+                            .map(|item| {
+                                let preview = operation_preview(item).join("   ");
+                                format!("{}   {}", review_status(true), preview)
+                            })
+                            .unwrap_or_else(|| review_status(true)),
                     ),
-                    outer[3],
+                    outer[2],
                 );
             } else {
                 let list_items = items
