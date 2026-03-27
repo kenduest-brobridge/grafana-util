@@ -11,6 +11,11 @@ use crate::common::{message, Result};
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
+#[cfg(feature = "tui")]
+use reqwest::Method;
+#[cfg(feature = "tui")]
+use serde_json::Value;
+
 #[allow(unused_imports)]
 pub(crate) use super::import_compare::diff_dashboards_with_request;
 #[cfg(test)]
@@ -55,12 +60,23 @@ pub(crate) fn dashboard_files_for_import(import_dir: &Path) -> Result<Vec<PathBu
 }
 
 fn selected_dashboard_files(
+    #[cfg(feature = "tui")] request_json: &mut impl FnMut(
+        Method,
+        &str,
+        &[(String, String)],
+        Option<&Value>,
+    ) -> Result<Option<Value>>,
+    #[cfg(feature = "tui")] lookup_cache: &mut super::import_lookup::ImportLookupCache,
     args: &super::ImportArgs,
     dashboard_files: Vec<PathBuf>,
 ) -> Result<Option<Vec<PathBuf>>> {
     #[cfg(feature = "tui")]
     {
-        let Some(selected_files) = super::import_interactive::select_import_dashboard_files(args)?
+        let Some(selected_files) = super::import_interactive::select_import_dashboard_files(
+            request_json,
+            lookup_cache,
+            args,
+        )?
         else {
             return Ok(None);
         };
@@ -81,6 +97,7 @@ fn selected_dashboard_files(
         if args.interactive {
             return super::tui_not_built("import --interactive");
         }
+        let _ = args;
         let _ = dashboard_files;
         Ok(None)
     }

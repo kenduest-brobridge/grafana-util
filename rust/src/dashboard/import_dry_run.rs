@@ -67,9 +67,13 @@ where
         .map(|item| (item.uid.clone(), item))
         .collect();
     let discovered_dashboard_files = super::dashboard_files_for_import(&args.import_dir)?;
-    let dashboard_files =
-        super::selected_dashboard_files(args, discovered_dashboard_files.clone())?
-            .unwrap_or(discovered_dashboard_files);
+    let dashboard_files = super::selected_dashboard_files(
+        &mut request_json,
+        &mut lookup_cache,
+        args,
+        discovered_dashboard_files.clone(),
+    )?
+    .unwrap_or(discovered_dashboard_files);
     let effective_replace_existing = args.replace_existing || args.update_existing_only;
     let mut dashboard_records: Vec<[String; 8]> = Vec::new();
     for dashboard_file in &dashboard_files {

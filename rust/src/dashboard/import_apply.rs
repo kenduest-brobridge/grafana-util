@@ -127,15 +127,19 @@ where
         )?;
     }
     let discovered_dashboard_files = super::dashboard_files_for_import(&args.import_dir)?;
-    let dashboard_files =
-        match super::selected_dashboard_files(args, discovered_dashboard_files.clone())? {
-            Some(selected) => selected,
-            None if args.interactive => {
-                println!("Import cancelled.");
-                return Ok(0);
-            }
-            None => discovered_dashboard_files,
-        };
+    let dashboard_files = match super::selected_dashboard_files(
+        &mut request_json,
+        &mut lookup_cache,
+        args,
+        discovered_dashboard_files.clone(),
+    )? {
+        Some(selected) => selected,
+        None if args.interactive => {
+            println!("Import cancelled.");
+            return Ok(0);
+        }
+        None => discovered_dashboard_files,
+    };
     let total = dashboard_files.len();
     let effective_replace_existing = args.replace_existing || args.update_existing_only;
     let mut dry_run_records: Vec<[String; 8]> = Vec::new();

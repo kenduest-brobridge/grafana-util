@@ -341,6 +341,23 @@ fn parse_cli_supports_import_interactive_flag() {
 }
 
 #[test]
+fn import_help_mentions_interactive_review_picker() {
+    use clap::CommandFactory;
+
+    let mut help = Vec::new();
+    let mut command = DashboardCliArgs::command();
+    command
+        .find_subcommand_mut("import")
+        .unwrap()
+        .write_long_help(&mut help)
+        .unwrap();
+    let rendered = String::from_utf8(help).unwrap();
+
+    assert!(rendered.contains("interactive review picker"));
+    assert!(rendered.contains("create/update/skip action"));
+}
+
+#[test]
 fn parse_cli_supports_import_dry_run_json_flag() {
     let args = parse_cli_from([
         "grafana-util",

@@ -13,6 +13,20 @@ Current AI-maintained status only.
 - Current Update: aligned browse summaries and footers around `Mode=...`, `active-pane=...`, `next pane`, `previous pane`, `search`, `next match`, and consistent confirm-delete or cancel wording.
 - Result: the browse surfaces now read more like one Rust operator console even though their row models and actions remain domain-specific.
 
+## 2026-03-28 - Interactive dashboard import review workbench
+- State: Done
+- Scope: `rust/src/dashboard/import.rs`, `rust/src/dashboard/import_apply.rs`, `rust/src/dashboard/import_dry_run.rs`, `rust/src/dashboard/import_interactive.rs`, `rust/src/dashboard/cli_defs_command.rs`, focused dashboard import parser/workflow tests
+- Baseline: `dashboard import --interactive` only opened a local file picker. It could choose which raw dashboard files to import, but it could not preview the create/update/skip outcome for the focused item and it had no grouping or review state beyond selected/unselected.
+- Current Update: rewired interactive import through the existing live dry-run/import lookup path, added on-focus review resolution with cached results, introduced folder/action/flat grouping, surfaced per-item `PENDING/CREATE/UPDATE/SKIP/BLOCKED` badges plus detail-pane review context, and updated the CLI help to describe the new review-first behavior.
+- Result: `dashboard import --interactive` is now a review-first import workbench that keeps the same entrypoint and final import boundary while reusing the existing import decision semantics instead of inventing a second engine.
+
+## 2026-03-28 - Interactive dashboard import summary and diff review
+- State: Done
+- Scope: `rust/src/dashboard/import_interactive.rs`, `rust/src/dashboard/dashboard_browse_workflow_rust_tests.rs`
+- Baseline: the new interactive import workbench already resolved per-item review state and grouping, but it still behaved more like a reviewed picker than a true operator review surface because it lacked overall action summaries, focused group context, and any lightweight comparison against the live dashboard shape.
+- Current Update: added overall review/action counts plus focused group summaries to the import header, and extended focused review state with a compact live diff summary for existing dashboards covering title, folder UID, tags, and panel-count changes.
+- Result: interactive dashboard import now feels more like a real review workspace: operators can see batch state at a glance, understand the current group context, and inspect a focused dashboard's live-vs-import delta without leaving the import flow.
+
 ## 2026-03-28 - Sync review TUI interaction grammar alignment
 - State: Done
 - Scope: `rust/src/sync/review_tui.rs`, `rust/src/sync/review_tui_helpers.rs`, `rust/src/sync/cli_review_tui_rust_tests.rs`

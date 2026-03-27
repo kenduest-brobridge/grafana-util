@@ -14,6 +14,22 @@ Current AI change log only.
 - Rollback/Risk: low. This changes operator-facing wording only and keeps browse state, input handling, and destructive behavior unchanged.
 - Follow-up: none.
 
+## 2026-03-28 - Interactive dashboard import review workbench
+- Summary: upgraded `dashboard import --interactive` from a local file picker into a review-first TUI that reuses the existing import dry-run/import lookup semantics for the focused dashboard. The workbench now resolves review state on focus, caches create/update/skip/block outcomes, exposes folder/action/flat grouping, and keeps `Enter` as the direct import boundary for the selected files.
+- Tests: extended focused dashboard import workflow tests for grouping and on-focus review resolution, and added a parser/help regression for the updated `--interactive` wording.
+- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all` passed; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_browse_workflow_rust_tests` passed; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_cli_parser_help_rust_tests` passed; `cargo test --manifest-path rust/Cargo.toml --quiet import_edge_dry_run_preflight_rust_tests` passed; `cargo test --manifest-path rust/Cargo.toml --quiet import_edge_dry_run_update_existing_rust_tests` passed; `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings` passed.
+- Impact: `rust/src/dashboard/import.rs`, `rust/src/dashboard/import_apply.rs`, `rust/src/dashboard/import_dry_run.rs`, `rust/src/dashboard/import_interactive.rs`, `rust/src/dashboard/cli_defs_command.rs`, `rust/src/dashboard/dashboard_browse_workflow_rust_tests.rs`, `rust/src/dashboard/dashboard_cli_parser_help_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: moderate. The CLI entrypoint and final import boundary are unchanged, but interactive import now performs live review lookups while the TUI is open, so future changes to import semantics should keep the review helper and non-interactive import path aligned.
+- Follow-up: a later phase can add a dedicated promotion-style review artifact or diff-aware live-vs-import panes, but this pass intentionally stops at review-then-import.
+
+## 2026-03-28 - Interactive dashboard import summary and diff review
+- Summary: extended the new interactive import workbench with operator-facing review summaries and a lightweight focused live diff. The header now shows pending/reviewed/create/update/skip/block counts plus the current folder/action group summary, and the review pane now shows a compact live-vs-import delta for existing dashboards instead of only the resolved action badge.
+- Tests: expanded the focused dashboard import workflow regression to cover summary counting and changed-live diff summaries in addition to the existing on-focus review cases.
+- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all` passed; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_browse_workflow_rust_tests` passed; `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings` passed.
+- Impact: `rust/src/dashboard/import_interactive.rs`, `rust/src/dashboard/dashboard_browse_workflow_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: low-to-moderate. This keeps the same review-then-import boundary, but it adds more operator-facing review text and focused live fetch usage, so revert if the import TUI needs to stay narrower or if the compact diff summary should move to a different pane later.
+- Follow-up: if this surface grows further, the next step should be a dedicated import-review document/model rather than piling more semantics into one renderer.
+
 ## 2026-03-28 - Inspect workbench modal state split
 - Summary: extracted the inspect workbench search prompt, repeat-search memory, and full-detail viewer fields into a dedicated `InspectWorkbenchModalState` helper, then rewired the workbench input loop and modal renderer to read through the nested modal state instead of the flattened top-level fields.
 - Tests: added a focused repeat-search regression alongside the existing inspect workbench state coverage.
