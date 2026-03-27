@@ -102,6 +102,17 @@ fn build_sync_promotion_preflight_document_reports_direct_mapped_and_missing_ref
         document["mappingSummary"]["targetEnvironment"],
         json!("prod")
     );
+    assert_eq!(document["checkSummary"]["folderRemapCount"], json!(1));
+    assert_eq!(
+        document["checkSummary"]["datasourceUidRemapCount"],
+        json!(2)
+    );
+    assert_eq!(
+        document["checkSummary"]["datasourceNameRemapCount"],
+        json!(2)
+    );
+    assert_eq!(document["checkSummary"]["mappedCount"], json!(3));
+    assert_eq!(document["checkSummary"]["missingTargetCount"], json!(2));
     assert!(document["checks"]
         .as_array()
         .unwrap()
@@ -160,6 +171,14 @@ fn render_sync_promotion_preflight_text_renders_summary_and_bundle_context() {
             "datasourceUidMappingCount": 1,
             "datasourceNameMappingCount": 0
         },
+        "checkSummary": {
+            "folderRemapCount": 1,
+            "datasourceUidRemapCount": 0,
+            "datasourceNameRemapCount": 0,
+            "directCount": 0,
+            "mappedCount": 1,
+            "missingTargetCount": 0
+        },
         "checks": [{
             "kind": "folder-remap",
             "identity": "cpu-main",
@@ -192,6 +211,8 @@ fn render_sync_promotion_preflight_text_renders_summary_and_bundle_context() {
     assert!(output.contains("missing-mappings=1"));
     assert!(output.contains("source-env=staging"));
     assert!(output.contains("target-env=prod"));
+    assert!(output.contains("folder-remaps=1"));
+    assert!(output.contains("mapped=1"));
     assert!(output.contains("folders=1"));
     assert!(output.contains("promotion stays blocked"));
     assert!(output.contains("resolution=explicit-map"));

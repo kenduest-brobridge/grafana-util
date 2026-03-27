@@ -32,6 +32,17 @@ pub struct SyncPromotionPreflightSummary {
     pub blocking_count: i64,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase", default)]
+struct PromotionCheckSummary {
+    folder_remap_count: i64,
+    datasource_uid_remap_count: i64,
+    datasource_name_remap_count: i64,
+    direct_count: i64,
+    mapped_count: i64,
+    missing_target_count: i64,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct PromotionCheck {
     kind: String,
@@ -55,6 +66,33 @@ impl SyncPromotionPreflightSummary {
                 "Sync promotion preflight summary is invalid: {error}"
             ))
         })
+    }
+}
+
+fn summarize_promotion_checks(checks: &[PromotionCheck]) -> PromotionCheckSummary {
+    PromotionCheckSummary {
+        folder_remap_count: checks
+            .iter()
+            .filter(|item| item.kind == "folder-remap")
+            .count() as i64,
+        datasource_uid_remap_count: checks
+            .iter()
+            .filter(|item| {
+                item.kind == "datasource-uid-remap" || item.kind == "alert-datasource-uid-remap"
+            })
+            .count() as i64,
+        datasource_name_remap_count: checks
+            .iter()
+            .filter(|item| {
+                item.kind == "datasource-name-remap" || item.kind == "alert-datasource-name-remap"
+            })
+            .count() as i64,
+        direct_count: checks.iter().filter(|item| item.status == "direct").count() as i64,
+        mapped_count: checks.iter().filter(|item| item.status == "mapped").count() as i64,
+        missing_target_count: checks
+            .iter()
+            .filter(|item| item.status == "missing-target")
+            .count() as i64,
     }
 }
 
@@ -405,6 +443,7 @@ pub fn build_sync_promotion_preflight_document(
     let direct_match_count = checks.iter().filter(|item| item.status == "direct").count() as i64;
     let mapped_count = checks.iter().filter(|item| item.status == "mapped").count() as i64;
     let missing_mapping_count = checks.iter().filter(|item| item.blocking).count() as i64;
+    let check_summary = summarize_promotion_checks(&checks);
     let bundle_summary = require_sync_bundle_preflight_summary(&bundle_preflight)?;
     let bundle_blocking_count = bundle_summary.sync_blocking_count
         + bundle_summary.provider_blocking_count
@@ -436,6 +475,7 @@ pub fn build_sync_promotion_preflight_document(
             "datasourceUidMappingCount": datasource_uid_mapping.len(),
             "datasourceNameMappingCount": datasource_name_mapping.len(),
         },
+        "checkSummary": serde_json::to_value(check_summary)?,
         "checks": checks.iter().map(|item| serde_json::json!({
             "kind": item.kind,
             "identity": item.identity,
@@ -460,6 +500,11 @@ pub fn render_sync_promotion_preflight_text(document: &Value) -> Result<Vec<Stri
     let mapping_summary = require_json_object_field(
         require_json_object(document, "Sync promotion preflight document")?,
         "mappingSummary",
+        "Sync promotion preflight document",
+    )?;
+    let check_summary = require_json_object_field(
+        require_json_object(document, "Sync promotion preflight document")?,
+        "checkSummary",
         "Sync promotion preflight document",
     )?;
     let bundle_preflight = document
@@ -492,6 +537,33 @@ pub fn render_sync_promotion_preflight_text(document: &Value) -> Result<Vec<Stri
                 .unwrap_or(0),
             mapping_summary
                 .get("datasourceNameMappingCount")
+                .and_then(Value::as_i64)
+                .unwrap_or(0),
+        ),
+        format!(
+            "Check buckets: folder-remaps={} datasource-uid-remaps={} datasource-name-remaps={} direct={} mapped={} missing-target={}",
+            check_summary
+                .get("folderRemapCount")
+                .and_then(Value::as_i64)
+                .unwrap_or(0),
+            check_summary
+                .get("datasourceUidRemapCount")
+                .and_then(Value::as_i64)
+                .unwrap_or(0),
+            check_summary
+                .get("datasourceNameRemapCount")
+                .and_then(Value::as_i64)
+                .unwrap_or(0),
+            check_summary
+                .get("directCount")
+                .and_then(Value::as_i64)
+                .unwrap_or(0),
+            check_summary
+                .get("mappedCount")
+                .and_then(Value::as_i64)
+                .unwrap_or(0),
+            check_summary
+                .get("missingTargetCount")
                 .and_then(Value::as_i64)
                 .unwrap_or(0),
         ),
