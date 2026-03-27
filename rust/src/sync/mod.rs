@@ -530,12 +530,16 @@ pub(crate) use json::{
 pub(crate) use live::{
     execute_live_apply, fetch_live_availability, fetch_live_resource_specs, merge_availability,
 };
+// Lineage helpers stay separate from staged document mutation helpers so the
+// review/apply flow is easy to trace at the call site.
 pub(crate) use staged_documents::{
     attach_apply_audit, attach_bundle_preflight_summary, attach_lineage, attach_preflight_summary,
     attach_review_audit, attach_trace_id, mark_plan_reviewed, require_matching_optional_trace_id,
     require_optional_stage, require_trace_id, validate_apply_bundle_preflight,
     validate_apply_preflight,
 };
+// Renderers remain public because the CLI and tests consume their stable text
+// output directly.
 pub use staged_documents::{
     render_alert_sync_assessment_text, render_sync_apply_intent_text, render_sync_plan_text,
     render_sync_summary_text,

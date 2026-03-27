@@ -47,6 +47,19 @@ fn load_sync_merged_availability(
     }
 }
 
+fn build_sync_review_document(
+    reviewed_plan_input: &Value,
+    review_token: &str,
+    trace_id: &str,
+    reviewed_by: Option<&str>,
+    reviewed_at: Option<&str>,
+    review_note: Option<&str>,
+) -> Result<Value> {
+    let document = mark_plan_reviewed(reviewed_plan_input, review_token)?;
+    let document = attach_review_audit(&document, trace_id, reviewed_by, reviewed_at, review_note)?;
+    attach_lineage(&document, "review", 2, Some(trace_id))
+}
+
 fn build_sync_apply_document(
     args: &SyncApplyArgs,
     plan: &Value,
@@ -54,28 +67,19 @@ fn build_sync_apply_document(
     bundle_preflight_summary: Option<Value>,
     trace_id: &str,
 ) -> Result<Value> {
-    attach_lineage(
-        &attach_trace_id(
-            &attach_apply_audit(
-                &attach_bundle_preflight_summary(
-                    &attach_preflight_summary(
-                        &build_sync_apply_intent_document(plan, args.approve)?,
-                        preflight_summary,
-                    )?,
-                    bundle_preflight_summary,
-                )?,
-                trace_id,
-                args.applied_by.as_deref(),
-                args.applied_at.as_deref(),
-                args.approval_reason.as_deref(),
-                args.apply_note.as_deref(),
-            )?,
-            Some(trace_id),
-        )?,
-        "apply",
-        3,
-        Some(trace_id),
-    )
+    let document = build_sync_apply_intent_document(plan, args.approve)?;
+    let document = attach_preflight_summary(&document, preflight_summary)?;
+    let document = attach_bundle_preflight_summary(&document, bundle_preflight_summary)?;
+    let document = attach_apply_audit(
+        &document,
+        trace_id,
+        args.applied_by.as_deref(),
+        args.applied_at.as_deref(),
+        args.approval_reason.as_deref(),
+        args.apply_note.as_deref(),
+    )?;
+    let document = attach_trace_id(&document, Some(trace_id))?;
+    attach_lineage(&document, "apply", 3, Some(trace_id))
 }
 
 fn load_sync_apply_preflight_summary(
@@ -272,17 +276,13 @@ fn run_sync_review(args: SyncReviewArgs) -> Result<()> {
     } else {
         plan
     };
-    let document = attach_lineage(
-        &attach_review_audit(
-            &mark_plan_reviewed(&reviewed_plan_input, &args.review_token)?,
-            &trace_id,
-            args.reviewed_by.as_deref(),
-            args.reviewed_at.as_deref(),
-            args.review_note.as_deref(),
-        )?,
-        "review",
-        2,
-        Some(&trace_id),
+    let document = build_sync_review_document(
+        &reviewed_plan_input,
+        &args.review_token,
+        &trace_id,
+        args.reviewed_by.as_deref(),
+        args.reviewed_at.as_deref(),
+        args.review_note.as_deref(),
     )?;
     emit_text_or_json(&document, render_sync_plan_text(&document)?, args.output)
 }

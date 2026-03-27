@@ -6,6 +6,27 @@ Current AI change log only.
 - Detailed 2026-03-27 entries moved to [`archive/ai-changes-archive-2026-03-27.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-03-27.md).
 - Keep this file limited to the latest active architecture and maintenance changes.
 
+## 2026-03-27 - Sync staged/live boundary split
+- Summary: split staged review/apply/preflight helper ownership out of `rust/src/sync/staged_documents.rs` into `rust/src/sync/staged_documents_apply.rs`, trimmed `rust/src/sync/staged_documents_render.rs` back to rendering and drift display, and moved live apply-intent parsing from `rust/src/sync/live_apply.rs` into `rust/src/sync/live_intent.rs`.
+- Tests: existing sync CLI, staged document, and live-apply coverage were reused; no new behavior-specific tests were needed for this boundary-only refactor.
+- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all --check` passed; `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings` passed; `cargo test --manifest-path rust/Cargo.toml --quiet sync` passed with 123 sync tests.
+- Impact: `rust/src/sync/cli.rs`, `rust/src/sync/live.rs`, `rust/src/sync/live_apply.rs`, `rust/src/sync/live_intent.rs`, `rust/src/sync/mod.rs`, `rust/src/sync/staged_documents.rs`, `rust/src/sync/staged_documents_apply.rs`, `rust/src/sync/staged_documents_render.rs`
+- Rollback/Risk: the public sync behavior should remain stable; revert the helper splits if module visibility or staged helper reexports need to be collapsed again.
+- Follow-up: none.
+
+## 2026-03-27 - Unified CLI help/example source split
+- Summary: moved the unified root help/example blocks and help-label color table out of `rust/src/cli.rs` into a dedicated `rust/src/cli_help_examples.rs` helper so the dispatcher stays focused on rendering and routing.
+- Validation: `cargo fmt --manifest-path rust/Cargo.toml --all`; `cargo test --quiet unified_help`
+- Test Run: passed, with 7 unified help-focused tests.
+- Impact: `rust/src/cli.rs`, `rust/src/cli_help_examples.rs`, `rust/src/lib.rs`, `rust/src/cli_rust_tests.rs`
+- Rollback/Risk: the user-facing help text should stay the same; revert the helper extraction if rendered help output changes unexpectedly.
+
+## 2026-03-27 - Dashboard dependency report human-readable output
+- Summary: enriched the offline dependency contract with typed datasource usage and orphan records, then split `InspectExportReportFormat::Dependency` onto a table-style text renderer while keeping `DependencyJson` as pretty JSON.
+- Validation: focused dependency/inspect tests are pending; full validation will run after the code settles.
+- Impact: `rust/src/dashboard_inspection_dependency_contract.rs`, `rust/src/dashboard/inspect_output.rs`, focused dashboard inspect regression tests
+- Rollback/Risk: dependency JSON shape now carries richer objects for orphaned datasources and added datasource UID/type fields in usage rows; revert the render split if downstream text expectations need to be restored.
+
 ## 2026-03-27 - Current Change Summary
 - Summary: archived the older detailed AI trace entries and reset the top-level AI docs to short current-only summaries.
 - Validation: confirmed the new archive files exist and the current AI docs now point at both archive generations.
