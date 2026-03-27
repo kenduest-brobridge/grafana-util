@@ -26,6 +26,7 @@ pub(crate) const DATASOURCE_CONTRACT_FIELDS: &[&str] = &[
     "isDefault",
     "org",
     "orgId",
+    "secureJsonDataPlaceholders",
 ];
 
 #[derive(Debug, Clone)]
@@ -47,6 +48,7 @@ pub(crate) struct DatasourceImportRecord {
     pub url: String,
     pub is_default: bool,
     pub org_id: String,
+    pub secure_json_data_placeholders: Option<Map<String, Value>>,
 }
 
 #[derive(Debug, Clone)]
@@ -186,6 +188,10 @@ pub(crate) fn load_import_records(
             url: string_field(object, "url", ""),
             is_default: string_field(object, "isDefault", "false") == "true",
             org_id: string_field(object, "orgId", ""),
+            secure_json_data_placeholders: object
+                .get("secureJsonDataPlaceholders")
+                .and_then(Value::as_object)
+                .cloned(),
         });
     }
     Ok((metadata, records))

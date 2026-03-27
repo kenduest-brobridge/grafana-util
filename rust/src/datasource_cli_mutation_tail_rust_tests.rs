@@ -44,6 +44,8 @@ fn modify_help_explains_live_mutation_flags() {
     assert!(help.contains("--server-name"));
     assert!(help.contains("--json-data"));
     assert!(help.contains("--secure-json-data"));
+    assert!(help.contains("--secure-json-data-placeholders"));
+    assert!(help.contains("--secret-values"));
     assert!(help.contains("--dry-run"));
     assert!(help.contains("Examples:"));
 }
@@ -362,6 +364,7 @@ fn resolve_match_marks_multiple_name_matches_as_ambiguous() {
         url: "http://prometheus:9090".to_string(),
         is_default: true,
         org_id: "1".to_string(),
+        secure_json_data_placeholders: None,
     };
     let live = vec![
         live_datasource(1, "prom-a", "Prometheus Main", "prometheus"),
@@ -418,6 +421,7 @@ fn resolve_match_allows_update_when_uid_exists_and_replace_existing_is_enabled()
         url: "http://prometheus:9090".to_string(),
         is_default: true,
         org_id: "1".to_string(),
+        secure_json_data_placeholders: None,
     };
     let live = vec![live_datasource(
         9,
@@ -444,6 +448,7 @@ fn resolve_match_blocks_name_match_when_uid_differs() {
         url: "http://prometheus:9090".to_string(),
         is_default: true,
         org_id: "1".to_string(),
+        secure_json_data_placeholders: None,
     };
     let live = vec![live_datasource(
         9,

@@ -208,6 +208,11 @@ pub struct DatasourceImportArgs {
     pub update_existing_only: bool,
     #[arg(
         long,
+        help = "Inline JSON object string mapping datasource secret placeholder names to resolved secret values for live import."
+    )]
+    pub secret_values: Option<String>,
+    #[arg(
+        long,
         default_value_t = false,
         help = "Preview what datasource import would do without changing Grafana."
     )]
@@ -358,6 +363,16 @@ pub struct DatasourceAddArgs {
         help = "Inline JSON object string for datasource secureJsonData."
     )]
     pub secure_json_data: Option<String>,
+    #[arg(
+        long,
+        help = "Inline JSON object string mapping secureJsonData field names to ${secret:...} placeholders."
+    )]
+    pub secure_json_data_placeholders: Option<String>,
+    #[arg(
+        long,
+        help = "Inline JSON object string mapping secret placeholder names to resolved secret values for add."
+    )]
+    pub secret_values: Option<String>,
     #[arg(
         long,
         default_value_t = false,
@@ -516,6 +531,16 @@ pub struct DatasourceModifyArgs {
         help = "Inline JSON object string to send in datasource secureJsonData."
     )]
     pub secure_json_data: Option<String>,
+    #[arg(
+        long,
+        help = "Inline JSON object string mapping secureJsonData field names to ${secret:...} placeholders."
+    )]
+    pub secure_json_data_placeholders: Option<String>,
+    #[arg(
+        long,
+        help = "Inline JSON object string mapping secret placeholder names to resolved secret values for modify."
+    )]
+    pub secret_values: Option<String>,
     #[arg(
         long,
         default_value_t = false,

@@ -108,6 +108,38 @@ pub fn iter_secret_placeholder_names(
     })
 }
 
+/// resolve secret placeholders.
+pub fn resolve_secret_placeholders(
+    placeholders: &[SecretPlaceholderReference],
+    provided_secrets: &Map<String, Value>,
+) -> Result<Map<String, Value>> {
+    let mut resolved = Map::new();
+    for placeholder in placeholders {
+        let secret_value = provided_secrets
+            .get(&placeholder.placeholder_name)
+            .ok_or_else(|| {
+                message(format!(
+                    "Missing datasource secret placeholder '{}'.",
+                    placeholder.placeholder_name
+                ))
+            })?
+            .as_str()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .ok_or_else(|| {
+                message(format!(
+                    "Resolved datasource secret '{}' must be a non-empty string.",
+                    placeholder.placeholder_name
+                ))
+            })?;
+        resolved.insert(
+            placeholder.field_name.clone(),
+            Value::String(secret_value.to_string()),
+        );
+    }
+    Ok(resolved)
+}
+
 /// build secret placeholder plan.
 pub fn build_secret_placeholder_plan(
     datasource_spec: &Map<String, Value>,

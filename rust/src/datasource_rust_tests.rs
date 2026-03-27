@@ -2,11 +2,12 @@
 //! Exercises parsing + import/export/diff helpers, including mocked datasource matching
 //! and contract fixtures.
 use super::{
-    build_add_payload, build_import_payload, build_modify_payload, build_modify_updates,
-    parse_json_object_argument, render_data_source_csv, render_data_source_json,
-    render_data_source_table, render_import_table, render_live_mutation_json,
-    render_live_mutation_table, resolve_delete_match, resolve_live_mutation_match, resolve_match,
-    CommonCliArgs, DatasourceCliArgs, DatasourceImportRecord,
+    build_add_payload, build_import_payload, build_import_payload_with_secret_values,
+    build_modify_payload, build_modify_updates, parse_json_object_argument, render_data_source_csv,
+    render_data_source_json, render_data_source_table, render_import_table,
+    render_live_mutation_json, render_live_mutation_table, resolve_delete_match,
+    resolve_live_mutation_match, resolve_match, CommonCliArgs, DatasourceCliArgs,
+    DatasourceImportRecord,
 };
 use crate::datasource_catalog::render_supported_datasource_catalog_json;
 use clap::{CommandFactory, Parser};
@@ -311,6 +312,28 @@ fn parse_datasource_import_supports_use_export_org_flags() {
 }
 
 #[test]
+fn parse_datasource_import_supports_secret_values_argument() {
+    let args = DatasourceCliArgs::parse_normalized_from([
+        "grafana-util",
+        "import",
+        "--import-dir",
+        "./datasources",
+        "--secret-values",
+        r#"{"loki-basic-auth":"secret-value"}"#,
+    ]);
+
+    match args.command {
+        super::DatasourceGroupCommand::Import(inner) => {
+            assert_eq!(
+                inner.secret_values.as_deref(),
+                Some(r#"{"loki-basic-auth":"secret-value"}"#)
+            );
+        }
+        _ => panic!("expected datasource import"),
+    }
+}
+
+#[test]
 fn parse_datasource_import_rejects_org_id_with_use_export_org() {
     let error = DatasourceCliArgs::try_parse_from([
         "grafana-util",
@@ -368,6 +391,7 @@ fn build_import_payload_matches_shared_contract_fixtures() {
                 .and_then(Value::as_str)
                 .unwrap()
                 .to_string(),
+            secure_json_data_placeholders: None,
         };
 
         assert_eq!(build_import_payload(&record), expected_payload);
@@ -477,6 +501,121 @@ fn build_add_payload_supports_datasource_auth_and_header_flags() {
         payload["secureJsonData"]["httpHeaderValue1"],
         json!("tenant-a")
     );
+}
+
+#[test]
+fn build_add_payload_resolves_secret_placeholders_into_secure_json_data() {
+    let args = DatasourceCliArgs::parse_normalized_from([
+        "grafana-util",
+        "add",
+        "--uid",
+        "loki-main",
+        "--name",
+        "Loki Main",
+        "--type",
+        "loki",
+        "--secure-json-data-placeholders",
+        r#"{"basicAuthPassword":"${secret:loki-basic-auth}","httpHeaderValue1":"${secret:loki-tenant-token}"}"#,
+        "--secret-values",
+        r#"{"loki-basic-auth":"secret-value","loki-tenant-token":"tenant-token"}"#,
+    ]);
+    let add_args = match args.command {
+        super::DatasourceGroupCommand::Add(inner) => inner,
+        _ => panic!("expected datasource add"),
+    };
+
+    let payload = build_add_payload(&add_args).unwrap();
+
+    assert_eq!(
+        payload["secureJsonData"]["basicAuthPassword"],
+        json!("secret-value")
+    );
+    assert_eq!(
+        payload["secureJsonData"]["httpHeaderValue1"],
+        json!("tenant-token")
+    );
+}
+
+#[test]
+fn build_add_payload_rejects_secret_values_without_placeholders() {
+    let args = DatasourceCliArgs::parse_normalized_from([
+        "grafana-util",
+        "add",
+        "--name",
+        "Loki Main",
+        "--type",
+        "loki",
+        "--secret-values",
+        r#"{"loki-basic-auth":"secret-value"}"#,
+    ]);
+    let add_args = match args.command {
+        super::DatasourceGroupCommand::Add(inner) => inner,
+        _ => panic!("expected datasource add"),
+    };
+
+    let error = build_add_payload(&add_args).unwrap_err().to_string();
+    assert!(error.contains("--secret-values requires --secure-json-data-placeholders"));
+}
+
+#[test]
+fn build_import_payload_resolves_secret_placeholders_into_secure_json_data() {
+    let record = DatasourceImportRecord {
+        uid: "loki-main".to_string(),
+        name: "Loki Main".to_string(),
+        datasource_type: "loki".to_string(),
+        access: "proxy".to_string(),
+        url: "http://loki:3100".to_string(),
+        is_default: false,
+        org_id: "1".to_string(),
+        secure_json_data_placeholders: json!({
+            "basicAuthPassword": "${secret:loki-basic-auth}",
+            "httpHeaderValue1": "${secret:loki-tenant-token}"
+        })
+        .as_object()
+        .cloned(),
+    };
+
+    let payload = build_import_payload_with_secret_values(
+        &record,
+        json!({
+            "loki-basic-auth": "secret-value",
+            "loki-tenant-token": "tenant-token"
+        })
+        .as_object(),
+    )
+    .unwrap();
+
+    assert_eq!(
+        payload["secureJsonData"]["basicAuthPassword"],
+        json!("secret-value")
+    );
+    assert_eq!(
+        payload["secureJsonData"]["httpHeaderValue1"],
+        json!("tenant-token")
+    );
+}
+
+#[test]
+fn build_import_payload_rejects_missing_secret_values_for_placeholders() {
+    let record = DatasourceImportRecord {
+        uid: "loki-main".to_string(),
+        name: "Loki Main".to_string(),
+        datasource_type: "loki".to_string(),
+        access: "proxy".to_string(),
+        url: "http://loki:3100".to_string(),
+        is_default: false,
+        org_id: "1".to_string(),
+        secure_json_data_placeholders: json!({
+            "basicAuthPassword": "${secret:loki-basic-auth}"
+        })
+        .as_object()
+        .cloned(),
+    };
+
+    let error = build_import_payload_with_secret_values(&record, None)
+        .unwrap_err()
+        .to_string();
+    assert!(error.contains("requires --secret-values"));
 }
 
 #[test]
@@ -608,6 +747,35 @@ fn build_modify_updates_supports_datasource_auth_and_header_flags() {
     assert_eq!(
         updates["secureJsonData"]["httpHeaderValue1"],
         json!("tenant-b")
+    );
+}
+
+#[test]
+fn build_modify_updates_resolves_secret_placeholders_into_secure_json_data() {
+    let args = DatasourceCliArgs::parse_normalized_from([
+        "grafana-util",
+        "modify",
+        "--uid",
+        "loki-main",
+        "--secure-json-data-placeholders",
+        r#"{"basicAuthPassword":"${secret:loki-basic-auth}","httpHeaderValue1":"${secret:loki-tenant-token}"}"#,
+        "--secret-values",
+        r#"{"loki-basic-auth":"secret-value","loki-tenant-token":"tenant-token"}"#,
+    ]);
+    let modify_args = match args.command {
+        super::DatasourceGroupCommand::Modify(inner) => inner,
+        _ => panic!("expected datasource modify"),
+    };
+
+    let updates = build_modify_updates(&modify_args).unwrap();
+
+    assert_eq!(
+        updates["secureJsonData"]["basicAuthPassword"],
+        json!("secret-value")
+    );
+    assert_eq!(
+        updates["secureJsonData"]["httpHeaderValue1"],
+        json!("tenant-token")
     );
 }
 

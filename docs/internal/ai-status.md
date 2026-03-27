@@ -49,10 +49,11 @@ Current AI-maintained status only.
 - Result: the unified help source is now split across `rust/src/cli.rs` and `rust/src/cli_help_examples.rs`, and focused help rendering tests passed.
 
 ## 2026-03-27 - Dashboard dependency report human-readable output
-- State: In Progress
-- Scope: `rust/src/dashboard_inspection_dependency_contract.rs`, `rust/src/dashboard/inspect_output.rs`, focused dashboard inspect tests
-- Baseline: dependency reporting still rendered `Dependency` and `DependencyJson` through the same pretty-JSON path, and orphaned datasource detail was limited to strings.
-- Current Update: enriching the dependency contract with typed usage/orphan rows and splitting the non-JSON dependency renderer into table-style sections.
+- State: Done
+- Scope: `rust/src/dashboard_inspection_dependency_contract.rs`, `rust/src/dashboard/inspect_output.rs`, `rust/src/dashboard/inspect_dependency_render.rs`, `rust/src/dashboard/inspect_family.rs`, focused dashboard inspect tests
+- Baseline: dependency reporting had richer contract data available, but the dedicated dependency text renderer was still coupled to the broader inspect output module and inspect query reporting still depended on governance-owned family normalization helpers.
+- Current Update: moved dependency table rendering into `inspect_dependency_render.rs`, added focused orphan-cell normalization coverage plus stronger output assertions for dashboard dependency sections, and extracted datasource family normalization into `inspect_family.rs` so the core inspect pipeline no longer reaches into governance internals for that shared helper.
+- Result: the dependency report path is now a clearer inspect-owned subsystem slice with focused tests, the explicit `In Progress` item is closed, and the dashboard inspect path no longer depends on governance for basic family normalization.
 
 ## 2026-03-27 - Current Maintainer State
 - State: Active
@@ -69,5 +70,5 @@ Current AI-maintained status only.
 
 ## 2026-03-27 - Open Follow-Up
 - State: Planned
-- Scope: `rust/src/dashboard/`, `rust/src/datasource.rs`, related dashboard and datasource tests
-- Next Step: shift the next architecture pass toward dashboard subsystem boundaries and fuller datasource secret-handling workflow wiring instead of deeper promotion review artifacts.
+- Scope: `rust/src/dashboard/`, `rust/src/datasource.rs`, `rust/src/datasource_import_export.rs`, `rust/src/lib.rs`, related dashboard and datasource tests
+- Next Step: continue dashboard subsystem boundary cleanup beyond dependency rendering and family normalization, keep narrowing public-vs-internal crate boundaries, and then decide whether datasource secret handling should expand from the now-wired mutation/import contracts into dry-run/preflight visibility or stay mutation-only for now.

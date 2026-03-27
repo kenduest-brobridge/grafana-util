@@ -3,12 +3,13 @@ use std::path::Path;
 use crate::common::Result;
 use crate::dashboard_inspection_dependency_contract::{
     build_offline_dependency_contract_document_from_report_rows,
-    build_offline_dependency_contract_from_report_rows, OfflineDependencyReportDocument,
+    build_offline_dependency_contract_from_report_rows,
 };
 
 use super::{build_export_inspection_summary, RAW_EXPORT_SUBDIR};
 use crate::dashboard::cli_defs::{InspectExportArgs, InspectExportReportFormat};
 use crate::dashboard::files::{load_datasource_inventory, load_export_metadata};
+use crate::dashboard::inspect_dependency_render::render_export_inspection_dependency_table_report;
 use crate::dashboard::inspect_governance::{
     build_export_inspection_governance_document, render_governance_table_report,
     ExportInspectionGovernanceDocument,
@@ -36,29 +37,6 @@ fn render_lines_to_string(lines: Vec<String>) -> String {
     output
 }
 
-fn render_dependency_section(
-    lines: &mut Vec<String>,
-    title: &str,
-    headers: &[&str],
-    rows: &[Vec<String>],
-) {
-    lines.push(String::new());
-    lines.push(title.to_string());
-    if rows.is_empty() {
-        lines.push("(none)".to_string());
-        return;
-    }
-    lines.extend(render_simple_table(headers, rows, true));
-}
-
-fn join_or_none(values: &[String]) -> String {
-    if values.is_empty() {
-        "(none)".to_string()
-    } else {
-        values.join(",")
-    }
-}
-
 fn render_export_inspection_governance_output(
     summary: &ExportInspectionSummary,
     governance: &ExportInspectionGovernanceDocument,
@@ -76,177 +54,6 @@ fn render_export_inspection_governance_output(
         output,
         dashboard_count: summary.dashboard_count,
     })
-}
-
-fn render_export_inspection_dependency_table_report(
-    import_dir: &str,
-    document: &OfflineDependencyReportDocument,
-) -> Vec<String> {
-    let mut lines = vec![
-        format!("Export inspection dependency: {}", import_dir),
-        String::new(),
-    ];
-
-    lines.push("# Summary".to_string());
-    let summary_rows = vec![vec![
-        document
-            .summary
-            .get("queryCount")
-            .and_then(serde_json::Value::as_u64)
-            .unwrap_or(0)
-            .to_string(),
-        document
-            .summary
-            .get("dashboardCount")
-            .and_then(serde_json::Value::as_u64)
-            .unwrap_or(0)
-            .to_string(),
-        document
-            .summary
-            .get("panelCount")
-            .and_then(serde_json::Value::as_u64)
-            .unwrap_or(0)
-            .to_string(),
-        document
-            .summary
-            .get("datasourceCount")
-            .and_then(serde_json::Value::as_u64)
-            .unwrap_or(0)
-            .to_string(),
-        document
-            .summary
-            .get("orphanedDatasourceCount")
-            .and_then(serde_json::Value::as_u64)
-            .unwrap_or(0)
-            .to_string(),
-    ]];
-    lines.extend(render_simple_table(
-        &[
-            "QUERY_COUNT",
-            "DASHBOARD_COUNT",
-            "PANEL_COUNT",
-            "DATASOURCE_COUNT",
-            "ORPHANED_DATASOURCE_COUNT",
-        ],
-        &summary_rows,
-        true,
-    ));
-
-    let usage_rows = document
-        .usage
-        .iter()
-        .map(|item| {
-            vec![
-                item.datasource_identity.clone(),
-                item.datasource_uid.clone(),
-                item.datasource_type.clone(),
-                item.family.clone(),
-                item.query_count.to_string(),
-                item.dashboard_count.to_string(),
-                item.panel_count.to_string(),
-                item.reference_count.to_string(),
-                join_or_none(&item.query_fields),
-            ]
-        })
-        .collect::<Vec<Vec<String>>>();
-    render_dependency_section(
-        &mut lines,
-        "# Datasource usage",
-        &[
-            "DATASOURCE",
-            "UID",
-            "TYPE",
-            "FAMILY",
-            "QUERIES",
-            "DASHBOARDS",
-            "PANELS",
-            "REFS",
-            "QUERY_FIELDS",
-        ],
-        &usage_rows,
-    );
-
-    let dashboard_rows = document
-        .dashboard_dependencies
-        .iter()
-        .map(|item| {
-            vec![
-                item.dashboard_uid.clone(),
-                item.dashboard_title.clone(),
-                item.query_count.to_string(),
-                item.panel_count.to_string(),
-                item.datasource_count.to_string(),
-                item.datasource_family_count.to_string(),
-                join_or_none(&item.query_fields),
-                join_or_none(&item.metrics),
-                join_or_none(&item.functions),
-                join_or_none(&item.measurements),
-                join_or_none(&item.buckets),
-            ]
-        })
-        .collect::<Vec<Vec<String>>>();
-    render_dependency_section(
-        &mut lines,
-        "# Dashboard dependencies",
-        &[
-            "DASHBOARD_UID",
-            "TITLE",
-            "QUERIES",
-            "PANELS",
-            "DATASOURCES",
-            "FAMILIES",
-            "QUERY_FIELDS",
-            "METRICS",
-            "FUNCTIONS",
-            "MEASUREMENTS",
-            "BUCKETS",
-        ],
-        &dashboard_rows,
-    );
-
-    let orphan_rows = document
-        .orphaned
-        .iter()
-        .map(|item| {
-            vec![
-                item.org.clone(),
-                item.org_id.clone(),
-                item.uid.clone(),
-                item.name.clone(),
-                item.datasource_type.clone(),
-                item.family.clone(),
-                item.access.clone(),
-                item.is_default.clone(),
-                item.url.clone(),
-                item.database.clone(),
-                item.default_bucket.clone(),
-                item.organization.clone(),
-                item.index_pattern.clone(),
-            ]
-        })
-        .collect::<Vec<Vec<String>>>();
-    render_dependency_section(
-        &mut lines,
-        "# Orphaned datasources",
-        &[
-            "ORG",
-            "ORG_ID",
-            "UID",
-            "NAME",
-            "TYPE",
-            "FAMILY",
-            "ACCESS",
-            "IS_DEFAULT",
-            "URL",
-            "DATABASE",
-            "DEFAULT_BUCKET",
-            "ORGANIZATION",
-            "INDEX_PATTERN",
-        ],
-        &orphan_rows,
-    );
-
-    lines
 }
 
 fn render_export_inspection_column_report_output(
@@ -501,7 +308,11 @@ mod tests {
             .output
             .starts_with("Export inspection dependency: "));
         assert!(dependency_output.output.contains("# Datasource usage"));
+        assert!(dependency_output
+            .output
+            .contains("# Dashboard dependencies"));
         assert!(dependency_output.output.contains("# Orphaned datasources"));
+        assert!(dependency_output.output.contains("cpu-main"));
         assert!(dependency_output.output.contains("Prometheus Main"));
         assert!(dependency_output.output.contains("Unused Main"));
         assert!(!dependency_output.output.trim_start().starts_with('{'));
@@ -517,6 +328,9 @@ mod tests {
         assert!(dependency_json_output
             .output
             .contains("\"datasourceUid\": \"prom-main\""));
+        assert!(dependency_json_output
+            .output
+            .contains("\"dashboardDependencies\""));
         assert!(dependency_json_output
             .output
             .contains("\"orphanedDatasources\""));

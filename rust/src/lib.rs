@@ -18,8 +18,8 @@ pub(crate) mod cli_help_examples;
 pub mod common;
 /// Dashboard export/import/inspect/screenshot/topology workflows.
 pub mod dashboard;
-/// Public contract types for dashboard dependency inspection documents.
-pub mod dashboard_inspection_dependency_contract;
+/// Internal contract types for dashboard dependency inspection documents.
+pub(crate) mod dashboard_inspection_dependency_contract;
 /// Internal query-feature analysis helpers for dashboard inspection flows.
 pub(crate) mod dashboard_inspection_query_features;
 /// Shared dashboard reference and dependency summary models.

@@ -3,7 +3,7 @@
 ## Purpose
 
 This note tracks the isolated placeholder-based datasource secret scaffold
-before any CLI, bundle, or provider wiring lands.
+before fuller CLI, datasource, or provider wiring lands.
 
 ## Scope
 
@@ -13,6 +13,12 @@ before any CLI, bundle, or provider wiring lands.
   - `python/tests/test_python_datasource_secret_workbench.py`
 
 ## Current Behavior
+
+- Rust status:
+  - Rust now has staged `${secret:...}` placeholder parsing, bundle-preflight
+    blocking, and explicit placeholder resolution helpers.
+  - Rust still does not wire those resolved secrets into datasource import or
+    live mutation workflows.
 
 - `collect_secret_placeholders(...)`
   - Accepts only `${secret:...}` placeholder strings inside
@@ -31,7 +37,8 @@ before any CLI, bundle, or provider wiring lands.
 - No argparse or unified CLI integration yet.
 - No datasource import/live-mutation workflow integration yet.
 - No external secret provider support yet.
-- No Rust parity implementation yet; parity remains a later wire-up concern.
+- Rust resolution is still contract-only and not yet wired into datasource
+  runtime workflows.
 
 ## Future Wire Points
 

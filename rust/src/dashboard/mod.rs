@@ -48,6 +48,8 @@ mod inspect_analyzer_loki;
 mod inspect_analyzer_prometheus;
 mod inspect_analyzer_search;
 mod inspect_analyzer_sql;
+mod inspect_dependency_render;
+mod inspect_family;
 mod inspect_governance;
 mod inspect_live;
 mod inspect_live_tui;

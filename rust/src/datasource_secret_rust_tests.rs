@@ -1,5 +1,6 @@
 use crate::datasource_secret::{
     build_secret_placeholder_plan, collect_secret_placeholders, iter_secret_placeholder_names,
+    resolve_secret_placeholders,
 };
 use serde_json::json;
 
@@ -35,4 +36,69 @@ fn build_secret_placeholder_plan_shapes_review_summary() {
         iter_secret_placeholder_names(&plan.placeholders).collect::<Vec<_>>(),
         vec!["loki-basic-auth", "loki-tenant-token"]
     );
+}
+
+#[test]
+fn resolve_secret_placeholders_fails_closed_on_missing_or_empty_values() {
+    let datasource = json!({
+        "uid": "loki-main",
+        "name": "Loki Main",
+        "type": "loki",
+        "secureJsonDataPlaceholders": {
+            "basicAuthPassword": "${secret:loki-basic-auth}",
+            "httpHeaderValue1": "${secret:loki-tenant-token}"
+        }
+    });
+    let plan = build_secret_placeholder_plan(datasource.as_object().unwrap()).unwrap();
+
+    let missing_error = resolve_secret_placeholders(
+        &plan.placeholders,
+        json!({"loki-basic-auth": "secret-value"})
+            .as_object()
+            .unwrap(),
+    )
+    .unwrap_err()
+    .to_string();
+    assert!(missing_error.contains("Missing datasource secret placeholder 'loki-tenant-token'"));
+
+    let empty_error = resolve_secret_placeholders(
+        &plan.placeholders,
+        json!({
+            "loki-basic-auth": "secret-value",
+            "loki-tenant-token": ""
+        })
+        .as_object()
+        .unwrap(),
+    )
+    .unwrap_err()
+    .to_string();
+    assert!(empty_error.contains("must be a non-empty string"));
+}
+
+#[test]
+fn resolve_secret_placeholders_builds_secure_json_data_map() {
+    let datasource = json!({
+        "uid": "loki-main",
+        "name": "Loki Main",
+        "type": "loki",
+        "secureJsonDataPlaceholders": {
+            "basicAuthPassword": "${secret:loki-basic-auth}",
+            "httpHeaderValue1": "${secret:loki-tenant-token}"
+        }
+    });
+    let plan = build_secret_placeholder_plan(datasource.as_object().unwrap()).unwrap();
+
+    let resolved = resolve_secret_placeholders(
+        &plan.placeholders,
+        json!({
+            "loki-basic-auth": "secret-value",
+            "loki-tenant-token": "tenant-token"
+        })
+        .as_object()
+        .unwrap(),
+    )
+    .unwrap();
+
+    assert_eq!(resolved["basicAuthPassword"], json!("secret-value"));
+    assert_eq!(resolved["httpHeaderValue1"], json!("tenant-token"));
 }

@@ -6,6 +6,7 @@ use crate::dashboard::{
     build_http_client, build_http_client_for_org, list_datasources, DEFAULT_ORG_ID,
 };
 use crate::datasource::{render_import_table, resolve_match, DatasourceImportArgs};
+use crate::datasource_secret::{build_secret_placeholder_plan, resolve_secret_placeholders};
 use crate::http::JsonHttpClient;
 
 #[path = "datasource_export_support.rs"]
@@ -194,8 +195,38 @@ pub(crate) fn print_datasource_import_dry_run_report(
     Ok(())
 }
 
+#[cfg(test)]
 pub(crate) fn build_import_payload(record: &DatasourceImportRecord) -> Value {
-    Value::Object(Map::from_iter(vec![
+    build_import_payload_with_secret_values(record, None)
+        .expect("import payload without secret values should remain valid")
+}
+
+fn parse_secret_values_argument(value: Option<&str>) -> Result<Option<Map<String, Value>>> {
+    let Some(raw) = value else {
+        return Ok(None);
+    };
+    let value: Value = serde_json::from_str(raw)
+        .map_err(|error| message(format!("Invalid JSON for --secret-values: {error}")))?;
+    let object = value
+        .as_object()
+        .cloned()
+        .ok_or_else(|| message("--secret-values must decode to a JSON object."))?;
+    Ok(Some(object))
+}
+
+#[cfg(test)]
+pub(crate) fn build_import_payload_with_secret_values(
+    record: &DatasourceImportRecord,
+    secret_values: Option<&Map<String, Value>>,
+) -> Result<Value> {
+    build_import_payload_with_secret_values_impl(record, secret_values)
+}
+
+fn build_import_payload_with_secret_values_impl(
+    record: &DatasourceImportRecord,
+    secret_values: Option<&Map<String, Value>>,
+) -> Result<Value> {
+    let mut payload = Map::from_iter(vec![
         ("name".to_string(), Value::String(record.name.clone())),
         (
             "type".to_string(),
@@ -205,7 +236,33 @@ pub(crate) fn build_import_payload(record: &DatasourceImportRecord) -> Value {
         ("access".to_string(), Value::String(record.access.clone())),
         ("uid".to_string(), Value::String(record.uid.clone())),
         ("isDefault".to_string(), Value::Bool(record.is_default)),
-    ]))
+    ]);
+    if let Some(placeholders) = &record.secure_json_data_placeholders {
+        let secret_values = secret_values.ok_or_else(|| {
+            message(format!(
+                "Datasource import for '{}' requires --secret-values because secureJsonDataPlaceholders are present.",
+                if record.uid.is_empty() { &record.name } else { &record.uid }
+            ))
+        })?;
+        let datasource_spec = Map::from_iter(vec![
+            ("uid".to_string(), Value::String(record.uid.clone())),
+            ("name".to_string(), Value::String(record.name.clone())),
+            (
+                "type".to_string(),
+                Value::String(record.datasource_type.clone()),
+            ),
+            (
+                "secureJsonDataPlaceholders".to_string(),
+                Value::Object(placeholders.clone()),
+            ),
+        ]);
+        let plan = build_secret_placeholder_plan(&datasource_spec)?;
+        let resolved = resolve_secret_placeholders(&plan.placeholders, secret_values)?;
+        if !resolved.is_empty() {
+            payload.insert("secureJsonData".to_string(), Value::Object(resolved));
+        }
+    }
+    Ok(Value::Object(payload))
 }
 
 pub(crate) fn import_datasources_with_client(
@@ -219,6 +276,7 @@ pub(crate) fn import_datasources_with_client(
     }
     let replace_existing = args.replace_existing || args.update_existing_only;
     let (metadata, records) = load_import_records(&args.import_dir)?;
+    let secret_values = parse_secret_values_argument(args.secret_values.as_deref())?;
     validate_matching_export_org(client, args, &args.import_dir, &metadata)?;
     let live = list_datasources(client)?;
     let mut created = 0usize;
@@ -233,7 +291,10 @@ pub(crate) fn import_datasources_with_client(
                     Method::POST,
                     "/api/datasources",
                     &[],
-                    Some(&build_import_payload(record)),
+                    Some(&build_import_payload_with_secret_values_impl(
+                        record,
+                        secret_values.as_ref(),
+                    )?),
                 )?;
                 created += 1;
             }
@@ -244,7 +305,8 @@ pub(crate) fn import_datasources_with_client(
                         matching.target_name
                     ))
                 })?;
-                let payload = build_import_payload(record);
+                let payload =
+                    build_import_payload_with_secret_values_impl(record, secret_values.as_ref())?;
                 client.request_json(
                     Method::PUT,
                     &format!("/api/datasources/{target_id}"),

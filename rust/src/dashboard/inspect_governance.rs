@@ -2,6 +2,7 @@
 //! Keeps the stable row models in a sibling module while document assembly lives here.
 use serde::Serialize;
 
+pub(crate) use super::inspect_family::normalize_family_name;
 use super::inspect_render::render_simple_table;
 
 #[path = "inspect_governance_coverage.rs"]
@@ -21,7 +22,6 @@ pub(crate) use inspect_governance_coverage::{
     build_datasource_coverage_rows, build_datasource_family_coverage_rows,
     build_datasource_governance_rows, build_inventory_lookup,
     dashboard_dependency_normalize_family_list, dashboard_dependency_unique_strings,
-    normalize_family_name,
 };
 #[allow(unused_imports)]
 pub(crate) use inspect_governance_document::{

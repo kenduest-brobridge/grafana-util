@@ -13,7 +13,7 @@ use super::super::files::{
     discover_dashboard_files, extract_dashboard_object, load_datasource_inventory,
     load_export_metadata, load_folder_inventory, load_json_file,
 };
-use super::super::inspect_governance::normalize_family_name;
+use super::super::inspect_family::normalize_family_name;
 use super::super::inspect_query::{
     dispatch_query_analysis, ordered_unique_push, QueryExtractionContext,
 };
