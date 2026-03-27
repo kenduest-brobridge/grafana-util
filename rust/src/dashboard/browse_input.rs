@@ -200,7 +200,7 @@ fn handle_search_dialog_key(state: &mut BrowserState, key: &KeyEvent) -> Result<
         .take()
         .ok_or_else(|| message("Dashboard browse search state is missing."))?;
     match key.code {
-        KeyCode::Esc | KeyCode::Char('q') if !key.modifiers.contains(KeyModifiers::CONTROL) => {
+        KeyCode::Esc if !key.modifiers.contains(KeyModifiers::CONTROL) => {
             state.status = "Cancelled dashboard search.".to_string();
         }
         KeyCode::Enter => {
@@ -696,4 +696,44 @@ fn scoped_org_client(
         ))
     })?;
     Ok(Some(build_http_client_for_org(&args.common, org_id)?))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::browse_support::DashboardBrowseDocument;
+    use super::super::browse_support::DashboardBrowseSummary;
+    use super::*;
+
+    fn empty_document() -> DashboardBrowseDocument {
+        DashboardBrowseDocument {
+            summary: DashboardBrowseSummary {
+                root_path: None,
+                dashboard_count: 0,
+                folder_count: 0,
+                org_count: 1,
+                scope_label: "current-org".to_string(),
+            },
+            nodes: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn search_prompt_treats_q_as_query_text() {
+        let mut state = BrowserState::new(empty_document());
+        state.start_search(SearchDirection::Forward);
+
+        handle_search_dialog_key(
+            &mut state,
+            &KeyEvent::new(KeyCode::Char('q'), KeyModifiers::NONE),
+        )
+        .expect("search key should succeed");
+
+        assert_eq!(
+            state
+                .pending_search
+                .as_ref()
+                .map(|search| search.query.as_str()),
+            Some("q")
+        );
+    }
 }

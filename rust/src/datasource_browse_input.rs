@@ -99,7 +99,7 @@ fn handle_search_key(state: &mut BrowserState, key: &KeyEvent) -> Result<Browser
         .take()
         .ok_or_else(|| message("Datasource browse search state is missing."))?;
     match key.code {
-        KeyCode::Esc | KeyCode::Char('q') if !key.modifiers.contains(KeyModifiers::CONTROL) => {
+        KeyCode::Esc if !key.modifiers.contains(KeyModifiers::CONTROL) => {
             state.status = "Cancelled datasource search.".to_string();
         }
         KeyCode::Enter => {
@@ -294,4 +294,42 @@ fn confirm_delete(
     state.replace_document(document);
     state.status = format!("Deleted datasource {}.", pending.uid);
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::datasource_browse_support::DatasourceBrowseDocument;
+    use super::*;
+
+    fn empty_document() -> DatasourceBrowseDocument {
+        DatasourceBrowseDocument {
+            scope_label: "current-org".to_string(),
+            org: "Main Org.".to_string(),
+            org_id: "1".to_string(),
+            items: Vec::new(),
+            org_count: 1,
+            datasource_count: 0,
+        }
+    }
+
+    #[test]
+    fn search_prompt_treats_q_as_query_text() {
+        let mut state = BrowserState::new(empty_document());
+        state.start_search(SearchDirection::Forward);
+
+        let action = handle_search_key(
+            &mut state,
+            &KeyEvent::new(KeyCode::Char('q'), KeyModifiers::NONE),
+        )
+        .expect("search key should succeed");
+
+        assert!(matches!(action, BrowserLoopAction::Continue));
+        assert_eq!(
+            state
+                .pending_search
+                .as_ref()
+                .map(|search| search.query.as_str()),
+            Some("q")
+        );
+    }
 }
