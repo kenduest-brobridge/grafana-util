@@ -7,6 +7,8 @@ use crate::common::tui;
 use crate::common::Result;
 
 #[cfg(feature = "tui")]
+use crate::tui_shell;
+#[cfg(feature = "tui")]
 use crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers};
 #[cfg(feature = "tui")]
 use crossterm::execute;
@@ -20,6 +22,8 @@ use ratatui::backend::CrosstermBackend;
 use ratatui::layout::{Constraint, Direction, Layout};
 #[cfg(feature = "tui")]
 use ratatui::style::{Color, Modifier, Style};
+#[cfg(feature = "tui")]
+use ratatui::text::Line;
 #[cfg(feature = "tui")]
 use ratatui::widgets::{Block, Borders, List, ListItem, ListState, Paragraph};
 #[cfg(feature = "tui")]
@@ -78,6 +82,45 @@ impl Drop for TerminalSession {
 }
 
 #[cfg(feature = "tui")]
+pub(crate) fn build_review_header_lines(
+    item_count: usize,
+    selected_count: usize,
+    diff_mode: bool,
+    diff_focus: DiffPaneFocus,
+) -> Vec<Line<'static>> {
+    vec![
+        Line::from(format!(
+            "Reviewable operations={}   selected={}   pending-drop={}",
+            item_count,
+            selected_count,
+            item_count.saturating_sub(selected_count)
+        )),
+        Line::from(format!(
+            "Mode={}   active-pane={}",
+            if diff_mode { "diff" } else { "checklist" },
+            match diff_focus {
+                DiffPaneFocus::Live if diff_mode => "live",
+                DiffPaneFocus::Desired if diff_mode => "desired",
+                _ => "operations",
+            }
+        )),
+        Line::from(
+            "Keep the workspace primary. Review operations first, then confirm the staged selection."
+                .to_string(),
+        ),
+    ]
+}
+
+#[cfg(feature = "tui")]
+pub(crate) fn review_status(diff_mode: bool) -> String {
+    if diff_mode {
+        "Diff mode active. Tab switches pane, Esc returns to the checklist, c confirms the reviewed selection.".to_string()
+    } else {
+        "Checklist mode active. Space toggles operations, Enter opens diff, c confirms the reviewed selection.".to_string()
+    }
+}
+
+#[cfg(feature = "tui")]
 pub(crate) fn run_sync_review_tui(plan: &Value) -> Result<Value> {
     let items = collect_reviewable_operations(plan)?;
     if items.is_empty() {
@@ -104,23 +147,22 @@ pub(crate) fn run_sync_review_tui(plan: &Value) -> Result<Value> {
             let outer = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([
-                    Constraint::Length(3),
+                    Constraint::Length(5),
                     Constraint::Min(1),
-                    Constraint::Length(5),
-                    Constraint::Length(5),
+                    Constraint::Length(4),
+                    Constraint::Length(4),
                 ])
                 .split(frame.area());
             let selected = state.selected().unwrap_or(0);
             let selected_item = items.get(selected);
             let selected_count = selected_keys.len();
-            let summary = Paragraph::new(format!(
-                "Reviewable operations: {}  Selected: {}  Pending drop: {}",
-                items.len(),
-                selected_count,
-                items.len().saturating_sub(selected_count),
-            ))
-            .block(Block::default().borders(Borders::ALL).title("Plan Status"));
-            frame.render_widget(summary, outer[0]);
+            frame.render_widget(
+                tui_shell::build_header(
+                    "Sync Review",
+                    build_review_header_lines(items.len(), selected_count, diff_mode, diff_focus),
+                ),
+                outer[0],
+            );
             if diff_mode {
                 let model = selected_item
                     .and_then(|item| build_review_operation_diff_model(&item.operation).ok());
@@ -131,7 +173,9 @@ pub(crate) fn run_sync_review_tui(plan: &Value) -> Result<Value> {
                 if let Some(model) = model {
                     let action_color = operation_badge_color(&model.action);
                     let mut live_state = ListState::default();
-                    live_state.select(Some(live_diff_cursor.min(model.live_lines.len().saturating_sub(1))));
+                    live_state.select(Some(
+                        live_diff_cursor.min(model.live_lines.len().saturating_sub(1)),
+                    ));
                     let live = List::new(render_diff_items(
                         &model.live_lines,
                         Color::Red,
@@ -148,11 +192,13 @@ pub(crate) fn run_sync_review_tui(plan: &Value) -> Result<Value> {
                                 selected,
                                 items.len(),
                             ))
-                            .border_style(Style::default().fg(if diff_focus == DiffPaneFocus::Live {
-                                Color::Cyan
-                            } else {
-                                action_color
-                            }))
+                            .border_style(Style::default().fg(
+                                if diff_focus == DiffPaneFocus::Live {
+                                    Color::Cyan
+                                } else {
+                                    action_color
+                                },
+                            ))
                             .borders(Borders::ALL),
                     )
                     .highlight_symbol("▌ ")
@@ -183,12 +229,13 @@ pub(crate) fn run_sync_review_tui(plan: &Value) -> Result<Value> {
                                 selected,
                                 items.len(),
                             ))
-                            .border_style(Style::default().fg(if diff_focus == DiffPaneFocus::Desired
-                            {
-                                Color::Cyan
-                            } else {
-                                action_color
-                            }))
+                            .border_style(Style::default().fg(
+                                if diff_focus == DiffPaneFocus::Desired {
+                                    Color::Cyan
+                                } else {
+                                    action_color
+                                },
+                            ))
                             .borders(Borders::ALL),
                     )
                     .highlight_symbol("▌ ")
@@ -216,31 +263,35 @@ pub(crate) fn run_sync_review_tui(plan: &Value) -> Result<Value> {
                             state.selected(),
                             Some(items.len()),
                         ))
-                        .border_style(Style::default().fg(
-                            selected_item
+                        .border_style(
+                            Style::default().fg(selected_item
                                 .and_then(|item| {
                                     item.operation
                                         .get("action")
                                         .and_then(Value::as_str)
                                         .map(operation_badge_color)
                                 })
-                                .unwrap_or(Color::Gray),
-                        )),
+                                .unwrap_or(Color::Gray)),
+                        ),
                 );
                 frame.render_widget(preview, outer[2]);
-                let help = Paragraph::new(build_diff_controls_lines(&DiffControlsState {
-                    selected,
-                    total: items.len(),
-                    diff_focus,
-                    live_wrap_lines,
-                    desired_wrap_lines,
-                    live_diff_cursor,
-                    live_horizontal_offset,
-                    desired_diff_cursor,
-                    desired_horizontal_offset,
-                }))
-                .block(Block::default().borders(Borders::ALL).title("Diff Controls"));
-                frame.render_widget(help, outer[3]);
+                frame.render_widget(
+                    tui_shell::build_footer(
+                        build_diff_controls_lines(&DiffControlsState {
+                            selected,
+                            total: items.len(),
+                            diff_focus,
+                            live_wrap_lines,
+                            desired_wrap_lines,
+                            live_diff_cursor,
+                            live_horizontal_offset,
+                            desired_diff_cursor,
+                            desired_horizontal_offset,
+                        }),
+                        review_status(true),
+                    ),
+                    outer[3],
+                );
             } else {
                 let list_items = items
                     .iter()
@@ -289,23 +340,38 @@ pub(crate) fn run_sync_review_tui(plan: &Value) -> Result<Value> {
                             state.selected(),
                             Some(items.len()),
                         ))
-                        .border_style(Style::default().fg(
-                            selected_item
+                        .border_style(
+                            Style::default().fg(selected_item
                                 .and_then(|item| {
                                     item.operation
                                         .get("action")
                                         .and_then(Value::as_str)
                                         .map(operation_badge_color)
                                 })
-                                .unwrap_or(Color::Gray),
-                        )),
+                                .unwrap_or(Color::Gray)),
+                        ),
                 );
                 frame.render_widget(preview, outer[2]);
-                let help = Paragraph::new(
-                    "Up/Down move  Space toggle  a select-all  n select-none  Enter diff  c confirm  q cancel",
-                )
-                .block(Block::default().borders(Borders::ALL).title("Controls"));
-                frame.render_widget(help, outer[3]);
+                frame.render_widget(
+                    tui_shell::build_footer(
+                        vec![
+                            tui_shell::control_line(&[
+                                ("Up/Down", Color::Blue, "move"),
+                                ("Space", Color::Yellow, "toggle"),
+                                ("a", Color::Cyan, "select-all"),
+                                ("n", Color::Cyan, "select-none"),
+                                ("Enter", Color::Blue, "diff"),
+                                ("c", Color::Green, "confirm"),
+                            ]),
+                            tui_shell::control_line(&[
+                                ("q", Color::Gray, "cancel"),
+                                ("Esc", Color::Gray, "cancel"),
+                            ]),
+                        ],
+                        review_status(false),
+                    ),
+                    outer[3],
+                );
             }
         })?;
 

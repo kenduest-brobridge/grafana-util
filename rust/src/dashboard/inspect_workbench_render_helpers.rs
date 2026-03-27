@@ -1,20 +1,12 @@
 #![cfg(feature = "tui")]
-use ratatui::style::{Color, Modifier, Style};
+use ratatui::style::Color;
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Borders};
 
 use crate::interactive_browser::BrowserItem;
+use crate::tui_shell;
 
-pub(crate) fn pane_block(label: &str, active: bool) -> Block<'static> {
-    let mut block = Block::default().borders(Borders::ALL).title(if active {
-        format!("{label} [Focused]")
-    } else {
-        label.to_string()
-    });
-    if active {
-        block = block.border_style(Style::default().fg(Color::Cyan));
-    }
-    block
+pub(crate) fn pane_block(label: &str, active: bool) -> ratatui::widgets::Block<'static> {
+    tui_shell::pane_block(label, active, Color::Cyan, Color::Reset)
 }
 
 pub(crate) fn item_color(kind: &str) -> Color {
@@ -68,29 +60,15 @@ pub(crate) fn slice_visible(value: &str, offset: usize, width: usize) -> String 
 }
 
 pub(crate) fn control_line(items: &[(&str, Color, &str)]) -> Line<'static> {
-    let mut spans = Vec::new();
-    for (index, (key, color, text)) in items.iter().enumerate() {
-        if index > 0 {
-            spans.push(Span::raw("   "));
-        }
-        spans.push(key_chip(key, *color));
-        spans.push(plain(format!(" {text}")));
-    }
-    Line::from(spans)
+    tui_shell::control_line(items)
 }
 
 pub(crate) fn key_chip(label: &str, color: Color) -> Span<'static> {
-    Span::styled(
-        format!(" {} ", label),
-        Style::default()
-            .fg(Color::White)
-            .bg(color)
-            .add_modifier(Modifier::BOLD),
-    )
+    tui_shell::key_chip(label, color)
 }
 
 pub(crate) fn plain(value: impl Into<String>) -> Span<'static> {
-    Span::styled(value.into(), Style::default().fg(Color::White))
+    tui_shell::plain(value)
 }
 
 pub(crate) fn compact_count_label(count: usize) -> String {

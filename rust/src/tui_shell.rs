@@ -1,0 +1,88 @@
+#![cfg(feature = "tui")]
+
+use ratatui::style::{Color, Modifier, Style};
+use ratatui::text::{Line, Span};
+use ratatui::widgets::{Block, Borders, Paragraph, Wrap};
+
+pub(crate) fn header_block(title: &str) -> Block<'static> {
+    Block::default()
+        .borders(Borders::ALL)
+        .title(title.to_string())
+        .border_style(Style::default().fg(Color::LightBlue))
+}
+
+pub(crate) fn footer_block() -> Block<'static> {
+    Block::default()
+        .borders(Borders::ALL)
+        .title("Status & Controls")
+        .style(Style::default().bg(Color::Rgb(16, 22, 30)))
+        .border_style(Style::default().fg(Color::LightBlue))
+}
+
+pub(crate) fn pane_block(title: &str, focused: bool, accent: Color, bg: Color) -> Block<'static> {
+    Block::default()
+        .borders(Borders::ALL)
+        .title(if focused {
+            format!("{title} [Focused]")
+        } else {
+            title.to_string()
+        })
+        .style(Style::default().bg(bg))
+        .border_style(Style::default().fg(if focused { accent } else { Color::Gray }))
+        .title_style(
+            Style::default()
+                .fg(Color::White)
+                .bg(bg)
+                .add_modifier(Modifier::BOLD),
+        )
+}
+
+pub(crate) fn key_chip(label: &str, color: Color) -> Span<'static> {
+    Span::styled(
+        format!(" {label} "),
+        Style::default()
+            .fg(Color::White)
+            .bg(color)
+            .add_modifier(Modifier::BOLD),
+    )
+}
+
+pub(crate) fn plain(value: impl Into<String>) -> Span<'static> {
+    Span::styled(value.into(), Style::default().fg(Color::White))
+}
+
+pub(crate) fn status_line(status: impl Into<String>) -> Line<'static> {
+    Line::from(Span::styled(
+        status.into(),
+        Style::default().fg(Color::Gray),
+    ))
+}
+
+pub(crate) fn control_line(items: &[(&str, Color, &str)]) -> Line<'static> {
+    let mut spans = Vec::new();
+    for (index, (key, color, text)) in items.iter().enumerate() {
+        if index > 0 {
+            spans.push(Span::raw("   "));
+        }
+        spans.push(key_chip(key, *color));
+        spans.push(plain(format!(" {text}")));
+    }
+    Line::from(spans)
+}
+
+pub(crate) fn build_header(title: &str, lines: Vec<Line<'static>>) -> Paragraph<'static> {
+    Paragraph::new(lines)
+        .wrap(Wrap { trim: false })
+        .block(header_block(title))
+}
+
+pub(crate) fn build_footer(
+    mut lines: Vec<Line<'static>>,
+    status: impl Into<String>,
+) -> Paragraph<'static> {
+    lines.push(status_line(status));
+    Paragraph::new(lines)
+        .wrap(Wrap { trim: false })
+        .block(footer_block())
+        .style(Style::default().bg(Color::Rgb(16, 22, 30)).fg(Color::White))
+}

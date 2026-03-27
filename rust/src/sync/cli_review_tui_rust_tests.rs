@@ -87,6 +87,18 @@ fn review_operation_preview_uses_readable_action_labels() {
         assert!(controls[0].to_string().contains("Live wrap OFF"));
         assert!(controls[0].to_string().contains("Desired wrap ON"));
     }
+    #[cfg(feature = "tui")]
+    {
+        let header_lines =
+            review_tui::build_review_header_lines(3, 2, true, review_tui::DiffPaneFocus::Desired);
+        assert_eq!(header_lines.len(), 3);
+        assert!(header_lines[0]
+            .to_string()
+            .contains("Reviewable operations=3"));
+        assert!(header_lines[1].to_string().contains("Mode=diff"));
+        assert!(header_lines[1].to_string().contains("active-pane=desired"));
+        assert!(review_tui::review_status(true).contains("Diff mode active"));
+    }
 }
 
 #[test]

@@ -41,6 +41,9 @@ pub mod http;
 pub(crate) mod interactive_browser;
 /// Declarative sync planning, review, audit, and apply workflows.
 pub mod sync;
+/// Shared terminal-shell helpers for the Rust TUI surfaces.
+#[cfg(feature = "tui")]
+pub(crate) mod tui_shell;
 /// Re-exported alert bundle contract helpers for compatibility with older paths.
 pub use sync::bundle_alert_contracts as sync_bundle_alert_contracts;
 /// Re-exported sync bundle preflight helpers for compatibility with older paths.

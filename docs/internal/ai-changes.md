@@ -6,6 +6,13 @@ Current AI change log only.
 - Detailed 2026-03-27 entries moved to [`archive/ai-changes-archive-2026-03-27.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-03-27.md).
 - Keep this file limited to the latest active architecture and maintenance changes.
 
+## 2026-03-28 - Shared Rust TUI shell pass
+- Summary: introduced a crate-private `tui_shell` helper and moved the main Rust TUI surfaces onto a common shell grammar so `dashboard inspect workbench`, `sync review`, and `datasource browse` now share the same header/footer/control vocabulary and stronger active-workspace hierarchy.
+- Tests: added focused TUI assertions for sync review header state and datasource browse header mode text, while keeping existing inspect workbench summary tests green.
+- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all --check` passed; `cargo test --manifest-path rust/Cargo.toml --quiet inspect_live_tui_rust_tests` passed; `cargo test --manifest-path rust/Cargo.toml --quiet cli_review_tui_rust_tests` passed; `cargo test --manifest-path rust/Cargo.toml --quiet datasource_browse_render` passed; `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings` passed.
+- Impact: `rust/src/tui_shell.rs`, `rust/src/lib.rs`, `rust/src/dashboard/inspect_workbench_render.rs`, `rust/src/dashboard/inspect_workbench_render_helpers.rs`, `rust/src/dashboard/inspect_workbench_support.rs`, `rust/src/sync/review_tui.rs`, `rust/src/sync/cli_review_tui_rust_tests.rs`, `rust/src/datasource_browse_render.rs`
+- Rollback/Risk: low-to-moderate. This changes only TUI presentation and helper wiring, not CLI contracts or live behavior, but it does reshape the operator-facing terminal hierarchy across multiple domains.
+
 ## 2026-03-28 - Datasource secret resolution aggregation
 - Summary: updated the shared datasource secret resolver so live mutation/import now accumulates every missing or empty placeholder name and returns one fail-closed error before any write attempt, instead of stopping at the first unresolved secret.
 - Tests: refreshed the focused secret helper regression to cover aggregate missing/empty reporting and updated the import preflight regression to assert the new later-stage failure text.

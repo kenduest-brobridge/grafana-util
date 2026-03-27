@@ -1,14 +1,13 @@
 #![cfg(feature = "tui")]
 
+use crate::tui_shell;
 use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Clear, List, ListItem, Paragraph};
 
 use super::datasource_browse_state::{BrowserState, PaneFocus};
-use super::datasource_browse_support::{
-    detail_lines, DatasourceBrowseDocument, DatasourceBrowseItem,
-};
+use super::datasource_browse_support::{detail_lines, DatasourceBrowseItem};
 
 pub(crate) fn render_datasource_browser_frame(
     frame: &mut ratatui::Frame,
@@ -27,10 +26,12 @@ pub(crate) fn render_datasource_browser_frame(
         .constraints([Constraint::Percentage(44), Constraint::Percentage(56)])
         .split(outer[1]);
 
-    let header = Paragraph::new(summary_lines(&state.document, &state.status).join("\n")).block(
-        Block::default()
-            .borders(Borders::ALL)
-            .title("Datasource Browser"),
+    let header = tui_shell::build_header(
+        "Datasource Browser",
+        summary_lines(state)
+            .into_iter()
+            .map(Line::from)
+            .collect::<Vec<_>>(),
     );
     frame.render_widget(header, outer[0]);
 
@@ -78,18 +79,10 @@ pub(crate) fn render_datasource_browser_frame(
         render_detail_panel(frame, panes[1], state);
     }
 
-    let footer = Paragraph::new(control_lines(
-        state.pending_delete.is_some(),
-        state.pending_edit.is_some(),
-    ))
-    .block(
-        Block::default()
-            .borders(Borders::ALL)
-            .title("Controls")
-            .style(Style::default().bg(Color::Rgb(16, 22, 30)))
-            .border_style(Style::default().fg(Color::LightBlue)),
-    )
-    .style(Style::default().bg(Color::Rgb(16, 22, 30)).fg(Color::White));
+    let footer = tui_shell::build_footer(
+        control_lines(state.pending_delete.is_some(), state.pending_edit.is_some()),
+        state.status.clone(),
+    );
     frame.render_widget(footer, outer[2]);
 
     if let Some(edit_state) = state.pending_edit.as_ref() {
@@ -100,7 +93,8 @@ pub(crate) fn render_datasource_browser_frame(
     }
 }
 
-fn summary_lines(document: &DatasourceBrowseDocument, status: &str) -> Vec<String> {
+fn summary_lines(state: &BrowserState) -> Vec<String> {
+    let document = &state.document;
     vec![
         if document.org_count > 1 {
             format!(
@@ -117,8 +111,20 @@ fn summary_lines(document: &DatasourceBrowseDocument, status: &str) -> Vec<Strin
                 document.datasource_count
             )
         },
-        "[*] means default datasource".to_string(),
-        status.to_string(),
+        format!(
+            "Active={}   mode={}",
+            state.focus_label(),
+            if state.pending_delete.is_some() {
+                "confirm-delete"
+            } else if state.pending_edit.is_some() {
+                "edit"
+            } else if state.pending_search.is_some() {
+                "search"
+            } else {
+                "browse"
+            }
+        ),
+        "[*] marks the default datasource for the current org scope.".to_string(),
     ]
 }
 
@@ -485,20 +491,14 @@ fn control_line(segments: &[(&'static str, Color, &'static str)]) -> Line<'stati
         if index > 0 {
             spans.push(plain("  "));
         }
-        spans.push(badge(key, *color));
+        spans.push(tui_shell::key_chip(key, *color));
         spans.push(plain(format!(" {:<14}", label)));
     }
     Line::from(spans)
 }
 
 fn badge(text: &'static str, bg: Color) -> Span<'static> {
-    Span::styled(
-        format!(" {text} "),
-        Style::default()
-            .fg(Color::White)
-            .bg(bg)
-            .add_modifier(Modifier::BOLD),
-    )
+    tui_shell::key_chip(text, bg)
 }
 
 fn plain(text: impl Into<std::borrow::Cow<'static, str>>) -> Span<'static> {
@@ -521,21 +521,7 @@ fn muted(text: &'static str) -> Span<'static> {
 }
 
 fn pane_block(title: &str, focused: bool, accent: Color, bg: Color) -> Block<'static> {
-    Block::default()
-        .borders(Borders::ALL)
-        .title(if focused {
-            format!("{title} [Focused]")
-        } else {
-            title.to_string()
-        })
-        .style(Style::default().bg(bg))
-        .border_style(Style::default().fg(if focused { accent } else { Color::Gray }))
-        .title_style(
-            Style::default()
-                .fg(Color::White)
-                .bg(bg)
-                .add_modifier(Modifier::BOLD),
-        )
+    tui_shell::pane_block(title, focused, accent, bg)
 }
 
 fn render_focusable_lines(
@@ -623,4 +609,41 @@ fn render_search_prompt(
     )
     .style(Style::default().bg(Color::Rgb(18, 20, 26)));
     frame.render_widget(prompt, area);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::datasource_browse_support::DatasourceBrowseDocument;
+    use super::*;
+
+    fn empty_document() -> DatasourceBrowseDocument {
+        DatasourceBrowseDocument {
+            org: "Main Org.".to_string(),
+            org_id: "1".to_string(),
+            org_count: 1,
+            datasource_count: 0,
+            scope_label: "current-org".to_string(),
+            items: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn summary_lines_surface_focus_and_mode() {
+        let state = BrowserState::new(empty_document());
+        let lines = summary_lines(&state);
+        assert!(lines[1].contains("Active=list"));
+        assert!(lines[1].contains("mode=browse"));
+    }
+
+    #[test]
+    fn summary_lines_surface_pending_delete_mode() {
+        let mut state = BrowserState::new(empty_document());
+        state.pending_delete = Some(super::super::datasource_browse_state::PendingDelete {
+            uid: "uid-1".to_string(),
+            name: "Prom".to_string(),
+            id: 7,
+        });
+        let lines = summary_lines(&state);
+        assert!(lines[1].contains("mode=confirm-delete"));
+    }
 }

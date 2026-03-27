@@ -6,6 +6,13 @@ Current AI-maintained status only.
 - Detailed 2026-03-27 entries moved to [`archive/ai-status-archive-2026-03-27.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-03-27.md).
 - Keep this file short and current. Additive historical detail belongs in `docs/internal/archive/`.
 
+## 2026-03-28 - Shared Rust TUI shell pass
+- State: Done
+- Scope: `rust/src/tui_shell.rs`, `rust/src/dashboard/inspect_workbench_render.rs`, `rust/src/dashboard/inspect_workbench_render_helpers.rs`, `rust/src/dashboard/inspect_workbench_support.rs`, `rust/src/sync/review_tui.rs`, `rust/src/datasource_browse_render.rs`, focused TUI tests
+- Baseline: dashboard inspect workbench, sync review, and datasource browse each rendered their own header/footer/control shell with different hierarchy, status placement, and active-pane grammar.
+- Current Update: added a shared crate-private `tui_shell` helper, moved inspect workbench, sync review, and datasource browse onto the same header/footer/control vocabulary, surfaced current mode/view/focus more clearly in headers, and compressed sync review status/help so the main workspace stays visually primary.
+- Result: the Rust TUI surfaces still keep domain-specific panes, but now read more like one operator console with a shared shell grammar and clearer active-task framing.
+
 ## 2026-03-28 - Datasource secret resolution aggregation
 - State: Done
 - Scope: `rust/src/datasource_secret.rs`, `rust/src/datasource_import_export.rs`, `rust/src/datasource_secret_rust_tests.rs`

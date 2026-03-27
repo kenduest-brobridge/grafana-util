@@ -1,8 +1,9 @@
 #![cfg(feature = "tui")]
+use crate::tui_shell;
 use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph, Wrap};
+use ratatui::widgets::{List, ListItem};
 
 use super::inspect_workbench_state::{InspectPane, InspectWorkbenchState};
 
@@ -23,7 +24,7 @@ pub(crate) fn render_frame(frame: &mut ratatui::Frame, state: &mut InspectWorkbe
     let outer = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(5),
+            Constraint::Length(6),
             Constraint::Min(1),
             Constraint::Length(4),
         ])
@@ -37,22 +38,36 @@ pub(crate) fn render_frame(frame: &mut ratatui::Frame, state: &mut InspectWorkbe
         ])
         .split(outer[1]);
 
-    frame.render_widget(
-        Paragraph::new(
-            state
-                .document
-                .summary_lines
-                .iter()
-                .cloned()
-                .map(Line::from)
-                .collect::<Vec<_>>(),
-        )
-        .wrap(Wrap { trim: false })
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title(state.document.title.clone()),
+    let mut header_lines = state
+        .document
+        .summary_lines
+        .iter()
+        .cloned()
+        .map(Line::from)
+        .collect::<Vec<_>>();
+    header_lines.push(Line::from(vec![
+        Span::styled("Active ", Style::default().fg(Color::Gray)),
+        Span::styled(
+            match state.focus {
+                InspectPane::Groups => "modes",
+                InspectPane::Items => "items",
+                InspectPane::Facts => "facts",
+            },
+            Style::default()
+                .fg(Color::White)
+                .add_modifier(Modifier::BOLD),
         ),
+        Span::raw("   "),
+        Span::styled("View ", Style::default().fg(Color::Gray)),
+        Span::styled(
+            state.current_view_label(),
+            Style::default()
+                .fg(Color::LightCyan)
+                .add_modifier(Modifier::BOLD),
+        ),
+    ]));
+    frame.render_widget(
+        tui_shell::build_header(&state.document.title, header_lines),
         outer[0],
     );
 
@@ -158,30 +173,27 @@ pub(crate) fn render_frame(frame: &mut ratatui::Frame, state: &mut InspectWorkbe
     render_detail_panel(frame, panes[2], state);
 
     frame.render_widget(
-        Paragraph::new(vec![
-            control_line(&[
-                ("Tab", Color::Blue, "next pane"),
-                ("Shift+Tab", Color::Blue, "prev pane"),
-                ("g", Color::Magenta, "mode"),
-                ("v", Color::Magenta, "mode view"),
-                ("/ ?", Color::Yellow, "search"),
-                ("n", Color::Yellow, "next"),
-            ]),
-            control_line(&[
-                ("Up/Down", Color::Blue, "move"),
-                ("Left/Right", Color::Blue, "items pan"),
-                ("Home/End", Color::Blue, "bounds"),
-                ("PgUp/PgDn", Color::Blue, "jump"),
-                ("Enter", Color::Blue, "open viewer"),
-                ("q", Color::Gray, "exit"),
-                ("Esc", Color::Gray, "exit"),
-            ]),
-            Line::from(Span::styled(
-                state.status.clone(),
-                Style::default().fg(Color::Gray),
-            )),
-        ])
-        .block(Block::default().borders(Borders::ALL).title("Controls")),
+        tui_shell::build_footer(
+            vec![
+                control_line(&[
+                    ("Tab", Color::Blue, "next pane"),
+                    ("Shift+Tab", Color::Blue, "prev pane"),
+                    ("g", Color::Magenta, "mode"),
+                    ("v", Color::Magenta, "mode view"),
+                    ("/ ?", Color::Yellow, "search"),
+                    ("n", Color::Yellow, "next"),
+                ]),
+                control_line(&[
+                    ("Up/Down", Color::Blue, "move"),
+                    ("Left/Right", Color::Blue, "items pan"),
+                    ("Home/End", Color::Blue, "bounds"),
+                    ("PgUp/PgDn", Color::Blue, "jump"),
+                    ("Enter", Color::Blue, "open viewer"),
+                    ("q", Color::Gray, "exit"),
+                ]),
+            ],
+            state.status.clone(),
+        ),
         outer[2],
     );
 

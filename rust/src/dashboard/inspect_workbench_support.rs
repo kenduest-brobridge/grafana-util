@@ -108,7 +108,7 @@ fn build_inspect_workbench_summary_lines(
             governance.summary.risk_record_count,
             governance.summary.query_audit_count
         ),
-        "Modes: Overview, Findings, Queries, and Dependencies. Use v to switch the current mode view."
+        "Modes=Overview, Findings, Queries, Dependencies   Use g to switch mode and v to change the current view."
             .to_string(),
     ]
 }
