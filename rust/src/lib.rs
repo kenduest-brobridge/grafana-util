@@ -12,6 +12,8 @@ pub mod alert_sync;
 pub mod bundle_preflight;
 /// Unified top-level CLI parsing and dispatch for the Rust binary.
 pub mod cli;
+/// Structured help/example text used by the unified CLI renderer.
+pub(crate) mod cli_help_examples;
 /// Shared error, auth, JSON, and filesystem helpers reused across domains.
 pub mod common;
 /// Dashboard export/import/inspect/screenshot/topology workflows.

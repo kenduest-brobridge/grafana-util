@@ -8,6 +8,8 @@ OUTPUT_DIR="${REPO_ROOT}/dist/linux-amd64"
 RUST_IMAGE="${RUST_IMAGE:-rust:1.89-bookworm}"
 TARGET_TRIPLE="x86_64-unknown-linux-gnu"
 CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-2}"
+RUST_RELEASE_RUSTFLAGS="${RUST_RELEASE_RUSTFLAGS:--C debuginfo=0}"
+BUILD_RUSTFLAGS="${RUSTFLAGS:+${RUSTFLAGS} }${RUST_RELEASE_RUSTFLAGS}"
 
 if ! command -v docker >/dev/null 2>&1; then
   echo "Error: docker is required for Linux amd64 Rust builds." >&2
@@ -20,6 +22,7 @@ docker run --rm \
   --platform linux/amd64 \
   --user "$(id -u):$(id -g)" \
   -e CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS}" \
+  -e RUSTFLAGS="${BUILD_RUSTFLAGS}" \
   -v "${REPO_ROOT}:/workspace" \
   -w /workspace/rust \
   "${RUST_IMAGE}" \

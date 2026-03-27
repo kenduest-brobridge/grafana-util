@@ -7,6 +7,8 @@ RUST_DIR="${REPO_ROOT}/rust"
 OUTPUT_DIR="${REPO_ROOT}/dist/linux-amd64"
 TARGET_TRIPLE="x86_64-unknown-linux-gnu"
 CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-2}"
+RUST_RELEASE_RUSTFLAGS="${RUST_RELEASE_RUSTFLAGS:--C debuginfo=0}"
+BUILD_RUSTFLAGS="${RUSTFLAGS:+${RUSTFLAGS} }${RUST_RELEASE_RUSTFLAGS}"
 
 if ! command -v zig >/dev/null 2>&1; then
   echo "Error: zig is required for non-Docker Linux amd64 Rust builds." >&2
@@ -24,7 +26,7 @@ mkdir -p "${OUTPUT_DIR}"
 
 (
   cd "${RUST_DIR}"
-  cargo zigbuild --release --jobs "${CARGO_BUILD_JOBS}" --target "${TARGET_TRIPLE}"
+  RUSTFLAGS="${BUILD_RUSTFLAGS}" cargo zigbuild --release --jobs "${CARGO_BUILD_JOBS}" --target "${TARGET_TRIPLE}"
 )
 
 cp "${RUST_DIR}/target/${TARGET_TRIPLE}/release/grafana-util" "${OUTPUT_DIR}/grafana-util"

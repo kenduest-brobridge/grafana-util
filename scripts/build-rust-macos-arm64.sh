@@ -5,6 +5,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 RUST_DIR="${REPO_ROOT}/rust"
 OUTPUT_DIR="${REPO_ROOT}/dist/macos-arm64"
+RUST_RELEASE_RUSTFLAGS="${RUST_RELEASE_RUSTFLAGS:--C debuginfo=0}"
+BUILD_RUSTFLAGS="${RUSTFLAGS:+${RUSTFLAGS} }${RUST_RELEASE_RUSTFLAGS}"
 
 if [[ "$(uname -s)" != "Darwin" ]]; then
   echo "Error: build-rust-macos-arm64 must run on macOS." >&2
@@ -20,7 +22,7 @@ mkdir -p "${OUTPUT_DIR}"
 
 (
   cd "${RUST_DIR}"
-  cargo build --release
+  RUSTFLAGS="${BUILD_RUSTFLAGS}" cargo build --release
 )
 
 cp "${RUST_DIR}/target/release/grafana-util" "${OUTPUT_DIR}/grafana-util"

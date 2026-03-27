@@ -1,0 +1,276 @@
+//! Structured help/example text for the unified Rust CLI.
+
+macro_rules! help_item {
+    (($label:literal, $summary:literal, $command:literal)) => {
+        concat!("  ", $label, " ", $summary, "\n    ", $command)
+    };
+}
+
+macro_rules! help_block {
+    ($heading:literal, $first:tt $(, $rest:tt)+ $(,)?) => {
+        concat!(
+            $heading,
+            "\n\n",
+            help_item!($first),
+            $(
+                "\n\n",
+                help_item!($rest),
+            )+
+        )
+    };
+    ($heading:literal, $only:tt $(,)?) => {
+        concat!($heading, "\n\n", help_item!($only))
+    };
+}
+
+pub(crate) const HELP_COLOR_RESET: &str = "\x1b[0m";
+pub(crate) const HELP_COLOR_DASHBOARD: &str = "\x1b[1;36m";
+pub(crate) const HELP_COLOR_ALERT: &str = "\x1b[1;31m";
+pub(crate) const HELP_COLOR_DATASOURCE: &str = "\x1b[1;32m";
+pub(crate) const HELP_COLOR_ACCESS: &str = "\x1b[1;33m";
+pub(crate) const HELP_COLOR_SYNC: &str = "\x1b[1;34m";
+
+pub(crate) const HELP_FULL_HINT: &str =
+    "Extended Help:\n  --help-full\n          Print help with extended examples\n";
+
+pub(crate) const UNIFIED_HELP_TEXT: &str = help_block!(
+    "Examples:",
+    (
+        "[Dashboard Export]",
+        "Export dashboards with Basic auth:",
+        "grafana-util dashboard export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./dashboards --overwrite"
+    ),
+    (
+        "[Dashboard Export]",
+        "Export dashboards across all visible orgs:",
+        "grafana-util dashboard export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --export-dir ./dashboards --overwrite"
+    ),
+    (
+        "[Dashboard Capture]",
+        "Capture a dashboard screenshot from browser-like state:",
+        r#"grafana-util dashboard screenshot --dashboard-url 'https://grafana.example.com/d/cpu-main/cpu-overview?var-cluster=prod-a' --token "$GRAFANA_API_TOKEN" --output ./cpu-main.png --full-page"#
+    ),
+    (
+        "[Dashboard Capture]",
+        "Inspect dashboard variables before capture:",
+        r#"grafana-util dashboard inspect-vars --dashboard-url 'https://grafana.example.com/d/cpu-main/cpu-overview?var-cluster=prod-a' --token "$GRAFANA_API_TOKEN""#
+    ),
+    (
+        "[Alert Export]",
+        "Export alerting resources through the unified binary:",
+        r#"grafana-util alert export --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output-dir ./alerts --overwrite"#
+    ),
+    (
+        "[Datasource Inventory]",
+        "List datasource inventory through the unified binary:",
+        r#"grafana-util datasource list --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --json"#
+    ),
+    (
+        "[Access Inventory]",
+        "List org users through the unified binary:",
+        r#"grafana-util access user list --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --json"#
+    ),
+    (
+        "[Sync Planning]",
+        "Build a sync plan directly from live Grafana state:",
+        r#"grafana-util sync plan --desired-file ./desired.json --fetch-live --url http://localhost:3000 --token "$GRAFANA_API_TOKEN"#
+    ),
+    (
+        "[Sync Apply]",
+        "Apply a reviewed sync plan back to Grafana:",
+        r#"grafana-util sync apply --plan-file ./sync-plan-reviewed.json --approve --execute-live --url http://localhost:3000 --token "$GRAFANA_API_TOKEN"#
+    )
+);
+
+pub(crate) const UNIFIED_HELP_FULL_TEXT: &str = help_block!(
+    "Extended Examples:",
+    (
+        "[Dashboard Inspect Export]",
+        "Render a grouped dashboard dependency table from raw exports:",
+        "grafana-util dashboard inspect-export --import-dir ./dashboards/raw --output-format report-tree-table --report-columns dashboard_uid,panel_title,datasource_uid,query"
+    ),
+    (
+        "[Dashboard Inspect Live]",
+        "Render datasource governance JSON directly from live Grafana:",
+        r#"grafana-util dashboard inspect-live --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output-format governance-json"#
+    ),
+    (
+        "[Datasource Import]",
+        "Dry-run a datasource import and keep the result machine-readable:",
+        r#"grafana-util datasource import --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --import-dir ./datasources --dry-run --json"#
+    ),
+    (
+        "[Access Team Import]",
+        "Preview a destructive team sync before confirming:",
+        "grafana-util access team import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./access-teams --replace-existing --dry-run --output-format table"
+    ),
+    (
+        "[Alert Import]",
+        "Re-map linked alert dashboards during import:",
+        "grafana-util alert import --url http://localhost:3000 --import-dir ./alerts/raw --replace-existing --dashboard-uid-map ./dashboard-map.json --panel-id-map ./panel-map.json"
+    ),
+    (
+        "[Sync Review]",
+        "Stamp a plan as reviewed before apply:",
+        "grafana-util sync review --plan-file ./sync-plan.json --review-note 'peer-reviewed' --output json"
+    )
+);
+
+pub(crate) const ALERT_HELP_FULL_TEXT: &str = help_block!(
+    "Extended Examples:",
+    (
+        "[Alert Export]",
+        "Export alerting resources with overwrite enabled:",
+        r#"grafana-util alert export --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output-dir ./alerts --overwrite"#
+    ),
+    (
+        "[Alert Import]",
+        "Preview a replace-existing import before execution as structured JSON:",
+        r#"grafana-util alert import --url http://localhost:3000 --import-dir ./alerts/raw --replace-existing --dry-run --json"#
+    ),
+    (
+        "[Alert Diff]",
+        "Compare a local export against Grafana as structured JSON:",
+        r#"grafana-util alert diff --url http://localhost:3000 --diff-dir ./alerts/raw --json"#
+    ),
+    (
+        "[Alert Import]",
+        "Re-map linked dashboards and panels during import:",
+        "grafana-util alert import --url http://localhost:3000 --import-dir ./alerts/raw --replace-existing --dashboard-uid-map ./dashboard-map.json --panel-id-map ./panel-map.json"
+    ),
+    (
+        "[Alert List]",
+        "Render live alert rules as JSON:",
+        r#"grafana-util alert list-rules --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --json"#
+    )
+);
+
+pub(crate) const DATASOURCE_HELP_FULL_TEXT: &str = help_block!(
+    "Extended Examples:",
+    (
+        "[Datasource Browse]",
+        "Open a live datasource browser:",
+        r#"grafana-util datasource browse --url http://localhost:3000 --token "$GRAFANA_API_TOKEN""#
+    ),
+    (
+        "[Datasource List]",
+        "Enumerate all visible org datasources as CSV:",
+        r#"grafana-util datasource list --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --output-format csv"#
+    ),
+    (
+        "[Datasource Add]",
+        "Preview a new datasource contract as JSON:",
+        r#"grafana-util datasource add --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --name prometheus-main --type prometheus --datasource-url http://prometheus:9090 --dry-run --json"#
+    ),
+    (
+        "[Datasource Import]",
+        "Import one exported org bundle with create-missing-orgs:",
+        r#"grafana-util datasource import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./datasources --use-export-org --only-org-id 2 --create-missing-orgs --dry-run --json"#
+    ),
+    (
+        "[Datasource Diff]",
+        "Compare a local export directory with live Grafana:",
+        r#"grafana-util datasource diff --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --diff-dir ./datasources"#
+    )
+);
+
+pub(crate) const ACCESS_HELP_FULL_TEXT: &str = help_block!(
+    "Extended Examples:",
+    (
+        "[Access User Diff]",
+        "Compare exported users against the Grafana global scope:",
+        "grafana-util access user diff --url http://localhost:3000 --basic-user admin --basic-password admin --diff-dir ./access-users --scope global"
+    ),
+    (
+        "[Access Team Import]",
+        "Preview a destructive team sync as a table:",
+        "grafana-util access team import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./access-teams --replace-existing --dry-run --output-format table"
+    ),
+    (
+        "[Access Org Delete]",
+        "Delete one org by explicit org id:",
+        "grafana-util access org delete --url http://localhost:3000 --basic-user admin --basic-password admin --org-id 7 --yes --json"
+    ),
+    (
+        "[Access Token Add]",
+        "Issue a short-lived service-account token:",
+        r#"grafana-util access service-account token add --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --service-account-id 7 --token-name nightly --seconds-to-live 3600"#
+    )
+);
+
+pub(crate) const SYNC_HELP_FULL_TEXT: &str = help_block!(
+    "Extended Examples:",
+    (
+        "[Sync Summary]",
+        "Render the desired resource summary as JSON:",
+        "grafana-util sync summary --desired-file ./desired.json --output json"
+    ),
+    (
+        "[Sync Audit]",
+        "Compare the current live state against a staged checksum lock:",
+        r#"grafana-util sync audit --lock-file ./sync-lock.json --fetch-live --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --fail-on-drift --output json"#
+    ),
+    (
+        "[Sync Bundle]",
+        "Package exported dashboard and alert artifacts into one source bundle:",
+        "grafana-util sync bundle --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts/raw --output-file ./sync-source-bundle.json"
+    ),
+    (
+        "[Sync Bundle Preflight]",
+        "Compare a source bundle against a target inventory snapshot:",
+        "grafana-util sync bundle-preflight --source-bundle ./sync-source-bundle.json --target-inventory ./target-inventory.json --output json"
+    ),
+    (
+        "[Sync Plan]",
+        "Build a live-backed plan with prune candidates:",
+        r#"grafana-util sync plan --desired-file ./desired.json --fetch-live --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --allow-prune --output json"#
+    ),
+    (
+        "[Sync Review]",
+        "Stamp a reviewed plan with reviewer metadata:",
+        "grafana-util sync review --plan-file ./sync-plan.json --review-note 'peer-reviewed' --reviewed-by ops-user --output json"
+    ),
+    (
+        "[Sync Apply]",
+        "Emit a reviewed local apply intent:",
+        "grafana-util sync apply --plan-file ./sync-plan-reviewed.json --approve"
+    )
+);
+
+pub(crate) const HELP_EXAMPLE_LABELS: [(&str, &str); 22] = [
+    ("[Dashboard Export]", HELP_COLOR_DASHBOARD),
+    ("[Dashboard Capture]", HELP_COLOR_DASHBOARD),
+    ("[Dashboard Inspect Export]", HELP_COLOR_DASHBOARD),
+    ("[Dashboard Inspect Live]", HELP_COLOR_DASHBOARD),
+    ("[Alert Export]", HELP_COLOR_ALERT),
+    ("[Alert Import]", HELP_COLOR_ALERT),
+    ("[Alert List]", HELP_COLOR_ALERT),
+    ("[Datasource Inventory]", HELP_COLOR_DATASOURCE),
+    ("[Datasource List]", HELP_COLOR_DATASOURCE),
+    ("[Datasource Add]", HELP_COLOR_DATASOURCE),
+    ("[Datasource Import]", HELP_COLOR_DATASOURCE),
+    ("[Datasource Diff]", HELP_COLOR_DATASOURCE),
+    ("[Access Inventory]", HELP_COLOR_ACCESS),
+    ("[Access User Diff]", HELP_COLOR_ACCESS),
+    ("[Access Team Import]", HELP_COLOR_ACCESS),
+    ("[Access Org Delete]", HELP_COLOR_ACCESS),
+    ("[Access Token Add]", HELP_COLOR_ACCESS),
+    ("[Sync Planning]", HELP_COLOR_SYNC),
+    ("[Sync Summary]", HELP_COLOR_SYNC),
+    ("[Sync Plan]", HELP_COLOR_SYNC),
+    ("[Sync Review]", HELP_COLOR_SYNC),
+    ("[Sync Apply]", HELP_COLOR_SYNC),
+];
+
+pub(crate) fn colorize_help_examples(text: &str) -> String {
+    let mut colored = text.to_string();
+    for (label, color) in HELP_EXAMPLE_LABELS {
+        let colored_label = format!("{color}{label}{HELP_COLOR_RESET}");
+        colored = colored.replace(label, &colored_label);
+    }
+    colored
+}
+
+pub(crate) fn inject_help_full_hint(help: String) -> String {
+    help.replace("\nExamples:\n", &format!("\n{HELP_FULL_HINT}\nExamples:\n"))
+}
