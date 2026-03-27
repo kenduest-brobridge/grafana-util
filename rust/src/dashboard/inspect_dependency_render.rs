@@ -1,6 +1,6 @@
 use crate::dashboard_inspection_dependency_contract::OfflineDependencyReportDocument;
 
-use super::inspect_render::render_simple_table;
+use super::inspect_render::{join_or_none, render_simple_table};
 
 fn render_dependency_section(
     lines: &mut Vec<String>,
@@ -15,14 +15,6 @@ fn render_dependency_section(
         return;
     }
     lines.extend(render_simple_table(headers, rows, true));
-}
-
-fn join_or_none(values: &[String]) -> String {
-    if values.is_empty() {
-        "(none)".to_string()
-    } else {
-        values.join(",")
-    }
 }
 
 fn normalize_dependency_cell(value: &str) -> String {
@@ -120,7 +112,7 @@ pub(super) fn render_export_inspection_dependency_table_report(
                 item.dashboard_count.to_string(),
                 item.panel_count.to_string(),
                 item.reference_count.to_string(),
-                join_or_none(&item.query_fields),
+                join_or_none(&item.query_fields, ","),
             ]
         })
         .collect::<Vec<Vec<String>>>();
@@ -152,11 +144,11 @@ pub(super) fn render_export_inspection_dependency_table_report(
                 item.panel_count.to_string(),
                 item.datasource_count.to_string(),
                 item.datasource_family_count.to_string(),
-                join_or_none(&item.query_fields),
-                join_or_none(&item.metrics),
-                join_or_none(&item.functions),
-                join_or_none(&item.measurements),
-                join_or_none(&item.buckets),
+                join_or_none(&item.query_fields, ","),
+                join_or_none(&item.metrics, ","),
+                join_or_none(&item.functions, ","),
+                join_or_none(&item.measurements, ","),
+                join_or_none(&item.buckets, ","),
             ]
         })
         .collect::<Vec<Vec<String>>>();

@@ -38,6 +38,7 @@ struct PromotionCheckSummary {
     folder_remap_count: i64,
     datasource_uid_remap_count: i64,
     datasource_name_remap_count: i64,
+    resolved_count: i64,
     direct_count: i64,
     mapped_count: i64,
     missing_target_count: i64,
@@ -97,12 +98,49 @@ fn summarize_promotion_checks(checks: &[PromotionCheck]) -> PromotionCheckSummar
                 item.kind == "datasource-name-remap" || item.kind == "alert-datasource-name-remap"
             })
             .count() as i64,
+        resolved_count: checks.iter().filter(|item| !item.blocking).count() as i64,
         direct_count: checks.iter().filter(|item| item.status == "direct").count() as i64,
         mapped_count: checks.iter().filter(|item| item.status == "mapped").count() as i64,
         missing_target_count: checks
             .iter()
             .filter(|item| item.status == "missing-target")
             .count() as i64,
+    }
+}
+
+fn partition_promotion_checks(checks: &[Value]) -> (Vec<&Value>, Vec<&Value>) {
+    let mut resolved_checks = Vec::new();
+    let mut blocking_checks = Vec::new();
+    for check in checks {
+        if check
+            .get("blocking")
+            .and_then(Value::as_bool)
+            .unwrap_or(false)
+        {
+            blocking_checks.push(check);
+        } else {
+            resolved_checks.push(check);
+        }
+    }
+    (resolved_checks, blocking_checks)
+}
+
+fn render_promotion_check_arrays(document: &Value) -> Result<(Vec<&Value>, Vec<&Value>)> {
+    if let Some(resolved_checks) = document.get("resolvedChecks").and_then(Value::as_array) {
+        Ok((
+            resolved_checks.iter().collect(),
+            document
+                .get("blockingChecks")
+                .and_then(Value::as_array)
+                .map(|checks| checks.iter().collect())
+                .unwrap_or_default(),
+        ))
+    } else if let Some(checks) = document.get("checks").and_then(Value::as_array) {
+        Ok(partition_promotion_checks(checks))
+    } else {
+        Err(message(
+            "Sync promotion preflight document is missing resolvedChecks.",
+        ))
     }
 }
 
@@ -520,6 +558,36 @@ pub fn build_sync_promotion_preflight_document(
             "detail": item.detail,
             "blocking": item.blocking,
         })).collect::<Vec<_>>(),
+        "resolvedChecks": checks
+            .iter()
+            .filter(|item| !item.blocking)
+            .map(|item| serde_json::json!({
+                "kind": item.kind,
+                "identity": item.identity,
+                "sourceValue": item.source_value,
+                "targetValue": item.target_value,
+                "resolution": item.resolution,
+                "mappingSource": item.mapping_source,
+                "status": item.status,
+                "detail": item.detail,
+                "blocking": item.blocking,
+            }))
+            .collect::<Vec<_>>(),
+        "blockingChecks": checks
+            .iter()
+            .filter(|item| item.blocking)
+            .map(|item| serde_json::json!({
+                "kind": item.kind,
+                "identity": item.identity,
+                "sourceValue": item.source_value,
+                "targetValue": item.target_value,
+                "resolution": item.resolution,
+                "mappingSource": item.mapping_source,
+                "status": item.status,
+                "detail": item.detail,
+                "blocking": item.blocking,
+            }))
+            .collect::<Vec<_>>(),
     }))
 }
 
@@ -548,6 +616,15 @@ pub fn render_sync_promotion_preflight_text(document: &Value) -> Result<Vec<Stri
     let bundle_preflight = document
         .get("bundlePreflight")
         .ok_or_else(|| message("Sync promotion preflight document is missing bundlePreflight."))?;
+    let (resolved_checks, blocking_checks) = render_promotion_check_arrays(document)?;
+    let resolved_remap_count = check_summary
+        .get("resolvedCount")
+        .and_then(Value::as_i64)
+        .unwrap_or(resolved_checks.len() as i64);
+    let blocking_remap_count = check_summary
+        .get("missingTargetCount")
+        .and_then(Value::as_i64)
+        .unwrap_or(blocking_checks.len() as i64);
     let mut lines = vec![
         "Sync promotion preflight".to_string(),
         format!(
@@ -579,7 +656,7 @@ pub fn render_sync_promotion_preflight_text(document: &Value) -> Result<Vec<Stri
                 .unwrap_or(0),
         ),
         format!(
-            "Check buckets: folder-remaps={} datasource-uid-remaps={} datasource-name-remaps={} direct={} mapped={} missing-target={}",
+            "Check buckets: folder-remaps={} datasource-uid-remaps={} datasource-name-remaps={} resolved-remaps={} blocking-remaps={} direct={} mapped={}",
             check_summary
                 .get("folderRemapCount")
                 .and_then(Value::as_i64)
@@ -592,6 +669,8 @@ pub fn render_sync_promotion_preflight_text(document: &Value) -> Result<Vec<Stri
                 .get("datasourceNameRemapCount")
                 .and_then(Value::as_i64)
                 .unwrap_or(0),
+            resolved_remap_count,
+            blocking_remap_count,
             check_summary
                 .get("directCount")
                 .and_then(Value::as_i64)
@@ -600,12 +679,8 @@ pub fn render_sync_promotion_preflight_text(document: &Value) -> Result<Vec<Stri
                 .get("mappedCount")
                 .and_then(Value::as_i64)
                 .unwrap_or(0),
-            check_summary
-                .get("missingTargetCount")
-                .and_then(Value::as_i64)
-                .unwrap_or(0),
         ),
-        "Reason: promotion stays blocked until bundle-preflight blockers are cleared and cross-environment mappings resolve to real target identifiers.".to_string(),
+        "Reason: promotion stays blocked until blocking checks are cleared; resolved remaps stay in the review handoff for traceability.".to_string(),
         format!(
             "Handoff: review-required={} ready-for-review={} next-stage={} blocking={} instruction={}",
             handoff_summary
@@ -624,28 +699,45 @@ pub fn render_sync_promotion_preflight_text(document: &Value) -> Result<Vec<Stri
             normalize_text(handoff_summary.get("reviewInstruction")),
         ),
         String::new(),
-        "# Promotion checks".to_string(),
+        "# Resolved remaps".to_string(),
     ];
-    if let Some(checks) = document.get("checks").and_then(Value::as_array) {
-        if checks.is_empty() {
-            lines.push(
-                "- none status=ok detail=No cross-environment remaps are required.".to_string(),
-            );
-        } else {
-            for check in checks {
-                if let Some(object) = check.as_object() {
-                    lines.push(format!(
-                        "- {} identity={} source={} target={} resolution={} mapping-source={} status={} detail={}",
-                        normalize_text(object.get("kind")),
-                        normalize_text(object.get("identity")),
-                        normalize_text(object.get("sourceValue")),
-                        normalize_text(object.get("targetValue")),
-                        normalize_text(object.get("resolution")),
-                        normalize_text(object.get("mappingSource")),
-                        normalize_text(object.get("status")),
-                        normalize_text(object.get("detail")),
-                    ));
-                }
+    if resolved_checks.is_empty() {
+        lines.push("- none status=ok detail=No resolved remaps to review.".to_string());
+    } else {
+        for check in resolved_checks {
+            if let Some(object) = check.as_object() {
+                lines.push(format!(
+                    "- {} identity={} source={} target={} resolution={} mapping-source={} status={} detail={}",
+                    normalize_text(object.get("kind")),
+                    normalize_text(object.get("identity")),
+                    normalize_text(object.get("sourceValue")),
+                    normalize_text(object.get("targetValue")),
+                    normalize_text(object.get("resolution")),
+                    normalize_text(object.get("mappingSource")),
+                    normalize_text(object.get("status")),
+                    normalize_text(object.get("detail")),
+                ));
+            }
+        }
+    }
+    lines.push(String::new());
+    lines.push("# Blocking remaps".to_string());
+    if blocking_checks.is_empty() {
+        lines.push("- none status=ok detail=No blocking remaps remain.".to_string());
+    } else {
+        for check in blocking_checks {
+            if let Some(object) = check.as_object() {
+                lines.push(format!(
+                    "- {} identity={} source={} target={} resolution={} mapping-source={} status={} detail={}",
+                    normalize_text(object.get("kind")),
+                    normalize_text(object.get("identity")),
+                    normalize_text(object.get("sourceValue")),
+                    normalize_text(object.get("targetValue")),
+                    normalize_text(object.get("resolution")),
+                    normalize_text(object.get("mappingSource")),
+                    normalize_text(object.get("status")),
+                    normalize_text(object.get("detail")),
+                ));
             }
         }
     }

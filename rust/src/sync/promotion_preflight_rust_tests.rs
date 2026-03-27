@@ -114,6 +114,7 @@ fn build_sync_promotion_preflight_document_reports_direct_mapped_and_missing_ref
         json!("prod")
     );
     assert_eq!(document["checkSummary"]["folderRemapCount"], json!(1));
+    assert_eq!(document["checkSummary"]["resolvedCount"], json!(3));
     assert_eq!(
         document["checkSummary"]["datasourceUidRemapCount"],
         json!(2)
@@ -124,6 +125,8 @@ fn build_sync_promotion_preflight_document_reports_direct_mapped_and_missing_ref
     );
     assert_eq!(document["checkSummary"]["mappedCount"], json!(3));
     assert_eq!(document["checkSummary"]["missingTargetCount"], json!(2));
+    assert_eq!(document["resolvedChecks"].as_array().unwrap().len(), 3);
+    assert_eq!(document["blockingChecks"].as_array().unwrap().len(), 2);
     assert!(document["checks"]
         .as_array()
         .unwrap()
@@ -137,6 +140,16 @@ fn build_sync_promotion_preflight_document_reports_direct_mapped_and_missing_ref
         .iter()
         .any(|item| item["kind"] == "alert-datasource-uid-remap"
             && item["status"] == "missing-target"));
+    assert!(document["resolvedChecks"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|item| item["blocking"] == json!(false)));
+    assert!(document["blockingChecks"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|item| item["blocking"] == json!(true)));
 }
 
 #[test]
@@ -186,9 +199,10 @@ fn render_sync_promotion_preflight_text_renders_summary_and_bundle_context() {
             "folderRemapCount": 1,
             "datasourceUidRemapCount": 0,
             "datasourceNameRemapCount": 0,
+            "resolvedCount": 1,
             "directCount": 0,
             "mappedCount": 1,
-            "missingTargetCount": 0
+            "missingTargetCount": 1
         },
         "handoffSummary": {
             "reviewRequired": true,
@@ -197,7 +211,7 @@ fn render_sync_promotion_preflight_text_renders_summary_and_bundle_context() {
             "blockingCount": 1,
             "reviewInstruction": "promotion handoff is blocked until the listed remaps and bundle issues are cleared"
         },
-        "checks": [{
+        "resolvedChecks": [{
             "kind": "folder-remap",
             "identity": "cpu-main",
             "sourceValue": "ops-src",
@@ -207,6 +221,17 @@ fn render_sync_promotion_preflight_text_renders_summary_and_bundle_context() {
             "status": "mapped",
             "detail": "Promotion mapping resolves this source identifier onto the target inventory.",
             "blocking": false
+        }],
+        "blockingChecks": [{
+            "kind": "alert-datasource-uid-remap",
+            "identity": "cpu-high",
+            "sourceValue": "loki-src",
+            "targetValue": "",
+            "resolution": "missing-map",
+            "mappingSource": "datasources.uids",
+            "status": "missing-target",
+            "detail": "Alert datasource UID is missing from the target inventory and has no valid promotion mapping.",
+            "blocking": true
         }],
         "bundlePreflight": {
             "kind": "grafana-utils-sync-bundle-preflight",
@@ -231,14 +256,19 @@ fn render_sync_promotion_preflight_text_renders_summary_and_bundle_context() {
     assert!(output.contains("source-env=staging"));
     assert!(output.contains("target-env=prod"));
     assert!(output.contains("folder-remaps=1"));
+    assert!(output.contains("resolved-remaps=1"));
+    assert!(output.contains("blocking-remaps=1"));
     assert!(output.contains("mapped=1"));
     assert!(output.contains("folders=1"));
     assert!(output.contains("promotion stays blocked"));
     assert!(output.contains(
         "Handoff: review-required=true ready-for-review=false next-stage=resolve-blockers blocking=1 instruction=promotion handoff is blocked until the listed remaps and bundle issues are cleared"
     ));
+    assert!(output.contains("# Resolved remaps"));
+    assert!(output.contains("# Blocking remaps"));
     assert!(output.contains("resolution=explicit-map"));
     assert!(output.contains("mapping-source=folders"));
+    assert!(output.contains("status=missing-target"));
     assert!(output.contains("Sync bundle preflight summary"));
     assert!(output.contains("Secret placeholders blocking: 0"));
 }

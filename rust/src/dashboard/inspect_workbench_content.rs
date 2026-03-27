@@ -3,6 +3,7 @@
 use crate::interactive_browser::BrowserItem;
 
 use super::super::inspect_governance::ExportInspectionGovernanceDocument;
+use super::super::inspect_render::{bool_text, join_or_none};
 use super::super::inspect_report::ExportInspectionQueryReport;
 
 pub(crate) fn build_dashboard_items(
@@ -24,11 +25,14 @@ pub(crate) fn build_dashboard_items(
                 fact("Folder", &row.folder_path),
                 fact("Panels", row.panel_count),
                 fact("Queries", row.query_count),
-                fact("Datasources", join_or_none(&row.datasources)),
-                fact("Families", join_or_none(&row.datasource_families)),
-                fact("Mixed Datasource", yes_no(row.mixed_datasource)),
+                fact("Datasources", join_or_none(&row.datasources, ", ")),
+                fact("Families", join_or_none(&row.datasource_families, ", ")),
+                fact(
+                    "Mixed Datasource",
+                    bool_text(row.mixed_datasource, "yes", "no"),
+                ),
                 fact("Finding Count", row.risk_count),
-                fact("Finding Kinds", join_or_none(&row.risk_kinds)),
+                fact("Finding Kinds", join_or_none(&row.risk_kinds, ", ")),
             ],
         })
         .collect()
@@ -50,11 +54,11 @@ pub(crate) fn build_dashboard_finding_summary_items(
                 fact("Title", &row.dashboard_title),
                 fact("Folder", &row.folder_path),
                 fact("Finding Count", row.risk_count),
-                fact("Finding Kinds", join_or_none(&row.risk_kinds)),
-                fact("Datasources", join_or_none(&row.datasources)),
+                fact("Finding Kinds", join_or_none(&row.risk_kinds, ", ")),
+                fact("Datasources", join_or_none(&row.datasources, ", ")),
                 fact(
                     "Datasource Families",
-                    join_or_none(&row.datasource_families),
+                    join_or_none(&row.datasource_families, ", "),
                 ),
             ],
         })
@@ -113,11 +117,11 @@ pub(crate) fn build_query_items(
                     fact("Datasource UID", blank_or(&row.datasource_uid, "-")),
                     fact("Datasource Family", blank_or(&row.datasource_family, "-")),
                     fact("Query Field", blank_or(&row.query_field, "-")),
-                    fact("Metrics", join_or_none(&row.metrics)),
-                    fact("Functions", join_or_none(&row.functions)),
-                    fact("Measurements", join_or_none(&row.measurements)),
-                    fact("Buckets", join_or_none(&row.buckets)),
-                    fact("Variables", join_or_none(&row.query_variables)),
+                    fact("Metrics", join_or_none(&row.metrics, ", ")),
+                    fact("Functions", join_or_none(&row.functions, ", ")),
+                    fact("Measurements", join_or_none(&row.measurements, ", ")),
+                    fact("Buckets", join_or_none(&row.buckets, ", ")),
+                    fact("Variables", join_or_none(&row.query_variables, ", ")),
                     String::new(),
                     fact("Query", blank_or(&row.query_text, "-")),
                 ],
@@ -186,8 +190,11 @@ pub(crate) fn build_finding_items(
             fact("Query Cost Score", audit.query_cost_score),
             fact("Score", audit.score),
             fact("Severity", &audit.severity),
-            fact("Reasons", join_or_none(&audit.reasons)),
-            fact("Recommendations", join_or_none(&audit.recommendations)),
+            fact("Reasons", join_or_none(&audit.reasons, ", ")),
+            fact(
+                "Recommendations",
+                join_or_none(&audit.recommendations, ", "),
+            ),
         ],
     }));
     items
@@ -216,9 +223,9 @@ pub(crate) fn build_datasource_coverage_items(
                 fact("Query Count", row.query_count),
                 fact("Dashboard Count", row.dashboard_count),
                 fact("Panel Count", row.panel_count),
-                fact("Dashboard UIDs", join_or_none(&row.dashboard_uids)),
-                fact("Query Fields", join_or_none(&row.query_fields)),
-                fact("Orphaned", yes_no(row.orphaned)),
+                fact("Dashboard UIDs", join_or_none(&row.dashboard_uids, ", ")),
+                fact("Query Fields", join_or_none(&row.query_fields, ", ")),
+                fact("Orphaned", bool_text(row.orphaned, "yes", "no")),
             ],
         })
         .collect::<Vec<_>>();
@@ -240,7 +247,7 @@ pub(crate) fn build_datasource_governance_items(
                 blank_or(&row.family, "unknown"),
                 row.risk_count,
                 row.mixed_dashboard_count,
-                yes_no(row.orphaned)
+                bool_text(row.orphaned, "yes", "no")
             ),
             details: vec![
                 fact("Datasource", blank_or(&row.datasource, "-")),
@@ -251,9 +258,9 @@ pub(crate) fn build_datasource_governance_items(
                 fact("Panel Count", row.panel_count),
                 fact("Mixed Dashboard Count", row.mixed_dashboard_count),
                 fact("Finding Count", row.risk_count),
-                fact("Finding Kinds", join_or_none(&row.risk_kinds)),
-                fact("Dashboard UIDs", join_or_none(&row.dashboard_uids)),
-                fact("Orphaned", yes_no(row.orphaned)),
+                fact("Finding Kinds", join_or_none(&row.risk_kinds, ", ")),
+                fact("Dashboard UIDs", join_or_none(&row.dashboard_uids, ", ")),
+                fact("Orphaned", bool_text(row.orphaned, "yes", "no")),
             ],
         })
         .collect::<Vec<_>>();
@@ -263,22 +270,6 @@ pub(crate) fn build_datasource_governance_items(
 
 fn fact(label: &str, value: impl std::fmt::Display) -> String {
     format!("{label}: {value}")
-}
-
-fn join_or_none(values: &[String]) -> String {
-    if values.is_empty() {
-        "(none)".to_string()
-    } else {
-        values.join(", ")
-    }
-}
-
-fn yes_no(value: bool) -> &'static str {
-    if value {
-        "yes"
-    } else {
-        "no"
-    }
 }
 
 fn blank_or<'a>(value: &'a str, fallback: &'a str) -> &'a str {

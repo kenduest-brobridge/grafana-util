@@ -1,4 +1,4 @@
-use super::super::inspect_render::render_simple_table;
+use super::super::inspect_render::{bool_text, join_or_none, render_simple_table};
 use super::ExportInspectionGovernanceDocument;
 
 /// Render the already-normalized governance document into text rows without recomputing
@@ -136,21 +136,6 @@ pub(crate) fn render_governance_table_report(
         .dashboard_governance
         .iter()
         .map(|row| {
-            let datasources = if row.datasources.is_empty() {
-                "(none)".to_string()
-            } else {
-                row.datasources.join(",")
-            };
-            let datasource_families = if row.datasource_families.is_empty() {
-                "(none)".to_string()
-            } else {
-                row.datasource_families.join(",")
-            };
-            let risk_kinds = if row.risk_kinds.is_empty() {
-                "(none)".to_string()
-            } else {
-                row.risk_kinds.join(",")
-            };
             vec![
                 row.dashboard_uid.clone(),
                 row.dashboard_title.clone(),
@@ -159,15 +144,11 @@ pub(crate) fn render_governance_table_report(
                 row.query_count.to_string(),
                 row.datasource_count.to_string(),
                 row.datasource_family_count.to_string(),
-                datasources,
-                datasource_families,
-                if row.mixed_datasource {
-                    "true".to_string()
-                } else {
-                    "false".to_string()
-                },
+                join_or_none(&row.datasources, ","),
+                join_or_none(&row.datasource_families, ","),
+                bool_text(row.mixed_datasource, "true", "false").to_string(),
                 row.risk_count.to_string(),
-                risk_kinds,
+                join_or_none(&row.risk_kinds, ","),
             ]
         })
         .collect::<Vec<Vec<String>>>();
@@ -249,16 +230,6 @@ pub(crate) fn render_governance_table_report(
         .datasource_governance
         .iter()
         .map(|row| {
-            let dashboard_uids = if row.dashboard_uids.is_empty() {
-                "(none)".to_string()
-            } else {
-                row.dashboard_uids.join(",")
-            };
-            let risk_kinds = if row.risk_kinds.is_empty() {
-                "(none)".to_string()
-            } else {
-                row.risk_kinds.join(",")
-            };
             vec![
                 row.datasource_uid.clone(),
                 row.datasource.clone(),
@@ -268,13 +239,9 @@ pub(crate) fn render_governance_table_report(
                 row.panel_count.to_string(),
                 row.mixed_dashboard_count.to_string(),
                 row.risk_count.to_string(),
-                risk_kinds,
-                dashboard_uids,
-                if row.orphaned {
-                    "true".to_string()
-                } else {
-                    "false".to_string()
-                },
+                join_or_none(&row.risk_kinds, ","),
+                join_or_none(&row.dashboard_uids, ","),
+                bool_text(row.orphaned, "true", "false").to_string(),
             ]
         })
         .collect::<Vec<Vec<String>>>();
@@ -306,16 +273,6 @@ pub(crate) fn render_governance_table_report(
         .datasources
         .iter()
         .map(|row| {
-            let dashboard_uids = if row.dashboard_uids.is_empty() {
-                "(none)".to_string()
-            } else {
-                row.dashboard_uids.join(",")
-            };
-            let query_fields = if row.query_fields.is_empty() {
-                "(none)".to_string()
-            } else {
-                row.query_fields.join(",")
-            };
             vec![
                 row.datasource_uid.clone(),
                 row.datasource.clone(),
@@ -323,13 +280,9 @@ pub(crate) fn render_governance_table_report(
                 row.query_count.to_string(),
                 row.dashboard_count.to_string(),
                 row.panel_count.to_string(),
-                dashboard_uids,
-                query_fields,
-                if row.orphaned {
-                    "true".to_string()
-                } else {
-                    "false".to_string()
-                },
+                join_or_none(&row.dashboard_uids, ","),
+                join_or_none(&row.query_fields, ","),
+                bool_text(row.orphaned, "true", "false").to_string(),
             ]
         })
         .collect::<Vec<Vec<String>>>();
