@@ -11,7 +11,9 @@ use crate::dashboard_inspection_query_features::build_query_features;
 use crate::dashboard_inspection_query_features::parse_query_text_families;
 #[cfg(test)]
 use crate::dashboard_reference_models::build_query_reference_payload;
-use crate::dashboard_reference_models::{dedupe_strings, DashboardQueryReference, QueryFeatureSet};
+use crate::dashboard_reference_models::{
+    dedupe_strings, normalize_family_name, DashboardQueryReference, QueryFeatureSet,
+};
 use serde_json::{json, Map, Value};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -19,6 +21,8 @@ use std::collections::{BTreeMap, BTreeSet};
 #[derive(Debug, Clone)]
 pub struct DependencyUsageSummary {
     pub datasource_identity: String,
+    pub datasource_uid: String,
+    pub datasource_type: String,
     pub family: String,
     pub query_count: usize,
     pub dashboard_count: usize,
@@ -36,12 +40,53 @@ impl DependencyUsageSummary {
 
         json!({
             "datasource": self.datasource_identity,
+            "datasourceUid": self.datasource_uid,
+            "datasourceType": self.datasource_type,
             "family": self.family,
             "queryCount": self.query_count,
             "dashboardCount": self.dashboard_count,
             "panelCount": self.panel_count,
             "referenceCount": self.reference_count,
             "queryFields": self.query_fields,
+        })
+    }
+}
+
+/// Struct definition for DependencyOrphanSummary.
+#[derive(Debug, Clone)]
+pub struct DependencyOrphanSummary {
+    pub uid: String,
+    pub name: String,
+    pub datasource_type: String,
+    pub family: String,
+    pub access: String,
+    pub url: String,
+    pub database: String,
+    pub default_bucket: String,
+    pub organization: String,
+    pub index_pattern: String,
+    pub is_default: String,
+    pub org: String,
+    pub org_id: String,
+}
+
+impl DependencyOrphanSummary {
+    /// as json.
+    pub fn as_json(&self) -> Value {
+        json!({
+            "uid": self.uid,
+            "name": self.name,
+            "type": self.datasource_type,
+            "family": self.family,
+            "access": self.access,
+            "url": self.url,
+            "database": self.database,
+            "defaultBucket": self.default_bucket,
+            "organization": self.organization,
+            "indexPattern": self.index_pattern,
+            "isDefault": self.is_default,
+            "org": self.org,
+            "orgId": self.org_id,
         })
     }
 }
@@ -54,7 +99,7 @@ pub struct OfflineDependencyReportDocument {
     pub query_features: BTreeMap<String, QueryFeatureSet>,
     pub(crate) dashboard_dependencies: Vec<DashboardDependencySummary>,
     pub usage: Vec<DependencyUsageSummary>,
-    pub orphaned: Vec<String>,
+    pub orphaned: Vec<DependencyOrphanSummary>,
 }
 
 impl OfflineDependencyReportDocument {
@@ -144,7 +189,7 @@ impl OfflineDependencyReportDocument {
             "orphanedDatasources": self
                 .orphaned
                 .iter()
-                .map(|value| Value::String(value.clone()))
+                .map(|item| item.as_json())
                 .collect::<Vec<_>>(),
         })
     }
@@ -152,17 +197,17 @@ impl OfflineDependencyReportDocument {
 
 #[derive(Debug, Clone)]
 pub(crate) struct DashboardDependencySummary {
-    dashboard_uid: String,
-    dashboard_title: String,
-    query_count: usize,
-    panel_count: usize,
-    datasource_count: usize,
-    datasource_family_count: usize,
-    query_fields: Vec<String>,
-    metrics: Vec<String>,
-    functions: Vec<String>,
-    measurements: Vec<String>,
-    buckets: Vec<String>,
+    pub(crate) dashboard_uid: String,
+    pub(crate) dashboard_title: String,
+    pub(crate) query_count: usize,
+    pub(crate) panel_count: usize,
+    pub(crate) datasource_count: usize,
+    pub(crate) datasource_family_count: usize,
+    pub(crate) query_fields: Vec<String>,
+    pub(crate) metrics: Vec<String>,
+    pub(crate) functions: Vec<String>,
+    pub(crate) measurements: Vec<String>,
+    pub(crate) buckets: Vec<String>,
 }
 
 impl DashboardDependencySummary {
@@ -249,7 +294,7 @@ fn build_dependency_query_input_from_report_row(
     }
 }
 
-fn build_offline_dependency_contract_document(
+fn build_offline_dependency_contract_document_from_query_inputs(
     query_inputs: Vec<DependencyQueryInput>,
     datasource_inventory: &[DatasourceInventoryItem],
 ) -> OfflineDependencyReportDocument {
@@ -278,6 +323,16 @@ fn build_offline_dependency_contract_document(
             reference.dashboard_uid, reference.panel_id
         ));
         query_features.insert(key, feature);
+        let datasource_identity = if reference.datasource_name.is_empty() {
+            reference.datasource_uid.clone()
+        } else {
+            reference.datasource_name.clone()
+        };
+        let datasource_key = if reference.datasource_uid.is_empty() {
+            datasource_identity.clone()
+        } else {
+            reference.datasource_uid.clone()
+        };
         let dashboard_entry = dashboard_dependencies
             .entry(reference.dashboard_uid.clone())
             .or_insert(DashboardDependencyAccumulator {
@@ -310,14 +365,14 @@ fn build_offline_dependency_contract_document(
         dashboard_entry.functions.extend(functions);
         dashboard_entry.measurements.extend(measurements);
         dashboard_entry.buckets.extend(buckets);
-        let fields = query_fields
-            .entry(reference.datasource_name.clone())
-            .or_default();
+        let fields = query_fields.entry(datasource_key.clone()).or_default();
         fields.insert(reference.query_field.clone());
 
-        let summary_entry = usage.entry(reference.datasource_name.clone()).or_insert((
+        let summary_entry = usage.entry(datasource_key.clone()).or_insert((
             DependencyUsageSummary {
-                datasource_identity: reference.datasource_name.clone(),
+                datasource_identity: datasource_identity.clone(),
+                datasource_uid: reference.datasource_uid.clone(),
+                datasource_type: reference.datasource_type.clone(),
                 family: reference.datasource_family.clone(),
                 query_count: 0,
                 dashboard_count: 0,
@@ -328,6 +383,16 @@ fn build_offline_dependency_contract_document(
             BTreeSet::new(),
             BTreeSet::new(),
         ));
+        summary_entry.0.datasource_identity = datasource_identity.clone();
+        if summary_entry.0.datasource_uid.is_empty() {
+            summary_entry.0.datasource_uid = reference.datasource_uid.clone();
+        }
+        if summary_entry.0.datasource_type.is_empty() {
+            summary_entry.0.datasource_type = reference.datasource_type.clone();
+        }
+        if summary_entry.0.family.is_empty() {
+            summary_entry.0.family = reference.datasource_family.clone();
+        }
         summary_entry.0.query_count += 1;
         summary_entry.0.reference_count += 1;
         summary_entry.0.query_fields = fields.iter().cloned().collect();
@@ -356,13 +421,21 @@ fn build_offline_dependency_contract_document(
         if !name.is_empty() && used.contains(&name) {
             continue;
         }
-        if !uid.is_empty() {
-            orphaned.push(uid);
-            continue;
-        }
-        if !name.is_empty() {
-            orphaned.push(name);
-        }
+        orphaned.push(DependencyOrphanSummary {
+            uid,
+            name,
+            datasource_type: item.datasource_type.clone(),
+            family: normalize_family_name(&item.datasource_type),
+            access: item.access.clone(),
+            url: item.url.clone(),
+            database: item.database.clone(),
+            default_bucket: item.default_bucket.clone(),
+            organization: item.organization.clone(),
+            index_pattern: item.index_pattern.clone(),
+            is_default: item.is_default.clone(),
+            org: item.org.clone(),
+            org_id: item.org_id.clone(),
+        });
     }
 
     let dashboard_dependencies = dashboard_dependencies
@@ -386,7 +459,11 @@ fn build_offline_dependency_contract_document(
         .into_values()
         .map(|(summary, _, _)| summary)
         .collect::<Vec<_>>();
-    usage_rows.sort_by(|left, right| left.datasource_identity.cmp(&right.datasource_identity));
+    usage_rows.sort_by(|left, right| {
+        left.datasource_identity
+            .cmp(&right.datasource_identity)
+            .then_with(|| left.datasource_uid.cmp(&right.datasource_uid))
+    });
 
     let mut summary = BTreeMap::new();
     summary.insert("queryCount".to_string(), Value::from(queries.len()));
@@ -417,6 +494,24 @@ fn build_offline_dependency_contract_document(
     }
 }
 
+fn build_offline_dependency_contract_document(
+    query_inputs: Vec<DependencyQueryInput>,
+    datasource_inventory: &[DatasourceInventoryItem],
+) -> OfflineDependencyReportDocument {
+    build_offline_dependency_contract_document_from_query_inputs(query_inputs, datasource_inventory)
+}
+
+pub(crate) fn build_offline_dependency_contract_document_from_report_rows(
+    query_report_rows: &[ExportInspectionQueryRow],
+    datasource_inventory: &[DatasourceInventoryItem],
+) -> OfflineDependencyReportDocument {
+    let query_inputs = query_report_rows
+        .iter()
+        .map(build_dependency_query_input_from_report_row)
+        .collect::<Vec<DependencyQueryInput>>();
+    build_offline_dependency_contract_document(query_inputs, datasource_inventory)
+}
+
 #[cfg(test)]
 pub(crate) fn build_offline_dependency_contract(
     query_report_rows: &[Value],
@@ -429,15 +524,16 @@ pub(crate) fn build_offline_dependency_contract(
     build_offline_dependency_contract_document(query_inputs, datasource_inventory).as_json()
 }
 
+#[cfg_attr(not(test), allow(dead_code))]
 pub(crate) fn build_offline_dependency_contract_from_report_rows(
     query_report_rows: &[ExportInspectionQueryRow],
     datasource_inventory: &[DatasourceInventoryItem],
 ) -> Value {
-    let query_inputs = query_report_rows
-        .iter()
-        .map(build_dependency_query_input_from_report_row)
-        .collect::<Vec<DependencyQueryInput>>();
-    build_offline_dependency_contract_document(query_inputs, datasource_inventory).as_json()
+    build_offline_dependency_contract_document_from_report_rows(
+        query_report_rows,
+        datasource_inventory,
+    )
+    .as_json()
 }
 
 #[cfg(test)]
@@ -656,5 +752,85 @@ mod tests {
         assert!(measurements.contains(&"posts".to_string()));
         assert!(measurements.contains(&"users".to_string()));
         assert!(!measurements.contains(&"recent".to_string()));
+    }
+
+    #[test]
+    fn build_offline_dependency_contract_surfaces_richer_usage_and_orphan_details() {
+        let document = build_offline_dependency_contract(
+            &[json!({
+                "dashboardUid": "dash-a",
+                "dashboardTitle": "Dash A",
+                "panelId": "7",
+                "panelTitle": "Panel",
+                "panelType": "timeseries",
+                "refId": "A",
+                "datasource": "Prometheus Main",
+                "datasourceUid": "prom-main",
+                "datasourceType": "prometheus",
+                "file": "dash-a.json",
+                "queryField": "expr",
+                "query": "up"
+            })],
+            &[
+                DatasourceInventoryItem {
+                    uid: "prom-main".to_string(),
+                    name: "Prometheus Main".to_string(),
+                    datasource_type: "prometheus".to_string(),
+                    access: "proxy".to_string(),
+                    url: "http://prometheus:9090".to_string(),
+                    database: String::new(),
+                    default_bucket: String::new(),
+                    organization: String::new(),
+                    index_pattern: String::new(),
+                    is_default: "true".to_string(),
+                    org: "Main Org.".to_string(),
+                    org_id: "1".to_string(),
+                },
+                DatasourceInventoryItem {
+                    uid: "orphan-main".to_string(),
+                    name: "Orphan Main".to_string(),
+                    datasource_type: "grafana-postgresql-datasource".to_string(),
+                    access: "proxy".to_string(),
+                    url: "postgresql://postgres:5432/orphan".to_string(),
+                    database: "orphan_db".to_string(),
+                    default_bucket: String::new(),
+                    organization: String::new(),
+                    index_pattern: String::new(),
+                    is_default: "false".to_string(),
+                    org: "Main Org.".to_string(),
+                    org_id: "1".to_string(),
+                },
+            ],
+        );
+
+        assert_eq!(document["summary"]["orphanedDatasourceCount"], json!(1));
+        assert_eq!(
+            document["datasourceUsage"][0]["datasourceUid"],
+            json!("prom-main")
+        );
+        assert_eq!(
+            document["datasourceUsage"][0]["datasourceType"],
+            json!("prometheus")
+        );
+        assert_eq!(
+            document["datasourceUsage"][0]["queryFields"],
+            json!(["expr"])
+        );
+        assert_eq!(
+            document["orphanedDatasources"][0]["uid"],
+            json!("orphan-main")
+        );
+        assert_eq!(
+            document["orphanedDatasources"][0]["name"],
+            json!("Orphan Main")
+        );
+        assert_eq!(
+            document["orphanedDatasources"][0]["family"],
+            json!("postgresql")
+        );
+        assert_eq!(
+            document["orphanedDatasources"][0]["database"],
+            json!("orphan_db")
+        );
     }
 }

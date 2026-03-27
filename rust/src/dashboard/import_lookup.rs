@@ -17,7 +17,10 @@ pub(crate) struct ImportLookupCache {
     pub dashboards_by_uid: BTreeMap<String, Option<Value>>,
     pub dashboard_uids_from_search: Option<BTreeSet<String>>,
     pub dashboard_summary_folder_uids: BTreeMap<String, String>,
+    pub resolved_existing_dashboard_folder_paths: BTreeMap<String, String>,
+    pub resolved_dashboard_import_folder_paths: BTreeMap<(String, bool), String>,
     pub folders_by_uid: BTreeMap<String, Option<Map<String, Value>>>,
+    pub ensured_folder_uids: BTreeSet<String>,
     pub current_org_id: Option<String>,
     pub orgs: Option<Vec<Map<String, Value>>>,
 }
@@ -376,6 +379,9 @@ where
     if uid.is_empty() {
         return Ok(None);
     }
+    if let Some(path) = cache.resolved_existing_dashboard_folder_paths.get(uid) {
+        return Ok(Some(path.clone()));
+    }
     let Some(existing_payload) = fetch_dashboard_if_exists_cached(request_json, cache, uid)? else {
         return Ok(None);
     };
@@ -390,7 +396,11 @@ where
         .trim()
         .to_string();
     if folder_uid.is_empty() || folder_uid == DEFAULT_FOLDER_UID {
-        return Ok(Some(DEFAULT_FOLDER_TITLE.to_string()));
+        let path = DEFAULT_FOLDER_TITLE.to_string();
+        cache
+            .resolved_existing_dashboard_folder_paths
+            .insert(uid.to_string(), path.clone());
+        return Ok(Some(path));
     }
     let Some(folder) = fetch_folder_if_exists_cached(request_json, cache, &folder_uid)? else {
         return Ok(None);
@@ -400,6 +410,9 @@ where
     if path.trim().is_empty() {
         Ok(None)
     } else {
+        cache
+            .resolved_existing_dashboard_folder_paths
+            .insert(uid.to_string(), path.clone());
         Ok(Some(path))
     }
 }
@@ -465,26 +478,50 @@ where
         .unwrap_or("")
         .trim()
         .to_string();
+    let cache_key = (folder_uid.clone(), prefer_live_lookup);
+    if let Some(path) = cache.resolved_dashboard_import_folder_paths.get(&cache_key) {
+        return Ok(path.clone());
+    }
     if folder_uid.is_empty() || folder_uid == DEFAULT_FOLDER_UID {
-        return Ok(DEFAULT_FOLDER_TITLE.to_string());
+        let path = DEFAULT_FOLDER_TITLE.to_string();
+        cache
+            .resolved_dashboard_import_folder_paths
+            .insert(cache_key, path.clone());
+        return Ok(path);
     }
     if prefer_live_lookup {
         if let Some(folder) = fetch_folder_if_exists_cached(request_json, cache, &folder_uid)? {
             let fallback_title = string_field(&folder, "title", &folder_uid);
-            return Ok(build_folder_path(&folder, &fallback_title));
+            let path = build_folder_path(&folder, &fallback_title);
+            cache
+                .resolved_dashboard_import_folder_paths
+                .insert(cache_key, path.clone());
+            return Ok(path);
         }
     }
     if let Some(folder) = folders_by_uid.get(&folder_uid) {
         if !folder.path.is_empty() {
-            return Ok(folder.path.clone());
+            let path = folder.path.clone();
+            cache
+                .resolved_dashboard_import_folder_paths
+                .insert(cache_key, path.clone());
+            return Ok(path);
         }
         if !folder.title.is_empty() {
-            return Ok(folder.title.clone());
+            let path = folder.title.clone();
+            cache
+                .resolved_dashboard_import_folder_paths
+                .insert(cache_key, path.clone());
+            return Ok(path);
         }
     }
     if let Some(folder) = fetch_folder_if_exists_cached(request_json, cache, &folder_uid)? {
         let fallback_title = string_field(&folder, "title", &folder_uid);
-        return Ok(build_folder_path(&folder, &fallback_title));
+        let path = build_folder_path(&folder, &fallback_title);
+        cache
+            .resolved_dashboard_import_folder_paths
+            .insert(cache_key, path.clone());
+        return Ok(path);
     }
     Ok(folder_uid)
 }
@@ -520,10 +557,15 @@ where
     if folder_uid.is_empty() {
         return Ok(());
     }
+    if cache.ensured_folder_uids.contains(folder_uid) {
+        return Ok(());
+    }
     let mut create_chain = Vec::new();
     let mut current_uid = folder_uid.to_string();
+    let mut existing_ancestor_uid = None;
     loop {
         if fetch_folder_if_exists_cached(request_json, cache, &current_uid)?.is_some() {
+            existing_ancestor_uid = Some(current_uid.clone());
             break;
         }
         let folder = folders_by_uid.get(&current_uid).ok_or_else(|| {
@@ -572,6 +614,11 @@ where
         cache
             .folders_by_uid
             .insert(folder.uid.clone(), Some(created));
+        cache.ensured_folder_uids.insert(folder.uid.clone());
     }
+    if let Some(existing_ancestor_uid) = existing_ancestor_uid {
+        cache.ensured_folder_uids.insert(existing_ancestor_uid);
+    }
+    cache.ensured_folder_uids.insert(folder_uid.to_string());
     Ok(())
 }
