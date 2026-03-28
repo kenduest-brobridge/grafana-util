@@ -14,6 +14,22 @@ Current AI change log only.
 - Rollback/Risk: low. This changes operator-facing wording only and keeps browse state, input handling, and destructive behavior unchanged.
 - Follow-up: none.
 
+## 2026-03-28 - Interactive dashboard import boundary split
+- Summary: split the growing `dashboard import --interactive` workbench into explicit render, review, and context helper modules while keeping the existing `crate::dashboard::import_interactive` entrypoint, state types, and test paths stable. The TUI frame/layout lives in `import_interactive_render.rs`, local artifact loading plus live review/diff resolution now live in `import_interactive_review.rs`, and the `Summary / Destination / Diff` context-pane builders now live in `import_interactive_context.rs`.
+- Tests: reused the focused dashboard import workflow regression suite to validate the unchanged grouping, review-on-focus, dry-run review wording, context view cycling, and diff-depth behavior after the split.
+- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all` passed; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_browse_workflow_rust_tests` passed; `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings` passed.
+- Impact: `rust/src/dashboard/import_interactive.rs`, `rust/src/dashboard/import_interactive_render.rs`, `rust/src/dashboard/import_interactive_review.rs`, `rust/src/dashboard/import_interactive_context.rs`, `rust/src/dashboard/mod.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: low-to-moderate. This is an internal ownership cleanup around already-landed interactive import behavior; revert the split if a different long-term module shape is needed, but keep the workbench state, renderer, and live review helpers separated.
+- Follow-up: if the import workbench keeps growing, the next split should isolate diff formatting helpers or destination-summary builders instead of folding them back into the renderer.
+
+## 2026-03-28 - Interactive dashboard import state/model split
+- Summary: split `dashboard import --interactive` again by separating the shared review/context model types plus `InteractiveImportState` into `import_interactive_state.rs`, reducing ownership overlap inside `import_interactive.rs` without changing the existing TUI flow, review semantics, or public entrypoint.
+- Tests: relied on the existing focused interactive import workflow regressions, which continue to reach the same `crate::dashboard::import_interactive::*` symbols through re-exports.
+- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all --check` passed; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_browse_workflow_rust_tests` passed; `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings` passed.
+- Impact: `rust/src/dashboard/import_interactive.rs`, `rust/src/dashboard/import_interactive_state.rs`, `rust/src/dashboard/mod.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: low. This is a follow-on ownership cleanup that keeps the same entrypoint and re-export paths while narrowing the orchestration file to TTY gating and top-level delegation.
+- Follow-up: the next useful split is to separate import-context loading from live review/diff synthesis inside `import_interactive_review.rs` if that module keeps growing.
+
 ## 2026-03-28 - Interactive dashboard import dry-run review mode
 - Summary: made `dashboard import --interactive --dry-run` an explicit operator-facing mode by switching the interactive header, status copy, Enter action label, help text, and cancellation message over to dry-run review wording instead of reusing the import wording.
 - Tests: added a focused dry-run state regression for the interactive import workbench and extended the import help regression to assert the new dry-run wording.
@@ -21,6 +37,14 @@ Current AI change log only.
 - Impact: `rust/src/dashboard/import_interactive.rs`, `rust/src/dashboard/import_apply.rs`, `rust/src/dashboard/cli_defs_command.rs`, `rust/src/dashboard/dashboard_browse_workflow_rust_tests.rs`, `rust/src/dashboard/dashboard_cli_parser_help_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
 - Rollback/Risk: low. This does not add a new command path; it only makes the existing interactive dry-run path explicit and less confusing for operators.
 - Follow-up: none.
+
+## 2026-03-28 - Interactive dashboard import context views
+- Summary: upgraded the interactive dashboard import workbench into a single-screen review surface with switchable `Summary`, `Destination`, and `Diff` context panes. The lower pane now lets operators switch scope across focused, selected, and all dashboards, and the diff pane can switch between summary, structural, and raw views without leaving the import workflow.
+- Tests: extended the focused dashboard import workflow regressions to cover the new context-view, scope, and diff-depth state transitions.
+- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all` passed; `cargo test --manifest-path rust/Cargo.toml --quiet dashboard_browse_workflow_rust_tests` passed; `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings` passed.
+- Impact: `rust/src/dashboard/import_interactive.rs`, `rust/src/dashboard/dashboard_browse_workflow_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: moderate. This keeps the same import entrypoint and selection model, but it expands the review model and makes the import workbench materially richer than the original selector. Current ownership is now tracked by the later `Interactive dashboard import boundary split` entry.
+- Follow-up: completed by the later same-day boundary split that moved the context-pane builders out of `import_interactive.rs`.
 
 ## 2026-03-28 - Interactive dashboard import review workbench
 - Summary: upgraded `dashboard import --interactive` from a local file picker into a review-first TUI that reuses the existing import dry-run/import lookup semantics for the focused dashboard. The workbench now resolves review state on focus, caches create/update/skip/block outcomes, exposes folder/action/flat grouping, and keeps `Enter` as the direct import boundary for the selected files.

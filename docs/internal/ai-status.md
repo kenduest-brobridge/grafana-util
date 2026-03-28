@@ -13,12 +13,33 @@ Current AI-maintained status only.
 - Current Update: aligned browse summaries and footers around `Mode=...`, `active-pane=...`, `next pane`, `previous pane`, `search`, `next match`, and consistent confirm-delete or cancel wording.
 - Result: the browse surfaces now read more like one Rust operator console even though their row models and actions remain domain-specific.
 
+## 2026-03-28 - Interactive dashboard import boundary split
+- State: Done
+- Scope: `rust/src/dashboard/import_interactive.rs`, `rust/src/dashboard/import_interactive_render.rs`, `rust/src/dashboard/import_interactive_review.rs`, `rust/src/dashboard/import_interactive_context.rs`, `rust/src/dashboard/mod.rs`
+- Baseline: the interactive dashboard import workbench had already grown into a real review surface with grouping, dry-run review mode, context panes, and diff depth switching, but those concerns still lived in one large module that mixed TUI render, state transitions, live review resolution, import artifact loading, and context-pane assembly.
+- Current Update: kept the public `crate::dashboard::import_interactive` path stable while splitting TUI rendering into `import_interactive_render.rs`, live review/data-loading logic into `import_interactive_review.rs`, and context-pane summary/destination/diff builders into `import_interactive_context.rs`, leaving `import_interactive.rs` focused on state, key handling, and the thin interactive entrypoint.
+- Result: the import review workbench now has clearer ownership boundaries and is less likely to regress into a single oversized dashboard import facade as more review detail is added.
+
+## 2026-03-28 - Interactive dashboard import state/model split
+- State: Done
+- Scope: `rust/src/dashboard/import_interactive.rs`, `rust/src/dashboard/import_interactive_state.rs`, `rust/src/dashboard/mod.rs`
+- Baseline: the interactive import boundary split already separated renderer, review loader, and context-pane builders, but `import_interactive.rs` still mixed shared view-model types, mutable workbench state, key handling, and the top-level entrypoint in one file.
+- Current Update: moved the interactive import item/review types plus `InteractiveImportState` and its state-machine methods into `import_interactive_state.rs`, while keeping `import_interactive.rs` as the thin orchestration entrypoint and re-export surface used by existing renderer and test paths.
+- Result: the dashboard import workbench now has a cleaner state/model seam, so future work can keep refining the import subsystem without growing the entrypoint back into a hub module.
+
 ## 2026-03-28 - Interactive dashboard import dry-run review mode
 - State: Done
 - Scope: `rust/src/dashboard/import_interactive.rs`, `rust/src/dashboard/import_apply.rs`, `rust/src/dashboard/cli_defs_command.rs`, focused dashboard import help/workflow tests
 - Baseline: `dashboard import --interactive` already acted as a review-first TUI, and `--dry-run` technically flowed through the same path, but the interactive wording still said `import selected` and cancellation still printed `Import cancelled.`, which made dry-run interactive use feel unofficial.
 - Current Update: made the interactive import workbench explicitly dry-run aware so the header, status text, footer Enter label, CLI help, and cancellation message all switch to dry-run review wording when `--dry-run` is active.
 - Result: `dashboard import --interactive --dry-run` is now a first-class interactive review mode instead of an implicit side effect of the normal import path.
+
+## 2026-03-28 - Interactive dashboard import context views
+- State: Done
+- Scope: `rust/src/dashboard/import_interactive.rs`, `rust/src/dashboard/dashboard_browse_workflow_rust_tests.rs`
+- Baseline: the interactive import workbench already had focused review and lightweight summary data, but it still only exposed one review pane. Operators could not stay on the same screen and switch between batch summary, destination-state context, and deeper diff detail.
+- Current Update: added context-view state to the import workbench with `Summary`, `Destination`, and `Diff` panes on the same screen, plus `focused / selected / all` scope switching and `summary / structural / raw` diff-depth switching.
+- Result: interactive import now behaves like a single review workspace instead of a reviewed picker, letting operators choose dashboards, inspect destination state, and inspect diffs without leaving the import TUI. Current ownership of those panes is now tracked by the later `Interactive dashboard import boundary split` entry.
 
 ## 2026-03-28 - Interactive dashboard import review workbench
 - State: Done

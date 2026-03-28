@@ -957,6 +957,50 @@ fn interactive_import_grouping_cycles_folder_action_flat() {
 }
 
 #[test]
+fn interactive_import_context_view_scope_and_diff_depth_cycle() {
+    let items = vec![
+        crate::dashboard::import_interactive::InteractiveImportItem {
+            path: PathBuf::from("a.json"),
+            uid: "a".to_string(),
+            title: "CPU".to_string(),
+            folder_path: "Infra".to_string(),
+            file_label: "a.json".to_string(),
+            review: crate::dashboard::import_interactive::InteractiveImportReviewState::Pending,
+        },
+    ];
+    let mut state = InteractiveImportState::new(items, "create-only".to_string(), false);
+
+    assert_eq!(
+        state.context_view,
+        crate::dashboard::import_interactive::InteractiveImportContextView::Summary
+    );
+    assert_eq!(
+        state.handle_key(KeyEvent::new(KeyCode::Char('v'), KeyModifiers::NONE)),
+        InteractiveImportAction::Continue
+    );
+    assert_eq!(
+        state.context_view,
+        crate::dashboard::import_interactive::InteractiveImportContextView::Destination
+    );
+    assert_eq!(
+        state.handle_key(KeyEvent::new(KeyCode::Char('s'), KeyModifiers::NONE)),
+        InteractiveImportAction::Continue
+    );
+    assert_eq!(
+        state.summary_scope,
+        crate::dashboard::import_interactive::InteractiveImportSummaryScope::Selected
+    );
+    assert_eq!(
+        state.handle_key(KeyEvent::new(KeyCode::Char('d'), KeyModifiers::NONE)),
+        InteractiveImportAction::Continue
+    );
+    assert_eq!(
+        state.diff_depth,
+        crate::dashboard::import_interactive::InteractiveImportDiffDepth::Structural
+    );
+}
+
+#[test]
 fn interactive_import_summary_counts_track_pending_selected_and_reviewed_actions() {
     let mut state = InteractiveImportState::new(
         vec![
@@ -976,17 +1020,21 @@ fn interactive_import_summary_counts_track_pending_selected_and_reviewed_actions
                 file_label: "b.json".to_string(),
                 review:
                     crate::dashboard::import_interactive::InteractiveImportReviewState::Resolved(
-                        crate::dashboard::import_interactive::InteractiveImportReview {
-                            action: "would-update".to_string(),
-                            destination: "exists".to_string(),
-                            action_label: "update".to_string(),
-                            folder_path: "Infra".to_string(),
-                            source_folder_path: "Infra".to_string(),
-                            destination_folder_path: "Infra".to_string(),
-                            reason: "".to_string(),
-                            diff_status: "changed".to_string(),
-                            diff_summary_lines: vec!["Title: old -> new".to_string()],
-                        },
+                        Box::new(
+                            crate::dashboard::import_interactive::InteractiveImportReview {
+                                action: "would-update".to_string(),
+                                destination: "exists".to_string(),
+                                action_label: "update".to_string(),
+                                folder_path: "Infra".to_string(),
+                                source_folder_path: "Infra".to_string(),
+                                destination_folder_path: "Infra".to_string(),
+                                reason: "".to_string(),
+                                diff_status: "changed".to_string(),
+                                diff_summary_lines: vec!["Title: old -> new".to_string()],
+                                diff_structural_lines: vec!["Panels: 1 -> 2".to_string()],
+                                diff_raw_lines: vec!["REMOTE".to_string(), "LOCAL".to_string()],
+                            },
+                        ),
                     ),
             },
         ],
