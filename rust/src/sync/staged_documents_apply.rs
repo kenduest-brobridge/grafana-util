@@ -1,4 +1,12 @@
 //! Sync staged document review, apply, and preflight gating helpers.
+//!
+//! Maintainer note:
+//! - This module owns the staged contract checks between plan, review, and
+//!   apply intent generation.
+//! - Preflight inputs are bridged into compact summaries here so apply intents
+//!   carry only the gate outcome needed for audit and execution decisions.
+//! - Audit fields such as `reviewedBy` and `appliedAt` are attached here,
+//!   while lineage sequencing stays owned by `staged_documents_lineage.rs`.
 #![cfg_attr(not(any(feature = "tui", test)), allow(dead_code))]
 
 use crate::common::{message, Result};
@@ -48,6 +56,8 @@ pub(crate) fn mark_plan_reviewed(document: &Value, review_token: &str) -> Result
     if review_token.trim() != DEFAULT_REVIEW_TOKEN {
         return Err(message("Sync plan review token rejected."));
     }
+    // Review is a staged state transition, not a plan rebuild. Preserve the
+    // existing document and stamp only the minimum review gate fields here.
     let trace_id = require_trace_id(document, "Sync plan document")?;
     object.insert("reviewed".to_string(), Value::Bool(true));
     object.insert("traceId".to_string(), Value::String(trace_id));
@@ -67,6 +77,9 @@ pub(crate) fn validate_apply_preflight(document: &Value) -> Result<Value> {
             let check_count = summary.check_count;
             let ok_count = summary.ok_count;
             let blocking_count = summary.blocking_count;
+            // Apply intent only needs the gating summary, not the full
+            // preflight check list. Keep this bridge intentionally narrow so
+            // apply-document shape stays stable if preflight detail evolves.
             bridged.insert("kind".to_string(), Value::String(kind.to_string()));
             bridged.insert("checkCount".to_string(), Value::Number(check_count.into()));
             bridged.insert("okCount".to_string(), Value::Number(ok_count.into()));
@@ -106,6 +119,9 @@ pub(crate) fn validate_apply_bundle_preflight(document: &Value) -> Result<Value>
         .get("alertArtifactAssessment")
         .map(alert_artifact_assessment_summary_or_default)
         .unwrap_or_default();
+    // Bundle preflight already aggregates several staged assessments. Re-bridge
+    // that result into one apply-facing summary instead of embedding the full
+    // source documents into the apply intent.
     let blocking_count = summary.sync_blocking_count
         + summary.provider_blocking_count
         + summary.secret_placeholder_blocking_count
@@ -163,6 +179,9 @@ pub(crate) fn attach_review_audit(
     review_note: Option<&str>,
 ) -> Result<Value> {
     let mut object = require_json_object(document, "Sync reviewed plan document")?.clone();
+    // Audit ownership lives here: actor, timestamp, and freeform note describe
+    // who approved the staged transition, while lineage markers are attached by
+    // the separate lineage helper.
     if let Some(actor) = normalize_optional_text(reviewed_by) {
         object.insert("reviewedBy".to_string(), Value::String(actor));
     }
@@ -188,6 +207,9 @@ pub(crate) fn attach_apply_audit(
     apply_note: Option<&str>,
 ) -> Result<Value> {
     let mut object = require_json_object(document, "Sync apply intent document")?.clone();
+    // Keep apply audit metadata distinct from live execution results. This
+    // staged document records approval context; Grafana responses belong in the
+    // later live-apply audit payload.
     if let Some(actor) = normalize_optional_text(applied_by) {
         object.insert("appliedBy".to_string(), Value::String(actor));
     }

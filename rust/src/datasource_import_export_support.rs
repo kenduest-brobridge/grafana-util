@@ -1,3 +1,12 @@
+//! Datasource import bundle loading and export-org routing helpers.
+//!
+//! Maintainer notes:
+//! - This module is the contract gate for on-disk datasource bundles; reject
+//!   mixed-schema or ambiguous org metadata here before import logic runs.
+//! - `--use-export-org` routing prefers explicit metadata from exported files and
+//!   falls back to `org_<id>_<name>` directory names only when the bundle lacks
+//!   stable org fields.
+
 use reqwest::Method;
 use serde_json::{Map, Value};
 use std::collections::BTreeSet;
@@ -137,6 +146,8 @@ pub(crate) fn load_import_records(
             metadata_path.display()
         )));
     }
+    // Treat export-metadata.json as the root contract. Import should fail here
+    // rather than guessing at newer or unrelated bundle layouts.
     let metadata = parse_export_metadata(&metadata_path)?;
     if metadata.kind != ROOT_INDEX_KIND {
         return Err(message(format!(
@@ -335,6 +346,8 @@ fn parse_export_org_scope(
     let metadata = parse_export_metadata(&scope_dir.join(EXPORT_METADATA_FILENAME))?;
     let export_org_ids = collect_source_org_ids(scope_dir, &metadata)?;
     let (source_org_id, source_org_name_from_dir) = if export_org_ids.is_empty() {
+        // Older or minimized exports may omit org metadata inside the payloads.
+        // In that case the directory name is the last fallback for routed import.
         let scope_name = scope_dir
             .file_name()
             .and_then(|item| item.to_str())
@@ -434,6 +447,8 @@ pub(crate) fn discover_export_org_import_scopes(
         if !path.join(EXPORT_METADATA_FILENAME).is_file() {
             continue;
         }
+        // Each child scope must be self-contained; do not infer org routing from
+        // partial directories or siblings without an export manifest.
         let scope = parse_export_org_scope(&path, &path)?;
         if !selected_org_ids.is_empty() && !selected_org_ids.contains(&scope.source_org_id) {
             continue;
@@ -500,6 +515,9 @@ pub(crate) fn validate_matching_export_org(
     if !args.require_matching_export_org {
         return Ok(());
     }
+    // This guardrail is intentionally strict: one import bundle must map to one
+    // target org, otherwise a mismatched client/org selection can mutate the
+    // wrong Grafana org with valid-looking datasource records.
     let source_org_ids = collect_source_org_ids(import_dir, metadata)?;
     if source_org_ids.is_empty() {
         return Err(message(

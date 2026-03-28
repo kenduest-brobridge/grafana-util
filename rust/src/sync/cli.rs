@@ -1,3 +1,9 @@
+//! Sync CLI orchestration for the staged plan/review/apply workflow.
+//!
+//! This module owns command wiring, trace propagation, and orchestration-time
+//! live overlays. The lower-level builders stay focused on normalized
+//! documents so they remain reusable from tests and offline inputs.
+
 use super::*;
 use crate::sync::live::load_apply_intent_operations;
 

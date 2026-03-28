@@ -1,3 +1,12 @@
+//! Datasource import/export orchestration.
+//!
+//! Maintainer notes:
+//! - Keep secret placeholder handling fail-closed: dry-run may describe required
+//!   placeholders, but live import must resolve every placeholder before issuing
+//!   any write request.
+//! - Keep routed `--use-export-org` imports explicit: plan org routing first,
+//!   then execute one scoped import per destination org.
+
 use reqwest::Method;
 use serde_json::{Map, Value};
 use std::path::Path;
@@ -92,6 +101,8 @@ fn build_import_secret_visibility_entries(import_dir: &Path) -> Vec<Value> {
     entries
 }
 
+// This preflight plan is intentionally side-effect free so import validation,
+// match resolution, and secret injection all complete before the first POST/PUT.
 struct PreparedDatasourceImportRequest {
     method: Method,
     path: String,
@@ -397,6 +408,9 @@ fn build_import_payload_with_secret_values_impl(
         ("isDefault".to_string(), Value::Bool(record.is_default)),
     ]);
     if let Some(placeholders) = &record.secure_json_data_placeholders {
+        // Placeholder metadata is exported for review, but imports never replay it
+        // directly. The caller must provide concrete `--secret-values`, otherwise
+        // the whole import stops before any write is attempted.
         let datasource_spec = Map::from_iter(vec![
             ("uid".to_string(), Value::String(record.uid.clone())),
             ("name".to_string(), Value::String(record.name.clone())),
@@ -439,6 +453,8 @@ pub(crate) fn import_datasources_with_client(
     let secret_values = parse_secret_values_argument(args.secret_values.as_deref())?;
     validate_matching_export_org(client, args, &args.import_dir, &metadata)?;
     let live = list_datasources(client)?;
+    // Build the full request set first so match errors or missing secrets do not
+    // leave the destination half-mutated.
     let plan = prepare_datasource_import_plan(
         &records,
         &live,
@@ -499,6 +515,8 @@ pub(crate) fn import_datasources_by_export_org(args: &DatasourceImportArgs) -> R
     }
     let mut imported_count = 0usize;
     for plan in plans {
+        // Each routed import gets its own org-scoped client and import_dir so
+        // downstream matching/validation sees the same shape as a direct import.
         println!(
             "Importing {}",
             format_routed_datasource_scope_summary_fields(

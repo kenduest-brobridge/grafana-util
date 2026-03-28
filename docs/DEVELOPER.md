@@ -46,12 +46,27 @@ This document is for maintainers. Keep `README.md` and the user guides operator-
 - `docs/unit-test-inventory.md`: test inventory reference for maintainers.
 - `docs/internal/examples/`: maintainer-only demo scripts for intentionally unwired Python API flows.
 
+## Rust Ownership Cues
+
+- Treat `rust/src/cli.rs` as command-topology only: parser shape, namespaced routing, help rendering, and dispatch seams for tests.
+- Treat domain facade files (`rust/src/dashboard/mod.rs`, `rust/src/access/mod.rs`, `rust/src/datasource.rs`, `rust/src/sync/mod.rs`, `rust/src/alert.rs`) as runtime entrypoints only: normalize args, build clients/requests, and route to owned helpers.
+- Treat `*summary.rs`, `*report.rs`, `*contract*.rs`, and staged-document modules as typed contract boundaries. Change these first when the JSON or cross-module data shape changes.
+- Treat `*render*.rs`, `*_tui.rs`, and `tui_shell.rs` as presentation layers. Change these first when only visible text, layout, or interaction chrome changes.
+- Treat `*state.rs`, `*workbench*.rs`, and `*interactive*.rs` as state-machine or interactive-flow ownership. Change these first when keyboard flow, modal state, or review-pane behavior changes.
+- Watch for intentional cross-module reuse:
+  - datasource auth/client setup is shared from dashboard helpers
+  - sync composes crate-private alert/datasource assessment helpers instead of redefining those checks in one large module
+  - access keeps distinct auth/client rules for org-admin paths versus org-scoped user/team/service-account paths
+
 ## Shortest Modification Paths
 
 - `dashboard inspect` contract changes: start in `rust/src/dashboard/mod.rs`, then split between `rust/src/dashboard/inspect.rs`, `rust/src/dashboard/inspect_query.rs`, `rust/src/dashboard/inspect_live.rs`, and `rust/src/dashboard/inspect_live_tui.rs`; typed summary/report boundaries live in `rust/src/dashboard/inspect_summary.rs` and `rust/src/dashboard/inspect_report.rs`.
 - `dashboard inspect` test changes: keep parser/help coverage near the relevant `*_cli_defs.rs`, and keep contract regressions in `rust/src/dashboard/rust_tests.rs`.
+- `dashboard import --interactive` changes: start in `rust/src/dashboard/mod.rs` to confirm the entrypoint, then choose `import_interactive_state.rs` for state/event flow, `import_interactive_review.rs` for live review/diff assembly, `import_interactive_loader.rs` for local artifact/context loading, and `import_interactive_render.rs` or `import_interactive_context.rs` for screen layout and pane content.
 - `sync` contract changes: start in `rust/src/sync/mod.rs`, then route dispatch and helpers through `rust/src/sync/cli.rs`, `rust/src/sync/live.rs`, `rust/src/sync/json.rs`, `rust/src/sync/bundle_inputs.rs`, `rust/src/sync/staged_documents.rs`, and `rust/src/sync/workbench.rs`; `live.rs`, `staged_documents.rs`, and `workbench.rs` own the typed apply/live boundary.
 - `sync` test changes: keep CLI and live regressions in `rust/src/sync/cli_rust_tests.rs` and `rust/src/sync/rust_tests.rs`.
+- `access` auth scope, request-shape, or browse changes: start in `rust/src/access/mod.rs`; only then branch into `cli_defs.rs` for parser shape or `user.rs` / `team.rs` / `service_account.rs` / `org.rs` for resource-specific workflow logic.
+- `datasource` import/export/diff or mutation changes: start in `rust/src/datasource.rs`, then move into `datasource_import_export.rs`, `datasource_diff.rs`, or `datasource_mutation_support.rs` depending on whether the change is contract, compare semantics, or live mutation payload/rendering.
 
 ## Version Workflow
 

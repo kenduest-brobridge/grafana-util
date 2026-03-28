@@ -1,3 +1,14 @@
+//! State and focus semantics for the interactive dashboard import TUI.
+//!
+//! Ownership model:
+//! - `items` is the durable backing store for all candidate dashboards and their review results.
+//! - `list_state` points at a visible row in the current grouping; it is focus, not selection.
+//! - `selected_paths` is the explicit batch-selection set used by Enter for dry-run/import.
+//! - `context_view`, `summary_scope`, and `diff_depth` are presentation toggles only; they never
+//!   change which dashboards are selected or reviewed.
+//!
+//! Review state follows focus. Moving the focused row marks that row as needing review again, but
+//! previously resolved review data remains attached to the underlying item until recomputed.
 #![cfg(feature = "tui")]
 
 use std::collections::BTreeSet;
@@ -331,6 +342,7 @@ impl InteractiveImportState {
     pub(crate) fn selected_item(&self) -> Option<&InteractiveImportItem> {
         let visible_index = self.list_state.selected()?;
         let ordered = self.ordered_indices();
+        // `list_state` indexes the grouped/sorted presentation, not `items` directly.
         let item_index = *ordered.get(visible_index)?;
         self.items.get(item_index)
     }
@@ -350,6 +362,7 @@ impl InteractiveImportState {
         let current = self.list_state.selected().unwrap_or(0) as isize;
         let next = (current + delta).clamp(0, visible_count.saturating_sub(1) as isize) as usize;
         self.list_state.select(Some(next));
+        // Focus changes trigger lazy review for the newly focused row; batch selection is separate.
         self.review_on_focus = true;
     }
 
@@ -388,6 +401,8 @@ impl InteractiveImportState {
         let focused_path = self.selected_item().map(|item| item.path.clone());
         self.grouping = self.grouping.next();
         if let Some(path) = focused_path {
+            // Re-anchor on the same underlying dashboard after regrouping so focus-driven review
+            // and context panes stay attached to the same item.
             self.select_path(&path);
         }
         self.status = format!(
@@ -439,6 +454,8 @@ impl InteractiveImportState {
             self.mark_focus_reviewed();
             return;
         };
+        // Review work is cached on the backing item. Presentation toggles may move the focused row
+        // around, but they should not force duplicate requests unless focus actually changed.
         if !matches!(
             self.items[item_index].review,
             InteractiveImportReviewState::Pending

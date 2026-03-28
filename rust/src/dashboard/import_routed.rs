@@ -1,3 +1,8 @@
+//! Route combined dashboard exports back into their destination orgs.
+//!
+//! Each source org is resolved independently, then the import args are rebound
+//! to the matching destination org so dry-run and live execution stay isolated.
+
 use reqwest::Method;
 use serde_json::Value;
 use std::path::Path;
@@ -22,7 +27,6 @@ fn count_dashboard_files(import_dir: &Path) -> Result<usize> {
     Ok(dashboard_files.len())
 }
 
-/// Purpose: implementation note.
 pub(crate) fn build_routed_import_dry_run_json_with_request<F, G>(
     mut request_json: F,
     mut collect_preview_for_org: G,
@@ -105,7 +109,6 @@ where
     build_routed_import_dry_run_json_document(&orgs, &imports)
 }
 
-/// Purpose: implementation note.
 pub(crate) fn import_dashboards_by_export_org_with_request<F, G, H>(
     mut request_json: F,
     mut import_for_org: G,
@@ -119,6 +122,8 @@ where
 {
     let scopes = discover_export_org_import_scopes(args)?;
     let mut lookup_cache = ImportLookupCache::default();
+    // Dry-run JSON is the most structured preview, so emit it before any
+    // table rendering or live import work.
     if args.dry_run && args.json {
         println!(
             "{}",
@@ -144,6 +149,8 @@ where
         org_rows.push(build_routed_import_org_row(&target_plan, dashboard_count));
         resolved_plans.push(target_plan);
     }
+    // Dry-run table output uses the same resolved plan but intentionally stops
+    // short of any destination org write.
     if args.dry_run && args.table {
         for line in render_routed_import_org_table(&org_rows, !args.no_header) {
             println!("{line}");
@@ -163,9 +170,13 @@ where
                 )
             );
         }
+        // Unresolved export-org scopes are still listed in preview output, but
+        // only resolved destination orgs are eligible for live writes.
         let Some(target_org_id) = target_plan.target_org_id else {
             continue;
         };
+        // Rebind the args to the destination org and disable export-org
+        // expansion so each routed import stays scoped to one org at a time.
         let mut scoped_args = args.clone();
         scoped_args.org_id = Some(target_org_id);
         scoped_args.use_export_org = false;

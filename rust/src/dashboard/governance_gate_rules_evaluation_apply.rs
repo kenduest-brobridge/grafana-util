@@ -1,3 +1,8 @@
+//! Apply dashboard governance gate rules in ordered evaluation phases.
+//!
+//! The evaluator first collects per-query and per-panel state, then checks
+//! dashboard-level limits, and finally validates the normalized audit summaries.
+
 use serde_json::Value;
 use std::collections::BTreeMap;
 
@@ -25,6 +30,9 @@ pub(crate) fn evaluate_dashboard_governance_gate_violations(
     let mut dashboard_complexity_scores = BTreeMap::<(String, String), usize>::new();
     let mut panel_counts = BTreeMap::<(String, String), (String, String, usize)>::new();
     let mut violations = Vec::new();
+
+    // Phase 1: walk the raw query rows once so later policy checks can reuse
+    // dashboard, panel, refresh, and complexity aggregates without rescanning.
     for query in queries {
         let dashboard_uid = string_field(query, "dashboardUid");
         let dashboard_title = string_field(query, "dashboardTitle");
@@ -203,6 +211,8 @@ pub(crate) fn evaluate_dashboard_governance_gate_violations(
         }
     }
 
+    // Phase 2: enforce dashboard and panel count thresholds from the collected
+    // aggregates before looking at the governance document summaries.
     if let Some(limit) = policy.max_queries_per_dashboard {
         for (dashboard_uid, (dashboard_title, query_count)) in &dashboard_counts {
             if *query_count > limit {
@@ -272,6 +282,8 @@ pub(crate) fn evaluate_dashboard_governance_gate_violations(
         }
     }
 
+    // Phase 3: evaluate dashboard summary records in the governance document
+    // so mixed-family and refresh checks stay aligned with exported metadata.
     if policy.forbid_mixed_families {
         let dashboards = governance_document
             .get("dashboardGovernance")
@@ -360,6 +372,8 @@ pub(crate) fn evaluate_dashboard_governance_gate_violations(
         }
     }
 
+    // Phase 4: audit documents are already normalized summaries, so these
+    // checks only compare their score and reason fields against policy limits.
     if policy.max_audit_score.is_some()
         || policy.max_reason_count.is_some()
         || !policy.block_reasons.is_empty()

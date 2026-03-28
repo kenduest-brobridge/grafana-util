@@ -1,3 +1,8 @@
+//! Sync plan construction and summary shaping.
+//!
+//! This module owns normalized plan diffs, managed-fields comparison rules,
+//! and the stable summary buckets consumed by the sync CLI renderers.
+
 use super::summary_builder::{is_alert_sync_kind, normalize_resource_specs};
 use super::workbench::{SyncResourceSpec, SYNC_PLAN_KIND, SYNC_PLAN_SCHEMA_VERSION};
 use crate::common::{message, Result};
@@ -24,6 +29,8 @@ fn compare_body(desired: &SyncResourceSpec, live: &SyncResourceSpec) -> Vec<Stri
     for key in desired.body.keys() {
         fields.insert(key.clone());
     }
+    // Only compare live keys that the desired spec claims to manage; this keeps
+    // out-of-band fields from becoming false drift when ownership is partial.
     let managed_filter = if desired.managed_fields.is_empty() {
         None
     } else {
@@ -177,6 +184,8 @@ pub(crate) fn build_sync_plan_summary_document(operations: &[Value]) -> Value {
         "would_delete": would_delete,
         "noop": noop,
         "unmanaged": unmanaged,
+        // Keep these aggregate names stable so older renderers can continue to
+        // read the same backward-compatible summary buckets.
         "alert_candidate": alert_assessment["summary"]["candidateCount"],
         "alert_plan_only": alert_assessment["summary"]["planOnlyCount"],
         "alert_blocked": alert_assessment["summary"]["blockedCount"],
@@ -188,6 +197,8 @@ pub fn build_sync_plan_document(
     live_specs: &[Value],
     allow_prune: bool,
 ) -> Result<Value> {
+    // The planner only emits normalized operations; stage transitions and
+    // transport concerns stay in the CLI orchestration layer.
     let desired = normalize_resource_specs(desired_specs)?;
     let live = normalize_resource_specs(live_specs)?;
     let desired_index = build_index(&desired)?;

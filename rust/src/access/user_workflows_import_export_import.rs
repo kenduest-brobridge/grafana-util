@@ -1,4 +1,11 @@
 //! User import workflow helpers.
+//!
+//! Maintainer notes:
+//! - Global import may create missing users, but org-scoped import cannot invent
+//!   new org users by login/email; it only reconciles users Grafana can already
+//!   resolve in that org.
+//! - Team membership removals are destructive and stay behind `--yes`, even when
+//!   other profile or role updates in the same record are non-destructive.
 
 use reqwest::Method;
 use serde_json::{Map, Value};
@@ -34,6 +41,8 @@ pub(crate) fn load_access_import_records(
         )));
     }
 
+    // Accept the legacy bare-array export shape, but prefer the bundled object
+    // so kind/version checks can stop incompatible imports early.
     let raw = fs::read_to_string(&path)?;
     let payload: Value = serde_json::from_str(&raw)?;
     let records = match payload {
@@ -213,6 +222,7 @@ where
             )));
         }
 
+        // Scope controls both lookup shape and what mutations are legal later.
         let existing = match args.scope {
             Scope::Global => lookup_global_user_by_identity(
                 &mut request_json,
@@ -253,6 +263,9 @@ where
                 continue;
             }
             if args.scope == Scope::Org {
+                // Org import is a membership/profile reconciliation flow, not a
+                // user-creation path. Creating the global account would require
+                // different auth and side effects than this command owns.
                 return Err(message(format!(
                     "User import cannot create missing org users by login/email: {}",
                     identity
@@ -351,6 +364,8 @@ where
         let mut current_members = std::collections::BTreeMap::<String, (String, String)>::new();
         let mut remove_keys: Vec<String> = Vec::new();
         if args.scope != Scope::Global && !target_teams.is_empty() {
+            // Only org-scoped imports reconcile team memberships because global
+            // user records do not have enough org context to remove safely.
             current_members = list_user_teams_with_request(&mut request_json, &user_id)?
                 .into_iter()
                 .filter_map(|team| {
@@ -403,6 +418,8 @@ where
             || resolved_email != existing_email
             || resolved_name != existing_name;
         if profile_changed {
+            // Apply profile changes before role/admin/team reconciliation so
+            // later operator output refers to the same resolved identity.
             let profile_payload = Map::from_iter(vec![
                 ("login".to_string(), Value::String(resolved_login)),
                 ("email".to_string(), Value::String(resolved_email)),
@@ -493,6 +510,8 @@ where
         }
 
         if args.scope != Scope::Global && !target_teams.is_empty() {
+            // Add missing memberships first, then remove stale ones once the
+            // operator has explicitly acknowledged destructive sync with `--yes`.
             for target in &target_teams {
                 let key = normalize_access_identity(target);
                 if current_members.contains_key(&key) {

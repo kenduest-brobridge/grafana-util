@@ -1,3 +1,11 @@
+//! Organization import/export/diff workflow helpers.
+//!
+//! Maintainer notes:
+//! - Org workflows require Basic auth because they touch Grafana admin APIs and
+//!   can create, rename, delete, or enumerate orgs outside the current context.
+//! - Org import reconciles org existence and listed user roles, but it does not
+//!   remove extra live org users that are absent from the export bundle.
+
 use reqwest::Method;
 use serde_json::{Map, Value};
 
@@ -144,6 +152,8 @@ where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
     validate_basic_auth_only(&args.common)?;
+    // Keep delete confirmation local to the destructive entrypoint so callers do
+    // not accidentally bypass it through shared lookup helpers.
     if !args.yes {
         return Err(message("Org delete requires --yes."));
     }
@@ -287,6 +297,8 @@ where
         let existing = live_orgs
             .iter()
             .find(|org| {
+                // Match by stable exported id when present, but still allow
+                // name-based reconciliation for bundles that only carry names.
                 string_field(org, "name", "") == desired_name
                     || (!exported_id.is_empty() && scalar_text(org.get("id")) == exported_id)
             })
@@ -304,6 +316,8 @@ where
                 && exported_id == existing_id
                 && string_field(existing, "name", "") != desired_name
             {
+                // Same exported org id but different current name means rename,
+                // not create. This preserves downstream user-role sync in-place.
                 if args.dry_run {
                     println!(
                         "Would rename org {} -> {}",
@@ -414,6 +428,8 @@ where
                         }
                     }
                     None => {
+                        // Import adds missing listed users, but intentionally does
+                        // not remove extra live users absent from the bundle.
                         if args.dry_run {
                             println!(
                                 "Would add org user {} -> {} in org {}",

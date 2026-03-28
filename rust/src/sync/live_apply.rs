@@ -1,3 +1,15 @@
+//! Reviewed sync apply execution against live Grafana APIs.
+//!
+//! Maintainer note:
+//! - This module is the last staged/live boundary: it consumes reviewed apply
+//!   intent operations and translates them into Grafana requests without
+//!   mutating the staged document itself.
+//! - `live_intent.rs` owns parsing the staged contract shape; this file owns
+//!   per-kind request mapping, identity fallback, and destructive-operation
+//!   guards.
+//! - Returned JSON is treated as a separate live execution audit record, not as
+//!   new staged contract input.
+
 use crate::alert::{
     build_contact_point_import_payload, build_mute_timing_import_payload,
     build_policies_import_payload, build_rule_import_payload, build_template_import_payload,
@@ -21,6 +33,9 @@ where
     let desired = &operation.desired;
     match action {
         "would-create" => {
+            // Folder create stays narrow on purpose: the staged operation may
+            // carry extra normalized fields, but the live create contract only
+            // depends on identity, title, and optional parent linkage.
             let title = desired
                 .get("title")
                 .and_then(Value::as_str)
@@ -57,6 +72,9 @@ where
         )?
         .unwrap_or(Value::Null)),
         "would-delete" => {
+            // Folder delete is the broadest destructive edge in sync apply, so
+            // require an explicit CLI guard instead of inferring intent from
+            // prune or review state alone.
             if !allow_folder_delete {
                 return Err(message(format!(
                     "Refusing live folder delete for {identity} without --allow-folder-delete."
@@ -93,6 +111,8 @@ where
         .unwrap_or(Value::Null));
     }
     let mut body = operation.desired.clone();
+    // Dashboard apply treats the reviewed identity as the stable UID contract
+    // and drops live-only numeric ids so staged artifacts remain portable.
     body.insert("uid".to_string(), Value::String(identity.to_string()));
     let title = body
         .get("title")
@@ -141,6 +161,9 @@ where
         Some(_) => return Err(message("Unexpected datasource list response from Grafana.")),
         None => Vec::new(),
     };
+    // Datasource plans may have been keyed by UID or by human name depending on
+    // the export path that produced them. Prefer UID resolution, then fall back
+    // to name to keep reviewed intents compatible with older staged inputs.
     for datasource in &datasources {
         let object = crate::sync::require_json_object(datasource, "Grafana datasource payload")?;
         if object.get("uid").and_then(Value::as_str).map(str::trim) == Some(identity) {
@@ -167,6 +190,9 @@ where
     let identity = operation.identity.as_str();
     let mut body = operation.desired.clone();
     if !identity.is_empty() {
+        // Preserve the reviewed identity as `uid` when the desired payload did
+        // not include it explicitly so the live request still targets the same
+        // logical datasource contract.
         body.entry("uid".to_string())
             .or_insert_with(|| Value::String(identity.to_string()));
     }
@@ -186,6 +212,9 @@ where
         )?
         .unwrap_or(Value::Null)),
         "would-update" => {
+            // Grafana datasource mutation APIs are keyed by numeric live id, so
+            // the staged identity must first resolve back onto the current live
+            // object before the reviewed intent can execute.
             let target = resolve_live_datasource_target_with_request(request_json, identity)?
                 .ok_or_else(|| {
                     message(format!(
@@ -251,6 +280,9 @@ where
     match action {
         "would-delete" => match kind {
             "alert" => {
+                // Alert rule delete is only safe with a stable UID-backed
+                // identity; name-based fallback would be ambiguous once rules
+                // drift in live Grafana.
                 if identity.is_empty() {
                     return Err(message(
                         "Alert sync delete requires a stable uid identity for live apply.",
@@ -286,6 +318,8 @@ where
             )?
             .unwrap_or(Value::Null)),
             "alert-policy" => {
+                // Policy delete resets the singleton notification policy tree.
+                // The outer executor adds a second guard before this path runs.
                 Ok(
                     request_json(Method::DELETE, "/api/v1/provisioning/policies", &[], None)?
                         .unwrap_or(Value::Null),
@@ -297,6 +331,9 @@ where
             "alert" => {
                 let mut payload = build_rule_import_payload(desired)?;
                 if !identity.is_empty() && !payload.contains_key("uid") {
+                    // Carry the staged identity forward when the reviewed body
+                    // omitted it; live update semantics require a UID-stable
+                    // alert rule contract.
                     payload.insert("uid".to_string(), Value::String(identity.to_string()));
                 }
                 let uid = payload
@@ -432,6 +469,9 @@ where
                     && operation.action == "would-delete"
                     && !allow_policy_reset
                 {
+                    // Deleting alert-policy is effectively a full policy reset,
+                    // so require an explicit live-only escape hatch even after
+                    // review and approval.
                     return Err(message(
                         "Refusing live notification policy reset without --allow-policy-reset.",
                     ));

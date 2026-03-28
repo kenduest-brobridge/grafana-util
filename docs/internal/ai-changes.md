@@ -6,6 +6,13 @@ Current AI change log only.
 - Detailed 2026-03-27 entries moved to [`archive/ai-changes-archive-2026-03-27.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-03-27.md).
 - Keep this file limited to the latest active architecture and maintenance changes.
 
+## 2026-03-28 - Maintainer comment and ownership pass
+- Summary: added maintainer-grade module headers and targeted sequencing notes across the highest-risk Rust maintenance surfaces, covering dashboard TUI state machines, governance and routed import flow, sync staged/live apply boundaries, datasource and access import semantics, and the crate-level ownership map in the maintainer docs.
+- Tests: reused formatting plus Rust library validation because this pass is comment- and doc-only and should not change runtime behavior.
+- Test Run: pending rerun after integration.
+- Impact: `rust/src/dashboard/inspect_workbench_state.rs`, `rust/src/dashboard/import_interactive_state.rs`, `rust/src/dashboard/browse_state.rs`, `rust/src/dashboard/governance_gate_rules_evaluation_apply.rs`, `rust/src/dashboard/import_routed.rs`, `rust/src/sync/cli.rs`, `rust/src/sync/live_apply.rs`, `rust/src/sync/plan_builder.rs`, `rust/src/sync/promotion_preflight.rs`, `rust/src/sync/staged_documents_apply.rs`, `rust/src/datasource_import_export.rs`, `rust/src/datasource_import_export_support.rs`, `rust/src/access/user_workflows_import_export_import.rs`, `rust/src/access/team_import_export.rs`, `rust/src/access/org_workflows.rs`, `rust/src/lib.rs`, `docs/overview-rust.md`, `docs/DEVELOPER.md`
+- Rollback/Risk: low. The pass is documentation-only; revert selectively if any note proves misleading or too noisy for the owning module.
+
 ## 2026-03-28 - Browse TUI interaction wording convergence
 - Summary: aligned the dashboard, datasource, user, and team browsers around the same interaction wording so browse summaries and footers now use `Mode=...`, `active-pane=...`, `next pane`, `previous pane`, `search`, `next match`, and consistent confirm-delete or cancel labels.
 - Tests: extended focused browse-render assertions for the new dashboard and datasource wording; access browse remained render-only wiring with no new dedicated test module.

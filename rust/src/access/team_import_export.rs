@@ -1,3 +1,10 @@
+//! Team export/import workflow helpers.
+//!
+//! Maintainer notes:
+//! - Team import is a two-phase sync: ensure the team and member identities
+//!   exist first, then apply the admin/member role split with the bulk update.
+//! - Membership removals are destructive and must remain behind `--yes`.
+
 use reqwest::Method;
 use serde_json::{Map, Value};
 use std::collections::{BTreeMap, BTreeSet};
@@ -61,6 +68,8 @@ where
             members.dedup();
             admins.sort();
             admins.dedup();
+            // Export admins separately even though they are also members so
+            // import can rebuild both presence and admin-state deterministically.
             row.insert(
                 "members".to_string(),
                 Value::Array(members.iter().cloned().map(Value::String).collect()),
@@ -218,6 +227,8 @@ where
             }
 
             if !(record_members.is_empty() && record_admins.is_empty()) {
+                // Add every referenced user first so the later bulk membership
+                // update only has to flip admin-state, not create missing edges.
                 for identity in merged_members.iter() {
                     let user = lookup_org_user_by_identity(&mut request_json, identity)?;
                     let user_id = user_id_from_record(&user);
@@ -290,6 +301,8 @@ where
         }
 
         if !args.dry_run {
+            // For existing teams, converge to the exported membership set before
+            // sending the admin/member payload split that finalizes role state.
             for identity in record_members
                 .iter()
                 .chain(record_admins.iter())

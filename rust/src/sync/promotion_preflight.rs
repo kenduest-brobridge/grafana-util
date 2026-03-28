@@ -1,10 +1,8 @@
-//! Staged promotion-preflight helpers.
+//! Promotion-preflight checks for staged sync handoff.
 //!
-//! Purpose:
-//! - Assess cross-environment folder and datasource remap needs before a
-//!   promotion workflow moves from a source bundle toward a target inventory.
-//! - Keep the first promotion workflow pure and reviewable by building on top
-//!   of the existing staged bundle-preflight document.
+//! This module owns promotion-specific remap checks and the review /
+//! continuation summaries built on top of bundle-preflight. Base sync blocking
+//! stays in the bundle document so promotion only layers on mapping policy.
 
 use super::bundle_preflight::{
     build_sync_bundle_preflight_document, render_sync_bundle_preflight_text,
@@ -138,6 +136,8 @@ fn partition_promotion_checks(checks: &[Value]) -> (Vec<&Value>, Vec<&Value>) {
 }
 
 fn render_promotion_check_arrays(document: &Value) -> Result<(Vec<&Value>, Vec<&Value>)> {
+    // Accept both the newer resolved/blocking split and the older flat checks
+    // array so historical artifacts keep rendering without regeneration.
     if let Some(resolved_checks) = document.get("resolvedChecks").and_then(Value::as_array) {
         Ok((
             resolved_checks.iter().collect(),
@@ -158,6 +158,8 @@ fn render_promotion_check_arrays(document: &Value) -> Result<(Vec<&Value>, Vec<&
 
 fn summarize_promotion_handoff(blocking_count: i64) -> PromotionHandoffSummary {
     let ready_for_review = blocking_count == 0;
+    // Handoff ends at review: blockers keep the next stage on resolve-blockers
+    // until every remap and bundle issue is cleared.
     PromotionHandoffSummary {
         review_required: true,
         ready_for_review,
@@ -181,6 +183,8 @@ fn summarize_promotion_continuation(
     blocking_count: i64,
 ) -> PromotionContinuationSummary {
     let ready_for_continuation = blocking_count == 0;
+    // Continuation is intentionally staged-only. It can move reviewed remaps
+    // forward, but it never turns on live mutation inside this document.
     PromotionContinuationSummary {
         staged_only: true,
         live_mutation_allowed: false,
@@ -528,6 +532,8 @@ pub fn build_sync_promotion_preflight_document(
 ) -> Result<Value> {
     let source_bundle = require_json_object(source_bundle, "Sync source bundle input")?;
     let target_inventory = require_json_object(target_inventory, "Sync target inventory input")?;
+    // Build on bundle-preflight first so the promotion summary reuses the same
+    // base blocking semantics before adding remap-specific checks.
     let bundle_preflight = build_sync_bundle_preflight_document(
         &Value::Object(source_bundle.clone()),
         &Value::Object(target_inventory.clone()),

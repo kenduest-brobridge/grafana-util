@@ -1,3 +1,15 @@
+//! Shared inspect workbench state for the export and live TUI flows.
+//!
+//! Ownership model:
+//! - `document` is the immutable source of groups, views, and items for one workbench session.
+//! - `group_state` and `item_state` track the focused row in each pane; they do not own data.
+//! - `group_view_indexes` persists the chosen view per group so rotating away from a group and
+//!   back again restores that group's previous presentation.
+//! - detail and modal fields are derived UI state and must be reset whenever focus changes to a
+//!   different item set.
+//!
+//! Search and modal state live under `modal` so pane navigation can stay simple while full-detail
+//! view and row search reuse the same focused item.
 #![cfg(feature = "tui")]
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::widgets::ListState;
@@ -128,6 +140,8 @@ impl InspectWorkbenchState {
     }
 
     pub(crate) fn reset_items(&mut self) {
+        // Group/view changes swap in a different item slice, so any per-item cursors and modal
+        // state must be dropped instead of trying to translate them across presentations.
         self.item_state
             .select((!self.current_items().is_empty()).then_some(0));
         self.item_horizontal_offset = 0;
@@ -186,6 +200,7 @@ impl InspectWorkbenchState {
         let current = self.item_state.selected().unwrap_or(0) as isize;
         let next = (current + delta).clamp(0, items_len.saturating_sub(1) as isize) as usize;
         self.item_state.select(Some(next));
+        // Horizontal and fact cursors are relative to the previously focused row only.
         self.item_horizontal_offset = 0;
         self.detail_cursor = 0;
     }
@@ -226,6 +241,8 @@ impl InspectWorkbenchState {
     }
 
     pub(crate) fn start_search(&mut self, direction: SearchDirection) {
+        // Search is modal against the current group's current view only; changing group/view will
+        // clear the pending prompt through `reset_items`.
         self.modal.start_search(direction);
         self.status = "Search current inspect rows by title, meta, or facts.".to_string();
     }
@@ -300,6 +317,7 @@ impl InspectWorkbenchState {
         }
         let next = (self.group_view_indexes[group_index] + 1) % group.views.len();
         let view_label = group.views[next].label.clone();
+        // View choice is persistent per group, but row selection within that view is not.
         self.group_view_indexes[group_index] = next;
         self.reset_items();
         self.status = format!("{group_label} mode view: {view_label}.");
@@ -333,6 +351,7 @@ pub(crate) fn handle_search_key(state: &mut InspectWorkbenchState, key: &KeyEven
             });
             if let Some(index) = state.find_match(&query, direction) {
                 state.item_state.select(Some(index));
+                // Search moves focus but keeps the current group/view; only per-row cursors reset.
                 state.detail_cursor = 0;
                 state.status = format!("Matched inspect row for {query}.");
             } else {

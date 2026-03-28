@@ -2,6 +2,24 @@
 //!
 //! Maintainers should read the full architecture overview here:
 //! <docs/overview-rust.md>
+//!
+//! Crate shape:
+//! - `cli` owns only unified command topology, parsing, and dispatch.
+//! - Domain facades (`dashboard`, `alert`, `access`, `datasource`, `sync`) own
+//!   command normalization, client/request wiring, and top-level routing.
+//! - Shared infrastructure (`common`, `http`) owns errors, JSON/filesystem
+//!   helpers, auth/client setup primitives, and live transport behavior.
+//! - Crate-private helper modules below are mostly internal contracts or
+//!   subsystem-specific support code; they should not grow into new public
+//!   maintainer entrypoints without an explicit docs update.
+//!
+//! Non-obvious relationships:
+//! - `datasource` reuses dashboard auth/client helpers instead of owning a
+//!   separate transport/auth stack.
+//! - `sync` composes staged document builders with `alert_sync`,
+//!   `datasource_provider`, and `datasource_secret` assessments.
+//! - Interactive/TUI flows stay inside their owning domains, with shared shell
+//!   chrome isolated in `tui_shell` when that feature is enabled.
 /// Access-management domain: users, orgs, teams, and service accounts.
 pub mod access;
 /// Alerting export/import/diff/list workflows and shared alert models.

@@ -6,6 +6,13 @@ Current AI-maintained status only.
 - Detailed 2026-03-27 entries moved to [`archive/ai-status-archive-2026-03-27.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-03-27.md).
 - Keep this file short and current. Additive historical detail belongs in `docs/internal/archive/`.
 
+## 2026-03-28 - Maintainer comment and ownership pass
+- State: Done
+- Scope: `rust/src/dashboard/*state.rs`, `rust/src/dashboard/governance_gate_rules_evaluation_apply.rs`, `rust/src/dashboard/import_routed.rs`, `rust/src/sync/cli.rs`, `rust/src/sync/live_apply.rs`, `rust/src/sync/plan_builder.rs`, `rust/src/sync/promotion_preflight.rs`, `rust/src/sync/staged_documents_apply.rs`, `rust/src/datasource_import_export*.rs`, `rust/src/access/*import*.rs`, `rust/src/lib.rs`, `docs/overview-rust.md`, `docs/DEVELOPER.md`
+- Baseline: the Rust mainline had already been split into cleaner subsystem files, but several high-risk modules still lacked maintainer-grade comments explaining ownership boundaries, state invariants, staged-versus-live assumptions, and import sequencing rules.
+- Current Update: added compact `//!` module headers, targeted maintainer notes, and an ownership map in the maintainer docs so dashboard TUI state machines, sync staged/live edges, datasource and access import flows, and crate-level module layering explain their responsibilities and non-obvious cross-module relationships directly in code and docs.
+- Result: the most complex Rust maintenance surfaces now carry explicit architecture and sequencing cues, reducing the amount of reconstruction a maintainer has to do from code alone before making changes.
+
 ## 2026-03-28 - Browse TUI interaction wording convergence
 - State: Done
 - Scope: `rust/src/dashboard/browse_render.rs`, `rust/src/datasource_browse_render.rs`, `rust/src/access/user_browse_render.rs`, `rust/src/access/team_browse_render.rs`

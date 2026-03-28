@@ -74,6 +74,43 @@ Rust crate 提供四個 CLI domain 的核心執行能力：
   - 管理 list/export/import/diff 四類流程與輸出模式（table/csv/json）。
   - `run_datasource_cli` 先 normalize 再 build client，接著進入對應 handler。
 
+### 2.3.1 Ownership map: facade vs contract vs renderer/state-machine
+
+- Facade / orchestrator：
+  - `rust/src/cli.rs`
+  - `rust/src/dashboard/mod.rs`
+  - `rust/src/access/mod.rs`
+  - `rust/src/datasource.rs`
+  - `rust/src/sync/mod.rs`
+  - 這些檔案應維持在「command topology、normalize、client/request wiring、top-level dispatch」層級，不承接細部資料契約或 renderer 細節。
+
+- Typed contract / shared model：
+  - `rust/src/dashboard/inspect_summary.rs`, `rust/src/dashboard/inspect_report.rs`
+  - `rust/src/dashboard_reference_models.rs`
+  - `rust/src/dashboard_inspection_dependency_contract.rs`
+  - `rust/src/sync/workbench.rs`, `rust/src/sync/staged_documents.rs`, `rust/src/sync/bundle_alert_contracts.rs`
+  - 這些模組定義跨流程要穩定的中介文件、summary/report 形狀、或 staged contract，改動時要先想 downstream render/tests 是否跟著變。
+
+- Renderer / presentation：
+  - `rust/src/dashboard/inspect_render.rs`, `rust/src/dashboard/inspect_dependency_render.rs`, `rust/src/dashboard/inspect_governance_render.rs`
+  - `rust/src/dashboard/browse_render.rs`
+  - `rust/src/sync/review_tui.rs`, `rust/src/sync/audit_tui.rs`
+  - 這些模組主要擁有 text/table/TUI 的可見輸出，不應反向擴張成新的 workflow owner。
+
+- State machine / interactive workbench：
+  - `rust/src/dashboard/import_interactive_state.rs`
+  - `rust/src/dashboard/inspect_workbench_state.rs`
+  - `rust/src/dashboard/import_interactive*.rs`
+  - `rust/src/dashboard/inspect_workbench*.rs`
+  - 這些模組承接互動式模式的 state、事件處理、view-model 與畫面分工；如果變更只影響 TUI 互動，不應先從 facade 改起。
+
+### 2.3.2 Cross-module relationships maintainers usually need first
+
+- `datasource` 沒有自建 auth/client stack；它直接重用 `dashboard` 匯出的 `build_auth_context`、`build_http_client`、`build_http_client_for_org` 與 `CommonCliArgs`。
+- `sync` 是跨 resource 的 staged contract layer，不直接重做各 domain 的 parser；它依賴 `alert_sync`、`datasource_provider`、`datasource_secret` 這些 crate-private assessment helper。
+- `dashboard` 是目前最大也是最容易失焦的 domain：`mod.rs` 只應保留 facade/re-export/dispatch，`inspect_*`、`import_interactive_*`、`governance_*`、`browse_*` 則各自維持子系統邊界。
+- `access` 的 auth scope 有刻意分流：org 管理走 `build_http_client_no_org_id`，user/team/service-account 流程則維持一般 org-aware client 路徑。
+
 ### 2.4 Domain 子模組（實作重點）
 
 - `rust/src/dashboard/`：`cli_defs`, `export`, `files`, `governance_gate`, `governance_gate_tui`, `help`, `impact_tui`, `import`, `inspect`, `inspect_analyzer_*`, `inspect_governance`, `inspect_live`, `inspect_live_tui`, `inspect_query`, `inspect_render`, `inspect_report`, `inspect_summary`, `list`, `live`, `models`, `prompt`, `screenshot`, `topology`, `topology_tui`, `validate`, `vars`；typed inspect summary/report contract surfaces are split across `inspect_summary.rs` and `inspect_report.rs`.
@@ -83,6 +120,12 @@ Rust crate 提供四個 CLI domain 的核心執行能力：
 - `rust/src/datasource_diff.rs`：diff 合併/欄位對齊與結果摘要模型。
 - `rust/src/http.rs`：HTTP transport 實作、query/url 建構、錯誤對映。
 - `rust/src/common.rs`：錯誤型別、訊息、解析工具與共用 helper。
+
+補充維護心法：
+
+- 如果模組名稱帶 `render`、`report`、`summary`，先假設它是 presentation 或 typed-output boundary，不是 command owner。
+- 如果模組名稱帶 `state`、`workbench`、`interactive`、`tui`，先假設它承接互動流程或畫面狀態，不是核心 API contract。
+- 如果要找「真正的入口」，先回到各 domain 的 `mod.rs` 或單檔 facade（如 `alert.rs`, `datasource.rs`）。
 
 ### 2.5 Contract 與 test split
 
@@ -144,6 +187,21 @@ Rust crate 提供四個 CLI domain 的核心執行能力：
   - 先看 `dashboard/mod.rs`，再往 `dashboard/inspect.rs`、`dashboard/inspect_query.rs`、`dashboard/inspect_live.rs`、`dashboard/inspect_live_tui.rs` 分流。
 - 改 sync contract 或 live plumbing：
   - 先看 `sync/mod.rs`，再按責任拆到 `sync/cli.rs`、`sync/live.rs`、`sync/json.rs`、`sync/bundle_inputs.rs`、`sync/staged_documents.rs`。
+- 改 dashboard import interactive workbench：
+  - 先看 `dashboard/mod.rs` 確認入口；
+  - 狀態/鍵盤事件優先看 `import_interactive_state.rs`；
+  - live review/diff 組裝優先看 `import_interactive_review.rs`；
+  - local artifact/context loading 優先看 `import_interactive_loader.rs`；
+  - TUI layout/context pane 優先看 `import_interactive_render.rs` 與 `import_interactive_context.rs`。
+- 改 access auth scope 或 request shape：
+  - 先看 `access/mod.rs` 的 `run_*_access_cli` 與 request helper；
+  - parser/flag 再回 `access/cli_defs.rs`；
+  - resource-specific workflow 再進 `user.rs`、`team.rs`、`service_account.rs`、`org.rs`。
+- 改 datasource import/export/diff contract：
+  - 先看 `datasource.rs` 的 normalize/dispatch；
+  - import/export record shape 進 `datasource_import_export.rs`；
+  - live/export compare semantics 進 `datasource_diff.rs`；
+  - add/modify/delete payload 與 dry-run 呈現則進 `datasource_mutation_support.rs`。
 - 改單一命令流程：
   - 只改對應 domain orchestrator（如 `dashboard/mod.rs` 或 `alert.rs`）中的 dispatch + runner。
 - 改 API 呼叫/傳輸：
