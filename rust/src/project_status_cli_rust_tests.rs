@@ -6,8 +6,14 @@ use crate::project_status::{
     ProjectStatusFreshness, ProjectStatusOverall, ProjectStatusRankedFinding,
     PROJECT_STATUS_BLOCKED, PROJECT_STATUS_READY,
 };
-use crate::project_status_command::render_project_status_text;
+use crate::project_status_command::{
+    execute_project_status_staged, render_project_status_text, ProjectStatusOutputFormat,
+    ProjectStatusStagedArgs,
+};
 use serde_json::{json, Value};
+use std::fs;
+use std::path::{Path, PathBuf};
+use tempfile::tempdir;
 
 fn sample_live_project_status() -> ProjectStatus {
     ProjectStatus {
@@ -112,6 +118,67 @@ fn assert_project_status_document_shape(document: &Value) {
     assert!(document["nextActions"].is_array());
 }
 
+fn write_change_desired_fixture(path: &Path) {
+    fs::write(
+        path,
+        serde_json::to_string_pretty(&json!([
+            {
+                "kind": "folder",
+                "uid": "ops",
+                "title": "Operations",
+                "body": {"title": "Operations"},
+                "sourcePath": "folders/ops.json"
+            },
+            {
+                "kind": "datasource",
+                "uid": "prom-main",
+                "name": "Prometheus Main",
+                "body": {"type": "prometheus"},
+                "sourcePath": "datasources/prom-main.json"
+            },
+            {
+                "kind": "dashboard",
+                "uid": "cpu-main",
+                "title": "CPU Main",
+                "body": {
+                    "folderUid": "ops",
+                    "datasourceUids": ["prom-main"],
+                    "datasourceNames": ["Prometheus Main"]
+                },
+                "sourcePath": "dashboards/cpu-main.json"
+            },
+            {
+                "kind": "alert",
+                "uid": "cpu-high",
+                "title": "CPU High",
+                "managedFields": ["condition"],
+                "body": {"condition": "A > 90"},
+                "sourcePath": "alerts/cpu-high.json"
+            }
+        ]))
+        .unwrap(),
+    )
+    .unwrap();
+}
+
+fn staged_args(desired_file: PathBuf) -> ProjectStatusStagedArgs {
+    ProjectStatusStagedArgs {
+        dashboard_export_dir: None,
+        datasource_export_dir: None,
+        access_user_export_dir: None,
+        access_team_export_dir: None,
+        access_org_export_dir: None,
+        access_service_account_export_dir: None,
+        desired_file: Some(desired_file),
+        source_bundle: None,
+        target_inventory: None,
+        alert_export_dir: None,
+        availability_file: None,
+        mapping_file: None,
+        output: ProjectStatusOutputFormat::Text,
+    }
+}
+
 #[test]
 fn project_status_live_document_serializes_the_shared_contract_shape() {
     let document = serde_json::to_value(sample_live_project_status()).unwrap();
@@ -200,6 +267,76 @@ fn project_status_live_text_renderer_surfaces_overall_domain_and_action_sections
             "Next actions:".to_string(),
             "- sync reason=blocked-by-blockers action=resolve sync workflow blockers in the fixed order: sync, provider, secret-placeholder, alert-artifact"
                 .to_string(),
+        ]
+    );
+}
+
+#[test]
+fn project_status_staged_document_serializes_the_shared_contract_shape() {
+    let temp = tempdir().unwrap();
+    let desired_file = temp.path().join("desired.json");
+    write_change_desired_fixture(&desired_file);
+
+    let status = execute_project_status_staged(&staged_args(desired_file)).unwrap();
+    let document = serde_json::to_value(status).unwrap();
+
+    assert_project_status_document_shape(&document);
+    assert_eq!(document["schemaVersion"], json!(1));
+    assert_eq!(document["toolVersion"], json!(TOOL_VERSION));
+    assert_eq!(document["scope"], json!("staged-only"));
+    assert_eq!(document["overall"]["status"], json!("partial"));
+    assert_eq!(document["overall"]["domainCount"], json!(6));
+    assert_eq!(document["overall"]["presentCount"], json!(1));
+    assert_eq!(document["overall"]["blockedCount"], json!(0));
+    assert_eq!(document["overall"]["blockerCount"], json!(0));
+    assert_eq!(document["overall"]["warningCount"], json!(0));
+    assert_eq!(document["overall"]["freshness"]["status"], json!("current"));
+    assert_eq!(document["overall"]["freshness"]["sourceCount"], json!(1));
+    assert_eq!(document["domains"].as_array().unwrap().len(), 1);
+    assert_eq!(document["domains"][0]["id"], json!("sync"));
+    assert_eq!(document["domains"][0]["scope"], json!("staged"));
+    assert_eq!(document["domains"][0]["mode"], json!("staged-documents"));
+    assert_eq!(
+        document["domains"][0]["status"],
+        json!(PROJECT_STATUS_READY)
+    );
+    assert_eq!(
+        document["domains"][0]["reasonCode"],
+        json!(PROJECT_STATUS_READY)
+    );
+    assert_eq!(document["topBlockers"], json!([]));
+    assert_eq!(
+        document["nextActions"],
+        json!([
+            {
+                "domain": "sync",
+                "reasonCode": "ready",
+                "action": "re-run sync summary after staged changes"
+            }
+        ])
+    );
+}
+
+#[test]
+fn project_status_staged_text_renderer_matches_the_shared_contract_fields() {
+    let temp = tempdir().unwrap();
+    let desired_file = temp.path().join("desired.json");
+    write_change_desired_fixture(&desired_file);
+
+    let status = execute_project_status_staged(&staged_args(desired_file)).unwrap();
+    let lines = render_project_status_text(&status);
+
+    assert_eq!(
+        lines,
+        vec![
+            "Project status".to_string(),
+            "Overall: status=partial scope=staged-only domains=6 present=1 blocked=0 blockers=0 warnings=0 freshness=current"
+                .to_string(),
+            "Domains:".to_string(),
+            "- sync status=ready mode=staged-documents primary=4 blockers=0 warnings=0 freshness=current next=re-run sync summary after staged changes"
+                .to_string(),
+            "Next actions:".to_string(),
+            "- sync reason=ready action=re-run sync summary after staged changes".to_string(),
         ]
     );
 }

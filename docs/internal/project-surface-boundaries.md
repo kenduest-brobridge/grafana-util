@@ -39,8 +39,8 @@ The maintained operator model is:
 
 | Area | Current state | Target state |
 | --- | --- | --- |
-| `overview` staged path | owns staged artifact loading, overview document assembly, and the embedded staged `projectStatus` summary | owns staged artifact loading plus overview-specific projection only |
-| `status` staged path | public command exists, but staged assembly still routes through overview artifact/document builders | owns shared staged status assembly directly |
+| `overview` staged path | owns staged artifact loading plus overview document projection | keep overview-specific projection separate from shared status aggregation |
+| `status` staged path | owns shared staged status assembly directly and reuses overview artifact loading | keep shared staged aggregation under `status` ownership |
 | `status` live path | shared live runtime already feeds `status live` and `overview live` | keep shared live runtime ownership in `status` |
 | `change` surface | public command name is `change`, but internal runtime and JSON kinds still use `sync` naming | keep public/internal split explicit until or unless a future contract migration is planned |
 
@@ -53,9 +53,10 @@ The maintained operator model is:
 - Do not make `overview` the long-term owner of staged status semantics.
 - Do not make `change` a generic inventory or status surface.
 
-## Immediate 30-Day Focus
+## Immediate Follow-Up
 
-- Document the current staged `status` dependency on overview clearly.
 - Keep public docs on `overview` / `status` / `change` vocabulary only.
 - Make any remaining `sync` or `project-status` mentions in current docs
   clearly internal or historical.
+- Continue shrinking `project_status_command.rs` now that staged ownership is
+  out of `overview`.

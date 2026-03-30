@@ -7,10 +7,10 @@ This file defines the architecture above any single command or TUI surface. It
 exists so the project can support a real "whole-project overview" without
 turning `grafana-util overview` into the accidental owner of every status rule.
 
-This is a target shared-status contract document, not a public command spec.
-`overview` is the current shipped owner of staged-artifact aggregation and
-projection; this file describes the broader status model that `overview`
-feeds today and that future surfaces can reuse.
+This is the shared-status architecture note behind the public `status`
+surface. `overview` remains the human-facing staged project entrypoint, but the
+shared staged status assembly now lives outside the overview document path so
+other surfaces can reuse it directly.
 
 Treat `project-status` as the current internal contract and file name behind
 the public `grafana-util status` surface.
@@ -48,7 +48,7 @@ broader than that so other surfaces can reuse the same status producers and
 contracts.
 
 Do not treat `project-status` as a current public command name. It is the
-target contract name for the broader shared status model.
+internal contract/file name for the broader shared status model.
 
 ## Layers
 

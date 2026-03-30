@@ -36,6 +36,7 @@ use crate::project_status_freshness::{
     build_live_project_status_freshness, build_live_project_status_freshness_from_samples,
     build_live_project_status_freshness_from_source_count, ProjectStatusFreshnessSample,
 };
+use crate::project_status_staged::build_staged_project_status;
 use crate::sync::{
     build_live_promotion_domain_status_transport, build_live_promotion_project_status,
     build_live_sync_domain_status, build_live_sync_domain_status_transport,
@@ -876,12 +877,12 @@ fn build_live_project_status(args: &ProjectStatusLiveArgs) -> Result<ProjectStat
                 build_live_multi_org_domain_status(args, orgs, build_live_dashboard_status)
                     .unwrap_or_else(|_| {
                         build_live_read_failed_domain_status(
-                    "dashboard",
-                    "live-dashboard-read",
-                    "live-dashboard-search",
-                    "live.dashboardCount",
-                    "restore dashboard/org read access, then re-run live status --all-orgs",
-                )
+                            "dashboard",
+                            "live-dashboard-read",
+                            "live-dashboard-search",
+                            "live.dashboardCount",
+                            "restore dashboard/org read access, then re-run live status --all-orgs",
+                        )
                     })
             }
             Ok(_) => build_live_dashboard_status(&client),
@@ -898,20 +899,18 @@ fn build_live_project_status(args: &ProjectStatusLiveArgs) -> Result<ProjectStat
     };
     let datasource_status = if let Some(orgs_result) = all_org_domain_statuses.as_ref() {
         match orgs_result {
-            Ok(orgs) if !orgs.is_empty() => build_live_multi_org_domain_status(
-                args,
-                orgs,
-                build_live_datasource_status,
-            )
-            .unwrap_or_else(|_| {
-                build_live_read_failed_domain_status(
+            Ok(orgs) if !orgs.is_empty() => {
+                build_live_multi_org_domain_status(args, orgs, build_live_datasource_status)
+                    .unwrap_or_else(|_| {
+                        build_live_read_failed_domain_status(
                     "datasource",
                     "live-inventory",
                     "live-datasource-list",
                     "live.datasourceCount",
                     "restore datasource/org read access, then re-run live status --all-orgs",
                 )
-            }),
+                    })
+            }
             Ok(_) => build_live_datasource_status(&client),
             Err(_) => build_live_read_failed_domain_status(
                 "datasource",
@@ -930,12 +929,12 @@ fn build_live_project_status(args: &ProjectStatusLiveArgs) -> Result<ProjectStat
                 build_live_multi_org_domain_status(args, orgs, build_live_alert_status)
                     .unwrap_or_else(|_| {
                         build_live_read_failed_domain_status(
-                    "alert",
-                    "live-alert-surfaces",
-                    "alert",
-                    "live.alertRuleCount",
-                    "restore alert/org read access, then re-run live status --all-orgs",
-                )
+                            "alert",
+                            "live-alert-surfaces",
+                            "alert",
+                            "live.alertRuleCount",
+                            "restore alert/org read access, then re-run live status --all-orgs",
+                        )
                     })
             }
             Ok(_) => build_live_alert_status(&client),
@@ -956,12 +955,12 @@ fn build_live_project_status(args: &ProjectStatusLiveArgs) -> Result<ProjectStat
                 build_live_multi_org_domain_status(args, orgs, build_live_access_status)
                     .unwrap_or_else(|_| {
                         build_live_read_failed_domain_status(
-                    "access",
-                    "live-list-surfaces",
-                    "grafana-utils-access-live-org-users",
-                    "live.users.count",
-                    "restore access/org read access, then re-run live status --all-orgs",
-                )
+                            "access",
+                            "live-list-surfaces",
+                            "grafana-utils-access-live-org-users",
+                            "live.users.count",
+                            "restore access/org read access, then re-run live status --all-orgs",
+                        )
                     })
             }
             Ok(_) => build_live_access_status(&client),
@@ -1127,8 +1126,7 @@ fn build_live_project_status_client_for_org(
 pub fn execute_project_status_staged(args: &ProjectStatusStagedArgs) -> Result<ProjectStatus> {
     let overview_args = staged_args_to_overview_args(args);
     let artifacts = overview::build_overview_artifacts(&overview_args)?;
-    let document = overview::build_overview_document(artifacts)?;
-    Ok(document.project_status)
+    Ok(build_staged_project_status(&artifacts))
 }
 
 /// Build the live status document without rendering it.

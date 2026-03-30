@@ -22,6 +22,13 @@ Current AI-maintained status only.
 - Current Update: added a new current boundary note that maps public names to internal runtime names and records the current-vs-target ownership split for `overview`, `status`, and `change`. Tightened `docs/DEVELOPER.md` with a public surface map, explicit naming boundary, and domain freeze policy. Updated the internal index and the overview/status architecture notes to describe `status` as the public surface, `project-status` as the internal architecture label, and `sync` as the internal namespace behind `change`. Also fixed the highest-value Traditional Chinese wording drift for `alert`, `overview`, and `status`.
 - Result: maintainers now have one current source for the public/internal naming bridge and the first-stage architecture cleanup target, while the Traditional Chinese public docs better match the current operator model.
 
+## 2026-03-30 - Extract shared staged status builder out of overview
+- State: Done
+- Scope: `rust/src/lib.rs`, `rust/src/overview_document.rs`, `rust/src/project_status_command.rs`, `rust/src/project_status_cli_rust_tests.rs`, `rust/src/project_status_staged.rs`, `docs/internal/project-surface-boundaries.md`, `docs/internal/overview-architecture.md`, `docs/internal/project-status-architecture.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: `grafana-util status staged` still reached staged project status by building overview artifacts, then a full `OverviewDocument`, and only then reading `document.project_status`. That meant the public `status` surface was still implemented as an `overview` byproduct even after the command rename.
+- Current Update: extracted the staged project-status assembly into a new internal shared module and rewired `execute_project_status_staged()` to build overview artifacts but call the staged status builder directly. `overview_document` now consumes the same shared staged builder instead of owning the domain aggregation logic itself. Added focused staged-status regressions that hit `execute_project_status_staged()` directly and assert the shared text/JSON contract shape without requiring `OverviewDocument`.
+- Result: staged `status` now owns its shared aggregation path directly, while `overview` remains a consumer of the same staged status result. The runtime ownership now matches the intended product model much more closely.
+
 ## 2026-03-30 - Alert authoring round-trip normalization and live smoke
 - State: Done
 - Scope: `rust/src/alert.rs`, `rust/src/alert_support.rs`, `rust/src/alert_runtime_support.rs`, `rust/src/alert_import_diff.rs`, `rust/src/alert_rust_tests.rs`, `scripts/test-rust-live-grafana.sh`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

@@ -69,6 +69,8 @@ pub(crate) mod project_status;
 pub mod project_status_command;
 /// Shared freshness helpers for live status stamping.
 pub(crate) mod project_status_freshness;
+/// Shared staged status builder reused by overview and status staged entrypoints.
+pub(crate) mod project_status_staged;
 /// Shared status interactive workbench for project-home and handoff flows.
 #[cfg(any(feature = "tui", test))]
 pub(crate) mod project_status_tui;

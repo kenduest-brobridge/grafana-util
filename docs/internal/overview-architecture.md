@@ -25,8 +25,7 @@ parallel analysis pipeline. Its job is to:
 - load already-staged export or preflight artifacts
 - assemble one stable overview document
 - project that document into text, JSON, and interactive views
-- expose a conservative staged `projectStatus` layer for cross-domain triage
-  while staged shared-status ownership is still being extracted
+- embed the shared staged `projectStatus` result for cross-domain triage
 - optionally hand live reads through to the shared `status live` path without
   owning live derivation
 
@@ -48,8 +47,8 @@ That single path should stay easy to trace in code.
   - This is where new artifact kinds or new input sources should be added first.
 
 - `rust/src/overview_document.rs`
-  - Owns `OverviewDocument` assembly, staged `projectStatus` derivation, and text rendering.
-  - This is where cross-domain status logic belongs.
+  - Owns `OverviewDocument` assembly and text rendering.
+  - It consumes the shared staged project-status builder rather than owning status derivation itself.
 
 - `rust/src/overview_sections.rs`
   - Owns section, view, and item projection for JSON/TUI consumers.
