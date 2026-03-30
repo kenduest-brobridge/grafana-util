@@ -8,6 +8,31 @@ Grafana Utilities 維運指南 (繁體中文)
 - **情境導向設計**：每個參數 (Flag) 皆標註了用途、差異與適用情境。
 - **安全第一**：內建互斥規則與標準作業程序 (SOP) 建議。
 
+目錄索引
+--------
+
+- [1) 全域前置說明](#tw-before-you-start)
+- [2) 全域通用參數](#tw-global-options)
+- [3) dashboard 指令模組](#tw-dashboard-commands)
+- [4) alert 指令模組](#tw-alert-commands)
+- [5) datasource 指令模組](#tw-datasource-commands)
+- [6) Access 指令模組](#tw-access-commands)
+- [7) 共通輸出規則、`sync`、`overview`、`project-status`](#tw-shared-output-rules)
+- [8) 常見情境快速對照](#tw-common-scenarios)
+- [9) 每命令 SOP（最短可跑版本）](#tw-minimal-sop)
+- [10) 參數互斥與差異矩陣（Rust）](#tw-matrix)
+
+快速跳轉：
+
+- [dashboard](#tw-dashboard-commands): `browse/export/list/import/delete/diff/inspect-export/inspect-live/screenshot`
+- [alert](#tw-alert-commands): `plan/apply/delete/init/new-rule/new-contact-point/new-template/export/import/diff/list-rules/list-contact-points/list-mute-timings/list-templates`
+- [datasource](#tw-datasource-commands): `browse/list/export/import/diff/add`
+- [access](#tw-access-commands): `org/user/team/service-account`
+- [sync](#tw-shared-output-rules): `summary/bundle/bundle-preflight/plan/review/apply/assess-alerts`
+- [overview](#tw-shared-output-rules)
+- [project-status](#tw-shared-output-rules)
+
+<a id="tw-before-you-start"></a>
 1) 全域前置說明
 ------------
 
@@ -19,6 +44,9 @@ grafana-util dashboard -h
 grafana-util alert -h
 grafana-util datasource -h
 grafana-util access -h
+grafana-util sync -h
+grafana-util overview -h
+grafana-util project-status -h
 ```
 
 安裝後可直接使用：
@@ -28,10 +56,43 @@ grafana-util <domain> <command> [options]
 ```
 
 ### 入口點說明：
-- **`grafana-util`**：統一入口，支援 `dashboard/alert/datasource/access`。
+- **`grafana-util`**：統一入口，支援 `dashboard/alert/datasource/access/sync/overview/project-status`。
 - 統一 CLI 請使用命名空間形式：`grafana-util <domain> <command>`。
 - `dashboard list-data-sources` 仍可使用，但新的資料來源盤點流程應優先改用 `datasource list`。
+- `overview` 與 `project-status` 是目前維護中的正式專案層入口，不是附屬別名。
 
+### 1.1 這份手冊怎麼用
+
+- 如果您是從 GitHub 首頁進來，先看 `README.md` 或 `README.zh-TW.md` 了解專案定位、支援範圍與快速範例。
+- 如果您要實際操作，這份手冊才是完整入口，重點在命令行為、參數差異、認證規則、實際輸出樣式與 dry-run 判讀。
+- 第一次接觸這個工具時，建議閱讀順序是：命令分區 -> 支援層級 -> 輸出面相 -> 對應命令章節。
+- 如果您已經有固定流程，可以直接跳到各模組章節，並把第 9 節與第 10 節當成最短重複操作參考。
+
+### 1.2 輸出與操作面相
+
+同一類 Grafana 工作流，常常同時提供人工巡檢與自動化兩種用法，所以這裡先把操作面整理清楚。
+
+| 面相 | 最適合的用途 | 代表命令 | 補充說明 |
+| --- | --- | --- | --- |
+| 互動式 TUI | 導覽、審查、在終端機內逐步操作 | `dashboard browse`、`dashboard inspect-export --interactive`、`dashboard inspect-live --interactive`、`datasource browse`、`overview --output interactive`、`project-status ... --output interactive` | 只有部分工作流支援；`interactive` 需要 TUI-capable build |
+| 純文字 | 預設維運摘要、dry-run 預覽、人工閱讀 | `sync`、`overview`、`project-status`、多數 dry-run 摘要 | 最適合終端機人工巡檢 |
+| JSON | CI、自動化、機器可讀交接資料 | import dry-run、sync 文件、staged/live project status | 有其他工具要接結果時優先選這個 |
+| Table / CSV / report | 清單盤點、差異審查、dashboard 分析報表 | list 系列命令、`dashboard inspect-*`、review tables | 最適合審計、治理與報表整理 |
+
+### 1.3 支援層級總覽
+
+如果您想先判斷每個模組到底成熟到什麼程度，先看這張表，再進入各命令細節。
+
+| 模組 | 支援深度 | 主要工作流 | 主要輸出面 | 備註 |
+| --- | --- | --- | --- | --- |
+| `dashboard` | 最深、最完整 | browse、list、export、import、diff、delete、inspect、依賴分析、permission export、screenshot/PDF | text、table/csv/json、report 模式、互動式 workbench | 功能最完整，也是分析與遷移能力最重的模組 |
+| `datasource` | 深且成熟 | browse、list、export、import、diff、add、modify、delete、跨 org replay | text、table/csv/json、互動式 browse | 同時涵蓋 live mutation 與檔案回放 |
+| `alert` | 成熟的遷移面 | list、export、import、diff、dry-run，涵蓋 rule bundle 與 alerting 資源 | table/csv/json | 主要聚焦 alerting inventory 與 replay |
+| `access` | 成熟的盤點與回放面 | org/user/team/service-account 的 list、add、modify、delete、export、import、diff | table/csv/json | 適合 access state inventory、重建與審查 |
+| `sync` | 進階 staged workflow | summary、bundle、preflight、plan、review、apply intent、audit、promotion-preflight | text/json | 重點是 review-first，不是直接盲目同步 |
+| `overview` / `project-status` | 專案級聚合面 | staged/live readiness、跨模組摘要、handoff 視圖 | text/json/interactive | 當您需要整體專案 read model 時最適合先看這裡 |
+
+<a id="tw-global-options"></a>
 2) 全域通用參數
 ----------------
 
@@ -56,15 +117,37 @@ grafana-util <domain> <command> [options]
 - `範例指令` 代表實際可用的呼叫方式。
 - `範例輸出` 代表預期格式，不保證您的 UID、名稱、筆數、folder 一定完全相同。
 - 若段落帶有 `實跑註記`，代表命令形態與輸出片段已用本地 Docker Grafana `12.4.1` 服務驗證過。
+- 這次修訂另外用 `scripts/seed-grafana-sample-data.sh` 灌入多 org、巢狀 folder，並補了 alerting resource 與 service account/token，讓 live 範例不只覆蓋最小 happy path。
 - 表格輸出適合人工操作。
 - JSON 輸出適合腳本、自動化與 CI。
+- 常見 `ACTION` 值：
+  - `create`：目標尚不存在。
+  - `update`：目標已存在，dry-run 或實際執行會修改它。
+  - `no-change`：匯出內容與 live 狀態已一致。
+  - `would-*`：純 dry-run 預測，不會真的改動。
+- 常見 dry-run `DESTINATION` / 狀態提示：
+  - `missing`：目前還找不到 live 目標。
+  - `exists` / `existing`：live 目標已存在。
+  - `exists-uid`：依 UID 找到對應的 live 目標。
+  - `exists-name`：依名稱找到對應的 live 目標。
+  - `missing-org`：路由後的目標 org 不存在。
+  - `would-create-org`：在 `--dry-run --create-missing-orgs` 下，代表真正執行時會先建立目標 org。
 
 ### 命令分區（快速導覽）
 
-- Dashboard：`dashboard export`、`dashboard list`、`dashboard import`、`dashboard delete`、`dashboard diff`、`dashboard inspect-export`、`dashboard inspect-live`、`dashboard inspect-vars`、`dashboard screenshot`
-- Alert：`alert export`、`alert import`、`alert diff`、`alert list-rules`、`alert list-contact-points`、`alert list-mute-timings`、`alert list-templates`
-- Datasource：`datasource list`、`datasource export`、`datasource import`、`datasource diff`
-- Access：`access org list`、`access org add`、`access org modify`、`access org delete`、`access org export`、`access org import`、`access user list`、`access user add`、`access user modify`、`access user delete`、`access user export`、`access user import`、`access user diff`、`access team list`、`access team add`、`access team modify`、`access team delete`、`access team export`、`access team import`、`access team diff`、`access service-account list`、`access service-account add`、`access service-account export`、`access service-account import`、`access service-account diff`、`access service-account delete`、`access service-account token add`、`access service-account token delete`
+如果您知道要處理的事情，但還不確定要進哪個命令入口，先看這張路由表。
+
+| 目標 | 先從哪個入口開始 | 常用命令 |
+| --- | --- | --- |
+| Dashboard 盤點與分析 | `dashboard` | `browse`、`list`、`export`、`import`、`diff`、`delete`、`inspect-export`、`inspect-live`、`inspect-vars`、`screenshot` |
+| Alerting 管理、盤點與遷移 | `alert` | `plan`、`apply`、`delete`、`init`、`new-rule`、`new-contact-point`、`new-template`、`list-rules`、`list-contact-points`、`list-mute-timings`、`list-templates`、`export`、`import`、`diff` |
+| Datasource 盤點與回放 | `datasource` | `browse`、`list`、`export`、`import`、`diff`、`add`、`modify`、`delete` |
+| Org 類 access 管理 | `access org` | `list`、`add`、`modify`、`delete`、`export`、`import` |
+| User 類 access 管理 | `access user` | `list`、`add`、`modify`、`delete`、`export`、`import`、`diff` |
+| Team 類 access 管理 | `access team` | `list`、`add`、`modify`、`delete`、`export`、`import`、`diff` |
+| Service account 類 access 管理 | `access service-account` | `list`、`add`、`delete`、`export`、`import`、`diff`、`token add`、`token delete` |
+| Staged sync 與 promotion 工作流 | `sync` | `summary`、`bundle`、`bundle-preflight`、`preflight`、`assess-alerts`、`plan`、`review`、`apply`、`audit`、`promotion-preflight` |
+| 專案層 staged/live 狀態檢視 | `overview`、`project-status` | `overview`、`overview live`、`project-status staged`、`project-status live` |
 
 ### 指令功能總覽
 
@@ -74,12 +157,20 @@ grafana-util <domain> <command> [options]
 | --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | --- |
 | **Dashboard** | Yes | Yes | Yes | Yes | Yes | No | No | No | 適合資產盤點、備份與環境遷移 |
 | **Datasource** | Yes | Yes | Yes | Yes | No | No | No | No | 支援組態漂移檢查與環境同步 |
-| **Alerting** | Yes | Yes | Yes | Yes | No | No | No | No | 涵蓋 Rules, Contact Points, Mute Timings |
+| **Alerting** | Yes | Yes | Yes | Yes | No | No | No | No | 管理 lane：`plan/apply/delete/init/new-*`；遷移 lane：`export/import/diff` |
 | **Organization** | Yes | Yes | Yes | No | No | Yes | Yes | Yes | 支援 org 盤點與成員關係重建 |
 | **User** | Yes | Yes | Yes | Yes | No | Yes | Yes | Yes | 支援全域或組織範圍的使用者盤點 |
 | **Team / Group** | Yes | Yes | Yes | Yes | No | Yes | Yes | Yes | 包含成員關係（Membership）同步 |
 | **Service Account** | Yes | Yes | Yes | Yes | No | Yes | Yes | Yes | 生命週期管理與 Token 簽發 |
 | **SA Token** | Yes | No | No | No | No | Yes | No | Yes | Token 建立與撤銷 |
+
+專案層入口：
+
+| 入口 | 輸入 | 會讀 live Grafana 嗎 | 輸出模式 | 主要用途 |
+| --- | --- | --- | --- | --- |
+| `sync` | desired JSON、bundle、lock、availability/mapping 檔 | 視子命令而定 | text/json | staged review、preflight、plan、review、apply intent |
+| `overview` | staged exports 與選用的 sync/promotion 輸入 | 只有 `overview live` 會 | text/json/interactive | 專案層級 staged/live 快照 |
+| `project-status` | staged exports 或 live Grafana | 會 | text/json/interactive | 正式的專案層級 staged/live readiness surface |
 
 認證互斥規則（由 CLI parser 強制執行）：
 
@@ -88,6 +179,7 @@ grafana-util <domain> <command> [options]
 3. `--basic-password` 不可與 `--prompt-password` 同時使用。
 4. `--prompt-password` 必須同時提供 `--basic-user`。
 
+<a id="tw-dashboard-commands"></a>
 3) dashboard 指令模組
 -----------------
 
@@ -109,20 +201,24 @@ grafana-util <domain> <command> [options]
 
 範例指令：
 ```bash
-grafana-util dashboard export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./dashboards --overwrite
+grafana-util dashboard export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./dashboards --overwrite --progress
 ```
 
 範例輸出：
 ```text
-Exported raw    cpu-main -> dashboards/raw/Infra/CPU__cpu-main.json
-Exported prompt cpu-main -> dashboards/prompt/Infra/CPU__cpu-main.json
-Exported raw    mem-main -> dashboards/raw/Infra/MEM__mem-main.json
-Exported prompt mem-main -> dashboards/prompt/Infra/MEM__mem-main.json
-Dashboard export completed: 2 dashboard(s), 4 file(s) written
+Exporting dashboard 1/7: mixed-query-smoke
+Exporting dashboard 2/7: smoke-prom-only
+Exporting dashboard 3/7: query-smoke
+Exporting dashboard 4/7: smoke-main
+Exporting dashboard 5/7: subfolder-chain-smoke
+Exporting dashboard 6/7: subfolder-main
+Exporting dashboard 7/7: two-prom-query-smoke
 ```
 
 補充：
+- `--progress` 只顯示簡潔進度；若要看到每個輸出檔路徑，改用 `--verbose`。
 - 使用 `--all-orgs` 時，匯出根目錄的 `export-metadata.json` 會包含 `orgCount` 與每個已匯出 org 的 `orgs[]` 摘要。
+- 若這份 export 後面還要直接餵 `dashboard import` / `dashboard diff` 做 dry-run，這次實跑最穩定的形態是加上 `--flat`。
 
 ### 3.2 `dashboard list`
 
@@ -226,17 +322,30 @@ tempo-prod         tempo-prod         tempo        false
 
 範例指令：
 ```bash
-grafana-util dashboard import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/raw --replace-existing --dry-run --table
+grafana-util dashboard import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards-flat/raw --replace-existing --dry-run --table
 ```
 
 範例輸出：
 ```text
-UID          TITLE            ACTION   DESTINATION   FOLDER
-cpu-main     CPU Overview     update   existing      Infra
-mem-main     Memory Overview  create   missing       Infra
+Import mode: create-or-update
+UID                    DESTINATION  ACTION  FOLDER_PATH                    FILE
+---------------------  -----------  ------  -----------------------------  ------------------------------------------------------------
+mixed-query-smoke      exists       update  General                        ./dashboards-flat/raw/Mixed_Query_Dashboard__mixed-query-smoke.json
+smoke-main             exists       update  General                        ./dashboards-flat/raw/Smoke_Dashboard__smoke-main.json
+subfolder-chain-smoke  exists       update  Platform / Team / Apps / Prod  ./dashboards-flat/raw/Subfolder_Chain_Dashboard__subfolder-chain-smoke.json
 
-Dry-run checked 2 dashboard(s)
+Dry-run checked 7 dashboard(s) from ./dashboards-flat/raw
 ```
+
+實跑註記：
+- 上面的 dry-run 表格已在本地 Grafana `12.4.1` 上，用 `dashboard export --flat` 先匯出後再回放驗證。
+
+怎麼看：
+- `ACTION=update` 代表 live dashboard 已存在，實際執行會更新它。
+- `ACTION=create` 代表 live 尚未存在，實際執行會新增它。
+- `DESTINATION` 描述的是 live 目標狀態，不是本地檔案目錄。
+- `DESTINATION=missing` 代表 dry-run 尚未找到對應的 live dashboard。
+- 多 org 路由 dry-run 還可能先出現 `missing-org` 或 `would-create-org`。
 
 ### 3.4a `dashboard delete`
 
@@ -446,10 +555,321 @@ Capture URL: https://192.168.1.112:3000/d-solo/rYdddlPWk/node-exporter-full?refr
 /tmp/node-exporter-full-panel-20-header-v2.png
 ```
 
+<a id="tw-alert-commands"></a>
 4) alert 命令
 -------------
 
-### 4.1 `alert export`
+目前 `alert` 建議拆成三層來理解：
+- Authoring layer：`init`、`add-rule`、`clone-rule`、`add-contact-point`、`set-route`、`preview-route`，以及較低階的 `new-*` scaffold。
+- Review/apply layer：`plan`、`apply`，以及 explicit delete preview surface。
+- Migration layer：`export`、`import`、`diff`，以及 live inventory 用的 `list-*`。
+
+這三層要分清楚：
+- authoring commands 只會寫或預覽 desired-state files，不會直接打 live Grafana mutation API。
+- `plan` / `apply` 才是 authoring lane 對 live Grafana 的正式 mutation path。
+- `export/import/diff` 仍留在舊的 `raw/` replay lane，不要和 desired-state authoring lane 混用。
+
+實務上要記住的 authoring 邊界：
+- `add-rule` 刻意只做 simple threshold / classic-condition style authoring。
+- 比較複雜的 rule，先用 `clone-rule` 從既有 desired rule 起手，再手改檔案。
+- `set-route` 管的是同一條 tool-owned managed route。重跑會覆蓋那條 route，不做 field-by-field merge。
+- `preview-route` 只是 desired-state preview，不是完整的 Grafana routing simulator。
+- `--folder` 只會記錄 desired folder identity，不是 live resolve/create folder workflow。
+- authoring commands 的 `--dry-run` 會輸出 desired document，但不落檔。
+
+### 4.1 Authoring Layer
+
+**用途**：先在同一棵 managed desired tree 下建立或修改 alert desired files，再進到 live review/apply。
+
+先初始化 desired tree：
+
+```bash
+grafana-util alert init --desired-dir ./alerts/desired
+```
+
+這棵 tree 會和 migration 用的 `alerts/raw` export tree 分開。
+
+Authoring command 對照表：
+
+| 指令 | 什麼情況用 | 重要邊界 |
+| --- | --- | --- |
+| `alert add-contact-point` | 快速建立簡單 contact-point desired document | 只寫 desired files |
+| `alert add-rule` | 建 simple threshold / classic-condition rule | 不適合複雜 multi-query authoring |
+| `alert clone-rule` | 從既有 desired rule clone 出新 rule 再手改 | 比較適合複雜 rule body |
+| `alert set-route` | 寫 tool-owned managed route document | 重跑會覆蓋同一條 managed route |
+| `alert preview-route` | 預覽 labels 對 managed route contract 的輸入形狀 | 只是 preview，不是 Grafana routing simulation |
+| `alert new-rule`、`new-contact-point`、`new-template` | 當高階 authoring surface 不夠時，用低階 scaffold 起手 | 需要手動補更多欄位 |
+
+常見 authoring 指令：
+
+```bash
+grafana-util alert add-contact-point --desired-dir ./alerts/desired --name pagerduty-primary
+grafana-util alert add-rule --desired-dir ./alerts/desired --name cpu-high --folder platform-alerts --rule-group cpu --receiver pagerduty-primary --label team=platform --severity critical --expr A --threshold 80 --above --for 5m
+grafana-util alert preview-route --desired-dir ./alerts/desired --label team=platform --severity critical
+```
+
+`preview-route` 的驗證輸出摘錄：
+
+```json
+{
+  "input": {
+    "labels": {
+      "team": "platform"
+    },
+    "severity": "critical"
+  },
+  "matches": []
+}
+```
+
+這裡 `matches: []` 是預期行為。`preview-route` 看的是 desired-state preview contract，不是 live alert 實例在 Grafana 裡的完整路由模擬。
+
+Managed route 覆蓋示例：
+
+```bash
+grafana-util alert set-route --desired-dir ./alerts/desired --receiver pagerduty-primary --label team=platform --severity critical
+grafana-util alert set-route --desired-dir ./alerts/desired --receiver pagerduty-primary --label team=infra --severity critical
+```
+
+第二次執行後，managed route 會從 `team=platform` 直接改成 `team=infra`，不會保留舊 matcher 再 merge 新 matcher。
+
+### 4.2 Review And Apply Layer
+
+#### `alert plan`
+
+**用途**：把 desired alert YAML / JSON 與 live Grafana 做比對，產生 reviewable plan。
+
+| 參數 | 用途 | 差異 / 情境 |
+| --- | --- | --- |
+| `--desired-dir` | desired alert 目錄 | 讀的是 managed desired files，不是 `raw/` export |
+| `--prune` | 把 live-only resource 轉成 delete row | 沒開時不會產生 delete |
+| `--dashboard-uid-map` | dashboard UID 對照 | linked alert-rule 跨環境修復 |
+| `--panel-id-map` | panel id 對照 | linked panel 跨環境修復 |
+| `--output text\|json` | 輸出模式 | `json` 適合 CI 與 review handoff |
+
+範例指令：
+```bash
+grafana-util alert plan --url http://localhost:3000 --basic-user admin --basic-password admin --desired-dir ./alerts/desired --prune --output json
+```
+
+如何判讀：
+- `create`：desired 有，但 live 還沒有。
+- `update`：live 已存在，但內容不同。
+- `noop`：desired 和 live 已一致。
+- `delete`：只有開 `--prune` 才會出現。
+- `blocked`：有需要處理的差異，但這次 plan 不把它當作 live-safe 動作。
+
+#### `alert apply`
+
+**用途**：把已審查的 alert plan 套回 Grafana。
+
+| 參數 | 用途 | 差異 / 情境 |
+| --- | --- | --- |
+| `--plan-file` | 已審查的 alert plan 文件 | `apply` 不直接讀 desired dir |
+| `--approve` | 明確批准旗標 | 沒有這個就不執行 |
+| `--output text\|json` | 輸出模式 | `json` 較適合 audit |
+
+範例指令：
+```bash
+grafana-util alert apply --url http://localhost:3000 --basic-user admin --basic-password admin --plan-file ./alert-plan-reviewed.json --approve --output json
+```
+
+如何判讀：
+- `appliedCount` 表示實際執行了幾筆。
+- `results[]` 會列出每個真的送出的 create/update/delete。
+- `noop` 和 `blocked` row 不會被執行。
+
+#### `alert delete`
+
+**用途**：預覽單一 alert 資源的 explicit delete 請求。
+
+| 參數 | 用途 | 差異 / 情境 |
+| --- | --- | --- |
+| `--kind` | 資源類型 | `rule`、`contact-point`、`mute-timing`、`template`、`policy-tree` |
+| `--identity` | 指定 identity | 視資源類型而定，可能是 UID 或名稱 |
+| `--allow-policy-reset` | 允許 notification policy reset | `policy-tree` delete 需要明確開啟 |
+| `--output text\|json` | 預覽輸出模式 | JSON 較方便交接或自動判讀 |
+
+範例指令：
+```bash
+grafana-util alert delete --kind policy-tree --identity default --allow-policy-reset --output json
+```
+
+如何判讀：
+- 這是 preview，不是直接盲刪。
+- `policy-tree` 是 reset 路徑，不是一般 delete。
+- 沒有 `--allow-policy-reset` 時，這筆會被標成 `blocked`。
+
+### 4.3 Operator Workflows
+
+#### Simple add path（`add-contact-point -> add-rule -> preview-route -> plan -> apply`）
+
+這組命令在 2026-03-30 以 Docker Grafana `12.4.1`、`http://127.0.0.1:43111` 做過本機驗證。
+
+1. 建 desired tree。
+
+```bash
+grafana-util alert init --desired-dir ./alerts/desired
+grafana-util alert add-contact-point --desired-dir ./alerts/desired --name pagerduty-primary
+grafana-util alert add-rule --desired-dir ./alerts/desired --name cpu-high --folder platform-alerts --rule-group cpu --receiver pagerduty-primary --label team=platform --severity critical --expr A --threshold 80 --above --for 5m
+grafana-util alert preview-route --desired-dir ./alerts/desired --label team=platform --severity critical
+```
+
+2. 先看 live plan。
+
+已驗證指令：
+
+```bash
+grafana-util alert plan --url http://127.0.0.1:43111 --basic-user admin --basic-password admin --desired-dir ./alerts/desired --output json
+```
+
+已驗證 summary 摘錄：
+
+```json
+{
+  "summary": {
+    "blocked": 1,
+    "create": 2,
+    "delete": 0,
+    "noop": 0,
+    "processed": 4,
+    "update": 1
+  }
+}
+```
+
+這次驗證裡：
+- `create` 是新的 contact point 與 alert rule。
+- `update` 是 managed notification policy document，因為 Grafana 起始狀態是 default empty policy tree。
+- `blocked` 是沒開 `--prune` 時保留下來的 live default policy tree row。
+
+3. 套用已審查的 plan。
+
+已驗證指令：
+
+```bash
+grafana-util alert apply --url http://127.0.0.1:43111 --basic-user admin --basic-password admin --plan-file ./alert-plan-reviewed.json --approve --output json
+```
+
+已驗證結果摘錄：
+
+```json
+{
+  "appliedCount": 3,
+  "results": [
+    {
+      "action": "create",
+      "identity": "pagerduty-primary",
+      "kind": "grafana-contact-point"
+    },
+    {
+      "action": "update",
+      "identity": "pagerduty-primary",
+      "kind": "grafana-notification-policies"
+    },
+    {
+      "action": "create",
+      "identity": "cpu-high",
+      "kind": "grafana-alert-rule"
+    }
+  ]
+}
+```
+
+4. 同一份驗證也看到一個實務限制：接著再跑 `plan --prune`，結果不會回到全 `noop`。Grafana 會正規化部分 live payload 欄位，所以目前 authoring 文件不保證 byte-for-byte round-trip。
+
+#### Complex path（`clone-rule -> edit desired file -> plan -> apply`）
+
+當 `add-rule` 太簡化、不足以描述你要的 rule 時，用這條路。
+
+```bash
+grafana-util alert clone-rule --desired-dir ./alerts/desired --source cpu-high --name cpu-high-staging --folder staging-alerts --rule-group cpu --receiver slack-platform
+# 手改 ./alerts/desired/rules/cpu-high-staging.yaml 或 .json
+grafana-util alert plan --url http://localhost:3000 --basic-user admin --basic-password admin --desired-dir ./alerts/desired --output json
+grafana-util alert apply --url http://localhost:3000 --basic-user admin --basic-password admin --plan-file ./alert-plan-reviewed.json --approve --output json
+```
+
+建議操作模式：
+- 先從已知正常的 desired rule 或 export 出來的 rule clone。
+- 手改 clone 後的 rule body，處理較複雜的 query、expression、annotation、recording semantics 或 linked dashboard metadata。
+- 改完後先 `plan`，確認 live diff 再 `apply`。
+
+#### Delete path（`移除 desired file -> plan --prune -> apply`）
+
+這條 prune delete 流程也在 2026-03-30 用同一個 Docker Grafana `12.4.1` fixture 做過本機驗證。
+
+1. 先把 rule file 從 desired state 移掉。
+
+```bash
+rm ./alerts/desired/rules/cpu-high.yaml
+```
+
+2. 開 `--prune` 重建 plan。
+
+已驗證指令：
+
+```bash
+grafana-util alert plan --url http://127.0.0.1:43111 --basic-user admin --basic-password admin --desired-dir ./alerts/desired --prune --output json
+```
+
+已驗證 summary 摘錄：
+
+```json
+{
+  "summary": {
+    "blocked": 0,
+    "create": 0,
+    "delete": 1,
+    "noop": 0,
+    "processed": 3,
+    "update": 2
+  }
+}
+```
+
+已驗證 delete row 摘錄：
+
+```json
+{
+  "action": "delete",
+  "identity": "cpu-high",
+  "kind": "grafana-alert-rule",
+  "reason": "missing-from-desired-state"
+}
+```
+
+這次驗證仍然有兩筆 `update` row，原因和上面同樣是 live normalization 差異；真正的 prune 訊號是 `missing-from-desired-state` 對應出的 `delete` row。
+
+3. 套用 prune plan。
+
+已驗證結果摘錄：
+
+```json
+{
+  "appliedCount": 3,
+  "results": [
+    {
+      "action": "update",
+      "identity": "pagerduty-primary",
+      "kind": "grafana-contact-point"
+    },
+    {
+      "action": "update",
+      "identity": "pagerduty-primary",
+      "kind": "grafana-notification-policies"
+    },
+    {
+      "action": "delete",
+      "identity": "cpu-high",
+      "kind": "grafana-alert-rule"
+    }
+  ]
+}
+```
+
+### 4.4 Migration Layer
+
+#### `alert export`
 
 **用途**：匯出 alerting 資源為 raw JSON。
 
@@ -466,13 +886,14 @@ grafana-util alert export --url http://localhost:3000 --basic-user admin --basic
 
 範例輸出：
 ```text
-Exported rule          alerts/raw/rules/cpu_high.json
-Exported contact point alerts/raw/contact-points/oncall_webhook.json
-Exported template      alerts/raw/templates/default_message.json
-Alert export completed: 3 resource(s) written
+Exported alert rule cpu-main -> /tmp/alert-export-after-apply/raw/rules/general/example-rules/CPU_Main__cpu-main.json
+Exported contact point contact-point-uid -> /tmp/alert-export-after-apply/raw/contact-points/example-contact-point/example-contact-point__contact-point-uid.json
+Exported notification policies empty -> /tmp/alert-export-after-apply/raw/policies/notification-policies.json
+Exported template example-template -> /tmp/alert-export-after-apply/raw/templates/example-template/example-template.json
+Exported 1 alert rules, 1 contact points, 0 mute timings, 1 notification policy documents, 1 templates. Root index: /tmp/alert-export-after-apply/index.json
 ```
 
-### 4.2 `alert import`（legacy `import-alert`）
+#### `alert import`（legacy `import-alert`）
 
 **用途**：將 alert raw 匯入 Grafana。
 
@@ -494,23 +915,35 @@ grafana-util alert import --url http://localhost:3000 --basic-user admin --basic
 ```json
 {
   "summary": {
-    "processed": 2,
-    "wouldCreate": 1,
-    "wouldUpdate": 1,
+    "processed": 4,
+    "wouldCreate": 0,
+    "wouldUpdate": 4,
     "wouldFailExisting": 0
   },
   "rows": [
     {
-      "path": "alerts/raw/contact-points/Smoke_Webhook/Smoke_Webhook__smoke-webhook.json",
+      "path": "/tmp/alert-export-after-apply/raw/contact-points/example-contact-point/example-contact-point__contact-point-uid.json",
       "kind": "grafana-contact-point",
-      "identity": "smoke-webhook",
+      "identity": "contact-point-uid",
       "action": "would-update"
     },
     {
-      "path": "alerts/raw/policies/notification-policies.json",
+      "path": "/tmp/alert-export-after-apply/raw/policies/notification-policies.json",
       "kind": "grafana-notification-policies",
-      "identity": "grafana-default-email",
-      "action": "would-create"
+      "identity": "empty",
+      "action": "would-update"
+    },
+    {
+      "path": "/tmp/alert-export-after-apply/raw/rules/general/example-rules/CPU_Main__cpu-main.json",
+      "kind": "grafana-alert-rule",
+      "identity": "cpu-main",
+      "action": "would-update"
+    },
+    {
+      "path": "/tmp/alert-export-after-apply/raw/templates/example-template/example-template.json",
+      "kind": "grafana-notification-template",
+      "identity": "example-template",
+      "action": "would-update"
     }
   ]
 }
@@ -521,7 +954,19 @@ grafana-util alert import --url http://localhost:3000 --basic-user admin --basic
 - `would-*` 是 dry-run 預測結果。
 - `kind` 可快速看出哪一類 alert 資源會變動。
 
-### 4.3 `alert diff`（legacy `diff-alert`）
+Migration 範例：
+
+```bash
+grafana-util alert export --url http://localhost:3000 --basic-user admin --basic-password admin --output-dir ./alerts --overwrite
+grafana-util alert import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./alerts/raw --replace-existing --dry-run --json
+```
+
+建議心智模型固定成這樣：
+- `add-rule/clone-rule/add-contact-point/set-route/preview-route/init/new-*` 是 desired-state authoring lane。
+- `plan/apply` 是 review-first live mutation lane。
+- `export/import/diff` 是 migration / replay lane。
+
+### 4.5 `alert diff`（legacy `diff-alert`）
 
 **用途**：比較本地 alert raw 與線上內容。
 
@@ -563,10 +1008,10 @@ grafana-util alert diff --url http://localhost:3000 --basic-user admin --basic-p
 }
 ```
 
-### 4.4 `alert list-rules`（legacy `list-alert-rules`）
-### 4.5 `alert list-contact-points`（legacy `list-alert-contact-points`）
-### 4.6 `alert list-mute-timings`（legacy `list-alert-mute-timings`）
-### 4.7 `alert list-templates`（legacy `list-alert-templates`）
+### 4.9 `alert list-rules`（legacy `list-alert-rules`）
+### 4.10 `alert list-contact-points`（legacy `list-alert-contact-points`）
+### 4.11 `alert list-mute-timings`（legacy `list-alert-mute-timings`）
+### 4.12 `alert list-templates`（legacy `list-alert-templates`）
 
 **用途**：四個 list 命令共用，依名稱回報不同資源。
 
@@ -615,6 +1060,7 @@ ops_summary        [{{ .Status }}] {{ .CommonLabels.severity }}
 跨 org 說明：
 - `--org-id` 與 `--all-orgs` 在 alert list 命令中只支援 Basic Auth，因為 Grafana org 切換需要管理員式 org scope 變更。
 
+<a id="tw-datasource-commands"></a>
 5) datasource 命令
 ------------------
 
@@ -712,6 +1158,11 @@ loki-prod   loki-prod          loki         create   missing
 
 實跑註記：
 - 真實環境 Docker 測試也會驗證依匯出來源 org 回放資料來源：`--use-export-org`、可重複的 `--only-org-id`、以及 `--create-missing-orgs`。在這種模擬執行 JSON 中，會先看到組織層級的 `exists`、`missing-org`、或 `would-create-org`，再進入每筆資料來源操作。
+
+怎麼看：
+- `UID` 與 `NAME` 都重要，但自動化比對應優先以 `UID` 為準。
+- `DESTINATION=missing` 代表 live datasource 尚不存在，dry-run 會走建立流程。
+- `DESTINATION=exists`、`exists-uid`、`exists-name` 則代表 importer 已找到 live 對象，只是比對後可能決定 `would-update` 或 `no-change`。
 
 ### 5.4 `datasource diff`
 
@@ -823,6 +1274,7 @@ INDEX  NAME          TYPE       ACTION  DETAIL
 實跑註記：
 - datasource mutation 這組命令已在 Docker Grafana `12.4.1` 實測流程中驗證，包含 dry-run 預覽，以及線上 add/modify 後 secret 欄位的保留行為。
 
+<a id="tw-access-commands"></a>
 6) Access (存取控制) 指令模組
 -------------
 
@@ -1410,6 +1862,7 @@ grafana-util access service-account token delete --url http://localhost:3000 --t
 }
 ```
 
+<a id="tw-shared-output-rules"></a>
 7) 共通輸出與互斥規則摘要
 -------------------------
 
@@ -1421,12 +1874,271 @@ grafana-util access service-account token delete --url http://localhost:3000 --t
 | 認證策略 | `org-id`、`all-orgs` 等多數 dashboard/datasource 命令偏向 basic auth；token 更常用於 alert/access 快速操作 |
 | 團隊別名 | `access group` 為 `access team` alias |
 
+### 7.1 `sync`、`overview`、`project-status` 這三條線怎麼分
+
+- `sync`：偏 staged review，負責 summary、bundle、preflight、plan/review/apply、alert-sync assessment。
+- `overview`：偏操作員總覽，把 staged artifacts 整合成一個專案層級快照。
+- `project-status`：正式的專案層 readiness contract；`staged` 看匯出物，`live` 看目前 Grafana。
+
+### 7.2 `sync summary`
+
+**用途**：把 desired resource JSON 正規化成穩定的 staged summary。
+
+| 參數 | 用途 | 差異 / 情境 |
+| --- | --- | --- |
+| `--desired-file` | desired resource JSON | 必填 |
+| `--output text\|json` | 輸出模式 | JSON 適合後續 plan/review |
+
+範例指令：
+```bash
+grafana-util sync summary --desired-file ./desired.json --output json
+```
+
+範例輸出：
+```json
+{
+  "kind": "grafana-utils-sync-summary",
+  "summary": {
+    "resourceCount": 4,
+    "dashboardCount": 1,
+    "datasourceCount": 1,
+    "folderCount": 1,
+    "alertCount": 1
+  }
+}
+```
+
+### 7.3 `sync bundle` 與 `sync bundle-preflight`
+
+**用途**：先把 dashboard / alert / datasource 匯出物包成單一 source bundle，再檢查哪些項目可以走 staged review、哪些仍是 plan-only 或 blocked。
+
+| 命令 | 關鍵旗標 | 主要用途 |
+| --- | --- | --- |
+| `sync bundle` | `--dashboard-export-dir`、`--alert-export-dir`、`--datasource-export-file`、`--output-file` | 把 staged exports 打包成可攜 bundle |
+| `sync bundle-preflight` | `--source-bundle`、`--target-inventory`、`--availability-file` | 做 plugin / datasource / alert artifact / secret-provider 的預檢 |
+
+範例指令：
+```bash
+grafana-util sync bundle \
+  --dashboard-export-dir ./dashboards/raw \
+  --alert-export-dir ./alerts/raw \
+  --datasource-export-file ./datasources/datasources.json \
+  --output-file ./sync-source-bundle.json \
+  --output json
+```
+
+範例輸出摘錄：
+```json
+{
+  "kind": "grafana-utils-sync-source-bundle",
+  "summary": {
+    "dashboardCount": 7,
+    "datasourceCount": 3,
+    "folderCount": 5,
+    "alertRuleCount": 1,
+    "contactPointCount": 1,
+    "muteTimingCount": 1,
+    "policyCount": 1,
+    "templateCount": 1
+  }
+}
+```
+
+範例指令：
+```bash
+grafana-util sync bundle-preflight \
+  --source-bundle ./sync-source-bundle.json \
+  --target-inventory ./target-inventory.json \
+  --output json
+```
+
+範例輸出摘錄：
+```json
+{
+  "kind": "grafana-utils-sync-bundle-preflight",
+  "summary": {
+    "resourceCount": 20,
+    "syncBlockingCount": 8,
+    "alertArtifactCount": 4,
+    "alertArtifactPlanOnlyCount": 1,
+    "alertArtifactBlockedCount": 3
+  }
+}
+```
+
+### 7.4 `sync plan`、`sync review`、`sync apply`、`sync assess-alerts`
+
+**用途**：把 staged desired 轉成 reviewable plan，標記已審查，再輸出 gated apply intent；若只想看 alert sync 評估，就用 `assess-alerts`。
+
+| 命令 | 關鍵旗標 | 主要用途 |
+| --- | --- | --- |
+| `sync plan` | `--desired-file`、`--live-file` 或 `--fetch-live`、`--allow-prune`、`--output json` | 建立 staged plan 文件 |
+| `sync review` | `--plan-file`、`--review-note`、`--reviewed-by` | 對 plan 蓋章，不直接套用 |
+| `sync apply` | `--plan-file`、`--approve`、`--execute-live` | 先輸出 apply intent；只有明確指定才做 live execute |
+| `sync assess-alerts` | `--alerts-file`、`--output json` | 單看 alert candidate / plan-only / blocked 分類 |
+
+範例指令：
+```bash
+grafana-util sync plan --desired-file ./desired-plan.json --live-file ./live.json --output json
+```
+
+範例輸出摘錄：
+```json
+{
+  "kind": "grafana-utils-sync-plan",
+  "summary": {
+    "would_create": 3,
+    "would_update": 0,
+    "would_delete": 0,
+    "noop": 0
+  },
+  "reviewRequired": true
+}
+```
+
+範例指令：
+```bash
+grafana-util sync review --plan-file ./sync-plan.json --review-note "docs-reviewed" --reviewed-by docs-user --output json
+grafana-util sync apply --plan-file ./sync-plan-reviewed.json --approve --output json
+```
+
+範例輸出摘錄：
+```json
+{
+  "kind": "grafana-utils-sync-apply-intent",
+  "approved": true,
+  "reviewed": true,
+  "summary": {
+    "would_create": 3,
+    "would_update": 0,
+    "would_delete": 0,
+    "noop": 0
+  }
+}
+```
+
+範例指令：
+```bash
+grafana-util sync assess-alerts --alerts-file ./alerts-only.json --output json
+```
+
+範例輸出摘錄：
+```json
+{
+  "kind": "grafana-utils-alert-sync-plan",
+  "summary": {
+    "alertCount": 1,
+    "candidateCount": 0,
+    "planOnlyCount": 1,
+    "blockedCount": 0
+  }
+}
+```
+
+### 7.5 `overview`
+
+**用途**：把 staged exports 與 staged sync 輸入整合成專案層級總覽。
+
+| 參數 | 用途 | 差異 / 情境 |
+| --- | --- | --- |
+| `--dashboard-export-dir` | staged dashboard 匯出根目錄 | 通常是一個 `raw/` 目錄 |
+| `--datasource-export-dir` | staged datasource 匯出目錄 | 通常是含 `datasources.json` 的 org 匯出目錄 |
+| `--alert-export-dir` | staged alert 匯出目錄 | 指到 alert export root，不是只指 `raw/` |
+| `--access-*-export-dir` | staged access bundles | 只帶你要納入總覽的 bundle |
+| `--desired-file` | 選填 sync summary 輸入 | 會加上 staged sync 狀態 |
+| `--source-bundle`、`--target-inventory`、`--mapping-file` | 選填 bundle/promotion 輸入 | 專案層級視角會更完整 |
+| `--output text\|json\|interactive` | 輸出模式 | `interactive` 需要 TUI build |
+
+範例指令：
+```bash
+grafana-util overview \
+  --dashboard-export-dir ./dashboards/raw \
+  --datasource-export-dir ./datasources \
+  --alert-export-dir ./alerts \
+  --access-user-export-dir ./access-users \
+  --access-team-export-dir ./access-teams \
+  --access-org-export-dir ./access-orgs \
+  --access-service-account-export-dir ./access-service-accounts \
+  --desired-file ./desired.json \
+  --output text
+```
+
+範例輸出：
+```text
+Project overview
+Status: blocked domains=6 present=5 blocked=1 blockers=3 warnings=0 freshness=current oldestAge=222s
+Artifacts: 8 total, 1 dashboard export, 1 datasource export, 1 alert export, 1 access user export, 1 access team export, 1 access org export, 1 access service-account export, 1 sync summary, 0 bundle preflight, 0 promotion preflight
+Domain status:
+- dashboard status=blocked reason=blocked-by-blockers primary=10 blockers=3 warnings=0 freshness=current next=resolve orphaned datasources, then mixed dashboards
+- datasource status=ready reason=ready primary=3 blockers=0 warnings=0 freshness=current
+- alert status=ready reason=ready primary=1 blockers=0 warnings=0 freshness=current next=re-run alert export after alerting changes
+- access status=ready reason=ready primary=13 blockers=0 warnings=0 freshness=current next=re-run access export after membership changes
+- sync status=ready reason=ready primary=4 blockers=0 warnings=0 freshness=current next=re-run sync summary after staged changes
+```
+
+### 7.6 `project-status staged` 與 `project-status live`
+
+**用途**：從 staged exports 或目前 Grafana 狀態輸出正式的專案層 readiness contract。
+
+| 命令 | 關鍵旗標 | 主要用途 |
+| --- | --- | --- |
+| `project-status staged` | staged export dirs + 選填 desired/bundle 輸入 | 機器可讀的 staged readiness |
+| `project-status live` | `--url`、認證、選填 staged context 檔案 | 機器可讀的 live readiness |
+| `overview live` | 與 live auth 相同 | convenience alias，內部委派給 `project-status live` |
+
+範例指令：
+```bash
+grafana-util project-status staged \
+  --dashboard-export-dir ./dashboards/raw \
+  --datasource-export-dir ./datasources \
+  --alert-export-dir ./alerts \
+  --access-user-export-dir ./access-users \
+  --access-team-export-dir ./access-teams \
+  --access-org-export-dir ./access-orgs \
+  --access-service-account-export-dir ./access-service-accounts \
+  --desired-file ./desired.json \
+  --output json
+```
+
+範例輸出摘錄：
+```json
+{
+  "scope": "staged-only",
+  "overall": {
+    "status": "blocked",
+    "domainCount": 6,
+    "blockedCount": 1,
+    "blockerCount": 3
+  }
+}
+```
+
+範例指令：
+```bash
+grafana-util project-status live --url http://localhost:3000 --basic-user admin --basic-password admin --output json
+```
+
+範例輸出摘錄：
+```json
+{
+  "scope": "live",
+  "overall": {
+    "status": "blocked",
+    "domainCount": 6,
+    "blockedCount": 1,
+    "blockerCount": 1,
+    "warningCount": 21
+  }
+}
+```
+
+<a id="tw-common-scenarios"></a>
 8) 常見情境快速對照
 ------------------
 
 ### 8.1 跨環境 dashboard 遷移
 
-1. `grafana-util dashboard export --all-orgs --overwrite --export-dir ./dashboards`
+1. `grafana-util dashboard export --all-orgs --overwrite --flat --export-dir ./dashboards`
 2. `grafana-util dashboard import --dry-run --replace-existing --table --import-dir ./dashboards/raw`
 3. 確認結果後再跑同一行去掉 `--dry-run`
 
@@ -1487,6 +2199,7 @@ grafana-util dashboard inspect-export --import-dir ./dashboards/raw --report jso
    - 缺少 Grafana SQL time filter
    - Loki 過寬 selector / regex
 
+<a id="tw-minimal-sop"></a>
 9) 每命令 SOP（最短可跑版本）
 ------------------------------
 
@@ -1494,7 +2207,7 @@ grafana-util dashboard inspect-export --import-dir ./dashboards/raw --report jso
 
 ```bash
 # dashboard
-grafana-util dashboard export --url <URL> --basic-user <USER> --basic-password <PASS> --export-dir <DIR> [--overwrite] [--all-orgs]
+grafana-util dashboard export --url <URL> --basic-user <USER> --basic-password <PASS> --export-dir <DIR> [--overwrite] [--all-orgs] [--flat]
 grafana-util dashboard export --url <URL> --token <TOKEN> --org-id <ORG_ID> --export-dir <DIR> [--overwrite]
 grafana-util dashboard list --url <URL> --basic-user <USER> --basic-password <PASS> [--org-id <ORG_ID>|--all-orgs] [--output-format table|csv|json] [--with-sources]
 grafana-util dashboard list-data-sources --url <URL> --basic-user <USER> --basic-password <PASS> [--output-format table|csv|json]
@@ -1542,8 +2255,22 @@ grafana-util access service-account add --url <URL> --token <TOKEN> --name <NAME
 grafana-util access service-account delete --url <URL> --token <TOKEN> --name <NAME> --yes
 grafana-util access service-account token add --url <URL> --token <TOKEN> --name <SA_NAME> --token-name <TOKEN_NAME> [--seconds-to-live <SECONDS>]
 grafana-util access service-account token delete --url <URL> --token <TOKEN> --name <SA_NAME> --token-name <TOKEN_NAME> --yes
+
+# sync / project
+grafana-util sync summary --desired-file ./desired.json --output json
+grafana-util sync bundle --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts/raw --datasource-export-file ./datasources/datasources.json --output-file ./sync-source-bundle.json --output json
+grafana-util sync bundle-preflight --source-bundle ./sync-source-bundle.json --target-inventory ./target-inventory.json --output json
+grafana-util sync plan --desired-file ./desired.json --live-file ./live.json --output json
+grafana-util sync review --plan-file ./sync-plan.json --review-note "peer-reviewed" --reviewed-by ops-user --output json
+grafana-util sync apply --plan-file ./sync-plan-reviewed.json --approve --output json
+grafana-util sync assess-alerts --alerts-file ./alerts-only.json --output json
+grafana-util overview --dashboard-export-dir ./dashboards/raw --datasource-export-dir ./datasources --alert-export-dir ./alerts --output text
+grafana-util overview live --url <URL> --basic-user <USER> --basic-password <PASS> --output json
+grafana-util project-status staged --dashboard-export-dir ./dashboards/raw --datasource-export-dir ./datasources --alert-export-dir ./alerts --output json
+grafana-util project-status live --url <URL> --basic-user <USER> --basic-password <PASS> --output json
 ```
 
+<a id="tw-matrix"></a>
 10) 參數互斥與差異矩陣（Rust）
 --------------------------------
 
@@ -1568,6 +2295,15 @@ grafana-util access service-account token delete --url <URL> --token <TOKEN> --n
 | access service-account import | text/table/json | 不可（僅 text/table/json） | text 為 dry-run 摘要 |
 | access service-account diff | text | 否 | 僅摘要 |
 | access service-account list | table/csv/json | 不可 | 同上 |
+| sync summary | text/json | 不可（僅 text/json） | desired-resource 摘要 |
+| sync bundle | text/json | 不可（僅 text/json） | source bundle 文件 |
+| sync bundle-preflight | text/json | 不可（僅 text/json） | bundle review 文件 |
+| sync plan | text/json | 不可（僅 text/json） | 可審查的 sync plan |
+| sync review | text/json | 不可（僅 text/json） | reviewed stamp |
+| sync apply | text/json | 不可（僅 text/json） | apply intent 或 live execute 摘要 |
+| sync assess-alerts | text/json | 不可（僅 text/json） | alert sync 分類 |
+| overview | text/json/interactive | 不可（僅 text/json/interactive） | 專案層 staged/live 總覽 |
+| project-status staged/live | text/json/interactive | 不可（僅 text/json/interactive） | 正式的專案層 readiness |
 
 `DRY-RUN` 類（模擬執行）：
 
@@ -1578,6 +2314,12 @@ grafana-util access service-account token delete --url <URL> --token <TOKEN> --n
 | alert import | 僅模擬執行 `create/update` |
 | access user import | 僅模擬執行 `create/update/skip`，以及 team 變更預覽 |
 | access team import | 僅模擬執行 `create/update/skip`，以及成員變更預覽 |
+
+常見 dry-run 狀態讀法：
+- `missing`：live 目標不存在，通常會搭配 `create` / `would-create`
+- `exists` / `existing`：live 目標存在，接著看 action 判斷是否 update 或 no-change
+- `exists-uid` / `exists-name`：代表 importer 是用哪種方式找到 live 對象
+- `missing-org` / `would-create-org`：多 org 路由匯入時，組織層先決條件還沒滿足
 
 `ORG` 控制：
 
@@ -1592,4 +2334,5 @@ grafana-util access service-account token delete --url <URL> --token <TOKEN> --n
 | datasource import | 可用（不可用 token，需 Grafana 帳號密碼） | 不可 |
 | alert list-* | 可用（不可用 token，需 Grafana 帳號密碼） | 可用（不可用 token，需 Grafana 帳號密碼） |
 | alert export/import/diff | 不支援 `org-id`/`all-orgs` | 不支援 |
+| alert plan/apply/delete | 不支援 `org-id`/`all-orgs` | 不支援 |
 | access 全部 | 用 `--scope` 替代 | 不支援 |

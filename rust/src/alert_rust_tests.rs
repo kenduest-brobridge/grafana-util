@@ -3,18 +3,22 @@
 //! behavior.
 use super::alert_list::serialize_contact_point_list_rows;
 use super::{
-    build_alert_diff_document, build_alert_import_dry_run_document,
-    build_alert_live_project_status_domain, build_alert_project_status_domain,
+    build_alert_delete_preview_from_files, build_alert_diff_document,
+    build_alert_import_dry_run_document, build_alert_live_project_status_domain,
+    build_alert_plan_document, build_alert_plan_with_request, build_alert_project_status_domain,
     build_compare_diff_text, build_contact_point_export_document, build_contact_point_output_path,
     build_empty_root_index, build_import_operation, build_rule_export_document,
     build_rule_output_path, detect_document_kind, determine_import_action_with_request,
-    expect_object_list, fetch_live_compare_document_with_request, get_rule_linkage,
-    import_resource_document_with_request, load_panel_id_map, load_string_map, parse_cli_from,
-    parse_template_list_response, root_command, serialize_compare_document,
-    serialize_rule_list_rows, AlertCliArgs, AlertLiveProjectStatusInputs, CONTACT_POINT_KIND,
+    execute_alert_plan_with_request, expect_object_list, fetch_live_compare_document_with_request,
+    get_rule_linkage, import_resource_document_with_request, init_alert_runtime_layout,
+    load_alert_resource_file, load_panel_id_map, load_string_map, parse_cli_from,
+    parse_template_list_response, root_command, run_alert_cli, serialize_compare_document,
+    serialize_rule_list_rows, write_new_contact_point_scaffold, write_new_rule_scaffold,
+    write_new_template_scaffold, AlertCliArgs, AlertLiveProjectStatusInputs, CONTACT_POINT_KIND,
     MUTE_TIMING_KIND, POLICIES_KIND, ROOT_INDEX_KIND, RULE_KIND, TEMPLATE_KIND, TOOL_API_VERSION,
     TOOL_SCHEMA_VERSION,
 };
+use crate::common::api_response;
 use crate::common::{message, Result, TOOL_VERSION};
 use reqwest::Method;
 use serde_json::json;
@@ -56,6 +60,17 @@ fn load_alert_recreate_contract_fixture() -> Value {
         "../../fixtures/alert_recreate_contract_cases.json"
     ))
     .unwrap()
+}
+
+fn write_pretty_json(path: &Path, value: &Value) {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).unwrap();
+    }
+    fs::write(
+        path,
+        format!("{}\n", serde_json::to_string_pretty(value).unwrap()),
+    )
+    .unwrap();
 }
 
 #[test]
@@ -787,6 +802,1061 @@ fn alert_diff_and_import_documents_align_for_update_and_create_actions() {
         .unwrap()
         .iter()
         .any(|row| row["identity"] == "new-webhook" && row["action"] == "would-create"));
+}
+
+#[test]
+fn load_alert_resource_file_accepts_json_and_yaml_desired_documents() {
+    let temp = tempdir().unwrap();
+    let json_path = temp.path().join("rule.json");
+    let yaml_path = temp.path().join("contact-point.yaml");
+
+    write_pretty_json(
+        &json_path,
+        &json!({
+            "uid": "rule-json",
+            "title": "JSON Rule",
+            "folderUID": "general",
+            "ruleGroup": "default",
+            "condition": "A",
+            "data": [],
+        }),
+    );
+    fs::write(
+        &yaml_path,
+        r#"name: yaml-contact-point
+type: webhook
+settings:
+  url: http://127.0.0.1:9000/notify
+"#,
+    )
+    .unwrap();
+
+    let (json_kind, json_payload) =
+        build_import_operation(&load_alert_resource_file(&json_path, "Alert resource").unwrap())
+            .unwrap();
+    let (yaml_kind, yaml_payload) =
+        build_import_operation(&load_alert_resource_file(&yaml_path, "Alert resource").unwrap())
+            .unwrap();
+
+    assert_eq!(json_kind, RULE_KIND);
+    assert_eq!(json_payload["uid"], json!("rule-json"));
+    assert_eq!(yaml_kind, CONTACT_POINT_KIND);
+    assert_eq!(yaml_payload["name"], json!("yaml-contact-point"));
+}
+
+#[test]
+fn request_optional_object_with_request_treats_http_404_as_missing() {
+    let result = super::alert_runtime_support::request_optional_object_with_request(
+        |_method, path, _params, _payload| {
+            Err(api_response(
+                404,
+                format!("http://127.0.0.1:3000{path}"),
+                "",
+            ))
+        },
+        Method::GET,
+        "/api/v1/provisioning/alert-rules/missing-rule",
+        None,
+    )
+    .unwrap();
+
+    assert!(result.is_none());
+}
+
+#[test]
+fn build_alert_plan_with_request_generates_create_update_noop_and_blocked_rows() {
+    let temp = tempdir().unwrap();
+    write_new_rule_scaffold(
+        &temp.path().join("rules/create-rule.json"),
+        "create-rule",
+        true,
+    )
+    .unwrap();
+    write_pretty_json(
+        &temp.path().join("contact-points/update-contact-point.yaml"),
+        &json!({
+            "kind": CONTACT_POINT_KIND,
+            "apiVersion": TOOL_API_VERSION,
+            "schemaVersion": TOOL_SCHEMA_VERSION,
+            "spec": {
+                "uid": "cp-update",
+                "name": "Update Me",
+                "type": "webhook",
+                "settings": {"url": "http://127.0.0.1/new"}
+            }
+        }),
+    );
+    write_new_template_scaffold(
+        &temp.path().join("templates/example-template.json"),
+        "example-template",
+        true,
+    )
+    .unwrap();
+
+    let plan = build_alert_plan_with_request(
+        |method, path, _params, _payload| match (method.clone(), path) {
+            (Method::GET, "/api/v1/provisioning/alert-rules/create-rule") => Ok(None),
+            (Method::GET, "/api/v1/provisioning/contact-points") => Ok(Some(json!([
+                {
+                    "uid": "cp-update",
+                    "name": "Update Me",
+                    "type": "webhook",
+                    "settings": {"url": "http://127.0.0.1/old"}
+                }
+            ]))),
+            (Method::GET, "/api/v1/provisioning/templates/example-template") => Ok(Some(json!({
+                "name": "example-template",
+                "template": "{{ define \"example-template\" }}replace me{{ end }}"
+            }))),
+            (Method::GET, "/api/v1/provisioning/alert-rules") => Ok(Some(json!([]))),
+            (Method::GET, "/api/v1/provisioning/mute-timings") => Ok(Some(json!([
+                {
+                    "name": "off-hours",
+                    "time_intervals": []
+                }
+            ]))),
+            (Method::GET, "/api/v1/provisioning/templates") => Ok(Some(json!([
+                {
+                    "name": "example-template",
+                    "template": "{{ define \"example-template\" }}replace me{{ end }}"
+                }
+            ]))),
+            (Method::GET, "/api/v1/provisioning/policies") => Ok(Some(json!({
+                "receiver": "grafana-default-email"
+            }))),
+            _ => panic!("unexpected request {method:?} {path}"),
+        },
+        temp.path(),
+        false,
+    )
+    .unwrap();
+
+    assert_eq!(plan["summary"]["create"], json!(1));
+    assert_eq!(plan["summary"]["update"], json!(1));
+    assert_eq!(plan["summary"]["noop"], json!(1));
+    assert_eq!(plan["summary"]["blocked"], json!(2));
+
+    let rows = plan["rows"].as_array().unwrap();
+    assert!(rows.iter().any(|row| {
+        row["kind"] == json!(RULE_KIND)
+            && row["identity"] == json!("create-rule")
+            && row["action"] == json!("create")
+    }));
+    assert!(rows.iter().any(|row| {
+        row["kind"] == json!(CONTACT_POINT_KIND)
+            && row["identity"] == json!("cp-update")
+            && row["action"] == json!("update")
+    }));
+    assert!(rows.iter().any(|row| {
+        row["kind"] == json!(TEMPLATE_KIND)
+            && row["identity"] == json!("example-template")
+            && row["action"] == json!("noop")
+    }));
+    assert!(rows.iter().any(|row| {
+        row["kind"] == json!(MUTE_TIMING_KIND)
+            && row["identity"] == json!("off-hours")
+            && row["action"] == json!("blocked")
+            && row["reason"] == json!("prune-required")
+    }));
+    assert!(rows.iter().any(|row| {
+        row["kind"] == json!(POLICIES_KIND)
+            && row["identity"] == json!("grafana-default-email")
+            && row["action"] == json!("blocked")
+    }));
+}
+
+#[test]
+fn build_alert_plan_with_request_marks_live_only_resources_delete_when_prune_enabled() {
+    let temp = tempdir().unwrap();
+    write_new_rule_scaffold(
+        &temp.path().join("rules/create-rule.json"),
+        "create-rule",
+        true,
+    )
+    .unwrap();
+
+    let plan = build_alert_plan_with_request(
+        |method, path, _params, _payload| match (method.clone(), path) {
+            (Method::GET, "/api/v1/provisioning/alert-rules/create-rule") => Ok(None),
+            (Method::GET, "/api/v1/provisioning/alert-rules") => Ok(Some(json!([]))),
+            (Method::GET, "/api/v1/provisioning/contact-points") => Ok(Some(json!([
+                {
+                    "uid": "cp-delete",
+                    "name": "Delete Me",
+                    "type": "webhook",
+                    "settings": {"url": "http://127.0.0.1/delete"}
+                }
+            ]))),
+            (Method::GET, "/api/v1/provisioning/mute-timings") => Ok(Some(json!([]))),
+            (Method::GET, "/api/v1/provisioning/templates") => Ok(Some(json!([]))),
+            (Method::GET, "/api/v1/provisioning/policies") => Ok(None),
+            _ => panic!("unexpected request {method:?} {path}"),
+        },
+        temp.path(),
+        true,
+    )
+    .unwrap();
+
+    assert!(plan["rows"].as_array().unwrap().iter().any(|row| {
+        row["kind"] == json!(CONTACT_POINT_KIND)
+            && row["identity"] == json!("cp-delete")
+            && row["action"] == json!("delete")
+    }));
+}
+
+#[test]
+fn normalize_compare_payload_erases_authoring_round_trip_drift_defaults() {
+    let contact_point = json!({
+        "uid": "cp-authoring",
+        "name": "Authoring Webhook",
+        "type": "webhook",
+        "settings": {"url": "http://127.0.0.1/notify"},
+    });
+    let contact_point_live = json!({
+        "uid": "cp-authoring",
+        "name": "Authoring Webhook",
+        "type": "webhook",
+        "settings": {"url": "http://127.0.0.1/notify"},
+        "disableResolveMessage": false,
+    });
+    assert_eq!(
+        super::normalize_compare_payload(CONTACT_POINT_KIND, contact_point.as_object().unwrap()),
+        super::normalize_compare_payload(
+            CONTACT_POINT_KIND,
+            contact_point_live.as_object().unwrap()
+        )
+    );
+
+    let policies_desired = json!({
+        "receiver": "pagerduty-primary",
+        "group_by": ["grafana_folder", "alertname"],
+        "routes": [{
+            "receiver": "pagerduty-primary",
+            "continue": false,
+            "group_by": ["grafana_folder", "alertname"],
+            "object_matchers": [
+                ["team", "=", "platform"],
+                ["severity", "=", "critical"],
+                ["grafana_utils_route", "=", "pagerduty-primary"]
+            ]
+        }]
+    });
+    let policies_live = json!({
+        "receiver": "pagerduty-primary",
+        "group_by": ["grafana_folder", "alertname"],
+        "routes": [{
+            "receiver": "pagerduty-primary",
+            "group_by": ["grafana_folder", "alertname"],
+            "object_matchers": [
+                ["grafana_utils_route", "=", "pagerduty-primary"],
+                ["severity", "=", "critical"],
+                ["team", "=", "platform"]
+            ]
+        }]
+    });
+    assert_eq!(
+        super::normalize_compare_payload(POLICIES_KIND, policies_desired.as_object().unwrap()),
+        super::normalize_compare_payload(POLICIES_KIND, policies_live.as_object().unwrap())
+    );
+
+    let rule_desired = json!({
+        "uid": "cpu-high",
+        "title": "cpu-high",
+        "folderUID": "platform-alerts",
+        "ruleGroup": "cpu",
+        "condition": "A",
+        "for": "5m",
+        "noDataState": "NoData",
+        "execErrState": "Alerting",
+        "labels": {
+            "grafana_utils_route": "pagerduty-primary",
+            "severity": "critical",
+            "team": "platform"
+        },
+        "annotations": {},
+        "data": [{
+            "refId": "A",
+            "datasourceUid": "__expr__",
+            "relativeTimeRange": {"from": 0, "to": 0},
+            "model": {
+                "refId": "A",
+                "type": "classic_conditions",
+                "datasource": {"type": "__expr__", "uid": "__expr__"},
+                "expression": "A",
+                "conditions": [{
+                    "type": "query",
+                    "query": {"params": ["A"]},
+                    "reducer": {"type": "last", "params": []},
+                    "evaluator": {"type": "gt", "params": [80.0]},
+                    "operator": {"type": "and"}
+                }],
+                "intervalMs": 1000,
+                "maxDataPoints": 43200
+            }
+        }]
+    });
+    let rule_live = json!({
+        "uid": "cpu-high",
+        "title": "cpu-high",
+        "folderUID": "platform-alerts",
+        "ruleGroup": "cpu",
+        "condition": "A",
+        "for": "5m",
+        "noDataState": "NoData",
+        "execErrState": "Alerting",
+        "isPaused": false,
+        "keep_firing_for": "0s",
+        "notification_settings": null,
+        "record": null,
+        "orgID": 1,
+        "labels": {
+            "grafana_utils_route": "pagerduty-primary",
+            "severity": "critical",
+            "team": "platform"
+        },
+        "annotations": {},
+        "data": [{
+            "refId": "A",
+            "queryType": "",
+            "datasourceUid": "__expr__",
+            "relativeTimeRange": {"from": 0, "to": 0},
+            "model": {
+                "refId": "A",
+                "type": "classic_conditions",
+                "datasource": {"type": "__expr__", "uid": "__expr__"},
+                "expression": "A",
+                "conditions": [{
+                    "type": "query",
+                    "query": {"params": ["A"]},
+                    "reducer": {"type": "last", "params": []},
+                    "evaluator": {"type": "gt", "params": [80.0]},
+                    "operator": {"type": "and"}
+                }],
+                "intervalMs": 1000,
+                "maxDataPoints": 43200
+            }
+        }]
+    });
+    assert_eq!(
+        super::normalize_compare_payload(RULE_KIND, rule_desired.as_object().unwrap()),
+        super::normalize_compare_payload(RULE_KIND, rule_live.as_object().unwrap())
+    );
+}
+
+#[test]
+fn build_alert_plan_with_request_treats_authoring_round_trip_defaults_as_noop() {
+    let temp = tempdir().unwrap();
+    write_pretty_json(
+        &temp
+            .path()
+            .join("contact-points/authoring-contact-point.json"),
+        &json!({
+            "kind": CONTACT_POINT_KIND,
+            "apiVersion": TOOL_API_VERSION,
+            "schemaVersion": TOOL_SCHEMA_VERSION,
+            "spec": {
+                "uid": "cp-authoring",
+                "name": "Authoring Webhook",
+                "type": "webhook",
+                "settings": {"url": "http://127.0.0.1/notify"}
+            }
+        }),
+    );
+    write_pretty_json(
+        &temp.path().join("policies/notification-policies.json"),
+        &json!({
+            "kind": POLICIES_KIND,
+            "apiVersion": TOOL_API_VERSION,
+            "schemaVersion": TOOL_SCHEMA_VERSION,
+            "spec": {
+                "receiver": "pagerduty-primary",
+                "group_by": ["grafana_folder", "alertname"],
+                "routes": [{
+                    "receiver": "pagerduty-primary",
+                    "continue": false,
+                    "group_by": ["grafana_folder", "alertname"],
+                    "object_matchers": [
+                        ["team", "=", "platform"],
+                        ["severity", "=", "critical"],
+                        ["grafana_utils_route", "=", "pagerduty-primary"]
+                    ]
+                }]
+            }
+        }),
+    );
+    write_pretty_json(
+        &temp.path().join("rules/cpu-high.json"),
+        &json!({
+            "kind": RULE_KIND,
+            "apiVersion": TOOL_API_VERSION,
+            "schemaVersion": TOOL_SCHEMA_VERSION,
+            "spec": {
+                "uid": "cpu-high",
+                "title": "cpu-high",
+                "folderUID": "platform-alerts",
+                "ruleGroup": "cpu",
+                "condition": "A",
+                "for": "5m",
+                "noDataState": "NoData",
+                "execErrState": "Alerting",
+                "labels": {
+                    "grafana_utils_route": "pagerduty-primary",
+                    "severity": "critical",
+                    "team": "platform"
+                },
+                "annotations": {},
+                "data": [{
+                    "refId": "A",
+                    "datasourceUid": "__expr__",
+                    "relativeTimeRange": {"from": 0, "to": 0},
+                    "model": {
+                        "refId": "A",
+                        "type": "classic_conditions",
+                        "datasource": {"type": "__expr__", "uid": "__expr__"},
+                        "expression": "A",
+                        "conditions": [{
+                            "type": "query",
+                            "query": {"params": ["A"]},
+                            "reducer": {"type": "last", "params": []},
+                            "evaluator": {"type": "gt", "params": [80.0]},
+                            "operator": {"type": "and"}
+                        }],
+                        "intervalMs": 1000,
+                        "maxDataPoints": 43200
+                    }
+                }]
+            }
+        }),
+    );
+
+    let plan = build_alert_plan_with_request(
+        |method, path, _params, _payload| match (method.clone(), path) {
+            (Method::GET, "/api/v1/provisioning/contact-points") => Ok(Some(json!([
+                {
+                    "uid": "cp-authoring",
+                    "name": "Authoring Webhook",
+                    "type": "webhook",
+                    "settings": {"url": "http://127.0.0.1/notify"},
+                    "disableResolveMessage": false
+                }
+            ]))),
+            (Method::GET, "/api/v1/provisioning/policies") => Ok(Some(json!({
+                "receiver": "pagerduty-primary",
+                "group_by": ["grafana_folder", "alertname"],
+                "routes": [{
+                    "receiver": "pagerduty-primary",
+                    "group_by": ["grafana_folder", "alertname"],
+                    "object_matchers": [
+                        ["grafana_utils_route", "=", "pagerduty-primary"],
+                        ["severity", "=", "critical"],
+                        ["team", "=", "platform"]
+                    ]
+                }]
+            }))),
+            (Method::GET, "/api/v1/provisioning/alert-rules/cpu-high") => Ok(Some(json!({
+                "uid": "cpu-high",
+                "title": "cpu-high",
+                "folderUID": "platform-alerts",
+                "ruleGroup": "cpu",
+                "condition": "A",
+                "for": "5m",
+                "noDataState": "NoData",
+                "execErrState": "Alerting",
+                "isPaused": false,
+                "keep_firing_for": "0s",
+                "notification_settings": null,
+                "record": null,
+                "orgID": 1,
+                "data": [{
+                    "refId": "A",
+                    "queryType": "",
+                    "datasourceUid": "__expr__",
+                    "relativeTimeRange": {"from": 0, "to": 0},
+                    "model": {
+                        "refId": "A",
+                        "type": "classic_conditions",
+                        "datasource": {"type": "__expr__", "uid": "__expr__"},
+                        "expression": "A",
+                        "conditions": [{
+                            "type": "query",
+                            "query": {"params": ["A"]},
+                            "reducer": {"type": "last", "params": []},
+                            "evaluator": {"type": "gt", "params": [80.0]},
+                            "operator": {"type": "and"}
+                        }],
+                        "intervalMs": 1000,
+                        "maxDataPoints": 43200
+                    }
+                }],
+                "labels": {
+                    "grafana_utils_route": "pagerduty-primary",
+                    "severity": "critical",
+                    "team": "platform"
+                },
+                "annotations": {}
+            }))),
+            (Method::GET, "/api/v1/provisioning/alert-rules") => Ok(Some(json!([
+                {"uid": "cpu-high"}
+            ]))),
+            (Method::GET, "/api/v1/provisioning/mute-timings") => Ok(Some(json!([]))),
+            (Method::GET, "/api/v1/provisioning/templates") => Ok(Some(json!([]))),
+            _ => panic!("unexpected request {method:?} {path}"),
+        },
+        temp.path(),
+        true,
+    )
+    .unwrap();
+
+    assert_eq!(plan["summary"]["create"], json!(0));
+    assert_eq!(plan["summary"]["update"], json!(0));
+    assert_eq!(plan["summary"]["noop"], json!(3));
+    assert_eq!(plan["summary"]["delete"], json!(0));
+}
+
+#[test]
+fn execute_alert_plan_with_request_applies_create_update_and_delete_rows() {
+    let plan = build_alert_plan_document(
+        &[
+            json!({
+                "kind": RULE_KIND,
+                "identity": "rule-create",
+                "action": "create",
+                "desired": {
+                    "uid": "rule-create",
+                    "title": "Create Me",
+                    "folderUID": "general",
+                    "ruleGroup": "default",
+                    "condition": "A",
+                    "data": []
+                }
+            }),
+            json!({
+                "kind": CONTACT_POINT_KIND,
+                "identity": "cp-update",
+                "action": "update",
+                "desired": {
+                    "uid": "cp-update",
+                    "name": "Update Me",
+                    "type": "webhook",
+                    "settings": {"url": "http://127.0.0.1/new"}
+                }
+            }),
+            json!({
+                "kind": TEMPLATE_KIND,
+                "identity": "template-delete",
+                "action": "delete",
+                "desired": null
+            }),
+            json!({
+                "kind": RULE_KIND,
+                "identity": "rule-noop",
+                "action": "noop",
+                "desired": null
+            }),
+        ],
+        true,
+    );
+    let calls = RefCell::new(Vec::new());
+
+    let result = execute_alert_plan_with_request(
+        |method, path, _params, payload| {
+            calls
+                .borrow_mut()
+                .push((method.clone(), path.to_string(), payload.cloned()));
+            match (method.clone(), path) {
+                (Method::POST, "/api/v1/provisioning/alert-rules") => {
+                    Ok(Some(json!({"uid": "rule-create"})))
+                }
+                (Method::PUT, "/api/v1/provisioning/contact-points/cp-update") => {
+                    Ok(Some(json!({"uid": "cp-update"})))
+                }
+                (Method::DELETE, "/api/v1/provisioning/templates/template-delete") => Ok(None),
+                _ => panic!("unexpected request {method:?} {path}"),
+            }
+        },
+        &plan,
+        false,
+    )
+    .unwrap();
+
+    assert_eq!(result["appliedCount"], json!(3));
+    let calls = calls.borrow();
+    assert_eq!(calls.len(), 3);
+    assert_eq!(calls[0].0, Method::POST);
+    assert_eq!(calls[0].1, "/api/v1/provisioning/alert-rules");
+    assert_eq!(calls[1].0, Method::PUT);
+    assert_eq!(calls[1].1, "/api/v1/provisioning/contact-points/cp-update");
+    assert_eq!(calls[2].0, Method::DELETE);
+    assert_eq!(calls[2].1, "/api/v1/provisioning/templates/template-delete");
+}
+
+#[test]
+fn execute_alert_plan_with_request_rejects_policy_delete_without_guard() {
+    let plan = build_alert_plan_document(
+        &[json!({
+            "kind": POLICIES_KIND,
+            "identity": "grafana-default-email",
+            "action": "delete",
+            "desired": null
+        })],
+        true,
+    );
+
+    let error =
+        execute_alert_plan_with_request(|_method, _path, _params, _payload| Ok(None), &plan, false)
+            .unwrap_err()
+            .to_string();
+
+    assert!(error.contains("--allow-policy-reset"));
+}
+
+#[test]
+fn alert_runtime_init_and_scaffolds_write_valid_desired_files() {
+    let temp = tempdir().unwrap();
+    let root = temp.path().join("alerts-managed");
+
+    let init = init_alert_runtime_layout(&root).unwrap();
+    assert_eq!(init["root"], json!(root.to_string_lossy().to_string()));
+    assert!(root.join("rules").is_dir());
+    assert!(root.join("contact-points").is_dir());
+    assert!(root.join("templates").is_dir());
+
+    let rule_path = root.join("rules").join("rule.yaml");
+    let contact_point_path = root.join("contact-points").join("contact-point.json");
+    let template_path = root.join("templates").join("template.yaml");
+
+    write_new_rule_scaffold(&rule_path, "cpu-main", true).unwrap();
+    write_new_contact_point_scaffold(&contact_point_path, "pagerduty-primary", true).unwrap();
+    write_new_template_scaffold(&template_path, "sev1-notification", true).unwrap();
+
+    let (rule_kind, _) =
+        build_import_operation(&load_alert_resource_file(&rule_path, "rule scaffold").unwrap())
+            .unwrap();
+    let (contact_point_kind, _) = build_import_operation(
+        &load_alert_resource_file(&contact_point_path, "contact point scaffold").unwrap(),
+    )
+    .unwrap();
+    let (template_kind, _) = build_import_operation(
+        &load_alert_resource_file(&template_path, "template scaffold").unwrap(),
+    )
+    .unwrap();
+
+    assert_eq!(rule_kind, RULE_KIND);
+    assert_eq!(contact_point_kind, CONTACT_POINT_KIND);
+    assert_eq!(template_kind, TEMPLATE_KIND);
+    assert_eq!(
+        load_alert_resource_file(&rule_path, "rule scaffold").unwrap()["spec"]["uid"],
+        json!("cpu-main")
+    );
+    assert_eq!(
+        load_alert_resource_file(&contact_point_path, "contact point scaffold").unwrap()["spec"]
+            ["name"],
+        json!("pagerduty-primary")
+    );
+    assert_eq!(
+        load_alert_resource_file(&template_path, "template scaffold").unwrap()["spec"]["name"],
+        json!("sev1-notification")
+    );
+}
+
+#[test]
+fn managed_route_helpers_build_stable_rule_authoring_contracts() {
+    assert_eq!(
+        super::alert_support::stable_route_label_key(),
+        "grafana_utils_route"
+    );
+    assert_eq!(
+        super::alert_support::build_stable_route_label_value("Team Alerts / Primary"),
+        "Team_Alerts_Primary"
+    );
+    assert_eq!(
+        super::alert_support::build_stable_route_matcher("Team Alerts / Primary"),
+        json!(["grafana_utils_route", "=", "Team_Alerts_Primary"])
+    );
+
+    let folder_contract =
+        super::alert_support::build_folder_resolution_contract("infra", Some("Infrastructure"));
+    assert_eq!(folder_contract["folderUid"], json!("infra"));
+    assert_eq!(folder_contract["folderTitle"], json!("Infrastructure"));
+    assert_eq!(folder_contract["resolution"], json!("uid-or-title"));
+
+    let rule_body =
+        super::alert_support::build_simple_rule_body("CPU High", "infra", "cpu", "Team Alerts");
+    assert_eq!(rule_body["folderUID"], json!("infra"));
+    assert_eq!(rule_body["ruleGroup"], json!("cpu"));
+    assert_eq!(
+        rule_body["labels"]["grafana_utils_route"],
+        json!("Team_Alerts")
+    );
+
+    let scaffold = super::alert_support::build_new_rule_scaffold_document_with_route(
+        "CPU High",
+        "infra",
+        "cpu",
+        "Team Alerts",
+    );
+    assert_eq!(scaffold["kind"], json!(RULE_KIND));
+    assert_eq!(
+        scaffold["spec"]["labels"]["grafana_utils_route"],
+        json!("Team_Alerts")
+    );
+    assert_eq!(scaffold["metadata"]["folder"]["folderUid"], json!("infra"));
+    assert_eq!(
+        scaffold["metadata"]["route"]["labelKey"],
+        json!("grafana_utils_route")
+    );
+    assert_eq!(
+        scaffold["metadata"]["route"]["labelValue"],
+        json!("Team_Alerts")
+    );
+}
+
+#[test]
+fn managed_policy_subtree_upsert_is_idempotent_and_leaves_unmanaged_routes_untouched() {
+    let current_policy = json!({
+        "receiver": "grafana-default-email",
+        "routes": [
+            {
+                "receiver": "legacy-email",
+                "object_matchers": [["team", "=", "legacy"]],
+                "routes": [{"receiver": "legacy-nested"}]
+            }
+        ]
+    });
+    let desired_route = json!({
+        "receiver": "team-webhook",
+        "group_by": ["grafana_folder", "alertname"],
+        "routes": [{"receiver": "team-slack"}]
+    });
+
+    let (first_policy, first_action) = super::alert_support::upsert_managed_policy_subtree(
+        current_policy.as_object().unwrap(),
+        "Team Alerts",
+        desired_route.as_object().unwrap(),
+    )
+    .unwrap();
+    assert_eq!(first_action, "created");
+    assert_eq!(first_policy["routes"].as_array().unwrap().len(), 2);
+    assert_eq!(first_policy["routes"][0], current_policy["routes"][0]);
+    let managed_route = first_policy["routes"][1].as_object().unwrap();
+    assert!(super::alert_support::route_matches_stable_label(
+        managed_route,
+        "Team Alerts"
+    ));
+    assert_eq!(managed_route["receiver"], json!("team-webhook"));
+    assert_eq!(
+        managed_route["object_matchers"],
+        json!([["grafana_utils_route", "=", "Team_Alerts"]])
+    );
+
+    let preview = super::alert_support::build_managed_policy_route_preview(
+        current_policy.as_object().unwrap(),
+        "Team Alerts",
+        Some(desired_route.as_object().unwrap()),
+    )
+    .unwrap();
+    assert_eq!(preview["action"], json!("created"));
+    assert_eq!(preview["managedRouteValue"], json!("Team_Alerts"));
+
+    let (second_policy, second_action) = super::alert_support::upsert_managed_policy_subtree(
+        &first_policy,
+        "Team Alerts",
+        desired_route.as_object().unwrap(),
+    )
+    .unwrap();
+    assert_eq!(second_action, "noop");
+    assert_eq!(second_policy, first_policy);
+}
+
+#[test]
+fn managed_policy_subtree_remove_only_touches_tool_owned_route() {
+    let current_policy = json!({
+        "receiver": "grafana-default-email",
+        "routes": [
+            {
+                "receiver": "legacy-email",
+                "object_matchers": [["team", "=", "legacy"]]
+            },
+            {
+                "receiver": "team-webhook",
+                "object_matchers": [["grafana_utils_route", "=", "Team_Alerts"]]
+            }
+        ]
+    });
+
+    let (next_policy, action) = super::alert_support::remove_managed_policy_subtree(
+        current_policy.as_object().unwrap(),
+        "Team Alerts",
+    )
+    .unwrap();
+    assert_eq!(action, "deleted");
+    assert_eq!(next_policy["routes"].as_array().unwrap().len(), 1);
+    assert_eq!(next_policy["routes"][0], current_policy["routes"][0]);
+
+    let preview = super::alert_support::build_managed_policy_route_preview(
+        current_policy.as_object().unwrap(),
+        "Team Alerts",
+        None,
+    )
+    .unwrap();
+    assert_eq!(preview["action"], json!("deleted"));
+    assert_eq!(preview["nextRoute"], Value::Null);
+
+    let (noop_policy, noop_action) =
+        super::alert_support::remove_managed_policy_subtree(&next_policy, "Team Alerts").unwrap();
+    assert_eq!(noop_action, "noop");
+    assert_eq!(noop_policy, next_policy);
+}
+
+#[test]
+fn runtime_managed_policy_helpers_produce_idempotent_documents() {
+    let current_policy = json!({
+        "receiver": "grafana-default-email",
+        "routes": [
+            {
+                "receiver": "legacy-email",
+                "object_matchers": [["team", "=", "legacy"]]
+            }
+        ]
+    });
+    let desired_route = json!({
+        "receiver": "team-webhook",
+        "object_matchers": [["grafana_utils_route", "=", "old-value"]],
+        "routes": [{"receiver": "team-slack"}]
+    });
+
+    let preview = super::alert_runtime_support::build_managed_policy_edit_preview_document(
+        &current_policy,
+        "Team Alerts",
+        Some(&desired_route),
+    )
+    .unwrap();
+    assert_eq!(
+        preview["kind"],
+        json!("grafana-util-alert-managed-policy-preview")
+    );
+    assert_eq!(preview["preview"]["action"], json!("created"));
+
+    let first_apply = super::alert_runtime_support::apply_managed_policy_subtree_edit_document(
+        &current_policy,
+        "Team Alerts",
+        Some(&desired_route),
+    )
+    .unwrap();
+    assert_eq!(first_apply["kind"], json!(POLICIES_KIND));
+    assert_eq!(first_apply["action"], json!("created"));
+    assert_eq!(
+        first_apply["spec"]["routes"][1]["object_matchers"],
+        json!([["grafana_utils_route", "=", "Team_Alerts"]])
+    );
+    assert_eq!(
+        first_apply["spec"]["routes"][0],
+        current_policy["routes"][0]
+    );
+
+    let second_apply = super::alert_runtime_support::apply_managed_policy_subtree_edit_document(
+        &first_apply["spec"],
+        "Team Alerts",
+        Some(&desired_route),
+    )
+    .unwrap();
+    assert_eq!(second_apply["action"], json!("noop"));
+    assert_eq!(second_apply["spec"], first_apply["spec"]);
+}
+
+#[test]
+fn contact_point_scaffolds_cover_webhook_email_and_slack_authoring_shapes() {
+    let webhook =
+        super::alert_support::build_contact_point_scaffold_document("team-webhook", "webhook");
+    let email = super::alert_support::build_contact_point_scaffold_document("team-email", "email");
+    let slack = super::alert_support::build_contact_point_scaffold_document("team-slack", "slack");
+
+    assert_eq!(webhook["spec"]["type"], json!("webhook"));
+    assert_eq!(
+        webhook["spec"]["settings"]["url"],
+        json!("http://127.0.0.1:9000/notify")
+    );
+    assert_eq!(email["spec"]["type"], json!("email"));
+    assert_eq!(
+        email["spec"]["settings"]["addresses"],
+        json!(["alerts@example.com"])
+    );
+    assert_eq!(slack["spec"]["type"], json!("slack"));
+    assert_eq!(slack["spec"]["settings"]["recipient"], json!("#alerts"));
+    assert_eq!(
+        slack["metadata"]["authoring"]["settingsKeys"],
+        json!(["recipient", "text", "token"])
+    );
+
+    let temp = tempdir().unwrap();
+    let slack_path = temp.path().join("team-slack.yaml");
+    super::alert_runtime_support::write_contact_point_scaffold(
+        &slack_path,
+        "team-slack",
+        "slack",
+        true,
+    )
+    .unwrap();
+    let written = load_alert_resource_file(&slack_path, "typed contact point scaffold").unwrap();
+    let (kind, payload) = build_import_operation(&written).unwrap();
+    assert_eq!(kind, CONTACT_POINT_KIND);
+    assert_eq!(payload["type"], json!("slack"));
+    assert_eq!(payload["settings"]["recipient"], json!("#alerts"));
+}
+
+#[test]
+fn run_alert_cli_add_rule_writes_desired_rule_and_managed_policy_files() {
+    let temp = tempdir().unwrap();
+    let desired_dir = temp.path().join("alerts-desired");
+    init_alert_runtime_layout(&desired_dir).unwrap();
+
+    let args = parse_cli_from([
+        "grafana-util alert",
+        "add-rule",
+        "--desired-dir",
+        desired_dir.to_string_lossy().as_ref(),
+        "--name",
+        "cpu-high",
+        "--folder",
+        "platform-alerts",
+        "--rule-group",
+        "cpu",
+        "--receiver",
+        "pagerduty-primary",
+        "--label",
+        "team=platform",
+        "--severity",
+        "critical",
+        "--expr",
+        "A",
+        "--threshold",
+        "80",
+        "--above",
+    ]);
+    run_alert_cli(args).unwrap();
+
+    let rule_path = desired_dir.join("rules").join("cpu-high.yaml");
+    let policy_path = desired_dir
+        .join("policies")
+        .join("notification-policies.yaml");
+    let rule = load_alert_resource_file(&rule_path, "authored rule").unwrap();
+    let policy = load_alert_resource_file(&policy_path, "managed policy").unwrap();
+
+    assert_eq!(rule["kind"], json!(RULE_KIND));
+    assert_eq!(rule["spec"]["folderUID"], json!("platform-alerts"));
+    assert_eq!(rule["spec"]["ruleGroup"], json!("cpu"));
+    assert_eq!(rule["spec"]["labels"]["team"], json!("platform"));
+    assert_eq!(rule["spec"]["labels"]["severity"], json!("critical"));
+    assert_eq!(
+        rule["spec"]["labels"]["grafana_utils_route"],
+        json!("pagerduty-primary")
+    );
+    assert_eq!(policy["kind"], json!(POLICIES_KIND));
+    assert_eq!(
+        policy["spec"]["routes"][0]["receiver"],
+        json!("pagerduty-primary")
+    );
+    assert_eq!(
+        policy["spec"]["routes"][0]["object_matchers"][0],
+        json!(["team", "=", "platform"])
+    );
+}
+
+#[test]
+fn run_alert_cli_clone_rule_dry_run_leaves_target_files_absent() {
+    let temp = tempdir().unwrap();
+    let desired_dir = temp.path().join("alerts-desired");
+    init_alert_runtime_layout(&desired_dir).unwrap();
+
+    let source_path = desired_dir.join("rules").join("cpu-high.yaml");
+    write_new_rule_scaffold(&source_path, "cpu-high", true).unwrap();
+
+    let args = parse_cli_from([
+        "grafana-util alert",
+        "clone-rule",
+        "--desired-dir",
+        desired_dir.to_string_lossy().as_ref(),
+        "--source",
+        "cpu-high",
+        "--name",
+        "cpu-high-staging",
+        "--no-route",
+        "--dry-run",
+    ]);
+    run_alert_cli(args).unwrap();
+
+    assert!(!desired_dir
+        .join("rules")
+        .join("cpu-high-staging.yaml")
+        .exists());
+    assert!(!desired_dir
+        .join("policies")
+        .join("notification-policies.yaml")
+        .exists());
+}
+
+#[test]
+fn run_alert_cli_set_route_overwrites_managed_route_in_place() {
+    let temp = tempdir().unwrap();
+    let desired_dir = temp.path().join("alerts-desired");
+    init_alert_runtime_layout(&desired_dir).unwrap();
+
+    let first = parse_cli_from([
+        "grafana-util alert",
+        "set-route",
+        "--desired-dir",
+        desired_dir.to_string_lossy().as_ref(),
+        "--receiver",
+        "pagerduty-primary",
+        "--label",
+        "team=platform",
+    ]);
+    run_alert_cli(first).unwrap();
+
+    let second = parse_cli_from([
+        "grafana-util alert",
+        "set-route",
+        "--desired-dir",
+        desired_dir.to_string_lossy().as_ref(),
+        "--receiver",
+        "pagerduty-primary",
+        "--label",
+        "team=infra",
+    ]);
+    run_alert_cli(second).unwrap();
+
+    let policy = load_alert_resource_file(
+        &desired_dir
+            .join("policies")
+            .join("notification-policies.yaml"),
+        "managed policy",
+    )
+    .unwrap();
+    let routes = policy["spec"]["routes"].as_array().unwrap();
+    assert_eq!(routes.len(), 1);
+    assert_eq!(routes[0]["receiver"], json!("pagerduty-primary"));
+    assert_eq!(
+        routes[0]["object_matchers"],
+        json!([
+            ["team", "=", "infra"],
+            ["grafana_utils_route", "=", "pagerduty-primary"]
+        ])
+    );
+}
+
+#[test]
+fn build_alert_delete_preview_from_files_blocks_policy_reset_without_guard() {
+    let temp = tempdir().unwrap();
+    let policy_path = temp.path().join("notification-policies.yaml");
+    fs::write(&policy_path, "receiver: grafana-default-email\n").unwrap();
+
+    let preview = build_alert_delete_preview_from_files(&[policy_path], false).unwrap();
+    assert_eq!(preview["summary"]["delete"], json!(0));
+    assert_eq!(preview["summary"]["blocked"], json!(1));
+    assert_eq!(
+        preview["rows"][0]["reason"],
+        json!("policy-reset-requires-allow-policy-reset")
+    );
 }
 
 #[test]

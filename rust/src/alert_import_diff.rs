@@ -1,6 +1,6 @@
 use serde_json::{json, Map, Value};
 
-use crate::common::{load_json_object_file, message, string_field, Result};
+use crate::common::{message, string_field, Result};
 
 use super::alert_client::GrafanaAlertClient;
 use super::alert_compare_support::{
@@ -9,8 +9,8 @@ use super::alert_compare_support::{
 };
 use super::alert_linkage_support::rewrite_rule_dashboard_linkage;
 use super::alert_support::{
-    build_import_operation, discover_alert_resource_files, strip_server_managed_fields,
-    AlertLinkageMappings,
+    build_import_operation, discover_alert_resource_files, load_alert_resource_file,
+    normalize_compare_payload, AlertLinkageMappings,
 };
 use super::{
     build_alert_diff_document, build_alert_import_dry_run_document, build_auth_context,
@@ -155,7 +155,7 @@ fn fetch_live_compare_document(
             match client.get_alert_rule(&uid) {
                 Ok(remote) => Ok(Some(build_compare_document(
                     kind,
-                    &strip_server_managed_fields(kind, &remote),
+                    &normalize_compare_payload(kind, &remote),
                 ))),
                 Err(error) if error.status_code() == Some(404) => Ok(None),
                 Err(error) => Err(error),
@@ -167,9 +167,8 @@ fn fetch_live_compare_document(
                 .list_contact_points()?
                 .into_iter()
                 .find(|item| string_field(item, "uid", "") == uid);
-            Ok(remote.map(|item| {
-                build_compare_document(kind, &strip_server_managed_fields(kind, &item))
-            }))
+            Ok(remote
+                .map(|item| build_compare_document(kind, &normalize_compare_payload(kind, &item))))
         }
         MUTE_TIMING_KIND => {
             let name = string_field(payload, "name", "");
@@ -177,16 +176,15 @@ fn fetch_live_compare_document(
                 .list_mute_timings()?
                 .into_iter()
                 .find(|item| string_field(item, "name", "") == name);
-            Ok(remote.map(|item| {
-                build_compare_document(kind, &strip_server_managed_fields(kind, &item))
-            }))
+            Ok(remote
+                .map(|item| build_compare_document(kind, &normalize_compare_payload(kind, &item))))
         }
         TEMPLATE_KIND => {
             let name = string_field(payload, "name", "");
             match client.get_template(&name) {
                 Ok(remote) => Ok(Some(build_compare_document(
                     kind,
-                    &strip_server_managed_fields(kind, &remote),
+                    &normalize_compare_payload(kind, &remote),
                 ))),
                 Err(error) if error.status_code() == Some(404) => Ok(None),
                 Err(error) => Err(error),
@@ -196,7 +194,7 @@ fn fetch_live_compare_document(
             let remote = client.get_notification_policies()?;
             Ok(Some(build_compare_document(
                 kind,
-                &strip_server_managed_fields(kind, &remote),
+                &normalize_compare_payload(kind, &remote),
             )))
         }
         _ => unreachable!(),
@@ -347,7 +345,7 @@ pub(crate) fn import_alerting_resources(args: &AlertCliArgs) -> Result<()> {
     }
 
     for resource_file in &resource_files {
-        let document = load_json_object_file(resource_file, "Alerting resource")?;
+        let document = load_alert_resource_file(resource_file, "Alerting resource")?;
         let (kind, payload) = build_import_operation(&document)?;
         let payload = prepare_import_payload_for_target(
             &client,
@@ -428,7 +426,7 @@ pub(crate) fn diff_alerting_resources(args: &AlertCliArgs) -> Result<()> {
     let mut diff_rows: Vec<Value> = Vec::new();
 
     for resource_file in &resource_files {
-        let document = load_json_object_file(resource_file, "Alerting resource")?;
+        let document = load_alert_resource_file(resource_file, "Alerting resource")?;
         let (kind, payload) = build_import_operation(&document)?;
         let payload = prepare_import_payload_for_target(
             &client,
@@ -439,7 +437,8 @@ pub(crate) fn diff_alerting_resources(args: &AlertCliArgs) -> Result<()> {
         )?;
         policies_seen = count_policy_documents(&kind, policies_seen)?;
         let identity = build_resource_identity(&kind, &payload);
-        let local_compare = build_compare_document(&kind, &payload);
+        let local_compare =
+            build_compare_document(&kind, &normalize_compare_payload(&kind, &payload));
         let remote_compare = fetch_live_compare_document(&client, &kind, &payload)?;
 
         if let Some(remote_compare) = remote_compare {

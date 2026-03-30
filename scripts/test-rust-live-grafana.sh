@@ -2405,9 +2405,143 @@ run_alert_replay_smoke() {
     || fail "alert diff did not return to same-state after recreate import"
 }
 
+run_alert_authoring_smoke() {
+  local desired_dir="${WORK_DIR}/alert-authoring-desired"
+  local preview_json="${WORK_DIR}/alert-authoring-preview-route.json"
+  local plan_create_json="${WORK_DIR}/alert-authoring-plan-create.json"
+  local apply_create_json="${WORK_DIR}/alert-authoring-apply-create.json"
+  local plan_post_apply_json="${WORK_DIR}/alert-authoring-plan-post-apply.json"
+  local plan_delete_json="${WORK_DIR}/alert-authoring-plan-delete.json"
+  local apply_delete_json="${WORK_DIR}/alert-authoring-apply-delete.json"
+  local authoring_contact_name="authoring-webhook"
+  local authoring_rule_name="authoring-cpu-high"
+
+  seed_alert_resources
+  rm -rf "${desired_dir}"
+
+  "$(alert_bin)" \
+    alert init \
+    --desired-dir "${desired_dir}" >/dev/null
+
+  "$(alert_bin)" \
+    alert add-contact-point \
+    --desired-dir "${desired_dir}" \
+    --name "${authoring_contact_name}" >/dev/null
+
+  "$(alert_bin)" \
+    alert add-rule \
+    --desired-dir "${desired_dir}" \
+    --name "${authoring_rule_name}" \
+    --folder smoke-alerts \
+    --rule-group "CPU Alerts" \
+    --receiver "${authoring_contact_name}" \
+    --label team=platform \
+    --severity critical \
+    --expr A \
+    --threshold 80 \
+    --above \
+    --for 5m >/dev/null
+
+  [[ -f "${desired_dir}/contact-points/${authoring_contact_name}.yaml" ]] \
+    || fail "alert authoring smoke did not write the contact-point desired file"
+  [[ -f "${desired_dir}/rules/${authoring_rule_name}.yaml" ]] \
+    || fail "alert authoring smoke did not write the alert-rule desired file"
+  [[ -f "${desired_dir}/policies/notification-policies.yaml" ]] \
+    || fail "alert authoring smoke did not write the managed policy desired file"
+
+  "$(alert_bin)" \
+    alert preview-route \
+    --desired-dir "${desired_dir}" \
+    --label team=platform \
+    --severity critical >"${preview_json}"
+  jq -e '
+    (.input.labels.team == "platform")
+    and (.input.severity == "critical")
+    and ((.matches | type) == "array")
+  ' "${preview_json}" >/dev/null \
+    || fail "alert preview-route did not emit the expected desired-state preview"
+
+  "$(alert_bin)" \
+    alert plan \
+    --url "${GRAFANA_URL}" \
+    --token "${GRAFANA_API_TOKEN}" \
+    --desired-dir "${desired_dir}" \
+    --output json >"${plan_create_json}"
+  jq -e --arg cp "${authoring_contact_name}" --arg rule "${authoring_rule_name}" '
+    (.rows | any(.kind == "grafana-contact-point" and .identity == $cp and .action == "create"))
+    and (.rows | any(.kind == "grafana-alert-rule" and .identity == $rule and .action == "create"))
+    and (.rows | any(.kind == "grafana-notification-policies" and .action == "update"))
+  ' "${plan_create_json}" >/dev/null \
+    || fail "alert authoring plan did not emit the expected create/update rows"
+
+  "$(alert_bin)" \
+    alert apply \
+    --url "${GRAFANA_URL}" \
+    --token "${GRAFANA_API_TOKEN}" \
+    --plan-file "${plan_create_json}" \
+    --approve \
+    --output json >"${apply_create_json}"
+  jq -e --arg cp "${authoring_contact_name}" --arg rule "${authoring_rule_name}" '
+    (.appliedCount >= 3)
+    and (.results | any(.kind == "grafana-contact-point" and .identity == $cp and .action == "create"))
+    and (.results | any(.kind == "grafana-notification-policies" and .action == "update"))
+    and (.results | any(.kind == "grafana-alert-rule" and .identity == $rule and .action == "create"))
+  ' "${apply_create_json}" >/dev/null \
+    || fail "alert authoring apply did not emit the expected create/update results"
+
+  api GET "/api/v1/provisioning/contact-points" | jq -e --arg uid "${authoring_contact_name}" 'any(.uid == $uid)' >/dev/null \
+    || fail "alert authoring apply did not create the contact point in Grafana"
+  api GET "/api/v1/provisioning/alert-rules/${authoring_rule_name}" | jq -e --arg uid "${authoring_rule_name}" '.uid == $uid' >/dev/null \
+    || fail "alert authoring apply did not create the alert rule in Grafana"
+
+  "$(alert_bin)" \
+    alert plan \
+    --url "${GRAFANA_URL}" \
+    --token "${GRAFANA_API_TOKEN}" \
+    --desired-dir "${desired_dir}" \
+    --output json >"${plan_post_apply_json}"
+  jq -e --arg cp "${authoring_contact_name}" --arg rule "${authoring_rule_name}" '
+    (.rows | any(.kind == "grafana-contact-point" and .identity == $cp and .action == "noop"))
+    and (.rows | any(.kind == "grafana-notification-policies" and .identity == $cp and .action == "noop"))
+    and (.rows | any(.kind == "grafana-alert-rule" and .identity == $rule and .action == "noop"))
+  ' "${plan_post_apply_json}" >/dev/null \
+    || fail "alert authoring plan did not return the authored resources to noop after apply"
+
+  rm -f "${desired_dir}/rules/${authoring_rule_name}.yaml"
+
+  "$(alert_bin)" \
+    alert plan \
+    --url "${GRAFANA_URL}" \
+    --token "${GRAFANA_API_TOKEN}" \
+    --desired-dir "${desired_dir}" \
+    --prune \
+    --output json >"${plan_delete_json}"
+  jq -e --arg rule "${authoring_rule_name}" '
+    (.rows | any(.kind == "grafana-alert-rule" and .identity == $rule and .action == "delete" and .reason == "missing-from-desired-state"))
+  ' "${plan_delete_json}" >/dev/null \
+    || fail "alert authoring prune plan did not emit the expected delete row"
+
+  "$(alert_bin)" \
+    alert apply \
+    --url "${GRAFANA_URL}" \
+    --token "${GRAFANA_API_TOKEN}" \
+    --plan-file "${plan_delete_json}" \
+    --approve \
+    --output json >"${apply_delete_json}"
+  jq -e --arg rule "${authoring_rule_name}" '
+    (.results | any(.kind == "grafana-alert-rule" and .identity == $rule and .action == "delete"))
+  ' "${apply_delete_json}" >/dev/null \
+    || fail "alert authoring prune apply did not delete the authored alert rule"
+
+  if api GET "/api/v1/provisioning/alert-rules/${authoring_rule_name}" >/dev/null 2>&1; then
+    fail "alert authoring prune apply did not remove the authored alert rule from Grafana"
+  fi
+}
+
 run_alert_smoke() {
   run_alert_artifact_smoke
   run_alert_replay_smoke
+  run_alert_authoring_smoke
 }
 
 prepare_sync_smoke_fixture() {

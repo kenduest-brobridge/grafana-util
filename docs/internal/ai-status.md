@@ -5,7 +5,57 @@ Current AI-maintained status only.
 - Older trace history moved to [`archive/ai-status-archive-2026-03-24.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-03-24.md).
 - Detailed 2026-03-27 entries moved to [`archive/ai-status-archive-2026-03-27.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-03-27.md).
 - Detailed 2026-03-28 task notes were condensed into [`archive/ai-status-archive-2026-03-28.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-03-28.md).
+- Some older entries below still cite pre-cleanup `docs/internal/...` paths for files that now live under `docs/internal/archive/`.
 - Keep this file short and current. Additive historical detail belongs in `docs/internal/archive/`.
+
+## 2026-03-30 - Alert authoring round-trip normalization and live smoke
+- State: Done
+- Scope: `rust/src/alert.rs`, `rust/src/alert_support.rs`, `rust/src/alert_runtime_support.rs`, `rust/src/alert_import_diff.rs`, `rust/src/alert_rust_tests.rs`, `scripts/test-rust-live-grafana.sh`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: the new Alert V2 authoring docs were live, but `alert apply` followed by `alert plan` still drifted on authoring-created contact points, managed policies, and simple rules because Grafana injects default fields, omits some empty objects, and can reorder compare-relevant arrays.
+- Current Update: normalized compare payloads for alert rules, contact points, and notification policies before diff/plan/import comparisons, covering Grafana-added defaults such as `disableResolveMessage: false`, `continue: false`, empty `annotations`, server-managed rule fields, empty `queryType`, matcher ordering, and integral-float number shape. Added focused Rust regressions for the normalization path and extended the Docker live smoke with an Alert V2 authoring flow: `add-contact-point`, `add-rule`, `preview-route`, `plan`, `apply`, post-apply `plan`, prune delete plan, and prune delete apply.
+- Result: authoring-created contact points, managed routes, and simple rules now round-trip back to `noop` after apply under the validated Grafana `12.4.1` smoke path, and the repo now has a regression guard for the operator workflow documented in the new user guide.
+
+## 2026-03-30 - Alert plan/apply/delete management lane
+- State: Done
+- Scope: `rust/src/alert.rs`, `rust/src/alert_cli_defs.rs`, `rust/src/alert_import_diff.rs`, `rust/src/alert_runtime_support.rs`, `rust/src/alert_support.rs`, `rust/src/alert_rust_tests.rs`, `rust/src/cli_help_examples.rs`, `rust/src/cli_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: the alert domain already had export/import/diff and list surfaces, and the sync live-apply transport already knew how to mutate Grafana alert provisioning resources, but there was no operator-first alert management lane for reviewable desired-state planning, explicit apply, or safe delete/scaffold workflows.
+- Current Update: added first-class `alert plan`, `alert apply`, `alert delete`, `alert init`, `alert new-rule`, `alert new-contact-point`, and `alert new-template` command surfaces, wired them into the Rust alert dispatcher, taught alert desired-state discovery to accept both JSON and YAML, and introduced managed-dir init/scaffold plus plan/apply/delete runtime helpers that reuse the existing alert document shape and provisioning request contracts.
+- Result: operators now have a CLI-first alert management lane that can build reviewable create/update/noop/delete plans from YAML or JSON desired files, apply reviewed plans back to Grafana, preview explicit deletes with policy-reset guarding, and scaffold a managed alert desired-state tree without going through the older migration-oriented import path.
+
+## 2026-03-30 - Alert V2 operator docs refresh
+- State: Done
+- Scope: `README.md`, `README.zh-TW.md`, `docs/user-guide.md`, `docs/user-guide-TW.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: the new alert authoring layer had already landed in the runtime and CLI help, but the public docs still centered the older `init/new-*` management wording, under-described the new authoring commands, and did not cleanly separate desired-state authoring from review/apply or the older `raw/` migration lane.
+- Current Update: rewrote the public alert docs around three layers: authoring, review/apply, and migration. Added operator-facing boundaries for `add-rule`, `clone-rule`, `set-route`, `preview-route`, `--folder`, and authoring `--dry-run`; refreshed README quick paths in both languages; and expanded the user guides with simple add, complex clone/edit, and prune-delete workflows. Also captured local Docker Grafana `12.4.1` validation data for `plan/apply/prune` plus the new authoring output shapes, while documenting the current live normalization drift that prevents a clean all-`noop` round-trip after apply.
+- Result: the public docs now describe the intended Alert V2 operator workflow without implying that authoring commands mutate Grafana directly, and maintainers have one current trace entry that records both the validated doc examples and the remaining live-validation limitation.
+
+## 2026-03-30 - Connection-first web flow and `web/mod.rs` split
+- State: Done
+- Scope: `rust/src/web/mod.rs`, `rust/src/web/handlers.rs`, `rust/src/web/contracts.rs`, `rust/src/web/registry.rs`, `rust/src/web/page.rs`, `rust/src/web/index.js`, `rust/src/web/index.css`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: the new web workspace shell already had dashboard-first actions, but the connection experience was still easy to miss, there was no explicit `Test Connection` confirmation path, and `rust/src/web/mod.rs` had grown into one large mixed file containing contracts, registry data, HTML, handlers, helpers, and tests.
+- Current Update: moved the web shell to a clearer three-step flow with a dedicated connection step, session-scoped connection status messaging, and a real `/api/connection/test` path wired to the shared Grafana auth/runtime helpers. Split the oversized `web/mod.rs` into smaller modules by concern so root routing/server wiring stays in `mod.rs` while contracts, registry metadata, HTML, and handlers live in their own files.
+- Result: operators now have a clearer place to enter URL/auth data and verify login before running workspace actions, and the Rust web module layout is easier to extend without turning `mod.rs` back into a monolith.
+
+## 2026-03-30 - Wire all-orgs live project-status execution
+- State: Done
+- Scope: `rust/src/project_status_command.rs`, `rust/src/overview.rs`, `rust/src/cli_rust_tests.rs`, `rust/src/overview_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: `project-status live` and delegated `overview live` already expose `--all-orgs` in the CLI contract and help text, but the runtime still builds one unscoped client and ignores both `--all-orgs` fan-out and explicit `--org-id` scoping for the main live domain reads.
+- Current Update: wired the shared live execution path to build org-scoped clients with `X-Grafana-Org-Id`, enumerate visible orgs for real `--all-orgs` fan-out, and aggregate live dashboard, datasource, alert, and access status across orgs instead of silently reading only the default scope. Focused parser/help and shared live-path regressions now lock both `project-status live` and delegated `overview live` to the same scoped runtime behavior.
+- Result: `project-status live --org-id <id>` now performs real scoped reads, `project-status live --all-orgs` now aggregates live status across visible orgs for the supported domains, and `overview live` inherits the same canonical live path instead of advertising scope flags it does not actually honor.
+
+## 2026-03-30 - Dashboard-first web workspace over shared Rust execution seams
+- State: Done
+- Scope: `rust/src/dashboard/mod.rs`, `rust/src/dashboard/inspect.rs`, `rust/src/dashboard/inspect_live.rs`, `rust/src/dashboard/inspect_output.rs`, `rust/src/dashboard/list.rs`, `rust/src/dashboard/vars.rs`, `rust/src/web/mod.rs`, `rust/src/web/index.js`, `rust/src/web/index.css`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: `grafana-util-web` already existed as a localhost-only Axum binary, but it was still a thin generic capability console with a raw JSON textarea and no dashboard-specific workspace design. Dashboard list/browse/inspect flows still mostly existed as CLI/TUI paths, and the web layer did not yet have a shared connection panel or a browser-native browse surface.
+- Current Update: replaced the generic web console with a workspace shell that keeps Grafana connection settings in browser session state, added dashboard-focused workspace actions for `browse`, `list`, `inspect-live`, `inspect-export`, and `inspect-vars`, and introduced reusable Rust execution seams so the web handlers can reuse the same dashboard list and inspect builders without stdout capture or JS-side business-logic reconstruction. The new browse response now ships tree/list/detail data from Rust, while the frontend renders a distinct browser-native layout instead of imitating the TUI.
+- Result: operators now get a real dashboard workbench in web, with URL/token or username/password input at the top, workspace/action navigation, browse/list/inspect flows backed by shared Rust contracts, and the earlier overview/project-status/sync web actions still available under the same shell.
+
+## 2026-03-30 - `grafana-util-web` local workbench over shared execution seams
+- State: Done
+- Scope: `rust/Cargo.toml`, `rust/src/lib.rs`, `rust/src/overview.rs`, `rust/src/project_status_command.rs`, `rust/src/sync/mod.rs`, `rust/src/sync/cli.rs`, `rust/src/web/mod.rs`, `rust/src/web/index.css`, `rust/src/web/index.js`, `rust/src/bin/grafana-util-web.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: there was no dedicated local web workbench binary yet, and the mature whole-project/status surfaces still only existed as CLI/TUI consumers. `overview`, `project-status`, and `sync` already had stable JSON documents, but they were still primarily shaped around direct CLI printing rather than a reusable browser-facing entry seam.
+- Current Update: added a separate `grafana-util-web` binary behind a dedicated Cargo `web` feature, kept the default CLI build free of web dependencies, introduced reusable execution seams for `overview`, `project-status`, and selected read-only `sync` commands, and layered a localhost-first Axum workbench on top with a thin capability registry plus one browser page that posts JSON requests and renders text/JSON responses. The server binds to `127.0.0.1` by default, keeps credentials request-scoped and in-memory, and intentionally excludes live apply in web v1.
+- Result: operators get a localhost-only browser surface over the same shared Rust contracts, with the web layer staying thin and owned by the existing execution seams.
 
 ## 2026-03-30 - `overview live` thin alias over shared project-status live
 - State: Done
@@ -281,3 +331,17 @@ Current AI-maintained status only.
 - Baseline: pane-based interactive screens had drifted apart in presentation. `overview` still rendered a redundant upper block, footer controls were unevenly spaced, and focus state was not consistently highlighted across the tab-driven TUI surfaces.
 - Current Update: collapsed `overview` to a single top summary block, changed shared control rows to fixed-width aligned cells, and standardized focus visibility with blue focus chips across the shared/major pane-based interactive views. Footer copy was also shortened to clearer operator-oriented action labels. `dashboard inspect-export --interactive` now also has a focused render smoke test, the inspect workbench shell follows the same visible header/footer treatment instead of an older ad hoc layout, and interactive export/live inspect now print explicit pre-workbench progress steps while summary/query/governance analysis is still running.
 - Result: `overview`, `project-status`, shared browser-style screens, inspect workbench, and the main dashboard/sync review panes now read as the same TUI family instead of separate hand-built layouts, and long-running inspect interactive launches no longer fail silently before the first frame.
+
+## 2026-03-30 - Alert scaffold naming and live operator examples
+- State: Done
+- Scope: `rust/src/alert.rs`, `rust/src/alert_support.rs`, `rust/src/alert_runtime_support.rs`, `rust/src/alert_rust_tests.rs`, `docs/user-guide.md`, `docs/user-guide-TW.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: the new alert management lane existed, but scaffolded files still used generic `example-*` identities regardless of `--name`, and the user guides only described the workflow abstractly instead of showing a validated end-to-end operator path.
+- Current Update: scaffold generation now carries `--name` into alert rule, contact point, and template identity fields. The alert guides now include Docker-validated Grafana `12.4.1` examples for `export`, `import --dry-run`, `plan`, `apply`, and prune-based delete planning/apply, including explicit add-rule and delete-rule walkthroughs.
+- Result: the management lane now starts from correctly named scaffolds, and operators have a concrete full example that covers both migration-style replay and desired-state add/delete flows.
+
+## 2026-03-30 - Alert authoring layer and managed route overwrite contract
+- State: Done
+- Scope: `rust/src/alert.rs`, `rust/src/alert_cli_defs.rs`, `rust/src/alert_support.rs`, `rust/src/alert_runtime_support.rs`, `rust/src/alert_rust_tests.rs`, `rust/src/cli_help_examples.rs`, `rust/src/cli_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: alert V2 planning had settled on a file-first authoring layer, but the runtime still lacked wired `add-rule` / `clone-rule` / `add-contact-point` / `set-route` / `preview-route` behavior, and the boundary between desired-file authoring versus live Grafana mutation was still easy to blur.
+- Current Update: wired the new authoring commands as desired-state writers only. `add-rule` now authors simple threshold/classic-condition rule documents plus optional managed-route updates, `clone-rule` rewrites staged rule files without inventing a second schema, `add-contact-point` writes scaffolded desired documents, and `set-route` / `preview-route` operate only on the managed notification-policy lane. Re-running `set-route` now explicitly overwrites the same tool-owned route instead of attempting field-by-field merges, and all authoring surfaces support `--dry-run`.
+- Result: alert V2 now has a concrete authoring layer that feeds the existing `plan/apply` engine without calling Grafana APIs directly, while keeping the managed route contract idempotent and bounded.

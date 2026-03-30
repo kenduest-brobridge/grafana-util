@@ -1,169 +1,212 @@
-# 📊 Grafana Utilities (Operator Toolkit)
+# Grafana Utilities
 
 Language: **English** | [繁體中文版](README.zh-TW.md)
 
-`grafana-utils` is an operator-focused toolkit designed for Grafana administrators and SREs.
+`grafana-util` is a Rust-first operator CLI for Grafana inventory, migration, review-first import/export, dashboard analysis, and staged sync workflows.
 
-## Contents
+## Why This Exists
 
-- [What This Is](#what-this-is)
-- [Support Overview](#support-overview)
-- [Get The Binary](#get-the-binary)
-- [Quick Start](#quick-start)
-- [Command Map](#command-map)
-- [Documentation](#documentation)
-- [Compatibility](#compatibility)
-- [Project Status](#project-status)
+Grafana's UI is good at object-by-object administration. It is much weaker when operators need estate-level work such as bulk export, cross-org inventory, dependency review, migration rehearsal, or reviewable change evidence.
 
-## What This Is
+That gap becomes obvious in larger environments:
 
-`grafana-util` helps operators:
-- inventory dashboards, datasources, alerts, orgs, users, teams, and service accounts
-- export, import, diff, and dry-run Grafana state changes
-- inspect dashboards for governance, query usage, and datasource dependencies
-- capture dashboards and panels as screenshots or PDFs
+- dashboard export in the Grafana UI is still awkward for bulk migration because it is largely one dashboard at a time
+- cross-environment migration often depends on exporting the "share externally" style payload so the target side can remap datasources during import
+- teams need to inventory which datasources exist, which dashboards depend on them, and what query or metric expressions are actually embedded in panels
+- permissions, users, orgs, teams, and service-account state are hard to review cleanly from scattered UI pages
+- alerting resources are painful to move because Grafana does not give the same kind of complete UI import path for alert bundles
+- risky changes should support `diff`, `dry-run`, staged review, and explicit apply steps instead of direct blind mutation
 
-## 🏗️ Technical Architecture
+`grafana-util` exists to turn Grafana state into something operators can inventory, export, inspect, diff, dry-run, review, and then apply deliberately. The tool is aimed at migration, audit, governance, and operator handoff workflows rather than dashboard authoring itself.
 
-The current maintained CLI is the Rust-based `grafana-util` binary.
-- User-facing docs and releases target the Rust binary.
-- Older Python implementation details remain in maintainer docs as historical and maintainer-only reference material.
+## Output And Interaction Modes
 
-## Support Overview
+Many commands are intentionally available through more than one surface so the same workflow can fit human review, TUI exploration, or automation.
 
-Use this as a quick capability summary:
+| Mode | What it is for | Examples |
+| --- | --- | --- |
+| Interactive TUI | Guided browsing, review, and in-terminal workbenches | `dashboard browse`, `dashboard inspect-export --interactive`, `dashboard inspect-live --interactive`, `datasource browse`, `overview --output interactive`, `project-status ... --output interactive` |
+| Plain text | Default operator-facing summaries and dry-run previews | `sync`, `overview`, `project-status`, dry-run summaries |
+| JSON | CI, scripting, structured review artifacts, handoff between commands | import dry-runs, sync documents, staged/live project status |
+| Table / CSV / report outputs | Inventory listings and dashboard analysis reports | list commands, `dashboard inspect-*`, review tables |
 
-- `Dashboard`: list, inspect, capture, export/import/delete/diff. Import is workflow-driven with dry-run and folder-aware migration; delete supports UID, folder-path subtree selection, and interactive preview.
-- `Alerting`: list plus export/import/diff for rules and related alerting resources.
-- `Datasource`: list, export/import/diff, and live add/modify/delete. Includes dry-run and multi-org replay support.
-- `Access User`: list, add/modify/delete, export/import/diff for global and org-scoped user lifecycle.
-- `Access Org`: list, add/modify/delete, export/import for org lifecycle and membership replay.
-- `Access Team`: list, add/modify/delete, export/import/diff with membership-aware sync.
-- `Access Service Account`: list, add/delete, export/import/diff, plus token add/delete workflows.
+## Support Levels By Area
 
-## Get The Binary
+Use this as the quick "how far does this project actually go?" view.
 
-Download pages:
-- [Latest release](https://github.com/kenduest-brobridge/grafana-utils/releases/latest)
-- [All releases](https://github.com/kenduest-brobridge/grafana-utils/releases)
+| Area | Support level | What you can do today | Output and interaction surfaces | Notes |
+| --- | --- | --- | --- | --- |
+| `dashboard` | Deepest surface | list, export, import, diff, delete, inspect live/exported dashboards, query inventory, datasource dependency review, permission export | text, table/csv/json, report modes, interactive workbenches, screenshot/PDF | most complete and analysis-heavy area |
+| `datasource` | Deep and mature | list, export, import, diff, add, modify, delete, browse live datasources, replay across orgs | text, table/csv/json, interactive browse | supports both live mutation and file-based replay |
+| `alert` | Mature management and migration surface | list rules plus contact points, mute timings, templates; build reviewable alert plans; apply reviewed changes; preview explicit deletes; scaffold managed desired-state files; export, import, diff, dry-run bundles | text/json, table/csv/json | supports both operator-first management and older migration/replay flows |
+| `access` | Mature inventory and replay surface | manage orgs, users, teams, service accounts; export, import, diff, dry-run; service-account token add/delete | table/csv/json | good for access-state inventory and controlled rebuilds |
+| `sync` | Advanced staged workflow | build summaries, bundles, preflight checks, plans, review records, apply intents, audits, promotion-preflight documents | text/json | review-first project workflow rather than blind direct sync |
+| `overview` / `project-status` | Project-wide aggregator | summarize staged exports or live Grafana into one readiness/status view | text/json/interactive | cross-domain read model for handoff, triage, and release readiness |
 
-Download flow:
-- Open the release page.
-- Expand `Assets`.
-- Download the prebuilt `grafana-util` archive for your OS and CPU.
+## Quick Capability Matrix
 
-If you are not using a tagged release yet, build locally from source:
-```bash
-cd rust && cargo build --release
-```
+This is the README-sized support matrix. Use the user guide for the full per-command breakdown.
 
-## 🛠️ Quick Start
+Core resource workflows:
 
-Check the CLI surface first:
+| Area | List | Export | Import | Diff | Inspect / Analyze | Live mutation | TUI |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `dashboard` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `datasource` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `alert` | ✓ | ✓ | ✓ | ✓ | - | ✓ | - |
+| `access` | ✓ | ✓ | ✓ | ✓ | - | ✓ | - |
+
+Project-level workflows:
+
+| Surface | Staged review | Live read | Interactive view |
+| --- | --- | --- | --- |
+| `sync` | ✓ | ✓ | - |
+| `overview` | ✓ | ✓ | ✓ |
+| `project-status` | ✓ | ✓ | ✓ |
+
+## Quick Start
+
+Inspect the maintained command surface:
+
 ```bash
 grafana-util -h
 grafana-util dashboard -h
 grafana-util datasource -h
 grafana-util alert -h
 grafana-util access -h
+grafana-util sync -h
+grafana-util overview -h
+grafana-util project-status -h
 ```
 
-## Common Operator Scenarios
+Live-tested examples for this README were validated against local Docker Grafana `12.4.1` with seeded sample orgs, dashboards, datasources, alerting resources, users, teams, and service accounts.
 
-List dashboards:
+List dashboards across orgs with datasource context:
+
 ```bash
 grafana-util dashboard list \
   --url http://localhost:3000 \
   --basic-user admin \
   --basic-password admin \
+  --all-orgs \
   --with-sources \
   --table
 ```
 
-Inspect live dashboards:
+Inspect an exported dashboard set to see datasource usage, query structure, and governance-oriented reports:
+
 ```bash
-grafana-util dashboard inspect-live \
-  --url http://localhost:3000 \
-  --basic-user admin \
-  --basic-password admin \
-  --output-format governance-json
+grafana-util dashboard inspect-export \
+  --import-dir ./dashboards/raw \
+  --output-format report-table
 ```
 
-List datasources:
-```bash
-grafana-util datasource list \
-  --url http://localhost:3000 \
-  --basic-user admin \
-  --basic-password admin \
-  --table
-```
+Preview a dashboard import before changing Grafana:
 
-List users:
-```bash
-grafana-util access user list \
-  --url http://localhost:3000 \
-  --basic-user admin \
-  --basic-password admin \
-  --scope global \
-  --table
-```
-
-Export dashboards:
-```bash
-grafana-util dashboard export \
-  --url http://localhost:3000 \
-  --basic-user admin \
-  --basic-password admin \
-  --export-dir ./dashboards \
-  --overwrite
-```
-
-Preview a dashboard import:
 ```bash
 grafana-util dashboard import \
   --url http://localhost:3000 \
+  --basic-user admin \
+  --basic-password admin \
   --import-dir ./dashboards/raw \
   --replace-existing \
-  --dry-run --table
+  --dry-run \
+  --table
 ```
 
-Preview a dashboard delete:
+Export alerting resources for migration or review:
+
 ```bash
-grafana-util dashboard delete \
+grafana-util alert export \
   --url http://localhost:3000 \
   --basic-user admin \
   --basic-password admin \
-  --path "Platform / Infra" \
-  --dry-run --table
+  --output-dir ./alerts \
+  --overwrite
 ```
 
-## Command Map
+Build a reviewable alert management plan from desired YAML or JSON files:
 
-Use this when you want the right entrypoint quickly.
+```bash
+grafana-util alert plan \
+  --url http://localhost:3000 \
+  --basic-user admin \
+  --basic-password admin \
+  --desired-dir ./alerts/desired \
+  --prune \
+  --output json
+```
 
-- `grafana-util dashboard ...`
-  - inventory, export/import/delete/diff, inspect, screenshot, PDF capture
-- `grafana-util datasource ...`
-  - inventory, export/import/diff, live add/modify/delete
-- `grafana-util alert ...`
-  - list, export/import/diff for alerting resources
-- `grafana-util access ...`
-  - org, user, team, and service-account inventory and change workflows
-- `grafana-util sync ...`
-  - staged bundle, preflight, review, and apply flows
+Alert now has three operator-facing layers:
 
-## Documentation
+1. Authoring layer: `alert add-rule`, `clone-rule`, `add-contact-point`, `set-route`, `preview-route`, plus the lower-level `init` and `new-*` scaffolds. These commands only write or preview desired-state files and never mutate live Grafana.
+2. Review/apply layer: `alert plan` compares desired files against live Grafana, and `alert apply` executes only the reviewed create, update, and delete rows.
+3. Migration layer: `alert export`, `import`, and `diff` stay focused on raw inventory, replay, and bundle-oriented migration workflows.
 
-- **[Traditional Chinese Guide](docs/user-guide-TW.md)**: Detailed commands and authentication rules.
-- **[English User Guide](docs/user-guide.md)**: Standard operator instructions.
-- **[Technical Overview (Rust)](docs/overview-rust.md)**
-- **[Developer Guide](docs/DEVELOPER.md)**: Maintenance and contribution notes.
+Authoring boundaries:
+- `add-rule` is for simple threshold or classic-condition style authoring. For richer rules, start from a real rule with `clone-rule`, then hand-edit the desired file.
+- `set-route` owns one managed route. Re-running it overwrites that same route instead of merging fields.
+- `preview-route` is only a desired-state preview helper. It is not a full Grafana routing simulator.
+- `--folder` sets the authored desired metadata only. It is not a live folder resolve/create workflow.
+- `--dry-run` is available on the authoring commands so operators can inspect the emitted desired document before writing files.
+
+Short alert workflow:
+
+1. Use the authoring layer to emit or edit desired files under `./alerts/desired`.
+2. Run `alert plan` to review what would create, update, block, or delete in live Grafana.
+3. Run `alert apply` only with the reviewed plan file.
+4. For deletes, remove the desired file, rerun `alert plan --prune`, then apply the reviewed delete plan.
+
+Minimal authoring-to-apply example:
+
+```bash
+grafana-util alert init --desired-dir ./alerts/desired
+grafana-util alert add-contact-point --desired-dir ./alerts/desired --name pagerduty-primary
+grafana-util alert add-rule --desired-dir ./alerts/desired --name cpu-high --folder platform-alerts --rule-group cpu --receiver pagerduty-primary --label team=platform --severity critical --expr A --threshold 80 --above --for 5m
+grafana-util alert preview-route --desired-dir ./alerts/desired --label team=platform --severity critical
+grafana-util alert plan --url http://localhost:3000 --basic-user admin --basic-password admin --desired-dir ./alerts/desired --output json
+grafana-util alert apply --url http://localhost:3000 --basic-user admin --basic-password admin --plan-file ./alert-plan-reviewed.json --approve --output json
+```
+
+Complex rule path:
+
+```bash
+grafana-util alert clone-rule --desired-dir ./alerts/desired --source cpu-high --name cpu-high-staging --folder staging-alerts --rule-group cpu --receiver slack-platform
+# edit ./alerts/desired/rules/cpu-high-staging.yaml or .json by hand
+grafana-util alert plan --url http://localhost:3000 --basic-user admin --basic-password admin --desired-dir ./alerts/desired --output json
+grafana-util alert apply --url http://localhost:3000 --basic-user admin --basic-password admin --plan-file ./alert-plan-reviewed.json --approve --output json
+```
+
+Delete path:
+
+```bash
+rm ./alerts/desired/rules/cpu-high.yaml
+grafana-util alert plan --url http://localhost:3000 --basic-user admin --basic-password admin --desired-dir ./alerts/desired --prune --output json
+grafana-util alert apply --url http://localhost:3000 --basic-user admin --basic-password admin --plan-file ./alert-plan-reviewed.json --approve --output json
+```
+
+The full alert authoring, review/apply, migration, and prune-delete guide is in [docs/user-guide.md](./docs/user-guide.md).
+
+## Install Or Build
+
+- [Latest release](https://github.com/kenduest-brobridge/grafana-utils/releases/latest)
+- [All releases](https://github.com/kenduest-brobridge/grafana-utils/releases)
+
+Build locally when you need the current checkout:
+
+```bash
+cd rust && cargo build --release
+```
+
+## Docs
+
+- [English user guide](docs/user-guide.md)
+- [Traditional Chinese user guide](docs/user-guide-TW.md)
+- [Rust technical overview](docs/overview-rust.md)
+- [Developer guide](docs/DEVELOPER.md)
 
 ## Compatibility
-- **OS**: Linux, macOS.
-- **Runtime**: Rust release binary.
-- **Grafana**: Supports v8.x, v9.x, v10.x+.
 
-## Project Status
-
-This project is under active development. Bug reports and operator feedback are welcome.
+- OS: Linux, macOS
+- Runtime: Rust release binary
+- Grafana: validated on `12.4.1`; intended for `8.x` through current `12.x`
