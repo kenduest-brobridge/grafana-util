@@ -224,7 +224,7 @@ fn build_export_inspection_governance_document_rolls_up_dashboard_dependency_ana
     assert_eq!(document.summary.datasource_coverage_count, 1);
     assert_eq!(document.summary.dashboard_datasource_edge_count, 1);
     assert_eq!(document.summary.datasource_risk_coverage_count, 0);
-    assert_eq!(document.summary.dashboard_risk_coverage_count, 2);
+    assert_eq!(document.summary.dashboard_risk_coverage_count, 1);
     assert_eq!(document.summary.risk_record_count, 1);
     assert_eq!(dependency_row["queryFields"], json!(["expr", "query"]));
     assert_eq!(

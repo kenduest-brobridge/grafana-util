@@ -77,6 +77,9 @@ pub mod sync;
 /// Shared terminal-shell helpers for the Rust TUI surfaces.
 #[cfg(feature = "tui")]
 pub(crate) mod tui_shell;
+/// Local-only web workbench built on top of shared Rust execution contracts.
+#[cfg(feature = "web")]
+pub mod web;
 /// Re-exported alert bundle contract helpers for compatibility with older paths.
 pub use sync::bundle_alert_contracts as sync_bundle_alert_contracts;
 /// Re-exported sync bundle preflight helpers for compatibility with older paths.

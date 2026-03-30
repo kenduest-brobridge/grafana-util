@@ -71,7 +71,11 @@ pub(crate) use inspect_extract::{
 pub(crate) use inspect_orchestration::analyze_export_dir;
 #[allow(unused_imports)]
 pub(crate) use inspect_orchestration::{
-    apply_query_report_filters, validate_inspect_export_report_args,
+    apply_query_report_filters, effective_inspect_report_format,
+    validate_inspect_export_report_args,
+};
+pub(crate) use inspect_output::{
+    render_export_inspection_report_output, render_export_inspection_summary_output,
 };
 pub(crate) use inspect_paths::{
     load_dashboard_org_scope_by_file, load_inspect_source_root, resolve_dashboard_source_file_path,

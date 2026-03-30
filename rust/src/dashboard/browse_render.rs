@@ -711,8 +711,8 @@ mod tests {
         assert!(lines[0].contains("Dashboards"));
         assert!(lines[1].contains("Mode"));
         assert!(lines[1].contains("browse"));
-        assert!(lines[1].contains("Pane"));
-        assert!(lines[1].contains("tree"));
+        assert!(lines[1].contains("Focus"));
+        assert!(lines[1].contains("Tree"));
         assert!(!lines
             .iter()
             .any(|line| line.contains("Loaded dashboard tree")));
@@ -734,8 +734,8 @@ mod tests {
             .collect::<Vec<_>>();
         assert!(lines[1].contains("Mode"));
         assert!(lines[1].contains("confirm-delete"));
-        assert!(lines[1].contains("Pane"));
-        assert!(lines[1].contains("tree"));
+        assert!(lines[1].contains("Focus"));
+        assert!(lines[1].contains("Tree"));
     }
 
     #[test]

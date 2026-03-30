@@ -456,7 +456,10 @@ pub enum DashboardCommand {
         after_help = "Examples:\n\n  Dry-run one dashboard delete by UID:\n    grafana-util dashboard delete --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --uid cpu-main --dry-run --json\n\n  Delete all dashboards under one folder subtree:\n    grafana-util dashboard delete --url http://localhost:3000 --basic-user admin --basic-password admin --path 'Platform / Infra' --yes\n\n  Interactively preview and confirm a folder delete:\n    grafana-util dashboard delete --url http://localhost:3000 --interactive"
     )]
     Delete(DeleteArgs),
-    #[command(about = "Compare local raw dashboard files against live Grafana dashboards.")]
+    #[command(
+        about = "Compare local raw dashboard files against live Grafana dashboards.",
+        after_help = "Examples:\n\n  Compare one raw export directory against the current org:\n    grafana-util dashboard diff --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/raw\n\n  Compare against one explicit org as structured JSON:\n    grafana-util dashboard diff --url http://localhost:3000 --basic-user admin --basic-password admin --org-id 2 --import-dir ./dashboards/raw --json"
+    )]
     Diff(DiffArgs),
     #[command(
         name = "inspect-export",
@@ -472,7 +475,8 @@ pub enum DashboardCommand {
     InspectLive(InspectLiveArgs),
     #[command(
         name = "inspect-vars",
-        about = "List dashboard templating variables and datasource-like choices from live Grafana."
+        about = "List dashboard templating variables and datasource-like choices from live Grafana.",
+        after_help = "Examples:\n\n  Inspect variables from a browser URL directly:\n    grafana-util dashboard inspect-vars --dashboard-url 'https://grafana.example.com/d/cpu-main/cpu-overview?var-cluster=prod-a' --token \"$GRAFANA_API_TOKEN\" --output-format table\n\n  Inspect one dashboard UID with a vars-query fragment:\n    grafana-util dashboard inspect-vars --url https://grafana.example.com --dashboard-uid cpu-main --vars-query 'var-cluster=prod-a&var-instance=node01' --token \"$GRAFANA_API_TOKEN\" --output-format json"
     )]
     InspectVars(InspectVarsArgs),
     #[command(

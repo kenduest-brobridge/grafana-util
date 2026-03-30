@@ -80,6 +80,13 @@ pub enum SyncOutputFormat {
     Json,
 }
 
+/// Reusable sync execution output for JSON/text consumers such as the web workbench.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SyncCommandOutput {
+    pub document: Value,
+    pub text_lines: Vec<String>,
+}
+
 #[derive(Debug, Clone, Parser)]
 #[command(
     name = "grafana-util sync",
@@ -630,6 +637,8 @@ pub(crate) use staged_documents::{
 pub fn run_sync_cli(command: SyncGroupCommand) -> Result<()> {
     cli::run_sync_cli(command)
 }
+
+pub use self::cli::execute_sync_command;
 
 #[cfg(test)]
 #[path = "cli_render_rust_tests.rs"]

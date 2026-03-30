@@ -9,14 +9,14 @@ use crate::dashboard::inspect_summary::{
 #[path = "inspect_output_report.rs"]
 mod inspect_output_report;
 
-pub(super) use inspect_output_report::render_export_inspection_report_output;
+pub(crate) use inspect_output_report::render_export_inspection_report_output;
 
-pub(super) struct ExportInspectionRenderedOutput {
-    pub(super) output: String,
-    pub(super) dashboard_count: usize,
+pub(crate) struct ExportInspectionRenderedOutput {
+    pub(crate) output: String,
+    pub(crate) dashboard_count: usize,
 }
 
-pub(super) fn render_lines_to_string(lines: Vec<String>) -> String {
+pub(crate) fn render_lines_to_string(lines: Vec<String>) -> String {
     let mut output = String::new();
     for line in lines {
         output.push_str(&line);
@@ -25,7 +25,7 @@ pub(super) fn render_lines_to_string(lines: Vec<String>) -> String {
     output
 }
 
-pub(super) fn render_export_inspection_summary_output(
+pub(crate) fn render_export_inspection_summary_output(
     args: &InspectExportArgs,
     summary: &ExportInspectionSummary,
 ) -> Result<String> {

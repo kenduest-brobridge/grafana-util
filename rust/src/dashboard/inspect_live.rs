@@ -406,7 +406,10 @@ fn copy_dir_recursive(source: &Path, destination: &Path) -> Result<()> {
     Ok(())
 }
 
-fn prepare_inspect_live_import_dir(temp_root: &Path, args: &InspectLiveArgs) -> Result<PathBuf> {
+pub(crate) fn prepare_inspect_live_import_dir(
+    temp_root: &Path,
+    args: &InspectLiveArgs,
+) -> Result<PathBuf> {
     if !args.all_orgs {
         return Ok(temp_root.join(RAW_EXPORT_SUBDIR));
     }

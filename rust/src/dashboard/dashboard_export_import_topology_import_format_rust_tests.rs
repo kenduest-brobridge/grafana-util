@@ -22,6 +22,7 @@ fn build_export_metadata_serializes_expected_shape() {
         value,
         json!({
             "schemaVersion": TOOL_SCHEMA_VERSION,
+            "toolVersion": crate::common::TOOL_VERSION,
             "kind": "grafana-utils-dashboard-export-index",
             "variant": "raw",
             "dashboardCount": 2,
@@ -61,6 +62,7 @@ fn build_root_export_index_serializes_expected_shape() {
         value,
         json!({
             "schemaVersion": TOOL_SCHEMA_VERSION,
+            "toolVersion": crate::common::TOOL_VERSION,
             "kind": "grafana-utils-dashboard-export-index",
             "items": [
                 {

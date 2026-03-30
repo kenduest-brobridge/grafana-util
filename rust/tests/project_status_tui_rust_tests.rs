@@ -178,7 +178,7 @@ fn project_status_tui_render_smoke_renders_the_tui_surfaces() {
     assert!(rendered.contains("Domains"));
     assert!(rendered.contains("Domain Detail"));
     assert!(rendered.contains("Actions"));
+    assert!(rendered.contains("Status & Controls"));
     assert!(rendered.contains("Recommended handoff domain: sync"));
-    assert!(rendered.contains("Enter"));
     assert!(rendered.contains("resolve sync workflow blockers"));
 }

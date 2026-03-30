@@ -313,7 +313,7 @@ where
         .collect()
 }
 
-fn collect_list_dashboards_with_request<F>(
+pub(crate) fn collect_list_dashboards_with_request<F>(
     request_json: &mut F,
     args: &ListArgs,
     org: Option<&Map<String, Value>>,

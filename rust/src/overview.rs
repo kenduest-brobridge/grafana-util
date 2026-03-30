@@ -72,6 +72,8 @@ const DATASOURCE_EXPORT_FILENAME: &str = "datasources.json";
 const DATASOURCE_EXPORT_METADATA_FILENAME: &str = "export-metadata.json";
 const DATASOURCE_ROOT_KIND: &str = "grafana-utils-datasource-export-index";
 const DATASOURCE_ROOT_SCHEMA_VERSION: i64 = 1;
+const OVERVIEW_HELP_TEXT: &str = "Examples:\n\n  Summarize staged exports as JSON:\n    grafana-util overview --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts --desired-file ./desired.json --output json\n\n  Summarize bundle and promotion context as text:\n    grafana-util overview --source-bundle ./sync-source-bundle.json --target-inventory ./target-inventory.json --availability-file ./availability.json --mapping-file ./mapping.json --output text\n\n  Open the live overview through the shared project-status path:\n    grafana-util overview live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output interactive";
+const OVERVIEW_LIVE_HELP_TEXT: &str = "Examples:\n\n  Render the live overview as JSON:\n    grafana-util overview live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output json\n\n  Open the live overview in the interactive workbench:\n    grafana-util overview live --url http://localhost:3000 --basic-user admin --basic-password admin --output interactive";
 
 /// Output formats for the overview renderer.
 #[derive(Debug, Clone, Copy, ValueEnum, PartialEq, Eq)]
@@ -173,7 +175,8 @@ pub struct OverviewArgs {
 #[command(
     name = "grafana-util overview",
     about = "Render a project-wide overview from staged artifacts, or use `live` as a thin entrypoint into shared live project status.",
-    args_conflicts_with_subcommands = true
+    args_conflicts_with_subcommands = true,
+    after_help = OVERVIEW_HELP_TEXT
 )]
 pub struct OverviewCliArgs {
     #[command(flatten)]
@@ -186,7 +189,8 @@ pub struct OverviewCliArgs {
 #[derive(Debug, Clone, Subcommand)]
 pub enum OverviewCommand {
     #[command(
-        about = "Render a live overview by delegating to the shared project-status live path."
+        about = "Render a live overview by delegating to the shared project-status live path.",
+        after_help = OVERVIEW_LIVE_HELP_TEXT
     )]
     Live(OverviewLiveArgs),
 }
@@ -293,6 +297,12 @@ pub fn render_overview_text(document: &OverviewDocument) -> Result<Vec<String>> 
     overview_document::render_overview_text(document)
 }
 
+/// Build the stable overview document without rendering it.
+pub fn execute_overview(args: &OverviewArgs) -> Result<OverviewDocument> {
+    let artifacts = overview_artifacts::build_overview_artifacts(args)?;
+    build_overview_document(artifacts)
+}
+
 #[cfg(feature = "tui")]
 pub(crate) fn run_overview_interactive(document: OverviewDocument) -> Result<()> {
     overview_tui::run_overview_interactive(document)
@@ -307,8 +317,7 @@ pub(crate) fn run_overview_interactive(_document: OverviewDocument) -> Result<()
 
 /// Run the overview command using staged artifact inputs and the requested output format.
 pub fn run_overview(args: OverviewArgs) -> Result<()> {
-    let artifacts = overview_artifacts::build_overview_artifacts(&args)?;
-    let document = build_overview_document(artifacts)?;
+    let document = execute_overview(&args)?;
     match args.output {
         OverviewOutputFormat::Text => {
             for line in render_overview_text(&document)? {

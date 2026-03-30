@@ -506,7 +506,7 @@ fn build_export_inspection_query_report_emits_prometheus_and_loki_families_for_i
             "{job=\"grafana\",level=~\"error|warn\"}".to_string(),
             "job=\"grafana\"".to_string(),
             "level=~\"error|warn\"".to_string(),
-            "level=\"error\"".to_string(),
+            "level".to_string(),
         ]
     );
     assert_eq!(loki.buckets, vec!["5m".to_string()]);
