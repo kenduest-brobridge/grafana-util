@@ -9,8 +9,9 @@ turning `grafana-util overview` into the accidental owner of every status rule.
 
 It is not an operator guide. Keep command usage in `README.md` and user guides.
 
-For the current execution map of which domain producers already exist and which
-ones are still missing, see `docs/internal/project-status-producer-gap-list.md`.
+For the latest archived execution map of which domain producers already exist
+and which ones were still missing in that planning pass, see
+`docs/internal/archive/project-status-producer-gap-list.md`.
 
 ## Purpose
 

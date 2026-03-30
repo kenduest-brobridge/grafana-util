@@ -26,17 +26,9 @@ Rust crate 提供四個 CLI domain 的核心執行能力：
 如果要規劃「整個專案」的概觀看進度、跨 domain status contract、或 project-home /
 domain-drill-down / action-handoff 類 TUI 路徑，先讀
 `docs/internal/project-status-architecture.md`。那份文件刻意比 `overview` 更上位，
-避免把整個專案的 status 架構錯誤地收斂成單一 command 的內部設計。
-如果要直接看各 domain 還缺哪些 status producer，再接著看
-`docs/internal/project-status-producer-gap-list.md`。
-如果要看目前真正建議執行的下一階段順序，再接著看
-`docs/internal/next-phase-execution-plan-2026-03-29.md`。
-如果要先看目前哪些 domain 已經夠穩可以停、哪些還值得再做一輪，再接著看
-`docs/internal/domain-producer-maturity-review-2026-03-29.md`。
-如果要直接看目前的專案層 stop / continue 結論與立即執行順序，再接著看
-`docs/internal/current-execution-review-2026-03-29.md`。
-如果要先看整個專案目前已成型能力、主要 command 用途、以及哪些區域目前不建議再擴，
-再接著看 `docs/internal/current-capability-inventory-2026-03-30.md`。
+避免把整個專案的 status 架構錯誤地收斂成單一 command 的內部設計。若需要舊的
+execution plans、gap lists、或 progress snapshots，改到 `docs/internal/archive/`
+查歷史文件，不要把那些已封存草案當成現行 maintainer 導覽。
 
 ## 2) 檔案導覽與責任邊界
 
