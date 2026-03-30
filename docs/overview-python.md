@@ -27,6 +27,35 @@ The Python tree remains in the repository for:
 - `python/grafana_utils/alerts/`: alerting provisioning helpers
 - `python/grafana_utils/http_transport.py`: transport abstraction shared across Python flows
 
+## Call-map starting points
+
+Use this page as the compact call-map entry instead of keeping a separate
+Python call-hierarchy note.
+
+### Domain facades
+
+- `python/grafana_utils/unified_cli.py`
+- `python/grafana_utils/dashboard_cli.py`
+- `python/grafana_utils/datasource_cli.py`
+- `python/grafana_utils/alert_cli.py`
+- `python/grafana_utils/access_cli.py`
+
+### High-value workflow modules
+
+- `python/grafana_utils/dashboards/export_workflow.py`
+- `python/grafana_utils/dashboards/import_workflow.py`
+- `python/grafana_utils/dashboards/inspection_workflow.py`
+- `python/grafana_utils/datasource/workflows.py`
+- `python/grafana_utils/access/workflows.py`
+- `python/grafana_utils/alerts/provisioning.py`
+
+### How to trace work
+
+- Start at the domain facade for parser and dispatch behavior.
+- Move into the matching workflow module for state changes and dry-run behavior.
+- Use `rg` or local call-graph tooling when you need a refreshed full call map;
+  this page stays intentionally compact.
+
 ## Validation commands
 
 - `PYTHONPATH=python python3 -m unittest -v`

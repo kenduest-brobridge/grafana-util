@@ -43,9 +43,11 @@ This document is for maintainers. Keep `README.md` and the user guides operator-
 - `docs/overview-rust.md`: Rust architecture walkthrough.
 - `docs/overview-python.md`: Python maintainer architecture walkthrough.
 - `docs/internal/overview-architecture.md`: maintainer map for the staged `grafana-util overview` design, data flow, and extension rules.
-- `docs/core-python-call-hierarchy.md`: Python call graph reference for maintainers.
-- `docs/unit-test-inventory.md`: test inventory reference for maintainers.
 - `docs/internal/examples/`: maintainer-only demo scripts for intentionally unwired Python API flows.
+
+Do not reintroduce standalone `call-hierarchy` or `unit-test-inventory` pages
+unless they become generated artifacts with a clear maintenance owner. Keep
+that routing in the overview and developer guides instead.
 
 ## Rust Ownership Cues
 
@@ -78,6 +80,45 @@ This document is for maintainers. Keep `README.md` and the user guides operator-
 - Use `make set-release-version VERSION=X.Y.Z` when preparing `main` for release.
 - Use `make set-dev-version VERSION=X.Y.Z DEV_ITERATION=N` when moving `dev` to the next preview cycle.
 - Preferred release ritual:
+
+## Validation Map
+
+Keep the validation entrypoints here instead of spreading them across multiple
+small maintainer-only files.
+
+### Python suites
+
+- `python/tests/test_python_dashboard_cli.py`
+- `python/tests/test_python_dashboard_inspection_cli.py`
+- `python/tests/test_python_datasource_cli.py`
+- `python/tests/test_python_alert_cli.py`
+- `python/tests/test_python_access_cli.py`
+- `python/tests/test_python_packaging.py`
+
+### Rust suites
+
+- `rust/src/dashboard/rust_tests.rs`
+- `rust/src/datasource_rust_tests.rs`
+- `rust/src/alert_rust_tests.rs`
+- `rust/src/access_rust_tests.rs`
+- `rust/src/sync/*_rust_tests.rs`
+
+### Common commands
+
+- `PYTHONPATH=python python3 -m unittest -v`
+- `cd rust && cargo test --quiet`
+- `make quality-python`
+- `make quality-rust`
+- `make test`
+
+### Usage
+
+- Use the Python suites when checking parity, regressions, or legacy workflow
+  behavior.
+- Use the Rust suites for the maintained runtime and release-blocking
+  validation.
+- When a feature spans both implementations, keep this section current instead
+  of reintroducing a separate test-inventory page.
   - work on `dev`
   - merge `dev` into `main`
   - run `make set-release-version VERSION=X.Y.Z` on `main`

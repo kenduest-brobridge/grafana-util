@@ -7,6 +7,7 @@ Use it for:
 
 - superseded `plan` and `unwired` design notes
 - dated execution reviews, backlogs, and roadmap snapshots
+- generated or one-off reference snapshots such as call-hierarchy dumps
 - one-off analysis reports and progress histories
 - archived `ai-status` / `ai-changes` snapshots
 

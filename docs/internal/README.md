@@ -11,8 +11,6 @@ backlogs, market analysis, and progress snapshots have been moved into
   - current change trace and active maintainer notes
 - `ai-changes.md`
   - current summarized change log for meaningful behavior or architecture work
-- `architecture-review-2026-03-27.md`
-  - project-level architecture review and structural risk scan
 - `overview-architecture.md`
   - source-of-truth maintainer map for `grafana-util overview`
 - `project-status-architecture.md`
@@ -28,5 +26,10 @@ backlogs, market analysis, and progress snapshots have been moved into
 - Move any unwired plan, dated execution note, backlog, proposal, or historical
   implementation scaffold into `archive/` unless it is still the current source
   of truth.
+- Move dated architecture reviews and generated reference snapshots into
+  `archive/` as well; keep only current maintainer entrypoints in the root.
 - Keep core architecture docs in the root only when maintainers should still
   read them before editing code.
+- Prefer consolidating small one-off maintainer references into
+  `docs/DEVELOPER.md`, `docs/overview-rust.md`, or `docs/overview-python.md`
+  instead of creating new standalone index pages.
