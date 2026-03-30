@@ -177,6 +177,46 @@ pub(crate) const ALERT_HELP_FULL_TEXT: &str = help_block!(
         r#"grafana-util alert diff --url http://localhost:3000 --diff-dir ./alerts/raw --json"#
     ),
     (
+        "[Alert Plan]",
+        "Build a staged alert plan from desired files with linkage maps:",
+        "grafana-util alert plan --desired-dir ./alerts/desired --prune --dashboard-uid-map ./dashboard-map.json --panel-id-map ./panel-map.json --output json"
+    ),
+    (
+        "[Alert Apply]",
+        "Apply a reviewed alert plan only after explicit approval:",
+        "grafana-util alert apply --plan-file ./alert-plan-reviewed.json --approve"
+    ),
+    (
+        "[Alert Delete]",
+        "Delete one explicit alert resource and allow policy reset only when requested:",
+        "grafana-util alert delete --kind policy-tree --identity default --allow-policy-reset"
+    ),
+    (
+        "[Alert Add Rule]",
+        "Dry-run a managed rule with routing, labels, and a simple threshold contract before writing files:",
+        "grafana-util alert add-rule --desired-dir ./alerts/desired --name cpu-high --folder platform-alerts --rule-group cpu --receiver pagerduty-primary --severity critical --expr 'A' --threshold 80 --above --for 5m --label team=platform --annotation summary='CPU high' --dry-run"
+    ),
+    (
+        "[Alert Clone Rule]",
+        "Dry-run a clone into a new target identity before writing files:",
+        "grafana-util alert clone-rule --desired-dir ./alerts/desired --source cpu-high --name cpu-high-staging --folder staging-alerts --rule-group cpu --receiver slack-platform --dry-run"
+    ),
+    (
+        "[Alert Add Contact Point]",
+        "Dry-run a managed contact point entry before wiring routes:",
+        "grafana-util alert add-contact-point --desired-dir ./alerts/desired --name pagerduty-primary --dry-run"
+    ),
+    (
+        "[Alert Set Route]",
+        "Dry-run the tool-owned managed route that will be fully replaced on rerun instead of merged field-by-field:",
+        "grafana-util alert set-route --desired-dir ./alerts/desired --receiver pagerduty-primary --label team=platform --severity critical --dry-run"
+    ),
+    (
+        "[Alert Preview Route]",
+        "Preview route matching inputs from the staged desired tree under the same replace-not-merge managed-route model:",
+        "grafana-util alert preview-route --desired-dir ./alerts/desired --label team=platform --severity critical"
+    ),
+    (
         "[Alert Import]",
         "Re-map linked dashboards and panels during import:",
         "grafana-util alert import --url http://localhost:3000 --import-dir ./alerts/raw --replace-existing --dashboard-uid-map ./dashboard-map.json --panel-id-map ./panel-map.json"
@@ -185,6 +225,21 @@ pub(crate) const ALERT_HELP_FULL_TEXT: &str = help_block!(
         "[Alert List]",
         "Render live alert rules as JSON:",
         r#"grafana-util alert list-rules --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --json"#
+    ),
+    (
+        "[Alert Init]",
+        "Initialize a desired-state tree for staged alert management:",
+        "grafana-util alert init --desired-dir ./alerts/desired"
+    ),
+    (
+        "[Alert New Rule]",
+        "Seed a low-level rule scaffold into the desired-state tree when the higher-level authoring surface is not enough:",
+        "grafana-util alert new-rule --desired-dir ./alerts/desired --name cpu-main"
+    ),
+    (
+        "[Alert New Contact Point]",
+        "Seed a low-level contact point scaffold directly:",
+        "grafana-util alert new-contact-point --desired-dir ./alerts/desired --name pagerduty-primary"
     )
 );
 

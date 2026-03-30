@@ -1,16 +1,38 @@
 //! Clap schema for alerting CLI commands.
 //! Defines args/enums/normalization helpers used by alert dispatcher and handlers.
-use clap::{Args, Command, CommandFactory, Parser, Subcommand, ValueEnum};
+use clap::{ArgAction, Args, Command, CommandFactory, Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;
 
 use crate::common::{resolve_auth_headers, Result};
 
 use super::{ALERT_HELP_TEXT, DEFAULT_OUTPUT_DIR, DEFAULT_TIMEOUT, DEFAULT_URL};
 
+const ALERT_EXPORT_HELP_TEXT: &str = "Examples:\n\n  grafana-util alert export --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output-dir ./alerts --overwrite\n  grafana-util alert export --url http://localhost:3000 --basic-user admin --basic-password admin --output-dir ./alerts --flat";
+const ALERT_IMPORT_HELP_TEXT: &str = "Examples:\n\n  grafana-util alert import --url http://localhost:3000 --import-dir ./alerts/raw --replace-existing\n  grafana-util alert import --url http://localhost:3000 --import-dir ./alerts/raw --replace-existing --dry-run --json\n  grafana-util alert import --url http://localhost:3000 --import-dir ./alerts/raw --replace-existing --dashboard-uid-map ./dashboard-map.json --panel-id-map ./panel-map.json";
+const ALERT_DIFF_HELP_TEXT: &str = "Examples:\n\n  grafana-util alert diff --url http://localhost:3000 --diff-dir ./alerts/raw\n  grafana-util alert diff --url http://localhost:3000 --diff-dir ./alerts/raw --json";
+const ALERT_PLAN_HELP_TEXT: &str = "Examples:\n\n  grafana-util alert plan --desired-dir ./alerts/desired\n  grafana-util alert plan --desired-dir ./alerts/desired --prune --dashboard-uid-map ./dashboard-map.json --panel-id-map ./panel-map.json --output json";
+const ALERT_APPLY_HELP_TEXT: &str = "Examples:\n\n  grafana-util alert apply --plan-file ./alert-plan-reviewed.json --approve\n  grafana-util alert apply --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --plan-file ./alert-plan-reviewed.json --approve";
+const ALERT_DELETE_HELP_TEXT: &str = "Examples:\n\n  grafana-util alert delete --kind rule --identity cpu-main\n  grafana-util alert delete --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --kind policy-tree --identity default --allow-policy-reset";
+const ALERT_INIT_HELP_TEXT: &str =
+    "Examples:\n\n  grafana-util alert init --desired-dir ./alerts/desired";
+const ALERT_ADD_RULE_HELP_TEXT: &str = "Examples:\n\n  grafana-util alert add-rule --desired-dir ./alerts/desired --name cpu-high --folder platform-alerts --rule-group cpu --receiver pagerduty-primary --severity critical --expr 'A' --threshold 80 --above --for 5m --label team=platform --annotation summary='CPU high'\n  grafana-util alert add-rule --desired-dir ./alerts/desired --name cpu-high --folder platform-alerts --rule-group cpu --receiver pagerduty-primary --dry-run";
+const ALERT_CLONE_RULE_HELP_TEXT: &str = "Examples:\n\n  grafana-util alert clone-rule --desired-dir ./alerts/desired --source cpu-high --name cpu-high-staging --folder staging-alerts --rule-group cpu --receiver slack-platform\n  grafana-util alert clone-rule --desired-dir ./alerts/desired --source cpu-high --name cpu-high-staging --dry-run";
+const ALERT_ADD_CONTACT_POINT_HELP_TEXT: &str = "Examples:\n\n  grafana-util alert add-contact-point --desired-dir ./alerts/desired --name pagerduty-primary\n  grafana-util alert add-contact-point --desired-dir ./alerts/desired --name pagerduty-primary --dry-run";
+const ALERT_SET_ROUTE_HELP_TEXT: &str = "Examples:\n\n  grafana-util alert set-route --desired-dir ./alerts/desired --receiver pagerduty-primary --label team=platform --severity critical\n  grafana-util alert set-route --desired-dir ./alerts/desired --receiver pagerduty-primary --label team=platform --severity critical --dry-run";
+const ALERT_PREVIEW_ROUTE_HELP_TEXT: &str = "Examples:\n\n  grafana-util alert preview-route --desired-dir ./alerts/desired --label team=platform --severity critical";
+const ALERT_NEW_RULE_HELP_TEXT: &str =
+    "Examples:\n\n  grafana-util alert new-rule --desired-dir ./alerts/desired --name cpu-main\n  grafana-util alert add-rule --desired-dir ./alerts/desired --name cpu-main --folder platform-alerts --rule-group cpu --receiver pagerduty-primary";
+const ALERT_NEW_CONTACT_POINT_HELP_TEXT: &str = "Examples:\n\n  grafana-util alert new-contact-point --desired-dir ./alerts/desired --name pagerduty-primary\n  grafana-util alert add-contact-point --desired-dir ./alerts/desired --name pagerduty-primary";
+const ALERT_NEW_TEMPLATE_HELP_TEXT: &str = "Examples:\n\n  grafana-util alert new-template --desired-dir ./alerts/desired --name sev1-notification";
+const ALERT_LIST_RULES_HELP_TEXT: &str = "Examples:\n\n  grafana-util alert list-rules --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --table\n  grafana-util alert list-rules --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --json";
+const ALERT_LIST_CONTACT_POINTS_HELP_TEXT: &str = "Examples:\n\n  grafana-util alert list-contact-points --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --table\n  grafana-util alert list-contact-points --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --json";
+const ALERT_LIST_MUTE_TIMINGS_HELP_TEXT: &str = "Examples:\n\n  grafana-util alert list-mute-timings --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --table\n  grafana-util alert list-mute-timings --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --json";
+const ALERT_LIST_TEMPLATES_HELP_TEXT: &str = "Examples:\n\n  grafana-util alert list-templates --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --table\n  grafana-util alert list-templates --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --json";
+
 #[derive(Debug, Clone, Parser)]
 #[command(
     name = "grafana-util alert",
-    about = "Export, import, or diff Grafana alerting resources.",
+    about = "Export, manage, and author Grafana alerting resources.",
     after_help = ALERT_HELP_TEXT,
     styles = crate::help_styles::CLI_HELP_STYLES
 )]
@@ -231,6 +253,52 @@ pub enum AlertListOutputFormat {
     Json,
 }
 
+/// Single-flag output selector for plan-oriented alert commands.
+#[derive(Debug, Clone, Copy, ValueEnum, PartialEq, Eq)]
+pub enum AlertCommandOutputFormat {
+    Text,
+    Json,
+}
+
+/// Resource categories supported by alert delete scaffolding.
+#[derive(Debug, Clone, Copy, ValueEnum, PartialEq, Eq)]
+pub enum AlertResourceKind {
+    Rule,
+    ContactPoint,
+    MuteTiming,
+    PolicyTree,
+    Template,
+}
+
+/// Canonical subcommand identity for normalized alert CLI routing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AlertCommandKind {
+    Export,
+    Import,
+    Diff,
+    Plan,
+    Apply,
+    Delete,
+    Init,
+    NewRule,
+    NewContactPoint,
+    NewTemplate,
+    ListRules,
+    ListContactPoints,
+    ListMuteTimings,
+    ListTemplates,
+}
+
+/// Authoring-focused subcommand identity carried only by parser/help surfaces.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AlertAuthoringCommandKind {
+    AddRule,
+    CloneRule,
+    AddContactPoint,
+    SetRoute,
+    PreviewRoute,
+}
+
 /// Struct definition for AlertListArgs.
 #[derive(Debug, Clone, Args)]
 pub struct AlertListArgs {
@@ -270,27 +338,385 @@ pub struct AlertListArgs {
     pub no_header: bool,
 }
 
+/// Arguments for building a staged alert apply plan.
+#[derive(Debug, Clone, Args)]
+pub struct AlertPlanArgs {
+    #[command(flatten)]
+    pub common: AlertCommonArgs,
+    #[arg(
+        long,
+        help = "Directory containing the desired alert resource definitions to plan from."
+    )]
+    pub desired_dir: PathBuf,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Mark live-only alert resources as delete candidates in the staged plan."
+    )]
+    pub prune: bool,
+    #[arg(
+        long,
+        help = "JSON file that maps source dashboard UIDs to target dashboard UIDs for linked alert-rule repair during planning."
+    )]
+    pub dashboard_uid_map: Option<PathBuf>,
+    #[arg(
+        long,
+        help = "JSON file that maps source dashboard UID and source panel ID to a target panel ID for linked alert-rule repair during planning."
+    )]
+    pub panel_id_map: Option<PathBuf>,
+    #[arg(
+        long,
+        value_enum,
+        default_value_t = AlertCommandOutputFormat::Text,
+        help = "Render plan output as text or json."
+    )]
+    pub output: AlertCommandOutputFormat,
+}
+
+/// Arguments for applying a reviewed alert plan.
+#[derive(Debug, Clone, Args)]
+pub struct AlertApplyArgs {
+    #[command(flatten)]
+    pub common: AlertCommonArgs,
+    #[arg(long, help = "JSON file containing the reviewed alert plan document.")]
+    pub plan_file: PathBuf,
+    #[arg(
+        long,
+        action = ArgAction::SetTrue,
+        required = true,
+        help = "Explicit acknowledgement required before alert apply execution is allowed."
+    )]
+    pub approve: bool,
+    #[arg(
+        long,
+        value_enum,
+        default_value_t = AlertCommandOutputFormat::Text,
+        help = "Render apply output as text or json."
+    )]
+    pub output: AlertCommandOutputFormat,
+}
+
+/// Arguments for deleting one managed alert resource.
+#[derive(Debug, Clone, Args)]
+pub struct AlertDeleteArgs {
+    #[command(flatten)]
+    pub common: AlertCommonArgs,
+    #[arg(long, value_enum, help = "Alert resource kind to delete.")]
+    pub kind: AlertResourceKind,
+    #[arg(
+        long,
+        help = "Explicit resource identity for the selected delete kind."
+    )]
+    pub identity: String,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Allow notification policy tree reset when deleting the policy-tree resource kind."
+    )]
+    pub allow_policy_reset: bool,
+    #[arg(
+        long,
+        value_enum,
+        default_value_t = AlertCommandOutputFormat::Text,
+        help = "Render delete preview or execution output as text or json."
+    )]
+    pub output: AlertCommandOutputFormat,
+}
+
+/// Arguments for initializing a staged alert desired-state layout.
+#[derive(Debug, Clone, Args)]
+pub struct AlertInitArgs {
+    #[arg(
+        long,
+        help = "Directory to initialize with staged alert desired-state scaffolding."
+    )]
+    pub desired_dir: PathBuf,
+}
+
+/// Shared arguments for new staged alert resource scaffolds.
+#[derive(Debug, Clone, Args)]
+pub struct AlertNewResourceArgs {
+    #[arg(
+        long,
+        help = "Directory containing the staged alert desired-state layout."
+    )]
+    pub desired_dir: PathBuf,
+    #[arg(long, help = "Resource name to seed into the new scaffold.")]
+    pub name: String,
+}
+
+/// Shared authoring inputs for desired-state alert resource commands.
+#[derive(Debug, Clone, Args)]
+pub struct AlertAuthoringBaseArgs {
+    #[arg(
+        long,
+        help = "Directory containing the staged alert desired-state layout."
+    )]
+    pub desired_dir: PathBuf,
+}
+
+/// Authoring inputs for high-level add-rule.
+#[derive(Debug, Clone, Args)]
+pub struct AlertAddRuleArgs {
+    #[command(flatten)]
+    pub base: AlertAuthoringBaseArgs,
+    #[arg(long, help = "Rule name to author.")]
+    pub name: String,
+    #[arg(long, help = "Folder that will own the authored rule.")]
+    pub folder: String,
+    #[arg(long = "rule-group", help = "Rule group name inside the folder.")]
+    pub rule_group: String,
+    #[arg(
+        long,
+        required_unless_present = "no_route",
+        help = "Receiver name to route the authored rule to."
+    )]
+    pub receiver: Option<String>,
+    #[arg(
+        long,
+        default_value_t = false,
+        conflicts_with = "receiver",
+        help = "Skip route authoring for this rule."
+    )]
+    pub no_route: bool,
+    #[arg(
+        long = "label",
+        help = "Rule label in key=value form. Repeat for more labels."
+    )]
+    pub labels: Vec<String>,
+    #[arg(
+        long = "annotation",
+        help = "Rule annotation in key=value form. Repeat for more annotations."
+    )]
+    pub annotations: Vec<String>,
+    #[arg(long, help = "Convenience severity label value for the authored rule.")]
+    pub severity: Option<String>,
+    #[arg(long = "for", help = "Pending duration before the rule starts firing.")]
+    pub for_duration: Option<String>,
+    #[arg(long, help = "Simple-rule expression reference or expression text.")]
+    pub expr: Option<String>,
+    #[arg(long, help = "Simple-rule threshold value.")]
+    pub threshold: Option<f64>,
+    #[arg(
+        long,
+        default_value_t = false,
+        conflicts_with = "below",
+        help = "Fire when the evaluated value is above the threshold."
+    )]
+    pub above: bool,
+    #[arg(
+        long,
+        default_value_t = false,
+        conflicts_with = "above",
+        help = "Fire when the evaluated value is below the threshold."
+    )]
+    pub below: bool,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Render the planned authored rule output without writing files."
+    )]
+    pub dry_run: bool,
+}
+
+/// Authoring inputs for rule cloning.
+#[derive(Debug, Clone, Args)]
+pub struct AlertCloneRuleArgs {
+    #[command(flatten)]
+    pub base: AlertAuthoringBaseArgs,
+    #[arg(
+        long,
+        help = "Existing rule identity to clone from the desired-state tree."
+    )]
+    pub source: String,
+    #[arg(long, help = "New rule name for the cloned rule.")]
+    pub name: String,
+    #[arg(long, help = "Optional replacement folder for the cloned rule.")]
+    pub folder: Option<String>,
+    #[arg(
+        long = "rule-group",
+        help = "Optional replacement rule group for the cloned rule."
+    )]
+    pub rule_group: Option<String>,
+    #[arg(
+        long,
+        help = "Optional replacement receiver for the cloned rule route."
+    )]
+    pub receiver: Option<String>,
+    #[arg(
+        long,
+        default_value_t = false,
+        conflicts_with = "receiver",
+        help = "Clear route authoring while cloning."
+    )]
+    pub no_route: bool,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Render the planned cloned rule output without writing files."
+    )]
+    pub dry_run: bool,
+}
+
+/// Authoring inputs for contact point creation.
+#[derive(Debug, Clone, Args)]
+pub struct AlertAddContactPointArgs {
+    #[command(flatten)]
+    pub base: AlertAuthoringBaseArgs,
+    #[arg(long, help = "Contact point name to author.")]
+    pub name: String,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Render the planned authored contact point output without writing files."
+    )]
+    pub dry_run: bool,
+}
+
+/// Authoring inputs for notification route updates.
+#[derive(Debug, Clone, Args)]
+pub struct AlertSetRouteArgs {
+    #[command(flatten)]
+    pub base: AlertAuthoringBaseArgs,
+    #[arg(long, help = "Receiver name for the route.")]
+    pub receiver: String,
+    #[arg(
+        long = "label",
+        help = "Route matcher in key=value form. Repeat for more matchers."
+    )]
+    pub labels: Vec<String>,
+    #[arg(long, help = "Convenience severity matcher value for the route.")]
+    pub severity: Option<String>,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Render the managed route document that would replace the tool-owned route without writing files."
+    )]
+    pub dry_run: bool,
+}
+
+/// Authoring inputs for route previews.
+#[derive(Debug, Clone, Args)]
+pub struct AlertPreviewRouteArgs {
+    #[command(flatten)]
+    pub base: AlertAuthoringBaseArgs,
+    #[arg(
+        long = "label",
+        help = "Preview label in key=value form. Repeat for more labels."
+    )]
+    pub labels: Vec<String>,
+    #[arg(long, help = "Convenience severity label value for route preview.")]
+    pub severity: Option<String>,
+}
+
 /// Enum definition for AlertGroupCommand.
 #[derive(Debug, Clone, Subcommand)]
 pub enum AlertGroupCommand {
-    #[command(about = "Export alerting resources into raw/ JSON files.")]
+    #[command(
+        about = "Export alerting resources into raw/ JSON files.",
+        after_help = ALERT_EXPORT_HELP_TEXT
+    )]
     Export(AlertExportArgs),
-    #[command(about = "Import alerting resource JSON files through the Grafana API.")]
+    #[command(
+        about = "Import alerting resource JSON files through the Grafana API.",
+        after_help = ALERT_IMPORT_HELP_TEXT
+    )]
     Import(AlertImportArgs),
-    #[command(about = "Compare local alerting export files against live Grafana resources.")]
+    #[command(
+        about = "Compare local alerting export files against live Grafana resources.",
+        after_help = ALERT_DIFF_HELP_TEXT
+    )]
     Diff(AlertDiffArgs),
-    #[command(name = "list-rules", about = "List live Grafana alert rules.")]
+    #[command(
+        about = "Build a staged alert management plan from desired alert resources.",
+        after_help = ALERT_PLAN_HELP_TEXT
+    )]
+    Plan(AlertPlanArgs),
+    #[command(
+        about = "Apply a reviewed alert management plan.",
+        after_help = ALERT_APPLY_HELP_TEXT
+    )]
+    Apply(AlertApplyArgs),
+    #[command(
+        about = "Delete one explicit alert resource identity.",
+        after_help = ALERT_DELETE_HELP_TEXT
+    )]
+    Delete(AlertDeleteArgs),
+    #[command(
+        about = "Initialize a staged alert desired-state layout.",
+        after_help = ALERT_INIT_HELP_TEXT
+    )]
+    Init(AlertInitArgs),
+    #[command(
+        name = "add-rule",
+        about = "Author a staged alert rule from the higher-level authoring surface.",
+        after_help = ALERT_ADD_RULE_HELP_TEXT
+    )]
+    AddRule(AlertAddRuleArgs),
+    #[command(
+        name = "clone-rule",
+        about = "Clone an existing staged alert rule into a new authoring target.",
+        after_help = ALERT_CLONE_RULE_HELP_TEXT
+    )]
+    CloneRule(AlertCloneRuleArgs),
+    #[command(
+        name = "add-contact-point",
+        about = "Author a staged alert contact point from the higher-level authoring surface.",
+        after_help = ALERT_ADD_CONTACT_POINT_HELP_TEXT
+    )]
+    AddContactPoint(AlertAddContactPointArgs),
+    #[command(
+        name = "set-route",
+        about = "Author or replace the tool-owned staged notification route. Re-running fully replaces that managed route instead of merging fields.",
+        after_help = ALERT_SET_ROUTE_HELP_TEXT
+    )]
+    SetRoute(AlertSetRouteArgs),
+    #[command(
+        name = "preview-route",
+        about = "Preview the managed route inputs without changing runtime behavior. The corresponding set-route command fully replaces the tool-owned route on rerun.",
+        after_help = ALERT_PREVIEW_ROUTE_HELP_TEXT
+    )]
+    PreviewRoute(AlertPreviewRouteArgs),
+    #[command(
+        name = "new-rule",
+        about = "Create a low-level staged alert rule scaffold.",
+        after_help = ALERT_NEW_RULE_HELP_TEXT
+    )]
+    NewRule(AlertNewResourceArgs),
+    #[command(
+        name = "new-contact-point",
+        about = "Create a low-level staged alert contact point scaffold.",
+        after_help = ALERT_NEW_CONTACT_POINT_HELP_TEXT
+    )]
+    NewContactPoint(AlertNewResourceArgs),
+    #[command(
+        name = "new-template",
+        about = "Create a low-level staged alert template scaffold.",
+        after_help = ALERT_NEW_TEMPLATE_HELP_TEXT
+    )]
+    NewTemplate(AlertNewResourceArgs),
+    #[command(
+        name = "list-rules",
+        about = "List live Grafana alert rules.",
+        after_help = ALERT_LIST_RULES_HELP_TEXT
+    )]
     ListRules(AlertListArgs),
     #[command(
         name = "list-contact-points",
-        about = "List live Grafana alert contact points."
+        about = "List live Grafana alert contact points.",
+        after_help = ALERT_LIST_CONTACT_POINTS_HELP_TEXT
     )]
     ListContactPoints(AlertListArgs),
-    #[command(name = "list-mute-timings", about = "List live Grafana mute timings.")]
+    #[command(
+        name = "list-mute-timings",
+        about = "List live Grafana mute timings.",
+        after_help = ALERT_LIST_MUTE_TIMINGS_HELP_TEXT
+    )]
     ListMuteTimings(AlertListArgs),
     #[command(
         name = "list-templates",
-        about = "List live Grafana notification templates."
+        about = "List live Grafana notification templates.",
+        after_help = ALERT_LIST_TEMPLATES_HELP_TEXT
     )]
     ListTemplates(AlertListArgs),
 }
@@ -308,6 +734,8 @@ pub struct AlertNamespaceArgs {
 /// Struct definition for AlertCliArgs.
 #[derive(Debug, Clone)]
 pub struct AlertCliArgs {
+    pub command_kind: Option<AlertCommandKind>,
+    pub authoring_command_kind: Option<AlertAuthoringCommandKind>,
     pub url: String,
     pub api_token: Option<String>,
     pub username: Option<String>,
@@ -332,11 +760,35 @@ pub struct AlertCliArgs {
     pub csv: bool,
     pub json: bool,
     pub no_header: bool,
+    pub desired_dir: Option<PathBuf>,
+    pub prune: bool,
+    pub plan_file: Option<PathBuf>,
+    pub approve: bool,
+    pub allow_policy_reset: bool,
+    pub resource_kind: Option<AlertResourceKind>,
+    pub resource_identity: Option<String>,
+    pub command_output: Option<AlertCommandOutputFormat>,
+    pub scaffold_name: Option<String>,
+    pub source_name: Option<String>,
+    pub folder: Option<String>,
+    pub rule_group: Option<String>,
+    pub receiver: Option<String>,
+    pub no_route: bool,
+    pub labels: Vec<String>,
+    pub annotations: Vec<String>,
+    pub severity: Option<String>,
+    pub for_duration: Option<String>,
+    pub expr: Option<String>,
+    pub threshold: Option<f64>,
+    pub above: bool,
+    pub below: bool,
 }
 
 /// cli args from common.
 pub fn cli_args_from_common(common: AlertCommonArgs) -> AlertCliArgs {
     AlertCliArgs {
+        command_kind: None,
+        authoring_command_kind: None,
         url: common.url,
         api_token: common.api_token,
         username: common.username,
@@ -361,7 +813,42 @@ pub fn cli_args_from_common(common: AlertCommonArgs) -> AlertCliArgs {
         csv: false,
         json: false,
         no_header: false,
+        desired_dir: None,
+        prune: false,
+        plan_file: None,
+        approve: false,
+        allow_policy_reset: false,
+        resource_kind: None,
+        resource_identity: None,
+        command_output: None,
+        scaffold_name: None,
+        source_name: None,
+        folder: None,
+        rule_group: None,
+        receiver: None,
+        no_route: false,
+        labels: Vec::new(),
+        annotations: Vec::new(),
+        severity: None,
+        for_duration: None,
+        expr: None,
+        threshold: None,
+        above: false,
+        below: false,
     }
+}
+
+fn cli_args_from_defaults() -> AlertCliArgs {
+    cli_args_from_common(AlertCommonArgs {
+        url: DEFAULT_URL.to_string(),
+        api_token: None,
+        username: None,
+        password: None,
+        prompt_password: false,
+        prompt_token: false,
+        timeout: DEFAULT_TIMEOUT,
+        verify_ssl: false,
+    })
 }
 
 fn empty_legacy_args() -> AlertLegacyArgs {
@@ -435,6 +922,7 @@ pub fn normalize_alert_namespace_args(args: AlertNamespaceArgs) -> AlertCliArgs 
     match args.command {
         Some(AlertGroupCommand::Export(inner)) => {
             let mut args = cli_args_from_common(inner.common);
+            args.command_kind = Some(AlertCommandKind::Export);
             args.output_dir = inner.output_dir;
             args.flat = inner.flat;
             args.overwrite = inner.overwrite;
@@ -442,6 +930,7 @@ pub fn normalize_alert_namespace_args(args: AlertNamespaceArgs) -> AlertCliArgs 
         }
         Some(AlertGroupCommand::Import(inner)) => {
             let mut args = cli_args_from_common(inner.common);
+            args.command_kind = Some(AlertCommandKind::Import);
             args.import_dir = Some(inner.import_dir);
             args.replace_existing = inner.replace_existing;
             args.dry_run = inner.dry_run;
@@ -452,14 +941,132 @@ pub fn normalize_alert_namespace_args(args: AlertNamespaceArgs) -> AlertCliArgs 
         }
         Some(AlertGroupCommand::Diff(inner)) => {
             let mut args = cli_args_from_common(inner.common);
+            args.command_kind = Some(AlertCommandKind::Diff);
             args.diff_dir = Some(inner.diff_dir);
             args.json = inner.json;
             args.dashboard_uid_map = inner.dashboard_uid_map;
             args.panel_id_map = inner.panel_id_map;
             args
         }
+        Some(AlertGroupCommand::Plan(inner)) => {
+            let mut args = cli_args_from_common(inner.common);
+            args.command_kind = Some(AlertCommandKind::Plan);
+            args.desired_dir = Some(inner.desired_dir);
+            args.prune = inner.prune;
+            args.dashboard_uid_map = inner.dashboard_uid_map;
+            args.panel_id_map = inner.panel_id_map;
+            args.command_output = Some(inner.output);
+            args.json = matches!(inner.output, AlertCommandOutputFormat::Json);
+            args
+        }
+        Some(AlertGroupCommand::Apply(inner)) => {
+            let mut args = cli_args_from_common(inner.common);
+            args.command_kind = Some(AlertCommandKind::Apply);
+            args.plan_file = Some(inner.plan_file);
+            args.approve = inner.approve;
+            args.command_output = Some(inner.output);
+            args.json = matches!(inner.output, AlertCommandOutputFormat::Json);
+            args
+        }
+        Some(AlertGroupCommand::Delete(inner)) => {
+            let mut args = cli_args_from_common(inner.common);
+            args.command_kind = Some(AlertCommandKind::Delete);
+            args.resource_kind = Some(inner.kind);
+            args.resource_identity = Some(inner.identity);
+            args.allow_policy_reset = inner.allow_policy_reset;
+            args.command_output = Some(inner.output);
+            args.json = matches!(inner.output, AlertCommandOutputFormat::Json);
+            args
+        }
+        Some(AlertGroupCommand::Init(inner)) => {
+            let mut args = cli_args_from_defaults();
+            args.command_kind = Some(AlertCommandKind::Init);
+            args.desired_dir = Some(inner.desired_dir);
+            args
+        }
+        Some(AlertGroupCommand::AddRule(inner)) => {
+            let mut args = cli_args_from_defaults();
+            args.authoring_command_kind = Some(AlertAuthoringCommandKind::AddRule);
+            args.desired_dir = Some(inner.base.desired_dir);
+            args.scaffold_name = Some(inner.name);
+            args.folder = Some(inner.folder);
+            args.rule_group = Some(inner.rule_group);
+            args.receiver = inner.receiver;
+            args.no_route = inner.no_route;
+            args.labels = inner.labels;
+            args.annotations = inner.annotations;
+            args.severity = inner.severity;
+            args.for_duration = inner.for_duration;
+            args.expr = inner.expr;
+            args.threshold = inner.threshold;
+            args.above = inner.above;
+            args.below = inner.below;
+            args.dry_run = inner.dry_run;
+            args
+        }
+        Some(AlertGroupCommand::CloneRule(inner)) => {
+            let mut args = cli_args_from_defaults();
+            args.authoring_command_kind = Some(AlertAuthoringCommandKind::CloneRule);
+            args.desired_dir = Some(inner.base.desired_dir);
+            args.source_name = Some(inner.source);
+            args.scaffold_name = Some(inner.name);
+            args.folder = inner.folder;
+            args.rule_group = inner.rule_group;
+            args.receiver = inner.receiver;
+            args.no_route = inner.no_route;
+            args.dry_run = inner.dry_run;
+            args
+        }
+        Some(AlertGroupCommand::AddContactPoint(inner)) => {
+            let mut args = cli_args_from_defaults();
+            args.authoring_command_kind = Some(AlertAuthoringCommandKind::AddContactPoint);
+            args.desired_dir = Some(inner.base.desired_dir);
+            args.scaffold_name = Some(inner.name);
+            args.dry_run = inner.dry_run;
+            args
+        }
+        Some(AlertGroupCommand::SetRoute(inner)) => {
+            let mut args = cli_args_from_defaults();
+            args.authoring_command_kind = Some(AlertAuthoringCommandKind::SetRoute);
+            args.desired_dir = Some(inner.base.desired_dir);
+            args.receiver = Some(inner.receiver);
+            args.labels = inner.labels;
+            args.severity = inner.severity;
+            args.dry_run = inner.dry_run;
+            args
+        }
+        Some(AlertGroupCommand::PreviewRoute(inner)) => {
+            let mut args = cli_args_from_defaults();
+            args.authoring_command_kind = Some(AlertAuthoringCommandKind::PreviewRoute);
+            args.desired_dir = Some(inner.base.desired_dir);
+            args.labels = inner.labels;
+            args.severity = inner.severity;
+            args
+        }
+        Some(AlertGroupCommand::NewRule(inner)) => {
+            let mut args = cli_args_from_defaults();
+            args.command_kind = Some(AlertCommandKind::NewRule);
+            args.desired_dir = Some(inner.desired_dir);
+            args.scaffold_name = Some(inner.name);
+            args
+        }
+        Some(AlertGroupCommand::NewContactPoint(inner)) => {
+            let mut args = cli_args_from_defaults();
+            args.command_kind = Some(AlertCommandKind::NewContactPoint);
+            args.desired_dir = Some(inner.desired_dir);
+            args.scaffold_name = Some(inner.name);
+            args
+        }
+        Some(AlertGroupCommand::NewTemplate(inner)) => {
+            let mut args = cli_args_from_defaults();
+            args.command_kind = Some(AlertCommandKind::NewTemplate);
+            args.desired_dir = Some(inner.desired_dir);
+            args.scaffold_name = Some(inner.name);
+            args
+        }
         Some(AlertGroupCommand::ListRules(inner)) => {
             let mut args = cli_args_from_common(inner.common);
+            args.command_kind = Some(AlertCommandKind::ListRules);
             args.list_kind = Some(AlertListKind::Rules);
             args.org_id = inner.org_id;
             args.all_orgs = inner.all_orgs;
@@ -472,6 +1079,7 @@ pub fn normalize_alert_namespace_args(args: AlertNamespaceArgs) -> AlertCliArgs 
         }
         Some(AlertGroupCommand::ListContactPoints(inner)) => {
             let mut args = cli_args_from_common(inner.common);
+            args.command_kind = Some(AlertCommandKind::ListContactPoints);
             args.list_kind = Some(AlertListKind::ContactPoints);
             args.org_id = inner.org_id;
             args.all_orgs = inner.all_orgs;
@@ -484,6 +1092,7 @@ pub fn normalize_alert_namespace_args(args: AlertNamespaceArgs) -> AlertCliArgs 
         }
         Some(AlertGroupCommand::ListMuteTimings(inner)) => {
             let mut args = cli_args_from_common(inner.common);
+            args.command_kind = Some(AlertCommandKind::ListMuteTimings);
             args.list_kind = Some(AlertListKind::MuteTimings);
             args.org_id = inner.org_id;
             args.all_orgs = inner.all_orgs;
@@ -496,6 +1105,7 @@ pub fn normalize_alert_namespace_args(args: AlertNamespaceArgs) -> AlertCliArgs 
         }
         Some(AlertGroupCommand::ListTemplates(inner)) => {
             let mut args = cli_args_from_common(inner.common);
+            args.command_kind = Some(AlertCommandKind::ListTemplates);
             args.list_kind = Some(AlertListKind::Templates);
             args.org_id = inner.org_id;
             args.all_orgs = inner.all_orgs;
@@ -509,6 +1119,8 @@ pub fn normalize_alert_namespace_args(args: AlertNamespaceArgs) -> AlertCliArgs 
         None => {
             let legacy = args.legacy;
             AlertCliArgs {
+                command_kind: None,
+                authoring_command_kind: None,
                 url: legacy.common.url,
                 api_token: legacy.common.api_token,
                 username: legacy.common.username,
@@ -533,6 +1145,28 @@ pub fn normalize_alert_namespace_args(args: AlertNamespaceArgs) -> AlertCliArgs 
                 csv: false,
                 json: false,
                 no_header: false,
+                desired_dir: None,
+                prune: false,
+                plan_file: None,
+                approve: false,
+                allow_policy_reset: false,
+                resource_kind: None,
+                resource_identity: None,
+                command_output: None,
+                scaffold_name: None,
+                source_name: None,
+                folder: None,
+                rule_group: None,
+                receiver: None,
+                no_route: false,
+                labels: Vec::new(),
+                annotations: Vec::new(),
+                severity: None,
+                for_duration: None,
+                expr: None,
+                threshold: None,
+                above: false,
+                below: false,
             }
         }
     }

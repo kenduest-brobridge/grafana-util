@@ -8,7 +8,15 @@ use super::access_cli_shared::{
 };
 
 pub(crate) const ACCESS_SERVICE_ACCOUNT_HELP_TEXT: &str = "Examples:\n\n  grafana-util access service-account list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json\n  grafana-util access service-account token add --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --name deploy-bot --token-name nightly";
+pub(crate) const ACCESS_SERVICE_ACCOUNT_LIST_HELP_TEXT: &str = "Examples:\n\n  grafana-util access service-account list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json\n  grafana-util access service-account list --url http://localhost:3000 --basic-user admin --basic-password admin --table";
+pub(crate) const ACCESS_SERVICE_ACCOUNT_ADD_HELP_TEXT: &str = "Examples:\n\n  grafana-util access service-account add --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --name deploy-bot --role Editor --json";
+pub(crate) const ACCESS_SERVICE_ACCOUNT_EXPORT_HELP_TEXT: &str = "Examples:\n\n  grafana-util access service-account export --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --export-dir ./access-service-accounts --overwrite";
+pub(crate) const ACCESS_SERVICE_ACCOUNT_IMPORT_HELP_TEXT: &str = "Examples:\n\n  grafana-util access service-account import --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --import-dir ./access-service-accounts --dry-run --output-format table\n  grafana-util access service-account import --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --import-dir ./access-service-accounts --replace-existing --yes";
+pub(crate) const ACCESS_SERVICE_ACCOUNT_DIFF_HELP_TEXT: &str = "Examples:\n\n  grafana-util access service-account diff --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --diff-dir ./access-service-accounts";
+pub(crate) const ACCESS_SERVICE_ACCOUNT_DELETE_HELP_TEXT: &str = "Examples:\n\n  grafana-util access service-account delete --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --name deploy-bot --yes --json";
+pub(crate) const ACCESS_SERVICE_ACCOUNT_TOKEN_HELP_TEXT: &str = "Examples:\n\n  grafana-util access service-account token add --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --name deploy-bot --token-name nightly\n  grafana-util access service-account token delete --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --name deploy-bot --token-name nightly --yes --json";
 pub(crate) const ACCESS_SERVICE_ACCOUNT_TOKEN_ADD_HELP_TEXT: &str = "Examples:\n\n  grafana-util access service-account token add --token \"$GRAFANA_API_TOKEN\" --name deploy-bot --token-name nightly\n  grafana-util access service-account token add --token \"$GRAFANA_API_TOKEN\" --service-account-id 7 --token-name nightly --seconds-to-live 3600";
+pub(crate) const ACCESS_SERVICE_ACCOUNT_TOKEN_DELETE_HELP_TEXT: &str = "Examples:\n\n  grafana-util access service-account token delete --token \"$GRAFANA_API_TOKEN\" --name deploy-bot --token-name nightly --yes --json\n  grafana-util access service-account token delete --token \"$GRAFANA_API_TOKEN\" --service-account-id 7 --token-name nightly --yes --json";
 
 /// Struct definition for ServiceAccountListArgs.
 #[derive(Debug, Clone, Args)]
@@ -192,18 +200,26 @@ pub struct ServiceAccountTokenAddArgs {
 pub enum ServiceAccountTokenCommand {
     #[command(after_help = ACCESS_SERVICE_ACCOUNT_TOKEN_ADD_HELP_TEXT)]
     Add(ServiceAccountTokenAddArgs),
+    #[command(after_help = ACCESS_SERVICE_ACCOUNT_TOKEN_DELETE_HELP_TEXT)]
     Delete(ServiceAccountTokenDeleteArgs),
 }
 
 /// Enum definition for ServiceAccountCommand.
 #[derive(Debug, Clone, Subcommand)]
 pub enum ServiceAccountCommand {
+    #[command(after_help = ACCESS_SERVICE_ACCOUNT_LIST_HELP_TEXT)]
     List(ServiceAccountListArgs),
+    #[command(after_help = ACCESS_SERVICE_ACCOUNT_ADD_HELP_TEXT)]
     Add(ServiceAccountAddArgs),
+    #[command(after_help = ACCESS_SERVICE_ACCOUNT_EXPORT_HELP_TEXT)]
     Export(ServiceAccountExportArgs),
+    #[command(after_help = ACCESS_SERVICE_ACCOUNT_IMPORT_HELP_TEXT)]
     Import(ServiceAccountImportArgs),
+    #[command(after_help = ACCESS_SERVICE_ACCOUNT_DIFF_HELP_TEXT)]
     Diff(ServiceAccountDiffArgs),
+    #[command(after_help = ACCESS_SERVICE_ACCOUNT_DELETE_HELP_TEXT)]
     Delete(ServiceAccountDeleteArgs),
+    #[command(after_help = ACCESS_SERVICE_ACCOUNT_TOKEN_HELP_TEXT)]
     Token {
         #[command(subcommand)]
         command: ServiceAccountTokenCommand,

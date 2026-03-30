@@ -3,7 +3,10 @@ use std::path::PathBuf;
 
 use super::access_cli_shared::{
     parse_bool_text, CommonCliArgs, DryRunOutputFormat, ListOutputFormat, Scope,
-    ACCESS_USER_ADD_HELP_TEXT, DEFAULT_ACCESS_USER_EXPORT_DIR, DEFAULT_PAGE_SIZE,
+    ACCESS_USER_ADD_HELP_TEXT, ACCESS_USER_BROWSE_HELP_TEXT, ACCESS_USER_DELETE_HELP_TEXT,
+    ACCESS_USER_DIFF_HELP_TEXT, ACCESS_USER_EXPORT_HELP_TEXT, ACCESS_USER_IMPORT_HELP_TEXT,
+    ACCESS_USER_LIST_HELP_TEXT, ACCESS_USER_MODIFY_HELP_TEXT, DEFAULT_ACCESS_USER_EXPORT_DIR,
+    DEFAULT_PAGE_SIZE,
 };
 
 /// Arguments for listing Grafana users.
@@ -357,13 +360,20 @@ pub struct UserDiffArgs {
 /// Enum definition for UserCommand.
 #[derive(Debug, Clone, Subcommand)]
 pub enum UserCommand {
+    #[command(after_help = ACCESS_USER_LIST_HELP_TEXT)]
     List(UserListArgs),
+    #[command(after_help = ACCESS_USER_BROWSE_HELP_TEXT)]
     Browse(UserBrowseArgs),
     #[command(after_help = ACCESS_USER_ADD_HELP_TEXT)]
     Add(UserAddArgs),
+    #[command(after_help = ACCESS_USER_MODIFY_HELP_TEXT)]
     Modify(UserModifyArgs),
+    #[command(after_help = ACCESS_USER_EXPORT_HELP_TEXT)]
     Export(UserExportArgs),
+    #[command(after_help = ACCESS_USER_IMPORT_HELP_TEXT)]
     Import(UserImportArgs),
+    #[command(after_help = ACCESS_USER_DIFF_HELP_TEXT)]
     Diff(UserDiffArgs),
+    #[command(after_help = ACCESS_USER_DELETE_HELP_TEXT)]
     Delete(UserDeleteArgs),
 }

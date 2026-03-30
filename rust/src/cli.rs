@@ -37,6 +37,24 @@ use crate::overview::{run_overview_cli, OverviewCliArgs};
 use crate::project_status_command::{run_project_status_cli, ProjectStatusCliArgs};
 use crate::sync::{run_sync_cli, SyncCliArgs, SyncGroupCommand};
 
+const UNIFIED_DASHBOARD_HELP_TEXT: &str = "Examples:\n\n  grafana-util dashboard browse --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\"\n  grafana-util dashboard export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./dashboards --overwrite\n  grafana-util dashboard diff --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/raw";
+const UNIFIED_DATASOURCE_HELP_TEXT: &str = "Examples:\n\n  grafana-util datasource browse --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\"\n  grafana-util datasource list --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --json\n  grafana-util datasource import --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --import-dir ./datasources --dry-run --json";
+const UNIFIED_SYNC_HELP_TEXT: &str = "Examples:\n\n  grafana-util sync summary --desired-file ./desired.json\n  grafana-util sync plan --desired-file ./desired.json --fetch-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\"\n  grafana-util sync apply --plan-file ./sync-plan-reviewed.json --approve --execute-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\"";
+const UNIFIED_ALERT_HELP_TEXT: &str = "Examples:\n\n  grafana-util alert export --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output-dir ./alerts --overwrite\n  grafana-util alert import --url http://localhost:3000 --import-dir ./alerts/raw --replace-existing --dry-run --json\n  grafana-util alert list-rules --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json";
+const UNIFIED_ACCESS_HELP_TEXT: &str = "Examples:\n\n  grafana-util access user list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json\n  grafana-util access team import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./access-teams --replace-existing --yes\n  grafana-util access service-account token add --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --name deploy-bot --token-name nightly";
+const DASHBOARD_BROWSE_HELP_TEXT: &str = "Examples:\n\n  grafana-util dashboard browse --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\"\n  grafana-util dashboard browse --url http://localhost:3000 --basic-user admin --basic-password admin --path 'Platform / Infra'\n  grafana-util dashboard browse --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs";
+const DASHBOARD_LIST_HELP_TEXT: &str = "Examples:\n\n  grafana-util dashboard list --url http://localhost:3000 --basic-user admin --basic-password admin\n  grafana-util dashboard list --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --json\n  grafana-util dashboard list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json";
+const DASHBOARD_EXPORT_HELP_TEXT: &str = "Examples:\n\n  grafana-util dashboard export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./dashboards --overwrite\n  grafana-util dashboard export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --export-dir ./dashboards --overwrite\n  grafana-util dashboard export --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --export-dir ./dashboards --overwrite";
+const DASHBOARD_IMPORT_HELP_TEXT: &str = "Examples:\n\n  grafana-util dashboard import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/raw --replace-existing\n  grafana-util dashboard import --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --import-dir ./dashboards/raw --dry-run --table\n  grafana-util dashboard import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/raw --interactive --replace-existing";
+const DASHBOARD_DELETE_HELP_TEXT: &str = "Examples:\n\n  grafana-util dashboard delete --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --uid cpu-main --dry-run --json\n  grafana-util dashboard delete --url http://localhost:3000 --basic-user admin --basic-password admin --path 'Platform / Infra' --yes\n  grafana-util dashboard delete --url http://localhost:3000 --interactive";
+const DASHBOARD_DIFF_HELP_TEXT: &str = "Examples:\n\n  grafana-util dashboard diff --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/raw\n  grafana-util dashboard diff --url http://localhost:3000 --basic-user admin --basic-password admin --org-id 2 --import-dir ./dashboards/raw --json";
+const DASHBOARD_INSPECT_EXPORT_HELP_TEXT: &str = "Examples:\n\n  grafana-util dashboard inspect-export --import-dir ./dashboards/raw --table\n  grafana-util dashboard inspect-export --import-dir ./dashboards/raw --interactive\n  grafana-util dashboard inspect-export --import-dir ./dashboards/raw --report governance-json";
+const DASHBOARD_INSPECT_LIVE_HELP_TEXT: &str = "Examples:\n\n  grafana-util dashboard inspect-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output-format governance-json\n  grafana-util dashboard inspect-live --url http://localhost:3000 --basic-user admin --basic-password admin --interactive";
+const DASHBOARD_INSPECT_VARS_HELP_TEXT: &str = "Examples:\n\n  grafana-util dashboard inspect-vars --dashboard-url 'https://grafana.example.com/d/cpu-main/cpu-overview?var-cluster=prod-a' --token \"$GRAFANA_API_TOKEN\" --output-format table\n  grafana-util dashboard inspect-vars --url https://grafana.example.com --dashboard-uid cpu-main --vars-query 'var-cluster=prod-a&var-instance=node01' --token \"$GRAFANA_API_TOKEN\" --output-format json";
+const DASHBOARD_GOVERNANCE_GATE_HELP_TEXT: &str = "Examples:\n\n  grafana-util dashboard governance-gate --policy-source file --policy ./policy.yaml --governance ./governance.json --queries ./queries.json\n  grafana-util dashboard governance-gate --policy-source builtin --builtin-policy default --governance ./governance.json --queries ./queries.json --output-format json --json-output ./governance-check.json";
+const DASHBOARD_TOPOLOGY_HELP_TEXT: &str = "Examples:\n\n  grafana-util dashboard topology --governance ./governance.json --queries ./queries.json --alert-contract ./alert-contract.json --output-format mermaid\n  grafana-util dashboard graph --governance ./governance.json --queries ./queries.json --alert-contract ./alert-contract.json --output-format dot --output-file ./dashboard-topology.dot";
+const DASHBOARD_SCREENSHOT_HELP_TEXT: &str = "Examples:\n\n  grafana-util dashboard screenshot --dashboard-url 'https://grafana.example.com/d/cpu-main/cpu-overview?var-cluster=prod-a' --token \"$GRAFANA_API_TOKEN\" --output ./cpu-main.png --full-page --header-title --header-url --header-captured-at\n  grafana-util dashboard screenshot --url https://grafana.example.com --dashboard-uid rYdddlPWk --panel-id 20 --vars-query 'var-datasource=prom-main&var-job=node-exporter&var-node=host01:9100' --token \"$GRAFANA_API_TOKEN\" --output ./panel.png --header-title 'CPU Busy' --header-text 'Solo panel debug capture'";
+
 fn render_long_help_with_color_choice(command: &mut clap::Command, colorize: bool) -> String {
     let configured = std::mem::take(command).color(if colorize {
         ColorChoice::Always
@@ -198,33 +216,67 @@ where
 /// Dashboard subcommands exposed through the unified root CLI.
 #[derive(Debug, Clone, Subcommand)]
 pub enum DashboardGroupCommand {
-    #[command(about = "Browse the live dashboard tree in an interactive terminal UI.")]
+    #[command(
+        about = "Browse the live dashboard tree in an interactive terminal UI.",
+        after_help = DASHBOARD_BROWSE_HELP_TEXT
+    )]
     Browse(BrowseArgs),
-    #[command(about = "List dashboard summaries without writing export files.")]
+    #[command(
+        about = "List dashboard summaries without writing export files.",
+        after_help = DASHBOARD_LIST_HELP_TEXT
+    )]
     List(ListArgs),
-    #[command(about = "Export dashboards to raw/ and prompt/ JSON files.")]
+    #[command(
+        about = "Export dashboards to raw/ and prompt/ JSON files.",
+        after_help = DASHBOARD_EXPORT_HELP_TEXT
+    )]
     Export(ExportArgs),
-    #[command(about = "Import dashboard JSON files through the Grafana API.")]
+    #[command(
+        about = "Import dashboard JSON files through the Grafana API.",
+        after_help = DASHBOARD_IMPORT_HELP_TEXT
+    )]
     Import(ImportArgs),
-    #[command(about = "Delete live dashboards by UID or folder path.")]
+    #[command(
+        about = "Delete live dashboards by UID or folder path.",
+        after_help = DASHBOARD_DELETE_HELP_TEXT
+    )]
     Delete(DeleteArgs),
-    #[command(about = "Compare local raw dashboard files against live Grafana dashboards.")]
+    #[command(
+        about = "Compare local raw dashboard files against live Grafana dashboards.",
+        after_help = DASHBOARD_DIFF_HELP_TEXT
+    )]
     Diff(DiffArgs),
-    #[command(about = "Analyze a raw dashboard export directory and summarize its structure.")]
+    #[command(
+        about = "Analyze a raw dashboard export directory and summarize its structure.",
+        after_help = DASHBOARD_INSPECT_EXPORT_HELP_TEXT
+    )]
     InspectExport(InspectExportArgs),
-    #[command(about = "Analyze live Grafana dashboards without writing a persistent export.")]
+    #[command(
+        about = "Analyze live Grafana dashboards without writing a persistent export.",
+        after_help = DASHBOARD_INSPECT_LIVE_HELP_TEXT
+    )]
     InspectLive(InspectLiveArgs),
-    #[command(about = "List dashboard templating variables from live Grafana.")]
+    #[command(
+        about = "List dashboard templating variables from live Grafana.",
+        after_help = DASHBOARD_INSPECT_VARS_HELP_TEXT
+    )]
     InspectVars(InspectVarsArgs),
-    #[command(about = "Evaluate governance policy against dashboard inspect JSON artifacts.")]
+    #[command(
+        about = "Evaluate governance policy against dashboard inspect JSON artifacts.",
+        after_help = DASHBOARD_GOVERNANCE_GATE_HELP_TEXT
+    )]
     GovernanceGate(GovernanceGateArgs),
     #[command(
         name = "topology",
         visible_alias = "graph",
-        about = "Build a deterministic dashboard topology graph from JSON artifacts."
+        about = "Build a deterministic dashboard topology graph from JSON artifacts.",
+        after_help = DASHBOARD_TOPOLOGY_HELP_TEXT
     )]
     Topology(TopologyArgs),
-    #[command(about = "Open one dashboard in a headless browser and capture image or PDF output.")]
+    #[command(
+        about = "Open one dashboard in a headless browser and capture image or PDF output.",
+        after_help = DASHBOARD_SCREENSHOT_HELP_TEXT
+    )]
     Screenshot(ScreenshotArgs),
 }
 
@@ -233,7 +285,8 @@ pub enum DashboardGroupCommand {
 pub enum UnifiedCommand {
     #[command(
         about = "Run dashboard export, list, import, and diff workflows.",
-        visible_alias = "db"
+        visible_alias = "db",
+        after_help = UNIFIED_DASHBOARD_HELP_TEXT
     )]
     Dashboard {
         #[command(subcommand)]
@@ -241,7 +294,8 @@ pub enum UnifiedCommand {
     },
     #[command(
         about = "Run datasource browse, list, export, import, and diff workflows.",
-        visible_alias = "ds"
+        visible_alias = "ds",
+        after_help = UNIFIED_DATASOURCE_HELP_TEXT
     )]
     Datasource {
         #[command(subcommand)]
@@ -249,15 +303,22 @@ pub enum UnifiedCommand {
     },
     #[command(
         about = "Run staged sync planning workflows with optional live Grafana fetch/apply paths.",
-        visible_alias = "sy"
+        visible_alias = "sy",
+        after_help = UNIFIED_SYNC_HELP_TEXT
     )]
     Sync {
         #[command(subcommand)]
         command: SyncGroupCommand,
     },
-    #[command(about = "Export, import, or diff Grafana alerting resources.")]
+    #[command(
+        about = "Export, import, or diff Grafana alerting resources.",
+        after_help = UNIFIED_ALERT_HELP_TEXT
+    )]
     Alert(AlertNamespaceArgs),
-    #[command(about = "List and manage Grafana users, teams, and service accounts.")]
+    #[command(
+        about = "List and manage Grafana users, teams, and service accounts.",
+        after_help = UNIFIED_ACCESS_HELP_TEXT
+    )]
     Access(AccessCliArgs),
     #[command(
         about = "Summarize project artifacts into a project-wide overview. Staged exports are the default; use `overview live` for live Grafana reads."

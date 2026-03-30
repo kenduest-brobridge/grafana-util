@@ -28,8 +28,12 @@ pub use access_cli_shared::{
     DEFAULT_ACCESS_TEAM_EXPORT_DIR, DEFAULT_PAGE_SIZE, DEFAULT_TIMEOUT, DEFAULT_URL,
 };
 use access_cli_shared::{
-    ACCESS_ORG_DELETE_HELP_TEXT, ACCESS_ORG_DIFF_HELP_TEXT, ACCESS_ORG_HELP_TEXT,
-    ACCESS_ROOT_HELP_TEXT, ACCESS_TEAM_HELP_TEXT, ACCESS_TEAM_IMPORT_HELP_TEXT,
+    ACCESS_ORG_ADD_HELP_TEXT, ACCESS_ORG_DELETE_HELP_TEXT, ACCESS_ORG_DIFF_HELP_TEXT,
+    ACCESS_ORG_EXPORT_HELP_TEXT, ACCESS_ORG_HELP_TEXT, ACCESS_ORG_IMPORT_HELP_TEXT,
+    ACCESS_ORG_LIST_HELP_TEXT, ACCESS_ORG_MODIFY_HELP_TEXT, ACCESS_ROOT_HELP_TEXT,
+    ACCESS_TEAM_ADD_HELP_TEXT, ACCESS_TEAM_BROWSE_HELP_TEXT, ACCESS_TEAM_DELETE_HELP_TEXT,
+    ACCESS_TEAM_DIFF_HELP_TEXT, ACCESS_TEAM_EXPORT_HELP_TEXT, ACCESS_TEAM_HELP_TEXT,
+    ACCESS_TEAM_IMPORT_HELP_TEXT, ACCESS_TEAM_LIST_HELP_TEXT, ACCESS_TEAM_MODIFY_HELP_TEXT,
     ACCESS_USER_HELP_TEXT,
 };
 use access_service_account_cli::ACCESS_SERVICE_ACCOUNT_HELP_TEXT;
@@ -464,10 +468,15 @@ pub struct OrgDiffArgs {
 /// Enum definition for OrgCommand.
 #[derive(Debug, Clone, Subcommand)]
 pub enum OrgCommand {
+    #[command(after_help = ACCESS_ORG_LIST_HELP_TEXT)]
     List(OrgListArgs),
+    #[command(after_help = ACCESS_ORG_ADD_HELP_TEXT)]
     Add(OrgAddArgs),
+    #[command(after_help = ACCESS_ORG_MODIFY_HELP_TEXT)]
     Modify(OrgModifyArgs),
+    #[command(after_help = ACCESS_ORG_EXPORT_HELP_TEXT)]
     Export(OrgExportArgs),
+    #[command(after_help = ACCESS_ORG_IMPORT_HELP_TEXT)]
     Import(OrgImportArgs),
     #[command(after_help = ACCESS_ORG_DIFF_HELP_TEXT)]
     Diff(OrgDiffArgs),
@@ -478,14 +487,21 @@ pub enum OrgCommand {
 /// Enum definition for TeamCommand.
 #[derive(Debug, Clone, Subcommand)]
 pub enum TeamCommand {
+    #[command(after_help = ACCESS_TEAM_LIST_HELP_TEXT)]
     List(TeamListArgs),
+    #[command(after_help = ACCESS_TEAM_BROWSE_HELP_TEXT)]
     Browse(TeamBrowseArgs),
+    #[command(after_help = ACCESS_TEAM_ADD_HELP_TEXT)]
     Add(TeamAddArgs),
+    #[command(after_help = ACCESS_TEAM_MODIFY_HELP_TEXT)]
     Modify(TeamModifyArgs),
+    #[command(after_help = ACCESS_TEAM_EXPORT_HELP_TEXT)]
     Export(TeamExportArgs),
     #[command(after_help = ACCESS_TEAM_IMPORT_HELP_TEXT)]
     Import(TeamImportArgs),
+    #[command(after_help = ACCESS_TEAM_DIFF_HELP_TEXT)]
     Diff(TeamDiffArgs),
+    #[command(after_help = ACCESS_TEAM_DELETE_HELP_TEXT)]
     Delete(TeamDeleteArgs),
 }
 

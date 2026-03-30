@@ -5,10 +5,11 @@ use super::{
     dispatch_with_handlers, maybe_render_unified_help_from_os_args, parse_cli_from,
     render_unified_help_full_text, render_unified_help_text, CliArgs, UnifiedCommand,
 };
+use crate::alert::{parse_cli_from as parse_alert_cli_from, root_command as alert_root_command};
 use crate::dashboard::DashboardCommand;
 use crate::datasource::DatasourceGroupCommand;
 use crate::sync::{SyncGroupCommand, SyncOutputFormat, DEFAULT_REVIEW_TOKEN};
-use clap::Parser;
+use clap::{CommandFactory, Parser};
 use std::cell::RefCell;
 use std::path::Path;
 
@@ -18,6 +19,19 @@ fn render_unified_help() -> String {
 
 fn render_unified_help_full() -> String {
     render_unified_help_full_text(false)
+}
+
+fn render_alert_subcommand_help(path: &[&str]) -> String {
+    let mut command = alert_root_command();
+    let mut current = &mut command;
+    for segment in path {
+        current = current
+            .find_subcommand_mut(segment)
+            .unwrap_or_else(|| panic!("missing alert subcommand help for {segment}"));
+    }
+    let mut output = Vec::new();
+    current.write_long_help(&mut output).unwrap();
+    String::from_utf8(output).unwrap()
 }
 
 #[test]
@@ -305,6 +319,589 @@ fn parse_cli_supports_alert_group() {
 }
 
 #[test]
+fn parse_cli_supports_alert_plan_group_command() {
+    let args: CliArgs = parse_cli_from([
+        "grafana-util",
+        "alert",
+        "plan",
+        "--desired-dir",
+        "./alerts/desired",
+        "--prune",
+        "--output",
+        "json",
+    ]);
+
+    match args.command {
+        UnifiedCommand::Alert(inner) => match inner.command {
+            Some(crate::alert::AlertGroupCommand::Plan(plan_args)) => {
+                assert_eq!(plan_args.desired_dir, Path::new("./alerts/desired"));
+                assert!(plan_args.prune);
+                assert_eq!(format!("{:?}", plan_args.output), "Json");
+            }
+            _ => panic!("expected alert plan"),
+        },
+        _ => panic!("expected alert group"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_alert_apply_group_command() {
+    let args: CliArgs = parse_cli_from([
+        "grafana-util",
+        "alert",
+        "apply",
+        "--plan-file",
+        "./plan.json",
+        "--approve",
+    ]);
+
+    match args.command {
+        UnifiedCommand::Alert(inner) => match inner.command {
+            Some(crate::alert::AlertGroupCommand::Apply(apply_args)) => {
+                assert_eq!(apply_args.plan_file, Path::new("./plan.json"));
+                assert!(apply_args.approve);
+            }
+            _ => panic!("expected alert apply"),
+        },
+        _ => panic!("expected alert group"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_alert_delete_group_command() {
+    let args: CliArgs = parse_cli_from([
+        "grafana-util",
+        "alert",
+        "delete",
+        "--kind",
+        "policy-tree",
+        "--identity",
+        "default",
+        "--allow-policy-reset",
+    ]);
+
+    match args.command {
+        UnifiedCommand::Alert(inner) => match inner.command {
+            Some(crate::alert::AlertGroupCommand::Delete(delete_args)) => {
+                assert_eq!(format!("{:?}", delete_args.kind), "PolicyTree");
+                assert_eq!(delete_args.identity, "default");
+                assert!(delete_args.allow_policy_reset);
+            }
+            _ => panic!("expected alert delete"),
+        },
+        _ => panic!("expected alert group"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_alert_scaffolding_group_commands() {
+    let init_args: CliArgs = parse_cli_from([
+        "grafana-util",
+        "alert",
+        "init",
+        "--desired-dir",
+        "./alerts/desired",
+    ]);
+    match init_args.command {
+        UnifiedCommand::Alert(inner) => match inner.command {
+            Some(crate::alert::AlertGroupCommand::Init(init_args)) => {
+                assert_eq!(init_args.desired_dir, Path::new("./alerts/desired"));
+            }
+            _ => panic!("expected alert init"),
+        },
+        _ => panic!("expected alert group"),
+    }
+
+    let new_rule_args: CliArgs = parse_cli_from([
+        "grafana-util",
+        "alert",
+        "new-rule",
+        "--desired-dir",
+        "./alerts/desired",
+        "--name",
+        "cpu-main",
+    ]);
+    match new_rule_args.command {
+        UnifiedCommand::Alert(inner) => match inner.command {
+            Some(crate::alert::AlertGroupCommand::NewRule(new_args)) => {
+                assert_eq!(new_args.desired_dir, Path::new("./alerts/desired"));
+                assert_eq!(new_args.name, "cpu-main");
+            }
+            _ => panic!("expected alert new-rule"),
+        },
+        _ => panic!("expected alert group"),
+    }
+
+    let new_contact_point_args: CliArgs = parse_cli_from([
+        "grafana-util",
+        "alert",
+        "new-contact-point",
+        "--desired-dir",
+        "./alerts/desired",
+        "--name",
+        "pagerduty-primary",
+    ]);
+    match new_contact_point_args.command {
+        UnifiedCommand::Alert(inner) => match inner.command {
+            Some(crate::alert::AlertGroupCommand::NewContactPoint(new_args)) => {
+                assert_eq!(new_args.name, "pagerduty-primary");
+            }
+            _ => panic!("expected alert new-contact-point"),
+        },
+        _ => panic!("expected alert group"),
+    }
+
+    let new_template_args: CliArgs = parse_cli_from([
+        "grafana-util",
+        "alert",
+        "new-template",
+        "--desired-dir",
+        "./alerts/desired",
+        "--name",
+        "sev1-notification",
+    ]);
+    match new_template_args.command {
+        UnifiedCommand::Alert(inner) => match inner.command {
+            Some(crate::alert::AlertGroupCommand::NewTemplate(new_args)) => {
+                assert_eq!(new_args.name, "sev1-notification");
+            }
+            _ => panic!("expected alert new-template"),
+        },
+        _ => panic!("expected alert group"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_alert_authoring_group_commands() {
+    let add_rule_args: CliArgs = parse_cli_from([
+        "grafana-util",
+        "alert",
+        "add-rule",
+        "--desired-dir",
+        "./alerts/desired",
+        "--name",
+        "cpu-high",
+        "--folder",
+        "platform-alerts",
+        "--rule-group",
+        "cpu",
+        "--receiver",
+        "pagerduty-primary",
+        "--label",
+        "team=platform",
+        "--annotation",
+        "summary=CPU high",
+        "--severity",
+        "critical",
+        "--for",
+        "5m",
+        "--expr",
+        "A",
+        "--threshold",
+        "80",
+        "--above",
+        "--dry-run",
+    ]);
+    match add_rule_args.command {
+        UnifiedCommand::Alert(inner) => match inner.command {
+            Some(crate::alert::AlertGroupCommand::AddRule(add_args)) => {
+                assert_eq!(add_args.base.desired_dir, Path::new("./alerts/desired"));
+                assert_eq!(add_args.name, "cpu-high");
+                assert_eq!(add_args.folder, "platform-alerts");
+                assert_eq!(add_args.rule_group, "cpu");
+                assert_eq!(add_args.receiver.as_deref(), Some("pagerduty-primary"));
+                assert_eq!(add_args.labels, vec!["team=platform".to_string()]);
+                assert_eq!(add_args.annotations, vec!["summary=CPU high".to_string()]);
+                assert_eq!(add_args.severity.as_deref(), Some("critical"));
+                assert_eq!(add_args.for_duration.as_deref(), Some("5m"));
+                assert_eq!(add_args.expr.as_deref(), Some("A"));
+                assert_eq!(add_args.threshold, Some(80.0));
+                assert!(add_args.above);
+                assert!(!add_args.below);
+                assert!(add_args.dry_run);
+            }
+            _ => panic!("expected alert add-rule"),
+        },
+        _ => panic!("expected alert group"),
+    }
+
+    let clone_rule_args: CliArgs = parse_cli_from([
+        "grafana-util",
+        "alert",
+        "clone-rule",
+        "--desired-dir",
+        "./alerts/desired",
+        "--source",
+        "cpu-high",
+        "--name",
+        "cpu-high-staging",
+        "--dry-run",
+    ]);
+    match clone_rule_args.command {
+        UnifiedCommand::Alert(inner) => match inner.command {
+            Some(crate::alert::AlertGroupCommand::CloneRule(clone_args)) => {
+                assert_eq!(clone_args.base.desired_dir, Path::new("./alerts/desired"));
+                assert_eq!(clone_args.source, "cpu-high");
+                assert_eq!(clone_args.name, "cpu-high-staging");
+                assert!(clone_args.dry_run);
+            }
+            _ => panic!("expected alert clone-rule"),
+        },
+        _ => panic!("expected alert group"),
+    }
+
+    let add_contact_point_args: CliArgs = parse_cli_from([
+        "grafana-util",
+        "alert",
+        "add-contact-point",
+        "--desired-dir",
+        "./alerts/desired",
+        "--name",
+        "pagerduty-primary",
+        "--dry-run",
+    ]);
+    match add_contact_point_args.command {
+        UnifiedCommand::Alert(inner) => match inner.command {
+            Some(crate::alert::AlertGroupCommand::AddContactPoint(add_args)) => {
+                assert_eq!(add_args.base.desired_dir, Path::new("./alerts/desired"));
+                assert_eq!(add_args.name, "pagerduty-primary");
+                assert!(add_args.dry_run);
+            }
+            _ => panic!("expected alert add-contact-point"),
+        },
+        _ => panic!("expected alert group"),
+    }
+
+    let set_route_args: CliArgs = parse_cli_from([
+        "grafana-util",
+        "alert",
+        "set-route",
+        "--desired-dir",
+        "./alerts/desired",
+        "--receiver",
+        "pagerduty-primary",
+        "--label",
+        "team=platform",
+        "--severity",
+        "critical",
+        "--dry-run",
+    ]);
+    match set_route_args.command {
+        UnifiedCommand::Alert(inner) => match inner.command {
+            Some(crate::alert::AlertGroupCommand::SetRoute(set_args)) => {
+                assert_eq!(set_args.base.desired_dir, Path::new("./alerts/desired"));
+                assert_eq!(set_args.receiver, "pagerduty-primary");
+                assert_eq!(set_args.labels, vec!["team=platform".to_string()]);
+                assert_eq!(set_args.severity.as_deref(), Some("critical"));
+                assert!(set_args.dry_run);
+            }
+            _ => panic!("expected alert set-route"),
+        },
+        _ => panic!("expected alert group"),
+    }
+
+    let preview_route_args: CliArgs = parse_cli_from([
+        "grafana-util",
+        "alert",
+        "preview-route",
+        "--desired-dir",
+        "./alerts/desired",
+        "--label",
+        "team=platform",
+        "--severity",
+        "critical",
+    ]);
+    match preview_route_args.command {
+        UnifiedCommand::Alert(inner) => match inner.command {
+            Some(crate::alert::AlertGroupCommand::PreviewRoute(preview_args)) => {
+                assert_eq!(preview_args.base.desired_dir, Path::new("./alerts/desired"));
+                assert_eq!(preview_args.labels, vec!["team=platform".to_string()]);
+                assert_eq!(preview_args.severity.as_deref(), Some("critical"));
+            }
+            _ => panic!("expected alert preview-route"),
+        },
+        _ => panic!("expected alert group"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_alert_plan_normalized_args() {
+    let args = parse_alert_cli_from([
+        "grafana-util alert",
+        "plan",
+        "--desired-dir",
+        "./alerts/desired",
+        "--prune",
+        "--dashboard-uid-map",
+        "./dashboard-map.json",
+        "--panel-id-map",
+        "./panel-map.json",
+        "--output",
+        "json",
+    ]);
+
+    assert_eq!(format!("{:?}", args.command_kind), "Some(Plan)");
+    assert_eq!(
+        args.desired_dir.as_deref(),
+        Some(Path::new("./alerts/desired"))
+    );
+    assert!(args.prune);
+    assert_eq!(
+        args.dashboard_uid_map.as_deref(),
+        Some(Path::new("./dashboard-map.json"))
+    );
+    assert_eq!(
+        args.panel_id_map.as_deref(),
+        Some(Path::new("./panel-map.json"))
+    );
+    assert_eq!(format!("{:?}", args.command_output), "Some(Json)");
+    assert!(args.json);
+}
+
+#[test]
+fn parse_cli_supports_alert_apply_normalized_args() {
+    let args = parse_alert_cli_from([
+        "grafana-util alert",
+        "apply",
+        "--plan-file",
+        "./plan.json",
+        "--approve",
+    ]);
+
+    assert_eq!(format!("{:?}", args.command_kind), "Some(Apply)");
+    assert_eq!(args.plan_file.as_deref(), Some(Path::new("./plan.json")));
+    assert!(args.approve);
+}
+
+#[test]
+fn parse_cli_supports_alert_delete_normalized_args() {
+    let args = parse_alert_cli_from([
+        "grafana-util alert",
+        "delete",
+        "--kind",
+        "rule",
+        "--identity",
+        "cpu-main",
+    ]);
+
+    assert_eq!(format!("{:?}", args.command_kind), "Some(Delete)");
+    assert_eq!(format!("{:?}", args.resource_kind), "Some(Rule)");
+    assert_eq!(args.resource_identity.as_deref(), Some("cpu-main"));
+    assert!(!args.allow_policy_reset);
+}
+
+#[test]
+fn parse_cli_supports_alert_scaffolding_normalized_args() {
+    let init_args = parse_alert_cli_from([
+        "grafana-util alert",
+        "init",
+        "--desired-dir",
+        "./alerts/desired",
+    ]);
+    assert_eq!(format!("{:?}", init_args.command_kind), "Some(Init)");
+    assert_eq!(
+        init_args.desired_dir.as_deref(),
+        Some(Path::new("./alerts/desired"))
+    );
+
+    let rule_args = parse_alert_cli_from([
+        "grafana-util alert",
+        "new-rule",
+        "--desired-dir",
+        "./alerts/desired",
+        "--name",
+        "cpu-main",
+    ]);
+    assert_eq!(format!("{:?}", rule_args.command_kind), "Some(NewRule)");
+    assert_eq!(rule_args.scaffold_name.as_deref(), Some("cpu-main"));
+
+    let contact_point_args = parse_alert_cli_from([
+        "grafana-util alert",
+        "new-contact-point",
+        "--desired-dir",
+        "./alerts/desired",
+        "--name",
+        "pagerduty-primary",
+    ]);
+    assert_eq!(
+        format!("{:?}", contact_point_args.command_kind),
+        "Some(NewContactPoint)"
+    );
+    assert_eq!(
+        contact_point_args.scaffold_name.as_deref(),
+        Some("pagerduty-primary")
+    );
+
+    let template_args = parse_alert_cli_from([
+        "grafana-util alert",
+        "new-template",
+        "--desired-dir",
+        "./alerts/desired",
+        "--name",
+        "sev1-notification",
+    ]);
+    assert_eq!(
+        format!("{:?}", template_args.command_kind),
+        "Some(NewTemplate)"
+    );
+    assert_eq!(
+        template_args.scaffold_name.as_deref(),
+        Some("sev1-notification")
+    );
+}
+
+#[test]
+fn parse_cli_supports_alert_authoring_normalized_args() {
+    let add_rule_args = parse_alert_cli_from([
+        "grafana-util alert",
+        "add-rule",
+        "--desired-dir",
+        "./alerts/desired",
+        "--name",
+        "cpu-high",
+        "--folder",
+        "platform-alerts",
+        "--rule-group",
+        "cpu",
+        "--receiver",
+        "pagerduty-primary",
+        "--label",
+        "team=platform",
+        "--annotation",
+        "summary=CPU high",
+        "--severity",
+        "critical",
+        "--for",
+        "5m",
+        "--expr",
+        "A",
+        "--threshold",
+        "80",
+        "--above",
+        "--dry-run",
+    ]);
+    assert_eq!(
+        format!("{:?}", add_rule_args.authoring_command_kind),
+        "Some(AddRule)"
+    );
+    assert_eq!(
+        add_rule_args.desired_dir.as_deref(),
+        Some(Path::new("./alerts/desired"))
+    );
+    assert_eq!(add_rule_args.scaffold_name.as_deref(), Some("cpu-high"));
+    assert_eq!(add_rule_args.folder.as_deref(), Some("platform-alerts"));
+    assert_eq!(add_rule_args.rule_group.as_deref(), Some("cpu"));
+    assert_eq!(add_rule_args.receiver.as_deref(), Some("pagerduty-primary"));
+    assert_eq!(add_rule_args.labels, vec!["team=platform".to_string()]);
+    assert_eq!(
+        add_rule_args.annotations,
+        vec!["summary=CPU high".to_string()]
+    );
+    assert_eq!(add_rule_args.severity.as_deref(), Some("critical"));
+    assert_eq!(add_rule_args.for_duration.as_deref(), Some("5m"));
+    assert_eq!(add_rule_args.expr.as_deref(), Some("A"));
+    assert_eq!(add_rule_args.threshold, Some(80.0));
+    assert!(add_rule_args.above);
+    assert!(!add_rule_args.below);
+    assert!(add_rule_args.dry_run);
+
+    let clone_rule_args = parse_alert_cli_from([
+        "grafana-util alert",
+        "clone-rule",
+        "--desired-dir",
+        "./alerts/desired",
+        "--source",
+        "cpu-high",
+        "--name",
+        "cpu-high-staging",
+        "--no-route",
+        "--dry-run",
+    ]);
+    assert_eq!(
+        format!("{:?}", clone_rule_args.authoring_command_kind),
+        "Some(CloneRule)"
+    );
+    assert_eq!(clone_rule_args.source_name.as_deref(), Some("cpu-high"));
+    assert_eq!(
+        clone_rule_args.scaffold_name.as_deref(),
+        Some("cpu-high-staging")
+    );
+    assert!(clone_rule_args.no_route);
+    assert!(clone_rule_args.dry_run);
+
+    let add_contact_point_args = parse_alert_cli_from([
+        "grafana-util alert",
+        "add-contact-point",
+        "--desired-dir",
+        "./alerts/desired",
+        "--name",
+        "pagerduty-primary",
+        "--dry-run",
+    ]);
+    assert_eq!(
+        format!("{:?}", add_contact_point_args.authoring_command_kind),
+        "Some(AddContactPoint)"
+    );
+    assert_eq!(
+        add_contact_point_args.scaffold_name.as_deref(),
+        Some("pagerduty-primary")
+    );
+    assert!(add_contact_point_args.dry_run);
+
+    let set_route_args = parse_alert_cli_from([
+        "grafana-util alert",
+        "set-route",
+        "--desired-dir",
+        "./alerts/desired",
+        "--receiver",
+        "pagerduty-primary",
+        "--label",
+        "team=platform",
+        "--dry-run",
+    ]);
+    assert_eq!(
+        format!("{:?}", set_route_args.authoring_command_kind),
+        "Some(SetRoute)"
+    );
+    assert_eq!(
+        set_route_args.receiver.as_deref(),
+        Some("pagerduty-primary")
+    );
+    assert_eq!(set_route_args.labels, vec!["team=platform".to_string()]);
+    assert!(set_route_args.dry_run);
+
+    let preview_route_args = parse_alert_cli_from([
+        "grafana-util alert",
+        "preview-route",
+        "--desired-dir",
+        "./alerts/desired",
+        "--label",
+        "team=platform",
+        "--severity",
+        "critical",
+    ]);
+    assert_eq!(
+        format!("{:?}", preview_route_args.authoring_command_kind),
+        "Some(PreviewRoute)"
+    );
+    assert_eq!(
+        preview_route_args.desired_dir.as_deref(),
+        Some(Path::new("./alerts/desired"))
+    );
+    assert_eq!(preview_route_args.labels, vec!["team=platform".to_string()]);
+    assert_eq!(preview_route_args.severity.as_deref(), Some("critical"));
+}
+
+#[test]
+fn parse_cli_supports_alert_apply_requires_approve_flag() {
+    let error = crate::alert::root_command()
+        .try_get_matches_from(["grafana-util alert", "apply", "--plan-file", "./plan.json"])
+        .unwrap_err();
+
+    assert!(error.to_string().contains("--approve"));
+}
+
+#[test]
 fn parse_cli_supports_access_group() {
     let args: CliArgs = parse_cli_from([
         "grafana-util",
@@ -366,6 +963,22 @@ fn parse_cli_supports_overview_live_command() {
 }
 
 #[test]
+fn parse_cli_supports_overview_live_org_scope_flags() {
+    let args: CliArgs = parse_cli_from(["grafana-util", "overview", "live", "--org-id", "7"]);
+
+    match args.command {
+        UnifiedCommand::Overview(inner) => match inner.command {
+            Some(crate::overview::OverviewCommand::Live(live)) => {
+                assert_eq!(live.org_id, Some(7));
+                assert!(!live.all_orgs);
+            }
+            _ => panic!("expected overview live"),
+        },
+        _ => panic!("expected overview group"),
+    }
+}
+
+#[test]
 fn parse_cli_supports_project_status_command() {
     let args: CliArgs = parse_cli_from(["grafana-util", "project-status", "staged"]);
 
@@ -416,6 +1029,22 @@ fn parse_cli_supports_project_status_live_staged_inputs() {
                     live.availability_file.as_deref(),
                     Some(Path::new("./availability.json"))
                 );
+            }
+            _ => panic!("expected project-status live"),
+        },
+        _ => panic!("expected project-status group"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_project_status_live_org_scope_flags() {
+    let args: CliArgs = parse_cli_from(["grafana-util", "project-status", "live", "--all-orgs"]);
+
+    match args.command {
+        UnifiedCommand::ProjectStatus(inner) => match inner.command {
+            crate::project_status_command::ProjectStatusSubcommand::Live(live) => {
+                assert!(live.all_orgs);
+                assert_eq!(live.org_id, None);
             }
             _ => panic!("expected project-status live"),
         },
@@ -519,9 +1148,26 @@ fn maybe_render_unified_help_from_os_args_handles_root_help_and_help_full_flags(
             .unwrap();
     assert!(alert_help.contains("Extended Examples:"));
     assert!(alert_help.contains("[Alert List]"));
+    assert!(alert_help.contains("[Alert Plan]"));
+    assert!(alert_help.contains("[Alert Apply]"));
+    assert!(alert_help.contains("[Alert Delete]"));
+    assert!(alert_help.contains("[Alert Add Rule]"));
+    assert!(alert_help.contains("[Alert Clone Rule]"));
+    assert!(alert_help.contains("[Alert Add Contact Point]"));
+    assert!(alert_help.contains("[Alert Set Route]"));
+    assert!(alert_help.contains("[Alert Preview Route]"));
     assert!(alert_help.contains("alert import --url http://localhost:3000 --import-dir ./alerts/raw --replace-existing --dry-run --json"));
     assert!(alert_help
         .contains("alert diff --url http://localhost:3000 --diff-dir ./alerts/raw --json"));
+    assert!(alert_help.contains("alert plan --desired-dir ./alerts/desired --prune --dashboard-uid-map ./dashboard-map.json --panel-id-map ./panel-map.json --output json"));
+    assert!(alert_help.contains("alert apply --plan-file ./alert-plan-reviewed.json --approve"));
+    assert!(alert_help
+        .contains("alert delete --kind policy-tree --identity default --allow-policy-reset"));
+    assert!(alert_help.contains("alert add-rule --desired-dir ./alerts/desired --name cpu-high"));
+    assert!(alert_help.contains("--dry-run"));
+    assert!(alert_help.contains("alert preview-route --desired-dir ./alerts/desired --label team=platform --severity critical"));
+    assert!(alert_help.contains("fully replaced on rerun instead of merged field-by-field"));
+    assert!(alert_help.contains("low-level rule scaffold"));
 
     let datasource_help = maybe_render_unified_help_from_os_args(
         ["grafana-util", "datasource", "--help-full"],
@@ -545,6 +1191,18 @@ fn maybe_render_unified_help_from_os_args_handles_root_help_and_help_full_flags(
     let alert_short_help =
         maybe_render_unified_help_from_os_args(["grafana-util", "alert", "-h"], false).unwrap();
     assert!(alert_short_help.contains("--help-full"));
+    assert!(alert_short_help.contains("plan"));
+    assert!(alert_short_help.contains("apply"));
+    assert!(alert_short_help.contains("delete"));
+    assert!(alert_short_help.contains("add-rule"));
+    assert!(alert_short_help.contains("clone-rule"));
+    assert!(alert_short_help.contains("add-contact-point"));
+    assert!(alert_short_help.contains("set-route"));
+    assert!(alert_short_help.contains("preview-route"));
+    assert!(alert_short_help.contains("init"));
+    assert!(alert_short_help.contains("new-rule"));
+    assert!(alert_short_help.contains("new-contact-point"));
+    assert!(alert_short_help.contains("new-template"));
 
     let datasource_short_help =
         maybe_render_unified_help_from_os_args(["grafana-util", "datasource", "-h"], false)
@@ -593,6 +1251,85 @@ fn maybe_render_unified_help_from_os_args_handles_root_help_and_help_full_flags(
         false
     )
     .is_none());
+}
+
+#[test]
+fn alert_help_subcommands_document_management_flags_and_examples() {
+    let plan_help = render_alert_subcommand_help(&["plan"]);
+    assert!(plan_help.contains("--desired-dir"));
+    assert!(plan_help.contains("--prune"));
+    assert!(plan_help.contains("--dashboard-uid-map"));
+    assert!(plan_help.contains("--panel-id-map"));
+    assert!(plan_help.contains("--output"));
+    assert!(plan_help.contains("grafana-util alert plan"));
+
+    let apply_help = render_alert_subcommand_help(&["apply"]);
+    assert!(apply_help.contains("--plan-file"));
+    assert!(apply_help.contains("--approve"));
+    assert!(apply_help.contains("grafana-util alert apply"));
+
+    let delete_help = render_alert_subcommand_help(&["delete"]);
+    assert!(delete_help.contains("--kind"));
+    assert!(delete_help.contains("--identity"));
+    assert!(delete_help.contains("--allow-policy-reset"));
+    assert!(delete_help.contains("grafana-util alert delete"));
+
+    let init_help = render_alert_subcommand_help(&["init"]);
+    assert!(init_help.contains("--desired-dir"));
+    assert!(init_help.contains("grafana-util alert init"));
+
+    let add_rule_help = render_alert_subcommand_help(&["add-rule"]);
+    assert!(add_rule_help.contains("--desired-dir"));
+    assert!(add_rule_help.contains("--name"));
+    assert!(add_rule_help.contains("--folder"));
+    assert!(add_rule_help.contains("--rule-group"));
+    assert!(add_rule_help.contains("--receiver"));
+    assert!(add_rule_help.contains("--no-route"));
+    assert!(add_rule_help.contains("--label"));
+    assert!(add_rule_help.contains("--annotation"));
+    assert!(add_rule_help.contains("--severity"));
+    assert!(add_rule_help.contains("--for"));
+    assert!(add_rule_help.contains("--expr"));
+    assert!(add_rule_help.contains("--threshold"));
+    assert!(add_rule_help.contains("--above"));
+    assert!(add_rule_help.contains("--below"));
+    assert!(add_rule_help.contains("--dry-run"));
+    assert!(add_rule_help.contains("grafana-util alert add-rule"));
+
+    let clone_rule_help = render_alert_subcommand_help(&["clone-rule"]);
+    assert!(clone_rule_help.contains("--desired-dir"));
+    assert!(clone_rule_help.contains("--source"));
+    assert!(clone_rule_help.contains("--name"));
+    assert!(clone_rule_help.contains("--dry-run"));
+    assert!(clone_rule_help.contains("grafana-util alert clone-rule"));
+
+    let add_contact_point_help = render_alert_subcommand_help(&["add-contact-point"]);
+    assert!(add_contact_point_help.contains("--desired-dir"));
+    assert!(add_contact_point_help.contains("--name"));
+    assert!(add_contact_point_help.contains("--dry-run"));
+    assert!(add_contact_point_help.contains("grafana-util alert add-contact-point"));
+
+    let set_route_help = render_alert_subcommand_help(&["set-route"]);
+    assert!(set_route_help.contains("--desired-dir"));
+    assert!(set_route_help.contains("--receiver"));
+    assert!(set_route_help.contains("--label"));
+    assert!(set_route_help.contains("--severity"));
+    assert!(set_route_help.contains("--dry-run"));
+    assert!(set_route_help.contains("fully replaces that managed route instead of merging fields"));
+    assert!(set_route_help.contains("grafana-util alert set-route"));
+
+    let preview_route_help = render_alert_subcommand_help(&["preview-route"]);
+    assert!(preview_route_help.contains("--desired-dir"));
+    assert!(preview_route_help.contains("--label"));
+    assert!(preview_route_help.contains("--severity"));
+    assert!(preview_route_help.contains("fully replaces the tool-owned route on rerun"));
+    assert!(preview_route_help.contains("grafana-util alert preview-route"));
+
+    let new_rule_help = render_alert_subcommand_help(&["new-rule"]);
+    assert!(new_rule_help.contains("--desired-dir"));
+    assert!(new_rule_help.contains("--name"));
+    assert!(new_rule_help.contains("low-level staged alert rule scaffold"));
+    assert!(new_rule_help.contains("grafana-util alert new-rule"));
 }
 
 #[test]
@@ -1099,4 +1836,30 @@ fn dispatch_routes_project_status_group_to_project_status_handler() {
 
     assert!(result.is_ok());
     assert_eq!(*routed.borrow(), vec!["project-status".to_string()]);
+}
+
+#[test]
+fn overview_live_help_exposes_project_status_live_contract() {
+    let mut command = crate::overview::OverviewCliArgs::command();
+    let live_command = command
+        .find_subcommand_mut("live")
+        .expect("overview live subcommand should exist");
+    let help = live_command.render_long_help().to_string();
+
+    assert!(help.contains("--org-id"));
+    assert!(help.contains("--all-orgs"));
+    assert!(help.contains("grafana-util overview live"));
+}
+
+#[test]
+fn project_status_live_help_exposes_live_org_scope_contract() {
+    let mut command = crate::project_status_command::ProjectStatusCliArgs::command();
+    let live_command = command
+        .find_subcommand_mut("live")
+        .expect("project-status live subcommand should exist");
+    let help = live_command.render_long_help().to_string();
+
+    assert!(help.contains("--org-id"));
+    assert!(help.contains("--all-orgs"));
+    assert!(help.contains("grafana-util project-status live"));
 }

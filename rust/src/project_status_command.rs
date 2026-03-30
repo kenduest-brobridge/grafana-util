@@ -10,6 +10,7 @@
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use reqwest::Method;
 use serde_json::{Map, Value};
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs::Metadata;
 use std::path::PathBuf;
 
@@ -28,8 +29,8 @@ use crate::datasource_live_project_status::{
 use crate::http::{JsonHttpClient, JsonHttpClientConfig};
 use crate::overview::{self, OverviewArgs, OverviewOutputFormat};
 use crate::project_status::{
-    build_project_status, status_finding, ProjectDomainStatus, ProjectStatus,
-    ProjectStatusFreshness, PROJECT_STATUS_PARTIAL,
+    build_project_status, status_finding, ProjectDomainStatus, ProjectStatus, ProjectStatusFinding,
+    ProjectStatusFreshness, PROJECT_STATUS_BLOCKED, PROJECT_STATUS_PARTIAL, PROJECT_STATUS_READY,
 };
 use crate::project_status_freshness::{
     build_live_project_status_freshness, build_live_project_status_freshness_from_samples,
@@ -43,9 +44,14 @@ use crate::sync::{
 
 const PROJECT_STATUS_DOMAIN_COUNT: usize = 6;
 const PROJECT_STATUS_LIVE_SCOPE: &str = "live";
+const PROJECT_STATUS_LIVE_ALL_ORGS_MODE_SUFFIX: &str = "-all-orgs";
 const PROJECT_STATUS_LIVE_READ_FAILED: &str = "live-read-failed";
+const PROJECT_STATUS_LIVE_ALL_ORGS_AGGREGATE: &str = "multi-org-aggregate";
 const PROJECT_STATUS_TIMESTAMP_FIELDS: &[&str] =
     &["updated", "updatedAt", "modified", "createdAt", "created"];
+const PROJECT_STATUS_HELP_TEXT: &str = "Examples:\n\n  Render staged project status as JSON:\n    grafana-util project-status staged --dashboard-export-dir ./dashboards/raw --desired-file ./desired.json --output json\n\n  Render live project status with staged sync context:\n    grafana-util project-status live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --sync-summary-file ./sync-summary.json --bundle-preflight-file ./bundle-preflight.json --output json";
+const PROJECT_STATUS_STAGED_HELP_TEXT: &str = "Examples:\n\n  Render staged project status as JSON:\n    grafana-util project-status staged --dashboard-export-dir ./dashboards/raw --desired-file ./desired.json --output json\n\n  Render staged project status in the interactive workbench:\n    grafana-util project-status staged --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts --output interactive";
+const PROJECT_STATUS_LIVE_HELP_TEXT: &str = "Examples:\n\n  Render live project status as JSON:\n    grafana-util project-status live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output json\n\n  Render live status across visible orgs while layering staged sync context:\n    grafana-util project-status live --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --sync-summary-file ./sync-summary.json --output interactive";
 
 #[derive(Debug, Clone, Copy, ValueEnum, PartialEq, Eq)]
 pub enum ProjectStatusOutputFormat {
@@ -218,10 +224,14 @@ pub struct ProjectStatusLiveArgs {
 
 #[derive(Debug, Clone, Subcommand)]
 pub enum ProjectStatusSubcommand {
-    #[command(about = "Render project status from staged artifacts. Use exported project inputs.")]
+    #[command(
+        about = "Render project status from staged artifacts. Use exported project inputs.",
+        after_help = PROJECT_STATUS_STAGED_HELP_TEXT
+    )]
     Staged(ProjectStatusStagedArgs),
     #[command(
-        about = "Render project status from live Grafana read surfaces. Use current Grafana state plus optional staged context files."
+        about = "Render project status from live Grafana read surfaces. Use current Grafana state plus optional staged context files.",
+        after_help = PROJECT_STATUS_LIVE_HELP_TEXT
     )]
     Live(ProjectStatusLiveArgs),
 }
@@ -229,7 +239,8 @@ pub enum ProjectStatusSubcommand {
 #[derive(Debug, Clone, Parser)]
 #[command(
     name = "grafana-util project-status",
-    about = "Render project-wide staged or live status through the shared project-status contract. Staged subcommands read exports; live subcommands query Grafana."
+    about = "Render project-wide staged or live status through the shared project-status contract. Staged subcommands read exports; live subcommands query Grafana.",
+    after_help = PROJECT_STATUS_HELP_TEXT
 )]
 pub struct ProjectStatusCliArgs {
     #[command(subcommand)]
@@ -602,6 +613,160 @@ fn build_live_alert_status(client: &JsonHttpClient) -> ProjectDomainStatus {
     stamp_live_domain_freshness(status, &freshness_samples)
 }
 
+fn project_status_severity_rank(status: &str) -> usize {
+    match status {
+        PROJECT_STATUS_BLOCKED => 0,
+        PROJECT_STATUS_PARTIAL => 1,
+        PROJECT_STATUS_READY => 2,
+        _ => 3,
+    }
+}
+
+fn list_visible_orgs(client: &JsonHttpClient) -> Result<Vec<Map<String, Value>>> {
+    request_object_list(
+        client,
+        "/api/orgs",
+        &[],
+        "Unexpected /api/orgs payload from Grafana.",
+    )
+}
+
+fn org_id_from_record(org: &Map<String, Value>) -> Result<i64> {
+    org.get("id")
+        .and_then(Value::as_i64)
+        .ok_or_else(|| message("Grafana org payload did not include a usable numeric id."))
+}
+
+fn merge_project_status_findings(findings: &[ProjectStatusFinding]) -> Vec<ProjectStatusFinding> {
+    let mut merged = BTreeMap::<(String, String), usize>::new();
+    for finding in findings {
+        *merged
+            .entry((finding.kind.clone(), finding.source.clone()))
+            .or_default() += finding.count;
+    }
+    merged
+        .into_iter()
+        .map(|((kind, source), count)| ProjectStatusFinding {
+            kind,
+            count,
+            source,
+        })
+        .collect()
+}
+
+fn merge_live_domain_statuses(statuses: Vec<ProjectDomainStatus>) -> Result<ProjectDomainStatus> {
+    let aggregate = statuses
+        .iter()
+        .min_by_key(|status| {
+            (
+                project_status_severity_rank(&status.status),
+                usize::MAX - status.blocker_count,
+                usize::MAX - status.warning_count,
+            )
+        })
+        .ok_or_else(|| message("Expected at least one per-org domain status to aggregate."))?;
+    let blockers = merge_project_status_findings(
+        &statuses
+            .iter()
+            .flat_map(|status| status.blockers.iter().cloned())
+            .collect::<Vec<_>>(),
+    );
+    let warnings = merge_project_status_findings(
+        &statuses
+            .iter()
+            .flat_map(|status| status.warnings.iter().cloned())
+            .collect::<Vec<_>>(),
+    );
+    let freshness = build_live_overall_freshness(
+        &statuses
+            .iter()
+            .cloned()
+            .collect::<Vec<ProjectDomainStatus>>(),
+    );
+    let reason_code = if statuses
+        .iter()
+        .all(|status| status.reason_code == aggregate.reason_code)
+    {
+        aggregate.reason_code.clone()
+    } else {
+        PROJECT_STATUS_LIVE_ALL_ORGS_AGGREGATE.to_string()
+    };
+    let mode = if statuses.iter().all(|status| status.mode == aggregate.mode) {
+        format!(
+            "{}{}",
+            aggregate.mode, PROJECT_STATUS_LIVE_ALL_ORGS_MODE_SUFFIX
+        )
+    } else {
+        PROJECT_STATUS_LIVE_ALL_ORGS_AGGREGATE.to_string()
+    };
+    let source_kinds = statuses
+        .iter()
+        .flat_map(|status| status.source_kinds.iter().cloned())
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect::<Vec<_>>();
+    let signal_keys = statuses
+        .iter()
+        .flat_map(|status| status.signal_keys.iter().cloned())
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect::<Vec<_>>();
+    let next_actions = statuses
+        .iter()
+        .flat_map(|status| status.next_actions.iter().cloned())
+        .fold(Vec::<String>::new(), |mut acc, item| {
+            if !acc.iter().any(|existing| existing == &item) {
+                acc.push(item);
+            }
+            acc
+        });
+
+    Ok(ProjectDomainStatus {
+        id: aggregate.id.clone(),
+        scope: aggregate.scope.clone(),
+        mode,
+        status: aggregate.status.clone(),
+        reason_code,
+        primary_count: statuses.iter().map(|status| status.primary_count).sum(),
+        blocker_count: statuses.iter().map(|status| status.blocker_count).sum(),
+        warning_count: statuses.iter().map(|status| status.warning_count).sum(),
+        source_kinds,
+        signal_keys,
+        blockers,
+        warnings,
+        next_actions,
+        freshness,
+    })
+}
+
+fn build_live_multi_org_domain_status_with_orgs<F>(
+    orgs: &[Map<String, Value>],
+    mut build_org_status: F,
+) -> Result<ProjectDomainStatus>
+where
+    F: FnMut(i64) -> Result<ProjectDomainStatus>,
+{
+    let mut statuses = Vec::new();
+    for org in orgs {
+        statuses.push(build_org_status(org_id_from_record(org)?)?);
+    }
+    merge_live_domain_statuses(statuses)
+}
+
+fn build_live_multi_org_domain_status<F>(
+    args: &ProjectStatusLiveArgs,
+    orgs: &[Map<String, Value>],
+    mut build_status: F,
+) -> Result<ProjectDomainStatus>
+where
+    F: FnMut(&JsonHttpClient) -> ProjectDomainStatus,
+{
+    build_live_multi_org_domain_status_with_orgs(orgs, |org_id| {
+        let client = build_live_project_status_client_for_org(args, Some(org_id))?;
+        Ok(build_status(&client))
+    })
+}
+
 fn build_live_access_status(client: &JsonHttpClient) -> ProjectDomainStatus {
     let status = build_access_live_domain_status(client).unwrap_or_else(|| {
         build_live_read_failed_domain_status(
@@ -700,11 +865,122 @@ fn build_live_project_status(args: &ProjectStatusLiveArgs) -> Result<ProjectStat
         args.availability_file.as_ref(),
         "Project status availability input",
     )?;
+    let all_org_domain_statuses = if args.all_orgs {
+        Some(list_visible_orgs(&client))
+    } else {
+        None
+    };
+    let dashboard_status = if let Some(orgs_result) = all_org_domain_statuses.as_ref() {
+        match orgs_result {
+            Ok(orgs) if !orgs.is_empty() => {
+                build_live_multi_org_domain_status(args, orgs, build_live_dashboard_status)
+                    .unwrap_or_else(|_| {
+                        build_live_read_failed_domain_status(
+                    "dashboard",
+                    "live-dashboard-read",
+                    "live-dashboard-search",
+                    "live.dashboardCount",
+                    "restore dashboard/org read access, then re-run live project-status --all-orgs",
+                )
+                    })
+            }
+            Ok(_) => build_live_dashboard_status(&client),
+            Err(_) => build_live_read_failed_domain_status(
+                "dashboard",
+                "live-dashboard-read",
+                "live-org-list",
+                "live.dashboardCount",
+                "restore org list access, then re-run live project-status --all-orgs",
+            ),
+        }
+    } else {
+        build_live_dashboard_status(&client)
+    };
+    let datasource_status = if let Some(orgs_result) = all_org_domain_statuses.as_ref() {
+        match orgs_result {
+            Ok(orgs) if !orgs.is_empty() => build_live_multi_org_domain_status(
+                args,
+                orgs,
+                build_live_datasource_status,
+            )
+            .unwrap_or_else(|_| {
+                build_live_read_failed_domain_status(
+                    "datasource",
+                    "live-inventory",
+                    "live-datasource-list",
+                    "live.datasourceCount",
+                    "restore datasource/org read access, then re-run live project-status --all-orgs",
+                )
+            }),
+            Ok(_) => build_live_datasource_status(&client),
+            Err(_) => build_live_read_failed_domain_status(
+                "datasource",
+                "live-inventory",
+                "live-org-list",
+                "live.datasourceCount",
+                "restore org list access, then re-run live project-status --all-orgs",
+            ),
+        }
+    } else {
+        build_live_datasource_status(&client)
+    };
+    let alert_status = if let Some(orgs_result) = all_org_domain_statuses.as_ref() {
+        match orgs_result {
+            Ok(orgs) if !orgs.is_empty() => {
+                build_live_multi_org_domain_status(args, orgs, build_live_alert_status)
+                    .unwrap_or_else(|_| {
+                        build_live_read_failed_domain_status(
+                    "alert",
+                    "live-alert-surfaces",
+                    "alert",
+                    "live.alertRuleCount",
+                    "restore alert/org read access, then re-run live project-status --all-orgs",
+                )
+                    })
+            }
+            Ok(_) => build_live_alert_status(&client),
+            Err(_) => build_live_read_failed_domain_status(
+                "alert",
+                "live-alert-surfaces",
+                "live-org-list",
+                "live.alertRuleCount",
+                "restore org list access, then re-run live project-status --all-orgs",
+            ),
+        }
+    } else {
+        build_live_alert_status(&client)
+    };
+    let access_status = if let Some(orgs_result) = all_org_domain_statuses.as_ref() {
+        match orgs_result {
+            Ok(orgs) if !orgs.is_empty() => {
+                build_live_multi_org_domain_status(args, orgs, build_live_access_status)
+                    .unwrap_or_else(|_| {
+                        build_live_read_failed_domain_status(
+                    "access",
+                    "live-list-surfaces",
+                    "grafana-utils-access-live-org-users",
+                    "live.users.count",
+                    "restore access/org read access, then re-run live project-status --all-orgs",
+                )
+                    })
+            }
+            Ok(_) => build_live_access_status(&client),
+            Err(_) => build_live_read_failed_domain_status(
+                "access",
+                "live-list-surfaces",
+                "live-org-list",
+                "live.users.count",
+                "restore org list access, then re-run live project-status --all-orgs",
+            ),
+        }
+    } else {
+        build_live_access_status(&client)
+    };
     let domains = vec![
-        build_live_dashboard_status(&client),
-        build_live_datasource_status(&client),
-        build_live_alert_status(&client),
-        build_live_access_status(&client),
+        dashboard_status,
+        datasource_status,
+        alert_status,
+        access_status,
         build_live_sync_status(
             sync_summary_document.as_ref().map(|(document, _)| document),
             bundle_preflight_document
@@ -811,13 +1087,31 @@ pub(crate) fn render_project_status_text(status: &ProjectStatus) -> Vec<String> 
 pub(crate) fn build_live_project_status_client(
     args: &ProjectStatusLiveArgs,
 ) -> Result<JsonHttpClient> {
-    let headers = resolve_auth_headers(
+    build_live_project_status_client_for_org(args, args.org_id)
+}
+
+fn resolve_live_project_status_headers(
+    args: &ProjectStatusLiveArgs,
+    org_id: Option<i64>,
+) -> Result<Vec<(String, String)>> {
+    let mut headers = resolve_auth_headers(
         args.api_token.as_deref(),
         args.username.as_deref(),
         args.password.as_deref(),
         args.prompt_password,
         args.prompt_token,
     )?;
+    if let Some(org_id) = org_id {
+        headers.push(("X-Grafana-Org-Id".to_string(), org_id.to_string()));
+    }
+    Ok(headers)
+}
+
+fn build_live_project_status_client_for_org(
+    args: &ProjectStatusLiveArgs,
+    org_id: Option<i64>,
+) -> Result<JsonHttpClient> {
+    let headers = resolve_live_project_status_headers(args, org_id)?;
     JsonHttpClient::new_with_ca_cert(
         JsonHttpClientConfig {
             base_url: args.url.clone(),
@@ -829,33 +1123,39 @@ pub(crate) fn build_live_project_status_client(
     )
 }
 
-pub fn run_project_status_staged(args: ProjectStatusStagedArgs) -> Result<()> {
-    let overview_args = staged_args_to_overview_args(&args);
+/// Build the staged project-status document without rendering it.
+pub fn execute_project_status_staged(args: &ProjectStatusStagedArgs) -> Result<ProjectStatus> {
+    let overview_args = staged_args_to_overview_args(args);
     let artifacts = overview::build_overview_artifacts(&overview_args)?;
     let document = overview::build_overview_document(artifacts)?;
+    Ok(document.project_status)
+}
+
+/// Build the live project-status document without rendering it.
+pub fn execute_project_status_live(args: &ProjectStatusLiveArgs) -> Result<ProjectStatus> {
+    build_live_project_status(args)
+}
+
+pub fn run_project_status_staged(args: ProjectStatusStagedArgs) -> Result<()> {
+    let status = execute_project_status_staged(&args)?;
     match args.output {
         ProjectStatusOutputFormat::Text => {
-            for line in render_project_status_text(&document.project_status) {
+            for line in render_project_status_text(&status) {
                 println!("{line}");
             }
             Ok(())
         }
         ProjectStatusOutputFormat::Json => {
-            println!(
-                "{}",
-                serde_json::to_string_pretty(&document.project_status)?
-            );
+            println!("{}", serde_json::to_string_pretty(&status)?);
             Ok(())
         }
         #[cfg(feature = "tui")]
-        ProjectStatusOutputFormat::Interactive => {
-            run_project_status_interactive(document.project_status)
-        }
+        ProjectStatusOutputFormat::Interactive => run_project_status_interactive(status),
     }
 }
 
 pub fn run_project_status_live(args: ProjectStatusLiveArgs) -> Result<()> {
-    let status = build_live_project_status(&args)?;
+    let status = execute_project_status_live(&args)?;
     match args.output {
         ProjectStatusOutputFormat::Text => {
             for line in render_project_status_text(&status) {
@@ -882,10 +1182,14 @@ pub fn run_project_status_cli(args: ProjectStatusCliArgs) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::{
-        build_live_dashboard_status_with_request, build_live_promotion_status,
-        build_live_sync_status, project_status_freshness_samples_from_value,
+        build_live_dashboard_status_with_request, build_live_multi_org_domain_status_with_orgs,
+        build_live_promotion_status, build_live_sync_status,
+        project_status_freshness_samples_from_value, resolve_live_project_status_headers,
     };
-    use crate::project_status::PROJECT_STATUS_PARTIAL;
+    use crate::project_status::{
+        status_finding, ProjectDomainStatus, ProjectStatusFreshness, PROJECT_STATUS_BLOCKED,
+        PROJECT_STATUS_PARTIAL, PROJECT_STATUS_READY, PROJECT_STATUS_UNKNOWN,
+    };
     use crate::project_status_freshness::build_live_project_status_freshness_from_samples;
     use chrono::{DateTime, Utc};
     use reqwest::Method;
@@ -1034,5 +1338,158 @@ mod tests {
         assert_eq!(freshness.source_count, 1);
         assert!(freshness.newest_age_seconds.is_some());
         assert!(freshness.oldest_age_seconds.is_some());
+    }
+
+    #[test]
+    fn resolve_live_project_status_headers_adds_org_scope_when_requested() {
+        let args = super::ProjectStatusLiveArgs {
+            url: "http://localhost:3000".to_string(),
+            api_token: Some("token-123".to_string()),
+            username: None,
+            password: None,
+            prompt_password: false,
+            prompt_token: false,
+            timeout: 30,
+            verify_ssl: false,
+            insecure: false,
+            ca_cert: None,
+            all_orgs: false,
+            org_id: Some(7),
+            sync_summary_file: None,
+            bundle_preflight_file: None,
+            promotion_summary_file: None,
+            mapping_file: None,
+            availability_file: None,
+            output: super::ProjectStatusOutputFormat::Text,
+        };
+
+        let headers = resolve_live_project_status_headers(&args, args.org_id).unwrap();
+
+        assert!(headers
+            .iter()
+            .any(|(name, value)| { name == "X-Grafana-Org-Id" && value == "7" }));
+    }
+
+    #[test]
+    fn build_live_multi_org_domain_status_with_orgs_fans_out_and_aggregates_counts() {
+        let orgs = vec![
+            json!({"id": 11, "name": "Core"})
+                .as_object()
+                .unwrap()
+                .clone(),
+            json!({"id": 22, "name": "Edge"})
+                .as_object()
+                .unwrap()
+                .clone(),
+        ];
+        let mut seen_org_ids = Vec::new();
+
+        let aggregated = build_live_multi_org_domain_status_with_orgs(&orgs, |org_id| {
+            seen_org_ids.push(org_id);
+            Ok(ProjectDomainStatus {
+                id: "alert".to_string(),
+                scope: "live".to_string(),
+                mode: "live-alert-surfaces".to_string(),
+                status: if org_id == 11 {
+                    PROJECT_STATUS_READY.to_string()
+                } else {
+                    PROJECT_STATUS_BLOCKED.to_string()
+                },
+                reason_code: if org_id == 11 {
+                    PROJECT_STATUS_READY.to_string()
+                } else {
+                    "blocked-by-blockers".to_string()
+                },
+                primary_count: if org_id == 11 { 3 } else { 5 },
+                blocker_count: if org_id == 11 { 0 } else { 2 },
+                warning_count: if org_id == 11 { 1 } else { 4 },
+                source_kinds: vec!["alert".to_string()],
+                signal_keys: vec![
+                    "live.alertRuleCount".to_string(),
+                    "live.policyCount".to_string(),
+                ],
+                blockers: if org_id == 11 {
+                    Vec::new()
+                } else {
+                    vec![status_finding(
+                        "missing-alert-policy",
+                        2,
+                        "live.policyCount",
+                    )]
+                },
+                warnings: vec![status_finding(
+                    "missing-panel-links",
+                    if org_id == 11 { 1 } else { 4 },
+                    "live.rulePanelMissingCount",
+                )],
+                next_actions: vec!["re-run alert checks".to_string()],
+                freshness: ProjectStatusFreshness {
+                    status: "current".to_string(),
+                    source_count: 1,
+                    newest_age_seconds: Some(if org_id == 11 { 15 } else { 40 }),
+                    oldest_age_seconds: Some(if org_id == 11 { 30 } else { 55 }),
+                },
+            })
+        })
+        .unwrap();
+
+        assert_eq!(seen_org_ids, vec![11, 22]);
+        assert_eq!(aggregated.id, "alert");
+        assert_eq!(aggregated.status, PROJECT_STATUS_BLOCKED);
+        assert_eq!(aggregated.reason_code, "multi-org-aggregate");
+        assert_eq!(aggregated.primary_count, 8);
+        assert_eq!(aggregated.blocker_count, 2);
+        assert_eq!(aggregated.warning_count, 5);
+        assert_eq!(
+            aggregated.blockers,
+            vec![status_finding(
+                "missing-alert-policy",
+                2,
+                "live.policyCount"
+            )]
+        );
+        assert_eq!(
+            aggregated.warnings,
+            vec![status_finding(
+                "missing-panel-links",
+                5,
+                "live.rulePanelMissingCount"
+            )]
+        );
+        assert_eq!(
+            aggregated.next_actions,
+            vec!["re-run alert checks".to_string()]
+        );
+        assert_eq!(aggregated.freshness.status, "current");
+        assert_eq!(aggregated.freshness.source_count, 2);
+        assert_eq!(aggregated.freshness.newest_age_seconds, Some(15));
+        assert_eq!(aggregated.freshness.oldest_age_seconds, Some(55));
+    }
+
+    #[test]
+    fn build_live_multi_org_domain_status_with_orgs_rejects_empty_org_lists() {
+        let error = build_live_multi_org_domain_status_with_orgs(&[], |_org_id| {
+            Ok(ProjectDomainStatus {
+                id: "dashboard".to_string(),
+                scope: "live".to_string(),
+                mode: "live-dashboard-read".to_string(),
+                status: PROJECT_STATUS_UNKNOWN.to_string(),
+                reason_code: "unknown".to_string(),
+                primary_count: 0,
+                blocker_count: 0,
+                warning_count: 0,
+                source_kinds: Vec::new(),
+                signal_keys: Vec::new(),
+                blockers: Vec::new(),
+                warnings: Vec::new(),
+                next_actions: Vec::new(),
+                freshness: ProjectStatusFreshness::default(),
+            })
+        })
+        .unwrap_err();
+
+        assert!(error
+            .to_string()
+            .contains("at least one per-org domain status"));
     }
 }
