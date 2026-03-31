@@ -84,7 +84,8 @@ mod vars;
 
 pub(crate) use authoring::{
     clone_live_dashboard_to_file_with_client, get_live_dashboard_to_file_with_client,
-    patch_dashboard_file, publish_dashboard_with_client,
+    patch_dashboard_file, publish_dashboard_with_client, render_dashboard_review_json,
+    render_dashboard_review_text, review_dashboard_file as build_dashboard_review,
 };
 pub use cli_defs::{
     build_auth_context, build_http_client, build_http_client_for_org, normalize_dashboard_cli_args,
@@ -93,7 +94,7 @@ pub use cli_defs::{
     ExportArgs, GetArgs, GovernanceGateArgs, GovernanceGateOutputFormat, GovernancePolicySource,
     ImpactArgs, ImpactOutputFormat, ImportArgs, InspectExportArgs, InspectExportReportFormat,
     InspectLiveArgs, InspectOutputFormat, InspectVarsArgs, ListArgs, PatchFileArgs, PublishArgs,
-    ScreenshotArgs, ScreenshotFullPageOutput, ScreenshotOutputFormat, ScreenshotTheme,
+    ReviewArgs, ScreenshotArgs, ScreenshotFullPageOutput, ScreenshotOutputFormat, ScreenshotTheme,
     SimpleOutputFormat, TopologyArgs, TopologyOutputFormat, ValidateExportArgs,
     ValidationOutputFormat,
 };
@@ -418,6 +419,16 @@ pub fn execute_dashboard_inspect_vars(args: &InspectVarsArgs) -> Result<Dashboar
     })
 }
 
+pub(crate) fn review_dashboard_file(args: &ReviewArgs) -> Result<()> {
+    let review = build_dashboard_review(&args.input)?;
+    if args.json {
+        print!("{}", render_dashboard_review_json(&review)?);
+    } else {
+        println!("{}", render_dashboard_review_text(&review).join("\n"));
+    }
+    Ok(())
+}
+
 /// Run the dashboard CLI with an already configured client.
 pub fn run_dashboard_cli_with_client(
     client: &JsonHttpClient,
@@ -449,6 +460,7 @@ pub fn run_dashboard_cli_with_client(
             Ok(())
         }
         DashboardCommand::PatchFile(patch_args) => patch_dashboard_file(&patch_args),
+        DashboardCommand::Review(review_args) => review_dashboard_file(&review_args),
         DashboardCommand::Publish(publish_args) => {
             publish_dashboard_with_client(client, &publish_args)
         }
@@ -545,6 +557,7 @@ pub fn run_dashboard_cli(args: DashboardCliArgs) -> Result<()> {
             Ok(())
         }
         DashboardCommand::PatchFile(patch_args) => patch_dashboard_file(&patch_args),
+        DashboardCommand::Review(review_args) => review_dashboard_file(&review_args),
         DashboardCommand::Publish(publish_args) => {
             let client = build_http_client(&publish_args.common)?;
             publish_dashboard_with_client(&client, &publish_args)

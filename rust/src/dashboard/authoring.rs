@@ -5,13 +5,11 @@
 use reqwest::Method;
 use serde_json::{Map, Value};
 use std::fs;
-#[cfg(test)]
-use std::path::Path;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::common::{message, value_as_object, Result};
+use crate::common::{message, string_field, value_as_object, Result};
 use crate::http::JsonHttpClient;
 
 #[cfg(test)]
@@ -21,6 +19,20 @@ use super::{
     extract_dashboard_object, fetch_dashboard, load_json_file, write_dashboard,
     write_json_document, CloneLiveArgs, GetArgs, ImportArgs, PatchFileArgs, PublishArgs,
 };
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct DashboardAuthoringReviewResult {
+    pub(crate) input_file: String,
+    pub(crate) document_kind: String,
+    pub(crate) title: String,
+    pub(crate) uid: String,
+    pub(crate) folder_uid: Option<String>,
+    pub(crate) tags: Vec<String>,
+    pub(crate) dashboard_id_is_null: bool,
+    pub(crate) meta_message_present: bool,
+    pub(crate) blocking_issues: Vec<String>,
+    pub(crate) suggested_next_action: String,
+}
 
 fn set_meta_folder_uid(document: &mut Map<String, Value>, folder_uid: &str) -> Result<()> {
     if folder_uid.is_empty() {
@@ -116,6 +128,161 @@ fn patch_dashboard_document(document: &mut Value, args: &PatchFileArgs) -> Resul
         }
     }
     Ok(())
+}
+
+fn join_tags(value: Option<&Value>) -> Vec<String> {
+    value
+        .and_then(Value::as_array)
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(Value::as_str)
+                .map(str::to_string)
+                .collect::<Vec<String>>()
+        })
+        .unwrap_or_default()
+}
+
+fn review_next_action(has_blocking_issues: bool, dashboard_id_is_null: bool) -> String {
+    let base_action = if dashboard_id_is_null {
+        "publish --dry-run"
+    } else {
+        "patch-file"
+    };
+    if has_blocking_issues {
+        format!("fix blocking issues, then {base_action}")
+    } else {
+        base_action.to_string()
+    }
+}
+
+pub(crate) fn review_dashboard_file(input: &Path) -> Result<DashboardAuthoringReviewResult> {
+    let document = load_json_file(input)?;
+    let document_object = value_as_object(&document, "Dashboard review expects a JSON object.")?;
+    let dashboard = extract_dashboard_object(document_object)?;
+    let document_kind = if document_object.contains_key("dashboard") {
+        "wrapped".to_string()
+    } else {
+        "bare".to_string()
+    };
+    let title = string_field(dashboard, "title", "");
+    let uid = string_field(dashboard, "uid", "");
+    let folder_uid = document_object
+        .get("meta")
+        .and_then(Value::as_object)
+        .map(|meta| string_field(meta, "folderUid", ""))
+        .filter(|value| !value.is_empty());
+    let tags = join_tags(dashboard.get("tags"));
+    let dashboard_id_is_null = matches!(dashboard.get("id"), Some(Value::Null));
+    let meta_message_present = document_object
+        .get("meta")
+        .and_then(Value::as_object)
+        .map(|meta| meta.contains_key("message"))
+        .unwrap_or(false);
+
+    let blocking_issues = match validate_dashboard_import_document(&document, input, false, None) {
+        Ok(()) => Vec::new(),
+        Err(error) => vec![error.to_string()],
+    };
+    let has_blocking_issues = !blocking_issues.is_empty();
+    let suggested_next_action = review_next_action(has_blocking_issues, dashboard_id_is_null);
+
+    Ok(DashboardAuthoringReviewResult {
+        input_file: input.display().to_string(),
+        document_kind,
+        title,
+        uid,
+        folder_uid,
+        tags,
+        dashboard_id_is_null,
+        meta_message_present,
+        blocking_issues,
+        suggested_next_action,
+    })
+}
+
+fn review_result_document(result: &DashboardAuthoringReviewResult) -> Value {
+    serde_json::json!({
+        "kind": "grafana-utils-dashboard-authoring-review",
+        "schemaVersion": 1,
+        "summary": {
+            "inputFile": result.input_file,
+            "documentKind": result.document_kind,
+            "title": result.title,
+            "uid": result.uid,
+            "folderUid": result.folder_uid,
+            "tags": result.tags,
+            "dashboardIdState": if result.dashboard_id_is_null { "null" } else { "non-null" },
+            "dashboardIdIsNull": result.dashboard_id_is_null,
+            "metaMessagePresent": result.meta_message_present,
+            "suggestedNextAction": result.suggested_next_action,
+        },
+        "blockingIssues": result.blocking_issues,
+    })
+}
+
+pub(crate) fn render_dashboard_review_text(result: &DashboardAuthoringReviewResult) -> Vec<String> {
+    let mut lines = vec![
+        "Dashboard authoring review".to_string(),
+        format!("File: {}", result.input_file),
+        format!("Kind: {}", result.document_kind),
+        format!("Title: {}", display_text(&result.title)),
+        format!("UID: {}", display_text(&result.uid)),
+    ];
+    if let Some(folder_uid) = &result.folder_uid {
+        lines.push(format!("Folder UID: {folder_uid}"));
+    }
+    lines.push(format!(
+        "Tags: {}",
+        if result.tags.is_empty() {
+            "-".to_string()
+        } else {
+            result.tags.join(", ")
+        }
+    ));
+    lines.push(format!(
+        "dashboard.id: {}",
+        if result.dashboard_id_is_null {
+            "null"
+        } else {
+            "non-null"
+        }
+    ));
+    lines.push(format!(
+        "meta.message: {}",
+        if result.meta_message_present {
+            "present"
+        } else {
+            "absent"
+        }
+    ));
+    if result.blocking_issues.is_empty() {
+        lines.push("Blocking issues: none".to_string());
+    } else {
+        lines.push("Blocking issues:".to_string());
+        for issue in &result.blocking_issues {
+            lines.push(format!("- {issue}"));
+        }
+    }
+    lines.push(format!("Next action: {}", result.suggested_next_action));
+    lines
+}
+
+pub(crate) fn render_dashboard_review_json(
+    result: &DashboardAuthoringReviewResult,
+) -> Result<String> {
+    Ok(format!(
+        "{}\n",
+        serde_json::to_string_pretty(&review_result_document(result))?
+    ))
+}
+
+fn display_text(value: &str) -> String {
+    if value.is_empty() {
+        "-".to_string()
+    } else {
+        value.to_string()
+    }
 }
 
 pub(crate) fn patch_dashboard_file(args: &PatchFileArgs) -> Result<()> {

@@ -1,6 +1,7 @@
 //! Runtime tests for dashboard live authoring commands.
 use super::authoring::{
     clone_live_dashboard_to_file_with_request, get_live_dashboard_to_file_with_request,
+    render_dashboard_review_json, render_dashboard_review_text, review_dashboard_file,
 };
 use crate::common::GrafanaCliError;
 use serde_json::{json, Value};
@@ -44,6 +45,10 @@ fn dashboard_request_fixture(
         (reqwest::Method::GET, "/api/dashboards/uid/cpu-main") => Ok(Some(payload.clone())),
         _ => Err(crate::common::message(format!("unexpected request {path}"))),
     }
+}
+
+fn write_json_file(path: &std::path::Path, value: &Value) {
+    fs::write(path, serde_json::to_string_pretty(value).unwrap() + "\n").unwrap();
 }
 
 #[test]
@@ -102,4 +107,107 @@ fn get_live_dashboard_to_file_with_request_errors_on_missing_dashboard() {
 
     assert!(matches!(error, GrafanaCliError::Message(_)));
     assert!(!output.exists());
+}
+
+#[test]
+fn review_dashboard_file_reports_wrapped_metadata_and_patch_file_next_action() {
+    let temp = tempdir().unwrap();
+    let input = temp.path().join("wrapped.json");
+    write_json_file(
+        &input,
+        &json!({
+            "dashboard": {
+                "id": 17,
+                "uid": "cpu-main",
+                "title": "CPU Main",
+                "schemaVersion": 39,
+                "tags": ["ops", "sre"]
+            },
+            "meta": {
+                "folderUid": "infra",
+                "message": "Promote CPU dashboard"
+            }
+        }),
+    );
+
+    let review = review_dashboard_file(&input).unwrap();
+    assert_eq!(review.document_kind, "wrapped");
+    assert_eq!(review.title, "CPU Main");
+    assert_eq!(review.uid, "cpu-main");
+    assert_eq!(review.folder_uid.as_deref(), Some("infra"));
+    assert_eq!(review.tags, vec!["ops".to_string(), "sre".to_string()]);
+    assert!(!review.dashboard_id_is_null);
+    assert!(review.meta_message_present);
+    assert!(review.blocking_issues.is_empty());
+    assert_eq!(review.suggested_next_action, "patch-file");
+
+    let text = render_dashboard_review_text(&review);
+    assert!(text.iter().any(|line| line == "Kind: wrapped"));
+    assert!(text.iter().any(|line| line == "dashboard.id: non-null"));
+    let json_output = render_dashboard_review_json(&review).unwrap();
+    assert!(json_output.contains("\"kind\": \"grafana-utils-dashboard-authoring-review\""));
+    assert!(json_output.contains("\"suggestedNextAction\": \"patch-file\""));
+}
+
+#[test]
+fn review_dashboard_file_reports_bare_metadata_and_publish_dry_run_next_action() {
+    let temp = tempdir().unwrap();
+    let input = temp.path().join("bare.json");
+    write_json_file(
+        &input,
+        &json!({
+            "id": null,
+            "uid": "cpu-main",
+            "title": "CPU Main",
+            "schemaVersion": 39,
+            "tags": ["ops"]
+        }),
+    );
+
+    let review = review_dashboard_file(&input).unwrap();
+    assert_eq!(review.document_kind, "bare");
+    assert_eq!(review.folder_uid, None);
+    assert!(review.dashboard_id_is_null);
+    assert!(!review.meta_message_present);
+    assert_eq!(review.suggested_next_action, "publish --dry-run");
+
+    let text = render_dashboard_review_text(&review);
+    assert!(text.iter().any(|line| line == "Kind: bare"));
+    assert!(text.iter().any(|line| line == "dashboard.id: null"));
+}
+
+#[test]
+fn review_dashboard_file_surfaces_blocking_validation_and_adjusts_next_action() {
+    let temp = tempdir().unwrap();
+    let input = temp.path().join("blocked.json");
+    write_json_file(
+        &input,
+        &json!({
+            "__inputs": [
+                {
+                    "name": "DS_PROMETHEUS",
+                    "label": "Prometheus"
+                }
+            ],
+            "dashboard": {
+                "id": null,
+                "uid": "cpu-main",
+                "title": "CPU Main",
+                "schemaVersion": 39,
+                "tags": ["ops"]
+            }
+        }),
+    );
+
+    let review = review_dashboard_file(&input).unwrap();
+    assert_eq!(review.document_kind, "wrapped");
+    assert_eq!(
+        review.suggested_next_action,
+        "fix blocking issues, then publish --dry-run"
+    );
+    assert!(!review.blocking_issues.is_empty());
+    assert!(review
+        .blocking_issues
+        .iter()
+        .any(|issue| issue.contains("__inputs")));
 }

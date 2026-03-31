@@ -60,8 +60,7 @@ fn unified_help_mentions_screenshot_and_inspect_vars_examples() {
     assert!(help.contains("dashboard screenshot"));
     assert!(help.contains("dashboard inspect-vars"));
     assert!(help.contains("--dashboard-url"));
-    assert!(help.contains("dashboard patch-file"));
-    assert!(help.contains("dashboard publish"));
+    assert!(help.contains("dashboard review"));
     assert!(help.contains("Run profile list, show, and init workflows."));
     assert!(help.contains("[Profile Show]"));
 }
@@ -182,6 +181,28 @@ fn parse_cli_supports_dashboard_group_patch_file_and_publish_commands() {
                 assert!(inner.dry_run);
             }
             _ => panic!("expected dashboard publish"),
+        },
+        _ => panic!("expected dashboard group"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_dashboard_group_review_command() {
+    let args: CliArgs = parse_cli_from([
+        "grafana-util",
+        "dashboard",
+        "review",
+        "--input",
+        "./drafts/cpu-main.json",
+    ]);
+
+    match args.command {
+        UnifiedCommand::Dashboard { command } => match command {
+            super::DashboardGroupCommand::Review(inner) => {
+                assert_eq!(inner.input, Path::new("./drafts/cpu-main.json"));
+                assert!(!inner.json);
+            }
+            _ => panic!("expected dashboard review"),
         },
         _ => panic!("expected dashboard group"),
     }
@@ -1793,6 +1814,60 @@ fn dispatch_routes_dashboard_group_to_dashboard_handler() {
 
     assert!(result.is_ok());
     assert_eq!(*routed.borrow(), vec!["dashboard-diff".to_string()]);
+}
+
+#[test]
+fn dispatch_routes_dashboard_review_group_to_dashboard_handler() {
+    let args: CliArgs = parse_cli_from([
+        "grafana-util",
+        "dashboard",
+        "review",
+        "--input",
+        "./drafts/cpu-main.json",
+    ]);
+    let routed = RefCell::new(Vec::new());
+
+    let result = dispatch_with_handlers(
+        args,
+        |dashboard_args| {
+            routed.borrow_mut().push(match dashboard_args.command {
+                DashboardCommand::Review(_) => "dashboard-review".to_string(),
+                _ => "other".to_string(),
+            });
+            Ok(())
+        },
+        |_datasource_args| {
+            routed.borrow_mut().push("datasource".to_string());
+            Ok(())
+        },
+        |_change_args| {
+            routed.borrow_mut().push("change".to_string());
+            Ok(())
+        },
+        |_alert_args| {
+            routed.borrow_mut().push("alert".to_string());
+            Ok(())
+        },
+        |_access_args| {
+            routed.borrow_mut().push("access".to_string());
+            Ok(())
+        },
+        |_profile_args| {
+            routed.borrow_mut().push("profile".to_string());
+            Ok(())
+        },
+        |_overview_args| {
+            routed.borrow_mut().push("overview".to_string());
+            Ok(())
+        },
+        |_project_status_args| {
+            routed.borrow_mut().push("status".to_string());
+            Ok(())
+        },
+    );
+
+    assert!(result.is_ok());
+    assert_eq!(*routed.borrow(), vec!["dashboard-review".to_string()]);
 }
 
 #[test]

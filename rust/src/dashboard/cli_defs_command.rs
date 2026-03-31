@@ -370,6 +370,22 @@ pub struct PatchFileArgs {
     pub tags: Vec<String>,
 }
 
+/// Arguments for reviewing one local dashboard JSON file without touching Grafana.
+#[derive(Debug, Clone, Args)]
+pub struct ReviewArgs {
+    #[arg(
+        long,
+        help = "Input dashboard JSON file to review locally. Review never contacts Grafana."
+    )]
+    pub input: PathBuf,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Render the review as JSON instead of text."
+    )]
+    pub json: bool,
+}
+
 /// Arguments for publishing one local dashboard JSON file through the live import pipeline.
 #[derive(Debug, Clone, Args)]
 pub struct PublishArgs {
@@ -658,6 +674,12 @@ pub enum DashboardCommand {
         after_help = "Examples:\n\n  Patch a raw export file in place:\n    grafana-util dashboard patch-file --input ./dashboards/raw/cpu-main.json --name 'CPU Overview' --folder-uid infra --tag prod --tag sre\n\n  Patch one draft file into a new output path:\n    grafana-util dashboard patch-file --input ./drafts/cpu-main.json --output ./drafts/cpu-main-patched.json --uid cpu-main --message 'Add folder metadata before publish'"
     )]
     PatchFile(PatchFileArgs),
+    #[command(
+        name = "review",
+        about = "Review one local dashboard JSON file without touching Grafana.",
+        after_help = "Examples:\n\n  Review one local dashboard file in text mode:\n    grafana-util dashboard review --input ./drafts/cpu-main.json\n\n  Review one local dashboard file as JSON:\n    grafana-util dashboard review --input ./drafts/cpu-main.json --json"
+    )]
+    Review(ReviewArgs),
     #[command(
         name = "publish",
         about = "Publish one local dashboard JSON file through the existing dashboard import pipeline.",

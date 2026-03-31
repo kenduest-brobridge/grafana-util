@@ -583,6 +583,34 @@ fn patch_file_help_mentions_in_place_and_output_paths() {
 }
 
 #[test]
+fn parse_cli_supports_review_command() {
+    let args = parse_cli_from([
+        "grafana-util",
+        "review",
+        "--input",
+        "./drafts/cpu-main.json",
+        "--json",
+    ]);
+
+    match args.command {
+        DashboardCommand::Review(review_args) => {
+            assert_eq!(review_args.input, PathBuf::from("./drafts/cpu-main.json"));
+            assert!(review_args.json);
+        }
+        _ => panic!("expected review command"),
+    }
+}
+
+#[test]
+fn review_help_mentions_local_file_only_output_modes() {
+    let help = render_dashboard_subcommand_help("review");
+    assert!(help.contains("--input"));
+    assert!(help.contains("--json"));
+    assert!(help.contains("Review one local dashboard JSON file without touching Grafana."));
+    assert!(help.contains("grafana-util dashboard review"));
+}
+
+#[test]
 fn publish_help_mentions_dry_run_preview() {
     let help = render_dashboard_subcommand_help("publish");
     assert!(help.contains("--input"));

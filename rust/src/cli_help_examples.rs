@@ -90,6 +90,11 @@ pub(crate) const UNIFIED_HELP_TEXT: &str = help_block!(
         r#"grafana-util dashboard inspect-vars --dashboard-url 'https://grafana.example.com/d/cpu-main/cpu-overview?var-cluster=prod-a' --token "$GRAFANA_API_TOKEN""#
     ),
     (
+        "[Dashboard Review]",
+        "Review a local dashboard file before publish:",
+        "grafana-util dashboard review --input ./drafts/cpu-main.json --json"
+    ),
+    (
         "[Alert Export]",
         "Export alerting resources through the unified binary:",
         r#"grafana-util alert export --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output-dir ./alerts --overwrite"#

@@ -239,8 +239,9 @@ Purpose: support a file-first dashboard authoring flow without exporting a whole
 Typical flow:
 1. `dashboard get` fetches one live dashboard into an API-safe local draft with `dashboard.id = null`.
 2. `dashboard clone-live` fetches one live dashboard into a new local draft and can override title, UID, or preserved `meta.folderUid`.
-3. `dashboard patch-file` edits one local draft or raw export file in place, or writes a patched copy to `--output`.
-4. `dashboard publish` stages one local file through the existing dashboard import pipeline, including `--dry-run --table` or `--dry-run --json`.
+3. `dashboard review` summarizes one local draft or export file, highlights blocking issues, and suggests the next command.
+4. `dashboard patch-file` edits one local draft or raw export file in place, or writes a patched copy to `--output`.
+5. `dashboard publish` stages one local file through the existing dashboard import pipeline, including `--dry-run --table` or `--dry-run --json`.
 
 Examples:
 
@@ -259,6 +260,11 @@ Patch one local file in place:
 grafana-util dashboard patch-file --input ./drafts/cpu-main.json --name "CPU Overview" --folder-uid infra --tag prod --tag sre --message "Prepare draft for publish"
 ```
 
+Review one local file before publishing:
+```bash
+grafana-util dashboard review --input ./drafts/cpu-main.json
+```
+
 Preview publish through the existing import dry-run path:
 ```bash
 grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --basic-password admin --input ./drafts/cpu-main.json --replace-existing --dry-run --table
@@ -266,6 +272,8 @@ grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --
 
 How to read it:
 - `dashboard get` and `dashboard clone-live` keep the wrapped Grafana document shape so later `dashboard publish` or `dashboard import` can reuse the same file.
+- `dashboard review` is local-only. It does not call Grafana APIs and is meant to be the fast authoring checkpoint between `get/clone-live` and `publish`.
+- `dashboard review --json` emits a compact machine-readable summary including `documentKind`, `dashboardIdIsNull`, `metaMessagePresent`, `blockingIssues`, and `suggestedNextAction`.
 - `dashboard patch-file` accepts either a wrapped export document or a bare dashboard object.
 - `dashboard patch-file --tag` replaces the tag list with the repeated `--tag` values you provide.
 - `dashboard publish` is intentionally a single-file wrapper over the current import lane; it does not create a second apply engine.
