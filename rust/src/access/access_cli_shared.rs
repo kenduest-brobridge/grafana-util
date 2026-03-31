@@ -68,6 +68,12 @@ pub(crate) const ACCESS_ORG_DELETE_HELP_TEXT: &str = "Examples:\n\n  grafana-uti
 /// Shared Grafana connection/authentication arguments for org-scoped access commands.
 #[derive(Debug, Clone, Args)]
 pub struct CommonCliArgs {
+    #[arg(
+        long,
+        help = "Load connection defaults from the selected repo-local profile in grafana-util.yaml.",
+        help_heading = "Authentication Options"
+    )]
+    pub profile: Option<String>,
     #[arg(long, default_value = DEFAULT_URL, help = "Grafana base URL.", help_heading = "Authentication Options")]
     pub url: String,
     #[arg(
@@ -138,6 +144,12 @@ pub struct CommonCliArgs {
 /// Shared connection/authentication arguments for global access admin commands.
 #[derive(Debug, Clone, Args)]
 pub struct CommonCliArgsNoOrgId {
+    #[arg(
+        long,
+        help = "Load connection defaults from the selected repo-local profile in grafana-util.yaml.",
+        help_heading = "Authentication Options"
+    )]
+    pub profile: Option<String>,
     #[arg(long, default_value = DEFAULT_URL, help = "Grafana base URL.", help_heading = "Authentication Options")]
     pub url: String,
     #[arg(

@@ -54,6 +54,7 @@ use crate::dashboard::inspect::{
 };
 use crate::dashboard::inspect_governance::governance_risk_spec;
 use crate::dashboard::DeleteArgs;
+use crate::dashboard::{resolve_dashboard_import_source, DashboardImportInputFormat};
 use clap::{CommandFactory, Parser};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use reqwest::Method;
@@ -66,6 +67,7 @@ pub(crate) type TestRequestResult = crate::common::Result<Option<Value>>;
 
 pub(crate) fn make_common_args(base_url: String) -> CommonCliArgs {
     CommonCliArgs {
+        profile: None,
         url: base_url,
         api_token: Some("token".to_string()),
         username: None,
@@ -79,6 +81,7 @@ pub(crate) fn make_common_args(base_url: String) -> CommonCliArgs {
 
 pub(crate) fn make_basic_common_args(base_url: String) -> CommonCliArgs {
     CommonCliArgs {
+        profile: None,
         url: base_url,
         api_token: None,
         username: Some("admin".to_string()),
@@ -184,6 +187,7 @@ pub(crate) fn make_import_args(import_dir: PathBuf) -> ImportArgs {
         only_org_id: Vec::new(),
         create_missing_orgs: false,
         import_dir,
+        input_format: DashboardImportInputFormat::Raw,
         import_folder_uid: None,
         ensure_folders: false,
         replace_existing: false,
@@ -307,6 +311,75 @@ pub(crate) fn write_basic_raw_export(
                 "folderUid": folder_uid,
                 "folderTitle": folder_title
             }
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn write_basic_provisioning_export(
+    provisioning_dir: &Path,
+    org_id: &str,
+    org_name: &str,
+    dashboard_uid: &str,
+    dashboard_title: &str,
+    datasource_uid: &str,
+    datasource_type: &str,
+    panel_type: &str,
+    dashboard_rel_path: &str,
+    query_field: &str,
+    query_text: &str,
+) {
+    let dashboards_dir = provisioning_dir.join("dashboards");
+    let dashboard_path = dashboards_dir.join(dashboard_rel_path);
+    fs::create_dir_all(dashboard_path.parent().unwrap()).unwrap();
+    fs::write(
+        provisioning_dir.join(EXPORT_METADATA_FILENAME),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-dashboard-export-index",
+            "schemaVersion": TOOL_SCHEMA_VERSION,
+            "variant": "provisioning",
+            "dashboardCount": 1,
+            "indexFile": "index.json",
+            "format": "grafana-file-provisioning-dashboard",
+            "org": org_name,
+            "orgId": org_id
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        provisioning_dir.join("index.json"),
+        serde_json::to_string_pretty(&json!([
+            {
+                "uid": dashboard_uid,
+                "title": dashboard_title,
+                "path": format!("dashboards/{dashboard_rel_path}"),
+                "format": "grafana-file-provisioning-dashboard",
+                "org": org_name,
+                "orgId": org_id
+            }
+        ]))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        dashboard_path,
+        serde_json::to_string_pretty(&json!({
+            "uid": dashboard_uid,
+            "title": dashboard_title,
+            "schemaVersion": 38,
+            "panels": [{
+                "id": 7,
+                "title": dashboard_title,
+                "type": panel_type,
+                "datasource": {"uid": datasource_uid, "type": datasource_type},
+                "targets": [{
+                    "refId": "A",
+                    query_field: query_text
+                }]
+            }]
         }))
         .unwrap(),
     )

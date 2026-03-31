@@ -202,6 +202,7 @@ fn build_delete_args(
 ) -> DeleteArgs {
     DeleteArgs {
         common: CommonCliArgs {
+            profile: None,
             url: args.common.url.clone(),
             api_token: args.common.api_token.clone(),
             username: args.common.username.clone(),

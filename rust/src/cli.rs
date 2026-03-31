@@ -34,6 +34,7 @@ use crate::dashboard::{
 };
 use crate::datasource::{run_datasource_cli, DatasourceCliArgs, DatasourceGroupCommand};
 use crate::overview::{run_overview_cli, OverviewCliArgs};
+use crate::profile_cli::{root_command as profile_root_command, run_profile_cli, ProfileCliArgs};
 use crate::project_status_command::{run_project_status_cli, ProjectStatusCliArgs};
 use crate::sync::{run_sync_cli, SyncCliArgs, SyncGroupCommand};
 
@@ -42,13 +43,14 @@ const UNIFIED_DATASOURCE_HELP_TEXT: &str = "Examples:\n\n  grafana-util datasour
 const UNIFIED_SYNC_HELP_TEXT: &str = "Examples:\n\n  grafana-util change summary --desired-file ./desired.json\n  grafana-util change plan --desired-file ./desired.json --fetch-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\"\n  grafana-util change apply --plan-file ./sync-plan-reviewed.json --approve --execute-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\"";
 const UNIFIED_ALERT_HELP_TEXT: &str = "Examples:\n\n  grafana-util alert export --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output-dir ./alerts --overwrite\n  grafana-util alert import --url http://localhost:3000 --import-dir ./alerts/raw --replace-existing --dry-run --json\n  grafana-util alert list-rules --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json";
 const UNIFIED_ACCESS_HELP_TEXT: &str = "Examples:\n\n  grafana-util access user list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json\n  grafana-util access team import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./access-teams --replace-existing --yes\n  grafana-util access service-account token add --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --name deploy-bot --token-name nightly";
+const UNIFIED_PROFILE_HELP_TEXT: &str = "Examples:\n\n  grafana-util profile list\n  grafana-util profile show --profile prod --output-format yaml\n  grafana-util profile init --overwrite";
 const DASHBOARD_BROWSE_HELP_TEXT: &str = "Examples:\n\n  grafana-util dashboard browse --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\"\n  grafana-util dashboard browse --url http://localhost:3000 --basic-user admin --basic-password admin --path 'Platform / Infra'\n  grafana-util dashboard browse --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs";
 const DASHBOARD_LIST_HELP_TEXT: &str = "Examples:\n\n  grafana-util dashboard list --url http://localhost:3000 --basic-user admin --basic-password admin\n  grafana-util dashboard list --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --json\n  grafana-util dashboard list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json";
 const DASHBOARD_EXPORT_HELP_TEXT: &str = "Examples:\n\n  grafana-util dashboard export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./dashboards --overwrite\n  grafana-util dashboard export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --export-dir ./dashboards --overwrite\n  grafana-util dashboard export --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --export-dir ./dashboards --overwrite";
 const DASHBOARD_IMPORT_HELP_TEXT: &str = "Examples:\n\n  grafana-util dashboard import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/raw --replace-existing\n  grafana-util dashboard import --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --import-dir ./dashboards/raw --dry-run --table\n  grafana-util dashboard import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/raw --interactive --replace-existing";
 const DASHBOARD_DELETE_HELP_TEXT: &str = "Examples:\n\n  grafana-util dashboard delete --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --uid cpu-main --dry-run --json\n  grafana-util dashboard delete --url http://localhost:3000 --basic-user admin --basic-password admin --path 'Platform / Infra' --yes\n  grafana-util dashboard delete --url http://localhost:3000 --interactive";
 const DASHBOARD_DIFF_HELP_TEXT: &str = "Examples:\n\n  grafana-util dashboard diff --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/raw\n  grafana-util dashboard diff --url http://localhost:3000 --basic-user admin --basic-password admin --org-id 2 --import-dir ./dashboards/raw --json";
-const DASHBOARD_INSPECT_EXPORT_HELP_TEXT: &str = "Examples:\n\n  grafana-util dashboard inspect-export --import-dir ./dashboards/raw --table\n  grafana-util dashboard inspect-export --import-dir ./dashboards/raw --interactive\n  grafana-util dashboard inspect-export --import-dir ./dashboards/raw --report governance-json";
+const DASHBOARD_INSPECT_EXPORT_HELP_TEXT: &str = "Examples:\n\n  grafana-util dashboard inspect-export --import-dir ./dashboards/raw --input-format raw --table\n  grafana-util dashboard inspect-export --import-dir ./dashboards/raw --input-format raw --interactive\n  grafana-util dashboard inspect-export --import-dir ./dashboards/raw --input-format raw --report governance-json\n  grafana-util dashboard inspect-export --import-dir ./dashboards/provisioning --input-format provisioning --report tree-table";
 const DASHBOARD_INSPECT_LIVE_HELP_TEXT: &str = "Examples:\n\n  grafana-util dashboard inspect-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output-format governance-json\n  grafana-util dashboard inspect-live --url http://localhost:3000 --basic-user admin --basic-password admin --interactive";
 const DASHBOARD_INSPECT_VARS_HELP_TEXT: &str = "Examples:\n\n  grafana-util dashboard inspect-vars --dashboard-url 'https://grafana.example.com/d/cpu-main/cpu-overview?var-cluster=prod-a' --token \"$GRAFANA_API_TOKEN\" --output-format table\n  grafana-util dashboard inspect-vars --url https://grafana.example.com --dashboard-uid cpu-main --vars-query 'var-cluster=prod-a&var-instance=node01' --token \"$GRAFANA_API_TOKEN\" --output-format json";
 const DASHBOARD_GOVERNANCE_GATE_HELP_TEXT: &str = "Examples:\n\n  grafana-util dashboard governance-gate --policy-source file --policy ./policy.yaml --governance ./governance.json --queries ./queries.json\n  grafana-util dashboard governance-gate --policy-source builtin --builtin-policy default --governance ./governance.json --queries ./queries.json --output-format json --json-output ./governance-check.json";
@@ -169,6 +171,9 @@ where
         [_binary, command, flag] if command == "access" && (flag == "--help" || flag == "-h") => {
             Some(render_domain_help_text(access_root_command(), colorize))
         }
+        [_binary, command, flag] if command == "profile" && (flag == "--help" || flag == "-h") => {
+            Some(render_domain_help_text(profile_root_command(), colorize))
+        }
         [_binary, command, flag] if command == "overview" && (flag == "--help" || flag == "-h") => {
             Some(render_overview_help_text(colorize))
         }
@@ -194,6 +199,9 @@ where
         [_binary, command, flag] if command == "access" && flag == "--help-full" => Some(
             render_domain_help_full_text(access_root_command(), ACCESS_HELP_FULL_TEXT, colorize),
         ),
+        [_binary, command, flag] if command == "profile" && flag == "--help-full" => {
+            Some(render_domain_help_text(profile_root_command(), colorize))
+        }
         [_binary, command, flag] if command == "overview" && flag == "--help-full" => {
             Some(render_overview_help_full_text(colorize))
         }
@@ -319,6 +327,11 @@ pub enum UnifiedCommand {
     )]
     Access(AccessCliArgs),
     #[command(
+        about = "Run profile list, show, and init workflows.",
+        after_help = UNIFIED_PROFILE_HELP_TEXT
+    )]
+    Profile(ProfileCliArgs),
+    #[command(
         about = "Summarize project artifacts into a project-wide overview. Staged exports are the default; use `overview live` to route into shared live status."
     )]
     Overview(OverviewCliArgs),
@@ -332,7 +345,7 @@ pub enum UnifiedCommand {
 #[derive(Debug, Clone, Parser)]
 #[command(
     name = "grafana-util",
-    about = "Unified Grafana dashboard, alerting, and access utility.",
+    about = "Unified Grafana dashboard, alerting, access, and profile utility.",
     after_help = UNIFIED_HELP_TEXT,
     styles = crate::help_styles::CLI_HELP_STYLES
 )]
@@ -392,15 +405,16 @@ fn wrap_dashboard_group(command: DashboardGroupCommand) -> DashboardCliArgs {
 ///
 /// Handlers are injected as callables so tests can assert routing without
 /// triggering network-heavy domain execution.
-fn dispatch_with_handlers<FD, FS, FY, FA, FX, FO, FP>(
+fn dispatch_with_handlers<FD, FS, FY, FA, FX, FP, FO, FQ>(
     args: CliArgs,
     mut run_dashboard: FD,
     mut run_datasource: FS,
     mut run_sync: FY,
     mut run_alert: FA,
     mut run_access: FX,
+    mut run_profile: FP,
     mut run_overview: FO,
-    mut run_project_status: FP,
+    mut run_project_status: FQ,
 ) -> Result<()>
 where
     FD: FnMut(DashboardCliArgs) -> Result<()>,
@@ -408,8 +422,9 @@ where
     FY: FnMut(SyncGroupCommand) -> Result<()>,
     FA: FnMut(AlertCliArgs) -> Result<()>,
     FX: FnMut(AccessCliArgs) -> Result<()>,
+    FP: FnMut(ProfileCliArgs) -> Result<()>,
     FO: FnMut(OverviewCliArgs) -> Result<()>,
-    FP: FnMut(ProjectStatusCliArgs) -> Result<()>,
+    FQ: FnMut(ProjectStatusCliArgs) -> Result<()>,
 {
     match args.command {
         UnifiedCommand::Dashboard { command } => run_dashboard(wrap_dashboard_group(command)),
@@ -417,6 +432,7 @@ where
         UnifiedCommand::Change { command } => run_sync(command),
         UnifiedCommand::Alert(inner) => run_alert(normalize_alert_namespace_args(inner)),
         UnifiedCommand::Access(inner) => run_access(inner),
+        UnifiedCommand::Profile(inner) => run_profile(inner),
         UnifiedCommand::Overview(inner) => run_overview(inner),
         UnifiedCommand::Status(inner) => run_project_status(inner),
     }
@@ -435,6 +451,7 @@ pub fn run_cli(args: CliArgs) -> Result<()> {
         run_sync_cli,
         run_alert_cli,
         run_access_cli,
+        run_profile_cli,
         run_overview_cli,
         run_project_status_cli,
     )

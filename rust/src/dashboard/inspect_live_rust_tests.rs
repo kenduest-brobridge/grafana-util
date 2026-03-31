@@ -13,6 +13,7 @@ type TestRequestResult = crate::common::Result<Option<Value>>;
 
 fn make_common_args(base_url: String) -> CommonCliArgs {
     CommonCliArgs {
+        profile: None,
         url: base_url,
         api_token: Some("token".to_string()),
         username: None,

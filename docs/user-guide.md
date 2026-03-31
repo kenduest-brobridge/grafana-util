@@ -39,6 +39,7 @@ grafana-util dashboard -h
 grafana-util alert -h
 grafana-util datasource -h
 grafana-util access -h
+grafana-util profile -h
 grafana-util change -h
 grafana-util overview -h
 grafana-util status -h
@@ -54,6 +55,7 @@ CLI notes:
 
 - `grafana-util` is the primary unified CLI.
 - Use the namespaced `grafana-util <domain> <command>` layout throughout this guide.
+- Use `grafana-util profile init`, `profile list`, and `profile show` to manage repo-local live connection defaults in `grafana-util.yaml`.
 - `dashboard list-data-sources` remains available under the dashboard command surface, but new datasource inventory workflows should prefer `datasource list`.
 - `overview` is the human project entrypoint, `status` is the canonical status contract, and `change` owns the staged change workflow.
 
@@ -100,6 +102,7 @@ Default URLs:
 
 | Option | Purpose | Typical use |
 | --- | --- | --- |
+| `--profile` | Load repo-local live connection defaults from `grafana-util.yaml` | Reuse one named Grafana environment without repeating `--url`, auth, timeout, or TLS flags |
 | `--url` | Grafana base URL | Any live Grafana operation |
 | `--token`, `--api-token` | API token auth | Scripts and non-interactive workflows |
 | `--basic-user` | Basic auth username | Org switching, admin workflows, access management |
@@ -109,7 +112,53 @@ Default URLs:
 | `--timeout` | HTTP timeout in seconds | Slow APIs or unstable networks |
 | `--verify-ssl` | Enable TLS certificate verification | Production TLS environments |
 
-### 2.1 How To Read Example Output
+### 2.1 Repo-Local Profiles
+
+The Rust CLI now supports a repo-local `grafana-util.yaml` file for live connection defaults.
+
+Example config:
+
+```yaml
+default_profile: dev
+profiles:
+  dev:
+    url: http://127.0.0.1:3000
+    token_env: GRAFANA_API_TOKEN
+    timeout: 30
+    verify_ssl: false
+
+  prod:
+    url: https://grafana.example.com
+    username: admin
+    password_env: GRAFANA_PROD_PASSWORD
+    verify_ssl: true
+```
+
+Profile commands:
+
+```bash
+grafana-util profile init
+grafana-util profile list
+grafana-util profile show --profile prod --output-format yaml
+```
+
+Live command example:
+
+```bash
+grafana-util dashboard list --profile prod --json
+grafana-util datasource export --profile dev --export-dir ./datasources --overwrite
+grafana-util status live --profile prod --all-orgs --output json
+```
+
+Profile resolution rules:
+
+- `--profile NAME` selects one named profile explicitly.
+- Without `--profile`, the CLI uses `default_profile` when present.
+- If there is exactly one profile and no `default_profile`, that profile is selected automatically.
+- Explicit CLI flags still win over the selected profile values.
+- If neither CLI nor profile supplies auth, the existing `GRAFANA_*` environment fallback still applies.
+
+### 2.2 How To Read Example Output
 
 - `Example command` shows a practical invocation shape.
 - `Example output` shows the expected format, not a guarantee that your own UIDs, names, counts, or folders will match exactly.
@@ -185,11 +234,11 @@ Authentication exclusivity rules:
 
 ### 3.1 `dashboard export`
 
-Purpose: export live dashboards into `raw/` and `prompt/` variants.
+Purpose: export live dashboards into `raw/`, `prompt/`, and `provisioning/` variants.
 
 | Option | Purpose | Difference / scenario |
 | --- | --- | --- |
-| `--export-dir` | Export root directory | Default `dashboards`; contains `raw/` and `prompt/` |
+| `--export-dir` | Export root directory | Default `dashboards`; contains `raw/`, `prompt/`, and `provisioning/` |
 | `--page-size` | Pagination size | Increase for large estates |
 | `--org-id` | Export from one explicit org | API token is not supported here; use Grafana username/password login |
 | `--all-orgs` | Export from all visible orgs | Best for central backups |
@@ -197,9 +246,18 @@ Purpose: export live dashboards into `raw/` and `prompt/` variants.
 | `--overwrite` | Replace existing files | Typical for repeatable exports |
 | `--without-dashboard-raw` | Skip `raw/` | Use only if API restore is not needed |
 | `--without-dashboard-prompt` | Skip `prompt/` | Use only if UI import is not needed |
+| `--without-dashboard-provisioning` | Skip `provisioning/` | Use only if Grafana file provisioning artifacts are not needed |
+| `--provisioning-provider-name` | Set the provider name in `provisioning/provisioning/dashboards.yaml` | Change the provider label Grafana shows for this export |
+| `--provisioning-provider-org-id` | Override the provider org ID in the generated YAML | Use when the export should point at a different Grafana org ID |
+| `--provisioning-provider-path` | Override the provider path written into the generated YAML | Point Grafana at a different dashboards directory on the export host |
+| `--provisioning-provider-disable-deletion` | Set `disableDeletion` in the generated YAML | Keep Grafana from deleting files that disappear from disk |
+| `--provisioning-provider-allow-ui-updates` | Set `allowUiUpdates` in the generated YAML | Allow dashboard edits from the Grafana UI when provisioning allows it |
+| `--provisioning-provider-update-interval-seconds` | Set `updateIntervalSeconds` in the generated YAML | Control how often Grafana checks the exported dashboards directory |
 | `--dry-run` | Preview files without writing them | Validate scope and paths first |
 | `--progress` | Print concise progress lines | Large exports |
 | `-v`, `--verbose` | Print detailed per-item output | Troubleshooting export behavior |
+
+The generated provisioning provider file still defaults to the current export tree path, the current org ID, `disableDeletion=false`, `allowUiUpdates=false`, and a 30 second update interval. Override those flags only when Grafana needs a different provisioning target or lifecycle policy.
 
 Example command:
 ```bash
@@ -221,9 +279,11 @@ How to read it:
 - `--progress` prints one concise line per dashboard; use `--verbose` when you need per-file output paths.
 - `raw` is the API-friendly reversible export.
 - `prompt` is the UI-import-friendly variant.
+- `provisioning` is the Grafana file-provisioning variant. It writes dashboard JSON under `provisioning/dashboards/` and a starter provider file at `provisioning/provisioning/dashboards.yaml` that points at that exported dashboards directory.
 - `raw/permissions.json` captures dashboard and folder permission metadata for backup and review.
 - With `--all-orgs`, the export root `export-metadata.json` includes `orgCount` plus an `orgs[]` summary for every exported org.
 - For replay-heavy dry-run examples in this guide, `--flat` is the most repeatable export shape because the resulting `raw/` tree can be pointed at `dashboard import` directly.
+- The generated `provisioning/provisioning/dashboards.yaml` points at the exported dashboards directory on the machine that wrote the export. If you move the tree elsewhere, update the `path` field to the directory Grafana will read from.
 
 ### 3.2 `dashboard list`
 
@@ -305,11 +365,12 @@ Preferred path:
 
 ### 3.4 `dashboard import`
 
-Purpose: import dashboards from a `raw/` export into live Grafana.
+Purpose: import dashboards from a `raw/` or `provisioning/` export into live Grafana.
 
 | Option | Purpose | Difference / scenario |
 | --- | --- | --- |
-| `--import-dir` | Input `raw/` directory or multi-org export root | Use `raw/` for normal import; use the combined export root with `--use-export-org` |
+| `--import-dir` | Input export directory or multi-org export root | Use `raw/` or `provisioning/` for single-org import; use the combined export root with `--use-export-org` |
+| `--input-format raw\|provisioning` | Choose the on-disk import contract | `provisioning` accepts either the provisioning root or its `dashboards/` subdirectory; routed `--use-export-org` provisioning imports require the combined export root, not one org's `provisioning/` directory |
 | `--org-id` | Target org | Org-specific import |
 | `--use-export-org` | Route each exported org back into Grafana | Import a combined `--all-orgs` export root |
 | `--only-org-id` | Restrict `--use-export-org` to selected source orgs | Repeat the flag to import multiple orgs |
@@ -352,6 +413,7 @@ Dry-run checked 7 dashboard(s) from ./dashboards-flat/raw
 
 Live note:
 - The dry-run table above was validated against a local Grafana `12.4.1` container by first exporting dashboards with `dashboard export --flat`.
+- For provisioning imports, `dashboard import --input-format provisioning --import-dir ./dashboards/provisioning` resolves the concrete `dashboards/` JSON tree automatically and keeps folder placement based on the provisioning file hierarchy.
 
 How to read it:
 - `ACTION=update` means the dashboard already exists and would be changed.
@@ -359,6 +421,8 @@ How to read it:
 - `DESTINATION` describes the live target state, not the local directory.
 - `DESTINATION=missing` means dry-run found no live dashboard with that UID yet.
 - Routed multi-org dry-runs can also report `missing-org` or `would-create-org` before any per-dashboard action rows are applied.
+- `--use-export-org --input-format provisioning` routes each `org_<id>_<name>/provisioning/` subtree from a combined `--all-orgs` export root through the same per-org import flow as raw exports.
+- `--interactive --use-export-org` runs the same review picker one scoped org import at a time after the combined export root is rebound to each matching `org_<id>_<name>/...` import directory.
 
 ### 3.4a `dashboard delete`
 
@@ -388,17 +452,23 @@ Current note:
 
 ### 3.5 `dashboard diff`
 
-Purpose: compare local exported dashboards against live Grafana.
+Purpose: compare local dashboard export files against live Grafana.
 
 | Option | Purpose | Difference / scenario |
 | --- | --- | --- |
-| `--import-dir` | `raw/` directory to compare | Read-only comparison |
+| `--import-dir` | Dashboard export directory to compare | Use `raw/` by default; use `provisioning/` or its `dashboards/` subdirectory with `--input-format provisioning` |
+| `--input-format raw\|provisioning` | Choose the on-disk diff contract | `raw` remains the default; `provisioning` compares the Grafana file-provisioning dashboard tree explicitly |
 | `--import-folder-uid` | Override folder uid assumption | Useful when folder mapping differs |
 | `--context-lines` | Diff context size | Increase when JSON changes are large |
 
 Example command:
 ```bash
 grafana-util dashboard diff --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/raw
+```
+
+Provisioning tree:
+```bash
+grafana-util dashboard diff --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/provisioning --input-format provisioning
 ```
 
 Example output:
@@ -417,13 +487,37 @@ How to read it:
 - `-` is the current live value.
 - `+` is the exported expected value.
 
+### 3.5a `dashboard validate-export`
+
+Purpose: validate exported dashboard JSON before GitOps-style sync or API import review.
+
+| Option | Purpose | Difference / scenario |
+| --- | --- | --- |
+| `--import-dir` | Dashboard export directory to validate | Use `raw/` by default; use `provisioning/` or its `dashboards/` subdirectory with `--input-format provisioning` |
+| `--input-format raw\|provisioning` | Choose the on-disk validation contract | Raw remains the default; provisioning validates the Grafana file-provisioning dashboard tree explicitly |
+| `--reject-custom-plugins` | Fail on custom panel or datasource plugins | Best for portable/core-only review gates |
+| `--reject-legacy-properties` | Fail on rows and web-import scaffolding | Best before sync/apply automation |
+| `--target-schema-version` | Require a minimum dashboard schemaVersion | Good for migration cutovers |
+| `--output-format text\|json` | Render the validation report as text or JSON | Use JSON for CI or artifact capture |
+| `--output-file` | Also write the rendered report to disk | Keep a CI artifact or attach to review bundles |
+
+Example commands:
+```bash
+grafana-util dashboard validate-export --import-dir ./dashboards/raw --reject-custom-plugins --reject-legacy-properties --target-schema-version 39
+grafana-util dashboard validate-export --import-dir ./dashboards/provisioning --input-format provisioning --output-format json --output-file ./dashboard-validation.json
+```
+
+Current note:
+- `dashboard validate-export` now follows the same explicit raw/provisioning input contract used by `dashboard import`, `dashboard diff`, and `dashboard inspect-export`. Raw stays the default lane.
+
 ### 3.6 `dashboard inspect-export`
 
 Purpose: analyze exported dashboards offline without calling Grafana.
 
 | Option | Purpose | Difference / scenario |
 | --- | --- | --- |
-| `--import-dir` | One org `raw/` directory or a combined multi-org export root | Offline analysis only |
+| `--import-dir` | One org export directory or a combined multi-org export root | Use `raw/` with `--input-format raw`; use `provisioning/` or its `dashboards/` subdirectory with `--input-format provisioning` |
+| `--input-format raw\|provisioning` | Choose the on-disk inspect contract | `raw` remains the default; `provisioning` analyzes the Grafana file-provisioning dashboard tree explicitly |
 | `--json` | JSON output | Script-friendly |
 | `--table` | Table output | Operator-friendly |
 | `--report` | Shortcut report mode | Empty `--report` means flat table; explicit values include `csv`, `json`, `tree`, `tree-table`, `dependency`, `dependency-json`, `governance`, and `governance-json` |
@@ -436,29 +530,34 @@ Purpose: analyze exported dashboards offline without calling Grafana.
 
 Example command:
 ```bash
-grafana-util dashboard inspect-export --import-dir ./dashboards/raw --output-format report-table
+grafana-util dashboard inspect-export --import-dir ./dashboards/raw --input-format raw --output-format report-table
 ```
 
 Combined multi-org export root:
 ```bash
-grafana-util dashboard inspect-export --import-dir ./dashboards --output-format report-tree-table
+grafana-util dashboard inspect-export --import-dir ./dashboards --input-format raw --output-format report-tree-table
+```
+
+Provisioning tree:
+```bash
+grafana-util dashboard inspect-export --import-dir ./dashboards/provisioning --input-format provisioning --report tree-table
 ```
 
 Inspect datasource-level org, database, bucket, and index-pattern fields:
 ```bash
-grafana-util dashboard inspect-export --import-dir ./dashboards/raw --report csv \
+grafana-util dashboard inspect-export --import-dir ./dashboards/raw --input-format raw --report csv \
   --report-columns datasource_name,datasource_org,datasource_org_id,datasource_database,datasource_bucket,datasource_index_pattern,query
 ```
 
 Inspect metrics, functions, and bucket extraction:
 ```bash
-grafana-util dashboard inspect-export --import-dir ./dashboards/raw --report csv \
+grafana-util dashboard inspect-export --import-dir ./dashboards/raw --input-format raw --report csv \
   --report-columns panel_id,ref_id,datasource_name,metrics,functions,buckets,query
 ```
 
 Inspect folder identity and source path details:
 ```bash
-grafana-util dashboard inspect-export --import-dir ./dashboards/raw --report csv \
+grafana-util dashboard inspect-export --import-dir ./dashboards/raw --input-format raw --report csv \
   --report-columns dashboard_uid,folder_path,folder_uid,parent_folder_uid,file
 ```
 
@@ -1116,7 +1215,7 @@ Cross-org note:
 
 ### 5.2 `datasource export`
 
-Purpose: export datasource inventory as normalized JSON.
+Purpose: export datasource inventory as normalized JSON plus a separate Grafana provisioning YAML lane.
 
 | Option | Purpose | Difference / scenario |
 | --- | --- | --- |
@@ -1124,6 +1223,7 @@ Purpose: export datasource inventory as normalized JSON.
 | `--org-id` | Export from one explicit org | Basic-auth only explicit org export |
 | `--all-orgs` | Export from all visible orgs | Writes one `org_<id>_<name>/` subtree per org |
 | `--overwrite` | Replace existing export files | Repeatable export runs |
+| `--without-datasource-provisioning` | Skip `provisioning/` | Use only if Grafana datasource provisioning files are not needed |
 | `--dry-run` | Preview only | Validate destination first |
 
 Example command:
@@ -1140,6 +1240,7 @@ Datasource export completed: 3 item(s)
 
 Live note:
 - The command shape above is exercised against a real Grafana `12.4.1` Docker server in the Rust live smoke flow.
+- The default export root now also includes `provisioning/datasources.yaml`, separate from the existing `datasources.json` import/diff lane.
 
 ### 5.3 `datasource import`
 
@@ -1148,6 +1249,7 @@ Purpose: import datasource inventory into live Grafana.
 | Option | Purpose | Difference / scenario |
 | --- | --- | --- |
 | `--import-dir` | Export root with `datasources.json` or combined export root | Use the combined root with `--use-export-org` |
+| `--input-format inventory\|provisioning` | Choose the on-disk import contract | `provisioning` accepts the export root, `provisioning/` directory, or a concrete YAML file |
 | `--org-id` | Target org | Explicit org restore |
 | `--use-export-org` | Route each exported org back into Grafana | Import a combined `--all-orgs` export root |
 | `--only-org-id` | Restrict `--use-export-org` to selected source orgs | Repeat the flag to import multiple orgs |
@@ -1178,6 +1280,7 @@ loki-prod   loki-prod          loki         create   missing
 
 Live note:
 - Real Docker-backed runs also validate routed datasource replay with `--use-export-org`, repeated `--only-org-id`, and `--create-missing-orgs`; in routed dry-run JSON the org preview reports `exists`, `missing-org`, or `would-create-org` before per-datasource actions.
+- Provisioning imports read Grafana datasource YAML directly and normalize it into the existing import pipeline; the older `datasources.json` contract remains the default under `--input-format inventory`.
 
 How to read it:
 - `UID` and `NAME` both matter, but automation should prefer `UID`.
@@ -1187,15 +1290,21 @@ How to read it:
 
 ### 5.4 `datasource diff`
 
-Purpose: compare exported datasource inventory with live Grafana.
+Purpose: compare exported datasource inventory or explicit provisioning YAML with live Grafana.
 
 | Option | Purpose |
 | --- | --- |
-| `--diff-dir` | Datasource export root directory |
+| `--diff-dir` | Datasource export root directory for inventory input, or export root / provisioning directory / concrete YAML file for provisioning input |
+| `--input-format` | Choose `inventory` for the default datasources.json export contract or `provisioning` for Grafana datasource provisioning YAML |
 
 Example command:
 ```bash
 grafana-util datasource diff --url http://localhost:3000 --basic-user admin --basic-password admin --diff-dir ./datasources
+```
+
+Provisioning example:
+```bash
+grafana-util datasource diff --url http://localhost:3000 --basic-user admin --basic-password admin --diff-dir ./datasources/provisioning --input-format provisioning
 ```
 
 Example output:
@@ -1960,7 +2069,7 @@ Purpose: turn exported dashboard/alert/datasource artifacts into one source bund
 
 | Command | Key flags | Main use |
 | --- | --- | --- |
-| `change bundle` | `--dashboard-export-dir`, `--alert-export-dir`, `--datasource-export-file`, `--output-file` | package staged exports into one portable source bundle |
+| `change bundle` | `--dashboard-export-dir`, `--alert-export-dir`, `--datasource-export-file` or `--datasource-provisioning-file`, `--output-file` | package staged exports into one portable source bundle |
 | `change bundle-preflight` | `--source-bundle`, `--target-inventory`, `--availability-file` | review blocking plugin, datasource, alert-artifact, and secret/provider checks |
 
 Example command:
@@ -1989,6 +2098,18 @@ Example output excerpt:
   }
 }
 ```
+
+Provisioning-backed datasource example:
+```bash
+grafana-util change bundle \
+  --dashboard-export-dir ./dashboards/raw \
+  --datasource-provisioning-file ./datasources/provisioning/datasources.yaml \
+  --output json
+```
+
+Notes:
+- `change bundle` still keeps datasource inventory JSON as the default staged contract.
+- `--datasource-provisioning-file` is explicit and mutually exclusive with `--datasource-export-file`.
 
 Example command:
 ```bash
@@ -2092,7 +2213,9 @@ Purpose: summarize staged exports and staged change inputs into one project-wide
 | Option | Purpose | Difference / scenario |
 | --- | --- | --- |
 | `--dashboard-export-dir` | Staged dashboard export root | Usually one `raw/` directory |
+| `--dashboard-provisioning-dir` | Staged dashboard provisioning root | Use this instead of `--dashboard-export-dir` when the source of truth is Grafana file provisioning |
 | `--datasource-export-dir` | Staged datasource export directory | Usually the org export directory containing `datasources.json` |
+| `--datasource-provisioning-file` | Staged datasource provisioning YAML | Use this instead of `--datasource-export-dir` when the source of truth is Grafana provisioning |
 | `--alert-export-dir` | Staged alert export directory | Point at the export root, not just `raw/` |
 | `--access-*-export-dir` | Staged access bundles | Add only the bundles you want summarized |
 | `--desired-file` | Optional change summary input | Adds staged change rows |
@@ -2113,6 +2236,15 @@ grafana-util overview \
   --output text
 ```
 
+Provisioning-backed dashboard example:
+```bash
+grafana-util overview \
+  --dashboard-provisioning-dir ./dashboards/provisioning \
+  --datasource-export-dir ./datasources \
+  --alert-export-dir ./alerts \
+  --output json
+```
+
 Example output:
 ```text
 Project overview
@@ -2126,13 +2258,19 @@ Domain status:
 - change status=ready reason=ready primary=4 blockers=0 warnings=0 freshness=current next=re-run change summary after staged changes
 ```
 
+Notes:
+- `--dashboard-provisioning-dir` is explicit and mutually exclusive with `--dashboard-export-dir`.
+- `--datasource-provisioning-file` is explicit and mutually exclusive with `--datasource-export-dir`.
+- Provisioning-backed overview keeps the same dashboard status contract; only the staged input lane changes.
+- Provisioning-backed overview keeps the same datasource status contract; only the staged input lane changes.
+
 ### 7.6 `status staged` and `status live`
 
 Purpose: render the canonical project-wide readiness contract from either staged exports or current Grafana state.
 
 | Command | Key flags | Main use |
 | --- | --- | --- |
-| `status staged` | staged export dirs plus optional desired/bundle inputs | machine-readable staged readiness |
+| `status staged` | staged export dirs, or `--dashboard-provisioning-dir`, `--datasource-provisioning-file`, plus optional desired/bundle inputs | machine-readable staged readiness |
 | `status live` | `--url`, auth, optional staged context files | machine-readable current Grafana status |
 | `overview live` | same live auth flags | human-facing live project read that routes through the shared `status live` path |
 
@@ -2150,6 +2288,20 @@ grafana-util status staged \
   --output json
 ```
 
+Provisioning-backed dashboard example:
+```bash
+grafana-util status staged \
+  --dashboard-provisioning-dir ./dashboards/provisioning \
+  --output json
+```
+
+Provisioning-backed datasource example:
+```bash
+grafana-util status staged \
+  --datasource-provisioning-file ./datasources/provisioning/datasources.yaml \
+  --output json
+```
+
 Example output excerpt:
 ```json
 {
@@ -2162,6 +2314,10 @@ Example output excerpt:
   }
 }
 ```
+
+Notes:
+- `--dashboard-provisioning-dir` is explicit and mutually exclusive with `--dashboard-export-dir`.
+- `--datasource-provisioning-file` is explicit and mutually exclusive with `--datasource-export-dir`.
 
 Example command:
 ```bash

@@ -17,8 +17,8 @@ use crate::project_status_live_runtime::build_live_project_status;
 use crate::project_status_staged::build_staged_project_status;
 
 pub(crate) const PROJECT_STATUS_DOMAIN_COUNT: usize = 6;
-const PROJECT_STATUS_HELP_TEXT: &str = "Examples:\n\n  Render staged project status as JSON:\n    grafana-util status staged --dashboard-export-dir ./dashboards/raw --desired-file ./desired.json --output json\n\n  Render live project status with staged sync context:\n    grafana-util status live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --sync-summary-file ./sync-summary.json --bundle-preflight-file ./bundle-preflight.json --output json";
-const PROJECT_STATUS_STAGED_HELP_TEXT: &str = "Examples:\n\n  Render staged project status as JSON:\n    grafana-util status staged --dashboard-export-dir ./dashboards/raw --desired-file ./desired.json --output json\n\n  Render staged project status in the interactive workbench:\n    grafana-util status staged --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts --output interactive";
+const PROJECT_STATUS_HELP_TEXT: &str = "Examples:\n\n  Render staged project status as JSON from raw dashboard artifacts:\n    grafana-util status staged --dashboard-export-dir ./dashboards/raw --desired-file ./desired.json --output json\n\n  Render staged project status from dashboard provisioning artifacts:\n    grafana-util status staged --dashboard-provisioning-dir ./dashboards/provisioning --output json\n\n  Render staged project status from datasource provisioning YAML:\n    grafana-util status staged --datasource-provisioning-file ./datasources/provisioning/datasources.yaml --output json\n\n  Render live project status with staged sync context:\n    grafana-util status live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --sync-summary-file ./sync-summary.json --bundle-preflight-file ./bundle-preflight.json --output json";
+const PROJECT_STATUS_STAGED_HELP_TEXT: &str = "Examples:\n\n  Render staged project status as JSON from raw dashboard artifacts:\n    grafana-util status staged --dashboard-export-dir ./dashboards/raw --desired-file ./desired.json --output json\n\n  Render staged project status from dashboard provisioning artifacts in the interactive workbench:\n    grafana-util status staged --dashboard-provisioning-dir ./dashboards/provisioning --alert-export-dir ./alerts --output interactive\n\n  Render staged project status from datasource provisioning YAML:\n    grafana-util status staged --datasource-provisioning-file ./datasources/provisioning/datasources.yaml --output json";
 const PROJECT_STATUS_LIVE_HELP_TEXT: &str = "Examples:\n\n  Render live project status as JSON:\n    grafana-util status live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output json\n\n  Render live status across visible orgs while layering staged sync context:\n    grafana-util status live --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --sync-summary-file ./sync-summary.json --output interactive";
 
 #[derive(Debug, Clone, Copy, ValueEnum, PartialEq, Eq)]
@@ -33,14 +33,29 @@ pub enum ProjectStatusOutputFormat {
 pub struct ProjectStatusStagedArgs {
     #[arg(
         long,
+        conflicts_with = "dashboard_provisioning_dir",
         help = "Dashboard export directory to summarize from staged artifacts."
     )]
     pub dashboard_export_dir: Option<PathBuf>,
     #[arg(
         long,
+        conflicts_with = "dashboard_export_dir",
+        help = "Dashboard provisioning directory to summarize from staged artifacts."
+    )]
+    pub dashboard_provisioning_dir: Option<PathBuf>,
+    #[arg(
+        long,
+        conflicts_with = "datasource_provisioning_file",
         help = "Datasource export directory to summarize from staged artifacts."
     )]
     pub datasource_export_dir: Option<PathBuf>,
+    #[arg(
+        long,
+        conflicts_with = "datasource_export_dir",
+        help = "Datasource provisioning YAML file to summarize instead of the stable inventory contract.",
+        help_heading = "Input Options"
+    )]
+    pub datasource_provisioning_file: Option<PathBuf>,
     #[arg(
         long,
         help = "Access user export directory to summarize from staged artifacts."
@@ -94,6 +109,11 @@ pub struct ProjectStatusStagedArgs {
 
 #[derive(Debug, Clone, Args)]
 pub struct ProjectStatusLiveArgs {
+    #[arg(
+        long,
+        help = "Load connection defaults from the selected repo-local profile in grafana-util.yaml."
+    )]
+    pub profile: Option<String>,
     #[arg(
         long,
         default_value = "http://localhost:3000",
@@ -218,7 +238,9 @@ pub struct ProjectStatusCliArgs {
 fn staged_args_to_overview_args(args: &ProjectStatusStagedArgs) -> OverviewArgs {
     OverviewArgs {
         dashboard_export_dir: args.dashboard_export_dir.clone(),
+        dashboard_provisioning_dir: args.dashboard_provisioning_dir.clone(),
         datasource_export_dir: args.datasource_export_dir.clone(),
+        datasource_provisioning_file: args.datasource_provisioning_file.clone(),
         access_user_export_dir: args.access_user_export_dir.clone(),
         access_team_export_dir: args.access_team_export_dir.clone(),
         access_org_export_dir: args.access_org_export_dir.clone(),

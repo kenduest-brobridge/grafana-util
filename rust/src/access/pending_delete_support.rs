@@ -121,6 +121,7 @@ mod pending_delete_support_tests {
 
     fn common_args() -> CommonCliArgs {
         CommonCliArgs {
+            profile: None,
             url: DEFAULT_URL.to_string(),
             api_token: Some("token".to_string()),
             username: None,

@@ -8,6 +8,7 @@ use super::{
 use crate::alert::{parse_cli_from as parse_alert_cli_from, root_command as alert_root_command};
 use crate::dashboard::DashboardCommand;
 use crate::datasource::DatasourceGroupCommand;
+use crate::profile_cli::{root_command as profile_root_command, ProfileCommand};
 use crate::sync::{SyncGroupCommand, SyncOutputFormat, DEFAULT_REVIEW_TOKEN};
 use clap::{CommandFactory, Parser};
 use std::cell::RefCell;
@@ -34,6 +35,19 @@ fn render_alert_subcommand_help(path: &[&str]) -> String {
     String::from_utf8(output).unwrap()
 }
 
+fn render_profile_subcommand_help(path: &[&str]) -> String {
+    let mut command = profile_root_command();
+    let mut current = &mut command;
+    for segment in path {
+        current = current
+            .find_subcommand_mut(segment)
+            .unwrap_or_else(|| panic!("missing profile subcommand help for {segment}"));
+    }
+    let mut output = Vec::new();
+    current.write_long_help(&mut output).unwrap();
+    String::from_utf8(output).unwrap()
+}
+
 #[test]
 fn unified_help_mentions_screenshot_and_inspect_vars_examples() {
     let help = render_unified_help();
@@ -46,6 +60,8 @@ fn unified_help_mentions_screenshot_and_inspect_vars_examples() {
     assert!(help.contains("dashboard screenshot"));
     assert!(help.contains("dashboard inspect-vars"));
     assert!(help.contains("--dashboard-url"));
+    assert!(help.contains("Run profile list, show, and init workflows."));
+    assert!(help.contains("[Profile Show]"));
 }
 
 #[test]
@@ -93,6 +109,69 @@ fn parse_cli_supports_dashboard_group_screenshot_command() {
         },
         _ => panic!("expected dashboard group"),
     }
+}
+
+#[test]
+fn parse_cli_supports_profile_group_list_command() {
+    let args: CliArgs = parse_cli_from(["grafana-util", "profile", "list"]);
+
+    match args.command {
+        UnifiedCommand::Profile(profile_args) => match profile_args.command {
+            ProfileCommand::List(_) => {}
+            _ => panic!("expected profile list"),
+        },
+        _ => panic!("expected profile group"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_profile_group_show_command() {
+    let args: CliArgs = parse_cli_from([
+        "grafana-util",
+        "profile",
+        "show",
+        "--profile",
+        "prod",
+        "--output-format",
+        "yaml",
+    ]);
+
+    match args.command {
+        UnifiedCommand::Profile(profile_args) => match profile_args.command {
+            ProfileCommand::Show(show_args) => {
+                assert_eq!(show_args.profile.as_deref(), Some("prod"));
+                assert_eq!(
+                    show_args.output_format,
+                    crate::profile_cli::ProfileShowOutputFormat::Yaml
+                );
+            }
+            _ => panic!("expected profile show"),
+        },
+        _ => panic!("expected profile group"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_profile_group_init_command() {
+    let args: CliArgs = parse_cli_from(["grafana-util", "profile", "init", "--overwrite"]);
+
+    match args.command {
+        UnifiedCommand::Profile(profile_args) => match profile_args.command {
+            ProfileCommand::Init(init_args) => {
+                assert!(init_args.overwrite);
+            }
+            _ => panic!("expected profile init"),
+        },
+        _ => panic!("expected profile group"),
+    }
+}
+
+#[test]
+fn profile_show_subcommand_help_mentions_output_format() {
+    let help = render_profile_subcommand_help(&["show"]);
+
+    assert!(help.contains("--output-format"));
+    assert!(help.contains("--profile"));
 }
 
 #[test]
@@ -1105,6 +1184,8 @@ fn unified_help_full_appends_extended_examples() {
     let help = render_unified_help_full();
     assert!(help.contains("Extended Examples:"));
     assert!(help.contains("[Dashboard Inspect Export]"));
+    assert!(help.contains("[Datasource Diff]"));
+    assert!(help.contains("--input-format provisioning"));
     assert!(help.contains("grafana-util change review --plan-file ./sync-plan.json"));
 }
 
@@ -1594,6 +1675,10 @@ fn dispatch_routes_dashboard_group_to_dashboard_handler() {
             routed.borrow_mut().push("access".to_string());
             Ok(())
         },
+        |_profile_args| {
+            routed.borrow_mut().push("profile".to_string());
+            Ok(())
+        },
         |_overview_args| {
             routed.borrow_mut().push("overview".to_string());
             Ok(())
@@ -1643,6 +1728,10 @@ fn dispatch_routes_access_group_to_access_handler() {
             routed.borrow_mut().push("access".to_string());
             Ok(())
         },
+        |_profile_args| {
+            routed.borrow_mut().push("profile".to_string());
+            Ok(())
+        },
         |_overview_args| {
             routed.borrow_mut().push("overview".to_string());
             Ok(())
@@ -1682,6 +1771,10 @@ fn dispatch_routes_overview_group_to_overview_handler() {
         },
         |_access_args| {
             routed.borrow_mut().push("access".to_string());
+            Ok(())
+        },
+        |_profile_args| {
+            routed.borrow_mut().push("profile".to_string());
             Ok(())
         },
         |_overview_args| {
@@ -1729,6 +1822,10 @@ fn dispatch_routes_change_group_to_change_handler() {
         },
         |_access_args| {
             routed.borrow_mut().push("access".to_string());
+            Ok(())
+        },
+        |_profile_args| {
+            routed.borrow_mut().push("profile".to_string());
             Ok(())
         },
         |_overview_args| {
@@ -1779,6 +1876,10 @@ fn dispatch_routes_datasource_group_to_datasource_handler() {
             routed.borrow_mut().push("access".to_string());
             Ok(())
         },
+        |_profile_args| {
+            routed.borrow_mut().push("profile".to_string());
+            Ok(())
+        },
         |_overview_args| {
             routed.borrow_mut().push("overview".to_string());
             Ok(())
@@ -1818,6 +1919,10 @@ fn dispatch_routes_status_group_to_status_handler() {
         },
         |_access_args| {
             routed.borrow_mut().push("access".to_string());
+            Ok(())
+        },
+        |_profile_args| {
+            routed.borrow_mut().push("profile".to_string());
             Ok(())
         },
         |_overview_args| {

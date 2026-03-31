@@ -3,6 +3,9 @@ use std::path::PathBuf;
 
 use crate::common::{resolve_auth_headers, Result};
 use crate::http::{JsonHttpClient, JsonHttpClientConfig};
+use crate::profile_config::{
+    load_selected_profile, resolve_connection_settings, ConnectionMergeInput,
+};
 
 use super::{
     AccessCliArgs, AccessCliRoot, AccessCommand, DryRunOutputFormat, ListOutputFormat, Scope,
@@ -136,14 +139,46 @@ pub struct AccessAuthContext {
 }
 
 pub fn build_auth_context(common: &super::CommonCliArgs) -> Result<AccessAuthContext> {
+    let selected_profile = load_selected_profile(common.profile.as_deref())?;
+    let resolved = resolve_connection_settings(
+        ConnectionMergeInput {
+            url: &common.url,
+            url_default: super::DEFAULT_URL,
+            api_token: common.api_token.as_deref(),
+            username: common.username.as_deref(),
+            password: common.password.as_deref(),
+            org_id: common.org_id,
+            timeout: common.timeout,
+            timeout_default: super::DEFAULT_TIMEOUT,
+            verify_ssl: common.verify_ssl,
+            insecure: common.insecure,
+            ca_cert: common.ca_cert.as_deref(),
+        },
+        selected_profile.as_ref(),
+    )?;
+    let token = if common.prompt_token && common.api_token.is_none() {
+        None
+    } else {
+        resolved.api_token.as_deref()
+    };
+    let username = if common.prompt_password {
+        common.username.as_deref().or(resolved.username.as_deref())
+    } else {
+        resolved.username.as_deref()
+    };
+    let password = if common.prompt_password && common.password.is_none() {
+        None
+    } else {
+        resolved.password.as_deref()
+    };
     let mut headers = resolve_auth_headers(
-        common.api_token.as_deref(),
-        common.username.as_deref(),
-        common.password.as_deref(),
+        token,
+        username,
+        password,
         common.prompt_password,
         common.prompt_token,
     )?;
-    if let Some(org_id) = common.org_id {
+    if let Some(org_id) = resolved.org_id {
         headers.push(("X-Grafana-Org-Id".to_string(), org_id.to_string()));
     }
     let auth_mode = headers
@@ -158,10 +193,10 @@ pub fn build_auth_context(common: &super::CommonCliArgs) -> Result<AccessAuthCon
         })
         .unwrap_or_else(|| "unknown".to_string());
     Ok(AccessAuthContext {
-        url: common.url.clone(),
-        timeout: common.timeout,
-        verify_ssl: common.verify_ssl || common.ca_cert.is_some(),
-        ca_cert: common.ca_cert.clone(),
+        url: resolved.url,
+        timeout: resolved.timeout,
+        verify_ssl: resolved.verify_ssl,
+        ca_cert: resolved.ca_cert,
         auth_mode,
         headers,
     })
@@ -170,10 +205,42 @@ pub fn build_auth_context(common: &super::CommonCliArgs) -> Result<AccessAuthCon
 pub fn build_auth_context_no_org_id(
     common: &super::CommonCliArgsNoOrgId,
 ) -> Result<AccessAuthContext> {
+    let selected_profile = load_selected_profile(common.profile.as_deref())?;
+    let resolved = resolve_connection_settings(
+        ConnectionMergeInput {
+            url: &common.url,
+            url_default: super::DEFAULT_URL,
+            api_token: common.api_token.as_deref(),
+            username: common.username.as_deref(),
+            password: common.password.as_deref(),
+            org_id: None,
+            timeout: common.timeout,
+            timeout_default: super::DEFAULT_TIMEOUT,
+            verify_ssl: common.verify_ssl,
+            insecure: common.insecure,
+            ca_cert: common.ca_cert.as_deref(),
+        },
+        selected_profile.as_ref(),
+    )?;
+    let token = if common.prompt_token && common.api_token.is_none() {
+        None
+    } else {
+        resolved.api_token.as_deref()
+    };
+    let username = if common.prompt_password {
+        common.username.as_deref().or(resolved.username.as_deref())
+    } else {
+        resolved.username.as_deref()
+    };
+    let password = if common.prompt_password && common.password.is_none() {
+        None
+    } else {
+        resolved.password.as_deref()
+    };
     let headers = resolve_auth_headers(
-        common.api_token.as_deref(),
-        common.username.as_deref(),
-        common.password.as_deref(),
+        token,
+        username,
+        password,
         common.prompt_password,
         common.prompt_token,
     )?;
@@ -189,10 +256,10 @@ pub fn build_auth_context_no_org_id(
         })
         .unwrap_or_else(|| "unknown".to_string());
     Ok(AccessAuthContext {
-        url: common.url.clone(),
-        timeout: common.timeout,
-        verify_ssl: common.verify_ssl || common.ca_cert.is_some(),
-        ca_cert: common.ca_cert.clone(),
+        url: resolved.url,
+        timeout: resolved.timeout,
+        verify_ssl: resolved.verify_ssl,
+        ca_cert: resolved.ca_cert,
         auth_mode,
         headers,
     })

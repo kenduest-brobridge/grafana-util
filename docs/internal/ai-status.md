@@ -8,6 +8,90 @@ Current AI-maintained status only.
 - Some older entries below still cite pre-cleanup `docs/internal/...` paths for files that now live under `docs/internal/archive/`.
 - Keep this file short and current. Additive historical detail belongs in `docs/internal/archive/`.
 
+## 2026-03-31 - Add explicit dashboard provisioning export provider overrides
+- State: Done
+- Scope: `rust/src/dashboard/cli_defs_command.rs`, `rust/src/dashboard/export.rs`, `rust/src/dashboard/dashboard_cli_parser_help_rust_tests.rs`, `rust/src/dashboard/export_focus_report_path_top_rust_tests.rs`, `rust/src/dashboard/inspect_live.rs`, `rust/src/dashboard/mod.rs`, `rust/src/dashboard/inspect_live_export_parity_all_orgs_rust_tests.rs`, `docs/user-guide.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: the dashboard provisioning export lane already wrote a usable default `provisioning/provisioning/dashboards.yaml`, but the provider block itself was still fixed to the default name, org ID, path, and lifecycle booleans.
+- Current Update: added explicit export CLI knobs for provisioning provider name, org ID override, path override, `disableDeletion`, `allowUiUpdates`, and `updateIntervalSeconds`, while keeping the existing defaults intact. The help text and user guide now call out the provider file and its override surface directly, and focused tests cover both parser/help output and the generated YAML shape.
+- Result: dashboard provisioning export now has an operator-controlled provider config surface instead of a hardcoded provider stub, while the export layout and import/diff behavior remain unchanged.
+
+## 2026-03-31 - Make dashboard provisioning export provider path concrete
+- State: Done
+- Scope: `rust/src/dashboard/export.rs`, `rust/src/dashboard/export_focus_report_path_top_rust_tests.rs`, `docs/user-guide.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: the generated `provisioning/provisioning/dashboards.yaml` still carried a placeholder path string, which meant operators had to hand-edit the provider file before it could point Grafana at the exported dashboards tree.
+- Current Update: changed the provisioning export helper to emit the actual exported dashboards directory path for the current export, falling back to the raw filesystem path if canonicalization is unavailable. Updated the user guide to explain that the generated provider file now points at the exported dashboards directory and only needs editing if the tree is moved elsewhere.
+- Result: dashboard provisioning export now writes a provider file that is immediately usable on the machine that created the export instead of a generic placeholder-only YAML stub.
+
+## 2026-03-31 - Add dashboard validate-export provisioning input format
+- State: Done
+- Scope: `rust/src/dashboard/validate.rs`, `rust/src/dashboard/cli_defs_command.rs`, `rust/src/dashboard/cli_defs_inspect.rs`, `rust/src/dashboard/dashboard_cli_inspect_help_rust_tests.rs`, `docs/user-guide.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: `dashboard validate-export` still described and resolved only the raw export lane, even though dashboard import, diff, and inspect already had an explicit provisioning input contract.
+- Current Update: added `--input-format provisioning` to `dashboard validate-export`, routed validation through the shared dashboard raw/provisioning source resolver, and documented that provisioning mode accepts either the `provisioning/` root or its `dashboards/` subdirectory while raw remains the default.
+- Result: dashboard validation now supports both export lanes through one explicit contract instead of treating provisioning trees as an unsupported path shape.
+
+## 2026-03-31 - Add datasource diff provisioning input format
+- State: Done
+- Scope: `rust/src/datasource.rs`, `rust/src/datasource_cli_defs.rs`, `rust/src/datasource_import_export_support.rs`, `rust/src/datasource_diff_rust_tests.rs`, `rust/src/datasource_rust_tests*.rs`, `docs/user-guide.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: `datasource diff` still only accepted the inventory export root contract and always loaded `datasources.json` through the inventory resolver. Provisioning YAML could be imported, but diff had no explicit provisioning lane and no parser/help path for it.
+- Current Update: added `--input-format provisioning` to `datasource diff`, routed diff loading through the shared datasource import resolver, and updated help/examples/docs to show the new lane without changing the inventory default.
+- Result: datasource diff now accepts inventory by default or provisioning input explicitly. Provisioning diff works from the export root, the `provisioning/` directory, or a concrete YAML file. Validation hit one unrelated repository blocker: `cargo test` and `cargo fmt` both fail in the existing tree because `rust/src/dashboard/import_edge_routed_org_scope_rust_tests.rs` references a missing `import_edge_routed_org_scope_provisioning_rust_tests.rs`.
+
+## 2026-03-31 - Clarify Python dashboard diff raw/provisioning help split
+- State: Done
+- Scope: `python/grafana_utils/dashboard_cli.py`, `python/grafana_utils/unified_cli.py`, `python/tests/test_python_dashboard_cli.py`, `python/tests/test_python_unified_cli.py`, `python/tests/test_python_unified_cli_dashboard_capture.py`, `docs/user-guide.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: the Python dashboard diff help and examples still centered the raw replay lane without explicitly calling out the provisioning lane added on the Rust side.
+- Current Update: updated the Python dashboard diff help and unified dashboard help so they explicitly distinguish Python raw diff/replay usage from Grafana file-provisioning inspection. The Python examples point provisioning users at `dashboard inspect-export --input-format provisioning` rather than implying Python diff consumes provisioning trees.
+- Result: the Python CLI help now explains its raw-vs-provisioning boundary directly, while the Rust runtime can keep evolving independently.
+
+## 2026-03-31 - Route dashboard provisioning imports with `--use-export-org`
+- State: Done
+- Scope: `rust/src/dashboard/import_validation.rs`, `rust/src/dashboard/rust_tests.rs`, `rust/src/dashboard/import_edge_routed_org_scope_rust_tests.rs`, `rust/src/dashboard/import_edge_routed_org_scope_provisioning_rust_tests.rs`, `docs/user-guide.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: `dashboard import --use-export-org` only discovered `raw/` child exports under a combined root. Single-org provisioning imports already worked with `--input-format provisioning`, but routed multi-org provisioning restores failed up front because the scope discovery path hard-rejected anything except raw.
+- Current Update: made routed export-org discovery variant-aware so `--use-export-org --input-format provisioning` now walks `org_<id>_<name>/provisioning/` children under a combined export root and reuses the existing per-org rebinding/import flow. Added focused tests for a successful routed provisioning import path and for the clearer single-org provisioning-root rejection message.
+- Result: dashboard routed import now supports both raw and provisioning combined export roots without changing raw behavior, while `--use-export-org` still rejects being pointed at one org's standalone `provisioning/` export directory.
+
+## 2026-03-31 - Add dashboard diff provisioning input format
+- State: Done
+- Scope: `rust/src/dashboard/cli_defs_command.rs`, `rust/src/dashboard/import.rs`, `rust/src/dashboard/import_compare.rs`, `rust/src/dashboard/export_diff_rust_tests.rs`, `rust/src/dashboard/export_diff_tail_rust_tests.rs`, `rust/src/dashboard/dashboard_cli_parser_help_rust_tests.rs`, `rust/src/dashboard/import_edge_routed_org_scope_selection_create_rust_tests.rs`
+- Baseline: `dashboard diff` only walked the raw export tree and assumed the caller had already pointed it at `raw/`. Provisioning dashboard JSON under `provisioning/` or `provisioning/dashboards/` was not an explicit diff input contract.
+- Current Update: added `--input-format provisioning` to `dashboard diff`, resolved provisioning roots through the same dashboard source resolver used by import, and kept raw as the default. The diff path now compares the resolved dashboard JSON tree against live Grafana without guessing at folder shape.
+- Result: dashboard diff now supports both raw replay trees and explicit provisioning trees as first-class inputs, while the default raw workflow remains backward-compatible.
+
+## 2026-03-31 - Add dashboard provisioning export lane
+- State: Done
+- Scope: `rust/src/dashboard/cli_defs_command.rs`, `rust/src/dashboard/export.rs`, `rust/src/dashboard/files.rs`, `rust/src/dashboard/models.rs`, `rust/src/dashboard/mod.rs`, `rust/src/dashboard/inspect_live.rs`, `rust/src/dashboard/dashboard_export_import_inventory_rust_tests.rs`, `rust/src/dashboard/dashboard_export_import_topology_import_format_rust_tests.rs`, `rust/src/dashboard/export_focus_report_path_top_rust_tests.rs`, `rust/src/dashboard/inspect_live_export_parity_all_orgs_rust_tests.rs`, `README.md`, `docs/user-guide.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: `dashboard export` only emitted `raw/` and `prompt/`. `raw/` already meant the grafana-util API replay contract, so putting Grafana file provisioning output into the same lane would have mixed two different on-disk semantics under one directory name.
+- Current Update: added a third `provisioning/` lane for dashboard export, kept `raw/` and `prompt/` unchanged, and recorded the new lane in root export indexes and docs. The provisioning lane writes plain dashboard JSON under `provisioning/dashboards/` plus a starter `provisioning/provisioning/dashboards.yaml` provider file so operators can wire Grafana file provisioning without changing the meaning of `raw/`.
+- Result: dashboard export now has three explicit lanes instead of overloading `raw/`, which keeps existing import/diff behavior stable while giving file-based Grafana deployments a first-class export artifact.
+
+## 2026-03-31 - Add dashboard provisioning staged-summary inputs to overview/status
+- State: Done
+- Scope: `rust/src/dashboard/inspect.rs`, `rust/src/dashboard/mod.rs`, `rust/src/overview.rs`, `rust/src/overview_artifacts.rs`, `rust/src/project_status_command.rs`, `rust/src/overview_rust_tests.rs`, `rust/src/project_status_cli_rust_tests.rs`, `docs/user-guide.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: the dashboard provisioning export lane already existed, but `overview` and `status staged` still only exposed the raw dashboard export dir as a staged input. That left provisioning users with a distinct export lane but no explicit overview/status input to summarize it.
+- Current Update: added explicit `--dashboard-provisioning-dir` staged inputs to both `overview` and `status staged`, kept `--dashboard-export-dir` as the default raw lane, and made the new provisioning input conflict cleanly with the raw alternative. Overview artifact loading now reads provisioning dashboard roots through the same inspect-summary contract, and the user guide now documents the raw/provisioning split clearly.
+- Result: operators can now summarize dashboard provisioning artifacts without guessing at the input contract, while the original raw export-dir workflow remains unchanged.
+
+## 2026-03-31 - Add datasource provisioning export lane
+- State: Done
+- Scope: `rust/src/datasource_cli_defs.rs`, `rust/src/datasource.rs`, `rust/src/datasource_export_support.rs`, `rust/src/datasource_import_export.rs`, `rust/src/datasource_rust_tests.rs`, `docs/user-guide.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: datasource export only wrote the grafana-utils JSON inventory contract. That worked for import/diff, but it left Grafana file-provisioning users without a first-class datasource export artifact and would have required overloading the existing `datasources.json` contract if added naively.
+- Current Update: added a separate `provisioning/` datasource export lane that writes `provisioning/datasources.yaml` while keeping the existing `datasources.json` root contract unchanged. The export index and metadata now include provisioning pointers, the all-org export path also writes one root provisioning file, and the CLI exposes `--without-datasource-provisioning` to disable that lane explicitly.
+- Result: datasource export now matches the dashboard strategy: existing replay/import semantics stay stable, while Grafana provisioning users get a distinct file-based artifact instead of a mixed contract.
+
+## 2026-03-31 - Add provisioning import formats for dashboards and datasources
+- State: Done
+- Scope: `rust/src/dashboard/cli_defs_command.rs`, `rust/src/dashboard/files.rs`, `rust/src/dashboard/import.rs`, `rust/src/dashboard/import_apply.rs`, `rust/src/dashboard/import_validation.rs`, `rust/src/dashboard/import_interactive_loader.rs`, `rust/src/dashboard/import_interactive_review.rs`, `rust/src/dashboard/mod.rs`, `rust/src/dashboard/*_rust_tests.rs`, `rust/src/datasource_cli_defs.rs`, `rust/src/datasource.rs`, `rust/src/datasource_import_export.rs`, `rust/src/datasource_import_export_support.rs`, `rust/src/datasource_import_export_routed.rs`, `rust/src/datasource_rust_tests.rs`, `rust/src/datasource_rust_tests_tail_rust_tests.rs`, `docs/user-guide.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: export now had dedicated provisioning lanes for dashboards and datasources, but import still assumed only the grafana-utils replay contracts: dashboard `raw/` and datasource `datasources.json`. That meant file-provisioning users could export into a clean provisioning lane but still could not feed those artifacts back into the import workflow explicitly.
+- Current Update: added explicit import input formats on both surfaces. `dashboard import --input-format provisioning` now accepts either the provisioning root or its `dashboards/` directory and resolves to the concrete JSON tree before discovery, validation, and interactive review. `datasource import --input-format provisioning` now accepts the export root, the `provisioning/` directory, or a concrete datasource YAML file and normalizes Grafana provisioning YAML into the existing datasource import plan.
+- Result: provisioning is now a first-class round-trip lane on both domains without breaking the older replay/import contracts or blurring their semantics.
+
+## 2026-03-31 - Extend provisioning lanes into inspect and staged bundle/status surfaces
+- State: Done
+- Scope: `rust/src/dashboard/cli_defs_inspect.rs`, `rust/src/dashboard/inspect.rs`, `rust/src/dashboard/inspect_orchestration.rs`, `rust/src/dashboard/help.rs`, `rust/src/cli.rs`, `rust/src/cli_help_examples.rs`, `rust/src/dashboard/*inspect*_rust_tests.rs`, `rust/src/sync/bundle_inputs.rs`, `rust/src/sync/mod.rs`, `rust/src/sync/cli.rs`, `rust/src/sync/*bundle*_rust_tests.rs`, `rust/src/overview.rs`, `rust/src/overview_artifacts.rs`, `rust/src/overview_rust_tests.rs`, `rust/src/project_status_command.rs`, `rust/src/project_status_cli_rust_tests.rs`, `docs/user-guide.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: provisioning export/import lanes existed, but `dashboard inspect-export` still described raw-only inputs and staged project surfaces still assumed datasource inventory JSON. That left provisioning as a partial round-trip lane instead of a consistent operator-visible workflow.
+- Current Update: added explicit `dashboard inspect-export --input-format raw|provisioning` so offline analysis can target either the raw replay tree or the provisioning dashboard tree without guessing. Added explicit datasource provisioning inputs to staged bundle and project-status surfaces: `change bundle --datasource-provisioning-file`, `overview --datasource-provisioning-file`, and `status staged --datasource-provisioning-file`. The older inventory/JSON inputs remain the default and now conflict cleanly with the provisioning alternatives instead of silently competing.
+- Result: provisioning is now an explicit lane not just for export/import, but also for offline dashboard inspection and datasource-driven staged bundle/status workflows, while the older raw/inventory contracts remain stable and unambiguous.
+
 ## 2026-03-30 - Extract shared status live support helpers
 - State: Done
 - Scope: `rust/src/lib.rs`, `rust/src/project_status_command.rs`, `rust/src/project_status_live_runtime.rs`, `rust/src/project_status_support.rs`, `docs/DEVELOPER.md`, `docs/internal/project-surface-boundaries.md`, `docs/internal/project-status-architecture.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
@@ -322,6 +406,13 @@ Current AI-maintained status only.
 - Baseline: inspect could already show folder and dashboard blast-radius facts per datasource, but operators still had to decide by eye whether that concentration was risky enough to flag.
 - Current Update: added a conservative `highBlastRadius` threshold to datasource governance and dependency usage, then surfaced the count in governance summary and the boolean in governance/dependency/TUI outputs.
 - Result: shared datasources that fan out broadly are now flagged explicitly in inspect output, so governance and cleanup work can focus on concentration hotspots instead of scanning raw counts manually.
+
+## 2026-03-31 - Rust profile/workspace usability foundation
+- State: Done
+- Scope: `rust/src/profile_config.rs`, `rust/src/profile_cli.rs`, `rust/src/cli.rs`, `rust/src/cli_help_examples.rs`, `rust/src/dashboard/cli_defs_shared.rs`, `rust/src/dashboard/dashboard_runtime.rs`, `rust/src/access/access_cli_shared.rs`, `rust/src/access/access_cli_runtime.rs`, `rust/src/alert_cli_defs.rs`, `rust/src/project_status_command.rs`, `rust/src/project_status_support.rs`, focused Rust tests, `docs/user-guide.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: the Rust CLI already had deep operator workflows, but every live command still required repeating URL/auth/TLS flags manually, and there was no repo-local workspace concept or first-class profile command surface.
+- Current Update: added repo-local `grafana-util.yaml` support plus `grafana-util profile list/show/init`. Dashboard, datasource, access, alert, and `status live` now accept `--profile` and merge live connection defaults from the selected profile while preserving explicit CLI override precedence and existing `GRAFANA_*` auth fallbacks.
+- Result: the first usability layer is now real instead of aspirational. Operators can keep named environments in-repo, inspect them directly, and run the main live command families with materially shorter and more stable invocations.
 
 ## 2026-03-28 - Datasource blast-radius outputs
 - State: Done

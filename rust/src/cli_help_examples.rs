@@ -29,6 +29,7 @@ pub(crate) const HELP_COLOR_ALERT: &str = "\x1b[1;31m";
 pub(crate) const HELP_COLOR_DATASOURCE: &str = "\x1b[1;32m";
 pub(crate) const HELP_COLOR_ACCESS: &str = "\x1b[1;33m";
 pub(crate) const HELP_COLOR_SYNC: &str = "\x1b[1;34m";
+pub(crate) const HELP_COLOR_PROFILE: &str = "\x1b[1;35m";
 
 pub(crate) const HELP_FULL_HINT: &str =
     "Extended Help:\n  --help-full\n          Print help with extended examples\n";
@@ -104,6 +105,11 @@ pub(crate) const UNIFIED_HELP_TEXT: &str = help_block!(
         r#"grafana-util access user list --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --json"#
     ),
     (
+        "[Profile Show]",
+        "Inspect a selected profile from the repo-local config file:",
+        "grafana-util profile show --profile prod --output-format yaml"
+    ),
+    (
         "[Change Planning]",
         "Build a change plan directly from live Grafana state:",
         r#"grafana-util change plan --desired-file ./desired.json --fetch-live --url http://localhost:3000 --token "$GRAFANA_API_TOKEN"#
@@ -120,7 +126,12 @@ pub(crate) const UNIFIED_HELP_FULL_TEXT: &str = help_block!(
     (
         "[Dashboard Inspect Export]",
         "Render a grouped dashboard dependency table from raw exports:",
-        "grafana-util dashboard inspect-export --import-dir ./dashboards/raw --output-format report-tree-table --report-columns dashboard_uid,panel_title,datasource_uid,query"
+        "grafana-util dashboard inspect-export --import-dir ./dashboards/raw --input-format raw --output-format report-tree-table --report-columns dashboard_uid,panel_title,datasource_uid,query"
+    ),
+    (
+        "[Dashboard Inspect Export]",
+        "Inspect a provisioning tree from the file-provisioning root:",
+        "grafana-util dashboard inspect-export --import-dir ./dashboards/provisioning --input-format provisioning --report tree-table"
     ),
     (
         "[Dashboard Inspect Live]",
@@ -133,9 +144,24 @@ pub(crate) const UNIFIED_HELP_FULL_TEXT: &str = help_block!(
         r#"grafana-util datasource import --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --import-dir ./datasources --dry-run --json"#
     ),
     (
+        "[Datasource Diff]",
+        "Compare a provisioning datasource tree against live Grafana:",
+        r#"grafana-util datasource diff --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --diff-dir ./datasources/provisioning --input-format provisioning"#
+    ),
+    (
         "[Access Team Import]",
         "Preview a destructive team sync before confirming:",
         "grafana-util access team import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./access-teams --replace-existing --dry-run --output-format table"
+    ),
+    (
+        "[Profile Show]",
+        "Inspect a selected profile from the repo-local config file:",
+        "grafana-util profile show --profile prod --output-format yaml"
+    ),
+    (
+        "[Profile Init]",
+        "Seed grafana-util.yaml in the current directory from the built-in template:",
+        "grafana-util profile init --overwrite"
     ),
     (
         "[Alert Import]",
@@ -269,6 +295,11 @@ pub(crate) const DATASOURCE_HELP_FULL_TEXT: &str = help_block!(
         "[Datasource Diff]",
         "Compare a local export directory with live Grafana:",
         r#"grafana-util datasource diff --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --diff-dir ./datasources"#
+    ),
+    (
+        "[Datasource Diff]",
+        "Compare a provisioning datasource tree against live Grafana:",
+        r#"grafana-util datasource diff --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --diff-dir ./datasources/provisioning --input-format provisioning"#
     )
 );
 
@@ -311,7 +342,7 @@ pub(crate) const SYNC_HELP_FULL_TEXT: &str = help_block!(
     (
         "[Change Bundle]",
         "Package exported dashboard and alert artifacts into one source bundle:",
-        "grafana-util change bundle --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts/raw --output-file ./sync-source-bundle.json"
+        "grafana-util change bundle --dashboard-provisioning-dir ./dashboards/provisioning --alert-export-dir ./alerts/raw --output-file ./sync-source-bundle.json"
     ),
     (
         "[Change Bundle Preflight]",
@@ -335,7 +366,7 @@ pub(crate) const SYNC_HELP_FULL_TEXT: &str = help_block!(
     )
 );
 
-pub(crate) const HELP_EXAMPLE_LABELS: [(&str, &str); 26] = [
+pub(crate) const HELP_EXAMPLE_LABELS: [(&str, &str); 28] = [
     ("[Dashboard Export]", HELP_COLOR_DASHBOARD),
     ("[Dashboard Capture]", HELP_COLOR_DASHBOARD),
     ("[Dashboard Inspect Export]", HELP_COLOR_DASHBOARD),
@@ -353,6 +384,8 @@ pub(crate) const HELP_EXAMPLE_LABELS: [(&str, &str); 26] = [
     ("[Access Team Import]", HELP_COLOR_ACCESS),
     ("[Access Org Delete]", HELP_COLOR_ACCESS),
     ("[Access Token Add]", HELP_COLOR_ACCESS),
+    ("[Profile Show]", HELP_COLOR_PROFILE),
+    ("[Profile Init]", HELP_COLOR_PROFILE),
     ("[Change Planning]", HELP_COLOR_SYNC),
     ("[Change Summary]", HELP_COLOR_SYNC),
     ("[Change Plan]", HELP_COLOR_SYNC),

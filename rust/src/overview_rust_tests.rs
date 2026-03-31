@@ -66,6 +66,30 @@ fn write_datasource_export_fixture(dir: &Path) {
     .unwrap();
 }
 
+fn write_datasource_provisioning_fixture(path: &Path) {
+    fs::write(
+        path,
+        r#"apiVersion: 1
+datasources:
+  - uid: prom-main
+    name: Prometheus Main
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    orgId: 1
+    isDefault: true
+  - uid: loki-main
+    name: Loki Main
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    orgId: 2
+    isDefault: false
+"#,
+    )
+    .unwrap();
+}
+
 fn write_alert_export_fixture(dir: &Path) {
     fs::create_dir_all(dir).unwrap();
     fs::write(
@@ -233,7 +257,9 @@ fn assert_dashboard_domain_contract(domain: &Value) {
 fn build_overview_artifacts_rejects_empty_inputs() {
     let args = OverviewArgs {
         dashboard_export_dir: None,
+        dashboard_provisioning_dir: None,
         datasource_export_dir: None,
+        datasource_provisioning_file: None,
         access_user_export_dir: None,
         access_team_export_dir: None,
         access_org_export_dir: None,
@@ -282,11 +308,58 @@ fn overview_args_parse_and_help_expose_output_mode() {
     let help = OverviewCliArgs::command().render_long_help().to_string();
     assert!(help.contains("--output <OUTPUT>"));
     assert!(help.contains("Render the overview document as text, json, or interactive output."));
+    assert!(help.contains("--dashboard-provisioning-dir"));
+    assert!(help.contains("--datasource-provisioning-file"));
     assert!(help.contains("live"));
     #[cfg(feature = "tui")]
     assert!(help.contains("interactive"));
     #[cfg(not(feature = "tui"))]
     assert!(!help.contains("interactive"));
+}
+
+#[test]
+fn overview_args_support_datasource_provisioning_file() {
+    let args = OverviewCliArgs::parse_from([
+        "grafana-util",
+        "--datasource-provisioning-file",
+        "./datasources/provisioning/datasources.yaml",
+        "--output",
+        "json",
+    ]);
+
+    assert_eq!(
+        args.staged.datasource_provisioning_file,
+        Some(std::path::Path::new("./datasources/provisioning/datasources.yaml").to_path_buf())
+    );
+}
+
+#[test]
+fn overview_args_support_dashboard_provisioning_dir() {
+    let args = OverviewCliArgs::parse_from([
+        "grafana-util",
+        "--dashboard-provisioning-dir",
+        "./dashboards/provisioning",
+        "--output",
+        "json",
+    ]);
+
+    assert_eq!(
+        args.staged.dashboard_provisioning_dir,
+        Some(std::path::Path::new("./dashboards/provisioning").to_path_buf())
+    );
+}
+
+#[test]
+fn overview_args_reject_dashboard_export_and_provisioning_inputs_together() {
+    let args = OverviewCliArgs::try_parse_from([
+        "grafana-util",
+        "--dashboard-export-dir",
+        "./dashboards/raw",
+        "--dashboard-provisioning-dir",
+        "./dashboards/provisioning",
+    ]);
+
+    assert!(args.is_err());
 }
 
 #[test]
@@ -300,7 +373,9 @@ fn overview_cli_help_exposes_staged_and_live_shapes() {
 fn build_overview_artifacts_rejects_incomplete_bundle_context() {
     let args = OverviewArgs {
         dashboard_export_dir: None,
+        dashboard_provisioning_dir: None,
         datasource_export_dir: None,
+        datasource_provisioning_file: None,
         access_user_export_dir: None,
         access_team_export_dir: None,
         access_org_export_dir: None,
@@ -635,7 +710,9 @@ fn build_overview_document_and_render_overview_text_for_all_sections() {
 
     let args = OverviewArgs {
         dashboard_export_dir: Some(dashboard_export_dir),
+        dashboard_provisioning_dir: None,
         datasource_export_dir: None,
+        datasource_provisioning_file: None,
         access_user_export_dir: None,
         access_team_export_dir: None,
         access_org_export_dir: None,
@@ -935,7 +1012,9 @@ fn build_overview_document_and_render_overview_text_for_change_summary_domain_st
 
     let args = OverviewArgs {
         dashboard_export_dir: None,
+        dashboard_provisioning_dir: None,
         datasource_export_dir: None,
+        datasource_provisioning_file: None,
         access_user_export_dir: None,
         access_team_export_dir: None,
         access_org_export_dir: None,
@@ -1019,7 +1098,9 @@ fn build_overview_document_preserves_the_shared_project_status_render_contract()
 
     let args = OverviewArgs {
         dashboard_export_dir: None,
+        dashboard_provisioning_dir: None,
         datasource_export_dir: None,
+        datasource_provisioning_file: None,
         access_user_export_dir: None,
         access_team_export_dir: None,
         access_org_export_dir: None,
@@ -1199,7 +1280,9 @@ fn build_overview_document_and_render_overview_text_for_bundle_preflight_assessm
 
     let args = OverviewArgs {
         dashboard_export_dir: None,
+        dashboard_provisioning_dir: None,
         datasource_export_dir: None,
+        datasource_provisioning_file: None,
         access_user_export_dir: None,
         access_team_export_dir: None,
         access_org_export_dir: None,
@@ -1334,7 +1417,9 @@ fn build_overview_document_and_render_overview_text_for_datasource_export_sectio
 
     let args = OverviewArgs {
         dashboard_export_dir: None,
+        dashboard_provisioning_dir: None,
         datasource_export_dir: Some(datasource_export_dir),
+        datasource_provisioning_file: None,
         access_user_export_dir: None,
         access_team_export_dir: None,
         access_org_export_dir: None,
@@ -1428,6 +1513,53 @@ fn build_overview_document_and_render_overview_text_for_datasource_export_sectio
 }
 
 #[test]
+fn build_overview_document_and_render_overview_text_for_datasource_provisioning_section() {
+    let temp = tempdir().unwrap();
+    let datasource_provisioning_file = temp.path().join("datasources.yaml");
+    write_datasource_provisioning_fixture(&datasource_provisioning_file);
+
+    let args = OverviewArgs {
+        dashboard_export_dir: None,
+        dashboard_provisioning_dir: None,
+        datasource_export_dir: None,
+        datasource_provisioning_file: Some(datasource_provisioning_file.clone()),
+        access_user_export_dir: None,
+        access_team_export_dir: None,
+        access_org_export_dir: None,
+        access_service_account_export_dir: None,
+        desired_file: None,
+        source_bundle: None,
+        target_inventory: None,
+        alert_export_dir: None,
+        availability_file: None,
+        mapping_file: None,
+        output: OverviewOutputFormat::Json,
+    };
+
+    let artifacts = build_overview_artifacts(&args).unwrap();
+    let document = build_overview_document(artifacts).unwrap();
+    let json_document = serde_json::to_value(&document).unwrap();
+    let lines = render_overview_text(&document).unwrap();
+
+    assert_eq!(document.summary.artifact_count, 1);
+    assert_eq!(document.summary.datasource_export_count, 1);
+    assert_eq!(
+        json_document["artifacts"][0]["title"],
+        json!("Datasource provisioning")
+    );
+    assert_eq!(
+        json_document["sections"][0]["views"][0]["items"][0]["meta"],
+        json!("datasources=2 orgs=2 defaults=1 types=2")
+    );
+    assert!(lines
+        .iter()
+        .any(|line| line.contains("# Datasource provisioning")));
+    assert!(lines
+        .iter()
+        .any(|line| line.contains("datasourceProvisioningFile=")));
+}
+
+#[test]
 fn build_overview_document_and_render_overview_text_for_alert_export_section() {
     let temp = tempdir().unwrap();
     let alert_export_dir = temp.path().join("alerts");
@@ -1435,7 +1567,9 @@ fn build_overview_document_and_render_overview_text_for_alert_export_section() {
 
     let args = OverviewArgs {
         dashboard_export_dir: None,
+        dashboard_provisioning_dir: None,
         datasource_export_dir: None,
+        datasource_provisioning_file: None,
         access_user_export_dir: None,
         access_team_export_dir: None,
         access_org_export_dir: None,
@@ -1586,7 +1720,9 @@ fn build_overview_document_and_render_overview_text_for_access_export_sections()
 
     let args = OverviewArgs {
         dashboard_export_dir: None,
+        dashboard_provisioning_dir: None,
         datasource_export_dir: None,
+        datasource_provisioning_file: None,
         access_user_export_dir: Some(user_export_dir),
         access_team_export_dir: Some(team_export_dir),
         access_org_export_dir: Some(org_export_dir),
@@ -1743,7 +1879,9 @@ fn build_overview_artifacts_rejects_access_export_metadata_kind_mismatch() {
 
     let args = OverviewArgs {
         dashboard_export_dir: None,
+        dashboard_provisioning_dir: None,
         datasource_export_dir: None,
+        datasource_provisioning_file: None,
         access_user_export_dir: Some(user_export_dir),
         access_team_export_dir: None,
         access_org_export_dir: None,
@@ -1781,7 +1919,9 @@ fn build_overview_artifacts_rejects_access_export_version_too_new() {
 
     let args = OverviewArgs {
         dashboard_export_dir: None,
+        dashboard_provisioning_dir: None,
         datasource_export_dir: None,
+        datasource_provisioning_file: None,
         access_user_export_dir: Some(user_export_dir),
         access_team_export_dir: None,
         access_org_export_dir: None,
@@ -1971,6 +2111,7 @@ fn collect_scoped_paths<'a>(
 
 fn sample_project_status_live_args(base_url: String) -> ProjectStatusLiveArgs {
     ProjectStatusLiveArgs {
+        profile: None,
         url: base_url,
         api_token: Some("token".to_string()),
         username: None,

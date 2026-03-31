@@ -7,9 +7,10 @@ use crate::project_status::{
     PROJECT_STATUS_BLOCKED, PROJECT_STATUS_READY,
 };
 use crate::project_status_command::{
-    execute_project_status_staged, render_project_status_text, ProjectStatusOutputFormat,
-    ProjectStatusStagedArgs,
+    execute_project_status_staged, render_project_status_text, ProjectStatusCliArgs,
+    ProjectStatusOutputFormat, ProjectStatusStagedArgs, ProjectStatusSubcommand,
 };
+use clap::{CommandFactory, Parser};
 use serde_json::{json, Value};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -189,7 +190,9 @@ fn write_change_desired_fixture(path: &Path) {
 fn staged_args(desired_file: PathBuf) -> ProjectStatusStagedArgs {
     ProjectStatusStagedArgs {
         dashboard_export_dir: None,
+        dashboard_provisioning_dir: None,
         datasource_export_dir: None,
+        datasource_provisioning_file: None,
         access_user_export_dir: None,
         access_team_export_dir: None,
         access_org_export_dir: None,
@@ -425,4 +428,70 @@ fn project_status_staged_text_renderer_matches_the_shared_contract_fields() {
             "- sync reason=ready action=re-run sync summary after staged changes".to_string(),
         ]
     );
+}
+
+#[test]
+fn project_status_cli_help_and_parse_support_datasource_provisioning_file() {
+    let mut command = ProjectStatusCliArgs::command();
+    let subcommand = command
+        .find_subcommand_mut("staged")
+        .expect("missing staged help");
+    let help = subcommand.render_long_help().to_string();
+    assert!(help.contains("--dashboard-provisioning-dir"));
+    assert!(help.contains("--datasource-provisioning-file"));
+
+    let args = ProjectStatusCliArgs::parse_from([
+        "grafana-util",
+        "staged",
+        "--datasource-provisioning-file",
+        "./datasources/provisioning/datasources.yaml",
+        "--output",
+        "json",
+    ]);
+
+    match args.command {
+        ProjectStatusSubcommand::Staged(inner) => {
+            assert_eq!(
+                inner.datasource_provisioning_file,
+                Some(Path::new("./datasources/provisioning/datasources.yaml").to_path_buf())
+            );
+        }
+        _ => panic!("expected staged"),
+    }
+}
+
+#[test]
+fn project_status_cli_supports_dashboard_provisioning_dir() {
+    let args = ProjectStatusCliArgs::parse_from([
+        "grafana-util",
+        "staged",
+        "--dashboard-provisioning-dir",
+        "./dashboards/provisioning",
+        "--output",
+        "json",
+    ]);
+
+    match args.command {
+        ProjectStatusSubcommand::Staged(inner) => {
+            assert_eq!(
+                inner.dashboard_provisioning_dir,
+                Some(Path::new("./dashboards/provisioning").to_path_buf())
+            );
+        }
+        _ => panic!("expected staged"),
+    }
+}
+
+#[test]
+fn project_status_cli_rejects_dashboard_export_and_provisioning_inputs_together() {
+    let args = ProjectStatusCliArgs::try_parse_from([
+        "grafana-util",
+        "staged",
+        "--dashboard-export-dir",
+        "./dashboards/raw",
+        "--dashboard-provisioning-dir",
+        "./dashboards/provisioning",
+    ]);
+
+    assert!(args.is_err());
 }

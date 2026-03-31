@@ -63,6 +63,10 @@ pub mod http;
 pub(crate) mod interactive_browser;
 /// Artifact-driven project overview assembly for staged dashboard and sync inputs.
 pub mod overview;
+/// Repo-local profile namespace for listing, showing, and initializing config files.
+pub mod profile_cli;
+/// Repo-local profile/workspace config loading and live connection default resolution.
+pub mod profile_config;
 /// Shared status contract shapes reused across overview and future status producers.
 pub(crate) mod project_status;
 /// Top-level status command surface for staged/live project-wide status.

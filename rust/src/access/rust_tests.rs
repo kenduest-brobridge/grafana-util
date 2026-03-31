@@ -67,6 +67,7 @@ fn render_access_root_help() -> String {
 
 fn make_token_common() -> CommonCliArgs {
     CommonCliArgs {
+        profile: None,
         url: "http://127.0.0.1:3000".to_string(),
         api_token: Some("token".to_string()),
         username: None,
@@ -83,6 +84,7 @@ fn make_token_common() -> CommonCliArgs {
 
 fn make_basic_common() -> CommonCliArgs {
     CommonCliArgs {
+        profile: None,
         url: "http://127.0.0.1:3000".to_string(),
         api_token: None,
         username: Some("admin".to_string()),
@@ -99,6 +101,7 @@ fn make_basic_common() -> CommonCliArgs {
 
 fn make_basic_common_no_org_id() -> CommonCliArgsNoOrgId {
     CommonCliArgsNoOrgId {
+        profile: None,
         url: "http://127.0.0.1:3000".to_string(),
         api_token: None,
         username: Some("admin".to_string()),

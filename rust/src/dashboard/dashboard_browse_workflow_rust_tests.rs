@@ -4,6 +4,7 @@ use super::*;
 fn dashboard_delete_validate_args_requires_yes_without_dry_run() {
     let args = DeleteArgs {
         common: CommonCliArgs {
+            profile: None,
             url: "https://grafana.example.com".to_string(),
             api_token: Some("token".to_string()),
             username: None,
@@ -35,6 +36,7 @@ fn dashboard_delete_validate_args_requires_yes_without_dry_run() {
 fn dashboard_delete_build_plan_matches_path_subtree() {
     let args = DeleteArgs {
         common: CommonCliArgs {
+            profile: None,
             url: "https://grafana.example.com".to_string(),
             api_token: Some("token".to_string()),
             username: None,
@@ -112,6 +114,7 @@ fn dashboard_delete_build_plan_matches_path_subtree() {
 fn dashboard_delete_with_request_deletes_dashboards_then_folders() {
     let args = DeleteArgs {
         common: CommonCliArgs {
+            profile: None,
             url: "https://grafana.example.com".to_string(),
             api_token: Some("token".to_string()),
             username: None,
@@ -1252,17 +1255,23 @@ fn interactive_import_review_surfaces_changed_live_summary() {
 }
 
 #[test]
-fn import_with_use_export_org_rejects_interactive_selection() {
+fn interactive_import_with_use_export_org_falls_through_to_tty_validation() {
     let temp = tempdir().unwrap();
     let mut args = make_import_args(temp.path().join("exports"));
     args.use_export_org = true;
     args.interactive = true;
+    let mut cache = crate::dashboard::import_lookup::ImportLookupCache::default();
 
-    let error = import_dashboards_with_org_clients(&args).unwrap_err();
+    let error = crate::dashboard::import_interactive::select_import_dashboard_files(
+        &mut |_method, _path, _params, _payload| Ok(None),
+        &mut cache,
+        &args,
+    )
+    .unwrap_err();
 
     assert!(error
         .to_string()
-        .contains("Dashboard import --interactive does not support --use-export-org yet."));
+        .contains("Dashboard import interactive mode requires a TTY."));
 }
 
 #[test]

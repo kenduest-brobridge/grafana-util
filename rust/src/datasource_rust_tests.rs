@@ -7,7 +7,7 @@ use super::{
     render_data_source_json, render_data_source_table, render_import_table,
     render_live_mutation_json, render_live_mutation_table, resolve_delete_match,
     resolve_live_mutation_match, resolve_match, CommonCliArgs, DatasourceCliArgs,
-    DatasourceImportRecord,
+    DatasourceImportInputFormat, DatasourceImportRecord,
 };
 use crate::datasource_catalog::render_supported_datasource_catalog_json;
 use clap::{CommandFactory, Parser};
@@ -129,6 +129,7 @@ fn assert_json_subset(actual: &Value, expected: &Value) {
 
 fn test_datasource_common_args() -> CommonCliArgs {
     CommonCliArgs {
+        profile: None,
         url: "http://grafana.example".to_string(),
         api_token: None,
         username: None,
@@ -196,9 +197,35 @@ fn parse_datasource_import_preserves_requested_path() {
     match args.command {
         super::DatasourceGroupCommand::Import(inner) => {
             assert_eq!(inner.import_dir, Path::new("./datasources"));
+            assert_eq!(inner.input_format, DatasourceImportInputFormat::Inventory);
             assert_eq!(inner.org_id, Some(7));
             assert!(inner.dry_run);
             assert!(inner.table);
+        }
+        _ => panic!("expected datasource import"),
+    }
+}
+
+#[test]
+fn parse_datasource_import_supports_provisioning_input_format() {
+    let args = DatasourceCliArgs::parse_normalized_from([
+        "grafana-util",
+        "import",
+        "--import-dir",
+        "./datasources/provisioning",
+        "--input-format",
+        "provisioning",
+        "--dry-run",
+    ]);
+
+    match args.command {
+        super::DatasourceGroupCommand::Import(inner) => {
+            assert_eq!(
+                inner.input_format,
+                DatasourceImportInputFormat::Provisioning
+            );
+            assert_eq!(inner.import_dir, Path::new("./datasources/provisioning"));
+            assert!(inner.dry_run);
         }
         _ => panic!("expected datasource import"),
     }
@@ -281,6 +308,22 @@ fn parse_datasource_export_supports_all_orgs_flag() {
         super::DatasourceGroupCommand::Export(inner) => {
             assert!(inner.all_orgs);
             assert_eq!(inner.org_id, None);
+        }
+        _ => panic!("expected datasource export"),
+    }
+}
+
+#[test]
+fn parse_datasource_export_supports_without_provisioning_flag() {
+    let args = DatasourceCliArgs::parse_normalized_from([
+        "grafana-util",
+        "export",
+        "--without-datasource-provisioning",
+    ]);
+
+    match args.command {
+        super::DatasourceGroupCommand::Export(inner) => {
+            assert!(inner.without_datasource_provisioning);
         }
         _ => panic!("expected datasource export"),
     }
@@ -387,6 +430,11 @@ fn build_import_payload_matches_shared_contract_fixtures() {
                 .unwrap()
                 .to_string(),
             is_default: normalized.get("isDefault").and_then(Value::as_str).unwrap() == "true",
+            org_name: normalized
+                .get("org")
+                .and_then(Value::as_str)
+                .unwrap_or_default()
+                .to_string(),
             org_id: normalized
                 .get("orgId")
                 .and_then(Value::as_str)
@@ -592,6 +640,7 @@ fn build_import_payload_resolves_secret_placeholders_into_secure_json_data() {
         access: "proxy".to_string(),
         url: "http://loki:3100".to_string(),
         is_default: false,
+        org_name: String::new(),
         org_id: "1".to_string(),
         secure_json_data_placeholders: json!({
             "basicAuthPassword": "${secret:loki-basic-auth}",
@@ -630,6 +679,7 @@ fn build_import_payload_rejects_missing_secret_values_for_placeholders() {
         access: "proxy".to_string(),
         url: "http://loki:3100".to_string(),
         is_default: false,
+        org_name: String::new(),
         org_id: "1".to_string(),
         secure_json_data_placeholders: json!({
             "basicAuthPassword": "${secret:loki-basic-auth}"
@@ -690,6 +740,7 @@ fn build_datasource_import_dry_run_json_value_includes_secret_visibility() {
     let report = super::DatasourceImportDryRunReport {
         mode: "create-or-update".to_string(),
         import_dir: import_dir.clone(),
+        input_format: DatasourceImportInputFormat::Inventory,
         source_org_id: "1".to_string(),
         target_org_id: "7".to_string(),
         rows: vec![vec![

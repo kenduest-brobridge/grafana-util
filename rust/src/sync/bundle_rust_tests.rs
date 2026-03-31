@@ -9,6 +9,7 @@ use serde_json::{json, Value};
 
 fn sync_common_args() -> CommonCliArgs {
     CommonCliArgs {
+        profile: None,
         url: "http://127.0.0.1:3000".to_string(),
         api_token: Some("test-token".to_string()),
         username: None,

@@ -58,6 +58,11 @@ pub enum ValidationOutputFormat {
 /// Shared Grafana connection/authentication arguments for dashboard commands.
 #[derive(Debug, Clone, Args)]
 pub struct CommonCliArgs {
+    #[arg(
+        long,
+        help = "Load connection defaults from the selected repo-local profile in grafana-util.yaml."
+    )]
+    pub profile: Option<String>,
     #[arg(long, default_value = DEFAULT_URL, help = "Grafana base URL.")]
     pub url: String,
     #[arg(

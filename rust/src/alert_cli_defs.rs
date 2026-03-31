@@ -4,6 +4,9 @@ use clap::{ArgAction, Args, Command, CommandFactory, Parser, Subcommand, ValueEn
 use std::path::PathBuf;
 
 use crate::common::{resolve_auth_headers, Result};
+use crate::profile_config::{
+    load_selected_profile, resolve_connection_settings, ConnectionMergeInput,
+};
 
 use super::{ALERT_HELP_TEXT, DEFAULT_OUTPUT_DIR, DEFAULT_TIMEOUT, DEFAULT_URL};
 
@@ -44,6 +47,11 @@ struct AlertCliRoot {
 /// Shared Grafana connection/authentication arguments for alert commands.
 #[derive(Debug, Clone, Args)]
 pub struct AlertCommonArgs {
+    #[arg(
+        long,
+        help = "Load connection defaults from the selected repo-local profile in grafana-util.yaml."
+    )]
+    pub profile: Option<String>,
     #[arg(long, default_value = DEFAULT_URL, help = "Grafana base URL.")]
     pub url: String,
     #[arg(
@@ -736,6 +744,7 @@ pub struct AlertNamespaceArgs {
 pub struct AlertCliArgs {
     pub command_kind: Option<AlertCommandKind>,
     pub authoring_command_kind: Option<AlertAuthoringCommandKind>,
+    pub profile: Option<String>,
     pub url: String,
     pub api_token: Option<String>,
     pub username: Option<String>,
@@ -789,6 +798,7 @@ pub fn cli_args_from_common(common: AlertCommonArgs) -> AlertCliArgs {
     AlertCliArgs {
         command_kind: None,
         authoring_command_kind: None,
+        profile: common.profile,
         url: common.url,
         api_token: common.api_token,
         username: common.username,
@@ -840,6 +850,7 @@ pub fn cli_args_from_common(common: AlertCommonArgs) -> AlertCliArgs {
 
 fn cli_args_from_defaults() -> AlertCliArgs {
     cli_args_from_common(AlertCommonArgs {
+        profile: None,
         url: DEFAULT_URL.to_string(),
         api_token: None,
         username: None,
@@ -854,6 +865,7 @@ fn cli_args_from_defaults() -> AlertCliArgs {
 fn empty_legacy_args() -> AlertLegacyArgs {
     AlertLegacyArgs {
         common: AlertCommonArgs {
+            profile: None,
             url: String::new(),
             api_token: None,
             username: None,
@@ -1121,6 +1133,7 @@ pub fn normalize_alert_namespace_args(args: AlertNamespaceArgs) -> AlertCliArgs 
             AlertCliArgs {
                 command_kind: None,
                 authoring_command_kind: None,
+                profile: legacy.common.profile,
                 url: legacy.common.url,
                 api_token: legacy.common.api_token,
                 username: legacy.common.username,
@@ -1194,14 +1207,46 @@ pub fn build_auth_context(args: &AlertCliArgs) -> Result<AlertAuthContext> {
     // Upstream callers: 無
     // Downstream callees: common.rs:resolve_auth_headers
 
+    let selected_profile = load_selected_profile(args.profile.as_deref())?;
+    let resolved = resolve_connection_settings(
+        ConnectionMergeInput {
+            url: &args.url,
+            url_default: DEFAULT_URL,
+            api_token: args.api_token.as_deref(),
+            username: args.username.as_deref(),
+            password: args.password.as_deref(),
+            org_id: args.org_id,
+            timeout: args.timeout,
+            timeout_default: DEFAULT_TIMEOUT,
+            verify_ssl: args.verify_ssl,
+            insecure: false,
+            ca_cert: None,
+        },
+        selected_profile.as_ref(),
+    )?;
+    let token = if args.prompt_token && args.api_token.is_none() {
+        None
+    } else {
+        resolved.api_token.as_deref()
+    };
+    let username = if args.prompt_password {
+        args.username.as_deref().or(resolved.username.as_deref())
+    } else {
+        resolved.username.as_deref()
+    };
+    let password = if args.prompt_password && args.password.is_none() {
+        None
+    } else {
+        resolved.password.as_deref()
+    };
     Ok(AlertAuthContext {
-        url: args.url.clone(),
-        timeout: args.timeout,
-        verify_ssl: args.verify_ssl,
+        url: resolved.url,
+        timeout: resolved.timeout,
+        verify_ssl: resolved.verify_ssl,
         headers: resolve_auth_headers(
-            args.api_token.as_deref(),
-            args.username.as_deref(),
-            args.password.as_deref(),
+            token,
+            username,
+            password,
             args.prompt_password,
             args.prompt_token,
         )?,
