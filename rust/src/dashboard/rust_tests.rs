@@ -884,6 +884,9 @@ fn assert_core_family_query_row(
 }
 
 #[cfg(test)]
+#[path = "dashboard_authoring_rust_tests.rs"]
+mod dashboard_authoring_rust_tests;
+#[cfg(test)]
 #[path = "export_diff_rust_tests.rs"]
 mod export_diff_rust_tests;
 #[cfg(test)]

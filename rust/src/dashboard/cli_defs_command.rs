@@ -1,4 +1,4 @@
-use clap::{Args, Parser, Subcommand};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;
 
 use super::super::{DEFAULT_EXPORT_DIR, DEFAULT_IMPORT_MESSAGE, DEFAULT_PAGE_SIZE};
@@ -11,7 +11,7 @@ use super::dashboard_runtime::{
     parse_dashboard_import_output_column, parse_dashboard_list_output_column,
 };
 
-/// Arguments for exporting dashboards into raw and prompt variants.
+/// Arguments for exporting dashboards into raw, prompt, and provisioning variants.
 #[derive(Debug, Clone, Args)]
 pub struct ExportArgs {
     #[command(flatten)]
@@ -19,7 +19,7 @@ pub struct ExportArgs {
     #[arg(
         long,
         default_value = DEFAULT_EXPORT_DIR,
-        help = "Directory to write exported dashboards into. Export writes raw/ and prompt/ subdirectories by default."
+        help = "Directory to write exported dashboards into. Export writes raw/, prompt/, and provisioning/ subdirectories by default."
     )]
     pub export_dir: PathBuf,
     #[arg(long, default_value_t = DEFAULT_PAGE_SIZE, help = "Dashboard search page size.")]
@@ -61,6 +61,46 @@ pub struct ExportArgs {
         help = "Skip the web-import prompt/ export variant. Use this only when you do not need Grafana UI import with datasource prompts."
     )]
     pub without_dashboard_prompt: bool,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Skip the file-provisioning provisioning/ export variant. Use this only when you do not need Grafana file provisioning artifacts."
+    )]
+    pub without_dashboard_provisioning: bool,
+    #[arg(
+        long,
+        default_value = "grafana-utils-dashboards",
+        help = "Set the Grafana provisioning provider name written into provisioning/provisioning/dashboards.yaml."
+    )]
+    pub provisioning_provider_name: String,
+    #[arg(
+        long,
+        help = "Override the Grafana org ID written into the provisioning provider config. By default the export uses the current org ID."
+    )]
+    pub provisioning_provider_org_id: Option<i64>,
+    #[arg(
+        long,
+        help = "Override the dashboard directory path written into the provisioning provider config. By default the export points at the current export tree path under provisioning/dashboards."
+    )]
+    pub provisioning_provider_path: Option<PathBuf>,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Set disableDeletion in the generated provisioning provider config."
+    )]
+    pub provisioning_provider_disable_deletion: bool,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Set allowUiUpdates in the generated provisioning provider config."
+    )]
+    pub provisioning_provider_allow_ui_updates: bool,
+    #[arg(
+        long,
+        default_value_t = 30,
+        help = "Set updateIntervalSeconds in the generated provisioning provider config."
+    )]
+    pub provisioning_provider_update_interval_seconds: i64,
     #[arg(
         long,
         default_value_t = false,
@@ -137,6 +177,13 @@ pub struct ListArgs {
 }
 
 /// Arguments for importing dashboards from a local export directory.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum DashboardImportInputFormat {
+    Raw,
+    Provisioning,
+}
+
+/// Arguments for importing dashboards from a local export directory.
 #[derive(Debug, Clone, Args)]
 pub struct ImportArgs {
     #[command(flatten)]
@@ -175,6 +222,13 @@ pub struct ImportArgs {
     pub import_dir: PathBuf,
     #[arg(
         long,
+        value_enum,
+        default_value_t = DashboardImportInputFormat::Raw,
+        help = "Interpret --import-dir as raw export files or Grafana file-provisioning artifacts. Use provisioning to accept either the provisioning/ root or its dashboards/ subdirectory."
+    )]
+    pub input_format: DashboardImportInputFormat,
+    #[arg(
+        long,
         help = "Force every imported dashboard into one destination Grafana folder UID. This overrides any folder UID carried by the exported dashboard files."
     )]
     pub import_folder_uid: Option<String>,
@@ -205,7 +259,7 @@ pub struct ImportArgs {
     #[arg(
         long,
         default_value_t = false,
-        help = "Fail the import when the raw export orgId metadata does not match the target Grafana org for this run. This is a safety check for accidental cross-org imports."
+        help = "Fail the import when the export orgId metadata does not match the target Grafana org for this run. This is a safety check for accidental cross-org imports."
     )]
     pub require_matching_export_org: bool,
     #[arg(
@@ -280,6 +334,124 @@ pub struct ImportArgs {
         help = "Show detailed per-item import output, including target paths, dry-run actions, and folder status details. Overrides --progress output."
     )]
     pub verbose: bool,
+}
+
+/// Arguments for patching one local dashboard JSON file in place or to a new path.
+#[derive(Debug, Clone, Args)]
+pub struct PatchFileArgs {
+    #[arg(
+        long,
+        help = "Input dashboard JSON file to patch. The file may be a wrapped export document or a bare dashboard object."
+    )]
+    pub input: PathBuf,
+    #[arg(
+        long,
+        help = "Write the patched JSON to this path instead of overwriting --input in place."
+    )]
+    pub output: Option<PathBuf>,
+    #[arg(long, help = "Replace dashboard.title with this value.")]
+    pub name: Option<String>,
+    #[arg(long, help = "Replace dashboard.uid with this value.")]
+    pub uid: Option<String>,
+    #[arg(
+        long = "folder-uid",
+        help = "Set meta.folderUid to this value so later publish/import runs target the right Grafana folder."
+    )]
+    pub folder_uid: Option<String>,
+    #[arg(
+        long,
+        help = "Store a human-readable note in meta.message alongside the patched file."
+    )]
+    pub message: Option<String>,
+    #[arg(
+        long = "tag",
+        help = "Replace dashboard.tags with these values. Repeat --tag to set multiple tags."
+    )]
+    pub tags: Vec<String>,
+}
+
+/// Arguments for publishing one local dashboard JSON file through the live import pipeline.
+#[derive(Debug, Clone, Args)]
+pub struct PublishArgs {
+    #[command(flatten)]
+    pub common: CommonCliArgs,
+    #[arg(
+        long,
+        help = "Dashboard JSON file to stage and publish. The file may be a wrapped export document or a bare dashboard object."
+    )]
+    pub input: PathBuf,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Update an existing dashboard when the UID already exists instead of failing on duplicates."
+    )]
+    pub replace_existing: bool,
+    #[arg(
+        long = "folder-uid",
+        help = "Override the destination Grafana folder UID for this publish."
+    )]
+    pub folder_uid: Option<String>,
+    #[arg(
+        long,
+        default_value = DEFAULT_IMPORT_MESSAGE,
+        help = "Version-history message to attach to the published dashboard revision."
+    )]
+    pub message: String,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Preview the publish through the existing import dry-run flow without changing Grafana."
+    )]
+    pub dry_run: bool,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "For --dry-run only, render a compact table instead of plain text."
+    )]
+    pub table: bool,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "For --dry-run only, render one JSON document."
+    )]
+    pub json: bool,
+}
+
+/// Arguments for fetching one live dashboard into a local draft file.
+#[derive(Debug, Clone, Args)]
+pub struct GetArgs {
+    #[command(flatten)]
+    pub common: CommonCliArgs,
+    #[arg(long = "dashboard-uid", help = "Live Grafana dashboard UID to fetch.")]
+    pub dashboard_uid: String,
+    #[arg(long, help = "Write the fetched dashboard draft to this file path.")]
+    pub output: PathBuf,
+}
+
+/// Arguments for cloning one live dashboard into a local draft file.
+#[derive(Debug, Clone, Args)]
+pub struct CloneLiveArgs {
+    #[command(flatten)]
+    pub common: CommonCliArgs,
+    #[arg(long = "source-uid", help = "Live Grafana dashboard UID to clone.")]
+    pub source_uid: String,
+    #[arg(long, help = "Write the cloned dashboard draft to this file path.")]
+    pub output: PathBuf,
+    #[arg(
+        long,
+        help = "Override the cloned dashboard title. Defaults to the source title."
+    )]
+    pub name: Option<String>,
+    #[arg(
+        long,
+        help = "Override the cloned dashboard UID. Defaults to the source UID."
+    )]
+    pub uid: Option<String>,
+    #[arg(
+        long = "folder-uid",
+        help = "Override the cloned dashboard folder UID in the preserved Grafana metadata."
+    )]
+    pub folder_uid: Option<String>,
 }
 
 /// Arguments for deleting live dashboards by UID or folder path.
@@ -407,9 +579,16 @@ pub struct DiffArgs {
     pub common: CommonCliArgs,
     #[arg(
         long,
-        help = "Compare dashboards from this directory against Grafana. Point this to the raw/ export directory explicitly."
+        help = "Compare dashboards from this directory against Grafana. Point this to the raw/ export directory explicitly, or use with --input-format provisioning for a provisioning root or its dashboards/ subdirectory."
     )]
     pub import_dir: PathBuf,
+    #[arg(
+        long,
+        value_enum,
+        default_value_t = DashboardImportInputFormat::Raw,
+        help = "Interpret --import-dir as raw export files or Grafana file-provisioning artifacts. Use provisioning to accept either the provisioning/ root or its dashboards/ subdirectory."
+    )]
+    pub input_format: DashboardImportInputFormat,
     #[arg(
         long,
         help = "Override the destination Grafana folder UID when comparing imported dashboards."
@@ -433,9 +612,21 @@ pub enum DashboardCommand {
     )]
     List(ListArgs),
     #[command(
+        name = "get",
+        about = "Fetch one live dashboard into an API-safe local JSON draft.",
+        after_help = "Examples:\n\n  Fetch one live dashboard and write a local draft file:\n    grafana-util dashboard get --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --dashboard-uid cpu-main --output ./cpu-main.json\n\n  Fetch one dashboard with Basic auth and a saved profile:\n    grafana-util dashboard get --profile prod --url http://localhost:3000 --basic-user admin --basic-password admin --dashboard-uid cpu-main --output ./cpu-main.json"
+    )]
+    Get(GetArgs),
+    #[command(
+        name = "clone-live",
+        about = "Clone one live dashboard into a local draft with optional overrides.",
+        after_help = "Examples:\n\n  Clone one live dashboard, keep the source UID and title, and write a local draft:\n    grafana-util dashboard clone-live --url http://localhost:3000 --basic-user admin --basic-password admin --source-uid cpu-main --output ./cpu-main-clone.json\n\n  Clone a live dashboard with a new title, UID, and folder UID:\n    grafana-util dashboard clone-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --source-uid cpu-main --name 'CPU Clone' --uid cpu-main-clone --folder-uid infra --output ./cpu-main-clone.json"
+    )]
+    CloneLive(CloneLiveArgs),
+    #[command(
         name = "export",
-        about = "Export dashboards to raw/ and prompt/ JSON files.",
-        after_help = "Examples:\n\n  Export dashboards from the current org with Basic auth:\n    grafana-util export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./dashboards --overwrite\n\n  Export dashboards across all visible orgs with Basic auth:\n    grafana-util export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --export-dir ./dashboards --overwrite\n\n  Export dashboards from one explicit org ID:\n    grafana-util export --url http://localhost:3000 --basic-user admin --basic-password admin --org-id 2 --export-dir ./dashboards --overwrite\n\n  Export dashboards from the current org with an API token:\n    export GRAFANA_API_TOKEN='your-token'\n    grafana-util export --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --export-dir ./dashboards --overwrite"
+        about = "Export dashboards to raw/, prompt/, and provisioning/ files.",
+        after_help = "The provisioning export writes a Grafana file-provisioning provider file at provisioning/provisioning/dashboards.yaml. Override the provider name, org ID, path, or update behavior when you need a different on-disk deployment target.\n\nExamples:\n\n  Export dashboards from the current org with Basic auth:\n    grafana-util export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./dashboards --overwrite\n\n  Export dashboards across all visible orgs with Basic auth:\n    grafana-util export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --export-dir ./dashboards --overwrite\n\n  Export dashboards with a custom provisioning provider path:\n    grafana-util export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./dashboards --overwrite --provisioning-provider-name grafana-utils-prod --provisioning-provider-org-id 2 --provisioning-provider-path /srv/grafana/dashboards --provisioning-provider-disable-deletion --provisioning-provider-update-interval-seconds 60\n\n  Export dashboards from one explicit org ID:\n    grafana-util export --url http://localhost:3000 --basic-user admin --basic-password admin --org-id 2 --export-dir ./dashboards --overwrite\n\n  Export dashboards from the current org with an API token:\n    export GRAFANA_API_TOKEN='your-token'\n    grafana-util export --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --export-dir ./dashboards --overwrite"
     )]
     Export(ExportArgs),
     #[command(
@@ -457,14 +648,26 @@ pub enum DashboardCommand {
     )]
     Delete(DeleteArgs),
     #[command(
-        about = "Compare local raw dashboard files against live Grafana dashboards.",
-        after_help = "Examples:\n\n  Compare one raw export directory against the current org:\n    grafana-util dashboard diff --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/raw\n\n  Compare against one explicit org as structured JSON:\n    grafana-util dashboard diff --url http://localhost:3000 --basic-user admin --basic-password admin --org-id 2 --import-dir ./dashboards/raw --json"
+        about = "Compare local dashboard files against live Grafana dashboards.",
+        after_help = "Examples:\n\n  Compare one raw export directory against the current org:\n    grafana-util dashboard diff --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/raw\n\n  Compare a provisioning export root against the current org:\n    grafana-util dashboard diff --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/provisioning --input-format provisioning\n\n  Compare against one explicit org as structured JSON:\n    grafana-util dashboard diff --url http://localhost:3000 --basic-user admin --basic-password admin --org-id 2 --import-dir ./dashboards/raw --json"
     )]
     Diff(DiffArgs),
     #[command(
+        name = "patch-file",
+        about = "Patch one local dashboard JSON file in place or to a new path.",
+        after_help = "Examples:\n\n  Patch a raw export file in place:\n    grafana-util dashboard patch-file --input ./dashboards/raw/cpu-main.json --name 'CPU Overview' --folder-uid infra --tag prod --tag sre\n\n  Patch one draft file into a new output path:\n    grafana-util dashboard patch-file --input ./drafts/cpu-main.json --output ./drafts/cpu-main-patched.json --uid cpu-main --message 'Add folder metadata before publish'"
+    )]
+    PatchFile(PatchFileArgs),
+    #[command(
+        name = "publish",
+        about = "Publish one local dashboard JSON file through the existing dashboard import pipeline.",
+        after_help = "Examples:\n\n  Publish one draft file to the current Grafana org:\n    grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --basic-password admin --input ./drafts/cpu-main.json --folder-uid infra --message 'Promote CPU dashboard'\n\n  Preview the same publish without writing to Grafana:\n    grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --basic-password admin --input ./drafts/cpu-main.json --dry-run --table"
+    )]
+    Publish(PublishArgs),
+    #[command(
         name = "inspect-export",
-        about = "Analyze a raw dashboard export directory and summarize its structure.",
-        after_help = "Examples:\n\n  Render a dashboard summary table from raw exports:\n    grafana-util dashboard inspect-export --import-dir ./dashboards/raw --table\n\n  Open the interactive inspect workbench over raw exports:\n    grafana-util dashboard inspect-export --import-dir ./dashboards/raw --interactive\n\n  Render governance JSON from raw exports:\n    grafana-util dashboard inspect-export --import-dir ./dashboards/raw --report governance-json"
+        about = "Analyze dashboard export directories and summarize their structure.",
+        after_help = "Examples:\n\n  Render a dashboard summary table from raw exports:\n    grafana-util dashboard inspect-export --import-dir ./dashboards/raw --input-format raw --table\n\n  Open the interactive inspect workbench over raw exports:\n    grafana-util dashboard inspect-export --import-dir ./dashboards/raw --input-format raw --interactive\n\n  Render governance JSON from raw exports:\n    grafana-util dashboard inspect-export --import-dir ./dashboards/raw --input-format raw --report governance-json\n\n  Inspect a file-provisioning tree from the provisioning root:\n    grafana-util dashboard inspect-export --import-dir ./dashboards/provisioning --input-format provisioning --report tree-table"
     )]
     InspectExport(InspectExportArgs),
     #[command(
@@ -501,7 +704,7 @@ pub enum DashboardCommand {
     #[command(
         name = "validate-export",
         about = "Run strict schema validation against dashboard raw export files before GitOps sync.",
-        after_help = "Examples:\n\n  Validate a raw export and fail on migration or plugin issues:\n    grafana-util dashboard validate-export --import-dir ./dashboards/raw --reject-custom-plugins --reject-legacy-properties --target-schema-version 39\n\n  Write the validation report as JSON:\n    grafana-util dashboard validate-export --import-dir ./dashboards/raw --output-format json --output-file ./dashboard-validation.json"
+        after_help = "Examples:\n\n  Validate a raw export and fail on migration or plugin issues:\n    grafana-util dashboard validate-export --import-dir ./dashboards/raw --reject-custom-plugins --reject-legacy-properties --target-schema-version 39\n\n  Validate a provisioning export root explicitly:\n    grafana-util dashboard validate-export --import-dir ./dashboards/provisioning --input-format provisioning --reject-custom-plugins\n\n  Write the validation report as JSON:\n    grafana-util dashboard validate-export --import-dir ./dashboards/raw --output-format json --output-file ./dashboard-validation.json"
     )]
     ValidateExport(ValidateExportArgs),
     #[command(
@@ -515,7 +718,7 @@ pub enum DashboardCommand {
 #[derive(Debug, Clone, Parser)]
 #[command(
     about = "Export or import Grafana dashboards.",
-    after_help = "Examples:\n\n  Export dashboards from local Grafana with Basic auth:\n    grafana-util export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./dashboards --overwrite\n\n  Export dashboards across all visible orgs with Basic auth:\n    grafana-util export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --export-dir ./dashboards --overwrite\n\n  List dashboards across all visible orgs with Basic auth:\n    grafana-util list --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --json\n\n  Export dashboards with an API token from the current org:\n    export GRAFANA_API_TOKEN='your-token'\n    grafana-util export --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --export-dir ./dashboards --overwrite\n\n  Compare raw dashboard exports against local Grafana:\n    grafana-util diff --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/raw\n\n  Capture a browser-rendered dashboard screenshot:\n    grafana-util screenshot --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --dashboard-uid cpu-main --output ./cpu-main.png --from now-6h --to now",
+    after_help = "Examples:\n\n  Fetch one live dashboard into a local draft:\n    grafana-util dashboard get --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --dashboard-uid cpu-main --output ./cpu-main.json\n\n  Clone one live dashboard with a new UID and folder:\n    grafana-util dashboard clone-live --url http://localhost:3000 --basic-user admin --basic-password admin --source-uid cpu-main --uid cpu-main-clone --folder-uid infra --output ./cpu-main-clone.json\n\n  Export dashboards from local Grafana with Basic auth:\n    grafana-util export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./dashboards --overwrite\n\n  Export dashboards across all visible orgs with Basic auth:\n    grafana-util export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --export-dir ./dashboards --overwrite\n\n  List dashboards across all visible orgs with Basic auth:\n    grafana-util list --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --json\n\n  Export dashboards with an API token from the current org:\n    export GRAFANA_API_TOKEN='your-token'\n    grafana-util export --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --export-dir ./dashboards --overwrite\n\n  Compare raw dashboard exports against local Grafana:\n    grafana-util diff --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/raw\n\n  Patch a local dashboard file before publishing:\n    grafana-util patch-file --input ./dashboards/raw/cpu-main.json --name 'CPU Overview' --folder-uid infra --tag prod --tag sre\n\n  Publish one local draft to Grafana:\n    grafana-util publish --url http://localhost:3000 --basic-user admin --basic-password admin --input ./drafts/cpu-main.json --dry-run --table\n\n  Capture a browser-rendered dashboard screenshot:\n    grafana-util screenshot --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --dashboard-uid cpu-main --output ./cpu-main.png --from now-6h --to now",
     styles = crate::help_styles::CLI_HELP_STYLES
 )]
 /// Struct definition for DashboardCliArgs.

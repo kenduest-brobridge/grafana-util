@@ -10,6 +10,7 @@ use std::path::Path;
 
 // Keep the dashboard surface area split by concern. This file should stay focused
 // on re-exports, shared constants, and top-level command dispatch.
+mod authoring;
 mod browse;
 mod browse_actions;
 mod browse_edit_dialog;
@@ -81,14 +82,19 @@ mod topology_tui;
 mod validate;
 mod vars;
 
+pub(crate) use authoring::{
+    clone_live_dashboard_to_file_with_client, get_live_dashboard_to_file_with_client,
+    patch_dashboard_file, publish_dashboard_with_client,
+};
 pub use cli_defs::{
     build_auth_context, build_http_client, build_http_client_for_org, normalize_dashboard_cli_args,
-    parse_cli_from, BrowseArgs, CommonCliArgs, DashboardAuthContext, DashboardCliArgs,
-    DashboardCommand, DeleteArgs, DiffArgs, ExportArgs, GovernanceGateArgs,
-    GovernanceGateOutputFormat, GovernancePolicySource, ImpactArgs, ImpactOutputFormat, ImportArgs,
-    InspectExportArgs, InspectExportReportFormat, InspectLiveArgs, InspectOutputFormat,
-    InspectVarsArgs, ListArgs, ScreenshotArgs, ScreenshotFullPageOutput, ScreenshotOutputFormat,
-    ScreenshotTheme, SimpleOutputFormat, TopologyArgs, TopologyOutputFormat, ValidateExportArgs,
+    parse_cli_from, BrowseArgs, CloneLiveArgs, CommonCliArgs, DashboardAuthContext,
+    DashboardCliArgs, DashboardCommand, DashboardImportInputFormat, DeleteArgs, DiffArgs,
+    ExportArgs, GetArgs, GovernanceGateArgs, GovernanceGateOutputFormat, GovernancePolicySource,
+    ImpactArgs, ImpactOutputFormat, ImportArgs, InspectExportArgs, InspectExportReportFormat,
+    InspectLiveArgs, InspectOutputFormat, InspectVarsArgs, ListArgs, PatchFileArgs, PublishArgs,
+    ScreenshotArgs, ScreenshotFullPageOutput, ScreenshotOutputFormat, ScreenshotTheme,
+    SimpleOutputFormat, TopologyArgs, TopologyOutputFormat, ValidateExportArgs,
     ValidationOutputFormat,
 };
 pub use export::{build_export_variant_dirs, build_output_path, export_dashboards_with_client};
@@ -119,15 +125,17 @@ pub(crate) use files::{
     build_dashboard_index_item, build_export_metadata, build_import_payload,
     build_preserved_web_import_document, build_root_export_index, build_variant_index,
     discover_dashboard_files, extract_dashboard_object, load_datasource_inventory,
-    load_export_metadata, load_folder_inventory, load_json_file, write_dashboard,
-    write_json_document,
+    load_export_metadata, load_folder_inventory, load_json_file, resolve_dashboard_import_source,
+    write_dashboard, write_json_document, ResolvedDashboardImportSource,
 };
 #[allow(unused_imports)]
 pub(crate) use governance_policy::{
     load_builtin_governance_policy, load_governance_policy, load_governance_policy_file,
     load_governance_policy_source,
 };
-pub(crate) use inspect::build_export_inspection_summary;
+pub(crate) use inspect::{
+    build_export_inspection_summary, build_export_inspection_summary_for_variant,
+};
 pub(crate) use inspect_report::ExportInspectionQueryRow;
 pub(crate) use inspect_summary::{
     build_export_inspection_summary_document, ExportInspectionSummary,
@@ -168,6 +176,7 @@ pub const DEFAULT_PAGE_SIZE: usize = 500;
 pub const DEFAULT_EXPORT_DIR: &str = "dashboards";
 pub const RAW_EXPORT_SUBDIR: &str = "raw";
 pub const PROMPT_EXPORT_SUBDIR: &str = "prompt";
+pub const PROVISIONING_EXPORT_SUBDIR: &str = "provisioning";
 pub const DEFAULT_IMPORT_MESSAGE: &str = "Imported by grafana-utils";
 pub const DEFAULT_DASHBOARD_TITLE: &str = "dashboard";
 pub const DEFAULT_FOLDER_TITLE: &str = "General";
@@ -349,7 +358,11 @@ fn execute_dashboard_inspect_at_path(
 
 pub fn execute_dashboard_inspect_export(args: &InspectExportArgs) -> Result<DashboardWebRunOutput> {
     let temp_dir = inspect_live::TempInspectDir::new("inspect-export-web")?;
-    let import_dir = inspect::prepare_inspect_export_import_dir(&temp_dir.path, &args.import_dir)?;
+    let import_dir = inspect::resolve_inspect_export_import_dir(
+        &temp_dir.path,
+        &args.import_dir,
+        args.input_format,
+    )?;
     execute_dashboard_inspect_at_path(args, &import_dir)
 }
 
@@ -365,6 +378,13 @@ pub fn execute_dashboard_inspect_live(args: &InspectLiveArgs) -> Result<Dashboar
         overwrite: false,
         without_dashboard_raw: false,
         without_dashboard_prompt: true,
+        without_dashboard_provisioning: true,
+        provisioning_provider_name: "grafana-utils-dashboards".to_string(),
+        provisioning_provider_org_id: None,
+        provisioning_provider_path: None,
+        provisioning_provider_disable_deletion: false,
+        provisioning_provider_allow_ui_updates: false,
+        provisioning_provider_update_interval_seconds: 30,
         dry_run: false,
         progress: args.progress,
         verbose: false,
@@ -373,6 +393,7 @@ pub fn execute_dashboard_inspect_live(args: &InspectLiveArgs) -> Result<Dashboar
     let inspect_import_dir = inspect_live::prepare_inspect_live_import_dir(&temp_dir.path, args)?;
     let inspect_args = InspectExportArgs {
         import_dir: inspect_import_dir,
+        input_format: DashboardImportInputFormat::Raw,
         json: args.json,
         table: args.table,
         report: args.report,
@@ -417,9 +438,19 @@ pub fn run_dashboard_cli_with_client(
             let _ = export_dashboards_with_client(client, &export_args)?;
             Ok(())
         }
+        DashboardCommand::Get(get_args) => {
+            get_live_dashboard_to_file_with_client(client, &get_args)
+        }
+        DashboardCommand::CloneLive(clone_args) => {
+            clone_live_dashboard_to_file_with_client(client, &clone_args)
+        }
         DashboardCommand::Import(import_args) => {
             let _ = import_dashboards_with_client(client, &import_args)?;
             Ok(())
+        }
+        DashboardCommand::PatchFile(patch_args) => patch_dashboard_file(&patch_args),
+        DashboardCommand::Publish(publish_args) => {
+            publish_dashboard_with_client(client, &publish_args)
         }
         DashboardCommand::Delete(delete_args) => {
             let _ = delete::delete_dashboards_with_client(client, &delete_args)?;
@@ -490,17 +521,33 @@ pub fn run_dashboard_cli(args: DashboardCliArgs) -> Result<()> {
         DashboardCommand::Export(export_args) => {
             // Reject the "export nothing" shape early so lower layers can assume at
             // least one artifact variant will be written.
-            if export_args.without_dashboard_raw && export_args.without_dashboard_prompt {
+            if export_args.without_dashboard_raw
+                && export_args.without_dashboard_prompt
+                && export_args.without_dashboard_provisioning
+            {
                 return Err(message(
-                    "At least one export variant must stay enabled. Remove --without-dashboard-raw or --without-dashboard-prompt.",
+                    "At least one export variant must stay enabled. Remove --without-dashboard-raw, --without-dashboard-prompt, or --without-dashboard-provisioning.",
                 ));
             }
             let _ = export_dashboards_with_org_clients(&export_args)?;
             Ok(())
         }
+        DashboardCommand::Get(get_args) => {
+            let client = build_http_client(&get_args.common)?;
+            get_live_dashboard_to_file_with_client(&client, &get_args)
+        }
+        DashboardCommand::CloneLive(clone_args) => {
+            let client = build_http_client(&clone_args.common)?;
+            clone_live_dashboard_to_file_with_client(&client, &clone_args)
+        }
         DashboardCommand::Import(import_args) => {
             let _ = import::import_dashboards_with_org_clients(&import_args)?;
             Ok(())
+        }
+        DashboardCommand::PatchFile(patch_args) => patch_dashboard_file(&patch_args),
+        DashboardCommand::Publish(publish_args) => {
+            let client = build_http_client(&publish_args.common)?;
+            publish_dashboard_with_client(&client, &publish_args)
         }
         DashboardCommand::Delete(delete_args) => {
             let _ = delete_dashboards_with_org_clients(&delete_args)?;
@@ -551,6 +598,9 @@ pub fn run_dashboard_cli(args: DashboardCliArgs) -> Result<()> {
     }
 }
 
+#[cfg(test)]
+#[path = "authoring_rust_tests.rs"]
+mod authoring_rust_tests;
 #[cfg(test)]
 #[path = "dashboard_cli_rust_tests.rs"]
 mod dashboard_cli_rust_tests;

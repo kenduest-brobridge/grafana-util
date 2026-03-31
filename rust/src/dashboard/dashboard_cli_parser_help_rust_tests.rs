@@ -1,6 +1,8 @@
 //! Dashboard CLI parser/help regressions kept separate from runtime-heavy tests.
 use super::super::{parse_cli_from, DashboardCliArgs, DashboardCommand};
+use crate::dashboard::DashboardImportInputFormat;
 use clap::{CommandFactory, Parser};
+use std::path::PathBuf;
 
 pub(super) fn render_dashboard_subcommand_help(name: &str) -> String {
     let mut command = DashboardCliArgs::command();
@@ -196,6 +198,65 @@ fn parse_cli_supports_export_org_scope_flags() {
 }
 
 #[test]
+fn parse_cli_supports_export_provisioning_provider_customization() {
+    let args = parse_cli_from([
+        "grafana-util",
+        "export",
+        "--provisioning-provider-name",
+        "grafana-utils-prod",
+        "--provisioning-provider-org-id",
+        "9",
+        "--provisioning-provider-path",
+        "/srv/grafana/dashboards",
+        "--provisioning-provider-disable-deletion",
+        "--provisioning-provider-allow-ui-updates",
+        "--provisioning-provider-update-interval-seconds",
+        "45",
+    ]);
+
+    match args.command {
+        DashboardCommand::Export(export_args) => {
+            assert_eq!(export_args.provisioning_provider_name, "grafana-utils-prod");
+            assert_eq!(export_args.provisioning_provider_org_id, Some(9));
+            assert_eq!(
+                export_args.provisioning_provider_path,
+                Some(PathBuf::from("/srv/grafana/dashboards"))
+            );
+            assert!(export_args.provisioning_provider_disable_deletion);
+            assert!(export_args.provisioning_provider_allow_ui_updates);
+            assert_eq!(
+                export_args.provisioning_provider_update_interval_seconds,
+                45
+            );
+        }
+        _ => panic!("expected export command"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_export_provisioning_provider_defaults() {
+    let args = parse_cli_from(["grafana-util", "export"]);
+
+    match args.command {
+        DashboardCommand::Export(export_args) => {
+            assert_eq!(
+                export_args.provisioning_provider_name,
+                "grafana-utils-dashboards"
+            );
+            assert_eq!(export_args.provisioning_provider_org_id, None);
+            assert_eq!(export_args.provisioning_provider_path, None);
+            assert!(!export_args.provisioning_provider_disable_deletion);
+            assert!(!export_args.provisioning_provider_allow_ui_updates);
+            assert_eq!(
+                export_args.provisioning_provider_update_interval_seconds,
+                30
+            );
+        }
+        _ => panic!("expected export command"),
+    }
+}
+
+#[test]
 fn parse_cli_rejects_conflicting_export_org_scope_flags() {
     let error =
         DashboardCliArgs::try_parse_from(["grafana-util", "export", "--org-id", "7", "--all-orgs"])
@@ -224,6 +285,19 @@ fn export_help_describes_progress_and_verbose_modes() {
     assert!(help.contains("Overrides --progress output"));
     assert!(!help.contains("--username"));
     assert!(!help.contains("--password "));
+}
+
+#[test]
+fn export_help_mentions_provisioning_provider_customization() {
+    let help = render_dashboard_subcommand_help("export");
+    assert!(help.contains("provisioning/provisioning/dashboards.yaml"));
+    assert!(help.contains("--provisioning-provider-name"));
+    assert!(help.contains("--provisioning-provider-org-id"));
+    assert!(help.contains("--provisioning-provider-path"));
+    assert!(help.contains("--provisioning-provider-disable-deletion"));
+    assert!(help.contains("--provisioning-provider-allow-ui-updates"));
+    assert!(help.contains("--provisioning-provider-update-interval-seconds"));
+    assert!(help.contains("current export tree path"));
 }
 
 #[test]
@@ -341,6 +415,28 @@ fn parse_cli_supports_import_interactive_flag() {
 }
 
 #[test]
+fn parse_cli_supports_provisioning_import_format() {
+    let args = parse_cli_from([
+        "grafana-util",
+        "import",
+        "--import-dir",
+        "./dashboards/provisioning",
+        "--input-format",
+        "provisioning",
+    ]);
+
+    match args.command {
+        DashboardCommand::Import(import_args) => {
+            assert_eq!(
+                import_args.input_format,
+                DashboardImportInputFormat::Provisioning
+            );
+        }
+        _ => panic!("expected import command"),
+    }
+}
+
+#[test]
 fn import_help_mentions_interactive_review_picker() {
     use clap::CommandFactory;
 
@@ -356,6 +452,146 @@ fn import_help_mentions_interactive_review_picker() {
     assert!(rendered.contains("interactive review picker"));
     assert!(rendered.contains("create/update/skip action"));
     assert!(rendered.contains("With --dry-run"));
+    assert!(rendered.contains("--input-format"));
+    assert!(rendered.contains("raw export files or Grafana file-provisioning artifacts"));
+}
+
+#[test]
+fn parse_cli_supports_provisioning_diff_input_format() {
+    let args = parse_cli_from([
+        "grafana-util",
+        "diff",
+        "--import-dir",
+        "./dashboards/provisioning",
+        "--input-format",
+        "provisioning",
+    ]);
+
+    match args.command {
+        DashboardCommand::Diff(diff_args) => {
+            assert_eq!(
+                diff_args.input_format,
+                DashboardImportInputFormat::Provisioning
+            );
+            assert_eq!(
+                diff_args.import_dir,
+                std::path::PathBuf::from("./dashboards/provisioning")
+            );
+        }
+        _ => panic!("expected diff command"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_patch_file_command() {
+    let args = parse_cli_from([
+        "grafana-util",
+        "patch-file",
+        "--input",
+        "./drafts/cpu-main.json",
+        "--output",
+        "./drafts/cpu-main-patched.json",
+        "--name",
+        "CPU Overview",
+        "--uid",
+        "cpu-main",
+        "--folder-uid",
+        "infra",
+        "--message",
+        "Promote CPU dashboard",
+        "--tag",
+        "prod",
+        "--tag",
+        "sre",
+    ]);
+
+    match args.command {
+        DashboardCommand::PatchFile(patch_args) => {
+            assert_eq!(patch_args.input, PathBuf::from("./drafts/cpu-main.json"));
+            assert_eq!(
+                patch_args.output,
+                Some(PathBuf::from("./drafts/cpu-main-patched.json"))
+            );
+            assert_eq!(patch_args.name.as_deref(), Some("CPU Overview"));
+            assert_eq!(patch_args.uid.as_deref(), Some("cpu-main"));
+            assert_eq!(patch_args.folder_uid.as_deref(), Some("infra"));
+            assert_eq!(patch_args.message.as_deref(), Some("Promote CPU dashboard"));
+            assert_eq!(patch_args.tags, vec!["prod", "sre"]);
+        }
+        _ => panic!("expected patch-file command"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_publish_command() {
+    let args = parse_cli_from([
+        "grafana-util",
+        "publish",
+        "--url",
+        "https://grafana.example.com",
+        "--basic-user",
+        "admin",
+        "--basic-password",
+        "admin",
+        "--input",
+        "./drafts/cpu-main.json",
+        "--folder-uid",
+        "infra",
+        "--message",
+        "Promote CPU dashboard",
+        "--dry-run",
+        "--table",
+    ]);
+
+    match args.command {
+        DashboardCommand::Publish(publish_args) => {
+            assert_eq!(publish_args.common.url, "https://grafana.example.com");
+            assert_eq!(publish_args.common.username.as_deref(), Some("admin"));
+            assert_eq!(publish_args.common.password.as_deref(), Some("admin"));
+            assert_eq!(publish_args.input, PathBuf::from("./drafts/cpu-main.json"));
+            assert_eq!(publish_args.folder_uid.as_deref(), Some("infra"));
+            assert_eq!(publish_args.message, "Promote CPU dashboard");
+            assert!(publish_args.dry_run);
+            assert!(publish_args.table);
+            assert!(!publish_args.json);
+        }
+        _ => panic!("expected publish command"),
+    }
+}
+
+#[test]
+fn diff_help_mentions_provisioning_input_format() {
+    let help = render_dashboard_subcommand_help("diff");
+    assert!(help.contains("--input-format"));
+    assert!(help.contains("Grafana file-provisioning artifacts"));
+    assert!(help.contains("provisioning/ root or its dashboards/ subdirectory"));
+    assert!(help.contains("Compare a provisioning export root against the current org"));
+}
+
+#[test]
+fn patch_file_help_mentions_in_place_and_output_paths() {
+    let help = render_dashboard_subcommand_help("patch-file");
+    assert!(help.contains("--input"));
+    assert!(help.contains("--output"));
+    assert!(help.contains("--name"));
+    assert!(help.contains("--uid"));
+    assert!(help.contains("--folder-uid"));
+    assert!(help.contains("--message"));
+    assert!(help.contains("--tag"));
+    assert!(help.contains("Patch a raw export file in place"));
+    assert!(help.contains("Patch one draft file into a new output path"));
+}
+
+#[test]
+fn publish_help_mentions_dry_run_preview() {
+    let help = render_dashboard_subcommand_help("publish");
+    assert!(help.contains("--input"));
+    assert!(help.contains("--folder-uid"));
+    assert!(help.contains("--message"));
+    assert!(help.contains("--dry-run"));
+    assert!(help.contains("--table"));
+    assert!(help.contains("Publish one draft file to the current Grafana org"));
+    assert!(help.contains("Preview the same publish without writing to Grafana"));
 }
 
 #[test]
@@ -709,4 +945,72 @@ fn parse_cli_supports_import_use_export_org_flags() {
         }
         _ => panic!("expected import command"),
     }
+}
+
+#[test]
+fn parse_cli_supports_dashboard_get_and_clone_live_commands() {
+    let get_args = parse_cli_from([
+        "grafana-util",
+        "get",
+        "--profile",
+        "prod",
+        "--dashboard-uid",
+        "cpu-main",
+        "--output",
+        "./cpu-main.json",
+    ]);
+    let clone_args = parse_cli_from([
+        "grafana-util",
+        "clone-live",
+        "--source-uid",
+        "cpu-main",
+        "--name",
+        "CPU Clone",
+        "--uid",
+        "cpu-main-clone",
+        "--folder-uid",
+        "infra",
+        "--output",
+        "./cpu-main-clone.json",
+    ]);
+
+    match get_args.command {
+        DashboardCommand::Get(args) => {
+            assert_eq!(args.common.profile.as_deref(), Some("prod"));
+            assert_eq!(args.dashboard_uid, "cpu-main");
+            assert_eq!(args.output, PathBuf::from("./cpu-main.json"));
+        }
+        _ => panic!("expected get command"),
+    }
+
+    match clone_args.command {
+        DashboardCommand::CloneLive(args) => {
+            assert_eq!(args.source_uid, "cpu-main");
+            assert_eq!(args.name.as_deref(), Some("CPU Clone"));
+            assert_eq!(args.uid.as_deref(), Some("cpu-main-clone"));
+            assert_eq!(args.folder_uid.as_deref(), Some("infra"));
+            assert_eq!(args.output, PathBuf::from("./cpu-main-clone.json"));
+        }
+        _ => panic!("expected clone-live command"),
+    }
+}
+
+#[test]
+fn dashboard_get_help_mentions_local_draft_and_output_path() {
+    let help = render_dashboard_subcommand_help("get");
+    assert!(help.contains("API-safe local JSON draft"));
+    assert!(help.contains("--dashboard-uid"));
+    assert!(help.contains("--output"));
+    assert!(help.contains("grafana-util dashboard get"));
+}
+
+#[test]
+fn dashboard_clone_live_help_mentions_override_flags() {
+    let help = render_dashboard_subcommand_help("clone-live");
+    assert!(help.contains("optional overrides"));
+    assert!(help.contains("--source-uid"));
+    assert!(help.contains("--name"));
+    assert!(help.contains("--uid"));
+    assert!(help.contains("--folder-uid"));
+    assert!(help.contains("grafana-util dashboard clone-live"));
 }

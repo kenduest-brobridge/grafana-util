@@ -60,6 +60,8 @@ fn unified_help_mentions_screenshot_and_inspect_vars_examples() {
     assert!(help.contains("dashboard screenshot"));
     assert!(help.contains("dashboard inspect-vars"));
     assert!(help.contains("--dashboard-url"));
+    assert!(help.contains("dashboard patch-file"));
+    assert!(help.contains("dashboard publish"));
     assert!(help.contains("Run profile list, show, and init workflows."));
     assert!(help.contains("[Profile Show]"));
 }
@@ -80,6 +82,106 @@ fn parse_cli_supports_dashboard_group_command() {
                 assert_eq!(inner.export_dir, Path::new("./dashboards"));
             }
             _ => panic!("expected dashboard export"),
+        },
+        _ => panic!("expected dashboard group"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_dashboard_group_get_and_clone_live_commands() {
+    let get_args: CliArgs = parse_cli_from([
+        "grafana-util",
+        "dashboard",
+        "get",
+        "--dashboard-uid",
+        "cpu-main",
+        "--output",
+        "./cpu-main.json",
+    ]);
+    let clone_args: CliArgs = parse_cli_from([
+        "grafana-util",
+        "dashboard",
+        "clone-live",
+        "--source-uid",
+        "cpu-main",
+        "--uid",
+        "cpu-main-clone",
+        "--folder-uid",
+        "infra",
+        "--output",
+        "./cpu-main-clone.json",
+    ]);
+
+    match get_args.command {
+        UnifiedCommand::Dashboard { command } => match command {
+            super::DashboardGroupCommand::Get(inner) => {
+                assert_eq!(inner.dashboard_uid, "cpu-main");
+                assert_eq!(inner.output, Path::new("./cpu-main.json"));
+            }
+            _ => panic!("expected dashboard get"),
+        },
+        _ => panic!("expected dashboard group"),
+    }
+
+    match clone_args.command {
+        UnifiedCommand::Dashboard { command } => match command {
+            super::DashboardGroupCommand::CloneLive(inner) => {
+                assert_eq!(inner.source_uid, "cpu-main");
+                assert_eq!(inner.uid.as_deref(), Some("cpu-main-clone"));
+                assert_eq!(inner.folder_uid.as_deref(), Some("infra"));
+                assert_eq!(inner.output, Path::new("./cpu-main-clone.json"));
+            }
+            _ => panic!("expected dashboard clone-live"),
+        },
+        _ => panic!("expected dashboard group"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_dashboard_group_patch_file_and_publish_commands() {
+    let patch_args: CliArgs = parse_cli_from([
+        "grafana-util",
+        "dashboard",
+        "patch-file",
+        "--input",
+        "./drafts/cpu-main.json",
+        "--tag",
+        "prod",
+    ]);
+    let publish_args: CliArgs = parse_cli_from([
+        "grafana-util",
+        "dashboard",
+        "publish",
+        "--url",
+        "https://grafana.example.com",
+        "--basic-user",
+        "admin",
+        "--basic-password",
+        "admin",
+        "--input",
+        "./drafts/cpu-main.json",
+        "--dry-run",
+    ]);
+
+    match patch_args.command {
+        UnifiedCommand::Dashboard { command } => match command {
+            super::DashboardGroupCommand::PatchFile(inner) => {
+                assert_eq!(inner.input, Path::new("./drafts/cpu-main.json"));
+                assert_eq!(inner.tags, vec!["prod".to_string()]);
+            }
+            _ => panic!("expected dashboard patch-file"),
+        },
+        _ => panic!("expected dashboard group"),
+    }
+
+    match publish_args.command {
+        UnifiedCommand::Dashboard { command } => match command {
+            super::DashboardGroupCommand::Publish(inner) => {
+                assert_eq!(inner.common.url, "https://grafana.example.com");
+                assert_eq!(inner.common.username.as_deref(), Some("admin"));
+                assert!(inner.dry_run);
+            }
+            _ => panic!("expected dashboard publish"),
         },
         _ => panic!("expected dashboard group"),
     }

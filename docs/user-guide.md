@@ -204,7 +204,7 @@ Use this table first when you need to confirm whether a resource supports invent
 
 | Resource | List | Export | Import | Diff | Inspect | Add | Modify | Delete | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Dashboards | Yes | Yes | Yes | Yes | Yes | No | No | No | Inventory, backup, and cross-environment migration |
+| Dashboards | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Inventory, local authoring drafts, backup, and cross-environment migration |
 | Datasources | Yes | Yes | Yes | Yes | No | No | No | No | Drift review and migration checkpoints |
 | Alert rules & alerting resources | Yes | Yes | Yes | Yes | No | No | No | No | management lane: `plan/apply/delete/init/new-*`; migration lane: `export/import/diff` |
 | Organizations | Yes | Yes | Yes | No | No | Yes | Yes | Yes | Org inventory plus membership replay on import |
@@ -231,6 +231,45 @@ Authentication exclusivity rules:
 <a id="dashboard-commands"></a>
 3) Dashboard Commands
 ---------------------
+
+### 3.0 Dashboard authoring (`dashboard get`, `clone-live`, `patch-file`, `publish`)
+
+Purpose: support a file-first dashboard authoring flow without exporting a whole dashboard tree first.
+
+Typical flow:
+1. `dashboard get` fetches one live dashboard into an API-safe local draft with `dashboard.id = null`.
+2. `dashboard clone-live` fetches one live dashboard into a new local draft and can override title, UID, or preserved `meta.folderUid`.
+3. `dashboard patch-file` edits one local draft or raw export file in place, or writes a patched copy to `--output`.
+4. `dashboard publish` stages one local file through the existing dashboard import pipeline, including `--dry-run --table` or `--dry-run --json`.
+
+Examples:
+
+Fetch one live dashboard into a local draft:
+```bash
+grafana-util dashboard get --url http://localhost:3000 --token <TOKEN> --dashboard-uid cpu-main --output ./drafts/cpu-main.json
+```
+
+Clone one live dashboard into a new draft with a new UID and folder:
+```bash
+grafana-util dashboard clone-live --url http://localhost:3000 --basic-user admin --basic-password admin --source-uid cpu-main --name "CPU Clone" --uid cpu-main-clone --folder-uid infra --output ./drafts/cpu-main-clone.json
+```
+
+Patch one local file in place:
+```bash
+grafana-util dashboard patch-file --input ./drafts/cpu-main.json --name "CPU Overview" --folder-uid infra --tag prod --tag sre --message "Prepare draft for publish"
+```
+
+Preview publish through the existing import dry-run path:
+```bash
+grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --basic-password admin --input ./drafts/cpu-main.json --replace-existing --dry-run --table
+```
+
+How to read it:
+- `dashboard get` and `dashboard clone-live` keep the wrapped Grafana document shape so later `dashboard publish` or `dashboard import` can reuse the same file.
+- `dashboard patch-file` accepts either a wrapped export document or a bare dashboard object.
+- `dashboard patch-file --tag` replaces the tag list with the repeated `--tag` values you provide.
+- `dashboard publish` is intentionally a single-file wrapper over the current import lane; it does not create a second apply engine.
+- `dashboard publish --folder-uid` and `dashboard publish --message` override the staged import payload without requiring you to hand-edit JSON first.
 
 ### 3.1 `dashboard export`
 
