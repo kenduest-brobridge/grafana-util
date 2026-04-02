@@ -33,7 +33,7 @@ Validated version output from the local Docker Grafana handbook fixture:
 
 ```text
 $ grafana-util --version
-grafana-util 0.6.1
+grafana-util 0.6.2
 ```
 
 That version check is the quickest way to catch a stale checkout or an unexpected install before you start comparing command output with the handbook.

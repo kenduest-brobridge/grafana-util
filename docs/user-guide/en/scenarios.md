@@ -29,7 +29,7 @@ Validated version output:
 
 ```text
 $ grafana-util --version
-grafana-util 0.6.1
+grafana-util 0.6.2
 ```
 
 ## 2. Inspect the deployment as an operator
