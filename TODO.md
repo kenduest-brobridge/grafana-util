@@ -16,7 +16,7 @@ Completed items that were previously listed here now live in `docs/internal/todo
 - reopen a domain lane only when a concrete consumer proves a missing decision-critical signal
 - keep `overview` and `project-status` as thin consumers instead of adding more derivation logic there
 - if a lane must reopen, prefer owner-module work inside `dashboard`, `datasource`, `alert`, `access`, `sync`, or `promotion`
-- keep advanced analysis and packaging exploratory rather than making them a current execution lane
+- keep advanced analysis and packaging exploratory rather than making it a current execution lane
 - clean repo workflow noise by keeping local scratch files, temp exports, and ad hoc notes out of normal review/commit paths
 - evaluate streaming or lower-memory dashboard listing/export paths only if large-instance validation shows the current full-materialization approach is a real bottleneck
 - evaluate semantic alert diff normalization for equivalent values such as duration aliases after the current structural diff behavior is otherwise stable
@@ -73,3 +73,20 @@ Rules to keep:
 4. clean repo workflow noise and local scratch artifacts
 5. extend Rust bundle normalization beyond alert-rule specs only if a concrete consumer needs it
 6. semantic alert diff normalization for equivalent values only after the current structural diff behavior is otherwise stable
+
+## Architecture Follow-up
+
+1. enforce the tool-not-platform boundary
+- treat `overview` and `status` as consumer/reporting surfaces, not new orchestration owners
+- require a concrete operator decision gap before adding another top-level surface or cross-domain workbench flow
+- prefer tightening help, docs, and output clarity over adding another architectural layer
+
+2. keep domain depth balanced before widening the surface
+- do not keep deepening dashboard-only intelligence while `access` and other domains remain materially shallower
+- define a minimum producer maturity bar for each domain before expanding cross-domain summary features again
+- use consumer-driven reopen rules so domain work resumes only when a real operator decision is blocked
+
+3. preserve a lightweight lane for simple backup use cases
+- keep plain export/backup flows obvious and low-friction for users who only need JSON capture and restore
+- avoid forcing review/workbench/governance-heavy flows onto the simplest inventory and backup paths
+- make the heavier plan/diff/governance lane explicitly optional and operator-intent driven
