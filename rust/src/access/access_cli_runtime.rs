@@ -9,7 +9,7 @@
 use clap::{Command, CommandFactory, Parser};
 use std::path::PathBuf;
 
-use crate::common::{resolve_auth_headers, Result};
+use crate::common::{resolve_auth_headers, set_json_color_choice, Result};
 use crate::http::{JsonHttpClient, JsonHttpClientConfig};
 use crate::profile_config::{
     load_selected_profile, resolve_connection_settings, ConnectionMergeInput,
@@ -24,7 +24,9 @@ where
     I: IntoIterator<Item = T>,
     T: Into<std::ffi::OsString> + Clone,
 {
-    normalize_access_cli_args(AccessCliRoot::parse_from(iter).args)
+    let root = AccessCliRoot::parse_from(iter);
+    set_json_color_choice(root.color);
+    normalize_access_cli_args(root.args)
 }
 
 fn apply_list_output_format(

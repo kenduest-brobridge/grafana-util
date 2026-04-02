@@ -15,7 +15,9 @@
 //!   layers and alert handlers.
 //! - Keep diff/import/export payload transforms next to their handlers, not in dispatcher code.
 
-use crate::common::{message, sanitize_path_component, string_field, write_json_file, Result};
+use crate::common::{
+    message, render_json_value, sanitize_path_component, string_field, write_json_file, Result,
+};
 use crate::http::{JsonHttpClient, JsonHttpClientConfig};
 use serde_json::{json, Map, Value};
 use std::path::{Path, PathBuf};
@@ -215,7 +217,7 @@ fn print_alert_action_document(
 ) -> Result<()> {
     match output {
         AlertCommandOutputFormat::Json => {
-            println!("{}", serde_json::to_string_pretty(document)?);
+            println!("{}", render_json_value(document)?);
             Ok(())
         }
         AlertCommandOutputFormat::Text => {

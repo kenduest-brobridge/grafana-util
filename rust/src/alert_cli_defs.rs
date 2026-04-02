@@ -3,7 +3,7 @@
 use clap::{ArgAction, Args, Command, CommandFactory, Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;
 
-use crate::common::{resolve_auth_headers, Result};
+use crate::common::{resolve_auth_headers, set_json_color_choice, CliColorChoice, Result};
 use crate::profile_config::{
     load_selected_profile, resolve_connection_settings, ConnectionMergeInput,
 };
@@ -40,6 +40,13 @@ const ALERT_LIST_TEMPLATES_HELP_TEXT: &str = "Examples:\n\n  grafana-util alert 
     styles = crate::help_styles::CLI_HELP_STYLES
 )]
 struct AlertCliRoot {
+    #[arg(
+        long,
+        value_enum,
+        default_value_t = CliColorChoice::Auto,
+        help = "Colorize JSON output. Use auto, always, or never."
+    )]
+    color: CliColorChoice,
     #[command(flatten)]
     args: AlertNamespaceArgs,
 }
@@ -949,7 +956,9 @@ where
     // Upstream callers: 無
     // Downstream callees: alert_cli_defs.rs:normalize_alert_namespace_args
 
-    normalize_alert_namespace_args(AlertCliRoot::parse_from(iter).args)
+    let root = AlertCliRoot::parse_from(iter);
+    set_json_color_choice(root.color);
+    normalize_alert_namespace_args(root.args)
 }
 
 /// root command.

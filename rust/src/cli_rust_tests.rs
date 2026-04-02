@@ -403,7 +403,7 @@ fn parse_cli_supports_datasource_group_command() {
     ]);
 
     match args.command {
-        UnifiedCommand::Datasource { command } => match command {
+        UnifiedCommand::Datasource { command, .. } => match command {
             DatasourceGroupCommand::Import(inner) => {
                 assert_eq!(inner.import_dir, Path::new("./datasources"));
                 assert!(inner.dry_run);
@@ -425,7 +425,7 @@ fn parse_cli_supports_datasource_diff_group_command() {
     ]);
 
     match args.command {
-        UnifiedCommand::Datasource { command } => match command {
+        UnifiedCommand::Datasource { command, .. } => match command {
             DatasourceGroupCommand::Diff(inner) => {
                 assert_eq!(inner.diff_dir, Path::new("./datasources"));
             }
@@ -440,7 +440,7 @@ fn parse_cli_supports_datasource_group_alias() {
     let args: CliArgs = parse_cli_from(["grafana-util", "ds", "list", "--json"]);
 
     match args.command {
-        UnifiedCommand::Datasource { command } => match command {
+        UnifiedCommand::Datasource { command, .. } => match command {
             DatasourceGroupCommand::List(inner) => {
                 assert!(inner.json);
             }
@@ -551,7 +551,7 @@ fn parse_cli_supports_datasource_list_command() {
     let args: CliArgs = parse_cli_from(["grafana-util", "datasource", "list", "--json"]);
 
     match args.command {
-        UnifiedCommand::Datasource { command } => match command {
+        UnifiedCommand::Datasource { command, .. } => match command {
             DatasourceGroupCommand::List(inner) => assert!(inner.json),
             _ => panic!("expected datasource list"),
         },
@@ -570,7 +570,7 @@ fn parse_cli_supports_datasource_types_command() {
     ]);
 
     match args.command {
-        UnifiedCommand::Datasource { command } => match command {
+        UnifiedCommand::Datasource { command, .. } => match command {
             DatasourceGroupCommand::Types(inner) => {
                 assert_eq!(inner.output_format, SimpleOutputFormat::Csv);
             }
@@ -592,7 +592,7 @@ fn parse_cli_supports_datasource_group_inspect_export_command() {
     ]);
 
     match args.command {
-        UnifiedCommand::Datasource { command } => match command {
+        UnifiedCommand::Datasource { command, .. } => match command {
             DatasourceGroupCommand::InspectExport(inner) => {
                 assert_eq!(inner.input_dir, Path::new("./datasources"));
                 assert!(inner.json);
@@ -609,7 +609,7 @@ fn parse_cli_supports_datasource_browse_command() {
     let args: CliArgs = parse_cli_from(["grafana-util", "datasource", "browse", "--org-id", "4"]);
 
     match args.command {
-        UnifiedCommand::Datasource { command } => match command {
+        UnifiedCommand::Datasource { command, .. } => match command {
             DatasourceGroupCommand::Browse(inner) => {
                 assert_eq!(inner.org_id, Some(4));
                 assert!(!inner.all_orgs);
@@ -625,7 +625,7 @@ fn parse_cli_supports_datasource_browse_all_orgs() {
     let args: CliArgs = parse_cli_from(["grafana-util", "datasource", "browse", "--all-orgs"]);
 
     match args.command {
-        UnifiedCommand::Datasource { command } => match command {
+        UnifiedCommand::Datasource { command, .. } => match command {
             DatasourceGroupCommand::Browse(inner) => {
                 assert!(inner.all_orgs);
                 assert_eq!(inner.org_id, None);

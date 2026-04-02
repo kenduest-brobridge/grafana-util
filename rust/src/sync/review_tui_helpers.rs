@@ -631,7 +631,7 @@ pub(crate) fn build_diff_controls_lines(state: &DiffControlsState) -> Vec<Line<'
                 Color::White,
             ),
             Span::raw("  "),
-            tui_shell::label("Focus "),
+            tui_shell::focus_label("Focus "),
             tui_shell::key_chip(focus, Color::Blue),
             Span::raw("  "),
             Span::styled(

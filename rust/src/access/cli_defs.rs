@@ -13,6 +13,7 @@ mod access_cli_shared;
 mod access_service_account_cli;
 
 use super::pending_delete::TeamDeleteArgs;
+use crate::common::CliColorChoice;
 
 pub use access_cli_runtime::{
     build_auth_context, build_auth_context_no_org_id, build_http_client,
@@ -543,6 +544,13 @@ pub enum AccessCommand {
 )]
 /// Struct definition for AccessCliRoot.
 pub(crate) struct AccessCliRoot {
+    #[arg(
+        long,
+        value_enum,
+        default_value_t = CliColorChoice::Auto,
+        help = "Colorize JSON output. Use auto, always, or never."
+    )]
+    color: CliColorChoice,
     #[command(flatten)]
     args: AccessCliArgs,
 }

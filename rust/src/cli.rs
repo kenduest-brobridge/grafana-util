@@ -26,14 +26,16 @@ use crate::cli_help_examples::{
     DATASOURCE_HELP_FULL_TEXT, OVERVIEW_HELP_FULL_TEXT, PROJECT_STATUS_HELP_FULL_TEXT,
     SYNC_HELP_FULL_TEXT, UNIFIED_HELP_FULL_TEXT, UNIFIED_HELP_TEXT,
 };
-use crate::common::Result;
+use crate::common::{json_color_choice, set_json_color_choice, CliColorChoice, Result};
 use crate::dashboard::{
     run_dashboard_cli, BrowseArgs, CloneLiveArgs, DashboardCliArgs, DashboardCommand, DeleteArgs,
     DiffArgs, ExportArgs, GetArgs, GovernanceGateArgs, ImportArgs, InspectExportArgs,
     InspectLiveArgs, InspectVarsArgs, ListArgs, PatchFileArgs, PublishArgs, ReviewArgs,
     ScreenshotArgs, TopologyArgs,
 };
-use crate::datasource::{run_datasource_cli, DatasourceCliArgs, DatasourceGroupCommand};
+use crate::datasource::{
+    root_command as datasource_root_command, run_datasource_cli, DatasourceGroupCommand,
+};
 use crate::overview::{run_overview_cli, OverviewCliArgs};
 use crate::profile_cli::{root_command as profile_root_command, run_profile_cli, ProfileCliArgs};
 use crate::project_status_command::{run_project_status_cli, ProjectStatusCliArgs};
@@ -171,10 +173,7 @@ where
         [_binary, command, flag]
             if command == "datasource" && (flag == "--help" || flag == "-h") =>
         {
-            Some(render_domain_help_text(
-                DatasourceCliArgs::command(),
-                colorize,
-            ))
+            Some(render_domain_help_text(datasource_root_command(), colorize))
         }
         [_binary, command, flag] if command == "access" && (flag == "--help" || flag == "-h") => {
             Some(render_domain_help_text(access_root_command(), colorize))
@@ -202,7 +201,7 @@ where
         ),
         [_binary, command, flag] if command == "datasource" && flag == "--help-full" => {
             Some(render_domain_help_full_text(
-                DatasourceCliArgs::command(),
+                datasource_root_command(),
                 DATASOURCE_HELP_FULL_TEXT,
                 colorize,
             ))
@@ -345,6 +344,13 @@ pub enum UnifiedCommand {
         after_help = UNIFIED_DATASOURCE_HELP_TEXT
     )]
     Datasource {
+        #[arg(
+            long,
+            global = true,
+            value_enum,
+            help = "Override JSON/YAML/table color for the datasource namespace. Use auto, always, never, none, or off."
+        )]
+        color: Option<CliColorChoice>,
         #[command(subcommand)]
         command: DatasourceGroupCommand,
     },
@@ -400,6 +406,13 @@ pub enum UnifiedCommand {
 )]
 /// Parsed root CLI arguments for the Rust unified binary.
 pub struct CliArgs {
+    #[arg(
+        long,
+        value_enum,
+        default_value_t = CliColorChoice::Auto,
+        help = "Colorize JSON output. Use auto, always, or never."
+    )]
+    pub color: CliColorChoice,
     #[command(subcommand)]
     pub command: UnifiedCommand,
 }
@@ -418,7 +431,10 @@ where
 }
 
 fn wrap_dashboard(command: DashboardCommand) -> DashboardCliArgs {
-    DashboardCliArgs { command }
+    DashboardCliArgs {
+        color: json_color_choice(),
+        command,
+    }
 }
 
 fn wrap_dashboard_group(command: DashboardGroupCommand) -> DashboardCliArgs {
@@ -486,9 +502,13 @@ where
     FO: FnMut(OverviewCliArgs) -> Result<()>,
     FQ: FnMut(ProjectStatusCliArgs) -> Result<()>,
 {
+    let default_color = args.color;
     match args.command {
         UnifiedCommand::Dashboard { command } => run_dashboard(wrap_dashboard_group(command)),
-        UnifiedCommand::Datasource { command } => run_datasource(command),
+        UnifiedCommand::Datasource { color, command } => {
+            set_json_color_choice(color.unwrap_or(default_color));
+            run_datasource(command)
+        }
         UnifiedCommand::Change { command } => run_sync(command),
         UnifiedCommand::Alert(inner) => run_alert(normalize_alert_namespace_args(inner)),
         UnifiedCommand::Access(inner) => run_access(inner),
@@ -505,6 +525,7 @@ where
 /// validate dispatch logic without touching network transport.
 pub fn run_cli(args: CliArgs) -> Result<()> {
     // Keep one executable boundary: parse-independent dispatch + injected runners.
+    set_json_color_choice(args.color);
     dispatch_with_handlers(
         args,
         run_dashboard_cli,

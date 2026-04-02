@@ -2,7 +2,7 @@
 
 use serde_json::{json, Map, Value};
 
-use crate::common::{message, string_field, Result};
+use crate::common::{message, render_json_value, string_field, Result};
 
 use super::alert_client::GrafanaAlertClient;
 use super::alert_compare_support::{
@@ -391,9 +391,9 @@ pub(crate) fn import_alerting_resources(args: &AlertCliArgs) -> Result<()> {
 
     if args.dry_run {
         if args.json {
-            println!(
+            print!(
                 "{}",
-                serde_json::to_string_pretty(&build_alert_import_dry_run_document(&dry_run_rows))?
+                render_json_value(&build_alert_import_dry_run_document(&dry_run_rows))?
             );
             return Ok(());
         }
@@ -513,9 +513,9 @@ pub(crate) fn diff_alerting_resources(args: &AlertCliArgs) -> Result<()> {
     }
 
     if args.json {
-        println!(
+        print!(
             "{}",
-            serde_json::to_string_pretty(&build_alert_diff_document(&diff_rows))?
+            render_json_value(&build_alert_diff_document(&diff_rows))?
         );
     }
 

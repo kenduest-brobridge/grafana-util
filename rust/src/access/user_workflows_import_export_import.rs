@@ -16,7 +16,9 @@ use std::path::Path;
 use crate::access::render::{
     bool_label, format_table, map_get_text, normalize_org_role, scalar_text, value_bool,
 };
-use crate::common::{load_json_object_file, message, string_field, value_as_object, Result};
+use crate::common::{
+    load_json_object_file, message, render_json_value, string_field, value_as_object, Result,
+};
 
 use super::super::{
     build_access_import_dry_run_row, build_access_import_dry_run_rows, build_auth_context,
@@ -587,9 +589,9 @@ where
                 println!("{line}");
             }
         } else if args.json {
-            println!(
+            print!(
                 "{}",
-                serde_json::to_string_pretty(&build_user_import_dry_run_document(
+                render_json_value(&build_user_import_dry_run_document(
                     &dry_run_rows,
                     processed,
                     created,

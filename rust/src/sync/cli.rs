@@ -5,11 +5,12 @@
 //! documents so they remain reusable from tests and offline inputs.
 
 use super::*;
+use crate::common::render_json_value;
 use crate::sync::live::load_apply_intent_operations;
 
 fn emit_text_or_json(document: &Value, lines: &[String], output: SyncOutputFormat) -> Result<()> {
     match output {
-        SyncOutputFormat::Json => println!("{}", serde_json::to_string_pretty(document)?),
+        SyncOutputFormat::Json => print!("{}", render_json_value(document)?),
         SyncOutputFormat::Text => {
             for line in lines {
                 println!("{line}");

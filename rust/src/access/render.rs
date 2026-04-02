@@ -2,7 +2,7 @@
 //! Centralizes table/csv/json field normalization and human-facing value formatting.
 use serde_json::{Map, Value};
 
-use crate::common::string_field;
+use crate::common::{render_json_value, string_field};
 pub(crate) use crate::tabular_output::render_yaml;
 
 use super::Scope;
@@ -266,9 +266,9 @@ pub(crate) fn map_get_text(map: &Map<String, Value>, key: &str) -> String {
 
 /// Purpose: implementation note.
 pub(crate) fn render_objects_json(rows: &[Map<String, Value>]) -> super::Result<String> {
-    Ok(serde_json::to_string_pretty(&Value::Array(
+    render_json_value(&Value::Array(
         rows.iter().cloned().map(Value::Object).collect(),
-    ))?)
+    ))
 }
 
 /// user table rows.

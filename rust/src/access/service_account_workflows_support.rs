@@ -12,13 +12,15 @@ use crate::access::{
     ServiceAccountImportArgs, ACCESS_EXPORT_KIND_SERVICE_ACCOUNTS, ACCESS_EXPORT_METADATA_FILENAME,
     ACCESS_EXPORT_VERSION, ACCESS_SERVICE_ACCOUNT_EXPORT_FILENAME, DEFAULT_PAGE_SIZE,
 };
-use crate::common::{load_json_object_file, message, string_field, value_as_object, Result};
+use crate::common::{
+    load_json_object_file, message, render_json_value, string_field, value_as_object, Result,
+};
 
 type DiffPayload = (String, Map<String, Value>);
 type DiffPayloadMap = BTreeMap<String, DiffPayload>;
 
 pub(super) fn render_single_object_json(object: &Map<String, Value>) -> Result<String> {
-    serde_json::to_string_pretty(&Value::Object(object.clone())).map_err(Into::into)
+    render_json_value(&Value::Object(object.clone()))
 }
 
 pub(super) fn assert_not_overwrite(path: &Path, dry_run: bool, overwrite: bool) -> Result<()> {

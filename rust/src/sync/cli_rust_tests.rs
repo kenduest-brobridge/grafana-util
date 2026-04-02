@@ -64,6 +64,7 @@ fn run_sync_cli_plan_accepts_local_inputs() {
         live_file: Some(live_file),
         fetch_live: false,
         common: CommonCliArgs {
+            color: crate::common::CliColorChoice::Auto,
             profile: None,
             url: "http://127.0.0.1:3000".to_string(),
             api_token: Some("test-token".to_string()),

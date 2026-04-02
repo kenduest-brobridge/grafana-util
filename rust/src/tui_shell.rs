@@ -23,6 +23,8 @@ pub(crate) fn footer_block() -> Block<'static> {
 }
 
 pub(crate) fn pane_block(title: &str, focused: bool, accent: Color, bg: Color) -> Block<'static> {
+    let title_bg = if focused { accent } else { bg };
+    let title_fg = if focused { Color::Black } else { Color::White };
     Block::default()
         .borders(Borders::ALL)
         .title(if focused {
@@ -34,8 +36,8 @@ pub(crate) fn pane_block(title: &str, focused: bool, accent: Color, bg: Color) -
         .border_style(Style::default().fg(if focused { accent } else { Color::Gray }))
         .title_style(
             Style::default()
-                .fg(Color::White)
-                .bg(bg)
+                .fg(title_fg)
+                .bg(title_bg)
                 .add_modifier(Modifier::BOLD),
         )
 }
@@ -59,6 +61,16 @@ pub(crate) fn label(value: impl Into<String>) -> Span<'static> {
         value.into(),
         Style::default()
             .fg(Color::LightCyan)
+            .add_modifier(Modifier::BOLD),
+    )
+}
+
+pub(crate) fn focus_label(value: impl Into<String>) -> Span<'static> {
+    Span::styled(
+        value.into(),
+        Style::default()
+            .fg(Color::Black)
+            .bg(Color::Blue)
             .add_modifier(Modifier::BOLD),
     )
 }

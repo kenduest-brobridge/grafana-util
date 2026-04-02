@@ -7,7 +7,7 @@
 use reqwest::Method;
 use serde_json::{Map, Value};
 
-use crate::common::{message, string_field, write_json_file, Result};
+use crate::common::{message, render_json_value, string_field, write_json_file, Result};
 
 use super::super::super::render::{
     format_table, normalize_service_account_row, scalar_text, service_account_role_to_api,
@@ -284,9 +284,9 @@ where
 
     if structured_output {
         if args.json {
-            println!(
+            print!(
                 "{}",
-                serde_json::to_string_pretty(&Value::Object(Map::from_iter(vec![
+                render_json_value(&Value::Object(Map::from_iter(vec![
                     (
                         "rows".to_string(),
                         Value::Array(dry_run_rows.iter().cloned().map(Value::Object).collect()),

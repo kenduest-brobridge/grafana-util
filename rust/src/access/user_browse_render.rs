@@ -60,7 +60,7 @@ pub(super) fn render_frame(
                     tui_shell::summary_cell("Rows", state.rows.len().to_string(), Color::White),
                 ]),
                 Line::from(vec![
-                    tui_shell::label("Focus "),
+                    tui_shell::focus_label("Focus "),
                     tui_shell::key_chip(
                         match state.focus {
                             PaneFocus::List => "List",

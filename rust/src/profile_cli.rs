@@ -8,7 +8,9 @@ use std::fmt::Write as _;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::common::{message, validation, Result};
+use crate::common::{
+    message, render_json_value, set_json_color_choice, validation, CliColorChoice, Result,
+};
 use crate::dashboard::SimpleOutputFormat;
 use crate::profile_config::{
     default_profile_config_path, load_profile_config_file, render_profile_init_template,
@@ -27,6 +29,13 @@ const PROFILE_HELP_TEXT: &str = "Examples:\n\n  grafana-util profile list\n  gra
     styles = crate::help_styles::CLI_HELP_STYLES
 )]
 pub struct ProfileCliArgs {
+    #[arg(
+        long,
+        value_enum,
+        default_value_t = CliColorChoice::Auto,
+        help = "Colorize JSON output. Use auto, always, or never."
+    )]
+    pub color: CliColorChoice,
     #[command(subcommand)]
     pub command: ProfileCommand,
 }
@@ -267,7 +276,7 @@ fn run_profile_show(args: ProfileShowArgs) -> Result<()> {
         SimpleOutputFormat::Json => {
             println!(
                 "{}",
-                serde_json::to_string_pretty(&ProfileShowDocument {
+                render_json_value(&ProfileShowDocument {
                     name: selected.name.clone(),
                     source_path: selected.source_path.clone(),
                     profile: selected.profile.clone(),
@@ -303,6 +312,7 @@ fn run_profile_init(args: ProfileInitArgs) -> Result<()> {
 }
 
 pub fn run_profile_cli(args: ProfileCliArgs) -> Result<()> {
+    set_json_color_choice(args.color);
     match args.command {
         ProfileCommand::List(_) => run_profile_list(),
         ProfileCommand::Show(show_args) => run_profile_show(show_args),

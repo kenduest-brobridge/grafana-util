@@ -3,7 +3,7 @@
 use clap::{Args, Subcommand};
 use serde_json::{Map, Value};
 
-use crate::common::{message, Result};
+use crate::common::{message, render_json_value, Result};
 
 use super::super::{CommonCliArgs, TeamAddArgs, TeamListArgs, TeamModifyArgs};
 
@@ -76,7 +76,7 @@ pub(crate) fn validate_confirmation(yes: bool, noun: &str) -> Result<()> {
 
 /// Render a JSON object as pretty-printed output.
 pub(crate) fn render_single_object_json(object: &Map<String, Value>) -> Result<String> {
-    serde_json::to_string_pretty(&Value::Object(object.clone())).map_err(Into::into)
+    render_json_value(&Value::Object(object.clone()))
 }
 
 /// Validate one and only one identity selector was provided.

@@ -7,7 +7,7 @@
 use reqwest::Method;
 use serde_json::{Map, Value};
 
-use crate::common::{message, string_field, Result};
+use crate::common::{message, render_json_value, string_field, Result};
 
 use super::super::render::{map_get_text, scalar_text};
 use super::super::{request_object, request_object_list_field, DEFAULT_PAGE_SIZE};
@@ -159,7 +159,7 @@ where
     let response = delete_team_api_with_request(&mut request_json, &team_id)?;
     let result = team_delete_result(&team, &response);
     if args.json {
-        println!("{}", serde_json::to_string_pretty(&Value::Object(result))?);
+        println!("{}", render_json_value(&Value::Object(result))?);
     } else {
         println!("{}", team_delete_summary_line(&result));
     }

@@ -5,7 +5,7 @@ use serde_json::{Map, Value};
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
 
-use crate::common::{message, string_field, Result};
+use crate::common::{message, render_json_value, string_field, Result};
 use crate::tabular_output::render_yaml;
 
 use super::{
@@ -138,7 +138,7 @@ fn render_alert_rows_for_output(
     yaml: bool,
 ) -> Result<String> {
     if json {
-        Ok(serde_json::to_string_pretty(rows)?)
+        render_json_value(rows)
     } else if yaml {
         render_yaml(&rows)
     } else if csv {

@@ -9,7 +9,7 @@ use reqwest::Method;
 use serde_json::{Map, Value};
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::common::{message, string_field, write_json_file, Result};
+use crate::common::{message, render_json_value, string_field, write_json_file, Result};
 
 use crate::access::render::{format_table, map_get_text, normalize_team_row, scalar_text};
 use crate::access::team_import_export_diff::{
@@ -390,9 +390,9 @@ where
 
     if args.dry_run && is_dry_run_table_or_json {
         if args.json {
-            println!(
+            print!(
                 "{}",
-                serde_json::to_string_pretty(&build_team_import_dry_run_document(
+                render_json_value(&build_team_import_dry_run_document(
                     &dry_run_rows,
                     processed,
                     created,

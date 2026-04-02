@@ -47,7 +47,7 @@ pub(super) fn render_frame(
                     ),
                 ]),
                 Line::from(vec![
-                    tui_shell::label("Focus "),
+                    tui_shell::focus_label("Focus "),
                     tui_shell::key_chip(
                         match state.focus {
                             PaneFocus::List => "List",

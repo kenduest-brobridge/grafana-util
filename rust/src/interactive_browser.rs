@@ -289,7 +289,7 @@ pub(crate) fn run_interactive_browser(
                         tui_shell::label("Filter "),
                         tui_shell::accent(kind_filters[active_filter].to_string(), Color::Yellow),
                         Span::raw("  "),
-                        tui_shell::label("Focus "),
+                        tui_shell::focus_label("Focus "),
                         tui_shell::key_chip(
                             match pane_focus {
                                 BrowserPane::Items => "Items",
@@ -414,6 +414,8 @@ pub(crate) fn run_interactive_browser(
 
 #[cfg(any(feature = "tui", test))]
 fn pane_block(title: &str, focused: bool, accent: Color, bg: Color) -> Block<'static> {
+    let title_bg = if focused { accent } else { bg };
+    let title_fg = if focused { Color::Black } else { Color::White };
     Block::default()
         .borders(Borders::ALL)
         .title(if focused {
@@ -425,8 +427,8 @@ fn pane_block(title: &str, focused: bool, accent: Color, bg: Color) -> Block<'st
         .border_style(Style::default().fg(if focused { accent } else { Color::Gray }))
         .title_style(
             Style::default()
-                .fg(Color::White)
-                .bg(bg)
+                .fg(title_fg)
+                .bg(title_bg)
                 .add_modifier(Modifier::BOLD),
         )
 }
