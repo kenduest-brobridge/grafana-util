@@ -5,7 +5,7 @@
 //!   secret resolution yet.
 //! - Keep placeholder declarations explicit, reviewable, and fail-closed.
 
-use crate::common::{message, Result};
+use crate::common::{message, sanitize_path_component, Result};
 use serde::Serialize;
 use serde_json::{json, Map, Value};
 use std::collections::HashSet;
@@ -14,6 +14,17 @@ use std::collections::HashSet;
 pub const SECRET_PLACEHOLDER_PREFIX: &str = "${secret:";
 /// Constant for placeholder reference suffix.
 pub const SECRET_PLACEHOLDER_SUFFIX: &str = "}";
+/// Constant for the currently supported placeholder provider kind.
+pub const INLINE_SECRET_PROVIDER_KIND: &str = "inline-placeholder-map";
+
+/// Struct definition for DatasourceSecretProviderContract.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct DatasourceSecretProviderContract {
+    pub kind: String,
+    pub input_flag: String,
+    pub placeholder_format: String,
+    pub placeholder_name_strategy: String,
+}
 
 /// Struct definition for SecretPlaceholderReference.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -30,13 +41,44 @@ pub struct DatasourceSecretPlaceholderPlan {
     pub datasource_name: String,
     pub datasource_type: String,
     pub placeholders: Vec<SecretPlaceholderReference>,
-    pub provider_kind: String,
+    pub provider: DatasourceSecretProviderContract,
     pub action: String,
     pub review_required: bool,
 }
 
 fn normalize_text(value: Option<&str>) -> String {
     value.unwrap_or("").trim().to_string()
+}
+
+pub fn inline_secret_provider_contract() -> DatasourceSecretProviderContract {
+    DatasourceSecretProviderContract {
+        kind: INLINE_SECRET_PROVIDER_KIND.to_string(),
+        input_flag: "--secret-values".to_string(),
+        placeholder_format: "${secret:<placeholder-name>}".to_string(),
+        placeholder_name_strategy:
+            "sanitize(<datasource-uid|name|type>-<secure-json-field>).lowercase".to_string(),
+    }
+}
+
+pub fn summarize_secret_provider_contract(provider: &DatasourceSecretProviderContract) -> Value {
+    json!({
+        "kind": provider.kind,
+        "inputFlag": provider.input_flag,
+        "placeholderFormat": provider.placeholder_format,
+        "placeholderNameStrategy": provider.placeholder_name_strategy,
+    })
+}
+
+pub fn build_inline_secret_placeholder_name(datasource_identity: &str, field_name: &str) -> String {
+    sanitize_path_component(&format!("{datasource_identity}-{field_name}")).to_ascii_lowercase()
+}
+
+pub fn build_inline_secret_placeholder_token(
+    datasource_identity: &str,
+    field_name: &str,
+) -> String {
+    let placeholder_name = build_inline_secret_placeholder_name(datasource_identity, field_name);
+    format!("{SECRET_PLACEHOLDER_PREFIX}{placeholder_name}{SECRET_PLACEHOLDER_SUFFIX}")
 }
 
 /// parse secret placeholder.
@@ -176,7 +218,7 @@ pub fn build_secret_placeholder_plan(
         datasource_name,
         datasource_type,
         placeholders: collect_secret_placeholders(secure_json_data)?,
-        provider_kind: "inline-placeholder-map".to_string(),
+        provider: inline_secret_provider_contract(),
         action: "inject-secrets".to_string(),
         review_required: true,
     })
@@ -188,7 +230,8 @@ pub fn summarize_secret_placeholder_plan(plan: &DatasourceSecretPlaceholderPlan)
         "datasourceUid": plan.datasource_uid,
         "datasourceName": plan.datasource_name,
         "datasourceType": plan.datasource_type,
-        "providerKind": plan.provider_kind,
+        "providerKind": plan.provider.kind,
+        "provider": summarize_secret_provider_contract(&plan.provider),
         "action": plan.action,
         "reviewRequired": plan.review_required,
         "secretFields": plan.placeholders.iter().map(|item| item.field_name.clone()).collect::<Vec<_>>(),

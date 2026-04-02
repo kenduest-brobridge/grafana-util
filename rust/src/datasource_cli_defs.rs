@@ -1,21 +1,24 @@
 //! CLI definitions for Core command surface and option compatibility behavior.
 
-use clap::{ArgAction, Args, Parser, Subcommand, ValueEnum};
+use clap::{ArgAction, Args, CommandFactory, Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;
 
+#[cfg(test)]
+use crate::common::set_json_color_choice;
+use crate::common::CliColorChoice;
 use crate::dashboard::{CommonCliArgs, SimpleOutputFormat};
 use crate::datasource_catalog::DatasourcePresetProfile;
 
 const DEFAULT_EXPORT_DIR: &str = "datasources";
-const DATASOURCE_ROOT_HELP_TEXT: &str = "Examples:\n\n  Browse live datasources in a TUI:\n    grafana-util datasource browse --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\"\n\n  Inspect a local datasource export root:\n    grafana-util datasource inspect-export --input-dir ./datasources --json\n\n  Show the built-in datasource type catalog:\n    grafana-util datasource types --output-format yaml\n\n  List datasources from the current org as JSON:\n    grafana-util datasource list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json\n\n  List datasources across all visible orgs with Basic auth:\n    grafana-util datasource list --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --json\n\n  Dry-run a live datasource create with the richer preset scaffold:\n    grafana-util datasource add --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --name prometheus-main --type prometheus --datasource-url http://prometheus:9090 --preset-profile full --dry-run --table\n\n  Dry-run a datasource import:\n    grafana-util datasource import --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --import-dir ./datasources --dry-run --json";
+const DATASOURCE_ROOT_HELP_TEXT: &str = "Examples:\n\n  Browse live datasources in a TUI:\n    grafana-util datasource browse --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\"\n\n  Inspect a local masked recovery bundle:\n    grafana-util datasource inspect-export --input-dir ./datasources --json\n\n  Show the built-in datasource type catalog:\n    grafana-util datasource types --output-format yaml\n\n  List datasources from the current org as JSON:\n    grafana-util datasource list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json\n\n  List datasources across all visible orgs with Basic auth:\n    grafana-util datasource list --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --json\n\n  Dry-run a live datasource create with the richer preset scaffold:\n    grafana-util datasource add --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --name prometheus-main --type prometheus --datasource-url http://prometheus:9090 --preset-profile full --dry-run --table\n\n  Dry-run a datasource import:\n    grafana-util datasource import --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --import-dir ./datasources --dry-run --json";
 const DATASOURCE_TYPES_HELP_TEXT: &str =
     "Examples:\n\n  grafana-util datasource types\n  grafana-util datasource types --output-format yaml";
 const DATASOURCE_LIST_HELP_TEXT: &str = "Examples:\n\n  grafana-util datasource list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output-format text\n  grafana-util datasource list --url http://localhost:3000 --basic-user admin --basic-password admin --org-id 2 --output-format csv\n  grafana-util datasource list --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --output-format yaml";
 const DATASOURCE_BROWSE_HELP_TEXT: &str = "Live-only browse against Grafana. Use `grafana-util datasource inspect-export` for local export inspection.\n\nKeys:\n\n  e edit selected datasource\n  d delete selected datasource\n  l refresh live inventory\n  q or Esc exit\n\nExamples:\n\n  grafana-util datasource browse --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\"\n  grafana-util datasource browse --url http://localhost:3000 --basic-user admin --basic-password admin --org-id 2\n  grafana-util datasource browse --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs";
-const DATASOURCE_INSPECT_EXPORT_HELP_TEXT: &str = "Local export inspection only. This command reads datasource export files from disk and does not talk to Grafana.\n\nExamples:\n\n  grafana-util datasource inspect-export --input-dir ./datasources --table\n  grafana-util datasource inspect-export --input-dir ./datasources --csv\n  grafana-util datasource inspect-export --input-dir ./datasources --json\n  grafana-util datasource inspect-export --input-dir ./datasources --yaml\n  grafana-util datasource inspect-export --input-dir ./datasources --interactive";
+const DATASOURCE_INSPECT_EXPORT_HELP_TEXT: &str = "Local export inspection only. This command reads recovery-capable masked export bundle files from disk and does not talk to Grafana. Use text, table, or CSV for operator-summary views, and JSON or YAML for the full machine-readable bundle contract.\n\nExamples:\n\n  grafana-util datasource inspect-export --input-dir ./datasources --table\n  grafana-util datasource inspect-export --input-dir ./datasources --csv\n  grafana-util datasource inspect-export --input-dir ./datasources --json\n  grafana-util datasource inspect-export --input-dir ./datasources --yaml\n  grafana-util datasource inspect-export --input-dir ./datasources --interactive";
 const DATASOURCE_EXPORT_HELP_TEXT: &str = "Examples:\n\n  grafana-util datasource export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./datasources --overwrite\n  grafana-util datasource export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --export-dir ./datasources";
 const DATASOURCE_IMPORT_HELP_TEXT: &str = "Examples:\n\n  grafana-util datasource import --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --import-dir ./datasources --dry-run --table\n  grafana-util datasource import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./datasources --secret-values '{\"loki-basic-auth\":\"secret-value\",\"loki-tenant-token\":\"tenant-token\"}'\n  grafana-util datasource import --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --input-format provisioning --import-dir ./datasources/provisioning --dry-run --json\n  grafana-util datasource import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./datasources --use-export-org --only-org-id 2 --create-missing-orgs --dry-run --json";
-const DATASOURCE_DIFF_HELP_TEXT: &str = "Examples:\n\n  grafana-util datasource diff --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --diff-dir ./datasources --input-format inventory\n  grafana-util datasource diff --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --diff-dir ./datasources/provisioning --input-format provisioning";
+const DATASOURCE_DIFF_HELP_TEXT: &str = "Compare datasource inventory from a local bundle against live Grafana and print an operator-summary diff report. Use datasource inspect-export --json or --yaml when you need the full machine-readable bundle contract instead.\n\nExamples:\n\n  grafana-util datasource diff --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --diff-dir ./datasources --input-format inventory\n  grafana-util datasource diff --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --diff-dir ./datasources/provisioning --input-format provisioning";
 const DATASOURCE_ADD_HELP_TEXT: &str = "Examples:\n\n  grafana-util datasource add --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --name prometheus-main --type prometheus --datasource-url http://prometheus:9090 --dry-run --table\n  grafana-util datasource add --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --name logs-main --type grafana-loki-datasource --datasource-url http://loki:3100 --apply-supported-defaults --dry-run --json\n  grafana-util datasource add --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --name tempo-main --type tempo --datasource-url http://tempo:3200 --preset-profile full --dry-run --json\n  grafana-util datasource add --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --uid loki-main --name loki-main --type loki --datasource-url http://loki:3100 --json-data '{\"timeout\":60}' --dry-run --json";
 const DATASOURCE_MODIFY_HELP_TEXT: &str = "Examples:\n\n  grafana-util datasource modify --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --uid prom-main --set-url http://prometheus-v2:9090 --dry-run --json\n  grafana-util datasource modify --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --uid prom-main --set-default true --dry-run --table";
 const DATASOURCE_DELETE_HELP_TEXT: &str = "Examples:\n\n  grafana-util datasource delete --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --uid prom-main --dry-run --json\n  grafana-util datasource delete --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --uid prom-main --yes";
@@ -133,6 +136,13 @@ pub struct DatasourceInspectExportArgs {
         help_heading = "Input Options"
     )]
     pub input_dir: PathBuf,
+    #[arg(
+        long,
+        value_enum,
+        help = "When the input path can be interpreted as both datasource inventory and provisioning artifacts, select which source to inspect.",
+        help_heading = "Input Options"
+    )]
+    pub input_type: Option<DatasourceImportInputFormat>,
     #[arg(
         long,
         default_value_t = false,
@@ -363,7 +373,7 @@ pub struct DatasourceDiffArgs {
     pub common: CommonCliArgs,
     #[arg(
         long,
-        help = "Compare datasource inventory from this directory against live Grafana. For provisioning input, point this at the export root, provisioning directory, or concrete datasources.yaml file.",
+        help = "Compare datasource inventory from this directory against live Grafana and print an operator-summary diff report. For provisioning input, point this at the export root, provisioning directory, or concrete datasources.yaml file.",
         help_heading = "Input Options"
     )]
     pub diff_dir: PathBuf,
@@ -683,7 +693,7 @@ pub enum DatasourceGroupCommand {
     Browse(DatasourceBrowseArgs),
     #[command(
         name = "inspect-export",
-        about = "Inspect a local datasource export root without connecting to Grafana.",
+        about = "Inspect a local masked recovery bundle without connecting to Grafana.",
         after_help = DATASOURCE_INSPECT_EXPORT_HELP_TEXT
     )]
     InspectExport(DatasourceInspectExportArgs),
@@ -708,9 +718,54 @@ pub enum DatasourceGroupCommand {
     after_help = DATASOURCE_ROOT_HELP_TEXT,
     styles = crate::help_styles::CLI_HELP_STYLES
 )]
+pub(crate) struct DatasourceCliRoot {
+    #[arg(
+        long,
+        global = true,
+        value_enum,
+        default_value_t = CliColorChoice::Auto,
+        help = "Colorize JSON output. Use auto, always, never, none, or off."
+    )]
+    color: CliColorChoice,
+    #[command(flatten)]
+    args: DatasourceCliArgs,
+}
+
+#[derive(Debug, Clone, Args)]
 pub struct DatasourceCliArgs {
     #[command(subcommand)]
     pub command: DatasourceGroupCommand,
+}
+
+pub fn root_command() -> clap::Command {
+    DatasourceCliRoot::command()
+}
+
+#[cfg(test)]
+impl DatasourceCliArgs {
+    pub(crate) fn command() -> clap::Command {
+        root_command()
+    }
+
+    pub(crate) fn parse_from<I, T>(iter: I) -> Self
+    where
+        I: IntoIterator<Item = T>,
+        T: Into<std::ffi::OsString> + Clone,
+    {
+        let root = DatasourceCliRoot::parse_from(iter);
+        set_json_color_choice(root.color);
+        root.args
+    }
+
+    pub(crate) fn try_parse_from<I, T>(iter: I) -> Result<Self, clap::Error>
+    where
+        I: IntoIterator<Item = T>,
+        T: Into<std::ffi::OsString> + Clone,
+    {
+        let root = DatasourceCliRoot::try_parse_from(iter)?;
+        set_json_color_choice(root.color);
+        Ok(root.args)
+    }
 }
 
 #[cfg(test)]

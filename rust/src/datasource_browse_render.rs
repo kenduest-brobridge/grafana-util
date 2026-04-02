@@ -129,7 +129,7 @@ fn summary_lines(state: &BrowserState) -> Vec<Line<'static>> {
                 },
             ),
             Span::raw("  "),
-            tui_shell::label("Focus "),
+            tui_shell::focus_label("Focus "),
             tui_shell::key_chip(state.focus_label(), Color::Blue),
         ]),
     ]

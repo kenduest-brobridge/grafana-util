@@ -11,7 +11,7 @@ use reqwest::Method;
 use serde_json::{Map, Value};
 use std::path::Path;
 
-use crate::common::{message, Result};
+use crate::common::{message, render_json_value, Result};
 use crate::dashboard::{
     build_http_client, build_http_client_for_org, list_datasources, DEFAULT_ORG_ID,
 };
@@ -19,8 +19,9 @@ use crate::datasource::{
     render_import_table, resolve_match, DatasourceImportArgs, DatasourceImportInputFormat,
 };
 use crate::datasource_secret::{
-    build_secret_placeholder_plan, describe_secret_placeholder_plan, resolve_secret_placeholders,
-    summarize_secret_placeholder_plan,
+    build_secret_placeholder_plan, describe_secret_placeholder_plan,
+    inline_secret_provider_contract, resolve_secret_placeholders,
+    summarize_secret_placeholder_plan, summarize_secret_provider_contract,
 };
 use crate::http::JsonHttpClient;
 
@@ -44,12 +45,16 @@ pub(crate) use datasource_import_export_routed::{
     format_routed_datasource_target_org_label, render_routed_datasource_import_org_table,
     resolve_export_org_target_plan,
 };
+#[allow(unused_imports)]
 pub(crate) use datasource_import_export_support::{
-    create_org, discover_export_org_import_scopes, fetch_current_org, list_orgs,
-    load_diff_record_values, load_import_records, org_id_string_from_value,
-    validate_matching_export_org, DatasourceExportMetadata, DatasourceExportOrgScope,
-    DatasourceExportOrgTargetPlan, DatasourceImportDryRunReport, DatasourceImportRecord,
-    DATASOURCE_EXPORT_FILENAME, EXPORT_METADATA_FILENAME,
+    classify_datasource_export_root_scope_kind, create_org,
+    discover_datasource_inventory_scope_dirs, discover_export_org_import_scopes, fetch_current_org,
+    list_orgs, load_datasource_export_root_manifest,
+    load_datasource_inventory_records_from_export_root, load_diff_record_values,
+    load_import_records, org_id_string_from_value, resolve_datasource_export_root_dir,
+    validate_matching_export_org, DatasourceExportOrgScope, DatasourceExportOrgTargetPlan,
+    DatasourceExportRootManifest, DatasourceExportRootScopeKind, DatasourceImportDryRunReport,
+    DatasourceImportRecord, DATASOURCE_EXPORT_FILENAME, EXPORT_METADATA_FILENAME, ROOT_INDEX_KIND,
 };
 
 fn build_import_secret_visibility_entries(
@@ -80,6 +85,10 @@ fn build_import_secret_visibility_entries(
             Ok(plan) => entries.push(summarize_secret_placeholder_plan(&plan)),
             Err(error) => entries.push(Value::Object(Map::from_iter(vec![
                 (
+                    "provider".to_string(),
+                    summarize_secret_provider_contract(&inline_secret_provider_contract()),
+                ),
+                (
                     "datasourceUid".to_string(),
                     Value::String(record.uid.clone()),
                 ),
@@ -93,7 +102,7 @@ fn build_import_secret_visibility_entries(
                 ),
                 (
                     "providerKind".to_string(),
-                    Value::String("inline-placeholder-map".to_string()),
+                    Value::String(inline_secret_provider_contract().kind),
                 ),
                 (
                     "action".to_string(),
@@ -321,9 +330,9 @@ pub(crate) fn print_datasource_import_dry_run_report(
     args: &DatasourceImportArgs,
 ) -> Result<()> {
     if args.json {
-        println!(
+        print!(
             "{}",
-            serde_json::to_string_pretty(&build_datasource_import_dry_run_json_value(report))?
+            render_json_value(&build_datasource_import_dry_run_json_value(report))?
         );
     } else if args.table {
         for line in render_import_table(
@@ -417,6 +426,30 @@ fn build_import_payload_with_secret_values_impl(
         ("uid".to_string(), Value::String(record.uid.clone())),
         ("isDefault".to_string(), Value::Bool(record.is_default)),
     ]);
+    if let Some(value) = record.basic_auth {
+        payload.insert("basicAuth".to_string(), Value::Bool(value));
+    }
+    if !record.basic_auth_user.is_empty() {
+        payload.insert(
+            "basicAuthUser".to_string(),
+            Value::String(record.basic_auth_user.clone()),
+        );
+    }
+    if !record.user.is_empty() {
+        payload.insert("user".to_string(), Value::String(record.user.clone()));
+    }
+    if let Some(value) = record.with_credentials {
+        payload.insert("withCredentials".to_string(), Value::Bool(value));
+    }
+    if !record.database.is_empty() {
+        payload.insert(
+            "database".to_string(),
+            Value::String(record.database.clone()),
+        );
+    }
+    if let Some(json_data) = &record.json_data {
+        payload.insert("jsonData".to_string(), Value::Object(json_data.clone()));
+    }
     if let Some(placeholders) = &record.secure_json_data_placeholders {
         // Placeholder metadata is exported for review, but imports never replay it
         // directly. The caller must provide concrete `--secret-values`, otherwise
@@ -570,6 +603,7 @@ pub(crate) fn import_datasources_by_export_org(args: &DatasourceImportArgs) -> R
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::common::CliColorChoice;
     use crate::dashboard::CommonCliArgs;
     use crate::http::{JsonHttpClient, JsonHttpClientConfig};
     use serde_json::json;
@@ -586,6 +620,7 @@ mod tests {
 
     fn build_test_common_args(base_url: String) -> CommonCliArgs {
         CommonCliArgs {
+            color: CliColorChoice::Auto,
             profile: None,
             url: base_url,
             api_token: None,
@@ -629,10 +664,19 @@ mod tests {
     "url": "http://loki:3100",
     "isDefault": false,
     "orgId": "1",
+    "basicAuth": true,
+    "basicAuthUser": "loki-user",
+    "database": "logs-main",
+    "jsonData": {
+      "httpMethod": "POST",
+      "httpHeaderName1": "X-Scope-OrgID"
+    },
     "secureJsonDataPlaceholders": {
       "basicAuthPassword": "${secret:loki-basic-auth}",
       "httpHeaderValue1": "${secret:loki-tenant-token}"
-    }
+    },
+    "user": "query-user",
+    "withCredentials": true
   }
 ]
 "#,
@@ -758,7 +802,13 @@ mod tests {
                 is_default: false,
                 org_name: String::new(),
                 org_id: "1".to_string(),
+                basic_auth: None,
+                basic_auth_user: String::new(),
+                database: String::new(),
+                json_data: None,
                 secure_json_data_placeholders: None,
+                user: String::new(),
+                with_credentials: None,
             },
             DatasourceImportRecord {
                 uid: "loki-main".to_string(),
@@ -769,16 +819,29 @@ mod tests {
                 is_default: false,
                 org_name: String::new(),
                 org_id: "1".to_string(),
-                secure_json_data_placeholders: json!({
-                    "basicAuthPassword": "${secret:loki-basic-auth}",
+                basic_auth: Some(true),
+                basic_auth_user: "loki-user".to_string(),
+                database: "logs-main".to_string(),
+                json_data: json!({
+                    "httpMethod": "POST",
+                    "httpHeaderName1": "X-Scope-OrgID",
                 })
                 .as_object()
                 .cloned(),
+                secure_json_data_placeholders: json!({
+                    "basicAuthPassword": "${secret:loki-basic-auth}",
+                    "httpHeaderValue1": "${secret:loki-tenant-token}",
+                })
+                .as_object()
+                .cloned(),
+                user: "query-user".to_string(),
+                with_credentials: Some(true),
             },
         ];
         let live = Vec::<Map<String, Value>>::new();
         let secret_values = json!({
-            "loki-basic-auth": "secret-value"
+            "loki-basic-auth": "secret-value",
+            "loki-tenant-token": "tenant-token",
         });
 
         let plan = prepare_datasource_import_plan(
@@ -797,9 +860,74 @@ mod tests {
         assert_eq!(plan.requests[0].method, Method::POST);
         assert_eq!(plan.requests[1].method, Method::POST);
         assert_eq!(plan.requests[1].path, "/api/datasources");
+        assert_eq!(plan.requests[1].payload["basicAuth"], json!(true));
+        assert_eq!(
+            plan.requests[1].payload["basicAuthUser"],
+            json!("loki-user")
+        );
+        assert_eq!(plan.requests[1].payload["user"], json!("query-user"));
+        assert_eq!(plan.requests[1].payload["withCredentials"], json!(true));
+        assert_eq!(plan.requests[1].payload["database"], json!("logs-main"));
+        assert_eq!(
+            plan.requests[1].payload["jsonData"]["httpMethod"],
+            json!("POST")
+        );
+        assert_eq!(
+            plan.requests[1].payload["jsonData"]["httpHeaderName1"],
+            json!("X-Scope-OrgID")
+        );
         assert_eq!(
             plan.requests[1].payload["secureJsonData"]["basicAuthPassword"],
             json!("secret-value")
         );
+        assert_eq!(
+            plan.requests[1].payload["secureJsonData"]["httpHeaderValue1"],
+            json!("tenant-token")
+        );
+    }
+
+    #[test]
+    fn import_datasources_with_client_succeeds_when_placeholder_secrets_are_supplied() {
+        let temp = tempdir().unwrap();
+        write_import_fixture(temp.path());
+        let (base_url, saw_write, stop, handle) = spawn_datasource_import_server();
+        let client = JsonHttpClient::new(JsonHttpClientConfig {
+            base_url,
+            headers: Vec::new(),
+            timeout_secs: 5,
+            verify_ssl: false,
+        })
+        .unwrap();
+        let args = DatasourceImportArgs {
+            common: build_test_common_args("http://unused".to_string()),
+            import_dir: temp.path().to_path_buf(),
+            input_format: DatasourceImportInputFormat::Inventory,
+            org_id: None,
+            use_export_org: false,
+            only_org_id: Vec::new(),
+            create_missing_orgs: false,
+            require_matching_export_org: false,
+            replace_existing: false,
+            update_existing_only: false,
+            secret_values: Some(
+                r#"{"loki-basic-auth":"secret-value","loki-tenant-token":"tenant-token"}"#
+                    .to_string(),
+            ),
+            dry_run: false,
+            table: false,
+            json: false,
+            output_format: None,
+            no_header: false,
+            output_columns: Vec::new(),
+            progress: false,
+            verbose: false,
+        };
+
+        let imported = import_datasources_with_client(&client, &args).unwrap();
+        stop.store(true, Ordering::SeqCst);
+        handle.join().unwrap();
+
+        assert_eq!(imported, 2);
+        assert!(saw_write.load(Ordering::SeqCst));
     }
 }

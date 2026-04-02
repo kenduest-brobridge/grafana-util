@@ -3,7 +3,7 @@
 use serde_json::{json, Value};
 use std::path::Path;
 
-use crate::common::{message, Result};
+use crate::common::{message, render_json_value, Result};
 use crate::http::JsonHttpClient;
 
 use super::{
@@ -225,11 +225,10 @@ pub(crate) fn build_routed_datasource_import_dry_run_json(
         "wouldCreateOrgCount": orgs.iter().filter(|entry| entry.get("orgAction") == Some(&Value::String("would-create".to_string()))).count(),
         "datasourceCount": imports.iter().filter_map(|entry| entry.get("summary").and_then(|summary| summary.get("datasourceCount")).and_then(Value::as_i64)).sum::<i64>(),
     });
-    serde_json::to_string_pretty(&json!({
+    render_json_value(&json!({
         "mode": describe_datasource_import_mode(args.replace_existing, args.update_existing_only),
         "orgs": orgs,
         "imports": imports,
         "summary": summary,
     }))
-    .map_err(Into::into)
 }

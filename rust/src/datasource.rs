@@ -15,9 +15,12 @@
 //! - Avoid side effects in normalization helpers; keep them as pure value transforms.
 use reqwest::Method;
 use serde_json::{Map, Value};
-use std::path::Path;
+use std::io::{self, IsTerminal};
+use std::path::{Path, PathBuf};
 
-use crate::common::{load_json_object_file, message, string_field, write_json_file, Result};
+use crate::common::{
+    load_json_object_file, message, render_json_value, string_field, write_json_file, Result,
+};
 use crate::dashboard::{
     build_auth_context, build_http_client, build_http_client_for_org, list_datasources,
     CommonCliArgs, SimpleOutputFormat,
@@ -34,6 +37,8 @@ use crate::datasource_catalog::{
 #[cfg(any(feature = "tui", test))]
 use crate::interactive_browser::{run_interactive_browser, BrowserItem};
 use crate::tabular_output::render_yaml;
+#[cfg(feature = "tui")]
+use crate::tui_shell;
 
 #[path = "datasource_browse.rs"]
 mod datasource_browse;
@@ -66,7 +71,11 @@ mod datasource_import_export;
 #[path = "datasource_mutation_support.rs"]
 mod datasource_mutation_support;
 
-pub(crate) use datasource_cli_defs::normalize_datasource_group_command;
+#[cfg(feature = "tui")]
+use crossterm::event::{self, Event, KeyCode, KeyEventKind};
+#[cfg(feature = "tui")]
+use datasource_browse_terminal::TerminalSession;
+pub(crate) use datasource_cli_defs::{normalize_datasource_group_command, root_command};
 pub use datasource_cli_defs::{
     DatasourceAddArgs, DatasourceBrowseArgs, DatasourceCliArgs, DatasourceDeleteArgs,
     DatasourceDiffArgs, DatasourceExportArgs, DatasourceGroupCommand, DatasourceImportArgs,
@@ -79,8 +88,10 @@ pub(crate) use datasource_import_export::{
     build_datasource_export_metadata, build_datasource_provisioning_document, build_export_index,
     build_export_records, build_list_records, export_datasource_scope, fetch_current_org,
     import_datasources_by_export_org, import_datasources_with_client, list_orgs,
+    load_datasource_export_root_manifest, load_datasource_inventory_records_from_export_root,
     load_diff_record_values, load_import_records, render_data_source_csv, render_data_source_json,
-    render_data_source_table, resolve_target_client, validate_import_org_auth, write_yaml_file,
+    render_data_source_table, resolve_datasource_export_root_dir, resolve_target_client,
+    validate_import_org_auth, write_yaml_file, DatasourceExportRootScopeKind,
     DatasourceImportRecord, DATASOURCE_EXPORT_FILENAME, DATASOURCE_PROVISIONING_FILENAME,
     DATASOURCE_PROVISIONING_SUBDIR, EXPORT_METADATA_FILENAME,
 };
@@ -88,10 +99,10 @@ pub(crate) use datasource_import_export::{
 #[allow(unused_imports)]
 pub(crate) use datasource_import_export::{
     build_import_payload, build_import_payload_with_secret_values,
-    collect_datasource_import_dry_run_report, discover_export_org_import_scopes,
-    format_routed_datasource_scope_summary_fields, format_routed_datasource_target_org_label,
-    render_routed_datasource_import_org_table, resolve_export_org_target_plan,
-    DatasourceExportMetadata, DatasourceExportOrgScope, DatasourceExportOrgTargetPlan,
+    classify_datasource_export_root_scope_kind, collect_datasource_import_dry_run_report,
+    discover_export_org_import_scopes, format_routed_datasource_scope_summary_fields,
+    format_routed_datasource_target_org_label, render_routed_datasource_import_org_table,
+    resolve_export_org_target_plan, DatasourceExportOrgScope, DatasourceExportOrgTargetPlan,
     DatasourceImportDryRunReport,
 };
 #[cfg(test)]
@@ -103,6 +114,14 @@ use datasource_mutation_support::{
     render_live_mutation_table, resolve_delete_match, resolve_live_mutation_match,
     validate_live_mutation_dry_run_args,
 };
+#[cfg(feature = "tui")]
+use ratatui::layout::{Constraint, Direction, Layout, Margin, Rect};
+#[cfg(feature = "tui")]
+use ratatui::style::{Color, Modifier, Style};
+#[cfg(feature = "tui")]
+use ratatui::text::{Line, Span};
+#[cfg(feature = "tui")]
+use ratatui::widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph, Wrap};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum DatasourceInspectExportRenderFormat {
@@ -118,6 +137,77 @@ pub(crate) struct DatasourceInspectExportSource {
     input_path: String,
     metadata: Option<Value>,
     records: Vec<Map<String, Value>>,
+}
+
+fn build_datasource_inspect_export_metadata(mut metadata: Map<String, Value>) -> Value {
+    metadata.insert(
+        "bundleKind".to_string(),
+        Value::String("masked-recovery".to_string()),
+    );
+    metadata.insert("masked".to_string(), Value::Bool(true));
+    metadata.insert("recoveryCapable".to_string(), Value::Bool(true));
+    Value::Object(metadata)
+}
+
+fn datasource_inspect_provisioning_candidates(input_dir: &Path) -> [std::path::PathBuf; 4] {
+    [
+        input_dir.join(DATASOURCE_PROVISIONING_FILENAME),
+        input_dir.join("datasources.yml"),
+        input_dir
+            .join(DATASOURCE_PROVISIONING_SUBDIR)
+            .join(DATASOURCE_PROVISIONING_FILENAME),
+        input_dir
+            .join(DATASOURCE_PROVISIONING_SUBDIR)
+            .join("datasources.yml"),
+    ]
+}
+
+fn has_datasource_inventory_export(input_dir: &Path) -> bool {
+    input_dir.join(EXPORT_METADATA_FILENAME).is_file()
+}
+
+fn has_datasource_provisioning_export(input_dir: &Path) -> bool {
+    datasource_inspect_provisioning_candidates(input_dir)
+        .iter()
+        .any(|candidate| candidate.is_file())
+}
+
+fn datasource_inspect_uses_tty() -> bool {
+    io::stdin().is_terminal() && io::stdout().is_terminal()
+}
+
+fn resolve_datasource_workspace_input_dir(input_dir: &Path) -> Result<PathBuf> {
+    resolve_datasource_export_root_dir(input_dir).map_err(|error| {
+        message(
+            error
+                .to_string()
+                .replace("--import-dir", "--input-dir")
+                .replace("Datasource import", "Datasource inspect-export"),
+        )
+    })
+}
+
+pub(crate) fn resolve_datasource_inspect_export_input_format(
+    input_dir: &Path,
+    input_type: Option<DatasourceImportInputFormat>,
+) -> Result<Option<DatasourceImportInputFormat>> {
+    let input_dir = resolve_datasource_workspace_input_dir(input_dir)?;
+    if let Some(input_type) = input_type {
+        return Ok(Some(input_type));
+    }
+    if input_dir.is_file() {
+        return Ok(Some(DatasourceImportInputFormat::Provisioning));
+    }
+    let has_inventory = has_datasource_inventory_export(&input_dir);
+    let has_provisioning = has_datasource_provisioning_export(&input_dir);
+    match (has_inventory, has_provisioning) {
+        (true, true) => Ok(Some(prompt_datasource_inspect_export_input_format(
+            &input_dir,
+        )?)),
+        (true, false) => Ok(Some(DatasourceImportInputFormat::Inventory)),
+        (false, true) => Ok(Some(DatasourceImportInputFormat::Provisioning)),
+        (false, false) => Ok(None),
+    }
 }
 
 fn render_datasource_text(records: &[Map<String, Value>]) -> Vec<String> {
@@ -185,22 +275,7 @@ fn build_datasource_inspect_export_browser_items(
 }
 
 fn datasource_inspect_export_record(record: &DatasourceImportRecord) -> Map<String, Value> {
-    Map::from_iter(vec![
-        ("uid".to_string(), Value::String(record.uid.clone())),
-        ("name".to_string(), Value::String(record.name.clone())),
-        (
-            "type".to_string(),
-            Value::String(record.datasource_type.clone()),
-        ),
-        ("access".to_string(), Value::String(record.access.clone())),
-        ("url".to_string(), Value::String(record.url.clone())),
-        (
-            "isDefault".to_string(),
-            Value::String(record.is_default.to_string()),
-        ),
-        ("org".to_string(), Value::String(record.org_name.clone())),
-        ("orgId".to_string(), Value::String(record.org_id.clone())),
-    ])
+    record.to_inventory_record()
 }
 
 pub(crate) fn resolve_datasource_inspect_export_format(
@@ -221,9 +296,12 @@ pub(crate) fn resolve_datasource_inspect_export_format(
 
 pub(crate) fn load_datasource_inspect_export_source(
     input_dir: &Path,
+    input_format: DatasourceImportInputFormat,
 ) -> Result<DatasourceInspectExportSource> {
-    if input_dir.is_file() {
+    let input_dir = resolve_datasource_workspace_input_dir(input_dir)?;
+    if input_format == DatasourceImportInputFormat::Provisioning && input_dir.is_file() {
         let extension = input_dir
+            .as_path()
             .extension()
             .and_then(|value| value.to_str())
             .unwrap_or_default();
@@ -234,27 +312,29 @@ pub(crate) fn load_datasource_inspect_export_source(
             )));
         }
         let (metadata, records) =
-            load_import_records(input_dir, DatasourceImportInputFormat::Provisioning)?;
+            load_import_records(&input_dir, DatasourceImportInputFormat::Provisioning)?;
         return Ok(DatasourceInspectExportSource {
             input_mode: "provisioning",
             input_path: input_dir.display().to_string(),
-            metadata: Some(Value::Object(Map::from_iter(vec![
-                (
-                    "inputFile".to_string(),
-                    Value::String(input_dir.display().to_string()),
-                ),
-                (
-                    "datasourcesFile".to_string(),
-                    Value::String(input_dir.display().to_string()),
-                ),
-                (
-                    "schemaVersion".to_string(),
-                    Value::Number(metadata.schema_version.into()),
-                ),
-                ("kind".to_string(), Value::String(metadata.kind)),
-                ("variant".to_string(), Value::String(metadata.variant)),
-                ("resource".to_string(), Value::String(metadata.resource)),
-            ]))),
+            metadata: Some(build_datasource_inspect_export_metadata(Map::from_iter(
+                vec![
+                    (
+                        "inputFile".to_string(),
+                        Value::String(input_dir.display().to_string()),
+                    ),
+                    (
+                        "datasourcesFile".to_string(),
+                        Value::String(input_dir.display().to_string()),
+                    ),
+                    (
+                        "schemaVersion".to_string(),
+                        Value::Number(metadata.schema_version.into()),
+                    ),
+                    ("kind".to_string(), Value::String(metadata.kind)),
+                    ("variant".to_string(), Value::String(metadata.variant)),
+                    ("resource".to_string(), Value::String(metadata.resource)),
+                ],
+            ))),
             records: records
                 .into_iter()
                 .map(|record| datasource_inspect_export_record(&record))
@@ -263,14 +343,20 @@ pub(crate) fn load_datasource_inspect_export_source(
     }
 
     let metadata_path = input_dir.join(EXPORT_METADATA_FILENAME);
-    if metadata_path.is_file() {
+    if input_format == DatasourceImportInputFormat::Inventory && metadata_path.is_file() {
         let metadata = load_json_object_file(&metadata_path, "Datasource export metadata")?;
-        let (_metadata, records) =
-            load_import_records(input_dir, DatasourceImportInputFormat::Inventory)?;
+        let (_, records) = load_datasource_inventory_records_from_export_root(&input_dir)?;
         return Ok(DatasourceInspectExportSource {
             input_mode: "inventory",
             input_path: input_dir.display().to_string(),
-            metadata: Some(metadata),
+            metadata: Some(build_datasource_inspect_export_metadata(
+                metadata.as_object().cloned().ok_or_else(|| {
+                    message(format!(
+                        "Datasource export metadata must be a JSON object: {}",
+                        metadata_path.display()
+                    ))
+                })?,
+            )),
             records: records
                 .into_iter()
                 .map(|record| datasource_inspect_export_record(&record))
@@ -278,42 +364,35 @@ pub(crate) fn load_datasource_inspect_export_source(
         });
     }
 
-    let provisioning_candidates = [
-        input_dir.join(DATASOURCE_PROVISIONING_FILENAME),
-        input_dir.join("datasources.yml"),
-        input_dir
-            .join(DATASOURCE_PROVISIONING_SUBDIR)
-            .join(DATASOURCE_PROVISIONING_FILENAME),
-        input_dir
-            .join(DATASOURCE_PROVISIONING_SUBDIR)
-            .join("datasources.yml"),
-    ];
+    let provisioning_candidates = datasource_inspect_provisioning_candidates(&input_dir);
     if provisioning_candidates
         .iter()
         .any(|candidate| candidate.is_file())
     {
         let (metadata, records) =
-            load_import_records(input_dir, DatasourceImportInputFormat::Provisioning)?;
+            load_import_records(&input_dir, DatasourceImportInputFormat::Provisioning)?;
         return Ok(DatasourceInspectExportSource {
             input_mode: "provisioning",
             input_path: input_dir.display().to_string(),
-            metadata: Some(Value::Object(Map::from_iter(vec![
-                (
-                    "inputDir".to_string(),
-                    Value::String(input_dir.display().to_string()),
-                ),
-                (
-                    "datasourcesFile".to_string(),
-                    Value::String(metadata.datasources_file),
-                ),
-                (
-                    "schemaVersion".to_string(),
-                    Value::Number(metadata.schema_version.into()),
-                ),
-                ("kind".to_string(), Value::String(metadata.kind)),
-                ("variant".to_string(), Value::String(metadata.variant)),
-                ("resource".to_string(), Value::String(metadata.resource)),
-            ]))),
+            metadata: Some(build_datasource_inspect_export_metadata(Map::from_iter(
+                vec![
+                    (
+                        "inputDir".to_string(),
+                        Value::String(input_dir.display().to_string()),
+                    ),
+                    (
+                        "datasourcesFile".to_string(),
+                        Value::String(metadata.datasources_file),
+                    ),
+                    (
+                        "schemaVersion".to_string(),
+                        Value::Number(metadata.schema_version.into()),
+                    ),
+                    ("kind".to_string(), Value::String(metadata.kind)),
+                    ("variant".to_string(), Value::String(metadata.variant)),
+                    ("resource".to_string(), Value::String(metadata.resource)),
+                ],
+            ))),
             records: records
                 .into_iter()
                 .map(|record| datasource_inspect_export_record(&record))
@@ -325,6 +404,197 @@ pub(crate) fn load_datasource_inspect_export_source(
         "Datasource inspect-export could not find export-metadata.json or provisioning/datasources.yaml under {}.",
         input_dir.display()
     )))
+}
+
+#[cfg(feature = "tui")]
+fn datasource_centered_popup_rect(area: Rect, width: u16, height: u16) -> Rect {
+    let popup_width = area.width.saturating_sub(8).min(width).max(72);
+    let popup_height = area.height.saturating_sub(4).min(height).max(12);
+    Rect {
+        x: area.x + area.width.saturating_sub(popup_width) / 2,
+        y: area.y + area.height.saturating_sub(popup_height) / 2,
+        width: popup_width,
+        height: popup_height,
+    }
+}
+
+#[cfg(feature = "tui")]
+fn run_datasource_inspect_input_selector(input_dir: &Path) -> Result<DatasourceImportInputFormat> {
+    let mut session = TerminalSession::enter()?;
+    let options = [
+        (
+            DatasourceImportInputFormat::Inventory,
+            "inventory",
+            "Inspect datasource inventory export records",
+        ),
+        (
+            DatasourceImportInputFormat::Provisioning,
+            "provisioning",
+            "Inspect provisioning datasource YAML",
+        ),
+    ];
+    let mut selected = 0usize;
+    loop {
+        session.terminal.draw(|frame| {
+            let area = frame.area();
+            frame.render_widget(Clear, area);
+            let popup = datasource_centered_popup_rect(area, 88, 17);
+            let inner = popup.inner(Margin {
+                vertical: 1,
+                horizontal: 3,
+            });
+            let chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([
+                    Constraint::Length(7),
+                    Constraint::Length(5),
+                    Constraint::Min(1),
+                    Constraint::Length(3),
+                ])
+                .split(inner);
+            frame.render_widget(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title("Datasource inspect input")
+                    .border_style(Style::default().fg(Color::LightBlue))
+                    .style(Style::default().bg(Color::Black)),
+                popup,
+            );
+            frame.render_widget(
+                Paragraph::new(vec![
+                    Line::from(vec![
+                        tui_shell::label("Title "),
+                        tui_shell::accent("Choose datasource inspect mode", Color::Cyan),
+                    ]),
+                    Line::from(vec![
+                        tui_shell::label("Input "),
+                        tui_shell::plain(input_dir.display().to_string()),
+                    ]),
+                    Line::from(""),
+                    Line::from(
+                        "This path contains both datasource inventory and provisioning artifacts.",
+                    ),
+                    Line::from("Select one input mode before continuing into the browser."),
+                ])
+                .wrap(Wrap { trim: false }),
+                chunks[0],
+            );
+            let items = options
+                .iter()
+                .enumerate()
+                .map(|(index, (_, label, detail))| {
+                    ListItem::new(Line::from(vec![
+                        Span::styled(
+                            format!("{}. {label}", index + 1),
+                            Style::default()
+                                .fg(Color::LightCyan)
+                                .add_modifier(Modifier::BOLD),
+                        ),
+                        Span::raw(" "),
+                        Span::styled(format!("({detail})"), Style::default().fg(Color::White)),
+                    ]))
+                })
+                .collect::<Vec<ListItem>>();
+            let mut state = ListState::default().with_selected(Some(selected));
+            frame.render_stateful_widget(
+                List::new(items)
+                    .block(
+                        Block::default()
+                            .borders(Borders::ALL)
+                            .title("Options")
+                            .border_style(Style::default().fg(Color::Gray)),
+                    )
+                    .highlight_symbol("   ")
+                    .highlight_style(Style::default().bg(Color::Blue).fg(Color::Black)),
+                chunks[1],
+                &mut state,
+            );
+            frame.render_widget(
+                Paragraph::new(vec![
+                    Line::from(vec![
+                        tui_shell::label("Choice "),
+                        tui_shell::plain(format!("{}. {}", selected + 1, options[selected].1)),
+                    ]),
+                    Line::from(vec![
+                        tui_shell::key_chip("Up/Down", Color::Blue),
+                        Span::raw(" move  "),
+                        tui_shell::key_chip("Enter", Color::Green),
+                        Span::raw(" confirm  "),
+                        tui_shell::key_chip("Esc/q", Color::DarkGray),
+                        Span::raw(" cancel"),
+                    ]),
+                ]),
+                chunks[3],
+            );
+        })?;
+
+        let Event::Key(key) = event::read()? else {
+            continue;
+        };
+        if key.kind != KeyEventKind::Press {
+            continue;
+        }
+        match key.code {
+            KeyCode::Up | KeyCode::Char('k') => {
+                selected = selected.saturating_sub(1);
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                selected = (selected + 1).min(options.len().saturating_sub(1));
+            }
+            KeyCode::Enter => return Ok(options[selected].0),
+            KeyCode::Esc | KeyCode::Char('q') => {
+                return Err(message("Datasource inspect-export selection cancelled."));
+            }
+            _ => {}
+        }
+    }
+}
+
+#[cfg(feature = "tui")]
+fn prompt_datasource_inspect_export_input_format(
+    input_dir: &Path,
+) -> Result<DatasourceImportInputFormat> {
+    if !datasource_inspect_uses_tty() {
+        return Err(message(format!(
+            "Datasource inspect-export found both inventory and provisioning artifacts under {}. Re-run with --input-type inventory or --input-type provisioning.",
+            input_dir.display()
+        )));
+    }
+    run_datasource_inspect_input_selector(input_dir)
+}
+
+#[cfg(not(feature = "tui"))]
+fn prompt_datasource_inspect_export_input_format(
+    input_dir: &Path,
+) -> Result<DatasourceImportInputFormat> {
+    if !datasource_inspect_uses_tty() {
+        return Err(message(format!(
+            "Datasource inspect-export found both inventory and provisioning artifacts under {}. Re-run with --input-type inventory or --input-type provisioning.",
+            input_dir.display()
+        )));
+    }
+    loop {
+        println!("Title: Choose datasource inspect mode");
+        println!("Input: {}", input_dir.display());
+        println!();
+        println!("1. inventory (Inspect datasource inventory export records)");
+        println!("2. provisioning (Inspect provisioning datasource YAML)");
+        print!("Choice [1-2/inventory/provisioning]: ");
+        io::stdout().flush()?;
+        let mut line = String::new();
+        io::stdin().read_line(&mut line)?;
+        let input_type = match line.trim().to_ascii_lowercase().as_str() {
+            "1" | "inventory" | "i" => Some(DatasourceImportInputFormat::Inventory),
+            "2" | "provisioning" | "p" | "yaml" | "yml" => {
+                Some(DatasourceImportInputFormat::Provisioning)
+            }
+            _ => None,
+        };
+        if let Some(input_type) = input_type {
+            return Ok(input_type);
+        }
+        eprintln!("Enter 1, 2, inventory, or provisioning.");
+    }
 }
 
 fn build_datasource_inspect_export_document(source: &DatasourceInspectExportSource) -> Value {
@@ -358,15 +628,26 @@ pub(crate) fn render_datasource_inspect_export_output(
 ) -> Result<String> {
     let mut output = String::new();
     let document = build_datasource_inspect_export_document(source);
+    // JSON and YAML keep the full bundle contract; human-readable views stay summary-oriented.
     match format {
         DatasourceInspectExportRenderFormat::Text => {
             output.push_str(&format!(
                 "Datasource inspect-export: {}\n",
                 source.input_path
             ));
+            output.push_str(&format!(
+                "Layer: {}\n",
+                datasource_inspect_export_output_layer(format)
+            ));
             output.push_str(&format!("Mode: {}\n", source.input_mode));
-            output.push_str(&format!("Datasource count: {}\n", source.records.len()));
             if let Some(metadata) = source.metadata.as_ref().and_then(Value::as_object) {
+                if metadata
+                    .get("masked")
+                    .and_then(Value::as_bool)
+                    .unwrap_or(false)
+                {
+                    output.push_str("Bundle: recovery-capable masked export\n");
+                }
                 if let Some(kind) = metadata.get("kind").and_then(Value::as_str) {
                     output.push_str(&format!("Kind: {kind}\n"));
                 }
@@ -382,6 +663,7 @@ pub(crate) fn render_datasource_inspect_export_output(
                     output.push_str(&format!("Datasources file: {datasources_file}\n"));
                 }
             }
+            output.push_str(&format!("Datasource count: {}\n", source.records.len()));
             output.push('\n');
             for line in render_data_source_table(&source.records, true) {
                 output.push_str(&line);
@@ -389,6 +671,15 @@ pub(crate) fn render_datasource_inspect_export_output(
             }
         }
         DatasourceInspectExportRenderFormat::Table => {
+            output.push_str(&format!(
+                "Datasource inspect-export: {}\n",
+                source.input_path
+            ));
+            output.push_str(&format!(
+                "Layer: {}\n",
+                datasource_inspect_export_output_layer(format)
+            ));
+            output.push_str(&format!("Mode: {}\n\n", source.input_mode));
             for line in render_data_source_table(&source.records, true) {
                 output.push_str(&line);
                 output.push('\n');
@@ -401,18 +692,26 @@ pub(crate) fn render_datasource_inspect_export_output(
             }
         }
         DatasourceInspectExportRenderFormat::Json => {
-            output.push_str(&serde_json::to_string_pretty(&document)?);
-            output.push('\n');
+            output.push_str(&render_json_value(&document)?);
         }
         DatasourceInspectExportRenderFormat::Yaml => {
-            output.push_str(&serde_yaml::to_string(&document).map_err(|error| {
-                message(format!(
-                    "Failed to serialize datasource inspect-export as YAML: {error}"
-                ))
-            })?);
+            output.push_str(&render_yaml(&document)?);
         }
     }
     Ok(output)
+}
+
+fn datasource_inspect_export_output_layer(
+    format: DatasourceInspectExportRenderFormat,
+) -> &'static str {
+    match format {
+        DatasourceInspectExportRenderFormat::Text
+        | DatasourceInspectExportRenderFormat::Table
+        | DatasourceInspectExportRenderFormat::Csv => "operator-summary",
+        DatasourceInspectExportRenderFormat::Json | DatasourceInspectExportRenderFormat::Yaml => {
+            "full-contract"
+        }
+    }
 }
 
 fn render_diff_identity(entry: &DatasourceDiffEntry) -> String {
@@ -431,7 +730,8 @@ fn render_diff_identity(entry: &DatasourceDiffEntry) -> String {
     entry.key.clone()
 }
 
-fn print_datasource_diff_report(report: &DatasourceDiffReport) {
+// Render the diff as an operator-summary report rather than a machine contract.
+fn print_datasource_diff_summary_report(report: &DatasourceDiffReport) {
     for entry in &report.entries {
         let identity = render_diff_identity(entry);
         match entry.status {
@@ -476,7 +776,7 @@ pub(crate) fn diff_datasources_with_live(
         &normalize_export_records(&export_values),
         &normalize_live_records(&live_values),
     );
-    print_datasource_diff_report(&report);
+    print_datasource_diff_summary_report(&report);
     let difference_count = report.summary.compared_count - report.summary.matches_count;
     println!(
         "Diff checked {} datasource(s); {} difference(s) found.",
@@ -514,9 +814,9 @@ pub fn run_datasource_cli(command: DatasourceGroupCommand) -> Result<()> {
                     }
                 }
                 SimpleOutputFormat::Json => {
-                    println!(
+                    print!(
                         "{}",
-                        serde_json::to_string_pretty(&render_supported_datasource_catalog_json())?
+                        render_json_value(&render_supported_datasource_catalog_json())?
                     );
                 }
                 SimpleOutputFormat::Yaml => {
@@ -564,9 +864,9 @@ pub fn run_datasource_cli(command: DatasourceGroupCommand) -> Result<()> {
                 list_datasources(&client)?
             };
             if args.json {
-                println!(
+                print!(
                     "{}",
-                    serde_json::to_string_pretty(&render_data_source_json(&datasources))?
+                    render_json_value(&render_data_source_json(&datasources))?
                 );
             } else if args.yaml {
                 print!("{}", render_yaml(&render_data_source_json(&datasources))?);
@@ -594,10 +894,21 @@ pub fn run_datasource_cli(command: DatasourceGroupCommand) -> Result<()> {
             Ok(())
         }
         DatasourceGroupCommand::InspectExport(args) => {
+            let input_format = resolve_datasource_inspect_export_input_format(
+                &args.input_dir,
+                args.input_type,
+            )?
+            .ok_or_else(|| {
+                message(format!(
+                    "Datasource inspect-export could not find export-metadata.json or provisioning/datasources.yaml under {}.",
+                    args.input_dir.display()
+                ))
+            })?;
             if args.interactive {
                 #[cfg(feature = "tui")]
                 {
-                    let source = load_datasource_inspect_export_source(&args.input_dir)?;
+                    let source =
+                        load_datasource_inspect_export_source(&args.input_dir, input_format)?;
                     let summary_lines = vec![
                         "Datasource inspect-export".to_string(),
                         format!("Input: {}", source.input_path),
@@ -618,7 +929,7 @@ pub fn run_datasource_cli(command: DatasourceGroupCommand) -> Result<()> {
                     ));
                 }
             }
-            let source = load_datasource_inspect_export_source(&args.input_dir)?;
+            let source = load_datasource_inspect_export_source(&args.input_dir, input_format)?;
             let format = resolve_datasource_inspect_export_format(&args);
             let rendered = render_datasource_inspect_export_output(&source, format)?;
             print!("{rendered}");
@@ -651,10 +962,7 @@ pub fn run_datasource_cli(command: DatasourceGroupCommand) -> Result<()> {
             ];
             if args.dry_run {
                 if args.json {
-                    println!(
-                        "{}",
-                        serde_json::to_string_pretty(&render_live_mutation_json(&[row]))?
-                    );
+                    print!("{}", render_json_value(&render_live_mutation_json(&[row]))?);
                 } else if args.table {
                     for line in render_live_mutation_table(&[row], !args.no_header) {
                         println!("{line}");
@@ -732,10 +1040,7 @@ pub fn run_datasource_cli(command: DatasourceGroupCommand) -> Result<()> {
             ];
             if args.dry_run {
                 if args.json {
-                    println!(
-                        "{}",
-                        serde_json::to_string_pretty(&render_live_mutation_json(&[row]))?
-                    );
+                    print!("{}", render_json_value(&render_live_mutation_json(&[row]))?);
                 } else if args.table {
                     for line in render_live_mutation_table(&[row], !args.no_header) {
                         println!("{line}");
@@ -808,10 +1113,7 @@ pub fn run_datasource_cli(command: DatasourceGroupCommand) -> Result<()> {
             ];
             if args.dry_run {
                 if args.json {
-                    println!(
-                        "{}",
-                        serde_json::to_string_pretty(&render_live_mutation_json(&[row]))?
-                    );
+                    print!("{}", render_json_value(&render_live_mutation_json(&[row]))?);
                 } else if args.table {
                     for line in render_live_mutation_table(&[row], !args.no_header) {
                         println!("{line}");

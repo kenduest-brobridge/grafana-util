@@ -13,10 +13,19 @@ use serde::Serialize;
 use serde_json::{json, Map, Value};
 use std::collections::HashSet;
 
+/// Constant for the provider contract kind used by datasource provider refs.
+pub const EXTERNAL_PROVIDER_REFERENCE_KIND: &str = "external-provider-reference";
+
 /// Constant for provider reference prefix.
 pub const PROVIDER_REFERENCE_PREFIX: &str = "${provider:";
 /// Constant for provider reference suffix.
 pub const PROVIDER_REFERENCE_SUFFIX: &str = "}";
+
+/// Struct definition for DatasourceProviderContract.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct DatasourceProviderContract {
+    pub kind: String,
+}
 
 /// Struct definition for SecretProviderReference.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -34,13 +43,27 @@ pub struct DatasourceSecretProviderPlan {
     pub datasource_name: String,
     pub datasource_type: String,
     pub references: Vec<SecretProviderReference>,
-    pub provider_kind: String,
+    pub provider: DatasourceProviderContract,
     pub action: String,
     pub review_required: bool,
 }
 
 fn normalize_text(value: Option<&str>) -> String {
     value.unwrap_or("").trim().to_string()
+}
+
+/// Build the staged provider contract used by datasource provider planning.
+pub fn external_provider_contract() -> DatasourceProviderContract {
+    DatasourceProviderContract {
+        kind: EXTERNAL_PROVIDER_REFERENCE_KIND.to_string(),
+    }
+}
+
+/// Summarize the staged provider contract for review output.
+pub fn summarize_provider_contract(provider: &DatasourceProviderContract) -> Value {
+    json!({
+        "kind": provider.kind,
+    })
 }
 
 /// parse provider reference.
@@ -154,7 +177,7 @@ pub fn build_provider_plan(
         datasource_name,
         datasource_type,
         references: collect_provider_references(secure_json_data)?,
-        provider_kind: "external-provider-reference".to_string(),
+        provider: external_provider_contract(),
         action: "resolve-provider-secrets".to_string(),
         review_required: true,
     })
@@ -166,7 +189,8 @@ pub fn summarize_provider_plan(plan: &DatasourceSecretProviderPlan) -> Value {
         "datasourceUid": plan.datasource_uid,
         "datasourceName": plan.datasource_name,
         "datasourceType": plan.datasource_type,
-        "providerKind": plan.provider_kind,
+        "providerKind": plan.provider.kind.clone(),
+        "provider": summarize_provider_contract(&plan.provider),
         "action": plan.action,
         "reviewRequired": plan.review_required,
         "providers": plan.references.iter().map(|item| {

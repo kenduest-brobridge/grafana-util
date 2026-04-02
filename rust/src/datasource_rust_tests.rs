@@ -9,8 +9,8 @@ use super::{
     resolve_live_mutation_match, resolve_match, CommonCliArgs, DatasourceCliArgs,
     DatasourceImportInputFormat, DatasourceImportRecord,
 };
+use crate::common::CliColorChoice;
 use crate::datasource_catalog::render_supported_datasource_catalog_json;
-use clap::{CommandFactory, Parser};
 use serde_json::{json, Value};
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -129,6 +129,7 @@ fn assert_json_subset(actual: &Value, expected: &Value) {
 
 fn test_datasource_common_args() -> CommonCliArgs {
     CommonCliArgs {
+        color: CliColorChoice::Auto,
         profile: None,
         url: "http://grafana.example".to_string(),
         api_token: None,
@@ -440,11 +441,61 @@ fn build_import_payload_matches_shared_contract_fixtures() {
                 .and_then(Value::as_str)
                 .unwrap()
                 .to_string(),
+            basic_auth: None,
+            basic_auth_user: String::new(),
+            database: String::new(),
+            json_data: None,
             secure_json_data_placeholders: None,
+            user: String::new(),
+            with_credentials: None,
         };
 
         assert_eq!(build_import_payload(&record), expected_payload);
     }
+}
+
+#[test]
+fn datasource_import_record_round_trips_through_inventory_shape() {
+    let record = DatasourceImportRecord {
+        uid: "loki-main".to_string(),
+        name: "Loki Logs".to_string(),
+        datasource_type: "loki".to_string(),
+        access: "proxy".to_string(),
+        url: "http://loki:3100".to_string(),
+        is_default: false,
+        org_name: "Observability".to_string(),
+        org_id: "7".to_string(),
+        basic_auth: Some(true),
+        basic_auth_user: "loki-user".to_string(),
+        database: "logs".to_string(),
+        json_data: Some(
+            json!({
+                "maxLines": 1000
+            })
+            .as_object()
+            .unwrap()
+            .clone(),
+        ),
+        secure_json_data_placeholders: Some(
+            json!({
+                "basicAuthPassword": "${secret:loki-main-basicauthpassword}"
+            })
+            .as_object()
+            .unwrap()
+            .clone(),
+        ),
+        user: "query-user".to_string(),
+        with_credentials: Some(true),
+    };
+
+    let inventory_record = record.to_inventory_record();
+    let reparsed = DatasourceImportRecord::from_inventory_record(
+        &inventory_record,
+        "datasource inventory roundtrip test",
+    )
+    .unwrap();
+
+    assert_eq!(reparsed, record);
 }
 
 #[test]
@@ -627,6 +678,7 @@ fn build_add_payload_rejects_missing_secret_values_with_visibility_summary() {
 
     assert!(error.contains("--secure-json-data-placeholders requires --secret-values"));
     assert!(error.contains("\"providerKind\":\"inline-placeholder-map\""));
+    assert!(error.contains("\"provider\":{\"inputFlag\":\"--secret-values\""));
     assert!(error.contains("\"placeholderNames\":[\"loki-basic-auth\",\"loki-tenant-token\"]"));
     assert!(error.contains("\"secretFields\":[\"basicAuthPassword\",\"httpHeaderValue1\"]"));
 }
@@ -642,12 +694,18 @@ fn build_import_payload_resolves_secret_placeholders_into_secure_json_data() {
         is_default: false,
         org_name: String::new(),
         org_id: "1".to_string(),
+        basic_auth: None,
+        basic_auth_user: String::new(),
+        database: String::new(),
+        json_data: None,
         secure_json_data_placeholders: json!({
             "basicAuthPassword": "${secret:loki-basic-auth}",
             "httpHeaderValue1": "${secret:loki-tenant-token}"
         })
         .as_object()
         .cloned(),
+        user: String::new(),
+        with_credentials: None,
     };
 
     let payload = build_import_payload_with_secret_values(
@@ -681,11 +739,17 @@ fn build_import_payload_rejects_missing_secret_values_for_placeholders() {
         is_default: false,
         org_name: String::new(),
         org_id: "1".to_string(),
+        basic_auth: None,
+        basic_auth_user: String::new(),
+        database: String::new(),
+        json_data: None,
         secure_json_data_placeholders: json!({
             "basicAuthPassword": "${secret:loki-basic-auth}"
         })
         .as_object()
         .cloned(),
+        user: String::new(),
+        with_credentials: None,
     };
 
     let error = build_import_payload_with_secret_values(&record, None)
@@ -767,6 +831,14 @@ fn build_datasource_import_dry_run_json_value_includes_secret_visibility() {
     assert_eq!(
         value["secretVisibility"][0]["providerKind"],
         json!("inline-placeholder-map")
+    );
+    assert_eq!(
+        value["secretVisibility"][0]["provider"]["inputFlag"],
+        json!("--secret-values")
+    );
+    assert_eq!(
+        value["secretVisibility"][0]["provider"]["placeholderNameStrategy"],
+        json!("sanitize(<datasource-uid|name|type>-<secure-json-field>).lowercase")
     );
     assert_eq!(
         value["secretVisibility"][0]["placeholderNames"],

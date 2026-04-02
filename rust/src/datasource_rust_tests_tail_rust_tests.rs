@@ -2,12 +2,15 @@
 
 use super::*;
 use crate::datasource::{
-    diff_datasources_with_live, discover_export_org_import_scopes,
-    format_routed_datasource_scope_summary_fields, format_routed_datasource_target_org_label,
-    load_datasource_inspect_export_source, load_import_records,
+    classify_datasource_export_root_scope_kind, diff_datasources_with_live,
+    discover_export_org_import_scopes, format_routed_datasource_scope_summary_fields,
+    format_routed_datasource_target_org_label, load_datasource_export_root_manifest,
+    load_datasource_inspect_export_source, load_datasource_inventory_records_from_export_root,
+    load_import_records, prompt_datasource_inspect_export_input_format,
     render_datasource_inspect_export_output, render_routed_datasource_import_org_table,
-    run_datasource_cli, DatasourceGroupCommand, DatasourceImportArgs, DatasourceImportInputFormat,
-    DatasourceInspectExportRenderFormat,
+    resolve_datasource_inspect_export_input_format, run_datasource_cli, DatasourceCliArgs,
+    DatasourceExportRootScopeKind, DatasourceGroupCommand, DatasourceImportArgs,
+    DatasourceImportInputFormat, DatasourceInspectExportRenderFormat,
 };
 use std::fs;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -272,6 +275,7 @@ fn datasource_import_rejects_extra_secret_or_server_managed_fields() {
             "schemaVersion": 1,
             "kind": "grafana-utils-datasource-export-index",
             "variant": "root",
+            "scopeKind": "org-root",
             "resource": "datasource",
             "datasourcesFile": "datasources.json",
             "indexFile": "index.json",
@@ -385,6 +389,154 @@ datasources:
 }
 
 #[test]
+fn datasource_import_loads_inventory_recovery_bundle_passthrough_fields() {
+    let temp = tempdir().unwrap();
+    let import_dir = temp.path().join("datasources");
+    fs::create_dir_all(&import_dir).unwrap();
+    fs::write(
+        import_dir.join("export-metadata.json"),
+        serde_json::to_string_pretty(&json!({
+            "schemaVersion": 1,
+            "kind": "grafana-utils-datasource-export-index",
+            "variant": "root",
+            "scopeKind": "org-root",
+            "resource": "datasource",
+            "datasourcesFile": "datasources.json",
+            "indexFile": "index.json",
+            "datasourceCount": 1,
+            "format": "grafana-datasource-inventory-v1"
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        import_dir.join("datasources.json"),
+        serde_json::to_string_pretty(&json!([{
+            "uid": "loki-main",
+            "name": "Loki Main",
+            "type": "loki",
+            "access": "proxy",
+            "url": "http://loki:3100",
+            "isDefault": true,
+            "org": "Main Org.",
+            "orgId": 7,
+            "basicAuth": true,
+            "basicAuthUser": "loki-user",
+            "database": "logs-main",
+            "jsonData": {
+                "httpMethod": "POST",
+                "httpHeaderName1": "X-Scope-OrgID"
+            },
+            "secureJsonDataPlaceholders": {
+                "basicAuthPassword": "${secret:loki-basic-auth}",
+                "httpHeaderValue1": "${secret:loki-tenant-token}"
+            },
+            "user": "query-user",
+            "withCredentials": true
+        }]))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        import_dir.join("index.json"),
+        serde_json::to_string_pretty(&json!({"items": []})).unwrap(),
+    )
+    .unwrap();
+
+    let (_, records) =
+        load_import_records(&import_dir, DatasourceImportInputFormat::Inventory).unwrap();
+
+    assert_eq!(records.len(), 1);
+    assert_eq!(records[0].uid, "loki-main");
+    assert_eq!(records[0].org_id, "7");
+    assert_eq!(records[0].basic_auth, Some(true));
+    assert_eq!(records[0].basic_auth_user, "loki-user");
+    assert_eq!(records[0].database, "logs-main");
+    assert_eq!(records[0].user, "query-user");
+    assert_eq!(records[0].with_credentials, Some(true));
+    assert_eq!(
+        records[0].json_data.as_ref().unwrap()["httpMethod"],
+        json!("POST")
+    );
+    assert_eq!(
+        records[0].json_data.as_ref().unwrap()["httpHeaderName1"],
+        json!("X-Scope-OrgID")
+    );
+    assert_eq!(
+        records[0].secure_json_data_placeholders.as_ref().unwrap()["basicAuthPassword"],
+        json!("${secret:loki-basic-auth}")
+    );
+    assert_eq!(
+        records[0].secure_json_data_placeholders.as_ref().unwrap()["httpHeaderValue1"],
+        json!("${secret:loki-tenant-token}")
+    );
+}
+
+#[test]
+fn datasource_import_loads_provisioning_recovery_bundle_passthrough_fields() {
+    let temp = tempdir().unwrap();
+    let provisioning_dir = temp.path().join("provisioning");
+    fs::create_dir_all(&provisioning_dir).unwrap();
+    let provisioning_file = provisioning_dir.join("datasources.yaml");
+    fs::write(
+        &provisioning_file,
+        r#"apiVersion: 1
+datasources:
+  - uid: loki-main
+    name: Loki Main
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    isDefault: false
+    orgId: 9
+    basicAuth: true
+    basicAuthUser: loki-user
+    database: logs-main
+    user: query-user
+    withCredentials: true
+    jsonData:
+      httpMethod: POST
+      httpHeaderName1: X-Scope-OrgID
+    secureJsonDataPlaceholders:
+      basicAuthPassword: ${secret:loki-basic-auth}
+      httpHeaderValue1: ${secret:loki-tenant-token}
+"#,
+    )
+    .unwrap();
+
+    let (_, records) = load_import_records(
+        &provisioning_file,
+        DatasourceImportInputFormat::Provisioning,
+    )
+    .unwrap();
+
+    assert_eq!(records.len(), 1);
+    assert_eq!(records[0].uid, "loki-main");
+    assert_eq!(records[0].org_id, "9");
+    assert_eq!(records[0].basic_auth, Some(true));
+    assert_eq!(records[0].basic_auth_user, "loki-user");
+    assert_eq!(records[0].database, "logs-main");
+    assert_eq!(records[0].user, "query-user");
+    assert_eq!(records[0].with_credentials, Some(true));
+    assert_eq!(
+        records[0].json_data.as_ref().unwrap()["httpMethod"],
+        json!("POST")
+    );
+    assert_eq!(
+        records[0].json_data.as_ref().unwrap()["httpHeaderName1"],
+        json!("X-Scope-OrgID")
+    );
+    assert_eq!(
+        records[0].secure_json_data_placeholders.as_ref().unwrap()["basicAuthPassword"],
+        json!("${secret:loki-basic-auth}")
+    );
+    assert_eq!(
+        records[0].secure_json_data_placeholders.as_ref().unwrap()["httpHeaderValue1"],
+        json!("${secret:loki-tenant-token}")
+    );
+}
+
+#[test]
 fn datasource_inspect_export_renders_inventory_root_in_multiple_output_modes() {
     let root = write_diff_fixture(&[json!({
         "uid": "prom-main",
@@ -397,7 +549,9 @@ fn datasource_inspect_export_renders_inventory_root_in_multiple_output_modes() {
         "orgId": "1"
     })]);
 
-    let source = load_datasource_inspect_export_source(&root).unwrap();
+    let source =
+        load_datasource_inspect_export_source(&root, DatasourceImportInputFormat::Inventory)
+            .unwrap();
     let table = render_datasource_inspect_export_output(
         &source,
         DatasourceInspectExportRenderFormat::Table,
@@ -414,14 +568,25 @@ fn datasource_inspect_export_renders_inventory_root_in_multiple_output_modes() {
             .unwrap();
 
     assert!(table.contains("UID"));
+    assert!(table.contains("Datasource inspect-export:"));
+    assert!(table.contains("Layer: operator-summary"));
+    assert!(table.contains("Mode: inventory"));
     assert!(table.contains("Prometheus Main"));
     assert!(text.contains("Datasource inspect-export:"));
+    assert!(text.contains("Layer: operator-summary"));
     assert!(text.contains("Mode: inventory"));
+    assert!(text.contains("Bundle: recovery-capable masked export"));
     assert!(text.contains("Datasource count: 1"));
     assert!(text.contains("Prometheus Main"));
     assert!(json_output.contains("\"inputMode\": \"inventory\""));
+    assert!(json_output.contains("\"bundleKind\": \"masked-recovery\""));
+    assert!(json_output.contains("\"masked\": true"));
+    assert!(json_output.contains("\"recoveryCapable\": true"));
     assert!(json_output.contains("\"datasourceCount\": 1"));
     assert!(yaml_output.contains("inputMode: inventory"));
+    assert!(yaml_output.contains("bundleKind: masked-recovery"));
+    assert!(yaml_output.contains("masked: true"));
+    assert!(yaml_output.contains("recoveryCapable: true"));
     assert!(yaml_output.contains("datasourceCount: 1"));
 
     fs::remove_dir_all(root).unwrap();
@@ -432,7 +597,11 @@ fn datasource_inspect_export_renders_provisioning_yaml_file_as_csv_and_yaml() {
     let root = write_provisioning_diff_fixture();
     let provisioning_file = root.join("provisioning/datasources.yaml");
 
-    let source = load_datasource_inspect_export_source(&provisioning_file).unwrap();
+    let source = load_datasource_inspect_export_source(
+        &provisioning_file,
+        DatasourceImportInputFormat::Provisioning,
+    )
+    .unwrap();
     let csv_output =
         render_datasource_inspect_export_output(&source, DatasourceInspectExportRenderFormat::Csv)
             .unwrap();
@@ -442,8 +611,388 @@ fn datasource_inspect_export_renders_provisioning_yaml_file_as_csv_and_yaml() {
 
     assert!(csv_output.contains("uid,name,type,url,isDefault"));
     assert!(csv_output.contains("Prometheus Main"));
+    assert!(yaml_output.contains("bundleKind: masked-recovery"));
+    assert!(yaml_output.contains("masked: true"));
+    assert!(yaml_output.contains("recoveryCapable: true"));
     assert!(yaml_output.contains("inputMode: provisioning"));
     assert!(yaml_output.contains("Prometheus Main"));
+
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn datasource_inspect_export_help_mentions_masked_recovery_bundle_contract() {
+    let mut command = DatasourceCliArgs::command();
+    let subcommand = command
+        .find_subcommand_mut("inspect-export")
+        .unwrap_or_else(|| panic!("missing datasource inspect-export help"));
+    let mut output = Vec::new();
+    subcommand.write_long_help(&mut output).unwrap();
+    let help = String::from_utf8(output).unwrap();
+
+    assert!(help.contains("recovery-capable masked export"));
+    assert!(help.contains("operator-summary views"));
+    assert!(help.contains("JSON or YAML for the full machine-readable bundle contract"));
+}
+
+#[test]
+fn datasource_export_root_manifest_classifies_org_and_workspace_roots() {
+    let temp = tempdir().unwrap();
+    let org_root = temp.path().join("org-root");
+    fs::create_dir_all(&org_root).unwrap();
+    fs::write(
+        org_root.join("export-metadata.json"),
+        serde_json::to_vec_pretty(&json!({
+            "schemaVersion": 1,
+            "kind": "grafana-utils-datasource-export-index",
+            "variant": "root",
+            "scopeKind": "org-root",
+            "resource": "datasource",
+            "datasourcesFile": "datasources.json",
+            "datasourceCount": 0,
+            "format": "grafana-datasource-masked-recovery-v1",
+            "exportMode": "masked-recovery",
+            "masked": true,
+            "recoveryCapable": true,
+            "secretMaterial": "placeholders-only",
+            "provisioningProjection": "derived-projection"
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let workspace_root = temp.path().join("workspace-root");
+    fs::create_dir_all(&workspace_root).unwrap();
+    fs::write(
+        workspace_root.join("export-metadata.json"),
+        serde_json::to_vec_pretty(&json!({
+            "schemaVersion": 1,
+            "kind": "grafana-utils-datasource-export-index",
+            "variant": "all-orgs-root",
+            "scopeKind": "workspace-root",
+            "resource": "datasource",
+            "indexFile": "index.json",
+            "datasourceCount": 0,
+            "orgCount": 0,
+            "format": "grafana-datasource-masked-recovery-v1",
+            "exportMode": "masked-recovery",
+            "masked": true,
+            "recoveryCapable": true,
+            "secretMaterial": "placeholders-only",
+            "provisioningProjection": "derived-projection"
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+
+    let org_manifest =
+        load_datasource_export_root_manifest(&org_root.join("export-metadata.json")).unwrap();
+    let workspace_manifest =
+        load_datasource_export_root_manifest(&workspace_root.join("export-metadata.json")).unwrap();
+
+    assert_eq!(
+        classify_datasource_export_root_scope_kind(&org_manifest.metadata),
+        DatasourceExportRootScopeKind::OrgRoot
+    );
+    assert_eq!(
+        org_manifest.scope_kind,
+        DatasourceExportRootScopeKind::OrgRoot
+    );
+    assert_eq!(
+        workspace_manifest.scope_kind,
+        DatasourceExportRootScopeKind::WorkspaceRoot
+    );
+}
+
+#[test]
+fn datasource_inventory_root_loader_combines_all_orgs_children() {
+    let temp = tempdir().unwrap();
+    let root = write_multi_org_import_fixture(
+        temp.path(),
+        &[
+            (
+                1,
+                "Main Org",
+                vec![json!({
+                    "uid": "prom-main",
+                    "name": "Prometheus Main",
+                    "type": "prometheus",
+                    "access": "proxy",
+                    "url": "http://prometheus:9090",
+                    "isDefault": "true",
+                    "org": "Main Org",
+                    "orgId": "1"
+                })],
+            ),
+            (
+                2,
+                "Ops Org",
+                vec![json!({
+                    "uid": "loki-ops",
+                    "name": "Loki Ops",
+                    "type": "loki",
+                    "access": "proxy",
+                    "url": "http://loki:3100",
+                    "isDefault": "false",
+                    "org": "Ops Org",
+                    "orgId": "2"
+                })],
+            ),
+        ],
+    );
+
+    let (manifest, records) = load_datasource_inventory_records_from_export_root(&root).unwrap();
+
+    assert_eq!(
+        manifest.scope_kind,
+        DatasourceExportRootScopeKind::AllOrgsRoot
+    );
+    assert_eq!(records.len(), 2);
+    assert_eq!(
+        records
+            .iter()
+            .map(|record| record.org_id.as_str())
+            .collect::<Vec<_>>(),
+        vec!["1", "2"]
+    );
+}
+
+#[test]
+fn datasource_diff_help_mentions_operator_summary_report() {
+    let mut command = DatasourceCliArgs::command();
+    let subcommand = command
+        .find_subcommand_mut("diff")
+        .unwrap_or_else(|| panic!("missing datasource diff help"));
+    let mut output = Vec::new();
+    subcommand.write_long_help(&mut output).unwrap();
+    let help = String::from_utf8(output).unwrap();
+
+    assert!(help.contains("--diff-dir"));
+    assert!(help.contains("--input-format"));
+    assert!(help.contains("provisioning"));
+    assert!(help.contains("operator-summary diff report"));
+    assert!(help.contains("inspect-export --json or --yaml"));
+}
+
+#[test]
+fn datasource_inspect_export_accepts_all_orgs_root_inventory() {
+    let temp = tempdir().unwrap();
+    let root = write_multi_org_import_fixture(
+        temp.path(),
+        &[
+            (
+                1,
+                "Main Org",
+                vec![json!({
+                    "uid": "prom-main",
+                    "name": "Prometheus Main",
+                    "type": "prometheus",
+                    "access": "proxy",
+                    "url": "http://prometheus:9090",
+                    "isDefault": "true",
+                    "org": "Main Org",
+                    "orgId": "1"
+                })],
+            ),
+            (
+                2,
+                "Ops Org",
+                vec![json!({
+                    "uid": "loki-ops",
+                    "name": "Loki Ops",
+                    "type": "loki",
+                    "access": "proxy",
+                    "url": "http://loki:3100",
+                    "isDefault": "false",
+                    "org": "Ops Org",
+                    "orgId": "2"
+                })],
+            ),
+        ],
+    );
+    fs::write(
+        root.join("export-metadata.json"),
+        serde_json::to_vec_pretty(&json!({
+            "schemaVersion": 1,
+            "kind": "grafana-utils-datasource-export-index",
+            "variant": "all-orgs-root",
+            "scopeKind": "all-orgs-root",
+            "resource": "datasource",
+            "indexFile": "index.json",
+            "datasourceCount": 2,
+            "orgCount": 2,
+            "format": "grafana-datasource-masked-recovery-v1",
+            "exportMode": "masked-recovery",
+            "masked": true,
+            "recoveryCapable": true,
+            "secretMaterial": "placeholders-only",
+            "provisioningProjection": "derived-projection"
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+
+    let source =
+        load_datasource_inspect_export_source(&root, DatasourceImportInputFormat::Inventory)
+            .unwrap();
+    let text =
+        render_datasource_inspect_export_output(&source, DatasourceInspectExportRenderFormat::Text)
+            .unwrap();
+
+    assert!(text.contains("Datasource count: 2"));
+    assert!(text.contains("Bundle: recovery-capable masked export"));
+    assert!(text.contains("Prometheus Main"));
+    assert!(text.contains("Loki Ops"));
+}
+
+#[test]
+fn datasource_inspect_export_resolves_workspace_root_inventory() {
+    let temp = tempdir().unwrap();
+    let workspace_root = temp.path().join("snapshot");
+    let datasource_export_root = write_multi_org_import_fixture(
+        &workspace_root,
+        &[
+            (
+                1,
+                "Main Org",
+                vec![json!({
+                    "uid": "prom-main",
+                    "name": "Prometheus Main",
+                    "type": "prometheus",
+                    "access": "proxy",
+                    "url": "http://prometheus:9090",
+                    "isDefault": "true",
+                    "org": "Main Org",
+                    "orgId": "1"
+                })],
+            ),
+            (
+                3,
+                "Ops Org",
+                vec![json!({
+                    "uid": "loki-ops",
+                    "name": "Loki Ops",
+                    "type": "loki",
+                    "access": "proxy",
+                    "url": "http://loki:3100",
+                    "isDefault": "false",
+                    "org": "Ops Org",
+                    "orgId": "3"
+                })],
+            ),
+        ],
+    );
+    let datasource_root = workspace_root.join("datasources");
+    fs::rename(&datasource_export_root, &datasource_root).unwrap();
+    fs::create_dir_all(workspace_root.join("dashboards")).unwrap();
+    fs::write(
+        datasource_root.join("export-metadata.json"),
+        serde_json::to_vec_pretty(&json!({
+            "schemaVersion": 1,
+            "kind": "grafana-utils-datasource-export-index",
+            "variant": "all-orgs-root",
+            "scopeKind": "workspace-root",
+            "resource": "datasource",
+            "indexFile": "index.json",
+            "datasourceCount": 2,
+            "orgCount": 2,
+            "format": "grafana-datasource-masked-recovery-v1",
+            "exportMode": "masked-recovery",
+            "masked": true,
+            "recoveryCapable": true,
+            "secretMaterial": "placeholders-only",
+            "provisioningProjection": "derived-projection"
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+
+    let input_format = resolve_datasource_inspect_export_input_format(&workspace_root, None)
+        .unwrap()
+        .unwrap();
+    assert_eq!(input_format, DatasourceImportInputFormat::Inventory);
+
+    let source = load_datasource_inspect_export_source(
+        &workspace_root,
+        DatasourceImportInputFormat::Inventory,
+    )
+    .unwrap();
+    let text =
+        render_datasource_inspect_export_output(&source, DatasourceInspectExportRenderFormat::Text)
+            .unwrap();
+
+    assert!(text.contains("Variant: all-orgs-root"));
+    assert!(text.contains("Datasource count: 2"));
+    assert!(text.contains("Prometheus Main"));
+    assert!(text.contains("Loki Ops"));
+}
+
+#[test]
+fn datasource_inspect_export_prefers_inventory_for_noninteractive_ambiguous_root() {
+    let root = write_diff_fixture(&[json!({
+        "uid": "prom-main",
+        "name": "Prometheus Main",
+        "type": "prometheus",
+        "access": "proxy",
+        "url": "http://prometheus:9090",
+        "isDefault": true,
+        "org": "Main Org",
+        "orgId": "1"
+    })]);
+    fs::create_dir_all(root.join("provisioning")).unwrap();
+    fs::write(
+        root.join("provisioning/datasources.yaml"),
+        r#"apiVersion: 1
+datasources:
+  - name: Provisioned Loki
+    uid: loki-prov
+    type: loki
+    access: proxy
+    url: http://loki:3100
+"#,
+    )
+    .unwrap();
+
+    let mode = resolve_datasource_inspect_export_input_format(
+        &root,
+        Some(DatasourceImportInputFormat::Inventory),
+    )
+    .unwrap()
+    .unwrap();
+    assert_eq!(mode, DatasourceImportInputFormat::Inventory);
+
+    let source = load_datasource_inspect_export_source(&root, mode).unwrap();
+    let text =
+        render_datasource_inspect_export_output(&source, DatasourceInspectExportRenderFormat::Text)
+            .unwrap();
+    assert!(text.contains("Prometheus Main"));
+    assert!(!text.contains("Provisioned Loki"));
+
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn datasource_inspect_export_requires_explicit_input_type_without_tty_for_ambiguous_root() {
+    let root = write_diff_fixture(&[json!({
+        "uid": "prom-main",
+        "name": "Prometheus Main",
+        "type": "prometheus",
+        "access": "proxy",
+        "url": "http://prometheus:9090",
+        "isDefault": true,
+        "org": "Main Org",
+        "orgId": "1"
+    })]);
+    fs::create_dir_all(root.join("provisioning")).unwrap();
+    fs::write(
+        root.join("provisioning/datasources.yaml"),
+        "apiVersion: 1\ndatasources: []\n",
+    )
+    .unwrap();
+
+    let error = prompt_datasource_inspect_export_input_format(&root).unwrap_err();
+    assert!(error
+        .to_string()
+        .contains("--input-type inventory or --input-type provisioning"));
 
     fs::remove_dir_all(root).unwrap();
 }
@@ -497,6 +1046,89 @@ fn discover_export_org_import_scopes_reads_selected_multi_org_root() {
     assert_eq!(scopes.len(), 1);
     assert_eq!(scopes[0].source_org_id, 2);
     assert_eq!(scopes[0].source_org_name, "Org Two");
+}
+
+#[test]
+fn discover_export_org_import_scopes_accepts_workspace_root_and_sorts_children() {
+    let temp = tempdir().unwrap();
+    let workspace_root = temp.path().join("snapshot");
+    let datasource_export_root = write_multi_org_import_fixture(
+        &workspace_root,
+        &[
+            (
+                9,
+                "Ops Org",
+                vec![
+                    json!({"uid":"loki-ops","name":"Loki Ops","type":"loki","access":"proxy","url":"http://loki:3100","isDefault":"false","org":"Ops Org","orgId":"9"}),
+                ],
+            ),
+            (
+                2,
+                "Org Two",
+                vec![
+                    json!({"uid":"prom-two","name":"Prometheus Two","type":"prometheus","access":"proxy","url":"http://prometheus-2:9090","isDefault":"false","org":"Org Two","orgId":"2"}),
+                ],
+            ),
+        ],
+    );
+    let datasource_root = workspace_root.join("datasources");
+    fs::rename(&datasource_export_root, &datasource_root).unwrap();
+    fs::create_dir_all(workspace_root.join("dashboards")).unwrap();
+    fs::write(
+        datasource_root.join("export-metadata.json"),
+        serde_json::to_vec_pretty(&json!({
+            "schemaVersion": 1,
+            "kind": "grafana-utils-datasource-export-index",
+            "variant": "all-orgs-root",
+            "scopeKind": "workspace-root",
+            "resource": "datasource",
+            "indexFile": "index.json",
+            "datasourceCount": 2,
+            "orgCount": 2,
+            "format": "grafana-datasource-masked-recovery-v1",
+            "exportMode": "masked-recovery",
+            "masked": true,
+            "recoveryCapable": true,
+            "secretMaterial": "placeholders-only",
+            "provisioningProjection": "derived-projection"
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let args = DatasourceImportArgs {
+        common: test_datasource_common_args(),
+        import_dir: workspace_root,
+        input_format: DatasourceImportInputFormat::Inventory,
+        org_id: None,
+        use_export_org: true,
+        only_org_id: Vec::new(),
+        create_missing_orgs: false,
+        require_matching_export_org: false,
+        replace_existing: false,
+        update_existing_only: false,
+        secret_values: None,
+        dry_run: true,
+        table: false,
+        json: false,
+        output_format: None,
+        no_header: false,
+        output_columns: Vec::new(),
+        progress: false,
+        verbose: false,
+    };
+
+    let scopes = discover_export_org_import_scopes(&args).unwrap();
+
+    assert_eq!(
+        scopes
+            .iter()
+            .map(|scope| scope.source_org_id)
+            .collect::<Vec<i64>>(),
+        vec![2, 9]
+    );
+    assert_eq!(scopes[0].source_org_name, "Org Two");
+    assert!(scopes[0].import_dir.ends_with("org_2_Org_Two"));
+    assert!(scopes[1].import_dir.ends_with("org_9_Ops_Org"));
 }
 
 #[test]
@@ -575,22 +1207,6 @@ fn datasource_import_with_use_export_org_requires_basic_auth() {
     assert!(error
         .to_string()
         .contains("Datasource import with --use-export-org requires Basic auth"));
-}
-
-#[test]
-fn diff_help_explains_input_format_and_provisioning_lane() {
-    let mut command = DatasourceCliArgs::command();
-    let subcommand = command
-        .find_subcommand_mut("diff")
-        .unwrap_or_else(|| panic!("missing datasource diff help"));
-    let mut output = Vec::new();
-    subcommand.write_long_help(&mut output).unwrap();
-    let help = String::from_utf8(output).unwrap();
-
-    assert!(help.contains("--diff-dir"));
-    assert!(help.contains("--input-format"));
-    assert!(help.contains("provisioning"));
-    assert!(help.contains("Compare datasource inventory"));
 }
 
 #[test]
@@ -757,7 +1373,12 @@ fn write_diff_fixture(records: &[Value]) -> std::path::PathBuf {
             "datasourcesFile": "datasources.json",
             "indexFile": "index.json",
             "datasourceCount": records.len(),
-            "format": "grafana-datasource-inventory-v1"
+            "format": "grafana-datasource-masked-recovery-v1",
+            "exportMode": "masked-recovery",
+            "masked": true,
+            "recoveryCapable": true,
+            "secretMaterial": "placeholders-only",
+            "provisioningProjection": "derived-projection"
         }))
         .unwrap(),
     )
@@ -796,6 +1417,8 @@ datasources:
     type: prometheus
     access: proxy
     url: http://prometheus:9090
+    jsonData:
+      httpMethod: POST
     isDefault: true
     orgId: 1
 "#,
@@ -810,6 +1433,31 @@ fn write_multi_org_import_fixture(
 ) -> std::path::PathBuf {
     let import_root = root.join("datasource-export-all-orgs");
     fs::create_dir_all(&import_root).unwrap();
+    let total_datasource_count = orgs
+        .iter()
+        .map(|(_, _, records)| records.len())
+        .sum::<usize>();
+    fs::write(
+        import_root.join("export-metadata.json"),
+        serde_json::to_vec_pretty(&json!({
+            "schemaVersion": 1,
+            "kind": "grafana-utils-datasource-export-index",
+            "variant": "all-orgs-root",
+            "scopeKind": "all-orgs-root",
+            "resource": "datasource",
+            "indexFile": "index.json",
+            "datasourceCount": total_datasource_count,
+            "orgCount": orgs.len(),
+            "format": "grafana-datasource-masked-recovery-v1",
+            "exportMode": "masked-recovery",
+            "masked": true,
+            "recoveryCapable": true,
+            "secretMaterial": "placeholders-only",
+            "provisioningProjection": "derived-projection"
+        }))
+        .unwrap(),
+    )
+    .unwrap();
     for (org_id, org_name, records) in orgs {
         let org_dir = import_root.join(format!("org_{}_{}", org_id, org_name.replace(' ', "_")));
         fs::create_dir_all(&org_dir).unwrap();
@@ -819,11 +1467,17 @@ fn write_multi_org_import_fixture(
                 "schemaVersion": 1,
                 "kind": "grafana-utils-datasource-export-index",
                 "variant": "root",
+                "scopeKind": "org-root",
                 "resource": "datasource",
                 "datasourcesFile": "datasources.json",
                 "indexFile": "index.json",
                 "datasourceCount": records.len(),
-                "format": "grafana-datasource-inventory-v1"
+                "format": "grafana-datasource-masked-recovery-v1",
+                "exportMode": "masked-recovery",
+                "masked": true,
+                "recoveryCapable": true,
+                "secretMaterial": "placeholders-only",
+                "provisioningProjection": "derived-projection"
             }))
             .unwrap(),
         )
@@ -852,6 +1506,14 @@ fn write_multi_org_import_fixture(
                 "kind": "grafana-utils-datasource-export-index",
                 "schemaVersion": 1,
                 "datasourcesFile": "datasources.json",
+                "exportMode": "masked-recovery",
+                "masked": true,
+                "recoveryCapable": true,
+                "secretMaterial": "placeholders-only",
+                "variants": {
+                    "inventory": "datasources.json",
+                    "provisioning": "provisioning/datasources.yaml"
+                },
                 "count": records.len(),
                 "items": index_items
             }))

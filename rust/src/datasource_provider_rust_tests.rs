@@ -2,7 +2,9 @@
 //! Keeps staged secret-provider parsing and review-summary behavior aligned with Python.
 
 use crate::datasource_provider::{
-    build_provider_plan, collect_provider_references, iter_provider_names, summarize_provider_plan,
+    build_provider_plan, collect_provider_references, external_provider_contract,
+    iter_provider_names, summarize_provider_contract, summarize_provider_plan,
+    EXTERNAL_PROVIDER_REFERENCE_KIND,
 };
 use serde_json::json;
 
@@ -33,7 +35,11 @@ fn build_provider_plan_shapes_review_summary() {
 
     let plan = build_provider_plan(datasource_spec.as_object().unwrap()).unwrap();
 
-    assert_eq!(plan.provider_kind, "external-provider-reference");
+    assert_eq!(plan.provider, external_provider_contract());
+    assert_eq!(
+        plan.provider.kind.as_str(),
+        EXTERNAL_PROVIDER_REFERENCE_KIND
+    );
     assert!(plan.review_required);
     assert_eq!(
         summarize_provider_plan(&plan),
@@ -42,6 +48,9 @@ fn build_provider_plan_shapes_review_summary() {
             "datasourceName": "Loki Main",
             "datasourceType": "loki",
             "providerKind": "external-provider-reference",
+            "provider": {
+                "kind": "external-provider-reference",
+            },
             "action": "resolve-provider-secrets",
             "reviewRequired": true,
             "providers": [
@@ -56,6 +65,12 @@ fn build_provider_plan_shapes_review_summary() {
                     "secretPath": "prod/loki/token",
                 },
             ],
+        })
+    );
+    assert_eq!(
+        summarize_provider_contract(&plan.provider),
+        json!({
+            "kind": "external-provider-reference",
         })
     );
 }

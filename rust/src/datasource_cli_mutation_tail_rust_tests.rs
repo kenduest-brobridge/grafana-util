@@ -425,7 +425,13 @@ fn resolve_match_marks_multiple_name_matches_as_ambiguous() {
         is_default: true,
         org_name: String::new(),
         org_id: "1".to_string(),
+        basic_auth: None,
+        basic_auth_user: String::new(),
+        database: String::new(),
+        json_data: None,
         secure_json_data_placeholders: None,
+        user: String::new(),
+        with_credentials: None,
     };
     let live = vec![
         live_datasource(1, "prom-a", "Prometheus Main", "prometheus"),
@@ -483,7 +489,13 @@ fn resolve_match_allows_update_when_uid_exists_and_replace_existing_is_enabled()
         is_default: true,
         org_name: String::new(),
         org_id: "1".to_string(),
+        basic_auth: None,
+        basic_auth_user: String::new(),
+        database: String::new(),
+        json_data: None,
         secure_json_data_placeholders: None,
+        user: String::new(),
+        with_credentials: None,
     };
     let live = vec![live_datasource(
         9,
@@ -511,7 +523,13 @@ fn resolve_match_blocks_name_match_when_uid_differs() {
         is_default: true,
         org_name: String::new(),
         org_id: "1".to_string(),
+        basic_auth: None,
+        basic_auth_user: String::new(),
+        database: String::new(),
+        json_data: None,
         secure_json_data_placeholders: None,
+        user: String::new(),
+        with_credentials: None,
     };
     let live = vec![live_datasource(
         9,
