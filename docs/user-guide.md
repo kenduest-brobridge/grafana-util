@@ -15,7 +15,7 @@ curl -fsSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-utils/ma
 Override the install location or pinned version when needed:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-utils/main/scripts/install.sh | BIN_DIR=/usr/local/bin VERSION=v0.5.0 sh
+curl -fsSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-utils/main/scripts/install.sh | BIN_DIR=/usr/local/bin VERSION=v0.6.0 sh
 ```
 
 If you already have a local checkout, run the script from the repository root instead:
@@ -1345,11 +1345,11 @@ Cross-org note:
 
 ### 5.2 `datasource export`
 
-Purpose: export datasource inventory as normalized JSON plus a separate Grafana provisioning YAML lane.
+Purpose: export datasource inventory as a masked recovery bundle plus a separate Grafana provisioning YAML lane.
 
 | Option | Purpose | Difference / scenario |
 | --- | --- | --- |
-| `--export-dir` | Export directory | Default `datasources` |
+| `--export-dir` | Export directory | Default `datasources`; writes `datasources.json`, metadata, and `provisioning/` by default |
 | `--org-id` | Export from one explicit org | Basic-auth only explicit org export |
 | `--all-orgs` | Export from all visible orgs | Writes one `org_<id>_<name>/` subtree per org |
 | `--overwrite` | Replace existing export files | Repeatable export runs |
@@ -1370,11 +1370,11 @@ Datasource export completed: 3 item(s)
 
 Live note:
 - The command shape above is exercised against a real Grafana `12.4.1` Docker server in the Rust live smoke flow.
-- The default export root now also includes `provisioning/datasources.yaml`, separate from the existing `datasources.json` import/diff lane.
+- The default export root now also includes `provisioning/datasources.yaml`, but the canonical restore/replay contract remains `datasources.json`.
 
 ### 5.3 `datasource import`
 
-Purpose: import datasource inventory into live Grafana.
+Purpose: import datasource inventory or provisioning-derived datasource definitions into live Grafana.
 
 | Option | Purpose | Difference / scenario |
 | --- | --- | --- |
@@ -1410,7 +1410,7 @@ loki-prod   loki-prod          loki         create   missing
 
 Live note:
 - Real Docker-backed runs also validate routed datasource replay with `--use-export-org`, repeated `--only-org-id`, and `--create-missing-orgs`; in routed dry-run JSON the org preview reports `exists`, `missing-org`, or `would-create-org` before per-datasource actions.
-- Provisioning imports read Grafana datasource YAML directly and normalize it into the existing import pipeline; the older `datasources.json` contract remains the default under `--input-format inventory`.
+- Provisioning imports read Grafana datasource YAML directly and normalize it into the existing import pipeline; `datasources.json` remains the default and canonical restore contract under `--input-format inventory`.
 
 How to read it:
 - `UID` and `NAME` both matter, but automation should prefer `UID`.

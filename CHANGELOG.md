@@ -86,6 +86,9 @@ Format rule going forward:
   consistently instead of reinterpreting staged layouts ad hoc.
 - Shared output handling is more consistent across commands, including broader
   text/table/csv/json/yaml coverage and color-aware JSON rendering.
+- Live dashboard and datasource status reporting is more consistent with the
+  staged contract boundaries, especially around multi-org and root-scoped
+  inventory reads.
 
 ### Fixed
 

@@ -102,6 +102,10 @@ grafana-util dashboard inspect-export \
   --output-format report-table
 ```
 
+`dashboard export` 預設會同時寫出三條 lane：`raw/` 給 grafana-util API replay，`prompt/` 給 Grafana UI 匯入，`provisioning/` 給 Grafana file provisioning artifacts。
+
+`datasource export` 則會把可回放的 masked recovery contract 寫進 `datasources.json`，另外再輸出 `provisioning/datasources.yaml` 作為 Grafana file provisioning projection。真正的 restore/replay contract 仍應以 `datasources.json` 為主，`provisioning/` 只視為衍生輸出。
+
 在真正匯入前先做 dry-run 預覽：
 
 ```bash
@@ -199,7 +203,7 @@ curl -fsSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-utils/ma
 需要指定安裝位置或版本時：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-utils/main/scripts/install.sh | BIN_DIR=/usr/local/bin VERSION=v0.5.0 sh
+curl -fsSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-utils/main/scripts/install.sh | BIN_DIR=/usr/local/bin VERSION=v0.6.0 sh
 ```
 
 如果您已經有本地 checkout，也可以直接在 repo 根目錄執行：

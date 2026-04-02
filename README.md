@@ -104,6 +104,8 @@ grafana-util dashboard inspect-export \
 
 `dashboard export` now writes three distinct lanes by default: `raw/` for grafana-util API replay, `prompt/` for Grafana UI import, and `provisioning/` for Grafana file-provisioning artifacts.
 
+`datasource export` writes a masked recovery bundle at `datasources.json` for grafana-util replay and restore, plus a separate `provisioning/datasources.yaml` projection for Grafana file provisioning. Keep `datasources.json` as the primary restore contract; treat `provisioning/` as a derived lane.
+
 Preview a dashboard import before changing Grafana:
 
 ```bash
@@ -201,7 +203,7 @@ curl -fsSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-utils/ma
 Override the install directory or pinned version when needed:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-utils/main/scripts/install.sh | BIN_DIR=/usr/local/bin VERSION=v0.5.0 sh
+curl -fsSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-utils/main/scripts/install.sh | BIN_DIR=/usr/local/bin VERSION=v0.6.0 sh
 ```
 
 If you already have a local checkout, run the script directly from the repo:

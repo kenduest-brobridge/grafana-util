@@ -20,7 +20,7 @@ curl -fsSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-utils/ma
 需要指定安裝位置或固定版本時：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-utils/main/scripts/install.sh | BIN_DIR=/usr/local/bin VERSION=v0.5.0 sh
+curl -fsSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-utils/main/scripts/install.sh | BIN_DIR=/usr/local/bin VERSION=v0.6.0 sh
 ```
 
 如果您已經有本地 checkout，也可以直接在 repo 根目錄執行：
@@ -1118,11 +1118,11 @@ tempo-prod         tempo-prod         tempo        http://tempo:3200
 
 ### 5.2 `datasource export`
 
-**用途**：匯出 datasource inventory。
+**用途**：匯出 datasource masked recovery bundle，並另外輸出 Grafana provisioning YAML lane。
 
 | 參數 | 用途 | 差異 / 情境 |
 | --- | --- | --- |
-| `--export-dir`（預設 `datasources`） | 匯出目錄 | 含 `datasources.json` + metadata |
+| `--export-dir`（預設 `datasources`） | 匯出目錄 | 預設包含 `datasources.json`、metadata 與 `provisioning/` |
 | `--org-id` | 匯出指定 org | 僅 Basic Auth 支援明確 org 匯出 |
 | `--all-orgs` | 匯出所有可見 org | 每個 org 會寫入 `org_<id>_<name>/` 子目錄 |
 | `--overwrite` | 覆蓋既有輸出 | 適合重複匯出流程 |
@@ -1142,14 +1142,16 @@ Datasource export completed: 3 item(s)
 
 實跑註記：
 - 上面的命令型態已在 Rust Docker 實測流程中，對真實 Grafana `12.4.1` 服務驗證過。
+- 預設匯出根目錄也會包含 `provisioning/datasources.yaml`；但 canonical restore/replay contract 仍是 `datasources.json`。
 
 ### 5.3 `datasource import`
 
-**用途**：匯入 datasource inventory。
+**用途**：匯入 datasource inventory，或匯入由 provisioning lane 正規化後的 datasource 定義。
 
 | 參數 | 用途 | 差異 / 情境 |
 | --- | --- | --- |
 | `--import-dir`（必須） | 指向 export root（含 `datasources.json`）或 combined export root | 搭配 `--use-export-org` 時要指向整個 multi-org 匯出根目錄 |
+| `--input-format inventory\|provisioning` | 選擇磁碟上的匯入 contract | `provisioning` 可接受 export root、`provisioning/` 目錄，或具體 YAML 檔 |
 | `--org-id` | 匯入目標 org | org 變更時必用 |
 | `--use-export-org` | 依 export 內 org 路由回 Grafana | 匯入 `--all-orgs` 產生的整體匯出根目錄 |
 | `--only-org-id` | 限制 `--use-export-org` 只匯入指定 source org | 可重複指定多個 org |
@@ -1180,6 +1182,7 @@ loki-prod   loki-prod          loki         create   missing
 
 實跑註記：
 - 真實環境 Docker 測試也會驗證依匯出來源 org 回放資料來源：`--use-export-org`、可重複的 `--only-org-id`、以及 `--create-missing-orgs`。在這種模擬執行 JSON 中，會先看到組織層級的 `exists`、`missing-org`、或 `would-create-org`，再進入每筆資料來源操作。
+- provisioning 匯入會先把 Grafana datasource YAML 正規化進同一條匯入 pipeline；預設與 canonical restore contract 仍是 `datasources.json` 的 inventory lane。
 
 怎麼看：
 - `UID` 與 `NAME` 都重要，但自動化比對應優先以 `UID` 為準。
