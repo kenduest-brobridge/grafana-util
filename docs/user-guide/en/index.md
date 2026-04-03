@@ -1,5 +1,14 @@
 # 📖 Operator Handbook: grafana-util
 
+## Language
+
+- English handbook: [current page](./index.md)
+- Traditional Chinese handbook: [繁體中文手冊](../zh-TW/index.md)
+- English command reference: [Command Docs](../../commands/en/index.md)
+- Traditional Chinese command reference: [繁體中文逐指令說明](../../commands/zh-TW/index.md)
+
+---
+
 Welcome to the official operator handbook for `grafana-util`. This guide is designed to take you from a fresh installation to mastering estate-level Grafana governance.
 
 ---

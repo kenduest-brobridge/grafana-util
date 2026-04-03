@@ -338,6 +338,8 @@ th {
     <div class="layout">
       <article class="panel article">
         <h1 id="維運導引手冊-operator-handbook">📖 維運導引手冊 (Operator Handbook)</h1>
+<h2 id="語言切換">語言切換</h2>
+<ul><li>繁體中文手冊：<a href="index.html">目前頁面</a></li><li>English handbook: <a href="../en/index.html">英文手冊</a></li><li>繁體中文指令詳細說明：<a href="../../commands/zh-TW/index.html">指令詳細說明</a></li><li>English command reference: <a href="../../commands/en/index.html">Command Docs</a></li></ul>
 <p>歡迎來到 <code>grafana-util</code> 的官方維運手冊。這份導覽旨在帶領您從安裝環境到精通 Estate-level 的 Grafana 治理與自動化。</p>
 <h2 id="30-秒快速上手-quick-start">⚡ 30 秒快速上手 (Quick Start)</h2>
 <p>僅需三個指令，即可從零開始獲得完整的專案健康報告。</p>
@@ -360,12 +362,12 @@ th {
 <h3 id="第四階段治理與整備度">🛡️ 第四階段：治理與整備度</h3>
 <ul><li><strong><a href="change-overview-status.html">變更與狀態 (Change &amp; Status)</a></strong>：暫存工作流、專案快照與健康門禁。</li></ul>
 <h3 id="第五階段深度探索">📖 第五階段：深度探索</h3>
-<ul><li><strong><a href="scenarios.html">維運實戰場景</a></strong>：端到端任務配方 (備份、災難恢復、稽核)。</li><li><strong><a href="recipes.html">實戰錦囊與最佳實踐</a></strong>：針對 Grafana 日常痛點的手術級解決方案。</li><li><strong><a href="reference.html">技術參考手冊</a></strong>：全量指令地圖與全域旗標字典。</li><li><strong><a href="../../commands/zh-TW/index.html">逐指令說明</a></strong>：每個 command 與 subcommand 各有獨立頁面，可直接查目前 CLI 指令面。</li><li><strong><a href="troubleshooting.html">疑難排解與名詞解釋</a></strong>：故障排除導引與術語索引。</li></ul>
+<ul><li><strong><a href="scenarios.html">維運實戰場景</a></strong>：端到端任務配方 (備份、災難恢復、稽核)。</li><li><strong><a href="recipes.html">實戰錦囊與最佳實踐</a></strong>：針對 Grafana 日常痛點的手術級解決方案。</li><li><strong><a href="reference.html">技術參考手冊</a></strong>：完整指令地圖與全域旗標字典。</li><li><strong><a href="../../commands/zh-TW/index.html">指令詳細說明</a></strong>：每個 command 與 subcommand 各有獨立頁面，可直接查目前 CLI 指令面。</li><li><strong><a href="troubleshooting.html">疑難排解與名詞解釋</a></strong>：故障排除導引與術語索引。</li></ul>
 <h2 id="依角色選擇閱讀路徑">👥 依角色選擇閱讀路徑</h2>
 <p>不同角色通常會需要不同的閱讀順序：</p>
-<p>先看 <a href="role-new-user.html">新使用者路徑</a>，再看 <a href="getting-started.html">開始使用</a>，需要精確旗標時再開 <a href="../../commands/zh-TW/index.html">逐指令說明</a>。</p>
+<p>先看 <a href="role-new-user.html">新使用者路徑</a>，再看 <a href="getting-started.html">開始使用</a>，需要精確旗標時再開 <a href="../../commands/zh-TW/index.html">指令詳細說明</a>。</p>
 <p>先看 <a href="role-sre-ops.html">SRE / 維運路徑</a>，再看 <a href="change-overview-status.html">變更與狀態</a>、<a href="dashboard.html">Dashboard 管理</a>、<a href="datasource.html">Datasource 管理</a>、<a href="troubleshooting.html">疑難排解</a>。</p>
-<p>先看 <a href="access.html">Access 管理</a>，再看 <a href="reference.html">技術參考手冊</a>，最後搭配 <a href="../../commands/zh-TW/index.html">逐指令說明</a>。</p>
+<p>先看 <a href="access.html">Access 管理</a>，再看 <a href="reference.html">技術參考手冊</a>，最後搭配 <a href="../../commands/zh-TW/index.html">指令詳細說明</a>。</p>
 <p>先看 <a href="role-automation-ci.html">自動化 / CI 路徑</a>，再看 <a href="reference.html">技術參考手冊</a>，如需終端機精確查詢可搭配 <code>docs/man/grafana-util.1</code>。</p>
 <p>先看 <a href="../../../DEVELOPER.md">docs/DEVELOPER.md</a>，再看 <a href="../../../internal/maintainer-role-map.md">maintainer-role-map.md</a> 與 <a href="../../../internal/README.md">docs/internal/README.md</a> 下面的設計與維護文件。</p>
 <ul><li><strong>新使用者</strong></li><li><strong>SRE / 維運人員</strong></li><li><strong>身份 / 權限管理者</strong></li><li><strong>自動化 / CI 維護者</strong></li><li><strong>維護者 / 架構師</strong></li></ul>
@@ -377,7 +379,7 @@ th {
       <aside class="panel sidebar">
         <section>
           <h2>On This Page</h2>
-          <ul><li><a class="link-card" href="#30-秒快速上手-quick-start">⚡ 30 秒快速上手 (Quick Start)</a></li><li><a class="link-card" href="#1-安裝-全域-binary">1. 安裝 (全域 Binary)</a></li><li><a class="link-card" href="#2-確認安裝版本">2. 確認安裝版本</a></li><li><a class="link-card" href="#3-執行第一次全盤稽核">3. 執行第一次全盤稽核</a></li><li><a class="link-card" href="#章節導覽-navigation-map">🧭 章節導覽 (Navigation Map)</a></li><li><a class="link-card" href="#第一階段奠定基礎">🚀 第一階段：奠定基礎</a></li><li><a class="link-card" href="#第二階段核心資產管理">🛠️ 第二階段：核心資產管理</a></li><li><a class="link-card" href="#第三階段身份與存取">🔐 第三階段：身份與存取</a></li><li><a class="link-card" href="#第四階段治理與整備度">🛡️ 第四階段：治理與整備度</a></li><li><a class="link-card" href="#第五階段深度探索">📖 第五階段：深度探索</a></li><li><a class="link-card" href="#依角色選擇閱讀路徑">👥 依角色選擇閱讀路徑</a></li><li><a class="link-card" href="#如何使用這份導航">🎯 如何使用這份導航？</a></li></ul>
+          <ul><li><a class="link-card" href="#語言切換">語言切換</a></li><li><a class="link-card" href="#30-秒快速上手-quick-start">⚡ 30 秒快速上手 (Quick Start)</a></li><li><a class="link-card" href="#1-安裝-全域-binary">1. 安裝 (全域 Binary)</a></li><li><a class="link-card" href="#2-確認安裝版本">2. 確認安裝版本</a></li><li><a class="link-card" href="#3-執行第一次全盤稽核">3. 執行第一次全盤稽核</a></li><li><a class="link-card" href="#章節導覽-navigation-map">🧭 章節導覽 (Navigation Map)</a></li><li><a class="link-card" href="#第一階段奠定基礎">🚀 第一階段：奠定基礎</a></li><li><a class="link-card" href="#第二階段核心資產管理">🛠️ 第二階段：核心資產管理</a></li><li><a class="link-card" href="#第三階段身份與存取">🔐 第三階段：身份與存取</a></li><li><a class="link-card" href="#第四階段治理與整備度">🛡️ 第四階段：治理與整備度</a></li><li><a class="link-card" href="#第五階段深度探索">📖 第五階段：深度探索</a></li><li><a class="link-card" href="#依角色選擇閱讀路徑">👥 依角色選擇閱讀路徑</a></li><li><a class="link-card" href="#如何使用這份導航">🎯 如何使用這份導航？</a></li></ul>
         </section>
         <section>
           <h2>Related</h2>

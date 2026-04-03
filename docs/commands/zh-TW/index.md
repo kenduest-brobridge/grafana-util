@@ -1,5 +1,14 @@
 # 逐指令說明
 
+## 語言切換
+
+- 繁體中文逐指令說明：[目前頁面](./index.md)
+- English command reference: [英文逐指令總索引](../en/index.md)
+- 繁體中文手冊：[維運手冊](../../user-guide/zh-TW/index.md)
+- English handbook: [Operator Handbook](../../user-guide/en/index.md)
+
+---
+
 這個目錄收錄 `grafana-util` 的逐指令與逐子命令頁面。  
 如果手冊章節是用來理解工作流，這裡就是拿來查實際指令面、常用旗標與相鄰命令差異的地方。
 
@@ -39,9 +48,3 @@
 | Status | [status](./status.md) |
 | Profile | [profile](./profile.md) |
 | Snapshot | [snapshot](./snapshot.md) |
-
-## 英文對照
-
-若您需要和英文版逐頁對照，可從這裡進入：
-
-- [英文逐指令總索引](../en/index.md)

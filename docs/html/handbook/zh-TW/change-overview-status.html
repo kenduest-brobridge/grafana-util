@@ -339,9 +339,9 @@ th {
       <article class="panel article">
         <h1 id="專案狀態與變更總覽-change-status">專案狀態與變更總覽 (Change &amp; Status)</h1>
 <p>本章聚焦在治理關卡，也就是在執行變更前後的最後一層驗證。</p>
-<h2 id="逐指令頁面">🔗 逐指令頁面</h2>
-<p>如果您現在想看的是逐指令說明，而不是工作流章節，請直接使用逐指令頁面：</p>
-<ul><li><a href="../../commands/zh-TW/change.html">change</a></li><li><a href="../../commands/zh-TW/status.html">status</a></li><li><a href="../../commands/zh-TW/overview.html">overview</a></li><li><a href="../../commands/zh-TW/snapshot.html">snapshot</a></li><li><a href="../../commands/zh-TW/index.html">逐指令總索引</a></li></ul>
+<h2 id="指令詳細頁面">🔗 指令詳細頁面</h2>
+<p>如果您現在想看的是指令詳細說明，而不是工作流章節，請直接使用指令詳細頁面：</p>
+<ul><li><a href="../../commands/zh-TW/change.html">change</a></li><li><a href="../../commands/zh-TW/status.html">status</a></li><li><a href="../../commands/zh-TW/overview.html">overview</a></li><li><a href="../../commands/zh-TW/snapshot.html">snapshot</a></li><li><a href="../../commands/zh-TW/index.html">指令詳細總索引</a></li></ul>
 <h2 id="狀態介面-status-surfaces">🚦 狀態介面 (Status Surfaces)</h2>
 <p>我們區分 <strong>Live</strong> (實際運行中) 與 <strong>Staged</strong> (您打算部署的內容)。</p>
 <h3 id="1-即時整備度檢查-live-check">1. 即時整備度檢查 (Live Check)</h3>
@@ -393,7 +393,7 @@ Alerts       ok       無孤立規則</code></pre>
 <p><code>overview live --output interactive</code> 會透過共用的 live status 路徑開啟 live project overview。</p>
 <pre><code>grafana-util overview live --url http://localhost:3000 --basic-user admin --basic-password admin --output interactive</code></pre>
 <p>TUI 使用以下視覺語言：</p>
-<ul><li><strong>🟢 綠色</strong>：組件健康且完全可達。</li><li><strong>🟡 黃色</strong>：組件可用，但有警告，例如缺少元數據。</li><li><strong>🔴 紅色</strong>：組件受阻，在進行任何部署前都需要處理。</li></ul>
+<ul><li><strong>🟢 綠色</strong>：組件健康且完全可達。</li><li><strong>🟡 黃色</strong>：組件可用，但有警告，例如缺少中繼資料。</li><li><strong>🔴 紅色</strong>：組件受阻，在進行任何部署前都需要處理。</li></ul>
 <p>如果要看 staged 產物的人工審查畫面，用不帶 <code>live</code> 的 <code>overview</code>；如果要機器可讀的 live 驗證關卡，改用 <code>status live</code>。</p>
 <p><a href="access.html">⬅️ 上一章：Access 管理</a> | <a href="index.html">🏠 回首頁</a> | <a href="scenarios.html">➡️ 下一章：維運情境手冊</a></p>
         <nav class="footer-nav"><a class="link-card" href="access.html"><span>Previous</span>身分與存取管理 (Identity &amp; Access)</a><a class="link-card" href="scenarios.html"><span>Next</span>維運情境手冊 (Operator Scenarios)</a></nav>
@@ -401,7 +401,7 @@ Alerts       ok       無孤立規則</code></pre>
       <aside class="panel sidebar">
         <section>
           <h2>On This Page</h2>
-          <ul><li><a class="link-card" href="#逐指令頁面">🔗 逐指令頁面</a></li><li><a class="link-card" href="#狀態介面-status-surfaces">🚦 狀態介面 (Status Surfaces)</a></li><li><a class="link-card" href="#1-即時整備度檢查-live-check">1. 即時整備度檢查 (Live Check)</a></li><li><a class="link-card" href="#2-暫存整備度檢查-staged-check">2. 暫存整備度檢查 (Staged Check)</a></li><li><a class="link-card" href="#變更生命週期-change-lifecycle">📋 變更生命週期 (Change Lifecycle)</a></li><li><a class="link-card" href="#1-變更摘要-change-summary">1. 變更摘要 (Change Summary)</a></li><li><a class="link-card" href="#2-預檢驗證-preflight-validation">2. 預檢驗證 (Preflight Validation)</a></li><li><a class="link-card" href="#互動模式-tui-語意">🖥️ 互動模式 (TUI) 語意</a></li></ul>
+          <ul><li><a class="link-card" href="#指令詳細頁面">🔗 指令詳細頁面</a></li><li><a class="link-card" href="#狀態介面-status-surfaces">🚦 狀態介面 (Status Surfaces)</a></li><li><a class="link-card" href="#1-即時整備度檢查-live-check">1. 即時整備度檢查 (Live Check)</a></li><li><a class="link-card" href="#2-暫存整備度檢查-staged-check">2. 暫存整備度檢查 (Staged Check)</a></li><li><a class="link-card" href="#變更生命週期-change-lifecycle">📋 變更生命週期 (Change Lifecycle)</a></li><li><a class="link-card" href="#1-變更摘要-change-summary">1. 變更摘要 (Change Summary)</a></li><li><a class="link-card" href="#2-預檢驗證-preflight-validation">2. 預檢驗證 (Preflight Validation)</a></li><li><a class="link-card" href="#互動模式-tui-語意">🖥️ 互動模式 (TUI) 語意</a></li></ul>
         </section>
         <section>
           <h2>Related</h2>

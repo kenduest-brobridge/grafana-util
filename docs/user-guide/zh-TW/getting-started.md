@@ -13,33 +13,34 @@
 curl -sSL https://raw.githubusercontent.com/kendlee/grafana-utils/main/scripts/install.sh | bash
 ```
 
-### 驗證版本
+### 檢查版本
 ```bash
 grafana-util --version
 ```
 **預期輸出：**
 ```text
-grafana-util 0.7.1
+grafana-util 0.7.2
 ```
 這代表執行檔已在 `PATH` 上，而且版本與目前檢出的發行版一致。
 
 ---
 
-## 📋 步驟 2：Profile 檔案
+## 📋 步驟 2：Profile 設定檔
 
-Profile 流程是 repo-local 的。`grafana-util profile` 預設會讀寫目前工作目錄中的 `grafana-util.yaml`，如果你有設定 `GRAFANA_UTIL_CONFIG`，就會改讀那個路徑。
+Profile 流程是專案本機 (Repo-local) 的。`grafana-util profile` 預設會讀寫目前工作目錄中的 `grafana-util.yaml`，若有設定 `GRAFANA_UTIL_CONFIG` 環境變數，則會優先讀取該路徑。
 
-### 驗證模式速覽
+### 身分驗證模式概覽
 
-建議依照這個順序使用：
+建議依序選擇適合的模式：
 
 | 模式 | 適合情境 | 範例 |
 | :--- | :--- | :--- |
 | `--profile` | 日常維運、CI、可重複執行的工作流 | `grafana-util status live --profile prod --output yaml` |
-| 直接 Basic auth | 本機 bootstrap、break-glass、管理員流程 | `grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output yaml` |
-| 直接 token | 單一 org 或權限較窄的 API 自動化 | `grafana-util overview live --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output yaml` |
+| 直接基本驗證 (Basic Auth) | 本機引導、緊急存取 (Break-glass)、管理員作業 | `grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output yaml` |
+| 直接 Token 驗證 | 單一組織或權限受限的 API 自動化 | `grafana-util overview live --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output yaml` |
 
-若要用環境變數承載秘密，建議把它放在 profile 裡，例如 `password_env: GRAFANA_PROD_PASSWORD` 或 `token_env: GRAFANA_DEV_TOKEN`，不要把明文秘密一再寫進每一條命令列。
+若要使用環境變數管理機密資訊，建議將其設定在 Profile 中（如 `password_env: GRAFANA_PROD_PASSWORD`），避免將明文密碼直接寫入指令。
+
 
 ### 1. 選一種建立 profile 的方式
 ```bash
@@ -89,9 +90,9 @@ profile:
 
 ---
 
-## 📋 步驟 3：第一批唯讀檢查
+## 📋 步驟 3：初步唯讀檢查
 
-只要 profile 檔案已準備好，就可以先用唯讀指令確認目前 CLI 的行為，再去碰 live 資料。
+只要 Profile 設定檔已準備就緒，建議先透過唯讀指令確認行為，再進行資料異動作業。
 
 ### 1. `status live` 入口
 ```bash

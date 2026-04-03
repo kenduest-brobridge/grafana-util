@@ -1,9 +1,9 @@
 # grafana-util
 ### A Rust CLI for Grafana Operations and Administration
 
-[![CI](https://img.shields.io/github/actions/workflow/status/kendlee/grafana-utils/ci.yml?branch=main)](https://github.com/kendlee/grafana-utils/actions)
-[![License](https://img.shields.io/github/license/kendlee/grafana-utils)](LICENSE)
-[![Release](https://img.shields.io/github/v/release/kendlee/grafana-utils)](https://github.com/kendlee/grafana-utils/releases)
+[![CI](https://img.shields.io/github/actions/workflow/status/kenduest-brobridge/grafana-utils/ci.yml?branch=main)](https://github.com/kenduest-brobridge/grafana-utils/actions)
+[![License](https://img.shields.io/github/license/kenduest-brobridge/grafana-utils)](LICENSE)
+[![Version](https://img.shields.io/github/v/tag/kenduest-brobridge/grafana-utils)](https://github.com/kenduest-brobridge/grafana-utils/tags)
 
 English | [繁體中文](./README.zh-TW.md)
 

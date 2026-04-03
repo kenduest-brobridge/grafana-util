@@ -1,5 +1,14 @@
 # 📖 維運導引手冊 (Operator Handbook)
 
+## 語言切換
+
+- 繁體中文手冊：[目前頁面](./index.md)
+- English handbook: [英文手冊](../en/index.md)
+- 繁體中文指令詳細說明：[指令詳細說明](../../commands/zh-TW/index.md)
+- English command reference: [Command Docs](../../commands/en/index.md)
+
+---
+
 歡迎來到 `grafana-util` 的官方維運手冊。這份導覽旨在帶領您從安裝環境到精通 Estate-level 的 Grafana 治理與自動化。
 
 ---
@@ -52,8 +61,8 @@ grafana-util overview live --url http://localhost:3000 --basic-user admin --prom
 ### 📖 第五階段：深度探索
 *   **[維運實戰場景](scenarios.md)**：端到端任務配方 (備份、災難恢復、稽核)。
 *   **[實戰錦囊與最佳實踐](recipes.md)**：針對 Grafana 日常痛點的手術級解決方案。
-*   **[技術參考手冊](reference.md)**：全量指令地圖與全域旗標字典。
-*   **[逐指令說明](../../commands/zh-TW/index.md)**：每個 command 與 subcommand 各有獨立頁面，可直接查目前 CLI 指令面。
+*   **[技術參考手冊](reference.md)**：完整指令地圖與全域旗標字典。
+*   **[指令詳細說明](../../commands/zh-TW/index.md)**：每個 command 與 subcommand 各有獨立頁面，可直接查目前 CLI 指令面。
 *   **[疑難排解與名詞解釋](troubleshooting.md)**：故障排除導引與術語索引。
 
 ---
@@ -63,11 +72,11 @@ grafana-util overview live --url http://localhost:3000 --basic-user admin --prom
 不同角色通常會需要不同的閱讀順序：
 
 *   **新使用者**
-  先看 [新使用者路徑](role-new-user.md)，再看 [開始使用](getting-started.md)，需要精確旗標時再開 [逐指令說明](../../commands/zh-TW/index.md)。
+  先看 [新使用者路徑](role-new-user.md)，再看 [開始使用](getting-started.md)，需要精確旗標時再開 [指令詳細說明](../../commands/zh-TW/index.md)。
 *   **SRE / 維運人員**
   先看 [SRE / 維運路徑](role-sre-ops.md)，再看 [變更與狀態](change-overview-status.md)、[Dashboard 管理](dashboard.md)、[Datasource 管理](datasource.md)、[疑難排解](troubleshooting.md)。
 *   **身份 / 權限管理者**
-  先看 [Access 管理](access.md)，再看 [技術參考手冊](reference.md)，最後搭配 [逐指令說明](../../commands/zh-TW/index.md)。
+  先看 [Access 管理](access.md)，再看 [技術參考手冊](reference.md)，最後搭配 [指令詳細說明](../../commands/zh-TW/index.md)。
 *   **自動化 / CI 維護者**
   先看 [自動化 / CI 路徑](role-automation-ci.md)，再看 [技術參考手冊](reference.md)，如需終端機精確查詢可搭配 `docs/man/grafana-util.1`。
 *   **維護者 / 架構師**

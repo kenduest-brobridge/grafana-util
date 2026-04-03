@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>👤 新使用者角色導讀 · grafana-util docs</title>
+  <title>👤 新手快速入門 · grafana-util docs</title>
   <style>:root {
   color-scheme: light dark;
   --bg: linear-gradient(180deg, #f7f3eb 0%, #fcfbf8 100%);
@@ -331,51 +331,51 @@ th {
     </div>
     <header class="hero">
       <div class="eyebrow">Handbook · 繁體中文</div>
-      <h1>👤 新使用者角色導讀</h1>
+      <h1>👤 新手快速入門</h1>
       <p>敘事式手冊頁面，適合照工作流閱讀，再跳到逐指令頁查精確命令面。</p>
-      <ol class="breadcrumbs"><li><a href="../../index.html">Home</a></li><li><a href="index.html">Handbook</a></li><li>繁體中文</li><li>👤 新使用者角色導讀</li></ol>
+      <ol class="breadcrumbs"><li><a href="../../index.html">Home</a></li><li><a href="index.html">Handbook</a></li><li>繁體中文</li><li>👤 新手快速入門</li></ol>
     </header>
     <div class="layout">
       <article class="panel article">
-        <h1 id="新使用者角色導讀">👤 新使用者角色導讀</h1>
-<p>這一頁給第一次接觸 <code>grafana-util</code> 的讀者。目標不是一次學完所有指令，而是先把連線、profile 與唯讀檢查跑順。</p>
+        <h1 id="新手快速入門">👤 新手快速入門</h1>
+<p>這一頁為第一次接觸 <code>grafana-util</code> 的讀者所準備。目標不是一次學完所有指令，而是先把連線、設定檔 (Profile) 與唯讀檢查流程跑順。</p>
 <h2 id="適用對象">適用對象</h2>
-<ul><li>第一次使用這組 CLI 的工程師或維運人員</li><li>需要先確認連線、版本與 profile 是否正常的人</li><li>還不需要做匯入、套用或跨組織作業的人</li></ul>
+<ul><li>第一次使用此 CLI 工具的工程師或維運人員。</li><li>需要先確認連線、版本與 Profile 是否正常的人員。</li><li>還不需要執行匯入、套用或跨組織作業的使用者。</li></ul>
 <h2 id="主要目標">主要目標</h2>
-<ul><li>先建立一個可重複使用的 profile</li><li>先學會看 <code>status live</code> 與 <code>overview live</code></li><li>先分清楚何時用 profile、何時才退回 direct Basic auth</li><li>先知道 token 只適合範圍很明確的單一 org 自動化</li></ul>
-<h2 id="第一天最常做的事">第一天最常做的事</h2>
-<ul><li>確認 binary 已經在 <code>PATH</code> 上</li><li>為本機 lab 或 dev Grafana 建一個 repo-local profile</li><li>跑一次安全的 live read，分清楚 <code>status live</code> 和 <code>overview live</code></li><li>知道下一步該往 dashboards、alerts、access 還是 automation 哪條路走</li></ul>
-<h2 id="建議的驗證與秘密處理">建議的驗證與秘密處理</h2>
-<p>1. 先用 <code>--profile</code>。這是日常操作最穩定的路徑，也最不容易把秘密重複貼在命令列上。 2. 沒有 profile 時，才用 direct Basic auth 做 bootstrap 或臨時檢查，並優先搭配 <code>--prompt-password</code>。 3. 只有在您很清楚 token scope 只需要涵蓋單一 org 或狹窄權限時，才改用 token。 4. 密碼與 token 盡量放在 <code>password_env</code>、<code>token_env</code> 或 secret store，不要寫進明文命令列。</p>
-<h2 id="建議先跑的-5-個指令">建議先跑的 5 個指令</h2>
+<ul><li>建立可重複使用的連線設定檔 (Profile)。</li><li>熟悉 <code>status live</code> 與 <code>overview live</code> 的使用。</li><li>釐清何時使用 Profile，以及何時需使用直接基本驗證 (Direct Basic Auth)。</li><li>瞭解 API Token 適用於範圍明確的單一組織自動化作業。</li></ul>
+<h2 id="典型新手任務">典型新手任務</h2>
+<ul><li>確認執行檔已加入 <code>PATH</code> 環境變數。</li><li>為本地實驗環境或開發用 Grafana 建立 Profile。</li><li>執行一次安全的即時讀取 (Live Read)，並區分 <code>status live</code> 與 <code>overview live</code> 的差異。</li><li>瞭解後續進行儀表板、告警或存取權限管理時應參考的說明文件。</li></ul>
+<h2 id="身分驗證與機密資料管理建議">身分驗證與機密資料管理建議</h2>
+<p>1. <strong>優先使用 <code>--profile</code></strong>：這是日常操作最穩定的路徑，也能避免在命令列中重複貼上機密資訊。 2. <strong>手動引導時使用 Basic Auth</strong>：若尚未建立 Profile，可使用直接基本驗證進行初始化或臨時檢查，並建議搭配 <code>--prompt-password</code> 手動輸入密碼。 3. <strong>特定自動化場景使用 Token</strong>：僅在您清楚 Token 權限僅需涵蓋單一組織或特定範圍時使用。 4. <strong>安全儲存機密資訊</strong>：建議將密碼與 Token 存放於 <code>password_env</code>、<code>token_env</code> 或系統秘密儲存庫 (Secret Store)，避免以明文形式出現在命令列中。</p>
+<h2 id="建議先執行的-5-個指令">建議先執行的 5 個指令</h2>
 <pre><code>grafana-util profile init --overwrite</code></pre>
 <pre><code>grafana-util profile add dev --url http://127.0.0.1:3000 --basic-user admin --prompt-password</code></pre>
 <pre><code>grafana-util profile list</code></pre>
 <pre><code>grafana-util profile show --profile dev --output-format yaml</code></pre>
 <pre><code>grafana-util status live --profile dev --output yaml</code></pre>
-<p>如果您暫時還沒有 profile，才改用這個 bootstrap 入口：</p>
+<p>如果您暫時還沒有 Profile，可改用此指令作為測試入口：</p>
 <pre><code>grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output yaml</code></pre>
-<p>如果您手上已經有一個範圍很明確的 token，也可以做一次等價的唯讀檢查：</p>
+<p>如果您手邊已有範圍明確的 Token，也可以執行同效的唯讀檢查：</p>
 <pre><code>grafana-util overview live --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --output json</code></pre>
-<h2 id="什麼叫做已經上手">什麼叫做已經上手</h2>
-<p>當您符合下面幾點時，就可以離開新手路徑：</p>
-<ul><li><code>grafana-util --version</code> 在平常使用的 shell 可以正常執行</li><li><code>profile show --profile dev</code> 解析出來的欄位是您預期的</li><li><code>status live --profile dev</code> 可以穩定回傳可讀輸出</li><li>您已經知道下一步要進 dashboards、alerts、access，還是 CI / automation</li></ul>
-<h2 id="接下來先讀哪些章節">接下來先讀哪些章節</h2>
+<h2 id="學習進度檢核">學習進度檢核</h2>
+<p>當您符合以下幾點時，即可進階到後續章節：</p>
+<ul><li>可在常用的終端機環境中正常執行 <code>grafana-util --version</code>。</li><li><code>profile show --profile dev</code> 解析出的欄位符合預期。</li><li><code>status live --profile dev</code> 能穩定回傳可讀的結果。</li><li>已清楚後續要進行儀表板 (Dashboards)、告警 (Alerts) 或存取權限 (Access) 管理的操作流程。</li></ul>
+<h2 id="後續閱讀建議">後續閱讀建議</h2>
 <ul><li><a href="getting-started.html">開始使用</a></li><li><a href="reference.html">技術參考手冊</a></li><li><a href="troubleshooting.html">疑難排解與名詞解釋</a></li></ul>
-<h2 id="建議同時開著哪些逐指令頁">建議同時開著哪些逐指令頁</h2>
-<ul><li><a href="../../commands/zh-TW/profile.html">profile</a></li><li><a href="../../commands/zh-TW/status.html">status</a></li><li><a href="../../commands/zh-TW/overview.html">overview</a></li><li><a href="../../commands/zh-TW/index.html">逐指令總索引</a></li></ul>
+<h2 id="推薦搭配參考的指令頁面">推薦搭配參考的指令頁面</h2>
+<ul><li><a href="../../commands/zh-TW/profile.html">profile</a></li><li><a href="../../commands/zh-TW/status.html">status</a></li><li><a href="../../commands/zh-TW/overview.html">overview</a></li><li><a href="../../commands/zh-TW/index.html">指令詳細總索引</a></li></ul>
 <h2 id="常見錯誤與限制">常見錯誤與限制</h2>
-<ul><li>不要一開始就把 <code>--output-format</code> 和 <code>--output</code> 混著用；這兩個旗標是不同層級的輸出控制。</li><li>不要把明文密碼直接寫進 <code>grafana-util.yaml</code>，除非您只是在做一次性的 lab 或 demo。</li><li>不要期待窄權限 token 能做所有事，尤其是跨 org 盤點或管理類操作。</li><li>不要先碰匯入或套用流程；先把 profile、status、overview 的讀取路徑跑通。</li></ul>
-<h2 id="什麼時候切到更深的文件">什麼時候切到更深的文件</h2>
-<ul><li>需要理解整個工作流故事時，切到 handbook 章節</li><li>已經知道要跑哪個流程、只差精確旗標時，切到逐指令頁</li><li>語法沒錯但 scope、auth 或輸出結果不符合預期時，切到疑難排解</li></ul>
+<ul><li><strong>旗標誤用</strong>：請勿混用 <code>--output-format</code> 與 <code>--output</code>，這兩個旗標位於不同的輸出控制層級。</li><li><strong>設定檔安全性</strong>：請勿在 <code>grafana-util.yaml</code> 中寫入明文密碼，除非僅用於一次性的實驗或展示。</li><li><strong>Token 權限限制</strong>：窄權限 Token 無法執行所有操作，特別是跨組織盤點或管理類任務。</li><li><strong>循序漸進</strong>：在熟悉 Profile、Status 與 Overview 的讀取流程前，建議先不要執行匯入或套用變更的作業。</li></ul>
+<h2 id="何時切換至深度文件">何時切換至深度文件</h2>
+<ul><li><strong>流程理解</strong>：需要理解完整操作脈絡時，請參閱維運指南 (Handbook) 章節。</li><li><strong>精確查閱</strong>：已知操作流程僅需確認特定旗標時，請參閱指令詳細說明頁。</li><li><strong>故障排除</strong>：語法正確但結果不符預期時，請參閱疑難排解章節。</li></ul>
 <h2 id="下一步">下一步</h2>
-<ul><li><a href="index.html">回到手冊首頁</a></li><li><a href="getting-started.html">先看開始使用</a></li><li><a href="reference.html">再看技術參考手冊</a></li><li><a href="../../commands/zh-TW/index.html">需要精確旗標時開啟逐指令總索引</a></li></ul>
+<ul><li><a href="index.html">回到手冊首頁</a></li><li><a href="getting-started.html">開始使用</a></li><li><a href="reference.html">技術參考手冊</a></li><li><a href="../../commands/zh-TW/index.html">查看指令詳細總索引</a></li></ul>
         <nav class="footer-nav"><a class="link-card" href="getting-started.html"><span>Previous</span>🚀 開始使用 (Getting Started)</a><a class="link-card" href="role-sre-ops.html"><span>Next</span>🛠️ SRE / 維運角色導讀</a></nav>
       </article>
       <aside class="panel sidebar">
         <section>
           <h2>On This Page</h2>
-          <ul><li><a class="link-card" href="#適用對象">適用對象</a></li><li><a class="link-card" href="#主要目標">主要目標</a></li><li><a class="link-card" href="#第一天最常做的事">第一天最常做的事</a></li><li><a class="link-card" href="#建議的驗證與秘密處理">建議的驗證與秘密處理</a></li><li><a class="link-card" href="#建議先跑的-5-個指令">建議先跑的 5 個指令</a></li><li><a class="link-card" href="#什麼叫做已經上手">什麼叫做已經上手</a></li><li><a class="link-card" href="#接下來先讀哪些章節">接下來先讀哪些章節</a></li><li><a class="link-card" href="#建議同時開著哪些逐指令頁">建議同時開著哪些逐指令頁</a></li><li><a class="link-card" href="#常見錯誤與限制">常見錯誤與限制</a></li><li><a class="link-card" href="#什麼時候切到更深的文件">什麼時候切到更深的文件</a></li><li><a class="link-card" href="#下一步">下一步</a></li></ul>
+          <ul><li><a class="link-card" href="#適用對象">適用對象</a></li><li><a class="link-card" href="#主要目標">主要目標</a></li><li><a class="link-card" href="#典型新手任務">典型新手任務</a></li><li><a class="link-card" href="#身分驗證與機密資料管理建議">身分驗證與機密資料管理建議</a></li><li><a class="link-card" href="#建議先執行的-5-個指令">建議先執行的 5 個指令</a></li><li><a class="link-card" href="#學習進度檢核">學習進度檢核</a></li><li><a class="link-card" href="#後續閱讀建議">後續閱讀建議</a></li><li><a class="link-card" href="#推薦搭配參考的指令頁面">推薦搭配參考的指令頁面</a></li><li><a class="link-card" href="#常見錯誤與限制">常見錯誤與限制</a></li><li><a class="link-card" href="#何時切換至深度文件">何時切換至深度文件</a></li><li><a class="link-card" href="#下一步">下一步</a></li></ul>
         </section>
         <section>
           <h2>Related</h2>

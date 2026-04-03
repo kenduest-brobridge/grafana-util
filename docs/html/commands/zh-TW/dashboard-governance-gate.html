@@ -343,7 +343,7 @@ th {
 <h2 id="何時使用">何時使用</h2>
 <p>當您已經有 <code>governance-json</code> 與 query-report 成品，想在推進之前先得到政策通過或失敗結果時，使用這個指令。</p>
 <h2 id="重點旗標">重點旗標</h2>
-<ul><li><code>--policy-source</code>：選擇 <code>file</code> 或 <code>builtin</code>。</li><li><code>--policy</code>：使用檔案型政策輸入時的政策檔路徑。</li><li><code>--builtin-policy</code>：使用內建政策輸入時的名稱。</li><li><code>--governance</code>：儀表板 inspect governance JSON 路徑。</li><li><code>--queries</code>：儀表板 inspect query-report JSON 路徑。</li><li><code>--output-format</code>：輸出文字或 JSON。</li><li><code>--json-output</code>：可選擇輸出正規化後的結果 JSON。</li><li><code>--interactive</code>：在互動式終端機瀏覽器中檢視發現項目。</li></ul>
+<ul><li><code>--policy-source</code>：選擇 <code>file</code> 或 <code>builtin</code>。</li><li><code>--policy</code>：使用檔案型政策輸入時的政策檔路徑。</li><li><code>--builtin-policy</code>：使用內建政策輸入時的名稱。</li><li><code>--governance</code>：儀表板 inspect governance JSON 路徑。</li><li><code>--queries</code>：儀表板 inspect query-report JSON 路徑。</li><li><code>--output-format</code>：輸出文字或 JSON。</li><li><code>--json-output</code>：可選擇輸出正規化後的結果 JSON。</li><li><code>--interactive</code>：在互動式終端機瀏覽器中檢視檢查結果。</li></ul>
 <h2 id="範例">範例</h2>
 <pre><code>grafana-util dashboard governance-gate --policy-source file --policy ./policy.yaml --governance ./governance.json --queries ./queries.json</code></pre>
 <pre><code>grafana-util dashboard governance-gate --policy-source builtin --builtin-policy default --governance ./governance.json --queries ./queries.json --output-format json --json-output ./governance-check.json</code></pre>

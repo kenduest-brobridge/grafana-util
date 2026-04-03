@@ -1,9 +1,9 @@
 # grafana-util
 ### 專為 Grafana 維運與管理設計的 Rust CLI
 
-[![CI](https://img.shields.io/github/actions/workflow/status/kendlee/grafana-utils/ci.yml?branch=main)](https://github.com/kendlee/grafana-utils/actions)
-[![License](https://img.shields.io/github/license/kendlee/grafana-utils)](LICENSE)
-[![Release](https://img.shields.io/github/v/release/kendlee/grafana-utils)](https://github.com/kendlee/grafana-utils/releases)
+[![CI](https://img.shields.io/github/actions/workflow/status/kenduest-brobridge/grafana-utils/ci.yml?branch=main)](https://github.com/kenduest-brobridge/grafana-utils/actions)
+[![License](https://img.shields.io/github/license/kenduest-brobridge/grafana-utils)](LICENSE)
+[![Version](https://img.shields.io/github/v/tag/kenduest-brobridge/grafana-utils)](https://github.com/kenduest-brobridge/grafana-utils/tags)
 
 [English](./README.md) | 繁體中文
 
@@ -20,7 +20,7 @@
 | **多組織掃描** | 需手動切換組織 | ✅ 一個指令自動掃描所有組織 |
 | **依賴性審查** | 能力有限 | ✅ 匯入前檢查失效的資料來源相依性 |
 | **告警變更流程** | 直接修改 | ✅ 可審查的 **計畫 / 套用 (Plan/Apply)** 流程 |
-| **機密資訊處理** | 容易處理失當 | ✅ **遮蔽式恢復 (Masked Recovery)** 與 profile secret 模式 |
+| **機密資料管理** | 容易處理失當 | ✅ **遮蔽式恢復 (Masked Recovery)** 與 profile secret 模式 |
 | **審查介面** | 只有原始 JSON | ✅ 互動式 TUI 與結構化表格/報表輸出 |
 
 ---
@@ -98,7 +98,7 @@ grafana-util overview live --output interactive
 
 ## 維運導引手冊 (Operator Handbook)
 
-手冊與逐指令文件各自扮演不同角色：手冊負責說明操作流程與維運脈絡，逐指令頁面則緊貼目前 CLI 介面。
+手冊與指令詳細手冊各自扮演不同角色：手冊負責說明操作流程與維運脈絡，指令說明頁面則緊貼目前 CLI 介面。
 
 如果直接讀 Markdown 不方便，請先產生本機 HTML 文件站，再開啟入口頁：
 
@@ -107,7 +107,7 @@ make html
 open ./docs/html/index.html
 ```
 
-在 Linux 上請把 `open` 換成 `xdg-open`。這批 checked-in HTML 檔案主要是給 repo 本機閱讀；GitHub 本身不會把它當成完整靜態文件站來瀏覽。
+在 Linux 上請把 `open` 換成 `xdg-open`。這批已簽入的 HTML 檔案主要是給 repo 本機閱讀；GitHub 本身不會把它當成完整靜態文件站來瀏覽。
 
 如果要直接用瀏覽器看公開版，請使用這個 repo 的 GitHub Pages 站點：
 
@@ -117,7 +117,7 @@ open ./docs/html/index.html
 *   **[開始使用](./docs/user-guide/zh-TW/getting-started.md)**：安裝、profile 設定與第一批常用命令。
 *   **[系統架構與設計原則](./docs/user-guide/zh-TW/architecture.md)**：維運模型、lane 設計與邊界。
 *   **[實戰範例](./docs/user-guide/zh-TW/recipes.md)**：常見維運任務與操作流程範例。
-*   **[逐指令說明](./docs/commands/zh-TW/index.md)**：每個 command 與 subcommand 各有獨立頁面，可直接查目前 CLI 指令面。
+*   **[指令詳細說明](./docs/commands/zh-TW/index.md)**：每個 command 與 subcommand 各有獨立頁面，可直接查目前 CLI 指令面。
 *   **[HTML 文件入口](./docs/html/index.html)**：執行 `make html` 後可本機瀏覽的 handbook 與 command reference 入口。
 *   **[Man Page](./docs/man/grafana-util.1)**：頂層 `man` 格式參考；macOS 可用 `man ./docs/man/grafana-util.1`，GNU/Linux 可用 `man -l docs/man/grafana-util.1`。
 *   **[疑難排解](./docs/user-guide/zh-TW/troubleshooting.md)**：診斷、限制與恢復建議。
@@ -131,11 +131,11 @@ open ./docs/html/index.html
 如果您不確定該先看哪一份文件，請直接從這裡判斷：
 
 *   **維運手冊**：[docs/user-guide/zh-TW/](./docs/user-guide/zh-TW/index.md) 適合看完整操作流程、觀念與閱讀順序。
-*   **逐指令參考**：[docs/commands/zh-TW/](./docs/commands/zh-TW/index.md) 適合逐頁查 command 與 subcommand。
+*   **指令詳細參考**：[docs/commands/zh-TW/](./docs/commands/zh-TW/index.md) 適合逐頁查 command 與 subcommand。
 *   **可瀏覽 HTML 文件站**：本機可看 [docs/html/index.html](./docs/html/index.html)，或直接使用公開站點 <https://kenduest-brobridge.github.io/grafana-utils/>。
 *   **終端機 manpage**：[docs/man/grafana-util.1](./docs/man/grafana-util.1) 適合 `man` 風格查詢。
 *   **維護者入口**：[docs/DEVELOPER.md](./docs/DEVELOPER.md) 適合看程式架構、文件分層、build/test 路線與 maintainer 引導。
-*   **維護者快速上手**：[docs/internal/maintainer-quickstart.md](./docs/internal/maintainer-quickstart.md) 提供第一次進 repo 的最短閱讀路徑、source of truth 地圖、generated 檔邊界與安全驗證命令。
+*   **維護者快速上手**：[docs/internal/maintainer-quickstart.md](./docs/internal/maintainer-quickstart.md) 提供第一次進 repo 的最短閱讀路徑、事實來源地圖、產出的檔案邊界與安全驗證命令。
 *   **generated docs 設計說明**：[docs/internal/generated-docs-architecture.md](./docs/internal/generated-docs-architecture.md) 說明 Markdown 轉 HTML/manpage 的整體設計。
 *   **generated docs 操作手冊**：[docs/internal/generated-docs-playbook.md](./docs/internal/generated-docs-playbook.md) 提供常見維護工作的步驟。
 *   **Secret storage 架構說明**：[docs/internal/profile-secret-storage-architecture.md](./docs/internal/profile-secret-storage-architecture.md) 說明 profile secret 模式、macOS/Linux 支援、限制與維護規則。

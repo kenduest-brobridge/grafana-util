@@ -14,7 +14,7 @@
 - `--queries`：儀表板 inspect query-report JSON 路徑。
 - `--output-format`：輸出文字或 JSON。
 - `--json-output`：可選擇輸出正規化後的結果 JSON。
-- `--interactive`：在互動式終端機瀏覽器中檢視發現項目。
+- `--interactive`：在互動式終端機瀏覽器中檢視檢查結果。
 
 ## 範例
 ```bash

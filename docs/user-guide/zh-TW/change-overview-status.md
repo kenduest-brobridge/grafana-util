@@ -2,15 +2,15 @@
 
 本章聚焦在治理關卡，也就是在執行變更前後的最後一層驗證。
 
-## 🔗 逐指令頁面
+## 🔗 指令詳細頁面
 
-如果您現在想看的是逐指令說明，而不是工作流章節，請直接使用逐指令頁面：
+如果您現在想看的是指令詳細說明，而不是工作流章節，請直接使用指令詳細頁面：
 
 - [change](../../commands/zh-TW/change.md)
 - [status](../../commands/zh-TW/status.md)
 - [overview](../../commands/zh-TW/overview.md)
 - [snapshot](../../commands/zh-TW/snapshot.md)
-- [逐指令總索引](../../commands/zh-TW/index.md)
+- [指令詳細總索引](../../commands/zh-TW/index.md)
 
 ---
 
@@ -99,7 +99,7 @@ grafana-util overview live --url http://localhost:3000 --basic-user admin --basi
 
 TUI 使用以下視覺語言：
 - **🟢 綠色**：組件健康且完全可達。
-- **🟡 黃色**：組件可用，但有警告，例如缺少元數據。
+- **🟡 黃色**：組件可用，但有警告，例如缺少中繼資料。
 - **🔴 紅色**：組件受阻，在進行任何部署前都需要處理。
 
 如果要看 staged 產物的人工審查畫面，用不帶 `live` 的 `overview`；如果要機器可讀的 live 驗證關卡，改用 `status live`。

@@ -1,5 +1,14 @@
 # Command Docs
 
+## Language
+
+- English command reference: [current page](./index.md)
+- Traditional Chinese command reference: [繁體中文逐指令說明](../zh-TW/index.md)
+- English handbook: [Operator Handbook](../../user-guide/en/index.md)
+- Traditional Chinese handbook: [繁體中文手冊](../../user-guide/zh-TW/index.md)
+
+---
+
 These pages track the current Rust CLI help for the command tree exposed by `grafana-util`.
 
 Use these pages when you want one stable page per command or subcommand instead of a handbook chapter. The handbook explains workflow and intent; the command pages explain the concrete CLI surface.
@@ -17,7 +26,6 @@ The checked-in `docs/html/commands/en/*.html` files are generated from the same 
 - [dashboard export](./dashboard-export.md)
 - [dashboard raw-to-prompt](./dashboard-raw-to-prompt.md)
 - [dashboard import](./dashboard-import.md)
-- [dashboard raw-to-prompt](./dashboard-raw-to-prompt.md)
 - [dashboard patch-file](./dashboard-patch-file.md)
 - [dashboard review](./dashboard-review.md)
 - [dashboard publish](./dashboard-publish.md)

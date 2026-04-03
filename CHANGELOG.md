@@ -14,6 +14,33 @@ Format rule going forward:
 - keep older tagged releases below
 - use commit/tag history as the source of truth
 
+## [0.7.2] - 2026-04-03
+
+### Highlights
+
+- The documentation entry flow now starts more cleanly by language, so English
+  and Traditional Chinese handbook/reference paths no longer feel mixed
+  together at the front door.
+- The Traditional Chinese operator docs were refined toward more natural
+  Taiwan-oriented wording for handbook, onboarding, and command-reference use.
+- README badges now point at the active `kenduest-brobridge/grafana-utils`
+  repository and use a tag-based version badge that matches the published tags.
+
+### Changed
+
+- Handbook and command-reference index pages now present language switching
+  before deeper reading paths.
+- The generated HTML landing page now separates English and zh-TW entrypoints
+  before handbook, command-reference, and role-specific navigation.
+- Several zh-TW handbook pages now use more natural operator-facing wording for
+  onboarding, governance, and status-review concepts.
+
+### Fixed
+
+- README badges no longer point at the old `kendlee/grafana-utils` repository.
+- The English command reference index no longer lists
+  `dashboard raw-to-prompt` twice.
+
 ## [0.7.1] - 2026-04-03
 
 ### Highlights
