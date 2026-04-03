@@ -23,12 +23,13 @@ use crate::alert::{
 use crate::common::Result;
 use crate::dashboard::{
     run_dashboard_cli, DashboardCliArgs, DashboardCommand, DiffArgs, ExportArgs, ImportArgs,
-    InspectExportArgs, InspectLiveArgs, ListArgs, ListDataSourcesArgs,
+    InspectExportArgs, InspectLiveArgs, InspectVarsArgs, ListArgs, ListDataSourcesArgs,
+    ScreenshotArgs,
 };
 use crate::datasource::{run_datasource_cli, DatasourceGroupCommand};
 use crate::sync::{run_sync_cli, SyncGroupCommand};
 
-const UNIFIED_HELP_TEXT: &str = "Examples:\n\n  Export dashboards:\n    grafana-util dashboard export --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --export-dir ./dashboards --overwrite\n\n  Export alerting resources through the unified binary:\n    grafana-util alert export --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output-dir ./alerts --overwrite\n\n  List org users through the unified binary:\n    grafana-util access user list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json\n\n  Build a local staged sync preflight document:\n    grafana-util sync preflight --desired-file ./desired.json --availability-file ./availability.json\n\nCompatibility shim remains available:\n  grafana-access-utils ...";
+const UNIFIED_HELP_TEXT: &str = "Examples:\n\n  Export dashboards:\n    grafana-util dashboard export --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --export-dir ./dashboards --overwrite\n\n  Capture a dashboard screenshot from browser-like state:\n    grafana-util dashboard screenshot --dashboard-url 'https://grafana.example.com/d/cpu-main/cpu-overview?var-cluster=prod-a' --token \"$GRAFANA_API_TOKEN\" --output ./cpu-main.png --full-page\n\n  Inspect dashboard variables before capture:\n    grafana-util dashboard inspect-vars --dashboard-url 'https://grafana.example.com/d/cpu-main/cpu-overview?var-cluster=prod-a' --token \"$GRAFANA_API_TOKEN\"\n\n  Export alerting resources through the unified binary:\n    grafana-util alert export --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output-dir ./alerts --overwrite\n\n  List org users through the unified binary:\n    grafana-util access user list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json\n\n  Build a local staged sync preflight document:\n    grafana-util sync preflight --desired-file ./desired.json --availability-file ./availability.json\n\nCompatibility shim remains available:\n  grafana-access-utils ...";
 
 #[derive(Debug, Clone, Subcommand)]
 pub enum DashboardGroupCommand {
@@ -49,6 +50,10 @@ pub enum DashboardGroupCommand {
     InspectExport(InspectExportArgs),
     #[command(about = "Analyze live Grafana dashboards without writing a persistent export.")]
     InspectLive(InspectLiveArgs),
+    #[command(about = "List dashboard templating variables from live Grafana.")]
+    InspectVars(InspectVarsArgs),
+    #[command(about = "Open one dashboard in a headless browser and capture image or PDF output.")]
+    Screenshot(ScreenshotArgs),
 }
 
 #[derive(Debug, Clone, Subcommand)]
@@ -123,6 +128,12 @@ fn wrap_dashboard_group(command: DashboardGroupCommand) -> DashboardCliArgs {
         }
         DashboardGroupCommand::InspectLive(inner) => {
             wrap_dashboard(DashboardCommand::InspectLive(inner))
+        }
+        DashboardGroupCommand::InspectVars(inner) => {
+            wrap_dashboard(DashboardCommand::InspectVars(inner))
+        }
+        DashboardGroupCommand::Screenshot(inner) => {
+            wrap_dashboard(DashboardCommand::Screenshot(inner))
         }
     }
 }
