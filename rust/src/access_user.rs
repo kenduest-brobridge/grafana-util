@@ -68,6 +68,9 @@ fn normalize_access_identity(value: &str) -> String {
     value.trim().to_ascii_lowercase()
 }
 
+type DiffPayload = (String, Map<String, Value>);
+type DiffPayloadMap = BTreeMap<String, DiffPayload>;
+
 fn parse_access_identity_list(value: &Value) -> Vec<String> {
     value
         .as_array()
@@ -824,13 +827,11 @@ fn normalize_user_for_diff(record: &Map<String, Value>, include_teams: bool) -> 
     payload
 }
 
-type UserDiffMap = BTreeMap<String, (String, Map<String, Value>)>;
-
 fn build_user_diff_map(
     records: &[Map<String, Value>],
     source: &str,
     include_teams: bool,
-) -> Result<UserDiffMap> {
+) -> Result<DiffPayloadMap> {
     let mut indexed = BTreeMap::new();
     for record in records {
         let login = string_field(record, "login", "");
