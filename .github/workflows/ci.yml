@@ -82,7 +82,7 @@ jobs:
       contents: write
     steps:
       - name: Download Rust release artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           pattern: rust-*
           path: release-assets
@@ -90,9 +90,10 @@ jobs:
       - name: Publish GitHub release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
           set -euo pipefail
-          gh release view "$RELEASE_TAG" >/dev/null 2>&1 || \
-            gh release create "$RELEASE_TAG" --title "$RELEASE_TAG" --notes ""
-          gh release upload "$RELEASE_TAG" release-assets/*.tar.gz --clobber
+          gh release view "$RELEASE_TAG" --repo "$GH_REPO" >/dev/null 2>&1 || \
+            gh release create "$RELEASE_TAG" --repo "$GH_REPO" --title "$RELEASE_TAG" --notes ""
+          gh release upload "$RELEASE_TAG" --repo "$GH_REPO" release-assets/*.tar.gz --clobber
