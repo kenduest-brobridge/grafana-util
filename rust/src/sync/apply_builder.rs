@@ -1,11 +1,10 @@
+use super::json::{require_json_array_field, require_json_object};
 use super::workbench::{SYNC_APPLY_INTENT_KIND, SYNC_APPLY_INTENT_SCHEMA_VERSION, SYNC_PLAN_KIND};
 use crate::common::{message, Result};
 use serde_json::Value;
 
 pub fn build_sync_apply_intent_document(plan_document: &Value, approve: bool) -> Result<Value> {
-    let plan = plan_document
-        .as_object()
-        .ok_or_else(|| message("Sync plan document must be a JSON object."))?;
+    let plan = require_json_object(plan_document, "Sync plan document")?;
     if plan.get("kind").and_then(Value::as_str) != Some(SYNC_PLAN_KIND) {
         return Err(message("Sync plan document kind is not supported."));
     }
@@ -27,11 +26,7 @@ pub fn build_sync_apply_intent_document(plan_document: &Value, approve: bool) ->
             "Refusing local sync apply intent without explicit approval.",
         ));
     }
-    let operations = plan
-        .get("operations")
-        .and_then(Value::as_array)
-        .cloned()
-        .ok_or_else(|| message("Sync plan document is missing operations."))?;
+    let operations = require_json_array_field(plan, "operations", "Sync plan document")?.clone();
     let executable_operations = operations
         .into_iter()
         .filter(|item| {

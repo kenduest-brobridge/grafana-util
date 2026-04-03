@@ -10,6 +10,7 @@ use serde_json::{Map, Value};
 
 use crate::common::{message, Result};
 
+use super::json::{require_json_array_field, require_json_object, require_json_object_field};
 use super::workbench::{normalize_resource_specs, SyncResourceSpec};
 
 pub const SYNC_LOCK_KIND: &str = "grafana-utils-sync-lock";
@@ -83,22 +84,18 @@ fn build_lock_specs_from_managed_specs(
 }
 
 fn parse_lock_resources(lock_document: &Value) -> Result<&Vec<Value>> {
-    if lock_document.get("kind").and_then(Value::as_str) != Some(SYNC_LOCK_KIND) {
+    let lock_object = require_json_object(lock_document, "Sync lock document")?;
+    if lock_object.get("kind").and_then(Value::as_str) != Some(SYNC_LOCK_KIND) {
         return Err(message("Sync lock document kind is not supported."));
     }
-    lock_document
-        .get("resources")
-        .and_then(Value::as_array)
-        .ok_or_else(|| message("Sync lock document is missing resources."))
+    require_json_array_field(lock_object, "resources", "Sync lock document")
 }
 
 fn build_lock_specs_from_lock_document(lock_document: &Value) -> Result<Vec<ManagedLockSpec>> {
     let resources = parse_lock_resources(lock_document)?;
     let mut specs = Vec::with_capacity(resources.len());
     for resource in resources {
-        let object = resource
-            .as_object()
-            .ok_or_else(|| message("Sync lock resource must be a JSON object."))?;
+        let object = require_json_object(resource, "Sync lock resource")?;
         let kind = object
             .get("kind")
             .and_then(Value::as_str)
@@ -260,9 +257,7 @@ pub(crate) fn build_sync_audit_document(
     let mut baseline_index = BTreeMap::new();
     if let Some(resources) = baseline_resources {
         for resource in resources {
-            let object = resource
-                .as_object()
-                .ok_or_else(|| message("Sync lock resource must be a JSON object."))?;
+            let object = require_json_object(resource, "Sync lock resource")?;
             let kind = object
                 .get("kind")
                 .and_then(Value::as_str)
@@ -285,9 +280,7 @@ pub(crate) fn build_sync_audit_document(
     let mut current_missing_count = 0i64;
 
     for resource in current_resources {
-        let object = resource
-            .as_object()
-            .ok_or_else(|| message("Sync lock resource must be a JSON object."))?;
+        let object = require_json_object(resource, "Sync lock resource")?;
         let kind = object
             .get("kind")
             .and_then(Value::as_str)
@@ -375,17 +368,12 @@ pub(crate) fn build_sync_audit_document(
 }
 
 pub(crate) fn render_sync_audit_text(document: &Value) -> Result<Vec<String>> {
+    let document = require_json_object(document, "Sync audit document")?;
     if document.get("kind").and_then(Value::as_str) != Some(SYNC_AUDIT_KIND) {
         return Err(message("Sync audit document kind is not supported."));
     }
-    let summary = document
-        .get("summary")
-        .and_then(Value::as_object)
-        .ok_or_else(|| message("Sync audit document is missing summary."))?;
-    let drifts = document
-        .get("drifts")
-        .and_then(Value::as_array)
-        .ok_or_else(|| message("Sync audit document is missing drifts."))?;
+    let summary = require_json_object_field(document, "summary", "Sync audit document")?;
+    let drifts = require_json_array_field(document, "drifts", "Sync audit document")?;
     let mut lines = vec![
         "Sync audit".to_string(),
         format!(
@@ -428,9 +416,7 @@ pub(crate) fn render_sync_audit_text(document: &Value) -> Result<Vec<String>> {
         ),
     ];
     for drift in drifts {
-        let object = drift
-            .as_object()
-            .ok_or_else(|| message("Sync audit drift row must be a JSON object."))?;
+        let object = require_json_object(drift, "Sync audit drift row")?;
         let fields = object
             .get("driftedFields")
             .and_then(Value::as_array)

@@ -65,7 +65,7 @@ Default URLs:
 
 ### Command Domains
 
-- Dashboard: `dashboard export`, `dashboard list`, `dashboard import`, `dashboard diff`, `dashboard inspect-export`, `dashboard inspect-live`, `dashboard inspect-vars`, `dashboard screenshot`
+- Dashboard: `dashboard export`, `dashboard list`, `dashboard import`, `dashboard delete`, `dashboard diff`, `dashboard inspect-export`, `dashboard inspect-live`, `dashboard inspect-vars`, `dashboard screenshot`
 - Alert: `alert export`, `alert import`, `alert diff`, `alert list-rules`, `alert list-contact-points`, `alert list-mute-timings`, `alert list-templates`
 - Datasource: `datasource list`, `datasource export`, `datasource import`, `datasource diff`
 - Access: `access org list`, `access org add`, `access org modify`, `access org delete`, `access org export`, `access org import`, `access user list`, `access user add`, `access user modify`, `access user delete`, `access user export`, `access user import`, `access user diff`, `access team list`, `access team add`, `access team modify`, `access team delete`, `access team export`, `access team import`, `access team diff`, `access service-account list`, `access service-account add`, `access service-account export`, `access service-account import`, `access service-account diff`, `access service-account delete`, `access service-account token add`, `access service-account token delete`
@@ -263,6 +263,32 @@ How to read it:
 - `ACTION=update` means the dashboard already exists and would be changed.
 - `ACTION=create` means the dashboard is not present yet.
 - `DESTINATION` describes the live target state, not the local directory.
+
+### 3.4a `dashboard delete`
+
+Purpose: delete live dashboards by explicit UID or by one folder-path subtree.
+
+| Option | Purpose | Difference / scenario |
+| --- | --- | --- |
+| `--uid` | Delete one dashboard by stable identity | Best for automation |
+| `--path` | Delete dashboards under one folder-path subtree | Good for cleanup by hierarchy |
+| `--delete-folders` | Also delete matched folder resources | Only with `--path`; folders are removed after dashboards |
+| `--interactive` | Guided selector + preview + confirmation | Best for manual maintenance |
+| `--yes` | Confirm live delete | Required for non-interactive live deletes |
+| `--dry-run` | Preview only | Always recommended first |
+| `--table` | Dry-run table output | Human review |
+| `--json` | Dry-run JSON output | Automation |
+| `--output-format text\|table\|json` | Dry-run output mode | Unified selector |
+| `--org-id` | Target one explicit org | Safer than cross-org delete |
+
+Example command:
+```bash
+grafana-util dashboard delete --url http://localhost:3000 --basic-user admin --basic-password admin --path "Platform / Infra" --dry-run --table
+```
+
+Current note:
+- `--path` matches the resolved Grafana folder path tree and deletes dashboards recursively from that subtree.
+- Without `--delete-folders`, folder resources remain in Grafana even when all matched dashboards are removed.
 
 ### 3.5 `dashboard diff`
 
@@ -1523,6 +1549,7 @@ grafana-util dashboard inspect-export --import-dir ./dashboards/raw --report jso
 grafana-util dashboard export --url <URL> --basic-user <USER> --basic-password <PASS> --export-dir <DIR> [--overwrite] [--all-orgs]
 grafana-util dashboard list --url <URL> --basic-user <USER> --basic-password <PASS> [--table|--csv|--json]
 grafana-util dashboard import --url <URL> --basic-user <USER> --basic-password <PASS> --import-dir <DIR>/raw --replace-existing [--dry-run]
+grafana-util dashboard delete --url <URL> --basic-user <USER> --basic-password <PASS> [--org-id <ORG_ID>] (--uid <UID>|--path <FOLDER_PATH>) [--delete-folders] [--dry-run|--yes]
 grafana-util dashboard diff --url <URL> --basic-user <USER> --basic-password <PASS> --import-dir <DIR>/raw
 
 grafana-util alert export --url <URL> --basic-user <USER> --basic-password <PASS> --output-dir <DIR> [--overwrite]
@@ -1558,6 +1585,7 @@ grafana-util access service-account list --url <URL> --token <TOKEN> --table
 | --- | --- | --- |
 | `dashboard list` | `table/csv/json` | Replaces legacy output flags |
 | `dashboard import` | `text/table/json` | Dry-run focused |
+| `dashboard delete` | `text/table/json` | Dry-run focused |
 | `alert list-*` | `table/csv/json` | Shared across list commands |
 | `datasource list` | `table/csv/json` | Shared list pattern |
 | `datasource add` | `text/table/json` | Dry-run capable |
@@ -1575,6 +1603,7 @@ grafana-util access service-account list --url <URL> --token <TOKEN> --table
 | `dashboard list` | Yes | Yes |
 | `dashboard export` | Yes | Yes |
 | `dashboard import` | Yes | No |
+| `dashboard delete` | Yes | No |
 | `datasource list` | Yes | Yes |
 | `datasource export` | Yes | Yes |
 | `datasource import` | Yes | No |

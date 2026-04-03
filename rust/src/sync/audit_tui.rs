@@ -1,26 +1,42 @@
 //! Specialized interactive TUI for sync audit drift triage.
-#![cfg_attr(test, allow(dead_code))]
-use crossterm::event::{self, Event, KeyCode, KeyEventKind};
-use crossterm::execute;
-use crossterm::terminal::{
-    disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
-};
-use ratatui::backend::CrosstermBackend;
-use ratatui::layout::{Constraint, Direction, Layout};
-use ratatui::style::{Color, Modifier, Style};
-use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Wrap};
-use ratatui::Terminal;
-use serde_json::Value;
-use std::io::{self, Stdout};
-use std::time::Duration;
-
-use crate::common::{message, Result};
-use crate::interactive_browser::BrowserItem;
-
+#![cfg_attr(not(any(feature = "tui", test)), allow(dead_code))]
+#[cfg(any(feature = "tui", test))]
 use super::{
     sync_audit_drift_cmp, sync_audit_drift_details, sync_audit_drift_meta, sync_audit_drift_title,
 };
+#[cfg(any(feature = "tui", test))]
+use crate::common::message;
+#[cfg(not(feature = "tui"))]
+use crate::common::tui;
+use crate::common::Result;
+#[cfg(any(feature = "tui", test))]
+use crate::interactive_browser::BrowserItem;
+
+#[cfg(feature = "tui")]
+use crossterm::event::{self, Event, KeyCode, KeyEventKind};
+#[cfg(feature = "tui")]
+use crossterm::execute;
+#[cfg(feature = "tui")]
+use crossterm::terminal::{
+    disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
+};
+#[cfg(feature = "tui")]
+use ratatui::backend::CrosstermBackend;
+#[cfg(feature = "tui")]
+use ratatui::layout::{Constraint, Direction, Layout};
+#[cfg(feature = "tui")]
+use ratatui::style::{Color, Modifier, Style};
+#[cfg(feature = "tui")]
+use ratatui::text::{Line, Span};
+#[cfg(feature = "tui")]
+use ratatui::widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Wrap};
+#[cfg(feature = "tui")]
+use ratatui::Terminal;
+use serde_json::Value;
+#[cfg(feature = "tui")]
+use std::io::{self, Stdout};
+#[cfg(feature = "tui")]
+use std::time::Duration;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum AuditPane {
@@ -29,6 +45,7 @@ enum AuditPane {
     Detail,
 }
 
+#[cfg(any(feature = "tui", test))]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct AuditGroup {
     pub(crate) label: String,
@@ -37,10 +54,12 @@ pub(crate) struct AuditGroup {
     pub(crate) subtitle: String,
 }
 
+#[cfg(feature = "tui")]
 struct TerminalSession {
     terminal: Terminal<CrosstermBackend<Stdout>>,
 }
 
+#[cfg(feature = "tui")]
 impl TerminalSession {
     fn enter() -> Result<Self> {
         enable_raw_mode()?;
@@ -52,6 +71,7 @@ impl TerminalSession {
     }
 }
 
+#[cfg(feature = "tui")]
 impl Drop for TerminalSession {
     fn drop(&mut self) {
         let _ = disable_raw_mode();
@@ -60,6 +80,7 @@ impl Drop for TerminalSession {
     }
 }
 
+#[cfg(feature = "tui")]
 fn pane_title(label: &str, active: bool) -> String {
     if active {
         format!("{label} [active]")
@@ -68,6 +89,7 @@ fn pane_title(label: &str, active: bool) -> String {
     }
 }
 
+#[cfg(feature = "tui")]
 fn pane_block(label: &str, active: bool) -> Block<'static> {
     let mut block = Block::default()
         .borders(Borders::ALL)
@@ -78,6 +100,7 @@ fn pane_block(label: &str, active: bool) -> Block<'static> {
     block
 }
 
+#[cfg(feature = "tui")]
 fn triage_color(status: &str) -> Color {
     match status {
         "missing-live" => Color::Red,
@@ -88,6 +111,7 @@ fn triage_color(status: &str) -> Color {
     }
 }
 
+#[cfg(any(feature = "tui", test))]
 pub(crate) fn build_sync_audit_tui_groups(audit: &Value) -> Result<Vec<AuditGroup>> {
     let summary = audit
         .get("summary")
@@ -141,6 +165,7 @@ pub(crate) fn build_sync_audit_tui_groups(audit: &Value) -> Result<Vec<AuditGrou
     ])
 }
 
+#[cfg(any(feature = "tui", test))]
 pub(crate) fn build_sync_audit_tui_rows(audit: &Value, status: &str) -> Result<Vec<BrowserItem>> {
     let drifts = audit
         .get("drifts")
@@ -164,6 +189,7 @@ pub(crate) fn build_sync_audit_tui_rows(audit: &Value, status: &str) -> Result<V
         .collect())
 }
 
+#[cfg(feature = "tui")]
 pub(crate) fn run_sync_audit_interactive(audit: &Value) -> Result<()> {
     let summary = audit
         .get("summary")
@@ -445,4 +471,36 @@ pub(crate) fn run_sync_audit_interactive(audit: &Value) -> Result<()> {
             }
         }
     }
+}
+
+#[cfg(not(feature = "tui"))]
+pub(crate) fn run_sync_audit_interactive(_audit: &Value) -> Result<()> {
+    Err(tui(
+        "Sync audit interactive TUI requires the `tui` feature.",
+    ))
+}
+
+#[cfg(not(feature = "tui"))]
+#[test]
+fn run_sync_audit_interactive_returns_tui_error_when_feature_disabled() {
+    let audit = serde_json::json!({
+        "summary": {
+            "managedCount": 0,
+            "baselineCount": 0,
+            "currentPresentCount": 0,
+            "currentMissingCount": 0,
+            "driftCount": 0,
+            "inSyncCount": 0,
+            "missingLockCount": 0,
+            "missingLiveCount": 0
+        },
+        "drifts": []
+    });
+
+    let error =
+        run_sync_audit_interactive(&audit).expect_err("feature-disabled audit should error");
+    assert_eq!(
+        error.to_string(),
+        "Sync audit interactive TUI requires the `tui` feature."
+    );
 }

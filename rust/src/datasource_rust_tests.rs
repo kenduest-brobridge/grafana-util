@@ -151,6 +151,7 @@ fn datasource_root_help_includes_examples() {
     let help = String::from_utf8(output).unwrap();
 
     assert!(help.contains("Examples:"));
+    assert!(help.contains("grafana-util datasource browse"));
     assert!(help.contains("grafana-util datasource types"));
     assert!(help.contains("grafana-util datasource list"));
     assert!(help.contains("--all-orgs"));
@@ -190,6 +191,23 @@ fn list_help_explains_org_scope_flags() {
 }
 
 #[test]
+fn browse_help_mentions_edit_delete_and_examples() {
+    let mut command = DatasourceCliArgs::command();
+    let subcommand = command
+        .find_subcommand_mut("browse")
+        .unwrap_or_else(|| panic!("missing datasource browse help"));
+    let mut output = Vec::new();
+    subcommand.write_long_help(&mut output).unwrap();
+    let help = String::from_utf8(output).unwrap();
+
+    assert!(help.contains("--org-id"));
+    assert!(help.contains("--all-orgs"));
+    assert!(help.contains("grafana-util datasource browse"));
+    assert!(help.contains("edit"));
+    assert!(help.contains("delete"));
+}
+
+#[test]
 fn import_help_explains_common_operator_flags() {
     let mut command = DatasourceCliArgs::command();
     let subcommand = command
@@ -216,6 +234,47 @@ fn import_help_explains_common_operator_flags() {
     assert!(help.contains("--verbose"));
     assert!(help.contains("Examples:"));
     assert!(help.contains("Input Options"));
+}
+
+#[test]
+fn parse_datasource_browse_supports_org_scope_flag() {
+    let args: DatasourceCliArgs =
+        DatasourceCliArgs::parse_from(["grafana-util datasource", "browse", "--org-id", "7"]);
+
+    match args.command {
+        super::DatasourceGroupCommand::Browse(inner) => {
+            assert_eq!(inner.org_id, Some(7));
+            assert!(!inner.all_orgs);
+        }
+        _ => panic!("expected datasource browse"),
+    }
+}
+
+#[test]
+fn parse_datasource_browse_supports_all_orgs_flag() {
+    let args: DatasourceCliArgs =
+        DatasourceCliArgs::parse_from(["grafana-util datasource", "browse", "--all-orgs"]);
+
+    match args.command {
+        super::DatasourceGroupCommand::Browse(inner) => {
+            assert!(inner.all_orgs);
+            assert_eq!(inner.org_id, None);
+        }
+        _ => panic!("expected datasource browse"),
+    }
+}
+
+#[test]
+fn parse_datasource_browse_rejects_conflicting_org_scope_flags() {
+    let result = DatasourceCliArgs::try_parse_from([
+        "grafana-util datasource",
+        "browse",
+        "--org-id",
+        "7",
+        "--all-orgs",
+    ]);
+
+    assert!(result.is_err());
 }
 
 #[test]

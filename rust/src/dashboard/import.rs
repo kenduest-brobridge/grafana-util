@@ -4,6 +4,8 @@
 use reqwest::Method;
 use serde_json::Value;
 use std::collections::BTreeMap;
+#[cfg(feature = "tui")]
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
 use crate::common::{message, string_field, value_as_object, Result};
@@ -38,12 +40,44 @@ pub(crate) use super::import_render::{
 };
 pub(crate) use super::import_validation::build_import_auth_context;
 
-fn dashboard_files_for_import(import_dir: &Path) -> Result<Vec<PathBuf>> {
+pub(crate) fn dashboard_files_for_import(import_dir: &Path) -> Result<Vec<PathBuf>> {
     let mut dashboard_files = super::discover_dashboard_files(import_dir)?;
     dashboard_files.retain(|path| {
         path.file_name().and_then(|name| name.to_str()) != Some(super::FOLDER_INVENTORY_FILENAME)
     });
     Ok(dashboard_files)
+}
+
+fn selected_dashboard_files(
+    args: &super::ImportArgs,
+    dashboard_files: Vec<PathBuf>,
+) -> Result<Option<Vec<PathBuf>>> {
+    #[cfg(feature = "tui")]
+    {
+        let Some(selected_files) = super::import_interactive::select_import_dashboard_files(args)?
+        else {
+            return Ok(None);
+        };
+        let known_files: BTreeSet<PathBuf> = dashboard_files.iter().cloned().collect();
+        let filtered: Vec<PathBuf> = selected_files
+            .into_iter()
+            .filter(|path| known_files.contains(path))
+            .collect();
+        if filtered.is_empty() {
+            return Err(message(
+                "Dashboard import interactive selection did not pick any valid dashboard files.",
+            ));
+        }
+        return Ok(Some(filtered));
+    }
+    #[cfg(not(feature = "tui"))]
+    {
+        if args.interactive {
+            return super::tui_not_built("import --interactive");
+        }
+        let _ = dashboard_files;
+        Ok(None)
+    }
 }
 
 /// Purpose: implementation note.
@@ -106,7 +140,9 @@ where
         .into_iter()
         .map(|item| (item.uid.clone(), item))
         .collect();
-    let dashboard_files = dashboard_files_for_import(&args.import_dir)?;
+    let discovered_dashboard_files = dashboard_files_for_import(&args.import_dir)?;
+    let dashboard_files = selected_dashboard_files(args, discovered_dashboard_files.clone())?
+        .unwrap_or(discovered_dashboard_files);
     let effective_replace_existing = args.replace_existing || args.update_existing_only;
     let mut dashboard_records: Vec<[String; 8]> = Vec::new();
     for dashboard_file in &dashboard_files {
@@ -331,7 +367,16 @@ where
             args.target_schema_version,
         )?;
     }
-    let dashboard_files = dashboard_files_for_import(&args.import_dir)?;
+    let discovered_dashboard_files = dashboard_files_for_import(&args.import_dir)?;
+    let dashboard_files = match selected_dashboard_files(args, discovered_dashboard_files.clone())?
+    {
+        Some(selected) => selected,
+        None if args.interactive => {
+            println!("Import cancelled.");
+            return Ok(0);
+        }
+        None => discovered_dashboard_files,
+    };
     let total = dashboard_files.len();
     let effective_replace_existing = args.replace_existing || args.update_existing_only;
     let mut dry_run_records: Vec<[String; 8]> = Vec::new();
@@ -706,6 +751,11 @@ pub fn import_dashboards_with_client(
 
 /// Purpose: implementation note.
 pub(crate) fn import_dashboards_with_org_clients(args: &super::ImportArgs) -> Result<usize> {
+    if args.interactive && args.use_export_org {
+        return Err(message(
+            "Dashboard import --interactive does not support --use-export-org yet.",
+        ));
+    }
     let context = build_import_auth_context(args)?;
     let client = JsonHttpClient::new(JsonHttpClientConfig {
         base_url: context.url.clone(),

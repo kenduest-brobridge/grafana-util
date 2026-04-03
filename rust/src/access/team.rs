@@ -17,9 +17,10 @@ use super::render::{
 };
 use super::user::lookup_org_user_by_identity;
 use super::{
-    request_array, request_object, TeamAddArgs, TeamDiffArgs, TeamExportArgs, TeamImportArgs,
-    TeamListArgs, TeamModifyArgs, ACCESS_EXPORT_KIND_TEAMS, ACCESS_EXPORT_METADATA_FILENAME,
-    ACCESS_EXPORT_VERSION, ACCESS_TEAM_EXPORT_FILENAME, DEFAULT_PAGE_SIZE,
+    request_array, request_object, request_object_list_field, TeamAddArgs, TeamDiffArgs,
+    TeamExportArgs, TeamImportArgs, TeamListArgs, TeamModifyArgs, ACCESS_EXPORT_KIND_TEAMS,
+    ACCESS_EXPORT_METADATA_FILENAME, ACCESS_EXPORT_VERSION, ACCESS_TEAM_EXPORT_FILENAME,
+    DEFAULT_PAGE_SIZE,
 };
 
 fn normalize_access_identity(value: &str) -> String {
@@ -513,7 +514,7 @@ fn load_team_import_records(
     Ok(normalized)
 }
 
-fn list_teams_with_request<F>(
+pub(crate) fn list_teams_with_request<F>(
     mut request_json: F,
     query: Option<&str>,
     page: usize,
@@ -527,26 +528,19 @@ where
         ("page".to_string(), page.to_string()),
         ("perpage".to_string(), per_page.to_string()),
     ];
-    let object = request_object(
+    request_object_list_field(
         &mut request_json,
         Method::GET,
         "/api/teams/search",
         &params,
         None,
+        "teams",
         "Unexpected team list response from Grafana.",
-    )?;
-    match object.get("teams") {
-        Some(Value::Array(values)) => values
-            .iter()
-            .map(|value| {
-                Ok(value_as_object(value, "Unexpected team list response from Grafana.")?.clone())
-            })
-            .collect(),
-        _ => Err(message("Unexpected team list response from Grafana.")),
-    }
+        "Unexpected team list response from Grafana.",
+    )
 }
 
-fn list_team_members_with_request<F>(
+pub(crate) fn list_team_members_with_request<F>(
     mut request_json: F,
     team_id: &str,
 ) -> Result<Vec<Map<String, Value>>>
@@ -670,7 +664,7 @@ where
         .ok_or_else(|| message(format!("Grafana team lookup did not find {name}.")))
 }
 
-fn iter_teams_with_request<F>(
+pub(crate) fn iter_teams_with_request<F>(
     mut request_json: F,
     query: Option<&str>,
 ) -> Result<Vec<Map<String, Value>>>
@@ -707,7 +701,7 @@ fn validate_team_modify_args(args: &TeamModifyArgs) -> Result<()> {
     Ok(())
 }
 
-fn team_member_identity(member: &Map<String, Value>) -> String {
+pub(crate) fn team_member_identity(member: &Map<String, Value>) -> String {
     let email = string_field(member, "email", "");
     if !email.is_empty() {
         email

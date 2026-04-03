@@ -41,8 +41,7 @@ use self::bundle_preflight::{
 };
 use self::preflight::{build_sync_preflight_document, render_sync_preflight_text};
 use self::workbench::{
-    build_sync_alert_assessment_document, build_sync_apply_intent_document,
-    build_sync_plan_document, build_sync_plan_summary_document, build_sync_source_bundle_document,
+    build_sync_apply_intent_document, build_sync_plan_document, build_sync_source_bundle_document,
     build_sync_summary_document, render_sync_source_bundle_text,
 };
 use crate::alert_sync::assess_alert_sync_specs;
@@ -61,7 +60,7 @@ const SYNC_ASSESS_ALERTS_HELP_TEXT: &str = "Examples:\n\n  grafana-util sync ass
 const SYNC_BUNDLE_PREFLIGHT_HELP_TEXT: &str = "Examples:\n\n  grafana-util sync bundle-preflight --source-bundle ./bundle.json --target-inventory ./target.json\n  grafana-util sync bundle-preflight --source-bundle ./bundle.json --target-inventory ./target.json --fetch-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output json";
 const SYNC_BUNDLE_HELP_TEXT: &str = "Examples:\n\n  grafana-util sync bundle --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts/raw --output-file ./sync-source-bundle.json\n  grafana-util sync bundle --dashboard-export-dir ./dashboards/raw --datasource-export-file ./datasources/datasources.json --output json";
 
-/// Enum definition for SyncOutputFormat.
+/// Output formats shared by staged sync document commands.
 #[derive(Debug, Clone, Copy, ValueEnum, PartialEq, Eq)]
 pub enum SyncOutputFormat {
     Text,
@@ -75,7 +74,7 @@ pub enum SyncOutputFormat {
     after_help = SYNC_ROOT_HELP_TEXT,
     styles = crate::help_styles::CLI_HELP_STYLES
 )]
-/// Struct definition for SyncCliArgs.
+/// Root `grafana-util sync` parser wrapper.
 pub struct SyncCliArgs {
     #[command(subcommand)]
     pub command: SyncGroupCommand,
@@ -84,7 +83,7 @@ pub struct SyncCliArgs {
 #[cfg(test)]
 pub(crate) use audit_tui::{build_sync_audit_tui_groups, build_sync_audit_tui_rows};
 
-/// Struct definition for SyncSummaryArgs.
+/// Arguments for summarizing local desired sync resources.
 #[derive(Debug, Clone, Args)]
 pub struct SyncSummaryArgs {
     #[arg(
@@ -103,7 +102,7 @@ pub struct SyncSummaryArgs {
     pub output: SyncOutputFormat,
 }
 
-/// Struct definition for SyncPlanArgs.
+/// Arguments for building a staged sync plan from desired and live state.
 #[derive(Debug, Clone, Args)]
 pub struct SyncPlanArgs {
     #[arg(
@@ -162,7 +161,7 @@ pub struct SyncPlanArgs {
     pub trace_id: Option<String>,
 }
 
-/// Struct definition for SyncReviewArgs.
+/// Arguments for marking a staged sync plan as reviewed.
 #[derive(Debug, Clone, Args)]
 pub struct SyncReviewArgs {
     #[arg(
@@ -206,7 +205,7 @@ pub struct SyncReviewArgs {
     pub interactive: bool,
 }
 
-/// Struct definition for SyncApplyArgs.
+/// Arguments for producing or executing an apply step from a reviewed plan.
 #[derive(Debug, Clone, Args)]
 pub struct SyncApplyArgs {
     #[arg(
@@ -493,7 +492,7 @@ pub struct SyncBundleArgs {
     pub output: SyncOutputFormat,
 }
 
-/// Enum definition for SyncGroupCommand.
+/// Top-level sync subcommands exposed under `grafana-util sync`.
 #[derive(Debug, Clone, Subcommand)]
 pub enum SyncGroupCommand {
     #[command(about = "Build a staged sync plan from local desired and live JSON files.", after_help = SYNC_PLAN_HELP_TEXT)]
@@ -534,16 +533,22 @@ pub(crate) use live::{
 pub(crate) use staged_documents::{
     attach_apply_audit, attach_bundle_preflight_summary, attach_lineage, attach_preflight_summary,
     attach_review_audit, attach_trace_id, mark_plan_reviewed, require_matching_optional_trace_id,
-    require_optional_stage, require_trace_id, sync_audit_drift_cmp, sync_audit_drift_details,
-    sync_audit_drift_meta, sync_audit_drift_title, validate_apply_bundle_preflight,
+    require_optional_stage, require_trace_id, validate_apply_bundle_preflight,
     validate_apply_preflight,
 };
 pub use staged_documents::{
     render_alert_sync_assessment_text, render_sync_apply_intent_text, render_sync_plan_text,
     render_sync_summary_text,
 };
+#[cfg(feature = "tui")]
+pub(crate) use staged_documents::{
+    sync_audit_drift_cmp, sync_audit_drift_details, sync_audit_drift_meta, sync_audit_drift_title,
+};
 
-/// run sync cli.
+/// Entrypoint for sync command execution after Clap parsing.
+///
+/// The heavy runtime logic lives in `sync/cli.rs`; this module keeps the parser
+/// surface and re-exports discoverable from one place.
 pub fn run_sync_cli(command: SyncGroupCommand) -> Result<()> {
     cli::run_sync_cli(command)
 }

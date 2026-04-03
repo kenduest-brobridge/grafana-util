@@ -13,14 +13,14 @@ use crate::common::{
 
 use super::render::{
     bool_label, format_table, map_get_text, normalize_org_role, normalize_user_row, paginate_rows,
-    render_csv, render_objects_json, scalar_text, user_matches, user_scope_text, user_summary_line,
-    user_table_rows, value_bool,
+    render_csv, render_objects_json, scalar_text, user_account_scope_text, user_matches,
+    user_scope_text, user_summary_line, user_table_rows, value_bool,
 };
 use super::{
-    build_auth_context, request_array, request_object, Scope, UserAddArgs, UserDeleteArgs,
-    UserDiffArgs, UserExportArgs, UserImportArgs, UserListArgs, UserModifyArgs,
-    ACCESS_EXPORT_KIND_USERS, ACCESS_EXPORT_METADATA_FILENAME, ACCESS_EXPORT_VERSION,
-    ACCESS_USER_EXPORT_FILENAME, DEFAULT_PAGE_SIZE,
+    build_auth_context, request_array, request_object, request_object_list_field, Scope,
+    UserAddArgs, UserDeleteArgs, UserDiffArgs, UserExportArgs, UserImportArgs, UserListArgs,
+    UserModifyArgs, ACCESS_EXPORT_KIND_USERS, ACCESS_EXPORT_METADATA_FILENAME,
+    ACCESS_EXPORT_VERSION, ACCESS_USER_EXPORT_FILENAME, DEFAULT_PAGE_SIZE,
 };
 
 fn user_id_json_value(user_id: &str) -> Value {
@@ -275,29 +275,25 @@ where
         ("page".to_string(), "1".to_string()),
         ("perpage".to_string(), DEFAULT_PAGE_SIZE.to_string()),
     ];
-    let object = request_object(
+    let teams = request_object_list_field(
         &mut request_json,
         Method::GET,
         "/api/teams/search",
         &params,
         None,
+        "teams",
         "Unexpected team list response for user import.",
+        "Unexpected team lookup response from Grafana.",
     )?;
-    let teams = object
-        .get("teams")
-        .and_then(Value::as_array)
-        .ok_or_else(|| message("Unexpected team lookup response from Grafana."))?;
     teams
         .iter()
-        .find_map(|team| {
-            team.as_object().and_then(|record| {
-                let name = string_field(record, "name", "");
-                if name == team_name {
-                    Some(record.clone())
-                } else {
-                    None
-                }
-            })
+        .find_map(|record| {
+            let name = string_field(record, "name", "");
+            if name == team_name {
+                Some(record.clone())
+            } else {
+                None
+            }
         })
         .ok_or_else(|| message(format!("Team not found by name: {}", team_name)))
 }
@@ -1079,7 +1075,7 @@ where
     )
 }
 
-fn iter_global_users_with_request<F>(
+pub(crate) fn iter_global_users_with_request<F>(
     mut request_json: F,
     page_size: usize,
 ) -> Result<Vec<Map<String, Value>>>
@@ -1114,7 +1110,7 @@ where
     Ok(users)
 }
 
-fn list_user_teams_with_request<F>(
+pub(crate) fn list_user_teams_with_request<F>(
     mut request_json: F,
     user_id: &str,
 ) -> Result<Vec<Map<String, Value>>>
@@ -1319,7 +1315,11 @@ fn validate_basic_auth_only(auth_mode: &str, operation: &str) -> Result<()> {
     }
 }
 
-fn validate_user_scope_auth(scope: &Scope, with_teams: bool, auth_mode: &str) -> Result<()> {
+pub(crate) fn validate_user_scope_auth(
+    scope: &Scope,
+    with_teams: bool,
+    auth_mode: &str,
+) -> Result<()> {
     if *scope == Scope::Global && auth_mode != "basic" {
         return Err(message(
             "User list with --scope global requires Basic auth (--basic-user / --basic-password).",
@@ -1445,6 +1445,7 @@ where
             row.insert("teams".to_string(), Value::Array(teams));
         }
     }
+    annotate_user_account_scope(&mut rows);
     rows.retain(|row| user_matches(row, args));
     let rows = paginate_rows(&rows, args.page, args.per_page);
     if args.json {
@@ -1459,6 +1460,7 @@ where
                 "orgRole",
                 "grafanaAdmin",
                 "scope",
+                "accountScope",
                 "teams",
             ],
             &user_table_rows(&rows),
@@ -1475,6 +1477,7 @@ where
                 "ORG_ROLE",
                 "GRAFANA_ADMIN",
                 "SCOPE",
+                "ACCOUNT_SCOPE",
                 "TEAMS",
             ],
             &user_table_rows(&rows),
@@ -1501,6 +1504,15 @@ where
         );
     }
     Ok(rows.len())
+}
+
+pub(crate) fn annotate_user_account_scope(rows: &mut [Map<String, Value>]) {
+    for row in rows {
+        row.insert(
+            "accountScope".to_string(),
+            Value::String(user_account_scope_text().to_string()),
+        );
+    }
 }
 
 /// Purpose: implementation note.

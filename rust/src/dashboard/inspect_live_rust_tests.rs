@@ -2,9 +2,12 @@
 //! Keeps shared helpers here while splitting output/governance and parity tests into modules.
 use super::test_support;
 use super::test_support::CommonCliArgs;
+use crate::common::GrafanaCliError;
+use crate::dashboard::inspect_live::load_variant_index_entries;
 use serde_json::Value;
 use std::fs;
 use std::path::Path;
+use tempfile::tempdir;
 
 type TestRequestResult = crate::common::Result<Option<Value>>;
 
@@ -65,6 +68,15 @@ fn normalize_queries_document_for_compare(document: &Value) -> Value {
         }
     }
     normalized
+}
+
+#[test]
+fn load_variant_index_entries_reports_json_error_for_invalid_index_file() {
+    let temp = tempdir().unwrap();
+    fs::write(temp.path().join("index.json"), "[").unwrap();
+
+    let error = load_variant_index_entries(temp.path(), None).unwrap_err();
+    assert!(matches!(error, GrafanaCliError::Json(_)));
 }
 
 fn assert_governance_documents_match(export_document: &Value, live_document: &Value) {

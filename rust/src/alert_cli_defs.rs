@@ -19,7 +19,7 @@ struct AlertCliRoot {
     args: AlertNamespaceArgs,
 }
 
-/// Struct definition for AlertCommonArgs.
+/// Shared Grafana connection/authentication arguments for alert commands.
 #[derive(Debug, Clone, Args)]
 pub struct AlertCommonArgs {
     #[arg(long, default_value = DEFAULT_URL, help = "Grafana base URL.")]
@@ -62,7 +62,7 @@ pub struct AlertCommonArgs {
     pub verify_ssl: bool,
 }
 
-/// Struct definition for AlertLegacyArgs.
+/// Legacy flat alert CLI shape kept for compatibility with older invocation styles.
 #[derive(Debug, Clone, Args)]
 pub struct AlertLegacyArgs {
     #[command(flatten)]
@@ -121,7 +121,7 @@ pub struct AlertLegacyArgs {
     pub panel_id_map: Option<PathBuf>,
 }
 
-/// Struct definition for AlertExportArgs.
+/// Arguments for exporting alerting resources from Grafana.
 #[derive(Debug, Clone, Args)]
 pub struct AlertExportArgs {
     #[command(flatten)]
@@ -146,7 +146,7 @@ pub struct AlertExportArgs {
     pub overwrite: bool,
 }
 
-/// Struct definition for AlertImportArgs.
+/// Arguments for importing alerting resources from a local export directory.
 #[derive(Debug, Clone, Args)]
 pub struct AlertImportArgs {
     #[command(flatten)]
@@ -186,7 +186,7 @@ pub struct AlertImportArgs {
     pub panel_id_map: Option<PathBuf>,
 }
 
-/// Struct definition for AlertDiffArgs.
+/// Arguments for diffing local alert exports against live Grafana state.
 #[derive(Debug, Clone, Args)]
 pub struct AlertDiffArgs {
     #[command(flatten)]
@@ -214,7 +214,7 @@ pub struct AlertDiffArgs {
     pub panel_id_map: Option<PathBuf>,
 }
 
-/// Enum definition for AlertListKind.
+/// Resource categories supported by alert list operations.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AlertListKind {
     Rules,

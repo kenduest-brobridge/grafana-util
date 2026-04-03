@@ -5,6 +5,7 @@
 //!   into one reviewable bundle document.
 //! - Keep Rust-side bundle planning pure and import-safe before any CLI wiring.
 
+use super::json::{require_json_array, require_json_object, require_json_object_field};
 use super::preflight::{build_sync_preflight_document, SyncPreflightSummary};
 use crate::common::{message, string_field, Result};
 use crate::datasource_provider::{
@@ -49,12 +50,9 @@ pub(crate) struct AlertArtifactAssessmentSummary {
 
 impl SyncBundlePreflightSummary {
     pub(crate) fn from_document(document: &Value) -> Result<Self> {
-        let summary = document
-            .get("summary")
-            .ok_or_else(|| message("Sync bundle preflight document is missing summary."))?;
-        let summary = summary
-            .as_object()
-            .ok_or_else(|| message("Sync bundle preflight summary must be a JSON object."))?;
+        let object = require_json_object(document, "Sync bundle preflight document")?;
+        let summary =
+            require_json_object_field(object, "summary", "Sync bundle preflight document")?;
         serde_json::from_value(Value::Object(summary.clone()))
             .map_err(|error| message(format!("Sync bundle preflight summary is invalid: {error}")))
     }
@@ -63,10 +61,8 @@ impl SyncBundlePreflightSummary {
 pub(crate) fn require_sync_bundle_preflight_summary(
     document: &Value,
 ) -> Result<SyncBundlePreflightSummary> {
-    let summary = document
-        .get("summary")
-        .and_then(Value::as_object)
-        .ok_or_else(|| message("Sync bundle preflight document is missing summary."))?;
+    let document = require_json_object(document, "Sync bundle preflight document")?;
+    let summary = require_json_object_field(document, "summary", "Sync bundle preflight document")?;
     let resource_count = summary
         .get("resourceCount")
         .and_then(Value::as_i64)
@@ -92,12 +88,9 @@ pub(crate) fn require_sync_bundle_preflight_summary(
 }
 
 fn provider_assessment_summary(document: &Value) -> Result<ProviderAssessmentSummary> {
-    let summary = document
-        .get("summary")
-        .ok_or_else(|| message("Sync provider assessment document is missing summary."))?;
-    let summary = summary
-        .as_object()
-        .ok_or_else(|| message("Sync provider assessment summary must be a JSON object."))?;
+    let document = require_json_object(document, "Sync provider assessment document")?;
+    let summary =
+        require_json_object_field(document, "summary", "Sync provider assessment document")?;
     serde_json::from_value(Value::Object(summary.clone())).map_err(|error| {
         message(format!(
             "Sync provider assessment summary is invalid: {error}"
@@ -106,12 +99,12 @@ fn provider_assessment_summary(document: &Value) -> Result<ProviderAssessmentSum
 }
 
 fn alert_artifact_assessment_summary(document: &Value) -> Result<AlertArtifactAssessmentSummary> {
-    let summary = document
-        .get("summary")
-        .ok_or_else(|| message("Sync alert artifact assessment document is missing summary."))?;
-    let summary = summary
-        .as_object()
-        .ok_or_else(|| message("Sync alert artifact assessment summary must be a JSON object."))?;
+    let document = require_json_object(document, "Sync alert artifact assessment document")?;
+    let summary = require_json_object_field(
+        document,
+        "summary",
+        "Sync alert artifact assessment document",
+    )?;
     serde_json::from_value(Value::Object(summary.clone())).map_err(|error| {
         message(format!(
             "Sync alert artifact assessment summary is invalid: {error}"
@@ -133,29 +126,11 @@ fn normalize_text(value: Option<&Value>) -> String {
     }
 }
 
-fn require_object(value: Option<&Value>, label: &str) -> Result<Map<String, Value>> {
-    match value {
-        None => Ok(Map::new()),
-        Some(Value::Object(object)) => Ok(object.clone()),
-        Some(_) => Err(message(format!("{label} must be a JSON object."))),
-    }
-}
-
-fn require_array<'a>(value: Option<&'a Value>, label: &str) -> Result<&'a Vec<Value>> {
-    match value {
-        None => Err(message(format!("{label} must be a JSON array."))),
-        Some(Value::Array(items)) => Ok(items),
-        Some(_) => Err(message(format!("{label} must be a JSON array."))),
-    }
-}
-
 fn require_string_list(value: Option<&Value>, label: &str) -> Result<Vec<String>> {
     let Some(value) = value else {
         return Ok(Vec::new());
     };
-    let items = value
-        .as_array()
-        .ok_or_else(|| message(format!("{label} must be a list.")))?;
+    let items = require_json_array(value, label)?;
     let mut result = Vec::new();
     for item in items {
         let text = normalize_text(Some(item));
@@ -324,7 +299,7 @@ fn normalize_alert_bundle_item(
 fn collect_alert_specs(source_bundle: &Map<String, Value>) -> Result<Vec<Value>> {
     let mut alerts = Vec::new();
     if let Some(items) = source_bundle.get("alerts") {
-        for item in require_array(Some(items), "alerts")? {
+        for item in require_json_array(items, "alerts")? {
             alerts.push(item.clone());
         }
     }
@@ -337,7 +312,7 @@ fn collect_alert_specs(source_bundle: &Map<String, Value>) -> Result<Vec<Value>>
     let Some(rule_documents) = alerting.get("rules") else {
         return Ok(alerts);
     };
-    for item in require_array(Some(rule_documents), "alerting.rules")? {
+    for item in require_json_array(rule_documents, "alerting.rules")? {
         let Some(object) = item.as_object() else {
             continue;
         };
@@ -566,15 +541,18 @@ pub fn build_sync_bundle_preflight_document(
     // Build the bundle preflight from staged bundle JSON so the sync-level and
     // provider-level gates can share one normalized availability snapshot.
 
-    let source_bundle = require_object(Some(source_bundle), "source bundle")?;
-    let _target_inventory = require_object(Some(target_inventory), "target inventory")?;
-    let availability = require_object(availability, "availability")?;
+    let source_bundle = require_json_object(source_bundle, "source bundle")?.clone();
+    let _target_inventory = require_json_object(target_inventory, "target inventory")?.clone();
+    let availability = match availability {
+        None => Map::new(),
+        Some(value) => require_json_object(value, "availability")?.clone(),
+    };
     let mut desired_specs = Vec::new();
     for key in ["dashboards", "datasources", "folders"] {
         let Some(items) = source_bundle.get(key) else {
             continue;
         };
-        for item in require_array(Some(items), key)? {
+        for item in require_json_array(items, key)? {
             desired_specs.push(item.clone());
         }
     }

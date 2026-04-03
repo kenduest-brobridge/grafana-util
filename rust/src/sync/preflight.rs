@@ -6,6 +6,7 @@
 //! - Keep staged dependency and alert live-apply policy checks isolated from
 //!   any Rust CLI or Grafana transport wiring.
 
+use super::json::{require_json_object, require_json_object_field};
 use super::workbench::{normalize_resource_specs, SyncResourceSpec};
 use crate::common::{message, Result};
 use serde::{Deserialize, Serialize};
@@ -38,22 +39,16 @@ pub struct SyncPreflightSummary {
 
 impl SyncPreflightSummary {
     pub(crate) fn from_document(document: &Value) -> Result<Self> {
-        let summary = document
-            .get("summary")
-            .ok_or_else(|| message("Sync preflight document is missing summary."))?;
-        let summary = summary
-            .as_object()
-            .ok_or_else(|| message("Sync preflight summary must be a JSON object."))?;
+        let object = require_json_object(document, "Sync preflight document")?;
+        let summary = require_json_object_field(object, "summary", "Sync preflight document")?;
         serde_json::from_value(Value::Object(summary.clone()))
             .map_err(|error| message(format!("Sync preflight summary is invalid: {error}")))
     }
 }
 
 pub(crate) fn require_sync_preflight_summary(document: &Value) -> Result<SyncPreflightSummary> {
-    let summary = document
-        .get("summary")
-        .and_then(Value::as_object)
-        .ok_or_else(|| message("Sync preflight document is missing summary."))?;
+    let document = require_json_object(document, "Sync preflight document")?;
+    let summary = require_json_object_field(document, "summary", "Sync preflight document")?;
     let check_count = summary
         .get("checkCount")
         .and_then(Value::as_i64)
@@ -78,14 +73,6 @@ fn normalize_text(value: Option<&Value>) -> String {
         Some(Value::String(text)) => text.trim().to_string(),
         Some(Value::Number(number)) => number.to_string(),
         _ => String::new(),
-    }
-}
-
-fn require_object(value: Option<&Value>, label: &str) -> Result<Map<String, Value>> {
-    match value {
-        None => Ok(Map::new()),
-        Some(Value::Object(object)) => Ok(object.clone()),
-        Some(_) => Err(message(format!("{label} must be a JSON object."))),
     }
 }
 
@@ -337,7 +324,8 @@ fn build_alert_checks(
     let available_plugin_ids = require_string_list(availability.get("pluginIds"), "pluginIds")?
         .into_iter()
         .collect::<BTreeSet<String>>();
-    let body = require_object(Some(&Value::Object(spec.body.clone())), "alert body")?;
+    let body_value = Value::Object(spec.body.clone());
+    let body = require_json_object(&body_value, "alert body")?;
     let plugin_ids = require_string_list(body.get("pluginIds"), "alert pluginIds")?;
     let mut checks = vec![SyncPreflightCheck {
         kind: "alert-live-apply".to_string(),
@@ -423,7 +411,10 @@ pub fn build_sync_preflight_document(
     // staged resource contract used by plan and audit.
 
     let specs = normalize_resource_specs(desired_specs)?;
-    let availability = require_object(availability, "availability")?;
+    let availability = match availability {
+        None => Map::new(),
+        Some(value) => require_json_object(value, "availability")?.clone(),
+    };
     let mut checks = Vec::new();
     for spec in &specs {
         match spec.kind.as_str() {
