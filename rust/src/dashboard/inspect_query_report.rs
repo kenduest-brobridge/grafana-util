@@ -6,6 +6,7 @@ use regex::Regex;
 use serde_json::{Map, Value};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
+use std::sync::LazyLock;
 
 use crate::common::{string_field, value_as_object, Result};
 
@@ -13,7 +14,7 @@ use super::super::files::{
     discover_dashboard_files, extract_dashboard_object, load_datasource_inventory,
     load_export_metadata, load_folder_inventory, load_json_file,
 };
-use super::super::inspect_governance::normalize_family_name;
+use super::super::inspect_family::normalize_family_name;
 use super::super::inspect_query::{
     dispatch_query_analysis, ordered_unique_push, QueryExtractionContext,
 };
@@ -29,10 +30,10 @@ use super::summarize_datasource_type;
 use super::summarize_datasource_uid;
 use super::summarize_panel_datasource_key;
 use super::{
-    build_export_inspection_summary, load_dashboard_org_scope_by_file, load_inspect_source_root,
-    resolve_dashboard_source_file_path, resolve_export_folder_inventory_item,
-    resolve_export_folder_path, DEFAULT_DASHBOARD_TITLE, DEFAULT_FOLDER_TITLE, DEFAULT_UNKNOWN_UID,
-    RAW_EXPORT_SUBDIR,
+    build_export_inspection_summary_for_variant, load_dashboard_org_scope_by_file,
+    load_inspect_source_root, resolve_dashboard_source_file_path,
+    resolve_export_folder_inventory_item, resolve_export_folder_path, DEFAULT_DASHBOARD_TITLE,
+    DEFAULT_FOLDER_TITLE, DEFAULT_UNKNOWN_UID, RAW_EXPORT_SUBDIR,
 };
 
 struct QueryReportContext<'a> {
@@ -47,6 +48,24 @@ struct QueryReportContext<'a> {
     dashboard_file_display: &'a str,
     datasource_inventory: &'a [DatasourceInventoryItem],
 }
+
+static QUERY_VARIABLE_BRACED_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\$\{([A-Za-z_][A-Za-z0-9_]*)(?::[^}]*)?\}")
+        .expect("invalid hard-coded variable regex")
+});
+static QUERY_VARIABLE_PLAIN_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\$([A-Za-z_][A-Za-z0-9_]*)").expect("invalid hard-coded variable regex")
+});
+static QUERY_VARIABLE_DOUBLE_BRACKET_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\[\[([A-Za-z_][A-Za-z0-9_]*)(?::[^\]]*)?\]\]")
+        .expect("invalid hard-coded variable regex")
+});
+static TEMPLATE_VARIABLE_NAME_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r#"(?m)(?:^|[^A-Za-z0-9_])\$(?:\{([A-Za-z_][A-Za-z0-9_]*)\}|([A-Za-z_][A-Za-z0-9_]*))"#,
+    )
+    .expect("invalid hard-coded dashboard template variable regex")
+});
 
 fn calculate_folder_level(folder_path: &str) -> String {
     let level = folder_path
@@ -99,14 +118,13 @@ fn extract_dashboard_tags(dashboard: &Map<String, Value>) -> Vec<String> {
 }
 
 fn extract_query_variables(query_text: &str) -> Vec<String> {
-    let patterns = [
-        r"\$\{([A-Za-z_][A-Za-z0-9_]*)(?::[^}]*)?\}",
-        r"\$([A-Za-z_][A-Za-z0-9_]*)",
-        r"\[\[([A-Za-z_][A-Za-z0-9_]*)(?::[^\]]*)?\]\]",
+    let regexes = [
+        &*QUERY_VARIABLE_BRACED_REGEX,
+        &*QUERY_VARIABLE_PLAIN_REGEX,
+        &*QUERY_VARIABLE_DOUBLE_BRACKET_REGEX,
     ];
     let mut values = Vec::new();
-    for pattern in patterns {
-        let regex = Regex::new(pattern).expect("invalid hard-coded variable regex");
+    for regex in regexes {
         for capture in regex.captures_iter(query_text) {
             let Some(value) = capture.get(1).map(|item| item.as_str().trim()) else {
                 continue;
@@ -143,12 +161,8 @@ fn target_is_disabled(target: &Map<String, Value>) -> bool {
 }
 
 fn extract_template_variable_names_from_text(text: &str) -> Vec<String> {
-    let regex = Regex::new(
-        r#"(?m)(?:^|[^A-Za-z0-9_])\$(?:\{([A-Za-z_][A-Za-z0-9_]*)\}|([A-Za-z_][A-Za-z0-9_]*))"#,
-    )
-    .expect("invalid hard-coded dashboard template variable regex");
     let mut values = Vec::new();
-    for captures in regex.captures_iter(text) {
+    for captures in TEMPLATE_VARIABLE_NAME_REGEX.captures_iter(text) {
         let value = captures
             .get(1)
             .or_else(|| captures.get(2))
@@ -375,10 +389,17 @@ fn collect_query_report_rows(
 pub(crate) fn build_export_inspection_query_report(
     import_dir: &Path,
 ) -> Result<ExportInspectionQueryReport> {
+    build_export_inspection_query_report_for_variant(import_dir, RAW_EXPORT_SUBDIR)
+}
+
+pub(crate) fn build_export_inspection_query_report_for_variant(
+    import_dir: &Path,
+    expected_variant: &str,
+) -> Result<ExportInspectionQueryReport> {
     // Build the normalized row set once; every downstream output format should derive
     // from this report instead of re-reading dashboard files or re-running analysis.
-    let summary = build_export_inspection_summary(import_dir)?;
-    let metadata = load_export_metadata(import_dir, Some(RAW_EXPORT_SUBDIR))?;
+    let summary = build_export_inspection_summary_for_variant(import_dir, expected_variant)?;
+    let metadata = load_export_metadata(import_dir, Some(expected_variant))?;
     let dashboard_org_scope = load_dashboard_org_scope_by_file(import_dir, metadata.as_ref())?;
     let source_root = load_inspect_source_root(import_dir);
     let dashboard_files = discover_dashboard_files(import_dir)?;

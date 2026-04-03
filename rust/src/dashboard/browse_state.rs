@@ -1,3 +1,9 @@
+//! State container for the dashboard browse TUI.
+//!
+//! `document` owns the current rendered tree snapshot while this module owns ephemeral UI state:
+//! current row focus, fact scrolling, cached live detail fetches, and any pending modal dialog.
+//! Selection is preserved across refreshes through a lightweight anchor so reloaded trees keep the
+//! operator near the same org/folder/dashboard when possible.
 #![cfg(feature = "tui")]
 use std::collections::BTreeMap;
 
@@ -96,10 +102,12 @@ impl BrowserState {
     pub(crate) fn replace_document(&mut self, document: DashboardBrowseDocument) {
         let anchor = self.selection_anchor();
         self.document = document;
+        // Cached live details belong to the old tree snapshot and may be stale after a refresh.
         self.live_view_cache.clear();
         self.pending_delete = None;
         self.pending_history = None;
         self.pending_search = None;
+        // Restore the operator's position by identity first, then degrade to the containing folder.
         self.restore_selection(anchor.as_ref());
         self.detail_scroll = 0;
     }
@@ -147,6 +155,7 @@ impl BrowserState {
     }
 
     pub(crate) fn start_search(&mut self, direction: SearchDirection) {
+        // Search is a transient modal layered over the current tree selection.
         self.pending_search = Some(SearchPromptState {
             direction,
             query: String::new(),
@@ -212,6 +221,8 @@ impl BrowserState {
                 })
             })
             .or_else(|| {
+                // Dashboard rows can disappear across refreshes; fall back to the enclosing folder
+                // before giving up and jumping to the top of the tree.
                 anchor.and_then(|item| {
                     self.document.nodes.iter().position(|node| {
                         node.kind == DashboardBrowseNodeKind::Folder
@@ -253,6 +264,8 @@ impl BrowserState {
 }
 
 fn node_matches(node: &DashboardBrowseNode, needle: &str) -> bool {
+    // Search intentionally stays on stable identity/location fields so refreshed live metadata
+    // does not change basic match semantics.
     [
         node.org_name.as_str(),
         node.title.as_str(),

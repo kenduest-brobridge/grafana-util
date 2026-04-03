@@ -30,6 +30,13 @@ fn inspect_live_dashboards_with_request_all_orgs_matches_export_root_governance_
         overwrite: true,
         without_dashboard_raw: false,
         without_dashboard_prompt: true,
+        without_dashboard_provisioning: true,
+        provisioning_provider_name: "grafana-utils-dashboards".to_string(),
+        provisioning_provider_org_id: None,
+        provisioning_provider_path: None,
+        provisioning_provider_disable_deletion: false,
+        provisioning_provider_allow_ui_updates: false,
+        provisioning_provider_update_interval_seconds: 30,
         dry_run: false,
         progress: false,
         verbose: false,
@@ -168,8 +175,13 @@ fn inspect_live_dashboards_with_request_all_orgs_matches_export_root_governance_
     let export_report_output = temp.path().join("export-report.json");
     let export_report_args = InspectExportArgs {
         import_dir: export_import_dir.clone(),
+        input_type: None,
+        input_format: crate::dashboard::DashboardImportInputFormat::Raw,
+        text: false,
+        csv: false,
         json: false,
         table: false,
+        yaml: false,
         report: Some(InspectExportReportFormat::Json),
         output_format: None,
         report_columns: Vec::new(),
@@ -178,6 +190,7 @@ fn inspect_live_dashboards_with_request_all_orgs_matches_export_root_governance_
         help_full: false,
         no_header: false,
         output_file: Some(export_report_output.clone()),
+        interactive: false,
     };
     let export_report_count = test_support::analyze_export_dir(&export_report_args).unwrap();
     let export_report_document = read_json_output_file(&export_report_output);
@@ -189,8 +202,11 @@ fn inspect_live_dashboards_with_request_all_orgs_matches_export_root_governance_
         concurrency: 1,
         org_id: None,
         all_orgs: true,
+        text: false,
+        csv: false,
         json: false,
         table: false,
+        yaml: false,
         report: Some(InspectExportReportFormat::Json),
         output_format: None,
         report_columns: Vec::new(),
@@ -210,8 +226,13 @@ fn inspect_live_dashboards_with_request_all_orgs_matches_export_root_governance_
     let export_governance_output = temp.path().join("export-governance.json");
     let export_governance_args = InspectExportArgs {
         import_dir: export_import_dir.clone(),
+        input_type: None,
+        input_format: crate::dashboard::DashboardImportInputFormat::Raw,
+        text: false,
+        csv: false,
         json: false,
         table: false,
+        yaml: false,
         report: Some(InspectExportReportFormat::GovernanceJson),
         output_format: None,
         report_columns: Vec::new(),
@@ -220,6 +241,7 @@ fn inspect_live_dashboards_with_request_all_orgs_matches_export_root_governance_
         help_full: false,
         no_header: false,
         output_file: Some(export_governance_output.clone()),
+        interactive: false,
     };
     let export_governance_count =
         test_support::analyze_export_dir(&export_governance_args).unwrap();
@@ -232,8 +254,11 @@ fn inspect_live_dashboards_with_request_all_orgs_matches_export_root_governance_
         concurrency: 1,
         org_id: None,
         all_orgs: true,
+        text: false,
+        csv: false,
         json: false,
         table: false,
+        yaml: false,
         report: Some(InspectExportReportFormat::GovernanceJson),
         output_format: None,
         report_columns: Vec::new(),
@@ -255,8 +280,13 @@ fn inspect_live_dashboards_with_request_all_orgs_matches_export_root_governance_
     let export_dependency_output = temp.path().join("export-dependency.json");
     let export_dependency_args = InspectExportArgs {
         import_dir: export_import_dir.clone(),
+        input_type: None,
+        input_format: crate::dashboard::DashboardImportInputFormat::Raw,
+        text: false,
+        csv: false,
         json: false,
         table: false,
+        yaml: false,
         report: Some(InspectExportReportFormat::DependencyJson),
         output_format: None,
         report_columns: Vec::new(),
@@ -265,6 +295,7 @@ fn inspect_live_dashboards_with_request_all_orgs_matches_export_root_governance_
         help_full: false,
         no_header: false,
         output_file: Some(export_dependency_output.clone()),
+        interactive: false,
     };
     let export_dependency_count =
         test_support::analyze_export_dir(&export_dependency_args).unwrap();
@@ -277,8 +308,11 @@ fn inspect_live_dashboards_with_request_all_orgs_matches_export_root_governance_
         concurrency: 1,
         org_id: None,
         all_orgs: true,
+        text: false,
+        csv: false,
         json: false,
         table: false,
+        yaml: false,
         report: Some(InspectExportReportFormat::DependencyJson),
         output_format: None,
         report_columns: Vec::new(),

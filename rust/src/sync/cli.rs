@@ -1,9 +1,16 @@
+//! Sync CLI orchestration for the staged plan/review/apply workflow.
+//!
+//! This module owns command wiring, trace propagation, and orchestration-time
+//! live overlays. The lower-level builders stay focused on normalized
+//! documents so they remain reusable from tests and offline inputs.
+
 use super::*;
+use crate::common::render_json_value;
 use crate::sync::live::load_apply_intent_operations;
 
-fn emit_text_or_json(document: &Value, lines: Vec<String>, output: SyncOutputFormat) -> Result<()> {
+fn emit_text_or_json(document: &Value, lines: &[String], output: SyncOutputFormat) -> Result<()> {
     match output {
-        SyncOutputFormat::Json => println!("{}", serde_json::to_string_pretty(document)?),
+        SyncOutputFormat::Json => print!("{}", render_json_value(document)?),
         SyncOutputFormat::Text => {
             for line in lines {
                 println!("{line}");
@@ -11,6 +18,13 @@ fn emit_text_or_json(document: &Value, lines: Vec<String>, output: SyncOutputFor
         }
     }
     Ok(())
+}
+
+fn sync_command_output(document: Value, text_lines: Vec<String>) -> SyncCommandOutput {
+    SyncCommandOutput {
+        document,
+        text_lines,
+    }
 }
 
 fn load_sync_live_array(
@@ -47,6 +61,19 @@ fn load_sync_merged_availability(
     }
 }
 
+fn build_sync_review_document(
+    reviewed_plan_input: &Value,
+    review_token: &str,
+    trace_id: &str,
+    reviewed_by: Option<&str>,
+    reviewed_at: Option<&str>,
+    review_note: Option<&str>,
+) -> Result<Value> {
+    let document = mark_plan_reviewed(reviewed_plan_input, review_token)?;
+    let document = attach_review_audit(&document, trace_id, reviewed_by, reviewed_at, review_note)?;
+    attach_lineage(&document, "review", 2, Some(trace_id))
+}
+
 fn build_sync_apply_document(
     args: &SyncApplyArgs,
     plan: &Value,
@@ -54,28 +81,19 @@ fn build_sync_apply_document(
     bundle_preflight_summary: Option<Value>,
     trace_id: &str,
 ) -> Result<Value> {
-    attach_lineage(
-        &attach_trace_id(
-            &attach_apply_audit(
-                &attach_bundle_preflight_summary(
-                    &attach_preflight_summary(
-                        &build_sync_apply_intent_document(plan, args.approve)?,
-                        preflight_summary,
-                    )?,
-                    bundle_preflight_summary,
-                )?,
-                trace_id,
-                args.applied_by.as_deref(),
-                args.applied_at.as_deref(),
-                args.approval_reason.as_deref(),
-                args.apply_note.as_deref(),
-            )?,
-            Some(trace_id),
-        )?,
-        "apply",
-        3,
-        Some(trace_id),
-    )
+    let document = build_sync_apply_intent_document(plan, args.approve)?;
+    let document = attach_preflight_summary(&document, preflight_summary)?;
+    let document = attach_bundle_preflight_summary(&document, bundle_preflight_summary)?;
+    let document = attach_apply_audit(
+        &document,
+        trace_id,
+        args.applied_by.as_deref(),
+        args.applied_at.as_deref(),
+        args.approval_reason.as_deref(),
+        args.apply_note.as_deref(),
+    )?;
+    let document = attach_trace_id(&document, Some(trace_id))?;
+    attach_lineage(&document, "apply", 3, Some(trace_id))
 }
 
 fn load_sync_apply_preflight_summary(
@@ -165,17 +183,192 @@ fn run_sync_audit(args: SyncAuditArgs) -> Result<()> {
     if args.interactive {
         return run_sync_audit_interactive(&audit);
     }
-    emit_text_or_json(&audit, render_sync_audit_text(&audit)?, args.output)
+    emit_text_or_json(&audit, &render_sync_audit_text(&audit)?, args.output)
 }
 
-fn run_sync_bundle(args: SyncBundleArgs) -> Result<()> {
+fn execute_sync_plan(args: &SyncPlanArgs) -> Result<SyncCommandOutput> {
+    let desired = load_json_array_file(&args.desired_file, "Sync desired input")?;
+    // Live fetch stays at orchestration level so the planner only sees
+    // normalized arrays and never has to own Grafana transport details.
+    let live = load_sync_live_array(
+        args.fetch_live,
+        &args.common,
+        args.org_id,
+        args.page_size,
+        args.live_file.as_ref(),
+        "Sync plan requires --live-file unless --fetch-live is used.",
+    )?;
+    let document = attach_lineage(
+        &attach_trace_id(
+            &build_sync_plan_document(&desired, &live, args.allow_prune)?,
+            args.trace_id.as_deref(),
+        )?,
+        "plan",
+        1,
+        None,
+    )?;
+    let text_lines = render_sync_plan_text(&document)?;
+    Ok(sync_command_output(document, text_lines))
+}
+
+fn run_sync_review(args: SyncReviewArgs) -> Result<()> {
+    let plan = load_json_value(&args.plan_file, "Sync plan input")?;
+    let trace_id = require_trace_id(&plan, "Sync plan document")?;
+    require_optional_stage(&plan, "Sync plan document", "plan", 1, None)?;
+    let reviewed_plan_input = if args.interactive {
+        review_tui::run_sync_review_tui(&plan)?
+    } else {
+        plan
+    };
+    let document = build_sync_review_document(
+        &reviewed_plan_input,
+        &args.review_token,
+        &trace_id,
+        args.reviewed_by.as_deref(),
+        args.reviewed_at.as_deref(),
+        args.review_note.as_deref(),
+    )?;
+    emit_text_or_json(&document, &render_sync_plan_text(&document)?, args.output)
+}
+
+fn run_sync_apply(args: SyncApplyArgs) -> Result<()> {
+    let plan = load_json_value(&args.plan_file, "Sync plan input")?;
+    let trace_id = require_trace_id(&plan, "Sync plan document")?;
+    require_optional_stage(&plan, "Sync plan document", "review", 2, Some(&trace_id))?;
+    let preflight_summary =
+        load_sync_apply_preflight_summary(&trace_id, args.preflight_file.as_ref())?;
+    let bundle_preflight_summary =
+        load_sync_apply_bundle_preflight_summary(&trace_id, args.bundle_preflight_file.as_ref())?;
+    let document = build_sync_apply_document(
+        &args,
+        &plan,
+        preflight_summary,
+        bundle_preflight_summary,
+        &trace_id,
+    )?;
+    if args.execute_live {
+        // Keep the reviewed plan document intact even when executing
+        // live so the emitted payload remains the audit trail.
+        let operations = load_apply_intent_operations(&document)?;
+        let live_result = execute_live_apply(
+            &args.common,
+            args.org_id,
+            &operations,
+            args.allow_folder_delete,
+            args.allow_policy_reset,
+        )?;
+        emit_text_or_json(
+            &live_result,
+            &[
+                "Sync live apply".to_string(),
+                format!(
+                    "Applied: {}",
+                    live_result
+                        .get("appliedCount")
+                        .and_then(Value::as_i64)
+                        .unwrap_or(0)
+                ),
+            ],
+            args.output,
+        )
+    } else {
+        emit_text_or_json(
+            &document,
+            &render_sync_apply_intent_text(&document)?,
+            args.output,
+        )
+    }
+}
+
+fn execute_sync_summary(args: &SyncSummaryArgs) -> Result<SyncCommandOutput> {
+    let desired = load_json_array_file(&args.desired_file, "Sync desired input")?;
+    let document = build_sync_summary_document(&desired)?;
+    let text_lines = render_sync_summary_text(&document)?;
+    Ok(sync_command_output(document, text_lines))
+}
+
+fn execute_sync_preflight(args: &SyncPreflightArgs) -> Result<SyncCommandOutput> {
+    let desired = load_json_array_file(&args.desired_file, "Sync desired input")?;
+    let availability = load_sync_merged_availability(
+        args.fetch_live,
+        &args.common,
+        args.org_id,
+        args.availability_file.as_ref(),
+    )?;
+    // Only the orchestration layer decides whether to supplement staged
+    // availability with a live Grafana snapshot.
+    let document = build_sync_preflight_document(&desired, availability.as_ref())?;
+    let text_lines = render_sync_preflight_text(&document)?;
+    Ok(sync_command_output(document, text_lines))
+}
+
+fn execute_sync_assess_alerts(args: &SyncAssessAlertsArgs) -> Result<SyncCommandOutput> {
+    let alerts = load_json_array_file(&args.alerts_file, "Alert sync input")?;
+    let document = assess_alert_sync_specs(&alerts)?;
+    let text_lines = render_alert_sync_assessment_text(&document)?;
+    Ok(sync_command_output(document, text_lines))
+}
+
+fn execute_sync_bundle_preflight(args: &SyncBundlePreflightArgs) -> Result<SyncCommandOutput> {
+    let source_bundle = load_json_value(&args.source_bundle, "Sync source bundle input")?;
+    let target_inventory = load_json_value(&args.target_inventory, "Sync target inventory input")?;
+    let availability = load_sync_merged_availability(
+        args.fetch_live,
+        &args.common,
+        args.org_id,
+        args.availability_file.as_ref(),
+    )?;
+    // Keep the bundle-preflight contract identical to preflight: live
+    // availability is an optional orchestration-time overlay.
+    let document = build_sync_bundle_preflight_document(
+        &source_bundle,
+        &target_inventory,
+        availability.as_ref(),
+    )?;
+    let text_lines = render_sync_bundle_preflight_text(&document)?;
+    Ok(sync_command_output(document, text_lines))
+}
+
+fn execute_sync_promotion_preflight(
+    args: &SyncPromotionPreflightArgs,
+) -> Result<SyncCommandOutput> {
+    let source_bundle = load_json_value(&args.source_bundle, "Sync source bundle input")?;
+    let target_inventory = load_json_value(&args.target_inventory, "Sync target inventory input")?;
+    let mapping = match args.mapping_file.as_ref() {
+        Some(path) => Some(load_json_value(path, "Sync promotion mapping input")?),
+        None => None,
+    };
+    let availability = load_sync_merged_availability(
+        args.fetch_live,
+        &args.common,
+        args.org_id,
+        args.availability_file.as_ref(),
+    )?;
+    let document = build_sync_promotion_preflight_document(
+        &source_bundle,
+        &target_inventory,
+        availability.as_ref(),
+        mapping.as_ref(),
+    )?;
+    let text_lines = render_sync_promotion_preflight_text(&document)?;
+    Ok(sync_command_output(document, text_lines))
+}
+
+fn execute_sync_bundle(args: &SyncBundleArgs) -> Result<SyncCommandOutput> {
+    if args.dashboard_export_dir.is_some() && args.dashboard_provisioning_dir.is_some() {
+        return Err(message(
+            "Sync bundle accepts only one dashboard input: --dashboard-export-dir or --dashboard-provisioning-dir.",
+        ));
+    }
     if args.dashboard_export_dir.is_none()
+        && args.dashboard_provisioning_dir.is_none()
         && args.alert_export_dir.is_none()
         && args.datasource_export_file.is_none()
+        && args.datasource_provisioning_file.is_none()
         && args.metadata_file.is_none()
     {
         return Err(message(
-            "Sync bundle requires at least one export input such as --dashboard-export-dir, --alert-export-dir, --datasource-export-file, or --metadata-file.",
+            "Sync bundle requires at least one export input such as --dashboard-export-dir, --dashboard-provisioning-dir, --alert-export-dir, --datasource-export-file, --datasource-provisioning-file, or --metadata-file.",
         ));
     }
     let mut dashboards = Vec::new();
@@ -184,13 +377,44 @@ fn run_sync_bundle(args: SyncBundleArgs) -> Result<()> {
     let mut metadata = Map::new();
     if let Some(export_dir) = args.dashboard_export_dir.as_ref() {
         let (dashboard_items, dashboard_datasources, folder_items, dashboard_metadata) =
-            load_dashboard_bundle_sections(export_dir)?;
+            load_dashboard_bundle_sections(
+                export_dir,
+                export_dir,
+                args.datasource_provisioning_file.as_deref(),
+            )?;
         dashboards = dashboard_items;
         datasources.extend(dashboard_datasources);
         folders = folder_items;
         metadata.extend(dashboard_metadata);
+        metadata.insert(
+            "dashboardExportDir".to_string(),
+            Value::String(export_dir.display().to_string()),
+        );
+    } else if let Some(provisioning_dir) = args.dashboard_provisioning_dir.as_ref() {
+        let (dashboard_items, dashboard_datasources, folder_items, dashboard_metadata) =
+            load_dashboard_provisioning_bundle_sections(
+                provisioning_dir,
+                args.datasource_provisioning_file.as_deref(),
+            )?;
+        dashboards = dashboard_items;
+        datasources.extend(dashboard_datasources);
+        folders = folder_items;
+        metadata.extend(dashboard_metadata);
+        metadata.insert(
+            "dashboardProvisioningDir".to_string(),
+            Value::String(provisioning_dir.display().to_string()),
+        );
     }
-    if let Some(datasource_export_file) = args.datasource_export_file.as_ref() {
+    if let Some(datasource_provisioning_file) = args.datasource_provisioning_file.as_ref() {
+        datasources = load_datasource_provisioning_records(datasource_provisioning_file)?
+            .into_iter()
+            .map(|item| normalize_datasource_bundle_item(&item))
+            .collect::<Result<Vec<_>>>()?;
+        metadata.insert(
+            "datasourceProvisioningFile".to_string(),
+            Value::String(datasource_provisioning_file.display().to_string()),
+        );
+    } else if let Some(datasource_export_file) = args.datasource_export_file.as_ref() {
         datasources = load_json_array_file(datasource_export_file, "Datasource export inventory")?
             .into_iter()
             .map(|item| normalize_datasource_bundle_item(&item))
@@ -226,183 +450,73 @@ fn run_sync_bundle(args: SyncBundleArgs) -> Result<()> {
         Some(&alerting),
         Some(&Value::Object(metadata)),
     )?;
-    if let Some(output_file) = args.output_file.as_ref() {
-        fs::write(
-            output_file,
-            format!("{}\n", serde_json::to_string_pretty(&document)?),
-        )?;
+    let text_lines = render_sync_source_bundle_text(&document)?;
+    Ok(sync_command_output(document, text_lines))
+}
+
+/// Execute reusable sync commands without writing to stdout.
+pub fn execute_sync_command(command: &SyncGroupCommand) -> Result<SyncCommandOutput> {
+    match command {
+        SyncGroupCommand::Plan(args) => execute_sync_plan(args),
+        SyncGroupCommand::Summary(args) => execute_sync_summary(args),
+        SyncGroupCommand::Preflight(args) => execute_sync_preflight(args),
+        SyncGroupCommand::AssessAlerts(args) => execute_sync_assess_alerts(args),
+        SyncGroupCommand::BundlePreflight(args) => execute_sync_bundle_preflight(args),
+        SyncGroupCommand::PromotionPreflight(args) => execute_sync_promotion_preflight(args),
+        SyncGroupCommand::Bundle(args) => execute_sync_bundle(args),
+        SyncGroupCommand::Review(_) => Err(message(
+            "Sync review is not exposed through reusable execution output.",
+        )),
+        SyncGroupCommand::Audit(_) => Err(message(
+            "Sync audit is not exposed through reusable execution output.",
+        )),
+        SyncGroupCommand::Apply(args) if args.execute_live => Err(message(
+            "Sync live apply is not exposed through reusable execution output.",
+        )),
+        SyncGroupCommand::Apply(_) => Err(message(
+            "Sync apply is not exposed through reusable execution output.",
+        )),
     }
-    emit_text_or_json(
-        &document,
-        render_sync_source_bundle_text(&document)?,
-        args.output,
-    )
-}
-
-fn run_sync_plan(args: SyncPlanArgs) -> Result<()> {
-    let desired = load_json_array_file(&args.desired_file, "Sync desired input")?;
-    // Live fetch stays at orchestration level so the planner only sees
-    // normalized arrays and never has to own Grafana transport details.
-    let live = load_sync_live_array(
-        args.fetch_live,
-        &args.common,
-        args.org_id,
-        args.page_size,
-        args.live_file.as_ref(),
-        "Sync plan requires --live-file unless --fetch-live is used.",
-    )?;
-    let document = attach_lineage(
-        &attach_trace_id(
-            &build_sync_plan_document(&desired, &live, args.allow_prune)?,
-            args.trace_id.as_deref(),
-        )?,
-        "plan",
-        1,
-        None,
-    )?;
-    emit_text_or_json(&document, render_sync_plan_text(&document)?, args.output)
-}
-
-fn run_sync_review(args: SyncReviewArgs) -> Result<()> {
-    let plan = load_json_value(&args.plan_file, "Sync plan input")?;
-    let trace_id = require_trace_id(&plan, "Sync plan document")?;
-    require_optional_stage(&plan, "Sync plan document", "plan", 1, None)?;
-    let reviewed_plan_input = if args.interactive {
-        review_tui::run_sync_review_tui(&plan)?
-    } else {
-        plan
-    };
-    let document = attach_lineage(
-        &attach_review_audit(
-            &mark_plan_reviewed(&reviewed_plan_input, &args.review_token)?,
-            &trace_id,
-            args.reviewed_by.as_deref(),
-            args.reviewed_at.as_deref(),
-            args.review_note.as_deref(),
-        )?,
-        "review",
-        2,
-        Some(&trace_id),
-    )?;
-    emit_text_or_json(&document, render_sync_plan_text(&document)?, args.output)
-}
-
-fn run_sync_apply(args: SyncApplyArgs) -> Result<()> {
-    let plan = load_json_value(&args.plan_file, "Sync plan input")?;
-    let trace_id = require_trace_id(&plan, "Sync plan document")?;
-    require_optional_stage(&plan, "Sync plan document", "review", 2, Some(&trace_id))?;
-    let preflight_summary =
-        load_sync_apply_preflight_summary(&trace_id, args.preflight_file.as_ref())?;
-    let bundle_preflight_summary =
-        load_sync_apply_bundle_preflight_summary(&trace_id, args.bundle_preflight_file.as_ref())?;
-    let document = build_sync_apply_document(
-        &args,
-        &plan,
-        preflight_summary,
-        bundle_preflight_summary,
-        &trace_id,
-    )?;
-    if args.execute_live {
-        // Keep the reviewed plan document intact even when executing
-        // live so the emitted payload remains the audit trail.
-        let operations = load_apply_intent_operations(&document)?;
-        let live_result = execute_live_apply(
-            &args.common,
-            args.org_id,
-            &operations,
-            args.allow_folder_delete,
-            args.allow_policy_reset,
-        )?;
-        emit_text_or_json(
-            &live_result,
-            vec![
-                "Sync live apply".to_string(),
-                format!(
-                    "Applied: {}",
-                    live_result
-                        .get("appliedCount")
-                        .and_then(Value::as_i64)
-                        .unwrap_or(0)
-                ),
-            ],
-            args.output,
-        )
-    } else {
-        emit_text_or_json(
-            &document,
-            render_sync_apply_intent_text(&document)?,
-            args.output,
-        )
-    }
-}
-
-fn run_sync_summary(args: SyncSummaryArgs) -> Result<()> {
-    let desired = load_json_array_file(&args.desired_file, "Sync desired input")?;
-    let document = build_sync_summary_document(&desired)?;
-    emit_text_or_json(&document, render_sync_summary_text(&document)?, args.output)
-}
-
-fn run_sync_preflight(args: SyncPreflightArgs) -> Result<()> {
-    let desired = load_json_array_file(&args.desired_file, "Sync desired input")?;
-    let availability = load_sync_merged_availability(
-        args.fetch_live,
-        &args.common,
-        args.org_id,
-        args.availability_file.as_ref(),
-    )?;
-    // Only the orchestration layer decides whether to supplement staged
-    // availability with a live Grafana snapshot.
-    let document = build_sync_preflight_document(&desired, availability.as_ref())?;
-    emit_text_or_json(
-        &document,
-        render_sync_preflight_text(&document)?,
-        args.output,
-    )
-}
-
-fn run_sync_assess_alerts(args: SyncAssessAlertsArgs) -> Result<()> {
-    let alerts = load_json_array_file(&args.alerts_file, "Alert sync input")?;
-    let document = assess_alert_sync_specs(&alerts)?;
-    emit_text_or_json(
-        &document,
-        render_alert_sync_assessment_text(&document)?,
-        args.output,
-    )
-}
-
-fn run_sync_bundle_preflight(args: SyncBundlePreflightArgs) -> Result<()> {
-    let source_bundle = load_json_value(&args.source_bundle, "Sync source bundle input")?;
-    let target_inventory = load_json_value(&args.target_inventory, "Sync target inventory input")?;
-    let availability = load_sync_merged_availability(
-        args.fetch_live,
-        &args.common,
-        args.org_id,
-        args.availability_file.as_ref(),
-    )?;
-    // Keep the bundle-preflight contract identical to preflight: live
-    // availability is an optional orchestration-time overlay.
-    let document = build_sync_bundle_preflight_document(
-        &source_bundle,
-        &target_inventory,
-        availability.as_ref(),
-    )?;
-    emit_text_or_json(
-        &document,
-        render_sync_bundle_preflight_text(&document)?,
-        args.output,
-    )
 }
 
 pub fn run_sync_cli(command: SyncGroupCommand) -> Result<()> {
     match command {
-        SyncGroupCommand::Plan(args) => run_sync_plan(args),
+        SyncGroupCommand::Plan(args) => {
+            let output = execute_sync_plan(&args)?;
+            emit_text_or_json(&output.document, &output.text_lines, args.output)
+        }
         SyncGroupCommand::Review(args) => run_sync_review(args),
         SyncGroupCommand::Apply(args) => run_sync_apply(args),
         SyncGroupCommand::Audit(args) => run_sync_audit(args),
-        SyncGroupCommand::Summary(args) => run_sync_summary(args),
-        SyncGroupCommand::Preflight(args) => run_sync_preflight(args),
-        SyncGroupCommand::AssessAlerts(args) => run_sync_assess_alerts(args),
-        SyncGroupCommand::BundlePreflight(args) => run_sync_bundle_preflight(args),
-        SyncGroupCommand::Bundle(args) => run_sync_bundle(args),
+        SyncGroupCommand::Summary(args) => {
+            let output = execute_sync_summary(&args)?;
+            emit_text_or_json(&output.document, &output.text_lines, args.output)
+        }
+        SyncGroupCommand::Preflight(args) => {
+            let output = execute_sync_preflight(&args)?;
+            emit_text_or_json(&output.document, &output.text_lines, args.output)
+        }
+        SyncGroupCommand::AssessAlerts(args) => {
+            let output = execute_sync_assess_alerts(&args)?;
+            emit_text_or_json(&output.document, &output.text_lines, args.output)
+        }
+        SyncGroupCommand::BundlePreflight(args) => {
+            let output = execute_sync_bundle_preflight(&args)?;
+            emit_text_or_json(&output.document, &output.text_lines, args.output)
+        }
+        SyncGroupCommand::PromotionPreflight(args) => {
+            let output = execute_sync_promotion_preflight(&args)?;
+            emit_text_or_json(&output.document, &output.text_lines, args.output)
+        }
+        SyncGroupCommand::Bundle(args) => {
+            let output = execute_sync_bundle(&args)?;
+            if let Some(output_file) = args.output_file.as_ref() {
+                fs::write(
+                    output_file,
+                    format!("{}\n", serde_json::to_string_pretty(&output.document)?),
+                )?;
+            }
+            emit_text_or_json(&output.document, &output.text_lines, args.output)
+        }
     }
 }

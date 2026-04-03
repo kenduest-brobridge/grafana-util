@@ -1,6 +1,12 @@
+//! Render helpers for dashboard delete plan and preview outputs.
+//!
+//! Responsibilities:
+//! - Convert delete plans into text output consumed by `--output text`.
+//! - Serialize dry-run and execution preview payloads for downstream consumers.
+
 use serde_json::json;
 
-use crate::common::Result;
+use crate::common::{render_json_value, Result};
 
 use super::delete_support::{DashboardDeleteTarget, DeletePlan, FolderDeleteTarget};
 
@@ -53,7 +59,7 @@ pub(crate) fn render_delete_dry_run_json(plan: &DeletePlan) -> Result<String> {
             })
         }))
         .collect::<Vec<_>>();
-    Ok(serde_json::to_string_pretty(&json!({
+    render_json_value(&json!({
         "selector": {
             "uid": plan.selector_uid,
             "path": plan.selector_path,
@@ -64,7 +70,7 @@ pub(crate) fn render_delete_dry_run_json(plan: &DeletePlan) -> Result<String> {
             "dashboardCount": plan.dashboards.len(),
             "folderCount": plan.folders.len(),
         }
-    }))?)
+    }))
 }
 
 pub(crate) fn render_delete_dry_run_table(plan: &DeletePlan, include_header: bool) -> Vec<String> {

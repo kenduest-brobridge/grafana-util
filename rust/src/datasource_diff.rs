@@ -1,19 +1,11 @@
 //! Datasource diff model and normalization helpers.
 //! Holds compare records/status used by list/import/export drift detection and report rendering.
-use serde_json::{Map, Value};
+use serde_json::Value;
 use std::collections::BTreeMap;
 
-/// Struct definition for DatasourceDiffRecord.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct DatasourceDiffRecord {
-    pub(crate) uid: String,
-    pub(crate) name: String,
-    pub(crate) datasource_type: String,
-    pub(crate) access: String,
-    pub(crate) url: String,
-    pub(crate) is_default: bool,
-    pub(crate) org_id: String,
-}
+use super::datasource_import_export::DatasourceImportRecord;
+
+pub(crate) type DatasourceDiffRecord = DatasourceImportRecord;
 
 /// Struct definition for DatasourceFieldDifference.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -61,35 +53,11 @@ pub(crate) struct DatasourceDiffReport {
     pub(crate) summary: DatasourceDiffSummary,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum RecordOrigin {
-    Export,
-    Live,
+trait DatasourceDiffRecordExt {
+    fn comparison_key(&self) -> String;
 }
 
-impl DatasourceDiffRecord {
-    /// from export map.
-    pub(crate) fn from_export_map(record: &Map<String, Value>) -> Self {
-        Self::from_map(record, RecordOrigin::Export)
-    }
-
-    /// from live map.
-    pub(crate) fn from_live_map(record: &Map<String, Value>) -> Self {
-        Self::from_map(record, RecordOrigin::Live)
-    }
-
-    fn from_map(record: &Map<String, Value>, origin: RecordOrigin) -> Self {
-        Self {
-            uid: string_field(record, "uid"),
-            name: string_field(record, "name"),
-            datasource_type: string_field(record, "type"),
-            access: string_field(record, "access"),
-            url: string_field(record, "url"),
-            is_default: bool_field(record, "isDefault"),
-            org_id: normalize_org_id(record, &origin),
-        }
-    }
-
+impl DatasourceDiffRecordExt for DatasourceDiffRecord {
     fn comparison_key(&self) -> String {
         if !self.uid.is_empty() {
             return format!("uid:{}", self.uid);
@@ -275,51 +243,13 @@ fn push_difference(
     });
 }
 
-fn string_field(record: &Map<String, Value>, key: &str) -> String {
-    match record.get(key) {
-        Some(Value::String(value)) => value.trim().to_string(),
-        Some(Value::Number(value)) => value.to_string(),
-        Some(Value::Bool(value)) => {
-            if *value {
-                "true".to_string()
-            } else {
-                "false".to_string()
-            }
-        }
-        Some(Value::Null) | None => String::new(),
-        Some(other) => other.to_string(),
-    }
-}
-
-fn bool_field(record: &Map<String, Value>, key: &str) -> bool {
-    match record.get(key) {
-        Some(Value::Bool(value)) => *value,
-        Some(Value::String(value)) => matches!(
-            value.trim().to_ascii_lowercase().as_str(),
-            "true" | "1" | "yes"
-        ),
-        Some(Value::Number(value)) => value.as_i64().unwrap_or(0) != 0,
-        _ => false,
-    }
-}
-
-// Pull orgId consistently from export/live records so diff rows compare with a
-// unified representation.
-fn normalize_org_id(record: &Map<String, Value>, origin: &RecordOrigin) -> String {
-    let key = match *origin {
-        RecordOrigin::Export => "orgId",
-        RecordOrigin::Live => "orgId",
-    };
-    string_field(record, key)
-}
-
 // Convert exported record map rows into a typed diff representation.
 /// Purpose: implementation note.
 pub(crate) fn normalize_export_records(values: &[Value]) -> Vec<DatasourceDiffRecord> {
     values
         .iter()
         .filter_map(Value::as_object)
-        .map(DatasourceDiffRecord::from_export_map)
+        .map(DatasourceImportRecord::from_generic_map)
         .collect()
 }
 
@@ -329,6 +259,6 @@ pub(crate) fn normalize_live_records(values: &[Value]) -> Vec<DatasourceDiffReco
     values
         .iter()
         .filter_map(Value::as_object)
-        .map(DatasourceDiffRecord::from_live_map)
+        .map(DatasourceImportRecord::from_generic_map)
         .collect()
 }

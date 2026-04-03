@@ -8,7 +8,7 @@
 
 use super::json::{require_json_object, require_json_object_field};
 use super::workbench::{normalize_resource_specs, SyncResourceSpec};
-use crate::common::{message, Result};
+use crate::common::{message, tool_version, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::collections::BTreeSet;
@@ -336,7 +336,7 @@ fn build_alert_checks(
                 .to_string(),
         blocking: true,
     }];
-    for datasource_uid in collect_alert_datasource_uids(&body)? {
+    for datasource_uid in collect_alert_datasource_uids(body)? {
         let available = available_datasource_uids.contains(&datasource_uid);
         checks.push(SyncPreflightCheck {
             kind: "alert-datasource".to_string(),
@@ -351,7 +351,7 @@ fn build_alert_checks(
             blocking: !available,
         });
     }
-    for datasource_name in collect_alert_datasource_names(&body)? {
+    for datasource_name in collect_alert_datasource_names(body)? {
         let available = available_datasource_names.contains(&datasource_name);
         checks.push(SyncPreflightCheck {
             kind: "alert-datasource-name".to_string(),
@@ -381,7 +381,7 @@ fn build_alert_checks(
             blocking: !available,
         });
     }
-    for contact_point in collect_alert_contact_points(&body)? {
+    for contact_point in collect_alert_contact_points(body)? {
         let available = available_contact_points.contains(&contact_point);
         checks.push(SyncPreflightCheck {
             kind: "alert-contact-point".to_string(),
@@ -438,6 +438,7 @@ pub fn build_sync_preflight_document(
     Ok(serde_json::json!({
         "kind": SYNC_PREFLIGHT_KIND,
         "schemaVersion": SYNC_PREFLIGHT_SCHEMA_VERSION,
+        "toolVersion": tool_version(),
         "summary": serde_json::to_value(SyncPreflightSummary {
             check_count: checks.len() as i64,
             ok_count: checks.iter().filter(|item| item.status == "ok").count() as i64,

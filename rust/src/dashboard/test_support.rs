@@ -5,11 +5,11 @@ pub(crate) use crate::dashboard::browse_support::build_dashboard_browse_document
 pub(crate) use crate::dashboard::cli_defs::{
     build_auth_context, build_http_client, build_http_client_for_org, normalize_dashboard_cli_args,
     parse_cli_from, BrowseArgs, CommonCliArgs, DashboardAuthContext, DashboardCliArgs,
-    DashboardCommand, DiffArgs, ExportArgs, GovernanceGateArgs, GovernanceGateOutputFormat,
-    GovernancePolicySource, ImpactArgs, ImpactOutputFormat, ImportArgs, InspectExportArgs,
-    InspectExportReportFormat, InspectLiveArgs, InspectOutputFormat, InspectVarsArgs, ListArgs,
-    ScreenshotArgs, ScreenshotFullPageOutput, ScreenshotOutputFormat, ScreenshotTheme,
-    SimpleOutputFormat, TopologyArgs, TopologyOutputFormat, ValidateExportArgs,
+    DashboardCommand, DashboardImportInputFormat, DiffArgs, ExportArgs, GovernanceGateArgs,
+    GovernanceGateOutputFormat, GovernancePolicySource, ImpactArgs, ImpactOutputFormat, ImportArgs,
+    InspectExportArgs, InspectExportReportFormat, InspectLiveArgs, InspectOutputFormat,
+    InspectVarsArgs, ListArgs, ScreenshotArgs, ScreenshotFullPageOutput, ScreenshotOutputFormat,
+    ScreenshotTheme, SimpleOutputFormat, TopologyArgs, TopologyOutputFormat, ValidateExportArgs,
     ValidationOutputFormat,
 };
 pub(crate) use crate::dashboard::export::{
@@ -19,9 +19,9 @@ pub(crate) use crate::dashboard::export::{
 pub(crate) use crate::dashboard::files::{
     build_dashboard_index_item, build_export_metadata, build_import_payload,
     build_preserved_web_import_document, build_root_export_index, build_variant_index,
-    discover_dashboard_files, extract_dashboard_object, load_datasource_inventory,
-    load_export_metadata, load_folder_inventory, load_json_file, write_dashboard,
-    write_json_document,
+    discover_dashboard_files, extract_dashboard_object, load_dashboard_export_root_manifest,
+    load_datasource_inventory, load_export_metadata, load_folder_inventory, load_json_file,
+    resolve_dashboard_export_root, write_dashboard, write_json_document,
 };
 pub(crate) use crate::dashboard::governance_gate::{
     evaluate_dashboard_governance_gate, render_dashboard_governance_gate_result,
@@ -58,9 +58,9 @@ pub(crate) mod import {
 pub(crate) mod inspect_governance {
     pub(crate) use crate::dashboard::inspect_governance::*;
 }
+pub(crate) use crate::dashboard::inspect_family::normalize_family_name;
 pub(crate) use crate::dashboard::inspect_governance::{
-    build_export_inspection_governance_document, normalize_family_name,
-    render_governance_table_report,
+    build_export_inspection_governance_document, render_governance_table_report,
 };
 pub(crate) use crate::dashboard::inspect_live::{
     inspect_live_dashboards_with_client, inspect_live_dashboards_with_request,
@@ -92,6 +92,7 @@ pub(crate) use crate::dashboard::inspect_summary::{
     DatasourceInventorySummary, ExportInspectionSummary, ExportInspectionSummaryDocument,
     ExportInspectionSummaryJsonSummary, MixedDashboardSummary,
 };
+pub(crate) use crate::dashboard::inspect_workbench_support::build_inspect_workbench_document;
 pub(crate) use crate::dashboard::list::{
     attach_dashboard_folder_paths_with_request, collect_dashboard_source_metadata,
     format_dashboard_summary_line, list_dashboards_with_client, list_dashboards_with_request,
@@ -107,8 +108,9 @@ pub(crate) use crate::dashboard::live::{
     list_datasources_with_request,
 };
 pub(crate) use crate::dashboard::models::{
-    DashboardIndexItem, DatasourceInventoryItem, ExportDatasourceUsageSummary, ExportMetadata,
-    ExportOrgSummary, FolderInventoryItem, RootExportIndex, RootExportVariants, VariantIndexEntry,
+    DashboardExportRootManifest, DashboardExportRootScopeKind, DashboardIndexItem,
+    DatasourceInventoryItem, ExportDatasourceUsageSummary, ExportMetadata, ExportOrgSummary,
+    FolderInventoryItem, RootExportIndex, RootExportVariants, VariantIndexEntry,
 };
 pub(crate) use crate::dashboard::prompt::{
     build_datasource_catalog, build_external_export_document, collect_datasource_refs,

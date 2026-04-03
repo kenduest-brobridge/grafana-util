@@ -5,6 +5,7 @@ use crate::datasource::datasource_diff::{
     build_datasource_diff_report, normalize_export_records, normalize_live_records,
     DatasourceDiffStatus,
 };
+use crate::datasource::DatasourceImportInputFormat;
 use serde_json::{json, Value};
 
 fn load_contract_cases() -> Vec<Value> {
@@ -30,6 +31,95 @@ fn normalize_export_records_handles_string_bools_and_org_ids() {
     assert_eq!(records[0].uid, "prom-main");
     assert!(records[0].is_default);
     assert_eq!(records[0].org_id, "7");
+}
+
+#[test]
+fn normalize_export_records_ignores_richer_masked_recovery_fields() {
+    let records = normalize_export_records(&[json!({
+        "uid": "loki-main",
+        "name": "Loki Logs",
+        "type": "loki",
+        "access": "proxy",
+        "url": "http://loki:3100",
+        "isDefault": "false",
+        "orgId": "7",
+        "basicAuth": true,
+        "basicAuthUser": "loki-user",
+        "withCredentials": true,
+        "database": "logs",
+        "jsonData": {
+            "maxLines": 1000
+        },
+        "secureJsonDataPlaceholders": {
+            "basicAuthPassword": "${secret:loki-main-basicauthpassword}"
+        }
+    })]);
+
+    assert_eq!(records.len(), 1);
+    assert_eq!(records[0].uid, "loki-main");
+    assert_eq!(records[0].name, "Loki Logs");
+    assert_eq!(records[0].datasource_type, "loki");
+    assert_eq!(records[0].access, "proxy");
+    assert_eq!(records[0].url, "http://loki:3100");
+    assert!(!records[0].is_default);
+    assert_eq!(records[0].org_id, "7");
+    assert_eq!(records[0].basic_auth, Some(true));
+    assert_eq!(records[0].basic_auth_user, "loki-user");
+    assert_eq!(records[0].database, "logs");
+    assert_eq!(records[0].with_credentials, Some(true));
+    assert_eq!(
+        records[0].json_data,
+        Some(
+            json!({
+                "maxLines": 1000
+            })
+            .as_object()
+            .unwrap()
+            .clone()
+        )
+    );
+    assert_eq!(
+        records[0].secure_json_data_placeholders,
+        Some(
+            json!({
+                "basicAuthPassword": "${secret:loki-main-basicauthpassword}"
+            })
+            .as_object()
+            .unwrap()
+            .clone()
+        )
+    );
+}
+
+#[test]
+fn normalize_live_records_uses_shared_canonical_record_shape() {
+    let records = normalize_live_records(&[json!({
+        "uid": "prom-main",
+        "name": "Prometheus Main",
+        "type": "prometheus",
+        "access": "proxy",
+        "url": "http://prometheus:9090",
+        "isDefault": true,
+        "org": "Main Org",
+        "orgId": 3,
+        "basicAuth": false,
+        "basicAuthUser": "prom-user",
+        "database": "metrics",
+        "jsonData": {
+            "httpMethod": "POST"
+        },
+        "user": "query-user",
+        "withCredentials": true
+    })]);
+
+    assert_eq!(records.len(), 1);
+    assert_eq!(records[0].org_name, "Main Org");
+    assert_eq!(records[0].org_id, "3");
+    assert_eq!(records[0].basic_auth, Some(false));
+    assert_eq!(records[0].basic_auth_user, "prom-user");
+    assert_eq!(records[0].database, "metrics");
+    assert_eq!(records[0].user, "query-user");
+    assert_eq!(records[0].with_credentials, Some(true));
 }
 
 #[test]
@@ -93,7 +183,12 @@ fn diff_report_rejects_extra_contract_fields_in_fixture_file() {
             "datasourcesFile": "datasources.json",
             "indexFile": "index.json",
             "datasourceCount": 1,
-            "format": "grafana-datasource-inventory-v1"
+            "format": "grafana-datasource-masked-recovery-v1",
+            "exportMode": "masked-recovery",
+            "masked": true,
+            "recoveryCapable": true,
+            "secretMaterial": "placeholders-only",
+            "provisioningProjection": "derived-projection"
         }))
         .unwrap(),
     )
@@ -120,7 +215,11 @@ fn diff_report_rejects_extra_contract_fields_in_fixture_file() {
     )
     .unwrap();
 
-    let result = crate::datasource::diff_datasources_with_live(&dir, &[]);
+    let result = crate::datasource::diff_datasources_with_live(
+        &dir,
+        DatasourceImportInputFormat::Inventory,
+        &[],
+    );
     let error = result.unwrap_err().to_string();
     assert!(error.contains("unsupported datasource field(s): password"));
     std::fs::remove_dir_all(dir).unwrap();

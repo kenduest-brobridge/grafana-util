@@ -1,14 +1,14 @@
 #![cfg(feature = "tui")]
 
+use crate::tui_shell;
+use crate::tui_shell::pane_block;
 use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Clear, List, ListItem, Paragraph};
 
 use super::datasource_browse_state::{BrowserState, PaneFocus};
-use super::datasource_browse_support::{
-    detail_lines, DatasourceBrowseDocument, DatasourceBrowseItem,
-};
+use super::datasource_browse_support::{detail_lines, DatasourceBrowseItem};
 
 pub(crate) fn render_datasource_browser_frame(
     frame: &mut ratatui::Frame,
@@ -27,11 +27,7 @@ pub(crate) fn render_datasource_browser_frame(
         .constraints([Constraint::Percentage(44), Constraint::Percentage(56)])
         .split(outer[1]);
 
-    let header = Paragraph::new(summary_lines(&state.document, &state.status).join("\n")).block(
-        Block::default()
-            .borders(Borders::ALL)
-            .title("Datasource Browser"),
-    );
+    let header = tui_shell::build_header("Datasource Browser", summary_lines(state));
     frame.render_widget(header, outer[0]);
 
     let list = List::new(build_list_items(&state.document.items))
@@ -57,68 +53,85 @@ pub(crate) fn render_datasource_browser_frame(
         );
     frame.render_stateful_widget(list, panes[0], &mut state.list_state);
 
-    if state.pending_delete.is_some() {
-        render_focusable_lines(
-            frame,
-            panes[1],
-            detail_text(state)
-                .lines()
-                .map(|line| Line::from(line.to_string()))
-                .collect::<Vec<_>>(),
-            pane_block(
-                &detail_title(state),
-                state.focus != PaneFocus::List,
-                Color::Red,
-                Color::Rgb(20, 18, 22),
-            ),
-            state.focus != PaneFocus::List,
-            state.detail_scroll,
-        );
-    } else {
-        render_detail_panel(frame, panes[1], state);
-    }
+    render_detail_panel(frame, panes[1], state);
 
-    let footer = Paragraph::new(control_lines(
-        state.pending_delete.is_some(),
-        state.pending_edit.is_some(),
-    ))
-    .block(
-        Block::default()
-            .borders(Borders::ALL)
-            .title("Controls")
-            .style(Style::default().bg(Color::Rgb(16, 22, 30)))
-            .border_style(Style::default().fg(Color::LightBlue)),
-    )
-    .style(Style::default().bg(Color::Rgb(16, 22, 30)).fg(Color::White));
+    let footer = tui_shell::build_footer(
+        control_lines(state.pending_delete.is_some(), state.pending_edit.is_some()),
+        state.status.clone(),
+    );
     frame.render_widget(footer, outer[2]);
 
     if let Some(edit_state) = state.pending_edit.as_ref() {
         edit_state.render(frame);
+    }
+    if state.pending_delete.is_some() {
+        tui_shell::render_overlay(
+            frame,
+            &detail_title(state),
+            detail_text(state)
+                .lines()
+                .map(|line| Line::from(line.to_string()))
+                .collect(),
+            Color::Red,
+        );
     }
     if let Some(search_state) = state.pending_search.as_ref() {
         render_search_prompt(frame, search_state.direction, &search_state.query);
     }
 }
 
-fn summary_lines(document: &DatasourceBrowseDocument, status: &str) -> Vec<String> {
+fn summary_lines(state: &BrowserState) -> Vec<Line<'static>> {
+    let document = &state.document;
     vec![
         if document.org_count > 1 {
-            format!(
-                "Scope {}  orgs={}  datasources={}",
-                blank_dash(&document.scope_label),
-                document.org_count,
-                document.datasource_count
-            )
+            tui_shell::summary_line(&[
+                tui_shell::summary_cell(
+                    "Scope",
+                    blank_dash(&document.scope_label),
+                    Color::LightBlue,
+                ),
+                tui_shell::summary_cell("Orgs", document.org_count.to_string(), Color::White),
+                tui_shell::summary_cell(
+                    "Datasources",
+                    document.datasource_count.to_string(),
+                    Color::White,
+                ),
+            ])
         } else {
-            format!(
-                "Org {} (id={})  datasources={}",
-                blank_dash(&document.org),
-                blank_dash(&document.org_id),
-                document.datasource_count
-            )
+            tui_shell::summary_line(&[
+                tui_shell::summary_cell("Org", blank_dash(&document.org), Color::LightBlue),
+                tui_shell::summary_cell("Id", blank_dash(&document.org_id), Color::White),
+                tui_shell::summary_cell(
+                    "Datasources",
+                    document.datasource_count.to_string(),
+                    Color::White,
+                ),
+            ])
         },
-        "[*] means default datasource".to_string(),
-        status.to_string(),
+        Line::from(vec![
+            tui_shell::label("Mode "),
+            tui_shell::accent(
+                if state.pending_delete.is_some() {
+                    "confirm-delete"
+                } else if state.pending_edit.is_some() {
+                    "edit"
+                } else if state.pending_search.is_some() {
+                    "search"
+                } else {
+                    "browse"
+                },
+                if state.pending_delete.is_some() {
+                    Color::LightRed
+                } else if state.pending_edit.is_some() || state.pending_search.is_some() {
+                    Color::Yellow
+                } else {
+                    Color::Green
+                },
+            ),
+            Span::raw("  "),
+            tui_shell::focus_label("Focus "),
+            tui_shell::key_chip(state.focus_label(), Color::Blue),
+        ]),
     ]
 }
 
@@ -345,7 +358,7 @@ fn render_detail_panel(
                 plain_boxed(&item.url, Color::Rgb(40, 49, 61)),
                 Span::raw("   "),
                 muted("ORG "),
-                plain_owned(format!(
+                tui_shell::plain(format!(
                     "{} ({})",
                     blank_dash(&item.org),
                     blank_dash(&item.org_id)
@@ -379,26 +392,29 @@ fn render_detail_panel(
     let shortcut_lines = if item.is_org_row() {
         vec![
             Line::from(vec![
-                badge("Up/Down", Color::Blue),
-                plain(" select org or datasource row"),
+                tui_shell::key_chip("Up/Down", Color::Blue),
+                tui_shell::plain(" select org or datasource row"),
             ]),
             Line::from(vec![
-                badge("l", Color::Cyan),
-                plain(" refresh all visible orgs"),
+                tui_shell::key_chip("l", Color::Cyan),
+                tui_shell::plain(" refresh all visible orgs"),
                 Span::raw("   "),
-                badge("e/d", Color::DarkGray),
-                plain(" datasource rows only"),
+                tui_shell::key_chip("e/d", Color::DarkGray),
+                tui_shell::plain(" datasource rows only"),
             ]),
         ]
     } else {
         vec![
-            Line::from(vec![badge("e", Color::Green), plain(" edit datasource")]),
             Line::from(vec![
-                badge("d", Color::Red),
-                plain(" delete datasource"),
+                tui_shell::key_chip("e", Color::Green),
+                tui_shell::plain(" edit datasource"),
+            ]),
+            Line::from(vec![
+                tui_shell::key_chip("d", Color::Red),
+                tui_shell::plain(" delete datasource"),
                 Span::raw("   "),
-                badge("l", Color::Cyan),
-                plain(" refresh live data"),
+                tui_shell::key_chip("l", Color::Cyan),
+                tui_shell::plain(" refresh live data"),
             ]),
         ]
     };
@@ -458,18 +474,19 @@ fn control_lines(has_pending_delete: bool, has_pending_edit: bool) -> Vec<Line<'
             ("Esc", Color::Gray, "cancel"),
             ("Ctrl+X", Color::Gray, "close"),
             ("Tab", Color::Blue, "next field"),
+            ("Shift+Tab", Color::Blue, "previous field"),
         ])];
     }
     vec![
         control_line(&[
-            ("Up/Down", Color::Blue, "select"),
+            ("Up/Down", Color::Blue, "move"),
             ("PgUp/PgDn", Color::Blue, "scroll detail"),
             ("Tab", Color::Blue, "next pane"),
             ("e", Color::Green, "edit"),
             ("d", Color::Red, "delete"),
         ]),
         control_line(&[
-            ("Shift+Tab", Color::Blue, "prev pane"),
+            ("Shift+Tab", Color::Blue, "previous pane"),
             ("/ ?", Color::Yellow, "search"),
             ("n", Color::Yellow, "next match"),
             ("l", Color::Cyan, "refresh"),
@@ -483,30 +500,12 @@ fn control_line(segments: &[(&'static str, Color, &'static str)]) -> Line<'stati
     let mut spans = Vec::new();
     for (index, (key, color, label)) in segments.iter().enumerate() {
         if index > 0 {
-            spans.push(plain("  "));
+            spans.push(tui_shell::plain("  "));
         }
-        spans.push(badge(key, *color));
-        spans.push(plain(format!(" {:<14}", label)));
+        spans.push(tui_shell::key_chip(key, *color));
+        spans.push(tui_shell::plain(format!(" {:<14}", label)));
     }
     Line::from(spans)
-}
-
-fn badge(text: &'static str, bg: Color) -> Span<'static> {
-    Span::styled(
-        format!(" {text} "),
-        Style::default()
-            .fg(Color::White)
-            .bg(bg)
-            .add_modifier(Modifier::BOLD),
-    )
-}
-
-fn plain(text: impl Into<std::borrow::Cow<'static, str>>) -> Span<'static> {
-    Span::styled(text.into(), Style::default().fg(Color::White))
-}
-
-fn plain_owned(text: impl Into<String>) -> Span<'static> {
-    Span::styled(text.into(), Style::default().fg(Color::White))
 }
 
 fn plain_boxed(text: &str, bg: Color) -> Span<'static> {
@@ -518,24 +517,6 @@ fn plain_boxed(text: &str, bg: Color) -> Span<'static> {
 
 fn muted(text: &'static str) -> Span<'static> {
     Span::styled(text, Style::default().fg(Color::Gray))
-}
-
-fn pane_block(title: &str, focused: bool, accent: Color, bg: Color) -> Block<'static> {
-    Block::default()
-        .borders(Borders::ALL)
-        .title(if focused {
-            format!("{title} [Focused]")
-        } else {
-            title.to_string()
-        })
-        .style(Style::default().bg(bg))
-        .border_style(Style::default().fg(if focused { accent } else { Color::Gray }))
-        .title_style(
-            Style::default()
-                .fg(Color::White)
-                .bg(bg)
-                .add_modifier(Modifier::BOLD),
-        )
 }
 
 fn render_focusable_lines(
@@ -623,4 +604,68 @@ fn render_search_prompt(
     )
     .style(Style::default().bg(Color::Rgb(18, 20, 26)));
     frame.render_widget(prompt, area);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::datasource_browse_support::DatasourceBrowseDocument;
+    use super::*;
+
+    fn empty_document() -> DatasourceBrowseDocument {
+        DatasourceBrowseDocument {
+            org: "Main Org.".to_string(),
+            org_id: "1".to_string(),
+            org_count: 1,
+            datasource_count: 0,
+            scope_label: "current-org".to_string(),
+            items: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn summary_lines_surface_focus_and_mode() {
+        let state = BrowserState::new(empty_document());
+        let lines = summary_lines(&state)
+            .into_iter()
+            .map(|line| line.to_string())
+            .collect::<Vec<_>>();
+        assert_eq!(lines.len(), 2);
+        assert!(lines[1].contains("Mode"));
+        assert!(lines[1].contains("browse"));
+        assert!(lines[1].contains("Focus"));
+        assert!(lines[1].contains("list"));
+        assert!(!lines.iter().any(|line| line.contains("default datasource")));
+    }
+
+    #[test]
+    fn summary_lines_surface_pending_delete_mode() {
+        let mut state = BrowserState::new(empty_document());
+        state.pending_delete = Some(super::super::datasource_browse_state::PendingDelete {
+            uid: "uid-1".to_string(),
+            name: "Prom".to_string(),
+            id: 7,
+        });
+        let lines = summary_lines(&state)
+            .into_iter()
+            .map(|line| line.to_string())
+            .collect::<Vec<_>>();
+        assert_eq!(lines.len(), 2);
+        assert!(lines[1].contains("Mode"));
+        assert!(lines[1].contains("confirm-delete"));
+        assert!(lines[1].contains("Focus"));
+        assert!(lines[1].contains("list"));
+    }
+
+    #[test]
+    fn control_lines_surface_consistent_focus_cycle_and_exit_labels() {
+        let lines = control_lines(false, false)
+            .into_iter()
+            .map(|line| line.to_string())
+            .collect::<Vec<_>>();
+        assert!(lines[0].contains("next pane"));
+        assert!(lines[1].contains("previous pane"));
+        assert!(lines[1].contains("search"));
+        assert!(lines[2].contains("exit"));
+        assert!(lines[2].contains("Esc"));
+    }
 }

@@ -17,6 +17,7 @@ use std::time::Duration;
 
 use crate::common::Result;
 use crate::interactive_browser::BrowserItem;
+use crate::tui_shell;
 
 use super::topology::{build_impact_browser_items, ImpactDocument};
 
@@ -69,7 +70,13 @@ fn pane_title(label: &str, active: bool) -> String {
 fn pane_block(label: &str, active: bool) -> Block<'static> {
     let mut block = Block::default()
         .borders(Borders::ALL)
-        .title(pane_title(label, active));
+        .title(pane_title(label, active))
+        .title_style(
+            Style::default()
+                .fg(if active { Color::Black } else { Color::White })
+                .bg(if active { Color::Cyan } else { Color::Reset })
+                .add_modifier(Modifier::BOLD),
+        );
     if active {
         block = block.border_style(Style::default().fg(Color::Cyan));
     }
@@ -290,33 +297,44 @@ pub(crate) fn run_impact_interactive(document: &ImpactDocument) -> Result<()> {
                 .block(pane_block(&detail_title, active_pane == ImpactPane::Detail));
             frame.render_widget(detail, panes[2]);
 
-            let footer = Paragraph::new(vec![
-                Line::from(vec![
-                    Span::styled(
-                        match active_pane {
-                            ImpactPane::Groups => "Focus: groups",
-                            ImpactPane::Items => "Focus: items",
-                            ImpactPane::Detail => "Focus: detail",
-                        },
-                        Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
-                    ),
-                    Span::raw("   "),
-                    Span::raw(format!(
-                        "Group {}/{}   Item {}/{}",
-                        group_state.selected().map(|index| index + 1).unwrap_or(0),
-                        groups.len(),
-                        item_state.selected().map(|index| index + 1).unwrap_or(0),
-                        items.len()
-                    )),
+            frame.render_widget(
+                tui_shell::build_footer_controls(vec![
+                    Line::from(vec![
+                        tui_shell::focus_label("Focus "),
+                        tui_shell::key_chip(
+                            match active_pane {
+                                ImpactPane::Groups => "Groups",
+                                ImpactPane::Items => "Items",
+                                ImpactPane::Detail => "Detail",
+                            },
+                            Color::Blue,
+                        ),
+                        Span::raw("  "),
+                        tui_shell::label("Selection "),
+                        tui_shell::accent(
+                            format!(
+                                "group {}/{}  item {}/{}",
+                                group_state.selected().map(|index| index + 1).unwrap_or(0),
+                                groups.len(),
+                                item_state.selected().map(|index| index + 1).unwrap_or(0),
+                                items.len()
+                            ),
+                            Color::White,
+                        ),
+                    ]),
+                    tui_shell::control_line(&[
+                        ("Tab", Color::Blue, "next pane"),
+                        ("Up/Down", Color::Blue, "move"),
+                        ("PgUp/PgDn", Color::Blue, "scroll detail"),
+                        ("Home/End", Color::Blue, "jump"),
+                    ]),
+                    tui_shell::control_line(&[
+                        ("Enter", Color::Blue, "reset detail"),
+                        ("q/Esc", Color::Gray, "exit"),
+                    ]),
                 ]),
-                Line::from(
-                    "Tab next pane  Up/Down move active pane  PgUp/PgDn detail jump  Home/End bounds"
-                        .to_string(),
-                ),
-                Line::from("Enter reset detail  q/Esc exit".to_string()),
-            ])
-            .block(Block::default().borders(Borders::ALL).title("Controls"));
-            frame.render_widget(footer, outer[2]);
+                outer[2],
+            );
         })?;
 
         if !event::poll(Duration::from_millis(250))? {

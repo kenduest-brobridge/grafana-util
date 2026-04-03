@@ -1,13 +1,12 @@
 #![cfg(feature = "tui")]
+use crate::tui_shell;
 use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Clear, List, ListItem, Paragraph};
 
 use super::browse_state::{BrowserState, PaneFocus, SearchDirection};
-use super::browse_support::{
-    DashboardBrowseDocument, DashboardBrowseNode, DashboardBrowseNodeKind,
-};
+use super::browse_support::{DashboardBrowseNode, DashboardBrowseNodeKind};
 use super::delete_render::render_delete_dry_run_text;
 
 pub(crate) fn render_dashboard_browser_frame(frame: &mut ratatui::Frame, state: &mut BrowserState) {
@@ -24,12 +23,7 @@ pub(crate) fn render_dashboard_browser_frame(frame: &mut ratatui::Frame, state: 
         .constraints([Constraint::Percentage(46), Constraint::Percentage(54)])
         .split(outer[1]);
 
-    let header = Paragraph::new(render_summary_lines(&state.document, &state.status).join("\n"))
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title("Dashboard Browser"),
-        );
+    let header = tui_shell::build_header("Dashboard Browser", render_summary_lines(state));
     frame.render_widget(header, outer[0]);
 
     let list = List::new(build_tree_items(&state.document.nodes))
@@ -57,47 +51,25 @@ pub(crate) fn render_dashboard_browser_frame(frame: &mut ratatui::Frame, state: 
         );
     frame.render_stateful_widget(list, panes[0], &mut state.list_state);
 
-    if state.pending_delete.is_some() {
-        render_focusable_lines(
-            frame,
-            panes[1],
-            build_detail_lines(state)
-                .into_iter()
-                .map(Line::from)
-                .collect::<Vec<_>>(),
-            pane_block(
-                "Delete Preview",
-                state.focus != PaneFocus::Tree,
-                Color::Red,
-                Color::Rgb(20, 18, 22),
-            ),
-            state.focus != PaneFocus::Tree,
-            state.detail_scroll,
-        );
-    } else {
-        render_detail_panel(frame, panes[1], state);
-    }
+    render_detail_panel(frame, panes[1], state);
 
-    let footer = Paragraph::new(control_lines(
-        state.pending_delete.is_some(),
-        state.pending_edit.is_some(),
-    ))
-    .block(
-        Block::default()
-            .borders(Borders::ALL)
-            .title("Controls")
-            .style(Style::default().bg(Color::Rgb(16, 22, 30)))
-            .border_style(Style::default().fg(Color::LightBlue))
-            .title_style(
-                Style::default()
-                    .fg(Color::White)
-                    .bg(Color::Rgb(16, 22, 30))
-                    .add_modifier(Modifier::BOLD),
-            ),
-    )
-    .style(Style::default().bg(Color::Rgb(16, 22, 30)).fg(Color::White));
+    let footer = tui_shell::build_footer(
+        control_lines(state.pending_delete.is_some(), state.pending_edit.is_some()),
+        state.status.clone(),
+    );
     frame.render_widget(footer, outer[2]);
 
+    if let Some(plan) = state.pending_delete.as_ref() {
+        tui_shell::render_overlay(
+            frame,
+            "Delete Preview",
+            render_delete_dry_run_text(plan)
+                .into_iter()
+                .map(Line::from)
+                .collect(),
+            Color::Red,
+        );
+    }
     if let Some(edit_state) = state.pending_edit.as_ref() {
         edit_state.render(frame);
     }
@@ -182,16 +154,6 @@ fn build_tree_items(nodes: &[DashboardBrowseNode]) -> Vec<ListItem<'_>> {
     rendered
 }
 
-fn build_detail_lines(state: &BrowserState) -> Vec<String> {
-    match state.pending_delete.as_ref() {
-        Some(plan) => render_delete_dry_run_text(plan),
-        None => state
-            .selected_node()
-            .map(|node| detail_lines_for_node(node, &state.live_view_cache))
-            .unwrap_or_else(|| vec!["No item selected.".to_string()]),
-    }
-}
-
 fn render_detail_panel(
     frame: &mut ratatui::Frame,
     area: ratatui::layout::Rect,
@@ -249,7 +211,7 @@ fn render_detail_panel(
         )),
         Line::from(vec![
             muted("UID "),
-            plain_owned(
+            tui_shell::plain(
                 node.uid
                     .as_deref()
                     .filter(|value| !value.is_empty())
@@ -340,50 +302,50 @@ fn detail_shortcut_lines(node: &DashboardBrowseNode) -> Vec<Line<'static>> {
     match node.kind {
         DashboardBrowseNodeKind::Org => vec![
             Line::from(vec![
-                key_chip("Up/Down", Color::Rgb(24, 78, 140)),
-                plain(" select org, folder, or dashboard"),
+                tui_shell::key_chip("Up/Down", Color::Rgb(24, 78, 140)),
+                tui_shell::plain(" select org, folder, or dashboard"),
             ]),
             Line::from(vec![
-                key_chip("l", Color::Rgb(24, 78, 140)),
-                plain(" refresh"),
-                plain("   "),
-                key_chip("/ ?", Color::Rgb(164, 116, 19)),
-                plain(" search"),
-                plain("   "),
-                key_chip("e/d", Color::Rgb(90, 98, 107)),
-                plain(" dashboard/folder rows only"),
+                tui_shell::key_chip("l", Color::Rgb(24, 78, 140)),
+                tui_shell::plain(" refresh"),
+                tui_shell::plain("   "),
+                tui_shell::key_chip("/ ?", Color::Rgb(164, 116, 19)),
+                tui_shell::plain(" search"),
+                tui_shell::plain("   "),
+                tui_shell::key_chip("e/d", Color::Rgb(90, 98, 107)),
+                tui_shell::plain(" dashboard/folder rows only"),
             ]),
         ],
         DashboardBrowseNodeKind::Folder => vec![
             Line::from(vec![
-                key_chip("d", Color::Rgb(150, 38, 46)),
-                plain(" delete dashboards in subtree"),
+                tui_shell::key_chip("d", Color::Rgb(150, 38, 46)),
+                tui_shell::plain(" delete dashboards in subtree"),
             ]),
             Line::from(vec![
-                key_chip("D", Color::Rgb(150, 38, 46)),
-                plain(" delete subtree + folders"),
+                tui_shell::key_chip("D", Color::Rgb(150, 38, 46)),
+                tui_shell::plain(" delete subtree + folders"),
             ]),
         ],
         DashboardBrowseNodeKind::Dashboard => vec![
             Line::from(vec![
-                key_chip("r", Color::Rgb(24, 106, 59)),
-                plain(" rename"),
-                plain("   "),
-                key_chip("h", Color::Rgb(71, 55, 152)),
-                plain(" history"),
-                plain("   "),
-                key_chip("m", Color::Rgb(24, 78, 140)),
-                plain(" move folder"),
+                tui_shell::key_chip("r", Color::Rgb(24, 106, 59)),
+                tui_shell::plain(" rename"),
+                tui_shell::plain("   "),
+                tui_shell::key_chip("h", Color::Rgb(71, 55, 152)),
+                tui_shell::plain(" history"),
+                tui_shell::plain("   "),
+                tui_shell::key_chip("m", Color::Rgb(24, 78, 140)),
+                tui_shell::plain(" move folder"),
             ]),
             Line::from(vec![
-                key_chip("e", Color::Rgb(71, 55, 152)),
-                plain(" edit dialog"),
-                plain("   "),
-                key_chip("E", Color::Rgb(71, 55, 152)),
-                plain(" raw json"),
-                plain("   "),
-                key_chip("d", Color::Rgb(150, 38, 46)),
-                plain(" delete"),
+                tui_shell::key_chip("e", Color::Rgb(71, 55, 152)),
+                tui_shell::plain(" edit dialog"),
+                tui_shell::plain("   "),
+                tui_shell::key_chip("E", Color::Rgb(71, 55, 152)),
+                tui_shell::plain(" raw json"),
+                tui_shell::plain("   "),
+                tui_shell::key_chip("d", Color::Rgb(150, 38, 46)),
+                tui_shell::plain(" delete"),
             ]),
         ],
     }
@@ -401,34 +363,96 @@ fn detail_lines_for_node(
     node.details.clone()
 }
 
-fn render_summary_lines(document: &DashboardBrowseDocument, status: &str) -> Vec<String> {
+fn render_summary_lines(state: &BrowserState) -> Vec<Line<'static>> {
+    let document = &state.document;
     vec![
         if document.summary.org_count > 1 {
-            format!(
-                "Scope {}  orgs={}  folders={}  dashboards={}  root={}",
-                document.summary.scope_label,
-                document.summary.org_count,
-                document.summary.folder_count,
-                document.summary.dashboard_count,
-                document
-                    .summary
-                    .root_path
-                    .as_deref()
-                    .unwrap_or("all folders")
-            )
+            tui_shell::summary_line(&[
+                tui_shell::summary_cell(
+                    "Scope",
+                    document.summary.scope_label.clone(),
+                    Color::LightBlue,
+                ),
+                tui_shell::summary_cell(
+                    "Orgs",
+                    document.summary.org_count.to_string(),
+                    Color::White,
+                ),
+                tui_shell::summary_cell(
+                    "Folders",
+                    document.summary.folder_count.to_string(),
+                    Color::White,
+                ),
+                tui_shell::summary_cell(
+                    "Dashboards",
+                    document.summary.dashboard_count.to_string(),
+                    Color::White,
+                ),
+                tui_shell::summary_cell(
+                    "Root",
+                    document
+                        .summary
+                        .root_path
+                        .as_deref()
+                        .unwrap_or("all folders"),
+                    Color::White,
+                ),
+            ])
         } else {
-            format!(
-                "Folders: {}  Dashboards: {}  Root: {}",
-                document.summary.folder_count,
-                document.summary.dashboard_count,
-                document
-                    .summary
-                    .root_path
-                    .as_deref()
-                    .unwrap_or("all folders")
-            )
+            tui_shell::summary_line(&[
+                tui_shell::summary_cell(
+                    "Folders",
+                    document.summary.folder_count.to_string(),
+                    Color::White,
+                ),
+                tui_shell::summary_cell(
+                    "Dashboards",
+                    document.summary.dashboard_count.to_string(),
+                    Color::White,
+                ),
+                tui_shell::summary_cell(
+                    "Root",
+                    document
+                        .summary
+                        .root_path
+                        .as_deref()
+                        .unwrap_or("all folders"),
+                    Color::White,
+                ),
+            ])
         },
-        status.to_string(),
+        if state.pending_delete.is_some() {
+            Line::from(vec![
+                tui_shell::label("Mode "),
+                tui_shell::accent("confirm-delete", Color::LightRed),
+                Span::raw("  "),
+                tui_shell::focus_label("Focus "),
+                tui_shell::key_chip(
+                    match state.focus {
+                        PaneFocus::Tree => "Tree",
+                        PaneFocus::Facts => "Facts",
+                    },
+                    Color::Blue,
+                ),
+                Span::raw("  "),
+                tui_shell::label("Confirm "),
+                tui_shell::accent("y / Esc / q", Color::Yellow),
+            ])
+        } else {
+            Line::from(vec![
+                tui_shell::label("Mode "),
+                tui_shell::accent("browse", Color::Green),
+                Span::raw("  "),
+                tui_shell::focus_label("Focus "),
+                tui_shell::key_chip(
+                    match state.focus {
+                        PaneFocus::Tree => "Tree",
+                        PaneFocus::Facts => "Facts",
+                    },
+                    Color::Blue,
+                ),
+            ])
+        },
     ]
 }
 
@@ -437,123 +461,108 @@ fn control_lines(has_pending_delete: bool, has_pending_edit: bool) -> Vec<Line<'
         vec![
             Line::from(vec![
                 muted("Delete preview active. "),
-                key_chip("y", Color::Rgb(150, 38, 46)),
-                plain(" confirm"),
-                plain("   "),
-                key_chip("n", Color::Rgb(90, 98, 107)),
-                plain(" cancel"),
-                plain("   "),
-                key_chip("Esc", Color::Rgb(90, 98, 107)),
-                plain(" close"),
+                tui_shell::key_chip("y", Color::Rgb(150, 38, 46)),
+                tui_shell::plain(" confirm delete"),
+                tui_shell::plain("   "),
+                tui_shell::key_chip("n", Color::Rgb(90, 98, 107)),
+                tui_shell::plain(" cancel"),
+                tui_shell::plain("   "),
+                tui_shell::key_chip("Esc", Color::Rgb(90, 98, 107)),
+                tui_shell::plain(" cancel"),
+                tui_shell::plain("   "),
+                tui_shell::key_chip("q", Color::Rgb(90, 98, 107)),
+                tui_shell::plain(" cancel"),
             ]),
             Line::from(vec![
-                key_chip("l", Color::Rgb(24, 78, 140)),
-                plain(" refresh"),
-                plain("   "),
-                key_chip("q", Color::Rgb(90, 98, 107)),
-                plain(" exit"),
+                tui_shell::key_chip("l", Color::Rgb(24, 78, 140)),
+                tui_shell::plain(" refresh"),
             ]),
         ]
     } else if has_pending_edit {
         vec![
             Line::from(vec![
                 muted("Edit dialog active. "),
-                key_chip("Ctrl+S", Color::Rgb(24, 106, 59)),
-                plain(" save"),
-                plain("   "),
-                key_chip("Ctrl+X", Color::Rgb(90, 98, 107)),
-                plain(" close"),
-                plain("   "),
-                key_chip("Esc", Color::Rgb(90, 98, 107)),
-                plain(" cancel"),
+                tui_shell::key_chip("Ctrl+S", Color::Rgb(24, 106, 59)),
+                tui_shell::plain(" save"),
+                tui_shell::plain("   "),
+                tui_shell::key_chip("Ctrl+X", Color::Rgb(90, 98, 107)),
+                tui_shell::plain(" close"),
+                tui_shell::plain("   "),
+                tui_shell::key_chip("Esc", Color::Rgb(90, 98, 107)),
+                tui_shell::plain(" cancel"),
             ]),
             Line::from(vec![
-                key_chip("Tab", Color::Rgb(24, 78, 140)),
-                plain(" next"),
-                plain("   "),
-                key_chip("Shift+Tab", Color::Rgb(24, 78, 140)),
-                plain(" previous"),
-                plain("   "),
-                key_chip("Backspace", Color::Rgb(90, 98, 107)),
-                plain(" delete char"),
+                tui_shell::key_chip("Tab", Color::Rgb(24, 78, 140)),
+                tui_shell::plain(" next field"),
+                tui_shell::plain("   "),
+                tui_shell::key_chip("Shift+Tab", Color::Rgb(24, 78, 140)),
+                tui_shell::plain(" previous field"),
+                tui_shell::plain("   "),
+                tui_shell::key_chip("Backspace", Color::Rgb(90, 98, 107)),
+                tui_shell::plain(" delete char"),
             ]),
         ]
     } else {
         vec![
             Line::from(vec![
-                key_chip("Up/Down", Color::Rgb(24, 78, 140)),
-                plain(" move"),
-                plain("   "),
-                key_chip("PgUp/PgDn", Color::Rgb(24, 78, 140)),
-                plain(" detail"),
-                plain("   "),
-                key_chip("Home/End", Color::Rgb(24, 78, 140)),
-                plain(" jump"),
-                plain("   "),
-                key_chip("Tab", Color::Rgb(164, 116, 19)),
-                plain(" next pane"),
+                tui_shell::key_chip("Up/Down", Color::Rgb(24, 78, 140)),
+                tui_shell::plain(" move"),
+                tui_shell::plain("   "),
+                tui_shell::key_chip("PgUp/PgDn", Color::Rgb(24, 78, 140)),
+                tui_shell::plain(" scroll detail"),
+                tui_shell::plain("   "),
+                tui_shell::key_chip("Home/End", Color::Rgb(24, 78, 140)),
+                tui_shell::plain(" jump"),
+                tui_shell::plain("   "),
+                tui_shell::key_chip("Tab", Color::Rgb(164, 116, 19)),
+                tui_shell::plain(" next pane"),
             ]),
             Line::from(vec![
-                key_chip("Shift+Tab", Color::Rgb(164, 116, 19)),
-                plain(" prev pane"),
-                plain("   "),
-                key_chip("/ ?", Color::Rgb(164, 116, 19)),
-                plain(" search"),
-                plain("   "),
-                key_chip("n", Color::Rgb(164, 116, 19)),
-                plain(" next match"),
-                plain("   "),
-                key_chip("r", Color::Rgb(24, 106, 59)),
-                plain(" rename"),
-                plain("   "),
-                key_chip("m", Color::Rgb(24, 78, 140)),
-                plain(" move folder"),
+                tui_shell::key_chip("Shift+Tab", Color::Rgb(164, 116, 19)),
+                tui_shell::plain(" previous pane"),
+                tui_shell::plain("   "),
+                tui_shell::key_chip("/ ?", Color::Rgb(164, 116, 19)),
+                tui_shell::plain(" search"),
+                tui_shell::plain("   "),
+                tui_shell::key_chip("n", Color::Rgb(164, 116, 19)),
+                tui_shell::plain(" next match"),
+                tui_shell::plain("   "),
+                tui_shell::key_chip("r", Color::Rgb(24, 106, 59)),
+                tui_shell::plain(" rename"),
+                tui_shell::plain("   "),
+                tui_shell::key_chip("m", Color::Rgb(24, 78, 140)),
+                tui_shell::plain(" move folder"),
             ]),
             Line::from(vec![
-                key_chip("d", Color::Rgb(150, 38, 46)),
-                plain(" delete"),
-                plain("   "),
-                key_chip("D", Color::Rgb(150, 38, 46)),
-                plain(" delete+folders"),
-                plain("   "),
-                key_chip("v", Color::Rgb(71, 55, 152)),
-                plain(" live details"),
-                plain("   "),
-                key_chip("h", Color::Rgb(71, 55, 152)),
-                plain(" history"),
-                plain("   "),
-                key_chip("e", Color::Rgb(71, 55, 152)),
-                plain(" edit dialog"),
-                plain("   "),
-                key_chip("E", Color::Rgb(71, 55, 152)),
-                plain(" raw json"),
-                plain("   "),
-                key_chip("l", Color::Rgb(24, 78, 140)),
-                plain(" refresh"),
-                plain("   "),
-                key_chip("q", Color::Rgb(90, 98, 107)),
-                plain(" exit"),
+                tui_shell::key_chip("d", Color::Rgb(150, 38, 46)),
+                tui_shell::plain(" delete"),
+                tui_shell::plain("   "),
+                tui_shell::key_chip("D", Color::Rgb(150, 38, 46)),
+                tui_shell::plain(" delete+folders"),
+                tui_shell::plain("   "),
+                tui_shell::key_chip("v", Color::Rgb(71, 55, 152)),
+                tui_shell::plain(" live details"),
+                tui_shell::plain("   "),
+                tui_shell::key_chip("h", Color::Rgb(71, 55, 152)),
+                tui_shell::plain(" history"),
+                tui_shell::plain("   "),
+                tui_shell::key_chip("e", Color::Rgb(71, 55, 152)),
+                tui_shell::plain(" edit dialog"),
+                tui_shell::plain("   "),
+                tui_shell::key_chip("E", Color::Rgb(71, 55, 152)),
+                tui_shell::plain(" raw json"),
+                tui_shell::plain("   "),
+                tui_shell::key_chip("l", Color::Rgb(24, 78, 140)),
+                tui_shell::plain(" refresh"),
+                tui_shell::plain("   "),
+                tui_shell::key_chip("Esc", Color::Rgb(90, 98, 107)),
+                tui_shell::plain(" exit"),
+                tui_shell::plain("   "),
+                tui_shell::key_chip("q", Color::Rgb(90, 98, 107)),
+                tui_shell::plain(" exit"),
             ]),
         ]
     }
-}
-
-fn key_chip(label: &'static str, bg: Color) -> Span<'static> {
-    Span::styled(
-        format!(" {} ", label),
-        Style::default()
-            .fg(Color::White)
-            .bg(bg)
-            .add_modifier(Modifier::BOLD),
-    )
-}
-
-fn plain(text: &'static str) -> Span<'static> {
-    Span::styled(text, Style::default().fg(Color::White))
-}
-
-fn plain_owned(text: &str) -> Span<'static> {
-    Span::styled(text.to_string(), Style::default().fg(Color::White))
 }
 
 fn muted(text: &'static str) -> Span<'static> {
@@ -576,6 +585,8 @@ fn node_color(node: &DashboardBrowseNode) -> Color {
 }
 
 fn pane_block(title: &str, focused: bool, accent: Color, bg: Color) -> Block<'static> {
+    let title_bg = if focused { accent } else { bg };
+    let title_fg = if focused { Color::Black } else { Color::White };
     Block::default()
         .borders(Borders::ALL)
         .title(if focused {
@@ -587,8 +598,8 @@ fn pane_block(title: &str, focused: bool, accent: Color, bg: Color) -> Block<'st
         .border_style(Style::default().fg(if focused { accent } else { Color::Gray }))
         .title_style(
             Style::default()
-                .fg(Color::White)
-                .bg(bg)
+                .fg(title_fg)
+                .bg(title_bg)
                 .add_modifier(if focused {
                     Modifier::BOLD
                 } else {
@@ -669,4 +680,88 @@ fn render_search_prompt(frame: &mut ratatui::Frame, direction: SearchDirection, 
     )
     .style(Style::default().bg(Color::Rgb(18, 20, 26)));
     frame.render_widget(prompt, area);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dashboard::delete_support::DeletePlan;
+
+    fn empty_document() -> super::super::browse_support::DashboardBrowseDocument {
+        super::super::browse_support::DashboardBrowseDocument {
+            summary: super::super::browse_support::DashboardBrowseSummary {
+                root_path: None,
+                dashboard_count: 0,
+                folder_count: 0,
+                org_count: 1,
+                scope_label: "current-org".to_string(),
+            },
+            nodes: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn summary_lines_move_status_out_of_the_header() {
+        let state = BrowserState::new(empty_document());
+        let lines = render_summary_lines(&state)
+            .into_iter()
+            .map(|line| line.to_string())
+            .collect::<Vec<_>>();
+        assert_eq!(lines.len(), 2);
+        assert!(lines[0].contains("Folders"));
+        assert!(lines[0].contains('0'));
+        assert!(lines[0].contains("Dashboards"));
+        assert!(lines[1].contains("Mode"));
+        assert!(lines[1].contains("browse"));
+        assert!(lines[1].contains("Focus"));
+        assert!(lines[1].contains("Tree"));
+        assert!(!lines
+            .iter()
+            .any(|line| line.contains("Loaded dashboard tree")));
+    }
+
+    #[test]
+    fn summary_lines_surface_pending_delete_mode() {
+        let mut state = BrowserState::new(empty_document());
+        state.pending_delete = Some(DeletePlan {
+            selector_uid: None,
+            selector_path: None,
+            delete_folders: false,
+            dashboards: Vec::new(),
+            folders: Vec::new(),
+        });
+        let lines = render_summary_lines(&state)
+            .into_iter()
+            .map(|line| line.to_string())
+            .collect::<Vec<_>>();
+        assert!(lines[1].contains("Mode"));
+        assert!(lines[1].contains("confirm-delete"));
+        assert!(lines[1].contains("Focus"));
+        assert!(lines[1].contains("Tree"));
+    }
+
+    #[test]
+    fn control_lines_use_consistent_pane_and_exit_labels() {
+        let lines = control_lines(false, false)
+            .into_iter()
+            .map(|line| line.to_string())
+            .collect::<Vec<_>>();
+        assert!(lines[0].contains("next pane"));
+        assert!(lines[1].contains("previous pane"));
+        assert!(lines[1].contains("search"));
+        assert!(lines[2].contains("exit"));
+        assert!(lines[2].contains("Esc"));
+    }
+
+    #[test]
+    fn delete_control_lines_use_cancel_labels() {
+        let lines = control_lines(true, false)
+            .into_iter()
+            .map(|line| line.to_string())
+            .collect::<Vec<_>>();
+        assert!(lines[0].contains("confirm delete"));
+        assert!(lines[0].contains("cancel"));
+        assert!(lines[1].contains("refresh"));
+        assert!(!lines.iter().any(|line| line.contains("exit")));
+    }
 }

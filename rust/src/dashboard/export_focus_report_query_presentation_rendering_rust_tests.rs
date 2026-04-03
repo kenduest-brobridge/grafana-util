@@ -11,8 +11,13 @@ use tempfile::tempdir;
 fn validate_inspect_export_report_args_rejects_panel_filter_without_report() {
     let args = test_support::InspectExportArgs {
         import_dir: PathBuf::from("./dashboards/raw"),
+        input_type: None,
+        input_format: test_support::DashboardImportInputFormat::Raw,
+        text: false,
+        csv: false,
         json: false,
         table: false,
+        yaml: false,
         report: None,
         output_format: None,
         report_columns: Vec::new(),
@@ -21,6 +26,7 @@ fn validate_inspect_export_report_args_rejects_panel_filter_without_report() {
         help_full: false,
         no_header: false,
         output_file: None,
+        interactive: false,
     };
 
     let error = test_support::validate_inspect_export_report_args(&args).unwrap_err();

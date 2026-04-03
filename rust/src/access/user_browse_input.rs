@@ -1,3 +1,5 @@
+//! Interactive browse workflows and terminal-driven state flow for Access entities.
+
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use reqwest::Method;
 use serde_json::{Map, Value};
@@ -20,6 +22,8 @@ use super::user_browse_state::{
 };
 use super::UserBrowseArgs;
 use std::collections::{BTreeMap, BTreeSet};
+
+type RawOrgUsers = (String, String, Vec<Map<String, Value>>);
 
 pub(super) enum BrowseAction {
     Continue,
@@ -462,7 +466,7 @@ fn handle_search_key(state: &mut BrowserState, key: &KeyEvent) {
         return;
     };
     match key.code {
-        KeyCode::Esc | KeyCode::Char('q') if !key.modifiers.contains(KeyModifiers::CONTROL) => {
+        KeyCode::Esc if !key.modifiers.contains(KeyModifiers::CONTROL) => {
             state.status = "Cancelled user search.".to_string();
         }
         KeyCode::Enter => {
@@ -548,7 +552,7 @@ where
         "Unexpected organization list response from Grafana.",
     )?;
 
-    let mut raw_orgs: Vec<(String, String, Vec<Map<String, Value>>)> = Vec::new();
+    let mut raw_orgs: Vec<RawOrgUsers> = Vec::new();
     let mut summaries: BTreeMap<String, Vec<String>> = BTreeMap::new();
     for org in orgs {
         let org_id = scalar_text(org.get("id"));
@@ -636,4 +640,28 @@ where
         rows.extend(members);
     }
     Ok(rows)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn search_prompt_treats_q_as_query_text() {
+        let mut state = BrowserState::new(Vec::new(), DisplayMode::GlobalAccounts);
+        state.start_search(SearchDirection::Forward);
+
+        handle_search_key(
+            &mut state,
+            &KeyEvent::new(KeyCode::Char('q'), KeyModifiers::NONE),
+        );
+
+        assert_eq!(
+            state
+                .pending_search
+                .as_ref()
+                .map(|search| search.query.as_str()),
+            Some("q")
+        );
+    }
 }

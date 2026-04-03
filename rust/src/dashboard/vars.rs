@@ -8,8 +8,11 @@ use serde_json::{Map, Value};
 use std::fs;
 use std::path::PathBuf;
 
-use crate::common::{message, object_field, string_field, value_as_object, Result};
+use crate::common::{
+    message, object_field, render_json_value, string_field, value_as_object, Result,
+};
 use crate::http::JsonHttpClient;
+use crate::tabular_output::render_yaml;
 
 use super::inspect_render::{render_csv, render_simple_table};
 use super::screenshot::parse_vars_query;
@@ -35,7 +38,7 @@ pub(crate) struct DashboardVariableRow {
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
-struct DashboardVariableDocument {
+pub(crate) struct DashboardVariableDocument {
     pub dashboard_uid: String,
     pub dashboard_title: String,
     pub variable_count: usize,
@@ -57,18 +60,14 @@ fn write_inspect_vars_output(output: &str, output_file: Option<&PathBuf>) -> Res
     Ok(())
 }
 
-/// inspect dashboard variables.
-pub(crate) fn inspect_dashboard_variables(args: &InspectVarsArgs) -> Result<()> {
-    let dashboard_uid = resolve_dashboard_uid(args)?;
-    let client = build_inspect_vars_client(args)?;
-    let mut document = build_dashboard_variable_document(&client, &dashboard_uid)?;
-    if let Some(vars_query) = args.vars_query.as_deref() {
-        apply_vars_query_overrides(&mut document.variables, vars_query)?;
-    }
-    let output = match args.output_format.unwrap_or(SimpleOutputFormat::Table) {
-        SimpleOutputFormat::Json => {
-            format!("{}\n", serde_json::to_string_pretty(&document)?)
-        }
+pub(crate) fn render_dashboard_variable_output(
+    args: &InspectVarsArgs,
+    document: &DashboardVariableDocument,
+) -> Result<String> {
+    match args.output_format.unwrap_or(SimpleOutputFormat::Table) {
+        SimpleOutputFormat::Text => Ok(format!("{}\n", render_dashboard_variable_text(document))),
+        SimpleOutputFormat::Json => Ok(format!("{}\n", render_json_value(document)?)),
+        SimpleOutputFormat::Yaml => Ok(format!("{}\n", render_yaml(document)?)),
         SimpleOutputFormat::Csv => {
             let mut rendered = String::new();
             for line in render_csv(
@@ -88,7 +87,7 @@ pub(crate) fn inspect_dashboard_variables(args: &InspectVarsArgs) -> Result<()> 
                 rendered.push_str(&line);
                 rendered.push('\n');
             }
-            rendered
+            Ok(rendered)
         }
         SimpleOutputFormat::Table => {
             let mut rendered = String::new();
@@ -113,9 +112,56 @@ pub(crate) fn inspect_dashboard_variables(args: &InspectVarsArgs) -> Result<()> 
                 rendered.push_str(&line);
                 rendered.push('\n');
             }
-            rendered
+            Ok(rendered)
         }
-    };
+    }
+}
+
+fn render_dashboard_variable_text(document: &DashboardVariableDocument) -> String {
+    let mut rendered = String::new();
+    rendered.push_str(&format!(
+        "Dashboard variables: {} ({})\n",
+        document.dashboard_title, document.dashboard_uid
+    ));
+    rendered.push_str(&format!("Variable count: {}\n", document.variable_count));
+    if document.variables.is_empty() {
+        return rendered;
+    }
+    rendered.push('\n');
+    rendered.push_str("# Variables\n");
+    for row in &document.variables {
+        rendered.push_str(&format!(
+            "- name={} type={} label={} current={} datasource={} query={} multi={} include_all={} options={}\n",
+            row.name,
+            row.variable_type,
+            row.label,
+            row.current,
+            row.datasource,
+            row.query,
+            row.multi,
+            row.include_all,
+            summarize_options(row)
+        ));
+    }
+    rendered
+}
+
+pub(crate) fn execute_dashboard_variable_inspection(
+    args: &InspectVarsArgs,
+) -> Result<DashboardVariableDocument> {
+    let dashboard_uid = resolve_dashboard_uid(args)?;
+    let client = build_inspect_vars_client(args)?;
+    let mut document = build_dashboard_variable_document(&client, &dashboard_uid)?;
+    if let Some(vars_query) = args.vars_query.as_deref() {
+        apply_vars_query_overrides(&mut document.variables, vars_query)?;
+    }
+    Ok(document)
+}
+
+/// inspect dashboard variables.
+pub(crate) fn inspect_dashboard_variables(args: &InspectVarsArgs) -> Result<()> {
+    let document = execute_dashboard_variable_inspection(args)?;
+    let output = render_dashboard_variable_output(args, &document)?;
     write_inspect_vars_output(&output, args.output_file.as_ref())?;
     Ok(())
 }
@@ -174,7 +220,7 @@ fn resolve_dashboard_uid(args: &InspectVarsArgs) -> Result<String> {
     ))
 }
 
-fn build_dashboard_variable_document(
+pub(crate) fn build_dashboard_variable_document(
     client: &JsonHttpClient,
     dashboard_uid: &str,
 ) -> Result<DashboardVariableDocument> {

@@ -6,7 +6,7 @@ use std::collections::BTreeSet;
 use std::fs;
 use std::path::Path;
 
-use crate::common::{message, string_field, value_as_object, Result};
+use crate::common::{message, render_json_value, string_field, value_as_object, Result};
 
 use super::{
     discover_dashboard_files, extract_dashboard_object, load_json_file, ValidateExportArgs,
@@ -355,16 +355,21 @@ fn render_validation_result_text(result: &DashboardValidationResult) -> Vec<Stri
 pub(crate) fn render_validation_result_json(result: &DashboardValidationResult) -> Result<String> {
     Ok(format!(
         "{}\n",
-        serde_json::to_string_pretty(&validation_result_document(result))?
+        render_json_value(&validation_result_document(result))?
     ))
 }
 
 pub(crate) fn run_dashboard_validate_export(args: &ValidateExportArgs) -> Result<()> {
     let temp_dir = super::inspect::TempInspectDir::new("validate-export")?;
-    let import_dir =
-        super::inspect::prepare_inspect_export_import_dir(&temp_dir.path, &args.import_dir)?;
+    let import_dir = super::inspect::resolve_inspect_export_import_dir(
+        &temp_dir.path,
+        &args.import_dir,
+        args.input_format,
+        None,
+        false,
+    )?;
     let result = validate_dashboard_export_dir(
-        &import_dir,
+        &import_dir.import_dir,
         args.reject_custom_plugins,
         args.reject_legacy_properties,
         args.target_schema_version,
@@ -386,6 +391,90 @@ pub(crate) fn run_dashboard_validate_export(args: &ValidateExportArgs) -> Result
         )));
     }
     Ok(())
+}
+
+#[cfg(test)]
+#[allow(clippy::items_after_test_module)]
+mod tests {
+    use super::*;
+    use crate::dashboard::{DashboardImportInputFormat, ValidationOutputFormat};
+    use serde_json::json;
+    use std::fs;
+    use tempfile::tempdir;
+
+    fn write_valid_dashboard(path: &Path, uid: &str, title: &str) {
+        fs::write(
+            path,
+            serde_json::to_string_pretty(&json!({
+                "uid": uid,
+                "title": title,
+                "schemaVersion": 39,
+                "panels": []
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn run_dashboard_validate_export_supports_provisioning_root() {
+        let temp = tempdir().unwrap();
+        let provisioning_root = temp.path().join("provisioning");
+        let dashboards_dir = provisioning_root.join("dashboards/team");
+        fs::create_dir_all(&dashboards_dir).unwrap();
+        write_valid_dashboard(
+            &dashboards_dir.join("cpu-main.json"),
+            "cpu-main",
+            "CPU Main",
+        );
+        let output_file = temp.path().join("validation.json");
+
+        run_dashboard_validate_export(&ValidateExportArgs {
+            import_dir: provisioning_root,
+            input_format: DashboardImportInputFormat::Provisioning,
+            reject_custom_plugins: true,
+            reject_legacy_properties: true,
+            target_schema_version: Some(39),
+            output_format: ValidationOutputFormat::Json,
+            output_file: Some(output_file.clone()),
+        })
+        .unwrap();
+
+        let report = fs::read_to_string(output_file).unwrap();
+        assert!(report.contains("\"dashboardCount\": 1"));
+        assert!(report.contains("\"errorCount\": 0"));
+    }
+
+    #[test]
+    fn run_dashboard_validate_export_supports_provisioning_dashboards_dir() {
+        let temp = tempdir().unwrap();
+        let provisioning_root = temp.path().join("provisioning");
+        let dashboards_dir = provisioning_root.join("dashboards");
+        fs::create_dir_all(&dashboards_dir).unwrap();
+        write_valid_dashboard(
+            &dashboards_dir.join("ops-main.json"),
+            "ops-main",
+            "Ops Main",
+        );
+        let output_file = temp.path().join("validation.json");
+
+        run_dashboard_validate_export(&ValidateExportArgs {
+            import_dir: dashboards_dir,
+            input_format: DashboardImportInputFormat::Provisioning,
+            reject_custom_plugins: false,
+            reject_legacy_properties: false,
+            target_schema_version: None,
+            output_format: ValidationOutputFormat::Json,
+            output_file: Some(output_file.clone()),
+        })
+        .unwrap();
+
+        let report = fs::read_to_string(output_file).unwrap();
+        assert!(
+            report.contains("\"dashboardUid\": \"ops-main\"") || report.contains("\"issues\": []")
+        );
+        assert!(report.contains("\"dashboardCount\": 1"));
+    }
 }
 
 pub(crate) fn validate_dashboard_import_document(

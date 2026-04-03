@@ -3,6 +3,52 @@ Grafana Utilities User Guide
 
 This guide documents the maintained Rust command surface used by the repository. Use `grafana-util ...` as the primary command shape throughout this manual.
 
+Install
+-------
+
+Use the repo-owned install script for the one-line path:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-utils/main/scripts/install.sh | sh
+```
+
+Override the install location or pinned version when needed:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-utils/main/scripts/install.sh | BIN_DIR=/usr/local/bin VERSION=v0.6.0 sh
+```
+
+If you already have a local checkout, run the script from the repository root instead:
+
+```bash
+sh ./scripts/install.sh
+```
+
+Contents
+--------
+
+- [1) Before You Start](#before-you-start)
+- [2) Global Options](#global-options)
+- [3) Dashboard Commands](#dashboard-commands)
+- [4) Alert Commands](#alert-commands)
+- [5) Datasource Commands](#datasource-commands)
+- [6) Access Commands](#access-commands)
+- [7) Shared Output Rules, `change`, `overview`, and `status`](#shared-output-rules)
+- [8) Common Operator Scenarios](#common-operator-scenarios)
+- [9) Minimal SOP Commands](#minimal-sop-commands)
+- [10) Output and Org Control Matrix](#output-and-org-control-matrix)
+
+Quick jump sections:
+
+- [dashboard](#dashboard-commands): `browse/export/list/import/delete/diff/inspect-export/inspect-live/screenshot`
+- [alert](#alert-commands): `plan/apply/delete/init/new-rule/new-contact-point/new-template/export/import/diff/list-rules/list-contact-points/list-mute-timings/list-templates`
+- [datasource](#datasource-commands): `browse/list/export/import/diff/add`
+- [access](#access-commands): `org/user/team/service-account`
+- [change](#shared-output-rules): `summary/bundle/bundle-preflight/plan/review/apply/assess-alerts`
+- [overview](#shared-output-rules)
+- [status](#shared-output-rules)
+
+<a id="before-you-start"></a>
 1) Before You Start
 -------------------
 
@@ -14,6 +60,10 @@ grafana-util dashboard -h
 grafana-util alert -h
 grafana-util datasource -h
 grafana-util access -h
+grafana-util profile -h
+grafana-util change -h
+grafana-util overview -h
+grafana-util status -h
 ```
 
 Installed entrypoints:
@@ -26,8 +76,43 @@ CLI notes:
 
 - `grafana-util` is the primary unified CLI.
 - Use the namespaced `grafana-util <domain> <command>` layout throughout this guide.
+- Use `grafana-util profile init`, `profile list`, and `profile show` to manage repo-local live connection defaults in `grafana-util.yaml`.
 - `dashboard list-data-sources` remains available under the dashboard command surface, but new datasource inventory workflows should prefer `datasource list`.
+- `overview` is the human project entrypoint, `status` is the canonical status contract, and `change` owns the staged change workflow.
 
+### 1.1 How To Use This Manual
+
+- Read `README.md` first when you need project positioning, supported areas, and quick examples for GitHub browsing.
+- Use this guide when you need command-level behavior, option differences, authentication rules, real output shapes, or dry-run interpretation.
+- If you are new to the tool, the fastest path is: command domains -> support depth -> output surfaces -> the specific command section you need.
+- If you are operating an established workflow, jump directly to the domain section, then use section 9 and section 10 as the shortest repeatable reference.
+
+### 1.2 Output And Interaction Surfaces
+
+The same Grafana workflow may be available through more than one surface depending on whether you are exploring manually or automating.
+
+| Surface | Best for | Representative commands | Notes |
+| --- | --- | --- | --- |
+| Interactive TUI | Guided review, browsing, in-terminal workflows | `dashboard browse`, `dashboard inspect-export --interactive`, `dashboard inspect-live --interactive`, `datasource browse`, `overview --output interactive`, `status ... --output interactive` | Only selected workflows provide TUI support; interactive output requires the TUI-capable build |
+| Plain text | Human-readable summaries and default dry-run previews | `change`, `overview`, `status`, many dry-run summaries | Best for operator review in terminal logs |
+| JSON | CI, scripting, stable machine-readable handoff | import dry-runs, change documents, staged/live status contracts | Prefer this when another tool will parse the result |
+| Table / CSV / report outputs | Inventory listing, diff review, dashboard analysis | list commands, `dashboard inspect-*`, review tables | Usually the best fit for audits and spreadsheets |
+
+### 1.3 Support Depth By Area
+
+Use this table before reading per-command details if you want to know how mature each area is and what kind of workflow it is meant to support.
+
+| Area | Support depth | Primary workflows | Main surfaces | Notes |
+| --- | --- | --- | --- | --- |
+| `dashboard` | Deepest and broadest | browse, list, export, import, diff, delete, inspect, dependency analysis, permission export, screenshot/PDF | text, table/csv/json, report modes, interactive TUI | The most feature-complete analysis and migration surface |
+| `datasource` | Deep and mature | browse, list, export, import, diff, add, modify, delete, org-aware replay | text, table/csv/json, interactive browse | Covers both live mutation and file-based replay |
+| `alert` | Mature management and migration surface | plan, apply, delete, init, scaffold, list, export, import, diff for alerting resources | text/json, table/csv/json | Review-first alert management lane plus the older inventory and replay lane |
+| `access` | Mature inventory and replay surface | list, add, modify, delete, export, import, diff for org/user/team/service-account flows | table/csv/json | Strongest for access-state inventory, rebuild, and review |
+| `change` | Advanced staged workflow | summary, bundle, preflight, plan, review, apply intent, audit, promotion-preflight | text/json | Review-first project change workflow, not blind direct mutation |
+| `overview` | Human project entrypoint | staged/live project snapshots, cross-domain summaries, handoff views | text/json/interactive | Start here when an operator wants one whole-project picture |
+| `status` | Canonical status contract | staged/live readiness, cross-domain summaries, machine-readable handoff | text/json/interactive | Use when you need the stable cross-domain readiness contract |
+
+<a id="global-options"></a>
 2) Global Options
 -----------------
 
@@ -38,6 +123,7 @@ Default URLs:
 
 | Option | Purpose | Typical use |
 | --- | --- | --- |
+| `--profile` | Load repo-local live connection defaults from `grafana-util.yaml` | Reuse one named Grafana environment without repeating `--url`, auth, timeout, or TLS flags |
 | `--url` | Grafana base URL | Any live Grafana operation |
 | `--token`, `--api-token` | API token auth | Scripts and non-interactive workflows |
 | `--basic-user` | Basic auth username | Org switching, admin workflows, access management |
@@ -47,11 +133,58 @@ Default URLs:
 | `--timeout` | HTTP timeout in seconds | Slow APIs or unstable networks |
 | `--verify-ssl` | Enable TLS certificate verification | Production TLS environments |
 
-### 2.1 How To Read Example Output
+### 2.1 Repo-Local Profiles
+
+The Rust CLI now supports a repo-local `grafana-util.yaml` file for live connection defaults.
+
+Example config:
+
+```yaml
+default_profile: dev
+profiles:
+  dev:
+    url: http://127.0.0.1:3000
+    token_env: GRAFANA_API_TOKEN
+    timeout: 30
+    verify_ssl: false
+
+  prod:
+    url: https://grafana.example.com
+    username: admin
+    password_env: GRAFANA_PROD_PASSWORD
+    verify_ssl: true
+```
+
+Profile commands:
+
+```bash
+grafana-util profile init
+grafana-util profile list
+grafana-util profile show --profile prod --output-format yaml
+```
+
+Live command example:
+
+```bash
+grafana-util dashboard list --profile prod --json
+grafana-util datasource export --profile dev --export-dir ./datasources --overwrite
+grafana-util status live --profile prod --all-orgs --output json
+```
+
+Profile resolution rules:
+
+- `--profile NAME` selects one named profile explicitly.
+- Without `--profile`, the CLI uses `default_profile` when present.
+- If there is exactly one profile and no `default_profile`, that profile is selected automatically.
+- Explicit CLI flags still win over the selected profile values.
+- If neither CLI nor profile supplies auth, the existing `GRAFANA_*` environment fallback still applies.
+
+### 2.2 How To Read Example Output
 
 - `Example command` shows a practical invocation shape.
 - `Example output` shows the expected format, not a guarantee that your own UIDs, names, counts, or folders will match exactly.
 - When a section includes a `Live note`, the command shape and output excerpt were checked against a local Docker Grafana `12.4.1` service.
+- For this revision, the validated sample set came from `scripts/seed-grafana-sample-data.sh` plus extra seeded alerting resources and a service account/token so live output covers multi-org, nested folders, alerting, and access surfaces.
 - Table output is best for operators.
 - JSON output is best for scripts, CI, or when you need stable machine-readable fields.
 - Common `ACTION` values:
@@ -59,16 +192,32 @@ Default URLs:
   - `update`: the target already exists and would be modified.
   - `no-change`: source and destination already match.
   - `would-*`: a dry-run prediction only.
+- Common dry-run destination or status hints:
+  - `missing`: no live match was found yet.
+  - `exists` / `existing`: a live match is already present.
+  - `exists-uid`: the live match was found by UID.
+  - `exists-name`: the live match was found by name.
+  - `missing-org`: the routed destination org does not exist.
+  - `would-create-org`: `--dry-run` detected that `--create-missing-orgs` would create the routed destination org.
 - In diff output:
   - `-` is usually the live or current value.
   - `+` is usually the exported or expected value.
 
 ### Command Domains
 
-- Dashboard: `dashboard export`, `dashboard list`, `dashboard import`, `dashboard delete`, `dashboard diff`, `dashboard inspect-export`, `dashboard inspect-live`, `dashboard inspect-vars`, `dashboard screenshot`
-- Alert: `alert export`, `alert import`, `alert diff`, `alert list-rules`, `alert list-contact-points`, `alert list-mute-timings`, `alert list-templates`
-- Datasource: `datasource list`, `datasource export`, `datasource import`, `datasource diff`
-- Access: `access org list`, `access org add`, `access org modify`, `access org delete`, `access org export`, `access org import`, `access user list`, `access user add`, `access user modify`, `access user delete`, `access user export`, `access user import`, `access user diff`, `access team list`, `access team add`, `access team modify`, `access team delete`, `access team export`, `access team import`, `access team diff`, `access service-account list`, `access service-account add`, `access service-account export`, `access service-account import`, `access service-account diff`, `access service-account delete`, `access service-account token add`, `access service-account token delete`
+Use this routing table when you know the task but not yet the exact command.
+
+| Goal | Start here | Common commands |
+| --- | --- | --- |
+| Dashboard inventory and analysis | `dashboard` | `browse`, `list`, `export`, `import`, `diff`, `delete`, `inspect-export`, `inspect-live`, `inspect-vars`, `screenshot` |
+| Alerting management, inventory, and migration | `alert` | `plan`, `apply`, `delete`, `init`, `new-rule`, `new-contact-point`, `new-template`, `list-rules`, `list-contact-points`, `list-mute-timings`, `list-templates`, `export`, `import`, `diff` |
+| Datasource inventory and replay | `datasource` | `browse`, `list`, `export`, `import`, `diff`, `add`, `modify`, `delete` |
+| Access management for orgs | `access org` | `list`, `add`, `modify`, `delete`, `export`, `import` |
+| Access management for users | `access user` | `list`, `add`, `modify`, `delete`, `export`, `import`, `diff` |
+| Access management for teams | `access team` | `list`, `add`, `modify`, `delete`, `export`, `import`, `diff` |
+| Access management for service accounts | `access service-account` | `list`, `add`, `delete`, `export`, `import`, `diff`, `token add`, `token delete` |
+| Staged change and promotion workflows | `change` | `summary`, `bundle`, `bundle-preflight`, `preflight`, `assess-alerts`, `plan`, `review`, `apply`, `audit`, `promotion-preflight` |
+| Project-wide staged or live reads | `overview`, `status` | `overview`, `overview live`, `status staged`, `status live` |
 
 ### Command capability summary
 
@@ -76,14 +225,22 @@ Use this table first when you need to confirm whether a resource supports invent
 
 | Resource | List | Export | Import | Diff | Inspect | Add | Modify | Delete | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Dashboards | Yes | Yes | Yes | Yes | Yes | No | No | No | Inventory, backup, and cross-environment migration |
+| Dashboards | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Inventory, local authoring drafts, backup, and cross-environment migration |
 | Datasources | Yes | Yes | Yes | Yes | No | No | No | No | Drift review and migration checkpoints |
-| Alert rules & alerting resources | Yes | Yes | Yes | Yes | No | No | No | No | rule trees, contact points, mute timings, templates |
+| Alert rules & alerting resources | Yes | Yes | Yes | Yes | No | No | No | No | management lane: `plan/apply/delete/init/new-*`; migration lane: `export/import/diff` |
 | Organizations | Yes | Yes | Yes | No | No | Yes | Yes | Yes | Org inventory plus membership replay on import |
 | Users | Yes | Yes | Yes | Yes | No | Yes | Yes | Yes | User inventory, migration, and drift comparison |
-| Teams (`group` alias) | Yes | Yes | Yes | Yes | No | Yes | Yes | Yes | Team inventory, migration, and drift comparison |
+| Teams | Yes | Yes | Yes | Yes | No | Yes | Yes | Yes | Team inventory, migration, and drift comparison |
 | Service accounts | Yes | Yes | Yes | Yes | No | Yes | Yes | Yes | Service account lifecycle, snapshot replay, and drift review |
 | Service account tokens | Yes | No | No | No | No | Yes | No | Yes | token add/delete workflows |
+
+Project-level surfaces:
+
+| Surface | Inputs | Live reads | Output modes | Main use |
+| --- | --- | --- | --- | --- |
+| `change` | desired JSON, bundle files, lock files, availability/mapping metadata | Optional, command-dependent | text/json | staged review, preflight, plan, review, apply intent |
+| `overview` | staged exports plus optional change/promotion inputs | `overview live` only | text/json/interactive | one operator-facing staged or live project snapshot |
+| `status` | staged exports or live Grafana | Yes | text/json/interactive | canonical project-wide staged/live readiness surface |
 
 Authentication exclusivity rules:
 
@@ -92,16 +249,126 @@ Authentication exclusivity rules:
 3. `--basic-password` cannot be combined with `--prompt-password`.
 4. `--prompt-password` requires `--basic-user`.
 
+<a id="dashboard-commands"></a>
 3) Dashboard Commands
 ---------------------
 
+### 3.0 Dashboard authoring (`dashboard get`, `clone-live`, `patch-file`, `publish`)
+
+Purpose: support a file-first dashboard authoring flow without exporting a whole dashboard tree first.
+
+Typical flow:
+1. `dashboard get` fetches one live dashboard into an API-safe local draft with `dashboard.id = null`.
+2. `dashboard clone-live` fetches one live dashboard into a new local draft and can override title, UID, or preserved `meta.folderUid`.
+3. `dashboard review` summarizes one local draft or export file, highlights blocking issues, and suggests the next command.
+4. `dashboard patch-file` edits one local draft or raw export file in place, or writes a patched copy to `--output`.
+5. `dashboard publish` stages one local file through the existing dashboard import pipeline, including `--dry-run --table` or `--dry-run --json`.
+
+Examples:
+
+Fetch one live dashboard into a local draft:
+```bash
+grafana-util dashboard get --url http://localhost:3000 --token <TOKEN> --dashboard-uid cpu-main --output ./drafts/cpu-main.json
+```
+
+Clone one live dashboard into a new draft with a new UID and folder:
+```bash
+grafana-util dashboard clone-live --url http://localhost:3000 --basic-user admin --basic-password admin --source-uid cpu-main --name "CPU Clone" --uid cpu-main-clone --folder-uid infra --output ./drafts/cpu-main-clone.json
+```
+
+Patch one local file in place:
+```bash
+grafana-util dashboard patch-file --input ./drafts/cpu-main.json --name "CPU Overview" --folder-uid infra --tag prod --tag sre --message "Prepare draft for publish"
+```
+
+Review one local file before publishing:
+```bash
+grafana-util dashboard review --input ./drafts/cpu-main.json
+```
+
+Preview publish through the existing import dry-run path:
+```bash
+grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --basic-password admin --input ./drafts/cpu-main.json --replace-existing --dry-run --table
+```
+
+How to read it:
+- `dashboard get` and `dashboard clone-live` keep the wrapped Grafana document shape so later `dashboard publish` or `dashboard import` can reuse the same file.
+- `dashboard review` is local-only. It does not call Grafana APIs and is meant to be the fast authoring checkpoint between `get/clone-live` and `publish`.
+- `dashboard review --json` emits a compact machine-readable summary including `documentKind`, `dashboardIdIsNull`, `metaMessagePresent`, `blockingIssues`, and `suggestedNextAction`.
+- `dashboard patch-file` accepts either a wrapped export document or a bare dashboard object.
+- `dashboard patch-file --tag` replaces the tag list with the repeated `--tag` values you provide.
+- `dashboard publish` is intentionally a single-file wrapper over the current import lane; it does not create a second apply engine.
+- `dashboard publish --folder-uid` and `dashboard publish --message` override the staged import payload without requiring you to hand-edit JSON first.
+
+### 3.0a Snapshot wrappers (`snapshot export`, `snapshot review`)
+
+Purpose: capture one all-org dashboard + datasource snapshot under one export root, then review that local inventory snapshot without retyping both staged input directories.
+
+Typical flow:
+1. `snapshot export` writes dashboard exports under `./snapshot/dashboards` and datasource exports under `./snapshot/datasources`.
+2. `snapshot review` reads that same root back through the snapshot inventory review path.
+
+Examples:
+
+Capture one all-org snapshot into a single root:
+```bash
+grafana-util snapshot export --url http://localhost:3000 --token <TOKEN> --export-dir ./snapshot
+```
+
+Replace an existing snapshot root on repeat runs:
+```bash
+grafana-util snapshot export --url http://localhost:3000 --token <TOKEN> --export-dir ./snapshot --overwrite
+```
+
+Review that local snapshot as text:
+```bash
+grafana-util snapshot review --input-dir ./snapshot --output text
+```
+
+Review that local snapshot as JSON:
+```bash
+grafana-util snapshot review --input-dir ./snapshot --output json
+```
+
+Review that local snapshot interactively:
+```bash
+grafana-util snapshot review --input-dir ./snapshot --interactive
+```
+
+`--interactive` is a shortcut for `--output interactive`.
+
+Snapshot layout:
+```text
+snapshot/
+  dashboards/
+    export-metadata.json
+    org_<id>_<name>/
+      raw/
+      prompt/
+      provisioning/
+  datasources/
+    export-metadata.json
+    org_<id>_<name>/
+      datasources.json
+      export-metadata.json
+      provisioning/
+        datasources.yaml
+```
+
+How to read it:
+- `snapshot export` is a thin wrapper over `dashboard export --all-orgs` plus `datasource export --all-orgs`.
+- `snapshot review` is a local snapshot inventory review; it does not call Grafana APIs.
+- `snapshot review` summarizes combined org coverage, per-org dashboard and datasource counts, and warning conditions before it opens the browser view.
+- v1 intentionally includes dashboards and datasources only. Access users, teams, orgs, and service accounts remain separate workflows.
+- `snapshot review` uses `./snapshot/dashboards` and `./snapshot/datasources` automatically, so you do not need to repeat both staged input flags manually.
+
 ### 3.1 `dashboard export`
 
-Purpose: export live dashboards into `raw/` and `prompt/` variants.
+Purpose: export live dashboards into `raw/`, `prompt/`, and `provisioning/` variants.
 
 | Option | Purpose | Difference / scenario |
 | --- | --- | --- |
-| `--export-dir` | Export root directory | Default `dashboards`; contains `raw/` and `prompt/` |
+| `--export-dir` | Export root directory | Default `dashboards`; contains `raw/`, `prompt/`, and `provisioning/` |
 | `--page-size` | Pagination size | Increase for large estates |
 | `--org-id` | Export from one explicit org | API token is not supported here; use Grafana username/password login |
 | `--all-orgs` | Export from all visible orgs | Best for central backups |
@@ -109,30 +376,44 @@ Purpose: export live dashboards into `raw/` and `prompt/` variants.
 | `--overwrite` | Replace existing files | Typical for repeatable exports |
 | `--without-dashboard-raw` | Skip `raw/` | Use only if API restore is not needed |
 | `--without-dashboard-prompt` | Skip `prompt/` | Use only if UI import is not needed |
+| `--without-dashboard-provisioning` | Skip `provisioning/` | Use only if Grafana file provisioning artifacts are not needed |
+| `--provisioning-provider-name` | Set the provider name in `provisioning/provisioning/dashboards.yaml` | Change the provider label Grafana shows for this export |
+| `--provisioning-provider-org-id` | Override the provider org ID in the generated YAML | Use when the export should point at a different Grafana org ID |
+| `--provisioning-provider-path` | Override the provider path written into the generated YAML | Point Grafana at a different dashboards directory on the export host |
+| `--provisioning-provider-disable-deletion` | Set `disableDeletion` in the generated YAML | Keep Grafana from deleting files that disappear from disk |
+| `--provisioning-provider-allow-ui-updates` | Set `allowUiUpdates` in the generated YAML | Allow dashboard edits from the Grafana UI when provisioning allows it |
+| `--provisioning-provider-update-interval-seconds` | Set `updateIntervalSeconds` in the generated YAML | Control how often Grafana checks the exported dashboards directory |
 | `--dry-run` | Preview files without writing them | Validate scope and paths first |
 | `--progress` | Print concise progress lines | Large exports |
 | `-v`, `--verbose` | Print detailed per-item output | Troubleshooting export behavior |
 
+The generated provisioning provider file still defaults to the current export tree path, the current org ID, `disableDeletion=false`, `allowUiUpdates=false`, and a 30 second update interval. Override those flags only when Grafana needs a different provisioning target or lifecycle policy.
+
 Example command:
 ```bash
-grafana-util dashboard export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./dashboards --overwrite
+grafana-util dashboard export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./dashboards --overwrite --progress
 ```
 
 Example output:
 ```text
-Exported raw    cpu-main -> dashboards/raw/Infra/CPU__cpu-main.json
-Exported prompt cpu-main -> dashboards/prompt/Infra/CPU__cpu-main.json
-Exported raw    mem-main -> dashboards/raw/Infra/MEM__mem-main.json
-Exported prompt mem-main -> dashboards/prompt/Infra/MEM__mem-main.json
-Exported 2 dashboards. Raw index: dashboards/raw/index.json Raw manifest: dashboards/raw/export-metadata.json Raw datasources: dashboards/raw/datasources.json Raw permissions: dashboards/raw/permissions.json Prompt index: dashboards/prompt/index.json Prompt manifest: dashboards/prompt/export-metadata.json Root index: dashboards/index.json Root manifest: dashboards/export-metadata.json
+Exporting dashboard 1/7: mixed-query-smoke
+Exporting dashboard 2/7: smoke-prom-only
+Exporting dashboard 3/7: query-smoke
+Exporting dashboard 4/7: smoke-main
+Exporting dashboard 5/7: subfolder-chain-smoke
+Exporting dashboard 6/7: subfolder-main
+Exporting dashboard 7/7: two-prom-query-smoke
 ```
 
 How to read it:
+- `--progress` prints one concise line per dashboard; use `--verbose` when you need per-file output paths.
 - `raw` is the API-friendly reversible export.
 - `prompt` is the UI-import-friendly variant.
+- `provisioning` is the Grafana file-provisioning variant. It writes dashboard JSON under `provisioning/dashboards/` and a starter provider file at `provisioning/provisioning/dashboards.yaml` that points at that exported dashboards directory.
 - `raw/permissions.json` captures dashboard and folder permission metadata for backup and review.
 - With `--all-orgs`, the export root `export-metadata.json` includes `orgCount` plus an `orgs[]` summary for every exported org.
-- The final summary is the fastest check for missing dashboards.
+- For replay-heavy dry-run examples in this guide, `--flat` is the most repeatable export shape because the resulting `raw/` tree can be pointed at `dashboard import` directly.
+- The generated `provisioning/provisioning/dashboards.yaml` points at the exported dashboards directory on the machine that wrote the export. If you move the tree elsewhere, update the `path` field to the directory Grafana will read from.
 
 ### 3.2 `dashboard list`
 
@@ -184,9 +465,9 @@ grafana-util dashboard list --url http://localhost:3000 --token <TOKEN> --json
 ]
 ```
 
-### 3.3 `dashboard list-data-sources` (compatibility shim; prefer `datasource list`)
+### 3.3 `dashboard list-data-sources`
 
-Purpose: preserve the older dashboard-scoped datasource inventory path while steering new scripts and runbooks to `datasource list`.
+Purpose: use the dashboard-scoped datasource inventory path when you want datasource output while already working from the dashboard surface. New runbooks should prefer `datasource list`.
 
 | Option | Purpose | Difference / scenario |
 | --- | --- | --- |
@@ -212,16 +493,14 @@ tempo-prod         tempo-prod         tempo        false
 Preferred path:
 - Use section `5.1 datasource list` for new automation, saved examples, and operator documentation.
 
-Preferred path:
-- Use section `5.1 datasource list` for new automation, saved examples, and operator documentation.
-
 ### 3.4 `dashboard import`
 
-Purpose: import dashboards from a `raw/` export into live Grafana.
+Purpose: import dashboards from a `raw/` or `provisioning/` export into live Grafana.
 
 | Option | Purpose | Difference / scenario |
 | --- | --- | --- |
-| `--import-dir` | Input `raw/` directory or multi-org export root | Use `raw/` for normal import; use the combined export root with `--use-export-org` |
+| `--import-dir` | Input export directory or multi-org export root | Use `raw/` or `provisioning/` for single-org import; use the combined export root with `--use-export-org` |
+| `--input-format raw\|provisioning` | Choose the on-disk import contract | `provisioning` accepts either the provisioning root or its `dashboards/` subdirectory; routed `--use-export-org` provisioning imports require the combined export root, not one org's `provisioning/` directory |
 | `--org-id` | Target org | Org-specific import |
 | `--use-export-org` | Route each exported org back into Grafana | Import a combined `--all-orgs` export root |
 | `--only-org-id` | Restrict `--use-export-org` to selected source orgs | Repeat the flag to import multiple orgs |
@@ -244,7 +523,7 @@ Purpose: import dashboards from a `raw/` export into live Grafana.
 
 Example command:
 ```bash
-grafana-util dashboard import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/raw --replace-existing --dry-run --table
+grafana-util dashboard import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards-flat/raw --replace-existing --dry-run --table
 ```
 
 Current note:
@@ -252,17 +531,28 @@ Current note:
 
 Example output:
 ```text
-UID          TITLE            ACTION   DESTINATION   FOLDER
-cpu-main     CPU Overview     update   existing      Infra
-mem-main     Memory Overview  create   missing       Infra
+Import mode: create-or-update
+UID                    DESTINATION  ACTION  FOLDER_PATH                    FILE
+---------------------  -----------  ------  -----------------------------  ------------------------------------------------------------
+mixed-query-smoke      exists       update  General                        ./dashboards-flat/raw/Mixed_Query_Dashboard__mixed-query-smoke.json
+smoke-main             exists       update  General                        ./dashboards-flat/raw/Smoke_Dashboard__smoke-main.json
+subfolder-chain-smoke  exists       update  Platform / Team / Apps / Prod  ./dashboards-flat/raw/Subfolder_Chain_Dashboard__subfolder-chain-smoke.json
 
-Dry-run checked 2 dashboard(s)
+Dry-run checked 7 dashboard(s) from ./dashboards-flat/raw
 ```
+
+Live note:
+- The dry-run table above was validated against a local Grafana `12.4.1` container by first exporting dashboards with `dashboard export --flat`.
+- For provisioning imports, `dashboard import --input-format provisioning --import-dir ./dashboards/provisioning` resolves the concrete `dashboards/` JSON tree automatically and keeps folder placement based on the provisioning file hierarchy.
 
 How to read it:
 - `ACTION=update` means the dashboard already exists and would be changed.
 - `ACTION=create` means the dashboard is not present yet.
 - `DESTINATION` describes the live target state, not the local directory.
+- `DESTINATION=missing` means dry-run found no live dashboard with that UID yet.
+- Routed multi-org dry-runs can also report `missing-org` or `would-create-org` before any per-dashboard action rows are applied.
+- `--use-export-org --input-format provisioning` routes each `org_<id>_<name>/provisioning/` subtree from a combined `--all-orgs` export root through the same per-org import flow as raw exports.
+- `--interactive --use-export-org` runs the same review picker one scoped org import at a time after the combined export root is rebound to each matching `org_<id>_<name>/...` import directory.
 
 ### 3.4a `dashboard delete`
 
@@ -292,17 +582,23 @@ Current note:
 
 ### 3.5 `dashboard diff`
 
-Purpose: compare local exported dashboards against live Grafana.
+Purpose: compare local dashboard export files against live Grafana.
 
 | Option | Purpose | Difference / scenario |
 | --- | --- | --- |
-| `--import-dir` | `raw/` directory to compare | Read-only comparison |
+| `--import-dir` | Dashboard export directory to compare | Use `raw/` by default; use `provisioning/` or its `dashboards/` subdirectory with `--input-format provisioning` |
+| `--input-format raw\|provisioning` | Choose the on-disk diff contract | `raw` remains the default; `provisioning` compares the Grafana file-provisioning dashboard tree explicitly |
 | `--import-folder-uid` | Override folder uid assumption | Useful when folder mapping differs |
 | `--context-lines` | Diff context size | Increase when JSON changes are large |
 
 Example command:
 ```bash
 grafana-util dashboard diff --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/raw
+```
+
+Provisioning tree:
+```bash
+grafana-util dashboard diff --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/provisioning --input-format provisioning
 ```
 
 Example output:
@@ -321,13 +617,37 @@ How to read it:
 - `-` is the current live value.
 - `+` is the exported expected value.
 
+### 3.5a `dashboard validate-export`
+
+Purpose: validate exported dashboard JSON before GitOps-style sync or API import review.
+
+| Option | Purpose | Difference / scenario |
+| --- | --- | --- |
+| `--import-dir` | Dashboard export directory to validate | Use `raw/` by default; use `provisioning/` or its `dashboards/` subdirectory with `--input-format provisioning` |
+| `--input-format raw\|provisioning` | Choose the on-disk validation contract | Raw remains the default; provisioning validates the Grafana file-provisioning dashboard tree explicitly |
+| `--reject-custom-plugins` | Fail on custom panel or datasource plugins | Best for portable/core-only review gates |
+| `--reject-legacy-properties` | Fail on rows and web-import scaffolding | Best before sync/apply automation |
+| `--target-schema-version` | Require a minimum dashboard schemaVersion | Good for migration cutovers |
+| `--output-format text\|json` | Render the validation report as text or JSON | Use JSON for CI or artifact capture |
+| `--output-file` | Also write the rendered report to disk | Keep a CI artifact or attach to review bundles |
+
+Example commands:
+```bash
+grafana-util dashboard validate-export --import-dir ./dashboards/raw --reject-custom-plugins --reject-legacy-properties --target-schema-version 39
+grafana-util dashboard validate-export --import-dir ./dashboards/provisioning --input-format provisioning --output-format json --output-file ./dashboard-validation.json
+```
+
+Current note:
+- `dashboard validate-export` now follows the same explicit raw/provisioning input contract used by `dashboard import`, `dashboard diff`, and `dashboard inspect-export`. Raw stays the default lane.
+
 ### 3.6 `dashboard inspect-export`
 
 Purpose: analyze exported dashboards offline without calling Grafana.
 
 | Option | Purpose | Difference / scenario |
 | --- | --- | --- |
-| `--import-dir` | One org `raw/` directory or a combined multi-org export root | Offline analysis only |
+| `--import-dir` | One org export directory or a combined multi-org export root | Use `raw/` with `--input-format raw`; use `provisioning/` or its `dashboards/` subdirectory with `--input-format provisioning` |
+| `--input-format raw\|provisioning` | Choose the on-disk inspect contract | `raw` remains the default; `provisioning` analyzes the Grafana file-provisioning dashboard tree explicitly |
 | `--json` | JSON output | Script-friendly |
 | `--table` | Table output | Operator-friendly |
 | `--report` | Shortcut report mode | Empty `--report` means flat table; explicit values include `csv`, `json`, `tree`, `tree-table`, `dependency`, `dependency-json`, `governance`, and `governance-json` |
@@ -340,29 +660,34 @@ Purpose: analyze exported dashboards offline without calling Grafana.
 
 Example command:
 ```bash
-grafana-util dashboard inspect-export --import-dir ./dashboards/raw --output-format report-table
+grafana-util dashboard inspect-export --import-dir ./dashboards/raw --input-format raw --output-format report-table
 ```
 
 Combined multi-org export root:
 ```bash
-grafana-util dashboard inspect-export --import-dir ./dashboards --output-format report-tree-table
+grafana-util dashboard inspect-export --import-dir ./dashboards --input-format raw --output-format report-tree-table
+```
+
+Provisioning tree:
+```bash
+grafana-util dashboard inspect-export --import-dir ./dashboards/provisioning --input-format provisioning --report tree-table
 ```
 
 Inspect datasource-level org, database, bucket, and index-pattern fields:
 ```bash
-grafana-util dashboard inspect-export --import-dir ./dashboards/raw --report csv \
+grafana-util dashboard inspect-export --import-dir ./dashboards/raw --input-format raw --report csv \
   --report-columns datasource_name,datasource_org,datasource_org_id,datasource_database,datasource_bucket,datasource_index_pattern,query
 ```
 
 Inspect metrics, functions, and bucket extraction:
 ```bash
-grafana-util dashboard inspect-export --import-dir ./dashboards/raw --report csv \
+grafana-util dashboard inspect-export --import-dir ./dashboards/raw --input-format raw --report csv \
   --report-columns panel_id,ref_id,datasource_name,metrics,functions,buckets,query
 ```
 
 Inspect folder identity and source path details:
 ```bash
-grafana-util dashboard inspect-export --import-dir ./dashboards/raw --report csv \
+grafana-util dashboard inspect-export --import-dir ./dashboards/raw --input-format raw --report csv \
   --report-columns dashboard_uid,folder_path,folder_uid,parent_folder_uid,file
 ```
 
@@ -477,10 +802,321 @@ Validated output file:
 /tmp/node-exporter-full-panel-20-header-v2.png
 ```
 
+<a id="alert-commands"></a>
 4) Alert Commands
 -----------------
 
-### 4.1 `alert export`
+Alert now has three operator-facing layers:
+- Authoring layer: `init`, `add-rule`, `clone-rule`, `add-contact-point`, `set-route`, `preview-route`, and the lower-level `new-*` scaffolds.
+- Review/apply layer: `plan`, `apply`, and the explicit delete preview surface.
+- Migration layer: `export`, `import`, `diff`, plus the live `list-*` inventory commands.
+
+Keep these layers separate:
+- The authoring commands only write or preview desired-state files. They do not call live Grafana mutation APIs.
+- `plan` and `apply` are the only normal live-mutation path for the authoring lane.
+- `export/import/diff` stays on the older `raw/` replay lane and should not be mixed into the desired-state authoring workflow.
+
+Authoring boundaries that matter in practice:
+- `add-rule` is intentionally limited to simple threshold or classic-condition style authoring.
+- For complex rules, use `clone-rule` from an existing desired rule, then edit the desired file by hand before `plan`.
+- `set-route` owns one tool-managed route. Re-running it overwrites that same route instead of merging field-by-field.
+- `preview-route` previews desired labels against the managed route contract. It is not a full Grafana routing simulator.
+- `--folder` records the desired folder identity only. It is not a live folder resolve/create workflow.
+- `--dry-run` on the authoring commands renders the desired document without writing files.
+
+### 4.1 Authoring Layer
+
+Purpose: build or edit desired alert files under one managed desired tree before any live review/apply step.
+
+Start with the desired tree:
+
+```bash
+grafana-util alert init --desired-dir ./alerts/desired
+```
+
+That tree is intentionally separate from the migration-oriented `alerts/raw` export tree.
+
+Authoring command map:
+
+| Command | Use it for | Important boundary |
+| --- | --- | --- |
+| `alert add-contact-point` | Create a simple contact-point desired document quickly | Writes desired files only |
+| `alert add-rule` | Create a simple threshold/classic-condition rule | Not for complex multi-query authoring |
+| `alert clone-rule` | Start from an existing desired rule and hand-edit the clone | Best path for richer rule bodies |
+| `alert set-route` | Author the tool-owned managed route document | Re-run overwrites the same managed route |
+| `alert preview-route` | Preview desired labels against the managed route input shape | Preview only; not a Grafana routing simulation |
+| `alert new-rule`, `new-contact-point`, `new-template` | Low-level starter scaffolds when the higher-level authoring surface is not enough | Leaves more of the document for manual editing |
+
+Common authoring commands:
+
+```bash
+grafana-util alert add-contact-point --desired-dir ./alerts/desired --name pagerduty-primary
+grafana-util alert add-rule --desired-dir ./alerts/desired --name cpu-high --folder platform-alerts --rule-group cpu --receiver pagerduty-primary --label team=platform --severity critical --expr A --threshold 80 --above --for 5m
+grafana-util alert preview-route --desired-dir ./alerts/desired --label team=platform --severity critical
+```
+
+Validated authoring output excerpt from `preview-route`:
+
+```json
+{
+  "input": {
+    "labels": {
+      "team": "platform"
+    },
+    "severity": "critical"
+  },
+  "matches": []
+}
+```
+
+`matches: []` here is expected. `preview-route` shows the desired-state preview contract, not whether Grafana would route a live alert instance exactly the same way.
+
+Managed route overwrite example:
+
+```bash
+grafana-util alert set-route --desired-dir ./alerts/desired --receiver pagerduty-primary --label team=platform --severity critical
+grafana-util alert set-route --desired-dir ./alerts/desired --receiver pagerduty-primary --label team=infra --severity critical
+```
+
+On the second run, the managed route changes from `team=platform` to `team=infra`. It does not preserve the old matcher and merge the new one on top.
+
+### 4.2 Review And Apply Layer
+
+#### `alert plan`
+
+Purpose: compare desired alert YAML or JSON files against live Grafana and build a reviewable plan.
+
+| Option | Purpose | Difference / scenario |
+| --- | --- | --- |
+| `--desired-dir` | Desired alert directory | Reads managed alert files instead of `raw/` exports |
+| `--prune` | Turn live-only resources into delete rows | Required before the plan can propose delete actions |
+| `--dashboard-uid-map` | Dashboard UID map | Preserve linked alert-rule references across environments |
+| `--panel-id-map` | Panel id map | Preserve linked panel references across environments |
+| `--output text\|json` | Plan rendering mode | Use `json` for CI or reviewed handoff artifacts |
+
+Example command:
+```bash
+grafana-util alert plan --url http://localhost:3000 --basic-user admin --basic-password admin --desired-dir ./alerts/desired --prune --output json
+```
+
+How to read it:
+- `create` means the desired resource is missing in live Grafana.
+- `update` means the live resource exists but differs.
+- `noop` means desired and live already match.
+- `delete` appears only when `--prune` is enabled.
+- `blocked` means the plan found something actionable but refused to treat it as live-safe, for example a live-only resource without `--prune`.
+
+#### `alert apply`
+
+Purpose: execute a reviewed alert plan file back to Grafana.
+
+| Option | Purpose | Difference / scenario |
+| --- | --- | --- |
+| `--plan-file` | Reviewed alert plan document | `apply` does not read desired files directly |
+| `--approve` | Explicit approval gate | Required before live execution |
+| `--output text\|json` | Apply result rendering | `json` is better for audit capture |
+
+Example command:
+```bash
+grafana-util alert apply --url http://localhost:3000 --basic-user admin --basic-password admin --plan-file ./alert-plan-reviewed.json --approve --output json
+```
+
+How to read it:
+- `appliedCount` tells you how many plan rows actually executed.
+- `results[]` records each executed resource action.
+- `apply` skips `noop` and `blocked` rows; it only executes `create`, `update`, and `delete`.
+
+#### `alert delete`
+
+Purpose: preview one explicit alert resource delete request by kind and identity.
+
+| Option | Purpose | Difference / scenario |
+| --- | --- | --- |
+| `--kind` | Resource kind | `rule`, `contact-point`, `mute-timing`, `template`, `policy-tree` |
+| `--identity` | Explicit resource identity | UID or name, depending on the resource kind |
+| `--allow-policy-reset` | Allow notification policy reset | Required before policy-tree delete is treated as executable |
+| `--output text\|json` | Preview rendering | JSON is easier to hand off or inspect programmatically |
+
+Example command:
+```bash
+grafana-util alert delete --kind policy-tree --identity default --allow-policy-reset --output json
+```
+
+How to read it:
+- This is a preview surface, not a blind delete shortcut.
+- `policy-tree` is special because Grafana models it as a reset path, not a normal delete.
+- If `--allow-policy-reset` is omitted, the preview row is marked `blocked`.
+
+### 4.3 Operator Workflows
+
+#### Simple add path (`add-contact-point -> add-rule -> preview-route -> plan -> apply`)
+
+Validated locally on March 30, 2026 against Docker Grafana `12.4.1` at `http://127.0.0.1:43111`.
+
+1. Build the desired tree.
+
+```bash
+grafana-util alert init --desired-dir ./alerts/desired
+grafana-util alert add-contact-point --desired-dir ./alerts/desired --name pagerduty-primary
+grafana-util alert add-rule --desired-dir ./alerts/desired --name cpu-high --folder platform-alerts --rule-group cpu --receiver pagerduty-primary --label team=platform --severity critical --expr A --threshold 80 --above --for 5m
+grafana-util alert preview-route --desired-dir ./alerts/desired --label team=platform --severity critical
+```
+
+2. Review the live plan.
+
+Validated command:
+
+```bash
+grafana-util alert plan --url http://127.0.0.1:43111 --basic-user admin --basic-password admin --desired-dir ./alerts/desired --output json
+```
+
+Validated summary excerpt:
+
+```json
+{
+  "summary": {
+    "blocked": 1,
+    "create": 2,
+    "delete": 0,
+    "noop": 0,
+    "processed": 4,
+    "update": 1
+  }
+}
+```
+
+In that run:
+- `create` covered the new contact point and alert rule.
+- `update` covered the managed notification policy document because Grafana started from the default empty policy tree.
+- `blocked` represented the live default policy tree row when `--prune` was not enabled.
+
+3. Apply the reviewed plan.
+
+Validated command:
+
+```bash
+grafana-util alert apply --url http://127.0.0.1:43111 --basic-user admin --basic-password admin --plan-file ./alert-plan-reviewed.json --approve --output json
+```
+
+Validated result excerpt:
+
+```json
+{
+  "appliedCount": 3,
+  "results": [
+    {
+      "action": "create",
+      "identity": "pagerduty-primary",
+      "kind": "grafana-contact-point"
+    },
+    {
+      "action": "update",
+      "identity": "pagerduty-primary",
+      "kind": "grafana-notification-policies"
+    },
+    {
+      "action": "create",
+      "identity": "cpu-high",
+      "kind": "grafana-alert-rule"
+    }
+  ]
+}
+```
+
+4. Practical limit from the same validation: a follow-up `plan --prune` did not return to all `noop` rows. Grafana normalizes some live payload fields, so the current authoring documents can still re-plan as `update` on contact-point, policy, and rule resources after apply. Do not read the authoring lane as a byte-for-byte round-trip guarantee.
+
+#### Complex path (`clone-rule -> edit desired file -> plan -> apply`)
+
+Use this when `add-rule` is too small for the rule you want to express.
+
+```bash
+grafana-util alert clone-rule --desired-dir ./alerts/desired --source cpu-high --name cpu-high-staging --folder staging-alerts --rule-group cpu --receiver slack-platform
+# edit ./alerts/desired/rules/cpu-high-staging.yaml or .json by hand
+grafana-util alert plan --url http://localhost:3000 --basic-user admin --basic-password admin --desired-dir ./alerts/desired --output json
+grafana-util alert apply --url http://localhost:3000 --basic-user admin --basic-password admin --plan-file ./alert-plan-reviewed.json --approve --output json
+```
+
+Recommended operator pattern:
+- Clone from a known-good desired rule or exported rule first.
+- Hand-edit the cloned rule body for richer queries, expressions, annotations, recording semantics, or linked dashboard metadata.
+- Review the resulting live diff with `plan` before `apply`.
+
+#### Delete path (`remove desired file -> plan --prune -> apply`)
+
+Validated locally on March 30, 2026 against the same Docker Grafana `12.4.1` fixture.
+
+1. Remove the rule file from desired state.
+
+```bash
+rm ./alerts/desired/rules/cpu-high.yaml
+```
+
+2. Rebuild the plan with prune enabled.
+
+Validated command:
+
+```bash
+grafana-util alert plan --url http://127.0.0.1:43111 --basic-user admin --basic-password admin --desired-dir ./alerts/desired --prune --output json
+```
+
+Validated summary excerpt:
+
+```json
+{
+  "summary": {
+    "blocked": 0,
+    "create": 0,
+    "delete": 1,
+    "noop": 0,
+    "processed": 3,
+    "update": 2
+  }
+}
+```
+
+Validated delete row excerpt:
+
+```json
+{
+  "action": "delete",
+  "identity": "cpu-high",
+  "kind": "grafana-alert-rule",
+  "reason": "missing-from-desired-state"
+}
+```
+
+The same validation still carried two `update` rows because of the live normalization differences described above. The key prune signal is the `delete` row created for the missing desired rule.
+
+3. Apply the reviewed prune plan.
+
+Validated result excerpt:
+
+```json
+{
+  "appliedCount": 3,
+  "results": [
+    {
+      "action": "update",
+      "identity": "pagerduty-primary",
+      "kind": "grafana-contact-point"
+    },
+    {
+      "action": "update",
+      "identity": "pagerduty-primary",
+      "kind": "grafana-notification-policies"
+    },
+    {
+      "action": "delete",
+      "identity": "cpu-high",
+      "kind": "grafana-alert-rule"
+    }
+  ]
+}
+```
+
+### 4.4 Migration Layer
+
+#### `alert export`
 
 Purpose: export alerting resources into `raw/` JSON files.
 
@@ -497,13 +1133,14 @@ grafana-util alert export --url http://localhost:3000 --basic-user admin --basic
 
 Example output:
 ```text
-Exported rule          alerts/raw/rules/cpu_high.json
-Exported contact point alerts/raw/contact-points/oncall_webhook.json
-Exported template      alerts/raw/templates/default_message.json
-Alert export completed: 3 resource(s) written
+Exported alert rule cpu-main -> /tmp/alert-export-after-apply/raw/rules/general/example-rules/CPU_Main__cpu-main.json
+Exported contact point contact-point-uid -> /tmp/alert-export-after-apply/raw/contact-points/example-contact-point/example-contact-point__contact-point-uid.json
+Exported notification policies empty -> /tmp/alert-export-after-apply/raw/policies/notification-policies.json
+Exported template example-template -> /tmp/alert-export-after-apply/raw/templates/example-template/example-template.json
+Exported 1 alert rules, 1 contact points, 0 mute timings, 1 notification policy documents, 1 templates. Root index: /tmp/alert-export-after-apply/index.json
 ```
 
-### 4.2 `alert import` (legacy `import-alert`)
+#### `alert import` (legacy `import-alert`)
 
 Purpose: import alerting resources from a `raw/` directory.
 
@@ -525,23 +1162,35 @@ Example output:
 ```json
 {
   "summary": {
-    "processed": 2,
-    "wouldCreate": 1,
-    "wouldUpdate": 1,
+    "processed": 4,
+    "wouldCreate": 0,
+    "wouldUpdate": 4,
     "wouldFailExisting": 0
   },
   "rows": [
     {
-      "path": "alerts/raw/contact-points/Smoke_Webhook/Smoke_Webhook__smoke-webhook.json",
+      "path": "/tmp/alert-export-after-apply/raw/contact-points/example-contact-point/example-contact-point__contact-point-uid.json",
       "kind": "grafana-contact-point",
-      "identity": "smoke-webhook",
+      "identity": "contact-point-uid",
       "action": "would-update"
     },
     {
-      "path": "alerts/raw/policies/notification-policies.json",
+      "path": "/tmp/alert-export-after-apply/raw/policies/notification-policies.json",
       "kind": "grafana-notification-policies",
-      "identity": "grafana-default-email",
-      "action": "would-create"
+      "identity": "empty",
+      "action": "would-update"
+    },
+    {
+      "path": "/tmp/alert-export-after-apply/raw/rules/general/example-rules/CPU_Main__cpu-main.json",
+      "kind": "grafana-alert-rule",
+      "identity": "cpu-main",
+      "action": "would-update"
+    },
+    {
+      "path": "/tmp/alert-export-after-apply/raw/templates/example-template/example-template.json",
+      "kind": "grafana-notification-template",
+      "identity": "example-template",
+      "action": "would-update"
     }
   ]
 }
@@ -552,7 +1201,19 @@ How to read it:
 - `would-*` values are dry-run predictions.
 - `kind` tells you which resource family would change.
 
-### 4.3 `alert diff` (legacy `diff-alert`)
+Migration example:
+
+```bash
+grafana-util alert export --url http://localhost:3000 --basic-user admin --basic-password admin --output-dir ./alerts --overwrite
+grafana-util alert import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./alerts/raw --replace-existing --dry-run --json
+```
+
+Use this split as the default mental model:
+- `add-rule/clone-rule/add-contact-point/set-route/preview-route/init/new-*` is the desired-state authoring lane.
+- `plan/apply` is the review-first live mutation lane.
+- `export/import/diff` is the migration and replay lane.
+
+### 4.5 `alert diff` (legacy `diff-alert`)
 
 Purpose: compare local alert exports against live Grafana.
 
@@ -594,10 +1255,10 @@ Example output:
 }
 ```
 
-### 4.4 `alert list-rules`
-### 4.5 `alert list-contact-points`
-### 4.6 `alert list-mute-timings`
-### 4.7 `alert list-templates`
+### 4.9 `alert list-rules`
+### 4.10 `alert list-contact-points`
+### 4.11 `alert list-mute-timings`
+### 4.12 `alert list-templates`
 
 Purpose: list live alerting resources.
 
@@ -650,6 +1311,7 @@ ops_summary        [{{ .Status }}] {{ .CommonLabels.severity }}
 Cross-org note:
 - `--org-id` and `--all-orgs` are Basic-auth-only for alert list commands because Grafana org switching requires a server-admin-style org scope change.
 
+<a id="datasource-commands"></a>
 5) Datasource Commands
 ----------------------
 
@@ -683,14 +1345,15 @@ Cross-org note:
 
 ### 5.2 `datasource export`
 
-Purpose: export datasource inventory as normalized JSON.
+Purpose: export datasource inventory as a masked recovery bundle plus a separate Grafana provisioning YAML lane.
 
 | Option | Purpose | Difference / scenario |
 | --- | --- | --- |
-| `--export-dir` | Export directory | Default `datasources` |
+| `--export-dir` | Export directory | Default `datasources`; writes `datasources.json`, metadata, and `provisioning/` by default |
 | `--org-id` | Export from one explicit org | Basic-auth only explicit org export |
 | `--all-orgs` | Export from all visible orgs | Writes one `org_<id>_<name>/` subtree per org |
 | `--overwrite` | Replace existing export files | Repeatable export runs |
+| `--without-datasource-provisioning` | Skip `provisioning/` | Use only if Grafana datasource provisioning files are not needed |
 | `--dry-run` | Preview only | Validate destination first |
 
 Example command:
@@ -707,14 +1370,16 @@ Datasource export completed: 3 item(s)
 
 Live note:
 - The command shape above is exercised against a real Grafana `12.4.1` Docker server in the Rust live smoke flow.
+- The default export root now also includes `provisioning/datasources.yaml`, but the canonical restore/replay contract remains `datasources.json`.
 
 ### 5.3 `datasource import`
 
-Purpose: import datasource inventory into live Grafana.
+Purpose: import datasource inventory or provisioning-derived datasource definitions into live Grafana.
 
 | Option | Purpose | Difference / scenario |
 | --- | --- | --- |
 | `--import-dir` | Export root with `datasources.json` or combined export root | Use the combined root with `--use-export-org` |
+| `--input-format inventory\|provisioning` | Choose the on-disk import contract | `provisioning` accepts the export root, `provisioning/` directory, or a concrete YAML file |
 | `--org-id` | Target org | Explicit org restore |
 | `--use-export-org` | Route each exported org back into Grafana | Import a combined `--all-orgs` export root |
 | `--only-org-id` | Restrict `--use-export-org` to selected source orgs | Repeat the flag to import multiple orgs |
@@ -745,22 +1410,31 @@ loki-prod   loki-prod          loki         create   missing
 
 Live note:
 - Real Docker-backed runs also validate routed datasource replay with `--use-export-org`, repeated `--only-org-id`, and `--create-missing-orgs`; in routed dry-run JSON the org preview reports `exists`, `missing-org`, or `would-create-org` before per-datasource actions.
+- Provisioning imports read Grafana datasource YAML directly and normalize it into the existing import pipeline; `datasources.json` remains the default and canonical restore contract under `--input-format inventory`.
 
 How to read it:
 - `UID` and `NAME` both matter, but automation should prefer `UID`.
 - `TYPE` helps catch name collisions with wrong datasource types.
+- `DESTINATION=missing` means the datasource is absent and the dry-run would create it.
+- `DESTINATION=exists`, `exists-uid`, or `exists-name` tells you how the importer matched the live datasource before deciding whether it would update or skip it.
 
 ### 5.4 `datasource diff`
 
-Purpose: compare exported datasource inventory with live Grafana.
+Purpose: compare exported datasource inventory or explicit provisioning YAML with live Grafana.
 
 | Option | Purpose |
 | --- | --- |
-| `--diff-dir` | Datasource export root directory |
+| `--diff-dir` | Datasource export root directory for inventory input, or export root / provisioning directory / concrete YAML file for provisioning input |
+| `--input-format` | Choose `inventory` for the default datasources.json export contract or `provisioning` for Grafana datasource provisioning YAML |
 
 Example command:
 ```bash
 grafana-util datasource diff --url http://localhost:3000 --basic-user admin --basic-password admin --diff-dir ./datasources
+```
+
+Provisioning example:
+```bash
+grafana-util datasource diff --url http://localhost:3000 --basic-user admin --basic-password admin --diff-dir ./datasources/provisioning --input-format provisioning
 ```
 
 Example output:
@@ -878,10 +1552,11 @@ INDEX  NAME          TYPE       ACTION  DETAIL
 Live note:
 - The datasource mutation surface is validated in the Docker Grafana `12.4.1` live smoke path, including dry-run preview and persisted secret-field behavior on live add/modify flows.
 
+<a id="access-commands"></a>
 6) Access Commands
 ------------------
 
-`group` is an alias for `team`.
+Use `access team` as the canonical team command path in this guide.
 
 ### 6.1 `access user list`
 
@@ -1055,7 +1730,7 @@ Purpose: import users from exported snapshot files.
 | --- | --- | --- |
 | `--import-dir` | Directory that contains `users.json` and `export-metadata.json` | Must match export layout |
 | `--scope` | `org` or `global` | Resolve duplicate matching rules |
-| `--replace-existing` | Update existing user records | Required for repeated sync |
+| `--replace-existing` | Update existing user records | Required for repeat reconcile runs |
 | `--dry-run` | Plan actions only, no API mutation | Safer first pass |
 | `--yes` | Skip confirmation for destructive membership removals | Required when team removals are detected |
 | `--table`, `--json`, `--output-format table/json` | Dry-run output mode selector | Available only with `--dry-run`; mutually exclusive |
@@ -1254,7 +1929,7 @@ Purpose: import teams and synchronize memberships from exported snapshots.
 | Option | Purpose | Difference / scenario |
 | --- | --- | --- |
 | `--import-dir` | Directory that contains `teams.json` and `export-metadata.json` | Must match export layout |
-| `--replace-existing` | Update existing teams rather than skip | Required for cross-instance sync |
+| `--replace-existing` | Update existing teams rather than skip | Required for cross-instance replay |
 | `--dry-run` | Plan actions only, no API mutation | Recommended before replay |
 | `--yes` | Skip confirmation for destructive removals | Required when members would be removed |
 | `--table`, `--json`, `--output-format table/json` | Dry-run output mode selector | Available only with `--dry-run`; mutually exclusive |
@@ -1472,6 +2147,7 @@ Example output:
 }
 ```
 
+<a id="shared-output-rules"></a>
 7) Shared Output Rules
 ----------------------
 
@@ -1480,15 +2156,325 @@ Example output:
 | Output flags are mutually exclusive | Most commands do not allow `--table`, `--csv`, `--json`, and `--output-format` together |
 | Prefer dry-run first | Especially for import-like workflows |
 | Org control is explicit | `--org-id` and `--all-orgs` should be used deliberately |
-| Legacy commands still exist | Prefer the modern subcommand layout for new automation |
-| `access group` is an alias | It maps to `access team` |
+| Top-level names are distinct by role | Use `overview` for human entry, `status` for the canonical readiness contract, and `change` for staged change workflows |
+| Prefer canonical team commands | Use `access team` throughout this guide |
 
+### 7.1 Change, overview, and status surfaces
+
+- `change` is the staged change lane: build desired summaries, source bundles, preflight checks, review/apply intent documents, and alert-change assessment.
+- `overview` is the human project entrypoint: use it for operator-facing staged or live snapshots when you want one readable project home.
+- `status` is the canonical readiness surface: use `staged` for exported artifacts and `live` for current Grafana reads.
+
+### 7.2 `change summary`
+
+Purpose: normalize a desired resource list into one stable staged summary document.
+
+| Option | Purpose | Difference / scenario |
+| --- | --- | --- |
+| `--desired-file` | Input desired-resource JSON | Required |
+| `--output text\|json` | Render summary document | Use JSON for later plan/review stages |
+
+Example command:
+```bash
+grafana-util change summary --desired-file ./desired.json --output json
+```
+
+Example output:
+```json
+{
+  "kind": "grafana-utils-sync-summary",
+  "summary": {
+    "resourceCount": 4,
+    "dashboardCount": 1,
+    "datasourceCount": 1,
+    "folderCount": 1,
+    "alertCount": 1
+  }
+}
+```
+
+### 7.3 `change bundle` and `change bundle-preflight`
+
+Purpose: turn exported dashboard/alert/datasource artifacts into one source bundle, then evaluate what blocks or stays plan-only before apply.
+
+| Command | Key flags | Main use |
+| --- | --- | --- |
+| `change bundle` | `--dashboard-export-dir`, `--alert-export-dir`, `--datasource-export-file` or `--datasource-provisioning-file`, `--output-file` | package staged exports into one portable source bundle |
+| `change bundle-preflight` | `--source-bundle`, `--target-inventory`, `--availability-file` | review blocking plugin, datasource, alert-artifact, and secret/provider checks |
+
+Example command:
+```bash
+grafana-util change bundle \
+  --dashboard-export-dir ./dashboards/raw \
+  --alert-export-dir ./alerts/raw \
+  --datasource-export-file ./datasources/datasources.json \
+  --output-file ./change-source-bundle.json \
+  --output json
+```
+
+Example output excerpt:
+```json
+{
+  "kind": "grafana-utils-sync-source-bundle",
+  "summary": {
+    "dashboardCount": 7,
+    "datasourceCount": 3,
+    "folderCount": 5,
+    "alertRuleCount": 1,
+    "contactPointCount": 1,
+    "muteTimingCount": 1,
+    "policyCount": 1,
+    "templateCount": 1
+  }
+}
+```
+
+Provisioning-backed datasource example:
+```bash
+grafana-util change bundle \
+  --dashboard-export-dir ./dashboards/raw \
+  --datasource-provisioning-file ./datasources/provisioning/datasources.yaml \
+  --output json
+```
+
+Notes:
+- `change bundle` still keeps datasource inventory JSON as the default staged contract.
+- `--datasource-provisioning-file` is explicit and mutually exclusive with `--datasource-export-file`.
+
+Example command:
+```bash
+grafana-util change bundle-preflight \
+  --source-bundle ./change-source-bundle.json \
+  --target-inventory ./target-inventory.json \
+  --output json
+```
+
+Example output excerpt:
+```json
+{
+  "kind": "grafana-utils-sync-bundle-preflight",
+  "summary": {
+    "resourceCount": 20,
+    "syncBlockingCount": 8,
+    "alertArtifactCount": 4,
+    "alertArtifactPlanOnlyCount": 1,
+    "alertArtifactBlockedCount": 3
+  }
+}
+```
+
+How to read it:
+- `change bundle` is the packaging step.
+- `change bundle-preflight` is the review step that surfaces what is ready, plan-only, or blocked before any live apply path is considered.
+
+### 7.4 `change plan`, `change review`, `change apply`, and `change assess-alerts`
+
+Purpose: convert staged desired resources into a reviewable plan, stamp that plan reviewed, then emit a gated apply intent. Use `assess-alerts` when you need only the alert-change review signal.
+
+| Command | Key flags | Main use |
+| --- | --- | --- |
+| `change plan` | `--desired-file`, `--live-file` or `--fetch-live`, `--allow-prune`, `--output json` | build the staged plan document |
+| `change review` | `--plan-file`, `--review-note`, `--reviewed-by` | mark a plan reviewed without applying it |
+| `change apply` | `--plan-file`, `--approve`, `--execute-live` | emit a local apply intent, or execute live when explicitly enabled |
+| `change assess-alerts` | `--alerts-file`, `--output json` | isolate alert candidate/plan-only/blocked classification |
+
+Example command:
+```bash
+grafana-util change plan --desired-file ./desired-plan.json --live-file ./live.json --output json
+```
+
+Example output excerpt:
+```json
+{
+  "kind": "grafana-utils-sync-plan",
+  "summary": {
+    "would_create": 3,
+    "would_update": 0,
+    "would_delete": 0,
+    "noop": 0
+  },
+  "reviewRequired": true
+}
+```
+
+Example command:
+```bash
+grafana-util change review --plan-file ./change-plan.json --review-note "docs-reviewed" --reviewed-by docs-user --output json
+grafana-util change apply --plan-file ./change-plan-reviewed.json --approve --output json
+```
+
+Example output excerpt:
+```json
+{
+  "kind": "grafana-utils-sync-apply-intent",
+  "approved": true,
+  "reviewed": true,
+  "summary": {
+    "would_create": 3,
+    "would_update": 0,
+    "would_delete": 0,
+    "noop": 0
+  }
+}
+```
+
+Example command:
+```bash
+grafana-util change assess-alerts --alerts-file ./alerts-only.json --output json
+```
+
+Example output excerpt:
+```json
+{
+  "kind": "grafana-utils-alert-sync-plan",
+  "summary": {
+    "alertCount": 1,
+    "candidateCount": 0,
+    "planOnlyCount": 1,
+    "blockedCount": 0
+  }
+}
+```
+
+### 7.5 `overview`
+
+Purpose: summarize staged exports and staged change inputs into one project-wide operator snapshot.
+
+| Option | Purpose | Difference / scenario |
+| --- | --- | --- |
+| `--dashboard-export-dir` | Staged dashboard export root | Usually one `raw/` directory |
+| `--dashboard-provisioning-dir` | Staged dashboard provisioning root | Use this instead of `--dashboard-export-dir` when the source of truth is Grafana file provisioning |
+| `--datasource-export-dir` | Staged datasource export directory | Usually the org export directory containing `datasources.json` |
+| `--datasource-provisioning-file` | Staged datasource provisioning YAML | Use this instead of `--datasource-export-dir` when the source of truth is Grafana provisioning |
+| `--alert-export-dir` | Staged alert export directory | Point at the export root, not just `raw/` |
+| `--access-*-export-dir` | Staged access bundles | Add only the bundles you want summarized |
+| `--desired-file` | Optional change summary input | Adds staged change rows |
+| `--source-bundle`, `--target-inventory`, `--mapping-file` | Optional bundle/promotion context | Broadens the project-level staged picture |
+| `--output text\|json\|interactive` | Render format | `interactive` requires the TUI-capable build |
+
+Example command:
+```bash
+grafana-util overview \
+  --dashboard-export-dir ./dashboards/raw \
+  --datasource-export-dir ./datasources \
+  --alert-export-dir ./alerts \
+  --access-user-export-dir ./access-users \
+  --access-team-export-dir ./access-teams \
+  --access-org-export-dir ./access-orgs \
+  --access-service-account-export-dir ./access-service-accounts \
+  --desired-file ./desired.json \
+  --output text
+```
+
+Provisioning-backed dashboard example:
+```bash
+grafana-util overview \
+  --dashboard-provisioning-dir ./dashboards/provisioning \
+  --datasource-export-dir ./datasources \
+  --alert-export-dir ./alerts \
+  --output json
+```
+
+Example output:
+```text
+Project overview
+Status: blocked domains=6 present=5 blocked=1 blockers=3 warnings=0 freshness=current oldestAge=222s
+Artifacts: 8 total, 1 dashboard export, 1 datasource export, 1 alert export, 1 access user export, 1 access team export, 1 access org export, 1 access service-account export, 1 change summary, 0 bundle preflight, 0 promotion preflight
+Domain status:
+- dashboard status=blocked reason=blocked-by-blockers primary=10 blockers=3 warnings=0 freshness=current next=resolve orphaned datasources, then mixed dashboards
+- datasource status=ready reason=ready primary=3 blockers=0 warnings=0 freshness=current
+- alert status=ready reason=ready primary=1 blockers=0 warnings=0 freshness=current next=re-run alert export after alerting changes
+- access status=ready reason=ready primary=13 blockers=0 warnings=0 freshness=current next=re-run access export after membership changes
+- change status=ready reason=ready primary=4 blockers=0 warnings=0 freshness=current next=re-run change summary after staged changes
+```
+
+Notes:
+- `--dashboard-provisioning-dir` is explicit and mutually exclusive with `--dashboard-export-dir`.
+- `--datasource-provisioning-file` is explicit and mutually exclusive with `--datasource-export-dir`.
+- Provisioning-backed overview keeps the same dashboard status contract; only the staged input lane changes.
+- Provisioning-backed overview keeps the same datasource status contract; only the staged input lane changes.
+
+### 7.6 `status staged` and `status live`
+
+Purpose: render the canonical project-wide readiness contract from either staged exports or current Grafana state.
+
+| Command | Key flags | Main use |
+| --- | --- | --- |
+| `status staged` | staged export dirs, or `--dashboard-provisioning-dir`, `--datasource-provisioning-file`, plus optional desired/bundle inputs | machine-readable staged readiness |
+| `status live` | `--url`, auth, optional staged context files | machine-readable current Grafana status |
+| `overview live` | same live auth flags | human-facing live project read that routes through the shared `status live` path |
+
+Example command:
+```bash
+grafana-util status staged \
+  --dashboard-export-dir ./dashboards/raw \
+  --datasource-export-dir ./datasources \
+  --alert-export-dir ./alerts \
+  --access-user-export-dir ./access-users \
+  --access-team-export-dir ./access-teams \
+  --access-org-export-dir ./access-orgs \
+  --access-service-account-export-dir ./access-service-accounts \
+  --desired-file ./desired.json \
+  --output json
+```
+
+Provisioning-backed dashboard example:
+```bash
+grafana-util status staged \
+  --dashboard-provisioning-dir ./dashboards/provisioning \
+  --output json
+```
+
+Provisioning-backed datasource example:
+```bash
+grafana-util status staged \
+  --datasource-provisioning-file ./datasources/provisioning/datasources.yaml \
+  --output json
+```
+
+Example output excerpt:
+```json
+{
+  "scope": "staged-only",
+  "overall": {
+    "status": "blocked",
+    "domainCount": 6,
+    "blockedCount": 1,
+    "blockerCount": 3
+  }
+}
+```
+
+Notes:
+- `--dashboard-provisioning-dir` is explicit and mutually exclusive with `--dashboard-export-dir`.
+- `--datasource-provisioning-file` is explicit and mutually exclusive with `--datasource-export-dir`.
+
+Example command:
+```bash
+grafana-util status live --url http://localhost:3000 --basic-user admin --basic-password admin --output json
+```
+
+Example output excerpt:
+```json
+{
+  "scope": "live",
+  "overall": {
+    "status": "blocked",
+    "domainCount": 6,
+    "blockedCount": 1,
+    "blockerCount": 1,
+    "warningCount": 21
+  }
+}
+```
+
+<a id="common-operator-scenarios"></a>
 8) Common Operator Scenarios
 ----------------------------
 
 ### 8.1 Cross-environment dashboard migration
 
-1. `grafana-util dashboard export --all-orgs --overwrite --export-dir ./dashboards`
+1. `grafana-util dashboard export --all-orgs --overwrite --flat --export-dir ./dashboards`
 2. `grafana-util dashboard import --dry-run --replace-existing --table --import-dir ./dashboards/raw`
 3. Remove `--dry-run` after reviewing the output.
 
@@ -1542,11 +2528,12 @@ grafana-util dashboard inspect-export --import-dir ./dashboards/raw --report jso
    - missing SQL Grafana time filters
    - broad Loki selectors or regexes
 
+<a id="minimal-sop-commands"></a>
 9) Minimal SOP Commands
 -----------------------
 
 ```bash
-grafana-util dashboard export --url <URL> --basic-user <USER> --basic-password <PASS> --export-dir <DIR> [--overwrite] [--all-orgs]
+grafana-util dashboard export --url <URL> --basic-user <USER> --basic-password <PASS> --export-dir <DIR> [--overwrite] [--all-orgs] [--flat]
 grafana-util dashboard list --url <URL> --basic-user <USER> --basic-password <PASS> [--table|--csv|--json]
 grafana-util dashboard import --url <URL> --basic-user <USER> --basic-password <PASS> --import-dir <DIR>/raw --replace-existing [--dry-run]
 grafana-util dashboard delete --url <URL> --basic-user <USER> --basic-password <PASS> [--org-id <ORG_ID>] (--uid <UID>|--path <FOLDER_PATH>) [--delete-folders] [--dry-run|--yes]
@@ -1576,8 +2563,22 @@ grafana-util access service-account export --url <URL> --token <TOKEN> --export-
 grafana-util access service-account import --url <URL> --token <TOKEN> --import-dir ./access-service-accounts --replace-existing [--dry-run] [--output-format text|table|json]
 grafana-util access service-account diff --url <URL> --token <TOKEN> --diff-dir ./access-service-accounts
 grafana-util access service-account list --url <URL> --token <TOKEN> --table
+
+grafana-util change summary --desired-file ./desired.json --output json
+grafana-util change bundle --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts/raw --datasource-export-file ./datasources/datasources.json --output-file ./change-source-bundle.json --output json
+grafana-util change bundle-preflight --source-bundle ./change-source-bundle.json --target-inventory ./target-inventory.json --output json
+grafana-util change plan --desired-file ./desired.json --live-file ./live.json --output json
+grafana-util change review --plan-file ./change-plan.json --review-note "peer-reviewed" --reviewed-by ops-user --output json
+grafana-util change apply --plan-file ./change-plan-reviewed.json --approve --output json
+grafana-util change assess-alerts --alerts-file ./alerts-only.json --output json
+
+grafana-util overview --dashboard-export-dir ./dashboards/raw --datasource-export-dir ./datasources --alert-export-dir ./alerts --output text
+grafana-util overview live --url <URL> --basic-user <USER> --basic-password <PASS> --output json
+grafana-util status staged --dashboard-export-dir ./dashboards/raw --datasource-export-dir ./datasources --alert-export-dir ./alerts --output json
+grafana-util status live --url <URL> --basic-user <USER> --basic-password <PASS> --output json
 ```
 
+<a id="output-and-org-control-matrix"></a>
 10) Output and Org Control Matrix
 ---------------------------------
 
@@ -1597,6 +2598,20 @@ grafana-util access service-account list --url <URL> --token <TOKEN> --table
 | `access team diff` | text | Summary output |
 | `access service-account import` | `text/table/json` | Dry-run table/json/text summary |
 | `access service-account diff` | text | Summary output |
+| `change summary` | `text/json` | Desired-resource summary |
+| `change bundle` | `text/json` | Source bundle document |
+| `change bundle-preflight` | `text/json` | Bundle review document |
+| `change plan` | `text/json` | Reviewable change plan |
+| `change review` | `text/json` | Reviewed plan stamp |
+| `change apply` | `text/json` | Apply intent or live execution summary |
+| `change assess-alerts` | `text/json` | Alert-change classification |
+| `overview` | `text/json/interactive` | Project-wide staged overview |
+| `status staged/live` | `text/json/interactive` | Canonical project-wide readiness |
+
+Common dry-run status hints:
+- `missing`: no live target exists yet.
+- `exists`, `exists-uid`, `exists-name`, `existing`: a live target was matched before the CLI decided whether it would update or skip it.
+- `missing-org`, `would-create-org`: routed multi-org restore needs org creation or operator review first.
 
 | Command | `--org-id` | `--all-orgs` |
 | --- | --- | --- |
@@ -1609,4 +2624,5 @@ grafana-util access service-account list --url <URL> --token <TOKEN> --table
 | `datasource import` | Yes | No |
 | `alert list-*` | Yes | Yes |
 | `alert export/import/diff` | No | No |
+| `alert plan/apply/delete` | No | No |
 | `access` commands | No | No |

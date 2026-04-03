@@ -5,13 +5,76 @@
 
 use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum DashboardExportRootScopeKind {
+    OrgRoot,
+    AllOrgsRoot,
+    WorkspaceRoot,
+    Unknown,
+}
+
+impl DashboardExportRootScopeKind {
+    pub(crate) fn is_aggregate(self) -> bool {
+        matches!(self, Self::AllOrgsRoot | Self::WorkspaceRoot)
+    }
+
+    pub(crate) fn is_root(self) -> bool {
+        !matches!(self, Self::Unknown)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct DashboardExportRootManifest {
+    pub(crate) metadata: ExportMetadata,
+    pub(crate) scope_kind: DashboardExportRootScopeKind,
+}
+
+impl DashboardExportRootManifest {
+    pub(crate) fn from_metadata(metadata: ExportMetadata) -> Self {
+        Self {
+            scope_kind: Self::classify_scope_kind(&metadata),
+            metadata,
+        }
+    }
+
+    pub(crate) fn classify_scope_kind(metadata: &ExportMetadata) -> DashboardExportRootScopeKind {
+        match metadata.scope_kind.as_deref() {
+            Some("org-root") => DashboardExportRootScopeKind::OrgRoot,
+            Some("all-orgs-root") => DashboardExportRootScopeKind::AllOrgsRoot,
+            Some("workspace-root") => DashboardExportRootScopeKind::WorkspaceRoot,
+            Some(_) => DashboardExportRootScopeKind::Unknown,
+            None if metadata.variant == "all-orgs-root" => {
+                DashboardExportRootScopeKind::AllOrgsRoot
+            }
+            None if metadata.variant == "root" && metadata.orgs.is_some() => {
+                DashboardExportRootScopeKind::AllOrgsRoot
+            }
+            None if metadata.variant == "root" => DashboardExportRootScopeKind::OrgRoot,
+            None => DashboardExportRootScopeKind::Unknown,
+        }
+    }
+
+    pub(crate) fn with_scope_kind(mut self, scope_kind: DashboardExportRootScopeKind) -> Self {
+        self.scope_kind = scope_kind;
+        self
+    }
+}
+
 /// Struct definition for ExportMetadata.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub(crate) struct ExportMetadata {
     #[serde(rename = "schemaVersion")]
     pub schema_version: i64,
+    #[serde(
+        rename = "toolVersion",
+        skip_serializing_if = "Option::is_none",
+        default
+    )]
+    pub tool_version: Option<String>,
     pub kind: String,
     pub variant: String,
+    #[serde(rename = "scopeKind", skip_serializing_if = "Option::is_none", default)]
+    pub scope_kind: Option<String>,
     #[serde(rename = "dashboardCount")]
     pub dashboard_count: u64,
     #[serde(rename = "indexFile")]
@@ -79,6 +142,8 @@ pub(crate) struct DashboardIndexItem {
     pub raw_path: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prompt_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub provisioning_path: Option<String>,
 }
 
 /// Struct definition for VariantIndexEntry.
@@ -88,8 +153,10 @@ pub(crate) struct VariantIndexEntry {
     pub title: String,
     pub path: String,
     pub format: String,
+    #[serde(default)]
     pub org: String,
     #[serde(rename = "orgId")]
+    #[serde(default)]
     pub org_id: String,
 }
 
@@ -98,6 +165,7 @@ pub(crate) struct VariantIndexEntry {
 pub(crate) struct RootExportVariants {
     pub raw: Option<String>,
     pub prompt: Option<String>,
+    pub provisioning: Option<String>,
 }
 
 /// Struct definition for FolderInventoryItem.
@@ -142,6 +210,12 @@ pub(crate) struct DatasourceInventoryItem {
 pub(crate) struct RootExportIndex {
     #[serde(rename = "schemaVersion")]
     pub schema_version: i64,
+    #[serde(
+        rename = "toolVersion",
+        skip_serializing_if = "Option::is_none",
+        default
+    )]
+    pub tool_version: Option<String>,
     pub kind: String,
     pub items: Vec<DashboardIndexItem>,
     pub variants: RootExportVariants,

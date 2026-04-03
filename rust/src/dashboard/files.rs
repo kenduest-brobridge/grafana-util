@@ -5,16 +5,79 @@ use serde_json::{Map, Value};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::common::{message, object_field, string_field, value_as_object, Result};
+use crate::common::{message, object_field, string_field, tool_version, value_as_object, Result};
 
 use super::{
+    DashboardExportRootManifest, DashboardExportRootScopeKind, DashboardImportInputFormat,
     DashboardIndexItem, DatasourceInventoryItem, ExportMetadata, ExportOrgSummary,
     FolderInventoryItem, RootExportIndex, RootExportVariants, VariantIndexEntry,
     DASHBOARD_PERMISSION_BUNDLE_FILENAME, DATASOURCE_INVENTORY_FILENAME, DEFAULT_DASHBOARD_TITLE,
     DEFAULT_FOLDER_TITLE, DEFAULT_ORG_ID, DEFAULT_ORG_NAME, EXPORT_METADATA_FILENAME,
-    FOLDER_INVENTORY_FILENAME, PROMPT_EXPORT_SUBDIR, RAW_EXPORT_SUBDIR, ROOT_INDEX_KIND,
-    TOOL_SCHEMA_VERSION,
+    FOLDER_INVENTORY_FILENAME, PROMPT_EXPORT_SUBDIR, PROVISIONING_EXPORT_SUBDIR, RAW_EXPORT_SUBDIR,
+    ROOT_INDEX_KIND, TOOL_SCHEMA_VERSION,
 };
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct ResolvedDashboardImportSource {
+    pub dashboard_dir: PathBuf,
+    pub metadata_dir: PathBuf,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct ResolvedDashboardExportRoot {
+    pub(crate) manifest: DashboardExportRootManifest,
+    pub(crate) metadata_dir: PathBuf,
+}
+
+pub(crate) fn resolve_dashboard_import_source(
+    import_dir: &Path,
+    input_format: DashboardImportInputFormat,
+) -> Result<ResolvedDashboardImportSource> {
+    match input_format {
+        DashboardImportInputFormat::Raw => Ok(ResolvedDashboardImportSource {
+            dashboard_dir: import_dir.to_path_buf(),
+            metadata_dir: import_dir.to_path_buf(),
+        }),
+        DashboardImportInputFormat::Provisioning => {
+            if !import_dir.exists() {
+                return Err(message(format!(
+                    "Import directory does not exist: {}",
+                    import_dir.display()
+                )));
+            }
+            if !import_dir.is_dir() {
+                return Err(message(format!(
+                    "Import path is not a directory: {}",
+                    import_dir.display()
+                )));
+            }
+            let nested_dashboards_dir = import_dir.join("dashboards");
+            if nested_dashboards_dir.is_dir() {
+                return Ok(ResolvedDashboardImportSource {
+                    dashboard_dir: nested_dashboards_dir,
+                    metadata_dir: import_dir.to_path_buf(),
+                });
+            }
+            if import_dir.file_name().and_then(|name| name.to_str()) == Some("dashboards") {
+                let metadata_dir = import_dir.parent().ok_or_else(|| {
+                    message(format!(
+                        "Dashboard provisioning import expects a parent provisioning directory for {}.",
+                        import_dir.display()
+                    ))
+                })?;
+                return Ok(ResolvedDashboardImportSource {
+                    dashboard_dir: import_dir.to_path_buf(),
+                    metadata_dir: metadata_dir.to_path_buf(),
+                });
+            }
+            Err(message(format!(
+                "Dashboard provisioning import expects --import-dir to point at the {}/ root or its dashboards/ directory: {}",
+                PROVISIONING_EXPORT_SUBDIR,
+                import_dir.display()
+            )))
+        }
+    }
+}
 
 /// discover dashboard files.
 pub(crate) fn discover_dashboard_files(import_dir: &Path) -> Result<Vec<PathBuf>> {
@@ -75,10 +138,21 @@ pub(crate) fn build_export_metadata(
     orgs: Option<Vec<ExportOrgSummary>>,
 ) -> ExportMetadata {
     let org_count = orgs.as_ref().map(|items| items.len() as u64);
+    let scope_kind = if variant == "root" {
+        Some(if orgs.is_some() {
+            "all-orgs-root".to_string()
+        } else {
+            "org-root".to_string()
+        })
+    } else {
+        None
+    };
     ExportMetadata {
         schema_version: TOOL_SCHEMA_VERSION,
+        tool_version: Some(tool_version().to_string()),
         kind: ROOT_INDEX_KIND.to_string(),
         variant: variant.to_string(),
+        scope_kind,
         dashboard_count: dashboard_count as u64,
         index_file: "index.json".to_string(),
         format: format_name.map(str::to_owned),
@@ -92,10 +166,9 @@ pub(crate) fn build_export_metadata(
     }
 }
 
-fn validate_export_metadata(
+fn validate_export_metadata_contract(
     metadata: &ExportMetadata,
     metadata_path: &Path,
-    expected_variant: Option<&str>,
 ) -> Result<()> {
     if metadata.kind != ROOT_INDEX_KIND {
         return Err(message(format!(
@@ -112,6 +185,15 @@ fn validate_export_metadata(
             TOOL_SCHEMA_VERSION
         )));
     }
+    Ok(())
+}
+
+fn validate_export_metadata(
+    metadata: &ExportMetadata,
+    metadata_path: &Path,
+    expected_variant: Option<&str>,
+) -> Result<()> {
+    validate_export_metadata_contract(metadata, metadata_path)?;
     if let Some(expected_variant) = expected_variant {
         if metadata.variant != expected_variant {
             return Err(message(format!(
@@ -122,6 +204,51 @@ fn validate_export_metadata(
         }
     }
     Ok(())
+}
+
+pub(crate) fn load_dashboard_export_root_manifest(
+    metadata_path: &Path,
+) -> Result<DashboardExportRootManifest> {
+    let value = load_json_file(metadata_path)?;
+    value_as_object(&value, "Dashboard export metadata must be a JSON object.")?;
+    let metadata: ExportMetadata = serde_json::from_value(value).map_err(|error| {
+        message(format!(
+            "Invalid dashboard export metadata in {}: {error}",
+            metadata_path.display()
+        ))
+    })?;
+    validate_export_metadata_contract(&metadata, metadata_path)?;
+    Ok(DashboardExportRootManifest::from_metadata(metadata))
+}
+
+pub(crate) fn resolve_dashboard_export_root(
+    import_dir: &Path,
+) -> Result<Option<ResolvedDashboardExportRoot>> {
+    let metadata_path = import_dir.join(EXPORT_METADATA_FILENAME);
+    if metadata_path.is_file() {
+        return Ok(Some(ResolvedDashboardExportRoot {
+            manifest: load_dashboard_export_root_manifest(&metadata_path)?,
+            metadata_dir: import_dir.to_path_buf(),
+        }));
+    }
+
+    let dashboard_dir = import_dir.join("dashboards");
+    let dashboard_metadata_path = dashboard_dir.join(EXPORT_METADATA_FILENAME);
+    if dashboard_metadata_path.is_file() {
+        let manifest = load_dashboard_export_root_manifest(&dashboard_metadata_path)?;
+        let manifest =
+            if import_dir.join("datasources").is_dir() && manifest.scope_kind.is_aggregate() {
+                manifest.with_scope_kind(DashboardExportRootScopeKind::WorkspaceRoot)
+            } else {
+                manifest
+            };
+        return Ok(Some(ResolvedDashboardExportRoot {
+            manifest,
+            metadata_dir: dashboard_dir,
+        }));
+    }
+
+    Ok(None)
 }
 
 /// load export metadata.
@@ -272,6 +399,7 @@ pub(crate) fn build_dashboard_index_item(
             .unwrap_or_else(|| DEFAULT_ORG_ID.to_string()),
         raw_path: None,
         prompt_path: None,
+        provisioning_path: None,
     }
 }
 
@@ -301,15 +429,18 @@ pub(crate) fn build_root_export_index(
     items: &[DashboardIndexItem],
     raw_index_path: Option<&Path>,
     prompt_index_path: Option<&Path>,
+    provisioning_index_path: Option<&Path>,
     folders: &[FolderInventoryItem],
 ) -> RootExportIndex {
     RootExportIndex {
         schema_version: TOOL_SCHEMA_VERSION,
+        tool_version: Some(tool_version().to_string()),
         kind: ROOT_INDEX_KIND.to_string(),
         items: items.to_vec(),
         variants: RootExportVariants {
             raw: raw_index_path.map(|path| path.display().to_string()),
             prompt: prompt_index_path.map(|path| path.display().to_string()),
+            provisioning: provisioning_index_path.map(|path| path.display().to_string()),
         },
         folders: folders.to_vec(),
     }

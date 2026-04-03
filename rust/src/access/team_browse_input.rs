@@ -1,3 +1,5 @@
+//! Interactive browse workflows and terminal-driven state flow for Access entities.
+
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use reqwest::Method;
 use serde_json::{Map, Value};
@@ -296,7 +298,7 @@ fn handle_search_key(state: &mut BrowserState, key: &KeyEvent) {
         return;
     };
     match key.code {
-        KeyCode::Esc | KeyCode::Char('q') if !key.modifiers.contains(KeyModifiers::CONTROL) => {
+        KeyCode::Esc if !key.modifiers.contains(KeyModifiers::CONTROL) => {
             state.status = "Cancelled team search.".to_string();
         }
         KeyCode::Enter => {
@@ -355,13 +357,31 @@ fn split_csv(value: &str) -> Vec<String> {
 fn current_detail_line_count(state: &BrowserState) -> usize {
     if state.pending_delete {
         6
-    } else if state
-        .selected_row()
-        .map(row_kind)
-        .is_some_and(|kind| kind == "member")
-    {
-        5
     } else {
         5
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn search_prompt_treats_q_as_query_text() {
+        let mut state = BrowserState::new(Vec::new());
+        state.start_search(SearchDirection::Forward);
+
+        handle_search_key(
+            &mut state,
+            &KeyEvent::new(KeyCode::Char('q'), KeyModifiers::NONE),
+        );
+
+        assert_eq!(
+            state
+                .pending_search
+                .as_ref()
+                .map(|search| search.query.as_str()),
+            Some("q")
+        );
     }
 }

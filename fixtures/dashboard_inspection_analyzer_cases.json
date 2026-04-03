@@ -83,7 +83,7 @@
         "{job=\"grafana\",level=~\"error|warn\"}",
         "job=\"grafana\"",
         "level=~\"error|warn\"",
-        "level=\"error\""
+        "level"
       ],
       "buckets": [
         "5m"

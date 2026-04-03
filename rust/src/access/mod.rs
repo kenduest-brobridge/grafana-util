@@ -14,10 +14,14 @@ use crate::http::JsonHttpClient;
 mod browse_terminal;
 #[path = "cli_defs.rs"]
 mod cli_defs;
+#[path = "live_project_status.rs"]
+mod live_project_status;
 #[path = "org.rs"]
 mod org;
 #[path = "pending_delete.rs"]
 mod pending_delete;
+#[path = "project_status.rs"]
+mod project_status;
 #[path = "render.rs"]
 mod render;
 #[path = "service_account.rs"]
@@ -26,6 +30,10 @@ mod service_account;
 mod team;
 #[path = "team_browse.rs"]
 mod team_browse;
+#[path = "team_import_export_diff.rs"]
+mod team_import_export_diff;
+#[path = "team_runtime.rs"]
+mod team_runtime;
 #[path = "user.rs"]
 mod user;
 #[path = "user_browse.rs"]
@@ -46,9 +54,14 @@ pub use cli_defs::{
     ACCESS_SERVICE_ACCOUNT_EXPORT_FILENAME, ACCESS_TEAM_EXPORT_FILENAME,
     ACCESS_USER_EXPORT_FILENAME, DEFAULT_PAGE_SIZE, DEFAULT_TIMEOUT, DEFAULT_URL,
 };
+#[allow(unused_imports)]
+pub(crate) use live_project_status::{
+    build_access_live_domain_status, build_access_live_domain_status_with_request,
+};
 pub use pending_delete::{
     GroupCommandStage, ServiceAccountDeleteArgs, ServiceAccountTokenDeleteArgs, TeamDeleteArgs,
 };
+pub(crate) use project_status::{build_access_domain_status, AccessDomainStatusInputs};
 
 #[derive(Clone, Debug)]
 enum BrowseSwitch {
@@ -133,12 +146,12 @@ fn request_object_list_field<F>(
     params: &[(String, String)],
     payload: Option<&Value>,
     field: &str,
-    object_error_message: &str,
-    list_error_message: &str,
+    error_messages: (&str, &str),
 ) -> Result<Vec<Map<String, Value>>>
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
+    let (object_error_message, list_error_message) = error_messages;
     let object = request_object(
         &mut request_json,
         method,

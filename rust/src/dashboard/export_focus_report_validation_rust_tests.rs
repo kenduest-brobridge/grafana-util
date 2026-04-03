@@ -9,8 +9,13 @@ use std::path::PathBuf;
 fn validate_inspect_export_report_args_rejects_report_columns_without_report() {
     let args = InspectExportArgs {
         import_dir: PathBuf::from("./dashboards/raw"),
+        input_type: None,
+        input_format: test_support::DashboardImportInputFormat::Raw,
+        text: false,
+        csv: false,
         json: false,
         table: false,
+        yaml: false,
         report: None,
         output_format: None,
         report_columns: vec!["dashboard_uid".to_string()],
@@ -19,6 +24,7 @@ fn validate_inspect_export_report_args_rejects_report_columns_without_report() {
         help_full: false,
         no_header: false,
         output_file: None,
+        interactive: false,
     };
 
     let error = test_support::validate_inspect_export_report_args(&args).unwrap_err();
@@ -31,8 +37,13 @@ fn validate_inspect_export_report_args_rejects_report_columns_without_report() {
 fn validate_inspect_export_report_args_rejects_report_columns_for_json_report() {
     let args = InspectExportArgs {
         import_dir: PathBuf::from("./dashboards/raw"),
+        input_type: None,
+        input_format: test_support::DashboardImportInputFormat::Raw,
+        text: false,
+        csv: false,
         json: false,
         table: false,
+        yaml: false,
         report: Some(InspectExportReportFormat::Json),
         output_format: None,
         report_columns: vec!["dashboard_uid".to_string()],
@@ -41,6 +52,7 @@ fn validate_inspect_export_report_args_rejects_report_columns_for_json_report() 
         help_full: false,
         no_header: false,
         output_file: None,
+        interactive: false,
     };
 
     let error = test_support::validate_inspect_export_report_args(&args).unwrap_err();
@@ -53,8 +65,13 @@ fn validate_inspect_export_report_args_rejects_report_columns_for_json_report() 
 fn validate_inspect_export_report_args_rejects_report_columns_for_dependency_report() {
     let args = InspectExportArgs {
         import_dir: PathBuf::from("./dashboards/raw"),
+        input_type: None,
+        input_format: test_support::DashboardImportInputFormat::Raw,
+        text: false,
+        csv: false,
         json: false,
         table: false,
+        yaml: false,
         report: Some(InspectExportReportFormat::Dependency),
         output_format: None,
         report_columns: vec!["dashboard_uid".to_string()],
@@ -63,6 +80,7 @@ fn validate_inspect_export_report_args_rejects_report_columns_for_dependency_rep
         help_full: false,
         no_header: false,
         output_file: None,
+        interactive: false,
     };
 
     let error = test_support::validate_inspect_export_report_args(&args).unwrap_err();
@@ -75,8 +93,13 @@ fn validate_inspect_export_report_args_rejects_report_columns_for_dependency_rep
 fn validate_inspect_export_report_args_rejects_report_columns_for_tree_report() {
     let args = InspectExportArgs {
         import_dir: PathBuf::from("./dashboards/raw"),
+        input_type: None,
+        input_format: test_support::DashboardImportInputFormat::Raw,
+        text: false,
+        csv: false,
         json: false,
         table: false,
+        yaml: false,
         report: Some(InspectExportReportFormat::Tree),
         output_format: None,
         report_columns: vec!["dashboard_uid".to_string()],
@@ -85,6 +108,7 @@ fn validate_inspect_export_report_args_rejects_report_columns_for_tree_report() 
         help_full: false,
         no_header: false,
         output_file: None,
+        interactive: false,
     };
 
     let error = test_support::validate_inspect_export_report_args(&args).unwrap_err();
@@ -97,8 +121,13 @@ fn validate_inspect_export_report_args_rejects_report_columns_for_tree_report() 
 fn validate_inspect_export_report_args_rejects_report_columns_for_governance_report() {
     let args = InspectExportArgs {
         import_dir: PathBuf::from("./dashboards/raw"),
+        input_type: None,
+        input_format: test_support::DashboardImportInputFormat::Raw,
+        text: false,
+        csv: false,
         json: false,
         table: false,
+        yaml: false,
         report: Some(InspectExportReportFormat::Governance),
         output_format: None,
         report_columns: vec!["dashboard_uid".to_string()],
@@ -107,6 +136,7 @@ fn validate_inspect_export_report_args_rejects_report_columns_for_governance_rep
         help_full: false,
         no_header: false,
         output_file: None,
+        interactive: false,
     };
 
     let error = test_support::validate_inspect_export_report_args(&args).unwrap_err();
@@ -119,8 +149,13 @@ fn validate_inspect_export_report_args_rejects_report_columns_for_governance_rep
 fn validate_inspect_export_report_args_allows_report_columns_for_tree_table_report() {
     let args = InspectExportArgs {
         import_dir: PathBuf::from("./dashboards/raw"),
+        input_type: None,
+        input_format: test_support::DashboardImportInputFormat::Raw,
+        text: false,
+        csv: false,
         json: false,
         table: false,
+        yaml: false,
         report: Some(InspectExportReportFormat::TreeTable),
         output_format: None,
         report_columns: vec!["panel_id".to_string(), "query".to_string()],
@@ -129,6 +164,7 @@ fn validate_inspect_export_report_args_allows_report_columns_for_tree_table_repo
         help_full: false,
         no_header: false,
         output_file: None,
+        interactive: false,
     };
 
     test_support::validate_inspect_export_report_args(&args).unwrap();
@@ -138,8 +174,13 @@ fn validate_inspect_export_report_args_allows_report_columns_for_tree_table_repo
 fn validate_inspect_export_report_args_rejects_panel_filter_without_report() {
     let args = InspectExportArgs {
         import_dir: PathBuf::from("./dashboards/raw"),
+        input_type: None,
+        input_format: test_support::DashboardImportInputFormat::Raw,
+        text: false,
+        csv: false,
         json: false,
         table: false,
+        yaml: false,
         report: None,
         output_format: None,
         report_columns: Vec::new(),
@@ -148,6 +189,7 @@ fn validate_inspect_export_report_args_rejects_panel_filter_without_report() {
         help_full: false,
         no_header: false,
         output_file: None,
+        interactive: false,
     };
 
     let error = test_support::validate_inspect_export_report_args(&args).unwrap_err();

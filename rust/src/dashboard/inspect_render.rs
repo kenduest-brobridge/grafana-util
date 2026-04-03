@@ -80,6 +80,26 @@ pub(crate) fn render_simple_table(
     lines
 }
 
+pub(crate) fn join_or_none(values: &[String], separator: &str) -> String {
+    if values.is_empty() {
+        "(none)".to_string()
+    } else {
+        values.join(separator)
+    }
+}
+
+pub(crate) fn bool_text(
+    value: bool,
+    true_text: &'static str,
+    false_text: &'static str,
+) -> &'static str {
+    if value {
+        true_text
+    } else {
+        false_text
+    }
+}
+
 /// Purpose: implementation note.
 pub(crate) fn render_grouped_query_report(report: &ExportInspectionQueryReport) -> Vec<String> {
     let normalized = normalize_query_report(report);
@@ -372,4 +392,25 @@ pub(crate) fn render_grouped_query_table_report(
         lines.pop();
     }
     lines
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{bool_text, join_or_none};
+
+    #[test]
+    fn inspect_render_join_or_none_formats_empty_and_joined_values() {
+        let values = vec!["alpha".to_string(), "beta".to_string()];
+
+        assert_eq!(join_or_none(&values, ","), "alpha,beta");
+        assert_eq!(join_or_none(&values, ", "), "alpha, beta");
+        assert_eq!(join_or_none(&[], ","), "(none)");
+    }
+
+    #[test]
+    fn inspect_render_bool_text_formats_expected_literals() {
+        assert_eq!(bool_text(true, "yes", "no"), "yes");
+        assert_eq!(bool_text(false, "yes", "no"), "no");
+        assert_eq!(bool_text(true, "true", "false"), "true");
+    }
 }

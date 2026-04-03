@@ -3,17 +3,27 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use crate::dashboard::ExportInspectionSummary;
 
+use super::super::inspect_family::normalize_family_name;
 use super::{
     build_dashboard_dependency_rows, find_broad_loki_selector, resolve_datasource_identity,
     DatasourceCoverageRow, DatasourceFamilyCoverageRow, DatasourceGovernanceRow,
     ExportInspectionQueryReport, GOVERNANCE_RISK_KIND_BROAD_LOKI_SELECTOR,
-    GOVERNANCE_RISK_KIND_DASHBOARD_PANEL_PRESSURE, GOVERNANCE_RISK_KIND_EMPTY_QUERY_ANALYSIS,
+    GOVERNANCE_RISK_KIND_DASHBOARD_PANEL_PRESSURE,
+    GOVERNANCE_RISK_KIND_DATASOURCE_HIGH_BLAST_RADIUS, GOVERNANCE_RISK_KIND_EMPTY_QUERY_ANALYSIS,
     GOVERNANCE_RISK_KIND_MIXED_DASHBOARD, GOVERNANCE_RISK_KIND_ORPHANED_DATASOURCE,
     GOVERNANCE_RISK_KIND_UNKNOWN_DATASOURCE_FAMILY,
 };
 
 type InventoryIdentity = (String, String, String);
 type InventoryLookup = BTreeMap<String, InventoryIdentity>;
+const HIGH_BLAST_RADIUS_DASHBOARD_THRESHOLD: usize = 3;
+const HIGH_BLAST_RADIUS_FOLDER_THRESHOLD: usize = 2;
+
+fn has_high_blast_radius(dashboard_count: usize, folder_count: usize) -> bool {
+    dashboard_count >= HIGH_BLAST_RADIUS_DASHBOARD_THRESHOLD
+        || (dashboard_count >= 2 && folder_count >= HIGH_BLAST_RADIUS_FOLDER_THRESHOLD)
+}
+
 type FamilyCoverage = (
     BTreeSet<String>,
     BTreeSet<String>,
@@ -42,24 +52,6 @@ pub(crate) fn build_inventory_lookup(
         }
     }
     (by_uid, by_name)
-}
-
-pub(crate) fn normalize_family_name(datasource_type: &str) -> String {
-    let lowered = datasource_type.trim().to_ascii_lowercase();
-    let normalized = lowered
-        .strip_prefix("grafana-")
-        .and_then(|value| value.strip_suffix("-datasource"))
-        .unwrap_or_else(|| lowered.strip_suffix("-datasource").unwrap_or(&lowered));
-    match normalized {
-        "" => "unknown".to_string(),
-        "influxdb" | "flux" => "flux".to_string(),
-        "prometheus" => "prometheus".to_string(),
-        "loki" => "loki".to_string(),
-        "mysql" | "postgres" | "mssql" | "postgresql" => "sql".to_string(),
-        "elasticsearch" | "opensearch" => "search".to_string(),
-        "tempo" | "jaeger" | "zipkin" => "tracing".to_string(),
-        value => value.to_string(),
-    }
 }
 
 fn normalize_family_list(families: &[String]) -> Vec<String> {
@@ -263,6 +255,8 @@ pub(crate) fn build_datasource_governance_rows(
             BTreeSet<String>,
             BTreeSet<String>,
             BTreeSet<String>,
+            BTreeSet<String>,
+            BTreeSet<String>,
             BTreeSet<(String, String, String)>,
             BTreeSet<String>,
             bool,
@@ -286,19 +280,21 @@ pub(crate) fn build_datasource_governance_rows(
                 BTreeSet::new(),
                 BTreeSet::new(),
                 BTreeSet::new(),
+                BTreeSet::new(),
+                BTreeSet::new(),
                 orphaned,
                 0usize,
             )
         });
-        record.7 = orphaned;
+        record.9 = orphaned;
         if orphaned {
-            record.5.insert((
+            record.7.insert((
                 GOVERNANCE_RISK_KIND_ORPHANED_DATASOURCE.to_string(),
                 String::new(),
                 String::new(),
             ));
             record
-                .6
+                .8
                 .insert(GOVERNANCE_RISK_KIND_ORPHANED_DATASOURCE.to_string());
         }
     }
@@ -315,56 +311,62 @@ pub(crate) fn build_datasource_governance_rows(
                 BTreeSet::new(),
                 BTreeSet::new(),
                 BTreeSet::new(),
+                BTreeSet::new(),
+                BTreeSet::new(),
                 false,
                 0usize,
             )
         });
         record.2.insert(row.dashboard_uid.clone());
+        record.3.insert(row.dashboard_title.clone());
+        if !row.folder_path.trim().is_empty() {
+            record.4.insert(row.folder_path.clone());
+        }
         record
-            .3
+            .5
             .insert(format!("{}:{}", row.dashboard_uid, row.panel_id));
-        record.4.insert(row.query_field.clone());
-        record.8 += 1;
-        record.7 = false;
+        record.6.insert(row.query_field.clone());
+        record.10 += 1;
+        record.9 = false;
 
         if mixed_dashboard_uids.contains(&row.dashboard_uid) {
-            record.5.insert((
+            record.7.insert((
                 GOVERNANCE_RISK_KIND_MIXED_DASHBOARD.to_string(),
                 row.dashboard_uid.clone(),
                 String::new(),
             ));
             record
-                .6
+                .8
                 .insert(GOVERNANCE_RISK_KIND_MIXED_DASHBOARD.to_string());
         }
         if family == "unknown" {
-            record.5.insert((
+            record.7.insert((
                 GOVERNANCE_RISK_KIND_UNKNOWN_DATASOURCE_FAMILY.to_string(),
                 row.dashboard_uid.clone(),
                 row.panel_id.clone(),
             ));
             record
-                .6
+                .8
                 .insert(GOVERNANCE_RISK_KIND_UNKNOWN_DATASOURCE_FAMILY.to_string());
         }
         if family == "loki" && find_broad_loki_selector(&row.query_text).is_some() {
-            record.5.insert((
+            record.7.insert((
                 GOVERNANCE_RISK_KIND_BROAD_LOKI_SELECTOR.to_string(),
                 row.dashboard_uid.clone(),
                 row.panel_id.clone(),
             ));
             record
-                .6
+                .8
                 .insert(GOVERNANCE_RISK_KIND_BROAD_LOKI_SELECTOR.to_string());
         }
         if pressured_dashboard_uids.contains(&row.dashboard_uid) {
-            record.5.insert((
+            record.7.insert((
                 GOVERNANCE_RISK_KIND_DASHBOARD_PANEL_PRESSURE.to_string(),
                 row.dashboard_uid.clone(),
                 String::new(),
             ));
             record
-                .6
+                .8
                 .insert(GOVERNANCE_RISK_KIND_DASHBOARD_PANEL_PRESSURE.to_string());
         }
         if row.metrics.is_empty()
@@ -372,13 +374,13 @@ pub(crate) fn build_datasource_governance_rows(
             && row.measurements.is_empty()
             && row.buckets.is_empty()
         {
-            record.5.insert((
+            record.7.insert((
                 GOVERNANCE_RISK_KIND_EMPTY_QUERY_ANALYSIS.to_string(),
                 row.dashboard_uid.clone(),
                 row.panel_id.clone(),
             ));
             record
-                .6
+                .8
                 .insert(GOVERNANCE_RISK_KIND_EMPTY_QUERY_ANALYSIS.to_string());
         }
     }
@@ -392,6 +394,8 @@ pub(crate) fn build_datasource_governance_rows(
                     datasource,
                     family,
                     dashboard_uids,
+                    dashboard_titles,
+                    folder_paths,
                     panel_keys,
                     _query_fields,
                     risk_occurrences,
@@ -400,6 +404,19 @@ pub(crate) fn build_datasource_governance_rows(
                     query_count,
                 ),
             )| {
+                let high_blast_radius =
+                    has_high_blast_radius(dashboard_uids.len(), folder_paths.len());
+                let mut risk_occurrences = risk_occurrences;
+                let mut risk_kinds = risk_kinds;
+                if high_blast_radius {
+                    risk_occurrences.insert((
+                        GOVERNANCE_RISK_KIND_DATASOURCE_HIGH_BLAST_RADIUS.to_string(),
+                        String::new(),
+                        String::new(),
+                    ));
+                    risk_kinds
+                        .insert(GOVERNANCE_RISK_KIND_DATASOURCE_HIGH_BLAST_RADIUS.to_string());
+                }
                 DatasourceGovernanceRow {
                     datasource_uid,
                     datasource,
@@ -413,7 +430,12 @@ pub(crate) fn build_datasource_governance_rows(
                         .count(),
                     risk_count: risk_occurrences.len(),
                     risk_kinds: risk_kinds.into_iter().collect(),
+                    folder_count: folder_paths.len(),
+                    high_blast_radius,
+                    cross_folder: folder_paths.len() > 1,
+                    folder_paths: folder_paths.into_iter().collect(),
                     dashboard_uids: dashboard_uids.into_iter().collect(),
+                    dashboard_titles: dashboard_titles.into_iter().collect(),
                     orphaned,
                 }
             },

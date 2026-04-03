@@ -10,10 +10,11 @@ use super::{
     build_datasource_family_coverage_rows, build_datasource_governance_rows,
     build_governance_risk_rows, build_inventory_lookup, build_query_audit_rows,
     dashboard_dependency_normalize_family_list, dashboard_dependency_unique_strings,
-    normalize_family_name, DashboardDatasourceEdgeRow, DashboardDependencyRow,
-    DashboardGovernanceRow, ExportInspectionGovernanceDocument, ExportInspectionSummary,
+    DashboardDatasourceEdgeRow, DashboardDependencyRow, DashboardGovernanceRow,
+    ExportInspectionGovernanceDocument, ExportInspectionSummary,
     GOVERNANCE_RISK_KIND_MIXED_DASHBOARD,
 };
+use crate::dashboard::inspect_family::normalize_family_name;
 
 #[derive(Clone, Debug)]
 pub(crate) struct ResolvedDatasourceIdentity {
@@ -28,10 +29,12 @@ pub(crate) fn resolve_datasource_identity(
     inventory_by_name: &BTreeMap<String, (String, String, String)>,
 ) -> ResolvedDatasourceIdentity {
     let normalized_family = normalize_family_name(&row.datasource_type);
-    let datasource_type = if matches!(normalized_family.as_str(), "search" | "tracing") {
+    let datasource_type = if normalized_family == "unknown" {
+        "unknown".to_string()
+    } else if matches!(normalized_family.as_str(), "search" | "tracing") {
         row.datasource_type.clone()
     } else {
-        "unknown".to_string()
+        normalized_family
     };
     if !row.datasource_uid.trim().is_empty() {
         if let Some((uid, name, datasource_type)) = inventory_by_uid.get(&row.datasource_uid) {
@@ -358,6 +361,10 @@ pub(crate) fn build_export_inspection_governance_document(
             datasource_risk_coverage_count: datasource_governance
                 .iter()
                 .filter(|row| row.risk_count != 0)
+                .count(),
+            high_blast_radius_datasource_count: datasource_governance
+                .iter()
+                .filter(|row| row.high_blast_radius)
                 .count(),
             dashboard_risk_coverage_count: dashboard_governance
                 .iter()

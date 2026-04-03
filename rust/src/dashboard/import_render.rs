@@ -1,9 +1,11 @@
+//! Import orchestration for Dashboard resources, including input normalization and apply contract handling.
+
 use serde::Serialize;
 use serde_json::Value;
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
-use crate::common::Result;
+use crate::common::{render_json_value, Result};
 
 use super::{FolderInventoryStatus, FolderInventoryStatusKind, DEFAULT_UNKNOWN_UID};
 
@@ -429,7 +431,7 @@ pub(crate) fn build_routed_import_dry_run_json_document(
             "dashboardCount": orgs.iter().map(|entry| entry.get("dashboardCount").and_then(Value::as_u64).unwrap_or(0)).sum::<u64>(),
         }
     });
-    Ok(serde_json::to_string_pretty(&payload)?)
+    render_json_value(&payload)
 }
 
 pub(crate) fn render_import_dry_run_json(
@@ -448,9 +450,7 @@ pub(crate) fn render_import_dry_run_json(
         skipped_missing_count,
         skipped_folder_mismatch_count,
     };
-    Ok(serde_json::to_string_pretty(
-        &build_import_dry_run_json_value(&report),
-    )?)
+    render_json_value(&build_import_dry_run_json_value(&report))
 }
 
 pub(crate) fn format_import_progress_line(
