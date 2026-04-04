@@ -17,8 +17,12 @@ The design goal is not to build a generic docs engine. The goal is to keep the r
 
 ## Source Of Truth
 
-There are two human-maintained source layers:
+There are three human-maintained source layers:
 
+- `docs/landing/{en,zh-TW}.md`
+  - homepage entrypoint content
+  - task grouping and landing-page copy
+  - curated top-level links
 - `docs/user-guide/{en,zh-TW}/`
   - handbook layer
   - ordered reading path
@@ -67,6 +71,7 @@ Design intent:
 
 Source:
 
+- `docs/landing/{en,zh-TW}.md`
 - `docs/user-guide/{en,zh-TW}/*.md`
 - `docs/commands/{en,zh-TW}/*.md`
 
@@ -123,6 +128,18 @@ Handbook metadata only:
 
 The chapter order is intentionally explicit. Do not infer it from filesystem ordering.
 
+### `scripts/docgen_landing.py`
+
+Landing metadata only:
+
+- supported landing locales
+- landing Markdown source paths
+- fixed landing-page Markdown contract
+- task and link extraction from landing source files
+
+The landing page intentionally has its own source layer so homepage copy and
+section ordering do not have to be hardcoded into the HTML renderer.
+
 ### `scripts/generate_manpages.py`
 
 Manpage projection only:
@@ -144,7 +161,9 @@ HTML site projection only:
 - applies handbook-to-command and command-to-handbook navigation
 - emits `.nojekyll`
 
-If a change is about layout, theme, navigation, landing-page structure, or GitHub Pages output shape, it belongs here.
+If a change is about layout, theme, navigation, GitHub Pages output shape, or
+landing-page rendering, it belongs here. If a change is about homepage copy,
+task ordering, or curated landing links, edit `docs/landing/` first.
 
 ## Why The Parsing Logic Is Small On Purpose
 
@@ -254,6 +273,8 @@ The HTML site is a manual, not a bare Markdown dump.
 Current design rules:
 
 - one landing page at `docs/html/index.html`
+- landing-page content is sourced from `docs/landing/{en,zh-TW}.md`
+- the homepage renders one locale view at a time and lets browser language or a manual toggle choose between `en` and `zh-TW`
 - two entry families:
   - handbook
   - command reference

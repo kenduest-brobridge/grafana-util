@@ -8,8 +8,10 @@ For the architecture and rationale, read [`generated-docs-architecture.md`](/Use
 
 If you need to:
 
+- add or edit landing-page content: work under `docs/landing/`
 - add or edit handbook content: work under `docs/user-guide/`
 - add or edit command reference content: work under `docs/commands/`
+- change landing-page source parsing: edit `scripts/docgen_landing.py`
 - change handbook ordering or prev/next navigation: edit `scripts/docgen_handbook.py`
 - change command-to-handbook back-links in HTML: edit `scripts/generate_command_html.py`
 - add or remove a namespace manpage: edit `scripts/generate_manpages.py`
@@ -26,6 +28,7 @@ make html
 make man-check
 make html-check
 python3 -m unittest -v \
+  python.tests.test_python_docgen_landing \
   python.tests.test_python_generate_manpages \
   python.tests.test_python_generate_command_html
 ```
@@ -138,11 +141,16 @@ Most layout and visual changes belong in [generate_command_html.py](/Users/kendl
 Common places:
 
 - page shell and shared layout
-- landing page
+- landing-page rendering
 - theme toggle
 - sidebar structure
 - breadcrumbs
 - handbook and command navigation blocks
+
+If you are changing landing-page copy, task grouping, or curated top-level links,
+edit `docs/landing/{en,zh-TW}.md` first. Only edit `generate_command_html.py`
+or `docgen_landing.py` when the landing schema or rendering behavior itself
+needs to change.
 
 When doing layout work:
 

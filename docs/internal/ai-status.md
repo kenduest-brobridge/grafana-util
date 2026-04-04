@@ -8,6 +8,13 @@ Current AI-maintained status only.
 - Keep this file short and current. Additive historical detail belongs in `docs/internal/archive/`.
 - Detailed 2026-03-29 through 2026-03-31 entries moved to [`archive/ai-status-archive-2026-03-31.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-03-31.md).
 
+## 2026-04-04 - Separate landing-page content from the HTML renderer
+- State: Done
+- Scope: `docs/landing/`, `scripts/docgen_landing.py`, `scripts/generate_command_html.py`, `python/tests/test_python_docgen_landing.py`, `python/tests/test_python_generate_command_html.py`, `docs/internal/generated-docs-architecture.md`, `docs/internal/generated-docs-playbook.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: the generated homepage had already moved to a task-oriented layout, but the actual landing-page copy, task order, locale strings, and curated links were still hardcoded directly in `scripts/generate_command_html.py`. That made simple homepage content edits look like renderer changes and blurred the source-of-truth boundary.
+- Current Update: added a dedicated `docs/landing/{en,zh-TW}.md` source layer plus `scripts/docgen_landing.py` to parse a fixed Markdown contract for hero copy, search copy, task sections, and maintainer links. The HTML generator now renders the landing page from those parsed structures, keeps only UI chrome and version metadata in Python, and still auto-selects `en` or `zh-TW` on first homepage load while preserving manual switching in local storage.
+- Result: homepage content now lives in Markdown instead of hardcoded Python, the landing renderer is materially thinner, and landing-page maintenance follows the same metadata-vs-renderer split already used by the handbook generator.
+
 ## 2026-04-03 - Tighten dashboard raw-to-prompt semantic compatibility
 - State: Done
 - Scope: `rust/src/dashboard/prompt.rs`, `rust/src/dashboard/raw_to_prompt_rust_tests.rs`, `scripts/compare_prompt_semantics.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
