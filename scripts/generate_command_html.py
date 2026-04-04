@@ -729,6 +729,7 @@ def render_landing_section(source_path: Path, output_rel: str, section: LandingS
 
 def build_landing_locale_data(config: HtmlBuildConfig) -> dict[str, dict[str, str]]:
     landing_rel = prefixed_output_rel(config, "index.html")
+    landing_root = config.source_root / "docs" / "landing"
     version_links = [(config.version_label or config.version, "#")]
     version_links.extend((link.label, relative_href(landing_rel, link.target_rel)) for link in config.version_links)
     if config.include_raw_manpages or config.raw_manpage_target_rel:
@@ -736,7 +737,7 @@ def build_landing_locale_data(config: HtmlBuildConfig) -> dict[str, dict[str, st
 
     landing_data: dict[str, dict[str, str]] = {}
     for locale in LANDING_LOCALES:
-        page = load_landing_page(locale)
+        page = load_landing_page(locale, landing_root=landing_root)
         ui_labels = LANDING_UI_LABELS[locale]
         maintainer_links = render_landing_links(page.source_path, landing_rel, page.maintainer.links, config)
         meta_html = "".join(

@@ -84,7 +84,17 @@ LINK_LINE_RE = re.compile(r"^- \[([^\]]+)\]\(([^)]+)\)\s*$")
 def load_landing_page(locale: str, landing_root: Path = LANDING_ROOT) -> LandingPage:
     if locale not in LANDING_LOCALES:
         raise ValueError(f"Unsupported landing locale: {locale}")
-    return parse_landing_page(landing_root / f"{locale}.md", locale)
+    path = landing_root / f"{locale}.md"
+    if path.exists():
+        return parse_landing_page(path, locale)
+    fallback_path = LANDING_ROOT / f"{locale}.md"
+    if not fallback_path.exists():
+        raise FileNotFoundError(path)
+    return parse_landing_text(
+        fallback_path.read_text(encoding="utf-8"),
+        locale=locale,
+        source_path=path,
+    )
 
 
 def parse_landing_page(path: Path, locale: str) -> LandingPage:
