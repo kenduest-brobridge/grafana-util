@@ -1,12 +1,12 @@
 # Dashboard 維運人員手冊
 
-本指南涵蓋 `grafana-util dashboard` 維運工作流，包含資產盤點、匯出 / 匯入、Drift 審查與 Dashboard 分析。
+本指南涵蓋 `grafana-util dashboard` 維運流程，包含資產盤點、匯出 / 匯入、漂移審查與 Dashboard 分析。
 
-> **維運優先設計**：本工具將 Dashboard 視為版本控制資產。目標是安全地搬移與治理 Dashboard 狀態，在變更觸及即時環境前提供清晰的可視化預覽。
+> **維運優先設計**：本工具把 Dashboard 視為版本控制資產。目標是讓搬移、比對與審查流程更安全，並在變更碰到即時環境前先看清楚會發生什麼事。
 
-## 🔗 逐指令頁面
+## 🔗 指令頁面
 
-如果您現在想看的是逐指令說明，而不是工作流章節，請直接使用逐指令頁面：
+如果你現在要查的是指令細節，而不是工作流程章節，可以直接看下面這些指令頁：
 
 - [dashboard 指令總覽](../../commands/zh-TW/dashboard.md)
 - [dashboard browse](../../commands/zh-TW/dashboard-browse.md)
@@ -27,24 +27,44 @@
 - [dashboard governance-gate](../../commands/zh-TW/dashboard-governance-gate.md)
 - [dashboard topology](../../commands/zh-TW/dashboard-topology.md)
 - [dashboard screenshot](../../commands/zh-TW/dashboard-screenshot.md)
-- [逐指令總索引](../../commands/zh-TW/index.md)
+- [指令詳細說明總索引](../../commands/zh-TW/index.md)
 
 ---
 
 ## 🛠️ 核心工作流用途
 
-Dashboard 領域專為大規模治理而設計：
+Dashboard 相關功能主要是為了處理大規模維運而設計：
 - **資產盤點**：了解跨一個或多個組織的 Dashboard 現況。
-- **結構化匯出**：使用專屬「路徑 (Lanes)」在環境間遷移 Dashboard。
-- **深度檢視**：離線分析查詢 (Queries) 與資料來源 (Datasource) 依賴。
+- **結構化匯出**：用分開的資料路徑在環境間遷移 Dashboard。
+- **深度檢視**：離線分析查詢 (Queries) 與 data source 依賴。
+- **截圖與視覺檢查**：產出可重現的 dashboard 或 panel 截圖，用於文件、事件處理紀錄與除錯。
 - **差異審查 (Drift Review)**：在套用變更前，比對本地暫存檔案與 live Grafana。
 - **受控變更**：透過強制性的 Dry-run 執行匯入或刪除。
 
 ---
 
-## 🚧 工作流路徑邊界 (三條路徑)
+## 🔎 檢視與截圖工作流
 
-Dashboard 匯出刻意產生三種不同的路徑，因為每一條路徑都對應不同的維運工作流。**這些路徑之間不可互換。**
+如果你的目標不是匯入或匯出，而是先看清楚 dashboard 目前長什麼樣、依賴哪些 data source、變數怎麼帶入，這一組指令應該先看。
+
+- `dashboard inspect-live`：直接看 live dashboard 的結構、查詢與依賴。
+- `dashboard inspect-export`：離線檢查已匯出的 dashboard 檔案。
+- `dashboard inspect-vars`：確認變數、data source 選項與 URL 帶入值。
+- `dashboard screenshot`：用 headless browser 產生可重現的 dashboard 或 panel 截圖。
+- `dashboard topology`：快速掌握 dashboard 與上游依賴之間的關係。
+
+常見情境：
+
+- 事件處理後需要補一張當下畫面的截圖
+- 想先確認某個 panel 是不是吃到正確的變數與 data source
+- 要整理文件或 review 附圖，但不想手動截圖
+- 想在變更前先看 dashboard 依賴與查詢結構
+
+---
+
+## 🚧 工作流程邊界（三條資料路徑）
+
+Dashboard 匯出會刻意產生三種不同的資料路徑，因為每一條都對應不同的維運流程。**這些路徑不能互換使用。**
 
 | 路徑 (Lane) | 用途 | 最佳使用場景 |
 | :--- | :--- | :--- |
@@ -85,7 +105,7 @@ grafana-util dashboard list \
   --table
 ```
 
-**驗證輸出摘錄：**
+**範例輸出：**
 ```text
 UID                      NAME                                      FOLDER  FOLDER_UID      FOLDER_PATH  ORG        ORG_ID
 -----------------------  ----------------------------------------  ------  --------------  -----------  ---------  ------
@@ -125,7 +145,7 @@ spring-jmx-node-unified  Spring JMX + Node Unified Dashboard (VM)  Demo    ffhrm
 ```bash
 grafana-util dashboard export --export-dir ./dashboards --overwrite --progress
 ```
-**輸出摘錄：**
+**範例輸出：**
 ```text
 Exporting dashboard 1/7: mixed-query-smoke
 Exporting dashboard 2/7: smoke-prom-only
@@ -138,7 +158,7 @@ Exporting dashboard 7/7: two-prom-query-smoke
 ```bash
 grafana-util dashboard import --import-dir ./dashboards/raw --dry-run --table
 ```
-**輸出摘錄：**
+**範例輸出：**
 ```text
 UID                    DESTINATION  ACTION  FOLDER_PATH                    FILE
 ---------------------  -----------  ------  -----------------------------  --------------------------------------
@@ -155,7 +175,7 @@ subfolder-chain-smoke  missing      create  Platform / Team / Apps / Prod  ./das
 ```bash
 grafana-util dashboard diff --import-dir ./dashboards/provisioning --input-format provisioning
 ```
-**輸出摘錄：**
+**範例輸出：**
 ```text
 --- live/cpu-main
 +++ export/cpu-main
@@ -164,4 +184,4 @@ grafana-util dashboard diff --import-dir ./dashboards/provisioning --input-forma
 ```
 
 ---
-[⬅️ 上一章：系統架構與設計原則](architecture.md) | [🏠 回首頁](index.md) | [➡️ 下一章：Datasource 管理](datasource.md)
+[⬅️ 上一章：系統架構與設計原則](architecture.md) | [🏠 回首頁](index.md) | [➡️ 下一章：Data source 管理](datasource.md)

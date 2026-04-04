@@ -6,6 +6,8 @@ Purpose: summarize staged artifacts into one project-wide overview.
 
 When to use: when you want a single readout across dashboard, datasource, access, alert, and change artifacts before checking status or promoting changes.
 
+Description: open this page when you need one project-wide summary before switching into a narrower workflow. The `overview` namespace is useful for readers who want one place to scan staged artifacts or live state across multiple Grafana surfaces without opening each asset command first.
+
 Key flags: staged inputs such as `--dashboard-export-dir`, `--dashboard-provisioning-dir`, `--datasource-export-dir`, `--datasource-provisioning-file`, `--access-user-export-dir`, `--access-team-export-dir`, `--access-org-export-dir`, `--access-service-account-export-dir`, `--desired-file`, `--source-bundle`, `--target-inventory`, `--alert-export-dir`, `--availability-file`, `--mapping-file`, and `--output`.
 
 Examples:

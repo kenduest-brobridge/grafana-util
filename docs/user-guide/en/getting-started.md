@@ -2,6 +2,15 @@
 
 This guide covers the current first-run setup for `grafana-util`.
 
+The most important design rule to understand up front is that the CLI supports several connection patterns. You can:
+
+- pass the Grafana URL and auth flags directly on a command
+- prompt for a password or token without echoing it
+- let environment variables supply the auth values
+- store repeatable defaults in a repo-local profile and reuse them with `--profile`
+
+Profiles are there to simplify repeated work. They are not the only way to start.
+
 For the exact flags behind this chapter, keep [profile](../../commands/en/profile.md), [status](../../commands/en/status.md), and [overview](../../commands/en/overview.md) open beside it.
 
 ---
@@ -25,21 +34,35 @@ This confirms that the binary is on your `PATH` and matches the checked-in relea
 
 ---
 
-## 📋 Step 2: Profile Files
+## 📋 Step 2: Connection Patterns And Profile Files
 
 Profile workflows are repo-local. `grafana-util profile` works against `grafana-util.yaml` in the current working directory by default, or against the file pointed to by `GRAFANA_UTIL_CONFIG`.
 
 ### Auth modes at a glance
 
-Use the auth modes in this order:
+`grafana-util` can read connection settings from direct flags, prompt-based input, environment variables, or a repo-local profile. Use the auth modes in this order:
 
 | Pattern | Best for | Example |
 | :--- | :--- | :--- |
-| `--profile` | daily operator workflows and CI jobs | `grafana-util status live --profile prod --output yaml` |
 | direct Basic auth | quick local checks, bootstrap, admin-only workflows | `grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output yaml` |
+| `--profile` | daily operator workflows and CI jobs once the connection is proven | `grafana-util status live --profile prod --output yaml` |
 | direct token | narrow API automation that stays inside one org or one scoped permission set | `grafana-util overview live --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output yaml` |
 
-When you want environment-backed secrets, prefer storing them in a profile such as `password_env: GRAFANA_PROD_PASSWORD` or `token_env: GRAFANA_DEV_TOKEN` instead of repeating raw secrets on every command line.
+Environment variables can supply the same auth without repeating sensitive values on every command:
+
+- `GRAFANA_USERNAME`
+- `GRAFANA_PASSWORD`
+- `GRAFANA_API_TOKEN`
+
+For repeatable work, prefer storing those references in a profile such as `password_env: GRAFANA_PROD_PASSWORD` or `token_env: GRAFANA_DEV_TOKEN` instead of repeating raw secrets on every command line.
+
+### Start direct, then simplify
+
+For a first run, the cleanest mental model is:
+
+1. run one direct read-only command with `--url` plus either Basic auth or token auth
+2. once that works, move the repeatable parts into a profile
+3. keep using `--profile` for normal day-to-day work
 
 ### 1. Pick how you want to create profiles
 ```bash
@@ -49,6 +72,19 @@ grafana-util profile add ci --url https://grafana.example.com --token-env GRAFAN
 grafana-util profile example --mode full
 ```
 `profile init` creates a minimal starter `grafana-util.yaml`. `profile add` can create a reusable Basic-auth or token-backed profile in one step, and `profile example` prints a fully commented reference template that you can copy and edit.
+
+If you are still proving basic connectivity, you can do that before any profile work:
+
+```bash
+grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output yaml
+```
+
+Then translate that same connection into a reusable profile:
+
+```bash
+grafana-util profile add dev --url http://127.0.0.1:3000 --basic-user admin --prompt-password
+grafana-util status live --profile dev --output yaml
+```
 
 By default, the config file lives next to your current checkout. If you point `GRAFANA_UTIL_CONFIG` somewhere else, the helper files follow that config directory:
 
@@ -132,12 +168,20 @@ grafana-util overview live --url http://localhost:3000 --basic-user admin --prom
 ```
 Use the profile form for normal repeatable work. Keep the direct Basic-auth form for bootstrap, break-glass access, or admin-only workflows when you are not ready to create a profile yet.
 
+If your shell already exports auth variables, the same read can stay short without creating a profile first:
+
+```bash
+export GRAFANA_USERNAME=admin
+export GRAFANA_PASSWORD=admin
+grafana-util overview live --url http://localhost:3000 --output yaml
+```
+
 ### 4. Know the common token limitation
 
 Token auth can be enough for single-org read flows, but multi-org or admin-scoped operations often need a user session or Basic auth with broader Grafana privileges.
 
 - `--all-orgs` inventory and export flows are safest with `--profile` backed by admin credentials or with direct Basic auth.
-- Org, user, team, and service-account management commonly needs admin-level credentials and may not work with a narrow API token.
+- Org, user, team, and service account management commonly needs admin-level credentials and may not work with a narrow API token.
 - When a token cannot see all target orgs, the command output is limited by that token's scope even if the flags ask for a broader view.
 
 ---

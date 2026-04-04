@@ -11,6 +11,7 @@ If you need to:
 - add or edit landing-page content: work under `docs/landing/`
 - add or edit handbook content: work under `docs/user-guide/`
 - add or edit command reference content: work under `docs/commands/`
+- review or edit zh-TW terminology and tone: read `docs/internal/zh-tw-style-guide.md`
 - change landing-page source parsing: edit `scripts/docgen_landing.py`
 - change handbook ordering or prev/next navigation: edit `scripts/docgen_handbook.py`
 - change handbook sidebar grouping: edit `scripts/docgen_handbook.py`
@@ -137,14 +138,17 @@ Checklist:
 
 ## Task: Change HTML Layout Or Theme
 
-Most layout and visual changes belong in [generate_command_html.py](/Users/kendlee/work/grafana-utils/scripts/generate_command_html.py).
+Most layout and visual changes belong in [generate_command_html.py](/Users/kendlee/work/grafana-utils/scripts/generate_command_html.py) plus the shared templates under [scripts/templates/](/Users/kendlee/work/grafana-utils/scripts/templates).
 
 Common places:
 
-- page shell and shared layout
+- page shell and shared layout templates
+- topbar and control bar templates
+- shared CSS and runtime JS assets
 - landing-page rendering
 - theme toggle
 - sidebar structure
+- command intro shell blocks
 - breadcrumbs
 - handbook and command navigation blocks
 
@@ -157,6 +161,9 @@ If you are changing landing-page copy, task grouping, or curated top-level links
 edit `docs/landing/{en,zh-TW}.md` first. Only edit `generate_command_html.py`
 or `docgen_landing.py` when the landing schema or rendering behavior itself
 needs to change.
+
+If the change is shared shell markup only, prefer editing `scripts/templates/`
+first and keep `generate_command_html.py` focused on view-model assembly.
 
 When doing layout work:
 
@@ -171,6 +178,20 @@ When doing layout work:
 4. verify `Auto`, `Light`, and `Dark` theme modes
 
 Do not add a second HTML renderer for Pages only. Pages must publish the same `docs/html/` tree used locally.
+
+## Task: Review Or Edit zh-TW Copy
+
+Before changing Traditional Chinese copy:
+
+1. read `docs/internal/zh-tw-style-guide.md`
+2. keep Grafana object names such as `data source`, `service account`, `team`, and `org` in English when they refer to product objects
+3. prefer Taiwan-facing operator wording over literal English translation
+4. regenerate HTML after any source-doc change
+
+If the wording change touches handbook or command index pages, review both:
+
+- `docs/html/index.html`
+- one affected zh-TW handbook or command page
 
 ## Task: Add A New Markdown Feature
 

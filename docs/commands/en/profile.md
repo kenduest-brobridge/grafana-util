@@ -6,6 +6,8 @@ Purpose: list, inspect, add, and initialize repo-local `grafana-util` profiles.
 
 When to use: when you want to keep Grafana connection defaults in the current checkout and reuse them with `--profile`.
 
+Description: open this page when you want to understand the full profile workflow before choosing one subcommand. The `profile` namespace is the entrypoint for repo-local connection defaults, secret handling, and non-interactive command reuse across local work, SRE tasks, and CI jobs.
+
 Key flags: the root command is a namespace; operational flags live on subcommands. The shared root flag is `--color`.
 
 Examples:

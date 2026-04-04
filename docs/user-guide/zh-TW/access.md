@@ -1,10 +1,10 @@
 # 身分與存取管理 (Identity & Access)
 
-管理 Grafana 的身分層資產：組織、使用者、團隊與服務帳號。
+管理 Grafana 的身分與存取資產：org、使用者、team 與 service account。
 
-## 🔗 逐指令頁面
+## 🔗 指令頁面
 
-如果您現在想看的是逐指令說明，而不是工作流章節，請直接使用逐指令頁面：
+如果你現在要查的是指令細節，而不是工作流程章節，可以直接看下面這些指令頁：
 
 - [access 指令總覽](../../commands/zh-TW/access.md)
 - [access user](../../commands/zh-TW/access-user.md)
@@ -12,15 +12,15 @@
 - [access team](../../commands/zh-TW/access-team.md)
 - [access service-account](../../commands/zh-TW/access-service-account.md)
 - [access service-account token](../../commands/zh-TW/access-service-account-token.md)
-- [逐指令總索引](../../commands/zh-TW/index.md)
+- [指令詳細說明總索引](../../commands/zh-TW/index.md)
 
 ---
 
-## 🏢 組織管理 (Organization)
+## 🏢 org 管理
 
-在需要以 Basic auth 做組織盤點、匯出或回放時，請使用 `access org`。
+需要用 Basic auth 盤點、匯出或回放 org 時，請使用 `access org`。
 
-### 1. 列出、匯出與回放組織
+### 1. 列出、匯出與回放 org
 ```bash
 grafana-util access org list --table
 grafana-util access org export --export-dir ./access-orgs
@@ -32,18 +32,18 @@ ID   NAME        IS_MAIN   QUOTA
 1    Main Org    true      -
 5    SRE Team    false     10
 
-Exported organization inventory -> access-orgs/orgs.json
-Exported organization metadata   -> access-orgs/export-metadata.json
+Exported org inventory -> access-orgs/orgs.json
+Exported org metadata   -> access-orgs/export-metadata.json
 
 PREFLIGHT IMPORT:
   - would create 0 org(s)
   - would update 1 org(s)
 ```
-先用 list 確認主組織，再用 export/import 建立可重播的組織快照。
+先用 list 確認主 org，再用 export/import 建立可重播的 org 快照。
 
 ---
 
-## 👤 使用者與團隊管理 (User & Team)
+## 👤 使用者 / team 管理
 
 需要調整成員、管理快照或檢查漂移時，請使用 `access user` 與 `access team`。
 
@@ -52,7 +52,7 @@ PREFLIGHT IMPORT:
 # 新增一個具備全域 Admin 角色的使用者
 grafana-util access user add --login dev-user --role Admin --prompt-password
 
-# 修改現有使用者在特定組織中的角色
+# 修改現有使用者在特定 org 中的角色
 grafana-util access user modify --login dev-user --org-id 5 --role Editor
 
 # 將儲存的使用者快照與即時 Grafana 比對
@@ -66,7 +66,7 @@ No user differences across 12 user(s).
 ```
 如果不想把密碼留在 shell history 裡，請改用 `--prompt-password`。`--scope global` 需要 Basic auth。
 
-### 2. 團隊發現與同步
+### 2. team 盤點與同步
 ```bash
 grafana-util access team list --org-id 1 --table
 grafana-util access team export --export-dir ./access-teams --with-members
@@ -84,15 +84,15 @@ LOGIN       ROLE    ACTION   STATUS
 dev-admin   Admin   update   existing
 ops-user    Viewer  create   missing
 ```
-匯出時加上 `--with-members` 才會保留成員狀態；做可能覆寫的匯入前，先用 `--dry-run --table` 檢查。
+匯出時加上 `--with-members` 才會保留成員狀態；要做可能覆寫的匯入前，先用 `--dry-run --table` 看一次。
 
 ---
 
-## 🤖 服務帳號管理 (Service Account)
+## 🤖 service account 管理
 
-服務帳號是自動化流程的基礎。
+service account 是自動化流程常見的基礎元件。
 
-### 1. 列出與匯出服務帳號
+### 1. 列出與匯出 service account
 ```bash
 grafana-util access service-account list --json
 grafana-util access service-account export --export-dir ./access-sa
@@ -115,9 +115,9 @@ Listed 1 service account(s) at http://127.0.0.1:3000
 Exported service account inventory -> access-sa/service-accounts.json
 Exported service account tokens    -> access-sa/tokens.json
 ```
-`access service-account export` 會寫出盤點結果與 token bundle。`tokens.json` 具敏感性，請妥善保管。
+`access service-account export` 會寫出盤點結果與 token bundle。`tokens.json` 包含敏感資訊，請妥善保管。
 
-### 2. 建立與刪除權杖 (Token)
+### 2. 建立與刪除 token
 ```bash
 # 以名稱新增一個 token
 grafana-util access service-account token add --name deploy-bot --token-name nightly --seconds-to-live 3600
@@ -150,9 +150,9 @@ Created service-account token nightly -> serviceAccountId=15
 
 ---
 
-## 🔍 漂移偵測 (Diff)
+## 🔍 漂移檢查 (Diff)
 
-比較本地身份快照與即時 Grafana 伺服器之間的差異。
+比較本機快照與 live Grafana 之間的差異。
 
 ```bash
 grafana-util access user diff --import-dir ./access-users

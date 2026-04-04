@@ -13,55 +13,55 @@ Use this namespace when you need to browse live dashboards, fetch or clone a liv
 .SH SUBCOMMANDS
 .TP
 .B browse
-Open the live dashboard tree in an interactive terminal UI.
+Open the live dashboard tree in an interactive terminal UI. Use when: You want to explore folders, select a dashboard, or inspect the live tree before fetching, diffing, importing, or deleting.
 .TP
 .B get
-Fetch one live dashboard into an API\-safe local JSON draft.
+Fetch one live dashboard into an API\-safe local JSON draft. Use when: You need a local copy of one live dashboard for review, patching, cloning, or later publish work.
 .TP
 .B clone\-live
-Clone one live dashboard into a local draft with optional overrides.
+Clone one live dashboard into a local draft with optional overrides. Use when: You want to start from an existing live dashboard but give the local draft a new title, UID, or folder target.
 .TP
 .B list
-List dashboard summaries without writing export files.
+List dashboard summaries without writing export files. Use when: You want a non\-interactive inventory view of live dashboards, optionally with resolved sources or structured output.
 .TP
 .B export
-Export dashboards to raw/, prompt/, and provisioning/ files.
+Export dashboards to raw/, prompt/, and provisioning/ files. Use when: You need a local export tree for later import, review, diff, or file\-provisioning workflows. The prompt/ lane is for Grafana UI import, not dashboard API import; use dashboard raw\-to\-prompt when you need to convert ordinary or raw dashboard JSON into prompt JSON.
 .TP
 .B import
-Import dashboard JSON files through the Grafana API.
+Import dashboard JSON files through the Grafana API. Use when: You have a local export tree or provisioning tree and need to push dashboards back into Grafana, either live or as a dry run. This command consumes raw/ or provisioning/ inputs; it does not consume the Grafana UI prompt/ lane.
 .TP
 .B patch\-file
-Patch one local dashboard JSON file in place or write it to a new path.
+Patch one local dashboard JSON file in place or write it to a new path. Use when: You need to rewrite dashboard metadata locally before review or publish, without contacting Grafana.
 .TP
 .B review
-Review one local dashboard JSON file without touching Grafana.
+Review one local dashboard JSON file without touching Grafana. Use when: You want a local read\-only check of a dashboard draft before publishing or importing it.
 .TP
 .B publish
-Publish one local dashboard JSON file through the existing dashboard import pipeline.
+Publish one local dashboard JSON file through the existing dashboard import pipeline. Use when: A local draft is ready to go live and you want the command to stage or push it through the same import path used by the CLI.
 .TP
 .B delete
-Delete live dashboards by UID or folder path.
+Delete live dashboards by UID or folder path. Use when: You need to remove one dashboard, a folder subtree, or a subtree plus the matched folders themselves.
 .TP
 .B diff
-Compare local dashboard files against live Grafana dashboards.
+Compare local dashboard files against live Grafana dashboards. Use when: You want to see what would change before importing or publishing a dashboard bundle.
 .TP
 .B inspect\-export
-Analyze dashboard export directories with operator\-summary and report\-contract views.
+Analyze dashboard export directories with operator\-summary and report\-contract views. Use when: You want to read a local export tree, inspect its structure, or render governance and dependency reports without contacting Grafana.
 .TP
 .B inspect\-live
-Analyze live Grafana dashboards via a temporary raw\-export snapshot.
+Analyze live Grafana dashboards via a temporary raw\-export snapshot. Use when: You need the same inspection views as inspect\-export, but sourced from live Grafana instead of a local export tree.
 .TP
 .B inspect\-vars
-List dashboard templating variables and datasource\-like choices from live Grafana.
+List dashboard templating variables and datasource\-like choices from live Grafana. Use when: You need to inspect variable state, feed a screenshot workflow, or debug variable\-scoped dashboard URLs.
 .TP
 .B governance\-gate
-Evaluate governance policy against dashboard inspect JSON artifacts.
+Evaluate governance policy against dashboard inspect JSON artifacts. Use when: You already have governance\-json and query\-report artifacts and want a policy pass or fail result before promotion.
 .TP
 .B topology
-Build a deterministic dashboard topology graph from JSON artifacts.
+Build a deterministic dashboard topology graph from JSON artifacts. Use when: You need a graph view of dashboards, folders, variables, datasource links, and optional alert contract data. The command also accepts the graph alias.
 .TP
 .B screenshot
-Open one dashboard in a headless browser and capture image or PDF output.
+Open one dashboard in a headless browser and capture image or PDF output. Use when: You need a reproducible dashboard or panel screenshot, especially for docs, incident notes, or visual debugging.
 .SH COMMON OPTIONS
 .TP
 .B \-\-url
@@ -83,21 +83,33 @@ inspect\-export and inspect\-live are read\-only analysis commands, not mutation
 .PP
 browse and screenshot operate against live Grafana state.
 .SH EXAMPLES
+.PP
+grafana\-util dashboard is the namespace for live dashboard workflows, local draft handling, export/import review, inspection, topology, and screenshots. The same namespace is also available as grafana\-util db.
 .EX
 grafana-util dashboard --help
 .EE
+.PP
+browse: Open the live dashboard tree in an interactive terminal UI.
 .EX
 grafana-util dashboard browse --profile prod
 .EE
+.PP
+browse: Open the live dashboard tree in an interactive terminal UI.
 .EX
 grafana-util dashboard browse --url http://localhost:3000 --basic-user admin --basic-password admin
 .EE
+.PP
+grafana\-util dashboard is the namespace for live dashboard workflows, local draft handling, export/import review, inspection, topology, and screenshots. The same namespace is also available as grafana\-util db.
 .EX
 grafana-util dashboard raw-to-prompt --input-file ./legacy/cpu-main.json --profile prod --org-id 2
 .EE
+.PP
+inspect\-live: Analyze live Grafana dashboards via a temporary raw\-export snapshot.
 .EX
 grafana-util dashboard inspect-live --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output-format governance-json
 .EE
+.PP
+inspect\-live: Analyze live Grafana dashboards via a temporary raw\-export snapshot.
 .EX
 grafana-util dashboard inspect-live --url http://localhost:3000 --basic-user admin --basic-password admin --interactive
 .EE

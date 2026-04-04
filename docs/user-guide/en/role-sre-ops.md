@@ -21,7 +21,7 @@ This page is for on-call operators and SREs who need a repeatable way to check r
 - Build staged summaries and preflight documents before an apply path.
 - Export or review assets during backup, drift review, or break-glass recovery.
 
-## Recommended Auth And Secret Approach
+## Recommended connection and secret handling
 
 Use a profile backed by admin-capable credentials for day-to-day work.
 
@@ -29,15 +29,20 @@ Use a profile backed by admin-capable credentials for day-to-day work.
 2. Direct Basic auth with `--prompt-password` for bootstrap or break-glass work.
 3. Token auth only for narrow reads where you already know the token can see every target org and resource.
 
-## First Commands To Run
+## First commands to run
 
 ```bash
-grafana-util profile list
-grafana-util profile show --profile prod --output-format yaml
-grafana-util status live --profile prod --output yaml
+grafana-util status live --profile prod --output table
 grafana-util overview live --profile prod --output interactive
-grafana-util change preflight --desired-file ./desired.json --fetch-live --profile prod --output json
-grafana-util dashboard list --profile prod --all-orgs --with-sources --table
+grafana-util change summary --desired-file ./desired.json
+grafana-util change preflight --desired-file ./desired.json --fetch-live --output json
+grafana-util dashboard export --export-dir ./backups --overwrite --progress
+```
+
+If you need to start from the access layer instead, swap the last line for:
+
+```bash
+grafana-util access org list --table
 ```
 
 If you are checking a host directly, Basic auth is the safest fallback for broad visibility:
@@ -52,7 +57,7 @@ Use token auth only when the scope matches the work:
 grafana-util overview live --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output json
 ```
 
-## What Good Looks Like
+## What good operator posture looks like
 
 You are in a good operator posture when:
 
@@ -61,14 +66,16 @@ You are in a good operator posture when:
 - you run preflight or dry-run checks before destructive actions
 - you know which command page to open when the surface shifts from status into dashboard, alert, or access work
 
-## Read Next
+## Read next
 
+- [Change & Status](change-overview-status.md)
 - [Dashboard Management](dashboard.md)
+- [Data source Management](datasource.md)
 - [Alerting Governance](alert.md)
 - [Access Management](access.md)
-- [Change & Status](change-overview-status.md)
+- [Troubleshooting](troubleshooting.md)
 
-## Keep Open
+## Keep open
 
 - [profile](../../commands/en/profile.md)
 - [status](../../commands/en/status.md)
@@ -77,8 +84,9 @@ You are in a good operator posture when:
 - [alert](../../commands/en/alert.md)
 - [access](../../commands/en/access.md)
 - [change](../../commands/en/change.md)
+- [full command index](../../commands/en/index.md)
 
-## Common Mistakes And Limits
+## Common mistakes and limits
 
 - Do not assume a token can see `--all-orgs`; that is one of the easiest ways to get partial inventory and miss a problem.
 - Do not paste `--basic-password` into shared shell history unless you are deliberately in a throwaway session.
@@ -86,15 +94,16 @@ You are in a good operator posture when:
 - Do not treat a successful read-only check as proof that write or admin workflows will also work.
 - Do not skip `change preflight`, `change plan`, or command-specific `--dry-run` paths before high-impact changes.
 
-## When To Switch To Deeper Docs
+## When to switch to deeper docs
 
 - Switch to [Dashboard Management](dashboard.md) when the issue is inventory, export/import, inspection, or screenshot workflow.
 - Switch to [Alerting Governance](alert.md) when the problem is rule ownership, contact points, routes, or plan/apply flow.
 - Switch to [Access Management](access.md) when org, user, team, or service-account scope becomes part of the incident or maintenance task.
 - Switch to the [Command Docs](../../commands/en/index.md) when you already know the workflow and just need the exact flags.
 
-## Next Steps
+## Next steps
 
-- [Operator Scenarios](scenarios.md)
-- [Troubleshooting](troubleshooting.md)
+- [Home](index.md)
+- [Change & Status](change-overview-status.md)
+- [Dashboard Management](dashboard.md)
 - [Command Docs](../../commands/en/index.md)

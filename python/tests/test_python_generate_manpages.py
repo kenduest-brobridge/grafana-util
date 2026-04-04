@@ -21,6 +21,80 @@ def load_module():
 
 
 class GenerateManpagesTests(unittest.TestCase):
+    def test_subcommand_manpages_are_generated(self):
+        module = load_module()
+
+        generated = module.generate_manpages()
+
+        self.assertIn("grafana-util-dashboard-screenshot.1", generated)
+        self.assertIn("grafana-util-access-service-account-token.1", generated)
+        self.assertIn("grafana-util-profile-add.1", generated)
+
+    def test_subcommand_manpage_contains_command_sections(self):
+        module = load_module()
+
+        generated = module.generate_manpages()
+        screenshot_manpage = generated["grafana-util-dashboard-screenshot.1"]
+
+        self.assertIn(".SH SYNOPSIS", screenshot_manpage)
+        self.assertIn(".B grafana-util dashboard screenshot [\\fIOPTIONS\\fR]", screenshot_manpage)
+        self.assertIn(".SH DESCRIPTION", screenshot_manpage)
+        self.assertIn("Open one dashboard in a headless browser and capture image or PDF output.", screenshot_manpage)
+        self.assertIn(".SH EXAMPLES", screenshot_manpage)
+
+    def test_namespace_manpage_subcommands_include_use_case_summary(self):
+        module = load_module()
+
+        generated = module.generate_manpages()
+        access_manpage = generated["grafana-util-access.1"]
+
+        self.assertIn(
+            "List, browse, create, modify, export, import, diff, or delete Grafana users. Use when:",
+            access_manpage,
+        )
+        self.assertIn(
+            "List, create, export, import, diff, or delete Grafana service accounts, and manage their tokens. Use when:",
+            access_manpage,
+        )
+
+    def test_top_level_manpage_commands_include_use_case_summary(self):
+        module = load_module()
+
+        generated = module.generate_manpages()
+        top_level_manpage = generated["grafana-util.1"]
+
+        self.assertIn(
+            ".B access\nRun the access\\-management command surface for users, orgs, teams, and service accounts. Use when:",
+            top_level_manpage,
+        )
+
+    def test_top_level_manpage_lists_subcommand_manpages(self):
+        module = load_module()
+
+        generated = module.generate_manpages()
+        top_level_manpage = generated["grafana-util.1"]
+
+        self.assertIn(".SH SUBCOMMAND MANPAGES", top_level_manpage)
+        self.assertIn(".SS dashboard", top_level_manpage)
+        self.assertIn(".B grafana\\-util\\-dashboard\\-screenshot(1)", top_level_manpage)
+        self.assertIn(".SS access", top_level_manpage)
+        self.assertIn(".B grafana\\-util\\-access\\-service\\-account\\-token(1)", top_level_manpage)
+
+    def test_namespace_manpage_examples_include_caption_lines(self):
+        module = load_module()
+
+        generated = module.generate_manpages()
+        access_manpage = generated["grafana-util-access.1"]
+
+        self.assertIn(
+            ".PP\nuser: List, browse, create, modify, export, import, diff, or delete Grafana users.",
+            access_manpage,
+        )
+        self.assertIn(
+            ".PP\nservice\\-account token: Add or delete tokens for a Grafana service account.",
+            access_manpage,
+        )
+
     def test_generated_manpages_match_checked_in_outputs(self):
         module = load_module()
 

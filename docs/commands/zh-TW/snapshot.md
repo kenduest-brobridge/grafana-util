@@ -6,7 +6,9 @@
 
 適用時機：當你想建立一個本機 snapshot root，收錄 dashboard 與 datasource inventory，供後續檢視時。
 
-主要旗標：root 指令本身只是命名空間；操作旗標都在 `export` 和 `review`。共用的 root 旗標是 `--color`。
+說明：如果你需要一份離線 snapshot，之後不用重新連到 Grafana 也能繼續檢視，先看這一頁最合適。`snapshot` 指令群組適合交接、備份、事件回顧，或任何想先留下本機 artifact 再往下分析的工作流。
+
+主要旗標：root 指令本身只是指令群組；操作旗標都在 `export` 和 `review`。共用的 root 旗標是 `--color`。
 
 範例：
 

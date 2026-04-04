@@ -6,6 +6,8 @@ Purpose: review-first sync workflows with optional live Grafana fetch and apply 
 
 When to use: when you need to summarize desired resources, plan against live state, review a plan, apply a reviewed plan, audit drift, or build bundle and promotion preflight documents.
 
+Description: start here when your team follows a review-first change workflow and you need the whole path in one place. The `change` namespace is the control surface for summary, preflight, planning, review, audit, and apply, so operators can see how those steps fit together before they run one exact subcommand.
+
 Key flags: the root command is a namespace; the main operational flags live on the subcommands. Common workflow inputs include `--desired-file`, `--plan-file`, `--live-file`, `--fetch-live`, `--approve`, `--execute-live`, `--source-bundle`, `--target-inventory`, `--availability-file`, `--mapping-file`, and `--output`.
 
 Examples:

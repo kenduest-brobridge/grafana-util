@@ -84,11 +84,22 @@ class GenerateCommandHtmlTests(unittest.TestCase):
         self.assertIn("Quick Start", rendered)
         self.assertIn("Common Tasks", rendered)
         self.assertIn("Reference", rendered)
-        self.assertIn("Export dashboards", rendered)
+        self.assertIn("Feature map", rendered)
+        self.assertIn("Dashboard inspection and screenshots", rendered)
         self.assertIn("快速開始", rendered)
         self.assertIn("繁體中文", rendered)
         self.assertIn("Developer guide", rendered)
         self.assertIn("latest/index.html", rendered)
+
+    def test_generate_outputs_includes_developer_page(self):
+        module = load_module()
+
+        generated = module.generate_outputs()
+
+        self.assertIn("developer.html", generated)
+        self.assertIn("Developer Guide", generated["developer.html"])
+        self.assertIn("Source: docs/DEVELOPER.md", generated["developer.html"])
+        self.assertIn("developer.html", generated["index.html"])
 
     def test_render_manpage_page_renders_structured_html(self):
         module = load_module()
@@ -162,6 +173,26 @@ class GenerateCommandHtmlTests(unittest.TestCase):
         self.assertIn('href="#install"', rendered)
         self.assertNotIn("⚡", rendered)
 
+    def test_theme_script_copies_full_code_blocks_without_filtering_comments(self):
+        module = load_module()
+
+        self.assertIn("navigator.clipboard.writeText(raw)", module.THEME_SCRIPT)
+        self.assertNotIn("filter(l => l.trim() && !l.trim().startsWith(\"#\"))", module.THEME_SCRIPT)
+
+    def test_page_style_keeps_unwrapped_code_blocks_inside_content_column(self):
+        module = load_module()
+
+        self.assertIn("pre { position: relative; max-width: 100%; box-sizing: border-box;", module.PAGE_STYLE)
+        self.assertIn(".article { min-width: 0;", module.PAGE_STYLE)
+        self.assertIn(".sidebar { position: sticky; top: 12px; min-width: 0;", module.PAGE_STYLE)
+
+    def test_page_style_uses_fixed_topbar_control_widths(self):
+        module = load_module()
+
+        self.assertIn("#locale-select { width: 148px; }", module.PAGE_STYLE)
+        self.assertIn("#page-locale-select { width: 172px; }", module.PAGE_STYLE)
+        self.assertIn("#jump-select { width: 300px; }", module.PAGE_STYLE)
+
     def test_render_global_nav_uses_localized_handbook_titles(self):
         module = load_module()
 
@@ -203,6 +234,58 @@ class GenerateCommandHtmlTests(unittest.TestCase):
         self.assertNotIn(">Datasource<", rendered)
         self.assertNotIn(">Dashboard<", rendered)
         self.assertNotIn("Grafana-util-datasource", rendered)
+
+    def test_render_handbook_page_includes_topbar_language_switch(self):
+        module = load_module()
+
+        config = module.HtmlBuildConfig(
+            source_root=REPO_ROOT,
+            command_docs_root=REPO_ROOT / "docs" / "commands",
+            handbook_root=REPO_ROOT / "docs" / "user-guide",
+            version="9.9.0",
+        )
+        page = next(p for p in module.build_handbook_pages("zh-TW", handbook_root=config.handbook_root) if p.stem == "index")
+
+        rendered = module.render_handbook_page(page, config)
+
+        self.assertIn('id="page-locale-select"', rendered)
+        self.assertIn("Language: 繁體中文", rendered)
+        self.assertIn("Switch to English", rendered)
+
+    def test_render_command_page_includes_intro_panel_from_command_doc_metadata(self):
+        module = load_module()
+
+        config = module.HtmlBuildConfig(
+            source_root=REPO_ROOT,
+            command_docs_root=REPO_ROOT / "docs" / "commands",
+            handbook_root=REPO_ROOT / "docs" / "user-guide",
+            version="9.9.0",
+        )
+        source = REPO_ROOT / "docs" / "commands" / "en" / "dashboard-screenshot.md"
+
+        rendered = module.render_command_page("en", source, "commands/en/dashboard-screenshot.html", config)
+
+        self.assertIn("What this page covers", rendered)
+        self.assertIn("When to open this page", rendered)
+        self.assertIn("Who this page is for", rendered)
+        self.assertIn("Open one dashboard in a headless browser and capture image or PDF output.", rendered)
+
+    def test_render_command_page_includes_intro_panel_for_zh_tw_command_docs(self):
+        module = load_module()
+
+        config = module.HtmlBuildConfig(
+            source_root=REPO_ROOT,
+            command_docs_root=REPO_ROOT / "docs" / "commands",
+            handbook_root=REPO_ROOT / "docs" / "user-guide",
+            version="9.9.0",
+        )
+        source = REPO_ROOT / "docs" / "commands" / "zh-TW" / "dashboard-screenshot.md"
+
+        rendered = module.render_command_page("zh-TW", source, "commands/zh-TW/dashboard-screenshot.html", config)
+
+        self.assertIn("這頁在說什麼", rendered)
+        self.assertIn("什麼時候看這頁", rendered)
+        self.assertIn("適合誰", rendered)
 
 
 if __name__ == "__main__":

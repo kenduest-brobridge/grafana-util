@@ -42,6 +42,7 @@ Then branch by task:
 
 - runtime change: open the owning Rust module under `rust/src/`
 - docs-generator change: open `docs/internal/generated-docs-architecture.md`
+- zh-TW doc copy review: open `docs/internal/zh-tw-style-guide.md`
 - secret/profile change: open `docs/internal/profile-secret-storage-architecture.md`
 - build or release change: open `python/pyproject.toml`, `rust/Cargo.toml`,
   `Makefile`, and `scripts/`
@@ -81,6 +82,7 @@ Treat these as authoritative:
 - generated-doc rules:
   - `docs/internal/generated-docs-architecture.md`
   - `docs/internal/generated-docs-playbook.md`
+  - `docs/internal/zh-tw-style-guide.md`
 
 Treat these as generated output, not source:
 
@@ -163,6 +165,8 @@ Use these pages for the matching concern:
   - generated-doc system design
 - `docs/internal/generated-docs-playbook.md`
   - generated-doc maintenance tasks
+- `docs/internal/zh-tw-style-guide.md`
+  - zh-TW terminology, tone, and review rules
 - `docs/internal/profile-secret-storage-architecture.md`
   - secret backend model and platform rules
 

@@ -11,20 +11,28 @@ when you need the final gate view for exported artifacts or live Grafana state.
 .SH SUBCOMMANDS
 .TP
 .B staged
-render project status from staged artifacts.
+render project status from staged artifacts. Use when: Need the machine\-readable readiness gate for exported files before apply.
 .TP
 .B live
-render project status from live Grafana read surfaces.
+render project status from live Grafana read surfaces. Use when: Need current Grafana status, optionally deepened with staged context files.
 .SH EXAMPLES
+.PP
+staged: render project status from staged artifacts.
 .EX
 grafana-util status staged --dashboard-export-dir ./dashboards/raw --desired-file ./desired.json --output json
 .EE
+.PP
+live: render project status from live Grafana read surfaces.
 .EX
 grafana-util status live --profile prod --output yaml
 .EE
+.PP
+staged: render project status from staged artifacts.
 .EX
 grafana-util status staged --dashboard-export-dir ./dashboards/raw --desired-file ./desired.json --output table
 .EE
+.PP
+staged: render project status from staged artifacts.
 .EX
 grafana-util status staged --dashboard-provisioning-dir ./dashboards/provisioning --alert-export-dir ./alerts --output interactive
 .EE

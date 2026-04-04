@@ -6,6 +6,11 @@
 ## When to use
 Use this namespace when you want to inspect supported datasource types, browse live inventory, export a datasource bundle, compare a local bundle with Grafana, or create and maintain live datasources.
 
+## Description
+Open this page when your task is about the full data source lifecycle rather than one single mutation. The `datasource` namespace groups the work operators usually do together: checking supported types, reading live inventory, exporting and diffing bundles, and repairing or updating live Grafana data source objects.
+
+This page is especially useful when you need to decide whether the next step is inventory, export/import, diff, or a live add/modify/delete action.
+
 ## Key flags
 - `--url`: Grafana base URL.
 - `--token`, `--basic-user`, `--basic-password`: shared live Grafana credentials.

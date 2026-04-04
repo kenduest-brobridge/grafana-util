@@ -60,11 +60,13 @@ Output:
 - `docs/man/grafana-util-overview.1`
 - `docs/man/grafana-util-change.1`
 - `docs/man/grafana-util-snapshot.1`
+- `docs/man/grafana-util-*.1` for every generated subcommand manpage
 
 Design intent:
 
 - top-level quick reference
 - namespace-level lookup pages
+- per-subcommand lookup pages for exact command syntax and examples
 - not a full handbook dump
 
 ### HTML Site
@@ -147,7 +149,7 @@ Manpage projection only:
 - defines the namespace manpage set with `NamespaceSpec`
 - maps each namespace to the English command docs that feed it
 - turns parsed command-doc fields into roff sections
-- owns top-level and namespace-level `SEE ALSO` relationships
+- owns top-level, namespace-level, and per-subcommand `SEE ALSO` relationships
 
 If a change is about "what manpages exist" or "what roff sections appear", it belongs here.
 
@@ -159,11 +161,16 @@ HTML site projection only:
 - renders handbook pages
 - renders command-reference pages
 - applies handbook-to-command and command-to-handbook navigation
+- fills file-backed HTML shell templates under `scripts/templates/`
+- loads shared CSS and runtime JS from `scripts/templates/`
 - emits `.nojekyll`
 
 If a change is about layout, theme, navigation, GitHub Pages output shape, or
-landing-page rendering, it belongs here. If a change is about homepage copy,
-task ordering, or curated landing links, edit `docs/landing/` first.
+landing-page rendering, it belongs here. Shared shell markup now lives in
+`scripts/templates/`, while `generate_command_html.py` prepares the view data
+and fills those templates. Shared CSS and client-side behavior also live there
+as file-backed assets. If a change is about homepage copy, task ordering,
+or curated landing links, edit `docs/landing/` first.
 
 ## Why The Parsing Logic Is Small On Purpose
 
@@ -198,8 +205,8 @@ Supported well:
 
 Important behavior:
 
-- for shell-style fenced blocks with multiple commands, generated HTML splits them into one `<pre>` block per command line for readability
-- generated manpages also split command examples into one `.EX/.EE` block per command
+- fenced code blocks stay intact as a single rendered code block
+- generated manpages keep each example as one coherent command block
 - source-relative `.md` links are rewritten to generated `.html` paths when needed
 
 Unsupported or intentionally narrow:

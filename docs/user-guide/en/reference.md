@@ -1,4 +1,4 @@
-# Technical Reference Manual
+# Technical Reference
 
 This manual provides the current command surface for `grafana-util`, including profile resolution, output flags, and live/staged status entrypoints.
 
@@ -6,7 +6,7 @@ Use this chapter alongside [profile](../../commands/en/profile.md), [status](../
 
 ---
 
-## 🔐 Profile & Authentication Management
+## Profile, connection, and secret handling
 
 Profiles are repo-local. `grafana-util profile` reads and writes `grafana-util.yaml` in the current working directory, and `--profile` selects one named profile from that file.
 
@@ -18,7 +18,7 @@ Profiles are repo-local. `grafana-util profile` reads and writes `grafana-util.y
 | direct Basic auth | bootstrap, break-glass, global admin work | simple, works well for cross-org and admin surfaces | avoid leaving plaintext passwords in shell history; prefer `--prompt-password` |
 | direct token | narrow scripted reads or scoped API actions | easy to rotate and limit | scope may block `--all-orgs`, org admin, or global admin workflows |
 
-In this repo, the intended steady-state is: store connection defaults in `grafana-util.yaml`, back secrets with `password_env`, `token_env`, or a secret store, then run routine commands with `--profile`.
+In practice, the normal progression is: verify connectivity with direct flags first, then move repeated URLs, usernames, and secret sources into a profile so day-to-day commands only need `--profile`.
 
 ### Secret storage modes: what they are, why they exist, and when to use them
 
@@ -166,7 +166,7 @@ profiles:
       path: .grafana-util.secrets.yaml
 ```
 
-### 5. Daily-use examples in all common auth styles
+### 5. Daily-use examples in the common auth styles
 ```bash
 grafana-util status live --profile prod --output yaml
 grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output yaml
@@ -226,6 +226,15 @@ Why these examples matter:
 ## 📊 Output Formats Comparison
 
 `grafana-util` supports explicit per-format flags plus a single `--output-format` selector. For dashboards, the current list command exposes `--json`, `--table`, `--csv`, `--yaml`, and `--output-format`.
+
+### 0. Start with this flag map
+
+| Situation | Syntax | Common values | Notes |
+| :--- | :--- | :--- | :--- |
+| Direct format selectors | `--text`, `--table`, `--csv`, `--json`, `--yaml` | `text` / `table` / `csv` / `json` / `yaml` | Common on list, review, inspect, and some dry-run mutation surfaces. |
+| Single selector for common formats | `--output-format <FORMAT>` | `text` / `table` / `csv` / `json` / `yaml` | Some commands also define command-specific values such as `report-table`, `governance-json`, `mermaid`, or `dot`. |
+| Live `status` / `overview` entrypoints | `--output <FORMAT>` | `table` / `csv` / `text` / `json` / `yaml` / `interactive` | These live entrypoints do not use `--output-format`. |
+| Write the rendered result to a file | `--output-file <PATH>` or a command-specific flag | command-specific | Common on topology, governance-gate, screenshot, and similar output-producing commands. |
 
 ### 1. Table or JSON selection
 ```bash

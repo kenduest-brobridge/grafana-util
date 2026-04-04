@@ -71,10 +71,10 @@ grafana-util alert preview-route --desired-dir ./alerts/desired --label team=sre
 
 ### Datasources：匯出與機密資訊恢復
 ```bash
-# 匯出資料來源時自動遮蔽密鑰，方便審查或納入版本控制
+# 匯出 data source 時自動遮蔽密鑰，方便審查或納入版本控制
 grafana-util datasource export --export-dir ./datasources --overwrite
 
-# 匯入時重新補齊必要的秘密資訊
+# 匯入時重新補齊必要的 secret 資訊
 grafana-util datasource import --import-dir ./datasources --replace-existing --prompt-password
 ```
 
@@ -117,8 +117,8 @@ open ./docs/html/index.html
 *   **[開始使用](./docs/user-guide/zh-TW/getting-started.md)**：安裝、profile 設定與第一批常用命令。
 *   **[系統架構與設計原則](./docs/user-guide/zh-TW/architecture.md)**：維運模型、lane 設計與邊界。
 *   **[實戰範例](./docs/user-guide/zh-TW/recipes.md)**：常見維運任務與操作流程範例。
-*   **[指令詳細說明](./docs/commands/zh-TW/index.md)**：每個 command 與 subcommand 各有獨立頁面，可直接查目前 CLI 指令面，並提供完整 command map 入口，像是 `dashboard screenshot`、`access service-account token`、`change bundle-preflight` 這類較深的子命令也能直接找到。
-*   **[HTML 文件入口](./docs/html/index.html)**：執行 `make html` 後可本機瀏覽的 handbook 與 command reference 入口。
+*   **[指令詳細說明](./docs/commands/zh-TW/index.md)**：每個 command 與 subcommand 都有獨立頁面，可直接查目前 CLI 的實際語法與旗標；像 `dashboard screenshot`、`access service-account token`、`change bundle-preflight` 這類較深的子命令也能直接找到。
+*   **[HTML 文件入口](./docs/html/index.html)**：執行 `make html` 後可在本機瀏覽的手冊與指令索引入口。
 *   **[Man Page](./docs/man/grafana-util.1)**：頂層 `man` 格式參考；macOS 可用 `man ./docs/man/grafana-util.1`，GNU/Linux 可用 `man -l docs/man/grafana-util.1`。
 *   **[疑難排解](./docs/user-guide/zh-TW/troubleshooting.md)**：診斷、限制與恢復建議。
 
@@ -128,14 +128,14 @@ open ./docs/html/index.html
 
 ## 文件導覽地圖
 
-如果您不確定該先看哪一份文件，請直接從這裡判斷：
+如果你不確定該先看哪一份文件，可以直接從這裡判斷：
 
 *   **維運手冊**：[docs/user-guide/zh-TW/](./docs/user-guide/zh-TW/index.md) 適合看完整操作流程、觀念與閱讀順序。
 *   **指令詳細參考**：[docs/commands/zh-TW/](./docs/commands/zh-TW/index.md) 適合逐頁查 command 與 subcommand。
 *   **可瀏覽 HTML 文件站**：本機可看 [docs/html/index.html](./docs/html/index.html)，或直接使用公開站點 <https://kenduest-brobridge.github.io/grafana-utils/>。
 *   **終端機 manpage**：[docs/man/grafana-util.1](./docs/man/grafana-util.1) 適合 `man` 風格查詢。
 *   **維護者入口**：[docs/DEVELOPER.md](./docs/DEVELOPER.md) 適合看程式架構、文件分層、build/test 路線與 maintainer 引導。
-*   **維護者快速上手**：[docs/internal/maintainer-quickstart.md](./docs/internal/maintainer-quickstart.md) 提供第一次進 repo 的最短閱讀路徑、事實來源地圖、產出的檔案邊界與安全驗證命令。
+*   **維護者快速上手**：[docs/internal/maintainer-quickstart.md](./docs/internal/maintainer-quickstart.md) 提供第一次進 repo 的最短閱讀順序、事實來源地圖、產出的檔案邊界與安全驗證命令。
 *   **generated docs 設計說明**：[docs/internal/generated-docs-architecture.md](./docs/internal/generated-docs-architecture.md) 說明 Markdown 轉 HTML/manpage 的整體設計。
 *   **generated docs 操作手冊**：[docs/internal/generated-docs-playbook.md](./docs/internal/generated-docs-playbook.md) 提供常見維護工作的步驟。
 *   **Secret storage 架構說明**：[docs/internal/profile-secret-storage-architecture.md](./docs/internal/profile-secret-storage-architecture.md) 說明 profile secret 模式、macOS/Linux 支援、限制與維護規則。
@@ -145,11 +145,11 @@ open ./docs/html/index.html
 
 ## 依角色選擇閱讀路徑
 
-如果您覺得用檔案類型找文件不直覺，可以直接依角色進入：
+如果你覺得照檔案類型找文件不直覺，也可以直接依角色進入：
 
-*   **新使用者**：先看專用的 [新使用者路徑](./docs/user-guide/zh-TW/role-new-user.md)，再看 [開始使用](./docs/user-guide/zh-TW/getting-started.md) 與 [技術參考手冊](./docs/user-guide/zh-TW/reference.md)。
-*   **SRE / 維運人員**：先看專用的 [SRE / 維運路徑](./docs/user-guide/zh-TW/role-sre-ops.md)，再看 [變更與狀態](./docs/user-guide/zh-TW/change-overview-status.md)、[Dashboard 管理](./docs/user-guide/zh-TW/dashboard.md)、[Datasource 管理](./docs/user-guide/zh-TW/datasource.md)、[疑難排解](./docs/user-guide/zh-TW/troubleshooting.md)。
-*   **自動化 / CI 維護者**：先看專用的 [自動化 / CI 路徑](./docs/user-guide/zh-TW/role-automation-ci.md)，再看 [技術參考手冊](./docs/user-guide/zh-TW/reference.md)、[逐指令說明](./docs/commands/zh-TW/index.md)，再搭配頂層 [manpage](./docs/man/grafana-util.1)。
+*   **新使用者**：先看專用的 [新手快速入門](./docs/user-guide/zh-TW/role-new-user.md)，再看 [開始使用](./docs/user-guide/zh-TW/getting-started.md) 與 [技術參考手冊](./docs/user-guide/zh-TW/reference.md)。
+*   **SRE / 維運人員**：先看專用的 [SRE / 維運角色導讀](./docs/user-guide/zh-TW/role-sre-ops.md)，再看 [變更與狀態](./docs/user-guide/zh-TW/change-overview-status.md)、[Dashboard 管理](./docs/user-guide/zh-TW/dashboard.md)、[Datasource 管理](./docs/user-guide/zh-TW/datasource.md)、[疑難排解](./docs/user-guide/zh-TW/troubleshooting.md)。
+*   **自動化 / CI 維護者**：先看專用的 [自動化 / CI 角色導讀](./docs/user-guide/zh-TW/role-automation-ci.md)，再看 [技術參考手冊](./docs/user-guide/zh-TW/reference.md)、[指令詳細說明](./docs/commands/zh-TW/index.md)，再搭配頂層 [manpage](./docs/man/grafana-util.1)。
 *   **平台架構師 / maintainer**：先看 [維護者快速上手](./docs/internal/maintainer-quickstart.md)，再看 [docs/DEVELOPER.md](./docs/DEVELOPER.md)、[Maintainer Role Map](./docs/internal/maintainer-role-map.md)、[generated docs 設計說明](./docs/internal/generated-docs-architecture.md)、[generated docs 操作手冊](./docs/internal/generated-docs-playbook.md)、[secret storage 架構說明](./docs/internal/profile-secret-storage-architecture.md)、[docs/internal/README.md](./docs/internal/README.md)。
 
 ---

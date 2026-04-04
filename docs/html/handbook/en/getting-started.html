@@ -4,15 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Getting Started · grafana-util docs</title>
-  <style>
-:root {
+  <style>:root {
   color-scheme: light dark;
   --font-scale: 1;
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI Variable Display", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   --font-zh: "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
   --font-mono: ui-monospace, "JetBrains Mono", SFMono-Regular, Menlo, Consolas, monospace;
-  
+
   --bg: #ffffff;
   --panel: #ffffff;
   --panel-strong: #f9fbfe;
@@ -109,24 +108,21 @@ html[lang="zh-TW"] body { font-family: var(--font-zh); letter-spacing: 0.025em; 
 a { color: var(--accent); text-decoration: none; font-weight: 500; transition: color 0.15s; }
 a:hover { color: var(--heading); }
 
-/* Typography */
 h1, h2, h3, h4 { font-family: var(--font-display); color: var(--heading); font-weight: 650; line-height: 1.2; margin: 0; }
 p, li { line-height: 1.72; margin-bottom: 1rem; }
 code { font: 0.88em var(--font-mono); background: var(--code-bg); padding: 0.2em 0.4em; border-radius: 4px; }
 
-/* Pre & Code Blocks */
-pre { position: relative; padding: 20px; border-radius: 8px; background: var(--pre-bg); color: var(--pre-text); margin: 1.5rem 0; border: 1px solid var(--border); overflow-x: auto; }
+pre { position: relative; max-width: 100%; box-sizing: border-box; padding: 20px; border-radius: 8px; background: var(--pre-bg); color: var(--pre-text); margin: 1.5rem 0; border: 1px solid var(--border); overflow-x: auto; }
 pre code { background: transparent !important; color: inherit !important; padding: 0 !important; font-size: 0.9rem; line-height: 1.6; white-space: pre; }
 pre.wrapped code { white-space: pre-wrap !important; word-break: break-all; }
 .code-controls { position: absolute; top: 8px; right: 8px; display: flex; gap: 6px; opacity: 0; transition: opacity 0.2s; z-index: 10; }
 pre:hover .code-controls { opacity: 1; }
-.control-btn { padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.1); color: #fff; font: 500 11px var(--font-mono); cursor: pointer; transition: 0.2s; }
-.control-btn:hover { background: rgba(255,255,255,0.2); }
-.control-btn.active { background: var(--accent); border-color: var(--accent); }
+.control-btn { padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.12); background: rgba(18, 24, 33, 0.78); color: rgba(243, 244, 246, 0.92); font: 500 11px var(--font-mono); cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s; backdrop-filter: blur(6px); }
+.control-btn:hover { background: rgba(33, 42, 54, 0.94); border-color: rgba(255,255,255,0.2); }
+.control-btn.active { background: #eef2f6; border-color: #eef2f6; color: #111827; }
 
-/* Layout Elements */
 .site { max-width: 1820px; margin: 0 auto; padding: 20px 18px; min-height: 100vh; display: flex; flex-direction: column; }
-.site.landing-shell { max-width: 1640px; padding-left: 36px; padding-right: 36px; }
+.site.landing-shell { max-width: 1880px; padding-left: 24px; padding-right: 24px; }
 .site.landing-shell .topbar { margin-bottom: 10px; }
 .site-content { flex-grow: 1; }
 .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 16px; border-bottom: 1px solid var(--border); padding-bottom: 14px; }
@@ -136,20 +132,24 @@ pre:hover .code-controls { opacity: 1; }
   border: 1px solid var(--border);
   background: var(--panel);
   color: var(--text);
+  box-sizing: border-box;
   padding: 4px 10px;
   font-size: 0.8rem; font-weight: 500; font-family: var(--font-sans);
   border-radius: 4px; height: 28px;
   cursor: pointer; transition: all 0.2s;
 }
 .themebar select:hover, .themebar select:focus { border-color: var(--accent); outline: none; }
+#locale-select { width: 148px; }
+#page-locale-select { width: 172px; }
+#jump-select { width: 300px; }
+#font-select { width: 138px; }
+#theme-select { width: 128px; }
 
-/* Content Grid */
 .layout { display: grid; grid-template-columns: 232px minmax(0, 1fr) 244px; gap: 20px; align-items: start; }
 @media (max-width: 1280px) { .layout { grid-template-columns: 210px minmax(0, 1fr); gap: 18px; } .sidebar { display: none !important; } }
 @media (max-width: 768px) { .layout { grid-template-columns: 1fr; } .nav-sidebar { display: none !important; } }
 
-/* Left Nav Sidebar */
-.nav-sidebar { position: sticky; top: 12px; padding: 2px 0 0; max-height: calc(100vh - 24px); overflow-y: auto; font-family: var(--font-sans); letter-spacing: -0.01em; }
+.nav-sidebar { position: sticky; top: 12px; min-width: 0; padding: 2px 0 0; max-height: calc(100vh - 24px); overflow-y: auto; font-family: var(--font-sans); letter-spacing: -0.01em; }
 html[lang="zh-TW"] .nav-sidebar { font-family: var(--font-zh); letter-spacing: 0; }
 .nav-sidebar li { margin-bottom: 0; }
 .nav-sidebar h2 { font-size: 0.74rem; font-weight: 700; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; letter-spacing: 0.04em; }
@@ -183,12 +183,57 @@ html[lang="zh-TW"] .nav-sidebar { font-family: var(--font-zh); letter-spacing: 0
 .nav-command-entry:hover { color: var(--heading); background: var(--panel-strong); }
 .nav-command-entry.active { color: var(--heading); font-weight: 620; background: color-mix(in srgb, var(--accent-soft) 60%, white); box-shadow: inset 2px 0 0 var(--accent); }
 
-/* Main Article */
-.article { padding: 10px 0 24px; }
+.article { min-width: 0; padding: 10px 0 24px; }
 .article p,
 .article li { color: var(--text); font-weight: 460; }
 .article ul li::marker,
 .article ol li::marker { color: var(--heading); }
+.article table {
+  width: 100%;
+  margin: 1.25rem 0 1.75rem;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+.article thead th {
+  padding: 0.9rem 1rem;
+  text-align: left;
+  vertical-align: top;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  font-weight: 680;
+  color: var(--heading);
+  background: var(--panel-strong);
+  border-bottom: 1px solid var(--border);
+}
+.article tbody td {
+  padding: 0.85rem 1rem;
+  vertical-align: top;
+  font-size: 0.94rem;
+  line-height: 1.62;
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+}
+.article tbody tr:last-child td {
+  border-bottom: 0;
+}
+.article th + th,
+.article td + td {
+  border-left: 1px solid var(--border);
+}
+.article table code {
+  white-space: nowrap;
+}
+.article table + p,
+.article table + ul,
+.article table + ol {
+  margin-top: 1.1rem;
+}
 .hero-eyebrow { display: inline-block; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font: 700 10px var(--font-mono); margin-bottom: 8px; text-transform: uppercase; }
 .article h1 { font-size: 2.15rem; margin-bottom: 12px; letter-spacing: -0.018em; font-weight: 680; }
 .article h2 { margin-top: 40px; border-top: 1px solid var(--border); padding-top: 24px; font-size: 1.5rem; margin-bottom: 12px; letter-spacing: -0.012em; font-weight: 620; }
@@ -198,9 +243,48 @@ html[lang="zh-TW"] .nav-sidebar { font-family: var(--font-zh); letter-spacing: 0
 .hero-summary { margin: 0 0 18px; max-width: 68ch; color: var(--text); font-size: 1rem; line-height: 1.72; font-weight: 450; }
 .article blockquote { margin: 1.5rem 0; padding: 12px 16px; border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 4px; }
 .article blockquote p { margin: 0; font-size: 0.95rem; color: var(--heading); }
+.breadcrumbs {
+  margin-bottom: 12px;
+  font-size: 0.84rem;
+  color: color-mix(in srgb, var(--muted) 78%, white);
+  font-weight: 460;
+}
+.command-intro {
+  margin: 0 0 1.6rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--panel-strong);
+  box-shadow: var(--shadow);
+}
+.command-intro-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.9rem 1.1rem;
+}
+.command-intro-block { min-width: 0; }
+.command-intro-label {
+  margin: 0 0 0.35rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.command-intro-text {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.98rem;
+  line-height: 1.7;
+}
+.command-intro-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--text);
+}
+.command-intro-list li { margin: 0.18rem 0; }
 
-/* Right TOC Sidebar */
-.sidebar { position: sticky; top: 12px; padding: 2px 0 0; max-height: calc(100vh - 24px); overflow-y: auto; font-family: var(--font-sans); letter-spacing: -0.01em; }
+.sidebar { position: sticky; top: 12px; min-width: 0; padding: 2px 0 0; max-height: calc(100vh - 24px); overflow-y: auto; font-family: var(--font-sans); letter-spacing: -0.01em; }
 html[lang="zh-TW"] .sidebar { font-family: var(--font-zh); letter-spacing: 0; }
 .sidebar li { margin-bottom: 0; }
 .sidebar h2 { font-size: 0.74rem; font-weight: 700; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; letter-spacing: 0.05em; }
@@ -230,22 +314,21 @@ html[lang="zh-TW"] .sidebar { font-family: var(--font-zh); letter-spacing: 0; }
 
 .site-footer { margin-top: 40px; padding: 24px 0; border-top: 1px solid var(--border); color: var(--muted); font-size: 0.85rem; text-align: center; }
 
-/* Landing */
 .landing-page {
   width: 100%;
   padding: 12px 0 20px;
 }
 .landing-hero {
   display: grid;
-  grid-template-columns: minmax(0, 0.92fr) minmax(360px, 0.72fr);
-  gap: 40px;
+  grid-template-columns: minmax(0, 1.08fr) minmax(420px, 0.88fr);
+  gap: 48px;
   align-items: start;
   padding: 18px 0 30px;
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--panel) 98%, white), color-mix(in srgb, var(--panel) 96%, var(--accent-soft)));
 }
 .landing-hero-inner {
-  max-width: 760px;
+  max-width: none;
 }
 .landing-title {
   margin: 0 0 18px;
@@ -276,9 +359,9 @@ html[lang="zh-TW"] .sidebar { font-family: var(--font-zh); letter-spacing: 0; }
 }
 .landing-search-form {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 12px;
-  align-items: stretch;
+  align-items: center;
   max-width: 100%;
 }
 .landing-search-input {
@@ -307,7 +390,8 @@ html[lang="zh-TW"] .sidebar { font-family: var(--font-zh); letter-spacing: 0; }
   color: var(--cta-text);
   font: 700 0.95rem var(--font-sans);
   cursor: pointer;
-  align-self: flex-start;
+  flex: 0 0 auto;
+  align-self: center;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
   transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.15s;
 }
@@ -325,8 +409,8 @@ html[lang="zh-TW"] .sidebar { font-family: var(--font-zh); letter-spacing: 0; }
 }
 .landing-sections {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 36px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 28px;
   margin-top: 30px;
   padding-top: 26px;
   border-top: 1px solid var(--border);
@@ -469,17 +553,20 @@ html[data-theme="dark"] .landing-meta {
   font-weight: 650;
 }
 
-/* Manpage */
-.manpage-rendered { display: grid; gap: 18px; }
+.manpage-rendered { display: grid; min-width: 0; gap: 18px; }
 .manpage-rendered > p { margin: 0; }
+.manpage-rendered .man-section { min-width: 0; }
 .manpage-rendered .man-section h2 { margin: 0 0 10px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
 .manpage-rendered .man-section + .man-section { margin-top: 6px; }
 .manpage-rendered .man-bullets { margin: 0; padding-left: 1.2rem; }
 .manpage-rendered .man-bullets li + li { margin-top: 8px; }
 .manpage-rendered .man-definitions { display: grid; grid-template-columns: minmax(0, 220px) minmax(0, 1fr); gap: 10px 18px; margin: 0; }
 .manpage-rendered .man-definitions dt { font-weight: 700; color: var(--heading); }
-.manpage-rendered .man-definitions dd { margin: 0; }
+.manpage-rendered .man-definitions dd { min-width: 0; margin: 0; }
 .manpage-rendered pre.man-example { margin: 0; }
+.manpage-intro > p:first-child {
+  margin-top: 0;
+}
 
 @media (max-width: 860px) {
   .landing-sections,
@@ -531,29 +618,37 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
   <div class="site">
     <div class="site-content">
       <div class="topbar">
-        <a class="brand" href="../../index.html">grafana-util docs</a>
-        <div class="themebar">
-          <select id="jump-select" aria-label="Jump"><option value="" selected>Jump to...</option><optgroup label="Handbook"><option value="index.html">Overview</option><option value="getting-started.html">Getting Started</option><option value="role-new-user.html">New User Handbook</option><option value="role-sre-ops.html">SRE / Operator Handbook</option><option value="role-automation-ci.html">Automation / CI Handbook</option><option value="architecture.html">Architecture &amp; Design Principles</option><option value="dashboard.html">Dashboard Operator Handbook</option><option value="datasource.html">Datasource Operator Handbook</option><option value="alert.html">Alert Operator Handbook</option><option value="access.html">Access Management (Identity &amp; Orgs)</option><option value="change-overview-status.html">Project Status &amp; Change Overview</option><option value="scenarios.html">Operator Scenarios</option><option value="recipes.html">Best Practices &amp; Real-World Recipes</option><option value="reference.html">Technical Reference Manual</option><option value="troubleshooting.html">Troubleshooting &amp; Glossary</option></optgroup><optgroup label="Commands"><option value="../../commands/en/dashboard.html">Dashboard</option><option value="../../commands/en/alert.html">Alert</option><option value="../../commands/en/datasource.html">Datasource</option><option value="../../commands/en/access.html">Access</option><option value="../../commands/en/profile.html">Profile</option><option value="../../commands/en/status.html">Status</option><option value="../../commands/en/overview.html">Overview</option><option value="../../commands/en/change.html">Change</option><option value="../../commands/en/snapshot.html">Snapshot</option></optgroup></select>
-          <select id="font-select" aria-label="Font Size">
-            <option value="0.9">Font: Compact</option>
-            <option value="1">Font: Default</option>
-            <option value="1.1">Font: Large</option>
-            <option value="1.2">Font: Extra Large</option>
-          </select>
-          <select id="theme-select" aria-label="Theme">
-            <option value="auto">Theme: Auto</option>
-            <option value="light">Theme: Light</option>
-            <option value="dark">Theme: Dark</option>
-          </select>
-        </div>
-      </div>
-      
-        <div class="layout">
-          <aside class="nav-sidebar"><section class="nav-section"><h2>Handbook</h2><div class="nav-group-block"><div class="nav-group-title">Start</div><ul class="nav-tree"><li class="nav-tree-node"><a href="index.html" class="nav-item">Overview</a></li><li class="nav-tree-node"><a href="getting-started.html" class="nav-item active">Getting Started</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">Role Paths</div><ul class="nav-tree"><li class="nav-tree-node"><a href="role-new-user.html" class="nav-item">New User Handbook</a></li><li class="nav-tree-node"><a href="role-sre-ops.html" class="nav-item">SRE / Operator Handbook</a></li><li class="nav-tree-node"><a href="role-automation-ci.html" class="nav-item">Automation / CI Handbook</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">Core Operations</div><ul class="nav-tree"><li class="nav-tree-node"><a href="dashboard.html" class="nav-item">Dashboard Operator Handbook</a></li><li class="nav-tree-node"><a href="datasource.html" class="nav-item">Datasource Operator Handbook</a></li><li class="nav-tree-node"><a href="alert.html" class="nav-item">Alert Operator Handbook</a></li><li class="nav-tree-node"><a href="access.html" class="nav-item">Access Management (Identity &amp; Orgs)</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">Governance</div><ul class="nav-tree"><li class="nav-tree-node"><a href="architecture.html" class="nav-item">Architecture &amp; Design Principles</a></li><li class="nav-tree-node"><a href="change-overview-status.html" class="nav-item">Project Status &amp; Change Overview</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">Scenarios &amp; Reference</div><ul class="nav-tree"><li class="nav-tree-node"><a href="scenarios.html" class="nav-item">Operator Scenarios</a></li><li class="nav-tree-node"><a href="recipes.html" class="nav-item">Best Practices &amp; Real-World Recipes</a></li><li class="nav-tree-node"><a href="reference.html" class="nav-item">Technical Reference Manual</a></li><li class="nav-tree-node"><a href="troubleshooting.html" class="nav-item">Troubleshooting &amp; Glossary</a></li></ul></div></section><section class="nav-section"><h2>Command Reference</h2><a href="../../commands/en/index.html" class="nav-command-entry">Open command docs</a></section></aside>
-          <article class="article">
-            <div style="margin-bottom:12px; font-size:0.84rem; color:color-mix(in srgb, var(--muted) 78%, white); font-weight:460;"><a href="../../index.html" style="color:inherit;text-decoration:none;">Home</a> / Handbook / Getting Started</div>
-            <div class="hero-eyebrow">Docs</div><h1><span class="hero-title-main">Getting Started</span></h1>
-            <p>This guide covers the current first-run setup for <code>grafana-util</code>.</p>
+  <a class="brand" href="../../index.html">grafana-util docs</a>
+  <div class="themebar">
+    <select id="page-locale-select" aria-label="Language switch"><option value="" selected>Language: English</option><option value="../zh-TW/getting-started.html">Switch to 繁體中文</option></select><select id="jump-select" aria-label="Jump"><option value="" selected>Jump to...</option><optgroup label="Handbook"><option value="index.html">Overview</option><option value="what-is-grafana-util.html">What grafana-util is for</option><option value="getting-started.html">Getting Started</option><option value="role-new-user.html">New User Handbook</option><option value="role-sre-ops.html">SRE / Operator Handbook</option><option value="role-automation-ci.html">Automation / CI Handbook</option><option value="architecture.html">Architecture &amp; Design Principles</option><option value="dashboard.html">Dashboard Operator Handbook</option><option value="datasource.html">Datasource Operator Handbook</option><option value="alert.html">Alert Operator Handbook</option><option value="access.html">Access Management (Identity &amp; Access)</option><option value="change-overview-status.html">Project Status &amp; Change Overview</option><option value="scenarios.html">Operator Scenarios</option><option value="recipes.html">Best Practices &amp; Real-World Recipes</option><option value="reference.html">Technical Reference</option><option value="troubleshooting.html">Troubleshooting &amp; Glossary</option></optgroup><optgroup label="Commands"><option value="../../commands/en/dashboard.html">Dashboard</option><option value="../../commands/en/alert.html">Alert</option><option value="../../commands/en/datasource.html">Datasource</option><option value="../../commands/en/access.html">Access</option><option value="../../commands/en/profile.html">Profile</option><option value="../../commands/en/status.html">Status</option><option value="../../commands/en/overview.html">Overview</option><option value="../../commands/en/change.html">Change</option><option value="../../commands/en/snapshot.html">Snapshot</option></optgroup></select>
+    <select id="font-select" aria-label="Font Size">
+      <option value="0.9">Font: Compact</option>
+      <option value="1">Font: Default</option>
+      <option value="1.1">Font: Large</option>
+      <option value="1.2">Font: Extra Large</option>
+    </select>
+    <select id="theme-select" aria-label="Theme">
+      <option value="auto">Theme: Auto</option>
+      <option value="light">Theme: Light</option>
+      <option value="dark">Theme: Dark</option>
+    </select>
+  </div>
+</div>
+
+      <div class="layout">
+  <aside class="nav-sidebar"><section class="nav-section"><h2>Handbook</h2><div class="nav-group-block"><div class="nav-group-title">Start</div><ul class="nav-tree"><li class="nav-tree-node"><a href="index.html" class="nav-item">Overview</a></li><li class="nav-tree-node"><a href="what-is-grafana-util.html" class="nav-item">What grafana-util is for</a></li><li class="nav-tree-node"><a href="getting-started.html" class="nav-item active">Getting Started</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">Role Paths</div><ul class="nav-tree"><li class="nav-tree-node"><a href="role-new-user.html" class="nav-item">New User Handbook</a></li><li class="nav-tree-node"><a href="role-sre-ops.html" class="nav-item">SRE / Operator Handbook</a></li><li class="nav-tree-node"><a href="role-automation-ci.html" class="nav-item">Automation / CI Handbook</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">Core Operations</div><ul class="nav-tree"><li class="nav-tree-node"><a href="dashboard.html" class="nav-item">Dashboard Operator Handbook</a></li><li class="nav-tree-node"><a href="datasource.html" class="nav-item">Datasource Operator Handbook</a></li><li class="nav-tree-node"><a href="alert.html" class="nav-item">Alert Operator Handbook</a></li><li class="nav-tree-node"><a href="access.html" class="nav-item">Access Management (Identity &amp; Access)</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">Governance</div><ul class="nav-tree"><li class="nav-tree-node"><a href="architecture.html" class="nav-item">Architecture &amp; Design Principles</a></li><li class="nav-tree-node"><a href="change-overview-status.html" class="nav-item">Project Status &amp; Change Overview</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">Scenarios &amp; Reference</div><ul class="nav-tree"><li class="nav-tree-node"><a href="scenarios.html" class="nav-item">Operator Scenarios</a></li><li class="nav-tree-node"><a href="recipes.html" class="nav-item">Best Practices &amp; Real-World Recipes</a></li><li class="nav-tree-node"><a href="reference.html" class="nav-item">Technical Reference</a></li><li class="nav-tree-node"><a href="troubleshooting.html" class="nav-item">Troubleshooting &amp; Glossary</a></li></ul></div></section><section class="nav-section"><h2>Command Reference</h2><a href="../../commands/en/index.html" class="nav-command-entry">Open command docs</a></section></aside>
+
+  <article class="article">
+    <div class="breadcrumbs"><a href="../../index.html">Home</a> / Handbook / Getting Started</div>
+
+    <div class="hero-eyebrow">Docs</div>
+<h1><span class="hero-title-main">Getting Started</span></h1>
+
+
+    <p>This guide covers the current first-run setup for <code>grafana-util</code>.</p>
+<p>The most important design rule to understand up front is that the CLI supports several connection patterns. You can:</p>
+<ul><li>pass the Grafana URL and auth flags directly on a command</li><li>prompt for a password or token without echoing it</li><li>let environment variables supply the auth values</li><li>store repeatable defaults in a repo-local profile and reuse them with <code>--profile</code></li></ul>
+<p>Profiles are there to simplify repeated work. They are not the only way to start.</p>
 <p>For the exact flags behind this chapter, keep <a href="../../commands/en/profile.html">profile</a>, <a href="../../commands/en/status.html">status</a>, and <a href="../../commands/en/overview.html">overview</a> open beside it.</p>
 <h2 id="step-1-installation">Step 1: Installation</h2>
 <h3 id="download-and-install">Download and Install</h3>
@@ -563,18 +658,28 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <p><strong>Expected Output:</strong></p>
 <pre><code>grafana-util 0.7.3</code></pre>
 <p>This confirms that the binary is on your <code>PATH</code> and matches the checked-in release.</p>
-<h2 id="step-2-profile-files">Step 2: Profile Files</h2>
+<h2 id="step-2-connection-patterns-and-profile-files">Step 2: Connection Patterns And Profile Files</h2>
 <p>Profile workflows are repo-local. <code>grafana-util profile</code> works against <code>grafana-util.yaml</code> in the current working directory by default, or against the file pointed to by <code>GRAFANA_UTIL_CONFIG</code>.</p>
 <h3 id="auth-modes-at-a-glance">Auth modes at a glance</h3>
-<p>Use the auth modes in this order:</p>
-<table><thead><tr><th>Pattern</th><th>Best for</th><th>Example</th></tr></thead><tbody><tr><td><code>--profile</code></td><td>daily operator workflows and CI jobs</td><td><code>grafana-util status live --profile prod --output yaml</code></td></tr><tr><td>direct Basic auth</td><td>quick local checks, bootstrap, admin-only workflows</td><td><code>grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output yaml</code></td></tr><tr><td>direct token</td><td>narrow API automation that stays inside one org or one scoped permission set</td><td><code>grafana-util overview live --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --output yaml</code></td></tr></tbody></table>
-<p>When you want environment-backed secrets, prefer storing them in a profile such as <code>password_env: GRAFANA_PROD_PASSWORD</code> or <code>token_env: GRAFANA_DEV_TOKEN</code> instead of repeating raw secrets on every command line.</p>
+<p><code>grafana-util</code> can read connection settings from direct flags, prompt-based input, environment variables, or a repo-local profile. Use the auth modes in this order:</p>
+<table><thead><tr><th>Pattern</th><th>Best for</th><th>Example</th></tr></thead><tbody><tr><td>direct Basic auth</td><td>quick local checks, bootstrap, admin-only workflows</td><td><code>grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output yaml</code></td></tr><tr><td><code>--profile</code></td><td>daily operator workflows and CI jobs once the connection is proven</td><td><code>grafana-util status live --profile prod --output yaml</code></td></tr><tr><td>direct token</td><td>narrow API automation that stays inside one org or one scoped permission set</td><td><code>grafana-util overview live --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --output yaml</code></td></tr></tbody></table>
+<p>Environment variables can supply the same auth without repeating sensitive values on every command:</p>
+<ul><li><code>GRAFANA_USERNAME</code></li><li><code>GRAFANA_PASSWORD</code></li><li><code>GRAFANA_API_TOKEN</code></li></ul>
+<p>For repeatable work, prefer storing those references in a profile such as <code>password_env: GRAFANA_PROD_PASSWORD</code> or <code>token_env: GRAFANA_DEV_TOKEN</code> instead of repeating raw secrets on every command line.</p>
+<h3 id="start-direct-then-simplify">Start direct, then simplify</h3>
+<p>For a first run, the cleanest mental model is:</p>
+<ol><li>run one direct read-only command with <code>--url</code> plus either Basic auth or token auth</li><li>once that works, move the repeatable parts into a profile</li><li>keep using <code>--profile</code> for normal day-to-day work</li></ol>
 <h3 id="1-pick-how-you-want-to-create-profiles">1. Pick how you want to create profiles</h3>
-<pre><code>grafana-util profile init --overwrite</code></pre>
-<pre><code>grafana-util profile add dev --url http://127.0.0.1:3000 --basic-user admin --prompt-password</code></pre>
-<pre><code>grafana-util profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN --store-secret os</code></pre>
-<pre><code>grafana-util profile example --mode full</code></pre>
+<pre><code>grafana-util profile init --overwrite
+grafana-util profile add dev --url http://127.0.0.1:3000 --basic-user admin --prompt-password
+grafana-util profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN --store-secret os
+grafana-util profile example --mode full</code></pre>
 <p><code>profile init</code> creates a minimal starter <code>grafana-util.yaml</code>. <code>profile add</code> can create a reusable Basic-auth or token-backed profile in one step, and <code>profile example</code> prints a fully commented reference template that you can copy and edit.</p>
+<p>If you are still proving basic connectivity, you can do that before any profile work:</p>
+<pre><code>grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output yaml</code></pre>
+<p>Then translate that same connection into a reusable profile:</p>
+<pre><code>grafana-util profile add dev --url http://127.0.0.1:3000 --basic-user admin --prompt-password
+grafana-util status live --profile dev --output yaml</code></pre>
 <p>By default, the config file lives next to your current checkout. If you point <code>GRAFANA_UTIL_CONFIG</code> somewhere else, the helper files follow that config directory:</p>
 <table><thead><tr><th>File</th><th>Default location</th><th>Purpose</th></tr></thead><tbody><tr><td><code>grafana-util.yaml</code></td><td>current working directory, or the path given by <code>GRAFANA_UTIL_CONFIG</code></td><td>repo-local profile definitions</td></tr><tr><td><code>.grafana-util.secrets.yaml</code></td><td>same directory as <code>grafana-util.yaml</code></td><td>encrypted secret store used by <code>encrypted-file</code> mode</td></tr><tr><td><code>.grafana-util.secrets.key</code></td><td>same directory as <code>grafana-util.yaml</code></td><td>local key file used by <code>encrypted-file</code> without a passphrase</td></tr></tbody></table>
 <h3 id="2-list-the-profiles-in-the-config-file">2. List the profiles in the config file</h3>
@@ -620,27 +725,36 @@ Examples:
   grafana-util overview live --url http://localhost:3000 --basic-user admin --basic-password admin --output yaml</code></pre>
 <p><code>overview live</code> is a thin wrapper over shared live status. Use <code>--output yaml</code> for a readable summary and <code>--output interactive</code> for the TUI workbench.</p>
 <h3 id="3-run-the-same-read-only-check-in-both-common-auth-styles">3. Run the same read-only check in both common auth styles</h3>
-<pre><code>grafana-util overview live --profile prod --output yaml</code></pre>
-<pre><code>grafana-util overview live --url http://localhost:3000 --basic-user admin --prompt-password --output interactive</code></pre>
+<pre><code>grafana-util overview live --profile prod --output yaml
+grafana-util overview live --url http://localhost:3000 --basic-user admin --prompt-password --output interactive</code></pre>
 <p>Use the profile form for normal repeatable work. Keep the direct Basic-auth form for bootstrap, break-glass access, or admin-only workflows when you are not ready to create a profile yet.</p>
+<p>If your shell already exports auth variables, the same read can stay short without creating a profile first:</p>
+<pre><code>export GRAFANA_USERNAME=admin
+export GRAFANA_PASSWORD=admin
+grafana-util overview live --url http://localhost:3000 --output yaml</code></pre>
 <h3 id="4-know-the-common-token-limitation">4. Know the common token limitation</h3>
 <p>Token auth can be enough for single-org read flows, but multi-org or admin-scoped operations often need a user session or Basic auth with broader Grafana privileges.</p>
-<ul><li><code>--all-orgs</code> inventory and export flows are safest with <code>--profile</code> backed by admin credentials or with direct Basic auth.</li><li>Org, user, team, and service-account management commonly needs admin-level credentials and may not work with a narrow API token.</li><li>When a token cannot see all target orgs, the command output is limited by that token&#x27;s scope even if the flags ask for a broader view.</li></ul>
+<ul><li><code>--all-orgs</code> inventory and export flows are safest with <code>--profile</code> backed by admin credentials or with direct Basic auth.</li><li>Org, user, team, and service account management commonly needs admin-level credentials and may not work with a narrow API token.</li><li>When a token cannot see all target orgs, the command output is limited by that token&#x27;s scope even if the flags ask for a broader view.</li></ul>
 <h2 id="interactive-mode-tui">Interactive Mode (TUI)</h2>
 <p><code>grafana-util dashboard browse</code> opens the live dashboard tree in a terminal UI. <code>overview live --output interactive</code> opens the interactive overview mode.</p>
 <p><a href="index.html">🏠 Home</a> | <a href="architecture.html">➡️ Next: Architecture &amp; Design</a></p>
-            <nav class="footer-nav"><a class="link-card" href="index.html"><span>Previous</span>Operator Handbook: grafana-util</a><a class="link-card" href="role-new-user.html"><span>Next</span>New User Handbook</a></nav>
-          </article>
-          <aside class="sidebar"><section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#step-1-installation"><span class="toc-label">Step 1: Installation</span></a></li><li class="toc-level-3"><a href="#download-and-install"><span class="toc-label">Download and Install</span></a></li><li class="toc-level-3"><a href="#verify-version"><span class="toc-label">Verify Version</span></a></li><li class="toc-level-2"><a href="#step-2-profile-files"><span class="toc-label">Step 2: Profile Files</span></a></li><li class="toc-level-3"><a href="#auth-modes-at-a-glance"><span class="toc-label">Auth modes at a glance</span></a></li><li class="toc-level-3"><a href="#1-pick-how-you-want-to-create-profiles"><span class="toc-label">1. Pick how you want to create profiles</span></a></li><li class="toc-level-3"><a href="#2-list-the-profiles-in-the-config-file"><span class="toc-label">2. List the profiles in the config file</span></a></li><li class="toc-level-3"><a href="#3-inspect-one-resolved-profile"><span class="toc-label">3. Inspect one resolved profile</span></a></li><li class="toc-level-2"><a href="#step-3-first-read-only-checks"><span class="toc-label">Step 3: First Read-Only Checks</span></a></li><li class="toc-level-3"><a href="#1-project-status-entry-point"><span class="toc-label">1. Project Status Entry Point</span></a></li><li class="toc-level-3"><a href="#2-overview-entry-point"><span class="toc-label">2. Overview Entry Point</span></a></li><li class="toc-level-3"><a href="#3-run-the-same-read-only-check-in-both-common-auth-styles"><span class="toc-label">3. Run the same read-only check in both common auth styles</span></a></li><li class="toc-level-3"><a href="#4-know-the-common-token-limitation"><span class="toc-label">4. Know the common token limitation</span></a></li><li class="toc-level-2"><a href="#interactive-mode-tui"><span class="toc-label">Interactive Mode (TUI)</span></a></li></ul></section><section class="sidebar-section"><h2>Related</h2></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: English</a></li><li><a href="../zh-TW/getting-started.html" class="sidebar-meta-link">Switch to 繁體中文</a></li></ul></section></aside>
-        </div>
-        
+    <nav class="footer-nav"><a class="link-card" href="what-is-grafana-util.html"><span>Previous</span>What grafana-util is for</a><a class="link-card" href="role-new-user.html"><span>Next</span>New User Handbook</a></nav>
+  </article>
+  <aside class="sidebar">
+  <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#step-1-installation"><span class="toc-label">Step 1: Installation</span></a></li><li class="toc-level-3"><a href="#download-and-install"><span class="toc-label">Download and Install</span></a></li><li class="toc-level-3"><a href="#verify-version"><span class="toc-label">Verify Version</span></a></li><li class="toc-level-2"><a href="#step-2-connection-patterns-and-profile-files"><span class="toc-label">Step 2: Connection Patterns And Profile Files</span></a></li><li class="toc-level-3"><a href="#auth-modes-at-a-glance"><span class="toc-label">Auth modes at a glance</span></a></li><li class="toc-level-3"><a href="#start-direct-then-simplify"><span class="toc-label">Start direct, then simplify</span></a></li><li class="toc-level-3"><a href="#1-pick-how-you-want-to-create-profiles"><span class="toc-label">1. Pick how you want to create profiles</span></a></li><li class="toc-level-3"><a href="#2-list-the-profiles-in-the-config-file"><span class="toc-label">2. List the profiles in the config file</span></a></li><li class="toc-level-3"><a href="#3-inspect-one-resolved-profile"><span class="toc-label">3. Inspect one resolved profile</span></a></li><li class="toc-level-2"><a href="#step-3-first-read-only-checks"><span class="toc-label">Step 3: First Read-Only Checks</span></a></li><li class="toc-level-3"><a href="#1-project-status-entry-point"><span class="toc-label">1. Project Status Entry Point</span></a></li><li class="toc-level-3"><a href="#2-overview-entry-point"><span class="toc-label">2. Overview Entry Point</span></a></li><li class="toc-level-3"><a href="#3-run-the-same-read-only-check-in-both-common-auth-styles"><span class="toc-label">3. Run the same read-only check in both common auth styles</span></a></li><li class="toc-level-3"><a href="#4-know-the-common-token-limitation"><span class="toc-label">4. Know the common token limitation</span></a></li><li class="toc-level-2"><a href="#interactive-mode-tui"><span class="toc-label">Interactive Mode (TUI)</span></a></li></ul></section>
+  <section class="sidebar-section"><h2>Related</h2></section>
+  <section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section>
+  <section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: English</a></li><li><a href="../zh-TW/getting-started.html" class="sidebar-meta-link">Switch to 繁體中文</a></li></ul></section>
+</aside>
+
+</div>
+
     </div>
     <footer class="site-footer">Source: getting-started.md</footer>
   </div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js" async></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js" async></script>
-  
-<script>
+  <script>
 (() => {
   const root = document.documentElement;
   const storageKey = "grafana-util-docs-theme";
@@ -672,8 +786,7 @@ Examples:
     const copyBtn = document.createElement("button"); copyBtn.className = "control-btn"; copyBtn.innerText = "Copy";
     copyBtn.onclick = () => {
       const raw = block.querySelector("code").innerText;
-      const filtered = raw.split("\n").filter(l => l.trim() && !l.trim().startsWith("#")).join("\n") || raw;
-      navigator.clipboard.writeText(filtered).then(() => { copyBtn.innerText="Copied!"; setTimeout(()=>copyBtn.innerText="Copy", 2000); });
+      navigator.clipboard.writeText(raw).then(() => { copyBtn.innerText="Copied!"; setTimeout(()=>copyBtn.innerText="Copy", 2000); });
     };
     controls.append(wrapBtn, copyBtn); block.append(controls);
   });
@@ -684,6 +797,8 @@ Examples:
 
   const jumpSelect = document.getElementById("jump-select");
   if(jumpSelect) jumpSelect.onchange = (e) => { if(e.target.value) window.location.href = e.target.value; };
+  const pageLocaleSelect = document.getElementById("page-locale-select");
+  if(pageLocaleSelect) pageLocaleSelect.onchange = (e) => { if(e.target.value) window.location.href = e.target.value; };
 
   const landingI18n = document.getElementById("landing-i18n");
   const localeSelect = document.getElementById("locale-select");

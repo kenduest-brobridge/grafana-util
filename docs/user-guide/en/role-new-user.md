@@ -1,6 +1,19 @@
 # New User Handbook
 
-This page is for someone opening `grafana-util` for the first time, or for a teammate who needs a safe local checklist before they touch live Grafana data.
+This page is for someone opening `grafana-util` for the first time, or for a teammate who needs a safe local checklist before touching live Grafana data.
+
+The first thing to understand is that `grafana-util` does not force one auth style. You can connect in several ways:
+
+- pass the Grafana URL and credentials directly on each command
+- prompt for a password or token instead of pasting it into the shell
+- rely on environment variables that the CLI already knows how to read
+- save repeatable defaults in a repo-local profile and call them back with `--profile`
+
+Profiles matter because they remove repetition, not because direct flags are unsupported. The normal learning path is:
+
+1. prove the binary can reach Grafana with one safe read
+2. understand which auth form you are using
+3. move the repeatable parts into a profile once you know the connection works
 
 ## Who It Is For
 
@@ -10,36 +23,60 @@ This page is for someone opening `grafana-util` for the first time, or for a tea
 
 ## Primary Goals
 
-- Verify the binary, profile file, and live connectivity.
-- Learn the safe auth path before you memorize the full command surface.
+- Verify the binary, live connectivity, and profile file behavior.
+- Learn the supported auth inputs before memorizing the full command surface.
+- Understand when direct flags are enough and when a profile becomes the cleaner choice.
 - Avoid pasting secrets into long command lines unless you are bootstrapping.
 
 ## Typical First-Day Tasks
 
 - Confirm the installed binary is on `PATH`.
-- Create one repo-local profile for a lab or dev Grafana.
+- Run one direct read-only command against a lab or dev Grafana.
+- Create one repo-local profile once the direct connection works.
 - Run one safe live read and recognize the difference between `status live` and `overview live`.
 - Learn which docs to keep open before moving on to dashboards, alerts, or access workflows.
 
+## How Connection And Auth Work
+
+`grafana-util` accepts connection details in more than one place.
+
+- `--url` selects the Grafana base URL.
+- `--basic-user` plus `--basic-password`, or `--prompt-password`, uses Basic auth.
+- `--token`, or `--prompt-token`, uses token auth.
+- `GRAFANA_USERNAME`, `GRAFANA_PASSWORD`, and `GRAFANA_API_TOKEN` can supply the same credentials through environment variables.
+- `--profile` loads the reusable defaults stored in `grafana-util.yaml`.
+
+That means you can always start with a one-off command, then move to a profile later if you do not want to keep repeating the same URL and auth flags.
+
 ## Recommended Auth And Secret Approach
 
-Start with a repo-local profile and keep secrets out of the command line when you can.
+Use the auth modes in this order:
 
-1. `--profile` with `password_env`, `token_env`, or an OS-backed secret store for repeatable use.
-2. Direct Basic auth with `--prompt-password` for quick local bootstrap or break-glass checks.
-3. Token auth only when you already know the token is scoped tightly enough for the read you want.
+1. Direct Basic auth with `--prompt-password` for a first local bootstrap or a one-time reachability check.
+2. `--profile` with `password_env`, `token_env`, or an OS-backed secret store for repeatable day-to-day work.
+3. Direct token auth only when you already know the token is scoped tightly enough for the read you want.
+
+The key idea is simple: direct flags prove the connection, profiles simplify repeated use.
 
 ## First Commands To Run
 
 ```bash
 grafana-util --version
+grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output yaml
 grafana-util profile init --overwrite
 grafana-util profile example --mode basic
 grafana-util profile add dev --url http://127.0.0.1:3000 --basic-user admin --prompt-password
 grafana-util status live --profile dev --output yaml
 ```
 
-If you do not have a profile yet, use direct Basic auth once to confirm the instance is reachable:
+The sequence matters:
+
+- first prove that the binary can talk to Grafana with one direct command
+- then initialize a repo-local config
+- then add a reusable profile for the same target
+- then run the same safe read again through `--profile`
+
+If you do not have a profile yet, this is the shortest safe bootstrap:
 
 ```bash
 grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output yaml
@@ -51,11 +88,20 @@ If you already have a scoped token, you can check the same live surface without 
 grafana-util overview live --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output json
 ```
 
+If your shell already exports auth variables, you can also keep the command shorter:
+
+```bash
+export GRAFANA_USERNAME=admin
+export GRAFANA_PASSWORD=admin
+grafana-util status live --url http://localhost:3000 --output yaml
+```
+
 ## What Good Looks Like
 
 You are ready to leave the new-user path when:
 
 - `grafana-util --version` works from your normal shell
+- one direct read-only command succeeds against the Grafana you care about
 - `profile show --profile dev` resolves the fields you expect
 - `status live --profile dev` returns readable output without prompting surprises
 - you know whether your next step is dashboards, alerts, access, or CI automation
@@ -75,6 +121,7 @@ You are ready to leave the new-user path when:
 
 ## Common Mistakes And Limits
 
+- Do not assume profiles are mandatory before the first connectivity check; one direct command is a good starting point.
 - Do not start with token auth if you are still learning the profile rules; token scope can hide data and make the output look incomplete.
 - Do not use `--show-secrets` on shared terminals or in screenshots.
 - Do not expect `--all-orgs` inventory flows to work reliably with a narrow token.

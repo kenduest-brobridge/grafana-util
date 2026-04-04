@@ -2,9 +2,11 @@
 
 ## Root
 
-用途：將已分階段的 artifact 彙總成一份全專案總覽。
+用途：把已準備好的 artifact 彙整成一份全專案總覽。
 
 適用時機：當你想在查看 status 或推進變更前，先一次看完 dashboard、datasource、access、alert 與 change 相關 artifact 時。
+
+說明：如果你需要先看一份全專案總覽，再決定要切到哪個較窄的工作流，先看這一頁最合適。`overview` 指令群組適合想一次掃過 staged artifact 或 live 狀態的人，不必先把每個資產指令都打開。
 
 主要旗標：分階段輸入，例如 `--dashboard-export-dir`、`--dashboard-provisioning-dir`、`--datasource-export-dir`、`--datasource-provisioning-file`、`--access-user-export-dir`、`--access-team-export-dir`、`--access-org-export-dir`、`--access-service-account-export-dir`、`--desired-file`、`--source-bundle`、`--target-inventory`、`--alert-export-dir`、`--availability-file`、`--mapping-file` 和 `--output`。
 
@@ -19,11 +21,11 @@ grafana-util overview --source-bundle ./sync-source-bundle.json --target-invento
 
 ## `live`
 
-用途：透過共用的 status live 路徑，渲染 live overview。
+用途：透過共用的 status live 流程，輸出 live overview。
 
-適用時機：當你需要與 `status live` 相同的 live readout，但希望從 overview 命名空間來操作時。
+適用時機：當你需要與 `status live` 相同的 live readout，但想從 overview 這個指令群組來操作時。
 
-主要旗標：共用 status live 路徑的 live 連線與驗證旗標，以及 `--sync-summary-file`、`--bundle-preflight-file`、`--promotion-summary-file`、`--mapping-file`、`--availability-file` 和 `--output`。
+主要旗標：共用 status live 流程的 live 連線與驗證旗標，以及 `--sync-summary-file`、`--bundle-preflight-file`、`--promotion-summary-file`、`--mapping-file`、`--availability-file` 和 `--output`。
 
 說明：
 - 可重複執行的 live overview 工作優先用 `--profile`。

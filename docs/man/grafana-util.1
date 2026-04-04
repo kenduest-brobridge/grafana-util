@@ -31,31 +31,251 @@ The checked-in English command reference pages under docs/commands/en/ are the h
 .SH TOP-LEVEL COMMANDS
 .TP
 .B dashboard
-grafana\-util dashboard is the namespace for live dashboard workflows, local draft handling, export/import review, inspection, topology, and screenshots. The same namespace is also available as grafana\-util db.
+grafana\-util dashboard is the namespace for live dashboard workflows, local draft handling, export/import review, inspection, topology, and screenshots. The same namespace is also available as grafana\-util db. Use when: You need to browse live dashboards, fetch or clone a live dashboard into a local JSON draft, compare local files with Grafana, inspect export or live metadata, convert raw dashboards into prompt JSON, or publish a prepared dashboard back to Grafana.
 .TP
 .B alert
-Run the alerting command surface for exporting, importing, diffing, planning, applying, deleting, authoring, and listing Grafana alert resources.
+Run the alerting command surface for exporting, importing, diffing, planning, applying, deleting, authoring, and listing Grafana alert resources. Use when: Export local alert bundles from Grafana.; Import or diff alert bundles against live Grafana state.; Build and apply a reviewed alert management plan.; Author staged rules, contact points, routes, and templates.; List live alert rules, contact points, mute timings, and templates.
 .TP
 .B datasource
-grafana\-util datasource is the namespace for catalog lookup, live browsing, export/import, diff, and live create/modify/delete workflows. The same namespace is also available as grafana\-util ds.
+grafana\-util datasource is the namespace for catalog lookup, live browsing, export/import, diff, and live create/modify/delete workflows. The same namespace is also available as grafana\-util ds. Use when: You want to inspect supported datasource types, browse live inventory, export a datasource bundle, compare a local bundle with Grafana, or create and maintain live datasources.
 .TP
 .B access
-Run the access\-management command surface for users, orgs, teams, and service accounts.
+Run the access\-management command surface for users, orgs, teams, and service accounts. Use when: List or browse access inventory.; Create, modify, export, import, diff, or delete access resources.; Manage service\-account tokens.
 .TP
 .B profile
-list, inspect, add, and initialize repo\-local grafana\-util profiles.
+list, inspect, add, and initialize repo\-local grafana\-util profiles. Use when: Want to keep Grafana connection defaults in the current checkout and reuse them with \-\-profile.
 .TP
 .B status
-render shared project\-wide staged or live status.
+render shared project\-wide staged or live status. Use when: Need the final gate view for exported artifacts or live Grafana state.
 .TP
 .B overview
-summarize staged artifacts into one project\-wide overview.
+summarize staged artifacts into one project\-wide overview. Use when: Want a single readout across dashboard, datasource, access, alert, and change artifacts before checking status or promoting changes.
 .TP
 .B change
-review\-first sync workflows with optional live Grafana fetch and apply paths.
+review\-first sync workflows with optional live Grafana fetch and apply paths. Use when: Need to summarize desired resources, plan against live state, review a plan, apply a reviewed plan, audit drift, or build bundle and promotion preflight documents.
 .TP
 .B snapshot
-export and review Grafana snapshot inventory bundles.
+export and review Grafana snapshot inventory bundles. Use when: Want a local snapshot root that captures dashboard and datasource inventory for later inspection.
+.SH SUBCOMMAND MANPAGES
+.SS dashboard
+.TP
+.B grafana\-util\-dashboard\-browse(1)
+Open the live dashboard tree in an interactive terminal UI. Use when: You want to explore folders, select a dashboard, or inspect the live tree before fetching, diffing, importing, or deleting.
+.TP
+.B grafana\-util\-dashboard\-get(1)
+Fetch one live dashboard into an API\-safe local JSON draft. Use when: You need a local copy of one live dashboard for review, patching, cloning, or later publish work.
+.TP
+.B grafana\-util\-dashboard\-clone\-live(1)
+Clone one live dashboard into a local draft with optional overrides. Use when: You want to start from an existing live dashboard but give the local draft a new title, UID, or folder target.
+.TP
+.B grafana\-util\-dashboard\-list(1)
+List dashboard summaries without writing export files. Use when: You want a non\-interactive inventory view of live dashboards, optionally with resolved sources or structured output.
+.TP
+.B grafana\-util\-dashboard\-export(1)
+Export dashboards to raw/, prompt/, and provisioning/ files. Use when: You need a local export tree for later import, review, diff, or file\-provisioning workflows. The prompt/ lane is for Grafana UI import, not dashboard API import; use dashboard raw\-to\-prompt when you need to convert ordinary or raw dashboard JSON into prompt JSON.
+.TP
+.B grafana\-util\-dashboard\-import(1)
+Import dashboard JSON files through the Grafana API. Use when: You have a local export tree or provisioning tree and need to push dashboards back into Grafana, either live or as a dry run. This command consumes raw/ or provisioning/ inputs; it does not consume the Grafana UI prompt/ lane.
+.TP
+.B grafana\-util\-dashboard\-patch\-file(1)
+Patch one local dashboard JSON file in place or write it to a new path. Use when: You need to rewrite dashboard metadata locally before review or publish, without contacting Grafana.
+.TP
+.B grafana\-util\-dashboard\-review(1)
+Review one local dashboard JSON file without touching Grafana. Use when: You want a local read\-only check of a dashboard draft before publishing or importing it.
+.TP
+.B grafana\-util\-dashboard\-publish(1)
+Publish one local dashboard JSON file through the existing dashboard import pipeline. Use when: A local draft is ready to go live and you want the command to stage or push it through the same import path used by the CLI.
+.TP
+.B grafana\-util\-dashboard\-delete(1)
+Delete live dashboards by UID or folder path. Use when: You need to remove one dashboard, a folder subtree, or a subtree plus the matched folders themselves.
+.TP
+.B grafana\-util\-dashboard\-diff(1)
+Compare local dashboard files against live Grafana dashboards. Use when: You want to see what would change before importing or publishing a dashboard bundle.
+.TP
+.B grafana\-util\-dashboard\-inspect\-export(1)
+Analyze dashboard export directories with operator\-summary and report\-contract views. Use when: You want to read a local export tree, inspect its structure, or render governance and dependency reports without contacting Grafana.
+.TP
+.B grafana\-util\-dashboard\-inspect\-live(1)
+Analyze live Grafana dashboards via a temporary raw\-export snapshot. Use when: You need the same inspection views as inspect\-export, but sourced from live Grafana instead of a local export tree.
+.TP
+.B grafana\-util\-dashboard\-inspect\-vars(1)
+List dashboard templating variables and datasource\-like choices from live Grafana. Use when: You need to inspect variable state, feed a screenshot workflow, or debug variable\-scoped dashboard URLs.
+.TP
+.B grafana\-util\-dashboard\-governance\-gate(1)
+Evaluate governance policy against dashboard inspect JSON artifacts. Use when: You already have governance\-json and query\-report artifacts and want a policy pass or fail result before promotion.
+.TP
+.B grafana\-util\-dashboard\-topology(1)
+Build a deterministic dashboard topology graph from JSON artifacts. Use when: You need a graph view of dashboards, folders, variables, datasource links, and optional alert contract data. The command also accepts the graph alias.
+.TP
+.B grafana\-util\-dashboard\-screenshot(1)
+Open one dashboard in a headless browser and capture image or PDF output. Use when: You need a reproducible dashboard or panel screenshot, especially for docs, incident notes, or visual debugging.
+.SS alert
+.TP
+.B grafana\-util\-alert\-export(1)
+Export alerting resources into raw/ JSON files. Use when: Capture alert rules, contact points, mute timings, templates, and policies from Grafana.; Build a local bundle before review or import.
+.TP
+.B grafana\-util\-alert\-import(1)
+Import alerting resource JSON files through the Grafana API. Use when: Recreate an exported alert bundle in Grafana.; Update existing alert resources with \-\-replace\-existing.; Preview import actions before making changes.
+.TP
+.B grafana\-util\-alert\-diff(1)
+Compare local alerting export files against live Grafana resources. Use when: Check a raw export directory against Grafana before import or plan work.; Render the diff as plain text or structured JSON.
+.TP
+.B grafana\-util\-alert\-plan(1)
+Build a staged alert management plan from desired alert resources. Use when: Review the changes needed to align Grafana with a desired\-state alert tree.; Prune live\-only alert resources from the plan when needed.; Repair linked rules with dashboard or panel remapping during planning.
+.TP
+.B grafana\-util\-alert\-apply(1)
+Apply a reviewed alert management plan. Use when: Execute a plan that was reviewed outside the live Grafana connection.; Require explicit acknowledgement before touching Grafana.
+.TP
+.B grafana\-util\-alert\-delete(1)
+Delete one explicit alert resource identity. Use when: Remove a single rule, contact point, mute timing, policy tree, or template by identity.; Reset the managed notification policy tree only when you intend to allow it.
+.TP
+.B grafana\-util\-alert\-add\-rule(1)
+Author a staged alert rule from the higher\-level authoring surface. Use when: Create a new rule under a desired\-state alert tree.; Attach labels, annotations, severity, and threshold logic in one command.; Generate a route for the rule unless you explicitly skip it.
+.TP
+.B grafana\-util\-alert\-clone\-rule(1)
+Clone an existing staged alert rule into a new authoring target. Use when: Reuse an existing rule as a starting point for a variant.; Override folder, rule group, receiver, or route behavior while cloning.
+.TP
+.B grafana\-util\-alert\-add\-contact\-point(1)
+Author a staged alert contact point from the higher\-level authoring surface. Use when: Create a new contact point under a desired\-state alert tree.; Preview the generated file before writing it.
+.TP
+.B grafana\-util\-alert\-set\-route(1)
+Author or replace the tool\-owned staged notification route. Use when: Replace the managed route with a new receiver and matcher set.; Re\-run the command to fully replace the managed route instead of merging fields.
+.TP
+.B grafana\-util\-alert\-preview\-route(1)
+Preview the managed route inputs without changing runtime behavior. Use when: Inspect the matcher set you intend to feed into set\-route.; Validate route inputs before writing the managed route document.
+.TP
+.B grafana\-util\-alert\-new\-rule(1)
+Create a low\-level staged alert rule scaffold. Use when: Seed a new rule file in a desired\-state tree.; Start from a simple scaffold before filling in rule details.
+.TP
+.B grafana\-util\-alert\-new\-contact\-point(1)
+Create a low\-level staged alert contact point scaffold. Use when: Seed a new contact point file in a desired\-state tree.; Start from a scaffold before filling in receiver details.
+.TP
+.B grafana\-util\-alert\-new\-template(1)
+Create a low\-level staged alert template scaffold. Use when: Seed a new notification template file in a desired\-state tree.; Start from a scaffold before adding template content.
+.TP
+.B grafana\-util\-alert\-list\-rules(1)
+List live Grafana alert rules. Use when: Inspect alert rule inventory from one org or from all visible orgs.; Render the list in text, table, CSV, JSON, or YAML form.
+.TP
+.B grafana\-util\-alert\-list\-contact\-points(1)
+List live Grafana alert contact points. Use when: Inspect notification endpoints configured in Grafana.; Switch output between text, table, CSV, JSON, and YAML.
+.TP
+.B grafana\-util\-alert\-list\-mute\-timings(1)
+List live Grafana mute timings. Use when: Inspect mute timing inventory from one org or from all visible orgs.; Render the list in text, table, CSV, JSON, or YAML form.
+.TP
+.B grafana\-util\-alert\-list\-templates(1)
+List live Grafana notification templates. Use when: Inspect template inventory from one org or from all visible orgs.; Render the list in text, table, CSV, JSON, or YAML form.
+.SS datasource
+.TP
+.B grafana\-util\-datasource\-types(1)
+Show the built\-in supported datasource type catalog. Use when: You need to see the canonical datasource type ids that the CLI normalizes and supports for create flows.
+.TP
+.B grafana\-util\-datasource\-list(1)
+List live Grafana datasource inventory. Use when: You need a non\-interactive inventory of datasources, either for the current org, one explicit org, or across all visible orgs.
+.TP
+.B grafana\-util\-datasource\-browse(1)
+Open a live datasource browser against Grafana with in\-place modify and delete actions. Use when: You want an interactive inventory view for inspecting, editing, or deleting live datasources.
+.TP
+.B grafana\-util\-datasource\-inspect\-export(1)
+Inspect a local masked recovery bundle without connecting to Grafana. Use when: You want to read datasource export artifacts from disk and review them with text, table, CSV, JSON, YAML, or interactive output.
+.TP
+.B grafana\-util\-datasource\-export(1)
+Export live Grafana datasource inventory as normalized JSON plus provisioning files. Use when: You need a local datasource bundle for later inspection, diff, or import.
+.TP
+.B grafana\-util\-datasource\-import(1)
+Import datasource inventory through the Grafana API. Use when: You have a local datasource bundle or provisioning tree and want to push it into Grafana, either live or as a dry run.
+.TP
+.B grafana\-util\-datasource\-diff(1)
+Compare datasource inventory from a local bundle against live Grafana and print an operator\-summary diff report. Use when: You want a concise live\-versus\-local difference report before import.
+.TP
+.B grafana\-util\-datasource\-add(1)
+Create one live Grafana datasource through the Grafana API. Use when: You want to create a new datasource directly, or dry\-run the create step before applying it.
+.TP
+.B grafana\-util\-datasource\-modify(1)
+Modify one live Grafana datasource through the Grafana API. Use when: A datasource already exists and you need to update its URL, auth, JSON payload, or other live settings.
+.TP
+.B grafana\-util\-datasource\-delete(1)
+Delete one live Grafana datasource through the Grafana API. Use when: A datasource should be removed by UID or by name, either as a dry run or as an acknowledged live delete.
+.SS access
+.TP
+.B grafana\-util\-access\-user(1)
+List, browse, create, modify, export, import, diff, or delete Grafana users. Use when: Inspect users in the current org or in global admin scope.; Create or update users with login, email, role, and admin settings.; Export and import user inventory bundles.; Remove users from the org membership or from the global registry.
+.TP
+.B grafana\-util\-access\-org(1)
+List, create, modify, export, import, diff, or delete Grafana organizations. Use when: Inspect organization inventory and org users.; Create a new organization or rename an existing one.; Export or import org bundles between environments.; Remove an organization by id or exact name.
+.TP
+.B grafana\-util\-access\-team(1)
+List, browse, create, modify, export, import, diff, or delete Grafana teams. Use when: Inspect team inventory and team memberships.; Create or update team membership and admin assignments.; Export or import team bundles.; Remove a team by id or exact name.
+.TP
+.B grafana\-util\-access\-service\-account(1)
+List, create, export, import, diff, or delete Grafana service accounts, and manage their tokens. Use when: Inspect service\-account inventory.; Create or update service\-account bundles.; Generate or delete service\-account tokens.
+.TP
+.B grafana\-util\-access\-service\-account\-token(1)
+Add or delete tokens for a Grafana service account. Use when: Create a new service\-account token.; Delete an existing service\-account token by service\-account name or id.
+.SS profile
+.TP
+.B grafana\-util\-profile\-list(1)
+list profile names from the resolved grafana\-util config file. Use when: Need to confirm which profiles are available in the current checkout.
+.TP
+.B grafana\-util\-profile\-show(1)
+show the selected profile as text, table, csv, json, or yaml. Use when: Want to inspect the resolved connection settings before running a live command.
+.TP
+.B grafana\-util\-profile\-add(1)
+create or replace one named profile without hand\-editing grafana\-util.yaml. Use when: Want a friendlier path than editing YAML directly, especially for storing reusable auth defaults.
+.TP
+.B grafana\-util\-profile\-example(1)
+print a comment\-rich reference config that operators can copy and adapt. Use when: Want one canonical example that explains the supported profile fields and secret storage modes.
+.TP
+.B grafana\-util\-profile\-init(1)
+initialize grafana\-util.yaml in the current working directory. Use when: A checkout does not yet have a repo\-local profile file and you want the built\-in starter template.
+.SS status
+.TP
+.B grafana\-util\-status\-staged(1)
+render project status from staged artifacts. Use when: Need the machine\-readable readiness gate for exported files before apply.
+.TP
+.B grafana\-util\-status\-live(1)
+render project status from live Grafana read surfaces. Use when: Need current Grafana status, optionally deepened with staged context files.
+.SS overview
+.TP
+.B grafana\-util\-overview\-live(1)
+render the live overview by delegating to the shared status live path. Use when: Need the same live readout that status live uses, but want it under the overview namespace.
+.SS change
+.TP
+.B grafana\-util\-change\-summary(1)
+summarize local desired sync resources. Use when: Want a quick size check before planning or applying.
+.TP
+.B grafana\-util\-change\-plan(1)
+build a staged sync plan from desired and live state. Use when: Need a reviewable plan before marking work as reviewed or applying it.
+.TP
+.B grafana\-util\-change\-review(1)
+mark a staged sync plan as reviewed. Use when: A plan has been inspected and should carry an explicit review token before apply.
+.TP
+.B grafana\-util\-change\-apply(1)
+build a gated apply intent from a reviewed sync plan, and optionally execute it live. Use when: A plan is already reviewed and you are ready to emit or execute the apply step.
+.TP
+.B grafana\-util\-change\-audit(1)
+audit managed Grafana resources against a checksum lock and current live state. Use when: Need a drift check or want to refresh a lock snapshot.
+.TP
+.B grafana\-util\-change\-preflight(1)
+build a staged sync preflight document from desired resources and optional availability hints. Use when: Need a structural gate before planning or applying.
+.TP
+.B grafana\-util\-change\-assess\-alerts(1)
+assess alert sync specs for candidate, plan\-only, and blocked states. Use when: Want a focused readout of how alert resources will be classified before bundling or applying.
+.TP
+.B grafana\-util\-change\-bundle(1)
+package exported dashboards, alerting resources, datasource inventory, and metadata into one local source bundle. Use when: Want a single bundle artifact for later sync, review, or preflight steps.
+.TP
+.B grafana\-util\-change\-bundle\-preflight(1)
+build a staged bundle\-level sync preflight document from a source bundle and target inventory. Use when: Need to compare a source bundle against a target inventory before apply.
+.TP
+.B grafana\-util\-change\-promotion\-preflight(1)
+build a staged promotion review handoff from a source bundle and target inventory. Use when: Are preparing a promotion review and want an explicit mapping and availability view.
+.SS snapshot
+.TP
+.B grafana\-util\-snapshot\-export(1)
+export dashboard and datasource inventory into a local snapshot bundle. Use when: Need a local snapshot root that can be reviewed without Grafana access.
+.TP
+.B grafana\-util\-snapshot\-review(1)
+review a local snapshot inventory without touching Grafana. Use when: Want to inspect an exported snapshot root as table, csv, text, json, yaml, or interactive output.
 .TP
 .B sync
 Declarative sync planning and gated apply workflows. Use command-local --help because this repo does not yet carry a generated sync namespace manpage.
@@ -109,29 +329,46 @@ Optional local key file used by the encrypted-file secret store mode.
 .SH DOCUMENTATION
 To render a checked-in manpage from the repo, run man ./docs/man/<name>.1 on BSD or macOS systems, or man -l docs/man/<name>.1 on GNU/Linux systems whose man implementation supports -l.
 .PP
-This repository currently provides top-level and namespace-level generated manpages. For deeper per-subcommand detail, use the matching Markdown command pages under docs/commands/en/ plus command-local --help.
+This repository provides generated top-level, namespace-level, and per-subcommand manpages sourced from docs/commands/en/.
 .SH EXAMPLES
+.SH EXAMPLES
+.PP
+Open the unified CLI help and command namespace list.
 .EX
 grafana-util --help
 .EE
+.PP
+Inspect the dashboard namespace help before choosing a live or file\-based workflow.
 .EX
 grafana-util dashboard --help
 .EE
+.PP
+Render staged or live estate status through a repo\-local profile.
 .EX
 grafana-util status live --profile prod --output yaml
 .EE
+.PP
+Render live estate status with direct Basic auth during bootstrap or break\-glass work.
 .EX
 grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output yaml
 .EE
+.PP
+Summarize live Grafana inventory as JSON under the overview namespace.
 .EX
 grafana-util overview live --url http://localhost:3000 --token $GRAFANA_API_TOKEN --output json
 .EE
+.PP
+Export live dashboards into a local working tree for review or promotion.
 .EX
 grafana-util dashboard export --url http://localhost:3000 --export-dir ./dashboards
 .EE
+.PP
+Build a reviewable alert plan from desired\-state files before apply.
 .EX
 grafana-util alert plan --desired-dir ./alerts/desired --prune --output json
 .EE
+.PP
+Export datasource inventory into a normalized local bundle.
 .EX
 grafana-util datasource export --url http://localhost:3000 --export-dir ./datasources --overwrite
 .EE

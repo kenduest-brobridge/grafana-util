@@ -10,6 +10,11 @@ Run the access-management command surface for users, orgs, teams, and service ac
 - Create, modify, export, import, diff, or delete access resources.
 - Manage service-account tokens.
 
+## Description
+Open this page when the work is about Grafana identity and access as a whole. The `access` namespace is the grouped entrypoint for org, user, team, service account, and service-account token lifecycle work.
+
+This page is for administrators who first need to choose the right access surface. If your task touches membership, org structure, service-account rotation, or access snapshots, start here and then jump into the matching subcommand page.
+
 ## Key flags
 
 - `--profile`, `--url`, `--token`, `--basic-user`, `--basic-password`

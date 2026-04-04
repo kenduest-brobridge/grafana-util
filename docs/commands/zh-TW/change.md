@@ -6,7 +6,9 @@
 
 適用時機：當你需要整理 desired resources、比對 live state、檢視 plan、套用已審核的 plan、稽核 drift，或產生 bundle 與 promotion 的 preflight 文件時。
 
-主要旗標：root 指令本身只是命名空間；主要操作旗標都在子指令上。常見的工作流程輸入包含 `--desired-file`、`--plan-file`、`--live-file`、`--fetch-live`、`--approve`、`--execute-live`、`--source-bundle`、`--target-inventory`、`--availability-file`、`--mapping-file` 和 `--output`。
+說明：如果你的團隊走的是先審核、再套用的變更流程，先看這一頁最合適。`change` 指令群組把 summary、preflight、plan、review、audit 與 apply 都放在同一個控制面下，方便你先看懂整條流程，再決定要執行哪個精確子命令。
+
+主要旗標：root 指令本身只是指令群組；主要操作旗標都在子指令上。常見的工作流程輸入包含 `--desired-file`、`--plan-file`、`--live-file`、`--fetch-live`、`--approve`、`--execute-live`、`--source-bundle`、`--target-inventory`、`--availability-file`、`--mapping-file` 和 `--output`。
 
 範例：
 

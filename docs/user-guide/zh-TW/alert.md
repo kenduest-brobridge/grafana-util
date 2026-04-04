@@ -1,12 +1,12 @@
 # Alert 維運人員手冊
 
-本指南涵蓋 `grafana-util alert` 維運工作流，包含告警 Desired-State 編寫、審查優先變更與遷移式回放流。
+本指南涵蓋 `grafana-util alert` 維運流程，包含告警 Desired State 編寫、審查優先的變更流程，以及遷移用的回放流程。
 
 > **維運原則**：透過 **計畫 (Plan) -> 審查 (Review) -> 套用 (Apply)** 週期來謹慎變更告警，防止即時環境發生意外。
 
-## 🔗 逐指令頁面
+## 🔗 指令頁面
 
-如果您現在想看的是逐指令說明，而不是工作流章節，請直接使用逐指令頁面：
+如果你現在要查的是指令細節，而不是工作流程章節，可以直接看下面這些指令頁：
 
 - [alert 指令總覽](../../commands/zh-TW/alert.md)
 - [alert export](../../commands/zh-TW/alert-export.md)
@@ -27,13 +27,13 @@
 - [alert list-contact-points](../../commands/zh-TW/alert-list-contact-points.md)
 - [alert list-mute-timings](../../commands/zh-TW/alert-list-mute-timings.md)
 - [alert list-templates](../../commands/zh-TW/alert-list-templates.md)
-- [逐指令總索引](../../commands/zh-TW/index.md)
+- [指令詳細說明總索引](../../commands/zh-TW/index.md)
 
 ---
 
 ## 🛠️ 核心工作流用途
 
-告警領域專為下列場景設計：
+告警相關功能主要是為了這幾種場景設計：
 - **Desired State**：在不觸碰即時 Grafana 的情況下，於本地建立告警配置。
 - **審查差異**：在核准變更前，比對 Desired State 與現有資產。
 - **受控套用**：僅執行已通過審查的計畫。
@@ -41,9 +41,9 @@
 
 ---
 
-## 🚧 工作流路徑邊界 (兩條路徑)
+## 🚧 工作流程邊界（兩條資料路徑）
 
-告警管理拆分為兩條獨立的維運路徑。**請勿混用這些路徑。**
+告警管理拆成兩條獨立的維運流程。**請不要混用這兩條路徑。**
 
 | 路徑 (Lane) | 用途 | 常用指令 |
 | :--- | :--- | :--- |
@@ -117,7 +117,7 @@ grafana-util alert apply \
 ```bash
 grafana-util alert plan --desired-dir ./alerts/desired --prune --output json
 ```
-**輸出摘錄：**
+**範例輸出：**
 ```json
 {
   "summary": {
@@ -135,7 +135,7 @@ grafana-util alert plan --desired-dir ./alerts/desired --prune --output json
 ```bash
 grafana-util alert preview-route --desired-dir ./alerts/desired --label team=platform --severity critical
 ```
-**輸出摘錄：**
+**範例輸出：**
 ```json
 {
   "input": { "labels": { "team": "platform" }, "severity": "critical" },
@@ -145,4 +145,4 @@ grafana-util alert preview-route --desired-dir ./alerts/desired --label team=pla
 *註：空白的 match list 代表合約驗證成功，不一定代表存在即時告警實例。*
 
 ---
-[⬅️ 上一章：Datasource 管理](datasource.md) | [🏠 回首頁](index.md) | [➡️ 下一章：Access 管理](access.md)
+[⬅️ 上一章：Data source 管理](datasource.md) | [🏠 回首頁](index.md) | [➡️ 下一章：Access 管理](access.md)

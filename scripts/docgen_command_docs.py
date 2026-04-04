@@ -20,6 +20,52 @@ def get_command_docs_dir(repo_root: Path = REPO_ROOT) -> Path:
 
 
 COMMAND_DOCS_DIR = get_command_docs_dir()
+ORDERED_LIST_ITEM_RE = re.compile(r"^\d+\.\s+(.*)$")
+SECTION_ALIASES = {
+    "Purpose": "Purpose",
+    "目的": "Purpose",
+    "用途": "Purpose",
+    "When to use": "When to use",
+    "使用時機": "When to use",
+    "何時使用": "When to use",
+    "Key flags": "Key flags",
+    "主要旗標": "Key flags",
+    "重點旗標": "Key flags",
+    "Examples": "Examples",
+    "範例": "Examples",
+    "Related commands": "Related commands",
+    "相關命令": "Related commands",
+    "相關指令": "Related commands",
+    "Auth notes": "Auth notes",
+    "驗證說明": "Auth notes",
+    "說明": "Description",
+    "Description": "Description",
+    "Workflow notes": "Workflow notes",
+    "Datasource resolution": "Datasource resolution",
+    "Placeholder model": "Placeholder model",
+    "Root": "Root",
+}
+
+LABEL_ALIASES = {
+    "Purpose": "Purpose",
+    "目的": "Purpose",
+    "用途": "Purpose",
+    "When to use": "When to use",
+    "使用時機": "When to use",
+    "何時使用": "When to use",
+    "Key flags": "Key flags",
+    "主要旗標": "Key flags",
+    "重點旗標": "Key flags",
+    "Examples": "Examples",
+    "範例": "Examples",
+    "Related commands": "Related commands",
+    "相關命令": "Related commands",
+    "相關指令": "Related commands",
+    "Auth notes": "Auth notes",
+    "驗證說明": "Auth notes",
+    "Description": "Description",
+    "說明": "Description",
+}
 
 
 @dataclass(frozen=True)
@@ -55,6 +101,11 @@ def clean_markdown(text: str) -> str:
     return " ".join(text.strip().split())
 
 
+def canonical_command_section(label: str) -> str:
+    cleaned = clean_markdown(label)
+    return SECTION_ALIASES.get(cleaned, cleaned)
+
+
 def split_markdown_sections(text: str) -> tuple[str, dict[str, list[str]]]:
     """Split a command-doc page by second-level headings."""
     lines = text.splitlines()
@@ -66,7 +117,7 @@ def split_markdown_sections(text: str) -> tuple[str, dict[str, list[str]]]:
             title = clean_markdown(line[2:].strip())
             continue
         if line.startswith("## "):
-            current = clean_markdown(line[3:].strip())
+            current = canonical_command_section(line[3:].strip())
             sections[current] = []
             continue
         if current is not None:
@@ -137,9 +188,9 @@ def parse_labeled_section(lines: list[str]) -> dict[str, list[str]]:
     labels: dict[str, list[str]] = {}
     current: str | None = None
     for raw in lines:
-        match = re.match(r"^([A-Za-z][A-Za-z -]+):\s*(.*)$", raw)
+        match = re.match(r"^([^:：]{1,80})[:：]\s*(.*)$", raw)
         if match:
-            current = match.group(1).strip()
+            current = LABEL_ALIASES.get(clean_markdown(match.group(1).strip()), clean_markdown(match.group(1).strip()))
             labels[current] = [match.group(2)] if match.group(2) else []
             continue
         if current is not None:
@@ -252,6 +303,7 @@ def render_markdown_document(md_text: str, link_transform=None) -> RenderedMarkd
     blocks: list[str] = []
     paragraph: list[str] = []
     list_items: list[str] = []
+    list_tag: str | None = None
     code_lines: list[str] = []
     table_lines: list[str] = []
     headings: list[RenderedHeading] = []
@@ -267,22 +319,17 @@ def render_markdown_document(md_text: str, link_transform=None) -> RenderedMarkd
             paragraph = []
 
     def flush_list() -> None:
-        nonlocal list_items
+        nonlocal list_items, list_tag
         if list_items:
             items = "".join(f"<li>{inline_html(item, link_transform=link_transform)}</li>" for item in list_items)
-            blocks.append(f"<ul>{items}</ul>")
+            blocks.append(f"<{list_tag}>{items}</{list_tag}>")
             list_items = []
+            list_tag = None
 
     def flush_code() -> None:
         nonlocal code_lines
         joined = chr(10).join(code_lines)
-        if code_lang in {"bash", "sh", "shell", "zsh"} and len([line for line in code_lines if line.strip()]) > 1:
-            for line in code_lines:
-                if not line.strip():
-                    continue
-                blocks.append(f"<pre><code>{html.escape(line.rstrip())}</code></pre>")
-        else:
-            blocks.append(f"<pre><code>{html.escape(joined)}</code></pre>")
+        blocks.append(f"<pre><code>{html.escape(joined)}</code></pre>")
         code_lines = []
 
     def flush_table() -> None:
@@ -345,10 +392,15 @@ def render_markdown_document(md_text: str, link_transform=None) -> RenderedMarkd
             headings.append(RenderedHeading(level=3, text=heading_text, anchor=anchor))
             blocks.append(f'<h3 id="{anchor}">{inline_html(heading_text, link_transform=link_transform)}</h3>')
             continue
-        if stripped.startswith(("- ", "* ")):
+        ordered_match = ORDERED_LIST_ITEM_RE.match(stripped)
+        if stripped.startswith(("- ", "* ")) or ordered_match:
             flush_paragraph()
             flush_table()
-            list_items.append(stripped[2:].strip())
+            next_tag = "ol" if ordered_match else "ul"
+            if list_tag and list_tag != next_tag:
+                flush_list()
+            list_tag = next_tag
+            list_items.append(ordered_match.group(1).strip() if ordered_match else stripped[2:].strip())
             continue
         if stripped.startswith("|") and stripped.endswith("|"):
             flush_paragraph()

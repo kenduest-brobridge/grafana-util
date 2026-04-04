@@ -238,8 +238,18 @@ def roff_example_block(examples: tuple[str, ...]) -> list[str]:
         return []
     lines: list[str] = []
     for example in examples:
-        lines.extend([".EX", example, ".EE"])
+            lines.extend([".EX", example, ".EE"])
     return lines
+
+
+def emit_example_entries(lines: list[str], entries: list[tuple[str, str]]) -> None:
+    if not entries:
+        return
+    lines.append(".SH EXAMPLES")
+    for caption, example in entries:
+        if caption:
+            lines.extend([".PP", roff_text(caption)])
+        lines.extend([".EX", example, ".EE"])
 
 
 def emit_header(lines: list[str], stem: str, title: str, *, version: str = VERSION) -> None:
@@ -282,6 +292,78 @@ def emit_common_options(lines: list[str], key_flags: tuple[str, ...]) -> None:
             lines.extend([".IP \\(bu 2", roff_text(flag)])
 
 
+def man_stem_for_cli_path(cli_path: str) -> str:
+    """Convert a CLI path like 'grafana-util access service-account' into a man stem."""
+    normalized = re.sub(r"\s+", "-", cli_path.strip())
+    normalized = normalized.replace("`", "")
+    return normalized
+
+
+def render_when_summary(page: CommandDocPage) -> str:
+    """Return a compact 'when to use' sentence for command listings."""
+    def normalize_fragment(text: str) -> str:
+        normalized = text.strip()
+        lowered = normalized.lower()
+        for prefix in (
+            "use this namespace when ",
+            "use this when ",
+            "use when ",
+            "when you ",
+            "when ",
+        ):
+            if lowered.startswith(prefix):
+                normalized = normalized[len(prefix):]
+                lowered = normalized.lower()
+                break
+        return normalized[:1].upper() + normalized[1:] if normalized else normalized
+
+    bullet_lines = [normalize_fragment(line[2:]) for line in page.when_lines if line.startswith("- ")]
+    if bullet_lines and len(bullet_lines) == len(page.when_lines):
+        return "Use when: " + "; ".join(bullet_lines)
+    if page.when:
+        return "Use when: " + normalize_fragment(page.when)
+    return ""
+
+
+def render_listing_summary(page: CommandDocPage) -> str:
+    """Combine purpose and use-case guidance for command tables."""
+    parts = [page.purpose.strip()]
+    when_summary = render_when_summary(page).strip()
+    if when_summary:
+        parts.append(when_summary)
+    return " ".join(part for part in parts if part)
+
+
+def build_namespace_example_entries(
+    cli_path: str, root_page: CommandDocPage, subcommands: list[CommandDocPage]
+) -> list[tuple[str, str]]:
+    pages_by_prefix = sorted(subcommands, key=lambda page: len(page.title.split()), reverse=True)
+    entries: list[tuple[str, str]] = []
+    seen: set[str] = set()
+
+    def infer_caption(example: str) -> str:
+        stripped = example.strip()
+        for page in pages_by_prefix:
+            command_prefix = f"{cli_path} {page.title}"
+            if stripped == command_prefix or stripped.startswith(command_prefix + " "):
+                return f"{page.title}: {page.purpose}"
+        return root_page.purpose
+
+    for example in root_page.examples:
+        if example not in seen:
+            seen.add(example)
+            entries.append((infer_caption(example), example))
+    for page in subcommands:
+        for example in page.examples:
+            if example in seen:
+                continue
+            seen.add(example)
+            entries.append((f"{page.title}: {page.purpose}", example))
+            if len(entries) >= 6:
+                return entries
+    return entries
+
+
 def load_subcommands(spec: NamespaceSpec, command_docs_dir: Path) -> list[CommandDocPage]:
     if spec.sub_docs:
         return [parse_command_page(command_docs_dir / filename, spec.cli_path) for filename in spec.sub_docs]
@@ -307,27 +389,36 @@ def generate_namespace_manpage(
     emit_when(lines, root_page)
     lines.append(".SH SUBCOMMANDS")
     for page in subcommands:
-        lines.extend([".TP", rf".B {roff_text(page.title)}", roff_text(page.purpose)])
+        lines.extend([".TP", rf".B {roff_text(page.title)}", roff_text(render_listing_summary(page))])
     emit_common_options(lines, root_page.key_flags)
     if spec.workflow_notes:
         lines.append(".SH WORKFLOW NOTES")
         for note in spec.workflow_notes:
             lines.extend([".PP", roff_text(note)])
 
-    examples = list(root_page.examples)
-    for page in subcommands:
-        for example in page.examples:
-            if example not in examples:
-                examples.append(example)
-            if len(examples) >= 6:
-                break
-        if len(examples) >= 6:
-            break
-    if examples:
-        lines.append(".SH EXAMPLES")
-        lines.extend(roff_example_block(tuple(examples)))
+    emit_example_entries(lines, build_namespace_example_entries(spec.cli_path, root_page, subcommands)[:6])
     emit_see_also(lines, spec.related_manpages)
     return "\n".join(lines) + "\n"
+
+
+def generate_subcommand_manpage(
+    spec: NamespaceSpec,
+    page: CommandDocPage,
+    *,
+    version: str = VERSION,
+) -> tuple[str, str]:
+    """Build one per-subcommand manpage from a parsed command doc page."""
+    full_cli_path = f"{spec.cli_path} {page.title}".strip()
+    stem = man_stem_for_cli_path(full_cli_path)
+    lines: list[str] = []
+    emit_header(lines, stem, page.purpose or f"{page.title} workflow", version=version)
+    lines.extend([".SH SYNOPSIS", rf".B {full_cli_path} [\fIOPTIONS\fR]"])
+    lines.extend([".SH DESCRIPTION", roff_text(page.purpose)])
+    emit_when(lines, page)
+    emit_common_options(lines, page.key_flags)
+    emit_example_entries(lines, [(page.purpose, example) for example in page.examples])
+    emit_see_also(lines, ("grafana-util", spec.stem))
+    return f"{stem}.1", "\n".join(lines) + "\n"
 
 
 def generate_top_level_manpage(*, command_docs_dir: Path, version: str = VERSION) -> str:
@@ -360,7 +451,27 @@ def generate_top_level_manpage(*, command_docs_dir: Path, version: str = VERSION
     )
     for spec in NAMESPACE_SPECS:
         root_page = parse_command_page(command_docs_dir / spec.root_doc, spec.cli_path)
-        lines.extend([".TP", rf".B {spec.cli_path.removeprefix('grafana-util ')}", roff_text(root_page.purpose)])
+        lines.extend(
+            [
+                ".TP",
+                rf".B {spec.cli_path.removeprefix('grafana-util ')}",
+                roff_text(render_listing_summary(root_page)),
+            ]
+        )
+    lines.append(".SH SUBCOMMAND MANPAGES")
+    for spec in NAMESPACE_SPECS:
+        subcommands = load_subcommands(spec, command_docs_dir)
+        lines.extend([".SS " + roff_text(spec.cli_path.removeprefix("grafana-util "))])
+        for page in subcommands:
+            full_cli_path = f"{spec.cli_path} {page.title}".strip()
+            stem = man_stem_for_cli_path(full_cli_path)
+            lines.extend(
+                [
+                    ".TP",
+                    rf".B {roff_text(stem)}(1)",
+                    roff_text(render_listing_summary(page)),
+                ]
+            )
     lines.extend(
         [
             ".TP",
@@ -405,23 +516,22 @@ def generate_top_level_manpage(*, command_docs_dir: Path, version: str = VERSION
             ".SH DOCUMENTATION",
             "To render a checked-in manpage from the repo, run man ./docs/man/<name>.1 on BSD or macOS systems, or man -l docs/man/<name>.1 on GNU/Linux systems whose man implementation supports -l.",
             ".PP",
-            "This repository currently provides top-level and namespace-level generated manpages. For deeper per-subcommand detail, use the matching Markdown command pages under docs/commands/en/ plus command-local --help.",
+            "This repository provides generated top-level, namespace-level, and per-subcommand manpages sourced from docs/commands/en/.",
             ".SH EXAMPLES",
         ]
     )
-    lines.extend(
-        roff_example_block(
-            (
-                "grafana-util --help",
-                "grafana-util dashboard --help",
-                "grafana-util status live --profile prod --output yaml",
-                "grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output yaml",
-                "grafana-util overview live --url http://localhost:3000 --token $GRAFANA_API_TOKEN --output json",
-                "grafana-util dashboard export --url http://localhost:3000 --export-dir ./dashboards",
-                "grafana-util alert plan --desired-dir ./alerts/desired --prune --output json",
-                "grafana-util datasource export --url http://localhost:3000 --export-dir ./datasources --overwrite",
-            )
-        )
+    emit_example_entries(
+        lines,
+        [
+            ("Open the unified CLI help and command namespace list.", "grafana-util --help"),
+            ("Inspect the dashboard namespace help before choosing a live or file-based workflow.", "grafana-util dashboard --help"),
+            ("Render staged or live estate status through a repo-local profile.", "grafana-util status live --profile prod --output yaml"),
+            ("Render live estate status with direct Basic auth during bootstrap or break-glass work.", "grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output yaml"),
+            ("Summarize live Grafana inventory as JSON under the overview namespace.", "grafana-util overview live --url http://localhost:3000 --token $GRAFANA_API_TOKEN --output json"),
+            ("Export live dashboards into a local working tree for review or promotion.", "grafana-util dashboard export --url http://localhost:3000 --export-dir ./dashboards"),
+            ("Build a reviewable alert plan from desired-state files before apply.", "grafana-util alert plan --desired-dir ./alerts/desired --prune --output json"),
+            ("Export datasource inventory into a normalized local bundle.", "grafana-util datasource export --url http://localhost:3000 --export-dir ./datasources --overwrite"),
+        ],
     )
     emit_see_also(lines, tuple(spec.stem for spec in NAMESPACE_SPECS) + ("man",))
     return "\n".join(lines) + "\n"
@@ -432,11 +542,15 @@ def generate_manpages(*, command_docs_dir: Path | None = None, version: str = VE
     resolved_command_docs_dir = command_docs_dir or get_command_docs_dir()
     outputs = {"grafana-util.1": generate_top_level_manpage(command_docs_dir=resolved_command_docs_dir, version=version)}
     for spec in NAMESPACE_SPECS:
+        subcommands = load_subcommands(spec, resolved_command_docs_dir)
         outputs[f"{spec.stem}.1"] = generate_namespace_manpage(
             spec,
             command_docs_dir=resolved_command_docs_dir,
             version=version,
         )
+        for page in subcommands:
+            name, body = generate_subcommand_manpage(spec, page, version=version)
+            outputs[name] = body
     return outputs
 
 

@@ -6,6 +6,8 @@ Purpose: export and review Grafana snapshot inventory bundles.
 
 When to use: when you want a local snapshot root that captures dashboard and datasource inventory for later inspection.
 
+Description: open this page when you need an offline snapshot of Grafana inventory that can be reviewed later without talking to the server again. The `snapshot` namespace is useful for handoff, backup, incident review, or any workflow where you want one local artifact before moving into deeper analysis.
+
 Key flags: the root command is a namespace; the operational flags live on `export` and `review`. The shared root flag is `--color`.
 
 Examples:

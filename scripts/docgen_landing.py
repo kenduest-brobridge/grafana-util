@@ -23,12 +23,12 @@ LANDING_ROOT = get_landing_root()
 LANDING_LOCALES = ("en", "zh-TW")
 LANDING_UI_LABELS = {
     "en": {
-        "search_placeholder": "Search tasks, commands, or handbook pages",
-        "search_button": "Search",
+        "search_placeholder": "Jump to a command or handbook page",
+        "search_button": "Jump",
     },
     "zh-TW": {
-        "search_placeholder": "搜尋任務、指令或手冊頁面",
-        "search_button": "搜尋",
+        "search_placeholder": "快速跳到指令或手冊頁面",
+        "search_button": "跳轉",
     },
 }
 

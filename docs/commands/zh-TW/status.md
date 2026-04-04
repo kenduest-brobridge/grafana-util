@@ -2,11 +2,13 @@
 
 ## Root
 
-用途：渲染共用的全專案 staged 或 live status。
+用途：輸出整個專案的 staged 或 live 狀態摘要。
 
-適用時機：當你需要 exported artifacts 或 live Grafana state 的最終門檻視圖時。
+適用時機：當你需要看 exported artifacts 或 live Grafana state 的最後檢查結果時。
 
-主要旗標：root 指令本身只是命名空間；staged 與 live 輸入都在子指令上。常見旗標包含 `--output` 和共用的 live 連線/驗證選項。
+說明：如果你要的是最後的 readiness 或健康度讀取，而不是逐條研究命令細節，先看這一頁最合適。`status` 指令群組就是維運與 CI 常拿來回答「目前 staged bundle 能不能往下走」或「現在 live Grafana 狀態如何」的 gate 視圖。
+
+主要旗標：root 指令本身只是指令群組；staged 與 live 輸入都在子指令上。常見旗標包含 `--output` 和共用的 live 連線 / 驗證選項。
 
 範例：
 
@@ -19,9 +21,9 @@ grafana-util status live --url http://localhost:3000 --token "$GRAFANA_API_TOKEN
 
 ## `staged`
 
-用途：根據已分階段的 artifact 渲染專案狀態。
+用途：根據已準備好的 artifact 輸出專案狀態。
 
-適用時機：當你需要在 apply 前，對匯出檔案做機器可讀的 readiness gate 時。
+適用時機：當你需要在 apply 前，先用結構化輸出做 readiness gate 時。
 
 主要旗標：`--dashboard-export-dir`、`--dashboard-provisioning-dir`、`--datasource-export-dir`、`--datasource-provisioning-file`、`--access-user-export-dir`、`--access-team-export-dir`、`--access-org-export-dir`、`--access-service-account-export-dir`、`--desired-file`、`--source-bundle`、`--target-inventory`、`--alert-export-dir`、`--availability-file`、`--mapping-file`、`--output`。
 
@@ -36,7 +38,7 @@ grafana-util status staged --dashboard-provisioning-dir ./dashboards/provisionin
 
 ## `live`
 
-用途：根據 live Grafana 的讀取面來渲染專案狀態。
+用途：根據 live Grafana 的讀取結果輸出專案狀態。
 
 適用時機：當你需要目前的 Grafana 狀態，並可選擇搭配 staged context 檔案時。
 

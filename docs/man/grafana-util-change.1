@@ -11,50 +11,62 @@ when you need to summarize desired resources, plan against live state, review a 
 .SH SUBCOMMANDS
 .TP
 .B summary
-summarize local desired sync resources.
+summarize local desired sync resources. Use when: Want a quick size check before planning or applying.
 .TP
 .B plan
-build a staged sync plan from desired and live state.
+build a staged sync plan from desired and live state. Use when: Need a reviewable plan before marking work as reviewed or applying it.
 .TP
 .B review
-mark a staged sync plan as reviewed.
+mark a staged sync plan as reviewed. Use when: A plan has been inspected and should carry an explicit review token before apply.
 .TP
 .B apply
-build a gated apply intent from a reviewed sync plan, and optionally execute it live.
+build a gated apply intent from a reviewed sync plan, and optionally execute it live. Use when: A plan is already reviewed and you are ready to emit or execute the apply step.
 .TP
 .B audit
-audit managed Grafana resources against a checksum lock and current live state.
+audit managed Grafana resources against a checksum lock and current live state. Use when: Need a drift check or want to refresh a lock snapshot.
 .TP
 .B preflight
-build a staged sync preflight document from desired resources and optional availability hints.
+build a staged sync preflight document from desired resources and optional availability hints. Use when: Need a structural gate before planning or applying.
 .TP
 .B assess\-alerts
-assess alert sync specs for candidate, plan\-only, and blocked states.
+assess alert sync specs for candidate, plan\-only, and blocked states. Use when: Want a focused readout of how alert resources will be classified before bundling or applying.
 .TP
 .B bundle
-package exported dashboards, alerting resources, datasource inventory, and metadata into one local source bundle.
+package exported dashboards, alerting resources, datasource inventory, and metadata into one local source bundle. Use when: Want a single bundle artifact for later sync, review, or preflight steps.
 .TP
 .B bundle\-preflight
-build a staged bundle\-level sync preflight document from a source bundle and target inventory.
+build a staged bundle\-level sync preflight document from a source bundle and target inventory. Use when: Need to compare a source bundle against a target inventory before apply.
 .TP
 .B promotion\-preflight
-build a staged promotion review handoff from a source bundle and target inventory.
+build a staged promotion review handoff from a source bundle and target inventory. Use when: Are preparing a promotion review and want an explicit mapping and availability view.
 .SH EXAMPLES
+.PP
+summary: summarize local desired sync resources.
 .EX
 grafana-util change summary --desired-file ./desired.json
 .EE
+.PP
+plan: build a staged sync plan from desired and live state.
 .EX
 grafana-util change plan --desired-file ./desired.json --fetch-live --profile prod
 .EE
+.PP
+apply: build a gated apply intent from a reviewed sync plan, and optionally execute it live.
 .EX
 grafana-util change apply --plan-file ./sync-plan-reviewed.json --approve --execute-live --profile prod
 .EE
+.PP
+summary: summarize local desired sync resources.
 .EX
 grafana-util change summary --desired-file ./desired.json --output json
 .EE
+.PP
+plan: build a staged sync plan from desired and live state.
 .EX
 grafana-util change plan --desired-file ./desired.json --live-file ./live.json
 .EE
+.PP
+plan: build a staged sync plan from desired and live state.
 .EX
 grafana-util change plan --desired-file ./desired.json --fetch-live --profile prod --allow-prune --output json
 .EE

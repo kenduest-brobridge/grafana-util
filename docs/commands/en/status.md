@@ -6,6 +6,8 @@ Purpose: render shared project-wide staged or live status.
 
 When to use: when you need the final gate view for exported artifacts or live Grafana state.
 
+Description: start here when you need a final readiness or health readout rather than a deep command-by-command walkthrough. The `status` namespace is the gate view that operators and CI jobs use to answer “is the staged bundle ready?” or “what does the live Grafana state look like right now?”.
+
 Key flags: the root command is a namespace; staged and live inputs live on the subcommands. Common flags include `--output` and the shared live connection/auth options.
 
 Examples:

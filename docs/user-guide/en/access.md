@@ -1,8 +1,8 @@
-# Access Management (Identity & Orgs)
+# Access Management (Identity & Access)
 
-Manage the identity layer of your Grafana estate: organizations, users, teams, and service accounts.
+Manage the identity and access layer of your Grafana estate: orgs, users, teams, and service accounts.
 
-## 🔗 Command Pages
+## Command Pages
 
 Need the command-by-command surface instead of the workflow guide?
 
@@ -16,11 +16,11 @@ Need the command-by-command surface instead of the workflow guide?
 
 ---
 
-## 🏢 Organization Management
+## org Management
 
-Use `access org` when you need Basic-auth-backed inventory, export, or replay for organizations.
+Use `access org` when you need Basic-auth-backed inventory, export, or replay for orgs.
 
-### 1. List, Export, and Replay Organizations
+### 1. List, Export, and Replay orgs
 ```bash
 grafana-util access org list --table
 grafana-util access org export --export-dir ./access-orgs
@@ -43,7 +43,7 @@ Use the list output to confirm the main org, then export/import when you need a 
 
 ---
 
-## 👤 User & Team Management
+## User and team management
 
 Use `access user` and `access team` for membership changes, snapshots, and drift checks.
 
@@ -88,7 +88,7 @@ Use `--with-members` when the export must preserve membership state, and use `--
 
 ---
 
-## 🤖 Service Account Management
+## service account management
 
 Service accounts are the foundation of automated pipelines.
 
@@ -150,7 +150,7 @@ Use `--json` when you need the one-time `key` field. Plain text is better for lo
 
 ---
 
-## 🔍 Drift Detection (Diff)
+## Drift Detection (Diff)
 
 Compare your local identity snapshots against the live Grafana server.
 

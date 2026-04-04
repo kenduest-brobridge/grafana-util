@@ -13,34 +13,34 @@ Use this namespace when you want to inspect supported datasource types, browse l
 .SH SUBCOMMANDS
 .TP
 .B types
-Show the built\-in supported datasource type catalog.
+Show the built\-in supported datasource type catalog. Use when: You need to see the canonical datasource type ids that the CLI normalizes and supports for create flows.
 .TP
 .B list
-List live Grafana datasource inventory.
+List live Grafana datasource inventory. Use when: You need a non\-interactive inventory of datasources, either for the current org, one explicit org, or across all visible orgs.
 .TP
 .B browse
-Open a live datasource browser against Grafana with in\-place modify and delete actions.
+Open a live datasource browser against Grafana with in\-place modify and delete actions. Use when: You want an interactive inventory view for inspecting, editing, or deleting live datasources.
 .TP
 .B inspect\-export
-Inspect a local masked recovery bundle without connecting to Grafana.
+Inspect a local masked recovery bundle without connecting to Grafana. Use when: You want to read datasource export artifacts from disk and review them with text, table, CSV, JSON, YAML, or interactive output.
 .TP
 .B export
-Export live Grafana datasource inventory as normalized JSON plus provisioning files.
+Export live Grafana datasource inventory as normalized JSON plus provisioning files. Use when: You need a local datasource bundle for later inspection, diff, or import.
 .TP
 .B import
-Import datasource inventory through the Grafana API.
+Import datasource inventory through the Grafana API. Use when: You have a local datasource bundle or provisioning tree and want to push it into Grafana, either live or as a dry run.
 .TP
 .B diff
-Compare datasource inventory from a local bundle against live Grafana and print an operator\-summary diff report.
+Compare datasource inventory from a local bundle against live Grafana and print an operator\-summary diff report. Use when: You want a concise live\-versus\-local difference report before import.
 .TP
 .B add
-Create one live Grafana datasource through the Grafana API.
+Create one live Grafana datasource through the Grafana API. Use when: You want to create a new datasource directly, or dry\-run the create step before applying it.
 .TP
 .B modify
-Modify one live Grafana datasource through the Grafana API.
+Modify one live Grafana datasource through the Grafana API. Use when: A datasource already exists and you need to update its URL, auth, JSON payload, or other live settings.
 .TP
 .B delete
-Delete one live Grafana datasource through the Grafana API.
+Delete one live Grafana datasource through the Grafana API. Use when: A datasource should be removed by UID or by name, either as a dry run or as an acknowledged live delete.
 .SH COMMON OPTIONS
 .TP
 .B \-\-url
@@ -58,21 +58,33 @@ control JSON color output for the namespace.
 .PP
 Datasource export follows a masked recovery contract. Treat the canonical export JSON as the replay source. Treat provisioning output as a derived projection for Grafana provisioning workflows.
 .SH EXAMPLES
+.PP
+grafana\-util datasource is the namespace for catalog lookup, live browsing, export/import, diff, and live create/modify/delete workflows. The same namespace is also available as grafana\-util ds.
 .EX
 grafana-util datasource --help
 .EE
+.PP
+types: Show the built\-in supported datasource type catalog.
 .EX
 grafana-util datasource types
 .EE
+.PP
+browse: Open a live datasource browser against Grafana with in\-place modify and delete actions.
 .EX
 grafana-util datasource browse --profile prod
 .EE
+.PP
+browse: Open a live datasource browser against Grafana with in\-place modify and delete actions.
 .EX
 grafana-util datasource browse --url http://localhost:3000 --basic-user admin --basic-password admin
 .EE
+.PP
+types: Show the built\-in supported datasource type catalog.
 .EX
 grafana-util datasource types --output-format yaml
 .EE
+.PP
+list: List live Grafana datasource inventory.
 .EX
 grafana-util datasource list --url http://localhost:3000 --basic-user admin --basic-password admin --output-format text
 .EE

@@ -10,6 +10,11 @@
 - 建立、修改、匯出、匯入、比對或刪除 access 資源。
 - 管理 service-account token。
 
+## 說明
+如果你現在處理的是 Grafana 身分與存取整體工作，而不是單一 user 命令，先看這一頁最合適。`access` 指令群組不是只管使用者，而是把 org、user、team、service account 和 service-account token 的整套生命週期放在一起。
+
+這頁是給管理者先判斷自己應該往哪個操作面走。只要你的工作牽涉成員、org 結構、service account 輪替，或 access 快照與比對，就先從這裡進來。
+
 ## 主要旗標
 
 - `--profile`, `--url`, `--token`, `--basic-user`, `--basic-password`

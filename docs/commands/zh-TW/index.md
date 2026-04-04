@@ -1,26 +1,26 @@
-# 逐指令說明
+# 指令詳細說明
 
 ## 語言切換
 
-- 繁體中文逐指令說明：[目前頁面](./index.md)
-- English command reference: [英文逐指令總索引](../en/index.md)
+- 繁體中文指令詳細說明：[目前頁面](./index.md)
+- English command reference: [英文指令總索引](../en/index.md)
 - 繁體中文手冊：[維運手冊](../../user-guide/zh-TW/index.md)
 - English handbook: [Operator Handbook](../../user-guide/en/index.md)
 
 ---
 
-這個目錄收錄 `grafana-util` 的逐指令與逐子命令頁面。  
-如果手冊章節是用來理解工作流，這裡就是拿來查實際指令面、常用旗標與相鄰命令差異的地方。
+這個目錄收錄 `grafana-util` 各個 command 與 subcommand 的獨立頁面。  
+如果手冊章節是幫你理解整體工作流程，這裡就是用來查實際語法、常用旗標，以及相近命令差在哪裡的地方。
 
-如果您是從繁體中文手冊進來，建議這樣使用：
+如果你是從繁體中文手冊進來，建議這樣使用：
 
-| 您要查什麼 | 建議閱讀順序 |
+| 你要查什麼 | 建議閱讀順序 |
 | :--- | :--- |
-| 先理解功能目的與操作流程 | 先讀 `docs/user-guide/zh-TW/` 對應章節 |
-| 需要查某個 command 或 subcommand 怎麼用 | 直接進這裡的繁中逐指令頁 |
-| 想核對目前 Rust CLI help 的精確形狀 | 以這裡的指令頁為主，必要時再對照英文頁 |
+| 先理解功能目的和操作流程 | 先讀 `docs/user-guide/zh-TW/` 對應章節 |
+| 需要查某個 command 或 subcommand 怎麼用 | 直接進這裡的繁中指令頁 |
+| 想核對目前 Rust CLI help 的實際語法 | 以這裡的指令頁為主，必要時再對照英文頁 |
 
-如果您偏好 `man` 格式閱讀頂層命令，macOS 可執行 `man ./docs/man/grafana-util.1`，GNU/Linux 可執行 `man -l docs/man/grafana-util.1`。
+如果你習慣用 `man` 格式閱讀頂層命令，macOS 可執行 `man ./docs/man/grafana-util.1`，GNU/Linux 可執行 `man -l docs/man/grafana-util.1`。
 
 ## Dashboard
 

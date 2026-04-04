@@ -8,10 +8,18 @@ Current AI change log only.
 - Keep this file limited to the latest active architecture and maintenance changes.
 - Detailed 2026-03-29 through 2026-03-31 entries moved to [`archive/ai-changes-archive-2026-03-31.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-03-31.md).
 
+## 2026-04-04 - Start template-backed HTML shell rendering
+- Summary: introduced a minimal file-backed template layer for the generated docs shell. The shared outer page shell, article layout, page header, and right sidebar moved out of inline Python string assembly and into `scripts/templates/*.tmpl`, while `scripts/generate_command_html.py` now loads those templates and fills them with the same existing escaped view-model data. This keeps the current landing/handbook/command content contracts intact but makes shared layout work less entangled with renderer logic.
+- Tests: reused the focused HTML generator and landing parser tests to confirm the template-backed renderer still produces the checked-in output tree.
+- Test Run: `python3 scripts/generate_command_html.py --write`; `python3 scripts/generate_command_html.py --check`; `python3 -m unittest -v python.tests.test_python_generate_command_html python.tests.test_python_docgen_landing`
+- Impact: `scripts/generate_command_html.py`, `scripts/templates/base.html.tmpl`, `scripts/templates/article_layout.html.tmpl`, `scripts/templates/page_header.html.tmpl`, `scripts/templates/right_sidebar.html.tmpl`, `docs/html/**`, `docs/internal/generated-docs-architecture.md`, `docs/internal/generated-docs-playbook.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: low to moderate. The main risk is accidental placeholder/template drift if future shell edits update the Python view model without updating the template files, but the existing checked-output test catches most of that quickly.
+- Follow-up: the next logical split is CSS and theme/runtime JS, so `generate_command_html.py` can stop carrying the remaining large asset strings.
+
 ## 2026-04-04 - Group handbook sidebar navigation by information architecture
 - Summary: separated handbook reading order from handbook sidebar structure. Added explicit sidebar groups in `scripts/docgen_handbook.py` so the HTML nav now reflects the handbook IA instead of flattening every chapter into one list. Updated the renderer to show grouped handbook sections and reduced command reference from a second flat namespace list to one command-docs hub entry, so the handbook sidebar stops mixing subject taxonomy and CLI inventory in the same visual layer.
 - Tests: updated generated HTML nav assertions for grouped handbook sections and the single command-reference hub entry.
-- Test Run: pending
+- Test Run: `python3 scripts/generate_command_html.py --write`; `python3 scripts/generate_command_html.py --check`; `python3 -m unittest -v python.tests.test_python_generate_command_html python.tests.test_python_docgen_landing`
 - Impact: `scripts/docgen_handbook.py`, `scripts/generate_command_html.py`, `python/tests/test_python_generate_command_html.py`, `docs/internal/generated-docs-architecture.md`, `docs/internal/generated-docs-playbook.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
 - Rollback/Risk: moderate. This changes sidebar wayfinding across handbook and command pages, so the main risk is users needing a short adjustment period or maintainers forgetting to keep `HANDBOOK_ORDER` and `HANDBOOK_NAV_GROUPS` aligned when adding chapters.
 - Follow-up: if grouped sidebar navigation feels better after regeneration, consider mirroring the same grouping language in the homepage handbook sections so entrypoint IA and in-page navigation stay fully consistent.

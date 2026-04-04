@@ -4,15 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>疑難排解與名詞解釋 · grafana-util docs</title>
-  <style>
-:root {
+  <style>:root {
   color-scheme: light dark;
   --font-scale: 1;
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI Variable Display", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   --font-zh: "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
   --font-mono: ui-monospace, "JetBrains Mono", SFMono-Regular, Menlo, Consolas, monospace;
-  
+
   --bg: #ffffff;
   --panel: #ffffff;
   --panel-strong: #f9fbfe;
@@ -109,24 +108,21 @@ html[lang="zh-TW"] body { font-family: var(--font-zh); letter-spacing: 0.025em; 
 a { color: var(--accent); text-decoration: none; font-weight: 500; transition: color 0.15s; }
 a:hover { color: var(--heading); }
 
-/* Typography */
 h1, h2, h3, h4 { font-family: var(--font-display); color: var(--heading); font-weight: 650; line-height: 1.2; margin: 0; }
 p, li { line-height: 1.72; margin-bottom: 1rem; }
 code { font: 0.88em var(--font-mono); background: var(--code-bg); padding: 0.2em 0.4em; border-radius: 4px; }
 
-/* Pre & Code Blocks */
-pre { position: relative; padding: 20px; border-radius: 8px; background: var(--pre-bg); color: var(--pre-text); margin: 1.5rem 0; border: 1px solid var(--border); overflow-x: auto; }
+pre { position: relative; max-width: 100%; box-sizing: border-box; padding: 20px; border-radius: 8px; background: var(--pre-bg); color: var(--pre-text); margin: 1.5rem 0; border: 1px solid var(--border); overflow-x: auto; }
 pre code { background: transparent !important; color: inherit !important; padding: 0 !important; font-size: 0.9rem; line-height: 1.6; white-space: pre; }
 pre.wrapped code { white-space: pre-wrap !important; word-break: break-all; }
 .code-controls { position: absolute; top: 8px; right: 8px; display: flex; gap: 6px; opacity: 0; transition: opacity 0.2s; z-index: 10; }
 pre:hover .code-controls { opacity: 1; }
-.control-btn { padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.1); color: #fff; font: 500 11px var(--font-mono); cursor: pointer; transition: 0.2s; }
-.control-btn:hover { background: rgba(255,255,255,0.2); }
-.control-btn.active { background: var(--accent); border-color: var(--accent); }
+.control-btn { padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.12); background: rgba(18, 24, 33, 0.78); color: rgba(243, 244, 246, 0.92); font: 500 11px var(--font-mono); cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s; backdrop-filter: blur(6px); }
+.control-btn:hover { background: rgba(33, 42, 54, 0.94); border-color: rgba(255,255,255,0.2); }
+.control-btn.active { background: #eef2f6; border-color: #eef2f6; color: #111827; }
 
-/* Layout Elements */
 .site { max-width: 1820px; margin: 0 auto; padding: 20px 18px; min-height: 100vh; display: flex; flex-direction: column; }
-.site.landing-shell { max-width: 1640px; padding-left: 36px; padding-right: 36px; }
+.site.landing-shell { max-width: 1880px; padding-left: 24px; padding-right: 24px; }
 .site.landing-shell .topbar { margin-bottom: 10px; }
 .site-content { flex-grow: 1; }
 .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 16px; border-bottom: 1px solid var(--border); padding-bottom: 14px; }
@@ -136,20 +132,24 @@ pre:hover .code-controls { opacity: 1; }
   border: 1px solid var(--border);
   background: var(--panel);
   color: var(--text);
+  box-sizing: border-box;
   padding: 4px 10px;
   font-size: 0.8rem; font-weight: 500; font-family: var(--font-sans);
   border-radius: 4px; height: 28px;
   cursor: pointer; transition: all 0.2s;
 }
 .themebar select:hover, .themebar select:focus { border-color: var(--accent); outline: none; }
+#locale-select { width: 148px; }
+#page-locale-select { width: 172px; }
+#jump-select { width: 300px; }
+#font-select { width: 138px; }
+#theme-select { width: 128px; }
 
-/* Content Grid */
 .layout { display: grid; grid-template-columns: 232px minmax(0, 1fr) 244px; gap: 20px; align-items: start; }
 @media (max-width: 1280px) { .layout { grid-template-columns: 210px minmax(0, 1fr); gap: 18px; } .sidebar { display: none !important; } }
 @media (max-width: 768px) { .layout { grid-template-columns: 1fr; } .nav-sidebar { display: none !important; } }
 
-/* Left Nav Sidebar */
-.nav-sidebar { position: sticky; top: 12px; padding: 2px 0 0; max-height: calc(100vh - 24px); overflow-y: auto; font-family: var(--font-sans); letter-spacing: -0.01em; }
+.nav-sidebar { position: sticky; top: 12px; min-width: 0; padding: 2px 0 0; max-height: calc(100vh - 24px); overflow-y: auto; font-family: var(--font-sans); letter-spacing: -0.01em; }
 html[lang="zh-TW"] .nav-sidebar { font-family: var(--font-zh); letter-spacing: 0; }
 .nav-sidebar li { margin-bottom: 0; }
 .nav-sidebar h2 { font-size: 0.74rem; font-weight: 700; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; letter-spacing: 0.04em; }
@@ -183,12 +183,57 @@ html[lang="zh-TW"] .nav-sidebar { font-family: var(--font-zh); letter-spacing: 0
 .nav-command-entry:hover { color: var(--heading); background: var(--panel-strong); }
 .nav-command-entry.active { color: var(--heading); font-weight: 620; background: color-mix(in srgb, var(--accent-soft) 60%, white); box-shadow: inset 2px 0 0 var(--accent); }
 
-/* Main Article */
-.article { padding: 10px 0 24px; }
+.article { min-width: 0; padding: 10px 0 24px; }
 .article p,
 .article li { color: var(--text); font-weight: 460; }
 .article ul li::marker,
 .article ol li::marker { color: var(--heading); }
+.article table {
+  width: 100%;
+  margin: 1.25rem 0 1.75rem;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+.article thead th {
+  padding: 0.9rem 1rem;
+  text-align: left;
+  vertical-align: top;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  font-weight: 680;
+  color: var(--heading);
+  background: var(--panel-strong);
+  border-bottom: 1px solid var(--border);
+}
+.article tbody td {
+  padding: 0.85rem 1rem;
+  vertical-align: top;
+  font-size: 0.94rem;
+  line-height: 1.62;
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+}
+.article tbody tr:last-child td {
+  border-bottom: 0;
+}
+.article th + th,
+.article td + td {
+  border-left: 1px solid var(--border);
+}
+.article table code {
+  white-space: nowrap;
+}
+.article table + p,
+.article table + ul,
+.article table + ol {
+  margin-top: 1.1rem;
+}
 .hero-eyebrow { display: inline-block; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font: 700 10px var(--font-mono); margin-bottom: 8px; text-transform: uppercase; }
 .article h1 { font-size: 2.15rem; margin-bottom: 12px; letter-spacing: -0.018em; font-weight: 680; }
 .article h2 { margin-top: 40px; border-top: 1px solid var(--border); padding-top: 24px; font-size: 1.5rem; margin-bottom: 12px; letter-spacing: -0.012em; font-weight: 620; }
@@ -198,9 +243,48 @@ html[lang="zh-TW"] .nav-sidebar { font-family: var(--font-zh); letter-spacing: 0
 .hero-summary { margin: 0 0 18px; max-width: 68ch; color: var(--text); font-size: 1rem; line-height: 1.72; font-weight: 450; }
 .article blockquote { margin: 1.5rem 0; padding: 12px 16px; border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 4px; }
 .article blockquote p { margin: 0; font-size: 0.95rem; color: var(--heading); }
+.breadcrumbs {
+  margin-bottom: 12px;
+  font-size: 0.84rem;
+  color: color-mix(in srgb, var(--muted) 78%, white);
+  font-weight: 460;
+}
+.command-intro {
+  margin: 0 0 1.6rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--panel-strong);
+  box-shadow: var(--shadow);
+}
+.command-intro-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.9rem 1.1rem;
+}
+.command-intro-block { min-width: 0; }
+.command-intro-label {
+  margin: 0 0 0.35rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.command-intro-text {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.98rem;
+  line-height: 1.7;
+}
+.command-intro-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--text);
+}
+.command-intro-list li { margin: 0.18rem 0; }
 
-/* Right TOC Sidebar */
-.sidebar { position: sticky; top: 12px; padding: 2px 0 0; max-height: calc(100vh - 24px); overflow-y: auto; font-family: var(--font-sans); letter-spacing: -0.01em; }
+.sidebar { position: sticky; top: 12px; min-width: 0; padding: 2px 0 0; max-height: calc(100vh - 24px); overflow-y: auto; font-family: var(--font-sans); letter-spacing: -0.01em; }
 html[lang="zh-TW"] .sidebar { font-family: var(--font-zh); letter-spacing: 0; }
 .sidebar li { margin-bottom: 0; }
 .sidebar h2 { font-size: 0.74rem; font-weight: 700; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; letter-spacing: 0.05em; }
@@ -230,22 +314,21 @@ html[lang="zh-TW"] .sidebar { font-family: var(--font-zh); letter-spacing: 0; }
 
 .site-footer { margin-top: 40px; padding: 24px 0; border-top: 1px solid var(--border); color: var(--muted); font-size: 0.85rem; text-align: center; }
 
-/* Landing */
 .landing-page {
   width: 100%;
   padding: 12px 0 20px;
 }
 .landing-hero {
   display: grid;
-  grid-template-columns: minmax(0, 0.92fr) minmax(360px, 0.72fr);
-  gap: 40px;
+  grid-template-columns: minmax(0, 1.08fr) minmax(420px, 0.88fr);
+  gap: 48px;
   align-items: start;
   padding: 18px 0 30px;
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--panel) 98%, white), color-mix(in srgb, var(--panel) 96%, var(--accent-soft)));
 }
 .landing-hero-inner {
-  max-width: 760px;
+  max-width: none;
 }
 .landing-title {
   margin: 0 0 18px;
@@ -276,9 +359,9 @@ html[lang="zh-TW"] .sidebar { font-family: var(--font-zh); letter-spacing: 0; }
 }
 .landing-search-form {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 12px;
-  align-items: stretch;
+  align-items: center;
   max-width: 100%;
 }
 .landing-search-input {
@@ -307,7 +390,8 @@ html[lang="zh-TW"] .sidebar { font-family: var(--font-zh); letter-spacing: 0; }
   color: var(--cta-text);
   font: 700 0.95rem var(--font-sans);
   cursor: pointer;
-  align-self: flex-start;
+  flex: 0 0 auto;
+  align-self: center;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
   transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.15s;
 }
@@ -325,8 +409,8 @@ html[lang="zh-TW"] .sidebar { font-family: var(--font-zh); letter-spacing: 0; }
 }
 .landing-sections {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 36px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 28px;
   margin-top: 30px;
   padding-top: 26px;
   border-top: 1px solid var(--border);
@@ -469,17 +553,20 @@ html[data-theme="dark"] .landing-meta {
   font-weight: 650;
 }
 
-/* Manpage */
-.manpage-rendered { display: grid; gap: 18px; }
+.manpage-rendered { display: grid; min-width: 0; gap: 18px; }
 .manpage-rendered > p { margin: 0; }
+.manpage-rendered .man-section { min-width: 0; }
 .manpage-rendered .man-section h2 { margin: 0 0 10px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
 .manpage-rendered .man-section + .man-section { margin-top: 6px; }
 .manpage-rendered .man-bullets { margin: 0; padding-left: 1.2rem; }
 .manpage-rendered .man-bullets li + li { margin-top: 8px; }
 .manpage-rendered .man-definitions { display: grid; grid-template-columns: minmax(0, 220px) minmax(0, 1fr); gap: 10px 18px; margin: 0; }
 .manpage-rendered .man-definitions dt { font-weight: 700; color: var(--heading); }
-.manpage-rendered .man-definitions dd { margin: 0; }
+.manpage-rendered .man-definitions dd { min-width: 0; margin: 0; }
 .manpage-rendered pre.man-example { margin: 0; }
+.manpage-intro > p:first-child {
+  margin-top: 0;
+}
 
 @media (max-width: 860px) {
   .landing-sections,
@@ -531,71 +618,81 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
   <div class="site">
     <div class="site-content">
       <div class="topbar">
-        <a class="brand" href="../../index.html">grafana-util docs</a>
-        <div class="themebar">
-          <select id="jump-select" aria-label="Jump"><option value="" selected>快速跳轉...</option><optgroup label="使用手冊"><option value="index.html">概觀</option><option value="getting-started.html">開始使用</option><option value="role-new-user.html">新手快速入門</option><option value="role-sre-ops.html">SRE / 維運角色導讀</option><option value="role-automation-ci.html">自動化 / CI 角色導讀</option><option value="architecture.html">系統架構與設計原則</option><option value="dashboard.html">Dashboard 維運人員手冊</option><option value="datasource.html">Datasource 維運人員手冊</option><option value="alert.html">Alert 維運人員手冊</option><option value="access.html">身分與存取管理</option><option value="change-overview-status.html">專案狀態與變更總覽</option><option value="scenarios.html">維運情境手冊</option><option value="recipes.html">實戰錦囊與最佳實踐</option><option value="reference.html">技術參考手冊</option><option value="troubleshooting.html">疑難排解與名詞解釋</option></optgroup><optgroup label="指令參考"><option value="../../commands/zh-TW/dashboard.html">Dashboard</option><option value="../../commands/zh-TW/alert.html">Alert</option><option value="../../commands/zh-TW/datasource.html">Datasource</option><option value="../../commands/zh-TW/access.html">Access</option><option value="../../commands/zh-TW/profile.html">Profile</option><option value="../../commands/zh-TW/status.html">Status</option><option value="../../commands/zh-TW/overview.html">Overview</option><option value="../../commands/zh-TW/change.html">Change</option><option value="../../commands/zh-TW/snapshot.html">Snapshot</option></optgroup></select>
-          <select id="font-select" aria-label="Font Size">
-            <option value="0.9">Font: Compact</option>
-            <option value="1">Font: Default</option>
-            <option value="1.1">Font: Large</option>
-            <option value="1.2">Font: Extra Large</option>
-          </select>
-          <select id="theme-select" aria-label="Theme">
-            <option value="auto">Theme: Auto</option>
-            <option value="light">Theme: Light</option>
-            <option value="dark">Theme: Dark</option>
-          </select>
-        </div>
-      </div>
-      
-        <div class="layout">
-          <aside class="nav-sidebar"><section class="nav-section"><h2>使用手冊</h2><div class="nav-group-block"><div class="nav-group-title">開始</div><ul class="nav-tree"><li class="nav-tree-node"><a href="index.html" class="nav-item">概觀</a></li><li class="nav-tree-node"><a href="getting-started.html" class="nav-item">開始使用</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">角色路徑</div><ul class="nav-tree"><li class="nav-tree-node"><a href="role-new-user.html" class="nav-item">新手快速入門</a></li><li class="nav-tree-node"><a href="role-sre-ops.html" class="nav-item">SRE / 維運角色導讀</a></li><li class="nav-tree-node"><a href="role-automation-ci.html" class="nav-item">自動化 / CI 角色導讀</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">核心操作</div><ul class="nav-tree"><li class="nav-tree-node"><a href="dashboard.html" class="nav-item">Dashboard 維運人員手冊</a></li><li class="nav-tree-node"><a href="datasource.html" class="nav-item">Datasource 維運人員手冊</a></li><li class="nav-tree-node"><a href="alert.html" class="nav-item">Alert 維運人員手冊</a></li><li class="nav-tree-node"><a href="access.html" class="nav-item">身分與存取管理</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">治理</div><ul class="nav-tree"><li class="nav-tree-node"><a href="architecture.html" class="nav-item">系統架構與設計原則</a></li><li class="nav-tree-node"><a href="change-overview-status.html" class="nav-item">專案狀態與變更總覽</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">實戰與參考</div><ul class="nav-tree"><li class="nav-tree-node"><a href="scenarios.html" class="nav-item">維運情境手冊</a></li><li class="nav-tree-node"><a href="recipes.html" class="nav-item">實戰錦囊與最佳實踐</a></li><li class="nav-tree-node"><a href="reference.html" class="nav-item">技術參考手冊</a></li><li class="nav-tree-node"><a href="troubleshooting.html" class="nav-item active">疑難排解與名詞解釋</a></li></ul></div></section><section class="nav-section"><h2>指令參考</h2><a href="../../commands/zh-TW/index.html" class="nav-command-entry">開啟指令參考</a></section></aside>
-          <article class="article">
-            <div style="margin-bottom:12px; font-size:0.84rem; color:color-mix(in srgb, var(--muted) 78%, white); font-weight:460;"><a href="../../index.html" style="color:inherit;text-decoration:none;">Home</a> / Handbook / 疑難排解與名詞解釋</div>
-            <div class="hero-eyebrow">Docs</div><h1><span class="hero-title-main">疑難排解與名詞解釋</span></h1>
-            <p>本章的目的不是只列錯誤訊息，而是幫您分辨問題到底屬於哪一類：</p>
-<ul><li>auth 還是 scope</li><li>live 還是 staged</li><li>指令形狀錯，還是輸出形狀不對</li><li>本機 profile wiring 問題，還是遠端 Grafana 行為</li></ul>
-<p>如果您正在追查驗證或連線設定，請把 <a href="../../commands/zh-TW/profile.html">profile</a>、<a href="../../commands/zh-TW/status.html">status</a>、<a href="../../commands/zh-TW/overview.html">overview</a> 與 <a href="../../commands/zh-TW/access.html">access</a> 一起開著。</p>
+  <a class="brand" href="../../index.html">grafana-util docs</a>
+  <div class="themebar">
+    <select id="page-locale-select" aria-label="Language switch"><option value="" selected>Language: 繁體中文</option><option value="../en/troubleshooting.html">Switch to English</option></select><select id="jump-select" aria-label="Jump"><option value="" selected>快速跳轉...</option><optgroup label="使用手冊"><option value="index.html">概觀</option><option value="what-is-grafana-util.html">這個工具是做什麼的</option><option value="getting-started.html">開始使用</option><option value="role-new-user.html">新手快速入門</option><option value="role-sre-ops.html">SRE / 維運角色導讀</option><option value="role-automation-ci.html">自動化 / CI 角色導讀</option><option value="architecture.html">系統架構與設計原則</option><option value="dashboard.html">Dashboard 維運人員手冊</option><option value="datasource.html">Data source 維運手冊</option><option value="alert.html">Alert 維運人員手冊</option><option value="access.html">身分與存取管理</option><option value="change-overview-status.html">專案狀態與變更總覽</option><option value="scenarios.html">維運情境手冊</option><option value="recipes.html">實戰錦囊與最佳實踐</option><option value="reference.html">技術參考手冊</option><option value="troubleshooting.html">疑難排解與名詞解釋</option></optgroup><optgroup label="指令參考"><option value="../../commands/zh-TW/dashboard.html">Dashboard</option><option value="../../commands/zh-TW/alert.html">Alert</option><option value="../../commands/zh-TW/datasource.html">Datasource</option><option value="../../commands/zh-TW/access.html">Access</option><option value="../../commands/zh-TW/profile.html">Profile</option><option value="../../commands/zh-TW/status.html">Status</option><option value="../../commands/zh-TW/overview.html">Overview</option><option value="../../commands/zh-TW/change.html">Change</option><option value="../../commands/zh-TW/snapshot.html">Snapshot</option></optgroup></select>
+    <select id="font-select" aria-label="Font Size">
+      <option value="0.9">Font: Compact</option>
+      <option value="1">Font: Default</option>
+      <option value="1.1">Font: Large</option>
+      <option value="1.2">Font: Extra Large</option>
+    </select>
+    <select id="theme-select" aria-label="Theme">
+      <option value="auto">Theme: Auto</option>
+      <option value="light">Theme: Light</option>
+      <option value="dark">Theme: Dark</option>
+    </select>
+  </div>
+</div>
+
+      <div class="layout">
+  <aside class="nav-sidebar"><section class="nav-section"><h2>使用手冊</h2><div class="nav-group-block"><div class="nav-group-title">開始</div><ul class="nav-tree"><li class="nav-tree-node"><a href="index.html" class="nav-item">概觀</a></li><li class="nav-tree-node"><a href="what-is-grafana-util.html" class="nav-item">這個工具是做什麼的</a></li><li class="nav-tree-node"><a href="getting-started.html" class="nav-item">開始使用</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">角色路徑</div><ul class="nav-tree"><li class="nav-tree-node"><a href="role-new-user.html" class="nav-item">新手快速入門</a></li><li class="nav-tree-node"><a href="role-sre-ops.html" class="nav-item">SRE / 維運角色導讀</a></li><li class="nav-tree-node"><a href="role-automation-ci.html" class="nav-item">自動化 / CI 角色導讀</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">核心操作</div><ul class="nav-tree"><li class="nav-tree-node"><a href="dashboard.html" class="nav-item">Dashboard 維運人員手冊</a></li><li class="nav-tree-node"><a href="datasource.html" class="nav-item">Data source 維運手冊</a></li><li class="nav-tree-node"><a href="alert.html" class="nav-item">Alert 維運人員手冊</a></li><li class="nav-tree-node"><a href="access.html" class="nav-item">身分與存取管理</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">治理</div><ul class="nav-tree"><li class="nav-tree-node"><a href="architecture.html" class="nav-item">系統架構與設計原則</a></li><li class="nav-tree-node"><a href="change-overview-status.html" class="nav-item">專案狀態與變更總覽</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">實戰與參考</div><ul class="nav-tree"><li class="nav-tree-node"><a href="scenarios.html" class="nav-item">維運情境手冊</a></li><li class="nav-tree-node"><a href="recipes.html" class="nav-item">實戰錦囊與最佳實踐</a></li><li class="nav-tree-node"><a href="reference.html" class="nav-item">技術參考手冊</a></li><li class="nav-tree-node"><a href="troubleshooting.html" class="nav-item active">疑難排解與名詞解釋</a></li></ul></div></section><section class="nav-section"><h2>指令參考</h2><a href="../../commands/zh-TW/index.html" class="nav-command-entry">開啟指令參考</a></section></aside>
+
+  <article class="article">
+    <div class="breadcrumbs"><a href="../../index.html">Home</a> / Handbook / 疑難排解與名詞解釋</div>
+
+    <div class="hero-eyebrow">Docs</div>
+<h1><span class="hero-title-main">疑難排解與名詞解釋</span></h1>
+
+
+    <p>本章不是只列錯誤訊息，而是幫你分辨問題到底屬於哪一類：</p>
+<ul><li>auth 還是 scope</li><li>live 還是 staged</li><li>指令形狀錯，還是輸出形狀不對</li><li>本機 profile 設定問題，還是遠端 Grafana 行為</li></ul>
+<p>如果你正在追查驗證或連線設定，請把 <a href="../../commands/zh-TW/profile.html">profile</a>、<a href="../../commands/zh-TW/status.html">status</a>、<a href="../../commands/zh-TW/overview.html">overview</a> 與 <a href="../../commands/zh-TW/access.html">access</a> 一起開著。</p>
 <h2 id="cli-診斷與調修">CLI 診斷與調修</h2>
 <h3 id="1-啟用-verbose-日誌">1. 啟用 verbose 日誌</h3>
-<p><code>grafana-util</code> 使用標準 Rust logging。您可以提高日誌等級來看實際 API request / response。</p>
-<pre><code>RUST_LOG=debug grafana-util overview live --profile prod</code></pre>
-<pre><code>grafana-util dashboard list -v</code></pre>
+<p><code>grafana-util</code> 使用標準 Rust logging。你可以提高日誌等級來看實際 API request / response。</p>
+<pre><code>RUST_LOG=debug grafana-util overview live --profile prod
+grafana-util dashboard list -v</code></pre>
 <p>適合拿來回答這些問題：</p>
-<ul><li>CLI 打到的是不是您以為的那台主機</li><li>是 auth、scope，還是 network 在拒絕請求</li><li>指令形狀是不是和文件理解的不一樣</li></ul>
+<ul><li>CLI 打到的是不是你以為的那台主機</li><li>是 auth、scope，還是 network 在拒絕請求</li><li>指令形狀是不是和文件理解的不一樣</li></ul>
 <h3 id="2-常見錯誤與快速修補">2. 常見錯誤與快速修補</h3>
 <table><thead><tr><th>症狀</th><th>常見原因</th><th>建議修補方式</th></tr></thead><tbody><tr><td><code>401 Unauthorized</code></td><td>token 或帳密無效</td><td>檢查 profile、環境變數、或實際輸入的憑證</td></tr><tr><td><code>403 Forbidden</code></td><td>credential 有效，但權限不足</td><td>確認角色/權限，或改用更廣的管理員憑證</td></tr><tr><td><code>Connection Refused</code></td><td>URL 錯誤或網路阻擋</td><td>驗證 <code>--url</code> 與 Grafana 網路可達性</td></tr><tr><td><code>Timeout</code></td><td>estate 太大或後端太慢</td><td>增加 <code>--timeout</code>，必要時先縮小 scope</td></tr></tbody></table>
 <h3 id="3-權限範圍與驗證方式不匹配">3. 權限範圍與驗證方式不匹配</h3>
 <p>這類問題最麻煩的地方是，看起來像「指令有跑成功」，但其實回傳結果不完整。</p>
-<table><thead><tr><th>症狀</th><th>常見原因</th><th>下一步先檢查什麼</th></tr></thead><tbody><tr><td><code>--all-orgs</code> 回來的 org 比預期少</td><td>token scope 比要求的讀取範圍窄</td><td>改用 admin-backed profile 或 direct Basic auth 重試</td></tr><tr><td>read-only status 可跑，但 access/admin 類指令失敗</td><td>credential 有效，但範圍不夠</td><td>對照目前 credential 與要執行的 command family</td></tr><tr><td>同一個 token 在某個 job 可用，換一個 job 就失敗</td><td>第二個 job 用到更廣的 surface</td><td>檢查該 workflow 是否其實該用 profile-backed Basic auth</td></tr></tbody></table>
+<table><thead><tr><th>症狀</th><th>常見原因</th><th>下一步先檢查什麼</th></tr></thead><tbody><tr><td><code>--all-orgs</code> 回來的 org 比預期少</td><td>token scope 比要求的讀取範圍窄</td><td>改用 admin-backed profile 或 direct Basic auth 重試</td></tr><tr><td>read-only status 可跑，但 access/admin 類指令失敗</td><td>credential 有效，但範圍不夠</td><td>對照目前 credential 與要執行的 command family</td></tr><tr><td>同一個 token 在某個 job 可用，換一個 job 就失敗</td><td>第二個 job 用到更廣的操作面</td><td>檢查該流程是否其實該用 profile-backed Basic auth</td></tr></tbody></table>
 <p>原則：</p>
 <ul><li>驗證成功不代表 scope 一定足夠</li><li>如果輸出「看起來怪怪但不是完全報錯」，先懷疑 scope，不要先懷疑 parser</li></ul>
 <h3 id="4-staged-與-live-搞混">4. staged 與 live 搞混</h3>
 <p>這是最常見的維運誤判之一。</p>
-<table><thead><tr><th>症狀</th><th>真正發生的事</th><th>建議修補方式</th></tr></thead><tbody><tr><td><code>status staged</code> 看起來健康，但 live apply 仍失敗</td><td>staged 檔案結構正確，不代表 live state 或權限也正確</td><td>先跑 <code>status live</code>，再跑 <code>change preflight</code> 或 command-specific dry-run</td></tr><tr><td><code>overview live</code> 看起來正常，就直接略過 preflight / plan</td><td>live 可讀性不等於 staged package 正確</td><td>apply 前仍要跑 staged gate 與 review path</td></tr><tr><td>import 或 apply 比預期改得更多</td><td>staged package 從來沒有先做 summary 或 plan</td><td>執行前先用 <code>change summary</code>、<code>change plan</code> 與 <code>--dry-run</code></td></tr></tbody></table>
+<table><thead><tr><th>症狀</th><th>真正發生的事</th><th>建議修補方式</th></tr></thead><tbody><tr><td><code>status staged</code> 看起來健康，但 live apply 仍失敗</td><td>staged 檔案結構正確，不代表 live state 或權限也正確</td><td>先跑 <code>status live</code>，再跑 <code>change preflight</code> 或 command-specific dry-run</td></tr><tr><td><code>overview live</code> 看起來正常，就直接略過 preflight / plan</td><td>live 可讀性不等於 staged 套件正確</td><td>apply 前仍要跑 staged gate 與 review path</td></tr><tr><td>import 或 apply 比預期改得更多</td><td>staged 套件從來沒有先做 summary 或 plan</td><td>執行前先用 <code>change summary</code>、<code>change plan</code> 與 <code>--dry-run</code></td></tr></tbody></table>
 <h3 id="5-profile-與-secret-問題">5. profile 與 secret 問題</h3>
-<table><thead><tr><th>症狀</th><th>常見原因</th><th>建議修補方式</th></tr></thead><tbody><tr><td><code>profile show --show-secrets</code> 解不出來</td><td>env var 不存在、OS store entry 不見、或 encrypted secret file / key 不見</td><td>回頭檢查 profile 指到的 secret source</td></tr><tr><td>本機可跑、CI 跑不起來</td><td>env 注入或 config path 不同</td><td>檢查 <code>GRAFANA_UTIL_CONFIG</code>、env vars 與必要的 secret files</td></tr><tr><td><code>--store-secret os</code> 在 macOS 可用，但 Linux 不行</td><td>Linux runner 沒有可用的 Secret Service session</td><td>改用 <code>password_env</code>、<code>token_env</code> 或 <code>encrypted-file</code></td></tr></tbody></table>
+<table><thead><tr><th>症狀</th><th>常見原因</th><th>建議修補方式</th></tr></thead><tbody><tr><td><code>profile show --show-secrets</code> 解不出來</td><td>env var 不存在、OS store entry 不見，或 encrypted secret file / key 不見</td><td>回頭檢查 profile 指到的 secret source</td></tr><tr><td>本機可跑、CI 跑不起來</td><td>env 注入或 config path 不同</td><td>檢查 <code>GRAFANA_UTIL_CONFIG</code>、env vars 與必要的 secret files</td></tr><tr><td><code>--store-secret os</code> 在 macOS 可用，但 Linux 不行</td><td>Linux runner 沒有可用的 Secret Service session</td><td>改用 <code>password_env</code>、<code>token_env</code> 或 <code>encrypted-file</code></td></tr></tbody></table>
 <h3 id="6-輸出格式用錯">6. 輸出格式用錯</h3>
-<table><thead><tr><th>症狀</th><th>常見原因</th><th>建議修補方式</th></tr></thead><tbody><tr><td>CI parser 突然壞掉</td><td>用到了給人看的輸出模式</td><td>改用 <code>json</code>、<code>yaml</code> 或其他明確機器可讀輸出</td></tr><tr><td>指令不接受 <code>--output-format</code></td><td>這個 surface 實際上使用 <code>--output</code></td><td>直接查該 command help 或逐指令頁</td></tr><tr><td>第一次檢查時互動式輸出太複雜</td><td>畫面好看，但原始訊號不夠直觀</td><td>先切成 <code>yaml</code> 或 <code>json</code></td></tr></tbody></table>
+<table><thead><tr><th>症狀</th><th>常見原因</th><th>建議修補方式</th></tr></thead><tbody><tr><td>CI parser 突然壞掉</td><td>用到了給人看的輸出模式</td><td>改用 <code>json</code>、<code>yaml</code> 或其他適合腳本處理的結構化輸出</td></tr><tr><td>指令不接受 <code>--output-format</code></td><td>這個指令實際上使用 <code>--output</code></td><td>直接查該 command help 或指令頁</td></tr><tr><td>第一次檢查時互動式輸出太複雜</td><td>畫面雖然好看，但資訊不夠直接</td><td>先切成 <code>yaml</code> 或 <code>json</code></td></tr></tbody></table>
 <h2 id="名詞解釋">名詞解釋</h2>
-<table><thead><tr><th>術語</th><th>定義</th></tr></thead><tbody><tr><td><strong>Surface</strong></td><td>高階介面分類，例如 <code>Status</code>、<code>Overview</code>、<code>Change</code></td></tr><tr><td><strong>Lane</strong></td><td>資產的隔離資料流路徑，例如 <code>raw/</code>、<code>prompt/</code>、<code>provisioning/</code></td></tr><tr><td><strong>Contract</strong></td><td>用來定義 readiness 或 compatibility 的機器可讀 JSON 文件</td></tr><tr><td><strong>Masked Recovery</strong></td><td>匯出時把 secrets 遮蔽，匯入或 replay 時再補回</td></tr><tr><td><strong>Desired State</strong></td><td>儲存在 Git 中、CLI 拿來對照 live Grafana 的目標設定</td></tr><tr><td><strong>Drift</strong></td><td>live Grafana 與本地 staged / desired artifacts 之間的差距</td></tr></tbody></table>
+<table><thead><tr><th>術語</th><th>定義</th></tr></thead><tbody><tr><td><strong>Surface</strong></td><td>高階操作面分類，例如 <code>Status</code>、<code>Overview</code>、<code>Change</code></td></tr><tr><td><strong>Lane</strong></td><td>資產的隔離路徑，例如 <code>raw/</code>、<code>prompt/</code>、<code>provisioning/</code></td></tr><tr><td><strong>Contract</strong></td><td>用來定義 readiness 或 compatibility 的結構化 JSON 文件</td></tr><tr><td><strong>Masked Recovery</strong></td><td>匯出時把 secrets 遮蔽，匯入或 replay 時再補回</td></tr><tr><td><strong>Desired State</strong></td><td>儲存在 Git 中、CLI 拿來對照 live Grafana 的目標設定</td></tr><tr><td><strong>Drift</strong></td><td>live Grafana 與本地 staged / desired 輸出物之間的差距</td></tr></tbody></table>
 <h2 id="取得更多協助">取得更多協助</h2>
 <ul><li><strong>先確認版本</strong>：回報問題時先執行 <code>grafana-util --version</code></li><li><strong>專案儲存庫</strong>：請在 <a href="https://github.com/kendlee/grafana-utils/issues">GitHub Issues</a> 回報 Bug 或提需求</li></ul>
 <p>回報問題時，盡量附上：</p>
 <ul><li>完整指令</li><li>這次是 live 還是 staged</li><li>使用的是 <code>--profile</code>、direct Basic auth，還是 token auth</li><li>問題比較像語法、連線、scope，還是 staged input shape</li></ul>
 <p><a href="recipes.html">⬅️ 上一章：實戰錦囊與最佳實踐</a> | <a href="index.html">🏠 回首頁</a></p>
-            <nav class="footer-nav"><a class="link-card" href="reference.html"><span>Previous</span>技術參考手冊 (Technical Reference)</a></nav>
-          </article>
-          <aside class="sidebar"><section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#cli-診斷與調修"><span class="toc-label">CLI 診斷與調修</span></a></li><li class="toc-level-3"><a href="#1-啟用-verbose-日誌"><span class="toc-label">1. 啟用 verbose 日誌</span></a></li><li class="toc-level-3"><a href="#2-常見錯誤與快速修補"><span class="toc-label">2. 常見錯誤與快速修補</span></a></li><li class="toc-level-3"><a href="#3-權限範圍與驗證方式不匹配"><span class="toc-label">3. 權限範圍與驗證方式不匹配</span></a></li><li class="toc-level-3"><a href="#4-staged-與-live-搞混"><span class="toc-label">4. staged 與 live 搞混</span></a></li><li class="toc-level-3"><a href="#5-profile-與-secret-問題"><span class="toc-label">5. profile 與 secret 問題</span></a></li><li class="toc-level-3"><a href="#6-輸出格式用錯"><span class="toc-label">6. 輸出格式用錯</span></a></li><li class="toc-level-2"><a href="#名詞解釋"><span class="toc-label">名詞解釋</span></a></li><li class="toc-level-2"><a href="#取得更多協助"><span class="toc-label">取得更多協助</span></a></li></ul></section><section class="sidebar-section"><h2>Related</h2></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/troubleshooting.html" class="sidebar-meta-link">Switch to English</a></li></ul></section></aside>
-        </div>
-        
+    <nav class="footer-nav"><a class="link-card" href="reference.html"><span>Previous</span>技術參考手冊 (Technical Reference)</a></nav>
+  </article>
+  <aside class="sidebar">
+  <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#cli-診斷與調修"><span class="toc-label">CLI 診斷與調修</span></a></li><li class="toc-level-3"><a href="#1-啟用-verbose-日誌"><span class="toc-label">1. 啟用 verbose 日誌</span></a></li><li class="toc-level-3"><a href="#2-常見錯誤與快速修補"><span class="toc-label">2. 常見錯誤與快速修補</span></a></li><li class="toc-level-3"><a href="#3-權限範圍與驗證方式不匹配"><span class="toc-label">3. 權限範圍與驗證方式不匹配</span></a></li><li class="toc-level-3"><a href="#4-staged-與-live-搞混"><span class="toc-label">4. staged 與 live 搞混</span></a></li><li class="toc-level-3"><a href="#5-profile-與-secret-問題"><span class="toc-label">5. profile 與 secret 問題</span></a></li><li class="toc-level-3"><a href="#6-輸出格式用錯"><span class="toc-label">6. 輸出格式用錯</span></a></li><li class="toc-level-2"><a href="#名詞解釋"><span class="toc-label">名詞解釋</span></a></li><li class="toc-level-2"><a href="#取得更多協助"><span class="toc-label">取得更多協助</span></a></li></ul></section>
+  <section class="sidebar-section"><h2>Related</h2></section>
+  <section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section>
+  <section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/troubleshooting.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
+</aside>
+
+</div>
+
     </div>
     <footer class="site-footer">Source: troubleshooting.md</footer>
   </div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js" async></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js" async></script>
-  
-<script>
+  <script>
 (() => {
   const root = document.documentElement;
   const storageKey = "grafana-util-docs-theme";
@@ -627,8 +724,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
     const copyBtn = document.createElement("button"); copyBtn.className = "control-btn"; copyBtn.innerText = "Copy";
     copyBtn.onclick = () => {
       const raw = block.querySelector("code").innerText;
-      const filtered = raw.split("\n").filter(l => l.trim() && !l.trim().startsWith("#")).join("\n") || raw;
-      navigator.clipboard.writeText(filtered).then(() => { copyBtn.innerText="Copied!"; setTimeout(()=>copyBtn.innerText="Copy", 2000); });
+      navigator.clipboard.writeText(raw).then(() => { copyBtn.innerText="Copied!"; setTimeout(()=>copyBtn.innerText="Copy", 2000); });
     };
     controls.append(wrapBtn, copyBtn); block.append(controls);
   });
@@ -639,6 +735,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 
   const jumpSelect = document.getElementById("jump-select");
   if(jumpSelect) jumpSelect.onchange = (e) => { if(e.target.value) window.location.href = e.target.value; };
+  const pageLocaleSelect = document.getElementById("page-locale-select");
+  if(pageLocaleSelect) pageLocaleSelect.onchange = (e) => { if(e.target.value) window.location.href = e.target.value; };
 
   const landingI18n = document.getElementById("landing-i18n");
   const localeSelect = document.getElementById("locale-select");

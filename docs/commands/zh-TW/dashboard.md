@@ -1,16 +1,21 @@
 # dashboard
 
 ## 用途
-`grafana-util dashboard` 是處理即時儀表板工作流程、在地草稿管理、匯出/匯入檢視、檢查、拓樸、截圖，以及 raw 轉 prompt JSON 的命名空間。這個命名空間也可用 `grafana-util db` 呼叫。
+`grafana-util dashboard` 是處理即時儀表板工作流程、在地草稿管理、匯出 / 匯入檢視、檢查、拓樸、截圖，以及 raw 轉 prompt JSON 的指令群組。這個指令群組也可用 `grafana-util db` 呼叫。
 
 ## 何時使用
-當您需要瀏覽線上儀表板、抓取或複製線上儀表板成為本地 JSON 草稿、比對本地檔案與 Grafana、檢查匯出或線上中繼資料，或將已準備好的儀表板發佈回 Grafana 時，使用這個命名空間。
+當你需要瀏覽線上儀表板、抓取或複製線上儀表板成為本地 JSON 草稿、比對本地檔案與 Grafana、檢查匯出或線上中繼資料，或把已準備好的儀表板發佈回 Grafana 時，就會用到這個指令群組。
+
+## 說明
+如果你現在處理的是整個 dashboard 工作流，而不是只查某個旗標，先看這一頁最合適。`dashboard` 指令群組把維運時常一起出現的工作整理在同一個入口下，例如盤點、備份與匯出、跨環境搬遷、套用前檢查、live 檢視、拓樸判讀，以及可重現的截圖流程。
+
+對 SRE 或 Grafana 維運人員來說，這頁的作用是先幫你判斷下一步要切去哪個子命令。若你已經知道要做的動作，再從這裡跳到對應子指令頁看精確語法與範例。
 
 ## 重點旗標
 - `--url`：Grafana 基底網址。
 - `--token`、`--basic-user`、`--basic-password`：共用的線上 Grafana 憑證。
 - `--profile`：從 `grafana-util.yaml` 載入 repo 本地預設值。
-- `--color`：控制這個命名空間的 JSON 彩色輸出。
+- `--color`：控制這個指令群組的 JSON 彩色輸出。
 
 ## 驗證說明
 - 可重複執行的日常工作優先用 `--profile`。

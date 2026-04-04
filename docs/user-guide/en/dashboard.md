@@ -37,8 +37,28 @@ Use the dashboard area for estate-level governance:
 - **Inventory**: Understand what exists across one or many organizations.
 - **Structured Export**: Move dashboards between environments with dedicated "lanes".
 - **Deep Inspection**: Analyze queries and datasource dependencies offline.
+- **Screenshots and visual checks**: Produce reproducible dashboard or panel captures for docs, incident notes, and debugging.
 - **Drift Review**: Compare staged files against live Grafana before applying.
 - **Controlled Mutation**: Import or delete dashboards with mandatory dry-runs.
+
+---
+
+## 🔎 Inspection and screenshot workflows
+
+If your goal is not export or import, but understanding what a dashboard currently looks like, which dependencies it carries, and how variables resolve, start here.
+
+- `dashboard inspect-live`: inspect one live dashboard's structure, queries, and dependencies.
+- `dashboard inspect-export`: inspect an exported dashboard file offline.
+- `dashboard inspect-vars`: verify variables, datasource choices, and URL-scoped inputs.
+- `dashboard screenshot`: generate a reproducible dashboard or panel capture with a headless browser.
+- `dashboard topology`: trace the dashboard's upstream relationships at a glance.
+
+Common cases:
+
+- attaching a screenshot to an incident or runbook
+- checking whether one panel resolves the intended variables and datasources
+- producing docs or review captures without manual screenshots
+- reviewing query/dependency structure before making changes
 
 ---
 

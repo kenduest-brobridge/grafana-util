@@ -11,35 +11,47 @@ when you want to keep Grafana connection defaults in the current checkout and re
 .SH SUBCOMMANDS
 .TP
 .B list
-list profile names from the resolved grafana\-util config file.
+list profile names from the resolved grafana\-util config file. Use when: Need to confirm which profiles are available in the current checkout.
 .TP
 .B show
-show the selected profile as text, table, csv, json, or yaml.
+show the selected profile as text, table, csv, json, or yaml. Use when: Want to inspect the resolved connection settings before running a live command.
 .TP
 .B add
-create or replace one named profile without hand\-editing grafana\-util.yaml.
+create or replace one named profile without hand\-editing grafana\-util.yaml. Use when: Want a friendlier path than editing YAML directly, especially for storing reusable auth defaults.
 .TP
 .B example
-print a comment\-rich reference config that operators can copy and adapt.
+print a comment\-rich reference config that operators can copy and adapt. Use when: Want one canonical example that explains the supported profile fields and secret storage modes.
 .TP
 .B init
-initialize grafana\-util.yaml in the current working directory.
+initialize grafana\-util.yaml in the current working directory. Use when: A checkout does not yet have a repo\-local profile file and you want the built\-in starter template.
 .SH EXAMPLES
+.PP
+list: list profile names from the resolved grafana\-util config file.
 .EX
 grafana-util profile list
 .EE
+.PP
+show: show the selected profile as text, table, csv, json, or yaml.
 .EX
 grafana-util profile show --profile prod --output-format yaml
 .EE
+.PP
+show: show the selected profile as text, table, csv, json, or yaml.
 .EX
 grafana-util profile show --profile prod --output-format json
 .EE
+.PP
+show: show the selected profile as text, table, csv, json, or yaml.
 .EX
 grafana-util profile show --profile prod --show-secrets --output-format yaml
 .EE
+.PP
+example: print a comment\-rich reference config that operators can copy and adapt.
 .EX
 grafana-util profile example
 .EE
+.PP
+example: print a comment\-rich reference config that operators can copy and adapt.
 .EX
 grafana-util profile example --mode basic
 .EE

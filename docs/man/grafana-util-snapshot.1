@@ -11,14 +11,18 @@ when you want a local snapshot root that captures dashboard and datasource inven
 .SH SUBCOMMANDS
 .TP
 .B export
-export dashboard and datasource inventory into a local snapshot bundle.
+export dashboard and datasource inventory into a local snapshot bundle. Use when: Need a local snapshot root that can be reviewed without Grafana access.
 .TP
 .B review
-review a local snapshot inventory without touching Grafana.
+review a local snapshot inventory without touching Grafana. Use when: Want to inspect an exported snapshot root as table, csv, text, json, yaml, or interactive output.
 .SH EXAMPLES
+.PP
+review: review a local snapshot inventory without touching Grafana.
 .EX
 grafana-util snapshot review --input-dir ./snapshot --output table
 .EE
+.PP
+review: review a local snapshot inventory without touching Grafana.
 .EX
 grafana-util snapshot review --input-dir ./snapshot --interactive
 .EE

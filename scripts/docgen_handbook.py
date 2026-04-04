@@ -20,6 +20,7 @@ HANDBOOK_ROOT = get_handbook_root()
 HANDBOOK_LOCALES = ("en", "zh-TW")
 HANDBOOK_ORDER = (
     "index.md",
+    "what-is-grafana-util.md",
     "getting-started.md",
     "role-new-user.md",
     "role-sre-ops.md",
@@ -36,7 +37,7 @@ HANDBOOK_ORDER = (
     "troubleshooting.md",
 )
 HANDBOOK_NAV_GROUPS = (
-    ("start", ("index.md", "getting-started.md")),
+    ("start", ("index.md", "what-is-grafana-util.md", "getting-started.md")),
     ("role-paths", ("role-new-user.md", "role-sre-ops.md", "role-automation-ci.md")),
     ("core-operations", ("dashboard.md", "datasource.md", "alert.md", "access.md")),
     ("governance", ("architecture.md", "change-overview-status.md")),

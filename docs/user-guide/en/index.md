@@ -1,4 +1,4 @@
-# 📖 Operator Handbook: grafana-util
+# Operator Handbook
 
 ## Language
 
@@ -9,13 +9,17 @@
 
 ---
 
-Welcome to the official operator handbook for `grafana-util`. This guide is designed to take you from a fresh installation to mastering estate-level Grafana governance.
+Welcome to the `grafana-util` handbook. Start here if you want the operator path from first connection, to repeatable profiles, to day-to-day Grafana maintenance and automation.
+
+If you want the high-level framing first, including the pain points this tool is meant to solve and when it is the right fit, start here:
+
+- [What grafana-util is for](what-is-grafana-util.md)
 
 ---
 
-## ⚡ 30-Second Quick Start
+## 30-Second Quick Start
 
-Get from zero to a full project health report in three commands.
+Get from zero to a first install check, connectivity check, and estate-level overview in three commands.
 
 ### 1. Install (Global Binary)
 ```bash
@@ -30,49 +34,50 @@ grafana-util --version
 
 ### 3. Run Your First Global Audit
 ```bash
-# Generates a high-level health & inventory report of your entire Grafana estate
+# Generates a high-level health and inventory report of your Grafana estate
 grafana-util overview live --url http://localhost:3000 --basic-user admin --prompt-password --output interactive
 ```
 
-**Why this matters:** In 30 seconds, you have verified connectivity, inventoried your dashboards/alerts, and identified any broken datasource configurations across all organizations.
+**Why this matters:** In 30 seconds, you have confirmed connectivity, checked dashboards and alerts, and found the first obvious data source problems before you make changes.
 
 ---
 
-## 🧭 Navigation Map
+## Navigation Map
 
-### 🚀 Phase 1: Foundation
-*   **[Getting Started](getting-started.md)**: Advanced installation, Profiles, and Auth rules.
+### Phase 1: Foundation
+*   **[What grafana-util is for](what-is-grafana-util.md)**: Start with the problems it solves and the operator workflows it is meant to support.
+*   **[Getting Started](getting-started.md)**: Installation, connection setup, profiles, and auth options.
 *   **[New User Path](role-new-user.md)**: The shortest safe path from install to first successful live read.
 *   **[SRE / Ops Path](role-sre-ops.md)**: The operator path for day-to-day governance, review-first change flows, and troubleshooting.
 *   **[Automation / CI Path](role-automation-ci.md)**: The profile, output, and command-reference path for scripting and automation.
-*   **[Architecture & Design Principles](architecture.md)**: The "Why" behind our design decisions.
+*   **[Architecture & Design Principles](architecture.md)**: The reasoning behind the workflow and command design.
 
-### 🛠️ Phase 2: Core Asset Management
-*   **[Dashboard Management](dashboard.md)**: Export, Import, and Live Inspection.
-*   **[Datasource Management](datasource.md)**: Masked Recovery and Live Mutations.
-*   **[Alerting Governance](alert.md)**: The Plan/Apply lifecycle for Grafana Alerts.
+### Phase 2: Core Asset Management
+*   **[Dashboard Management](dashboard.md)**: Export, import, inspection, screenshots, and governance checks.
+*   **[Data source Management](datasource.md)**: Export, import, inspection, and live mutation guidance for Grafana data sources.
+*   **[Alerting Governance](alert.md)**: Review, planning, and apply flow for Grafana alerts.
 
-### 🔐 Phase 3: Identity & Access
-*   **[Access Management](access.md)**: Organizations, Users, Teams, and Service Accounts.
+### Phase 3: Identity & Access
+*   **[Access Management](access.md)**: org, user, team, and service account operations.
 
-### 🛡️ Phase 4: Governance & Readiness
-*   **[Change & Status](change-overview-status.md)**: Staged workflows, project snapshots, and health gates.
+### Phase 4: Governance & Readiness
+*   **[Change & Status](change-overview-status.md)**: staged workflows, project snapshots, and preflight checks.
 
-### 📖 Phase 5: Deep Dive
-*   **[Practical Scenarios](scenarios.md)**: End-to-end task recipes (Backups, DR, Audits).
-*   **[Best Practices & Recipes](recipes.md)**: Surgical solutions for common Grafana headaches.
-*   **[Technical Reference](reference.md)**: Full command map and global flag dictionary.
+### Phase 5: Deep Dive
+*   **[Practical Scenarios](scenarios.md)**: end-to-end task recipes such as backups, DR, and audits.
+*   **[Best Practices & Recipes](recipes.md)**: recommended ways to handle common Grafana operator problems.
+*   **[Technical Reference](reference.md)**: command map, profile behavior, common flags, and output guidance.
 *   **[Command Docs](../../commands/en/index.md)**: One page per command and subcommand, aligned to the current Rust CLI help.
 *   **[Troubleshooting & Glossary](troubleshooting.md)**: Diagnostic guides and terminology index.
 
 ---
 
-## 👥 Choose Your Role
+## Choose Your Role
 
 Different readers usually need different paths through the handbook:
 
 *   **New user**
-  Start with [New User Path](role-new-user.md), then [Getting Started](getting-started.md), then open [Command Docs](../../commands/en/index.md) when you need exact flags.
+  Start with [What grafana-util is for](what-is-grafana-util.md), then [New User Path](role-new-user.md), then [Getting Started](getting-started.md), then open [Command Docs](../../commands/en/index.md) when you need exact flags.
 *   **SRE / operator**
   Start with [SRE / Ops Path](role-sre-ops.md), then [Change & Status](change-overview-status.md), [Dashboard Management](dashboard.md), [Datasource Management](datasource.md), and [Troubleshooting](troubleshooting.md).
 *   **Identity / access administrator**
@@ -84,8 +89,8 @@ Different readers usually need different paths through the handbook:
 
 ---
 
-## 🎯 How to use this guide
-If you are new, start with **Getting Started** and follow the **"Next Page"** links at the bottom of each chapter for a guided learning path.
+## How to use this guide
+If you are new, start with **What grafana-util is for**, then **Getting Started**, then follow the **Next Page** links at the bottom of each chapter.
 
 ---
-**Next Step**: [🚀 Getting Started](getting-started.md)
+**Next Step**: [What grafana-util is for](what-is-grafana-util.md)

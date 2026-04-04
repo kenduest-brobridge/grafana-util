@@ -15,19 +15,19 @@ Manage service\-account tokens.
 .SH SUBCOMMANDS
 .TP
 .B user
-List, browse, create, modify, export, import, diff, or delete Grafana users.
+List, browse, create, modify, export, import, diff, or delete Grafana users. Use when: Inspect users in the current org or in global admin scope.; Create or update users with login, email, role, and admin settings.; Export and import user inventory bundles.; Remove users from the org membership or from the global registry.
 .TP
 .B org
-List, create, modify, export, import, diff, or delete Grafana organizations.
+List, create, modify, export, import, diff, or delete Grafana organizations. Use when: Inspect organization inventory and org users.; Create a new organization or rename an existing one.; Export or import org bundles between environments.; Remove an organization by id or exact name.
 .TP
 .B team
-List, browse, create, modify, export, import, diff, or delete Grafana teams.
+List, browse, create, modify, export, import, diff, or delete Grafana teams. Use when: Inspect team inventory and team memberships.; Create or update team membership and admin assignments.; Export or import team bundles.; Remove a team by id or exact name.
 .TP
 .B service\-account
-List, create, export, import, diff, or delete Grafana service accounts, and manage their tokens.
+List, create, export, import, diff, or delete Grafana service accounts, and manage their tokens. Use when: Inspect service\-account inventory.; Create or update service\-account bundles.; Generate or delete service\-account tokens.
 .TP
 .B service\-account token
-Add or delete tokens for a Grafana service account.
+Add or delete tokens for a Grafana service account. Use when: Create a new service\-account token.; Delete an existing service\-account token by service\-account name or id.
 .SH COMMON OPTIONS
 .IP \(bu 2
 \-\-profile, \-\-url, \-\-token, \-\-basic\-user, \-\-basic\-password
@@ -36,21 +36,33 @@ Add or delete tokens for a Grafana service account.
 .IP \(bu 2
 Use the nested subcommands for user, org, team or group, and service\-account.
 .SH EXAMPLES
+.PP
+user: List, browse, create, modify, export, import, diff, or delete Grafana users.
 .EX
 grafana-util access user list --profile prod --json
 .EE
+.PP
+service\-account: List, create, export, import, diff, or delete Grafana service accounts, and manage their tokens.
 .EX
 grafana-util access service-account list --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output-format text
 .EE
+.PP
+service\-account token: Add or delete tokens for a Grafana service account.
 .EX
 grafana-util access service-account token add --url http://localhost:3000 --basic-user admin --basic-password admin --name deploy-bot --token-name nightly
 .EE
+.PP
+user: List, browse, create, modify, export, import, diff, or delete Grafana users.
 .EX
 grafana-util access user list --url http://localhost:3000 --basic-user admin --basic-password admin --scope org --output-format text
 .EE
+.PP
+user: List, browse, create, modify, export, import, diff, or delete Grafana users.
 .EX
 grafana-util access user add --url http://localhost:3000 --basic-user admin --basic-password admin --login alice --email alice@example.com --name Alice --password secret
 .EE
+.PP
+user: List, browse, create, modify, export, import, diff, or delete Grafana users.
 .EX
 grafana-util access user delete --url http://localhost:3000 --basic-user admin --basic-password admin --login temp-user --scope global --yes --json
 .EE

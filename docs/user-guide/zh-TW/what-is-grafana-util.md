@@ -1,0 +1,117 @@
+# 這個工具是做什麼的
+
+`grafana-util` 不是單純把 Grafana HTTP API 包成一堆指令，也不是只有備份匯出工具。它的重點是把日常維運會碰到的幾條工作流接起來，讓你在「盤點、檢查、審查、搬移、回放」之間有一套一致的做法。
+
+如果你曾經遇過下面這些痛點，這個工具就是為了解這些事：
+
+- 想先看整個 Grafana 環境目前長什麼樣，但 UI 很難快速盤點多 org 或大量資產
+- 想搬 dashboard、alert 或 data source，卻不想只靠手動點 UI
+- 想先知道變更會影響什麼，再決定要不要套用
+- 想把匯出結果放進 Git、CI/CD 或 review 流程，但又不想把秘密資料直接寫進檔案
+- 想做可重複的維運流程，而不是每次都重新拼湊參數與操作步驟
+
+---
+
+## 它的定位
+
+`grafana-util` 比較接近一套 Grafana 維運工作流工具，而不是單一功能的 CLI。
+
+它把常見需求拆成幾個面向：
+
+- **盤點與觀察**：用 `status`、`overview` 先看目前狀態
+- **資產操作**：用 `dashboard`、`datasource`、`alert`、`access` 管理不同類型的 Grafana 資產
+- **變更審查**：用 `change` 先看摘要、preflight 與 plan，再決定要不要套用
+- **連線與憑證**：用 `profile` 把 URL、驗證方式與 secret 來源整理起來
+
+重點不是記住每個 command，而是先知道自己在做哪一種工作。
+
+---
+
+## 功能總覽表
+
+| 功能面向 | 主要 command | 你會用它來做什麼 |
+| :--- | :--- | :--- |
+| 環境狀態檢查 | `status` | 看 live 或 staged 狀態是否健康、是否適合往下做 |
+| 全域總覽 | `overview` | 快速盤點整體 Grafana 環境、先決定下一步要往哪裡鑽 |
+| Dashboard 維運 | `dashboard` | 匯出、匯入、diff、inspect、截圖、拓樸分析 |
+| Data source 維運 | `datasource` | data source 盤點、匯出、匯入、diff、修改與恢復 |
+| 告警治理 | `alert` | 告警規則、通知路由、contact point、plan / apply |
+| 身分與存取 | `access` | org、user、team、service account 與 token 管理 |
+| 變更審查 | `change` | 先看 summary、preflight、plan、review，再決定要不要套用 |
+| 連線與憑證設定 | `profile` | 把 URL、驗證方式與 secret 來源整理成可重複使用的設定 |
+
+如果你只想知道「現在該從哪裡開始」，可以先用這個表判斷自己遇到的是哪一類問題，再往對應章節走。
+
+---
+
+## 這個工具特別適合哪些情境
+
+### 1. 日常維運與巡檢
+
+你想先回答：
+
+- 目前有哪些 dashboard、alert、data source？
+- live 狀態是否正常？
+- 哪些地方看起來已經漂移或快要出問題？
+
+這時通常會先從 `status live` 或 `overview live` 開始。
+
+### 2. 匯出、搬移與回放
+
+你想把 dashboard 或 data source 從一個環境搬到另一個環境，或保留一份可重播的匯出樹。這時你需要的不只是「匯出」本身，而是：
+
+- 匯出成適合的資料路徑
+- 先做 diff / inspect / dry-run
+- 再決定要不要匯入或回放
+
+### 3. 變更前先做審查
+
+你不想直接套用變更，而是先回答：
+
+- 這次到底會改到哪些東西？
+- staged 輸入是不是完整？
+- 權限、secret、路由、依賴是否合理？
+
+這時 `change summary`、`change preflight`、`alert plan` 這些流程就很重要。
+
+### 4. 自動化與 CI/CD
+
+你想把 Grafana 維運流程接進腳本、pipeline 或例行工作，而不是只靠人手動操作。
+
+這時重點通常是：
+
+- 用 `--profile` 或 env 把連線整理好
+- 讓輸出格式穩定可讀
+- 讓變更流程有 review 與 gate
+
+---
+
+## 它不特別想解的事
+
+有些情況其實不一定要先用 `grafana-util`：
+
+- 你只是臨時在 Grafana UI 改一個小設定
+- 你只想查單一畫面上的某個值
+- 你不需要匯出、審查、搬移、回放或自動化
+
+如果工作本身不需要留下可重複、可審查的操作脈絡，直接用 Grafana UI 可能更快。
+
+---
+
+## 建議怎麼開始
+
+第一次接觸時，不用先把所有 command 看完。比較自然的順序是：
+
+1. 先看這個工具支援哪些連線與驗證方式
+2. 先跑一次安全的唯讀檢查
+3. 再決定要走新手、安全、SRE 或自動化路線
+4. 需要精確語法時，再去看逐指令說明
+
+如果你現在就是第一次使用，下一步建議接著看：
+
+- [開始使用](getting-started.md)
+- [新手快速入門](role-new-user.md)
+- [指令詳細說明](../../commands/zh-TW/index.md)
+
+---
+[⬅️ 回手冊首頁](index.md) | [➡️ 下一章：開始使用](getting-started.md)

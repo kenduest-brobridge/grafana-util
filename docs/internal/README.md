@@ -15,6 +15,8 @@ backlogs, market analysis, and progress snapshots have been moved into
   - design map for the Markdown-to-manpage and Markdown-to-HTML pipeline
 - `generated-docs-playbook.md`
   - task-oriented maintainer recipes for common generated-docs changes
+- `zh-tw-style-guide.md`
+  - zh-TW terminology, tone, and product-name translation rules for docs review
 - `maintainer-quickstart.md`
   - first-entry route for new maintainers and AI agents
 - `profile-secret-storage-architecture.md`
@@ -39,6 +41,7 @@ backlogs, market analysis, and progress snapshots have been moved into
 - `ai-changes.md` -> condensed change ledger for meaningful behavior or architecture work
 - `generated-docs-architecture.md` -> source/output model, generator split, and generated-docs design rules
 - `generated-docs-playbook.md` -> maintainer cookbook for adding docs pages, locales, outputs, and manpage coverage
+- `zh-tw-style-guide.md` -> review rules for Taiwan-facing Traditional Chinese docs and product-object naming
 - `maintainer-quickstart.md` -> first-entry reading order, source-of-truth map, task routing, and safe validation commands
 - `profile-secret-storage-architecture.md` -> profile secret modes, macOS/Linux backend behavior, and secret-resolution design rules
 - `maintainer-role-map.md` -> maintainer persona entrypoint and validation map by concern

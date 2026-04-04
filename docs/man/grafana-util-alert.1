@@ -19,58 +19,58 @@ List live alert rules, contact points, mute timings, and templates.
 .SH SUBCOMMANDS
 .TP
 .B export
-Export alerting resources into raw/ JSON files.
+Export alerting resources into raw/ JSON files. Use when: Capture alert rules, contact points, mute timings, templates, and policies from Grafana.; Build a local bundle before review or import.
 .TP
 .B import
-Import alerting resource JSON files through the Grafana API.
+Import alerting resource JSON files through the Grafana API. Use when: Recreate an exported alert bundle in Grafana.; Update existing alert resources with \-\-replace\-existing.; Preview import actions before making changes.
 .TP
 .B diff
-Compare local alerting export files against live Grafana resources.
+Compare local alerting export files against live Grafana resources. Use when: Check a raw export directory against Grafana before import or plan work.; Render the diff as plain text or structured JSON.
 .TP
 .B plan
-Build a staged alert management plan from desired alert resources.
+Build a staged alert management plan from desired alert resources. Use when: Review the changes needed to align Grafana with a desired\-state alert tree.; Prune live\-only alert resources from the plan when needed.; Repair linked rules with dashboard or panel remapping during planning.
 .TP
 .B apply
-Apply a reviewed alert management plan.
+Apply a reviewed alert management plan. Use when: Execute a plan that was reviewed outside the live Grafana connection.; Require explicit acknowledgement before touching Grafana.
 .TP
 .B delete
-Delete one explicit alert resource identity.
+Delete one explicit alert resource identity. Use when: Remove a single rule, contact point, mute timing, policy tree, or template by identity.; Reset the managed notification policy tree only when you intend to allow it.
 .TP
 .B add\-rule
-Author a staged alert rule from the higher\-level authoring surface.
+Author a staged alert rule from the higher\-level authoring surface. Use when: Create a new rule under a desired\-state alert tree.; Attach labels, annotations, severity, and threshold logic in one command.; Generate a route for the rule unless you explicitly skip it.
 .TP
 .B clone\-rule
-Clone an existing staged alert rule into a new authoring target.
+Clone an existing staged alert rule into a new authoring target. Use when: Reuse an existing rule as a starting point for a variant.; Override folder, rule group, receiver, or route behavior while cloning.
 .TP
 .B add\-contact\-point
-Author a staged alert contact point from the higher\-level authoring surface.
+Author a staged alert contact point from the higher\-level authoring surface. Use when: Create a new contact point under a desired\-state alert tree.; Preview the generated file before writing it.
 .TP
 .B set\-route
-Author or replace the tool\-owned staged notification route.
+Author or replace the tool\-owned staged notification route. Use when: Replace the managed route with a new receiver and matcher set.; Re\-run the command to fully replace the managed route instead of merging fields.
 .TP
 .B preview\-route
-Preview the managed route inputs without changing runtime behavior.
+Preview the managed route inputs without changing runtime behavior. Use when: Inspect the matcher set you intend to feed into set\-route.; Validate route inputs before writing the managed route document.
 .TP
 .B new\-rule
-Create a low\-level staged alert rule scaffold.
+Create a low\-level staged alert rule scaffold. Use when: Seed a new rule file in a desired\-state tree.; Start from a simple scaffold before filling in rule details.
 .TP
 .B new\-contact\-point
-Create a low\-level staged alert contact point scaffold.
+Create a low\-level staged alert contact point scaffold. Use when: Seed a new contact point file in a desired\-state tree.; Start from a scaffold before filling in receiver details.
 .TP
 .B new\-template
-Create a low\-level staged alert template scaffold.
+Create a low\-level staged alert template scaffold. Use when: Seed a new notification template file in a desired\-state tree.; Start from a scaffold before adding template content.
 .TP
 .B list\-rules
-List live Grafana alert rules.
+List live Grafana alert rules. Use when: Inspect alert rule inventory from one org or from all visible orgs.; Render the list in text, table, CSV, JSON, or YAML form.
 .TP
 .B list\-contact\-points
-List live Grafana alert contact points.
+List live Grafana alert contact points. Use when: Inspect notification endpoints configured in Grafana.; Switch output between text, table, CSV, JSON, and YAML.
 .TP
 .B list\-mute\-timings
-List live Grafana mute timings.
+List live Grafana mute timings. Use when: Inspect mute timing inventory from one org or from all visible orgs.; Render the list in text, table, CSV, JSON, or YAML form.
 .TP
 .B list\-templates
-List live Grafana notification templates.
+List live Grafana notification templates. Use when: Inspect template inventory from one org or from all visible orgs.; Render the list in text, table, CSV, JSON, or YAML form.
 .SH COMMON OPTIONS
 .IP \(bu 2
 \-\-profile, \-\-url, \-\-token, \-\-basic\-user, \-\-basic\-password
@@ -82,21 +82,33 @@ Use the nested subcommands for export, import, diff, plan, apply, delete, add\-r
 .PP
 The safest alert workflow is: author or update desired files, inspect the delta with alert plan, then execute only reviewed changes with alert apply.
 .SH EXAMPLES
+.PP
+list\-rules: List live Grafana alert rules.
 .EX
 grafana-util alert list-rules --profile prod --json
 .EE
+.PP
+export: Export alerting resources into raw/ JSON files.
 .EX
 grafana-util alert export --url http://localhost:3000 --basic-user admin --basic-password admin --output-dir ./alerts --overwrite
 .EE
+.PP
+export: Export alerting resources into raw/ JSON files.
 .EX
 grafana-util alert export --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output-dir ./alerts --flat
 .EE
+.PP
+export: Export alerting resources into raw/ JSON files.
 .EX
 grafana-util alert export --url http://localhost:3000 --basic-user admin --basic-password admin --output-dir ./alerts --flat
 .EE
+.PP
+import: Import alerting resource JSON files through the Grafana API.
 .EX
 grafana-util alert import --url http://localhost:3000 --import-dir ./alerts/raw --replace-existing
 .EE
+.PP
+import: Import alerting resource JSON files through the Grafana API.
 .EX
 grafana-util alert import --url http://localhost:3000 --import-dir ./alerts/raw --replace-existing --dry-run --json
 .EE

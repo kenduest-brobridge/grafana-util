@@ -2,6 +2,15 @@
 
 本章說明 `grafana-util` 目前的首次使用流程。
 
+先講最重要的設計：`grafana-util` 支援不只一種連線方式。你可以：
+
+- 每次執行時直接帶 `--url` 與驗證旗標
+- 用 `--prompt-password` 或 `--prompt-token` 互動輸入
+- 讓環境變數提供帳號、密碼或 token
+- 把常用預設整理進 repo-local 的 profile，再用 `--profile` 重複使用
+
+profile 的重點是讓日常操作少重打重複參數，不是代表一開始只能用 profile。
+
 若要對照本章提到的旗標，請一併參考 [profile](../../commands/zh-TW/profile.md)、[status](../../commands/zh-TW/status.md) 與 [overview](../../commands/zh-TW/overview.md)。
 
 ---
@@ -25,21 +34,35 @@ grafana-util 0.7.3
 
 ---
 
-## 📋 步驟 2：Profile 設定檔
+## 📋 步驟 2：連線方式與 Profile 設定檔
 
 Profile 流程是專案本機 (Repo-local) 的。`grafana-util profile` 預設會讀寫目前工作目錄中的 `grafana-util.yaml`，若有設定 `GRAFANA_UTIL_CONFIG` 環境變數，則會優先讀取該路徑。
 
 ### 身分驗證模式概覽
 
-建議依序選擇適合的模式：
+`grafana-util` 可以從直接旗標、互動輸入、環境變數或 repo-local profile 取得連線資訊。建議依序使用：
 
 | 模式 | 適合情境 | 範例 |
 | :--- | :--- | :--- |
-| `--profile` | 日常維運、CI、可重複執行的工作流 | `grafana-util status live --profile prod --output yaml` |
 | 直接基本驗證 (Basic Auth) | 本機引導、緊急存取 (Break-glass)、管理員作業 | `grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output yaml` |
+| `--profile` | 連線已確認後的日常維運、CI、可重複執行工作流 | `grafana-util status live --profile prod --output yaml` |
 | 直接 Token 驗證 | 單一組織或權限受限的 API 自動化 | `grafana-util overview live --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output yaml` |
 
-若要使用環境變數管理機密資訊，建議將其設定在 Profile 中（如 `password_env: GRAFANA_PROD_PASSWORD`），避免將明文密碼直接寫入指令。
+環境變數也可以直接提供同樣的驗證資訊：
+
+- `GRAFANA_USERNAME`
+- `GRAFANA_PASSWORD`
+- `GRAFANA_API_TOKEN`
+
+如果是重複執行的工作，建議把這些 reference 寫進 profile，例如 `password_env: GRAFANA_PROD_PASSWORD` 或 `token_env: GRAFANA_DEV_TOKEN`，這樣就不用在每條命令上重打敏感資訊。
+
+### 建議的學習順序
+
+第一次使用時，建議照這個順序：
+
+1. 先用一個直接的唯讀命令確認 Grafana 真的連得到
+2. 確認自己正在用哪一種驗證方式
+3. 之後再把重複的 URL、帳號與 secret 來源整理進 profile
 
 
 ### 1. 選一種建立 profile 的方式
@@ -50,6 +73,19 @@ grafana-util profile add ci --url https://grafana.example.com --token-env GRAFAN
 grafana-util profile example --mode full
 ```
 `profile init` 會產生一份最小可用的 `grafana-util.yaml`。`profile add` 可以一步建立 Basic-auth 或 token-backed 的可用 profile，不用自己手改 YAML。`profile example` 則會印出完整註解版範本，方便你拿去改。
+
+如果你還在驗證基本連線，也可以先不碰 profile，直接跑：
+
+```bash
+grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output yaml
+```
+
+確認沒問題後，再把同一組設定整理成可重複使用的 profile：
+
+```bash
+grafana-util profile add dev --url http://127.0.0.1:3000 --basic-user admin --prompt-password
+grafana-util status live --profile dev --output yaml
+```
 
 如果你想自己確認這些檔案會放哪裡，規則很單純：
 
@@ -133,19 +169,27 @@ grafana-util overview live --url http://localhost:3000 --basic-user admin --prom
 ```
 平常可重複執行的工作優先用 profile。直接 Basic auth 則保留給 bootstrap、臨時救援或尚未建好 profile 的管理員流程。
 
+如果 shell 已經有環境變數，也可以先不建 profile，直接這樣測：
+
+```bash
+export GRAFANA_USERNAME=admin
+export GRAFANA_PASSWORD=admin
+grafana-util overview live --url http://localhost:3000 --output yaml
+```
+
 ### 4. 先知道 token 的常見限制
 
 Token 驗證足以處理單一 org 的讀取流程，但跨 org 或管理員範圍的操作常常還是需要使用者身分或具備較廣權限的 Basic auth。
 
 - `--all-orgs` 相關的盤點與匯出流程，最穩妥的是使用管理員憑證支援的 `--profile` 或直接 Basic auth。
-- org、user、team 與 service-account 管理通常需要管理員等級權限，窄權限 token 可能無法完成。
+- org、user、team 與 service account 管理通常需要管理員等級權限，窄權限 token 可能無法完成。
 - 如果 token 看不到所有目標 org，即使旗標要求更廣的範圍，輸出仍會被 token 權限限制。
 
 ---
 
 ## 🖥️ 互動模式 (TUI)
 
-`grafana-util dashboard browse` 會在終端機中開啟 live dashboard tree；`overview live --output interactive` 則會開啟互動式的整體總覽。
+`grafana-util dashboard browse` 會在終端機中顯示 live dashboard tree；`overview live --output interactive` 則會顯示互動式的整體總覽。
 
 ---
 [🏠 回首頁](index.md) | [➡️ 下一章：系統架構與設計原則](architecture.md)

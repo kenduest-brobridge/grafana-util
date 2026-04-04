@@ -1,37 +1,37 @@
 # 技術參考手冊 (Technical Reference)
 
-本章整理 `grafana-util` 目前的主要指令面，包括 profile 解析、輸出旗標，以及 staged/live 的 status 入口。
+本章整理 `grafana-util` 目前常用的指令、共用旗標，以及 profile 解析、輸出格式與 staged / live 的 status 用法。
 
-如果您想逐條對照指令與旗標，請搭配 [profile](../../commands/zh-TW/profile.md)、[status](../../commands/zh-TW/status.md)、[overview](../../commands/zh-TW/overview.md) 與 [access](../../commands/zh-TW/access.md) 一起看。
+如果你想逐條對照指令與旗標，請搭配 [profile](../../commands/zh-TW/profile.md)、[status](../../commands/zh-TW/status.md)、[overview](../../commands/zh-TW/overview.md) 與 [access](../../commands/zh-TW/access.md) 一起看。
 
 ---
 
-## 🔐 Profile 與驗證管理
+## 🔐 Profile、連線與 secret 處理
 
-Profile 是 repo-local 的。`grafana-util profile` 會讀寫目前工作目錄中的 `grafana-util.yaml`，`--profile` 則是從這個檔案裡挑選一個命名 profile。
+Profile 是 repo-local 的設定。`grafana-util profile` 會讀寫目前工作目錄中的 `grafana-util.yaml`，`--profile` 則是從這個檔案裡挑選一個命名 profile。
 
-### 建議的驗證使用順序
+### 建議的使用順序
 
 | 方法 | 最適合 | 優點 | 限制 / 注意事項 |
 | :--- | :--- | :--- | :--- |
-| `--profile` | 可重複的日常維運、CI、長期 checkout | 不必重複把秘密寫在命令列，支援 env 與 secret store | 需要先做一次設定 |
-| 直接 Basic auth | bootstrap、break-glass、全域管理員流程 | 直覺，也較適合跨 org 與 admin surface | 不要把明文密碼留在 shell history；優先用 `--prompt-password` |
+| `--profile` | 可重複的日常維運、CI、長期維護的 checkout | 不必重複把 secret 寫在命令列，支援 env 與 secret store | 需要先做一次設定 |
+| 直接 Basic auth | bootstrap、break-glass、全域管理員流程 | 直覺，也較適合跨 org 與管理員操作 | 不要把明文密碼留在 shell history；優先用 `--prompt-password` |
 | 直接 token | 權限較窄的腳本或單一 org API 操作 | 容易輪替，也容易做最小權限 | 權限範圍可能不足以支援 `--all-orgs`、org 管理或全域管理操作 |
 
-這個 repo 建議的 steady-state 是：把連線預設放進 `grafana-util.yaml`，秘密用 `password_env`、`token_env` 或 secret store 承載，日常執行時用 `--profile`。
+如果你先從實務順序來看，通常會是：先用直接旗標確認連線，再把重複的 URL、帳號和 secret 來源收進 profile，讓日常操作只需要 `--profile`。
 
-### Secret 保存模式：它是什麼、好處是什麼、什麼時候該用
+### Secret 保存模式：差別與適用情境
 
 `grafana-util` 不只支援一種 secret 存放方式，因為本機操作、CI 與長期維護的 checkout，需求和風險模型並不一樣。
 
 | 模式 | 它是什麼 | 好處 | 限制 / 注意事項 |
 | :--- | :--- | :--- | :--- |
-| `file` | 直接把明文 secret 放在 `grafana-util.yaml` | 最直覺、最好手改 | secret 就留在設定檔裡，不適合共享 repo 或日常管理流程 |
+| `file` | 直接把明文 secret 放在 `grafana-util.yaml` | 最直覺、最好手改 | secret 會留在設定檔裡，不適合共享 repo 或日常管理流程 |
 | `password_env` / `token_env` | profile 只記環境變數名稱，真正 secret 仍留在 environment | 很適合 CI、wrapper script、既有 env-injection 流程 | 還是要自己管理好 process environment |
 | `os` | profile 只記 reference key，真正 secret 放在 macOS Keychain 或 Linux Secret Service | 秘密不用留在 YAML，也不必每次重打 | 只支援 macOS / Linux；Linux 也要有可用的 secret-service session |
 | `encrypted-file` | profile 只記 reference key，真正 secret 加密後放在 `.grafana-util.secrets.yaml` | 不依賴 OS secret service，也比明文檔安全 | 強度取決於 passphrase 或 local key 的管理方式 |
 
-大多數團隊可用這個順序思考：
+如果你先從操作順序來想，通常可以這樣排：
 
 1. CI 與自動化：優先用 `password_env` / `token_env`
 2. macOS 或 Linux 桌面上的日常維運：優先用 `os`
@@ -53,7 +53,7 @@ password_store:
   key: grafana-util/profile/prod/password
 ```
 
-真正的密碼不會放進 `grafana-util.yaml`。
+真正的密碼不會寫進 `grafana-util.yaml`。
 
 重要限制：
 
@@ -206,7 +206,7 @@ grafana-util overview live --profile ci --output json
 
 - `--all-orgs` 最適合搭配管理員憑證支援的 `--profile` 或直接 Basic auth。
 - Token 只能看到它被授權看到的範圍。多 org inventory、org export/import、user 或 team 管理，都可能因 token 權限不足而只回傳部分資料或直接失敗。
-- `access org`、`access user`、`access team` 與 service-account lifecycle 這類 surface，通常需要比窄權限 API token 更高的 Grafana 權限。
+- `access org`、`access user`、`access team` 與 service account 建立、輪替、清理這類操作，通常需要比窄權限 API token 更高的 Grafana 權限。
 
 ### 8. Secret storage 常見排解
 
@@ -218,7 +218,7 @@ grafana-util overview live --profile ci --output json
   請確認對應的 env var 仍存在、OS secret store 裡的 key 仍存在，或加密 secret file 與 passphrase/local key 還在。
 - `encrypted-file` 在一台機器可用、另一台不行：
   目標 checkout 必須同時有 `.grafana-util.secrets.yaml`，以及相同的 passphrase 或對應的 local key file。
-- profile 在一般 live 指令可用，但 `--all-orgs` 或 access-management 失敗：
+- profile 在一般 live 指令可用，但 `--all-orgs` 或存取管理相關指令失敗：
   代表 credential 本身有效，但權限範圍不夠。請改用管理員等級的 Basic auth 或 admin-backed profile。
 
 ---
@@ -226,6 +226,15 @@ grafana-util overview live --profile ci --output json
 ## 📊 輸出格式對照
 
 `grafana-util` 同時提供各格式旗標與單一 `--output-format` 選擇器。以 dashboard list 來說，目前可用的是 `--json`、`--table`、`--csv`、`--yaml` 與 `--output-format`。
+
+### 0. 先看這張旗標對照表
+
+| 情境 | 寫法 | 常見值 | 補充 |
+| :--- | :--- | :--- | :--- |
+| 直接切換常見格式 | `--text`、`--table`、`--csv`、`--json`、`--yaml` | `text` / `table` / `csv` / `json` / `yaml` | 適合 list、review、inspect、部分 import / delete dry-run 這類輸出面。 |
+| 用單一旗標切換格式 | `--output-format <FORMAT>` | `text` / `table` / `csv` / `json` / `yaml` | 也可能出現 command 專用值，例如 `report-table`、`governance-json`、`mermaid`、`dot`。 |
+| live status / overview 類入口 | `--output <FORMAT>` | `table` / `csv` / `text` / `json` / `yaml` / `interactive` | 這條路徑不是 `--output-format`。 |
+| 將結果另外寫入檔案 | `--output-file <PATH>` 或 command 專用旗標 | 視指令而定 | 常見於 topology、governance gate、screenshot 這類輸出型指令。 |
 
 ### 1. 表格或 JSON 的選擇
 ```bash
@@ -277,7 +286,7 @@ Render a live overview by delegating to the shared status live path.
 
 ### 1. 使用 `jq` 進行過濾 (Bash/Zsh)
 ```bash
-# 取得組織 ID 為 5 的所有 Dashboard UID
+# 取得 org ID 為 5 的所有 Dashboard UID
 grafana-util dashboard list --profile prod --json | jq -r '.[] | select(.orgId == 5) | .uid'
 ```
 這是目前可用的 JSON 腳本路徑。如果需要更少或不同欄位，請改用 `--output-columns`，不要再假設舊版表格欄位還存在。

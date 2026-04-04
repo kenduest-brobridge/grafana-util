@@ -12,6 +12,11 @@ Run the alerting command surface for exporting, importing, diffing, planning, ap
 - Author staged rules, contact points, routes, and templates.
 - List live alert rules, contact points, mute timings, and templates.
 
+## Description
+Open this page when the work is about Grafana alerting as a full workflow, not just one command. The `alert` namespace covers inventory, local authoring, diff and review, and the plan/apply path that teams usually need before changing production alert resources.
+
+This is the right entrypoint for SREs, platform operators, and anyone who wants to understand how alert rules, notification routing, and contact-point changes fit together before diving into one exact subcommand.
+
 ## Key flags
 
 - `--profile`, `--url`, `--token`, `--basic-user`, `--basic-password`
