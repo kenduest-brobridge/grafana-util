@@ -815,7 +815,7 @@ Render a live overview by delegating to the shared status live path.
 <h2 id="dashboard-lanes">Dashboard Lanes</h2>
 <ul><li><code>raw/</code> is the API-safe replay/import lane.</li><li><code>prompt/</code> is the Grafana UI import lane.</li><li><code>dashboard export</code> writes the prompt lane for you.</li><li><code>dashboard raw-to-prompt</code> converts ordinary or raw dashboard JSON into prompt JSON when you need to repair or migrate a dashboard for Grafana UI import.</li><li><code>dashboard import</code> consumes <code>raw/</code> or <code>provisioning/</code> input; it does not consume <code>prompt/</code>.</li></ul>
 <h2 id="automation-scripting-cicd">Automation &amp; Scripting (CI/CD)</h2>
-<h3 id="1-filtering-with-jq-bashzsh">1. Filtering with &lt;code&gt;jq&lt;/code&gt; (Bash/Zsh)</h3>
+<h3 id="1-filtering-with-jq-bashzsh">1. Filtering with <code>jq</code> (Bash/Zsh)</h3>
 <pre><code># Get the UID of all dashboards in organization ID 5
 grafana-util dashboard list --profile prod --json | jq -r &#x27;.[] | select(.orgId == 5) | .uid&#x27;</code></pre>
 <p>This is the current JSON path for scripting. If you need fewer or different fields, use <code>--output-columns</code> instead of assuming the old sample table shape.</p>

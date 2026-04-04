@@ -670,7 +670,7 @@ grafana-util change plan --desired-file ./desired.json --fetch-live --profile pr
 grafana-util change apply --plan-file ./sync-plan-reviewed.json --approve --execute-live --url http://localhost:3000 --basic-user admin --basic-password admin
 grafana-util change plan --desired-file ./desired.json --fetch-live --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot;</code></pre>
 <p>相關指令：<code>grafana-util overview</code>、<code>grafana-util status</code>、<code>grafana-util snapshot</code>。</p>
-<h2 id="summary">code&gt;summary&lt;/code&gt;</h2>
+<h2 id="summary"><code>summary</code></h2>
 <p>用途：彙總本機 desired 同步資源。</p>
 <p>適用時機：當你想在規劃或套用前，先快速確認規模大小時。</p>
 <p>主要旗標：<code>--desired-file</code>、<code>--output</code>。</p>
@@ -678,7 +678,7 @@ grafana-util change plan --desired-file ./desired.json --fetch-live --url http:/
 <pre><code>grafana-util change summary --desired-file ./desired.json
 grafana-util change summary --desired-file ./desired.json --output json</code></pre>
 <p>相關指令：<code>change plan</code>、<code>change preflight</code>。</p>
-<h2 id="plan">code&gt;plan&lt;/code&gt;</h2>
+<h2 id="plan"><code>plan</code></h2>
 <p>用途：根據 desired 與 live state 建立分階段的同步 plan。</p>
 <p>適用時機：當你需要一份可供審核的 plan，確認後再標記完成或直接套用時。</p>
 <p>主要旗標：<code>--desired-file</code>、<code>--live-file</code>、<code>--fetch-live</code>、<code>--org-id</code>、<code>--page-size</code>、<code>--allow-prune</code>、<code>--trace-id</code>、<code>--output</code>。</p>
@@ -688,7 +688,7 @@ grafana-util change plan --desired-file ./desired.json --fetch-live --profile pr
 grafana-util change plan --desired-file ./desired.json --fetch-live --url http://localhost:3000 --basic-user admin --basic-password admin --allow-prune --output json
 grafana-util change plan --desired-file ./desired.json --fetch-live --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --allow-prune --output json</code></pre>
 <p>相關指令：<code>change review</code>、<code>change apply</code>、<code>change summary</code>。</p>
-<h2 id="review">code&gt;review&lt;/code&gt;</h2>
+<h2 id="review"><code>review</code></h2>
 <p>用途：將分階段的同步 plan 標記為已審核。</p>
 <p>適用時機：當 plan 已經檢視完成，且在 apply 之前需要明確的審核 token 時。</p>
 <p>主要旗標：<code>--plan-file</code>、<code>--review-token</code>、<code>--reviewed-by</code>、<code>--reviewed-at</code>、<code>--review-note</code>、<code>--interactive</code>、<code>--output</code>。</p>
@@ -696,7 +696,7 @@ grafana-util change plan --desired-file ./desired.json --fetch-live --url http:/
 <pre><code>grafana-util change review --plan-file ./sync-plan.json
 grafana-util change review --plan-file ./sync-plan.json --review-note &#x27;peer-reviewed&#x27; --output json</code></pre>
 <p>相關指令：<code>change plan</code>、<code>change apply</code>。</p>
-<h2 id="apply">code&gt;apply&lt;/code&gt;</h2>
+<h2 id="apply"><code>apply</code></h2>
 <p>用途：根據已審核的同步 plan 產生受控的 apply intent，並可選擇直接執行到 live。</p>
 <p>適用時機：當 plan 已經審核完成，而你準備輸出或執行 apply 步驟時。</p>
 <p>主要旗標：<code>--plan-file</code>、<code>--preflight-file</code>、<code>--bundle-preflight-file</code>、<code>--approve</code>、<code>--execute-live</code>、<code>--allow-folder-delete</code>、<code>--allow-policy-reset</code>、<code>--org-id</code>、<code>--output</code>、<code>--applied-by</code>、<code>--applied-at</code>、<code>--approval-reason</code>、<code>--apply-note</code>。</p>
@@ -705,7 +705,7 @@ grafana-util change review --plan-file ./sync-plan.json --review-note &#x27;peer
 grafana-util change apply --plan-file ./sync-plan-reviewed.json --approve --execute-live --url http://localhost:3000 --basic-user admin --basic-password admin
 grafana-util change apply --plan-file ./sync-plan-reviewed.json --approve --execute-live --allow-folder-delete --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot;</code></pre>
 <p>相關指令：<code>change review</code>、<code>change preflight</code>、<code>change bundle-preflight</code>。</p>
-<h2 id="audit">code&gt;audit&lt;/code&gt;</h2>
+<h2 id="audit"><code>audit</code></h2>
 <p>用途：比對受管 Grafana 資源的 checksum lock 與目前 live state，進行稽核。</p>
 <p>適用時機：當你需要做 drift 檢查，或想刷新 lock snapshot 時。</p>
 <p>主要旗標：<code>--managed-file</code>、<code>--lock-file</code>、<code>--live-file</code>、<code>--fetch-live</code>、<code>--org-id</code>、<code>--page-size</code>、<code>--write-lock</code>、<code>--fail-on-drift</code>、<code>--interactive</code>、<code>--output</code>。</p>
@@ -715,7 +715,7 @@ grafana-util change audit --lock-file ./sync-lock.json --fetch-live --profile pr
 grafana-util change audit --lock-file ./sync-lock.json --fetch-live --url http://localhost:3000 --basic-user admin --basic-password admin --fail-on-drift --output json
 grafana-util change audit --lock-file ./sync-lock.json --fetch-live --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --fail-on-drift --output json</code></pre>
 <p>相關指令：<code>change preflight</code>、<code>change plan</code>、<code>status live</code>。</p>
-<h2 id="preflight">code&gt;preflight&lt;/code&gt;</h2>
+<h2 id="preflight"><code>preflight</code></h2>
 <p>用途：根據 desired resources 與可選的 availability 提示，建立分階段的同步 preflight 文件。</p>
 <p>適用時機：當你需要在規劃或套用前先做結構性門檻檢查時。</p>
 <p>主要旗標：<code>--desired-file</code>、<code>--availability-file</code>、<code>--fetch-live</code>、<code>--org-id</code>、<code>--output</code>。</p>
@@ -725,7 +725,7 @@ grafana-util change preflight --desired-file ./desired.json --fetch-live --profi
 grafana-util change preflight --desired-file ./desired.json --fetch-live --url http://localhost:3000 --basic-user admin --basic-password admin --output json
 grafana-util change preflight --desired-file ./desired.json --fetch-live --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --output json</code></pre>
 <p>相關指令：<code>change summary</code>、<code>change plan</code>、<code>status staged</code>。</p>
-<h2 id="assess-alerts">code&gt;assess-alerts&lt;/code&gt;</h2>
+<h2 id="assess-alerts"><code>assess-alerts</code></h2>
 <p>用途：評估 alert 同步規格的 candidate、plan-only 與 blocked 狀態。</p>
 <p>適用時機：當你想在 bundling 或 apply 前，先看 alert 資源會如何分類時。</p>
 <p>主要旗標：<code>--alerts-file</code>、<code>--output</code>。</p>
@@ -733,7 +733,7 @@ grafana-util change preflight --desired-file ./desired.json --fetch-live --url h
 <pre><code>grafana-util change assess-alerts --alerts-file ./alerts.json
 grafana-util change assess-alerts --alerts-file ./alerts.json --output json</code></pre>
 <p>相關指令：<code>change bundle</code>、<code>change bundle-preflight</code>、<code>overview</code>。</p>
-<h2 id="bundle">code&gt;bundle&lt;/code&gt;</h2>
+<h2 id="bundle"><code>bundle</code></h2>
 <p>用途：將匯出的 dashboards、alerting 資源、datasource inventory 與 metadata 打包成單一的本機 source bundle。</p>
 <p>適用時機：當你想要一個統一的 bundle artifact，供後續同步、審核或 preflight 使用時。</p>
 <p>主要旗標：<code>--dashboard-export-dir</code>、<code>--dashboard-provisioning-dir</code>、<code>--alert-export-dir</code>、<code>--datasource-export-file</code>、<code>--datasource-provisioning-file</code>、<code>--metadata-file</code>、<code>--output-file</code>、<code>--output</code>。</p>
@@ -741,7 +741,7 @@ grafana-util change assess-alerts --alerts-file ./alerts.json --output json</cod
 <pre><code>grafana-util change bundle --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts/raw --output-file ./sync-source-bundle.json
 grafana-util change bundle --dashboard-provisioning-dir ./dashboards/provisioning --alert-export-dir ./alerts/raw --output-file ./sync-source-bundle.json</code></pre>
 <p>相關指令：<code>change bundle-preflight</code>、<code>change promotion-preflight</code>、<code>snapshot export</code>。</p>
-<h2 id="bundle-preflight">code&gt;bundle-preflight&lt;/code&gt;</h2>
+<h2 id="bundle-preflight"><code>bundle-preflight</code></h2>
 <p>用途：根據 source bundle 與 target inventory 建立分階段的 bundle-level sync preflight 文件。</p>
 <p>適用時機：當你需要在 apply 前比較 source bundle 與 target inventory 時。</p>
 <p>主要旗標：<code>--source-bundle</code>、<code>--target-inventory</code>、<code>--availability-file</code>、<code>--fetch-live</code>、<code>--org-id</code>、<code>--output</code>。</p>
@@ -749,7 +749,7 @@ grafana-util change bundle --dashboard-provisioning-dir ./dashboards/provisionin
 <pre><code>grafana-util change bundle-preflight --source-bundle ./sync-source-bundle.json --target-inventory ./target-inventory.json --output json
 grafana-util change bundle-preflight --source-bundle ./sync-source-bundle.json --target-inventory ./target-inventory.json --availability-file ./availability.json --output json</code></pre>
 <p>相關指令：<code>change bundle</code>、<code>change promotion-preflight</code>、<code>status staged</code>。</p>
-<h2 id="promotion-preflight">code&gt;promotion-preflight&lt;/code&gt;</h2>
+<h2 id="promotion-preflight"><code>promotion-preflight</code></h2>
 <p>用途：根據 source bundle 與 target inventory 建立分階段的 promotion review handoff。</p>
 <p>適用時機：當你準備進行 promotion review，並且需要明確的 mapping 與 availability 視圖時。</p>
 <p>主要旗標：<code>--source-bundle</code>、<code>--target-inventory</code>、<code>--mapping-file</code>、<code>--availability-file</code>、<code>--fetch-live</code>、<code>--org-id</code>、<code>--output</code>。</p>

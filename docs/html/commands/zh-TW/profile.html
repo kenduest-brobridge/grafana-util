@@ -672,14 +672,14 @@ grafana-util profile add ci --url https://grafana.example.com --token-env GRAFAN
 grafana-util profile example --mode full
 grafana-util profile init --overwrite</code></pre>
 <p>相關指令：<code>grafana-util status live</code>、<code>grafana-util overview live</code>、<code>grafana-util change plan</code>。</p>
-<h2 id="list">code&gt;list&lt;/code&gt;</h2>
+<h2 id="list"><code>list</code></h2>
 <p>用途：從解析後的 <code>grafana-util</code> 設定檔列出 profile 名稱。</p>
 <p>適用時機：當你要確認目前 checkout 裡有哪些 profile 可用。</p>
 <p>主要旗標：除了共用的 root <code>--color</code> 之外，沒有其他旗標。</p>
 <p>範例：</p>
 <pre><code>grafana-util profile list</code></pre>
 <p>相關指令：<code>profile show</code>、<code>profile add</code>、<code>profile init</code>。</p>
-<h2 id="show">code&gt;show&lt;/code&gt;</h2>
+<h2 id="show"><code>show</code></h2>
 <p>用途：以 text、table、csv、json 或 yaml 顯示目前選定的 profile。</p>
 <p>適用時機：當你想在執行 live 指令前，先確認最後解析到的連線設定。</p>
 <p>主要旗標：</p>
@@ -691,7 +691,7 @@ grafana-util profile show --profile prod --show-secrets --output-format yaml</co
 <p>說明：</p>
 <ul><li>預設會遮蔽秘密值。</li><li>加上 <code>--show-secrets</code> 才會顯示明文，或解出 secret-store 參照。</li></ul>
 <p>相關指令：<code>profile list</code>、<code>profile add</code>、<code>status live</code>、<code>overview live</code>。</p>
-<h2 id="add">code&gt;add&lt;/code&gt;</h2>
+<h2 id="add"><code>add</code></h2>
 <p>用途：不用手改 <code>grafana-util.yaml</code>，直接建立或覆蓋一個命名 profile。</p>
 <p>適用時機：當你想更快建立可重用的連線設定，尤其是需要把驗證資訊一起記住時。</p>
 <p>主要旗標：</p>
@@ -703,7 +703,7 @@ grafana-util profile add stage --url https://grafana-stage.example.com --token-e
 <p>說明：</p>
 <ul><li>預設 config path：<code>grafana-util.yaml</code></li><li>預設加密秘密檔：<code>.grafana-util.secrets.yaml</code></li><li><code>encrypted-file</code> 且未設 passphrase 時，預設本地 key file：<code>.grafana-util.secrets.key</code></li><li>這些預設 secret path 都是以 config file 所在目錄為基準，不是用臨時的 process cwd 去算。</li><li><code>file</code> 是預設模式。</li><li><code>os</code> 與 <code>encrypted-file</code> 都是明確 opt-in。</li><li><code>os</code> 模式會把 secret 放進 macOS Keychain 或 Linux Secret Service，而不是寫進 <code>grafana-util.yaml</code>。</li><li><code>os</code> 目前只支援 macOS 與 Linux；如果是 headless Linux shell，通常要改用 <code>password_env</code>、<code>token_env</code> 或 <code>encrypted-file</code>。</li><li>對重複執行的自動化工作，優先把秘密放進 profile 的 <code>password_env</code> 或 <code>token_env</code>，不要把秘密直接貼進每次 live 指令。</li></ul>
 <p>相關指令：<code>profile show</code>、<code>profile example</code>、<code>profile init</code>。</p>
-<h2 id="example">code&gt;example&lt;/code&gt;</h2>
+<h2 id="example"><code>example</code></h2>
 <p>用途：輸出一份帶完整註解的參考設定，方便直接拿來改。</p>
 <p>適用時機：當你想看一份完整、可讀、可參考的 profile 設定範本，而不是只看零碎欄位說明。</p>
 <p>主要旗標：</p>
@@ -715,7 +715,7 @@ grafana-util profile example --mode full</code></pre>
 <p>說明：</p>
 <ul><li><code>basic</code> 是較短的起手範本。</li><li><code>full</code> 會包含 <code>file</code>、<code>os</code>、<code>encrypted-file</code> 三種模式的註解示例。</li><li><code>os</code> 類型範例的前提是本機 macOS Keychain 或 Linux Secret Service 可用。</li></ul>
 <p>相關指令：<code>profile add</code>、<code>profile init</code>、<code>profile show</code>。</p>
-<h2 id="init">code&gt;init&lt;/code&gt;</h2>
+<h2 id="init"><code>init</code></h2>
 <p>用途：在目前工作目錄初始化 <code>grafana-util.yaml</code>。</p>
 <p>適用時機：當某個 checkout 還沒有 repo-local profile 檔案，而你想先產生內建起手範本時。</p>
 <p>主要旗標：</p>

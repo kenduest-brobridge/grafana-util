@@ -668,7 +668,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <pre><code>grafana-util overview --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts --desired-file ./desired.json --output table
 grafana-util overview --source-bundle ./sync-source-bundle.json --target-inventory ./target-inventory.json --availability-file ./availability.json --mapping-file ./mapping.json --output text</code></pre>
 <p>相關指令：<code>grafana-util status staged</code>、<code>grafana-util change summary</code>、<code>grafana-util snapshot review</code>。</p>
-<h2 id="live">code&gt;live&lt;/code&gt;</h2>
+<h2 id="live"><code>live</code></h2>
 <p>用途：透過共用的 status live 流程，輸出 live overview。</p>
 <p>適用時機：當你需要與 <code>status live</code> 相同的 live readout，但想從 overview 這個指令群組來操作時。</p>
 <p>主要旗標：共用 status live 流程的 live 連線與驗證旗標，以及 <code>--sync-summary-file</code>、<code>--bundle-preflight-file</code>、<code>--promotion-summary-file</code>、<code>--mapping-file</code>、<code>--availability-file</code> 和 <code>--output</code>。</p>

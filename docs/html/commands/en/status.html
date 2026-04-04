@@ -672,7 +672,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <pre><code>grafana-util status staged --dashboard-export-dir ./dashboards/raw --desired-file ./desired.json --output json
 grafana-util status live --profile prod --output yaml</code></pre>
 <p>Related commands: <code>grafana-util overview</code>, <code>grafana-util change preflight</code>, <code>grafana-util change apply</code>.</p>
-<h2 id="staged">code&gt;staged&lt;/code&gt;</h2>
+<h2 id="staged"><code>staged</code></h2>
 <p>Purpose: render project status from staged artifacts.</p>
 <p>When to use: when you need the machine-readable readiness gate for exported files before apply.</p>
 <p>Key flags: <code>--dashboard-export-dir</code>, <code>--dashboard-provisioning-dir</code>, <code>--datasource-export-dir</code>, <code>--datasource-provisioning-file</code>, <code>--access-user-export-dir</code>, <code>--access-team-export-dir</code>, <code>--access-org-export-dir</code>, <code>--access-service-account-export-dir</code>, <code>--desired-file</code>, <code>--source-bundle</code>, <code>--target-inventory</code>, <code>--alert-export-dir</code>, <code>--availability-file</code>, <code>--mapping-file</code>, <code>--output</code>.</p>
@@ -680,7 +680,7 @@ grafana-util status live --profile prod --output yaml</code></pre>
 <pre><code>grafana-util status staged --dashboard-export-dir ./dashboards/raw --desired-file ./desired.json --output table
 grafana-util status staged --dashboard-provisioning-dir ./dashboards/provisioning --alert-export-dir ./alerts --output interactive</code></pre>
 <p>Related commands: <code>grafana-util overview</code>, <code>grafana-util change summary</code>, <code>grafana-util change preflight</code>.</p>
-<h2 id="live">code&gt;live&lt;/code&gt;</h2>
+<h2 id="live"><code>live</code></h2>
 <p>Purpose: render project status from live Grafana read surfaces.</p>
 <p>When to use: when you need current Grafana status, optionally deepened with staged context files.</p>
 <p>Key flags: <code>--profile</code>, <code>--url</code>, <code>--token</code>, <code>--basic-user</code>, <code>--basic-password</code>, <code>--prompt-password</code>, <code>--prompt-token</code>, <code>--timeout</code>, <code>--verify-ssl</code>, <code>--insecure</code>, <code>--ca-cert</code>, <code>--all-orgs</code>, <code>--org-id</code>, <code>--sync-summary-file</code>, <code>--bundle-preflight-file</code>, <code>--promotion-summary-file</code>, <code>--mapping-file</code>, <code>--availability-file</code>, <code>--output</code>.</p>

@@ -672,7 +672,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <pre><code>grafana-util overview --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts --desired-file ./desired.json --output table
 grafana-util overview --source-bundle ./sync-source-bundle.json --target-inventory ./target-inventory.json --availability-file ./availability.json --mapping-file ./mapping.json --output text</code></pre>
 <p>Related commands: <code>grafana-util status staged</code>, <code>grafana-util change summary</code>, <code>grafana-util snapshot review</code>.</p>
-<h2 id="live">code&gt;live&lt;/code&gt;</h2>
+<h2 id="live"><code>live</code></h2>
 <p>Purpose: render the live overview by delegating to the shared status live path.</p>
 <p>When to use: when you need the same live readout that <code>status live</code> uses, but want it under the overview namespace.</p>
 <p>Key flags: live connection and auth flags from the shared status live path, plus <code>--sync-summary-file</code>, <code>--bundle-preflight-file</code>, <code>--promotion-summary-file</code>, <code>--mapping-file</code>, <code>--availability-file</code>, and <code>--output</code>.</p>

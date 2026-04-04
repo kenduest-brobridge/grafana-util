@@ -815,7 +815,7 @@ Render a live overview by delegating to the shared status live path.
 <h2 id="dashboard-路徑">Dashboard 路徑</h2>
 <ul><li><code>raw/</code> 是給 API replay/import 使用的路徑。</li><li><code>prompt/</code> 是給 Grafana UI 匯入使用的路徑。</li><li><code>dashboard export</code> 會直接產生 prompt 路徑。</li><li><code>dashboard raw-to-prompt</code> 可以把一般或 raw 的 dashboard JSON 轉成 prompt JSON，方便修補或遷移成 Grafana UI 匯入格式。</li><li><code>dashboard import</code> 只吃 <code>raw/</code> 或 <code>provisioning/</code> 輸入，不吃 <code>prompt/</code>。</li></ul>
 <h2 id="自動化與腳本開發-cicd">自動化與腳本開發 (CI/CD)</h2>
-<h3 id="1-使用-jq-進行過濾-bashzsh">1. 使用 &lt;code&gt;jq&lt;/code&gt; 進行過濾 (Bash/Zsh)</h3>
+<h3 id="1-使用-jq-進行過濾-bashzsh">1. 使用 <code>jq</code> 進行過濾 (Bash/Zsh)</h3>
 <pre><code># 取得 org ID 為 5 的所有 Dashboard UID
 grafana-util dashboard list --profile prod --json | jq -r &#x27;.[] | select(.orgId == 5) | .uid&#x27;</code></pre>
 <p>這是目前可用的 JSON 腳本路徑。如果需要更少或不同欄位，請改用 <code>--output-columns</code>，不要再假設舊版表格欄位還存在。</p>

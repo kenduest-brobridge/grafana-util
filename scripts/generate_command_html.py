@@ -138,8 +138,8 @@ def strip_heading_decorations(body_html: str) -> str:
         level = match.group(1)
         attrs = match.group(2)
         content = match.group(3)
-        cleaned = strip_decorative_prefix(html.unescape(content))
-        return f"<h{level}{attrs}>{html.escape(cleaned)}</h{level}>"
+        cleaned = re.sub(r"^([^\w\s\u4e00-\u9fffA-Za-z<]+)\s*", "", content, flags=re.UNICODE)
+        return f"<h{level}{attrs}>{cleaned}</h{level}>"
     return re.sub(r"<h([1-6])([^>]*)>(.*?)</h\1>", replace_heading, body_html, flags=re.DOTALL)
 
 def title_only(text: str) -> str:

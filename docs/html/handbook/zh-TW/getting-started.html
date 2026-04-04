@@ -705,7 +705,7 @@ profile:
 <p>要覆蓋預設選擇規則時，用 <code>--profile</code>；想人工確認最後採用的設定時，用 <code>yaml</code> 最直觀。</p>
 <h2 id="步驟-3初步唯讀檢查">步驟 3：初步唯讀檢查</h2>
 <p>只要 Profile 設定檔已準備就緒，建議先透過唯讀指令確認行為，再進行資料異動作業。</p>
-<h3 id="1-status-live-入口">1. &lt;code&gt;status live&lt;/code&gt; 入口</h3>
+<h3 id="1-status-live-入口">1. <code>status live</code> 入口</h3>
 <pre><code>grafana-util status live -h</code></pre>
 <p><strong>預期輸出：</strong></p>
 <pre><code>Render project status from live Grafana read surfaces. Use current Grafana state plus optional staged context files.
@@ -718,7 +718,7 @@ Options:
       --url &lt;URL&gt;
           Grafana base URL. [default: http://localhost:3000]</code></pre>
 <p><code>status live</code> 會直接查詢 Grafana，而且現在用的是 <code>--output</code>，不是舊文件常見的 <code>--output-format</code>。</p>
-<h3 id="2-overview-live-入口">2. &lt;code&gt;overview live&lt;/code&gt; 入口</h3>
+<h3 id="2-overview-live-入口">2. <code>overview live</code> 入口</h3>
 <pre><code>grafana-util overview live -h</code></pre>
 <p><strong>預期輸出：</strong></p>
 <pre><code>Render a live overview by delegating to the shared status live path.

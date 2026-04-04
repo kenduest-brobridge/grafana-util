@@ -158,6 +158,14 @@ class GenerateCommandHtmlTests(unittest.TestCase):
         self.assertIn(">30 秒快速上手 (Quick Start)<", rendered)
         self.assertNotIn("⚡", rendered)
 
+    def test_strip_heading_decorations_preserves_inline_code_in_heading_html(self):
+        module = load_module()
+
+        rendered = module.strip_heading_decorations('<h3 id="status-live">1. <code>status live</code> 入口</h3>')
+
+        self.assertIn("<code>status live</code>", rendered)
+        self.assertNotIn("&lt;code&gt;status live&lt;/code&gt;", rendered)
+
     def test_render_toc_adds_hierarchy_classes_and_strips_emoji_labels(self):
         module = load_module()
 
