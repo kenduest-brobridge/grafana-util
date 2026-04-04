@@ -8,6 +8,14 @@ Current AI change log only.
 - Keep this file limited to the latest active architecture and maintenance changes.
 - Detailed 2026-03-29 through 2026-03-31 entries moved to [`archive/ai-changes-archive-2026-03-31.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-03-31.md).
 
+## 2026-04-04 - Group handbook sidebar navigation by information architecture
+- Summary: separated handbook reading order from handbook sidebar structure. Added explicit sidebar groups in `scripts/docgen_handbook.py` so the HTML nav now reflects the handbook IA instead of flattening every chapter into one list. Updated the renderer to show grouped handbook sections and reduced command reference from a second flat namespace list to one command-docs hub entry, so the handbook sidebar stops mixing subject taxonomy and CLI inventory in the same visual layer.
+- Tests: updated generated HTML nav assertions for grouped handbook sections and the single command-reference hub entry.
+- Test Run: pending
+- Impact: `scripts/docgen_handbook.py`, `scripts/generate_command_html.py`, `python/tests/test_python_generate_command_html.py`, `docs/internal/generated-docs-architecture.md`, `docs/internal/generated-docs-playbook.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: moderate. This changes sidebar wayfinding across handbook and command pages, so the main risk is users needing a short adjustment period or maintainers forgetting to keep `HANDBOOK_ORDER` and `HANDBOOK_NAV_GROUPS` aligned when adding chapters.
+- Follow-up: if grouped sidebar navigation feels better after regeneration, consider mirroring the same grouping language in the homepage handbook sections so entrypoint IA and in-page navigation stay fully consistent.
+
 ## 2026-04-04 - Separate landing-page content from the HTML renderer
 - Summary: moved the generated homepage content out of `scripts/generate_command_html.py` into a new public source layer under `docs/landing/{en,zh-TW}.md`. Added `scripts/docgen_landing.py` to parse a small landing-page Markdown contract for hero copy, search copy, task sections, inline reference links, and maintainer links, then rewired the HTML generator to render the landing page from that parsed structure instead of a hardcoded locale data table. The homepage still auto-selects `en` or `zh-TW` from browser language on first load and preserves manual switching in local storage, but the renderer now owns only layout, UI chrome, and build-time version links.
 - Tests: added focused landing-parser coverage and updated generated-html coverage to assert the new landing source and locale-switch payload still render correctly.

@@ -8,6 +8,13 @@ Current AI-maintained status only.
 - Keep this file short and current. Additive historical detail belongs in `docs/internal/archive/`.
 - Detailed 2026-03-29 through 2026-03-31 entries moved to [`archive/ai-status-archive-2026-03-31.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-03-31.md).
 
+## 2026-04-04 - Group handbook sidebar navigation by information architecture
+- State: Done
+- Scope: `scripts/docgen_handbook.py`, `scripts/generate_command_html.py`, `python/tests/test_python_generate_command_html.py`, `docs/internal/generated-docs-architecture.md`, `docs/internal/generated-docs-playbook.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: the HTML sidebar rendered every handbook chapter from one flat `HANDBOOK_ORDER` sequence, then appended a second flat command list underneath. That mixed onboarding, role paths, asset guides, governance chapters, and command reference into one scan surface, which made the handbook feel fragmented even when individual pages were fine.
+- Current Update: split handbook navigation concerns into two metadata layers. `HANDBOOK_ORDER` still owns linear reading order for previous/next, while new sidebar groups in `scripts/docgen_handbook.py` now define the actual information architecture shown in the HTML nav. The renderer now reads those groups and reduces command reference to a single hub entry instead of a second mini index.
+- Result: handbook and command pages now share a grouped handbook sidebar that matches the handbook index IA more closely, while command docs are represented as one secondary entrypoint instead of a competing taxonomy. Validation passed with regenerated HTML plus focused landing and HTML generator tests.
+
 ## 2026-04-04 - Separate landing-page content from the HTML renderer
 - State: Done
 - Scope: `docs/landing/`, `scripts/docgen_landing.py`, `scripts/generate_command_html.py`, `python/tests/test_python_docgen_landing.py`, `python/tests/test_python_generate_command_html.py`, `docs/internal/generated-docs-architecture.md`, `docs/internal/generated-docs-playbook.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

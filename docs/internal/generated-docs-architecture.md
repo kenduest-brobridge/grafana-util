@@ -243,16 +243,18 @@ Handbook pages are narrative, so they are rendered from Markdown more directly.
 The key handbook-specific rules are:
 
 - page ordering is defined by `HANDBOOK_ORDER` in `scripts/docgen_handbook.py`
+- sidebar grouping is defined separately by `HANDBOOK_NAV_GROUPS` in `scripts/docgen_handbook.py`
 - each locale must provide the same chapter set and filenames
-- navigation is file-name based, not title based
+- sidebar labels are title-driven, but group membership is metadata-driven
 - the HTML handbook experience depends on the ordered sequence for previous/next controls
 
 When adding a new handbook chapter:
 
 1. add the Markdown file in both `en` and `zh-TW`
 2. add its filename to `HANDBOOK_ORDER`
-3. regenerate HTML
-4. verify the chapter appears in both locale flows
+3. place it in the right `HANDBOOK_NAV_GROUPS` section
+4. regenerate HTML
+5. verify the chapter appears in both locale flows
 
 ## Locale Policy
 

@@ -26,23 +26,35 @@
   --pre-bg: #0f172a;
   --pre-text: #f8fafc;
   --shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
+  --input-bg: #ffffff;
+  --input-border: #ccd8e5;
+  --input-text: #1c2740;
+  --cta-bg: #0d84d8;
+  --cta-border: #0d84d8;
+  --cta-text: #ffffff;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #020617;
-    --panel: #0f172a;
-    --panel-strong: #1e293b;
-    --text: #cbd5e1;
-    --muted: #a6b4c7;
-    --heading: #f8fafc;
-    --accent: #38bdf8;
-    --accent-soft: rgba(56, 189, 248, 0.15);
-    --border: #334155;
-    --code-bg: #1e293b;
-    --pre-bg: #020617;
-    --pre-text: #f8fafc;
-    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    --bg: #0b0f14;
+    --panel: #11161c;
+    --panel-strong: #151b22;
+    --text: #e6edf3;
+    --muted: #9da7b3;
+    --heading: #f3f4f6;
+    --accent: #aab4bf;
+    --accent-soft: rgba(170, 180, 191, 0.16);
+    --border: #202833;
+    --code-bg: #1b222b;
+    --pre-bg: #0a0d10;
+    --pre-text: #f3f4f6;
+    --shadow: 0 14px 32px rgba(0, 0, 0, 0.34);
+    --input-bg: #11161c;
+    --input-border: #28313b;
+    --input-text: #f3f4f6;
+    --cta-bg: #24303b;
+    --cta-border: #334250;
+    --cta-text: #f3f4f6;
   }
 }
 
@@ -60,22 +72,34 @@ html[data-theme="light"] {
   --pre-bg: #0f172a;
   --pre-text: #f8fafc;
   --shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
+  --input-bg: #ffffff;
+  --input-border: #ccd8e5;
+  --input-text: #1c2740;
+  --cta-bg: #0d84d8;
+  --cta-border: #0d84d8;
+  --cta-text: #ffffff;
 }
 
 html[data-theme="dark"] {
-  --bg: #020617;
-  --panel: #0f172a;
-  --panel-strong: #1e293b;
-  --text: #cbd5e1;
-  --muted: #a6b4c7;
-  --heading: #f8fafc;
-  --accent: #38bdf8;
-  --accent-soft: rgba(56, 189, 248, 0.15);
-  --border: #334155;
-  --code-bg: #1e293b;
-  --pre-bg: #020617;
-  --pre-text: #f8fafc;
-  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+  --bg: #0b0f14;
+  --panel: #11161c;
+  --panel-strong: #151b22;
+  --text: #e6edf3;
+  --muted: #9da7b3;
+  --heading: #f3f4f6;
+  --accent: #aab4bf;
+  --accent-soft: rgba(170, 180, 191, 0.16);
+  --border: #202833;
+  --code-bg: #1b222b;
+  --pre-bg: #0a0d10;
+  --pre-text: #f3f4f6;
+  --shadow: 0 14px 32px rgba(0, 0, 0, 0.34);
+  --input-bg: #11161c;
+  --input-border: #28313b;
+  --input-text: #f3f4f6;
+  --cta-bg: #24303b;
+  --cta-border: #334250;
+  --cta-text: #f3f4f6;
 }
 
 html { font-size: calc(16px * var(--font-scale)); scroll-behavior: smooth; }
@@ -130,6 +154,8 @@ html[lang="zh-TW"] .nav-sidebar { font-family: var(--font-zh); letter-spacing: 0
 .nav-sidebar li { margin-bottom: 0; }
 .nav-sidebar h2 { font-size: 0.74rem; font-weight: 700; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; letter-spacing: 0.04em; }
 .nav-section + .nav-section { margin-top: 18px; }
+.nav-group-block + .nav-group-block { margin-top: 14px; }
+.nav-group-title { margin: 0 0 6px; font-size: 0.76rem; font-weight: 700; color: var(--muted); letter-spacing: 0.02em; }
 .nav-tree,
 .nav-sub-list { list-style: none; margin: 0; padding: 0; position: relative; }
 .nav-tree::before,
@@ -146,17 +172,16 @@ html[lang="zh-TW"] .nav-sidebar { font-family: var(--font-zh); letter-spacing: 0
 .nav-item { display: block; padding: 5px 8px; border-radius: 8px; color: var(--text); text-decoration: none !important; transition: 0.15s; font-weight: 550; font-size: 0.9rem; line-height: 1.44; }
 .nav-group-link,
 .nav-item,
-.nav-command-link { white-space: nowrap; }
+.nav-command-entry { white-space: nowrap; }
 .nav-item:hover { background: var(--panel-strong); color: var(--heading); }
 .nav-item.active,
 .nav-group-link.active { background: color-mix(in srgb, var(--accent-soft) 82%, white); color: var(--heading); font-weight: 620; box-shadow: inset 2px 0 0 var(--accent); }
 .nav-sub-list { margin-top: 4px; margin-left: 10px; }
 .nav-sub-list .nav-item { color: var(--muted); font-weight: 520; }
 .nav-sub-list .nav-item.active { color: var(--heading); font-weight: 610; }
-.nav-command-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; }
-.nav-command-link { display: block; padding: 4px 8px; border-radius: 6px; color: var(--muted); text-decoration: none !important; font-size: 0.84rem; font-weight: 520; line-height: 1.32; transition: 0.15s; }
-.nav-command-link:hover { color: var(--heading); background: color-mix(in srgb, var(--panel-strong) 72%, white); }
-.nav-command-link.active { color: var(--heading); font-weight: 610; background: transparent; box-shadow: inset 2px 0 0 var(--accent); }
+.nav-command-entry { display: block; padding: 5px 8px; border-radius: 8px; color: var(--muted); text-decoration: none !important; font-size: 0.88rem; font-weight: 560; line-height: 1.4; transition: 0.15s; }
+.nav-command-entry:hover { color: var(--heading); background: var(--panel-strong); }
+.nav-command-entry.active { color: var(--heading); font-weight: 620; background: color-mix(in srgb, var(--accent-soft) 60%, white); box-shadow: inset 2px 0 0 var(--accent); }
 
 /* Main Article */
 .article { padding: 10px 0 24px; }
@@ -260,10 +285,10 @@ html[lang="zh-TW"] .sidebar { font-family: var(--font-zh); letter-spacing: 0; }
   flex: 1;
   min-height: 48px;
   padding: 0 16px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--input-border);
   border-radius: 14px;
-  background: #fff;
-  color: var(--text);
+  background: var(--input-bg);
+  color: var(--input-text);
   font: 500 1rem var(--font-sans);
 }
 .landing-search-input::placeholder {
@@ -276,13 +301,27 @@ html[lang="zh-TW"] .sidebar { font-family: var(--font-zh); letter-spacing: 0; }
 .landing-search-button {
   min-height: 46px;
   padding: 0 18px;
-  border: 1px solid var(--accent);
+  border: 1px solid var(--cta-border);
   border-radius: 14px;
-  background: var(--accent);
-  color: #fff;
+  background: var(--cta-bg);
+  color: var(--cta-text);
   font: 700 0.95rem var(--font-sans);
   cursor: pointer;
   align-self: flex-start;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.15s;
+}
+.landing-search-button:hover {
+  background: color-mix(in srgb, var(--cta-bg) 84%, white);
+  border-color: color-mix(in srgb, var(--cta-border) 78%, white);
+}
+.landing-search-button:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.landing-search-button:active {
+  transform: translateY(1px);
 }
 .landing-sections {
   display: grid;
@@ -333,6 +372,39 @@ html[lang="zh-TW"] .sidebar { font-family: var(--font-zh); letter-spacing: 0; }
   font-size: 0.98rem;
   line-height: 1.7;
   color: var(--muted);
+}
+html[data-theme="dark"] .landing-hero {
+  background:
+    radial-gradient(circle at 14% 10%, rgba(255, 255, 255, 0.04), transparent 24%),
+    radial-gradient(circle at 82% 14%, rgba(170, 180, 191, 0.11), transparent 28%),
+    linear-gradient(180deg, #0b0f14 0%, #0d1218 58%, #10161d 100%);
+  border-bottom: 1px solid var(--border);
+}
+html[data-theme="dark"] .landing-search-panel {
+  padding: 18px 20px 20px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+html[data-theme="dark"] .landing-search-input::placeholder {
+  color: color-mix(in srgb, var(--muted) 82%, white);
+}
+html[data-theme="dark"] .landing-sections {
+  gap: 24px;
+}
+html[data-theme="dark"] .landing-section {
+  padding: 18px 20px 20px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+}
+html[data-theme="dark"] .landing-task {
+  border-top-color: color-mix(in srgb, var(--border) 76%, white);
+}
+html[data-theme="dark"] .landing-meta {
+  border-top-color: var(--border);
 }
 .landing-link-list {
   display: flex;
@@ -477,7 +549,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
       </div>
       
         <div class="layout">
-          <aside class="nav-sidebar"><section class="nav-section"><h2>Handbook</h2><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/en/index.html" class="nav-item">Overview</a></li><li class="nav-tree-node"><a href="../../handbook/en/getting-started.html" class="nav-item">Getting Started</a></li><li class="nav-tree-node"><a href="../../handbook/en/role-new-user.html" class="nav-item">New User Handbook</a></li><li class="nav-tree-node"><a href="../../handbook/en/role-sre-ops.html" class="nav-item">SRE / Operator Handbook</a></li><li class="nav-tree-node"><a href="../../handbook/en/role-automation-ci.html" class="nav-item">Automation / CI Handbook</a></li><li class="nav-tree-node"><a href="../../handbook/en/architecture.html" class="nav-item">Architecture &amp; Design Principles</a></li><li class="nav-tree-node"><a href="../../handbook/en/dashboard.html" class="nav-item">Dashboard Operator Handbook</a></li><li class="nav-tree-node"><a href="../../handbook/en/datasource.html" class="nav-item">Datasource Operator Handbook</a></li><li class="nav-tree-node"><a href="../../handbook/en/alert.html" class="nav-item">Alert Operator Handbook</a></li><li class="nav-tree-node"><a href="../../handbook/en/access.html" class="nav-item">Access Management (Identity &amp; Orgs)</a></li><li class="nav-tree-node"><a href="../../handbook/en/change-overview-status.html" class="nav-item">Project Status &amp; Change Overview</a></li><li class="nav-tree-node"><a href="../../handbook/en/scenarios.html" class="nav-item">Operator Scenarios</a></li><li class="nav-tree-node"><a href="../../handbook/en/recipes.html" class="nav-item">Best Practices &amp; Real-World Recipes</a></li><li class="nav-tree-node"><a href="../../handbook/en/reference.html" class="nav-item">Technical Reference Manual</a></li><li class="nav-tree-node"><a href="../../handbook/en/troubleshooting.html" class="nav-item">Troubleshooting &amp; Glossary</a></li></ul></section><section class="nav-section"><h2>Commands</h2><ul class="nav-command-list"><li><a href="dashboard.html" class="nav-command-link">Dashboard</a></li><li><a href="alert.html" class="nav-command-link">Alert</a></li><li><a href="datasource.html" class="nav-command-link">Datasource</a></li><li><a href="access.html" class="nav-command-link">Access</a></li><li><a href="profile.html" class="nav-command-link">Profile</a></li><li><a href="status.html" class="nav-command-link">Status</a></li><li><a href="overview.html" class="nav-command-link">Overview</a></li><li><a href="change.html" class="nav-command-link">Change</a></li><li><a href="snapshot.html" class="nav-command-link">Snapshot</a></li></ul></section></aside>
+          <aside class="nav-sidebar"><section class="nav-section"><h2>Handbook</h2><div class="nav-group-block"><div class="nav-group-title">Start</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/en/index.html" class="nav-item">Overview</a></li><li class="nav-tree-node"><a href="../../handbook/en/getting-started.html" class="nav-item">Getting Started</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">Role Paths</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/en/role-new-user.html" class="nav-item">New User Handbook</a></li><li class="nav-tree-node"><a href="../../handbook/en/role-sre-ops.html" class="nav-item">SRE / Operator Handbook</a></li><li class="nav-tree-node"><a href="../../handbook/en/role-automation-ci.html" class="nav-item">Automation / CI Handbook</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">Core Operations</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/en/dashboard.html" class="nav-item">Dashboard Operator Handbook</a></li><li class="nav-tree-node"><a href="../../handbook/en/datasource.html" class="nav-item">Datasource Operator Handbook</a></li><li class="nav-tree-node"><a href="../../handbook/en/alert.html" class="nav-item">Alert Operator Handbook</a></li><li class="nav-tree-node"><a href="../../handbook/en/access.html" class="nav-item">Access Management (Identity &amp; Orgs)</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">Governance</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/en/architecture.html" class="nav-item">Architecture &amp; Design Principles</a></li><li class="nav-tree-node"><a href="../../handbook/en/change-overview-status.html" class="nav-item">Project Status &amp; Change Overview</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">Scenarios &amp; Reference</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/en/scenarios.html" class="nav-item">Operator Scenarios</a></li><li class="nav-tree-node"><a href="../../handbook/en/recipes.html" class="nav-item">Best Practices &amp; Real-World Recipes</a></li><li class="nav-tree-node"><a href="../../handbook/en/reference.html" class="nav-item">Technical Reference Manual</a></li><li class="nav-tree-node"><a href="../../handbook/en/troubleshooting.html" class="nav-item">Troubleshooting &amp; Glossary</a></li></ul></div></section><section class="nav-section"><h2>Command Reference</h2><a href="index.html" class="nav-command-entry active">Open command docs</a></section></aside>
           <article class="article">
             <div style="margin-bottom:12px; font-size:0.84rem; color:color-mix(in srgb, var(--muted) 78%, white); font-weight:460;"><a href="../../index.html" style="color:inherit;text-decoration:none;">Home</a> / Commands / datasource import</div>
             <div class="hero-eyebrow">Docs</div><h1><span class="hero-title-main">datasource import</span></h1>

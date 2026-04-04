@@ -174,14 +174,19 @@ class GenerateCommandHtmlTests(unittest.TestCase):
 
         rendered = module.render_global_nav("handbook/zh-TW/index.html", "zh-TW", config)
 
+        self.assertIn("開始", rendered)
+        self.assertIn("角色路徑", rendered)
+        self.assertIn("核心操作", rendered)
+        self.assertIn("實戰與參考", rendered)
         self.assertIn("開始使用", rendered)
         self.assertIn("新手快速入門", rendered)
-        self.assertIn('class="nav-tree"', rendered)
-        self.assertIn('class="nav-tree-node"', rendered)
+        self.assertIn("Dashboard 維運人員手冊", rendered)
+        self.assertIn('class="nav-group-block"', rendered)
+        self.assertIn('class="nav-group-title"', rendered)
         self.assertNotIn(">Getting Started<", rendered)
         self.assertNotIn(">Role New User<", rendered)
 
-    def test_render_global_nav_renders_flat_command_list_without_tree_controls(self):
+    def test_render_global_nav_renders_single_command_reference_entry(self):
         module = load_module()
 
         config = module.HtmlBuildConfig(
@@ -193,12 +198,11 @@ class GenerateCommandHtmlTests(unittest.TestCase):
 
         rendered = module.render_global_nav("commands/zh-TW/datasource.html", "zh-TW", config)
 
-        self.assertIn(">Datasource<", rendered)
-        self.assertIn(">Dashboard<", rendered)
-        self.assertIn('class="nav-command-link', rendered)
+        self.assertIn(">開啟指令參考<", rendered)
+        self.assertIn('class="nav-command-entry active"', rendered)
+        self.assertNotIn(">Datasource<", rendered)
+        self.assertNotIn(">Dashboard<", rendered)
         self.assertNotIn("Grafana-util-datasource", rendered)
-        self.assertNotIn("toggle-icon", rendered)
-        self.assertNotIn(">browse<", rendered)
 
 
 if __name__ == "__main__":

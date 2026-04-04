@@ -35,6 +35,29 @@ HANDBOOK_ORDER = (
     "reference.md",
     "troubleshooting.md",
 )
+HANDBOOK_NAV_GROUPS = (
+    ("start", ("index.md", "getting-started.md")),
+    ("role-paths", ("role-new-user.md", "role-sre-ops.md", "role-automation-ci.md")),
+    ("core-operations", ("dashboard.md", "datasource.md", "alert.md", "access.md")),
+    ("governance", ("architecture.md", "change-overview-status.md")),
+    ("scenarios-reference", ("scenarios.md", "recipes.md", "reference.md", "troubleshooting.md")),
+)
+HANDBOOK_NAV_GROUP_LABELS = {
+    "en": {
+        "start": "Start",
+        "role-paths": "Role Paths",
+        "core-operations": "Core Operations",
+        "governance": "Governance",
+        "scenarios-reference": "Scenarios & Reference",
+    },
+    "zh-TW": {
+        "start": "開始",
+        "role-paths": "角色路徑",
+        "core-operations": "核心操作",
+        "governance": "治理",
+        "scenarios-reference": "實戰與參考",
+    },
+}
 LOCALE_LABELS = {
     "en": "English",
     "zh-TW": "繁體中文",
@@ -53,6 +76,14 @@ class HandbookPage:
     next_output_rel: str | None
     next_title: str | None
     language_switch_rel: str | None
+
+
+def _validate_handbook_nav_groups() -> None:
+    nav_files = [filename for _, filenames in HANDBOOK_NAV_GROUPS for filename in filenames]
+    if len(nav_files) != len(set(nav_files)):
+        raise ValueError("HANDBOOK_NAV_GROUPS must not contain duplicate handbook files")
+    if set(nav_files) != set(HANDBOOK_ORDER):
+        raise ValueError("HANDBOOK_NAV_GROUPS must cover HANDBOOK_ORDER exactly")
 
 
 def parse_title(path: Path) -> str:
@@ -98,3 +129,6 @@ def handbook_language_href(page: HandbookPage) -> str | None:
     if page.language_switch_rel is None:
         return None
     return relative_href(page.output_rel, page.language_switch_rel)
+
+
+_validate_handbook_nav_groups()
