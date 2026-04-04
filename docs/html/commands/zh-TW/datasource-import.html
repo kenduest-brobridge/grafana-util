@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="重點旗標">重點旗標</h2>
 <ul><li><code>--import-dir</code>：inventory 或 provisioning 輸入的來源路徑。</li><li><code>--input-format</code>：選擇 <code>inventory</code> 或 <code>provisioning</code>。</li><li><code>--org-id</code>、<code>--use-export-org</code>、<code>--only-org-id</code>、<code>--create-missing-orgs</code>：控制跨 org 路由。</li><li><code>--replace-existing</code>、<code>--update-existing-only</code>、<code>--require-matching-export-org</code>：匯入安全與重整控制。</li><li><code>--secret-values</code>：在匯入時解析佔位秘密值。</li><li><code>--dry-run</code>、<code>--table</code>、<code>--json</code>、<code>--output-format</code>、<code>--no-header</code>、<code>--output-columns</code>、<code>--progress</code>、<code>--verbose</code>：預覽與回報控制。</li></ul>
 <h2 id="範例">範例</h2>
-<pre><code>grafana-util datasource import --profile prod --import-dir ./datasources --dry-run --table
+<pre><code># 用途：透過 Grafana API 匯入 datasource inventory。
+grafana-util datasource import --profile prod --import-dir ./datasources --dry-run --table
 grafana-util datasource import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./datasources --use-export-org --only-org-id 2 --create-missing-orgs --dry-run --json
 grafana-util datasource import --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --import-dir ./datasources --dry-run --table</code></pre>
 <h2 id="相關指令">相關指令</h2>

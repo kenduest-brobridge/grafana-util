@@ -32,6 +32,7 @@ Use a profile first, with env-backed secrets for CI.
 ## First commands to run
 
 ```bash
+# Purpose: First commands to run.
 grafana-util profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN
 grafana-util profile show --profile ci --output-format yaml
 grafana-util status staged --desired-file ./desired.json --output json
@@ -44,12 +45,14 @@ If the job only needs to validate one live surface, you can replace the last lin
 If you need a bootstrap check before the profile is wired, use Basic auth with a prompted password:
 
 ```bash
+# Purpose: If you need a bootstrap check before the profile is wired, use Basic auth with a prompted password.
 grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output yaml
 ```
 
 If the job already receives a scoped token, you can call the live surface directly:
 
 ```bash
+# Purpose: If the job already receives a scoped token, you can call the live surface directly.
 grafana-util overview live --url https://grafana.example.com --token "$GRAFANA_CI_TOKEN" --output json
 ```
 

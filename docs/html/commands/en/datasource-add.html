@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="key-flags">Key flags</h2>
 <ul><li><code>--uid</code>: stable datasource identity.</li><li><code>--name</code>: datasource name.</li><li><code>--type</code>: Grafana datasource plugin type id.</li><li><code>--datasource-url</code>: datasource target URL.</li><li><code>--access</code>: proxy or direct access mode.</li><li><code>--default</code>: mark as the default datasource.</li><li><code>--preset-profile</code> and <code>--apply-supported-defaults</code>: scaffold supported defaults.</li><li><code>--json-data</code>, <code>--secure-json-data</code>, <code>--secure-json-data-placeholders</code>, <code>--secret-values</code>: configure custom fields and secrets.</li><li><code>--dry-run</code>, <code>--table</code>, <code>--json</code>, <code>--output-format</code>, <code>--no-header</code>: preview output controls.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code>grafana-util datasource add --url http://localhost:3000 --basic-user admin --basic-password admin --name prometheus-main --type prometheus --datasource-url http://prometheus:9090 --dry-run --table
+<pre><code># Purpose: Create one live Grafana datasource through the Grafana API.
+grafana-util datasource add --url http://localhost:3000 --basic-user admin --basic-password admin --name prometheus-main --type prometheus --datasource-url http://prometheus:9090 --dry-run --table
 grafana-util datasource add --profile prod --name tempo-main --type tempo --datasource-url http://tempo:3200 --preset-profile full --dry-run --json</code></pre>
 <h2 id="related-commands">Related commands</h2>
 <ul><li><a href="datasource-types.html">datasource types</a></li><li><a href="datasource-modify.html">datasource modify</a></li><li><a href="datasource-list.html">datasource list</a></li></ul>

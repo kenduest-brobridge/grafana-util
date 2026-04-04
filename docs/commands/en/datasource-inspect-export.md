@@ -14,6 +14,7 @@ Use this when you want to read datasource export artifacts from disk and review 
 
 ## Examples
 ```bash
+# Purpose: Inspect a local masked recovery bundle without connecting to Grafana.
 grafana-util datasource inspect-export --input-dir ./datasources --table
 grafana-util datasource inspect-export --input-dir ./datasources --json
 ```

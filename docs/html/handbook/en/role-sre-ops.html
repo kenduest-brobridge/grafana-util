@@ -700,17 +700,21 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <p>Use a profile backed by admin-capable credentials for day-to-day work.</p>
 <ol><li><code>--profile</code> with <code>password_env</code>, <code>token_env</code>, or an OS-backed secret store for repeatable operator use.</li><li>Direct Basic auth with <code>--prompt-password</code> for bootstrap or break-glass work.</li><li>Token auth only for narrow reads where you already know the token can see every target org and resource.</li></ol>
 <h2 id="first-commands-to-run">First commands to run</h2>
-<pre><code>grafana-util status live --profile prod --output table
+<pre><code># Purpose: First commands to run.
+grafana-util status live --profile prod --output table
 grafana-util overview live --profile prod --output interactive
 grafana-util change summary --desired-file ./desired.json
 grafana-util change preflight --desired-file ./desired.json --fetch-live --output json
 grafana-util dashboard export --export-dir ./backups --overwrite --progress</code></pre>
 <p>If you need to start from the access layer instead, swap the last line for:</p>
-<pre><code>grafana-util access org list --table</code></pre>
+<pre><code># Purpose: If you need to start from the access layer instead, swap the last line for.
+grafana-util access org list --table</code></pre>
 <p>If you are checking a host directly, Basic auth is the safest fallback for broad visibility:</p>
-<pre><code>grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --all-orgs --output table</code></pre>
+<pre><code># Purpose: If you are checking a host directly, Basic auth is the safest fallback for broad visibility.
+grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --all-orgs --output table</code></pre>
 <p>Use token auth only when the scope matches the work:</p>
-<pre><code>grafana-util overview live --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --output json</code></pre>
+<pre><code># Purpose: Use token auth only when the scope matches the work.
+grafana-util overview live --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --output json</code></pre>
 <h2 id="what-good-operator-posture-looks-like">What good operator posture looks like</h2>
 <p>You are in a good operator posture when:</p>
 <ul><li>you can tell whether the current credential can really see the org or admin scope you need</li><li>you can separate live reads from staged review from actual apply paths</li><li>you run preflight or dry-run checks before destructive actions</li><li>you know which command page to open when the surface shifts from status into dashboard, alert, or access work</li></ul>

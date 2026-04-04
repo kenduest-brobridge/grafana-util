@@ -1,6 +1,20 @@
 # Project Status & Change Overview
 
+Use this chapter when you need to answer two questions before or after a change: is the estate ready, and what exactly will move?
+
 This domain focuses on the governance gate: the final layer of validation before and after making changes.
+
+## Who It Is For
+
+- Operators reviewing readiness before a maintenance window or apply path.
+- Engineers who need to summarize staged inputs before promotion.
+- Reviewers who want to separate “is the estate healthy?” from “what will this bundle do?”
+
+## Primary Goals
+
+- Separate live health checks from staged change inspection.
+- Catch broken inputs before an apply path starts.
+- Give reviewers a stable summary of what changed and what still looks risky.
 
 ## 🔗 Command Pages
 
@@ -41,6 +55,7 @@ We distinguish between **Live** (what is actually running) and **Staged** (what 
 
 ### 1. Live Readiness Check
 ```bash
+# Purpose: 1. Live Readiness Check.
 grafana-util status live --output table
 grafana-util status live --profile prod --sync-summary-file ./sync-summary.json --bundle-preflight-file ./bundle-preflight.json --output json
 ```
@@ -58,6 +73,7 @@ Use `status live` when you want the shared live status path to tell you whether 
 ### 2. Staged Readiness Check
 Use this as a mandatory CI/CD gate before running `apply`.
 ```bash
+# Purpose: Use this as a mandatory CI/CD gate before running apply.
 grafana-util status staged --desired-file ./desired.json --output json
 grafana-util status staged --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts --desired-file ./desired.json --output table
 ```
@@ -80,6 +96,7 @@ Manage the transition from Git to production Grafana.
 ### 1. Change Summary
 Get a high-level summary of your current change package.
 ```bash
+# Purpose: Get a high-level summary of your current change package.
 grafana-util change summary --desired-file ./desired.json
 grafana-util change summary --desired-file ./desired.json --output json
 ```
@@ -96,6 +113,7 @@ Use the summary to size the change before you inspect the plan. If the total is 
 ### 2. Preflight Validation
 Verify the structural integrity of your export/import trees.
 ```bash
+# Purpose: Verify the structural integrity of your export/import trees.
 grafana-util change preflight --desired-file ./desired.json --availability-file ./availability.json
 grafana-util change preflight --desired-file ./desired.json --fetch-live --output json
 ```
@@ -115,6 +133,7 @@ Use preflight when you need a structural gate before planning or applying. A cle
 `overview live --output interactive` opens the live project overview through the shared status live path.
 
 ```bash
+# Purpose: overview live --output interactive opens the live project overview through the shared status live path.
 grafana-util overview live --url http://localhost:3000 --basic-user admin --basic-password admin --output interactive
 ```
 

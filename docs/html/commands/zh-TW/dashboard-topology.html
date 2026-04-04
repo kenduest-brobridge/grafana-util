@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="重點旗標">重點旗標</h2>
 <ul><li><code>--governance</code>：儀表板治理 JSON 輸入。</li><li><code>--queries</code>：可選的儀表板 query-report JSON 輸入。</li><li><code>--alert-contract</code>：可選的 alert contract JSON 輸入。</li><li><code>--output-format</code>：輸出 <code>text</code>、<code>json</code>、<code>mermaid</code> 或 <code>dot</code>。</li><li><code>--output-file</code>：將渲染後的拓樸寫到磁碟。</li><li><code>--interactive</code>：開啟互動式終端機瀏覽器。</li></ul>
 <h2 id="範例">範例</h2>
-<pre><code>grafana-util dashboard topology --governance ./governance.json --queries ./queries.json --alert-contract ./alert-contract.json --output-format mermaid
+<pre><code># 用途：從 JSON 成品建立可重現的儀表板拓樸圖。
+grafana-util dashboard topology --governance ./governance.json --queries ./queries.json --alert-contract ./alert-contract.json --output-format mermaid
 grafana-util dashboard graph --governance ./governance.json --queries ./queries.json --alert-contract ./alert-contract.json --output-format dot --output-file ./dashboard-topology.dot</code></pre>
 <h2 id="相關指令">相關指令</h2>
 <ul><li><a href="dashboard-inspect-export.html">dashboard inspect-export</a></li><li><a href="dashboard-governance-gate.html">dashboard governance-gate</a></li><li><a href="dashboard-screenshot.html">dashboard screenshot</a></li></ul>

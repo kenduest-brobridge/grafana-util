@@ -48,6 +48,7 @@
 
 ## 範例
 ```bash
+# 用途：把一般 dashboard JSON 或 `raw/` lane 檔案轉成帶有 `__inputs` 的 Grafana UI prompt JSON。
 grafana-util dashboard raw-to-prompt --input-file ./dashboards/raw/cpu-main.json
 grafana-util dashboard raw-to-prompt --input-file ./legacy/cpu.json --input-file ./legacy/logs.json --progress
 grafana-util dashboard raw-to-prompt --input-dir ./dashboards/raw --overwrite

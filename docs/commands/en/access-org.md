@@ -28,6 +28,7 @@ List, create, modify, export, import, diff, or delete Grafana organizations.
 ## Examples
 
 ```bash
+# Purpose: List, create, modify, export, import, diff, or delete Grafana organizations.
 grafana-util access org list --profile prod --output-format text
 grafana-util access org list --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --json
 grafana-util access org modify --url http://localhost:3000 --basic-user admin --basic-password admin --name platform --set-name platform-core --json

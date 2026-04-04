@@ -717,7 +717,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="placeholder-模型">Placeholder 模型</h2>
 <ul><li><code>$datasource</code> 是 dashboard variable 參照，代表 dashboard 或 panel 是透過名為 <code>datasource</code> 的 Grafana 變數來選 datasource。</li><li><code>${DS_PROMETHEUS}</code> 或 <code>${DS_*}</code> 是 external import input placeholder，代表 Grafana 在 <code>Upload JSON</code> 時要先詢問 datasource，再把結果注入 dashboard。</li><li>這兩者有關聯，但不是同一件事。生成後的 prompt 檔可以同時包含：</li><li><code>__inputs</code> 內的 <code>${DS_*}</code> 與某些 typed datasource 參照</li><li>panel 層級刻意保留的 <code>$datasource</code></li><li><code>raw-to-prompt</code> 的目標是保留這個邊界，而不是把所有 datasource placeholder 都壓成同一種寫法。</li><li>如果原始 dashboard 本來就依賴 Grafana datasource variable，轉換後的 prompt 檔仍可能同時看到 <code>$datasource</code> 與 <code>__inputs</code>。</li></ul>
 <h2 id="範例">範例</h2>
-<pre><code>grafana-util dashboard raw-to-prompt --input-file ./dashboards/raw/cpu-main.json
+<pre><code># 用途：把一般 dashboard JSON 或 `raw/` lane 檔案轉成帶有 `__inputs` 的 Grafana UI prompt JSON。
+grafana-util dashboard raw-to-prompt --input-file ./dashboards/raw/cpu-main.json
 grafana-util dashboard raw-to-prompt --input-file ./legacy/cpu.json --input-file ./legacy/logs.json --progress
 grafana-util dashboard raw-to-prompt --input-dir ./dashboards/raw --overwrite
 grafana-util dashboard raw-to-prompt --input-dir ./legacy-json --output-dir ./converted/prompt --output-format table

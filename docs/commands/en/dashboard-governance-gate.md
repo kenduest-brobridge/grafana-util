@@ -18,6 +18,7 @@ Use this when you already have `governance-json` and query-report artifacts and 
 
 ## Examples
 ```bash
+# Purpose: Evaluate governance policy against dashboard inspect JSON artifacts.
 grafana-util dashboard governance-gate --policy-source file --policy ./policy.yaml --governance ./governance.json --queries ./queries.json
 grafana-util dashboard governance-gate --policy-source builtin --builtin-policy default --governance ./governance.json --queries ./queries.json --output-format json --json-output ./governance-check.json
 ```

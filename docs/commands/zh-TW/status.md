@@ -13,6 +13,7 @@
 範例：
 
 ```bash
+# 用途：Root。
 grafana-util status staged --dashboard-export-dir ./dashboards/raw --desired-file ./desired.json --output json
 grafana-util status live --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output yaml
 ```
@@ -30,6 +31,7 @@ grafana-util status live --url http://localhost:3000 --token "$GRAFANA_API_TOKEN
 範例：
 
 ```bash
+# 用途：staged。
 grafana-util status staged --dashboard-export-dir ./dashboards/raw --desired-file ./desired.json --output table
 grafana-util status staged --dashboard-provisioning-dir ./dashboards/provisioning --alert-export-dir ./alerts --output interactive
 ```
@@ -51,6 +53,7 @@ grafana-util status staged --dashboard-provisioning-dir ./dashboards/provisionin
 範例：
 
 ```bash
+# 用途：live。
 grafana-util status live --profile prod --output yaml
 grafana-util status live --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --sync-summary-file ./sync-summary.json --output interactive
 grafana-util status live --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output json

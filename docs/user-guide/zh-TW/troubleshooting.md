@@ -9,6 +9,18 @@
 
 如果你正在追查驗證或連線設定，請把 [profile](../../commands/zh-TW/profile.md)、[status](../../commands/zh-TW/status.md)、[overview](../../commands/zh-TW/overview.md) 與 [access](../../commands/zh-TW/access.md) 一起開著。
 
+## 適用對象
+
+- 遇到錯誤訊息，但不確定是語法、權限還是 scope 的人
+- 想先分辨 live / staged / profile 問題的人
+- 需要把常見錯誤整理成可重複排查流程的人
+
+## 主要目標
+
+- 先分辨問題類型
+- 再決定要看哪一頁、跑哪個檢查
+- 最後才進到修正或回報
+
 ---
 
 ## 🛠️ CLI 診斷與調修
@@ -18,6 +30,7 @@
 `grafana-util` 使用標準 Rust logging。你可以提高日誌等級來看實際 API request / response。
 
 ```bash
+# 用途：grafana-util 使用標準 Rust logging。你可以提高日誌等級來看實際 API request / response。
 RUST_LOG=debug grafana-util overview live --profile prod
 grafana-util dashboard list -v
 ```
@@ -85,9 +98,9 @@ grafana-util dashboard list -v
 | 術語 | 定義 |
 | :--- | :--- |
 | **Surface** | 高階操作面分類，例如 `Status`、`Overview`、`Change` |
-| **Lane** | 資產的隔離路徑，例如 `raw/`、`prompt/`、`provisioning/` |
+| **Lane** | 資料路徑，例如 `raw/`、`prompt/`、`provisioning/` |
 | **Contract** | 用來定義 readiness 或 compatibility 的結構化 JSON 文件 |
-| **Masked Recovery** | 匯出時把 secrets 遮蔽，匯入或 replay 時再補回 |
+| **Masked Recovery** | 匯出時先把 secrets 遮蔽，匯入或 replay 時再補回 |
 | **Desired State** | 儲存在 Git 中、CLI 拿來對照 live Grafana 的目標設定 |
 | **Drift** | live Grafana 與本地 staged / desired 輸出物之間的差距 |
 

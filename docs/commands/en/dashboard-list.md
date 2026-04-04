@@ -21,6 +21,7 @@ Use this when you want a non-interactive inventory view of live dashboards, opti
 
 ## Examples
 ```bash
+# Purpose: List dashboard summaries without writing export files.
 grafana-util dashboard list --profile prod
 grafana-util dashboard list --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --json
 grafana-util dashboard list --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --json

@@ -19,6 +19,7 @@
 
 ## 範例
 ```bash
+# 用途：透過 Grafana API 建立一個線上 Grafana datasource。
 grafana-util datasource add --profile prod --name tempo-main --type tempo --datasource-url http://tempo:3200 --preset-profile full --dry-run --json
 grafana-util datasource add --url http://localhost:3000 --basic-user admin --basic-password admin --name prometheus-main --type prometheus --datasource-url http://prometheus:9090 --dry-run --table
 grafana-util datasource add --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --name tempo-main --type tempo --datasource-url http://tempo:3200 --preset-profile full --dry-run --json

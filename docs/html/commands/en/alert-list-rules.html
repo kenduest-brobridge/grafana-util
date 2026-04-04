@@ -713,7 +713,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="notes">Notes</h2>
 <ul><li>Use <code>--profile</code> for repeatable single-org inventory.</li><li>For <code>--all-orgs</code>, prefer admin-backed <code>--profile</code> or direct Basic auth because token scope can return a partial view.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code>grafana-util alert list-rules --profile prod --table
+<pre><code># Purpose: List live Grafana alert rules.
+grafana-util alert list-rules --profile prod --table
 grafana-util alert list-rules --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --json
 grafana-util alert list-rules --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --output-format yaml</code></pre>
 <h2 id="related-commands">Related commands</h2>

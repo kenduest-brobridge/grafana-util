@@ -21,6 +21,7 @@ Author a staged alert rule from the higher-level authoring surface.
 ## Examples
 
 ```bash
+# Purpose: Author a staged alert rule from the higher-level authoring surface.
 grafana-util alert add-rule --desired-dir ./alerts/desired --name cpu-high --folder platform-alerts --rule-group cpu --receiver pagerduty-primary --severity critical --expr 'A' --threshold 80 --above --for 5m --label team=platform --annotation summary='CPU high'
 grafana-util alert add-rule --desired-dir ./alerts/desired --name cpu-high --folder platform-alerts --rule-group cpu --receiver pagerduty-primary --dry-run
 ```

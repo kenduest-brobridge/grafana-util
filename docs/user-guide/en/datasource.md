@@ -1,8 +1,20 @@
 # Datasource Operator Handbook
 
-This guide covers `grafana-util datasource` as an operator workflow for inventory, recovery, replay, and controlled live mutation. 
+This guide is for operators who need to inventory Grafana data sources, export a masked recovery bundle, replay or diff that bundle, and make controlled live changes with reviewable dry-runs.
 
-> **Goal**: Ensure datasource configuration can be backed up, compared, and replayed safely using a **Masked Recovery** contract that protects sensitive credentials.
+## Who It Is For
+
+- Operators responsible for backup, replay, and change control around Grafana data sources.
+- Teams moving data source state into Git, provisioning, or recovery bundles.
+- Anyone who needs to understand which fields are safe to store and which credentials must stay masked.
+
+## Primary Goals
+
+- Inventory live data sources before exporting or mutating them.
+- Build a replayable bundle without leaking sensitive values.
+- Use dry-runs and diff views before making live changes.
+
+> **Goal**: Keep datasource configuration safe to back up, compare, and replay by using a **Masked Recovery** contract that protects sensitive credentials and still leaves enough structure to restore the estate later.
 
 ## 🔗 Command Pages
 
@@ -52,6 +64,7 @@ Datasource export produces two primary artifacts, each with a specific job:
 Use `datasource list` to verify the current state of your Grafana plugins and targets.
 
 ```bash
+# Purpose: Use datasource list to verify the current state of your Grafana plugins and targets.
 grafana-util datasource list \
   --url http://localhost:3000 \
   --basic-user admin \
@@ -90,6 +103,7 @@ dehk4kxat5la8b  Prometheus  prometheus  http://prometheus:9090  true            
 
 ### 1. Export Inventory
 ```bash
+# Purpose: 1. Export Inventory.
 grafana-util datasource export --export-dir ./datasources --overwrite
 ```
 **Output Excerpt:**
@@ -101,6 +115,7 @@ Datasource export completed: 3 item(s)
 
 ### 2. Dry-Run Import Preview
 ```bash
+# Purpose: 2. Dry-Run Import Preview.
 grafana-util datasource import --import-dir ./datasources --replace-existing --dry-run --table
 ```
 **Output Excerpt:**
@@ -116,6 +131,7 @@ loki-prod   loki-prod          loki         create   missing
 
 ### 3. Direct Live Add (Dry-Run)
 ```bash
+# Purpose: 3. Direct Live Add (Dry-Run).
 grafana-util datasource add \
   --uid prom-main --name prom-new --type prometheus \
   --datasource-url http://prometheus:9090 --dry-run --table

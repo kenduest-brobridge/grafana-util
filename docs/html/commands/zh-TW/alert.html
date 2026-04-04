@@ -716,7 +716,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="驗證說明">驗證說明</h2>
 <ul><li>一般 alert 檢查與套用流程優先用 <code>--profile</code>。</li><li>需要更廣 org 可見度或管理員盤點時，Basic auth 會更穩定。</li><li>Token 驗證較適合單一 org 或權限範圍已知的自動化。</li></ul>
 <h2 id="範例">範例</h2>
-<pre><code>grafana-util alert list-rules --profile prod --json
+<pre><code># 用途：執行 alerting 指令介面，用來匯出、匯入、比對、規劃、套用、刪除、撰寫與列出 Grafana alert 資源。
+grafana-util alert list-rules --profile prod --json
 grafana-util alert export --url http://localhost:3000 --basic-user admin --basic-password admin --output-dir ./alerts --overwrite
 grafana-util alert export --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --output-dir ./alerts --flat</code></pre>
 <h2 id="相關命令">相關命令</h2>

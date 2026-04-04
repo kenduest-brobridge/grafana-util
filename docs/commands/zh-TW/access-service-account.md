@@ -23,6 +23,7 @@
 ## 範例
 
 ```bash
+# 用途：列出、建立、匯出、匯入、比對或刪除 Grafana service account，並管理其 token。
 grafana-util access service-account list --profile prod --output-format text
 grafana-util access service-account add --url http://localhost:3000 --basic-user admin --basic-password admin --name deploy-bot --role Editor --json
 grafana-util access service-account token add --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --name deploy-bot --token-name nightly

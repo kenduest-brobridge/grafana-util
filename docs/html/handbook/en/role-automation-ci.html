@@ -700,16 +700,19 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <p>Use a profile first, with env-backed secrets for CI.</p>
 <ol><li><code>--profile</code> with <code>password_env</code> or <code>token_env</code> for repeatable jobs and checked-in config.</li><li>Direct Basic auth only for bootstrap or one-off validation in a safe local shell.</li><li>Token auth is the normal steady state for narrow automation, as long as the token scope matches the exact resource set you need.</li></ol>
 <h2 id="first-commands-to-run">First commands to run</h2>
-<pre><code>grafana-util profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN
+<pre><code># Purpose: First commands to run.
+grafana-util profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN
 grafana-util profile show --profile ci --output-format yaml
 grafana-util status staged --desired-file ./desired.json --output json
 grafana-util change preflight --desired-file ./desired.json --fetch-live --output json
 grafana-util overview live --profile ci --output yaml</code></pre>
 <p>If the job only needs to validate one live surface, you can replace the last line with an equivalent direct Basic-auth or narrow-token read, but do not ask the credential to see more than its real scope.</p>
 <p>If you need a bootstrap check before the profile is wired, use Basic auth with a prompted password:</p>
-<pre><code>grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output yaml</code></pre>
+<pre><code># Purpose: If you need a bootstrap check before the profile is wired, use Basic auth with a prompted password.
+grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output yaml</code></pre>
 <p>If the job already receives a scoped token, you can call the live surface directly:</p>
-<pre><code>grafana-util overview live --url https://grafana.example.com --token &quot;$GRAFANA_CI_TOKEN&quot; --output json</code></pre>
+<pre><code># Purpose: If the job already receives a scoped token, you can call the live surface directly.
+grafana-util overview live --url https://grafana.example.com --token &quot;$GRAFANA_CI_TOKEN&quot; --output json</code></pre>
 <h2 id="what-a-stable-automation-path-looks-like">What a stable automation path looks like</h2>
 <p>Your automation path is in good shape when:</p>
 <ul><li>jobs run without prompts</li><li>the same profile can be reused across multiple checks</li><li>outputs are machine-readable and stable enough for parsing</li><li>failures clearly separate bad credentials, bad scope, bad staged input, and connectivity problems</li></ul>

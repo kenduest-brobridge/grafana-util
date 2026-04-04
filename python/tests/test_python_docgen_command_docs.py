@@ -53,6 +53,25 @@ class DocgenCommandDocsTests(unittest.TestCase):
         self.assertIn("--basic-user admin \\", rendered.body_html)
         self.assertEqual(rendered.body_html.count("<pre><code>"), 1)
 
+    def test_parse_command_page_ignores_leading_purpose_comment_inside_example_fence(self):
+        module = load_module()
+        source = REPO_ROOT / "docs" / "commands" / "zh-TW" / "dashboard-list.md"
+
+        parsed = module.parse_command_page(source, "grafana-util dashboard list")
+
+        self.assertTrue(parsed.examples)
+        self.assertEqual(parsed.examples[0], "grafana-util dashboard list --profile prod")
+        self.assertNotIn("# 用途：", "\n".join(parsed.examples))
+
+    def test_parse_command_page_does_not_take_fenced_comment_as_page_title(self):
+        module = load_module()
+        source = REPO_ROOT / "docs" / "commands" / "en" / "dashboard-export.md"
+
+        parsed = module.parse_command_page(source, "grafana-util dashboard export")
+
+        self.assertEqual(parsed.title, "export")
+        self.assertEqual(parsed.purpose, "Export dashboards to raw/, prompt/, and provisioning/ files.")
+
 
 if __name__ == "__main__":
     unittest.main()

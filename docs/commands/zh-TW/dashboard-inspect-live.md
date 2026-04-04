@@ -16,6 +16,7 @@
 
 ## 範例
 ```bash
+# 用途：透過暫時的 raw export 快照分析線上 Grafana 儀表板。
 grafana-util dashboard inspect-live --profile prod --output-format governance-json
 grafana-util dashboard inspect-live --url http://localhost:3000 --basic-user admin --basic-password admin --interactive
 grafana-util dashboard inspect-live --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output-format governance-json

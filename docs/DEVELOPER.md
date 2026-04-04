@@ -119,6 +119,7 @@ Generated artifact ownership:
 Regeneration commands:
 
 ```bash
+# Purpose: Regeneration commands.
 make man
 make man-check
 make html
@@ -160,6 +161,7 @@ Primary entrypoint:
 Common maintainer flows:
 
 ```bash
+# Purpose: Validation And Build Guide.
 make help
 make test
 make test-python

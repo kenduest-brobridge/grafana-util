@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="重點旗標">重點旗標</h2>
 <ul><li><code>--import-dir</code>：原始或合併匯出輸入的來源目錄。</li><li><code>--input-format</code>：選擇 <code>raw</code> 或 <code>provisioning</code>。</li><li><code>--org-id</code>、<code>--use-export-org</code>、<code>--only-org-id</code>、<code>--create-missing-orgs</code>：控制跨 org 路由。</li><li><code>--import-folder-uid</code>：強制指定目的資料夾 UID。</li><li><code>--ensure-folders</code>、<code>--replace-existing</code>、<code>--update-existing-only</code>：控制匯入行為。</li><li><code>--require-matching-folder-path</code>、<code>--require-matching-export-org</code>、<code>--strict-schema</code>、<code>--target-schema-version</code>：安全檢查。</li><li><code>--import-message</code>：儲存在 Grafana 的修訂訊息。</li><li><code>--interactive</code>、<code>--dry-run</code>、<code>--table</code>、<code>--json</code>、<code>--output-format</code>、<code>--output-columns</code>、<code>--no-header</code>、<code>--progress</code>、<code>--verbose</code>：預覽與回報控制。</li></ul>
 <h2 id="範例">範例</h2>
-<pre><code>grafana-util dashboard import --profile prod --import-dir ./dashboards/raw --replace-existing
+<pre><code># 用途：透過 Grafana API 匯入儀表板 JSON 檔案。
+grafana-util dashboard import --profile prod --import-dir ./dashboards/raw --replace-existing
 grafana-util dashboard import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/raw --dry-run --table
 grafana-util dashboard import --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --import-dir ./dashboards/raw --dry-run --table</code></pre>
 <h2 id="相關指令">相關指令</h2>

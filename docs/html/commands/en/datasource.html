@@ -716,7 +716,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="auth-notes">Auth notes</h2>
 <ul><li>Prefer <code>--profile</code> for repeatable datasource inventory and change flows.</li><li>Use direct Basic auth for org-spanning or admin-level mutation work.</li><li>Token auth is acceptable for scoped reads and diffs when the token can see the target org.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code>grafana-util datasource --help
+<pre><code># Purpose: `grafana-util datasource` is the namespace for catalog lookup, live browsing, export/import, diff, and live create/modify/delete workflows. The same namespace is also available as `grafana-util ds`.
+grafana-util datasource --help
 grafana-util datasource types
 grafana-util datasource browse --profile prod
 grafana-util datasource browse --url http://localhost:3000 --basic-user admin --basic-password admin</code></pre>

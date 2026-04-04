@@ -23,6 +23,7 @@
 
 ## 範例
 ```bash
+# 用途：將儀表板匯出成 `raw/`、`prompt/` 與 `provisioning/` 檔案。
 grafana-util dashboard export --profile prod --export-dir ./dashboards --overwrite
 grafana-util dashboard export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --export-dir ./dashboards --overwrite
 grafana-util dashboard export --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --export-dir ./dashboards --overwrite

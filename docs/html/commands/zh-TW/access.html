@@ -716,7 +716,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="驗證說明">驗證說明</h2>
 <ul><li>可重複的 inventory 讀取優先用 <code>--profile</code>。</li><li>org、user、team 與 service-account lifecycle 往往需要管理員權限，直接 Basic auth 是最穩妥的 fallback。</li><li>即使 token 能執行部分 list 指令，也不代表足夠支援整個 access 管理面。</li></ul>
 <h2 id="範例">範例</h2>
-<pre><code>grafana-util access user list --profile prod --json
+<pre><code># 用途：執行 access-management 指令介面，涵蓋使用者、組織、團隊與服務帳號。
+grafana-util access user list --profile prod --json
 grafana-util access service-account token add --url http://localhost:3000 --basic-user admin --basic-password admin --name deploy-bot --token-name nightly
 grafana-util access service-account list --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --output-format text</code></pre>
 <h2 id="相關命令">相關命令</h2>

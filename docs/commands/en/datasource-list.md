@@ -15,6 +15,7 @@ Use this when you need a non-interactive inventory of datasources, either for th
 
 ## Examples
 ```bash
+# Purpose: List live Grafana datasource inventory.
 grafana-util datasource list --url http://localhost:3000 --basic-user admin --basic-password admin --output-format text
 grafana-util datasource list --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --output-format yaml
 ```

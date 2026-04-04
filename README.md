@@ -41,8 +41,11 @@ grafana-util overview live --url http://my-grafana:3000 --basic-user admin --pro
 Download and install notes:
 
 *   **Pinned install**: `VERSION=0.7.4 curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-utils/main/scripts/install.sh | sh`
+*   **Custom install directory**: `BIN_DIR="$HOME/.local/bin" curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-utils/main/scripts/install.sh | sh`
 *   **Release downloads**: <https://github.com/kenduest-brobridge/grafana-utils/releases>
 *   **Published binaries**: standard release binaries are published for `linux-amd64` and `macos-arm64`. If you need the browser-enabled screenshot build, download the `*-browser-*` archive from the same release.
+*   **Default install location**: the script uses `BIN_DIR` when you set it, otherwise `/usr/local/bin` if writable, and otherwise falls back to `$HOME/.local/bin`.
+*   **PATH setup**: if the chosen install directory is not on `PATH`, the script prints the exact `zsh` / `bash` snippet to add it. You can also preview the install contract with `sh ./scripts/install.sh --help`.
 
 ---
 
@@ -109,6 +112,7 @@ Use the handbook and command reference together: the handbook explains workflow 
 If plain Markdown is awkward to read, generate the local HTML docs site and open the entrypoint:
 
 ```bash
+# Purpose: If plain Markdown is awkward to read, generate the local HTML docs site and open the entrypoint.
 make html
 open ./docs/html/index.html
 ```

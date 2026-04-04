@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="重點旗標">重點旗標</h2>
 <ul><li><code>--input</code>：要檢視的儀表板 JSON 檔。</li><li><code>--output-format</code>：選擇 <code>text</code>、<code>table</code>、<code>csv</code>、<code>json</code> 或 <code>yaml</code>。</li><li><code>--json</code>、<code>--table</code>、<code>--csv</code>、<code>--yaml</code>：直接輸出選擇器。</li></ul>
 <h2 id="範例">範例</h2>
-<pre><code>grafana-util dashboard review --input ./drafts/cpu-main.json
+<pre><code># 用途：檢視一個本地儀表板 JSON 檔，但不會碰到 Grafana。
+grafana-util dashboard review --input ./drafts/cpu-main.json
 grafana-util dashboard review --input ./drafts/cpu-main.json --output-format yaml</code></pre>
 <h2 id="相關指令">相關指令</h2>
 <ul><li><a href="dashboard-patch-file.html">dashboard patch-file</a></li><li><a href="dashboard-publish.html">dashboard publish</a></li><li><a href="dashboard-inspect-export.html">dashboard inspect-export</a></li></ul>

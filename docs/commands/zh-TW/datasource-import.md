@@ -16,6 +16,7 @@
 
 ## 範例
 ```bash
+# 用途：透過 Grafana API 匯入 datasource inventory。
 grafana-util datasource import --profile prod --import-dir ./datasources --dry-run --table
 grafana-util datasource import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./datasources --use-export-org --only-org-id 2 --create-missing-orgs --dry-run --json
 grafana-util datasource import --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --import-dir ./datasources --dry-run --table

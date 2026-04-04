@@ -7,7 +7,7 @@
 - 每次執行時直接帶 `--url` 與驗證參數
 - 用 `--prompt-password` 或 `--prompt-token` 互動輸入，不把敏感值直接打在命令列
 - 讓環境變數提供帳號、密碼或 token
-- 把常用預設寫進 repo-local 的 profile，再用 `--profile` 重複使用
+- 把常用預設寫進專案本地的 profile，再用 `--profile` 重複使用
 
 profile 的價值是把重複的連線資訊收斂起來，不是代表前面那些方式不能用。比較自然的學習順序是：
 
@@ -17,8 +17,8 @@ profile 的價值是把重複的連線資訊收斂起來，不是代表前面那
 
 ## 適用對象
 
-- 第一次使用此 CLI 工具的工程師或維運人員。
-- 需要先確認連線、版本與 Profile 是否正常的人員。
+- 第一次接觸這個工具的工程師或維運人員。
+- 需要先確認連線、版本與 profile 是否正常的人。
 - 還不需要執行匯入、套用或跨 org 作業的使用者。
 
 ## 主要目標
@@ -60,6 +60,7 @@ profile 的價值是把重複的連線資訊收斂起來，不是代表前面那
 ## 建議先執行的 5 個指令
 
 ```bash
+# 用途：建議先執行的 5 個指令。
 grafana-util --version
 grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output yaml
 grafana-util profile init --overwrite
@@ -78,18 +79,21 @@ grafana-util status live --profile dev --output yaml
 如果你暫時還沒有 profile，這就是最短的安全起手式：
 
 ```bash
+# 用途：如果你暫時還沒有 profile，這就是最短的安全起手式。
 grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output yaml
 ```
 
 如果你手邊已有範圍明確的 token，也可以直接做同一類唯讀檢查：
 
 ```bash
+# 用途：如果你手邊已有範圍明確的 token，也可以直接做同一類唯讀檢查。
 grafana-util overview live --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output json
 ```
 
 如果你的 shell 已經有環境變數，也可以不先建 profile，直接這樣跑：
 
 ```bash
+# 用途：如果你的 shell 已經有環境變數，也可以不先建 profile，直接這樣跑。
 export GRAFANA_USERNAME=admin
 export GRAFANA_PASSWORD=admin
 grafana-util status live --url http://localhost:3000 --output yaml

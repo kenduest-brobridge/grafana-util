@@ -18,6 +18,7 @@
 
 ## 範例
 ```bash
+# 用途：透過 Grafana API 匯入儀表板 JSON 檔案。
 grafana-util dashboard import --profile prod --import-dir ./dashboards/raw --replace-existing
 grafana-util dashboard import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/raw --dry-run --table
 grafana-util dashboard import --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --import-dir ./dashboards/raw --dry-run --table

@@ -689,7 +689,11 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h1><span class="hero-title-main">Data source 維運手冊</span></h1>
 
 
-    <p>本指南涵蓋 <code>grafana-util datasource</code> 的維運流程，包含資產盤點、災難恢復、回放與受控的 live 變更。</p>
+    <p>這一章整理 data source 的盤點、備份、回放與受控變更。重點是讓你知道哪些資料適合進 Git，哪些資料只適合在恢復時補回。</p>
+<h2 id="適用對象">適用對象</h2>
+<ul><li>負責 data source 盤點、同步與恢復的人</li><li>需要把 data source 資產接進 Git 或 provisioning 流程的人</li><li>需要先做 dry-run，再決定要不要套用的人</li></ul>
+<h2 id="主要目標">主要目標</h2>
+<ul><li>先看懂 live data source 長什麼樣</li><li>再建立可回放的輸出樹</li><li>最後才進行匯入、修改或刪除</li></ul>
 <p>&gt; <strong>維運目標</strong>：確保 data source 設定可以安全地備份、比對與回放，並透過 <strong>Masked Recovery（遮蔽式還原）</strong> 保護敏感憑證。</p>
 <h2 id="指令頁面">指令頁面</h2>
 <p>如果你現在要查的是指令細節，而不是工作流程章節，可以直接看下面這些指令頁：</p>
@@ -703,7 +707,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <p><strong>重要提示</strong>：請始終把 <code>datasources.json</code> 視為真正的恢復來源。Provisioning YAML 只是從恢復包衍生出來的次要投影。</p>
 <h2 id="閱讀即時資產盤點">閱讀即時資產盤點</h2>
 <p>使用 <code>datasource list</code> 驗證目前 Grafana 的外掛與目標狀態。</p>
-<pre><code>grafana-util datasource list \
+<pre><code># 用途：使用 datasource list 驗證目前 Grafana 的外掛與目標狀態。
+grafana-util datasource list \
   --url http://localhost:3000 \
   --basic-user admin \
   --basic-password admin \
@@ -716,22 +721,25 @@ dehk4kxat5la8b  Prometheus  prometheus  http://prometheus:9090  true            
 <ul><li><strong>UID</strong>：用於自動化的穩定身份識別。</li><li><strong>TYPE</strong>：識別外掛實作 (例如 prometheus, loki)。</li><li><strong>IS_DEFAULT</strong>：標示這是否為該 org 的預設 data source。</li><li><strong>URL</strong>：該紀錄關聯的後端目標位址。</li></ul>
 <h2 id="關鍵指令-完整參數參考">關鍵指令 (完整參數參考)</h2>
 <table><thead><tr><th>指令</th><th>帶有參數的完整範例</th></tr></thead><tbody><tr><td><strong>盤點 (List)</strong></td><td><code>grafana-util datasource list --all-orgs --table</code></td></tr><tr><td><strong>匯出 (Export)</strong></td><td><code>grafana-util datasource export --export-dir ./datasources --overwrite</code></td></tr><tr><td><strong>匯入 (Import)</strong></td><td><code>grafana-util datasource import --import-dir ./datasources --replace-existing --dry-run --table</code></td></tr><tr><td><strong>比對 (Diff)</strong></td><td><code>grafana-util datasource diff --import-dir ./datasources</code></td></tr><tr><td><strong>新增 (Add)</strong></td><td><code>grafana-util datasource add --uid &lt;UID&gt; --name &lt;NAME&gt; --type prometheus --datasource-url &lt;URL&gt; --dry-run --table</code></td></tr></tbody></table>
-<h2 id="docker-驗證範例">Docker 驗證範例</h2>
+<h2 id="實作範例">實作範例</h2>
 <h3 id="1-匯出盤點資產">1. 匯出盤點資產</h3>
-<pre><code>grafana-util datasource export --export-dir ./datasources --overwrite</code></pre>
+<pre><code># 用途：1. 匯出盤點資產。
+grafana-util datasource export --export-dir ./datasources --overwrite</code></pre>
 <p><strong>範例輸出：</strong></p>
 <pre><code>Exported datasource inventory -&gt; datasources/datasources.json
 Exported metadata            -&gt; datasources/export-metadata.json
 Datasource export completed: 3 item(s)</code></pre>
 <h3 id="2-dry-run-匯入預覽">2. Dry-Run 匯入預覽</h3>
-<pre><code>grafana-util datasource import --import-dir ./datasources --replace-existing --dry-run --table</code></pre>
+<pre><code># 用途：2. Dry-Run 匯入預覽。
+grafana-util datasource import --import-dir ./datasources --replace-existing --dry-run --table</code></pre>
 <p><strong>範例輸出：</strong></p>
 <pre><code>UID         NAME               TYPE         ACTION   DESTINATION
 prom-main   prometheus-main    prometheus   update   existing
 loki-prod   loki-prod          loki         create   missing</code></pre>
 <ul><li><strong>ACTION=create</strong>：將建立新的 data source 紀錄。</li><li><strong>ACTION=update</strong>：將取代現有的紀錄。</li><li><strong>DESTINATION=missing</strong>：Grafana 目前沒有這個 UID，因此匯入時會建立新紀錄。</li><li><strong>DESTINATION=existing</strong>：Grafana 目前已經有這個 UID，因此匯入時會覆蓋既有 data source 紀錄。</li></ul>
 <h3 id="3-直接即時新增-dry-run">3. 直接即時新增 (Dry-Run)</h3>
-<pre><code>grafana-util datasource add \
+<pre><code># 用途：3. 直接即時新增 (Dry-Run)。
+grafana-util datasource add \
   --uid prom-main --name prom-new --type prometheus \
   --datasource-url http://prometheus:9090 --dry-run --table</code></pre>
 <p><strong>範例輸出：</strong></p>
@@ -741,7 +749,7 @@ loki-prod   loki-prod          loki         create   missing</code></pre>
     <nav class="footer-nav"><a class="link-card" href="dashboard.html"><span>Previous</span>Dashboard 維運人員手冊</a><a class="link-card" href="alert.html"><span>Next</span>Alert 維運人員手冊</a></nav>
   </article>
   <aside class="sidebar">
-  <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#指令頁面"><span class="toc-label">指令頁面</span></a></li><li class="toc-level-2"><a href="#核心工作流用途"><span class="toc-label">核心工作流用途</span></a></li><li class="toc-level-2"><a href="#工作流程邊界"><span class="toc-label">工作流程邊界</span></a></li><li class="toc-level-2"><a href="#閱讀即時資產盤點"><span class="toc-label">閱讀即時資產盤點</span></a></li><li class="toc-level-2"><a href="#關鍵指令-完整參數參考"><span class="toc-label">關鍵指令 (完整參數參考)</span></a></li><li class="toc-level-2"><a href="#docker-驗證範例"><span class="toc-label">Docker 驗證範例</span></a></li><li class="toc-level-3"><a href="#1-匯出盤點資產"><span class="toc-label">1. 匯出盤點資產</span></a></li><li class="toc-level-3"><a href="#2-dry-run-匯入預覽"><span class="toc-label">2. Dry-Run 匯入預覽</span></a></li><li class="toc-level-3"><a href="#3-直接即時新增-dry-run"><span class="toc-label">3. 直接即時新增 (Dry-Run)</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/datasource.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
+  <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#適用對象"><span class="toc-label">適用對象</span></a></li><li class="toc-level-2"><a href="#主要目標"><span class="toc-label">主要目標</span></a></li><li class="toc-level-2"><a href="#指令頁面"><span class="toc-label">指令頁面</span></a></li><li class="toc-level-2"><a href="#核心工作流用途"><span class="toc-label">核心工作流用途</span></a></li><li class="toc-level-2"><a href="#工作流程邊界"><span class="toc-label">工作流程邊界</span></a></li><li class="toc-level-2"><a href="#閱讀即時資產盤點"><span class="toc-label">閱讀即時資產盤點</span></a></li><li class="toc-level-2"><a href="#關鍵指令-完整參數參考"><span class="toc-label">關鍵指令 (完整參數參考)</span></a></li><li class="toc-level-2"><a href="#實作範例"><span class="toc-label">實作範例</span></a></li><li class="toc-level-3"><a href="#1-匯出盤點資產"><span class="toc-label">1. 匯出盤點資產</span></a></li><li class="toc-level-3"><a href="#2-dry-run-匯入預覽"><span class="toc-label">2. Dry-Run 匯入預覽</span></a></li><li class="toc-level-3"><a href="#3-直接即時新增-dry-run"><span class="toc-label">3. 直接即時新增 (Dry-Run)</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/datasource.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
 </aside>
 
 </div>

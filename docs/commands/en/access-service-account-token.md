@@ -17,6 +17,7 @@ Add or delete tokens for a Grafana service account.
 ## Examples
 
 ```bash
+# Purpose: Add or delete tokens for a Grafana service account.
 grafana-util access service-account token add --profile prod --name deploy-bot --token-name nightly
 grafana-util access service-account token delete --profile prod --name deploy-bot --token-name nightly --yes --json
 ```

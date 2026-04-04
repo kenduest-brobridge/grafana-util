@@ -716,7 +716,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="驗證說明">驗證說明</h2>
 <ul><li>可重複執行的 data source 清單與變更工作優先用 <code>--profile</code>。</li><li>org 跨越或管理員型 mutation 工作，直接 Basic auth 會更穩定。</li><li>Token 驗證適合權限邊界明確的讀取或 diff 流程。</li></ul>
 <h2 id="範例">範例</h2>
-<pre><code>grafana-util datasource --help
+<pre><code># 用途：`grafana-util datasource` 是處理目錄查找、線上瀏覽、匯出 / 匯入、diff，以及線上建立 / 修改 / 刪除工作流程的指令群組。這個指令群組也可用 `grafana-util ds` 呼叫。
+grafana-util datasource --help
 grafana-util datasource types
 grafana-util datasource browse --profile prod
 grafana-util datasource browse --url http://localhost:3000 --basic-user admin --basic-password admin</code></pre>

@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="key-flags">Key flags</h2>
 <ul><li><code>--page-size</code>: dashboard search page size.</li><li><code>--concurrency</code>: maximum parallel fetch workers.</li><li><code>--org-id</code>: inspect one explicit Grafana org.</li><li><code>--all-orgs</code>: inspect across visible orgs.</li><li><code>--report</code>, <code>--output-format</code>, <code>--output-file</code>, <code>--interactive</code>, <code>--no-header</code>: output controls.</li><li><code>--progress</code>: show fetch progress.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code>grafana-util dashboard inspect-live --url http://localhost:3000 --basic-user admin --basic-password admin --output-format governance-json
+<pre><code># Purpose: Analyze live Grafana dashboards via a temporary raw-export snapshot.
+grafana-util dashboard inspect-live --url http://localhost:3000 --basic-user admin --basic-password admin --output-format governance-json
 grafana-util dashboard inspect-live --url http://localhost:3000 --basic-user admin --basic-password admin --interactive</code></pre>
 <h2 id="related-commands">Related commands</h2>
 <ul><li><a href="dashboard-inspect-export.html">dashboard inspect-export</a></li><li><a href="dashboard-inspect-vars.html">dashboard inspect-vars</a></li><li><a href="dashboard-governance-gate.html">dashboard governance-gate</a></li></ul>

@@ -41,8 +41,11 @@ grafana-util overview live --url http://my-grafana:3000 --basic-user admin --pro
 安裝與下載資訊：
 
 *   **固定版本安裝**：`VERSION=0.7.4 curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-utils/main/scripts/install.sh | sh`
+*   **指定安裝目錄**：`BIN_DIR="$HOME/.local/bin" curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-utils/main/scripts/install.sh | sh`
 *   **Release 下載頁**：<https://github.com/kenduest-brobridge/grafana-utils/releases>
 *   **已發布 binary**：目前提供 `linux-amd64` 與 `macos-arm64` 的標準版。若需要支援瀏覽器截圖的版本，請到同一個 release 下載 `*-browser-*` 壓縮檔。
+*   **預設安裝位置**：若有設定 `BIN_DIR` 就優先使用；否則會先嘗試可寫入的 `/usr/local/bin`，再退回 `$HOME/.local/bin`。
+*   **PATH 設定提醒**：如果安裝目錄還沒在 `PATH` 內，安裝腳本會印出對應 `zsh` / `bash` 可直接使用的設定方式。也可以先執行 `sh ./scripts/install.sh --help` 看完整說明。
 
 ---
 
@@ -109,6 +112,7 @@ grafana-util overview live --output interactive
 如果直接讀 Markdown 不方便，請先產生本機 HTML 文件站，再開啟入口頁：
 
 ```bash
+# 用途：如果直接讀 Markdown 不方便，請先產生本機 HTML 文件站，再開啟入口頁。
 make html
 open ./docs/html/index.html
 ```

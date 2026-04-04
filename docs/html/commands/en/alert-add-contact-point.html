@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="key-flags">Key flags</h2>
 <ul><li><code>--desired-dir</code> points to the staged alert tree.</li><li><code>--name</code> sets the contact point name.</li><li><code>--dry-run</code> previews the planned output.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code>grafana-util alert add-contact-point --desired-dir ./alerts/desired --name pagerduty-primary
+<pre><code># Purpose: Author a staged alert contact point from the higher-level authoring surface.
+grafana-util alert add-contact-point --desired-dir ./alerts/desired --name pagerduty-primary
 grafana-util alert add-contact-point --desired-dir ./alerts/desired --name pagerduty-primary --dry-run</code></pre>
 <h2 id="related-commands">Related commands</h2>
 <ul><li><a href="alert.html">alert</a></li><li><a href="alert-set-route.html">alert set-route</a></li><li><a href="alert-new-contact-point.html">alert new-contact-point</a></li></ul>

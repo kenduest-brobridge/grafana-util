@@ -14,6 +14,7 @@ Use this when a datasource should be removed by UID or by name, either as a dry 
 
 ## Examples
 ```bash
+# Purpose: Delete one live Grafana datasource through the Grafana API.
 grafana-util datasource delete --url http://localhost:3000 --basic-user admin --basic-password admin --uid prom-main --dry-run --json
 grafana-util datasource delete --profile prod --uid prom-main --yes
 ```

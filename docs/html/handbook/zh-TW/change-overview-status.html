@@ -690,13 +690,18 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 
 
     <p>這一章聚焦在變更前後的最後檢查，幫你確認目前狀態、差異與套用前的準備是否到位。</p>
+<h2 id="適用對象">適用對象</h2>
+<ul><li>要先看 live / staged 狀態再決定下一步的人</li><li>負責變更審查、preflight 或 apply gate 的人</li><li>需要把 status / overview / change 串成固定流程的人</li></ul>
+<h2 id="主要目標">主要目標</h2>
+<ul><li>先區分 live 與 staged</li><li>再確認變更包、輸入結構與差異摘要</li><li>最後才進入 apply</li></ul>
 <h2 id="指令詳細頁面">指令詳細頁面</h2>
 <p>如果你現在要查的是指令細節，而不是整段工作流程，直接跳到下面這些指令頁就可以：</p>
 <ul><li><a href="../../commands/zh-TW/change.html">change</a></li><li><a href="../../commands/zh-TW/change.html#summary">change summary</a></li><li><a href="../../commands/zh-TW/change.html#plan">change plan</a></li><li><a href="../../commands/zh-TW/change.html#review">change review</a></li><li><a href="../../commands/zh-TW/change.html#apply">change apply</a></li><li><a href="../../commands/zh-TW/change.html#audit">change audit</a></li><li><a href="../../commands/zh-TW/change.html#preflight">change preflight</a></li><li><a href="../../commands/zh-TW/change.html#assess-alerts">change assess-alerts</a></li><li><a href="../../commands/zh-TW/change.html#bundle">change bundle</a></li><li><a href="../../commands/zh-TW/change.html#bundle-preflight">change bundle-preflight</a></li><li><a href="../../commands/zh-TW/change.html#promotion-preflight">change promotion-preflight</a></li><li><a href="../../commands/zh-TW/status.html">status</a></li><li><a href="../../commands/zh-TW/status.html#staged">status staged</a></li><li><a href="../../commands/zh-TW/status.html#live">status live</a></li><li><a href="../../commands/zh-TW/overview.html">overview</a></li><li><a href="../../commands/zh-TW/overview.html#live">overview live</a></li><li><a href="../../commands/zh-TW/snapshot.html">snapshot</a></li><li><a href="../../commands/zh-TW/snapshot.html#export">snapshot export</a></li><li><a href="../../commands/zh-TW/snapshot.html#review">snapshot review</a></li><li><a href="../../commands/zh-TW/profile.html">profile</a></li><li><a href="../../commands/zh-TW/profile.html#list">profile list</a></li><li><a href="../../commands/zh-TW/profile.html#show">profile show</a></li><li><a href="../../commands/zh-TW/profile.html#add">profile add</a></li><li><a href="../../commands/zh-TW/profile.html#example">profile example</a></li><li><a href="../../commands/zh-TW/profile.html#init">profile init</a></li><li><a href="../../commands/zh-TW/index.html">指令詳細總索引</a></li></ul>
 <h2 id="狀態操作面">狀態操作面</h2>
 <p>這裡會區分 <strong>Live</strong>（目前 Grafana 上真的在跑的內容）和 <strong>Staged</strong>（你準備要部署的內容）。</p>
 <h3 id="1-即時整備度檢查-live-check">1. 即時整備度檢查 (Live Check)</h3>
-<pre><code>grafana-util status live --output table
+<pre><code># 用途：1. 即時整備度檢查 (Live Check)。
+grafana-util status live --output table
 grafana-util status live --profile prod --sync-summary-file ./sync-summary.json --bundle-preflight-file ./bundle-preflight.json --output json</code></pre>
 <p><strong>預期輸出：</strong></p>
 <pre><code>OVERALL: status=ready
@@ -708,7 +713,8 @@ Alerts       ok       無孤立規則</code></pre>
 <p><code>status live</code> 走的是共用的 live 狀態檢查流程。若同時帶入 staged sync 檔案，就能在不改變指令用法的前提下，讓 live 視圖多出更多對照資訊。</p>
 <h3 id="2-暫存整備度檢查-staged-check">2. 暫存整備度檢查 (Staged Check)</h3>
 <p>在執行 <code>apply</code> 之前，這一步很適合拿來當 CI/CD 的強制檢查。</p>
-<pre><code>grafana-util status staged --desired-file ./desired.json --output json
+<pre><code># 用途：在執行 apply 之前，這一步很適合拿來當 CI/CD 的強制檢查。
+grafana-util status staged --desired-file ./desired.json --output json
 grafana-util status staged --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts --desired-file ./desired.json --output table</code></pre>
 <p><strong>預期輸出：</strong></p>
 <pre><code>{
@@ -716,12 +722,13 @@ grafana-util status staged --dashboard-export-dir ./dashboards/raw --alert-expor
   &quot;blockers&quot;: [],
   &quot;warnings&quot;: [&quot;1 個儀表板缺少唯一的目錄分配&quot;]
 }</code></pre>
-<p><code>status staged</code> 比較偏向給機器讀的驗證結果。<code>blockers</code> 代表一定得先處理，<code>warnings</code> 則表示需要人工再多看一眼。</p>
+<p><code>status staged</code> 比較偏向給腳本或 CI 判讀的驗證結果。<code>blockers</code> 代表一定得先處理，<code>warnings</code> 則表示需要人工再多看一眼。</p>
 <h2 id="變更生命週期-change-lifecycle">變更生命週期 (Change Lifecycle)</h2>
 <p>管理從 Git 到正式 Grafana 環境的過渡。</p>
 <h3 id="1-變更摘要-change-summary">1. 變更摘要 (Change Summary)</h3>
 <p>獲取目前變更包的高階摘要。</p>
-<pre><code>grafana-util change summary --desired-file ./desired.json
+<pre><code># 用途：獲取目前變更包的高階摘要。
+grafana-util change summary --desired-file ./desired.json
 grafana-util change summary --desired-file ./desired.json --output json</code></pre>
 <p><strong>預期輸出：</strong></p>
 <pre><code>CHANGE PACKAGE SUMMARY:
@@ -732,7 +739,8 @@ grafana-util change summary --desired-file ./desired.json --output json</code></
 <p>先用 summary 看整個變更包的規模，再往下看 plan。若總數異常偏大，應先停下來檢查 staged 輸入。</p>
 <h3 id="2-預檢驗證-preflight-validation">2. 預檢驗證 (Preflight Validation)</h3>
 <p>驗證匯出 / 匯入目錄結構的完整性。</p>
-<pre><code>grafana-util change preflight --desired-file ./desired.json --availability-file ./availability.json
+<pre><code># 用途：驗證匯出 / 匯入目錄結構的完整性。
+grafana-util change preflight --desired-file ./desired.json --availability-file ./availability.json
 grafana-util change preflight --desired-file ./desired.json --fetch-live --output json</code></pre>
 <p><strong>預期輸出：</strong></p>
 <pre><code>PREFLIGHT CHECK:
@@ -742,7 +750,8 @@ grafana-util change preflight --desired-file ./desired.json --fetch-live --outpu
 <p>preflight 適合放在規劃或套用前，做結構層的檢查。通過只代表輸入形狀合理，不代表 live 狀態已經完全吻合。</p>
 <h2 id="互動模式-tui-語意">互動模式 (TUI) 語意</h2>
 <p><code>overview live --output interactive</code> 會透過共用的 live status 路徑顯示 live project overview。</p>
-<pre><code>grafana-util overview live --url http://localhost:3000 --basic-user admin --basic-password admin --output interactive</code></pre>
+<pre><code># 用途：overview live --output interactive 會透過共用的 live status 路徑顯示 live project overview。
+grafana-util overview live --url http://localhost:3000 --basic-user admin --basic-password admin --output interactive</code></pre>
 <p>TUI 使用以下視覺語言：</p>
 <ul><li><strong>🟢 綠色</strong>：組件健康且完全可達。</li><li><strong>🟡 黃色</strong>：組件可用，但有警告，例如缺少中繼資料。</li><li><strong>🔴 紅色</strong>：組件受阻，在進行任何部署前都需要處理。</li></ul>
 <p>如果要看 staged 產物的人工審查畫面，用不帶 <code>live</code> 的 <code>overview</code>；如果要拿結構化輸出做 live 檢查，改用 <code>status live</code>。</p>
@@ -750,7 +759,7 @@ grafana-util change preflight --desired-file ./desired.json --fetch-live --outpu
     <nav class="footer-nav"><a class="link-card" href="access.html"><span>Previous</span>身分與存取管理 (Identity &amp; Access)</a><a class="link-card" href="scenarios.html"><span>Next</span>維運情境手冊 (Operator Scenarios)</a></nav>
   </article>
   <aside class="sidebar">
-  <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#指令詳細頁面"><span class="toc-label">指令詳細頁面</span></a></li><li class="toc-level-2"><a href="#狀態操作面"><span class="toc-label">狀態操作面</span></a></li><li class="toc-level-3"><a href="#1-即時整備度檢查-live-check"><span class="toc-label">1. 即時整備度檢查 (Live Check)</span></a></li><li class="toc-level-3"><a href="#2-暫存整備度檢查-staged-check"><span class="toc-label">2. 暫存整備度檢查 (Staged Check)</span></a></li><li class="toc-level-2"><a href="#變更生命週期-change-lifecycle"><span class="toc-label">變更生命週期 (Change Lifecycle)</span></a></li><li class="toc-level-3"><a href="#1-變更摘要-change-summary"><span class="toc-label">1. 變更摘要 (Change Summary)</span></a></li><li class="toc-level-3"><a href="#2-預檢驗證-preflight-validation"><span class="toc-label">2. 預檢驗證 (Preflight Validation)</span></a></li><li class="toc-level-2"><a href="#互動模式-tui-語意"><span class="toc-label">互動模式 (TUI) 語意</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/change-overview-status.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
+  <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#適用對象"><span class="toc-label">適用對象</span></a></li><li class="toc-level-2"><a href="#主要目標"><span class="toc-label">主要目標</span></a></li><li class="toc-level-2"><a href="#指令詳細頁面"><span class="toc-label">指令詳細頁面</span></a></li><li class="toc-level-2"><a href="#狀態操作面"><span class="toc-label">狀態操作面</span></a></li><li class="toc-level-3"><a href="#1-即時整備度檢查-live-check"><span class="toc-label">1. 即時整備度檢查 (Live Check)</span></a></li><li class="toc-level-3"><a href="#2-暫存整備度檢查-staged-check"><span class="toc-label">2. 暫存整備度檢查 (Staged Check)</span></a></li><li class="toc-level-2"><a href="#變更生命週期-change-lifecycle"><span class="toc-label">變更生命週期 (Change Lifecycle)</span></a></li><li class="toc-level-3"><a href="#1-變更摘要-change-summary"><span class="toc-label">1. 變更摘要 (Change Summary)</span></a></li><li class="toc-level-3"><a href="#2-預檢驗證-preflight-validation"><span class="toc-label">2. 預檢驗證 (Preflight Validation)</span></a></li><li class="toc-level-2"><a href="#互動模式-tui-語意"><span class="toc-label">互動模式 (TUI) 語意</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/change-overview-status.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
 </aside>
 
 </div>

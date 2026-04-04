@@ -689,16 +689,29 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h1><span class="hero-title-main">Getting Started</span></h1>
 
 
-    <p>This guide covers the current first-run setup for <code>grafana-util</code>.</p>
+    <p>This guide is for the first time you need to install <code>grafana-util</code>, prove that it can reach Grafana, and decide whether a direct command, env-backed auth, or a repo-local profile is the cleanest starting point.</p>
+<h2 id="who-it-is-for">Who It Is For</h2>
+<ul><li>Someone installing <code>grafana-util</code> for the first time.</li><li>An operator validating connectivity before any live mutation.</li><li>A teammate deciding whether direct flags, environment variables, or a profile should be the cleanest default.</li></ul>
+<h2 id="primary-goals">Primary Goals</h2>
+<ul><li>Install the binary and confirm where it lands.</li><li>Prove one safe live read against Grafana.</li><li>Move repeated connection details into a profile only after the direct path works.</li></ul>
 <p>The most important design rule to understand up front is that the CLI supports several connection patterns. You can:</p>
 <ul><li>pass the Grafana URL and auth flags directly on a command</li><li>prompt for a password or token without echoing it</li><li>let environment variables supply the auth values</li><li>store repeatable defaults in a repo-local profile and reuse them with <code>--profile</code></li></ul>
-<p>Profiles are there to simplify repeated work. They are not the only way to start.</p>
+<p>Profiles are there to simplify repeated work. They are not the only way to start, and they should not block a first connectivity check.</p>
 <p>For the exact flags behind this chapter, keep <a href="../../commands/en/profile.html">profile</a>, <a href="../../commands/en/status.html">status</a>, and <a href="../../commands/en/overview.html">overview</a> open beside it.</p>
 <h2 id="step-1-installation">Step 1: Installation</h2>
 <h3 id="download-and-install">Download and Install</h3>
-<pre><code>curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-utils/main/scripts/install.sh | sh</code></pre>
+<pre><code># Purpose: Download and Install.
+curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-utils/main/scripts/install.sh | sh</code></pre>
+<p>If you want one fixed release or one explicit install directory, the same script also supports:</p>
+<pre><code># Purpose: Install one pinned release into one explicit binary directory.
+VERSION=0.7.4 BIN_DIR=&quot;$HOME/.local/bin&quot; curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-utils/main/scripts/install.sh | sh</code></pre>
+<p>The installer uses <code>BIN_DIR</code> when you set it. Otherwise it tries <code>/usr/local/bin</code> when that directory is writable, then falls back to <code>$HOME/.local/bin</code>.</p>
+<p>If the chosen install directory is not already on <code>PATH</code>, the installer prints the exact shell snippet to add it for <code>zsh</code> or <code>bash</code>. You can also inspect the contract first with:</p>
+<pre><code># Purpose: Show install script options, BIN_DIR behavior, and PATH setup notes.
+sh ./scripts/install.sh --help</code></pre>
 <h3 id="verify-version">Verify Version</h3>
-<pre><code>grafana-util --version</code></pre>
+<pre><code># Purpose: Verify Version.
+grafana-util --version</code></pre>
 <p><strong>Expected Output:</strong></p>
 <pre><code>grafana-util 0.7.4</code></pre>
 <p>This confirms that the binary is on your <code>PATH</code> and matches the checked-in release.</p>
@@ -714,27 +727,32 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <p>For a first run, the cleanest mental model is:</p>
 <ol><li>run one direct read-only command with <code>--url</code> plus either Basic auth or token auth</li><li>once that works, move the repeatable parts into a profile</li><li>keep using <code>--profile</code> for normal day-to-day work</li></ol>
 <h3 id="1-pick-how-you-want-to-create-profiles">1. Pick how you want to create profiles</h3>
-<pre><code>grafana-util profile init --overwrite
+<pre><code># Purpose: 1. Pick how you want to create profiles.
+grafana-util profile init --overwrite
 grafana-util profile add dev --url http://127.0.0.1:3000 --basic-user admin --prompt-password
 grafana-util profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN --store-secret os
 grafana-util profile example --mode full</code></pre>
 <p><code>profile init</code> creates a minimal starter <code>grafana-util.yaml</code>. <code>profile add</code> can create a reusable Basic-auth or token-backed profile in one step, and <code>profile example</code> prints a fully commented reference template that you can copy and edit.</p>
 <p>If you are still proving basic connectivity, you can do that before any profile work:</p>
-<pre><code>grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output yaml</code></pre>
+<pre><code># Purpose: If you are still proving basic connectivity, you can do that before any profile work.
+grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output yaml</code></pre>
 <p>Then translate that same connection into a reusable profile:</p>
-<pre><code>grafana-util profile add dev --url http://127.0.0.1:3000 --basic-user admin --prompt-password
+<pre><code># Purpose: Then translate that same connection into a reusable profile.
+grafana-util profile add dev --url http://127.0.0.1:3000 --basic-user admin --prompt-password
 grafana-util status live --profile dev --output yaml</code></pre>
 <p>By default, the config file lives next to your current checkout. If you point <code>GRAFANA_UTIL_CONFIG</code> somewhere else, the helper files follow that config directory:</p>
 <table><thead><tr><th>File</th><th>Default location</th><th>Purpose</th></tr></thead><tbody><tr><td><code>grafana-util.yaml</code></td><td>current working directory, or the path given by <code>GRAFANA_UTIL_CONFIG</code></td><td>repo-local profile definitions</td></tr><tr><td><code>.grafana-util.secrets.yaml</code></td><td>same directory as <code>grafana-util.yaml</code></td><td>encrypted secret store used by <code>encrypted-file</code> mode</td></tr><tr><td><code>.grafana-util.secrets.key</code></td><td>same directory as <code>grafana-util.yaml</code></td><td>local key file used by <code>encrypted-file</code> without a passphrase</td></tr></tbody></table>
 <h3 id="2-list-the-profiles-in-the-config-file">2. List the profiles in the config file</h3>
-<pre><code>grafana-util profile list</code></pre>
+<pre><code># Purpose: 2. List the profiles in the config file.
+grafana-util profile list</code></pre>
 <p><strong>Expected Output:</strong></p>
 <pre><code>dev
 prod</code></pre>
 <p>On a freshly initialized config, <code>profile list</code> prints one discovered profile name per line.</p>
 <p>Use the <a href="../../commands/en/profile.html">profile</a> command reference when you want the flag-by-flag auth rules.</p>
 <h3 id="3-inspect-one-resolved-profile">3. Inspect one resolved profile</h3>
-<pre><code>grafana-util profile show --profile prod --output-format yaml</code></pre>
+<pre><code># Purpose: 3. Inspect one resolved profile.
+grafana-util profile show --profile prod --output-format yaml</code></pre>
 <p><strong>Expected Output:</strong></p>
 <pre><code>name: prod
 source_path: grafana-util.yaml
@@ -747,7 +765,8 @@ profile:
 <h2 id="step-3-first-read-only-checks">Step 3: First Read-Only Checks</h2>
 <p>Once a profile file exists, use read-only commands to confirm the current command shape before you touch live data.</p>
 <h3 id="1-project-status-entry-point">1. Project Status Entry Point</h3>
-<pre><code>grafana-util status live -h</code></pre>
+<pre><code># Purpose: 1. Project Status Entry Point.
+grafana-util status live -h</code></pre>
 <p><strong>Expected Output:</strong></p>
 <pre><code>Render project status from live Grafana read surfaces. Use current Grafana state plus optional staged context files.
 
@@ -760,7 +779,8 @@ Options:
           Grafana base URL. [default: http://localhost:3000]</code></pre>
 <p><code>status live</code> queries Grafana directly, and its output selector is <code>--output</code>, not <code>--output-format</code>.</p>
 <h3 id="2-overview-entry-point">2. Overview Entry Point</h3>
-<pre><code>grafana-util overview live -h</code></pre>
+<pre><code># Purpose: 2. Overview Entry Point.
+grafana-util overview live -h</code></pre>
 <p><strong>Expected Output:</strong></p>
 <pre><code>Render a live overview by delegating to the shared status live path.
 
@@ -769,11 +789,13 @@ Examples:
   grafana-util overview live --url http://localhost:3000 --basic-user admin --basic-password admin --output yaml</code></pre>
 <p><code>overview live</code> is a thin wrapper over shared live status. Use <code>--output yaml</code> for a readable summary and <code>--output interactive</code> for the TUI workbench.</p>
 <h3 id="3-run-the-same-read-only-check-in-both-common-auth-styles">3. Run the same read-only check in both common auth styles</h3>
-<pre><code>grafana-util overview live --profile prod --output yaml
+<pre><code># Purpose: 3. Run the same read-only check in both common auth styles.
+grafana-util overview live --profile prod --output yaml
 grafana-util overview live --url http://localhost:3000 --basic-user admin --prompt-password --output interactive</code></pre>
 <p>Use the profile form for normal repeatable work. Keep the direct Basic-auth form for bootstrap, break-glass access, or admin-only workflows when you are not ready to create a profile yet.</p>
 <p>If your shell already exports auth variables, the same read can stay short without creating a profile first:</p>
-<pre><code>export GRAFANA_USERNAME=admin
+<pre><code># Purpose: If your shell already exports auth variables, the same read can stay short without creating a profile first.
+export GRAFANA_USERNAME=admin
 export GRAFANA_PASSWORD=admin
 grafana-util overview live --url http://localhost:3000 --output yaml</code></pre>
 <h3 id="4-know-the-common-token-limitation">4. Know the common token limitation</h3>
@@ -785,7 +807,7 @@ grafana-util overview live --url http://localhost:3000 --output yaml</code></pre
     <nav class="footer-nav"><a class="link-card" href="what-is-grafana-util.html"><span>Previous</span>What grafana-util is for</a><a class="link-card" href="role-new-user.html"><span>Next</span>New User Handbook</a></nav>
   </article>
   <aside class="sidebar">
-  <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#step-1-installation"><span class="toc-label">Step 1: Installation</span></a></li><li class="toc-level-3"><a href="#download-and-install"><span class="toc-label">Download and Install</span></a></li><li class="toc-level-3"><a href="#verify-version"><span class="toc-label">Verify Version</span></a></li><li class="toc-level-2"><a href="#step-2-connection-patterns-and-profile-files"><span class="toc-label">Step 2: Connection Patterns And Profile Files</span></a></li><li class="toc-level-3"><a href="#auth-modes-at-a-glance"><span class="toc-label">Auth modes at a glance</span></a></li><li class="toc-level-3"><a href="#start-direct-then-simplify"><span class="toc-label">Start direct, then simplify</span></a></li><li class="toc-level-3"><a href="#1-pick-how-you-want-to-create-profiles"><span class="toc-label">1. Pick how you want to create profiles</span></a></li><li class="toc-level-3"><a href="#2-list-the-profiles-in-the-config-file"><span class="toc-label">2. List the profiles in the config file</span></a></li><li class="toc-level-3"><a href="#3-inspect-one-resolved-profile"><span class="toc-label">3. Inspect one resolved profile</span></a></li><li class="toc-level-2"><a href="#step-3-first-read-only-checks"><span class="toc-label">Step 3: First Read-Only Checks</span></a></li><li class="toc-level-3"><a href="#1-project-status-entry-point"><span class="toc-label">1. Project Status Entry Point</span></a></li><li class="toc-level-3"><a href="#2-overview-entry-point"><span class="toc-label">2. Overview Entry Point</span></a></li><li class="toc-level-3"><a href="#3-run-the-same-read-only-check-in-both-common-auth-styles"><span class="toc-label">3. Run the same read-only check in both common auth styles</span></a></li><li class="toc-level-3"><a href="#4-know-the-common-token-limitation"><span class="toc-label">4. Know the common token limitation</span></a></li><li class="toc-level-2"><a href="#interactive-mode-tui"><span class="toc-label">Interactive Mode (TUI)</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: English</a></li><li><a href="../zh-TW/getting-started.html" class="sidebar-meta-link">Switch to 繁體中文</a></li></ul></section>
+  <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#who-it-is-for"><span class="toc-label">Who It Is For</span></a></li><li class="toc-level-2"><a href="#primary-goals"><span class="toc-label">Primary Goals</span></a></li><li class="toc-level-2"><a href="#step-1-installation"><span class="toc-label">Step 1: Installation</span></a></li><li class="toc-level-3"><a href="#download-and-install"><span class="toc-label">Download and Install</span></a></li><li class="toc-level-3"><a href="#verify-version"><span class="toc-label">Verify Version</span></a></li><li class="toc-level-2"><a href="#step-2-connection-patterns-and-profile-files"><span class="toc-label">Step 2: Connection Patterns And Profile Files</span></a></li><li class="toc-level-3"><a href="#auth-modes-at-a-glance"><span class="toc-label">Auth modes at a glance</span></a></li><li class="toc-level-3"><a href="#start-direct-then-simplify"><span class="toc-label">Start direct, then simplify</span></a></li><li class="toc-level-3"><a href="#1-pick-how-you-want-to-create-profiles"><span class="toc-label">1. Pick how you want to create profiles</span></a></li><li class="toc-level-3"><a href="#2-list-the-profiles-in-the-config-file"><span class="toc-label">2. List the profiles in the config file</span></a></li><li class="toc-level-3"><a href="#3-inspect-one-resolved-profile"><span class="toc-label">3. Inspect one resolved profile</span></a></li><li class="toc-level-2"><a href="#step-3-first-read-only-checks"><span class="toc-label">Step 3: First Read-Only Checks</span></a></li><li class="toc-level-3"><a href="#1-project-status-entry-point"><span class="toc-label">1. Project Status Entry Point</span></a></li><li class="toc-level-3"><a href="#2-overview-entry-point"><span class="toc-label">2. Overview Entry Point</span></a></li><li class="toc-level-3"><a href="#3-run-the-same-read-only-check-in-both-common-auth-styles"><span class="toc-label">3. Run the same read-only check in both common auth styles</span></a></li><li class="toc-level-3"><a href="#4-know-the-common-token-limitation"><span class="toc-label">4. Know the common token limitation</span></a></li><li class="toc-level-2"><a href="#interactive-mode-tui"><span class="toc-label">Interactive Mode (TUI)</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: English</a></li><li><a href="../zh-TW/getting-started.html" class="sidebar-meta-link">Switch to 繁體中文</a></li></ul></section>
 </aside>
 
 </div>

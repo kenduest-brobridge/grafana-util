@@ -710,7 +710,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <p>Description: open this page when you need an offline snapshot of Grafana inventory that can be reviewed later without talking to the server again. The <code>snapshot</code> namespace is useful for handoff, backup, incident review, or any workflow where you want one local artifact before moving into deeper analysis.</p>
 <p>Key flags: the root command is a namespace; the operational flags live on <code>export</code> and <code>review</code>. The shared root flag is <code>--color</code>.</p>
 <p>Examples:</p>
-<pre><code>grafana-util snapshot export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./snapshot
+<pre><code># Purpose: Root.
+grafana-util snapshot export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./snapshot
 grafana-util snapshot review --input-dir ./snapshot --output json</code></pre>
 <p>Related commands: <code>grafana-util overview</code>, <code>grafana-util status staged</code>, <code>grafana-util change bundle</code>.</p>
 <h2 id="export"><code>export</code></h2>
@@ -718,7 +719,8 @@ grafana-util snapshot review --input-dir ./snapshot --output json</code></pre>
 <p>When to use: when you need a local snapshot root that can be reviewed without Grafana access.</p>
 <p>Key flags: <code>--export-dir</code>, <code>--overwrite</code>, plus the shared Grafana connection and auth flags.</p>
 <p>Examples:</p>
-<pre><code>grafana-util snapshot export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./snapshot
+<pre><code># Purpose: export.
+grafana-util snapshot export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./snapshot
 grafana-util snapshot export --profile prod --export-dir ./snapshot --overwrite</code></pre>
 <p>Related commands: <code>snapshot review</code>, <code>change bundle</code>, <code>overview</code>.</p>
 <h2 id="review"><code>review</code></h2>
@@ -726,7 +728,8 @@ grafana-util snapshot export --profile prod --export-dir ./snapshot --overwrite<
 <p>When to use: when you want to inspect an exported snapshot root as table, csv, text, json, yaml, or interactive output.</p>
 <p>Key flags: <code>--input-dir</code>, <code>--interactive</code>, <code>--output</code>.</p>
 <p>Examples:</p>
-<pre><code>grafana-util snapshot review --input-dir ./snapshot --output table
+<pre><code># Purpose: review.
+grafana-util snapshot review --input-dir ./snapshot --output table
 grafana-util snapshot review --input-dir ./snapshot --interactive</code></pre>
 <p>Related commands: <code>snapshot export</code>, <code>overview</code>, <code>status staged</code>.</p>
     

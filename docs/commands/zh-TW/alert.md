@@ -32,6 +32,7 @@
 ## 範例
 
 ```bash
+# 用途：執行 alerting 指令介面，用來匯出、匯入、比對、規劃、套用、刪除、撰寫與列出 Grafana alert 資源。
 grafana-util alert list-rules --profile prod --json
 grafana-util alert export --url http://localhost:3000 --basic-user admin --basic-password admin --output-dir ./alerts --overwrite
 grafana-util alert export --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output-dir ./alerts --flat

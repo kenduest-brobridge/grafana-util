@@ -1,6 +1,20 @@
 # Alert Operator Handbook
 
+This guide is for operators who need to author alerting changes locally, review the delta before applying it, or replay legacy alert bundles without guessing at the live effect.
+
 This guide covers `grafana-util alert` as an operator workflow for alert desired-state authoring, review-first mutation, and migration-style replay flows.
+
+## Who It Is For
+
+- Operators maintaining Grafana Alerting rules, routes, contact points, and templates.
+- Reviewers who need to understand an alert bundle before apply.
+- Teams moving alerting state through Git, review, or CI workflows.
+
+## Primary Goals
+
+- Build or import alert desired state without touching live Grafana first.
+- Review plan output before an apply path.
+- Use replay and migration flows without guessing what live resources will change.
 
 > **Operator Principle**: Change alerts deliberately through a **Plan -> Review -> Apply** cycle to prevent accidental mutations in live environments.
 
@@ -89,6 +103,7 @@ grafana-util alert plan \
 **Validated Apply Step:**
 Only execute after the plan has been reviewed and saved.
 ```bash
+# Purpose: Only execute after the plan has been reviewed and saved.
 grafana-util alert apply \
   --plan-file ./alert-plan-reviewed.json \
   --approve --output json
@@ -115,6 +130,7 @@ grafana-util alert apply \
 
 ### 1. Alert Plan Excerpt
 ```bash
+# Purpose: 1. Alert Plan Excerpt.
 grafana-util alert plan --desired-dir ./alerts/desired --prune --output json
 ```
 **Output Excerpt:**
@@ -133,6 +149,7 @@ grafana-util alert plan --desired-dir ./alerts/desired --prune --output json
 ### 2. Route Preview
 Verify your routing logic locally before applying.
 ```bash
+# Purpose: Verify your routing logic locally before applying.
 grafana-util alert preview-route --desired-dir ./alerts/desired --label team=platform --severity critical
 ```
 **Output Excerpt:**

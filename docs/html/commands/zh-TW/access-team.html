@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="主要旗標">主要旗標</h2>
 <ul><li><code>list</code>: <code>--query</code>, <code>--name</code>, <code>--with-members</code>, <code>--page</code>, <code>--per-page</code>, <code>--table</code>, <code>--csv</code>, <code>--json</code>, <code>--yaml</code>, <code>--output-format</code></li><li><code>browse</code>: <code>--query</code>, <code>--name</code>, <code>--with-members</code>, <code>--page</code>, <code>--per-page</code></li><li><code>add</code>: <code>--name</code>, <code>--email</code>, <code>--member</code>, <code>--admin</code>, <code>--json</code></li><li><code>modify</code>: <code>--team-id</code>, <code>--name</code>, <code>--add-member</code>, <code>--remove-member</code>, <code>--add-admin</code>, <code>--remove-admin</code>, <code>--json</code></li><li><code>export</code> 與 <code>diff</code>: <code>--export-dir</code> 或 <code>--diff-dir</code>, <code>--overwrite</code>, <code>--dry-run</code>, <code>--with-members</code></li><li><code>import</code>: <code>--import-dir</code>, <code>--replace-existing</code>, <code>--dry-run</code>, <code>--table</code>, <code>--json</code>, <code>--output-format</code>, <code>--yes</code></li><li><code>delete</code>: <code>--team-id</code>, <code>--name</code>, <code>--yes</code>, <code>--json</code></li></ul>
 <h2 id="範例">範例</h2>
-<pre><code>grafana-util access team list --profile prod --output-format text
+<pre><code># 用途：列出、瀏覽、建立、修改、匯出、匯入、比對或刪除 Grafana 團隊。
+grafana-util access team list --profile prod --output-format text
 grafana-util access team import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./access-teams --replace-existing --yes
 grafana-util access team add --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --name platform-team --email platform@example.com --member alice --admin alice --json</code></pre>
 <h2 id="相關命令">相關命令</h2>

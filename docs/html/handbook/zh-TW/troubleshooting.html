@@ -692,10 +692,15 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
     <p>本章不是只列錯誤訊息，而是幫你分辨問題到底屬於哪一類：</p>
 <ul><li>auth 還是 scope</li><li>live 還是 staged</li><li>指令形狀錯，還是輸出形狀不對</li><li>本機 profile 設定問題，還是遠端 Grafana 行為</li></ul>
 <p>如果你正在追查驗證或連線設定，請把 <a href="../../commands/zh-TW/profile.html">profile</a>、<a href="../../commands/zh-TW/status.html">status</a>、<a href="../../commands/zh-TW/overview.html">overview</a> 與 <a href="../../commands/zh-TW/access.html">access</a> 一起開著。</p>
+<h2 id="適用對象">適用對象</h2>
+<ul><li>遇到錯誤訊息，但不確定是語法、權限還是 scope 的人</li><li>想先分辨 live / staged / profile 問題的人</li><li>需要把常見錯誤整理成可重複排查流程的人</li></ul>
+<h2 id="主要目標">主要目標</h2>
+<ul><li>先分辨問題類型</li><li>再決定要看哪一頁、跑哪個檢查</li><li>最後才進到修正或回報</li></ul>
 <h2 id="cli-診斷與調修">CLI 診斷與調修</h2>
 <h3 id="1-啟用-verbose-日誌">1. 啟用 verbose 日誌</h3>
 <p><code>grafana-util</code> 使用標準 Rust logging。你可以提高日誌等級來看實際 API request / response。</p>
-<pre><code>RUST_LOG=debug grafana-util overview live --profile prod
+<pre><code># 用途：grafana-util 使用標準 Rust logging。你可以提高日誌等級來看實際 API request / response。
+RUST_LOG=debug grafana-util overview live --profile prod
 grafana-util dashboard list -v</code></pre>
 <p>適合拿來回答這些問題：</p>
 <ul><li>CLI 打到的是不是你以為的那台主機</li><li>是 auth、scope，還是 network 在拒絕請求</li><li>指令形狀是不是和文件理解的不一樣</li></ul>
@@ -714,7 +719,7 @@ grafana-util dashboard list -v</code></pre>
 <h3 id="6-輸出格式用錯">6. 輸出格式用錯</h3>
 <table><thead><tr><th>症狀</th><th>常見原因</th><th>建議修補方式</th></tr></thead><tbody><tr><td>CI parser 突然壞掉</td><td>用到了給人看的輸出模式</td><td>改用 <code>json</code>、<code>yaml</code> 或其他適合腳本處理的結構化輸出</td></tr><tr><td>指令不接受 <code>--output-format</code></td><td>這個指令實際上使用 <code>--output</code></td><td>直接查該 command help 或指令頁</td></tr><tr><td>第一次檢查時互動式輸出太複雜</td><td>畫面雖然好看，但資訊不夠直接</td><td>先切成 <code>yaml</code> 或 <code>json</code></td></tr></tbody></table>
 <h2 id="名詞解釋">名詞解釋</h2>
-<table><thead><tr><th>術語</th><th>定義</th></tr></thead><tbody><tr><td><strong>Surface</strong></td><td>高階操作面分類，例如 <code>Status</code>、<code>Overview</code>、<code>Change</code></td></tr><tr><td><strong>Lane</strong></td><td>資產的隔離路徑，例如 <code>raw/</code>、<code>prompt/</code>、<code>provisioning/</code></td></tr><tr><td><strong>Contract</strong></td><td>用來定義 readiness 或 compatibility 的結構化 JSON 文件</td></tr><tr><td><strong>Masked Recovery</strong></td><td>匯出時把 secrets 遮蔽，匯入或 replay 時再補回</td></tr><tr><td><strong>Desired State</strong></td><td>儲存在 Git 中、CLI 拿來對照 live Grafana 的目標設定</td></tr><tr><td><strong>Drift</strong></td><td>live Grafana 與本地 staged / desired 輸出物之間的差距</td></tr></tbody></table>
+<table><thead><tr><th>術語</th><th>定義</th></tr></thead><tbody><tr><td><strong>Surface</strong></td><td>高階操作面分類，例如 <code>Status</code>、<code>Overview</code>、<code>Change</code></td></tr><tr><td><strong>Lane</strong></td><td>資料路徑，例如 <code>raw/</code>、<code>prompt/</code>、<code>provisioning/</code></td></tr><tr><td><strong>Contract</strong></td><td>用來定義 readiness 或 compatibility 的結構化 JSON 文件</td></tr><tr><td><strong>Masked Recovery</strong></td><td>匯出時先把 secrets 遮蔽，匯入或 replay 時再補回</td></tr><tr><td><strong>Desired State</strong></td><td>儲存在 Git 中、CLI 拿來對照 live Grafana 的目標設定</td></tr><tr><td><strong>Drift</strong></td><td>live Grafana 與本地 staged / desired 輸出物之間的差距</td></tr></tbody></table>
 <h2 id="取得更多協助">取得更多協助</h2>
 <ul><li><strong>先確認版本</strong>：回報問題時先執行 <code>grafana-util --version</code></li><li><strong>專案儲存庫</strong>：請在 <a href="https://github.com/kendlee/grafana-utils/issues">GitHub Issues</a> 回報 Bug 或提需求</li></ul>
 <p>回報問題時，盡量附上：</p>
@@ -723,7 +728,7 @@ grafana-util dashboard list -v</code></pre>
     <nav class="footer-nav"><a class="link-card" href="reference.html"><span>Previous</span>技術參考手冊 (Technical Reference)</a></nav>
   </article>
   <aside class="sidebar">
-  <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#cli-診斷與調修"><span class="toc-label">CLI 診斷與調修</span></a></li><li class="toc-level-3"><a href="#1-啟用-verbose-日誌"><span class="toc-label">1. 啟用 verbose 日誌</span></a></li><li class="toc-level-3"><a href="#2-常見錯誤與快速修補"><span class="toc-label">2. 常見錯誤與快速修補</span></a></li><li class="toc-level-3"><a href="#3-權限範圍與驗證方式不匹配"><span class="toc-label">3. 權限範圍與驗證方式不匹配</span></a></li><li class="toc-level-3"><a href="#4-staged-與-live-搞混"><span class="toc-label">4. staged 與 live 搞混</span></a></li><li class="toc-level-3"><a href="#5-profile-與-secret-問題"><span class="toc-label">5. profile 與 secret 問題</span></a></li><li class="toc-level-3"><a href="#6-輸出格式用錯"><span class="toc-label">6. 輸出格式用錯</span></a></li><li class="toc-level-2"><a href="#名詞解釋"><span class="toc-label">名詞解釋</span></a></li><li class="toc-level-2"><a href="#取得更多協助"><span class="toc-label">取得更多協助</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/troubleshooting.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
+  <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#適用對象"><span class="toc-label">適用對象</span></a></li><li class="toc-level-2"><a href="#主要目標"><span class="toc-label">主要目標</span></a></li><li class="toc-level-2"><a href="#cli-診斷與調修"><span class="toc-label">CLI 診斷與調修</span></a></li><li class="toc-level-3"><a href="#1-啟用-verbose-日誌"><span class="toc-label">1. 啟用 verbose 日誌</span></a></li><li class="toc-level-3"><a href="#2-常見錯誤與快速修補"><span class="toc-label">2. 常見錯誤與快速修補</span></a></li><li class="toc-level-3"><a href="#3-權限範圍與驗證方式不匹配"><span class="toc-label">3. 權限範圍與驗證方式不匹配</span></a></li><li class="toc-level-3"><a href="#4-staged-與-live-搞混"><span class="toc-label">4. staged 與 live 搞混</span></a></li><li class="toc-level-3"><a href="#5-profile-與-secret-問題"><span class="toc-label">5. profile 與 secret 問題</span></a></li><li class="toc-level-3"><a href="#6-輸出格式用錯"><span class="toc-label">6. 輸出格式用錯</span></a></li><li class="toc-level-2"><a href="#名詞解釋"><span class="toc-label">名詞解釋</span></a></li><li class="toc-level-2"><a href="#取得更多協助"><span class="toc-label">取得更多協助</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/troubleshooting.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
 </aside>
 
 </div>

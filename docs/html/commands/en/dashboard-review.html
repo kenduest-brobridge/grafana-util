@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="key-flags">Key flags</h2>
 <ul><li><code>--input</code>: dashboard JSON file to review.</li><li><code>--output-format</code>: choose <code>text</code>, <code>table</code>, <code>csv</code>, <code>json</code>, or <code>yaml</code>.</li><li><code>--json</code>, <code>--table</code>, <code>--csv</code>, <code>--yaml</code>: direct output selectors.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code>grafana-util dashboard review --input ./drafts/cpu-main.json
+<pre><code># Purpose: Review one local dashboard JSON file without touching Grafana.
+grafana-util dashboard review --input ./drafts/cpu-main.json
 grafana-util dashboard review --input ./drafts/cpu-main.json --output-format yaml</code></pre>
 <h2 id="related-commands">Related commands</h2>
 <ul><li><a href="dashboard-patch-file.html">dashboard patch-file</a></li><li><a href="dashboard-publish.html">dashboard publish</a></li><li><a href="dashboard-inspect-export.html">dashboard inspect-export</a></li></ul>

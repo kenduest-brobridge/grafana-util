@@ -706,7 +706,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <p>說明：如果你需要先看一份全專案總覽，再決定要切到哪個較窄的工作流，先看這一頁最合適。<code>overview</code> 指令群組適合想一次掃過 staged artifact 或 live 狀態的人，不必先把每個資產指令都打開。</p>
 <p>主要旗標：分階段輸入，例如 <code>--dashboard-export-dir</code>、<code>--dashboard-provisioning-dir</code>、<code>--datasource-export-dir</code>、<code>--datasource-provisioning-file</code>、<code>--access-user-export-dir</code>、<code>--access-team-export-dir</code>、<code>--access-org-export-dir</code>、<code>--access-service-account-export-dir</code>、<code>--desired-file</code>、<code>--source-bundle</code>、<code>--target-inventory</code>、<code>--alert-export-dir</code>、<code>--availability-file</code>、<code>--mapping-file</code> 和 <code>--output</code>。</p>
 <p>範例：</p>
-<pre><code>grafana-util overview --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts --desired-file ./desired.json --output table
+<pre><code># 用途：Root。
+grafana-util overview --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts --desired-file ./desired.json --output table
 grafana-util overview --source-bundle ./sync-source-bundle.json --target-inventory ./target-inventory.json --availability-file ./availability.json --mapping-file ./mapping.json --output text</code></pre>
 <p>相關指令：<code>grafana-util status staged</code>、<code>grafana-util change summary</code>、<code>grafana-util snapshot review</code>。</p>
 <h2 id="live"><code>live</code></h2>
@@ -716,7 +717,8 @@ grafana-util overview --source-bundle ./sync-source-bundle.json --target-invento
 <p>說明：</p>
 <ul><li>可重複執行的 live overview 工作優先用 <code>--profile</code>。</li><li>想拿到較廣 org 可見度時，直接 Basic auth 會更穩定。</li><li>Token 驗證適合權限邊界明確的讀取流程，但最後可見結果仍受 token 權限範圍限制。</li></ul>
 <p>範例：</p>
-<pre><code>grafana-util overview live --profile prod --output yaml
+<pre><code># 用途：live。
+grafana-util overview live --profile prod --output yaml
 grafana-util overview live --url http://localhost:3000 --basic-user admin --basic-password admin --output interactive
 grafana-util overview live --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --output json</code></pre>
 <p>相關指令：<code>grafana-util status live</code>、<code>grafana-util change apply</code>、<code>grafana-util profile show</code>。</p>

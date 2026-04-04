@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="key-flags">Key flags</h2>
 <ul><li><code>--dashboard-uid</code> or <code>--dashboard-url</code>: choose the dashboard to inspect.</li><li><code>--vars-query</code>: overlay a variable query string such as <code>var-env=prod&amp;var-host=web01</code>.</li><li><code>--org-id</code>: scope the inspection to one org.</li><li><code>--output-format</code>: render table, csv, text, json, or yaml.</li><li><code>--no-header</code>: suppress table or CSV headers.</li><li><code>--output-file</code>: write a copy of the output to disk.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code>grafana-util dashboard inspect-vars --dashboard-url &#x27;https://grafana.example.com/d/cpu-main/cpu-overview?var-cluster=prod-a&#x27; --profile prod --output-format table
+<pre><code># Purpose: List dashboard templating variables and datasource-like choices from live Grafana.
+grafana-util dashboard inspect-vars --dashboard-url &#x27;https://grafana.example.com/d/cpu-main/cpu-overview?var-cluster=prod-a&#x27; --profile prod --output-format table
 grafana-util dashboard inspect-vars --url https://grafana.example.com --dashboard-uid cpu-main --vars-query &#x27;var-cluster=prod-a&amp;var-instance=node01&#x27; --basic-user admin --prompt-password --output-format json</code></pre>
 <h2 id="related-commands">Related commands</h2>
 <ul><li><a href="dashboard-screenshot.html">dashboard screenshot</a></li><li><a href="dashboard-inspect-live.html">dashboard inspect-live</a></li><li><a href="dashboard-browse.html">dashboard browse</a></li></ul>

@@ -25,6 +25,7 @@ If you are an SRE, Grafana operator, or responder, this page should help you dec
 
 ## Examples
 ```bash
+# Purpose: `grafana-util dashboard` is the namespace for live dashboard workflows, local draft handling, export/import review, inspection, topology, and screenshots. The same namespace is also available as `grafana-util db`.
 grafana-util dashboard --help
 grafana-util dashboard browse --profile prod
 grafana-util dashboard browse --url http://localhost:3000 --basic-user admin --basic-password admin

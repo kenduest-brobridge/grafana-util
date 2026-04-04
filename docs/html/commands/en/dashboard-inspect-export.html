@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="key-flags">Key flags</h2>
 <ul><li><code>--import-dir</code>: dashboard export root to inspect.</li><li><code>--input-format</code>: choose <code>raw</code> or <code>provisioning</code>.</li><li><code>--input-type</code>: select <code>raw</code> or <code>source</code> when the export root has multiple dashboard variants.</li><li><code>--report</code>: render table, csv, json, tree, tree-table, dependency, dependency-json, governance, or governance-json views.</li><li><code>--output-format</code>: single-flag output selector.</li><li><code>--interactive</code>: open the shared inspect workbench.</li><li><code>--output-file</code>: write the result to disk.</li><li><code>--no-header</code>: suppress table-like headers.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code>grafana-util dashboard inspect-export --import-dir ./dashboards/raw --input-format raw --table
+<pre><code># Purpose: Analyze dashboard export directories with operator-summary and report-contract views.
+grafana-util dashboard inspect-export --import-dir ./dashboards/raw --input-format raw --table
 grafana-util dashboard inspect-export --import-dir ./dashboards/provisioning --input-format provisioning --report governance-json</code></pre>
 <h2 id="related-commands">Related commands</h2>
 <ul><li><a href="dashboard-export.html">dashboard export</a></li><li><a href="dashboard-diff.html">dashboard diff</a></li><li><a href="dashboard-governance-gate.html">dashboard governance-gate</a></li></ul>

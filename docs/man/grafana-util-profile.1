@@ -24,37 +24,6 @@ print a comment\-rich reference config that operators can copy and adapt. Use wh
 .TP
 .B init
 initialize grafana\-util.yaml in the current working directory. Use when: A checkout does not yet have a repo\-local profile file and you want the built\-in starter template.
-.SH EXAMPLES
-.PP
-list: list profile names from the resolved grafana\-util config file.
-.EX
-grafana-util profile list
-.EE
-.PP
-show: show the selected profile as text, table, csv, json, or yaml.
-.EX
-grafana-util profile show --profile prod --output-format yaml
-.EE
-.PP
-show: show the selected profile as text, table, csv, json, or yaml.
-.EX
-grafana-util profile show --profile prod --output-format json
-.EE
-.PP
-show: show the selected profile as text, table, csv, json, or yaml.
-.EX
-grafana-util profile show --profile prod --show-secrets --output-format yaml
-.EE
-.PP
-example: print a comment\-rich reference config that operators can copy and adapt.
-.EX
-grafana-util profile example
-.EE
-.PP
-example: print a comment\-rich reference config that operators can copy and adapt.
-.EX
-grafana-util profile example --mode basic
-.EE
 .SH SEE ALSO
 \fBgrafana-util\fR(1),
 \fBgrafana-util-status\fR(1),

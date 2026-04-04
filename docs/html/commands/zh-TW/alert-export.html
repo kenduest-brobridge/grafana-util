@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="主要旗標">主要旗標</h2>
 <ul><li><code>--output-dir</code> 指定匯出套件的寫入位置，預設為 <code>alerts</code>。</li><li><code>--flat</code> 會把資源檔直接寫入各自的資源目錄。</li><li><code>--overwrite</code> 會取代既有的匯出檔。</li><li>使用 <code>grafana-util alert</code> 的共用連線旗標。</li></ul>
 <h2 id="範例">範例</h2>
-<pre><code>grafana-util alert export --profile prod --output-dir ./alerts --overwrite
+<pre><code># 用途：將 alert 資源匯出成 `raw/` JSON 檔案。
+grafana-util alert export --profile prod --output-dir ./alerts --overwrite
 grafana-util alert export --url http://localhost:3000 --basic-user admin --basic-password admin --output-dir ./alerts --flat
 grafana-util alert export --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --output-dir ./alerts --overwrite</code></pre>
 <h2 id="相關命令">相關命令</h2>

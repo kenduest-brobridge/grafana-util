@@ -1,6 +1,18 @@
 # Operator Scenarios
 
-This chapter translates discrete command families into end-to-end operator workflows.
+This chapter turns command families into end-to-end operator workflows so you can move from one-off commands to a repeatable operating sequence.
+
+## Who It Is For
+
+- Operators who already know the job to do, but want the safest order of operations.
+- Teams standardizing common workflows for dashboard, access, alert, or recovery work.
+- Reviewers who need an end-to-end checklist instead of isolated command help.
+
+## Primary Goals
+
+- Turn separate command namespaces into complete operational paths.
+- Show which validation step should happen before the next mutation.
+- Reduce guesswork when moving between live, staged, export, and replay work.
 
 For the exact flags behind each workflow, see [dashboard](../../commands/en/dashboard.md), [access](../../commands/en/access.md), [alert](../../commands/en/alert.md), [change](../../commands/en/change.md), [status](../../commands/en/status.md), and [overview](../../commands/en/overview.md).
 
@@ -11,6 +23,7 @@ For the exact flags behind each workflow, see [dashboard](../../commands/en/dash
 Prove connectivity and version alignment before making changes.
 
 ```bash
+# Purpose: Prove connectivity and version alignment before making changes.
 grafana-util profile list
 grafana-util status live --profile prod --output table
 grafana-util overview live --profile prod --output interactive
@@ -34,6 +47,7 @@ Start with `profile list` to confirm which repo-local defaults are active, then 
 Inventory all assets across all organizations.
 
 ```bash
+# Purpose: Inventory all assets across all organizations.
 grafana-util dashboard list --profile prod --all-orgs --with-sources --table
 grafana-util access org list --basic-user admin --basic-password admin --with-users --output-format yaml
 ```
@@ -57,6 +71,7 @@ Use the dashboard and access inventory together when you need to answer what exi
 Export live dashboards into a durable tree.
 
 ```bash
+# Purpose: Export live dashboards into a durable tree.
 grafana-util dashboard export --export-dir ./backups --overwrite --progress
 grafana-util access org export --export-dir ./access-orgs
 grafana-util access service-account export --export-dir ./access-service-accounts
@@ -80,6 +95,7 @@ Keep dashboard, org, and service-account exports together when the goal is a rep
 Replay a backup into a live Grafana instance.
 
 ```bash
+# Purpose: Replay a backup into a live Grafana instance.
 grafana-util dashboard import --import-dir ./backups/raw --replace-existing --dry-run --table
 grafana-util access team import --import-dir ./access-teams --replace-existing --dry-run --table
 ```
@@ -102,6 +118,7 @@ Use the dry-run tables to check whether the restore is additive or destructive b
 Move alerting changes through a reviewed lifecycle.
 
 ```bash
+# Purpose: Move alerting changes through a reviewed lifecycle.
 grafana-util change summary --desired-file ./desired.json
 grafana-util change preflight --desired-file ./desired.json --output json
 grafana-util alert plan --profile prod --desired-dir ./alerts/desired --output json
@@ -130,6 +147,7 @@ Run `change summary` first when you want to understand the size of the change, t
 Manage users, teams, and service accounts through snapshots.
 
 ```bash
+# Purpose: Manage users, teams, and service accounts through snapshots.
 grafana-util access user import --import-dir ./access-users --dry-run --table
 grafana-util access service-account token add --service-account-id 15 --token-name nightly --seconds-to-live 3600 --json
 grafana-util access service-account token delete --service-account-id 15 --token-name nightly --yes --json

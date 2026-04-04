@@ -126,6 +126,7 @@ If the task is:
 When you are still orienting, prefer the narrowest non-destructive checks:
 
 ```bash
+# Purpose: When you are still orienting, prefer the narrowest non-destructive checks.
 make help
 make man-check
 make html-check
@@ -136,6 +137,7 @@ cd python && PYTHONPATH=. poetry run python -m unittest -v tests
 For generated docs work:
 
 ```bash
+# Purpose: For generated docs work.
 make man
 make html
 ```
@@ -143,6 +145,7 @@ make html
 For local output review:
 
 ```bash
+# Purpose: For local output review.
 man ./docs/man/grafana-util.1
 open ./docs/html/index.html
 ```

@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="key-flags">Key flags</h2>
 <ul><li><code>--diff-dir</code> points to the raw export directory.</li><li><code>--json</code> renders the diff as structured JSON.</li><li><code>--dashboard-uid-map</code> and <code>--panel-id-map</code> repair linked alert rules during comparison.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code>grafana-util alert diff --url http://localhost:3000 --diff-dir ./alerts/raw
+<pre><code># Purpose: Compare local alerting export files against live Grafana resources.
+grafana-util alert diff --url http://localhost:3000 --diff-dir ./alerts/raw
 grafana-util alert diff --url http://localhost:3000 --diff-dir ./alerts/raw --json</code></pre>
 <h2 id="related-commands">Related commands</h2>
 <ul><li><a href="alert.html">alert</a></li><li><a href="alert-export.html">alert export</a></li><li><a href="alert-import.html">alert import</a></li></ul>

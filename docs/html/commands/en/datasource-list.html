@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="key-flags">Key flags</h2>
 <ul><li><code>--org-id</code>: list one explicit Grafana org.</li><li><code>--all-orgs</code>: aggregate datasource inventory across visible orgs. Requires Basic auth.</li><li><code>--output-format</code>, <code>--text</code>, <code>--table</code>, <code>--csv</code>, <code>--json</code>, <code>--yaml</code>: output mode controls.</li><li><code>--output-columns</code>: choose the displayed columns.</li><li><code>--no-header</code>: suppress table headers.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code>grafana-util datasource list --url http://localhost:3000 --basic-user admin --basic-password admin --output-format text
+<pre><code># Purpose: List live Grafana datasource inventory.
+grafana-util datasource list --url http://localhost:3000 --basic-user admin --basic-password admin --output-format text
 grafana-util datasource list --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --output-format yaml</code></pre>
 <h2 id="related-commands">Related commands</h2>
 <ul><li><a href="datasource-browse.html">datasource browse</a></li><li><a href="datasource-export.html">datasource export</a></li><li><a href="datasource-diff.html">datasource diff</a></li></ul>

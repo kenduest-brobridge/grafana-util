@@ -17,6 +17,7 @@ Create a low-level staged alert template scaffold.
 ## Examples
 
 ```bash
+# Purpose: Create a low-level staged alert template scaffold.
 grafana-util alert new-template --desired-dir ./alerts/desired --name sev1-notification
 ```
 

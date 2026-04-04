@@ -18,6 +18,7 @@ Apply a reviewed alert management plan.
 ## Examples
 
 ```bash
+# Purpose: Apply a reviewed alert management plan.
 grafana-util alert apply --plan-file ./alert-plan-reviewed.json --approve
 grafana-util alert apply --url http://localhost:3000 --basic-user admin --basic-password admin --plan-file ./alert-plan-reviewed.json --approve
 ```

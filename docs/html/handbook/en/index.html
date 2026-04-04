@@ -691,7 +691,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 
     <h2 id="language">Language</h2>
 <ul><li>English handbook: <a href="index.html">current page</a></li><li>Traditional Chinese handbook: <a href="../zh-TW/index.html">繁體中文手冊</a></li><li>English command reference: <a href="../../commands/en/index.html">Command Docs</a></li><li>Traditional Chinese command reference: <a href="../../commands/zh-TW/index.html">繁體中文逐指令說明</a></li></ul>
-<p>Welcome to the <code>grafana-util</code> handbook. Start here if you want the operator path from first connection, to repeatable profiles, to day-to-day Grafana maintenance and automation.</p>
+<p>Welcome to the <code>grafana-util</code> handbook. Start here if you need a practical operator path from first connection, to repeatable profiles, to day-to-day Grafana maintenance and automation.</p>
+<p>This handbook is organized around the way operators actually work: first understand what the tool is for, then get a safe connection working, then move into dashboards, alerts, access, and review workflows.</p>
 <p>If you want the high-level framing first, including the pain points this tool is meant to solve and when it is the right fit, start here:</p>
 <ul><li><a href="what-is-grafana-util.html">What grafana-util is for</a></li></ul>
 <h2 id="30-second-quick-start">30-Second Quick Start</h2>
@@ -700,7 +701,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <pre><code># Downloads and installs the latest version to your local bin directory
 curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-utils/main/scripts/install.sh | sh</code></pre>
 <h3 id="2-confirm-the-installed-version">2. Confirm the Installed Version</h3>
-<pre><code>grafana-util --version</code></pre>
+<pre><code># Purpose: 2. Confirm the Installed Version.
+grafana-util --version</code></pre>
 <h3 id="3-run-your-first-global-audit">3. Run Your First Global Audit</h3>
 <pre><code># Generates a high-level health and inventory report of your Grafana estate
 grafana-util overview live --url http://localhost:3000 --basic-user admin --prompt-password --output interactive</code></pre>
@@ -709,17 +711,17 @@ grafana-util overview live --url http://localhost:3000 --basic-user admin --prom
 <h3 id="phase-1-foundation">Phase 1: Foundation</h3>
 <ul><li><strong><a href="what-is-grafana-util.html">What grafana-util is for</a></strong>: Start with the problems it solves and the operator workflows it is meant to support.</li><li><strong><a href="getting-started.html">Getting Started</a></strong>: Installation, connection setup, profiles, and auth options.</li><li><strong><a href="role-new-user.html">New User Path</a></strong>: The shortest safe path from install to first successful live read.</li><li><strong><a href="role-sre-ops.html">SRE / Ops Path</a></strong>: The operator path for day-to-day governance, review-first change flows, and troubleshooting.</li><li><strong><a href="role-automation-ci.html">Automation / CI Path</a></strong>: The profile, output, and command-reference path for scripting and automation.</li><li><strong><a href="architecture.html">Architecture &amp; Design Principles</a></strong>: The reasoning behind the workflow and command design.</li></ul>
 <h3 id="phase-2-core-asset-management">Phase 2: Core Asset Management</h3>
-<ul><li><strong><a href="dashboard.html">Dashboard Management</a></strong>: Export, import, inspection, screenshots, and governance checks.</li><li><strong><a href="datasource.html">Data source Management</a></strong>: Export, import, inspection, and live mutation guidance for Grafana data sources.</li><li><strong><a href="alert.html">Alerting Governance</a></strong>: Review, planning, and apply flow for Grafana alerts.</li></ul>
+<ul><li><strong><a href="dashboard.html">Dashboard Management</a></strong>: Export, import, inspection, screenshots, and governance checks for dashboard assets.</li><li><strong><a href="datasource.html">Data source Management</a></strong>: Export, import, inspection, and live mutation guidance for Grafana data sources.</li><li><strong><a href="alert.html">Alerting Governance</a></strong>: Review, planning, and apply flow for Grafana alerts.</li></ul>
 <h3 id="phase-3-identity-access">Phase 3: Identity &amp; Access</h3>
 <ul><li><strong><a href="access.html">Access Management</a></strong>: org, user, team, and service account operations.</li></ul>
 <h3 id="phase-4-governance-readiness">Phase 4: Governance &amp; Readiness</h3>
 <ul><li><strong><a href="change-overview-status.html">Change &amp; Status</a></strong>: staged workflows, project snapshots, and preflight checks.</li></ul>
 <h3 id="phase-5-deep-dive">Phase 5: Deep Dive</h3>
-<ul><li><strong><a href="scenarios.html">Practical Scenarios</a></strong>: end-to-end task recipes such as backups, DR, and audits.</li><li><strong><a href="recipes.html">Best Practices &amp; Recipes</a></strong>: recommended ways to handle common Grafana operator problems.</li><li><strong><a href="reference.html">Technical Reference</a></strong>: command map, profile behavior, common flags, and output guidance.</li><li><strong><a href="../../commands/en/index.html">Command Docs</a></strong>: One page per command and subcommand, aligned to the current Rust CLI help.</li><li><strong><a href="troubleshooting.html">Troubleshooting &amp; Glossary</a></strong>: Diagnostic guides and terminology index.</li></ul>
+<ul><li><strong><a href="scenarios.html">Practical Scenarios</a></strong>: end-to-end task recipes such as backups, DR, and audits.</li><li><strong><a href="recipes.html">Best Practices &amp; Recipes</a></strong>: recommended ways to handle common Grafana operator problems.</li><li><strong><a href="reference.html">Technical Reference</a></strong>: command map, profile behavior, auth handling, common flags, and output guidance.</li><li><strong><a href="../../commands/en/index.html">Command Docs</a></strong>: One page per command and subcommand, aligned to the current Rust CLI help.</li><li><strong><a href="troubleshooting.html">Troubleshooting &amp; Glossary</a></strong>: Diagnostic guides and terminology index.</li></ul>
 <h2 id="choose-your-role">Choose Your Role</h2>
 <p>Different readers usually need different paths through the handbook:</p>
 <p>Start with <a href="what-is-grafana-util.html">What grafana-util is for</a>, then <a href="role-new-user.html">New User Path</a>, then <a href="getting-started.html">Getting Started</a>, then open <a href="../../commands/en/index.html">Command Docs</a> when you need exact flags.</p>
-<p>Start with <a href="role-sre-ops.html">SRE / Ops Path</a>, then <a href="change-overview-status.html">Change &amp; Status</a>, <a href="dashboard.html">Dashboard Management</a>, <a href="datasource.html">Datasource Management</a>, and <a href="troubleshooting.html">Troubleshooting</a>.</p>
+<p>Start with <a href="role-sre-ops.html">SRE / Ops Path</a>, then <a href="change-overview-status.html">Change &amp; Status</a>, <a href="dashboard.html">Dashboard Management</a>, <a href="datasource.html">Data source Management</a>, and <a href="troubleshooting.html">Troubleshooting</a>.</p>
 <p>Start with <a href="access.html">Access Management</a>, then <a href="reference.html">Technical Reference</a>, then the <a href="../../commands/en/index.html">Command Docs</a>.</p>
 <p>Start with <a href="role-automation-ci.html">Automation / CI Path</a>, then <a href="reference.html">Technical Reference</a>, then the <a href="../../commands/en/index.html">Command Docs</a>, then validate exact terminal lookup with the top-level manpage at <code>docs/man/grafana-util.1</code>.</p>
 <p>Start with <a href="../../developer.html">docs/DEVELOPER.md</a>, then <a href="../../internal/maintainer-role-map.md">maintainer-role-map.md</a>, then the internal design and playbook docs under <a href="../../internal/README.md">docs/internal/README.md</a>.</p>

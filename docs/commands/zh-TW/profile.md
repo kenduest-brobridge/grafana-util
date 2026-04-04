@@ -13,6 +13,7 @@
 範例：
 
 ```bash
+# 用途：Root。
 grafana-util profile list
 grafana-util profile show --profile prod --output-format yaml
 grafana-util profile add prod --url https://grafana.example.com --basic-user admin --prompt-password --store-secret encrypted-file
@@ -34,6 +35,7 @@ grafana-util profile init --overwrite
 範例：
 
 ```bash
+# 用途：list。
 grafana-util profile list
 ```
 
@@ -53,6 +55,7 @@ grafana-util profile list
 範例：
 
 ```bash
+# 用途：show。
 grafana-util profile show --profile prod --output-format yaml
 grafana-util profile show --profile prod --output-format json
 grafana-util profile show --profile prod --show-secrets --output-format yaml
@@ -80,6 +83,7 @@ grafana-util profile show --profile prod --show-secrets --output-format yaml
 範例：
 
 ```bash
+# 用途：add。
 grafana-util profile add dev --url http://127.0.0.1:3000 --basic-user admin --password-env GRAFANA_DEV_PASSWORD
 grafana-util profile add prod --url https://grafana.example.com --basic-user admin --prompt-password --store-secret os --set-default
 grafana-util profile add stage --url https://grafana-stage.example.com --token-env GRAFANA_STAGE_TOKEN --store-secret encrypted-file --prompt-secret-passphrase
@@ -110,6 +114,7 @@ grafana-util profile add stage --url https://grafana-stage.example.com --token-e
 範例：
 
 ```bash
+# 用途：example。
 grafana-util profile example
 grafana-util profile example --mode basic
 grafana-util profile example --mode full
@@ -134,6 +139,7 @@ grafana-util profile example --mode full
 範例：
 
 ```bash
+# 用途：init。
 grafana-util profile init
 grafana-util profile init --overwrite
 ```

@@ -1,6 +1,18 @@
 # Alert 維運人員手冊
 
-本指南涵蓋 `grafana-util alert` 維運流程，包含告警 Desired State 編寫、審查優先的變更流程，以及遷移用的回放流程。
+這一章整理告警的設計、審查與套用流程。它的重點不是只會建立 rule，而是先把 route、contact point、template 與 plan/apply 的關係說清楚。
+
+## 適用對象
+
+- 負責 Grafana Alerting 設定的人
+- 需要先審查告警變更，再套用到 live 環境的人
+- 要把 alert 流程接到 Git、review 或 CI 的維運人員
+
+## 主要目標
+
+- 先在本地整理 Desired State
+- 再做 plan / review / apply
+- 需要回放或遷移時，再走 export / import / diff
 
 > **維運原則**：透過 **計畫 (Plan) -> 審查 (Review) -> 套用 (Apply)** 週期來謹慎變更告警，防止即時環境發生意外。
 
@@ -89,6 +101,7 @@ grafana-util alert plan \
 **驗證套用步驟：**
 僅在計畫審查完成並保存後執行。
 ```bash
+# 用途：僅在計畫審查完成並保存後執行。
 grafana-util alert apply \
   --plan-file ./alert-plan-reviewed.json \
   --approve --output json
@@ -111,10 +124,11 @@ grafana-util alert apply \
 
 ---
 
-## 🔬 Docker 驗證範例
+## 🔬 實作範例
 
 ### 1. 告警計畫摘錄
 ```bash
+# 用途：1. 告警計畫摘錄。
 grafana-util alert plan --desired-dir ./alerts/desired --prune --output json
 ```
 **範例輸出：**
@@ -133,6 +147,7 @@ grafana-util alert plan --desired-dir ./alerts/desired --prune --output json
 ### 2. 路由預覽
 在套用前於本地驗證路由邏輯。
 ```bash
+# 用途：在套用前於本地驗證路由邏輯。
 grafana-util alert preview-route --desired-dir ./alerts/desired --label team=platform --severity critical
 ```
 **範例輸出：**

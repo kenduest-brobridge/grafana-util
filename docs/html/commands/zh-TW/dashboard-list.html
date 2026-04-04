@@ -713,7 +713,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="說明">說明</h2>
 <ul><li>可重複執行的單一 org 盤點優先用 <code>--profile</code>。</li><li><code>--all-orgs</code> 最好搭配管理員憑證支援的 <code>--profile</code> 或直接 Basic auth，因為 token 權限可能看不到其他 org。</li></ul>
 <h2 id="範例">範例</h2>
-<pre><code>grafana-util dashboard list --profile prod
+<pre><code># 用途：列出儀表板摘要，不寫入匯出檔案。
+grafana-util dashboard list --profile prod
 grafana-util dashboard list --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --json
 grafana-util dashboard list --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --json</code></pre>
 <h2 id="相關指令">相關指令</h2>

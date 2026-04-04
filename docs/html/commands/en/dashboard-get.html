@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="key-flags">Key flags</h2>
 <ul><li><code>--dashboard-uid</code>: live Grafana dashboard UID to fetch.</li><li><code>--output</code>: write the fetched draft to this path.</li><li>Shared live flags: <code>--url</code>, <code>--token</code>, <code>--basic-user</code>, <code>--basic-password</code>, <code>--profile</code>.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code>grafana-util dashboard get --profile prod --dashboard-uid cpu-main --output ./cpu-main.json
+<pre><code># Purpose: Fetch one live dashboard into an API-safe local JSON draft.
+grafana-util dashboard get --profile prod --dashboard-uid cpu-main --output ./cpu-main.json
 grafana-util dashboard get --profile prod --url http://localhost:3000 --basic-user admin --basic-password admin --dashboard-uid cpu-main --output ./cpu-main.json</code></pre>
 <h2 id="related-commands">Related commands</h2>
 <ul><li><a href="dashboard-clone-live.html">dashboard clone-live</a></li><li><a href="dashboard-patch-file.html">dashboard patch-file</a></li><li><a href="dashboard-review.html">dashboard review</a></li></ul>

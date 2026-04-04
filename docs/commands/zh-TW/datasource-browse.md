@@ -13,6 +13,7 @@
 
 ## 範例
 ```bash
+# 用途：在 Grafana 上開啟線上 datasource 瀏覽器，並可在同一介面進行修改與刪除。
 grafana-util datasource browse --profile prod
 grafana-util datasource browse --url http://localhost:3000 --basic-user admin --basic-password admin --org-id 2
 grafana-util datasource browse --url http://localhost:3000 --token "$GRAFANA_API_TOKEN"

@@ -710,7 +710,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <p>Description: open this page when you want to understand the full profile workflow before choosing one subcommand. The <code>profile</code> namespace is the entrypoint for repo-local connection defaults, secret handling, and non-interactive command reuse across local work, SRE tasks, and CI jobs.</p>
 <p>Key flags: the root command is a namespace; operational flags live on subcommands. The shared root flag is <code>--color</code>.</p>
 <p>Examples:</p>
-<pre><code>grafana-util profile list
+<pre><code># Purpose: Root.
+grafana-util profile list
 grafana-util profile show --profile prod --output-format yaml
 grafana-util profile add prod --url https://grafana.example.com --basic-user admin --prompt-password --store-secret encrypted-file
 grafana-util profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN --store-secret os
@@ -722,7 +723,8 @@ grafana-util profile init --overwrite</code></pre>
 <p>When to use: when you need to confirm which profiles are available in the current checkout.</p>
 <p>Key flags: none beyond the shared root <code>--color</code>.</p>
 <p>Examples:</p>
-<pre><code>grafana-util profile list</code></pre>
+<pre><code># Purpose: list.
+grafana-util profile list</code></pre>
 <p>Related commands: <code>profile show</code>, <code>profile add</code>, <code>profile init</code>.</p>
 <h2 id="show"><code>show</code></h2>
 <p>Purpose: show the selected profile as text, table, csv, json, or yaml.</p>
@@ -730,7 +732,8 @@ grafana-util profile init --overwrite</code></pre>
 <p>Key flags:</p>
 <ul><li><code>--profile</code></li><li><code>--output-format</code></li><li><code>--show-secrets</code></li></ul>
 <p>Examples:</p>
-<pre><code>grafana-util profile show --profile prod --output-format yaml
+<pre><code># Purpose: show.
+grafana-util profile show --profile prod --output-format yaml
 grafana-util profile show --profile prod --output-format json
 grafana-util profile show --profile prod --show-secrets --output-format yaml</code></pre>
 <p>Notes:</p>
@@ -742,7 +745,8 @@ grafana-util profile show --profile prod --show-secrets --output-format yaml</co
 <p>Key flags:</p>
 <ul><li><code>--url</code></li><li>auth inputs: <code>--token</code>, <code>--token-env</code>, <code>--prompt-token</code>, <code>--basic-user</code>, <code>--basic-password</code>, <code>--password-env</code>, <code>--prompt-password</code></li><li>storage mode: <code>--store-secret file|os|encrypted-file</code></li><li>encrypted-file options: <code>--secret-file</code>, <code>--prompt-secret-passphrase</code>, <code>--secret-passphrase-env</code></li><li>behavior: <code>--replace-existing</code>, <code>--set-default</code></li></ul>
 <p>Examples:</p>
-<pre><code>grafana-util profile add dev --url http://127.0.0.1:3000 --basic-user admin --password-env GRAFANA_DEV_PASSWORD
+<pre><code># Purpose: add.
+grafana-util profile add dev --url http://127.0.0.1:3000 --basic-user admin --password-env GRAFANA_DEV_PASSWORD
 grafana-util profile add prod --url https://grafana.example.com --basic-user admin --prompt-password --store-secret os --set-default
 grafana-util profile add stage --url https://grafana-stage.example.com --token-env GRAFANA_STAGE_TOKEN --store-secret encrypted-file --prompt-secret-passphrase</code></pre>
 <p>Notes:</p>
@@ -754,7 +758,8 @@ grafana-util profile add stage --url https://grafana-stage.example.com --token-e
 <p>Key flags:</p>
 <ul><li><code>--mode basic|full</code></li></ul>
 <p>Examples:</p>
-<pre><code>grafana-util profile example
+<pre><code># Purpose: example.
+grafana-util profile example
 grafana-util profile example --mode basic
 grafana-util profile example --mode full</code></pre>
 <p>Notes:</p>
@@ -766,7 +771,8 @@ grafana-util profile example --mode full</code></pre>
 <p>Key flags:</p>
 <ul><li><code>--overwrite</code></li></ul>
 <p>Examples:</p>
-<pre><code>grafana-util profile init
+<pre><code># Purpose: init.
+grafana-util profile init
 grafana-util profile init --overwrite</code></pre>
 <p>Notes:</p>
 <ul><li><code>init</code> seeds the built-in starter template.</li><li><code>add</code> is the friendlier way to create one real profile entry directly.</li></ul>

@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="重點旗標">重點旗標</h2>
 <ul><li><code>--org-id</code>：列出指定的 Grafana org。</li><li><code>--all-orgs</code>：彙整所有可見 org 的 datasource inventory。需要 Basic auth。</li><li><code>--output-format</code>、<code>--text</code>、<code>--table</code>、<code>--csv</code>、<code>--json</code>、<code>--yaml</code>：輸出模式控制。</li><li><code>--output-columns</code>：選擇顯示欄位。</li><li><code>--no-header</code>：隱藏表格標頭。</li></ul>
 <h2 id="範例">範例</h2>
-<pre><code>grafana-util datasource list --profile prod --output-format text
+<pre><code># 用途：列出線上 Grafana datasource inventory。
+grafana-util datasource list --profile prod --output-format text
 grafana-util datasource list --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --output-format yaml
 grafana-util datasource list --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --json</code></pre>
 <h2 id="相關指令">相關指令</h2>

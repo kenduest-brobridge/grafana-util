@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="重點旗標">重點旗標</h2>
 <ul><li><code>--uid</code>：要修改的 datasource UID。</li><li><code>--set-url</code>：替換 datasource URL。</li><li><code>--set-access</code>：替換 datasource 存取模式。</li><li><code>--set-default</code>：設定或取消預設 datasource 旗標。</li><li><code>--basic-auth</code>、<code>--basic-auth-user</code>、<code>--basic-auth-password</code>：更新基本驗證設定。</li><li><code>--user</code>、<code>--password</code>、<code>--with-credentials</code>、<code>--http-header</code>：更新支援的請求設定。</li><li><code>--tls-skip-verify</code>、<code>--server-name</code>：更新與 TLS 相關的設定。</li><li><code>--json-data</code>、<code>--secure-json-data</code>、<code>--secure-json-data-placeholders</code>、<code>--secret-values</code>：更新結構化欄位與秘密值。</li><li><code>--dry-run</code>、<code>--table</code>、<code>--json</code>、<code>--output-format</code>、<code>--no-header</code>：預覽輸出控制。</li></ul>
 <h2 id="範例">範例</h2>
-<pre><code>grafana-util datasource modify --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --uid prom-main --set-url http://prometheus-v2:9090 --dry-run --json
+<pre><code># 用途：透過 Grafana API 修改一個線上 Grafana datasource。
+grafana-util datasource modify --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --uid prom-main --set-url http://prometheus-v2:9090 --dry-run --json
 grafana-util datasource modify --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --uid prom-main --set-default true --dry-run --table</code></pre>
 <h2 id="相關指令">相關指令</h2>
 <ul><li><a href="datasource-add.html">datasource add</a></li><li><a href="datasource-list.html">datasource list</a></li><li><a href="datasource-delete.html">datasource delete</a></li></ul>

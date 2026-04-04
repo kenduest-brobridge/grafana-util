@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="主要旗標">主要旗標</h2>
 <ul><li><code>--desired-dir</code> 指向暫存的 alert 樹。</li><li><code>--label</code> 以 <code>key=value</code> 形式加入預覽 matcher。</li><li><code>--severity</code> 加入方便使用的 severity matcher 值。</li></ul>
 <h2 id="範例">範例</h2>
-<pre><code>grafana-util alert preview-route --desired-dir ./alerts/desired --label team=platform --severity critical</code></pre>
+<pre><code># 用途：在不改變執行行為的前提下，預覽受管理的路由輸入。
+grafana-util alert preview-route --desired-dir ./alerts/desired --label team=platform --severity critical</code></pre>
 <h2 id="相關命令">相關命令</h2>
 <ul><li><a href="alert.html">alert</a></li><li><a href="alert-set-route.html">alert set-route</a></li></ul>
     

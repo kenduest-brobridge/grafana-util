@@ -13,6 +13,7 @@
 範例：
 
 ```bash
+# 用途：Root。
 grafana-util snapshot export --profile prod --export-dir ./snapshot
 grafana-util snapshot review --input-dir ./snapshot --output json
 grafana-util snapshot export --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --export-dir ./snapshot
@@ -31,6 +32,7 @@ grafana-util snapshot export --url http://localhost:3000 --token "$GRAFANA_API_T
 範例：
 
 ```bash
+# 用途：export。
 grafana-util snapshot export --profile prod --export-dir ./snapshot
 grafana-util snapshot export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./snapshot --overwrite
 grafana-util snapshot export --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --export-dir ./snapshot
@@ -49,6 +51,7 @@ grafana-util snapshot export --url http://localhost:3000 --token "$GRAFANA_API_T
 範例：
 
 ```bash
+# 用途：review。
 grafana-util snapshot review --input-dir ./snapshot --output table
 grafana-util snapshot review --input-dir ./snapshot --interactive
 ```

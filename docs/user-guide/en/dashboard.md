@@ -1,8 +1,20 @@
 # Dashboard Operator Handbook
 
-This guide covers `grafana-util dashboard` as an operator workflow for inventory, export/import, drift review, and dashboard analysis. 
+This guide is for operators who need to inventory dashboards, export or import them safely, inspect dependencies, capture screenshots, or review drift before a live change.
 
-> **Operator-First Design**: This tool treats dashboards as version-controlled assets. The goal is to move and govern dashboard state safely, providing clear visibility into changes before they touch live Grafana.
+## Who It Is For
+
+- SREs and platform engineers responsible for dashboard inventory, promotion, or review.
+- Operators who need screenshots, dependency checks, or export trees before a change.
+- Teams that want dashboard work to fit into Git, review, and CI flows.
+
+## Primary Goals
+
+- Start from live visibility instead of guessing what exists.
+- Understand the export and inspect lanes before replaying files.
+- Review drift and dependency shape before import, publish, or delete.
+
+> **Operator-First Design**: This tool treats dashboards as version-controlled assets. The goal is to move and govern dashboard state safely, with enough visibility to decide whether a file is ready to replay, patch, or promote.
 
 ## 🔗 Command Pages
 
@@ -98,6 +110,7 @@ Dashboard export intentionally produces three different "lanes" because each ser
 Use `dashboard list` to get a fast picture of the estate.
 
 ```bash
+# Purpose: Use dashboard list to get a fast picture of the estate.
 grafana-util dashboard list \
   --url http://localhost:3000 \
   --basic-user admin \
@@ -143,6 +156,7 @@ spring-jmx-node-unified  Spring JMX + Node Unified Dashboard (VM)  Demo    ffhrm
 ### 1. Export Progress
 Use `--progress` for a clean log during large estate exports.
 ```bash
+# Purpose: Use --progress for a clean log during large estate exports.
 grafana-util dashboard export --export-dir ./dashboards --overwrite --progress
 ```
 **Output Excerpt:**
@@ -156,6 +170,7 @@ Exporting dashboard 7/7: two-prom-query-smoke
 ### 2. Dry-Run Import Preview
 Always confirm the destination action before mutation.
 ```bash
+# Purpose: Always confirm the destination action before mutation.
 grafana-util dashboard import --import-dir ./dashboards/raw --dry-run --table
 ```
 **Output Excerpt:**
@@ -173,6 +188,7 @@ subfolder-chain-smoke  missing      create  Platform / Team / Apps / Prod  ./das
 ### 3. Provisioning-Oriented Comparison
 Compare your local provisioning files against live state.
 ```bash
+# Purpose: Compare your local provisioning files against live state.
 grafana-util dashboard diff --import-dir ./dashboards/provisioning --input-format provisioning
 ```
 **Output Excerpt:**

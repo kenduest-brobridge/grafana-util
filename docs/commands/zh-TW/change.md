@@ -13,6 +13,7 @@
 範例：
 
 ```bash
+# 用途：Root。
 grafana-util change summary --desired-file ./desired.json
 grafana-util change plan --desired-file ./desired.json --fetch-live --profile prod
 grafana-util change apply --plan-file ./sync-plan-reviewed.json --approve --execute-live --url http://localhost:3000 --basic-user admin --basic-password admin
@@ -32,6 +33,7 @@ grafana-util change plan --desired-file ./desired.json --fetch-live --url http:/
 範例：
 
 ```bash
+# 用途：summary。
 grafana-util change summary --desired-file ./desired.json
 grafana-util change summary --desired-file ./desired.json --output json
 ```
@@ -49,6 +51,7 @@ grafana-util change summary --desired-file ./desired.json --output json
 範例：
 
 ```bash
+# 用途：plan。
 grafana-util change plan --desired-file ./desired.json --live-file ./live.json
 grafana-util change plan --desired-file ./desired.json --fetch-live --profile prod --output json
 grafana-util change plan --desired-file ./desired.json --fetch-live --url http://localhost:3000 --basic-user admin --basic-password admin --allow-prune --output json
@@ -68,6 +71,7 @@ grafana-util change plan --desired-file ./desired.json --fetch-live --url http:/
 範例：
 
 ```bash
+# 用途：review。
 grafana-util change review --plan-file ./sync-plan.json
 grafana-util change review --plan-file ./sync-plan.json --review-note 'peer-reviewed' --output json
 ```
@@ -85,6 +89,7 @@ grafana-util change review --plan-file ./sync-plan.json --review-note 'peer-revi
 範例：
 
 ```bash
+# 用途：apply。
 grafana-util change apply --plan-file ./sync-plan-reviewed.json --approve
 grafana-util change apply --plan-file ./sync-plan-reviewed.json --approve --execute-live --url http://localhost:3000 --basic-user admin --basic-password admin
 grafana-util change apply --plan-file ./sync-plan-reviewed.json --approve --execute-live --allow-folder-delete --url http://localhost:3000 --token "$GRAFANA_API_TOKEN"
@@ -103,6 +108,7 @@ grafana-util change apply --plan-file ./sync-plan-reviewed.json --approve --exec
 範例：
 
 ```bash
+# 用途：audit。
 grafana-util change audit --managed-file ./desired.json --live-file ./live.json --write-lock ./sync-lock.json
 grafana-util change audit --lock-file ./sync-lock.json --fetch-live --profile prod --output json
 grafana-util change audit --lock-file ./sync-lock.json --fetch-live --url http://localhost:3000 --basic-user admin --basic-password admin --fail-on-drift --output json
@@ -122,6 +128,7 @@ grafana-util change audit --lock-file ./sync-lock.json --fetch-live --url http:/
 範例：
 
 ```bash
+# 用途：preflight。
 grafana-util change preflight --desired-file ./desired.json --availability-file ./availability.json
 grafana-util change preflight --desired-file ./desired.json --fetch-live --profile prod --output json
 grafana-util change preflight --desired-file ./desired.json --fetch-live --url http://localhost:3000 --basic-user admin --basic-password admin --output json
@@ -141,6 +148,7 @@ grafana-util change preflight --desired-file ./desired.json --fetch-live --url h
 範例：
 
 ```bash
+# 用途：assess-alerts。
 grafana-util change assess-alerts --alerts-file ./alerts.json
 grafana-util change assess-alerts --alerts-file ./alerts.json --output json
 ```
@@ -158,6 +166,7 @@ grafana-util change assess-alerts --alerts-file ./alerts.json --output json
 範例：
 
 ```bash
+# 用途：bundle。
 grafana-util change bundle --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts/raw --output-file ./sync-source-bundle.json
 grafana-util change bundle --dashboard-provisioning-dir ./dashboards/provisioning --alert-export-dir ./alerts/raw --output-file ./sync-source-bundle.json
 ```
@@ -175,6 +184,7 @@ grafana-util change bundle --dashboard-provisioning-dir ./dashboards/provisionin
 範例：
 
 ```bash
+# 用途：bundle-preflight。
 grafana-util change bundle-preflight --source-bundle ./sync-source-bundle.json --target-inventory ./target-inventory.json --output json
 grafana-util change bundle-preflight --source-bundle ./sync-source-bundle.json --target-inventory ./target-inventory.json --availability-file ./availability.json --output json
 ```
@@ -192,6 +202,7 @@ grafana-util change bundle-preflight --source-bundle ./sync-source-bundle.json -
 範例：
 
 ```bash
+# 用途：promotion-preflight。
 grafana-util change promotion-preflight --source-bundle ./sync-source-bundle.json --target-inventory ./target-inventory.json --mapping-file ./promotion-map.json --output json
 grafana-util change promotion-preflight --source-bundle ./sync-source-bundle.json --target-inventory ./target-inventory.json --mapping-file ./promotion-map.json --availability-file ./availability.json --output json
 ```

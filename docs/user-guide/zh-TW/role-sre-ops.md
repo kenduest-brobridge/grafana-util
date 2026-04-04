@@ -4,7 +4,7 @@
 
 ## 適用對象
 
-- On-call SRE、平台維運、Grafana operator
+- 值班 SRE、平台維運、Grafana operator
 - 需要做健康檢查、盤點、回放或漂移比對的人
 - 需要在變更前後做檢查把關的人
 
@@ -17,7 +17,7 @@
 
 ## 典型維運任務
 
-- 維護前先做 live readiness 檢查
+- 維護前先做即時整備度檢查
 - 盤點跨 org 的 dashboard、data source 或 alert
 - 在 apply 之前先做 staged summary、preflight 與 dry-run
 - 在備份、漂移檢查或災難復原時做匯出與比對
@@ -32,6 +32,7 @@
 ## 建議先跑的 5 個指令
 
 ```bash
+# 用途：建議先跑的 5 個指令。
 grafana-util status live --profile prod --output table
 grafana-util overview live --profile prod --output interactive
 grafana-util change summary --desired-file ./desired.json
@@ -42,6 +43,7 @@ grafana-util dashboard export --export-dir ./backups --overwrite --progress
 如果你要先處理存取層資產，可以把 `dashboard export` 換成：
 
 ```bash
+# 用途：如果你要先處理存取層資產，可以把 dashboard export 換成。
 grafana-util access org list --table
 ```
 
@@ -75,7 +77,7 @@ grafana-util access org list --table
 ## 什麼叫做處於良好的維運姿勢
 
 - 你知道目前的 credential 到底能不能看見要處理的 org 或管理範圍
-- 你能分清楚 live read、staged review 與真正 apply 是三種不同流程
+- 你能分清楚即時讀取、staged review 與真正 apply 是三種不同流程
 - 重大變更前會先跑 preflight 或 dry-run
 - 問題一旦從 status 轉進 dashboard、alert 或 access，你知道要切到哪一頁
 

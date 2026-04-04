@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="key-flags">Key flags</h2>
 <ul><li><code>--import-dir</code> points at the <code>raw/</code> export directory.</li><li><code>--replace-existing</code> updates resources with matching identities.</li><li><code>--dry-run</code> previews the import.</li><li><code>--json</code> renders dry-run output as structured JSON.</li><li><code>--dashboard-uid-map</code> and <code>--panel-id-map</code> repair linked alert rules during import.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code>grafana-util alert import --url http://localhost:3000 --import-dir ./alerts/raw --replace-existing
+<pre><code># Purpose: Import alerting resource JSON files through the Grafana API.
+grafana-util alert import --url http://localhost:3000 --import-dir ./alerts/raw --replace-existing
 grafana-util alert import --url http://localhost:3000 --import-dir ./alerts/raw --replace-existing --dry-run --json</code></pre>
 <h2 id="related-commands">Related commands</h2>
 <ul><li><a href="alert.html">alert</a></li><li><a href="alert-export.html">alert export</a></li><li><a href="alert-diff.html">alert diff</a></li></ul>

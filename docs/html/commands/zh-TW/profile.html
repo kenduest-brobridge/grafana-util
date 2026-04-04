@@ -706,7 +706,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <p>說明：如果你想先理解整個 profile 工作流，再決定要進哪個子命令，先看這一頁最合適。<code>profile</code> 指令群組是 repo-local 連線預設、secret 處理，以及本機與 CI 重複執行方式的入口。</p>
 <p>主要旗標：root 指令本身只是指令群組；實際操作旗標都在子指令上。共用 root 旗標是 <code>--color</code>。</p>
 <p>範例：</p>
-<pre><code>grafana-util profile list
+<pre><code># 用途：Root。
+grafana-util profile list
 grafana-util profile show --profile prod --output-format yaml
 grafana-util profile add prod --url https://grafana.example.com --basic-user admin --prompt-password --store-secret encrypted-file
 grafana-util profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN --store-secret os
@@ -718,7 +719,8 @@ grafana-util profile init --overwrite</code></pre>
 <p>適用時機：當你要確認目前 checkout 裡有哪些 profile 可用。</p>
 <p>主要旗標：除了共用的 root <code>--color</code> 之外，沒有其他旗標。</p>
 <p>範例：</p>
-<pre><code>grafana-util profile list</code></pre>
+<pre><code># 用途：list。
+grafana-util profile list</code></pre>
 <p>相關指令：<code>profile show</code>、<code>profile add</code>、<code>profile init</code>。</p>
 <h2 id="show"><code>show</code></h2>
 <p>用途：以 text、table、csv、json 或 yaml 顯示目前選定的 profile。</p>
@@ -726,7 +728,8 @@ grafana-util profile init --overwrite</code></pre>
 <p>主要旗標：</p>
 <ul><li><code>--profile</code></li><li><code>--output-format</code></li><li><code>--show-secrets</code></li></ul>
 <p>範例：</p>
-<pre><code>grafana-util profile show --profile prod --output-format yaml
+<pre><code># 用途：show。
+grafana-util profile show --profile prod --output-format yaml
 grafana-util profile show --profile prod --output-format json
 grafana-util profile show --profile prod --show-secrets --output-format yaml</code></pre>
 <p>說明：</p>
@@ -738,7 +741,8 @@ grafana-util profile show --profile prod --show-secrets --output-format yaml</co
 <p>主要旗標：</p>
 <ul><li><code>--url</code></li><li>驗證輸入：<code>--token</code>、<code>--token-env</code>、<code>--prompt-token</code>、<code>--basic-user</code>、<code>--basic-password</code>、<code>--password-env</code>、<code>--prompt-password</code></li><li>秘密保存模式：<code>--store-secret file|os|encrypted-file</code></li><li><code>encrypted-file</code> 相關：<code>--secret-file</code>、<code>--prompt-secret-passphrase</code>、<code>--secret-passphrase-env</code></li><li>行為控制：<code>--replace-existing</code>、<code>--set-default</code></li></ul>
 <p>範例：</p>
-<pre><code>grafana-util profile add dev --url http://127.0.0.1:3000 --basic-user admin --password-env GRAFANA_DEV_PASSWORD
+<pre><code># 用途：add。
+grafana-util profile add dev --url http://127.0.0.1:3000 --basic-user admin --password-env GRAFANA_DEV_PASSWORD
 grafana-util profile add prod --url https://grafana.example.com --basic-user admin --prompt-password --store-secret os --set-default
 grafana-util profile add stage --url https://grafana-stage.example.com --token-env GRAFANA_STAGE_TOKEN --store-secret encrypted-file --prompt-secret-passphrase</code></pre>
 <p>說明：</p>
@@ -750,7 +754,8 @@ grafana-util profile add stage --url https://grafana-stage.example.com --token-e
 <p>主要旗標：</p>
 <ul><li><code>--mode basic|full</code></li></ul>
 <p>範例：</p>
-<pre><code>grafana-util profile example
+<pre><code># 用途：example。
+grafana-util profile example
 grafana-util profile example --mode basic
 grafana-util profile example --mode full</code></pre>
 <p>說明：</p>
@@ -762,7 +767,8 @@ grafana-util profile example --mode full</code></pre>
 <p>主要旗標：</p>
 <ul><li><code>--overwrite</code></li></ul>
 <p>範例：</p>
-<pre><code>grafana-util profile init
+<pre><code># 用途：init。
+grafana-util profile init
 grafana-util profile init --overwrite</code></pre>
 <p>說明：</p>
 <ul><li><code>init</code> 會寫入內建起手範本。</li><li>如果你是想直接建立一個真正可用的 profile，通常 <code>add</code> 會比較順手。</li></ul>

@@ -24,6 +24,7 @@ List, browse, create, modify, export, import, diff, or delete Grafana teams.
 ## Examples
 
 ```bash
+# Purpose: List, browse, create, modify, export, import, diff, or delete Grafana teams.
 grafana-util access team list --url http://localhost:3000 --basic-user admin --basic-password admin --output-format text
 grafana-util access team add --url http://localhost:3000 --basic-user admin --basic-password admin --name platform-team --email platform@example.com --member alice --admin alice --json
 grafana-util access team import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./access-teams --replace-existing --yes

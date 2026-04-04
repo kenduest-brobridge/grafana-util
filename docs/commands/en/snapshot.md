@@ -13,6 +13,7 @@ Key flags: the root command is a namespace; the operational flags live on `expor
 Examples:
 
 ```bash
+# Purpose: Root.
 grafana-util snapshot export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./snapshot
 grafana-util snapshot review --input-dir ./snapshot --output json
 ```
@@ -30,6 +31,7 @@ Key flags: `--export-dir`, `--overwrite`, plus the shared Grafana connection and
 Examples:
 
 ```bash
+# Purpose: export.
 grafana-util snapshot export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./snapshot
 grafana-util snapshot export --profile prod --export-dir ./snapshot --overwrite
 ```
@@ -47,6 +49,7 @@ Key flags: `--input-dir`, `--interactive`, `--output`.
 Examples:
 
 ```bash
+# Purpose: review.
 grafana-util snapshot review --input-dir ./snapshot --output table
 grafana-util snapshot review --input-dir ./snapshot --interactive
 ```

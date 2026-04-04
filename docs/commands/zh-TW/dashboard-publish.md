@@ -16,6 +16,7 @@
 
 ## 範例
 ```bash
+# 用途：透過既有的儀表板匯入流程發佈一個本地儀表板 JSON 檔。
 grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --basic-password admin --input ./drafts/cpu-main.json --folder-uid infra --message 'Promote CPU dashboard'
 grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --basic-password admin --input ./drafts/cpu-main.json --dry-run --table
 ```

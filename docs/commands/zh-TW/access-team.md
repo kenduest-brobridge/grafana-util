@@ -24,6 +24,7 @@
 ## 範例
 
 ```bash
+# 用途：列出、瀏覽、建立、修改、匯出、匯入、比對或刪除 Grafana 團隊。
 grafana-util access team list --profile prod --output-format text
 grafana-util access team import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./access-teams --replace-existing --yes
 grafana-util access team add --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --name platform-team --email platform@example.com --member alice --admin alice --json

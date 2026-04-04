@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="key-flags">Key flags</h2>
 <ul><li><code>--plan-file</code> points to the reviewed plan document.</li><li><code>--approve</code> is required before execution is allowed.</li><li><code>--output</code> renders apply output as <code>text</code> or <code>json</code>.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code>grafana-util alert apply --plan-file ./alert-plan-reviewed.json --approve
+<pre><code># Purpose: Apply a reviewed alert management plan.
+grafana-util alert apply --plan-file ./alert-plan-reviewed.json --approve
 grafana-util alert apply --url http://localhost:3000 --basic-user admin --basic-password admin --plan-file ./alert-plan-reviewed.json --approve</code></pre>
 <h2 id="related-commands">Related commands</h2>
 <ul><li><a href="alert.html">alert</a></li><li><a href="alert-plan.html">alert plan</a></li><li><a href="alert-delete.html">alert delete</a></li></ul>

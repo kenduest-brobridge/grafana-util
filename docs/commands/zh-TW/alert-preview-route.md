@@ -18,6 +18,7 @@
 ## 範例
 
 ```bash
+# 用途：在不改變執行行為的前提下，預覽受管理的路由輸入。
 grafana-util alert preview-route --desired-dir ./alerts/desired --label team=platform --severity critical
 ```
 

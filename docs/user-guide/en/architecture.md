@@ -1,6 +1,20 @@
 # 🏛️ Architecture & Design Principles
 
-Understanding the architectural philosophy of `grafana-util` is key to managing large-scale Grafana estates effectively. This chapter explains the "Why" behind our design decisions, but it also tells you how those decisions should change the way you operate.
+Use this chapter when you want to understand why the handbook and command surfaces are split the way they are, and how that split should change your day-to-day operator choices.
+
+Understanding the architectural philosophy of `grafana-util` is key to managing large-scale Grafana estates effectively. This chapter explains the "Why" behind the design decisions, but it also tells you how those decisions should change the way you operate.
+
+## Who It Is For
+
+- Maintainers or operators who want to understand why the CLI is shaped this way.
+- Teams deciding how far to trust export, replay, review, and staged workflows.
+- Reviewers who need design context before changing docs, scripts, or operator process.
+
+## Primary Goals
+
+- Explain the design tradeoffs behind the command families and workflow lanes.
+- Show how those tradeoffs affect day-to-day operator behavior.
+- Give enough context that you can explain the tool, not just run it.
 
 For the command surface behind these ideas, see [status](../../commands/en/status.md), [overview](../../commands/en/overview.md), [change](../../commands/en/change.md), and [dashboard](../../commands/en/dashboard.md).
 

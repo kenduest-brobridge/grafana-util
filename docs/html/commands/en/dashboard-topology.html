@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="key-flags">Key flags</h2>
 <ul><li><code>--governance</code>: dashboard governance JSON input.</li><li><code>--queries</code>: optional dashboard query-report JSON input.</li><li><code>--alert-contract</code>: optional alert contract JSON input.</li><li><code>--output-format</code>: render <code>text</code>, <code>json</code>, <code>mermaid</code>, or <code>dot</code>.</li><li><code>--output-file</code>: write the rendered topology to disk.</li><li><code>--interactive</code>: open the interactive terminal browser.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code>grafana-util dashboard topology --governance ./governance.json --queries ./queries.json --alert-contract ./alert-contract.json --output-format mermaid
+<pre><code># Purpose: Build a deterministic dashboard topology graph from JSON artifacts.
+grafana-util dashboard topology --governance ./governance.json --queries ./queries.json --alert-contract ./alert-contract.json --output-format mermaid
 grafana-util dashboard graph --governance ./governance.json --queries ./queries.json --alert-contract ./alert-contract.json --output-format dot --output-file ./dashboard-topology.dot</code></pre>
 <h2 id="related-commands">Related commands</h2>
 <ul><li><a href="dashboard-inspect-export.html">dashboard inspect-export</a></li><li><a href="dashboard-governance-gate.html">dashboard governance-gate</a></li><li><a href="dashboard-screenshot.html">dashboard screenshot</a></li></ul>

@@ -726,7 +726,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <p>Generated artifact ownership:</p>
 <ul><li><code>scripts/generate_manpages.py</code></li><li>owns <code>docs/man/*.1</code></li><li><code>scripts/generate_command_html.py</code></li><li>owns the HTML docs site rooted at <code>docs/html/index.html</code></li></ul>
 <p>Regeneration commands:</p>
-<pre><code>make man
+<pre><code># Purpose: Regeneration commands.
+make man
 make man-check
 make html
 make html-check</code></pre>
@@ -742,7 +743,8 @@ make html-check</code></pre>
 <p>Primary entrypoint:</p>
 <ul><li><code>Makefile</code></li></ul>
 <p>Common maintainer flows:</p>
-<pre><code>make help
+<pre><code># Purpose: Validation And Build Guide.
+make help
 make test
 make test-python
 make test-rust

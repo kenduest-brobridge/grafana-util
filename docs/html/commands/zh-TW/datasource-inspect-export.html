@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="重點旗標">重點旗標</h2>
 <ul><li><code>--input-dir</code>：包含匯出成品的本地目錄。</li><li><code>--input-type</code>：當路徑可能被解讀成 inventory 或 provisioning 兩種型態時，用它指定。</li><li><code>--interactive</code>：開啟本地匯出檢視工作台。</li><li><code>--table</code>、<code>--csv</code>、<code>--text</code>、<code>--json</code>、<code>--yaml</code>、<code>--output-format</code>：輸出模式控制。</li></ul>
 <h2 id="範例">範例</h2>
-<pre><code>grafana-util datasource inspect-export --input-dir ./datasources --table
+<pre><code># 用途：在不連線到 Grafana 的情況下，檢查本地的 masked recovery bundle。
+grafana-util datasource inspect-export --input-dir ./datasources --table
 grafana-util datasource inspect-export --input-dir ./datasources --json</code></pre>
 <h2 id="相關指令">相關指令</h2>
 <ul><li><a href="datasource-export.html">datasource export</a></li><li><a href="datasource-import.html">datasource import</a></li><li><a href="datasource-diff.html">datasource diff</a></li></ul>

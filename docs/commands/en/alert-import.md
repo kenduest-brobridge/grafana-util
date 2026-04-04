@@ -21,6 +21,7 @@ Import alerting resource JSON files through the Grafana API.
 ## Examples
 
 ```bash
+# Purpose: Import alerting resource JSON files through the Grafana API.
 grafana-util alert import --url http://localhost:3000 --import-dir ./alerts/raw --replace-existing
 grafana-util alert import --url http://localhost:3000 --import-dir ./alerts/raw --replace-existing --dry-run --json
 ```

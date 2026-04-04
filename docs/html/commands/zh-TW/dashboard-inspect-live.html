@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="重點旗標">重點旗標</h2>
 <ul><li><code>--page-size</code>：儀表板搜尋的每頁筆數。</li><li><code>--concurrency</code>：最大平行抓取工作數。</li><li><code>--org-id</code>：檢查指定的 Grafana org。</li><li><code>--all-orgs</code>：跨所有可見 org 檢查。</li><li><code>--report</code>、<code>--output-format</code>、<code>--output-file</code>、<code>--interactive</code>、<code>--no-header</code>：輸出控制。</li><li><code>--progress</code>：顯示抓取進度。</li></ul>
 <h2 id="範例">範例</h2>
-<pre><code>grafana-util dashboard inspect-live --profile prod --output-format governance-json
+<pre><code># 用途：透過暫時的 raw export 快照分析線上 Grafana 儀表板。
+grafana-util dashboard inspect-live --profile prod --output-format governance-json
 grafana-util dashboard inspect-live --url http://localhost:3000 --basic-user admin --basic-password admin --interactive
 grafana-util dashboard inspect-live --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --output-format governance-json</code></pre>
 <h2 id="相關指令">相關指令</h2>

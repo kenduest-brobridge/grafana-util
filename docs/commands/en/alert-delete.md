@@ -19,6 +19,7 @@ Delete one explicit alert resource identity.
 ## Examples
 
 ```bash
+# Purpose: Delete one explicit alert resource identity.
 grafana-util alert delete --kind rule --identity cpu-main
 grafana-util alert delete --url http://localhost:3000 --basic-user admin --basic-password admin --kind policy-tree --identity default --allow-policy-reset
 ```

@@ -16,6 +16,7 @@ Use this when you need a graph view of dashboards, folders, variables, datasourc
 
 ## Examples
 ```bash
+# Purpose: Build a deterministic dashboard topology graph from JSON artifacts.
 grafana-util dashboard topology --governance ./governance.json --queries ./queries.json --alert-contract ./alert-contract.json --output-format mermaid
 grafana-util dashboard graph --governance ./governance.json --queries ./queries.json --alert-contract ./alert-contract.json --output-format dot --output-file ./dashboard-topology.dot
 ```

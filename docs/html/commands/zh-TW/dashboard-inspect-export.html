@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="重點旗標">重點旗標</h2>
 <ul><li><code>--import-dir</code>：要檢查的儀表板匯出根目錄。</li><li><code>--input-format</code>：選擇 <code>raw</code> 或 <code>provisioning</code>。</li><li><code>--input-type</code>：當匯出根目錄包含多種儀表板變體時，選擇 <code>raw</code> 或 <code>source</code>。</li><li><code>--report</code>：輸出 <code>table</code>、<code>csv</code>、<code>json</code>、<code>tree</code>、<code>tree-table</code>、<code>dependency</code>、<code>dependency-json</code>、<code>governance</code> 或 <code>governance-json</code> 檢視。</li><li><code>--output-format</code>：單一旗標的輸出選擇器。</li><li><code>--interactive</code>：開啟共用 inspect 工作台。</li><li><code>--output-file</code>：將結果寫到磁碟。</li><li><code>--no-header</code>：隱藏表格類輸出的標頭。</li></ul>
 <h2 id="範例">範例</h2>
-<pre><code>grafana-util dashboard inspect-export --import-dir ./dashboards/raw --input-format raw --table
+<pre><code># 用途：以 operator-summary 與 report-contract 檢視角度分析儀表板匯出目錄。
+grafana-util dashboard inspect-export --import-dir ./dashboards/raw --input-format raw --table
 grafana-util dashboard inspect-export --import-dir ./dashboards/provisioning --input-format provisioning --report governance-json</code></pre>
 <h2 id="相關指令">相關指令</h2>
 <ul><li><a href="dashboard-export.html">dashboard export</a></li><li><a href="dashboard-diff.html">dashboard diff</a></li><li><a href="dashboard-governance-gate.html">dashboard governance-gate</a></li></ul>

@@ -17,6 +17,7 @@
 
 ## 範例
 ```bash
+# 用途：原地修補一個本地儀表板 JSON 檔，或將其寫到新路徑。
 grafana-util dashboard patch-file --input ./dashboards/raw/cpu-main.json --name 'CPU Overview' --folder-uid infra --tag prod --tag sre
 grafana-util dashboard patch-file --input ./drafts/cpu-main.json --output ./drafts/cpu-main-patched.json --uid cpu-main --message 'Add folder metadata before publish'
 ```

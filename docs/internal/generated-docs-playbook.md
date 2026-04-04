@@ -25,6 +25,7 @@ If you need to:
 After any docs-generator change:
 
 ```bash
+# Purpose: After any docs-generator change.
 make man
 make html
 make man-check
@@ -38,6 +39,7 @@ python3 -m unittest -v \
 Useful local review commands:
 
 ```bash
+# Purpose: Useful local review commands.
 man ./docs/man/grafana-util.1
 open ./docs/html/index.html
 ```
@@ -325,6 +327,7 @@ Most likely cause:
 Fix:
 
 ```bash
+# Purpose: Fix.
 make html
 make html-check
 ```

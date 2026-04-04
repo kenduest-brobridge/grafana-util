@@ -690,10 +690,15 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 
 
     <p>本章把分散的指令整理成幾個常見的實際操作流程。</p>
+<h2 id="適用對象">適用對象</h2>
+<ul><li>已經知道自己要做哪一類維運流程的人</li><li>想看端到端操作順序，而不是單一 command 的人</li><li>需要把 dashboard、access、alert、change 串在一起的人</li></ul>
+<h2 id="主要目標">主要目標</h2>
+<ul><li>把零散指令串成完整流程</li><li>讓你先知道哪一步該先看、哪一步該先檢查</li><li>在真正套用前先做可重播的準備</li></ul>
 <p>如果要對照每個工作流對應的精確旗標，請搭配 <a href="../../commands/zh-TW/dashboard.html">dashboard</a>、<a href="../../commands/zh-TW/access.html">access</a>、<a href="../../commands/zh-TW/alert.html">alert</a>、<a href="../../commands/zh-TW/change.html">change</a>、<a href="../../commands/zh-TW/status.html">status</a> 與 <a href="../../commands/zh-TW/overview.html">overview</a> 一起看。</p>
 <h2 id="1-變更前環境驗證">1. 變更前環境驗證</h2>
 <p>在執行任何變更前，先確認連線正確，而且版本沒搞錯。</p>
-<pre><code>grafana-util profile list
+<pre><code># 用途：在執行任何變更前，先確認連線正確，而且版本沒搞錯。
+grafana-util profile list
 grafana-util status live --profile prod --output table
 grafana-util overview live --profile prod --output interactive</code></pre>
 <p><strong>預期輸出：</strong></p>
@@ -704,10 +709,11 @@ OVERALL: status=ready
 
 Project overview
 Live status: ready</code></pre>
-<p>先用 <code>profile list</code> 確認 repo-local 預設值，再用 <code>status live</code> 做驗證，最後用 <code>overview live --output interactive</code> 看同一個 live 操作面的可瀏覽版本。</p>
+<p>先用 <code>profile list</code> 確認專案本地的預設值，再用 <code>status live</code> 做驗證，最後用 <code>overview live --output interactive</code> 看同一個 live 操作面的可瀏覽版本。</p>
 <h2 id="2-全資產稽核-estate-wide-audit">2. 全資產稽核 (Estate-Wide Audit)</h2>
 <p>盤點跨 org 的資產。</p>
-<pre><code>grafana-util dashboard list --profile prod --all-orgs --with-sources --table
+<pre><code># 用途：盤點跨 org 的資產。
+grafana-util dashboard list --profile prod --all-orgs --with-sources --table
 grafana-util access org list --basic-user admin --basic-password admin --with-users --output-format yaml</code></pre>
 <p><strong>預期輸出：</strong></p>
 <pre><code>UID        TITLE             FOLDER    ORG   SOURCES
@@ -721,7 +727,8 @@ users:
 <p>Dashboard 與 access inventory 一起看，才比較能在動手前回答「目前到底有哪些東西」。</p>
 <h2 id="3-可靠的備份-dashboard-export">3. 可靠的備份 (Dashboard Export)</h2>
 <p>把 live dashboard 匯出成可長期保存的目錄結構。</p>
-<pre><code>grafana-util dashboard export --export-dir ./backups --overwrite --progress
+<pre><code># 用途：把 live dashboard 匯出成可長期保存的目錄結構。
+grafana-util dashboard export --export-dir ./backups --overwrite --progress
 grafana-util access org export --export-dir ./access-orgs
 grafana-util access service-account export --export-dir ./access-service-accounts</code></pre>
 <p><strong>預期輸出：</strong></p>
@@ -735,7 +742,8 @@ Exported service account inventory -&gt; access-service-accounts/service-account
 <p>如果目標是建立可重播的環境快照，dashboard、org 與 service account 的匯出最好一起保留。</p>
 <h2 id="4-受控的恢復-dashboard-import">4. 受控的恢復 (Dashboard Import)</h2>
 <p>把備份回放到 live Grafana 實例。</p>
-<pre><code>grafana-util dashboard import --import-dir ./backups/raw --replace-existing --dry-run --table
+<pre><code># 用途：把備份回放到 live Grafana 實例。
+grafana-util dashboard import --import-dir ./backups/raw --replace-existing --dry-run --table
 grafana-util access team import --import-dir ./access-teams --replace-existing --dry-run --table</code></pre>
 <p><strong>預期輸出：</strong></p>
 <pre><code>UID        TITLE          ACTION   DESTINATION
@@ -748,7 +756,8 @@ ops-user    Viewer  create   missing</code></pre>
 <p>先看 dry-run 表格，再決定這次回放是以新增為主，還是會覆寫既有資產。</p>
 <h2 id="5-告警治理流程-planapply">5. 告警治理流程 (Plan/Apply)</h2>
 <p>告警變更應遵循受審查的生命週期。</p>
-<pre><code>grafana-util change summary --desired-file ./desired.json
+<pre><code># 用途：告警變更應遵循受審查的生命週期。
+grafana-util change summary --desired-file ./desired.json
 grafana-util change preflight --desired-file ./desired.json --output json
 grafana-util alert plan --profile prod --desired-dir ./alerts/desired --output json</code></pre>
 <p><strong>預期輸出 (摘要片段)：</strong></p>
@@ -767,7 +776,8 @@ PREFLIGHT CHECK:
 <p>想先了解變更包規模時，先跑 <code>change summary</code>；要確認 staged 輸入結構正確時，再跑 <code>change preflight</code>；最後才進入 alert-specific planning。</p>
 <h2 id="6-身份快照回放-access-management">6. 身份快照回放 (Access Management)</h2>
 <p>透過快照管理使用者、team 與 service account。</p>
-<pre><code>grafana-util access user import --import-dir ./access-users --dry-run --table
+<pre><code># 用途：透過快照管理使用者、team 與 service account。
+grafana-util access user import --import-dir ./access-users --dry-run --table
 grafana-util access service-account token add --service-account-id 15 --token-name nightly --seconds-to-live 3600 --json
 grafana-util access service-account token delete --service-account-id 15 --token-name nightly --yes --json</code></pre>
 <p><strong>預期輸出：</strong></p>
@@ -786,7 +796,7 @@ ops-user    Viewer  create   missing
     <nav class="footer-nav"><a class="link-card" href="change-overview-status.html"><span>Previous</span>專案狀態與變更總覽 (Change &amp; Status)</a><a class="link-card" href="recipes.html"><span>Next</span>實戰錦囊與最佳實踐</a></nav>
   </article>
   <aside class="sidebar">
-  <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#1-變更前環境驗證"><span class="toc-label">1. 變更前環境驗證</span></a></li><li class="toc-level-2"><a href="#2-全資產稽核-estate-wide-audit"><span class="toc-label">2. 全資產稽核 (Estate-Wide Audit)</span></a></li><li class="toc-level-2"><a href="#3-可靠的備份-dashboard-export"><span class="toc-label">3. 可靠的備份 (Dashboard Export)</span></a></li><li class="toc-level-2"><a href="#4-受控的恢復-dashboard-import"><span class="toc-label">4. 受控的恢復 (Dashboard Import)</span></a></li><li class="toc-level-2"><a href="#5-告警治理流程-planapply"><span class="toc-label">5. 告警治理流程 (Plan/Apply)</span></a></li><li class="toc-level-2"><a href="#6-身份快照回放-access-management"><span class="toc-label">6. 身份快照回放 (Access Management)</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/scenarios.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
+  <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#適用對象"><span class="toc-label">適用對象</span></a></li><li class="toc-level-2"><a href="#主要目標"><span class="toc-label">主要目標</span></a></li><li class="toc-level-2"><a href="#1-變更前環境驗證"><span class="toc-label">1. 變更前環境驗證</span></a></li><li class="toc-level-2"><a href="#2-全資產稽核-estate-wide-audit"><span class="toc-label">2. 全資產稽核 (Estate-Wide Audit)</span></a></li><li class="toc-level-2"><a href="#3-可靠的備份-dashboard-export"><span class="toc-label">3. 可靠的備份 (Dashboard Export)</span></a></li><li class="toc-level-2"><a href="#4-受控的恢復-dashboard-import"><span class="toc-label">4. 受控的恢復 (Dashboard Import)</span></a></li><li class="toc-level-2"><a href="#5-告警治理流程-planapply"><span class="toc-label">5. 告警治理流程 (Plan/Apply)</span></a></li><li class="toc-level-2"><a href="#6-身份快照回放-access-management"><span class="toc-label">6. 身份快照回放 (Access Management)</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/scenarios.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
 </aside>
 
 </div>

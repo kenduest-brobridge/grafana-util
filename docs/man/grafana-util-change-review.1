@@ -8,17 +8,6 @@ grafana\-util\-change\-review \- mark a staged sync plan as reviewed.
 mark a staged sync plan as reviewed.
 .PP
 when a plan has been inspected and should carry an explicit review token before apply.
-.SH EXAMPLES
-.PP
-mark a staged sync plan as reviewed.
-.EX
-grafana-util change review --plan-file ./sync-plan.json
-.EE
-.PP
-mark a staged sync plan as reviewed.
-.EX
-grafana-util change review --plan-file ./sync-plan.json --review-note 'peer-reviewed' --output json
-.EE
 .SH SEE ALSO
 \fBgrafana-util\fR(1),
 \fBgrafana-util-change\fR(1)

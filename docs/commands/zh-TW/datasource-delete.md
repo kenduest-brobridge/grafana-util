@@ -14,6 +14,7 @@
 
 ## 範例
 ```bash
+# 用途：透過 Grafana API 刪除一個線上 Grafana datasource。
 grafana-util datasource delete --profile prod --uid prom-main --dry-run --json
 grafana-util datasource delete --url http://localhost:3000 --basic-user admin --basic-password admin --uid prom-main --yes
 grafana-util datasource delete --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --uid prom-main --dry-run --json

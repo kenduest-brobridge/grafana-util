@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="主要旗標">主要旗標</h2>
 <ul><li><code>--import-dir</code> 指向 <code>raw/</code> 匯出目錄。</li><li><code>--replace-existing</code> 會更新識別相符的資源。</li><li><code>--dry-run</code> 預覽匯入流程。</li><li><code>--json</code> 將 dry-run 輸出呈現為結構化 JSON。</li><li><code>--dashboard-uid-map</code> 與 <code>--panel-id-map</code> 用來在匯入時修正關聯的 alert 規則。</li></ul>
 <h2 id="範例">範例</h2>
-<pre><code>grafana-util alert import --url http://localhost:3000 --import-dir ./alerts/raw --replace-existing
+<pre><code># 用途：透過 Grafana API 匯入 alert 資源 JSON 檔。
+grafana-util alert import --url http://localhost:3000 --import-dir ./alerts/raw --replace-existing
 grafana-util alert import --url http://localhost:3000 --import-dir ./alerts/raw --replace-existing --dry-run --json</code></pre>
 <h2 id="相關命令">相關命令</h2>
 <ul><li><a href="alert.html">alert</a></li><li><a href="alert-export.html">alert export</a></li><li><a href="alert-diff.html">alert diff</a></li></ul>

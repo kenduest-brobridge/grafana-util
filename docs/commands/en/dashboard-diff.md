@@ -14,6 +14,7 @@ Use this when you want to see what would change before importing or publishing a
 
 ## Examples
 ```bash
+# Purpose: Compare local dashboard files against live Grafana dashboards.
 grafana-util dashboard diff --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/raw
 grafana-util dashboard diff --url http://localhost:3000 --basic-user admin --basic-password admin --org-id 2 --import-dir ./dashboards/raw --json
 ```

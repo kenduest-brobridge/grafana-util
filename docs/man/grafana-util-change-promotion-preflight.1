@@ -8,17 +8,6 @@ grafana\-util\-change\-promotion\-preflight \- build a staged promotion review h
 build a staged promotion review handoff from a source bundle and target inventory.
 .PP
 when you are preparing a promotion review and want an explicit mapping and availability view.
-.SH EXAMPLES
-.PP
-build a staged promotion review handoff from a source bundle and target inventory.
-.EX
-grafana-util change promotion-preflight --source-bundle ./sync-source-bundle.json --target-inventory ./target-inventory.json --mapping-file ./promotion-map.json --output json
-.EE
-.PP
-build a staged promotion review handoff from a source bundle and target inventory.
-.EX
-grafana-util change promotion-preflight --source-bundle ./sync-source-bundle.json --target-inventory ./target-inventory.json --mapping-file ./promotion-map.json --availability-file ./availability.json --output json
-.EE
 .SH SEE ALSO
 \fBgrafana-util\fR(1),
 \fBgrafana-util-change\fR(1)

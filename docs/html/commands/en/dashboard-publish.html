@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="key-flags">Key flags</h2>
 <ul><li><code>--input</code>: dashboard JSON file to publish.</li><li><code>--replace-existing</code>: update an existing dashboard when the UID already exists.</li><li><code>--folder-uid</code>: override the destination folder UID.</li><li><code>--message</code>: revision message stored in Grafana.</li><li><code>--dry-run</code>: preview the publish without changing Grafana.</li><li><code>--table</code>, <code>--json</code>: dry-run output modes.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code>grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --basic-password admin --input ./drafts/cpu-main.json --folder-uid infra --message &#x27;Promote CPU dashboard&#x27;
+<pre><code># Purpose: Publish one local dashboard JSON file through the existing dashboard import pipeline.
+grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --basic-password admin --input ./drafts/cpu-main.json --folder-uid infra --message &#x27;Promote CPU dashboard&#x27;
 grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --basic-password admin --input ./drafts/cpu-main.json --dry-run --table</code></pre>
 <h2 id="related-commands">Related commands</h2>
 <ul><li><a href="dashboard-import.html">dashboard import</a></li><li><a href="dashboard-review.html">dashboard review</a></li><li><a href="dashboard-patch-file.html">dashboard patch-file</a></li></ul>

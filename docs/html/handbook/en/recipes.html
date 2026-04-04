@@ -690,11 +690,16 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 
 
     <p>This chapter provides practical solutions for common Grafana operational headaches. The goal is not just to show a command, but to show when to use it, what success looks like, and what to check when the workflow goes sideways.</p>
+<h2 id="who-it-is-for">Who It Is For</h2>
+<ul><li>Operators who want proven workflow patterns instead of starting from a blank shell.</li><li>Teams standardizing migration, recovery, and review playbooks.</li><li>People who need success criteria and failure checks beside each example.</li></ul>
+<h2 id="primary-goals">Primary Goals</h2>
+<ul><li>Turn common operational problems into reusable playbooks.</li><li>Show what “good output” looks like before you continue.</li><li>Call out when a lane or workflow is the wrong fit for the job.</li></ul>
 <h2 id="recipe-1-promoting-dashboards-dev-prod">Recipe 1: Promoting Dashboards (Dev -&gt; Prod)</h2>
 <p><strong>Problem</strong>: Exporting from Dev and importing to Prod often fails due to hardcoded organization IDs, folder context, or source-environment datasource UIDs.</p>
 <p><strong>Solution</strong>: Use the <strong><code>prompt/</code> lane</strong> for a clean promotion handoff.</p>
 <ol><li><strong>Export from Dev</strong>: <code>grafana-util dashboard export --export-dir ./dev-assets</code></li><li><strong>Locate Clean Source</strong>: Use files in <code>./dev-assets/prompt/</code>. These have environment-specific metadata stripped.</li><li><strong>Import to Prod</strong>:</li></ol>
-<pre><code>   grafana-util dashboard import --import-dir ./dev-assets/prompt --url https://prod-grafana --replace-existing</code></pre>
+<pre><code># Purpose: Import to Prod.
+   grafana-util dashboard import --import-dir ./dev-assets/prompt --url https://prod-grafana --replace-existing</code></pre>
 <p><strong>Use this when</strong>: the source and target environments share dashboard intent, but you do not want to replay every source-specific field literally.</p>
 <p><strong>Do not use this when</strong>: you are performing raw backup/replay or disaster recovery. In that case, start from <code>raw/</code>, not <code>prompt/</code>.</p>
 <p><strong>Success looks like</strong>:</p>
@@ -715,7 +720,8 @@ grafana-util dashboard inspect-export --import-dir ./backups/raw --output-format
 <h2 id="recipe-3-mass-taggingrenaming-surgical-patching">Recipe 3: Mass Tagging/Renaming (Surgical Patching)</h2>
 <p><strong>Problem</strong>: You need to add a tag such as <code>ManagedBySRE</code> to many dashboards at once without hand-editing every file.</p>
 <p><strong>Solution</strong>: Use <code>patch-file</code> in a loop, then preview the result before replaying it.</p>
-<pre><code>for file in ./dashboards/raw/*.json; do
+<pre><code># Purpose: Solution: Use patch-file in a loop, then preview the result before replaying it.
+for file in ./dashboards/raw/*.json; do
   grafana-util dashboard patch-file --input &quot;$file&quot; --tag &quot;ManagedBySRE&quot; --output &quot;$file&quot;
 done
 
@@ -729,7 +735,8 @@ grafana-util dashboard import --import-dir ./dashboards/raw --replace-existing -
 <h2 id="recipe-4-verifying-alert-routing-logic">Recipe 4: Verifying Alert Routing Logic</h2>
 <p><strong>Problem</strong>: Complex notification policies make it hard to know where an alert will land.</p>
 <p><strong>Solution</strong>: Use <code>preview-route</code> to simulate matches.</p>
-<pre><code>grafana-util alert preview-route \
+<pre><code># Purpose: Solution: Use preview-route to simulate matches.
+grafana-util alert preview-route \
   --desired-dir ./alerts/desired \
   --label service=order \
   --severity critical</code></pre>
@@ -745,7 +752,7 @@ grafana-util dashboard import --import-dir ./dashboards/raw --replace-existing -
     <nav class="footer-nav"><a class="link-card" href="scenarios.html"><span>Previous</span>Operator Scenarios</a><a class="link-card" href="reference.html"><span>Next</span>Technical Reference</a></nav>
   </article>
   <aside class="sidebar">
-  <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#recipe-1-promoting-dashboards-dev-prod"><span class="toc-label">Recipe 1: Promoting Dashboards (Dev -&gt; Prod)</span></a></li><li class="toc-level-2"><a href="#recipe-2-auditing-dependencies-before-import"><span class="toc-label">Recipe 2: Auditing Dependencies Before Import</span></a></li><li class="toc-level-2"><a href="#recipe-3-mass-taggingrenaming-surgical-patching"><span class="toc-label">Recipe 3: Mass Tagging/Renaming (Surgical Patching)</span></a></li><li class="toc-level-2"><a href="#recipe-4-verifying-alert-routing-logic"><span class="toc-label">Recipe 4: Verifying Alert Routing Logic</span></a></li><li class="toc-level-2"><a href="#expert-tips"><span class="toc-label">Expert Tips</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: English</a></li><li><a href="../zh-TW/recipes.html" class="sidebar-meta-link">Switch to 繁體中文</a></li></ul></section>
+  <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#who-it-is-for"><span class="toc-label">Who It Is For</span></a></li><li class="toc-level-2"><a href="#primary-goals"><span class="toc-label">Primary Goals</span></a></li><li class="toc-level-2"><a href="#recipe-1-promoting-dashboards-dev-prod"><span class="toc-label">Recipe 1: Promoting Dashboards (Dev -&gt; Prod)</span></a></li><li class="toc-level-2"><a href="#recipe-2-auditing-dependencies-before-import"><span class="toc-label">Recipe 2: Auditing Dependencies Before Import</span></a></li><li class="toc-level-2"><a href="#recipe-3-mass-taggingrenaming-surgical-patching"><span class="toc-label">Recipe 3: Mass Tagging/Renaming (Surgical Patching)</span></a></li><li class="toc-level-2"><a href="#recipe-4-verifying-alert-routing-logic"><span class="toc-label">Recipe 4: Verifying Alert Routing Logic</span></a></li><li class="toc-level-2"><a href="#expert-tips"><span class="toc-label">Expert Tips</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: English</a></li><li><a href="../zh-TW/recipes.html" class="sidebar-meta-link">Switch to 繁體中文</a></li></ul></section>
 </aside>
 
 </div>

@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="key-flags">Key flags</h2>
 <ul><li><code>--uid</code>: delete one dashboard by UID.</li><li><code>--path</code>: delete dashboards under one folder subtree.</li><li><code>--delete-folders</code>: with <code>--path</code>, also remove matched folders.</li><li><code>--yes</code>: acknowledge the live delete.</li><li><code>--interactive</code>: preview and confirm interactively.</li><li><code>--dry-run</code>, <code>--table</code>, <code>--json</code>, <code>--output-format</code>, <code>--no-header</code>: preview output controls.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code>grafana-util dashboard delete --url http://localhost:3000 --basic-user admin --basic-password admin --uid cpu-main --dry-run --json
+<pre><code># Purpose: Delete live dashboards by UID or folder path.
+grafana-util dashboard delete --url http://localhost:3000 --basic-user admin --basic-password admin --uid cpu-main --dry-run --json
 grafana-util dashboard delete --url http://localhost:3000 --basic-user admin --basic-password admin --path &#x27;Platform / Infra&#x27; --yes</code></pre>
 <h2 id="related-commands">Related commands</h2>
 <ul><li><a href="dashboard-browse.html">dashboard browse</a></li><li><a href="dashboard-list.html">dashboard list</a></li><li><a href="dashboard-import.html">dashboard import</a></li></ul>

@@ -1,6 +1,20 @@
 # Technical Reference
 
+Use this chapter when you already know the workflow and need the exact command behavior, output flags, profile rules, or secret-handling details.
+
 This manual provides the current command surface for `grafana-util`, including profile resolution, output flags, and live/staged status entrypoints.
+
+## Who It Is For
+
+- Operators who know which command family they need and want exact flags or output behavior.
+- Script and CI authors who need stable formatting and secret-handling rules.
+- Reviewers checking whether a workflow expects `--output` or `--output-format`.
+
+## Primary Goals
+
+- Explain connection, profile, and secret rules in one place.
+- Clarify which output modes exist on which command surfaces.
+- Reduce time spent jumping between individual command pages for shared behavior.
 
 Use this chapter alongside [profile](../../commands/en/profile.md), [status](../../commands/en/status.md), [overview](../../commands/en/overview.md), and [access](../../commands/en/access.md) when you want the command-by-command surface.
 
@@ -78,6 +92,7 @@ If you set `GRAFANA_UTIL_CONFIG`, the config file moves with that path. The help
 
 ### 2. Initialize, add, and list profiles
 ```bash
+# Purpose: 2. Initialize, add, and list profiles.
 grafana-util profile init --overwrite
 grafana-util profile add dev --url http://127.0.0.1:3000 --basic-user admin --prompt-password
 grafana-util profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN --store-secret os
@@ -94,6 +109,7 @@ prod
 
 ### 3. Show the resolved profile
 ```bash
+# Purpose: 3. Show the resolved profile.
 grafana-util profile show --profile prod --output-format yaml
 grafana-util profile show --profile prod --show-secrets --output-format yaml
 ```
@@ -168,6 +184,7 @@ profiles:
 
 ### 5. Daily-use examples in the common auth styles
 ```bash
+# Purpose: 5. Daily-use examples in the common auth styles.
 grafana-util status live --profile prod --output yaml
 grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output yaml
 grafana-util overview live --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output json
@@ -238,6 +255,7 @@ Why these examples matter:
 
 ### 1. Table or JSON selection
 ```bash
+# Purpose: 1. Table or JSON selection.
 grafana-util dashboard list -h
 ```
 **Expected Output:**
@@ -253,6 +271,7 @@ Use `--json` for automation, `--table` for quick human review, and `--output-for
 
 ### 2. Live status and overview output selectors
 ```bash
+# Purpose: 2. Live status and overview output selectors.
 grafana-util status live -h
 grafana-util overview live -h
 ```
@@ -293,6 +312,7 @@ This is the current JSON path for scripting. If you need fewer or different fiel
 
 ### 2. Handling Exit Codes
 ```bash
+# Purpose: 2. Handling Exit Codes.
 grafana-util status live --profile prod --output json
 if [ $? -eq 2 ]; then
   echo "CRITICAL: Grafana connection blocked!"

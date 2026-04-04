@@ -14,6 +14,7 @@ Use this when you want to explore folders, select a dashboard, or inspect the li
 
 ## Examples
 ```bash
+# Purpose: Open the live dashboard tree in an interactive terminal UI.
 grafana-util dashboard browse --url http://localhost:3000 --basic-user admin --basic-password admin
 grafana-util dashboard browse --url http://localhost:3000 --basic-user admin --basic-password admin --path 'Platform / Infra'
 ```

@@ -20,6 +20,7 @@ Build a staged alert management plan from desired alert resources.
 ## Examples
 
 ```bash
+# Purpose: Build a staged alert management plan from desired alert resources.
 grafana-util alert plan --desired-dir ./alerts/desired
 grafana-util alert plan --desired-dir ./alerts/desired --prune --dashboard-uid-map ./dashboard-map.json --panel-id-map ./panel-map.json --output json
 ```

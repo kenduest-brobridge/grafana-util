@@ -24,6 +24,7 @@ List live Grafana alert contact points.
 ## Examples
 
 ```bash
+# Purpose: List live Grafana alert contact points.
 grafana-util alert list-contact-points --profile prod --table
 grafana-util alert list-contact-points --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --json
 grafana-util alert list-contact-points --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --output-format yaml

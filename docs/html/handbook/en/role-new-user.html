@@ -709,7 +709,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <ol><li>Direct Basic auth with <code>--prompt-password</code> for a first local bootstrap or a one-time reachability check.</li><li><code>--profile</code> with <code>password_env</code>, <code>token_env</code>, or an OS-backed secret store for repeatable day-to-day work.</li><li>Direct token auth only when you already know the token is scoped tightly enough for the read you want.</li></ol>
 <p>The key idea is simple: direct flags prove the connection, profiles simplify repeated use.</p>
 <h2 id="first-commands-to-run">First Commands To Run</h2>
-<pre><code>grafana-util --version
+<pre><code># Purpose: First Commands To Run.
+grafana-util --version
 grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output yaml
 grafana-util profile init --overwrite
 grafana-util profile example --mode basic
@@ -718,11 +719,14 @@ grafana-util status live --profile dev --output yaml</code></pre>
 <p>The sequence matters:</p>
 <ul><li>first prove that the binary can talk to Grafana with one direct command</li><li>then initialize a repo-local config</li><li>then add a reusable profile for the same target</li><li>then run the same safe read again through <code>--profile</code></li></ul>
 <p>If you do not have a profile yet, this is the shortest safe bootstrap:</p>
-<pre><code>grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output yaml</code></pre>
+<pre><code># Purpose: If you do not have a profile yet, this is the shortest safe bootstrap.
+grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output yaml</code></pre>
 <p>If you already have a scoped token, you can check the same live surface without a profile:</p>
-<pre><code>grafana-util overview live --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --output json</code></pre>
+<pre><code># Purpose: If you already have a scoped token, you can check the same live surface without a profile.
+grafana-util overview live --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --output json</code></pre>
 <p>If your shell already exports auth variables, you can also keep the command shorter:</p>
-<pre><code>export GRAFANA_USERNAME=admin
+<pre><code># Purpose: If your shell already exports auth variables, you can also keep the command shorter.
+export GRAFANA_USERNAME=admin
 export GRAFANA_PASSWORD=admin
 grafana-util status live --url http://localhost:3000 --output yaml</code></pre>
 <h2 id="what-good-looks-like">What Good Looks Like</h2>

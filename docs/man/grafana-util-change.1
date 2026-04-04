@@ -39,37 +39,6 @@ build a staged bundle\-level sync preflight document from a source bundle and ta
 .TP
 .B promotion\-preflight
 build a staged promotion review handoff from a source bundle and target inventory. Use when: Are preparing a promotion review and want an explicit mapping and availability view.
-.SH EXAMPLES
-.PP
-summary: summarize local desired sync resources.
-.EX
-grafana-util change summary --desired-file ./desired.json
-.EE
-.PP
-plan: build a staged sync plan from desired and live state.
-.EX
-grafana-util change plan --desired-file ./desired.json --fetch-live --profile prod
-.EE
-.PP
-apply: build a gated apply intent from a reviewed sync plan, and optionally execute it live.
-.EX
-grafana-util change apply --plan-file ./sync-plan-reviewed.json --approve --execute-live --profile prod
-.EE
-.PP
-summary: summarize local desired sync resources.
-.EX
-grafana-util change summary --desired-file ./desired.json --output json
-.EE
-.PP
-plan: build a staged sync plan from desired and live state.
-.EX
-grafana-util change plan --desired-file ./desired.json --live-file ./live.json
-.EE
-.PP
-plan: build a staged sync plan from desired and live state.
-.EX
-grafana-util change plan --desired-file ./desired.json --fetch-live --profile prod --allow-prune --output json
-.EE
 .SH SEE ALSO
 \fBgrafana-util\fR(1),
 \fBgrafana-util-status\fR(1),

@@ -276,6 +276,10 @@ export dashboard and datasource inventory into a local snapshot bundle. Use when
 .TP
 .B grafana\-util\-snapshot\-review(1)
 review a local snapshot inventory without touching Grafana. Use when: Want to inspect an exported snapshot root as table, csv, text, json, yaml, or interactive output.
+.SS dashboard
+.TP
+.B grafana\-util\-dashboard\-raw\-to\-prompt(1)
+Convert ordinary dashboard JSON or raw/ lane files into Grafana UI prompt JSON with __inputs. Use when: Someone gives you a normal Grafana dashboard export, legacy raw JSON, or a raw/ lane file and you need a prompt\-safe file for the Grafana UI Upload JSON flow.
 .TP
 .B sync
 Declarative sync planning and gated apply workflows. Use command-local --help because this repo does not yet carry a generated sync namespace manpage.

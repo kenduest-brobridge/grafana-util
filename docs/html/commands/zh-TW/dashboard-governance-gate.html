@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="重點旗標">重點旗標</h2>
 <ul><li><code>--policy-source</code>：選擇 <code>file</code> 或 <code>builtin</code>。</li><li><code>--policy</code>：使用檔案型政策輸入時的政策檔路徑。</li><li><code>--builtin-policy</code>：使用內建政策輸入時的名稱。</li><li><code>--governance</code>：儀表板 inspect governance JSON 路徑。</li><li><code>--queries</code>：儀表板 inspect query-report JSON 路徑。</li><li><code>--output-format</code>：輸出文字或 JSON。</li><li><code>--json-output</code>：可選擇輸出正規化後的結果 JSON。</li><li><code>--interactive</code>：在互動式終端機瀏覽器中檢視檢查結果。</li></ul>
 <h2 id="範例">範例</h2>
-<pre><code>grafana-util dashboard governance-gate --policy-source file --policy ./policy.yaml --governance ./governance.json --queries ./queries.json
+<pre><code># 用途：針對儀表板 inspect JSON 成品套用治理政策檢查。
+grafana-util dashboard governance-gate --policy-source file --policy ./policy.yaml --governance ./governance.json --queries ./queries.json
 grafana-util dashboard governance-gate --policy-source builtin --builtin-policy default --governance ./governance.json --queries ./queries.json --output-format json --json-output ./governance-check.json</code></pre>
 <h2 id="相關指令">相關指令</h2>
 <ul><li><a href="dashboard-inspect-export.html">dashboard inspect-export</a></li><li><a href="dashboard-inspect-live.html">dashboard inspect-live</a></li><li><a href="dashboard-topology.html">dashboard topology</a></li></ul>

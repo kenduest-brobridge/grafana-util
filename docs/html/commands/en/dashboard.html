@@ -716,7 +716,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="auth-notes">Auth notes</h2>
 <ul><li>Prefer <code>--profile</code> for repeatable daily work and CI.</li><li>Use direct Basic auth for bootstrap or admin-heavy flows.</li><li>Token auth can be enough for scoped reads, but cross-org workflows such as <code>--all-orgs</code> are safer with admin-backed <code>--profile</code> or Basic auth.</li><li><code>dashboard raw-to-prompt</code> is usually offline, but it can optionally use <code>--profile</code> or live auth flags to look up datasource inventory while repairing prompt files.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code>grafana-util dashboard --help
+<pre><code># Purpose: `grafana-util dashboard` is the namespace for live dashboard workflows, local draft handling, export/import review, inspection, topology, and screenshots. The same namespace is also available as `grafana-util db`.
+grafana-util dashboard --help
 grafana-util dashboard browse --profile prod
 grafana-util dashboard browse --url http://localhost:3000 --basic-user admin --basic-password admin
 grafana-util dashboard raw-to-prompt --input-file ./legacy/cpu-main.json --profile prod --org-id 2

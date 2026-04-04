@@ -33,6 +33,22 @@ class InstallScriptTests(unittest.TestCase):
             'supported targets: linux-amd64, macos-arm64',
             content,
         )
+        self.assertIn("BIN_DIR=/custom/bin", content)
+        self.assertIn("$HOME/.local/bin", content)
+
+    def test_install_script_help_describes_bin_dir_and_path_behavior(self):
+        completed = subprocess.run(
+            ["sh", str(INSTALL_SCRIPT_PATH), "--help"],
+            cwd=str(REPO_ROOT),
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+
+        self.assertEqual(completed.returncode, 0, msg=completed.stderr)
+        self.assertIn("BIN_DIR=/custom/bin", completed.stdout)
+        self.assertIn("$HOME/.local/bin", completed.stdout)
+        self.assertIn("PATH", completed.stdout)
 
     def test_install_script_installs_from_local_archive_override(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -73,6 +89,7 @@ class InstallScriptTests(unittest.TestCase):
             self.assertTrue(installed_binary.is_file())
             self.assertTrue(os.access(installed_binary, os.X_OK))
             self.assertIn("Installed grafana-util to", completed.stdout)
+            self.assertIn("The install directory is not currently on PATH.", completed.stdout)
             self.assertIn("Add " + str(bin_dir) + " to PATH if needed:", completed.stdout)
 
             mode = installed_binary.stat().st_mode

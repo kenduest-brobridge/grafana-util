@@ -23,6 +23,7 @@ List, create, export, import, diff, or delete Grafana service accounts, and mana
 ## Examples
 
 ```bash
+# Purpose: List, create, export, import, diff, or delete Grafana service accounts, and manage their tokens.
 grafana-util access service-account list --url http://localhost:3000 --basic-user admin --basic-password admin --output-format text
 grafana-util access service-account add --url http://localhost:3000 --basic-user admin --basic-password admin --name deploy-bot --role Editor --json
 grafana-util access service-account token add --profile prod --name deploy-bot --token-name nightly

@@ -24,6 +24,7 @@ This page is especially useful when you need to decide whether the next step is 
 
 ## Examples
 ```bash
+# Purpose: `grafana-util datasource` is the namespace for catalog lookup, live browsing, export/import, diff, and live create/modify/delete workflows. The same namespace is also available as `grafana-util ds`.
 grafana-util datasource --help
 grafana-util datasource types
 grafana-util datasource browse --profile prod

@@ -12,22 +12,6 @@ when you want a single readout across dashboard, datasource, access, alert, and 
 .TP
 .B live
 render the live overview by delegating to the shared status live path. Use when: Need the same live readout that status live uses, but want it under the overview namespace.
-.SH EXAMPLES
-.PP
-summarize staged artifacts into one project\-wide overview.
-.EX
-grafana-util overview --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts --desired-file ./desired.json --output table
-.EE
-.PP
-summarize staged artifacts into one project\-wide overview.
-.EX
-grafana-util overview --source-bundle ./sync-source-bundle.json --target-inventory ./target-inventory.json --availability-file ./availability.json --mapping-file ./mapping.json --output text
-.EE
-.PP
-live: render the live overview by delegating to the shared status live path.
-.EX
-grafana-util overview live --profile prod --output yaml
-.EE
 .SH SEE ALSO
 \fBgrafana-util\fR(1),
 \fBgrafana-util-status\fR(1),

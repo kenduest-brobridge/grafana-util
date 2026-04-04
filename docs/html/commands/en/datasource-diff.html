@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="key-flags">Key flags</h2>
 <ul><li><code>--diff-dir</code>: local datasource bundle to compare.</li><li><code>--input-format</code>: choose <code>inventory</code> or <code>provisioning</code>.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code>grafana-util datasource diff --url http://localhost:3000 --basic-user admin --basic-password admin --diff-dir ./datasources --input-format inventory
+<pre><code># Purpose: Compare datasource inventory from a local bundle against live Grafana and print an operator-summary diff report.
+grafana-util datasource diff --url http://localhost:3000 --basic-user admin --basic-password admin --diff-dir ./datasources --input-format inventory
 grafana-util datasource diff --profile prod --diff-dir ./datasources/provisioning --input-format provisioning</code></pre>
 <h2 id="related-commands">Related commands</h2>
 <ul><li><a href="datasource-export.html">datasource export</a></li><li><a href="datasource-import.html">datasource import</a></li><li><a href="datasource-inspect-export.html">datasource inspect-export</a></li></ul>

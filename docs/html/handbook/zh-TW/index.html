@@ -694,20 +694,25 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <p>歡迎來到 <code>grafana-util</code> 的維運手冊。這份手冊會帶你從安裝、連線、profile 這些基本設定開始，一路看到日常維運、自動化流程，以及整體 Grafana 環境怎麼管。</p>
 <p>如果你想先知道這個工具到底在解什麼問題、適合哪些工作、什麼情況不一定要先用它，建議先看：</p>
 <ul><li><a href="what-is-grafana-util.html">這個工具是做什麼的</a></li></ul>
+<h2 id="適用對象">適用對象</h2>
+<ul><li>想先看完章節地圖，再決定從哪裡開始的人</li><li>想先知道這份手冊涵蓋哪些工作流的人</li><li>想快速切到角色導讀、完整參考或指令索引的人</li></ul>
+<h2 id="主要目標">主要目標</h2>
+<ul><li>先讓你看懂這份手冊在解什麼問題</li><li>幫你快速找到適合自己角色的路線</li><li>讓你知道何時該看手冊、何時該直接查指令頁</li></ul>
 <h2 id="30-秒快速上手-quick-start">30 秒快速上手 (Quick Start)</h2>
 <p>只要三個指令，就能從零開始確認安裝、連線，並快速掌握目前環境狀態。</p>
 <h3 id="1-安裝-全域-binary">1. 安裝 (全域 Binary)</h3>
 <pre><code># 從原始碼儲存庫下載並安裝最新版本到本地 bin 目錄
 curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-utils/main/scripts/install.sh | sh</code></pre>
 <h3 id="2-確認安裝版本">2. 確認安裝版本</h3>
-<pre><code>grafana-util --version</code></pre>
+<pre><code># 用途：2. 確認安裝版本。
+grafana-util --version</code></pre>
 <h3 id="3-執行第一次完整巡檢">3. 執行第一次完整巡檢</h3>
 <pre><code># 產生整個 Grafana Estate 的高階健康度與資產盤點報告
 grafana-util overview live --url http://localhost:3000 --basic-user admin --prompt-password --output interactive</code></pre>
 <p><strong>為什麼這很重要？</strong> 30 秒內，你就能先確認連線正常，快速看 Dashboard、Alert 和 data source 的狀態，也能先看出哪些設定可能已經失效。</p>
 <h2 id="章節導覽-navigation-map">章節導覽 (Navigation Map)</h2>
 <h3 id="第一階段奠定基礎">第一階段：奠定基礎</h3>
-<ul><li><strong><a href="what-is-grafana-util.html">這個工具是做什麼的</a></strong>：先看它在解哪些痛點、適合哪些維運工作。</li><li><strong><a href="getting-started.html">開始使用 (Getting Started)</a></strong>：先看安裝、連線、profile 與認證怎麼配合。</li><li><strong><a href="role-new-user.html">新手快速入門</a></strong>：從第一次連線到第一次成功 live read 的最短安全路線。</li><li><strong><a href="role-sre-ops.html">SRE / 維運角色導讀</a></strong>：適合日常維運、review-first 變更流程與排障。</li><li><strong><a href="role-automation-ci.html">自動化 / CI 角色導讀</a></strong>：適合腳本、自動化與輸出格式相關工作。</li><li><strong><a href="architecture.html">系統架構與設計原則</a></strong>：說明核心設計決策和背後取捨。</li></ul>
+<ul><li><strong><a href="what-is-grafana-util.html">這個工具是做什麼的</a></strong>：先看它在解哪些痛點、適合哪些維運工作。</li><li><strong><a href="getting-started.html">開始使用 (Getting Started)</a></strong>：先看安裝、連線、profile 與認證怎麼配合。</li><li><strong><a href="role-new-user.html">新手快速入門</a></strong>：從第一次連線到第一次成功讀到 live 狀態的最短安全路線。</li><li><strong><a href="role-sre-ops.html">SRE / 維運角色導讀</a></strong>：適合日常維運、先審查再變更的流程與排障。</li><li><strong><a href="role-automation-ci.html">自動化 / CI 角色導讀</a></strong>：適合腳本、自動化與輸出格式相關工作。</li><li><strong><a href="architecture.html">系統架構與設計原則</a></strong>：說明核心設計決策和背後取捨。</li></ul>
 <h3 id="第二階段核心資產管理">第二階段：核心資產管理</h3>
 <ul><li><strong><a href="dashboard.html">Dashboard 管理</a></strong>：看儀表板匯出、匯入與即時分析。</li><li><strong><a href="datasource.html">Data source 管理</a></strong>：看 data source 的匯出、匯入與即時異動。</li><li><strong><a href="alert.html">告警治理</a></strong>：看告警規則的 plan / apply 管理流程。</li></ul>
 <h3 id="第三階段身份與存取">第三階段：身份與存取</h3>
@@ -722,7 +727,7 @@ grafana-util overview live --url http://localhost:3000 --basic-user admin --prom
 <p>先看 <a href="role-sre-ops.html">SRE / 維運角色導讀</a>，再看 <a href="change-overview-status.html">變更與狀態</a>、<a href="dashboard.html">Dashboard 管理</a>、<a href="datasource.html">Data source 管理</a>、<a href="troubleshooting.html">疑難排解</a>。</p>
 <p>先看 <a href="access.html">Access 管理</a>，再看 <a href="reference.html">技術參考手冊</a>，最後搭配 <a href="../../commands/zh-TW/index.html">指令詳細說明</a>。</p>
 <p>先看 <a href="role-automation-ci.html">自動化 / CI 角色導讀</a>，再看 <a href="reference.html">技術參考手冊</a>，需要終端機版摘要時可搭配 <code>docs/man/grafana-util.1</code>。</p>
-<p>先看 <a href="../../developer.html">docs/DEVELOPER.md</a>，再看 <a href="../../internal/maintainer-role-map.md">maintainer-role-map.md</a> 與 <a href="../../internal/README.md">docs/internal/README.md</a> 下面的設計與維護文件。</p>
+<p>先看 <a href="../DEVELOPER.html">DEVELOPER.md</a>，再看 <a href="../internal/maintainer-role-map.html">maintainer-role-map.md</a> 與 <a href="../internal/README.html">internal README</a> 裡的設計與維護文件。</p>
 <ul><li><strong>新使用者</strong></li><li><strong>SRE / 維運人員</strong></li><li><strong>身份 / 權限管理者</strong></li><li><strong>自動化 / CI 維護者</strong></li><li><strong>維護者 / 架構師</strong></li></ul>
 <h2 id="如何使用這份導航">如何使用這份導航？</h2>
 <p>如果你是第一次使用，建議先從「<strong>開始使用</strong>」進去。每頁最下方都有 <strong>「下一章」</strong> 連結，可以照順序一路讀下去。</p>
@@ -730,7 +735,7 @@ grafana-util overview live --url http://localhost:3000 --basic-user admin --prom
     <nav class="footer-nav"><a class="link-card" href="what-is-grafana-util.html"><span>Next</span>這個工具是做什麼的</a></nav>
   </article>
   <aside class="sidebar">
-  <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#語言切換"><span class="toc-label">語言切換</span></a></li><li class="toc-level-2"><a href="#30-秒快速上手-quick-start"><span class="toc-label">30 秒快速上手 (Quick Start)</span></a></li><li class="toc-level-3"><a href="#1-安裝-全域-binary"><span class="toc-label">1. 安裝 (全域 Binary)</span></a></li><li class="toc-level-3"><a href="#2-確認安裝版本"><span class="toc-label">2. 確認安裝版本</span></a></li><li class="toc-level-3"><a href="#3-執行第一次完整巡檢"><span class="toc-label">3. 執行第一次完整巡檢</span></a></li><li class="toc-level-2"><a href="#章節導覽-navigation-map"><span class="toc-label">章節導覽 (Navigation Map)</span></a></li><li class="toc-level-3"><a href="#第一階段奠定基礎"><span class="toc-label">第一階段：奠定基礎</span></a></li><li class="toc-level-3"><a href="#第二階段核心資產管理"><span class="toc-label">第二階段：核心資產管理</span></a></li><li class="toc-level-3"><a href="#第三階段身份與存取"><span class="toc-label">第三階段：身份與存取</span></a></li><li class="toc-level-3"><a href="#第四階段治理與整備度"><span class="toc-label">第四階段：治理與整備度</span></a></li><li class="toc-level-3"><a href="#第五階段深度探索"><span class="toc-label">第五階段：深度探索</span></a></li><li class="toc-level-2"><a href="#依角色選擇閱讀路徑"><span class="toc-label">依角色選擇閱讀路徑</span></a></li><li class="toc-level-2"><a href="#如何使用這份導航"><span class="toc-label">如何使用這份導航？</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/index.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
+  <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#語言切換"><span class="toc-label">語言切換</span></a></li><li class="toc-level-2"><a href="#適用對象"><span class="toc-label">適用對象</span></a></li><li class="toc-level-2"><a href="#主要目標"><span class="toc-label">主要目標</span></a></li><li class="toc-level-2"><a href="#30-秒快速上手-quick-start"><span class="toc-label">30 秒快速上手 (Quick Start)</span></a></li><li class="toc-level-3"><a href="#1-安裝-全域-binary"><span class="toc-label">1. 安裝 (全域 Binary)</span></a></li><li class="toc-level-3"><a href="#2-確認安裝版本"><span class="toc-label">2. 確認安裝版本</span></a></li><li class="toc-level-3"><a href="#3-執行第一次完整巡檢"><span class="toc-label">3. 執行第一次完整巡檢</span></a></li><li class="toc-level-2"><a href="#章節導覽-navigation-map"><span class="toc-label">章節導覽 (Navigation Map)</span></a></li><li class="toc-level-3"><a href="#第一階段奠定基礎"><span class="toc-label">第一階段：奠定基礎</span></a></li><li class="toc-level-3"><a href="#第二階段核心資產管理"><span class="toc-label">第二階段：核心資產管理</span></a></li><li class="toc-level-3"><a href="#第三階段身份與存取"><span class="toc-label">第三階段：身份與存取</span></a></li><li class="toc-level-3"><a href="#第四階段治理與整備度"><span class="toc-label">第四階段：治理與整備度</span></a></li><li class="toc-level-3"><a href="#第五階段深度探索"><span class="toc-label">第五階段：深度探索</span></a></li><li class="toc-level-2"><a href="#依角色選擇閱讀路徑"><span class="toc-label">依角色選擇閱讀路徑</span></a></li><li class="toc-level-2"><a href="#如何使用這份導航"><span class="toc-label">如何使用這份導航？</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/index.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
 </aside>
 
 </div>

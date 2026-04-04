@@ -2,6 +2,18 @@
 
 理解 `grafana-util` 的設計原則，會幫助你在管理較大規模的 Grafana 環境時做出比較穩定的判斷。這一章不只解釋為什麼這樣設計，也會說明這些設計會怎麼影響實際操作。
 
+## 適用對象
+
+- 想理解這套工具為什麼這樣分層的人
+- 要決定團隊怎麼用 status / overview / change 的人
+- 想知道 lane、masked recovery 與 staged/live 差異的人
+
+## 主要目標
+
+- 先把操作面分清楚
+- 再把資產路徑與 secret 管理規則看懂
+- 最後理解 dashboard 與 alert 為什麼故意走不同模型
+
 如果想對照這些概念實際對應到哪些指令，請搭配 [status](../../commands/zh-TW/status.md)、[overview](../../commands/zh-TW/overview.md)、[change](../../commands/zh-TW/change.md) 與 [dashboard](../../commands/zh-TW/dashboard.md) 一起看。
 
 ---

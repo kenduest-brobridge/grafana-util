@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="key-flags">Key flags</h2>
 <ul><li><code>--desired-dir</code> points to the staged alert desired-state tree.</li><li><code>--prune</code> marks live-only resources as delete candidates.</li><li><code>--dashboard-uid-map</code> and <code>--panel-id-map</code> repair linked alert rules.</li><li><code>--output</code> renders the plan as <code>text</code> or <code>json</code>.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code>grafana-util alert plan --desired-dir ./alerts/desired
+<pre><code># Purpose: Build a staged alert management plan from desired alert resources.
+grafana-util alert plan --desired-dir ./alerts/desired
 grafana-util alert plan --desired-dir ./alerts/desired --prune --dashboard-uid-map ./dashboard-map.json --panel-id-map ./panel-map.json --output json</code></pre>
 <h2 id="related-commands">Related commands</h2>
 <ul><li><a href="alert.html">alert</a></li><li><a href="alert-apply.html">alert apply</a></li><li><a href="alert-delete.html">alert delete</a></li></ul>

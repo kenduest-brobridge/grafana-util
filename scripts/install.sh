@@ -19,6 +19,38 @@ fail() {
   exit 1
 }
 
+print_help() {
+  cat <<'EOF'
+Usage:
+  curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-utils/main/scripts/install.sh | sh
+
+Environment overrides:
+  VERSION=0.7.4           Install one specific release tag instead of latest.
+  BIN_DIR=/custom/bin     Install the binary into one writable directory.
+  REPO=owner/repo         Override the GitHub repository source.
+  ASSET_URL=file:///...   Install from one explicit archive URL.
+  BINARY_NAME=name        Override the binary name inside the archive.
+  RUST_ARTIFACT_FLAVOR=browser
+                          Install the browser-enabled archive lane.
+
+Install directory selection:
+  1. Use BIN_DIR if you set it.
+  2. Otherwise use /usr/local/bin when it exists and is writable.
+  3. Otherwise fall back to $HOME/.local/bin.
+
+After install:
+  If the install directory is not already on PATH, the script prints the
+  exact export command to add it for the current shell.
+EOF
+}
+
+case "${1:-}" in
+  -h|--help|help)
+    print_help
+    exit 0
+    ;;
+esac
+
 command -v curl >/dev/null 2>&1 || fail "curl is required"
 command -v tar >/dev/null 2>&1 || fail "tar is required"
 command -v install >/dev/null 2>&1 || fail "install is required"
@@ -138,15 +170,22 @@ log "Installed ${BINARY_NAME} to ${target_path}"
 case ":${PATH:-}:" in
   *:"${install_dir}":*) ;;
   *)
+    shell_name=$(basename "${SHELL:-sh}")
     log ""
+    log "The install directory is not currently on PATH."
     log "Add ${install_dir} to PATH if needed:"
-    log "  export PATH=\"${install_dir}:\$PATH\""
+    case "$shell_name" in
+      zsh)
+        log "  echo 'export PATH=\"${install_dir}:\$PATH\"' >> ~/.zshrc"
+        log "  exec zsh"
+        ;;
+      bash)
+        log "  echo 'export PATH=\"${install_dir}:\$PATH\"' >> ~/.bashrc"
+        log "  exec bash"
+        ;;
+      *)
+        log "  export PATH=\"${install_dir}:\$PATH\""
+        ;;
+    esac
     ;;
 esac
-resolve_artifact_suffix() {
-  case "$RUST_ARTIFACT_FLAVOR" in
-    standard) printf '%s\n' "" ;;
-    browser) printf '%s\n' "-browser" ;;
-    *) fail "unsupported RUST_ARTIFACT_FLAVOR: ${RUST_ARTIFACT_FLAVOR}; supported values: standard, browser" ;;
-  esac
-}

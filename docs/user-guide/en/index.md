@@ -9,7 +9,9 @@
 
 ---
 
-Welcome to the `grafana-util` handbook. Start here if you want the operator path from first connection, to repeatable profiles, to day-to-day Grafana maintenance and automation.
+Welcome to the `grafana-util` handbook. Start here if you need a practical operator path from first connection, to repeatable profiles, to day-to-day Grafana maintenance and automation.
+
+This handbook is organized around the way operators actually work: first understand what the tool is for, then get a safe connection working, then move into dashboards, alerts, access, and review workflows.
 
 If you want the high-level framing first, including the pain points this tool is meant to solve and when it is the right fit, start here:
 
@@ -29,6 +31,7 @@ curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-utils/mai
 
 ### 2. Confirm the Installed Version
 ```bash
+# Purpose: 2. Confirm the Installed Version.
 grafana-util --version
 ```
 
@@ -53,7 +56,7 @@ grafana-util overview live --url http://localhost:3000 --basic-user admin --prom
 *   **[Architecture & Design Principles](architecture.md)**: The reasoning behind the workflow and command design.
 
 ### Phase 2: Core Asset Management
-*   **[Dashboard Management](dashboard.md)**: Export, import, inspection, screenshots, and governance checks.
+*   **[Dashboard Management](dashboard.md)**: Export, import, inspection, screenshots, and governance checks for dashboard assets.
 *   **[Data source Management](datasource.md)**: Export, import, inspection, and live mutation guidance for Grafana data sources.
 *   **[Alerting Governance](alert.md)**: Review, planning, and apply flow for Grafana alerts.
 
@@ -66,7 +69,7 @@ grafana-util overview live --url http://localhost:3000 --basic-user admin --prom
 ### Phase 5: Deep Dive
 *   **[Practical Scenarios](scenarios.md)**: end-to-end task recipes such as backups, DR, and audits.
 *   **[Best Practices & Recipes](recipes.md)**: recommended ways to handle common Grafana operator problems.
-*   **[Technical Reference](reference.md)**: command map, profile behavior, common flags, and output guidance.
+*   **[Technical Reference](reference.md)**: command map, profile behavior, auth handling, common flags, and output guidance.
 *   **[Command Docs](../../commands/en/index.md)**: One page per command and subcommand, aligned to the current Rust CLI help.
 *   **[Troubleshooting & Glossary](troubleshooting.md)**: Diagnostic guides and terminology index.
 
@@ -79,7 +82,7 @@ Different readers usually need different paths through the handbook:
 *   **New user**
   Start with [What grafana-util is for](what-is-grafana-util.md), then [New User Path](role-new-user.md), then [Getting Started](getting-started.md), then open [Command Docs](../../commands/en/index.md) when you need exact flags.
 *   **SRE / operator**
-  Start with [SRE / Ops Path](role-sre-ops.md), then [Change & Status](change-overview-status.md), [Dashboard Management](dashboard.md), [Datasource Management](datasource.md), and [Troubleshooting](troubleshooting.md).
+  Start with [SRE / Ops Path](role-sre-ops.md), then [Change & Status](change-overview-status.md), [Dashboard Management](dashboard.md), [Data source Management](datasource.md), and [Troubleshooting](troubleshooting.md).
 *   **Identity / access administrator**
   Start with [Access Management](access.md), then [Technical Reference](reference.md), then the [Command Docs](../../commands/en/index.md).
 *   **Automation / CI owner**

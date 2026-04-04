@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="重點旗標">重點旗標</h2>
 <ul><li><code>--dashboard-uid</code> 或 <code>--dashboard-url</code>：選擇要檢查的儀表板。</li><li><code>--vars-query</code>：疊加變數查詢字串，例如 <code>var-env=prod&amp;var-host=web01</code>。</li><li><code>--org-id</code>：將檢查限制在單一 org。</li><li><code>--output-format</code>：輸出 <code>table</code>、<code>csv</code>、<code>text</code>、<code>json</code> 或 <code>yaml</code>。</li><li><code>--no-header</code>：隱藏表格或 CSV 標頭。</li><li><code>--output-file</code>：將輸出複本寫到磁碟。</li></ul>
 <h2 id="範例">範例</h2>
-<pre><code>grafana-util dashboard inspect-vars --profile prod --dashboard-uid cpu-main --vars-query &#x27;var-cluster=prod-a&amp;var-instance=node01&#x27; --output-format json
+<pre><code># 用途：列出線上 Grafana 的儀表板模板變數與類似 datasource 的選項。
+grafana-util dashboard inspect-vars --profile prod --dashboard-uid cpu-main --vars-query &#x27;var-cluster=prod-a&amp;var-instance=node01&#x27; --output-format json
 grafana-util dashboard inspect-vars --url https://grafana.example.com --dashboard-uid cpu-main --vars-query &#x27;var-cluster=prod-a&amp;var-instance=node01&#x27; --basic-user admin --prompt-password --output-format json
 grafana-util dashboard inspect-vars --dashboard-url &#x27;https://grafana.example.com/d/cpu-main/cpu-overview?var-cluster=prod-a&#x27; --token &quot;$GRAFANA_API_TOKEN&quot; --output-format table</code></pre>
 <h2 id="相關指令">相關指令</h2>

@@ -8,17 +8,6 @@ grafana\-util\-change\-apply \- build a gated apply intent from a reviewed sync 
 build a gated apply intent from a reviewed sync plan, and optionally execute it live.
 .PP
 when a plan is already reviewed and you are ready to emit or execute the apply step.
-.SH EXAMPLES
-.PP
-build a gated apply intent from a reviewed sync plan, and optionally execute it live.
-.EX
-grafana-util change apply --plan-file ./sync-plan-reviewed.json --approve
-.EE
-.PP
-build a gated apply intent from a reviewed sync plan, and optionally execute it live.
-.EX
-grafana-util change apply --plan-file ./sync-plan-reviewed.json --approve --execute-live --allow-folder-delete --profile prod
-.EE
 .SH SEE ALSO
 \fBgrafana-util\fR(1),
 \fBgrafana-util-change\fR(1)

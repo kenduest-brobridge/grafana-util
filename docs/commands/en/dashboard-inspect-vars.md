@@ -16,6 +16,7 @@ Use this when you need to inspect variable state, feed a screenshot workflow, or
 
 ## Examples
 ```bash
+# Purpose: List dashboard templating variables and datasource-like choices from live Grafana.
 grafana-util dashboard inspect-vars --dashboard-url 'https://grafana.example.com/d/cpu-main/cpu-overview?var-cluster=prod-a' --profile prod --output-format table
 grafana-util dashboard inspect-vars --url https://grafana.example.com --dashboard-uid cpu-main --vars-query 'var-cluster=prod-a&var-instance=node01' --basic-user admin --prompt-password --output-format json
 ```

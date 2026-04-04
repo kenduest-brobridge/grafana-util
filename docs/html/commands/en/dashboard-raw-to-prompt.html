@@ -717,7 +717,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="placeholder-model">Placeholder model</h2>
 <ul><li><code>$datasource</code> is a dashboard variable reference. It means the dashboard or panel is selecting a datasource through a Grafana variable named <code>datasource</code>.</li><li><code>${DS_PROMETHEUS}</code> or <code>${DS_*}</code> is an external-import input placeholder. It means Grafana should ask for a datasource during <code>Upload JSON</code> and then inject the selected value.</li><li>These are related but not identical. A generated prompt file can legitimately contain both:</li><li><code>${DS_*}</code> in <code>__inputs</code> and some typed datasource references</li><li><code>$datasource</code> in panel-level datasource fields that intentionally keep the dashboard-variable flow</li><li><code>raw-to-prompt</code> tries to preserve that distinction instead of flattening everything into one placeholder style.</li><li>If a dashboard historically used Grafana datasource variables, the migrated prompt may still contain <code>$datasource</code> alongside <code>__inputs</code>.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code>grafana-util dashboard raw-to-prompt --input-file ./dashboards/raw/cpu-main.json
+<pre><code># Purpose: Convert ordinary dashboard JSON or `raw/` lane files into Grafana UI prompt JSON with `__inputs`.
+grafana-util dashboard raw-to-prompt --input-file ./dashboards/raw/cpu-main.json
 grafana-util dashboard raw-to-prompt --input-file ./legacy/cpu.json --input-file ./legacy/logs.json --progress
 grafana-util dashboard raw-to-prompt --input-dir ./dashboards/raw --overwrite
 grafana-util dashboard raw-to-prompt --input-dir ./legacy-json --output-dir ./converted/prompt --output-format table

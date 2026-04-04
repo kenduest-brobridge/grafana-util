@@ -713,7 +713,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="說明">說明</h2>
 <ul><li>一般單一 org 匯出可優先用 <code>--profile</code>。</li><li><code>--all-orgs</code> 最好搭配管理員憑證支援的 <code>--profile</code> 或直接 Basic auth，因為 token 的可見範圍可能不足以涵蓋所有 org。</li></ul>
 <h2 id="範例">範例</h2>
-<pre><code>grafana-util dashboard export --profile prod --export-dir ./dashboards --overwrite
+<pre><code># 用途：將儀表板匯出成 `raw/`、`prompt/` 與 `provisioning/` 檔案。
+grafana-util dashboard export --profile prod --export-dir ./dashboards --overwrite
 grafana-util dashboard export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --export-dir ./dashboards --overwrite
 grafana-util dashboard export --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --export-dir ./dashboards --overwrite</code></pre>
 <h2 id="相關指令">相關指令</h2>

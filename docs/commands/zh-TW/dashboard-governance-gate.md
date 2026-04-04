@@ -18,6 +18,7 @@
 
 ## 範例
 ```bash
+# 用途：針對儀表板 inspect JSON 成品套用治理政策檢查。
 grafana-util dashboard governance-gate --policy-source file --policy ./policy.yaml --governance ./governance.json --queries ./queries.json
 grafana-util dashboard governance-gate --policy-source builtin --builtin-policy default --governance ./governance.json --queries ./queries.json --output-format json --json-output ./governance-check.json
 ```

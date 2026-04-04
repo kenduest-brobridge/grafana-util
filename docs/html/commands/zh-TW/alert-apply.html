@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="主要旗標">主要旗標</h2>
 <ul><li><code>--plan-file</code> 指向已審閱的計畫文件。</li><li><code>--approve</code> 是允許執行前的必要確認。</li><li><code>--output</code> 可將套用輸出呈現為 <code>text</code> 或 <code>json</code>。</li></ul>
 <h2 id="範例">範例</h2>
-<pre><code>grafana-util alert apply --profile prod --plan-file ./alert-plan-reviewed.json --approve
+<pre><code># 用途：套用一份已審閱過的 alert 管理計畫。
+grafana-util alert apply --profile prod --plan-file ./alert-plan-reviewed.json --approve
 grafana-util alert apply --url http://localhost:3000 --basic-user admin --basic-password admin --plan-file ./alert-plan-reviewed.json --approve
 grafana-util alert apply --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --plan-file ./alert-plan-reviewed.json --approve</code></pre>
 <h2 id="相關命令">相關命令</h2>

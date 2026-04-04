@@ -1,6 +1,18 @@
 # Access Management (Identity & Access)
 
-Manage the identity and access layer of your Grafana estate: orgs, users, teams, and service accounts.
+Use this chapter when identity and access are the task: org boundaries, users, teams, service accounts, and the tokens that let automation act safely.
+
+## Who It Is For
+
+- Administrators managing org, user, team, or service-account lifecycle work.
+- Operators exporting or replaying identity state across environments.
+- Teams rotating service-account tokens or auditing access drift.
+
+## Primary Goals
+
+- Clarify which access surface matches the task before running mutations.
+- Keep org, user, team, and service-account inventory reviewable.
+- Treat token rotation and access replay as controlled workflows instead of one-off edits.
 
 ## Command Pages
 
@@ -18,10 +30,11 @@ Need the command-by-command surface instead of the workflow guide?
 
 ## org Management
 
-Use `access org` when you need Basic-auth-backed inventory, export, or replay for orgs.
+Use `access org` when you need Basic-auth-backed inventory, export, or replay for orgs, especially when you need to verify which orgs exist before a cross-org change.
 
 ### 1. List, Export, and Replay orgs
 ```bash
+# Purpose: 1. List, Export, and Replay orgs.
 grafana-util access org list --table
 grafana-util access org export --export-dir ./access-orgs
 grafana-util access org import --import-dir ./access-orgs --dry-run
@@ -45,7 +58,7 @@ Use the list output to confirm the main org, then export/import when you need a 
 
 ## User and team management
 
-Use `access user` and `access team` for membership changes, snapshots, and drift checks.
+Use `access user` and `access team` for membership changes, snapshots, and drift checks when you need to reconcile who can see or edit what.
 
 ### 1. Add, Modify, and Diff Users
 ```bash
@@ -68,6 +81,7 @@ Use `--prompt-password` when you do not want a password in shell history. `--sco
 
 ### 2. Discover and Sync Teams
 ```bash
+# Purpose: 2. Discover and Sync Teams.
 grafana-util access team list --org-id 1 --table
 grafana-util access team export --export-dir ./access-teams --with-members
 grafana-util access team import --import-dir ./access-teams --replace-existing --dry-run --table
@@ -90,10 +104,11 @@ Use `--with-members` when the export must preserve membership state, and use `--
 
 ## service account management
 
-Service accounts are the foundation of automated pipelines.
+Service accounts are the foundation of repeatable automation, CI jobs, and scoped integrations.
 
 ### 1. List and Export Service Accounts
 ```bash
+# Purpose: 1. List and Export Service Accounts.
 grafana-util access service-account list --json
 grafana-util access service-account export --export-dir ./access-sa
 ```
@@ -155,6 +170,7 @@ Use `--json` when you need the one-time `key` field. Plain text is better for lo
 Compare your local identity snapshots against the live Grafana server.
 
 ```bash
+# Purpose: Compare your local identity snapshots against the live Grafana server.
 grafana-util access user diff --import-dir ./access-users
 grafana-util access team diff --diff-dir ./access-teams
 grafana-util access service-account diff --diff-dir ./access-sa

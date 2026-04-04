@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="主要旗標">主要旗標</h2>
 <ul><li><code>--kind</code> 選擇要刪除的資源種類。</li><li><code>--identity</code> 提供明確的資源識別。</li><li><code>--allow-policy-reset</code> 允許重設政策樹。</li><li><code>--output</code> 可將刪除預覽或執行結果呈現為 <code>text</code> 或 <code>json</code>。</li></ul>
 <h2 id="範例">範例</h2>
-<pre><code>grafana-util alert delete --profile prod --kind rule --identity cpu-main
+<pre><code># 用途：刪除一個明確指定的 alert 資源識別。
+grafana-util alert delete --profile prod --kind rule --identity cpu-main
 grafana-util alert delete --url http://localhost:3000 --basic-user admin --basic-password admin --kind policy-tree --identity default --allow-policy-reset
 grafana-util alert delete --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --kind rule --identity cpu-main</code></pre>
 <h2 id="相關命令">相關命令</h2>

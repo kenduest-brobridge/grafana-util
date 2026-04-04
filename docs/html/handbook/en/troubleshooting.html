@@ -689,14 +689,20 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h1><span class="hero-title-main">Troubleshooting &amp; Glossary</span></h1>
 
 
-    <p>This chapter helps you diagnose real failures instead of guessing. The most useful split is not just &quot;error code versus no error code&quot;, but:</p>
+    <p>Use this chapter when a command looks syntactically correct but the result is wrong, incomplete, or inconsistent with what you expected.</p>
+<h2 id="who-it-is-for">Who It Is For</h2>
+<ul><li>Operators who can run the command, but do not trust the outcome yet.</li><li>Engineers trying to separate auth, scope, staged-input, and live-state problems.</li><li>Teams building a repeatable debugging flow instead of ad hoc trial and error.</li></ul>
+<h2 id="primary-goals">Primary Goals</h2>
+<ul><li>Identify the category of failure before changing credentials or inputs.</li><li>Point you to the right companion chapter or command reference quickly.</li><li>Keep debugging focused on facts you can verify from the CLI.</li></ul>
+<p>It helps you diagnose real failures instead of guessing. The most useful split is not just &quot;error code versus no error code&quot;, but:</p>
 <ul><li>auth versus scope</li><li>live versus staged</li><li>command shape versus output shape</li><li>local profile wiring versus remote Grafana behavior</li></ul>
 <p>If you are tracing auth or connection setup, keep <a href="../../commands/en/profile.html">profile</a>, <a href="../../commands/en/status.html">status</a>, <a href="../../commands/en/overview.html">overview</a>, and <a href="../../commands/en/access.html">access</a> open beside this chapter.</p>
 <h2 id="debugging-the-cli">Debugging the CLI</h2>
 <p>When a command fails or behaves unexpectedly, use these techniques to look under the hood.</p>
 <h3 id="1-enable-verbose-logging">1. Enable verbose logging</h3>
 <p><code>grafana-util</code> uses standard Rust logging. You can increase verbosity to see the exact API requests and responses.</p>
-<pre><code>RUST_LOG=debug grafana-util overview live --profile prod
+<pre><code># Purpose: grafana-util uses standard Rust logging. You can increase verbosity to see the exact API requests and responses.
+RUST_LOG=debug grafana-util overview live --profile prod
 grafana-util dashboard list -v</code></pre>
 <p>Use this when you need to answer:</p>
 <ul><li>did the CLI call the host you expected?</li><li>was the request rejected by auth, scope, or network?</li><li>did the command shape differ from what the docs led you to expect?</li></ul>
@@ -724,7 +730,7 @@ grafana-util dashboard list -v</code></pre>
     <nav class="footer-nav"><a class="link-card" href="reference.html"><span>Previous</span>Technical Reference</a></nav>
   </article>
   <aside class="sidebar">
-  <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#debugging-the-cli"><span class="toc-label">Debugging the CLI</span></a></li><li class="toc-level-3"><a href="#1-enable-verbose-logging"><span class="toc-label">1. Enable verbose logging</span></a></li><li class="toc-level-3"><a href="#2-common-errors-and-fast-fixes"><span class="toc-label">2. Common errors and fast fixes</span></a></li><li class="toc-level-3"><a href="#3-scope-and-auth-mismatches"><span class="toc-label">3. Scope and auth mismatches</span></a></li><li class="toc-level-3"><a href="#4-staged-vs-live-confusion"><span class="toc-label">4. Staged vs live confusion</span></a></li><li class="toc-level-3"><a href="#5-secret-and-profile-problems"><span class="toc-label">5. Secret and profile problems</span></a></li><li class="toc-level-3"><a href="#6-output-mode-mistakes"><span class="toc-label">6. Output-mode mistakes</span></a></li><li class="toc-level-2"><a href="#glossary-of-terms"><span class="toc-label">Glossary of Terms</span></a></li><li class="toc-level-2"><a href="#getting-more-help"><span class="toc-label">Getting More Help</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: English</a></li><li><a href="../zh-TW/troubleshooting.html" class="sidebar-meta-link">Switch to 繁體中文</a></li></ul></section>
+  <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#who-it-is-for"><span class="toc-label">Who It Is For</span></a></li><li class="toc-level-2"><a href="#primary-goals"><span class="toc-label">Primary Goals</span></a></li><li class="toc-level-2"><a href="#debugging-the-cli"><span class="toc-label">Debugging the CLI</span></a></li><li class="toc-level-3"><a href="#1-enable-verbose-logging"><span class="toc-label">1. Enable verbose logging</span></a></li><li class="toc-level-3"><a href="#2-common-errors-and-fast-fixes"><span class="toc-label">2. Common errors and fast fixes</span></a></li><li class="toc-level-3"><a href="#3-scope-and-auth-mismatches"><span class="toc-label">3. Scope and auth mismatches</span></a></li><li class="toc-level-3"><a href="#4-staged-vs-live-confusion"><span class="toc-label">4. Staged vs live confusion</span></a></li><li class="toc-level-3"><a href="#5-secret-and-profile-problems"><span class="toc-label">5. Secret and profile problems</span></a></li><li class="toc-level-3"><a href="#6-output-mode-mistakes"><span class="toc-label">6. Output-mode mistakes</span></a></li><li class="toc-level-2"><a href="#glossary-of-terms"><span class="toc-label">Glossary of Terms</span></a></li><li class="toc-level-2"><a href="#getting-more-help"><span class="toc-label">Getting More Help</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: English</a></li><li><a href="../zh-TW/troubleshooting.html" class="sidebar-meta-link">Switch to 繁體中文</a></li></ul></section>
 </aside>
 
 </div>

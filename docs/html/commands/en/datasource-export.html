@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="key-flags">Key flags</h2>
 <ul><li><code>--export-dir</code>: target directory for the export tree.</li><li><code>--org-id</code>: export one explicit Grafana org.</li><li><code>--all-orgs</code>: export each visible org into per-org subdirectories. Requires Basic auth.</li><li><code>--overwrite</code>: replace existing files.</li><li><code>--without-datasource-provisioning</code>: skip the provisioning variant.</li><li><code>--dry-run</code>: preview what would be written.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code>grafana-util datasource export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./datasources --overwrite
+<pre><code># Purpose: Export live Grafana datasource inventory as normalized JSON plus provisioning files.
+grafana-util datasource export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./datasources --overwrite
 grafana-util datasource export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --export-dir ./datasources --overwrite</code></pre>
 <h2 id="related-commands">Related commands</h2>
 <ul><li><a href="datasource-inspect-export.html">datasource inspect-export</a></li><li><a href="datasource-import.html">datasource import</a></li><li><a href="datasource-diff.html">datasource diff</a></li></ul>

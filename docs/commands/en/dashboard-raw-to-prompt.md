@@ -48,6 +48,7 @@ Use this when someone gives you a normal Grafana dashboard export, legacy raw JS
 
 ## Examples
 ```bash
+# Purpose: Convert ordinary dashboard JSON or `raw/` lane files into Grafana UI prompt JSON with `__inputs`.
 grafana-util dashboard raw-to-prompt --input-file ./dashboards/raw/cpu-main.json
 grafana-util dashboard raw-to-prompt --input-file ./legacy/cpu.json --input-file ./legacy/logs.json --progress
 grafana-util dashboard raw-to-prompt --input-dir ./dashboards/raw --overwrite

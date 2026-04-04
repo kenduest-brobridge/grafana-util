@@ -13,6 +13,7 @@ Key flags: the root command is a namespace; the main operational flags live on t
 Examples:
 
 ```bash
+# Purpose: Root.
 grafana-util change summary --desired-file ./desired.json
 grafana-util change plan --desired-file ./desired.json --fetch-live --profile prod
 grafana-util change apply --plan-file ./sync-plan-reviewed.json --approve --execute-live --profile prod
@@ -31,6 +32,7 @@ Key flags: `--desired-file`, `--output`.
 Examples:
 
 ```bash
+# Purpose: summary.
 grafana-util change summary --desired-file ./desired.json
 grafana-util change summary --desired-file ./desired.json --output json
 ```
@@ -48,6 +50,7 @@ Key flags: `--desired-file`, `--live-file`, `--fetch-live`, `--org-id`, `--page-
 Examples:
 
 ```bash
+# Purpose: plan.
 grafana-util change plan --desired-file ./desired.json --live-file ./live.json
 grafana-util change plan --desired-file ./desired.json --fetch-live --profile prod --allow-prune --output json
 ```
@@ -65,6 +68,7 @@ Key flags: `--plan-file`, `--review-token`, `--reviewed-by`, `--reviewed-at`, `-
 Examples:
 
 ```bash
+# Purpose: review.
 grafana-util change review --plan-file ./sync-plan.json
 grafana-util change review --plan-file ./sync-plan.json --review-note 'peer-reviewed' --output json
 ```
@@ -82,6 +86,7 @@ Key flags: `--plan-file`, `--preflight-file`, `--bundle-preflight-file`, `--appr
 Examples:
 
 ```bash
+# Purpose: apply.
 grafana-util change apply --plan-file ./sync-plan-reviewed.json --approve
 grafana-util change apply --plan-file ./sync-plan-reviewed.json --approve --execute-live --allow-folder-delete --profile prod
 ```
@@ -99,6 +104,7 @@ Key flags: `--managed-file`, `--lock-file`, `--live-file`, `--fetch-live`, `--or
 Examples:
 
 ```bash
+# Purpose: audit.
 grafana-util change audit --managed-file ./desired.json --live-file ./live.json --write-lock ./sync-lock.json
 grafana-util change audit --lock-file ./sync-lock.json --fetch-live --profile prod --fail-on-drift --output json
 ```
@@ -116,6 +122,7 @@ Key flags: `--desired-file`, `--availability-file`, `--fetch-live`, `--org-id`, 
 Examples:
 
 ```bash
+# Purpose: preflight.
 grafana-util change preflight --desired-file ./desired.json --availability-file ./availability.json
 grafana-util change preflight --desired-file ./desired.json --fetch-live --profile prod --output json
 ```
@@ -133,6 +140,7 @@ Key flags: `--alerts-file`, `--output`.
 Examples:
 
 ```bash
+# Purpose: assess-alerts.
 grafana-util change assess-alerts --alerts-file ./alerts.json
 grafana-util change assess-alerts --alerts-file ./alerts.json --output json
 ```
@@ -150,6 +158,7 @@ Key flags: `--dashboard-export-dir`, `--dashboard-provisioning-dir`, `--alert-ex
 Examples:
 
 ```bash
+# Purpose: bundle.
 grafana-util change bundle --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts/raw --output-file ./sync-source-bundle.json
 grafana-util change bundle --dashboard-provisioning-dir ./dashboards/provisioning --alert-export-dir ./alerts/raw --output-file ./sync-source-bundle.json
 ```
@@ -167,6 +176,7 @@ Key flags: `--source-bundle`, `--target-inventory`, `--availability-file`, `--fe
 Examples:
 
 ```bash
+# Purpose: bundle-preflight.
 grafana-util change bundle-preflight --source-bundle ./sync-source-bundle.json --target-inventory ./target-inventory.json --output json
 grafana-util change bundle-preflight --source-bundle ./sync-source-bundle.json --target-inventory ./target-inventory.json --availability-file ./availability.json --output json
 ```
@@ -184,6 +194,7 @@ Key flags: `--source-bundle`, `--target-inventory`, `--mapping-file`, `--availab
 Examples:
 
 ```bash
+# Purpose: promotion-preflight.
 grafana-util change promotion-preflight --source-bundle ./sync-source-bundle.json --target-inventory ./target-inventory.json --mapping-file ./promotion-map.json --output json
 grafana-util change promotion-preflight --source-bundle ./sync-source-bundle.json --target-inventory ./target-inventory.json --mapping-file ./promotion-map.json --availability-file ./availability.json --output json
 ```

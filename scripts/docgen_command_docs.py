@@ -112,7 +112,17 @@ def split_markdown_sections(text: str) -> tuple[str, dict[str, list[str]]]:
     title = ""
     sections: dict[str, list[str]] = {}
     current: str | None = None
+    inside_fence = False
     for line in lines:
+        if line.strip().startswith("```"):
+            inside_fence = not inside_fence
+            if current is not None:
+                sections[current].append(line)
+            continue
+        if inside_fence:
+            if current is not None:
+                sections[current].append(line)
+            continue
         if line.startswith("# "):
             title = clean_markdown(line[2:].strip())
             continue
@@ -181,7 +191,10 @@ def extract_codeblock(lines: list[str]) -> list[str]:
             continue
         if inside:
             code.append(raw.rstrip())
-    return [line for line in code if line.strip()]
+    cleaned = [line for line in code if line.strip()]
+    if cleaned and cleaned[0].lstrip().startswith("# "):
+        cleaned = cleaned[1:]
+    return cleaned
 
 
 def parse_labeled_section(lines: list[str]) -> dict[str, list[str]]:

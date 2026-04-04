@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="主要旗標">主要旗標</h2>
 <ul><li><code>--desired-dir</code> 指向暫存的 alert 樹。</li><li><code>--source</code> 指定要複製的規則。</li><li><code>--name</code> 設定新的規則名稱。</li><li><code>--folder</code>、<code>--rule-group</code>、<code>--receiver</code> 與 <code>--no-route</code> 用來調整複製後的目標。</li><li><code>--dry-run</code> 預覽複製後的輸出。</li></ul>
 <h2 id="範例">範例</h2>
-<pre><code>grafana-util alert clone-rule --desired-dir ./alerts/desired --source cpu-high --name cpu-high-staging --folder staging-alerts --rule-group cpu --receiver slack-platform
+<pre><code># 用途：將既有的暫存 alert 規則複製到新的撰寫目標。
+grafana-util alert clone-rule --desired-dir ./alerts/desired --source cpu-high --name cpu-high-staging --folder staging-alerts --rule-group cpu --receiver slack-platform
 grafana-util alert clone-rule --desired-dir ./alerts/desired --source cpu-high --name cpu-high-staging --dry-run</code></pre>
 <h2 id="相關命令">相關命令</h2>
 <ul><li><a href="alert.html">alert</a></li><li><a href="alert-add-rule.html">alert add-rule</a></li><li><a href="alert-new-rule.html">alert new-rule</a></li></ul>

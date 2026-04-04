@@ -8,17 +8,6 @@ grafana\-util\-change\-plan \- build a staged sync plan from desired and live st
 build a staged sync plan from desired and live state.
 .PP
 when you need a reviewable plan before marking work as reviewed or applying it.
-.SH EXAMPLES
-.PP
-build a staged sync plan from desired and live state.
-.EX
-grafana-util change plan --desired-file ./desired.json --live-file ./live.json
-.EE
-.PP
-build a staged sync plan from desired and live state.
-.EX
-grafana-util change plan --desired-file ./desired.json --fetch-live --profile prod --allow-prune --output json
-.EE
 .SH SEE ALSO
 \fBgrafana-util\fR(1),
 \fBgrafana-util-change\fR(1)

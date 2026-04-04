@@ -716,7 +716,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="auth-notes">Auth notes</h2>
 <ul><li>Prefer <code>--profile</code> for repeatable inventory reads.</li><li>Org, user, team, and service-account lifecycle commands often need admin-level credentials; direct Basic auth is the most predictable fallback.</li><li>Token auth may be too narrow for org-wide administration even when read-only list commands work.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code>grafana-util access user list --profile prod --json
+<pre><code># Purpose: Run the access-management command surface for users, orgs, teams, and service accounts.
+grafana-util access user list --profile prod --json
 grafana-util access service-account list --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --output-format text
 grafana-util access service-account token add --url http://localhost:3000 --basic-user admin --basic-password admin --name deploy-bot --token-name nightly</code></pre>
 <h2 id="related-commands">Related commands</h2>

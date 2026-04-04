@@ -17,6 +17,20 @@
 
 ---
 
+## 適用對象
+
+- 想先看完章節地圖，再決定從哪裡開始的人
+- 想先知道這份手冊涵蓋哪些工作流的人
+- 想快速切到角色導讀、完整參考或指令索引的人
+
+## 主要目標
+
+- 先讓你看懂這份手冊在解什麼問題
+- 幫你快速找到適合自己角色的路線
+- 讓你知道何時該看手冊、何時該直接查指令頁
+
+---
+
 ## ⚡ 30 秒快速上手 (Quick Start)
 
 只要三個指令，就能從零開始確認安裝、連線，並快速掌握目前環境狀態。
@@ -29,6 +43,7 @@ curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-utils/mai
 
 ### 2. 確認安裝版本
 ```bash
+# 用途：2. 確認安裝版本。
 grafana-util --version
 ```
 
@@ -47,8 +62,8 @@ grafana-util overview live --url http://localhost:3000 --basic-user admin --prom
 ### 🚀 第一階段：奠定基礎
 *   **[這個工具是做什麼的](what-is-grafana-util.md)**：先看它在解哪些痛點、適合哪些維運工作。
 *   **[開始使用 (Getting Started)](getting-started.md)**：先看安裝、連線、profile 與認證怎麼配合。
-*   **[新手快速入門](role-new-user.md)**：從第一次連線到第一次成功 live read 的最短安全路線。
-*   **[SRE / 維運角色導讀](role-sre-ops.md)**：適合日常維運、review-first 變更流程與排障。
+*   **[新手快速入門](role-new-user.md)**：從第一次連線到第一次成功讀到 live 狀態的最短安全路線。
+*   **[SRE / 維運角色導讀](role-sre-ops.md)**：適合日常維運、先審查再變更的流程與排障。
 *   **[自動化 / CI 角色導讀](role-automation-ci.md)**：適合腳本、自動化與輸出格式相關工作。
 *   **[系統架構與設計原則](architecture.md)**：說明核心設計決策和背後取捨。
 
@@ -85,7 +100,7 @@ grafana-util overview live --url http://localhost:3000 --basic-user admin --prom
 *   **自動化 / CI 維護者**
   先看 [自動化 / CI 角色導讀](role-automation-ci.md)，再看 [技術參考手冊](reference.md)，需要終端機版摘要時可搭配 `docs/man/grafana-util.1`。
 *   **維護者 / 架構師**
-  先看 [docs/DEVELOPER.md](/Users/kendlee/work/grafana-utils/docs/DEVELOPER.md)，再看 [maintainer-role-map.md](/Users/kendlee/work/grafana-utils/docs/internal/maintainer-role-map.md) 與 [docs/internal/README.md](/Users/kendlee/work/grafana-utils/docs/internal/README.md) 下面的設計與維護文件。
+  先看 [DEVELOPER.md](../DEVELOPER.md)，再看 [maintainer-role-map.md](../internal/maintainer-role-map.md) 與 [internal README](../internal/README.md) 裡的設計與維護文件。
 
 ---
 

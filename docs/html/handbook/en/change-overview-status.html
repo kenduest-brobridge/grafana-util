@@ -689,14 +689,20 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h1><span class="hero-title-main">Project Status &amp; Change Overview</span></h1>
 
 
-    <p>This domain focuses on the governance gate: the final layer of validation before and after making changes.</p>
+    <p>Use this chapter when you need to answer two questions before or after a change: is the estate ready, and what exactly will move?</p>
+<p>This domain focuses on the governance gate: the final layer of validation before and after making changes.</p>
+<h2 id="who-it-is-for">Who It Is For</h2>
+<ul><li>Operators reviewing readiness before a maintenance window or apply path.</li><li>Engineers who need to summarize staged inputs before promotion.</li><li>Reviewers who want to separate “is the estate healthy?” from “what will this bundle do?”</li></ul>
+<h2 id="primary-goals">Primary Goals</h2>
+<ul><li>Separate live health checks from staged change inspection.</li><li>Catch broken inputs before an apply path starts.</li><li>Give reviewers a stable summary of what changed and what still looks risky.</li></ul>
 <h2 id="command-pages">Command Pages</h2>
 <p>Need the command-by-command surface instead of the workflow guide?</p>
 <ul><li><a href="../../commands/en/change.html">change</a></li><li><a href="../../commands/en/change.html#summary">change summary</a></li><li><a href="../../commands/en/change.html#plan">change plan</a></li><li><a href="../../commands/en/change.html#review">change review</a></li><li><a href="../../commands/en/change.html#apply">change apply</a></li><li><a href="../../commands/en/change.html#audit">change audit</a></li><li><a href="../../commands/en/change.html#preflight">change preflight</a></li><li><a href="../../commands/en/change.html#assess-alerts">change assess-alerts</a></li><li><a href="../../commands/en/change.html#bundle">change bundle</a></li><li><a href="../../commands/en/change.html#bundle-preflight">change bundle-preflight</a></li><li><a href="../../commands/en/change.html#promotion-preflight">change promotion-preflight</a></li><li><a href="../../commands/en/status.html">status</a></li><li><a href="../../commands/en/status.html#staged">status staged</a></li><li><a href="../../commands/en/status.html#live">status live</a></li><li><a href="../../commands/en/overview.html">overview</a></li><li><a href="../../commands/en/overview.html#live">overview live</a></li><li><a href="../../commands/en/snapshot.html">snapshot</a></li><li><a href="../../commands/en/snapshot.html#export">snapshot export</a></li><li><a href="../../commands/en/snapshot.html#review">snapshot review</a></li><li><a href="../../commands/en/profile.html">profile</a></li><li><a href="../../commands/en/profile.html#list">profile list</a></li><li><a href="../../commands/en/profile.html#show">profile show</a></li><li><a href="../../commands/en/profile.html#add">profile add</a></li><li><a href="../../commands/en/profile.html#example">profile example</a></li><li><a href="../../commands/en/profile.html#init">profile init</a></li><li><a href="../../commands/en/index.html">full command index</a></li></ul>
 <h2 id="status-surfaces">Status Surfaces</h2>
 <p>We distinguish between <strong>Live</strong> (what is actually running) and <strong>Staged</strong> (what you intend to deploy).</p>
 <h3 id="1-live-readiness-check">1. Live Readiness Check</h3>
-<pre><code>grafana-util status live --output table
+<pre><code># Purpose: 1. Live Readiness Check.
+grafana-util status live --output table
 grafana-util status live --profile prod --sync-summary-file ./sync-summary.json --bundle-preflight-file ./bundle-preflight.json --output json</code></pre>
 <p><strong>Expected Output:</strong></p>
 <pre><code>OVERALL: status=ready
@@ -708,7 +714,8 @@ Alerts       ok       No dangling rules</code></pre>
 <p>Use <code>status live</code> when you want the shared live status path to tell you whether Grafana is safe to read from or promote into. The extra staged sync files deepen the live view without changing the command shape.</p>
 <h3 id="2-staged-readiness-check">2. Staged Readiness Check</h3>
 <p>Use this as a mandatory CI/CD gate before running <code>apply</code>.</p>
-<pre><code>grafana-util status staged --desired-file ./desired.json --output json
+<pre><code># Purpose: Use this as a mandatory CI/CD gate before running apply.
+grafana-util status staged --desired-file ./desired.json --output json
 grafana-util status staged --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts --desired-file ./desired.json --output table</code></pre>
 <p><strong>Expected Output:</strong></p>
 <pre><code>{
@@ -721,7 +728,8 @@ grafana-util status staged --dashboard-export-dir ./dashboards/raw --alert-expor
 <p>Manage the transition from Git to production Grafana.</p>
 <h3 id="1-change-summary">1. Change Summary</h3>
 <p>Get a high-level summary of your current change package.</p>
-<pre><code>grafana-util change summary --desired-file ./desired.json
+<pre><code># Purpose: Get a high-level summary of your current change package.
+grafana-util change summary --desired-file ./desired.json
 grafana-util change summary --desired-file ./desired.json --output json</code></pre>
 <p><strong>Expected Output:</strong></p>
 <pre><code>CHANGE PACKAGE SUMMARY:
@@ -732,7 +740,8 @@ grafana-util change summary --desired-file ./desired.json --output json</code></
 <p>Use the summary to size the change before you inspect the plan. If the total is unexpectedly large, stop and review the staged inputs first.</p>
 <h3 id="2-preflight-validation">2. Preflight Validation</h3>
 <p>Verify the structural integrity of your export/import trees.</p>
-<pre><code>grafana-util change preflight --desired-file ./desired.json --availability-file ./availability.json
+<pre><code># Purpose: Verify the structural integrity of your export/import trees.
+grafana-util change preflight --desired-file ./desired.json --availability-file ./availability.json
 grafana-util change preflight --desired-file ./desired.json --fetch-live --output json</code></pre>
 <p><strong>Expected Output:</strong></p>
 <pre><code>PREFLIGHT CHECK:
@@ -742,7 +751,8 @@ grafana-util change preflight --desired-file ./desired.json --fetch-live --outpu
 <p>Use preflight when you need a structural gate before planning or applying. A clean preflight means the inputs are shaped correctly, not that live Grafana already matches them.</p>
 <h2 id="interactive-mode-tui-semantics">Interactive Mode (TUI) Semantics</h2>
 <p><code>overview live --output interactive</code> opens the live project overview through the shared status live path.</p>
-<pre><code>grafana-util overview live --url http://localhost:3000 --basic-user admin --basic-password admin --output interactive</code></pre>
+<pre><code># Purpose: overview live --output interactive opens the live project overview through the shared status live path.
+grafana-util overview live --url http://localhost:3000 --basic-user admin --basic-password admin --output interactive</code></pre>
 <p>The TUI uses the following visual language:</p>
 <ul><li><strong>🟢 Green</strong>: The component is healthy and fully reachable.</li><li><strong>🟡 Yellow</strong>: The component is functional but has warnings, such as missing metadata.</li><li><strong>🔴 Red</strong>: The component is blocked and needs action before deployment.</li></ul>
 <p>Use <code>overview</code> without <code>live</code> for staged artifact review, and use <code>status live</code> when you need the same live gate in machine-readable form.</p>
@@ -750,7 +760,7 @@ grafana-util change preflight --desired-file ./desired.json --fetch-live --outpu
     <nav class="footer-nav"><a class="link-card" href="access.html"><span>Previous</span>Access Management (Identity &amp; Access)</a><a class="link-card" href="scenarios.html"><span>Next</span>Operator Scenarios</a></nav>
   </article>
   <aside class="sidebar">
-  <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#command-pages"><span class="toc-label">Command Pages</span></a></li><li class="toc-level-2"><a href="#status-surfaces"><span class="toc-label">Status Surfaces</span></a></li><li class="toc-level-3"><a href="#1-live-readiness-check"><span class="toc-label">1. Live Readiness Check</span></a></li><li class="toc-level-3"><a href="#2-staged-readiness-check"><span class="toc-label">2. Staged Readiness Check</span></a></li><li class="toc-level-2"><a href="#change-lifecycle"><span class="toc-label">Change Lifecycle</span></a></li><li class="toc-level-3"><a href="#1-change-summary"><span class="toc-label">1. Change Summary</span></a></li><li class="toc-level-3"><a href="#2-preflight-validation"><span class="toc-label">2. Preflight Validation</span></a></li><li class="toc-level-2"><a href="#interactive-mode-tui-semantics"><span class="toc-label">Interactive Mode (TUI) Semantics</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: English</a></li><li><a href="../zh-TW/change-overview-status.html" class="sidebar-meta-link">Switch to 繁體中文</a></li></ul></section>
+  <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#who-it-is-for"><span class="toc-label">Who It Is For</span></a></li><li class="toc-level-2"><a href="#primary-goals"><span class="toc-label">Primary Goals</span></a></li><li class="toc-level-2"><a href="#command-pages"><span class="toc-label">Command Pages</span></a></li><li class="toc-level-2"><a href="#status-surfaces"><span class="toc-label">Status Surfaces</span></a></li><li class="toc-level-3"><a href="#1-live-readiness-check"><span class="toc-label">1. Live Readiness Check</span></a></li><li class="toc-level-3"><a href="#2-staged-readiness-check"><span class="toc-label">2. Staged Readiness Check</span></a></li><li class="toc-level-2"><a href="#change-lifecycle"><span class="toc-label">Change Lifecycle</span></a></li><li class="toc-level-3"><a href="#1-change-summary"><span class="toc-label">1. Change Summary</span></a></li><li class="toc-level-3"><a href="#2-preflight-validation"><span class="toc-label">2. Preflight Validation</span></a></li><li class="toc-level-2"><a href="#interactive-mode-tui-semantics"><span class="toc-label">Interactive Mode (TUI) Semantics</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: English</a></li><li><a href="../zh-TW/change-overview-status.html" class="sidebar-meta-link">Switch to 繁體中文</a></li></ul></section>
 </aside>
 
 </div>

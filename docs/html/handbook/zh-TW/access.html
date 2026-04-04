@@ -689,14 +689,19 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h1><span class="hero-title-main">身分與存取管理</span><span class="hero-title-secondary">Identity &amp; Access</span></h1>
 
 
-    <p>管理 Grafana 的身分與存取資產：org、使用者、team 與 service account。</p>
+    <p>這一章整理 Grafana 的身分與存取資產：org、使用者、team 與 service account。重點是先把人、組織與自動化憑證的生命週期講清楚，再談匯出、同步與回放。</p>
+<h2 id="適用對象">適用對象</h2>
+<ul><li>負責 org、使用者、team 或 service account 管理的人</li><li>需要做權限盤點、同步、匯出或回放的人</li><li>需要把身分資產接進 Git 或 CI 流程的人</li></ul>
+<h2 id="主要目標">主要目標</h2>
+<ul><li>先理解 org / user / team / service account 的關係</li><li>再把盤點、匯出、匯入與 diff 做成可重複流程</li><li>需要時才對 token 做輪替或刪除</li></ul>
 <h2 id="指令頁面">指令頁面</h2>
 <p>如果你現在要查的是指令細節，而不是工作流程章節，可以直接看下面這些指令頁：</p>
 <ul><li><a href="../../commands/zh-TW/access.html">access 指令總覽</a></li><li><a href="../../commands/zh-TW/access-user.html">access user</a></li><li><a href="../../commands/zh-TW/access-org.html">access org</a></li><li><a href="../../commands/zh-TW/access-team.html">access team</a></li><li><a href="../../commands/zh-TW/access-service-account.html">access service-account</a></li><li><a href="../../commands/zh-TW/access-service-account-token.html">access service-account token</a></li><li><a href="../../commands/zh-TW/index.html">指令詳細說明總索引</a></li></ul>
 <h2 id="org-管理">org 管理</h2>
 <p>需要用 Basic auth 盤點、匯出或回放 org 時，請使用 <code>access org</code>。</p>
 <h3 id="1-列出匯出與回放-org">1. 列出、匯出與回放 org</h3>
-<pre><code>grafana-util access org list --table
+<pre><code># 用途：1. 列出、匯出與回放 org。
+grafana-util access org list --table
 grafana-util access org export --export-dir ./access-orgs
 grafana-util access org import --import-dir ./access-orgs --dry-run</code></pre>
 <p><strong>預期輸出：</strong></p>
@@ -711,7 +716,7 @@ PREFLIGHT IMPORT:
   - would create 0 org(s)
   - would update 1 org(s)</code></pre>
 <p>先用 list 確認主 org，再用 export/import 建立可重播的 org 快照。</p>
-<h2 id="使用者-team-管理">使用者 / team 管理</h2>
+<h2 id="使用者與-team-管理">使用者與 team 管理</h2>
 <p>需要調整成員、管理快照或檢查漂移時，請使用 <code>access user</code> 與 <code>access team</code>。</p>
 <h3 id="1-新增修改與比對使用者">1. 新增、修改與比對使用者</h3>
 <pre><code># 新增一個具備全域 Admin 角色的使用者
@@ -728,7 +733,8 @@ grafana-util access user diff --diff-dir ./access-users --scope global</code></p
 No user differences across 12 user(s).</code></pre>
 <p>如果不想把密碼留在 shell history 裡，請改用 <code>--prompt-password</code>。<code>--scope global</code> 需要 Basic auth。</p>
 <h3 id="2-team-盤點與同步">2. team 盤點與同步</h3>
-<pre><code>grafana-util access team list --org-id 1 --table
+<pre><code># 用途：2. team 盤點與同步。
+grafana-util access team list --org-id 1 --table
 grafana-util access team export --export-dir ./access-teams --with-members
 grafana-util access team import --import-dir ./access-teams --replace-existing --dry-run --table</code></pre>
 <p><strong>預期輸出：</strong></p>
@@ -745,7 +751,8 @@ ops-user    Viewer  create   missing</code></pre>
 <h2 id="service-account-管理">service account 管理</h2>
 <p>service account 是自動化流程常見的基礎元件。</p>
 <h3 id="1-列出與匯出-service-account">1. 列出與匯出 service account</h3>
-<pre><code>grafana-util access service-account list --json
+<pre><code># 用途：1. 列出與匯出 service account。
+grafana-util access service-account list --json
 grafana-util access service-account export --export-dir ./access-sa</code></pre>
 <p><strong>預期輸出：</strong></p>
 <pre><code>[
@@ -792,7 +799,8 @@ grafana-util access service-account token delete --service-account-id 15 --token
 <p>如果需要一次性的 <code>key</code>，請加上 <code>--json</code>。純文字輸出適合寫入日誌，不適合拿來擷取憑證。</p>
 <h2 id="漂移檢查-diff">漂移檢查 (Diff)</h2>
 <p>比較本機快照與 live Grafana 之間的差異。</p>
-<pre><code>grafana-util access user diff --import-dir ./access-users
+<pre><code># 用途：比較本機快照與 live Grafana 之間的差異。
+grafana-util access user diff --import-dir ./access-users
 grafana-util access team diff --diff-dir ./access-teams
 grafana-util access service-account diff --diff-dir ./access-sa</code></pre>
 <p><strong>預期輸出：</strong></p>
@@ -808,7 +816,7 @@ No service account differences across 2 service account(s).</code></pre>
     <nav class="footer-nav"><a class="link-card" href="alert.html"><span>Previous</span>Alert 維運人員手冊</a><a class="link-card" href="change-overview-status.html"><span>Next</span>專案狀態與變更總覽 (Change &amp; Status)</a></nav>
   </article>
   <aside class="sidebar">
-  <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#指令頁面"><span class="toc-label">指令頁面</span></a></li><li class="toc-level-2"><a href="#org-管理"><span class="toc-label">org 管理</span></a></li><li class="toc-level-3"><a href="#1-列出匯出與回放-org"><span class="toc-label">1. 列出、匯出與回放 org</span></a></li><li class="toc-level-2"><a href="#使用者-team-管理"><span class="toc-label">使用者 / team 管理</span></a></li><li class="toc-level-3"><a href="#1-新增修改與比對使用者"><span class="toc-label">1. 新增、修改與比對使用者</span></a></li><li class="toc-level-3"><a href="#2-team-盤點與同步"><span class="toc-label">2. team 盤點與同步</span></a></li><li class="toc-level-2"><a href="#service-account-管理"><span class="toc-label">service account 管理</span></a></li><li class="toc-level-3"><a href="#1-列出與匯出-service-account"><span class="toc-label">1. 列出與匯出 service account</span></a></li><li class="toc-level-3"><a href="#2-建立與刪除-token"><span class="toc-label">2. 建立與刪除 token</span></a></li><li class="toc-level-2"><a href="#漂移檢查-diff"><span class="toc-label">漂移檢查 (Diff)</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/access.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
+  <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#適用對象"><span class="toc-label">適用對象</span></a></li><li class="toc-level-2"><a href="#主要目標"><span class="toc-label">主要目標</span></a></li><li class="toc-level-2"><a href="#指令頁面"><span class="toc-label">指令頁面</span></a></li><li class="toc-level-2"><a href="#org-管理"><span class="toc-label">org 管理</span></a></li><li class="toc-level-3"><a href="#1-列出匯出與回放-org"><span class="toc-label">1. 列出、匯出與回放 org</span></a></li><li class="toc-level-2"><a href="#使用者與-team-管理"><span class="toc-label">使用者與 team 管理</span></a></li><li class="toc-level-3"><a href="#1-新增修改與比對使用者"><span class="toc-label">1. 新增、修改與比對使用者</span></a></li><li class="toc-level-3"><a href="#2-team-盤點與同步"><span class="toc-label">2. team 盤點與同步</span></a></li><li class="toc-level-2"><a href="#service-account-管理"><span class="toc-label">service account 管理</span></a></li><li class="toc-level-3"><a href="#1-列出與匯出-service-account"><span class="toc-label">1. 列出與匯出 service account</span></a></li><li class="toc-level-3"><a href="#2-建立與刪除-token"><span class="toc-label">2. 建立與刪除 token</span></a></li><li class="toc-level-2"><a href="#漂移檢查-diff"><span class="toc-label">漂移檢查 (Diff)</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/access.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
 </aside>
 
 </div>

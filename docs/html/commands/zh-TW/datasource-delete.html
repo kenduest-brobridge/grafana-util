@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="重點旗標">重點旗標</h2>
 <ul><li><code>--uid</code>：要刪除的 datasource UID。</li><li><code>--name</code>：當沒有 UID 可用時，改用名稱刪除。</li><li><code>--yes</code>：確認這次線上刪除。</li><li><code>--dry-run</code>、<code>--table</code>、<code>--json</code>、<code>--output-format</code>、<code>--no-header</code>：預覽輸出控制。</li></ul>
 <h2 id="範例">範例</h2>
-<pre><code>grafana-util datasource delete --profile prod --uid prom-main --dry-run --json
+<pre><code># 用途：透過 Grafana API 刪除一個線上 Grafana datasource。
+grafana-util datasource delete --profile prod --uid prom-main --dry-run --json
 grafana-util datasource delete --url http://localhost:3000 --basic-user admin --basic-password admin --uid prom-main --yes
 grafana-util datasource delete --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --uid prom-main --dry-run --json</code></pre>
 <h2 id="相關指令">相關指令</h2>

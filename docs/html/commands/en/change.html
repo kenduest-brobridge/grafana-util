@@ -710,7 +710,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <p>Description: start here when your team follows a review-first change workflow and you need the whole path in one place. The <code>change</code> namespace is the control surface for summary, preflight, planning, review, audit, and apply, so operators can see how those steps fit together before they run one exact subcommand.</p>
 <p>Key flags: the root command is a namespace; the main operational flags live on the subcommands. Common workflow inputs include <code>--desired-file</code>, <code>--plan-file</code>, <code>--live-file</code>, <code>--fetch-live</code>, <code>--approve</code>, <code>--execute-live</code>, <code>--source-bundle</code>, <code>--target-inventory</code>, <code>--availability-file</code>, <code>--mapping-file</code>, and <code>--output</code>.</p>
 <p>Examples:</p>
-<pre><code>grafana-util change summary --desired-file ./desired.json
+<pre><code># Purpose: Root.
+grafana-util change summary --desired-file ./desired.json
 grafana-util change plan --desired-file ./desired.json --fetch-live --profile prod
 grafana-util change apply --plan-file ./sync-plan-reviewed.json --approve --execute-live --profile prod</code></pre>
 <p>Related commands: <code>grafana-util overview</code>, <code>grafana-util status</code>, <code>grafana-util snapshot</code>.</p>
@@ -719,7 +720,8 @@ grafana-util change apply --plan-file ./sync-plan-reviewed.json --approve --exec
 <p>When to use: when you want a quick size check before planning or applying.</p>
 <p>Key flags: <code>--desired-file</code>, <code>--output</code>.</p>
 <p>Examples:</p>
-<pre><code>grafana-util change summary --desired-file ./desired.json
+<pre><code># Purpose: summary.
+grafana-util change summary --desired-file ./desired.json
 grafana-util change summary --desired-file ./desired.json --output json</code></pre>
 <p>Related commands: <code>change plan</code>, <code>change preflight</code>.</p>
 <h2 id="plan"><code>plan</code></h2>
@@ -727,7 +729,8 @@ grafana-util change summary --desired-file ./desired.json --output json</code></
 <p>When to use: when you need a reviewable plan before marking work as reviewed or applying it.</p>
 <p>Key flags: <code>--desired-file</code>, <code>--live-file</code>, <code>--fetch-live</code>, <code>--org-id</code>, <code>--page-size</code>, <code>--allow-prune</code>, <code>--trace-id</code>, <code>--output</code>.</p>
 <p>Examples:</p>
-<pre><code>grafana-util change plan --desired-file ./desired.json --live-file ./live.json
+<pre><code># Purpose: plan.
+grafana-util change plan --desired-file ./desired.json --live-file ./live.json
 grafana-util change plan --desired-file ./desired.json --fetch-live --profile prod --allow-prune --output json</code></pre>
 <p>Related commands: <code>change review</code>, <code>change apply</code>, <code>change summary</code>.</p>
 <h2 id="review"><code>review</code></h2>
@@ -735,7 +738,8 @@ grafana-util change plan --desired-file ./desired.json --fetch-live --profile pr
 <p>When to use: when a plan has been inspected and should carry an explicit review token before apply.</p>
 <p>Key flags: <code>--plan-file</code>, <code>--review-token</code>, <code>--reviewed-by</code>, <code>--reviewed-at</code>, <code>--review-note</code>, <code>--interactive</code>, <code>--output</code>.</p>
 <p>Examples:</p>
-<pre><code>grafana-util change review --plan-file ./sync-plan.json
+<pre><code># Purpose: review.
+grafana-util change review --plan-file ./sync-plan.json
 grafana-util change review --plan-file ./sync-plan.json --review-note &#x27;peer-reviewed&#x27; --output json</code></pre>
 <p>Related commands: <code>change plan</code>, <code>change apply</code>.</p>
 <h2 id="apply"><code>apply</code></h2>
@@ -743,7 +747,8 @@ grafana-util change review --plan-file ./sync-plan.json --review-note &#x27;peer
 <p>When to use: when a plan is already reviewed and you are ready to emit or execute the apply step.</p>
 <p>Key flags: <code>--plan-file</code>, <code>--preflight-file</code>, <code>--bundle-preflight-file</code>, <code>--approve</code>, <code>--execute-live</code>, <code>--allow-folder-delete</code>, <code>--allow-policy-reset</code>, <code>--org-id</code>, <code>--output</code>, <code>--applied-by</code>, <code>--applied-at</code>, <code>--approval-reason</code>, <code>--apply-note</code>.</p>
 <p>Examples:</p>
-<pre><code>grafana-util change apply --plan-file ./sync-plan-reviewed.json --approve
+<pre><code># Purpose: apply.
+grafana-util change apply --plan-file ./sync-plan-reviewed.json --approve
 grafana-util change apply --plan-file ./sync-plan-reviewed.json --approve --execute-live --allow-folder-delete --profile prod</code></pre>
 <p>Related commands: <code>change review</code>, <code>change preflight</code>, <code>change bundle-preflight</code>.</p>
 <h2 id="audit"><code>audit</code></h2>
@@ -751,7 +756,8 @@ grafana-util change apply --plan-file ./sync-plan-reviewed.json --approve --exec
 <p>When to use: when you need a drift check or want to refresh a lock snapshot.</p>
 <p>Key flags: <code>--managed-file</code>, <code>--lock-file</code>, <code>--live-file</code>, <code>--fetch-live</code>, <code>--org-id</code>, <code>--page-size</code>, <code>--write-lock</code>, <code>--fail-on-drift</code>, <code>--interactive</code>, <code>--output</code>.</p>
 <p>Examples:</p>
-<pre><code>grafana-util change audit --managed-file ./desired.json --live-file ./live.json --write-lock ./sync-lock.json
+<pre><code># Purpose: audit.
+grafana-util change audit --managed-file ./desired.json --live-file ./live.json --write-lock ./sync-lock.json
 grafana-util change audit --lock-file ./sync-lock.json --fetch-live --profile prod --fail-on-drift --output json</code></pre>
 <p>Related commands: <code>change preflight</code>, <code>change plan</code>, <code>status live</code>.</p>
 <h2 id="preflight"><code>preflight</code></h2>
@@ -759,7 +765,8 @@ grafana-util change audit --lock-file ./sync-lock.json --fetch-live --profile pr
 <p>When to use: when you need a structural gate before planning or applying.</p>
 <p>Key flags: <code>--desired-file</code>, <code>--availability-file</code>, <code>--fetch-live</code>, <code>--org-id</code>, <code>--output</code>.</p>
 <p>Examples:</p>
-<pre><code>grafana-util change preflight --desired-file ./desired.json --availability-file ./availability.json
+<pre><code># Purpose: preflight.
+grafana-util change preflight --desired-file ./desired.json --availability-file ./availability.json
 grafana-util change preflight --desired-file ./desired.json --fetch-live --profile prod --output json</code></pre>
 <p>Related commands: <code>change summary</code>, <code>change plan</code>, <code>status staged</code>.</p>
 <h2 id="assess-alerts"><code>assess-alerts</code></h2>
@@ -767,7 +774,8 @@ grafana-util change preflight --desired-file ./desired.json --fetch-live --profi
 <p>When to use: when you want a focused readout of how alert resources will be classified before bundling or applying.</p>
 <p>Key flags: <code>--alerts-file</code>, <code>--output</code>.</p>
 <p>Examples:</p>
-<pre><code>grafana-util change assess-alerts --alerts-file ./alerts.json
+<pre><code># Purpose: assess-alerts.
+grafana-util change assess-alerts --alerts-file ./alerts.json
 grafana-util change assess-alerts --alerts-file ./alerts.json --output json</code></pre>
 <p>Related commands: <code>change bundle</code>, <code>change bundle-preflight</code>, <code>overview</code>.</p>
 <h2 id="bundle"><code>bundle</code></h2>
@@ -775,7 +783,8 @@ grafana-util change assess-alerts --alerts-file ./alerts.json --output json</cod
 <p>When to use: when you want a single bundle artifact for later sync, review, or preflight steps.</p>
 <p>Key flags: <code>--dashboard-export-dir</code>, <code>--dashboard-provisioning-dir</code>, <code>--alert-export-dir</code>, <code>--datasource-export-file</code>, <code>--datasource-provisioning-file</code>, <code>--metadata-file</code>, <code>--output-file</code>, <code>--output</code>.</p>
 <p>Examples:</p>
-<pre><code>grafana-util change bundle --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts/raw --output-file ./sync-source-bundle.json
+<pre><code># Purpose: bundle.
+grafana-util change bundle --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts/raw --output-file ./sync-source-bundle.json
 grafana-util change bundle --dashboard-provisioning-dir ./dashboards/provisioning --alert-export-dir ./alerts/raw --output-file ./sync-source-bundle.json</code></pre>
 <p>Related commands: <code>change bundle-preflight</code>, <code>change promotion-preflight</code>, <code>snapshot export</code>.</p>
 <h2 id="bundle-preflight"><code>bundle-preflight</code></h2>
@@ -783,7 +792,8 @@ grafana-util change bundle --dashboard-provisioning-dir ./dashboards/provisionin
 <p>When to use: when you need to compare a source bundle against a target inventory before apply.</p>
 <p>Key flags: <code>--source-bundle</code>, <code>--target-inventory</code>, <code>--availability-file</code>, <code>--fetch-live</code>, <code>--org-id</code>, <code>--output</code>.</p>
 <p>Examples:</p>
-<pre><code>grafana-util change bundle-preflight --source-bundle ./sync-source-bundle.json --target-inventory ./target-inventory.json --output json
+<pre><code># Purpose: bundle-preflight.
+grafana-util change bundle-preflight --source-bundle ./sync-source-bundle.json --target-inventory ./target-inventory.json --output json
 grafana-util change bundle-preflight --source-bundle ./sync-source-bundle.json --target-inventory ./target-inventory.json --availability-file ./availability.json --output json</code></pre>
 <p>Related commands: <code>change bundle</code>, <code>change promotion-preflight</code>, <code>status staged</code>.</p>
 <h2 id="promotion-preflight"><code>promotion-preflight</code></h2>
@@ -791,7 +801,8 @@ grafana-util change bundle-preflight --source-bundle ./sync-source-bundle.json -
 <p>When to use: when you are preparing a promotion review and want an explicit mapping and availability view.</p>
 <p>Key flags: <code>--source-bundle</code>, <code>--target-inventory</code>, <code>--mapping-file</code>, <code>--availability-file</code>, <code>--fetch-live</code>, <code>--org-id</code>, <code>--output</code>.</p>
 <p>Examples:</p>
-<pre><code>grafana-util change promotion-preflight --source-bundle ./sync-source-bundle.json --target-inventory ./target-inventory.json --mapping-file ./promotion-map.json --output json
+<pre><code># Purpose: promotion-preflight.
+grafana-util change promotion-preflight --source-bundle ./sync-source-bundle.json --target-inventory ./target-inventory.json --mapping-file ./promotion-map.json --output json
 grafana-util change promotion-preflight --source-bundle ./sync-source-bundle.json --target-inventory ./target-inventory.json --mapping-file ./promotion-map.json --availability-file ./availability.json --output json</code></pre>
 <p>Related commands: <code>change bundle-preflight</code>, <code>change apply</code>, <code>status live</code>.</p>
     

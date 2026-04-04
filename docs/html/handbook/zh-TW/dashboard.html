@@ -689,7 +689,11 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h1><span class="hero-title-main">Dashboard 維運人員手冊</span></h1>
 
 
-    <p>本指南涵蓋 <code>grafana-util dashboard</code> 維運流程，包含資產盤點、匯出 / 匯入、漂移審查與 Dashboard 分析。</p>
+    <p>這一章是給要管 dashboard 生命週期的人。重點不是只會匯出或匯入，而是先看懂現況、知道變更會影響什麼，再決定要不要回放或套用。</p>
+<h2 id="適用對象">適用對象</h2>
+<ul><li>需要盤點、搬移、審查或截圖 dashboard 的 SRE / 平台工程師</li><li>想把 dashboard 放進 Git、review 或 CI 流程的人</li><li>需要先看 live 現況，再決定要不要匯出、匯入或刪除的人</li></ul>
+<h2 id="主要目標">主要目標</h2>
+<ul><li>先看懂 live dashboard 長什麼樣</li><li>再確認匯出樹、依賴與變數是不是合理</li><li>最後才進入匯入、發佈或刪除</li></ul>
 <p>&gt; <strong>維運優先設計</strong>：本工具把 Dashboard 視為版本控制資產。目標是讓搬移、比對與審查流程更安全，並在變更碰到即時環境前先看清楚會發生什麼事。</p>
 <h2 id="指令頁面">指令頁面</h2>
 <p>如果你現在要查的是指令細節，而不是工作流程章節，可以直接看下面這些指令頁：</p>
@@ -705,14 +709,15 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="工作流程邊界三條資料路徑">工作流程邊界（三條資料路徑）</h2>
 <p>Dashboard 匯出會刻意產生三種不同的資料路徑，因為每一條都對應不同的維運流程。<strong>這些路徑不能互換使用。</strong></p>
 <table><thead><tr><th>路徑 (Lane)</th><th>用途</th><th>最佳使用場景</th></tr></thead><tbody><tr><td><code>raw/</code></td><td><strong>標準回放 (Replay)</strong></td><td><code>grafana-util dashboard import</code> 的主要來源。可還原且 API 友善。</td></tr><tr><td><code>prompt/</code></td><td><strong>UI 匯入</strong></td><td>與 Grafana UI 內建的 &quot;Upload JSON&quot; 功能相容。若您手上只有一般或 raw 的 dashboard JSON，請先用 <code>grafana-util dashboard raw-to-prompt</code> 轉換。</td></tr><tr><td><code>provisioning/</code></td><td><strong>檔案配置</strong></td><td>供 Grafana 透過其內建配置系統從磁碟讀取 Dashboard。</td></tr></tbody></table>
-<h2 id="prompt-placeholder-說明">Prompt Placeholder 說明</h2>
+<h2 id="prompt-與變數說明">Prompt 與變數說明</h2>
 <ul><li><code>$datasource</code> 是 dashboard variable 參照。</li><li><code>${DS_*}</code> 是由 <code>__inputs</code> 產生的 external import placeholder。</li><li>一份 prompt dashboard 同時出現這兩種寫法是合理的。</li><li>這通常代表 dashboard 一邊保留 Grafana datasource variable 的工作流，一邊也需要 external import input。</li><li>不要把 <code>$datasource</code> 直接解讀成 mixed datasource family；很多情況只是 panel 仍透過同一個 datasource variable 做選擇。</li></ul>
 <h2 id="暫存-vs-即時維運邏輯">暫存 vs 即時：維運邏輯</h2>
 <ul><li><strong>暫存工作 (Staged)</strong>：本地匯出樹、驗證、離線檢視與 Dry-run 審查。</li><li><strong>即時工作 (Live)</strong>：直接對接 Grafana 的盤點、即時 Diff、匯入與刪除。</li></ul>
 <p><strong>黃金守則</strong>：先用 <code>list</code> 或 <code>browse</code> 發現資產，<code>export</code> 到暫存目錄，透過 <code>inspect</code> 與 <code>diff</code> 驗證，最後在 Dry-run 符合預期後才執行 <code>import</code> 或 <code>delete</code>。</p>
 <h2 id="閱讀即時資產盤點">閱讀即時資產盤點</h2>
 <p>使用 <code>dashboard list</code> 快速取得資產全貌。</p>
-<pre><code>grafana-util dashboard list \
+<pre><code># 用途：使用 dashboard list 快速取得資產全貌。
+grafana-util dashboard list \
   --url http://localhost:3000 \
   --basic-user admin \
   --basic-password admin \
@@ -726,10 +731,11 @@ spring-jmx-node-unified  Spring JMX + Node Unified Dashboard (VM)  Demo    ffhrm
 <ul><li><strong>UID</strong>：用於自動化與刪除的穩定身份識別。</li><li><strong>FOLDER_PATH</strong>：Dashboard 所屬的目錄路徑。</li><li><strong>ORG/ORG_ID</strong>：確認該物件隸屬於哪個組織。</li></ul>
 <h2 id="關鍵指令-完整參數參考">關鍵指令 (完整參數參考)</h2>
 <table><thead><tr><th>指令</th><th>帶有參數的完整範例</th></tr></thead><tbody><tr><td><strong>盤點 (List)</strong></td><td><code>grafana-util dashboard list --all-orgs --with-sources --table</code></td></tr><tr><td><strong>匯出 (Export)</strong></td><td><code>grafana-util dashboard export --export-dir ./dashboards --overwrite --progress</code></td></tr><tr><td><strong>Raw 轉 Prompt</strong></td><td><code>grafana-util dashboard raw-to-prompt --input-dir ./dashboards/raw --output-dir ./dashboards/prompt --overwrite --progress</code></td></tr><tr><td><strong>匯入 (Import)</strong></td><td><code>grafana-util dashboard import --import-dir ./dashboards/raw --replace-existing --dry-run --table</code></td></tr><tr><td><strong>比對 (Diff)</strong></td><td><code>grafana-util dashboard diff --import-dir ./dashboards/raw --input-format raw</code></td></tr><tr><td><strong>分析 (Inspect)</strong></td><td><code>grafana-util dashboard inspect-export --import-dir ./dashboards/raw --output-format report-table</code></td></tr><tr><td><strong>刪除 (Delete)</strong></td><td><code>grafana-util dashboard delete --uid &lt;UID&gt; --url &lt;URL&gt; --basic-user admin --basic-password admin</code></td></tr><tr><td><strong>變數檢視 (Vars)</strong></td><td><code>grafana-util dashboard inspect-vars --uid &lt;UID&gt; --url &lt;URL&gt; --table</code></td></tr><tr><td><strong>檔案修正 (Patch)</strong></td><td><code>grafana-util dashboard patch-file --input &lt;FILE&gt; --title &quot;New Title&quot; --output &lt;FILE&gt;</code></td></tr><tr><td><strong>發佈 (Publish)</strong></td><td><code>grafana-util dashboard publish --input &lt;FILE&gt; --url &lt;URL&gt; --basic-user admin --basic-password admin</code></td></tr><tr><td><strong>複製 (Clone)</strong></td><td><code>grafana-util dashboard clone-live --uid &lt;UID&gt; --output &lt;FILE&gt; --url &lt;URL&gt;</code></td></tr></tbody></table>
-<h2 id="docker-驗證範例">Docker 驗證範例</h2>
+<h2 id="實作範例">實作範例</h2>
 <h3 id="1-匯出進度-export-progress">1. 匯出進度 (Export Progress)</h3>
 <p>在大規模匯出時使用 <code>--progress</code> 以取得簡潔的日誌。</p>
-<pre><code>grafana-util dashboard export --export-dir ./dashboards --overwrite --progress</code></pre>
+<pre><code># 用途：在大規模匯出時使用 --progress 以取得簡潔的日誌。
+grafana-util dashboard export --export-dir ./dashboards --overwrite --progress</code></pre>
 <p><strong>範例輸出：</strong></p>
 <pre><code>Exporting dashboard 1/7: mixed-query-smoke
 Exporting dashboard 2/7: smoke-prom-only
@@ -737,7 +743,8 @@ Exporting dashboard 2/7: smoke-prom-only
 Exporting dashboard 7/7: two-prom-query-smoke</code></pre>
 <h3 id="2-dry-run-匯入預覽">2. Dry-Run 匯入預覽</h3>
 <p>在變更前務必確認目標動作。</p>
-<pre><code>grafana-util dashboard import --import-dir ./dashboards/raw --dry-run --table</code></pre>
+<pre><code># 用途：在變更前務必確認目標動作。
+grafana-util dashboard import --import-dir ./dashboards/raw --dry-run --table</code></pre>
 <p><strong>範例輸出：</strong></p>
 <pre><code>UID                    DESTINATION  ACTION  FOLDER_PATH                    FILE
 ---------------------  -----------  ------  -----------------------------  --------------------------------------
@@ -746,7 +753,8 @@ subfolder-chain-smoke  missing      create  Platform / Team / Apps / Prod  ./das
 <ul><li><strong>ACTION=create</strong>：將新增 Dashboard。</li><li><strong>ACTION=update</strong>：將取代現有的 live Dashboard。</li><li><strong>DESTINATION=missing</strong>：Grafana 目前沒有這個 UID，因此匯入時會建立新紀錄。</li><li><strong>DESTINATION=exists</strong>：Grafana 目前已經有這個 UID，因此匯入時會對應到既有 Dashboard。</li></ul>
 <h3 id="3-provisioning-比對">3. Provisioning 比對</h3>
 <p>比對本地配置檔案與實例現況。</p>
-<pre><code>grafana-util dashboard diff --import-dir ./dashboards/provisioning --input-format provisioning</code></pre>
+<pre><code># 用途：比對本地配置檔案與實例現況。
+grafana-util dashboard diff --import-dir ./dashboards/provisioning --input-format provisioning</code></pre>
 <p><strong>範例輸出：</strong></p>
 <pre><code>--- live/cpu-main
 +++ export/cpu-main
@@ -756,7 +764,7 @@ subfolder-chain-smoke  missing      create  Platform / Team / Apps / Prod  ./das
     <nav class="footer-nav"><a class="link-card" href="architecture.html"><span>Previous</span>系統架構與設計原則</a><a class="link-card" href="datasource.html"><span>Next</span>Data source 維運手冊</a></nav>
   </article>
   <aside class="sidebar">
-  <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#指令頁面"><span class="toc-label">指令頁面</span></a></li><li class="toc-level-2"><a href="#核心工作流用途"><span class="toc-label">核心工作流用途</span></a></li><li class="toc-level-2"><a href="#檢視與截圖工作流"><span class="toc-label">檢視與截圖工作流</span></a></li><li class="toc-level-2"><a href="#工作流程邊界三條資料路徑"><span class="toc-label">工作流程邊界（三條資料路徑）</span></a></li><li class="toc-level-2"><a href="#prompt-placeholder-說明"><span class="toc-label">Prompt Placeholder 說明</span></a></li><li class="toc-level-2"><a href="#暫存-vs-即時維運邏輯"><span class="toc-label">暫存 vs 即時：維運邏輯</span></a></li><li class="toc-level-2"><a href="#閱讀即時資產盤點"><span class="toc-label">閱讀即時資產盤點</span></a></li><li class="toc-level-2"><a href="#關鍵指令-完整參數參考"><span class="toc-label">關鍵指令 (完整參數參考)</span></a></li><li class="toc-level-2"><a href="#docker-驗證範例"><span class="toc-label">Docker 驗證範例</span></a></li><li class="toc-level-3"><a href="#1-匯出進度-export-progress"><span class="toc-label">1. 匯出進度 (Export Progress)</span></a></li><li class="toc-level-3"><a href="#2-dry-run-匯入預覽"><span class="toc-label">2. Dry-Run 匯入預覽</span></a></li><li class="toc-level-3"><a href="#3-provisioning-比對"><span class="toc-label">3. Provisioning 比對</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/dashboard.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
+  <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#適用對象"><span class="toc-label">適用對象</span></a></li><li class="toc-level-2"><a href="#主要目標"><span class="toc-label">主要目標</span></a></li><li class="toc-level-2"><a href="#指令頁面"><span class="toc-label">指令頁面</span></a></li><li class="toc-level-2"><a href="#核心工作流用途"><span class="toc-label">核心工作流用途</span></a></li><li class="toc-level-2"><a href="#檢視與截圖工作流"><span class="toc-label">檢視與截圖工作流</span></a></li><li class="toc-level-2"><a href="#工作流程邊界三條資料路徑"><span class="toc-label">工作流程邊界（三條資料路徑）</span></a></li><li class="toc-level-2"><a href="#prompt-與變數說明"><span class="toc-label">Prompt 與變數說明</span></a></li><li class="toc-level-2"><a href="#暫存-vs-即時維運邏輯"><span class="toc-label">暫存 vs 即時：維運邏輯</span></a></li><li class="toc-level-2"><a href="#閱讀即時資產盤點"><span class="toc-label">閱讀即時資產盤點</span></a></li><li class="toc-level-2"><a href="#關鍵指令-完整參數參考"><span class="toc-label">關鍵指令 (完整參數參考)</span></a></li><li class="toc-level-2"><a href="#實作範例"><span class="toc-label">實作範例</span></a></li><li class="toc-level-3"><a href="#1-匯出進度-export-progress"><span class="toc-label">1. 匯出進度 (Export Progress)</span></a></li><li class="toc-level-3"><a href="#2-dry-run-匯入預覽"><span class="toc-label">2. Dry-Run 匯入預覽</span></a></li><li class="toc-level-3"><a href="#3-provisioning-比對"><span class="toc-label">3. Provisioning 比對</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/dashboard.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
 </aside>
 
 </div>

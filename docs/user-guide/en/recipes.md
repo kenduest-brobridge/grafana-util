@@ -2,6 +2,18 @@
 
 This chapter provides practical solutions for common Grafana operational headaches. The goal is not just to show a command, but to show when to use it, what success looks like, and what to check when the workflow goes sideways.
 
+## Who It Is For
+
+- Operators who want proven workflow patterns instead of starting from a blank shell.
+- Teams standardizing migration, recovery, and review playbooks.
+- People who need success criteria and failure checks beside each example.
+
+## Primary Goals
+
+- Turn common operational problems into reusable playbooks.
+- Show what “good output” looks like before you continue.
+- Call out when a lane or workflow is the wrong fit for the job.
+
 ---
 
 ## 🚀 Recipe 1: Promoting Dashboards (Dev -> Prod)
@@ -14,6 +26,7 @@ This chapter provides practical solutions for common Grafana operational headach
 2. **Locate Clean Source**: Use files in `./dev-assets/prompt/`. These have environment-specific metadata stripped.
 3. **Import to Prod**:
    ```bash
+# Purpose: Import to Prod.
    grafana-util dashboard import --import-dir ./dev-assets/prompt --url https://prod-grafana --replace-existing
    ```
 
@@ -71,6 +84,7 @@ grafana-util dashboard inspect-export --import-dir ./backups/raw --output-format
 **Solution**: Use `patch-file` in a loop, then preview the result before replaying it.
 
 ```bash
+# Purpose: Solution: Use patch-file in a loop, then preview the result before replaying it.
 for file in ./dashboards/raw/*.json; do
   grafana-util dashboard patch-file --input "$file" --tag "ManagedBySRE" --output "$file"
 done
@@ -103,6 +117,7 @@ grafana-util dashboard import --import-dir ./dashboards/raw --replace-existing -
 **Solution**: Use `preview-route` to simulate matches.
 
 ```bash
+# Purpose: Solution: Use preview-route to simulate matches.
 grafana-util alert preview-route \
   --desired-dir ./alerts/desired \
   --label service=order \

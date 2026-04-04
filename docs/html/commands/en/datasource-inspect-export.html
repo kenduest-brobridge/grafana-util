@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="key-flags">Key flags</h2>
 <ul><li><code>--input-dir</code>: local directory containing the export artifacts.</li><li><code>--input-type</code>: select inventory or provisioning when the path could be interpreted either way.</li><li><code>--interactive</code>: open the local export inspection workbench.</li><li><code>--table</code>, <code>--csv</code>, <code>--text</code>, <code>--json</code>, <code>--yaml</code>, <code>--output-format</code>: output mode controls.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code>grafana-util datasource inspect-export --input-dir ./datasources --table
+<pre><code># Purpose: Inspect a local masked recovery bundle without connecting to Grafana.
+grafana-util datasource inspect-export --input-dir ./datasources --table
 grafana-util datasource inspect-export --input-dir ./datasources --json</code></pre>
 <h2 id="related-commands">Related commands</h2>
 <ul><li><a href="datasource-export.html">datasource export</a></li><li><a href="datasource-import.html">datasource import</a></li><li><a href="datasource-diff.html">datasource diff</a></li></ul>

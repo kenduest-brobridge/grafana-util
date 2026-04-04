@@ -713,7 +713,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="notes">Notes</h2>
 <ul><li>Use <code>--profile</code> for repeatable org inventory when the selected profile has the required admin privileges.</li><li>Org administration is commonly broader than a narrow API token. Basic auth or an admin-backed profile is the safer default for create, rename, export, import, and delete flows.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code>grafana-util access org list --profile prod --output-format text
+<pre><code># Purpose: List, create, modify, export, import, diff, or delete Grafana organizations.
+grafana-util access org list --profile prod --output-format text
 grafana-util access org list --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --json
 grafana-util access org modify --url http://localhost:3000 --basic-user admin --basic-password admin --name platform --set-name platform-core --json
 grafana-util access org delete --url http://localhost:3000 --basic-user admin --basic-password admin --name platform --yes</code></pre>

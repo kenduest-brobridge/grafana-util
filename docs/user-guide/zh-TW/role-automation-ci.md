@@ -20,7 +20,7 @@
 - 在 promotion 或 apply 前先跑 readiness gate
 - 從 staged 或 live 狀態產生可讓腳本處理的摘要
 - 讓多個 job 共用同一套 profile 設定
-- 在 auth scope、連線或 staged input 不正確時快速 fail fast
+- 在 auth scope、連線或 staged input 不正確時，提早失敗並讓 pipeline 直接停下來
 
 ## 建議的連線與秘密資料處理方式
 
@@ -32,6 +32,7 @@
 ## 建議先跑的 5 個指令
 
 ```bash
+# 用途：建議先跑的 5 個指令。
 grafana-util profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN
 grafana-util profile show --profile ci --output-format yaml
 grafana-util status staged --desired-file ./desired.json --output json

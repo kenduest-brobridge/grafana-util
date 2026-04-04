@@ -689,7 +689,12 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h1><span class="hero-title-main">Alert Operator Handbook</span></h1>
 
 
-    <p>This guide covers <code>grafana-util alert</code> as an operator workflow for alert desired-state authoring, review-first mutation, and migration-style replay flows.</p>
+    <p>This guide is for operators who need to author alerting changes locally, review the delta before applying it, or replay legacy alert bundles without guessing at the live effect.</p>
+<p>This guide covers <code>grafana-util alert</code> as an operator workflow for alert desired-state authoring, review-first mutation, and migration-style replay flows.</p>
+<h2 id="who-it-is-for">Who It Is For</h2>
+<ul><li>Operators maintaining Grafana Alerting rules, routes, contact points, and templates.</li><li>Reviewers who need to understand an alert bundle before apply.</li><li>Teams moving alerting state through Git, review, or CI workflows.</li></ul>
+<h2 id="primary-goals">Primary Goals</h2>
+<ul><li>Build or import alert desired state without touching live Grafana first.</li><li>Review plan output before an apply path.</li><li>Use replay and migration flows without guessing what live resources will change.</li></ul>
 <p>&gt; <strong>Operator Principle</strong>: Change alerts deliberately through a <strong>Plan -&gt; Review -&gt; Apply</strong> cycle to prevent accidental mutations in live environments.</p>
 <h2 id="command-pages">Command Pages</h2>
 <p>Need the command-by-command surface instead of the workflow guide?</p>
@@ -720,14 +725,16 @@ grafana-util alert plan \
 <p><strong>How to Read the Plan Output:</strong></p>
 <ul><li><strong>create</strong>: Desired resource is missing in live Grafana.</li><li><strong>update</strong>: Live Grafana differs from your desired file.</li><li><strong>delete</strong>: Triggered by <code>--prune</code> when a live resource is not in your files.</li></ul>
 <p><strong>Validated Apply Step:</strong> Only execute after the plan has been reviewed and saved.</p>
-<pre><code>grafana-util alert apply \
+<pre><code># Purpose: Only execute after the plan has been reviewed and saved.
+grafana-util alert apply \
   --plan-file ./alert-plan-reviewed.json \
   --approve --output json</code></pre>
 <h2 id="key-commands-full-argument-reference">Key Commands (Full Argument Reference)</h2>
 <table><thead><tr><th>Command</th><th>Full Example with Arguments</th></tr></thead><tbody><tr><td><strong>List Rules</strong></td><td><code>grafana-util alert list-rules --all-orgs --table</code></td></tr><tr><td><strong>Export</strong></td><td><code>grafana-util alert export --export-dir ./alerts --overwrite</code></td></tr><tr><td><strong>Plan</strong></td><td><code>grafana-util alert plan --desired-dir ./alerts/desired --prune --output json</code></td></tr><tr><td><strong>Apply</strong></td><td><code>grafana-util alert apply --plan-file ./plan.json --approve</code></td></tr><tr><td><strong>Set Route</strong></td><td><code>grafana-util alert set-route --desired-dir ./alerts/desired --receiver pagerduty</code></td></tr><tr><td><strong>New Rule</strong></td><td><code>grafana-util alert new-rule --name &lt;NAME&gt; --folder &lt;FOLDER&gt; --output &lt;FILE&gt;</code></td></tr><tr><td><strong>New Contact</strong></td><td><code>grafana-util alert new-contact-point --name &lt;NAME&gt; --type &lt;TYPE&gt; --output &lt;FILE&gt;</code></td></tr><tr><td><strong>New Template</strong></td><td><code>grafana-util alert new-template --name &lt;NAME&gt; --template &lt;CONTENT&gt; --output &lt;FILE&gt;</code></td></tr></tbody></table>
 <h2 id="validated-docker-examples">Validated Docker Examples</h2>
 <h3 id="1-alert-plan-excerpt">1. Alert Plan Excerpt</h3>
-<pre><code>grafana-util alert plan --desired-dir ./alerts/desired --prune --output json</code></pre>
+<pre><code># Purpose: 1. Alert Plan Excerpt.
+grafana-util alert plan --desired-dir ./alerts/desired --prune --output json</code></pre>
 <p><strong>Output Excerpt:</strong></p>
 <pre><code>{
   &quot;summary&quot;: {
@@ -740,7 +747,8 @@ grafana-util alert plan \
 }</code></pre>
 <h3 id="2-route-preview">2. Route Preview</h3>
 <p>Verify your routing logic locally before applying.</p>
-<pre><code>grafana-util alert preview-route --desired-dir ./alerts/desired --label team=platform --severity critical</code></pre>
+<pre><code># Purpose: Verify your routing logic locally before applying.
+grafana-util alert preview-route --desired-dir ./alerts/desired --label team=platform --severity critical</code></pre>
 <p><strong>Output Excerpt:</strong></p>
 <pre><code>{
   &quot;input&quot;: { &quot;labels&quot;: { &quot;team&quot;: &quot;platform&quot; }, &quot;severity&quot;: &quot;critical&quot; },
@@ -751,7 +759,7 @@ grafana-util alert plan \
     <nav class="footer-nav"><a class="link-card" href="datasource.html"><span>Previous</span>Datasource Operator Handbook</a><a class="link-card" href="access.html"><span>Next</span>Access Management (Identity &amp; Access)</a></nav>
   </article>
   <aside class="sidebar">
-  <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#command-pages"><span class="toc-label">Command Pages</span></a></li><li class="toc-level-2"><a href="#what-this-area-is-for"><span class="toc-label">What This Area Is For</span></a></li><li class="toc-level-2"><a href="#workflow-boundaries-two-lanes"><span class="toc-label">Workflow Boundaries (Two Lanes)</span></a></li><li class="toc-level-2"><a href="#authoring-desired-state"><span class="toc-label">Authoring Desired State</span></a></li><li class="toc-level-2"><a href="#review-and-apply-the-review-cycle"><span class="toc-label">Review and Apply (The Review Cycle)</span></a></li><li class="toc-level-2"><a href="#key-commands-full-argument-reference"><span class="toc-label">Key Commands (Full Argument Reference)</span></a></li><li class="toc-level-2"><a href="#validated-docker-examples"><span class="toc-label">Validated Docker Examples</span></a></li><li class="toc-level-3"><a href="#1-alert-plan-excerpt"><span class="toc-label">1. Alert Plan Excerpt</span></a></li><li class="toc-level-3"><a href="#2-route-preview"><span class="toc-label">2. Route Preview</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: English</a></li><li><a href="../zh-TW/alert.html" class="sidebar-meta-link">Switch to 繁體中文</a></li></ul></section>
+  <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#who-it-is-for"><span class="toc-label">Who It Is For</span></a></li><li class="toc-level-2"><a href="#primary-goals"><span class="toc-label">Primary Goals</span></a></li><li class="toc-level-2"><a href="#command-pages"><span class="toc-label">Command Pages</span></a></li><li class="toc-level-2"><a href="#what-this-area-is-for"><span class="toc-label">What This Area Is For</span></a></li><li class="toc-level-2"><a href="#workflow-boundaries-two-lanes"><span class="toc-label">Workflow Boundaries (Two Lanes)</span></a></li><li class="toc-level-2"><a href="#authoring-desired-state"><span class="toc-label">Authoring Desired State</span></a></li><li class="toc-level-2"><a href="#review-and-apply-the-review-cycle"><span class="toc-label">Review and Apply (The Review Cycle)</span></a></li><li class="toc-level-2"><a href="#key-commands-full-argument-reference"><span class="toc-label">Key Commands (Full Argument Reference)</span></a></li><li class="toc-level-2"><a href="#validated-docker-examples"><span class="toc-label">Validated Docker Examples</span></a></li><li class="toc-level-3"><a href="#1-alert-plan-excerpt"><span class="toc-label">1. Alert Plan Excerpt</span></a></li><li class="toc-level-3"><a href="#2-route-preview"><span class="toc-label">2. Route Preview</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: English</a></li><li><a href="../zh-TW/alert.html" class="sidebar-meta-link">Switch to 繁體中文</a></li></ul></section>
 </aside>
 
 </div>

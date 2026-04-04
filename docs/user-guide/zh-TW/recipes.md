@@ -2,6 +2,18 @@
 
 本章整理幾個真的會用到的 Grafana 維運配方。重點不只是指令本身，而是什麼時候該用、成功長什麼樣、失敗先查哪裡。
 
+## 適用對象
+
+- 想快速套用既有維運做法的人
+- 需要把 dashboard、alert、access 的常見操作做成標準套路的人
+- 想先看成功判準與失敗檢查點的人
+
+## 主要目標
+
+- 把常見情境拆成可重複的做法
+- 先讓你知道哪個 lane、哪個流程比較對
+- 減少靠猜來操作 Grafana 的次數
+
 ---
 
 ## 🚀 錦囊 1：跨環境儀表板遷移 (Dev -> Prod)
@@ -14,6 +26,7 @@
 2. **定位乾淨來源**：使用 `./dev-assets/prompt/` 下的檔案。這些檔案已去除來源環境專屬 metadata。
 3. **匯入到 Prod**：
    ```bash
+# 用途：匯入到 Prod。
    grafana-util dashboard import --import-dir ./dev-assets/prompt --url https://prod-grafana --replace-existing
    ```
 
@@ -42,6 +55,7 @@
 **解決方案**：匯入前先跑 **pre-import inspection**。
 
 ```bash
+# 用途：解決方案：匯入前先跑 pre-import inspection。
 grafana-util dashboard inspect-export --import-dir ./backups/raw --output-format report-table
 ```
 
@@ -70,6 +84,7 @@ grafana-util dashboard inspect-export --import-dir ./backups/raw --output-format
 **解決方案**：在迴圈中使用 `patch-file`，然後在 replay 前先 preview。
 
 ```bash
+# 用途：解決方案：在迴圈中使用 patch-file，然後在 replay 前先 preview。
 for file in ./dashboards/raw/*.json; do
   grafana-util dashboard patch-file --input "$file" --tag "ManagedBySRE" --output "$file"
 done
@@ -102,6 +117,7 @@ grafana-util dashboard import --import-dir ./dashboards/raw --replace-existing -
 **解決方案**：使用 `preview-route` 模擬匹配結果。
 
 ```bash
+# 用途：解決方案：使用 preview-route 模擬匹配結果。
 grafana-util alert preview-route \
   --desired-dir ./alerts/desired \
   --label service=order \

@@ -8,17 +8,6 @@ grafana\-util\-change\-audit \- audit managed Grafana resources against a checks
 audit managed Grafana resources against a checksum lock and current live state.
 .PP
 when you need a drift check or want to refresh a lock snapshot.
-.SH EXAMPLES
-.PP
-audit managed Grafana resources against a checksum lock and current live state.
-.EX
-grafana-util change audit --managed-file ./desired.json --live-file ./live.json --write-lock ./sync-lock.json
-.EE
-.PP
-audit managed Grafana resources against a checksum lock and current live state.
-.EX
-grafana-util change audit --lock-file ./sync-lock.json --fetch-live --profile prod --fail-on-drift --output json
-.EE
 .SH SEE ALSO
 \fBgrafana-util\fR(1),
 \fBgrafana-util-change\fR(1)

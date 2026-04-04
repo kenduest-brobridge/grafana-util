@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="key-flags">Key flags</h2>
 <ul><li><code>--uid</code>: datasource UID to delete.</li><li><code>--name</code>: datasource name to delete when UID is not available.</li><li><code>--yes</code>: acknowledge the live delete.</li><li><code>--dry-run</code>, <code>--table</code>, <code>--json</code>, <code>--output-format</code>, <code>--no-header</code>: preview output controls.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code>grafana-util datasource delete --url http://localhost:3000 --basic-user admin --basic-password admin --uid prom-main --dry-run --json
+<pre><code># Purpose: Delete one live Grafana datasource through the Grafana API.
+grafana-util datasource delete --url http://localhost:3000 --basic-user admin --basic-password admin --uid prom-main --dry-run --json
 grafana-util datasource delete --profile prod --uid prom-main --yes</code></pre>
 <h2 id="related-commands">Related commands</h2>
 <ul><li><a href="datasource-browse.html">datasource browse</a></li><li><a href="datasource-modify.html">datasource modify</a></li><li><a href="datasource-list.html">datasource list</a></li></ul>

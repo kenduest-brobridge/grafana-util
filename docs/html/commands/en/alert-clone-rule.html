@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="key-flags">Key flags</h2>
 <ul><li><code>--desired-dir</code> points to the staged alert tree.</li><li><code>--source</code> identifies the rule to clone.</li><li><code>--name</code> sets the new rule name.</li><li><code>--folder</code>, <code>--rule-group</code>, <code>--receiver</code>, and <code>--no-route</code> adjust the clone target.</li><li><code>--dry-run</code> previews the cloned output.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code>grafana-util alert clone-rule --desired-dir ./alerts/desired --source cpu-high --name cpu-high-staging --folder staging-alerts --rule-group cpu --receiver slack-platform
+<pre><code># Purpose: Clone an existing staged alert rule into a new authoring target.
+grafana-util alert clone-rule --desired-dir ./alerts/desired --source cpu-high --name cpu-high-staging --folder staging-alerts --rule-group cpu --receiver slack-platform
 grafana-util alert clone-rule --desired-dir ./alerts/desired --source cpu-high --name cpu-high-staging --dry-run</code></pre>
 <h2 id="related-commands">Related commands</h2>
 <ul><li><a href="alert.html">alert</a></li><li><a href="alert-add-rule.html">alert add-rule</a></li><li><a href="alert-new-rule.html">alert new-rule</a></li></ul>

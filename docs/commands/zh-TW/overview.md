@@ -13,6 +13,7 @@
 範例：
 
 ```bash
+# 用途：Root。
 grafana-util overview --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts --desired-file ./desired.json --output table
 grafana-util overview --source-bundle ./sync-source-bundle.json --target-inventory ./target-inventory.json --availability-file ./availability.json --mapping-file ./mapping.json --output text
 ```
@@ -35,6 +36,7 @@ grafana-util overview --source-bundle ./sync-source-bundle.json --target-invento
 範例：
 
 ```bash
+# 用途：live。
 grafana-util overview live --profile prod --output yaml
 grafana-util overview live --url http://localhost:3000 --basic-user admin --basic-password admin --output interactive
 grafana-util overview live --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output json

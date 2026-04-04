@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="key-flags">Key flags</h2>
 <ul><li><code>--desired-dir</code> points to the staged alert tree.</li><li><code>--name</code> seeds the scaffold name.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code>grafana-util alert new-rule --desired-dir ./alerts/desired --name cpu-main
+<pre><code># Purpose: Create a low-level staged alert rule scaffold.
+grafana-util alert new-rule --desired-dir ./alerts/desired --name cpu-main
 grafana-util alert add-rule --desired-dir ./alerts/desired --name cpu-main --folder platform-alerts --rule-group cpu --receiver pagerduty-primary</code></pre>
 <h2 id="related-commands">Related commands</h2>
 <ul><li><a href="alert.html">alert</a></li><li><a href="alert-add-rule.html">alert add-rule</a></li><li><a href="alert-clone-rule.html">alert clone-rule</a></li></ul>

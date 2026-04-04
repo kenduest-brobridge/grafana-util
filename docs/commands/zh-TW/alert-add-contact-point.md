@@ -18,6 +18,7 @@
 ## 範例
 
 ```bash
+# 用途：從較高階的撰寫介面建立一個暫存中的 alert 聯絡點。
 grafana-util alert add-contact-point --desired-dir ./alerts/desired --name pagerduty-primary
 grafana-util alert add-contact-point --desired-dir ./alerts/desired --name pagerduty-primary --dry-run
 ```

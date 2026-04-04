@@ -24,6 +24,7 @@
 ## 範例
 
 ```bash
+# 用途：列出、瀏覽、建立、修改、匯出、匯入、比對或刪除 Grafana 使用者。
 grafana-util access user list --profile prod --scope org --output-format text
 grafana-util access user add --url http://localhost:3000 --basic-user admin --basic-password admin --login alice --email alice@example.com --name Alice --password secret
 grafana-util access user list --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --scope org --json

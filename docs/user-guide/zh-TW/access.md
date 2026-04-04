@@ -1,6 +1,18 @@
 # 身分與存取管理 (Identity & Access)
 
-管理 Grafana 的身分與存取資產：org、使用者、team 與 service account。
+這一章整理 Grafana 的身分與存取資產：org、使用者、team 與 service account。重點是先把人、組織與自動化憑證的生命週期講清楚，再談匯出、同步與回放。
+
+## 適用對象
+
+- 負責 org、使用者、team 或 service account 管理的人
+- 需要做權限盤點、同步、匯出或回放的人
+- 需要把身分資產接進 Git 或 CI 流程的人
+
+## 主要目標
+
+- 先理解 org / user / team / service account 的關係
+- 再把盤點、匯出、匯入與 diff 做成可重複流程
+- 需要時才對 token 做輪替或刪除
 
 ## 🔗 指令頁面
 
@@ -22,6 +34,7 @@
 
 ### 1. 列出、匯出與回放 org
 ```bash
+# 用途：1. 列出、匯出與回放 org。
 grafana-util access org list --table
 grafana-util access org export --export-dir ./access-orgs
 grafana-util access org import --import-dir ./access-orgs --dry-run
@@ -43,7 +56,7 @@ PREFLIGHT IMPORT:
 
 ---
 
-## 👤 使用者 / team 管理
+## 👤 使用者與 team 管理
 
 需要調整成員、管理快照或檢查漂移時，請使用 `access user` 與 `access team`。
 
@@ -68,6 +81,7 @@ No user differences across 12 user(s).
 
 ### 2. team 盤點與同步
 ```bash
+# 用途：2. team 盤點與同步。
 grafana-util access team list --org-id 1 --table
 grafana-util access team export --export-dir ./access-teams --with-members
 grafana-util access team import --import-dir ./access-teams --replace-existing --dry-run --table
@@ -94,6 +108,7 @@ service account 是自動化流程常見的基礎元件。
 
 ### 1. 列出與匯出 service account
 ```bash
+# 用途：1. 列出與匯出 service account。
 grafana-util access service-account list --json
 grafana-util access service-account export --export-dir ./access-sa
 ```
@@ -155,6 +170,7 @@ Created service-account token nightly -> serviceAccountId=15
 比較本機快照與 live Grafana 之間的差異。
 
 ```bash
+# 用途：比較本機快照與 live Grafana 之間的差異。
 grafana-util access user diff --import-dir ./access-users
 grafana-util access team diff --diff-dir ./access-teams
 grafana-util access service-account diff --diff-dir ./access-sa

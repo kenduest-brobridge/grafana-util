@@ -16,6 +16,7 @@
 
 ## 範例
 ```bash
+# 用途：從 JSON 成品建立可重現的儀表板拓樸圖。
 grafana-util dashboard topology --governance ./governance.json --queries ./queries.json --alert-contract ./alert-contract.json --output-format mermaid
 grafana-util dashboard graph --governance ./governance.json --queries ./queries.json --alert-contract ./alert-contract.json --output-format dot --output-file ./dashboard-topology.dot
 ```

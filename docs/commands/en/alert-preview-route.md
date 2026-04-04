@@ -18,6 +18,7 @@ Preview the managed route inputs without changing runtime behavior.
 ## Examples
 
 ```bash
+# Purpose: Preview the managed route inputs without changing runtime behavior.
 grafana-util alert preview-route --desired-dir ./alerts/desired --label team=platform --severity critical
 ```
 

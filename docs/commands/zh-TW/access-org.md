@@ -28,6 +28,7 @@
 ## 範例
 
 ```bash
+# 用途：列出、建立、修改、匯出、匯入、比對或刪除 Grafana 組織。
 grafana-util access org list --profile prod --output-format text
 grafana-util access org modify --url http://localhost:3000 --basic-user admin --basic-password admin --name platform --set-name platform-core --json
 grafana-util access org list --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --json

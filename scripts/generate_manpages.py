@@ -409,6 +409,22 @@ def generate_subcommand_manpage(
 ) -> tuple[str, str]:
     """Build one per-subcommand manpage from a parsed command doc page."""
     full_cli_path = f"{spec.cli_path} {page.title}".strip()
+    return generate_command_doc_manpage(
+        full_cli_path,
+        page,
+        version=version,
+        see_also=("grafana-util", spec.stem),
+    )
+
+
+def generate_command_doc_manpage(
+    full_cli_path: str,
+    page: CommandDocPage,
+    *,
+    version: str = VERSION,
+    see_also: tuple[str, ...] = ("grafana-util",),
+) -> tuple[str, str]:
+    """Build one manpage from one parsed command doc page."""
     stem = man_stem_for_cli_path(full_cli_path)
     lines: list[str] = []
     emit_header(lines, stem, page.purpose or f"{page.title} workflow", version=version)
@@ -417,8 +433,25 @@ def generate_subcommand_manpage(
     emit_when(lines, page)
     emit_common_options(lines, page.key_flags)
     emit_example_entries(lines, [(page.purpose, example) for example in page.examples])
-    emit_see_also(lines, ("grafana-util", spec.stem))
+    emit_see_also(lines, see_also)
     return f"{stem}.1", "\n".join(lines) + "\n"
+
+
+def iter_standalone_command_pages(command_docs_dir: Path) -> list[tuple[str, CommandDocPage]]:
+    """Return command-doc pages backed by standalone Markdown files."""
+    root_docs = {Path(spec.root_doc).stem for spec in NAMESPACE_SPECS}
+    root_docs.add("index")
+    pages: list[tuple[str, CommandDocPage]] = []
+    for source in sorted(command_docs_dir.glob("*.md")):
+        if source.stem in root_docs:
+            continue
+        cli_path = "grafana-util " + source.stem.replace("-", " ")
+        try:
+            page = parse_command_page(source, cli_path)
+        except ValueError:
+            continue
+        pages.append((cli_path, page))
+    return pages
 
 
 def generate_top_level_manpage(*, command_docs_dir: Path, version: str = VERSION) -> str:
@@ -459,12 +492,14 @@ def generate_top_level_manpage(*, command_docs_dir: Path, version: str = VERSION
             ]
         )
     lines.append(".SH SUBCOMMAND MANPAGES")
+    listed_stems: set[str] = set()
     for spec in NAMESPACE_SPECS:
         subcommands = load_subcommands(spec, command_docs_dir)
         lines.extend([".SS " + roff_text(spec.cli_path.removeprefix("grafana-util "))])
         for page in subcommands:
             full_cli_path = f"{spec.cli_path} {page.title}".strip()
             stem = man_stem_for_cli_path(full_cli_path)
+            listed_stems.add(stem)
             lines.extend(
                 [
                     ".TP",
@@ -472,6 +507,20 @@ def generate_top_level_manpage(*, command_docs_dir: Path, version: str = VERSION
                     roff_text(render_listing_summary(page)),
                 ]
             )
+    for cli_path, page in iter_standalone_command_pages(command_docs_dir):
+        stem = man_stem_for_cli_path(cli_path)
+        if stem in listed_stems:
+            continue
+        namespace = cli_path.split()[1]
+        lines.extend([".SS " + roff_text(namespace)])
+        lines.extend(
+            [
+                ".TP",
+                rf".B {roff_text(stem)}(1)",
+                roff_text(render_listing_summary(page)),
+            ]
+        )
+        listed_stems.add(stem)
     lines.extend(
         [
             ".TP",
@@ -551,6 +600,9 @@ def generate_manpages(*, command_docs_dir: Path | None = None, version: str = VE
         for page in subcommands:
             name, body = generate_subcommand_manpage(spec, page, version=version)
             outputs[name] = body
+    for cli_path, page in iter_standalone_command_pages(resolved_command_docs_dir):
+        name, body = generate_command_doc_manpage(cli_path, page, version=version)
+        outputs.setdefault(name, body)
     return outputs
 
 

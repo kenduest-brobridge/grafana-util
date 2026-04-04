@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="key-flags">Key flags</h2>
 <ul><li><code>--uid</code>: datasource UID to modify.</li><li><code>--set-url</code>: replace the datasource URL.</li><li><code>--set-access</code>: replace the datasource access mode.</li><li><code>--set-default</code>: set or clear the default datasource flag.</li><li><code>--basic-auth</code>, <code>--basic-auth-user</code>, <code>--basic-auth-password</code>: update basic auth settings.</li><li><code>--user</code>, <code>--password</code>, <code>--with-credentials</code>, <code>--http-header</code>: update supported request settings.</li><li><code>--tls-skip-verify</code>, <code>--server-name</code>: update TLS-related settings.</li><li><code>--json-data</code>, <code>--secure-json-data</code>, <code>--secure-json-data-placeholders</code>, <code>--secret-values</code>: update structured fields and secrets.</li><li><code>--dry-run</code>, <code>--table</code>, <code>--json</code>, <code>--output-format</code>, <code>--no-header</code>: preview output controls.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code>grafana-util datasource modify --url http://localhost:3000 --basic-user admin --basic-password admin --uid prom-main --set-url http://prometheus-v2:9090 --dry-run --json
+<pre><code># Purpose: Modify one live Grafana datasource through the Grafana API.
+grafana-util datasource modify --url http://localhost:3000 --basic-user admin --basic-password admin --uid prom-main --set-url http://prometheus-v2:9090 --dry-run --json
 grafana-util datasource modify --profile prod --uid prom-main --set-default true --dry-run --table</code></pre>
 <h2 id="related-commands">Related commands</h2>
 <ul><li><a href="datasource-add.html">datasource add</a></li><li><a href="datasource-list.html">datasource list</a></li><li><a href="datasource-delete.html">datasource delete</a></li></ul>

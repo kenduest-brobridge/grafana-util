@@ -8,17 +8,6 @@ grafana\-util\-change\-bundle\-preflight \- build a staged bundle\-level sync pr
 build a staged bundle\-level sync preflight document from a source bundle and target inventory.
 .PP
 when you need to compare a source bundle against a target inventory before apply.
-.SH EXAMPLES
-.PP
-build a staged bundle\-level sync preflight document from a source bundle and target inventory.
-.EX
-grafana-util change bundle-preflight --source-bundle ./sync-source-bundle.json --target-inventory ./target-inventory.json --output json
-.EE
-.PP
-build a staged bundle\-level sync preflight document from a source bundle and target inventory.
-.EX
-grafana-util change bundle-preflight --source-bundle ./sync-source-bundle.json --target-inventory ./target-inventory.json --availability-file ./availability.json --output json
-.EE
 .SH SEE ALSO
 \fBgrafana-util\fR(1),
 \fBgrafana-util-change\fR(1)

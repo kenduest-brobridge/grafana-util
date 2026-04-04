@@ -690,11 +690,16 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 
 
     <p>本章整理幾個真的會用到的 Grafana 維運配方。重點不只是指令本身，而是什麼時候該用、成功長什麼樣、失敗先查哪裡。</p>
+<h2 id="適用對象">適用對象</h2>
+<ul><li>想快速套用既有維運做法的人</li><li>需要把 dashboard、alert、access 的常見操作做成標準套路的人</li><li>想先看成功判準與失敗檢查點的人</li></ul>
+<h2 id="主要目標">主要目標</h2>
+<ul><li>把常見情境拆成可重複的做法</li><li>先讓你知道哪個 lane、哪個流程比較對</li><li>減少靠猜來操作 Grafana 的次數</li></ul>
 <h2 id="錦囊-1跨環境儀表板遷移-dev-prod">錦囊 1：跨環境儀表板遷移 (Dev -&gt; Prod)</h2>
 <p><strong>問題描述</strong>：直接從開發環境匯出再匯入到正式環境，常會因 org ID、folder context 或 data source UID 不一致而失敗。</p>
 <p><strong>解決方案</strong>：利用 <strong><code>prompt/</code> lane</strong> 做乾淨遷移。</p>
 <ol><li><strong>從 Dev 匯出</strong>：<code>grafana-util dashboard export --export-dir ./dev-assets</code></li><li><strong>定位乾淨來源</strong>：使用 <code>./dev-assets/prompt/</code> 下的檔案。這些檔案已去除來源環境專屬 metadata。</li><li><strong>匯入到 Prod</strong>：</li></ol>
-<pre><code>   grafana-util dashboard import --import-dir ./dev-assets/prompt --url https://prod-grafana --replace-existing</code></pre>
+<pre><code># 用途：匯入到 Prod。
+   grafana-util dashboard import --import-dir ./dev-assets/prompt --url https://prod-grafana --replace-existing</code></pre>
 <p><strong>適合什麼時候用</strong>：來源與目標環境的 dashboard 意圖相同，但不想直接帶著來源環境 metadata 時。</p>
 <p><strong>不適合什麼時候用</strong>：如果你的目標是 raw backup/replay 或災難恢復，請從 <code>raw/</code> 開始，不要從 <code>prompt/</code> 開始。</p>
 <p><strong>成功判準</strong>：</p>
@@ -704,7 +709,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="錦囊-2匯入前的依賴性盤點">錦囊 2：匯入前的依賴性盤點</h2>
 <p><strong>問題描述</strong>：dashboard 匯入成功了，但 panel 因缺少 data source 而全部壞掉。</p>
 <p><strong>解決方案</strong>：匯入前先跑 <strong>pre-import inspection</strong>。</p>
-<pre><code>grafana-util dashboard inspect-export --import-dir ./backups/raw --output-format report-table</code></pre>
+<pre><code># 用途：解決方案：匯入前先跑 pre-import inspection。
+grafana-util dashboard inspect-export --import-dir ./backups/raw --output-format report-table</code></pre>
 <p><strong>檢查重點</strong>：確認報告中 <code>Sources</code> 欄位列出的每個 UID，都存在於目標環境的 <code>datasource list</code>。</p>
 <p><strong>適合什麼時候用</strong>：正式匯入前、promotion bundle 送審前，或確認某批 dashboard export 是否真的可攜時。</p>
 <p><strong>成功判準</strong>：</p>
@@ -714,7 +720,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="錦囊-3批次加標籤或更名-surgical-patching">錦囊 3：批次加標籤或更名 (Surgical Patching)</h2>
 <p><strong>問題描述</strong>：你需要一次幫很多 dashboard 加 tag 或做機械式更名。</p>
 <p><strong>解決方案</strong>：在迴圈中使用 <code>patch-file</code>，然後在 replay 前先 preview。</p>
-<pre><code>for file in ./dashboards/raw/*.json; do
+<pre><code># 用途：解決方案：在迴圈中使用 patch-file，然後在 replay 前先 preview。
+for file in ./dashboards/raw/*.json; do
   grafana-util dashboard patch-file --input &quot;$file&quot; --tag &quot;ManagedBySRE&quot; --output &quot;$file&quot;
 done
 
@@ -728,7 +735,8 @@ grafana-util dashboard import --import-dir ./dashboards/raw --replace-existing -
 <h2 id="錦囊-4驗證告警路由邏輯">錦囊 4：驗證告警路由邏輯</h2>
 <p><strong>問題描述</strong>：通知策略很複雜，你很難只靠眼睛判斷告警最後會送到哪個 receiver。</p>
 <p><strong>解決方案</strong>：使用 <code>preview-route</code> 模擬匹配結果。</p>
-<pre><code>grafana-util alert preview-route \
+<pre><code># 用途：解決方案：使用 preview-route 模擬匹配結果。
+grafana-util alert preview-route \
   --desired-dir ./alerts/desired \
   --label service=order \
   --severity critical</code></pre>
@@ -744,7 +752,7 @@ grafana-util dashboard import --import-dir ./dashboards/raw --replace-existing -
     <nav class="footer-nav"><a class="link-card" href="scenarios.html"><span>Previous</span>維運情境手冊 (Operator Scenarios)</a><a class="link-card" href="reference.html"><span>Next</span>技術參考手冊 (Technical Reference)</a></nav>
   </article>
   <aside class="sidebar">
-  <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#錦囊-1跨環境儀表板遷移-dev-prod"><span class="toc-label">錦囊 1：跨環境儀表板遷移 (Dev -&gt; Prod)</span></a></li><li class="toc-level-2"><a href="#錦囊-2匯入前的依賴性盤點"><span class="toc-label">錦囊 2：匯入前的依賴性盤點</span></a></li><li class="toc-level-2"><a href="#錦囊-3批次加標籤或更名-surgical-patching"><span class="toc-label">錦囊 3：批次加標籤或更名 (Surgical Patching)</span></a></li><li class="toc-level-2"><a href="#錦囊-4驗證告警路由邏輯"><span class="toc-label">錦囊 4：驗證告警路由邏輯</span></a></li><li class="toc-level-2"><a href="#專家建議"><span class="toc-label">專家建議</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/recipes.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
+  <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#適用對象"><span class="toc-label">適用對象</span></a></li><li class="toc-level-2"><a href="#主要目標"><span class="toc-label">主要目標</span></a></li><li class="toc-level-2"><a href="#錦囊-1跨環境儀表板遷移-dev-prod"><span class="toc-label">錦囊 1：跨環境儀表板遷移 (Dev -&gt; Prod)</span></a></li><li class="toc-level-2"><a href="#錦囊-2匯入前的依賴性盤點"><span class="toc-label">錦囊 2：匯入前的依賴性盤點</span></a></li><li class="toc-level-2"><a href="#錦囊-3批次加標籤或更名-surgical-patching"><span class="toc-label">錦囊 3：批次加標籤或更名 (Surgical Patching)</span></a></li><li class="toc-level-2"><a href="#錦囊-4驗證告警路由邏輯"><span class="toc-label">錦囊 4：驗證告警路由邏輯</span></a></li><li class="toc-level-2"><a href="#專家建議"><span class="toc-label">專家建議</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/recipes.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
 </aside>
 
 </div>

@@ -691,11 +691,11 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 
     <p>這一頁是給第一次接觸 <code>grafana-util</code> 的人。目標不是一開始就背完所有指令，而是先把連線、驗證方式、profile 與唯讀檢查流程搞清楚。</p>
 <p>先抓住一個重點：<code>grafana-util</code> 不是只能靠 profile 連線。這個工具本來就支援多種方式：</p>
-<ul><li>每次執行時直接帶 <code>--url</code> 與驗證參數</li><li>用 <code>--prompt-password</code> 或 <code>--prompt-token</code> 互動輸入，不把敏感值直接打在命令列</li><li>讓環境變數提供帳號、密碼或 token</li><li>把常用預設寫進 repo-local 的 profile，再用 <code>--profile</code> 重複使用</li></ul>
+<ul><li>每次執行時直接帶 <code>--url</code> 與驗證參數</li><li>用 <code>--prompt-password</code> 或 <code>--prompt-token</code> 互動輸入，不把敏感值直接打在命令列</li><li>讓環境變數提供帳號、密碼或 token</li><li>把常用預設寫進專案本地的 profile，再用 <code>--profile</code> 重複使用</li></ul>
 <p>profile 的價值是把重複的連線資訊收斂起來，不是代表前面那些方式不能用。比較自然的學習順序是：</p>
 <ol><li>先用一個安全的唯讀指令確認真的連得上 Grafana</li><li>再搞清楚自己目前用的是哪一種驗證方式</li><li>確認連線沒問題後，再把常用設定整理進 profile</li></ol>
 <h2 id="適用對象">適用對象</h2>
-<ul><li>第一次使用此 CLI 工具的工程師或維運人員。</li><li>需要先確認連線、版本與 Profile 是否正常的人員。</li><li>還不需要執行匯入、套用或跨 org 作業的使用者。</li></ul>
+<ul><li>第一次接觸這個工具的工程師或維運人員。</li><li>需要先確認連線、版本與 profile 是否正常的人。</li><li>還不需要執行匯入、套用或跨 org 作業的使用者。</li></ul>
 <h2 id="主要目標">主要目標</h2>
 <ul><li>先確認執行檔、Grafana 連線與唯讀檢查都正常。</li><li>了解這個工具支援哪些連線與驗證方式。</li><li>釐清何時直接帶旗標就夠，何時應該改用 profile 簡化。</li><li>熟悉 <code>status live</code> 與 <code>overview live</code> 的差異。</li><li>了解 token 比較適合權限範圍明確的單一 org 自動化作業。</li></ul>
 <h2 id="典型新手任務">典型新手任務</h2>
@@ -707,7 +707,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="身分驗證與秘密資料處理建議">身分驗證與秘密資料處理建議</h2>
 <ol><li><strong>第一次連線先用直接旗標驗證</strong>：例如 <code>--url</code> 加上 Basic auth，先確定這台 Grafana 真的連得到。</li><li><strong>日常重複工作改用 <code>--profile</code></strong>：連線確認後，把 URL、帳號與 secret 來源整理進 profile，之後就不用每次重打。</li><li><strong>本機引導或臨時檢查可用 Basic auth</strong>：若還沒建 profile，可先用 <code>--basic-user</code> 搭配 <code>--prompt-password</code>。</li><li><strong>特定自動化場景才直接用 token</strong>：只有在你很清楚 token 權限範圍時，才建議直接拿來跑命令。</li><li><strong>secret 優先放在環境變數或 secret store</strong>：像 <code>password_env</code>、<code>token_env</code>、<code>os</code> 或 <code>encrypted-file</code> 都比把敏感值直接打在命令列上安全。</li></ol>
 <h2 id="建議先執行的-5-個指令">建議先執行的 5 個指令</h2>
-<pre><code>grafana-util --version
+<pre><code># 用途：建議先執行的 5 個指令。
+grafana-util --version
 grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output yaml
 grafana-util profile init --overwrite
 grafana-util profile add dev --url http://127.0.0.1:3000 --basic-user admin --prompt-password
@@ -715,11 +716,14 @@ grafana-util status live --profile dev --output yaml</code></pre>
 <p>這個順序不是隨便排的：</p>
 <ul><li>先看 binary 有沒有裝好</li><li>再用一次直接旗標確認 Grafana 真的連得通</li><li>確認沒問題後再初始化設定檔</li><li>把同一組連線整理成 profile</li><li>最後再用 <code>--profile</code> 跑同一種唯讀檢查</li></ul>
 <p>如果你暫時還沒有 profile，這就是最短的安全起手式：</p>
-<pre><code>grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output yaml</code></pre>
+<pre><code># 用途：如果你暫時還沒有 profile，這就是最短的安全起手式。
+grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output yaml</code></pre>
 <p>如果你手邊已有範圍明確的 token，也可以直接做同一類唯讀檢查：</p>
-<pre><code>grafana-util overview live --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --output json</code></pre>
+<pre><code># 用途：如果你手邊已有範圍明確的 token，也可以直接做同一類唯讀檢查。
+grafana-util overview live --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --output json</code></pre>
 <p>如果你的 shell 已經有環境變數，也可以不先建 profile，直接這樣跑：</p>
-<pre><code>export GRAFANA_USERNAME=admin
+<pre><code># 用途：如果你的 shell 已經有環境變數，也可以不先建 profile，直接這樣跑。
+export GRAFANA_USERNAME=admin
 export GRAFANA_PASSWORD=admin
 grafana-util status live --url http://localhost:3000 --output yaml</code></pre>
 <h2 id="學習進度檢核">學習進度檢核</h2>

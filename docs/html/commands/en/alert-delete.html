@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="key-flags">Key flags</h2>
 <ul><li><code>--kind</code> selects the resource kind to delete.</li><li><code>--identity</code> provides the explicit resource identity.</li><li><code>--allow-policy-reset</code> permits policy-tree reset.</li><li><code>--output</code> renders delete preview or execution output as <code>text</code> or <code>json</code>.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code>grafana-util alert delete --kind rule --identity cpu-main
+<pre><code># Purpose: Delete one explicit alert resource identity.
+grafana-util alert delete --kind rule --identity cpu-main
 grafana-util alert delete --url http://localhost:3000 --basic-user admin --basic-password admin --kind policy-tree --identity default --allow-policy-reset</code></pre>
 <h2 id="related-commands">Related commands</h2>
 <ul><li><a href="alert.html">alert</a></li><li><a href="alert-plan.html">alert plan</a></li><li><a href="alert-apply.html">alert apply</a></li></ul>

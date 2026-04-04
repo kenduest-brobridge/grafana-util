@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="重點旗標">重點旗標</h2>
 <ul><li><code>--dashboard-uid</code>：要抓取的線上 Grafana 儀表板 UID。</li><li><code>--output</code>：將抓回來的草稿寫到這個路徑。</li><li>共用線上旗標：<code>--url</code>、<code>--token</code>、<code>--basic-user</code>、<code>--basic-password</code>、<code>--profile</code>。</li></ul>
 <h2 id="範例">範例</h2>
-<pre><code>grafana-util dashboard get --profile prod --dashboard-uid cpu-main --output ./cpu-main.json
+<pre><code># 用途：將一個線上儀表板抓取成 API 安全的本地 JSON 草稿。
+grafana-util dashboard get --profile prod --dashboard-uid cpu-main --output ./cpu-main.json
 grafana-util dashboard get --url http://localhost:3000 --basic-user admin --basic-password admin --dashboard-uid cpu-main --output ./cpu-main.json
 grafana-util dashboard get --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --dashboard-uid cpu-main --output ./cpu-main.json</code></pre>
 <h2 id="相關指令">相關指令</h2>

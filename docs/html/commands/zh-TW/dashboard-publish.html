@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="重點旗標">重點旗標</h2>
 <ul><li><code>--input</code>：要發佈的儀表板 JSON 檔。</li><li><code>--replace-existing</code>：當 UID 已存在時更新既有儀表板。</li><li><code>--folder-uid</code>：覆寫目的資料夾 UID。</li><li><code>--message</code>：儲存在 Grafana 的修訂訊息。</li><li><code>--dry-run</code>：預覽發佈內容，但不變更 Grafana。</li><li><code>--table</code>、<code>--json</code>：dry-run 的輸出模式。</li></ul>
 <h2 id="範例">範例</h2>
-<pre><code>grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --basic-password admin --input ./drafts/cpu-main.json --folder-uid infra --message &#x27;Promote CPU dashboard&#x27;
+<pre><code># 用途：透過既有的儀表板匯入流程發佈一個本地儀表板 JSON 檔。
+grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --basic-password admin --input ./drafts/cpu-main.json --folder-uid infra --message &#x27;Promote CPU dashboard&#x27;
 grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --basic-password admin --input ./drafts/cpu-main.json --dry-run --table</code></pre>
 <h2 id="相關指令">相關指令</h2>
 <ul><li><a href="dashboard-import.html">dashboard import</a></li><li><a href="dashboard-review.html">dashboard review</a></li><li><a href="dashboard-patch-file.html">dashboard patch-file</a></li></ul>

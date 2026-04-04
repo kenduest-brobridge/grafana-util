@@ -695,11 +695,12 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="主要目標">主要目標</h2>
 <ul><li>先把連線設定收斂成可重複的 profile</li><li>先用 JSON 或 table 類輸出讓腳本穩定判讀</li><li>先在 <code>status staged</code> 與 <code>change preflight</code> 擋掉有問題的變更</li><li>只在確定 scope 合理時才用 token 或 service account token</li></ul>
 <h2 id="典型自動化任務">典型自動化任務</h2>
-<ul><li>在 promotion 或 apply 前先跑 readiness gate</li><li>從 staged 或 live 狀態產生可讓腳本處理的摘要</li><li>讓多個 job 共用同一套 profile 設定</li><li>在 auth scope、連線或 staged input 不正確時快速 fail fast</li></ul>
+<ul><li>在 promotion 或 apply 前先跑 readiness gate</li><li>從 staged 或 live 狀態產生可讓腳本處理的摘要</li><li>讓多個 job 共用同一套 profile 設定</li><li>在 auth scope、連線或 staged input 不正確時，提早失敗並讓 pipeline 直接停下來</li></ul>
 <h2 id="建議的連線與秘密資料處理方式">建議的連線與秘密資料處理方式</h2>
 <ol><li>CI 內優先用 <code>--profile</code> 搭配 <code>token_env</code> 或 <code>password_env</code>，讓 pipeline 不直接持有明文秘密。</li><li>direct Basic auth 只留給 bootstrap、除錯或手動救援，不要當成預設做法。</li><li>token 只適合單一 org 或權限邊界很明確的自動化，不要拿它去碰管理員操作。</li><li>若流程會產生 service account token，請把它視為敏感憑證並規劃輪替與撤銷。</li></ol>
 <h2 id="建議先跑的-5-個指令">建議先跑的 5 個指令</h2>
-<pre><code>grafana-util profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN
+<pre><code># 用途：建議先跑的 5 個指令。
+grafana-util profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN
 grafana-util profile show --profile ci --output-format yaml
 grafana-util status staged --desired-file ./desired.json --output json
 grafana-util change preflight --desired-file ./desired.json --fetch-live --output json

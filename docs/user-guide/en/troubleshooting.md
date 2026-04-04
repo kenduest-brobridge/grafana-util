@@ -1,6 +1,20 @@
 # 🔍 Troubleshooting & Glossary
 
-This chapter helps you diagnose real failures instead of guessing. The most useful split is not just "error code versus no error code", but:
+Use this chapter when a command looks syntactically correct but the result is wrong, incomplete, or inconsistent with what you expected.
+
+## Who It Is For
+
+- Operators who can run the command, but do not trust the outcome yet.
+- Engineers trying to separate auth, scope, staged-input, and live-state problems.
+- Teams building a repeatable debugging flow instead of ad hoc trial and error.
+
+## Primary Goals
+
+- Identify the category of failure before changing credentials or inputs.
+- Point you to the right companion chapter or command reference quickly.
+- Keep debugging focused on facts you can verify from the CLI.
+
+It helps you diagnose real failures instead of guessing. The most useful split is not just "error code versus no error code", but:
 
 - auth versus scope
 - live versus staged
@@ -20,6 +34,7 @@ When a command fails or behaves unexpectedly, use these techniques to look under
 `grafana-util` uses standard Rust logging. You can increase verbosity to see the exact API requests and responses.
 
 ```bash
+# Purpose: grafana-util uses standard Rust logging. You can increase verbosity to see the exact API requests and responses.
 RUST_LOG=debug grafana-util overview live --profile prod
 grafana-util dashboard list -v
 ```

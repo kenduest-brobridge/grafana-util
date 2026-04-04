@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="key-flags">Key flags</h2>
 <ul><li><code>--org-id</code>: browse one explicit Grafana org.</li><li><code>--all-orgs</code>: aggregate datasource browsing across visible orgs. Requires Basic auth.</li><li>Shared live flags: <code>--url</code>, <code>--token</code>, <code>--basic-user</code>, <code>--basic-password</code>.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code>grafana-util datasource browse --url http://localhost:3000 --basic-user admin --basic-password admin
+<pre><code># Purpose: Open a live datasource browser against Grafana with in-place modify and delete actions.
+grafana-util datasource browse --url http://localhost:3000 --basic-user admin --basic-password admin
 grafana-util datasource browse --url http://localhost:3000 --basic-user admin --basic-password admin --org-id 2</code></pre>
 <h2 id="related-commands">Related commands</h2>
 <ul><li><a href="datasource-list.html">datasource list</a></li><li><a href="datasource-modify.html">datasource modify</a></li><li><a href="datasource-delete.html">datasource delete</a></li></ul>

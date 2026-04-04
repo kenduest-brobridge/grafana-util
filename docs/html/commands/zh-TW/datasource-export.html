@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="重點旗標">重點旗標</h2>
 <ul><li><code>--export-dir</code>：匯出樹的目標目錄。</li><li><code>--org-id</code>：匯出指定的 Grafana org。</li><li><code>--all-orgs</code>：把每個可見 org 匯出到各自的子目錄。需要 Basic auth。</li><li><code>--overwrite</code>：取代既有檔案。</li><li><code>--without-datasource-provisioning</code>：略過 provisioning 變體。</li><li><code>--dry-run</code>：預覽會寫出哪些內容。</li></ul>
 <h2 id="範例">範例</h2>
-<pre><code>grafana-util datasource export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./datasources --overwrite
+<pre><code># 用途：將線上 Grafana datasource inventory 匯出成標準化 JSON 與 provisioning 檔案。
+grafana-util datasource export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./datasources --overwrite
 grafana-util datasource export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --export-dir ./datasources --overwrite</code></pre>
 <h2 id="相關指令">相關指令</h2>
 <ul><li><a href="datasource-inspect-export.html">datasource inspect-export</a></li><li><a href="datasource-import.html">datasource import</a></li><li><a href="datasource-diff.html">datasource diff</a></li></ul>

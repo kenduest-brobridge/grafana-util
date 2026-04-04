@@ -21,6 +21,7 @@
 
 ## 範例
 ```bash
+# 用途：列出儀表板摘要，不寫入匯出檔案。
 grafana-util dashboard list --profile prod
 grafana-util dashboard list --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --json
 grafana-util dashboard list --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --json

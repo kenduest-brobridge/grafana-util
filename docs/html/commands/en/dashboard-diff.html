@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="key-flags">Key flags</h2>
 <ul><li><code>--import-dir</code>: compare this export directory against Grafana.</li><li><code>--input-format</code>: choose <code>raw</code> or <code>provisioning</code>.</li><li><code>--import-folder-uid</code>: override the destination folder UID for the comparison.</li><li><code>--context-lines</code>: unified diff context.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code>grafana-util dashboard diff --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/raw
+<pre><code># Purpose: Compare local dashboard files against live Grafana dashboards.
+grafana-util dashboard diff --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/raw
 grafana-util dashboard diff --url http://localhost:3000 --basic-user admin --basic-password admin --org-id 2 --import-dir ./dashboards/raw --json</code></pre>
 <h2 id="related-commands">Related commands</h2>
 <ul><li><a href="dashboard-export.html">dashboard export</a></li><li><a href="dashboard-import.html">dashboard import</a></li><li><a href="dashboard-inspect-export.html">dashboard inspect-export</a></li></ul>

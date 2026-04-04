@@ -16,6 +16,7 @@ Use this when you need a local datasource bundle for later inspection, diff, or 
 
 ## Examples
 ```bash
+# Purpose: Export live Grafana datasource inventory as normalized JSON plus provisioning files.
 grafana-util datasource export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./datasources --overwrite
 grafana-util datasource export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --export-dir ./datasources --overwrite
 ```

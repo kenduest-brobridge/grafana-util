@@ -689,7 +689,11 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h1><span class="hero-title-main">Alert 維運人員手冊</span></h1>
 
 
-    <p>本指南涵蓋 <code>grafana-util alert</code> 維運流程，包含告警 Desired State 編寫、審查優先的變更流程，以及遷移用的回放流程。</p>
+    <p>這一章整理告警的設計、審查與套用流程。它的重點不是只會建立 rule，而是先把 route、contact point、template 與 plan/apply 的關係說清楚。</p>
+<h2 id="適用對象">適用對象</h2>
+<ul><li>負責 Grafana Alerting 設定的人</li><li>需要先審查告警變更，再套用到 live 環境的人</li><li>要把 alert 流程接到 Git、review 或 CI 的維運人員</li></ul>
+<h2 id="主要目標">主要目標</h2>
+<ul><li>先在本地整理 Desired State</li><li>再做 plan / review / apply</li><li>需要回放或遷移時，再走 export / import / diff</li></ul>
 <p>&gt; <strong>維運原則</strong>：透過 <strong>計畫 (Plan) -&gt; 審查 (Review) -&gt; 套用 (Apply)</strong> 週期來謹慎變更告警，防止即時環境發生意外。</p>
 <h2 id="指令頁面">指令頁面</h2>
 <p>如果你現在要查的是指令細節，而不是工作流程章節，可以直接看下面這些指令頁：</p>
@@ -720,14 +724,16 @@ grafana-util alert plan \
 <p><strong>如何解讀計畫輸出：</strong></p>
 <ul><li><strong>create</strong>：Desired 資源在即時 Grafana 中缺失。</li><li><strong>update</strong>：即時 Grafana 與您的 Desired 檔案存在差異。</li><li><strong>delete</strong>：當啟動 <code>--prune</code> 且即時資源不在您的檔案中時觸發。</li></ul>
 <p><strong>驗證套用步驟：</strong> 僅在計畫審查完成並保存後執行。</p>
-<pre><code>grafana-util alert apply \
+<pre><code># 用途：僅在計畫審查完成並保存後執行。
+grafana-util alert apply \
   --plan-file ./alert-plan-reviewed.json \
   --approve --output json</code></pre>
 <h2 id="關鍵指令-完整參數參考">關鍵指令 (完整參數參考)</h2>
 <table><thead><tr><th>指令</th><th>帶有參數的完整範例</th></tr></thead><tbody><tr><td><strong>列出規則 (List)</strong></td><td><code>grafana-util alert list-rules --all-orgs --table</code></td></tr><tr><td><strong>匯出 (Export)</strong></td><td><code>grafana-util alert export --export-dir ./alerts --overwrite</code></td></tr><tr><td><strong>計畫 (Plan)</strong></td><td><code>grafana-util alert plan --desired-dir ./alerts/desired --prune --output json</code></td></tr><tr><td><strong>套用 (Apply)</strong></td><td><code>grafana-util alert apply --plan-file ./plan.json --approve</code></td></tr><tr><td><strong>設定路由 (Set Route)</strong></td><td><code>grafana-util alert set-route --desired-dir ./alerts/desired --receiver pagerduty</code></td></tr><tr><td><strong>新增規則 (New)</strong></td><td><code>grafana-util alert new-rule --name &lt;NAME&gt; --folder &lt;FOLDER&gt; --output &lt;FILE&gt;</code></td></tr><tr><td><strong>新增聯絡點 (New)</strong></td><td><code>grafana-util alert new-contact-point --name &lt;NAME&gt; --type &lt;TYPE&gt; --output &lt;FILE&gt;</code></td></tr><tr><td><strong>新增範本 (New)</strong></td><td><code>grafana-util alert new-template --name &lt;NAME&gt; --template &lt;CONTENT&gt; --output &lt;FILE&gt;</code></td></tr></tbody></table>
-<h2 id="docker-驗證範例">Docker 驗證範例</h2>
+<h2 id="實作範例">實作範例</h2>
 <h3 id="1-告警計畫摘錄">1. 告警計畫摘錄</h3>
-<pre><code>grafana-util alert plan --desired-dir ./alerts/desired --prune --output json</code></pre>
+<pre><code># 用途：1. 告警計畫摘錄。
+grafana-util alert plan --desired-dir ./alerts/desired --prune --output json</code></pre>
 <p><strong>範例輸出：</strong></p>
 <pre><code>{
   &quot;summary&quot;: {
@@ -740,7 +746,8 @@ grafana-util alert plan \
 }</code></pre>
 <h3 id="2-路由預覽">2. 路由預覽</h3>
 <p>在套用前於本地驗證路由邏輯。</p>
-<pre><code>grafana-util alert preview-route --desired-dir ./alerts/desired --label team=platform --severity critical</code></pre>
+<pre><code># 用途：在套用前於本地驗證路由邏輯。
+grafana-util alert preview-route --desired-dir ./alerts/desired --label team=platform --severity critical</code></pre>
 <p><strong>範例輸出：</strong></p>
 <pre><code>{
   &quot;input&quot;: { &quot;labels&quot;: { &quot;team&quot;: &quot;platform&quot; }, &quot;severity&quot;: &quot;critical&quot; },
@@ -751,7 +758,7 @@ grafana-util alert plan \
     <nav class="footer-nav"><a class="link-card" href="datasource.html"><span>Previous</span>Data source 維運手冊</a><a class="link-card" href="access.html"><span>Next</span>身分與存取管理 (Identity &amp; Access)</a></nav>
   </article>
   <aside class="sidebar">
-  <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#指令頁面"><span class="toc-label">指令頁面</span></a></li><li class="toc-level-2"><a href="#核心工作流用途"><span class="toc-label">核心工作流用途</span></a></li><li class="toc-level-2"><a href="#工作流程邊界兩條資料路徑"><span class="toc-label">工作流程邊界（兩條資料路徑）</span></a></li><li class="toc-level-2"><a href="#編寫-desired-state"><span class="toc-label">編寫 Desired State</span></a></li><li class="toc-level-2"><a href="#審查與套用-審查週期"><span class="toc-label">審查與套用 (審查週期)</span></a></li><li class="toc-level-2"><a href="#關鍵指令-完整參數參考"><span class="toc-label">關鍵指令 (完整參數參考)</span></a></li><li class="toc-level-2"><a href="#docker-驗證範例"><span class="toc-label">Docker 驗證範例</span></a></li><li class="toc-level-3"><a href="#1-告警計畫摘錄"><span class="toc-label">1. 告警計畫摘錄</span></a></li><li class="toc-level-3"><a href="#2-路由預覽"><span class="toc-label">2. 路由預覽</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/alert.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
+  <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#適用對象"><span class="toc-label">適用對象</span></a></li><li class="toc-level-2"><a href="#主要目標"><span class="toc-label">主要目標</span></a></li><li class="toc-level-2"><a href="#指令頁面"><span class="toc-label">指令頁面</span></a></li><li class="toc-level-2"><a href="#核心工作流用途"><span class="toc-label">核心工作流用途</span></a></li><li class="toc-level-2"><a href="#工作流程邊界兩條資料路徑"><span class="toc-label">工作流程邊界（兩條資料路徑）</span></a></li><li class="toc-level-2"><a href="#編寫-desired-state"><span class="toc-label">編寫 Desired State</span></a></li><li class="toc-level-2"><a href="#審查與套用-審查週期"><span class="toc-label">審查與套用 (審查週期)</span></a></li><li class="toc-level-2"><a href="#關鍵指令-完整參數參考"><span class="toc-label">關鍵指令 (完整參數參考)</span></a></li><li class="toc-level-2"><a href="#實作範例"><span class="toc-label">實作範例</span></a></li><li class="toc-level-3"><a href="#1-告警計畫摘錄"><span class="toc-label">1. 告警計畫摘錄</span></a></li><li class="toc-level-3"><a href="#2-路由預覽"><span class="toc-label">2. 路由預覽</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/alert.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
 </aside>
 
 </div>

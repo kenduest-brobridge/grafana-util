@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="key-flags">Key flags</h2>
 <ul><li><code>--desired-dir</code> points to the staged alert tree.</li><li><code>--name</code>, <code>--folder</code>, and <code>--rule-group</code> define the rule placement.</li><li><code>--receiver</code> or <code>--no-route</code> controls route authoring.</li><li><code>--label</code>, <code>--annotation</code>, <code>--severity</code>, <code>--for</code>, <code>--expr</code>, <code>--threshold</code>, <code>--above</code>, and <code>--below</code> shape the rule.</li><li><code>--dry-run</code> previews the planned file output.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code>grafana-util alert add-rule --desired-dir ./alerts/desired --name cpu-high --folder platform-alerts --rule-group cpu --receiver pagerduty-primary --severity critical --expr &#x27;A&#x27; --threshold 80 --above --for 5m --label team=platform --annotation summary=&#x27;CPU high&#x27;
+<pre><code># Purpose: Author a staged alert rule from the higher-level authoring surface.
+grafana-util alert add-rule --desired-dir ./alerts/desired --name cpu-high --folder platform-alerts --rule-group cpu --receiver pagerduty-primary --severity critical --expr &#x27;A&#x27; --threshold 80 --above --for 5m --label team=platform --annotation summary=&#x27;CPU high&#x27;
 grafana-util alert add-rule --desired-dir ./alerts/desired --name cpu-high --folder platform-alerts --rule-group cpu --receiver pagerduty-primary --dry-run</code></pre>
 <h2 id="related-commands">Related commands</h2>
 <ul><li><a href="alert.html">alert</a></li><li><a href="alert-clone-rule.html">alert clone-rule</a></li><li><a href="alert-new-rule.html">alert new-rule</a></li></ul>

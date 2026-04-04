@@ -61,6 +61,7 @@ The key idea is simple: direct flags prove the connection, profiles simplify rep
 ## First Commands To Run
 
 ```bash
+# Purpose: First Commands To Run.
 grafana-util --version
 grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output yaml
 grafana-util profile init --overwrite
@@ -79,18 +80,21 @@ The sequence matters:
 If you do not have a profile yet, this is the shortest safe bootstrap:
 
 ```bash
+# Purpose: If you do not have a profile yet, this is the shortest safe bootstrap.
 grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output yaml
 ```
 
 If you already have a scoped token, you can check the same live surface without a profile:
 
 ```bash
+# Purpose: If you already have a scoped token, you can check the same live surface without a profile.
 grafana-util overview live --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output json
 ```
 
 If your shell already exports auth variables, you can also keep the command shorter:
 
 ```bash
+# Purpose: If your shell already exports auth variables, you can also keep the command shorter.
 export GRAFANA_USERNAME=admin
 export GRAFANA_PASSWORD=admin
 grafana-util status live --url http://localhost:3000 --output yaml

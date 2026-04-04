@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="key-flags">Key flags</h2>
 <ul><li><code>--desired-dir</code> points to the staged alert tree.</li><li><code>--receiver</code> sets the route receiver.</li><li><code>--label</code> adds route matchers in <code>key=value</code> form.</li><li><code>--severity</code> adds a convenience severity matcher.</li><li><code>--dry-run</code> renders the managed route document without writing files.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code>grafana-util alert set-route --desired-dir ./alerts/desired --receiver pagerduty-primary --label team=platform --severity critical
+<pre><code># Purpose: Author or replace the tool-owned staged notification route.
+grafana-util alert set-route --desired-dir ./alerts/desired --receiver pagerduty-primary --label team=platform --severity critical
 grafana-util alert set-route --desired-dir ./alerts/desired --receiver pagerduty-primary --label team=platform --severity critical --dry-run</code></pre>
 <h2 id="related-commands">Related commands</h2>
 <ul><li><a href="alert.html">alert</a></li><li><a href="alert-preview-route.html">alert preview-route</a></li><li><a href="alert-add-contact-point.html">alert add-contact-point</a></li></ul>

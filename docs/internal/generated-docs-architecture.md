@@ -344,6 +344,7 @@ The expected maintenance loop is:
 Primary commands:
 
 ```bash
+# Purpose: Primary commands.
 make man
 make man-check
 make html
@@ -353,6 +354,7 @@ make html-check
 Useful local entrypoints:
 
 ```bash
+# Purpose: Useful local entrypoints.
 man ./docs/man/grafana-util.1
 open ./docs/html/index.html
 ```
@@ -377,6 +379,7 @@ What they check:
 This means generator work normally needs both steps:
 
 ```bash
+# Purpose: This means generator work normally needs both steps.
 python3 ./scripts/generate_manpages.py --write
 python3 ./scripts/generate_command_html.py --write
 python3 -m unittest -v \

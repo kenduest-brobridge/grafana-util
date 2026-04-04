@@ -711,7 +711,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="key-flags">Key flags</h2>
 <ul><li><code>--policy-source</code>: choose <code>file</code> or <code>builtin</code>.</li><li><code>--policy</code>: policy file path when using file-based policy input.</li><li><code>--builtin-policy</code>: named built-in policy when using builtin policy input.</li><li><code>--governance</code>: path to dashboard inspect governance JSON.</li><li><code>--queries</code>: path to dashboard inspect query-report JSON.</li><li><code>--output-format</code>: render text or JSON.</li><li><code>--json-output</code>: optionally write the normalized result JSON.</li><li><code>--interactive</code>: open the interactive terminal browser over findings.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code>grafana-util dashboard governance-gate --policy-source file --policy ./policy.yaml --governance ./governance.json --queries ./queries.json
+<pre><code># Purpose: Evaluate governance policy against dashboard inspect JSON artifacts.
+grafana-util dashboard governance-gate --policy-source file --policy ./policy.yaml --governance ./governance.json --queries ./queries.json
 grafana-util dashboard governance-gate --policy-source builtin --builtin-policy default --governance ./governance.json --queries ./queries.json --output-format json --json-output ./governance-check.json</code></pre>
 <h2 id="related-commands">Related commands</h2>
 <ul><li><a href="dashboard-inspect-export.html">dashboard inspect-export</a></li><li><a href="dashboard-inspect-live.html">dashboard inspect-live</a></li><li><a href="dashboard-topology.html">dashboard topology</a></li></ul>

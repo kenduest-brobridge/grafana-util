@@ -13,6 +13,7 @@ Key flags: the root command is a namespace; staged and live inputs live on the s
 Examples:
 
 ```bash
+# Purpose: Root.
 grafana-util status staged --dashboard-export-dir ./dashboards/raw --desired-file ./desired.json --output json
 grafana-util status live --profile prod --output yaml
 ```
@@ -30,6 +31,7 @@ Key flags: `--dashboard-export-dir`, `--dashboard-provisioning-dir`, `--datasour
 Examples:
 
 ```bash
+# Purpose: staged.
 grafana-util status staged --dashboard-export-dir ./dashboards/raw --desired-file ./desired.json --output table
 grafana-util status staged --dashboard-provisioning-dir ./dashboards/provisioning --alert-export-dir ./alerts --output interactive
 ```
@@ -51,6 +53,7 @@ Notes:
 Examples:
 
 ```bash
+# Purpose: live.
 grafana-util status live --profile prod --output yaml
 grafana-util status live --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output json
 grafana-util status live --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --sync-summary-file ./sync-summary.json --output interactive

@@ -716,7 +716,8 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="auth-notes">Auth notes</h2>
 <ul><li>Prefer <code>--profile</code> for normal alert review and apply loops.</li><li>Use Basic auth when you need broader org visibility or admin-backed inventory.</li><li>Token auth works best for scoped single-org reads or automation where the token permissions are already well understood.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code>grafana-util alert list-rules --profile prod --json
+<pre><code># Purpose: Run the alerting command surface for exporting, importing, diffing, planning, applying, deleting, authoring, and listing Grafana alert resources.
+grafana-util alert list-rules --profile prod --json
 grafana-util alert export --url http://localhost:3000 --basic-user admin --basic-password admin --output-dir ./alerts --overwrite
 grafana-util alert export --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --output-dir ./alerts --flat</code></pre>
 <h2 id="related-commands">Related commands</h2>
