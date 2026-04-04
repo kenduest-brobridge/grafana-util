@@ -1,5 +1,6 @@
 import importlib.util
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -286,6 +287,41 @@ class GenerateCommandHtmlTests(unittest.TestCase):
         self.assertIn("這頁在說什麼", rendered)
         self.assertIn("什麼時候看這頁", rendered)
         self.assertIn("適合誰", rendered)
+
+    def test_versioned_handbook_build_skips_missing_newer_chapters(self):
+        module = load_module()
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            for locale in ("en", "zh-TW"):
+                source_dir = REPO_ROOT / "docs" / "user-guide" / locale
+                target_dir = root / locale
+                target_dir.mkdir(parents=True, exist_ok=True)
+                for source in source_dir.glob("*.md"):
+                    if source.name == "what-is-grafana-util.md":
+                        continue
+                    target_dir.joinpath(source.name).write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+
+            pages = module.build_handbook_pages("en", handbook_root=root)
+            stems = [page.stem for page in pages]
+
+            self.assertNotIn("what-is-grafana-util", stems)
+            self.assertIn("getting-started", stems)
+
+            config = module.HtmlBuildConfig(
+                source_root=REPO_ROOT,
+                command_docs_root=REPO_ROOT / "docs" / "commands",
+                handbook_root=root,
+                version="0.7.3",
+                output_prefix="v0.7",
+                version_label="v0.7",
+            )
+            generated = module.generate_outputs(config)
+
+            self.assertIn("v0.7/index.html", generated)
+            self.assertIn("v0.7/handbook/en/getting-started.html", generated)
+            self.assertNotIn("v0.7/handbook/en/what-is-grafana-util.html", generated)
+            self.assertNotIn("what-is-grafana-util.html", generated["v0.7/index.html"])
 
 
 if __name__ == "__main__":

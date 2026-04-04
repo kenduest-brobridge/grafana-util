@@ -172,7 +172,6 @@ def render_version_portal(
         home_href="index.html",
         hero_title="grafana-util Versioned Docs",
         hero_summary="Published release docs, development preview docs, and browser-readable manpage mirrors.",
-        eyebrow="Docs Portal",
         breadcrumbs=[("Home", None)],
         body_html=body_html,
         toc_html="<p>Choose a release line or the dev preview.</p>",

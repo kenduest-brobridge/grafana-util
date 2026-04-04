@@ -18,9 +18,9 @@ from docgen_handbook import (
     HANDBOOK_LOCALES,
     HANDBOOK_NAV_GROUP_LABELS,
     HANDBOOK_NAV_GROUPS,
-    HANDBOOK_ORDER,
     LOCALE_LABELS,
     build_handbook_pages,
+    existing_handbook_files,
     handbook_language_href,
 )
 from docgen_landing import LANDING_LOCALES, LANDING_UI_LABELS, LandingLink, LandingSection, LandingTask, load_landing_page
@@ -222,9 +222,12 @@ def handbook_nav_groups(locale: str, config: HtmlBuildConfig) -> list[tuple[str,
         items: list[tuple[str, str, str]] = []
         for filename in filenames:
             stem = Path(filename).stem
+            if stem not in titles:
+                continue
             target = prefixed_output_rel(config, f"handbook/{locale}/{stem}.html")
             items.append((stem, titles[stem], target))
-        grouped.append((labels[group_key], items))
+        if items:
+            grouped.append((labels[group_key], items))
     return grouped
 
 def format_handbook_nav_label(title: str, locale: str, stem: str) -> str:
@@ -246,7 +249,7 @@ def render_jump_select_options(output_rel: str, locale: str, config: HtmlBuildCo
     prompt_label = "Jump to..." if locale == "en" else "快速跳轉..."
     handbook_titles = handbook_nav_titles(locale, config)
     sections = [f'<option value="" selected>{html.escape(prompt_label)}</option>', f'<optgroup label="{handbook_label}">']
-    for name in HANDBOOK_ORDER:
+    for name in existing_handbook_files(locale, handbook_root=config.handbook_root):
         stem = Path(name).stem
         label = handbook_titles.get(stem, (stem.replace("-", " ").title()) if stem != "index" else ("Overview" if locale == "en" else "概觀"))
         sections.append(f'<option value="{html.escape(relative_href(output_rel, prefixed_output_rel(config, f"handbook/{locale}/{stem}.html")))}">{html.escape(label)}</option>')

@@ -94,21 +94,31 @@ def parse_title(path: Path) -> str:
     return path.stem.replace("-", " ").title()
 
 
+def existing_handbook_files(locale: str, handbook_root: Path = HANDBOOK_ROOT) -> list[str]:
+    if locale not in HANDBOOK_LOCALES:
+        raise ValueError(f"Unsupported handbook locale: {locale}")
+    locale_dir = handbook_root / locale
+    return [filename for filename in HANDBOOK_ORDER if (locale_dir / filename).exists()]
+
+
 def build_handbook_pages(locale: str, handbook_root: Path = HANDBOOK_ROOT) -> list[HandbookPage]:
     """Build the ordered handbook page list for one locale."""
     if locale not in HANDBOOK_LOCALES:
         raise ValueError(f"Unsupported handbook locale: {locale}")
     locale_dir = handbook_root / locale
-    output_rels = [f"handbook/{locale}/{Path(name).with_suffix('.html').as_posix()}" for name in HANDBOOK_ORDER]
-    titles = [parse_title(locale_dir / filename) for filename in HANDBOOK_ORDER]
+    filenames = existing_handbook_files(locale, handbook_root)
+    output_rels = [f"handbook/{locale}/{Path(name).with_suffix('.html').as_posix()}" for name in filenames]
+    titles = [parse_title(locale_dir / filename) for filename in filenames]
     pages: list[HandbookPage] = []
-    for index, filename in enumerate(HANDBOOK_ORDER):
+    for index, filename in enumerate(filenames):
         source_path = locale_dir / filename
         output_rel = output_rels[index]
         other_locale = next((candidate for candidate in HANDBOOK_LOCALES if candidate != locale), None)
         other_output_rel = None
         if other_locale is not None:
-            other_output_rel = f"handbook/{other_locale}/{Path(filename).with_suffix('.html').as_posix()}"
+            other_source_path = handbook_root / other_locale / filename
+            if other_source_path.exists():
+                other_output_rel = f"handbook/{other_locale}/{Path(filename).with_suffix('.html').as_posix()}"
         pages.append(
             HandbookPage(
                 locale=locale,
