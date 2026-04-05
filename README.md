@@ -259,4 +259,3 @@ Open by role:
 We welcome contributions! Please see our [Developer Guide](./docs/DEVELOPER.md) for setup instructions.
 
 ---
-*Maintained by [kendlee](https://github.com/kendlee)*

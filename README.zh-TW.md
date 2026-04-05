@@ -259,4 +259,3 @@ open ./docs/html/index.html
 我們歡迎任何形式的貢獻！請參閱 [開發者指南](./docs/DEVELOPER.md) 了解設定步驟。
 
 ---
-*專案維護：[kendlee](https://github.com/kendlee)*
