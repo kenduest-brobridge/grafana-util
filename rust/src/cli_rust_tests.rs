@@ -15,6 +15,7 @@ use crate::dashboard::{
 use crate::datasource::DatasourceGroupCommand;
 use crate::overview::OverviewOutputFormat;
 use crate::profile_cli::{root_command as profile_root_command, ProfileCommand};
+use crate::resource::{ResourceCommand, ResourceKind, ResourceOutputFormat};
 use crate::snapshot::root_command as snapshot_root_command;
 use crate::sync::{SyncAdvancedCommand, SyncGroupCommand, SyncOutputFormat, DEFAULT_REVIEW_TOKEN};
 use clap::{CommandFactory, Parser};
@@ -131,6 +132,36 @@ fn parse_cli_supports_dashboard_group_command() {
         },
         _ => panic!("expected dashboard group"),
     }
+}
+
+#[test]
+fn parse_cli_supports_resource_list_command() {
+    let args: CliArgs = parse_cli_from([
+        "grafana-util",
+        "resource",
+        "list",
+        "dashboards",
+        "--output-format",
+        "json",
+    ]);
+
+    match args.command {
+        UnifiedCommand::Resource(inner) => match inner.command {
+            ResourceCommand::List(list_args) => {
+                assert_eq!(list_args.kind, ResourceKind::Dashboards);
+                assert_eq!(list_args.output_format, ResourceOutputFormat::Json);
+            }
+            _ => panic!("expected resource list"),
+        },
+        _ => panic!("expected resource command"),
+    }
+}
+
+#[test]
+fn unified_help_mentions_resource_escape_hatch() {
+    let help = render_unified_help();
+    assert!(help.contains("resource"));
+    assert!(help.contains("generic read-only query surface"));
 }
 
 #[test]

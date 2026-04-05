@@ -957,6 +957,79 @@ fn publish_help_mentions_dry_run_preview() {
 }
 
 #[test]
+fn parse_cli_supports_dashboard_serve_command() {
+    let args = parse_cli_from([
+        "grafana-util",
+        "serve",
+        "--script",
+        "jsonnet dashboards/cpu.jsonnet",
+        "--watch",
+        "./dashboards",
+        "--port",
+        "18080",
+    ]);
+
+    match args.command {
+        DashboardCommand::Serve(serve_args) => {
+            assert_eq!(
+                serve_args.script.as_deref(),
+                Some("jsonnet dashboards/cpu.jsonnet")
+            );
+            assert_eq!(serve_args.port, 18080);
+            assert_eq!(serve_args.watch, vec![PathBuf::from("./dashboards")]);
+            assert!(serve_args.input.is_none());
+        }
+        _ => panic!("expected serve command"),
+    }
+}
+
+#[test]
+fn serve_help_mentions_local_preview_server() {
+    let help = render_dashboard_subcommand_help("serve");
+    assert!(help.contains("--input"));
+    assert!(help.contains("--script"));
+    assert!(help.contains("--watch"));
+    assert!(help.contains("--port"));
+    assert!(help.contains("local preview server"));
+}
+
+#[test]
+fn parse_cli_supports_dashboard_edit_live_command() {
+    let args = parse_cli_from([
+        "grafana-util",
+        "edit-live",
+        "--url",
+        "https://grafana.example.com",
+        "--dashboard-uid",
+        "cpu-main",
+        "--output",
+        "./drafts/cpu-main.edited.json",
+    ]);
+
+    match args.command {
+        DashboardCommand::EditLive(edit_args) => {
+            assert_eq!(edit_args.common.url, "https://grafana.example.com");
+            assert_eq!(edit_args.dashboard_uid, "cpu-main");
+            assert_eq!(
+                edit_args.output,
+                Some(PathBuf::from("./drafts/cpu-main.edited.json"))
+            );
+            assert!(!edit_args.apply_live);
+        }
+        _ => panic!("expected edit-live command"),
+    }
+}
+
+#[test]
+fn edit_live_help_mentions_safe_local_draft_default() {
+    let help = render_dashboard_subcommand_help("edit-live");
+    assert!(help.contains("--dashboard-uid"));
+    assert!(help.contains("--output"));
+    assert!(help.contains("--apply-live"));
+    assert!(help.contains("local draft"));
+}
+
+#[test]
 fn parse_cli_supports_import_dry_run_json_flag() {
     let args = parse_cli_from([
         "grafana-util",

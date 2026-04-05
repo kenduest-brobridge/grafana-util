@@ -57,6 +57,8 @@ pub(crate) mod datasource_project_status;
 pub(crate) mod datasource_provider;
 /// Datasource secret placeholder planning helpers used by staged sync review.
 pub(crate) mod datasource_secret;
+/// Shared internal Grafana connection/client layer used by live runtime paths.
+pub(crate) mod grafana_api;
 /// Centralized Clap help styling configuration.
 pub(crate) mod help_styles;
 /// Replaceable JSON HTTP client used by all live Grafana operations.
@@ -86,6 +88,8 @@ pub(crate) mod project_status_support;
 /// Shared status interactive workbench for project-home and handoff flows.
 #[cfg(any(feature = "tui", test))]
 pub(crate) mod project_status_tui;
+/// Generic Grafana resource discovery and read-only query commands.
+pub mod resource;
 /// Snapshot export/review wrappers for staged dashboard and datasource bundles.
 pub mod snapshot;
 /// Shared staged export scope resolution helpers for dashboard and datasource artifacts.

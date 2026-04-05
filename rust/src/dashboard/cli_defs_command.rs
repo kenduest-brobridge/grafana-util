@@ -635,6 +635,91 @@ pub struct PublishArgs {
     pub json: bool,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum DashboardServeScriptFormat {
+    Json,
+    Yaml,
+}
+
+/// Arguments for serving dashboard drafts through a local preview server.
+#[derive(Debug, Clone, Args)]
+pub struct ServeArgs {
+    #[arg(
+        long,
+        conflicts_with = "script",
+        help = "Load one dashboard draft file or a directory of dashboard draft files into the preview server."
+    )]
+    pub input: Option<PathBuf>,
+    #[arg(
+        long,
+        conflicts_with = "input",
+        help = "Run this local script and treat stdout as one dashboard document or an array of dashboard documents."
+    )]
+    pub script: Option<String>,
+    #[arg(
+        long = "script-format",
+        value_enum,
+        default_value_t = DashboardServeScriptFormat::Json,
+        help = "Interpret --script stdout as json or yaml."
+    )]
+    pub script_format: DashboardServeScriptFormat,
+    #[arg(
+        long,
+        default_value = "127.0.0.1",
+        help = "Address for the local preview server to bind."
+    )]
+    pub address: String,
+    #[arg(
+        long,
+        default_value_t = 8080,
+        help = "Port for the local preview server to bind."
+    )]
+    pub port: u16,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Do not watch input paths for changes after the initial preview is loaded."
+    )]
+    pub no_watch: bool,
+    #[arg(
+        long = "watch",
+        help = "Extra local paths to watch for preview reloads. Repeat --watch for multiple paths."
+    )]
+    pub watch: Vec<PathBuf>,
+}
+
+/// Arguments for editing one live dashboard through an external editor.
+#[derive(Debug, Clone, Args)]
+pub struct EditLiveArgs {
+    #[command(flatten)]
+    pub common: CommonCliArgs,
+    #[arg(long = "dashboard-uid", help = "Live Grafana dashboard UID to edit.")]
+    pub dashboard_uid: String,
+    #[arg(
+        long,
+        help = "Write the edited dashboard draft to this file path instead of using ./<uid>.edited.json."
+    )]
+    pub output: Option<PathBuf>,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Apply the edited dashboard back to Grafana immediately instead of writing a local draft file."
+    )]
+    pub apply_live: bool,
+    #[arg(
+        long,
+        default_value = DEFAULT_IMPORT_MESSAGE,
+        help = "Revision message to use when --apply-live writes the edited dashboard back to Grafana."
+    )]
+    pub message: String,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Acknowledge the live writeback when --apply-live is set."
+    )]
+    pub yes: bool,
+}
+
 /// Arguments for fetching one live dashboard into a local draft file.
 #[derive(Debug, Clone, Args)]
 pub struct GetArgs {
@@ -955,6 +1040,18 @@ pub enum DashboardCommand {
         after_help = "Examples:\n\n  Clone one live dashboard, keep the source UID and title, and write a local draft:\n    grafana-util dashboard clone-live --url http://localhost:3000 --basic-user admin --basic-password admin --source-uid cpu-main --output ./cpu-main-clone.json\n\n  Clone a live dashboard with a new title, UID, and folder UID:\n    grafana-util dashboard clone-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --source-uid cpu-main --name 'CPU Clone' --uid cpu-main-clone --folder-uid infra --output ./cpu-main-clone.json"
     )]
     CloneLive(CloneLiveArgs),
+    #[command(
+        name = "serve",
+        about = "Serve dashboard drafts through a local preview server.",
+        after_help = "Examples:\n\n  Serve one local draft file:\n    grafana-util dashboard serve --input ./drafts/cpu-main.json\n\n  Serve a directory of dashboard drafts:\n    grafana-util dashboard serve --input ./dashboards/raw\n\n  Serve one generated dashboard and watch the generator inputs:\n    grafana-util dashboard serve --script 'jsonnet dashboards/cpu.jsonnet' --watch ./dashboards --watch ./lib"
+    )]
+    Serve(ServeArgs),
+    #[command(
+        name = "edit-live",
+        about = "Fetch one live dashboard into an external editor and save the result as a local draft or explicit live writeback.",
+        after_help = "Examples:\n\n  Edit one live dashboard and write the result to the default local draft path:\n    grafana-util dashboard edit-live --url http://localhost:3000 --basic-user admin --basic-password admin --dashboard-uid cpu-main\n\n  Edit one live dashboard into an explicit output file:\n    grafana-util dashboard edit-live --profile prod --dashboard-uid cpu-main --output ./drafts/cpu-main.edited.json\n\n  Edit one live dashboard and write it back to Grafana after explicit acknowledgement:\n    grafana-util dashboard edit-live --profile prod --dashboard-uid cpu-main --apply-live --yes --message 'Hotfix CPU dashboard'"
+    )]
+    EditLive(EditLiveArgs),
     #[command(
         name = "export",
         about = "Export dashboards to raw/, prompt/, provisioning/, and optional history/ files.",

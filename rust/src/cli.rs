@@ -39,14 +39,16 @@ use crate::cli_help_examples::UNIFIED_HELP_TEXT;
 use crate::common::{json_color_choice, set_json_color_choice, CliColorChoice, Result};
 use crate::dashboard::{
     run_dashboard_cli, BrowseArgs, CloneLiveArgs, DashboardCliArgs, DashboardCommand,
-    DashboardHistoryArgs, DeleteArgs, DiffArgs, ExportArgs, GetArgs, GovernanceGateArgs,
-    ImportArgs, InspectExportArgs, InspectLiveArgs, InspectVarsArgs, ListArgs, PatchFileArgs,
-    PublishArgs, RawToPromptArgs, ReviewArgs, ScreenshotArgs, TopologyArgs,
+    DashboardHistoryArgs, DeleteArgs, DiffArgs, EditLiveArgs, ExportArgs, GetArgs,
+    GovernanceGateArgs, ImportArgs, InspectExportArgs, InspectLiveArgs, InspectVarsArgs, ListArgs,
+    PatchFileArgs, PublishArgs, RawToPromptArgs, ReviewArgs, ScreenshotArgs, ServeArgs,
+    TopologyArgs,
 };
 use crate::datasource::{run_datasource_cli, DatasourceGroupCommand};
 use crate::overview::{run_overview_cli, OverviewCliArgs};
 use crate::profile_cli::{run_profile_cli, ProfileCliArgs};
 use crate::project_status_command::{run_project_status_cli, ProjectStatusCliArgs};
+use crate::resource::{run_resource_cli, ResourceCliArgs};
 use crate::snapshot::{run_snapshot_cli, SnapshotCommand};
 use crate::sync::{run_sync_cli, SyncGroupCommand};
 
@@ -68,6 +70,10 @@ pub enum DashboardGroupCommand {
         after_help = DASHBOARD_CLONE_LIVE_HELP_TEXT
     )]
     CloneLive(CloneLiveArgs),
+    #[command(about = "Serve dashboard drafts through a local preview server.")]
+    Serve(ServeArgs),
+    #[command(about = "Edit one live dashboard through an external editor.")]
+    EditLive(EditLiveArgs),
     #[command(
         about = "List dashboard summaries without writing export files.",
         after_help = DASHBOARD_LIST_HELP_TEXT
@@ -209,6 +215,8 @@ pub enum UnifiedCommand {
         after_help = UNIFIED_PROFILE_HELP_TEXT
     )]
     Profile(ProfileCliArgs),
+    #[command(about = "Read live Grafana resources through a generic read-only query surface.")]
+    Resource(ResourceCliArgs),
     #[command(
         about = "Export and review live dashboard snapshots.",
         after_help = SNAPSHOT_HELP_TEXT
@@ -276,6 +284,8 @@ fn wrap_dashboard_group(command: DashboardGroupCommand) -> DashboardCliArgs {
         DashboardGroupCommand::CloneLive(inner) => {
             wrap_dashboard(DashboardCommand::CloneLive(inner))
         }
+        DashboardGroupCommand::Serve(inner) => wrap_dashboard(DashboardCommand::Serve(inner)),
+        DashboardGroupCommand::EditLive(inner) => wrap_dashboard(DashboardCommand::EditLive(inner)),
         DashboardGroupCommand::List(inner) => wrap_dashboard(DashboardCommand::List(inner)),
         DashboardGroupCommand::Export(inner) => wrap_dashboard(DashboardCommand::Export(inner)),
         DashboardGroupCommand::RawToPrompt(inner) => {
@@ -354,6 +364,7 @@ where
         UnifiedCommand::Alert(inner) => run_alert(normalize_alert_namespace_args(inner)),
         UnifiedCommand::Access(inner) => run_access(inner),
         UnifiedCommand::Profile(inner) => run_profile(inner),
+        UnifiedCommand::Resource(inner) => run_resource_cli(inner),
         UnifiedCommand::Snapshot { command } => run_snapshot(command),
         UnifiedCommand::Overview(inner) => run_overview(inner),
         UnifiedCommand::Status(inner) => run_project_status(inner),

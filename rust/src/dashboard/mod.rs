@@ -29,6 +29,7 @@ mod delete_render;
 mod delete_support;
 mod edit;
 mod edit_external;
+mod edit_live;
 mod edit_prompt;
 mod export;
 mod files;
@@ -83,6 +84,7 @@ mod raw_to_prompt_plan;
 mod raw_to_prompt_resolution;
 mod raw_to_prompt_types;
 mod screenshot;
+mod serve;
 mod topology;
 mod topology_tui;
 mod validate;
@@ -98,14 +100,15 @@ pub use cli_defs::{
     build_auth_context, build_http_client, build_http_client_for_org, normalize_dashboard_cli_args,
     parse_cli_from, BrowseArgs, CloneLiveArgs, CommonCliArgs, DashboardAuthContext,
     DashboardCliArgs, DashboardCommand, DashboardHistoryArgs, DashboardHistorySubcommand,
-    DashboardImportInputFormat, DeleteArgs, DiffArgs, ExportArgs, GetArgs, GovernanceGateArgs,
-    GovernanceGateOutputFormat, GovernancePolicySource, HistoryExportArgs, HistoryListArgs,
-    HistoryOutputFormat, HistoryRestoreArgs, ImpactArgs, ImpactOutputFormat, ImportArgs,
-    InspectExportArgs, InspectExportReportFormat, InspectLiveArgs, InspectOutputFormat,
-    InspectVarsArgs, ListArgs, PatchFileArgs, PublishArgs, RawToPromptArgs, RawToPromptLogFormat,
-    RawToPromptOutputFormat, RawToPromptResolution, ReviewArgs, ScreenshotArgs,
-    ScreenshotFullPageOutput, ScreenshotOutputFormat, ScreenshotTheme, SimpleOutputFormat,
-    TopologyArgs, TopologyOutputFormat, ValidateExportArgs, ValidationOutputFormat,
+    DashboardImportInputFormat, DashboardServeScriptFormat, DeleteArgs, DiffArgs, EditLiveArgs,
+    ExportArgs, GetArgs, GovernanceGateArgs, GovernanceGateOutputFormat, GovernancePolicySource,
+    HistoryExportArgs, HistoryListArgs, HistoryOutputFormat, HistoryRestoreArgs, ImpactArgs,
+    ImpactOutputFormat, ImportArgs, InspectExportArgs, InspectExportReportFormat, InspectLiveArgs,
+    InspectOutputFormat, InspectVarsArgs, ListArgs, PatchFileArgs, PublishArgs, RawToPromptArgs,
+    RawToPromptLogFormat, RawToPromptOutputFormat, RawToPromptResolution, ReviewArgs,
+    ScreenshotArgs, ScreenshotFullPageOutput, ScreenshotOutputFormat, ScreenshotTheme, ServeArgs,
+    SimpleOutputFormat, TopologyArgs, TopologyOutputFormat, ValidateExportArgs,
+    ValidationOutputFormat,
 };
 pub use export::{build_export_variant_dirs, build_output_path, export_dashboards_with_client};
 pub use help::{
@@ -123,6 +126,7 @@ pub(crate) use raw_to_prompt::run_raw_to_prompt;
 
 use browse::browse_dashboards_with_org_client;
 use delete::delete_dashboards_with_org_clients;
+use edit_live::run_dashboard_edit_live;
 use export::export_dashboards_with_org_clients;
 use history::{
     export_dashboard_history_with_request, run_dashboard_history_list,
@@ -132,6 +136,7 @@ use inspect::analyze_export_dir;
 use inspect_live::inspect_live_dashboards_with_client;
 use list::list_dashboards_with_org_clients;
 use screenshot::capture_dashboard_screenshot;
+use serve::run_dashboard_serve;
 use topology::{run_dashboard_impact, run_dashboard_topology};
 use validate::run_dashboard_validate_export;
 use vars::inspect_dashboard_variables;
@@ -542,6 +547,10 @@ pub fn run_dashboard_cli_with_client(
         DashboardCommand::CloneLive(clone_args) => {
             clone_live_dashboard_to_file_with_client(client, &clone_args)
         }
+        DashboardCommand::Serve(serve_args) => run_dashboard_serve(&serve_args),
+        DashboardCommand::EditLive(edit_live_args) => {
+            run_dashboard_edit_live(Some(client), &edit_live_args)
+        }
         DashboardCommand::Import(import_args) => {
             let _ = import_dashboards_with_client(client, &import_args)?;
             Ok(())
@@ -665,6 +674,11 @@ pub fn run_dashboard_cli(args: DashboardCliArgs) -> Result<()> {
         DashboardCommand::CloneLive(clone_args) => {
             let client = build_http_client(&clone_args.common)?;
             clone_live_dashboard_to_file_with_client(&client, &clone_args)
+        }
+        DashboardCommand::Serve(serve_args) => run_dashboard_serve(&serve_args),
+        DashboardCommand::EditLive(edit_live_args) => {
+            let client = build_http_client(&edit_live_args.common)?;
+            run_dashboard_edit_live(Some(&client), &edit_live_args)
         }
         DashboardCommand::Import(import_args) => {
             let _ = import::import_dashboards_with_org_clients(&import_args)?;

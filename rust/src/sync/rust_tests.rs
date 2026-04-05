@@ -427,3 +427,41 @@ fn build_sync_plan_document_prunes_non_rule_alert_delete_when_supported() {
         json!("missing-from-desired-state")
     );
 }
+
+#[test]
+fn build_sync_plan_document_adds_dependency_ordering_metadata() {
+    let plan = build_sync_plan_document(
+        &[
+            json!({
+                "kind": "dashboard",
+                "uid": "cpu-main",
+                "title": "CPU Main",
+                "body": {"title": "CPU Main"},
+            }),
+            json!({
+                "kind": "folder",
+                "uid": "infra",
+                "title": "Infra",
+                "body": {"title": "Infra"},
+            }),
+            json!({
+                "kind": "datasource",
+                "uid": "prom-main",
+                "name": "prom-main",
+                "title": "prom-main",
+                "body": {"type": "prometheus"},
+            }),
+        ],
+        &[],
+        false,
+    )
+    .unwrap();
+
+    assert_eq!(plan["ordering"]["mode"], json!("dependency-aware"));
+    let operations = plan["operations"].as_array().unwrap();
+    assert_eq!(operations[0]["kind"], json!("folder"));
+    assert_eq!(operations[0]["orderIndex"], json!(1));
+    assert_eq!(operations[1]["kind"], json!("datasource"));
+    assert_eq!(operations[2]["kind"], json!("dashboard"));
+    assert_eq!(operations[2]["orderGroup"], json!("create-update"));
+}
