@@ -31,6 +31,36 @@
 - 如果 inspect 顯示查詢或變數缺失，先處理這些問題，再進入匯入流程。
 - 如果你說不出 screenshot 或 topology 在證明什麼，可能是開錯工作流了。
 
+## 草稿 authoring 工作流
+
+當這次工作不是從整棵 export tree 開始，而是圍繞一份 dashboard 草稿反覆修改時，請直接走 authoring 這條路。
+
+- 如果 Grafana 裡已經有最接近的來源，先用 `dashboard get` 或 `dashboard clone-live` 取回草稿。
+- 在任何 mutation 前先跑 `dashboard review`，確認 title、UID、tags、folder UID 與阻擋性驗證問題。
+- 要重寫本地草稿內容時，用 `dashboard patch-file` 原地修改或輸出成新檔。
+- 草稿準備好後，用 `dashboard publish` 走和正式 import 同一條 replay pipeline。
+
+如果你的團隊是用 Jsonnet、grafanalib 或其他 generator 產 dashboard，不必每次都先落一個中繼暫存檔才能 review 或 publish。
+
+```bash
+# 用途：從標準輸入檢視一份生成儀表板。
+jsonnet dashboards/cpu.jsonnet | grafana-util dashboard review --input - --output-format json
+```
+
+```bash
+# 用途：從標準輸入發佈一份生成儀表板。
+jsonnet dashboards/cpu.jsonnet | grafana-util dashboard publish --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --input - --replace-existing
+```
+
+如果你是在本地反覆編修同一份草稿，請改用檔案路徑搭配 `dashboard publish --watch`，不要用 `--input -`。watch 模式會在每次儲存穩定後重跑 publish 或 dry-run，而且就算其中一次驗證或 API 呼叫失敗，也會繼續監看後續變更。
+
+```bash
+# 用途：編修本地草稿時，每次儲存後自動重跑 dry-run publish。
+grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --basic-password admin --input ./drafts/cpu-main.json --dry-run --watch
+```
+
+`dashboard patch-file --input -` 必須搭配 `--output`，因為標準輸入不能原地覆寫。
+
 ## 歷史與還原工作流
 
 當您要找回一個已知可用的 dashboard 版本時，請直接走 history 這條路，不要手動重建 JSON。
@@ -174,7 +204,7 @@ spring-jmx-node-unified  Spring JMX + Node Unified Dashboard (VM)  Demo    ffhrm
 | **分析 (Inspect)** | `grafana-util dashboard inspect-export --import-dir ./dashboards/raw --output-format report-table` |
 | **刪除 (Delete)** | `grafana-util dashboard delete --uid <UID> --url <URL> --basic-user admin --basic-password admin` |
 | **變數檢視 (Vars)** | `grafana-util dashboard inspect-vars --uid <UID> --url <URL> --table` |
-| **檔案修正 (Patch)** | `grafana-util dashboard patch-file --input <FILE> --title "New Title" --output <FILE>` |
+| **檔案修正 (Patch)** | `grafana-util dashboard patch-file --input <FILE> --name "New Title" --output <FILE>` |
 | **發佈 (Publish)** | `grafana-util dashboard publish --input <FILE> --url <URL> --basic-user admin --basic-password admin` |
 | **複製 (Clone)** | `grafana-util dashboard clone-live --uid <UID> --output <FILE> --url <URL>` |
 

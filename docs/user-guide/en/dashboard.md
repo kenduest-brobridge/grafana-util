@@ -31,6 +31,36 @@ This guide is for operators who need to inventory dashboards, export or import t
 - If inspect output shows missing queries or variables, stop and resolve that before import.
 - If you cannot explain what a screenshot or topology output is proving, you are probably in the wrong workflow lane.
 
+## Draft authoring workflow
+
+Use the authoring lane when the work starts from one dashboard draft instead of a full export tree.
+
+- Start from a live draft with `dashboard get` or `dashboard clone-live` when Grafana already has the closest source dashboard.
+- Use `dashboard review` before mutation to confirm title, UID, tags, folder UID, and any blocking validation issues.
+- Use `dashboard patch-file` when you need to rewrite one local draft in place or write a new patched file.
+- Use `dashboard publish` when the draft is ready to go back through the same import pipeline used by the broader replay path.
+
+Generator-driven teams do not need to stop at an intermediate temp file for every review or publish step.
+
+```bash
+# Purpose: Review one generated dashboard from standard input.
+jsonnet dashboards/cpu.jsonnet | grafana-util dashboard review --input - --output-format json
+```
+
+```bash
+# Purpose: Publish one generated dashboard from standard input.
+jsonnet dashboards/cpu.jsonnet | grafana-util dashboard publish --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --input - --replace-existing
+```
+
+If you are editing one local draft repeatedly, use `dashboard publish --watch` with a file path instead of `--input -`. Watch mode reruns publish or dry-run after each stabilized save and keeps watching even if one iteration fails validation or the API call.
+
+```bash
+# Purpose: Re-run dry-run publish after each save while editing one local draft.
+grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --basic-password admin --input ./drafts/cpu-main.json --dry-run --watch
+```
+
+`dashboard patch-file --input -` requires `--output` because standard input cannot be overwritten in place.
+
 ## History and recovery
 
 When you are trying to recover a known-good dashboard version, use the history lane instead of rebuilding JSON by hand.
@@ -174,7 +204,7 @@ spring-jmx-node-unified  Spring JMX + Node Unified Dashboard (VM)  Demo    ffhrm
 | **Inspect** | `grafana-util dashboard inspect-export --import-dir ./dashboards/raw --output-format report-table` |
 | **Delete** | `grafana-util dashboard delete --uid <UID> --url <URL> --basic-user admin --basic-password admin` |
 | **Inspect Vars** | `grafana-util dashboard inspect-vars --uid <UID> --url <URL> --table` |
-| **Patch File** | `grafana-util dashboard patch-file --input <FILE> --title "New Title" --output <FILE>` |
+| **Patch File** | `grafana-util dashboard patch-file --input <FILE> --name "New Title" --output <FILE>` |
 | **Publish** | `grafana-util dashboard publish --input <FILE> --url <URL> --basic-user admin --basic-password admin` |
 | **Clone Live** | `grafana-util dashboard clone-live --uid <UID> --output <FILE> --url <URL>` |
 

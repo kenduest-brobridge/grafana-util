@@ -25,6 +25,14 @@
 
 `grafana-util dashboard` 把 dashboard 相關工作收在同一個入口：從瀏覽、草稿、匯出、匯入、比對，到拓樸、影響面和截圖。它也可用 `grafana-util db` 呼叫。
 
+如果是單一 dashboard 的 authoring 路徑，建議把它想成：
+- `get` 或 `clone-live`：先做草稿
+- `review`：先驗證草稿內容
+- `patch-file`：改寫本地中繼資料
+- `publish`：沿用 import pipeline 發回 Grafana
+
+`review`、`patch-file`、`publish` 也都支援 `--input -`，可以直接吃標準輸入的一份 wrapped 或 bare dashboard JSON。這適合外部 generator 已經把 JSON 寫到 stdout 的情況。若你是在本地反覆編修同一份檔案，則改用 `publish --watch`；它只支援本地檔案路徑，不支援 `--input -`。
+
 ## 歷史與還原工作流
 
 如果你的問題不是「現在這份 dashboard 長什麼樣」，而是「哪個舊版本應該被救回來並變成新的最新版本」，就看這一組。
@@ -80,6 +88,16 @@ grafana-util dashboard inspect-live --url http://localhost:3000 --basic-user adm
 ```bash
 # 先產生治理成品，留給 topology 或 governance-gate 接著用。
 grafana-util dashboard inspect-live --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output-format governance-json
+```
+
+```bash
+# 先從標準輸入 review 一份生成儀表板，再決定要不要 publish。
+jsonnet dashboards/cpu.jsonnet | grafana-util dashboard review --input - --output-format json
+```
+
+```bash
+# 編修本地草稿時，每次儲存後自動重跑 publish dry-run。
+grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --basic-password admin --input ./drafts/cpu-main.json --dry-run --watch
 ```
 
 ## 相關指令

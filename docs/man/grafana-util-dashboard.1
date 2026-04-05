@@ -22,6 +22,18 @@ Use this namespace when you need to browse live dashboards, fetch or clone a liv
 .PP
 \- Capture: screenshot flows for reproducible visual proof.
 .PP
+For single\-dashboard authoring, the local draft path is:
+.PP
+\- get or clone\-live to start from one live dashboard
+.PP
+\- review to verify one draft
+.PP
+\- patch\-file to rewrite local metadata
+.PP
+\- publish to replay that draft back through the import pipeline
+.PP
+review, patch\-file, and publish also accept \-\-input \- for one wrapped or bare dashboard JSON document from standard input. Use that when an external generator already writes the dashboard JSON to stdout. publish \-\-watch is the local\-file variant for repeated save\-and\-preview loops and does not support \-\-input \-.
+.PP
 Choose this page when the task is dashboard work but you are still deciding whether the next step is to inspect, move, review, or capture.
 .SH BEFORE / AFTER
 .IP \(bu 2

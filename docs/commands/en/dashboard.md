@@ -19,6 +19,14 @@ If you are an SRE, Grafana operator, or responder, this page should help you dec
 - **History**: list, restore, and export revision history before you recover or promote a dashboard.
 - **Capture**: screenshot flows for reproducible visual proof.
 
+For single-dashboard authoring, the local draft path is:
+- `get` or `clone-live` to start from one live dashboard
+- `review` to verify one draft
+- `patch-file` to rewrite local metadata
+- `publish` to replay that draft back through the import pipeline
+
+`review`, `patch-file`, and `publish` also accept `--input -` for one wrapped or bare dashboard JSON document from standard input. Use that when an external generator already writes the dashboard JSON to stdout. `publish --watch` is the local-file variant for repeated save-and-preview loops and does not support `--input -`.
+
 Choose this page when the task is dashboard work but you are still deciding whether the next step is to inspect, move, review, or capture.
 
 ## Before / After
@@ -69,6 +77,16 @@ grafana-util dashboard browse --url http://localhost:3000 --basic-user admin --b
 ```bash
 # Purpose: Convert a legacy dashboard export into prompt-friendly JSON.
 grafana-util dashboard raw-to-prompt --input-file ./legacy/cpu-main.json --profile prod --org-id 2
+```
+
+```bash
+# Purpose: Review one generated dashboard from standard input before mutation.
+jsonnet dashboards/cpu.jsonnet | grafana-util dashboard review --input - --output-format json
+```
+
+```bash
+# Purpose: Watch one local draft file and rerun publish dry-run after each save.
+grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --basic-password admin --input ./drafts/cpu-main.json --dry-run --watch
 ```
 
 ```bash
