@@ -9,7 +9,15 @@
 
 **提供 dashboard、alert、datasource、access control 與維運審查所需的可重複操作流程。**
 
-`grafana-util` 是一款以 Rust 為核心的 Grafana 維運 CLI，面向需要穩定、可審查、可自動化操作方式的 SRE、平台工程師、sysadmin 與維護者。它提供 dashboard、alert、datasource、access control 與整體狀態檢查等操作流程，用來取代零散 API 呼叫與臨時腳本。
+`grafana-util` 是我長期維護的一個 Rust 個人工具，出發點是處理自己在 Grafana 維運上反覆遇到的痛點。它把 dashboard、alert、datasource、access control 與整體狀態檢查這些日常工作，整理成比較可審查、帶治理意識、也更容易重複執行的流程。它主要面向 SRE、平台工程師、sysadmin 與維護者，適合那些不想只靠零散 API 呼叫、純 UI 點選或一次性腳本的人。
+
+它不是要變成完整的 Grafana 平台，也不是要取代所有其他 CLI。這個工具比較明確的設計重心是維運流程本身：先 inspect，再 review，變更前先看清楚，secret 要有意識地處理，盡量把操作收斂成可重複的路徑。
+
+如果你也知道 `grafanactl` 或 `grizzly`，這裡比較適合把差異理解成「設計取向不同」：
+
+- `grafanactl` 比較接近通用的 Grafana 資源/API 操作 CLI。
+- `grizzly` 比較接近宣告式的 Grafana-as-code 管理流程。
+- `grafana-util` 目前更偏向可審查操作、inspection/governance 流程，以及較安全的搬移或回放路徑。
 
 ---
 

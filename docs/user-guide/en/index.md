@@ -11,6 +11,8 @@
 
 Welcome to the `grafana-util` handbook. Start here if you need a practical operator path from first connection, to repeatable profiles, to day-to-day Grafana maintenance and automation.
 
+`grafana-util` is a personal long-term tool built around real Grafana maintenance pain. This handbook is written from that same angle: not "how to expose every API surface", but how to move through inventory, inspection, review, migration, and safer live changes without rebuilding the workflow every time.
+
 This handbook is organized around the way operators actually work: first understand what the tool is for, then get a safe connection working, then move into dashboards, alerts, access, and review workflows.
 
 If you want the high-level framing first, including the pain points this tool is meant to solve and when it is the right fit, start here:

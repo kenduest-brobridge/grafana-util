@@ -21,7 +21,7 @@ If you regularly hit problems like these, this is the tool solving them:
 | Alerting or access changes are hard to explain in review. | Plans, summaries, and structured output make the intended change visible before apply. |
 | Secrets and auth defaults get repeated across shell history and scripts. | Profiles and secret modes make repeated workflows cleaner and safer. |
 
-This is the main product difference: the tool is trying to improve the operating path, not just shorten one command.
+This is the main design difference: the tool is trying to improve the operating path, not just shorten one command.
 
 ## What success looks like
 
@@ -41,6 +41,8 @@ This is the main product difference: the tool is trying to improve the operating
 
 `grafana-util` is best understood as a Grafana operations workflow tool, not a single-purpose CLI.
 
+It is a personal long-term tool, not a complete platform and not an attempt to cover every Grafana API surface. The point is to make the high-friction operator paths easier to review, repeat, and automate without losing context.
+
 It breaks the work into a few clear surfaces:
 
 - **Inventory and observation**: start with `status` and `overview`
@@ -49,6 +51,16 @@ It breaks the work into a few clear surfaces:
 - **Connection and credentials**: use `profile` to keep URLs, auth defaults, and secret sources repeatable
 
 The goal is not to memorize every command first. The goal is to know what kind of work you are doing.
+
+## Design orientation in context
+
+If you already know tools such as `grafanactl` or `grizzly`, it is more accurate to think in terms of design orientation than competition:
+
+- `grafanactl` is closer to a general resource and API-oriented Grafana CLI.
+- `grizzly` is closer to declarative Grafana-as-code management.
+- `grafana-util` is more focused on reviewable operations, inspection/governance flows, and safer migration or replay paths.
+
+These tools can overlap. The useful question is which working style you need first.
 
 ---
 

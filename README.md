@@ -9,7 +9,15 @@ English | [繁體中文](./README.zh-TW.md)
 
 **Repeatable Grafana workflows for dashboards, alerts, datasources, access control, and operational review.**
 
-`grafana-util` is a Rust CLI for teams that operate Grafana in a disciplined way across dashboards, alerts, datasources, access control, and environment-wide status surfaces. It is intended for SREs, platform engineers, sysadmins, and maintainers who need reviewable workflows, safer change paths, and automation-friendly output instead of ad hoc API calls or one-off scripts.
+`grafana-util` is a personal long-term Rust tool built around real Grafana maintenance pain. I use it to make day-to-day workflows more reviewable, governance-aware, and repeatable across dashboards, alerts, datasources, access control, and estate-wide status checks. It is aimed at SREs, platform engineers, sysadmins, and maintainers who want safer operating paths and automation-friendly output instead of ad hoc API calls, UI-only changes, or one-off scripts.
+
+It is not trying to be a complete Grafana platform or a replacement for every other CLI. The design center here is operator workflow: inspect first, review changes before apply, keep secrets handled deliberately, and prefer repeatable paths over hand-built command sequences.
+
+If you already know tools such as `grafanactl` or `grizzly`, the difference here is mostly design orientation:
+
+- `grafanactl` is closer to a general resource and API-oriented Grafana CLI.
+- `grizzly` is closer to declarative Grafana-as-code management.
+- `grafana-util` is more focused on reviewable operations, inspection/governance flows, and safer migration or replay paths.
 
 ---
 
