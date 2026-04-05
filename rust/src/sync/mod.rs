@@ -987,6 +987,10 @@ mod cli_audit_preflight_rust_tests;
 mod cli_help_rust_tests;
 
 #[cfg(test)]
+#[path = "cli_task_first_smoke_rust_tests.rs"]
+mod cli_task_first_smoke_rust_tests;
+
+#[cfg(test)]
 #[path = "live_rust_tests.rs"]
 mod sync_live_rust_tests;
 
