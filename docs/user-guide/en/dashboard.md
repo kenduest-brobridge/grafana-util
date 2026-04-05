@@ -21,7 +21,7 @@ This guide is for operators who need to inventory dashboards, export or import t
 
 ## What success looks like
 
-- You know whether the current task belongs in list, export, inspect, topology, screenshot, or import.
+- You know whether the current task belongs in inventory, single-dashboard authoring, export/import replay, inspect, topology, or screenshot.
 - You can explain which lane you are using before mutating anything.
 - You can prove the dashboard is ready to replay or publish before you touch live state.
 
@@ -143,6 +143,10 @@ Dashboard export intentionally produces three different "lanes" because each ser
 | `prompt/` | **UI Import** | Compatible with the Grafana UI "Upload JSON" feature. If you only have ordinary or raw dashboard JSON, convert it first with `grafana-util dashboard raw-to-prompt`. |
 | `provisioning/` | **File Provisioning** | When Grafana should read dashboards from disk via its internal provisioning system. |
 
+If you add `--include-history` to `dashboard export`, the export tree also gains a `history/` subdirectory for each org scope. In `--all-orgs` mode, that becomes one history tree per exported org root.
+
+Use `dashboard history export` when you need a standalone JSON artifact for one dashboard UID. Use `dashboard export --include-history` when you want history artifacts bundled alongside the export tree.
+
 ---
 
 ## 🔤 Prompt Placeholder Notes
@@ -198,6 +202,7 @@ spring-jmx-node-unified  Spring JMX + Node Unified Dashboard (VM)  Demo    ffhrm
 | :--- | :--- |
 | **List** | `grafana-util dashboard list --all-orgs --with-sources --table` |
 | **Export** | `grafana-util dashboard export --export-dir ./dashboards --overwrite --progress` |
+| **Export + History** | `grafana-util dashboard export --export-dir ./dashboards --include-history --overwrite --progress` |
 | **Raw to Prompt** | `grafana-util dashboard raw-to-prompt --input-dir ./dashboards/raw --output-dir ./dashboards/prompt --overwrite --progress` |
 | **Import** | `grafana-util dashboard import --import-dir ./dashboards/raw --replace-existing --dry-run --table` |
 | **Diff** | `grafana-util dashboard diff --import-dir ./dashboards/raw --input-format raw` |
@@ -206,7 +211,7 @@ spring-jmx-node-unified  Spring JMX + Node Unified Dashboard (VM)  Demo    ffhrm
 | **Inspect Vars** | `grafana-util dashboard inspect-vars --uid <UID> --url <URL> --table` |
 | **Patch File** | `grafana-util dashboard patch-file --input <FILE> --name "New Title" --output <FILE>` |
 | **Publish** | `grafana-util dashboard publish --input <FILE> --url <URL> --basic-user admin --basic-password admin` |
-| **Clone Live** | `grafana-util dashboard clone-live --uid <UID> --output <FILE> --url <URL>` |
+| **Clone Live** | `grafana-util dashboard clone-live --source-uid <UID> --output <FILE> --url <URL>` |
 
 ---
 

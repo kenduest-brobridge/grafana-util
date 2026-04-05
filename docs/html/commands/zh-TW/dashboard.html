@@ -771,7 +771,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <p><code>grafana-util dashboard</code> 把 dashboard 相關工作收在同一個入口：從瀏覽、草稿、匯出、匯入、比對，到拓樸、影響面和截圖。它也可用 <code>grafana-util db</code> 呼叫。</p>
 <p>如果是單一 dashboard 的 authoring 路徑，建議把它想成：</p>
 <ul><li><code>get</code> 或 <code>clone-live</code>：先做草稿</li><li><code>review</code>：先驗證草稿內容</li><li><code>patch-file</code>：改寫本地中繼資料</li><li><code>publish</code>：沿用 import pipeline 發回 Grafana</li></ul>
-<p><code>review</code>、<code>patch-file</code>、<code>publish</code> 也都支援 <code>--input -</code>，可以直接吃標準輸入的一份 wrapped 或 bare dashboard JSON。這適合外部 generator 已經把 JSON 寫到 stdout 的情況。若你是在本地反覆編修同一份檔案，則改用 <code>publish --watch</code>；它只支援本地檔案路徑，不支援 <code>--input -</code>。</p>
+<p><code>review</code>、<code>patch-file</code>、<code>publish</code> 也都支援 <code>--input -</code>，可以直接吃標準輸入的一份 wrapped 或 bare dashboard JSON。這適合外部 generator 已經把 JSON 寫到 stdout 的情況。<code>patch-file --input -</code> 必須搭配 <code>--output</code>，若你是在本地反覆編修同一份檔案，則改用 <code>publish --watch</code>；它只支援本地檔案路徑，不支援 <code>--input -</code>。</p>
 <h2 id="歷史與還原工作流">歷史與還原工作流</h2>
 <p>如果你的問題不是「現在這份 dashboard 長什麼樣」，而是「哪個舊版本應該被救回來並變成新的最新版本」，就看這一組。</p>
 <ul><li><a href="dashboard-history.html">dashboard history</a></li><li><code>dashboard history list</code>：列出單一 dashboard UID 的最近版本歷史。</li><li><code>dashboard history restore</code>：把某個歷史版本複製成新的最新 Grafana 版本。</li><li><code>dashboard history export</code>：把歷史版本匯出成可重用的 JSON 成品，方便審查或 CI。</li></ul>

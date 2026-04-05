@@ -25,7 +25,7 @@ For single-dashboard authoring, the local draft path is:
 - `patch-file` to rewrite local metadata
 - `publish` to replay that draft back through the import pipeline
 
-`review`, `patch-file`, and `publish` also accept `--input -` for one wrapped or bare dashboard JSON document from standard input. Use that when an external generator already writes the dashboard JSON to stdout. `publish --watch` is the local-file variant for repeated save-and-preview loops and does not support `--input -`.
+`review`, `patch-file`, and `publish` also accept `--input -` for one wrapped or bare dashboard JSON document from standard input. Use that when an external generator already writes the dashboard JSON to stdout. `patch-file --input -` requires `--output`, and `publish --watch` is the local-file variant for repeated save-and-preview loops and does not support `--input -`.
 
 Choose this page when the task is dashboard work but you are still deciding whether the next step is to inspect, move, review, or capture.
 

@@ -32,7 +32,7 @@ For single\-dashboard authoring, the local draft path is:
 .PP
 \- publish to replay that draft back through the import pipeline
 .PP
-review, patch\-file, and publish also accept \-\-input \- for one wrapped or bare dashboard JSON document from standard input. Use that when an external generator already writes the dashboard JSON to stdout. publish \-\-watch is the local\-file variant for repeated save\-and\-preview loops and does not support \-\-input \-.
+review, patch\-file, and publish also accept \-\-input \- for one wrapped or bare dashboard JSON document from standard input. Use that when an external generator already writes the dashboard JSON to stdout. patch\-file \-\-input \- requires \-\-output, and publish \-\-watch is the local\-file variant for repeated save\-and\-preview loops and does not support \-\-input \-.
 .PP
 Choose this page when the task is dashboard work but you are still deciding whether the next step is to inspect, move, review, or capture.
 .SH BEFORE / AFTER
@@ -55,7 +55,7 @@ Clone one live dashboard into a local draft with optional overrides. Use when: Y
 List dashboard summaries without writing export files. Use when: You want a non\-interactive inventory view of live dashboards, optionally with resolved sources or structured output.
 .TP
 .B export
-Export dashboards to raw/, prompt/, and provisioning/ files. Use when: You need a local export tree for later import, review, diff, or file\-provisioning workflows. The prompt/ lane is for Grafana UI import, not dashboard API import; use dashboard raw\-to\-prompt when you need to convert ordinary or raw dashboard JSON into prompt JSON.
+Export dashboards to raw/, prompt/, and provisioning/ files, with optional history/ artifacts. Use when: You need a local export tree for later import, review, diff, or file\-provisioning workflows. Add \-\-include\-history when you also need dashboard revision\-history artifacts under each exported org scope. The prompt/ lane is for Grafana UI import, not dashboard API import; use dashboard raw\-to\-prompt when you need to convert ordinary or raw dashboard JSON into prompt JSON.
 .TP
 .B import
 Import dashboard JSON files through the Grafana API. Use when: You have a local export tree or provisioning tree and need to push dashboards back into Grafana, either live or as a dry run. This command consumes raw/ or provisioning/ inputs; it does not consume the Grafana UI prompt/ lane.
@@ -153,7 +153,7 @@ list: List dashboard summaries without writing export files.
 grafana-util dashboard list --profile prod
 .EE
 .PP
-export: Export dashboards to raw/, prompt/, and provisioning/ files.
+export: Export dashboards to raw/, prompt/, and provisioning/ files, with optional history/ artifacts.
 .EX
 grafana-util dashboard export --profile prod --export-dir ./dashboards --overwrite
 .EE
