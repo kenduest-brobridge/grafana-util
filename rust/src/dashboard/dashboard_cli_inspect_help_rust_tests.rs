@@ -8,6 +8,8 @@ use super::dashboard_cli_parser_help_rust_tests::render_dashboard_subcommand_hel
 use clap::{CommandFactory, Parser};
 use std::path::{Path, PathBuf};
 
+const INSPECT_LIVE_HELP_FIXTURE: &str = include_str!("fixtures/inspect_live_help.txt");
+
 #[test]
 fn parse_cli_supports_inspect_live_report_json_flag() {
     let args = parse_cli_from([
@@ -248,9 +250,9 @@ fn parse_cli_supports_inspect_live_all_orgs_flag() {
 }
 
 #[test]
-fn inspect_live_help_mentions_interactive_browser() {
+fn inspect_live_help_matches_fixture() {
     let help = render_dashboard_subcommand_help("inspect-live");
-    assert!(help.contains("--interactive"));
+    assert_eq!(help, INSPECT_LIVE_HELP_FIXTURE);
 }
 
 #[test]

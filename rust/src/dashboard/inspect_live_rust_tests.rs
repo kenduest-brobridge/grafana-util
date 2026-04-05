@@ -8,6 +8,7 @@ use crate::dashboard::inspect_live::load_variant_index_entries;
 use serde_json::Value;
 use std::fs;
 use std::path::Path;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use tempfile::tempdir;
 
 type TestRequestResult = crate::common::Result<Option<Value>>;
@@ -217,6 +218,125 @@ fn core_family_inspect_live_request_fixture(
             ))),
         }
     }
+}
+
+#[test]
+fn snapshot_live_dashboard_export_with_fetcher_retries_rate_limited_dashboard_fetch() {
+    let temp = tempdir().unwrap();
+    let attempts = AtomicUsize::new(0);
+    let summaries = vec![serde_json::Map::from_iter([
+        (
+            "folderTitle".to_string(),
+            Value::String("General".to_string()),
+        ),
+        ("uid".to_string(), Value::String("cpu-main".to_string())),
+        ("title".to_string(), Value::String("CPU Main".to_string())),
+    ])];
+
+    let count = test_support::snapshot_live_dashboard_export_with_fetcher(
+        temp.path(),
+        &summaries,
+        4,
+        false,
+        |uid| {
+            let attempt = attempts.fetch_add(1, Ordering::SeqCst);
+            if attempt < 2 {
+                return Err(crate::common::api_response(
+                    429,
+                    format!("https://grafana.example.com/api/dashboards/uid/{uid}"),
+                    "rate limited",
+                ));
+            }
+            Ok(serde_json::json!({
+                "dashboard": {
+                    "id": 11,
+                    "uid": uid,
+                    "title": "CPU Main",
+                    "panels": []
+                },
+                "meta": {}
+            }))
+        },
+    )
+    .unwrap();
+
+    assert_eq!(count, 1);
+    assert_eq!(attempts.load(Ordering::SeqCst), 3);
+    let staged = fs::read_to_string(temp.path().join("General").join("CPU_Main__cpu-main.json"))
+        .unwrap();
+    assert!(staged.contains("\"uid\": \"cpu-main\""));
+}
+
+#[test]
+fn snapshot_live_dashboard_export_with_fetcher_caps_worker_parallelism() {
+    let temp = tempdir().unwrap();
+    let current = AtomicUsize::new(0);
+    let peak = AtomicUsize::new(0);
+    let summaries = (0..32)
+        .map(|index| {
+            serde_json::Map::from_iter([
+                (
+                    "folderTitle".to_string(),
+                    Value::String("General".to_string()),
+                ),
+                ("uid".to_string(), Value::String(format!("cpu-{index}"))),
+                ("title".to_string(), Value::String(format!("CPU {index}"))),
+            ])
+        })
+        .collect::<Vec<_>>();
+
+    test_support::snapshot_live_dashboard_export_with_fetcher(temp.path(), &summaries, 128, false, |uid| {
+        let in_flight = current.fetch_add(1, Ordering::SeqCst) + 1;
+        let mut seen = peak.load(Ordering::SeqCst);
+        while in_flight > seen
+            && peak
+                .compare_exchange(seen, in_flight, Ordering::SeqCst, Ordering::SeqCst)
+                .is_err()
+        {
+            seen = peak.load(Ordering::SeqCst);
+        }
+        std::thread::sleep(std::time::Duration::from_millis(20));
+        current.fetch_sub(1, Ordering::SeqCst);
+        Ok(serde_json::json!({
+            "dashboard": {
+                "id": 11,
+                "uid": uid,
+                "title": uid,
+                "panels": []
+            },
+            "meta": {}
+        }))
+    })
+    .unwrap();
+
+    assert!(peak.load(Ordering::SeqCst) <= 16);
+}
+
+#[test]
+fn snapshot_live_dashboard_export_with_fetcher_reports_dashboard_uid_on_fetch_failure() {
+    let temp = tempdir().unwrap();
+    let summaries = vec![serde_json::Map::from_iter([
+        (
+            "folderTitle".to_string(),
+            Value::String("General".to_string()),
+        ),
+        ("uid".to_string(), Value::String("cpu-main".to_string())),
+        ("title".to_string(), Value::String("CPU Main".to_string())),
+    ])];
+
+    let error = test_support::snapshot_live_dashboard_export_with_fetcher(
+        temp.path(),
+        &summaries,
+        1,
+        false,
+        |_uid| Err(crate::common::message("boom")),
+    )
+    .unwrap_err();
+
+    assert!(error
+        .to_string()
+        .contains("Failed to fetch live dashboard uid=cpu-main during inspect-live: boom"));
+    assert_eq!(error.kind(), "context");
 }
 
 #[cfg(test)]

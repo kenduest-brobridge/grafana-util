@@ -12,9 +12,11 @@ use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process;
+use std::thread;
+use std::time::Duration;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::common::{message, string_field, validation, value_as_object, Result};
+use crate::common::{message, string_field, validation, value_as_object, GrafanaCliError, Result};
 use crate::http::JsonHttpClient;
 
 use super::cli_defs::{ExportArgs, InspectExportArgs, InspectLiveArgs};
@@ -39,6 +41,10 @@ use super::{
     DATASOURCE_INVENTORY_FILENAME, EXPORT_METADATA_FILENAME, FOLDER_INVENTORY_FILENAME,
     RAW_EXPORT_SUBDIR,
 };
+
+const MAX_LIVE_INSPECT_CONCURRENCY: usize = 16;
+const LIVE_INSPECT_RETRY_LIMIT: usize = 3;
+const LIVE_INSPECT_RETRY_BACKOFF_MS: u64 = 200;
 
 pub(crate) struct TempInspectDir {
     pub(crate) path: PathBuf,
@@ -99,6 +105,39 @@ fn build_live_scan_progress_bar(total: usize) -> ProgressBar {
     bar
 }
 
+fn bounded_live_inspect_concurrency(requested: usize) -> usize {
+    requested.clamp(1, MAX_LIVE_INSPECT_CONCURRENCY)
+}
+
+fn is_retryable_live_fetch_error(error: &GrafanaCliError) -> bool {
+    matches!(error.status_code(), Some(429 | 502 | 503 | 504))
+}
+
+fn fetch_live_dashboard_with_retries<F>(uid: &str, fetch_dashboard: &F) -> Result<Value>
+where
+    F: Fn(&str) -> Result<Value> + Sync,
+{
+    let mut attempt = 0usize;
+    loop {
+        attempt += 1;
+        match fetch_dashboard(uid) {
+            Ok(payload) => return Ok(payload),
+            Err(error) if is_retryable_live_fetch_error(&error) && attempt < LIVE_INSPECT_RETRY_LIMIT => {
+                thread::sleep(Duration::from_millis(
+                    LIVE_INSPECT_RETRY_BACKOFF_MS * attempt as u64,
+                ));
+            }
+            Err(error) => {
+                return Err(
+                    error.with_context(format!(
+                        "Failed to fetch live dashboard uid={uid} during inspect-live"
+                    )),
+                )
+            }
+        }
+    }
+}
+
 pub(crate) fn snapshot_live_dashboard_export_with_fetcher<F>(
     raw_dir: &Path,
     summaries: &[Map<String, Value>],
@@ -117,7 +156,7 @@ where
     } else {
         None
     };
-    let thread_count = concurrency.max(1);
+    let thread_count = bounded_live_inspect_concurrency(concurrency);
     let pool = ThreadPoolBuilder::new()
         .num_threads(thread_count)
         .build()
@@ -132,8 +171,13 @@ where
             .map(|summary| {
                 let uid = string_field(summary, "uid", "");
                 let output_path = build_output_path(raw_dir, summary, false);
-                let payload = fetch_dashboard(&uid)?;
-                write_dashboard(&payload, &output_path, false)?;
+                let payload = fetch_live_dashboard_with_retries(&uid, &fetch_dashboard)?;
+                write_dashboard(&payload, &output_path, false).map_err(|error| {
+                    error.with_context(format!(
+                        "Failed to stage live dashboard uid={uid} into {}",
+                        output_path.display()
+                    ))
+                })?;
                 if let Some(bar) = progress_bar.as_ref() {
                     bar.inc(1);
                     bar.set_message(uid);

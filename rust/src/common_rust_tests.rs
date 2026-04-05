@@ -75,6 +75,46 @@ fn structured_local_parse_and_transport_helpers_include_context() {
 }
 
 #[test]
+fn context_preserves_error_identity_and_status_code() {
+    let parse_error = parse_error("dashboard file", "invalid JSON")
+        .with_context("Failed to load dashboard");
+
+    assert_eq!(parse_error.kind(), "context");
+    assert_eq!(
+        parse_error.to_string(),
+        "Failed to load dashboard: Failed to parse dashboard file: invalid JSON"
+    );
+    assert_eq!(parse_error.status_code(), None);
+
+    let api_error = super::api_response(
+        404,
+        "http://grafana.local/api/dashboards/uid/cpu-main",
+        "not found",
+    )
+    .with_context("Failed to fetch dashboard cpu-main");
+
+    assert_eq!(api_error.kind(), "context");
+    assert_eq!(api_error.status_code(), Some(404));
+    assert_eq!(
+        api_error.to_string(),
+        "Failed to fetch dashboard cpu-main: HTTP error 404 for http://grafana.local/api/dashboards/uid/cpu-main: not found"
+    );
+}
+
+#[test]
+fn context_can_be_stacked_without_losing_status_code() {
+    let error = super::api_response(502, "http://grafana.local/api/search", "bad gateway")
+        .with_context("Inspect live dashboards")
+        .with_context("Failed to build live inspection summary");
+
+    assert_eq!(error.status_code(), Some(502));
+    assert_eq!(
+        error.to_string(),
+        "Failed to build live inspection summary: Inspect live dashboards: HTTP error 502 for http://grafana.local/api/search: bad gateway"
+    );
+}
+
+#[test]
 fn resolve_auth_headers_prefers_bearer_token() {
     let headers = resolve_auth_headers(Some("abc123"), None, None, false, false).unwrap();
     assert_eq!(

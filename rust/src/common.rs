@@ -252,6 +252,12 @@ pub enum GrafanaCliError {
         url: String,
         body: String,
     },
+    #[error("{context}: {source}")]
+    Context {
+        context: String,
+        #[source]
+        source: Box<GrafanaCliError>,
+    },
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
     #[error("JSON error: {0}")]
@@ -337,10 +343,19 @@ pub fn parse_error(target: impl Into<String>, details: impl Into<String>) -> Gra
 }
 
 impl GrafanaCliError {
+    /// Attach higher-level context while preserving the original typed error.
+    pub fn with_context(self, context: impl Into<String>) -> Self {
+        GrafanaCliError::Context {
+            context: context.into(),
+            source: Box::new(self),
+        }
+    }
+
     /// Return the HTTP status code for API errors and `None` for local failures.
     pub fn status_code(&self) -> Option<u16> {
         match self {
             GrafanaCliError::ApiResponse { status_code, .. } => Some(*status_code),
+            GrafanaCliError::Context { source, .. } => source.status_code(),
             _ => None,
         }
     }
@@ -356,6 +371,7 @@ impl GrafanaCliError {
             GrafanaCliError::HeaderName { .. } => "header-name",
             GrafanaCliError::HeaderValue { .. } => "header-value",
             GrafanaCliError::Parse { .. } => "parse",
+            GrafanaCliError::Context { .. } => "context",
             GrafanaCliError::ApiResponse { .. } => "api-response",
             GrafanaCliError::Io(_) => "io",
             GrafanaCliError::Json(_) => "json",
