@@ -33,11 +33,6 @@ Export live Grafana datasource inventory as normalized JSON plus provisioning fi
 .EX
 grafana-util datasource export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./datasources --overwrite
 .EE
-.PP
-Export live Grafana datasource inventory as normalized JSON plus provisioning files.
-.EX
-grafana-util datasource export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --export-dir ./datasources --overwrite
-.EE
 .SH SEE ALSO
 \fBgrafana-util\fR(1),
 \fBgrafana-util-datasource\fR(1)

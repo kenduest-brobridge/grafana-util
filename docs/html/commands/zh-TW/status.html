@@ -155,10 +155,27 @@ pre:hover .code-controls { opacity: 1; }
 .nav-sidebar { position: sticky; top: 12px; min-width: 0; padding: 2px 0 0; max-height: calc(100vh - 24px); overflow-y: auto; font-family: var(--font-sans); letter-spacing: -0.01em; }
 html[lang="zh-TW"] .nav-sidebar { font-family: var(--font-zh); letter-spacing: 0; }
 .nav-sidebar li { margin-bottom: 0; }
-.nav-sidebar h2 { font-size: 0.74rem; font-weight: 700; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; letter-spacing: 0.04em; }
+.nav-sidebar h2 {
+  margin: 0 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.72rem;
+  font-weight: 620;
+  text-transform: none;
+  color: var(--muted);
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+}
 .nav-section + .nav-section { margin-top: 18px; }
 .nav-group-block + .nav-group-block { margin-top: 14px; }
-.nav-group-title { margin: 0 0 6px; font-size: 0.76rem; font-weight: 700; color: var(--muted); letter-spacing: 0.02em; }
+.nav-group-title {
+  margin: 0 0 6px;
+  font-size: 1.02rem;
+  font-weight: 720;
+  color: var(--heading);
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+}
 .nav-tree,
 .nav-sub-list { list-style: none; margin: 0; padding: 0; position: relative; }
 .nav-tree::before,
@@ -172,7 +189,7 @@ html[lang="zh-TW"] .nav-sidebar { font-family: var(--font-zh); letter-spacing: 0
 .nav-group-header:hover { color: var(--heading); }
 .nav-group-link { flex: 1; display: block; padding: 5px 8px; border-radius: 8px; color: var(--heading); text-decoration: none !important; font-weight: 610; line-height: 1.42; }
 .nav-group-link:hover { background: var(--panel-strong); }
-.nav-item { display: block; padding: 5px 8px; border-radius: 8px; color: var(--text); text-decoration: none !important; transition: 0.15s; font-weight: 550; font-size: 0.9rem; line-height: 1.44; }
+.nav-item { display: block; padding: 4px 8px; border-radius: 8px; color: var(--text); text-decoration: none !important; transition: 0.15s; font-weight: 540; font-size: 0.84rem; line-height: 1.42; }
 .nav-group-link,
 .nav-item,
 .nav-command-entry { white-space: nowrap; }
@@ -680,7 +697,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 </div>
 
       <div class="layout">
-  <aside class="nav-sidebar"><section class="nav-section"><h2>使用手冊</h2><div class="nav-group-block"><div class="nav-group-title">開始</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/zh-TW/index.html" class="nav-item">概觀</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/what-is-grafana-util.html" class="nav-item">這個工具是做什麼的</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/getting-started.html" class="nav-item">開始使用</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">角色路徑</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/zh-TW/role-new-user.html" class="nav-item">新手快速入門</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/role-sre-ops.html" class="nav-item">SRE / 維運角色導讀</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/role-automation-ci.html" class="nav-item">自動化 / CI 角色導讀</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">核心操作</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/zh-TW/dashboard.html" class="nav-item">Dashboard 維運人員手冊</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/datasource.html" class="nav-item">Data source 維運手冊</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/alert.html" class="nav-item">Alert 維運人員手冊</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/access.html" class="nav-item">身分與存取管理</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">治理</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/zh-TW/architecture.html" class="nav-item">系統架構與設計原則</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/change-overview-status.html" class="nav-item">專案狀態與變更總覽</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">實戰與參考</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/zh-TW/scenarios.html" class="nav-item">維運情境手冊</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/recipes.html" class="nav-item">實戰錦囊與最佳實踐</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/reference.html" class="nav-item">技術參考手冊</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/troubleshooting.html" class="nav-item">疑難排解與名詞解釋</a></li></ul></div></section><section class="nav-section"><h2>指令參考</h2><a href="index.html" class="nav-command-entry active">開啟指令參考</a></section></aside>
+  <aside class="nav-sidebar"><section class="nav-section"><h2>手冊導覽</h2><div class="nav-group-block"><div class="nav-group-title">開始</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/zh-TW/index.html" class="nav-item">概觀</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/what-is-grafana-util.html" class="nav-item">這個工具是做什麼的</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/getting-started.html" class="nav-item">開始使用</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">角色路徑</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/zh-TW/role-new-user.html" class="nav-item">新手快速入門</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/role-sre-ops.html" class="nav-item">SRE / 維運角色導讀</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/role-automation-ci.html" class="nav-item">自動化 / CI 角色導讀</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">核心操作</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/zh-TW/dashboard.html" class="nav-item">Dashboard 維運人員手冊</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/datasource.html" class="nav-item">Data source 維運手冊</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/alert.html" class="nav-item">Alert 維運人員手冊</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/access.html" class="nav-item">身分與存取管理</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">治理</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/zh-TW/architecture.html" class="nav-item">系統架構與設計原則</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/change-overview-status.html" class="nav-item">專案狀態與變更總覽</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">實戰與參考</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/zh-TW/scenarios.html" class="nav-item">維運情境手冊</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/recipes.html" class="nav-item">實戰錦囊與最佳實踐</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/reference.html" class="nav-item">技術參考手冊</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/troubleshooting.html" class="nav-item">疑難排解與名詞解釋</a></li></ul></div></section><section class="nav-section"><h2>指令入口</h2><a href="index.html" class="nav-command-entry active">開啟指令參考</a></section></aside>
 
   <article class="article">
     <div class="breadcrumbs"><a href="../../index.html">Home</a> / Commands / grafana-util status</div>
@@ -704,32 +721,36 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <p>用途：輸出整個專案的 staged 或 live 狀態摘要。</p>
 <p>適用時機：當你需要看 exported artifacts 或 live Grafana state 的最後檢查結果時。</p>
 <p>說明：如果你要的是最後的 readiness 或健康度讀取，而不是逐條研究命令細節，先看這一頁最合適。<code>status</code> 指令群組就是維運與 CI 常拿來回答「目前 staged bundle 能不能往下走」或「現在 live Grafana 狀態如何」的 gate 視圖。</p>
-<p>主要旗標：root 指令本身只是指令群組；staged 與 live 輸入都在子指令上。常見旗標包含 <code>--output</code> 和共用的 live 連線 / 驗證選項。</p>
+<p>主要旗標：root 指令本身只是指令群組；staged 與 live 輸入都在子指令上。常見旗標包含 <code>--output-format</code> 和共用的 live 連線 / 驗證選項。</p>
 <p>範例：</p>
 <pre><code># 用途：Root。
-grafana-util status staged --dashboard-export-dir ./dashboards/raw --desired-file ./desired.json --output json
-grafana-util status live --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --output yaml</code></pre>
+grafana-util status staged --dashboard-export-dir ./dashboards/raw --desired-file ./desired.json --output-format json</code></pre>
+<pre><code># 用途：Root。
+grafana-util status live --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --output-format yaml</code></pre>
 <p>相關指令：<code>grafana-util overview</code>、<code>grafana-util change preflight</code>、<code>grafana-util change apply</code>。</p>
 <h2 id="staged"><code>staged</code></h2>
 <p>用途：根據已準備好的 artifact 輸出專案狀態。</p>
 <p>適用時機：當你需要在 apply 前，先用結構化輸出做 readiness gate 時。</p>
-<p>主要旗標：<code>--dashboard-export-dir</code>、<code>--dashboard-provisioning-dir</code>、<code>--datasource-export-dir</code>、<code>--datasource-provisioning-file</code>、<code>--access-user-export-dir</code>、<code>--access-team-export-dir</code>、<code>--access-org-export-dir</code>、<code>--access-service-account-export-dir</code>、<code>--desired-file</code>、<code>--source-bundle</code>、<code>--target-inventory</code>、<code>--alert-export-dir</code>、<code>--availability-file</code>、<code>--mapping-file</code>、<code>--output</code>。</p>
+<p>主要旗標：<code>--dashboard-export-dir</code>、<code>--dashboard-provisioning-dir</code>、<code>--datasource-export-dir</code>、<code>--datasource-provisioning-file</code>、<code>--access-user-export-dir</code>、<code>--access-team-export-dir</code>、<code>--access-org-export-dir</code>、<code>--access-service-account-export-dir</code>、<code>--desired-file</code>、<code>--source-bundle</code>、<code>--target-inventory</code>、<code>--alert-export-dir</code>、<code>--availability-file</code>、<code>--mapping-file</code>、<code>--output-format</code>。</p>
 <p>範例：</p>
 <pre><code># 用途：staged。
-grafana-util status staged --dashboard-export-dir ./dashboards/raw --desired-file ./desired.json --output table
-grafana-util status staged --dashboard-provisioning-dir ./dashboards/provisioning --alert-export-dir ./alerts --output interactive</code></pre>
+grafana-util status staged --dashboard-export-dir ./dashboards/raw --desired-file ./desired.json --output-format table</code></pre>
+<pre><code># 用途：staged。
+grafana-util status staged --dashboard-provisioning-dir ./dashboards/provisioning --alert-export-dir ./alerts --output-format interactive</code></pre>
 <p>相關指令：<code>grafana-util overview</code>、<code>grafana-util change summary</code>、<code>grafana-util change preflight</code>。</p>
 <h2 id="live"><code>live</code></h2>
 <p>用途：根據 live Grafana 的讀取結果輸出專案狀態。</p>
 <p>適用時機：當你需要目前的 Grafana 狀態，並可選擇搭配 staged context 檔案時。</p>
-<p>主要旗標：<code>--profile</code>、<code>--url</code>、<code>--token</code>、<code>--basic-user</code>、<code>--basic-password</code>、<code>--prompt-password</code>、<code>--prompt-token</code>、<code>--timeout</code>、<code>--verify-ssl</code>、<code>--insecure</code>、<code>--ca-cert</code>、<code>--all-orgs</code>、<code>--org-id</code>、<code>--sync-summary-file</code>、<code>--bundle-preflight-file</code>、<code>--promotion-summary-file</code>、<code>--mapping-file</code>、<code>--availability-file</code>、<code>--output</code>。</p>
+<p>主要旗標：<code>--profile</code>、<code>--url</code>、<code>--token</code>、<code>--basic-user</code>、<code>--basic-password</code>、<code>--prompt-password</code>、<code>--prompt-token</code>、<code>--timeout</code>、<code>--verify-ssl</code>、<code>--insecure</code>、<code>--ca-cert</code>、<code>--all-orgs</code>、<code>--org-id</code>、<code>--sync-summary-file</code>、<code>--bundle-preflight-file</code>、<code>--promotion-summary-file</code>、<code>--mapping-file</code>、<code>--availability-file</code>、<code>--output-format</code>。</p>
 <p>說明：</p>
 <ul><li>一般 live status 檢查優先用 <code>--profile</code>。</li><li><code>--all-orgs</code> 最穩妥的是搭配管理員憑證支援的 <code>--profile</code> 或直接 Basic auth，因為 token 權限可能看不到其他 org。</li></ul>
 <p>範例：</p>
 <pre><code># 用途：live。
-grafana-util status live --profile prod --output yaml
-grafana-util status live --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --sync-summary-file ./sync-summary.json --output interactive
-grafana-util status live --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --output json</code></pre>
+grafana-util status live --profile prod --output-format yaml</code></pre>
+<pre><code># 用途：live。
+grafana-util status live --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --sync-summary-file ./sync-summary.json --output-format interactive</code></pre>
+<pre><code># 用途：live。
+grafana-util status live --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --output-format json</code></pre>
 <p>相關指令：<code>grafana-util overview live</code>、<code>grafana-util change apply</code>、<code>grafana-util profile show</code>。</p>
     
   </article>

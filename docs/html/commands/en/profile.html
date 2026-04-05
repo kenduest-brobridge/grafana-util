@@ -155,10 +155,27 @@ pre:hover .code-controls { opacity: 1; }
 .nav-sidebar { position: sticky; top: 12px; min-width: 0; padding: 2px 0 0; max-height: calc(100vh - 24px); overflow-y: auto; font-family: var(--font-sans); letter-spacing: -0.01em; }
 html[lang="zh-TW"] .nav-sidebar { font-family: var(--font-zh); letter-spacing: 0; }
 .nav-sidebar li { margin-bottom: 0; }
-.nav-sidebar h2 { font-size: 0.74rem; font-weight: 700; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; letter-spacing: 0.04em; }
+.nav-sidebar h2 {
+  margin: 0 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.72rem;
+  font-weight: 620;
+  text-transform: none;
+  color: var(--muted);
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+}
 .nav-section + .nav-section { margin-top: 18px; }
 .nav-group-block + .nav-group-block { margin-top: 14px; }
-.nav-group-title { margin: 0 0 6px; font-size: 0.76rem; font-weight: 700; color: var(--muted); letter-spacing: 0.02em; }
+.nav-group-title {
+  margin: 0 0 6px;
+  font-size: 1.02rem;
+  font-weight: 720;
+  color: var(--heading);
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+}
 .nav-tree,
 .nav-sub-list { list-style: none; margin: 0; padding: 0; position: relative; }
 .nav-tree::before,
@@ -172,7 +189,7 @@ html[lang="zh-TW"] .nav-sidebar { font-family: var(--font-zh); letter-spacing: 0
 .nav-group-header:hover { color: var(--heading); }
 .nav-group-link { flex: 1; display: block; padding: 5px 8px; border-radius: 8px; color: var(--heading); text-decoration: none !important; font-weight: 610; line-height: 1.42; }
 .nav-group-link:hover { background: var(--panel-strong); }
-.nav-item { display: block; padding: 5px 8px; border-radius: 8px; color: var(--text); text-decoration: none !important; transition: 0.15s; font-weight: 550; font-size: 0.9rem; line-height: 1.44; }
+.nav-item { display: block; padding: 4px 8px; border-radius: 8px; color: var(--text); text-decoration: none !important; transition: 0.15s; font-weight: 540; font-size: 0.84rem; line-height: 1.42; }
 .nav-group-link,
 .nav-item,
 .nav-command-entry { white-space: nowrap; }
@@ -680,7 +697,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 </div>
 
       <div class="layout">
-  <aside class="nav-sidebar"><section class="nav-section"><h2>Handbook</h2><div class="nav-group-block"><div class="nav-group-title">Start</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/en/index.html" class="nav-item">Overview</a></li><li class="nav-tree-node"><a href="../../handbook/en/what-is-grafana-util.html" class="nav-item">What grafana-util is for</a></li><li class="nav-tree-node"><a href="../../handbook/en/getting-started.html" class="nav-item">Getting Started</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">Role Paths</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/en/role-new-user.html" class="nav-item">New User Handbook</a></li><li class="nav-tree-node"><a href="../../handbook/en/role-sre-ops.html" class="nav-item">SRE / Operator Handbook</a></li><li class="nav-tree-node"><a href="../../handbook/en/role-automation-ci.html" class="nav-item">Automation / CI Handbook</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">Core Operations</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/en/dashboard.html" class="nav-item">Dashboard Operator Handbook</a></li><li class="nav-tree-node"><a href="../../handbook/en/datasource.html" class="nav-item">Datasource Operator Handbook</a></li><li class="nav-tree-node"><a href="../../handbook/en/alert.html" class="nav-item">Alert Operator Handbook</a></li><li class="nav-tree-node"><a href="../../handbook/en/access.html" class="nav-item">Access Management (Identity &amp; Access)</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">Governance</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/en/architecture.html" class="nav-item">Architecture &amp; Design Principles</a></li><li class="nav-tree-node"><a href="../../handbook/en/change-overview-status.html" class="nav-item">Project Status &amp; Change Overview</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">Scenarios &amp; Reference</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/en/scenarios.html" class="nav-item">Operator Scenarios</a></li><li class="nav-tree-node"><a href="../../handbook/en/recipes.html" class="nav-item">Best Practices &amp; Real-World Recipes</a></li><li class="nav-tree-node"><a href="../../handbook/en/reference.html" class="nav-item">Technical Reference</a></li><li class="nav-tree-node"><a href="../../handbook/en/troubleshooting.html" class="nav-item">Troubleshooting &amp; Glossary</a></li></ul></div></section><section class="nav-section"><h2>Command Reference</h2><a href="index.html" class="nav-command-entry active">Open command docs</a></section></aside>
+  <aside class="nav-sidebar"><section class="nav-section"><h2>Guide Map</h2><div class="nav-group-block"><div class="nav-group-title">Start</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/en/index.html" class="nav-item">Overview</a></li><li class="nav-tree-node"><a href="../../handbook/en/what-is-grafana-util.html" class="nav-item">What grafana-util is for</a></li><li class="nav-tree-node"><a href="../../handbook/en/getting-started.html" class="nav-item">Getting Started</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">Role Paths</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/en/role-new-user.html" class="nav-item">New User Handbook</a></li><li class="nav-tree-node"><a href="../../handbook/en/role-sre-ops.html" class="nav-item">SRE / Operator Handbook</a></li><li class="nav-tree-node"><a href="../../handbook/en/role-automation-ci.html" class="nav-item">Automation / CI Handbook</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">Core Operations</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/en/dashboard.html" class="nav-item">Dashboard Operator Handbook</a></li><li class="nav-tree-node"><a href="../../handbook/en/datasource.html" class="nav-item">Datasource Operator Handbook</a></li><li class="nav-tree-node"><a href="../../handbook/en/alert.html" class="nav-item">Alert Operator Handbook</a></li><li class="nav-tree-node"><a href="../../handbook/en/access.html" class="nav-item">Access Management (Identity &amp; Access)</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">Governance</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/en/architecture.html" class="nav-item">Architecture &amp; Design Principles</a></li><li class="nav-tree-node"><a href="../../handbook/en/change-overview-status.html" class="nav-item">Project Status &amp; Change Overview</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">Scenarios &amp; Reference</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/en/scenarios.html" class="nav-item">Operator Scenarios</a></li><li class="nav-tree-node"><a href="../../handbook/en/recipes.html" class="nav-item">Best Practices &amp; Real-World Recipes</a></li><li class="nav-tree-node"><a href="../../handbook/en/reference.html" class="nav-item">Technical Reference</a></li><li class="nav-tree-node"><a href="../../handbook/en/troubleshooting.html" class="nav-item">Troubleshooting &amp; Glossary</a></li></ul></div></section><section class="nav-section"><h2>Command Entry</h2><a href="index.html" class="nav-command-entry active">Open command docs</a></section></aside>
 
   <article class="article">
     <div class="breadcrumbs"><a href="../../index.html">Home</a> / Commands / grafana-util profile</div>
@@ -711,11 +728,16 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <p>Key flags: the root command is a namespace; operational flags live on subcommands. The shared root flag is <code>--color</code>.</p>
 <p>Examples:</p>
 <pre><code># Purpose: Root.
-grafana-util profile list
-grafana-util profile show --profile prod --output-format yaml
-grafana-util profile add prod --url https://grafana.example.com --basic-user admin --prompt-password --store-secret encrypted-file
-grafana-util profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN --store-secret os
-grafana-util profile example --mode full
+grafana-util profile list</code></pre>
+<pre><code># Purpose: Root.
+grafana-util profile show --profile prod --output-format yaml</code></pre>
+<pre><code># Purpose: Root.
+grafana-util profile add prod --url https://grafana.example.com --basic-user admin --prompt-password --store-secret encrypted-file</code></pre>
+<pre><code># Purpose: Root.
+grafana-util profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN --store-secret os</code></pre>
+<pre><code># Purpose: Root.
+grafana-util profile example --mode full</code></pre>
+<pre><code># Purpose: Root.
 grafana-util profile init --overwrite</code></pre>
 <p>Related commands: <code>grafana-util status live</code>, <code>grafana-util overview live</code>, <code>grafana-util change plan</code>.</p>
 <h2 id="list"><code>list</code></h2>
@@ -733,8 +755,10 @@ grafana-util profile list</code></pre>
 <ul><li><code>--profile</code></li><li><code>--output-format</code></li><li><code>--show-secrets</code></li></ul>
 <p>Examples:</p>
 <pre><code># Purpose: show.
-grafana-util profile show --profile prod --output-format yaml
-grafana-util profile show --profile prod --output-format json
+grafana-util profile show --profile prod --output-format yaml</code></pre>
+<pre><code># Purpose: show.
+grafana-util profile show --profile prod --output-format json</code></pre>
+<pre><code># Purpose: show.
 grafana-util profile show --profile prod --show-secrets --output-format yaml</code></pre>
 <p>Notes:</p>
 <ul><li>Secret values are masked by default.</li><li><code>--show-secrets</code> reveals plaintext values or resolves secret-store references.</li></ul>
@@ -746,8 +770,10 @@ grafana-util profile show --profile prod --show-secrets --output-format yaml</co
 <ul><li><code>--url</code></li><li>auth inputs: <code>--token</code>, <code>--token-env</code>, <code>--prompt-token</code>, <code>--basic-user</code>, <code>--basic-password</code>, <code>--password-env</code>, <code>--prompt-password</code></li><li>storage mode: <code>--store-secret file|os|encrypted-file</code></li><li>encrypted-file options: <code>--secret-file</code>, <code>--prompt-secret-passphrase</code>, <code>--secret-passphrase-env</code></li><li>behavior: <code>--replace-existing</code>, <code>--set-default</code></li></ul>
 <p>Examples:</p>
 <pre><code># Purpose: add.
-grafana-util profile add dev --url http://127.0.0.1:3000 --basic-user admin --password-env GRAFANA_DEV_PASSWORD
-grafana-util profile add prod --url https://grafana.example.com --basic-user admin --prompt-password --store-secret os --set-default
+grafana-util profile add dev --url http://127.0.0.1:3000 --basic-user admin --password-env GRAFANA_DEV_PASSWORD</code></pre>
+<pre><code># Purpose: add.
+grafana-util profile add prod --url https://grafana.example.com --basic-user admin --prompt-password --store-secret os --set-default</code></pre>
+<pre><code># Purpose: add.
 grafana-util profile add stage --url https://grafana-stage.example.com --token-env GRAFANA_STAGE_TOKEN --store-secret encrypted-file --prompt-secret-passphrase</code></pre>
 <p>Notes:</p>
 <ul><li>Default config path: <code>grafana-util.yaml</code></li><li>Default encrypted secret file: <code>.grafana-util.secrets.yaml</code></li><li>Default local key file for encrypted-file without a passphrase: <code>.grafana-util.secrets.key</code></li><li>These default secret paths are resolved relative to the config file directory, not a temporary process cwd.</li><li><code>file</code> is the default storage mode.</li><li><code>os</code> and <code>encrypted-file</code> are explicit opt-in modes.</li><li><code>os</code> stores secrets in the macOS Keychain or Linux Secret Service, not in <code>grafana-util.yaml</code>.</li><li><code>os</code> is only supported on macOS and Linux. Headless Linux shells may need <code>password_env</code>, <code>token_env</code>, or <code>encrypted-file</code> instead.</li><li>Prefer profile-backed <code>password_env</code> or <code>token_env</code> entries for repeated automation instead of pasting secrets into every live command.</li></ul>
@@ -759,8 +785,10 @@ grafana-util profile add stage --url https://grafana-stage.example.com --token-e
 <ul><li><code>--mode basic|full</code></li></ul>
 <p>Examples:</p>
 <pre><code># Purpose: example.
-grafana-util profile example
-grafana-util profile example --mode basic
+grafana-util profile example</code></pre>
+<pre><code># Purpose: example.
+grafana-util profile example --mode basic</code></pre>
+<pre><code># Purpose: example.
 grafana-util profile example --mode full</code></pre>
 <p>Notes:</p>
 <ul><li><code>basic</code> is a short starter template.</li><li><code>full</code> includes commented examples for <code>file</code>, <code>os</code>, and <code>encrypted-file</code>.</li><li>The <code>os</code> examples assume macOS Keychain or Linux Secret Service is available.</li></ul>
@@ -772,7 +800,8 @@ grafana-util profile example --mode full</code></pre>
 <ul><li><code>--overwrite</code></li></ul>
 <p>Examples:</p>
 <pre><code># Purpose: init.
-grafana-util profile init
+grafana-util profile init</code></pre>
+<pre><code># Purpose: init.
 grafana-util profile init --overwrite</code></pre>
 <p>Notes:</p>
 <ul><li><code>init</code> seeds the built-in starter template.</li><li><code>add</code> is the friendlier way to create one real profile entry directly.</li></ul>

@@ -42,11 +42,6 @@ Create one live Grafana datasource through the Grafana API.
 .EX
 grafana-util datasource add --url http://localhost:3000 --basic-user admin --basic-password admin --name prometheus-main --type prometheus --datasource-url http://prometheus:9090 --dry-run --table
 .EE
-.PP
-Create one live Grafana datasource through the Grafana API.
-.EX
-grafana-util datasource add --profile prod --name tempo-main --type tempo --datasource-url http://tempo:3200 --preset-profile full --dry-run --json
-.EE
 .SH SEE ALSO
 \fBgrafana-util\fR(1),
 \fBgrafana-util-datasource\fR(1)

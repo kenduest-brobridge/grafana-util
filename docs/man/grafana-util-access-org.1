@@ -39,21 +39,6 @@ List, create, modify, export, import, diff, or delete Grafana organizations.
 .EX
 grafana-util access org list --profile prod --output-format text
 .EE
-.PP
-List, create, modify, export, import, diff, or delete Grafana organizations.
-.EX
-grafana-util access org list --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --json
-.EE
-.PP
-List, create, modify, export, import, diff, or delete Grafana organizations.
-.EX
-grafana-util access org modify --url http://localhost:3000 --basic-user admin --basic-password admin --name platform --set-name platform-core --json
-.EE
-.PP
-List, create, modify, export, import, diff, or delete Grafana organizations.
-.EX
-grafana-util access org delete --url http://localhost:3000 --basic-user admin --basic-password admin --name platform --yes
-.EE
 .SH SEE ALSO
 \fBgrafana-util\fR(1),
 \fBgrafana-util-access\fR(1)

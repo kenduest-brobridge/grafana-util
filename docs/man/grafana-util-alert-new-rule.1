@@ -21,11 +21,6 @@ Create a low\-level staged alert rule scaffold.
 .EX
 grafana-util alert new-rule --desired-dir ./alerts/desired --name cpu-main
 .EE
-.PP
-Create a low\-level staged alert rule scaffold.
-.EX
-grafana-util alert add-rule --desired-dir ./alerts/desired --name cpu-main --folder platform-alerts --rule-group cpu --receiver pagerduty-primary
-.EE
 .SH SEE ALSO
 \fBgrafana-util\fR(1),
 \fBgrafana-util-alert\fR(1)

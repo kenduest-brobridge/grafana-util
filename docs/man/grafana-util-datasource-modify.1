@@ -42,11 +42,6 @@ Modify one live Grafana datasource through the Grafana API.
 .EX
 grafana-util datasource modify --url http://localhost:3000 --basic-user admin --basic-password admin --uid prom-main --set-url http://prometheus-v2:9090 --dry-run --json
 .EE
-.PP
-Modify one live Grafana datasource through the Grafana API.
-.EX
-grafana-util datasource modify --profile prod --uid prom-main --set-default true --dry-run --table
-.EE
 .SH SEE ALSO
 \fBgrafana-util\fR(1),
 \fBgrafana-util-datasource\fR(1)

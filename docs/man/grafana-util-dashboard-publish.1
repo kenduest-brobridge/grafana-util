@@ -33,11 +33,6 @@ Publish one local dashboard JSON file through the existing dashboard import pipe
 .EX
 grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --basic-password admin --input ./drafts/cpu-main.json --folder-uid infra --message 'Promote CPU dashboard'
 .EE
-.PP
-Publish one local dashboard JSON file through the existing dashboard import pipeline.
-.EX
-grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --basic-password admin --input ./drafts/cpu-main.json --dry-run --table
-.EE
 .SH SEE ALSO
 \fBgrafana-util\fR(1),
 \fBgrafana-util-dashboard\fR(1)

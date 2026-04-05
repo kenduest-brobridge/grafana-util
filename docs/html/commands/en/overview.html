@@ -155,10 +155,27 @@ pre:hover .code-controls { opacity: 1; }
 .nav-sidebar { position: sticky; top: 12px; min-width: 0; padding: 2px 0 0; max-height: calc(100vh - 24px); overflow-y: auto; font-family: var(--font-sans); letter-spacing: -0.01em; }
 html[lang="zh-TW"] .nav-sidebar { font-family: var(--font-zh); letter-spacing: 0; }
 .nav-sidebar li { margin-bottom: 0; }
-.nav-sidebar h2 { font-size: 0.74rem; font-weight: 700; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; letter-spacing: 0.04em; }
+.nav-sidebar h2 {
+  margin: 0 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.72rem;
+  font-weight: 620;
+  text-transform: none;
+  color: var(--muted);
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+}
 .nav-section + .nav-section { margin-top: 18px; }
 .nav-group-block + .nav-group-block { margin-top: 14px; }
-.nav-group-title { margin: 0 0 6px; font-size: 0.76rem; font-weight: 700; color: var(--muted); letter-spacing: 0.02em; }
+.nav-group-title {
+  margin: 0 0 6px;
+  font-size: 1.02rem;
+  font-weight: 720;
+  color: var(--heading);
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+}
 .nav-tree,
 .nav-sub-list { list-style: none; margin: 0; padding: 0; position: relative; }
 .nav-tree::before,
@@ -172,7 +189,7 @@ html[lang="zh-TW"] .nav-sidebar { font-family: var(--font-zh); letter-spacing: 0
 .nav-group-header:hover { color: var(--heading); }
 .nav-group-link { flex: 1; display: block; padding: 5px 8px; border-radius: 8px; color: var(--heading); text-decoration: none !important; font-weight: 610; line-height: 1.42; }
 .nav-group-link:hover { background: var(--panel-strong); }
-.nav-item { display: block; padding: 5px 8px; border-radius: 8px; color: var(--text); text-decoration: none !important; transition: 0.15s; font-weight: 550; font-size: 0.9rem; line-height: 1.44; }
+.nav-item { display: block; padding: 4px 8px; border-radius: 8px; color: var(--text); text-decoration: none !important; transition: 0.15s; font-weight: 540; font-size: 0.84rem; line-height: 1.42; }
 .nav-group-link,
 .nav-item,
 .nav-command-entry { white-space: nowrap; }
@@ -680,7 +697,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 </div>
 
       <div class="layout">
-  <aside class="nav-sidebar"><section class="nav-section"><h2>Handbook</h2><div class="nav-group-block"><div class="nav-group-title">Start</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/en/index.html" class="nav-item">Overview</a></li><li class="nav-tree-node"><a href="../../handbook/en/what-is-grafana-util.html" class="nav-item">What grafana-util is for</a></li><li class="nav-tree-node"><a href="../../handbook/en/getting-started.html" class="nav-item">Getting Started</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">Role Paths</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/en/role-new-user.html" class="nav-item">New User Handbook</a></li><li class="nav-tree-node"><a href="../../handbook/en/role-sre-ops.html" class="nav-item">SRE / Operator Handbook</a></li><li class="nav-tree-node"><a href="../../handbook/en/role-automation-ci.html" class="nav-item">Automation / CI Handbook</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">Core Operations</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/en/dashboard.html" class="nav-item">Dashboard Operator Handbook</a></li><li class="nav-tree-node"><a href="../../handbook/en/datasource.html" class="nav-item">Datasource Operator Handbook</a></li><li class="nav-tree-node"><a href="../../handbook/en/alert.html" class="nav-item">Alert Operator Handbook</a></li><li class="nav-tree-node"><a href="../../handbook/en/access.html" class="nav-item">Access Management (Identity &amp; Access)</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">Governance</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/en/architecture.html" class="nav-item">Architecture &amp; Design Principles</a></li><li class="nav-tree-node"><a href="../../handbook/en/change-overview-status.html" class="nav-item">Project Status &amp; Change Overview</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">Scenarios &amp; Reference</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/en/scenarios.html" class="nav-item">Operator Scenarios</a></li><li class="nav-tree-node"><a href="../../handbook/en/recipes.html" class="nav-item">Best Practices &amp; Real-World Recipes</a></li><li class="nav-tree-node"><a href="../../handbook/en/reference.html" class="nav-item">Technical Reference</a></li><li class="nav-tree-node"><a href="../../handbook/en/troubleshooting.html" class="nav-item">Troubleshooting &amp; Glossary</a></li></ul></div></section><section class="nav-section"><h2>Command Reference</h2><a href="index.html" class="nav-command-entry active">Open command docs</a></section></aside>
+  <aside class="nav-sidebar"><section class="nav-section"><h2>Guide Map</h2><div class="nav-group-block"><div class="nav-group-title">Start</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/en/index.html" class="nav-item">Overview</a></li><li class="nav-tree-node"><a href="../../handbook/en/what-is-grafana-util.html" class="nav-item">What grafana-util is for</a></li><li class="nav-tree-node"><a href="../../handbook/en/getting-started.html" class="nav-item">Getting Started</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">Role Paths</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/en/role-new-user.html" class="nav-item">New User Handbook</a></li><li class="nav-tree-node"><a href="../../handbook/en/role-sre-ops.html" class="nav-item">SRE / Operator Handbook</a></li><li class="nav-tree-node"><a href="../../handbook/en/role-automation-ci.html" class="nav-item">Automation / CI Handbook</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">Core Operations</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/en/dashboard.html" class="nav-item">Dashboard Operator Handbook</a></li><li class="nav-tree-node"><a href="../../handbook/en/datasource.html" class="nav-item">Datasource Operator Handbook</a></li><li class="nav-tree-node"><a href="../../handbook/en/alert.html" class="nav-item">Alert Operator Handbook</a></li><li class="nav-tree-node"><a href="../../handbook/en/access.html" class="nav-item">Access Management (Identity &amp; Access)</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">Governance</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/en/architecture.html" class="nav-item">Architecture &amp; Design Principles</a></li><li class="nav-tree-node"><a href="../../handbook/en/change-overview-status.html" class="nav-item">Project Status &amp; Change Overview</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">Scenarios &amp; Reference</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/en/scenarios.html" class="nav-item">Operator Scenarios</a></li><li class="nav-tree-node"><a href="../../handbook/en/recipes.html" class="nav-item">Best Practices &amp; Real-World Recipes</a></li><li class="nav-tree-node"><a href="../../handbook/en/reference.html" class="nav-item">Technical Reference</a></li><li class="nav-tree-node"><a href="../../handbook/en/troubleshooting.html" class="nav-item">Troubleshooting &amp; Glossary</a></li></ul></div></section><section class="nav-section"><h2>Command Entry</h2><a href="index.html" class="nav-command-entry active">Open command docs</a></section></aside>
 
   <article class="article">
     <div class="breadcrumbs"><a href="../../index.html">Home</a> / Commands / grafana-util overview</div>
@@ -708,23 +725,26 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <p>Purpose: summarize staged artifacts into one project-wide overview.</p>
 <p>When to use: when you want a single readout across dashboard, datasource, access, alert, and change artifacts before checking status or promoting changes.</p>
 <p>Description: open this page when you need one project-wide summary before switching into a narrower workflow. The <code>overview</code> namespace is useful for readers who want one place to scan staged artifacts or live state across multiple Grafana surfaces without opening each asset command first.</p>
-<p>Key flags: staged inputs such as <code>--dashboard-export-dir</code>, <code>--dashboard-provisioning-dir</code>, <code>--datasource-export-dir</code>, <code>--datasource-provisioning-file</code>, <code>--access-user-export-dir</code>, <code>--access-team-export-dir</code>, <code>--access-org-export-dir</code>, <code>--access-service-account-export-dir</code>, <code>--desired-file</code>, <code>--source-bundle</code>, <code>--target-inventory</code>, <code>--alert-export-dir</code>, <code>--availability-file</code>, <code>--mapping-file</code>, and <code>--output</code>.</p>
+<p>Key flags: staged inputs such as <code>--dashboard-export-dir</code>, <code>--dashboard-provisioning-dir</code>, <code>--datasource-export-dir</code>, <code>--datasource-provisioning-file</code>, <code>--access-user-export-dir</code>, <code>--access-team-export-dir</code>, <code>--access-org-export-dir</code>, <code>--access-service-account-export-dir</code>, <code>--desired-file</code>, <code>--source-bundle</code>, <code>--target-inventory</code>, <code>--alert-export-dir</code>, <code>--availability-file</code>, <code>--mapping-file</code>, and <code>--output-format</code>.</p>
 <p>Examples:</p>
 <pre><code># Purpose: Root.
-grafana-util overview --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts --desired-file ./desired.json --output table
-grafana-util overview --source-bundle ./sync-source-bundle.json --target-inventory ./target-inventory.json --availability-file ./availability.json --mapping-file ./mapping.json --output text</code></pre>
+grafana-util overview --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts --desired-file ./desired.json --output-format table</code></pre>
+<pre><code># Purpose: Root.
+grafana-util overview --source-bundle ./sync-source-bundle.json --target-inventory ./target-inventory.json --availability-file ./availability.json --mapping-file ./mapping.json --output-format text</code></pre>
 <p>Related commands: <code>grafana-util status staged</code>, <code>grafana-util change summary</code>, <code>grafana-util snapshot review</code>.</p>
 <h2 id="live"><code>live</code></h2>
 <p>Purpose: render the live overview by delegating to the shared status live path.</p>
 <p>When to use: when you need the same live readout that <code>status live</code> uses, but want it under the overview namespace.</p>
-<p>Key flags: live connection and auth flags from the shared status live path, plus <code>--sync-summary-file</code>, <code>--bundle-preflight-file</code>, <code>--promotion-summary-file</code>, <code>--mapping-file</code>, <code>--availability-file</code>, and <code>--output</code>.</p>
+<p>Key flags: live connection and auth flags from the shared status live path, plus <code>--sync-summary-file</code>, <code>--bundle-preflight-file</code>, <code>--promotion-summary-file</code>, <code>--mapping-file</code>, <code>--availability-file</code>, and <code>--output-format</code>.</p>
 <p>Notes:</p>
 <ul><li>Prefer <code>--profile</code> for repeatable live overview work.</li><li>Direct Basic auth is the safer fallback for broader org visibility.</li><li>Token auth is fine for scoped reads, but the visible results still follow the token&#x27;s permission envelope.</li></ul>
 <p>Examples:</p>
 <pre><code># Purpose: live.
-grafana-util overview live --profile prod --output yaml
-grafana-util overview live --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --output json
-grafana-util overview live --url http://localhost:3000 --basic-user admin --basic-password admin --output interactive</code></pre>
+grafana-util overview live --profile prod --output-format yaml</code></pre>
+<pre><code># Purpose: live.
+grafana-util overview live --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --output-format json</code></pre>
+<pre><code># Purpose: live.
+grafana-util overview live --url http://localhost:3000 --basic-user admin --basic-password admin --output-format interactive</code></pre>
 <p>Related commands: <code>grafana-util status live</code>, <code>grafana-util change apply</code>, <code>grafana-util profile show</code>.</p>
     
   </article>

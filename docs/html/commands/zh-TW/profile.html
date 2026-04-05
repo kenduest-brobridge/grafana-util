@@ -155,10 +155,27 @@ pre:hover .code-controls { opacity: 1; }
 .nav-sidebar { position: sticky; top: 12px; min-width: 0; padding: 2px 0 0; max-height: calc(100vh - 24px); overflow-y: auto; font-family: var(--font-sans); letter-spacing: -0.01em; }
 html[lang="zh-TW"] .nav-sidebar { font-family: var(--font-zh); letter-spacing: 0; }
 .nav-sidebar li { margin-bottom: 0; }
-.nav-sidebar h2 { font-size: 0.74rem; font-weight: 700; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; letter-spacing: 0.04em; }
+.nav-sidebar h2 {
+  margin: 0 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.72rem;
+  font-weight: 620;
+  text-transform: none;
+  color: var(--muted);
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+}
 .nav-section + .nav-section { margin-top: 18px; }
 .nav-group-block + .nav-group-block { margin-top: 14px; }
-.nav-group-title { margin: 0 0 6px; font-size: 0.76rem; font-weight: 700; color: var(--muted); letter-spacing: 0.02em; }
+.nav-group-title {
+  margin: 0 0 6px;
+  font-size: 1.02rem;
+  font-weight: 720;
+  color: var(--heading);
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+}
 .nav-tree,
 .nav-sub-list { list-style: none; margin: 0; padding: 0; position: relative; }
 .nav-tree::before,
@@ -172,7 +189,7 @@ html[lang="zh-TW"] .nav-sidebar { font-family: var(--font-zh); letter-spacing: 0
 .nav-group-header:hover { color: var(--heading); }
 .nav-group-link { flex: 1; display: block; padding: 5px 8px; border-radius: 8px; color: var(--heading); text-decoration: none !important; font-weight: 610; line-height: 1.42; }
 .nav-group-link:hover { background: var(--panel-strong); }
-.nav-item { display: block; padding: 5px 8px; border-radius: 8px; color: var(--text); text-decoration: none !important; transition: 0.15s; font-weight: 550; font-size: 0.9rem; line-height: 1.44; }
+.nav-item { display: block; padding: 4px 8px; border-radius: 8px; color: var(--text); text-decoration: none !important; transition: 0.15s; font-weight: 540; font-size: 0.84rem; line-height: 1.42; }
 .nav-group-link,
 .nav-item,
 .nav-command-entry { white-space: nowrap; }
@@ -680,7 +697,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 </div>
 
       <div class="layout">
-  <aside class="nav-sidebar"><section class="nav-section"><h2>使用手冊</h2><div class="nav-group-block"><div class="nav-group-title">開始</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/zh-TW/index.html" class="nav-item">概觀</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/what-is-grafana-util.html" class="nav-item">這個工具是做什麼的</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/getting-started.html" class="nav-item">開始使用</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">角色路徑</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/zh-TW/role-new-user.html" class="nav-item">新手快速入門</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/role-sre-ops.html" class="nav-item">SRE / 維運角色導讀</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/role-automation-ci.html" class="nav-item">自動化 / CI 角色導讀</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">核心操作</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/zh-TW/dashboard.html" class="nav-item">Dashboard 維運人員手冊</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/datasource.html" class="nav-item">Data source 維運手冊</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/alert.html" class="nav-item">Alert 維運人員手冊</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/access.html" class="nav-item">身分與存取管理</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">治理</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/zh-TW/architecture.html" class="nav-item">系統架構與設計原則</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/change-overview-status.html" class="nav-item">專案狀態與變更總覽</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">實戰與參考</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/zh-TW/scenarios.html" class="nav-item">維運情境手冊</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/recipes.html" class="nav-item">實戰錦囊與最佳實踐</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/reference.html" class="nav-item">技術參考手冊</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/troubleshooting.html" class="nav-item">疑難排解與名詞解釋</a></li></ul></div></section><section class="nav-section"><h2>指令參考</h2><a href="index.html" class="nav-command-entry active">開啟指令參考</a></section></aside>
+  <aside class="nav-sidebar"><section class="nav-section"><h2>手冊導覽</h2><div class="nav-group-block"><div class="nav-group-title">開始</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/zh-TW/index.html" class="nav-item">概觀</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/what-is-grafana-util.html" class="nav-item">這個工具是做什麼的</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/getting-started.html" class="nav-item">開始使用</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">角色路徑</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/zh-TW/role-new-user.html" class="nav-item">新手快速入門</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/role-sre-ops.html" class="nav-item">SRE / 維運角色導讀</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/role-automation-ci.html" class="nav-item">自動化 / CI 角色導讀</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">核心操作</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/zh-TW/dashboard.html" class="nav-item">Dashboard 維運人員手冊</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/datasource.html" class="nav-item">Data source 維運手冊</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/alert.html" class="nav-item">Alert 維運人員手冊</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/access.html" class="nav-item">身分與存取管理</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">治理</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/zh-TW/architecture.html" class="nav-item">系統架構與設計原則</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/change-overview-status.html" class="nav-item">專案狀態與變更總覽</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">實戰與參考</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/zh-TW/scenarios.html" class="nav-item">維運情境手冊</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/recipes.html" class="nav-item">實戰錦囊與最佳實踐</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/reference.html" class="nav-item">技術參考手冊</a></li><li class="nav-tree-node"><a href="../../handbook/zh-TW/troubleshooting.html" class="nav-item">疑難排解與名詞解釋</a></li></ul></div></section><section class="nav-section"><h2>指令入口</h2><a href="index.html" class="nav-command-entry active">開啟指令參考</a></section></aside>
 
   <article class="article">
     <div class="breadcrumbs"><a href="../../index.html">Home</a> / Commands / grafana-util profile</div>
@@ -707,11 +724,16 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <p>主要旗標：root 指令本身只是指令群組；實際操作旗標都在子指令上。共用 root 旗標是 <code>--color</code>。</p>
 <p>範例：</p>
 <pre><code># 用途：Root。
-grafana-util profile list
-grafana-util profile show --profile prod --output-format yaml
-grafana-util profile add prod --url https://grafana.example.com --basic-user admin --prompt-password --store-secret encrypted-file
-grafana-util profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN --store-secret os
-grafana-util profile example --mode full
+grafana-util profile list</code></pre>
+<pre><code># 用途：Root。
+grafana-util profile show --profile prod --output-format yaml</code></pre>
+<pre><code># 用途：Root。
+grafana-util profile add prod --url https://grafana.example.com --basic-user admin --prompt-password --store-secret encrypted-file</code></pre>
+<pre><code># 用途：Root。
+grafana-util profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN --store-secret os</code></pre>
+<pre><code># 用途：Root。
+grafana-util profile example --mode full</code></pre>
+<pre><code># 用途：Root。
 grafana-util profile init --overwrite</code></pre>
 <p>相關指令：<code>grafana-util status live</code>、<code>grafana-util overview live</code>、<code>grafana-util change plan</code>。</p>
 <h2 id="list"><code>list</code></h2>
@@ -729,8 +751,10 @@ grafana-util profile list</code></pre>
 <ul><li><code>--profile</code></li><li><code>--output-format</code></li><li><code>--show-secrets</code></li></ul>
 <p>範例：</p>
 <pre><code># 用途：show。
-grafana-util profile show --profile prod --output-format yaml
-grafana-util profile show --profile prod --output-format json
+grafana-util profile show --profile prod --output-format yaml</code></pre>
+<pre><code># 用途：show。
+grafana-util profile show --profile prod --output-format json</code></pre>
+<pre><code># 用途：show。
 grafana-util profile show --profile prod --show-secrets --output-format yaml</code></pre>
 <p>說明：</p>
 <ul><li>預設會遮蔽秘密值。</li><li>加上 <code>--show-secrets</code> 才會顯示明文，或解出 secret-store 參照。</li></ul>
@@ -742,8 +766,10 @@ grafana-util profile show --profile prod --show-secrets --output-format yaml</co
 <ul><li><code>--url</code></li><li>驗證輸入：<code>--token</code>、<code>--token-env</code>、<code>--prompt-token</code>、<code>--basic-user</code>、<code>--basic-password</code>、<code>--password-env</code>、<code>--prompt-password</code></li><li>秘密保存模式：<code>--store-secret file|os|encrypted-file</code></li><li><code>encrypted-file</code> 相關：<code>--secret-file</code>、<code>--prompt-secret-passphrase</code>、<code>--secret-passphrase-env</code></li><li>行為控制：<code>--replace-existing</code>、<code>--set-default</code></li></ul>
 <p>範例：</p>
 <pre><code># 用途：add。
-grafana-util profile add dev --url http://127.0.0.1:3000 --basic-user admin --password-env GRAFANA_DEV_PASSWORD
-grafana-util profile add prod --url https://grafana.example.com --basic-user admin --prompt-password --store-secret os --set-default
+grafana-util profile add dev --url http://127.0.0.1:3000 --basic-user admin --password-env GRAFANA_DEV_PASSWORD</code></pre>
+<pre><code># 用途：add。
+grafana-util profile add prod --url https://grafana.example.com --basic-user admin --prompt-password --store-secret os --set-default</code></pre>
+<pre><code># 用途：add。
 grafana-util profile add stage --url https://grafana-stage.example.com --token-env GRAFANA_STAGE_TOKEN --store-secret encrypted-file --prompt-secret-passphrase</code></pre>
 <p>說明：</p>
 <ul><li>預設 config path：<code>grafana-util.yaml</code></li><li>預設加密秘密檔：<code>.grafana-util.secrets.yaml</code></li><li><code>encrypted-file</code> 且未設 passphrase 時，預設本地 key file：<code>.grafana-util.secrets.key</code></li><li>這些預設 secret path 都是以 config file 所在目錄為基準，不是用臨時的 process cwd 去算。</li><li><code>file</code> 是預設模式。</li><li><code>os</code> 與 <code>encrypted-file</code> 都是明確 opt-in。</li><li><code>os</code> 模式會把 secret 放進 macOS Keychain 或 Linux Secret Service，而不是寫進 <code>grafana-util.yaml</code>。</li><li><code>os</code> 目前只支援 macOS 與 Linux；如果是 headless Linux shell，通常要改用 <code>password_env</code>、<code>token_env</code> 或 <code>encrypted-file</code>。</li><li>對重複執行的自動化工作，優先把秘密放進 profile 的 <code>password_env</code> 或 <code>token_env</code>，不要把秘密直接貼進每次 live 指令。</li></ul>
@@ -755,8 +781,10 @@ grafana-util profile add stage --url https://grafana-stage.example.com --token-e
 <ul><li><code>--mode basic|full</code></li></ul>
 <p>範例：</p>
 <pre><code># 用途：example。
-grafana-util profile example
-grafana-util profile example --mode basic
+grafana-util profile example</code></pre>
+<pre><code># 用途：example。
+grafana-util profile example --mode basic</code></pre>
+<pre><code># 用途：example。
 grafana-util profile example --mode full</code></pre>
 <p>說明：</p>
 <ul><li><code>basic</code> 是較短的起手範本。</li><li><code>full</code> 會包含 <code>file</code>、<code>os</code>、<code>encrypted-file</code> 三種模式的註解示例。</li><li><code>os</code> 類型範例的前提是本機 macOS Keychain 或 Linux Secret Service 可用。</li></ul>
@@ -768,7 +796,8 @@ grafana-util profile example --mode full</code></pre>
 <ul><li><code>--overwrite</code></li></ul>
 <p>範例：</p>
 <pre><code># 用途：init。
-grafana-util profile init
+grafana-util profile init</code></pre>
+<pre><code># 用途：init。
 grafana-util profile init --overwrite</code></pre>
 <p>說明：</p>
 <ul><li><code>init</code> 會寫入內建起手範本。</li><li>如果你是想直接建立一個真正可用的 profile，通常 <code>add</code> 會比較順手。</li></ul>

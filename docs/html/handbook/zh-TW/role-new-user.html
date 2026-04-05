@@ -155,10 +155,27 @@ pre:hover .code-controls { opacity: 1; }
 .nav-sidebar { position: sticky; top: 12px; min-width: 0; padding: 2px 0 0; max-height: calc(100vh - 24px); overflow-y: auto; font-family: var(--font-sans); letter-spacing: -0.01em; }
 html[lang="zh-TW"] .nav-sidebar { font-family: var(--font-zh); letter-spacing: 0; }
 .nav-sidebar li { margin-bottom: 0; }
-.nav-sidebar h2 { font-size: 0.74rem; font-weight: 700; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; letter-spacing: 0.04em; }
+.nav-sidebar h2 {
+  margin: 0 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.72rem;
+  font-weight: 620;
+  text-transform: none;
+  color: var(--muted);
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+}
 .nav-section + .nav-section { margin-top: 18px; }
 .nav-group-block + .nav-group-block { margin-top: 14px; }
-.nav-group-title { margin: 0 0 6px; font-size: 0.76rem; font-weight: 700; color: var(--muted); letter-spacing: 0.02em; }
+.nav-group-title {
+  margin: 0 0 6px;
+  font-size: 1.02rem;
+  font-weight: 720;
+  color: var(--heading);
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+}
 .nav-tree,
 .nav-sub-list { list-style: none; margin: 0; padding: 0; position: relative; }
 .nav-tree::before,
@@ -172,7 +189,7 @@ html[lang="zh-TW"] .nav-sidebar { font-family: var(--font-zh); letter-spacing: 0
 .nav-group-header:hover { color: var(--heading); }
 .nav-group-link { flex: 1; display: block; padding: 5px 8px; border-radius: 8px; color: var(--heading); text-decoration: none !important; font-weight: 610; line-height: 1.42; }
 .nav-group-link:hover { background: var(--panel-strong); }
-.nav-item { display: block; padding: 5px 8px; border-radius: 8px; color: var(--text); text-decoration: none !important; transition: 0.15s; font-weight: 550; font-size: 0.9rem; line-height: 1.44; }
+.nav-item { display: block; padding: 4px 8px; border-radius: 8px; color: var(--text); text-decoration: none !important; transition: 0.15s; font-weight: 540; font-size: 0.84rem; line-height: 1.42; }
 .nav-group-link,
 .nav-item,
 .nav-command-entry { white-space: nowrap; }
@@ -680,7 +697,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 </div>
 
       <div class="layout">
-  <aside class="nav-sidebar"><section class="nav-section"><h2>使用手冊</h2><div class="nav-group-block"><div class="nav-group-title">開始</div><ul class="nav-tree"><li class="nav-tree-node"><a href="index.html" class="nav-item">概觀</a></li><li class="nav-tree-node"><a href="what-is-grafana-util.html" class="nav-item">這個工具是做什麼的</a></li><li class="nav-tree-node"><a href="getting-started.html" class="nav-item">開始使用</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">角色路徑</div><ul class="nav-tree"><li class="nav-tree-node"><a href="role-new-user.html" class="nav-item active">新手快速入門</a></li><li class="nav-tree-node"><a href="role-sre-ops.html" class="nav-item">SRE / 維運角色導讀</a></li><li class="nav-tree-node"><a href="role-automation-ci.html" class="nav-item">自動化 / CI 角色導讀</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">核心操作</div><ul class="nav-tree"><li class="nav-tree-node"><a href="dashboard.html" class="nav-item">Dashboard 維運人員手冊</a></li><li class="nav-tree-node"><a href="datasource.html" class="nav-item">Data source 維運手冊</a></li><li class="nav-tree-node"><a href="alert.html" class="nav-item">Alert 維運人員手冊</a></li><li class="nav-tree-node"><a href="access.html" class="nav-item">身分與存取管理</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">治理</div><ul class="nav-tree"><li class="nav-tree-node"><a href="architecture.html" class="nav-item">系統架構與設計原則</a></li><li class="nav-tree-node"><a href="change-overview-status.html" class="nav-item">專案狀態與變更總覽</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">實戰與參考</div><ul class="nav-tree"><li class="nav-tree-node"><a href="scenarios.html" class="nav-item">維運情境手冊</a></li><li class="nav-tree-node"><a href="recipes.html" class="nav-item">實戰錦囊與最佳實踐</a></li><li class="nav-tree-node"><a href="reference.html" class="nav-item">技術參考手冊</a></li><li class="nav-tree-node"><a href="troubleshooting.html" class="nav-item">疑難排解與名詞解釋</a></li></ul></div></section><section class="nav-section"><h2>指令參考</h2><a href="../../commands/zh-TW/index.html" class="nav-command-entry">開啟指令參考</a></section></aside>
+  <aside class="nav-sidebar"><section class="nav-section"><h2>手冊導覽</h2><div class="nav-group-block"><div class="nav-group-title">開始</div><ul class="nav-tree"><li class="nav-tree-node"><a href="index.html" class="nav-item">概觀</a></li><li class="nav-tree-node"><a href="what-is-grafana-util.html" class="nav-item">這個工具是做什麼的</a></li><li class="nav-tree-node"><a href="getting-started.html" class="nav-item">開始使用</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">角色路徑</div><ul class="nav-tree"><li class="nav-tree-node"><a href="role-new-user.html" class="nav-item active">新手快速入門</a></li><li class="nav-tree-node"><a href="role-sre-ops.html" class="nav-item">SRE / 維運角色導讀</a></li><li class="nav-tree-node"><a href="role-automation-ci.html" class="nav-item">自動化 / CI 角色導讀</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">核心操作</div><ul class="nav-tree"><li class="nav-tree-node"><a href="dashboard.html" class="nav-item">Dashboard 維運人員手冊</a></li><li class="nav-tree-node"><a href="datasource.html" class="nav-item">Data source 維運手冊</a></li><li class="nav-tree-node"><a href="alert.html" class="nav-item">Alert 維運人員手冊</a></li><li class="nav-tree-node"><a href="access.html" class="nav-item">身分與存取管理</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">治理</div><ul class="nav-tree"><li class="nav-tree-node"><a href="architecture.html" class="nav-item">系統架構與設計原則</a></li><li class="nav-tree-node"><a href="change-overview-status.html" class="nav-item">專案狀態與變更總覽</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">實戰與參考</div><ul class="nav-tree"><li class="nav-tree-node"><a href="scenarios.html" class="nav-item">維運情境手冊</a></li><li class="nav-tree-node"><a href="recipes.html" class="nav-item">實戰錦囊與最佳實踐</a></li><li class="nav-tree-node"><a href="reference.html" class="nav-item">技術參考手冊</a></li><li class="nav-tree-node"><a href="troubleshooting.html" class="nav-item">疑難排解與名詞解釋</a></li></ul></div></section><section class="nav-section"><h2>指令入口</h2><a href="../../commands/zh-TW/index.html" class="nav-command-entry">開啟指令參考</a></section></aside>
 
   <article class="article">
     <div class="breadcrumbs"><a href="../../index.html">Home</a> / Handbook / 新手快速入門</div>
@@ -708,24 +725,28 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <ol><li><strong>第一次連線先用直接旗標驗證</strong>：例如 <code>--url</code> 加上 Basic auth，先確定這台 Grafana 真的連得到。</li><li><strong>日常重複工作改用 <code>--profile</code></strong>：連線確認後，把 URL、帳號與 secret 來源整理進 profile，之後就不用每次重打。</li><li><strong>本機引導或臨時檢查可用 Basic auth</strong>：若還沒建 profile，可先用 <code>--basic-user</code> 搭配 <code>--prompt-password</code>。</li><li><strong>特定自動化場景才直接用 token</strong>：只有在你很清楚 token 權限範圍時，才建議直接拿來跑命令。</li><li><strong>secret 優先放在環境變數或 secret store</strong>：像 <code>password_env</code>、<code>token_env</code>、<code>os</code> 或 <code>encrypted-file</code> 都比把敏感值直接打在命令列上安全。</li></ol>
 <h2 id="建議先執行的-5-個指令">建議先執行的 5 個指令</h2>
 <pre><code># 用途：建議先執行的 5 個指令。
-grafana-util --version
-grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output yaml
-grafana-util profile init --overwrite
-grafana-util profile add dev --url http://127.0.0.1:3000 --basic-user admin --prompt-password
-grafana-util status live --profile dev --output yaml</code></pre>
+grafana-util --version</code></pre>
+<pre><code># 用途：建議先執行的 5 個指令。
+grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output-format yaml</code></pre>
+<pre><code># 用途：建議先執行的 5 個指令。
+grafana-util profile init --overwrite</code></pre>
+<pre><code># 用途：建議先執行的 5 個指令。
+grafana-util profile add dev --url http://127.0.0.1:3000 --basic-user admin --prompt-password</code></pre>
+<pre><code># 用途：建議先執行的 5 個指令。
+grafana-util status live --profile dev --output-format yaml</code></pre>
 <p>這個順序不是隨便排的：</p>
 <ul><li>先看 binary 有沒有裝好</li><li>再用一次直接旗標確認 Grafana 真的連得通</li><li>確認沒問題後再初始化設定檔</li><li>把同一組連線整理成 profile</li><li>最後再用 <code>--profile</code> 跑同一種唯讀檢查</li></ul>
 <p>如果你暫時還沒有 profile，這就是最短的安全起手式：</p>
 <pre><code># 用途：如果你暫時還沒有 profile，這就是最短的安全起手式。
-grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output yaml</code></pre>
+grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output-format yaml</code></pre>
 <p>如果你手邊已有範圍明確的 token，也可以直接做同一類唯讀檢查：</p>
 <pre><code># 用途：如果你手邊已有範圍明確的 token，也可以直接做同一類唯讀檢查。
-grafana-util overview live --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --output json</code></pre>
+grafana-util overview live --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --output-format json</code></pre>
 <p>如果你的 shell 已經有環境變數，也可以不先建 profile，直接這樣跑：</p>
 <pre><code># 用途：如果你的 shell 已經有環境變數，也可以不先建 profile，直接這樣跑。
 export GRAFANA_USERNAME=admin
 export GRAFANA_PASSWORD=admin
-grafana-util status live --url http://localhost:3000 --output yaml</code></pre>
+grafana-util status live --url http://localhost:3000 --output-format yaml</code></pre>
 <h2 id="學習進度檢核">學習進度檢核</h2>
 <p>當你符合以下幾點時，就可以進到後續章節：</p>
 <ul><li>可在常用的終端機環境中正常執行 <code>grafana-util --version</code>。</li><li>至少有一個直接的唯讀指令能穩定連到目標 Grafana。</li><li><code>profile show --profile dev</code> 解析出的欄位符合預期。</li><li><code>status live --profile dev</code> 能穩定回傳可讀的結果。</li><li>已清楚後續要進行 dashboard、alert 或 access 管理的操作流程。</li></ul>

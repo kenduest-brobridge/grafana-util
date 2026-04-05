@@ -39,11 +39,6 @@ Evaluate governance policy against dashboard inspect JSON artifacts.
 .EX
 grafana-util dashboard governance-gate --policy-source file --policy ./policy.yaml --governance ./governance.json --queries ./queries.json
 .EE
-.PP
-Evaluate governance policy against dashboard inspect JSON artifacts.
-.EX
-grafana-util dashboard governance-gate --policy-source builtin --builtin-policy default --governance ./governance.json --queries ./queries.json --output-format json --json-output ./governance-check.json
-.EE
 .SH SEE ALSO
 \fBgrafana-util\fR(1),
 \fBgrafana-util-dashboard\fR(1)
