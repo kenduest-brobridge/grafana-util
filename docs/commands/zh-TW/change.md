@@ -15,36 +15,27 @@
 
 主要旗標：root 指令本身只是指令群組；主要操作旗標都在子指令上。常見工作流程輸入包含 `--workspace`、`--desired-file`、`--dashboard-export-dir`、`--dashboard-provisioning-dir`、`--alert-export-dir`、`--source-bundle`、`--target-inventory`、`--availability-file`、`--mapping-file`、`--fetch-live`、`--live-file`、`--preview-file`、`--approve`、`--execute-live` 與 `--output-format`。
 
-### 給 CI / 腳本用的 JSON contract
+### 第一次使用時，先走這條路
 
-如果你要用 `change` 系列輸出給 CI、腳本或外部系統判斷，請先用 `kind` 與 `schemaVersion` 當成 contract 識別，再讀後面的欄位。
+如果你是第一次操作，先照這個順序走：
 
-CLI 內建快速查詢：
+1. `change inspect` 看 staged package 裡有什麼
+2. `change check` 確認輸入結構是否適合繼續往下走
+3. `change preview` 預覽這次會改到什麼
+4. `change apply` 只在 preview 已審核且核准後才執行
 
-- `grafana-util change --help-schema`
-- `grafana-util change inspect --help`
-- `grafana-util change preview --help-schema`
-- `grafana-util change apply --help-schema`
+### `--workspace` 會幫你找什麼
 
-| 指令 | 輸出 kind | 主要 top-level 欄位 |
-| --- | --- | --- |
-| `change inspect --output-format json` | staged summary 或 overview/status 風格的 inspection 輸出 | 依輸入類型輸出 staged 摘要與 discovered-input 資訊 |
-| `change check --output-format json` | project-status staged status | staged readiness/status 輸出，以及 blockers 或 warnings |
-| `change preview --output-format json` | `grafana-utils-sync-plan` 或 bundle/promotion preflight kinds | task-first 入口會沿用既有 staged plan/bundle-preflight/promotion-preflight contracts |
-| `change apply --output-format json` | `grafana-utils-sync-apply-intent` | `kind`、`schemaVersion`、`toolVersion`、`mode`、`reviewed`、`reviewRequired`、`allowPrune`、`approved`、`summary`、`alertAssessment`、`operations`、可選 `preflightSummary`、可選 `bundlePreflightSummary`、`appliedBy`、`appliedAt`、`approvalReason`、`applyNote`、`traceId`、`stage`、`stepIndex`、`parentTraceId` |
-| `change apply --execute-live --output-format json` | live apply result | `mode`、`appliedCount`、`results` |
-| `change advanced audit --output-format json` | `grafana-utils-sync-audit` | `kind`、`schemaVersion`、`toolVersion`、`summary`、`currentLock`、`baselineLock`、`drifts` |
-| `change advanced preflight --output-format json` | `grafana-utils-sync-preflight` | `kind`、`schemaVersion`、`toolVersion`、`summary`、`checks` |
-| `change advanced assess-alerts --output-format json` | `grafana-utils-alert-sync-plan` | `kind`、`schemaVersion`、`toolVersion`、`summary`、`alerts` |
-| `change advanced bundle-preflight --output-format json` | `grafana-utils-sync-bundle-preflight` | `kind`、`schemaVersion`、`summary`、`syncPreflight`、`alertArtifactAssessment`、`secretPlaceholderAssessment`、`providerAssessment` |
-| `change advanced promotion-preflight --output-format json` | `grafana-utils-sync-promotion-preflight` | `kind`、`schemaVersion`、`toolVersion`、`summary`、`bundlePreflight`、`mappingSummary`、`checkSummary`、`handoffSummary`、`continuationSummary`、`checks`、`resolvedChecks`、`blockingChecks` |
+當你帶 `--workspace .` 時，`change` 會嘗試在目前 repo 或工作目錄裡找常見的 staged inputs，並拼成同一條 review lane：
 
-補充：
+- dashboard export trees
+- dashboard provisioning trees
+- datasource provisioning files
+- alert export trees
+- staged desired change files
+- source bundle、target inventory、promotion mapping files
 
-- `change apply` 有兩種 JSON shape。沒有 `--execute-live` 時，回的是 staged apply intent；有 `--execute-live` 時，回的是 live 執行結果。
-- `change preview` 是 task-first 入口。依你提供的 staged 輸入不同，可能輸出既有的 plan kind，或 bundle/promotion preflight kinds。
-- `change apply` 現在優先使用 `--preview-file`，但仍保留 `--plan-file` 當 alias。
-- `change advanced bundle` 不用 `--output-format` 來挑格式；它是用 `--output-file` 把 source bundle 寫到檔案。
+如果自動發現沒有找到可用輸入，先停下來，改用明確旗標，例如 `--desired-file`、`--dashboard-export-dir`、`--alert-export-dir`、`--source-bundle` 或 `--target-inventory`。
 
 成功判準：
 
@@ -165,6 +156,37 @@ grafana-util change advanced review --plan-file ./sync-plan.json --review-note '
 ```bash
 grafana-util change advanced bundle-preflight --source-bundle ./bundle.json --target-inventory ./target.json --output-format json
 ```
+
+### 給 CI / 腳本用的 JSON contract
+
+如果你要用 `change` 系列輸出給 CI、腳本或外部系統判斷，請先用 `kind` 與 `schemaVersion` 當成 contract 識別，再讀後面的欄位。
+
+CLI 內建快速查詢：
+
+- `grafana-util change --help-schema`
+- `grafana-util change inspect --help`
+- `grafana-util change preview --help-schema`
+- `grafana-util change apply --help-schema`
+
+| 指令 | 輸出 kind | 主要 top-level 欄位 |
+| --- | --- | --- |
+| `change inspect --output-format json` | staged summary 或 overview/status 風格的 inspection 輸出 | 依輸入類型輸出 staged 摘要與 discovered-input 資訊 |
+| `change check --output-format json` | project-status staged status | staged readiness/status 輸出，以及 blockers 或 warnings |
+| `change preview --output-format json` | `grafana-utils-sync-plan` 或 bundle/promotion preflight kinds | task-first 入口會沿用既有 staged plan/bundle-preflight/promotion-preflight contracts |
+| `change apply --output-format json` | `grafana-utils-sync-apply-intent` | `kind`、`schemaVersion`、`toolVersion`、`mode`、`reviewed`、`reviewRequired`、`allowPrune`、`approved`、`summary`、`alertAssessment`、`operations`、可選 `preflightSummary`、可選 `bundlePreflightSummary`、`appliedBy`、`appliedAt`、`approvalReason`、`applyNote`、`traceId`、`stage`、`stepIndex`、`parentTraceId` |
+| `change apply --execute-live --output-format json` | live apply result | `mode`、`appliedCount`、`results` |
+| `change advanced audit --output-format json` | `grafana-utils-sync-audit` | `kind`、`schemaVersion`、`toolVersion`、`summary`、`currentLock`、`baselineLock`、`drifts` |
+| `change advanced preflight --output-format json` | `grafana-utils-sync-preflight` | `kind`、`schemaVersion`、`toolVersion`、`summary`、`checks` |
+| `change advanced assess-alerts --output-format json` | `grafana-utils-alert-sync-plan` | `kind`、`schemaVersion`、`toolVersion`、`summary`、`alerts` |
+| `change advanced bundle-preflight --output-format json` | `grafana-utils-sync-bundle-preflight` | `kind`、`schemaVersion`、`summary`、`syncPreflight`、`alertArtifactAssessment`、`secretPlaceholderAssessment`、`providerAssessment` |
+| `change advanced promotion-preflight --output-format json` | `grafana-utils-sync-promotion-preflight` | `kind`、`schemaVersion`、`toolVersion`、`summary`、`bundlePreflight`、`mappingSummary`、`checkSummary`、`handoffSummary`、`continuationSummary`、`checks`、`resolvedChecks`、`blockingChecks` |
+
+補充：
+
+- `change apply` 有兩種 JSON shape。沒有 `--execute-live` 時，回的是 staged apply intent；有 `--execute-live` 時，回的是 live 執行結果。
+- `change preview` 是 task-first 入口。依你提供的 staged 輸入不同，可能輸出既有的 plan kind，或 bundle/promotion preflight kinds。
+- `change apply` 現在優先使用 `--preview-file`，但仍保留 `--plan-file` 當 alias。
+- `change advanced bundle` 不用 `--output-format` 來挑格式；它是用 `--output-file` 把 source bundle 寫到檔案。
 
 ## `summary`
 

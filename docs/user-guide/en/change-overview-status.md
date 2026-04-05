@@ -37,11 +37,21 @@ This domain focuses on the governance gate: the final layer of validation before
 
 Need the command-by-command surface instead of the workflow guide?
 
+Primary lane:
+
 - [change](../../commands/en/change.md)
 - [change inspect](../../commands/en/change.md#inspect)
 - [change check](../../commands/en/change.md#check)
 - [change preview](../../commands/en/change.md#preview)
 - [change apply](../../commands/en/change.md#apply)
+- [status](../../commands/en/status.md)
+- [status staged](../../commands/en/status.md#staged)
+- [status live](../../commands/en/status.md#live)
+- [overview](../../commands/en/overview.md)
+- [overview live](../../commands/en/overview.md#live)
+
+Advanced workflows:
+
 - [change advanced](../../commands/en/change.md#advanced)
 - [change advanced summary](../../commands/en/change.md#summary)
 - [change advanced plan](../../commands/en/change.md#plan)
@@ -52,11 +62,6 @@ Need the command-by-command surface instead of the workflow guide?
 - [change advanced bundle](../../commands/en/change.md#bundle)
 - [change advanced bundle-preflight](../../commands/en/change.md#bundle-preflight)
 - [change advanced promotion-preflight](../../commands/en/change.md#promotion-preflight)
-- [status](../../commands/en/status.md)
-- [status staged](../../commands/en/status.md#staged)
-- [status live](../../commands/en/status.md#live)
-- [overview](../../commands/en/overview.md)
-- [overview live](../../commands/en/overview.md#live)
 - [snapshot](../../commands/en/snapshot.md)
 - [snapshot export](../../commands/en/snapshot.md#export)
 - [snapshot review](../../commands/en/snapshot.md#review)
@@ -121,6 +126,17 @@ grafana-util status staged --dashboard-export-dir ./dashboards/raw --alert-expor
 ## 📋 Change Lifecycle
 
 Manage the transition from Git to production Grafana.
+
+### First-run shortcut
+
+If you are not sure where to start, use this sequence:
+
+1. `change inspect --workspace .`
+2. `change check --workspace .`
+3. `change preview --workspace . --fetch-live --profile <profile>`
+4. `change apply --preview-file ./change-preview.json --approve --execute-live --profile <profile>`
+
+`--workspace` is the shortest path because `change` will try to discover common staged inputs in the current repo or working tree. If that does not match your layout, switch to explicit flags such as `--desired-file`, `--dashboard-export-dir`, `--alert-export-dir`, `--source-bundle`, or `--target-inventory`.
 
 ### 1. Change Inspect
 Get a fast, task-first summary of what the staged package contains.

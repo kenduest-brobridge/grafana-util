@@ -15,36 +15,27 @@ Before / After:
 
 Key flags: the root command is a namespace; the main operational flags live on the subcommands. Common workflow inputs include `--workspace`, `--desired-file`, `--dashboard-export-dir`, `--dashboard-provisioning-dir`, `--alert-export-dir`, `--source-bundle`, `--target-inventory`, `--availability-file`, `--mapping-file`, `--fetch-live`, `--live-file`, `--preview-file`, `--approve`, `--execute-live`, and `--output-format`.
 
-### JSON contracts for CI and scripts
+### First-run path
 
-If you want to automate around `change` outputs, treat `kind` plus `schemaVersion` as the contract guard before you inspect the rest of the payload.
+If you are starting fresh, use this order first:
 
-Quick lookups from the CLI:
+1. `change inspect` to see what the staged package contains
+2. `change check` to confirm it is structurally ready
+3. `change preview` to see what would change
+4. `change apply` only after the preview is reviewed and approved
 
-- `grafana-util change --help-schema`
-- `grafana-util change inspect --help`
-- `grafana-util change preview --help-schema`
-- `grafana-util change apply --help-schema`
+### What `--workspace` tries to discover
 
-| Command | Output kind | Top-level fields to expect |
-| --- | --- | --- |
-| `change inspect --output-format json` | overview/status-style staged summary | command-specific staged summary and discovered-input output |
-| `change check --output-format json` | project-status staged status | staged readiness/status output plus blockers or warnings |
-| `change preview --output-format json` | `grafana-utils-sync-plan` or bundle/promotion preflight kinds | preview uses the existing staged plan/bundle-preflight/promotion-preflight contracts under a task-first entrypoint |
-| `change apply --output-format json` | `grafana-utils-sync-apply-intent` | `kind`, `schemaVersion`, `toolVersion`, `mode`, `reviewed`, `reviewRequired`, `allowPrune`, `approved`, `summary`, `alertAssessment`, `operations`, optional `preflightSummary`, optional `bundlePreflightSummary`, `appliedBy`, `appliedAt`, `approvalReason`, `applyNote`, `traceId`, `stage`, `stepIndex`, `parentTraceId` |
-| `change apply --execute-live --output-format json` | live apply result | `mode`, `appliedCount`, `results` |
-| `change advanced audit --output-format json` | `grafana-utils-sync-audit` | `kind`, `schemaVersion`, `toolVersion`, `summary`, `currentLock`, `baselineLock`, `drifts` |
-| `change advanced preflight --output-format json` | `grafana-utils-sync-preflight` | `kind`, `schemaVersion`, `toolVersion`, `summary`, `checks` |
-| `change advanced assess-alerts --output-format json` | `grafana-utils-alert-sync-plan` | `kind`, `schemaVersion`, `toolVersion`, `summary`, `alerts` |
-| `change advanced bundle-preflight --output-format json` | `grafana-utils-sync-bundle-preflight` | `kind`, `schemaVersion`, `summary`, `syncPreflight`, `alertArtifactAssessment`, `secretPlaceholderAssessment`, `providerAssessment` |
-| `change advanced promotion-preflight --output-format json` | `grafana-utils-sync-promotion-preflight` | `kind`, `schemaVersion`, `toolVersion`, `summary`, `bundlePreflight`, `mappingSummary`, `checkSummary`, `handoffSummary`, `continuationSummary`, `checks`, `resolvedChecks`, `blockingChecks` |
+When you pass `--workspace .`, `change` looks for the common staged inputs it can assemble into one review lane:
 
-Notes:
+- dashboard export trees
+- dashboard provisioning trees
+- datasource provisioning files
+- alert export trees
+- staged desired change files
+- source bundles, target inventory files, and promotion mapping files
 
-- `change apply` has two JSON shapes. Without `--execute-live`, it emits a staged apply-intent document. With `--execute-live`, it emits the live execution result instead.
-- `change preview` is task-first. It may emit the existing staged plan kind or the bundle/promotion preflight kinds depending on which staged inputs you provide.
-- `change apply` accepts `--preview-file` and still accepts `--plan-file` as an alias for compatibility.
-- `change advanced bundle` does not use `--output-format`; it writes the bundle contract with `--output-file`.
+If discovery finds nothing usable, stop and switch to explicit flags such as `--desired-file`, `--dashboard-export-dir`, `--alert-export-dir`, `--source-bundle`, or `--target-inventory`.
 
 What success looks like:
 
@@ -169,6 +160,37 @@ grafana-util change advanced review --plan-file ./sync-plan.json --review-note '
 # Purpose: Expose lower-level staged contracts and specialized sync workflows.
 grafana-util change advanced bundle-preflight --source-bundle ./bundle.json --target-inventory ./target.json --output-format json
 ```
+
+### JSON contracts for CI and scripts
+
+If you are automating around `change` outputs, treat `kind` plus `schemaVersion` as the contract guard before you inspect the rest of the payload.
+
+Quick lookups from the CLI:
+
+- `grafana-util change --help-schema`
+- `grafana-util change inspect --help`
+- `grafana-util change preview --help-schema`
+- `grafana-util change apply --help-schema`
+
+| Command | Output kind | Top-level fields to expect |
+| --- | --- | --- |
+| `change inspect --output-format json` | overview/status-style staged summary | command-specific staged summary and discovered-input output |
+| `change check --output-format json` | project-status staged status | staged readiness/status output plus blockers or warnings |
+| `change preview --output-format json` | `grafana-utils-sync-plan` or bundle/promotion preflight kinds | preview uses the existing staged plan/bundle-preflight/promotion-preflight contracts under a task-first entrypoint |
+| `change apply --output-format json` | `grafana-utils-sync-apply-intent` | `kind`, `schemaVersion`, `toolVersion`, `mode`, `reviewed`, `reviewRequired`, `allowPrune`, `approved`, `summary`, `alertAssessment`, `operations`, optional `preflightSummary`, optional `bundlePreflightSummary`, `appliedBy`, `appliedAt`, `approvalReason`, `applyNote`, `traceId`, `stage`, `stepIndex`, `parentTraceId` |
+| `change apply --execute-live --output-format json` | live apply result | `mode`, `appliedCount`, `results` |
+| `change advanced audit --output-format json` | `grafana-utils-sync-audit` | `kind`, `schemaVersion`, `toolVersion`, `summary`, `currentLock`, `baselineLock`, `drifts` |
+| `change advanced preflight --output-format json` | `grafana-utils-sync-preflight` | `kind`, `schemaVersion`, `toolVersion`, `summary`, `checks` |
+| `change advanced assess-alerts --output-format json` | `grafana-utils-alert-sync-plan` | `kind`, `schemaVersion`, `toolVersion`, `summary`, `alerts` |
+| `change advanced bundle-preflight --output-format json` | `grafana-utils-sync-bundle-preflight` | `kind`, `schemaVersion`, `summary`, `syncPreflight`, `alertArtifactAssessment`, `secretPlaceholderAssessment`, `providerAssessment` |
+| `change advanced promotion-preflight --output-format json` | `grafana-utils-sync-promotion-preflight` | `kind`, `schemaVersion`, `toolVersion`, `summary`, `bundlePreflight`, `mappingSummary`, `checkSummary`, `handoffSummary`, `continuationSummary`, `checks`, `resolvedChecks`, `blockingChecks` |
+
+Notes:
+
+- `change apply` has two JSON shapes. Without `--execute-live`, it emits a staged apply-intent document. With `--execute-live`, it emits the live execution result instead.
+- `change preview` is task-first. It may emit the existing staged plan kind or the bundle/promotion preflight kinds depending on which staged inputs you provide.
+- `change apply` accepts `--preview-file` and still accepts `--plan-file` as an alias for compatibility.
+- `change advanced bundle` does not use `--output-format`; it writes the bundle contract with `--output-file`.
 
 ## `summary`
 
