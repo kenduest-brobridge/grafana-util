@@ -154,7 +154,7 @@ fn run_sync_cli_bundle_writes_source_bundle_artifact() {
         metadata_file: Some(metadata_file.clone()),
         output_file: Some(output_file.clone()),
         also_stdout: false,
-        output: SyncOutputFormat::Json,
+        output_format: SyncOutputFormat::Json,
     }));
 
     assert!(result.is_ok());
@@ -325,7 +325,7 @@ fn run_sync_cli_bundle_preserves_alert_export_artifact_metadata() {
         metadata_file: None,
         output_file: Some(output_file.clone()),
         also_stdout: false,
-        output: SyncOutputFormat::Json,
+        output_format: SyncOutputFormat::Json,
     }));
 
     assert!(result.is_ok());
@@ -418,7 +418,7 @@ fn run_sync_cli_bundle_ignores_dashboard_permissions_bundle() {
         metadata_file: None,
         output_file: Some(output_file.clone()),
         also_stdout: false,
-        output: SyncOutputFormat::Json,
+        output_format: SyncOutputFormat::Json,
     }));
 
     assert!(result.is_ok(), "{result:?}");
@@ -445,7 +445,7 @@ fn run_sync_cli_bundle_supports_dashboard_provisioning_root() {
         metadata_file: None,
         output_file: Some(output_file.clone()),
         also_stdout: false,
-        output: SyncOutputFormat::Json,
+        output_format: SyncOutputFormat::Json,
     }));
 
     assert!(result.is_ok(), "{result:?}");
@@ -484,7 +484,7 @@ fn run_sync_cli_bundle_rejects_conflicting_dashboard_inputs() {
         metadata_file: None,
         output_file: None,
         also_stdout: false,
-        output: SyncOutputFormat::Json,
+        output_format: SyncOutputFormat::Json,
     }));
 
     assert!(result.is_err());
@@ -527,7 +527,7 @@ fn run_sync_cli_bundle_preserves_datasource_provider_metadata_from_inventory_fil
         metadata_file: None,
         output_file: Some(output_file.clone()),
         also_stdout: false,
-        output: SyncOutputFormat::Json,
+        output_format: SyncOutputFormat::Json,
     }));
 
     assert!(result.is_ok());
@@ -564,7 +564,7 @@ fn run_sync_cli_bundle_preserves_datasource_metadata_from_provisioning_file() {
         metadata_file: None,
         output_file: Some(output_file.clone()),
         also_stdout: false,
-        output: SyncOutputFormat::Json,
+        output_format: SyncOutputFormat::Json,
     }));
 
     assert!(result.is_ok());
@@ -637,7 +637,7 @@ fn run_sync_cli_bundle_normalizes_tool_rule_export_into_top_level_alert_spec() {
         metadata_file: None,
         output_file: Some(output_file.clone()),
         also_stdout: false,
-        output: SyncOutputFormat::Json,
+        output_format: SyncOutputFormat::Json,
     }));
 
     assert!(result.is_ok());
@@ -703,7 +703,7 @@ fn run_sync_cli_bundle_preflight_accepts_local_bundle_inputs() {
         fetch_live: false,
         common: sync_common_args(),
         org_id: None,
-        output: SyncOutputFormat::Json,
+        output_format: SyncOutputFormat::Json,
     }));
 
     assert!(result.is_ok());

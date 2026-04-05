@@ -71,7 +71,7 @@ fn governance_gate_help_mentions_policy_and_queries_inputs() {
     assert!(help.contains("--json-output"));
     assert!(help.contains("--output-format"));
     assert!(help.contains("governance-gate"));
-    assert!(help.contains("inspect-live"));
+    assert!(help.contains("inspect-live or inspect-export"));
 }
 
 #[test]
@@ -177,7 +177,7 @@ fn topology_help_mentions_alert_contract_and_visual_formats() {
     assert!(help.contains("--output-file"));
     assert!(help.contains("--also-stdout"));
     assert!(help.contains("--interactive"));
-    assert!(help.contains("inspect-live"));
+    assert!(help.contains("inspect-live or inspect-export"));
     assert!(help.contains("governance.json"));
     assert!(help.contains("mermaid"));
     assert!(help.contains("dot"));
