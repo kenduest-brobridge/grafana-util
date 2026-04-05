@@ -386,6 +386,7 @@ fn collect_query_report_rows(
     }
 }
 
+#[cfg_attr(not(feature = "tui"), allow(dead_code))]
 pub(crate) fn build_export_inspection_query_report(
     import_dir: &Path,
 ) -> Result<ExportInspectionQueryReport> {

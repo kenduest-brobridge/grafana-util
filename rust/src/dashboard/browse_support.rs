@@ -5,13 +5,15 @@ use reqwest::Method;
 use serde_json::{Map, Value};
 
 use crate::common::{message, string_field, Result};
+use crate::grafana_api::DashboardResourceClient;
 
 use super::delete_support::normalize_folder_path;
-use super::list::{fetch_current_org_with_request, list_orgs_with_request, org_id_value};
+use super::list::{fetch_current_org_with_request, org_id_value};
 use super::{
-    build_auth_context, build_http_client_for_org, collect_folder_inventory_with_request,
-    fetch_dashboard_with_request, list_dashboard_summaries_with_request, BrowseArgs,
-    DEFAULT_DASHBOARD_TITLE, DEFAULT_FOLDER_TITLE,
+    build_auth_context, build_http_client, build_http_client_for_org,
+    collect_folder_inventory_with_request, fetch_dashboard_with_request,
+    list_dashboard_summaries_with_request, BrowseArgs, DEFAULT_DASHBOARD_TITLE,
+    DEFAULT_FOLDER_TITLE,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -103,7 +105,7 @@ where
 }
 
 fn load_dashboard_browse_document_all_orgs<F>(
-    request_json: &mut F,
+    _request_json: &mut F,
     args: &BrowseArgs,
 ) -> Result<DashboardBrowseDocument>
 where
@@ -116,7 +118,9 @@ where
         ));
     }
 
-    let mut orgs = list_orgs_with_request(&mut *request_json)?;
+    let client = build_http_client(&args.common)?;
+    let dashboard = DashboardResourceClient::new(&client);
+    let mut orgs = dashboard.list_orgs()?;
     orgs.sort_by(|left, right| {
         string_field(left, "name", "")
             .to_ascii_lowercase()
@@ -138,16 +142,14 @@ where
         let org_id = org_id_value(org)?;
         let org_id_text = org_id.to_string();
         let client = build_http_client_for_org(&args.common, org_id)?;
-        let dashboard_summaries = list_dashboard_summaries_with_request(
-            |method, path, params, payload| client.request_json(method, path, params, payload),
-            args.page_size,
-        )?;
+        let dashboard = DashboardResourceClient::new(&client);
+        let dashboard_summaries = dashboard.list_dashboard_summaries(args.page_size)?;
         let summaries = super::list::attach_dashboard_folder_paths_with_request(
-            |method, path, params, payload| client.request_json(method, path, params, payload),
+            |method, path, params, payload| dashboard.request_json(method, path, params, payload),
             &dashboard_summaries,
         )?;
         let folder_inventory = collect_folder_inventory_with_request(
-            |method, path, params, payload| client.request_json(method, path, params, payload),
+            |method, path, params, payload| dashboard.request_json(method, path, params, payload),
             &summaries,
         )?;
         let scoped = build_dashboard_browse_document_for_org(

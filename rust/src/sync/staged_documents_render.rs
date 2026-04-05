@@ -180,15 +180,6 @@ pub fn render_sync_plan_text(document: &Value) -> Result<Vec<String>> {
                 .and_then(Value::as_i64)
                 .unwrap_or(0),
         ),
-        format!(
-            "Ordering: {}",
-            document
-                .get("ordering")
-                .and_then(Value::as_object)
-                .and_then(|ordering| ordering.get("mode"))
-                .and_then(Value::as_str)
-                .unwrap_or("unspecified")
-        ),
         "Plan-only alert items stay review-only until this plan is approved and applied."
             .to_string(),
         format!(
@@ -203,6 +194,14 @@ pub fn render_sync_plan_text(document: &Value) -> Result<Vec<String>> {
                 .unwrap_or(false),
         ),
     ];
+    if let Some(ordering_mode) = document
+        .get("ordering")
+        .and_then(Value::as_object)
+        .and_then(|ordering| ordering.get("mode"))
+        .and_then(Value::as_str)
+    {
+        lines.insert(5, format!("Ordering: {ordering_mode}"));
+    }
     if let Some(reviewed_by) = document.get("reviewedBy").and_then(Value::as_str) {
         lines.push(format!("Reviewed by: {reviewed_by}"));
     }

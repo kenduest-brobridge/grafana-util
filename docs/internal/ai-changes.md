@@ -335,3 +335,10 @@ Current AI change log only.
 - Impact: `rust/src/dashboard/import_interactive.rs`, `rust/src/dashboard/import_interactive_render.rs`, `rust/src/dashboard/import_interactive_state.rs`, `rust/src/dashboard/import_apply.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
 - Rollback/Risk: low. The request-based selector remains in place for tests and non-client callers, while the client-backed import lane now stays on one consistent shared-client review path.
 - Follow-up: if the import runtime is revisited again, the next cleanup target is reducing the duplicated request/client main-loop code in `import_apply.rs` without introducing more small adapter layers.
+## 2026-04-05 - Merge dashboard import request/client main loops
+- Summary: collapsed the last big structural duplication in `import_apply.rs`. The request-closure and client-backed import entrypoints now both route through the same shared preparation, live-import, and dry-run rendering helpers, with the backend difference isolated to a small `LiveImportBackend` implementation for request closures versus `DashboardResourceClient`.
+- Tests: re-ran focused import-runtime, interactive import, and routed auth slices after the shared-runner wiring change.
+- Test Run: `cargo test --manifest-path rust/Cargo.toml --quiet import_rust_tests -- --test-threads=1`; `cargo test --manifest-path rust/Cargo.toml --quiet interactive_import_resolves -- --test-threads=1`; `cargo test --manifest-path rust/Cargo.toml --quiet import_routed_scope_auth_rust_tests -- --test-threads=1`
+- Impact: `rust/src/dashboard/import_apply.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: low to moderate. The runtime behavior is covered by existing focused tests and the request/client backend split is smaller now, but future import behavior changes should extend the shared helpers rather than reintroducing path-specific orchestration.
+- Follow-up: if the import runtime needs another cleanup pass later, keep it scoped to reducing any leftover helper-level duplication around selection/setup, not by adding new endpoint-specific adapter layers.

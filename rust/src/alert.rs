@@ -18,7 +18,8 @@
 use crate::common::{
     message, render_json_value, sanitize_path_component, string_field, write_json_file, Result,
 };
-use crate::http::{JsonHttpClient, JsonHttpClientConfig};
+use crate::grafana_api::{GrafanaApiClient, GrafanaConnection};
+use crate::http::JsonHttpClient;
 use serde_json::{json, Map, Value};
 use std::path::{Path, PathBuf};
 
@@ -45,6 +46,7 @@ mod alert_runtime_support;
 #[path = "alert_support.rs"]
 mod alert_support;
 
+pub(crate) use crate::grafana_api::{expect_object_list, parse_template_list_response};
 pub use alert_cli_defs::{
     build_auth_context, cli_args_from_common, normalize_alert_group_command,
     normalize_alert_namespace_args, parse_cli_from, root_command, AlertAuthContext,
@@ -53,7 +55,6 @@ pub use alert_cli_defs::{
     AlertLegacyArgs, AlertListArgs, AlertListKind, AlertNamespaceArgs, AlertResourceKind,
 };
 pub(crate) use alert_client::GrafanaAlertClient;
-pub(crate) use alert_client::{expect_object_list, parse_template_list_response};
 #[allow(unused_imports)]
 pub(crate) use alert_compare_support::{
     append_root_index_item, build_compare_diff_text, build_compare_document,
@@ -141,12 +142,15 @@ pub const ALERT_HELP_TEXT: &str = "Examples:\n\n  Export alerting resources with
 
 fn build_alert_http_client(args: &AlertCliArgs) -> Result<JsonHttpClient> {
     let context = build_auth_context(args)?;
-    JsonHttpClient::new(JsonHttpClientConfig {
-        base_url: context.url,
-        headers: context.headers,
-        timeout_secs: context.timeout,
-        verify_ssl: context.verify_ssl,
-    })
+    Ok(GrafanaApiClient::from_connection(GrafanaConnection::new(
+        context.url,
+        context.headers,
+        context.timeout,
+        context.verify_ssl,
+        None,
+        "unknown".to_string(),
+    ))?
+    .into_http_client())
 }
 
 fn render_alert_action_text(title: &str, document: &Value) -> Vec<String> {

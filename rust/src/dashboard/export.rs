@@ -12,6 +12,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::common::{message, sanitize_path_component, string_field, Result};
+use crate::grafana_api::DashboardResourceClient;
 use crate::http::JsonHttpClient;
 
 use super::history::build_dashboard_history_export_document_with_request;
@@ -638,13 +639,12 @@ pub fn export_dashboards_with_client(client: &JsonHttpClient, args: &ExportArgs)
 pub(crate) fn export_dashboards_with_org_clients(args: &ExportArgs) -> Result<usize> {
     if args.all_orgs {
         let admin_client = build_http_client(&args.common)?;
+        let admin_dashboard = DashboardResourceClient::new(&admin_client);
         let mut total = 0usize;
         let mut root_items = Vec::new();
         let mut root_folders = Vec::new();
         let mut org_summaries = Vec::new();
-        for org in list_orgs_with_request(|method, path, params, payload| {
-            admin_client.request_json(method, path, params, payload)
-        })? {
+        for org in admin_dashboard.list_orgs()? {
             let org_id = org_id_value(&org)?;
             let org_client = build_http_client_for_org(&args.common, org_id)?;
             let scope_result = export_dashboards_in_scope_with_request(
@@ -686,10 +686,12 @@ pub(crate) fn export_dashboards_with_org_clients(args: &ExportArgs) -> Result<us
         .exported_count)
     } else {
         let client = build_http_client(&args.common)?;
+        let dashboard = DashboardResourceClient::new(&client);
+        let current_org = dashboard.fetch_current_org()?;
         Ok(export_dashboards_in_scope_with_request(
             &mut |method, path, params, payload| client.request_json(method, path, params, payload),
             args,
-            None,
+            Some(&current_org),
             None,
         )?
         .exported_count)

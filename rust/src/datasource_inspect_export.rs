@@ -2,9 +2,13 @@
 
 use serde_json::{Map, Value};
 use std::io::{self, IsTerminal};
+#[cfg(not(feature = "tui"))]
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use crate::common::{load_json_object_file, message, render_json_value, string_field, Result};
+use crate::common::{load_json_object_file, message, render_json_value, Result};
+#[cfg(any(feature = "tui", test))]
+use crate::common::string_field;
 #[cfg(any(feature = "tui", test))]
 use crate::interactive_browser::BrowserItem;
 use crate::tabular_output::render_yaml;

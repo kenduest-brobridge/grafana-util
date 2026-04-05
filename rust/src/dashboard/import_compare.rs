@@ -6,12 +6,15 @@ use std::path::Path;
 
 use crate::common::{message, object_field, string_field, value_as_object, Result};
 
-use super::{build_import_payload, build_preserved_web_import_document};
+use super::{build_import_payload, build_preserved_web_import_document, DEFAULT_FOLDER_UID};
 
 fn build_compare_document(dashboard: &Map<String, Value>, folder_uid: Option<&str>) -> Value {
     let mut compare = Map::new();
     compare.insert("dashboard".to_string(), Value::Object(dashboard.clone()));
-    if let Some(folder_uid) = folder_uid.filter(|value| !value.is_empty()) {
+    if let Some(folder_uid) = folder_uid
+        .filter(|value| !value.is_empty())
+        .filter(|value| *value != DEFAULT_FOLDER_UID)
+    {
         compare.insert(
             "folderUid".to_string(),
             Value::String(folder_uid.to_string()),

@@ -16,6 +16,7 @@ use std::path::{Path, PathBuf};
 
 use crate::common::{message, string_field, Result};
 use crate::dashboard::DEFAULT_ORG_ID;
+use crate::grafana_api::DashboardResourceClient;
 use crate::http::JsonHttpClient;
 
 use super::datasource_export_support::{
@@ -336,28 +337,11 @@ struct ProvisioningImportDatasource {
 }
 
 pub(crate) fn fetch_current_org(client: &JsonHttpClient) -> Result<Map<String, Value>> {
-    match client.request_json(Method::GET, "/api/org", &[], None)? {
-        Some(value) => value
-            .as_object()
-            .cloned()
-            .ok_or_else(|| message("Unexpected current-org payload from Grafana.")),
-        None => Err(message("Grafana did not return current-org metadata.")),
-    }
+    DashboardResourceClient::new(client).fetch_current_org()
 }
 
 pub(crate) fn list_orgs(client: &JsonHttpClient) -> Result<Vec<Map<String, Value>>> {
-    match client.request_json(Method::GET, "/api/orgs", &[], None)? {
-        Some(Value::Array(items)) => items
-            .into_iter()
-            .map(|item| {
-                item.as_object()
-                    .cloned()
-                    .ok_or_else(|| message("Unexpected org entry in /api/orgs response."))
-            })
-            .collect(),
-        Some(_) => Err(message("Unexpected /api/orgs payload from Grafana.")),
-        None => Ok(Vec::new()),
-    }
+    DashboardResourceClient::new(client).list_orgs()
 }
 
 pub(crate) fn create_org(client: &JsonHttpClient, org_name: &str) -> Result<Map<String, Value>> {

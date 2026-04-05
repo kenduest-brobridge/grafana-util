@@ -273,14 +273,7 @@ fn run_sync_apply(args: SyncApplyArgs) -> Result<()> {
         Ok(()) => preview,
         Err(_) => {
             require_optional_stage(&preview, "Change preview document", "plan", 1, None)?;
-            build_sync_review_document(
-                &preview,
-                DEFAULT_REVIEW_TOKEN,
-                &trace_id,
-                None,
-                None,
-                None,
-            )?
+            build_sync_review_document(&preview, DEFAULT_REVIEW_TOKEN, &trace_id, None, None, None)?
         }
     };
     let preflight_summary =

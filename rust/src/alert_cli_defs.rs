@@ -3,10 +3,9 @@
 use clap::{ArgAction, Args, Command, CommandFactory, Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;
 
-use crate::common::{resolve_auth_headers, set_json_color_choice, CliColorChoice, Result};
-use crate::profile_config::{
-    load_selected_profile, resolve_connection_settings, ConnectionMergeInput,
-};
+use crate::common::{set_json_color_choice, CliColorChoice, Result};
+use crate::grafana_api::{AuthInputs, GrafanaConnection};
+use crate::profile_config::ConnectionMergeInput;
 
 use super::{ALERT_HELP_TEXT, DEFAULT_OUTPUT_DIR, DEFAULT_TIMEOUT, DEFAULT_URL};
 
@@ -1266,12 +1265,8 @@ pub fn normalize_alert_group_command(command: AlertGroupCommand) -> AlertCliArgs
 /// Args: see function signature.
 /// Returns: see implementation.
 pub fn build_auth_context(args: &AlertCliArgs) -> Result<AlertAuthContext> {
-    // Call graph (hierarchy): this function is used in related modules.
-    // Upstream callers: 無
-    // Downstream callees: common.rs:resolve_auth_headers
-
-    let selected_profile = load_selected_profile(args.profile.as_deref())?;
-    let resolved = resolve_connection_settings(
+    let connection = GrafanaConnection::resolve(
+        args.profile.as_deref(),
         ConnectionMergeInput {
             url: &args.url,
             url_default: DEFAULT_URL,
@@ -1285,33 +1280,19 @@ pub fn build_auth_context(args: &AlertCliArgs) -> Result<AlertAuthContext> {
             insecure: false,
             ca_cert: None,
         },
-        selected_profile.as_ref(),
+        AuthInputs {
+            api_token: args.api_token.as_deref(),
+            username: args.username.as_deref(),
+            password: args.password.as_deref(),
+            prompt_password: args.prompt_password,
+            prompt_token: args.prompt_token,
+        },
+        false,
     )?;
-    let token = if args.prompt_token && args.api_token.is_none() {
-        None
-    } else {
-        resolved.api_token.as_deref()
-    };
-    let username = if args.prompt_password {
-        args.username.as_deref().or(resolved.username.as_deref())
-    } else {
-        resolved.username.as_deref()
-    };
-    let password = if args.prompt_password && args.password.is_none() {
-        None
-    } else {
-        resolved.password.as_deref()
-    };
     Ok(AlertAuthContext {
-        url: resolved.url,
-        timeout: resolved.timeout,
-        verify_ssl: resolved.verify_ssl,
-        headers: resolve_auth_headers(
-            token,
-            username,
-            password,
-            args.prompt_password,
-            args.prompt_token,
-        )?,
+        url: connection.base_url,
+        timeout: connection.timeout_secs,
+        verify_ssl: connection.verify_ssl,
+        headers: connection.headers,
     })
 }

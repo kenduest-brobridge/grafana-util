@@ -4,20 +4,19 @@
 //! - Build authenticated HTTP clients and auth header sets for status checks.
 //! - Resolve per-org connection settings and default behavior for live runs.
 
-use crate::common::{resolve_auth_headers, Result as CommonResult};
-use crate::http::{JsonHttpClient, JsonHttpClientConfig};
-use crate::profile_config::{
-    load_selected_profile, resolve_connection_settings, ConnectionMergeInput,
-    ResolvedConnectionSettings,
-};
+use crate::common::Result as CommonResult;
+use crate::grafana_api::{AuthInputs, GrafanaApiClient, GrafanaConnection};
+use crate::http::JsonHttpClient;
+use crate::profile_config::ConnectionMergeInput;
 use crate::project_status_command::ProjectStatusLiveArgs;
 
-fn resolve_live_project_status_settings(
+fn resolve_live_project_status_connection(
     args: &ProjectStatusLiveArgs,
     org_id: Option<i64>,
-) -> CommonResult<ResolvedConnectionSettings> {
-    let selected_profile = load_selected_profile(args.profile.as_deref())?;
-    resolve_connection_settings(
+    include_org_header: bool,
+) -> CommonResult<GrafanaConnection> {
+    GrafanaConnection::resolve(
+        args.profile.as_deref(),
         ConnectionMergeInput {
             url: &args.url,
             url_default: "http://localhost:3000",
@@ -31,40 +30,15 @@ fn resolve_live_project_status_settings(
             insecure: args.insecure,
             ca_cert: args.ca_cert.as_deref(),
         },
-        selected_profile.as_ref(),
+        AuthInputs {
+            api_token: args.api_token.as_deref(),
+            username: args.username.as_deref(),
+            password: args.password.as_deref(),
+            prompt_password: args.prompt_password,
+            prompt_token: args.prompt_token,
+        },
+        include_org_header,
     )
-}
-
-fn resolve_live_project_status_headers_from_resolved(
-    args: &ProjectStatusLiveArgs,
-    resolved: &ResolvedConnectionSettings,
-) -> CommonResult<Vec<(String, String)>> {
-    let token = if args.prompt_token && args.api_token.is_none() {
-        None
-    } else {
-        resolved.api_token.as_deref()
-    };
-    let username = if args.prompt_password {
-        args.username.as_deref().or(resolved.username.as_deref())
-    } else {
-        resolved.username.as_deref()
-    };
-    let password = if args.prompt_password && args.password.is_none() {
-        None
-    } else {
-        resolved.password.as_deref()
-    };
-    let mut headers = resolve_auth_headers(
-        token,
-        username,
-        password,
-        args.prompt_password,
-        args.prompt_token,
-    )?;
-    if let Some(org_id) = resolved.org_id {
-        headers.push(("X-Grafana-Org-Id".to_string(), org_id.to_string()));
-    }
-    Ok(headers)
 }
 
 #[cfg(test)]
@@ -72,8 +46,8 @@ pub(crate) fn resolve_live_project_status_headers(
     args: &ProjectStatusLiveArgs,
     org_id: Option<i64>,
 ) -> CommonResult<Vec<(String, String)>> {
-    let resolved = resolve_live_project_status_settings(args, org_id)?;
-    resolve_live_project_status_headers_from_resolved(args, &resolved)
+    let connection = resolve_live_project_status_connection(args, org_id, true)?;
+    Ok(connection.headers)
 }
 
 pub(crate) fn build_live_project_status_client(
@@ -86,17 +60,8 @@ pub(crate) fn build_live_project_status_client_for_org(
     args: &ProjectStatusLiveArgs,
     org_id: Option<i64>,
 ) -> CommonResult<JsonHttpClient> {
-    let resolved = resolve_live_project_status_settings(args, org_id)?;
-    let headers = resolve_live_project_status_headers_from_resolved(args, &resolved)?;
-    JsonHttpClient::new_with_ca_cert(
-        JsonHttpClientConfig {
-            base_url: resolved.url,
-            headers,
-            timeout_secs: resolved.timeout,
-            verify_ssl: resolved.verify_ssl,
-        },
-        resolved.ca_cert.as_deref(),
-    )
+    let connection = resolve_live_project_status_connection(args, org_id, true)?;
+    Ok(GrafanaApiClient::from_connection(connection)?.into_http_client())
 }
 
 #[cfg(test)]

@@ -63,6 +63,7 @@ pub use pending_delete::{
 };
 pub(crate) use project_status::{build_access_domain_status, AccessDomainStatusInputs};
 
+#[cfg_attr(not(feature = "tui"), allow(dead_code))]
 #[derive(Clone, Debug)]
 enum BrowseSwitch {
     Exit,
@@ -70,6 +71,7 @@ enum BrowseSwitch {
     ToTeam(TeamBrowseArgs),
 }
 
+#[cfg_attr(not(feature = "tui"), allow(dead_code))]
 fn default_team_browse_args_from_user(args: &UserBrowseArgs) -> TeamBrowseArgs {
     TeamBrowseArgs {
         common: args.common.clone(),
@@ -81,6 +83,7 @@ fn default_team_browse_args_from_user(args: &UserBrowseArgs) -> TeamBrowseArgs {
     }
 }
 
+#[cfg_attr(not(feature = "tui"), allow(dead_code))]
 fn default_user_browse_args_from_team(args: &TeamBrowseArgs) -> UserBrowseArgs {
     UserBrowseArgs {
         common: args.common.clone(),

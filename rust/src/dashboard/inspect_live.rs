@@ -17,6 +17,7 @@ use std::time::Duration;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::common::{message, string_field, validation, value_as_object, GrafanaCliError, Result};
+use crate::grafana_api::{DashboardResourceClient, DatasourceResourceClient};
 use crate::http::JsonHttpClient;
 
 use super::cli_defs::{ExportArgs, InspectExportArgs, InspectLiveArgs};
@@ -33,13 +34,10 @@ use super::inspect::build_export_inspection_summary;
 use super::inspect_governance::build_export_inspection_governance_document;
 #[cfg(feature = "tui")]
 use super::inspect_live_tui::run_inspect_live_interactive as run_inspect_live_tui;
-use super::live::{
-    build_datasource_inventory_record, collect_folder_inventory_with_request, fetch_dashboard,
-    list_dashboard_summaries, list_datasources,
-};
+use super::live::build_datasource_inventory_record;
 use super::{
-    DATASOURCE_INVENTORY_FILENAME, EXPORT_METADATA_FILENAME, FOLDER_INVENTORY_FILENAME,
-    RAW_EXPORT_SUBDIR,
+    FolderInventoryItem, DATASOURCE_INVENTORY_FILENAME, DEFAULT_FOLDER_TITLE, DEFAULT_ORG_ID,
+    DEFAULT_ORG_NAME, EXPORT_METADATA_FILENAME, FOLDER_INVENTORY_FILENAME, RAW_EXPORT_SUBDIR,
 };
 
 const MAX_LIVE_INSPECT_CONCURRENCY: usize = 16;
@@ -196,6 +194,81 @@ where
     Ok(summaries.len())
 }
 
+fn collect_folder_inventory_from_summaries(
+    dashboard: &DashboardResourceClient<'_>,
+    summaries: &[Map<String, Value>],
+) -> Result<Vec<FolderInventoryItem>> {
+    let mut seen = std::collections::BTreeSet::new();
+    let mut folders = Vec::new();
+    for summary in summaries {
+        let folder_uid = string_field(summary, "folderUid", "");
+        if folder_uid.is_empty() {
+            continue;
+        }
+        let org_id = summary
+            .get("orgId")
+            .map(|value| match value {
+                Value::String(text) => text.clone(),
+                _ => value.to_string(),
+            })
+            .unwrap_or_else(|| DEFAULT_ORG_ID.to_string());
+        let key = format!("{org_id}:{folder_uid}");
+        if seen.contains(&key) {
+            continue;
+        }
+        let Some(folder) = dashboard.fetch_folder_if_exists(&folder_uid)? else {
+            continue;
+        };
+        let org = string_field(summary, "orgName", DEFAULT_ORG_NAME);
+        let mut parent_path = Vec::new();
+        let mut previous_parent_uid = None;
+        if let Some(parents) = folder.get("parents").and_then(Value::as_array) {
+            for parent in parents {
+                let Some(parent_object) = parent.as_object() else {
+                    continue;
+                };
+                let parent_uid = string_field(parent_object, "uid", "");
+                let parent_title = string_field(parent_object, "title", "");
+                if parent_uid.is_empty() || parent_title.is_empty() {
+                    continue;
+                }
+                parent_path.push(parent_title.clone());
+                let parent_key = format!("{org_id}:{parent_uid}");
+                if !seen.contains(&parent_key) {
+                    folders.push(FolderInventoryItem {
+                        uid: parent_uid.clone(),
+                        title: parent_title,
+                        path: parent_path.join(" / "),
+                        parent_uid: previous_parent_uid.clone(),
+                        org: org.clone(),
+                        org_id: org_id.clone(),
+                    });
+                    seen.insert(parent_key);
+                }
+                previous_parent_uid = Some(parent_uid);
+            }
+        }
+        let folder_title = string_field(&folder, "title", DEFAULT_FOLDER_TITLE);
+        parent_path.push(folder_title.clone());
+        folders.push(FolderInventoryItem {
+            uid: folder_uid.clone(),
+            title: folder_title,
+            path: parent_path.join(" / "),
+            parent_uid: previous_parent_uid,
+            org,
+            org_id: org_id.clone(),
+        });
+        seen.insert(key);
+    }
+    folders.sort_by(|left, right| {
+        left.org_id
+            .cmp(&right.org_id)
+            .then(left.path.cmp(&right.path))
+            .then(left.uid.cmp(&right.uid))
+    });
+    Ok(folders)
+}
+
 pub(crate) fn load_variant_index_entries(
     import_dir: &Path,
     metadata: Option<&super::models::ExportMetadata>,
@@ -257,11 +330,14 @@ pub(crate) fn inspect_live_dashboards_with_client(
 
     let temp_dir = TempInspectDir::new("inspect-live")?;
     let raw_dir = temp_dir.path.join(RAW_EXPORT_SUBDIR);
-    let summaries = list_dashboard_summaries(client, args.page_size)?;
-    let datasource_items = list_datasources(client)?;
-    let org_value = client
-        .request_json(Method::GET, "/api/org", &[], None)?
-        .unwrap_or_else(|| serde_json::json!({"id": 1, "name": "Main Org."}));
+    let dashboard = DashboardResourceClient::new(client);
+    let datasource = DatasourceResourceClient::new(client);
+    let summaries = dashboard.list_dashboard_summaries(args.page_size)?;
+    let datasource_items = datasource.list_datasources()?;
+    let org_value = dashboard
+        .fetch_current_org()
+        .map(Value::Object)
+        .unwrap_or_else(|_| serde_json::json!({"id": 1, "name": "Main Org."}));
     let org = value_as_object(&org_value, "Unexpected current org payload from Grafana.")?;
     let datasource_inventory = datasource_items
         .iter()
@@ -272,16 +348,13 @@ pub(crate) fn inspect_live_dashboards_with_client(
         &summaries,
         args.concurrency,
         args.progress,
-        |uid| fetch_dashboard(client, uid),
+        |uid| dashboard.fetch_dashboard(uid),
     )?;
     write_json_document(
         &datasource_inventory,
         &raw_dir.join(DATASOURCE_INVENTORY_FILENAME),
     )?;
-    let folder_inventory = collect_folder_inventory_with_request(
-        |method, path, params, payload| client.request_json(method, path, params, payload),
-        &summaries,
-    )?;
+    let folder_inventory = collect_folder_inventory_from_summaries(&dashboard, &summaries)?;
     write_json_document(&folder_inventory, &raw_dir.join(FOLDER_INVENTORY_FILENAME))?;
     if args.interactive {
         return run_interactive_inspect_live_tui_from_dir(&raw_dir);

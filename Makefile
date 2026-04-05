@@ -1,4 +1,12 @@
-.PHONY: help print-version sync-version set-release-version set-dev-version poetry-install poetry-lock poetry-test poetry-quality-python man man-check html html-check pages-site build build-python build-rust build-rust-browser build-rust-native build-rust-native-browser build-rust-host build-rust-host-browser build-rust-macos-arm64 build-rust-macos-arm64-browser build-rust-linux-amd64 build-rust-linux-amd64-browser build-rust-linux-amd64-docker build-rust-linux-amd64-browser-docker build-rust-linux-amd64-zig validate-rust-linux-amd64-artifact validate-rust-linux-amd64-browser-artifact seed-grafana-sample-data destroy-grafana-sample-data reset-grafana-all-data test test-python test-rust fmt-rust-check lint-rust quality quality-python quality-rust quality-ai-workflow quality-alert-rust quality-sync-rust test-rust-live test-sync-live test-alert-live test-alert-live-artifact test-alert-live-replay test-access-live test-python-datasource-live test-datasource-live
+VERSIONING_TARGETS := help print-version sync-version set-release-version set-dev-version
+PYTHON_TARGETS := poetry-install poetry-lock poetry-test poetry-quality-python build-python
+DOC_TARGETS := man man-check html html-check pages-site
+RUST_BUILD_TARGETS := build-rust build-rust-browser build-rust-native build-rust-native-browser build-rust-host build-rust-host-browser build-rust-macos-arm64 build-rust-macos-arm64-browser build-rust-linux-amd64 build-rust-linux-amd64-browser build-rust-linux-amd64-docker build-rust-linux-amd64-browser-docker build-rust-linux-amd64-zig validate-rust-linux-amd64-artifact validate-rust-linux-amd64-browser-artifact
+QUALITY_TARGETS := test test-python test-rust fmt-rust-check lint-rust quality quality-python quality-rust quality-ai-workflow quality-alert-rust quality-sync-rust
+LIVE_TARGETS := seed-grafana-sample-data destroy-grafana-sample-data reset-grafana-all-data test-rust-live test-sync-live test-alert-live test-alert-live-artifact test-alert-live-replay test-access-live test-python-datasource-live test-datasource-live
+META_TARGETS := build
+
+.PHONY: $(VERSIONING_TARGETS) $(PYTHON_TARGETS) $(DOC_TARGETS) $(RUST_BUILD_TARGETS) $(QUALITY_TARGETS) $(LIVE_TARGETS) $(META_TARGETS)
 
 PYTHON ?= python3
 PIP ?= $(PYTHON) -m pip
@@ -9,6 +17,7 @@ PYTHON_DIST_DIR ?= dist
 DEV_ITERATION ?= 1
 RUST_RELEASE_RUSTFLAGS ?= -C debuginfo=0
 HOST_OS := $(shell uname -s)
+PYTHON_DIR := python
 ESC := \033
 BOLD := $(ESC)[1m
 RESET := $(ESC)[0m
@@ -116,6 +125,9 @@ $(BLUE)$(BOLD)Meta$(RESET)
 endef
 
 HELP_ALL := $(HELP_TITLE)$(HELP_VERSIONING)$(HELP_PYTHON)$(HELP_DOCS)$(HELP_RUST_BUILD)$(HELP_ARTIFACT_VALIDATION)$(HELP_QUALITY)$(HELP_LIVE)$(HELP_META)
+RUST_RUN := cd $(RUST_DIR) &&
+PYTHON_RUN := cd $(PYTHON_DIR) &&
+PYTHON_POETRY_RUN := cd $(PYTHON_DIR) && $(POETRY) run
 
 help:
 	@printf '%b' '$(subst $(NL),\n,$(HELP_ALL))'
@@ -135,16 +147,16 @@ set-dev-version:
 	bash ./scripts/set-version.sh --version "$(VERSION).dev$(DEV_ITERATION)"
 
 poetry-install:
-	$(POETRY) --directory python install --with dev
+	$(POETRY) --directory $(PYTHON_DIR) install --with dev
 
 poetry-lock:
-	$(POETRY) --directory python lock
+	$(POETRY) --directory $(PYTHON_DIR) lock
 
 poetry-test:
-	cd python && $(POETRY) run env PYTHONPATH=. $(PYTHON) -m unittest -v tests
+	$(PYTHON_POETRY_RUN) env PYTHONPATH=. $(PYTHON) -m unittest -v tests
 
 poetry-quality-python:
-	cd python && $(POETRY) run env PYTHON=python PYTHONPATH=. ../scripts/check-python-quality.sh
+	$(PYTHON_POETRY_RUN) env PYTHON=python PYTHONPATH=. ../scripts/check-python-quality.sh
 
 man:
 	$(PYTHON) ./scripts/generate_manpages.py --write
@@ -167,7 +179,7 @@ build: build-python build-rust
 	@find $(RUST_DIR)/target/release -maxdepth 1 -type f -perm -111 | sort
 
 build-python:
-	cd python && $(POETRY) run python -m build --sdist --wheel --no-isolation --outdir ../$(PYTHON_DIST_DIR) .
+	$(PYTHON_POETRY_RUN) python -m build --sdist --wheel --no-isolation --outdir ../$(PYTHON_DIST_DIR) .
 	@printf '%s\n' 'Python build outputs:'
 	@find $(PYTHON_DIST_DIR) -maxdepth 1 -type f \( -name '*.whl' -o -name '*.tar.gz' \) | sort
 
@@ -188,12 +200,12 @@ endif
 	@printf '%s\n' "dist/linux-amd64-browser/grafana-util"
 
 build-rust-native:
-	cd $(RUST_DIR) && RUSTFLAGS="$(RUST_RELEASE_RUSTFLAGS)" $(CARGO) build --release
+	$(RUST_RUN) RUSTFLAGS="$(RUST_RELEASE_RUSTFLAGS)" $(CARGO) build --release
 	@printf '%s\n' 'Rust native build outputs:'
 	@find $(RUST_DIR)/target/release -maxdepth 1 -type f -perm -111 | sort
 
 build-rust-native-browser:
-	cd $(RUST_DIR) && RUSTFLAGS="$(RUST_RELEASE_RUSTFLAGS)" $(CARGO) build --release --features browser
+	$(RUST_RUN) RUSTFLAGS="$(RUST_RELEASE_RUSTFLAGS)" $(CARGO) build --release --features browser
 	@printf '%s\n' 'Rust native browser-enabled build outputs:'
 	@find $(RUST_DIR)/target/release -maxdepth 1 -type f -perm -111 | sort
 
@@ -249,16 +261,16 @@ reset-grafana-all-data:
 test: test-python test-rust
 
 test-python:
-	PYTHONPATH=python $(PYTHON) -m unittest discover -s python/tests -v
+	PYTHONPATH=$(PYTHON_DIR) $(PYTHON) -m unittest discover -s $(PYTHON_DIR)/tests -v
 
 test-rust:
-	cd $(RUST_DIR) && $(CARGO) test
+	$(RUST_RUN) $(CARGO) test
 
 fmt-rust-check:
-	cd $(RUST_DIR) && $(CARGO) fmt --check
+	$(RUST_RUN) $(CARGO) fmt --check
 
 lint-rust:
-	cd $(RUST_DIR) && $(CARGO) clippy --all-targets -- -D warnings
+	$(RUST_RUN) $(CARGO) clippy --all-targets -- -D warnings
 
 quality: quality-python quality-rust
 
@@ -272,20 +284,20 @@ quality-ai-workflow:
 	$(PYTHON) ./scripts/check_ai_workflow.py
 
 quality-alert-rust:
-	cd $(RUST_DIR) && $(CARGO) test --quiet alert_
-	cd $(RUST_DIR) && $(CARGO) test --quiet run_sync_cli_bundle_preserves_alert_export_artifact_metadata
-	cd $(RUST_DIR) && $(CARGO) test --quiet build_sync_bundle_preflight_document_ignores_alert_replay_artifacts_but_keeps_zero_checks
-	cd $(RUST_DIR) && $(CARGO) test --quiet render_sync_source_bundle_text_reports_alert_replay_artifact_counts
-	cd $(RUST_DIR) && $(CARGO) fmt --check
-	cd $(RUST_DIR) && $(CARGO) check --quiet
+	$(RUST_RUN) $(CARGO) test --quiet alert_
+	$(RUST_RUN) $(CARGO) test --quiet run_sync_cli_bundle_preserves_alert_export_artifact_metadata
+	$(RUST_RUN) $(CARGO) test --quiet build_sync_bundle_preflight_document_ignores_alert_replay_artifacts_but_keeps_zero_checks
+	$(RUST_RUN) $(CARGO) test --quiet render_sync_source_bundle_text_reports_alert_replay_artifact_counts
+	$(RUST_RUN) $(CARGO) fmt --check
+	$(RUST_RUN) $(CARGO) check --quiet
 
 quality-sync-rust:
-	cd $(RUST_DIR) && $(CARGO) test --quiet sync_
-	cd $(RUST_DIR) && $(CARGO) test --quiet build_sync_source_bundle_document_matches_cross_domain_summary_contract
-	cd $(RUST_DIR) && $(CARGO) test --quiet build_sync_source_bundle_document_preserves_alert_replay_artifact_summary_and_paths
-	cd $(RUST_DIR) && $(CARGO) test --quiet build_sync_bundle_preflight_document_ignores_alert_replay_artifacts_but_keeps_zero_checks
-	cd $(RUST_DIR) && $(CARGO) fmt --check
-	cd $(RUST_DIR) && $(CARGO) check --quiet
+	$(RUST_RUN) $(CARGO) test --quiet sync_
+	$(RUST_RUN) $(CARGO) test --quiet build_sync_source_bundle_document_matches_cross_domain_summary_contract
+	$(RUST_RUN) $(CARGO) test --quiet build_sync_source_bundle_document_preserves_alert_replay_artifact_summary_and_paths
+	$(RUST_RUN) $(CARGO) test --quiet build_sync_bundle_preflight_document_ignores_alert_replay_artifacts_but_keeps_zero_checks
+	$(RUST_RUN) $(CARGO) fmt --check
+	$(RUST_RUN) $(CARGO) check --quiet
 
 test-rust-live:
 	./scripts/test-rust-live-grafana.sh

@@ -84,6 +84,7 @@ pub(crate) use inspect_paths::{
     resolve_export_folder_inventory_item, resolve_export_folder_path,
     resolve_export_identity_field, write_inspect_output,
 };
+#[cfg(any(feature = "tui", test))]
 pub(crate) use inspect_query_report::build_export_inspection_query_report;
 pub(crate) use inspect_query_report::build_export_inspection_query_report_for_variant;
 
@@ -316,6 +317,7 @@ fn build_export_inspection_summary_with_variant(
     })
 }
 
+#[cfg_attr(not(feature = "tui"), allow(dead_code))]
 pub(crate) fn build_export_inspection_summary(
     import_dir: &Path,
 ) -> Result<ExportInspectionSummary> {

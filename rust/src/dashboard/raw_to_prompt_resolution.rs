@@ -9,17 +9,16 @@ use crate::dashboard::inspect_query::{
     resolve_query_analyzer_family_from_datasource_type,
     resolve_query_analyzer_family_from_query_signature,
 };
+use crate::grafana_api::{DashboardResourceClient, DatasourceResourceClient};
 
-use super::list::fetch_current_org_with_request;
 use super::raw_to_prompt_types::{
     DashboardScanContext, DatasourceMapDocument, RawToPromptOutcome, RawToPromptResolutionKind,
     RawToPromptStats, ResolvedDatasourceReplacement, MAPPING_KIND,
 };
 use super::{
     build_datasource_catalog, build_datasource_inventory_record, build_external_export_document,
-    build_http_client, build_http_client_for_org, list_datasources_with_request, load_json_file,
-    CommonCliArgs, DatasourceInventoryItem, RawToPromptArgs, RawToPromptResolution,
-    DEFAULT_TIMEOUT, DEFAULT_URL,
+    build_http_client, build_http_client_for_org, load_json_file, CommonCliArgs,
+    DatasourceInventoryItem, RawToPromptArgs, RawToPromptResolution, DEFAULT_TIMEOUT, DEFAULT_URL,
 };
 
 pub(crate) fn load_live_datasource_inventory(
@@ -44,12 +43,10 @@ pub(crate) fn load_live_datasource_inventory(
         Some(org_id) => build_http_client_for_org(&common, org_id)?,
         None => build_http_client(&common)?,
     };
-    let current_org = fetch_current_org_with_request(|method, path, params, payload| {
-        client.request_json(method, path, params, payload)
-    })?;
-    let datasources = list_datasources_with_request(|method, path, params, payload| {
-        client.request_json(method, path, params, payload)
-    })?;
+    let dashboard = DashboardResourceClient::new(&client);
+    let datasource = DatasourceResourceClient::new(&client);
+    let current_org = dashboard.fetch_current_org()?;
+    let datasources = datasource.list_datasources()?;
     Ok(datasources
         .iter()
         .map(|datasource| build_datasource_inventory_record(datasource, &current_org))

@@ -272,6 +272,7 @@ pub(crate) fn build_snapshot_review_summary_lines(document: &Value) -> Result<Ve
     ])
 }
 
+#[cfg_attr(not(any(feature = "tui", test)), allow(dead_code))]
 fn snapshot_review_folder_depth(path: &str) -> usize {
     let separator = if path.contains(" / ") { " / " } else { "/" };
     path.split(separator)

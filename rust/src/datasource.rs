@@ -98,12 +98,21 @@ pub(crate) use datasource_import_export::{
     resolve_export_org_target_plan, DatasourceExportOrgScope, DatasourceExportOrgTargetPlan,
     DatasourceImportDryRunReport,
 };
+#[cfg(any(feature = "tui", test))]
 #[allow(unused_imports)]
 pub(crate) use datasource_inspect_export::{
     build_datasource_inspect_export_browser_items, load_datasource_inspect_export_source,
     prompt_datasource_inspect_export_input_format, render_datasource_inspect_export_output,
     resolve_datasource_inspect_export_format, resolve_datasource_inspect_export_input_format,
     DatasourceInspectExportRenderFormat, DatasourceInspectExportSource,
+};
+#[cfg(not(any(feature = "tui", test)))]
+#[allow(unused_imports)]
+pub(crate) use datasource_inspect_export::{
+    load_datasource_inspect_export_source, prompt_datasource_inspect_export_input_format,
+    render_datasource_inspect_export_output, resolve_datasource_inspect_export_format,
+    resolve_datasource_inspect_export_input_format, DatasourceInspectExportRenderFormat,
+    DatasourceInspectExportSource,
 };
 #[cfg(test)]
 pub(crate) use datasource_mutation_support::parse_json_object_argument;

@@ -1074,7 +1074,14 @@ where
 #[allow(dead_code)]
 pub fn run_snapshot_review(args: SnapshotReviewArgs) -> Result<()> {
     let output = if args.interactive {
-        OverviewOutputFormat::Interactive
+        #[cfg(feature = "tui")]
+        {
+            OverviewOutputFormat::Interactive
+        }
+        #[cfg(not(feature = "tui"))]
+        {
+            OverviewOutputFormat::Text
+        }
     } else {
         args.output_format
     };

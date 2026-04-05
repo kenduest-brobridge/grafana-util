@@ -7,6 +7,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::common::{message, string_field, value_as_object, Result};
+use crate::grafana_api::DashboardResourceClient;
 use crate::sync::preflight::build_sync_preflight_document;
 
 use super::import_lookup::{
@@ -324,6 +325,49 @@ where
     Ok(())
 }
 
+fn current_org_id_with_client(client: &DashboardResourceClient<'_>) -> Result<String> {
+    let org = client.fetch_current_org()?;
+    super::list::org_id_value(&org).map(|value| value.to_string())
+}
+
+pub(crate) fn validate_matching_export_org_with_client(
+    client: &DashboardResourceClient<'_>,
+    args: &super::ImportArgs,
+    import_dir: &Path,
+    metadata: Option<&ExportMetadata>,
+    target_org_id_override: Option<i64>,
+) -> Result<()> {
+    if !args.require_matching_export_org {
+        return Ok(());
+    }
+    let export_org_ids = load_export_org_ids(import_dir, metadata)?;
+    if export_org_ids.is_empty() {
+        return Err(message(
+            "Cannot verify exported org for import: export orgId metadata was not found in index.json, folders.json, or datasources.json.",
+        ));
+    }
+    if export_org_ids.len() > 1 {
+        return Err(message(format!(
+            "Cannot verify exported org for import: found multiple export orgIds ({}).",
+            export_org_ids
+                .into_iter()
+                .collect::<Vec<String>>()
+                .join(", ")
+        )));
+    }
+    let export_org_id = export_org_ids.into_iter().next().unwrap_or_default();
+    let target_org_id = match target_org_id_override {
+        Some(org_id) => org_id.to_string(),
+        None => current_org_id_with_client(client)?,
+    };
+    if export_org_id != target_org_id {
+        return Err(message(format!(
+            "Dashboard import export org mismatch: export orgId {export_org_id} does not match target org {target_org_id}. Use matching credentials/org selection or omit --require-matching-export-org."
+        )));
+    }
+    Ok(())
+}
+
 pub(crate) fn resolve_target_org_plan_for_export_scope_with_request<F>(
     request_json: &mut F,
     cache: &mut ImportLookupCache,
@@ -556,6 +600,42 @@ where
     Ok(availability)
 }
 
+fn build_dashboard_import_availability_with_client(
+    client: &DashboardResourceClient<'_>,
+    datasources: &[Map<String, Value>],
+    fetch_plugins: bool,
+) -> Result<Map<String, Value>> {
+    let mut availability = build_dashboard_import_availability_from_datasources(datasources);
+    if !fetch_plugins {
+        return Ok(availability);
+    }
+    match client.request_json(Method::GET, "/api/plugins", &[], None)? {
+        Some(Value::Array(plugins)) => {
+            let plugin_ids = plugins
+                .iter()
+                .filter_map(Value::as_object)
+                .filter_map(|plugin| plugin.get("id").and_then(Value::as_str))
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .map(str::to_string)
+                .collect::<BTreeSet<String>>();
+            availability.insert(
+                "pluginIds".to_string(),
+                Value::Array(
+                    plugin_ids
+                        .into_iter()
+                        .map(Value::String)
+                        .collect::<Vec<_>>(),
+                ),
+            );
+        }
+        Some(_) => return Err(message("Unexpected plugin list response from Grafana.")),
+        None => {}
+    }
+
+    Ok(availability)
+}
+
 fn build_dashboard_import_dependency_specs(
     import_dir: &Path,
     datasource_catalog: &super::prompt::DatasourceCatalog,
@@ -626,6 +706,47 @@ where
     )?;
     let availability = build_dashboard_import_availability_with_request(
         &mut request_json,
+        &datasources,
+        needs_plugin_availability,
+    )?;
+    let document =
+        build_sync_preflight_document(&desired_specs, Some(&Value::Object(availability)))?;
+    let blocking = document
+        .get("summary")
+        .and_then(Value::as_object)
+        .and_then(|summary| summary.get("blockingCount"))
+        .and_then(Value::as_i64)
+        .unwrap_or(0);
+    if blocking > 0 {
+        return Err(message(format!(
+            "Refusing dashboard import because preflight reports {blocking} blocking checks."
+        )));
+    }
+    Ok(())
+}
+
+pub(crate) fn validate_dashboard_import_dependencies_with_client(
+    client: &DashboardResourceClient<'_>,
+    import_dir: &Path,
+    strict_schema: bool,
+    target_schema_version: Option<i64>,
+) -> Result<()> {
+    let (needs_datasource_availability, needs_plugin_availability) =
+        dashboard_import_dependency_availability_requirements(import_dir)?;
+    let datasources = if needs_datasource_availability {
+        client.list_datasources()?
+    } else {
+        Vec::new()
+    };
+    let datasource_catalog = build_datasource_catalog(&datasources);
+    let desired_specs = build_dashboard_import_dependency_specs(
+        import_dir,
+        &datasource_catalog,
+        strict_schema,
+        target_schema_version,
+    )?;
+    let availability = build_dashboard_import_availability_with_client(
+        client,
         &datasources,
         needs_plugin_availability,
     )?;

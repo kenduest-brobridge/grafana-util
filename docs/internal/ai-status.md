@@ -308,3 +308,9 @@ Current AI-maintained status only.
 - Baseline: the interactive dashboard import lane still always resolved focused review rows through the request-closure path, even when the surrounding import entrypoint already had a concrete `DashboardResourceClient`.
 - Current Update: added a client-backed interactive selector entrypoint plus client-backed focused-review resolution in the TUI state/render path, then wired the client-backed import entrypoint to use that selector when `--interactive` is enabled.
 - Result: the TUI import lane now follows the same shared client path as the rest of the client-backed dashboard import flow instead of dropping back to request-only review resolution.
+## 2026-04-05 - Merge dashboard import request/client main loops
+- State: Done
+- Scope: `rust/src/dashboard/import_apply.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: `import_apply.rs` still kept two large import execution flows, one for request closures and one for `DashboardResourceClient`, so behavior was aligned but the main orchestration loop was still duplicated and guarded by a temporary `#![allow(dead_code)]`.
+- Current Update: finished wiring the existing shared `LiveImportBackend`, `prepare_import_run(...)`, `run_live_import(...)`, and `render_dry_run_report(...)` helpers into the real request/client entrypoints. Dry-run rendering now uses one shared renderer, and both live paths now share the same import preparation and main loop while keeping backend-specific lookup/apply hooks.
+- Result: the dashboard import runtime no longer maintains parallel request/client main loops for the same behavior, and `import_apply.rs` no longer needs the dead-code escape hatch to compile cleanly.

@@ -89,7 +89,9 @@ fn infer_workspace_root(base_dir: &Path) -> PathBuf {
             let grandparent = parent.and_then(Path::parent);
             let great_grandparent = grandparent.and_then(Path::parent);
             if parent.and_then(Path::file_name).and_then(|v| v.to_str()) == Some("provisioning")
-                && grandparent.and_then(Path::file_name).and_then(|v| v.to_str())
+                && grandparent
+                    .and_then(Path::file_name)
+                    .and_then(|v| v.to_str())
                     == Some("datasources")
             {
                 return great_grandparent.unwrap_or(base_dir).to_path_buf();
@@ -133,7 +135,9 @@ fn overlay_direct_workspace_input(discovered: &mut DiscoveredChangeInputs, base_
             let parent = base_dir.parent();
             let grandparent = parent.and_then(Path::parent);
             if parent.and_then(Path::file_name).and_then(|v| v.to_str()) == Some("provisioning")
-                && grandparent.and_then(Path::file_name).and_then(|v| v.to_str())
+                && grandparent
+                    .and_then(Path::file_name)
+                    .and_then(|v| v.to_str())
                     == Some("datasources")
             {
                 discovered.datasource_provisioning_file = Some(base_dir.to_path_buf());
@@ -662,13 +666,17 @@ mod guided_rust_tests {
         )
         .unwrap();
 
-        let discovered = discover_change_staged_inputs(Some(&workspace.join("dashboards"))).unwrap();
+        let discovered =
+            discover_change_staged_inputs(Some(&workspace.join("dashboards"))).unwrap();
 
         assert_eq!(
             discovered.dashboard_export_dir,
             Some(workspace.join("dashboards/raw"))
         );
-        assert_eq!(discovered.alert_export_dir, Some(workspace.join("alerts/raw")));
+        assert_eq!(
+            discovered.alert_export_dir,
+            Some(workspace.join("alerts/raw"))
+        );
         assert_eq!(
             discovered.datasource_provisioning_file,
             Some(workspace.join("datasources/provisioning/datasources.yaml"))
@@ -694,7 +702,10 @@ mod guided_rust_tests {
             discovered.dashboard_provisioning_dir,
             Some(workspace.join("dashboards/provisioning"))
         );
-        assert_eq!(discovered.alert_export_dir, Some(workspace.join("alerts/raw")));
+        assert_eq!(
+            discovered.alert_export_dir,
+            Some(workspace.join("alerts/raw"))
+        );
     }
 
     #[test]
@@ -709,10 +720,9 @@ mod guided_rust_tests {
         )
         .unwrap();
 
-        let discovered = discover_change_staged_inputs(Some(
-            &workspace.join("datasources/provisioning"),
-        ))
-        .unwrap();
+        let discovered =
+            discover_change_staged_inputs(Some(&workspace.join("datasources/provisioning")))
+                .unwrap();
 
         assert_eq!(
             discovered.datasource_provisioning_file,

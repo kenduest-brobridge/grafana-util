@@ -19,13 +19,16 @@ use super::super::cli_defs::{
 use super::super::files::{
     load_export_metadata, resolve_dashboard_export_root, resolve_dashboard_import_source,
 };
+#[cfg(feature = "tui")]
 use super::super::inspect_governance::build_export_inspection_governance_document;
 use super::super::inspect_live::{prepare_inspect_export_import_dir_for_variant, TempInspectDir};
 use super::super::inspect_report::{
     refresh_filtered_query_report_summary, report_format_supports_columns,
     resolve_report_column_ids_for_format, ExportInspectionQueryReport,
 };
+#[cfg(feature = "tui")]
 use super::super::inspect_workbench::run_inspect_workbench;
+#[cfg(feature = "tui")]
 use super::super::inspect_workbench_support::build_inspect_workbench_document;
 use super::super::{PROMPT_EXPORT_SUBDIR, RAW_EXPORT_SUBDIR};
 use super::inspect_output::{
@@ -691,7 +694,7 @@ fn run_interactive_export_workbench(import_dir: &Path, expected_variant: &str) -
 
 #[cfg(not(feature = "tui"))]
 fn run_interactive_export_workbench(_import_dir: &Path, _expected_variant: &str) -> Result<usize> {
-    super::tui_not_built("inspect-export --interactive")
+    super::super::tui_not_built("inspect-export --interactive")
 }
 
 pub(crate) fn analyze_export_dir(args: &InspectExportArgs) -> Result<usize> {
