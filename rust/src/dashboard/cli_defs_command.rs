@@ -915,7 +915,7 @@ pub enum DashboardHistorySubcommand {
     List(HistoryListArgs),
     #[command(
         name = "restore",
-        about = "Restore one historical dashboard version as a new latest Grafana revision.",
+        about = "Restore one historical dashboard version as a new latest Grafana revision entry.",
         after_help = "Examples:\n\n  Preview a restore without changing Grafana:\n    grafana-util dashboard history restore --url http://localhost:3000 --basic-user admin --basic-password admin --dashboard-uid cpu-main --version 17 --dry-run --output-format table\n\n  Restore a historical version and record a new revision message:\n    grafana-util dashboard history restore --url http://localhost:3000 --basic-user admin --basic-password admin --dashboard-uid cpu-main --version 17 --message 'Restore known good CPU dashboard after regression' --yes"
     )]
     Restore(HistoryRestoreArgs),

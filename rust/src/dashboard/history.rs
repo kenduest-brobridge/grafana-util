@@ -276,12 +276,24 @@ where
         .and_then(Value::as_object)
         .map(|meta| string_field(meta, "folderUid", ""))
         .filter(|value| !value.is_empty());
+    let current_dashboard = current_object
+        .get("dashboard")
+        .and_then(Value::as_object)
+        .ok_or_else(|| message("Current dashboard payload did not include dashboard data."))?;
+    let current_id = current_dashboard
+        .get("id")
+        .and_then(Value::as_i64)
+        .ok_or_else(|| message("Current dashboard payload did not include dashboard id."))?;
+    let current_version = current_dashboard
+        .get("version")
+        .and_then(Value::as_i64)
+        .ok_or_else(|| message("Current dashboard payload did not include dashboard version."))?;
 
     let mut dashboard =
         fetch_dashboard_history_version_data_with_request(&mut request_json, uid, version)?;
-    dashboard.insert("id".to_string(), Value::Null);
+    dashboard.insert("id".to_string(), Value::from(current_id));
     dashboard.insert("uid".to_string(), Value::String(uid.to_string()));
-    dashboard.remove("version");
+    dashboard.insert("version".to_string(), Value::from(current_version));
     if !dashboard.contains_key("title") {
         dashboard.insert(
             "title".to_string(),
