@@ -56,6 +56,8 @@
 - [dashboard raw-to-prompt](./dashboard-raw-to-prompt.md)
 - [dashboard import](./dashboard-import.md)
 - [dashboard patch-file](./dashboard-patch-file.md)
+- [dashboard serve](./dashboard-serve.md)
+- [dashboard edit-live](./dashboard-edit-live.md)
 - [dashboard review](./dashboard-review.md)
 - [dashboard publish](./dashboard-publish.md)
 - [dashboard delete](./dashboard-delete.md)
@@ -137,3 +139,10 @@
 - [snapshot](./snapshot.md)
 - [snapshot export](./snapshot.md#export)
 - [snapshot review](./snapshot.md#review)
+
+## 通用資源查詢
+
+- [resource](./resource.md)
+- [resource kinds](./resource-kinds.md)
+- [resource list](./resource-list.md)
+- [resource get](./resource-get.md)

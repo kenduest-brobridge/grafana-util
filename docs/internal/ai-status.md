@@ -8,6 +8,34 @@ Current AI-maintained status only.
 - Keep this file short and current. Additive historical detail belongs in `docs/internal/archive/`.
 - Detailed 2026-03-29 through 2026-03-31 entries moved to [`archive/ai-status-archive-2026-03-31.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-03-31.md).
 
+## 2026-04-05 - Add generic resource queries plus dashboard serve/edit-live authoring surfaces
+- State: Done
+- Scope: `rust/src/resource.rs`, `rust/src/cli.rs`, `rust/src/dashboard/serve.rs`, `rust/src/dashboard/edit_live.rs`, `rust/src/sync/plan_builder.rs`, `rust/src/sync/staged_documents_render.rs`, `rust/src/sync/rust_tests.rs`, `docs/commands/en/*.md`, `docs/commands/zh-TW/*.md`, `docs/user-guide/en/dashboard.md`, `docs/user-guide/zh-TW/dashboard.md`, generated man/html, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: the repo already had deep workflow-specific surfaces for dashboards, alerts, datasources, access, and change review, but it still lacked a small generic live resource query surface, a local dashboard preview server, a safe live-dashboard editor flow, and explicit dependency-order metadata in staged sync plans.
+- Current Update: added the new read-only `resource` namespace backed by the shared `grafana_api` clients, added `dashboard serve` for lightweight local draft preview plus reloads, added `dashboard edit-live` with a local-draft default and explicit `--apply-live` opt-in, and annotated/sorted staged sync operations with dependency-aware ordering metadata and blocked-reason summary output. Command docs and handbook pages now document the new surfaces without pushing maintainer jargon into README.
+- Result: the Rust CLI now has a generic read-only resource query surface for unsupported-yet-common live lookups, a faster single-dashboard authoring loop, and clearer staged sync ordering evidence in both JSON and text plan output.
+
+## 2026-04-05 - Move dashboard list flow onto shared Grafana resource clients
+- State: Done
+- Scope: `rust/src/dashboard/list.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: dashboard list already had with-request seams, but the public client-backed path still handed raw `request_json` closures through to the helper flow, so folder path and source enrichment were not using the new shared concrete dashboard/datasource resource methods yet.
+- Current Update: added a small local dashboard-list resource wrapper in `dashboard/list.rs` and switched the public client-backed list path to use shared concrete dashboard and datasource methods for summaries, folder lookup, dashboard fetches, and datasource listing. The request-injection helpers remain intact for tests and other consumers.
+- Result: the dashboard list flow now uses the shared concrete Grafana resource layer where possible without changing the public CLI behavior or the with-request seam.
+
+## 2026-04-05 - Move dashboard inspect-live fast path onto shared Grafana resource clients
+- State: Done
+- Scope: `rust/src/dashboard/inspect_live.rs`, `rust/src/grafana_api/dashboard.rs`, `rust/src/grafana_api/tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: the single-org inspect-live fast path had already started consuming shared dashboard and datasource methods for summary/dashboard/datasource reads, but it still kept one direct current-org read outside the shared dashboard client.
+- Current Update: added shared current-org support to `DashboardResourceClient` and switched the inspect-live single-org fast path to use that shared method alongside the existing shared summary, dashboard fetch, folder lookup, and datasource-list calls.
+- Result: the inspect-live fast path no longer owns a direct `/api/org` read in the client-backed lane, so its main live reads now route through the shared dashboard resource layer.
+
+## 2026-04-05 - Move dashboard live wrappers onto shared Grafana resource clients
+- State: Done
+- Scope: `rust/src/grafana_api/dashboard.rs`, `rust/src/grafana_api/datasource.rs`, `rust/src/grafana_api/tests.rs`, `rust/src/dashboard/live.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: the shared-client refactor had already centralized connection wiring, but the public helpers in `dashboard/live.rs` still mostly treated `DashboardResourceClient` and `DatasourceResourceClient` as thin `request_json` pass-through adapters instead of calling concrete shared endpoint methods. The new `grafana_api` dashboard and datasource resource modules also still lacked most of the dashboard live endpoint surface.
+- Current Update: added concrete dashboard/datasource resource methods for dashboard search, paged dashboard summaries, folder lookup, dashboard fetch, dashboard/folder permission reads, dashboard import, dashboard delete, folder delete, and datasource listing. The public wrappers in `dashboard/live.rs` now call those methods directly, while the existing `with_request` helpers stay in place for orchestration and test seams.
+- Result: dashboard live reads and mutations now rely on one shared home for those Grafana endpoint contracts instead of re-declaring the API shape in the public wrapper layer. Focused `grafana_api` and alert regressions passed after the migration.
+
 ## 2026-04-05 - Verify repo-local smoke regression for the task-first change lane
 - State: Done
 - Scope: `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
@@ -244,3 +272,39 @@ Current AI-maintained status only.
 - Baseline: `change` exposed the lower-level sync lifecycle directly (`summary`, `plan`, `review`, `preflight`, `apply`, plus bundle/promotion lanes), so first-run users had to understand staged artifact names before they could tell which command to run.
 - Current Update: added task-first `change inspect`, `change check`, and `change preview` routing on top of the existing staged sync builders, moved the old low-level workflow under `change advanced`, taught `change apply` to look for `--preview-file` or common repo-local preview artifacts, and updated Rust help/parser tests plus the first-entry docs to describe the new lane. The same work also finished wiring the already-added dashboard `history` command surface so the crate compiles and tests cleanly with that command present.
 - Result: the staged sync contract still exists underneath, but the operator-facing `change` entrypoint now starts from task intent instead of internal document names.
+## 2026-04-05 - Centralize dashboard import lookup live calls
+- State: Done
+- Scope: `rust/src/dashboard/import_lookup.rs`, `rust/src/dashboard/live.rs`, `rust/src/grafana_api/dashboard.rs`, `rust/src/grafana_api/tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: dashboard import lookup still owned one raw create-folder API contract locally and spread its request-based live calls across multiple direct helper invocations, even after the shared `grafana_api` layer existed for dashboard resources.
+- Current Update: added shared `create_folder_entry(...)` coverage to `grafana_api/dashboard.rs`, moved the request-based folder-create helper into `dashboard/live.rs`, and wrapped `import_lookup.rs` live reads/writes behind a local `ImportLookupRequestClient` so dashboard summary loading, dashboard/folder fetches, current-org lookup, org listing, and folder creation now route through one lookup-scoped client seam.
+- Result: `import_lookup.rs` no longer owns a raw folder-create endpoint contract, and the remaining request-based import live calls are centralized enough to make a later `DashboardResourceClient` threading pass smaller.
+## 2026-04-05 - Add client-backed dashboard import preflight
+- State: Done
+- Scope: `rust/src/dashboard/import_apply.rs`, `rust/src/dashboard/import_validation.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: dashboard import runtime still validated export org and preflight dependencies through request-closure helpers only, even when a concrete `JsonHttpClient` was already present on the client-backed path.
+- Current Update: added client-backed import validation helpers that use `DashboardResourceClient` for current-org lookup, datasource listing, and plugin availability reads, then wired `import_dashboards_with_client` to invoke them before the existing request-based execution path.
+- Result: the client-backed import entrypoint now touches the shared dashboard resource layer directly for live preflight reads, while the request-closure seam remains in place for the generic execution path.
+## 2026-04-05 - Centralize datasource/import org lookups
+- State: Done
+- Scope: `rust/src/grafana_api/access.rs`, `rust/src/grafana_api/tests.rs`, `rust/src/datasource_import_export_support.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: datasource import/export helpers still read `/api/org` and `/api/orgs` directly from `JsonHttpClient`, even though the shared Grafana client layer already owned the same org contracts for dashboard flows.
+- Current Update: added shared `fetch_current_org(...)` and `list_orgs(...)` methods to `AccessResourceClient`, and switched datasource import/export support helpers to use `DashboardResourceClient` for the same org lookup reads.
+- Result: the shared client layer now owns the org lookup contract in one place, and datasource import/export no longer hardcodes those paths locally.
+## 2026-04-05 - Route dashboard import client path through shared lookup backend
+- State: Done
+- Scope: `rust/src/dashboard/import_apply.rs`, `rust/src/dashboard/import_lookup.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: the dashboard import client-backed entrypoint only used the shared dashboard client for preflight checks, then dropped back to the request-closure execution path for the real import loop.
+- Current Update: added a shared lookup backend in `import_lookup.rs` that supports both request closures and `DashboardResourceClient`, then rewired `import_dashboards_with_client` to use the client-backed lookup path for dashboard existence checks, folder-path resolution, folder ensuring, and final dashboard import requests while keeping the interactive selection seam request-based.
+- Result: the main dashboard import client path now runs through the shared Grafana client layer end-to-end for its live lookup/apply flow, while tests and edge orchestration can still use the request seam.
+## 2026-04-05 - Align dashboard import dry-run and interactive review with shared lookup backend
+- State: Done
+- Scope: `rust/src/dashboard/import_dry_run.rs`, `rust/src/dashboard/import_interactive_review.rs`, `rust/src/dashboard/import_apply.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: dashboard import dry-run and interactive review still only had request-based lookup flows, even after the import client path had moved onto the shared lookup backend.
+- Current Update: added a client-backed dry-run report builder in `import_dry_run.rs` and used it from `import_dashboards_with_client` for dry-run execution. Also added a client-backed interactive review path in `import_interactive_review.rs` so review resolution can use the same shared lookup backend when a concrete dashboard client is available, while the current TUI caller keeps its request seam unchanged.
+- Result: the main import, dry-run, and review code paths now share the same lookup model instead of diverging into separate endpoint ownership patterns.
+## 2026-04-05 - Route TUI dashboard import review through the shared client path
+- State: Done
+- Scope: `rust/src/dashboard/import_interactive.rs`, `rust/src/dashboard/import_interactive_render.rs`, `rust/src/dashboard/import_interactive_state.rs`, `rust/src/dashboard/import_apply.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: the interactive dashboard import lane still always resolved focused review rows through the request-closure path, even when the surrounding import entrypoint already had a concrete `DashboardResourceClient`.
+- Current Update: added a client-backed interactive selector entrypoint plus client-backed focused-review resolution in the TUI state/render path, then wired the client-backed import entrypoint to use that selector when `--interactive` is enabled.
+- Result: the TUI import lane now follows the same shared client path as the rest of the client-backed dashboard import flow instead of dropping back to request-only review resolution.

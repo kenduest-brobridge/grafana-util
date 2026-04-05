@@ -36,8 +36,10 @@
 當這次工作不是從整棵 export tree 開始，而是圍繞一份 dashboard 草稿反覆修改時，請直接走 authoring 這條路。
 
 - 如果 Grafana 裡已經有最接近的來源，先用 `dashboard get` 或 `dashboard clone-live` 取回草稿。
+- 如果你要一邊編修一邊在瀏覽器看本地草稿內容，先用 `dashboard serve` 開一個輕量 preview server。
 - 在任何 mutation 前先跑 `dashboard review`，確認 title、UID、tags、folder UID 與阻擋性驗證問題。
 - 要重寫本地草稿內容時，用 `dashboard patch-file` 原地修改或輸出成新檔。
+- 如果你想從 live dashboard 開始直接編修，但又不想預設就回寫 Grafana，請用 `dashboard edit-live`。
 - 草稿準備好後，用 `dashboard publish` 走和正式 import 同一條 replay pipeline。
 
 如果你的團隊是用 Jsonnet、grafanalib 或其他 generator 產 dashboard，不必每次都先落一個中繼暫存檔才能 review 或 publish。
@@ -59,8 +61,19 @@ jsonnet dashboards/cpu.jsonnet | grafana-util dashboard publish --url http://loc
 grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --basic-password admin --input ./drafts/cpu-main.json --dry-run --watch
 ```
 
+```bash
+# 用途：在本地瀏覽器裡持續檢視一份 dashboard 草稿。
+grafana-util dashboard serve --input ./drafts/cpu-main.json --port 18080
+```
+
+```bash
+# 用途：從 live dashboard 拉進 editor，但預設仍先落成新的本地草稿。
+grafana-util dashboard edit-live --profile prod --dashboard-uid cpu-main --output ./drafts/cpu-main.edited.json
+```
+
 `dashboard patch-file --input -` 必須搭配 `--output`，因為標準輸入不能原地覆寫。
 如果目標是 Grafana 內建的 General folder，`dashboard publish` 會把它正規化回預設 root publish 路徑，不會硬送出字面上的 `general` folder UID。
+`dashboard serve` 的定位是輕量 preview 與文件檢視，不是把完整 Grafana renderer 內嵌到本地 server。
 
 ## 歷史與還原工作流
 
@@ -88,6 +101,8 @@ grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --
 - [dashboard import](../../commands/zh-TW/dashboard-import.md)
 - [dashboard raw-to-prompt](../../commands/zh-TW/dashboard-raw-to-prompt.md)
 - [dashboard patch-file](../../commands/zh-TW/dashboard-patch-file.md)
+- [dashboard serve](../../commands/zh-TW/dashboard-serve.md)
+- [dashboard edit-live](../../commands/zh-TW/dashboard-edit-live.md)
 - [dashboard review](../../commands/zh-TW/dashboard-review.md)
 - [dashboard publish](../../commands/zh-TW/dashboard-publish.md)
 - [dashboard delete](../../commands/zh-TW/dashboard-delete.md)

@@ -49,6 +49,8 @@ The checked-in `docs/html/commands/en/*.html` files are generated from the same 
 - [dashboard raw-to-prompt](./dashboard-raw-to-prompt.md)
 - [dashboard import](./dashboard-import.md)
 - [dashboard patch-file](./dashboard-patch-file.md)
+- [dashboard serve](./dashboard-serve.md)
+- [dashboard edit-live](./dashboard-edit-live.md)
 - [dashboard review](./dashboard-review.md)
 - [dashboard publish](./dashboard-publish.md)
 - [dashboard delete](./dashboard-delete.md)
@@ -129,5 +131,12 @@ The checked-in `docs/html/commands/en/*.html` files are generated from the same 
 - [snapshot](./snapshot.md)
 - [snapshot export](./snapshot.md#export)
 - [snapshot review](./snapshot.md#review)
+
+## Generic Resource Query
+
+- [resource](./resource.md)
+- [resource kinds](./resource-kinds.md)
+- [resource list](./resource-list.md)
+- [resource get](./resource-get.md)
 
 The matching manpages live under `docs/man/grafana-util-*.1`.

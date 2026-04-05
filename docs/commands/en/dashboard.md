@@ -15,14 +15,17 @@ If you are an SRE, Grafana operator, or responder, this page should help you dec
 
 - **Inspect**: browse, list, get, inspect-live, inspect-export, inspect-vars, and topology checks.
 - **Move**: export, import, clone-live, raw-to-prompt, diff, and publish paths.
+- **Author**: get, clone-live, serve, patch-file, edit-live, review, and publish around one dashboard draft.
 - **Review Before Mutate**: review, governance-gate, and impact analysis.
 - **History**: list, restore, and export revision history before you recover or promote a dashboard.
 - **Capture**: screenshot flows for reproducible visual proof.
 
 For single-dashboard authoring, the local draft path is:
 - `get` or `clone-live` to start from one live dashboard
+- `serve` to keep one or more drafts open in a local preview browser while you edit
 - `review` to verify one draft
 - `patch-file` to rewrite local metadata
+- `edit-live` to fetch one live dashboard into an editor with a safe local-draft default
 - `publish` to replay that draft back through the import pipeline
 
 `review`, `patch-file`, and `publish` also accept `--input -` for one wrapped or bare dashboard JSON document from standard input. Use that when an external generator already writes the dashboard JSON to stdout. `patch-file --input -` requires `--output`, and `publish --watch` is the local-file variant for repeated save-and-preview loops and does not support `--input -`.
@@ -90,6 +93,16 @@ grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --
 ```
 
 ```bash
+# Purpose: Open one local dashboard draft in the local preview server.
+grafana-util dashboard serve --input ./drafts/cpu-main.json --port 18080
+```
+
+```bash
+# Purpose: Pull one live dashboard into an external editor and keep the result as a local draft by default.
+grafana-util dashboard edit-live --profile prod --dashboard-uid cpu-main --output ./drafts/cpu-main.edited.json
+```
+
+```bash
 # Purpose: Inspect live dashboard governance data for downstream review.
 grafana-util dashboard inspect-live --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output-format governance-json
 ```
@@ -117,6 +130,11 @@ grafana-util dashboard inspect-live --url http://localhost:3000 --basic-user adm
 - [dashboard import](./dashboard-import.md)
 - [dashboard raw-to-prompt](./dashboard-raw-to-prompt.md)
 - [dashboard patch-file](./dashboard-patch-file.md)
+
+### Author
+
+- [dashboard serve](./dashboard-serve.md)
+- [dashboard edit-live](./dashboard-edit-live.md)
 
 ### Review Before Mutate
 

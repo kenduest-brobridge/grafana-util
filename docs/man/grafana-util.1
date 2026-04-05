@@ -294,6 +294,10 @@ Inspect the staged change package from discovered or explicit inputs. Use when: 
 Preview what would change from discovered or explicit staged inputs. Use when: You want the actionable review artifact for the current staged package.; This is the task\-first replacement for the common plan step.; Choose this when the operator question is “what will change?” rather than “which lower\-level builder should I run?”
 .SS dashboard
 .TP
+.B grafana\-util\-dashboard\-edit\-live(1)
+Fetch one live dashboard into an external editor with a safe local\-draft default. Use when: Grafana already has the closest source dashboard and you want to edit that payload directly, but you do not want the default path to write straight back to Grafana.
+.SS dashboard
+.TP
 .B grafana\-util\-dashboard\-history(1)
 List, restore, or export live dashboard revision history for one dashboard UID. Use when: You need to inspect earlier dashboard versions, recover a known\-good revision, or export dashboard history into a reusable artifact for review or CI.
 .SS dashboard
@@ -304,6 +308,26 @@ Estimate the blast radius of one datasource from dashboard governance artifacts.
 .TP
 .B grafana\-util\-dashboard\-raw\-to\-prompt(1)
 Convert ordinary dashboard JSON or raw/ lane files into Grafana UI prompt JSON with __inputs. Use when: Someone gives you a normal Grafana dashboard export, legacy raw JSON, or a raw/ lane file and you need a prompt\-safe file for the Grafana UI Upload JSON flow.
+.SS dashboard
+.TP
+.B grafana\-util\-dashboard\-serve(1)
+Serve one or more dashboard drafts through a lightweight local preview server. Use when: You are iterating on one dashboard draft, one draft directory, or one generator command and want a local browser surface without publishing back to Grafana after every change.
+.SS resource
+.TP
+.B grafana\-util\-resource\-get(1)
+Fetch one supported live Grafana resource by selector. Use when: You need the live payload for one supported resource item and want a simpler generic query than building a full export or inspect workflow.
+.SS resource
+.TP
+.B grafana\-util\-resource\-kinds(1)
+List the live resource kinds supported by the generic read\-only resource query surface. Use when: You need to confirm whether the generic resource query surface already supports the live Grafana resource kind you want to inspect.
+.SS resource
+.TP
+.B grafana\-util\-resource\-list(1)
+List one supported live Grafana resource kind. Use when: You need a read\-only live inventory for one supported resource kind but do not yet need a higher\-level domain workflow.
+.SS resource
+.TP
+.B grafana\-util\-resource(1)
+Read a small set of live Grafana resources through a generic read\-only query surface. Use when: You need a read\-only live lookup before a richer workflow exists in dashboard, alert, datasource, access, or change.
 .TP
 .B change
 Declarative sync planning and gated apply workflows. Sync is the workflow family; the public CLI surface and generated manpages live under grafana-util change and the grafana-util-change*(1) pages.

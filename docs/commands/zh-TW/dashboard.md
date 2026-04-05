@@ -5,6 +5,7 @@
 | 工作流 | 常用子命令 |
 | --- | --- |
 | 盤點與瀏覽 live dashboard | `browse`、`list`、`inspect-live` |
+| 單一 dashboard 草稿 authoring | `get`、`clone-live`、`serve`、`patch-file`、`edit-live`、`review`、`publish` |
 | 匯出 / 匯入 / 比對 | `get`、`clone-live`、`export`、`import`、`diff`、`review`、`patch-file`、`publish`、`delete` |
 | 變更前檢查 | `inspect-export`、`inspect-vars`、`governance-gate` |
 | 拓樸與影響面 | `topology`、`impact` |
@@ -27,8 +28,10 @@
 
 如果是單一 dashboard 的 authoring 路徑，建議把它想成：
 - `get` 或 `clone-live`：先做草稿
+- `serve`：用本地 preview server 持續檢視草稿內容
 - `review`：先驗證草稿內容
 - `patch-file`：改寫本地中繼資料
+- `edit-live`：從 live 拉一份進 editor，預設仍先落回本地草稿
 - `publish`：沿用 import pipeline 發回 Grafana
 
 `review`、`patch-file`、`publish` 也都支援 `--input -`，可以直接吃標準輸入的一份 wrapped 或 bare dashboard JSON。這適合外部 generator 已經把 JSON 寫到 stdout 的情況。`patch-file --input -` 必須搭配 `--output`，若你是在本地反覆編修同一份檔案，則改用 `publish --watch`；它只支援本地檔案路徑，不支援 `--input -`。
@@ -100,6 +103,16 @@ jsonnet dashboards/cpu.jsonnet | grafana-util dashboard review --input - --outpu
 grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --basic-password admin --input ./drafts/cpu-main.json --dry-run --watch
 ```
 
+```bash
+# 開一個本地 preview server，持續檢視單一 dashboard 草稿。
+grafana-util dashboard serve --input ./drafts/cpu-main.json --port 18080
+```
+
+```bash
+# 從 live dashboard 開始編修，但預設先輸出成新的本地草稿。
+grafana-util dashboard edit-live --profile prod --dashboard-uid cpu-main --output ./drafts/cpu-main.edited.json
+```
+
 ## 相關指令
 
 ### 盤點
@@ -115,6 +128,11 @@ grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --
 - [dashboard import](./dashboard-import.md)
 - [dashboard raw-to-prompt](./dashboard-raw-to-prompt.md)
 - [dashboard patch-file](./dashboard-patch-file.md)
+
+### 草稿 authoring
+
+- [dashboard serve](./dashboard-serve.md)
+- [dashboard edit-live](./dashboard-edit-live.md)
 
 ### 變更前檢查
 

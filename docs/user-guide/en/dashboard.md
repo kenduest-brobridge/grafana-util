@@ -36,8 +36,10 @@ This guide is for operators who need to inventory dashboards, export or import t
 Use the authoring lane when the work starts from one dashboard draft instead of a full export tree.
 
 - Start from a live draft with `dashboard get` or `dashboard clone-live` when Grafana already has the closest source dashboard.
+- Use `dashboard serve` when you want a lightweight local preview browser for one draft file, one draft directory, or one generator script output while you edit.
 - Use `dashboard review` before mutation to confirm title, UID, tags, folder UID, and any blocking validation issues.
 - Use `dashboard patch-file` when you need to rewrite one local draft in place or write a new patched file.
+- Use `dashboard edit-live` when you want to fetch one live dashboard into an external editor but still keep a safe local-draft default instead of immediately mutating Grafana.
 - Use `dashboard publish` when the draft is ready to go back through the same import pipeline used by the broader replay path.
 
 Generator-driven teams do not need to stop at an intermediate temp file for every review or publish step.
@@ -59,8 +61,19 @@ If you are editing one local draft repeatedly, use `dashboard publish --watch` w
 grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --basic-password admin --input ./drafts/cpu-main.json --dry-run --watch
 ```
 
+```bash
+# Purpose: Keep one draft open in a lightweight local preview browser while you edit.
+grafana-util dashboard serve --input ./drafts/cpu-main.json --port 18080
+```
+
+```bash
+# Purpose: Fetch one live dashboard into an external editor and keep the result as a local draft by default.
+grafana-util dashboard edit-live --profile prod --dashboard-uid cpu-main --output ./drafts/cpu-main.edited.json
+```
+
 `dashboard patch-file --input -` requires `--output` because standard input cannot be overwritten in place.
 If you target Grafana's built-in General folder, `dashboard publish` normalizes that back to the default root publish path instead of sending a literal `general` folder UID.
+`dashboard serve` is intentionally a lightweight preview/document-inspection surface, not a full embedded Grafana renderer.
 
 ## History and recovery
 
@@ -88,6 +101,8 @@ Need the command-by-command surface instead of the workflow guide?
 - [dashboard import](../../commands/en/dashboard-import.md)
 - [dashboard raw-to-prompt](../../commands/en/dashboard-raw-to-prompt.md)
 - [dashboard patch-file](../../commands/en/dashboard-patch-file.md)
+- [dashboard serve](../../commands/en/dashboard-serve.md)
+- [dashboard edit-live](../../commands/en/dashboard-edit-live.md)
 - [dashboard review](../../commands/en/dashboard-review.md)
 - [dashboard publish](../../commands/en/dashboard-publish.md)
 - [dashboard delete](../../commands/en/dashboard-delete.md)
