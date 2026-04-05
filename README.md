@@ -165,7 +165,38 @@ grafana-util dashboard import \
 
 This is useful when you want to see what would change before touching the live server.
 
-### 5. Review alerting changes before apply
+### 5. Iterate on one dashboard draft quickly
+
+```bash
+# Review one generated dashboard directly from standard input.
+jsonnet dashboards/cpu.jsonnet | \
+  grafana-util dashboard review --input - --output-format json
+```
+
+```bash
+# Publish one generated dashboard without writing an intermediate temp file.
+jsonnet dashboards/cpu.jsonnet | \
+  grafana-util dashboard publish \
+    --url http://localhost:3000 \
+    --token "$GRAFANA_API_TOKEN" \
+    --input - \
+    --replace-existing
+```
+
+```bash
+# Re-run dry-run publish after each save while editing one local draft.
+grafana-util dashboard publish \
+  --url http://localhost:3000 \
+  --basic-user admin \
+  --basic-password admin \
+  --input ./drafts/cpu-main.json \
+  --dry-run \
+  --watch
+```
+
+Use this lane when the work starts from one dashboard draft instead of a full export tree. `patch-file --input -` requires `--output`, and `publish --watch` only accepts a local file path. If you point `--folder-uid` at Grafana's default General folder, `grafana-util` now normalizes that back to the root/default publish path instead of sending a literal `general` folder UID.
+
+### 6. Review alerting changes before apply
 
 ```bash
 # Build a reviewable alert plan from desired state versus the live server.
@@ -185,7 +216,7 @@ grafana-util alert preview-route \
 
 Use these together when you need a review surface instead of mutating Grafana alerting blindly.
 
-### 6. Export and re-import datasources with secret recovery
+### 7. Export and re-import datasources with secret recovery
 
 ```bash
 # Export datasources with secrets masked for review or version control.

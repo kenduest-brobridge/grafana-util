@@ -785,10 +785,10 @@ jsonnet dashboards/cpu.jsonnet | grafana-util dashboard publish --url http://loc
 <p>If you are editing one local draft repeatedly, use <code>dashboard publish --watch</code> with a file path instead of <code>--input -</code>. Watch mode reruns publish or dry-run after each stabilized save and keeps watching even if one iteration fails validation or the API call.</p>
 <pre><code># Purpose: Re-run dry-run publish after each save while editing one local draft.
 grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --basic-password admin --input ./drafts/cpu-main.json --dry-run --watch</code></pre>
-<p><code>dashboard patch-file --input -</code> requires <code>--output</code> because standard input cannot be overwritten in place.</p>
+<p><code>dashboard patch-file --input -</code> requires <code>--output</code> because standard input cannot be overwritten in place. If you target Grafana&#x27;s built-in General folder, <code>dashboard publish</code> normalizes that back to the default root publish path instead of sending a literal <code>general</code> folder UID.</p>
 <h2 id="history-and-recovery">History and recovery</h2>
 <p>When you are trying to recover a known-good dashboard version, use the history lane instead of rebuilding JSON by hand.</p>
-<ul><li><a href="../../commands/en/dashboard-history.html">dashboard history</a></li><li><code>dashboard history list</code> shows the recent revisions for one dashboard UID.</li><li><code>dashboard history restore</code> copies one historical version forward as a new latest Grafana revision.</li><li><code>dashboard history export</code> writes a reusable revision-history artifact for review or CI.</li></ul>
+<ul><li><a href="../../commands/en/dashboard-history.html">dashboard history</a></li><li><code>dashboard history list</code> shows the recent revisions for one dashboard UID.</li><li><code>dashboard history restore</code> copies one historical version forward as a new latest Grafana revision entry.</li><li><code>dashboard history export</code> writes a reusable revision-history artifact for review or CI.</li></ul>
 <p>Restore is not a destructive overwrite. The selected historical version stays in history, and the restored copy becomes the new current revision.</p>
 <p>&gt; <strong>Operator-First Design</strong>: This tool treats dashboards as version-controlled assets. The goal is to move and govern dashboard state safely, with enough visibility to decide whether a file is ready to replay, patch, or promote.</p>
 <h2 id="command-pages">Command Pages</h2>

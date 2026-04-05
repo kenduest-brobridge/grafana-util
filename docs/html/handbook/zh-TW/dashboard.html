@@ -785,7 +785,7 @@ jsonnet dashboards/cpu.jsonnet | grafana-util dashboard publish --url http://loc
 <p>如果你是在本地反覆編修同一份草稿，請改用檔案路徑搭配 <code>dashboard publish --watch</code>，不要用 <code>--input -</code>。watch 模式會在每次儲存穩定後重跑 publish 或 dry-run，而且就算其中一次驗證或 API 呼叫失敗，也會繼續監看後續變更。</p>
 <pre><code># 用途：編修本地草稿時，每次儲存後自動重跑 dry-run publish。
 grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --basic-password admin --input ./drafts/cpu-main.json --dry-run --watch</code></pre>
-<p><code>dashboard patch-file --input -</code> 必須搭配 <code>--output</code>，因為標準輸入不能原地覆寫。</p>
+<p><code>dashboard patch-file --input -</code> 必須搭配 <code>--output</code>，因為標準輸入不能原地覆寫。 如果目標是 Grafana 內建的 General folder，<code>dashboard publish</code> 會把它正規化回預設 root publish 路徑，不會硬送出字面上的 <code>general</code> folder UID。</p>
 <h2 id="歷史與還原工作流">歷史與還原工作流</h2>
 <p>當您要找回一個已知可用的 dashboard 版本時，請直接走 history 這條路，不要手動重建 JSON。</p>
 <ul><li><a href="../../commands/zh-TW/dashboard-history.html">dashboard history</a></li><li><code>dashboard history list</code>：列出單一 dashboard UID 的最近版本歷史。</li><li><code>dashboard history restore</code>：把某個歷史版本複製成新的最新 Grafana revision。</li><li><code>dashboard history export</code>：把版本歷史匯出成可重用的成品，方便審查或 CI。</li></ul>

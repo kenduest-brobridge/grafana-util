@@ -12,7 +12,7 @@ use super::{
     DashboardIndexItem, DatasourceInventoryItem, ExportMetadata, ExportOrgSummary,
     FolderInventoryItem, RootExportIndex, RootExportVariants, VariantIndexEntry,
     DASHBOARD_PERMISSION_BUNDLE_FILENAME, DATASOURCE_INVENTORY_FILENAME, DEFAULT_DASHBOARD_TITLE,
-    DEFAULT_FOLDER_TITLE, DEFAULT_ORG_ID, DEFAULT_ORG_NAME, EXPORT_METADATA_FILENAME,
+    DEFAULT_FOLDER_TITLE, DEFAULT_FOLDER_UID, DEFAULT_ORG_ID, DEFAULT_ORG_NAME, EXPORT_METADATA_FILENAME,
     FOLDER_INVENTORY_FILENAME, PROMPT_EXPORT_SUBDIR, PROVISIONING_EXPORT_SUBDIR, RAW_EXPORT_SUBDIR,
     ROOT_INDEX_KIND, TOOL_SCHEMA_VERSION,
 };
@@ -335,7 +335,10 @@ pub(crate) fn build_import_payload(
         "message".to_string(),
         Value::String(message_text.to_string()),
     );
-    if let Some(folder_uid) = folder_uid.filter(|value| !value.is_empty()) {
+    if let Some(folder_uid) = folder_uid
+        .filter(|value| !value.is_empty())
+        .filter(|value| value != DEFAULT_FOLDER_UID)
+    {
         payload.insert("folderUid".to_string(), Value::String(folder_uid));
     }
     Ok(Value::Object(payload))

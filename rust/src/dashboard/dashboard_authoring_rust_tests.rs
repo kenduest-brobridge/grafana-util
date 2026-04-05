@@ -159,6 +159,60 @@ fn publish_dashboard_with_request_posts_staged_single_file() {
 }
 
 #[test]
+fn publish_dashboard_with_request_omits_general_folder_uid() {
+    let temp = tempdir().unwrap();
+    let input = temp.path().join("cpu-main.json");
+    fs::write(
+        &input,
+        serde_json::to_string_pretty(&json!({
+            "uid": "cpu-main",
+            "title": "CPU Overview",
+            "schemaVersion": 38,
+            "panels": []
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+
+    let payloads = Arc::new(Mutex::new(Vec::<Value>::new()));
+    let recorded = payloads.clone();
+
+    let args = PublishArgs {
+        common: make_common_args("http://127.0.0.1:3000".to_string()),
+        input: input.clone(),
+        replace_existing: true,
+        folder_uid: Some("general".to_string()),
+        message: "Promote CPU dashboard".to_string(),
+        dry_run: false,
+        watch: false,
+        table: false,
+        json: false,
+    };
+
+    publish_dashboard_with_request(
+        move |method, path, _params, payload: Option<&Value>| match (method, path) {
+            (reqwest::Method::GET, "/api/datasources") => Ok(Some(json!([]))),
+            (reqwest::Method::GET, "/api/plugins") => Ok(Some(json!([]))),
+            (reqwest::Method::GET, "/api/search") => Ok(Some(json!([]))),
+            (reqwest::Method::POST, "/api/dashboards/db") => {
+                recorded
+                    .lock()
+                    .unwrap()
+                    .push(payload.cloned().unwrap_or(Value::Null));
+                Ok(Some(json!({"status": "success"})))
+            }
+            _ => Err(crate::common::message("unexpected request".to_string())),
+        },
+        &args,
+    )
+    .unwrap();
+
+    let payloads = payloads.lock().unwrap();
+    assert_eq!(payloads.len(), 1);
+    assert!(payloads[0].get("folderUid").is_none());
+}
+
+#[test]
 fn patch_dashboard_file_rejects_stdin_without_output() {
     let error = patch_dashboard_file(&PatchFileArgs {
         input: std::path::PathBuf::from("-"),

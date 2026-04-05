@@ -60,6 +60,7 @@ grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --
 ```
 
 `dashboard patch-file --input -` 必須搭配 `--output`，因為標準輸入不能原地覆寫。
+如果目標是 Grafana 內建的 General folder，`dashboard publish` 會把它正規化回預設 root publish 路徑，不會硬送出字面上的 `general` folder UID。
 
 ## 歷史與還原工作流
 

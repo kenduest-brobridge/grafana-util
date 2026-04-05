@@ -165,7 +165,38 @@ grafana-util dashboard import \
 
 適合在真正碰 live Grafana 之前，先看會新增、覆蓋或變動哪些項目。
 
-### 5. 告警變更先審查，再套用
+### 5. 單一 dashboard 草稿快速反覆編修
+
+```bash
+# 直接從標準輸入 review 一份 generator 產生的 dashboard。
+jsonnet dashboards/cpu.jsonnet | \
+  grafana-util dashboard review --input - --output-format json
+```
+
+```bash
+# 不落中繼暫存檔，直接把 generator 產生的 dashboard 發佈到 Grafana。
+jsonnet dashboards/cpu.jsonnet | \
+  grafana-util dashboard publish \
+    --url http://localhost:3000 \
+    --token "$GRAFANA_API_TOKEN" \
+    --input - \
+    --replace-existing
+```
+
+```bash
+# 本地編修同一份草稿時，每次儲存後自動重跑 dry-run publish。
+grafana-util dashboard publish \
+  --url http://localhost:3000 \
+  --basic-user admin \
+  --basic-password admin \
+  --input ./drafts/cpu-main.json \
+  --dry-run \
+  --watch
+```
+
+這條路適合從單一 dashboard 草稿開始的工作，而不是整棵 export tree。`patch-file --input -` 必須搭配 `--output`，`publish --watch` 也只接受本地檔案路徑。另外，如果你把 `--folder-uid` 指到 Grafana 預設的 General folder，`grafana-util` 現在會把它正規化回 root/default publish 路徑，而不是硬送出字面上的 `general` folder UID。
+
+### 6. 告警變更先審查，再套用
 
 ```bash
 # 依 desired state 與 live server 建立可審查的 alert 計畫。
@@ -185,7 +216,7 @@ grafana-util alert preview-route \
 
 這兩步適合用在你不想直接改 live 告警，而是想先有 review surface 的情境。
 
-### 6. 匯出 datasource，之後再恢復 secret 匯回
+### 7. 匯出 datasource，之後再恢復 secret 匯回
 
 ```bash
 # 匯出 data source，secret 會遮蔽，方便審查或納入版本控制。

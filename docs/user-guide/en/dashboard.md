@@ -60,6 +60,7 @@ grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --
 ```
 
 `dashboard patch-file --input -` requires `--output` because standard input cannot be overwritten in place.
+If you target Grafana's built-in General folder, `dashboard publish` normalizes that back to the default root publish path instead of sending a literal `general` folder UID.
 
 ## History and recovery
 
@@ -67,7 +68,7 @@ When you are trying to recover a known-good dashboard version, use the history l
 
 - [dashboard history](../../commands/en/dashboard-history.md)
 - `dashboard history list` shows the recent revisions for one dashboard UID.
-- `dashboard history restore` copies one historical version forward as a new latest Grafana revision.
+- `dashboard history restore` copies one historical version forward as a new latest Grafana revision entry.
 - `dashboard history export` writes a reusable revision-history artifact for review or CI.
 
 Restore is not a destructive overwrite. The selected historical version stays in history, and the restored copy becomes the new current revision.

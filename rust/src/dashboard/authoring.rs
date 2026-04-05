@@ -554,7 +554,7 @@ fn watch_publish_dashboard_with_client(client: &JsonHttpClient, args: &PublishAr
     validate_publish_args(args)?;
     let input_path = &args.input;
     eprintln!(
-        "Watching {} for dashboard publish changes.",
+        "Watching {} for dashboard publish changes. Press Ctrl-C to stop.",
         input_path.display()
     );
 
@@ -574,10 +574,19 @@ fn watch_publish_dashboard_with_client(client: &JsonHttpClient, args: &PublishAr
             continue;
         }
 
+        eprintln!(
+            "Detected dashboard input change for {}; waiting for a stable save.",
+            input_path.display()
+        );
+
         thread::sleep(Duration::from_millis(300));
         let stabilized = current_file_watch_fingerprint(input_path)?;
         if stabilized != current {
             last_seen = stabilized;
+            eprintln!(
+                "Dashboard input changed again before it stabilized; still watching {}.",
+                input_path.display()
+            );
             continue;
         }
 

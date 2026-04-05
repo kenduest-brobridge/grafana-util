@@ -17,7 +17,7 @@ dashboard JSON file to publish. Use \- to read one wrapped or bare dashboard JSO
 update an existing dashboard when the UID already exists.
 .TP
 .B \-\-folder\-uid
-override the destination folder UID.
+override the destination folder UID. The built\-in General folder is normalized back to the default root publish path instead of sending a literal general folder UID.
 .TP
 .B \-\-message
 revision message stored in Grafana.
@@ -26,7 +26,7 @@ revision message stored in Grafana.
 preview the publish without changing Grafana.
 .TP
 .B \-\-watch
-rerun publish or dry\-run whenever the local input file changes. Use this with a local file path, not \-\-input \-.
+rerun publish or dry\-run whenever the local input file changes. Use this with a local file path, not \-\-input \-. The watcher reports change detection, transient failures, and reruns, and keeps watching until you stop it.
 .TP
 .B \-\-table, \-\-json
 dry\-run output modes.
