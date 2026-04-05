@@ -4,7 +4,7 @@ use serde_json::Value;
 use std::path::Path;
 
 use crate::common::{
-    load_json_object_file, render_json_value, should_print_stdout, write_plain_output_file, Result,
+    emit_plain_output, load_json_object_file, render_json_value, should_print_stdout, Result,
 };
 
 use super::{
@@ -371,12 +371,14 @@ pub(crate) fn run_dashboard_topology(args: &TopologyArgs) -> Result<()> {
     if let Some(output_file) = args.output_file.as_ref() {
         if matches!(args.output_format, TopologyOutputFormat::Json) {
             write_json_document(&document, output_file)?;
-        } else {
-            write_plain_output_file(output_file, &rendered)?;
         }
     }
-    if should_print_stdout(args.output_file.as_deref(), args.also_stdout) {
-        println!("{rendered}");
+    if matches!(args.output_format, TopologyOutputFormat::Json) {
+        if should_print_stdout(args.output_file.as_deref(), args.also_stdout) {
+            print!("{rendered}");
+        }
+    } else {
+        emit_plain_output(&rendered, args.output_file.as_deref(), args.also_stdout)?;
     }
     Ok(())
 }
@@ -412,6 +414,66 @@ pub(crate) fn run_dashboard_impact(args: &ImpactArgs) -> Result<()> {
         ImpactOutputFormat::Json => print!("{}", render_json_value(&document)?),
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod output_contract_tests {
+    use super::*;
+    use serde_json::json;
+    use std::fs;
+    use tempfile::tempdir;
+
+    #[test]
+    fn run_dashboard_topology_writes_plain_text_output_file_and_keeps_also_stdout_enabled() {
+        let temp = tempdir().unwrap();
+        let governance = temp.path().join("governance.json");
+        let output_file = temp.path().join("topology.txt");
+        fs::write(
+            &governance,
+            serde_json::to_string_pretty(&json!({
+                "dashboardGovernance": [
+                    {
+                        "dashboardUid": "cpu-main",
+                        "dashboardTitle": "CPU Main",
+                        "folderPath": "Platform",
+                        "panelCount": 1,
+                        "queryCount": 1
+                    }
+                ],
+                "dashboardDatasourceEdges": [
+                    {
+                        "dashboardUid": "cpu-main",
+                        "dashboardTitle": "CPU Main",
+                        "folderPath": "Platform",
+                        "datasourceUid": "prom-main",
+                        "datasource": "Prometheus Main",
+                        "family": "prometheus",
+                        "panelCount": 1,
+                        "queryCount": 1
+                    }
+                ]
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+
+        run_dashboard_topology(&TopologyArgs {
+            governance,
+            queries: None,
+            alert_contract: None,
+            output_format: TopologyOutputFormat::Text,
+            output_file: Some(output_file.clone()),
+            also_stdout: true,
+            interactive: false,
+        })
+        .unwrap();
+
+        let raw = fs::read_to_string(output_file).unwrap();
+        assert_eq!(
+            raw,
+            "Dashboard topology: nodes=2 edges=1 datasources=1 dashboards=1 panels=0 variables=0 alert-resources=0 alert-rules=0 contact-points=0 mute-timings=0 notification-policies=0 templates=0\n  datasource:prom-main --feeds--> dashboard:cpu-main\n"
+        );
+    }
 }
 
 #[cfg(test)]

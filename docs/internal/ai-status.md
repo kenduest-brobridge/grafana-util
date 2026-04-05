@@ -8,6 +8,13 @@ Current AI-maintained status only.
 - Keep this file short and current. Additive historical detail belongs in `docs/internal/archive/`.
 - Detailed 2026-03-29 through 2026-03-31 entries moved to [`archive/ai-status-archive-2026-03-31.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-03-31.md).
 
+## 2026-04-05 - Consolidate persisted-output routing for reviewable artifacts
+- State: Done
+- Scope: `rust/src/common.rs`, `rust/src/common_rust_tests.rs`, `rust/src/dashboard/inspect_paths.rs`, `rust/src/dashboard/vars.rs`, `rust/src/dashboard/topology.rs`, `rust/src/dashboard/validate.rs`, `rust/src/sync/bundle_exec_rust_tests.rs`, `docs/internal/maintainer-quickstart.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: several dashboard and sync paths already tried to keep output-file artifacts plain and avoid duplicate stdout, but they still implemented that contract through repeated command-local trim/write/print branches. ANSI stripping also rebuilt its regex each call.
+- Current Update: added a shared `emit_plain_output` helper and switched the representative dashboard paths that persist operator-facing text or JSON renderings onto the same output-routing contract. `strip_ansi_codes` now uses a precompiled regex, maintainer guidance now states the persisted-artifact rule explicitly, and focused regressions cover `common`, `inspect_paths`, `inspect-vars`, `topology`, `validate-export`, and `change bundle`.
+- Result: persisted artifacts now follow one clearer repo-owned rule: on-disk output stays plain and deterministic, and stdout is only duplicated when `--also-stdout` is set.
+
 ## 2026-04-05 - Add repo-specific AI workflow note, drift checks, GitHub templates, and AGENTS routing
 - State: Done
 - Scope: `AGENTS.md`, `docs/internal/ai-workflow-note.md`, `docs/internal/task-brief-template.md`, `.github/ISSUE_TEMPLATE/ai-task-brief.md`, `.github/PULL_REQUEST_TEMPLATE.md`, `scripts/check_ai_workflow.py`, `python/tests/test_python_check_ai_workflow.py`, `Makefile`, `docs/DEVELOPER.md`, `docs/internal/maintainer-quickstart.md`, `docs/internal/README.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

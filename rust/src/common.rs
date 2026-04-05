@@ -15,6 +15,7 @@ use std::env;
 use std::fs;
 use std::io::IsTerminal;
 use std::path::Path;
+use std::sync::OnceLock;
 use thiserror::Error;
 
 thread_local! {
@@ -27,6 +28,7 @@ const ANSI_JSON_STRING: &str = "\x1b[32m";
 const ANSI_JSON_NUMBER: &str = "\x1b[33m";
 const ANSI_JSON_BOOL: &str = "\x1b[35m";
 const ANSI_JSON_NULL: &str = "\x1b[2;90m";
+static ANSI_ESCAPE_RE: OnceLock<Regex> = OnceLock::new();
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum JsonContext {
@@ -103,7 +105,8 @@ where
 
 /// Remove ANSI escape sequences so persisted output files remain plain text.
 pub fn strip_ansi_codes(text: &str) -> String {
-    let ansi_re = Regex::new(r"\x1b\[[0-9;?]*[ -/]*[@-~]").expect("valid ANSI regex");
+    let ansi_re = ANSI_ESCAPE_RE
+        .get_or_init(|| Regex::new(r"\x1b\[[0-9;?]*[ -/]*[@-~]").expect("valid ANSI regex"));
     ansi_re.replace_all(text, "").into_owned()
 }
 
@@ -119,6 +122,25 @@ pub fn write_plain_output_file(path: &Path, output: &str) -> Result<()> {
 
 pub fn should_print_stdout(output_file: Option<&Path>, also_stdout: bool) -> bool {
     output_file.is_none() || also_stdout
+}
+
+/// Persist plain-text artifacts and optionally mirror them to stdout.
+pub fn emit_plain_output(
+    output: &str,
+    output_file: Option<&Path>,
+    also_stdout: bool,
+) -> Result<()> {
+    let normalized = output.trim_end_matches('\n');
+    if normalized.is_empty() {
+        return Ok(());
+    }
+    if let Some(path) = output_file {
+        write_plain_output_file(path, normalized)?;
+    }
+    if should_print_stdout(output_file, also_stdout) {
+        println!("{normalized}");
+    }
+    Ok(())
 }
 
 fn colorize_json_pretty(rendered: &str) -> String {

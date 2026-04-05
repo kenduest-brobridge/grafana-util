@@ -192,6 +192,7 @@ Use these pages for the matching concern:
 - Handbook content and command-reference content are separate source layers.
   Do not merge them into one doc family just because they cross-link.
 - Generated artifacts should not become the only place a change is made.
+- When a command writes a persisted artifact, keep the on-disk output plain text and only duplicate stdout when `--also-stdout` is explicitly set.
 - `docs/internal/ai-status.md` and `docs/internal/ai-changes.md` are trace
   files, not long-form design docs.
 

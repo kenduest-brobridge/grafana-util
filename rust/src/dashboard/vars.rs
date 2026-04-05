@@ -8,8 +8,8 @@ use serde_json::{Map, Value};
 use std::path::PathBuf;
 
 use crate::common::{
-    message, object_field, render_json_value, should_print_stdout, string_field, value_as_object,
-    write_plain_output_file, Result,
+    emit_plain_output, message, object_field, render_json_value, string_field, value_as_object,
+    Result,
 };
 use crate::http::JsonHttpClient;
 use crate::tabular_output::render_yaml;
@@ -50,17 +50,7 @@ fn write_inspect_vars_output(
     output_file: Option<&PathBuf>,
     also_stdout: bool,
 ) -> Result<()> {
-    let normalized = output.trim_end_matches('\n');
-    if normalized.is_empty() {
-        return Ok(());
-    }
-    if let Some(output_path) = output_file {
-        write_plain_output_file(output_path, normalized)?;
-    }
-    if should_print_stdout(output_file.map(PathBuf::as_path), also_stdout) {
-        println!("{normalized}");
-    }
-    Ok(())
+    emit_plain_output(output, output_file.map(PathBuf::as_path), also_stdout)
 }
 
 pub(crate) fn render_dashboard_variable_output(
@@ -429,5 +419,31 @@ fn format_compact_value(value: &Value) -> String {
             }
             serde_json::to_string(object).unwrap_or_default()
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use tempfile::tempdir;
+
+    #[test]
+    fn write_inspect_vars_output_strips_ansi_and_trailing_newlines() {
+        let temp = tempdir().unwrap();
+        let output_file = temp.path().join("inspect-vars.txt");
+
+        write_inspect_vars_output(
+            "Dashboard variables: CPU Main (cpu-main)\n\u{1b}[1;36mVariable count: 1\u{1b}[0m\n\n",
+            Some(&output_file),
+            false,
+        )
+        .unwrap();
+
+        let raw = fs::read_to_string(output_file).unwrap();
+        assert_eq!(
+            raw,
+            "Dashboard variables: CPU Main (cpu-main)\nVariable count: 1\n"
+        );
     }
 }

@@ -5,7 +5,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::common::{message, object_field, should_print_stdout, write_plain_output_file, Result};
+use crate::common::{emit_plain_output, message, object_field, Result};
 
 use super::super::files::{load_datasource_inventory, load_folder_inventory};
 use super::super::inspect_live::load_variant_index_entries;
@@ -33,18 +33,7 @@ pub(crate) fn write_inspect_output(
     output_file: Option<&PathBuf>,
     also_stdout: bool,
 ) -> Result<()> {
-    let normalized = output.trim_end_matches('\n');
-    if normalized.is_empty() {
-        return Ok(());
-    }
-    if let Some(output_path) = output_file {
-        write_plain_output_file(output_path, normalized)?;
-    }
-    if should_print_stdout(output_file.map(PathBuf::as_path), also_stdout) {
-        print!("{normalized}");
-        println!();
-    }
-    Ok(())
+    emit_plain_output(output, output_file.map(PathBuf::as_path), also_stdout)
 }
 
 fn load_export_identity_values(
@@ -267,5 +256,28 @@ pub(crate) fn resolve_export_folder_path(
         DEFAULT_FOLDER_TITLE.to_string()
     } else {
         folder_name
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use tempfile::tempdir;
+
+    #[test]
+    fn write_inspect_output_strips_ansi_and_trailing_newlines() {
+        let temp = tempdir().unwrap();
+        let output_file = temp.path().join("inspect.txt");
+
+        write_inspect_output(
+            "{\n  \u{1b}[1;36m\"summary\"\u{1b}[0m: \u{1b}[33m1\u{1b}[0m\n}\n\n",
+            Some(&output_file),
+            false,
+        )
+        .unwrap();
+
+        let raw = fs::read_to_string(output_file).unwrap();
+        assert_eq!(raw, "{\n  \"summary\": 1\n}\n");
     }
 }
