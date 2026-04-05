@@ -116,6 +116,55 @@ pub(crate) fn project_status_freshness_samples_from_records<'a>(
         .collect()
 }
 
+pub(crate) fn dashboard_project_status_freshness_samples<'a>(
+    inputs: &'a LiveDashboardProjectStatusInputs,
+) -> Vec<ProjectStatusFreshnessSample<'a>> {
+    let mut freshness_samples =
+        project_status_freshness_samples_from_records("dashboard-search", &inputs.dashboard_summaries);
+    freshness_samples.extend(project_status_freshness_samples_from_records(
+        "datasource-list",
+        &inputs.datasources,
+    ));
+    freshness_samples
+}
+
+pub(crate) fn alert_project_status_freshness_samples<'a>(
+    documents: &'a ProjectStatusAlertSurfaceDocuments,
+) -> Vec<ProjectStatusFreshnessSample<'a>> {
+    let mut freshness_samples = Vec::new();
+    if let Some(document) = documents.rules.as_ref() {
+        freshness_samples.extend(project_status_freshness_samples_from_value(
+            "alert-rules",
+            document,
+        ));
+    }
+    if let Some(document) = documents.contact_points.as_ref() {
+        freshness_samples.extend(project_status_freshness_samples_from_value(
+            "alert-contact-points",
+            document,
+        ));
+    }
+    if let Some(document) = documents.mute_timings.as_ref() {
+        freshness_samples.extend(project_status_freshness_samples_from_value(
+            "alert-mute-timings",
+            document,
+        ));
+    }
+    if let Some(document) = documents.policies.as_ref() {
+        freshness_samples.extend(project_status_freshness_samples_from_value(
+            "alert-policies",
+            document,
+        ));
+    }
+    if let Some(document) = documents.templates.as_ref() {
+        freshness_samples.extend(project_status_freshness_samples_from_value(
+            "alert-templates",
+            document,
+        ));
+    }
+    freshness_samples
+}
+
 #[cfg(test)]
 fn stamp_live_domain_freshness(
     mut domain: ProjectDomainStatus,
@@ -411,12 +460,14 @@ where
 #[cfg(test)]
 mod tests {
     use super::{
+        alert_project_status_freshness_samples,
         collect_live_dashboard_project_status_inputs,
         collect_live_dashboard_project_status_inputs_with_request, fetch_current_org,
         fetch_current_org_with_request, latest_dashboard_version_timestamp,
         latest_dashboard_version_timestamp_with_request, list_visible_orgs,
         list_visible_orgs_with_request, load_alert_surface_documents,
-        load_alert_surface_documents_with_request,
+        load_alert_surface_documents_with_request, ProjectStatusAlertSurfaceDocuments,
+        dashboard_project_status_freshness_samples,
     };
     use crate::dashboard::DEFAULT_PAGE_SIZE;
     use crate::http::{JsonHttpClient, JsonHttpClientConfig};
@@ -577,6 +628,26 @@ mod tests {
     }
 
     #[test]
+    fn dashboard_project_status_freshness_samples_collects_dashboard_and_datasource_timestamps() {
+        let (client, _, handle) = build_test_client(vec![
+                http_response(
+                    "200 OK",
+                    r#"[{"uid":"cpu-main","title":"CPU Main","updatedAt":"2026-01-01T00:00:00Z"}]"#,
+                ),
+                http_response(
+                    "200 OK",
+                    r#"[{"uid":"prom-main","name":"Prometheus Main","created":"2026-01-01T01:00:00Z"}]"#,
+                ),
+            ]);
+        let inputs = collect_live_dashboard_project_status_inputs(&client, DEFAULT_PAGE_SIZE).unwrap();
+        handle.join().unwrap();
+
+        let samples = dashboard_project_status_freshness_samples(&inputs);
+
+        assert_eq!(samples.len(), 2);
+    }
+
+    #[test]
     fn latest_dashboard_version_timestamp_with_request_uses_first_summary_uid() {
         let timestamp = latest_dashboard_version_timestamp_with_request(
             |method, path, params, _payload| {
@@ -629,6 +700,21 @@ mod tests {
         });
 
         assert!(docs.templates.is_none());
+    }
+
+    #[test]
+    fn alert_project_status_freshness_samples_collects_alert_surface_timestamps() {
+        let documents = ProjectStatusAlertSurfaceDocuments {
+            rules: Some(json!([{"updated":"2026-01-01T00:00:00Z"}])),
+            contact_points: Some(json!([{"created":"2026-01-01T01:00:00Z"}])),
+            mute_timings: None,
+            policies: Some(json!({"modified":"2026-01-01T02:00:00Z"})),
+            templates: Some(json!({"createdAt":"2026-01-01T03:00:00Z"})),
+        };
+
+        let samples = alert_project_status_freshness_samples(&documents);
+
+        assert_eq!(samples.len(), 4);
     }
 
     #[test]

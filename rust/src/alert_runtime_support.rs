@@ -43,17 +43,10 @@ fn path_string(path: &Path) -> String {
 }
 
 #[allow(unused_imports)]
-pub(crate) use crate::grafana_api::alert_live::{
+use crate::grafana_api::alert_live::{
     apply_create_with_request, apply_delete_with_request, apply_update_with_request,
     fetch_live_compare_document_with_request, request_array_with_request,
     request_live_resources_by_kind_with_request, request_optional_object_with_request,
-};
-
-#[cfg(test)]
-#[allow(unused_imports)]
-pub(crate) use crate::grafana_api::alert_live::{
-    determine_import_action_with_request, import_resource_document_with_request,
-    request_object_with_request,
 };
 
 fn plan_summary(rows: &[Value]) -> Value {

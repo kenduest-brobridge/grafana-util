@@ -118,14 +118,7 @@ fn build_live_dashboard_status(client: &JsonHttpClient) -> ProjectDomainStatus {
         Ok(inputs) => {
             let status = build_live_dashboard_domain_status_from_inputs(&inputs);
             let mut freshness_samples =
-                project_status_live::project_status_freshness_samples_from_records(
-                    "dashboard-search",
-                    &inputs.dashboard_summaries,
-                );
-            freshness_samples.extend(project_status_live::project_status_freshness_samples_from_records(
-                "datasource-list",
-                &inputs.datasources,
-            ));
+                project_status_live::dashboard_project_status_freshness_samples(&inputs);
             let dashboard_version_timestamp = if freshness_samples.is_empty() {
                 project_status_live::latest_dashboard_version_timestamp(client, &inputs.dashboard_summaries)
             } else {
@@ -193,37 +186,7 @@ fn build_live_alert_status(client: &JsonHttpClient) -> ProjectDomainStatus {
             "restore alert read access, then re-run live status",
         )
     });
-    let mut freshness_samples = Vec::new();
-    if let Some(document) = documents.rules.as_ref() {
-        freshness_samples.extend(project_status_live::project_status_freshness_samples_from_value(
-            "alert-rules",
-            document,
-        ));
-    }
-    if let Some(document) = documents.contact_points.as_ref() {
-        freshness_samples.extend(project_status_live::project_status_freshness_samples_from_value(
-            "alert-contact-points",
-            document,
-        ));
-    }
-    if let Some(document) = documents.mute_timings.as_ref() {
-        freshness_samples.extend(project_status_live::project_status_freshness_samples_from_value(
-            "alert-mute-timings",
-            document,
-        ));
-    }
-    if let Some(document) = documents.policies.as_ref() {
-        freshness_samples.extend(project_status_live::project_status_freshness_samples_from_value(
-            "alert-policies",
-            document,
-        ));
-    }
-    if let Some(document) = documents.templates.as_ref() {
-        freshness_samples.extend(project_status_live::project_status_freshness_samples_from_value(
-            "alert-templates",
-            document,
-        ));
-    }
+    let freshness_samples = project_status_live::alert_project_status_freshness_samples(&documents);
     stamp_live_domain_freshness(status, &freshness_samples)
 }
 

@@ -959,7 +959,7 @@ settings:
 
 #[test]
 fn request_optional_object_with_request_treats_http_404_as_missing() {
-    let result = super::alert_runtime_support::request_optional_object_with_request(
+    let result = crate::grafana_api::alert_live::request_optional_object_with_request(
         |_method, path, _params, _payload| {
             Err(api_response(
                 404,

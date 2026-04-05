@@ -8,6 +8,12 @@ Current AI change log only.
 - Keep this file limited to the latest active architecture and maintenance changes.
 - Detailed 2026-03-29 through 2026-03-31 entries moved to [`archive/ai-changes-archive-2026-03-31.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-03-31.md).
 
+## 2026-04-06 - Slim project-status runtime by sharing dashboard and alert freshness assembly
+- Summary: moved the remaining project-status-specific freshness sample assembly for dashboards and alerts out of `project_status_live_runtime.rs` and into `grafana_api::project_status_live`. The runtime still owns domain status aggregation, freshness stamping, and final `ProjectStatus` assembly, but it now consumes shared helpers for dashboard-search/datasource-list and alert-surface freshness samples instead of rebuilding those loops locally.
+- Tests: `cargo check --manifest-path rust/Cargo.toml --quiet`; `cargo check --manifest-path rust/Cargo.toml --quiet --no-default-features`; `cargo test --manifest-path rust/Cargo.toml --quiet project_status_cli_rust_tests -- --test-threads=1`; `cargo test --manifest-path rust/Cargo.toml --quiet alert_rust_tests -- --test-threads=1`; `cargo test --manifest-path rust/Cargo.toml --quiet grafana_api -- --test-threads=1`; `git diff --check`
+- Impact: `rust/src/project_status_live_runtime.rs`, `rust/src/grafana_api/project_status_live.rs`, `rust/src/alert_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: low. The behavior should be unchanged, but future project-status work should keep live freshness assembly in the shared helper module and leave aggregation/scoring/final assembly in the runtime layer.
+
 ## 2026-04-06 - Keep alert runtime orchestration local while shared alert helpers own request seams
 - Summary: kept the alert workflow split where it belongs. `grafana_api::alert_live` now uses the shared alert request helper directly rather than a narrower re-export path, `request_optional_object_with_request` keeps the existing test seam shape, and `alert_runtime_support.rs` remains focused on plan/build/apply orchestration instead of re-owning live request construction. This was a helper-ownership and compile-hygiene pass, not a new SDK layer.
 - Tests: `cargo check --manifest-path rust/Cargo.toml --quiet`; `cargo test --manifest-path rust/Cargo.toml --quiet alert_rust_tests -- --test-threads=1`; `cargo test --manifest-path rust/Cargo.toml --quiet grafana_api -- --test-threads=1`

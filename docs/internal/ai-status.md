@@ -8,6 +8,13 @@ Current AI-maintained status only.
 - Keep this file short and current. Additive historical detail belongs in `docs/internal/archive/`.
 - Detailed 2026-03-29 through 2026-03-31 entries moved to [`archive/ai-status-archive-2026-03-31.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-03-31.md).
 
+## 2026-04-06 - Slim project-status runtime by sharing dashboard and alert freshness assembly
+- State: Done
+- Scope: `rust/src/project_status_live_runtime.rs`, `rust/src/grafana_api/project_status_live.rs`, `rust/src/alert_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: `project_status_live_runtime.rs` still assembled dashboard freshness samples and alert surface freshness samples locally even after the shared project-status collectors were in place.
+- Current Update: moved the dashboard freshness sample assembly and alert surface freshness sample assembly into `grafana_api::project_status_live`, then switched the runtime to consume those shared helpers while keeping the final status assembly, freshness stamping, and aggregation local.
+- Result: the runtime is thinner and now focuses on per-domain assembly and aggregation, while the project-status-specific live read/freshness helpers live in the shared helper module.
+
 ## 2026-04-06 - Keep alert runtime orchestration local while shared alert helpers own request seams
 - State: Done
 - Scope: `rust/src/grafana_api/alert_live.rs`, `rust/src/grafana_api/alerting.rs`, `rust/src/alert_runtime_support.rs`, `rust/src/alert_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

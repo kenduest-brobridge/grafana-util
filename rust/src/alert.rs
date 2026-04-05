@@ -81,7 +81,7 @@ pub use alert_runtime_support::{
 };
 pub use alert_runtime_support::{build_alert_diff_document, build_alert_import_dry_run_document};
 #[cfg(test)]
-pub(crate) use alert_runtime_support::{
+pub(crate) use crate::grafana_api::alert_live::{
     determine_import_action_with_request, fetch_live_compare_document_with_request,
     import_resource_document_with_request,
 };
