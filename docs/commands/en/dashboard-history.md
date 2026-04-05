@@ -26,6 +26,34 @@ Restore creates a new latest revision instead of overwriting the historical vers
 - `--dry-run` shows the restore intent without changing Grafana.
 - A real restore requires confirmation with `--yes`.
 
+## JSON contracts for CI
+
+Use the built-in schema help when automation needs stable routing rules:
+
+- `grafana-util dashboard history --help-schema`
+- `grafana-util dashboard history list --help-schema`
+- `grafana-util dashboard history restore --help-schema`
+- `grafana-util dashboard history export --help-schema`
+
+Routing rule:
+
+1. inspect `kind`
+2. confirm `schemaVersion`
+3. only then branch on nested fields
+
+Practical mapping:
+
+- `dashboard history list --output-format json` -> `grafana-util-dashboard-history-list`
+- `dashboard history restore --dry-run --output-format json` -> `grafana-util-dashboard-history-restore`
+- `dashboard history restore --output-format json` -> the same contract shape, but live execution still creates a new latest revision
+- `dashboard history export --output ./cpu-main.history.json` -> `grafana-util-dashboard-history-export`
+
+Top-level keys worth remembering:
+
+- list -> `kind`, `schemaVersion`, `toolVersion`, `dashboardUid`, `versionCount`, `versions`
+- restore -> `kind`, `schemaVersion`, `toolVersion`, `mode`, `dashboardUid`, `currentVersion`, `restoreVersion`, `currentTitle`, `restoredTitle`, optional `targetFolderUid`, `createsNewRevision`, `message`
+- export -> `kind`, `schemaVersion`, `toolVersion`, `dashboardUid`, `currentVersion`, `currentTitle`, `versionCount`, `versions`
+
 ## Examples
 ```bash
 # Purpose: List the last 20 dashboard revisions as a table for review.

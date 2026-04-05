@@ -26,6 +26,34 @@
 - `--dry-run` 只會顯示還原意圖，不會真的變更 Grafana。
 - 真正要還原時，必須加上 `--yes`。
 
+## 給 CI 用的 JSON contract
+
+當自動化流程需要穩定判斷輸出文件時，直接用內建 schema help：
+
+- `grafana-util dashboard history --help-schema`
+- `grafana-util dashboard history list --help-schema`
+- `grafana-util dashboard history restore --help-schema`
+- `grafana-util dashboard history export --help-schema`
+
+判斷順序建議固定成：
+
+1. 先看 `kind`
+2. 再確認 `schemaVersion`
+3. 最後才往下讀巢狀欄位
+
+常見對應：
+
+- `dashboard history list --output-format json` -> `grafana-util-dashboard-history-list`
+- `dashboard history restore --dry-run --output-format json` -> `grafana-util-dashboard-history-restore`
+- `dashboard history restore --output-format json` -> 同一種 contract，但 live 執行仍會建立新的 latest revision
+- `dashboard history export --output ./cpu-main.history.json` -> `grafana-util-dashboard-history-export`
+
+幾個值得先記住的 top-level 欄位：
+
+- list -> `kind`、`schemaVersion`、`toolVersion`、`dashboardUid`、`versionCount`、`versions`
+- restore -> `kind`、`schemaVersion`、`toolVersion`、`mode`、`dashboardUid`、`currentVersion`、`restoreVersion`、`currentTitle`、`restoredTitle`、可選的 `targetFolderUid`、`createsNewRevision`、`message`
+- export -> `kind`、`schemaVersion`、`toolVersion`、`dashboardUid`、`currentVersion`、`currentTitle`、`versionCount`、`versions`
+
 ## 範例
 ```bash
 # 用途：列出最近 20 個 dashboard revision，方便審查。

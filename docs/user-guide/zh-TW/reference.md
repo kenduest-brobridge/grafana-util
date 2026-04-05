@@ -77,6 +77,31 @@ CLI 內建快速查詢：
 
 如果你需要每種文件的 top-level 欄位細節，直接看 [change 指令頁](../../commands/zh-TW/change.md) 會最快。
 
+### 給 CI 用的 `dashboard history` JSON 文件
+
+`dashboard history` 這組指令也有穩定的 JSON contract 可供自動化流程使用。
+
+判斷順序同樣建議固定成：
+
+1. 先看 `kind`
+2. 再確認 `schemaVersion`
+3. 最後才往下讀巢狀欄位
+
+CLI 內建快速查詢：
+
+- `grafana-util dashboard history --help-schema`
+- `grafana-util dashboard history list --help-schema`
+- `grafana-util dashboard history restore --help-schema`
+- `grafana-util dashboard history export --help-schema`
+
+常見對應：
+
+- `dashboard history list --output-format json` -> `grafana-util-dashboard-history-list`
+- `dashboard history restore --dry-run --output-format json` -> `grafana-util-dashboard-history-restore`
+- `dashboard history export --output ./cpu-main.history.json` -> `grafana-util-dashboard-history-export`
+
+如果你需要每種文件的 top-level 欄位細節，直接看 [dashboard history 指令頁](../../commands/zh-TW/dashboard-history.md) 會最快。
+
 ---
 
 ## 🔐 Profile、連線與 secret 處理

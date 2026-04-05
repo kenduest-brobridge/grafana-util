@@ -428,6 +428,7 @@ pub fn execute_dashboard_inspect_live(args: &InspectLiveArgs) -> Result<Dashboar
         without_dashboard_raw: false,
         without_dashboard_prompt: true,
         without_dashboard_provisioning: true,
+        include_history: false,
         provisioning_provider_name: "grafana-utils-dashboards".to_string(),
         provisioning_provider_org_id: None,
         provisioning_provider_path: None,

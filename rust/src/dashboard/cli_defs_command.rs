@@ -75,6 +75,12 @@ pub struct ExportArgs {
     pub without_dashboard_provisioning: bool,
     #[arg(
         long,
+        default_value_t = false,
+        help = "Write dashboard revision history artifacts under a history/ subdirectory for each exported org scope."
+    )]
+    pub include_history: bool,
+    #[arg(
+        long,
         default_value = "grafana-utils-dashboards",
         help = "Set the Grafana provisioning provider name written into provisioning/provisioning/dashboards.yaml."
     )]
@@ -951,8 +957,8 @@ pub enum DashboardCommand {
     CloneLive(CloneLiveArgs),
     #[command(
         name = "export",
-        about = "Export dashboards to raw/, prompt/, and provisioning/ files.",
-        after_help = "The provisioning export writes a Grafana file-provisioning provider file at provisioning/provisioning/dashboards.yaml. Override the provider name, org ID, path, or update behavior when you need a different on-disk deployment target.\n\nExamples:\n\n  Export dashboards from the current org with Basic auth:\n    grafana-util export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./dashboards --overwrite\n\n  Export dashboards across all visible orgs with Basic auth:\n    grafana-util export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --export-dir ./dashboards --overwrite\n\n  Export dashboards with a custom provisioning provider path:\n    grafana-util export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./dashboards --overwrite --provisioning-provider-name grafana-utils-prod --provisioning-provider-org-id 2 --provisioning-provider-path /srv/grafana/dashboards --provisioning-provider-disable-deletion --provisioning-provider-update-interval-seconds 60\n\n  Export dashboards from one explicit org ID:\n    grafana-util export --url http://localhost:3000 --basic-user admin --basic-password admin --org-id 2 --export-dir ./dashboards --overwrite\n\n  Export dashboards from the current org with an API token:\n    export GRAFANA_API_TOKEN='your-token'\n    grafana-util export --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --export-dir ./dashboards --overwrite"
+        about = "Export dashboards to raw/, prompt/, provisioning/, and optional history/ files.",
+        after_help = "The provisioning export writes a Grafana file-provisioning provider file at provisioning/provisioning/dashboards.yaml. Override the provider name, org ID, path, or update behavior when you need a different on-disk deployment target. Add --include-history when you also want per-dashboard revision history under history/ for each exported scope.\n\nExamples:\n\n  Export dashboards from the current org with Basic auth and history artifacts:\n    grafana-util export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./dashboards --overwrite --include-history\n\n  Export dashboards across all visible orgs with Basic auth and history artifacts:\n    grafana-util export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --export-dir ./dashboards --overwrite --include-history\n\n  Export dashboards with a custom provisioning provider path:\n    grafana-util export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./dashboards --overwrite --provisioning-provider-name grafana-utils-prod --provisioning-provider-org-id 2 --provisioning-provider-path /srv/grafana/dashboards --provisioning-provider-disable-deletion --provisioning-provider-update-interval-seconds 60\n\n  Export dashboards from one explicit org ID:\n    grafana-util export --url http://localhost:3000 --basic-user admin --basic-password admin --org-id 2 --export-dir ./dashboards --overwrite\n\n  Export dashboards from the current org with an API token:\n    export GRAFANA_API_TOKEN='your-token'\n    grafana-util export --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --export-dir ./dashboards --overwrite"
     )]
     Export(ExportArgs),
     #[command(

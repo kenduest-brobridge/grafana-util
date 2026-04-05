@@ -136,6 +136,40 @@ class PublicDocsEvidenceTests(unittest.TestCase):
             for marker in markers:
                 self.assertIn(marker, text, path.name)
 
+    def test_dashboard_export_docs_cover_history_artifacts(self):
+        expectations = {
+            REPO_ROOT / "docs" / "commands" / "en" / "dashboard-export.md": ["--include-history", "history/"],
+            REPO_ROOT / "docs" / "commands" / "zh-TW" / "dashboard-export.md": ["--include-history", "history/"],
+            REPO_ROOT / "docs" / "user-guide" / "en" / "dashboard.md": ["--include-history", "history/"],
+            REPO_ROOT / "docs" / "user-guide" / "zh-TW" / "dashboard.md": ["--include-history", "history/"],
+        }
+        for path, markers in expectations.items():
+            text = path.read_text(encoding="utf-8")
+            for marker in markers:
+                self.assertIn(marker, text, path.name)
+
+    def test_dashboard_history_docs_cover_schema_help_and_contract_markers(self):
+        expectations = {
+            REPO_ROOT / "docs" / "commands" / "en" / "dashboard-history.md": [
+                "--help-schema",
+                "schemaVersion",
+                "grafana-util-dashboard-history-list",
+                "grafana-util-dashboard-history-restore",
+                "grafana-util-dashboard-history-export",
+            ],
+            REPO_ROOT / "docs" / "commands" / "zh-TW" / "dashboard-history.md": [
+                "--help-schema",
+                "schemaVersion",
+                "grafana-util-dashboard-history-list",
+                "grafana-util-dashboard-history-restore",
+                "grafana-util-dashboard-history-export",
+            ],
+        }
+        for path, markers in expectations.items():
+            text = path.read_text(encoding="utf-8")
+            for marker in markers:
+                self.assertIn(marker, text, path.name)
+
     def test_alert_command_pages_include_before_after_guidance(self):
         expectations = {
             REPO_ROOT / "docs" / "commands" / "en" / "alert-export.md": ["## Before / After", "## What success looks like", "## Failure checks"],

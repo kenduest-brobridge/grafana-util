@@ -241,6 +241,7 @@ pub fn build_snapshot_dashboard_export_args(args: &SnapshotExportArgs) -> Dashbo
         without_dashboard_raw: false,
         without_dashboard_prompt: false,
         without_dashboard_provisioning: false,
+        include_history: false,
         provisioning_provider_name: "grafana-utils-dashboards".to_string(),
         provisioning_provider_org_id: None,
         provisioning_provider_path: None,

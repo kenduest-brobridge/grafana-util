@@ -14,6 +14,7 @@ use std::path::{Path, PathBuf};
 use crate::common::{message, sanitize_path_component, string_field, Result};
 use crate::http::JsonHttpClient;
 
+use super::history::build_dashboard_history_export_document_with_request;
 use super::list::{
     attach_dashboard_org_metadata, collect_dashboard_source_metadata,
     fetch_current_org_with_request, list_orgs_with_request, org_id_value,
@@ -68,6 +69,24 @@ pub fn build_export_variant_dirs(output_dir: &Path) -> (PathBuf, PathBuf, PathBu
         output_dir.join(PROMPT_EXPORT_SUBDIR),
         output_dir.join(PROVISIONING_EXPORT_SUBDIR),
     )
+}
+
+fn build_history_output_path(history_dir: &Path, uid: &str) -> PathBuf {
+    history_dir.join(format!("{}.history.json", sanitize_path_component(uid)))
+}
+
+fn write_history_document<T: Serialize>(
+    payload: &T,
+    output_path: &Path,
+    overwrite: bool,
+) -> Result<()> {
+    if output_path.exists() && !overwrite {
+        return Err(message(format!(
+            "Refusing to overwrite existing file: {}. Use --overwrite.",
+            output_path.display()
+        )));
+    }
+    write_json_document(payload, output_path)
 }
 
 #[derive(Serialize)]
@@ -224,6 +243,7 @@ where
         args.export_dir.clone()
     };
     let (raw_dir, prompt_dir, provisioning_dir) = build_export_variant_dirs(&scope_output_dir);
+    let history_dir = scope_output_dir.join("history");
     let provisioning_dashboards_dir = provisioning_dir.join("dashboards");
     let provisioning_config_dir = provisioning_dir.join("provisioning");
     if !args.dry_run && !args.without_dashboard_raw {
@@ -235,6 +255,9 @@ where
     if !args.dry_run && !args.without_dashboard_provisioning {
         fs::create_dir_all(&provisioning_dashboards_dir)?;
         fs::create_dir_all(&provisioning_config_dir)?;
+    }
+    if !args.dry_run && args.include_history {
+        fs::create_dir_all(&history_dir)?;
     }
     let datasource_list = list_datasources_with_request(&mut scoped_request)?;
     let datasource_inventory = datasource_list
@@ -285,6 +308,23 @@ where
             collect_dashboard_source_metadata(&payload, &datasource_catalog)?;
         used_source_names.extend(source_names);
         used_source_uids.extend(source_uids);
+        if args.include_history {
+            let history_document = build_dashboard_history_export_document_with_request(
+                &mut scoped_request,
+                &uid,
+                20,
+            )?;
+            let history_path = build_history_output_path(&history_dir, &uid);
+            if !args.dry_run {
+                write_history_document(&history_document, &history_path, args.overwrite)?;
+            }
+            if args.verbose {
+                println!(
+                    "{}",
+                    format_export_verbose_line("history", &uid, &history_path, args.dry_run)
+                );
+            }
+        }
         let mut item = super::build_dashboard_index_item(&summary, &uid);
         if !args.without_dashboard_raw {
             let raw_document = build_preserved_web_import_document(&payload)?;

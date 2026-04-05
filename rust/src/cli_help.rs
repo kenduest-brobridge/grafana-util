@@ -21,7 +21,7 @@ use crate::project_status_command::ProjectStatusCliArgs;
 use crate::snapshot::root_command as snapshot_root_command;
 use crate::sync::SyncCliArgs;
 
-pub(crate) const UNIFIED_DASHBOARD_HELP_TEXT: &str = "Examples:\n\n  grafana-util dashboard browse --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\"\n  grafana-util dashboard get --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --dashboard-uid cpu-main --output ./cpu-main.json\n  grafana-util dashboard clone-live --url http://localhost:3000 --basic-user admin --basic-password admin --source-uid cpu-main --output ./cpu-main-clone.json\n  grafana-util dashboard export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./dashboards --overwrite\n  grafana-util dashboard raw-to-prompt --input-file ./dashboards/raw/cpu-main.json --datasource-map ./datasource-map.json --resolution exact\n  grafana-util dashboard diff --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/raw\n  grafana-util dashboard patch-file --input ./dashboards/raw/cpu-main.json --name 'CPU Overview' --folder-uid infra --tag prod --tag sre\n  grafana-util dashboard review --input ./drafts/cpu-main.json --output-format yaml\n  grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --basic-password admin --input ./drafts/cpu-main.json --dry-run --table";
+pub(crate) const UNIFIED_DASHBOARD_HELP_TEXT: &str = "Examples:\n\n  grafana-util dashboard browse --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\"\n  grafana-util dashboard get --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --dashboard-uid cpu-main --output ./cpu-main.json\n  grafana-util dashboard clone-live --url http://localhost:3000 --basic-user admin --basic-password admin --source-uid cpu-main --output ./cpu-main-clone.json\n  grafana-util dashboard export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./dashboards --overwrite --include-history\n  grafana-util dashboard raw-to-prompt --input-file ./dashboards/raw/cpu-main.json --datasource-map ./datasource-map.json --resolution exact\n  grafana-util dashboard diff --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/raw\n  grafana-util dashboard patch-file --input ./dashboards/raw/cpu-main.json --name 'CPU Overview' --folder-uid infra --tag prod --tag sre\n  grafana-util dashboard review --input ./drafts/cpu-main.json --output-format yaml\n  grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --basic-password admin --input ./drafts/cpu-main.json --dry-run --table";
 pub(crate) const UNIFIED_DATASOURCE_HELP_TEXT: &str = "Examples:\n\n  grafana-util datasource browse --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\"\n  grafana-util datasource inspect-export --input-dir ./datasources --json\n  grafana-util datasource list --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --json\n  grafana-util datasource import --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --import-dir ./datasources --dry-run --json";
 pub(crate) const UNIFIED_SYNC_HELP_TEXT: &str = "Examples:\n\n  grafana-util change inspect --dashboard-export-dir ./dashboards/raw --output-format table\n  grafana-util change preview --fetch-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output-format json\n  grafana-util change apply --preview-file ./change-preview.json --approve --execute-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\"";
 pub(crate) const UNIFIED_ALERT_HELP_TEXT: &str = "Examples:\n\n  grafana-util alert export --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output-dir ./alerts --overwrite\n  grafana-util alert import --url http://localhost:3000 --import-dir ./alerts/raw --replace-existing --dry-run --json\n  grafana-util alert list-rules --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json";
@@ -31,7 +31,7 @@ pub(crate) const DASHBOARD_BROWSE_HELP_TEXT: &str = "Examples:\n\n  grafana-util
 pub(crate) const DASHBOARD_GET_HELP_TEXT: &str = "Examples:\n\n  grafana-util dashboard get --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --dashboard-uid cpu-main --output ./cpu-main.json\n  grafana-util dashboard get --profile prod --url http://localhost:3000 --basic-user admin --basic-password admin --dashboard-uid cpu-main --output ./cpu-main.json";
 pub(crate) const DASHBOARD_CLONE_LIVE_HELP_TEXT: &str = "Examples:\n\n  grafana-util dashboard clone-live --url http://localhost:3000 --basic-user admin --basic-password admin --source-uid cpu-main --output ./cpu-main-clone.json\n  grafana-util dashboard clone-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --source-uid cpu-main --name 'CPU Clone' --uid cpu-main-clone --folder-uid infra --output ./cpu-main-clone.json";
 pub(crate) const DASHBOARD_LIST_HELP_TEXT: &str = "Examples:\n\n  grafana-util dashboard list --url http://localhost:3000 --basic-user admin --basic-password admin\n  grafana-util dashboard list --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --json\n  grafana-util dashboard list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json";
-pub(crate) const DASHBOARD_EXPORT_HELP_TEXT: &str = "Examples:\n\n  grafana-util dashboard export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./dashboards --overwrite\n  grafana-util dashboard export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --export-dir ./dashboards --overwrite\n  grafana-util dashboard export --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --export-dir ./dashboards --overwrite";
+pub(crate) const DASHBOARD_EXPORT_HELP_TEXT: &str = "Examples:\n\n  grafana-util dashboard export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./dashboards --overwrite --include-history\n  grafana-util dashboard export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --export-dir ./dashboards --overwrite --include-history\n  grafana-util dashboard export --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --export-dir ./dashboards --overwrite";
 pub(crate) const DASHBOARD_RAW_TO_PROMPT_HELP_TEXT: &str = "Examples:\n\n  grafana-util dashboard raw-to-prompt --input-file ./dashboards/raw/cpu-main.json\n  grafana-util dashboard raw-to-prompt --input-file ./dashboards/raw/cpu-main.json --datasource-map ./datasource-map.json --resolution strict --output-format json\n  grafana-util dashboard raw-to-prompt --input-dir ./dashboards/raw --output-dir ./dashboards/prompt --overwrite";
 pub(crate) const DASHBOARD_IMPORT_HELP_TEXT: &str = "Examples:\n\n  grafana-util dashboard import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/raw --replace-existing\n  grafana-util dashboard import --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --import-dir ./dashboards/raw --dry-run --table\n  grafana-util dashboard import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/raw --interactive --replace-existing";
 pub(crate) const DASHBOARD_PATCH_FILE_HELP_TEXT: &str = "Examples:\n\n  grafana-util dashboard patch-file --input ./dashboards/raw/cpu-main.json --name 'CPU Overview' --folder-uid infra --tag prod --tag sre\n  grafana-util dashboard patch-file --input ./drafts/cpu-main.json --output ./drafts/cpu-main-patched.json --uid cpu-main --message 'Add folder metadata before publish'";
@@ -249,6 +249,10 @@ const CHANGE_BUNDLE_SCHEMA_HELP_TEXT: &str = "Change bundle JSON contract\n\nCom
 - providers
 - secretPlaceholders
 - alertArtifacts";
+const DASHBOARD_HISTORY_SCHEMA_ROOT_HELP_TEXT: &str = "Dashboard history JSON schema guide\n\nUse this help surface when CI, scripts, or external tooling need to understand the machine-readable documents emitted by `dashboard history`.\n\nGeneral rule:\n- Branch on `kind` plus `schemaVersion` before reading nested fields.\n- `dashboard history list` and `dashboard history restore` switch machine-readable output with `--output-format json`.\n- `dashboard history export` always writes a JSON artifact through `--output`.\n- `dashboard history restore` does not rewind Grafana history in place; it copies one historical version forward as a new latest revision.\n\nSubcommand contracts:\n- list -> grafana-util-dashboard-history-list\n  top-level keys: kind, schemaVersion, toolVersion, dashboardUid, versionCount, versions\n- restore -> grafana-util-dashboard-history-restore\n  top-level keys: kind, schemaVersion, toolVersion, mode, dashboardUid, currentVersion, restoreVersion, currentTitle, restoredTitle, optional targetFolderUid, createsNewRevision, message\n- export -> grafana-util-dashboard-history-export\n  top-level keys: kind, schemaVersion, toolVersion, dashboardUid, currentVersion, currentTitle, versionCount, versions\n\nQuick lookups:\n- grafana-util dashboard history --help-schema\n- grafana-util dashboard history list --help-schema\n- grafana-util dashboard history restore --help-schema\n- grafana-util dashboard history export --help-schema";
+const DASHBOARD_HISTORY_LIST_SCHEMA_HELP_TEXT: &str = "Dashboard history list JSON schema\n\nCommand:\n  grafana-util dashboard history list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --dashboard-uid cpu-main --output-format json\n\nkind:\n  grafana-util-dashboard-history-list\n\nTop-level keys:\n- kind\n- schemaVersion\n- toolVersion\n- dashboardUid\n- versionCount\n- versions[]\n  - version\n  - created\n  - createdBy\n  - message";
+const DASHBOARD_HISTORY_RESTORE_SCHEMA_HELP_TEXT: &str = "Dashboard history restore JSON schema\n\nCommand:\n  grafana-util dashboard history restore --url http://localhost:3000 --basic-user admin --basic-password admin --dashboard-uid cpu-main --version 17 --dry-run --output-format json\n\nkind:\n  grafana-util-dashboard-history-restore\n\nTop-level keys:\n- kind\n- schemaVersion\n- toolVersion\n- mode\n  - dry-run\n  - live\n- dashboardUid\n- currentVersion\n- restoreVersion\n- currentTitle\n- restoredTitle\n- optional targetFolderUid\n- createsNewRevision\n- message\n\nNotes:\n- `--dry-run` renders the same contract without mutating Grafana.\n- A live restore still creates a new latest revision; it does not remove the historical version you selected.";
+const DASHBOARD_HISTORY_EXPORT_SCHEMA_HELP_TEXT: &str = "Dashboard history export JSON schema\n\nCommand:\n  grafana-util dashboard history export --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --dashboard-uid cpu-main --output ./cpu-main.history.json\n\nkind:\n  grafana-util-dashboard-history-export\n\nArtifact notes:\n- This command always writes the JSON contract to `--output`.\n- Use `--overwrite` when you intentionally want to replace an existing artifact file.\n\nTop-level keys:\n- kind\n- schemaVersion\n- toolVersion\n- dashboardUid\n- currentVersion\n- currentTitle\n- versionCount\n- versions[]\n  - version\n  - created\n  - createdBy\n  - message\n  - dashboard";
 
 fn render_long_help_with_color_choice(command: &mut clap::Command, colorize: bool) -> String {
     let configured = std::mem::take(command).color(if colorize {
@@ -355,6 +359,16 @@ fn render_change_schema_help(target: Option<&str>) -> Option<String> {
     }
 }
 
+fn render_dashboard_history_schema_help(target: Option<&str>) -> Option<String> {
+    match target {
+        None => Some(DASHBOARD_HISTORY_SCHEMA_ROOT_HELP_TEXT.to_string()),
+        Some("list") => Some(DASHBOARD_HISTORY_LIST_SCHEMA_HELP_TEXT.to_string()),
+        Some("restore") => Some(DASHBOARD_HISTORY_RESTORE_SCHEMA_HELP_TEXT.to_string()),
+        Some("export") => Some(DASHBOARD_HISTORY_EXPORT_SCHEMA_HELP_TEXT.to_string()),
+        _ => None,
+    }
+}
+
 pub fn maybe_render_unified_help_from_os_args<I, T>(iter: I, colorize: bool) -> Option<String>
 where
     I: IntoIterator<Item = T>,
@@ -373,6 +387,17 @@ where
             .filter(|value| !value.starts_with('-'))
             .map(String::as_str);
         return render_change_schema_help(target);
+    }
+    if args.len() >= 4
+        && args.get(1).map(String::as_str) == Some("dashboard")
+        && args.get(2).map(String::as_str) == Some("history")
+        && args.iter().any(|value| value == "--help-schema")
+    {
+        let target = args
+            .get(3)
+            .filter(|value| !value.starts_with('-'))
+            .map(String::as_str);
+        return render_dashboard_history_schema_help(target);
     }
     match args.as_slice() {
         [_binary] => Some(render_unified_help_text(colorize)),

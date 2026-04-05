@@ -1916,6 +1916,55 @@ fn maybe_render_unified_help_from_os_args_supports_change_subcommand_schema_help
 }
 
 #[test]
+fn maybe_render_unified_help_from_os_args_supports_dashboard_history_schema_root() {
+    let help = maybe_render_unified_help_from_os_args(
+        ["grafana-util", "dashboard", "history", "--help-schema"],
+        false,
+    )
+    .unwrap();
+    assert!(help.contains("Dashboard history JSON schema guide"));
+    assert!(help.contains("grafana-util-dashboard-history-list"));
+    assert!(help.contains("grafana-util-dashboard-history-restore"));
+    assert!(help.contains("grafana-util-dashboard-history-export"));
+    assert!(help.contains("grafana-util dashboard history export --help-schema"));
+}
+
+#[test]
+fn maybe_render_unified_help_from_os_args_supports_dashboard_history_subcommand_schema_help() {
+    let restore_help = maybe_render_unified_help_from_os_args(
+        [
+            "grafana-util",
+            "dashboard",
+            "history",
+            "restore",
+            "--help-schema",
+        ],
+        false,
+    )
+    .unwrap();
+    assert!(restore_help.contains("Dashboard history restore JSON schema"));
+    assert!(restore_help.contains("grafana-util-dashboard-history-restore"));
+    assert!(restore_help.contains("createsNewRevision"));
+    assert!(restore_help.contains("A live restore still creates a new latest revision"));
+
+    let export_help = maybe_render_unified_help_from_os_args(
+        [
+            "grafana-util",
+            "dashboard",
+            "history",
+            "export",
+            "--help-schema",
+        ],
+        false,
+    )
+    .unwrap();
+    assert!(export_help.contains("Dashboard history export JSON schema"));
+    assert!(export_help.contains("grafana-util-dashboard-history-export"));
+    assert!(export_help.contains("versions[]"));
+    assert!(export_help.contains("dashboard"));
+}
+
+#[test]
 fn alert_help_subcommands_document_management_flags_and_examples() {
     let plan_help = render_alert_subcommand_help(&["plan"]);
     assert!(plan_help.contains("--desired-dir"));

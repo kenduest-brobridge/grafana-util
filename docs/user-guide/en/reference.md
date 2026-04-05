@@ -78,6 +78,31 @@ Practical mapping:
 
 Use the dedicated [change command reference](../../commands/en/change.md) when you need the exact top-level keys for each document.
 
+### `dashboard history` JSON documents for CI
+
+`dashboard history` also exposes stable JSON contracts for automation.
+
+The same routing rule applies:
+
+1. inspect `kind`
+2. confirm `schemaVersion`
+3. only then branch on nested fields
+
+Fast lookups from the CLI:
+
+- `grafana-util dashboard history --help-schema`
+- `grafana-util dashboard history list --help-schema`
+- `grafana-util dashboard history restore --help-schema`
+- `grafana-util dashboard history export --help-schema`
+
+Practical mapping:
+
+- `dashboard history list --output-format json` -> `grafana-util-dashboard-history-list`
+- `dashboard history restore --dry-run --output-format json` -> `grafana-util-dashboard-history-restore`
+- `dashboard history export --output ./cpu-main.history.json` -> `grafana-util-dashboard-history-export`
+
+Use the dedicated [dashboard history reference](../../commands/en/dashboard-history.md) when you need the exact top-level keys for each document.
+
 ---
 
 ## Profile, connection, and secret handling

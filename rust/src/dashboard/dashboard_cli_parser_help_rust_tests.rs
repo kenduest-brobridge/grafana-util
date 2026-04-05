@@ -183,6 +183,7 @@ fn parse_cli_supports_prompt_token() {
 fn parse_cli_supports_export_org_scope_flags() {
     let org_args = parse_cli_from(["grafana-util", "export", "--org-id", "7"]);
     let all_orgs_args = parse_cli_from(["grafana-util", "export", "--all-orgs"]);
+    let history_args = parse_cli_from(["grafana-util", "export", "--include-history"]);
 
     match org_args.command {
         DashboardCommand::Export(export_args) => {
@@ -196,6 +197,15 @@ fn parse_cli_supports_export_org_scope_flags() {
         DashboardCommand::Export(export_args) => {
             assert_eq!(export_args.org_id, None);
             assert!(export_args.all_orgs);
+        }
+        _ => panic!("expected export command"),
+    }
+
+    match history_args.command {
+        DashboardCommand::Export(export_args) => {
+            assert!(export_args.include_history);
+            assert!(!export_args.all_orgs);
+            assert_eq!(export_args.org_id, None);
         }
         _ => panic!("expected export command"),
     }
@@ -462,10 +472,19 @@ fn parse_cli_rejects_conflicting_export_org_scope_flags() {
 fn export_help_explains_flat_layout() {
     let help = render_dashboard_subcommand_help("export");
     assert!(help.contains("--all-orgs"));
+    assert!(help.contains("--include-history"));
     assert!(help.contains("Prefer Basic auth when you need cross-org export"));
     assert!(help.contains("Export dashboards across all visible orgs with Basic auth"));
     assert!(help.contains("Write dashboard files directly into each export variant directory"));
     assert!(help.contains("folder-based subdirectories on disk"));
+}
+
+#[test]
+fn export_help_mentions_history_artifacts() {
+    let help = render_dashboard_subcommand_help("export");
+    assert!(help.contains("history/"));
+    assert!(help.contains("revision history"));
+    assert!(help.contains("per-dashboard revision history"));
 }
 
 #[test]

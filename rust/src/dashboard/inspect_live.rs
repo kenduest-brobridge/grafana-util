@@ -83,6 +83,7 @@ fn build_live_export_args(args: &InspectLiveArgs, export_dir: PathBuf) -> Export
         without_dashboard_raw: false,
         without_dashboard_prompt: true,
         without_dashboard_provisioning: true,
+        include_history: false,
         provisioning_provider_name: "grafana-utils-dashboards".to_string(),
         provisioning_provider_org_id: None,
         provisioning_provider_path: None,
