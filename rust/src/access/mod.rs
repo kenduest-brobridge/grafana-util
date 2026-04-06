@@ -171,7 +171,18 @@ fn run_user_access_cli(command: &UserCommand, args: &AccessCliArgs) -> Result<()
             }
         }
         UserCommand::Browse(inner) => {
-            run_access_cli_with_common(&inner.common, args, build_http_client)
+            if inner.input_dir.is_some() {
+                run_access_cli_with_request(
+                    |_method, _path, _params, _payload| {
+                        Err(message(
+                            "Local access user browse should not call the live request layer.",
+                        ))
+                    },
+                    args,
+                )
+            } else {
+                run_access_cli_with_common(&inner.common, args, build_http_client)
+            }
         }
         UserCommand::Add(inner) => {
             run_access_cli_with_common(&inner.common, args, build_http_client)
@@ -240,7 +251,18 @@ fn run_team_access_cli(command: &TeamCommand, args: &AccessCliArgs) -> Result<()
             }
         }
         TeamCommand::Browse(inner) => {
-            run_access_cli_with_common(&inner.common, args, build_http_client)
+            if inner.input_dir.is_some() {
+                run_access_cli_with_request(
+                    |_method, _path, _params, _payload| {
+                        Err(message(
+                            "Local access team browse should not call the live request layer.",
+                        ))
+                    },
+                    args,
+                )
+            } else {
+                run_access_cli_with_common(&inner.common, args, build_http_client)
+            }
         }
         TeamCommand::Add(inner) => {
             run_access_cli_with_common(&inner.common, args, build_http_client)

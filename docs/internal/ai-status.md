@@ -8,6 +8,13 @@ Current AI-maintained status only.
 - Keep this file short and current. Additive historical detail belongs in `docs/internal/archive/`.
 - Detailed 2026-03-29 through 2026-03-31 entries moved to [`archive/ai-status-archive-2026-03-31.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-03-31.md).
 
+## 2026-04-07 - Add local bundle browse mode for access user and team
+- State: Done
+- Scope: `rust/src/access/access_user_cli.rs`, `rust/src/access/cli_defs.rs`, `rust/src/access/browse_support.rs`, `rust/src/access/user_browse.rs`, `rust/src/access/user_browse_input.rs`, `rust/src/access/user_browse_render.rs`, `rust/src/access/team_browse_input.rs`, `rust/src/access/team_browse_render.rs`, `rust/src/access/user.rs`, `rust/src/access/mod.rs`, `rust/src/access/access_cli_shared.rs`, `rust/src/access/access_cli_rust_tests.rs`, `docs/commands/en/access-user.md`, `docs/commands/en/access-team.md`, `docs/commands/zh-TW/access-user.md`, `docs/commands/zh-TW/access-team.md`, `docs/user-guide/en/access.md`, `docs/user-guide/zh-TW/access.md`, generated man/html, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: access `user browse` and `team browse` were still live-only even though `access user list` and `access team list` already supported local bundle inspection through `--input-dir`.
+- Current Update: added `--input-dir` to both browse commands, routed direct CLI execution around live client construction for local mode, reused bundle readers to populate read-only local TUI state, disabled live-only jump/edit/delete actions in local mode, updated help/examples/docs, and regenerated man/html.
+- Result: access user/team browse now follows the same source model as access list: operators can browse either live Grafana or a saved local bundle, while local browse stays explicitly read-only.
+
 ## 2026-04-06 - Standardize local directory flags onto input-dir and output-dir
 - State: Done
 - Scope: `rust/src/dashboard/*`, `rust/src/access/*`, `rust/src/datasource*`, `rust/src/alert*`, `rust/src/snapshot*`, `rust/src/cli*.rs`, `docs/commands/**/*`, `docs/user-guide/**/*`, `README.md`, `README.zh-TW.md`, generated man/html, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

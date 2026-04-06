@@ -89,7 +89,7 @@ PREFLIGHT IMPORT:
 
 ## 👤 使用者與 team 管理
 
-需要調整成員、管理快照或檢查漂移時，請使用 `access user` 與 `access team`。它們的 `list` 也可以讀本機 bundle。
+需要調整成員、管理快照或檢查漂移時，請使用 `access user` 與 `access team`。它們的 `list` 與 `browse` 都可以讀本機 bundle。
 
 ### 1. 新增、修改與比對使用者
 ```bash

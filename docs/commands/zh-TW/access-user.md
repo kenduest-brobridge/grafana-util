@@ -2,7 +2,7 @@
 
 ## 目的
 
-列出 live 或本機的 Grafana 使用者、瀏覽 live 資料，以及建立、修改、匯出、匯入、比對或刪除 Grafana 使用者。
+列出或瀏覽 live 與本機的 Grafana 使用者，以及建立、修改、匯出、匯入、比對或刪除 Grafana 使用者。
 
 ## 使用時機
 
@@ -32,7 +32,7 @@
 ## 主要旗標
 
 - `list`: `--input-dir`, `--scope`, `--all-orgs`, `--query`, `--login`, `--email`, `--org-role`, `--grafana-admin`, `--with-teams`, `--page`, `--per-page`, `--table`, `--csv`, `--json`, `--yaml`, `--output-format`
-- `browse` 只支援 live：`--scope`, `--all-orgs`, `--current-org`, `--query`, `--login`, `--email`, `--org-role`, `--grafana-admin`, `--page`, `--per-page`
+- `browse`: `--input-dir`, `--scope`, `--all-orgs`, `--current-org`, `--query`, `--login`, `--email`, `--org-role`, `--grafana-admin`, `--page`, `--per-page`
 - `add`: `--login`, `--email`, `--name`, `--password` 或 `--password-file` 或 `--prompt-user-password`, `--org-role`, `--grafana-admin`, `--json`
 - `modify`: `--user-id`, `--login`, `--email`, `--set-login`, `--set-email`, `--set-name`, `--set-password` 或 `--set-password-file` 或 `--prompt-set-password`, `--set-org-role`, `--set-grafana-admin`, `--json`
 - `export` 與 `diff`: `--output-dir` 或 `--diff-dir`, `--overwrite`, `--dry-run`, `--scope`, `--with-teams`
@@ -49,6 +49,11 @@ grafana-util access user list --profile prod --scope org --output-format text
 ```bash
 # 用途：先看本機存好的使用者套件。
 grafana-util access user list --input-dir ./access-users --output-format table
+```
+
+```bash
+# 用途：直接互動式瀏覽本機使用者套件，不碰 live Grafana。
+grafana-util access user browse --input-dir ./access-users --login alice
 ```
 
 ```bash

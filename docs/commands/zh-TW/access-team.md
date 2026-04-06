@@ -2,7 +2,7 @@
 
 ## 目的
 
-列出 live 或本機的 Grafana 團隊、瀏覽 live 資料，以及建立、修改、匯出、匯入、比對或刪除 Grafana 團隊。
+列出或瀏覽 live 與本機的 Grafana 團隊，以及建立、修改、匯出、匯入、比對或刪除 Grafana 團隊。
 
 ## 使用時機
 
@@ -32,7 +32,7 @@
 ## 主要旗標
 
 - `list`: `--input-dir`, `--query`, `--name`, `--with-members`, `--page`, `--per-page`, `--table`, `--csv`, `--json`, `--yaml`, `--output-format`
-- `browse` 只支援 live：`--query`, `--name`, `--with-members`, `--page`, `--per-page`
+- `browse`: `--input-dir`, `--query`, `--name`, `--with-members`, `--page`, `--per-page`
 - `add`: `--name`, `--email`, `--member`, `--admin`, `--json`
 - `modify`: `--team-id`, `--name`, `--add-member`, `--remove-member`, `--add-admin`, `--remove-admin`, `--json`
 - `export` 與 `diff`: `--output-dir` 或 `--diff-dir`, `--overwrite`, `--dry-run`, `--with-members`
@@ -49,6 +49,11 @@ grafana-util access team list --profile prod --output-format text
 ```bash
 # 用途：先看本機存好的 team 套件。
 grafana-util access team list --input-dir ./access-teams --output-format table
+```
+
+```bash
+# 用途：直接互動式瀏覽本機 team 套件，不碰 live Grafana。
+grafana-util access team browse --input-dir ./access-teams --name platform-team
 ```
 
 ```bash

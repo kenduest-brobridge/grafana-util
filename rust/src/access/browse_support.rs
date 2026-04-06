@@ -16,6 +16,7 @@ pub(crate) enum BrowseSwitch {
 pub(crate) fn default_team_browse_args_from_user(args: &UserBrowseArgs) -> TeamBrowseArgs {
     TeamBrowseArgs {
         common: args.common.clone(),
+        input_dir: args.input_dir.clone(),
         query: None,
         name: None,
         with_members: true,
@@ -28,6 +29,7 @@ pub(crate) fn default_team_browse_args_from_user(args: &UserBrowseArgs) -> TeamB
 pub(crate) fn default_user_browse_args_from_team(args: &TeamBrowseArgs) -> UserBrowseArgs {
     UserBrowseArgs {
         common: args.common.clone(),
+        input_dir: args.input_dir.clone(),
         scope: Scope::Global,
         all_orgs: false,
         current_org: false,

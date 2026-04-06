@@ -57,7 +57,9 @@ pub(super) fn browse_users_in_session<F>(
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
-    let display_mode = if args.all_orgs {
+    let display_mode = if args.input_dir.is_some() {
+        DisplayMode::GlobalAccounts
+    } else if args.all_orgs {
         DisplayMode::OrgMemberships
     } else {
         DisplayMode::GlobalAccounts

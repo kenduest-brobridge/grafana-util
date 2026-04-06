@@ -89,7 +89,7 @@ Use the list output to confirm the main org, then export/import when you need a 
 
 ## User and team management
 
-Use `access user` and `access team` for membership changes, snapshots, and drift checks when you need to reconcile who can see or edit what. Their `list` commands also read local bundles through `--input-dir`.
+Use `access user` and `access team` for membership changes, snapshots, and drift checks when you need to reconcile who can see or edit what. Their `list` and `browse` commands both read local bundles through `--input-dir`.
 
 ### 1. Add, Modify, and Diff Users
 ```bash

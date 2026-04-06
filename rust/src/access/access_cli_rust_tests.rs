@@ -51,6 +51,37 @@ fn parse_cli_supports_user_browse() {
 }
 
 #[test]
+fn parse_cli_supports_user_browse_local_input_dir() {
+    let args = parse_cli_from([
+        "grafana-util access",
+        "user",
+        "browse",
+        "--input-dir",
+        "/tmp/access-users",
+        "--login",
+        "alice",
+    ]);
+
+    match args.command {
+        AccessCommand::User {
+            command: UserCommand::Browse(browse_args),
+        } => {
+            assert_eq!(
+                browse_args
+                    .input_dir
+                    .as_ref()
+                    .unwrap()
+                    .to_string_lossy()
+                    .as_ref(),
+                "/tmp/access-users"
+            );
+            assert_eq!(browse_args.login.as_deref(), Some("alice"));
+        }
+        _ => panic!("expected user browse"),
+    }
+}
+
+#[test]
 fn parse_cli_supports_user_browse_current_org() {
     let args = parse_cli_from(["grafana-util access", "user", "browse", "--current-org"]);
 
@@ -73,6 +104,7 @@ fn access_user_browse_help_hides_deprecated_with_teams_flag() {
     assert!(help.contains("--all-orgs"));
     assert!(help.contains("--current-org"));
     assert!(help.contains("--scope"));
+    assert!(help.contains("--input-dir"));
 }
 
 #[test]
@@ -84,6 +116,37 @@ fn parse_cli_supports_team_browse() {
             command: TeamCommand::Browse(browse_args),
         } => {
             assert!(browse_args.with_members);
+        }
+        _ => panic!("expected team browse"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_team_browse_local_input_dir() {
+    let args = parse_cli_from([
+        "grafana-util access",
+        "team",
+        "browse",
+        "--input-dir",
+        "/tmp/access-teams",
+        "--name",
+        "platform-team",
+    ]);
+
+    match args.command {
+        AccessCommand::Team {
+            command: TeamCommand::Browse(browse_args),
+        } => {
+            assert_eq!(
+                browse_args
+                    .input_dir
+                    .as_ref()
+                    .unwrap()
+                    .to_string_lossy()
+                    .as_ref(),
+                "/tmp/access-teams"
+            );
+            assert_eq!(browse_args.name.as_deref(), Some("platform-team"));
         }
         _ => panic!("expected team browse"),
     }

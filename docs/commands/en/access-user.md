@@ -2,7 +2,7 @@
 
 ## Purpose
 
-List live or local Grafana users, browse live, create, modify, export, import, diff, or delete Grafana users.
+List or browse live and local Grafana users, create, modify, export, import, diff, or delete Grafana users.
 
 ## When to use
 
@@ -32,7 +32,7 @@ List live or local Grafana users, browse live, create, modify, export, import, d
 ## Key flags
 
 - `list`: `--input-dir`, `--scope`, `--all-orgs`, `--query`, `--login`, `--email`, `--org-role`, `--grafana-admin`, `--with-teams`, `--page`, `--per-page`, `--table`, `--csv`, `--json`, `--yaml`, `--output-format`
-- `browse` live only: `--scope`, `--all-orgs`, `--current-org`, `--query`, `--login`, `--email`, `--org-role`, `--grafana-admin`, `--page`, `--per-page`
+- `browse`: `--input-dir`, `--scope`, `--all-orgs`, `--current-org`, `--query`, `--login`, `--email`, `--org-role`, `--grafana-admin`, `--page`, `--per-page`
 - `add`: `--login`, `--email`, `--name`, `--password` or `--password-file` or `--prompt-user-password`, `--org-role`, `--grafana-admin`, `--json`
 - `modify`: `--user-id`, `--login`, `--email`, `--set-login`, `--set-email`, `--set-name`, `--set-password` or `--set-password-file` or `--prompt-set-password`, `--set-org-role`, `--set-grafana-admin`, `--json`
 - `export` and `diff`: `--output-dir` or `--diff-dir`, `--overwrite`, `--dry-run`, `--scope`, `--with-teams`
@@ -49,6 +49,11 @@ grafana-util access user list --url http://localhost:3000 --basic-user admin --b
 ```bash
 # Purpose: Review a saved user bundle without touching Grafana.
 grafana-util access user list --input-dir ./access-users --output-format table
+```
+
+```bash
+# Purpose: Browse one saved user bundle interactively without touching Grafana.
+grafana-util access user browse --input-dir ./access-users --login alice
 ```
 
 ```bash

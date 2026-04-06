@@ -801,7 +801,7 @@ PREFLIGHT IMPORT:
   - would update 1 org(s)</code></pre>
 <p>先用 list 確認主 org，再用 export/import 建立可重播的 org 快照。</p>
 <h2 id="使用者與-team-管理">使用者與 team 管理</h2>
-<p>需要調整成員、管理快照或檢查漂移時，請使用 <code>access user</code> 與 <code>access team</code>。它們的 <code>list</code> 也可以讀本機 bundle。</p>
+<p>需要調整成員、管理快照或檢查漂移時，請使用 <code>access user</code> 與 <code>access team</code>。它們的 <code>list</code> 與 <code>browse</code> 都可以讀本機 bundle。</p>
 <h3 id="1-新增修改與比對使用者">1. 新增、修改與比對使用者</h3>
 <pre><code># 新增一個具備全域 Admin 角色的使用者
 grafana-util access user add --login dev-user --role Admin --prompt-password

@@ -84,6 +84,11 @@ pub struct UserListArgs {
 pub struct UserBrowseArgs {
     #[command(flatten)]
     pub common: CommonCliArgs,
+    #[arg(
+        long,
+        help = "Browse users from a local export bundle directory instead of live Grafana."
+    )]
+    pub input_dir: Option<PathBuf>,
     #[arg(long, value_enum, default_value_t = Scope::Global, help = "Browse users from the current org scope or from the Grafana global admin scope.")]
     pub scope: Scope,
     #[arg(

@@ -801,7 +801,7 @@ PREFLIGHT IMPORT:
   - would update 1 org(s)</code></pre>
 <p>Use the list output to confirm the main org, then export/import when you need a repeatable org snapshot.</p>
 <h2 id="user-and-team-management">User and team management</h2>
-<p>Use <code>access user</code> and <code>access team</code> for membership changes, snapshots, and drift checks when you need to reconcile who can see or edit what. Their <code>list</code> commands also read local bundles through <code>--input-dir</code>.</p>
+<p>Use <code>access user</code> and <code>access team</code> for membership changes, snapshots, and drift checks when you need to reconcile who can see or edit what. Their <code>list</code> and <code>browse</code> commands both read local bundles through <code>--input-dir</code>.</p>
 <h3 id="1-add-modify-and-diff-users">1. Add, Modify, and Diff Users</h3>
 <pre><code># Add a new user with global admin role
 grafana-util access user add --login dev-user --role Admin --prompt-password

@@ -102,6 +102,11 @@ pub struct TeamListArgs {
 pub struct TeamBrowseArgs {
     #[command(flatten)]
     pub common: CommonCliArgs,
+    #[arg(
+        long,
+        help = "Browse teams from a local export bundle directory instead of live Grafana."
+    )]
+    pub input_dir: Option<PathBuf>,
     #[arg(long, help = "Filter teams by a free-text search.")]
     pub query: Option<String>,
     #[arg(long, help = "Filter teams by exact team name.")]
