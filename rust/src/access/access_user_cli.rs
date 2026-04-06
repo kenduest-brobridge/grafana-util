@@ -19,7 +19,10 @@ use super::access_cli_shared::{
 pub struct UserListArgs {
     #[command(flatten)]
     pub common: CommonCliArgs,
-    #[arg(long, help = "List users from a local export bundle directory instead of live Grafana.")]
+    #[arg(
+        long,
+        help = "List users from a local export bundle directory instead of live Grafana."
+    )]
     pub input_dir: Option<PathBuf>,
     #[arg(long, value_enum, default_value_t = Scope::Org, help = "List users from the current org scope or from the Grafana global admin scope.")]
     pub scope: Scope,

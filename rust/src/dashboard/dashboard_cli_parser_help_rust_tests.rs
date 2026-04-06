@@ -1,8 +1,7 @@
 //! Dashboard CLI parser/help regressions kept separate from runtime-heavy tests.
 use super::super::{
     parse_cli_from, DashboardCliArgs, DashboardCommand, DashboardHistorySubcommand,
-    RawToPromptLogFormat,
-    RawToPromptOutputFormat, RawToPromptResolution, SimpleOutputFormat,
+    RawToPromptLogFormat, RawToPromptOutputFormat, RawToPromptResolution, SimpleOutputFormat,
 };
 use crate::common::CliColorChoice;
 use crate::dashboard::DashboardImportInputFormat;
@@ -1128,7 +1127,10 @@ fn parse_cli_supports_browse_local_export_tree() {
 
     match args.command {
         DashboardCommand::Browse(browse_args) => {
-            assert_eq!(browse_args.import_dir, Some(PathBuf::from("./dashboards/raw")));
+            assert_eq!(
+                browse_args.import_dir,
+                Some(PathBuf::from("./dashboards/raw"))
+            );
             assert_eq!(browse_args.input_format, DashboardImportInputFormat::Raw);
             assert_eq!(browse_args.path.as_deref(), Some("Platform / Infra"));
         }

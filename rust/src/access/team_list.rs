@@ -6,8 +6,8 @@ use serde_json::{Map, Value};
 use crate::common::Result;
 
 use crate::access::render::{
-    format_table, map_get_text, normalize_team_row, paginate_rows, render_csv,
-    render_objects_json, render_yaml, team_summary_line, team_table_rows,
+    format_table, map_get_text, normalize_team_row, paginate_rows, render_csv, render_objects_json,
+    render_yaml, team_summary_line, team_table_rows,
 };
 use crate::access::team_import_export_diff::{
     build_record_diff_fields, build_team_diff_map, load_team_import_records,

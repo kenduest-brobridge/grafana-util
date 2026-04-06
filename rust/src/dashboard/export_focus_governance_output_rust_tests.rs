@@ -1,8 +1,8 @@
 //! Dashboard governance output contract regressions.
 use super::super::test_support;
 use super::super::{
-    CommonCliArgs, DashboardImportInputFormat,
-    render_dashboard_governance_gate_result, GovernanceGateArgs, GovernanceGateOutputFormat,
+    render_dashboard_governance_gate_result, CommonCliArgs, DashboardImportInputFormat,
+    GovernanceGateArgs, GovernanceGateOutputFormat,
 };
 use crate::common::CliColorChoice;
 use crate::dashboard::GovernancePolicySource;

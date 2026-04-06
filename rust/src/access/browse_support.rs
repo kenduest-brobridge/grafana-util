@@ -2,7 +2,7 @@
 //!
 //! This keeps the TUI-only browse transition helpers out of the access facade.
 
-use super::cli_defs::{TeamBrowseArgs, UserBrowseArgs, DEFAULT_PAGE_SIZE, Scope};
+use super::cli_defs::{Scope, TeamBrowseArgs, UserBrowseArgs, DEFAULT_PAGE_SIZE};
 
 #[cfg_attr(not(feature = "tui"), allow(dead_code))]
 #[derive(Clone, Debug)]

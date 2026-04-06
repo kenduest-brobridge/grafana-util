@@ -47,9 +47,15 @@ fn parse_cli_supports_analyze_export_tree_through_canonical_analyze_command() {
 
     match args.command {
         DashboardCommand::Analyze(analyze_args) => {
-            assert_eq!(analyze_args.import_dir, Some(PathBuf::from("./dashboards/raw")));
+            assert_eq!(
+                analyze_args.import_dir,
+                Some(PathBuf::from("./dashboards/raw"))
+            );
             assert_eq!(analyze_args.input_format, DashboardImportInputFormat::Raw);
-            assert_eq!(analyze_args.output_format, Some(InspectOutputFormat::TreeTable));
+            assert_eq!(
+                analyze_args.output_format,
+                Some(InspectOutputFormat::TreeTable)
+            );
         }
         _ => panic!("expected analyze command"),
     }
@@ -69,7 +75,10 @@ fn parse_cli_supports_analyze_live_queries_json_output_format() {
     match args.command {
         DashboardCommand::InspectLive(inspect_args) => {
             assert_eq!(inspect_args.common.url, "https://grafana.example.com");
-            assert_eq!(inspect_args.output_format, Some(InspectOutputFormat::QueriesJson));
+            assert_eq!(
+                inspect_args.output_format,
+                Some(InspectOutputFormat::QueriesJson)
+            );
             assert!(!inspect_args.json);
             assert!(!inspect_args.table);
         }
@@ -147,10 +156,7 @@ fn parse_cli_supports_analyze_live_output_file() {
                 Some(PathBuf::from("/tmp/analyze-live.txt"))
             );
             assert!(!inspect_args.also_stdout);
-            assert_eq!(
-                inspect_args.output_format,
-                Some(InspectOutputFormat::Tree)
-            );
+            assert_eq!(inspect_args.output_format, Some(InspectOutputFormat::Tree));
         }
         _ => panic!("expected analyze-live command"),
     }
@@ -194,7 +200,10 @@ fn parse_cli_supports_analyze_live_tree_table_output_format() {
     match args.command {
         DashboardCommand::InspectLive(inspect_args) => {
             assert_eq!(inspect_args.common.url, "https://grafana.example.com");
-            assert_eq!(inspect_args.output_format, Some(InspectOutputFormat::TreeTable));
+            assert_eq!(
+                inspect_args.output_format,
+                Some(InspectOutputFormat::TreeTable)
+            );
             assert!(!inspect_args.json);
             assert!(!inspect_args.table);
         }
@@ -216,7 +225,10 @@ fn parse_cli_supports_analyze_live_dependency_output_format() {
     match args.command {
         DashboardCommand::InspectLive(inspect_args) => {
             assert_eq!(inspect_args.common.url, "https://grafana.example.com");
-            assert_eq!(inspect_args.output_format, Some(InspectOutputFormat::Dependency));
+            assert_eq!(
+                inspect_args.output_format,
+                Some(InspectOutputFormat::Dependency)
+            );
             assert!(!inspect_args.json);
             assert!(!inspect_args.table);
         }
@@ -238,7 +250,10 @@ fn parse_cli_supports_analyze_live_governance_json_output_format() {
     match args.command {
         DashboardCommand::InspectLive(inspect_args) => {
             assert_eq!(inspect_args.common.url, "https://grafana.example.com");
-            assert_eq!(inspect_args.output_format, Some(InspectOutputFormat::GovernanceJson));
+            assert_eq!(
+                inspect_args.output_format,
+                Some(InspectOutputFormat::GovernanceJson)
+            );
             assert!(!inspect_args.json);
             assert!(!inspect_args.table);
         }
@@ -282,9 +297,7 @@ fn parse_cli_supports_analyze_live_all_orgs_flag() {
 #[test]
 fn inspect_live_help_matches_fixture() {
     let help = render_dashboard_subcommand_help("analyze-live");
-    assert!(help.contains(
-        "Analyze live Grafana dashboards via a temporary raw-export snapshot."
-    ));
+    assert!(help.contains("Analyze live Grafana dashboards via a temporary raw-export snapshot."));
     assert!(help.contains("--output-format governance-json"));
 }
 
@@ -450,7 +463,10 @@ fn parse_cli_supports_list_vars_local_input_file() {
 
     match args.command {
         DashboardCommand::InspectVars(inspect_args) => {
-            assert_eq!(inspect_args.input, Some(PathBuf::from("./dashboards/raw/cpu-main.json")));
+            assert_eq!(
+                inspect_args.input,
+                Some(PathBuf::from("./dashboards/raw/cpu-main.json"))
+            );
             assert!(inspect_args.import_dir.is_none());
             assert_eq!(inspect_args.output_format, Some(SimpleOutputFormat::Yaml));
         }
@@ -475,7 +491,10 @@ fn parse_cli_supports_list_vars_local_import_dir() {
 
     match args.command {
         DashboardCommand::InspectVars(inspect_args) => {
-            assert_eq!(inspect_args.import_dir, Some(PathBuf::from("./dashboards/raw")));
+            assert_eq!(
+                inspect_args.import_dir,
+                Some(PathBuf::from("./dashboards/raw"))
+            );
             assert_eq!(inspect_args.input_format, DashboardImportInputFormat::Raw);
             assert_eq!(inspect_args.dashboard_uid.as_deref(), Some("cpu-main"));
             assert_eq!(inspect_args.output_format, Some(SimpleOutputFormat::Table));

@@ -536,7 +536,8 @@ mod tests {
         let read_back = read_secret_from_os_store(&store, &key).expect("read legacy keychain item");
         assert_eq!(read_back, legacy_value);
 
-        write_secret_to_os_store(&store, &key, new_value).expect("write keyring-backed keychain item");
+        write_secret_to_os_store(&store, &key, new_value)
+            .expect("write keyring-backed keychain item");
 
         let find_output = Command::new("security")
             .args([

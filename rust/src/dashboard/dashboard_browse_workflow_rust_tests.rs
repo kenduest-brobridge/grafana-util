@@ -260,7 +260,6 @@ fn dashboard_browse_document_builds_tree_with_general_and_nested_folders() {
     assert_eq!(document.nodes[4].depth, 2);
 }
 
-
 #[test]
 fn dashboard_browse_document_filters_to_requested_root_path() {
     let summaries = vec![

@@ -95,10 +95,11 @@ pub(crate) fn list_service_accounts_from_input_dir(args: &ServiceAccountListArgs
         .input_dir
         .as_ref()
         .expect("service-account local list requires input_dir");
-    let mut rows = load_service_account_import_records(input_dir, ACCESS_EXPORT_KIND_SERVICE_ACCOUNTS)?
-        .into_iter()
-        .map(|item| normalize_service_account_row(&item))
-        .collect::<Vec<Map<String, Value>>>();
+    let mut rows =
+        load_service_account_import_records(input_dir, ACCESS_EXPORT_KIND_SERVICE_ACCOUNTS)?
+            .into_iter()
+            .map(|item| normalize_service_account_row(&item))
+            .collect::<Vec<Map<String, Value>>>();
     if let Some(query) = &args.query {
         let query = query.to_ascii_lowercase();
         rows.retain(|row| {

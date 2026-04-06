@@ -57,7 +57,10 @@ pub use access_user_cli::{
 pub struct TeamListArgs {
     #[command(flatten)]
     pub common: CommonCliArgs,
-    #[arg(long, help = "List teams from a local export bundle directory instead of live Grafana.")]
+    #[arg(
+        long,
+        help = "List teams from a local export bundle directory instead of live Grafana."
+    )]
     pub input_dir: Option<PathBuf>,
     #[arg(long, help = "Filter teams by a free-text search.")]
     pub query: Option<String>,
@@ -292,7 +295,10 @@ pub struct TeamModifyArgs {
 pub struct OrgListArgs {
     #[command(flatten)]
     pub common: CommonCliArgsNoOrgId,
-    #[arg(long, help = "List organizations from a local export bundle directory instead of live Grafana.")]
+    #[arg(
+        long,
+        help = "List organizations from a local export bundle directory instead of live Grafana."
+    )]
     pub input_dir: Option<PathBuf>,
     #[arg(long = "org-id", help = "Filter to one exact organization id.")]
     pub org_id: Option<i64>,

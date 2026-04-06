@@ -56,9 +56,9 @@ fn validate_inspect_export_report_args_rejects_report_columns_for_json_report() 
     };
 
     let error = test_support::validate_inspect_export_report_args(&args).unwrap_err();
-    assert!(error.to_string().contains(
-        "--report-columns is only supported with table, csv, or tree-table output."
-    ));
+    assert!(error
+        .to_string()
+        .contains("--report-columns is only supported with table, csv, or tree-table output."));
 }
 
 #[test]
@@ -84,9 +84,9 @@ fn validate_inspect_export_report_args_rejects_report_columns_for_dependency_rep
     };
 
     let error = test_support::validate_inspect_export_report_args(&args).unwrap_err();
-    assert!(error.to_string().contains(
-        "--report-columns is only supported with table, csv, or tree-table output."
-    ));
+    assert!(error
+        .to_string()
+        .contains("--report-columns is only supported with table, csv, or tree-table output."));
 }
 
 #[test]
@@ -112,9 +112,9 @@ fn validate_inspect_export_report_args_rejects_report_columns_for_tree_report() 
     };
 
     let error = test_support::validate_inspect_export_report_args(&args).unwrap_err();
-    assert!(error.to_string().contains(
-        "--report-columns is only supported with table, csv, or tree-table output."
-    ));
+    assert!(error
+        .to_string()
+        .contains("--report-columns is only supported with table, csv, or tree-table output."));
 }
 
 #[test]
