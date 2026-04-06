@@ -110,6 +110,43 @@ fn unified_help_mentions_screenshot_and_dashboard_analysis_examples() {
 }
 
 #[test]
+fn dashboard_help_and_docs_remain_canonical_first() {
+    let unified_help = render_unified_help();
+    assert!(unified_help.contains("grafana-util dashboard export"));
+    assert!(unified_help.contains("grafana-util dashboard browse"));
+    assert!(unified_help.contains("grafana-util dashboard screenshot"));
+    assert!(unified_help.contains("grafana-util dashboard list-vars"));
+    assert!(unified_help.contains("grafana-util dashboard analyze"));
+    assert!(unified_help.contains("grafana-util dashboard review"));
+    assert!(!unified_help.contains("grafana-util export --"));
+    assert!(!unified_help.contains("grafana-util list --"));
+    assert!(!unified_help.contains("grafana-util diff --"));
+    assert!(!unified_help.contains("grafana-util publish --"));
+
+    let en_dashboard_index = include_str!("../../docs/commands/en/index.md");
+    assert!(en_dashboard_index.contains("Compatibility Alias Pages"));
+    assert!(en_dashboard_index.contains("[dashboard analyze (local alias)]"));
+    assert!(en_dashboard_index.contains("[dashboard analyze (live alias)]"));
+    assert!(!en_dashboard_index.contains("[dashboard analyze (local)]"));
+    assert!(!en_dashboard_index.contains("[dashboard analyze (live)]"));
+
+    let zh_dashboard_index = include_str!("../../docs/commands/zh-TW/index.md");
+    assert!(zh_dashboard_index.contains("相容別名頁面"));
+    assert!(zh_dashboard_index.contains("[dashboard analyze（本地別名）]"));
+    assert!(zh_dashboard_index.contains("[dashboard analyze（即時別名）]"));
+    assert!(!zh_dashboard_index.contains("[dashboard analyze（本地）]"));
+    assert!(!zh_dashboard_index.contains("[dashboard analyze（即時）]"));
+
+    let en_dashboard_page = include_str!("../../docs/commands/en/dashboard.md");
+    assert!(en_dashboard_page.contains("grafana-util dashboard browse"));
+    assert!(en_dashboard_page.contains("grafana-util dashboard publish"));
+    assert!(!en_dashboard_page.contains("grafana-util export --"));
+    assert!(!en_dashboard_page.contains("grafana-util list --"));
+    assert!(!en_dashboard_page.contains("grafana-util diff --"));
+    assert!(!en_dashboard_page.contains("grafana-util publish --"));
+}
+
+#[test]
 fn unified_cli_renders_root_version_flag_output() {
     let clap_version = CliArgs::command().render_version().to_string();
     let unified_version = render_unified_version_text();
