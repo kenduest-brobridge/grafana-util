@@ -14,8 +14,6 @@ use sha2::Sha256;
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-#[cfg(target_os = "macos")]
-use std::process::Command;
 
 use crate::common::{message, validation, Result};
 
@@ -53,35 +51,7 @@ pub struct SystemOsSecretStore;
 
 impl OsSecretStore for SystemOsSecretStore {
     fn set_secret(&self, key: &str, value: &str) -> Result<()> {
-        #[cfg(target_os = "macos")]
-        {
-            let output = Command::new("security")
-                .args([
-                    "add-generic-password",
-                    "-U",
-                    "-s",
-                    PROFILE_SECRET_SERVICE,
-                    "-a",
-                    key,
-                    "-w",
-                    value,
-                ])
-                .output()
-                .map_err(|error| {
-                    message(format!(
-                        "Failed to run macOS security tool for `{key}`: {error}"
-                    ))
-                })?;
-            if output.status.success() {
-                return Ok(());
-            }
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            Err(message(format!(
-                "Failed to store secret `{key}` in the macOS Keychain: {}",
-                stderr.trim()
-            )))
-        }
-        #[cfg(target_os = "linux")]
+        #[cfg(any(target_os = "macos", target_os = "linux"))]
         {
             let entry = keyring::Entry::new(PROFILE_SECRET_SERVICE, key).map_err(|error| {
                 message(format!(
@@ -104,37 +74,7 @@ impl OsSecretStore for SystemOsSecretStore {
     }
 
     fn get_secret(&self, key: &str) -> Result<String> {
-        #[cfg(target_os = "macos")]
-        {
-            let output = Command::new("security")
-                .args([
-                    "find-generic-password",
-                    "-s",
-                    PROFILE_SECRET_SERVICE,
-                    "-a",
-                    key,
-                    "-w",
-                ])
-                .output()
-                .map_err(|error| {
-                    message(format!(
-                        "Failed to run macOS security tool for `{key}`: {error}"
-                    ))
-                })?;
-            if output.status.success() {
-                return String::from_utf8(output.stdout).map_err(|error| {
-                    message(format!(
-                        "Failed to decode macOS Keychain secret `{key}` as UTF-8: {error}"
-                    ))
-                });
-            }
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            Err(message(format!(
-                "Failed to read secret `{key}` from the macOS Keychain: {}",
-                stderr.trim()
-            )))
-        }
-        #[cfg(target_os = "linux")]
+        #[cfg(any(target_os = "macos", target_os = "linux"))]
         {
             let entry = keyring::Entry::new(PROFILE_SECRET_SERVICE, key).map_err(|error| {
                 message(format!(

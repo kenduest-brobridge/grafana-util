@@ -34,6 +34,7 @@ pub(crate) struct ProfileAddOutcome {
     pub(crate) action: ProfileAddAction,
     pub(crate) default_set: bool,
     pub(crate) local_key_warning: bool,
+    pub(crate) gitignore_updated: bool,
 }
 
 fn load_profile_config_at_resolved_path() -> Result<(std::path::PathBuf, ProfileConfigFile)> {
@@ -103,6 +104,76 @@ fn resolve_add_secret_value(
 
 fn build_profile_store_key(profile_name: &str, field_name: &str) -> String {
     format!("grafana-util/profile/{profile_name}/{field_name}")
+}
+
+fn relative_gitignore_entry(base_dir: &Path, path: &Path) -> Option<String> {
+    let relative = path.strip_prefix(base_dir).ok()?;
+    let rendered = relative.to_string_lossy().replace('\\', "/");
+    if rendered.is_empty() {
+        None
+    } else {
+        Some(rendered)
+    }
+}
+
+fn ensure_secret_paths_gitignored(config_path: &Path, secret_file_path: &Path) -> Result<bool> {
+    let base_dir = config_path.parent().unwrap_or_else(|| Path::new("."));
+    let mut entries = Vec::new();
+    if let Some(secret_entry) = relative_gitignore_entry(base_dir, secret_file_path) {
+        entries.push(secret_entry);
+    }
+    let key_path = resolve_secret_key_path(secret_file_path);
+    if let Some(key_entry) = relative_gitignore_entry(base_dir, &key_path) {
+        entries.push(key_entry);
+    }
+    entries.sort();
+    entries.dedup();
+    if entries.is_empty() {
+        return Ok(false);
+    }
+
+    let gitignore_path = base_dir.join(".gitignore");
+    let existing = if gitignore_path.exists() {
+        fs::read_to_string(&gitignore_path).map_err(|error| {
+            message(format!(
+                "Failed to read {}: {error}",
+                gitignore_path.display()
+            ))
+        })?
+    } else {
+        String::new()
+    };
+    let existing_lines: Vec<&str> = existing.lines().collect();
+    let missing_entries: Vec<String> = entries
+        .into_iter()
+        .filter(|entry| !existing_lines.iter().any(|line| *line == entry))
+        .collect();
+    if missing_entries.is_empty() {
+        return Ok(false);
+    }
+    if let Some(parent) = gitignore_path.parent() {
+        fs::create_dir_all(parent).map_err(|error| {
+            message(format!(
+                "Failed to create .gitignore directory {}: {error}",
+                parent.display()
+            ))
+        })?;
+    }
+    let mut rendered = existing;
+    if !rendered.is_empty() && !rendered.ends_with('\n') {
+        rendered.push('\n');
+    }
+    for entry in missing_entries {
+        rendered.push_str(&entry);
+        rendered.push('\n');
+    }
+    fs::write(&gitignore_path, rendered).map_err(|error| {
+        message(format!(
+            "Failed to update {}: {error}",
+            gitignore_path.display()
+        ))
+    })?;
+    Ok(true)
 }
 
 fn validate_profile_add_args(args: &ProfileAddArgs) -> Result<()> {
@@ -354,6 +425,11 @@ pub(crate) fn apply_profile_add_with_store<S: OsSecretStore>(
         args.set_default,
     )?;
     save_profile_config_file(config_path, &config)?;
+    let gitignore_updated = if let Some(secret_file_path) = effective_secret_file_path.as_deref() {
+        ensure_secret_paths_gitignored(config_path, secret_file_path)?
+    } else {
+        false
+    };
     Ok(ProfileAddOutcome {
         action: if existed {
             ProfileAddAction::Updated
@@ -362,6 +438,7 @@ pub(crate) fn apply_profile_add_with_store<S: OsSecretStore>(
         },
         default_set: config.default_profile.as_deref() == Some(args.name.as_str()),
         local_key_warning,
+        gitignore_updated,
     })
 }
 
@@ -443,6 +520,14 @@ fn run_profile_add(args: ProfileAddArgs) -> Result<()> {
     if outcome.local_key_warning {
         println!(
             "Stored secrets in encrypted-file mode without a passphrase. This protects against casual disclosure, not local account compromise."
+        );
+        println!(
+            "Prefer --prompt-secret-passphrase or --secret-passphrase-env when the secret should stay portable or resist local key-file exposure."
+        );
+    }
+    if outcome.gitignore_updated {
+        println!(
+            "Updated .gitignore to ignore encrypted secret helper files in the profile config directory."
         );
     }
     println!(

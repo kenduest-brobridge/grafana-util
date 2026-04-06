@@ -809,7 +809,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <ol><li>CI 與自動化：優先用 <code>password_env</code> / <code>token_env</code></li><li>macOS 或 Linux 桌面上的日常維運：優先用 <code>os</code></li><li>需要在專案本地加密存放、但不想依賴 OS secret service：用 <code>encrypted-file</code></li><li><code>file</code> 明文模式只留給 demo、一次性 lab、或明確的 bootstrap 情境</li></ol>
 <h3 id="macos-與-linux-的-os-secret-store-支援">macOS 與 Linux 的 OS secret store 支援</h3>
 <p><code>os</code> provider 目前是平台後端：</p>
-<ul><li>macOS：透過 <code>security</code> 寫入 Keychain</li><li>Linux：透過系統 keyring 整合寫入 Secret Service</li></ul>
+<ul><li>macOS：透過系統 keyring 整合寫入 Keychain</li><li>Linux：透過系統 keyring 整合寫入 Secret Service</li></ul>
 <p>這樣 profile YAML 只會留下像這樣的 reference：</p>
 <pre><code>password_store:
   provider: os
@@ -821,6 +821,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <table><thead><tr><th>工作流</th><th>用途</th><th>什麼時候用</th></tr></thead><tbody><tr><td><code>profile init</code></td><td>產生最小版的 <code>grafana-util.yaml</code>。</td><td>想先有一份基本設定檔再慢慢改時。</td></tr><tr><td><code>profile add</code></td><td>直接建立或更新一個 named profile。</td><td>想用比較順手的一步式流程時。</td></tr><tr><td><code>profile example</code></td><td>輸出完整註解版範本。</td><td>想拿一份可直接修改的參考設定時。</td></tr></tbody></table>
 <p>如果你有設定 <code>GRAFANA_UTIL_CONFIG</code>，設定檔就會跟著那個路徑走。<code>encrypted-file</code> 模式用到的幫助檔也會放在同一個目錄：</p>
 <table><thead><tr><th>檔案</th><th>預設位置</th></tr></thead><tbody><tr><td><code>grafana-util.yaml</code></td><td>目前工作目錄，或 <code>GRAFANA_UTIL_CONFIG</code> 指定的路徑</td></tr><tr><td><code>.grafana-util.secrets.yaml</code></td><td>跟 <code>grafana-util.yaml</code> 放同一個目錄</td></tr><tr><td><code>.grafana-util.secrets.key</code></td><td>跟 <code>grafana-util.yaml</code> 放同一個目錄</td></tr></tbody></table>
+<p>如果 <code>encrypted-file</code> 使用這些 repo-local helper 路徑，<code>profile add</code> 也會在尚未忽略時，自動把它們加到 config 目錄的 <code>.gitignore</code>。</p>
 <h3 id="2-初始化新增並列出-profile">2. 初始化、新增並列出 profile</h3>
 <pre><code># 用途：2. 初始化、新增並列出 profile。
 grafana-util profile init --overwrite</code></pre>
@@ -945,7 +946,7 @@ grafana-util overview live --profile ci --output-format json</code></pre>
 <h2 id="輸出格式對照">輸出格式對照</h2>
 <p><code>grafana-util</code> 同時提供各格式旗標與單一 <code>--output-format</code> 選擇器。以 dashboard list 來說，目前可用的是 <code>--json</code>、<code>--table</code>、<code>--csv</code>、<code>--yaml</code> 與 <code>--output-format</code>。</p>
 <h3 id="0-先看這張旗標對照表">0. 先看這張旗標對照表</h3>
-<table><thead><tr><th>情境</th><th>寫法</th><th>常見值</th><th>補充</th></tr></thead><tbody><tr><td>直接切換常見格式</td><td><code>--text</code>、<code>--table</code>、<code>--csv</code>、<code>--json</code>、<code>--yaml</code></td><td><code>text</code> / <code>table</code> / <code>csv</code> / <code>json</code> / <code>yaml</code></td><td>適合 list、review、inspect、部分 import / delete dry-run 這類輸出面。</td></tr><tr><td>用單一旗標切換格式</td><td><code>--output-format &lt;FORMAT&gt;</code></td><td><code>text</code> / <code>table</code> / <code>csv</code> / <code>json</code> / <code>yaml</code></td><td>也可能出現 command 專用值，例如 <code>report-table</code>、<code>governance-json</code>、<code>mermaid</code>、<code>dot</code>。</td></tr><tr><td>live status / overview 類入口</td><td><code>--output-format &lt;FORMAT&gt;</code></td><td><code>table</code> / <code>csv</code> / <code>text</code> / <code>json</code> / <code>yaml</code> / <code>interactive</code></td><td>這條路徑現在也統一使用 <code>--output-format</code>。</td></tr><tr><td>將結果另外寫入檔案</td><td><code>--output-file &lt;PATH&gt;</code> 或 command 專用旗標</td><td>視指令而定</td><td>常見於 topology、governance gate、screenshot 這類輸出型指令。</td></tr></tbody></table>
+<table><thead><tr><th>情境</th><th>寫法</th><th>常見值</th><th>補充</th></tr></thead><tbody><tr><td>直接切換常見格式</td><td><code>--text</code>、<code>--table</code>、<code>--csv</code>、<code>--json</code>、<code>--yaml</code></td><td><code>text</code> / <code>table</code> / <code>csv</code> / <code>json</code> / <code>yaml</code></td><td>適合 list、review、inspect、部分 import / delete dry-run 這類輸出面。</td></tr><tr><td>用單一旗標切換格式</td><td><code>--output-format &lt;FORMAT&gt;</code></td><td><code>text</code> / <code>table</code> / <code>csv</code> / <code>json</code> / <code>yaml</code></td><td>也可能出現 command 專用值，例如 <code>governance</code>、<code>governance-json</code>、<code>queries-json</code>、<code>mermaid</code>、<code>dot</code>。</td></tr><tr><td>live status / overview 類入口</td><td><code>--output-format &lt;FORMAT&gt;</code></td><td><code>table</code> / <code>csv</code> / <code>text</code> / <code>json</code> / <code>yaml</code> / <code>interactive</code></td><td>這條路徑現在也統一使用 <code>--output-format</code>。</td></tr><tr><td>將結果另外寫入檔案</td><td><code>--output-file &lt;PATH&gt;</code> 或 command 專用旗標</td><td>視指令而定</td><td>常見於 topology、governance gate、screenshot 這類輸出型指令。</td></tr></tbody></table>
 <h3 id="1-表格或-json-的選擇">1. 表格或 JSON 的選擇</h3>
 <pre><code># 用途：1. 表格或 JSON 的選擇。
 grafana-util dashboard list -h</code></pre>

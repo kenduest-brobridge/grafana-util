@@ -8,6 +8,13 @@ Current AI-maintained status only.
 - Keep this file short and current. Additive historical detail belongs in `docs/internal/archive/`.
 - Detailed 2026-03-29 through 2026-03-31 entries moved to [`archive/ai-status-archive-2026-03-31.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-03-31.md).
 
+## 2026-04-06 - Harden profile secret storage against macOS argv leakage and repo-local secret commits
+- State: Done
+- Scope: `rust/src/profile_secret_store.rs`, `rust/src/profile_cli_runtime.rs`, `rust/src/profile_cli_rust_tests.rs`, `rust/Cargo.toml`, `docs/commands/en/profile.md`, `docs/commands/zh-TW/profile.md`, `docs/user-guide/en/reference.md`, `docs/user-guide/zh-TW/reference.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: the macOS `os` secret-store path still invoked `security ... -w <secret>`, which exposed the secret in process argv, and `encrypted-file` mode relied only on operator discipline to keep `.grafana-util.secrets.yaml` and `.grafana-util.secrets.key` out of Git.
+- Current Update: switched the macOS OS-secret backend to the same `keyring` integration already used on Linux, added config-directory `.gitignore` protection for repo-local encrypted secret helper files, and strengthened the CLI warning shown when `encrypted-file` falls back to the local key file without a passphrase.
+- Result: profile-backed OS secret writes no longer pass plaintext secrets through macOS command-line arguments, and repo-local encrypted secret helpers now get an automatic Git-ignore guardrail when they live under the config directory tree.
+
 ## 2026-04-06 - Slim project-status runtime by sharing dashboard and alert freshness assembly
 - State: Done
 - Scope: `rust/src/project_status_live_runtime.rs`, `rust/src/grafana_api/project_status_live.rs`, `rust/src/alert_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

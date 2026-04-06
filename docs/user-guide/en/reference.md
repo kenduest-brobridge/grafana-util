@@ -143,7 +143,7 @@ Recommended order for most teams:
 
 The `os` provider is platform-backed:
 
-- macOS: stores secrets in the Keychain through the `security` tool
+- macOS: stores secrets in the Keychain through the system keyring integration
 - Linux: stores secrets in the desktop secret service through the system keyring integration
 
 This is useful because your profile YAML keeps only a secret reference such as:
@@ -176,6 +176,8 @@ If you set `GRAFANA_UTIL_CONFIG`, the config file moves with that path. The help
 | `grafana-util.yaml` | current working directory, or the path given by `GRAFANA_UTIL_CONFIG` |
 | `.grafana-util.secrets.yaml` | same directory as `grafana-util.yaml` |
 | `.grafana-util.secrets.key` | same directory as `grafana-util.yaml` |
+
+When `encrypted-file` uses these repo-local helper paths, `profile add` also appends them to the config-directory `.gitignore` if they are not already ignored.
 
 ### 2. Initialize, add, and list profiles
 ```bash
@@ -386,7 +388,7 @@ Why these examples matter:
 | Situation | Syntax | Common values | Notes |
 | :--- | :--- | :--- | :--- |
 | Direct format selectors | `--text`, `--table`, `--csv`, `--json`, `--yaml` | `text` / `table` / `csv` / `json` / `yaml` | Common on list, review, inspect, and some dry-run mutation surfaces. |
-| Single selector for common formats | `--output-format <FORMAT>` | `text` / `table` / `csv` / `json` / `yaml` | Some commands also define command-specific values such as `report-table`, `governance-json`, `mermaid`, or `dot`. |
+| Single selector for common formats | `--output-format <FORMAT>` | `text` / `table` / `csv` / `json` / `yaml` | Some commands also define command-specific values such as `governance`, `governance-json`, `queries-json`, `mermaid`, or `dot`. |
 | Live `status` / `overview` entrypoints | `--output-format <FORMAT>` | `table` / `csv` / `text` / `json` / `yaml` / `interactive` | These live entrypoints now use the same standard selector. |
 | Write the rendered result to a file | `--output-file <PATH>` or a command-specific flag | command-specific | Common on topology, governance-gate, screenshot, and similar output-producing commands. |
 
