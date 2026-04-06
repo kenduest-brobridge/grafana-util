@@ -128,7 +128,7 @@ Datasources: ...
 
 ```bash
 # 跨組織匯出 dashboard，建立本地備份與審查基礎。
-grafana-util dashboard export --all-orgs --export-dir ./backup --progress
+grafana-util dashboard export --all-orgs --output-dir ./backup --progress
 ```
 
 這是做備份、搬移、審查和 CI 檢查的起點。
@@ -138,7 +138,7 @@ grafana-util dashboard export --all-orgs --export-dir ./backup --progress
 ```bash
 # 盤點匯出目錄中的 datasource 相依性與結構問題。
 grafana-util dashboard analyze \
-  --import-dir ./backup/raw \
+  --input-dir ./backup/raw \
   --input-format raw \
   --output-format dependency
 ```
@@ -158,7 +158,7 @@ Dependency report:
 ```bash
 # 先 dry-run dashboard 匯入，表格化顯示預計變更。
 grafana-util dashboard import \
-  --import-dir ./backup/raw \
+  --input-dir ./backup/raw \
   --replace-existing \
   --dry-run \
   --table
@@ -219,13 +219,13 @@ grafana-util alert preview-route \
 
 ```bash
 # 匯出 data source，secret 會遮蔽，方便審查或納入版本控制。
-grafana-util datasource export --export-dir ./datasources --overwrite
+grafana-util datasource export --output-dir ./datasources --overwrite
 ```
 
 ```bash
 # 匯回時再互動式補回必要 secret。
 grafana-util datasource import \
-  --import-dir ./datasources \
+  --input-dir ./datasources \
   --replace-existing \
   --prompt-password
 ```
@@ -240,7 +240,7 @@ grafana-util datasource import \
 
 1. 用 `overview live` 確認目標 Grafana 真的連得到
 2. 用 `dashboard export` 匯出成可審查的目錄樹
-3. 用 `grafana-util dashboard analyze --import-dir ./dashboards/raw --input-format raw --output-format dependency` 先抓出缺少的 datasource 依賴
+3. 用 `grafana-util dashboard analyze --input-dir ./dashboards/raw --input-format raw --output-format dependency` 先抓出缺少的 datasource 依賴
 4. 用 `dashboard import --dry-run` 預覽回放結果，再決定要不要動 live
 
 這是最短、也最能感受到工具價值的一條公開工作流。

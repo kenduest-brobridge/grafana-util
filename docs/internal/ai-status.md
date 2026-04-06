@@ -8,6 +8,13 @@ Current AI-maintained status only.
 - Keep this file short and current. Additive historical detail belongs in `docs/internal/archive/`.
 - Detailed 2026-03-29 through 2026-03-31 entries moved to [`archive/ai-status-archive-2026-03-31.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-03-31.md).
 
+## 2026-04-06 - Standardize local directory flags onto input-dir and output-dir
+- State: Done
+- Scope: `rust/src/dashboard/*`, `rust/src/access/*`, `rust/src/datasource*`, `rust/src/alert*`, `rust/src/snapshot*`, `rust/src/cli*.rs`, `docs/commands/**/*`, `docs/user-guide/**/*`, `README.md`, `README.zh-TW.md`, generated man/html, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: the CLI currently mixes `--import-dir`, `--export-dir`, `--input-dir`, and `--output-dir` across otherwise similar workflows. Some verbs are task-oriented (`export`, `import`), while some analysis/read-only flows still expose `--import-dir`, which makes local-vs-live source selection harder to reason about.
+- Current Update: renamed the public Rust CLI surface so directory inputs consistently use `--input-dir` and directory outputs consistently use `--output-dir`, updated help/docs/examples/generated artifacts to the new contract, and added parser regressions that reject the legacy public spellings.
+- Result: the Rust-first public CLI now uses one directory-flag vocabulary across dashboard, access, datasource, alert, and snapshot workflows, while localhost smoke confirmed the new flags work for live export plus local analyze/list flows.
+
 ## 2026-04-06 - Fold datasource local inspection into datasource list and remove inspect-export
 - State: Done
 - Scope: `rust/src/datasource_cli_defs.rs`, `rust/src/datasource.rs`, `rust/src/datasource_inspect_export.rs`, `rust/src/cli.rs`, `rust/src/cli_help.rs`, `rust/src/cli_help_examples.rs`, `rust/src/datasource_import_export_support.rs`, `rust/src/cli_rust_tests.rs`, `rust/src/datasource_cli_mutation_rust_tests.rs`, `rust/src/datasource_rust_tests_tail_rust_tests.rs`, `docs/commands/en/datasource*.md`, `docs/commands/zh-TW/datasource*.md`, `docs/user-guide/en/datasource.md`, `docs/user-guide/zh-TW/datasource.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

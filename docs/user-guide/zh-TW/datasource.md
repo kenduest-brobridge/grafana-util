@@ -109,9 +109,9 @@ dehk4kxat5la8b  Prometheus  prometheus  http://prometheus:9090  true            
 | 指令 | 帶有參數的完整範例 |
 | :--- | :--- |
 | **盤點 (List)** | `grafana-util datasource list --all-orgs --table` 或 `grafana-util datasource list --input-dir ./datasources --table` |
-| **匯出 (Export)** | `grafana-util datasource export --export-dir ./datasources --overwrite` |
-| **匯入 (Import)** | `grafana-util datasource import --import-dir ./datasources --replace-existing --dry-run --table` |
-| **比對 (Diff)** | `grafana-util datasource diff --import-dir ./datasources` |
+| **匯出 (Export)** | `grafana-util datasource export --output-dir ./datasources --overwrite` |
+| **匯入 (Import)** | `grafana-util datasource import --input-dir ./datasources --replace-existing --dry-run --table` |
+| **比對 (Diff)** | `grafana-util datasource diff --input-dir ./datasources` |
 | **新增 (Add)** | `grafana-util datasource add --uid <UID> --name <NAME> --type prometheus --datasource-url <URL> --dry-run --table` |
 
 ---
@@ -121,7 +121,7 @@ dehk4kxat5la8b  Prometheus  prometheus  http://prometheus:9090  true            
 ### 1. 匯出盤點資產
 ```bash
 # 用途：1. 匯出盤點資產。
-grafana-util datasource export --export-dir ./datasources --overwrite
+grafana-util datasource export --output-dir ./datasources --overwrite
 ```
 **範例輸出：**
 ```text
@@ -133,7 +133,7 @@ Datasource export completed: 3 item(s)
 ### 2. Dry-Run 匯入預覽
 ```bash
 # 用途：2. Dry-Run 匯入預覽。
-grafana-util datasource import --import-dir ./datasources --replace-existing --dry-run --table
+grafana-util datasource import --input-dir ./datasources --replace-existing --dry-run --table
 ```
 **範例輸出：**
 ```text

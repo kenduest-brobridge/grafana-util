@@ -11,7 +11,7 @@ Use this when you need a local export tree for later import, review, diff, or fi
 - **After**: export becomes the first artifact in a repeatable workflow that can feed inspect, diff, dry-run import, and Git review.
 
 ## Key flags
-- `--export-dir`: target directory for the export tree.
+- `--output-dir`: target directory for the export tree.
 - `--org-id`: export one explicit Grafana org.
 - `--all-orgs`: export each visible org into per-org subdirectories. Prefer Basic auth.
 - `--flat`: write files directly into each export variant directory.
@@ -42,22 +42,22 @@ Use this when you need a local export tree for later import, review, diff, or fi
 ## Examples
 ```bash
 # Purpose: Export dashboards to `raw/`, `prompt/`, and `provisioning/` files.
-grafana-util dashboard export --profile prod --export-dir ./dashboards --overwrite
+grafana-util dashboard export --profile prod --output-dir ./dashboards --overwrite
 ```
 
 ```bash
 # Purpose: Export dashboards to `raw/`, `prompt/`, and `provisioning/` files.
-grafana-util dashboard export --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --export-dir ./dashboards --overwrite
+grafana-util dashboard export --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output-dir ./dashboards --overwrite
 ```
 
 ```bash
 # Purpose: Export dashboards to `raw/`, `prompt/`, and `provisioning/` files.
-grafana-util dashboard export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --export-dir ./dashboards --overwrite
+grafana-util dashboard export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --output-dir ./dashboards --overwrite
 ```
 
 ```bash
 # Purpose: Export dashboards plus per-org revision-history artifacts into a reusable tree.
-grafana-util dashboard export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --include-history --export-dir ./dashboards --overwrite
+grafana-util dashboard export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --include-history --output-dir ./dashboards --overwrite
 ```
 
 ## Related commands

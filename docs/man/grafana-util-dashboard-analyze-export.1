@@ -7,7 +7,7 @@ grafana\-util\-dashboard\-analyze\-export \- Analyze dashboard export directorie
 .SH DESCRIPTION
 Analyze dashboard export directories through the canonical dashboard analyze command.
 .PP
-Use this when you want to read a local export tree, inspect its structure, or render governance and dependency views without contacting Grafana. Prefer dashboard analyze \-\-import\-dir ... in new docs and scripts.
+Use this when you want to read a local export tree, inspect its structure, or render governance and dependency views without contacting Grafana. Prefer dashboard analyze \-\-input\-dir ... in new docs and scripts.
 .SH BEFORE / AFTER
 .IP \(bu 2
 Before: an export tree is just a folder of JSON files, and you still have to guess which dashboards, variables, or policy checks matter.
@@ -15,7 +15,7 @@ Before: an export tree is just a folder of JSON files, and you still have to gue
 After: one analysis pass turns that tree into operator views you can review, hand to CI, or feed into later checks such as topology and governance\-gate.
 .SH COMMON OPTIONS
 .TP
-.B \-\-import\-dir
+.B \-\-input\-dir
 dashboard export root to analyze.
 .TP
 .B \-\-input\-format
@@ -53,7 +53,7 @@ if the tree came from an older export, rerun dashboard export first so you do no
 .PP
 Analyze dashboard export directories through the canonical dashboard analyze command.
 .EX
-grafana-util dashboard analyze --import-dir ./dashboards/raw --input-format raw --output-format table
+grafana-util dashboard analyze --input-dir ./dashboards/raw --input-format raw --output-format table
 .EE
 .SH SEE ALSO
 \fBgrafana-util\fR(1),

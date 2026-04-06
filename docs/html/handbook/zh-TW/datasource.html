@@ -800,18 +800,18 @@ dehk4kxat5la8b  Prometheus  prometheus  http://prometheus:9090  true            
 <p><strong>如何解讀：</strong></p>
 <ul><li><strong>UID</strong>：用於自動化的穩定身份識別。</li><li><strong>TYPE</strong>：識別外掛實作 (例如 prometheus, loki)。</li><li><strong>IS_DEFAULT</strong>：標示這是否為該 org 的預設 data source。</li><li><strong>URL</strong>：該紀錄關聯的後端目標位址。</li></ul>
 <h2 id="關鍵指令-完整參數參考">關鍵指令 (完整參數參考)</h2>
-<table><thead><tr><th>指令</th><th>帶有參數的完整範例</th></tr></thead><tbody><tr><td><strong>盤點 (List)</strong></td><td><code>grafana-util datasource list --all-orgs --table</code> 或 <code>grafana-util datasource list --input-dir ./datasources --table</code></td></tr><tr><td><strong>匯出 (Export)</strong></td><td><code>grafana-util datasource export --export-dir ./datasources --overwrite</code></td></tr><tr><td><strong>匯入 (Import)</strong></td><td><code>grafana-util datasource import --import-dir ./datasources --replace-existing --dry-run --table</code></td></tr><tr><td><strong>比對 (Diff)</strong></td><td><code>grafana-util datasource diff --import-dir ./datasources</code></td></tr><tr><td><strong>新增 (Add)</strong></td><td><code>grafana-util datasource add --uid &lt;UID&gt; --name &lt;NAME&gt; --type prometheus --datasource-url &lt;URL&gt; --dry-run --table</code></td></tr></tbody></table>
+<table><thead><tr><th>指令</th><th>帶有參數的完整範例</th></tr></thead><tbody><tr><td><strong>盤點 (List)</strong></td><td><code>grafana-util datasource list --all-orgs --table</code> 或 <code>grafana-util datasource list --input-dir ./datasources --table</code></td></tr><tr><td><strong>匯出 (Export)</strong></td><td><code>grafana-util datasource export --output-dir ./datasources --overwrite</code></td></tr><tr><td><strong>匯入 (Import)</strong></td><td><code>grafana-util datasource import --input-dir ./datasources --replace-existing --dry-run --table</code></td></tr><tr><td><strong>比對 (Diff)</strong></td><td><code>grafana-util datasource diff --input-dir ./datasources</code></td></tr><tr><td><strong>新增 (Add)</strong></td><td><code>grafana-util datasource add --uid &lt;UID&gt; --name &lt;NAME&gt; --type prometheus --datasource-url &lt;URL&gt; --dry-run --table</code></td></tr></tbody></table>
 <h2 id="實作範例">實作範例</h2>
 <h3 id="1-匯出盤點資產">1. 匯出盤點資產</h3>
 <pre><code># 用途：1. 匯出盤點資產。
-grafana-util datasource export --export-dir ./datasources --overwrite</code></pre>
+grafana-util datasource export --output-dir ./datasources --overwrite</code></pre>
 <p><strong>範例輸出：</strong></p>
 <pre><code>Exported datasource inventory -&gt; datasources/datasources.json
 Exported metadata            -&gt; datasources/export-metadata.json
 Datasource export completed: 3 item(s)</code></pre>
 <h3 id="2-dry-run-匯入預覽">2. Dry-Run 匯入預覽</h3>
 <pre><code># 用途：2. Dry-Run 匯入預覽。
-grafana-util datasource import --import-dir ./datasources --replace-existing --dry-run --table</code></pre>
+grafana-util datasource import --input-dir ./datasources --replace-existing --dry-run --table</code></pre>
 <p><strong>範例輸出：</strong></p>
 <pre><code>UID         NAME               TYPE         ACTION   DESTINATION
 prom-main   prometheus-main    prometheus   update   existing

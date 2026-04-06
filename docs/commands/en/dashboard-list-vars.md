@@ -9,8 +9,8 @@ Use this when you need to list variable state, feed a screenshot workflow, debug
 ## Key flags
 - `--dashboard-uid` or `--dashboard-url`: choose the dashboard to inspect for variable values.
 - `--input`: read one local dashboard JSON file instead of calling Grafana.
-- `--import-dir`: read a dashboard from a local export tree instead of calling Grafana.
-- `--input-format`: interpret `--import-dir` as `raw` or `provisioning`.
+- `--input-dir`: read a dashboard from a local export tree instead of calling Grafana.
+- `--input-format`: interpret `--input-dir` as `raw` or `provisioning`.
 - `--vars-query`: overlay a variable query string such as `var-env=prod&var-host=web01`.
 - `--org-id`: scope the inspection to one org.
 - `--output-format`: render table, csv, text, json, or yaml.

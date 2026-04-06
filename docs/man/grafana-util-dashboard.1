@@ -84,7 +84,7 @@ Delete live dashboards by UID or folder path. Use when: You need to remove one d
 Compare local dashboard files against live Grafana dashboards. Use when: You want to see what would change before importing or publishing a dashboard bundle.
 .TP
 .B analyze\-export
-Analyze dashboard export directories through the canonical dashboard analyze command. Use when: You want to read a local export tree, inspect its structure, or render governance and dependency views without contacting Grafana. Prefer dashboard analyze \-\-import\-dir ... in new docs and scripts.
+Analyze dashboard export directories through the canonical dashboard analyze command. Use when: You want to read a local export tree, inspect its structure, or render governance and dependency views without contacting Grafana. Prefer dashboard analyze \-\-input\-dir ... in new docs and scripts.
 .TP
 .B analyze\-live
 Analyze live Grafana dashboards through the canonical dashboard analyze command. Use when: You need the same analysis views as the local export\-tree flow, but sourced from live Grafana instead of a local export tree. Prefer dashboard analyze \-\-url ... in new docs and scripts.
@@ -96,7 +96,7 @@ List dashboard templating variables and datasource\-like choices from live Grafa
 Evaluate governance policy directly against live Grafana or a local export tree, with saved analysis artifacts as an advanced reuse path. Use when: You want a policy pass or fail result before promotion. Prefer direct live or local analysis inputs for the common path; keep governance\-json and queries\-json for advanced reuse and CI pipelines.
 .TP
 .B topology
-Build a deterministic dashboard topology graph directly from live Grafana or a local export tree, with saved analysis artifacts available for advanced reuse. Use when: You need a graph view of dashboards, folders, variables, datasource links, and optional alert contract data. Prefer \-\-url or \-\-import\-dir for the common path; keep artifact inputs for advanced reuse or CI. The command also accepts the graph alias.
+Build a deterministic dashboard topology graph directly from live Grafana or a local export tree, with saved analysis artifacts available for advanced reuse. Use when: You need a graph view of dashboards, folders, variables, datasource links, and optional alert contract data. Prefer \-\-url or \-\-input\-dir for the common path; keep artifact inputs for advanced reuse or CI. The command also accepts the graph alias.
 .TP
 .B screenshot
 Open one dashboard in a headless browser and capture image or PDF output. Use when: You need a reproducible dashboard or panel screenshot, especially for docs, incident notes, or visual debugging.
@@ -163,7 +163,7 @@ grafana-util dashboard list --profile prod
 .PP
 export: Export dashboards to raw/, prompt/, and provisioning/ files, with optional history/ artifacts.
 .EX
-grafana-util dashboard export --profile prod --export-dir ./dashboards --overwrite
+grafana-util dashboard export --profile prod --output-dir ./dashboards --overwrite
 .EE
 .SH SEE ALSO
 \fBgrafana-util\fR(1),

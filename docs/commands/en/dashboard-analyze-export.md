@@ -4,7 +4,7 @@
 Analyze dashboard export directories through the canonical `dashboard analyze` command.
 
 ## When to use
-Use this when you want to read a local export tree, inspect its structure, or render governance and dependency views without contacting Grafana. Prefer `dashboard analyze --import-dir ...` in new docs and scripts.
+Use this when you want to read a local export tree, inspect its structure, or render governance and dependency views without contacting Grafana. Prefer `dashboard analyze --input-dir ...` in new docs and scripts.
 
 ## Before / After
 
@@ -12,7 +12,7 @@ Use this when you want to read a local export tree, inspect its structure, or re
 - **After**: one analysis pass turns that tree into operator views you can review, hand to CI, or feed into later checks such as `topology` and `governance-gate`.
 
 ## Key flags
-- `--import-dir`: dashboard export root to analyze.
+- `--input-dir`: dashboard export root to analyze.
 - `--input-format`: choose `raw` or `provisioning`.
 - `--input-type`: select `raw` or `source` when the export root has multiple dashboard variants.
 - `--output-format`: render `text`, `table`, `csv`, `json`, `yaml`, `tree`, `tree-table`, `dependency`, `dependency-json`, `governance`, `governance-json`, or `queries-json` views.
@@ -23,12 +23,12 @@ Use this when you want to read a local export tree, inspect its structure, or re
 ## Examples
 ```bash
 # Purpose: Analyze dashboard export directories through the canonical dashboard analyze command.
-grafana-util dashboard analyze --import-dir ./dashboards/raw --input-format raw --output-format table
+grafana-util dashboard analyze --input-dir ./dashboards/raw --input-format raw --output-format table
 ```
 
 ```bash
 # Purpose: Analyze dashboard export directories through the canonical dashboard analyze command.
-grafana-util dashboard analyze --import-dir ./dashboards/provisioning --input-format provisioning --output-format governance-json
+grafana-util dashboard analyze --input-dir ./dashboards/provisioning --input-format provisioning --output-format governance-json
 ```
 
 ## What success looks like

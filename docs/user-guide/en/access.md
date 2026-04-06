@@ -63,12 +63,12 @@ grafana-util access org list --input-dir ./access-orgs --table
 
 ```bash
 # Purpose: 1. List, Export, and Replay orgs.
-grafana-util access org export --export-dir ./access-orgs
+grafana-util access org export --output-dir ./access-orgs
 ```
 
 ```bash
 # Purpose: 1. List, Export, and Replay orgs.
-grafana-util access org import --import-dir ./access-orgs --dry-run
+grafana-util access org import --input-dir ./access-orgs --dry-run
 ```
 **Expected Output:**
 ```text
@@ -130,12 +130,12 @@ grafana-util access team list --input-dir ./access-teams --table
 
 ```bash
 # Purpose: 2. Discover and Sync Teams.
-grafana-util access team export --export-dir ./access-teams --with-members
+grafana-util access team export --output-dir ./access-teams --with-members
 ```
 
 ```bash
 # Purpose: 2. Discover and Sync Teams.
-grafana-util access team import --import-dir ./access-teams --replace-existing --dry-run --table
+grafana-util access team import --input-dir ./access-teams --replace-existing --dry-run --table
 ```
 **Expected Output:**
 ```text
@@ -171,7 +171,7 @@ grafana-util access service-account list --input-dir ./access-sa --output-format
 
 ```bash
 # Purpose: 1. List and Export Service Accounts.
-grafana-util access service-account export --export-dir ./access-sa
+grafana-util access service-account export --output-dir ./access-sa
 ```
 **Expected Output:**
 ```text
@@ -232,7 +232,7 @@ Compare your local identity snapshots against the live Grafana server.
 
 ```bash
 # Purpose: Compare your local identity snapshots against the live Grafana server.
-grafana-util access user diff --import-dir ./access-users
+grafana-util access user diff --input-dir ./access-users
 ```
 
 ```bash

@@ -10,14 +10,14 @@ use std::fs;
 use tempfile::tempdir;
 
 fn make_history_only_export_args(
-    export_dir: std::path::PathBuf,
+    output_dir: std::path::PathBuf,
     org_id: Option<i64>,
     all_orgs: bool,
     overwrite: bool,
 ) -> ExportArgs {
     ExportArgs {
         common: make_common_args("http://127.0.0.1:3000".to_string()),
-        export_dir,
+        output_dir,
         page_size: 500,
         org_id,
         all_orgs,
@@ -44,7 +44,7 @@ fn export_dashboards_with_request_all_orgs_aggregates_results() {
     let temp = tempdir().unwrap();
     let args = ExportArgs {
         common: make_common_args("http://127.0.0.1:3000".to_string()),
-        export_dir: temp.path().join("dashboards"),
+        output_dir: temp.path().join("dashboards"),
         page_size: 500,
         org_id: None,
         all_orgs: true,
@@ -122,51 +122,51 @@ fn export_dashboards_with_request_all_orgs_aggregates_results() {
 
     assert_eq!(count, 2);
     assert!(args
-        .export_dir
+        .output_dir
         .join("org_1_Main_Org/raw/Infra/CPU__abc.json")
         .is_file());
     assert!(args
-        .export_dir
+        .output_dir
         .join("org_1_Main_Org/raw/index.json")
         .is_file());
     assert!(args
-        .export_dir
+        .output_dir
         .join("org_1_Main_Org/raw/export-metadata.json")
         .is_file());
     assert!(args
-        .export_dir
+        .output_dir
         .join("org_1_Main_Org/raw/folders.json")
         .is_file());
     assert!(args
-        .export_dir
+        .output_dir
         .join("org_1_Main_Org/raw/datasources.json")
         .is_file());
     assert!(args
-        .export_dir
+        .output_dir
         .join("org_1_Main_Org/raw/permissions.json")
         .is_file());
     assert!(args
-        .export_dir
+        .output_dir
         .join("org_2_Ops_Org/raw/Ops/Logs__xyz.json")
         .is_file());
     assert!(args
-        .export_dir
+        .output_dir
         .join("org_2_Ops_Org/raw/index.json")
         .is_file());
     assert!(args
-        .export_dir
+        .output_dir
         .join("org_2_Ops_Org/raw/permissions.json")
         .is_file());
     let aggregate_root_index: Value =
-        serde_json::from_str(&fs::read_to_string(args.export_dir.join("index.json")).unwrap())
+        serde_json::from_str(&fs::read_to_string(args.output_dir.join("index.json")).unwrap())
             .unwrap();
     let aggregate_root_metadata: Value = serde_json::from_str(
-        &fs::read_to_string(args.export_dir.join("export-metadata.json")).unwrap(),
+        &fs::read_to_string(args.output_dir.join("export-metadata.json")).unwrap(),
     )
     .unwrap();
     let org_one_metadata: Value = serde_json::from_str(
         &fs::read_to_string(
-            args.export_dir
+            args.output_dir
                 .join("org_1_Main_Org/raw/export-metadata.json"),
         )
         .unwrap(),
@@ -174,7 +174,7 @@ fn export_dashboards_with_request_all_orgs_aggregates_results() {
     .unwrap();
     let org_two_metadata: Value = serde_json::from_str(
         &fs::read_to_string(
-            args.export_dir
+            args.output_dir
                 .join("org_2_Ops_Org/raw/export-metadata.json"),
         )
         .unwrap(),
@@ -204,7 +204,7 @@ fn export_dashboards_with_request_all_orgs_aggregates_results() {
     assert_eq!(
         aggregate_root_index["items"][0]["raw_path"],
         Value::String(
-            args.export_dir
+            args.output_dir
                 .join("org_1_Main_Org/raw/Infra/CPU__abc.json")
                 .display()
                 .to_string()
@@ -213,7 +213,7 @@ fn export_dashboards_with_request_all_orgs_aggregates_results() {
     assert_eq!(
         aggregate_root_index["items"][1]["raw_path"],
         Value::String(
-            args.export_dir
+            args.output_dir
                 .join("org_2_Ops_Org/raw/Ops/Logs__xyz.json")
                 .display()
                 .to_string()
@@ -244,7 +244,7 @@ fn export_dashboards_with_request_all_orgs_aggregates_results() {
     );
     assert_eq!(
         org_one_entry["exportDir"],
-        Value::String(args.export_dir.join("org_1_Main_Org").display().to_string())
+        Value::String(args.output_dir.join("org_1_Main_Org").display().to_string())
     );
     assert_eq!(
         org_one_entry["usedDatasources"][0]["uid"],
@@ -256,7 +256,7 @@ fn export_dashboards_with_request_all_orgs_aggregates_results() {
     );
     assert_eq!(
         org_two_entry["exportDir"],
-        Value::String(args.export_dir.join("org_2_Ops_Org").display().to_string())
+        Value::String(args.output_dir.join("org_2_Ops_Org").display().to_string())
     );
     assert_eq!(
         org_two_entry["usedDatasources"][0]["uid"],
@@ -512,14 +512,14 @@ fn export_dashboards_with_request_include_history_writes_all_org_history_artifac
 #[test]
 fn export_dashboards_with_request_include_history_respects_overwrite() {
     let temp = tempdir().unwrap();
-    let export_dir = temp.path().join("current");
-    fs::create_dir_all(export_dir.join("history")).unwrap();
+    let output_dir = temp.path().join("current");
+    fs::create_dir_all(output_dir.join("history")).unwrap();
     fs::write(
-        export_dir.join("history/cpu-main.history.json"),
+        output_dir.join("history/cpu-main.history.json"),
         "{\"kind\":\"existing\"}\n",
     )
     .unwrap();
-    let args = make_history_only_export_args(export_dir.clone(), None, false, false);
+    let args = make_history_only_export_args(output_dir.clone(), None, false, false);
 
     let error = export_dashboards_with_request(
         |_method, path, _params, _payload| match path {
@@ -561,7 +561,7 @@ fn export_dashboards_with_dry_run_keeps_output_dir_empty() {
     let temp = tempdir().unwrap();
     let args = ExportArgs {
         common: make_common_args("http://127.0.0.1:3000".to_string()),
-        export_dir: temp.path().join("dashboards"),
+        output_dir: temp.path().join("dashboards"),
         page_size: 500,
         org_id: None,
         all_orgs: false,
@@ -601,7 +601,7 @@ fn export_dashboards_with_dry_run_keeps_output_dir_empty() {
     .unwrap();
 
     assert_eq!(count, 1);
-    assert!(!args.export_dir.exists());
+    assert!(!args.output_dir.exists());
 }
 
 #[test]
@@ -609,7 +609,7 @@ fn export_dashboards_writes_provisioning_artifacts_in_separate_lane() {
     let temp = tempdir().unwrap();
     let args = ExportArgs {
         common: make_common_args("http://127.0.0.1:3000".to_string()),
-        export_dir: temp.path().join("dashboards"),
+        output_dir: temp.path().join("dashboards"),
         page_size: 500,
         org_id: None,
         all_orgs: false,
@@ -650,26 +650,26 @@ fn export_dashboards_writes_provisioning_artifacts_in_separate_lane() {
 
     assert_eq!(count, 1);
     assert!(args
-        .export_dir
+        .output_dir
         .join("provisioning/dashboards/Infra/CPU__cpu-main.json")
         .is_file());
-    assert!(args.export_dir.join("provisioning/index.json").is_file());
+    assert!(args.output_dir.join("provisioning/index.json").is_file());
     assert!(args
-        .export_dir
+        .output_dir
         .join("provisioning/export-metadata.json")
         .is_file());
     assert!(args
-        .export_dir
+        .output_dir
         .join("provisioning/provisioning/dashboards.yaml")
         .is_file());
 
     let root_index: Value =
-        serde_json::from_str(&fs::read_to_string(args.export_dir.join("index.json")).unwrap())
+        serde_json::from_str(&fs::read_to_string(args.output_dir.join("index.json")).unwrap())
             .unwrap();
     assert_eq!(
         root_index["variants"]["provisioning"],
         Value::String(
-            args.export_dir
+            args.output_dir
                 .join("provisioning/index.json")
                 .display()
                 .to_string()
@@ -678,7 +678,7 @@ fn export_dashboards_writes_provisioning_artifacts_in_separate_lane() {
     assert_eq!(
         root_index["items"][0]["provisioning_path"],
         Value::String(
-            args.export_dir
+            args.output_dir
                 .join("provisioning/dashboards/Infra/CPU__cpu-main.json")
                 .display()
                 .to_string()
@@ -686,7 +686,7 @@ fn export_dashboards_writes_provisioning_artifacts_in_separate_lane() {
     );
 
     let metadata: Value = serde_json::from_str(
-        &fs::read_to_string(args.export_dir.join("provisioning/export-metadata.json")).unwrap(),
+        &fs::read_to_string(args.output_dir.join("provisioning/export-metadata.json")).unwrap(),
     )
     .unwrap();
     assert_eq!(
@@ -699,7 +699,7 @@ fn export_dashboards_writes_provisioning_artifacts_in_separate_lane() {
     );
 
     let provider_yaml = fs::read_to_string(
-        args.export_dir
+        args.output_dir
             .join("provisioning/provisioning/dashboards.yaml"),
     )
     .unwrap();
@@ -708,7 +708,7 @@ fn export_dashboards_writes_provisioning_artifacts_in_separate_lane() {
     assert!(provider_yaml.contains("orgId: 7"));
     assert!(provider_yaml.contains("type: file"));
     assert!(provider_yaml.contains("foldersFromFilesStructure: true"));
-    let expected_dashboard_path = fs::canonicalize(args.export_dir.join("provisioning/dashboards"))
+    let expected_dashboard_path = fs::canonicalize(args.output_dir.join("provisioning/dashboards"))
         .unwrap()
         .display()
         .to_string();
@@ -723,7 +723,7 @@ fn export_dashboards_writes_custom_provisioning_provider_settings() {
     fs::create_dir_all(&custom_provider_path).unwrap();
     let args = ExportArgs {
         common: make_common_args("http://127.0.0.1:3000".to_string()),
-        export_dir: temp.path().join("dashboards"),
+        output_dir: temp.path().join("dashboards"),
         page_size: 500,
         org_id: None,
         all_orgs: false,
@@ -764,7 +764,7 @@ fn export_dashboards_writes_custom_provisioning_provider_settings() {
 
     assert_eq!(count, 1);
     let provider_yaml = fs::read_to_string(
-        args.export_dir
+        args.output_dir
             .join("provisioning/provisioning/dashboards.yaml"),
     )
     .unwrap();

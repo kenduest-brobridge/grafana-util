@@ -10,7 +10,7 @@ use tempfile::tempdir;
 #[test]
 fn validate_inspect_export_report_args_rejects_panel_filter_without_report() {
     let args = test_support::InspectExportArgs {
-        import_dir: PathBuf::from("./dashboards/raw"),
+        input_dir: PathBuf::from("./dashboards/raw"),
         input_type: None,
         input_format: test_support::DashboardImportInputFormat::Raw,
         text: false,
@@ -52,7 +52,7 @@ fn render_csv_uses_headers_and_escaping() {
 #[test]
 fn render_grouped_query_report_displays_dashboard_panel_and_query_tree() {
     let report = test_support::ExportInspectionQueryReport {
-        import_dir: "/tmp/raw".to_string(),
+        input_dir: "/tmp/raw".to_string(),
         summary: test_support::QueryReportSummary {
             dashboard_count: 1,
             panel_count: 2,
@@ -171,7 +171,7 @@ fn render_grouped_query_report_displays_dashboard_panel_and_query_tree() {
 #[test]
 fn render_grouped_query_table_report_displays_dashboard_sections_with_tables() {
     let report = test_support::ExportInspectionQueryReport {
-        import_dir: "/tmp/raw".to_string(),
+        input_dir: "/tmp/raw".to_string(),
         summary: test_support::QueryReportSummary {
             dashboard_count: 1,
             panel_count: 2,
@@ -429,7 +429,7 @@ fn render_query_report_column_supports_variable_and_count_columns() {
 #[test]
 fn render_grouped_query_table_report_includes_loki_analysis_columns() {
     let report = test_support::ExportInspectionQueryReport {
-        import_dir: "/tmp/raw".to_string(),
+        input_dir: "/tmp/raw".to_string(),
         summary: test_support::QueryReportSummary {
             dashboard_count: 1,
             panel_count: 1,

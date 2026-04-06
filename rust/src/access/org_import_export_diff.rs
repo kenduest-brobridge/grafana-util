@@ -235,8 +235,8 @@ pub(super) fn build_org_export_metadata(
     metadata
 }
 
-pub(super) fn load_org_import_records(import_dir: &Path) -> Result<Vec<Map<String, Value>>> {
-    let path = import_dir.join(ACCESS_ORG_EXPORT_FILENAME);
+pub(super) fn load_org_import_records(input_dir: &Path) -> Result<Vec<Map<String, Value>>> {
+    let path = input_dir.join(ACCESS_ORG_EXPORT_FILENAME);
     if !path.is_file() {
         return Err(message(format!(
             "Access import file not found: {}",

@@ -30,7 +30,7 @@ pub(crate) struct DashboardAnalysisSourceArgs<'a> {
     pub(crate) page_size: usize,
     pub(crate) org_id: Option<i64>,
     pub(crate) all_orgs: bool,
-    pub(crate) import_dir: Option<&'a Path>,
+    pub(crate) input_dir: Option<&'a Path>,
     pub(crate) input_format: DashboardImportInputFormat,
     pub(crate) input_type: Option<InspectExportInputType>,
     pub(crate) governance: Option<&'a Path>,
@@ -43,24 +43,24 @@ fn load_object(path: &Path, label: &str) -> Result<Value> {
 }
 
 fn build_artifacts_from_export_dir(
-    import_dir: &Path,
+    input_dir: &Path,
     input_format: DashboardImportInputFormat,
     input_type: Option<InspectExportInputType>,
 ) -> Result<DashboardAnalysisArtifacts> {
     let temp_dir = TempInspectDir::new("dashboard-analysis-source")?;
     let resolved = resolve_inspect_export_import_dir(
         &temp_dir.path,
-        import_dir,
+        input_dir,
         input_format,
         input_type,
         false,
     )?;
     let summary = build_export_inspection_summary_for_variant(
-        &resolved.import_dir,
+        &resolved.input_dir,
         resolved.expected_variant,
     )?;
     let report = build_export_inspection_query_report_for_variant(
-        &resolved.import_dir,
+        &resolved.input_dir,
         resolved.expected_variant,
     )?;
     Ok(DashboardAnalysisArtifacts {
@@ -83,9 +83,9 @@ fn build_artifacts_from_live(
         source.all_orgs,
     );
     let _ = export_dashboards_with_org_clients(&export_args)?;
-    let import_dir = prepare_live_analysis_import_dir(&temp_dir.path, source.all_orgs)?;
+    let input_dir = prepare_live_analysis_import_dir(&temp_dir.path, source.all_orgs)?;
     build_artifacts_from_export_dir(
-        &import_dir,
+        &input_dir,
         DashboardImportInputFormat::Raw,
         Some(InspectExportInputType::Raw),
     )
@@ -94,13 +94,13 @@ fn build_artifacts_from_live(
 pub(crate) fn resolve_dashboard_analysis_artifacts(
     source: &DashboardAnalysisSourceArgs<'_>,
 ) -> Result<DashboardAnalysisArtifacts> {
-    if let Some(import_dir) = source.import_dir {
+    if let Some(input_dir) = source.input_dir {
         if source.governance.is_some() || source.queries.is_some() {
             return Err(message(
-                "--import-dir cannot be combined with --governance or --queries.",
+                "--input-dir cannot be combined with --governance or --queries.",
             ));
         }
-        return build_artifacts_from_export_dir(import_dir, source.input_format, source.input_type);
+        return build_artifacts_from_export_dir(input_dir, source.input_format, source.input_type);
     }
 
     if source.governance.is_some() || source.queries.is_some() {
@@ -265,7 +265,7 @@ mod tests {
             page_size: 500,
             org_id: None,
             all_orgs: false,
-            import_dir: Some(&raw_dir),
+            input_dir: Some(&raw_dir),
             input_format: DashboardImportInputFormat::Raw,
             input_type: Some(InspectExportInputType::Raw),
             governance: None,
@@ -298,7 +298,7 @@ mod tests {
             page_size: 500,
             org_id: None,
             all_orgs: false,
-            import_dir: None,
+            input_dir: None,
             input_format: DashboardImportInputFormat::Raw,
             input_type: None,
             governance: Some(&governance_path),

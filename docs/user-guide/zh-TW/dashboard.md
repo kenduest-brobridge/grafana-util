@@ -217,12 +217,12 @@ spring-jmx-node-unified  Spring JMX + Node Unified Dashboard (VM)  Demo    ffhrm
 | 指令 | 帶有參數的完整範例 |
 | :--- | :--- |
 | **盤點 (List)** | `grafana-util dashboard list --all-orgs --with-sources --table` |
-| **匯出 (Export)** | `grafana-util dashboard export --export-dir ./dashboards --overwrite --progress` |
-| **匯出 + 歷史** | `grafana-util dashboard export --export-dir ./dashboards --include-history --overwrite --progress` |
+| **匯出 (Export)** | `grafana-util dashboard export --output-dir ./dashboards --overwrite --progress` |
+| **匯出 + 歷史** | `grafana-util dashboard export --output-dir ./dashboards --include-history --overwrite --progress` |
 | **Raw 轉 Prompt** | `grafana-util dashboard raw-to-prompt --input-dir ./dashboards/raw --output-dir ./dashboards/prompt --overwrite --progress` |
-| **匯入 (Import)** | `grafana-util dashboard import --import-dir ./dashboards/raw --replace-existing --dry-run --table` |
-| **比對 (Diff)** | `grafana-util dashboard diff --import-dir ./dashboards/raw --input-format raw` |
-| **分析 (Analyze)** | `grafana-util dashboard analyze --import-dir ./dashboards/raw --input-format raw --output-format dependency` |
+| **匯入 (Import)** | `grafana-util dashboard import --input-dir ./dashboards/raw --replace-existing --dry-run --table` |
+| **比對 (Diff)** | `grafana-util dashboard diff --input-dir ./dashboards/raw --input-format raw` |
+| **分析 (Analyze)** | `grafana-util dashboard analyze --input-dir ./dashboards/raw --input-format raw --output-format dependency` |
 | **刪除 (Delete)** | `grafana-util dashboard delete --uid <UID> --url <URL> --basic-user admin --basic-password admin` |
 | **變數檢視 (List Vars)** | `grafana-util dashboard list-vars --uid <UID> --url <URL> --table` |
 | **檔案修正 (Patch)** | `grafana-util dashboard patch-file --input <FILE> --name "New Title" --output <FILE>` |
@@ -237,7 +237,7 @@ spring-jmx-node-unified  Spring JMX + Node Unified Dashboard (VM)  Demo    ffhrm
 在大規模匯出時使用 `--progress` 以取得簡潔的日誌。
 ```bash
 # 用途：在大規模匯出時使用 --progress 以取得簡潔的日誌。
-grafana-util dashboard export --export-dir ./dashboards --overwrite --progress
+grafana-util dashboard export --output-dir ./dashboards --overwrite --progress
 ```
 **範例輸出：**
 ```text
@@ -251,7 +251,7 @@ Exporting dashboard 7/7: two-prom-query-smoke
 在變更前務必確認目標動作。
 ```bash
 # 用途：在變更前務必確認目標動作。
-grafana-util dashboard import --import-dir ./dashboards/raw --dry-run --table
+grafana-util dashboard import --input-dir ./dashboards/raw --dry-run --table
 ```
 **範例輸出：**
 ```text
@@ -269,7 +269,7 @@ subfolder-chain-smoke  missing      create  Platform / Team / Apps / Prod  ./das
 比對本地配置檔案與實例現況。
 ```bash
 # 用途：比對本地配置檔案與實例現況。
-grafana-util dashboard diff --import-dir ./dashboards/provisioning --input-format provisioning
+grafana-util dashboard diff --input-dir ./dashboards/provisioning --input-format provisioning
 ```
 **範例輸出：**
 ```text

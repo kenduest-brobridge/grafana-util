@@ -4,7 +4,7 @@
 透過 canonical 的 `dashboard analyze` 指令分析儀表板匯出目錄。
 
 ## 何時使用
-當您想讀取本地匯出樹、檢視其結構，或在不連到 Grafana 的情況下產生治理與相依性視圖時，使用這個頁面。新文件與腳本請優先使用 `grafana-util dashboard analyze --import-dir ...`。
+當您想讀取本地匯出樹、檢視其結構，或在不連到 Grafana 的情況下產生治理與相依性視圖時，使用這個頁面。新文件與腳本請優先使用 `grafana-util dashboard analyze --input-dir ...`。
 
 ## 採用前後對照
 
@@ -12,7 +12,7 @@
 - **採用後**：跑一次 analyze，就能把匯出樹整理成維運人員看得懂的檢視，也能直接交給 CI 或後續的 `topology`、`governance-gate`。
 
 ## 重點旗標
-- `--import-dir`：要分析的儀表板匯出根目錄。
+- `--input-dir`：要分析的儀表板匯出根目錄。
 - `--input-format`：選擇 `raw` 或 `provisioning`。
 - `--input-type`：當匯出根目錄包含多種儀表板變體時，選擇 `raw` 或 `source`。
 - `--output-format`：輸出 `text`、`table`、`csv`、`json`、`yaml`、`tree`、`tree-table`、`dependency`、`dependency-json`、`governance`、`governance-json` 或 `queries-json` 檢視。
@@ -23,12 +23,12 @@
 ## 範例
 ```bash
 # 用途：透過 canonical 的 dashboard analyze 指令分析儀表板匯出目錄。
-grafana-util dashboard analyze --import-dir ./dashboards/raw --input-format raw --output-format table
+grafana-util dashboard analyze --input-dir ./dashboards/raw --input-format raw --output-format table
 ```
 
 ```bash
 # 用途：透過 canonical 的 dashboard analyze 指令分析儀表板匯出目錄。
-grafana-util dashboard analyze --import-dir ./dashboards/provisioning --input-format provisioning --output-format governance-json
+grafana-util dashboard analyze --input-dir ./dashboards/provisioning --input-format provisioning --output-format governance-json
 ```
 
 ## 成功判準

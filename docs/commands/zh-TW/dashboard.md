@@ -18,7 +18,7 @@
 - 先看現況：`dashboard browse` 或 `dashboard list`
 - 先做草稿：`dashboard fetch-live`、`dashboard clone-live`、`dashboard export`
 - 先做比對：`dashboard diff`、`dashboard review`
-- 先做分析：`dashboard analyze --import-dir ...`、`dashboard analyze --url ...`、`dashboard list-vars`
+- 先做分析：`dashboard analyze --input-dir ...`、`dashboard analyze --url ...`、`dashboard list-vars`
 - 先做上線前檢查：`dashboard governance-gate`
 - 先看影響面：`dashboard topology`、`dashboard impact`
 - 先處理歷史版本：`dashboard history list`、`dashboard history restore`、`dashboard history export`

@@ -55,8 +55,8 @@ pub const SNAPSHOT_DATASOURCE_TOOL_SCHEMA_VERSION: i64 = 1;
 pub const SNAPSHOT_METADATA_FILENAME: &str = "snapshot-metadata.json";
 const SNAPSHOT_REVIEW_KIND: &str = "grafana-utils-snapshot-review";
 const SNAPSHOT_REVIEW_SCHEMA_VERSION: i64 = 1;
-const SNAPSHOT_ROOT_HELP_TEXT: &str = "Examples:\n\n  grafana-util snapshot export --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --export-dir ./snapshot\n\n  grafana-util snapshot export --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --export-dir ./snapshot --overwrite\n\n  grafana-util snapshot review --input-dir ./snapshot --output-format table\n\n  grafana-util snapshot review --input-dir ./snapshot --interactive";
-const SNAPSHOT_EXPORT_HELP_TEXT: &str = "Examples:\n\n  grafana-util snapshot export --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --export-dir ./snapshot\n  grafana-util snapshot export --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --export-dir ./snapshot --overwrite";
+const SNAPSHOT_ROOT_HELP_TEXT: &str = "Examples:\n\n  grafana-util snapshot export --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output-dir ./snapshot\n\n  grafana-util snapshot export --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output-dir ./snapshot --overwrite\n\n  grafana-util snapshot review --input-dir ./snapshot --output-format table\n\n  grafana-util snapshot review --input-dir ./snapshot --interactive";
+const SNAPSHOT_EXPORT_HELP_TEXT: &str = "Examples:\n\n  grafana-util snapshot export --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output-dir ./snapshot\n  grafana-util snapshot export --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output-dir ./snapshot --overwrite";
 const SNAPSHOT_REVIEW_HELP_TEXT: &str = "Examples:\n\n  grafana-util snapshot review --input-dir ./snapshot --output-format table\n  grafana-util snapshot review --input-dir ./snapshot --output-format csv\n  grafana-util snapshot review --input-dir ./snapshot --output-format text\n  grafana-util snapshot review --input-dir ./snapshot --output-format json\n  grafana-util snapshot review --input-dir ./snapshot --output-format yaml\n  grafana-util snapshot review --input-dir ./snapshot --interactive";
 
 fn export_scope_kind_from_metadata_value(metadata: &Value) -> &str {
@@ -93,8 +93,8 @@ fn rewrite_export_scope_kind(metadata_path: &Path, scope_kind: &str) -> Result<(
     Ok(())
 }
 
-fn annotate_snapshot_root_scope_kinds(export_dir: &Path) -> Result<()> {
-    let paths = build_snapshot_paths(export_dir);
+fn annotate_snapshot_root_scope_kinds(output_dir: &Path) -> Result<()> {
+    let paths = build_snapshot_paths(output_dir);
     rewrite_export_scope_kind(
         &paths.dashboards.join(EXPORT_METADATA_FILENAME),
         "workspace-root",
@@ -152,7 +152,7 @@ fn access_common_no_org_id_from_snapshot(common: &CommonCliArgs) -> AccessCommon
 fn build_snapshot_access_user_export_args(args: &SnapshotExportArgs) -> UserExportArgs {
     UserExportArgs {
         common: access_common_from_snapshot(&args.common),
-        export_dir: build_snapshot_paths(&args.export_dir)
+        output_dir: build_snapshot_paths(&args.output_dir)
             .access
             .join(SNAPSHOT_ACCESS_USERS_DIR),
         overwrite: args.overwrite,
@@ -165,7 +165,7 @@ fn build_snapshot_access_user_export_args(args: &SnapshotExportArgs) -> UserExpo
 fn build_snapshot_access_team_export_args(args: &SnapshotExportArgs) -> TeamExportArgs {
     TeamExportArgs {
         common: access_common_from_snapshot(&args.common),
-        export_dir: build_snapshot_paths(&args.export_dir)
+        output_dir: build_snapshot_paths(&args.output_dir)
             .access
             .join(SNAPSHOT_ACCESS_TEAMS_DIR),
         overwrite: args.overwrite,
@@ -178,7 +178,7 @@ fn build_snapshot_access_org_export_args(args: &SnapshotExportArgs) -> OrgExport
     OrgExportArgs {
         common: access_common_no_org_id_from_snapshot(&args.common),
         org_id: None,
-        export_dir: build_snapshot_paths(&args.export_dir)
+        output_dir: build_snapshot_paths(&args.output_dir)
             .access
             .join(SNAPSHOT_ACCESS_ORGS_DIR),
         overwrite: args.overwrite,
@@ -193,7 +193,7 @@ fn build_snapshot_access_service_account_export_args(
 ) -> ServiceAccountExportArgs {
     ServiceAccountExportArgs {
         common: access_common_from_snapshot(&args.common),
-        export_dir: build_snapshot_paths(&args.export_dir)
+        output_dir: build_snapshot_paths(&args.output_dir)
             .access
             .join(SNAPSHOT_ACCESS_SERVICE_ACCOUNTS_DIR),
         overwrite: args.overwrite,
@@ -260,9 +260,9 @@ fn load_snapshot_lane_metadata_summary(
 }
 
 fn build_snapshot_access_lane_summaries(
-    export_dir: &Path,
+    output_dir: &Path,
 ) -> Result<(Value, SnapshotAccessReviewCounts, Vec<Value>)> {
-    let access_root = export_dir.join(SNAPSHOT_ACCESS_DIR);
+    let access_root = output_dir.join(SNAPSHOT_ACCESS_DIR);
     if !access_root.exists() {
         return Ok((
             json!({
@@ -376,10 +376,10 @@ fn build_snapshot_access_lane_summaries(
 }
 
 pub(crate) fn build_snapshot_root_metadata(
-    export_dir: &Path,
+    output_dir: &Path,
     common: &CommonCliArgs,
 ) -> Result<Value> {
-    let paths = build_snapshot_paths(export_dir);
+    let paths = build_snapshot_paths(output_dir);
     let dashboard_metadata = load_snapshot_lane_metadata_summary(
         &paths.dashboards,
         "index.json",
@@ -456,7 +456,7 @@ pub(crate) fn build_snapshot_root_metadata(
         "capturedAt": DateTime::<Utc>::from(std::time::SystemTime::now()).to_rfc3339(),
         "source": snapshot_common_source(common),
         "paths": {
-            "root": export_dir.to_string_lossy(),
+            "root": output_dir.to_string_lossy(),
             "dashboards": paths.dashboards.to_string_lossy(),
             "datasources": paths.datasources.to_string_lossy(),
             "access": paths.access.to_string_lossy(),
@@ -488,11 +488,11 @@ pub struct SnapshotExportArgs {
     #[command(flatten)]
     pub common: CommonCliArgs,
     #[arg(
-        long,
+        long = "output-dir",
         default_value = "snapshot",
         help = "Directory to write the snapshot export root into. The live export writes dashboard and datasource bundles under this root."
     )]
-    pub export_dir: PathBuf,
+    pub output_dir: PathBuf,
     #[arg(
         long,
         help = "Replace an existing snapshot export root instead of failing when the dashboard or datasource export directories already exist."
@@ -590,17 +590,17 @@ struct SnapshotAccessReviewCounts {
     service_account_count: usize,
 }
 
-pub fn build_snapshot_paths(export_dir: &Path) -> SnapshotPaths {
-    let access = export_dir.join(SNAPSHOT_ACCESS_DIR);
+pub fn build_snapshot_paths(output_dir: &Path) -> SnapshotPaths {
+    let access = output_dir.join(SNAPSHOT_ACCESS_DIR);
     SnapshotPaths {
-        dashboards: export_dir.join(SNAPSHOT_DASHBOARD_DIR),
-        datasources: export_dir.join(SNAPSHOT_DATASOURCE_DIR),
+        dashboards: output_dir.join(SNAPSHOT_DASHBOARD_DIR),
+        datasources: output_dir.join(SNAPSHOT_DATASOURCE_DIR),
         access_users: access.join(SNAPSHOT_ACCESS_USERS_DIR),
         access_teams: access.join(SNAPSHOT_ACCESS_TEAMS_DIR),
         access_orgs: access.join(SNAPSHOT_ACCESS_ORGS_DIR),
         access_service_accounts: access.join(SNAPSHOT_ACCESS_SERVICE_ACCOUNTS_DIR),
         access,
-        metadata: export_dir.join(SNAPSHOT_METADATA_FILENAME),
+        metadata: output_dir.join(SNAPSHOT_METADATA_FILENAME),
     }
 }
 
@@ -630,10 +630,10 @@ pub fn build_snapshot_overview_args(args: &SnapshotReviewArgs) -> OverviewArgs {
 }
 
 pub fn build_snapshot_dashboard_export_args(args: &SnapshotExportArgs) -> DashboardExportArgs {
-    let paths = build_snapshot_paths(&args.export_dir);
+    let paths = build_snapshot_paths(&args.output_dir);
     DashboardExportArgs {
         common: args.common.clone(),
-        export_dir: paths.dashboards,
+        output_dir: paths.dashboards,
         page_size: dashboard::DEFAULT_PAGE_SIZE,
         org_id: None,
         all_orgs: true,
@@ -656,10 +656,10 @@ pub fn build_snapshot_dashboard_export_args(args: &SnapshotExportArgs) -> Dashbo
 }
 
 pub fn build_snapshot_datasource_export_args(args: &SnapshotExportArgs) -> DatasourceExportArgs {
-    let paths = build_snapshot_paths(&args.export_dir);
+    let paths = build_snapshot_paths(&args.output_dir);
     DatasourceExportArgs {
         common: args.common.clone(),
-        export_dir: paths.datasources,
+        output_dir: paths.datasources,
         org_id: None,
         all_orgs: true,
         overwrite: args.overwrite,
@@ -1464,8 +1464,8 @@ fn run_snapshot_access_exports(args: &SnapshotExportArgs) -> Result<()> {
 }
 
 fn write_snapshot_root_metadata_file(args: &SnapshotExportArgs) -> Result<()> {
-    let metadata_path = build_snapshot_paths(&args.export_dir).metadata;
-    let metadata = build_snapshot_root_metadata(&args.export_dir, &args.common)?;
+    let metadata_path = build_snapshot_paths(&args.output_dir).metadata;
+    let metadata = build_snapshot_root_metadata(&args.output_dir, &args.common)?;
     fs::write(metadata_path, serde_json::to_string_pretty(&metadata)?)?;
     Ok(())
 }
@@ -1486,7 +1486,7 @@ where
     run_datasource(DatasourceGroupCommand::Export(
         build_snapshot_datasource_export_args(&args),
     ))?;
-    annotate_snapshot_root_scope_kinds(&args.export_dir)?;
+    annotate_snapshot_root_scope_kinds(&args.output_dir)?;
     Ok(())
 }
 
@@ -1500,7 +1500,7 @@ pub fn run_snapshot_export(args: SnapshotExportArgs) -> Result<()> {
         crate::datasource::run_datasource_cli,
     )?;
     run_snapshot_access_exports(&export_args)?;
-    annotate_snapshot_root_scope_kinds(&export_args.export_dir)?;
+    annotate_snapshot_root_scope_kinds(&export_args.output_dir)?;
     write_snapshot_root_metadata_file(&export_args)?;
     Ok(())
 }

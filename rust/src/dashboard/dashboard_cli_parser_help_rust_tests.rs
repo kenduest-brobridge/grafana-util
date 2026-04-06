@@ -604,7 +604,7 @@ fn parse_cli_supports_import_progress_and_verbose_flags() {
     let args = parse_cli_from([
         "grafana-util",
         "import",
-        "--import-dir",
+        "--input-dir",
         "./dashboards/raw",
         "--progress",
         "-v",
@@ -624,7 +624,7 @@ fn parse_cli_supports_import_interactive_flag() {
     let args = parse_cli_from([
         "grafana-util",
         "import",
-        "--import-dir",
+        "--input-dir",
         "./dashboards/raw",
         "--interactive",
     ]);
@@ -642,7 +642,7 @@ fn parse_cli_supports_provisioning_import_format() {
     let args = parse_cli_from([
         "grafana-util",
         "import",
-        "--import-dir",
+        "--input-dir",
         "./dashboards/provisioning",
         "--input-format",
         "provisioning",
@@ -684,7 +684,7 @@ fn parse_cli_supports_provisioning_diff_input_format() {
     let args = parse_cli_from([
         "grafana-util",
         "diff",
-        "--import-dir",
+        "--input-dir",
         "./dashboards/provisioning",
         "--input-format",
         "provisioning",
@@ -697,7 +697,7 @@ fn parse_cli_supports_provisioning_diff_input_format() {
                 DashboardImportInputFormat::Provisioning
             );
             assert_eq!(
-                diff_args.import_dir,
+                diff_args.input_dir,
                 std::path::PathBuf::from("./dashboards/provisioning")
             );
         }
@@ -1050,7 +1050,7 @@ fn parse_cli_supports_import_dry_run_json_flag() {
     let args = parse_cli_from([
         "grafana-util",
         "import",
-        "--import-dir",
+        "--input-dir",
         "./dashboards/raw",
         "--dry-run",
         "--json",
@@ -1070,7 +1070,7 @@ fn parse_cli_supports_import_dry_run_output_format_table() {
     let args = parse_cli_from([
         "grafana-util",
         "import",
-        "--import-dir",
+        "--input-dir",
         "./dashboards/raw",
         "--dry-run",
         "--output-format",
@@ -1117,7 +1117,7 @@ fn parse_cli_supports_browse_local_export_tree() {
     let args = parse_cli_from([
         "grafana-util",
         "browse",
-        "--import-dir",
+        "--input-dir",
         "./dashboards/raw",
         "--input-format",
         "raw",
@@ -1128,7 +1128,7 @@ fn parse_cli_supports_browse_local_export_tree() {
     match args.command {
         DashboardCommand::Browse(browse_args) => {
             assert_eq!(
-                browse_args.import_dir,
+                browse_args.input_dir,
                 Some(PathBuf::from("./dashboards/raw"))
             );
             assert_eq!(browse_args.input_format, DashboardImportInputFormat::Raw);
@@ -1153,7 +1153,7 @@ fn browse_help_mentions_live_tree_controls() {
 #[test]
 fn browse_help_mentions_local_export_tree_examples() {
     let help = render_dashboard_subcommand_help("browse");
-    assert!(help.contains("--import-dir ./dashboards/raw"));
+    assert!(help.contains("--input-dir ./dashboards/raw"));
     assert!(help.contains("Browse a raw export tree from disk"));
 }
 
@@ -1262,7 +1262,7 @@ fn parse_cli_supports_import_dry_run_output_columns() {
     let args = parse_cli_from([
         "grafana-util",
         "import",
-        "--import-dir",
+        "--input-dir",
         "./dashboards/raw",
         "--dry-run",
         "--output-format",
@@ -1295,7 +1295,7 @@ fn parse_cli_supports_import_update_existing_only_flag() {
     let args = parse_cli_from([
         "grafana-util",
         "import",
-        "--import-dir",
+        "--input-dir",
         "./dashboards/raw",
         "--update-existing-only",
     ]);
@@ -1314,7 +1314,7 @@ fn parse_cli_supports_import_require_matching_folder_path_flag() {
     let args = parse_cli_from([
         "grafana-util",
         "import",
-        "--import-dir",
+        "--input-dir",
         "./dashboards/raw",
         "--require-matching-folder-path",
     ]);
@@ -1332,7 +1332,7 @@ fn parse_cli_supports_import_org_scope_flag() {
     let args = parse_cli_from([
         "grafana-util",
         "import",
-        "--import-dir",
+        "--input-dir",
         "./dashboards/raw",
         "--org-id",
         "7",
@@ -1351,7 +1351,7 @@ fn parse_cli_supports_import_by_export_org_flags() {
     let args = parse_cli_from([
         "grafana-util",
         "import",
-        "--import-dir",
+        "--input-dir",
         "./dashboards",
         "--use-export-org",
         "--only-org-id",
@@ -1377,7 +1377,7 @@ fn parse_cli_supports_import_require_matching_export_org_flag() {
     let args = parse_cli_from([
         "grafana-util",
         "import",
-        "--import-dir",
+        "--input-dir",
         "./dashboards/raw",
         "--require-matching-export-org",
     ]);
@@ -1395,7 +1395,7 @@ fn parse_cli_rejects_import_org_id_with_use_export_org() {
     let error = DashboardCliArgs::try_parse_from([
         "grafana-util",
         "import",
-        "--import-dir",
+        "--input-dir",
         "./dashboards",
         "--org-id",
         "7",
@@ -1412,7 +1412,7 @@ fn parse_cli_supports_import_use_export_org_flags() {
     let args = parse_cli_from([
         "grafana-util",
         "import",
-        "--import-dir",
+        "--input-dir",
         "./dashboards",
         "--use-export-org",
         "--only-org-id",
@@ -1531,7 +1531,7 @@ fn parse_cli_supports_dashboard_history_list_input_sources() {
         "grafana-util",
         "history",
         "list",
-        "--import-dir",
+        "--input-dir",
         "./dashboards",
         "--dashboard-uid",
         "cpu-main",
@@ -1544,7 +1544,7 @@ fn parse_cli_supports_dashboard_history_list_input_sources() {
             DashboardHistorySubcommand::List(args) => {
                 assert_eq!(args.dashboard_uid, None);
                 assert_eq!(args.input, Some(PathBuf::from("./cpu-main.history.json")));
-                assert_eq!(args.import_dir, None);
+                assert_eq!(args.input_dir, None);
             }
             _ => panic!("expected history list subcommand"),
         },
@@ -1556,7 +1556,7 @@ fn parse_cli_supports_dashboard_history_list_input_sources() {
             DashboardHistorySubcommand::List(args) => {
                 assert_eq!(args.dashboard_uid.as_deref(), Some("cpu-main"));
                 assert_eq!(args.input, None);
-                assert_eq!(args.import_dir, Some(PathBuf::from("./dashboards")));
+                assert_eq!(args.input_dir, Some(PathBuf::from("./dashboards")));
             }
             _ => panic!("expected history list subcommand"),
         },
@@ -1568,7 +1568,7 @@ fn parse_cli_supports_dashboard_history_list_input_sources() {
 fn dashboard_history_list_help_mentions_local_inputs() {
     let help = render_dashboard_history_subcommand_help("list");
     assert!(help.contains("--input"));
-    assert!(help.contains("--import-dir"));
+    assert!(help.contains("--input-dir"));
     assert!(help.contains("dashboard history export"));
     assert!(help.contains("dashboard export --include-history"));
 }

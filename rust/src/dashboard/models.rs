@@ -143,7 +143,7 @@ pub(crate) struct ExportOrgSummary {
     #[serde(rename = "usedDatasources", skip_serializing_if = "Option::is_none")]
     pub used_datasources: Option<Vec<ExportDatasourceUsageSummary>>,
     #[serde(rename = "exportDir", skip_serializing_if = "Option::is_none")]
-    pub export_dir: Option<String>,
+    pub output_dir: Option<String>,
 }
 
 /// Struct definition for ExportDatasourceUsageSummary.

@@ -15,7 +15,7 @@ Before: importing datasource bundles usually meant manually reconciling files, o
 After: one import command can preview the plan, reconcile org routing, and then push the bundle with the right guardrails.
 .SH COMMON OPTIONS
 .TP
-.B \-\-import\-dir
+.B \-\-input\-dir
 source path for inventory or provisioning input.
 .TP
 .B \-\-input\-format
@@ -50,7 +50,7 @@ if secrets stay unresolved, check the placeholder map and the provided secret va
 .PP
 Import datasource inventory through the Grafana API.
 .EX
-grafana-util datasource import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./datasources --dry-run --table
+grafana-util datasource import --url http://localhost:3000 --basic-user admin --basic-password admin --input-dir ./datasources --dry-run --table
 .EE
 .SH SEE ALSO
 \fBgrafana-util\fR(1),

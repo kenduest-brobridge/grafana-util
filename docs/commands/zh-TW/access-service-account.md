@@ -32,8 +32,8 @@
 
 - `list`: `--input-dir`, `--query`, `--page`, `--per-page`, `--table`, `--csv`, `--json`, `--yaml`, `--output-format`
 - `add`: `--name`, `--role`, `--disabled`, `--json`
-- `export` 與 `diff`: `--export-dir` 或 `--diff-dir`, `--overwrite`, `--dry-run`
-- `import`: `--import-dir`, `--replace-existing`, `--dry-run`, `--table`, `--json`, `--output-format`, `--yes`
+- `export` 與 `diff`: `--output-dir` 或 `--diff-dir`, `--overwrite`, `--dry-run`
+- `import`: `--input-dir`, `--replace-existing`, `--dry-run`, `--table`, `--json`, `--output-format`, `--yes`
 - `delete`: `--name`, `--yes`, `--json`
 - `token add`: `--service-account-id` 或 `--name`, `--token-name`, `--seconds-to-live`, `--json`
 - `token delete`: `--service-account-id` 或 `--name`, `--token-name`, `--yes`, `--json`

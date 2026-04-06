@@ -43,13 +43,13 @@ trait LiveImportBackend {
         &mut self,
         cache: &mut ImportLookupCache,
         args: &ImportArgs,
-        import_dir: &std::path::Path,
+        input_dir: &std::path::Path,
         metadata: Option<&ExportMetadata>,
     ) -> Result<()>;
 
     fn validate_dependencies(
         &mut self,
-        import_dir: &std::path::Path,
+        input_dir: &std::path::Path,
         strict_schema: bool,
         target_schema_version: Option<i64>,
     ) -> Result<()>;
@@ -110,14 +110,14 @@ where
         &mut self,
         cache: &mut ImportLookupCache,
         args: &ImportArgs,
-        import_dir: &std::path::Path,
+        input_dir: &std::path::Path,
         metadata: Option<&ExportMetadata>,
     ) -> Result<()> {
         validate_matching_export_org_with_request(
             &mut *self.request_json,
             cache,
             args,
-            import_dir,
+            input_dir,
             metadata,
             None,
         )
@@ -125,13 +125,13 @@ where
 
     fn validate_dependencies(
         &mut self,
-        import_dir: &std::path::Path,
+        input_dir: &std::path::Path,
         strict_schema: bool,
         target_schema_version: Option<i64>,
     ) -> Result<()> {
         validate_dashboard_import_dependencies_with_request(
             &mut *self.request_json,
-            import_dir,
+            input_dir,
             strict_schema,
             target_schema_version,
         )
@@ -214,13 +214,13 @@ impl LiveImportBackend for ClientImportBackend<'_> {
         &mut self,
         _cache: &mut ImportLookupCache,
         args: &ImportArgs,
-        import_dir: &std::path::Path,
+        input_dir: &std::path::Path,
         metadata: Option<&ExportMetadata>,
     ) -> Result<()> {
         super::super::import_validation::validate_matching_export_org_with_client(
             &self.dashboard,
             args,
-            import_dir,
+            input_dir,
             metadata,
             None,
         )
@@ -228,13 +228,13 @@ impl LiveImportBackend for ClientImportBackend<'_> {
 
     fn validate_dependencies(
         &mut self,
-        import_dir: &std::path::Path,
+        input_dir: &std::path::Path,
         strict_schema: bool,
         target_schema_version: Option<i64>,
     ) -> Result<()> {
         super::super::import_validation::validate_dashboard_import_dependencies_with_client(
             &self.dashboard,
-            import_dir,
+            input_dir,
             strict_schema,
             target_schema_version,
         )
@@ -589,7 +589,7 @@ fn run_live_import<B: LiveImportBackend>(
         println!(
             "Imported {} dashboard files from {}; skipped {} missing dashboards and {} folder-mismatched dashboards",
             imported_count,
-            args.import_dir.display(),
+            args.input_dir.display(),
             skipped_missing_count,
             skipped_folder_mismatch_count
         );
@@ -597,21 +597,21 @@ fn run_live_import<B: LiveImportBackend>(
         println!(
             "Imported {} dashboard files from {}; skipped {} missing dashboards",
             imported_count,
-            args.import_dir.display(),
+            args.input_dir.display(),
             skipped_missing_count
         );
     } else if skipped_folder_mismatch_count > 0 {
         println!(
             "Imported {} dashboard files from {}; skipped {} folder-mismatched dashboards",
             imported_count,
-            args.import_dir.display(),
+            args.input_dir.display(),
             skipped_folder_mismatch_count
         );
     } else {
         println!(
             "Imported {} dashboard files from {}",
             imported_count,
-            args.import_dir.display()
+            args.input_dir.display()
         );
     }
     Ok(imported_count)
@@ -628,7 +628,7 @@ fn render_dry_run_report(
                 &report.mode,
                 &report.folder_statuses,
                 &report.dashboard_records,
-                &report.import_dir,
+                &report.input_dir,
                 report.skipped_missing_count,
                 report.skipped_folder_mismatch_count,
             )?
@@ -697,7 +697,7 @@ fn render_dry_run_report(
             println!(
                 "Dry-run checked {} dashboard(s) from {}; would skip {} missing dashboards and {} folder-mismatched dashboards",
                 report.dashboard_records.len(),
-                report.import_dir.display(),
+                report.input_dir.display(),
                 report.skipped_missing_count,
                 report.skipped_folder_mismatch_count
             );
@@ -705,21 +705,21 @@ fn render_dry_run_report(
             println!(
                 "Dry-run checked {} dashboard(s) from {}; would skip {} missing dashboards",
                 report.dashboard_records.len(),
-                report.import_dir.display(),
+                report.input_dir.display(),
                 report.skipped_missing_count
             );
         } else if report.skipped_folder_mismatch_count > 0 {
             println!(
                 "Dry-run checked {} dashboard(s) from {}; would skip {} folder-mismatched dashboards",
                 report.dashboard_records.len(),
-                report.import_dir.display(),
+                report.input_dir.display(),
                 report.skipped_folder_mismatch_count
             );
         } else {
             println!(
                 "Dry-run checked {} dashboard(s) from {}",
                 report.dashboard_records.len(),
-                report.import_dir.display()
+                report.input_dir.display()
             );
         }
     }

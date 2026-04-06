@@ -22,7 +22,7 @@ fn parse_cli_supports_analyze_live_through_canonical_analyze_command() {
     match args.command {
         DashboardCommand::Analyze(analyze_args) => {
             assert_eq!(analyze_args.common.url, "https://grafana.example.com");
-            assert!(analyze_args.import_dir.is_none());
+            assert!(analyze_args.input_dir.is_none());
             assert_eq!(
                 analyze_args.output_format,
                 Some(InspectOutputFormat::GovernanceJson)
@@ -37,7 +37,7 @@ fn parse_cli_supports_analyze_export_tree_through_canonical_analyze_command() {
     let args = parse_cli_from([
         "grafana-util",
         "analyze",
-        "--import-dir",
+        "--input-dir",
         "./dashboards/raw",
         "--input-format",
         "raw",
@@ -48,7 +48,7 @@ fn parse_cli_supports_analyze_export_tree_through_canonical_analyze_command() {
     match args.command {
         DashboardCommand::Analyze(analyze_args) => {
             assert_eq!(
-                analyze_args.import_dir,
+                analyze_args.input_dir,
                 Some(PathBuf::from("./dashboards/raw"))
             );
             assert_eq!(analyze_args.input_format, DashboardImportInputFormat::Raw);
@@ -306,7 +306,7 @@ fn parse_cli_supports_dashboard_validate_export_command() {
     let args = parse_cli_from([
         "grafana-util",
         "validate-export",
-        "--import-dir",
+        "--input-dir",
         "./dashboards/raw",
         "--reject-custom-plugins",
         "--reject-legacy-properties",
@@ -320,7 +320,7 @@ fn parse_cli_supports_dashboard_validate_export_command() {
 
     match args.command {
         DashboardCommand::ValidateExport(validate_args) => {
-            assert_eq!(validate_args.import_dir, Path::new("./dashboards/raw"));
+            assert_eq!(validate_args.input_dir, Path::new("./dashboards/raw"));
             assert_eq!(validate_args.input_format, DashboardImportInputFormat::Raw);
             assert!(validate_args.reject_custom_plugins);
             assert!(validate_args.reject_legacy_properties);
@@ -341,7 +341,7 @@ fn parse_cli_supports_dashboard_validate_export_provisioning_input_format() {
     let args = parse_cli_from([
         "grafana-util",
         "validate-export",
-        "--import-dir",
+        "--input-dir",
         "./dashboards/provisioning",
         "--input-format",
         "provisioning",
@@ -350,7 +350,7 @@ fn parse_cli_supports_dashboard_validate_export_provisioning_input_format() {
     match args.command {
         DashboardCommand::ValidateExport(validate_args) => {
             assert_eq!(
-                validate_args.import_dir,
+                validate_args.input_dir,
                 Path::new("./dashboards/provisioning")
             );
             assert_eq!(
@@ -467,7 +467,7 @@ fn parse_cli_supports_list_vars_local_input_file() {
                 inspect_args.input,
                 Some(PathBuf::from("./dashboards/raw/cpu-main.json"))
             );
-            assert!(inspect_args.import_dir.is_none());
+            assert!(inspect_args.input_dir.is_none());
             assert_eq!(inspect_args.output_format, Some(SimpleOutputFormat::Yaml));
         }
         other => panic!("expected list-vars command, got {other:?}"),
@@ -479,7 +479,7 @@ fn parse_cli_supports_list_vars_local_import_dir() {
     let args = parse_cli_from([
         "grafana-util",
         "list-vars",
-        "--import-dir",
+        "--input-dir",
         "./dashboards/raw",
         "--dashboard-uid",
         "cpu-main",
@@ -492,7 +492,7 @@ fn parse_cli_supports_list_vars_local_import_dir() {
     match args.command {
         DashboardCommand::InspectVars(inspect_args) => {
             assert_eq!(
-                inspect_args.import_dir,
+                inspect_args.input_dir,
                 Some(PathBuf::from("./dashboards/raw"))
             );
             assert_eq!(inspect_args.input_format, DashboardImportInputFormat::Raw);
@@ -508,7 +508,7 @@ fn parse_cli_supports_analyze_export_provisioning_input_format() {
     let args = parse_cli_from([
         "grafana-util",
         "analyze-export",
-        "--import-dir",
+        "--input-dir",
         "./dashboards/provisioning",
         "--input-format",
         "provisioning",
@@ -521,7 +521,7 @@ fn parse_cli_supports_analyze_export_provisioning_input_format() {
                 DashboardImportInputFormat::Provisioning
             );
             assert_eq!(
-                inspect_args.import_dir,
+                inspect_args.input_dir,
                 Path::new("./dashboards/provisioning")
             );
         }

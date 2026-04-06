@@ -34,8 +34,8 @@
 - `list`: `--input-dir`, `--org-id`, `--name`, `--query`, `--with-users`, `--table`, `--csv`, `--json`, `--yaml`, `--output-format`
 - `add`: `--name`, `--json`
 - `modify`: `--org-id`, `--name`, `--set-name`, `--json`
-- `export` 與 `diff`: `--org-id`, `--name`, `--export-dir` 或 `--diff-dir`, `--overwrite`, `--dry-run`, `--with-users`
-- `import`: `--import-dir`, `--replace-existing`, `--dry-run`, `--yes`
+- `export` 與 `diff`: `--org-id`, `--name`, `--output-dir` 或 `--diff-dir`, `--overwrite`, `--dry-run`, `--with-users`
+- `import`: `--input-dir`, `--replace-existing`, `--dry-run`, `--yes`
 - `delete`: `--org-id`, `--name`, `--yes`, `--json`
 
 ## 說明

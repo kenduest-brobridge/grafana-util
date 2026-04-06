@@ -785,9 +785,9 @@ grafana-util access org list --table</code></pre>
 <pre><code># Purpose: 1. List, Export, and Replay orgs.
 grafana-util access org list --input-dir ./access-orgs --table</code></pre>
 <pre><code># Purpose: 1. List, Export, and Replay orgs.
-grafana-util access org export --export-dir ./access-orgs</code></pre>
+grafana-util access org export --output-dir ./access-orgs</code></pre>
 <pre><code># Purpose: 1. List, Export, and Replay orgs.
-grafana-util access org import --import-dir ./access-orgs --dry-run</code></pre>
+grafana-util access org import --input-dir ./access-orgs --dry-run</code></pre>
 <p><strong>Expected Output:</strong></p>
 <pre><code>ID   NAME        IS_MAIN   QUOTA
 1    Main Org    true      -
@@ -825,9 +825,9 @@ grafana-util access team list --org-id 1 --table</code></pre>
 <pre><code># Purpose: 2. Discover and Sync Teams.
 grafana-util access team list --input-dir ./access-teams --table</code></pre>
 <pre><code># Purpose: 2. Discover and Sync Teams.
-grafana-util access team export --export-dir ./access-teams --with-members</code></pre>
+grafana-util access team export --output-dir ./access-teams --with-members</code></pre>
 <pre><code># Purpose: 2. Discover and Sync Teams.
-grafana-util access team import --import-dir ./access-teams --replace-existing --dry-run --table</code></pre>
+grafana-util access team import --input-dir ./access-teams --replace-existing --dry-run --table</code></pre>
 <p><strong>Expected Output:</strong></p>
 <pre><code>ID   NAME           MEMBERS   EMAIL
 10   Platform SRE   5         sre@company.com
@@ -847,7 +847,7 @@ grafana-util access service-account list --json</code></pre>
 <pre><code># Purpose: 1. List and Export Service Accounts.
 grafana-util access service-account list --input-dir ./access-sa --output-format text</code></pre>
 <pre><code># Purpose: 1. List and Export Service Accounts.
-grafana-util access service-account export --export-dir ./access-sa</code></pre>
+grafana-util access service-account export --output-dir ./access-sa</code></pre>
 <p><strong>Expected Output:</strong></p>
 <pre><code>[
   {
@@ -894,7 +894,7 @@ grafana-util access service-account token delete --service-account-id 15 --token
 <h2 id="drift-detection-diff">Drift Detection (Diff)</h2>
 <p>Compare your local identity snapshots against the live Grafana server.</p>
 <pre><code># Purpose: Compare your local identity snapshots against the live Grafana server.
-grafana-util access user diff --import-dir ./access-users</code></pre>
+grafana-util access user diff --input-dir ./access-users</code></pre>
 <pre><code># Purpose: Compare your local identity snapshots against the live Grafana server.
 grafana-util access team diff --diff-dir ./access-teams</code></pre>
 <pre><code># Purpose: Compare your local identity snapshots against the live Grafana server.

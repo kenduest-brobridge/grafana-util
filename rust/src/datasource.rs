@@ -660,7 +660,7 @@ pub fn run_datasource_cli(command: DatasourceGroupCommand) -> Result<()> {
                     let org_name = string_field(&org, "name", "");
                     let org_client = build_http_client_for_org_from_api(&admin_api, org_id)?;
                     let records = build_export_records(&org_client)?;
-                    let scoped_output_dir = build_all_orgs_output_dir(&args.export_dir, &org);
+                    let scoped_output_dir = build_all_orgs_output_dir(&args.output_dir, &org);
                     let datasources_path = scoped_output_dir.join(DATASOURCE_EXPORT_FILENAME);
                     let index_path = scoped_output_dir.join("index.json");
                     let metadata_path = scoped_output_dir.join(EXPORT_METADATA_FILENAME);
@@ -737,16 +737,16 @@ pub fn run_datasource_cli(command: DatasourceGroupCommand) -> Result<()> {
                 }
                 if !args.dry_run {
                     write_json_file(
-                        &args.export_dir.join("index.json"),
+                        &args.output_dir.join("index.json"),
                         &build_all_orgs_export_index(&root_items),
                         args.overwrite,
                     )?;
                     write_json_file(
-                        &args.export_dir.join(EXPORT_METADATA_FILENAME),
+                        &args.output_dir.join(EXPORT_METADATA_FILENAME),
                         &build_all_orgs_export_metadata(
                             &args.common.url,
                             args.common.profile.as_deref(),
-                            &args.export_dir,
+                            &args.output_dir,
                             org_count,
                             total,
                         ),
@@ -755,7 +755,7 @@ pub fn run_datasource_cli(command: DatasourceGroupCommand) -> Result<()> {
                     if !args.without_datasource_provisioning {
                         write_yaml_file(
                             &args
-                                .export_dir
+                                .output_dir
                                 .join(DATASOURCE_PROVISIONING_SUBDIR)
                                 .join(DATASOURCE_PROVISIONING_FILENAME),
                             &build_datasource_provisioning_document(&root_records),
@@ -767,14 +767,14 @@ pub fn run_datasource_cli(command: DatasourceGroupCommand) -> Result<()> {
                     "{} datasource(s) across {} exported org(s) under {}",
                     total,
                     org_count,
-                    args.export_dir.display()
+                    args.output_dir.display()
                 );
                 return Ok(());
             }
             let client = resolve_target_client(&args.common, args.org_id)?;
             export_datasource_scope(
                 &client,
-                &args.export_dir,
+                &args.output_dir,
                 args.overwrite,
                 args.dry_run,
                 !args.without_datasource_provisioning,

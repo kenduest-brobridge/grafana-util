@@ -406,7 +406,7 @@ pub(crate) fn run_dashboard_governance_gate(args: &GovernanceGateArgs) -> Result
         page_size: args.page_size,
         org_id: args.org_id,
         all_orgs: args.all_orgs,
-        import_dir: args.import_dir.as_deref(),
+        input_dir: args.input_dir.as_deref(),
         input_format: args.input_format,
         input_type: args.input_type,
         governance: args.governance.as_deref(),

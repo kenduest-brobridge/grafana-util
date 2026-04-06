@@ -376,11 +376,11 @@ fn build_change_bundle_specs(
     let mut dashboards = Vec::new();
     let mut datasources = Vec::new();
     let mut folders = Vec::new();
-    if let Some(export_dir) = dashboard_export_dir {
+    if let Some(output_dir) = dashboard_export_dir {
         let (dashboard_items, dashboard_datasources, folder_items, _dashboard_metadata) =
             load_dashboard_bundle_sections(
-                export_dir,
-                export_dir,
+                output_dir,
+                output_dir,
                 datasource_provisioning_file.map(PathBuf::as_path),
             )?;
         dashboards = dashboard_items;
@@ -618,10 +618,10 @@ mod guided_rust_tests {
             ..DiscoveredChangeInputs::default()
         };
 
-        let (export_dir, provisioning_dir) =
+        let (output_dir, provisioning_dir) =
             select_preview_dashboard_sources(&inputs, &discovered).unwrap();
 
-        assert_eq!(export_dir, Some(&PathBuf::from("./dashboards/raw")));
+        assert_eq!(output_dir, Some(&PathBuf::from("./dashboards/raw")));
         assert!(provisioning_dir.is_none());
     }
 
@@ -634,10 +634,10 @@ mod guided_rust_tests {
             ..DiscoveredChangeInputs::default()
         };
 
-        let (export_dir, provisioning_dir) =
+        let (output_dir, provisioning_dir) =
             select_preview_dashboard_sources(&inputs, &discovered).unwrap();
 
-        assert_eq!(export_dir, Some(&PathBuf::from("./dashboards/raw")));
+        assert_eq!(output_dir, Some(&PathBuf::from("./dashboards/raw")));
         assert!(provisioning_dir.is_none());
     }
 

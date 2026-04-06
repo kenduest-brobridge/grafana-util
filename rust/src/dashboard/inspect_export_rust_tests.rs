@@ -15,14 +15,14 @@ fn parse_cli_supports_inspect_export_json_flag() {
     let args = parse_cli_from([
         "grafana-util",
         "inspect-export",
-        "--import-dir",
+        "--input-dir",
         "./dashboards/raw",
         "--json",
     ]);
 
     match args.command {
         DashboardCommand::InspectExport(inspect_args) => {
-            assert_eq!(inspect_args.import_dir, Path::new("./dashboards/raw"));
+            assert_eq!(inspect_args.input_dir, Path::new("./dashboards/raw"));
             assert!(inspect_args.json);
             assert!(!inspect_args.table);
         }
@@ -35,7 +35,7 @@ fn parse_cli_supports_inspect_export_output_format_flag() {
     let args = parse_cli_from([
         "grafana-util",
         "inspect-export",
-        "--import-dir",
+        "--input-dir",
         "./dashboards/raw",
         "--output-format",
         "tree-table",
@@ -43,7 +43,7 @@ fn parse_cli_supports_inspect_export_output_format_flag() {
 
     match args.command {
         DashboardCommand::InspectExport(inspect_args) => {
-            assert_eq!(inspect_args.import_dir, Path::new("./dashboards/raw"));
+            assert_eq!(inspect_args.input_dir, Path::new("./dashboards/raw"));
             assert_eq!(
                 inspect_args.output_format,
                 Some(InspectOutputFormat::TreeTable)
@@ -67,7 +67,7 @@ fn parse_cli_supports_inspect_export_baseline_output_formats() {
         let args = parse_cli_from([
             "grafana-util",
             "inspect-export",
-            "--import-dir",
+            "--input-dir",
             "./dashboards/raw",
             "--output-format",
             output_format,
@@ -75,7 +75,7 @@ fn parse_cli_supports_inspect_export_baseline_output_formats() {
 
         match args.command {
             DashboardCommand::InspectExport(inspect_args) => {
-                assert_eq!(inspect_args.import_dir, Path::new("./dashboards/raw"));
+                assert_eq!(inspect_args.input_dir, Path::new("./dashboards/raw"));
                 assert_eq!(inspect_args.output_format, Some(expected));
                 assert!(!inspect_args.json);
                 assert!(!inspect_args.table);
@@ -90,7 +90,7 @@ fn parse_cli_supports_inspect_export_output_format_dependency_flag() {
     let args = parse_cli_from([
         "grafana-util",
         "inspect-export",
-        "--import-dir",
+        "--input-dir",
         "./dashboards/raw",
         "--output-format",
         "dependency",
@@ -98,7 +98,7 @@ fn parse_cli_supports_inspect_export_output_format_dependency_flag() {
 
     match args.command {
         DashboardCommand::InspectExport(inspect_args) => {
-            assert_eq!(inspect_args.import_dir, Path::new("./dashboards/raw"));
+            assert_eq!(inspect_args.input_dir, Path::new("./dashboards/raw"));
             assert_eq!(
                 inspect_args.output_format,
                 Some(InspectOutputFormat::Dependency)
@@ -115,7 +115,7 @@ fn parse_cli_supports_inspect_export_output_file() {
     let args = parse_cli_from([
         "grafana-util",
         "inspect-export",
-        "--import-dir",
+        "--input-dir",
         "./dashboards/raw",
         "--output-format",
         "queries-json",
@@ -143,14 +143,14 @@ fn parse_cli_supports_inspect_export_interactive_flag() {
     let args = parse_cli_from([
         "grafana-util",
         "inspect-export",
-        "--import-dir",
+        "--input-dir",
         "./dashboards/raw",
         "--interactive",
     ]);
 
     match args.command {
         DashboardCommand::InspectExport(inspect_args) => {
-            assert_eq!(inspect_args.import_dir, Path::new("./dashboards/raw"));
+            assert_eq!(inspect_args.input_dir, Path::new("./dashboards/raw"));
             assert!(inspect_args.interactive);
         }
         _ => panic!("expected inspect-export command"),
@@ -162,7 +162,7 @@ fn parse_cli_supports_inspect_export_input_type_flag() {
     let args = parse_cli_from([
         "grafana-util",
         "inspect-export",
-        "--import-dir",
+        "--input-dir",
         "./dashboards",
         "--input-type",
         "source",
@@ -170,7 +170,7 @@ fn parse_cli_supports_inspect_export_input_type_flag() {
 
     match args.command {
         DashboardCommand::InspectExport(inspect_args) => {
-            assert_eq!(inspect_args.import_dir, Path::new("./dashboards"));
+            assert_eq!(inspect_args.input_dir, Path::new("./dashboards"));
             assert_eq!(
                 inspect_args.input_type,
                 Some(InspectExportInputType::Source)
@@ -185,7 +185,7 @@ fn parse_cli_supports_inspect_export_report_json_flag() {
     let args = parse_cli_from([
         "grafana-util",
         "inspect-export",
-        "--import-dir",
+        "--input-dir",
         "./dashboards/raw",
         "--output-format",
         "queries-json",
@@ -193,7 +193,7 @@ fn parse_cli_supports_inspect_export_report_json_flag() {
 
     match args.command {
         DashboardCommand::InspectExport(inspect_args) => {
-            assert_eq!(inspect_args.import_dir, Path::new("./dashboards/raw"));
+            assert_eq!(inspect_args.input_dir, Path::new("./dashboards/raw"));
             assert_eq!(
                 inspect_args.output_format,
                 Some(InspectOutputFormat::QueriesJson)
@@ -210,7 +210,7 @@ fn parse_cli_supports_inspect_export_report_csv_flag() {
     let args = parse_cli_from([
         "grafana-util",
         "inspect-export",
-        "--import-dir",
+        "--input-dir",
         "./dashboards/raw",
         "--output-format",
         "csv",
@@ -218,7 +218,7 @@ fn parse_cli_supports_inspect_export_report_csv_flag() {
 
     match args.command {
         DashboardCommand::InspectExport(inspect_args) => {
-            assert_eq!(inspect_args.import_dir, Path::new("./dashboards/raw"));
+            assert_eq!(inspect_args.input_dir, Path::new("./dashboards/raw"));
             assert_eq!(inspect_args.output_format, Some(InspectOutputFormat::Csv));
             assert!(!inspect_args.json);
             assert!(!inspect_args.table);
@@ -232,7 +232,7 @@ fn parse_cli_supports_inspect_export_report_tree_flag() {
     let args = parse_cli_from([
         "grafana-util",
         "inspect-export",
-        "--import-dir",
+        "--input-dir",
         "./dashboards/raw",
         "--output-format",
         "tree",
@@ -240,7 +240,7 @@ fn parse_cli_supports_inspect_export_report_tree_flag() {
 
     match args.command {
         DashboardCommand::InspectExport(inspect_args) => {
-            assert_eq!(inspect_args.import_dir, Path::new("./dashboards/raw"));
+            assert_eq!(inspect_args.input_dir, Path::new("./dashboards/raw"));
             assert_eq!(inspect_args.output_format, Some(InspectOutputFormat::Tree));
             assert!(!inspect_args.json);
             assert!(!inspect_args.table);
@@ -254,7 +254,7 @@ fn parse_cli_supports_inspect_export_report_tree_table_flag() {
     let args = parse_cli_from([
         "grafana-util",
         "inspect-export",
-        "--import-dir",
+        "--input-dir",
         "./dashboards/raw",
         "--output-format",
         "tree-table",
@@ -262,7 +262,7 @@ fn parse_cli_supports_inspect_export_report_tree_table_flag() {
 
     match args.command {
         DashboardCommand::InspectExport(inspect_args) => {
-            assert_eq!(inspect_args.import_dir, Path::new("./dashboards/raw"));
+            assert_eq!(inspect_args.input_dir, Path::new("./dashboards/raw"));
             assert_eq!(
                 inspect_args.output_format,
                 Some(InspectOutputFormat::TreeTable)
@@ -279,7 +279,7 @@ fn parse_cli_supports_inspect_export_report_dependency_flag() {
     let args = parse_cli_from([
         "grafana-util",
         "inspect-export",
-        "--import-dir",
+        "--input-dir",
         "./dashboards/raw",
         "--output-format",
         "dependency",
@@ -287,7 +287,7 @@ fn parse_cli_supports_inspect_export_report_dependency_flag() {
 
     match args.command {
         DashboardCommand::InspectExport(inspect_args) => {
-            assert_eq!(inspect_args.import_dir, Path::new("./dashboards/raw"));
+            assert_eq!(inspect_args.input_dir, Path::new("./dashboards/raw"));
             assert_eq!(
                 inspect_args.output_format,
                 Some(InspectOutputFormat::Dependency)
@@ -304,7 +304,7 @@ fn parse_cli_supports_inspect_export_report_dependency_json_flag() {
     let args = parse_cli_from([
         "grafana-util",
         "inspect-export",
-        "--import-dir",
+        "--input-dir",
         "./dashboards/raw",
         "--output-format",
         "dependency-json",
@@ -312,7 +312,7 @@ fn parse_cli_supports_inspect_export_report_dependency_json_flag() {
 
     match args.command {
         DashboardCommand::InspectExport(inspect_args) => {
-            assert_eq!(inspect_args.import_dir, Path::new("./dashboards/raw"));
+            assert_eq!(inspect_args.input_dir, Path::new("./dashboards/raw"));
             assert_eq!(
                 inspect_args.output_format,
                 Some(InspectOutputFormat::DependencyJson)
@@ -329,7 +329,7 @@ fn parse_cli_supports_inspect_export_report_governance_flag() {
     let args = parse_cli_from([
         "grafana-util",
         "inspect-export",
-        "--import-dir",
+        "--input-dir",
         "./dashboards/raw",
         "--output-format",
         "governance",
@@ -337,7 +337,7 @@ fn parse_cli_supports_inspect_export_report_governance_flag() {
 
     match args.command {
         DashboardCommand::InspectExport(inspect_args) => {
-            assert_eq!(inspect_args.import_dir, Path::new("./dashboards/raw"));
+            assert_eq!(inspect_args.input_dir, Path::new("./dashboards/raw"));
             assert_eq!(
                 inspect_args.output_format,
                 Some(InspectOutputFormat::Governance)
@@ -367,7 +367,7 @@ fn analyze_export_dir_supports_explicit_provisioning_input_format() {
     .unwrap();
 
     let args = super::test_support::InspectExportArgs {
-        import_dir: provisioning_root,
+        input_dir: provisioning_root,
         input_type: None,
         input_format: DashboardImportInputFormat::Provisioning,
         text: false,
@@ -425,7 +425,7 @@ fn analyze_export_dir_accepts_workspace_wrapper_root_when_dashboards_metadata_ex
     .unwrap();
 
     let args = super::test_support::InspectExportArgs {
-        import_dir: workspace_root.clone(),
+        input_dir: workspace_root.clone(),
         input_type: None,
         input_format: DashboardImportInputFormat::Raw,
         text: false,
@@ -472,7 +472,7 @@ fn analyze_export_dir_requires_input_type_for_dashboard_root_with_raw_and_prompt
     .unwrap();
 
     let args = super::test_support::InspectExportArgs {
-        import_dir: dashboard_root,
+        input_dir: dashboard_root,
         input_type: None,
         input_format: DashboardImportInputFormat::Raw,
         text: false,
@@ -503,7 +503,7 @@ fn parse_cli_supports_inspect_export_help_full_flag() {
     let args = parse_cli_from([
         "grafana-util",
         "inspect-export",
-        "--import-dir",
+        "--input-dir",
         "./dashboards/raw",
         "--help-full",
     ]);
@@ -511,7 +511,7 @@ fn parse_cli_supports_inspect_export_help_full_flag() {
     match args.command {
         DashboardCommand::InspectExport(inspect_args) => {
             assert!(inspect_args.help_full);
-            assert_eq!(inspect_args.import_dir, Path::new("./dashboards/raw"));
+            assert_eq!(inspect_args.input_dir, Path::new("./dashboards/raw"));
         }
         _ => panic!("expected inspect-export command"),
     }
@@ -522,7 +522,7 @@ fn parse_cli_supports_inspect_export_report_columns_and_filter() {
     let args = parse_cli_from([
         "grafana-util",
         "inspect-export",
-        "--import-dir",
+        "--input-dir",
         "./dashboards/raw",
         "--output-format",
         "tree-table",
@@ -565,7 +565,7 @@ fn parse_cli_supports_inspect_export_report_columns_all() {
     let args = parse_cli_from([
         "grafana-util",
         "inspect-export",
-        "--import-dir",
+        "--input-dir",
         "./dashboards/raw",
         "--output-format",
         "tree-table",

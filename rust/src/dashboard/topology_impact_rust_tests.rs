@@ -72,7 +72,7 @@ fn governance_gate_help_mentions_policy_and_queries_inputs() {
     assert!(help.contains("--policy"));
     assert!(help.contains("--builtin-policy"));
     assert!(help.contains("JSON or YAML"));
-    assert!(help.contains("--import-dir"));
+    assert!(help.contains("--input-dir"));
     assert!(help.contains("--governance"));
     assert!(help.contains("--queries"));
     assert!(help.contains("--json-output"));
@@ -205,7 +205,7 @@ fn parse_cli_supports_dashboard_topology_live_source_flags() {
             assert_eq!(topology_args.common.url, "http://localhost:3000");
             assert_eq!(topology_args.org_id, Some(7));
             assert_eq!(topology_args.page_size, 250);
-            assert!(topology_args.import_dir.is_none());
+            assert!(topology_args.input_dir.is_none());
             assert!(topology_args.governance.is_none());
         }
         _ => panic!("expected topology command"),
@@ -219,7 +219,7 @@ fn topology_help_mentions_alert_contract_and_visual_formats() {
     assert!(help.contains(
         "Show dashboard dependencies directly from live Grafana or a local export tree."
     ));
-    assert!(help.contains("--import-dir"));
+    assert!(help.contains("--input-dir"));
     assert!(help.contains("--governance"));
     assert!(help.contains("--alert-contract"));
     assert!(help.contains("--output-format"));
@@ -245,7 +245,7 @@ fn parse_cli_supports_dashboard_governance_gate_import_dir() {
         "builtin",
         "--builtin-policy",
         "default",
-        "--import-dir",
+        "--input-dir",
         "./dashboards",
         "--input-format",
         "raw",
@@ -253,7 +253,7 @@ fn parse_cli_supports_dashboard_governance_gate_import_dir() {
 
     match args.command {
         DashboardCommand::GovernanceGate(gate_args) => {
-            assert_eq!(gate_args.import_dir, Some(PathBuf::from("./dashboards")));
+            assert_eq!(gate_args.input_dir, Some(PathBuf::from("./dashboards")));
             assert_eq!(
                 gate_args.input_format,
                 crate::dashboard::DashboardImportInputFormat::Raw
@@ -304,7 +304,7 @@ fn parse_cli_supports_dashboard_impact_import_dir_source() {
     let args = parse_cli_from([
         "grafana-util",
         "impact",
-        "--import-dir",
+        "--input-dir",
         "./dashboards",
         "--input-format",
         "raw",
@@ -314,7 +314,7 @@ fn parse_cli_supports_dashboard_impact_import_dir_source() {
 
     match args.command {
         DashboardCommand::Impact(impact_args) => {
-            assert_eq!(impact_args.import_dir, Some(PathBuf::from("./dashboards")));
+            assert_eq!(impact_args.input_dir, Some(PathBuf::from("./dashboards")));
             assert_eq!(
                 impact_args.input_format,
                 crate::dashboard::DashboardImportInputFormat::Raw
@@ -330,7 +330,7 @@ fn parse_cli_supports_dashboard_impact_import_dir_source() {
 fn impact_help_mentions_datasource_uid_and_output_format() {
     let help = render_dashboard_subcommand_help("impact");
 
-    assert!(help.contains("--import-dir"));
+    assert!(help.contains("--input-dir"));
     assert!(help.contains("--url"));
     assert!(help.contains("--governance"));
     assert!(help.contains("--datasource-uid"));

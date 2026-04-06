@@ -15,7 +15,7 @@ Before: import is a blind replay step, and you find folder, org, or schema probl
 After: import becomes a controlled replay step that can be previewed first with \-\-dry\-run, then executed with clearer intent.
 .SH COMMON OPTIONS
 .TP
-.B \-\-import\-dir
+.B \-\-input\-dir
 source directory for raw or combined export input.
 .TP
 .B \-\-input\-format
@@ -56,7 +56,7 @@ if the schema check blocks replay, confirm whether the source tree needs normali
 .PP
 Import dashboard JSON files through the Grafana API.
 .EX
-grafana-util dashboard import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./dashboards/raw --replace-existing
+grafana-util dashboard import --url http://localhost:3000 --basic-user admin --basic-password admin --input-dir ./dashboards/raw --replace-existing
 .EE
 .SH SEE ALSO
 \fBgrafana-util\fR(1),

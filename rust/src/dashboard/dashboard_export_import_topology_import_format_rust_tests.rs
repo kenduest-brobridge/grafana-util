@@ -748,7 +748,7 @@ fn routed_import_scope_identity_matches_table_json_and_progress_surfaces() {
             |_target_org_id, scoped_args| {
                 Ok(test_support::import::ImportDryRunReport {
                     mode: "create-only".to_string(),
-                    import_dir: scoped_args.import_dir.clone(),
+                    input_dir: scoped_args.input_dir.clone(),
                     folder_statuses: Vec::new(),
                     dashboard_records: Vec::new(),
                     skipped_missing_count: 0,
@@ -897,7 +897,7 @@ fn routed_import_selected_scope_statuses_match_json_table_and_summary_contract()
             |_target_org_id, scoped_args| {
                 Ok(test_support::import::ImportDryRunReport {
                     mode: "create-only".to_string(),
-                    import_dir: scoped_args.import_dir.clone(),
+                    input_dir: scoped_args.input_dir.clone(),
                     folder_statuses: Vec::new(),
                     dashboard_records: Vec::new(),
                     skipped_missing_count: 0,

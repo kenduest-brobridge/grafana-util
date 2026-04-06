@@ -16,7 +16,7 @@
 - `--policy`：使用檔案型政策輸入時的政策檔路徑。
 - `--builtin-policy`：使用內建政策輸入時的名稱。
 - `--url`：直接分析線上 Grafana。
-- `--import-dir`：直接分析本地匯出樹。
+- `--input-dir`：直接分析本地匯出樹。
 - `--input-format`：分析本地匯出時選擇 `raw` 或 `provisioning`。
 - `--governance`：儀表板 inspect governance JSON 路徑（`governance-json` 成品，進階重用）。
 - `--queries`：儀表板 inspect query-report JSON 路徑（`queries-json` 成品，進階重用）。
@@ -32,7 +32,7 @@ grafana-util dashboard governance-gate --url http://localhost:3000 --basic-user 
 
 ```bash
 # 用途：直接對本地匯出樹套用治理政策檢查。
-grafana-util dashboard governance-gate --import-dir ./dashboards/raw --input-format raw --policy-source builtin --builtin-policy default --output-format json --json-output ./governance-check.json
+grafana-util dashboard governance-gate --input-dir ./dashboards/raw --input-format raw --policy-source builtin --builtin-policy default --output-format json --json-output ./governance-check.json
 ```
 
 ```bash

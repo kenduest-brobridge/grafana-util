@@ -150,18 +150,18 @@ class PublicDocsEvidenceTests(unittest.TestCase):
 
     def test_dashboard_analyze_docs_use_canonical_analyze_and_output_names(self):
         expectations = {
-            REPO_ROOT / "README.md": ["dashboard analyze --import-dir ./dashboards/raw --input-format raw --output-format dependency"],
-            REPO_ROOT / "README.zh-TW.md": ["dashboard analyze --import-dir ./dashboards/raw --input-format raw --output-format dependency"],
+            REPO_ROOT / "README.md": ["dashboard analyze --input-dir ./dashboards/raw --input-format raw --output-format dependency"],
+            REPO_ROOT / "README.zh-TW.md": ["dashboard analyze --input-dir ./dashboards/raw --input-format raw --output-format dependency"],
             REPO_ROOT / "docs" / "commands" / "en" / "dashboard-analyze-live.md": ["dashboard analyze --url", "--output-format", "governance"],
-            REPO_ROOT / "docs" / "commands" / "en" / "dashboard-analyze-export.md": ["dashboard analyze --import-dir", "--output-format", "governance-json", "queries-json"],
-            REPO_ROOT / "docs" / "commands" / "en" / "dashboard-governance-gate.md": ["--url", "--import-dir", "governance-json", "queries-json"],
-            REPO_ROOT / "docs" / "commands" / "en" / "dashboard-topology.md": ["--url", "--import-dir", "governance-json", "queries-json"],
-            REPO_ROOT / "docs" / "commands" / "en" / "dashboard-impact.md": ["--url", "--import-dir", "governance-json"],
+            REPO_ROOT / "docs" / "commands" / "en" / "dashboard-analyze-export.md": ["dashboard analyze --input-dir", "--output-format", "governance-json", "queries-json"],
+            REPO_ROOT / "docs" / "commands" / "en" / "dashboard-governance-gate.md": ["--url", "--input-dir", "governance-json", "queries-json"],
+            REPO_ROOT / "docs" / "commands" / "en" / "dashboard-topology.md": ["--url", "--input-dir", "governance-json", "queries-json"],
+            REPO_ROOT / "docs" / "commands" / "en" / "dashboard-impact.md": ["--url", "--input-dir", "governance-json"],
             REPO_ROOT / "docs" / "commands" / "zh-TW" / "dashboard-analyze-live.md": ["dashboard analyze --url", "--output-format", "governance"],
-            REPO_ROOT / "docs" / "commands" / "zh-TW" / "dashboard-analyze-export.md": ["dashboard analyze --import-dir", "--output-format", "governance-json", "queries-json"],
-            REPO_ROOT / "docs" / "commands" / "zh-TW" / "dashboard-governance-gate.md": ["--url", "--import-dir", "governance-json", "queries-json"],
-            REPO_ROOT / "docs" / "commands" / "zh-TW" / "dashboard-topology.md": ["--url", "--import-dir", "governance-json", "queries-json"],
-            REPO_ROOT / "docs" / "commands" / "zh-TW" / "dashboard-impact.md": ["--url", "--import-dir", "governance-json"],
+            REPO_ROOT / "docs" / "commands" / "zh-TW" / "dashboard-analyze-export.md": ["dashboard analyze --input-dir", "--output-format", "governance-json", "queries-json"],
+            REPO_ROOT / "docs" / "commands" / "zh-TW" / "dashboard-governance-gate.md": ["--url", "--input-dir", "governance-json", "queries-json"],
+            REPO_ROOT / "docs" / "commands" / "zh-TW" / "dashboard-topology.md": ["--url", "--input-dir", "governance-json", "queries-json"],
+            REPO_ROOT / "docs" / "commands" / "zh-TW" / "dashboard-impact.md": ["--url", "--input-dir", "governance-json"],
         }
         for path, markers in expectations.items():
             text = path.read_text(encoding="utf-8")

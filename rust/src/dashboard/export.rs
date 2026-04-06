@@ -240,9 +240,9 @@ where
         .map(|value| value.to_string())
         .unwrap_or_else(|| DEFAULT_UNKNOWN_UID.to_string());
     let scope_output_dir = if args.all_orgs {
-        build_all_orgs_output_dir(&args.export_dir, &current_org)
+        build_all_orgs_output_dir(&args.output_dir, &current_org)
     } else {
-        args.export_dir.clone()
+        args.output_dir.clone()
     };
     let (raw_dir, prompt_dir, provisioning_dir) = build_export_variant_dirs(&scope_output_dir);
     let history_dir = scope_output_dir.join("history");
@@ -545,7 +545,7 @@ where
         datasource_count: Some(datasource_inventory.len() as u64),
         used_datasource_count: Some(used_datasources.len() as u64),
         used_datasources: Some(used_datasources),
-        export_dir: if args.all_orgs {
+        output_dir: if args.all_orgs {
             Some(scope_output_dir.display().to_string())
         } else {
             None
@@ -582,7 +582,7 @@ where
 }
 
 fn write_all_orgs_root_export_bundle(
-    export_dir: &Path,
+    output_dir: &Path,
     root_items: &[DashboardIndexItem],
     root_folders: &[FolderInventoryItem],
     org_summaries: Vec<ExportOrgSummary>,
@@ -591,7 +591,7 @@ fn write_all_orgs_root_export_bundle(
 ) -> Result<()> {
     write_json_document(
         &build_root_export_index(root_items, None, None, None, root_folders),
-        &export_dir.join("index.json"),
+        &output_dir.join("index.json"),
     )?;
     write_json_document(
         &build_export_metadata(
@@ -608,10 +608,10 @@ fn write_all_orgs_root_export_bundle(
             Some(source_url),
             None,
             source_profile,
-            export_dir,
-            &export_dir.join(EXPORT_METADATA_FILENAME),
+            output_dir,
+            &output_dir.join(EXPORT_METADATA_FILENAME),
         ),
-        &export_dir.join(EXPORT_METADATA_FILENAME),
+        &output_dir.join(EXPORT_METADATA_FILENAME),
     )?;
     Ok(())
 }
@@ -647,7 +647,7 @@ where
         }
         if !args.dry_run && !root_items.is_empty() {
             write_all_orgs_root_export_bundle(
-                &args.export_dir,
+                &args.output_dir,
                 &root_items,
                 &root_folders,
                 org_summaries,
@@ -701,7 +701,7 @@ pub(crate) fn export_dashboards_with_org_clients(args: &ExportArgs) -> Result<us
         }
         if !args.dry_run && !root_items.is_empty() {
             write_all_orgs_root_export_bundle(
-                &args.export_dir,
+                &args.output_dir,
                 &root_items,
                 &root_folders,
                 org_summaries,

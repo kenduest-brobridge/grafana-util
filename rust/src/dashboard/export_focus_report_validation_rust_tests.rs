@@ -8,7 +8,7 @@ use std::path::PathBuf;
 #[test]
 fn validate_inspect_export_report_args_rejects_report_columns_without_report() {
     let args = InspectExportArgs {
-        import_dir: PathBuf::from("./dashboards/raw"),
+        input_dir: PathBuf::from("./dashboards/raw"),
         input_type: None,
         input_format: test_support::DashboardImportInputFormat::Raw,
         text: false,
@@ -36,7 +36,7 @@ fn validate_inspect_export_report_args_rejects_report_columns_without_report() {
 #[test]
 fn validate_inspect_export_report_args_rejects_report_columns_for_json_report() {
     let args = InspectExportArgs {
-        import_dir: PathBuf::from("./dashboards/raw"),
+        input_dir: PathBuf::from("./dashboards/raw"),
         input_type: None,
         input_format: test_support::DashboardImportInputFormat::Raw,
         text: false,
@@ -64,7 +64,7 @@ fn validate_inspect_export_report_args_rejects_report_columns_for_json_report() 
 #[test]
 fn validate_inspect_export_report_args_rejects_report_columns_for_dependency_report() {
     let args = InspectExportArgs {
-        import_dir: PathBuf::from("./dashboards/raw"),
+        input_dir: PathBuf::from("./dashboards/raw"),
         input_type: None,
         input_format: test_support::DashboardImportInputFormat::Raw,
         text: false,
@@ -92,7 +92,7 @@ fn validate_inspect_export_report_args_rejects_report_columns_for_dependency_rep
 #[test]
 fn validate_inspect_export_report_args_rejects_report_columns_for_tree_report() {
     let args = InspectExportArgs {
-        import_dir: PathBuf::from("./dashboards/raw"),
+        input_dir: PathBuf::from("./dashboards/raw"),
         input_type: None,
         input_format: test_support::DashboardImportInputFormat::Raw,
         text: false,
@@ -120,7 +120,7 @@ fn validate_inspect_export_report_args_rejects_report_columns_for_tree_report() 
 #[test]
 fn validate_inspect_export_report_args_rejects_report_columns_for_governance_report() {
     let args = InspectExportArgs {
-        import_dir: PathBuf::from("./dashboards/raw"),
+        input_dir: PathBuf::from("./dashboards/raw"),
         input_type: None,
         input_format: test_support::DashboardImportInputFormat::Raw,
         text: false,
@@ -146,7 +146,7 @@ fn validate_inspect_export_report_args_rejects_report_columns_for_governance_rep
 #[test]
 fn validate_inspect_export_report_args_allows_report_columns_for_tree_table_report() {
     let args = InspectExportArgs {
-        import_dir: PathBuf::from("./dashboards/raw"),
+        input_dir: PathBuf::from("./dashboards/raw"),
         input_type: None,
         input_format: test_support::DashboardImportInputFormat::Raw,
         text: false,
@@ -171,7 +171,7 @@ fn validate_inspect_export_report_args_allows_report_columns_for_tree_table_repo
 #[test]
 fn validate_inspect_export_report_args_rejects_panel_filter_without_report() {
     let args = InspectExportArgs {
-        import_dir: PathBuf::from("./dashboards/raw"),
+        input_dir: PathBuf::from("./dashboards/raw"),
         input_type: None,
         input_format: test_support::DashboardImportInputFormat::Raw,
         text: false,

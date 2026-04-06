@@ -139,7 +139,7 @@ pub const TOOL_SCHEMA_VERSION: i64 = 1;
 pub const ROOT_INDEX_KIND: &str = "grafana-util-alert-export-index";
 
 /// Constant for alert help text.
-pub const ALERT_HELP_TEXT: &str = "Examples:\n\n  Export alerting resources with an API token:\n    export GRAFANA_API_TOKEN='your-token'\n    grafana-util alert export --url https://grafana.example.com --output-dir ./alerts --overwrite\n\n  Import back into Grafana and update existing resources:\n    grafana-util alert import --url https://grafana.example.com --import-dir ./alerts/raw --replace-existing\n\n  Preview alert import as structured JSON before execution:\n    grafana-util alert import --url https://grafana.example.com --import-dir ./alerts/raw --replace-existing --dry-run --json\n\n  Compare a local alert export against Grafana as structured JSON:\n    grafana-util alert diff --url https://grafana.example.com --diff-dir ./alerts/raw --json\n\n  Import linked alert rules with dashboard and panel remapping:\n    grafana-util alert import --url https://grafana.example.com --import-dir ./alerts/raw --replace-existing --dashboard-uid-map ./dashboard-map.json --panel-id-map ./panel-map.json";
+pub const ALERT_HELP_TEXT: &str = "Examples:\n\n  Export alerting resources with an API token:\n    export GRAFANA_API_TOKEN='your-token'\n    grafana-util alert export --url https://grafana.example.com --output-dir ./alerts --overwrite\n\n  Import back into Grafana and update existing resources:\n    grafana-util alert import --url https://grafana.example.com --input-dir ./alerts/raw --replace-existing\n\n  Preview alert import as structured JSON before execution:\n    grafana-util alert import --url https://grafana.example.com --input-dir ./alerts/raw --replace-existing --dry-run --json\n\n  Compare a local alert export against Grafana as structured JSON:\n    grafana-util alert diff --url https://grafana.example.com --diff-dir ./alerts/raw --json\n\n  Import linked alert rules with dashboard and panel remapping:\n    grafana-util alert import --url https://grafana.example.com --input-dir ./alerts/raw --replace-existing --dashboard-uid-map ./dashboard-map.json --panel-id-map ./panel-map.json";
 
 fn build_alert_http_client(args: &AlertCliArgs) -> Result<JsonHttpClient> {
     let context = build_auth_context(args)?;
@@ -987,7 +987,7 @@ pub fn run_alert_cli(args: AlertCliArgs) -> Result<()> {
     if args.list_kind.is_some() {
         return alert_list::list_alert_resources(&args);
     }
-    if args.import_dir.is_some() {
+    if args.input_dir.is_some() {
         return alert_import_diff::import_alerting_resources(&args);
     }
     if args.diff_dir.is_some() {

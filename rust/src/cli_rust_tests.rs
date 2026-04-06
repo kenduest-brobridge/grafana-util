@@ -133,19 +133,67 @@ fn parse_cli_supports_dashboard_group_command() {
         "grafana-util",
         "dashboard",
         "export",
-        "--export-dir",
+        "--output-dir",
         "./dashboards",
     ]);
 
     match args.command {
         UnifiedCommand::Dashboard { command } => match command {
             super::DashboardGroupCommand::Export(inner) => {
-                assert_eq!(inner.export_dir, Path::new("./dashboards"));
+                assert_eq!(inner.output_dir, Path::new("./dashboards"));
             }
             _ => panic!("expected dashboard export"),
         },
         _ => panic!("expected dashboard group"),
     }
+}
+
+#[test]
+fn parse_cli_rejects_legacy_export_import_dir_flags() {
+    let dashboard_export = CliArgs::try_parse_from([
+        "grafana-util",
+        "dashboard",
+        "export",
+        "--export-dir",
+        "./dashboards",
+    ])
+    .unwrap_err();
+    assert!(dashboard_export.to_string().contains("--export-dir"));
+    assert!(dashboard_export.to_string().contains("--output-dir"));
+
+    let datasource_import = CliArgs::try_parse_from([
+        "grafana-util",
+        "datasource",
+        "import",
+        "--import-dir",
+        "./datasources",
+    ])
+    .unwrap_err();
+    assert!(datasource_import.to_string().contains("--import-dir"));
+    assert!(datasource_import.to_string().contains("--input-dir"));
+
+    let access_user_export = CliArgs::try_parse_from([
+        "grafana-util",
+        "access",
+        "user",
+        "export",
+        "--export-dir",
+        "./access-users",
+    ])
+    .unwrap_err();
+    assert!(access_user_export.to_string().contains("--export-dir"));
+    assert!(access_user_export.to_string().contains("--output-dir"));
+
+    let snapshot_export = CliArgs::try_parse_from([
+        "grafana-util",
+        "snapshot",
+        "export",
+        "--export-dir",
+        "./snapshot",
+    ])
+    .unwrap_err();
+    assert!(snapshot_export.to_string().contains("--export-dir"));
+    assert!(snapshot_export.to_string().contains("--output-dir"));
 }
 
 #[test]
@@ -389,7 +437,7 @@ fn parse_cli_supports_snapshot_group_export_and_review_commands() {
         "https://grafana.example.com",
         "--token",
         "abc",
-        "--export-dir",
+        "--output-dir",
         "./snapshot",
         "--overwrite",
     ]);
@@ -406,7 +454,7 @@ fn parse_cli_supports_snapshot_group_export_and_review_commands() {
     match export_args.command {
         UnifiedCommand::Snapshot { command } => match command {
             super::SnapshotCommand::Export(inner) => {
-                assert_eq!(inner.export_dir, Path::new("./snapshot"));
+                assert_eq!(inner.output_dir, Path::new("./snapshot"));
                 assert_eq!(inner.common.url, "https://grafana.example.com");
                 assert_eq!(inner.common.api_token.as_deref(), Some("abc"));
                 assert!(inner.overwrite);
@@ -666,7 +714,7 @@ fn parse_cli_supports_datasource_group_command() {
         "grafana-util",
         "datasource",
         "import",
-        "--import-dir",
+        "--input-dir",
         "./datasources",
         "--dry-run",
     ]);
@@ -674,7 +722,7 @@ fn parse_cli_supports_datasource_group_command() {
     match args.command {
         UnifiedCommand::Datasource { command, .. } => match command {
             DatasourceGroupCommand::Import(inner) => {
-                assert_eq!(inner.import_dir, Path::new("./datasources"));
+                assert_eq!(inner.input_dir, Path::new("./datasources"));
                 assert!(inner.dry_run);
             }
             _ => panic!("expected datasource import"),
@@ -725,7 +773,7 @@ fn parse_cli_supports_dashboard_group_inspect_export_command() {
         "grafana-util",
         "dashboard",
         "analyze-export",
-        "--import-dir",
+        "--input-dir",
         "./dashboards/raw",
         "--json",
     ]);
@@ -733,7 +781,7 @@ fn parse_cli_supports_dashboard_group_inspect_export_command() {
     match args.command {
         UnifiedCommand::Dashboard { command } => match command {
             super::DashboardGroupCommand::InspectExport(inner) => {
-                assert_eq!(inner.import_dir, Path::new("./dashboards/raw"));
+                assert_eq!(inner.input_dir, Path::new("./dashboards/raw"));
                 assert!(inner.json);
             }
             _ => panic!("expected dashboard analyze-export"),
@@ -1845,7 +1893,7 @@ fn maybe_render_unified_help_from_os_args_handles_root_help_and_help_full_flags(
     assert!(alert_help.contains("[Alert Add Contact Point]"));
     assert!(alert_help.contains("[Alert Set Route]"));
     assert!(alert_help.contains("[Alert Preview Route]"));
-    assert!(alert_help.contains("alert import --url http://localhost:3000 --import-dir ./alerts/raw --replace-existing --dry-run --json"));
+    assert!(alert_help.contains("alert import --url http://localhost:3000 --input-dir ./alerts/raw --replace-existing --dry-run --json"));
     assert!(alert_help
         .contains("alert diff --url http://localhost:3000 --diff-dir ./alerts/raw --json"));
     assert!(alert_help.contains("alert plan --desired-dir ./alerts/desired --prune --dashboard-uid-map ./dashboard-map.json --panel-id-map ./panel-map.json --output-format json"));
@@ -2391,7 +2439,7 @@ fn dispatch_routes_dashboard_group_to_dashboard_handler() {
         "grafana-util",
         "dashboard",
         "diff",
-        "--import-dir",
+        "--input-dir",
         "./dashboards/raw",
     ]);
     let routed = RefCell::new(Vec::new());
@@ -2507,7 +2555,7 @@ fn dispatch_routes_snapshot_group_to_snapshot_handler() {
         "grafana-util",
         "snapshot",
         "export",
-        "--export-dir",
+        "--output-dir",
         "./snapshot",
     ]);
     let routed = RefCell::new(Vec::new());

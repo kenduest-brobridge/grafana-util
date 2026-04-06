@@ -37,17 +37,17 @@ where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
     let mut lookup_cache = ImportLookupCache::default();
-    let metadata = load_export_metadata(&args.import_dir, Some(RAW_EXPORT_SUBDIR))?;
+    let metadata = load_export_metadata(&args.input_dir, Some(RAW_EXPORT_SUBDIR))?;
     super::super::import_validation::validate_matching_export_org_with_request(
         &mut request_json,
         &mut lookup_cache,
         args,
-        &args.import_dir,
+        &args.input_dir,
         metadata.as_ref(),
         None,
     )?;
     let folder_inventory = if args.ensure_folders || args.dry_run {
-        load_folder_inventory(&args.import_dir, metadata.as_ref())?
+        load_folder_inventory(&args.input_dir, metadata.as_ref())?
     } else {
         Vec::new()
     };
@@ -58,7 +58,7 @@ where
             .unwrap_or(FOLDER_INVENTORY_FILENAME);
         return Err(message(format!(
             "Folder inventory file not found for --ensure-folders: {}. Re-export dashboards with raw folder inventory or omit --ensure-folders.",
-            args.import_dir.join(folders_file).display()
+            args.input_dir.join(folders_file).display()
         )));
     }
     let folder_statuses = if args.ensure_folders {
@@ -74,7 +74,7 @@ where
         .into_iter()
         .map(|item| (item.uid.clone(), item))
         .collect();
-    let discovered_dashboard_files = super::dashboard_files_for_import(&args.import_dir)?;
+    let discovered_dashboard_files = super::dashboard_files_for_import(&args.input_dir)?;
     let dashboard_files = {
         #[cfg(feature = "tui")]
         {
@@ -113,7 +113,7 @@ where
                 super::super::import_lookup::resolve_source_dashboard_folder_path(
                     &document,
                     dashboard_file,
-                    &args.import_dir,
+                    &args.input_dir,
                     &folders_by_uid,
                 )?,
             )
@@ -193,7 +193,7 @@ where
     Ok(ImportDryRunReport {
         mode: describe_dashboard_import_mode(args.replace_existing, args.update_existing_only)
             .to_string(),
-        import_dir: args.import_dir.clone(),
+        input_dir: args.input_dir.clone(),
         folder_statuses,
         skipped_missing_count: if args.update_existing_only {
             dashboard_records
@@ -217,16 +217,16 @@ pub(crate) fn collect_import_dry_run_report_with_client(
 ) -> Result<ImportDryRunReport> {
     let dashboard_client = DashboardResourceClient::new(client);
     let mut lookup_cache = ImportLookupCache::default();
-    let metadata = load_export_metadata(&args.import_dir, Some(RAW_EXPORT_SUBDIR))?;
+    let metadata = load_export_metadata(&args.input_dir, Some(RAW_EXPORT_SUBDIR))?;
     super::super::import_validation::validate_matching_export_org_with_client(
         &dashboard_client,
         args,
-        &args.import_dir,
+        &args.input_dir,
         metadata.as_ref(),
         None,
     )?;
     let folder_inventory = if args.ensure_folders || args.dry_run {
-        load_folder_inventory(&args.import_dir, metadata.as_ref())?
+        load_folder_inventory(&args.input_dir, metadata.as_ref())?
     } else {
         Vec::new()
     };
@@ -237,7 +237,7 @@ pub(crate) fn collect_import_dry_run_report_with_client(
             .unwrap_or(FOLDER_INVENTORY_FILENAME);
         return Err(message(format!(
             "Folder inventory file not found for --ensure-folders: {}. Re-export dashboards with raw folder inventory or omit --ensure-folders.",
-            args.import_dir.join(folders_file).display()
+            args.input_dir.join(folders_file).display()
         )));
     }
     let folder_statuses = if args.ensure_folders {
@@ -253,7 +253,7 @@ pub(crate) fn collect_import_dry_run_report_with_client(
         .into_iter()
         .map(|item| (item.uid.clone(), item))
         .collect();
-    let discovered_dashboard_files = super::dashboard_files_for_import(&args.import_dir)?;
+    let discovered_dashboard_files = super::dashboard_files_for_import(&args.input_dir)?;
     let dashboard_files = {
         #[cfg(feature = "tui")]
         {
@@ -294,7 +294,7 @@ pub(crate) fn collect_import_dry_run_report_with_client(
                 super::super::import_lookup::resolve_source_dashboard_folder_path(
                     &document,
                     dashboard_file,
-                    &args.import_dir,
+                    &args.input_dir,
                     &folders_by_uid,
                 )?,
             )
@@ -374,7 +374,7 @@ pub(crate) fn collect_import_dry_run_report_with_client(
     Ok(ImportDryRunReport {
         mode: describe_dashboard_import_mode(args.replace_existing, args.update_existing_only)
             .to_string(),
-        import_dir: args.import_dir.clone(),
+        input_dir: args.input_dir.clone(),
         folder_statuses,
         skipped_missing_count: if args.update_existing_only {
             dashboard_records

@@ -206,7 +206,7 @@ fn dashboard_history_list_reads_single_local_artifact() {
         common: make_history_common_args(),
         dashboard_uid: Some("cpu-main".to_string()),
         input: Some(artifact_path),
-        import_dir: None,
+        input_dir: None,
         limit: 20,
         output_format: HistoryOutputFormat::Json,
     };
@@ -242,7 +242,7 @@ fn dashboard_history_list_rejects_mismatched_local_artifact_uid() {
         common: make_history_common_args(),
         dashboard_uid: Some("memory-main".to_string()),
         input: Some(artifact_path),
-        import_dir: None,
+        input_dir: None,
         limit: 20,
         output_format: HistoryOutputFormat::Json,
     };
@@ -261,11 +261,11 @@ fn dashboard_history_list_rejects_mismatched_local_artifact_uid() {
 #[test]
 fn dashboard_history_list_reads_export_tree_inventory_without_uid_filter() {
     let temp = tempdir().unwrap();
-    let import_dir = temp.path().join("dashboards");
-    fs::create_dir_all(import_dir.join("all-orgs/org_1_Main_Org/history")).unwrap();
-    fs::create_dir_all(import_dir.join("all-orgs/org_2_Ops_Org/history")).unwrap();
+    let input_dir = temp.path().join("dashboards");
+    fs::create_dir_all(input_dir.join("all-orgs/org_1_Main_Org/history")).unwrap();
+    fs::create_dir_all(input_dir.join("all-orgs/org_2_Ops_Org/history")).unwrap();
     fs::write(
-        import_dir.join("all-orgs/org_1_Main_Org/history/cpu-main.history.json"),
+        input_dir.join("all-orgs/org_1_Main_Org/history/cpu-main.history.json"),
         serde_json::to_string_pretty(&json!({
             "kind": "grafana-util-dashboard-history-export",
             "schemaVersion": 1,
@@ -280,7 +280,7 @@ fn dashboard_history_list_reads_export_tree_inventory_without_uid_filter() {
     )
     .unwrap();
     fs::write(
-        import_dir.join("all-orgs/org_2_Ops_Org/history/ops-main.history.json"),
+        input_dir.join("all-orgs/org_2_Ops_Org/history/ops-main.history.json"),
         serde_json::to_string_pretty(&json!({
             "kind": "grafana-util-dashboard-history-export",
             "schemaVersion": 1,
@@ -299,7 +299,7 @@ fn dashboard_history_list_reads_export_tree_inventory_without_uid_filter() {
         common: make_history_common_args(),
         dashboard_uid: None,
         input: None,
-        import_dir: Some(import_dir),
+        input_dir: Some(input_dir),
         limit: 20,
         output_format: HistoryOutputFormat::Json,
     };
@@ -314,12 +314,12 @@ fn dashboard_history_list_reads_export_tree_inventory_without_uid_filter() {
 #[test]
 fn dashboard_history_list_rejects_ambiguous_uid_in_export_tree() {
     let temp = tempdir().unwrap();
-    let import_dir = temp.path().join("dashboards");
-    fs::create_dir_all(import_dir.join("all-orgs/org_1_Main_Org/history")).unwrap();
-    fs::create_dir_all(import_dir.join("all-orgs/org_2_Ops_Org/history")).unwrap();
+    let input_dir = temp.path().join("dashboards");
+    fs::create_dir_all(input_dir.join("all-orgs/org_1_Main_Org/history")).unwrap();
+    fs::create_dir_all(input_dir.join("all-orgs/org_2_Ops_Org/history")).unwrap();
     for path in [
-        import_dir.join("all-orgs/org_1_Main_Org/history/cpu-main.history.json"),
-        import_dir.join("all-orgs/org_2_Ops_Org/history/cpu-main.history.json"),
+        input_dir.join("all-orgs/org_1_Main_Org/history/cpu-main.history.json"),
+        input_dir.join("all-orgs/org_2_Ops_Org/history/cpu-main.history.json"),
     ] {
         fs::write(
             path,
@@ -342,7 +342,7 @@ fn dashboard_history_list_rejects_ambiguous_uid_in_export_tree() {
         common: make_history_common_args(),
         dashboard_uid: Some("cpu-main".to_string()),
         input: None,
-        import_dir: Some(import_dir),
+        input_dir: Some(input_dir),
         limit: 20,
         output_format: HistoryOutputFormat::Table,
     };

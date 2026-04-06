@@ -32,7 +32,7 @@
 
 ```bash
 # 用途：從 live Grafana 匯出本機 snapshot bundle。
-grafana-util snapshot export --profile prod --export-dir ./snapshot
+grafana-util snapshot export --profile prod --output-dir ./snapshot
 ```
 
 ```bash
@@ -42,7 +42,7 @@ grafana-util snapshot review --input-dir ./snapshot --output-format json
 
 ```bash
 # 用途：用 token 認證從 live Grafana 匯出 snapshot bundle。
-grafana-util snapshot export --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --export-dir ./snapshot
+grafana-util snapshot export --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output-dir ./snapshot
 ```
 
 相關指令：`grafana-util overview`、`grafana-util status staged`、`grafana-util change bundle`。
@@ -63,23 +63,23 @@ grafana-util snapshot export --url http://localhost:3000 --token "$GRAFANA_API_T
 - `snapshot/access/service-accounts/`
 - `snapshot/snapshot-metadata.json`
 
-主要旗標：`--export-dir`、`--overwrite`，以及共用的 Grafana 連線與驗證旗標。
+主要旗標：`--output-dir`、`--overwrite`，以及共用的 Grafana 連線與驗證旗標。
 
 範例：
 
 ```bash
 # 用途：export。
-grafana-util snapshot export --profile prod --export-dir ./snapshot
+grafana-util snapshot export --profile prod --output-dir ./snapshot
 ```
 
 ```bash
 # 用途：export。
-grafana-util snapshot export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./snapshot --overwrite
+grafana-util snapshot export --url http://localhost:3000 --basic-user admin --basic-password admin --output-dir ./snapshot --overwrite
 ```
 
 ```bash
 # 用途：export。
-grafana-util snapshot export --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --export-dir ./snapshot
+grafana-util snapshot export --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output-dir ./snapshot
 ```
 
 相關指令：`snapshot review`、`change bundle`、`overview`。

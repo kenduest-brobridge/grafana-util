@@ -75,7 +75,7 @@ grafana-util change preview --workspace . --fetch-live --output-format json
 
 ```bash
 # Purpose: First commands to run.
-grafana-util dashboard export --export-dir ./backups --overwrite --progress
+grafana-util dashboard export --output-dir ./backups --overwrite --progress
 ```
 
 If you need to start from the access layer instead, swap the last line for:

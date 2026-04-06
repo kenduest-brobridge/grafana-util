@@ -123,7 +123,7 @@ grafana-util alert export --url http://localhost:3000 --basic-user admin --basic
 .PP
 import: Import alerting resource JSON files through the Grafana API.
 .EX
-grafana-util alert import --url http://localhost:3000 --import-dir ./alerts/raw --replace-existing
+grafana-util alert import --url http://localhost:3000 --input-dir ./alerts/raw --replace-existing
 .EE
 .PP
 diff: Compare local alerting export files against live Grafana resources.

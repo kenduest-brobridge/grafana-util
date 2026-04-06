@@ -32,8 +32,8 @@ List live or local Grafana service accounts, create, export, import, diff, or de
 
 - `list`: `--input-dir`, `--query`, `--page`, `--per-page`, `--table`, `--csv`, `--json`, `--yaml`, `--output-format`
 - `add`: `--name`, `--role`, `--disabled`, `--json`
-- `export` and `diff`: `--export-dir` or `--diff-dir`, `--overwrite`, `--dry-run`
-- `import`: `--import-dir`, `--replace-existing`, `--dry-run`, `--table`, `--json`, `--output-format`, `--yes`
+- `export` and `diff`: `--output-dir` or `--diff-dir`, `--overwrite`, `--dry-run`
+- `import`: `--input-dir`, `--replace-existing`, `--dry-run`, `--table`, `--json`, `--output-format`, `--yes`
 - `delete`: `--name`, `--yes`, `--json`
 - `token add`: `--service-account-id` or `--name`, `--token-name`, `--seconds-to-live`, `--json`
 - `token delete`: `--service-account-id` or `--name`, `--token-name`, `--yes`, `--json`

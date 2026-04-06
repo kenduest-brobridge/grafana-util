@@ -519,12 +519,12 @@ where
         return render_dashboard_history_list_output(&list_document, args.output_format);
     }
 
-    if let Some(import_dir) = &args.import_dir {
-        return run_dashboard_history_list_from_import_dir(import_dir, args);
+    if let Some(input_dir) = &args.input_dir {
+        return run_dashboard_history_list_from_import_dir(input_dir, args);
     }
 
     let dashboard_uid = args.dashboard_uid.as_deref().ok_or_else(|| {
-        message("Dashboard history list requires --dashboard-uid unless --input or --import-dir is set.")
+        message("Dashboard history list requires --dashboard-uid unless --input or --input-dir is set.")
     })?;
     let document = build_dashboard_history_list_document_with_request(
         &mut request_json,
@@ -769,8 +769,8 @@ fn collect_history_artifact_paths(root: &Path, output: &mut Vec<PathBuf>) -> Res
     Ok(())
 }
 
-fn derive_history_artifact_scope(import_dir: &Path, artifact_path: &Path) -> Option<String> {
-    let relative = artifact_path.strip_prefix(import_dir).ok()?;
+fn derive_history_artifact_scope(input_dir: &Path, artifact_path: &Path) -> Option<String> {
+    let relative = artifact_path.strip_prefix(input_dir).ok()?;
     let mut scope_parts = Vec::new();
     for component in relative.components() {
         let piece = component.as_os_str().to_string_lossy().to_string();
@@ -786,14 +786,14 @@ fn derive_history_artifact_scope(import_dir: &Path, artifact_path: &Path) -> Opt
     }
 }
 
-fn load_history_artifacts_from_import_dir(import_dir: &Path) -> Result<Vec<LocalHistoryArtifact>> {
+fn load_history_artifacts_from_import_dir(input_dir: &Path) -> Result<Vec<LocalHistoryArtifact>> {
     let mut paths = Vec::new();
-    collect_history_artifact_paths(import_dir, &mut paths)?;
+    collect_history_artifact_paths(input_dir, &mut paths)?;
     let mut artifacts = Vec::new();
     for path in paths {
         let document = load_dashboard_history_export_document(&path)?;
         artifacts.push(LocalHistoryArtifact {
-            scope: derive_history_artifact_scope(import_dir, &path),
+            scope: derive_history_artifact_scope(input_dir, &path),
             path,
             document,
         });
@@ -803,7 +803,7 @@ fn load_history_artifacts_from_import_dir(import_dir: &Path) -> Result<Vec<Local
 }
 
 fn build_dashboard_history_inventory_document(
-    import_dir: &Path,
+    input_dir: &Path,
     artifacts: &[LocalHistoryArtifact],
 ) -> DashboardHistoryInventoryDocument {
     DashboardHistoryInventoryDocument {
@@ -820,7 +820,7 @@ fn build_dashboard_history_inventory_document(
                 version_count: artifact.document.version_count,
                 path: artifact
                     .path
-                    .strip_prefix(import_dir)
+                    .strip_prefix(input_dir)
                     .unwrap_or(&artifact.path)
                     .display()
                     .to_string(),
@@ -831,14 +831,14 @@ fn build_dashboard_history_inventory_document(
 }
 
 fn run_dashboard_history_list_from_import_dir(
-    import_dir: &Path,
+    input_dir: &Path,
     args: &HistoryListArgs,
 ) -> Result<()> {
-    let artifacts = load_history_artifacts_from_import_dir(import_dir)?;
+    let artifacts = load_history_artifacts_from_import_dir(input_dir)?;
     if artifacts.is_empty() {
         return Err(message(format!(
             "No dashboard history artifacts found under {}. Export with `dashboard export --include-history` first.",
-            import_dir.display()
+            input_dir.display()
         )));
     }
     if let Some(uid) = &args.dashboard_uid {
@@ -851,7 +851,7 @@ fn run_dashboard_history_list_from_import_dir(
                 return Err(message(format!(
                     "No dashboard history artifact for UID {} found under {}.",
                     uid,
-                    import_dir.display()
+                    input_dir.display()
                 )))
             }
             1 => {
@@ -874,13 +874,13 @@ fn run_dashboard_history_list_from_import_dir(
                 return Err(message(format!(
                     "Multiple dashboard history artifacts for UID {} found under {}: {}. Narrow the export root or inspect one artifact with --input.",
                     uid,
-                    import_dir.display(),
+                    input_dir.display(),
                     scopes
                 )));
             }
         }
     }
-    let document = build_dashboard_history_inventory_document(import_dir, &artifacts);
+    let document = build_dashboard_history_inventory_document(input_dir, &artifacts);
     render_dashboard_history_inventory_output(&document, args.output_format)
 }
 

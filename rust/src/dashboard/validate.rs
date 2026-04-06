@@ -270,13 +270,13 @@ fn validate_dashboard_document(
 }
 
 pub(crate) fn validate_dashboard_export_dir(
-    import_dir: &Path,
+    input_dir: &Path,
     reject_custom_plugins: bool,
     reject_legacy_properties: bool,
     target_schema_version: Option<i64>,
 ) -> Result<DashboardValidationResult> {
     let mut issues = Vec::new();
-    let files = discover_dashboard_files(import_dir)?;
+    let files = discover_dashboard_files(input_dir)?;
     for dashboard_file in &files {
         let document = load_json_file(dashboard_file)?;
         issues.extend(validate_dashboard_document(
@@ -362,15 +362,15 @@ pub(crate) fn render_validation_result_json(result: &DashboardValidationResult) 
 
 pub(crate) fn run_dashboard_validate_export(args: &ValidateExportArgs) -> Result<()> {
     let temp_dir = super::inspect::TempInspectDir::new("validate-export")?;
-    let import_dir = super::inspect::resolve_inspect_export_import_dir(
+    let input_dir = super::inspect::resolve_inspect_export_import_dir(
         &temp_dir.path,
-        &args.import_dir,
+        &args.input_dir,
         args.input_format,
         None,
         false,
     )?;
     let result = validate_dashboard_export_dir(
-        &import_dir.import_dir,
+        &input_dir.input_dir,
         args.reject_custom_plugins,
         args.reject_legacy_properties,
         args.target_schema_version,
@@ -429,7 +429,7 @@ mod tests {
         let output_file = temp.path().join("validation.json");
 
         run_dashboard_validate_export(&ValidateExportArgs {
-            import_dir: provisioning_root,
+            input_dir: provisioning_root,
             input_format: DashboardImportInputFormat::Provisioning,
             reject_custom_plugins: true,
             reject_legacy_properties: true,
@@ -459,7 +459,7 @@ mod tests {
         let output_file = temp.path().join("validation.json");
 
         run_dashboard_validate_export(&ValidateExportArgs {
-            import_dir: dashboards_dir,
+            input_dir: dashboards_dir,
             input_format: DashboardImportInputFormat::Provisioning,
             reject_custom_plugins: false,
             reject_legacy_properties: false,
@@ -491,7 +491,7 @@ mod tests {
         let output_file = temp.path().join("validation.json");
 
         run_dashboard_validate_export(&ValidateExportArgs {
-            import_dir: provisioning_root,
+            input_dir: provisioning_root,
             input_format: DashboardImportInputFormat::Provisioning,
             reject_custom_plugins: true,
             reject_legacy_properties: true,
@@ -522,7 +522,7 @@ mod tests {
         set_json_color_choice(CliColorChoice::Always);
 
         let result = run_dashboard_validate_export(&ValidateExportArgs {
-            import_dir: dashboards_dir,
+            input_dir: dashboards_dir,
             input_format: DashboardImportInputFormat::Provisioning,
             reject_custom_plugins: false,
             reject_legacy_properties: false,

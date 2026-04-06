@@ -58,11 +58,11 @@ pub(crate) use import_dry_run::collect_import_dry_run_report_with_request;
 pub(crate) fn resolve_import_source(
     args: &super::ImportArgs,
 ) -> Result<ResolvedDashboardImportSource> {
-    resolve_dashboard_import_source(&args.import_dir, args.input_format)
+    resolve_dashboard_import_source(&args.input_dir, args.input_format)
 }
 
 pub(crate) fn resolve_diff_source(args: &super::DiffArgs) -> Result<ResolvedDashboardImportSource> {
-    resolve_dashboard_import_source(&args.import_dir, args.input_format)
+    resolve_dashboard_import_source(&args.input_dir, args.input_format)
 }
 
 pub(crate) fn import_metadata_variant(args: &super::ImportArgs) -> &'static str {
@@ -72,8 +72,8 @@ pub(crate) fn import_metadata_variant(args: &super::ImportArgs) -> &'static str 
     }
 }
 
-pub(crate) fn dashboard_files_for_import(import_dir: &Path) -> Result<Vec<PathBuf>> {
-    let mut dashboard_files = super::discover_dashboard_files(import_dir)?;
+pub(crate) fn dashboard_files_for_import(input_dir: &Path) -> Result<Vec<PathBuf>> {
+    let mut dashboard_files = super::discover_dashboard_files(input_dir)?;
     dashboard_files.retain(|path| {
         path.file_name().and_then(|name| name.to_str()) != Some(super::FOLDER_INVENTORY_FILENAME)
     });

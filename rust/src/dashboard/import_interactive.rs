@@ -37,14 +37,14 @@ where
     if items.is_empty() {
         return Err(message(format!(
             "No dashboard JSON files were found under {}.",
-            args.import_dir.display()
+            args.input_dir.display()
         )));
     }
     super::import_interactive_render::run_import_selector(
         request_json,
         lookup_cache,
         args,
-        args.import_dir.display().to_string(),
+        args.input_dir.display().to_string(),
         items,
     )
 }
@@ -65,14 +65,14 @@ pub(crate) fn select_import_dashboard_files_with_client(
     if items.is_empty() {
         return Err(message(format!(
             "No dashboard JSON files were found under {}.",
-            args.import_dir.display()
+            args.input_dir.display()
         )));
     }
     super::import_interactive_render::run_import_selector_with_client(
         client,
         lookup_cache,
         args,
-        args.import_dir.display().to_string(),
+        args.input_dir.display().to_string(),
         items,
     )
 }

@@ -7,7 +7,7 @@ grafana\-util\-dashboard\-topology \- Build a deterministic dashboard topology g
 .SH DESCRIPTION
 Build a deterministic dashboard topology graph directly from live Grafana or a local export tree, with saved analysis artifacts available for advanced reuse.
 .PP
-Use this when you need a graph view of dashboards, folders, variables, datasource links, and optional alert contract data. Prefer \-\-url or \-\-import\-dir for the common path; keep artifact inputs for advanced reuse or CI. The command also accepts the graph alias.
+Use this when you need a graph view of dashboards, folders, variables, datasource links, and optional alert contract data. Prefer \-\-url or \-\-input\-dir for the common path; keep artifact inputs for advanced reuse or CI. The command also accepts the graph alias.
 .SH BEFORE / AFTER
 .IP \(bu 2
 Before: dependency knowledge lives in operator memory, raw JSON, or one\-off diagrams that drift out of date.
@@ -18,7 +18,7 @@ After: one topology run gives you a reproducible graph you can inspect in text f
 .B \-\-url
 analyze live Grafana directly.
 .TP
-.B \-\-import\-dir
+.B \-\-input\-dir
 analyze a local export tree directly.
 .TP
 .B \-\-input\-format

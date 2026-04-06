@@ -100,29 +100,29 @@ pub fn build_resource_dirs(raw_dir: &Path) -> BTreeMap<&'static str, PathBuf> {
         .collect()
 }
 
-pub fn discover_alert_resource_files(import_dir: &Path) -> Result<Vec<PathBuf>> {
-    if !import_dir.exists() {
+pub fn discover_alert_resource_files(input_dir: &Path) -> Result<Vec<PathBuf>> {
+    if !input_dir.exists() {
         return Err(message(format!(
             "Import directory does not exist: {}",
-            import_dir.display()
+            input_dir.display()
         )));
     }
-    if !import_dir.is_dir() {
+    if !input_dir.is_dir() {
         return Err(message(format!(
             "Import path is not a directory: {}",
-            import_dir.display()
+            input_dir.display()
         )));
     }
-    if import_dir.join(super::RAW_EXPORT_SUBDIR).is_dir() {
+    if input_dir.join(super::RAW_EXPORT_SUBDIR).is_dir() {
         return Err(message(format!(
-            "Import path {} looks like the export root. Point --import-dir at {}.",
-            import_dir.display(),
-            import_dir.join(super::RAW_EXPORT_SUBDIR).display()
+            "Import path {} looks like the export root. Point --input-dir at {}.",
+            input_dir.display(),
+            input_dir.join(super::RAW_EXPORT_SUBDIR).display()
         )));
     }
 
     let mut files = Vec::new();
-    collect_resource_files(import_dir, &mut files)?;
+    collect_resource_files(input_dir, &mut files)?;
     files.retain(|path| {
         !matches!(
             path.file_name().and_then(|value| value.to_str()),
@@ -133,7 +133,7 @@ pub fn discover_alert_resource_files(import_dir: &Path) -> Result<Vec<PathBuf>> 
     if files.is_empty() {
         return Err(message(format!(
             "No alerting resource JSON or YAML files found in {}",
-            import_dir.display()
+            input_dir.display()
         )));
     }
     Ok(files)

@@ -13,7 +13,7 @@
 
 ## 重點旗標
 - `--url`：直接分析線上 Grafana。
-- `--import-dir`：直接分析本地匯出樹。
+- `--input-dir`：直接分析本地匯出樹。
 - `--input-format`：分析本地匯出時選擇 `raw` 或 `provisioning`。
 - `--governance`：dashboard governance JSON 輸入（`governance-json` 成品）。
 - `--datasource-uid`：要追蹤的 datasource UID。
@@ -35,7 +35,7 @@ grafana-util dashboard impact \
 ```bash
 # 用途：從本地匯出樹評估單一 datasource 的影響範圍。
 grafana-util dashboard impact \
-  --import-dir ./dashboards/raw \
+  --input-dir ./dashboards/raw \
   --input-format raw \
   --datasource-uid prom-main \
   --output-format json

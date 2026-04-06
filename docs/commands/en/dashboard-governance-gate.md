@@ -16,7 +16,7 @@ Use this when you want a policy pass or fail result before promotion. Prefer dir
 - `--policy`: policy file path when using file-based policy input.
 - `--builtin-policy`: named built-in policy when using builtin policy input.
 - `--url`: analyze live Grafana directly.
-- `--import-dir`: analyze a local export tree directly.
+- `--input-dir`: analyze a local export tree directly.
 - `--input-format`: choose `raw` or `provisioning` when analyzing local exports.
 - `--governance`: path to dashboard inspect governance JSON (`governance-json` artifact, advanced reuse).
 - `--queries`: path to dashboard inspect query-report JSON (`queries-json` artifact, advanced reuse).
@@ -32,7 +32,7 @@ grafana-util dashboard governance-gate --url http://localhost:3000 --basic-user 
 
 ```bash
 # Purpose: Evaluate governance policy against a local export tree directly.
-grafana-util dashboard governance-gate --import-dir ./dashboards/raw --input-format raw --policy-source builtin --builtin-policy default --output-format json --json-output ./governance-check.json
+grafana-util dashboard governance-gate --input-dir ./dashboards/raw --input-format raw --policy-source builtin --builtin-policy default --output-format json --json-output ./governance-check.json
 ```
 
 ```bash

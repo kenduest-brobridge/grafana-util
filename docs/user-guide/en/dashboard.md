@@ -217,12 +217,12 @@ spring-jmx-node-unified  Spring JMX + Node Unified Dashboard (VM)  Demo    ffhrm
 | Command | Full Example with Arguments |
 | :--- | :--- |
 | **List** | `grafana-util dashboard list --all-orgs --with-sources --table` |
-| **Export** | `grafana-util dashboard export --export-dir ./dashboards --overwrite --progress` |
-| **Export + History** | `grafana-util dashboard export --export-dir ./dashboards --include-history --overwrite --progress` |
+| **Export** | `grafana-util dashboard export --output-dir ./dashboards --overwrite --progress` |
+| **Export + History** | `grafana-util dashboard export --output-dir ./dashboards --include-history --overwrite --progress` |
 | **Raw to Prompt** | `grafana-util dashboard raw-to-prompt --input-dir ./dashboards/raw --output-dir ./dashboards/prompt --overwrite --progress` |
-| **Import** | `grafana-util dashboard import --import-dir ./dashboards/raw --replace-existing --dry-run --table` |
-| **Diff** | `grafana-util dashboard diff --import-dir ./dashboards/raw --input-format raw` |
-| **Analyze** | `grafana-util dashboard analyze --import-dir ./dashboards/raw --input-format raw --output-format dependency` |
+| **Import** | `grafana-util dashboard import --input-dir ./dashboards/raw --replace-existing --dry-run --table` |
+| **Diff** | `grafana-util dashboard diff --input-dir ./dashboards/raw --input-format raw` |
+| **Analyze** | `grafana-util dashboard analyze --input-dir ./dashboards/raw --input-format raw --output-format dependency` |
 | **Delete** | `grafana-util dashboard delete --uid <UID> --url <URL> --basic-user admin --basic-password admin` |
 | **List Vars** | `grafana-util dashboard list-vars --uid <UID> --url <URL> --table` |
 | **Patch File** | `grafana-util dashboard patch-file --input <FILE> --name "New Title" --output <FILE>` |
@@ -237,7 +237,7 @@ spring-jmx-node-unified  Spring JMX + Node Unified Dashboard (VM)  Demo    ffhrm
 Use `--progress` for a clean log during large estate exports.
 ```bash
 # Purpose: Use --progress for a clean log during large estate exports.
-grafana-util dashboard export --export-dir ./dashboards --overwrite --progress
+grafana-util dashboard export --output-dir ./dashboards --overwrite --progress
 ```
 **Output Excerpt:**
 ```text
@@ -251,7 +251,7 @@ Exporting dashboard 7/7: two-prom-query-smoke
 Always confirm the destination action before mutation.
 ```bash
 # Purpose: Always confirm the destination action before mutation.
-grafana-util dashboard import --import-dir ./dashboards/raw --dry-run --table
+grafana-util dashboard import --input-dir ./dashboards/raw --dry-run --table
 ```
 **Output Excerpt:**
 ```text
@@ -269,7 +269,7 @@ subfolder-chain-smoke  missing      create  Platform / Team / Apps / Prod  ./das
 Compare your local provisioning files against live state.
 ```bash
 # Purpose: Compare your local provisioning files against live state.
-grafana-util dashboard diff --import-dir ./dashboards/provisioning --input-format provisioning
+grafana-util dashboard diff --input-dir ./dashboards/provisioning --input-format provisioning
 ```
 **Output Excerpt:**
 ```text

@@ -303,10 +303,10 @@ pub(super) fn build_team_access_export_metadata(
 }
 
 pub(super) fn load_team_import_records(
-    import_dir: &Path,
+    input_dir: &Path,
     expected_kind: &str,
 ) -> Result<Vec<Map<String, Value>>> {
-    let path = import_dir.join(ACCESS_TEAM_EXPORT_FILENAME);
+    let path = input_dir.join(ACCESS_TEAM_EXPORT_FILENAME);
     if !path.is_file() {
         return Err(message(format!(
             "Access import file not found: {}",
@@ -365,7 +365,7 @@ pub(super) fn load_team_import_records(
         }
     };
 
-    let metadata_path = import_dir.join(ACCESS_EXPORT_METADATA_FILENAME);
+    let metadata_path = input_dir.join(ACCESS_EXPORT_METADATA_FILENAME);
     if metadata_path.is_file() {
         let _metadata = load_json_object_file(&metadata_path, "Access import metadata")?;
     }

@@ -785,7 +785,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="採用前後對照">採用前後對照</h2>
 <ul><li><strong>採用前</strong>：datasource 的風險通常只能靠記憶、命名習慣或人工在 Grafana 裡搜尋來猜。</li><li><strong>採用後</strong>：跑一次 <code>impact</code>，就能知道某個 datasource UID 往下會影響哪些 dashboard 與 alert 資產。</li></ul>
 <h2 id="重點旗標">重點旗標</h2>
-<ul><li><code>--url</code>：直接分析線上 Grafana。</li><li><code>--import-dir</code>：直接分析本地匯出樹。</li><li><code>--input-format</code>：分析本地匯出時選擇 <code>raw</code> 或 <code>provisioning</code>。</li><li><code>--governance</code>：dashboard governance JSON 輸入（<code>governance-json</code> 成品）。</li><li><code>--datasource-uid</code>：要追蹤的 datasource UID。</li><li><code>--alert-contract</code>：可選的 alert contract JSON 輸入。</li><li><code>--output-format</code>：輸出 <code>text</code> 或 <code>json</code>。</li><li><code>--interactive</code>：開啟互動式終端機瀏覽器。</li></ul>
+<ul><li><code>--url</code>：直接分析線上 Grafana。</li><li><code>--input-dir</code>：直接分析本地匯出樹。</li><li><code>--input-format</code>：分析本地匯出時選擇 <code>raw</code> 或 <code>provisioning</code>。</li><li><code>--governance</code>：dashboard governance JSON 輸入（<code>governance-json</code> 成品）。</li><li><code>--datasource-uid</code>：要追蹤的 datasource UID。</li><li><code>--alert-contract</code>：可選的 alert contract JSON 輸入。</li><li><code>--output-format</code>：輸出 <code>text</code> 或 <code>json</code>。</li><li><code>--interactive</code>：開啟互動式終端機瀏覽器。</li></ul>
 <h2 id="範例">範例</h2>
 <pre><code># 用途：直接從 live Grafana 評估單一 datasource 的影響範圍。
 grafana-util dashboard impact \
@@ -796,7 +796,7 @@ grafana-util dashboard impact \
   --output-format text</code></pre>
 <pre><code># 用途：從本地匯出樹評估單一 datasource 的影響範圍。
 grafana-util dashboard impact \
-  --import-dir ./dashboards/raw \
+  --input-dir ./dashboards/raw \
   --input-format raw \
   --datasource-uid prom-main \
   --output-format json</code></pre>

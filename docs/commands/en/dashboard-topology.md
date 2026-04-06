@@ -4,7 +4,7 @@
 Build a deterministic dashboard topology graph directly from live Grafana or a local export tree, with saved analysis artifacts available for advanced reuse.
 
 ## When to use
-Use this when you need a graph view of dashboards, folders, variables, datasource links, and optional alert contract data. Prefer `--url` or `--import-dir` for the common path; keep artifact inputs for advanced reuse or CI. The command also accepts the `graph` alias.
+Use this when you need a graph view of dashboards, folders, variables, datasource links, and optional alert contract data. Prefer `--url` or `--input-dir` for the common path; keep artifact inputs for advanced reuse or CI. The command also accepts the `graph` alias.
 
 ## Before / After
 
@@ -13,7 +13,7 @@ Use this when you need a graph view of dashboards, folders, variables, datasourc
 
 ## Key flags
 - `--url`: analyze live Grafana directly.
-- `--import-dir`: analyze a local export tree directly.
+- `--input-dir`: analyze a local export tree directly.
 - `--input-format`: choose `raw` or `provisioning` when analyzing local exports.
 - `--governance`: dashboard governance JSON input (`governance-json` artifact, advanced reuse).
 - `--queries`: optional dashboard query-report JSON input (`queries-json` artifact, advanced reuse).
@@ -35,7 +35,7 @@ grafana-util dashboard topology \
 ```bash
 # Purpose: Build a deterministic dashboard topology graph from a local export tree.
 grafana-util dashboard graph \
-  --import-dir ./dashboards/raw \
+  --input-dir ./dashboards/raw \
   --input-format raw \
   --output-format dot \
   --output-file ./dashboard-topology.dot

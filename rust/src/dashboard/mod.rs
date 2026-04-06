@@ -146,11 +146,11 @@ use validate::run_dashboard_validate_export;
 use vars::inspect_dashboard_variables;
 
 fn analyze_args_to_export_args(args: AnalyzeArgs) -> Result<InspectExportArgs> {
-    let import_dir = args
-        .import_dir
-        .ok_or_else(|| message("dashboard analyze local mode requires --import-dir."))?;
+    let input_dir = args
+        .input_dir
+        .ok_or_else(|| message("dashboard analyze local mode requires --input-dir."))?;
     Ok(InspectExportArgs {
-        import_dir,
+        input_dir,
         input_type: args.input_type,
         input_format: args.input_format,
         text: args.text,
@@ -392,14 +392,14 @@ pub fn execute_dashboard_list(args: &ListArgs) -> Result<DashboardWebRunOutput> 
 
 fn execute_dashboard_inspect_at_path(
     args: &InspectExportArgs,
-    import_dir: &Path,
+    input_dir: &Path,
     expected_variant: &str,
 ) -> Result<DashboardWebRunOutput> {
     inspect::validate_inspect_export_report_args(args)?;
     if let Some(report_format) = inspect::effective_inspect_report_format(args) {
         let report = inspect::apply_query_report_filters(
             inspect::build_export_inspection_query_report_for_variant(
-                import_dir,
+                input_dir,
                 expected_variant,
             )?,
             args.report_filter_datasource.as_deref(),
@@ -407,7 +407,7 @@ fn execute_dashboard_inspect_at_path(
         );
         let rendered = inspect::render_export_inspection_report_output(
             args,
-            import_dir,
+            input_dir,
             expected_variant,
             report_format,
             &report,
@@ -415,7 +415,7 @@ fn execute_dashboard_inspect_at_path(
         let document = match report_format {
             InspectExportReportFormat::Governance | InspectExportReportFormat::GovernanceJson => {
                 let summary = inspect::build_export_inspection_summary_for_variant(
-                    import_dir,
+                    input_dir,
                     expected_variant,
                 )?;
                 serde_json::to_value(
@@ -425,9 +425,9 @@ fn execute_dashboard_inspect_at_path(
                 )?
             }
             InspectExportReportFormat::Dependency | InspectExportReportFormat::DependencyJson => {
-                let metadata = load_export_metadata(import_dir, Some(expected_variant))?;
+                let metadata = load_export_metadata(input_dir, Some(expected_variant))?;
                 let datasource_inventory =
-                    load_datasource_inventory(import_dir, metadata.as_ref())?;
+                    load_datasource_inventory(input_dir, metadata.as_ref())?;
                 crate::dashboard_inspection_dependency_contract::build_offline_dependency_contract_from_report_rows(
                     &report.queries,
                     &datasource_inventory,
@@ -448,7 +448,7 @@ fn execute_dashboard_inspect_at_path(
     }
 
     let summary =
-        inspect::build_export_inspection_summary_for_variant(import_dir, expected_variant)?;
+        inspect::build_export_inspection_summary_for_variant(input_dir, expected_variant)?;
     let rendered = inspect::render_export_inspection_summary_output(args, &summary)?;
     Ok(DashboardWebRunOutput {
         document: serde_json::to_value(build_export_inspection_summary_document(&summary))?,
@@ -458,21 +458,21 @@ fn execute_dashboard_inspect_at_path(
 
 pub fn execute_dashboard_inspect_export(args: &InspectExportArgs) -> Result<DashboardWebRunOutput> {
     let temp_dir = inspect_live::TempInspectDir::new("inspect-export-web")?;
-    let import_dir = inspect::resolve_inspect_export_import_dir(
+    let input_dir = inspect::resolve_inspect_export_import_dir(
         &temp_dir.path,
-        &args.import_dir,
+        &args.input_dir,
         args.input_format,
         args.input_type,
         args.interactive,
     )?;
-    execute_dashboard_inspect_at_path(args, &import_dir.import_dir, import_dir.expected_variant)
+    execute_dashboard_inspect_at_path(args, &input_dir.input_dir, input_dir.expected_variant)
 }
 
 pub fn execute_dashboard_inspect_live(args: &InspectLiveArgs) -> Result<DashboardWebRunOutput> {
     let temp_dir = inspect_live::TempInspectDir::new("inspect-live-web")?;
     let export_args = ExportArgs {
         common: args.common.clone(),
-        export_dir: temp_dir.path.clone(),
+        output_dir: temp_dir.path.clone(),
         page_size: args.page_size,
         org_id: args.org_id,
         all_orgs: args.all_orgs,
@@ -495,7 +495,7 @@ pub fn execute_dashboard_inspect_live(args: &InspectLiveArgs) -> Result<Dashboar
     let _ = export_dashboards_with_org_clients(&export_args)?;
     let inspect_import_dir = inspect_live::prepare_inspect_live_import_dir(&temp_dir.path, args)?;
     let inspect_args = InspectExportArgs {
-        import_dir: inspect_import_dir,
+        input_dir: inspect_import_dir,
         input_type: None,
         input_format: DashboardImportInputFormat::Raw,
         text: args.text,
@@ -513,7 +513,7 @@ pub fn execute_dashboard_inspect_live(args: &InspectLiveArgs) -> Result<Dashboar
         also_stdout: false,
         interactive: false,
     };
-    execute_dashboard_inspect_at_path(&inspect_args, &inspect_args.import_dir, RAW_EXPORT_SUBDIR)
+    execute_dashboard_inspect_at_path(&inspect_args, &inspect_args.input_dir, RAW_EXPORT_SUBDIR)
 }
 
 pub fn execute_dashboard_inspect_vars(args: &InspectVarsArgs) -> Result<DashboardWebRunOutput> {
@@ -608,7 +608,7 @@ pub fn run_dashboard_cli_with_client(
             publish_dashboard_with_client(client, &publish_args)
         }
         DashboardCommand::Analyze(analyze_args) => {
-            if analyze_args.import_dir.is_some() {
+            if analyze_args.input_dir.is_some() {
                 let inspect_args = analyze_args_to_export_args(analyze_args)?;
                 if inspect_args.help_full {
                     print!("{}", render_inspect_export_help_full());
@@ -757,7 +757,7 @@ pub fn run_dashboard_cli(args: DashboardCliArgs) -> Result<()> {
             publish_dashboard_with_client(&client, &publish_args)
         }
         DashboardCommand::Analyze(analyze_args) => {
-            if analyze_args.import_dir.is_some() {
+            if analyze_args.input_dir.is_some() {
                 let inspect_args = analyze_args_to_export_args(analyze_args)?;
                 if inspect_args.help_full {
                     print!("{}", render_inspect_export_help_full());
@@ -818,13 +818,24 @@ pub fn run_dashboard_cli(args: DashboardCliArgs) -> Result<()> {
         DashboardCommand::Impact(impact_args) => run_dashboard_impact(&impact_args),
         DashboardCommand::History(history_args) => match history_args.command {
             DashboardHistorySubcommand::List(list_args) => {
-                let client = build_http_client(&list_args.common)?;
-                run_dashboard_history_list(
-                    |method, path, params, payload| {
-                        request_json_with_client(&client, method, path, params, payload)
-                    },
-                    &list_args,
-                )
+                if list_args.input.is_some() || list_args.input_dir.is_some() {
+                    run_dashboard_history_list(
+                        |_method, _path, _params, _payload| {
+                            Err(message(
+                                "dashboard history list local mode should not call Grafana",
+                            ))
+                        },
+                        &list_args,
+                    )
+                } else {
+                    let client = build_http_client(&list_args.common)?;
+                    run_dashboard_history_list(
+                        |method, path, params, payload| {
+                            request_json_with_client(&client, method, path, params, payload)
+                        },
+                        &list_args,
+                    )
+                }
             }
             DashboardHistorySubcommand::Restore(restore_args) => {
                 let client = build_http_client(&restore_args.common)?;

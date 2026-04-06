@@ -410,7 +410,7 @@ fn parse_cli_supports_org_commands() {
         "org",
         "export",
         "--with-users",
-        "--export-dir",
+        "--output-dir",
         "/tmp/access-orgs",
     ]);
     match args.command {
@@ -418,7 +418,7 @@ fn parse_cli_supports_org_commands() {
             command: OrgCommand::Export(export_args),
         } => {
             assert!(export_args.with_users);
-            assert_eq!(export_args.export_dir.to_string_lossy(), "/tmp/access-orgs");
+            assert_eq!(export_args.output_dir.to_string_lossy(), "/tmp/access-orgs");
         }
         _ => panic!("expected org export"),
     }
@@ -427,7 +427,7 @@ fn parse_cli_supports_org_commands() {
         "grafana-util access",
         "org",
         "import",
-        "--import-dir",
+        "--input-dir",
         "/tmp/access-orgs",
         "--replace-existing",
         "--dry-run",
@@ -438,7 +438,7 @@ fn parse_cli_supports_org_commands() {
         } => {
             assert!(import_args.replace_existing);
             assert!(import_args.dry_run);
-            assert_eq!(import_args.import_dir.to_string_lossy(), "/tmp/access-orgs");
+            assert_eq!(import_args.input_dir.to_string_lossy(), "/tmp/access-orgs");
         }
         _ => panic!("expected org import"),
     }
@@ -747,7 +747,7 @@ fn parse_cli_supports_service_account_export_import_and_diff() {
         "grafana-util access",
         "service-account",
         "export",
-        "--export-dir",
+        "--output-dir",
         "/tmp/access-service-accounts",
         "--overwrite",
         "--dry-run",
@@ -757,7 +757,7 @@ fn parse_cli_supports_service_account_export_import_and_diff() {
             command: ServiceAccountCommand::Export(args),
         } => {
             assert_eq!(
-                args.export_dir.to_string_lossy().as_ref(),
+                args.output_dir.to_string_lossy().as_ref(),
                 "/tmp/access-service-accounts"
             );
             assert!(args.overwrite);
@@ -770,7 +770,7 @@ fn parse_cli_supports_service_account_export_import_and_diff() {
         "grafana-util access",
         "service-account",
         "import",
-        "--import-dir",
+        "--input-dir",
         "/tmp/access-service-accounts",
         "--replace-existing",
         "--dry-run",
@@ -782,7 +782,7 @@ fn parse_cli_supports_service_account_export_import_and_diff() {
             command: ServiceAccountCommand::Import(args),
         } => {
             assert_eq!(
-                args.import_dir.to_string_lossy().as_ref(),
+                args.input_dir.to_string_lossy().as_ref(),
                 "/tmp/access-service-accounts"
             );
             assert!(args.replace_existing);
@@ -1153,7 +1153,7 @@ fn parse_cli_supports_user_export_and_import() {
         "--with-teams",
         "--dry-run",
         "--overwrite",
-        "--export-dir",
+        "--output-dir",
         "/tmp/access-users",
     ]);
     match export_args.command {
@@ -1176,7 +1176,7 @@ fn parse_cli_supports_user_export_and_import() {
         "global",
         "--replace-existing",
         "--dry-run",
-        "--import-dir",
+        "--input-dir",
         "/tmp/access-users",
         "--yes",
     ]);
@@ -1250,7 +1250,7 @@ fn parse_cli_supports_team_export_and_import() {
         "export",
         "--with-members",
         "--dry-run",
-        "--export-dir",
+        "--output-dir",
         "/tmp/access-teams",
     ]);
     match export_args.command {
@@ -1269,7 +1269,7 @@ fn parse_cli_supports_team_export_and_import() {
         "import",
         "--replace-existing",
         "--dry-run",
-        "--import-dir",
+        "--input-dir",
         "/tmp/access-teams",
         "--yes",
     ]);
@@ -1291,7 +1291,7 @@ fn parse_cli_supports_user_import_dry_run_output_format_table() {
         "grafana-util access",
         "user",
         "import",
-        "--import-dir",
+        "--input-dir",
         "/tmp/access-users",
         "--dry-run",
         "--output-format",
@@ -1317,7 +1317,7 @@ fn parse_cli_supports_user_import_dry_run_output_format_json() {
         "grafana-util access",
         "user",
         "import",
-        "--import-dir",
+        "--input-dir",
         "/tmp/access-users",
         "--dry-run",
         "--output-format",
@@ -1343,7 +1343,7 @@ fn parse_cli_supports_team_import_dry_run_output_format_table() {
         "grafana-util access",
         "team",
         "import",
-        "--import-dir",
+        "--input-dir",
         "/tmp/access-teams",
         "--dry-run",
         "--output-format",
@@ -1369,7 +1369,7 @@ fn parse_cli_supports_team_import_dry_run_output_format_json() {
         "grafana-util access",
         "team",
         "import",
-        "--import-dir",
+        "--input-dir",
         "/tmp/access-teams",
         "--dry-run",
         "--output-format",

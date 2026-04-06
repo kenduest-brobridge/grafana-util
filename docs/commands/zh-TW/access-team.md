@@ -35,8 +35,8 @@
 - `browse` 只支援 live：`--query`, `--name`, `--with-members`, `--page`, `--per-page`
 - `add`: `--name`, `--email`, `--member`, `--admin`, `--json`
 - `modify`: `--team-id`, `--name`, `--add-member`, `--remove-member`, `--add-admin`, `--remove-admin`, `--json`
-- `export` 與 `diff`: `--export-dir` 或 `--diff-dir`, `--overwrite`, `--dry-run`, `--with-members`
-- `import`: `--import-dir`, `--replace-existing`, `--dry-run`, `--table`, `--json`, `--output-format`, `--yes`
+- `export` 與 `diff`: `--output-dir` 或 `--diff-dir`, `--overwrite`, `--dry-run`, `--with-members`
+- `import`: `--input-dir`, `--replace-existing`, `--dry-run`, `--table`, `--json`, `--output-format`, `--yes`
 - `delete`: `--team-id`, `--name`, `--yes`, `--json`
 
 ## 範例

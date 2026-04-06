@@ -92,7 +92,7 @@ fn resolve_datasource_workspace_input_dir(input_dir: &Path) -> Result<PathBuf> {
         message(
             error
                 .to_string()
-                .replace("--import-dir", "--input-dir")
+                .replace("--input-dir", "--input-dir")
                 .replace("Datasource import", "Datasource list"),
         )
     })

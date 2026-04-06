@@ -8,7 +8,7 @@
 
 ## 重點旗標
 - `--path`：從某個資料夾子樹開始，而不是從整棵樹開始。
-- `--import-dir`：瀏覽本機 raw 匯出根目錄、all-orgs 匯出根目錄，或 provisioning 樹。
+- `--input-dir`：瀏覽本機 raw 匯出根目錄、all-orgs 匯出根目錄，或 provisioning 樹。
 - `--input-format`：將本機匯出樹視為 `raw` 或 `provisioning`。
 - `--org-id`：瀏覽指定的 Grafana org。
 - `--all-orgs`：彙整所有可見 org 的瀏覽結果。需要 Basic auth。
@@ -27,7 +27,7 @@ grafana-util dashboard browse --url http://localhost:3000 --basic-user admin --b
 
 ```bash
 # 用途：在互動式終端機 UI 中開啟本機 raw 匯出樹。
-grafana-util dashboard browse --import-dir ./dashboards/raw --path 'Platform / Infra'
+grafana-util dashboard browse --input-dir ./dashboards/raw --path 'Platform / Infra'
 ```
 
 ```bash

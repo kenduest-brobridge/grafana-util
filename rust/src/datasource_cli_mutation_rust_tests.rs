@@ -86,7 +86,7 @@ fn import_help_explains_common_operator_flags() {
     subcommand.write_long_help(&mut output).unwrap();
     let help = String::from_utf8(output).unwrap();
 
-    assert!(help.contains("--import-dir"));
+    assert!(help.contains("--input-dir"));
     assert!(help.contains("--org-id"));
     assert!(help.contains("--use-export-org"));
     assert!(help.contains("--only-org-id"));

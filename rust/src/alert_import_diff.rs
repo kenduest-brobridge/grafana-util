@@ -328,11 +328,11 @@ fn import_resource_document(
 
 pub(crate) fn import_alerting_resources(args: &AlertCliArgs) -> Result<()> {
     let client = GrafanaAlertClient::new(&build_auth_context(args)?)?;
-    let import_dir = args
-        .import_dir
+    let input_dir = args
+        .input_dir
         .as_ref()
         .ok_or_else(|| message("Import directory is required for alerting import."))?;
-    let resource_files = discover_alert_resource_files(import_dir)?;
+    let resource_files = discover_alert_resource_files(input_dir)?;
     let linkage_mappings = AlertLinkageMappings::load(
         args.dashboard_uid_map.as_deref(),
         args.panel_id_map.as_deref(),
@@ -400,13 +400,13 @@ pub(crate) fn import_alerting_resources(args: &AlertCliArgs) -> Result<()> {
         println!(
             "Dry-run checked {} alerting resource files from {}",
             resource_files.len(),
-            import_dir.display()
+            input_dir.display()
         );
     } else {
         println!(
             "Imported {} alerting resource files from {}",
             resource_files.len(),
-            import_dir.display()
+            input_dir.display()
         );
     }
     Ok(())

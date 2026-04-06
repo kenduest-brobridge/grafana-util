@@ -55,7 +55,7 @@ summarize staged artifacts into one project\-wide overview. Use when: Want a sin
 task\-first staged change workflow with optional live Grafana preview and apply paths. Use when: Need to inspect a staged package, check whether it looks safe to continue, preview what would change, apply an approved preview, or drop into lower\-level advanced review contracts.
 .TP
 .B snapshot
-export and review Grafana snapshot inventory bundles. Use when: Want a local snapshot root that captures dashboard and datasource inventory for later inspection.
+export and review Grafana snapshot inventory bundles. Use when: Want a local snapshot root that captures dashboard, datasource, and access inventory for later inspection.
 .SH SUBCOMMAND MANPAGES
 .SS dashboard
 .TP
@@ -93,7 +93,7 @@ Delete live dashboards by UID or folder path. Use when: You need to remove one d
 Compare local dashboard files against live Grafana dashboards. Use when: You want to see what would change before importing or publishing a dashboard bundle.
 .TP
 .B grafana\-util\-dashboard\-analyze\-export(1)
-Analyze dashboard export directories through the canonical dashboard analyze command. Use when: You want to read a local export tree, inspect its structure, or render governance and dependency views without contacting Grafana. Prefer dashboard analyze \-\-import\-dir ... in new docs and scripts.
+Analyze dashboard export directories through the canonical dashboard analyze command. Use when: You want to read a local export tree, inspect its structure, or render governance and dependency views without contacting Grafana. Prefer dashboard analyze \-\-input\-dir ... in new docs and scripts.
 .TP
 .B grafana\-util\-dashboard\-analyze\-live(1)
 Analyze live Grafana dashboards through the canonical dashboard analyze command. Use when: You need the same analysis views as the local export\-tree flow, but sourced from live Grafana instead of a local export tree. Prefer dashboard analyze \-\-url ... in new docs and scripts.
@@ -105,7 +105,7 @@ List dashboard templating variables and datasource\-like choices from live Grafa
 Evaluate governance policy directly against live Grafana or a local export tree, with saved analysis artifacts as an advanced reuse path. Use when: You want a policy pass or fail result before promotion. Prefer direct live or local analysis inputs for the common path; keep governance\-json and queries\-json for advanced reuse and CI pipelines.
 .TP
 .B grafana\-util\-dashboard\-topology(1)
-Build a deterministic dashboard topology graph directly from live Grafana or a local export tree, with saved analysis artifacts available for advanced reuse. Use when: You need a graph view of dashboards, folders, variables, datasource links, and optional alert contract data. Prefer \-\-url or \-\-import\-dir for the common path; keep artifact inputs for advanced reuse or CI. The command also accepts the graph alias.
+Build a deterministic dashboard topology graph directly from live Grafana or a local export tree, with saved analysis artifacts available for advanced reuse. Use when: You need a graph view of dashboards, folders, variables, datasource links, and optional alert contract data. Prefer \-\-url or \-\-input\-dir for the common path; keep artifact inputs for advanced reuse or CI. The command also accepts the graph alias.
 .TP
 .B grafana\-util\-dashboard\-screenshot(1)
 Open one dashboard in a headless browser and capture image or PDF output. Use when: You need a reproducible dashboard or panel screenshot, especially for docs, incident notes, or visual debugging.
@@ -269,7 +269,7 @@ build a staged promotion review handoff from a source bundle and target inventor
 .SS snapshot
 .TP
 .B grafana\-util\-snapshot\-export(1)
-export dashboard and datasource inventory into a local snapshot bundle. Use when: Need a local snapshot root that can be reviewed without Grafana access.
+export dashboard, datasource, and access inventory into a local snapshot bundle. Use when: Need a local snapshot root that can be reviewed without Grafana access.
 .TP
 .B grafana\-util\-snapshot\-review(1)
 review a local snapshot inventory without touching Grafana. Use when: Want to inspect an exported snapshot root as table, csv, text, json, yaml, or interactive output.

@@ -63,12 +63,12 @@ grafana-util access org list --input-dir ./access-orgs --table
 
 ```bash
 # 用途：1. 列出、匯出與回放 org。
-grafana-util access org export --export-dir ./access-orgs
+grafana-util access org export --output-dir ./access-orgs
 ```
 
 ```bash
 # 用途：1. 列出、匯出與回放 org。
-grafana-util access org import --import-dir ./access-orgs --dry-run
+grafana-util access org import --input-dir ./access-orgs --dry-run
 ```
 **預期輸出：**
 ```text
@@ -130,12 +130,12 @@ grafana-util access team list --input-dir ./access-teams --table
 
 ```bash
 # 用途：2. team 盤點與同步。
-grafana-util access team export --export-dir ./access-teams --with-members
+grafana-util access team export --output-dir ./access-teams --with-members
 ```
 
 ```bash
 # 用途：2. team 盤點與同步。
-grafana-util access team import --import-dir ./access-teams --replace-existing --dry-run --table
+grafana-util access team import --input-dir ./access-teams --replace-existing --dry-run --table
 ```
 **預期輸出：**
 ```text
@@ -170,7 +170,7 @@ grafana-util access service-account list --input-dir ./access-sa --output-format
 
 ```bash
 # 用途：1. 列出與匯出 service account。
-grafana-util access service-account export --export-dir ./access-sa
+grafana-util access service-account export --output-dir ./access-sa
 ```
 **預期輸出：**
 ```text
@@ -231,7 +231,7 @@ Created service-account token nightly -> serviceAccountId=15
 
 ```bash
 # 用途：比較本機快照與 live Grafana 之間的差異。
-grafana-util access user diff --import-dir ./access-users
+grafana-util access user diff --input-dir ./access-users
 ```
 
 ```bash

@@ -9,8 +9,8 @@
 ## 重點旗標
 - `--dashboard-uid` 或 `--dashboard-url`：選擇要列出變數的儀表板。
 - `--input`：直接讀取一個本機儀表板 JSON 檔案。
-- `--import-dir`：從本機匯出樹讀取儀表板。
-- `--input-format`：將 `--import-dir` 視為 `raw` 或 `provisioning`。
+- `--input-dir`：從本機匯出樹讀取儀表板。
+- `--input-format`：將 `--input-dir` 視為 `raw` 或 `provisioning`。
 - `--vars-query`：疊加變數查詢字串，例如 `var-env=prod&var-host=web01`。
 - `--org-id`：將檢查限制在單一 org。
 - `--output-format`：輸出 `table`、`csv`、`text`、`json` 或 `yaml`。

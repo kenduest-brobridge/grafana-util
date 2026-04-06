@@ -76,9 +76,9 @@ pub(crate) fn load_dashboard_browse_document_for_args<F>(
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
-    if let Some(import_dir) = args.import_dir.as_deref() {
+    if let Some(input_dir) = args.input_dir.as_deref() {
         return load_dashboard_browse_document_from_local_import_dir(
-            import_dir,
+            input_dir,
             args.input_format,
             args.path.as_deref(),
         );
@@ -90,12 +90,12 @@ where
 }
 
 fn load_dashboard_browse_document_from_local_import_dir(
-    import_dir: &Path,
+    input_dir: &Path,
     input_format: DashboardImportInputFormat,
     root_path: Option<&str>,
 ) -> Result<DashboardBrowseDocument> {
     let temp_dir = TempInspectDir::new("dashboard-browse-local")?;
-    let resolved = resolve_local_browse_source(&temp_dir.path, import_dir, input_format)?;
+    let resolved = resolve_local_browse_source(&temp_dir.path, input_dir, input_format)?;
     let metadata = load_export_metadata(&resolved.metadata_dir, None)?;
     let folder_inventory = load_folder_inventory(&resolved.metadata_dir, metadata.as_ref())?;
     let dashboard_files = discover_dashboard_files(&resolved.dashboard_dir)?;
@@ -134,18 +134,18 @@ fn load_dashboard_browse_document_from_local_import_dir(
 
 fn resolve_local_browse_source(
     temp_root: &Path,
-    import_dir: &Path,
+    input_dir: &Path,
     input_format: DashboardImportInputFormat,
 ) -> Result<super::files::ResolvedDashboardImportSource> {
     match input_format {
         DashboardImportInputFormat::Raw => {
-            if resolve_dashboard_export_root(import_dir)?
+            if resolve_dashboard_export_root(input_dir)?
                 .map(|resolved| resolved.manifest.scope_kind.is_root())
                 .unwrap_or(false)
             {
                 let dashboard_dir = prepare_inspect_export_import_dir_for_variant(
                     temp_root,
-                    import_dir,
+                    input_dir,
                     super::RAW_EXPORT_SUBDIR,
                 )?;
                 return Ok(super::files::ResolvedDashboardImportSource {
@@ -153,16 +153,16 @@ fn resolve_local_browse_source(
                     metadata_dir: dashboard_dir,
                 });
             }
-            resolve_dashboard_import_source(import_dir, input_format)
+            resolve_dashboard_import_source(input_dir, input_format)
         }
         DashboardImportInputFormat::Provisioning => {
-            resolve_dashboard_import_source(import_dir, input_format)
+            resolve_dashboard_import_source(input_dir, input_format)
         }
     }
 }
 
 fn build_local_dashboard_summaries(
-    import_dir: &Path,
+    input_dir: &Path,
     dashboard_files: &[PathBuf],
     folder_inventory: &[super::FolderInventoryItem],
     metadata: Option<&crate::dashboard::models::ExportMetadata>,
@@ -197,13 +197,13 @@ fn build_local_dashboard_summaries(
         let folder_item = resolve_export_folder_inventory_item(
             document_object,
             dashboard_file,
-            import_dir,
+            input_dir,
             &folder_inventory_by_uid,
         );
         let folder_path = resolve_export_folder_path(
             document_object,
             dashboard_file,
-            import_dir,
+            input_dir,
             &folder_inventory_by_uid,
         );
         let folder_uid = folder_item
@@ -838,7 +838,7 @@ mod tests {
     use std::fs;
     use tempfile::tempdir;
 
-    fn make_browse_args(import_dir: std::path::PathBuf) -> BrowseArgs {
+    fn make_browse_args(input_dir: std::path::PathBuf) -> BrowseArgs {
         BrowseArgs {
             common: CommonCliArgs {
                 color: CliColorChoice::Auto,
@@ -852,7 +852,7 @@ mod tests {
                 timeout: 30,
                 verify_ssl: false,
             },
-            import_dir: Some(import_dir),
+            input_dir: Some(input_dir),
             input_format: DashboardImportInputFormat::Raw,
             page_size: 500,
             org_id: None,

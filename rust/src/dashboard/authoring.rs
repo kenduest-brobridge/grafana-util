@@ -506,7 +506,7 @@ fn build_publish_import_args(temp_input: PathBuf, args: &PublishArgs) -> ImportA
         use_export_org: false,
         only_org_id: Vec::new(),
         create_missing_orgs: false,
-        import_dir: temp_input,
+        input_dir: temp_input,
         input_format: super::DashboardImportInputFormat::Raw,
         import_folder_uid: args.folder_uid.clone(),
         ensure_folders: false,

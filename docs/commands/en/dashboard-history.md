@@ -14,14 +14,14 @@ Restore creates a new latest revision instead of overwriting the historical vers
 
 - live: use `--url` and `--dashboard-uid`
 - single local artifact: use `--input <history.json>` from `dashboard history export`
-- export tree: use `--import-dir <export-root>` from `dashboard export --include-history`
+- export tree: use `--input-dir <export-root>` from `dashboard export --include-history`
 
 `dashboard history restore` stays live-only.
 
 ## Key flags
 - `--dashboard-uid`: the dashboard UID whose revision history you want. Required for live history list and restore, and useful for filtering local export-tree history.
 - `--input`: read one reusable history artifact produced by `dashboard history export`.
-- `--import-dir`: read one export tree produced by `dashboard export --include-history`.
+- `--input-dir`: read one export tree produced by `dashboard export --include-history`.
 - `--limit`: how many recent versions to include in list or export views.
 - `--version`: the historical version number to restore.
 - `--message`: revision message for the new restored revision.
@@ -56,7 +56,7 @@ Routing rule:
 Practical mapping:
 
 - `dashboard history list --output-format json` -> `grafana-util-dashboard-history-list`
-- `dashboard history list --import-dir ./dashboards --output-format json` -> `grafana-util-dashboard-history-inventory` when you do not narrow with `--dashboard-uid`
+- `dashboard history list --input-dir ./dashboards --output-format json` -> `grafana-util-dashboard-history-inventory` when you do not narrow with `--dashboard-uid`
 - `dashboard history restore --dry-run --output-format json` -> `grafana-util-dashboard-history-restore`
 - `dashboard history restore --output-format json` -> the same contract shape, but live execution still creates a new latest revision
 - `dashboard history export --output ./cpu-main.history.json` -> `grafana-util-dashboard-history-export`
@@ -81,7 +81,7 @@ grafana-util dashboard history list --input ./cpu-main.history.json --output-for
 
 ```bash
 # Purpose: Read a dashboard export tree with included history and list one dashboard by UID.
-grafana-util dashboard history list --import-dir ./dashboards --dashboard-uid cpu-main --output-format table
+grafana-util dashboard history list --input-dir ./dashboards --dashboard-uid cpu-main --output-format table
 ```
 
 ```bash

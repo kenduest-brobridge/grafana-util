@@ -75,7 +75,7 @@ grafana-util change preview --workspace . --fetch-live --output-format json
 
 ```bash
 # 用途：建議先跑的 5 個指令。
-grafana-util dashboard export --export-dir ./backups --overwrite --progress
+grafana-util dashboard export --output-dir ./backups --overwrite --progress
 ```
 
 如果你要先處理存取層資產，可以把 `dashboard export` 換成：

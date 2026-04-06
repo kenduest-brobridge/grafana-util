@@ -64,10 +64,10 @@ fn run_access_cli_with_request_routes_team_export() {
 #[test]
 fn run_access_cli_with_request_routes_team_import() {
     let temp = tempdir().unwrap();
-    let import_dir = temp.path().join("access-teams");
-    fs::create_dir_all(&import_dir).unwrap();
+    let input_dir = temp.path().join("access-teams");
+    fs::create_dir_all(&input_dir).unwrap();
     fs::write(
-        import_dir.join("teams.json"),
+        input_dir.join("teams.json"),
         r#"[{"name":"Ops","email":"ops@example.com"}]"#,
     )
     .unwrap();
@@ -76,8 +76,8 @@ fn run_access_cli_with_request_routes_team_import() {
         "grafana-util access",
         "team",
         "import",
-        "--import-dir",
-        import_dir.to_str().unwrap(),
+        "--input-dir",
+        input_dir.to_str().unwrap(),
     ]);
     let mut calls = Vec::new();
     let result = run_access_cli_with_request(
@@ -130,10 +130,10 @@ fn run_access_cli_with_request_routes_org_export() {
 #[test]
 fn run_access_cli_with_request_routes_org_import() {
     let temp = tempdir().unwrap();
-    let import_dir = temp.path().join("access-orgs");
-    fs::create_dir_all(&import_dir).unwrap();
+    let input_dir = temp.path().join("access-orgs");
+    fs::create_dir_all(&input_dir).unwrap();
     fs::write(
-        import_dir.join("orgs.json"),
+        input_dir.join("orgs.json"),
         r#"{
             "kind":"grafana-utils-access-org-export-index",
             "version":1,
@@ -156,8 +156,8 @@ fn run_access_cli_with_request_routes_org_import() {
         "admin",
         "--basic-password",
         "admin",
-        "--import-dir",
-        import_dir.to_str().unwrap(),
+        "--input-dir",
+        input_dir.to_str().unwrap(),
         "--replace-existing",
     ]);
     let mut calls = Vec::new();
@@ -323,7 +323,7 @@ fn org_export_with_request_writes_bundle_with_users() {
     let args = OrgExportArgs {
         common: make_basic_common_no_org_id(),
         org_id: None,
-        export_dir: temp_dir.path().to_path_buf(),
+        output_dir: temp_dir.path().to_path_buf(),
         overwrite: true,
         dry_run: false,
         name: Some("Main Org".to_string()),
@@ -410,7 +410,7 @@ fn org_import_rejects_kind_mismatch_and_future_version_bundle_contract() {
     .unwrap();
     let args = OrgImportArgs {
         common: make_basic_common_no_org_id(),
-        import_dir: temp.path().to_path_buf(),
+        input_dir: temp.path().to_path_buf(),
         replace_existing: true,
         dry_run: true,
         yes: false,
@@ -439,8 +439,8 @@ fn org_import_rejects_kind_mismatch_and_future_version_bundle_contract() {
 #[test]
 fn org_import_with_request_dry_run_reports_user_role_update_without_mutating() {
     let temp = tempdir().unwrap();
-    let import_dir = temp.path().join("access-orgs");
-    fs::create_dir_all(&import_dir).unwrap();
+    let input_dir = temp.path().join("access-orgs");
+    fs::create_dir_all(&input_dir).unwrap();
     let bundle = json!({
         "kind": "grafana-utils-access-org-export-index",
         "version": 1,
@@ -454,13 +454,13 @@ fn org_import_with_request_dry_run_reports_user_role_update_without_mutating() {
         ]
     });
     fs::write(
-        import_dir.join("orgs.json"),
+        input_dir.join("orgs.json"),
         serde_json::to_string_pretty(&bundle).unwrap(),
     )
     .unwrap();
     let args = OrgImportArgs {
         common: make_basic_common_no_org_id(),
-        import_dir: import_dir.clone(),
+        input_dir: input_dir.clone(),
         replace_existing: true,
         dry_run: true,
         yes: true,
@@ -498,8 +498,8 @@ fn org_import_with_request_dry_run_reports_user_role_update_without_mutating() {
 #[test]
 fn org_import_with_request_updates_existing_org_users() {
     let temp = tempdir().unwrap();
-    let import_dir = temp.path().join("access-orgs");
-    fs::create_dir_all(&import_dir).unwrap();
+    let input_dir = temp.path().join("access-orgs");
+    fs::create_dir_all(&input_dir).unwrap();
     let bundle = json!({
         "kind": "grafana-utils-access-org-export-index",
         "version": 1,
@@ -513,13 +513,13 @@ fn org_import_with_request_updates_existing_org_users() {
         ]
     });
     fs::write(
-        import_dir.join("orgs.json"),
+        input_dir.join("orgs.json"),
         serde_json::to_string_pretty(&bundle).unwrap(),
     )
     .unwrap();
     let args = OrgImportArgs {
         common: make_basic_common_no_org_id(),
-        import_dir: import_dir.clone(),
+        input_dir: input_dir.clone(),
         replace_existing: true,
         dry_run: false,
         yes: true,
@@ -552,8 +552,8 @@ fn org_import_with_request_updates_existing_org_users() {
 #[test]
 fn org_import_with_request_creates_missing_org_and_users_when_replace_existing_is_set() {
     let temp = tempdir().unwrap();
-    let import_dir = temp.path().join("access-orgs");
-    fs::create_dir_all(&import_dir).unwrap();
+    let input_dir = temp.path().join("access-orgs");
+    fs::create_dir_all(&input_dir).unwrap();
     let bundle = json!({
         "kind": "grafana-utils-access-org-export-index",
         "version": 1,
@@ -567,13 +567,13 @@ fn org_import_with_request_creates_missing_org_and_users_when_replace_existing_i
         ]
     });
     fs::write(
-        import_dir.join("orgs.json"),
+        input_dir.join("orgs.json"),
         serde_json::to_string_pretty(&bundle).unwrap(),
     )
     .unwrap();
     let args = OrgImportArgs {
         common: make_basic_common_no_org_id(),
-        import_dir: import_dir.clone(),
+        input_dir: input_dir.clone(),
         replace_existing: true,
         dry_run: false,
         yes: true,
@@ -733,7 +733,7 @@ fn user_export_with_request_writes_global_bundle() {
     let temp_dir = tempdir().unwrap();
     let args = UserExportArgs {
         common: make_basic_common(),
-        export_dir: temp_dir.path().to_path_buf(),
+        output_dir: temp_dir.path().to_path_buf(),
         overwrite: true,
         dry_run: false,
         scope: Scope::Global,
@@ -804,7 +804,7 @@ fn user_import_rejects_kind_mismatch_and_future_version_bundle_contract() {
     .unwrap();
     let args = UserImportArgs {
         common: make_basic_common(),
-        import_dir: temp_dir.path().to_path_buf(),
+        input_dir: temp_dir.path().to_path_buf(),
         scope: Scope::Global,
         replace_existing: true,
         dry_run: true,
@@ -887,7 +887,7 @@ fn user_import_with_request_dry_run_reports_global_profile_and_admin_drift() {
     .unwrap();
     let args = UserImportArgs {
         common: make_basic_common(),
-        import_dir: temp_dir.path().to_path_buf(),
+        input_dir: temp_dir.path().to_path_buf(),
         scope: Scope::Global,
         replace_existing: true,
         dry_run: true,
@@ -945,7 +945,7 @@ fn user_import_with_request_dry_run_json_reports_global_summary_and_rows() {
     .unwrap();
     let args = UserImportArgs {
         common: make_basic_common(),
-        import_dir: temp_dir.path().to_path_buf(),
+        input_dir: temp_dir.path().to_path_buf(),
         scope: Scope::Global,
         replace_existing: true,
         dry_run: true,
@@ -986,7 +986,7 @@ fn user_import_with_request_updates_existing_global_user() {
     .unwrap();
     let args = UserImportArgs {
         common: make_basic_common(),
-        import_dir: temp_dir.path().to_path_buf(),
+        input_dir: temp_dir.path().to_path_buf(),
         scope: Scope::Global,
         replace_existing: true,
         dry_run: false,
@@ -1058,7 +1058,7 @@ fn user_import_with_request_creates_missing_global_user_when_password_present() 
     .unwrap();
     let args = UserImportArgs {
         common: make_basic_common(),
-        import_dir: temp_dir.path().to_path_buf(),
+        input_dir: temp_dir.path().to_path_buf(),
         scope: Scope::Global,
         replace_existing: true,
         dry_run: false,
@@ -1104,7 +1104,7 @@ fn user_export_with_request_writes_org_bundle_with_teams() {
     let temp_dir = tempdir().unwrap();
     let args = UserExportArgs {
         common: make_basic_common(),
-        export_dir: temp_dir.path().to_path_buf(),
+        output_dir: temp_dir.path().to_path_buf(),
         overwrite: true,
         dry_run: false,
         scope: Scope::Org,

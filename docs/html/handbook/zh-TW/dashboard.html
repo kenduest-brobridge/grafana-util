@@ -832,12 +832,12 @@ spring-jmx-node-unified  Spring JMX + Node Unified Dashboard (VM)  Demo    ffhrm
 <p><strong>如何解讀：</strong></p>
 <ul><li><strong>UID</strong>：用於自動化與刪除的穩定身份識別。</li><li><strong>FOLDER_PATH</strong>：Dashboard 所屬的目錄路徑。</li><li><strong>ORG/ORG_ID</strong>：確認該物件隸屬於哪個組織。</li></ul>
 <h2 id="關鍵指令-完整參數參考">關鍵指令 (完整參數參考)</h2>
-<table><thead><tr><th>指令</th><th>帶有參數的完整範例</th></tr></thead><tbody><tr><td><strong>盤點 (List)</strong></td><td><code>grafana-util dashboard list --all-orgs --with-sources --table</code></td></tr><tr><td><strong>匯出 (Export)</strong></td><td><code>grafana-util dashboard export --export-dir ./dashboards --overwrite --progress</code></td></tr><tr><td><strong>匯出 + 歷史</strong></td><td><code>grafana-util dashboard export --export-dir ./dashboards --include-history --overwrite --progress</code></td></tr><tr><td><strong>Raw 轉 Prompt</strong></td><td><code>grafana-util dashboard raw-to-prompt --input-dir ./dashboards/raw --output-dir ./dashboards/prompt --overwrite --progress</code></td></tr><tr><td><strong>匯入 (Import)</strong></td><td><code>grafana-util dashboard import --import-dir ./dashboards/raw --replace-existing --dry-run --table</code></td></tr><tr><td><strong>比對 (Diff)</strong></td><td><code>grafana-util dashboard diff --import-dir ./dashboards/raw --input-format raw</code></td></tr><tr><td><strong>分析 (Analyze)</strong></td><td><code>grafana-util dashboard analyze --import-dir ./dashboards/raw --input-format raw --output-format dependency</code></td></tr><tr><td><strong>刪除 (Delete)</strong></td><td><code>grafana-util dashboard delete --uid &lt;UID&gt; --url &lt;URL&gt; --basic-user admin --basic-password admin</code></td></tr><tr><td><strong>變數檢視 (List Vars)</strong></td><td><code>grafana-util dashboard list-vars --uid &lt;UID&gt; --url &lt;URL&gt; --table</code></td></tr><tr><td><strong>檔案修正 (Patch)</strong></td><td><code>grafana-util dashboard patch-file --input &lt;FILE&gt; --name &quot;New Title&quot; --output &lt;FILE&gt;</code></td></tr><tr><td><strong>發佈 (Publish)</strong></td><td><code>grafana-util dashboard publish --input &lt;FILE&gt; --url &lt;URL&gt; --basic-user admin --basic-password admin</code></td></tr><tr><td><strong>複製 (Clone)</strong></td><td><code>grafana-util dashboard clone-live --source-uid &lt;UID&gt; --output &lt;FILE&gt; --url &lt;URL&gt;</code></td></tr></tbody></table>
+<table><thead><tr><th>指令</th><th>帶有參數的完整範例</th></tr></thead><tbody><tr><td><strong>盤點 (List)</strong></td><td><code>grafana-util dashboard list --all-orgs --with-sources --table</code></td></tr><tr><td><strong>匯出 (Export)</strong></td><td><code>grafana-util dashboard export --output-dir ./dashboards --overwrite --progress</code></td></tr><tr><td><strong>匯出 + 歷史</strong></td><td><code>grafana-util dashboard export --output-dir ./dashboards --include-history --overwrite --progress</code></td></tr><tr><td><strong>Raw 轉 Prompt</strong></td><td><code>grafana-util dashboard raw-to-prompt --input-dir ./dashboards/raw --output-dir ./dashboards/prompt --overwrite --progress</code></td></tr><tr><td><strong>匯入 (Import)</strong></td><td><code>grafana-util dashboard import --input-dir ./dashboards/raw --replace-existing --dry-run --table</code></td></tr><tr><td><strong>比對 (Diff)</strong></td><td><code>grafana-util dashboard diff --input-dir ./dashboards/raw --input-format raw</code></td></tr><tr><td><strong>分析 (Analyze)</strong></td><td><code>grafana-util dashboard analyze --input-dir ./dashboards/raw --input-format raw --output-format dependency</code></td></tr><tr><td><strong>刪除 (Delete)</strong></td><td><code>grafana-util dashboard delete --uid &lt;UID&gt; --url &lt;URL&gt; --basic-user admin --basic-password admin</code></td></tr><tr><td><strong>變數檢視 (List Vars)</strong></td><td><code>grafana-util dashboard list-vars --uid &lt;UID&gt; --url &lt;URL&gt; --table</code></td></tr><tr><td><strong>檔案修正 (Patch)</strong></td><td><code>grafana-util dashboard patch-file --input &lt;FILE&gt; --name &quot;New Title&quot; --output &lt;FILE&gt;</code></td></tr><tr><td><strong>發佈 (Publish)</strong></td><td><code>grafana-util dashboard publish --input &lt;FILE&gt; --url &lt;URL&gt; --basic-user admin --basic-password admin</code></td></tr><tr><td><strong>複製 (Clone)</strong></td><td><code>grafana-util dashboard clone-live --source-uid &lt;UID&gt; --output &lt;FILE&gt; --url &lt;URL&gt;</code></td></tr></tbody></table>
 <h2 id="實作範例">實作範例</h2>
 <h3 id="1-匯出進度-export-progress">1. 匯出進度 (Export Progress)</h3>
 <p>在大規模匯出時使用 <code>--progress</code> 以取得簡潔的日誌。</p>
 <pre><code># 用途：在大規模匯出時使用 --progress 以取得簡潔的日誌。
-grafana-util dashboard export --export-dir ./dashboards --overwrite --progress</code></pre>
+grafana-util dashboard export --output-dir ./dashboards --overwrite --progress</code></pre>
 <p><strong>範例輸出：</strong></p>
 <pre><code>Exporting dashboard 1/7: mixed-query-smoke
 Exporting dashboard 2/7: smoke-prom-only
@@ -846,7 +846,7 @@ Exporting dashboard 7/7: two-prom-query-smoke</code></pre>
 <h3 id="2-dry-run-匯入預覽">2. Dry-Run 匯入預覽</h3>
 <p>在變更前務必確認目標動作。</p>
 <pre><code># 用途：在變更前務必確認目標動作。
-grafana-util dashboard import --import-dir ./dashboards/raw --dry-run --table</code></pre>
+grafana-util dashboard import --input-dir ./dashboards/raw --dry-run --table</code></pre>
 <p><strong>範例輸出：</strong></p>
 <pre><code>UID                    DESTINATION  ACTION  FOLDER_PATH                    FILE
 ---------------------  -----------  ------  -----------------------------  --------------------------------------
@@ -856,7 +856,7 @@ subfolder-chain-smoke  missing      create  Platform / Team / Apps / Prod  ./das
 <h3 id="3-provisioning-比對">3. Provisioning 比對</h3>
 <p>比對本地配置檔案與實例現況。</p>
 <pre><code># 用途：比對本地配置檔案與實例現況。
-grafana-util dashboard diff --import-dir ./dashboards/provisioning --input-format provisioning</code></pre>
+grafana-util dashboard diff --input-dir ./dashboards/provisioning --input-format provisioning</code></pre>
 <p><strong>範例輸出：</strong></p>
 <pre><code>--- live/cpu-main
 +++ export/cpu-main

@@ -106,12 +106,12 @@ grafana-util datasource browse --url http://localhost:3000 --basic-user admin --
 .PP
 export: Export live Grafana datasource inventory as normalized JSON plus provisioning files.
 .EX
-grafana-util datasource export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./datasources --overwrite
+grafana-util datasource export --url http://localhost:3000 --basic-user admin --basic-password admin --output-dir ./datasources --overwrite
 .EE
 .PP
 import: Import datasource inventory through the Grafana API.
 .EX
-grafana-util datasource import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./datasources --dry-run --table
+grafana-util datasource import --url http://localhost:3000 --basic-user admin --basic-password admin --input-dir ./datasources --dry-run --table
 .EE
 .SH SEE ALSO
 \fBgrafana-util\fR(1),

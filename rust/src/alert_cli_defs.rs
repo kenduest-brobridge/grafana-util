@@ -10,7 +10,7 @@ use crate::profile_config::ConnectionMergeInput;
 use super::{ALERT_HELP_TEXT, DEFAULT_OUTPUT_DIR, DEFAULT_TIMEOUT, DEFAULT_URL};
 
 const ALERT_EXPORT_HELP_TEXT: &str = "Examples:\n\n  grafana-util alert export --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output-dir ./alerts --overwrite\n  grafana-util alert export --url http://localhost:3000 --basic-user admin --basic-password admin --output-dir ./alerts --flat";
-const ALERT_IMPORT_HELP_TEXT: &str = "Examples:\n\n  grafana-util alert import --url http://localhost:3000 --import-dir ./alerts/raw --replace-existing\n  grafana-util alert import --url http://localhost:3000 --import-dir ./alerts/raw --replace-existing --dry-run --json\n  grafana-util alert import --url http://localhost:3000 --import-dir ./alerts/raw --replace-existing --dashboard-uid-map ./dashboard-map.json --panel-id-map ./panel-map.json";
+const ALERT_IMPORT_HELP_TEXT: &str = "Examples:\n\n  grafana-util alert import --url http://localhost:3000 --input-dir ./alerts/raw --replace-existing\n  grafana-util alert import --url http://localhost:3000 --input-dir ./alerts/raw --replace-existing --dry-run --json\n  grafana-util alert import --url http://localhost:3000 --input-dir ./alerts/raw --replace-existing --dashboard-uid-map ./dashboard-map.json --panel-id-map ./panel-map.json";
 const ALERT_DIFF_HELP_TEXT: &str = "Examples:\n\n  grafana-util alert diff --url http://localhost:3000 --diff-dir ./alerts/raw\n  grafana-util alert diff --url http://localhost:3000 --diff-dir ./alerts/raw --json";
 const ALERT_PLAN_HELP_TEXT: &str = "Examples:\n\n  grafana-util alert plan --desired-dir ./alerts/desired\n  grafana-util alert plan --desired-dir ./alerts/desired --prune --dashboard-uid-map ./dashboard-map.json --panel-id-map ./panel-map.json --output-format json";
 const ALERT_APPLY_HELP_TEXT: &str = "Examples:\n\n  grafana-util alert apply --plan-file ./alert-plan-reviewed.json --approve\n  grafana-util alert apply --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --plan-file ./alert-plan-reviewed.json --approve --output-format json";
@@ -110,14 +110,14 @@ pub struct AlertLegacyArgs {
     )]
     pub output_dir: PathBuf,
     #[arg(
-        long,
+        long = "input-dir",
         conflicts_with = "diff_dir",
         help = "Import alerting resource JSON from this directory instead of exporting. Point this to the raw/ export directory explicitly."
     )]
-    pub import_dir: Option<PathBuf>,
+    pub input_dir: Option<PathBuf>,
     #[arg(
         long,
-        conflicts_with = "import_dir",
+        conflicts_with = "input_dir",
         help = "Compare alerting resource JSON from this directory against Grafana. Point this to the raw/ export directory explicitly."
     )]
     pub diff_dir: Option<PathBuf>,
@@ -188,10 +188,10 @@ pub struct AlertImportArgs {
     #[command(flatten)]
     pub common: AlertCommonArgs,
     #[arg(
-        long,
+        long = "input-dir",
         help = "Import alerting resource JSON from this directory instead of exporting. Point this to the raw/ export directory explicitly."
     )]
-    pub import_dir: PathBuf,
+    pub input_dir: PathBuf,
     #[arg(
         long,
         default_value_t = false,
@@ -796,7 +796,7 @@ pub struct AlertCliArgs {
     pub prompt_password: bool,
     pub prompt_token: bool,
     pub output_dir: PathBuf,
-    pub import_dir: Option<PathBuf>,
+    pub input_dir: Option<PathBuf>,
     pub diff_dir: Option<PathBuf>,
     pub timeout: u64,
     pub flat: bool,
@@ -852,7 +852,7 @@ pub fn cli_args_from_common(common: AlertCommonArgs) -> AlertCliArgs {
         prompt_password: common.prompt_password,
         prompt_token: common.prompt_token,
         output_dir: PathBuf::from(DEFAULT_OUTPUT_DIR),
-        import_dir: None,
+        input_dir: None,
         diff_dir: None,
         timeout: common.timeout,
         flat: false,
@@ -924,7 +924,7 @@ fn empty_legacy_args() -> AlertLegacyArgs {
             verify_ssl: false,
         },
         output_dir: PathBuf::new(),
-        import_dir: None,
+        input_dir: None,
         diff_dir: None,
         flat: false,
         overwrite: false,
@@ -995,7 +995,7 @@ pub fn normalize_alert_namespace_args(args: AlertNamespaceArgs) -> AlertCliArgs 
         Some(AlertGroupCommand::Import(inner)) => {
             let mut args = cli_args_from_common(inner.common);
             args.command_kind = Some(AlertCommandKind::Import);
-            args.import_dir = Some(inner.import_dir);
+            args.input_dir = Some(inner.input_dir);
             args.replace_existing = inner.replace_existing;
             args.dry_run = inner.dry_run;
             args.json = inner.json;
@@ -1201,7 +1201,7 @@ pub fn normalize_alert_namespace_args(args: AlertNamespaceArgs) -> AlertCliArgs 
                 prompt_password: legacy.common.prompt_password,
                 prompt_token: legacy.common.prompt_token,
                 output_dir: legacy.output_dir,
-                import_dir: legacy.import_dir,
+                input_dir: legacy.input_dir,
                 diff_dir: legacy.diff_dir,
                 timeout: legacy.common.timeout,
                 flat: legacy.flat,

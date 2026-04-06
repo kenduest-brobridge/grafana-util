@@ -418,11 +418,11 @@ pub(crate) fn execute_sync_bundle(args: &SyncBundleArgs) -> Result<SyncCommandOu
     let mut datasources = Vec::new();
     let mut folders = Vec::new();
     let mut metadata = Map::new();
-    if let Some(export_dir) = args.dashboard_export_dir.as_ref() {
+    if let Some(output_dir) = args.dashboard_export_dir.as_ref() {
         let (dashboard_items, dashboard_datasources, folder_items, dashboard_metadata) =
             load_dashboard_bundle_sections(
-                export_dir,
-                export_dir,
+                output_dir,
+                output_dir,
                 args.datasource_provisioning_file.as_deref(),
             )?;
         dashboards = dashboard_items;
@@ -431,7 +431,7 @@ pub(crate) fn execute_sync_bundle(args: &SyncBundleArgs) -> Result<SyncCommandOu
         metadata.extend(dashboard_metadata);
         metadata.insert(
             "dashboardExportDir".to_string(),
-            Value::String(export_dir.display().to_string()),
+            Value::String(output_dir.display().to_string()),
         );
     } else if let Some(provisioning_dir) = args.dashboard_provisioning_dir.as_ref() {
         let (dashboard_items, dashboard_datasources, folder_items, dashboard_metadata) =
@@ -468,12 +468,12 @@ pub(crate) fn execute_sync_bundle(args: &SyncBundleArgs) -> Result<SyncCommandOu
         );
     }
     let alerting = match args.alert_export_dir.as_ref() {
-        Some(export_dir) => {
+        Some(output_dir) => {
             metadata.insert(
                 "alertExportDir".to_string(),
-                Value::String(export_dir.display().to_string()),
+                Value::String(output_dir.display().to_string()),
             );
-            load_alerting_bundle_section(export_dir)?
+            load_alerting_bundle_section(output_dir)?
         }
         None => Value::Object(Map::new()),
     };

@@ -258,11 +258,11 @@ pub struct UserExportArgs {
     #[command(flatten)]
     pub common: CommonCliArgs,
     #[arg(
-        long,
+        long = "output-dir",
         default_value = DEFAULT_ACCESS_USER_EXPORT_DIR,
         help = "Directory to write users.json and export-metadata.json."
     )]
-    pub export_dir: PathBuf,
+    pub output_dir: PathBuf,
     #[arg(
         long,
         default_value_t = false,
@@ -296,10 +296,10 @@ pub struct UserImportArgs {
     #[command(flatten)]
     pub common: CommonCliArgs,
     #[arg(
-        long,
+        long = "input-dir",
         help = "Import directory that contains users.json and export-metadata.json."
     )]
-    pub import_dir: PathBuf,
+    pub input_dir: PathBuf,
     #[arg(
         long,
         value_enum,

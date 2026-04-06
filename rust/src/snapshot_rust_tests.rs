@@ -458,7 +458,7 @@ fn snapshot_export_wrapper_calls_dashboard_then_datasource_runners() {
 
     let export_args = SnapshotExportArgs {
         common: sample_common_args(),
-        export_dir: PathBuf::from("./snapshot"),
+        output_dir: PathBuf::from("./snapshot"),
         overwrite: true,
     };
 
@@ -501,12 +501,12 @@ fn snapshot_export_wrapper_calls_dashboard_then_datasource_runners() {
     let datasource_args = datasource_args.borrow().clone().expect("datasource args");
     assert!(dashboard_args.all_orgs);
     assert_eq!(
-        dashboard_args.export_dir,
+        dashboard_args.output_dir,
         PathBuf::from("./snapshot/dashboards")
     );
     assert!(datasource_args.all_orgs);
     assert_eq!(
-        datasource_args.export_dir,
+        datasource_args.output_dir,
         PathBuf::from("./snapshot/datasources")
     );
     assert!(dashboard_args.overwrite);

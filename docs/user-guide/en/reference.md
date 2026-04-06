@@ -87,7 +87,7 @@ Use the dedicated [change command reference](../../commands/en/change.md) when y
 For local history inspection, `dashboard history list` can also read:
 
 - a single reusable artifact created by `dashboard history export --output ./cpu-main.history.json`
-- an export tree created by `dashboard export --include-history --export-dir ./dashboards`
+- an export tree created by `dashboard export --include-history --output-dir ./dashboards`
 
 `dashboard history restore` remains live-only.
 
@@ -107,7 +107,7 @@ Fast lookups from the CLI:
 Practical mapping:
 
 - `dashboard history list --output-format json` -> `grafana-util-dashboard-history-list`
-- `dashboard history list --import-dir ./dashboards --output-format json` -> `grafana-util-dashboard-history-inventory` when no `--dashboard-uid` filter is present
+- `dashboard history list --input-dir ./dashboards --output-format json` -> `grafana-util-dashboard-history-inventory` when no `--dashboard-uid` filter is present
 - `dashboard history restore --dry-run --output-format json` -> `grafana-util-dashboard-history-restore`
 - `dashboard history export --output ./cpu-main.history.json` -> `grafana-util-dashboard-history-export`
 

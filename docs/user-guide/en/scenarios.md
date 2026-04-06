@@ -113,17 +113,17 @@ Export live dashboards into a durable tree.
 
 ```bash
 # Purpose: Export live dashboards into a durable tree.
-grafana-util dashboard export --export-dir ./backups --overwrite --progress
+grafana-util dashboard export --output-dir ./backups --overwrite --progress
 ```
 
 ```bash
 # Purpose: Export live dashboards into a durable tree.
-grafana-util access org export --export-dir ./access-orgs
+grafana-util access org export --output-dir ./access-orgs
 ```
 
 ```bash
 # Purpose: Export live dashboards into a durable tree.
-grafana-util access service-account export --export-dir ./access-service-accounts
+grafana-util access service-account export --output-dir ./access-service-accounts
 ```
 **Expected Output:**
 ```text
@@ -149,12 +149,12 @@ Replay a backup into a live Grafana instance.
 
 ```bash
 # Purpose: Replay a backup into a live Grafana instance.
-grafana-util dashboard import --import-dir ./backups/raw --replace-existing --dry-run --table
+grafana-util dashboard import --input-dir ./backups/raw --replace-existing --dry-run --table
 ```
 
 ```bash
 # Purpose: Replay a backup into a live Grafana instance.
-grafana-util access team import --import-dir ./access-teams --replace-existing --dry-run --table
+grafana-util access team import --input-dir ./access-teams --replace-existing --dry-run --table
 ```
 **Expected Output:**
 ```text
@@ -213,7 +213,7 @@ Manage users, teams, and service accounts through snapshots.
 
 ```bash
 # Purpose: Manage users, teams, and service accounts through snapshots.
-grafana-util access user import --import-dir ./access-users --dry-run --table
+grafana-util access user import --input-dir ./access-users --dry-run --table
 ```
 
 ```bash

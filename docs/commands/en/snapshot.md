@@ -32,7 +32,7 @@ Examples:
 
 ```bash
 # Purpose: Export a local snapshot bundle from live Grafana.
-grafana-util snapshot export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./snapshot
+grafana-util snapshot export --url http://localhost:3000 --basic-user admin --basic-password admin --output-dir ./snapshot
 ```
 
 ```bash
@@ -58,18 +58,18 @@ What gets written:
 - `snapshot/access/service-accounts/`
 - `snapshot/snapshot-metadata.json`
 
-Key flags: `--export-dir`, `--overwrite`, plus the shared Grafana connection and auth flags.
+Key flags: `--output-dir`, `--overwrite`, plus the shared Grafana connection and auth flags.
 
 Examples:
 
 ```bash
 # Purpose: export.
-grafana-util snapshot export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./snapshot
+grafana-util snapshot export --url http://localhost:3000 --basic-user admin --basic-password admin --output-dir ./snapshot
 ```
 
 ```bash
 # Purpose: export.
-grafana-util snapshot export --profile prod --export-dir ./snapshot --overwrite
+grafana-util snapshot export --profile prod --output-dir ./snapshot --overwrite
 ```
 
 Related commands: `snapshot review`, `change bundle`, `overview`.

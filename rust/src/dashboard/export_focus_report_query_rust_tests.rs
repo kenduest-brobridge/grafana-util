@@ -133,7 +133,7 @@ fn apply_query_report_filters_matches_core_family_aliases() {
         )
     };
     let report = test_support::ExportInspectionQueryReport {
-        import_dir: "/tmp/raw".to_string(),
+        input_dir: "/tmp/raw".to_string(),
         summary: test_support::QueryReportSummary {
             dashboard_count: 6,
             panel_count: 6,

@@ -109,9 +109,9 @@ dehk4kxat5la8b  Prometheus  prometheus  http://prometheus:9090  true            
 | Command | Full Example with Arguments |
 | :--- | :--- |
 | **List** | `grafana-util datasource list --all-orgs --table` or `grafana-util datasource list --input-dir ./datasources --table` |
-| **Export** | `grafana-util datasource export --export-dir ./datasources --overwrite` |
-| **Import** | `grafana-util datasource import --import-dir ./datasources --replace-existing --dry-run --table` |
-| **Diff** | `grafana-util datasource diff --import-dir ./datasources` |
+| **Export** | `grafana-util datasource export --output-dir ./datasources --overwrite` |
+| **Import** | `grafana-util datasource import --input-dir ./datasources --replace-existing --dry-run --table` |
+| **Diff** | `grafana-util datasource diff --input-dir ./datasources` |
 | **Add** | `grafana-util datasource add --uid <UID> --name <NAME> --type prometheus --datasource-url <URL> --dry-run --table` |
 
 ---
@@ -121,7 +121,7 @@ dehk4kxat5la8b  Prometheus  prometheus  http://prometheus:9090  true            
 ### 1. Export Inventory
 ```bash
 # Purpose: 1. Export Inventory.
-grafana-util datasource export --export-dir ./datasources --overwrite
+grafana-util datasource export --output-dir ./datasources --overwrite
 ```
 **Output Excerpt:**
 ```text
@@ -133,7 +133,7 @@ Datasource export completed: 3 item(s)
 ### 2. Dry-Run Import Preview
 ```bash
 # Purpose: 2. Dry-Run Import Preview.
-grafana-util datasource import --import-dir ./datasources --replace-existing --dry-run --table
+grafana-util datasource import --input-dir ./datasources --replace-existing --dry-run --table
 ```
 **Output Excerpt:**
 ```text

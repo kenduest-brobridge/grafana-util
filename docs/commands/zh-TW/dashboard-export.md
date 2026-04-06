@@ -11,7 +11,7 @@
 - **採用後**：匯出會變成整條工作流的第一份 artifact，後面可以接 inspect、diff、dry-run import 與 Git review。
 
 ## 重點旗標
-- `--export-dir`：匯出樹的目標目錄。
+- `--output-dir`：匯出樹的目標目錄。
 - `--org-id`：匯出指定的 Grafana org。
 - `--all-orgs`：把每個可見 org 匯出到各自的子目錄。建議使用 Basic auth。
 - `--flat`：直接把檔案寫入各個匯出變體目錄。
@@ -42,22 +42,22 @@
 ## 範例
 ```bash
 # 用途：將儀表板匯出成 `raw/`、`prompt/` 與 `provisioning/` 檔案。
-grafana-util dashboard export --profile prod --export-dir ./dashboards --overwrite
+grafana-util dashboard export --profile prod --output-dir ./dashboards --overwrite
 ```
 
 ```bash
 # 用途：將儀表板匯出成 `raw/`、`prompt/` 與 `provisioning/` 檔案。
-grafana-util dashboard export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --export-dir ./dashboards --overwrite
+grafana-util dashboard export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --output-dir ./dashboards --overwrite
 ```
 
 ```bash
 # 用途：將儀表板匯出成 `raw/`、`prompt/` 與 `provisioning/` 檔案。
-grafana-util dashboard export --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --export-dir ./dashboards --overwrite
+grafana-util dashboard export --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output-dir ./dashboards --overwrite
 ```
 
 ```bash
 # 用途：匯出 dashboard，並把每個 org 的版本歷史成品一併寫入可重用的目錄樹。
-grafana-util dashboard export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --include-history --export-dir ./dashboards --overwrite
+grafana-util dashboard export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --include-history --output-dir ./dashboards --overwrite
 ```
 
 ## 相關指令

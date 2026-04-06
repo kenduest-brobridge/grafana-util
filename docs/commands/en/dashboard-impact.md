@@ -13,7 +13,7 @@ Use this when you are about to change, migrate, or troubleshoot one datasource a
 
 ## Key flags
 - `--url`: analyze live Grafana directly.
-- `--import-dir`: analyze a local export tree directly.
+- `--input-dir`: analyze a local export tree directly.
 - `--input-format`: choose `raw` or `provisioning` when analyzing local exports.
 - `--governance`: dashboard governance JSON input (`governance-json` artifact).
 - `--datasource-uid`: datasource UID to trace.
@@ -35,7 +35,7 @@ grafana-util dashboard impact \
 ```bash
 # Purpose: Estimate the blast radius of one datasource from a local export tree.
 grafana-util dashboard impact \
-  --import-dir ./dashboards/raw \
+  --input-dir ./dashboards/raw \
   --input-format raw \
   --datasource-uid prom-main \
   --output-format json

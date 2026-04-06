@@ -344,7 +344,7 @@ fn parse_cli_supports_diff_dir_and_dry_run() {
     ]);
     assert_eq!(args.url, "https://grafana.example.com");
     assert_eq!(args.diff_dir.as_deref(), Some(Path::new("./alerts/raw")));
-    assert!(args.import_dir.is_none());
+    assert!(args.input_dir.is_none());
     assert!(!args.dry_run);
 }
 
@@ -416,13 +416,13 @@ fn parse_cli_supports_import_subcommand() {
     let args: AlertCliArgs = parse_cli_from([
         "grafana-alert-utils",
         "import",
-        "--import-dir",
+        "--input-dir",
         "./alerts/raw",
         "--replace-existing",
         "--dry-run",
         "--json",
     ]);
-    assert_eq!(args.import_dir.as_deref(), Some(Path::new("./alerts/raw")));
+    assert_eq!(args.input_dir.as_deref(), Some(Path::new("./alerts/raw")));
     assert!(args.replace_existing);
     assert!(args.dry_run);
     assert!(args.json);

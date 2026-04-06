@@ -626,7 +626,7 @@ fn normalize_folder_path(path: Option<&str>) -> String {
 pub(crate) fn resolve_source_dashboard_folder_path(
     document: &Value,
     dashboard_file: &Path,
-    import_dir: &Path,
+    input_dir: &Path,
     folders_by_uid: &BTreeMap<String, FolderInventoryItem>,
 ) -> Result<String> {
     let document_object = value_as_object(document, "Dashboard payload must be a JSON object.")?;
@@ -647,7 +647,7 @@ pub(crate) fn resolve_source_dashboard_folder_path(
             }
         }
     }
-    let relative = dashboard_file.strip_prefix(import_dir).map_err(|error| {
+    let relative = dashboard_file.strip_prefix(input_dir).map_err(|error| {
         validation(format!(
             "Failed to resolve import-relative dashboard path for {}: {error}",
             dashboard_file.display()

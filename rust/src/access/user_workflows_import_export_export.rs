@@ -136,8 +136,8 @@ where
     validate_user_scope_auth(&args.scope, args.with_teams, &auth_mode)?;
     let records = build_user_export_records(&mut request_json, args)?;
 
-    let users_path = args.export_dir.join(ACCESS_USER_EXPORT_FILENAME);
-    let metadata_path = args.export_dir.join(ACCESS_EXPORT_METADATA_FILENAME);
+    let users_path = args.output_dir.join(ACCESS_USER_EXPORT_FILENAME);
+    let metadata_path = args.output_dir.join(ACCESS_EXPORT_METADATA_FILENAME);
     assert_not_overwrite(&users_path, args.dry_run, args.overwrite)?;
     assert_not_overwrite(&metadata_path, args.dry_run, args.overwrite)?;
 
@@ -162,7 +162,7 @@ where
             &Value::Object(build_access_export_metadata(
                 &args.common.url,
                 args.common.profile.as_deref(),
-                &args.export_dir,
+                &args.output_dir,
                 records.len(),
                 &args.scope,
                 args.with_teams,

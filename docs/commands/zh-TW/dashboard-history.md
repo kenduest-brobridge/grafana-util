@@ -14,14 +14,14 @@
 
 - live：使用 `--url` 和 `--dashboard-uid`
 - 單一 local 成品：使用 `dashboard history export` 產生的 `--input <history.json>`
-- export tree：使用 `dashboard export --include-history` 產生的 `--import-dir <export-root>`
+- export tree：使用 `dashboard export --include-history` 產生的 `--input-dir <export-root>`
 
 `dashboard history restore` 仍然只支援 live。
 
 ## 重點旗標
 - `--dashboard-uid`：要檢視版本歷史的 dashboard UID。做 live history list 與 restore 時必填；讀取 local export tree 時也可用來過濾特定 dashboard。
 - `--input`：讀取 `dashboard history export` 產生的一份可重用 history 成品。
-- `--import-dir`：讀取 `dashboard export --include-history` 產生的 export tree。
+- `--input-dir`：讀取 `dashboard export --include-history` 產生的 export tree。
 - `--limit`：list 或 export 要包含多少個最近版本。
 - `--version`：要還原的歷史版本號。
 - `--message`：新還原 revision 要附帶的版本訊息。
@@ -56,7 +56,7 @@
 常見對應：
 
 - `dashboard history list --output-format json` -> `grafana-util-dashboard-history-list`
-- `dashboard history list --import-dir ./dashboards --output-format json` -> 如果沒有再用 `--dashboard-uid` 縮小，會是 `grafana-util-dashboard-history-inventory`
+- `dashboard history list --input-dir ./dashboards --output-format json` -> 如果沒有再用 `--dashboard-uid` 縮小，會是 `grafana-util-dashboard-history-inventory`
 - `dashboard history restore --dry-run --output-format json` -> `grafana-util-dashboard-history-restore`
 - `dashboard history restore --output-format json` -> 同一種 contract，但 live 執行仍會建立新的 latest revision
 - `dashboard history export --output ./cpu-main.history.json` -> `grafana-util-dashboard-history-export`
@@ -81,7 +81,7 @@ grafana-util dashboard history list --input ./cpu-main.history.json --output-for
 
 ```bash
 # 用途：讀取包含 history 的 dashboard export tree，並列出指定 dashboard 的版本。
-grafana-util dashboard history list --import-dir ./dashboards --dashboard-uid cpu-main --output-format table
+grafana-util dashboard history list --input-dir ./dashboards --dashboard-uid cpu-main --output-format table
 ```
 
 ```bash

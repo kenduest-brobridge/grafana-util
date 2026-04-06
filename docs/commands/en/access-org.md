@@ -34,8 +34,8 @@ List live or local Grafana organizations, create, modify, export, import, diff, 
 - `list`: `--input-dir`, `--org-id`, `--name`, `--query`, `--with-users`, `--table`, `--csv`, `--json`, `--yaml`, `--output-format`
 - `add`: `--name`, `--json`
 - `modify`: `--org-id`, `--name`, `--set-name`, `--json`
-- `export` and `diff`: `--org-id`, `--name`, `--export-dir` or `--diff-dir`, `--overwrite`, `--dry-run`, `--with-users`
-- `import`: `--import-dir`, `--replace-existing`, `--dry-run`, `--yes`
+- `export` and `diff`: `--org-id`, `--name`, `--output-dir` or `--diff-dir`, `--overwrite`, `--dry-run`, `--with-users`
+- `import`: `--input-dir`, `--replace-existing`, `--dry-run`, `--yes`
 - `delete`: `--org-id`, `--name`, `--yes`, `--json`
 
 ## Notes

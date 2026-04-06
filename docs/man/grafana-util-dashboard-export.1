@@ -15,7 +15,7 @@ Before: export is a one\-off action, and you only discover later whether the tre
 After: export becomes the first artifact in a repeatable workflow that can feed inspect, diff, dry\-run import, and Git review.
 .SH COMMON OPTIONS
 .TP
-.B \-\-export\-dir
+.B \-\-output\-dir
 target directory for the export tree.
 .TP
 .B \-\-org\-id
@@ -66,7 +66,7 @@ if the next step is import, confirm whether you should continue from raw/ or pro
 .PP
 Export dashboards to raw/, prompt/, and provisioning/ files, with optional history/ artifacts.
 .EX
-grafana-util dashboard export --profile prod --export-dir ./dashboards --overwrite
+grafana-util dashboard export --profile prod --output-dir ./dashboards --overwrite
 .EE
 .SH SEE ALSO
 \fBgrafana-util\fR(1),

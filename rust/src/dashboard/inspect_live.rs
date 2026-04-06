@@ -71,14 +71,14 @@ impl Drop for TempInspectDir {
 
 pub(crate) fn build_analysis_live_export_args(
     common: &crate::dashboard::CommonCliArgs,
-    export_dir: PathBuf,
+    output_dir: PathBuf,
     page_size: usize,
     org_id: Option<i64>,
     all_orgs: bool,
 ) -> ExportArgs {
     ExportArgs {
         common: common.clone(),
-        export_dir,
+        output_dir,
         page_size,
         org_id,
         all_orgs,
@@ -100,10 +100,10 @@ pub(crate) fn build_analysis_live_export_args(
     }
 }
 
-fn build_live_export_args(args: &InspectLiveArgs, export_dir: PathBuf) -> ExportArgs {
+fn build_live_export_args(args: &InspectLiveArgs, output_dir: PathBuf) -> ExportArgs {
     let mut export_args = build_analysis_live_export_args(
         &args.common,
-        export_dir,
+        output_dir,
         args.page_size,
         args.org_id,
         args.all_orgs,
@@ -304,13 +304,13 @@ fn collect_folder_inventory_from_summaries(
 }
 
 pub(crate) fn load_variant_index_entries(
-    import_dir: &Path,
+    input_dir: &Path,
     metadata: Option<&super::models::ExportMetadata>,
 ) -> Result<Vec<super::models::VariantIndexEntry>> {
     let index_file = metadata
         .map(|item| item.index_file.clone())
         .unwrap_or_else(|| "index.json".to_string());
-    let index_path = import_dir.join(&index_file);
+    let index_path = input_dir.join(&index_file);
     if !index_path.is_file() {
         return Ok(Vec::new());
     }
@@ -320,25 +320,25 @@ pub(crate) fn load_variant_index_entries(
 }
 
 #[cfg(feature = "tui")]
-fn run_interactive_inspect_live_tui_from_dir(import_dir: &Path) -> Result<usize> {
+fn run_interactive_inspect_live_tui_from_dir(input_dir: &Path) -> Result<usize> {
     eprintln!(
         "[analyze-live --interactive] building summary: {}",
-        import_dir.display()
+        input_dir.display()
     );
-    let summary = build_export_inspection_summary(import_dir)?;
+    let summary = build_export_inspection_summary(input_dir)?;
     eprintln!(
         "[analyze-live --interactive] building query report: {}",
-        import_dir.display()
+        input_dir.display()
     );
-    let report = build_export_inspection_query_report(import_dir)?;
+    let report = build_export_inspection_query_report(input_dir)?;
     eprintln!(
         "[analyze-live --interactive] building governance review: {}",
-        import_dir.display()
+        input_dir.display()
     );
     let governance = build_export_inspection_governance_document(&summary, &report);
     eprintln!(
         "[analyze-live --interactive] launching analysis workbench: {}",
-        import_dir.display()
+        input_dir.display()
     );
     run_inspect_live_tui(&summary, &governance, &report)?;
     Ok(summary.dashboard_count)
@@ -399,10 +399,10 @@ pub(crate) fn inspect_live_dashboards_with_client(
 
 fn build_export_inspect_args_from_live(
     args: &InspectLiveArgs,
-    import_dir: PathBuf,
+    input_dir: PathBuf,
 ) -> InspectExportArgs {
     InspectExportArgs {
-        import_dir,
+        input_dir,
         input_type: None,
         input_format: super::DashboardImportInputFormat::Raw,
         text: args.text,
@@ -435,23 +435,23 @@ fn load_json_array_file(path: &Path, error_context: &str) -> Result<Vec<Value>> 
 }
 
 fn discover_org_variant_export_dirs(
-    import_dir: &Path,
+    input_dir: &Path,
     expected_variant: &'static str,
 ) -> Result<Vec<(String, PathBuf)>> {
-    if !import_dir.exists() {
+    if !input_dir.exists() {
         return Err(message(format!(
             "Import directory does not exist: {}",
-            import_dir.display()
+            input_dir.display()
         )));
     }
-    if !import_dir.is_dir() {
+    if !input_dir.is_dir() {
         return Err(message(format!(
             "Import path is not a directory: {}",
-            import_dir.display()
+            input_dir.display()
         )));
     }
     let mut org_raw_dirs = Vec::new();
-    for entry in fs::read_dir(import_dir)? {
+    for entry in fs::read_dir(input_dir)? {
         let entry = entry?;
         let org_root = entry.path();
         if !org_root.is_dir() {
@@ -469,8 +469,8 @@ fn discover_org_variant_export_dirs(
     org_raw_dirs.sort_by(|left, right| left.0.cmp(&right.0));
     if org_raw_dirs.is_empty() {
         return Err(message(format!(
-            "Import path {} does not contain any org-scoped {expected_variant}/ exports. Point --import-dir at a combined multi-org dashboard export root that includes that variant.",
-            import_dir.display(),
+            "Import path {} does not contain any org-scoped {expected_variant}/ exports. Point --input-dir at a combined multi-org dashboard export root that includes that variant.",
+            input_dir.display(),
         )));
     }
     Ok(org_raw_dirs)
@@ -589,19 +589,19 @@ pub(crate) fn prepare_inspect_live_import_dir(
 #[cfg(test)]
 pub(crate) fn prepare_inspect_export_import_dir(
     temp_root: &Path,
-    import_dir: &Path,
+    input_dir: &Path,
 ) -> Result<PathBuf> {
-    prepare_inspect_export_import_dir_for_variant(temp_root, import_dir, RAW_EXPORT_SUBDIR)
+    prepare_inspect_export_import_dir_for_variant(temp_root, input_dir, RAW_EXPORT_SUBDIR)
 }
 
 pub(crate) fn prepare_inspect_export_import_dir_for_variant(
     temp_root: &Path,
-    import_dir: &Path,
+    input_dir: &Path,
     expected_variant: &'static str,
 ) -> Result<PathBuf> {
     // Root exports need one synthetic raw tree so offline inspect sees the same layout
     // whether the source was a live all-org fetch or a prebuilt export archive.
-    let root_manifest = super::files::resolve_dashboard_export_root(import_dir)?;
+    let root_manifest = super::files::resolve_dashboard_export_root(input_dir)?;
     if root_manifest
         .as_ref()
         .map(|resolved| resolved.manifest.scope_kind.is_root())
@@ -610,16 +610,16 @@ pub(crate) fn prepare_inspect_export_import_dir_for_variant(
         let inspect_variant_dir = temp_root
             .join("inspect-export-all-orgs")
             .join(expected_variant);
-        let org_variant_dirs = discover_org_variant_export_dirs(import_dir, expected_variant)?;
+        let org_variant_dirs = discover_org_variant_export_dirs(input_dir, expected_variant)?;
         merge_org_variant_exports_into_dir(
             &org_variant_dirs,
             &inspect_variant_dir,
-            Some(import_dir),
+            Some(input_dir),
             expected_variant,
         )?;
         return Ok(inspect_variant_dir);
     }
-    Ok(import_dir.to_path_buf())
+    Ok(input_dir.to_path_buf())
 }
 
 pub(crate) fn inspect_live_dashboards_with_request<F>(

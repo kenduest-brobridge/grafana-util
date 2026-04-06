@@ -35,7 +35,7 @@ fn render_export_inspection_governance_output(
         format!("{}\n", render_json_value(governance)?)
     } else {
         render_lines_to_string(render_governance_table_report(
-            &summary.import_dir,
+            &summary.input_dir,
             governance,
         ))
     };
@@ -92,7 +92,7 @@ fn render_export_inspection_column_report_output(
         let mut output = String::new();
         output.push_str(&format!(
             "Export inspection report: {}\n\n",
-            report.import_dir
+            report.input_dir
         ));
         output.push_str("# Query report\n");
         for line in render_simple_table(&headers, &rows, !args.no_header) {
@@ -127,13 +127,13 @@ fn render_export_inspection_queries_json_output(
 }
 
 fn render_export_inspection_dependency_output(
-    import_dir: &Path,
+    input_dir: &Path,
     expected_variant: &str,
     report_format: InspectExportReportFormat,
     report: &ExportInspectionQueryReport,
 ) -> Result<ExportInspectionRenderedOutput> {
-    let metadata = load_export_metadata(import_dir, Some(expected_variant))?;
-    let datasource_inventory = load_datasource_inventory(import_dir, metadata.as_ref())?;
+    let metadata = load_export_metadata(input_dir, Some(expected_variant))?;
+    let datasource_inventory = load_datasource_inventory(input_dir, metadata.as_ref())?;
     let output = if report_format == InspectExportReportFormat::DependencyJson {
         format!(
             "{}\n",
@@ -148,7 +148,7 @@ fn render_export_inspection_dependency_output(
             &datasource_inventory,
         );
         render_lines_to_string(render_export_inspection_dependency_table_report(
-            &report.import_dir,
+            &report.input_dir,
             &document,
         ))
     };
@@ -160,7 +160,7 @@ fn render_export_inspection_dependency_output(
 
 pub(crate) fn render_export_inspection_report_output(
     args: &InspectExportArgs,
-    import_dir: &Path,
+    input_dir: &Path,
     expected_variant: &str,
     report_format: InspectExportReportFormat,
     report: &ExportInspectionQueryReport,
@@ -168,7 +168,7 @@ pub(crate) fn render_export_inspection_report_output(
     match report_format {
         InspectExportReportFormat::Governance | InspectExportReportFormat::GovernanceJson => {
             let summary =
-                build_export_inspection_summary_for_variant(import_dir, expected_variant)?;
+                build_export_inspection_summary_for_variant(input_dir, expected_variant)?;
             let governance = build_export_inspection_governance_document(&summary, report);
             render_export_inspection_governance_output(&summary, &governance, report_format)
         }
@@ -177,7 +177,7 @@ pub(crate) fn render_export_inspection_report_output(
         }
         InspectExportReportFormat::Dependency | InspectExportReportFormat::DependencyJson => {
             render_export_inspection_dependency_output(
-                import_dir,
+                input_dir,
                 expected_variant,
                 report_format,
                 report,
@@ -205,9 +205,9 @@ mod tests {
     use std::fs;
     use tempfile::tempdir;
 
-    fn make_report(import_dir: &str) -> ExportInspectionQueryReport {
+    fn make_report(input_dir: &str) -> ExportInspectionQueryReport {
         ExportInspectionQueryReport {
-            import_dir: import_dir.to_string(),
+            input_dir: input_dir.to_string(),
             summary: QueryReportSummary {
                 dashboard_count: 1,
                 panel_count: 1,
@@ -231,7 +231,7 @@ mod tests {
     #[test]
     fn render_export_inspection_report_output_renders_dependency_text_and_json_distinctly() {
         let temp = tempdir().unwrap();
-        let import_dir = temp.path();
+        let input_dir = temp.path();
         let metadata = build_export_metadata(
             "raw",
             1,
@@ -244,18 +244,18 @@ mod tests {
             None,
             "local",
             None,
-            Some(import_dir),
+            Some(input_dir),
             None,
-            import_dir,
-            &import_dir.join("export-metadata.json"),
+            input_dir,
+            &input_dir.join("export-metadata.json"),
         );
         fs::write(
-            import_dir.join("export-metadata.json"),
+            input_dir.join("export-metadata.json"),
             serde_json::to_string_pretty(&metadata).unwrap() + "\n",
         )
         .unwrap();
         fs::write(
-            import_dir.join("datasources.json"),
+            input_dir.join("datasources.json"),
             serde_json::to_string_pretty(&json!([
                 {
                     "uid": "prom-main",
@@ -292,7 +292,7 @@ mod tests {
         .unwrap();
 
         let args = InspectExportArgs {
-            import_dir: import_dir.to_path_buf(),
+            input_dir: input_dir.to_path_buf(),
             input_type: None,
             input_format: crate::dashboard::DashboardImportInputFormat::Raw,
             text: false,
@@ -310,11 +310,11 @@ mod tests {
             also_stdout: false,
             interactive: false,
         };
-        let report = make_report(&import_dir.display().to_string());
+        let report = make_report(&input_dir.display().to_string());
 
         let dependency_output = render_export_inspection_report_output(
             &args,
-            import_dir,
+            input_dir,
             "raw",
             InspectExportReportFormat::Dependency,
             &report,
@@ -335,7 +335,7 @@ mod tests {
 
         let dependency_json_output = render_export_inspection_report_output(
             &args,
-            import_dir,
+            input_dir,
             "raw",
             InspectExportReportFormat::DependencyJson,
             &report,

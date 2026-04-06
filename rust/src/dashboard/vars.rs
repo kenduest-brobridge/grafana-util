@@ -150,7 +150,7 @@ fn render_dashboard_variable_text(document: &DashboardVariableDocument) -> Strin
 pub(crate) fn execute_dashboard_variable_inspection(
     args: &InspectVarsArgs,
 ) -> Result<DashboardVariableDocument> {
-    if args.input.is_some() || args.import_dir.is_some() {
+    if args.input.is_some() || args.input_dir.is_some() {
         let mut document = execute_dashboard_variable_inspection_local(args)?;
         if let Some(vars_query) = args.vars_query.as_deref() {
             apply_vars_query_overrides(&mut document.variables, vars_query)?;
@@ -266,10 +266,10 @@ fn execute_dashboard_variable_inspection_local(
             dashboard_uid_hint.as_deref(),
         );
     }
-    let Some(import_dir) = args.import_dir.as_deref() else {
-        return Err(message("Local list-vars requires --input or --import-dir."));
+    let Some(input_dir) = args.input_dir.as_deref() else {
+        return Err(message("Local list-vars requires --input or --input-dir."));
     };
-    let resolved = resolve_local_variable_source(import_dir, args.input_format)?;
+    let resolved = resolve_local_variable_source(input_dir, args.input_format)?;
     let mut dashboard_files = discover_dashboard_files(&resolved.dashboard_dir)?;
     dashboard_files.retain(|path| !is_history_artifact(path));
     if dashboard_files.is_empty() {
@@ -284,19 +284,19 @@ fn execute_dashboard_variable_inspection_local(
 }
 
 fn resolve_local_variable_source(
-    import_dir: &std::path::Path,
+    input_dir: &std::path::Path,
     input_format: DashboardImportInputFormat,
 ) -> Result<super::files::ResolvedDashboardImportSource> {
     match input_format {
         DashboardImportInputFormat::Raw => {
-            if resolve_dashboard_export_root(import_dir)?
+            if resolve_dashboard_export_root(input_dir)?
                 .map(|resolved| resolved.manifest.scope_kind.is_root())
                 .unwrap_or(false)
             {
                 let temp_dir = TempInspectDir::new("inspect-vars-local")?;
                 let dashboard_dir = prepare_inspect_export_import_dir_for_variant(
                     &temp_dir.path,
-                    import_dir,
+                    input_dir,
                     RAW_EXPORT_SUBDIR,
                 )?;
                 return Ok(super::files::ResolvedDashboardImportSource {
@@ -304,10 +304,10 @@ fn resolve_local_variable_source(
                     metadata_dir: dashboard_dir,
                 });
             }
-            resolve_dashboard_import_source(import_dir, input_format)
+            resolve_dashboard_import_source(input_dir, input_format)
         }
         DashboardImportInputFormat::Provisioning => {
-            resolve_dashboard_import_source(import_dir, input_format)
+            resolve_dashboard_import_source(input_dir, input_format)
         }
     }
 }
@@ -339,7 +339,7 @@ fn select_local_dashboard_file(
         return Ok(dashboard_files[0].clone());
     }
     Err(message(
-        "Use --dashboard-uid or --dashboard-url to choose one dashboard from --import-dir, or use --input for one local dashboard file.",
+        "Use --dashboard-uid or --dashboard-url to choose one dashboard from --input-dir, or use --input for one local dashboard file.",
     ))
 }
 

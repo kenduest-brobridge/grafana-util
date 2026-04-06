@@ -800,18 +800,18 @@ dehk4kxat5la8b  Prometheus  prometheus  http://prometheus:9090  true            
 <p><strong>How to Read It:</strong></p>
 <ul><li><strong>UID</strong>: Stable identity for automation.</li><li><strong>TYPE</strong>: Identifies the plugin implementation (e.g., prometheus, loki).</li><li><strong>IS_DEFAULT</strong>: Indicates if this is the default datasource for the organization.</li><li><strong>URL</strong>: The backend target associated with the record.</li></ul>
 <h2 id="key-commands-full-argument-reference">Key Commands (Full Argument Reference)</h2>
-<table><thead><tr><th>Command</th><th>Full Example with Arguments</th></tr></thead><tbody><tr><td><strong>List</strong></td><td><code>grafana-util datasource list --all-orgs --table</code> or <code>grafana-util datasource list --input-dir ./datasources --table</code></td></tr><tr><td><strong>Export</strong></td><td><code>grafana-util datasource export --export-dir ./datasources --overwrite</code></td></tr><tr><td><strong>Import</strong></td><td><code>grafana-util datasource import --import-dir ./datasources --replace-existing --dry-run --table</code></td></tr><tr><td><strong>Diff</strong></td><td><code>grafana-util datasource diff --import-dir ./datasources</code></td></tr><tr><td><strong>Add</strong></td><td><code>grafana-util datasource add --uid &lt;UID&gt; --name &lt;NAME&gt; --type prometheus --datasource-url &lt;URL&gt; --dry-run --table</code></td></tr></tbody></table>
+<table><thead><tr><th>Command</th><th>Full Example with Arguments</th></tr></thead><tbody><tr><td><strong>List</strong></td><td><code>grafana-util datasource list --all-orgs --table</code> or <code>grafana-util datasource list --input-dir ./datasources --table</code></td></tr><tr><td><strong>Export</strong></td><td><code>grafana-util datasource export --output-dir ./datasources --overwrite</code></td></tr><tr><td><strong>Import</strong></td><td><code>grafana-util datasource import --input-dir ./datasources --replace-existing --dry-run --table</code></td></tr><tr><td><strong>Diff</strong></td><td><code>grafana-util datasource diff --input-dir ./datasources</code></td></tr><tr><td><strong>Add</strong></td><td><code>grafana-util datasource add --uid &lt;UID&gt; --name &lt;NAME&gt; --type prometheus --datasource-url &lt;URL&gt; --dry-run --table</code></td></tr></tbody></table>
 <h2 id="validated-docker-examples">Validated Docker Examples</h2>
 <h3 id="1-export-inventory">1. Export Inventory</h3>
 <pre><code># Purpose: 1. Export Inventory.
-grafana-util datasource export --export-dir ./datasources --overwrite</code></pre>
+grafana-util datasource export --output-dir ./datasources --overwrite</code></pre>
 <p><strong>Output Excerpt:</strong></p>
 <pre><code>Exported datasource inventory -&gt; datasources/datasources.json
 Exported metadata            -&gt; datasources/export-metadata.json
 Datasource export completed: 3 item(s)</code></pre>
 <h3 id="2-dry-run-import-preview">2. Dry-Run Import Preview</h3>
 <pre><code># Purpose: 2. Dry-Run Import Preview.
-grafana-util datasource import --import-dir ./datasources --replace-existing --dry-run --table</code></pre>
+grafana-util datasource import --input-dir ./datasources --replace-existing --dry-run --table</code></pre>
 <p><strong>Output Excerpt:</strong></p>
 <pre><code>UID         NAME               TYPE         ACTION   DESTINATION
 prom-main   prometheus-main    prometheus   update   existing

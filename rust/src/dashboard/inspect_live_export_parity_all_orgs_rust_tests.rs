@@ -19,10 +19,10 @@ use tempfile::tempdir;
 #[test]
 fn inspect_live_dashboards_with_request_all_orgs_matches_export_root_governance_contract() {
     let temp = tempdir().unwrap();
-    let export_dir = temp.path().join("dashboards");
+    let output_dir = temp.path().join("dashboards");
     let export_args = ExportArgs {
         common: make_common_args("http://127.0.0.1:3000".to_string()),
-        export_dir: export_dir.clone(),
+        output_dir: output_dir.clone(),
         page_size: 500,
         org_id: None,
         all_orgs: true,
@@ -170,12 +170,12 @@ fn inspect_live_dashboards_with_request_all_orgs_matches_export_root_governance_
     assert_eq!(export_count, 2);
 
     let export_import_dir =
-        test_support::prepare_inspect_export_import_dir(inspect_root_temp.path(), &export_dir)
+        test_support::prepare_inspect_export_import_dir(inspect_root_temp.path(), &output_dir)
             .unwrap();
 
     let export_report_output = temp.path().join("export-report.json");
     let export_report_args = InspectExportArgs {
-        import_dir: export_import_dir.clone(),
+        input_dir: export_import_dir.clone(),
         input_type: None,
         input_format: crate::dashboard::DashboardImportInputFormat::Raw,
         text: false,
@@ -226,7 +226,7 @@ fn inspect_live_dashboards_with_request_all_orgs_matches_export_root_governance_
 
     let export_governance_output = temp.path().join("export-governance.json");
     let export_governance_args = InspectExportArgs {
-        import_dir: export_import_dir.clone(),
+        input_dir: export_import_dir.clone(),
         input_type: None,
         input_format: crate::dashboard::DashboardImportInputFormat::Raw,
         text: false,
@@ -280,7 +280,7 @@ fn inspect_live_dashboards_with_request_all_orgs_matches_export_root_governance_
 
     let export_dependency_output = temp.path().join("export-dependency.json");
     let export_dependency_args = InspectExportArgs {
-        import_dir: export_import_dir.clone(),
+        input_dir: export_import_dir.clone(),
         input_type: None,
         input_format: crate::dashboard::DashboardImportInputFormat::Raw,
         text: false,

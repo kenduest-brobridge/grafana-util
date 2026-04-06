@@ -259,23 +259,23 @@ pub struct InspectVarsArgs {
     #[arg(
         long,
         value_name = "FILE",
-        conflicts_with = "import_dir",
+        conflicts_with = "input_dir",
         help = "Read one local dashboard JSON file instead of calling Grafana. Use this for a raw dashboard file, a prompt file, or a file-provisioning dashboard object."
     )]
     pub input: Option<PathBuf>,
     #[arg(
-        long,
+        long = "input-dir",
         value_name = "DIR",
         conflicts_with = "input",
         help = "Read one local dashboard from an export tree instead of calling Grafana. Point this at a raw/ export root, an all-orgs export root, or a provisioning/ dashboards tree."
     )]
-    pub import_dir: Option<PathBuf>,
+    pub input_dir: Option<PathBuf>,
     #[arg(
         long,
         value_enum,
         default_value_t = DashboardImportInputFormat::Raw,
-        requires = "import_dir",
-        help = "Interpret --import-dir as raw export files or Grafana file-provisioning artifacts. Use provisioning to accept either the provisioning/ root or its dashboards/ subdirectory."
+        requires = "input_dir",
+        help = "Interpret --input-dir as raw export files or Grafana file-provisioning artifacts. Use provisioning to accept either the provisioning/ root or its dashboards/ subdirectory."
     )]
     pub input_format: DashboardImportInputFormat,
     #[arg(
@@ -318,23 +318,23 @@ pub struct AnalyzeArgs {
     #[command(flatten)]
     pub common: CommonCliArgs,
     #[arg(
-        long,
+        long = "input-dir",
         help = "Analyze dashboards from this directory instead of live Grafana. Use --input-format provisioning to point at a provisioning/ root or its dashboards/ subdirectory."
     )]
-    pub import_dir: Option<PathBuf>,
+    pub input_dir: Option<PathBuf>,
     #[arg(
         long,
         value_enum,
-        requires = "import_dir",
-        help = "When --import-dir points at a dashboard export root that contains multiple variants, select which dashboard tree to analyze. Use raw for raw/ and source for prompt/."
+        requires = "input_dir",
+        help = "When --input-dir points at a dashboard export root that contains multiple variants, select which dashboard tree to analyze. Use raw for raw/ and source for prompt/."
     )]
     pub input_type: Option<InspectExportInputType>,
     #[arg(
         long,
         value_enum,
         default_value_t = DashboardImportInputFormat::Raw,
-        requires = "import_dir",
-        help = "Interpret --import-dir as raw export files or Grafana file-provisioning artifacts. Use provisioning to accept either the provisioning/ root or its dashboards/ subdirectory."
+        requires = "input_dir",
+        help = "Interpret --input-dir as raw export files or Grafana file-provisioning artifacts. Use provisioning to accept either the provisioning/ root or its dashboards/ subdirectory."
     )]
     pub input_format: DashboardImportInputFormat,
     #[arg(
@@ -351,14 +351,14 @@ pub struct AnalyzeArgs {
     pub concurrency: usize,
     #[arg(
         long,
-        conflicts_with_all = ["all_orgs", "import_dir"],
+        conflicts_with_all = ["all_orgs", "input_dir"],
         help = "Analyze dashboards from this Grafana org ID when reading live Grafana."
     )]
     pub org_id: Option<i64>,
     #[arg(
         long,
         default_value_t = false,
-        conflicts_with_all = ["org_id", "import_dir"],
+        conflicts_with_all = ["org_id", "input_dir"],
         help = "Enumerate all visible Grafana orgs and analyze dashboards across them when reading live Grafana."
     )]
     pub all_orgs: bool,
@@ -457,24 +457,24 @@ pub struct AnalyzeArgs {
 }
 
 /// Struct definition for InspectExportArgs.
-#[derive(Debug, Clone, Args)]
-pub struct InspectExportArgs {
-    #[arg(
-        long,
+    #[derive(Debug, Clone, Args)]
+    pub struct InspectExportArgs {
+        #[arg(
+        long = "input-dir",
         help = "Analyze dashboards from this directory. Use --input-format provisioning to point at a provisioning/ root or its dashboards/ subdirectory."
     )]
-    pub import_dir: PathBuf,
+    pub input_dir: PathBuf,
     #[arg(
-        long,
+        long = "input-type",
         value_enum,
-        help = "When --import-dir points at a dashboard export root that contains multiple variants, select which dashboard tree to inspect. Use raw for raw/ and source for prompt/."
+        help = "When --input-dir points at a dashboard export root that contains multiple variants, select which dashboard tree to inspect. Use raw for raw/ and source for prompt/."
     )]
     pub input_type: Option<InspectExportInputType>,
     #[arg(
-        long,
+        long = "input-format",
         value_enum,
         default_value_t = DashboardImportInputFormat::Raw,
-        help = "Interpret --import-dir as raw export files or Grafana file-provisioning artifacts. Use provisioning to accept either the provisioning/ root or its dashboards/ subdirectory."
+        help = "Interpret --input-dir as raw export files or Grafana file-provisioning artifacts. Use provisioning to accept either the provisioning/ root or its dashboards/ subdirectory."
     )]
     pub input_format: DashboardImportInputFormat,
     #[arg(
@@ -710,22 +710,22 @@ pub struct GovernanceGateArgs {
     )]
     pub all_orgs: bool,
     #[arg(
-        long,
+        long = "input-dir",
         conflicts_with_all = ["governance", "queries"],
         help = "Analyze dashboards from this local export tree directly. Prefer --url for live Grafana or saved artifacts only for advanced reuse."
     )]
-    pub import_dir: Option<PathBuf>,
+    pub input_dir: Option<PathBuf>,
     #[arg(
-        long,
+        long = "input-format",
         value_enum,
         default_value_t = DashboardImportInputFormat::Raw,
-        help = "Interpret --import-dir as raw export files or Grafana file-provisioning artifacts from a local export tree."
+        help = "Interpret --input-dir as raw export files or Grafana file-provisioning artifacts from a local export tree."
     )]
     pub input_format: DashboardImportInputFormat,
     #[arg(
-        long,
+        long = "input-type",
         value_enum,
-        help = "Disambiguate a mixed export root when --import-dir can resolve to both raw and source-style dashboard inputs."
+        help = "Disambiguate a mixed export root when --input-dir can resolve to both raw and source-style dashboard inputs."
     )]
     pub input_type: Option<InspectExportInputType>,
     #[arg(
@@ -748,12 +748,12 @@ pub struct GovernanceGateArgs {
     pub builtin_policy: Option<String>,
     #[arg(
         long,
-        help = "Reuse a saved governance-json artifact. Prefer --url or --import-dir for the common path; keep this for advanced reuse."
+        help = "Reuse a saved governance-json artifact. Prefer --url or --input-dir for the common path; keep this for advanced reuse."
     )]
     pub governance: Option<PathBuf>,
     #[arg(
         long,
-        help = "Reuse a saved queries-json artifact. Prefer --url or --import-dir for the common path; keep this for advanced reuse."
+        help = "Reuse a saved queries-json artifact. Prefer --url or --input-dir for the common path; keep this for advanced reuse."
     )]
     pub queries: Option<PathBuf>,
     #[arg(
@@ -801,32 +801,32 @@ pub struct TopologyArgs {
     )]
     pub all_orgs: bool,
     #[arg(
-        long,
+        long = "input-dir",
         conflicts_with_all = ["governance", "queries"],
         help = "Analyze dashboards from this local export tree directly. Prefer --url for live Grafana or saved artifacts only for advanced reuse."
     )]
-    pub import_dir: Option<PathBuf>,
+    pub input_dir: Option<PathBuf>,
     #[arg(
         long,
         value_enum,
         default_value_t = DashboardImportInputFormat::Raw,
-        help = "Interpret --import-dir as raw export files or Grafana file-provisioning artifacts from a local export tree."
+        help = "Interpret --input-dir as raw export files or Grafana file-provisioning artifacts from a local export tree."
     )]
     pub input_format: DashboardImportInputFormat,
     #[arg(
         long,
         value_enum,
-        help = "Disambiguate a mixed export root when --import-dir can resolve to both raw and source-style dashboard inputs."
+        help = "Disambiguate a mixed export root when --input-dir can resolve to both raw and source-style dashboard inputs."
     )]
     pub input_type: Option<InspectExportInputType>,
     #[arg(
         long,
-        help = "Reuse a saved governance-json artifact. Prefer --url or --import-dir for the common path; keep this for advanced reuse."
+        help = "Reuse a saved governance-json artifact. Prefer --url or --input-dir for the common path; keep this for advanced reuse."
     )]
     pub governance: Option<PathBuf>,
     #[arg(
         long,
-        help = "Reuse a saved queries-json artifact when you already split analysis into artifact files. Prefer --url or --import-dir for the common path; keep this for advanced reuse."
+        help = "Reuse a saved queries-json artifact when you already split analysis into artifact files. Prefer --url or --input-dir for the common path; keep this for advanced reuse."
     )]
     pub queries: Option<PathBuf>,
     #[arg(
@@ -886,22 +886,22 @@ pub struct ImpactArgs {
     )]
     pub all_orgs: bool,
     #[arg(
-        long,
+        long = "input-dir",
         conflicts_with_all = ["governance", "queries"],
         help = "Analyze dashboards from this export directory instead of live Grafana or prebuilt artifact files."
     )]
-    pub import_dir: Option<PathBuf>,
+    pub input_dir: Option<PathBuf>,
     #[arg(
-        long,
+        long = "input-format",
         value_enum,
         default_value_t = DashboardImportInputFormat::Raw,
-        help = "Interpret --import-dir as raw export files or Grafana file-provisioning artifacts."
+        help = "Interpret --input-dir as raw export files or Grafana file-provisioning artifacts."
     )]
     pub input_format: DashboardImportInputFormat,
     #[arg(
-        long,
+        long = "input-type",
         value_enum,
-        help = "Disambiguate a mixed export root when --import-dir can resolve to both raw and source-style dashboard inputs."
+        help = "Disambiguate a mixed export root when --input-dir can resolve to both raw and source-style dashboard inputs."
     )]
     pub input_type: Option<InspectExportInputType>,
     #[arg(
@@ -943,15 +943,15 @@ pub struct ImpactArgs {
 #[derive(Debug, Clone, Args)]
 pub struct ValidateExportArgs {
     #[arg(
-        long,
+        long = "input-dir",
         help = "Validate dashboards from this export directory. Use raw/ by default, or use provisioning/ or its dashboards/ subdirectory with --input-format provisioning."
     )]
-    pub import_dir: PathBuf,
+    pub input_dir: PathBuf,
     #[arg(
         long,
         value_enum,
         default_value_t = DashboardImportInputFormat::Raw,
-        help = "Interpret --import-dir as raw export files or Grafana file-provisioning artifacts. Use provisioning to accept either the provisioning/ root or its dashboards/ subdirectory."
+        help = "Interpret --input-dir as raw export files or Grafana file-provisioning artifacts. Use provisioning to accept either the provisioning/ root or its dashboards/ subdirectory."
     )]
     pub input_format: DashboardImportInputFormat,
     #[arg(

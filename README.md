@@ -128,7 +128,7 @@ Datasources: ...
 
 ```bash
 # Export dashboards across all organizations into a local backup tree.
-grafana-util dashboard export --all-orgs --export-dir ./backup --progress
+grafana-util dashboard export --all-orgs --output-dir ./backup --progress
 ```
 
 This is the starting point for backup, migration, review, and CI-style inspection.
@@ -138,7 +138,7 @@ This is the starting point for backup, migration, review, and CI-style inspectio
 ```bash
 # Audit datasource dependencies and structural issues in an exported dashboard tree.
 grafana-util dashboard analyze \
-  --import-dir ./backup/raw \
+  --input-dir ./backup/raw \
   --input-format raw \
   --output-format dependency
 ```
@@ -158,7 +158,7 @@ Dependency report:
 ```bash
 # Dry-run a dashboard import and render the result as a table.
 grafana-util dashboard import \
-  --import-dir ./backup/raw \
+  --input-dir ./backup/raw \
   --replace-existing \
   --dry-run \
   --table
@@ -219,13 +219,13 @@ Use these together when you need a review surface instead of mutating Grafana al
 
 ```bash
 # Export datasources with secrets masked for review or version control.
-grafana-util datasource export --export-dir ./datasources --overwrite
+grafana-util datasource export --output-dir ./datasources --overwrite
 ```
 
 ```bash
 # Re-import datasources and recover required secrets interactively.
 grafana-util datasource import \
-  --import-dir ./datasources \
+  --input-dir ./datasources \
   --replace-existing \
   --prompt-password
 ```
@@ -240,7 +240,7 @@ If you want one end-to-end path instead of isolated commands, use this sequence:
 
 1. `overview live` to confirm the target Grafana is reachable and worth inspecting
 2. `dashboard export` to create a reviewable tree
-3. `grafana-util dashboard analyze --import-dir ./dashboards/raw --input-format raw --output-format dependency` to find missing datasource dependencies before import
+3. `grafana-util dashboard analyze --input-dir ./dashboards/raw --input-format raw --output-format dependency` to find missing datasource dependencies before import
 4. `dashboard import --dry-run` to preview replay behavior before live mutation
 
 That sequence is the shortest public proof that the tool is doing more than wrapping a single endpoint.

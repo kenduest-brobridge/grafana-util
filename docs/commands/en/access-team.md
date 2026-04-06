@@ -35,8 +35,8 @@ List live or local Grafana teams, browse live, create, modify, export, import, d
 - `browse` live only: `--query`, `--name`, `--with-members`, `--page`, `--per-page`
 - `add`: `--name`, `--email`, `--member`, `--admin`, `--json`
 - `modify`: `--team-id`, `--name`, `--add-member`, `--remove-member`, `--add-admin`, `--remove-admin`, `--json`
-- `export` and `diff`: `--export-dir` or `--diff-dir`, `--overwrite`, `--dry-run`, `--with-members`
-- `import`: `--import-dir`, `--replace-existing`, `--dry-run`, `--table`, `--json`, `--output-format`, `--yes`
+- `export` and `diff`: `--output-dir` or `--diff-dir`, `--overwrite`, `--dry-run`, `--with-members`
+- `import`: `--input-dir`, `--replace-existing`, `--dry-run`, `--table`, `--json`, `--output-format`, `--yes`
 - `delete`: `--team-id`, `--name`, `--yes`, `--json`
 
 ## Examples
@@ -58,7 +58,7 @@ grafana-util access team add --url http://localhost:3000 --basic-user admin --ba
 
 ```bash
 # Purpose: Import a team bundle before switching environments.
-grafana-util access team import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./access-teams --replace-existing --yes
+grafana-util access team import --url http://localhost:3000 --basic-user admin --basic-password admin --input-dir ./access-teams --replace-existing --yes
 ```
 
 ## Related commands

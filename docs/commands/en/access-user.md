@@ -35,8 +35,8 @@ List live or local Grafana users, browse live, create, modify, export, import, d
 - `browse` live only: `--scope`, `--all-orgs`, `--current-org`, `--query`, `--login`, `--email`, `--org-role`, `--grafana-admin`, `--page`, `--per-page`
 - `add`: `--login`, `--email`, `--name`, `--password` or `--password-file` or `--prompt-user-password`, `--org-role`, `--grafana-admin`, `--json`
 - `modify`: `--user-id`, `--login`, `--email`, `--set-login`, `--set-email`, `--set-name`, `--set-password` or `--set-password-file` or `--prompt-set-password`, `--set-org-role`, `--set-grafana-admin`, `--json`
-- `export` and `diff`: `--export-dir` or `--diff-dir`, `--overwrite`, `--dry-run`, `--scope`, `--with-teams`
-- `import`: `--import-dir`, `--scope`, `--replace-existing`, `--dry-run`, `--table`, `--json`, `--output-format`, `--yes`
+- `export` and `diff`: `--output-dir` or `--diff-dir`, `--overwrite`, `--dry-run`, `--scope`, `--with-teams`
+- `import`: `--input-dir`, `--scope`, `--replace-existing`, `--dry-run`, `--table`, `--json`, `--output-format`, `--yes`
 - `delete`: `--user-id`, `--login`, `--email`, `--scope`, `--yes`, `--json`
 
 ## Examples

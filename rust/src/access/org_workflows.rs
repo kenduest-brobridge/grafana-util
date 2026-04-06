@@ -242,8 +242,8 @@ where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
     validate_basic_auth_only(&args.common)?;
-    let payload_path = args.export_dir.join(ACCESS_ORG_EXPORT_FILENAME);
-    let metadata_path = args.export_dir.join(ACCESS_EXPORT_METADATA_FILENAME);
+    let payload_path = args.output_dir.join(ACCESS_ORG_EXPORT_FILENAME);
+    let metadata_path = args.output_dir.join(ACCESS_EXPORT_METADATA_FILENAME);
     assert_not_overwrite(&payload_path, args.dry_run, args.overwrite)?;
     assert_not_overwrite(&metadata_path, args.dry_run, args.overwrite)?;
     let mut records = list_organizations_with_request(&mut request_json)?
@@ -300,7 +300,7 @@ where
             &Value::Object(build_org_export_metadata(
                 &args.common.url,
                 args.common.profile.as_deref(),
-                &args.export_dir,
+                &args.output_dir,
                 records.len(),
                 args.with_users,
                 args.org_id,
@@ -332,7 +332,7 @@ where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
     validate_basic_auth_only(&args.common)?;
-    let records = load_org_import_records(&args.import_dir)?
+    let records = load_org_import_records(&args.input_dir)?
         .into_iter()
         .map(|record| normalize_org_row(&record))
         .collect::<Vec<Map<String, Value>>>();
@@ -514,7 +514,7 @@ where
         created,
         updated,
         skipped,
-        args.import_dir.display()
+        args.input_dir.display()
     );
     Ok(0)
 }

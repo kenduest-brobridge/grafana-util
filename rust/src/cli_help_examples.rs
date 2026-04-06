@@ -73,7 +73,7 @@ pub(crate) const UNIFIED_HELP_TEXT: &str = help_block!(
     (
         "[Dashboard Export]",
         "Export dashboards with Basic auth:",
-        "grafana-util dashboard export --url http://localhost:3000 --basic-user admin --basic-password admin --export-dir ./dashboards --overwrite"
+        "grafana-util dashboard export --url http://localhost:3000 --basic-user admin --basic-password admin --output-dir ./dashboards --overwrite"
     ),
     (
         "[Dashboard Raw To Prompt]",
@@ -83,7 +83,7 @@ pub(crate) const UNIFIED_HELP_TEXT: &str = help_block!(
     (
         "[Dashboard Export]",
         "Export dashboards across all visible orgs:",
-        "grafana-util dashboard export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --export-dir ./dashboards --overwrite"
+        "grafana-util dashboard export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --output-dir ./dashboards --overwrite"
     ),
     (
         "[Dashboard Capture]",
@@ -103,7 +103,7 @@ pub(crate) const UNIFIED_HELP_TEXT: &str = help_block!(
     (
         "[Dashboard Browse]",
         "Browse a local export tree from disk:",
-        "grafana-util dashboard browse --import-dir ./dashboards/raw --path 'Platform / Infra'"
+        "grafana-util dashboard browse --input-dir ./dashboards/raw --path 'Platform / Infra'"
     ),
     (
         "[Dashboard Analyze]",
@@ -118,7 +118,7 @@ pub(crate) const UNIFIED_HELP_TEXT: &str = help_block!(
     (
         "[Snapshot Export]",
         "Capture a live snapshot into a local export root:",
-        r#"grafana-util snapshot export --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --export-dir ./snapshot"#
+        r#"grafana-util snapshot export --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output-dir ./snapshot"#
     ),
     (
         "[Alert Export]",
@@ -177,7 +177,7 @@ pub(crate) const UNIFIED_HELP_FULL_TEXT: &str = help_block!(
     (
         "[Dashboard Analyze]",
         "Render a grouped dashboard dependency table from raw exports:",
-        "grafana-util dashboard analyze --import-dir ./dashboards/raw --input-format raw --output-format tree-table --report-columns dashboard_uid,panel_title,datasource_uid,query"
+        "grafana-util dashboard analyze --input-dir ./dashboards/raw --input-format raw --output-format tree-table --report-columns dashboard_uid,panel_title,datasource_uid,query"
     ),
     (
         "[Dashboard Raw To Prompt]",
@@ -187,7 +187,7 @@ pub(crate) const UNIFIED_HELP_FULL_TEXT: &str = help_block!(
     (
         "[Dashboard Analyze]",
         "Inspect a provisioning tree from the file-provisioning root:",
-        "grafana-util dashboard analyze --import-dir ./dashboards/provisioning --input-format provisioning --output-format tree-table"
+        "grafana-util dashboard analyze --input-dir ./dashboards/provisioning --input-format provisioning --output-format tree-table"
     ),
     (
         "[Dashboard Analyze]",
@@ -197,7 +197,7 @@ pub(crate) const UNIFIED_HELP_FULL_TEXT: &str = help_block!(
     (
         "[Datasource Import]",
         "Dry-run a datasource import and keep the result machine-readable:",
-        r#"grafana-util datasource import --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --import-dir ./datasources --dry-run --json"#
+        r#"grafana-util datasource import --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --input-dir ./datasources --dry-run --json"#
     ),
     (
         "[Datasource Diff]",
@@ -232,12 +232,12 @@ pub(crate) const UNIFIED_HELP_FULL_TEXT: &str = help_block!(
     (
         "[Snapshot Export]",
         "Capture a live snapshot into a local export root:",
-        r#"grafana-util snapshot export --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --export-dir ./snapshot"#
+        r#"grafana-util snapshot export --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output-dir ./snapshot"#
     ),
     (
         "[Alert Import]",
         "Re-map linked alert dashboards during import:",
-        "grafana-util alert import --url http://localhost:3000 --import-dir ./alerts/raw --replace-existing --dashboard-uid-map ./dashboard-map.json --panel-id-map ./panel-map.json"
+        "grafana-util alert import --url http://localhost:3000 --input-dir ./alerts/raw --replace-existing --dashboard-uid-map ./dashboard-map.json --panel-id-map ./panel-map.json"
     ),
     (
         "[Change Review]",
@@ -271,7 +271,7 @@ pub(crate) const ALERT_HELP_FULL_TEXT: &str = help_block!(
     (
         "[Alert Import]",
         "Preview a replace-existing import before execution as structured JSON:",
-        r#"grafana-util alert import --url http://localhost:3000 --import-dir ./alerts/raw --replace-existing --dry-run --json"#
+        r#"grafana-util alert import --url http://localhost:3000 --input-dir ./alerts/raw --replace-existing --dry-run --json"#
     ),
     (
         "[Alert Diff]",
@@ -321,7 +321,7 @@ pub(crate) const ALERT_HELP_FULL_TEXT: &str = help_block!(
     (
         "[Alert Import]",
         "Re-map linked dashboards and panels during import:",
-        "grafana-util alert import --url http://localhost:3000 --import-dir ./alerts/raw --replace-existing --dashboard-uid-map ./dashboard-map.json --panel-id-map ./panel-map.json"
+        "grafana-util alert import --url http://localhost:3000 --input-dir ./alerts/raw --replace-existing --dashboard-uid-map ./dashboard-map.json --panel-id-map ./panel-map.json"
     ),
     (
         "[Alert List]",
@@ -365,7 +365,7 @@ pub(crate) const DATASOURCE_HELP_FULL_TEXT: &str = help_block!(
     (
         "[Datasource Import]",
         "Import one exported org bundle with create-missing-orgs:",
-        r#"grafana-util datasource import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./datasources --use-export-org --only-org-id 2 --create-missing-orgs --dry-run --json"#
+        r#"grafana-util datasource import --url http://localhost:3000 --basic-user admin --basic-password admin --input-dir ./datasources --use-export-org --only-org-id 2 --create-missing-orgs --dry-run --json"#
     ),
     (
         "[Datasource Diff]",
@@ -394,7 +394,7 @@ pub(crate) const ACCESS_HELP_FULL_TEXT: &str = help_block!(
     (
         "[Access Team Import]",
         "Preview a destructive team sync as a table:",
-        "grafana-util access team import --url http://localhost:3000 --basic-user admin --basic-password admin --import-dir ./access-teams --replace-existing --dry-run --output-format table"
+        "grafana-util access team import --url http://localhost:3000 --basic-user admin --basic-password admin --input-dir ./access-teams --replace-existing --dry-run --output-format table"
     ),
     (
         "[Access Org Delete]",
