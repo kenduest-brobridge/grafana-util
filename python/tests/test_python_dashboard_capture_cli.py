@@ -16,10 +16,10 @@ dashboard_cli = importlib.import_module("grafana_utils.dashboard_cli")
 
 
 class DashboardCaptureCliTests(unittest.TestCase):
-    def test_dashboard_capture_parse_args_supports_inspect_vars(self):
+    def test_dashboard_capture_parse_args_supports_list_vars(self):
         args = dashboard_cli.parse_args(
             [
-                "inspect-vars",
+                "list-vars",
                 "--dashboard-uid",
                 "cpu-main",
                 "--vars-query",
@@ -29,24 +29,36 @@ class DashboardCaptureCliTests(unittest.TestCase):
             ]
         )
 
-        self.assertEqual(args.command, "inspect-vars")
+        self.assertEqual(args.command, "list-vars")
         self.assertEqual(args.dashboard_uid, "cpu-main")
         self.assertEqual(args.vars_query, "var-env=prod")
         self.assertEqual(args.output_format, "json")
 
-    def test_dashboard_capture_parse_args_supports_inspect_vars_output_file(self):
+    def test_dashboard_capture_parse_args_supports_inspect_vars_alias(self):
         args = dashboard_cli.parse_args(
             [
                 "inspect-vars",
                 "--dashboard-uid",
                 "cpu-main",
-                "--output-file",
-                "/tmp/inspect-vars-output.txt",
             ]
         )
 
-        self.assertEqual(args.command, "inspect-vars")
-        self.assertEqual(args.output_file, "/tmp/inspect-vars-output.txt")
+        self.assertEqual(args.command, "list-vars")
+        self.assertEqual(args.dashboard_uid, "cpu-main")
+
+    def test_dashboard_capture_parse_args_supports_list_vars_output_file(self):
+        args = dashboard_cli.parse_args(
+            [
+                "list-vars",
+                "--dashboard-uid",
+                "cpu-main",
+                "--output-file",
+                "/tmp/list-vars-output.txt",
+            ]
+        )
+
+        self.assertEqual(args.command, "list-vars")
+        self.assertEqual(args.output_file, "/tmp/list-vars-output.txt")
 
     def test_dashboard_capture_parse_args_supports_screenshot(self):
         args = dashboard_cli.parse_args(
@@ -90,17 +102,18 @@ class DashboardCaptureCliTests(unittest.TestCase):
         self.assertTrue(args.header_captured_at)
         self.assertEqual(args.header_text, "nightly review")
 
-    def test_dashboard_capture_inspect_vars_help_mentions_dashboard_inputs(self):
+    def test_dashboard_capture_list_vars_help_mentions_dashboard_inputs(self):
         stdout = io.StringIO()
         with redirect_stdout(stdout):
             with self.assertRaises(SystemExit):
-                dashboard_cli.parse_args(["inspect-vars", "-h"])
+                dashboard_cli.parse_args(["list-vars", "-h"])
 
         help_text = stdout.getvalue()
         self.assertIn("--dashboard-uid", help_text)
         self.assertIn("--dashboard-url", help_text)
         self.assertIn("--vars-query", help_text)
         self.assertIn("--output-format", help_text)
+        self.assertIn("list-vars", help_text)
 
     def test_dashboard_capture_screenshot_help_mentions_capture_flags(self):
         stdout = io.StringIO()
@@ -124,22 +137,22 @@ class DashboardCaptureCliTests(unittest.TestCase):
         self.assertIn("--header-captured-at", help_text)
         self.assertIn("--header-text", help_text)
 
-    def test_dashboard_capture_main_dispatches_inspect_vars(self):
+    def test_dashboard_capture_main_dispatches_list_vars(self):
         with mock.patch.object(
-            dashboard_cli, "inspect_vars", return_value=13
+            dashboard_cli, "list_vars_command", return_value=13
         ) as mocked:
-            result = dashboard_cli.main(["inspect-vars", "--dashboard-uid", "cpu-main"])
+            result = dashboard_cli.main(["list-vars", "--dashboard-uid", "cpu-main"])
 
         self.assertEqual(result, 13)
         mocked.assert_called_once()
 
-    def test_dashboard_capture_inspect_vars_supports_output_file(self):
-        output_dir = tempfile.TemporaryDirectory(prefix="grafana-util-inspect-vars-")
+    def test_dashboard_capture_list_vars_supports_output_file(self):
+        output_dir = tempfile.TemporaryDirectory(prefix="grafana-util-list-vars-")
         self.addCleanup(output_dir.cleanup)
-        output_file = Path(output_dir.name) / "inspect-vars.txt"
+        output_file = Path(output_dir.name) / "list-vars.txt"
         args = dashboard_cli.parse_args(
             [
-                "inspect-vars",
+                "list-vars",
                 "--dashboard-uid",
                 "cpu-main",
                 "--output-file",

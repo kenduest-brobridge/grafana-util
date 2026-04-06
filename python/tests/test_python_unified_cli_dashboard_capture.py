@@ -24,11 +24,43 @@ class UnifiedDashboardCaptureCliTests(unittest.TestCase):
                 unified_cli.parse_args(["dashboard"])
 
         help_text = stdout.getvalue()
-        self.assertIn("inspect-vars", help_text)
+        self.assertIn("raw-to-prompt", help_text)
+        self.assertIn("list-vars", help_text)
         self.assertIn("screenshot", help_text)
         self.assertIn("inspect-export --input-format provisioning", help_text)
 
-    def test_unified_cli_dashboard_capture_parse_args_supports_dashboard_inspect_vars_namespace(
+    def test_unified_cli_dashboard_capture_parse_args_supports_dashboard_raw_to_prompt_namespace(
+        self,
+    ):
+        args = unified_cli.parse_args(
+            [
+                "dashboard",
+                "raw-to-prompt",
+                "--input-file",
+                "./dashboards/raw/cpu-main.json",
+            ]
+        )
+
+        self.assertEqual(args.entrypoint, "dashboard")
+        self.assertEqual(
+            args.forwarded_argv,
+            ["raw-to-prompt", "--input-file", "./dashboards/raw/cpu-main.json"],
+        )
+
+    def test_unified_cli_dashboard_capture_parse_args_supports_dashboard_list_vars_namespace(
+        self,
+    ):
+        args = unified_cli.parse_args(
+            ["dashboard", "list-vars", "--dashboard-uid", "cpu-main"]
+        )
+
+        self.assertEqual(args.entrypoint, "dashboard")
+        self.assertEqual(
+            args.forwarded_argv,
+            ["list-vars", "--dashboard-uid", "cpu-main"],
+        )
+
+    def test_unified_cli_dashboard_capture_parse_args_supports_dashboard_inspect_vars_alias(
         self,
     ):
         args = unified_cli.parse_args(
@@ -38,7 +70,7 @@ class UnifiedDashboardCaptureCliTests(unittest.TestCase):
         self.assertEqual(args.entrypoint, "dashboard")
         self.assertEqual(
             args.forwarded_argv,
-            ["inspect-vars", "--dashboard-uid", "cpu-main"],
+            ["list-vars", "--dashboard-uid", "cpu-main"],
         )
 
     def test_unified_cli_dashboard_capture_parse_args_supports_dashboard_screenshot_namespace(

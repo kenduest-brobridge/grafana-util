@@ -41,6 +41,15 @@ from . import (
 )
 
 DASHBOARD_COMMAND_HELP = {
+    "fetch-live": "Fetch one live dashboard into a local draft file.",
+    "clone-live": "Clone one live dashboard into a local draft file.",
+    "patch-file": "Patch one local dashboard JSON file in place or to a new path.",
+    "review": "Review one local dashboard JSON file without touching Grafana.",
+    "publish": "Publish one local dashboard JSON file through the import pipeline.",
+    "raw-to-prompt": "Convert raw dashboard JSON into prompt-lane artifacts.",
+    "analyze": "Analyze dashboards from live Grafana or a local export tree.",
+    "validate-export": "Validate one dashboard export tree without mutating Grafana.",
+    "history": "List, export, or restore dashboard revision history.",
     "export": "Export dashboards into raw/ and prompt/ variants.",
     "list": "List live dashboard summaries from Grafana.",
     "import": "Import dashboards from exported raw JSON files.",
@@ -51,12 +60,22 @@ DASHBOARD_COMMAND_HELP = {
     ),
     "inspect-export": "Analyze a raw dashboard export directory offline.",
     "inspect-live": "Analyze live Grafana dashboards without writing a persistent export.",
-    "inspect-vars": "List dashboard templating variables from live Grafana.",
+    "list-vars": "List dashboard templating variables from live Grafana.",
     "governance-gate": "Evaluate dashboard governance policy against inspect artifacts.",
     "topology": "Build a deterministic dashboard topology graph from governance artifacts.",
+    "impact": "Summarize which dashboards and alerts would be affected by one datasource.",
     "screenshot": "Capture one Grafana dashboard or panel through a browser backend.",
 }
 UNIFIED_DASHBOARD_COMMAND_MAP = {
+    "fetch-live": "fetch-live",
+    "clone-live": "clone-live",
+    "patch-file": "patch-file",
+    "review": "review",
+    "publish": "publish",
+    "raw-to-prompt": "raw-to-prompt",
+    "analyze": "analyze",
+    "validate-export": "validate-export",
+    "history": "history",
     "export": "export-dashboard",
     "list": "list-dashboard",
     "import": "import-dashboard",
@@ -64,9 +83,11 @@ UNIFIED_DASHBOARD_COMMAND_MAP = {
     "diff": "diff",
     "inspect-export": "inspect-export",
     "inspect-live": "inspect-live",
-    "inspect-vars": "inspect-vars",
+    "list-vars": "list-vars",
+    "inspect-vars": "list-vars",
     "governance-gate": "governance-gate",
     "topology": "topology",
+    "impact": "impact",
     "graph": "topology",
     "screenshot": "screenshot",
 }
@@ -96,6 +117,15 @@ def _print_dashboard_group_help() -> None:
     print(
         "Usage: grafana-util dashboard <COMMAND> [OPTIONS]\n\n"
         "Commands:\n"
+        "  fetch-live         Fetch one live dashboard into a local draft file.\n"
+        "  clone-live         Clone one live dashboard into a local draft file.\n"
+        "  patch-file         Patch one local dashboard JSON file in place or to a new path.\n"
+        "  review             Review one local dashboard JSON file without touching Grafana.\n"
+        "  publish            Publish one local dashboard JSON file through the import pipeline.\n"
+        "  raw-to-prompt      Convert raw dashboard JSON into prompt-lane artifacts.\n"
+        "  analyze            Analyze dashboards from live Grafana or a local export tree.\n"
+        "  validate-export    Validate one dashboard export tree without mutating Grafana.\n"
+        "  history            List, export, or restore dashboard revision history.\n"
         "  export             Export dashboards into raw/ and prompt/ variants.\n"
         "  list               List live dashboard summaries from Grafana.\n"
         "  import             Import dashboards from exported raw JSON files.\n"
@@ -104,9 +134,10 @@ def _print_dashboard_group_help() -> None:
         "inspect provisioning trees separately with dashboard inspect-export --input-format provisioning.\n"
         "  inspect-export     Analyze a raw dashboard export directory offline.\n"
         "  inspect-live       Analyze live Grafana dashboards without writing a persistent export.\n"
-        "  inspect-vars       List dashboard templating variables from live Grafana.\n"
+        "  list-vars          List dashboard templating variables from live Grafana.\n"
         "  governance-gate    Evaluate dashboard governance policy against inspect artifacts.\n"
         "  topology (graph)   Build a deterministic dashboard topology graph from JSON artifacts.\n"
+        "  impact             Summarize which dashboards and alerts would be affected by one datasource.\n"
         "  screenshot         Capture one Grafana dashboard or panel through a browser backend."
     )
 
@@ -122,6 +153,7 @@ def build_parser() -> argparse.ArgumentParser:
         epilog=(
             "Examples:\n\n"
             "  grafana-util dashboard export --url http://localhost:3000 --export-dir ./dashboards\n"
+            "  grafana-util dashboard raw-to-prompt --input-dir ./dashboards/raw --output-dir ./dashboards/prompt\n"
             "  grafana-util alert export --url http://localhost:3000 --output-dir ./alerts\n"
             '  grafana-util access user list --url http://localhost:3000 --token "$GRAFANA_API_TOKEN"\n'
             "  grafana-util datasource export --url http://localhost:3000 --export-dir ./datasources\n"
@@ -131,6 +163,7 @@ def build_parser() -> argparse.ArgumentParser:
             "  grafana-util status staged --desired-file ./desired.json\n"
             "  grafana-util snapshot review --input-dir ./snapshot\n"
             "  grafana-util resource kinds\n"
+            "  grafana-util dashboard list-vars --dashboard-uid cpu-main --token \"$GRAFANA_API_TOKEN\"\n"
             "  grafana-util sync plan --desired-file ./desired.json --live-file ./live.json"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,

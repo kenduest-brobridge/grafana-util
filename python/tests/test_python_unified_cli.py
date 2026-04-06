@@ -75,6 +75,8 @@ class UnifiedCliTests(unittest.TestCase):
         help_text = stdout.getvalue()
         self.assertIn("grafana-util dashboard", help_text)
         self.assertIn("list", help_text)
+        self.assertIn("raw-to-prompt", help_text)
+        self.assertIn("list-vars", help_text)
         self.assertIn("inspect-export", help_text)
         self.assertIn("inspect-export --input-format provisioning", help_text)
 
@@ -144,6 +146,40 @@ class UnifiedCliTests(unittest.TestCase):
         self.assertEqual(
             args.forwarded_argv,
             ["inspect-live", "--url", "http://127.0.0.1:3000", "--report"],
+        )
+
+    def test_unified_parse_args_supports_dashboard_raw_to_prompt_namespace(self):
+        args = unified_cli.parse_args(
+            [
+                "dashboard",
+                "raw-to-prompt",
+                "--input-file",
+                "./dashboards/raw/cpu-main.json",
+            ]
+        )
+
+        self.assertEqual(args.entrypoint, "dashboard")
+        self.assertEqual(
+            args.forwarded_argv,
+            ["raw-to-prompt", "--input-file", "./dashboards/raw/cpu-main.json"],
+        )
+
+    def test_unified_parse_args_supports_dashboard_list_vars_namespace(self):
+        args = unified_cli.parse_args(["dashboard", "list-vars", "--dashboard-uid", "cpu-main"])
+
+        self.assertEqual(args.entrypoint, "dashboard")
+        self.assertEqual(
+            args.forwarded_argv,
+            ["list-vars", "--dashboard-uid", "cpu-main"],
+        )
+
+    def test_unified_parse_args_supports_dashboard_inspect_vars_alias(self):
+        args = unified_cli.parse_args(["dashboard", "inspect-vars", "--dashboard-uid", "cpu-main"])
+
+        self.assertEqual(args.entrypoint, "dashboard")
+        self.assertEqual(
+            args.forwarded_argv,
+            ["list-vars", "--dashboard-uid", "cpu-main"],
         )
 
     def test_unified_parse_args_supports_dashboard_governance_gate_namespace(self):
