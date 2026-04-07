@@ -518,6 +518,13 @@ fn export_help_mentions_history_artifacts() {
 }
 
 #[test]
+fn history_restore_help_uses_operator_facing_summary() {
+    let help = render_dashboard_history_subcommand_help("restore");
+    assert!(help.contains("Restore a previous live dashboard revision from Grafana history."));
+    assert!(!help.contains("new latest revision entry on the same dashboard"));
+}
+
+#[test]
 fn export_help_describes_progress_and_verbose_modes() {
     let help = render_dashboard_subcommand_help("export");
     assert!(help.contains("--progress"));
