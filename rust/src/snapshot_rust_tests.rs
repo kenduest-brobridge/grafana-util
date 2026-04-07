@@ -5,6 +5,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
+use crate::access::{AccessCommand, OrgCommand, ServiceAccountCommand, TeamCommand, UserCommand};
 use crate::common::sanitize_path_component;
 use crate::dashboard::{
     CommonCliArgs, DashboardCommand, EXPORT_METADATA_FILENAME, TOOL_SCHEMA_VERSION,
@@ -14,9 +15,11 @@ use crate::overview::OverviewOutputFormat;
 use crate::snapshot::{
     build_snapshot_overview_args, build_snapshot_paths, build_snapshot_review_browser_items,
     build_snapshot_review_document, build_snapshot_review_summary_lines,
-    build_snapshot_root_metadata, render_snapshot_review_text, run_snapshot_export_with_handlers,
-    run_snapshot_review_document_with_handler, SnapshotCliArgs, SnapshotExportArgs,
-    SnapshotReviewArgs, SNAPSHOT_DATASOURCE_EXPORT_FILENAME,
+    build_snapshot_root_metadata, render_snapshot_review_text,
+    run_snapshot_export_selected_with_handlers,
+    run_snapshot_export_with_handlers, run_snapshot_review_document_with_handler, SnapshotCliArgs,
+    SnapshotExportArgs, SnapshotExportLane, SnapshotExportSelection, SnapshotReviewArgs,
+    SNAPSHOT_DATASOURCE_EXPORT_FILENAME,
     SNAPSHOT_DATASOURCE_EXPORT_METADATA_FILENAME, SNAPSHOT_DATASOURCE_ROOT_INDEX_KIND,
     SNAPSHOT_DATASOURCE_TOOL_SCHEMA_VERSION,
 };
@@ -452,20 +455,23 @@ fn snapshot_review_browser_items_prioritize_signals_before_folders_and_split_fol
 
 #[test]
 fn snapshot_export_wrapper_calls_dashboard_then_datasource_runners() {
+    let temp = tempdir().unwrap();
     let calls = Rc::new(RefCell::new(Vec::new()));
     let dashboard_args = Rc::new(RefCell::new(None));
     let datasource_args = Rc::new(RefCell::new(None));
 
     let export_args = SnapshotExportArgs {
         common: sample_common_args(),
-        output_dir: PathBuf::from("./snapshot"),
+        output_dir: temp.path().join("snapshot"),
         overwrite: true,
+        prompt: false,
     };
 
     let dashboard_calls = Rc::clone(&calls);
     let dashboard_seen = Rc::clone(&dashboard_args);
     let datasource_calls = Rc::clone(&calls);
     let datasource_seen = Rc::clone(&datasource_args);
+    let access_calls = Rc::clone(&calls);
 
     run_snapshot_export_with_handlers(
         export_args,
@@ -489,12 +495,39 @@ fn snapshot_export_wrapper_calls_dashboard_then_datasource_runners() {
                 other => panic!("unexpected datasource command: {:?}", other),
             }
         },
+        move |cli| {
+            match cli.command {
+                AccessCommand::User {
+                    command: UserCommand::Export(_),
+                } => access_calls.borrow_mut().push("access-user".to_string()),
+                AccessCommand::Team {
+                    command: TeamCommand::Export(_),
+                } => access_calls.borrow_mut().push("access-team".to_string()),
+                AccessCommand::Org {
+                    command: OrgCommand::Export(_),
+                } => access_calls.borrow_mut().push("access-org".to_string()),
+                AccessCommand::ServiceAccount {
+                    command: ServiceAccountCommand::Export(_),
+                } => access_calls
+                    .borrow_mut()
+                    .push("access-service-account".to_string()),
+                other => panic!("unexpected access command: {:?}", other),
+            }
+            Ok(())
+        },
     )
     .unwrap();
 
     assert_eq!(
         *calls.borrow(),
-        vec!["dashboard".to_string(), "datasource".to_string()]
+        vec![
+            "dashboard".to_string(),
+            "datasource".to_string(),
+            "access-user".to_string(),
+            "access-team".to_string(),
+            "access-org".to_string(),
+            "access-service-account".to_string()
+        ]
     );
 
     let dashboard_args = dashboard_args.borrow().clone().expect("dashboard args");
@@ -502,15 +535,80 @@ fn snapshot_export_wrapper_calls_dashboard_then_datasource_runners() {
     assert!(dashboard_args.all_orgs);
     assert_eq!(
         dashboard_args.output_dir,
-        PathBuf::from("./snapshot/dashboards")
+        temp.path().join("snapshot").join("dashboards")
     );
     assert!(datasource_args.all_orgs);
     assert_eq!(
         datasource_args.output_dir,
-        PathBuf::from("./snapshot/datasources")
+        temp.path().join("snapshot").join("datasources")
     );
     assert!(dashboard_args.overwrite);
     assert!(datasource_args.overwrite);
+}
+
+#[test]
+fn snapshot_export_selected_with_handlers_runs_only_selected_lanes() {
+    let temp = tempdir().unwrap();
+    let calls = Rc::new(RefCell::new(Vec::new()));
+    let selection = SnapshotExportSelection {
+        lanes: vec![
+            SnapshotExportLane::Datasources,
+            SnapshotExportLane::AccessTeams,
+            SnapshotExportLane::AccessServiceAccounts,
+        ],
+    };
+    let export_args = SnapshotExportArgs {
+        common: sample_common_args(),
+        output_dir: temp.path().join("snapshot"),
+        overwrite: false,
+        prompt: false,
+    };
+
+    let dashboard_calls = Rc::clone(&calls);
+    let datasource_calls = Rc::clone(&calls);
+    let access_calls = Rc::clone(&calls);
+
+    run_snapshot_export_selected_with_handlers(
+        export_args,
+        &selection,
+        move |_args| {
+            dashboard_calls.borrow_mut().push("dashboard".to_string());
+            Ok(())
+        },
+        move |command| {
+            match command {
+                DatasourceGroupCommand::Export(_) => {
+                    datasource_calls.borrow_mut().push("datasource".to_string());
+                    Ok(())
+                }
+                other => panic!("unexpected datasource command: {:?}", other),
+            }
+        },
+        move |cli| {
+            match cli.command {
+                AccessCommand::Team {
+                    command: TeamCommand::Export(_),
+                } => access_calls.borrow_mut().push("access-team".to_string()),
+                AccessCommand::ServiceAccount {
+                    command: ServiceAccountCommand::Export(_),
+                } => access_calls
+                    .borrow_mut()
+                    .push("access-service-account".to_string()),
+                other => panic!("unexpected access command: {:?}", other),
+            }
+            Ok(())
+        },
+    )
+    .unwrap();
+
+    assert_eq!(
+        *calls.borrow(),
+        vec![
+            "datasource".to_string(),
+            "access-team".to_string(),
+            "access-service-account".to_string()
+        ]
+    );
 }
 
 #[test]

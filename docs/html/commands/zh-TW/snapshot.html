@@ -798,7 +798,7 @@ grafana-util snapshot export --url http://localhost:3000 --token &quot;$GRAFANA_
 <p>適用時機：當你需要一個不必連到 Grafana 也能檢視的本機 snapshot root 時。</p>
 <p>會寫出的內容：</p>
 <ul><li><code>snapshot/dashboards/</code></li><li><code>snapshot/datasources/</code></li><li><code>snapshot/access/users/</code></li><li><code>snapshot/access/teams/</code></li><li><code>snapshot/access/orgs/</code></li><li><code>snapshot/access/service-accounts/</code></li><li><code>snapshot/snapshot-metadata.json</code></li></ul>
-<p>主要旗標：<code>--output-dir</code>、<code>--overwrite</code>，以及共用的 Grafana 連線與驗證旗標。</p>
+<p>主要旗標：<code>--output-dir</code>、<code>--overwrite</code>、<code>--prompt</code>，以及共用的 Grafana 連線與驗證旗標。<code>--prompt</code> 會先開一個 terminal multi-select prompt，讓你在匯出前勾選要包含哪些 lane。</p>
 <p>範例：</p>
 <pre><code># 用途：export。
 grafana-util snapshot export --profile prod --output-dir ./snapshot</code></pre>
@@ -806,6 +806,8 @@ grafana-util snapshot export --profile prod --output-dir ./snapshot</code></pre>
 grafana-util snapshot export --url http://localhost:3000 --basic-user admin --basic-password admin --output-dir ./snapshot --overwrite</code></pre>
 <pre><code># 用途：export。
 grafana-util snapshot export --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --output-dir ./snapshot</code></pre>
+<pre><code># 用途：先用 terminal prompt 勾選要匯出的 snapshot lane。
+grafana-util snapshot export --profile prod --prompt --output-dir ./snapshot</code></pre>
 <p>相關指令：<code>snapshot review</code>、<code>change bundle</code>、<code>overview</code>。</p>
 <h2 id="review"><code>review</code></h2>
 <p>用途：在不接觸 Grafana 的情況下檢視本機 snapshot inventory。</p>

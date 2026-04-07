@@ -58,7 +58,7 @@ What gets written:
 - `snapshot/access/service-accounts/`
 - `snapshot/snapshot-metadata.json`
 
-Key flags: `--output-dir`, `--overwrite`, plus the shared Grafana connection and auth flags.
+Key flags: `--output-dir`, `--overwrite`, `--prompt`, plus the shared Grafana connection and auth flags. `--prompt` opens a terminal multi-select prompt so you can choose which lanes to export before the snapshot starts.
 
 Examples:
 
@@ -70,6 +70,11 @@ grafana-util snapshot export --url http://localhost:3000 --basic-user admin --ba
 ```bash
 # Purpose: export.
 grafana-util snapshot export --profile prod --output-dir ./snapshot --overwrite
+```
+
+```bash
+# Purpose: choose snapshot lanes from a terminal prompt before export.
+grafana-util snapshot export --profile prod --prompt --output-dir ./snapshot
 ```
 
 Related commands: `snapshot review`, `change bundle`, `overview`.

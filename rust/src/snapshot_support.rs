@@ -557,29 +557,44 @@ fn materialize_snapshot_common_auth(common: CommonCliArgs) -> Result<CommonCliAr
     )
 }
 
-fn run_snapshot_access_exports(args: &super::SnapshotExportArgs) -> Result<()> {
-    access::run_access_cli(AccessCliArgs {
-        command: AccessCommand::User {
-            command: UserCommand::Export(build_snapshot_access_user_export_args(args)),
-        },
-    })?;
-    access::run_access_cli(AccessCliArgs {
-        command: AccessCommand::Team {
-            command: TeamCommand::Export(build_snapshot_access_team_export_args(args)),
-        },
-    })?;
-    access::run_access_cli(AccessCliArgs {
-        command: AccessCommand::Org {
-            command: OrgCommand::Export(build_snapshot_access_org_export_args(args)),
-        },
-    })?;
-    access::run_access_cli(AccessCliArgs {
-        command: AccessCommand::ServiceAccount {
-            command: ServiceAccountCommand::Export(
-                build_snapshot_access_service_account_export_args(args),
-            ),
-        },
-    })?;
+fn run_snapshot_access_exports_with_handler<FA>(
+    args: &super::SnapshotExportArgs,
+    selection: &super::SnapshotExportSelection,
+    mut run_access: FA,
+) -> Result<()>
+where
+    FA: FnMut(AccessCliArgs) -> Result<()>,
+{
+    if selection.contains(super::SnapshotExportLane::AccessUsers) {
+        run_access(AccessCliArgs {
+            command: AccessCommand::User {
+                command: UserCommand::Export(build_snapshot_access_user_export_args(args)),
+            },
+        })?;
+    }
+    if selection.contains(super::SnapshotExportLane::AccessTeams) {
+        run_access(AccessCliArgs {
+            command: AccessCommand::Team {
+                command: TeamCommand::Export(build_snapshot_access_team_export_args(args)),
+            },
+        })?;
+    }
+    if selection.contains(super::SnapshotExportLane::AccessOrgs) {
+        run_access(AccessCliArgs {
+            command: AccessCommand::Org {
+                command: OrgCommand::Export(build_snapshot_access_org_export_args(args)),
+            },
+        })?;
+    }
+    if selection.contains(super::SnapshotExportLane::AccessServiceAccounts) {
+        run_access(AccessCliArgs {
+            command: AccessCommand::ServiceAccount {
+                command: ServiceAccountCommand::Export(
+                    build_snapshot_access_service_account_export_args(args),
+                ),
+            },
+        })?;
+    }
     Ok(())
 }
 
@@ -590,39 +605,75 @@ fn write_snapshot_root_metadata_file(args: &super::SnapshotExportArgs) -> Result
     Ok(())
 }
 
-pub(crate) fn run_snapshot_export_with_handlers<FD, FS>(
+pub(crate) fn run_snapshot_export_selected_with_handlers<FD, FS, FA>(
     args: super::SnapshotExportArgs,
+    selection: &super::SnapshotExportSelection,
     mut run_dashboard: FD,
     mut run_datasource: FS,
+    mut run_access: FA,
 ) -> Result<()>
 where
     FD: FnMut(DashboardCliArgs) -> Result<()>,
     FS: FnMut(DatasourceGroupCommand) -> Result<()>,
+    FA: FnMut(AccessCliArgs) -> Result<()>,
 {
-    run_dashboard(DashboardCliArgs {
-        color: args.common.color,
-        command: DashboardCommand::Export(build_snapshot_dashboard_export_args(&args)),
-    })?;
-    run_datasource(DatasourceGroupCommand::Export(
-        build_snapshot_datasource_export_args(&args),
-    ))?;
+    fs::create_dir_all(&args.output_dir)?;
+    if selection.contains(super::SnapshotExportLane::Dashboards) {
+        run_dashboard(DashboardCliArgs {
+            color: args.common.color,
+            command: DashboardCommand::Export(build_snapshot_dashboard_export_args(&args)),
+        })?;
+    }
+    if selection.contains(super::SnapshotExportLane::Datasources) {
+        run_datasource(DatasourceGroupCommand::Export(
+            build_snapshot_datasource_export_args(&args),
+        ))?;
+    }
+    run_snapshot_access_exports_with_handler(&args, selection, &mut run_access)?;
     annotate_snapshot_root_scope_kinds(&args.output_dir)?;
+    write_snapshot_root_metadata_file(&args)?;
     Ok(())
+}
+
+#[cfg(test)]
+pub(crate) fn run_snapshot_export_with_handlers<FD, FS, FA>(
+    args: super::SnapshotExportArgs,
+    mut run_dashboard: FD,
+    mut run_datasource: FS,
+    mut run_access: FA,
+) -> Result<()>
+where
+    FD: FnMut(DashboardCliArgs) -> Result<()>,
+    FS: FnMut(DatasourceGroupCommand) -> Result<()>,
+    FA: FnMut(AccessCliArgs) -> Result<()>,
+{
+    run_snapshot_export_selected_with_handlers(
+        args,
+        &super::SnapshotExportSelection::all(),
+        &mut run_dashboard,
+        &mut run_datasource,
+        &mut run_access,
+    )
 }
 
 pub fn run_snapshot_export(args: super::SnapshotExportArgs) -> Result<()> {
     let mut args = args;
     args.common = materialize_snapshot_common_auth(args.common)?;
-    let export_args = args.clone();
-    run_snapshot_export_with_handlers(
+    let selection = if args.prompt {
+        match super::prompt_snapshot_export_selection()? {
+            Some(selection) => selection,
+            None => return Ok(()),
+        }
+    } else {
+        super::SnapshotExportSelection::all()
+    };
+    run_snapshot_export_selected_with_handlers(
         args,
+        &selection,
         dashboard::run_dashboard_cli,
         crate::datasource::run_datasource_cli,
-    )?;
-    run_snapshot_access_exports(&export_args)?;
-    annotate_snapshot_root_scope_kinds(&export_args.output_dir)?;
-    write_snapshot_root_metadata_file(&export_args)?;
-    Ok(())
+        access::run_access_cli,
+    )
 }
 
 fn normalize_snapshot_datasource_dir(temp_root: &Path, datasource_dir: &Path) -> Result<PathBuf> {
