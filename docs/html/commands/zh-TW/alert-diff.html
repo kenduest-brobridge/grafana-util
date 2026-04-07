@@ -783,14 +783,16 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="使用時機">使用時機</h2>
 <ul><li>在匯入或規劃之前，先檢查原始匯出目錄與 Grafana 的差異。</li><li>將 diff 以純文字或結構化 JSON 呈現。</li></ul>
 <h2 id="主要旗標">主要旗標</h2>
-<ul><li><code>--diff-dir</code> 指向原始匯出目錄。</li><li><code>--json</code> 將 diff 呈現為結構化 JSON。</li><li><code>--dashboard-uid-map</code> 與 <code>--panel-id-map</code> 用來在比較時修正關聯的 alert 規則。</li></ul>
+<ul><li><code>--diff-dir</code> 指向原始匯出目錄。</li><li><code>--output-format json</code> 將 diff 呈現為結構化 JSON。</li><li><code>--json</code> 仍保留作為相容旗標，等同於 <code>--output-format json</code>。</li><li><code>--dashboard-uid-map</code> 與 <code>--panel-id-map</code> 用來在比較時修正關聯的 alert 規則。</li></ul>
 <h2 id="範例">範例</h2>
 <pre><code># 用途：比較本機 alert 匯出檔與線上 Grafana 資源的差異。
 grafana-util alert diff --url http://localhost:3000 --diff-dir ./alerts/raw</code></pre>
 <pre><code># 用途：比較本機 alert 匯出檔與線上 Grafana 資源的差異。
-grafana-util alert diff --url http://localhost:3000 --diff-dir ./alerts/raw --json</code></pre>
+grafana-util alert diff --url http://localhost:3000 --diff-dir ./alerts/raw --output-format json</code></pre>
 <h2 id="相關命令">相關命令</h2>
-<ul><li><a href="alert.html">alert</a></li><li><a href="alert-export.html">alert export</a></li><li><a href="alert-import.html">alert import</a></li></ul>
+<ul><li><a href="alert.html">alert</a></li><li><a href="alert-export.html">alert export</a></li><li><a href="alert-import.html">alert import</a></li><li><a href="../../handbook/zh-TW/diff-json-contract.html">共用 diff JSON contract</a></li></ul>
+<p>CLI schema 快速查詢：</p>
+<ul><li><code>grafana-util alert diff --help-schema</code></li><li><a href="../../handbook/zh-TW/diff-json-contract.html">共用 diff JSON contract</a></li></ul>
     
   </article>
   <aside class="sidebar">

@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.grafana-util.local/change/sync-source-bundle.schema.json",
+  "title": "Change bundle JSON schema",
+  "type": "object",
+  "required": [
+    "kind",
+    "schemaVersion",
+    "toolVersion",
+    "summary",
+    "resources",
+    "providers",
+    "secretPlaceholders",
+    "alertArtifacts"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "resources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "kind": {},
+          "identity": {},
+          "sourcePath": {}
+        },
+        "required": [
+          "kind",
+          "identity",
+          "sourcePath"
+        ],
+        "additionalProperties": false
+      }
+    }
+  }
+}

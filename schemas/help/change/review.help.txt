@@ -1,0 +1,39 @@
+Change review JSON schema
+
+Command:
+  grafana-util change review --plan-file ./sync-plan.json --output-format json
+
+kind:
+  grafana-utils-sync-plan
+
+Top-level keys:
+- kind
+- schemaVersion
+- toolVersion
+- dryRun
+- reviewRequired
+- reviewed
+- allowPrune
+- summary
+- alertAssessment
+- operations
+- traceId
+- stage
+- stepIndex
+- parentTraceId
+- reviewedBy
+- reviewedAt
+- reviewNote
+- summary
+  - operationCount
+  - blocked_reasons
+- operations[]
+  - kind
+  - identity
+  - action
+  - orderIndex
+  - orderGroup
+  - kindOrder
+
+Notes:
+- This is the reviewed sync-plan contract; new consumers should still route by `kind` plus `schemaVersion` before reading review metadata.

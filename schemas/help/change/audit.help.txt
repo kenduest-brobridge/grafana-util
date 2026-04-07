@@ -1,0 +1,25 @@
+Change audit JSON schema
+
+Command:
+  grafana-util change audit --lock-file ./sync-lock.json --fetch-live --profile prod --output-format json
+
+kind:
+  grafana-utils-sync-audit
+
+Top-level keys:
+- kind
+- schemaVersion
+- toolVersion
+- summary
+- currentLock
+- baselineLock
+- drifts
+- summary
+  - managedCount
+  - driftCount
+- drifts[]
+  - kind
+  - identity
+  - status
+  - driftedFields
+  - sourcePath

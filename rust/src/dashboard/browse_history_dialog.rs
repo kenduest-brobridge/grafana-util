@@ -1,4 +1,5 @@
 #![cfg(feature = "tui")]
+use crate::tui_shell;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
@@ -14,13 +15,20 @@ pub(crate) struct HistoryDialogState {
     versions: Vec<DashboardHistoryVersion>,
     selected_index: usize,
     pending_restore: bool,
+    editing_message: bool,
+    restore_message: String,
+    busy_message: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum HistoryDialogAction {
     Continue,
     Close,
-    Restore { uid: String, version: i64 },
+    Restore {
+        uid: String,
+        version: i64,
+        message: String,
+    },
 }
 
 impl HistoryDialogState {
@@ -35,23 +43,53 @@ impl HistoryDialogState {
             versions,
             selected_index: 0,
             pending_restore: false,
+            editing_message: false,
+            restore_message: String::new(),
+            busy_message: None,
         }
     }
 
     pub(crate) fn handle_key(&mut self, key: &KeyEvent) -> HistoryDialogAction {
+        if self.busy_message.is_some() {
+            return HistoryDialogAction::Continue;
+        }
         if self.pending_restore {
             return match key.code {
-                KeyCode::Esc | KeyCode::Char('n') => {
-                    self.pending_restore = false;
+                KeyCode::Esc | KeyCode::Char('q') => {
+                    if self.editing_message {
+                        self.editing_message = false;
+                    } else {
+                        self.pending_restore = false;
+                    }
                     HistoryDialogAction::Continue
                 }
-                KeyCode::Char('y') => HistoryDialogAction::Restore {
+                KeyCode::Char('n') => {
+                    self.pending_restore = false;
+                    self.editing_message = false;
+                    HistoryDialogAction::Continue
+                }
+                KeyCode::Enter => HistoryDialogAction::Restore {
                     uid: self.dashboard_uid.clone(),
                     version: self
                         .selected_version()
                         .map(|item| item.version)
                         .unwrap_or_default(),
+                    message: self.restore_message.clone(),
                 },
+                KeyCode::Char('e') => {
+                    self.editing_message = true;
+                    HistoryDialogAction::Continue
+                }
+                KeyCode::Backspace if self.editing_message => {
+                    self.restore_message.pop();
+                    HistoryDialogAction::Continue
+                }
+                KeyCode::Char(ch)
+                    if self.editing_message && !key.modifiers.contains(KeyModifiers::CONTROL) =>
+                {
+                    self.restore_message.push(ch);
+                    HistoryDialogAction::Continue
+                }
                 _ => HistoryDialogAction::Continue,
             };
         }
@@ -74,6 +112,8 @@ impl HistoryDialogState {
             KeyCode::Char('r') => {
                 if !self.versions.is_empty() {
                     self.pending_restore = true;
+                    self.editing_message = false;
+                    self.restore_message = self.default_restore_message();
                 }
                 HistoryDialogAction::Continue
             }
@@ -110,7 +150,11 @@ impl HistoryDialogState {
                     .add_modifier(Modifier::BOLD),
             )),
             Line::from(Span::styled(
-                "Up/Down select  r restore selected  Ctrl+X/Esc close",
+                if self.pending_restore {
+                    "Review restore before apply. Enter confirms. e edits the message."
+                } else {
+                    "Up/Down select a version. r opens a restore review."
+                },
                 Style::default()
                     .fg(Color::White)
                     .bg(Color::Rgb(71, 55, 152))
@@ -169,24 +213,48 @@ impl HistoryDialogState {
         frame.render_stateful_widget(list, sections[1], &mut list_state);
 
         let summary = if self.pending_restore {
+            let selected_version = self
+                .selected_version()
+                .map(|item| item.version)
+                .unwrap_or_default();
+            let selected_message = self
+                .selected_version()
+                .map(|item| item.message.clone())
+                .filter(|message| !message.is_empty())
+                .unwrap_or_else(|| "-".to_string());
             vec![
-                Line::from(vec![
-                    Span::styled(
-                        "RESTORE",
-                        Style::default()
-                            .fg(Color::White)
-                            .bg(Color::Rgb(150, 38, 46))
-                            .add_modifier(Modifier::BOLD),
-                    ),
-                    Span::raw(format!(
-                        " restore {} to version {} ?",
-                        self.dashboard_title,
-                        self.selected_version()
-                            .map(|item| item.version)
-                            .unwrap_or_default()
-                    )),
-                ]),
-                Line::from("y confirm  n cancel  Esc cancel"),
+                Line::from(
+                    self.busy_message
+                        .clone()
+                        .unwrap_or_else(|| "Ready to restore the selected version.".to_string()),
+                ),
+                Line::from("".to_string()),
+                Line::from(format!("Dashboard: {}", self.dashboard_title)),
+                Line::from(format!("UID: {}", self.dashboard_uid)),
+                Line::from(format!("Restore to version: {}", selected_version)),
+                Line::from(
+                    "Result: Grafana will create a new latest revision. Existing history stays."
+                        .to_string(),
+                ),
+                Line::from(format!("Selected version message: {}", selected_message)),
+                Line::from("".to_string()),
+                Line::from(Span::styled(
+                    "Revision Message",
+                    Style::default()
+                        .fg(Color::LightYellow)
+                        .add_modifier(Modifier::BOLD),
+                )),
+                Line::from(if self.restore_message.trim().is_empty() {
+                    if self.editing_message {
+                        "> ".to_string()
+                    } else {
+                        "(empty)".to_string()
+                    }
+                } else if self.editing_message {
+                    format!("> {}", self.restore_message)
+                } else {
+                    self.restore_message.clone()
+                }),
             ]
         } else if let Some(item) = self.selected_version() {
             vec![
@@ -216,54 +284,63 @@ impl HistoryDialogState {
         );
         frame.render_widget(summary, sections[2]);
 
-        let footer = Paragraph::new(if self.pending_restore {
-            vec![Line::from(vec![
-                hotkey("y", Color::Rgb(24, 106, 59)),
-                plain(" confirm restore"),
-                plain("   "),
-                hotkey("n", Color::Rgb(90, 98, 107)),
-                plain(" cancel restore"),
-                plain("   "),
-                hotkey("Esc", Color::Rgb(90, 98, 107)),
-                plain(" close"),
-                plain("   "),
-                hotkey("q", Color::Rgb(90, 98, 107)),
-                plain(" close"),
-            ])]
+        let footer = tui_shell::build_footer_controls(if self.pending_restore {
+            if self.busy_message.is_some() {
+                tui_shell::control_grid(&[
+                    vec![("Working", Color::Rgb(24, 78, 140), "restoring revision")],
+                    vec![("Esc/q", Color::Rgb(90, 98, 107), "wait for completion")],
+                ])
+            } else {
+                tui_shell::control_grid(&[
+                    vec![
+                        ("Enter", Color::Rgb(24, 106, 59), "confirm restore"),
+                        ("e", Color::Rgb(164, 116, 19), "edit message"),
+                        ("n", Color::Rgb(90, 98, 107), "cancel review"),
+                    ],
+                    vec![
+                        ("Esc", Color::Rgb(90, 98, 107), "back"),
+                        ("q", Color::Rgb(90, 98, 107), "back"),
+                    ],
+                ])
+            }
         } else {
-            vec![
-                Line::from(vec![
-                    hotkey("Up/Down", Color::Rgb(24, 78, 140)),
-                    plain(" select version"),
-                    plain("   "),
-                    hotkey("r", Color::Rgb(150, 38, 46)),
-                    plain(" restore selected"),
-                    plain("   "),
-                    hotkey("Esc", Color::Rgb(90, 98, 107)),
-                    plain(" close"),
-                    plain("   "),
-                    hotkey("q", Color::Rgb(90, 98, 107)),
-                    plain(" close"),
-                ]),
-                Line::from(vec![
-                    hotkey("Ctrl+X", Color::Rgb(90, 98, 107)),
-                    plain(" close history"),
-                ]),
-            ]
-        })
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title("Hotkeys")
-                .style(Style::default().bg(Color::Rgb(22, 18, 30)))
-                .border_style(Style::default().fg(Color::LightMagenta)),
-        )
-        .style(Style::default().bg(Color::Rgb(22, 18, 30)));
+            tui_shell::control_grid(&[
+                vec![
+                    ("Up/Down", Color::Rgb(24, 78, 140), "select version"),
+                    ("r", Color::Rgb(150, 38, 46), "open restore review"),
+                ],
+                vec![
+                    ("Esc", Color::Rgb(90, 98, 107), "close"),
+                    ("q", Color::Rgb(90, 98, 107), "close"),
+                    ("Ctrl+X", Color::Rgb(90, 98, 107), "close"),
+                ],
+            ])
+        });
         frame.render_widget(footer, sections[3]);
     }
 
     fn selected_version(&self) -> Option<&DashboardHistoryVersion> {
         self.versions.get(self.selected_index)
+    }
+
+    fn default_restore_message(&self) -> String {
+        let version = self
+            .selected_version()
+            .map(|item| item.version)
+            .unwrap_or_default();
+        let base = format!("Restore {} to version {}", self.dashboard_title, version);
+        let Some(item) = self.selected_version() else {
+            return base;
+        };
+        if item.message.trim().is_empty() {
+            base
+        } else {
+            format!("{base} ({})", item.message.trim())
+        }
+    }
+
+    pub(crate) fn set_busy_message(&mut self, value: impl Into<String>) {
+        self.busy_message = Some(value.into());
     }
 }
 
@@ -285,18 +362,4 @@ fn centered_rect(width_percent: u16, height: u16, area: Rect) -> Rect {
         ])
         .split(vertical[1]);
     horizontal[1]
-}
-
-fn hotkey(label: &'static str, bg: Color) -> Span<'static> {
-    Span::styled(
-        format!(" {} ", label),
-        Style::default()
-            .fg(Color::White)
-            .bg(bg)
-            .add_modifier(Modifier::BOLD),
-    )
-}
-
-fn plain(text: &'static str) -> Span<'static> {
-    Span::styled(text, Style::default().fg(Color::White))
 }

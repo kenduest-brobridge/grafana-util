@@ -1062,6 +1062,35 @@ fn parse_cli_supports_dashboard_edit_live_command() {
                 Some(PathBuf::from("./drafts/cpu-main.edited.json"))
             );
             assert!(!edit_args.apply_live);
+            assert!(!edit_args.publish_dry_run);
+        }
+        _ => panic!("expected edit-live command"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_dashboard_edit_live_publish_dry_run() {
+    let args = parse_cli_from([
+        "grafana-util",
+        "edit-live",
+        "--url",
+        "https://grafana.example.com",
+        "--dashboard-uid",
+        "cpu-main",
+        "--output",
+        "./drafts/cpu-main.edited.json",
+        "--publish-dry-run",
+    ]);
+
+    match args.command {
+        DashboardCommand::EditLive(edit_args) => {
+            assert_eq!(edit_args.dashboard_uid, "cpu-main");
+            assert_eq!(
+                edit_args.output,
+                Some(PathBuf::from("./drafts/cpu-main.edited.json"))
+            );
+            assert!(edit_args.publish_dry_run);
+            assert!(!edit_args.apply_live);
         }
         _ => panic!("expected edit-live command"),
     }
@@ -1073,7 +1102,8 @@ fn edit_live_help_mentions_safe_local_draft_default() {
     assert!(help.contains("--dashboard-uid"));
     assert!(help.contains("--output"));
     assert!(help.contains("--apply-live"));
-    assert!(help.contains("local draft"));
+    assert!(help.contains("--publish-dry-run"));
+    assert!(help.contains("preview"));
     assert!(help.contains("review output"));
 }
 
@@ -1603,4 +1633,66 @@ fn dashboard_history_list_help_mentions_local_inputs() {
     assert!(help.contains("--input-dir"));
     assert!(help.contains("dashboard history export"));
     assert!(help.contains("dashboard export --include-history"));
+}
+
+#[test]
+fn dashboard_history_diff_help_mentions_dual_sources() {
+    let help = render_dashboard_history_subcommand_help("diff");
+    assert!(help.contains("--base-dashboard-uid"));
+    assert!(help.contains("--new-dashboard-uid"));
+    assert!(help.contains("--base-input"));
+    assert!(help.contains("--new-input"));
+    assert!(help.contains("--base-input-dir"));
+    assert!(help.contains("--new-input-dir"));
+    assert!(help.contains("--base-version"));
+    assert!(help.contains("--new-version"));
+    assert!(help.contains("--output-format"));
+    assert!(help.contains("Compare two historical dashboard revisions"));
+}
+
+#[test]
+fn parse_cli_supports_dashboard_history_diff_with_local_artifacts() {
+    let args = parse_cli_from([
+        "grafana-util",
+        "history",
+        "diff",
+        "--base-input",
+        "./exports-2026-04-01/history/cpu-main.history.json",
+        "--base-version",
+        "17",
+        "--new-input",
+        "./exports-2026-04-07/history/cpu-main.history.json",
+        "--new-version",
+        "21",
+        "--output-format",
+        "json",
+    ]);
+
+    match args.command {
+        DashboardCommand::History(history_args) => match history_args.command {
+            DashboardHistorySubcommand::Diff(args) => {
+                assert_eq!(
+                    args.base_input,
+                    Some(PathBuf::from(
+                        "./exports-2026-04-01/history/cpu-main.history.json"
+                    ))
+                );
+                assert_eq!(args.base_input_dir, None);
+                assert_eq!(args.base_dashboard_uid, None);
+                assert_eq!(args.base_version, 17);
+                assert_eq!(
+                    args.new_input,
+                    Some(PathBuf::from(
+                        "./exports-2026-04-07/history/cpu-main.history.json"
+                    ))
+                );
+                assert_eq!(args.new_input_dir, None);
+                assert_eq!(args.new_dashboard_uid, None);
+                assert_eq!(args.new_version, 21);
+                assert_eq!(args.output_format, crate::common::DiffOutputFormat::Json);
+            }
+            _ => panic!("expected history diff subcommand"),
+        },
+        _ => panic!("expected history command"),
+    }
 }

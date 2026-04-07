@@ -1,0 +1,33 @@
+Change promotion-preflight JSON schema
+
+Command:
+  grafana-util change promotion-preflight --source-bundle ./bundle.json --target-inventory ./target.json --mapping-file ./promotion-map.json --output-format json
+
+kind:
+  grafana-utils-sync-promotion-preflight
+
+Top-level keys:
+- kind
+- schemaVersion
+- toolVersion
+- summary
+- bundlePreflight
+- mappingSummary
+- checkSummary
+- handoffSummary
+- continuationSummary
+- checks
+- resolvedChecks
+- blockingChecks
+- checks[]
+  - kind
+  - identity
+  - status
+- resolvedChecks[]
+  - kind
+  - identity
+  - status
+- blockingChecks[]
+  - kind
+  - identity
+  - status

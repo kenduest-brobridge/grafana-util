@@ -1,0 +1,340 @@
+[
+  {
+    "contractId": "grafana-util-dashboard-diff",
+    "title": "Dashboard diff JSON schema",
+    "kind": "grafana-util-dashboard-diff",
+    "schemaVersion": 1,
+    "goldenSample": "fixtures/shared_diff_golden_cases.json#dashboard",
+    "topLevelKeys": ["kind", "schemaVersion", "toolVersion", "summary", "rows"],
+    "nestedSections": [
+      {
+        "path": "summary",
+        "label": "summary",
+        "keys": [
+          "checked",
+          "same",
+          "different",
+          "missingRemote",
+          "extraRemote",
+          "ambiguous"
+        ]
+      },
+      {
+        "path": "rows[]",
+        "label": "rows[]",
+        "keys": [
+          "domain",
+          "resourceKind",
+          "identity",
+          "status",
+          "path",
+          "changedFields",
+          "diffText",
+          "contextLines"
+        ]
+      }
+    ],
+    "fieldSchemas": {
+      "kind": {
+        "type": "string",
+        "const": "grafana-util-dashboard-diff"
+      },
+      "schemaVersion": {
+        "type": "integer",
+        "const": 1
+      },
+      "toolVersion": {
+        "type": "string"
+      },
+      "summary.checked": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "summary.same": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "summary.different": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "summary.missingRemote": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "summary.extraRemote": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "summary.ambiguous": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "rows[].domain": {
+        "type": "string"
+      },
+      "rows[].resourceKind": {
+        "type": "string"
+      },
+      "rows[].identity": {
+        "type": "string"
+      },
+      "rows[].status": {
+        "type": "string"
+      },
+      "rows[].path": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "rows[].changedFields": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "rows[].diffText": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "rows[].contextLines": {
+        "type": [
+          "integer",
+          "null"
+        ],
+        "minimum": 0
+      }
+    }
+  },
+  {
+    "contractId": "grafana-util-alert-diff",
+    "title": "Alert diff JSON schema",
+    "kind": "grafana-util-alert-diff",
+    "schemaVersion": 1,
+    "goldenSample": "fixtures/shared_diff_golden_cases.json#alert",
+    "topLevelKeys": ["kind", "schemaVersion", "toolVersion", "summary", "rows"],
+    "nestedSections": [
+      {
+        "path": "summary",
+        "label": "summary",
+        "keys": [
+          "checked",
+          "same",
+          "different",
+          "missingRemote",
+          "extraRemote",
+          "ambiguous"
+        ]
+      },
+      {
+        "path": "rows[]",
+        "label": "rows[]",
+        "keys": [
+          "domain",
+          "resourceKind",
+          "identity",
+          "status",
+          "path",
+          "changedFields"
+        ]
+      }
+    ],
+    "fieldSchemas": {
+      "kind": {
+        "type": "string",
+        "const": "grafana-util-alert-diff"
+      },
+      "schemaVersion": {
+        "type": "integer",
+        "const": 1
+      },
+      "toolVersion": {
+        "type": "string"
+      },
+      "summary.checked": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "summary.same": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "summary.different": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "summary.missingRemote": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "summary.extraRemote": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "summary.ambiguous": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "rows[].domain": {
+        "type": "string"
+      },
+      "rows[].resourceKind": {
+        "type": "string"
+      },
+      "rows[].identity": {
+        "type": "string"
+      },
+      "rows[].status": {
+        "type": "string"
+      },
+      "rows[].path": {
+        "type": "string"
+      },
+      "rows[].changedFields": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  {
+    "contractId": "grafana-util-datasource-diff",
+    "title": "Datasource diff JSON schema",
+    "kind": "grafana-util-datasource-diff",
+    "schemaVersion": 1,
+    "goldenSample": "fixtures/shared_diff_golden_cases.json#datasource",
+    "topLevelKeys": ["kind", "schemaVersion", "toolVersion", "summary", "rows"],
+    "nestedSections": [
+      {
+        "path": "summary",
+        "label": "summary",
+        "keys": [
+          "checked",
+          "same",
+          "different",
+          "missingRemote",
+          "extraRemote",
+          "ambiguous"
+        ]
+      },
+      {
+        "path": "rows[]",
+        "label": "rows[]",
+        "keys": [
+          "domain",
+          "resourceKind",
+          "identity",
+          "status",
+          "path",
+          "changedFields",
+          "changes"
+        ]
+      },
+      {
+        "path": "rows[].changes[]",
+        "label": "rows[].changes[]",
+        "keys": [
+          "field",
+          "before",
+          "after"
+        ]
+      }
+    ],
+    "fieldSchemas": {
+      "kind": {
+        "type": "string",
+        "const": "grafana-util-datasource-diff"
+      },
+      "schemaVersion": {
+        "type": "integer",
+        "const": 1
+      },
+      "toolVersion": {
+        "type": "string"
+      },
+      "summary.checked": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "summary.same": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "summary.different": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "summary.missingRemote": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "summary.extraRemote": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "summary.ambiguous": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "rows[].domain": {
+        "type": "string"
+      },
+      "rows[].resourceKind": {
+        "type": "string"
+      },
+      "rows[].identity": {
+        "type": "string"
+      },
+      "rows[].status": {
+        "type": "string"
+      },
+      "rows[].path": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "rows[].changedFields": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "rows[].changes": {
+        "type": "array",
+        "items": {
+          "type": "object"
+        }
+      },
+      "rows[].changes[].field": {
+        "type": "string"
+      },
+      "rows[].changes[].before": {
+        "type": [
+          "string",
+          "number",
+          "integer",
+          "boolean",
+          "null",
+          "object",
+          "array"
+        ]
+      },
+      "rows[].changes[].after": {
+        "type": [
+          "string",
+          "number",
+          "integer",
+          "boolean",
+          "null",
+          "object",
+          "array"
+        ]
+      }
+    }
+  }
+]

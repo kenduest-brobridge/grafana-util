@@ -11,7 +11,10 @@ use crate::common::{
 
 use super::{build_import_payload, build_preserved_web_import_document, DEFAULT_FOLDER_UID};
 
-fn build_compare_document(dashboard: &Map<String, Value>, folder_uid: Option<&str>) -> Value {
+pub(crate) fn build_compare_document(
+    dashboard: &Map<String, Value>,
+    folder_uid: Option<&str>,
+) -> Value {
     let mut compare = Map::new();
     compare.insert("dashboard".to_string(), Value::Object(dashboard.clone()));
     if let Some(folder_uid) = folder_uid
@@ -57,22 +60,22 @@ fn build_remote_compare_document(
     Ok(build_compare_document(dashboard_object, folder_uid))
 }
 
-fn serialize_compare_document(document: &Value) -> Result<String> {
+pub(crate) fn serialize_compare_document(document: &Value) -> Result<String> {
     Ok(serde_json::to_string(document)?)
 }
 
-fn build_compare_diff_text(
-    remote_compare: &Value,
-    local_compare: &Value,
-    uid: &str,
-    dashboard_file: &Path,
+pub(crate) fn build_compare_diff_text_with_labels(
+    base_compare: &Value,
+    new_compare: &Value,
+    base_label: &str,
+    new_label: &str,
     _context_lines: usize,
 ) -> Result<String> {
-    let remote_pretty = serde_json::to_string_pretty(remote_compare)?;
-    let local_pretty = serde_json::to_string_pretty(local_compare)?;
+    let remote_pretty = serde_json::to_string_pretty(base_compare)?;
+    let local_pretty = serde_json::to_string_pretty(new_compare)?;
     let mut text = String::new();
-    let _ = writeln!(&mut text, "--- grafana:{uid}");
-    let _ = writeln!(&mut text, "+++ {}", dashboard_file.display());
+    let _ = writeln!(&mut text, "--- {base_label}");
+    let _ = writeln!(&mut text, "+++ {new_label}");
     for line in remote_pretty.lines() {
         let _ = writeln!(&mut text, "-{line}");
     }
@@ -80,6 +83,22 @@ fn build_compare_diff_text(
         let _ = writeln!(&mut text, "+{line}");
     }
     Ok(text)
+}
+
+fn build_compare_diff_text(
+    remote_compare: &Value,
+    local_compare: &Value,
+    uid: &str,
+    dashboard_file: &Path,
+    context_lines: usize,
+) -> Result<String> {
+    build_compare_diff_text_with_labels(
+        remote_compare,
+        local_compare,
+        &format!("grafana:{uid}"),
+        &dashboard_file.display().to_string(),
+        context_lines,
+    )
 }
 
 pub(crate) fn diff_dashboards_with_request<F>(

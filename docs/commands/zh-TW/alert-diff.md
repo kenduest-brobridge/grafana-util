@@ -12,7 +12,8 @@
 ## 主要旗標
 
 - `--diff-dir` 指向原始匯出目錄。
-- `--json` 將 diff 呈現為結構化 JSON。
+- `--output-format json` 將 diff 呈現為結構化 JSON。
+- `--json` 仍保留作為相容旗標，等同於 `--output-format json`。
 - `--dashboard-uid-map` 與 `--panel-id-map` 用來在比較時修正關聯的 alert 規則。
 
 ## 範例
@@ -24,7 +25,7 @@ grafana-util alert diff --url http://localhost:3000 --diff-dir ./alerts/raw
 
 ```bash
 # 用途：比較本機 alert 匯出檔與線上 Grafana 資源的差異。
-grafana-util alert diff --url http://localhost:3000 --diff-dir ./alerts/raw --json
+grafana-util alert diff --url http://localhost:3000 --diff-dir ./alerts/raw --output-format json
 ```
 
 ## 相關命令
@@ -32,3 +33,9 @@ grafana-util alert diff --url http://localhost:3000 --diff-dir ./alerts/raw --js
 - [alert](./alert.md)
 - [alert export](./alert-export.md)
 - [alert import](./alert-import.md)
+- [共用 diff JSON contract](../../user-guide/zh-TW/diff-json-contract.md)
+
+CLI schema 快速查詢：
+
+- `grafana-util alert diff --help-schema`
+- [共用 diff JSON contract](../../user-guide/zh-TW/diff-json-contract.md)

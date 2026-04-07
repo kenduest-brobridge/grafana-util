@@ -783,14 +783,16 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="when-to-use">When to use</h2>
 <ul><li>Check a raw export directory against Grafana before import or plan work.</li><li>Render the diff as plain text or structured JSON.</li></ul>
 <h2 id="key-flags">Key flags</h2>
-<ul><li><code>--diff-dir</code> points to the raw export directory.</li><li><code>--json</code> renders the diff as structured JSON.</li><li><code>--dashboard-uid-map</code> and <code>--panel-id-map</code> repair linked alert rules during comparison.</li></ul>
+<ul><li><code>--diff-dir</code> points to the raw export directory.</li><li><code>--output-format json</code> renders the diff as structured JSON.</li><li><code>--json</code> remains available as a compatibility flag equivalent to <code>--output-format json</code>.</li><li><code>--dashboard-uid-map</code> and <code>--panel-id-map</code> repair linked alert rules during comparison.</li></ul>
 <h2 id="examples">Examples</h2>
 <pre><code># Purpose: Compare local alerting export files against live Grafana resources.
 grafana-util alert diff --url http://localhost:3000 --diff-dir ./alerts/raw</code></pre>
 <pre><code># Purpose: Compare local alerting export files against live Grafana resources.
-grafana-util alert diff --url http://localhost:3000 --diff-dir ./alerts/raw --json</code></pre>
+grafana-util alert diff --url http://localhost:3000 --diff-dir ./alerts/raw --output-format json</code></pre>
 <h2 id="related-commands">Related commands</h2>
-<ul><li><a href="alert.html">alert</a></li><li><a href="alert-export.html">alert export</a></li><li><a href="alert-import.html">alert import</a></li></ul>
+<ul><li><a href="alert.html">alert</a></li><li><a href="alert-export.html">alert export</a></li><li><a href="alert-import.html">alert import</a></li><li><a href="../../handbook/en/diff-json-contract.html">Shared diff JSON contract</a></li></ul>
+<p>CLI schema lookup:</p>
+<ul><li><code>grafana-util alert diff --help-schema</code></li><li><a href="../../handbook/en/diff-json-contract.html">shared diff JSON contract</a></li></ul>
     
   </article>
   <aside class="sidebar">

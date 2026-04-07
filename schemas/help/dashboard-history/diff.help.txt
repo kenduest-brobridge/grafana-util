@@ -1,0 +1,48 @@
+Dashboard history diff JSON schema
+
+Commands:
+  grafana-util dashboard history diff --url http://localhost:3000 --basic-user admin --basic-password admin --base-dashboard-uid cpu-main --base-version 17 --new-dashboard-uid cpu-main --new-version 21 --output-format text
+  grafana-util dashboard history diff --base-input ./exports-2026-04-01/history/cpu-main.history.json --base-version 17 --new-input ./exports-2026-04-07/history/cpu-main.history.json --new-version 21 --output-format json
+  grafana-util dashboard history diff --base-input-dir ./exports-2026-04-01 --base-dashboard-uid cpu-main --base-version 17 --new-input-dir ./exports-2026-04-07 --new-dashboard-uid cpu-main --new-version 21 --output-format json
+
+General rule:
+- Branch on `kind` plus `schemaVersion` before reading nested fields.
+- `--output-format json` is the machine-readable path.
+- Each side is resolved independently from live Grafana, one reusable history artifact, or one export root created with `dashboard export --include-history`.
+
+kind:
+  grafana-util-dashboard-history-diff
+
+Top-level keys:
+- kind
+- schemaVersion
+- toolVersion
+- summary
+- rows
+- summary
+  - checked
+  - same
+  - different
+  - missingRemote
+  - extraRemote
+  - ambiguous
+- rows[]
+  - domain
+  - resourceKind
+  - identity
+  - status
+  - path
+  - baseSource
+  - newSource
+  - baseVersion
+  - newVersion
+  - changedFields
+  - diffText
+  - contextLines
+
+Quick lookups:
+- grafana-util dashboard history diff --help-schema
+
+Notes:
+- Use the `base` and `new` flags symmetrically so the compare source is explicit.
+- Two dated export roots for the same dashboard UID can be compared directly.

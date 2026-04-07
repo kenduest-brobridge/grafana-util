@@ -89,6 +89,7 @@ CLI 內建快速查詢：
 - `dashboard export --include-history --output-dir ./dashboards` 產生的 export tree
 
 `dashboard history restore` 仍然只支援 live。
+`dashboard history diff` 可以比對 live Grafana、可重用 history 成品，或不同日期的 export roots。
 
 判斷順序同樣建議固定成：
 
@@ -101,6 +102,7 @@ CLI 內建快速查詢：
 - `grafana-util dashboard history --help-schema`
 - `grafana-util dashboard history list --help-schema`
 - `grafana-util dashboard history restore --help-schema`
+- `grafana-util dashboard history diff --help-schema`
 - `grafana-util dashboard history export --help-schema`
 
 常見對應：
@@ -108,9 +110,50 @@ CLI 內建快速查詢：
 - `dashboard history list --output-format json` -> `grafana-util-dashboard-history-list`
 - `dashboard history list --input-dir ./dashboards --output-format json` -> 如果沒有 `--dashboard-uid` 篩選，會是 `grafana-util-dashboard-history-inventory`
 - `dashboard history restore --dry-run --output-format json` -> `grafana-util-dashboard-history-restore`
+- `dashboard history diff --output-format json` -> `grafana-util-dashboard-history-diff`
 - `dashboard history export --output ./cpu-main.history.json` -> `grafana-util-dashboard-history-export`
 
 如果你需要每種文件的 top-level 欄位細節，直接看 [dashboard history 指令頁](../../commands/zh-TW/dashboard-history.md) 會最快。
+
+### 共用 diff JSON contract
+
+`dashboard diff`、`dashboard history diff`、`alert diff`、`datasource diff` 在 `--output-format json` 模式下共用同一個 JSON envelope。和其他可機器解析的 contract 一樣，最安全的讀法是：
+
+1. 先看 `kind`
+2. 再確認 `schemaVersion`
+3. 最後才讀 `summary` 與 `rows`
+
+如果你要查每個指令的 summary 與 row 欄位，請看 [共用 diff JSON contract](./diff-json-contract.md)。
+
+CLI schema 快速查詢：
+
+- `grafana-util dashboard diff --help-schema`
+- `grafana-util alert diff --help-schema`
+- `grafana-util datasource diff --help-schema`
+
+### 給 CI 用的 `status` JSON 文件
+
+`status staged` 與 `status live` 現在共用同一個明確的 machine-readable contract：
+
+1. 先看 `kind`
+2. 再確認 `schemaVersion`
+3. 最後才讀 `overall`、`domains`、`topBlockers`、`nextActions`
+
+穩定路由：
+
+- `kind` -> `grafana-util-project-status`
+- `schemaVersion` -> `1`
+
+CLI schema 快速查詢：
+
+- `grafana-util status --help-schema`
+- `grafana-util status staged --help-schema`
+- `grafana-util status live --help-schema`
+
+常見對應：
+
+- `status staged --output-format json` -> `grafana-util-project-status`
+- `status live --output-format json` -> `grafana-util-project-status`
 
 ---
 

@@ -89,6 +89,7 @@ grafana-util overview live --url http://localhost:3000 --basic-user admin --prom
 *   **[Practical Scenarios](scenarios.md)**: end-to-end task recipes such as backups, DR, and audits.
 *   **[Best Practices & Recipes](recipes.md)**: recommended ways to handle common Grafana operator problems.
 *   **[Technical Reference](reference.md)**: command map, profile behavior, auth handling, common flags, and output guidance.
+*   **[Shared Diff JSON Contract](diff-json-contract.md)**: the common JSON envelope and row fields used by dashboard, alert, and datasource diff outputs.
 *   **[Command Docs](../../commands/en/index.md)**: One page per command and subcommand, aligned to the current Rust CLI help.
 *   **[Troubleshooting & Glossary](troubleshooting.md)**: Diagnostic guides and terminology index.
 

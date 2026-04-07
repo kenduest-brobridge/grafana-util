@@ -21,8 +21,8 @@ mod cli_defs_command_local;
 
 pub use cli_defs_command_export::{ExportArgs, RawToPromptArgs};
 pub use cli_defs_command_history::{
-    DashboardHistoryArgs, DashboardHistorySubcommand, HistoryExportArgs, HistoryListArgs,
-    HistoryRestoreArgs,
+    DashboardHistoryArgs, DashboardHistorySubcommand, HistoryDiffArgs, HistoryExportArgs,
+    HistoryListArgs, HistoryRestoreArgs,
 };
 pub use cli_defs_command_list::ListArgs;
 pub use cli_defs_command_live::{
@@ -78,8 +78,8 @@ pub enum DashboardCommand {
     Serve(ServeArgs),
     #[command(
         name = "edit-live",
-        about = "Fetch one live dashboard into an external editor, review the edited draft, and save the result as a local draft or explicit live writeback.",
-        after_help = "Examples:\n\n  Edit one live dashboard and write the result to the default local draft path:\n    grafana-util dashboard edit-live --url http://localhost:3000 --basic-user admin --basic-password admin --dashboard-uid cpu-main\n\n  Edit one live dashboard into an explicit output file:\n    grafana-util dashboard edit-live --profile prod --dashboard-uid cpu-main --output ./drafts/cpu-main.edited.json\n\n  Edit one live dashboard and write it back to Grafana after explicit acknowledgement:\n    grafana-util dashboard edit-live --profile prod --dashboard-uid cpu-main --apply-live --yes --message 'Hotfix CPU dashboard'\n\n  Edit one live dashboard and inspect the review output before deciding whether to publish:\n    grafana-util dashboard edit-live --profile prod --dashboard-uid cpu-main"
+        about = "Fetch one live dashboard into an external editor, review the edited draft, and either preview, save, or apply the result.",
+        after_help = "What it does:\n  Fetch one live dashboard into an external editor, then return a review output that drives preview, save, or live apply.\n\nExamples:\n\n  Edit one live dashboard and immediately preview the live publish without saving a draft file:\n    grafana-util dashboard edit-live --url http://localhost:3000 --basic-user admin --basic-password admin --dashboard-uid cpu-main\n\n  Edit one live dashboard into an explicit output file:\n    grafana-util dashboard edit-live --profile prod --dashboard-uid cpu-main --output ./drafts/cpu-main.edited.json\n\n  Edit one live dashboard, save the local draft, and immediately preview the publish:\n    grafana-util dashboard edit-live --profile prod --dashboard-uid cpu-main --output ./drafts/cpu-main.edited.json --publish-dry-run\n\n  Edit one live dashboard and write it back to Grafana after explicit acknowledgement:\n    grafana-util dashboard edit-live --profile prod --dashboard-uid cpu-main --apply-live --yes --message 'Hotfix CPU dashboard'\n\n  Edit one live dashboard, inspect the preview, then decide whether to publish manually:\n    grafana-util dashboard edit-live --profile prod --dashboard-uid cpu-main"
     )]
     EditLive(EditLiveArgs),
     #[command(
@@ -103,7 +103,7 @@ pub enum DashboardCommand {
     #[command(
         name = "browse",
         about = "Browse live Grafana or a local export tree in an interactive terminal UI.",
-        after_help = "Examples:\n\n  Browse the full dashboard tree from the current org:\n    grafana-util dashboard browse --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\"\n\n  Open the browser at one folder subtree:\n    grafana-util dashboard browse --url http://localhost:3000 --basic-user admin --basic-password admin --path 'Platform / Infra'\n\n  Browse a raw export tree from disk:\n    grafana-util dashboard browse --input-dir ./dashboards/raw --path 'Platform / Infra'\n\n  Browse one explicit org:\n    grafana-util dashboard browse --url http://localhost:3000 --basic-user admin --basic-password admin --org-id 2\n\n  Browse all visible orgs with Basic auth:\n    grafana-util dashboard browse --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs"
+        after_help = "What it does:\n  Browse the dashboard tree in a terminal UI, with live-only actions for edit, raw JSON review/apply, history, and delete.\n\nExamples:\n\n  Browse the full dashboard tree from the current org:\n    grafana-util dashboard browse --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\"\n\n  Open the browser at one folder subtree:\n    grafana-util dashboard browse --url http://localhost:3000 --basic-user admin --basic-password admin --path 'Platform / Infra'\n\n  Browse a raw export tree from disk:\n    grafana-util dashboard browse --input-dir ./dashboards/raw --path 'Platform / Infra'\n\n  Browse one explicit org:\n    grafana-util dashboard browse --url http://localhost:3000 --basic-user admin --basic-password admin --org-id 2\n\n  Browse all visible orgs with Basic auth:\n    grafana-util dashboard browse --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs"
     )]
     Browse(BrowseArgs),
     #[command(
@@ -150,16 +150,16 @@ pub enum DashboardCommand {
         name = "analyze-export",
         hide = true,
         alias = "inspect-export",
-        about = "Analyze dashboard export directories with operator-summary, governance, dependency, and queries-json views.",
-        after_help = "Examples:\n\n  Render an operator-summary table from raw exports:\n    grafana-util dashboard analyze-export --input-dir ./dashboards/raw --input-format raw --output-format table\n\n  Open the interactive inspect workbench over raw exports:\n    grafana-util dashboard analyze-export --input-dir ./dashboards/raw --input-format raw --interactive\n\n  Render the machine-readable governance artifact from raw exports:\n    grafana-util dashboard analyze-export --input-dir ./dashboards/raw --input-format raw --output-format governance-json\n\n  Render the queries-json artifact from raw exports:\n    grafana-util dashboard analyze-export --input-dir ./dashboards/raw --input-format raw --output-format queries-json\n\n  Inspect a file-provisioning tree from the provisioning root:\n    grafana-util dashboard analyze-export --input-dir ./dashboards/provisioning --input-format provisioning --output-format tree-table"
+        about = "Compatibility alias for dashboard analyze over export directories.",
+        after_help = "Examples:\n\n  Render an operator-summary table from raw exports:\n    grafana-util dashboard analyze --input-dir ./dashboards/raw --input-format raw --output-format table\n\n  Open the interactive analysis workbench over raw exports:\n    grafana-util dashboard analyze --input-dir ./dashboards/raw --input-format raw --interactive\n\n  Render the machine-readable governance artifact from raw exports:\n    grafana-util dashboard analyze --input-dir ./dashboards/raw --input-format raw --output-format governance-json\n\n  Render the queries-json artifact from raw exports:\n    grafana-util dashboard analyze --input-dir ./dashboards/raw --input-format raw --output-format queries-json\n\n  Inspect a file-provisioning tree from the provisioning root:\n    grafana-util dashboard analyze --input-dir ./dashboards/provisioning --input-format provisioning --output-format tree-table"
     )]
     InspectExport(InspectExportArgs),
     #[command(
         name = "analyze-live",
         hide = true,
         alias = "inspect-live",
-        about = "Analyze live Grafana dashboards via a temporary raw-export snapshot.",
-        after_help = "Examples:\n\n  Render governance JSON from live Grafana:\n    grafana-util dashboard analyze-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output-format governance-json\n\n  Render the queries-json artifact from live Grafana:\n    grafana-util dashboard analyze-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output-format queries-json\n\n  Open the interactive inspect workbench over live Grafana:\n    grafana-util dashboard analyze-live --url http://localhost:3000 --basic-user admin --basic-password admin --interactive"
+        about = "Compatibility alias for dashboard analyze over live Grafana.",
+        after_help = "Examples:\n\n  Render governance JSON from live Grafana:\n    grafana-util dashboard analyze --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output-format governance-json\n\n  Render the queries-json artifact from live Grafana:\n    grafana-util dashboard analyze --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output-format queries-json\n\n  Open the interactive analysis workbench over live Grafana:\n    grafana-util dashboard analyze --url http://localhost:3000 --basic-user admin --basic-password admin --interactive"
     )]
     InspectLive(InspectLiveArgs),
     #[command(
@@ -213,7 +213,7 @@ mod tests {
         let history = command.find_subcommand("history").unwrap();
         let restore = history.find_subcommand("restore").unwrap();
         let about = restore.get_about().unwrap().to_string();
-        assert!(about.contains("same dashboard"));
+        assert!(about.contains("previous live dashboard revision"));
     }
 }
 

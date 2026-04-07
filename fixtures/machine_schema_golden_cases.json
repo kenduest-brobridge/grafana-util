@@ -1,0 +1,362 @@
+{
+  "sync-summary": {
+    "kind": "grafana-utils-sync-summary",
+    "schemaVersion": 1,
+    "toolVersion": "__TOOL_VERSION__",
+    "summary": {
+      "resourceCount": 2,
+      "blockingCount": 0
+    },
+    "resources": [
+      {
+        "kind": "dashboard",
+        "identity": "cpu-main",
+        "action": "update"
+      }
+    ]
+  },
+  "sync-plan": {
+    "kind": "grafana-utils-sync-plan",
+    "schemaVersion": 1,
+    "toolVersion": "__TOOL_VERSION__",
+    "dryRun": true,
+    "reviewRequired": true,
+    "reviewed": false,
+    "allowPrune": false,
+    "summary": {
+      "operationCount": 1,
+      "blocked_reasons": []
+    },
+    "alertAssessment": {},
+    "operations": [
+      {
+        "kind": "dashboard",
+        "identity": "cpu-main",
+        "action": "update",
+        "orderIndex": 1,
+        "orderGroup": "dashboard",
+        "kindOrder": 30
+      }
+    ],
+    "traceId": "trace-1",
+    "stage": "preview",
+    "stepIndex": 1,
+    "parentTraceId": "root-trace"
+  },
+  "sync-plan-reviewed": {
+    "kind": "grafana-utils-sync-plan",
+    "schemaVersion": 1,
+    "toolVersion": "__TOOL_VERSION__",
+    "dryRun": true,
+    "reviewRequired": true,
+    "reviewed": true,
+    "allowPrune": false,
+    "summary": {
+      "operationCount": 1,
+      "blocked_reasons": []
+    },
+    "alertAssessment": {},
+    "operations": [
+      {
+        "kind": "dashboard",
+        "identity": "cpu-main",
+        "action": "update",
+        "orderIndex": 1,
+        "orderGroup": "dashboard",
+        "kindOrder": 30
+      }
+    ],
+    "traceId": "trace-1",
+    "stage": "review",
+    "stepIndex": 2,
+    "parentTraceId": "root-trace",
+    "reviewedBy": "ops",
+    "reviewedAt": "2026-04-07T00:00:00Z",
+    "reviewNote": "approved for apply"
+  },
+  "sync-apply-intent": {
+    "kind": "grafana-utils-sync-apply-intent",
+    "schemaVersion": 1,
+    "toolVersion": "__TOOL_VERSION__",
+    "mode": "apply-intent",
+    "reviewed": true,
+    "reviewRequired": true,
+    "allowPrune": false,
+    "approved": true,
+    "summary": {
+      "operationCount": 1,
+      "blockingCount": 0
+    },
+    "alertAssessment": {},
+    "operations": [
+      {
+        "kind": "dashboard",
+        "identity": "cpu-main",
+        "action": "update"
+      }
+    ],
+    "preflightSummary": {},
+    "bundlePreflightSummary": {},
+    "appliedBy": "ops",
+    "appliedAt": "2026-04-07T00:00:00Z",
+    "approvalReason": "deploy",
+    "applyNote": "approved",
+    "traceId": "trace-1",
+    "stage": "apply",
+    "stepIndex": 3,
+    "parentTraceId": "root-trace"
+  },
+  "sync-apply-live-result": {
+    "mode": "live-apply",
+    "appliedCount": 1,
+    "results": [
+      {
+        "kind": "dashboard",
+        "identity": "cpu-main",
+        "action": "update",
+        "response": {
+          "status": 200
+        }
+      }
+    ]
+  },
+  "sync-audit": {
+    "kind": "grafana-utils-sync-audit",
+    "schemaVersion": 1,
+    "toolVersion": "__TOOL_VERSION__",
+    "summary": {
+      "managedCount": 2,
+      "driftCount": 1
+    },
+    "currentLock": {},
+    "baselineLock": {},
+    "drifts": [
+      {
+        "kind": "dashboard",
+        "identity": "cpu-main",
+        "status": "drifted",
+        "driftedFields": ["dashboard"],
+        "sourcePath": "dashboards/cpu-main.json"
+      }
+    ]
+  },
+  "sync-preflight": {
+    "kind": "grafana-utils-sync-preflight",
+    "schemaVersion": 1,
+    "toolVersion": "__TOOL_VERSION__",
+    "summary": {
+      "checkCount": 1,
+      "blockingCount": 0
+    },
+    "checks": [
+      {
+        "kind": "datasource",
+        "identity": "prom-main",
+        "status": "ok",
+        "detail": "present",
+        "blocking": false
+      }
+    ]
+  },
+  "alert-sync-plan": {
+    "kind": "grafana-utils-alert-sync-plan",
+    "schemaVersion": 1,
+    "toolVersion": "__TOOL_VERSION__",
+    "summary": {
+      "alertCount": 1,
+      "blockingCount": 0
+    },
+    "alerts": [
+      {
+        "kind": "rule",
+        "identity": "cpu-high",
+        "status": "plan-only"
+      }
+    ]
+  },
+  "sync-bundle-preflight": {
+    "kind": "grafana-utils-sync-bundle-preflight",
+    "schemaVersion": 1,
+    "summary": {},
+    "syncPreflight": {},
+    "alertArtifactAssessment": {},
+    "secretPlaceholderAssessment": {},
+    "providerAssessment": {}
+  },
+  "sync-promotion-preflight": {
+    "kind": "grafana-utils-sync-promotion-preflight",
+    "schemaVersion": 1,
+    "toolVersion": "__TOOL_VERSION__",
+    "summary": {},
+    "bundlePreflight": {},
+    "mappingSummary": {},
+    "checkSummary": {},
+    "handoffSummary": {},
+    "continuationSummary": {},
+    "checks": [
+      {
+        "kind": "dashboard",
+        "identity": "cpu-main",
+        "status": "ok"
+      }
+    ],
+    "resolvedChecks": [],
+    "blockingChecks": []
+  },
+  "sync-source-bundle": {
+    "kind": "grafana-utils-sync-source-bundle",
+    "schemaVersion": 1,
+    "toolVersion": "__TOOL_VERSION__",
+    "summary": {},
+    "resources": [
+      {
+        "kind": "dashboard",
+        "identity": "cpu-main",
+        "sourcePath": "dashboards/cpu-main.json"
+      }
+    ],
+    "providers": [],
+    "secretPlaceholders": [],
+    "alertArtifacts": []
+  },
+  "dashboard-history-list": {
+    "kind": "grafana-util-dashboard-history-list",
+    "schemaVersion": 1,
+    "toolVersion": "__TOOL_VERSION__",
+    "dashboardUid": "cpu-main",
+    "versionCount": 1,
+    "versions": [
+      {
+        "version": 3,
+        "created": "2026-04-07T00:00:00Z",
+        "createdBy": "ops",
+        "message": "updated"
+      }
+    ]
+  },
+  "dashboard-history-inventory": {
+    "kind": "grafana-util-dashboard-history-inventory",
+    "schemaVersion": 1,
+    "toolVersion": "__TOOL_VERSION__",
+    "artifactCount": 1,
+    "artifacts": [
+      {
+        "dashboardUid": "cpu-main",
+        "currentTitle": "CPU Main",
+        "currentVersion": 3,
+        "versionCount": 3,
+        "path": "dashboards/history/cpu-main.json",
+        "scope": "Main Org."
+      }
+    ]
+  },
+  "dashboard-history-restore": {
+    "kind": "grafana-util-dashboard-history-restore",
+    "schemaVersion": 1,
+    "toolVersion": "__TOOL_VERSION__",
+    "mode": "dry-run",
+    "dashboardUid": "cpu-main",
+    "currentVersion": 5,
+    "restoreVersion": 3,
+    "currentTitle": "CPU Main",
+    "restoredTitle": "CPU Main",
+    "targetFolderUid": "ops",
+    "createsNewRevision": true,
+    "message": "would restore version 3"
+  },
+  "dashboard-history-diff": {
+    "kind": "grafana-util-dashboard-history-diff",
+    "schemaVersion": 1,
+    "toolVersion": "__TOOL_VERSION__",
+    "summary": {
+      "checked": 1,
+      "same": 0,
+      "different": 1,
+      "missingRemote": 0,
+      "extraRemote": 0,
+      "ambiguous": 0
+    },
+    "rows": [
+      {
+        "domain": "dashboard",
+        "resourceKind": "dashboard-history",
+        "identity": "cpu-main",
+        "status": "different",
+        "path": "./exports-2026-04-01/history/cpu-main.history.json@17 -> ./exports-2026-04-07/history/cpu-main.history.json@21",
+        "baseSource": "./exports-2026-04-01/history/cpu-main.history.json",
+        "newSource": "./exports-2026-04-07/history/cpu-main.history.json",
+        "baseVersion": 17,
+        "newVersion": 21,
+        "changedFields": ["dashboard"],
+        "diffText": "--- ./exports-2026-04-01/history/cpu-main.history.json@17\n+++ ./exports-2026-04-07/history/cpu-main.history.json@21\n",
+        "contextLines": 3
+      }
+    ]
+  },
+  "dashboard-history-export": {
+    "kind": "grafana-util-dashboard-history-export",
+    "schemaVersion": 1,
+    "toolVersion": "__TOOL_VERSION__",
+    "dashboardUid": "cpu-main",
+    "currentVersion": 5,
+    "currentTitle": "CPU Main",
+    "versionCount": 2,
+    "versions": [
+      {
+        "version": 4,
+        "created": "2026-04-06T00:00:00Z",
+        "createdBy": "ops",
+        "message": "edited",
+        "dashboard": {}
+      }
+    ]
+  },
+  "project-status": {
+    "kind": "grafana-util-project-status",
+    "schemaVersion": 1,
+    "toolVersion": "__TOOL_VERSION__",
+    "scope": "staged-only",
+    "overall": {
+      "status": "partial",
+      "domainCount": 6,
+      "presentCount": 2,
+      "blockedCount": 0,
+      "blockerCount": 1,
+      "warningCount": 0,
+      "freshness": {}
+    },
+    "domains": [
+      {
+        "id": "dashboard",
+        "scope": "staged",
+        "mode": "artifact-summary",
+        "status": "ready",
+        "reasonCode": "ready",
+        "primaryCount": 1,
+        "blockerCount": 0,
+        "warningCount": 0,
+        "sourceKinds": ["dashboard-export"],
+        "signalKeys": ["summary.dashboardCount"],
+        "blockers": [],
+        "warnings": [],
+        "nextActions": [],
+        "freshness": {}
+      }
+    ],
+    "topBlockers": [
+      {
+        "domain": "sync",
+        "kind": "sync-blocking",
+        "count": 1,
+        "source": "summary.blockingCount"
+      }
+    ],
+    "nextActions": [
+      {
+        "domain": "sync",
+        "reasonCode": "blocked-by-blockers",
+        "action": "resolve sync blockers"
+      }
+    ]
+  }
+}

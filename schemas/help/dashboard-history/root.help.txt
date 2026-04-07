@@ -1,0 +1,34 @@
+Dashboard history JSON schema guide
+
+Use this help surface when CI, scripts, or external tooling need to understand the machine-readable documents emitted by `dashboard history`.
+
+General rule:
+- Branch on `kind` plus `schemaVersion` before reading nested fields.
+- `dashboard history list` and `dashboard history restore` switch machine-readable output with `--output-format json`.
+- `dashboard history diff` compares two historical versions from live Grafana or local history artifacts.
+- `dashboard history export` always writes a JSON artifact through `--output`.
+- `dashboard history restore` does not rewind Grafana history in place; it copies one historical version forward as a new latest revision entry.
+
+Subcommand contracts:
+
+- list -> grafana-util-dashboard-history-list
+  top-level keys: kind, schemaVersion, toolVersion, dashboardUid, versionCount, versions
+
+- list inventory -> grafana-util-dashboard-history-inventory
+  top-level keys: kind, schemaVersion, toolVersion, artifactCount, artifacts
+
+- restore -> grafana-util-dashboard-history-restore
+  top-level keys: kind, schemaVersion, toolVersion, mode, dashboardUid, currentVersion, restoreVersion, currentTitle, restoredTitle, targetFolderUid, createsNewRevision, message
+
+- diff -> grafana-util-dashboard-history-diff
+  top-level keys: kind, schemaVersion, toolVersion, summary, rows
+
+- export -> grafana-util-dashboard-history-export
+  top-level keys: kind, schemaVersion, toolVersion, dashboardUid, currentVersion, currentTitle, versionCount, versions
+
+Quick lookups:
+- grafana-util dashboard history --help-schema
+- grafana-util dashboard history list --help-schema
+- grafana-util dashboard history restore --help-schema
+- grafana-util dashboard history diff --help-schema
+- grafana-util dashboard history export --help-schema

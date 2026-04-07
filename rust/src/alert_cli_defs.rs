@@ -1016,7 +1016,11 @@ pub fn normalize_alert_namespace_args(args: AlertNamespaceArgs) -> AlertCliArgs 
             let mut args = cli_args_from_common(inner.common);
             args.command_kind = Some(AlertCommandKind::Diff);
             args.diff_dir = Some(inner.diff_dir);
-            args.diff_output = Some(inner.output_format);
+            args.diff_output = Some(if inner.json {
+                DiffOutputFormat::Json
+            } else {
+                inner.output_format
+            });
             args.json = inner.json || matches!(inner.output_format, DiffOutputFormat::Json);
             args.dashboard_uid_map = inner.dashboard_uid_map;
             args.panel_id_map = inner.panel_id_map;

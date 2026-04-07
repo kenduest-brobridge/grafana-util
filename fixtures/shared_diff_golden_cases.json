@@ -1,0 +1,89 @@
+[
+  {
+    "domain": "alert",
+    "document": {
+      "kind": "grafana-util-alert-diff",
+      "schemaVersion": 1,
+      "toolVersion": "__TOOL_VERSION__",
+      "summary": {
+        "checked": 1,
+        "same": 0,
+        "different": 1,
+        "missingRemote": 0,
+        "extraRemote": 0,
+        "ambiguous": 0
+      },
+      "rows": [
+        {
+          "domain": "alert",
+          "resourceKind": "contact-point",
+          "identity": "smoke-webhook",
+          "status": "different",
+          "path": "alerts/raw/contact-points/smoke.json",
+          "changedFields": ["spec"]
+        }
+      ]
+    }
+  },
+  {
+    "domain": "dashboard",
+    "document": {
+      "kind": "grafana-util-dashboard-diff",
+      "schemaVersion": 1,
+      "toolVersion": "__TOOL_VERSION__",
+      "summary": {
+        "checked": 2,
+        "same": 1,
+        "different": 1,
+        "missingRemote": 0,
+        "extraRemote": 0,
+        "ambiguous": 0
+      },
+      "rows": [
+        {
+          "domain": "dashboard",
+          "resourceKind": "dashboard",
+          "identity": "cpu-main",
+          "status": "different",
+          "path": "./dashboards/raw/cpu-main.json",
+          "changedFields": ["dashboard"],
+          "diffText": "--- grafana:cpu-main\n+++ ./dashboards/raw/cpu-main.json\n",
+          "contextLines": 3
+        }
+      ]
+    }
+  },
+  {
+    "domain": "datasource",
+    "document": {
+      "kind": "grafana-util-datasource-diff",
+      "schemaVersion": 1,
+      "toolVersion": "__TOOL_VERSION__",
+      "summary": {
+        "checked": 1,
+        "same": 0,
+        "different": 1,
+        "missingRemote": 0,
+        "extraRemote": 0,
+        "ambiguous": 0
+      },
+      "rows": [
+        {
+          "domain": "datasource",
+          "resourceKind": "datasource",
+          "identity": "uid:prom-main",
+          "status": "different",
+          "path": null,
+          "changedFields": ["access"],
+          "changes": [
+            {
+              "field": "access",
+              "before": "proxy",
+              "after": "direct"
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

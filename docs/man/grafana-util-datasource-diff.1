@@ -13,6 +13,8 @@ Use this when you want a concise live\-versus\-local difference report before im
 Before: you had to inspect local and live datasource JSON by hand to find drift.
 .IP \(bu 2
 After: one diff command shows what changed between the bundle and Grafana before you import anything.
+.IP \(bu 2
+JSON mode includes a shared diff envelope plus field\-level changes[{field,before,after}].
 .SH COMMON OPTIONS
 .TP
 .B \-\-diff\-dir
@@ -20,6 +22,9 @@ local datasource bundle to compare.
 .TP
 .B \-\-input\-format
 choose inventory or provisioning.
+.TP
+.B \-\-output\-format
+choose text or json.
 .SH SUCCESS CRITERIA
 .IP \(bu 2
 you can explain the change set before import

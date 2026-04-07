@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.grafana-util.local/dashboard-history/dashboard-history-export.schema.json",
+  "title": "Dashboard history export JSON schema",
+  "type": "object",
+  "required": [
+    "kind",
+    "schemaVersion",
+    "toolVersion",
+    "dashboardUid",
+    "currentVersion",
+    "currentTitle",
+    "versionCount",
+    "versions"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "versions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "version": {},
+          "created": {},
+          "createdBy": {},
+          "message": {},
+          "dashboard": {}
+        },
+        "required": [
+          "version",
+          "created",
+          "createdBy",
+          "message",
+          "dashboard"
+        ],
+        "additionalProperties": false
+      }
+    }
+  }
+}

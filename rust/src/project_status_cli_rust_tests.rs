@@ -4,7 +4,7 @@ use crate::common::TOOL_VERSION;
 use crate::project_status::{
     status_finding, ProjectDomainStatus, ProjectStatus, ProjectStatusAction,
     ProjectStatusFreshness, ProjectStatusOverall, ProjectStatusRankedFinding,
-    PROJECT_STATUS_BLOCKED, PROJECT_STATUS_READY,
+    PROJECT_STATUS_BLOCKED, PROJECT_STATUS_KIND, PROJECT_STATUS_READY,
 };
 use crate::project_status_command::{
     execute_project_status_staged, render_project_status_text, ProjectStatusCliArgs,
@@ -135,6 +135,7 @@ fn empty_live_project_status() -> ProjectStatus {
 }
 
 fn assert_project_status_document_shape(document: &Value) {
+    assert_eq!(document["kind"], json!(PROJECT_STATUS_KIND));
     assert!(document["schemaVersion"].is_i64());
     assert!(document["toolVersion"].is_string());
     assert!(document["scope"].is_string());
@@ -354,6 +355,7 @@ fn project_status_live_document_serializes_the_shared_contract_shape() {
     let document = serde_json::to_value(sample_live_project_status()).unwrap();
 
     assert_project_status_document_shape(&document);
+    assert_eq!(document["kind"], json!(PROJECT_STATUS_KIND));
     assert_eq!(document["schemaVersion"], json!(1));
     assert_eq!(document["toolVersion"], json!(TOOL_VERSION));
     assert_eq!(document["scope"], json!("live"));
@@ -512,6 +514,7 @@ fn project_status_staged_document_serializes_the_shared_contract_shape() {
     let document = serde_json::to_value(status).unwrap();
 
     assert_project_status_document_shape(&document);
+    assert_eq!(document["kind"], json!(PROJECT_STATUS_KIND));
     assert_eq!(document["schemaVersion"], json!(1));
     assert_eq!(document["toolVersion"], json!(TOOL_VERSION));
     assert_eq!(document["scope"], json!("staged-only"));
@@ -582,6 +585,8 @@ fn project_status_cli_help_and_parse_support_datasource_provisioning_file() {
     assert!(help.contains("--dashboard-provisioning-dir"));
     assert!(help.contains("--datasource-provisioning-file"));
     assert!(help.contains("Render project status as table, csv, text, json, yaml"));
+    assert!(help.contains("Schema guide:"));
+    assert!(help.contains("grafana-util status staged --help-schema"));
 
     let args = ProjectStatusCliArgs::parse_from([
         "grafana-util",

@@ -770,7 +770,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 </div>
 <div class="command-intro-block">
   <p class="command-intro-label">When to open this page</p>
-  <ul class="command-intro-list"><li>Use this when you want to explore folders, select a dashboard, inspect the live tree before fetching, diffing, importing, or deleting, or review a local export tree without calling Grafana.</li></ul>
+  <ul class="command-intro-list"><li>Use this when you want to explore folders, select a dashboard, inspect the live tree before fetching, diffing, importing, or deleting, review raw JSON edits inside the live TUI flow, or review a local export tree without calling Grafana.</li></ul>
 </div>
 <div class="command-intro-block">
   <p class="command-intro-label">Who this page is for</p>
@@ -781,9 +781,11 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="purpose">Purpose</h2>
 <p>Open the live dashboard tree or a local export tree in an interactive terminal UI.</p>
 <h2 id="when-to-use">When to use</h2>
-<p>Use this when you want to explore folders, select a dashboard, inspect the live tree before fetching, diffing, importing, or deleting, or review a local export tree without calling Grafana.</p>
+<p>Use this when you want to explore folders, select a dashboard, inspect the live tree before fetching, diffing, importing, or deleting, review raw JSON edits inside the live TUI flow, or review a local export tree without calling Grafana.</p>
 <h2 id="key-flags">Key flags</h2>
 <ul><li><code>--path</code>: start at one folder subtree instead of the full tree.</li><li><code>--input-dir</code>: browse a local raw export root, all-orgs export root, or provisioning tree.</li><li><code>--input-format</code>: interpret the local export tree as <code>raw</code> or <code>provisioning</code>.</li><li><code>--org-id</code>: browse one explicit Grafana org.</li><li><code>--all-orgs</code>: aggregate browse results across visible orgs. Requires Basic auth.</li><li>Shared live flags: <code>--url</code>, <code>--token</code>, <code>--basic-user</code>, <code>--basic-password</code>.</li></ul>
+<h2 id="live-tui-actions">Live TUI actions</h2>
+<ul><li><code>e</code>: open the metadata edit dialog for the selected live dashboard row.</li><li><code>E</code>: open the selected live dashboard JSON in your external editor, then return to a TUI review modal where you can preview publish, save a draft, apply live, or discard.</li><li><code>h</code>: inspect live revision history for the selected dashboard.</li><li><code>d</code> / <code>D</code>: preview delete actions for the selected dashboard or subtree.</li><li>Local browse stays read-only and does not offer these live actions.</li></ul>
 <h2 id="examples">Examples</h2>
 <pre><code># Purpose: Open the live dashboard tree in an interactive terminal UI.
 grafana-util dashboard browse --url http://localhost:3000 --basic-user admin --basic-password admin</code></pre>
@@ -798,7 +800,7 @@ grafana-util dashboard browse --input-dir ./dashboards/raw --path &#x27;Platform
   <aside class="sidebar">
   <button class="sidebar-toggle sidebar-toggle-right" type="button" aria-expanded="true" aria-label="Toggle page sidebar">▶</button>
   <div class="sidebar-content">
-    <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#purpose"><span class="toc-label">Purpose</span></a></li><li class="toc-level-2"><a href="#when-to-use"><span class="toc-label">When to use</span></a></li><li class="toc-level-2"><a href="#key-flags"><span class="toc-label">Key flags</span></a></li><li class="toc-level-2"><a href="#examples"><span class="toc-label">Examples</span></a></li><li class="toc-level-2"><a href="#related-commands"><span class="toc-label">Related commands</span></a></li></ul></section><section class="sidebar-section"><h2>Related</h2><ul class="sidebar-meta-list"><li><a href="../../handbook/en/dashboard.html" class="sidebar-meta-link">Matching handbook chapter</a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: English</a></li><li><a href="../zh-TW/dashboard-browse.html" class="sidebar-meta-link">Switch to 繁體中文</a></li></ul></section>
+    <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#purpose"><span class="toc-label">Purpose</span></a></li><li class="toc-level-2"><a href="#when-to-use"><span class="toc-label">When to use</span></a></li><li class="toc-level-2"><a href="#key-flags"><span class="toc-label">Key flags</span></a></li><li class="toc-level-2"><a href="#live-tui-actions"><span class="toc-label">Live TUI actions</span></a></li><li class="toc-level-2"><a href="#examples"><span class="toc-label">Examples</span></a></li><li class="toc-level-2"><a href="#related-commands"><span class="toc-label">Related commands</span></a></li></ul></section><section class="sidebar-section"><h2>Related</h2><ul class="sidebar-meta-list"><li><a href="../../handbook/en/dashboard.html" class="sidebar-meta-link">Matching handbook chapter</a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: English</a></li><li><a href="../zh-TW/dashboard-browse.html" class="sidebar-meta-link">Switch to 繁體中文</a></li></ul></section>
   </div>
 </aside>
 

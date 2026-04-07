@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.grafana-util.local/change/sync-apply-live-result.schema.json",
+  "title": "Change apply live result JSON schema",
+  "type": "object",
+  "required": [
+    "mode",
+    "appliedCount",
+    "results"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "kind": {},
+          "identity": {},
+          "action": {},
+          "response": {}
+        },
+        "required": [
+          "kind",
+          "identity",
+          "action",
+          "response"
+        ],
+        "additionalProperties": false
+      }
+    }
+  }
+}

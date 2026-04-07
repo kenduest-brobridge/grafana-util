@@ -606,7 +606,7 @@ fn build_dashboard_browse_document_for_org(
                     if local_mode {
                         format!("Source file: {}", string_field(summary, "sourceFile", "-"))
                     } else {
-                        "Advanced edit: press E to open raw dashboard JSON in an external editor."
+                        "Advanced edit: press E to open raw dashboard JSON, then review/apply/save it back in the TUI."
                             .to_string()
                     },
                     if local_mode {

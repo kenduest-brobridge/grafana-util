@@ -1,0 +1,60 @@
+[
+  {
+    "contractId": "project-status",
+    "title": "Project status JSON schema",
+    "kind": "grafana-util-project-status",
+    "schemaVersion": 1,
+    "goldenSample": "fixtures/machine_schema_golden_cases.json#project-status",
+    "topLevelKeys": [
+      "kind",
+      "schemaVersion",
+      "toolVersion",
+      "scope",
+      "overall",
+      "domains",
+      "topBlockers",
+      "nextActions"
+    ],
+    "nestedSections": [
+      {
+        "path": "overall",
+        "keys": [
+          "status",
+          "domainCount",
+          "presentCount",
+          "blockedCount",
+          "blockerCount",
+          "warningCount",
+          "freshness"
+        ]
+      },
+      {
+        "path": "domains[]",
+        "keys": [
+          "id",
+          "scope",
+          "mode",
+          "status",
+          "reasonCode",
+          "primaryCount",
+          "blockerCount",
+          "warningCount",
+          "sourceKinds",
+          "signalKeys",
+          "blockers",
+          "warnings",
+          "nextActions",
+          "freshness"
+        ]
+      },
+      {
+        "path": "topBlockers[]",
+        "keys": ["domain", "kind", "count", "source"]
+      },
+      {
+        "path": "nextActions[]",
+        "keys": ["domain", "reasonCode", "action"]
+      }
+    ]
+  }
+]

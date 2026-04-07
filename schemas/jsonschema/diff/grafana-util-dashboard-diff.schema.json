@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.grafana-util.local/diff/grafana-util-dashboard-diff.schema.json",
+  "title": "Dashboard diff JSON schema",
+  "type": "object",
+  "required": [
+    "kind",
+    "schemaVersion",
+    "toolVersion",
+    "summary",
+    "rows"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "summary": {
+      "type": "object",
+      "properties": {
+        "checked": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "same": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "different": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "missingRemote": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "extraRemote": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ambiguous": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "checked",
+        "same",
+        "different",
+        "missingRemote",
+        "extraRemote",
+        "ambiguous"
+      ],
+      "additionalProperties": false
+    },
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "domain": {
+            "type": "string"
+          },
+          "resourceKind": {
+            "type": "string"
+          },
+          "identity": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "path": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "changedFields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "diffText": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "contextLines": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          }
+        },
+        "required": [
+          "domain",
+          "resourceKind",
+          "identity",
+          "status",
+          "path",
+          "changedFields",
+          "diffText",
+          "contextLines"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "kind": {
+      "type": "string",
+      "const": "grafana-util-dashboard-diff"
+    },
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "toolVersion": {
+      "type": "string"
+    }
+  }
+}

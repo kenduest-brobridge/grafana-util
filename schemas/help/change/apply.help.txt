@@ -1,0 +1,16 @@
+Change apply JSON schema
+
+Commands:
+  grafana-util change apply --plan-file ./sync-plan-reviewed.json --approve --output-format json
+  grafana-util change apply --plan-file ./sync-plan-reviewed.json --approve --execute-live --profile prod --output-format json
+
+Contracts:
+
+- Default apply-intent kind -> grafana-utils-sync-apply-intent
+  top-level keys: kind, schemaVersion, toolVersion, mode, reviewed, reviewRequired, allowPrune, approved, summary, alertAssessment, operations, preflightSummary, bundlePreflightSummary, appliedBy, appliedAt, approvalReason, applyNote, traceId, stage, stepIndex, parentTraceId
+
+- Live execute shape (`--execute-live`) -> live apply result
+  top-level keys: mode, appliedCount, results
+
+Notes:
+- The live apply result reports one entry per operation under `results[]`, with `kind`, `identity`, `action`, and `response`.

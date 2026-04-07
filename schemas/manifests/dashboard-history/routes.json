@@ -1,0 +1,120 @@
+[
+  {
+    "routeId": "root.help",
+    "title": "Dashboard history JSON schema guide",
+    "intro": [
+      "Use this help surface when CI, scripts, or external tooling need to understand the machine-readable documents emitted by `dashboard history`."
+    ],
+    "generalRule": [
+      "Branch on `kind` plus `schemaVersion` before reading nested fields.",
+      "`dashboard history list` and `dashboard history restore` switch machine-readable output with `--output-format json`.",
+      "`dashboard history diff` compares two historical versions from live Grafana or local history artifacts.",
+      "`dashboard history export` always writes a JSON artifact through `--output`.",
+      "`dashboard history restore` does not rewind Grafana history in place; it copies one historical version forward as a new latest revision entry."
+    ],
+    "contractSectionHeading": "Subcommand contracts",
+    "contractSections": [
+      { "contractId": "dashboard-history-list", "label": "list" },
+      {
+        "contractId": "dashboard-history-inventory",
+        "label": "list inventory"
+      },
+      { "contractId": "dashboard-history-restore", "label": "restore" },
+      { "contractId": "dashboard-history-diff", "label": "diff" },
+      { "contractId": "dashboard-history-export", "label": "export" }
+    ],
+    "quickLookups": [
+      "grafana-util dashboard history --help-schema",
+      "grafana-util dashboard history list --help-schema",
+      "grafana-util dashboard history restore --help-schema",
+      "grafana-util dashboard history diff --help-schema",
+      "grafana-util dashboard history export --help-schema"
+    ]
+  },
+  {
+    "routeId": "list.help",
+    "title": "Dashboard history list JSON schema",
+    "commands": [
+      "grafana-util dashboard history list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --dashboard-uid cpu-main --output-format json",
+      "grafana-util dashboard history list --input ./cpu-main.history.json --output-format json",
+      "grafana-util dashboard history list --input-dir ./dashboards --output-format json"
+    ],
+    "contractSectionHeading": "Kinds",
+    "contractSections": [
+      {
+        "contractId": "dashboard-history-list",
+        "label": "grafana-util-dashboard-history-list",
+        "description": "returned for one dashboard history stream from live Grafana or one local artifact",
+        "showNested": true
+      },
+      {
+        "contractId": "dashboard-history-inventory",
+        "label": "grafana-util-dashboard-history-inventory",
+        "description": "returned when `--input-dir` is used without `--dashboard-uid`, so you can inventory available history artifacts first",
+        "showNested": true
+      }
+    ]
+  },
+  {
+    "routeId": "restore.help",
+    "title": "Dashboard history restore JSON schema",
+    "commands": [
+      "grafana-util dashboard history restore --url http://localhost:3000 --basic-user admin --basic-password admin --dashboard-uid cpu-main --version 17 --dry-run --output-format json"
+    ],
+    "contractSections": [
+      {
+        "contractId": "dashboard-history-restore",
+        "showNested": true
+      }
+    ],
+    "notes": [
+      "`--dry-run` renders the same contract without mutating Grafana.",
+      "A live restore still creates a new latest revision entry; it does not remove the historical version you selected.",
+      "Grafana may keep the same numeric `version` in some environments, so treat the new history entry and message as the reliable signal."
+    ]
+  },
+  {
+    "routeId": "diff.help",
+    "title": "Dashboard history diff JSON schema",
+    "commands": [
+      "grafana-util dashboard history diff --url http://localhost:3000 --basic-user admin --basic-password admin --base-dashboard-uid cpu-main --base-version 17 --new-dashboard-uid cpu-main --new-version 21 --output-format text",
+      "grafana-util dashboard history diff --base-input ./exports-2026-04-01/history/cpu-main.history.json --base-version 17 --new-input ./exports-2026-04-07/history/cpu-main.history.json --new-version 21 --output-format json",
+      "grafana-util dashboard history diff --base-input-dir ./exports-2026-04-01 --base-dashboard-uid cpu-main --base-version 17 --new-input-dir ./exports-2026-04-07 --new-dashboard-uid cpu-main --new-version 21 --output-format json"
+    ],
+    "generalRule": [
+      "Branch on `kind` plus `schemaVersion` before reading nested fields.",
+      "`--output-format json` is the machine-readable path.",
+      "Each side is resolved independently from live Grafana, one reusable history artifact, or one export root created with `dashboard export --include-history`."
+    ],
+    "contractSections": [
+      {
+        "contractId": "dashboard-history-diff",
+        "showNested": true
+      }
+    ],
+    "notes": [
+      "Use the `base` and `new` flags symmetrically so the compare source is explicit.",
+      "Two dated export roots for the same dashboard UID can be compared directly."
+    ],
+    "quickLookups": [
+      "grafana-util dashboard history diff --help-schema"
+    ]
+  },
+  {
+    "routeId": "export.help",
+    "title": "Dashboard history export JSON schema",
+    "commands": [
+      "grafana-util dashboard history export --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --dashboard-uid cpu-main --output ./cpu-main.history.json"
+    ],
+    "contractSections": [
+      {
+        "contractId": "dashboard-history-export",
+        "showNested": true
+      }
+    ],
+    "notes": [
+      "This command always writes the JSON contract to `--output`.",
+      "Use `--overwrite` when you intentionally want to replace an existing artifact file."
+    ]
+  }
+]

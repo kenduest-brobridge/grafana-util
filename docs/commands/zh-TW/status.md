@@ -24,6 +24,11 @@ grafana-util status live --url http://localhost:3000 --token "$GRAFANA_API_TOKEN
 
 相關指令：`grafana-util overview`、`grafana-util change check`、`grafana-util change apply`。
 
+Schema guide：
+- `grafana-util status --help-schema`
+- `grafana-util status staged --help-schema`
+- `grafana-util status live --help-schema`
+
 ## `staged`
 
 用途：根據已準備好的 artifact 輸出專案狀態。
@@ -45,6 +50,8 @@ grafana-util status staged --dashboard-provisioning-dir ./dashboards/provisionin
 ```
 
 相關指令：`grafana-util overview`、`grafana-util change inspect`、`grafana-util change check`。
+
+Machine-readable contract：`grafana-util-project-status`
 
 ## `live`
 
@@ -76,3 +83,5 @@ grafana-util status live --url http://localhost:3000 --token "$GRAFANA_API_TOKEN
 ```
 
 相關指令：`grafana-util overview live`、`grafana-util change apply`、`grafana-util profile show`。
+
+Machine-readable contract：`grafana-util-project-status`

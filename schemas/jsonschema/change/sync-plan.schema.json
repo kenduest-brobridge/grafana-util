@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.grafana-util.local/change/sync-plan.schema.json",
+  "title": "Change plan JSON schema",
+  "type": "object",
+  "required": [
+    "kind",
+    "schemaVersion",
+    "toolVersion",
+    "dryRun",
+    "reviewRequired",
+    "reviewed",
+    "allowPrune",
+    "summary",
+    "alertAssessment",
+    "operations",
+    "traceId",
+    "stage",
+    "stepIndex",
+    "parentTraceId"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "summary": {
+      "type": "object",
+      "properties": {
+        "operationCount": {},
+        "blocked_reasons": {}
+      },
+      "required": [
+        "operationCount",
+        "blocked_reasons"
+      ],
+      "additionalProperties": false
+    },
+    "operations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "kind": {},
+          "identity": {},
+          "action": {},
+          "orderIndex": {},
+          "orderGroup": {},
+          "kindOrder": {}
+        },
+        "required": [
+          "kind",
+          "identity",
+          "action",
+          "orderIndex",
+          "orderGroup",
+          "kindOrder"
+        ],
+        "additionalProperties": false
+      }
+    }
+  }
+}

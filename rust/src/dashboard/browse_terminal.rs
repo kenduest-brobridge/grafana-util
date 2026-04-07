@@ -34,6 +34,8 @@ impl TerminalSession {
     pub(crate) fn resume(&mut self) -> Result<()> {
         enable_raw_mode()?;
         execute!(self.terminal.backend_mut(), EnterAlternateScreen)?;
+        self.terminal.autoresize()?;
+        self.terminal.clear()?;
         self.terminal.hide_cursor()?;
         Ok(())
     }

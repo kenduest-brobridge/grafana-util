@@ -43,7 +43,7 @@ grafana\-util datasource is the namespace for catalog lookup, inventory reads, e
 Run the access\-management command surface for users, orgs, teams, and service accounts. Use when: List live or local access inventory.; Create, modify, export, import, diff, or delete access resources.; Manage service\-account tokens.
 .TP
 .B profile
-list, inspect, add, and initialize repo\-local grafana\-util profiles. Use when: Want to keep Grafana connection defaults in the current checkout and reuse them with \-\-profile.
+list, inspect, validate, add, and initialize repo\-local grafana\-util profiles. Use when: Want to keep Grafana connection defaults in the current checkout and reuse them with \-\-profile.
 .TP
 .B status
 render shared project\-wide staged or live status. Use when: Need the final gate view for exported artifacts or live Grafana state.
@@ -60,7 +60,7 @@ export and review Grafana snapshot inventory bundles. Use when: Want a local sna
 .SS dashboard
 .TP
 .B grafana\-util\-dashboard\-browse(1)
-Open the live dashboard tree or a local export tree in an interactive terminal UI. Use when: You want to explore folders, select a dashboard, inspect the live tree before fetching, diffing, importing, or deleting, or review a local export tree without calling Grafana.
+Open the live dashboard tree or a local export tree in an interactive terminal UI. Use when: You want to explore folders, select a dashboard, inspect the live tree before fetching, diffing, importing, or deleting, review raw JSON edits inside the live TUI flow, or review a local export tree without calling Grafana.
 .TP
 .B grafana\-util\-dashboard\-fetch\-live(1)
 Fetch one live dashboard into an API\-safe local JSON draft. Use when: You need a local copy of one live dashboard for review, patching, cloning, or later publish work.
@@ -216,6 +216,12 @@ list profile names from the resolved grafana\-util config file. Use when: Need t
 .B grafana\-util\-profile\-show(1)
 show the selected profile as text, table, csv, json, or yaml. Use when: Want to inspect the resolved connection settings before running a live command.
 .TP
+.B grafana\-util\-profile\-current(1)
+show the currently selected profile, resolved config path, auth mode, and secret mode. Use when: Want to confirm which repo\-local profile would be used before a live command runs.
+.TP
+.B grafana\-util\-profile\-validate(1)
+validate the selected profile and optionally check Grafana reachability. Use when: Want to confirm profile selection, auth shape, and secret resolution before running a live command.
+.TP
 .B grafana\-util\-profile\-add(1)
 create or replace one named profile without hand\-editing grafana\-util.yaml. Use when: Want a friendlier path than editing YAML directly, especially for storing reusable auth defaults.
 .TP
@@ -292,11 +298,11 @@ Preview what would change from discovered or explicit staged inputs. Use when: Y
 .SS dashboard
 .TP
 .B grafana\-util\-dashboard\-edit\-live(1)
-Fetch one live dashboard into an external editor with a safe local\-draft default. Use when: Grafana already has the closest source dashboard and you want to edit that payload directly, but you do not want the default path to write straight back to Grafana.
+Fetch one live dashboard into an external editor, then preview, save, or apply the edited result. Use when: Grafana already has the closest source dashboard and you want to edit that payload directly, while keeping a clear choice between preview\-only, saved draft, and direct live apply flows.
 .SS dashboard
 .TP
 .B grafana\-util\-dashboard\-history(1)
-List, restore, or export dashboard revision history for one dashboard UID, whether it comes from live Grafana or from local history artifacts. Use when: You need to inspect earlier dashboard versions, recover a known\-good revision, or export dashboard history into a reusable artifact for review or CI. You can also read the same history back from a single exported artifact or an export tree with included history.
+List, restore, diff, or export dashboard revision history for one dashboard UID, whether it comes from live Grafana or from local history artifacts. Use when: You need to inspect earlier dashboard versions, recover a known\-good revision, or export dashboard history into a reusable artifact for review or CI. You can also read the same history back from a single exported artifact or an export tree with included history.
 .SS dashboard
 .TP
 .B grafana\-util\-dashboard\-impact(1)

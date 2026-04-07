@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.grafana-util.local/diff/grafana-util-datasource-diff.schema.json",
+  "title": "Datasource diff JSON schema",
+  "type": "object",
+  "required": [
+    "kind",
+    "schemaVersion",
+    "toolVersion",
+    "summary",
+    "rows"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "summary": {
+      "type": "object",
+      "properties": {
+        "checked": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "same": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "different": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "missingRemote": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "extraRemote": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ambiguous": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "checked",
+        "same",
+        "different",
+        "missingRemote",
+        "extraRemote",
+        "ambiguous"
+      ],
+      "additionalProperties": false
+    },
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "domain": {
+            "type": "string"
+          },
+          "resourceKind": {
+            "type": "string"
+          },
+          "identity": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "path": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "changedFields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "changes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "field": {
+                  "type": "string"
+                },
+                "before": {
+                  "type": [
+                    "string",
+                    "number",
+                    "integer",
+                    "boolean",
+                    "null",
+                    "object",
+                    "array"
+                  ]
+                },
+                "after": {
+                  "type": [
+                    "string",
+                    "number",
+                    "integer",
+                    "boolean",
+                    "null",
+                    "object",
+                    "array"
+                  ]
+                }
+              },
+              "required": [
+                "field",
+                "before",
+                "after"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "domain",
+          "resourceKind",
+          "identity",
+          "status",
+          "path",
+          "changedFields",
+          "changes"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "kind": {
+      "type": "string",
+      "const": "grafana-util-datasource-diff"
+    },
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "toolVersion": {
+      "type": "string"
+    }
+  }
+}

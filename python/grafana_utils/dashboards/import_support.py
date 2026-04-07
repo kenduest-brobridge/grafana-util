@@ -443,6 +443,8 @@ def build_import_payload(
     folder_uid = folder_uid_override
     if folder_uid is None and isinstance(meta, dict):
         folder_uid = meta.get("folderUid")
+    if folder_uid is None:
+        folder_uid = document.get("folderUid")
 
     payload = {
         "dashboard": dashboard,

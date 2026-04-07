@@ -16,6 +16,7 @@ mod authoring;
 mod browse;
 mod browse_actions;
 mod browse_edit_dialog;
+mod browse_external_edit_dialog;
 mod browse_history_dialog;
 mod browse_input;
 mod browse_render;
@@ -31,7 +32,6 @@ mod delete_support;
 mod edit;
 mod edit_external;
 mod edit_live;
-mod edit_prompt;
 mod export;
 mod facade_support;
 mod files;
@@ -105,12 +105,12 @@ pub use cli_defs::{
     DashboardCliArgs, DashboardCommand, DashboardHistoryArgs, DashboardHistorySubcommand,
     DashboardImportInputFormat, DashboardServeScriptFormat, DeleteArgs, DiffArgs, EditLiveArgs,
     ExportArgs, GetArgs, GovernanceGateArgs, GovernanceGateOutputFormat, GovernancePolicySource,
-    HistoryExportArgs, HistoryListArgs, HistoryOutputFormat, HistoryRestoreArgs, ImpactArgs,
-    ImpactOutputFormat, ImportArgs, InspectExportArgs, InspectExportReportFormat, InspectLiveArgs,
-    InspectOutputFormat, InspectVarsArgs, ListArgs, PatchFileArgs, PublishArgs, RawToPromptArgs,
-    RawToPromptLogFormat, RawToPromptOutputFormat, RawToPromptResolution, ReviewArgs,
-    ScreenshotArgs, ScreenshotFullPageOutput, ScreenshotOutputFormat, ScreenshotTheme, ServeArgs,
-    SimpleOutputFormat, TopologyArgs, TopologyOutputFormat, ValidateExportArgs,
+    HistoryDiffArgs, HistoryExportArgs, HistoryListArgs, HistoryOutputFormat, HistoryRestoreArgs,
+    ImpactArgs, ImpactOutputFormat, ImportArgs, InspectExportArgs, InspectExportReportFormat,
+    InspectLiveArgs, InspectOutputFormat, InspectVarsArgs, ListArgs, PatchFileArgs, PublishArgs,
+    RawToPromptArgs, RawToPromptLogFormat, RawToPromptOutputFormat, RawToPromptResolution,
+    ReviewArgs, ScreenshotArgs, ScreenshotFullPageOutput, ScreenshotOutputFormat, ScreenshotTheme,
+    ServeArgs, SimpleOutputFormat, TopologyArgs, TopologyOutputFormat, ValidateExportArgs,
     ValidationOutputFormat,
 };
 pub use export::{build_export_variant_dirs, build_output_path, export_dashboards_with_client};
@@ -133,7 +133,7 @@ use delete::delete_dashboards_with_org_clients;
 use edit_live::run_dashboard_edit_live;
 use export::export_dashboards_with_org_clients;
 use history::{
-    export_dashboard_history_with_request, run_dashboard_history_list,
+    export_dashboard_history_with_request, run_dashboard_history_diff, run_dashboard_history_list,
     run_dashboard_history_restore,
 };
 use inspect::analyze_export_dir;
@@ -671,6 +671,13 @@ pub fn run_dashboard_cli_with_client(
                 },
                 &list_args,
             ),
+            DashboardHistorySubcommand::Diff(diff_args) => run_dashboard_history_diff(
+                |method, path, params, payload| {
+                    request_json_with_client(client, method, path, params, payload)
+                },
+                &diff_args,
+            )
+            .map(|_| ()),
             DashboardHistorySubcommand::Restore(restore_args) => run_dashboard_history_restore(
                 |method, path, params, payload| {
                     request_json_with_client(client, method, path, params, payload)
@@ -831,6 +838,30 @@ pub fn run_dashboard_cli(args: DashboardCliArgs) -> Result<()> {
                         },
                         &list_args,
                     )
+                }
+            }
+            DashboardHistorySubcommand::Diff(diff_args) => {
+                if diff_args.base_input.is_none() && diff_args.base_input_dir.is_none()
+                    || diff_args.new_input.is_none() && diff_args.new_input_dir.is_none()
+                {
+                    let client = build_http_client(&diff_args.common)?;
+                    run_dashboard_history_diff(
+                        |method, path, params, payload| {
+                            request_json_with_client(&client, method, path, params, payload)
+                        },
+                        &diff_args,
+                    )
+                    .map(|_| ())
+                } else {
+                    run_dashboard_history_diff(
+                        |_method, _path, _params, _payload| {
+                            Err(message(
+                                "dashboard history diff local mode should not call Grafana",
+                            ))
+                        },
+                        &diff_args,
+                    )
+                    .map(|_| ())
                 }
             }
             DashboardHistorySubcommand::Restore(restore_args) => {

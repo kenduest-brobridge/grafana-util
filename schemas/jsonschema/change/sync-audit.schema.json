@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.grafana-util.local/change/sync-audit.schema.json",
+  "title": "Change audit JSON schema",
+  "type": "object",
+  "required": [
+    "kind",
+    "schemaVersion",
+    "toolVersion",
+    "summary",
+    "currentLock",
+    "baselineLock",
+    "drifts"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "summary": {
+      "type": "object",
+      "properties": {
+        "managedCount": {},
+        "driftCount": {}
+      },
+      "required": [
+        "managedCount",
+        "driftCount"
+      ],
+      "additionalProperties": false
+    },
+    "drifts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "kind": {},
+          "identity": {},
+          "status": {},
+          "driftedFields": {},
+          "sourcePath": {}
+        },
+        "required": [
+          "kind",
+          "identity",
+          "status",
+          "driftedFields",
+          "sourcePath"
+        ],
+        "additionalProperties": false
+      }
+    }
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.grafana-util.local/change/sync-preflight.schema.json",
+  "title": "Change preflight JSON schema",
+  "type": "object",
+  "required": [
+    "kind",
+    "schemaVersion",
+    "toolVersion",
+    "summary",
+    "checks"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "summary": {
+      "type": "object",
+      "properties": {
+        "checkCount": {},
+        "blockingCount": {}
+      },
+      "required": [
+        "checkCount",
+        "blockingCount"
+      ],
+      "additionalProperties": false
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "kind": {},
+          "identity": {},
+          "status": {},
+          "detail": {},
+          "blocking": {}
+        },
+        "required": [
+          "kind",
+          "identity",
+          "status",
+          "detail",
+          "blocking"
+        ],
+        "additionalProperties": false
+      }
+    }
+  }
+}

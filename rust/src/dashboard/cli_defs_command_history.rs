@@ -1,5 +1,6 @@
 //! CLI definitions for dashboard history workflows.
 
+use crate::common::DiffOutputFormat;
 use clap::{Args, Subcommand};
 use std::path::PathBuf;
 
@@ -106,6 +107,74 @@ pub struct HistoryExportArgs {
     pub overwrite: bool,
 }
 
+/// Arguments for comparing two historical dashboard revisions.
+#[derive(Debug, Clone, Args)]
+pub struct HistoryDiffArgs {
+    #[command(flatten)]
+    pub common: CommonCliArgs,
+    #[arg(
+        long = "base-dashboard-uid",
+        help = "Base-side dashboard UID for live Grafana history or for selecting one artifact under --base-input-dir."
+    )]
+    pub base_dashboard_uid: Option<String>,
+    #[arg(
+        long = "base-input",
+        value_name = "FILE",
+        conflicts_with = "base_input_dir",
+        help = "Base-side local history artifact JSON produced by `dashboard history export`."
+    )]
+    pub base_input: Option<PathBuf>,
+    #[arg(
+        long = "base-input-dir",
+        value_name = "DIR",
+        conflicts_with = "base_input",
+        help = "Base-side dashboard export root produced by `dashboard export --include-history`."
+    )]
+    pub base_input_dir: Option<PathBuf>,
+    #[arg(
+        long = "new-dashboard-uid",
+        help = "New-side dashboard UID for live Grafana history or for selecting one artifact under --new-input-dir."
+    )]
+    pub new_dashboard_uid: Option<String>,
+    #[arg(
+        long = "new-input",
+        value_name = "FILE",
+        conflicts_with = "new_input_dir",
+        help = "New-side local history artifact JSON produced by `dashboard history export`."
+    )]
+    pub new_input: Option<PathBuf>,
+    #[arg(
+        long = "new-input-dir",
+        value_name = "DIR",
+        conflicts_with = "new_input",
+        help = "New-side dashboard export root produced by `dashboard export --include-history`."
+    )]
+    pub new_input_dir: Option<PathBuf>,
+    #[arg(
+        long = "base-version",
+        help = "Base-side dashboard history version number."
+    )]
+    pub base_version: i64,
+    #[arg(
+        long = "new-version",
+        help = "New-side dashboard history version number."
+    )]
+    pub new_version: i64,
+    #[arg(
+        long,
+        value_enum,
+        default_value_t = DiffOutputFormat::Text,
+        help = "Render history diff as text or json."
+    )]
+    pub output_format: DiffOutputFormat,
+    #[arg(
+        long,
+        default_value_t = 3,
+        help = "Number of unified diff context lines."
+    )]
+    pub context_lines: usize,
+}
+
 /// Dashboard history subcommands.
 #[derive(Debug, Clone, Subcommand)]
 pub enum DashboardHistorySubcommand {
@@ -121,6 +190,12 @@ pub enum DashboardHistorySubcommand {
         after_help = "Examples:\n\n  Preview a restore without changing Grafana:\n    grafana-util dashboard history restore --url http://localhost:3000 --basic-user admin --basic-password admin --dashboard-uid cpu-main --version 17 --dry-run --output-format table\n\n  Restore a historical version and record a new revision message:\n    grafana-util dashboard history restore --url http://localhost:3000 --basic-user admin --basic-password admin --dashboard-uid cpu-main --version 17 --message 'Restore known good CPU dashboard after regression' --yes"
     )]
     Restore(HistoryRestoreArgs),
+    #[command(
+        name = "diff",
+        about = "Compare two historical dashboard revisions from live Grafana or local history artifacts.",
+        after_help = "Examples:\n\n  Compare two live revisions from Grafana:\n    grafana-util dashboard history diff --url http://localhost:3000 --basic-user admin --basic-password admin --base-dashboard-uid cpu-main --base-version 17 --new-dashboard-uid cpu-main --new-version 21\n\n  Compare two versions from one local history artifact:\n    grafana-util dashboard history diff --base-input ./cpu-main.history.json --base-version 17 --new-input ./cpu-main.history.json --new-version 21 --output-format json\n\n  Compare two dated export roots for the same dashboard UID:\n    grafana-util dashboard history diff --base-input-dir ./exports-2026-04-01 --base-dashboard-uid cpu-main --base-version 17 --new-input-dir ./exports-2026-04-07 --new-dashboard-uid cpu-main --new-version 21 --output-format json"
+    )]
+    Diff(HistoryDiffArgs),
     #[command(
         name = "export",
         about = "Export dashboard revision history into a reusable JSON artifact.",

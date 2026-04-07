@@ -1,6 +1,6 @@
 VERSIONING_TARGETS := help print-version sync-version set-release-version set-dev-version
 PYTHON_TARGETS := poetry-install poetry-lock poetry-test poetry-quality-python build-python
-DOC_TARGETS := man man-check html html-check pages-site
+DOC_TARGETS := man man-check html html-check pages-site schema schema-check
 RUST_BUILD_TARGETS := build-rust build-rust-browser build-rust-native build-rust-native-browser build-rust-host build-rust-host-browser build-rust-macos-arm64 build-rust-macos-arm64-browser build-rust-linux-amd64 build-rust-linux-amd64-browser build-rust-linux-amd64-docker build-rust-linux-amd64-browser-docker build-rust-linux-amd64-zig validate-rust-linux-amd64-artifact validate-rust-linux-amd64-browser-artifact
 QUALITY_TARGETS := test test-python test-rust fmt-rust-check lint-rust quality quality-python quality-rust quality-ai-workflow quality-alert-rust quality-sync-rust
 LIVE_TARGETS := seed-grafana-sample-data destroy-grafana-sample-data reset-grafana-all-data test-rust-live test-sync-live test-alert-live test-alert-live-artifact test-alert-live-replay test-access-live test-python-datasource-live test-datasource-live
@@ -56,6 +56,8 @@ endef
 
 define HELP_DOCS
 $(BLUE)$(BOLD)Docs$(RESET)
+  $(GREEN)make schema$(RESET)  Regenerate checked-in JSON Schema and schema-help artifacts from schemas/manifests/
+  $(GREEN)make schema-check$(RESET)  Fail if checked-in schemas/jsonschema/ or schemas/help/ artifacts are out of date
   $(GREEN)make man$(RESET)  Regenerate grafana-util, dashboard, alert, datasource, access, profile, status, overview, change, and snapshot manpages
   $(GREEN)make man-check$(RESET)  Fail if those checked-in docs/man/*.1 pages are out of date
   $(GREEN)make html$(RESET)  Regenerate the HTML docs site: handbook + command reference, with docs/html/index.html as the entrypoint
@@ -157,6 +159,12 @@ poetry-test:
 
 poetry-quality-python:
 	$(PYTHON_POETRY_RUN) env PYTHON=python PYTHONPATH=. ../scripts/check-python-quality.sh
+
+schema:
+	$(PYTHON) ./scripts/generate_schema_artifacts.py --write
+
+schema-check:
+	$(PYTHON) ./scripts/generate_schema_artifacts.py --check
 
 man:
 	$(PYTHON) ./scripts/generate_manpages.py --write

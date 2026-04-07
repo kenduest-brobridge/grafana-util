@@ -1,0 +1,41 @@
+Dashboard diff JSON schema
+
+Command:
+  grafana-util dashboard diff --url http://localhost:3000 --basic-user admin --basic-password admin --input-dir ./dashboards/raw --output-format json
+
+General rule:
+- Branch on `kind` plus `schemaVersion` before reading nested fields.
+- `--output-format json` is the machine-readable path.
+
+kind:
+  grafana-util-dashboard-diff
+
+Top-level keys:
+- kind
+- schemaVersion
+- toolVersion
+- summary
+- rows
+- summary
+  - checked
+  - same
+  - different
+  - missingRemote
+  - extraRemote
+  - ambiguous
+- rows[]
+  - domain
+  - resourceKind
+  - identity
+  - status
+  - path
+  - changedFields
+  - diffText
+  - contextLines
+
+Quick lookups:
+- grafana-util dashboard diff --help-schema
+
+Notes:
+- `diffText` carries the compact diff preview for review tooling.
+- Use `contextLines` to understand how much surrounding diff context was rendered.

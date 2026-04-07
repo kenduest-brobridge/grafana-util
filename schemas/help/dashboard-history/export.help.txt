@@ -1,0 +1,27 @@
+Dashboard history export JSON schema
+
+Command:
+  grafana-util dashboard history export --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --dashboard-uid cpu-main --output ./cpu-main.history.json
+
+kind:
+  grafana-util-dashboard-history-export
+
+Top-level keys:
+- kind
+- schemaVersion
+- toolVersion
+- dashboardUid
+- currentVersion
+- currentTitle
+- versionCount
+- versions
+- versions[]
+  - version
+  - created
+  - createdBy
+  - message
+  - dashboard
+
+Notes:
+- This command always writes the JSON contract to `--output`.
+- Use `--overwrite` when you intentionally want to replace an existing artifact file.

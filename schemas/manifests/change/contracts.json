@@ -1,0 +1,277 @@
+[
+  {
+    "contractId": "sync-summary",
+    "title": "Change summary JSON schema",
+    "kind": "grafana-utils-sync-summary",
+    "schemaVersion": 1,
+    "goldenSample": "fixtures/machine_schema_golden_cases.json#sync-summary",
+    "topLevelKeys": ["kind", "schemaVersion", "toolVersion", "summary", "resources"],
+    "nestedSections": [
+      {
+        "path": "summary",
+        "keys": ["resourceCount", "blockingCount"]
+      },
+      {
+        "path": "resources[]",
+        "keys": ["kind", "identity", "action"]
+      }
+    ]
+  },
+  {
+    "contractId": "sync-plan",
+    "title": "Change plan JSON schema",
+    "kind": "grafana-utils-sync-plan",
+    "schemaVersion": 1,
+    "goldenSample": "fixtures/machine_schema_golden_cases.json#sync-plan",
+    "topLevelKeys": [
+      "kind",
+      "schemaVersion",
+      "toolVersion",
+      "dryRun",
+      "reviewRequired",
+      "reviewed",
+      "allowPrune",
+      "summary",
+      "alertAssessment",
+      "operations",
+      "traceId",
+      "stage",
+      "stepIndex",
+      "parentTraceId"
+    ],
+    "nestedSections": [
+      {
+        "path": "summary",
+        "keys": ["operationCount", "blocked_reasons"]
+      },
+      {
+        "path": "operations[]",
+        "keys": ["kind", "identity", "action", "orderIndex", "orderGroup", "kindOrder"]
+      }
+    ]
+  },
+  {
+    "contractId": "sync-plan-reviewed",
+    "title": "Change review JSON schema",
+    "kind": "grafana-utils-sync-plan",
+    "schemaVersion": 1,
+    "goldenSample": "fixtures/machine_schema_golden_cases.json#sync-plan-reviewed",
+    "topLevelKeys": [
+      "kind",
+      "schemaVersion",
+      "toolVersion",
+      "dryRun",
+      "reviewRequired",
+      "reviewed",
+      "allowPrune",
+      "summary",
+      "alertAssessment",
+      "operations",
+      "traceId",
+      "stage",
+      "stepIndex",
+      "parentTraceId",
+      "reviewedBy",
+      "reviewedAt",
+      "reviewNote"
+    ],
+    "nestedSections": [
+      {
+        "path": "summary",
+        "keys": ["operationCount", "blocked_reasons"]
+      },
+      {
+        "path": "operations[]",
+        "keys": ["kind", "identity", "action", "orderIndex", "orderGroup", "kindOrder"]
+      }
+    ]
+  },
+  {
+    "contractId": "sync-apply-intent",
+    "title": "Change apply JSON schema",
+    "kind": "grafana-utils-sync-apply-intent",
+    "schemaVersion": 1,
+    "goldenSample": "fixtures/machine_schema_golden_cases.json#sync-apply-intent",
+    "topLevelKeys": [
+      "kind",
+      "schemaVersion",
+      "toolVersion",
+      "mode",
+      "reviewed",
+      "reviewRequired",
+      "allowPrune",
+      "approved",
+      "summary",
+      "alertAssessment",
+      "operations",
+      "preflightSummary",
+      "bundlePreflightSummary",
+      "appliedBy",
+      "appliedAt",
+      "approvalReason",
+      "applyNote",
+      "traceId",
+      "stage",
+      "stepIndex",
+      "parentTraceId"
+    ],
+    "nestedSections": [
+      {
+        "path": "summary",
+        "keys": ["operationCount", "blockingCount"]
+      },
+      {
+        "path": "operations[]",
+        "keys": ["kind", "identity", "action"]
+      }
+    ]
+  },
+  {
+    "contractId": "sync-apply-live-result",
+    "title": "Change apply live result JSON schema",
+    "goldenSample": "fixtures/machine_schema_golden_cases.json#sync-apply-live-result",
+    "topLevelKeys": ["mode", "appliedCount", "results"],
+    "nestedSections": [
+      {
+        "path": "results[]",
+        "keys": ["kind", "identity", "action", "response"]
+      }
+    ]
+  },
+  {
+    "contractId": "sync-audit",
+    "title": "Change audit JSON schema",
+    "kind": "grafana-utils-sync-audit",
+    "schemaVersion": 1,
+    "goldenSample": "fixtures/machine_schema_golden_cases.json#sync-audit",
+    "topLevelKeys": [
+      "kind",
+      "schemaVersion",
+      "toolVersion",
+      "summary",
+      "currentLock",
+      "baselineLock",
+      "drifts"
+    ],
+    "nestedSections": [
+      {
+        "path": "summary",
+        "keys": ["managedCount", "driftCount"]
+      },
+      {
+        "path": "drifts[]",
+        "keys": ["kind", "identity", "status", "driftedFields", "sourcePath"]
+      }
+    ]
+  },
+  {
+    "contractId": "sync-preflight",
+    "title": "Change preflight JSON schema",
+    "kind": "grafana-utils-sync-preflight",
+    "schemaVersion": 1,
+    "goldenSample": "fixtures/machine_schema_golden_cases.json#sync-preflight",
+    "topLevelKeys": ["kind", "schemaVersion", "toolVersion", "summary", "checks"],
+    "nestedSections": [
+      {
+        "path": "summary",
+        "keys": ["checkCount", "blockingCount"]
+      },
+      {
+        "path": "checks[]",
+        "keys": ["kind", "identity", "status", "detail", "blocking"]
+      }
+    ]
+  },
+  {
+    "contractId": "alert-sync-plan",
+    "title": "Change assess-alerts JSON schema",
+    "kind": "grafana-utils-alert-sync-plan",
+    "schemaVersion": 1,
+    "goldenSample": "fixtures/machine_schema_golden_cases.json#alert-sync-plan",
+    "topLevelKeys": ["kind", "schemaVersion", "toolVersion", "summary", "alerts"],
+    "nestedSections": [
+      {
+        "path": "summary",
+        "keys": ["alertCount", "blockingCount"]
+      },
+      {
+        "path": "alerts[]",
+        "keys": ["kind", "identity", "status"]
+      }
+    ]
+  },
+  {
+    "contractId": "sync-bundle-preflight",
+    "title": "Change bundle-preflight JSON schema",
+    "kind": "grafana-utils-sync-bundle-preflight",
+    "schemaVersion": 1,
+    "goldenSample": "fixtures/machine_schema_golden_cases.json#sync-bundle-preflight",
+    "topLevelKeys": [
+      "kind",
+      "schemaVersion",
+      "summary",
+      "syncPreflight",
+      "alertArtifactAssessment",
+      "secretPlaceholderAssessment",
+      "providerAssessment"
+    ]
+  },
+  {
+    "contractId": "sync-promotion-preflight",
+    "title": "Change promotion-preflight JSON schema",
+    "kind": "grafana-utils-sync-promotion-preflight",
+    "schemaVersion": 1,
+    "goldenSample": "fixtures/machine_schema_golden_cases.json#sync-promotion-preflight",
+    "topLevelKeys": [
+      "kind",
+      "schemaVersion",
+      "toolVersion",
+      "summary",
+      "bundlePreflight",
+      "mappingSummary",
+      "checkSummary",
+      "handoffSummary",
+      "continuationSummary",
+      "checks",
+      "resolvedChecks",
+      "blockingChecks"
+    ],
+    "nestedSections": [
+      {
+        "path": "checks[]",
+        "keys": ["kind", "identity", "status"]
+      },
+      {
+        "path": "resolvedChecks[]",
+        "keys": ["kind", "identity", "status"]
+      },
+      {
+        "path": "blockingChecks[]",
+        "keys": ["kind", "identity", "status"]
+      }
+    ]
+  },
+  {
+    "contractId": "sync-source-bundle",
+    "title": "Change bundle JSON schema",
+    "kind": "grafana-utils-sync-source-bundle",
+    "schemaVersion": 1,
+    "goldenSample": "fixtures/machine_schema_golden_cases.json#sync-source-bundle",
+    "topLevelKeys": [
+      "kind",
+      "schemaVersion",
+      "toolVersion",
+      "summary",
+      "resources",
+      "providers",
+      "secretPlaceholders",
+      "alertArtifacts"
+    ],
+    "nestedSections": [
+      {
+        "path": "resources[]",
+        "keys": ["kind", "identity", "sourcePath"]
+      }
+    ]
+  }
+]

@@ -1,0 +1,44 @@
+Datasource diff JSON schema
+
+Command:
+  grafana-util datasource diff --url http://localhost:3000 --basic-user admin --basic-password admin --diff-dir ./datasources --input-format inventory --output-format json
+
+General rule:
+- Branch on `kind` plus `schemaVersion` before reading nested fields.
+- `--output-format json` is the machine-readable path.
+
+kind:
+  grafana-util-datasource-diff
+
+Top-level keys:
+- kind
+- schemaVersion
+- toolVersion
+- summary
+- rows
+- summary
+  - checked
+  - same
+  - different
+  - missingRemote
+  - extraRemote
+  - ambiguous
+- rows[]
+  - domain
+  - resourceKind
+  - identity
+  - status
+  - path
+  - changedFields
+  - changes
+- rows[].changes[]
+  - field
+  - before
+  - after
+
+Quick lookups:
+- grafana-util datasource diff --help-schema
+
+Notes:
+- `changes[]` is the field-level drift review surface.
+- `path` is null for datasource diff rows because the compare key is resource-oriented rather than file-oriented.

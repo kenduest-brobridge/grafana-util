@@ -90,6 +90,7 @@ For local history inspection, `dashboard history list` can also read:
 - an export tree created by `dashboard export --include-history --output-dir ./dashboards`
 
 `dashboard history restore` remains live-only.
+`dashboard history diff` can compare two historical versions from live Grafana, a reusable artifact, or export roots from different dates.
 
 The same routing rule applies:
 
@@ -102,6 +103,7 @@ Fast lookups from the CLI:
 - `grafana-util dashboard history --help-schema`
 - `grafana-util dashboard history list --help-schema`
 - `grafana-util dashboard history restore --help-schema`
+- `grafana-util dashboard history diff --help-schema`
 - `grafana-util dashboard history export --help-schema`
 
 Practical mapping:
@@ -109,9 +111,50 @@ Practical mapping:
 - `dashboard history list --output-format json` -> `grafana-util-dashboard-history-list`
 - `dashboard history list --input-dir ./dashboards --output-format json` -> `grafana-util-dashboard-history-inventory` when no `--dashboard-uid` filter is present
 - `dashboard history restore --dry-run --output-format json` -> `grafana-util-dashboard-history-restore`
+- `dashboard history diff --output-format json` -> `grafana-util-dashboard-history-diff`
 - `dashboard history export --output ./cpu-main.history.json` -> `grafana-util-dashboard-history-export`
 
 Use the dedicated [dashboard history reference](../../commands/en/dashboard-history.md) when you need the exact top-level keys for each document.
+
+### Shared diff JSON contract
+
+`dashboard diff`, `dashboard history diff`, `alert diff`, and `datasource diff` use one shared JSON envelope in `--output-format json` mode. The safest routing rule is the same as the other machine-readable contracts:
+
+1. inspect `kind`
+2. confirm `schemaVersion`
+3. then read `summary` and `rows`
+
+Use the dedicated [shared diff JSON contract](./diff-json-contract.md) when you need the exact summary fields or row fields for each command.
+
+CLI schema lookups:
+
+- `grafana-util dashboard diff --help-schema`
+- `grafana-util alert diff --help-schema`
+- `grafana-util datasource diff --help-schema`
+
+### `status` JSON documents for CI
+
+`status staged` and `status live` now share one explicit machine-readable contract:
+
+1. inspect `kind`
+2. confirm `schemaVersion`
+3. then read `overall`, `domains`, `topBlockers`, and `nextActions`
+
+Stable routing:
+
+- `kind` -> `grafana-util-project-status`
+- `schemaVersion` -> `1`
+
+CLI schema lookups:
+
+- `grafana-util status --help-schema`
+- `grafana-util status staged --help-schema`
+- `grafana-util status live --help-schema`
+
+Practical mapping:
+
+- `status staged --output-format json` -> `grafana-util-project-status`
+- `status live --output-format json` -> `grafana-util-project-status`
 
 ---
 

@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.grafana-util.local/change/sync-apply-intent.schema.json",
+  "title": "Change apply JSON schema",
+  "type": "object",
+  "required": [
+    "kind",
+    "schemaVersion",
+    "toolVersion",
+    "mode",
+    "reviewed",
+    "reviewRequired",
+    "allowPrune",
+    "approved",
+    "summary",
+    "alertAssessment",
+    "operations",
+    "preflightSummary",
+    "bundlePreflightSummary",
+    "appliedBy",
+    "appliedAt",
+    "approvalReason",
+    "applyNote",
+    "traceId",
+    "stage",
+    "stepIndex",
+    "parentTraceId"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "summary": {
+      "type": "object",
+      "properties": {
+        "operationCount": {},
+        "blockingCount": {}
+      },
+      "required": [
+        "operationCount",
+        "blockingCount"
+      ],
+      "additionalProperties": false
+    },
+    "operations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "kind": {},
+          "identity": {},
+          "action": {}
+        },
+        "required": [
+          "kind",
+          "identity",
+          "action"
+        ],
+        "additionalProperties": false
+      }
+    }
+  }
+}

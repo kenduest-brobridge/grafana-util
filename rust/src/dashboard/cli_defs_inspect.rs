@@ -516,7 +516,7 @@ pub struct InspectExportArgs {
         long,
         value_enum,
         conflicts_with_all = ["text", "table", "csv", "json", "yaml"],
-        help = "Single-flag output selector for analyze-export output. Use text, table, csv, json, yaml, tree, tree-table, dependency, dependency-json, governance, governance-json, or queries-json."
+        help = "Single-flag output selector for dashboard analyze output. Use text, table, csv, json, yaml, tree, tree-table, dependency, dependency-json, governance, governance-json, or queries-json."
     )]
     pub output_format: Option<InspectOutputFormat>,
     #[arg(
@@ -539,7 +539,7 @@ pub struct InspectExportArgs {
     #[arg(
         long,
         default_value_t = false,
-        help = "Show extended help with analysis examples for analyze-export."
+        help = "Show extended help with analysis examples for dashboard analyze."
     )]
     pub help_full: bool,
     #[arg(
@@ -630,7 +630,7 @@ pub struct InspectLiveArgs {
         long,
         value_enum,
         conflicts_with_all = ["text", "table", "csv", "json", "yaml"],
-        help = "Single-flag output selector for analyze-live output. Use text, table, csv, json, yaml, tree, tree-table, dependency, dependency-json, governance, governance-json, or queries-json."
+        help = "Single-flag output selector for dashboard analyze output. Use text, table, csv, json, yaml, tree, tree-table, dependency, dependency-json, governance, governance-json, or queries-json."
     )]
     pub output_format: Option<InspectOutputFormat>,
     #[arg(
@@ -659,7 +659,7 @@ pub struct InspectLiveArgs {
     #[arg(
         long,
         default_value_t = false,
-        help = "Show extended help with analysis examples for analyze-live."
+        help = "Show extended help with analysis examples for dashboard analyze."
     )]
     pub help_full: bool,
     #[arg(

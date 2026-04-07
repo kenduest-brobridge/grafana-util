@@ -1,0 +1,41 @@
+Alert diff JSON schema
+
+Commands:
+  grafana-util alert diff --url http://localhost:3000 --diff-dir ./alerts/raw --output-format json
+  grafana-util alert diff --url http://localhost:3000 --diff-dir ./alerts/raw --json
+
+General rule:
+- Branch on `kind` plus `schemaVersion` before reading nested fields.
+- The canonical machine-readable flag is `--output-format json`.
+- `--json` remains a compatibility alias for the same JSON contract.
+
+kind:
+  grafana-util-alert-diff
+
+Top-level keys:
+- kind
+- schemaVersion
+- toolVersion
+- summary
+- rows
+- summary
+  - checked
+  - same
+  - different
+  - missingRemote
+  - extraRemote
+  - ambiguous
+- rows[]
+  - domain
+  - resourceKind
+  - identity
+  - status
+  - path
+  - changedFields
+
+Quick lookups:
+- grafana-util alert diff --help-schema
+
+Notes:
+- `status` is the stable routing field for automation.
+- Older tooling may still look at legacy row-local action vocabulary; prefer `status` for new consumers.

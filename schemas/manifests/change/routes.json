@@ -1,0 +1,189 @@
+[
+  {
+    "routeId": "root.help",
+    "title": "Change JSON schema guide",
+    "intro": [
+      "Use this help surface when CI, scripts, or external tooling need to understand which JSON document each `change` subcommand emits."
+    ],
+    "generalRule": [
+      "Branch on `kind` plus `schemaVersion` before reading nested fields.",
+      "`--output-format json` is the machine-readable path.",
+      "`change bundle` writes a bundle contract through `--output-file`; it does not use `--output-format`."
+    ],
+    "contractSectionHeading": "Subcommand contracts",
+    "contractSections": [
+      { "contractId": "sync-summary", "label": "summary" },
+      { "contractId": "sync-plan", "label": "plan" },
+      { "contractId": "sync-plan-reviewed", "label": "review" },
+      { "contractId": "sync-apply-intent", "label": "apply" },
+      {
+        "contractId": "sync-apply-live-result",
+        "label": "apply --execute-live",
+        "shapeLabel": "live apply result"
+      },
+      { "contractId": "sync-audit", "label": "audit" },
+      { "contractId": "sync-preflight", "label": "preflight" },
+      { "contractId": "alert-sync-plan", "label": "assess-alerts" },
+      { "contractId": "sync-bundle-preflight", "label": "bundle-preflight" },
+      { "contractId": "sync-promotion-preflight", "label": "promotion-preflight" },
+      { "contractId": "sync-source-bundle", "label": "bundle" }
+    ],
+    "quickLookups": [
+      "grafana-util change --help-schema",
+      "grafana-util change summary --help-schema",
+      "grafana-util change plan --help-schema",
+      "grafana-util change review --help-schema",
+      "grafana-util change apply --help-schema"
+    ]
+  },
+  {
+    "routeId": "summary.help",
+    "title": "Change summary JSON schema",
+    "commands": [
+      "grafana-util change summary --desired-file ./desired.json --fetch-live --profile prod --output-format json"
+    ],
+    "contractSections": [
+      {
+        "contractId": "sync-summary",
+        "showNested": true
+      }
+    ]
+  },
+  {
+    "routeId": "plan.help",
+    "title": "Change plan JSON schema",
+    "commands": [
+      "grafana-util change plan --desired-file ./desired.json --fetch-live --profile prod --output-format json"
+    ],
+    "contractSections": [
+      {
+        "contractId": "sync-plan",
+        "showNested": true
+      }
+    ]
+  },
+  {
+    "routeId": "review.help",
+    "title": "Change review JSON schema",
+    "commands": [
+      "grafana-util change review --plan-file ./sync-plan.json --output-format json"
+    ],
+    "contractSections": [
+      {
+        "contractId": "sync-plan-reviewed",
+        "showNested": true
+      }
+    ],
+    "notes": [
+      "This is the reviewed sync-plan contract; new consumers should still route by `kind` plus `schemaVersion` before reading review metadata."
+    ]
+  },
+  {
+    "routeId": "apply.help",
+    "title": "Change apply JSON schema",
+    "commands": [
+      "grafana-util change apply --plan-file ./sync-plan-reviewed.json --approve --output-format json",
+      "grafana-util change apply --plan-file ./sync-plan-reviewed.json --approve --execute-live --profile prod --output-format json"
+    ],
+    "contractSectionHeading": "Contracts",
+    "contractSections": [
+      {
+        "contractId": "sync-apply-intent",
+        "label": "Default apply-intent kind",
+        "showNested": true
+      },
+      {
+        "contractId": "sync-apply-live-result",
+        "label": "Live execute shape (`--execute-live`)",
+        "shapeLabel": "live apply result",
+        "showNested": true
+      }
+    ],
+    "notes": [
+      "The live apply result reports one entry per operation under `results[]`, with `kind`, `identity`, `action`, and `response`."
+    ]
+  },
+  {
+    "routeId": "audit.help",
+    "title": "Change audit JSON schema",
+    "commands": [
+      "grafana-util change audit --lock-file ./sync-lock.json --fetch-live --profile prod --output-format json"
+    ],
+    "contractSections": [
+      {
+        "contractId": "sync-audit",
+        "showNested": true
+      }
+    ]
+  },
+  {
+    "routeId": "preflight.help",
+    "title": "Change preflight JSON schema",
+    "commands": [
+      "grafana-util change preflight --desired-file ./desired.json --fetch-live --profile prod --output-format json"
+    ],
+    "contractSections": [
+      {
+        "contractId": "sync-preflight",
+        "showNested": true
+      }
+    ]
+  },
+  {
+    "routeId": "assess-alerts.help",
+    "title": "Change assess-alerts JSON schema",
+    "commands": [
+      "grafana-util change assess-alerts --alerts-file ./alerts.json --output-format json"
+    ],
+    "contractSections": [
+      {
+        "contractId": "alert-sync-plan",
+        "showNested": true
+      }
+    ]
+  },
+  {
+    "routeId": "bundle-preflight.help",
+    "title": "Change bundle-preflight JSON schema",
+    "commands": [
+      "grafana-util change bundle-preflight --source-bundle ./bundle.json --target-inventory ./target.json --output-format json"
+    ],
+    "contractSections": [
+      {
+        "contractId": "sync-bundle-preflight",
+        "showNested": true
+      }
+    ]
+  },
+  {
+    "routeId": "promotion-preflight.help",
+    "title": "Change promotion-preflight JSON schema",
+    "commands": [
+      "grafana-util change promotion-preflight --source-bundle ./bundle.json --target-inventory ./target.json --mapping-file ./promotion-map.json --output-format json"
+    ],
+    "contractSections": [
+      {
+        "contractId": "sync-promotion-preflight",
+        "showNested": true
+      }
+    ]
+  },
+  {
+    "routeId": "bundle.help",
+    "title": "Change bundle JSON contract",
+    "commands": [
+      "grafana-util change bundle --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts/raw --output-file ./sync-source-bundle.json"
+    ],
+    "contractSections": [
+      {
+        "contractId": "sync-source-bundle",
+        "showNested": true
+      }
+    ],
+    "notes": [
+      "`change bundle` writes the contract to `--output-file`.",
+      "It does not switch render modes with `--output-format`.",
+      "Add `--also-stdout` only when you intentionally want both file output and stdout."
+    ]
+  }
+]

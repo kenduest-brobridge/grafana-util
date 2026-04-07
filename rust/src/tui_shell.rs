@@ -140,12 +140,31 @@ pub(crate) fn control_line(items: &[(&str, Color, &str)]) -> Line<'static> {
         .map(|(_, _, text)| text.chars().count())
         .max()
         .unwrap_or(0);
-    let cell_width = key_width + body_width + 3;
+    build_control_line(items, &vec![(key_width, body_width); items.len()])
+}
+
+pub(crate) fn control_grid(rows: &[Vec<(&str, Color, &str)>]) -> Vec<Line<'static>> {
+    let column_count = rows.iter().map(Vec::len).max().unwrap_or(0);
+    let mut widths = vec![(0usize, 0usize); column_count];
+    for row in rows {
+        for (index, (key, _, text)) in row.iter().enumerate() {
+            widths[index].0 = widths[index].0.max(key.chars().count());
+            widths[index].1 = widths[index].1.max(text.chars().count());
+        }
+    }
+    rows.iter()
+        .map(|row| build_control_line(row, &widths))
+        .collect()
+}
+
+fn build_control_line(items: &[(&str, Color, &str)], widths: &[(usize, usize)]) -> Line<'static> {
     let mut spans = Vec::new();
     for (index, (key, color, text)) in items.iter().enumerate() {
         if index > 0 {
             spans.push(Span::raw("  "));
         }
+        let (key_width, body_width) = widths.get(index).copied().unwrap_or_default();
+        let cell_width = key_width + body_width + 3;
         let padded_key = format!("{key:<key_width$}");
         let text_span = format!(" {:<body_width$}", text);
         let used_width = key_width + body_width + 3;

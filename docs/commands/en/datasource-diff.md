@@ -9,6 +9,7 @@ Use this when you want a concise live-versus-local difference report before impo
 ## Key flags
 - `--diff-dir`: local datasource bundle to compare.
 - `--input-format`: choose `inventory` or `provisioning`.
+- `--output-format`: choose `text` or `json`.
 
 ## Examples
 ```bash
@@ -21,10 +22,16 @@ grafana-util datasource diff --url http://localhost:3000 --basic-user admin --ba
 grafana-util datasource diff --profile prod --diff-dir ./datasources/provisioning --input-format provisioning
 ```
 
+```bash
+# Purpose: Compare datasource inventory from a local bundle against live Grafana and render the shared diff contract.
+grafana-util datasource diff --profile prod --diff-dir ./datasources --input-format inventory --output-format json
+```
+
 ## Before / After
 
 - **Before**: you had to inspect local and live datasource JSON by hand to find drift.
 - **After**: one diff command shows what changed between the bundle and Grafana before you import anything.
+- JSON mode includes a shared diff envelope plus field-level `changes[{field,before,after}]`.
 
 ## What success looks like
 
@@ -42,3 +49,9 @@ grafana-util datasource diff --profile prod --diff-dir ./datasources/provisionin
 - [datasource list](./datasource-list.md)
 - [datasource export](./datasource-export.md)
 - [datasource import](./datasource-import.md)
+- [Shared diff JSON contract](../../user-guide/en/diff-json-contract.md)
+
+CLI schema lookup:
+
+- `grafana-util datasource diff --help-schema`
+- [shared diff JSON contract](../../user-guide/en/diff-json-contract.md)

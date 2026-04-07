@@ -5,6 +5,7 @@
 //!   shared constants/helpers.
 //! - Domain-specific producer logic belongs in the owning domain modules.
 
+use serde::ser::{SerializeStruct, Serializer};
 use serde::Serialize;
 use std::cmp::Reverse;
 
@@ -14,6 +15,7 @@ pub const PROJECT_STATUS_READY: &str = "ready";
 pub const PROJECT_STATUS_PARTIAL: &str = "partial";
 pub const PROJECT_STATUS_BLOCKED: &str = "blocked";
 pub const PROJECT_STATUS_UNKNOWN: &str = "unknown";
+pub const PROJECT_STATUS_KIND: &str = "grafana-util-project-status";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Default)]
 #[serde(rename_all = "camelCase")]
@@ -82,18 +84,33 @@ pub struct ProjectStatusAction {
     pub action: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProjectStatus {
-    #[serde(rename = "schemaVersion")]
     pub schema_version: i64,
-    #[serde(rename = "toolVersion")]
     pub tool_version: String,
     pub scope: String,
     pub overall: ProjectStatusOverall,
     pub domains: Vec<ProjectDomainStatus>,
     pub top_blockers: Vec<ProjectStatusRankedFinding>,
     pub next_actions: Vec<ProjectStatusAction>,
+}
+
+impl Serialize for ProjectStatus {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut state = serializer.serialize_struct("ProjectStatus", 8)?;
+        state.serialize_field("kind", PROJECT_STATUS_KIND)?;
+        state.serialize_field("schemaVersion", &self.schema_version)?;
+        state.serialize_field("toolVersion", &self.tool_version)?;
+        state.serialize_field("scope", &self.scope)?;
+        state.serialize_field("overall", &self.overall)?;
+        state.serialize_field("domains", &self.domains)?;
+        state.serialize_field("topBlockers", &self.top_blockers)?;
+        state.serialize_field("nextActions", &self.next_actions)?;
+        state.end()
+    }
 }
 
 pub(crate) fn status_finding(kind: &str, count: usize, source: &str) -> ProjectStatusFinding {

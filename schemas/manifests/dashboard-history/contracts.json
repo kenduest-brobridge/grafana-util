@@ -1,0 +1,211 @@
+[
+  {
+    "contractId": "dashboard-history-list",
+    "title": "Dashboard history list JSON schema",
+    "kind": "grafana-util-dashboard-history-list",
+    "schemaVersion": 1,
+    "goldenSample": "fixtures/machine_schema_golden_cases.json#dashboard-history-list",
+    "topLevelKeys": [
+      "kind",
+      "schemaVersion",
+      "toolVersion",
+      "dashboardUid",
+      "versionCount",
+      "versions"
+    ],
+    "nestedSections": [
+      {
+        "path": "versions[]",
+        "keys": ["version", "created", "createdBy", "message"]
+      }
+    ]
+  },
+  {
+    "contractId": "dashboard-history-inventory",
+    "title": "Dashboard history inventory JSON schema",
+    "kind": "grafana-util-dashboard-history-inventory",
+    "schemaVersion": 1,
+    "goldenSample": "fixtures/machine_schema_golden_cases.json#dashboard-history-inventory",
+    "topLevelKeys": [
+      "kind",
+      "schemaVersion",
+      "toolVersion",
+      "artifactCount",
+      "artifacts"
+    ],
+    "nestedSections": [
+      {
+        "path": "artifacts[]",
+        "keys": ["dashboardUid", "currentTitle", "currentVersion", "versionCount", "path", "scope"]
+      }
+    ]
+  },
+  {
+    "contractId": "dashboard-history-restore",
+    "title": "Dashboard history restore JSON schema",
+    "kind": "grafana-util-dashboard-history-restore",
+    "schemaVersion": 1,
+    "goldenSample": "fixtures/machine_schema_golden_cases.json#dashboard-history-restore",
+    "topLevelKeys": [
+      "kind",
+      "schemaVersion",
+      "toolVersion",
+      "mode",
+      "dashboardUid",
+      "currentVersion",
+      "restoreVersion",
+      "currentTitle",
+      "restoredTitle",
+      "targetFolderUid",
+      "createsNewRevision",
+      "message"
+    ]
+  },
+  {
+    "contractId": "dashboard-history-export",
+    "title": "Dashboard history export JSON schema",
+    "kind": "grafana-util-dashboard-history-export",
+    "schemaVersion": 1,
+    "goldenSample": "fixtures/machine_schema_golden_cases.json#dashboard-history-export",
+    "topLevelKeys": [
+      "kind",
+      "schemaVersion",
+      "toolVersion",
+      "dashboardUid",
+      "currentVersion",
+      "currentTitle",
+      "versionCount",
+      "versions"
+    ],
+    "nestedSections": [
+      {
+        "path": "versions[]",
+        "keys": ["version", "created", "createdBy", "message", "dashboard"]
+      }
+    ]
+  },
+  {
+    "contractId": "dashboard-history-diff",
+    "title": "Dashboard history diff JSON schema",
+    "kind": "grafana-util-dashboard-history-diff",
+    "schemaVersion": 1,
+    "goldenSample": "fixtures/machine_schema_golden_cases.json#dashboard-history-diff",
+    "topLevelKeys": [
+      "kind",
+      "schemaVersion",
+      "toolVersion",
+      "summary",
+      "rows"
+    ],
+    "nestedSections": [
+      {
+        "path": "summary",
+        "keys": [
+          "checked",
+          "same",
+          "different",
+          "missingRemote",
+          "extraRemote",
+          "ambiguous"
+        ]
+      },
+      {
+        "path": "rows[]",
+        "keys": [
+          "domain",
+          "resourceKind",
+          "identity",
+          "status",
+          "path",
+          "baseSource",
+          "newSource",
+          "baseVersion",
+          "newVersion",
+          "changedFields",
+          "diffText",
+          "contextLines"
+        ]
+      }
+    ],
+    "fieldSchemas": {
+      "kind": {
+        "type": "string",
+        "const": "grafana-util-dashboard-history-diff"
+      },
+      "schemaVersion": {
+        "type": "integer",
+        "const": 1
+      },
+      "toolVersion": {
+        "type": "string"
+      },
+      "summary.checked": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "summary.same": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "summary.different": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "summary.missingRemote": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "summary.extraRemote": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "summary.ambiguous": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "rows[].domain": {
+        "type": "string"
+      },
+      "rows[].resourceKind": {
+        "type": "string"
+      },
+      "rows[].identity": {
+        "type": "string"
+      },
+      "rows[].status": {
+        "type": "string"
+      },
+      "rows[].path": {
+        "type": "string"
+      },
+      "rows[].baseSource": {
+        "type": "string"
+      },
+      "rows[].newSource": {
+        "type": "string"
+      },
+      "rows[].baseVersion": {
+        "type": "integer"
+      },
+      "rows[].newVersion": {
+        "type": "integer"
+      },
+      "rows[].changedFields": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "rows[].diffText": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "rows[].contextLines": {
+        "type": "integer",
+        "minimum": 0
+      }
+    }
+  }
+]

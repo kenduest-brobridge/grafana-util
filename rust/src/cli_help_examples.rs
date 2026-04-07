@@ -276,7 +276,7 @@ pub(crate) const ALERT_HELP_FULL_TEXT: &str = help_block!(
     (
         "[Alert Diff]",
         "Compare a local export against Grafana as structured JSON:",
-        r#"grafana-util alert diff --url http://localhost:3000 --diff-dir ./alerts/raw --json"#
+        r#"grafana-util alert diff --url http://localhost:3000 --diff-dir ./alerts/raw --output-format json"#
     ),
     (
         "[Alert Plan]",

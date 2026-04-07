@@ -856,6 +856,34 @@ fn dashboard_history_dialog_escape_and_q_close_dialog() {
 }
 
 #[test]
+fn dashboard_history_dialog_restore_review_uses_human_message() {
+    let versions = vec![crate::dashboard::history::DashboardHistoryVersion {
+        version: 7,
+        created: "2026-03-26T10:00:00Z".to_string(),
+        created_by: "admin".to_string(),
+        message: "before query regression".to_string(),
+    }];
+    let mut dialog = crate::dashboard::browse_history_dialog::HistoryDialogState::new(
+        "cpu-main".to_string(),
+        "CPU Main".to_string(),
+        versions,
+    );
+    assert_eq!(
+        dialog.handle_key(&KeyEvent::new(KeyCode::Char('r'), KeyModifiers::NONE)),
+        crate::dashboard::browse_history_dialog::HistoryDialogAction::Continue
+    );
+    let confirm = dialog.handle_key(&KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE));
+    assert_eq!(
+        confirm,
+        crate::dashboard::browse_history_dialog::HistoryDialogAction::Restore {
+            uid: "cpu-main".to_string(),
+            version: 7,
+            message: "Restore CPU Main to version 7 (before query regression)".to_string(),
+        }
+    );
+}
+
+#[test]
 fn interactive_import_loads_dashboard_titles_and_folder_paths() {
     let temp = tempdir().unwrap();
     let raw_dir = temp.path().join("raw");

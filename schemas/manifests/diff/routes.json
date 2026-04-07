@@ -1,0 +1,67 @@
+[
+  {
+    "routeId": "dashboard",
+    "title": "Dashboard diff JSON schema",
+    "commands": [
+      "grafana-util dashboard diff --url http://localhost:3000 --basic-user admin --basic-password admin --input-dir ./dashboards/raw --output-format json"
+    ],
+    "generalRule": [
+      "Branch on `kind` plus `schemaVersion` before reading nested fields.",
+      "`--output-format json` is the machine-readable path."
+    ],
+    "contractSections": [
+      "grafana-util-dashboard-diff"
+    ],
+    "notes": [
+      "`diffText` carries the compact diff preview for review tooling.",
+      "Use `contextLines` to understand how much surrounding diff context was rendered."
+    ],
+    "quickLookups": [
+      "grafana-util dashboard diff --help-schema"
+    ]
+  },
+  {
+    "routeId": "alert",
+    "title": "Alert diff JSON schema",
+    "commands": [
+      "grafana-util alert diff --url http://localhost:3000 --diff-dir ./alerts/raw --output-format json",
+      "grafana-util alert diff --url http://localhost:3000 --diff-dir ./alerts/raw --json"
+    ],
+    "generalRule": [
+      "Branch on `kind` plus `schemaVersion` before reading nested fields.",
+      "The canonical machine-readable flag is `--output-format json`.",
+      "`--json` remains a compatibility alias for the same JSON contract."
+    ],
+    "contractSections": [
+      "grafana-util-alert-diff"
+    ],
+    "notes": [
+      "`status` is the stable routing field for automation.",
+      "Older tooling may still look at legacy row-local action vocabulary; prefer `status` for new consumers."
+    ],
+    "quickLookups": [
+      "grafana-util alert diff --help-schema"
+    ]
+  },
+  {
+    "routeId": "datasource",
+    "title": "Datasource diff JSON schema",
+    "commands": [
+      "grafana-util datasource diff --url http://localhost:3000 --basic-user admin --basic-password admin --diff-dir ./datasources --input-format inventory --output-format json"
+    ],
+    "generalRule": [
+      "Branch on `kind` plus `schemaVersion` before reading nested fields.",
+      "`--output-format json` is the machine-readable path."
+    ],
+    "contractSections": [
+      "grafana-util-datasource-diff"
+    ],
+    "notes": [
+      "`changes[]` is the field-level drift review surface.",
+      "`path` is null for datasource diff rows because the compare key is resource-oriented rather than file-oriented."
+    ],
+    "quickLookups": [
+      "grafana-util datasource diff --help-schema"
+    ]
+  }
+]

@@ -1,7 +1,7 @@
 # dashboard history
 
 ## Purpose
-List, restore, or export dashboard revision history for one dashboard UID, whether it comes from live Grafana or from local history artifacts.
+List, restore, diff, or export dashboard revision history for one dashboard UID, whether it comes from live Grafana or from local history artifacts.
 
 ## When to use
 Use this when you need to inspect earlier dashboard versions, recover a known-good revision, or export dashboard history into a reusable artifact for review or CI. You can also read the same history back from a single exported artifact or an export tree with included history.
@@ -18,16 +18,22 @@ Restore creates a new latest revision instead of overwriting the historical vers
 
 `dashboard history restore` stays live-only.
 
+`dashboard history diff` compares two historical versions and can mix live Grafana, a single history artifact, or export roots from different dates.
+
 ## Key flags
 - `--dashboard-uid`: the dashboard UID whose revision history you want. Required for live history list and restore, and useful for filtering local export-tree history.
 - `--input`: read one reusable history artifact produced by `dashboard history export`.
 - `--input-dir`: read one export tree produced by `dashboard export --include-history`.
+- `--base-dashboard-uid` / `--new-dashboard-uid`: dashboard UIDs for live or export-tree diff sources.
+- `--base-input` / `--new-input`: reusable history artifacts to compare.
+- `--base-input-dir` / `--new-input-dir`: export trees to compare, which lets you compare history exports from different dates.
+- `--base-version` / `--new-version`: the historical version numbers to compare.
 - `--limit`: how many recent versions to include in list or export views.
 - `--version`: the historical version number to restore.
 - `--message`: revision message for the new restored revision.
 - `--dry-run`: preview a restore without changing Grafana.
 - `--yes`: confirm a real restore.
-- `--output-format`: render list or restore output as text, table, json, or yaml.
+- `--output-format`: render list or restore output as text, table, json, or yaml. Diff uses text or json.
 - `--output`: write exported history artifacts to a JSON file.
 - `--overwrite`: replace an existing export artifact.
 
@@ -45,6 +51,7 @@ Use the built-in schema help when automation needs stable routing rules:
 - `grafana-util dashboard history --help-schema`
 - `grafana-util dashboard history list --help-schema`
 - `grafana-util dashboard history restore --help-schema`
+- `grafana-util dashboard history diff --help-schema`
 - `grafana-util dashboard history export --help-schema`
 
 Routing rule:
@@ -58,6 +65,7 @@ Practical mapping:
 - `dashboard history list --output-format json` -> `grafana-util-dashboard-history-list`
 - `dashboard history list --input-dir ./dashboards --output-format json` -> `grafana-util-dashboard-history-inventory` when you do not narrow with `--dashboard-uid`
 - `dashboard history restore --dry-run --output-format json` -> `grafana-util-dashboard-history-restore`
+- `dashboard history diff --output-format json` -> `grafana-util-dashboard-history-diff`
 - `dashboard history restore --output-format json` -> the same contract shape, but live execution still creates a new latest revision
 - `dashboard history export --output ./cpu-main.history.json` -> `grafana-util-dashboard-history-export`
 
@@ -66,6 +74,7 @@ Top-level keys worth remembering:
 - list -> `kind`, `schemaVersion`, `toolVersion`, `dashboardUid`, `versionCount`, `versions`
 - list inventory -> `kind`, `schemaVersion`, `toolVersion`, `artifactCount`, `artifacts`
 - restore -> `kind`, `schemaVersion`, `toolVersion`, `mode`, `dashboardUid`, `currentVersion`, `restoreVersion`, `currentTitle`, `restoredTitle`, optional `targetFolderUid`, `createsNewRevision`, `message`
+- diff -> `kind`, `schemaVersion`, `toolVersion`, `summary`, `rows` (rows include `path`, `baseSource`, `newSource`, `baseVersion`, `newVersion`, `changedFields`, `diffText`, and `contextLines`)
 - export -> `kind`, `schemaVersion`, `toolVersion`, `dashboardUid`, `currentVersion`, `currentTitle`, `versionCount`, `versions`
 
 ## Examples
@@ -90,6 +99,11 @@ grafana-util dashboard history restore --url http://localhost:3000 --basic-user 
 ```
 
 ```bash
+# Purpose: Compare two dated history exports for the same dashboard UID.
+grafana-util dashboard history diff --base-input-dir ./exports-2026-04-01 --base-dashboard-uid cpu-main --base-version 17 --new-input-dir ./exports-2026-04-07 --new-dashboard-uid cpu-main --new-version 21 --output-format json
+```
+
+```bash
 # Purpose: Export the recent dashboard history revisions into a reusable JSON artifact.
 grafana-util dashboard history export --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --dashboard-uid cpu-main --limit 20 --output ./cpu-main.history.json
 ```
@@ -97,12 +111,13 @@ grafana-util dashboard history export --url http://localhost:3000 --token "$GRAF
 ## Before / After
 
 - **Before**: dashboard revision recovery often meant guessing which old version to trust, then manually rebuilding it or editing JSON by hand.
-- **After**: one history namespace covers list, restore, and export, so operators can inspect old versions, recover a known-good revision, and hand the same artifact to review or CI.
+- **After**: one history namespace covers list, restore, diff, and export, so operators can inspect old versions, compare revisions from different dates, recover a known-good revision, and hand the same artifact to review or CI.
 
 ## What success looks like
 
 - list output shows the revision numbers and messages you expected for the target dashboard UID
 - restore dry-run clearly shows the version that would become the new latest revision
+- diff clearly shows the two versions you compared and whether they matched
 - a real restore leaves the old version in history and adds a new current revision
 - export writes a reusable JSON artifact that can be inspected later without Grafana
 

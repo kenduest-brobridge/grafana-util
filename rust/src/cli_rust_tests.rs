@@ -19,7 +19,10 @@ use crate::resource::{ResourceCliArgs, ResourceCommand, ResourceKind, ResourceOu
 use crate::snapshot::root_command as snapshot_root_command;
 use crate::sync::{SyncAdvancedCommand, SyncGroupCommand, SyncOutputFormat, DEFAULT_REVIEW_TOKEN};
 use clap::{CommandFactory, Parser};
+use serde_json::Value;
 use std::cell::RefCell;
+use std::collections::BTreeSet;
+use std::fs;
 use std::path::{Path, PathBuf};
 
 fn render_unified_help() -> String {
@@ -82,6 +85,149 @@ fn render_resource_subcommand_help(path: &[&str]) -> String {
     String::from_utf8(output).unwrap()
 }
 
+fn load_shared_diff_contract_fixture(domain: &str) -> Value {
+    serde_json::from_str::<Vec<Value>>(include_str!(
+        "../../fixtures/shared_diff_contract_cases.json"
+    ))
+    .unwrap()
+    .into_iter()
+    .find(|value| value.get("domain").and_then(Value::as_str) == Some(domain))
+    .expect("shared diff contract fixture")
+}
+
+fn load_generated_diff_help(domain: &str) -> &'static str {
+    match domain {
+        "dashboard" => include_str!("../../schemas/help/diff/dashboard.txt"),
+        "alert" => include_str!("../../schemas/help/diff/alert.txt"),
+        "datasource" => include_str!("../../schemas/help/diff/datasource.txt"),
+        _ => panic!("unknown diff help domain: {domain}"),
+    }
+}
+
+fn assert_help_contains_all_keys(help: &str, keys: &[&str]) {
+    for key in keys {
+        assert!(
+            help.contains(key),
+            "help output is missing required schema key `{key}`"
+        );
+    }
+}
+
+fn assert_help_matches_shared_diff_contract(help: &str, domain: &str) {
+    let fixture = load_shared_diff_contract_fixture(domain);
+    let generated_help = load_generated_diff_help(domain);
+    assert_eq!(help, generated_help);
+    let expected_top_level_keys = fixture["topLevelKeys"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|value| value.as_str().unwrap())
+        .collect::<BTreeSet<_>>();
+    let expected_summary_keys = fixture["summaryKeys"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|value| value.as_str().unwrap())
+        .collect::<BTreeSet<_>>();
+    let expected_row_keys = fixture["rowKeys"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|value| value.as_str().unwrap())
+        .collect::<BTreeSet<_>>();
+
+    assert!(help.contains(fixture["kind"].as_str().unwrap()));
+    assert_help_contains_all_keys(
+        help,
+        &expected_top_level_keys.iter().cloned().collect::<Vec<_>>(),
+    );
+    assert_help_contains_all_keys(
+        help,
+        &expected_summary_keys.iter().cloned().collect::<Vec<_>>(),
+    );
+    assert_help_contains_all_keys(help, &expected_row_keys.iter().cloned().collect::<Vec<_>>());
+}
+
+fn repo_root_relative_path(relative: &str) -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join(relative)
+}
+
+fn read_repo_text(relative: &str) -> String {
+    fs::read_to_string(repo_root_relative_path(relative)).unwrap()
+}
+
+fn read_repo_json(relative: &str) -> Value {
+    serde_json::from_str(&read_repo_text(relative)).unwrap()
+}
+
+fn assert_generated_schema_route_exists(family: &str, contract_id: &str) {
+    let schema_path = repo_root_relative_path(&format!(
+        "schemas/jsonschema/{family}/{contract_id}.schema.json"
+    ));
+    let schema = serde_json::from_str::<Value>(&fs::read_to_string(&schema_path).unwrap()).unwrap();
+    assert!(
+        schema["title"].is_string(),
+        "schema {contract_id} should have a title"
+    );
+    assert!(
+        schema["properties"].is_object(),
+        "schema {contract_id} should expose properties"
+    );
+}
+
+fn route_help_target(route_id: &str) -> Option<&str> {
+    let trimmed = route_id.strip_suffix(".help").unwrap_or(route_id);
+    match trimmed {
+        "root" => None,
+        other => Some(other),
+    }
+}
+
+fn assert_manifest_driven_schema_help(command_args: &[&str], family: &str) {
+    let routes = read_repo_json(&format!("schemas/manifests/{family}/routes.json"));
+    let contracts = read_repo_json(&format!("schemas/manifests/{family}/contracts.json"));
+
+    for route in routes.as_array().unwrap() {
+        let route_id = route["routeId"].as_str().unwrap();
+        let help_path = repo_root_relative_path(&format!("schemas/help/{family}/{route_id}.txt"));
+        let expected_help = fs::read_to_string(help_path).unwrap();
+        let mut route_args = command_args.to_vec();
+        if let Some(target) = route_help_target(route_id) {
+            route_args.insert(route_args.len() - 1, target);
+        }
+        let actual_help = maybe_render_unified_help_from_os_args(route_args, false)
+            .expect("expected route help output");
+        assert_eq!(actual_help, expected_help);
+    }
+
+    let declared_contracts = contracts
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|contract| contract["contractId"].as_str().unwrap())
+        .collect::<BTreeSet<_>>();
+    for contract_id in declared_contracts {
+        assert_generated_schema_route_exists(family, contract_id);
+    }
+}
+
+#[test]
+fn shared_diff_contract_docs_explain_versioning_rules() {
+    let en = include_str!("../../docs/user-guide/en/diff-json-contract.md");
+    assert!(en.contains("family-wide major version"));
+    assert!(en.contains("current version is `1`"));
+    assert!(en.contains("breaking changes"));
+    assert!(en.contains("dashboard diff`, `alert diff`, and `datasource diff` together"));
+
+    let zh = include_str!("../../docs/user-guide/zh-TW/diff-json-contract.md");
+    assert!(zh.contains("family-wide major version"));
+    assert!(zh.contains("目前版本是 `1`"));
+    assert!(zh.contains("breaking change"));
+    assert!(zh.contains("dashboard diff`、`alert diff`、`datasource diff`"));
+}
+
 #[test]
 fn unified_help_mentions_screenshot_and_dashboard_analysis_examples() {
     let help = render_unified_help();
@@ -124,14 +270,14 @@ fn dashboard_help_and_docs_remain_canonical_first() {
     assert!(!unified_help.contains("grafana-util publish --"));
 
     let en_dashboard_index = include_str!("../../docs/commands/en/index.md");
-    assert!(en_dashboard_index.contains("Compatibility Alias Pages"));
+    assert!(en_dashboard_index.contains("Compatibility Pages"));
     assert!(en_dashboard_index.contains("[dashboard analyze (local alias)]"));
     assert!(en_dashboard_index.contains("[dashboard analyze (live alias)]"));
     assert!(!en_dashboard_index.contains("[dashboard analyze (local)]"));
     assert!(!en_dashboard_index.contains("[dashboard analyze (live)]"));
 
     let zh_dashboard_index = include_str!("../../docs/commands/zh-TW/index.md");
-    assert!(zh_dashboard_index.contains("相容別名頁面"));
+    assert!(zh_dashboard_index.contains("相容頁面"));
     assert!(zh_dashboard_index.contains("[dashboard analyze（本地別名）]"));
     assert!(zh_dashboard_index.contains("[dashboard analyze（即時別名）]"));
     assert!(!zh_dashboard_index.contains("[dashboard analyze（本地）]"));
@@ -578,6 +724,56 @@ fn parse_cli_supports_profile_group_list_command() {
 }
 
 #[test]
+fn parse_cli_supports_profile_group_current_command() {
+    let args: CliArgs = parse_cli_from([
+        "grafana-util",
+        "profile",
+        "current",
+        "--profile",
+        "prod",
+        "--output-format",
+        "json",
+    ]);
+
+    match args.command {
+        UnifiedCommand::Profile(profile_args) => match profile_args.command {
+            ProfileCommand::Current(current_args) => {
+                assert_eq!(current_args.profile.as_deref(), Some("prod"));
+                assert_eq!(current_args.output_format, SimpleOutputFormat::Json);
+            }
+            _ => panic!("expected profile current"),
+        },
+        _ => panic!("expected profile group"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_profile_group_validate_command() {
+    let args: CliArgs = parse_cli_from([
+        "grafana-util",
+        "profile",
+        "validate",
+        "--profile",
+        "prod",
+        "--live",
+        "--output-format",
+        "yaml",
+    ]);
+
+    match args.command {
+        UnifiedCommand::Profile(profile_args) => match profile_args.command {
+            ProfileCommand::Validate(validate_args) => {
+                assert_eq!(validate_args.profile.as_deref(), Some("prod"));
+                assert!(validate_args.live);
+                assert_eq!(validate_args.output_format, SimpleOutputFormat::Yaml);
+            }
+            _ => panic!("expected profile validate"),
+        },
+        _ => panic!("expected profile group"),
+    }
+}
+
+#[test]
 fn parse_cli_supports_profile_group_show_command() {
     let args: CliArgs = parse_cli_from([
         "grafana-util",
@@ -743,6 +939,16 @@ fn profile_example_subcommand_help_mentions_modes() {
     assert!(help.contains("--mode"));
     assert!(help.contains("basic"));
     assert!(help.contains("full"));
+}
+
+#[test]
+fn profile_root_help_mentions_current_and_validate() {
+    let help = render_profile_subcommand_help(&[]);
+
+    assert!(help.contains("grafana-util profile current"));
+    assert!(help.contains("grafana-util profile validate"));
+    assert!(help.contains("Show the currently selected profile"));
+    assert!(help.contains("Validate the selected profile"));
 }
 
 #[test]
@@ -953,6 +1159,53 @@ fn parse_cli_supports_dashboard_history_export() {
                     assert!(inner.overwrite);
                 }
                 _ => panic!("expected dashboard history export"),
+            },
+            _ => panic!("expected dashboard history"),
+        },
+        _ => panic!("expected dashboard group"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_dashboard_history_diff() {
+    let args: CliArgs = parse_cli_from([
+        "grafana-util",
+        "dashboard",
+        "history",
+        "diff",
+        "--base-input",
+        "./exports-2026-04-01/history/cpu-main.history.json",
+        "--base-version",
+        "17",
+        "--new-input",
+        "./exports-2026-04-07/history/cpu-main.history.json",
+        "--new-version",
+        "21",
+        "--output-format",
+        "json",
+    ]);
+
+    match args.command {
+        UnifiedCommand::Dashboard { command } => match command {
+            super::DashboardGroupCommand::History(history_args) => match history_args.command {
+                crate::dashboard::DashboardHistorySubcommand::Diff(inner) => {
+                    assert_eq!(
+                        inner.base_input,
+                        Some(PathBuf::from(
+                            "./exports-2026-04-01/history/cpu-main.history.json"
+                        ))
+                    );
+                    assert_eq!(inner.base_version, 17);
+                    assert_eq!(
+                        inner.new_input,
+                        Some(PathBuf::from(
+                            "./exports-2026-04-07/history/cpu-main.history.json"
+                        ))
+                    );
+                    assert_eq!(inner.new_version, 21);
+                    assert_eq!(inner.output_format, crate::common::DiffOutputFormat::Json);
+                }
+                _ => panic!("expected dashboard history diff"),
             },
             _ => panic!("expected dashboard history"),
         },
@@ -1931,8 +2184,9 @@ fn maybe_render_unified_help_from_os_args_handles_root_help_and_help_full_flags(
     assert!(alert_help.contains("[Alert Set Route]"));
     assert!(alert_help.contains("[Alert Preview Route]"));
     assert!(alert_help.contains("alert import --url http://localhost:3000 --input-dir ./alerts/raw --replace-existing --dry-run --json"));
-    assert!(alert_help
-        .contains("alert diff --url http://localhost:3000 --diff-dir ./alerts/raw --json"));
+    assert!(alert_help.contains(
+        "alert diff --url http://localhost:3000 --diff-dir ./alerts/raw --output-format json"
+    ));
     assert!(alert_help.contains("alert plan --desired-dir ./alerts/desired --prune --dashboard-uid-map ./dashboard-map.json --panel-id-map ./panel-map.json --output-format json"));
     assert!(alert_help.contains("alert apply --plan-file ./alert-plan-reviewed.json --approve"));
     assert!(alert_help
@@ -2033,6 +2287,37 @@ fn maybe_render_unified_help_from_os_args_handles_root_help_and_help_full_flags(
         .contains("Render project-wide staged or live status through the shared status contract."));
     assert!(project_status_help.contains("staged"));
     assert!(project_status_help.contains("live"));
+    assert!(project_status_help.contains("Schema guide:"));
+    assert!(project_status_help.contains("grafana-util status --help-schema"));
+
+    let project_status_schema_help =
+        maybe_render_unified_help_from_os_args(["grafana-util", "status", "--help-schema"], false)
+            .unwrap();
+    assert!(project_status_schema_help.contains("Status JSON schema guide"));
+    assert!(project_status_schema_help.contains("grafana-util-project-status"));
+    assert!(project_status_schema_help.contains("grafana-util status staged --help-schema"));
+    assert!(project_status_schema_help.contains("grafana-util status live --help-schema"));
+
+    let project_status_staged_schema_help = maybe_render_unified_help_from_os_args(
+        ["grafana-util", "status", "staged", "--help-schema"],
+        false,
+    )
+    .unwrap();
+    assert!(project_status_staged_schema_help.contains("Status staged JSON schema"));
+    assert!(project_status_staged_schema_help.contains("grafana-util-project-status"));
+    assert!(project_status_staged_schema_help.contains(
+        "grafana-util status staged --dashboard-export-dir ./dashboards/raw --desired-file ./desired.json --output-format json"
+    ));
+
+    let project_status_live_schema_help = maybe_render_unified_help_from_os_args(
+        ["grafana-util", "status", "live", "--help-schema"],
+        false,
+    )
+    .unwrap();
+    assert!(project_status_live_schema_help.contains("Status live JSON schema"));
+    assert!(project_status_live_schema_help.contains("grafana-util-project-status"));
+    assert!(project_status_live_schema_help
+        .contains("grafana-util status live --profile prod --output-format json"));
 
     let change_short_help =
         maybe_render_unified_help_from_os_args(["grafana-util", "change", "-h"], false).unwrap();
@@ -2070,19 +2355,12 @@ fn maybe_render_unified_help_from_os_args_handles_root_help_and_help_full_flags(
 
 #[test]
 fn maybe_render_unified_help_from_os_args_supports_change_schema_root() {
-    let help =
-        maybe_render_unified_help_from_os_args(["grafana-util", "change", "--help-schema"], false)
-            .unwrap();
-    assert!(help.contains("Change JSON schema guide"));
-    assert!(help.contains("grafana-utils-sync-summary"));
-    assert!(help.contains("grafana-utils-sync-plan"));
-    assert!(help.contains("grafana-utils-sync-apply-intent"));
-    assert!(help.contains("grafana-utils-alert-sync-plan"));
-    assert!(help.contains("grafana-util change preview --help-schema"));
+    assert_manifest_driven_schema_help(&["grafana-util", "change", "--help-schema"], "change");
 }
 
 #[test]
 fn maybe_render_unified_help_from_os_args_supports_change_subcommand_schema_help() {
+    assert_manifest_driven_schema_help(&["grafana-util", "change", "--help-schema"], "change");
     let help = maybe_render_unified_help_from_os_args(
         ["grafana-util", "change", "apply", "--help-schema"],
         false,
@@ -2097,20 +2375,18 @@ fn maybe_render_unified_help_from_os_args_supports_change_subcommand_schema_help
 
 #[test]
 fn maybe_render_unified_help_from_os_args_supports_dashboard_history_schema_root() {
-    let help = maybe_render_unified_help_from_os_args(
-        ["grafana-util", "dashboard", "history", "--help-schema"],
-        false,
-    )
-    .unwrap();
-    assert!(help.contains("Dashboard history JSON schema guide"));
-    assert!(help.contains("grafana-util-dashboard-history-list"));
-    assert!(help.contains("grafana-util-dashboard-history-restore"));
-    assert!(help.contains("grafana-util-dashboard-history-export"));
-    assert!(help.contains("grafana-util dashboard history export --help-schema"));
+    assert_manifest_driven_schema_help(
+        &["grafana-util", "dashboard", "history", "--help-schema"],
+        "dashboard-history",
+    );
 }
 
 #[test]
 fn maybe_render_unified_help_from_os_args_supports_dashboard_history_subcommand_schema_help() {
+    assert_manifest_driven_schema_help(
+        &["grafana-util", "dashboard", "history", "--help-schema"],
+        "dashboard-history",
+    );
     let restore_help = maybe_render_unified_help_from_os_args(
         [
             "grafana-util",
@@ -2127,6 +2403,22 @@ fn maybe_render_unified_help_from_os_args_supports_dashboard_history_subcommand_
     assert!(restore_help.contains("createsNewRevision"));
     assert!(restore_help.contains("A live restore still creates a new latest revision"));
 
+    let diff_help = maybe_render_unified_help_from_os_args(
+        [
+            "grafana-util",
+            "dashboard",
+            "history",
+            "diff",
+            "--help-schema",
+        ],
+        false,
+    )
+    .unwrap();
+    assert!(diff_help.contains("Dashboard history diff JSON schema"));
+    assert!(diff_help.contains("grafana-util-dashboard-history-diff"));
+    assert!(diff_help.contains("baseVersion"));
+    assert!(diff_help.contains("newVersion"));
+
     let export_help = maybe_render_unified_help_from_os_args(
         [
             "grafana-util",
@@ -2142,6 +2434,41 @@ fn maybe_render_unified_help_from_os_args_supports_dashboard_history_subcommand_
     assert!(export_help.contains("grafana-util-dashboard-history-export"));
     assert!(export_help.contains("versions[]"));
     assert!(export_help.contains("dashboard"));
+}
+
+#[test]
+fn maybe_render_unified_help_from_os_args_supports_dashboard_diff_schema_help() {
+    let help = maybe_render_unified_help_from_os_args(
+        ["grafana-util", "dashboard", "diff", "--help-schema"],
+        false,
+    )
+    .unwrap();
+    assert!(help.contains("Dashboard diff JSON schema"));
+    assert_help_matches_shared_diff_contract(&help, "dashboard");
+}
+
+#[test]
+fn maybe_render_unified_help_from_os_args_supports_alert_diff_schema_help() {
+    let help = maybe_render_unified_help_from_os_args(
+        ["grafana-util", "alert", "diff", "--help-schema"],
+        false,
+    )
+    .unwrap();
+    assert!(help.contains("Alert diff JSON schema"));
+    assert_help_matches_shared_diff_contract(&help, "alert");
+    assert!(help.contains("--output-format json"));
+    assert!(help.contains("--json"));
+}
+
+#[test]
+fn maybe_render_unified_help_from_os_args_supports_datasource_diff_schema_help() {
+    let help = maybe_render_unified_help_from_os_args(
+        ["grafana-util", "datasource", "diff", "--help-schema"],
+        false,
+    )
+    .unwrap();
+    assert!(help.contains("Datasource diff JSON schema"));
+    assert_help_matches_shared_diff_contract(&help, "datasource");
 }
 
 #[test]

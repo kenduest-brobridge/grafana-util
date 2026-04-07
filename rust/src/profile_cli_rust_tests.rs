@@ -1,5 +1,9 @@
 use crate::common::{validation, Result};
-use crate::profile_cli::profile_cli_render::{build_display_profile, render_profile_example};
+use crate::profile_cli::profile_cli_render::{
+    build_display_profile, render_profile_current_json, render_profile_current_text,
+    render_profile_example, render_profile_validate_json, render_profile_validate_text,
+    ProfileCurrentDocument, ProfileValidateCheck, ProfileValidateDocument,
+};
 use crate::profile_cli::profile_cli_runtime::{apply_profile_add_with_store, ProfileAddAction};
 use crate::profile_cli::{ProfileAddArgs, ProfileExampleMode, ProfileSecretStorageMode};
 use crate::profile_config::{
@@ -7,6 +11,7 @@ use crate::profile_config::{
     SelectedProfile,
 };
 use crate::profile_secret_store::OsSecretStore;
+use serde_json::Value;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -184,6 +189,65 @@ fn build_display_profile_masks_and_reveals_plaintext_secrets() {
     let revealed = build_display_profile(&selected, true, None).unwrap();
     assert_eq!(revealed.token.as_deref(), Some("abc123"));
     assert_eq!(revealed.password.as_deref(), Some("secret"));
+}
+
+#[test]
+fn render_profile_current_document_includes_selection_metadata() {
+    let document = ProfileCurrentDocument {
+        config_path: PathBuf::from("grafana-util.yaml"),
+        config_exists: true,
+        selected_profile: Some("prod".to_string()),
+        auth_mode: "basic".to_string(),
+        secret_mode: "encrypted-file".to_string(),
+        profile: None,
+    };
+
+    let rendered = render_profile_current_json(&document).unwrap();
+    let value: Value = serde_json::from_str(&rendered).unwrap();
+    assert_eq!(value["config_path"], "grafana-util.yaml");
+    assert_eq!(value["config_exists"], true);
+    assert_eq!(value["selected_profile"], "prod");
+    assert_eq!(value["auth_mode"], "basic");
+    assert_eq!(value["secret_mode"], "encrypted-file");
+    assert!(value["profile"].is_null());
+    assert!(render_profile_current_text(&document).contains("selected_profile: prod"));
+}
+
+#[test]
+fn render_profile_validate_document_includes_check_rows() {
+    let document = ProfileValidateDocument {
+        config_path: PathBuf::from("grafana-util.yaml"),
+        profile: "prod".to_string(),
+        valid: true,
+        live_checked: true,
+        auth_mode: "token".to_string(),
+        secret_mode: "os".to_string(),
+        checks: vec![
+            ProfileValidateCheck {
+                name: "selection".to_string(),
+                status: "ok".to_string(),
+                message: "Selected profile `prod`.".to_string(),
+            },
+            ProfileValidateCheck {
+                name: "live".to_string(),
+                status: "ok".to_string(),
+                message: "Grafana /api/health succeeded.".to_string(),
+            },
+        ],
+    };
+
+    let rendered = render_profile_validate_json(&document).unwrap();
+    let value: Value = serde_json::from_str(&rendered).unwrap();
+    assert_eq!(value["config_path"], "grafana-util.yaml");
+    assert_eq!(value["profile"], "prod");
+    assert_eq!(value["valid"], true);
+    assert_eq!(value["live_checked"], true);
+    assert_eq!(value["auth_mode"], "token");
+    assert_eq!(value["secret_mode"], "os");
+    assert_eq!(value["checks"].as_array().map(Vec::len), Some(2));
+    assert_eq!(value["checks"][0]["name"], "selection");
+    assert_eq!(value["checks"][1]["name"], "live");
+    assert!(render_profile_validate_text(&document).contains("live_checked: true"));
 }
 
 #[test]

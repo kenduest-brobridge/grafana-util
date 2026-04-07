@@ -62,7 +62,9 @@ The checked-in `docs/html/commands/en/*.html` files are generated from the same 
 - [dashboard history](./dashboard-history.md)
 - [dashboard screenshot](./dashboard-screenshot.md)
 
-### Compatibility Alias Pages
+### Compatibility Pages
+
+These pages document compatibility aliases for `dashboard analyze`. Prefer the canonical `dashboard analyze ...` form in new docs and scripts.
 
 - [dashboard analyze (local alias)](./dashboard-analyze-export.md)
 - [dashboard analyze (live alias)](./dashboard-analyze-live.md)

@@ -207,6 +207,10 @@ Dashboard watch implementation policy:
 - Keep command-reference detail in `docs/commands/`.
 - Keep generated docs logic narrow and documented through the generated-docs architecture and playbook.
 - Keep typed contracts in the dedicated internal policy/spec docs.
+- Treat the shared diff JSON contract as one family: bump `schemaVersion` only for breaking changes to the envelope or required field semantics, keep it stable for additive backward-compatible fields, and update `dashboard diff`, `alert diff`, and `datasource diff` together.
+- Treat `schemas/manifests/**/{contracts,routes}.json` as the source of truth for machine-readable CLI contracts that now participate in the schema system.
+- Treat `schemas/jsonschema/**/*.schema.json` and `schemas/help/**/*.txt` as generated artifacts derived from those manifests via `make schema`; do not hand-edit them as the primary source.
+- Treat golden payload fixtures such as `fixtures/shared_diff_golden_cases.json` and `fixtures/machine_schema_golden_cases.json` as validation artifacts, not as the canonical field inventory.
 - Prefer repo-owned typed envelopes over ad hoc maps when a workflow already owns the shape.
 - Keep facades thin: `cli.rs` and domain `mod.rs` files should route, normalize, and re-export, not absorb downstream contract logic.
 - Keep comments high-signal: explain ownership, invariants, and non-obvious behavior; do not narrate obvious control flow.

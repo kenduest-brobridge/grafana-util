@@ -10,6 +10,7 @@ use std::collections::BTreeMap;
 use ratatui::widgets::ListState;
 
 use super::browse_edit_dialog::EditDialogState;
+use super::browse_external_edit_dialog::ExternalEditDialogState;
 use super::browse_history_dialog::HistoryDialogState;
 use super::browse_support::{
     DashboardBrowseDocument, DashboardBrowseNode, DashboardBrowseNodeKind,
@@ -48,6 +49,11 @@ pub(crate) struct SelectionAnchor {
     org_id: String,
 }
 
+pub(crate) struct CompletionNotice {
+    pub(crate) title: String,
+    pub(crate) body: String,
+}
+
 pub(crate) struct BrowserState {
     pub(crate) document: DashboardBrowseDocument,
     pub(crate) local_mode: bool,
@@ -56,9 +62,11 @@ pub(crate) struct BrowserState {
     pub(crate) live_view_cache: BTreeMap<String, Vec<String>>,
     pub(crate) pending_delete: Option<DeletePlan>,
     pub(crate) pending_edit: Option<EditDialogState>,
+    pub(crate) pending_external_edit: Option<ExternalEditDialogState>,
     pub(crate) pending_history: Option<HistoryDialogState>,
     pub(crate) pending_search: Option<SearchPromptState>,
     pub(crate) last_search: Option<SearchState>,
+    pub(crate) completion_notice: Option<CompletionNotice>,
     pub(crate) focus: PaneFocus,
     pub(crate) status: String,
 }
@@ -77,7 +85,7 @@ impl BrowserState {
         } else if local_mode {
             "Loaded local dashboard tree. Live actions are unavailable in browse mode.".to_string()
         } else {
-            "Loaded dashboard tree. Use e for edit, E for raw JSON edit, v for live details, and d/D for delete.".to_string()
+            "Loaded dashboard tree. Use e for metadata edit, E for raw JSON review/apply, h for history, v for live details, and d/D for delete.".to_string()
         };
         Self {
             document,
@@ -87,9 +95,11 @@ impl BrowserState {
             live_view_cache: BTreeMap::new(),
             pending_delete: None,
             pending_edit: None,
+            pending_external_edit: None,
             pending_history: None,
             pending_search: None,
             last_search: None,
+            completion_notice: None,
             focus: PaneFocus::Tree,
             status,
         }
@@ -115,7 +125,9 @@ impl BrowserState {
         self.live_view_cache.clear();
         self.pending_delete = None;
         self.pending_history = None;
+        self.pending_external_edit = None;
         self.pending_search = None;
+        self.completion_notice = None;
         // Restore the operator's position by identity first, then degrade to the containing folder.
         self.restore_selection(anchor.as_ref());
         self.detail_scroll = 0;

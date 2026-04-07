@@ -24,6 +24,11 @@ grafana-util status live --profile prod --output-format yaml
 
 Related commands: `grafana-util overview`, `grafana-util change check`, `grafana-util change apply`.
 
+Schema guide:
+- `grafana-util status --help-schema`
+- `grafana-util status staged --help-schema`
+- `grafana-util status live --help-schema`
+
 ## `staged`
 
 Purpose: render project status from staged artifacts.
@@ -45,6 +50,8 @@ grafana-util status staged --dashboard-provisioning-dir ./dashboards/provisionin
 ```
 
 Related commands: `grafana-util overview`, `grafana-util change inspect`, `grafana-util change check`.
+
+Machine-readable contract: `grafana-util-project-status`
 
 ## `live`
 
@@ -76,3 +83,5 @@ grafana-util status live --url http://localhost:3000 --basic-user admin --basic-
 ```
 
 Related commands: `grafana-util overview live`, `grafana-util change apply`, `grafana-util profile show`.
+
+Machine-readable contract: `grafana-util-project-status`

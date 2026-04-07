@@ -5,6 +5,7 @@ use crate::common::{message, Result};
 use reqwest::Method;
 
 use super::browse_edit_dialog::EditDialogState;
+use super::browse_external_edit_dialog::ExternalEditDialogState;
 use super::browse_history_dialog::HistoryDialogState;
 use super::browse_support::{
     fetch_dashboard_view_lines_with_request, load_dashboard_browse_document_for_args,
@@ -19,9 +20,9 @@ use super::edit_external::{
     apply_external_dashboard_edit_with_request, fetch_external_dashboard_edit_draft_with_request,
     open_dashboard_in_external_editor, review_external_dashboard_edit,
 };
-use super::edit_prompt::prompt_yes_no;
 use super::history::{
-    list_dashboard_history_versions_with_request, restore_dashboard_history_version_with_request,
+    list_dashboard_history_versions_with_request,
+    restore_dashboard_history_version_with_request_and_message,
 };
 use super::live::{delete_dashboard_request_with_request, delete_folder_request_with_request};
 use super::{BrowseArgs, CommonCliArgs, DeleteArgs};
@@ -86,11 +87,12 @@ pub(crate) fn restore_dashboard_history_version<F>(
     request_json: &mut F,
     uid: &str,
     version: i64,
+    message: &str,
 ) -> Result<()>
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
-    restore_dashboard_history_version_with_request(request_json, uid, version)
+    restore_dashboard_history_version_with_request_and_message(request_json, uid, version, message)
 }
 
 pub(crate) fn apply_dashboard_edit_save<F>(
@@ -119,10 +121,10 @@ where
     Ok(true)
 }
 
-pub(crate) fn run_external_dashboard_edit<F>(
+pub(crate) fn begin_external_dashboard_edit<F>(
     request_json: &mut F,
     node: &DashboardBrowseNode,
-) -> Result<(String, bool)>
+) -> Result<Option<ExternalEditDialogState>>
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
@@ -132,17 +134,28 @@ where
     )?;
     let edited = open_dashboard_in_external_editor(&draft)?;
     let Some(review) = review_external_dashboard_edit(&draft, &edited)? else {
-        println!("No raw JSON changes detected for {}.", draft.uid);
-        return Ok((draft.uid, false));
+        return Ok(None);
     };
-    for line in &review.summary_lines {
-        println!("{line}");
-    }
-    if !prompt_yes_no("Confirm raw JSON apply [y/N]: ")? {
-        return Ok((draft.uid, false));
-    }
-    apply_external_dashboard_edit_with_request(&mut *request_json, &review.updated_payload)?;
-    Ok((draft.uid, true))
+    Ok(Some(ExternalEditDialogState::new(
+        draft.uid,
+        draft.title,
+        review.updated_payload,
+        review
+            .summary_lines
+            .into_iter()
+            .filter(|line| !line.starts_with("Apply this raw JSON change"))
+            .collect(),
+    )))
+}
+
+pub(crate) fn apply_external_dashboard_edit<F>(
+    request_json: &mut F,
+    updated_payload: &Value,
+) -> Result<()>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    apply_external_dashboard_edit_with_request(request_json, updated_payload)
 }
 
 pub(crate) fn build_delete_preview<F>(

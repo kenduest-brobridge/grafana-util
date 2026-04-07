@@ -1,0 +1,16 @@
+Dashboard history list JSON schema
+
+Commands:
+  grafana-util dashboard history list --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --dashboard-uid cpu-main --output-format json
+  grafana-util dashboard history list --input ./cpu-main.history.json --output-format json
+  grafana-util dashboard history list --input-dir ./dashboards --output-format json
+
+Kinds:
+
+- grafana-util-dashboard-history-list -> grafana-util-dashboard-history-list
+  returned for one dashboard history stream from live Grafana or one local artifact
+  top-level keys: kind, schemaVersion, toolVersion, dashboardUid, versionCount, versions
+
+- grafana-util-dashboard-history-inventory -> grafana-util-dashboard-history-inventory
+  returned when `--input-dir` is used without `--dashboard-uid`, so you can inventory available history artifacts first
+  top-level keys: kind, schemaVersion, toolVersion, artifactCount, artifacts

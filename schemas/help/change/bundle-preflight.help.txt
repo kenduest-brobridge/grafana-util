@@ -1,0 +1,16 @@
+Change bundle-preflight JSON schema
+
+Command:
+  grafana-util change bundle-preflight --source-bundle ./bundle.json --target-inventory ./target.json --output-format json
+
+kind:
+  grafana-utils-sync-bundle-preflight
+
+Top-level keys:
+- kind
+- schemaVersion
+- summary
+- syncPreflight
+- alertArtifactAssessment
+- secretPlaceholderAssessment
+- providerAssessment

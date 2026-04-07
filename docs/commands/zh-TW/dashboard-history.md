@@ -1,7 +1,7 @@
 # dashboard history
 
 ## 用途
-列出、還原或匯出單一 dashboard UID 的版本歷史，來源可以是 live Grafana，也可以是本機 history 成品。
+列出、還原、比對或匯出單一 dashboard UID 的版本歷史，來源可以是 live Grafana，也可以是本機 history 成品。
 
 ## 何時使用
 當您需要檢查較早的 dashboard 版本、找回一個已知可用的版本，或把 dashboard 歷史匯出成可重用的成品給審查或 CI 時，使用這個指令。您也可以直接從單一匯出成品或包含 history 的 export tree 讀回同一份歷史。
@@ -18,16 +18,22 @@
 
 `dashboard history restore` 仍然只支援 live。
 
+`dashboard history diff` 可以比對兩個歷史版本，來源可混合 live Grafana、單一 history 成品，或不同日期的 export roots。
+
 ## 重點旗標
 - `--dashboard-uid`：要檢視版本歷史的 dashboard UID。做 live history list 與 restore 時必填；讀取 local export tree 時也可用來過濾特定 dashboard。
 - `--input`：讀取 `dashboard history export` 產生的一份可重用 history 成品。
 - `--input-dir`：讀取 `dashboard export --include-history` 產生的 export tree。
+- `--base-dashboard-uid` / `--new-dashboard-uid`：diff 來源若是 live 或 export tree，這兩個 dashboard UID 要明確指定。
+- `--base-input` / `--new-input`：要比對的可重用 history 成品。
+- `--base-input-dir` / `--new-input-dir`：要比對的 export tree，可直接比較不同日期的 history exports。
+- `--base-version` / `--new-version`：要比對的歷史版本號。
 - `--limit`：list 或 export 要包含多少個最近版本。
 - `--version`：要還原的歷史版本號。
 - `--message`：新還原 revision 要附帶的版本訊息。
 - `--dry-run`：預覽還原，但不會真的變更 Grafana。
 - `--yes`：確認真的執行還原。
-- `--output-format`：把 list 或 restore 輸出成 text、table、json 或 yaml。
+- `--output-format`：把 list 或 restore 輸出成 text、table、json 或 yaml。diff 只會用 text 或 json。
 - `--output`：把匯出的歷史成品寫到 JSON 檔。
 - `--overwrite`：覆蓋既有的匯出成品檔。
 
@@ -45,6 +51,7 @@
 - `grafana-util dashboard history --help-schema`
 - `grafana-util dashboard history list --help-schema`
 - `grafana-util dashboard history restore --help-schema`
+- `grafana-util dashboard history diff --help-schema`
 - `grafana-util dashboard history export --help-schema`
 
 判斷順序建議固定成：
@@ -58,6 +65,7 @@
 - `dashboard history list --output-format json` -> `grafana-util-dashboard-history-list`
 - `dashboard history list --input-dir ./dashboards --output-format json` -> 如果沒有再用 `--dashboard-uid` 縮小，會是 `grafana-util-dashboard-history-inventory`
 - `dashboard history restore --dry-run --output-format json` -> `grafana-util-dashboard-history-restore`
+- `dashboard history diff --output-format json` -> `grafana-util-dashboard-history-diff`
 - `dashboard history restore --output-format json` -> 同一種 contract，但 live 執行仍會建立新的 latest revision
 - `dashboard history export --output ./cpu-main.history.json` -> `grafana-util-dashboard-history-export`
 
@@ -66,6 +74,7 @@
 - list -> `kind`、`schemaVersion`、`toolVersion`、`dashboardUid`、`versionCount`、`versions`
 - list inventory -> `kind`、`schemaVersion`、`toolVersion`、`artifactCount`、`artifacts`
 - restore -> `kind`、`schemaVersion`、`toolVersion`、`mode`、`dashboardUid`、`currentVersion`、`restoreVersion`、`currentTitle`、`restoredTitle`、可選的 `targetFolderUid`、`createsNewRevision`、`message`
+- diff -> `kind`、`schemaVersion`、`toolVersion`、`summary`、`rows`（rows 會包含 `path`、`baseSource`、`newSource`、`baseVersion`、`newVersion`、`changedFields`、`diffText`、`contextLines`）
 - export -> `kind`、`schemaVersion`、`toolVersion`、`dashboardUid`、`currentVersion`、`currentTitle`、`versionCount`、`versions`
 
 ## 範例
@@ -90,6 +99,11 @@ grafana-util dashboard history restore --url http://localhost:3000 --basic-user 
 ```
 
 ```bash
+# 用途：比對同一個 dashboard UID 在兩個不同日期匯出的 history 成品。
+grafana-util dashboard history diff --base-input-dir ./exports-2026-04-01 --base-dashboard-uid cpu-main --base-version 17 --new-input-dir ./exports-2026-04-07 --new-dashboard-uid cpu-main --new-version 21 --output-format json
+```
+
+```bash
 # 用途：把最近的 dashboard history 匯出成可重用的 JSON 成品。
 grafana-util dashboard history export --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --dashboard-uid cpu-main --limit 20 --output ./cpu-main.history.json
 ```
@@ -97,12 +111,13 @@ grafana-util dashboard history export --url http://localhost:3000 --token "$GRAF
 ## 採用前後對照
 
 - **採用前**：dashboard 還原常常得先猜哪個舊版本可用，再手動重建，或直接改 JSON。
-- **採用後**：同一個 history 指令群組就能列出、還原與匯出，讓操作人員先看清楚，再把同一份成品交給審查或 CI。
+- **採用後**：同一個 history 指令群組就能列出、還原、比對與匯出，讓操作人員先看清楚，再把同一份成品交給審查或 CI。
 
 ## 成功判準
 
 - list 輸出會列出您預期的版本號與訊息
 - restore 的 dry-run 會清楚顯示哪個版本將成為新的最新 revision
+- diff 會清楚顯示您比對的兩個版本，以及它們是否一致
 - 真正還原後，舊版本仍在 history 裡，而新的 current revision 會新增出來
 - export 會寫出可重複使用的 JSON 成品，之後不連 Grafana 也能檢查
 

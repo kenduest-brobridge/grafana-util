@@ -1,0 +1,62 @@
+[
+  {
+    "routeId": "root",
+    "title": "Status JSON schema guide",
+    "intro": [
+      "Use this guide when CI, scripts, or external tooling need the machine-readable project-status document."
+    ],
+    "contractSectionHeading": "Contract",
+    "contractSections": [
+      {
+        "contractId": "project-status",
+        "label": "kind = grafana-util-project-status",
+        "description": "schemaVersion = 1",
+        "showNested": false
+      }
+    ],
+    "notes": [
+      "`status` and `overview` reuse the same ProjectStatus wire shape.",
+      "`staged` and `live` emit the same top-level envelope; they differ only in how the fields are populated.",
+      "Branch on kind plus schemaVersion before reading nested fields."
+    ],
+    "quickLookups": [
+      "grafana-util status --help-schema",
+      "grafana-util status staged --help-schema",
+      "grafana-util status live --help-schema"
+    ]
+  },
+  {
+    "routeId": "staged",
+    "title": "Status staged JSON schema",
+    "commands": [
+      "grafana-util status staged --dashboard-export-dir ./dashboards/raw --desired-file ./desired.json --output-format json"
+    ],
+    "contractSections": [
+      {
+        "contractId": "project-status",
+        "showNested": false
+      }
+    ],
+    "notes": [
+      "This is the same shared contract used by live status.",
+      "Branch on kind plus schemaVersion before reading nested fields."
+    ]
+  },
+  {
+    "routeId": "live",
+    "title": "Status live JSON schema",
+    "commands": [
+      "grafana-util status live --profile prod --output-format json"
+    ],
+    "contractSections": [
+      {
+        "contractId": "project-status",
+        "showNested": false
+      }
+    ],
+    "notes": [
+      "This is the same shared contract used by staged status.",
+      "Branch on kind plus schemaVersion before reading nested fields."
+    ]
+  }
+]

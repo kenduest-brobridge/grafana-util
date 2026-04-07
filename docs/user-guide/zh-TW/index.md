@@ -101,6 +101,7 @@ grafana-util overview live --url http://localhost:3000 --basic-user admin --prom
 *   **[維運情境手冊](scenarios.md)**：看備份、災難復原、稽核等端到端任務範例。
 *   **[實戰錦囊與最佳實踐](recipes.md)**：整理 Grafana 日常常見問題與建議做法。
 *   **[技術參考手冊](reference.md)**：集中說明常用旗標、輸出格式與操作原則。
+*   **[共用 Diff JSON contract](diff-json-contract.md)**：dashboard、alert、datasource diff 共用的 JSON envelope、summary 與 row 欄位說明。
 *   **[指令詳細說明](../../commands/zh-TW/index.md)**：每個 command 和 subcommand 都有獨立頁面，適合直接查語法與旗標。
 *   **[疑難排解與名詞解釋](troubleshooting.md)**：故障排除導引與術語索引。
 

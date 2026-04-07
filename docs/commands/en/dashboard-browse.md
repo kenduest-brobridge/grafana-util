@@ -4,7 +4,7 @@
 Open the live dashboard tree or a local export tree in an interactive terminal UI.
 
 ## When to use
-Use this when you want to explore folders, select a dashboard, inspect the live tree before fetching, diffing, importing, or deleting, or review a local export tree without calling Grafana.
+Use this when you want to explore folders, select a dashboard, inspect the live tree before fetching, diffing, importing, or deleting, review raw JSON edits inside the live TUI flow, or review a local export tree without calling Grafana.
 
 ## Key flags
 - `--path`: start at one folder subtree instead of the full tree.
@@ -13,6 +13,13 @@ Use this when you want to explore folders, select a dashboard, inspect the live 
 - `--org-id`: browse one explicit Grafana org.
 - `--all-orgs`: aggregate browse results across visible orgs. Requires Basic auth.
 - Shared live flags: `--url`, `--token`, `--basic-user`, `--basic-password`.
+
+## Live TUI actions
+- `e`: open the metadata edit dialog for the selected live dashboard row.
+- `E`: open the selected live dashboard JSON in your external editor, then return to a TUI review modal where you can preview publish, save a draft, apply live, or discard.
+- `h`: inspect live revision history for the selected dashboard.
+- `d` / `D`: preview delete actions for the selected dashboard or subtree.
+- Local browse stays read-only and does not offer these live actions.
 
 ## Examples
 ```bash

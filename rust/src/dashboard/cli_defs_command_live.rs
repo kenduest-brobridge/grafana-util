@@ -27,6 +27,13 @@ pub struct EditLiveArgs {
     pub apply_live: bool,
     #[arg(
         long,
+        default_value_t = false,
+        conflicts_with = "apply_live",
+        help = "After writing the local draft, automatically run the equivalent dashboard publish --dry-run preview against Grafana."
+    )]
+    pub publish_dry_run: bool,
+    #[arg(
+        long,
         default_value = DEFAULT_IMPORT_MESSAGE,
         help = "Revision message to use when --apply-live writes the edited dashboard back to Grafana."
     )]

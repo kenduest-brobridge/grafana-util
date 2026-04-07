@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.grafana-util.local/change/sync-summary.schema.json",
+  "title": "Change summary JSON schema",
+  "type": "object",
+  "required": [
+    "kind",
+    "schemaVersion",
+    "toolVersion",
+    "summary",
+    "resources"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "summary": {
+      "type": "object",
+      "properties": {
+        "resourceCount": {},
+        "blockingCount": {}
+      },
+      "required": [
+        "resourceCount",
+        "blockingCount"
+      ],
+      "additionalProperties": false
+    },
+    "resources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "kind": {},
+          "identity": {},
+          "action": {}
+        },
+        "required": [
+          "kind",
+          "identity",
+          "action"
+        ],
+        "additionalProperties": false
+      }
+    }
+  }
+}

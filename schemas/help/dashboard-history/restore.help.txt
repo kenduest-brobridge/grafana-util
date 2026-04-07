@@ -1,0 +1,26 @@
+Dashboard history restore JSON schema
+
+Command:
+  grafana-util dashboard history restore --url http://localhost:3000 --basic-user admin --basic-password admin --dashboard-uid cpu-main --version 17 --dry-run --output-format json
+
+kind:
+  grafana-util-dashboard-history-restore
+
+Top-level keys:
+- kind
+- schemaVersion
+- toolVersion
+- mode
+- dashboardUid
+- currentVersion
+- restoreVersion
+- currentTitle
+- restoredTitle
+- targetFolderUid
+- createsNewRevision
+- message
+
+Notes:
+- `--dry-run` renders the same contract without mutating Grafana.
+- A live restore still creates a new latest revision entry; it does not remove the historical version you selected.
+- Grafana may keep the same numeric `version` in some environments, so treat the new history entry and message as the reliable signal.

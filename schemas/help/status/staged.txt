@@ -1,0 +1,21 @@
+Status staged JSON schema
+
+Command:
+  grafana-util status staged --dashboard-export-dir ./dashboards/raw --desired-file ./desired.json --output-format json
+
+kind:
+  grafana-util-project-status
+
+Top-level keys:
+- kind
+- schemaVersion
+- toolVersion
+- scope
+- overall
+- domains
+- topBlockers
+- nextActions
+
+Notes:
+- This is the same shared contract used by live status.
+- Branch on kind plus schemaVersion before reading nested fields.

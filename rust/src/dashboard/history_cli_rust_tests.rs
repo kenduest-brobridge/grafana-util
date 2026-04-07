@@ -2,15 +2,17 @@
 #![allow(unused_imports)]
 
 use super::history::{
+    build_dashboard_history_diff_document_with_request,
     build_dashboard_history_export_document_with_request,
     build_dashboard_history_list_document_with_request, export_dashboard_history_with_request,
     run_dashboard_history_restore,
 };
 use super::test_support;
 use super::{
-    discover_dashboard_files, CommonCliArgs, HistoryExportArgs, HistoryListArgs,
+    discover_dashboard_files, CommonCliArgs, HistoryDiffArgs, HistoryExportArgs, HistoryListArgs,
     HistoryOutputFormat, HistoryRestoreArgs,
 };
+use crate::common::DiffOutputFormat;
 use reqwest::Method;
 use serde_json::{json, Value};
 use std::fs;
@@ -29,6 +31,43 @@ fn make_history_common_args() -> CommonCliArgs {
         timeout: 30,
         verify_ssl: false,
     }
+}
+
+fn write_history_export_artifact(path: &std::path::Path, uid: &str, version: i64, title: &str) {
+    fs::write(
+        path,
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-util-dashboard-history-export",
+            "schemaVersion": 1,
+            "toolVersion": "0.8.0-dev",
+            "dashboardUid": uid,
+            "currentVersion": version,
+            "currentTitle": title,
+            "versionCount": 1,
+            "versions": [
+                {
+                    "version": version,
+                    "created": "2026-04-07T12:00:00Z",
+                    "createdBy": "ops",
+                    "message": format!("Revision {version}"),
+                    "dashboard": {
+                        "uid": uid,
+                        "title": title,
+                        "version": version,
+                        "panels": [
+                            {
+                                "id": 1,
+                                "type": "graph",
+                                "title": title
+                            }
+                        ]
+                    }
+                }
+            ]
+        }))
+        .unwrap(),
+    )
+    .unwrap();
 }
 
 #[test]
@@ -165,6 +204,141 @@ fn dashboard_history_export_writes_json_artifact_with_dashboard_payloads() {
     assert_eq!(artifact["dashboardUid"], "cpu-main");
     assert_eq!(artifact["versionCount"], 2);
     assert_eq!(artifact["versions"][0]["dashboard"]["title"], "CPU Main");
+}
+
+#[test]
+fn dashboard_history_diff_builds_json_contract_from_local_export_roots() {
+    let base_dir = tempdir().unwrap();
+    let new_dir = tempdir().unwrap();
+    let base_root = base_dir.path().join("exports-2026-04-01/history");
+    let new_root = new_dir.path().join("exports-2026-04-07/history");
+    fs::create_dir_all(&base_root).unwrap();
+    fs::create_dir_all(&new_root).unwrap();
+
+    let base_path = base_root.join("cpu-main.history.json");
+    let new_path = new_root.join("cpu-main.history.json");
+    write_history_export_artifact(&base_path, "cpu-main", 17, "CPU Main");
+    write_history_export_artifact(&new_path, "cpu-main", 21, "CPU Main");
+
+    let args = HistoryDiffArgs {
+        common: make_history_common_args(),
+        base_dashboard_uid: Some("cpu-main".to_string()),
+        base_input: None,
+        base_input_dir: Some(base_dir.path().join("exports-2026-04-01")),
+        base_version: 17,
+        new_dashboard_uid: Some("cpu-main".to_string()),
+        new_input: None,
+        new_input_dir: Some(new_dir.path().join("exports-2026-04-07")),
+        new_version: 21,
+        output_format: DiffOutputFormat::Json,
+        context_lines: 3,
+    };
+
+    let document = build_dashboard_history_diff_document_with_request(
+        |_method, _path, _params, _payload| {
+            Err(test_support::message(
+                "local history diff should not call Grafana",
+            ))
+        },
+        &args,
+    )
+    .unwrap();
+
+    assert_eq!(
+        document["kind"],
+        json!("grafana-util-dashboard-history-diff")
+    );
+    assert_eq!(document["schemaVersion"], json!(1));
+    assert_eq!(document["summary"]["checked"], json!(1));
+    assert_eq!(document["summary"]["same"], json!(0));
+    assert_eq!(document["summary"]["different"], json!(1));
+    let row = document["rows"][0].as_object().unwrap();
+    assert_eq!(row["domain"], json!("dashboard"));
+    assert_eq!(row["resourceKind"], json!("dashboard-history"));
+    assert_eq!(row["identity"], json!("cpu-main"));
+    assert_eq!(row["status"], json!("different"));
+    assert_eq!(row["baseVersion"], json!(17));
+    assert_eq!(row["newVersion"], json!(21));
+    assert_eq!(
+        row["baseSource"],
+        json!(base_path.display().to_string() + "@17")
+    );
+    assert_eq!(
+        row["newSource"],
+        json!(new_path.display().to_string() + "@21")
+    );
+    assert_eq!(row["changedFields"], json!(["dashboard"]));
+    assert_eq!(row["contextLines"], json!(3));
+    assert!(row["diffText"].as_str().unwrap().contains("--- "));
+    assert!(row["diffText"].as_str().unwrap().contains("+++ "));
+}
+
+#[test]
+fn dashboard_history_diff_builds_json_contract_from_live_versions() {
+    let args = HistoryDiffArgs {
+        common: make_history_common_args(),
+        base_dashboard_uid: Some("cpu-main".to_string()),
+        base_input: None,
+        base_input_dir: None,
+        base_version: 17,
+        new_dashboard_uid: Some("cpu-main".to_string()),
+        new_input: None,
+        new_input_dir: None,
+        new_version: 21,
+        output_format: DiffOutputFormat::Json,
+        context_lines: 2,
+    };
+
+    let document = build_dashboard_history_diff_document_with_request(
+        |method, path, _params, _payload| match (method.clone(), path) {
+            (Method::GET, "/api/dashboards/uid/cpu-main/versions/17") => Ok(Some(json!({
+                "data": {
+                    "uid": "cpu-main",
+                    "title": "CPU Main",
+                    "version": 17,
+                    "panels": [{"id": 1, "title": "Old"}]
+                }
+            }))),
+            (Method::GET, "/api/dashboards/uid/cpu-main/versions/21") => Ok(Some(json!({
+                "data": {
+                    "uid": "cpu-main",
+                    "title": "CPU Main",
+                    "version": 21,
+                    "panels": [{"id": 1, "title": "New"}]
+                }
+            }))),
+            _ => Err(test_support::message(format!(
+                "unexpected request {method} {path}"
+            ))),
+        },
+        &args,
+    )
+    .unwrap();
+
+    assert_eq!(
+        document["kind"],
+        json!("grafana-util-dashboard-history-diff")
+    );
+    assert_eq!(document["summary"]["checked"], json!(1));
+    assert_eq!(document["summary"]["different"], json!(1));
+    let row = document["rows"][0].as_object().unwrap();
+    assert_eq!(row["baseSource"], json!("grafana:cpu-main@17"));
+    assert_eq!(row["newSource"], json!("grafana:cpu-main@21"));
+    assert_eq!(row["identity"], json!("cpu-main"));
+    assert_eq!(row["status"], json!("different"));
+    assert_eq!(
+        row["path"],
+        json!("grafana:cpu-main@17 -> grafana:cpu-main@21")
+    );
+    assert_eq!(row["contextLines"], json!(2));
+    assert!(row["diffText"]
+        .as_str()
+        .unwrap()
+        .contains("grafana:cpu-main@17"));
+    assert!(row["diffText"]
+        .as_str()
+        .unwrap()
+        .contains("grafana:cpu-main@21"));
 }
 
 #[test]

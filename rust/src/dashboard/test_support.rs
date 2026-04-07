@@ -6,13 +6,13 @@ pub(crate) use crate::dashboard::cli_defs::{
     build_auth_context, build_http_client, build_http_client_for_org, normalize_dashboard_cli_args,
     parse_cli_from, BrowseArgs, CommonCliArgs, DashboardAuthContext, DashboardCliArgs,
     DashboardCommand, DashboardHistorySubcommand, DashboardImportInputFormat, DiffArgs, ExportArgs,
-    GovernanceGateArgs, GovernanceGateOutputFormat, GovernancePolicySource, HistoryExportArgs,
-    HistoryListArgs, HistoryOutputFormat, HistoryRestoreArgs, ImpactArgs, ImpactOutputFormat,
-    ImportArgs, InspectExportArgs, InspectExportReportFormat, InspectLiveArgs, InspectOutputFormat,
-    InspectVarsArgs, ListArgs, RawToPromptArgs, RawToPromptLogFormat, RawToPromptOutputFormat,
-    RawToPromptResolution, ScreenshotArgs, ScreenshotFullPageOutput, ScreenshotOutputFormat,
-    ScreenshotTheme, SimpleOutputFormat, TopologyArgs, TopologyOutputFormat, ValidateExportArgs,
-    ValidationOutputFormat,
+    GovernanceGateArgs, GovernanceGateOutputFormat, GovernancePolicySource, HistoryDiffArgs,
+    HistoryExportArgs, HistoryListArgs, HistoryOutputFormat, HistoryRestoreArgs, ImpactArgs,
+    ImpactOutputFormat, ImportArgs, InspectExportArgs, InspectExportReportFormat, InspectLiveArgs,
+    InspectOutputFormat, InspectVarsArgs, ListArgs, RawToPromptArgs, RawToPromptLogFormat,
+    RawToPromptOutputFormat, RawToPromptResolution, ScreenshotArgs, ScreenshotFullPageOutput,
+    ScreenshotOutputFormat, ScreenshotTheme, SimpleOutputFormat, TopologyArgs,
+    TopologyOutputFormat, ValidateExportArgs, ValidationOutputFormat,
 };
 pub(crate) use crate::dashboard::export::{
     build_export_variant_dirs, build_output_path, export_dashboards_with_client,
@@ -42,12 +42,14 @@ pub(crate) use crate::dashboard::help::{
     render_inspect_live_help_full,
 };
 pub(crate) use crate::dashboard::history::{
+    build_dashboard_history_diff_document_with_request,
     build_dashboard_history_export_document_with_request,
     build_dashboard_history_list_document_with_request, export_dashboard_history_with_request,
-    restore_dashboard_history_version_with_request_and_message, run_dashboard_history_list,
-    run_dashboard_history_restore, DashboardHistoryExportDocument, DashboardHistoryListDocument,
-    DashboardHistoryRestoreDocument, DashboardHistoryVersion, DASHBOARD_HISTORY_EXPORT_KIND,
-    DASHBOARD_HISTORY_LIST_KIND, DASHBOARD_HISTORY_RESTORE_KIND,
+    restore_dashboard_history_version_with_request_and_message, run_dashboard_history_diff,
+    run_dashboard_history_list, run_dashboard_history_restore, DashboardHistoryExportDocument,
+    DashboardHistoryListDocument, DashboardHistoryRestoreDocument, DashboardHistoryVersion,
+    DASHBOARD_HISTORY_DIFF_KIND, DASHBOARD_HISTORY_EXPORT_KIND, DASHBOARD_HISTORY_LIST_KIND,
+    DASHBOARD_HISTORY_RESTORE_KIND,
 };
 pub(crate) use crate::dashboard::impact_tui::{build_impact_tui_groups, filter_impact_tui_items};
 pub(crate) use crate::dashboard::import::{

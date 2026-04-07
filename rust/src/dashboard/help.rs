@@ -43,7 +43,7 @@ fn render_dashboard_subcommand_help_text(subcommand_name: &str, colorize: bool) 
 /// Args: see function signature.
 /// Returns: see implementation.
 pub fn render_inspect_export_help_full() -> String {
-    let mut text = render_dashboard_subcommand_help_text("inspect-export", false);
+    let mut text = render_dashboard_subcommand_help_text("analyze", false);
     text.push_str(INSPECT_EXPORT_HELP_FULL_EXAMPLES);
     text
 }
@@ -53,7 +53,7 @@ pub fn render_inspect_export_help_full() -> String {
 /// Args: see function signature.
 /// Returns: see implementation.
 pub fn render_inspect_live_help_full() -> String {
-    let mut text = render_dashboard_subcommand_help_text("inspect-live", false);
+    let mut text = render_dashboard_subcommand_help_text("analyze", false);
     text.push_str(INSPECT_LIVE_HELP_FULL_EXAMPLES);
     text
 }

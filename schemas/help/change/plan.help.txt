@@ -1,0 +1,33 @@
+Change plan JSON schema
+
+Command:
+  grafana-util change plan --desired-file ./desired.json --fetch-live --profile prod --output-format json
+
+kind:
+  grafana-utils-sync-plan
+
+Top-level keys:
+- kind
+- schemaVersion
+- toolVersion
+- dryRun
+- reviewRequired
+- reviewed
+- allowPrune
+- summary
+- alertAssessment
+- operations
+- traceId
+- stage
+- stepIndex
+- parentTraceId
+- summary
+  - operationCount
+  - blocked_reasons
+- operations[]
+  - kind
+  - identity
+  - action
+  - orderIndex
+  - orderGroup
+  - kindOrder

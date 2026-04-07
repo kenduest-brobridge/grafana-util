@@ -12,7 +12,8 @@ Compare local alerting export files against live Grafana resources.
 ## Key flags
 
 - `--diff-dir` points to the raw export directory.
-- `--json` renders the diff as structured JSON.
+- `--output-format json` renders the diff as structured JSON.
+- `--json` remains available as a compatibility flag equivalent to `--output-format json`.
 - `--dashboard-uid-map` and `--panel-id-map` repair linked alert rules during comparison.
 
 ## Examples
@@ -24,7 +25,7 @@ grafana-util alert diff --url http://localhost:3000 --diff-dir ./alerts/raw
 
 ```bash
 # Purpose: Compare local alerting export files against live Grafana resources.
-grafana-util alert diff --url http://localhost:3000 --diff-dir ./alerts/raw --json
+grafana-util alert diff --url http://localhost:3000 --diff-dir ./alerts/raw --output-format json
 ```
 
 ## Related commands
@@ -32,3 +33,9 @@ grafana-util alert diff --url http://localhost:3000 --diff-dir ./alerts/raw --js
 - [alert](./alert.md)
 - [alert export](./alert-export.md)
 - [alert import](./alert-import.md)
+- [Shared diff JSON contract](../../user-guide/en/diff-json-contract.md)
+
+CLI schema lookup:
+
+- `grafana-util alert diff --help-schema`
+- [shared diff JSON contract](../../user-guide/en/diff-json-contract.md)

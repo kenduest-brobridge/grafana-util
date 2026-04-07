@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.grafana-util.local/status/project-status.schema.json",
+  "title": "Project status JSON schema",
+  "type": "object",
+  "required": [
+    "kind",
+    "schemaVersion",
+    "toolVersion",
+    "scope",
+    "overall",
+    "domains",
+    "topBlockers",
+    "nextActions"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "overall": {
+      "type": "object",
+      "properties": {
+        "status": {},
+        "domainCount": {},
+        "presentCount": {},
+        "blockedCount": {},
+        "blockerCount": {},
+        "warningCount": {},
+        "freshness": {}
+      },
+      "required": [
+        "status",
+        "domainCount",
+        "presentCount",
+        "blockedCount",
+        "blockerCount",
+        "warningCount",
+        "freshness"
+      ],
+      "additionalProperties": false
+    },
+    "domains": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {},
+          "scope": {},
+          "mode": {},
+          "status": {},
+          "reasonCode": {},
+          "primaryCount": {},
+          "blockerCount": {},
+          "warningCount": {},
+          "sourceKinds": {},
+          "signalKeys": {},
+          "blockers": {},
+          "warnings": {},
+          "nextActions": {},
+          "freshness": {}
+        },
+        "required": [
+          "id",
+          "scope",
+          "mode",
+          "status",
+          "reasonCode",
+          "primaryCount",
+          "blockerCount",
+          "warningCount",
+          "sourceKinds",
+          "signalKeys",
+          "blockers",
+          "warnings",
+          "nextActions",
+          "freshness"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "topBlockers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "domain": {},
+          "kind": {},
+          "count": {},
+          "source": {}
+        },
+        "required": [
+          "domain",
+          "kind",
+          "count",
+          "source"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "nextActions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "domain": {},
+          "reasonCode": {},
+          "action": {}
+        },
+        "required": [
+          "domain",
+          "reasonCode",
+          "action"
+        ],
+        "additionalProperties": false
+      }
+    }
+  }
+}

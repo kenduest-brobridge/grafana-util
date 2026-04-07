@@ -117,6 +117,13 @@ grafana-util profile add ci \
 
 From example 2 onward, the connection details are omitted for brevity. You can still pass them directly with `--url`, `--basic-user`, `--basic-password`, or `--token`, or keep them in `export`ed environment variables or a shared `profile`.
 
+Before running a live command, you can also confirm the selected profile or validate it end to end:
+
+```bash
+grafana-util profile current --profile prod --output-format json
+grafana-util profile validate --profile prod --live --output-format json
+```
+
 ### 1. Get a live operational overview
 ```bash
 grafana-util overview live \
@@ -136,6 +143,18 @@ grafana-util dashboard list --all-orgs --table
 ```bash
 # Export all dashboards into a reviewable local tree.
 grafana-util dashboard export --all-orgs --output-dir ./backup --progress
+```
+
+### 4. Diff local artifacts with machine-readable output
+```bash
+# Emit the shared dashboard diff contract.
+grafana-util dashboard diff --input-dir ./backup/raw --output-format json
+
+# Keep alert diff canonical on --output-format json; --json remains a compatibility alias.
+grafana-util alert diff --diff-dir ./alerts/raw --output-format json
+
+# Datasource diff JSON includes field-level before/after changes.
+grafana-util datasource diff --diff-dir ./datasources --input-format inventory --output-format json
 ```
 
 ### 4. Analyze dashboard dependencies

@@ -19,11 +19,12 @@ use super::{
     TOOL_SCHEMA_VERSION,
 };
 use crate::common::api_response;
-use crate::common::{message, Result, TOOL_VERSION};
+use crate::common::{message, DiffOutputFormat, Result, TOOL_VERSION};
 use reqwest::Method;
 use serde_json::json;
 use serde_json::Value;
 use std::cell::RefCell;
+use std::collections::BTreeSet;
 use std::fs;
 use std::path::Path;
 use tempfile::tempdir;
@@ -62,6 +63,35 @@ fn load_alert_recreate_contract_fixture() -> Value {
     .unwrap()
 }
 
+fn load_shared_diff_golden_fixture(domain: &str) -> Value {
+    serde_json::from_str::<Vec<Value>>(include_str!("../../fixtures/shared_diff_golden_cases.json"))
+        .unwrap()
+        .into_iter()
+        .find(|value| value.get("domain").and_then(Value::as_str) == Some(domain))
+        .map(resolve_tool_version_placeholder)
+        .expect("shared diff golden fixture")
+}
+
+fn resolve_tool_version_placeholder(mut value: Value) -> Value {
+    match &mut value {
+        Value::String(text) if text == "__TOOL_VERSION__" => {
+            *text = TOOL_VERSION.to_string();
+        }
+        Value::Array(items) => {
+            for item in items {
+                *item = resolve_tool_version_placeholder(item.clone());
+            }
+        }
+        Value::Object(map) => {
+            for item in map.values_mut() {
+                *item = resolve_tool_version_placeholder(item.clone());
+            }
+        }
+        _ => {}
+    }
+    value
+}
+
 fn write_pretty_json(path: &Path, value: &Value) {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).unwrap();
@@ -71,6 +101,16 @@ fn write_pretty_json(path: &Path, value: &Value) {
         format!("{}\n", serde_json::to_string_pretty(value).unwrap()),
     )
     .unwrap();
+}
+
+fn assert_exact_object_keys(value: &Value, expected_keys: &[&str]) {
+    let object = value.as_object().expect("expected JSON object");
+    let actual_keys = object.keys().cloned().collect::<BTreeSet<_>>();
+    let expected_keys = expected_keys
+        .iter()
+        .map(|key| (*key).to_string())
+        .collect::<BTreeSet<_>>();
+    assert_eq!(actual_keys, expected_keys);
 }
 
 #[test]
@@ -359,6 +399,22 @@ fn parse_cli_supports_diff_json() {
     ]);
     assert_eq!(args.diff_dir.as_deref(), Some(Path::new("./alerts/raw")));
     assert!(args.json);
+    assert_eq!(args.diff_output, Some(DiffOutputFormat::Json));
+}
+
+#[test]
+fn parse_cli_supports_diff_output_format_json() {
+    let args: AlertCliArgs = parse_cli_from([
+        "grafana-util alert",
+        "diff",
+        "--diff-dir",
+        "./alerts/raw",
+        "--output-format",
+        "json",
+    ]);
+    assert_eq!(args.diff_dir.as_deref(), Some(Path::new("./alerts/raw")));
+    assert!(args.json);
+    assert_eq!(args.diff_output, Some(DiffOutputFormat::Json));
 }
 
 #[test]
@@ -776,10 +832,38 @@ fn build_alert_diff_document_reports_summary_and_rows() {
         }),
     ]);
 
+    assert_eq!(document["kind"], json!("grafana-util-alert-diff"));
+    assert_eq!(document["schemaVersion"], json!(1));
+    assert_eq!(document["toolVersion"], json!(TOOL_VERSION));
     assert_eq!(document["summary"]["checked"], json!(3));
     assert_eq!(document["summary"]["same"], json!(1));
     assert_eq!(document["summary"]["different"], json!(1));
     assert_eq!(document["summary"]["missingRemote"], json!(1));
+    assert_eq!(document["rows"].as_array().map(Vec::len), Some(3));
+    assert_exact_object_keys(
+        &document,
+        &["kind", "rows", "schemaVersion", "summary", "toolVersion"],
+    );
+    for row in document["rows"].as_array().unwrap() {
+        assert_exact_object_keys(row, &["action", "identity", "kind", "path"]);
+    }
+    assert_eq!(document["rows"][0]["action"], json!("same"));
+    assert_eq!(document["rows"][1]["action"], json!("different"));
+    assert_eq!(document["rows"][2]["action"], json!("missing-remote"));
+}
+
+#[test]
+fn build_alert_diff_document_matches_shared_contract_fixture() {
+    let fixture = load_shared_diff_golden_fixture("alert");
+    let document = build_alert_diff_document(&[json!({
+        "domain": "alert",
+        "resourceKind": "contact-point",
+        "identity": "smoke-webhook",
+        "status": "different",
+        "path": "alerts/raw/contact-points/smoke.json",
+        "changedFields": ["spec"],
+    })]);
+    assert_eq!(document, fixture["document"]);
 }
 
 #[test]

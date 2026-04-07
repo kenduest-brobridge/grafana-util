@@ -783,7 +783,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="何時使用">何時使用</h2>
 <p>當您想在匯入前先取得簡潔的線上與本地差異報告時，使用這個指令。</p>
 <h2 id="重點旗標">重點旗標</h2>
-<ul><li><code>--diff-dir</code>：要比對的本地 datasource bundle。</li><li><code>--input-format</code>：選擇 <code>inventory</code> 或 <code>provisioning</code>。</li></ul>
+<ul><li><code>--diff-dir</code>：要比對的本地 datasource bundle。</li><li><code>--input-format</code>：選擇 <code>inventory</code> 或 <code>provisioning</code>。</li><li><code>--output-format</code>：選擇 <code>text</code> 或 <code>json</code>。</li></ul>
 <h2 id="範例">範例</h2>
 <pre><code># 用途：比較本地 bundle 中的 datasource inventory 與線上 Grafana，並輸出給操作人員看的 diff 報告。
 grafana-util datasource diff --profile prod --diff-dir ./datasources --input-format inventory</code></pre>
@@ -791,14 +791,18 @@ grafana-util datasource diff --profile prod --diff-dir ./datasources --input-for
 grafana-util datasource diff --url http://localhost:3000 --basic-user admin --basic-password admin --diff-dir ./datasources/provisioning --input-format provisioning</code></pre>
 <pre><code># 用途：比較本地 bundle 中的 datasource inventory 與線上 Grafana，並輸出給操作人員看的 diff 報告。
 grafana-util datasource diff --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --diff-dir ./datasources --input-format inventory</code></pre>
+<pre><code># 用途：比較本地 datasource inventory 與線上 Grafana，並輸出共用 diff JSON contract。
+grafana-util datasource diff --profile prod --diff-dir ./datasources --input-format inventory --output-format json</code></pre>
 <h2 id="採用前後對照">採用前後對照</h2>
-<ul><li><strong>採用前</strong>：常常要手動對照本地與線上的 datasource JSON，才能看出 drift 在哪裡。</li><li><strong>採用後</strong>：一個 diff 指令就能在匯入前看出 bundle 與 Grafana 的差異。</li></ul>
+<ul><li><strong>採用前</strong>：常常要手動對照本地與線上的 datasource JSON，才能看出 drift 在哪裡。</li><li><strong>採用後</strong>：一個 diff 指令就能在匯入前看出 bundle 與 Grafana 的差異。</li><li>JSON 模式會輸出共用 diff envelope，以及欄位層級的 <code>changes[{field,before,after}]</code>。</li></ul>
 <h2 id="成功判準">成功判準</h2>
 <ul><li>在匯入前就能清楚說明這次變更的內容</li><li>inventory 與 provisioning 兩種輸入都能產出可讀的摘要</li><li>輸出能直接看出是 bundle 變了，還是 live 端變了</li></ul>
 <h2 id="失敗時先檢查">失敗時先檢查</h2>
 <ul><li>如果 diff 意外是空的，先確認 bundle 路徑與 <code>--input-format</code></li><li>如果 live 端看起來不對，先確認目標 Grafana 與 org 範圍，再相信報告</li><li>如果 diff 很吵，先確認你比對的是預期中的 inventory bundle，而不是舊 provisioning 樹</li></ul>
 <h2 id="相關指令">相關指令</h2>
-<ul><li><a href="datasource-list.html">datasource list</a></li><li><a href="datasource-export.html">datasource export</a></li><li><a href="datasource-import.html">datasource import</a></li></ul>
+<ul><li><a href="datasource-list.html">datasource list</a></li><li><a href="datasource-export.html">datasource export</a></li><li><a href="datasource-import.html">datasource import</a></li><li><a href="../../handbook/zh-TW/diff-json-contract.html">共用 diff JSON contract</a></li></ul>
+<p>CLI schema 快速查詢：</p>
+<ul><li><code>grafana-util datasource diff --help-schema</code></li><li><a href="../../handbook/zh-TW/diff-json-contract.html">共用 diff JSON contract</a></li></ul>
     
   </article>
   <aside class="sidebar">

@@ -1,0 +1,23 @@
+[
+  {
+    "domain": "dashboard",
+    "kind": "grafana-util-dashboard-diff",
+    "topLevelKeys": ["kind", "schemaVersion", "toolVersion", "summary", "rows"],
+    "summaryKeys": ["checked", "same", "different", "missingRemote", "extraRemote", "ambiguous"],
+    "rowKeys": ["domain", "resourceKind", "identity", "status", "path", "changedFields", "diffText", "contextLines"]
+  },
+  {
+    "domain": "alert",
+    "kind": "grafana-util-alert-diff",
+    "topLevelKeys": ["kind", "schemaVersion", "toolVersion", "summary", "rows"],
+    "summaryKeys": ["checked", "same", "different", "missingRemote", "extraRemote", "ambiguous"],
+    "rowKeys": ["domain", "resourceKind", "identity", "status", "path", "changedFields"]
+  },
+  {
+    "domain": "datasource",
+    "kind": "grafana-util-datasource-diff",
+    "topLevelKeys": ["kind", "schemaVersion", "toolVersion", "summary", "rows"],
+    "summaryKeys": ["checked", "same", "different", "missingRemote", "extraRemote", "ambiguous"],
+    "rowKeys": ["domain", "resourceKind", "identity", "status", "path", "changedFields", "changes"]
+  }
+]

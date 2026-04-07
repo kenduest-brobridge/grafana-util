@@ -11,6 +11,7 @@
 - `--input-format`：選擇 `raw` 或 `provisioning`。
 - `--import-folder-uid`：覆寫比對時的目的資料夾 UID。
 - `--context-lines`：統一 diff 的上下文行數。
+- `--output-format`：選擇 `text` 或 `json`。
 
 ## 範例
 ```bash
@@ -20,10 +21,16 @@ grafana-util dashboard diff --url http://localhost:3000 --basic-user admin --bas
 
 ```bash
 # 用途：比較本地儀表板檔案與線上 Grafana 儀表板的差異。
-grafana-util dashboard diff --url http://localhost:3000 --basic-user admin --basic-password admin --org-id 2 --input-dir ./dashboards/raw --json
+grafana-util dashboard diff --url http://localhost:3000 --basic-user admin --basic-password admin --org-id 2 --input-dir ./dashboards/raw --output-format json
 ```
 
 ## 相關指令
 - [dashboard export](./dashboard-export.md)
 - [dashboard import](./dashboard-import.md)
 - [dashboard analyze（本地）](./dashboard-analyze-export.md)
+- [共用 diff JSON contract](../../user-guide/zh-TW/diff-json-contract.md)
+
+CLI schema 快速查詢：
+
+- `grafana-util dashboard diff --help-schema`
+- [共用 diff JSON contract](../../user-guide/zh-TW/diff-json-contract.md)

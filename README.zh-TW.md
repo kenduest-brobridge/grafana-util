@@ -118,6 +118,13 @@ grafana-util profile add ci \
 
 從第二個例子開始，我們先省略連線資訊，讓畫面更簡潔。你還是可以直接帶 `--url`、`--basic-user`、`--basic-password` 或 `--token`，也可以先用 `export` 設好環境變數，或者放進 `profile`，分別管理 username、password、token。
 
+在執行 live 指令前，也可以先確認目前選到的 profile，或做完整驗證：
+
+```bash
+grafana-util profile current --profile prod --output-format json
+grafana-util profile validate --profile prod --live --output-format json
+```
+
 ### 1. 檢視環境維運總覽
 ```bash
 grafana-util overview live \
@@ -137,6 +144,18 @@ grafana-util dashboard list --all-orgs --table
 ```bash
 # 跨組織匯出所有儀表板，建立本地審查目錄樹。
 grafana-util dashboard export --all-orgs --output-dir ./backup --progress
+```
+
+### 4. 用機器可讀格式比對本地 artifact
+```bash
+# 輸出共用 dashboard diff contract。
+grafana-util dashboard diff --input-dir ./backup/raw --output-format json
+
+# alert diff 對外以 --output-format json 為主；--json 仍保留相容。
+grafana-util alert diff --diff-dir ./alerts/raw --output-format json
+
+# datasource diff 的 JSON 會包含欄位層級的 before/after 變更。
+grafana-util datasource diff --diff-dir ./datasources --input-format inventory --output-format json
 ```
 
 ### 4. 分析儀表板相依性

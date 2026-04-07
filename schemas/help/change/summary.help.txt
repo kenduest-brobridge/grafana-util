@@ -1,0 +1,21 @@
+Change summary JSON schema
+
+Command:
+  grafana-util change summary --desired-file ./desired.json --fetch-live --profile prod --output-format json
+
+kind:
+  grafana-utils-sync-summary
+
+Top-level keys:
+- kind
+- schemaVersion
+- toolVersion
+- summary
+- resources
+- summary
+  - resourceCount
+  - blockingCount
+- resources[]
+  - kind
+  - identity
+  - action

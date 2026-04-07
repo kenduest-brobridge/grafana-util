@@ -297,7 +297,7 @@ fn parse_cli_supports_analyze_live_all_orgs_flag() {
 #[test]
 fn inspect_live_help_matches_fixture() {
     let help = render_dashboard_subcommand_help("analyze-live");
-    assert!(help.contains("Analyze live Grafana dashboards via a temporary raw-export snapshot."));
+    assert!(help.contains("Compatibility alias for dashboard analyze over live Grafana."));
     assert!(help.contains("--output-format governance-json"));
 }
 
@@ -387,7 +387,7 @@ fn inspect_live_help_mentions_report_and_panel_filter_flags() {
     assert!(help.contains("--also-stdout"));
     assert!(help.contains("tree"));
     assert!(help.contains("tree-table"));
-    assert!(!help.contains("Extended Examples:"));
+    assert!(help.contains("dashboard analyze output"));
 }
 
 #[test]
@@ -430,14 +430,11 @@ fn inspect_export_help_mentions_operator_summary_and_machine_readable_paths() {
     let help = render_dashboard_subcommand_help("analyze-export");
 
     assert!(help.contains("operator-summary table"));
-    assert!(help.contains("operator-summary CSV"));
-    assert!(help.contains("machine-readable governance artifact"));
+    assert!(help.contains("interactive analysis workbench"));
+    assert!(help.contains("machine-readable governance"));
     assert!(help.contains("queries-json artifact"));
-    assert!(help.contains("operator-summary, governance, dependency, and queries-json views"));
-    assert!(help.contains("governance, dependency, and queries-json views"));
-    assert!(help.contains(
-        "Analyze dashboard export directories with operator-summary, governance, dependency, and queries-json views."
-    ));
+    assert!(help.contains("Compatibility alias for dashboard analyze over export directories."));
+    assert!(help.contains("grafana-util dashboard analyze --input-dir ./dashboards/raw"));
 }
 
 #[test]
@@ -584,15 +581,15 @@ fn maybe_render_dashboard_help_full_from_os_args_handles_missing_required_args()
     let help = test_support::maybe_render_dashboard_help_full_from_os_args([
         "grafana-util",
         "dashboard",
-        "analyze-export",
+        "analyze",
         "--help-full",
     ])
-    .expect("expected analyze-export full help");
+    .expect("expected analyze full help");
 
-    assert!(help.contains("analyze-export"));
+    assert!(help.contains("analyze"));
     assert!(help.contains("Extended Examples:"));
     assert!(help.contains("--output-format tree-table"));
-    assert!(help.contains("--report-filter-panel-id 7"));
+    assert!(help.contains("Analyze live Grafana and render governance JSON"));
 }
 
 #[test]

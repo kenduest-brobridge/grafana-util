@@ -766,11 +766,11 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
     <section class="command-intro">
   <div class="command-intro-grid"><div class="command-intro-block">
   <p class="command-intro-label">What this page covers</p>
-  <p class="command-intro-text">Fetch one live dashboard into an external editor with a safe local-draft default.</p>
+  <p class="command-intro-text">Fetch one live dashboard into an external editor, then preview, save, or apply the edited result.</p>
 </div>
 <div class="command-intro-block">
   <p class="command-intro-label">When to open this page</p>
-  <ul class="command-intro-list"><li>Use this when Grafana already has the closest source dashboard and you want to edit that payload directly, but you do not want the default path to write straight back to Grafana.</li></ul>
+  <ul class="command-intro-list"><li>Use this when Grafana already has the closest source dashboard and you want to edit that payload directly, while keeping a clear choice between preview-only, saved draft, and direct live apply flows.</li></ul>
 </div>
 <div class="command-intro-block">
   <p class="command-intro-label">Who this page is for</p>
@@ -779,18 +779,20 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 </div>
 </section>
 <h2 id="purpose">Purpose</h2>
-<p>Fetch one live dashboard into an external editor with a safe local-draft default.</p>
+<p>Fetch one live dashboard into an external editor, then preview, save, or apply the edited result.</p>
 <h2 id="when-to-use">When to use</h2>
-<p>Use this when Grafana already has the closest source dashboard and you want to edit that payload directly, but you do not want the default path to write straight back to Grafana.</p>
+<p>Use this when Grafana already has the closest source dashboard and you want to edit that payload directly, while keeping a clear choice between preview-only, saved draft, and direct live apply flows.</p>
 <h2 id="key-flags">Key flags</h2>
-<ul><li><code>--dashboard-uid</code>: live Grafana dashboard UID to edit.</li><li><code>--output</code>: local draft path to write after editing. When omitted, the default is <code>./&lt;uid&gt;.edited.json</code>.</li><li><code>--apply-live</code>: write the edited payload back to Grafana instead of writing a local draft.</li><li><code>--yes</code>: required with <code>--apply-live</code> because it mutates live Grafana.</li><li><code>--message</code>: revision message used when <code>--apply-live</code> writes back to Grafana.</li><li><code>--profile</code>, <code>--url</code>, <code>--token</code>, <code>--basic-user</code>, <code>--basic-password</code>: live Grafana connection settings.</li></ul>
+<ul><li><code>--dashboard-uid</code>: live Grafana dashboard UID to edit.</li><li><code>--output</code>: local draft path to write after editing. When omitted, <code>edit-live</code> stays ephemeral and does not create a local draft file.</li><li><code>--apply-live</code>: write the edited payload back to Grafana instead of writing a local draft.</li><li><code>--publish-dry-run</code>: when <code>--output</code> is set, save the local draft and immediately run the equivalent <code>dashboard publish --dry-run</code> preview.</li><li><code>--yes</code>: required with <code>--apply-live</code> because it mutates live Grafana.</li><li><code>--message</code>: revision message used when <code>--apply-live</code> writes back to Grafana.</li><li><code>--profile</code>, <code>--url</code>, <code>--token</code>, <code>--basic-user</code>, <code>--basic-password</code>: live Grafana connection settings.</li></ul>
 <h2 id="notes">Notes</h2>
-<ul><li>The command opens <code>$VISUAL</code>, then <code>$EDITOR</code>, then falls back to <code>vi</code>.</li><li>Without <code>--apply-live</code>, this command always writes a local draft after the edit session.</li><li>After editing, the command prints a review summary that includes blocking validation issues and the suggested next action.</li><li><code>--apply-live</code> only proceeds when the edited draft keeps <code>dashboard.id</code> null, preserves the source dashboard UID, and has no blocking review issues.</li><li>The edited payload must still contain <code>dashboard.uid</code>.</li></ul>
+<ul><li>The command opens <code>$VISUAL</code>, then <code>$EDITOR</code>, then falls back to <code>vi</code>.</li><li>With neither <code>--output</code> nor <code>--apply-live</code>, the command keeps the edit session ephemeral and automatically runs a live <code>publish --dry-run</code> preview instead of writing a draft file.</li><li>With <code>--output</code>, the command writes the edited draft to disk and stops there unless you also add <code>--publish-dry-run</code>.</li><li>After editing, the command prints a review summary that includes blocking validation issues and the suggested next action.</li><li><code>--apply-live</code> only proceeds when the edited draft keeps <code>dashboard.id</code> null, preserves the source dashboard UID, and has no blocking review issues.</li><li>The edited payload must still contain <code>dashboard.uid</code>.</li></ul>
 <h2 id="examples">Examples</h2>
+<pre><code># Purpose: Edit one live dashboard and preview the live publish without writing a draft file.
+grafana-util dashboard edit-live --profile prod --dashboard-uid cpu-main</code></pre>
 <pre><code># Purpose: Edit one live dashboard and keep the result as a local draft.
-grafana-util dashboard edit-live --profile prod --dashboard-uid cpu-main --output ./drafts/cpu-main.edited.json</code></pre>
-<pre><code># Purpose: Edit one live dashboard and let the default output path be ./cpu-main.edited.json.
-grafana-util dashboard edit-live --url http://localhost:3000 --basic-user admin --basic-password admin --dashboard-uid cpu-main</code></pre>
+grafana-util dashboard edit-live --url http://localhost:3000 --basic-user admin --basic-password admin --dashboard-uid cpu-main --output ./drafts/cpu-main.edited.json</code></pre>
+<pre><code># Purpose: Edit one live dashboard, save the draft, and immediately preview the publish.
+grafana-util dashboard edit-live --profile prod --dashboard-uid cpu-main --output ./drafts/cpu-main.edited.json --publish-dry-run</code></pre>
 <pre><code># Purpose: Edit one live dashboard and explicitly write the result back to Grafana.
 grafana-util dashboard edit-live --profile prod --dashboard-uid cpu-main --apply-live --yes --message &#x27;Hotfix CPU dashboard&#x27;</code></pre>
 <h2 id="related-commands">Related commands</h2>

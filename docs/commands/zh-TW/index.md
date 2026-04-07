@@ -69,7 +69,9 @@
 - [dashboard history](./dashboard-history.md)
 - [dashboard screenshot](./dashboard-screenshot.md)
 
-### 相容別名頁面
+### 相容頁面
+
+這些頁面是 `dashboard analyze` 的相容別名說明。新文件與腳本請優先使用 canonical 的 `dashboard analyze ...` 形式。
 
 - [dashboard analyze（本地別名）](./dashboard-analyze-export.md)
 - [dashboard analyze（即時別名）](./dashboard-analyze-live.md)

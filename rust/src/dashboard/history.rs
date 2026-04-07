@@ -1,7 +1,8 @@
 #![cfg_attr(not(any(feature = "tui", test)), allow(dead_code))]
 
 use crate::common::{
-    message, render_json_value, string_field, tool_version, value_as_object, Result,
+    build_shared_diff_document, message, render_json_value, string_field, tool_version,
+    value_as_object, DiffOutputFormat, Result, SharedDiffSummary,
 };
 use crate::tabular_output::{render_table, render_yaml};
 use reqwest::Method;
@@ -11,11 +12,16 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use super::{
-    fetch_dashboard_with_request, import_dashboard_request_with_request, write_json_document,
-    HistoryExportArgs, HistoryListArgs, HistoryOutputFormat, HistoryRestoreArgs,
-    DEFAULT_DASHBOARD_TITLE, DEFAULT_FOLDER_UID, TOOL_SCHEMA_VERSION,
+    fetch_dashboard_with_request,
+    import_compare::{
+        build_compare_diff_text_with_labels, build_compare_document, serialize_compare_document,
+    },
+    import_dashboard_request_with_request, write_json_document, HistoryDiffArgs, HistoryExportArgs,
+    HistoryListArgs, HistoryOutputFormat, HistoryRestoreArgs, DEFAULT_DASHBOARD_TITLE,
+    DEFAULT_FOLDER_UID, TOOL_SCHEMA_VERSION,
 };
 
+#[allow(dead_code)]
 pub(crate) const BROWSE_HISTORY_RESTORE_MESSAGE: &str =
     "Restored by grafana-utils dashboard browse";
 pub(crate) const DASHBOARD_HISTORY_RESTORE_MESSAGE: &str =
@@ -25,6 +31,7 @@ pub(crate) const DASHBOARD_HISTORY_RESTORE_KIND: &str = "grafana-util-dashboard-
 pub(crate) const DASHBOARD_HISTORY_EXPORT_KIND: &str = "grafana-util-dashboard-history-export";
 pub(crate) const DASHBOARD_HISTORY_INVENTORY_KIND: &str =
     "grafana-util-dashboard-history-inventory";
+pub(crate) const DASHBOARD_HISTORY_DIFF_KIND: &str = "grafana-util-dashboard-history-diff";
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct DashboardHistoryVersion {
@@ -129,6 +136,17 @@ pub(crate) struct DashboardHistoryInventoryDocument {
     pub artifacts: Vec<DashboardHistoryInventoryItem>,
 }
 
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub(crate) struct DashboardHistoryDiffDocument {
+    pub kind: String,
+    #[serde(rename = "schemaVersion")]
+    pub schema_version: i64,
+    #[serde(rename = "toolVersion")]
+    pub tool_version: String,
+    pub summary: SharedDiffSummary,
+    pub rows: Vec<Value>,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct DashboardRestorePreview {
     current_version: i64,
@@ -142,6 +160,30 @@ struct LocalHistoryArtifact {
     path: PathBuf,
     scope: Option<String>,
     document: DashboardHistoryExportDocument,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum HistoryDiffSource {
+    Live {
+        dashboard_uid: String,
+    },
+    Artifact {
+        path: PathBuf,
+    },
+    ImportDir {
+        input_dir: PathBuf,
+        dashboard_uid: String,
+    },
+}
+
+#[derive(Clone, Debug, PartialEq)]
+struct ResolvedHistoryDiffSide {
+    source_label: String,
+    dashboard_uid: String,
+    version: i64,
+    title: String,
+    dashboard: Value,
+    compare_document: Value,
 }
 
 pub(crate) fn list_dashboard_history_versions_with_request<F>(
@@ -354,6 +396,7 @@ where
     Ok(())
 }
 
+#[allow(dead_code)]
 pub(crate) fn restore_dashboard_history_version_with_request<F>(
     request_json: F,
     uid: &str,
@@ -658,6 +701,337 @@ where
     )?;
     write_json_document(&document, &args.output)?;
     Ok(())
+}
+
+fn resolve_history_diff_source(
+    dashboard_uid: &Option<String>,
+    input: &Option<PathBuf>,
+    input_dir: &Option<PathBuf>,
+    side: &str,
+) -> Result<HistoryDiffSource> {
+    match (dashboard_uid, input, input_dir) {
+        (Some(uid), None, None) => Ok(HistoryDiffSource::Live {
+            dashboard_uid: uid.clone(),
+        }),
+        (None, Some(path), None) => Ok(HistoryDiffSource::Artifact { path: path.clone() }),
+        (Some(uid), None, Some(dir)) => Ok(HistoryDiffSource::ImportDir {
+            input_dir: dir.clone(),
+            dashboard_uid: uid.clone(),
+        }),
+        (None, None, Some(_)) => Err(message(format!(
+            "dashboard history diff {side} side requires --{side}-dashboard-uid when --{side}-input-dir is set."
+        ))),
+        (None, None, None) => Err(message(format!(
+            "dashboard history diff {side} side requires exactly one source: --{side}-dashboard-uid, --{side}-input, or --{side}-input-dir with --{side}-dashboard-uid."
+        ))),
+        _ => Err(message(format!(
+            "dashboard history diff {side} side must choose exactly one source."
+        ))),
+    }
+}
+
+fn dashboard_history_export_version<'a>(
+    document: &'a DashboardHistoryExportDocument,
+    version: i64,
+    label: &str,
+) -> Result<&'a DashboardHistoryExportVersion> {
+    document
+        .versions
+        .iter()
+        .find(|item| item.version == version)
+        .ok_or_else(|| {
+            message(format!(
+                "History source {label} does not contain dashboard version {version}."
+            ))
+        })
+}
+
+fn build_history_compare_document(dashboard: &Value) -> Result<Value> {
+    let dashboard_object = value_as_object(
+        dashboard,
+        "Dashboard history artifact version did not include dashboard JSON.",
+    )?;
+    let folder_uid = dashboard_object.get("folderUid").and_then(Value::as_str);
+    Ok(build_compare_document(dashboard_object, folder_uid))
+}
+
+fn resolve_history_diff_side_from_document(
+    document: &DashboardHistoryExportDocument,
+    label: String,
+    version: i64,
+) -> Result<ResolvedHistoryDiffSide> {
+    let version_entry = dashboard_history_export_version(document, version, &label)?;
+    Ok(ResolvedHistoryDiffSide {
+        source_label: format!("{label}@{version}"),
+        dashboard_uid: document.dashboard_uid.clone(),
+        version,
+        title: string_field(
+            value_as_object(
+                &version_entry.dashboard,
+                "Dashboard history artifact version did not include dashboard JSON.",
+            )?,
+            "title",
+            DEFAULT_DASHBOARD_TITLE,
+        ),
+        dashboard: version_entry.dashboard.clone(),
+        compare_document: build_history_compare_document(&version_entry.dashboard)?,
+    })
+}
+
+fn resolve_history_diff_side_with_request<F>(
+    mut request_json: F,
+    source: &HistoryDiffSource,
+    version: i64,
+) -> Result<ResolvedHistoryDiffSide>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    match source {
+        HistoryDiffSource::Live { dashboard_uid } => {
+            let dashboard = Value::Object(fetch_dashboard_history_version_data_with_request(
+                &mut request_json,
+                dashboard_uid,
+                version,
+            )?);
+            let dashboard_object = value_as_object(
+                &dashboard,
+                "Dashboard history version payload did not include dashboard data.",
+            )?;
+            Ok(ResolvedHistoryDiffSide {
+                source_label: format!("grafana:{dashboard_uid}@{version}"),
+                dashboard_uid: dashboard_uid.clone(),
+                version,
+                title: string_field(dashboard_object, "title", DEFAULT_DASHBOARD_TITLE),
+                dashboard: dashboard.clone(),
+                compare_document: build_history_compare_document(&dashboard)?,
+            })
+        }
+        HistoryDiffSource::Artifact { path } => {
+            let document = load_dashboard_history_export_document(path)?;
+            resolve_history_diff_side_from_document(&document, path.display().to_string(), version)
+        }
+        HistoryDiffSource::ImportDir {
+            input_dir,
+            dashboard_uid,
+        } => {
+            let artifact = load_history_artifact_for_uid(input_dir, dashboard_uid)?;
+            let label = artifact.path.display().to_string();
+            resolve_history_diff_side_from_document(&artifact.document, label, version)
+        }
+    }
+}
+
+fn load_history_artifact_for_uid(
+    input_dir: &Path,
+    dashboard_uid: &str,
+) -> Result<LocalHistoryArtifact> {
+    let artifacts = load_history_artifacts_from_import_dir(input_dir)?;
+    if artifacts.is_empty() {
+        return Err(message(format!(
+            "No dashboard history artifacts found under {}. Export with `dashboard export --include-history` first.",
+            input_dir.display()
+        )));
+    }
+    let matching = artifacts
+        .into_iter()
+        .filter(|artifact| artifact.document.dashboard_uid == dashboard_uid)
+        .collect::<Vec<_>>();
+    match matching.len() {
+        0 => Err(message(format!(
+            "No dashboard history artifact for UID {} found under {}.",
+            dashboard_uid,
+            input_dir.display()
+        ))),
+        1 => Ok(matching.into_iter().next().expect("single artifact")),
+        _ => {
+            let scopes = matching
+                .iter()
+                .map(|artifact| {
+                    artifact
+                        .scope
+                        .clone()
+                        .unwrap_or_else(|| artifact.path.display().to_string())
+                })
+                .collect::<Vec<_>>()
+                .join(", ");
+            Err(message(format!(
+                "Multiple dashboard history artifacts for UID {} found under {}: {}. Narrow the export root or inspect one artifact with --input.",
+                dashboard_uid,
+                input_dir.display(),
+                scopes
+            )))
+        }
+    }
+}
+
+fn history_diff_identity(base_uid: &str, new_uid: &str) -> String {
+    if base_uid == new_uid {
+        base_uid.to_string()
+    } else {
+        format!("{base_uid} -> {new_uid}")
+    }
+}
+
+fn build_dashboard_history_diff_document(
+    base: &ResolvedHistoryDiffSide,
+    new: &ResolvedHistoryDiffSide,
+    context_lines: usize,
+) -> Result<(DashboardHistoryDiffDocument, bool)> {
+    let same = serialize_compare_document(&base.compare_document)?
+        == serialize_compare_document(&new.compare_document)?;
+    let diff_text = if same {
+        Value::Null
+    } else {
+        Value::String(build_compare_diff_text_with_labels(
+            &base.compare_document,
+            &new.compare_document,
+            &base.source_label,
+            &new.source_label,
+            context_lines,
+        )?)
+    };
+    let status = if same { "same" } else { "different" };
+    let rows = vec![serde_json::json!({
+        "domain": "dashboard",
+        "resourceKind": "dashboard-history",
+        "identity": history_diff_identity(&base.dashboard_uid, &new.dashboard_uid),
+        "status": status,
+        "path": format!("{} -> {}", base.source_label, new.source_label),
+        "baseSource": base.source_label,
+        "newSource": new.source_label,
+        "baseVersion": base.version,
+        "newVersion": new.version,
+        "changedFields": if same { Vec::<String>::new() } else { vec!["dashboard".to_string()] },
+        "diffText": diff_text,
+        "contextLines": context_lines,
+    })];
+    Ok((
+        DashboardHistoryDiffDocument {
+            kind: DASHBOARD_HISTORY_DIFF_KIND.to_string(),
+            schema_version: 1,
+            tool_version: tool_version().to_string(),
+            summary: SharedDiffSummary {
+                checked: 1,
+                same: usize::from(same),
+                different: usize::from(!same),
+                missing_remote: 0,
+                extra_remote: 0,
+                ambiguous: 0,
+            },
+            rows,
+        },
+        same,
+    ))
+}
+
+#[allow(dead_code)]
+pub(crate) fn build_dashboard_history_diff_document_with_request<F>(
+    mut request_json: F,
+    args: &HistoryDiffArgs,
+) -> Result<Value>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    let base_source = resolve_history_diff_source(
+        &args.base_dashboard_uid,
+        &args.base_input,
+        &args.base_input_dir,
+        "base",
+    )?;
+    let new_source = resolve_history_diff_source(
+        &args.new_dashboard_uid,
+        &args.new_input,
+        &args.new_input_dir,
+        "new",
+    )?;
+    let base =
+        resolve_history_diff_side_with_request(&mut request_json, &base_source, args.base_version)?;
+    let new =
+        resolve_history_diff_side_with_request(&mut request_json, &new_source, args.new_version)?;
+    let (document, _) = build_dashboard_history_diff_document(&base, &new, args.context_lines)?;
+    Ok(build_shared_diff_document(
+        &document.kind,
+        document.schema_version,
+        document.summary,
+        &document.rows,
+    ))
+}
+
+fn render_dashboard_history_diff_text(
+    base: &ResolvedHistoryDiffSide,
+    new: &ResolvedHistoryDiffSide,
+    document: &DashboardHistoryDiffDocument,
+) -> String {
+    let row = &document.rows[0];
+    let status = row
+        .get("status")
+        .and_then(Value::as_str)
+        .unwrap_or("different");
+    let mut lines = vec![format!(
+        "Dashboard history diff: {} status={} base-version={} new-version={}",
+        history_diff_identity(&base.dashboard_uid, &new.dashboard_uid),
+        status,
+        base.version,
+        new.version
+    )];
+    lines.push(format!("Base source: {}", base.source_label));
+    lines.push(format!("New source: {}", new.source_label));
+    if let Some(path) = row.get("path").and_then(Value::as_str) {
+        lines.push(format!("Path: {path}"));
+    }
+    lines.push(format!("Base title: {}", base.title));
+    lines.push(format!("New title: {}", new.title));
+    if let Some(diff_text) = row.get("diffText").and_then(Value::as_str) {
+        lines.push(String::new());
+        lines.push(diff_text.trim_end().to_string());
+    }
+    lines.join("\n")
+}
+
+pub(crate) fn run_dashboard_history_diff<F>(
+    mut request_json: F,
+    args: &HistoryDiffArgs,
+) -> Result<usize>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    let base_source = resolve_history_diff_source(
+        &args.base_dashboard_uid,
+        &args.base_input,
+        &args.base_input_dir,
+        "base",
+    )?;
+    let new_source = resolve_history_diff_source(
+        &args.new_dashboard_uid,
+        &args.new_input,
+        &args.new_input_dir,
+        "new",
+    )?;
+    let base =
+        resolve_history_diff_side_with_request(&mut request_json, &base_source, args.base_version)?;
+    let new =
+        resolve_history_diff_side_with_request(&mut request_json, &new_source, args.new_version)?;
+    let (document, same) = build_dashboard_history_diff_document(&base, &new, args.context_lines)?;
+    match args.output_format {
+        DiffOutputFormat::Text => {
+            println!(
+                "{}",
+                render_dashboard_history_diff_text(&base, &new, &document)
+            )
+        }
+        DiffOutputFormat::Json => {
+            print!(
+                "{}",
+                render_json_value(&build_shared_diff_document(
+                    DASHBOARD_HISTORY_DIFF_KIND,
+                    1,
+                    document.summary,
+                    &document.rows,
+                ))?
+            )
+        }
+    }
+    Ok(usize::from(!same))
 }
 
 fn display_value(value: &Value) -> String {

@@ -789,6 +789,8 @@ grafana-util status staged --dashboard-export-dir ./dashboards/raw --desired-fil
 <pre><code># Purpose: Render live status from a reusable profile.
 grafana-util status live --profile prod --output-format yaml</code></pre>
 <p>Related commands: <code>grafana-util overview</code>, <code>grafana-util change check</code>, <code>grafana-util change apply</code>.</p>
+<p>Schema guide:</p>
+<ul><li><code>grafana-util status --help-schema</code></li><li><code>grafana-util status staged --help-schema</code></li><li><code>grafana-util status live --help-schema</code></li></ul>
 <h2 id="staged"><code>staged</code></h2>
 <p>Purpose: render project status from staged artifacts.</p>
 <p>When to use: when you need the machine-readable readiness gate for exported files before apply.</p>
@@ -799,6 +801,7 @@ grafana-util status staged --dashboard-export-dir ./dashboards/raw --desired-fil
 <pre><code># Purpose: staged.
 grafana-util status staged --dashboard-provisioning-dir ./dashboards/provisioning --alert-export-dir ./alerts --output-format interactive</code></pre>
 <p>Related commands: <code>grafana-util overview</code>, <code>grafana-util change inspect</code>, <code>grafana-util change check</code>.</p>
+<p>Machine-readable contract: <code>grafana-util-project-status</code></p>
 <h2 id="live"><code>live</code></h2>
 <p>Purpose: render project status from live Grafana read surfaces.</p>
 <p>When to use: when you need current Grafana status, optionally deepened with staged context files.</p>
@@ -813,6 +816,7 @@ grafana-util status live --url http://localhost:3000 --token &quot;$GRAFANA_API_
 <pre><code># Purpose: live.
 grafana-util status live --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --sync-summary-file ./sync-summary.json --output-format interactive</code></pre>
 <p>Related commands: <code>grafana-util overview live</code>, <code>grafana-util change apply</code>, <code>grafana-util profile show</code>.</p>
+<p>Machine-readable contract: <code>grafana-util-project-status</code></p>
     
   </article>
   <aside class="sidebar">

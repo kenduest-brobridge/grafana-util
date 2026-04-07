@@ -1,0 +1,21 @@
+Change assess-alerts JSON schema
+
+Command:
+  grafana-util change assess-alerts --alerts-file ./alerts.json --output-format json
+
+kind:
+  grafana-utils-alert-sync-plan
+
+Top-level keys:
+- kind
+- schemaVersion
+- toolVersion
+- summary
+- alerts
+- summary
+  - alertCount
+  - blockingCount
+- alerts[]
+  - kind
+  - identity
+  - status

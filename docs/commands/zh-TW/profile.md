@@ -2,7 +2,7 @@
 
 ## Root
 
-用途：列出、檢視、新增與初始化 repo-local 的 `grafana-util` profile。
+用途：列出、檢視、驗證、新增與初始化 repo-local 的 `grafana-util` profile。
 
 適用時機：當你想把 Grafana 連線預設放在目前 checkout，之後再用 `--profile` 重複使用。
 
@@ -40,6 +40,16 @@ grafana-util profile show --profile prod --output-format yaml
 ```
 
 ```bash
+# 用途：顯示目前選到的 profile 與解析後的設定檔路徑。
+grafana-util profile current --profile prod
+```
+
+```bash
+# 用途：驗證所選 profile，並額外檢查 Grafana 是否可連通。
+grafana-util profile validate --profile prod --live
+```
+
+```bash
 # 用途：建立可重複使用的 production profile，並用互動式密碼保存 secret。
 grafana-util profile add prod --url https://grafana.example.com --basic-user admin --prompt-password --store-secret encrypted-file
 ```
@@ -59,7 +69,7 @@ grafana-util profile example --mode full
 grafana-util profile init --overwrite
 ```
 
-相關指令：`grafana-util status live`、`grafana-util overview live`、`grafana-util change preview`。
+相關指令：`grafana-util status live`、`grafana-util overview live`、`grafana-util change preview`、`grafana-util profile current`、`grafana-util profile validate`。
 
 ## `list`
 
@@ -76,7 +86,7 @@ grafana-util profile init --overwrite
 grafana-util profile list
 ```
 
-相關指令：`profile show`、`profile add`、`profile init`。
+相關指令：`profile show`、`profile current`、`profile add`、`profile init`。
 
 ## `show`
 
@@ -110,7 +120,64 @@ grafana-util profile show --profile prod --show-secrets --output-format yaml
 - 預設會遮蔽秘密值。
 - 加上 `--show-secrets` 才會顯示明文，或解出 secret-store 參照。
 
-相關指令：`profile list`、`profile add`、`status live`、`overview live`。
+相關指令：`profile list`、`profile add`、`profile current`、`profile validate`、`status live`、`overview live`。
+
+## `current`
+
+用途：顯示目前選到的 profile、解析後的設定檔路徑、驗證模式與 secret 模式。
+
+適用時機：當你想在 live 指令執行前，先確認目前會使用哪個 repo-local profile。
+
+主要旗標：
+- `--profile`
+- `--output-format`
+
+範例：
+
+```bash
+# 用途：current。
+grafana-util profile current
+```
+
+```bash
+# 用途：current。
+grafana-util profile current --profile prod --output-format json
+```
+
+說明：
+- 輸出只做診斷用途，不會揭露 secret。
+- 如果設定檔不存在，`current` 會回報設定檔不存在，而不是直接失敗。
+
+相關指令：`profile show`、`profile validate`、`status live`、`overview live`。
+
+## `validate`
+
+用途：驗證所選 profile，並可選擇額外檢查 Grafana 可連通性。
+
+適用時機：當你想在執行 live 指令前，先確認 profile 選擇、驗證形狀與 secret 解析是否正常。
+
+主要旗標：
+- `--profile`
+- `--live`
+- `--output-format`
+
+範例：
+
+```bash
+# 用途：validate。
+grafana-util profile validate --profile prod
+```
+
+```bash
+# 用途：validate。
+grafana-util profile validate --profile prod --live --output-format json
+```
+
+說明：
+- `--live` 會在靜態驗證成功後，再額外呼叫 Grafana `/api/health`。
+- 驗證不會輸出 secret。
+
+相關指令：`profile current`、`profile show`、`status live`、`overview live`。
 
 ## `add`
 
@@ -154,7 +221,7 @@ grafana-util profile add stage --url https://grafana-stage.example.com --token-e
 - `os` 目前只支援 macOS 與 Linux；如果是 headless Linux shell，通常要改用 `password_env`、`token_env` 或 `encrypted-file`。
 - 對重複執行的自動化工作，優先把秘密放進 profile 的 `password_env` 或 `token_env`，不要把秘密直接貼進每次 live 指令。
 
-相關指令：`profile show`、`profile example`、`profile init`。
+相關指令：`profile show`、`profile current`、`profile example`、`profile init`。
 
 ## `example`
 
@@ -187,7 +254,7 @@ grafana-util profile example --mode full
 - `full` 會包含 `file`、`os`、`encrypted-file` 三種模式的註解示例。
 - `os` 類型範例的前提是本機 macOS Keychain 或 Linux Secret Service 可用。
 
-相關指令：`profile add`、`profile init`、`profile show`。
+相關指令：`profile add`、`profile init`、`profile show`、`profile current`、`profile validate`。
 
 ## `init`
 
@@ -214,4 +281,4 @@ grafana-util profile init --overwrite
 - `init` 會寫入內建起手範本。
 - 如果你是想直接建立一個真正可用的 profile，通常 `add` 會比較順手。
 
-相關指令：`profile add`、`profile example`、`status live`。
+相關指令：`profile add`、`profile example`、`profile current`、`profile validate`、`status live`。

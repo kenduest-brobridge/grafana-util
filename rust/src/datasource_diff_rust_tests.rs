@@ -1,7 +1,9 @@
 //! Datasource diff unit tests.
 //! Validates compare status/classification and mismatch reporting around import-vs-live
 //! contract data.
-use crate::common::DiffOutputFormat;
+use crate::common::{
+    build_shared_diff_document, DiffOutputFormat, SharedDiffSummary, TOOL_VERSION,
+};
 use crate::datasource::datasource_diff::{
     build_datasource_diff_report, normalize_export_records, normalize_live_records,
     DatasourceDiffStatus,
@@ -14,6 +16,35 @@ fn load_contract_cases() -> Vec<Value> {
         "../../fixtures/datasource_contract_cases.json"
     ))
     .unwrap()
+}
+
+fn load_shared_diff_golden_fixture(domain: &str) -> Value {
+    serde_json::from_str::<Vec<Value>>(include_str!("../../fixtures/shared_diff_golden_cases.json"))
+        .unwrap()
+        .into_iter()
+        .find(|value| value.get("domain").and_then(Value::as_str) == Some(domain))
+        .map(resolve_tool_version_placeholder)
+        .expect("shared diff golden fixture")
+}
+
+fn resolve_tool_version_placeholder(mut value: Value) -> Value {
+    match &mut value {
+        Value::String(text) if text == "__TOOL_VERSION__" => {
+            *text = TOOL_VERSION.to_string();
+        }
+        Value::Array(items) => {
+            for item in items {
+                *item = resolve_tool_version_placeholder(item.clone());
+            }
+        }
+        Value::Object(map) => {
+            for item in map.values_mut() {
+                *item = resolve_tool_version_placeholder(item.clone());
+            }
+        }
+        _ => {}
+    }
+    value
 }
 
 #[test]
@@ -340,4 +371,62 @@ fn diff_report_marks_ambiguous_name_matches_without_uid() {
         report.entries[0].status,
         DatasourceDiffStatus::AmbiguousLiveMatch
     );
+}
+
+#[test]
+fn diff_report_json_contract_preserves_row_shape() {
+    let fixture = load_shared_diff_golden_fixture("datasource");
+    let export_records = normalize_export_records(&[json!({
+        "uid": "prom-main",
+        "name": "Prometheus Main",
+        "type": "prometheus",
+        "access": "proxy",
+        "url": "http://prometheus:9090",
+        "isDefault": true,
+        "orgId": "1"
+    })]);
+    let live_records = normalize_live_records(&[json!({
+        "uid": "prom-main",
+        "name": "Prometheus Main",
+        "type": "prometheus",
+        "access": "direct",
+        "url": "http://prometheus:9090",
+        "isDefault": true,
+        "orgId": 1
+    })]);
+
+    let report = build_datasource_diff_report(&export_records, &live_records);
+    let entry = &report.entries[0];
+    let document = build_shared_diff_document(
+        "grafana-util-datasource-diff",
+        1,
+        SharedDiffSummary {
+            checked: report.summary.compared_count,
+            same: report.summary.matches_count,
+            different: report.summary.different_count,
+            missing_remote: report.summary.missing_in_live_count,
+            extra_remote: report.summary.missing_in_export_count,
+            ambiguous: report.summary.ambiguous_live_match_count,
+        },
+        &[json!({
+            "domain": "datasource",
+            "resourceKind": "datasource",
+            "identity": entry.key,
+            "status": entry.status.as_str(),
+            "path": null,
+            "changedFields": entry.differences.iter().map(|item| item.field).collect::<Vec<_>>(),
+            "changes": entry.differences.iter().map(|item| json!({
+                "field": item.field,
+                "before": item.expected,
+                "after": item.actual,
+            })).collect::<Vec<_>>(),
+        })],
+    );
+
+    assert_eq!(document["kind"], json!("grafana-util-datasource-diff"));
+    assert_eq!(document["schemaVersion"], json!(1));
+    assert_eq!(document["summary"]["checked"], json!(1));
+    assert_eq!(document["summary"]["different"], json!(1));
+    assert_eq!(document["rows"].as_array().map(Vec::len), Some(1));
+    assert_eq!(document, fixture["document"]);
 }

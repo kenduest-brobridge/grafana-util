@@ -36,7 +36,9 @@ use super::{
     with_dashboard_import_live_preflight, write_basic_raw_export,
     write_combined_export_root_metadata,
 };
-use crate::common::{api_response, DiffOutputFormat};
+use crate::common::{
+    api_response, build_shared_diff_document, DiffOutputFormat, SharedDiffSummary, TOOL_VERSION,
+};
 use crate::dashboard::inspect::{
     dispatch_query_analysis, extract_query_field_and_text, resolve_query_analyzer_family,
     QueryAnalysis, QueryExtractionContext,
@@ -275,4 +277,69 @@ fn diff_dashboards_with_client_supports_provisioning_dashboards_dir() {
     .unwrap();
 
     assert_eq!(count, 0);
+}
+
+fn load_shared_diff_golden_fixture(domain: &str) -> Value {
+    serde_json::from_str::<Vec<Value>>(include_str!(
+        "../../../fixtures/shared_diff_golden_cases.json"
+    ))
+    .unwrap()
+    .into_iter()
+    .find(|value| value.get("domain").and_then(Value::as_str) == Some(domain))
+    .map(resolve_tool_version_placeholder)
+    .expect("shared diff golden fixture")
+}
+
+fn resolve_tool_version_placeholder(mut value: Value) -> Value {
+    match &mut value {
+        Value::String(text) if text == "__TOOL_VERSION__" => {
+            *text = TOOL_VERSION.to_string();
+        }
+        Value::Array(items) => {
+            for item in items {
+                *item = resolve_tool_version_placeholder(item.clone());
+            }
+        }
+        Value::Object(map) => {
+            for item in map.values_mut() {
+                *item = resolve_tool_version_placeholder(item.clone());
+            }
+        }
+        _ => {}
+    }
+    value
+}
+
+#[test]
+fn dashboard_diff_json_contract_preserves_envelope_and_rows() {
+    let fixture = load_shared_diff_golden_fixture("dashboard");
+    let document = build_shared_diff_document(
+        "grafana-util-dashboard-diff",
+        1,
+        SharedDiffSummary {
+            checked: 2,
+            same: 1,
+            different: 1,
+            missing_remote: 0,
+            extra_remote: 0,
+            ambiguous: 0,
+        },
+        &[json!({
+            "domain": "dashboard",
+            "resourceKind": "dashboard",
+            "identity": "cpu-main",
+            "status": "different",
+            "path": "./dashboards/raw/cpu-main.json",
+            "changedFields": ["dashboard"],
+            "diffText": "--- grafana:cpu-main\n+++ ./dashboards/raw/cpu-main.json\n",
+            "contextLines": 3,
+        })],
+    );
+
+    assert_eq!(document["kind"], json!("grafana-util-dashboard-diff"));
+    assert_eq!(document["schemaVersion"], json!(1));
+    assert_eq!(document["summary"]["checked"], json!(2));
+    assert_eq!(document["summary"]["same"], json!(1));
+    assert_eq!(document["rows"].as_array().map(Vec::len), Some(1));
+    assert_eq!(document, fixture["document"]);
 }

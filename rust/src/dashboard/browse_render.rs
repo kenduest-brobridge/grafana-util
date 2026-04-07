@@ -57,6 +57,7 @@ pub(crate) fn render_dashboard_browser_frame(frame: &mut ratatui::Frame, state: 
         control_lines(
             state.pending_delete.is_some(),
             state.pending_edit.is_some(),
+            state.pending_external_edit.is_some(),
             state.local_mode,
         ),
         state.status.clone(),
@@ -77,11 +78,26 @@ pub(crate) fn render_dashboard_browser_frame(frame: &mut ratatui::Frame, state: 
     if let Some(edit_state) = state.pending_edit.as_ref() {
         edit_state.render(frame);
     }
+    if let Some(external_edit_state) = state.pending_external_edit.as_ref() {
+        external_edit_state.render(frame);
+    }
     if let Some(history_state) = state.pending_history.as_ref() {
         history_state.render(frame);
     }
     if let Some(search_state) = state.pending_search.as_ref() {
         render_search_prompt(frame, search_state.direction, &search_state.query);
+    }
+    if let Some(notice) = state.completion_notice.as_ref() {
+        tui_shell::render_overlay(
+            frame,
+            &notice.title,
+            vec![
+                Line::from(notice.body.clone()),
+                Line::from(""),
+                Line::from("Press any key to continue."),
+            ],
+            Color::Green,
+        );
     }
 }
 
@@ -374,14 +390,14 @@ fn detail_shortcut_lines(node: &DashboardBrowseNode, local_mode: bool) -> Vec<Li
                 tui_shell::plain(if local_mode {
                     " local browse is read-only"
                 } else {
-                    " edit dialog"
+                    " metadata edit dialog"
                 }),
                 tui_shell::plain("   "),
                 tui_shell::key_chip("E", Color::Rgb(71, 55, 152)),
                 tui_shell::plain(if local_mode {
                     " local browse is read-only"
                 } else {
-                    " raw json"
+                    " raw JSON -> review/apply/save"
                 }),
                 tui_shell::plain("   "),
                 tui_shell::key_chip("d", Color::Rgb(150, 38, 46)),
@@ -510,136 +526,90 @@ fn render_summary_lines(state: &BrowserState) -> Vec<Line<'static>> {
 fn control_lines(
     has_pending_delete: bool,
     has_pending_edit: bool,
+    has_pending_external_edit: bool,
     local_mode: bool,
 ) -> Vec<Line<'static>> {
-    if local_mode && !has_pending_delete && !has_pending_edit {
-        return vec![
-            Line::from(vec![
-                tui_shell::key_chip("Up/Down", Color::Rgb(24, 78, 140)),
-                tui_shell::plain(" move"),
-                tui_shell::plain("   "),
-                tui_shell::key_chip("PgUp/PgDn", Color::Rgb(24, 78, 140)),
-                tui_shell::plain(" scroll detail"),
-                tui_shell::plain("   "),
-                tui_shell::key_chip("Tab", Color::Rgb(164, 116, 19)),
-                tui_shell::plain(" next pane"),
-                tui_shell::plain("   "),
-                tui_shell::key_chip("l", Color::Rgb(24, 78, 140)),
-                tui_shell::plain(" refresh local tree"),
-                tui_shell::plain("   "),
-                tui_shell::key_chip("/ ?", Color::Rgb(164, 116, 19)),
-                tui_shell::plain(" search"),
-            ]),
+    if local_mode && !has_pending_delete && !has_pending_edit && !has_pending_external_edit {
+        return tui_shell::control_grid(&[
+            vec![
+                ("Up/Down", Color::Rgb(24, 78, 140), "move"),
+                ("PgUp/PgDn", Color::Rgb(24, 78, 140), "scroll detail"),
+                ("Tab", Color::Rgb(164, 116, 19), "next pane"),
+                ("l", Color::Rgb(24, 78, 140), "refresh local tree"),
+            ],
+            vec![
+                ("/ ?", Color::Rgb(164, 116, 19), "search"),
+            ],
+        ])
+        .into_iter()
+        .chain(std::iter::once(
             Line::from(vec![
                 muted("Local browse is read-only. Live edit, move, delete, and history actions are unavailable."),
             ]),
-        ];
+        ))
+        .collect();
     }
     if has_pending_delete {
-        vec![
-            Line::from(vec![
-                muted("Delete preview active. "),
-                tui_shell::key_chip("y", Color::Rgb(150, 38, 46)),
-                tui_shell::plain(" confirm delete"),
-                tui_shell::plain("   "),
-                tui_shell::key_chip("n", Color::Rgb(90, 98, 107)),
-                tui_shell::plain(" cancel"),
-                tui_shell::plain("   "),
-                tui_shell::key_chip("Esc", Color::Rgb(90, 98, 107)),
-                tui_shell::plain(" cancel"),
-                tui_shell::plain("   "),
-                tui_shell::key_chip("q", Color::Rgb(90, 98, 107)),
-                tui_shell::plain(" cancel"),
-            ]),
-            Line::from(vec![
-                tui_shell::key_chip("l", Color::Rgb(24, 78, 140)),
-                tui_shell::plain(" refresh"),
-            ]),
-        ]
+        tui_shell::control_grid(&[
+            vec![
+                ("y", Color::Rgb(150, 38, 46), "confirm delete"),
+                ("n", Color::Rgb(90, 98, 107), "cancel"),
+                ("Esc", Color::Rgb(90, 98, 107), "cancel"),
+                ("q", Color::Rgb(90, 98, 107), "cancel"),
+            ],
+            vec![("l", Color::Rgb(24, 78, 140), "refresh")],
+        ])
     } else if has_pending_edit {
-        vec![
-            Line::from(vec![
-                muted("Edit dialog active. "),
-                tui_shell::key_chip("Ctrl+S", Color::Rgb(24, 106, 59)),
-                tui_shell::plain(" save"),
-                tui_shell::plain("   "),
-                tui_shell::key_chip("Ctrl+X", Color::Rgb(90, 98, 107)),
-                tui_shell::plain(" close"),
-                tui_shell::plain("   "),
-                tui_shell::key_chip("Esc", Color::Rgb(90, 98, 107)),
-                tui_shell::plain(" cancel"),
-            ]),
-            Line::from(vec![
-                tui_shell::key_chip("Tab", Color::Rgb(24, 78, 140)),
-                tui_shell::plain(" next field"),
-                tui_shell::plain("   "),
-                tui_shell::key_chip("Shift+Tab", Color::Rgb(24, 78, 140)),
-                tui_shell::plain(" previous field"),
-                tui_shell::plain("   "),
-                tui_shell::key_chip("Backspace", Color::Rgb(90, 98, 107)),
-                tui_shell::plain(" delete char"),
-            ]),
-        ]
+        tui_shell::control_grid(&[
+            vec![
+                ("Ctrl+S", Color::Rgb(24, 106, 59), "save"),
+                ("Ctrl+X", Color::Rgb(90, 98, 107), "close"),
+                ("Esc", Color::Rgb(90, 98, 107), "cancel"),
+            ],
+            vec![
+                ("Tab", Color::Rgb(24, 78, 140), "next field"),
+                ("Shift+Tab", Color::Rgb(24, 78, 140), "previous field"),
+                ("Backspace", Color::Rgb(90, 98, 107), "delete char"),
+            ],
+        ])
+    } else if has_pending_external_edit {
+        tui_shell::control_grid(&[
+            vec![
+                ("a", Color::Rgb(24, 106, 59), "apply live"),
+                ("w", Color::Rgb(164, 116, 19), "draft filename"),
+                ("q", Color::Rgb(90, 98, 107), "discard"),
+            ],
+            vec![
+                ("Enter", Color::Rgb(24, 106, 59), "apply live"),
+                ("p", Color::Rgb(24, 78, 140), "refresh preview"),
+            ],
+        ])
     } else {
-        vec![
-            Line::from(vec![
-                tui_shell::key_chip("Up/Down", Color::Rgb(24, 78, 140)),
-                tui_shell::plain(" move"),
-                tui_shell::plain("   "),
-                tui_shell::key_chip("PgUp/PgDn", Color::Rgb(24, 78, 140)),
-                tui_shell::plain(" scroll detail"),
-                tui_shell::plain("   "),
-                tui_shell::key_chip("Home/End", Color::Rgb(24, 78, 140)),
-                tui_shell::plain(" jump"),
-                tui_shell::plain("   "),
-                tui_shell::key_chip("Tab", Color::Rgb(164, 116, 19)),
-                tui_shell::plain(" next pane"),
-            ]),
-            Line::from(vec![
-                tui_shell::key_chip("Shift+Tab", Color::Rgb(164, 116, 19)),
-                tui_shell::plain(" previous pane"),
-                tui_shell::plain("   "),
-                tui_shell::key_chip("/ ?", Color::Rgb(164, 116, 19)),
-                tui_shell::plain(" search"),
-                tui_shell::plain("   "),
-                tui_shell::key_chip("n", Color::Rgb(164, 116, 19)),
-                tui_shell::plain(" next match"),
-                tui_shell::plain("   "),
-                tui_shell::key_chip("r", Color::Rgb(24, 106, 59)),
-                tui_shell::plain(" rename"),
-                tui_shell::plain("   "),
-                tui_shell::key_chip("m", Color::Rgb(24, 78, 140)),
-                tui_shell::plain(" move folder"),
-            ]),
-            Line::from(vec![
-                tui_shell::key_chip("d", Color::Rgb(150, 38, 46)),
-                tui_shell::plain(" delete"),
-                tui_shell::plain("   "),
-                tui_shell::key_chip("D", Color::Rgb(150, 38, 46)),
-                tui_shell::plain(" delete+folders"),
-                tui_shell::plain("   "),
-                tui_shell::key_chip("v", Color::Rgb(71, 55, 152)),
-                tui_shell::plain(" live details"),
-                tui_shell::plain("   "),
-                tui_shell::key_chip("h", Color::Rgb(71, 55, 152)),
-                tui_shell::plain(" history"),
-                tui_shell::plain("   "),
-                tui_shell::key_chip("e", Color::Rgb(71, 55, 152)),
-                tui_shell::plain(" edit dialog"),
-                tui_shell::plain("   "),
-                tui_shell::key_chip("E", Color::Rgb(71, 55, 152)),
-                tui_shell::plain(" raw json"),
-                tui_shell::plain("   "),
-                tui_shell::key_chip("l", Color::Rgb(24, 78, 140)),
-                tui_shell::plain(" refresh"),
-                tui_shell::plain("   "),
-                tui_shell::key_chip("Esc", Color::Rgb(90, 98, 107)),
-                tui_shell::plain(" exit"),
-                tui_shell::plain("   "),
-                tui_shell::key_chip("q", Color::Rgb(90, 98, 107)),
-                tui_shell::plain(" exit"),
-            ]),
-        ]
+        tui_shell::control_grid(&[
+            vec![
+                ("Up/Down", Color::Rgb(24, 78, 140), "move"),
+                ("PgUp/PgDn", Color::Rgb(24, 78, 140), "scroll detail"),
+                ("Home/End", Color::Rgb(24, 78, 140), "jump"),
+                ("Tab", Color::Rgb(164, 116, 19), "next pane"),
+            ],
+            vec![
+                ("Shift+Tab", Color::Rgb(164, 116, 19), "previous pane"),
+                ("/ ?", Color::Rgb(164, 116, 19), "search"),
+                ("n", Color::Rgb(164, 116, 19), "next match"),
+                ("r", Color::Rgb(24, 106, 59), "rename"),
+                ("m", Color::Rgb(24, 78, 140), "move folder"),
+            ],
+            vec![
+                ("d", Color::Rgb(150, 38, 46), "delete"),
+                ("D", Color::Rgb(150, 38, 46), "delete+folders"),
+                ("v", Color::Rgb(71, 55, 152), "live details"),
+                ("h", Color::Rgb(71, 55, 152), "history"),
+                ("e", Color::Rgb(71, 55, 152), "edit"),
+                ("E", Color::Rgb(71, 55, 152), "raw json"),
+                ("l", Color::Rgb(24, 78, 140), "refresh"),
+                ("Esc/q", Color::Rgb(90, 98, 107), "exit"),
+            ],
+        ])
     }
 }
 
@@ -820,7 +790,7 @@ mod tests {
 
     #[test]
     fn control_lines_use_consistent_pane_and_exit_labels() {
-        let lines = control_lines(false, false, false)
+        let lines = control_lines(false, false, false, false)
             .into_iter()
             .map(|line| line.to_string())
             .collect::<Vec<_>>();
@@ -828,12 +798,12 @@ mod tests {
         assert!(lines[1].contains("previous pane"));
         assert!(lines[1].contains("search"));
         assert!(lines[2].contains("exit"));
-        assert!(lines[2].contains("Esc"));
+        assert!(lines[2].contains("Esc/q"));
     }
 
     #[test]
     fn delete_control_lines_use_cancel_labels() {
-        let lines = control_lines(true, false, false)
+        let lines = control_lines(true, false, false, false)
             .into_iter()
             .map(|line| line.to_string())
             .collect::<Vec<_>>();
@@ -853,11 +823,24 @@ mod tests {
         assert!(summary_lines[1].contains("local-browse"));
         assert!(summary_lines[1].contains("Tree"));
 
-        let lines = control_lines(false, false, true)
+        let lines = control_lines(false, false, false, true)
             .into_iter()
             .map(|line| line.to_string())
             .collect::<Vec<_>>();
         assert!(lines[0].contains("refresh local tree"));
-        assert!(lines[1].contains("read-only"));
+        assert!(lines[2].contains("read-only"));
+    }
+
+    #[test]
+    fn external_edit_control_lines_show_preview_save_apply_actions() {
+        let lines = control_lines(false, false, true, false)
+            .into_iter()
+            .map(|line| line.to_string())
+            .collect::<Vec<_>>();
+        assert!(lines[0].contains("apply live"));
+        assert!(lines[0].contains("draft filename"));
+        assert!(lines[0].contains("discard"));
+        assert!(lines[1].contains("refresh preview"));
+        assert!(!lines.iter().any(|line| line.contains("s ")));
     }
 }

@@ -1,0 +1,23 @@
+Change preflight JSON schema
+
+Command:
+  grafana-util change preflight --desired-file ./desired.json --fetch-live --profile prod --output-format json
+
+kind:
+  grafana-utils-sync-preflight
+
+Top-level keys:
+- kind
+- schemaVersion
+- toolVersion
+- summary
+- checks
+- summary
+  - checkCount
+  - blockingCount
+- checks[]
+  - kind
+  - identity
+  - status
+  - detail
+  - blocking

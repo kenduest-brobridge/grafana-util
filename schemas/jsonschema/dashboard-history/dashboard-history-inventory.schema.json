@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.grafana-util.local/dashboard-history/dashboard-history-inventory.schema.json",
+  "title": "Dashboard history inventory JSON schema",
+  "type": "object",
+  "required": [
+    "kind",
+    "schemaVersion",
+    "toolVersion",
+    "artifactCount",
+    "artifacts"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "dashboardUid": {},
+          "currentTitle": {},
+          "currentVersion": {},
+          "versionCount": {},
+          "path": {},
+          "scope": {}
+        },
+        "required": [
+          "dashboardUid",
+          "currentTitle",
+          "currentVersion",
+          "versionCount",
+          "path",
+          "scope"
+        ],
+        "additionalProperties": false
+      }
+    }
+  }
+}

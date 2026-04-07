@@ -2,7 +2,7 @@
 
 ## Root
 
-Purpose: list, inspect, add, and initialize repo-local `grafana-util` profiles.
+Purpose: list, inspect, validate, add, and initialize repo-local `grafana-util` profiles.
 
 When to use: when you want to keep Grafana connection defaults in the current checkout and reuse them with `--profile`.
 
@@ -40,6 +40,16 @@ grafana-util profile show --profile prod --output-format yaml
 ```
 
 ```bash
+# Purpose: Show the currently selected profile and resolved config path.
+grafana-util profile current --profile prod
+```
+
+```bash
+# Purpose: Validate the selected profile and check Grafana reachability.
+grafana-util profile validate --profile prod --live
+```
+
+```bash
 # Purpose: Create a reusable production profile with prompt-based secrets.
 grafana-util profile add prod --url https://grafana.example.com --basic-user admin --prompt-password --store-secret encrypted-file
 ```
@@ -59,7 +69,7 @@ grafana-util profile example --mode full
 grafana-util profile init --overwrite
 ```
 
-Related commands: `grafana-util status live`, `grafana-util overview live`, `grafana-util change preview`.
+Related commands: `grafana-util status live`, `grafana-util overview live`, `grafana-util change preview`, `grafana-util profile current`, `grafana-util profile validate`.
 
 ## `list`
 
@@ -76,7 +86,7 @@ Examples:
 grafana-util profile list
 ```
 
-Related commands: `profile show`, `profile add`, `profile init`.
+Related commands: `profile show`, `profile current`, `profile add`, `profile init`.
 
 ## `show`
 
@@ -110,7 +120,64 @@ Notes:
 - Secret values are masked by default.
 - `--show-secrets` reveals plaintext values or resolves secret-store references.
 
-Related commands: `profile list`, `profile add`, `status live`, `overview live`.
+Related commands: `profile list`, `profile add`, `profile current`, `profile validate`, `status live`, `overview live`.
+
+## `current`
+
+Purpose: show the currently selected profile, resolved config path, auth mode, and secret mode.
+
+When to use: when you want to confirm which repo-local profile would be used before a live command runs.
+
+Key flags:
+- `--profile`
+- `--output-format`
+
+Examples:
+
+```bash
+# Purpose: current.
+grafana-util profile current
+```
+
+```bash
+# Purpose: current.
+grafana-util profile current --profile prod --output-format json
+```
+
+Notes:
+- The output is diagnostic only and does not reveal secrets.
+- If the config file is missing, `current` reports that the config does not exist instead of failing.
+
+Related commands: `profile show`, `profile validate`, `status live`, `overview live`.
+
+## `validate`
+
+Purpose: validate the selected profile and optionally check Grafana reachability.
+
+When to use: when you want to confirm profile selection, auth shape, and secret resolution before running a live command.
+
+Key flags:
+- `--profile`
+- `--live`
+- `--output-format`
+
+Examples:
+
+```bash
+# Purpose: validate.
+grafana-util profile validate --profile prod
+```
+
+```bash
+# Purpose: validate.
+grafana-util profile validate --profile prod --live --output-format json
+```
+
+Notes:
+- `--live` adds a Grafana `/api/health` check after static validation succeeds.
+- Validation does not print secrets.
+
+Related commands: `profile current`, `profile show`, `status live`, `overview live`.
 
 ## `add`
 
@@ -154,7 +221,7 @@ Notes:
 - `os` is only supported on macOS and Linux. Headless Linux shells may need `password_env`, `token_env`, or `encrypted-file` instead.
 - Prefer profile-backed `password_env` or `token_env` entries for repeated automation instead of pasting secrets into every live command.
 
-Related commands: `profile show`, `profile example`, `profile init`.
+Related commands: `profile show`, `profile current`, `profile example`, `profile init`.
 
 ## `example`
 
@@ -187,7 +254,7 @@ Notes:
 - `full` includes commented examples for `file`, `os`, and `encrypted-file`.
 - The `os` examples assume macOS Keychain or Linux Secret Service is available.
 
-Related commands: `profile add`, `profile init`, `profile show`.
+Related commands: `profile add`, `profile init`, `profile show`, `profile current`, `profile validate`.
 
 ## `init`
 
@@ -214,4 +281,4 @@ Notes:
 - `init` seeds the built-in starter template.
 - `add` is the friendlier way to create one real profile entry directly.
 
-Related commands: `profile add`, `profile example`, `status live`.
+Related commands: `profile add`, `profile example`, `profile current`, `profile validate`, `status live`.
