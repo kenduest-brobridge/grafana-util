@@ -301,6 +301,8 @@ pub struct OverviewDocument {
     pub schema_version: i64,
     #[serde(rename = "toolVersion")]
     pub tool_version: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub discovery: Option<Value>,
     pub summary: OverviewSummary,
     pub project_status: OverviewProjectStatus,
     pub artifacts: Vec<OverviewArtifact>,

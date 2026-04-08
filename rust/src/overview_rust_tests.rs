@@ -439,6 +439,7 @@ fn sample_overview_document() -> OverviewDocument {
         kind: OVERVIEW_KIND.to_string(),
         schema_version: 1,
         tool_version: TOOL_VERSION.to_string(),
+        discovery: None,
         summary: OverviewSummary {
             artifact_count: 3,
             dashboard_export_count: 1,
@@ -455,6 +456,7 @@ fn sample_overview_document() -> OverviewDocument {
         project_status: OverviewProjectStatus {
             schema_version: 1,
             tool_version: TOOL_VERSION.to_string(),
+            discovery: None,
             scope: "staged-only".to_string(),
             overall: OverviewProjectStatusOverall {
                 status: "partial".to_string(),

@@ -21,10 +21,14 @@ use crate::dashboard::{
     resolve_inspect_export_import_dir, DashboardImportInputFormat, DashboardSourceKind,
     InspectExportInputType, TempInspectDir,
 };
-use crate::overview::{run_overview, OverviewArgs, OverviewOutputFormat};
-use crate::project_status_command::{
-    run_project_status_staged, ProjectStatusOutputFormat, ProjectStatusStagedArgs,
+use crate::overview::{
+    execute_overview, render_overview_text, OverviewArgs, OverviewDocument, OverviewOutputFormat,
 };
+use crate::project_status_command::{
+    execute_project_status_staged, render_project_status_text, ProjectStatusOutputFormat,
+    ProjectStatusStagedArgs,
+};
+use crate::project_status::ProjectStatus;
 use serde_json::{Map, Value};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -329,46 +333,92 @@ fn ensure_any_discovered(discovered: &DiscoveredChangeInputs) -> Result<()> {
 }
 
 fn render_discovery_provenance(discovered: &DiscoveredChangeInputs) -> Option<String> {
-    let workspace_root = discovered.workspace_root.as_ref()?;
-    let mut sources = Vec::new();
-    if let Some(path) = discovered.dashboard_export_dir.as_ref() {
-        sources.push(format!("dashboard-export={}", path.display()));
-    }
-    if let Some(path) = discovered.dashboard_provisioning_dir.as_ref() {
-        sources.push(format!("dashboard-provisioning={}", path.display()));
-    }
-    if let Some(path) = discovered.datasource_provisioning_file.as_ref() {
-        sources.push(format!("datasource-provisioning={}", path.display()));
-    }
-    if let Some(path) = discovered.alert_export_dir.as_ref() {
-        sources.push(format!("alert-export={}", path.display()));
-    }
-    if let Some(path) = discovered.desired_file.as_ref() {
-        sources.push(format!("desired-file={}", path.display()));
-    }
-    if let Some(path) = discovered.source_bundle.as_ref() {
-        sources.push(format!("source-bundle={}", path.display()));
-    }
-    if let Some(path) = discovered.target_inventory.as_ref() {
-        sources.push(format!("target-inventory={}", path.display()));
-    }
-    if let Some(path) = discovered.availability_file.as_ref() {
-        sources.push(format!("availability={}", path.display()));
-    }
-    if let Some(path) = discovered.mapping_file.as_ref() {
-        sources.push(format!("mapping={}", path.display()));
-    }
-    if let Some(path) = discovered.reviewed_plan_file.as_ref() {
-        sources.push(format!("reviewed-plan={}", path.display()));
-    }
-    if sources.is_empty() {
-        return None;
-    }
+    let document = build_discovery_document(discovered)?;
+    let workspace_root = document.get("workspaceRoot").and_then(Value::as_str)?;
+    let sources = document
+        .get("inputs")
+        .and_then(Value::as_object)?
+        .iter()
+        .map(|(key, value)| format!("{key}={}", value.as_str().unwrap_or_default()))
+        .collect::<Vec<_>>();
     Some(format!(
         "Discovered change workspace root {} from {}.",
-        workspace_root.display(),
+        workspace_root,
         sources.join(", ")
     ))
+}
+
+fn build_discovery_document(discovered: &DiscoveredChangeInputs) -> Option<Value> {
+    let workspace_root = discovered.workspace_root.as_ref()?;
+    let mut inputs = Map::new();
+    for (key, path) in [
+        ("dashboardExportDir", discovered.dashboard_export_dir.as_ref()),
+        (
+            "dashboardProvisioningDir",
+            discovered.dashboard_provisioning_dir.as_ref(),
+        ),
+        (
+            "datasourceProvisioningFile",
+            discovered.datasource_provisioning_file.as_ref(),
+        ),
+        ("alertExportDir", discovered.alert_export_dir.as_ref()),
+        ("desiredFile", discovered.desired_file.as_ref()),
+        ("sourceBundle", discovered.source_bundle.as_ref()),
+        ("targetInventory", discovered.target_inventory.as_ref()),
+        ("availabilityFile", discovered.availability_file.as_ref()),
+        ("mappingFile", discovered.mapping_file.as_ref()),
+        ("reviewedPlanFile", discovered.reviewed_plan_file.as_ref()),
+    ] {
+        if let Some(path) = path {
+            inputs.insert(key.to_string(), Value::String(path.display().to_string()));
+        }
+    }
+    Some(Value::Object(Map::from_iter([
+        (
+            "workspaceRoot".to_string(),
+            Value::String(workspace_root.display().to_string()),
+        ),
+        ("inputCount".to_string(), Value::from(inputs.len() as i64)),
+        ("inputs".to_string(), Value::Object(inputs)),
+    ])))
+}
+
+fn attach_discovery_to_overview(
+    mut document: OverviewDocument,
+    discovered: &DiscoveredChangeInputs,
+) -> OverviewDocument {
+    document.discovery = build_discovery_document(discovered);
+    document
+}
+
+fn attach_discovery_to_status(
+    mut status: ProjectStatus,
+    discovered: &DiscoveredChangeInputs,
+) -> ProjectStatus {
+    status.discovery = build_discovery_document(discovered);
+    status
+}
+
+fn attach_discovery_to_sync_output(
+    mut output: SyncCommandOutput,
+    discovered: &DiscoveredChangeInputs,
+) -> SyncCommandOutput {
+    if let Some(discovery) = build_discovery_document(discovered) {
+        if let Some(object) = output.document.as_object_mut() {
+            object.insert("discovery".to_string(), discovery.clone());
+        }
+        output.text_lines.insert(
+            0,
+            format!(
+                "Discovery: workspace-root={}",
+                discovery
+                    .get("workspaceRoot")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+            ),
+        );
+    }
+    output
 }
 
 fn emit_discovery_provenance(discovered: &DiscoveredChangeInputs, output_format: SyncOutputFormat) {
@@ -709,7 +759,20 @@ pub(crate) fn run_sync_inspect(args: ChangeInspectArgs) -> Result<()> {
     {
         ensure_any_discovered(&discovered)?;
     }
-    run_overview(merged)
+    match args.output.output_format {
+        SyncOutputFormat::Json => {
+            let document = attach_discovery_to_overview(execute_overview(&merged)?, &discovered);
+            println!("{}", crate::common::render_json_value(&document)?);
+            Ok(())
+        }
+        SyncOutputFormat::Text => {
+            let document = attach_discovery_to_overview(execute_overview(&merged)?, &discovered);
+            for line in render_overview_text(&document)? {
+                println!("{line}");
+            }
+            Ok(())
+        }
+    }
 }
 
 pub(crate) fn run_sync_check(args: ChangeCheckArgs) -> Result<()> {
@@ -731,7 +794,22 @@ pub(crate) fn run_sync_check(args: ChangeCheckArgs) -> Result<()> {
     {
         ensure_any_discovered(&discovered)?;
     }
-    run_project_status_staged(merged)
+    match args.output.output_format {
+        SyncOutputFormat::Json => {
+            let status =
+                attach_discovery_to_status(execute_project_status_staged(&merged)?, &discovered);
+            println!("{}", crate::common::render_json_value(&status)?);
+            Ok(())
+        }
+        SyncOutputFormat::Text => {
+            let status =
+                attach_discovery_to_status(execute_project_status_staged(&merged)?, &discovered);
+            for line in render_project_status_text(&status) {
+                println!("{line}");
+            }
+            Ok(())
+        }
+    }
 }
 
 pub(crate) fn run_sync_preview(args: ChangePreviewArgs) -> Result<()> {
@@ -776,7 +854,7 @@ pub(crate) fn run_sync_preview(args: ChangePreviewArgs) -> Result<()> {
             output_format: args.output.output_format,
         })?;
         return emit_preview_output(
-            output,
+            attach_discovery_to_sync_output(output, &discovered),
             args.output.output_file.as_ref(),
             args.output.also_stdout,
             args.output.output_format,
@@ -793,7 +871,7 @@ pub(crate) fn run_sync_preview(args: ChangePreviewArgs) -> Result<()> {
             output_format: args.output.output_format,
         })?;
         return emit_preview_output(
-            output,
+            attach_discovery_to_sync_output(output, &discovered),
             args.output.output_file.as_ref(),
             args.output.also_stdout,
             args.output.output_format,
@@ -849,7 +927,7 @@ pub(crate) fn run_sync_preview(args: ChangePreviewArgs) -> Result<()> {
         }
     };
     emit_preview_output(
-        output,
+        attach_discovery_to_sync_output(output, &discovered),
         args.output.output_file.as_ref(),
         args.output.also_stdout,
         args.output.output_format,
@@ -1131,5 +1209,63 @@ mod guided_rust_tests {
         ));
         assert!(provenance.contains("datasource-provisioning=/tmp/grafana-oac-repo/datasources/provisioning/datasources.yaml"));
         assert!(provenance.contains("alert-export=/tmp/grafana-oac-repo/alerts/raw"));
+    }
+
+    #[test]
+    fn build_discovery_document_reports_workspace_root_and_inputs() {
+        let discovered = DiscoveredChangeInputs {
+            workspace_root: Some(PathBuf::from("/tmp/grafana-oac-repo")),
+            dashboard_export_dir: Some(PathBuf::from(
+                "/tmp/grafana-oac-repo/dashboards/git-sync/raw",
+            )),
+            alert_export_dir: Some(PathBuf::from("/tmp/grafana-oac-repo/alerts/raw")),
+            datasource_provisioning_file: Some(PathBuf::from(
+                "/tmp/grafana-oac-repo/datasources/provisioning/datasources.yaml",
+            )),
+            ..DiscoveredChangeInputs::default()
+        };
+
+        let document = build_discovery_document(&discovered).unwrap();
+        assert_eq!(
+            document["workspaceRoot"],
+            Value::String("/tmp/grafana-oac-repo".to_string())
+        );
+        assert_eq!(document["inputCount"], Value::from(3));
+        assert_eq!(
+            document["inputs"]["dashboardExportDir"],
+            Value::String("/tmp/grafana-oac-repo/dashboards/git-sync/raw".to_string())
+        );
+        assert_eq!(
+            document["inputs"]["alertExportDir"],
+            Value::String("/tmp/grafana-oac-repo/alerts/raw".to_string())
+        );
+    }
+
+    #[test]
+    fn attach_discovery_to_sync_output_adds_top_level_document_and_text_summary() {
+        let discovered = DiscoveredChangeInputs {
+            workspace_root: Some(PathBuf::from("/tmp/grafana-oac-repo")),
+            dashboard_export_dir: Some(PathBuf::from(
+                "/tmp/grafana-oac-repo/dashboards/git-sync/raw",
+            )),
+            ..DiscoveredChangeInputs::default()
+        };
+        let output = SyncCommandOutput {
+            document: serde_json::json!({
+                "kind": "grafana-utils-sync-plan",
+                "schemaVersion": 1
+            }),
+            text_lines: vec!["SYNC PLAN".to_string()],
+        };
+
+        let attached = attach_discovery_to_sync_output(output, &discovered);
+        assert_eq!(
+            attached.document["discovery"]["workspaceRoot"],
+            Value::String("/tmp/grafana-oac-repo".to_string())
+        );
+        assert_eq!(
+            attached.text_lines.first(),
+            Some(&"Discovery: workspace-root=/tmp/grafana-oac-repo".to_string())
+        );
     }
 }

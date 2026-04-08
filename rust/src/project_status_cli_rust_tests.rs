@@ -20,6 +20,7 @@ fn sample_live_project_status() -> ProjectStatus {
     ProjectStatus {
         schema_version: 1,
         tool_version: TOOL_VERSION.to_string(),
+        discovery: None,
         scope: "live".to_string(),
         overall: ProjectStatusOverall {
             status: PROJECT_STATUS_BLOCKED.to_string(),
@@ -113,6 +114,7 @@ fn empty_live_project_status() -> ProjectStatus {
     ProjectStatus {
         schema_version: 1,
         tool_version: TOOL_VERSION.to_string(),
+        discovery: None,
         scope: "live".to_string(),
         overall: ProjectStatusOverall {
             status: PROJECT_STATUS_READY.to_string(),

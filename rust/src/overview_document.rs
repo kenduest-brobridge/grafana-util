@@ -25,6 +25,7 @@ pub(crate) fn build_overview_document(
         kind: OVERVIEW_KIND.to_string(),
         schema_version: OVERVIEW_SCHEMA_VERSION,
         tool_version: tool_version().to_string(),
+        discovery: None,
         summary: build_overview_summary(&artifacts)?,
         project_status: build_staged_project_status(&artifacts),
         artifacts,
@@ -70,6 +71,11 @@ pub(crate) fn render_overview_text(document: &OverviewDocument) -> Result<Vec<St
             document.summary.promotion_preflight_count,
         ),
     ];
+    if let Some(discovery) = document.discovery.as_ref().and_then(|value| value.as_object()) {
+        if let Some(workspace_root) = discovery.get("workspaceRoot").and_then(|value| value.as_str()) {
+            lines.push(format!("Discovery: workspace-root={workspace_root}"));
+        }
+    }
     if !document.project_status.domains.is_empty() {
         lines.push("Domain status:".to_string());
         for domain in &document.project_status.domains {

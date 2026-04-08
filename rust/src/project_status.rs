@@ -7,6 +7,7 @@
 
 use serde::ser::{SerializeStruct, Serializer};
 use serde::Serialize;
+use serde_json::Value;
 use std::cmp::Reverse;
 
 use crate::common::tool_version;
@@ -88,6 +89,7 @@ pub struct ProjectStatusAction {
 pub struct ProjectStatus {
     pub schema_version: i64,
     pub tool_version: String,
+    pub discovery: Option<Value>,
     pub scope: String,
     pub overall: ProjectStatusOverall,
     pub domains: Vec<ProjectDomainStatus>,
@@ -100,10 +102,13 @@ impl Serialize for ProjectStatus {
     where
         S: Serializer,
     {
-        let mut state = serializer.serialize_struct("ProjectStatus", 8)?;
+        let mut state = serializer.serialize_struct("ProjectStatus", 9)?;
         state.serialize_field("kind", PROJECT_STATUS_KIND)?;
         state.serialize_field("schemaVersion", &self.schema_version)?;
         state.serialize_field("toolVersion", &self.tool_version)?;
+        if let Some(discovery) = self.discovery.as_ref() {
+            state.serialize_field("discovery", discovery)?;
+        }
         state.serialize_field("scope", &self.scope)?;
         state.serialize_field("overall", &self.overall)?;
         state.serialize_field("domains", &self.domains)?;
@@ -226,6 +231,7 @@ pub(crate) fn build_project_status(
     ProjectStatus {
         schema_version: 1,
         tool_version: tool_version().to_string(),
+        discovery: None,
         scope: scope.to_string(),
         overall: ProjectStatusOverall {
             status: overall_status.to_string(),

@@ -558,10 +558,12 @@ mod tests {
             kind: "grafana-utils-overview".to_string(),
             schema_version: 1,
             tool_version: crate::common::TOOL_VERSION.to_string(),
+            discovery: None,
             summary: OverviewSummary::default(),
             project_status: ProjectStatus {
                 schema_version: 1,
                 tool_version: crate::common::TOOL_VERSION.to_string(),
+                discovery: None,
                 scope: "staged-only".to_string(),
                 overall: ProjectStatusOverall {
                     status: "blocked".to_string(),

@@ -145,7 +145,7 @@ Notes:
 - `change apply` has two JSON shapes. Without `--execute-live`, it emits a staged apply-intent document. With `--execute-live`, it emits the live execution result instead.
 - `change preview` is task-first. It may emit the existing staged plan kind or the bundle/promotion preflight kinds depending on which staged inputs you provide.
 - `change apply` accepts `--preview-file` and still accepts `--plan-file` as an alias for compatibility.
-- `change advanced bundle` does not use `--output-format`; it writes the bundle contract with `--output-file`.
+- `change bundle` does not use `--output-format`; it writes the bundle contract with `--output-file`.
 
 ## `summary`
 
@@ -483,7 +483,7 @@ Purpose: package exported dashboards, alerting resources, datasource inventory, 
 
 When to use: when you want a single bundle artifact for later sync, review, or preflight steps, especially after you have already discovered one mixed workspace root and want to hand off the same source provenance as a package.
 
-Key flags: `--dashboard-export-dir`, `--dashboard-provisioning-dir`, `--alert-export-dir`, `--datasource-export-file`, `--datasource-provisioning-file`, `--metadata-file`, `--output-file`, `--output-format`.
+Key flags: `--workspace`, `--dashboard-export-dir`, `--dashboard-provisioning-dir`, `--alert-export-dir`, `--datasource-export-file`, `--datasource-provisioning-file`, `--metadata-file`, `--output-file`, `--output-format`.
 
 JSON shape:
 
@@ -507,6 +507,10 @@ grafana-util change bundle --dashboard-export-dir ./dashboards/raw --alert-expor
 ```bash
 # Purpose: bundle.
 grafana-util change bundle --dashboard-provisioning-dir ./dashboards/provisioning --alert-export-dir ./alerts/raw --output-file ./sync-source-bundle.json
+```
+
+```bash
+grafana-util change bundle --workspace ./grafana-oac-repo --output-file ./sync-source-bundle.json
 ```
 
 This bundle path is the handoff step for the same mixed workspace tree that inspect, check, and preview discovered earlier.

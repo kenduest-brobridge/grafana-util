@@ -196,7 +196,7 @@ grafana-util change preview --desired-file ./desired.json --live-file ./live.jso
 Preview is the task-first replacement for the common `plan` step. It still emits the same reviewable staged contract underneath, but the operator entrypoint is now “preview what would change” instead of “build a plan document.”
 That preview contract is also where ordering lives: `ordering.mode`, `operations[].orderIndex` / `orderGroup` / `kindOrder`, and `summary.blocked_reasons` tell reviewers how the plan is sequenced and which operations remain blocked before apply.
 
-If the same mixed workspace root needs to become a handoff package, run `change bundle` with the surfaced dashboard and alert directories from that tree, then keep the resulting `sync-source-bundle.json` as the portable review artifact.
+If the same mixed workspace root needs to become a handoff package, run `change bundle --workspace ./grafana-oac-repo --output-file ./sync-source-bundle.json`, then keep the resulting `sync-source-bundle.json` as the portable review artifact.
 
 ---
 

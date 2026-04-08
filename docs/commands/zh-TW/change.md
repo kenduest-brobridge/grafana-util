@@ -147,7 +147,7 @@ CLI 內建快速查詢：
 - `change apply` 有兩種 JSON shape。沒有 `--execute-live` 時，回的是 staged apply intent；有 `--execute-live` 時，回的是 live 執行結果。
 - `change preview` 是 task-first 入口。依你提供的 staged 輸入不同，可能輸出既有的 plan kind，或 bundle/promotion preflight kinds。
 - `change apply` 現在優先使用 `--preview-file`，但仍保留 `--plan-file` 當 alias。
-- `change advanced bundle` 不用 `--output-format` 來挑格式；它是用 `--output-file` 把 source bundle 寫到檔案。
+- `change bundle` 不用 `--output-format` 來挑格式；它是用 `--output-file` 把 source bundle 寫到檔案。
 
 ## `summary`
 
@@ -555,7 +555,7 @@ grafana-util change assess-alerts --alerts-file ./alerts.json --output-format js
 
 適用時機：當你想要一個統一的 bundle artifact，供後續同步、審核或 preflight 使用時。
 
-主要旗標：`--dashboard-export-dir`、`--dashboard-provisioning-dir`、`--alert-export-dir`、`--datasource-export-file`、`--datasource-provisioning-file`、`--metadata-file`、`--output-file`、`--output-format`。
+主要旗標：`--workspace`、`--dashboard-export-dir`、`--dashboard-provisioning-dir`、`--alert-export-dir`、`--datasource-export-file`、`--datasource-provisioning-file`、`--metadata-file`、`--output-file`、`--output-format`。
 
 JSON shape：
 
@@ -579,6 +579,10 @@ grafana-util change bundle --dashboard-export-dir ./dashboards/raw --alert-expor
 ```bash
 # 用途：bundle。
 grafana-util change bundle --dashboard-provisioning-dir ./dashboards/provisioning --alert-export-dir ./alerts/raw --output-file ./sync-source-bundle.json
+```
+
+```bash
+grafana-util change bundle --workspace ./grafana-oac-repo --output-file ./sync-source-bundle.json
 ```
 
 這條 bundle 路徑就是把前面 inspect、check、preview 已經發現的同一個 mixed workspace tree，整理成可交接的 bundle artifact。

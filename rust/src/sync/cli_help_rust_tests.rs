@@ -123,7 +123,16 @@ fn change_advanced_bundle_help_includes_examples_and_output_heading() {
     assert!(help.contains("--output-file"));
     assert!(help.contains("--also-stdout"));
     assert!(help.contains("Mixed workspace bundle handoff"));
-    assert!(help.contains("grafana-util change advanced bundle --workspace ./grafana-oac-repo"));
+    assert!(help.contains("grafana-util change bundle --workspace ./grafana-oac-repo"));
+    assert!(help.contains("sync-source-bundle.json"));
+}
+
+#[test]
+fn change_bundle_help_includes_workspace_example() {
+    let help = render_change_subcommand_help("bundle");
+    assert!(help.contains("Examples:"));
+    assert!(help.contains("--workspace"));
+    assert!(help.contains("grafana-util change bundle --workspace ./grafana-oac-repo"));
     assert!(help.contains("sync-source-bundle.json"));
 }
 
@@ -150,6 +159,32 @@ fn change_root_help_includes_task_first_examples() {
     assert!(help.contains("grafana-util change bundle"));
     assert!(help.contains("grafana-util change advanced bundle"));
     assert!(help.contains("grafana-util change advanced bundle-preflight"));
+}
+
+#[test]
+fn parse_change_cli_supports_bundle_workspace_command() {
+    let args = SyncCliArgs::parse_from([
+        "grafana-util",
+        "bundle",
+        "--workspace",
+        "./grafana-oac-repo",
+        "--output-file",
+        "./sync-source-bundle.json",
+    ]);
+
+    match args.command {
+        SyncGroupCommand::Bundle(inner) => {
+            assert_eq!(
+                inner.workspace,
+                Some(Path::new("./grafana-oac-repo").to_path_buf())
+            );
+            assert_eq!(
+                inner.output_file,
+                Some(Path::new("./sync-source-bundle.json").to_path_buf())
+            );
+        }
+        other => panic!("expected top-level bundle command, got {other:?}"),
+    }
 }
 
 #[test]
