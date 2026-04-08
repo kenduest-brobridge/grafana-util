@@ -391,8 +391,10 @@ where
         UnifiedCommand::Version(args) => {
             if args.json {
                 let payload = serde_json::json!({
+                    "schemaVersion": crate::common::TOOL_VERSION_SCHEMA_VERSION,
                     "name": "grafana-util",
                     "version": crate::common::tool_version(),
+                    "commit": crate::common::tool_git_commit(),
                     "buildTime": crate::common::tool_build_time(),
                 });
                 print!(

@@ -8,7 +8,8 @@ use super::{
 };
 use crate::alert::{parse_cli_from as parse_alert_cli_from, root_command as alert_root_command};
 use crate::common::{
-    render_json_value_with_choice, CliColorChoice, TOOL_BUILD_TIME, TOOL_VERSION, TOOL_VERSION_TEXT,
+    render_json_value_with_choice, CliColorChoice, TOOL_BUILD_TIME, TOOL_GIT_COMMIT, TOOL_VERSION,
+    TOOL_VERSION_SCHEMA_VERSION, TOOL_VERSION_TEXT,
 };
 use crate::dashboard::{
     DashboardCommand, RawToPromptLogFormat, RawToPromptOutputFormat, RawToPromptResolution,
@@ -302,6 +303,8 @@ fn unified_cli_renders_root_version_flag_output() {
     assert_eq!(unified_version, TOOL_VERSION_TEXT);
     assert!(unified_version.contains("grafana-util"));
     assert!(unified_version.contains(TOOL_VERSION));
+    assert!(unified_version.contains("commit:"));
+    assert!(unified_version.contains(TOOL_GIT_COMMIT));
     assert!(unified_version.contains("build time:"));
     assert!(unified_version.contains(TOOL_BUILD_TIME));
 }
@@ -328,15 +331,20 @@ fn parse_cli_supports_version_json_flag() {
 fn version_subcommand_json_output_is_machine_readable() {
     let output = {
         let payload = serde_json::json!({
+            "schemaVersion": TOOL_VERSION_SCHEMA_VERSION,
             "name": "grafana-util",
             "version": TOOL_VERSION,
+            "commit": TOOL_GIT_COMMIT,
             "buildTime": TOOL_BUILD_TIME,
         });
         render_json_value_with_choice(&payload, CliColorChoice::Never, false).unwrap()
     };
     let value: Value = serde_json::from_str(&output).unwrap();
+    assert_eq!(value.as_object().unwrap().len(), 5);
+    assert_eq!(value["schemaVersion"], TOOL_VERSION_SCHEMA_VERSION);
     assert_eq!(value["name"], "grafana-util");
     assert_eq!(value["version"], TOOL_VERSION);
+    assert_eq!(value["commit"], TOOL_GIT_COMMIT);
     assert_eq!(value["buildTime"], TOOL_BUILD_TIME);
 }
 

@@ -325,11 +325,17 @@ pub type Result<T> = std::result::Result<T, GrafanaCliError>;
 
 /// Canonical grafana-util version embedded in emitted JSON documents.
 pub const TOOL_VERSION: &str = env!("CARGO_PKG_VERSION");
+/// Schema version for machine-readable CLI version output.
+pub const TOOL_VERSION_SCHEMA_VERSION: i64 = 1;
 /// UTC timestamp recorded when this binary was built.
 pub const TOOL_BUILD_TIME: &str = env!("GRAFANA_UTIL_BUILD_TIME");
+/// Short Git commit recorded for this binary build.
+pub const TOOL_GIT_COMMIT: &str = env!("GRAFANA_UTIL_GIT_COMMIT");
 /// Canonical version payload handed to Clap for `--version`.
 pub const TOOL_VERSION_DETAILS: &str = concat!(
     env!("CARGO_PKG_VERSION"),
+    "\ncommit: ",
+    env!("GRAFANA_UTIL_GIT_COMMIT"),
     "\nbuild time: ",
     env!("GRAFANA_UTIL_BUILD_TIME")
 );
@@ -337,6 +343,8 @@ pub const TOOL_VERSION_DETAILS: &str = concat!(
 pub const TOOL_VERSION_TEXT: &str = concat!(
     "grafana-util ",
     env!("CARGO_PKG_VERSION"),
+    "\ncommit: ",
+    env!("GRAFANA_UTIL_GIT_COMMIT"),
     "\nbuild time: ",
     env!("GRAFANA_UTIL_BUILD_TIME"),
     "\n"
@@ -350,6 +358,11 @@ pub fn tool_version() -> &'static str {
 /// Return the UTC build timestamp recorded for this binary.
 pub fn tool_build_time() -> &'static str {
     TOOL_BUILD_TIME
+}
+
+/// Return the short Git commit recorded for this binary.
+pub fn tool_git_commit() -> &'static str {
+    TOOL_GIT_COMMIT
 }
 
 /// Build a plain user-facing CLI error message.
