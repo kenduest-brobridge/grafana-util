@@ -781,9 +781,9 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="採用前後對照">採用前後對照</h2>
 <ul><li><strong>採用前</strong>：你知道這包東西存在，但不知道它在結構上是否足夠一致、足夠安全。</li><li><strong>採用後</strong>：你會拿到一份明確區分 blockers 與 warnings 的 readiness 結果，可以很早就停下流程。</li></ul>
 <h2 id="主要旗標">主要旗標</h2>
-<ul><li><code>--workspace</code>：從常見 repo-local inputs 或 Git Sync workspace root 自動發現 staged package。</li><li><code>--availability-file</code>：把 staged availability hints 併進來。</li><li><code>--target-inventory</code>、<code>--mapping-file</code>：在 bundle / promotion 場景下加入更多檢查。</li><li><code>--fetch-live</code>：把 live target 的檢查也併進結果。</li><li><code>--output-format</code>：輸出成 <code>text</code> 或 <code>json</code>。</li></ul>
+<ul><li><code>--workspace</code>：從常見 repo-local inputs，或同一個 mixed repo root 裡的 Git Sync dashboards、<code>alerts/raw</code>、<code>datasources/provisioning</code> 自動發現 staged package。</li><li><code>--availability-file</code>：把 staged availability hints 併進來。</li><li><code>--target-inventory</code>、<code>--mapping-file</code>：在 bundle / promotion 場景下加入更多檢查。</li><li><code>--fetch-live</code>：把 live target 的檢查也併進結果。</li><li><code>--output-format</code>：輸出成 <code>text</code> 或 <code>json</code>。</li></ul>
 <h2 id="範例">範例</h2>
-<pre><code># 用途：檢查自動發現到的 staged package。
+<pre><code># 用途：檢查從同一個 mixed repo root 自動發現到的 staged package。
 grafana-util change check --workspace ./grafana-oac-repo --output-format json</code></pre>
 <p><strong>預期輸出：</strong></p>
 <pre><code>{

@@ -53,9 +53,11 @@ Failure checks:
 Examples:
 
 ```bash
-# Purpose: Inspect the staged package from a Git Sync workspace root.
+# Purpose: Inspect one repo root that mixes Git Sync dashboards, alerts/raw, and datasources/provisioning.
 grafana-util change inspect --workspace ./grafana-oac-repo
 ```
+
+That one `--workspace` root can include `dashboards/git-sync/raw`, `dashboards/git-sync/provisioning`, `alerts/raw`, and `datasources/provisioning/datasources.yaml`.
 
 ```bash
 # Purpose: Check whether the staged package is safe to continue.

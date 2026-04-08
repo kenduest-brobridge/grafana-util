@@ -17,7 +17,7 @@ Inspect the staged change package from discovered or explicit inputs.
 
 ## Key flags
 
-- `--workspace`: auto-discover common staged inputs from the current repo, export tree, provisioning tree, or a Git Sync workspace root.
+- `--workspace`: auto-discover common staged inputs from the current repo, export tree, provisioning tree, or one repo root that mixes Git Sync dashboards, `alerts/raw`, and `datasources/provisioning`.
 - `--desired-file`: inspect one explicit desired change file.
 - `--dashboard-export-dir`, `--dashboard-provisioning-dir`: inspect dashboard staged inputs directly.
 - `--alert-export-dir`, `--datasource-provisioning-file`: add alert and datasource staged inputs explicitly.
@@ -28,9 +28,11 @@ Inspect the staged change package from discovered or explicit inputs.
 ## Examples
 
 ```bash
-# Purpose: Inspect the staged package from a Git Sync workspace root.
+# Purpose: Inspect the staged package from one mixed repo root.
 grafana-util change inspect --workspace ./grafana-oac-repo
 ```
+
+This repo-root flow can discover `dashboards/git-sync/raw`, `dashboards/git-sync/provisioning`, `alerts/raw`, and `datasources/provisioning/datasources.yaml` together.
 
 **Expected Output:**
 ```text

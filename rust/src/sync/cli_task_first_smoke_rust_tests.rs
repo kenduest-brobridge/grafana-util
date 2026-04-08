@@ -57,6 +57,45 @@ fn write_dashboard_raw_fixture(root: &Path) {
     .unwrap();
 }
 
+fn write_datasource_provisioning_fixture(root: &Path) {
+    fs::create_dir_all(root).unwrap();
+    fs::write(
+        root.join("datasources.yaml"),
+        r#"apiVersion: 1
+datasources:
+  - name: Prometheus Main
+    type: prometheus
+    uid: prom-main
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+"#,
+    )
+    .unwrap();
+}
+
+fn write_alert_export_fixture(root: &Path) {
+    fs::create_dir_all(root).unwrap();
+    fs::write(
+        root.join("index.json"),
+        serde_json::to_string_pretty(&json!({
+            "schemaVersion": 1,
+            "apiVersion": 1,
+            "kind": "grafana-util-alert-export-index",
+            "rules": [{
+                "kind": "grafana-alert-rule",
+                "uid": "cpu-high",
+                "title": "CPU High",
+                "folderUID": "general",
+                "ruleGroup": "cpu-alerts",
+                "path": "rules/general/cpu-alerts/CPU_High__cpu-high.json"
+            }]
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+}
+
 fn task_first_change_cli_args(
     command: &str,
     workspace: &Path,
@@ -198,4 +237,66 @@ fn task_first_change_lane_smoke_runs_from_git_sync_workspace_root() {
         }
         _ => panic!("expected preview"),
     }
+}
+
+#[test]
+fn task_first_change_lane_smoke_runs_from_git_sync_mixed_workspace_root() {
+    let temp = tempdir().unwrap();
+    let workspace = temp.path().join("workspace");
+    fs::create_dir_all(workspace.join(".git")).unwrap();
+    let dashboards_raw = workspace.join("dashboards").join("git-sync").join("raw");
+    write_dashboard_raw_fixture(&dashboards_raw);
+    write_datasource_provisioning_fixture(&workspace.join("datasources").join("provisioning"));
+    write_alert_export_fixture(&workspace.join("alerts").join("raw"));
+    let live_file = workspace.join("live.json");
+    fs::write(&live_file, "[]").unwrap();
+    let preview_file = workspace.join("change-preview.json");
+
+    let inspect_args = task_first_change_cli_args("inspect", &workspace, None, None);
+    match inspect_args.command {
+        SyncGroupCommand::Inspect(inner) => {
+            let result = run_sync_cli(SyncGroupCommand::Inspect(inner));
+            assert!(result.is_ok(), "{result:?}");
+        }
+        _ => panic!("expected inspect"),
+    }
+
+    let check_args = task_first_change_cli_args("check", &workspace, None, None);
+    match check_args.command {
+        SyncGroupCommand::Check(inner) => {
+            let result = run_sync_cli(SyncGroupCommand::Check(inner));
+            assert!(result.is_ok(), "{result:?}");
+        }
+        _ => panic!("expected check"),
+    }
+
+    let preview_args = task_first_change_cli_args("preview", &workspace, Some(&live_file), None);
+    match preview_args.command {
+        SyncGroupCommand::Preview(inner) => {
+            let result = run_sync_cli(SyncGroupCommand::Preview(ChangePreviewArgs {
+                output: ChangeOutputArgs {
+                    output_file: Some(preview_file.clone()),
+                    ..inner.output.clone()
+                },
+                ..inner
+            }));
+            assert!(result.is_ok(), "{result:?}");
+        }
+        _ => panic!("expected preview"),
+    }
+
+    let preview_document: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&preview_file).unwrap()).unwrap();
+    assert_eq!(preview_document["kind"], json!("grafana-utils-sync-plan"));
+    assert!(preview_document["operations"].as_array().is_some());
+    assert!(preview_document["operations"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|operation| operation["kind"] == json!("dashboard")));
+    assert!(preview_document["operations"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|operation| operation["kind"] == json!("datasource")));
 }

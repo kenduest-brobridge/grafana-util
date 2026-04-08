@@ -793,8 +793,9 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <p>失敗時先檢查：</p>
 <ul><li>如果 inspect 或 check 看起來不合理，先停下來，不要往 preview 或 apply 走</li><li>如果 live fetch 讓結果和預期差很多，先回頭比對 staged 輸入與 live 目標</li><li>如果 JSON 要交給自動化判斷，先驗 <code>kind</code> 和 <code>schemaVersion</code>，再解析其他欄位</li></ul>
 <p>範例：</p>
-<pre><code># 用途：先從 Git Sync workspace root 看 staged package 的形狀。
+<pre><code># 用途：先從同一個 mixed repo root 看 staged package 的形狀。
 grafana-util change inspect --workspace ./grafana-oac-repo</code></pre>
+<p>同一個 <code>--workspace</code> root 可以同時包含 <code>dashboards/git-sync/raw</code>、<code>dashboards/git-sync/provisioning</code>、<code>alerts/raw</code> 與 <code>datasources/provisioning/datasources.yaml</code>。</p>
 <pre><code># 用途：先檢查 staged package 是否適合往下走。
 grafana-util change check --workspace ./grafana-oac-repo --fetch-live --output-format json</code></pre>
 <pre><code># 用途：先預覽這次會改到什麼，再決定是否套用。

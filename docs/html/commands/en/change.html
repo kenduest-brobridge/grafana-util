@@ -797,8 +797,9 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <p>Failure checks:</p>
 <ul><li>if summary or preflight looks wrong, stop before plan or apply</li><li>if live fetch changes the result unexpectedly, compare staged inputs against the live target first</li><li>if automation consumes JSON, validate <code>kind</code> and <code>schemaVersion</code> before deeper parsing</li></ul>
 <p>Examples:</p>
-<pre><code># Purpose: Inspect the staged package from a Git Sync workspace root.
+<pre><code># Purpose: Inspect one repo root that mixes Git Sync dashboards, alerts/raw, and datasources/provisioning.
 grafana-util change inspect --workspace ./grafana-oac-repo</code></pre>
+<p>That one <code>--workspace</code> root can include <code>dashboards/git-sync/raw</code>, <code>dashboards/git-sync/provisioning</code>, <code>alerts/raw</code>, and <code>datasources/provisioning/datasources.yaml</code>.</p>
 <pre><code># Purpose: Check whether the staged package is safe to continue.
 grafana-util change check --workspace ./grafana-oac-repo --fetch-live --output-format json</code></pre>
 <pre><code># Purpose: Preview what would change from discovered or explicit staged inputs.

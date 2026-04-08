@@ -813,11 +813,12 @@ grafana-util status staged --dashboard-export-dir ./dashboards/raw --alert-expor
 <h3 id="第一次使用先走這條最短路徑">第一次使用，先走這條最短路徑</h3>
 <p>如果你還不確定要從哪裡開始，先照這個順序走：</p>
 <ol><li><code>change inspect --workspace .</code></li><li><code>change check --workspace .</code></li><li><code>change preview --workspace . --fetch-live --profile &lt;profile&gt;</code></li><li><code>change apply --preview-file ./change-preview.json --approve --execute-live --profile &lt;profile&gt;</code></li></ol>
-<p><code>--workspace</code> 是最短路徑，因為 <code>change</code> 會先嘗試在目前 repo 或工作目錄裡找常見 staged inputs，包含 Git Sync workspace root。若這不符合你的目錄布局，再改用 <code>--desired-file</code>、<code>--dashboard-export-dir</code>、<code>--alert-export-dir</code>、<code>--source-bundle</code>、<code>--target-inventory</code> 這些明確旗標。</p>
+<p><code>--workspace</code> 是最短路徑，因為 <code>change</code> 會先嘗試在目前 repo 或工作目錄裡找常見 staged inputs，包含同一個 mixed repo root 裡的 Git Sync dashboards、<code>alerts/raw</code>、<code>datasources/provisioning</code>。若這不符合你的目錄布局，再改用 <code>--desired-file</code>、<code>--dashboard-export-dir</code>、<code>--alert-export-dir</code>、<code>--source-bundle</code>、<code>--target-inventory</code> 這些明確旗標。</p>
 <h3 id="1-變更檢視-change-inspect">1. 變更檢視 (Change Inspect)</h3>
 <p>先看目前變更包的高階摘要與輸入形狀。</p>
-<pre><code># 用途：先從 Git Sync workspace root 自動發現常見 staged inputs。
+<pre><code># 用途：先從同一個 mixed repo root 自動發現常見 staged inputs。
 grafana-util change inspect --workspace ./grafana-oac-repo</code></pre>
+<p>同一個 workspace root 可以同時包含 <code>dashboards/git-sync/raw</code>、<code>dashboards/git-sync/provisioning</code>、<code>alerts/raw</code> 與 <code>datasources/provisioning/datasources.yaml</code>。</p>
 <pre><code># 用途：用明確 staged 匯出目錄建立 inspection 輸出。
 grafana-util change inspect --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts/raw --output-format json</code></pre>
 <p><strong>預期輸出：</strong></p>
@@ -829,7 +830,7 @@ grafana-util change inspect --dashboard-export-dir ./dashboards/raw --alert-expo
 <p>先用 inspect 看整個變更包的規模與輸入形狀，再往下看 preview。若總數異常偏大，應先停下來檢查 staged 輸入。</p>
 <h3 id="2-變更檢查-change-check">2. 變更檢查 (Change Check)</h3>
 <p>驗證匯出 / 匯入目錄結構與 staged readiness。</p>
-<pre><code># 用途：先檢查目前 workspace 自動發現到的 staged package。
+<pre><code># 用途：先檢查目前 mixed workspace 自動發現到的 staged package。
 grafana-util change check --workspace ./grafana-oac-repo --availability-file ./availability.json</code></pre>
 <pre><code># 用途：把 live availability hints 併進 staged 檢查。
 grafana-util change check --workspace ./grafana-oac-repo --fetch-live --output-format json</code></pre>
@@ -841,7 +842,7 @@ grafana-util change check --workspace ./grafana-oac-repo --fetch-live --output-f
 <p>check 適合放在 preview 或 apply 前，做 staged readiness 與結構層檢查。通過只代表輸入形狀合理，不代表 live 狀態已經完全吻合。</p>
 <h3 id="3-變更預覽-change-preview">3. 變更預覽 (Change Preview)</h3>
 <p>先建立可操作的 preview，確認這次真的會改到哪些東西。</p>
-<pre><code># 用途：預覽目前 staged package 對 live Grafana 的影響。
+<pre><code># 用途：預覽目前 mixed workspace 對 live Grafana 的影響。
 grafana-util change preview --workspace ./grafana-oac-repo --fetch-live --profile prod</code></pre>
 <pre><code># 用途：用明確 desired/live 輸入產出 JSON preview。
 grafana-util change preview --desired-file ./desired.json --live-file ./live.json --output-format json</code></pre>

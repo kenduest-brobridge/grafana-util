@@ -130,10 +130,12 @@ fn change_root_help_includes_task_first_examples() {
     command.write_long_help(&mut output).unwrap();
     let help = String::from_utf8(output).unwrap();
 
-    assert!(help.contains("Git Sync workspace root"));
+    assert!(help.contains("Git Sync dashboards"));
     assert!(help.contains("grafana-util change inspect --workspace ./grafana-oac-repo"));
     assert!(help.contains("grafana-util change check --workspace ./grafana-oac-repo"));
     assert!(help.contains("grafana-util change preview --workspace ./grafana-oac-repo"));
+    assert!(help.contains("alerts/raw"));
+    assert!(help.contains("datasources/provisioning"));
     assert!(help.contains("grafana-util change inspect"));
     assert!(help.contains("grafana-util change check"));
     assert!(help.contains("grafana-util change preview"));

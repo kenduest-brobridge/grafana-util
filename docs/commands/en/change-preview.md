@@ -17,7 +17,7 @@ Preview what would change from discovered or explicit staged inputs.
 
 ## Key flags
 
-- `--workspace`: auto-discover the staged package from common repo-local inputs or a Git Sync workspace root.
+- `--workspace`: auto-discover the staged package from common repo-local inputs or one repo root that mixes Git Sync dashboards, `alerts/raw`, and `datasources/provisioning`.
 - `--desired-file`: preview one explicit desired change file.
 - `--source-bundle`, `--target-inventory`, `--mapping-file`, `--availability-file`: switch into bundle or promotion-aware preview paths.
 - `--live-file`: compare against one saved live-state document.
@@ -29,7 +29,7 @@ Preview what would change from discovered or explicit staged inputs.
 ## Examples
 
 ```bash
-# Purpose: Preview the current staged package against live Grafana.
+# Purpose: Preview one mixed repo root against live Grafana.
 grafana-util change preview --workspace ./grafana-oac-repo --fetch-live --profile prod
 ```
 

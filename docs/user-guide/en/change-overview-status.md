@@ -126,14 +126,16 @@ If you are not sure where to start, use this sequence:
 3. `change preview --workspace . --fetch-live --profile <profile>`
 4. `change apply --preview-file ./change-preview.json --approve --execute-live --profile <profile>`
 
-`--workspace` is the shortest path because `change` will try to discover common staged inputs in the current repo or working tree, including a Git Sync workspace root. If that does not match your layout, switch to explicit flags such as `--desired-file`, `--dashboard-export-dir`, `--alert-export-dir`, `--source-bundle`, or `--target-inventory`.
+`--workspace` is the shortest path because `change` will try to discover common staged inputs in the current repo or working tree, including one repo root that mixes Git Sync dashboards, `alerts/raw`, and `datasources/provisioning`. If that does not match your layout, switch to explicit flags such as `--desired-file`, `--dashboard-export-dir`, `--alert-export-dir`, `--source-bundle`, or `--target-inventory`.
 
 ### 1. Change Inspect
 Get a fast, task-first summary of what the staged package contains.
 ```bash
-# Purpose: Inspect the staged package from a Git Sync workspace root.
+# Purpose: Inspect the staged package from one mixed repo root.
 grafana-util change inspect --workspace ./grafana-oac-repo
 ```
+
+This same workspace root can contain `dashboards/git-sync/raw`, `dashboards/git-sync/provisioning`, `alerts/raw`, and `datasources/provisioning/datasources.yaml`.
 
 ```bash
 # Purpose: Inspect explicit staged exports as JSON.
@@ -152,7 +154,7 @@ Use inspect to size the change before you fetch live state. If the total is unex
 ### 2. Change Check
 Verify staged readiness before you preview or apply anything.
 ```bash
-# Purpose: Check the discovered staged package with staged availability hints.
+# Purpose: Check the discovered mixed workspace with staged availability hints.
 grafana-util change check --workspace ./grafana-oac-repo --availability-file ./availability.json
 ```
 
@@ -172,7 +174,7 @@ Use check when you need a readiness gate before preview or apply. A clean check 
 ### 3. Change Preview
 Build the actionable preview that shows what would change.
 ```bash
-# Purpose: Preview the current staged package against live Grafana.
+# Purpose: Preview the current mixed workspace against live Grafana.
 grafana-util change preview --workspace ./grafana-oac-repo --fetch-live --profile prod
 ```
 

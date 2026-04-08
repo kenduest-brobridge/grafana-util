@@ -53,9 +53,11 @@
 範例：
 
 ```bash
-# 用途：先從 Git Sync workspace root 看 staged package 的形狀。
+# 用途：先從同一個 mixed repo root 看 staged package 的形狀。
 grafana-util change inspect --workspace ./grafana-oac-repo
 ```
+
+同一個 `--workspace` root 可以同時包含 `dashboards/git-sync/raw`、`dashboards/git-sync/provisioning`、`alerts/raw` 與 `datasources/provisioning/datasources.yaml`。
 
 ```bash
 # 用途：先檢查 staged package 是否適合往下走。

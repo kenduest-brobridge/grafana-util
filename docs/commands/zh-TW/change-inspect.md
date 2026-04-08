@@ -17,7 +17,7 @@
 
 ## 主要旗標
 
-- `--workspace`：從 repo、export tree、provisioning tree 或 Git Sync workspace root 自動發現常見 staged inputs。
+- `--workspace`：從 repo、export tree、provisioning tree，或同一個 mixed repo root 裡的 Git Sync dashboards、`alerts/raw`、`datasources/provisioning` 自動發現常見 staged inputs。
 - `--desired-file`：直接檢視單一 desired change file。
 - `--dashboard-export-dir`、`--dashboard-provisioning-dir`：明確指定 dashboard staged inputs。
 - `--alert-export-dir`、`--datasource-provisioning-file`：補充 alert 與 datasource staged inputs。
@@ -28,9 +28,11 @@
 ## 範例
 
 ```bash
-# 用途：從 Git Sync workspace root 檢視 staged package。
+# 用途：從同一個 mixed repo root 檢視 staged package。
 grafana-util change inspect --workspace ./grafana-oac-repo
 ```
+
+這種 repo-root flow 會一起發現 `dashboards/git-sync/raw`、`dashboards/git-sync/provisioning`、`alerts/raw` 與 `datasources/provisioning/datasources.yaml`。
 
 **預期輸出：**
 ```text

@@ -970,6 +970,40 @@ mod guided_rust_tests {
     }
 
     #[test]
+    fn discover_change_staged_inputs_accepts_mixed_git_sync_repo_workspace() {
+        let temp = tempdir().unwrap();
+        let workspace = temp.path();
+        std::fs::create_dir_all(workspace.join("dashboards/git-sync/raw")).unwrap();
+        std::fs::create_dir_all(workspace.join("dashboards/git-sync/provisioning")).unwrap();
+        std::fs::create_dir_all(workspace.join("alerts/raw")).unwrap();
+        std::fs::create_dir_all(workspace.join("datasources/provisioning")).unwrap();
+        std::fs::write(
+            workspace.join("datasources/provisioning/datasources.yaml"),
+            "apiVersion: 1\n",
+        )
+        .unwrap();
+
+        let discovered = discover_change_staged_inputs(Some(workspace)).unwrap();
+
+        assert_eq!(
+            discovered.dashboard_export_dir,
+            Some(workspace.join("dashboards/git-sync/raw"))
+        );
+        assert_eq!(
+            discovered.dashboard_provisioning_dir,
+            Some(workspace.join("dashboards/git-sync/provisioning"))
+        );
+        assert_eq!(
+            discovered.alert_export_dir,
+            Some(workspace.join("alerts/raw"))
+        );
+        assert_eq!(
+            discovered.datasource_provisioning_file,
+            Some(workspace.join("datasources/provisioning/datasources.yaml"))
+        );
+    }
+
+    #[test]
     fn discover_change_staged_inputs_accepts_datasource_provisioning_tree_as_workspace() {
         let temp = tempdir().unwrap();
         let workspace = temp.path();
