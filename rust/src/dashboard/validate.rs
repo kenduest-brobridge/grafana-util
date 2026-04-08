@@ -478,6 +478,37 @@ mod tests {
     }
 
     #[test]
+    fn run_dashboard_validate_export_supports_git_sync_repo_root_without_export_metadata() {
+        let temp = tempdir().unwrap();
+        let repo_root = temp.path().join("grafana-oac-repo");
+        fs::create_dir_all(repo_root.join(".git")).unwrap();
+        let dashboards_dir = repo_root.join("dashboards/git-sync/raw/org_1/raw");
+        fs::create_dir_all(&dashboards_dir).unwrap();
+        write_valid_dashboard(
+            &dashboards_dir.join("cpu-main.json"),
+            "cpu-main",
+            "CPU Main",
+        );
+        let output_file = temp.path().join("validation-git-sync.json");
+
+        run_dashboard_validate_export(&ValidateExportArgs {
+            input_dir: repo_root,
+            input_format: DashboardImportInputFormat::Raw,
+            reject_custom_plugins: true,
+            reject_legacy_properties: true,
+            target_schema_version: Some(39),
+            output_format: ValidationOutputFormat::Json,
+            output_file: Some(output_file.clone()),
+            also_stdout: false,
+        })
+        .unwrap();
+
+        let report = fs::read_to_string(output_file).unwrap();
+        assert!(report.contains("\"dashboardCount\": 1"));
+        assert!(report.contains("\"errorCount\": 0"));
+    }
+
+    #[test]
     fn run_dashboard_validate_export_supports_also_stdout_with_output_file() {
         let temp = tempdir().unwrap();
         let provisioning_root = temp.path().join("provisioning");

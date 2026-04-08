@@ -20,7 +20,7 @@ After: you have a readiness\-style result with blockers and warnings that can st
 .SH COMMON OPTIONS
 .TP
 .B \-\-workspace
-auto\-discover the staged package from common repo\-local inputs.
+auto\-discover the staged package from common repo\-local inputs or a Git Sync workspace root.
 .TP
 .B \-\-availability\-file
 merge staged availability hints into the check.
@@ -51,7 +51,7 @@ if automation reads the JSON, inspect status, blockers, and warnings only after 
 .PP
 Check whether the staged change package looks structurally safe to continue.
 .EX
-grafana-util change check --workspace . --output-format json
+grafana-util change check --workspace ./grafana-oac-repo --output-format json
 .EE
 .SH SEE ALSO
 \fBgrafana-util\fR(1)

@@ -785,7 +785,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="採用前後對照">採用前後對照</h2>
 <ul><li><strong>採用前</strong>：相依關係通常只存在維護者的記憶、原始 JSON，或是很快過期的臨時圖。</li><li><strong>採用後</strong>：跑一次 topology，就能得到可重現的相依圖，既能在終端看摘要，也能丟給 Mermaid 或 Graphviz。</li></ul>
 <h2 id="重點旗標">重點旗標</h2>
-<ul><li><code>--url</code>：直接分析線上 Grafana。</li><li><code>--input-dir</code>：直接分析本地匯出樹。</li><li><code>--input-format</code>：分析本地匯出時選擇 <code>raw</code> 或 <code>provisioning</code>。</li><li><code>--governance</code>：儀表板治理 JSON 輸入（<code>governance-json</code> 成品，進階重用）。</li><li><code>--queries</code>：可選的儀表板 query-report JSON 輸入（<code>queries-json</code> 成品，進階重用）。</li><li><code>--alert-contract</code>：可選的 alert contract JSON 輸入。</li><li><code>--output-format</code>：輸出 <code>text</code>、<code>json</code>、<code>mermaid</code> 或 <code>dot</code>。</li><li><code>--output-file</code>：將渲染後的拓樸寫到磁碟。</li><li><code>--interactive</code>：開啟互動式終端機瀏覽器。</li></ul>
+<ul><li><code>--url</code>：直接分析線上 Grafana。</li><li><code>--input-dir</code>：直接分析本地匯出樹。</li><li><code>--input-format</code>：分析本地來源時選擇 <code>raw</code>、<code>provisioning</code> 或 <code>git-sync</code>。</li><li><code>--governance</code>：儀表板治理 JSON 輸入（<code>governance-json</code> 成品，進階重用）。</li><li><code>--queries</code>：可選的儀表板 query-report JSON 輸入（<code>queries-json</code> 成品，進階重用）。</li><li><code>--alert-contract</code>：可選的 alert contract JSON 輸入。</li><li><code>--output-format</code>：輸出 <code>text</code>、<code>json</code>、<code>mermaid</code> 或 <code>dot</code>。</li><li><code>--output-file</code>：將渲染後的拓樸寫到磁碟。</li><li><code>--interactive</code>：開啟互動式終端機瀏覽器。</li></ul>
 <h2 id="範例">範例</h2>
 <pre><code># 用途：直接從 live Grafana 建立可重現的儀表板拓樸圖。
 grafana-util dashboard topology \
@@ -799,6 +799,11 @@ grafana-util dashboard graph \
   --input-format raw \
   --output-format dot \
   --output-file ./dashboard-topology.dot</code></pre>
+<pre><code># 用途：從 repo-backed Git Sync 樹建立可重現的儀表板拓樸圖。
+grafana-util dashboard topology \
+  --input-dir ./grafana-oac-repo \
+  --input-format git-sync \
+  --output-format mermaid</code></pre>
 <pre><code># 用途：進階重用：從已保存的分析成品建立可重現的儀表板拓樸圖。
 grafana-util dashboard topology \
   --governance ./governance.json \

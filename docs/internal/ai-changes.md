@@ -8,6 +8,12 @@ Current AI change log only.
 - Keep this file limited to the latest active architecture and maintenance changes.
 - Detailed 2026-03-29 through 2026-03-31 entries moved to [`archive/ai-changes-archive-2026-03-31.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-03-31.md).
 
+## 2026-04-08 - Standardize the repo-local Docker Grafana live test port on 43011
+- Summary: documented `http://127.0.0.1:43011` as the preferred repo-local Docker Grafana port for AI-assisted live validation and disposable smoke work. The goal is workflow consistency rather than a runtime behavior change: use `43011` first for local Docker Grafana unless the task explicitly needs another port.
+- Tests: none. Internal workflow-doc update only.
+- Impact: `docs/internal/ai-workflow-note.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Rollback/Risk: low. This is a maintainer/AI workflow baseline only, but future docs or scripts should avoid reintroducing multiple competing "default local Docker Grafana" ports without a clear reason.
+
 ## 2026-04-08 - Remove implicit localhost live URL defaults
 - Summary: removed the Rust-first localhost URL assumption from the shared live Grafana connection surfaces. `dashboard`, `alert`, `access`, and `status live` no longer advertise or rely on `http://localhost:3000` as an implicit default; instead they now require the base URL to come from `--url`, `GRAFANA_URL`, or the selected repo-local profile. The shared connection merge logic now errors clearly when none of those sources provides a URL.
 - Tests: `cargo test --manifest-path rust/Cargo.toml profile_cli_rust_tests --quiet`; `cargo test --manifest-path rust/Cargo.toml dashboard_cli_inspect_help_rust_tests --quiet`; `cargo build --manifest-path rust/Cargo.toml --quiet`; `make man`; `make html`

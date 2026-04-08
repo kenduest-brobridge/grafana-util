@@ -109,10 +109,9 @@ where
     F: FnMut(reqwest::Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
     let resolved = super::import::resolve_diff_source(args)?;
-    let expected_variant = match args.input_format {
-        super::DashboardImportInputFormat::Raw => super::RAW_EXPORT_SUBDIR,
-        super::DashboardImportInputFormat::Provisioning => super::PROVISIONING_EXPORT_SUBDIR,
-    };
+    let expected_variant = resolved
+        .expected_variant()
+        .ok_or_else(|| message("Dashboard diff local mode requires an export-backed source."))?;
     let _ = super::load_export_metadata(&resolved.metadata_dir, Some(expected_variant))?;
     let dashboard_files = super::import::dashboard_files_for_import(&resolved.dashboard_dir)?;
     let mut differences = 0;

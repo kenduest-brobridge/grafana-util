@@ -18,6 +18,7 @@ use super::super::cli_defs::{
 };
 use super::super::files::{
     load_export_metadata, resolve_dashboard_export_root, resolve_dashboard_import_source,
+    DashboardRepoLayoutKind, DashboardSourceKind,
 };
 #[cfg(feature = "tui")]
 use super::super::inspect_governance::build_export_inspection_governance_document;
@@ -50,6 +51,31 @@ use ratatui::widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragra
 pub(crate) struct ResolvedInspectExportInput {
     pub(crate) input_dir: PathBuf,
     pub(crate) expected_variant: &'static str,
+    pub(crate) source_kind: Option<DashboardSourceKind>,
+}
+
+fn dashboard_source_kind_for_variant(expected_variant: &str) -> Option<DashboardSourceKind> {
+    DashboardSourceKind::from_expected_variant(expected_variant)
+}
+
+fn future_git_sync_variant_root(input_dir: &Path, variant_dir_name: &'static str) -> Option<PathBuf> {
+    DashboardRepoLayoutKind::from_root_dir(input_dir)
+        .and_then(|layout| layout.resolve_dashboard_variant_root(input_dir, variant_dir_name))
+        .or_else(|| {
+            let dashboards_dir = if input_dir.file_name().and_then(|name| name.to_str())
+                == Some("dashboards")
+            {
+                input_dir.to_path_buf()
+            } else {
+                input_dir.join("dashboards")
+            };
+            let direct_candidate = dashboards_dir.join(variant_dir_name);
+            if direct_candidate.is_dir() {
+                return Some(direct_candidate);
+            }
+            let wrapped_candidate = dashboards_dir.join("git-sync").join(variant_dir_name);
+            wrapped_candidate.is_dir().then_some(wrapped_candidate)
+        })
 }
 
 fn map_output_format_to_report(
@@ -114,6 +140,7 @@ pub(crate) fn resolve_inspect_export_import_dir(
             Ok(ResolvedInspectExportInput {
                 input_dir: resolved.dashboard_dir,
                 expected_variant: RAW_EXPORT_SUBDIR,
+                source_kind: Some(DashboardSourceKind::ProvisioningExport),
             })
         }
     }
@@ -156,11 +183,17 @@ fn resolve_raw_inspect_input(
     let metadata = load_export_metadata(&input_dir, None)?;
     let raw_dirs = discover_org_variant_export_dirs(&input_dir, RAW_EXPORT_SUBDIR)?;
     let source_dirs = discover_org_variant_export_dirs(&input_dir, PROMPT_EXPORT_SUBDIR)?;
+    let future_raw_root = future_git_sync_variant_root(&input_dir, RAW_EXPORT_SUBDIR);
+    let future_source_root = future_git_sync_variant_root(&input_dir, PROMPT_EXPORT_SUBDIR);
     let is_dashboard_root = resolve_dashboard_export_root(&input_dir)?
         .map(|resolved| resolved.manifest.scope_kind.is_root())
         .unwrap_or(false);
 
-    if is_dashboard_root || (!raw_dirs.is_empty() || !source_dirs.is_empty()) {
+    if is_dashboard_root
+        || (!raw_dirs.is_empty() || !source_dirs.is_empty())
+        || future_raw_root.is_some()
+        || future_source_root.is_some()
+    {
         let selected_variant = match (input_type, raw_dirs.is_empty(), source_dirs.is_empty()) {
             (Some(InspectExportInputType::Raw), _, _) => RAW_EXPORT_SUBDIR,
             (Some(InspectExportInputType::Source), _, _) => PROMPT_EXPORT_SUBDIR,
@@ -172,10 +205,30 @@ fn resolve_raw_inspect_input(
             },
             (None, true, true) => RAW_EXPORT_SUBDIR,
         };
-        let selected_dirs = if selected_variant == RAW_EXPORT_SUBDIR {
-            raw_dirs
-        } else {
-            source_dirs
+        let (selected_dirs, selected_input_dir) = match DashboardSourceKind::from_expected_variant(selected_variant) {
+            Some(DashboardSourceKind::RawExport) => {
+                if raw_dirs.is_empty() {
+                    if let Some(root) = future_raw_root {
+                        (discover_org_variant_export_dirs(&root, RAW_EXPORT_SUBDIR)?, root)
+                    } else {
+                        (raw_dirs, input_dir.clone())
+                    }
+                } else {
+                    (raw_dirs, input_dir.clone())
+                }
+            }
+            Some(DashboardSourceKind::ProvisioningExport) => {
+                if source_dirs.is_empty() {
+                    if let Some(root) = future_source_root {
+                        (discover_org_variant_export_dirs(&root, PROMPT_EXPORT_SUBDIR)?, root)
+                    } else {
+                        (source_dirs, input_dir.clone())
+                    }
+                } else {
+                    (source_dirs, input_dir.clone())
+                }
+            }
+            _ => unreachable!("inspect source variant must be raw or provisioning"),
         };
         if selected_dirs.is_empty() {
             return Err(message(format!(
@@ -184,10 +237,15 @@ fn resolve_raw_inspect_input(
             )));
         }
         let inspect_variant_dir =
-            prepare_inspect_export_import_dir_for_variant(temp_root, &input_dir, selected_variant)?;
+            prepare_inspect_export_import_dir_for_variant(
+                temp_root,
+                &selected_input_dir,
+                selected_variant,
+            )?;
         return Ok(ResolvedInspectExportInput {
             input_dir: inspect_variant_dir,
             expected_variant: selected_variant,
+            source_kind: dashboard_source_kind_for_variant(selected_variant),
         });
     }
 
@@ -203,6 +261,7 @@ fn resolve_raw_inspect_input(
     Ok(ResolvedInspectExportInput {
         input_dir,
         expected_variant,
+        source_kind: dashboard_source_kind_for_variant(expected_variant),
     })
 }
 
@@ -232,6 +291,7 @@ fn render_interactive_loading_frame(
     frame: &mut ratatui::Frame<'_>,
     input_dir: &Path,
     expected_variant: &str,
+    source_kind: Option<DashboardSourceKind>,
     active_step: usize,
 ) {
     let area = frame.area();
@@ -271,11 +331,18 @@ fn render_interactive_loading_frame(
             ]),
             Line::from(vec![
                 tui_shell::label("Variant "),
-                if expected_variant == RAW_EXPORT_SUBDIR {
-                    tui_shell::key_chip("RAW", Color::Rgb(78, 161, 255))
-                } else {
-                    tui_shell::key_chip("SOURCE", Color::Rgb(73, 182, 133))
-                },
+                match source_kind {
+                    Some(DashboardSourceKind::RawExport) => {
+                        tui_shell::key_chip("RAW", Color::Rgb(78, 161, 255))
+                    }
+                    Some(DashboardSourceKind::ProvisioningExport) => {
+                        tui_shell::key_chip("PROVISIONING", Color::Rgb(73, 182, 133))
+                    }
+                    _ if expected_variant == RAW_EXPORT_SUBDIR => {
+                        tui_shell::key_chip("RAW", Color::Rgb(78, 161, 255))
+                    }
+                    _ => tui_shell::key_chip("SOURCE", Color::Rgb(73, 182, 133)),
+                }
             ]),
             Line::from("Building inspection artifacts before opening the interactive browser."),
         ])
@@ -352,10 +419,11 @@ fn draw_interactive_loading_step(
     session: &mut TerminalSession,
     input_dir: &Path,
     expected_variant: &str,
+    source_kind: Option<DashboardSourceKind>,
     active_step: usize,
 ) -> Result<()> {
     session.terminal.draw(|frame| {
-        render_interactive_loading_frame(frame, input_dir, expected_variant, active_step)
+        render_interactive_loading_frame(frame, input_dir, expected_variant, source_kind, active_step)
     })?;
     Ok(())
 }
@@ -620,9 +688,10 @@ fn analyze_export_dir_at_path(
     args: &InspectExportArgs,
     input_dir: &Path,
     expected_variant: &str,
+    source_kind: Option<DashboardSourceKind>,
 ) -> Result<usize> {
     if args.interactive {
-        return run_interactive_export_workbench(input_dir, expected_variant);
+        return run_interactive_export_workbench(input_dir, expected_variant, source_kind);
     }
     let write_output = |output: &str| -> Result<()> {
         write_inspect_output(output, args.output_file.as_ref(), args.also_stdout)
@@ -653,16 +722,20 @@ fn analyze_export_dir_at_path(
 }
 
 #[cfg(feature = "tui")]
-fn run_interactive_export_workbench(input_dir: &Path, expected_variant: &str) -> Result<usize> {
+fn run_interactive_export_workbench(
+    input_dir: &Path,
+    expected_variant: &str,
+    source_kind: Option<DashboardSourceKind>,
+) -> Result<usize> {
     let mut session = TerminalSession::enter()?;
-    draw_interactive_loading_step(&mut session, input_dir, expected_variant, 0)?;
+    draw_interactive_loading_step(&mut session, input_dir, expected_variant, source_kind, 0)?;
     let summary =
         super::super::build_export_inspection_summary_for_variant(input_dir, expected_variant)?;
-    draw_interactive_loading_step(&mut session, input_dir, expected_variant, 1)?;
+    draw_interactive_loading_step(&mut session, input_dir, expected_variant, source_kind, 1)?;
     let report = build_export_inspection_query_report_for_variant(input_dir, expected_variant)?;
-    draw_interactive_loading_step(&mut session, input_dir, expected_variant, 2)?;
+    draw_interactive_loading_step(&mut session, input_dir, expected_variant, source_kind, 2)?;
     let governance = build_export_inspection_governance_document(&summary, &report);
-    draw_interactive_loading_step(&mut session, input_dir, expected_variant, 3)?;
+    draw_interactive_loading_step(&mut session, input_dir, expected_variant, source_kind, 3)?;
     let document =
         build_inspect_workbench_document("export artifacts", &summary, &governance, &report);
     drop(session);
@@ -671,7 +744,11 @@ fn run_interactive_export_workbench(input_dir: &Path, expected_variant: &str) ->
 }
 
 #[cfg(not(feature = "tui"))]
-fn run_interactive_export_workbench(_import_dir: &Path, _expected_variant: &str) -> Result<usize> {
+fn run_interactive_export_workbench(
+    _import_dir: &Path,
+    _expected_variant: &str,
+    _source_kind: Option<DashboardSourceKind>,
+) -> Result<usize> {
     super::super::tui_not_built("analyze-export --interactive")
 }
 
@@ -685,12 +762,24 @@ pub(crate) fn analyze_export_dir(args: &InspectExportArgs) -> Result<usize> {
         args.input_type,
         args.interactive,
     )?;
-    analyze_export_dir_at_path(args, &resolved.input_dir, resolved.expected_variant)
+    analyze_export_dir_at_path(
+        args,
+        &resolved.input_dir,
+        resolved.expected_variant,
+        resolved.source_kind,
+    )
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_interactive_input_type_answer, InspectExportInputType};
+    use super::{
+        parse_interactive_input_type_answer, resolve_inspect_export_import_dir,
+        InspectExportInputType,
+    };
+    use crate::dashboard::{DashboardImportInputFormat, DashboardSourceKind};
+    use serde_json::json;
+    use std::fs;
+    use tempfile::tempdir;
 
     #[test]
     fn parse_interactive_input_type_answer_accepts_expected_aliases() {
@@ -715,5 +804,125 @@ mod tests {
             Some(InspectExportInputType::Source)
         );
         assert_eq!(parse_interactive_input_type_answer(""), None);
+    }
+
+    #[test]
+    fn resolve_inspect_export_import_dir_marks_provisioning_source_kind() {
+        let temp = tempdir().unwrap();
+        let input_dir = temp.path().join("provisioning");
+        let dashboards_dir = input_dir.join("dashboards");
+        fs::create_dir_all(&dashboards_dir).unwrap();
+        fs::write(
+            input_dir.join("export-metadata.json"),
+            serde_json::to_string_pretty(&json!({
+                "kind": "grafana-utils-dashboard-export-index",
+                "schemaVersion": 1,
+                "variant": "provisioning",
+                "dashboardCount": 0,
+                "indexFile": "index.json",
+                "org": "Main Org.",
+                "orgId": "1"
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+
+        let resolved = resolve_inspect_export_import_dir(
+            temp.path(),
+            &input_dir,
+            DashboardImportInputFormat::Provisioning,
+            None,
+            false,
+        )
+        .unwrap();
+
+        assert_eq!(resolved.expected_variant, super::RAW_EXPORT_SUBDIR);
+        assert_eq!(
+            resolved.source_kind,
+            Some(DashboardSourceKind::ProvisioningExport)
+        );
+    }
+
+    #[test]
+    fn resolve_inspect_export_import_dir_accepts_git_sync_wrapped_raw_tree() {
+        let temp = tempdir().unwrap();
+        let workspace = temp.path();
+        std::fs::write(
+            workspace.join("export-metadata.json"),
+            serde_json::to_string_pretty(&json!({
+                "kind": "grafana-utils-dashboard-export-index",
+                "schemaVersion": 1,
+                "variant": "raw",
+                "dashboardCount": 1,
+                "indexFile": "index.json",
+                "org": "Main Org.",
+                "orgId": "1"
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        let raw_root = workspace.join("dashboards/git-sync/raw");
+        std::fs::create_dir_all(raw_root.join("org_1/raw")).unwrap();
+        std::fs::write(
+            raw_root.join("export-metadata.json"),
+            serde_json::to_string_pretty(&json!({
+                "kind": "grafana-utils-dashboard-export-index",
+                "schemaVersion": 1,
+                "variant": "raw",
+                "dashboardCount": 1,
+                "indexFile": "index.json",
+                "org": "Main Org.",
+                "orgId": "1"
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+
+        let resolved = resolve_inspect_export_import_dir(
+            workspace,
+            workspace,
+            DashboardImportInputFormat::Raw,
+            None,
+            false,
+        )
+        .unwrap();
+
+        assert_eq!(resolved.expected_variant, super::RAW_EXPORT_SUBDIR);
+        assert_eq!(resolved.source_kind, Some(DashboardSourceKind::RawExport));
+    }
+
+    #[test]
+    fn resolve_inspect_export_import_dir_accepts_git_sync_repo_root_without_export_metadata() {
+        let temp = tempdir().unwrap();
+        let workspace = temp.path();
+        std::fs::create_dir_all(workspace.join(".git")).unwrap();
+        let raw_root = workspace.join("dashboards/git-sync/raw");
+        std::fs::create_dir_all(raw_root.join("org_1/raw")).unwrap();
+        std::fs::write(
+            raw_root.join("export-metadata.json"),
+            serde_json::to_string_pretty(&json!({
+                "kind": "grafana-utils-dashboard-export-index",
+                "schemaVersion": 1,
+                "variant": "raw",
+                "dashboardCount": 1,
+                "indexFile": "index.json",
+                "org": "Main Org.",
+                "orgId": "1"
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+
+        let resolved = resolve_inspect_export_import_dir(
+            workspace,
+            workspace,
+            DashboardImportInputFormat::Raw,
+            None,
+            false,
+        )
+        .unwrap();
+
+        assert_eq!(resolved.expected_variant, super::RAW_EXPORT_SUBDIR);
+        assert_eq!(resolved.source_kind, Some(DashboardSourceKind::RawExport));
     }
 }

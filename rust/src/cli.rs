@@ -14,7 +14,7 @@
 //! Caveats:
 //! - Do not add domain logic or HTTP transport details here.
 //! - Keep help output canonical-first so users discover formal commands.
-use clap::{Parser, Subcommand};
+use clap::{Args, Parser, Subcommand};
 
 use crate::access::{run_access_cli, AccessCliArgs};
 use crate::alert::{
@@ -40,9 +40,9 @@ use crate::common::{json_color_choice, set_json_color_choice, CliColorChoice, Re
 use crate::dashboard::{
     run_dashboard_cli, AnalyzeArgs, BrowseArgs, CloneLiveArgs, DashboardCliArgs, DashboardCommand,
     DashboardHistoryArgs, DeleteArgs, DiffArgs, EditLiveArgs, ExportArgs, GetArgs,
-    GovernanceGateArgs, ImportArgs, InspectExportArgs, InspectLiveArgs, InspectVarsArgs, ListArgs,
-    PatchFileArgs, PublishArgs, RawToPromptArgs, ReviewArgs, ScreenshotArgs, ServeArgs,
-    TopologyArgs,
+    GovernanceGateArgs, ImpactArgs, ImportArgs, InspectExportArgs, InspectLiveArgs,
+    InspectVarsArgs, ListArgs, PatchFileArgs, PublishArgs, RawToPromptArgs, ReviewArgs,
+    ScreenshotArgs, ServeArgs, TopologyArgs, ValidateExportArgs,
 };
 use crate::datasource::{run_datasource_cli, DatasourceGroupCommand};
 use crate::overview::{run_overview_cli, OverviewCliArgs};
@@ -165,6 +165,15 @@ pub enum DashboardGroupCommand {
     )]
     Topology(TopologyArgs),
     #[command(
+        about = "Show which dashboards and alert resources would be affected by one data source from live Grafana, an export tree, or saved artifacts."
+    )]
+    Impact(ImpactArgs),
+    #[command(
+        name = "validate-export",
+        about = "Run strict schema validation against dashboard raw export files before GitOps sync."
+    )]
+    ValidateExport(ValidateExportArgs),
+    #[command(
         about = "List, restore, diff, or export live dashboard revision history.",
         after_help = "Examples:\n\n  List recent revisions from live Grafana for one dashboard:\n    grafana-util dashboard history list --url http://localhost:3000 --basic-user admin --basic-password admin --dashboard-uid cpu-main --output-format table\n\n  Review one local history artifact without calling Grafana:\n    grafana-util dashboard history list --input ./cpu-main.history.json --output-format yaml\n\n  Compare two live or local historical revisions:\n    grafana-util dashboard history diff --base-input ./cpu-main.history.json --base-version 17 --new-input ./cpu-main.history.json --new-version 21 --output-format json\n\n  Restore one historical revision as a new latest Grafana version:\n    grafana-util dashboard history restore --url http://localhost:3000 --basic-user admin --basic-password admin --dashboard-uid cpu-main --version 17 --dry-run\n\n  Export recent revision history into a reusable JSON artifact:\n    grafana-util dashboard history export --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --dashboard-uid cpu-main --output ./cpu-main.history.json"
     )]
@@ -180,7 +189,7 @@ pub enum DashboardGroupCommand {
 #[derive(Debug, Clone, Subcommand)]
 pub enum UnifiedCommand {
     #[command(about = "Print the current grafana-util version.")]
-    Version,
+    Version(VersionArgs),
     #[command(
         about = "Run dashboard browse, authoring, export, raw-to-prompt, import, diff, patch-file, review, and publish workflows.",
         visible_alias = "db",
@@ -253,10 +262,16 @@ pub enum UnifiedCommand {
     Status(ProjectStatusCliArgs),
 }
 
+#[derive(Debug, Clone, Args)]
+pub struct VersionArgs {
+    #[arg(long, help = "Render version details as JSON for external tooling.")]
+    pub json: bool,
+}
+
 #[derive(Debug, Clone, Parser)]
 #[command(
     name = "grafana-util",
-    version = crate::common::TOOL_VERSION,
+    version = crate::common::TOOL_VERSION_DETAILS,
     about = "Unified Grafana dashboard, alerting, access, and profile utility.",
     after_help = UNIFIED_HELP_TEXT,
     styles = crate::help_styles::CLI_HELP_STYLES
@@ -330,6 +345,10 @@ fn wrap_dashboard_group(command: DashboardGroupCommand) -> DashboardCliArgs {
             wrap_dashboard(DashboardCommand::GovernanceGate(inner))
         }
         DashboardGroupCommand::Topology(inner) => wrap_dashboard(DashboardCommand::Topology(inner)),
+        DashboardGroupCommand::Impact(inner) => wrap_dashboard(DashboardCommand::Impact(inner)),
+        DashboardGroupCommand::ValidateExport(inner) => {
+            wrap_dashboard(DashboardCommand::ValidateExport(inner))
+        }
         DashboardGroupCommand::History(inner) => wrap_dashboard(DashboardCommand::History(inner)),
         DashboardGroupCommand::Screenshot(inner) => {
             wrap_dashboard(DashboardCommand::Screenshot(inner))
@@ -369,8 +388,20 @@ where
 {
     let default_color = args.color;
     match args.command {
-        UnifiedCommand::Version => {
-            print!("{}", render_unified_version_text());
+        UnifiedCommand::Version(args) => {
+            if args.json {
+                let payload = serde_json::json!({
+                    "name": "grafana-util",
+                    "version": crate::common::tool_version(),
+                    "buildTime": crate::common::tool_build_time(),
+                });
+                print!(
+                    "{}",
+                    crate::common::render_json_value_with_choice(&payload, default_color, false)?
+                );
+            } else {
+                print!("{}", render_unified_version_text());
+            }
             Ok(())
         }
         UnifiedCommand::Dashboard { command } => run_dashboard(wrap_dashboard_group(command)),

@@ -813,11 +813,11 @@ grafana-util status staged --dashboard-export-dir ./dashboards/raw --alert-expor
 <h3 id="第一次使用先走這條最短路徑">第一次使用，先走這條最短路徑</h3>
 <p>如果你還不確定要從哪裡開始，先照這個順序走：</p>
 <ol><li><code>change inspect --workspace .</code></li><li><code>change check --workspace .</code></li><li><code>change preview --workspace . --fetch-live --profile &lt;profile&gt;</code></li><li><code>change apply --preview-file ./change-preview.json --approve --execute-live --profile &lt;profile&gt;</code></li></ol>
-<p><code>--workspace</code> 是最短路徑，因為 <code>change</code> 會先嘗試在目前 repo 或工作目錄裡找常見 staged inputs。若這不符合你的目錄布局，再改用 <code>--desired-file</code>、<code>--dashboard-export-dir</code>、<code>--alert-export-dir</code>、<code>--source-bundle</code>、<code>--target-inventory</code> 這些明確旗標。</p>
+<p><code>--workspace</code> 是最短路徑，因為 <code>change</code> 會先嘗試在目前 repo 或工作目錄裡找常見 staged inputs，包含 Git Sync workspace root。若這不符合你的目錄布局，再改用 <code>--desired-file</code>、<code>--dashboard-export-dir</code>、<code>--alert-export-dir</code>、<code>--source-bundle</code>、<code>--target-inventory</code> 這些明確旗標。</p>
 <h3 id="1-變更檢視-change-inspect">1. 變更檢視 (Change Inspect)</h3>
 <p>先看目前變更包的高階摘要與輸入形狀。</p>
-<pre><code># 用途：先從目前 workspace 自動發現常見 staged inputs。
-grafana-util change inspect --workspace .</code></pre>
+<pre><code># 用途：先從 Git Sync workspace root 自動發現常見 staged inputs。
+grafana-util change inspect --workspace ./grafana-oac-repo</code></pre>
 <pre><code># 用途：用明確 staged 匯出目錄建立 inspection 輸出。
 grafana-util change inspect --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts/raw --output-format json</code></pre>
 <p><strong>預期輸出：</strong></p>
@@ -830,9 +830,9 @@ grafana-util change inspect --dashboard-export-dir ./dashboards/raw --alert-expo
 <h3 id="2-變更檢查-change-check">2. 變更檢查 (Change Check)</h3>
 <p>驗證匯出 / 匯入目錄結構與 staged readiness。</p>
 <pre><code># 用途：先檢查目前 workspace 自動發現到的 staged package。
-grafana-util change check --workspace . --availability-file ./availability.json</code></pre>
+grafana-util change check --workspace ./grafana-oac-repo --availability-file ./availability.json</code></pre>
 <pre><code># 用途：把 live availability hints 併進 staged 檢查。
-grafana-util change check --workspace . --fetch-live --output-format json</code></pre>
+grafana-util change check --workspace ./grafana-oac-repo --fetch-live --output-format json</code></pre>
 <p><strong>預期輸出：</strong></p>
 <pre><code>PREFLIGHT CHECK:
 - dashboards: valid (7 files)
@@ -842,7 +842,7 @@ grafana-util change check --workspace . --fetch-live --output-format json</code>
 <h3 id="3-變更預覽-change-preview">3. 變更預覽 (Change Preview)</h3>
 <p>先建立可操作的 preview，確認這次真的會改到哪些東西。</p>
 <pre><code># 用途：預覽目前 staged package 對 live Grafana 的影響。
-grafana-util change preview --workspace . --fetch-live --profile prod</code></pre>
+grafana-util change preview --workspace ./grafana-oac-repo --fetch-live --profile prod</code></pre>
 <pre><code># 用途：用明確 desired/live 輸入產出 JSON preview。
 grafana-util change preview --desired-file ./desired.json --live-file ./live.json --output-format json</code></pre>
 <p>preview 是現在 task-first 路徑裡對應舊 <code>plan</code> 的入口。底層 contract 還是同一套，但對使用者來說，先想「這次會改到什麼」比先想「我要 build 哪種 plan 文件」更自然。 這份 preview contract 也是排序契約的公開面：<code>ordering.mode</code>、每筆 operation 的 <code>orderIndex</code> / <code>orderGroup</code> / <code>kindOrder</code>，以及 <code>summary.blocked_reasons</code> 會讓審查者看出 plan 的執行順序與尚未解除的受阻工作。</p>

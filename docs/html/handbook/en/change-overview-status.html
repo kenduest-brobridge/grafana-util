@@ -814,11 +814,11 @@ grafana-util status staged --dashboard-export-dir ./dashboards/raw --alert-expor
 <h3 id="first-run-shortcut">First-run shortcut</h3>
 <p>If you are not sure where to start, use this sequence:</p>
 <ol><li><code>change inspect --workspace .</code></li><li><code>change check --workspace .</code></li><li><code>change preview --workspace . --fetch-live --profile &lt;profile&gt;</code></li><li><code>change apply --preview-file ./change-preview.json --approve --execute-live --profile &lt;profile&gt;</code></li></ol>
-<p><code>--workspace</code> is the shortest path because <code>change</code> will try to discover common staged inputs in the current repo or working tree. If that does not match your layout, switch to explicit flags such as <code>--desired-file</code>, <code>--dashboard-export-dir</code>, <code>--alert-export-dir</code>, <code>--source-bundle</code>, or <code>--target-inventory</code>.</p>
+<p><code>--workspace</code> is the shortest path because <code>change</code> will try to discover common staged inputs in the current repo or working tree, including a Git Sync workspace root. If that does not match your layout, switch to explicit flags such as <code>--desired-file</code>, <code>--dashboard-export-dir</code>, <code>--alert-export-dir</code>, <code>--source-bundle</code>, or <code>--target-inventory</code>.</p>
 <h3 id="1-change-inspect">1. Change Inspect</h3>
 <p>Get a fast, task-first summary of what the staged package contains.</p>
-<pre><code># Purpose: Inspect the staged package from the current workspace.
-grafana-util change inspect --workspace .</code></pre>
+<pre><code># Purpose: Inspect the staged package from a Git Sync workspace root.
+grafana-util change inspect --workspace ./grafana-oac-repo</code></pre>
 <pre><code># Purpose: Inspect explicit staged exports as JSON.
 grafana-util change inspect --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts/raw --output-format json</code></pre>
 <p><strong>Expected Output:</strong></p>
@@ -831,7 +831,7 @@ grafana-util change inspect --dashboard-export-dir ./dashboards/raw --alert-expo
 <h3 id="2-change-check">2. Change Check</h3>
 <p>Verify staged readiness before you preview or apply anything.</p>
 <pre><code># Purpose: Check the discovered staged package with staged availability hints.
-grafana-util change check --workspace . --availability-file ./availability.json</code></pre>
+grafana-util change check --workspace ./grafana-oac-repo --availability-file ./availability.json</code></pre>
 <pre><code># Purpose: Check the staged package and merge live availability hints.
 grafana-util change check --workspace . --fetch-live --output-format json</code></pre>
 <p><strong>Expected Output:</strong></p>
@@ -843,7 +843,7 @@ grafana-util change check --workspace . --fetch-live --output-format json</code>
 <h3 id="3-change-preview">3. Change Preview</h3>
 <p>Build the actionable preview that shows what would change.</p>
 <pre><code># Purpose: Preview the current staged package against live Grafana.
-grafana-util change preview --workspace . --fetch-live --profile prod</code></pre>
+grafana-util change preview --workspace ./grafana-oac-repo --fetch-live --profile prod</code></pre>
 <pre><code># Purpose: Preview one explicit desired/live pair as JSON.
 grafana-util change preview --desired-file ./desired.json --live-file ./live.json --output-format json</code></pre>
 <p>Preview is the task-first replacement for the common <code>plan</code> step. It still emits the same reviewable staged contract underneath, but the operator entrypoint is now “preview what would change” instead of “build a plan document.” That preview contract is also where ordering lives: <code>ordering.mode</code>, <code>operations[].orderIndex</code> / <code>orderGroup</code> / <code>kindOrder</code>, and <code>summary.blocked_reasons</code> tell reviewers how the plan is sequenced and which operations remain blocked before apply.</p>

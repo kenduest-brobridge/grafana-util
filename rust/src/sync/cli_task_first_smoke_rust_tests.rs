@@ -153,3 +153,49 @@ fn task_first_change_lane_smoke_runs_from_repo_local_workspace() {
         _ => panic!("expected apply"),
     }
 }
+
+#[test]
+fn task_first_change_lane_smoke_runs_from_git_sync_workspace_root() {
+    let temp = tempdir().unwrap();
+    let workspace = temp.path().join("workspace");
+    fs::create_dir_all(workspace.join(".git")).unwrap();
+    let dashboards_raw = workspace.join("dashboards").join("git-sync").join("raw");
+    write_dashboard_raw_fixture(&dashboards_raw);
+    let live_file = workspace.join("live.json");
+    fs::write(&live_file, "[]").unwrap();
+
+    let inspect_args = task_first_change_cli_args("inspect", &workspace, None, None);
+    match inspect_args.command {
+        SyncGroupCommand::Inspect(inner) => {
+            assert_eq!(inner.inputs.workspace, workspace);
+            assert!(run_sync_cli(SyncGroupCommand::Inspect(inner)).is_ok());
+        }
+        _ => panic!("expected inspect"),
+    }
+
+    let check_args = task_first_change_cli_args("check", &workspace, None, None);
+    match check_args.command {
+        SyncGroupCommand::Check(inner) => {
+            assert_eq!(inner.inputs.workspace, workspace);
+            assert!(run_sync_cli(SyncGroupCommand::Check(inner)).is_ok());
+        }
+        _ => panic!("expected check"),
+    }
+
+    let preview_args = task_first_change_cli_args("preview", &workspace, Some(&live_file), None);
+    match preview_args.command {
+        SyncGroupCommand::Preview(inner) => {
+            assert_eq!(inner.inputs.workspace, workspace);
+            assert_eq!(inner.live_file, Some(live_file.clone()));
+            assert!(run_sync_cli(SyncGroupCommand::Preview(ChangePreviewArgs {
+                output: ChangeOutputArgs {
+                    output_file: None,
+                    ..inner.output.clone()
+                },
+                ..inner
+            }))
+            .is_ok());
+        }
+        _ => panic!("expected preview"),
+    }
+}

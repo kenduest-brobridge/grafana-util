@@ -30,6 +30,7 @@
 
 - dashboard export trees
 - dashboard provisioning trees
+- 包含 `dashboards/git-sync/raw` 與 `dashboards/git-sync/provisioning` 的 Git Sync workspace roots
 - datasource provisioning files
 - alert export trees
 - staged desired change files
@@ -52,18 +53,18 @@
 範例：
 
 ```bash
-# 用途：先從常見 repo-local 或明確輸入看 staged package 的形狀。
-grafana-util change inspect --workspace .
+# 用途：先從 Git Sync workspace root 看 staged package 的形狀。
+grafana-util change inspect --workspace ./grafana-oac-repo
 ```
 
 ```bash
 # 用途：先檢查 staged package 是否適合往下走。
-grafana-util change check --workspace . --fetch-live --output-format json
+grafana-util change check --workspace ./grafana-oac-repo --fetch-live --output-format json
 ```
 
 ```bash
 # 用途：先預覽這次會改到什麼，再決定是否套用。
-grafana-util change preview --workspace . --fetch-live --profile prod
+grafana-util change preview --workspace ./grafana-oac-repo --fetch-live --profile prod
 ```
 
 ```bash

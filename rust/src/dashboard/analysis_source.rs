@@ -283,6 +283,37 @@ mod tests {
     }
 
     #[test]
+    fn resolve_dashboard_analysis_artifacts_supports_git_sync_repo_layout() {
+        let temp = tempdir().unwrap();
+        let repo_root = temp.path();
+        fs::create_dir_all(repo_root.join(".git")).unwrap();
+        let raw_dir = repo_root.join("dashboards/git-sync/raw/org_1/raw");
+        write_basic_raw_export(&raw_dir, "cpu-main", "CPU Main", "prom-main");
+        let common = make_common_args();
+
+        let artifacts = resolve_dashboard_analysis_artifacts(&DashboardAnalysisSourceArgs {
+            common: &common,
+            page_size: 500,
+            org_id: None,
+            all_orgs: false,
+            input_dir: Some(repo_root),
+            input_format: DashboardImportInputFormat::Raw,
+            input_type: Some(InspectExportInputType::Raw),
+            governance: None,
+            queries: None,
+            require_queries: false,
+        })
+        .unwrap();
+
+        assert_eq!(artifacts.governance["summary"]["dashboardCount"], json!(1));
+        assert_eq!(artifacts.queries["summary"]["dashboardCount"], json!(1));
+        assert_eq!(
+            artifacts.queries["queries"][0]["dashboardUid"],
+            json!("cpu-main")
+        );
+    }
+
+    #[test]
     fn resolve_dashboard_analysis_artifacts_requires_queries_for_gate_artifacts() {
         let temp = tempdir().unwrap();
         let governance_path = temp.path().join("governance.json");

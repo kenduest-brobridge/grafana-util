@@ -7,7 +7,9 @@ use super::{
     UnifiedCommand,
 };
 use crate::alert::{parse_cli_from as parse_alert_cli_from, root_command as alert_root_command};
-use crate::common::TOOL_VERSION;
+use crate::common::{
+    render_json_value_with_choice, CliColorChoice, TOOL_BUILD_TIME, TOOL_VERSION, TOOL_VERSION_TEXT,
+};
 use crate::dashboard::{
     DashboardCommand, RawToPromptLogFormat, RawToPromptOutputFormat, RawToPromptResolution,
     SimpleOutputFormat,
@@ -297,17 +299,45 @@ fn unified_cli_renders_root_version_flag_output() {
     let clap_version = CliArgs::command().render_version().to_string();
     let unified_version = render_unified_version_text();
     assert_eq!(clap_version, unified_version);
+    assert_eq!(unified_version, TOOL_VERSION_TEXT);
     assert!(unified_version.contains("grafana-util"));
     assert!(unified_version.contains(TOOL_VERSION));
+    assert!(unified_version.contains("build time:"));
+    assert!(unified_version.contains(TOOL_BUILD_TIME));
 }
 
 #[test]
 fn parse_cli_supports_version_subcommand() {
     let args: CliArgs = parse_cli_from(["grafana-util", "version"]);
     match args.command {
-        UnifiedCommand::Version => {}
+        UnifiedCommand::Version(inner) => assert!(!inner.json),
         _ => panic!("expected version command"),
     }
+}
+
+#[test]
+fn parse_cli_supports_version_json_flag() {
+    let args: CliArgs = parse_cli_from(["grafana-util", "version", "--json"]);
+    match args.command {
+        UnifiedCommand::Version(inner) => assert!(inner.json),
+        _ => panic!("expected version command"),
+    }
+}
+
+#[test]
+fn version_subcommand_json_output_is_machine_readable() {
+    let output = {
+        let payload = serde_json::json!({
+            "name": "grafana-util",
+            "version": TOOL_VERSION,
+            "buildTime": TOOL_BUILD_TIME,
+        });
+        render_json_value_with_choice(&payload, CliColorChoice::Never, false).unwrap()
+    };
+    let value: Value = serde_json::from_str(&output).unwrap();
+    assert_eq!(value["name"], "grafana-util");
+    assert_eq!(value["version"], TOOL_VERSION);
+    assert_eq!(value["buildTime"], TOOL_BUILD_TIME);
 }
 
 #[test]
@@ -1094,6 +1124,62 @@ fn parse_cli_supports_dashboard_group_graph_alias() {
                 );
             }
             _ => panic!("expected dashboard topology"),
+        },
+        _ => panic!("expected dashboard group"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_dashboard_group_impact_command() {
+    let args: CliArgs = parse_cli_from([
+        "grafana-util",
+        "dashboard",
+        "impact",
+        "--input-dir",
+        "./grafana-oac-repo",
+        "--input-format",
+        "git-sync",
+        "--datasource-uid",
+        "smoke-prom",
+        "--output-format",
+        "json",
+    ]);
+
+    match args.command {
+        UnifiedCommand::Dashboard { command } => match command {
+            super::DashboardGroupCommand::Impact(inner) => {
+                assert_eq!(inner.input_dir, Some(PathBuf::from("./grafana-oac-repo")));
+                assert_eq!(inner.input_format, crate::dashboard::DashboardImportInputFormat::Raw);
+                assert_eq!(inner.datasource_uid, "smoke-prom");
+                assert_eq!(inner.output_format, crate::dashboard::ImpactOutputFormat::Json);
+            }
+            _ => panic!("expected dashboard impact"),
+        },
+        _ => panic!("expected dashboard group"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_dashboard_group_validate_export_command() {
+    let args: CliArgs = parse_cli_from([
+        "grafana-util",
+        "dashboard",
+        "validate-export",
+        "--input-dir",
+        "./grafana-oac-repo",
+        "--input-format",
+        "git-sync",
+        "--reject-custom-plugins",
+    ]);
+
+    match args.command {
+        UnifiedCommand::Dashboard { command } => match command {
+            super::DashboardGroupCommand::ValidateExport(inner) => {
+                assert_eq!(inner.input_dir, PathBuf::from("./grafana-oac-repo"));
+                assert_eq!(inner.input_format, crate::dashboard::DashboardImportInputFormat::Raw);
+                assert!(inner.reject_custom_plugins);
+            }
+            _ => panic!("expected dashboard validate-export"),
         },
         _ => panic!("expected dashboard group"),
     }

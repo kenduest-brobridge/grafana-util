@@ -785,10 +785,10 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="before-after">Before / After</h2>
 <ul><li><strong>Before</strong>: you know what the package contains, but not whether the staged inputs are coherent enough to continue.</li><li><strong>After</strong>: you have a readiness-style result with blockers and warnings that can stop the workflow early.</li></ul>
 <h2 id="key-flags">Key flags</h2>
-<ul><li><code>--workspace</code>: auto-discover the staged package from common repo-local inputs.</li><li><code>--availability-file</code>: merge staged availability hints into the check.</li><li><code>--target-inventory</code>, <code>--mapping-file</code>: deepen bundle or promotion-oriented checks when those artifacts exist.</li><li><code>--fetch-live</code>: merge live target checks into the staged readiness decision.</li><li><code>--output-format</code>: render as <code>text</code> or <code>json</code>.</li></ul>
+<ul><li><code>--workspace</code>: auto-discover the staged package from common repo-local inputs or a Git Sync workspace root.</li><li><code>--availability-file</code>: merge staged availability hints into the check.</li><li><code>--target-inventory</code>, <code>--mapping-file</code>: deepen bundle or promotion-oriented checks when those artifacts exist.</li><li><code>--fetch-live</code>: merge live target checks into the staged readiness decision.</li><li><code>--output-format</code>: render as <code>text</code> or <code>json</code>.</li></ul>
 <h2 id="examples">Examples</h2>
 <pre><code># Purpose: Check the discovered staged package.
-grafana-util change check --workspace . --output-format json</code></pre>
+grafana-util change check --workspace ./grafana-oac-repo --output-format json</code></pre>
 <p><strong>Expected Output:</strong></p>
 <pre><code>{
   &quot;status&quot;: &quot;ready&quot;,
@@ -796,7 +796,7 @@ grafana-util change check --workspace . --output-format json</code></pre>
   &quot;warnings&quot;: []
 }</code></pre>
 <pre><code># Purpose: Check the staged package with live and availability context.
-grafana-util change check --workspace . --fetch-live --availability-file ./availability.json</code></pre>
+grafana-util change check --workspace ./grafana-oac-repo --fetch-live --availability-file ./availability.json</code></pre>
 <p><strong>Expected Output:</strong></p>
 <pre><code>PREFLIGHT CHECK:
 - dashboards: valid

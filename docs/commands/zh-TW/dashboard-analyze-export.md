@@ -13,7 +13,7 @@
 
 ## 重點旗標
 - `--input-dir`：要分析的儀表板匯出根目錄。
-- `--input-format`：選擇 `raw` 或 `provisioning`。
+- `--input-format`：選擇 `raw`、`provisioning` 或 `git-sync`。
 - `--input-type`：當匯出根目錄包含多種儀表板變體時，選擇 `raw` 或 `source`。
 - `--output-format`：輸出 `text`、`table`、`csv`、`json`、`yaml`、`tree`、`tree-table`、`dependency`、`dependency-json`、`governance`、`governance-json` 或 `queries-json` 檢視。
 - `--interactive`：開啟共用分析工作台。
@@ -29,6 +29,10 @@ grafana-util dashboard analyze --input-dir ./dashboards/raw --input-format raw -
 ```bash
 # 用途：透過 canonical 的 dashboard analyze 指令分析儀表板匯出目錄。
 grafana-util dashboard analyze --input-dir ./dashboards/provisioning --input-format provisioning --output-format governance-json
+```
+
+```bash
+grafana-util dashboard analyze --input-dir ./grafana-oac-repo --input-format git-sync --output-format governance
 ```
 
 ## 成功判準

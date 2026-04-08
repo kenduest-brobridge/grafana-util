@@ -150,10 +150,9 @@ fn parse_export_org_scope(import_root: &Path, raw_dir: &Path) -> Result<ExportOr
 }
 
 fn use_export_org_variant_dir(input_format: super::DashboardImportInputFormat) -> &'static str {
-    match input_format {
-        super::DashboardImportInputFormat::Raw => RAW_EXPORT_SUBDIR,
-        super::DashboardImportInputFormat::Provisioning => super::PROVISIONING_EXPORT_SUBDIR,
-    }
+    super::DashboardSourceKind::from_import_input_format(input_format)
+        .expected_variant()
+        .expect("dashboard import input format must map to an export variant")
 }
 
 fn parse_export_org_scope_for_variant(

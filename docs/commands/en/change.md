@@ -30,6 +30,7 @@ When you pass `--workspace .`, `change` looks for the common staged inputs it ca
 
 - dashboard export trees
 - dashboard provisioning trees
+- Git Sync dashboard workspace roots containing `dashboards/git-sync/raw` and `dashboards/git-sync/provisioning`
 - datasource provisioning files
 - alert export trees
 - staged desired change files
@@ -52,18 +53,18 @@ Failure checks:
 Examples:
 
 ```bash
-# Purpose: Inspect the staged package from common repo-local inputs.
-grafana-util change inspect --workspace .
+# Purpose: Inspect the staged package from a Git Sync workspace root.
+grafana-util change inspect --workspace ./grafana-oac-repo
 ```
 
 ```bash
 # Purpose: Check whether the staged package is safe to continue.
-grafana-util change check --workspace . --fetch-live --output-format json
+grafana-util change check --workspace ./grafana-oac-repo --fetch-live --output-format json
 ```
 
 ```bash
 # Purpose: Preview what would change from discovered or explicit staged inputs.
-grafana-util change preview --workspace . --fetch-live --profile prod
+grafana-util change preview --workspace ./grafana-oac-repo --fetch-live --profile prod
 ```
 
 ```bash

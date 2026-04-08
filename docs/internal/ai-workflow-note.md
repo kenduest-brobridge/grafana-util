@@ -46,6 +46,30 @@ The important rule is:
 - maintained knowledge explains how to navigate and apply those facts
 - schema docs tell the agent how to work in this repo
 
+## Local Live Validation Baseline
+
+When an AI agent needs a disposable local Grafana instance for live validation,
+prefer the repo-owned Docker test port:
+
+- `http://127.0.0.1:43011`
+
+Use this as the default local live Grafana target for repo validation scripts,
+manual smoke checks, and AI-assisted live testing unless the task explicitly
+needs a different port.
+
+Why this baseline exists:
+
+- avoid colliding with a human-maintained Grafana already using `:3000`
+- stay aligned with the repo's live-test script conventions
+- keep AI-authored examples and local validation notes consistent
+
+Practical rule:
+
+- if the task says "use local Docker Grafana" and no port is specified, assume
+  `43011` first
+- only fall back to another port when `43011` is already in use or the task
+  explicitly says otherwise
+
 Do not let AI-maintained notes become a second source of truth for runtime
 behavior or compatibility rules.
 

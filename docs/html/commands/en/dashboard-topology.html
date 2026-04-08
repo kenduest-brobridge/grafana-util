@@ -785,7 +785,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="before-after">Before / After</h2>
 <ul><li><strong>Before</strong>: dependency knowledge lives in operator memory, raw JSON, or one-off diagrams that drift out of date.</li><li><strong>After</strong>: one topology run gives you a reproducible graph you can inspect in text form, hand to Mermaid, or ship to Graphviz.</li></ul>
 <h2 id="key-flags">Key flags</h2>
-<ul><li><code>--url</code>: analyze live Grafana directly.</li><li><code>--input-dir</code>: analyze a local export tree directly.</li><li><code>--input-format</code>: choose <code>raw</code> or <code>provisioning</code> when analyzing local exports.</li><li><code>--governance</code>: dashboard governance JSON input (<code>governance-json</code> artifact, advanced reuse).</li><li><code>--queries</code>: optional dashboard query-report JSON input (<code>queries-json</code> artifact, advanced reuse).</li><li><code>--alert-contract</code>: optional alert contract JSON input.</li><li><code>--output-format</code>: render <code>text</code>, <code>json</code>, <code>mermaid</code>, or <code>dot</code>.</li><li><code>--output-file</code>: write the rendered topology to disk.</li><li><code>--interactive</code>: open the interactive terminal browser.</li></ul>
+<ul><li><code>--url</code>: analyze live Grafana directly.</li><li><code>--input-dir</code>: analyze a local export tree directly.</li><li><code>--input-format</code>: choose <code>raw</code>, <code>provisioning</code>, or <code>git-sync</code> when analyzing local exports.</li><li><code>--governance</code>: dashboard governance JSON input (<code>governance-json</code> artifact, advanced reuse).</li><li><code>--queries</code>: optional dashboard query-report JSON input (<code>queries-json</code> artifact, advanced reuse).</li><li><code>--alert-contract</code>: optional alert contract JSON input.</li><li><code>--output-format</code>: render <code>text</code>, <code>json</code>, <code>mermaid</code>, or <code>dot</code>.</li><li><code>--output-file</code>: write the rendered topology to disk.</li><li><code>--interactive</code>: open the interactive terminal browser.</li></ul>
 <h2 id="examples">Examples</h2>
 <pre><code># Purpose: Build a deterministic dashboard topology graph directly from live Grafana.
 grafana-util dashboard topology \
@@ -799,6 +799,11 @@ grafana-util dashboard graph \
   --input-format raw \
   --output-format dot \
   --output-file ./dashboard-topology.dot</code></pre>
+<pre><code># Purpose: Build a deterministic dashboard topology graph from a repo-backed Git Sync tree.
+grafana-util dashboard topology \
+  --input-dir ./grafana-oac-repo \
+  --input-format git-sync \
+  --output-format mermaid</code></pre>
 <pre><code># Purpose: Advanced reuse: build a deterministic dashboard topology graph from saved artifacts.
 grafana-util dashboard topology \
   --governance ./governance.json \

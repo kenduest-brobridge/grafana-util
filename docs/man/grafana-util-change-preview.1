@@ -20,7 +20,7 @@ After: you have one staged preview contract that can move into review and eventu
 .SH COMMON OPTIONS
 .TP
 .B \-\-workspace
-auto\-discover the staged package from common repo\-local inputs.
+auto\-discover the staged package from common repo\-local inputs or a Git Sync workspace root.
 .TP
 .B \-\-desired\-file
 preview one explicit desired change file.
@@ -60,7 +60,7 @@ if preview emits bundle or promotion preflight kinds instead of a sync plan, con
 .PP
 Preview what would change from discovered or explicit staged inputs.
 .EX
-grafana-util change preview --workspace . --fetch-live --profile prod
+grafana-util change preview --workspace ./grafana-oac-repo --fetch-live --profile prod
 .EE
 .SH SEE ALSO
 \fBgrafana-util\fR(1)

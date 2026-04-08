@@ -8,6 +8,13 @@ Current AI-maintained status only.
 - Keep this file short and current. Additive historical detail belongs in `docs/internal/archive/`.
 - Detailed 2026-03-29 through 2026-03-31 entries moved to [`archive/ai-status-archive-2026-03-31.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-03-31.md).
 
+## 2026-04-08 - Set Docker Grafana 43011 as the repo-local live test baseline
+- State: Done
+- Scope: `docs/internal/ai-workflow-note.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: repo conversations and validation notes were already using a mix of `:3000`, archive/demo ports, and ad hoc local Docker ports, so later AI-assisted live testing could collide with a manually running Grafana or waste time rediscovering which disposable port to use.
+- Current Update: recorded `http://127.0.0.1:43011` as the preferred repo-local Docker Grafana test port in the AI workflow note and traced that decision here so future AI/live validation work has one stable default target before falling back to another port.
+- Result: AI-assisted live smoke, Docker validation, and follow-up maintainer notes now have one explicit local Grafana baseline that avoids clobbering a human-owned `:3000` instance.
+
 ## 2026-04-08 - Remove implicit localhost live URL defaults
 - State: Done
 - Scope: `rust/src/dashboard/{cli_defs_shared.rs,dashboard_runtime.rs}`, `rust/src/alert_cli_defs.rs`, `rust/src/access/{access_cli_shared.rs,access_cli_runtime.rs}`, `rust/src/{profile_config.rs,project_status_command.rs,project_status_support.rs}`, `docs/user-guide/{en,zh-TW}/getting-started.md`, generated man/html, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

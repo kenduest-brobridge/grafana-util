@@ -14,7 +14,7 @@ Use this when you are about to change, migrate, or troubleshoot one datasource a
 ## Key flags
 - `--url`: analyze live Grafana directly.
 - `--input-dir`: analyze a local export tree directly.
-- `--input-format`: choose `raw` or `provisioning` when analyzing local exports.
+- `--input-format`: choose `raw`, `provisioning`, or `git-sync` when analyzing local exports.
 - `--governance`: dashboard governance JSON input (`governance-json` artifact).
 - `--datasource-uid`: datasource UID to trace.
 - `--alert-contract`: optional alert contract JSON input.
@@ -37,6 +37,15 @@ grafana-util dashboard impact \
 grafana-util dashboard impact \
   --input-dir ./dashboards/raw \
   --input-format raw \
+  --datasource-uid prom-main \
+  --output-format json
+```
+
+```bash
+# Purpose: Estimate the blast radius of one datasource from a repo-backed Git Sync tree.
+grafana-util dashboard impact \
+  --input-dir ./grafana-oac-repo \
+  --input-format git-sync \
   --datasource-uid prom-main \
   --output-format json
 ```

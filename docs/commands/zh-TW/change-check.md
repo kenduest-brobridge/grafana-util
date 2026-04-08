@@ -17,7 +17,7 @@
 
 ## 主要旗標
 
-- `--workspace`：從常見 repo-local inputs 自動發現 staged package。
+- `--workspace`：從常見 repo-local inputs 或 Git Sync workspace root 自動發現 staged package。
 - `--availability-file`：把 staged availability hints 併進來。
 - `--target-inventory`、`--mapping-file`：在 bundle / promotion 場景下加入更多檢查。
 - `--fetch-live`：把 live target 的檢查也併進結果。
@@ -27,7 +27,7 @@
 
 ```bash
 # 用途：檢查自動發現到的 staged package。
-grafana-util change check --workspace . --output-format json
+grafana-util change check --workspace ./grafana-oac-repo --output-format json
 ```
 
 **預期輸出：**
@@ -41,7 +41,7 @@ grafana-util change check --workspace . --output-format json
 
 ```bash
 # 用途：把 live 與 availability context 也合併進 staged check。
-grafana-util change check --workspace . --fetch-live --availability-file ./availability.json
+grafana-util change check --workspace ./grafana-oac-repo --fetch-live --availability-file ./availability.json
 ```
 
 **預期輸出：**

@@ -13,7 +13,7 @@ Use this when you want to read a local export tree, inspect its structure, or re
 
 ## Key flags
 - `--input-dir`: dashboard export root to analyze.
-- `--input-format`: choose `raw` or `provisioning`.
+- `--input-format`: choose `raw`, `provisioning`, or `git-sync`.
 - `--input-type`: select `raw` or `source` when the export root has multiple dashboard variants.
 - `--output-format`: render `text`, `table`, `csv`, `json`, `yaml`, `tree`, `tree-table`, `dependency`, `dependency-json`, `governance`, `governance-json`, or `queries-json` views.
 - `--interactive`: open the shared analysis workbench.
@@ -29,6 +29,10 @@ grafana-util dashboard analyze --input-dir ./dashboards/raw --input-format raw -
 ```bash
 # Purpose: Analyze dashboard export directories through the canonical dashboard analyze command.
 grafana-util dashboard analyze --input-dir ./dashboards/provisioning --input-format provisioning --output-format governance-json
+```
+
+```bash
+grafana-util dashboard analyze --input-dir ./grafana-oac-repo --input-format git-sync --output-format governance
 ```
 
 ## What success looks like

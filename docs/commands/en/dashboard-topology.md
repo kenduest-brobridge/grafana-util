@@ -14,7 +14,7 @@ Use this when you need a graph view of dashboards, folders, variables, datasourc
 ## Key flags
 - `--url`: analyze live Grafana directly.
 - `--input-dir`: analyze a local export tree directly.
-- `--input-format`: choose `raw` or `provisioning` when analyzing local exports.
+- `--input-format`: choose `raw`, `provisioning`, or `git-sync` when analyzing local exports.
 - `--governance`: dashboard governance JSON input (`governance-json` artifact, advanced reuse).
 - `--queries`: optional dashboard query-report JSON input (`queries-json` artifact, advanced reuse).
 - `--alert-contract`: optional alert contract JSON input.
@@ -39,6 +39,14 @@ grafana-util dashboard graph \
   --input-format raw \
   --output-format dot \
   --output-file ./dashboard-topology.dot
+```
+
+```bash
+# Purpose: Build a deterministic dashboard topology graph from a repo-backed Git Sync tree.
+grafana-util dashboard topology \
+  --input-dir ./grafana-oac-repo \
+  --input-format git-sync \
+  --output-format mermaid
 ```
 
 ```bash

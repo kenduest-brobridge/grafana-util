@@ -11,6 +11,28 @@ use super::{
     ValidationOutputFormat,
 };
 
+fn parse_dashboard_analysis_input_format(value: &str) -> Result<DashboardImportInputFormat, String> {
+    match value.trim().to_ascii_lowercase().as_str() {
+        "raw" => Ok(DashboardImportInputFormat::Raw),
+        "provisioning" => Ok(DashboardImportInputFormat::Provisioning),
+        "git-sync" => Ok(DashboardImportInputFormat::Raw),
+        other => Err(format!(
+            "unsupported dashboard analysis input format {other:?}; use raw, provisioning, or git-sync"
+        )),
+    }
+}
+
+fn parse_dashboard_validate_input_format(value: &str) -> Result<DashboardImportInputFormat, String> {
+    match value.trim().to_ascii_lowercase().as_str() {
+        "raw" => Ok(DashboardImportInputFormat::Raw),
+        "provisioning" => Ok(DashboardImportInputFormat::Provisioning),
+        "git-sync" => Ok(DashboardImportInputFormat::Raw),
+        other => Err(format!(
+            "unsupported dashboard validate input format {other:?}; use raw, provisioning, or git-sync"
+        )),
+    }
+}
+
 /// Enum definition for structured dashboard analysis outputs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 pub enum InspectExportReportFormat {
@@ -319,7 +341,7 @@ pub struct AnalyzeArgs {
     pub common: CommonCliArgs,
     #[arg(
         long = "input-dir",
-        help = "Analyze dashboards from this directory instead of live Grafana. Use --input-format provisioning to point at a provisioning/ root or its dashboards/ subdirectory."
+        help = "Analyze dashboards from this directory instead of live Grafana. Use --input-format provisioning for a provisioning/ root or its dashboards/ subdirectory, or --input-format git-sync for a repo-backed dashboard tree."
     )]
     pub input_dir: Option<PathBuf>,
     #[arg(
@@ -331,10 +353,11 @@ pub struct AnalyzeArgs {
     pub input_type: Option<InspectExportInputType>,
     #[arg(
         long,
-        value_enum,
-        default_value_t = DashboardImportInputFormat::Raw,
+        default_value = "raw",
+        value_parser = parse_dashboard_analysis_input_format,
         requires = "input_dir",
-        help = "Interpret --input-dir as raw export files or Grafana file-provisioning artifacts. Use provisioning to accept either the provisioning/ root or its dashboards/ subdirectory."
+        value_name = "raw|provisioning|git-sync",
+        help = "Interpret --input-dir as raw export files, Grafana file-provisioning artifacts, or a repo-backed Git Sync dashboard tree. Use git-sync for a Grafana OaC repo root; use provisioning for a provisioning/ root or its dashboards/ subdirectory."
     )]
     pub input_format: DashboardImportInputFormat,
     #[arg(
@@ -461,7 +484,7 @@ pub struct AnalyzeArgs {
 pub struct InspectExportArgs {
     #[arg(
         long = "input-dir",
-        help = "Analyze dashboards from this directory. Use --input-format provisioning to point at a provisioning/ root or its dashboards/ subdirectory."
+        help = "Analyze dashboards from this directory. Use --input-format provisioning for a provisioning/ root or its dashboards/ subdirectory, or --input-format git-sync for a repo-backed dashboard tree."
     )]
     pub input_dir: PathBuf,
     #[arg(
@@ -472,9 +495,10 @@ pub struct InspectExportArgs {
     pub input_type: Option<InspectExportInputType>,
     #[arg(
         long = "input-format",
-        value_enum,
-        default_value_t = DashboardImportInputFormat::Raw,
-        help = "Interpret --input-dir as raw export files or Grafana file-provisioning artifacts. Use provisioning to accept either the provisioning/ root or its dashboards/ subdirectory."
+        default_value = "raw",
+        value_parser = parse_dashboard_analysis_input_format,
+        value_name = "raw|provisioning|git-sync",
+        help = "Interpret --input-dir as raw export files, Grafana file-provisioning artifacts, or a repo-backed Git Sync dashboard tree. Use git-sync for a Grafana OaC repo root; use provisioning for a provisioning/ root or its dashboards/ subdirectory."
     )]
     pub input_format: DashboardImportInputFormat,
     #[arg(
@@ -712,14 +736,15 @@ pub struct GovernanceGateArgs {
     #[arg(
         long = "input-dir",
         conflicts_with_all = ["governance", "queries"],
-        help = "Analyze dashboards from this local export tree directly. Prefer --url for live Grafana or saved artifacts only for advanced reuse."
+        help = "Analyze dashboards from this local export tree directly. Prefer --url for live Grafana or saved artifacts only for advanced reuse. Use --input-format git-sync for a repo-backed Git Sync dashboard tree."
     )]
     pub input_dir: Option<PathBuf>,
     #[arg(
         long = "input-format",
-        value_enum,
-        default_value_t = DashboardImportInputFormat::Raw,
-        help = "Interpret --input-dir as raw export files or Grafana file-provisioning artifacts from a local export tree."
+        default_value = "raw",
+        value_parser = parse_dashboard_analysis_input_format,
+        value_name = "raw|provisioning|git-sync",
+        help = "Interpret --input-dir as raw export files, Grafana file-provisioning artifacts, or a repo-backed Git Sync dashboard tree from a local analysis source."
     )]
     pub input_format: DashboardImportInputFormat,
     #[arg(
@@ -803,14 +828,15 @@ pub struct TopologyArgs {
     #[arg(
         long = "input-dir",
         conflicts_with_all = ["governance", "queries"],
-        help = "Analyze dashboards from this local export tree directly. Prefer --url for live Grafana or saved artifacts only for advanced reuse."
+        help = "Analyze dashboards from this local export tree directly. Prefer --url for live Grafana or saved artifacts only for advanced reuse. Use --input-format git-sync for a repo-backed Git Sync dashboard tree."
     )]
     pub input_dir: Option<PathBuf>,
     #[arg(
         long,
-        value_enum,
-        default_value_t = DashboardImportInputFormat::Raw,
-        help = "Interpret --input-dir as raw export files or Grafana file-provisioning artifacts from a local export tree."
+        default_value = "raw",
+        value_parser = parse_dashboard_analysis_input_format,
+        value_name = "raw|provisioning|git-sync",
+        help = "Interpret --input-dir as raw export files, Grafana file-provisioning artifacts, or a repo-backed Git Sync dashboard tree from a local analysis source."
     )]
     pub input_format: DashboardImportInputFormat,
     #[arg(
@@ -888,14 +914,15 @@ pub struct ImpactArgs {
     #[arg(
         long = "input-dir",
         conflicts_with_all = ["governance", "queries"],
-        help = "Analyze dashboards from this export directory instead of live Grafana or prebuilt artifact files."
+        help = "Analyze dashboards from this export directory instead of live Grafana or prebuilt artifact files. Use --input-format git-sync for a repo-backed Git Sync dashboard tree."
     )]
     pub input_dir: Option<PathBuf>,
     #[arg(
         long = "input-format",
-        value_enum,
-        default_value_t = DashboardImportInputFormat::Raw,
-        help = "Interpret --input-dir as raw export files or Grafana file-provisioning artifacts."
+        default_value = "raw",
+        value_parser = parse_dashboard_analysis_input_format,
+        value_name = "raw|provisioning|git-sync",
+        help = "Interpret --input-dir as raw export files, Grafana file-provisioning artifacts, or a repo-backed Git Sync dashboard tree."
     )]
     pub input_format: DashboardImportInputFormat,
     #[arg(
@@ -944,14 +971,15 @@ pub struct ImpactArgs {
 pub struct ValidateExportArgs {
     #[arg(
         long = "input-dir",
-        help = "Validate dashboards from this export directory. Use raw/ by default, or use provisioning/ or its dashboards/ subdirectory with --input-format provisioning."
+        help = "Validate dashboards from this export directory. Use raw/ by default, use provisioning/ or its dashboards/ subdirectory with --input-format provisioning, or use --input-format git-sync for a Grafana OaC repo root."
     )]
     pub input_dir: PathBuf,
     #[arg(
         long,
-        value_enum,
-        default_value_t = DashboardImportInputFormat::Raw,
-        help = "Interpret --input-dir as raw export files or Grafana file-provisioning artifacts. Use provisioning to accept either the provisioning/ root or its dashboards/ subdirectory."
+        default_value = "raw",
+        value_parser = parse_dashboard_validate_input_format,
+        value_name = "raw|provisioning|git-sync",
+        help = "Interpret --input-dir as raw export files, Grafana file-provisioning artifacts, or a repo-backed Git Sync dashboard tree. Use git-sync for a Grafana OaC repo root; use provisioning for a provisioning/ root or its dashboards/ subdirectory."
     )]
     pub input_format: DashboardImportInputFormat,
     #[arg(

@@ -146,6 +146,7 @@ fn resolve_local_browse_source(
                     super::RAW_EXPORT_SUBDIR,
                 )?;
                 return Ok(super::files::ResolvedDashboardImportSource {
+                    source_kind: super::DashboardSourceKind::RawExport,
                     dashboard_dir: dashboard_dir.clone(),
                     metadata_dir: dashboard_dir,
                 });

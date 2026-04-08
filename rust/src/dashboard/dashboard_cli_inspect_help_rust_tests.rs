@@ -62,6 +62,106 @@ fn parse_cli_supports_analyze_export_tree_through_canonical_analyze_command() {
 }
 
 #[test]
+fn parse_cli_supports_analyze_export_git_sync_input_format() {
+    let args = parse_cli_from([
+        "grafana-util",
+        "analyze",
+        "--input-dir",
+        "./dashboards/provisioning",
+        "--input-format",
+        "git-sync",
+        "--output-format",
+        "governance",
+    ]);
+
+    match args.command {
+        DashboardCommand::Analyze(analyze_args) => {
+            assert_eq!(analyze_args.input_format, DashboardImportInputFormat::Raw);
+            assert_eq!(
+                analyze_args.output_format,
+                Some(InspectOutputFormat::Governance)
+            );
+        }
+        _ => panic!("expected analyze command"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_governance_gate_git_sync_input_format() {
+    let args = parse_cli_from([
+        "grafana-util",
+        "governance-gate",
+        "--input-dir",
+        "./grafana-oac-repo",
+        "--input-format",
+        "git-sync",
+        "--policy-source",
+        "builtin",
+        "--builtin-policy",
+        "default",
+    ]);
+
+    match args.command {
+        DashboardCommand::GovernanceGate(governance_args) => {
+            assert_eq!(governance_args.input_format, DashboardImportInputFormat::Raw);
+            assert_eq!(
+                governance_args.input_dir.as_deref(),
+                Some(Path::new("./grafana-oac-repo"))
+            );
+        }
+        _ => panic!("expected governance-gate command"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_topology_git_sync_input_format() {
+    let args = parse_cli_from([
+        "grafana-util",
+        "topology",
+        "--input-dir",
+        "./grafana-oac-repo",
+        "--input-format",
+        "git-sync",
+    ]);
+
+    match args.command {
+        DashboardCommand::Topology(topology_args) => {
+            assert_eq!(topology_args.input_format, DashboardImportInputFormat::Raw);
+            assert_eq!(
+                topology_args.input_dir.as_deref(),
+                Some(Path::new("./grafana-oac-repo"))
+            );
+        }
+        _ => panic!("expected topology command"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_impact_git_sync_input_format() {
+    let args = parse_cli_from([
+        "grafana-util",
+        "impact",
+        "--input-dir",
+        "./grafana-oac-repo",
+        "--input-format",
+        "git-sync",
+        "--datasource-uid",
+        "prom-main",
+    ]);
+
+    match args.command {
+        DashboardCommand::Impact(impact_args) => {
+            assert_eq!(impact_args.input_format, DashboardImportInputFormat::Raw);
+            assert_eq!(
+                impact_args.input_dir.as_deref(),
+                Some(Path::new("./grafana-oac-repo"))
+            );
+        }
+        _ => panic!("expected impact command"),
+    }
+}
+
+#[test]
 fn parse_cli_supports_analyze_live_queries_json_output_format() {
     let args = parse_cli_from([
         "grafana-util",
@@ -363,13 +463,59 @@ fn parse_cli_supports_dashboard_validate_export_provisioning_input_format() {
 }
 
 #[test]
-fn validate_export_help_mentions_provisioning_input_format() {
+fn parse_cli_supports_dashboard_validate_export_git_sync_input_format() {
+    let args = parse_cli_from([
+        "grafana-util",
+        "validate-export",
+        "--input-dir",
+        "./grafana-oac-repo",
+        "--input-format",
+        "git-sync",
+    ]);
+
+    match args.command {
+        DashboardCommand::ValidateExport(validate_args) => {
+            assert_eq!(validate_args.input_dir, Path::new("./grafana-oac-repo"));
+            assert_eq!(validate_args.input_format, DashboardImportInputFormat::Raw);
+        }
+        _ => panic!("expected validate-export command"),
+    }
+}
+
+#[test]
+fn validate_export_help_mentions_git_sync_input_format() {
     let help = render_dashboard_subcommand_help("validate-export");
 
     assert!(help.contains("--input-format"));
     assert!(help.contains("Grafana file-provisioning artifacts"));
     assert!(help.contains("provisioning/ root or its dashboards/ subdirectory"));
+    assert!(help.contains("git-sync"));
+    assert!(help.contains("Grafana OaC repo root"));
     assert!(help.contains("Validate a provisioning export root explicitly"));
+}
+
+#[test]
+fn governance_gate_help_mentions_git_sync_input_format() {
+    let help = render_dashboard_subcommand_help("governance-gate");
+
+    assert!(help.contains("git-sync"));
+    assert!(help.contains("repo-backed Git Sync dashboard tree"));
+}
+
+#[test]
+fn topology_help_mentions_git_sync_input_format() {
+    let help = render_dashboard_subcommand_help("topology");
+
+    assert!(help.contains("git-sync"));
+    assert!(help.contains("repo-backed Git Sync dashboard tree"));
+}
+
+#[test]
+fn impact_help_mentions_git_sync_input_format() {
+    let help = render_dashboard_subcommand_help("impact");
+
+    assert!(help.contains("git-sync"));
+    assert!(help.contains("repo-backed Git Sync dashboard tree"));
 }
 
 #[test]
@@ -388,6 +534,14 @@ fn inspect_live_help_mentions_report_and_panel_filter_flags() {
     assert!(help.contains("tree"));
     assert!(help.contains("tree-table"));
     assert!(help.contains("dashboard analyze output"));
+}
+
+#[test]
+fn analyze_help_mentions_git_sync_input_format_alias() {
+    let help = render_dashboard_subcommand_help("analyze");
+
+    assert!(help.contains("git-sync"));
+    assert!(help.contains("repo-backed Git Sync dashboard tree"));
 }
 
 #[test]

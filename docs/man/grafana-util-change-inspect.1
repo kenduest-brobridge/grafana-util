@@ -20,7 +20,7 @@ After: you have one overview\-style document that tells you which sections were 
 .SH COMMON OPTIONS
 .TP
 .B \-\-workspace
-auto\-discover common staged inputs from the current repo, export tree, or provisioning tree.
+auto\-discover common staged inputs from the current repo, export tree, provisioning tree, or a Git Sync workspace root.
 .TP
 .B \-\-desired\-file
 inspect one explicit desired change file.
@@ -57,7 +57,7 @@ if JSON consumers read the result, validate kind and schemaVersion before deeper
 .PP
 Inspect the staged change package from discovered or explicit inputs.
 .EX
-grafana-util change inspect --workspace .
+grafana-util change inspect --workspace ./grafana-oac-repo
 .EE
 .SH SEE ALSO
 \fBgrafana-util\fR(1)

@@ -106,11 +106,12 @@ pub use cli_defs::{
     DashboardImportInputFormat, DashboardServeScriptFormat, DeleteArgs, DiffArgs, EditLiveArgs,
     ExportArgs, GetArgs, GovernanceGateArgs, GovernanceGateOutputFormat, GovernancePolicySource,
     HistoryDiffArgs, HistoryExportArgs, HistoryListArgs, HistoryOutputFormat, HistoryRestoreArgs,
-    ImpactArgs, ImpactOutputFormat, ImportArgs, InspectExportArgs, InspectExportReportFormat,
-    InspectLiveArgs, InspectOutputFormat, InspectVarsArgs, ListArgs, PatchFileArgs, PublishArgs,
-    RawToPromptArgs, RawToPromptLogFormat, RawToPromptOutputFormat, RawToPromptResolution,
-    ReviewArgs, ScreenshotArgs, ScreenshotFullPageOutput, ScreenshotOutputFormat, ScreenshotTheme,
-    ServeArgs, SimpleOutputFormat, TopologyArgs, TopologyOutputFormat, ValidateExportArgs,
+    ImpactArgs, ImpactOutputFormat, ImportArgs, InspectExportArgs, InspectExportInputType,
+    InspectExportReportFormat, InspectLiveArgs, InspectOutputFormat, InspectVarsArgs, ListArgs,
+    PatchFileArgs, PublishArgs, RawToPromptArgs, RawToPromptLogFormat,
+    RawToPromptOutputFormat, RawToPromptResolution, ReviewArgs, ScreenshotArgs,
+    ScreenshotFullPageOutput, ScreenshotOutputFormat, ScreenshotTheme, ServeArgs,
+    SimpleOutputFormat, TopologyArgs, TopologyOutputFormat, ValidateExportArgs,
     ValidationOutputFormat,
 };
 pub use export::{build_export_variant_dirs, build_output_path, export_dashboards_with_client};
@@ -127,6 +128,7 @@ pub use live::{
 };
 pub use prompt::build_external_export_document;
 pub(crate) use raw_to_prompt::run_raw_to_prompt;
+pub(crate) use inspect::resolve_inspect_export_import_dir;
 
 use browse::browse_dashboards_with_org_client;
 use delete::delete_dashboards_with_org_clients;
@@ -217,12 +219,14 @@ pub(crate) use facade_support::{
     list_datasources_with_request, load_builtin_governance_policy, load_governance_policy,
     load_governance_policy_file, load_governance_policy_source, LiveDashboardProjectStatusInputs,
 };
+#[allow(unused_imports)]
 pub(crate) use files::{
     build_dashboard_index_item, build_export_metadata, build_import_payload,
     build_preserved_web_import_document, build_root_export_index, build_variant_index,
     discover_dashboard_files, extract_dashboard_object, load_datasource_inventory,
     load_export_metadata, load_folder_inventory, load_json_file, resolve_dashboard_import_source,
-    write_dashboard, write_json_document, ResolvedDashboardImportSource,
+    write_dashboard, write_json_document, DashboardRepoLayoutKind, DashboardSourceKind,
+    ResolvedDashboardImportSource,
 };
 pub(crate) use inspect::build_export_inspection_summary_for_variant;
 pub(crate) use inspect_live::TempInspectDir;

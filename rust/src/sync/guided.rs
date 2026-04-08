@@ -16,6 +16,10 @@ use super::{
     SyncBundlePreflightArgs, SyncCommandOutput, SyncPlanArgs, SyncPromotionPreflightArgs,
 };
 use crate::common::{emit_plain_output, message};
+use crate::dashboard::{
+    resolve_inspect_export_import_dir, DashboardImportInputFormat, DashboardSourceKind,
+    InspectExportInputType, TempInspectDir,
+};
 use crate::overview::{run_overview, OverviewArgs, OverviewOutputFormat};
 use crate::project_status_command::{
     run_project_status_staged, ProjectStatusOutputFormat, ProjectStatusStagedArgs,
@@ -36,6 +40,108 @@ pub struct DiscoveredChangeInputs {
     pub reviewed_plan_file: Option<PathBuf>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DashboardWorkspaceLayout {
+    RawExport,
+    ProvisioningExport,
+    GitSyncRawExport,
+    GitSyncProvisioningExport,
+}
+
+impl DashboardWorkspaceLayout {
+    fn source_kind(self) -> DashboardSourceKind {
+        match self {
+            Self::RawExport => DashboardSourceKind::RawExport,
+            Self::ProvisioningExport => DashboardSourceKind::ProvisioningExport,
+            Self::GitSyncRawExport => DashboardSourceKind::RawExport,
+            Self::GitSyncProvisioningExport => DashboardSourceKind::ProvisioningExport,
+        }
+    }
+
+    fn workspace_subdir(self) -> &'static str {
+        match self {
+            Self::RawExport => "raw",
+            Self::ProvisioningExport => "provisioning",
+            Self::GitSyncRawExport => "raw",
+            Self::GitSyncProvisioningExport => "provisioning",
+        }
+    }
+
+    fn wrapper_subdir(self) -> Option<&'static str> {
+        match self {
+            Self::GitSyncRawExport | Self::GitSyncProvisioningExport => Some("git-sync"),
+            _ => None,
+        }
+    }
+}
+
+fn dashboard_workspace_layout_from_path(base_dir: &Path) -> Option<DashboardWorkspaceLayout> {
+    let name = base_dir.file_name().and_then(|name| name.to_str())?;
+    let parent_name = base_dir
+        .parent()
+        .and_then(Path::file_name)
+        .and_then(|name| name.to_str());
+    let grandparent_name = base_dir
+        .parent()
+        .and_then(Path::parent)
+        .and_then(Path::file_name)
+        .and_then(|name| name.to_str());
+    match (grandparent_name, parent_name, name) {
+        (Some("dashboards"), Some("git-sync"), "raw") => {
+            Some(DashboardWorkspaceLayout::GitSyncRawExport)
+        }
+        (Some("dashboards"), Some("git-sync"), "provisioning") => {
+            Some(DashboardWorkspaceLayout::GitSyncProvisioningExport)
+        }
+        (Some("dashboards"), _, "raw") => Some(DashboardWorkspaceLayout::RawExport),
+        (Some("dashboards"), _, "provisioning") => {
+            Some(DashboardWorkspaceLayout::ProvisioningExport)
+        }
+        _ => None,
+    }
+}
+
+fn resolve_dashboard_workspace_dir(
+    dashboards_dir: &Path,
+    layout: DashboardWorkspaceLayout,
+) -> Option<PathBuf> {
+    let direct_candidate = dashboards_dir.join(layout.workspace_subdir());
+    if direct_candidate.is_dir() {
+        return Some(direct_candidate);
+    }
+    let Some(wrapper_subdir) = layout.wrapper_subdir() else {
+        return None;
+    };
+    let wrapped_candidate = dashboards_dir
+        .join(wrapper_subdir)
+        .join(layout.workspace_subdir());
+    wrapped_candidate.is_dir().then_some(wrapped_candidate)
+}
+
+fn dashboard_workspace_roots(base_dir: &Path) -> (Option<PathBuf>, Option<PathBuf>) {
+    let dashboards_dir = if base_dir.file_name().and_then(|name| name.to_str()) == Some("dashboards")
+    {
+        base_dir.to_path_buf()
+    } else {
+        base_dir.join("dashboards")
+    };
+    let raw_dir = resolve_dashboard_workspace_dir(&dashboards_dir, DashboardWorkspaceLayout::RawExport)
+        .or_else(|| {
+            resolve_dashboard_workspace_dir(&dashboards_dir, DashboardWorkspaceLayout::GitSyncRawExport)
+        });
+    let provisioning_dir = resolve_dashboard_workspace_dir(
+        &dashboards_dir,
+        DashboardWorkspaceLayout::ProvisioningExport,
+    )
+    .or_else(|| {
+        resolve_dashboard_workspace_dir(
+            &dashboards_dir,
+            DashboardWorkspaceLayout::GitSyncProvisioningExport,
+        )
+    });
+    (raw_dir, provisioning_dir)
+}
+
 fn current_repo_dir() -> Result<PathBuf> {
     env::current_dir()
         .map_err(|error| message(format!("Could not resolve current directory: {error}")))
@@ -46,12 +152,12 @@ fn first_existing(paths: &[PathBuf]) -> Option<PathBuf> {
 }
 
 fn discover_from_workspace_root(base_dir: &Path) -> DiscoveredChangeInputs {
-    let dashboards_dir = base_dir.join("dashboards");
     let datasources_dir = base_dir.join("datasources");
     let alerts_dir = base_dir.join("alerts");
+    let (dashboard_export_dir, dashboard_provisioning_dir) = dashboard_workspace_roots(base_dir);
     DiscoveredChangeInputs {
-        dashboard_export_dir: first_existing(&[dashboards_dir.join("raw")]),
-        dashboard_provisioning_dir: first_existing(&[dashboards_dir.join("provisioning")]),
+        dashboard_export_dir,
+        dashboard_provisioning_dir,
         datasource_provisioning_file: first_existing(&[datasources_dir
             .join("provisioning")
             .join("datasources.yaml")]),
@@ -101,9 +207,29 @@ fn infer_workspace_root(base_dir: &Path) -> PathBuf {
     }
     let parent = base_dir.parent();
     let grandparent = parent.and_then(Path::parent);
+    let great_grandparent = grandparent.and_then(Path::parent);
     match name {
         "dashboards" | "alerts" | "datasources" => parent.unwrap_or(base_dir).to_path_buf(),
+        "git-sync" => {
+            if parent
+                .and_then(Path::file_name)
+                .and_then(|v| v.to_str())
+                == Some("dashboards")
+            {
+                grandparent.unwrap_or(base_dir).to_path_buf()
+            } else {
+                base_dir.to_path_buf()
+            }
+        }
         "raw" | "provisioning" => grandparent.unwrap_or(base_dir).to_path_buf(),
+        _ if matches!(parent.and_then(Path::file_name).and_then(|v| v.to_str()), Some("git-sync"))
+            && matches!(
+                grandparent.and_then(Path::file_name).and_then(|v| v.to_str()),
+                Some("dashboards")
+            ) =>
+        {
+            great_grandparent.unwrap_or(base_dir).to_path_buf()
+        }
         _ => base_dir.to_path_buf(),
     }
 }
@@ -145,16 +271,26 @@ fn overlay_direct_workspace_input(discovered: &mut DiscoveredChangeInputs, base_
         }
         return;
     }
+    if let Some(layout) = dashboard_workspace_layout_from_path(base_dir) {
+        match layout.source_kind() {
+            DashboardSourceKind::RawExport => discovered.dashboard_export_dir = Some(base_dir.to_path_buf()),
+            DashboardSourceKind::ProvisioningExport => {
+                discovered.dashboard_provisioning_dir = Some(base_dir.to_path_buf())
+            }
+            DashboardSourceKind::LiveGrafana | DashboardSourceKind::HistoryArtifact => {}
+        }
+        return;
+    }
     let parent_name = base_dir
         .parent()
         .and_then(Path::file_name)
         .and_then(|name| name.to_str());
     match (parent_name, name) {
-        (Some("dashboards"), "raw") => {
-            discovered.dashboard_export_dir = Some(base_dir.to_path_buf());
-        }
-        (Some("dashboards"), "provisioning") => {
-            discovered.dashboard_provisioning_dir = Some(base_dir.to_path_buf());
+        (_, "dashboards") => {
+            let (dashboard_export_dir, dashboard_provisioning_dir) =
+                dashboard_workspace_roots(base_dir);
+            discovered.dashboard_export_dir = dashboard_export_dir;
+            discovered.dashboard_provisioning_dir = dashboard_provisioning_dir;
         }
         (Some("alerts"), "raw") => {
             discovered.alert_export_dir = Some(base_dir.to_path_buf());
@@ -162,11 +298,6 @@ fn overlay_direct_workspace_input(discovered: &mut DiscoveredChangeInputs, base_
         (Some("datasources"), "provisioning") => {
             discovered.datasource_provisioning_file =
                 first_existing(&[base_dir.join("datasources.yaml")]);
-        }
-        (_, "dashboards") => {
-            discovered.dashboard_export_dir = first_existing(&[base_dir.join("raw")]);
-            discovered.dashboard_provisioning_dir =
-                first_existing(&[base_dir.join("provisioning")]);
         }
         (_, "alerts") => {
             discovered.alert_export_dir = first_existing(&[base_dir.join("raw"), base_dir.into()]);
@@ -249,6 +380,51 @@ fn build_overview_args(
             super::SyncOutputFormat::Json => OverviewOutputFormat::Json,
         },
     }
+}
+
+struct NormalizedChangeDashboardInputs {
+    _temp_dir: Option<TempInspectDir>,
+    dashboard_export_dir: Option<PathBuf>,
+    dashboard_provisioning_dir: Option<PathBuf>,
+}
+
+fn normalize_change_dashboard_inputs(
+    dashboard_export_dir: Option<&PathBuf>,
+    dashboard_provisioning_dir: Option<&PathBuf>,
+) -> Result<NormalizedChangeDashboardInputs> {
+    let mut temp_dir = None;
+    let mut normalized_export_dir = None;
+    let mut normalized_provisioning_dir = None;
+
+    if let Some(path) = dashboard_export_dir {
+        let holder = TempInspectDir::new("change-dashboard-export-input")?;
+        let resolved = resolve_inspect_export_import_dir(
+            &holder.path,
+            path,
+            DashboardImportInputFormat::Raw,
+            Some(InspectExportInputType::Raw),
+            false,
+        )?;
+        normalized_export_dir = Some(resolved.input_dir);
+        temp_dir = Some(holder);
+    } else if let Some(path) = dashboard_provisioning_dir {
+        let holder = TempInspectDir::new("change-dashboard-provisioning-input")?;
+        let resolved = resolve_inspect_export_import_dir(
+            &holder.path,
+            path,
+            DashboardImportInputFormat::Provisioning,
+            None,
+            false,
+        )?;
+        normalized_provisioning_dir = Some(resolved.input_dir);
+        temp_dir = Some(holder);
+    }
+
+    Ok(NormalizedChangeDashboardInputs {
+        _temp_dir: temp_dir,
+        dashboard_export_dir: normalized_export_dir,
+        dashboard_provisioning_dir: normalized_provisioning_dir,
+    })
 }
 
 fn build_status_args(
@@ -454,7 +630,13 @@ fn load_preview_desired_specs(
 
 pub(crate) fn run_sync_inspect(args: ChangeInspectArgs) -> Result<()> {
     let discovered = discover_change_staged_inputs(Some(args.inputs.workspace.as_path()))?;
-    let merged = build_overview_args(&args, &discovered);
+    let mut merged = build_overview_args(&args, &discovered);
+    let normalized_dashboard_inputs = normalize_change_dashboard_inputs(
+        merged.dashboard_export_dir.as_ref(),
+        merged.dashboard_provisioning_dir.as_ref(),
+    )?;
+    merged.dashboard_export_dir = normalized_dashboard_inputs.dashboard_export_dir;
+    merged.dashboard_provisioning_dir = normalized_dashboard_inputs.dashboard_provisioning_dir;
     if merged.dashboard_export_dir.is_none()
         && merged.dashboard_provisioning_dir.is_none()
         && merged.datasource_provisioning_file.is_none()
@@ -469,7 +651,13 @@ pub(crate) fn run_sync_inspect(args: ChangeInspectArgs) -> Result<()> {
 
 pub(crate) fn run_sync_check(args: ChangeCheckArgs) -> Result<()> {
     let discovered = discover_change_staged_inputs(Some(args.inputs.workspace.as_path()))?;
-    let merged = build_status_args(&args, &discovered);
+    let mut merged = build_status_args(&args, &discovered);
+    let normalized_dashboard_inputs = normalize_change_dashboard_inputs(
+        merged.dashboard_export_dir.as_ref(),
+        merged.dashboard_provisioning_dir.as_ref(),
+    )?;
+    merged.dashboard_export_dir = normalized_dashboard_inputs.dashboard_export_dir;
+    merged.dashboard_provisioning_dir = normalized_dashboard_inputs.dashboard_provisioning_dir;
     if merged.dashboard_export_dir.is_none()
         && merged.dashboard_provisioning_dir.is_none()
         && merged.datasource_provisioning_file.is_none()
@@ -484,6 +672,12 @@ pub(crate) fn run_sync_check(args: ChangeCheckArgs) -> Result<()> {
 
 pub(crate) fn run_sync_preview(args: ChangePreviewArgs) -> Result<()> {
     let discovered = discover_change_staged_inputs(Some(args.inputs.workspace.as_path()))?;
+    let (selected_dashboard_export_dir, selected_dashboard_provisioning_dir) =
+        select_preview_dashboard_sources(&args.inputs, &discovered)?;
+    let normalized_dashboard_inputs = normalize_change_dashboard_inputs(
+        selected_dashboard_export_dir,
+        selected_dashboard_provisioning_dir,
+    )?;
     let source_bundle = args
         .inputs
         .source_bundle
@@ -558,7 +752,14 @@ pub(crate) fn run_sync_preview(args: ChangePreviewArgs) -> Result<()> {
             trace_id: args.trace_id.clone(),
         })?
     } else {
-        let desired = load_preview_desired_specs(&args.inputs, &discovered)?;
+        let preview_discovered = DiscoveredChangeInputs {
+            dashboard_export_dir: normalized_dashboard_inputs.dashboard_export_dir.clone(),
+            dashboard_provisioning_dir: normalized_dashboard_inputs
+                .dashboard_provisioning_dir
+                .clone(),
+            ..discovered.clone()
+        };
+        let desired = load_preview_desired_specs(&args.inputs, &preview_discovered)?;
         let live = load_sync_live_array(
             args.fetch_live,
             &args.common,
@@ -705,6 +906,66 @@ mod guided_rust_tests {
         assert_eq!(
             discovered.alert_export_dir,
             Some(workspace.join("alerts/raw"))
+        );
+    }
+
+    #[test]
+    fn discover_change_staged_inputs_recognizes_git_sync_wrapped_dashboard_tree() {
+        let temp = tempdir().unwrap();
+        let workspace = temp.path();
+        std::fs::create_dir_all(workspace.join("dashboards/git-sync/raw")).unwrap();
+        std::fs::create_dir_all(workspace.join("dashboards/git-sync/provisioning")).unwrap();
+
+        let discovered = discover_change_staged_inputs(Some(workspace)).unwrap();
+
+        assert_eq!(
+            discovered.dashboard_export_dir,
+            Some(workspace.join("dashboards/git-sync/raw"))
+        );
+        assert_eq!(
+            discovered.dashboard_provisioning_dir,
+            Some(workspace.join("dashboards/git-sync/provisioning"))
+        );
+    }
+
+    #[test]
+    fn discover_change_staged_inputs_accepts_dashboards_git_sync_dir_as_workspace() {
+        let temp = tempdir().unwrap();
+        let workspace = temp.path();
+        std::fs::create_dir_all(workspace.join("dashboards/git-sync/raw")).unwrap();
+        std::fs::create_dir_all(workspace.join("dashboards/git-sync/provisioning")).unwrap();
+
+        let discovered =
+            discover_change_staged_inputs(Some(&workspace.join("dashboards/git-sync"))).unwrap();
+
+        assert_eq!(
+            discovered.dashboard_export_dir,
+            Some(workspace.join("dashboards/git-sync/raw"))
+        );
+        assert_eq!(
+            discovered.dashboard_provisioning_dir,
+            Some(workspace.join("dashboards/git-sync/provisioning"))
+        );
+    }
+
+    #[test]
+    fn discover_change_staged_inputs_accepts_dashboards_git_sync_raw_dir_as_workspace() {
+        let temp = tempdir().unwrap();
+        let workspace = temp.path();
+        std::fs::create_dir_all(workspace.join("dashboards/git-sync/raw")).unwrap();
+        std::fs::create_dir_all(workspace.join("dashboards/git-sync/provisioning")).unwrap();
+
+        let discovered =
+            discover_change_staged_inputs(Some(&workspace.join("dashboards/git-sync/raw")))
+                .unwrap();
+
+        assert_eq!(
+            discovered.dashboard_export_dir,
+            Some(workspace.join("dashboards/git-sync/raw"))
+        );
+        assert_eq!(
+            discovered.dashboard_provisioning_dir,
+            Some(workspace.join("dashboards/git-sync/provisioning"))
         );
     }
 

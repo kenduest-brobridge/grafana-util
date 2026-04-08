@@ -325,10 +325,31 @@ pub type Result<T> = std::result::Result<T, GrafanaCliError>;
 
 /// Canonical grafana-util version embedded in emitted JSON documents.
 pub const TOOL_VERSION: &str = env!("CARGO_PKG_VERSION");
+/// UTC timestamp recorded when this binary was built.
+pub const TOOL_BUILD_TIME: &str = env!("GRAFANA_UTIL_BUILD_TIME");
+/// Canonical version payload handed to Clap for `--version`.
+pub const TOOL_VERSION_DETAILS: &str = concat!(
+    env!("CARGO_PKG_VERSION"),
+    "\nbuild time: ",
+    env!("GRAFANA_UTIL_BUILD_TIME")
+);
+/// Canonical user-facing version text for CLI version output.
+pub const TOOL_VERSION_TEXT: &str = concat!(
+    "grafana-util ",
+    env!("CARGO_PKG_VERSION"),
+    "\nbuild time: ",
+    env!("GRAFANA_UTIL_BUILD_TIME"),
+    "\n"
+);
 
 /// Return the current grafana-util version for staged/export/status metadata.
 pub fn tool_version() -> &'static str {
     TOOL_VERSION
+}
+
+/// Return the UTC build timestamp recorded for this binary.
+pub fn tool_build_time() -> &'static str {
+    TOOL_BUILD_TIME
 }
 
 /// Build a plain user-facing CLI error message.

@@ -73,6 +73,7 @@ fn governance_gate_help_mentions_policy_and_queries_inputs() {
     assert!(help.contains("--builtin-policy"));
     assert!(help.contains("JSON or YAML"));
     assert!(help.contains("--input-dir"));
+    assert!(help.contains("git-sync"));
     assert!(help.contains("--governance"));
     assert!(help.contains("--queries"));
     assert!(help.contains("--json-output"));
@@ -80,6 +81,33 @@ fn governance_gate_help_mentions_policy_and_queries_inputs() {
     assert!(help.contains("governance-gate"));
     assert!(help.contains("Check live Grafana directly"));
     assert!(help.contains("Advanced reuse: recheck saved analysis artifacts"));
+}
+
+#[test]
+fn parse_cli_supports_dashboard_governance_gate_git_sync_input_dir() {
+    let args = parse_cli_from([
+        "grafana-util",
+        "governance-gate",
+        "--policy-source",
+        "builtin",
+        "--builtin-policy",
+        "default",
+        "--input-dir",
+        "./grafana-oac-repo",
+        "--input-format",
+        "git-sync",
+    ]);
+
+    match args.command {
+        DashboardCommand::GovernanceGate(gate_args) => {
+            assert_eq!(gate_args.input_dir, Some(PathBuf::from("./grafana-oac-repo")));
+            assert_eq!(
+                gate_args.input_format,
+                crate::dashboard::DashboardImportInputFormat::Raw
+            );
+        }
+        _ => panic!("expected governance-gate command"),
+    }
 }
 
 #[test]
@@ -220,6 +248,7 @@ fn topology_help_mentions_alert_contract_and_visual_formats() {
         "Show dashboard dependencies directly from live Grafana or a local export tree."
     ));
     assert!(help.contains("--input-dir"));
+    assert!(help.contains("git-sync"));
     assert!(help.contains("--governance"));
     assert!(help.contains("--alert-contract"));
     assert!(help.contains("--output-format"));
@@ -234,6 +263,32 @@ fn topology_help_mentions_alert_contract_and_visual_formats() {
     assert!(help.contains("dashboard dependencies directly"));
     assert!(help.contains("topology"));
     assert!(help.contains("Advanced reuse: render Graphviz DOT"));
+}
+
+#[test]
+fn parse_cli_supports_dashboard_topology_git_sync_input_dir() {
+    let args = parse_cli_from([
+        "grafana-util",
+        "topology",
+        "--input-dir",
+        "./grafana-oac-repo",
+        "--input-format",
+        "git-sync",
+        "--output-format",
+        "json",
+    ]);
+
+    match args.command {
+        DashboardCommand::Topology(topology_args) => {
+            assert_eq!(topology_args.input_dir, Some(PathBuf::from("./grafana-oac-repo")));
+            assert_eq!(
+                topology_args.input_format,
+                crate::dashboard::DashboardImportInputFormat::Raw
+            );
+            assert_eq!(topology_args.output_format, TopologyOutputFormat::Json);
+        }
+        _ => panic!("expected topology command"),
+    }
 }
 
 #[test]
@@ -331,6 +386,7 @@ fn impact_help_mentions_datasource_uid_and_output_format() {
     let help = render_dashboard_subcommand_help("impact");
 
     assert!(help.contains("--input-dir"));
+    assert!(help.contains("git-sync"));
     assert!(help.contains("--url"));
     assert!(help.contains("--governance"));
     assert!(help.contains("--datasource-uid"));
@@ -339,6 +395,32 @@ fn impact_help_mentions_datasource_uid_and_output_format() {
     assert!(help.contains("--interactive"));
     assert!(help.contains("blast radius"));
     assert!(help.contains("Check blast radius directly from live Grafana"));
+}
+
+#[test]
+fn parse_cli_supports_dashboard_impact_git_sync_input_dir_source() {
+    let args = parse_cli_from([
+        "grafana-util",
+        "impact",
+        "--input-dir",
+        "./grafana-oac-repo",
+        "--input-format",
+        "git-sync",
+        "--datasource-uid",
+        "prom-main",
+    ]);
+
+    match args.command {
+        DashboardCommand::Impact(impact_args) => {
+            assert_eq!(impact_args.input_dir, Some(PathBuf::from("./grafana-oac-repo")));
+            assert_eq!(
+                impact_args.input_format,
+                crate::dashboard::DashboardImportInputFormat::Raw
+            );
+            assert_eq!(impact_args.datasource_uid, "prom-main");
+        }
+        _ => panic!("expected impact command"),
+    }
 }
 
 #[test]

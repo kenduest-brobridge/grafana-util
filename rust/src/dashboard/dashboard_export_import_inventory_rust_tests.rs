@@ -2,6 +2,7 @@
 #![allow(unused_imports)]
 
 use super::*;
+use crate::dashboard::{DashboardRepoLayoutKind, DashboardSourceKind};
 
 #[test]
 fn build_export_variant_dirs_returns_raw_and_prompt_dirs() {
@@ -118,6 +119,7 @@ fn resolve_dashboard_import_source_accepts_provisioning_root() {
         resolved.dashboard_dir,
         temp.path().join("provisioning/dashboards")
     );
+    assert_eq!(resolved.source_kind, DashboardSourceKind::ProvisioningExport);
 }
 
 #[test]
@@ -133,6 +135,103 @@ fn resolve_dashboard_import_source_accepts_provisioning_dashboards_dir() {
 
     assert_eq!(resolved.metadata_dir, provisioning_root);
     assert_eq!(resolved.dashboard_dir, dashboards_dir);
+    assert_eq!(resolved.source_kind, DashboardSourceKind::ProvisioningExport);
+}
+
+#[test]
+fn resolve_dashboard_import_source_marks_raw_exports_with_source_kind() {
+    let temp = tempdir().unwrap();
+    fs::create_dir_all(temp.path().join("raw")).unwrap();
+
+    let resolved =
+        resolve_dashboard_import_source(&temp.path().join("raw"), DashboardImportInputFormat::Raw)
+            .unwrap();
+
+    assert_eq!(resolved.source_kind, DashboardSourceKind::RawExport);
+}
+
+#[test]
+fn dashboard_source_kind_detects_workspace_dirs() {
+    assert_eq!(
+        DashboardSourceKind::from_workspace_dir(Path::new("./dashboards/raw")),
+        Some(DashboardSourceKind::RawExport)
+    );
+    assert_eq!(
+        DashboardSourceKind::from_workspace_dir(Path::new("./dashboards/provisioning")),
+        Some(DashboardSourceKind::ProvisioningExport)
+    );
+    assert!(DashboardSourceKind::RawExport.is_file_backed());
+    assert!(DashboardSourceKind::ProvisioningExport.is_file_backed());
+}
+
+#[test]
+fn dashboard_source_kind_helpers_cover_workspace_and_variant_round_trips() {
+    let raw_dir = Path::new("/tmp/dashboards/raw");
+    let provisioning_dir = Path::new("/tmp/dashboards/provisioning");
+
+    assert_eq!(
+        DashboardSourceKind::from_workspace_dir(raw_dir),
+        Some(DashboardSourceKind::RawExport)
+    );
+    assert_eq!(
+        DashboardSourceKind::from_workspace_dir(provisioning_dir),
+        Some(DashboardSourceKind::ProvisioningExport)
+    );
+    assert_eq!(
+        DashboardSourceKind::from_expected_variant("raw"),
+        Some(DashboardSourceKind::RawExport)
+    );
+    assert_eq!(
+        DashboardSourceKind::from_expected_variant("provisioning"),
+        Some(DashboardSourceKind::ProvisioningExport)
+    );
+    assert!(DashboardSourceKind::RawExport.is_file_backed());
+    assert!(DashboardSourceKind::ProvisioningExport.is_file_backed());
+    assert_eq!(DashboardSourceKind::RawExport.expected_variant(), Some("raw"));
+    assert_eq!(
+        DashboardSourceKind::ProvisioningExport.expected_variant(),
+        Some("provisioning")
+    );
+    assert_eq!(DashboardSourceKind::LiveGrafana.expected_variant(), None);
+}
+
+#[test]
+fn dashboard_repo_layout_kind_detects_git_sync_repo_roots() {
+    let temp = tempdir().unwrap();
+    fs::create_dir_all(temp.path().join(".git")).unwrap();
+    fs::create_dir_all(temp.path().join("dashboards")).unwrap();
+
+    assert_eq!(
+        DashboardRepoLayoutKind::from_root_dir(temp.path()),
+        Some(DashboardRepoLayoutKind::GitSyncRepo)
+    );
+    assert_eq!(
+        DashboardRepoLayoutKind::from_root_dir(&temp.path().join("dashboards")),
+        None
+    );
+    assert!(DashboardRepoLayoutKind::GitSyncRepo.is_git_sync_repo());
+}
+
+#[test]
+fn dashboard_repo_layout_kind_resolves_git_sync_variant_roots() {
+    let temp = tempdir().unwrap();
+    let repo_root = temp.path();
+    fs::create_dir_all(repo_root.join(".git")).unwrap();
+    fs::create_dir_all(repo_root.join("dashboards")).unwrap();
+    let raw_root = repo_root.join("dashboards/git-sync/raw");
+    let provisioning_root = repo_root.join("dashboards/git-sync/provisioning");
+    fs::create_dir_all(&raw_root).unwrap();
+    fs::create_dir_all(&provisioning_root).unwrap();
+
+    let layout = DashboardRepoLayoutKind::from_root_dir(repo_root).unwrap();
+    assert_eq!(
+        layout.resolve_dashboard_variant_root(repo_root, "raw"),
+        Some(raw_root)
+    );
+    assert_eq!(
+        layout.resolve_dashboard_variant_root(repo_root, "provisioning"),
+        Some(provisioning_root)
+    );
 }
 
 #[test]

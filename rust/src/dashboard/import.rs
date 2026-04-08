@@ -66,10 +66,9 @@ pub(crate) fn resolve_diff_source(args: &super::DiffArgs) -> Result<ResolvedDash
 }
 
 pub(crate) fn import_metadata_variant(args: &super::ImportArgs) -> &'static str {
-    match args.input_format {
-        super::DashboardImportInputFormat::Raw => RAW_EXPORT_SUBDIR,
-        super::DashboardImportInputFormat::Provisioning => PROVISIONING_EXPORT_SUBDIR,
-    }
+    super::DashboardSourceKind::from_import_input_format(args.input_format)
+        .expected_variant()
+        .expect("dashboard import source kind must map to an export variant")
 }
 
 pub(crate) fn dashboard_files_for_import(input_dir: &Path) -> Result<Vec<PathBuf>> {

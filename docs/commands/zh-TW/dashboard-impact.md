@@ -14,7 +14,7 @@
 ## 重點旗標
 - `--url`：直接分析線上 Grafana。
 - `--input-dir`：直接分析本地匯出樹。
-- `--input-format`：分析本地匯出時選擇 `raw` 或 `provisioning`。
+- `--input-format`：分析本地來源時選擇 `raw`、`provisioning` 或 `git-sync`。
 - `--governance`：dashboard governance JSON 輸入（`governance-json` 成品）。
 - `--datasource-uid`：要追蹤的 datasource UID。
 - `--alert-contract`：可選的 alert contract JSON 輸入。
@@ -37,6 +37,15 @@ grafana-util dashboard impact \
 grafana-util dashboard impact \
   --input-dir ./dashboards/raw \
   --input-format raw \
+  --datasource-uid prom-main \
+  --output-format json
+```
+
+```bash
+# 用途：從 repo-backed Git Sync 樹評估單一 datasource 的影響範圍。
+grafana-util dashboard impact \
+  --input-dir ./grafana-oac-repo \
+  --input-format git-sync \
   --datasource-uid prom-main \
   --output-format json
 ```

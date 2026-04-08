@@ -790,19 +790,19 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <ol><li><code>change inspect</code> to see what the staged package contains</li><li><code>change check</code> to confirm it is structurally ready</li><li><code>change preview</code> to see what would change</li><li><code>change apply</code> only after the preview is reviewed and approved</li></ol>
 <h3 id="what-workspace-tries-to-discover">What <code>--workspace</code> tries to discover</h3>
 <p>When you pass <code>--workspace .</code>, <code>change</code> looks for the common staged inputs it can assemble into one review lane:</p>
-<ul><li>dashboard export trees</li><li>dashboard provisioning trees</li><li>datasource provisioning files</li><li>alert export trees</li><li>staged desired change files</li><li>source bundles, target inventory files, and promotion mapping files</li></ul>
+<ul><li>dashboard export trees</li><li>dashboard provisioning trees</li><li>Git Sync dashboard workspace roots containing <code>dashboards/git-sync/raw</code> and <code>dashboards/git-sync/provisioning</code></li><li>datasource provisioning files</li><li>alert export trees</li><li>staged desired change files</li><li>source bundles, target inventory files, and promotion mapping files</li></ul>
 <p>If discovery finds nothing usable, stop and switch to explicit flags such as <code>--desired-file</code>, <code>--dashboard-export-dir</code>, <code>--alert-export-dir</code>, <code>--source-bundle</code>, or <code>--target-inventory</code>.</p>
 <p>What success looks like:</p>
 <ul><li>you can explain the size and risk of a change before apply</li><li>staged inputs pass preflight before they enter plan or apply</li><li>reviewed plans carry explicit evidence instead of relying on operator memory</li></ul>
 <p>Failure checks:</p>
 <ul><li>if summary or preflight looks wrong, stop before plan or apply</li><li>if live fetch changes the result unexpectedly, compare staged inputs against the live target first</li><li>if automation consumes JSON, validate <code>kind</code> and <code>schemaVersion</code> before deeper parsing</li></ul>
 <p>Examples:</p>
-<pre><code># Purpose: Inspect the staged package from common repo-local inputs.
-grafana-util change inspect --workspace .</code></pre>
+<pre><code># Purpose: Inspect the staged package from a Git Sync workspace root.
+grafana-util change inspect --workspace ./grafana-oac-repo</code></pre>
 <pre><code># Purpose: Check whether the staged package is safe to continue.
-grafana-util change check --workspace . --fetch-live --output-format json</code></pre>
+grafana-util change check --workspace ./grafana-oac-repo --fetch-live --output-format json</code></pre>
 <pre><code># Purpose: Preview what would change from discovered or explicit staged inputs.
-grafana-util change preview --workspace . --fetch-live --profile prod</code></pre>
+grafana-util change preview --workspace ./grafana-oac-repo --fetch-live --profile prod</code></pre>
 <pre><code># Purpose: Apply a reviewed preview to live Grafana after explicit approval.
 grafana-util change apply \
   --preview-file ./change-preview.json \

@@ -17,7 +17,7 @@
 
 ## 主要旗標
 
-- `--workspace`：從常見 repo-local inputs 自動發現 staged package。
+- `--workspace`：從常見 repo-local inputs 或 Git Sync workspace root 自動發現 staged package。
 - `--desired-file`：直接預覽單一 desired change file。
 - `--source-bundle`、`--target-inventory`、`--mapping-file`、`--availability-file`：切進 bundle / promotion-aware 的 preview 路徑。
 - `--live-file`：和一份保存好的 live-state 文件做比對。
@@ -30,7 +30,7 @@
 
 ```bash
 # 用途：把目前 staged package 對 live Grafana 的影響先預覽出來。
-grafana-util change preview --workspace . --fetch-live --profile prod
+grafana-util change preview --workspace ./grafana-oac-repo --fetch-live --profile prod
 ```
 
 **預期輸出：**

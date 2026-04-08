@@ -529,6 +529,127 @@ mod output_contract_tests {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::common::CliColorChoice;
+    use serde_json::json;
+    use std::fs;
+    use tempfile::tempdir;
+
+    use super::super::analysis_source::{
+        resolve_dashboard_analysis_artifacts, DashboardAnalysisSourceArgs,
+    };
+    use super::super::cli_defs::{CommonCliArgs, InspectExportInputType};
+
+    fn make_common_args() -> CommonCliArgs {
+        CommonCliArgs {
+            color: CliColorChoice::Never,
+            profile: None,
+            url: "http://127.0.0.1:3000".to_string(),
+            api_token: None,
+            username: None,
+            password: None,
+            prompt_password: false,
+            prompt_token: false,
+            timeout: 30,
+            verify_ssl: false,
+        }
+    }
+
+    fn write_basic_git_sync_raw_export(raw_dir: &Path) {
+        fs::create_dir_all(raw_dir).unwrap();
+        fs::write(
+            raw_dir.join("export-metadata.json"),
+            serde_json::to_string_pretty(&json!({
+                "kind": "grafana-utils-dashboard-export-index",
+                "schemaVersion": 1,
+                "variant": "raw",
+                "dashboardCount": 1,
+                "indexFile": "index.json",
+                "format": "grafana-web-import-preserve-uid",
+                "foldersFile": "folders.json",
+                "datasourcesFile": "datasources.json",
+                "org": "Main Org",
+                "orgId": "1"
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        fs::write(
+            raw_dir.join("folders.json"),
+            serde_json::to_string_pretty(&json!([
+                {
+                    "uid": "general",
+                    "title": "General",
+                    "path": "General",
+                    "org": "Main Org",
+                    "orgId": "1"
+                }
+            ]))
+            .unwrap(),
+        )
+        .unwrap();
+        fs::write(
+            raw_dir.join("datasources.json"),
+            serde_json::to_string_pretty(&json!([
+                {
+                    "uid": "prom-main",
+                    "name": "Prometheus Main",
+                    "type": "prometheus",
+                    "access": "proxy",
+                    "url": "http://grafana.example.internal",
+                    "isDefault": "true",
+                    "org": "Main Org",
+                    "orgId": "1"
+                }
+            ]))
+            .unwrap(),
+        )
+        .unwrap();
+        fs::write(
+            raw_dir.join("index.json"),
+            serde_json::to_string_pretty(&json!([
+                {
+                    "uid": "cpu-main",
+                    "title": "CPU Main",
+                    "path": "dash.json",
+                    "format": "grafana-web-import-preserve-uid",
+                    "org": "Main Org",
+                    "orgId": "1"
+                }
+            ]))
+            .unwrap(),
+        )
+        .unwrap();
+        fs::write(
+            raw_dir.join("dash.json"),
+            serde_json::to_string_pretty(&json!({
+                "dashboard": {
+                    "id": null,
+                    "uid": "cpu-main",
+                    "title": "CPU Main",
+                    "schemaVersion": 38,
+                    "templating": {
+                        "list": []
+                    },
+                    "panels": [{
+                        "id": 7,
+                        "title": "CPU",
+                        "type": "timeseries",
+                        "datasource": {"uid": "prom-main", "type": "prometheus"},
+                        "targets": [{
+                            "refId": "A",
+                            "expr": "sum(rate(cpu_seconds_total[5m]))"
+                        }]
+                    }]
+                },
+                "meta": {
+                    "folderUid": "general",
+                    "folderTitle": "General"
+                }
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+    }
 
     fn sample_topology_document() -> TopologyDocument {
         TopologyDocument {
@@ -716,5 +837,36 @@ mod tests {
             .details
             .iter()
             .any(|line| line == "  uses -> Env [variable]"));
+    }
+
+    #[test]
+    fn build_topology_and_impact_documents_from_git_sync_repo_layout() {
+        let temp = tempdir().unwrap();
+        let repo_root = temp.path();
+        fs::create_dir_all(repo_root.join(".git")).unwrap();
+        let raw_dir = repo_root.join("dashboards/git-sync/raw/org_1/raw");
+        write_basic_git_sync_raw_export(&raw_dir);
+
+        let artifacts = resolve_dashboard_analysis_artifacts(&DashboardAnalysisSourceArgs {
+            common: &make_common_args(),
+            page_size: 100,
+            org_id: None,
+            all_orgs: false,
+            input_dir: Some(repo_root),
+            input_format: crate::dashboard::DashboardImportInputFormat::Raw,
+            input_type: Some(InspectExportInputType::Raw),
+            governance: None,
+            queries: None,
+            require_queries: false,
+        })
+        .unwrap();
+
+        let topology = build_topology_document(&artifacts.governance, None).unwrap();
+        let impact = build_impact_document(&artifacts.governance, None, "prom-main").unwrap();
+
+        assert_eq!(topology.summary.dashboard_count, 1);
+        assert_eq!(topology.summary.datasource_count, 1);
+        assert_eq!(impact.summary.dashboard_count, 1);
+        assert_eq!(impact.dashboards[0].dashboard_uid, "cpu-main");
     }
 }

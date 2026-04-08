@@ -14,7 +14,7 @@
 ## 重點旗標
 - `--url`：直接分析線上 Grafana。
 - `--input-dir`：直接分析本地匯出樹。
-- `--input-format`：分析本地匯出時選擇 `raw` 或 `provisioning`。
+- `--input-format`：分析本地來源時選擇 `raw`、`provisioning` 或 `git-sync`。
 - `--governance`：儀表板治理 JSON 輸入（`governance-json` 成品，進階重用）。
 - `--queries`：可選的儀表板 query-report JSON 輸入（`queries-json` 成品，進階重用）。
 - `--alert-contract`：可選的 alert contract JSON 輸入。
@@ -39,6 +39,14 @@ grafana-util dashboard graph \
   --input-format raw \
   --output-format dot \
   --output-file ./dashboard-topology.dot
+```
+
+```bash
+# 用途：從 repo-backed Git Sync 樹建立可重現的儀表板拓樸圖。
+grafana-util dashboard topology \
+  --input-dir ./grafana-oac-repo \
+  --input-format git-sync \
+  --output-format mermaid
 ```
 
 ```bash
