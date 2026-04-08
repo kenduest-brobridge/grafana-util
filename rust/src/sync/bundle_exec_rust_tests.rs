@@ -65,6 +65,101 @@ fn write_dashboard_provisioning_fixture(root: &std::path::Path) {
     .unwrap();
 }
 
+fn write_dashboard_raw_fixture(root: &std::path::Path) {
+    fs::create_dir_all(root).unwrap();
+    fs::write(
+        root.join("export-metadata.json"),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-dashboard-export-index",
+            "schemaVersion": 1,
+            "variant": "raw",
+            "dashboardCount": 1,
+            "indexFile": "index.json",
+            "format": "grafana-web-import-preserve-uid",
+            "foldersFile": "folders.json"
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        root.join("folders.json"),
+        serde_json::to_string_pretty(&json!([
+            {"uid": "general", "title": "General", "path": "General"}
+        ]))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        root.join("cpu-main.json"),
+        serde_json::to_string_pretty(&json!({
+            "dashboard": {
+                "uid": "cpu-main",
+                "title": "CPU Main",
+                "panels": []
+            },
+            "meta": {"folderUid": "general"}
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+}
+
+fn write_alert_export_fixture(root: &std::path::Path) {
+    fs::create_dir_all(root).unwrap();
+    fs::create_dir_all(root.join("rules").join("general").join("cpu-alerts")).unwrap();
+    fs::write(
+        root.join("index.json"),
+        serde_json::to_string_pretty(&json!({
+            "schemaVersion": 1,
+            "apiVersion": 1,
+            "kind": "grafana-util-alert-export-index",
+            "rules": [{
+                "kind": "grafana-alert-rule",
+                "uid": "cpu-high",
+                "title": "CPU High",
+                "folderUID": "general",
+                "ruleGroup": "cpu-alerts",
+                "path": "rules/general/cpu-alerts/CPU_High__cpu-high.json"
+            }]
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        root.join("rules")
+            .join("general")
+            .join("cpu-alerts")
+            .join("CPU_High__cpu-high.json"),
+        serde_json::to_string_pretty(&json!({
+            "schemaVersion": 1,
+            "toolVersion": "test",
+            "apiVersion": 1,
+            "kind": "grafana-alert-rule",
+            "metadata": {
+                "uid": "cpu-high",
+                "title": "CPU High"
+            },
+            "spec": {
+                "uid": "cpu-high",
+                "title": "CPU High",
+                "folderUID": "general",
+                "ruleGroup": "cpu-alerts",
+                "condition": "A",
+                "data": [{
+                    "refId": "A",
+                    "datasourceUid": "prom-main",
+                    "model": {
+                        "expr": "up",
+                        "refId": "A"
+                    }
+                }]
+            }
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+}
+
 #[test]
 fn run_sync_cli_bundle_writes_source_bundle_artifact() {
     let temp = tempdir().unwrap();
@@ -146,6 +241,7 @@ fn run_sync_cli_bundle_writes_source_bundle_artifact() {
     let output_file = temp.path().join("bundle.json");
 
     let result = run_sync_cli(SyncGroupCommand::Bundle(SyncBundleArgs {
+        workspace: None,
         dashboard_export_dir: Some(dashboard_export_dir.clone()),
         dashboard_provisioning_dir: None,
         alert_export_dir: Some(alert_export_dir.clone()),
@@ -230,6 +326,7 @@ fn run_sync_cli_bundle_keeps_plain_file_output_when_also_stdout_is_enabled() {
     .unwrap();
 
     let result = run_sync_cli(SyncGroupCommand::Bundle(SyncBundleArgs {
+        workspace: None,
         dashboard_export_dir: Some(dashboard_export_dir.clone()),
         dashboard_provisioning_dir: None,
         alert_export_dir: None,
@@ -357,6 +454,7 @@ fn run_sync_cli_bundle_preserves_alert_export_artifact_metadata() {
     let output_file = temp.path().join("bundle.json");
 
     let result = run_sync_cli(SyncGroupCommand::Bundle(SyncBundleArgs {
+        workspace: None,
         dashboard_export_dir: None,
         dashboard_provisioning_dir: None,
         alert_export_dir: Some(alert_export_dir.clone()),
@@ -450,6 +548,7 @@ fn run_sync_cli_bundle_ignores_dashboard_permissions_bundle() {
     let output_file = temp.path().join("bundle.json");
 
     let result = run_sync_cli(SyncGroupCommand::Bundle(SyncBundleArgs {
+        workspace: None,
         dashboard_export_dir: Some(dashboard_export_dir.clone()),
         dashboard_provisioning_dir: None,
         alert_export_dir: None,
@@ -477,6 +576,7 @@ fn run_sync_cli_bundle_supports_dashboard_provisioning_root() {
     let output_file = temp.path().join("bundle.json");
 
     let result = run_sync_cli(SyncGroupCommand::Bundle(SyncBundleArgs {
+        workspace: None,
         dashboard_export_dir: None,
         dashboard_provisioning_dir: Some(provisioning_root.clone()),
         alert_export_dir: None,
@@ -516,6 +616,7 @@ fn run_sync_cli_bundle_rejects_conflicting_dashboard_inputs() {
     fs::create_dir_all(&dashboard_provisioning_dir).unwrap();
 
     let result = run_sync_cli(SyncGroupCommand::Bundle(SyncBundleArgs {
+        workspace: None,
         dashboard_export_dir: Some(dashboard_export_dir),
         dashboard_provisioning_dir: Some(dashboard_provisioning_dir),
         alert_export_dir: None,
@@ -559,6 +660,7 @@ fn run_sync_cli_bundle_preserves_datasource_provider_metadata_from_inventory_fil
     let output_file = temp.path().join("bundle.json");
 
     let result = run_sync_cli(SyncGroupCommand::Bundle(SyncBundleArgs {
+        workspace: None,
         dashboard_export_dir: None,
         dashboard_provisioning_dir: None,
         alert_export_dir: None,
@@ -596,6 +698,7 @@ fn run_sync_cli_bundle_preserves_datasource_metadata_from_provisioning_file() {
     let output_file = temp.path().join("bundle.json");
 
     let result = run_sync_cli(SyncGroupCommand::Bundle(SyncBundleArgs {
+        workspace: None,
         dashboard_export_dir: None,
         dashboard_provisioning_dir: None,
         alert_export_dir: None,
@@ -669,6 +772,7 @@ fn run_sync_cli_bundle_normalizes_tool_rule_export_into_top_level_alert_spec() {
     let output_file = temp.path().join("bundle.json");
 
     let result = run_sync_cli(SyncGroupCommand::Bundle(SyncBundleArgs {
+        workspace: None,
         dashboard_export_dir: None,
         dashboard_provisioning_dir: None,
         alert_export_dir: Some(alert_export_dir.clone()),
@@ -793,4 +897,62 @@ fn render_sync_apply_intent_text_includes_alert_artifact_bundle_counts() {
     assert!(
         output.contains("Reason: preflight and bundle-preflight blocking must be 0 before apply")
     );
+}
+
+#[test]
+fn run_sync_cli_bundle_accepts_mixed_git_sync_workspace_root() {
+    let temp = tempdir().unwrap();
+    let workspace = temp.path().join("workspace");
+    fs::create_dir_all(workspace.join(".git")).unwrap();
+    write_dashboard_raw_fixture(&workspace.join("dashboards").join("git-sync").join("raw"));
+    write_dashboard_provisioning_fixture(
+        &workspace.join("dashboards").join("git-sync").join("provisioning"),
+    );
+    write_alert_export_fixture(&workspace.join("alerts").join("raw"));
+    fs::create_dir_all(workspace.join("datasources").join("provisioning")).unwrap();
+    let datasource_provisioning_file = workspace
+        .join("datasources")
+        .join("provisioning")
+        .join("datasources.yaml");
+    write_datasource_provisioning_fixture(&datasource_provisioning_file);
+    let output_file = temp.path().join("bundle.json");
+
+    let result = run_sync_cli(SyncGroupCommand::Bundle(SyncBundleArgs {
+        workspace: Some(workspace.clone()),
+        dashboard_export_dir: None,
+        dashboard_provisioning_dir: None,
+        alert_export_dir: None,
+        datasource_export_file: None,
+        datasource_provisioning_file: None,
+        metadata_file: None,
+        output_file: Some(output_file.clone()),
+        also_stdout: false,
+        output_format: SyncOutputFormat::Json,
+    }));
+
+    assert!(result.is_ok(), "{result:?}");
+    let bundle: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&output_file).unwrap()).unwrap();
+    assert_eq!(
+        bundle["metadata"]["workspaceRoot"],
+        json!(workspace.display().to_string())
+    );
+    assert_eq!(
+        bundle["metadata"]["dashboardExportDir"],
+        json!(workspace.join("dashboards/git-sync/raw").display().to_string())
+    );
+    assert_eq!(
+        bundle["metadata"]["alertExportDir"],
+        json!(workspace.join("alerts/raw").display().to_string())
+    );
+    assert_eq!(
+        bundle["metadata"]["datasourceProvisioningFile"],
+        json!(workspace
+            .join("datasources/provisioning/datasources.yaml")
+            .display()
+            .to_string())
+    );
+    assert_eq!(bundle["summary"]["dashboardCount"], json!(1));
+    assert_eq!(bundle["summary"]["datasourceCount"], json!(1));
+    assert_eq!(bundle["summary"]["alertRuleCount"], json!(1));
 }

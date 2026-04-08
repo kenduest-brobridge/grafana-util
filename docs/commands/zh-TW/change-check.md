@@ -17,7 +17,7 @@
 
 ## 主要旗標
 
-- `--workspace`：從常見 repo-local inputs，或同一個 mixed repo root 裡的 Git Sync dashboards、`alerts/raw`、`datasources/provisioning` 自動發現 staged package。
+- `--workspace`：從常見 repo-local inputs，或同一個 mixed repo root 裡的 Git Sync dashboards、`alerts/raw`、`datasources/provisioning` source provenance 自動發現 staged package。
 - `--availability-file`：把 staged availability hints 併進來。
 - `--target-inventory`、`--mapping-file`：在 bundle / promotion 場景下加入更多檢查。
 - `--fetch-live`：把 live target 的檢查也併進結果。
@@ -29,6 +29,8 @@
 # 用途：檢查從同一個 mixed repo root 自動發現到的 staged package。
 grafana-util change check --workspace ./grafana-oac-repo --output-format json
 ```
+
+這個 repo root 會把 dashboard、alert、datasource 的 provenance 一起帶進 readiness gate，讓 inspect / check / preview 看到的是同一種 workspace 形狀。
 
 **預期輸出：**
 ```json

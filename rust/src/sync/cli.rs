@@ -403,27 +403,67 @@ pub(crate) fn execute_sync_bundle(args: &SyncBundleArgs) -> Result<SyncCommandOu
             "Sync bundle accepts only one dashboard input: --dashboard-export-dir or --dashboard-provisioning-dir.",
         ));
     }
-    if args.dashboard_export_dir.is_none()
-        && args.dashboard_provisioning_dir.is_none()
-        && args.alert_export_dir.is_none()
-        && args.datasource_export_file.is_none()
-        && args.datasource_provisioning_file.is_none()
+    let discovered = match args.workspace.as_ref() {
+        Some(workspace) => Some(discover_change_staged_inputs(Some(workspace.as_path()))?),
+        None => None,
+    };
+    let dashboard_export_dir = args.dashboard_export_dir.clone().or_else(|| {
+        discovered
+            .as_ref()
+            .and_then(|found| found.dashboard_export_dir.clone())
+    });
+    let dashboard_provisioning_dir = args.dashboard_provisioning_dir.clone().or_else(|| {
+        if dashboard_export_dir.is_some() {
+            None
+        } else {
+            discovered
+                .as_ref()
+                .and_then(|found| found.dashboard_provisioning_dir.clone())
+        }
+    });
+    let alert_export_dir = args.alert_export_dir.clone().or_else(|| {
+        discovered
+            .as_ref()
+            .and_then(|found| found.alert_export_dir.clone())
+    });
+    let datasource_export_file = args.datasource_export_file.clone();
+    let datasource_provisioning_file = args.datasource_provisioning_file.clone().or_else(|| {
+        if datasource_export_file.is_some() {
+            None
+        } else {
+            discovered
+                .as_ref()
+                .and_then(|found| found.datasource_provisioning_file.clone())
+        }
+    });
+
+    if dashboard_export_dir.is_none()
+        && dashboard_provisioning_dir.is_none()
+        && alert_export_dir.is_none()
+        && datasource_export_file.is_none()
+        && datasource_provisioning_file.is_none()
         && args.metadata_file.is_none()
     {
         return Err(message(
-            "Sync bundle requires at least one export input such as --dashboard-export-dir, --dashboard-provisioning-dir, --alert-export-dir, --datasource-export-file, --datasource-provisioning-file, or --metadata-file.",
+            "Sync bundle requires at least one export input such as --workspace, --dashboard-export-dir, --dashboard-provisioning-dir, --alert-export-dir, --datasource-export-file, --datasource-provisioning-file, or --metadata-file.",
         ));
     }
     let mut dashboards = Vec::new();
     let mut datasources = Vec::new();
     let mut folders = Vec::new();
     let mut metadata = Map::new();
-    if let Some(output_dir) = args.dashboard_export_dir.as_ref() {
+    if let Some(workspace) = args.workspace.as_ref() {
+        metadata.insert(
+            "workspaceRoot".to_string(),
+            Value::String(workspace.display().to_string()),
+        );
+    }
+    if let Some(output_dir) = dashboard_export_dir.as_ref() {
         let (dashboard_items, dashboard_datasources, folder_items, dashboard_metadata) =
             load_dashboard_bundle_sections(
                 output_dir,
                 output_dir,
-                args.datasource_provisioning_file.as_deref(),
+                datasource_provisioning_file.as_deref(),
             )?;
         dashboards = dashboard_items;
         datasources.extend(dashboard_datasources);
@@ -433,11 +473,11 @@ pub(crate) fn execute_sync_bundle(args: &SyncBundleArgs) -> Result<SyncCommandOu
             "dashboardExportDir".to_string(),
             Value::String(output_dir.display().to_string()),
         );
-    } else if let Some(provisioning_dir) = args.dashboard_provisioning_dir.as_ref() {
+    } else if let Some(provisioning_dir) = dashboard_provisioning_dir.as_ref() {
         let (dashboard_items, dashboard_datasources, folder_items, dashboard_metadata) =
             load_dashboard_provisioning_bundle_sections(
                 provisioning_dir,
-                args.datasource_provisioning_file.as_deref(),
+                datasource_provisioning_file.as_deref(),
             )?;
         dashboards = dashboard_items;
         datasources.extend(dashboard_datasources);
@@ -448,7 +488,7 @@ pub(crate) fn execute_sync_bundle(args: &SyncBundleArgs) -> Result<SyncCommandOu
             Value::String(provisioning_dir.display().to_string()),
         );
     }
-    if let Some(datasource_provisioning_file) = args.datasource_provisioning_file.as_ref() {
+    if let Some(datasource_provisioning_file) = datasource_provisioning_file.as_ref() {
         datasources = load_datasource_provisioning_records(datasource_provisioning_file)?
             .into_iter()
             .map(|item| normalize_datasource_bundle_item(&item))
@@ -457,7 +497,7 @@ pub(crate) fn execute_sync_bundle(args: &SyncBundleArgs) -> Result<SyncCommandOu
             "datasourceProvisioningFile".to_string(),
             Value::String(datasource_provisioning_file.display().to_string()),
         );
-    } else if let Some(datasource_export_file) = args.datasource_export_file.as_ref() {
+    } else if let Some(datasource_export_file) = datasource_export_file.as_ref() {
         datasources = load_json_array_file(datasource_export_file, "Datasource export inventory")?
             .into_iter()
             .map(|item| normalize_datasource_bundle_item(&item))
@@ -467,7 +507,7 @@ pub(crate) fn execute_sync_bundle(args: &SyncBundleArgs) -> Result<SyncCommandOu
             Value::String(datasource_export_file.display().to_string()),
         );
     }
-    let alerting = match args.alert_export_dir.as_ref() {
+    let alerting = match alert_export_dir.as_ref() {
         Some(output_dir) => {
             metadata.insert(
                 "alertExportDir".to_string(),

@@ -17,7 +17,7 @@ Inspect the staged change package from discovered or explicit inputs.
 
 ## Key flags
 
-- `--workspace`: auto-discover common staged inputs from the current repo, export tree, provisioning tree, or one repo root that mixes Git Sync dashboards, `alerts/raw`, and `datasources/provisioning`.
+- `--workspace`: auto-discover common staged inputs from the current repo, export tree, provisioning tree, or one repo root that mixes Git Sync dashboards, `alerts/raw`, and `datasources/provisioning` source provenance.
 - `--desired-file`: inspect one explicit desired change file.
 - `--dashboard-export-dir`, `--dashboard-provisioning-dir`: inspect dashboard staged inputs directly.
 - `--alert-export-dir`, `--datasource-provisioning-file`: add alert and datasource staged inputs explicitly.

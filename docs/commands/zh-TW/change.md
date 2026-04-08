@@ -26,7 +26,7 @@
 
 ### `--workspace` 會幫你找什麼
 
-當你帶 `--workspace .` 時，`change` 會嘗試在目前 repo 或工作目錄裡找常見的 staged inputs，並拼成同一條 review lane：
+當你帶 `--workspace .` 時，`change` 會嘗試在目前 repo 或工作目錄裡找常見的 staged inputs，並拼成同一條 review lane，讓同一個 repo root 承載多個 surface 的 source provenance：
 
 - dashboard export trees
 - dashboard provisioning trees
@@ -58,6 +58,16 @@ grafana-util change inspect --workspace ./grafana-oac-repo
 ```
 
 同一個 `--workspace` root 可以同時包含 `dashboards/git-sync/raw`、`dashboards/git-sync/provisioning`、`alerts/raw` 與 `datasources/provisioning/datasources.yaml`。
+
+混合 workspace tree 範例：
+
+```text
+./grafana-oac-repo/
+  dashboards/git-sync/raw/
+  dashboards/git-sync/provisioning/
+  alerts/raw/
+  datasources/provisioning/datasources.yaml
+```
 
 ```bash
 # 用途：先檢查 staged package 是否適合往下走。
@@ -541,7 +551,7 @@ grafana-util change assess-alerts --alerts-file ./alerts.json --output-format js
 
 ## `bundle`
 
-用途：將匯出的 dashboards、alerting 資源、datasource inventory 與 metadata 打包成單一的本機 source bundle。
+用途：將匯出的 dashboards、alerting 資源、datasource inventory 與 metadata 打包成單一的本機 source bundle；尤其適合在你已經從同一個 mixed workspace root 發現 source provenance 之後，把同一批內容封裝成可交接的 bundle。
 
 適用時機：當你想要一個統一的 bundle artifact，供後續同步、審核或 preflight 使用時。
 
@@ -570,6 +580,8 @@ grafana-util change bundle --dashboard-export-dir ./dashboards/raw --alert-expor
 # 用途：bundle。
 grafana-util change bundle --dashboard-provisioning-dir ./dashboards/provisioning --alert-export-dir ./alerts/raw --output-file ./sync-source-bundle.json
 ```
+
+這條 bundle 路徑就是把前面 inspect、check、preview 已經發現的同一個 mixed workspace tree，整理成可交接的 bundle artifact。
 
 **預期輸出：**
 ```json

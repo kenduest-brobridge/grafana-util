@@ -117,10 +117,14 @@ fn change_advanced_promotion_preflight_help_includes_mapping_input() {
 fn change_advanced_bundle_help_includes_examples_and_output_heading() {
     let help = render_change_advanced_subcommand_help("bundle");
     assert!(help.contains("Examples:"));
+    assert!(help.contains("--workspace"));
     assert!(help.contains("--dashboard-export-dir"));
     assert!(help.contains("--dashboard-provisioning-dir"));
     assert!(help.contains("--output-file"));
     assert!(help.contains("--also-stdout"));
+    assert!(help.contains("Mixed workspace bundle handoff"));
+    assert!(help.contains("grafana-util change advanced bundle --workspace ./grafana-oac-repo"));
+    assert!(help.contains("sync-source-bundle.json"));
 }
 
 #[test]
@@ -131,6 +135,9 @@ fn change_root_help_includes_task_first_examples() {
     let help = String::from_utf8(output).unwrap();
 
     assert!(help.contains("Git Sync dashboards"));
+    assert!(help.contains("source provenance"));
+    assert!(help.contains("./grafana-oac-repo/"));
+    assert!(help.contains("dashboards/git-sync/provisioning"));
     assert!(help.contains("grafana-util change inspect --workspace ./grafana-oac-repo"));
     assert!(help.contains("grafana-util change check --workspace ./grafana-oac-repo"));
     assert!(help.contains("grafana-util change preview --workspace ./grafana-oac-repo"));
@@ -140,6 +147,7 @@ fn change_root_help_includes_task_first_examples() {
     assert!(help.contains("grafana-util change check"));
     assert!(help.contains("grafana-util change preview"));
     assert!(help.contains("grafana-util change apply"));
+    assert!(help.contains("grafana-util change bundle"));
     assert!(help.contains("grafana-util change advanced bundle"));
     assert!(help.contains("grafana-util change advanced bundle-preflight"));
 }

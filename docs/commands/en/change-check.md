@@ -17,7 +17,7 @@ Check whether the staged change package looks structurally safe to continue.
 
 ## Key flags
 
-- `--workspace`: auto-discover the staged package from common repo-local inputs or one repo root that mixes Git Sync dashboards, `alerts/raw`, and `datasources/provisioning`.
+- `--workspace`: auto-discover the staged package from common repo-local inputs or one repo root that mixes Git Sync dashboards, `alerts/raw`, and `datasources/provisioning` source provenance.
 - `--availability-file`: merge staged availability hints into the check.
 - `--target-inventory`, `--mapping-file`: deepen bundle or promotion-oriented checks when those artifacts exist.
 - `--fetch-live`: merge live target checks into the staged readiness decision.
@@ -29,6 +29,8 @@ Check whether the staged change package looks structurally safe to continue.
 # Purpose: Check one mixed repo root discovered through --workspace.
 grafana-util change check --workspace ./grafana-oac-repo --output-format json
 ```
+
+This one repo root can carry dashboard, alert, and datasource provenance together, so the readiness gate sees the same workspace shape as inspect and preview.
 
 **Expected Output:**
 ```json

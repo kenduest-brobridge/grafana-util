@@ -26,7 +26,7 @@ If you are starting fresh, use this order first:
 
 ### What `--workspace` tries to discover
 
-When you pass `--workspace .`, `change` looks for the common staged inputs it can assemble into one review lane:
+When you pass `--workspace .`, `change` looks for the common staged inputs it can assemble into one review lane, so one repo root can carry source provenance for multiple surfaces:
 
 - dashboard export trees
 - dashboard provisioning trees
@@ -58,6 +58,16 @@ grafana-util change inspect --workspace ./grafana-oac-repo
 ```
 
 That one `--workspace` root can include `dashboards/git-sync/raw`, `dashboards/git-sync/provisioning`, `alerts/raw`, and `datasources/provisioning/datasources.yaml`.
+
+Example mixed workspace tree:
+
+```text
+./grafana-oac-repo/
+  dashboards/git-sync/raw/
+  dashboards/git-sync/provisioning/
+  alerts/raw/
+  datasources/provisioning/datasources.yaml
+```
 
 ```bash
 # Purpose: Check whether the staged package is safe to continue.
@@ -471,7 +481,7 @@ Related commands: `change bundle`, `change bundle-preflight`, `overview`.
 
 Purpose: package exported dashboards, alerting resources, datasource inventory, and metadata into one local source bundle.
 
-When to use: when you want a single bundle artifact for later sync, review, or preflight steps.
+When to use: when you want a single bundle artifact for later sync, review, or preflight steps, especially after you have already discovered one mixed workspace root and want to hand off the same source provenance as a package.
 
 Key flags: `--dashboard-export-dir`, `--dashboard-provisioning-dir`, `--alert-export-dir`, `--datasource-export-file`, `--datasource-provisioning-file`, `--metadata-file`, `--output-file`, `--output-format`.
 
@@ -498,6 +508,8 @@ grafana-util change bundle --dashboard-export-dir ./dashboards/raw --alert-expor
 # Purpose: bundle.
 grafana-util change bundle --dashboard-provisioning-dir ./dashboards/provisioning --alert-export-dir ./alerts/raw --output-file ./sync-source-bundle.json
 ```
+
+This bundle path is the handoff step for the same mixed workspace tree that inspect, check, and preview discovered earlier.
 
 **Expected Output:**
 ```json

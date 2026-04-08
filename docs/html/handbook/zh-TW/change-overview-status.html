@@ -814,6 +814,12 @@ grafana-util status staged --dashboard-export-dir ./dashboards/raw --alert-expor
 <p>如果你還不確定要從哪裡開始，先照這個順序走：</p>
 <ol><li><code>change inspect --workspace .</code></li><li><code>change check --workspace .</code></li><li><code>change preview --workspace . --fetch-live --profile &lt;profile&gt;</code></li><li><code>change apply --preview-file ./change-preview.json --approve --execute-live --profile &lt;profile&gt;</code></li></ol>
 <p><code>--workspace</code> 是最短路徑，因為 <code>change</code> 會先嘗試在目前 repo 或工作目錄裡找常見 staged inputs，包含同一個 mixed repo root 裡的 Git Sync dashboards、<code>alerts/raw</code>、<code>datasources/provisioning</code>。若這不符合你的目錄布局，再改用 <code>--desired-file</code>、<code>--dashboard-export-dir</code>、<code>--alert-export-dir</code>、<code>--source-bundle</code>、<code>--target-inventory</code> 這些明確旗標。</p>
+<p>混合 workspace tree 範例：</p>
+<pre><code>./grafana-oac-repo/
+  dashboards/git-sync/raw/
+  dashboards/git-sync/provisioning/
+  alerts/raw/
+  datasources/provisioning/datasources.yaml</code></pre>
 <h3 id="1-變更檢視-change-inspect">1. 變更檢視 (Change Inspect)</h3>
 <p>先看目前變更包的高階摘要與輸入形狀。</p>
 <pre><code># 用途：先從同一個 mixed repo root 自動發現常見 staged inputs。
@@ -847,6 +853,7 @@ grafana-util change preview --workspace ./grafana-oac-repo --fetch-live --profil
 <pre><code># 用途：用明確 desired/live 輸入產出 JSON preview。
 grafana-util change preview --desired-file ./desired.json --live-file ./live.json --output-format json</code></pre>
 <p>preview 是現在 task-first 路徑裡對應舊 <code>plan</code> 的入口。底層 contract 還是同一套，但對使用者來說，先想「這次會改到什麼」比先想「我要 build 哪種 plan 文件」更自然。 這份 preview contract 也是排序契約的公開面：<code>ordering.mode</code>、每筆 operation 的 <code>orderIndex</code> / <code>orderGroup</code> / <code>kindOrder</code>，以及 <code>summary.blocked_reasons</code> 會讓審查者看出 plan 的執行順序與尚未解除的受阻工作。</p>
+<p>如果同一個 mixed workspace root 最後要交接成 bundle，把那個 tree 裡已發現的 dashboard 與 alert 來源再跑一次 <code>change bundle</code>，保留產生的 <code>sync-source-bundle.json</code> 作為可攜式的 review artifact。</p>
 <h2 id="互動模式-tui-語意">互動模式 (TUI) 語意</h2>
 <p><code>overview live --output-format interactive</code> 會透過共用的 live status 路徑顯示 live project overview。</p>
 <pre><code># 用途：overview live --output-format interactive 會透過共用的 live status 路徑顯示 live project overview。

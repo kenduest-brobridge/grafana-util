@@ -265,7 +265,7 @@ build a staged sync preflight document from desired resources and optional avail
 assess alert sync specs for candidate, plan\-only, and blocked states. Use when: Want a focused readout of how alert resources will be classified before bundling or applying.
 .TP
 .B grafana\-util\-change\-bundle(1)
-package exported dashboards, alerting resources, datasource inventory, and metadata into one local source bundle. Use when: Want a single bundle artifact for later sync, review, or preflight steps.
+package exported dashboards, alerting resources, datasource inventory, and metadata into one local source bundle. Use when: Want a single bundle artifact for later sync, review, or preflight steps, especially after you have already discovered one mixed workspace root and want to hand off the same source provenance as a package.
 .TP
 .B grafana\-util\-change\-bundle\-preflight(1)
 build a staged bundle\-level sync preflight document from a source bundle and target inventory. Use when: Need to compare a source bundle against a target inventory before apply.

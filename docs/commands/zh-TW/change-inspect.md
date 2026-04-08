@@ -17,7 +17,7 @@
 
 ## 主要旗標
 
-- `--workspace`：從 repo、export tree、provisioning tree，或同一個 mixed repo root 裡的 Git Sync dashboards、`alerts/raw`、`datasources/provisioning` 自動發現常見 staged inputs。
+- `--workspace`：從 repo、export tree、provisioning tree，或同一個 mixed repo root 裡的 Git Sync dashboards、`alerts/raw`、`datasources/provisioning` source provenance 自動發現常見 staged inputs。
 - `--desired-file`：直接檢視單一 desired change file。
 - `--dashboard-export-dir`、`--dashboard-provisioning-dir`：明確指定 dashboard staged inputs。
 - `--alert-export-dir`、`--datasource-provisioning-file`：補充 alert 與 datasource staged inputs。

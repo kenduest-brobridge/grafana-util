@@ -785,7 +785,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <p>如果你是第一次操作，先照這個順序走：</p>
 <ol><li><code>change inspect</code> 看 staged package 裡有什麼</li><li><code>change check</code> 確認輸入結構是否適合繼續往下走</li><li><code>change preview</code> 預覽這次會改到什麼</li><li><code>change apply</code> 只在 preview 已審核且核准後才執行</li></ol>
 <h3 id="-workspace-會幫你找什麼"><code>--workspace</code> 會幫你找什麼</h3>
-<p>當你帶 <code>--workspace .</code> 時，<code>change</code> 會嘗試在目前 repo 或工作目錄裡找常見的 staged inputs，並拼成同一條 review lane：</p>
+<p>當你帶 <code>--workspace .</code> 時，<code>change</code> 會嘗試在目前 repo 或工作目錄裡找常見的 staged inputs，並拼成同一條 review lane，讓同一個 repo root 承載多個 surface 的 source provenance：</p>
 <ul><li>dashboard export trees</li><li>dashboard provisioning trees</li><li>包含 <code>dashboards/git-sync/raw</code> 與 <code>dashboards/git-sync/provisioning</code> 的 Git Sync workspace roots</li><li>datasource provisioning files</li><li>alert export trees</li><li>staged desired change files</li><li>source bundle、target inventory、promotion mapping files</li></ul>
 <p>如果自動發現沒有找到可用輸入，先停下來，改用明確旗標，例如 <code>--desired-file</code>、<code>--dashboard-export-dir</code>、<code>--alert-export-dir</code>、<code>--source-bundle</code> 或 <code>--target-inventory</code>。</p>
 <p>成功判準：</p>
@@ -796,6 +796,12 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <pre><code># 用途：先從同一個 mixed repo root 看 staged package 的形狀。
 grafana-util change inspect --workspace ./grafana-oac-repo</code></pre>
 <p>同一個 <code>--workspace</code> root 可以同時包含 <code>dashboards/git-sync/raw</code>、<code>dashboards/git-sync/provisioning</code>、<code>alerts/raw</code> 與 <code>datasources/provisioning/datasources.yaml</code>。</p>
+<p>混合 workspace tree 範例：</p>
+<pre><code>./grafana-oac-repo/
+  dashboards/git-sync/raw/
+  dashboards/git-sync/provisioning/
+  alerts/raw/
+  datasources/provisioning/datasources.yaml</code></pre>
 <pre><code># 用途：先檢查 staged package 是否適合往下走。
 grafana-util change check --workspace ./grafana-oac-repo --fetch-live --output-format json</code></pre>
 <pre><code># 用途：先預覽這次會改到什麼，再決定是否套用。
@@ -1039,7 +1045,7 @@ grafana-util change assess-alerts --alerts-file ./alerts.json --output-format js
 <p>如果你覺得整份 sync plan 對 alert 太寬，這個指令就是把 alert 那一塊單獨拉出來看。</p>
 <p>相關指令：<code>change bundle</code>、<code>change bundle-preflight</code>、<code>overview</code>。</p>
 <h2 id="bundle"><code>bundle</code></h2>
-<p>用途：將匯出的 dashboards、alerting 資源、datasource inventory 與 metadata 打包成單一的本機 source bundle。</p>
+<p>用途：將匯出的 dashboards、alerting 資源、datasource inventory 與 metadata 打包成單一的本機 source bundle；尤其適合在你已經從同一個 mixed workspace root 發現 source provenance 之後，把同一批內容封裝成可交接的 bundle。</p>
 <p>適用時機：當你想要一個統一的 bundle artifact，供後續同步、審核或 preflight 使用時。</p>
 <p>主要旗標：<code>--dashboard-export-dir</code>、<code>--dashboard-provisioning-dir</code>、<code>--alert-export-dir</code>、<code>--datasource-export-file</code>、<code>--datasource-provisioning-file</code>、<code>--metadata-file</code>、<code>--output-file</code>、<code>--output-format</code>。</p>
 <p>JSON shape：</p>
@@ -1049,6 +1055,7 @@ grafana-util change assess-alerts --alerts-file ./alerts.json --output-format js
 grafana-util change bundle --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts/raw --output-file ./sync-source-bundle.json</code></pre>
 <pre><code># 用途：bundle。
 grafana-util change bundle --dashboard-provisioning-dir ./dashboards/provisioning --alert-export-dir ./alerts/raw --output-file ./sync-source-bundle.json</code></pre>
+<p>這條 bundle 路徑就是把前面 inspect、check、preview 已經發現的同一個 mixed workspace tree，整理成可交接的 bundle artifact。</p>
 <p><strong>預期輸出：</strong></p>
 <pre><code>{
   &quot;kind&quot;: &quot;grafana-utils-sync-source-bundle&quot;,

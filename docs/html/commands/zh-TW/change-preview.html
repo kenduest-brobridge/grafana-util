@@ -781,10 +781,11 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="採用前後對照">採用前後對照</h2>
 <ul><li><strong>採用前</strong>：你知道這包東西存在，也知道它大致可用，但 create / update / delete 還沒被明確攤開。</li><li><strong>採用後</strong>：你會得到一份可 review、可交接、可進入 apply 的 staged preview contract。</li></ul>
 <h2 id="主要旗標">主要旗標</h2>
-<ul><li><code>--workspace</code>：從常見 repo-local inputs，或同一個 mixed repo root 裡的 Git Sync dashboards、<code>alerts/raw</code>、<code>datasources/provisioning</code> 自動發現 staged package。</li><li><code>--desired-file</code>：直接預覽單一 desired change file。</li><li><code>--source-bundle</code>、<code>--target-inventory</code>、<code>--mapping-file</code>、<code>--availability-file</code>：切進 bundle / promotion-aware 的 preview 路徑。</li><li><code>--live-file</code>：和一份保存好的 live-state 文件做比對。</li><li><code>--fetch-live</code>：直接去問 live Grafana。</li><li><code>--allow-prune</code>：讓 delete 類操作可以進入 preview。</li><li><code>--trace-id</code>：加上明確的 review lineage。</li><li><code>--output-format</code>、<code>--output-file</code>：輸出或保存 preview artifact。</li></ul>
+<ul><li><code>--workspace</code>：從常見 repo-local inputs，或同一個 mixed repo root 裡的 Git Sync dashboards、<code>alerts/raw</code>、<code>datasources/provisioning</code> source provenance 自動發現 staged package。</li><li><code>--desired-file</code>：直接預覽單一 desired change file。</li><li><code>--source-bundle</code>、<code>--target-inventory</code>、<code>--mapping-file</code>、<code>--availability-file</code>：切進 bundle / promotion-aware 的 preview 路徑。</li><li><code>--live-file</code>：和一份保存好的 live-state 文件做比對。</li><li><code>--fetch-live</code>：直接去問 live Grafana。</li><li><code>--allow-prune</code>：讓 delete 類操作可以進入 preview。</li><li><code>--trace-id</code>：加上明確的 review lineage。</li><li><code>--output-format</code>、<code>--output-file</code>：輸出或保存 preview artifact。</li></ul>
 <h2 id="範例">範例</h2>
 <pre><code># 用途：先預覽同一個 mixed repo root 對 live Grafana 的影響。
 grafana-util change preview --workspace ./grafana-oac-repo --fetch-live --profile prod</code></pre>
+<p>這條 preview 路徑會維持同一個 mixed workspace root 的形狀，讓 dashboards、alerts、datasources 一起進入 review。</p>
 <p><strong>預期輸出：</strong></p>
 <pre><code>SYNC PLAN:
 - create: 1

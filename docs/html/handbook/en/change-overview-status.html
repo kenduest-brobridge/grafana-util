@@ -815,6 +815,12 @@ grafana-util status staged --dashboard-export-dir ./dashboards/raw --alert-expor
 <p>If you are not sure where to start, use this sequence:</p>
 <ol><li><code>change inspect --workspace .</code></li><li><code>change check --workspace .</code></li><li><code>change preview --workspace . --fetch-live --profile &lt;profile&gt;</code></li><li><code>change apply --preview-file ./change-preview.json --approve --execute-live --profile &lt;profile&gt;</code></li></ol>
 <p><code>--workspace</code> is the shortest path because <code>change</code> will try to discover common staged inputs in the current repo or working tree, including one repo root that mixes Git Sync dashboards, <code>alerts/raw</code>, and <code>datasources/provisioning</code>. If that does not match your layout, switch to explicit flags such as <code>--desired-file</code>, <code>--dashboard-export-dir</code>, <code>--alert-export-dir</code>, <code>--source-bundle</code>, or <code>--target-inventory</code>.</p>
+<p>Example mixed workspace tree:</p>
+<pre><code>./grafana-oac-repo/
+  dashboards/git-sync/raw/
+  dashboards/git-sync/provisioning/
+  alerts/raw/
+  datasources/provisioning/datasources.yaml</code></pre>
 <h3 id="1-change-inspect">1. Change Inspect</h3>
 <p>Get a fast, task-first summary of what the staged package contains.</p>
 <pre><code># Purpose: Inspect the staged package from one mixed repo root.
@@ -848,6 +854,7 @@ grafana-util change preview --workspace ./grafana-oac-repo --fetch-live --profil
 <pre><code># Purpose: Preview one explicit desired/live pair as JSON.
 grafana-util change preview --desired-file ./desired.json --live-file ./live.json --output-format json</code></pre>
 <p>Preview is the task-first replacement for the common <code>plan</code> step. It still emits the same reviewable staged contract underneath, but the operator entrypoint is now “preview what would change” instead of “build a plan document.” That preview contract is also where ordering lives: <code>ordering.mode</code>, <code>operations[].orderIndex</code> / <code>orderGroup</code> / <code>kindOrder</code>, and <code>summary.blocked_reasons</code> tell reviewers how the plan is sequenced and which operations remain blocked before apply.</p>
+<p>If the same mixed workspace root needs to become a handoff package, run <code>change bundle</code> with the surfaced dashboard and alert directories from that tree, then keep the resulting <code>sync-source-bundle.json</code> as the portable review artifact.</p>
 <h2 id="interactive-mode-tui-semantics">Interactive Mode (TUI) Semantics</h2>
 <p><code>overview live --output-format interactive</code> opens the live project overview through the shared status live path.</p>
 <pre><code># Purpose: overview live --output-format interactive opens the live project overview through the shared status live path.

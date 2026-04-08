@@ -17,7 +17,7 @@
 
 ## 主要旗標
 
-- `--workspace`：從常見 repo-local inputs，或同一個 mixed repo root 裡的 Git Sync dashboards、`alerts/raw`、`datasources/provisioning` 自動發現 staged package。
+- `--workspace`：從常見 repo-local inputs，或同一個 mixed repo root 裡的 Git Sync dashboards、`alerts/raw`、`datasources/provisioning` source provenance 自動發現 staged package。
 - `--desired-file`：直接預覽單一 desired change file。
 - `--source-bundle`、`--target-inventory`、`--mapping-file`、`--availability-file`：切進 bundle / promotion-aware 的 preview 路徑。
 - `--live-file`：和一份保存好的 live-state 文件做比對。
@@ -32,6 +32,8 @@
 # 用途：先預覽同一個 mixed repo root 對 live Grafana 的影響。
 grafana-util change preview --workspace ./grafana-oac-repo --fetch-live --profile prod
 ```
+
+這條 preview 路徑會維持同一個 mixed workspace root 的形狀，讓 dashboards、alerts、datasources 一起進入 review。
 
 **預期輸出：**
 ```text

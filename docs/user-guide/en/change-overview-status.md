@@ -128,6 +128,16 @@ If you are not sure where to start, use this sequence:
 
 `--workspace` is the shortest path because `change` will try to discover common staged inputs in the current repo or working tree, including one repo root that mixes Git Sync dashboards, `alerts/raw`, and `datasources/provisioning`. If that does not match your layout, switch to explicit flags such as `--desired-file`, `--dashboard-export-dir`, `--alert-export-dir`, `--source-bundle`, or `--target-inventory`.
 
+Example mixed workspace tree:
+
+```text
+./grafana-oac-repo/
+  dashboards/git-sync/raw/
+  dashboards/git-sync/provisioning/
+  alerts/raw/
+  datasources/provisioning/datasources.yaml
+```
+
 ### 1. Change Inspect
 Get a fast, task-first summary of what the staged package contains.
 ```bash
@@ -185,6 +195,8 @@ grafana-util change preview --desired-file ./desired.json --live-file ./live.jso
 
 Preview is the task-first replacement for the common `plan` step. It still emits the same reviewable staged contract underneath, but the operator entrypoint is now “preview what would change” instead of “build a plan document.”
 That preview contract is also where ordering lives: `ordering.mode`, `operations[].orderIndex` / `orderGroup` / `kindOrder`, and `summary.blocked_reasons` tell reviewers how the plan is sequenced and which operations remain blocked before apply.
+
+If the same mixed workspace root needs to become a handoff package, run `change bundle` with the surfaced dashboard and alert directories from that tree, then keep the resulting `sync-source-bundle.json` as the portable review artifact.
 
 ---
 
