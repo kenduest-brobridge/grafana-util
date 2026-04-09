@@ -1,327 +1,27 @@
 //! Task-first `grafana-util change` workflow helpers.
 
-use std::env;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use super::{
-    attach_lineage, attach_trace_id, build_alert_sync_specs, build_sync_plan_document,
+    attach_lineage, attach_trace_id, build_sync_plan_document,
     cli::{
         execute_sync_bundle_preflight, execute_sync_plan, execute_sync_promotion_preflight,
         load_sync_live_array, render_and_emit_sync_command_output,
     },
-    load_alerting_bundle_section, load_dashboard_bundle_sections,
-    load_dashboard_provisioning_bundle_sections, load_datasource_provisioning_records,
-    load_json_array_file, load_json_value, normalize_datasource_bundle_item, render_sync_plan_text,
-    ChangeCheckArgs, ChangeInspectArgs, ChangePreviewArgs, ChangeStagedInputsArgs, Result,
-    SyncBundlePreflightArgs, SyncCommandOutput, SyncOutputFormat, SyncPlanArgs,
-    SyncPromotionPreflightArgs,
+    input_normalization::{
+        build_overview_args, build_status_args, load_preview_desired_specs,
+        normalize_change_dashboard_inputs, select_preview_dashboard_sources,
+    },
+    workspace_discovery::{
+        attach_discovery_to_overview, attach_discovery_to_status, attach_discovery_to_sync_output,
+        discover_change_staged_inputs, emit_discovery_provenance, DiscoveredChangeInputs,
+    },
+    ChangeCheckArgs, ChangeInspectArgs, ChangePreviewArgs, Result, SyncBundlePreflightArgs,
+    SyncCommandOutput, SyncOutputFormat, SyncPlanArgs, SyncPromotionPreflightArgs,
 };
 use crate::common::{emit_plain_output, message};
-use crate::dashboard::{
-    resolve_inspect_export_import_dir, DashboardImportInputFormat, DashboardSourceKind,
-    InspectExportInputType, TempInspectDir,
-};
-use crate::overview::{
-    execute_overview, render_overview_text, OverviewArgs, OverviewDocument, OverviewOutputFormat,
-};
-use crate::project_status_command::{
-    execute_project_status_staged, render_project_status_text, ProjectStatusOutputFormat,
-    ProjectStatusStagedArgs,
-};
-use crate::project_status::ProjectStatus;
-use serde_json::{Map, Value};
-
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct DiscoveredChangeInputs {
-    pub workspace_root: Option<PathBuf>,
-    pub dashboard_export_dir: Option<PathBuf>,
-    pub dashboard_provisioning_dir: Option<PathBuf>,
-    pub datasource_provisioning_file: Option<PathBuf>,
-    pub alert_export_dir: Option<PathBuf>,
-    pub desired_file: Option<PathBuf>,
-    pub source_bundle: Option<PathBuf>,
-    pub target_inventory: Option<PathBuf>,
-    pub availability_file: Option<PathBuf>,
-    pub mapping_file: Option<PathBuf>,
-    pub reviewed_plan_file: Option<PathBuf>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum DashboardWorkspaceLayout {
-    RawExport,
-    ProvisioningExport,
-    GitSyncRawExport,
-    GitSyncProvisioningExport,
-}
-
-impl DashboardWorkspaceLayout {
-    fn source_kind(self) -> DashboardSourceKind {
-        match self {
-            Self::RawExport => DashboardSourceKind::RawExport,
-            Self::ProvisioningExport => DashboardSourceKind::ProvisioningExport,
-            Self::GitSyncRawExport => DashboardSourceKind::RawExport,
-            Self::GitSyncProvisioningExport => DashboardSourceKind::ProvisioningExport,
-        }
-    }
-
-    fn workspace_subdir(self) -> &'static str {
-        match self {
-            Self::RawExport => "raw",
-            Self::ProvisioningExport => "provisioning",
-            Self::GitSyncRawExport => "raw",
-            Self::GitSyncProvisioningExport => "provisioning",
-        }
-    }
-
-    fn wrapper_subdir(self) -> Option<&'static str> {
-        match self {
-            Self::GitSyncRawExport | Self::GitSyncProvisioningExport => Some("git-sync"),
-            _ => None,
-        }
-    }
-}
-
-fn dashboard_workspace_layout_from_path(base_dir: &Path) -> Option<DashboardWorkspaceLayout> {
-    let name = base_dir.file_name().and_then(|name| name.to_str())?;
-    let parent_name = base_dir
-        .parent()
-        .and_then(Path::file_name)
-        .and_then(|name| name.to_str());
-    let grandparent_name = base_dir
-        .parent()
-        .and_then(Path::parent)
-        .and_then(Path::file_name)
-        .and_then(|name| name.to_str());
-    match (grandparent_name, parent_name, name) {
-        (Some("dashboards"), Some("git-sync"), "raw") => {
-            Some(DashboardWorkspaceLayout::GitSyncRawExport)
-        }
-        (Some("dashboards"), Some("git-sync"), "provisioning") => {
-            Some(DashboardWorkspaceLayout::GitSyncProvisioningExport)
-        }
-        (Some("dashboards"), _, "raw") => Some(DashboardWorkspaceLayout::RawExport),
-        (Some("dashboards"), _, "provisioning") => {
-            Some(DashboardWorkspaceLayout::ProvisioningExport)
-        }
-        _ => None,
-    }
-}
-
-fn resolve_dashboard_workspace_dir(
-    dashboards_dir: &Path,
-    layout: DashboardWorkspaceLayout,
-) -> Option<PathBuf> {
-    let direct_candidate = dashboards_dir.join(layout.workspace_subdir());
-    if direct_candidate.is_dir() {
-        return Some(direct_candidate);
-    }
-    let Some(wrapper_subdir) = layout.wrapper_subdir() else {
-        return None;
-    };
-    let wrapped_candidate = dashboards_dir
-        .join(wrapper_subdir)
-        .join(layout.workspace_subdir());
-    wrapped_candidate.is_dir().then_some(wrapped_candidate)
-}
-
-fn dashboard_workspace_roots(base_dir: &Path) -> (Option<PathBuf>, Option<PathBuf>) {
-    let dashboards_dir =
-        if base_dir.file_name().and_then(|name| name.to_str()) == Some("dashboards") {
-            base_dir.to_path_buf()
-        } else {
-            base_dir.join("dashboards")
-        };
-    let raw_dir =
-        resolve_dashboard_workspace_dir(&dashboards_dir, DashboardWorkspaceLayout::RawExport)
-            .or_else(|| {
-                resolve_dashboard_workspace_dir(
-                    &dashboards_dir,
-                    DashboardWorkspaceLayout::GitSyncRawExport,
-                )
-            });
-    let provisioning_dir = resolve_dashboard_workspace_dir(
-        &dashboards_dir,
-        DashboardWorkspaceLayout::ProvisioningExport,
-    )
-    .or_else(|| {
-        resolve_dashboard_workspace_dir(
-            &dashboards_dir,
-            DashboardWorkspaceLayout::GitSyncProvisioningExport,
-        )
-    });
-    (raw_dir, provisioning_dir)
-}
-
-fn current_repo_dir() -> Result<PathBuf> {
-    env::current_dir()
-        .map_err(|error| message(format!("Could not resolve current directory: {error}")))
-}
-
-fn first_existing(paths: &[PathBuf]) -> Option<PathBuf> {
-    paths.iter().find(|path| path.exists()).cloned()
-}
-
-fn discover_from_workspace_root(base_dir: &Path) -> DiscoveredChangeInputs {
-    let datasources_dir = base_dir.join("datasources");
-    let alerts_dir = base_dir.join("alerts");
-    let (dashboard_export_dir, dashboard_provisioning_dir) = dashboard_workspace_roots(base_dir);
-    DiscoveredChangeInputs {
-        workspace_root: Some(base_dir.to_path_buf()),
-        dashboard_export_dir,
-        dashboard_provisioning_dir,
-        datasource_provisioning_file: first_existing(&[datasources_dir
-            .join("provisioning")
-            .join("datasources.yaml")]),
-        alert_export_dir: first_existing(&[alerts_dir.join("raw"), alerts_dir]),
-        desired_file: first_existing(&[base_dir.join("desired.json")]),
-        source_bundle: first_existing(&[
-            base_dir.join("sync-source-bundle.json"),
-            base_dir.join("bundle.json"),
-        ]),
-        target_inventory: first_existing(&[
-            base_dir.join("target-inventory.json"),
-            base_dir.join("target.json"),
-        ]),
-        availability_file: first_existing(&[base_dir.join("availability.json")]),
-        mapping_file: first_existing(&[
-            base_dir.join("promotion-map.json"),
-            base_dir.join("promotion-mapping.json"),
-            base_dir.join("mapping.json"),
-        ]),
-        reviewed_plan_file: first_existing(&[
-            base_dir.join("sync-plan-reviewed.json"),
-            base_dir.join("reviewed-plan.json"),
-            base_dir.join("sync-plan.json"),
-        ]),
-    }
-}
-
-fn infer_workspace_root(base_dir: &Path) -> PathBuf {
-    let Some(name) = base_dir.file_name().and_then(|name| name.to_str()) else {
-        return base_dir.to_path_buf();
-    };
-    if base_dir.is_file() {
-        if name == "datasources.yaml" {
-            let parent = base_dir.parent();
-            let grandparent = parent.and_then(Path::parent);
-            let great_grandparent = grandparent.and_then(Path::parent);
-            if parent.and_then(Path::file_name).and_then(|v| v.to_str()) == Some("provisioning")
-                && grandparent
-                    .and_then(Path::file_name)
-                    .and_then(|v| v.to_str())
-                    == Some("datasources")
-            {
-                return great_grandparent.unwrap_or(base_dir).to_path_buf();
-            }
-        }
-        return base_dir.parent().unwrap_or(base_dir).to_path_buf();
-    }
-    let parent = base_dir.parent();
-    let grandparent = parent.and_then(Path::parent);
-    let great_grandparent = grandparent.and_then(Path::parent);
-    match name {
-        "dashboards" | "alerts" | "datasources" => parent.unwrap_or(base_dir).to_path_buf(),
-        "git-sync" => {
-            if parent.and_then(Path::file_name).and_then(|v| v.to_str()) == Some("dashboards") {
-                grandparent.unwrap_or(base_dir).to_path_buf()
-            } else {
-                base_dir.to_path_buf()
-            }
-        }
-        "raw" | "provisioning" => grandparent.unwrap_or(base_dir).to_path_buf(),
-        _ if matches!(
-            parent.and_then(Path::file_name).and_then(|v| v.to_str()),
-            Some("git-sync")
-        ) && matches!(
-            grandparent
-                .and_then(Path::file_name)
-                .and_then(|v| v.to_str()),
-            Some("dashboards")
-        ) =>
-        {
-            great_grandparent.unwrap_or(base_dir).to_path_buf()
-        }
-        _ => base_dir.to_path_buf(),
-    }
-}
-
-fn overlay_direct_workspace_input(discovered: &mut DiscoveredChangeInputs, base_dir: &Path) {
-    let Some(name) = base_dir.file_name().and_then(|name| name.to_str()) else {
-        return;
-    };
-    if base_dir.is_file() {
-        if name == "desired.json" {
-            discovered.desired_file = Some(base_dir.to_path_buf());
-        } else if matches!(name, "sync-source-bundle.json" | "bundle.json") {
-            discovered.source_bundle = Some(base_dir.to_path_buf());
-        } else if matches!(name, "target-inventory.json" | "target.json") {
-            discovered.target_inventory = Some(base_dir.to_path_buf());
-        } else if name == "availability.json" {
-            discovered.availability_file = Some(base_dir.to_path_buf());
-        } else if matches!(
-            name,
-            "promotion-map.json" | "promotion-mapping.json" | "mapping.json"
-        ) {
-            discovered.mapping_file = Some(base_dir.to_path_buf());
-        } else if matches!(
-            name,
-            "sync-plan-reviewed.json" | "reviewed-plan.json" | "sync-plan.json"
-        ) {
-            discovered.reviewed_plan_file = Some(base_dir.to_path_buf());
-        } else if name == "datasources.yaml" {
-            let parent = base_dir.parent();
-            let grandparent = parent.and_then(Path::parent);
-            if parent.and_then(Path::file_name).and_then(|v| v.to_str()) == Some("provisioning")
-                && grandparent
-                    .and_then(Path::file_name)
-                    .and_then(|v| v.to_str())
-                    == Some("datasources")
-            {
-                discovered.datasource_provisioning_file = Some(base_dir.to_path_buf());
-            }
-        }
-        return;
-    }
-    if let Some(layout) = dashboard_workspace_layout_from_path(base_dir) {
-        match layout.source_kind() {
-            DashboardSourceKind::RawExport => {
-                discovered.dashboard_export_dir = Some(base_dir.to_path_buf())
-            }
-            DashboardSourceKind::ProvisioningExport => {
-                discovered.dashboard_provisioning_dir = Some(base_dir.to_path_buf())
-            }
-            DashboardSourceKind::LiveGrafana | DashboardSourceKind::HistoryArtifact => {}
-        }
-        return;
-    }
-    let parent_name = base_dir
-        .parent()
-        .and_then(Path::file_name)
-        .and_then(|name| name.to_str());
-    match (parent_name, name) {
-        (_, "dashboards") => {
-            let (dashboard_export_dir, dashboard_provisioning_dir) =
-                dashboard_workspace_roots(base_dir);
-            discovered.dashboard_export_dir = dashboard_export_dir;
-            discovered.dashboard_provisioning_dir = dashboard_provisioning_dir;
-        }
-        (Some("alerts"), "raw") => {
-            discovered.alert_export_dir = Some(base_dir.to_path_buf());
-        }
-        (Some("datasources"), "provisioning") => {
-            discovered.datasource_provisioning_file =
-                first_existing(&[base_dir.join("datasources.yaml")]);
-        }
-        (_, "alerts") => {
-            discovered.alert_export_dir = first_existing(&[base_dir.join("raw"), base_dir.into()]);
-        }
-        (_, "datasources") => {
-            discovered.datasource_provisioning_file =
-                first_existing(&[base_dir.join("provisioning").join("datasources.yaml")]);
-        }
-        _ => {}
-    }
-}
+use crate::overview::{execute_overview, render_overview_text};
+use crate::project_status_command::{execute_project_status_staged, render_project_status_text};
 
 fn ensure_any_discovered(discovered: &DiscoveredChangeInputs) -> Result<()> {
     if discovered == &DiscoveredChangeInputs::default() {
@@ -332,331 +32,16 @@ fn ensure_any_discovered(discovered: &DiscoveredChangeInputs) -> Result<()> {
     Ok(())
 }
 
-fn render_discovery_provenance(discovered: &DiscoveredChangeInputs) -> Option<String> {
-    let document = build_discovery_document(discovered)?;
-    let workspace_root = document.get("workspaceRoot").and_then(Value::as_str)?;
-    let sources = document
-        .get("inputs")
-        .and_then(Value::as_object)?
-        .iter()
-        .map(|(key, value)| {
-            let label = match key.as_str() {
-                "dashboardExportDir" => "dashboard-export",
-                "dashboardProvisioningDir" => "dashboard-provisioning",
-                "datasourceProvisioningFile" => "datasource-provisioning",
-                "alertExportDir" => "alert-export",
-                "desiredFile" => "desired-file",
-                "sourceBundle" => "source-bundle",
-                "targetInventory" => "target-inventory",
-                "availabilityFile" => "availability-file",
-                "mappingFile" => "mapping-file",
-                "reviewedPlanFile" => "reviewed-plan-file",
-                _ => key.as_str(),
-            };
-            format!("{label}={}", value.as_str().unwrap_or_default())
-        })
-        .collect::<Vec<_>>();
-    Some(format!(
-        "Discovered change workspace root {} from {}.",
-        workspace_root,
-        sources.join(", ")
-    ))
-}
-
-fn render_discovery_summary(discovered: &DiscoveredChangeInputs) -> Option<String> {
-    let workspace_root = discovered.workspace_root.as_ref()?.display().to_string();
-    let mut sources = Vec::new();
-    if discovered.dashboard_export_dir.is_some() {
-        sources.push("dashboard-export");
-    }
-    if discovered.dashboard_provisioning_dir.is_some() {
-        sources.push("dashboard-provisioning");
-    }
-    if discovered.datasource_provisioning_file.is_some() {
-        sources.push("datasource-provisioning");
-    }
-    if discovered.alert_export_dir.is_some() {
-        sources.push("alert-export");
-    }
-    if discovered.desired_file.is_some() {
-        sources.push("desired-file");
-    }
-    if discovered.source_bundle.is_some() {
-        sources.push("source-bundle");
-    }
-    if discovered.target_inventory.is_some() {
-        sources.push("target-inventory");
-    }
-    if discovered.availability_file.is_some() {
-        sources.push("availability-file");
-    }
-    if discovered.mapping_file.is_some() {
-        sources.push("mapping-file");
-    }
-    if discovered.reviewed_plan_file.is_some() {
-        sources.push("reviewed-plan-file");
-    }
-    if sources.is_empty() {
-        return None;
-    }
-    Some(format!(
-        "Discovery: workspace-root={} sources={}",
-        workspace_root,
-        sources.join(", ")
-    ))
-}
-
-fn build_discovery_document(discovered: &DiscoveredChangeInputs) -> Option<Value> {
-    let workspace_root = discovered.workspace_root.as_ref()?;
-    let mut inputs = Map::new();
-    for (key, path) in [
-        ("dashboardExportDir", discovered.dashboard_export_dir.as_ref()),
-        (
-            "dashboardProvisioningDir",
-            discovered.dashboard_provisioning_dir.as_ref(),
-        ),
-        (
-            "datasourceProvisioningFile",
-            discovered.datasource_provisioning_file.as_ref(),
-        ),
-        ("alertExportDir", discovered.alert_export_dir.as_ref()),
-        ("desiredFile", discovered.desired_file.as_ref()),
-        ("sourceBundle", discovered.source_bundle.as_ref()),
-        ("targetInventory", discovered.target_inventory.as_ref()),
-        ("availabilityFile", discovered.availability_file.as_ref()),
-        ("mappingFile", discovered.mapping_file.as_ref()),
-        ("reviewedPlanFile", discovered.reviewed_plan_file.as_ref()),
-    ] {
-        if let Some(path) = path {
-            inputs.insert(key.to_string(), Value::String(path.display().to_string()));
-        }
-    }
-    Some(Value::Object(Map::from_iter([
-        (
-            "workspaceRoot".to_string(),
-            Value::String(workspace_root.display().to_string()),
-        ),
-        ("inputCount".to_string(), Value::from(inputs.len() as i64)),
-        ("inputs".to_string(), Value::Object(inputs)),
-    ])))
-}
-
-fn attach_discovery_to_overview(
-    mut document: OverviewDocument,
-    discovered: &DiscoveredChangeInputs,
-) -> OverviewDocument {
-    document.discovery = build_discovery_document(discovered);
-    document
-}
-
-fn attach_discovery_to_status(
-    mut status: ProjectStatus,
-    discovered: &DiscoveredChangeInputs,
-) -> ProjectStatus {
-    status.discovery = build_discovery_document(discovered);
-    status
-}
-
-fn attach_discovery_to_sync_output(
-    mut output: SyncCommandOutput,
-    discovered: &DiscoveredChangeInputs,
-) -> SyncCommandOutput {
-    if let Some(discovery) = build_discovery_document(discovered) {
-        if let Some(object) = output.document.as_object_mut() {
-            object.insert("discovery".to_string(), discovery.clone());
-        }
-        if let Some(summary) = render_discovery_summary(discovered) {
-            output.text_lines.insert(0, summary);
-        }
-    }
-    output
-}
-
-fn emit_discovery_provenance(discovered: &DiscoveredChangeInputs, output_format: SyncOutputFormat) {
-    if let Some(note) = render_discovery_provenance(discovered) {
-        if !matches!(output_format, SyncOutputFormat::Text) {
-            eprintln!("{note}");
-        }
-    }
-}
-
-pub(crate) fn discover_change_staged_inputs(
-    base_dir: Option<&Path>,
-) -> Result<DiscoveredChangeInputs> {
-    let base_dir = match base_dir {
-        Some(path) => path.to_path_buf(),
-        None => current_repo_dir()?,
-    };
-    let workspace_root = infer_workspace_root(&base_dir);
-    let mut discovered = discover_from_workspace_root(&workspace_root);
-    overlay_direct_workspace_input(&mut discovered, &base_dir);
-    Ok(discovered)
-}
-
-fn build_overview_args(
-    args: &ChangeInspectArgs,
-    discovered: &DiscoveredChangeInputs,
-) -> OverviewArgs {
-    OverviewArgs {
-        dashboard_export_dir: args
-            .inputs
-            .dashboard_export_dir
-            .clone()
-            .or(discovered.dashboard_export_dir.clone()),
-        dashboard_provisioning_dir: args
-            .inputs
-            .dashboard_provisioning_dir
-            .clone()
-            .or(discovered.dashboard_provisioning_dir.clone()),
-        datasource_export_dir: None,
-        datasource_provisioning_file: args
-            .inputs
-            .datasource_provisioning_file
-            .clone()
-            .or(discovered.datasource_provisioning_file.clone()),
-        access_user_export_dir: None,
-        access_team_export_dir: None,
-        access_org_export_dir: None,
-        access_service_account_export_dir: None,
-        desired_file: args
-            .inputs
-            .desired_file
-            .clone()
-            .or(discovered.desired_file.clone()),
-        source_bundle: args
-            .inputs
-            .source_bundle
-            .clone()
-            .or(discovered.source_bundle.clone()),
-        target_inventory: discovered.target_inventory.clone(),
-        alert_export_dir: args
-            .inputs
-            .alert_export_dir
-            .clone()
-            .or(discovered.alert_export_dir.clone()),
-        availability_file: discovered.availability_file.clone(),
-        mapping_file: discovered.mapping_file.clone(),
-        output_format: match args.output.output_format {
-            super::SyncOutputFormat::Text => OverviewOutputFormat::Text,
-            super::SyncOutputFormat::Json => OverviewOutputFormat::Json,
-        },
-    }
-}
-
-struct NormalizedChangeDashboardInputs {
-    _temp_dir: Option<TempInspectDir>,
-    dashboard_export_dir: Option<PathBuf>,
-    dashboard_provisioning_dir: Option<PathBuf>,
-}
-
-fn normalize_change_dashboard_inputs(
-    dashboard_export_dir: Option<&PathBuf>,
-    dashboard_provisioning_dir: Option<&PathBuf>,
-) -> Result<NormalizedChangeDashboardInputs> {
-    let mut temp_dir = None;
-    let mut normalized_export_dir = None;
-    let mut normalized_provisioning_dir = None;
-
-    if let Some(path) = dashboard_export_dir {
-        let holder = TempInspectDir::new("change-dashboard-export-input")?;
-        let resolved = resolve_inspect_export_import_dir(
-            &holder.path,
-            path,
-            DashboardImportInputFormat::Raw,
-            Some(InspectExportInputType::Raw),
-            false,
-        )?;
-        normalized_export_dir = Some(resolved.input_dir);
-        temp_dir = Some(holder);
-    } else if let Some(path) = dashboard_provisioning_dir {
-        let holder = TempInspectDir::new("change-dashboard-provisioning-input")?;
-        let resolved = resolve_inspect_export_import_dir(
-            &holder.path,
-            path,
-            DashboardImportInputFormat::Provisioning,
-            None,
-            false,
-        )?;
-        normalized_provisioning_dir = Some(resolved.input_dir);
-        temp_dir = Some(holder);
-    }
-
-    Ok(NormalizedChangeDashboardInputs {
-        _temp_dir: temp_dir,
-        dashboard_export_dir: normalized_export_dir,
-        dashboard_provisioning_dir: normalized_provisioning_dir,
-    })
-}
-
-fn build_status_args(
-    args: &ChangeCheckArgs,
-    discovered: &DiscoveredChangeInputs,
-) -> ProjectStatusStagedArgs {
-    ProjectStatusStagedArgs {
-        dashboard_export_dir: args
-            .inputs
-            .dashboard_export_dir
-            .clone()
-            .or(discovered.dashboard_export_dir.clone()),
-        dashboard_provisioning_dir: args
-            .inputs
-            .dashboard_provisioning_dir
-            .clone()
-            .or(discovered.dashboard_provisioning_dir.clone()),
-        datasource_export_dir: None,
-        datasource_provisioning_file: args
-            .inputs
-            .datasource_provisioning_file
-            .clone()
-            .or(discovered.datasource_provisioning_file.clone()),
-        access_user_export_dir: None,
-        access_team_export_dir: None,
-        access_org_export_dir: None,
-        access_service_account_export_dir: None,
-        desired_file: args
-            .inputs
-            .desired_file
-            .clone()
-            .or(discovered.desired_file.clone()),
-        source_bundle: args
-            .inputs
-            .source_bundle
-            .clone()
-            .or(discovered.source_bundle.clone()),
-        target_inventory: args
-            .target_inventory
-            .clone()
-            .or(discovered.target_inventory.clone()),
-        alert_export_dir: args
-            .inputs
-            .alert_export_dir
-            .clone()
-            .or(discovered.alert_export_dir.clone()),
-        availability_file: args
-            .availability_file
-            .clone()
-            .or(discovered.availability_file.clone()),
-        mapping_file: args
-            .mapping_file
-            .clone()
-            .or(discovered.mapping_file.clone()),
-        output_format: match args.output.output_format {
-            super::SyncOutputFormat::Text => ProjectStatusOutputFormat::Text,
-            super::SyncOutputFormat::Json => ProjectStatusOutputFormat::Json,
-        },
-    }
-}
-
 fn emit_preview_output(
     output: SyncCommandOutput,
     output_file: Option<&PathBuf>,
     also_stdout: bool,
-    format: super::SyncOutputFormat,
+    format: SyncOutputFormat,
 ) -> Result<()> {
     if let Some(path) = output_file {
         let persisted = match format {
-            super::SyncOutputFormat::Json => serde_json::to_string_pretty(&output.document)?,
-            super::SyncOutputFormat::Text => output.text_lines.join("\n"),
+            SyncOutputFormat::Json => serde_json::to_string_pretty(&output.document)?,
+            SyncOutputFormat::Text => output.text_lines.join("\n"),
         };
         emit_plain_output(&persisted, Some(path.as_path()), false)?;
     }
@@ -666,133 +51,21 @@ fn emit_preview_output(
     Ok(())
 }
 
-fn select_preview_dashboard_sources<'a>(
-    inputs: &'a ChangeStagedInputsArgs,
-    discovered: &'a DiscoveredChangeInputs,
-) -> Result<(Option<&'a PathBuf>, Option<&'a PathBuf>)> {
-    if inputs.dashboard_export_dir.is_some() && inputs.dashboard_provisioning_dir.is_some() {
-        return Err(message(
-            "Change preview accepts only one dashboard source: --dashboard-export-dir or --dashboard-provisioning-dir.",
-        ));
-    }
-    if let Some(path) = inputs.dashboard_export_dir.as_ref() {
-        return Ok((Some(path), None));
-    }
-    if let Some(path) = inputs.dashboard_provisioning_dir.as_ref() {
-        return Ok((None, Some(path)));
-    }
-    if let Some(path) = discovered.dashboard_export_dir.as_ref() {
-        return Ok((Some(path), None));
-    }
-    Ok((None, discovered.dashboard_provisioning_dir.as_ref()))
-}
-
-fn build_change_bundle_specs(
-    inputs: &ChangeStagedInputsArgs,
-    discovered: &DiscoveredChangeInputs,
-) -> Result<Option<Vec<Value>>> {
-    let (dashboard_export_dir, dashboard_provisioning_dir) =
-        select_preview_dashboard_sources(inputs, discovered)?;
-    let alert_export_dir = inputs
-        .alert_export_dir
-        .as_ref()
-        .or(discovered.alert_export_dir.as_ref());
-    let datasource_provisioning_file = inputs
-        .datasource_provisioning_file
-        .as_ref()
-        .or(discovered.datasource_provisioning_file.as_ref());
-
-    if dashboard_export_dir.is_none()
-        && dashboard_provisioning_dir.is_none()
-        && alert_export_dir.is_none()
-        && datasource_provisioning_file.is_none()
-    {
-        return Ok(None);
-    }
-
-    let mut dashboards = Vec::new();
-    let mut datasources = Vec::new();
-    let mut folders = Vec::new();
-    if let Some(output_dir) = dashboard_export_dir {
-        let (dashboard_items, dashboard_datasources, folder_items, _dashboard_metadata) =
-            load_dashboard_bundle_sections(
-                output_dir,
-                output_dir,
-                datasource_provisioning_file.map(PathBuf::as_path),
-            )?;
-        dashboards = dashboard_items;
-        datasources.extend(dashboard_datasources);
-        folders = folder_items;
-    } else if let Some(provisioning_dir) = dashboard_provisioning_dir {
-        let (dashboard_items, dashboard_datasources, folder_items, _dashboard_metadata) =
-            load_dashboard_provisioning_bundle_sections(
-                provisioning_dir,
-                datasource_provisioning_file.map(PathBuf::as_path),
-            )?;
-        dashboards = dashboard_items;
-        datasources.extend(dashboard_datasources);
-        folders = folder_items;
-    }
-    if let Some(path) = datasource_provisioning_file {
-        datasources = load_datasource_provisioning_records(path)?
-            .into_iter()
-            .map(|item| normalize_datasource_bundle_item(&item))
-            .collect::<Result<Vec<_>>>()?;
-    }
-    let alerting = match alert_export_dir {
-        Some(path) => load_alerting_bundle_section(path)?,
-        None => Value::Object(Map::new()),
-    };
-    let alerts = build_alert_sync_specs(&alerting)?;
-
-    let mut desired_specs = Vec::new();
-    desired_specs.extend(dashboards);
-    desired_specs.extend(datasources);
-    desired_specs.extend(folders);
-    desired_specs.extend(alerts);
-    Ok(Some(desired_specs))
-}
-
-fn load_preview_desired_specs(
-    inputs: &ChangeStagedInputsArgs,
-    discovered: &DiscoveredChangeInputs,
-) -> Result<Vec<Value>> {
-    if let Some(path) = inputs
-        .desired_file
-        .as_ref()
-        .or(discovered.desired_file.as_ref())
-    {
-        return load_json_array_file(path, "Change desired input");
-    }
-    if let Some(path) = inputs
-        .source_bundle
-        .as_ref()
-        .or(discovered.source_bundle.as_ref())
-    {
-        let source_bundle = load_json_value(path, "Change source bundle input")?;
-        let bundle = source_bundle
-            .as_object()
-            .ok_or_else(|| message("Change source bundle input must be a JSON object."))?;
-        let mut desired_specs = Vec::new();
-        for key in ["dashboards", "datasources", "folders", "alerts"] {
-            if let Some(items) = bundle.get(key).and_then(Value::as_array) {
-                desired_specs.extend(items.iter().cloned());
-            }
-        }
-        return Ok(desired_specs);
-    }
-    if let Some(specs) = build_change_bundle_specs(inputs, discovered)? {
-        return Ok(specs);
-    }
-    Err(message(
-        "Change preview could not find a staged desired change file, source bundle, or staged export/provisioning inputs.",
-    ))
-}
-
 pub(crate) fn run_sync_inspect(args: ChangeInspectArgs) -> Result<()> {
     let discovered = discover_change_staged_inputs(Some(args.inputs.workspace.as_path()))?;
     emit_discovery_provenance(&discovered, args.output.output_format);
-    let mut merged = build_overview_args(&args, &discovered);
+    let mut merged = build_overview_args(
+        &args,
+        discovered.dashboard_export_dir.as_ref(),
+        discovered.dashboard_provisioning_dir.as_ref(),
+        discovered.datasource_provisioning_file.as_ref(),
+        discovered.desired_file.as_ref(),
+        discovered.source_bundle.as_ref(),
+        discovered.target_inventory.as_ref(),
+        discovered.alert_export_dir.as_ref(),
+        discovered.availability_file.as_ref(),
+        discovered.mapping_file.as_ref(),
+    );
     let normalized_dashboard_inputs = normalize_change_dashboard_inputs(
         merged.dashboard_export_dir.as_ref(),
         merged.dashboard_provisioning_dir.as_ref(),
@@ -827,7 +100,18 @@ pub(crate) fn run_sync_inspect(args: ChangeInspectArgs) -> Result<()> {
 pub(crate) fn run_sync_check(args: ChangeCheckArgs) -> Result<()> {
     let discovered = discover_change_staged_inputs(Some(args.inputs.workspace.as_path()))?;
     emit_discovery_provenance(&discovered, args.output.output_format);
-    let mut merged = build_status_args(&args, &discovered);
+    let mut merged = build_status_args(
+        &args,
+        discovered.dashboard_export_dir.as_ref(),
+        discovered.dashboard_provisioning_dir.as_ref(),
+        discovered.datasource_provisioning_file.as_ref(),
+        discovered.desired_file.as_ref(),
+        discovered.source_bundle.as_ref(),
+        discovered.target_inventory.as_ref(),
+        discovered.alert_export_dir.as_ref(),
+        discovered.availability_file.as_ref(),
+        discovered.mapping_file.as_ref(),
+    );
     let normalized_dashboard_inputs = normalize_change_dashboard_inputs(
         merged.dashboard_export_dir.as_ref(),
         merged.dashboard_provisioning_dir.as_ref(),
@@ -865,7 +149,11 @@ pub(crate) fn run_sync_preview(args: ChangePreviewArgs) -> Result<()> {
     let discovered = discover_change_staged_inputs(Some(args.inputs.workspace.as_path()))?;
     emit_discovery_provenance(&discovered, args.output.output_format);
     let (selected_dashboard_export_dir, selected_dashboard_provisioning_dir) =
-        select_preview_dashboard_sources(&args.inputs, &discovered)?;
+        select_preview_dashboard_sources(
+            &args.inputs,
+            discovered.dashboard_export_dir.as_ref(),
+            discovered.dashboard_provisioning_dir.as_ref(),
+        )?;
     let normalized_dashboard_inputs = normalize_change_dashboard_inputs(
         selected_dashboard_export_dir,
         selected_dashboard_provisioning_dir,
@@ -952,7 +240,15 @@ pub(crate) fn run_sync_preview(args: ChangePreviewArgs) -> Result<()> {
                 .clone(),
             ..discovered.clone()
         };
-        let desired = load_preview_desired_specs(&args.inputs, &preview_discovered)?;
+        let desired = load_preview_desired_specs(
+            &args.inputs,
+            preview_discovered.desired_file.as_ref(),
+            preview_discovered.source_bundle.as_ref(),
+            preview_discovered.dashboard_export_dir.as_ref(),
+            preview_discovered.dashboard_provisioning_dir.as_ref(),
+            preview_discovered.alert_export_dir.as_ref(),
+            preview_discovered.datasource_provisioning_file.as_ref(),
+        )?;
         let live = load_sync_live_array(
             args.fetch_live,
             &args.common,
@@ -971,7 +267,7 @@ pub(crate) fn run_sync_preview(args: ChangePreviewArgs) -> Result<()> {
             None,
         )?;
         SyncCommandOutput {
-            text_lines: render_sync_plan_text(&document)?,
+            text_lines: super::render_sync_plan_text(&document)?,
             document,
         }
     };
@@ -986,6 +282,8 @@ pub(crate) fn run_sync_preview(args: ChangePreviewArgs) -> Result<()> {
 #[cfg(test)]
 mod guided_rust_tests {
     use super::*;
+    use crate::sync::workspace_discovery::render_discovery_provenance;
+    use crate::sync::ChangeStagedInputsArgs;
     use tempfile::tempdir;
 
     fn staged_inputs(
@@ -1005,48 +303,20 @@ mod guided_rust_tests {
     }
 
     #[test]
-    fn select_preview_dashboard_sources_prefers_explicit_export_input() {
-        let inputs = staged_inputs(Some("./dashboards/raw"), None);
-        let discovered = DiscoveredChangeInputs {
-            workspace_root: Some(PathBuf::from(".")),
-            dashboard_provisioning_dir: Some(PathBuf::from("./dashboards/provisioning")),
-            ..DiscoveredChangeInputs::default()
-        };
-
-        let (output_dir, provisioning_dir) =
-            select_preview_dashboard_sources(&inputs, &discovered).unwrap();
-
-        assert_eq!(output_dir, Some(&PathBuf::from("./dashboards/raw")));
-        assert!(provisioning_dir.is_none());
-    }
-
-    #[test]
     fn select_preview_dashboard_sources_prefers_discovered_export_over_provisioning() {
         let inputs = staged_inputs(None, None);
-        let discovered = DiscoveredChangeInputs {
-            workspace_root: Some(PathBuf::from(".")),
-            dashboard_export_dir: Some(PathBuf::from("./dashboards/raw")),
-            dashboard_provisioning_dir: Some(PathBuf::from("./dashboards/provisioning")),
-            ..DiscoveredChangeInputs::default()
-        };
+        let discovered_export = PathBuf::from("./dashboards/raw");
+        let discovered_provisioning = PathBuf::from("./dashboards/provisioning");
 
-        let (output_dir, provisioning_dir) =
-            select_preview_dashboard_sources(&inputs, &discovered).unwrap();
+        let (output_dir, provisioning_dir) = select_preview_dashboard_sources(
+            &inputs,
+            Some(&discovered_export),
+            Some(&discovered_provisioning),
+        )
+        .unwrap();
 
-        assert_eq!(output_dir, Some(&PathBuf::from("./dashboards/raw")));
+        assert_eq!(output_dir, Some(&discovered_export));
         assert!(provisioning_dir.is_none());
-    }
-
-    #[test]
-    fn select_preview_dashboard_sources_rejects_two_explicit_dashboard_inputs() {
-        let inputs = staged_inputs(Some("./dashboards/raw"), Some("./dashboards/provisioning"));
-        let error = select_preview_dashboard_sources(&inputs, &DiscoveredChangeInputs::default())
-            .unwrap_err();
-
-        assert_eq!(
-            error.to_string(),
-            "Change preview accepts only one dashboard source: --dashboard-export-dir or --dashboard-provisioning-dir."
-        );
     }
 
     #[test]
@@ -1144,67 +414,6 @@ mod guided_rust_tests {
     }
 
     #[test]
-    fn discover_change_staged_inputs_accepts_dashboards_git_sync_raw_dir_as_workspace() {
-        let temp = tempdir().unwrap();
-        let workspace = temp.path();
-        std::fs::create_dir_all(workspace.join("dashboards/git-sync/raw")).unwrap();
-        std::fs::create_dir_all(workspace.join("dashboards/git-sync/provisioning")).unwrap();
-
-        let discovered =
-            discover_change_staged_inputs(Some(&workspace.join("dashboards/git-sync/raw")))
-                .unwrap();
-
-        assert_eq!(
-            discovered.dashboard_export_dir,
-            Some(workspace.join("dashboards/git-sync/raw"))
-        );
-        assert_eq!(
-            discovered.dashboard_provisioning_dir,
-            Some(workspace.join("dashboards/git-sync/provisioning"))
-        );
-    }
-
-    #[test]
-    fn discover_change_staged_inputs_accepts_mixed_git_sync_repo_workspace() {
-        let temp = tempdir().unwrap();
-        let workspace = temp.path();
-        std::fs::create_dir_all(workspace.join("dashboards/git-sync/raw")).unwrap();
-        std::fs::create_dir_all(workspace.join("dashboards/git-sync/provisioning")).unwrap();
-        std::fs::create_dir_all(workspace.join("alerts/raw")).unwrap();
-        std::fs::create_dir_all(workspace.join("datasources/provisioning")).unwrap();
-        std::fs::write(
-            workspace.join("datasources/provisioning/datasources.yaml"),
-            "apiVersion: 1\n",
-        )
-        .unwrap();
-
-        let discovered = discover_change_staged_inputs(Some(workspace)).unwrap();
-
-        assert_eq!(
-            discovered.dashboard_export_dir,
-            Some(workspace.join("dashboards/git-sync/raw"))
-        );
-        assert_eq!(
-            discovered.dashboard_provisioning_dir,
-            Some(workspace.join("dashboards/git-sync/provisioning"))
-        );
-        assert_eq!(
-            discovered.alert_export_dir,
-            Some(workspace.join("alerts/raw"))
-        );
-        assert_eq!(
-            discovered.datasource_provisioning_file,
-            Some(workspace.join("datasources/provisioning/datasources.yaml"))
-        );
-        assert_eq!(discovered.workspace_root, Some(workspace.to_path_buf()));
-        let provenance = render_discovery_provenance(&discovered).unwrap();
-        assert!(provenance.contains("dashboard-export="));
-        assert!(provenance.contains("dashboard-provisioning="));
-        assert!(provenance.contains("alert-export="));
-        assert!(provenance.contains("datasource-provisioning="));
-    }
-
-    #[test]
     fn discover_change_staged_inputs_accepts_datasource_provisioning_tree_as_workspace() {
         let temp = tempdir().unwrap();
         let workspace = temp.path();
@@ -1232,89 +441,25 @@ mod guided_rust_tests {
     }
 
     #[test]
-    fn render_discovery_provenance_reports_workspace_root_and_sources() {
-        let discovered = DiscoveredChangeInputs {
-            workspace_root: Some(PathBuf::from("/tmp/grafana-oac-repo")),
-            dashboard_export_dir: Some(PathBuf::from(
-                "/tmp/grafana-oac-repo/dashboards/git-sync/raw",
-            )),
-            dashboard_provisioning_dir: Some(PathBuf::from(
-                "/tmp/grafana-oac-repo/dashboards/git-sync/provisioning",
-            )),
-            datasource_provisioning_file: Some(PathBuf::from(
-                "/tmp/grafana-oac-repo/datasources/provisioning/datasources.yaml",
-            )),
-            alert_export_dir: Some(PathBuf::from("/tmp/grafana-oac-repo/alerts/raw")),
-            ..DiscoveredChangeInputs::default()
-        };
+    fn discovered_mixed_workspace_provenance_still_reports_all_sources() {
+        let temp = tempdir().unwrap();
+        let workspace = temp.path();
+        std::fs::create_dir_all(workspace.join("dashboards/git-sync/raw")).unwrap();
+        std::fs::create_dir_all(workspace.join("dashboards/git-sync/provisioning")).unwrap();
+        std::fs::create_dir_all(workspace.join("alerts/raw")).unwrap();
+        std::fs::create_dir_all(workspace.join("datasources/provisioning")).unwrap();
+        std::fs::write(
+            workspace.join("datasources/provisioning/datasources.yaml"),
+            "apiVersion: 1\n",
+        )
+        .unwrap();
 
+        let discovered = discover_change_staged_inputs(Some(workspace)).unwrap();
         let provenance = render_discovery_provenance(&discovered).unwrap();
-        assert!(provenance.contains("Discovered change workspace root /tmp/grafana-oac-repo"));
-        assert!(
-            provenance.contains("dashboard-export=/tmp/grafana-oac-repo/dashboards/git-sync/raw")
-        );
-        assert!(provenance.contains(
-            "dashboard-provisioning=/tmp/grafana-oac-repo/dashboards/git-sync/provisioning"
-        ));
-        assert!(provenance.contains("datasource-provisioning=/tmp/grafana-oac-repo/datasources/provisioning/datasources.yaml"));
-        assert!(provenance.contains("alert-export=/tmp/grafana-oac-repo/alerts/raw"));
-    }
 
-    #[test]
-    fn build_discovery_document_reports_workspace_root_and_inputs() {
-        let discovered = DiscoveredChangeInputs {
-            workspace_root: Some(PathBuf::from("/tmp/grafana-oac-repo")),
-            dashboard_export_dir: Some(PathBuf::from(
-                "/tmp/grafana-oac-repo/dashboards/git-sync/raw",
-            )),
-            alert_export_dir: Some(PathBuf::from("/tmp/grafana-oac-repo/alerts/raw")),
-            datasource_provisioning_file: Some(PathBuf::from(
-                "/tmp/grafana-oac-repo/datasources/provisioning/datasources.yaml",
-            )),
-            ..DiscoveredChangeInputs::default()
-        };
-
-        let document = build_discovery_document(&discovered).unwrap();
-        assert_eq!(
-            document["workspaceRoot"],
-            Value::String("/tmp/grafana-oac-repo".to_string())
-        );
-        assert_eq!(document["inputCount"], Value::from(3));
-        assert_eq!(
-            document["inputs"]["dashboardExportDir"],
-            Value::String("/tmp/grafana-oac-repo/dashboards/git-sync/raw".to_string())
-        );
-        assert_eq!(
-            document["inputs"]["alertExportDir"],
-            Value::String("/tmp/grafana-oac-repo/alerts/raw".to_string())
-        );
-    }
-
-    #[test]
-    fn attach_discovery_to_sync_output_adds_top_level_document_and_text_summary() {
-        let discovered = DiscoveredChangeInputs {
-            workspace_root: Some(PathBuf::from("/tmp/grafana-oac-repo")),
-            dashboard_export_dir: Some(PathBuf::from(
-                "/tmp/grafana-oac-repo/dashboards/git-sync/raw",
-            )),
-            ..DiscoveredChangeInputs::default()
-        };
-        let output = SyncCommandOutput {
-            document: serde_json::json!({
-                "kind": "grafana-utils-sync-plan",
-                "schemaVersion": 1
-            }),
-            text_lines: vec!["SYNC PLAN".to_string()],
-        };
-
-        let attached = attach_discovery_to_sync_output(output, &discovered);
-        assert_eq!(
-            attached.document["discovery"]["workspaceRoot"],
-            Value::String("/tmp/grafana-oac-repo".to_string())
-        );
-        assert_eq!(
-            attached.text_lines.first(),
-            Some(&"Discovery: workspace-root=/tmp/grafana-oac-repo sources=dashboard-export".to_string())
-        );
+        assert!(provenance.contains("dashboard-export="));
+        assert!(provenance.contains("dashboard-provisioning="));
+        assert!(provenance.contains("alert-export="));
+        assert!(provenance.contains("datasource-provisioning="));
     }
 }

@@ -25,6 +25,7 @@ mod bundle_inputs;
 pub mod bundle_preflight;
 pub mod cli;
 mod guided;
+mod input_normalization;
 mod json;
 pub mod live;
 mod live_project_status;
@@ -39,6 +40,7 @@ pub mod review_tui;
 mod staged_documents;
 mod summary_builder;
 pub mod workbench;
+mod workspace_discovery;
 
 use self::audit::{
     build_sync_audit_document, build_sync_lock_document, build_sync_lock_document_from_lock,
@@ -48,9 +50,7 @@ use self::audit_tui::run_sync_audit_interactive;
 use self::bundle_preflight::{
     build_sync_bundle_preflight_document, render_sync_bundle_preflight_text,
 };
-pub(crate) use self::guided::{
-    discover_change_staged_inputs, run_sync_check, run_sync_inspect, run_sync_preview,
-};
+pub(crate) use self::guided::{run_sync_check, run_sync_inspect, run_sync_preview};
 use self::preflight::{build_sync_preflight_document, render_sync_preflight_text};
 pub(crate) use self::project_status::{build_sync_domain_status, SyncDomainStatusInputs};
 pub(crate) use self::project_status_promotion::build_promotion_domain_status;
@@ -61,6 +61,7 @@ use self::workbench::{
     build_sync_apply_intent_document, build_sync_plan_document, build_sync_source_bundle_document,
     build_sync_summary_document, render_sync_source_bundle_text,
 };
+pub(crate) use self::workspace_discovery::discover_change_staged_inputs;
 use crate::alert_sync::assess_alert_sync_specs;
 use crate::common::{message, Result};
 use crate::dashboard::CommonCliArgs;
