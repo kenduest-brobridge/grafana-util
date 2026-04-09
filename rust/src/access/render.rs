@@ -3,7 +3,7 @@
 use serde_json::{Map, Value};
 use std::collections::BTreeSet;
 
-use crate::common::{render_json_value, string_field};
+use crate::common::{render_json_value, requested_columns_include_all, string_field};
 pub(crate) use crate::tabular_output::render_yaml;
 
 use super::Scope;
@@ -449,7 +449,7 @@ fn resolve_list_columns<'a>(
     if requested.is_empty() {
         return supported.to_vec();
     }
-    if requested.iter().any(|value| value == "all") {
+    if requested_columns_include_all(requested) {
         return supported.to_vec();
     }
     requested

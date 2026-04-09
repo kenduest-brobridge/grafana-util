@@ -175,6 +175,16 @@ pub fn emit_plain_output(
     Ok(())
 }
 
+/// Print one supported column id per line for discoverability-style CLI flags.
+pub fn print_supported_columns(columns: &[&str]) {
+    println!("{}", columns.join("\n"));
+}
+
+/// Return whether a selected column list asked for the full human-readable set.
+pub fn requested_columns_include_all(columns: &[String]) -> bool {
+    columns.iter().any(|value| value == "all")
+}
+
 fn colorize_json_pretty(rendered: &str) -> String {
     let mut colored = String::with_capacity(rendered.len() + 32);
     let mut chars = rendered.chars().peekable();

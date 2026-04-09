@@ -2,7 +2,7 @@
 use serde_json::{Map, Value};
 use std::fmt::Write as _;
 
-use crate::common::string_field;
+use crate::common::{requested_columns_include_all, string_field};
 
 use super::{
     DEFAULT_DASHBOARD_TITLE, DEFAULT_FOLDER_TITLE, DEFAULT_FOLDER_UID, DEFAULT_UNKNOWN_UID,
@@ -127,7 +127,7 @@ fn resolve_dashboard_list_columns(
     summaries: &[Map<String, Value>],
     output_columns: &[String],
 ) -> Vec<DashboardListColumn> {
-    if output_columns.iter().any(|column| column == "all") {
+    if requested_columns_include_all(output_columns) {
         return vec![
             DashboardListColumn::Uid,
             DashboardListColumn::Name,

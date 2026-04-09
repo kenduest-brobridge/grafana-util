@@ -5,7 +5,7 @@ use serde_json::Value;
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
-use crate::common::{render_json_value, Result};
+use crate::common::{render_json_value, requested_columns_include_all, Result};
 
 use super::{FolderInventoryStatus, FolderInventoryStatusKind, DEFAULT_UNKNOWN_UID};
 
@@ -311,7 +311,7 @@ fn resolve_dashboard_import_table_columns(
     selected_columns: Option<&[String]>,
 ) -> Vec<(usize, &'static str)> {
     if let Some(columns) = selected_columns {
-        if columns.iter().any(|column| column == "all") {
+        if requested_columns_include_all(columns) {
             return vec![
                 (0usize, "UID"),
                 (1usize, "DESTINATION"),
