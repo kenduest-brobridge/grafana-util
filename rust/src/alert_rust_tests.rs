@@ -1835,6 +1835,8 @@ fn runtime_managed_policy_helpers_produce_idempotent_documents() {
         preview["kind"],
         json!("grafana-util-alert-managed-policy-preview")
     );
+    assert_eq!(preview["reviewRequired"], json!(true));
+    assert_eq!(preview["reviewed"], json!(false));
     assert_eq!(preview["preview"]["action"], json!("created"));
 
     let first_apply = super::alert_runtime_support::apply_managed_policy_subtree_edit_document(

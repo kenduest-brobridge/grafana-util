@@ -361,6 +361,8 @@ pub fn build_managed_policy_edit_preview_document(
     };
     Ok(json!({
         "kind": "grafana-util-alert-managed-policy-preview",
+        "reviewRequired": true,
+        "reviewed": false,
         "routeName": route_name,
         "preview": build_managed_policy_route_preview(current_policy, route_name, desired_route)?,
     }))
