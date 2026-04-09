@@ -71,37 +71,15 @@ pub(crate) fn build_user_import_dry_run_document(
     skipped: usize,
     source: &Path,
 ) -> Value {
-    Value::Object(Map::from_iter(vec![
-        (
-            "rows".to_string(),
-            Value::Array(rows.iter().cloned().map(Value::Object).collect()),
-        ),
-        (
-            "summary".to_string(),
-            Value::Object(Map::from_iter(vec![
-                (
-                    "processed".to_string(),
-                    Value::Number((processed as i64).into()),
-                ),
-                (
-                    "created".to_string(),
-                    Value::Number((created as i64).into()),
-                ),
-                (
-                    "updated".to_string(),
-                    Value::Number((updated as i64).into()),
-                ),
-                (
-                    "skipped".to_string(),
-                    Value::Number((skipped as i64).into()),
-                ),
-                (
-                    "source".to_string(),
-                    Value::String(source.to_string_lossy().to_string()),
-                ),
-            ])),
-        ),
-    ]))
+    crate::access::build_access_import_dry_run_document(
+        "grafana-util-access-user-import-dry-run",
+        rows,
+        processed,
+        created,
+        updated,
+        skipped,
+        source,
+    )
 }
 
 fn validate_user_import_dry_run_output(args: &UserImportArgs) -> Result<()> {

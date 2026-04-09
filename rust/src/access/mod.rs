@@ -4,9 +4,13 @@
 //! used by the CLI and tests.
 use reqwest::Method;
 use serde_json::{Map, Value};
+use std::path::Path;
 
-use crate::common::{message, value_as_object, Result};
+use crate::common::{message, tool_version, value_as_object, Result};
 use crate::http::JsonHttpClient;
+
+pub(crate) const ACCESS_IMPORT_DRY_RUN_KIND: &str = "grafana-utils-access-import-dry-run";
+pub(crate) const ACCESS_IMPORT_DRY_RUN_SCHEMA_VERSION: i64 = 1;
 
 // Internal modules stay split by resource kind so user/org/team/service-account
 // workflows can evolve independently while this file keeps only domain routing.
@@ -140,6 +144,66 @@ where
             .collect(),
         _ => Err(message(list_error_message)),
     }
+}
+
+pub(crate) fn build_access_import_dry_run_document(
+    resource_kind: &str,
+    rows: &[Map<String, Value>],
+    processed: usize,
+    created: usize,
+    updated: usize,
+    skipped: usize,
+    source: &Path,
+) -> Value {
+    Value::Object(Map::from_iter(vec![
+        (
+            "kind".to_string(),
+            Value::String(ACCESS_IMPORT_DRY_RUN_KIND.to_string()),
+        ),
+        (
+            "schemaVersion".to_string(),
+            Value::Number(ACCESS_IMPORT_DRY_RUN_SCHEMA_VERSION.into()),
+        ),
+        (
+            "toolVersion".to_string(),
+            Value::String(tool_version().to_string()),
+        ),
+        ("reviewRequired".to_string(), Value::Bool(true)),
+        ("reviewed".to_string(), Value::Bool(false)),
+        (
+            "resourceKind".to_string(),
+            Value::String(resource_kind.to_string()),
+        ),
+        (
+            "rows".to_string(),
+            Value::Array(rows.iter().cloned().map(Value::Object).collect()),
+        ),
+        (
+            "summary".to_string(),
+            Value::Object(Map::from_iter(vec![
+                (
+                    "processed".to_string(),
+                    Value::Number((processed as i64).into()),
+                ),
+                (
+                    "created".to_string(),
+                    Value::Number((created as i64).into()),
+                ),
+                (
+                    "updated".to_string(),
+                    Value::Number((updated as i64).into()),
+                ),
+                (
+                    "skipped".to_string(),
+                    Value::Number((skipped as i64).into()),
+                ),
+                (
+                    "source".to_string(),
+                    Value::String(source.to_string_lossy().to_string()),
+                ),
+            ])),
+        ),
+    ]))
 }
 
 /// Access execution path for callers that already own a configured `JsonHttpClient`.

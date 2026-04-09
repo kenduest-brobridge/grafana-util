@@ -200,6 +200,25 @@ pub(super) fn build_service_account_import_dry_run_rows(
         .collect()
 }
 
+pub(super) fn build_service_account_import_dry_run_document(
+    rows: &[Map<String, Value>],
+    processed: usize,
+    created: usize,
+    updated: usize,
+    skipped: usize,
+    source: &Path,
+) -> Value {
+    crate::access::build_access_import_dry_run_document(
+        "grafana-util-access-service-account-import-dry-run",
+        rows,
+        processed,
+        created,
+        updated,
+        skipped,
+        source,
+    )
+}
+
 pub(super) fn validate_service_account_import_dry_run_output(
     args: &ServiceAccountImportArgs,
 ) -> Result<()> {
@@ -308,8 +327,9 @@ where
 
 #[cfg(test)]
 mod service_account_json_tests {
-    use super::render_single_object_json;
+    use super::{build_service_account_import_dry_run_document, render_single_object_json};
     use serde_json::{Map, Value};
+    use std::path::Path;
 
     #[test]
     fn render_single_object_json_returns_object_payload() {
@@ -321,5 +341,54 @@ mod service_account_json_tests {
         assert!(rendered.trim_start().starts_with('{'));
         assert!(!rendered.trim_start().starts_with('['));
         assert!(rendered.contains("\"name\": \"svc\""));
+    }
+
+    #[test]
+    fn service_account_import_dry_run_document_reports_review_envelope() {
+        let rows = vec![Map::from_iter(vec![
+            ("index".to_string(), Value::String("1".to_string())),
+            ("identity".to_string(), Value::String("svc".to_string())),
+            ("action".to_string(), Value::String("created".to_string())),
+            (
+                "detail".to_string(),
+                Value::String("would create service-account".to_string()),
+            ),
+        ])];
+
+        let document = build_service_account_import_dry_run_document(
+            &rows,
+            1,
+            1,
+            0,
+            0,
+            Path::new("/tmp/access-service-accounts"),
+        );
+
+        assert_eq!(
+            document.get("kind"),
+            Some(&Value::String(
+                "grafana-utils-access-import-dry-run".to_string()
+            ))
+        );
+        assert_eq!(
+            document.get("resourceKind"),
+            Some(&Value::String(
+                "grafana-util-access-service-account-import-dry-run".to_string()
+            ))
+        );
+        assert_eq!(document.get("schemaVersion"), Some(&Value::Number(1.into())));
+        assert_eq!(document.get("reviewRequired"), Some(&Value::Bool(true)));
+        assert_eq!(document.get("reviewed"), Some(&Value::Bool(false)));
+        assert!(document.get("toolVersion").is_some());
+        assert_eq!(
+            document
+                .get("summary")
+                .and_then(|summary| summary.get("source")),
+            Some(&Value::String("/tmp/access-service-accounts".to_string()))
+        );
+        assert_eq!(
+            document.get("rows").and_then(Value::as_array).map(Vec::len),
+            Some(1)
+        );
     }
 }
