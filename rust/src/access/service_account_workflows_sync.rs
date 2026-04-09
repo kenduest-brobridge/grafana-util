@@ -24,9 +24,10 @@ use super::super::{
 };
 use super::service_account_workflows_support::{
     assert_not_overwrite, build_record_diff_fields, build_service_account_diff_map,
-    build_service_account_export_metadata, build_service_account_import_dry_run_row,
-    build_service_account_import_dry_run_rows, list_all_service_accounts_with_request,
-    load_service_account_import_records, validate_service_account_import_dry_run_output,
+    build_service_account_export_metadata, build_service_account_import_dry_run_document,
+    build_service_account_import_dry_run_row, build_service_account_import_dry_run_rows,
+    list_all_service_accounts_with_request, load_service_account_import_records,
+    validate_service_account_import_dry_run_output,
 };
 
 /// Purpose: implementation note.
@@ -287,37 +288,14 @@ where
         if args.json {
             print!(
                 "{}",
-                render_json_value(&Value::Object(Map::from_iter(vec![
-                    (
-                        "rows".to_string(),
-                        Value::Array(dry_run_rows.iter().cloned().map(Value::Object).collect()),
-                    ),
-                    (
-                        "summary".to_string(),
-                        Value::Object(Map::from_iter(vec![
-                            (
-                                "processed".to_string(),
-                                Value::Number((processed as i64).into())
-                            ),
-                            (
-                                "created".to_string(),
-                                Value::Number((created as i64).into())
-                            ),
-                            (
-                                "updated".to_string(),
-                                Value::Number((updated as i64).into())
-                            ),
-                            (
-                                "skipped".to_string(),
-                                Value::Number((skipped as i64).into())
-                            ),
-                            (
-                                "source".to_string(),
-                                Value::String(args.input_dir.to_string_lossy().to_string()),
-                            ),
-                        ])),
-                    ),
-                ])))?
+                render_json_value(&build_service_account_import_dry_run_document(
+                    &dry_run_rows,
+                    processed,
+                    created,
+                    updated,
+                    skipped,
+                    &args.input_dir,
+                ))?
             );
             return Ok(0);
         }

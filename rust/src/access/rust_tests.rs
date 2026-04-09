@@ -684,7 +684,7 @@ fn team_import_dry_run_document_reports_summary_and_rows() {
     );
     assert_eq!(
         document.get("resourceKind"),
-        Some(&json!("grafana-util-access-team-import-dry-run"))
+        Some(&json!("team"))
     );
     assert_eq!(document.get("schemaVersion"), Some(&json!(1)));
     assert_eq!(document.get("toolVersion"), Some(&json!(TOOL_VERSION)));
@@ -759,7 +759,7 @@ fn user_import_dry_run_document_reports_summary_and_rows() {
     );
     assert_eq!(
         document.get("resourceKind"),
-        Some(&json!("grafana-util-access-user-import-dry-run"))
+        Some(&json!("user"))
     );
     assert_eq!(document.get("schemaVersion"), Some(&json!(1)));
     assert_eq!(document.get("toolVersion"), Some(&json!(TOOL_VERSION)));

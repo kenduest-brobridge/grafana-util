@@ -192,7 +192,7 @@ pub(crate) fn build_team_import_dry_run_document(
     source: &Path,
 ) -> Value {
     crate::access::build_access_import_dry_run_document(
-        "grafana-util-access-team-import-dry-run",
+        "team",
         rows,
         processed,
         created,

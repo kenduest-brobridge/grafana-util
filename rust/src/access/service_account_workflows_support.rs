@@ -209,7 +209,7 @@ pub(super) fn build_service_account_import_dry_run_document(
     source: &Path,
 ) -> Value {
     crate::access::build_access_import_dry_run_document(
-        "grafana-util-access-service-account-import-dry-run",
+        "service-account",
         rows,
         processed,
         created,
@@ -372,9 +372,7 @@ mod service_account_json_tests {
         );
         assert_eq!(
             document.get("resourceKind"),
-            Some(&Value::String(
-                "grafana-util-access-service-account-import-dry-run".to_string()
-            ))
+            Some(&Value::String("service-account".to_string()))
         );
         assert_eq!(document.get("schemaVersion"), Some(&Value::Number(1.into())));
         assert_eq!(document.get("reviewRequired"), Some(&Value::Bool(true)));
