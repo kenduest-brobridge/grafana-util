@@ -51,6 +51,40 @@ fn emit_preview_output(
     Ok(())
 }
 
+fn normalize_change_dashboard_args(
+    dashboard_export_dir: &mut Option<PathBuf>,
+    dashboard_provisioning_dir: &mut Option<PathBuf>,
+) -> Result<()> {
+    let normalized = normalize_change_dashboard_inputs(
+        dashboard_export_dir.as_ref(),
+        dashboard_provisioning_dir.as_ref(),
+    )?;
+    *dashboard_export_dir = normalized.dashboard_export_dir;
+    *dashboard_provisioning_dir = normalized.dashboard_provisioning_dir;
+    Ok(())
+}
+
+fn ensure_change_inputs_present(
+    discovered: &DiscoveredChangeInputs,
+    dashboard_export_dir: Option<&PathBuf>,
+    dashboard_provisioning_dir: Option<&PathBuf>,
+    datasource_provisioning_file: Option<&PathBuf>,
+    alert_export_dir: Option<&PathBuf>,
+    desired_file: Option<&PathBuf>,
+    source_bundle: Option<&PathBuf>,
+) -> Result<()> {
+    if dashboard_export_dir.is_none()
+        && dashboard_provisioning_dir.is_none()
+        && datasource_provisioning_file.is_none()
+        && alert_export_dir.is_none()
+        && desired_file.is_none()
+        && source_bundle.is_none()
+    {
+        ensure_any_discovered(discovered)?;
+    }
+    Ok(())
+}
+
 pub(crate) fn run_sync_inspect(args: ChangeInspectArgs) -> Result<()> {
     let discovered = discover_change_staged_inputs(Some(args.inputs.workspace.as_path()))?;
     emit_discovery_provenance(&discovered, args.output.output_format);
@@ -66,21 +100,19 @@ pub(crate) fn run_sync_inspect(args: ChangeInspectArgs) -> Result<()> {
         discovered.availability_file.as_ref(),
         discovered.mapping_file.as_ref(),
     );
-    let normalized_dashboard_inputs = normalize_change_dashboard_inputs(
+    normalize_change_dashboard_args(
+        &mut merged.dashboard_export_dir,
+        &mut merged.dashboard_provisioning_dir,
+    )?;
+    ensure_change_inputs_present(
+        &discovered,
         merged.dashboard_export_dir.as_ref(),
         merged.dashboard_provisioning_dir.as_ref(),
+        merged.datasource_provisioning_file.as_ref(),
+        merged.alert_export_dir.as_ref(),
+        merged.desired_file.as_ref(),
+        merged.source_bundle.as_ref(),
     )?;
-    merged.dashboard_export_dir = normalized_dashboard_inputs.dashboard_export_dir;
-    merged.dashboard_provisioning_dir = normalized_dashboard_inputs.dashboard_provisioning_dir;
-    if merged.dashboard_export_dir.is_none()
-        && merged.dashboard_provisioning_dir.is_none()
-        && merged.datasource_provisioning_file.is_none()
-        && merged.alert_export_dir.is_none()
-        && merged.desired_file.is_none()
-        && merged.source_bundle.is_none()
-    {
-        ensure_any_discovered(&discovered)?;
-    }
     match args.output.output_format {
         SyncOutputFormat::Json => {
             let document = attach_discovery_to_overview(execute_overview(&merged)?, &discovered);
@@ -112,21 +144,19 @@ pub(crate) fn run_sync_check(args: ChangeCheckArgs) -> Result<()> {
         discovered.availability_file.as_ref(),
         discovered.mapping_file.as_ref(),
     );
-    let normalized_dashboard_inputs = normalize_change_dashboard_inputs(
+    normalize_change_dashboard_args(
+        &mut merged.dashboard_export_dir,
+        &mut merged.dashboard_provisioning_dir,
+    )?;
+    ensure_change_inputs_present(
+        &discovered,
         merged.dashboard_export_dir.as_ref(),
         merged.dashboard_provisioning_dir.as_ref(),
+        merged.datasource_provisioning_file.as_ref(),
+        merged.alert_export_dir.as_ref(),
+        merged.desired_file.as_ref(),
+        merged.source_bundle.as_ref(),
     )?;
-    merged.dashboard_export_dir = normalized_dashboard_inputs.dashboard_export_dir;
-    merged.dashboard_provisioning_dir = normalized_dashboard_inputs.dashboard_provisioning_dir;
-    if merged.dashboard_export_dir.is_none()
-        && merged.dashboard_provisioning_dir.is_none()
-        && merged.datasource_provisioning_file.is_none()
-        && merged.alert_export_dir.is_none()
-        && merged.desired_file.is_none()
-        && merged.source_bundle.is_none()
-    {
-        ensure_any_discovered(&discovered)?;
-    }
     match args.output.output_format {
         SyncOutputFormat::Json => {
             let status =
@@ -280,7 +310,7 @@ pub(crate) fn run_sync_preview(args: ChangePreviewArgs) -> Result<()> {
 }
 
 #[cfg(test)]
-mod guided_rust_tests {
+mod task_first_rust_tests {
     use super::*;
     use crate::sync::workspace_discovery::render_discovery_provenance;
     use crate::sync::ChangeStagedInputsArgs;

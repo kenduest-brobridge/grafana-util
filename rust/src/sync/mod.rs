@@ -25,7 +25,7 @@ mod bundle_inputs;
 pub mod bundle_preflight;
 pub mod cli;
 mod discovery_model;
-mod guided;
+mod task_first;
 mod input_normalization;
 mod json;
 pub mod live;
@@ -54,7 +54,7 @@ use self::bundle_preflight::{
 pub(crate) use self::discovery_model::{
     render_discovery_summary_from_value, ChangeDiscoveryDocument, DiscoveryInputKind,
 };
-pub(crate) use self::guided::{run_sync_check, run_sync_inspect, run_sync_preview};
+pub(crate) use self::task_first::{run_sync_check, run_sync_inspect, run_sync_preview};
 use self::preflight::{build_sync_preflight_document, render_sync_preflight_text};
 pub(crate) use self::project_status::{build_sync_domain_status, SyncDomainStatusInputs};
 pub(crate) use self::project_status_promotion::build_promotion_domain_status;
