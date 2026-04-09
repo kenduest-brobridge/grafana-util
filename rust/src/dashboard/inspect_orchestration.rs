@@ -18,7 +18,7 @@ use super::super::cli_defs::{
 };
 use super::super::files::{
     load_export_metadata, resolve_dashboard_export_root, resolve_dashboard_import_source,
-    DashboardRepoLayoutKind, DashboardSourceKind,
+    DashboardSourceKind,
 };
 #[cfg(feature = "tui")]
 use super::super::inspect_governance::build_export_inspection_governance_document;
@@ -27,6 +27,7 @@ use super::super::inspect_report::{
     refresh_filtered_query_report_summary, report_format_supports_columns,
     resolve_report_column_ids_for_format, ExportInspectionQueryReport,
 };
+use super::super::source_loader::resolve_dashboard_workspace_variant_dir;
 #[cfg(feature = "tui")]
 use super::super::inspect_workbench::run_inspect_workbench;
 #[cfg(feature = "tui")]
@@ -37,6 +38,7 @@ use super::inspect_output::{
 };
 use super::inspect_query_report::build_export_inspection_query_report_for_variant;
 use super::write_inspect_output;
+
 #[cfg(feature = "tui")]
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 #[cfg(feature = "tui")]
@@ -56,28 +58,6 @@ pub(crate) struct ResolvedInspectExportInput {
 
 fn dashboard_source_kind_for_variant(expected_variant: &str) -> Option<DashboardSourceKind> {
     DashboardSourceKind::from_expected_variant(expected_variant)
-}
-
-fn future_git_sync_variant_root(
-    input_dir: &Path,
-    variant_dir_name: &'static str,
-) -> Option<PathBuf> {
-    DashboardRepoLayoutKind::from_root_dir(input_dir)
-        .and_then(|layout| layout.resolve_dashboard_variant_root(input_dir, variant_dir_name))
-        .or_else(|| {
-            let dashboards_dir =
-                if input_dir.file_name().and_then(|name| name.to_str()) == Some("dashboards") {
-                    input_dir.to_path_buf()
-                } else {
-                    input_dir.join("dashboards")
-                };
-            let direct_candidate = dashboards_dir.join(variant_dir_name);
-            if direct_candidate.is_dir() {
-                return Some(direct_candidate);
-            }
-            let wrapped_candidate = dashboards_dir.join("git-sync").join(variant_dir_name);
-            wrapped_candidate.is_dir().then_some(wrapped_candidate)
-        })
 }
 
 fn map_output_format_to_report(
@@ -185,8 +165,9 @@ fn resolve_raw_inspect_input(
     let metadata = load_export_metadata(&input_dir, None)?;
     let raw_dirs = discover_org_variant_export_dirs(&input_dir, RAW_EXPORT_SUBDIR)?;
     let source_dirs = discover_org_variant_export_dirs(&input_dir, PROMPT_EXPORT_SUBDIR)?;
-    let future_raw_root = future_git_sync_variant_root(&input_dir, RAW_EXPORT_SUBDIR);
-    let future_source_root = future_git_sync_variant_root(&input_dir, PROMPT_EXPORT_SUBDIR);
+    let future_raw_root = resolve_dashboard_workspace_variant_dir(&input_dir, RAW_EXPORT_SUBDIR);
+    let future_source_root =
+        resolve_dashboard_workspace_variant_dir(&input_dir, PROMPT_EXPORT_SUBDIR);
     let is_dashboard_root = resolve_dashboard_export_root(&input_dir)?
         .map(|resolved| resolved.manifest.scope_kind.is_root())
         .unwrap_or(false);

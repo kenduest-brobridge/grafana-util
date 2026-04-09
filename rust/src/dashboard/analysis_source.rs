@@ -9,13 +9,13 @@ use super::cli_defs::{CommonCliArgs, DashboardImportInputFormat, InspectExportIn
 use super::export::export_dashboards_with_org_clients;
 use super::inspect::{
     build_export_inspection_query_report_for_variant, build_export_inspection_summary_for_variant,
-    resolve_inspect_export_import_dir,
 };
 use super::inspect_governance::build_export_inspection_governance_document;
 use super::inspect_live::{
     build_analysis_live_export_args, prepare_live_analysis_import_dir, TempInspectDir,
 };
 use super::inspect_report::build_export_inspection_query_report_document;
+use super::source_loader::load_dashboard_source;
 use super::ExportArgs;
 
 #[derive(Debug)]
@@ -47,14 +47,7 @@ fn build_artifacts_from_export_dir(
     input_format: DashboardImportInputFormat,
     input_type: Option<InspectExportInputType>,
 ) -> Result<DashboardAnalysisArtifacts> {
-    let temp_dir = TempInspectDir::new("dashboard-analysis-source")?;
-    let resolved = resolve_inspect_export_import_dir(
-        &temp_dir.path,
-        input_dir,
-        input_format,
-        input_type,
-        false,
-    )?;
+    let resolved = load_dashboard_source(input_dir, input_format, input_type, false)?;
     let summary = build_export_inspection_summary_for_variant(
         &resolved.input_dir,
         resolved.expected_variant,

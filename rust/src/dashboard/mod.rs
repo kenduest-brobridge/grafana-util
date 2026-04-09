@@ -89,6 +89,7 @@ mod raw_to_prompt_resolution;
 mod raw_to_prompt_types;
 mod screenshot;
 mod serve;
+mod source_loader;
 mod topology;
 mod topology_tui;
 mod validate;
@@ -128,6 +129,7 @@ pub(crate) use authoring::{
     render_dashboard_review_yaml, review_dashboard_file as build_dashboard_review,
 };
 pub(crate) use cli_defs::{build_api_client, build_http_client_for_org_from_api};
+pub(crate) use cli_defs::materialize_dashboard_common_auth;
 pub use cli_defs::{
     build_auth_context, build_http_client, build_http_client_for_org, normalize_dashboard_cli_args,
     parse_cli_from, AnalyzeArgs, BrowseArgs, CloneLiveArgs, CommonCliArgs, DashboardAuthContext,
@@ -142,7 +144,6 @@ pub use cli_defs::{
     ScreenshotOutputFormat, ScreenshotTheme, ServeArgs, SimpleOutputFormat, TopologyArgs,
     TopologyOutputFormat, ValidateExportArgs, ValidationOutputFormat,
 };
-pub(crate) use cli_defs::materialize_dashboard_common_auth;
 pub use export::{build_export_variant_dirs, build_output_path, export_dashboards_with_client};
 pub use help::{
     maybe_render_dashboard_help_full_from_os_args,
