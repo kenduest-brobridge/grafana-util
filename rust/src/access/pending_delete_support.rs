@@ -8,9 +8,9 @@ use dialoguer::{
 };
 use std::io::{self, IsTerminal};
 
-use crate::common::{message, Result};
 #[cfg(test)]
 use crate::common::render_json_value;
+use crate::common::{message, Result};
 #[cfg(test)]
 use serde_json::{Map, Value};
 
@@ -180,7 +180,11 @@ pub(crate) fn truncate_prompt_text(text: &str, width: usize) -> String {
 }
 
 pub(crate) fn format_prompt_column(text: &str, width: usize) -> String {
-    format!("{:<width$}", truncate_prompt_text(text, width), width = width)
+    format!(
+        "{:<width$}",
+        truncate_prompt_text(text, width),
+        width = width
+    )
 }
 
 pub(crate) fn format_prompt_row(columns: &[(&str, usize)], trailer: &str) -> String {
@@ -339,7 +343,10 @@ mod pending_delete_support_tests {
 
     #[test]
     fn truncate_prompt_text_adds_ascii_ellipsis() {
-        assert_eq!(truncate_prompt_text("browse-editor@example.com", 12), "browse-ed...");
+        assert_eq!(
+            truncate_prompt_text("browse-editor@example.com", 12),
+            "browse-ed..."
+        );
         assert_eq!(truncate_prompt_text("short", 12), "short");
     }
 

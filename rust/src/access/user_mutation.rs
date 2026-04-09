@@ -9,9 +9,8 @@ use std::path::Path;
 use crate::common::{message, string_field, Result};
 
 use super::super::pending_delete::{
-    format_prompt_row,
-    print_delete_confirmation_summary, prompt_confirm_delete, prompt_select_index,
-    prompt_select_indexes, validate_delete_prompt,
+    format_prompt_row, print_delete_confirmation_summary, prompt_confirm_delete,
+    prompt_select_index, prompt_select_indexes, validate_delete_prompt,
 };
 use super::render::{
     bool_label, map_get_text, normalize_org_role, render_objects_json, scalar_text,
@@ -314,7 +313,9 @@ where
         Scope::Global => iter_global_users_with_request(&mut request_json, DEFAULT_PAGE_SIZE)?,
     };
     if candidates.is_empty() {
-        return Err(message("User delete --prompt did not find any matching users."));
+        return Err(message(
+            "User delete --prompt did not find any matching users.",
+        ));
     }
     let labels = candidates
         .iter()
@@ -508,40 +509,41 @@ where
     if scope == Scope::Global {
         validate_basic_auth_only(&auth_mode, "User delete with --scope global")?;
     }
-    let base_users = if args.prompt && args.user_id.is_none() && args.login.is_none() && args.email.is_none() {
-        let Some(users) = prompt_resolve_user_delete_targets(&mut request_json, &scope)? else {
-            println!("Cancelled user delete.");
-            return Ok(0);
+    let base_users =
+        if args.prompt && args.user_id.is_none() && args.login.is_none() && args.email.is_none() {
+            let Some(users) = prompt_resolve_user_delete_targets(&mut request_json, &scope)? else {
+                println!("Cancelled user delete.");
+                return Ok(0);
+            };
+            users
+        } else {
+            vec![match scope {
+                Scope::Org => {
+                    if let Some(user_id) = &args.user_id {
+                        lookup_org_user_by_identity(&mut request_json, user_id)?
+                    } else {
+                        lookup_org_user_by_identity(
+                            &mut request_json,
+                            args.login
+                                .as_deref()
+                                .or(args.email.as_deref())
+                                .unwrap_or(""),
+                        )?
+                    }
+                }
+                Scope::Global => {
+                    if let Some(user_id) = &args.user_id {
+                        get_user_with_request(&mut request_json, user_id)?
+                    } else {
+                        lookup_global_user_by_identity(
+                            &mut request_json,
+                            args.login.as_deref(),
+                            args.email.as_deref(),
+                        )?
+                    }
+                }
+            }]
         };
-        users
-    } else {
-        vec![match scope {
-        Scope::Org => {
-            if let Some(user_id) = &args.user_id {
-                lookup_org_user_by_identity(&mut request_json, user_id)?
-            } else {
-                lookup_org_user_by_identity(
-                    &mut request_json,
-                    args.login
-                        .as_deref()
-                        .or(args.email.as_deref())
-                        .unwrap_or(""),
-                )?
-            }
-        }
-        Scope::Global => {
-            if let Some(user_id) = &args.user_id {
-                get_user_with_request(&mut request_json, user_id)?
-            } else {
-                lookup_global_user_by_identity(
-                    &mut request_json,
-                    args.login.as_deref(),
-                    args.email.as_deref(),
-                )?
-            }
-        }
-        }]
-    };
     if args.prompt {
         let labels = base_users
             .iter()

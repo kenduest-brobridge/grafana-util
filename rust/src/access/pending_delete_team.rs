@@ -12,9 +12,9 @@ use crate::common::{message, render_json_value, string_field, Result};
 use super::super::render::{map_get_text, scalar_text};
 use super::super::{request_object, request_object_list_field, DEFAULT_PAGE_SIZE};
 use super::pending_delete_support::{
-    format_prompt_row,
-    print_delete_confirmation_summary, prompt_confirm_delete, prompt_select_indexes,
-    validate_confirmation, validate_delete_prompt, validate_exactly_one_identity, TeamDeleteArgs,
+    format_prompt_row, print_delete_confirmation_summary, prompt_confirm_delete,
+    prompt_select_indexes, validate_confirmation, validate_delete_prompt,
+    validate_exactly_one_identity, TeamDeleteArgs,
 };
 
 /// List one page of teams for delete resolution.
@@ -165,7 +165,9 @@ where
     let teams = if args.prompt && args.team_id.is_none() && args.name.is_none() {
         let teams = list_teams_with_request(&mut request_json, None, 1, DEFAULT_PAGE_SIZE)?;
         if teams.is_empty() {
-            return Err(message("Team delete --prompt did not find any matching teams."));
+            return Err(message(
+                "Team delete --prompt did not find any matching teams.",
+            ));
         }
         let labels = teams
             .iter()
@@ -194,9 +196,7 @@ where
             .collect::<Vec<_>>();
         print_delete_confirmation_summary("The following teams will be deleted:", &labels);
     }
-    if args.prompt
-        && !prompt_confirm_delete(&format!("Delete {} team(s)?", teams.len()))?
-    {
+    if args.prompt && !prompt_confirm_delete(&format!("Delete {} team(s)?", teams.len()))? {
         println!("Cancelled team delete.");
         return Ok(0);
     }

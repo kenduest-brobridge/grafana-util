@@ -12,11 +12,10 @@ use crate::common::{message, string_field, value_as_object, Result};
 use super::super::render::{map_get_text, normalize_service_account_row, scalar_text};
 use super::super::{request_object, request_object_list_field, DEFAULT_PAGE_SIZE};
 use super::pending_delete_support::{
-    format_prompt_row,
-    print_delete_confirmation_summary, prompt_confirm_delete, prompt_select_index,
-    prompt_select_indexes, validate_confirmation, validate_delete_prompt,
-    validate_exactly_one_identity, validate_token_identity,
-    ServiceAccountDeleteArgs, ServiceAccountTokenDeleteArgs,
+    format_prompt_row, print_delete_confirmation_summary, prompt_confirm_delete,
+    prompt_select_index, prompt_select_indexes, validate_confirmation, validate_delete_prompt,
+    validate_exactly_one_identity, validate_token_identity, ServiceAccountDeleteArgs,
+    ServiceAccountTokenDeleteArgs,
 };
 
 /// List one page of service accounts for delete resolution.
@@ -188,36 +187,39 @@ where
         )?;
         validate_confirmation(args.yes, "Service-account")?;
     }
-    let service_accounts = if args.prompt && args.service_account_id.is_none() && args.name.is_none()
-    {
-        let accounts = list_service_accounts_with_request(&mut request_json, None, 1, DEFAULT_PAGE_SIZE)?;
-        if accounts.is_empty() {
-            return Err(message(
-                "Service-account delete --prompt did not find any matching service accounts.",
-            ));
-        }
-        let labels = accounts
-            .iter()
-            .map(service_account_prompt_label)
-            .collect::<Vec<_>>();
-        let Some(indexes) =
-            prompt_select_indexes("Service Accounts To Delete", &labels)?
-        else {
-            println!("Cancelled service-account delete.");
-            return Ok(0);
+    let service_accounts =
+        if args.prompt && args.service_account_id.is_none() && args.name.is_none() {
+            let accounts =
+                list_service_accounts_with_request(&mut request_json, None, 1, DEFAULT_PAGE_SIZE)?;
+            if accounts.is_empty() {
+                return Err(message(
+                    "Service-account delete --prompt did not find any matching service accounts.",
+                ));
+            }
+            let labels = accounts
+                .iter()
+                .map(service_account_prompt_label)
+                .collect::<Vec<_>>();
+            let Some(indexes) = prompt_select_indexes("Service Accounts To Delete", &labels)?
+            else {
+                println!("Cancelled service-account delete.");
+                return Ok(0);
+            };
+            indexes
+                .into_iter()
+                .filter_map(|index| accounts.get(index).cloned())
+                .collect::<Vec<_>>()
+        } else if let Some(service_account_id) = &args.service_account_id {
+            vec![get_service_account_with_request(
+                &mut request_json,
+                service_account_id,
+            )?]
+        } else {
+            vec![lookup_service_account_by_name(
+                &mut request_json,
+                args.name.as_deref().unwrap_or(""),
+            )?]
         };
-        indexes
-            .into_iter()
-            .filter_map(|index| accounts.get(index).cloned())
-            .collect::<Vec<_>>()
-    } else if let Some(service_account_id) = &args.service_account_id {
-        vec![get_service_account_with_request(&mut request_json, service_account_id)?]
-    } else {
-        vec![lookup_service_account_by_name(
-            &mut request_json,
-            args.name.as_deref().unwrap_or(""),
-        )?]
-    };
     if args.prompt {
         let labels = service_accounts
             .iter()
@@ -422,7 +424,8 @@ where
     }
     let service_account = if args.prompt && args.service_account_id.is_none() && args.name.is_none()
     {
-        let accounts = list_service_accounts_with_request(&mut request_json, None, 1, DEFAULT_PAGE_SIZE)?;
+        let accounts =
+            list_service_accounts_with_request(&mut request_json, None, 1, DEFAULT_PAGE_SIZE)?;
         if accounts.is_empty() {
             return Err(message(
                 "Service-account token delete --prompt did not find any matching service accounts.",
@@ -432,9 +435,7 @@ where
             .iter()
             .map(service_account_prompt_label)
             .collect::<Vec<_>>();
-        let Some(index) =
-            prompt_select_index("Service Account", &labels)?
-        else {
+        let Some(index) = prompt_select_index("Service Account", &labels)? else {
             println!("Cancelled service-account token delete.");
             return Ok(0);
         };
@@ -453,7 +454,8 @@ where
         }
     };
     let tokens = if args.prompt && args.token_id.is_none() && args.token_name.is_none() {
-        let tokens = list_service_account_tokens_with_request(&mut request_json, &service_account_id)?;
+        let tokens =
+            list_service_account_tokens_with_request(&mut request_json, &service_account_id)?;
         if tokens.is_empty() {
             return Err(message(format!(
                 "Service-account token delete --prompt did not find any tokens for service account {service_account_id}."
@@ -463,9 +465,7 @@ where
             .iter()
             .map(service_account_token_prompt_label)
             .collect::<Vec<_>>();
-        let Some(indexes) =
-            prompt_select_indexes("Tokens To Delete", &labels)?
-        else {
+        let Some(indexes) = prompt_select_indexes("Tokens To Delete", &labels)? else {
             println!("Cancelled service-account token delete.");
             return Ok(0);
         };

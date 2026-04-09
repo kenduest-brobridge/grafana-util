@@ -12,9 +12,8 @@ use serde_json::{Map, Value};
 use crate::common::{message, string_field, value_as_object, write_json_file, Result};
 
 use super::super::pending_delete::{
-    format_prompt_row,
-    print_delete_confirmation_summary, prompt_confirm_delete, prompt_select_indexes,
-    validate_delete_prompt,
+    format_prompt_row, print_delete_confirmation_summary, prompt_confirm_delete,
+    prompt_select_indexes, validate_delete_prompt,
 };
 use super::super::render::{
     format_table, render_csv, render_objects_json, render_yaml, scalar_text,
@@ -222,13 +221,8 @@ where
                 "Org delete --prompt did not find any matching organizations.",
             ));
         }
-        let labels = orgs
-            .iter()
-            .map(org_delete_prompt_label)
-            .collect::<Vec<_>>();
-        let Some(indexes) =
-            prompt_select_indexes("Organizations To Delete", &labels)?
-        else {
+        let labels = orgs.iter().map(org_delete_prompt_label).collect::<Vec<_>>();
+        let Some(indexes) = prompt_select_indexes("Organizations To Delete", &labels)? else {
             println!("Cancelled org delete.");
             return Ok(0);
         };
@@ -244,15 +238,10 @@ where
         )?]
     };
     if args.prompt {
-        let labels = orgs
-            .iter()
-            .map(org_delete_prompt_label)
-            .collect::<Vec<_>>();
+        let labels = orgs.iter().map(org_delete_prompt_label).collect::<Vec<_>>();
         print_delete_confirmation_summary("The following organizations will be deleted:", &labels);
     }
-    if args.prompt
-        && !prompt_confirm_delete(&format!("Delete {} organization(s)?", orgs.len()))?
-    {
+    if args.prompt && !prompt_confirm_delete(&format!("Delete {} organization(s)?", orgs.len()))? {
         println!("Cancelled org delete.");
         return Ok(0);
     }
