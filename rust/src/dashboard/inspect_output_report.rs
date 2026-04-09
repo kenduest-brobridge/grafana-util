@@ -301,6 +301,7 @@ mod tests {
             yaml: false,
             output_format: Some(InspectOutputFormat::Dependency),
             report_columns: Vec::new(),
+            list_columns: false,
             report_filter_datasource: None,
             report_filter_panel_id: None,
             help_full: false,

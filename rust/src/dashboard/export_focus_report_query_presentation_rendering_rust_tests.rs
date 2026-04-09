@@ -20,6 +20,7 @@ fn validate_inspect_export_report_args_rejects_panel_filter_without_report() {
         yaml: false,
         output_format: None,
         report_columns: Vec::new(),
+        list_columns: false,
         report_filter_datasource: None,
         report_filter_panel_id: Some("7".to_string()),
         help_full: false,

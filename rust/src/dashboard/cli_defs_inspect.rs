@@ -11,7 +11,9 @@ use super::{
     ValidationOutputFormat,
 };
 
-fn parse_dashboard_analysis_input_format(value: &str) -> Result<DashboardImportInputFormat, String> {
+fn parse_dashboard_analysis_input_format(
+    value: &str,
+) -> Result<DashboardImportInputFormat, String> {
     match value.trim().to_ascii_lowercase().as_str() {
         "raw" => Ok(DashboardImportInputFormat::Raw),
         "provisioning" => Ok(DashboardImportInputFormat::Provisioning),
@@ -22,7 +24,9 @@ fn parse_dashboard_analysis_input_format(value: &str) -> Result<DashboardImportI
     }
 }
 
-fn parse_dashboard_validate_input_format(value: &str) -> Result<DashboardImportInputFormat, String> {
+fn parse_dashboard_validate_input_format(
+    value: &str,
+) -> Result<DashboardImportInputFormat, String> {
     match value.trim().to_ascii_lowercase().as_str() {
         "raw" => Ok(DashboardImportInputFormat::Raw),
         "provisioning" => Ok(DashboardImportInputFormat::Provisioning),
@@ -436,6 +440,12 @@ pub struct AnalyzeArgs {
     pub report_columns: Vec<String>,
     #[arg(
         long,
+        default_value_t = false,
+        help = "Print the supported --report-columns values and exit."
+    )]
+    pub list_columns: bool,
+    #[arg(
+        long,
         help = "For table, csv, tree, tree-table, dependency, dependency-json, governance, governance-json, or queries-json output, include only rows whose datasource label, uid, type, or family exactly matches this value."
     )]
     pub report_filter_datasource: Option<String>,
@@ -552,6 +562,12 @@ pub struct InspectExportArgs {
     pub report_columns: Vec<String>,
     #[arg(
         long,
+        default_value_t = false,
+        help = "Print the supported --report-columns values and exit."
+    )]
+    pub list_columns: bool,
+    #[arg(
+        long,
         help = "For table, csv, tree, tree-table, dependency, dependency-json, governance, governance-json, or queries-json output, include only rows whose datasource label, uid, type, or family exactly matches this value."
     )]
     pub report_filter_datasource: Option<String>,
@@ -664,6 +680,12 @@ pub struct InspectLiveArgs {
         help = "For table, csv, or tree-table query analysis output, limit the query report to the selected columns. Use all to expand every supported column. Supported values: org, org_id, dashboard_uid, dashboard_title, dashboard_tags, folder_path, folder_full_path, folder_level, folder_uid, parent_folder_uid, panel_id, panel_title, panel_type, panel_target_count, panel_query_count, panel_datasource_count, panel_variables, ref_id, datasource, datasource_name, datasource_uid, datasource_org, datasource_org_id, datasource_database, datasource_bucket, datasource_organization, datasource_index_pattern, datasource_type, datasource_family, query_field, target_hidden, target_disabled, query_variables, metrics, functions, measurements, buckets, query, file. JSON-style aliases like orgId, dashboardUid, dashboardTags, folderFullPath, folderLevel, folderUid, parentFolderUid, panelTargetCount, panelQueryCount, panelDatasourceCount, panelVariables, datasourceName, datasourceUid, datasourceOrg, datasourceOrgId, datasourceDatabase, datasourceBucket, datasourceOrganization, datasourceIndexPattern, datasourceType, datasourceFamily, targetHidden, targetDisabled, and queryVariables are also accepted."
     )]
     pub report_columns: Vec<String>,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Print the supported --report-columns values and exit."
+    )]
+    pub list_columns: bool,
     #[arg(
         long,
         help = "For table, csv, tree, tree-table, dependency, dependency-json, governance, governance-json, or queries-json output, include only rows whose datasource label, uid, type, or family exactly matches this value."

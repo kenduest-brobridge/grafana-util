@@ -16,6 +16,8 @@
 - `--input-format`：選擇 `raw`、`provisioning` 或 `git-sync`。
 - `--input-type`：當匯出根目錄包含多種儀表板變體時，選擇 `raw` 或 `source`。
 - `--output-format`：輸出 `text`、`table`、`csv`、`json`、`yaml`、`tree`、`tree-table`、`dependency`、`dependency-json`、`governance`、`governance-json` 或 `queries-json` 檢視。
+- `--report-columns`：把 table、csv 或 tree-table 的 query 輸出裁成指定欄位。可用 `all` 展開完整 query 欄位集合。
+- `--list-columns`：列出支援的 `--report-columns` 值後直接結束。
 - `--interactive`：開啟共用分析工作台。
 - `--output-file`：將結果寫到磁碟。
 - `--no-header`：隱藏表格類輸出的標頭。

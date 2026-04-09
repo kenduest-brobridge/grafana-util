@@ -27,6 +27,12 @@ select raw or source when the export root has multiple dashboard variants.
 .B \-\-output\-format
 render text, table, csv, json, yaml, tree, tree\-table, dependency, dependency\-json, governance, governance\-json, or queries\-json views.
 .TP
+.B \-\-report\-columns
+trim table, csv, or tree\-table query output to the selected fields. Use all for the full query\-column set.
+.TP
+.B \-\-list\-columns
+print the supported \-\-report\-columns values and exit.
+.TP
 .B \-\-interactive
 open the shared analysis workbench.
 .TP

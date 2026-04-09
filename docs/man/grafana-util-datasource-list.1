@@ -31,7 +31,10 @@ aggregate datasource inventory across visible orgs. Requires Basic auth.
 output mode controls.
 .TP
 .B \-\-output\-columns
-choose the displayed columns.
+choose the displayed columns. Use all to expand the full human\-readable column set.
+.TP
+.B \-\-list\-columns
+print the supported \-\-output\-columns values and exit.
 .TP
 .B \-\-no\-header
 suppress table headers.
@@ -50,7 +53,7 @@ if \-\-all\-orgs fails, fall back to Basic auth and check whether the token is l
 .IP \(bu 2
 if a local bundle does not read correctly, confirm \-\-input\-dir and \-\-input\-format
 .IP \(bu 2
-if column selection looks wrong, verify the output format and requested columns together
+if column selection looks wrong, run \-\-list\-columns first and confirm the output format and requested columns together
 .SH EXAMPLES
 .PP
 List datasource inventory from live Grafana or a local export bundle.

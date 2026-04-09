@@ -16,6 +16,8 @@ Use this when you want to read a local export tree, inspect its structure, or re
 - `--input-format`: choose `raw`, `provisioning`, or `git-sync`.
 - `--input-type`: select `raw` or `source` when the export root has multiple dashboard variants.
 - `--output-format`: render `text`, `table`, `csv`, `json`, `yaml`, `tree`, `tree-table`, `dependency`, `dependency-json`, `governance`, `governance-json`, or `queries-json` views.
+- `--report-columns`: trim table, csv, or tree-table query output to the selected fields. Use `all` for the full query-column set.
+- `--list-columns`: print the supported `--report-columns` values and exit.
 - `--interactive`: open the shared analysis workbench.
 - `--output-file`: write the result to disk.
 - `--no-header`: suppress table-like headers.

@@ -12,6 +12,8 @@ Use this when you need the same analysis views as the local export-tree flow, bu
 - `--org-id`: analyze one explicit Grafana org.
 - `--all-orgs`: analyze across visible orgs.
 - `--output-format`, `--output-file`, `--interactive`, `--no-header`: output controls.
+- `--report-columns`: trim table, csv, or tree-table query output to the selected fields. Use `all` for the full query-column set.
+- `--list-columns`: print the supported `--report-columns` values and exit.
 - `--progress`: show fetch progress.
 
 ## Examples

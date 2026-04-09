@@ -783,7 +783,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="何時使用">何時使用</h2>
 <p>當您需要和本地匯出樹相同的分析方式，但來源是線上 Grafana 而不是本地匯出樹時，使用這個頁面。新文件與腳本請優先使用 <code>grafana-util dashboard analyze --url ...</code>。</p>
 <h2 id="重點旗標">重點旗標</h2>
-<ul><li><code>--page-size</code>：儀表板搜尋的每頁筆數。</li><li><code>--concurrency</code>：最大平行抓取工作數。</li><li><code>--org-id</code>：分析指定的 Grafana org。</li><li><code>--all-orgs</code>：跨所有可見 org 分析。</li><li><code>--output-format</code>、<code>--output-file</code>、<code>--interactive</code>、<code>--no-header</code>：輸出控制。</li><li><code>--progress</code>：顯示抓取進度。</li></ul>
+<ul><li><code>--page-size</code>：儀表板搜尋的每頁筆數。</li><li><code>--concurrency</code>：最大平行抓取工作數。</li><li><code>--org-id</code>：分析指定的 Grafana org。</li><li><code>--all-orgs</code>：跨所有可見 org 分析。</li><li><code>--output-format</code>、<code>--output-file</code>、<code>--interactive</code>、<code>--no-header</code>：輸出控制。</li><li><code>--report-columns</code>：把 table、csv 或 tree-table 的 query 輸出裁成指定欄位。可用 <code>all</code> 展開完整 query 欄位集合。</li><li><code>--list-columns</code>：列出支援的 <code>--report-columns</code> 值後直接結束。</li><li><code>--progress</code>：顯示抓取進度。</li></ul>
 <h2 id="範例">範例</h2>
 <pre><code># 用途：透過 canonical 的 dashboard analyze 指令分析 live Grafana。
 grafana-util dashboard analyze --profile prod --output-format governance</code></pre>

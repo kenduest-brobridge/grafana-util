@@ -2,7 +2,9 @@
 //!
 //! This file is the boundary between unified command parsing and the lower-level
 //! dashboard modules that implement export/import/live/inspect/screenshot logic.
-use crate::common::{message, render_json_value, set_json_color_choice, Result};
+use crate::common::{
+    message, print_supported_columns, render_json_value, set_json_color_choice, Result,
+};
 use crate::http::JsonHttpClient;
 use crate::tabular_output::render_yaml;
 use serde::Serialize;
@@ -115,8 +117,8 @@ const DASHBOARD_IMPORT_OUTPUT_COLUMNS: &[&str] = &[
     "file",
 ];
 
-fn print_supported_dashboard_columns(columns: &[&str]) {
-    println!("{}", columns.join("\n"));
+fn print_supported_dashboard_report_columns() {
+    print_supported_columns(SUPPORTED_REPORT_COLUMN_IDS);
 }
 
 pub(crate) use authoring::{
@@ -167,6 +169,7 @@ use history::{
 };
 use inspect::analyze_export_dir;
 use inspect_live::inspect_live_dashboards_with_client;
+use inspect_report::SUPPORTED_REPORT_COLUMN_IDS;
 use list::list_dashboards_with_org_clients;
 use screenshot::capture_dashboard_screenshot;
 use serve::run_dashboard_serve;
@@ -189,6 +192,7 @@ fn analyze_args_to_export_args(args: AnalyzeArgs) -> Result<InspectExportArgs> {
         yaml: args.yaml,
         output_format: args.output_format,
         report_columns: args.report_columns,
+        list_columns: args.list_columns,
         report_filter_datasource: args.report_filter_datasource,
         report_filter_panel_id: args.report_filter_panel_id,
         help_full: args.help_full,
@@ -213,6 +217,7 @@ fn analyze_args_to_live_args(args: AnalyzeArgs) -> InspectLiveArgs {
         yaml: args.yaml,
         output_format: args.output_format,
         report_columns: args.report_columns,
+        list_columns: args.list_columns,
         report_filter_datasource: args.report_filter_datasource,
         report_filter_panel_id: args.report_filter_panel_id,
         progress: args.progress,
@@ -532,6 +537,7 @@ pub fn execute_dashboard_inspect_live(args: &InspectLiveArgs) -> Result<Dashboar
         yaml: args.yaml,
         output_format: args.output_format,
         report_columns: args.report_columns.clone(),
+        list_columns: args.list_columns,
         report_filter_datasource: args.report_filter_datasource.clone(),
         report_filter_panel_id: args.report_filter_panel_id.clone(),
         help_full: args.help_full,
@@ -605,7 +611,7 @@ pub fn run_dashboard_cli_with_client(
         }
         DashboardCommand::List(list_args) => {
             if list_args.list_columns {
-                print_supported_dashboard_columns(DASHBOARD_LIST_OUTPUT_COLUMNS);
+                print_supported_columns(DASHBOARD_LIST_OUTPUT_COLUMNS);
                 return Ok(());
             }
             let _ = list_dashboards_with_client(client, &list_args)?;
@@ -631,7 +637,7 @@ pub fn run_dashboard_cli_with_client(
         }
         DashboardCommand::Import(import_args) => {
             if import_args.list_columns {
-                print_supported_dashboard_columns(DASHBOARD_IMPORT_OUTPUT_COLUMNS);
+                print_supported_columns(DASHBOARD_IMPORT_OUTPUT_COLUMNS);
                 return Ok(());
             }
             let _ = import_dashboards_with_client(client, &import_args)?;
@@ -645,6 +651,10 @@ pub fn run_dashboard_cli_with_client(
         DashboardCommand::Analyze(analyze_args) => {
             if analyze_args.input_dir.is_some() {
                 let inspect_args = analyze_args_to_export_args(analyze_args)?;
+                if inspect_args.list_columns {
+                    print_supported_dashboard_report_columns();
+                    return Ok(());
+                }
                 if inspect_args.help_full {
                     print!("{}", render_inspect_export_help_full());
                     return Ok(());
@@ -653,6 +663,10 @@ pub fn run_dashboard_cli_with_client(
                 Ok(())
             } else {
                 let inspect_args = analyze_args_to_live_args(analyze_args);
+                if inspect_args.list_columns {
+                    print_supported_dashboard_report_columns();
+                    return Ok(());
+                }
                 if inspect_args.help_full {
                     print!("{}", render_inspect_live_help_full());
                     return Ok(());
@@ -678,6 +692,10 @@ pub fn run_dashboard_cli_with_client(
             Ok(())
         }
         DashboardCommand::InspectExport(inspect_args) => {
+            if inspect_args.list_columns {
+                print_supported_dashboard_report_columns();
+                return Ok(());
+            }
             // `--help-full` is handled here because inspect-export can be executed
             // both from the unified CLI and from direct dashboard parser paths.
             if inspect_args.help_full {
@@ -688,6 +706,10 @@ pub fn run_dashboard_cli_with_client(
             Ok(())
         }
         DashboardCommand::InspectLive(inspect_args) => {
+            if inspect_args.list_columns {
+                print_supported_dashboard_report_columns();
+                return Ok(());
+            }
             if inspect_args.help_full {
                 print!("{}", render_inspect_live_help_full());
                 return Ok(());
@@ -750,11 +772,11 @@ pub fn run_dashboard_cli(args: DashboardCliArgs) -> Result<()> {
     let mut args = normalize_dashboard_cli_args(args);
     match &args.command {
         DashboardCommand::List(list_args) if list_args.list_columns => {
-            print_supported_dashboard_columns(DASHBOARD_LIST_OUTPUT_COLUMNS);
+            print_supported_columns(DASHBOARD_LIST_OUTPUT_COLUMNS);
             return Ok(());
         }
         DashboardCommand::Import(import_args) if import_args.list_columns => {
-            print_supported_dashboard_columns(DASHBOARD_IMPORT_OUTPUT_COLUMNS);
+            print_supported_columns(DASHBOARD_IMPORT_OUTPUT_COLUMNS);
             return Ok(());
         }
         _ => {}
@@ -813,6 +835,10 @@ pub fn run_dashboard_cli(args: DashboardCliArgs) -> Result<()> {
         DashboardCommand::Analyze(analyze_args) => {
             if analyze_args.input_dir.is_some() {
                 let inspect_args = analyze_args_to_export_args(analyze_args)?;
+                if inspect_args.list_columns {
+                    print_supported_dashboard_report_columns();
+                    return Ok(());
+                }
                 if inspect_args.help_full {
                     print!("{}", render_inspect_export_help_full());
                     return Ok(());
@@ -821,6 +847,10 @@ pub fn run_dashboard_cli(args: DashboardCliArgs) -> Result<()> {
                 Ok(())
             } else {
                 let inspect_args = analyze_args_to_live_args(analyze_args);
+                if inspect_args.list_columns {
+                    print_supported_dashboard_report_columns();
+                    return Ok(());
+                }
                 if inspect_args.help_full {
                     print!("{}", render_inspect_live_help_full());
                     return Ok(());
@@ -846,6 +876,10 @@ pub fn run_dashboard_cli(args: DashboardCliArgs) -> Result<()> {
             Ok(())
         }
         DashboardCommand::InspectExport(inspect_args) => {
+            if inspect_args.list_columns {
+                print_supported_dashboard_report_columns();
+                return Ok(());
+            }
             if inspect_args.help_full {
                 print!("{}", render_inspect_export_help_full());
                 return Ok(());
@@ -854,6 +888,10 @@ pub fn run_dashboard_cli(args: DashboardCliArgs) -> Result<()> {
             Ok(())
         }
         DashboardCommand::InspectLive(inspect_args) => {
+            if inspect_args.list_columns {
+                print_supported_dashboard_report_columns();
+                return Ok(());
+            }
             if inspect_args.help_full {
                 print!("{}", render_inspect_live_help_full());
                 return Ok(());

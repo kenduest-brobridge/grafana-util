@@ -377,6 +377,7 @@ fn analyze_export_dir_supports_explicit_provisioning_input_format() {
         yaml: false,
         output_format: None,
         report_columns: Vec::new(),
+        list_columns: false,
         report_filter_datasource: None,
         report_filter_panel_id: None,
         help_full: false,
@@ -435,6 +436,7 @@ fn analyze_export_dir_accepts_workspace_wrapper_root_when_dashboards_metadata_ex
         yaml: false,
         output_format: None,
         report_columns: Vec::new(),
+        list_columns: false,
         report_filter_datasource: None,
         report_filter_panel_id: None,
         help_full: false,
@@ -482,6 +484,7 @@ fn analyze_export_dir_requires_input_type_for_dashboard_root_with_raw_and_prompt
         yaml: false,
         output_format: None,
         report_columns: Vec::new(),
+        list_columns: false,
         report_filter_datasource: None,
         report_filter_panel_id: None,
         help_full: false,
@@ -580,6 +583,25 @@ fn parse_cli_supports_inspect_export_report_columns_all() {
                 Some(InspectOutputFormat::TreeTable)
             );
             assert_eq!(inspect_args.report_columns, vec!["all".to_string()]);
+        }
+        _ => panic!("expected inspect-export command"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_inspect_export_list_columns() {
+    let args = parse_cli_from([
+        "grafana-util",
+        "inspect-export",
+        "--input-dir",
+        "./dashboards/raw",
+        "--list-columns",
+    ]);
+
+    match args.command {
+        DashboardCommand::InspectExport(inspect_args) => {
+            assert!(inspect_args.list_columns);
+            assert!(inspect_args.report_columns.is_empty());
         }
         _ => panic!("expected inspect-export command"),
     }

@@ -12,6 +12,8 @@
 - `--org-id`：分析指定的 Grafana org。
 - `--all-orgs`：跨所有可見 org 分析。
 - `--output-format`、`--output-file`、`--interactive`、`--no-header`：輸出控制。
+- `--report-columns`：把 table、csv 或 tree-table 的 query 輸出裁成指定欄位。可用 `all` 展開完整 query 欄位集合。
+- `--list-columns`：列出支援的 `--report-columns` 值後直接結束。
 - `--progress`：顯示抓取進度。
 
 ## 範例

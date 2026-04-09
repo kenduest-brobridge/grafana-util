@@ -12,7 +12,8 @@
 - `--org-id`：列出指定的 Grafana org。
 - `--all-orgs`：彙整所有可見 org 的 datasource inventory。需要 Basic auth。
 - `--output-format`、`--text`、`--table`、`--csv`、`--json`、`--yaml`：輸出模式控制。
-- `--output-columns`：選擇顯示欄位。
+- `--output-columns`：選擇顯示欄位。可用 `all` 展開完整的 human-readable 欄位集合。
+- `--list-columns`：列出支援的 `--output-columns` 值後直接結束。
 - `--no-header`：隱藏表格標頭。
 
 ## 範例
@@ -52,7 +53,7 @@ grafana-util datasource list --input-dir ./datasources --json
 - 如果 inventory 是空的，先確認 org 範圍與驗證資訊是否真的看得到目標 org
 - 如果 `--all-orgs` 失敗，先改用 Basic auth，並檢查 token 是否只看得到單一 org
 - 如果本地 bundle 讀取失敗，先確認 `--input-dir` 與 `--input-format`
-- 如果欄位看起來不對，先確認輸出格式與指定欄位是否一致
+- 如果欄位看起來不對，先跑 `--list-columns`，再確認輸出格式與指定欄位是否一致
 
 ## 相關指令
 - [datasource browse](./datasource-browse.md)

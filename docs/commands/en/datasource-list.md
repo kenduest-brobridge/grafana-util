@@ -12,7 +12,8 @@ Use this when you need a non-interactive inventory of datasources, either from l
 - `--org-id`: list one explicit Grafana org.
 - `--all-orgs`: aggregate datasource inventory across visible orgs. Requires Basic auth.
 - `--output-format`, `--text`, `--table`, `--csv`, `--json`, `--yaml`: output mode controls.
-- `--output-columns`: choose the displayed columns.
+- `--output-columns`: choose the displayed columns. Use `all` to expand the full human-readable column set.
+- `--list-columns`: print the supported `--output-columns` values and exit.
 - `--no-header`: suppress table headers.
 
 ## Examples
@@ -47,7 +48,7 @@ grafana-util datasource list --input-dir ./datasources --json
 - if the inventory is empty, confirm the org scope and whether the credentials can see the target org
 - if `--all-orgs` fails, fall back to Basic auth and check whether the token is limited to one org
 - if a local bundle does not read correctly, confirm `--input-dir` and `--input-format`
-- if column selection looks wrong, verify the output format and requested columns together
+- if column selection looks wrong, run `--list-columns` first and confirm the output format and requested columns together
 
 ## Related commands
 - [datasource browse](./datasource-browse.md)

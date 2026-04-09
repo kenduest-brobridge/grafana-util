@@ -414,6 +414,7 @@ fn build_export_inspect_args_from_live(
         output_file: args.output_file.clone(),
         also_stdout: args.also_stdout,
         report_columns: args.report_columns.clone(),
+        list_columns: args.list_columns,
         report_filter_datasource: args.report_filter_datasource.clone(),
         report_filter_panel_id: args.report_filter_panel_id.clone(),
         help_full: args.help_full,

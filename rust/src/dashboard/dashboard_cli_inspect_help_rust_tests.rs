@@ -103,7 +103,10 @@ fn parse_cli_supports_governance_gate_git_sync_input_format() {
 
     match args.command {
         DashboardCommand::GovernanceGate(governance_args) => {
-            assert_eq!(governance_args.input_format, DashboardImportInputFormat::Raw);
+            assert_eq!(
+                governance_args.input_format,
+                DashboardImportInputFormat::Raw
+            );
             assert_eq!(
                 governance_args.input_dir.as_deref(),
                 Some(Path::new("./grafana-oac-repo"))
@@ -381,6 +384,34 @@ fn parse_cli_supports_analyze_live_help_full_flag() {
 }
 
 #[test]
+fn parse_cli_supports_analyze_live_report_columns_all_and_list_columns() {
+    let args = parse_cli_from([
+        "grafana-util",
+        "analyze-live",
+        "--url",
+        "https://grafana.example.com",
+        "--output-format",
+        "tree-table",
+        "--report-columns",
+        "all",
+        "--list-columns",
+    ]);
+
+    match args.command {
+        DashboardCommand::InspectLive(inspect_args) => {
+            assert_eq!(inspect_args.common.url, "https://grafana.example.com");
+            assert_eq!(
+                inspect_args.output_format,
+                Some(InspectOutputFormat::TreeTable)
+            );
+            assert_eq!(inspect_args.report_columns, vec!["all".to_string()]);
+            assert!(inspect_args.list_columns);
+        }
+        _ => panic!("expected analyze-live command"),
+    }
+}
+
+#[test]
 fn parse_cli_supports_analyze_live_all_orgs_flag() {
     let args = parse_cli_from(["grafana-util", "analyze-live", "--all-orgs", "--table"]);
 
@@ -399,6 +430,7 @@ fn inspect_live_help_matches_fixture() {
     let help = render_dashboard_subcommand_help("analyze-live");
     assert!(help.contains("Compatibility alias for dashboard analyze over live Grafana."));
     assert!(help.contains("--output-format governance-json"));
+    assert!(help.contains("--list-columns"));
 }
 
 #[test]
