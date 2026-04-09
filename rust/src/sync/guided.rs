@@ -339,7 +339,22 @@ fn render_discovery_provenance(discovered: &DiscoveredChangeInputs) -> Option<St
         .get("inputs")
         .and_then(Value::as_object)?
         .iter()
-        .map(|(key, value)| format!("{key}={}", value.as_str().unwrap_or_default()))
+        .map(|(key, value)| {
+            let label = match key.as_str() {
+                "dashboardExportDir" => "dashboard-export",
+                "dashboardProvisioningDir" => "dashboard-provisioning",
+                "datasourceProvisioningFile" => "datasource-provisioning",
+                "alertExportDir" => "alert-export",
+                "desiredFile" => "desired-file",
+                "sourceBundle" => "source-bundle",
+                "targetInventory" => "target-inventory",
+                "availabilityFile" => "availability-file",
+                "mappingFile" => "mapping-file",
+                "reviewedPlanFile" => "reviewed-plan-file",
+                _ => key.as_str(),
+            };
+            format!("{label}={}", value.as_str().unwrap_or_default())
+        })
         .collect::<Vec<_>>();
     Some(format!(
         "Discovered change workspace root {} from {}.",

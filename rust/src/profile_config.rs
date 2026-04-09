@@ -216,6 +216,8 @@ pub fn resolve_connection_settings(
         url
     } else if let Some(url) = profile.and_then(|item| item.url.clone()) {
         url
+    } else if !input.url_default.trim().is_empty() {
+        input.url_default.to_string()
     } else {
         return Err(validation(
             "Grafana base URL is required. Pass --url, set GRAFANA_URL, or configure a profile with url.",
