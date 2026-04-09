@@ -8,7 +8,7 @@ use crate::common::{message, string_field, value_as_object, Result};
 use crate::dashboard::{
     build_import_payload, extract_dashboard_object, format_folder_inventory_status_line,
     load_export_metadata, load_folder_inventory, load_json_file, validate, FolderInventoryItem,
-    FolderInventoryStatus, ImportArgs, FOLDER_INVENTORY_FILENAME, RAW_EXPORT_SUBDIR,
+    FolderInventoryStatus, ImportArgs, FOLDER_INVENTORY_FILENAME,
 };
 use crate::grafana_api::DashboardResourceClient;
 use crate::http::JsonHttpClient;
@@ -38,7 +38,10 @@ where
 {
     let resolved_import = super::resolve_import_source(args)?;
     let mut lookup_cache = ImportLookupCache::default();
-    let metadata = load_export_metadata(resolved_import.metadata_dir(), Some(RAW_EXPORT_SUBDIR))?;
+    let metadata = load_export_metadata(
+        resolved_import.metadata_dir(),
+        Some(super::import_metadata_variant(args)),
+    )?;
     super::super::import_validation::validate_matching_export_org_with_request(
         &mut request_json,
         &mut lookup_cache,
@@ -83,13 +86,20 @@ where
                 &mut request_json,
                 &mut lookup_cache,
                 args,
+                &resolved_import,
+                resolved_import.dashboard_dir(),
                 discovered_dashboard_files.clone(),
             )?
             .unwrap_or(discovered_dashboard_files)
         }
         #[cfg(not(feature = "tui"))]
         {
-            super::selected_dashboard_files(args, discovered_dashboard_files.clone())?
+            super::selected_dashboard_files(
+                args,
+                &resolved_import,
+                resolved_import.dashboard_dir(),
+                discovered_dashboard_files.clone(),
+            )?
                 .unwrap_or(discovered_dashboard_files)
         }
     };
@@ -114,7 +124,7 @@ where
                 super::super::import_lookup::resolve_source_dashboard_folder_path(
                     &document,
                     dashboard_file,
-                    resolved_import.metadata_dir(),
+                    resolved_import.dashboard_dir(),
                     &folders_by_uid,
                 )?,
             )
@@ -219,7 +229,10 @@ pub(crate) fn collect_import_dry_run_report_with_client(
     let resolved_import = super::resolve_import_source(args)?;
     let dashboard_client = DashboardResourceClient::new(client);
     let mut lookup_cache = ImportLookupCache::default();
-    let metadata = load_export_metadata(resolved_import.metadata_dir(), Some(RAW_EXPORT_SUBDIR))?;
+    let metadata = load_export_metadata(
+        resolved_import.metadata_dir(),
+        Some(super::import_metadata_variant(args)),
+    )?;
     super::super::import_validation::validate_matching_export_org_with_client(
         &dashboard_client,
         args,
@@ -265,13 +278,20 @@ pub(crate) fn collect_import_dry_run_report_with_client(
                 },
                 &mut lookup_cache,
                 args,
+                &resolved_import,
+                resolved_import.dashboard_dir(),
                 discovered_dashboard_files.clone(),
             )?
             .unwrap_or(discovered_dashboard_files)
         }
         #[cfg(not(feature = "tui"))]
         {
-            super::selected_dashboard_files(args, discovered_dashboard_files.clone())?
+            super::selected_dashboard_files(
+                args,
+                &resolved_import,
+                resolved_import.dashboard_dir(),
+                discovered_dashboard_files.clone(),
+            )?
                 .unwrap_or(discovered_dashboard_files)
         }
     };
@@ -296,7 +316,7 @@ pub(crate) fn collect_import_dry_run_report_with_client(
                 super::super::import_lookup::resolve_source_dashboard_folder_path(
                     &document,
                     dashboard_file,
-                    resolved_import.metadata_dir(),
+                    resolved_import.dashboard_dir(),
                     &folders_by_uid,
                 )?,
             )

@@ -1,6 +1,7 @@
 #![cfg(feature = "tui")]
 
 use std::collections::BTreeMap;
+use std::path::PathBuf;
 
 use crate::common::{string_field, value_as_object, Result};
 
@@ -11,16 +12,19 @@ use super::import_lookup::resolve_source_dashboard_folder_path;
 pub(crate) fn load_interactive_import_items(
     args: &super::ImportArgs,
 ) -> Result<Vec<InteractiveImportItem>> {
-    Ok(load_interactive_import_context(args)?.0)
+    let resolved_import = super::import::resolve_import_source(args)?;
+    let dashboard_files = super::import::dashboard_files_for_import(resolved_import.dashboard_dir())?;
+    Ok(load_interactive_import_context_from_source(args, &resolved_import, &dashboard_files)?.0)
 }
 
-pub(crate) fn load_interactive_import_context(
+pub(crate) fn load_interactive_import_context_from_source(
     args: &super::ImportArgs,
+    resolved_import: &super::import::LoadedImportSource,
+    dashboard_files: &[PathBuf],
 ) -> Result<(
     Vec<InteractiveImportItem>,
     BTreeMap<String, super::FolderInventoryItem>,
 )> {
-    let resolved_import = super::import::resolve_import_source(args)?;
     let metadata = super::load_export_metadata(
         resolved_import.metadata_dir(),
         Some(super::import::import_metadata_variant(args)),
@@ -32,7 +36,7 @@ pub(crate) fn load_interactive_import_context(
         .map(|item| (item.uid.clone(), item))
         .collect();
     let mut items = Vec::new();
-    for path in super::import::dashboard_files_for_import(resolved_import.dashboard_dir())? {
+    for path in dashboard_files {
         let document = super::load_json_file(&path)?;
         let document_object =
             value_as_object(&document, "Dashboard payload must be a JSON object.")?;
@@ -41,18 +45,18 @@ pub(crate) fn load_interactive_import_context(
         let title = string_field(dashboard, "title", super::DEFAULT_DASHBOARD_TITLE).to_string();
         let folder_path = resolve_source_dashboard_folder_path(
             &document,
-            &path,
-            resolved_import.metadata_dir(),
+            path,
+            resolved_import.dashboard_dir(),
             &folders_by_uid,
         )
         .unwrap_or_default();
         let file_label = path
             .strip_prefix(resolved_import.dashboard_dir())
-            .unwrap_or(&path)
+            .unwrap_or(path)
             .display()
             .to_string();
         items.push(InteractiveImportItem {
-            path,
+            path: path.clone(),
             uid,
             title,
             folder_path,

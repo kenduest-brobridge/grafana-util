@@ -309,3 +309,7 @@ mod source_loader_tests {
         );
     }
 }
+
+#[cfg(test)]
+#[path = "source_loader_contract_rust_tests.rs"]
+mod source_loader_contract_rust_tests;

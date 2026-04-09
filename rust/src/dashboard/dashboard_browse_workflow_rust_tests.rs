@@ -1294,15 +1294,38 @@ fn interactive_import_review_surfaces_changed_live_summary() {
 #[test]
 fn interactive_import_with_use_export_org_falls_through_to_tty_validation() {
     let temp = tempdir().unwrap();
-    let mut args = make_import_args(temp.path().join("exports"));
+    let export_root = temp.path().join("exports");
+    write_combined_export_root_metadata(&export_root, &[("1", "Main Org", "org_1_Main_Org")]);
+    let raw_root = export_root.join("org_1_Main_Org/raw");
+    write_basic_raw_export(
+        &raw_root,
+        "1",
+        "Main Org",
+        "cpu-main",
+        "CPU Main",
+        "prom-main",
+        "prometheus",
+        "timeseries",
+        "infra",
+        "Infra",
+        "expr",
+        "up",
+    );
+    let mut args = make_import_args(export_root);
     args.use_export_org = true;
     args.interactive = true;
     let mut cache = crate::dashboard::import_lookup::ImportLookupCache::default();
+    let resolved_import = crate::dashboard::import::resolve_import_source(&args).unwrap();
+    let dashboard_files =
+        crate::dashboard::import::dashboard_files_for_import(resolved_import.dashboard_dir())
+            .unwrap();
 
     let error = crate::dashboard::import_interactive::select_import_dashboard_files(
         &mut |_method, _path, _params, _payload| Ok(None),
         &mut cache,
         &args,
+        &resolved_import,
+        dashboard_files.as_slice(),
     )
     .unwrap_err();
 

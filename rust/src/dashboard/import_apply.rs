@@ -351,7 +351,7 @@ fn prepare_import_run<F>(
     args: &ImportArgs,
 ) -> Result<PreparedImportRun>
 where
-    F: FnMut(Vec<PathBuf>) -> Result<Option<Vec<PathBuf>>>,
+    F: FnMut(&super::LoadedImportSource, Vec<PathBuf>) -> Result<Option<Vec<PathBuf>>>,
 {
     let resolved_import = super::resolve_import_source(args)?;
     let metadata = load_export_metadata(
@@ -379,7 +379,10 @@ where
         .collect::<BTreeMap<String, FolderInventoryItem>>();
     let discovered_dashboard_files =
         super::dashboard_files_for_import(resolved_import.dashboard_dir())?;
-    let dashboard_files = match select_dashboard_files(discovered_dashboard_files.clone())? {
+    let dashboard_files = match select_dashboard_files(
+        &resolved_import,
+        discovered_dashboard_files.clone(),
+    )? {
         Some(selected) => selected,
         None if args.interactive => {
             println!(
@@ -444,7 +447,7 @@ fn run_live_import<B: LiveImportBackend>(
                 super::super::import_lookup::resolve_source_dashboard_folder_path(
                     &document,
                     dashboard_file,
-                    prepared.resolved_import.metadata_dir(),
+                    prepared.resolved_import.dashboard_dir(),
                     &prepared.folders_by_uid,
                 )?,
             )
@@ -746,19 +749,26 @@ where
         validate_import_args(args)?;
         let mut lookup_cache = ImportLookupCache::default();
         let prepared = prepare_import_run(
-            &mut |dashboard_files| {
+            &mut |resolved_import, dashboard_files| {
                 #[cfg(feature = "tui")]
                 {
                     super::selected_dashboard_files(
                         &mut request_json,
                         &mut lookup_cache,
                         args,
+                        resolved_import,
+                        resolved_import.dashboard_dir(),
                         dashboard_files,
                     )
                 }
                 #[cfg(not(feature = "tui"))]
                 {
-                    super::selected_dashboard_files(args, dashboard_files)
+                    super::selected_dashboard_files(
+                        args,
+                        resolved_import,
+                        resolved_import.dashboard_dir(),
+                        dashboard_files,
+                    )
                 }
             },
             args,
@@ -795,18 +805,21 @@ pub fn import_dashboards_with_client(client: &JsonHttpClient, args: &ImportArgs)
     let mut backend = ClientImportBackend::new(client);
     let mut lookup_cache = ImportLookupCache::default();
     let prepared = prepare_import_run(
-        &mut |_dashboard_files| {
+        &mut |resolved_import, _dashboard_files| {
             #[cfg(feature = "tui")]
             {
                 import_interactive::select_import_dashboard_files_with_client(
                     &backend.dashboard,
                     &mut lookup_cache,
                     args,
+                    resolved_import,
+                    _dashboard_files.as_slice(),
                 )
             }
             #[cfg(not(feature = "tui"))]
             {
                 let _ = _dashboard_files;
+                let _ = resolved_import;
                 if args.interactive {
                     return super::super::tui_not_built("import --interactive");
                 }

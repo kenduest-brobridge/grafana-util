@@ -965,3 +965,68 @@ fn run_sync_cli_bundle_accepts_mixed_git_sync_workspace_root() {
     assert_eq!(bundle["summary"]["datasourceCount"], json!(1));
     assert_eq!(bundle["summary"]["alertRuleCount"], json!(1));
 }
+
+#[test]
+fn run_sync_cli_bundle_accepts_git_sync_provisioning_workspace_root() {
+    let temp = tempdir().unwrap();
+    let workspace = temp.path().join("workspace");
+    fs::create_dir_all(workspace.join(".git")).unwrap();
+    write_dashboard_provisioning_fixture(
+        &workspace.join("dashboards").join("git-sync").join("provisioning"),
+    );
+    write_alert_export_fixture(&workspace.join("alerts").join("raw"));
+    fs::create_dir_all(workspace.join("datasources").join("provisioning")).unwrap();
+    let datasource_provisioning_file = workspace
+        .join("datasources")
+        .join("provisioning")
+        .join("datasources.yaml");
+    write_datasource_provisioning_fixture(&datasource_provisioning_file);
+    let output_file = temp.path().join("bundle.json");
+
+    let result = run_sync_cli(SyncGroupCommand::Bundle(SyncBundleArgs {
+        workspace: Some(workspace.clone()),
+        dashboard_export_dir: None,
+        dashboard_provisioning_dir: None,
+        alert_export_dir: None,
+        datasource_export_file: None,
+        datasource_provisioning_file: None,
+        metadata_file: None,
+        output_file: Some(output_file.clone()),
+        also_stdout: false,
+        output_format: SyncOutputFormat::Json,
+    }));
+
+    assert!(result.is_ok(), "{result:?}");
+    let bundle: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&output_file).unwrap()).unwrap();
+    assert_eq!(
+        bundle["metadata"]["workspaceRoot"],
+        json!(workspace.display().to_string())
+    );
+    assert_eq!(
+        bundle["discovery"]["inputs"]["dashboardProvisioningDir"],
+        json!(workspace
+            .join("dashboards/git-sync/provisioning")
+            .display()
+            .to_string())
+    );
+    assert_eq!(
+        bundle["metadata"]["dashboardProvisioningDir"],
+        json!(workspace
+            .join("dashboards/git-sync/provisioning")
+            .display()
+            .to_string())
+    );
+    assert_eq!(bundle["metadata"]["dashboardExportDir"], serde_json::Value::Null);
+    assert_eq!(
+        bundle["metadata"]["dashboardExport"]["variant"],
+        json!("provisioning")
+    );
+    assert_eq!(
+        bundle["dashboards"][0]["sourcePath"],
+        json!("team/cpu-main.json")
+    );
+    assert_eq!(bundle["summary"]["dashboardCount"], json!(1));
+    assert_eq!(bundle["summary"]["datasourceCount"], json!(1));
+    assert_eq!(bundle["summary"]["alertRuleCount"], json!(1));
+}

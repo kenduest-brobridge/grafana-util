@@ -10,8 +10,6 @@ mod import_dry_run;
 #[cfg(feature = "tui")]
 use crate::common::message;
 use crate::common::Result;
-#[cfg(feature = "tui")]
-use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
 #[cfg(feature = "tui")]
@@ -97,6 +95,10 @@ pub(crate) fn dashboard_files_for_import(input_dir: &Path) -> Result<Vec<PathBuf
     Ok(dashboard_files)
 }
 
+#[cfg(test)]
+#[path = "import_loaded_source_rust_tests.rs"]
+mod import_loaded_source_rust_tests;
+
 fn selected_dashboard_files(
     #[cfg(feature = "tui")] request_json: &mut impl FnMut(
         Method,
@@ -106,6 +108,8 @@ fn selected_dashboard_files(
     ) -> Result<Option<Value>>,
     #[cfg(feature = "tui")] lookup_cache: &mut super::import_lookup::ImportLookupCache,
     args: &super::ImportArgs,
+    resolved_import: &LoadedImportSource,
+    dashboard_root: &Path,
     dashboard_files: Vec<PathBuf>,
 ) -> Result<Option<Vec<PathBuf>>> {
     #[cfg(feature = "tui")]
@@ -114,14 +118,23 @@ fn selected_dashboard_files(
             request_json,
             lookup_cache,
             args,
+            resolved_import,
+            dashboard_files.as_slice(),
         )?
         else {
             return Ok(None);
         };
-        let known_files: BTreeSet<PathBuf> = dashboard_files.iter().cloned().collect();
+        let known_files = dashboard_files
+            .iter()
+            .filter_map(|path| {
+                path.strip_prefix(dashboard_root)
+                    .ok()
+                    .map(|relative| (relative.to_path_buf(), path.clone()))
+            })
+            .collect::<std::collections::BTreeMap<PathBuf, PathBuf>>();
         let filtered: Vec<PathBuf> = selected_files
             .into_iter()
-            .filter(|path| known_files.contains(path))
+            .filter_map(|path| known_files.get(&path).cloned())
             .collect();
         if filtered.is_empty() {
             return Err(message(
@@ -136,6 +149,8 @@ fn selected_dashboard_files(
             return super::tui_not_built("import --interactive");
         }
         let _ = args;
+        let _ = resolved_import;
+        let _ = dashboard_root;
         let _ = dashboard_files;
         Ok(None)
     }
