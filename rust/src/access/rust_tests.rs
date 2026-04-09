@@ -71,14 +71,18 @@ fn access_delete_help_mentions_prompt() {
     assert!(render_access_subcommand_help(&["team", "delete"]).contains("--prompt"));
     assert!(render_access_subcommand_help(&["org", "delete"]).contains("--prompt"));
     assert!(render_access_subcommand_help(&["service-account", "delete"]).contains("--prompt"));
-    assert!(render_access_subcommand_help(&["service-account", "token", "delete"]).contains("--prompt"));
+    assert!(
+        render_access_subcommand_help(&["service-account", "token", "delete"]).contains("--prompt")
+    );
 }
 
 #[test]
 fn parse_cli_supports_access_delete_prompt_flags() {
     let user_args = parse_cli_from(["grafana-util access", "user", "delete", "--prompt"]);
     match user_args.command {
-        AccessCommand::User { command: UserCommand::Delete(inner) } => {
+        AccessCommand::User {
+            command: UserCommand::Delete(inner),
+        } => {
             assert!(inner.prompt);
             assert_eq!(inner.scope, None);
         }
@@ -87,7 +91,9 @@ fn parse_cli_supports_access_delete_prompt_flags() {
 
     let org_args = parse_cli_from(["grafana-util access", "org", "delete", "--prompt"]);
     match org_args.command {
-        AccessCommand::Org { command: OrgCommand::Delete(inner) } => assert!(inner.prompt),
+        AccessCommand::Org {
+            command: OrgCommand::Delete(inner),
+        } => assert!(inner.prompt),
         _ => panic!("expected access org delete"),
     }
 }
@@ -1132,6 +1138,8 @@ fn team_list_with_request_reads_search_and_members() {
         query: Some("ops".to_string()),
         name: None,
         with_members: true,
+        output_columns: Vec::new(),
+        list_columns: false,
         page: 1,
         per_page: 100,
         input_dir: None,
@@ -1161,6 +1169,38 @@ fn team_list_with_request_reads_search_and_members() {
     assert!(calls
         .iter()
         .any(|(_, path, _)| path == "/api/teams/5/members"));
+}
+
+#[test]
+fn team_list_all_output_columns_are_accepted() {
+    let args = TeamListArgs {
+        common: make_token_common(),
+        query: None,
+        name: None,
+        with_members: false,
+        output_columns: vec!["all".to_string()],
+        list_columns: false,
+        page: 1,
+        per_page: 100,
+        input_dir: None,
+        table: true,
+        csv: false,
+        json: false,
+        yaml: false,
+        output_format: None,
+    };
+
+    let result = list_teams_command_with_request(
+        |method, path, _params, _payload| match (method, path) {
+            (Method::GET, "/api/teams/search") => {
+                Ok(Some(json!({"teams": [{"id": 5, "name": "Ops", "memberCount": 1}]})))
+            }
+            _ => panic!("unexpected path {path}"),
+        },
+        &args,
+    );
+
+    assert_eq!(result.unwrap(), 1);
 }
 
 #[test]

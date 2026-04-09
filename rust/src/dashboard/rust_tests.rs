@@ -208,6 +208,7 @@ pub(crate) fn make_import_args(input_dir: PathBuf) -> ImportArgs {
         output_format: None,
         no_header: false,
         output_columns: Vec::new(),
+        list_columns: false,
         progress: false,
         verbose: false,
     }
@@ -1071,6 +1072,7 @@ fn list_dashboards_with_request_all_orgs_aggregates_results() {
         all_orgs: true,
         show_sources: false,
         output_columns: Vec::new(),
+        list_columns: false,
         text: false,
         table: false,
         csv: false,

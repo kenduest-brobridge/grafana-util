@@ -11,7 +11,7 @@ use crate::common::{message, string_field, Result};
 use super::render::{
     format_table, map_get_text, normalize_user_row, paginate_rows, render_csv, render_objects_json,
     render_yaml, scalar_text, user_account_scope_text, user_matches, user_scope_text,
-    user_summary_line, user_table_rows,
+    user_list_column_ids, user_summary_line, user_table_headers, user_table_rows,
 };
 use super::user_workflows::load_access_import_records;
 use super::{build_auth_context, request_array, Scope, UserListArgs, DEFAULT_PAGE_SIZE};
@@ -150,6 +150,15 @@ pub(crate) fn list_users_with_request<F>(mut request_json: F, args: &UserListArg
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
+    if args.list_columns {
+        println!("{}", user_list_column_ids().join("\n"));
+        return Ok(0);
+    }
+    if !args.output_columns.is_empty() && (args.json || args.yaml) {
+        return Err(message(
+            "--output-columns is only supported with text, table, or csv output for access user list.",
+        ));
+    }
     let auth_mode = build_auth_context(&args.common)?.auth_mode;
     validate_user_scope_auth(&args.scope, args.with_teams, &auth_mode)?;
     let mut rows = match args.scope {
@@ -182,36 +191,18 @@ where
     } else if args.yaml {
         println!("{}", render_yaml(&rows)?);
     } else if args.csv {
+        let headers = user_table_headers(&args.output_columns);
         for line in render_csv(
-            &[
-                "id",
-                "login",
-                "email",
-                "name",
-                "orgRole",
-                "grafanaAdmin",
-                "scope",
-                "accountScope",
-                "teams",
-            ],
-            &user_table_rows(&rows),
+            &headers,
+            &user_table_rows(&rows, &args.output_columns),
         ) {
             println!("{line}");
         }
     } else if args.table {
+        let headers = user_table_headers(&args.output_columns);
         for line in format_table(
-            &[
-                "ID",
-                "LOGIN",
-                "EMAIL",
-                "NAME",
-                "ORG_ROLE",
-                "GRAFANA_ADMIN",
-                "SCOPE",
-                "ACCOUNT_SCOPE",
-                "TEAMS",
-            ],
-            &user_table_rows(&rows),
+            &headers,
+            &user_table_rows(&rows, &args.output_columns),
         ) {
             println!("{line}");
         }
@@ -224,7 +215,7 @@ where
         );
     } else {
         for row in &rows {
-            println!("{}", user_summary_line(row));
+            println!("{}", user_summary_line(row, &args.output_columns));
         }
         println!();
         println!(
@@ -246,6 +237,15 @@ fn local_user_scope(row: &Map<String, Value>, args: &UserListArgs) -> Scope {
 }
 
 pub(crate) fn list_users_from_input_dir(args: &UserListArgs) -> Result<usize> {
+    if args.list_columns {
+        println!("{}", user_list_column_ids().join("\n"));
+        return Ok(0);
+    }
+    if !args.output_columns.is_empty() && (args.json || args.yaml) {
+        return Err(message(
+            "--output-columns is only supported with text, table, or csv output for access user list.",
+        ));
+    }
     let input_dir = args
         .input_dir
         .as_ref()
@@ -270,36 +270,18 @@ pub(crate) fn list_users_from_input_dir(args: &UserListArgs) -> Result<usize> {
     } else if args.yaml {
         println!("{}", render_yaml(&rows)?);
     } else if args.csv {
+        let headers = user_table_headers(&args.output_columns);
         for line in render_csv(
-            &[
-                "id",
-                "login",
-                "email",
-                "name",
-                "orgRole",
-                "grafanaAdmin",
-                "scope",
-                "accountScope",
-                "teams",
-            ],
-            &user_table_rows(&rows),
+            &headers,
+            &user_table_rows(&rows, &args.output_columns),
         ) {
             println!("{line}");
         }
     } else if args.table {
+        let headers = user_table_headers(&args.output_columns);
         for line in format_table(
-            &[
-                "ID",
-                "LOGIN",
-                "EMAIL",
-                "NAME",
-                "ORG_ROLE",
-                "GRAFANA_ADMIN",
-                "SCOPE",
-                "ACCOUNT_SCOPE",
-                "TEAMS",
-            ],
-            &user_table_rows(&rows),
+            &headers,
+            &user_table_rows(&rows, &args.output_columns),
         ) {
             println!("{line}");
         }
@@ -311,7 +293,7 @@ pub(crate) fn list_users_from_input_dir(args: &UserListArgs) -> Result<usize> {
         );
     } else {
         for row in &rows {
-            println!("{}", user_summary_line(row));
+            println!("{}", user_summary_line(row, &args.output_columns));
         }
         println!();
         println!(

@@ -147,6 +147,13 @@ pub struct ImportArgs {
     #[arg(
         long,
         default_value_t = false,
+        requires = "dry_run",
+        help = "Print the supported --output-columns values and exit."
+    )]
+    pub list_columns: bool,
+    #[arg(
+        long,
+        default_value_t = false,
         help = "Show concise per-dashboard import progress in <current>/<total> form while processing files. Use this for long-running batch imports."
     )]
     pub progress: bool,

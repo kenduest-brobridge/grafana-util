@@ -40,6 +40,12 @@ pub struct ListArgs {
         help = "Render only these comma-separated list columns. Supported values: uid, name, folder, folder_uid, path, org, org_id, sources, source_uids. JSON-style aliases like folderUid, orgId, and sourceUids are also accepted. Selecting sources or source_uids also enables datasource resolution."
     )]
     pub output_columns: Vec<String>,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Print the supported --output-columns values and exit."
+    )]
+    pub list_columns: bool,
     #[arg(long, default_value_t = false, conflicts_with_all = ["table", "csv", "json", "yaml", "output_format"], help = "Render dashboard summaries as plain text.")]
     pub text: bool,
     #[arg(long, default_value_t = false, conflicts_with_all = ["text", "csv", "json", "yaml", "output_format"], help = "Render dashboard summaries as a table.")]

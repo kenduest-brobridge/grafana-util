@@ -783,7 +783,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="何時使用">何時使用</h2>
 <p>當您需要一個非互動式的線上儀表板清單檢視，且可能想加上解析後的來源或結構化輸出時，使用這個指令。</p>
 <h2 id="重點旗標">重點旗標</h2>
-<ul><li><code>--page-size</code>：儀表板搜尋的每頁筆數。</li><li><code>--org-id</code>：列出指定的 Grafana org。</li><li><code>--all-orgs</code>：彙整所有可見 org 的結果。建議使用 Basic auth。</li><li><code>--show-sources</code>：在清單輸出中加入解析後的 datasource 名稱。<code>--with-sources</code> 仍接受為相容別名。</li><li><code>--output-columns</code>：選擇顯示欄位。若選到 <code>sources</code> 或 <code>source_uids</code>，也會一併解析 datasource 名稱。</li><li><code>--output-format</code>、<code>--json</code>、<code>--yaml</code>、<code>--csv</code>、<code>--table</code>、<code>--text</code>：輸出模式控制。</li><li><code>--no-header</code>：隱藏表格標頭。</li></ul>
+<ul><li><code>--page-size</code>：儀表板搜尋的每頁筆數。</li><li><code>--org-id</code>：列出指定的 Grafana org。</li><li><code>--all-orgs</code>：彙整所有可見 org 的結果。建議使用 Basic auth。</li><li><code>--show-sources</code>：在清單輸出中加入解析後的 datasource 名稱。<code>--with-sources</code> 仍接受為相容別名。</li><li><code>--output-columns</code>：選擇顯示欄位。可用 <code>all</code> 展開完整的 human-readable 欄位集合。若選到 <code>sources</code> 或 <code>source_uids</code>，也會一併解析 datasource 名稱。</li><li><code>--list-columns</code>：列出支援的 <code>--output-columns</code> 值後直接結束。</li><li><code>--output-format</code>、<code>--json</code>、<code>--yaml</code>、<code>--csv</code>、<code>--table</code>、<code>--text</code>：輸出模式控制。</li><li><code>--no-header</code>：隱藏表格標頭。</li></ul>
 <h2 id="說明">說明</h2>
 <ul><li>可重複執行的單一 org 盤點優先用 <code>--profile</code>。</li><li><code>--all-orgs</code> 最好搭配管理員憑證支援的 <code>--profile</code> 或直接 Basic auth，因為 token 權限可能看不到其他 org。</li></ul>
 <h2 id="範例">範例</h2>

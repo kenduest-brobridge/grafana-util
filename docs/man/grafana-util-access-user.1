@@ -24,7 +24,7 @@ After: one namespace covers inventory, create/update, export/import, and targete
 .SH COMMON OPTIONS
 .TP
 .B list
-\-\-input\-dir, \-\-scope, \-\-all\-orgs, \-\-query, \-\-login, \-\-email, \-\-org\-role, \-\-grafana\-admin, \-\-with\-teams, \-\-page, \-\-per\-page, \-\-table, \-\-csv, \-\-json, \-\-yaml, \-\-output\-format
+\-\-input\-dir, \-\-scope, \-\-all\-orgs, \-\-query, \-\-login, \-\-email, \-\-org\-role, \-\-grafana\-admin, \-\-with\-teams, \-\-output\-columns, \-\-list\-columns, \-\-page, \-\-per\-page, \-\-table, \-\-csv, \-\-json, \-\-yaml, \-\-output\-format
 .TP
 .B browse
 \-\-input\-dir, \-\-scope, \-\-all\-orgs, \-\-current\-org, \-\-query, \-\-login, \-\-email, \-\-org\-role, \-\-grafana\-admin, \-\-page, \-\-per\-page
@@ -50,6 +50,8 @@ created or modified users have the expected login, email, and role
 inventory and bundles can be diffed before deletion or migration
 .IP \(bu 2
 membership scope stays explicit, so you do not accidentally manage the wrong org or global registry
+.IP \(bu 2
+machine\-readable list / export output includes structured origin and lastActive user metadata for automation and audits
 .SH FAILURE CHECKS
 .IP \(bu 2
 if list, add, or delete looks empty or wrong, confirm the selected profile or auth token has the right org or admin scope

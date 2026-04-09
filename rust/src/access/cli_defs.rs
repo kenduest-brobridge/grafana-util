@@ -20,6 +20,9 @@ pub use access_cli_runtime::{
     build_http_client_no_org_id, normalize_access_cli_args, parse_cli_from, root_command,
     AccessAuthContext,
 };
+pub(crate) use access_cli_runtime::{
+    materialize_access_common_auth, materialize_access_common_auth_no_org_id,
+};
 pub use access_cli_shared::{
     CommonCliArgs, CommonCliArgsNoOrgId, DryRunOutputFormat, ListOutputFormat, Scope,
     ACCESS_EXPORT_KIND_ORGS, ACCESS_EXPORT_KIND_SERVICE_ACCOUNTS, ACCESS_EXPORT_KIND_TEAMS,
@@ -52,6 +55,20 @@ pub use access_user_cli::{
     UserImportArgs, UserListArgs, UserModifyArgs,
 };
 
+fn parse_team_list_output_column(value: &str) -> std::result::Result<String, String> {
+    match value {
+        "all" => Ok("all".to_string()),
+        "id" => Ok("id".to_string()),
+        "name" => Ok("name".to_string()),
+        "email" => Ok("email".to_string()),
+        "member_count" | "memberCount" => Ok("member_count".to_string()),
+        "members" => Ok("members".to_string()),
+        _ => Err(format!(
+            "Unsupported --output-columns value '{value}'. Supported values: all, id, name, email, member_count, members."
+        )),
+    }
+}
+
 /// Struct definition for TeamListArgs.
 #[derive(Debug, Clone, Args)]
 pub struct TeamListArgs {
@@ -72,6 +89,19 @@ pub struct TeamListArgs {
         help = "Include team members and admins in the rendered output."
     )]
     pub with_members: bool,
+    #[arg(
+        long,
+        value_delimiter = ',',
+        value_parser = parse_team_list_output_column,
+        help = "For text, table, or csv output, render only these comma-separated columns. Use all to expand every supported column. Supported values: all, id, name, email, member_count, members. JSON-style aliases like memberCount are also accepted."
+    )]
+    pub output_columns: Vec<String>,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Print the supported --output-columns values and exit."
+    )]
+    pub list_columns: bool,
     #[arg(
         long,
         default_value_t = 1,

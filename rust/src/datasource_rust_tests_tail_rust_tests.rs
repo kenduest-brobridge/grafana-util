@@ -1036,6 +1036,7 @@ fn discover_export_org_import_scopes_reads_selected_multi_org_root() {
         output_format: None,
         no_header: false,
         output_columns: Vec::new(),
+        list_columns: false,
         progress: false,
         verbose: false,
     };
@@ -1112,6 +1113,7 @@ fn discover_export_org_import_scopes_accepts_workspace_root_and_sorts_children()
         output_format: None,
         no_header: false,
         output_columns: Vec::new(),
+        list_columns: false,
         progress: false,
         verbose: false,
     };
@@ -1161,6 +1163,7 @@ fn discover_export_org_import_scopes_errors_when_selected_org_missing() {
         output_format: None,
         no_header: false,
         output_columns: Vec::new(),
+        list_columns: false,
         progress: false,
         verbose: false,
     };

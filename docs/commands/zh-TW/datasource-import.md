@@ -12,7 +12,7 @@
 - `--org-id`、`--use-export-org`、`--only-org-id`、`--create-missing-orgs`：控制跨 org 路由。
 - `--replace-existing`、`--update-existing-only`、`--require-matching-export-org`：匯入安全與重整控制。
 - `--secret-values`：在匯入時解析佔位秘密值。
-- `--dry-run`、`--table`、`--json`、`--output-format`、`--no-header`、`--output-columns`、`--progress`、`--verbose`：預覽與回報控制。
+- `--dry-run`、`--table`、`--json`、`--output-format`、`--no-header`、`--output-columns`、`--list-columns`、`--progress`、`--verbose`：預覽與回報控制。若想看完整 dry-run 表格欄位，可用 `--output-columns all`。
 
 ## 範例
 ```bash

@@ -789,6 +789,7 @@ mod tests {
             output_format: None,
             no_header: false,
             output_columns: Vec::new(),
+            list_columns: false,
             progress: false,
             verbose: false,
         };
@@ -936,6 +937,7 @@ mod tests {
             output_format: None,
             no_header: false,
             output_columns: Vec::new(),
+            list_columns: false,
             progress: false,
             verbose: false,
         };

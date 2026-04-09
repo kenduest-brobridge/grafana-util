@@ -18,7 +18,7 @@
 - `--ensure-folders`、`--replace-existing`、`--update-existing-only`：控制匯入行為。
 - `--require-matching-folder-path`、`--require-matching-export-org`、`--strict-schema`、`--target-schema-version`：安全檢查。
 - `--import-message`：儲存在 Grafana 的修訂訊息。
-- `--interactive`、`--dry-run`、`--table`、`--json`、`--output-format`、`--output-columns`、`--no-header`、`--progress`、`--verbose`：預覽與回報控制。
+- `--interactive`、`--dry-run`、`--table`、`--json`、`--output-format`、`--output-columns`、`--list-columns`、`--no-header`、`--progress`、`--verbose`：預覽與回報控制。若想看完整 dry-run 表格欄位，可用 `--output-columns all`。
 
 ## 成功判準
 - dry-run 先把 create/update 動作列清楚，再進入 live replay

@@ -151,6 +151,7 @@ fn import_dashboards_with_matching_dependencies_posts_after_preflight() {
         output_format: None,
         no_header: false,
         output_columns: Vec::new(),
+        list_columns: false,
         progress: false,
         verbose: false,
     };
@@ -232,6 +233,7 @@ fn import_dashboards_rejects_unsupported_export_schema_version() {
         output_format: None,
         no_header: false,
         output_columns: Vec::new(),
+        list_columns: false,
         progress: false,
         verbose: false,
     };
@@ -302,6 +304,7 @@ fn import_dashboards_with_update_existing_only_skips_missing_dashboards() {
         output_format: None,
         no_header: false,
         output_columns: Vec::new(),
+        list_columns: false,
         progress: false,
         verbose: false,
     };
@@ -395,6 +398,7 @@ fn import_dashboards_with_update_existing_only_table_marks_missing_dashboards_as
         output_format: None,
         no_header: true,
         output_columns: Vec::new(),
+        list_columns: false,
         progress: false,
         verbose: false,
     };

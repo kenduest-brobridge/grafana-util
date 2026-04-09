@@ -76,6 +76,7 @@ fn import_dashboards_with_client_imports_discovered_files() {
         output_format: None,
         no_header: false,
         output_columns: Vec::new(),
+        list_columns: false,
         progress: false,
         verbose: false,
     };
@@ -127,6 +128,7 @@ fn import_dashboards_with_org_id_requires_basic_auth() {
         output_format: None,
         no_header: false,
         output_columns: Vec::new(),
+        list_columns: false,
         progress: false,
         verbose: false,
     };
@@ -465,6 +467,7 @@ fn build_import_auth_context_adds_org_header_for_basic_auth_imports() {
         output_format: None,
         no_header: false,
         output_columns: Vec::new(),
+        list_columns: false,
         progress: false,
         verbose: false,
     };

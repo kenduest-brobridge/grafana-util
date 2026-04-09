@@ -311,6 +311,18 @@ fn resolve_dashboard_import_table_columns(
     selected_columns: Option<&[String]>,
 ) -> Vec<(usize, &'static str)> {
     if let Some(columns) = selected_columns {
+        if columns.iter().any(|column| column == "all") {
+            return vec![
+                (0usize, "UID"),
+                (1usize, "DESTINATION"),
+                (2usize, "ACTION"),
+                (3usize, "FOLDER_PATH"),
+                (4usize, "SOURCE_FOLDER_PATH"),
+                (5usize, "DESTINATION_FOLDER_PATH"),
+                (6usize, "REASON"),
+                (7usize, "FILE"),
+            ];
+        }
         return columns
             .iter()
             .map(|column| match column.as_str() {

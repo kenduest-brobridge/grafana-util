@@ -84,6 +84,7 @@ fn import_dashboards_rejects_mismatched_export_org_with_explicit_org_id() {
         output_format: None,
         no_header: false,
         output_columns: Vec::new(),
+        list_columns: false,
         progress: false,
         verbose: false,
     };
@@ -161,6 +162,7 @@ fn import_dashboards_rejects_mismatched_export_org_with_current_token_org() {
         output_format: None,
         no_header: false,
         output_columns: Vec::new(),
+        list_columns: false,
         progress: false,
         verbose: false,
     };
@@ -244,6 +246,7 @@ fn import_dashboards_allows_matching_export_org_with_current_org_lookup() {
         output_format: None,
         no_header: false,
         output_columns: Vec::new(),
+        list_columns: false,
         progress: false,
         verbose: false,
     };

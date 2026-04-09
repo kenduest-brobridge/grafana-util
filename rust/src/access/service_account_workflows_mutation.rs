@@ -3,11 +3,12 @@
 use reqwest::Method;
 use serde_json::{Map, Value};
 
-use crate::common::Result;
+use crate::common::{message, Result};
 
 use super::super::super::render::{
     format_table, map_get_text, normalize_service_account_row, paginate_rows, render_csv,
-    render_objects_json, render_yaml, service_account_role_to_api, service_account_summary_line,
+    render_objects_json, render_yaml, service_account_list_column_ids,
+    service_account_role_to_api, service_account_summary_line, service_account_table_headers,
     service_account_table_rows,
 };
 use super::super::super::{
@@ -30,6 +31,15 @@ pub(crate) fn list_service_accounts_command_with_request<F>(
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
+    if args.list_columns {
+        println!("{}", service_account_list_column_ids().join("\n"));
+        return Ok(0);
+    }
+    if !args.output_columns.is_empty() && (args.json || args.yaml) {
+        return Err(message(
+            "--output-columns is only supported with text, table, or csv output for access service-account list.",
+        ));
+    }
     let mut rows = list_service_accounts_with_request(
         &mut request_json,
         args.query.as_deref(),
@@ -55,18 +65,18 @@ where
     } else if args.yaml {
         println!("{}", render_yaml(&rows)?);
     } else if args.csv {
+        let headers = service_account_table_headers(&args.output_columns);
         for line in render_csv(
-            &["id", "name", "login", "role", "disabled", "tokens", "orgId"],
-            &service_account_table_rows(&rows),
+            &headers,
+            &service_account_table_rows(&rows, &args.output_columns),
         ) {
             println!("{line}");
         }
     } else if args.table {
+        let headers = service_account_table_headers(&args.output_columns);
         for line in format_table(
-            &[
-                "ID", "NAME", "LOGIN", "ROLE", "DISABLED", "TOKENS", "ORG_ID",
-            ],
-            &service_account_table_rows(&rows),
+            &headers,
+            &service_account_table_rows(&rows, &args.output_columns),
         ) {
             println!("{line}");
         }
@@ -78,7 +88,7 @@ where
         );
     } else {
         for row in &rows {
-            println!("{}", service_account_summary_line(row));
+            println!("{}", service_account_summary_line(row, &args.output_columns));
         }
         println!();
         println!(
@@ -91,6 +101,15 @@ where
 }
 
 pub(crate) fn list_service_accounts_from_input_dir(args: &ServiceAccountListArgs) -> Result<usize> {
+    if args.list_columns {
+        println!("{}", service_account_list_column_ids().join("\n"));
+        return Ok(0);
+    }
+    if !args.output_columns.is_empty() && (args.json || args.yaml) {
+        return Err(message(
+            "--output-columns is only supported with text, table, or csv output for access service-account list.",
+        ));
+    }
     let input_dir = args
         .input_dir
         .as_ref()
@@ -117,18 +136,18 @@ pub(crate) fn list_service_accounts_from_input_dir(args: &ServiceAccountListArgs
     } else if args.yaml {
         println!("{}", render_yaml(&rows)?);
     } else if args.csv {
+        let headers = service_account_table_headers(&args.output_columns);
         for line in render_csv(
-            &["id", "name", "login", "role", "disabled", "tokens", "orgId"],
-            &service_account_table_rows(&rows),
+            &headers,
+            &service_account_table_rows(&rows, &args.output_columns),
         ) {
             println!("{line}");
         }
     } else if args.table {
+        let headers = service_account_table_headers(&args.output_columns);
         for line in format_table(
-            &[
-                "ID", "NAME", "LOGIN", "ROLE", "DISABLED", "TOKENS", "ORG_ID",
-            ],
-            &service_account_table_rows(&rows),
+            &headers,
+            &service_account_table_rows(&rows, &args.output_columns),
         ) {
             println!("{line}");
         }
@@ -140,7 +159,7 @@ pub(crate) fn list_service_accounts_from_input_dir(args: &ServiceAccountListArgs
         );
     } else {
         for row in &rows {
-            println!("{}", service_account_summary_line(row));
+            println!("{}", service_account_summary_line(row, &args.output_columns));
         }
         println!();
         println!(

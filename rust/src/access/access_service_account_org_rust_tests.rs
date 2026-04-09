@@ -10,6 +10,8 @@ fn service_account_list_with_request_reads_search() {
         page: 1,
         per_page: 100,
         input_dir: None,
+        output_columns: Vec::new(),
+        list_columns: false,
         table: false,
         csv: false,
         json: false,
@@ -32,6 +34,36 @@ fn service_account_list_with_request_reads_search() {
 
     assert_eq!(result.unwrap(), 1);
     assert_eq!(calls[0].1, "/api/serviceaccounts/search");
+}
+
+#[test]
+fn service_account_list_with_request_all_output_columns_are_accepted() {
+    let args = ServiceAccountListArgs {
+        common: make_token_common(),
+        query: None,
+        page: 1,
+        per_page: 100,
+        input_dir: None,
+        output_columns: vec!["all".to_string()],
+        list_columns: false,
+        table: true,
+        csv: false,
+        json: false,
+        yaml: false,
+        output_format: None,
+    };
+
+    let result = list_service_accounts_command_with_request(
+        |method, path, _params, _payload| match (method, path) {
+            (Method::GET, "/api/serviceaccounts/search") => Ok(Some(
+                json!({"serviceAccounts": [{"id": 4, "name": "svc", "login": "sa-svc", "role": "Viewer", "isDisabled": false, "tokens": 1, "orgId": 1}]}),
+            )),
+            _ => panic!("unexpected path {path}"),
+        },
+        &args,
+    );
+
+    assert_eq!(result.unwrap(), 1);
 }
 
 #[test]

@@ -12,6 +12,22 @@ use super::access_cli_shared::{
     DEFAULT_ACCESS_SERVICE_ACCOUNT_EXPORT_DIR, DEFAULT_PAGE_SIZE,
 };
 
+fn parse_service_account_list_output_column(value: &str) -> std::result::Result<String, String> {
+    match value {
+        "all" => Ok("all".to_string()),
+        "id" => Ok("id".to_string()),
+        "name" => Ok("name".to_string()),
+        "login" => Ok("login".to_string()),
+        "role" => Ok("role".to_string()),
+        "disabled" => Ok("disabled".to_string()),
+        "tokens" => Ok("tokens".to_string()),
+        "org_id" | "orgId" => Ok("org_id".to_string()),
+        _ => Err(format!(
+            "Unsupported --output-columns value '{value}'. Supported values: all, id, name, login, role, disabled, tokens, org_id."
+        )),
+    }
+}
+
 pub(crate) const ACCESS_SERVICE_ACCOUNT_HELP_TEXT: &str = "Examples:\n\n  grafana-util access service-account list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --json\n  grafana-util access service-account token add --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --name deploy-bot --token-name nightly";
 pub(crate) const ACCESS_SERVICE_ACCOUNT_LIST_HELP_TEXT: &str = "Examples:\n\n  grafana-util access service-account list --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output-format text\n  grafana-util access service-account list --url http://localhost:3000 --basic-user admin --basic-password admin --output-format yaml";
 pub(crate) const ACCESS_SERVICE_ACCOUNT_ADD_HELP_TEXT: &str = "Examples:\n\n  grafana-util access service-account add --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --name deploy-bot --role Editor --json";
@@ -43,6 +59,19 @@ pub struct ServiceAccountListArgs {
     pub page: usize,
     #[arg(long, default_value_t = DEFAULT_PAGE_SIZE, help = "Number of service accounts to request per page.")]
     pub per_page: usize,
+    #[arg(
+        long,
+        value_delimiter = ',',
+        value_parser = parse_service_account_list_output_column,
+        help = "For text, table, or csv output, render only these comma-separated columns. Use all to expand every supported column. Supported values: all, id, name, login, role, disabled, tokens, org_id. JSON-style aliases like orgId are also accepted."
+    )]
+    pub output_columns: Vec<String>,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Print the supported --output-columns values and exit."
+    )]
+    pub list_columns: bool,
     #[arg(long, default_value_t = false, conflicts_with_all = ["csv", "json", "yaml"], help = "Render service-account summaries as a table.")]
     pub table: bool,
     #[arg(long, default_value_t = false, conflicts_with_all = ["table", "json", "yaml"], help = "Render service-account summaries as CSV.")]

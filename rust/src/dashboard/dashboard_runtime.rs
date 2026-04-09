@@ -1,7 +1,8 @@
 //! Parser/runtime helpers for dashboard CLI commands.
 use clap::Parser;
+use rpassword::prompt_password;
 
-use crate::common::Result;
+use crate::common::{GrafanaCliError, Result};
 use crate::dashboard::DEFAULT_TIMEOUT;
 use crate::grafana_api::{AuthInputs, GrafanaApiClient, GrafanaConnection};
 use crate::http::JsonHttpClient;
@@ -35,6 +36,7 @@ pub(super) fn parse_dashboard_import_output_column(
     value: &str,
 ) -> std::result::Result<String, String> {
     match value {
+        "all" => Ok("all".to_string()),
         "uid" => Ok("uid".to_string()),
         "destination" => Ok("destination".to_string()),
         "action" => Ok("action".to_string()),
@@ -46,7 +48,7 @@ pub(super) fn parse_dashboard_import_output_column(
         "reason" => Ok("reason".to_string()),
         "file" => Ok("file".to_string()),
         _ => Err(format!(
-            "Unsupported --output-columns value '{value}'. Supported values: uid, destination, action, folder_path, source_folder_path, destination_folder_path, reason, file."
+            "Unsupported --output-columns value '{value}'. Supported values: all, uid, destination, action, folder_path, source_folder_path, destination_folder_path, reason, file."
         )),
     }
 }
@@ -55,6 +57,7 @@ pub(super) fn parse_dashboard_list_output_column(
     value: &str,
 ) -> std::result::Result<String, String> {
     match value {
+        "all" => Ok("all".to_string()),
         "uid" => Ok("uid".to_string()),
         "name" => Ok("name".to_string()),
         "folder" => Ok("folder".to_string()),
@@ -65,7 +68,7 @@ pub(super) fn parse_dashboard_list_output_column(
         "sources" => Ok("sources".to_string()),
         "source_uids" | "sourceUids" => Ok("source_uids".to_string()),
         _ => Err(format!(
-            "Unsupported --output-columns value '{value}'. Supported values: uid, name, folder, folder_uid, path, org, org_id, sources, source_uids."
+            "Unsupported --output-columns value '{value}'. Supported values: all, uid, name, folder, folder_uid, path, org, org_id, sources, source_uids."
         )),
     }
 }
@@ -215,6 +218,34 @@ pub fn build_auth_context(common: &CommonCliArgs) -> Result<DashboardAuthContext
     })
 }
 
+pub(crate) fn materialize_dashboard_common_auth_with_prompt<F, G>(
+    mut common: CommonCliArgs,
+    mut prompt_password_reader: F,
+    mut prompt_token_reader: G,
+) -> Result<CommonCliArgs>
+where
+    F: FnMut() -> Result<String>,
+    G: FnMut() -> Result<String>,
+{
+    if common.prompt_password && common.password.is_none() {
+        common.password = Some(prompt_password_reader()?);
+    }
+    if common.prompt_token && common.api_token.is_none() {
+        common.api_token = Some(prompt_token_reader()?);
+    }
+    common.prompt_password = false;
+    common.prompt_token = false;
+    Ok(common)
+}
+
+pub(crate) fn materialize_dashboard_common_auth(common: CommonCliArgs) -> Result<CommonCliArgs> {
+    materialize_dashboard_common_auth_with_prompt(
+        common,
+        || prompt_password("Grafana Basic auth password: ").map_err(GrafanaCliError::from),
+        || prompt_password("Grafana API token: ").map_err(GrafanaCliError::from),
+    )
+}
+
 pub fn build_http_client(common: &CommonCliArgs) -> Result<JsonHttpClient> {
     Ok(build_api_client(common)?.into_http_client())
 }
@@ -262,4 +293,43 @@ fn build_connection(common: &CommonCliArgs) -> Result<GrafanaConnection> {
         },
         false,
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_common() -> CommonCliArgs {
+        CommonCliArgs {
+            color: crate::common::CliColorChoice::Auto,
+            profile: None,
+            url: "http://127.0.0.1:3000".to_string(),
+            api_token: None,
+            username: Some("admin".to_string()),
+            password: None,
+            prompt_password: true,
+            prompt_token: false,
+            timeout: DEFAULT_TIMEOUT,
+            verify_ssl: false,
+        }
+    }
+
+    #[test]
+    fn materialize_dashboard_common_auth_prompts_password_once_and_clears_prompt_flags() {
+        let mut prompts = 0usize;
+        let resolved = materialize_dashboard_common_auth_with_prompt(
+            make_common(),
+            || {
+                prompts += 1;
+                Ok("prompted-password".to_string())
+            },
+            || panic!("token prompt should not be used"),
+        )
+        .unwrap();
+
+        assert_eq!(prompts, 1);
+        assert_eq!(resolved.password.as_deref(), Some("prompted-password"));
+        assert!(!resolved.prompt_password);
+        assert!(!resolved.prompt_token);
+    }
 }

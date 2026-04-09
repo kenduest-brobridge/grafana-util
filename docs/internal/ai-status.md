@@ -8,6 +8,13 @@ Current AI-maintained status only.
 - Keep this file short and current. Additive historical detail belongs in `docs/internal/archive/`.
 - Detailed 2026-03-29 through 2026-03-31 entries moved to [`archive/ai-status-archive-2026-03-31.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-03-31.md).
 
+## 2026-04-09 - Add discoverable column selectors across access and existing output-column surfaces
+- State: Done
+- Scope: `rust/src/access/{access_user_cli.rs,access_service_account_cli.rs,cli_defs.rs,render.rs,user_read.rs,team_list.rs,service_account_workflows_mutation.rs,mod.rs,*tests.rs}`, `rust/src/dashboard/{cli_defs_command_list.rs,cli_defs_command_local.rs,dashboard_runtime.rs,list_render.rs,import_render.rs,mod.rs,*tests.rs}`, `rust/src/{datasource.rs,datasource_cli_defs.rs,datasource_mutation_render.rs,datasource_rust_tests.rs}`, `docs/commands/{en,zh-TW}/*`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: some commands already had `--output-columns`, but discoverability was weak and support was inconsistent. Access list commands had no column selector at all, and existing dashboard/datasource selectors did not offer one obvious “show me everything” contract or a zero-guess way to list supported columns.
+- Current Update: added `--output-columns` plus `--list-columns` to access user/team/service-account list, taught those human-readable outputs to honor selected columns without changing JSON/YAML contracts, and added `all` as the canonical full-column selector. Then aligned the pre-existing dashboard list, dashboard import dry-run, and datasource import dry-run selectors so `all` expands the full human-readable column set and `--list-columns` prints the supported ids without requiring live auth.
+- Result: column discovery and full-column expansion now follow one consistent operator model: `--list-columns` shows the canonical ids, `--output-columns all` expands the full human-readable set, and JSON/YAML machine contracts stay full and unchanged.
+
 ## 2026-04-09 - Add structured origin and last-active metadata to access user machine output
 - State: Done
 - Scope: `rust/src/access/{render.rs,access_cli_rust_tests.rs,access_runtime_org_rust_tests.rs}`, `docs/commands/{en,zh-TW}/access-user.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`

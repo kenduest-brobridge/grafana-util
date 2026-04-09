@@ -854,7 +854,8 @@ where
             match raw_result {
                 Ok(Some(dialog)) => {
                     let uid = dialog.uid.clone();
-                    state.status = format!("Preparing live preview for raw JSON edit on {}...", uid);
+                    state.status =
+                        format!("Preparing live preview for raw JSON edit on {}...", uid);
                     let preview_lines = if let Some(client) = scoped_org_client(args, &node)? {
                         let mut scoped = |method: Method,
                                           path: &str,
@@ -945,6 +946,7 @@ fn build_external_edit_import_args(args: &BrowseArgs, input_dir: PathBuf) -> Imp
         output_format: None,
         no_header: false,
         output_columns: Vec::new(),
+        list_columns: false,
         progress: false,
         verbose: false,
     }

@@ -22,7 +22,8 @@ use crate::common::{
 };
 use crate::dashboard::{
     build_api_client, build_auth_context, build_http_client, build_http_client_for_org,
-    build_http_client_for_org_from_api, CommonCliArgs, SimpleOutputFormat,
+    build_http_client_for_org_from_api, materialize_dashboard_common_auth, CommonCliArgs,
+    SimpleOutputFormat,
 };
 use crate::datasource::datasource_diff::{
     build_datasource_diff_report, normalize_export_records, normalize_live_records,
@@ -351,6 +352,18 @@ pub fn run_datasource_cli(command: DatasourceGroupCommand) -> Result<()> {
     // Downstream callees: common.rs:message, common.rs:write_json_file, dashboard_cli_defs.rs:build_http_client_for_org, dashboard_live.rs:list_datasources, datasource.rs:build_add_payload, datasource.rs:build_all_orgs_export_index, datasource.rs:build_all_orgs_export_metadata, datasource.rs:build_all_orgs_output_dir, datasource.rs:build_datasource_export_metadata, datasource.rs:build_export_index, datasource.rs:build_export_records, datasource.rs:build_list_records ...
 
     let command = normalize_datasource_group_command(command);
+    if let DatasourceGroupCommand::Import(args) = &command {
+        if args.list_columns {
+            println!("uid\nname\ntype\ndestination\naction\norg_id\nfile");
+            return Ok(());
+        }
+        if !args.output_columns.is_empty() && !args.table {
+            return Err(message(
+                "--output-columns is only supported with --dry-run --table or table-like --output-format for datasource import.",
+            ));
+        }
+    }
+    let command = materialize_datasource_command_auth(command)?;
     match command {
         DatasourceGroupCommand::Types(args) => {
             match args.output_format {
@@ -906,6 +919,39 @@ pub fn run_datasource_cli(command: DatasourceGroupCommand) -> Result<()> {
             Ok(())
         }
     }
+}
+
+fn materialize_datasource_command_auth(
+    mut command: DatasourceGroupCommand,
+) -> Result<DatasourceGroupCommand> {
+    match &mut command {
+        DatasourceGroupCommand::List(inner) => {
+            inner.common = materialize_dashboard_common_auth(inner.common.clone())?;
+        }
+        DatasourceGroupCommand::Add(inner) => {
+            inner.common = materialize_dashboard_common_auth(inner.common.clone())?;
+        }
+        DatasourceGroupCommand::Modify(inner) => {
+            inner.common = materialize_dashboard_common_auth(inner.common.clone())?;
+        }
+        DatasourceGroupCommand::Delete(inner) => {
+            inner.common = materialize_dashboard_common_auth(inner.common.clone())?;
+        }
+        DatasourceGroupCommand::Export(inner) => {
+            inner.common = materialize_dashboard_common_auth(inner.common.clone())?;
+        }
+        DatasourceGroupCommand::Import(inner) => {
+            inner.common = materialize_dashboard_common_auth(inner.common.clone())?;
+        }
+        DatasourceGroupCommand::Diff(inner) => {
+            inner.common = materialize_dashboard_common_auth(inner.common.clone())?;
+        }
+        DatasourceGroupCommand::Browse(inner) => {
+            inner.common = materialize_dashboard_common_auth(inner.common.clone())?;
+        }
+        DatasourceGroupCommand::Types(_) => {}
+    }
+    Ok(command)
 }
 
 #[cfg(test)]

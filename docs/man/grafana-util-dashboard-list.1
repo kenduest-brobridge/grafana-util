@@ -23,7 +23,10 @@ aggregate results across visible orgs. Prefer Basic auth.
 include resolved datasource names in the list output. \-\-with\-sources remains accepted as a compatibility alias.
 .TP
 .B \-\-output\-columns
-choose the displayed columns. Selecting sources or source_uids also resolves datasource names.
+choose the displayed columns. Use all to expand the full human\-readable column set. Selecting sources or source_uids also resolves datasource names.
+.TP
+.B \-\-list\-columns
+print the supported \-\-output\-columns values and exit.
 .TP
 .B \-\-output\-format, \-\-json, \-\-yaml, \-\-csv, \-\-table, \-\-text
 output mode controls.

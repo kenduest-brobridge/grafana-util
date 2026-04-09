@@ -14,6 +14,26 @@ use super::access_cli_shared::{
     DEFAULT_PAGE_SIZE,
 };
 
+fn parse_user_list_output_column(value: &str) -> std::result::Result<String, String> {
+    match value {
+        "all" => Ok("all".to_string()),
+        "id" => Ok("id".to_string()),
+        "login" => Ok("login".to_string()),
+        "email" => Ok("email".to_string()),
+        "name" => Ok("name".to_string()),
+        "org_role" | "orgRole" => Ok("org_role".to_string()),
+        "grafana_admin" | "grafanaAdmin" => Ok("grafana_admin".to_string()),
+        "scope" => Ok("scope".to_string()),
+        "account_scope" | "accountScope" => Ok("account_scope".to_string()),
+        "origin" => Ok("origin".to_string()),
+        "last_active" | "lastActive" => Ok("last_active".to_string()),
+        "teams" => Ok("teams".to_string()),
+        _ => Err(format!(
+            "Unsupported --output-columns value '{value}'. Supported values: all, id, login, email, name, org_role, grafana_admin, scope, account_scope, origin, last_active, teams."
+        )),
+    }
+}
+
 /// Arguments for listing Grafana users.
 #[derive(Debug, Clone, Args)]
 pub struct UserListArgs {
@@ -54,6 +74,19 @@ pub struct UserListArgs {
         help = "Include each user's current team memberships in the list output."
     )]
     pub with_teams: bool,
+    #[arg(
+        long,
+        value_delimiter = ',',
+        value_parser = parse_user_list_output_column,
+        help = "For text, table, or csv output, render only these comma-separated columns. Use all to expand every supported column. Supported values: all, id, login, email, name, org_role, grafana_admin, scope, account_scope, origin, last_active, teams. JSON-style aliases like orgRole, grafanaAdmin, accountScope, and lastActive are also accepted."
+    )]
+    pub output_columns: Vec<String>,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Print the supported --output-columns values and exit."
+    )]
+    pub list_columns: bool,
     #[arg(
         long,
         default_value_t = 1,

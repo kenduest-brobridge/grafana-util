@@ -445,6 +445,7 @@ fn list_dashboards_with_request_returns_dashboard_count() {
         all_orgs: false,
         show_sources: false,
         output_columns: Vec::new(),
+        list_columns: false,
         text: false,
         table: false,
         csv: false,
@@ -586,6 +587,7 @@ fn list_dashboards_with_request_json_fetches_dashboards_and_datasources_by_defau
         all_orgs: false,
         show_sources: false,
         output_columns: Vec::new(),
+        list_columns: false,
         text: false,
         table: false,
         csv: false,
@@ -650,6 +652,7 @@ fn list_dashboards_with_request_output_columns_sources_fetches_dashboard_sources
         all_orgs: false,
         show_sources: false,
         output_columns: vec!["uid".to_string(), "sources".to_string()],
+        list_columns: false,
         text: false,
         table: true,
         csv: false,
@@ -702,6 +705,47 @@ fn list_dashboards_with_request_output_columns_sources_fetches_dashboard_sources
 }
 
 #[test]
+fn list_dashboards_with_request_output_columns_all_expands_full_human_columns() {
+    let args = ListArgs {
+        common: make_common_args("http://127.0.0.1:3000".to_string()),
+        page_size: 500,
+        org_id: None,
+        all_orgs: false,
+        show_sources: false,
+        output_columns: vec!["all".to_string()],
+        list_columns: false,
+        text: false,
+        table: true,
+        csv: false,
+        json: false,
+        yaml: false,
+        output_format: None,
+        no_header: false,
+    };
+
+    let count = list_dashboards_with_request(
+        |_method, path, _params, _payload| match path {
+            "/api/search" => Ok(Some(json!([
+                {"uid": "abc", "title": "CPU", "folderTitle": "Infra", "folderUid": "infra"}
+            ]))),
+            "/api/org" => Ok(Some(json!({
+                "id": 1,
+                "name": "Main Org"
+            }))),
+            "/api/folders/infra" => Ok(Some(json!({
+                "title": "Infra",
+                "parents": [{"title": "Platform"}]
+            }))),
+            _ => Err(test_support::message(format!("unexpected path {path}"))),
+        },
+        &args,
+    )
+    .unwrap();
+
+    assert_eq!(count, 1);
+}
+
+#[test]
 fn list_dashboards_with_request_with_org_id_scopes_requests() {
     let args = ListArgs {
         common: make_common_args("http://127.0.0.1:3000".to_string()),
@@ -710,6 +754,7 @@ fn list_dashboards_with_request_with_org_id_scopes_requests() {
         all_orgs: false,
         show_sources: false,
         output_columns: Vec::new(),
+        list_columns: false,
         text: false,
         table: false,
         csv: false,

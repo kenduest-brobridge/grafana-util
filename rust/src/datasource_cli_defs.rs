@@ -293,6 +293,13 @@ pub struct DatasourceImportArgs {
     #[arg(
         long,
         default_value_t = false,
+        requires = "dry_run",
+        help = "Print the supported --output-columns values and exit."
+    )]
+    pub list_columns: bool,
+    #[arg(
+        long,
+        default_value_t = false,
         help = "Show concise per-datasource progress in <current>/<total> form while processing files."
     )]
     pub progress: bool,
@@ -783,6 +790,7 @@ pub(crate) fn normalize_datasource_group_command(
 
 fn parse_datasource_import_output_column(value: &str) -> std::result::Result<String, String> {
     match value {
+        "all" => Ok("all".to_string()),
         "uid" => Ok("uid".to_string()),
         "name" => Ok("name".to_string()),
         "type" => Ok("type".to_string()),
@@ -791,7 +799,7 @@ fn parse_datasource_import_output_column(value: &str) -> std::result::Result<Str
         "org_id" | "orgId" => Ok("org_id".to_string()),
         "file" => Ok("file".to_string()),
         _ => Err(format!(
-            "Unsupported --output-columns value '{value}'. Supported values: uid, name, type, destination, action, org_id, file."
+            "Unsupported --output-columns value '{value}'. Supported values: all, uid, name, type, destination, action, org_id, file."
         )),
     }
 }

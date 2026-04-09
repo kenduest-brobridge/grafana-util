@@ -524,6 +524,7 @@ fn build_publish_import_args(temp_input: PathBuf, args: &PublishArgs) -> ImportA
         output_format: None,
         no_header: false,
         output_columns: Vec::new(),
+        list_columns: false,
         progress: false,
         verbose: false,
     }

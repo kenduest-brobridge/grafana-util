@@ -18,7 +18,7 @@ Use this when you have a local export tree or provisioning tree and need to push
 - `--ensure-folders`, `--replace-existing`, `--update-existing-only`: control import behavior.
 - `--require-matching-folder-path`, `--require-matching-export-org`, `--strict-schema`, `--target-schema-version`: safety checks.
 - `--import-message`: revision message stored in Grafana.
-- `--interactive`, `--dry-run`, `--table`, `--json`, `--output-format`, `--output-columns`, `--no-header`, `--progress`, `--verbose`: preview and reporting controls.
+- `--interactive`, `--dry-run`, `--table`, `--json`, `--output-format`, `--output-columns`, `--list-columns`, `--no-header`, `--progress`, `--verbose`: preview and reporting controls. Use `--output-columns all` for the full dry-run table.
 
 ## What success looks like
 - dry-run shows the expected create/update actions before you touch the live server

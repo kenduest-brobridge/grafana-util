@@ -12,7 +12,7 @@ Use this when you have a local datasource bundle or provisioning tree and want t
 - `--org-id`, `--use-export-org`, `--only-org-id`, `--create-missing-orgs`: control cross-org routing.
 - `--replace-existing`, `--update-existing-only`, `--require-matching-export-org`: import safety and reconciliation controls.
 - `--secret-values`: resolve placeholder secrets during import.
-- `--dry-run`, `--table`, `--json`, `--output-format`, `--no-header`, `--output-columns`, `--progress`, `--verbose`: preview and reporting controls.
+- `--dry-run`, `--table`, `--json`, `--output-format`, `--no-header`, `--output-columns`, `--list-columns`, `--progress`, `--verbose`: preview and reporting controls. Use `--output-columns all` for the full dry-run table.
 
 ## Examples
 ```bash

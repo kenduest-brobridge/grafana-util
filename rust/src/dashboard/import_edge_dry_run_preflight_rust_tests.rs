@@ -68,6 +68,7 @@ fn import_dashboards_with_dry_run_skips_post_requests() {
         output_format: None,
         no_header: false,
         output_columns: Vec::new(),
+        list_columns: false,
         progress: false,
         verbose: false,
     };
@@ -164,6 +165,7 @@ fn import_dashboards_rejects_missing_dependencies_before_dashboard_lookup() {
         output_format: None,
         no_header: false,
         output_columns: Vec::new(),
+        list_columns: false,
         progress: false,
         verbose: false,
     };
@@ -258,6 +260,7 @@ fn import_dashboards_skips_dependency_preflight_for_dependency_free_dashboards()
         output_format: None,
         no_header: false,
         output_columns: Vec::new(),
+        list_columns: false,
         progress: false,
         verbose: false,
     };

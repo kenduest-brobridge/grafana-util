@@ -30,7 +30,7 @@ List live or local Grafana service accounts, create, export, import, diff, or de
 
 ## Key flags
 
-- `list`: `--input-dir`, `--query`, `--page`, `--per-page`, `--table`, `--csv`, `--json`, `--yaml`, `--output-format`
+- `list`: `--input-dir`, `--query`, `--output-columns`, `--list-columns`, `--page`, `--per-page`, `--table`, `--csv`, `--json`, `--yaml`, `--output-format`
 - `add`: `--name`, `--role`, `--disabled`, `--json`
 - `export` and `diff`: `--output-dir` or `--diff-dir`, `--overwrite`, `--dry-run`
 - `import`: `--input-dir`, `--replace-existing`, `--dry-run`, `--table`, `--json`, `--output-format`, `--yes`

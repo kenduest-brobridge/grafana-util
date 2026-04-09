@@ -11,7 +11,8 @@ Use this when you want a non-interactive inventory view of live dashboards, opti
 - `--org-id`: list one explicit Grafana org.
 - `--all-orgs`: aggregate results across visible orgs. Prefer Basic auth.
 - `--show-sources`: include resolved datasource names in the list output. `--with-sources` remains accepted as a compatibility alias.
-- `--output-columns`: choose the displayed columns. Selecting `sources` or `source_uids` also resolves datasource names.
+- `--output-columns`: choose the displayed columns. Use `all` to expand the full human-readable column set. Selecting `sources` or `source_uids` also resolves datasource names.
+- `--list-columns`: print the supported `--output-columns` values and exit.
 - `--output-format`, `--json`, `--yaml`, `--csv`, `--table`, `--text`: output mode controls.
 - `--no-header`: suppress table headers.
 

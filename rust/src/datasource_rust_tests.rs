@@ -183,6 +183,29 @@ fn render_import_table_honors_selected_columns() {
 }
 
 #[test]
+fn render_import_table_supports_all_columns() {
+    let rows = vec![vec![
+        "prom-main".to_string(),
+        "Prometheus Main".to_string(),
+        "prometheus".to_string(),
+        "exists-uid".to_string(),
+        "would-update".to_string(),
+        "7".to_string(),
+        "datasources.json#0".to_string(),
+    ]];
+
+    let lines = render_import_table(&rows, true, Some(&["all".to_string()]));
+
+    assert!(lines[0].contains("UID"));
+    assert!(lines[0].contains("NAME"));
+    assert!(lines[0].contains("TYPE"));
+    assert!(lines[0].contains("DESTINATION"));
+    assert!(lines[0].contains("ACTION"));
+    assert!(lines[0].contains("ORG_ID"));
+    assert!(lines[0].contains("FILE"));
+}
+
+#[test]
 fn parse_datasource_import_preserves_requested_path() {
     let args = DatasourceCliArgs::parse_normalized_from([
         "grafana-util",
@@ -275,6 +298,31 @@ fn parse_datasource_import_supports_output_columns() {
                 inner.output_columns,
                 vec!["uid", "action", "org_id", "file"]
             );
+        }
+        _ => panic!("expected datasource import"),
+    }
+}
+
+#[test]
+fn parse_datasource_import_supports_output_columns_all_and_list_columns() {
+    let args = DatasourceCliArgs::parse_normalized_from([
+        "grafana-util",
+        "import",
+        "--input-dir",
+        "./datasources",
+        "--dry-run",
+        "--output-format",
+        "table",
+        "--output-columns",
+        "all",
+        "--list-columns",
+    ]);
+
+    match args.command {
+        super::DatasourceGroupCommand::Import(inner) => {
+            assert!(inner.table);
+            assert_eq!(inner.output_columns, vec!["all"]);
+            assert!(inner.list_columns);
         }
         _ => panic!("expected datasource import"),
     }

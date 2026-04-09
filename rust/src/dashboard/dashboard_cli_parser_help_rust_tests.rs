@@ -129,6 +129,27 @@ fn parse_cli_supports_list_output_columns_with_aliases() {
 }
 
 #[test]
+fn parse_cli_supports_list_output_columns_all_and_list_columns() {
+    let args = parse_cli_from([
+        "grafana-util",
+        "list",
+        "--url",
+        "https://grafana.example.com",
+        "--output-columns",
+        "all",
+        "--list-columns",
+    ]);
+
+    match args.command {
+        DashboardCommand::List(list_args) => {
+            assert_eq!(list_args.output_columns, vec!["all"]);
+            assert!(list_args.list_columns);
+        }
+        _ => panic!("expected list command"),
+    }
+}
+
+#[test]
 fn parse_cli_supports_list_output_format_csv() {
     let args = parse_cli_from([
         "grafana-util",
@@ -1421,6 +1442,31 @@ fn parse_cli_supports_import_dry_run_output_columns() {
                     "file",
                 ]
             );
+        }
+        _ => panic!("expected import command"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_import_dry_run_output_columns_all_and_list_columns() {
+    let args = parse_cli_from([
+        "grafana-util",
+        "import",
+        "--input-dir",
+        "./dashboards/raw",
+        "--dry-run",
+        "--output-format",
+        "table",
+        "--output-columns",
+        "all",
+        "--list-columns",
+    ]);
+
+    match args.command {
+        DashboardCommand::Import(import_args) => {
+            assert!(import_args.table);
+            assert_eq!(import_args.output_columns, vec!["all"]);
+            assert!(import_args.list_columns);
         }
         _ => panic!("expected import command"),
     }

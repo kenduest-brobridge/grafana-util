@@ -92,6 +92,33 @@ mod topology_tui;
 mod validate;
 mod vars;
 
+const DASHBOARD_LIST_OUTPUT_COLUMNS: &[&str] = &[
+    "uid",
+    "name",
+    "folder",
+    "folder_uid",
+    "path",
+    "org",
+    "org_id",
+    "sources",
+    "source_uids",
+];
+
+const DASHBOARD_IMPORT_OUTPUT_COLUMNS: &[&str] = &[
+    "uid",
+    "destination",
+    "action",
+    "folder_path",
+    "source_folder_path",
+    "destination_folder_path",
+    "reason",
+    "file",
+];
+
+fn print_supported_dashboard_columns(columns: &[&str]) {
+    println!("{}", columns.join("\n"));
+}
+
 pub(crate) use authoring::{
     clone_live_dashboard_to_file_with_client, get_live_dashboard_to_file_with_client,
     patch_dashboard_file, publish_dashboard_with_client, render_dashboard_review_csv,
@@ -108,12 +135,12 @@ pub use cli_defs::{
     HistoryDiffArgs, HistoryExportArgs, HistoryListArgs, HistoryOutputFormat, HistoryRestoreArgs,
     ImpactArgs, ImpactOutputFormat, ImportArgs, InspectExportArgs, InspectExportInputType,
     InspectExportReportFormat, InspectLiveArgs, InspectOutputFormat, InspectVarsArgs, ListArgs,
-    PatchFileArgs, PublishArgs, RawToPromptArgs, RawToPromptLogFormat,
-    RawToPromptOutputFormat, RawToPromptResolution, ReviewArgs, ScreenshotArgs,
-    ScreenshotFullPageOutput, ScreenshotOutputFormat, ScreenshotTheme, ServeArgs,
-    SimpleOutputFormat, TopologyArgs, TopologyOutputFormat, ValidateExportArgs,
-    ValidationOutputFormat,
+    PatchFileArgs, PublishArgs, RawToPromptArgs, RawToPromptLogFormat, RawToPromptOutputFormat,
+    RawToPromptResolution, ReviewArgs, ScreenshotArgs, ScreenshotFullPageOutput,
+    ScreenshotOutputFormat, ScreenshotTheme, ServeArgs, SimpleOutputFormat, TopologyArgs,
+    TopologyOutputFormat, ValidateExportArgs, ValidationOutputFormat,
 };
+pub(crate) use cli_defs::materialize_dashboard_common_auth;
 pub use export::{build_export_variant_dirs, build_output_path, export_dashboards_with_client};
 pub use help::{
     maybe_render_dashboard_help_full_from_os_args,
@@ -121,6 +148,7 @@ pub use help::{
     render_inspect_live_help_full,
 };
 pub use import::{diff_dashboards_with_client, import_dashboards_with_client};
+pub(crate) use inspect::resolve_inspect_export_import_dir;
 pub use list::list_dashboards_with_client;
 pub use live::{
     delete_dashboard_request, delete_folder_request, fetch_dashboard, import_dashboard_request,
@@ -128,7 +156,6 @@ pub use live::{
 };
 pub use prompt::build_external_export_document;
 pub(crate) use raw_to_prompt::run_raw_to_prompt;
-pub(crate) use inspect::resolve_inspect_export_import_dir;
 
 use browse::browse_dashboards_with_org_client;
 use delete::delete_dashboards_with_org_clients;
@@ -577,6 +604,10 @@ pub fn run_dashboard_cli_with_client(
             Ok(())
         }
         DashboardCommand::List(list_args) => {
+            if list_args.list_columns {
+                print_supported_dashboard_columns(DASHBOARD_LIST_OUTPUT_COLUMNS);
+                return Ok(());
+            }
             let _ = list_dashboards_with_client(client, &list_args)?;
             Ok(())
         }
@@ -599,6 +630,10 @@ pub fn run_dashboard_cli_with_client(
             run_dashboard_edit_live(Some(client), &edit_live_args)
         }
         DashboardCommand::Import(import_args) => {
+            if import_args.list_columns {
+                print_supported_dashboard_columns(DASHBOARD_IMPORT_OUTPUT_COLUMNS);
+                return Ok(());
+            }
             let _ = import_dashboards_with_client(client, &import_args)?;
             Ok(())
         }
@@ -712,7 +747,19 @@ pub fn run_dashboard_cli(args: DashboardCliArgs) -> Result<()> {
     // normalize CLI args first, then decide whether each branch needs org fan-out,
     // one live client, or no client at all.
     set_json_color_choice(args.color);
-    let args = normalize_dashboard_cli_args(args);
+    let mut args = normalize_dashboard_cli_args(args);
+    match &args.command {
+        DashboardCommand::List(list_args) if list_args.list_columns => {
+            print_supported_dashboard_columns(DASHBOARD_LIST_OUTPUT_COLUMNS);
+            return Ok(());
+        }
+        DashboardCommand::Import(import_args) if import_args.list_columns => {
+            print_supported_dashboard_columns(DASHBOARD_IMPORT_OUTPUT_COLUMNS);
+            return Ok(());
+        }
+        _ => {}
+    }
+    materialize_dashboard_command_auth(&mut args)?;
     match args.command {
         DashboardCommand::Browse(browse_args) => {
             let _ = browse_dashboards_with_org_client(&browse_args)?;
@@ -894,6 +941,47 @@ pub fn run_dashboard_cli(args: DashboardCliArgs) -> Result<()> {
             capture_dashboard_screenshot(&screenshot_args)
         }
     }
+}
+
+fn materialize_dashboard_command_auth(args: &mut DashboardCliArgs) -> Result<()> {
+    match &mut args.command {
+        DashboardCommand::Browse(inner) => inner.common = materialize_dashboard_common_auth(inner.common.clone())?,
+        DashboardCommand::List(inner) => inner.common = materialize_dashboard_common_auth(inner.common.clone())?,
+        DashboardCommand::Export(inner) => inner.common = materialize_dashboard_common_auth(inner.common.clone())?,
+        DashboardCommand::Get(inner) => inner.common = materialize_dashboard_common_auth(inner.common.clone())?,
+        DashboardCommand::CloneLive(inner) => inner.common = materialize_dashboard_common_auth(inner.common.clone())?,
+        DashboardCommand::EditLive(inner) => inner.common = materialize_dashboard_common_auth(inner.common.clone())?,
+        DashboardCommand::Import(inner) => inner.common = materialize_dashboard_common_auth(inner.common.clone())?,
+        DashboardCommand::InspectLive(inner) => inner.common = materialize_dashboard_common_auth(inner.common.clone())?,
+        DashboardCommand::Diff(inner) => inner.common = materialize_dashboard_common_auth(inner.common.clone())?,
+        DashboardCommand::Screenshot(inner) => inner.common = materialize_dashboard_common_auth(inner.common.clone())?,
+        DashboardCommand::Delete(inner) => inner.common = materialize_dashboard_common_auth(inner.common.clone())?,
+        DashboardCommand::Publish(inner) => inner.common = materialize_dashboard_common_auth(inner.common.clone())?,
+        DashboardCommand::History(history_args) => match &mut history_args.command {
+            DashboardHistorySubcommand::List(inner) => {
+                inner.common = materialize_dashboard_common_auth(inner.common.clone())?
+            }
+            DashboardHistorySubcommand::Restore(inner) => {
+                inner.common = materialize_dashboard_common_auth(inner.common.clone())?
+            }
+            DashboardHistorySubcommand::Export(inner) => {
+                inner.common = materialize_dashboard_common_auth(inner.common.clone())?
+            }
+            DashboardHistorySubcommand::Diff(_) => {}
+        },
+        DashboardCommand::Review(_)
+        | DashboardCommand::PatchFile(_)
+        | DashboardCommand::RawToPrompt(_)
+        | DashboardCommand::Serve(_)
+        | DashboardCommand::Analyze(_)
+        | DashboardCommand::GovernanceGate(_)
+        | DashboardCommand::Topology(_)
+        | DashboardCommand::Impact(_)
+        | DashboardCommand::ValidateExport(_)
+        | DashboardCommand::InspectExport(_)
+        | DashboardCommand::InspectVars(_) => {}
+    }
+    Ok(())
 }
 
 #[cfg(test)]

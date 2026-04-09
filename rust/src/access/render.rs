@@ -385,6 +385,135 @@ pub(crate) fn map_get_text(map: &Map<String, Value>, key: &str) -> String {
     }
 }
 
+const USER_LIST_COLUMNS: [(&str, &str, &str); 11] = [
+    ("id", "ID", "id"),
+    ("login", "LOGIN", "login"),
+    ("email", "EMAIL", "email"),
+    ("name", "NAME", "name"),
+    ("org_role", "ORG_ROLE", "orgRole"),
+    ("grafana_admin", "GRAFANA_ADMIN", "grafanaAdmin"),
+    ("scope", "SCOPE", "scope"),
+    ("account_scope", "ACCOUNT_SCOPE", "accountScope"),
+    ("origin", "ORIGIN", "origin.kind"),
+    ("last_active", "LAST_ACTIVE", "lastActive.at"),
+    ("teams", "TEAMS", "teams"),
+];
+
+const TEAM_LIST_COLUMNS: [(&str, &str, &str); 5] = [
+    ("id", "ID", "id"),
+    ("name", "NAME", "name"),
+    ("email", "EMAIL", "email"),
+    ("member_count", "MEMBER_COUNT", "memberCount"),
+    ("members", "MEMBERS", "members"),
+];
+
+const SERVICE_ACCOUNT_LIST_COLUMNS: [(&str, &str, &str); 7] = [
+    ("id", "ID", "id"),
+    ("name", "NAME", "name"),
+    ("login", "LOGIN", "login"),
+    ("role", "ROLE", "role"),
+    ("disabled", "DISABLED", "disabled"),
+    ("tokens", "TOKENS", "tokens"),
+    ("org_id", "ORG_ID", "orgId"),
+];
+
+fn map_get_path_text(map: &Map<String, Value>, path: &str) -> String {
+    let mut current = None;
+    for (index, key) in path.split('.').enumerate() {
+        current = if index == 0 {
+            map.get(key)
+        } else {
+            match current {
+                Some(Value::Object(inner)) => inner.get(key),
+                _ => None,
+            }
+        };
+    }
+    match current {
+        Some(Value::String(text)) => text.clone(),
+        Some(Value::Array(values)) => values
+            .iter()
+            .filter_map(Value::as_str)
+            .collect::<Vec<&str>>()
+            .join(","),
+        Some(Value::Bool(value)) => value.to_string(),
+        Some(Value::Number(number)) => number.to_string(),
+        _ => String::new(),
+    }
+}
+
+fn resolve_list_columns<'a>(
+    supported: &'a [(&'a str, &'a str, &'a str)],
+    requested: &[String],
+) -> Vec<(&'a str, &'a str, &'a str)> {
+    if requested.is_empty() {
+        return supported.to_vec();
+    }
+    if requested.iter().any(|value| value == "all") {
+        return supported.to_vec();
+    }
+    requested
+        .iter()
+        .filter_map(|value| supported.iter().copied().find(|(id, _, _)| id == value))
+        .collect()
+}
+
+fn build_table_rows_for_columns(
+    rows: &[Map<String, Value>],
+    columns: &[(&str, &str, &str)],
+) -> Vec<Vec<String>> {
+    rows.iter()
+        .map(|row| {
+            columns
+                .iter()
+                .map(|(_, _, path)| map_get_path_text(row, path))
+                .collect::<Vec<String>>()
+        })
+        .collect()
+}
+
+fn build_summary_line_for_columns(
+    row: &Map<String, Value>,
+    columns: &[(&str, &str, &str)],
+) -> String {
+    columns
+        .iter()
+        .filter_map(|(id, _, path)| {
+            let value = map_get_path_text(row, path);
+            if value.is_empty() {
+                None
+            } else {
+                Some(format!("{id}={value}"))
+            }
+        })
+        .collect::<Vec<String>>()
+        .join(" ")
+}
+
+pub(crate) fn user_list_column_ids() -> &'static [&'static str] {
+    &[
+        "id",
+        "login",
+        "email",
+        "name",
+        "org_role",
+        "grafana_admin",
+        "scope",
+        "account_scope",
+        "origin",
+        "last_active",
+        "teams",
+    ]
+}
+
+pub(crate) fn team_list_column_ids() -> &'static [&'static str] {
+    &["id", "name", "email", "member_count", "members"]
+}
+
+pub(crate) fn service_account_list_column_ids() -> &'static [&'static str] {
+    &["id", "name", "login", "role", "disabled", "tokens", "org_id"]
+}
+
 /// Purpose: implementation note.
 pub(crate) fn render_objects_json(rows: &[Map<String, Value>]) -> super::Result<String> {
     render_json_value(&Value::Array(
@@ -393,126 +522,132 @@ pub(crate) fn render_objects_json(rows: &[Map<String, Value>]) -> super::Result<
 }
 
 /// user table rows.
-pub(crate) fn user_table_rows(rows: &[Map<String, Value>]) -> Vec<Vec<String>> {
-    rows.iter()
-        .map(|row| {
-            vec![
-                map_get_text(row, "id"),
-                map_get_text(row, "login"),
-                map_get_text(row, "email"),
-                map_get_text(row, "name"),
-                map_get_text(row, "orgRole"),
-                map_get_text(row, "grafanaAdmin"),
-                map_get_text(row, "scope"),
-                map_get_text(row, "accountScope"),
-                map_get_text(row, "teams"),
-            ]
-        })
+pub(crate) fn user_table_rows(rows: &[Map<String, Value>], requested_columns: &[String]) -> Vec<Vec<String>> {
+    let columns = resolve_list_columns(&USER_LIST_COLUMNS, requested_columns);
+    build_table_rows_for_columns(rows, &columns)
+}
+
+pub(crate) fn user_table_headers(requested_columns: &[String]) -> Vec<&'static str> {
+    resolve_list_columns(&USER_LIST_COLUMNS, requested_columns)
+        .into_iter()
+        .map(|(_, header, _)| header)
         .collect()
 }
 
 /// team table rows.
-pub(crate) fn team_table_rows(rows: &[Map<String, Value>]) -> Vec<Vec<String>> {
-    rows.iter()
-        .map(|row| {
-            vec![
-                map_get_text(row, "id"),
-                map_get_text(row, "name"),
-                map_get_text(row, "email"),
-                map_get_text(row, "memberCount"),
-                map_get_text(row, "members"),
-            ]
-        })
+pub(crate) fn team_table_rows(rows: &[Map<String, Value>], requested_columns: &[String]) -> Vec<Vec<String>> {
+    let columns = resolve_list_columns(&TEAM_LIST_COLUMNS, requested_columns);
+    build_table_rows_for_columns(rows, &columns)
+}
+
+pub(crate) fn team_table_headers(requested_columns: &[String]) -> Vec<&'static str> {
+    resolve_list_columns(&TEAM_LIST_COLUMNS, requested_columns)
+        .into_iter()
+        .map(|(_, header, _)| header)
         .collect()
 }
 
 /// service account table rows.
-pub(crate) fn service_account_table_rows(rows: &[Map<String, Value>]) -> Vec<Vec<String>> {
-    rows.iter()
-        .map(|row| {
-            vec![
-                map_get_text(row, "id"),
-                map_get_text(row, "name"),
-                map_get_text(row, "login"),
-                map_get_text(row, "role"),
-                map_get_text(row, "disabled"),
-                map_get_text(row, "tokens"),
-                map_get_text(row, "orgId"),
-            ]
-        })
+pub(crate) fn service_account_table_rows(
+    rows: &[Map<String, Value>],
+    requested_columns: &[String],
+) -> Vec<Vec<String>> {
+    let columns = resolve_list_columns(&SERVICE_ACCOUNT_LIST_COLUMNS, requested_columns);
+    build_table_rows_for_columns(rows, &columns)
+}
+
+pub(crate) fn service_account_table_headers(requested_columns: &[String]) -> Vec<&'static str> {
+    resolve_list_columns(&SERVICE_ACCOUNT_LIST_COLUMNS, requested_columns)
+        .into_iter()
+        .map(|(_, header, _)| header)
         .collect()
 }
 
 /// user summary line.
-pub(crate) fn user_summary_line(row: &Map<String, Value>) -> String {
-    let mut parts = vec![
-        format!("id={}", map_get_text(row, "id")),
-        format!("login={}", map_get_text(row, "login")),
-    ];
-    let email = map_get_text(row, "email");
-    if !email.is_empty() {
-        parts.push(format!("email={email}"));
+pub(crate) fn user_summary_line(row: &Map<String, Value>, requested_columns: &[String]) -> String {
+    if requested_columns.is_empty() {
+        let mut parts = vec![
+            format!("id={}", map_get_text(row, "id")),
+            format!("login={}", map_get_text(row, "login")),
+        ];
+        let email = map_get_text(row, "email");
+        if !email.is_empty() {
+            parts.push(format!("email={email}"));
+        }
+        let name = map_get_text(row, "name");
+        if !name.is_empty() {
+            parts.push(format!("name={name}"));
+        }
+        let role = map_get_text(row, "orgRole");
+        if !role.is_empty() {
+            parts.push(format!("orgRole={role}"));
+        }
+        let admin = map_get_text(row, "grafanaAdmin");
+        if !admin.is_empty() {
+            parts.push(format!("grafanaAdmin={admin}"));
+        }
+        let account_scope = map_get_text(row, "accountScope");
+        if !account_scope.is_empty() {
+            parts.push(format!("accountScope={account_scope}"));
+        }
+        let teams = map_get_text(row, "teams");
+        if !teams.is_empty() {
+            parts.push(format!("teams={teams}"));
+        }
+        parts.push(format!("scope={}", map_get_text(row, "scope")));
+        return parts.join(" ");
     }
-    let name = map_get_text(row, "name");
-    if !name.is_empty() {
-        parts.push(format!("name={name}"));
-    }
-    let role = map_get_text(row, "orgRole");
-    if !role.is_empty() {
-        parts.push(format!("orgRole={role}"));
-    }
-    let admin = map_get_text(row, "grafanaAdmin");
-    if !admin.is_empty() {
-        parts.push(format!("grafanaAdmin={admin}"));
-    }
-    let account_scope = map_get_text(row, "accountScope");
-    if !account_scope.is_empty() {
-        parts.push(format!("accountScope={account_scope}"));
-    }
-    let teams = map_get_text(row, "teams");
-    if !teams.is_empty() {
-        parts.push(format!("teams={teams}"));
-    }
-    parts.push(format!("scope={}", map_get_text(row, "scope")));
-    parts.join(" ")
+    let columns = resolve_list_columns(&USER_LIST_COLUMNS, requested_columns);
+    build_summary_line_for_columns(row, &columns)
 }
 
 /// team summary line.
-pub(crate) fn team_summary_line(row: &Map<String, Value>) -> String {
-    let mut parts = vec![
-        format!("id={}", map_get_text(row, "id")),
-        format!("name={}", map_get_text(row, "name")),
-    ];
-    let email = map_get_text(row, "email");
-    if !email.is_empty() {
-        parts.push(format!("email={email}"));
+pub(crate) fn team_summary_line(row: &Map<String, Value>, requested_columns: &[String]) -> String {
+    if requested_columns.is_empty() {
+        let mut parts = vec![
+            format!("id={}", map_get_text(row, "id")),
+            format!("name={}", map_get_text(row, "name")),
+        ];
+        let email = map_get_text(row, "email");
+        if !email.is_empty() {
+            parts.push(format!("email={email}"));
+        }
+        parts.push(format!("memberCount={}", map_get_text(row, "memberCount")));
+        let members = map_get_text(row, "members");
+        if !members.is_empty() {
+            parts.push(format!("members={members}"));
+        }
+        return parts.join(" ");
     }
-    parts.push(format!("memberCount={}", map_get_text(row, "memberCount")));
-    let members = map_get_text(row, "members");
-    if !members.is_empty() {
-        parts.push(format!("members={members}"));
-    }
-    parts.join(" ")
+    let columns = resolve_list_columns(&TEAM_LIST_COLUMNS, requested_columns);
+    build_summary_line_for_columns(row, &columns)
 }
 
 /// service account summary line.
-pub(crate) fn service_account_summary_line(row: &Map<String, Value>) -> String {
-    let mut parts = vec![
-        format!("id={}", map_get_text(row, "id")),
-        format!("name={}", map_get_text(row, "name")),
-    ];
-    let login = map_get_text(row, "login");
-    if !login.is_empty() {
-        parts.push(format!("login={login}"));
+pub(crate) fn service_account_summary_line(
+    row: &Map<String, Value>,
+    requested_columns: &[String],
+) -> String {
+    if requested_columns.is_empty() {
+        let mut parts = vec![
+            format!("id={}", map_get_text(row, "id")),
+            format!("name={}", map_get_text(row, "name")),
+        ];
+        let login = map_get_text(row, "login");
+        if !login.is_empty() {
+            parts.push(format!("login={login}"));
+        }
+        parts.push(format!("role={}", map_get_text(row, "role")));
+        parts.push(format!("disabled={}", map_get_text(row, "disabled")));
+        parts.push(format!("tokens={}", map_get_text(row, "tokens")));
+        let org_id = map_get_text(row, "orgId");
+        if !org_id.is_empty() {
+            parts.push(format!("orgId={org_id}"));
+        }
+        return parts.join(" ");
     }
-    parts.push(format!("role={}", map_get_text(row, "role")));
-    parts.push(format!("disabled={}", map_get_text(row, "disabled")));
-    parts.push(format!("tokens={}", map_get_text(row, "tokens")));
-    let org_id = map_get_text(row, "orgId");
-    if !org_id.is_empty() {
-        parts.push(format!("orgId={org_id}"));
-    }
-    parts.join(" ")
+    let columns = resolve_list_columns(&SERVICE_ACCOUNT_LIST_COLUMNS, requested_columns);
+    build_summary_line_for_columns(row, &columns)
 }
 
 fn exact_text_matches(text: &str, filter: &Option<String>) -> bool {

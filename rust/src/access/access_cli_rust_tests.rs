@@ -2,7 +2,7 @@
 
 use super::*;
 use crate::access::{
-    render::normalize_user_row,
+    render::{normalize_user_row, user_table_headers},
     build_auth_context, ACCESS_EXPORT_KIND_ORGS, ACCESS_EXPORT_KIND_SERVICE_ACCOUNTS,
     ACCESS_EXPORT_KIND_TEAMS, ACCESS_EXPORT_KIND_USERS, ACCESS_ORG_EXPORT_FILENAME,
     ACCESS_SERVICE_ACCOUNT_EXPORT_FILENAME, ACCESS_TEAM_EXPORT_FILENAME,
@@ -30,6 +30,30 @@ fn parse_cli_supports_user_list() {
             assert!(!list_args.csv);
             assert!(!list_args.json);
             assert!(!list_args.yaml);
+            assert!(list_args.output_columns.is_empty());
+            assert!(!list_args.list_columns);
+        }
+        _ => panic!("expected user list"),
+    }
+}
+
+#[test]
+fn parse_cli_supports_user_list_output_columns_all_and_list_columns() {
+    let args = parse_cli_from([
+        "grafana-util access",
+        "user",
+        "list",
+        "--output-columns",
+        "all",
+        "--list-columns",
+    ]);
+
+    match args.command {
+        AccessCommand::User {
+            command: UserCommand::List(list_args),
+        } => {
+            assert_eq!(list_args.output_columns, vec!["all".to_string()]);
+            assert!(list_args.list_columns);
         }
         _ => panic!("expected user list"),
     }
@@ -1138,6 +1162,8 @@ fn user_list_with_request_reads_org_users() {
         org_role: None,
         grafana_admin: None,
         with_teams: false,
+        output_columns: Vec::new(),
+        list_columns: false,
         page: 1,
         per_page: 100,
         input_dir: None,
@@ -1204,8 +1230,8 @@ fn user_list_render_shows_account_scope_for_shared_global_identity() {
 
     annotate_user_account_scope(&mut rows);
 
-    assert_eq!(user_table_rows(&rows)[0][7], "global-shared");
-    assert!(user_summary_line(&rows[0]).contains("accountScope=global-shared"));
+    assert_eq!(user_table_rows(&rows, &[])[0][7], "global-shared");
+    assert!(user_summary_line(&rows[0], &[]).contains("accountScope=global-shared"));
 }
 
 #[test]
@@ -1280,6 +1306,28 @@ fn normalize_user_row_preserves_existing_structured_origin_and_last_active() {
     assert_eq!(row["origin"]["labels"], json!(["oauth"]));
     assert_eq!(row["lastActive"]["at"], json!("2026-04-09T08:12:00Z"));
     assert_eq!(row["lastActive"]["age"], json!("2m"));
+}
+
+#[test]
+fn user_table_headers_expand_all_output_columns() {
+    let headers = user_table_headers(&["all".to_string()]);
+
+    assert_eq!(
+        headers,
+        vec![
+            "ID",
+            "LOGIN",
+            "EMAIL",
+            "NAME",
+            "ORG_ROLE",
+            "GRAFANA_ADMIN",
+            "SCOPE",
+            "ACCOUNT_SCOPE",
+            "ORIGIN",
+            "LAST_ACTIVE",
+            "TEAMS",
+        ]
+    );
 }
 
 #[test]

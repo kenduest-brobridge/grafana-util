@@ -3,11 +3,11 @@
 use reqwest::Method;
 use serde_json::{Map, Value};
 
-use crate::common::Result;
+use crate::common::{message, Result};
 
 use crate::access::render::{
     format_table, map_get_text, normalize_team_row, paginate_rows, render_csv, render_objects_json,
-    render_yaml, team_summary_line, team_table_rows,
+    render_yaml, team_list_column_ids, team_summary_line, team_table_headers, team_table_rows,
 };
 use crate::access::team_import_export_diff::{
     build_record_diff_fields, build_team_diff_map, load_team_import_records,
@@ -98,6 +98,15 @@ pub(crate) fn list_teams_command_with_request<F>(
 where
     F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
 {
+    if args.list_columns {
+        println!("{}", team_list_column_ids().join("\n"));
+        return Ok(0);
+    }
+    if !args.output_columns.is_empty() && (args.json || args.yaml) {
+        return Err(message(
+            "--output-columns is only supported with text, table, or csv output for access team list.",
+        ));
+    }
     let mut rows = list_teams_with_request(
         &mut request_json,
         args.query.as_deref(),
@@ -127,24 +136,20 @@ where
     } else if args.yaml {
         println!("{}", render_yaml(&rows)?);
     } else if args.csv {
-        for line in render_csv(
-            &["id", "name", "email", "memberCount", "members"],
-            &team_table_rows(&rows),
-        ) {
+        let headers = team_table_headers(&args.output_columns);
+        for line in render_csv(&headers, &team_table_rows(&rows, &args.output_columns)) {
             println!("{line}");
         }
     } else if args.table {
-        for line in format_table(
-            &["ID", "NAME", "EMAIL", "MEMBER_COUNT", "MEMBERS"],
-            &team_table_rows(&rows),
-        ) {
+        let headers = team_table_headers(&args.output_columns);
+        for line in format_table(&headers, &team_table_rows(&rows, &args.output_columns)) {
             println!("{line}");
         }
         println!();
         println!("Listed {} team(s) at {}", rows.len(), args.common.url);
     } else {
         for row in &rows {
-            println!("{}", team_summary_line(row));
+            println!("{}", team_summary_line(row, &args.output_columns));
         }
         println!();
         println!("Listed {} team(s) at {}", rows.len(), args.common.url);
@@ -153,6 +158,15 @@ where
 }
 
 pub(crate) fn list_teams_from_input_dir(args: &TeamListArgs) -> Result<usize> {
+    if args.list_columns {
+        println!("{}", team_list_column_ids().join("\n"));
+        return Ok(0);
+    }
+    if !args.output_columns.is_empty() && (args.json || args.yaml) {
+        return Err(message(
+            "--output-columns is only supported with text, table, or csv output for access team list.",
+        ));
+    }
     let input_dir = args
         .input_dir
         .as_ref()
@@ -186,17 +200,13 @@ pub(crate) fn list_teams_from_input_dir(args: &TeamListArgs) -> Result<usize> {
     } else if args.yaml {
         println!("{}", render_yaml(&rows)?);
     } else if args.csv {
-        for line in render_csv(
-            &["id", "name", "email", "memberCount", "members"],
-            &team_table_rows(&rows),
-        ) {
+        let headers = team_table_headers(&args.output_columns);
+        for line in render_csv(&headers, &team_table_rows(&rows, &args.output_columns)) {
             println!("{line}");
         }
     } else if args.table {
-        for line in format_table(
-            &["ID", "NAME", "EMAIL", "MEMBER_COUNT", "MEMBERS"],
-            &team_table_rows(&rows),
-        ) {
+        let headers = team_table_headers(&args.output_columns);
+        for line in format_table(&headers, &team_table_rows(&rows, &args.output_columns)) {
             println!("{line}");
         }
         println!();
@@ -207,7 +217,7 @@ pub(crate) fn list_teams_from_input_dir(args: &TeamListArgs) -> Result<usize> {
         );
     } else {
         for row in &rows {
-            println!("{}", team_summary_line(row));
+            println!("{}", team_summary_line(row, &args.output_columns));
         }
         println!();
         println!(

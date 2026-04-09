@@ -127,6 +127,19 @@ fn resolve_dashboard_list_columns(
     summaries: &[Map<String, Value>],
     output_columns: &[String],
 ) -> Vec<DashboardListColumn> {
+    if output_columns.iter().any(|column| column == "all") {
+        return vec![
+            DashboardListColumn::Uid,
+            DashboardListColumn::Name,
+            DashboardListColumn::Folder,
+            DashboardListColumn::FolderUid,
+            DashboardListColumn::Path,
+            DashboardListColumn::Org,
+            DashboardListColumn::OrgId,
+            DashboardListColumn::Sources,
+            DashboardListColumn::SourceUids,
+        ];
+    }
     if !output_columns.is_empty() {
         return output_columns
             .iter()

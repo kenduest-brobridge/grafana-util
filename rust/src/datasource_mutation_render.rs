@@ -140,6 +140,17 @@ pub(crate) fn render_import_table(
     selected_columns: Option<&[String]>,
 ) -> Vec<String> {
     let columns = if let Some(selected) = selected_columns {
+        if selected.iter().any(|column| column == "all") {
+            vec![
+                (0usize, "UID"),
+                (1usize, "NAME"),
+                (2usize, "TYPE"),
+                (3usize, "DESTINATION"),
+                (4usize, "ACTION"),
+                (5usize, "ORG_ID"),
+                (6usize, "FILE"),
+            ]
+        } else {
         selected
             .iter()
             .map(|column| match column.as_str() {
@@ -153,6 +164,7 @@ pub(crate) fn render_import_table(
                 _ => unreachable!("validated datasource import output column"),
             })
             .collect::<Vec<(usize, &str)>>()
+        }
     } else {
         vec![
             (0usize, "UID"),
