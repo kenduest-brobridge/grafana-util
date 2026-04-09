@@ -7,7 +7,7 @@
 
 use serde_json::{Map, Value};
 
-use crate::common::{message, Result};
+use crate::common::{message, requested_columns_include_all, Result};
 
 pub(crate) fn render_live_mutation_table(
     rows: &[Vec<String>],
@@ -140,7 +140,7 @@ pub(crate) fn render_import_table(
     selected_columns: Option<&[String]>,
 ) -> Vec<String> {
     let columns = if let Some(selected) = selected_columns {
-        if selected.iter().any(|column| column == "all") {
+        if requested_columns_include_all(selected) {
             vec![
                 (0usize, "UID"),
                 (1usize, "NAME"),
