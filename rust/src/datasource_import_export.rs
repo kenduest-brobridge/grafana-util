@@ -400,10 +400,7 @@ pub(crate) fn print_datasource_import_dry_run_report(
     } else {
         println!("Import mode: {}", report.mode);
         for row in &report.rows {
-            println!(
-                "Dry-run datasource uid={} name={} dest={} action={} file={}",
-                row[0], row[1], row[3], row[4], row[6]
-            );
+            println!("{}", format_datasource_import_dry_run_line(row));
         }
         println!(
             "Dry-run checked {} datasource(s) from {}",
@@ -420,6 +417,13 @@ pub(crate) fn print_datasource_import_dry_run_report(
         }
     }
     Ok(())
+}
+
+fn format_datasource_import_dry_run_line(row: &[String]) -> String {
+    format!(
+        "Dry-run datasource uid={} name={} type={} dest={} action={} file={}",
+        row[0], row[1], row[2], row[3], row[4], row[6]
+    )
 }
 
 #[cfg(test)]
@@ -929,6 +933,28 @@ mod tests {
             plan.requests[1].payload["secureJsonData"]["httpHeaderValue1"],
             json!("tenant-token")
         );
+    }
+
+    #[test]
+    fn datasource_import_dry_run_line_includes_type_context() {
+        let row = vec![
+            "prom-main".to_string(),
+            "Prometheus Main".to_string(),
+            "prometheus".to_string(),
+            "would-create".to_string(),
+            "would-create".to_string(),
+            "7".to_string(),
+            "datasources.json#0".to_string(),
+        ];
+
+        let line = format_datasource_import_dry_run_line(&row);
+
+        assert!(line.contains("uid=prom-main"));
+        assert!(line.contains("name=Prometheus Main"));
+        assert!(line.contains("type=prometheus"));
+        assert!(line.contains("dest=would-create"));
+        assert!(line.contains("action=would-create"));
+        assert!(line.contains("file=datasources.json#0"));
     }
 
     #[test]
