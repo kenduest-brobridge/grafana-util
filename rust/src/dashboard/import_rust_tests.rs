@@ -43,6 +43,38 @@ fn discover_export_org_import_scopes_reports_json_error_for_invalid_index_file()
 }
 
 #[test]
+fn discover_export_org_import_scopes_resolves_repo_root_git_sync_raw_tree() {
+    let temp = tempdir().unwrap();
+    let repo_root = temp.path();
+    fs::create_dir_all(repo_root.join(".git")).unwrap();
+    let raw_dir = repo_root.join("dashboards/git-sync/raw/org_1/raw");
+    fs::create_dir_all(&raw_dir).unwrap();
+    super::dashboard_rust_tests::write_basic_raw_export(
+        &raw_dir,
+        "1",
+        "Main Org",
+        "cpu-main",
+        "CPU Main",
+        "prom-main",
+        "prometheus",
+        "timeseries",
+        "infra",
+        "Infra",
+        "expr",
+        "up",
+    );
+
+    let mut args = super::dashboard_rust_tests::make_import_args(repo_root.to_path_buf());
+    args.use_export_org = true;
+
+    let scopes = discover_export_org_import_scopes(&args).unwrap();
+    assert_eq!(scopes.len(), 1);
+    assert_eq!(scopes[0].source_org_id, 1);
+    assert_eq!(scopes[0].source_org_name, "Main Org");
+    assert_eq!(scopes[0].input_dir, raw_dir);
+}
+
+#[test]
 fn resolve_source_dashboard_folder_path_reports_validation_error_for_unrelated_path() {
     let temp = tempdir().unwrap();
     let input_dir = temp.path().join("imports");

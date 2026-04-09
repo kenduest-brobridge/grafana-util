@@ -14,6 +14,7 @@ use super::import_lookup::{
     list_orgs_cached, resolve_import_target_org_id_with_request, ImportLookupCache,
 };
 use super::list::collect_dashboard_source_metadata;
+use super::source_loader::resolve_dashboard_workspace_variant_dir;
 use super::{build_datasource_catalog, collect_datasource_refs, DEFAULT_DASHBOARD_TITLE};
 use super::{
     discover_dashboard_files, load_datasource_inventory, load_export_metadata,
@@ -155,6 +156,40 @@ fn use_export_org_variant_dir(input_format: super::DashboardImportInputFormat) -
         .expect("dashboard import input format must map to an export variant")
 }
 
+fn has_export_org_scopes(input_dir: &Path, variant_dir_name: &str) -> Result<bool> {
+    for entry in fs::read_dir(input_dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if !path.is_dir() {
+            continue;
+        }
+        let Some(name) = path.file_name().and_then(|item| item.to_str()) else {
+            continue;
+        };
+        if name.starts_with("org_") && path.join(variant_dir_name).is_dir() {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
+fn normalize_export_org_scopes_root(
+    input_dir: &Path,
+    variant_dir_name: &str,
+) -> Result<PathBuf> {
+    if has_export_org_scopes(input_dir, variant_dir_name)? {
+        return Ok(input_dir.to_path_buf());
+    }
+    if let Some(workspace_variant_dir) =
+        resolve_dashboard_workspace_variant_dir(input_dir, variant_dir_name)
+    {
+        if has_export_org_scopes(&workspace_variant_dir, variant_dir_name)? {
+            return Ok(workspace_variant_dir);
+        }
+    }
+    Ok(input_dir.to_path_buf())
+}
+
 fn parse_export_org_scope_for_variant(
     import_root: &Path,
     variant_dir: &Path,
@@ -215,9 +250,10 @@ pub(crate) fn discover_export_org_import_scopes(
         return Ok(Vec::new());
     }
     let variant_dir_name = use_export_org_variant_dir(args.input_format);
+    let scan_root = normalize_export_org_scopes_root(&args.input_dir, variant_dir_name)?;
     let selected_org_ids: BTreeSet<i64> = args.only_org_id.iter().copied().collect();
     let mut scopes = Vec::new();
-    for entry in fs::read_dir(&args.input_dir)? {
+    for entry in fs::read_dir(&scan_root)? {
         let entry = entry?;
         let path = entry.path();
         if !path.is_dir() {
@@ -245,7 +281,7 @@ pub(crate) fn discover_export_org_import_scopes(
     }
     scopes.sort_by(|left, right| left.source_org_id.cmp(&right.source_org_id));
     if scopes.is_empty() {
-        if let Some(metadata) = load_export_metadata(&args.input_dir, None)? {
+        if let Some(metadata) = load_export_metadata(&scan_root, None)? {
             if metadata.variant != "root" {
                 return Err(message(format!(
                     "Dashboard import with --use-export-org expects the combined export root, not one {variant_dir_name}/ export directory."
@@ -255,7 +291,7 @@ pub(crate) fn discover_export_org_import_scopes(
         if selected_org_ids.is_empty() {
             return Err(message(format!(
                 "Dashboard import with --use-export-org did not find any org-specific {variant_dir_name} exports under {}.",
-                args.input_dir.display(),
+                scan_root.display(),
             )));
         }
         return Err(message(format!(
@@ -265,7 +301,7 @@ pub(crate) fn discover_export_org_import_scopes(
                 .map(|id| id.to_string())
                 .collect::<Vec<String>>()
                 .join(", "),
-            args.input_dir.display()
+            scan_root.display()
         )));
     }
     let found_org_ids: BTreeSet<i64> = scopes.iter().map(|scope| scope.source_org_id).collect();

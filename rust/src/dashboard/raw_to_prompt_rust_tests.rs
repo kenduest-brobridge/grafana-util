@@ -130,6 +130,38 @@ fn raw_to_prompt_raw_dir_defaults_to_sibling_prompt_and_writes_metadata() {
 }
 
 #[test]
+fn raw_to_prompt_repo_root_normalizes_to_dashboard_raw_lane() {
+    let temp = tempdir().unwrap();
+    fs::create_dir_all(temp.path().join(".git")).unwrap();
+    let dashboards_root = temp.path().join("dashboards");
+    let raw_dir = dashboards_root.join("raw");
+    write_json(
+        &raw_dir.join("cpu-main.json"),
+        json!({
+            "uid": "cpu-main",
+            "title": "CPU Main",
+            "panels": [{
+                "id": 1,
+                "type": "timeseries",
+                "datasource": "legacy-prom",
+                "targets": [{"refId": "A", "expr": "rate(cpu_usage_total[5m])"}]
+            }]
+        }),
+    );
+
+    let mut args = make_args();
+    args.input_dir = Some(temp.path().to_path_buf());
+    args.overwrite = true;
+
+    run_raw_to_prompt(&args).unwrap();
+
+    let prompt_dir = dashboards_root.join("prompt");
+    assert!(prompt_dir.join("cpu-main.json").is_file());
+    assert!(prompt_dir.join("index.json").is_file());
+    assert!(prompt_dir.join(EXPORT_METADATA_FILENAME).is_file());
+}
+
+#[test]
 fn raw_to_prompt_uses_datasource_map_for_exact_resolution() {
     let temp = tempdir().unwrap();
     let input = temp.path().join("cpu-main.json");
