@@ -14,6 +14,7 @@ from docgen_common import REPO_ROOT, VERSION, check_outputs, print_written_outpu
 
 MAN_DIR = REPO_ROOT / "docs" / "man"
 DATE = "2026-04-03"
+LEGACY_ROOT_SOURCE_PAGES = {"status.md", "overview.md"}
 
 
 @dataclass(frozen=True)
@@ -462,7 +463,7 @@ def iter_standalone_command_pages(command_docs_dir: Path) -> list[tuple[str, Com
     root_docs.add("index")
     pages: list[tuple[str, CommandDocPage]] = []
     for source in sorted(command_docs_dir.glob("*.md")):
-        if source.stem in root_docs:
+        if source.stem in root_docs or source.name in LEGACY_ROOT_SOURCE_PAGES:
             continue
         cli_path = "grafana-util " + source.stem.replace("-", " ")
         try:
@@ -593,9 +594,9 @@ def generate_top_level_manpage(*, command_docs_dir: Path, version: str = VERSION
         [
             ("Open the unified CLI help and command namespace list.", "grafana-util --help"),
             ("Inspect the dashboard namespace help before choosing a live or file-based workflow.", "grafana-util dashboard --help"),
-            ("Render staged or live estate status through a repo-local profile.", "grafana-util status live --profile prod --output yaml"),
-            ("Render live estate status with direct Basic auth during bootstrap or break-glass work.", "grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output yaml"),
-            ("Summarize live Grafana inventory as JSON under the overview namespace.", "grafana-util overview live --url http://localhost:3000 --token $GRAFANA_API_TOKEN --output json"),
+            ("Render staged or live estate state through a repo-local profile.", "grafana-util observe live --profile prod --output yaml"),
+            ("Render live estate state with direct Basic auth during bootstrap or break-glass work.", "grafana-util observe live --url http://localhost:3000 --basic-user admin --prompt-password --output yaml"),
+            ("Summarize live Grafana inventory as JSON under the observe overview namespace.", "grafana-util observe overview live --url http://localhost:3000 --token $GRAFANA_API_TOKEN --output json"),
             ("Export live dashboards into a local working tree for review or promotion.", "grafana-util dashboard export --url http://localhost:3000 --export-dir ./dashboards"),
             ("Build a reviewable alert plan from desired-state files before apply.", "grafana-util alert plan --desired-dir ./alerts/desired --prune --output json"),
             ("Export datasource inventory into a normalized local bundle.", "grafana-util datasource export --url http://localhost:3000 --export-dir ./datasources --overwrite"),

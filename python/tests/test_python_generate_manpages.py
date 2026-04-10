@@ -29,6 +29,9 @@ class GenerateManpagesTests(unittest.TestCase):
         self.assertIn("grafana-util-dashboard-screenshot.1", generated)
         self.assertIn("grafana-util-access-service-account-token.1", generated)
         self.assertIn("grafana-util-profile-add.1", generated)
+        self.assertNotIn("grafana-util-status.1", generated)
+        self.assertNotIn("grafana-util-overview.1", generated)
+        self.assertNotIn("grafana-util-profile.1", generated)
 
     def test_subcommand_manpage_contains_command_sections(self):
         module = load_module()
@@ -121,6 +124,22 @@ class GenerateManpagesTests(unittest.TestCase):
         )
         self.assertIn("grafana-util-change*(1) pages.", top_level_manpage)
         self.assertNotIn("does not yet carry a generated sync namespace manpage", top_level_manpage)
+        self.assertNotIn("grafana-util status --profile prod", top_level_manpage)
+        self.assertNotIn("grafana-util overview live --url", top_level_manpage)
+        self.assertIn("grafana-util observe live --profile prod --output yaml", top_level_manpage)
+        self.assertIn("grafana-util observe overview live --url", top_level_manpage)
+
+    def test_removed_root_migration_pages_do_not_generate_outputs(self):
+        module = load_module()
+
+        generated = module.generate_manpages()
+
+        self.assertNotIn("grafana-util-status.1", generated)
+        self.assertNotIn("grafana-util-overview.1", generated)
+        self.assertNotIn("grafana-util-profile.1", generated)
+        self.assertNotIn("grafana-util-status-live.1", generated)
+        self.assertNotIn("grafana-util-overview-live.1", generated)
+        self.assertNotIn("grafana-util-profile-add.1", generated)
 
     def test_namespace_manpage_examples_include_caption_lines(self):
         module = load_module()

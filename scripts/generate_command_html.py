@@ -24,7 +24,7 @@ from docgen_handbook import (
     handbook_language_href,
 )
 from docgen_landing import LANDING_LOCALES, LANDING_UI_LABELS, LandingLink, LandingSection, LandingTask, load_landing_page
-from generate_manpages import NAMESPACE_SPECS, generate_manpages
+from generate_manpages import LEGACY_ROOT_SOURCE_PAGES, NAMESPACE_SPECS, generate_manpages
 
 HTML_ROOT_DIR = REPO_ROOT / "docs" / "html"
 COMMAND_DOCS_ROOT = REPO_ROOT / "docs" / "commands"
@@ -917,6 +917,8 @@ def generate_outputs(config=HtmlBuildConfig()):
             outputs[prefixed_output_rel(config, f"man/{name}")] = roff
     for loc in COMMAND_DOC_LOCALES:
         for src in sorted((config.command_docs_root / loc).glob("*.md")):
+            if src.name in LEGACY_ROOT_SOURCE_PAGES:
+                continue
             out_rel = prefixed_output_rel(config, f"commands/{loc}/{src.with_suffix('.html').name}")
             outputs[out_rel] = render_command_page(loc, src, out_rel, config)
     for loc in HANDBOOK_LOCALES:

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>兼容頁：grafana-util status · grafana-util docs</title>
+  <title>grafana-util observe · grafana-util docs</title>
   <style>:root {
   color-scheme: light dark;
   --font-scale: 1;
@@ -736,7 +736,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
       <div class="topbar">
   <a class="brand" href="../../index.html">grafana-util docs</a>
   <div class="themebar">
-    <select id="page-locale-select" aria-label="Language switch"><option value="" selected>Language: 繁體中文</option><option value="../en/status.html">Switch to English</option></select><select id="jump-select" aria-label="Jump"><option value="" selected>快速跳轉...</option><optgroup label="使用手冊"><option value="../../handbook/zh-TW/index.html">概觀</option><option value="../../handbook/zh-TW/what-is-grafana-util.html">這個工具是做什麼的</option><option value="../../handbook/zh-TW/getting-started.html">開始使用</option><option value="../../handbook/zh-TW/role-new-user.html">新手快速入門</option><option value="../../handbook/zh-TW/role-sre-ops.html">SRE / 維運角色導讀</option><option value="../../handbook/zh-TW/role-automation-ci.html">自動化 / CI 角色導讀</option><option value="../../handbook/zh-TW/architecture.html">系統架構與設計原則</option><option value="../../handbook/zh-TW/dashboard.html">Dashboard 維運人員手冊</option><option value="../../handbook/zh-TW/datasource.html">Data source 維運手冊</option><option value="../../handbook/zh-TW/alert.html">Alert 維運人員手冊</option><option value="../../handbook/zh-TW/access.html">身分與存取管理</option><option value="../../handbook/zh-TW/change-overview-status.html">專案狀態與變更總覽</option><option value="../../handbook/zh-TW/scenarios.html">維運情境手冊</option><option value="../../handbook/zh-TW/recipes.html">實戰錦囊與最佳實踐</option><option value="../../handbook/zh-TW/reference.html">技術參考手冊</option><option value="../../handbook/zh-TW/troubleshooting.html">疑難排解與名詞解釋</option></optgroup><optgroup label="指令參考"><option value="dashboard.html">Dashboard</option><option value="migrate.html">Migrate</option><option value="alert.html">Alert</option><option value="datasource.html">Datasource</option><option value="access.html">Access</option><option value="profile.html">Profile</option><option value="status.html">Status</option><option value="overview.html">Overview</option><option value="change.html">Change</option><option value="snapshot.html">Snapshot</option></optgroup></select>
+    <select id="page-locale-select" aria-label="Language switch"><option value="" selected>Language: 繁體中文</option><option value="../en/observe.html">Switch to English</option></select><select id="jump-select" aria-label="Jump"><option value="" selected>快速跳轉...</option><optgroup label="使用手冊"><option value="../../handbook/zh-TW/index.html">概觀</option><option value="../../handbook/zh-TW/what-is-grafana-util.html">這個工具是做什麼的</option><option value="../../handbook/zh-TW/getting-started.html">開始使用</option><option value="../../handbook/zh-TW/role-new-user.html">新手快速入門</option><option value="../../handbook/zh-TW/role-sre-ops.html">SRE / 維運角色導讀</option><option value="../../handbook/zh-TW/role-automation-ci.html">自動化 / CI 角色導讀</option><option value="../../handbook/zh-TW/architecture.html">系統架構與設計原則</option><option value="../../handbook/zh-TW/dashboard.html">Dashboard 維運人員手冊</option><option value="../../handbook/zh-TW/datasource.html">Data source 維運手冊</option><option value="../../handbook/zh-TW/alert.html">Alert 維運人員手冊</option><option value="../../handbook/zh-TW/access.html">身分與存取管理</option><option value="../../handbook/zh-TW/change-overview-status.html">專案狀態與變更總覽</option><option value="../../handbook/zh-TW/scenarios.html">維運情境手冊</option><option value="../../handbook/zh-TW/recipes.html">實戰錦囊與最佳實踐</option><option value="../../handbook/zh-TW/reference.html">技術參考手冊</option><option value="../../handbook/zh-TW/troubleshooting.html">疑難排解與名詞解釋</option></optgroup><optgroup label="指令參考"><option value="dashboard.html">Dashboard</option><option value="migrate.html">Migrate</option><option value="alert.html">Alert</option><option value="datasource.html">Datasource</option><option value="access.html">Access</option><option value="config.html">Config</option><option value="observe.html">Observe</option><option value="change.html">Change</option><option value="snapshot.html">Snapshot</option></optgroup></select>
     <select id="font-select" aria-label="Font Size">
       <option value="0.9">Font: Compact</option>
       <option value="1">Font: Default</option>
@@ -758,74 +758,79 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 </aside>
 
   <article class="article">
-    <div class="breadcrumbs"><a href="../../index.html">Home</a> / Commands / 兼容頁：grafana-util status</div>
+    <div class="breadcrumbs"><a href="../../index.html">Home</a> / Commands / grafana-util observe</div>
 
-    <h1><span class="hero-title-main">兼容頁：grafana-util status</span></h1>
+    <h1><span class="hero-title-main">grafana-util observe</span></h1>
 
 
     <section class="command-intro">
   <div class="command-intro-grid"><div class="command-intro-block">
   <p class="command-intro-label">這頁在說什麼</p>
-  <p class="command-intro-text">舊 status root 的相容參考頁。</p>
+  <p class="command-intro-text">透過同一個 observe surface 做 live 與 staged 的 Grafana 唯讀檢查。</p>
 </div>
 <div class="command-intro-block">
   <p class="command-intro-label">適合誰</p>
-  <p class="command-intro-text">適合想在動手前先做 live 或 staged readiness 檢查的人。</p>
+  <p class="command-intro-text">適合想用同一個安全的唯讀入口查看 staged 檢查、live 檢查、overview、snapshot 與 generic resource reads 的人。</p>
 </div>
 </div>
 </section>
 <h2 id="root">Root</h2>
-<p>用途：舊 <code>status</code> root 的相容參考頁。</p>
-<p>適用時機：當你在對照舊文件或舊腳本，想對應到目前的 <code>observe</code> surface 時。</p>
-<p>說明：目前公開的 staged/live status surface 已移到 <code>grafana-util observe</code>。請改用 <code>observe staged</code>、<code>observe live</code>、<code>observe overview</code> 或 <code>observe snapshot</code>，不要再把 top-level <code>status</code> 當成主入口。</p>
-<p>主要旗標：canonical root 是 <code>observe</code>；staged 與 live 輸入都在子指令上。常見旗標包含 <code>--output-format</code> 和共用的 live 連線 / 驗證選項。</p>
-<p>範例：</p>
-<pre><code># 用途：輸出 staged 狀態，來源是 dashboard 與 desired 產物。
-grafana-util observe staged --dashboard-export-dir ./dashboards/raw --desired-file ./desired.json --output-format json</code></pre>
-<pre><code># 用途：用可重複使用的 profile 輸出 live 狀態。
-grafana-util observe live --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --output-format yaml</code></pre>
-<p>相關指令：<code>grafana-util observe overview</code>、<code>grafana-util change check</code>、<code>grafana-util change apply</code>。</p>
-<p>Schema guide：</p>
-<ul><li><code>grafana-util observe --help-schema</code></li><li><code>grafana-util observe staged --help-schema</code></li><li><code>grafana-util observe live --help-schema</code></li></ul>
+<p>用途：透過同一個 observe surface 做 live 與 staged 的 Grafana 唯讀檢查。</p>
+<p>適用時機：當你想在 export、change review、或任何 domain-specific workflow 之前，先做安全的 read-only 檢查。</p>
+<p>說明：<code>observe</code> 是公開的唯讀入口，負責 staged status、live status、project overview、snapshot，以及 generic resource read。把它當成預設的「先看再動手」入口；真的要進 mutation 或 domain-heavy workflow 時，再切去 <code>change</code> 或 <code>advanced</code>。</p>
+<h2 id="先從這裡開始">先從這裡開始</h2>
+<ul><li><code>observe staged</code>：從本地 artifacts 顯示 staged readiness</li><li><code>observe live</code>：從 Grafana 顯示 live readiness</li><li><code>observe overview</code>：整理 staged 或 live 的整體摘要</li><li><code>observe snapshot</code>：建立或檢視本地 snapshot bundle</li><li><code>observe resource ...</code>：檢查 generic live resources</li></ul>
+<p>Examples:</p>
+<pre><code># 用途：透過可重複使用的 repo-local profile 檢查 live readiness。
+grafana-util observe live --profile prod --output-format yaml</code></pre>
+<pre><code># 用途：在 change preview 前先看 staged dashboard 與 alert artifacts。
+grafana-util observe staged --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts/raw --output-format text</code></pre>
+<pre><code># 用途：用較高層次的方式整理 staged workspace。
+grafana-util observe overview --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts/raw --output-format text</code></pre>
+<p>相關指令：<code>grafana-util change</code>、<code>grafana-util export</code>、<code>grafana-util config profile</code>、<code>grafana-util advanced</code>。</p>
 <h2 id="staged"><code>staged</code></h2>
-<p>用途：根據已準備好的 artifact 輸出專案狀態。</p>
-<p>適用時機：當你需要在 apply 前，先用結構化輸出做 readiness gate 時。</p>
-<p>主要旗標：<code>--dashboard-export-dir</code>、<code>--dashboard-provisioning-dir</code>、<code>--datasource-export-dir</code>、<code>--datasource-provisioning-file</code>、<code>--access-user-export-dir</code>、<code>--access-team-export-dir</code>、<code>--access-org-export-dir</code>、<code>--access-service-account-export-dir</code>、<code>--desired-file</code>、<code>--source-bundle</code>、<code>--target-inventory</code>、<code>--alert-export-dir</code>、<code>--availability-file</code>、<code>--mapping-file</code>、<code>--output-format</code>。</p>
-<p>範例：</p>
-<pre><code># 用途：staged。
+<p>用途：從 staged artifacts 產生 project status。</p>
+<p>適用時機：當你要在 apply 前，用 machine-readable gate 檢查本地檔案是否準備好。</p>
+<p>重要旗標：<code>--dashboard-export-dir</code>、<code>--dashboard-provisioning-dir</code>、<code>--datasource-export-dir</code>、<code>--datasource-provisioning-file</code>、<code>--access-user-export-dir</code>、<code>--access-team-export-dir</code>、<code>--access-org-export-dir</code>、<code>--access-service-account-export-dir</code>、<code>--desired-file</code>、<code>--source-bundle</code>、<code>--target-inventory</code>、<code>--alert-export-dir</code>、<code>--availability-file</code>、<code>--mapping-file</code>、<code>--output-format</code>。</p>
+<p>Examples:</p>
+<pre><code># 用途：從 raw dashboard artifacts 與 desired file 產生 staged status。
 grafana-util observe staged --dashboard-export-dir ./dashboards/raw --desired-file ./desired.json --output-format table</code></pre>
-<pre><code># 用途：staged。
+<pre><code># 用途：在 interactive workbench 裡檢查 staged status。
 grafana-util observe staged --dashboard-provisioning-dir ./dashboards/provisioning --alert-export-dir ./alerts --output-format interactive</code></pre>
-<p>相關指令：<code>grafana-util observe overview</code>、<code>grafana-util change inspect</code>、<code>grafana-util change check</code>。</p>
 <p>Machine-readable contract：<code>grafana-util-project-status</code></p>
 <h2 id="live"><code>live</code></h2>
-<p>用途：根據 live Grafana 的讀取結果輸出專案狀態。</p>
-<p>適用時機：當你需要目前的 Grafana 狀態，並可選擇搭配 staged context 檔案時。</p>
-<p>主要旗標：<code>--profile</code>、<code>--url</code>、<code>--token</code>、<code>--basic-user</code>、<code>--basic-password</code>、<code>--prompt-password</code>、<code>--prompt-token</code>、<code>--timeout</code>、<code>--verify-ssl</code>、<code>--insecure</code>、<code>--ca-cert</code>、<code>--all-orgs</code>、<code>--org-id</code>、<code>--sync-summary-file</code>、<code>--bundle-preflight-file</code>、<code>--promotion-summary-file</code>、<code>--mapping-file</code>、<code>--availability-file</code>、<code>--output-format</code>。</p>
-<p>說明：</p>
-<ul><li>一般 live status 檢查優先用 <code>--profile</code>。</li><li><code>--all-orgs</code> 最穩妥的是搭配管理員憑證支援的 <code>--profile</code> 或直接 Basic auth，因為 token 權限可能看不到其他 org。</li></ul>
-<p>範例：</p>
-<pre><code># 用途：live。
+<p>用途：從 live Grafana read surface 產生 project status。</p>
+<p>適用時機：當你需要目前 Grafana 的 live 狀態，並可選擇疊上 staged sync context。</p>
+<p>重要旗標：<code>--profile</code>、<code>--url</code>、<code>--token</code>、<code>--basic-user</code>、<code>--basic-password</code>、<code>--prompt-password</code>、<code>--prompt-token</code>、<code>--timeout</code>、<code>--verify-ssl</code>、<code>--insecure</code>、<code>--ca-cert</code>、<code>--all-orgs</code>、<code>--org-id</code>、<code>--sync-summary-file</code>、<code>--bundle-preflight-file</code>、<code>--promotion-summary-file</code>、<code>--mapping-file</code>、<code>--availability-file</code>、<code>--output-format</code>。</p>
+<p>Examples:</p>
+<pre><code># 用途：透過可重複使用的 profile 顯示 live status。
 grafana-util observe live --profile prod --output-format yaml</code></pre>
-<pre><code># 用途：live。
-grafana-util observe live --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --sync-summary-file ./sync-summary.json --output-format interactive</code></pre>
-<pre><code># 用途：live。
-grafana-util observe live --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --output-format json</code></pre>
-<p>相關指令：<code>grafana-util observe overview</code>、<code>grafana-util change apply</code>、<code>grafana-util config profile show</code>。</p>
+<pre><code># 用途：顯示帶 staged sync context 的 live status。
+grafana-util observe live --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --sync-summary-file ./sync-summary.json --bundle-preflight-file ./bundle-preflight.json --output-format json</code></pre>
 <p>Machine-readable contract：<code>grafana-util-project-status</code></p>
+<h2 id="overview"><code>overview</code></h2>
+<p>用途：整理 project-wide staged 或 live context。</p>
+<p>適用時機：當你想用一個較高層次的視角，同時看 dashboards、datasources、alerts、access 與 change artifacts。</p>
+<p>重要旗標：像 <code>--dashboard-export-dir</code>、<code>--dashboard-provisioning-dir</code>、<code>--datasource-export-dir</code>、<code>--datasource-provisioning-file</code>、<code>--access-user-export-dir</code>、<code>--access-team-export-dir</code>、<code>--access-org-export-dir</code>、<code>--access-service-account-export-dir</code>、<code>--desired-file</code>、<code>--source-bundle</code>、<code>--target-inventory</code>、<code>--alert-export-dir</code>、<code>--availability-file</code>、<code>--mapping-file</code>、<code>--output-format</code> 這類 staged input 與 output flags。</p>
+<p>Examples:</p>
+<pre><code># 用途：整理 staged dashboard、alert 與 access artifacts。
+grafana-util observe overview --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts --desired-file ./desired.json --output-format table</code></pre>
+<pre><code># 用途：在 interactive workbench 顯示 live overview。
+grafana-util observe overview live --url http://localhost:3000 --basic-user admin --basic-password admin --output-format interactive</code></pre>
+<p>相關指令：<code>grafana-util observe live</code>、<code>grafana-util change inspect</code>、<code>grafana-util snapshot review</code>。</p>
     
   </article>
   <aside class="sidebar">
   <button class="sidebar-toggle sidebar-toggle-right" type="button" aria-expanded="true" aria-label="Toggle page sidebar">▶</button>
   <div class="sidebar-content">
-    <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#root"><span class="toc-label">Root</span></a></li><li class="toc-level-2"><a href="#staged"><span class="toc-label">staged`</span></a></li><li class="toc-level-2"><a href="#live"><span class="toc-label">live`</span></a></li></ul></section><section class="sidebar-section"><h2>Related</h2><ul class="sidebar-meta-list"><li><a href="../../handbook/zh-TW/change-overview-status.html" class="sidebar-meta-link">Matching handbook chapter</a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/status.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
+    <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#root"><span class="toc-label">Root</span></a></li><li class="toc-level-2"><a href="#先從這裡開始"><span class="toc-label">先從這裡開始</span></a></li><li class="toc-level-2"><a href="#staged"><span class="toc-label">staged`</span></a></li><li class="toc-level-2"><a href="#live"><span class="toc-label">live`</span></a></li><li class="toc-level-2"><a href="#overview"><span class="toc-label">overview`</span></a></li></ul></section><section class="sidebar-section"><h2>Related</h2><ul class="sidebar-meta-list"><li><a href="../../handbook/zh-TW/change-overview-status.html" class="sidebar-meta-link">Matching handbook chapter</a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/observe.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
   </div>
 </aside>
 
 </div>
 
     </div>
-    <footer class="site-footer">Source: status.md</footer>
+    <footer class="site-footer">Source: observe.md</footer>
   </div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js" async></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js" async></script>

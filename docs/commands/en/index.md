@@ -18,6 +18,7 @@ Use these pages when you want one stable page per command or subcommand instead 
 The public first-run CLI is organized around a small task-first surface:
 
 - [observe](./observe.md): read-only status, overview, snapshot, and resource queries
+- [config](./config.md): repo-local configuration workflows and profile management
 - `export`: common backup and local-inventory capture
 - `change`: review-first staged change workflows
 - [config profile](./profile.md): repo-local connection and secret management
@@ -25,7 +26,7 @@ The public first-run CLI is organized around a small task-first surface:
 
 Compatibility roots such as `dashboard`, `alert`, `datasource`, and `access` still exist for expert workflows, but they are no longer the primary onboarding path.
 
-Removed root paths:
+Removed root paths as migration notes only:
 
 - `status ...` -> `observe staged ...` or `observe live ...`
 - `overview ...` -> `observe overview ...`

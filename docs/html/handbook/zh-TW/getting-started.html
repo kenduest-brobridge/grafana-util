@@ -736,7 +736,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
       <div class="topbar">
   <a class="brand" href="../../index.html">grafana-util docs</a>
   <div class="themebar">
-    <select id="page-locale-select" aria-label="Language switch"><option value="" selected>Language: 繁體中文</option><option value="../en/getting-started.html">Switch to English</option></select><select id="jump-select" aria-label="Jump"><option value="" selected>快速跳轉...</option><optgroup label="使用手冊"><option value="index.html">概觀</option><option value="what-is-grafana-util.html">這個工具是做什麼的</option><option value="getting-started.html">開始使用</option><option value="role-new-user.html">新手快速入門</option><option value="role-sre-ops.html">SRE / 維運角色導讀</option><option value="role-automation-ci.html">自動化 / CI 角色導讀</option><option value="architecture.html">系統架構與設計原則</option><option value="dashboard.html">Dashboard 維運人員手冊</option><option value="datasource.html">Data source 維運手冊</option><option value="alert.html">Alert 維運人員手冊</option><option value="access.html">身分與存取管理</option><option value="change-overview-status.html">專案狀態與變更總覽</option><option value="scenarios.html">維運情境手冊</option><option value="recipes.html">實戰錦囊與最佳實踐</option><option value="reference.html">技術參考手冊</option><option value="troubleshooting.html">疑難排解與名詞解釋</option></optgroup><optgroup label="指令參考"><option value="../../commands/zh-TW/dashboard.html">Dashboard</option><option value="../../commands/zh-TW/migrate.html">Migrate</option><option value="../../commands/zh-TW/alert.html">Alert</option><option value="../../commands/zh-TW/datasource.html">Datasource</option><option value="../../commands/zh-TW/access.html">Access</option><option value="../../commands/zh-TW/profile.html">Profile</option><option value="../../commands/zh-TW/status.html">Status</option><option value="../../commands/zh-TW/overview.html">Overview</option><option value="../../commands/zh-TW/change.html">Change</option><option value="../../commands/zh-TW/snapshot.html">Snapshot</option></optgroup></select>
+    <select id="page-locale-select" aria-label="Language switch"><option value="" selected>Language: 繁體中文</option><option value="../en/getting-started.html">Switch to English</option></select><select id="jump-select" aria-label="Jump"><option value="" selected>快速跳轉...</option><optgroup label="使用手冊"><option value="index.html">概觀</option><option value="what-is-grafana-util.html">這個工具是做什麼的</option><option value="getting-started.html">開始使用</option><option value="role-new-user.html">新手快速入門</option><option value="role-sre-ops.html">SRE / 維運角色導讀</option><option value="role-automation-ci.html">自動化 / CI 角色導讀</option><option value="architecture.html">系統架構與設計原則</option><option value="dashboard.html">Dashboard 維運人員手冊</option><option value="datasource.html">Data source 維運手冊</option><option value="alert.html">Alert 維運人員手冊</option><option value="access.html">身分與存取管理</option><option value="change-overview-status.html">專案狀態與變更總覽</option><option value="scenarios.html">維運情境手冊</option><option value="recipes.html">實戰錦囊與最佳實踐</option><option value="reference.html">技術參考手冊</option><option value="troubleshooting.html">疑難排解與名詞解釋</option></optgroup><optgroup label="指令參考"><option value="../../commands/zh-TW/dashboard.html">Dashboard</option><option value="../../commands/zh-TW/migrate.html">Migrate</option><option value="../../commands/zh-TW/alert.html">Alert</option><option value="../../commands/zh-TW/datasource.html">Datasource</option><option value="../../commands/zh-TW/access.html">Access</option><option value="../../commands/zh-TW/config.html">Config</option><option value="../../commands/zh-TW/observe.html">Observe</option><option value="../../commands/zh-TW/change.html">Change</option><option value="../../commands/zh-TW/snapshot.html">Snapshot</option></optgroup></select>
     <select id="font-select" aria-label="Font Size">
       <option value="0.9">Font: Compact</option>
       <option value="1">Font: Default</option>
@@ -781,7 +781,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <p>讀完這一章後，理想狀態應該是：</p>
 <ul><li>binary 已經能從你的 shell 直接執行</li><li>至少一條直接的 live 唯讀命令成功</li><li>你知道自己現在是用 Basic auth、token、環境變數，還是 <code>--profile</code></li><li>你已經為同一個目標 Grafana 建好一個可重複使用的 profile</li><li>你知道下一步該去看 dashboard、alert、access，還是自動化路線</li></ul>
 <p>如果你還做不到這些，先停在第一個失敗的唯讀命令，搭配 <a href="troubleshooting.html">疑難排解與名詞解釋</a> 找原因，不要急著往變更或匯入流程走。</p>
-<p>若要對照本章提到的旗標，請一併參考 <a href="../../commands/zh-TW/profile.html">profile</a>、<a href="../../commands/zh-TW/status.html">status</a> 與 <a href="../../commands/zh-TW/overview.html">overview</a>。</p>
+<p>若要對照本章提到的旗標，請一併參考 <a href="../../commands/zh-TW/config.html">config profile</a> 與 <a href="../../commands/zh-TW/index.html">指令詳細說明總索引</a>。</p>
 <h2 id="步驟-1安裝">步驟 1：安裝</h2>
 <h3 id="下載並安裝">下載並安裝</h3>
 <pre><code># 用途：下載並安裝。
@@ -851,7 +851,7 @@ grafana-util config profile list</code></pre>
 <pre><code>dev
 prod</code></pre>
 <p>在剛初始化完成的設定檔中，<code>config profile list</code> 會一行列出一個 profile 名稱。</p>
-<p>若要看每個旗標背後的驗證規則，可再對照 <a href="../../commands/zh-TW/profile.html">config profile</a> 指令頁。</p>
+<p>若要看每個旗標背後的驗證規則，可再對照 <a href="../../commands/zh-TW/config.html">config profile</a> 指令頁。</p>
 <h3 id="3-查看已解析的-profile">3. 查看已解析的 profile</h3>
 <pre><code># 用途：3. 查看已解析的 profile。
 grafana-util config profile show --profile prod --output-format yaml</code></pre>
@@ -884,12 +884,12 @@ Options:
 <pre><code># 用途：2. observe overview 入口。
 grafana-util observe overview -h</code></pre>
 <p><strong>預期輸出：</strong></p>
-<pre><code>Render a live overview by delegating to the shared status live path.
+<pre><code>Render a live overview by delegating to the shared observe live path.
 ...
 Examples:
   grafana-util observe overview live --url http://localhost:3000 --basic-user admin --basic-password admin --output-format interactive
   grafana-util observe overview live --url http://localhost:3000 --basic-user admin --basic-password admin --output-format yaml</code></pre>
-<p><code>observe overview live</code> 是共用 live status 路徑的人類導向包裝。要看可讀摘要可用 <code>--output-format yaml</code>，想進互動式工作台就用 <code>--output-format interactive</code>。</p>
+<p><code>observe overview live</code> 是共用 observe live 路徑的人類導向包裝。要看可讀摘要可用 <code>--output-format yaml</code>，想進互動式工作台就用 <code>--output-format interactive</code>。</p>
 <h3 id="3-用兩種常見驗證方式跑同一個唯讀檢查">3. 用兩種常見驗證方式跑同一個唯讀檢查</h3>
 <pre><code># 用途：3. 用兩種常見驗證方式跑同一個唯讀檢查。
 grafana-util observe overview live --profile prod --output-format yaml</code></pre>

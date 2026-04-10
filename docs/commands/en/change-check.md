@@ -8,7 +8,7 @@ Check whether the staged change package looks structurally safe to continue.
 
 - Run this after `change inspect` when you need one readiness gate before preview.
 - Use this in CI when you want a fast staged readiness decision without building a full plan yet.
-- Prefer this over `status staged` when you want to stay in the task-first `change` lane.
+- Prefer this over `observe staged` when you want to stay in the task-first `change` lane.
 
 ## Before / After
 
@@ -71,4 +71,4 @@ PREFLIGHT CHECK:
 - [change](./change.md)
 - [change inspect](./change-inspect.md)
 - [change preview](./change-preview.md)
-- [status](./status.md)
+- [observe](./observe.md)

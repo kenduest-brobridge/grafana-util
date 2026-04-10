@@ -8,7 +8,7 @@
 
 說明：目前公開的 `config` surface 很小，主要就是承載 `config profile`。這條路徑負責 repo-local 連線預設、secret 處理，以及本機與 CI 可重複執行的認證設定。
 
-## 先從這裡開始
+主要入口：
 
 - [`config profile`](./profile.md)：新增、驗證、檢視、初始化 repo-local profiles
 

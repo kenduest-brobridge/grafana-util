@@ -31,7 +31,7 @@ This chapter turns command families into end-to-end operator workflows so you ca
 - If the expected output does not line up with the stage you are in, resolve the mismatch before continuing.
 - If you still need exact flags more than workflow context, switch to the command reference.
 
-For the exact flags behind each workflow, see [observe](../../commands/en/observe.md), [export](../../commands/en/export.md), [change](../../commands/en/change.md), [config profile](../../commands/en/profile.md), and [advanced](../../commands/en/advanced.md).
+For the exact flags behind each workflow, see [observe](../../commands/en/observe.md), [export](../../commands/en/export.md), [change](../../commands/en/change.md), [config](../../commands/en/config.md), [config profile](../../commands/en/profile.md), and [advanced](../../commands/en/advanced.md).
 
 ---
 

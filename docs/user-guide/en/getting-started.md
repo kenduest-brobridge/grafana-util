@@ -52,7 +52,7 @@ By the end of this chapter, a first successful run should look like this:
 
 If you cannot reach that state yet, stop at the first failing read-only command and use [Troubleshooting](troubleshooting.md) before moving into mutation workflows.
 
-For the exact flags behind this chapter, keep [config profile](../../commands/en/profile.md), [observe live](../../commands/en/observe.md), and [observe overview](../../commands/en/observe.md) open beside it.
+For the exact flags behind this chapter, keep [config](../../commands/en/config.md), [config profile](../../commands/en/profile.md), [observe live](../../commands/en/observe.md), and [observe overview](../../commands/en/observe.md) open beside it.
 
 ---
 

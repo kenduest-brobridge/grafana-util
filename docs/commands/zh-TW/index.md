@@ -20,7 +20,7 @@
 - [observe](./observe.md)：唯讀狀態、overview、snapshot、resource 查詢
 - `export`：常見備份與本地 inventory 擷取
 - `change`：以 review 為先的 staged change workflow
-- [config profile](./profile.md)：repo-local 連線與 secret 管理
+- [config](./config.md)：repo-local 連線與 secret 管理，主要是 `config profile`
 - `advanced`：你已經知道是某個 domain 時，再打開進階樹
 
 像 `dashboard`、`alert`、`datasource`、`access` 這些舊根命令仍可使用，但不再是第一層 onboarding 入口。

@@ -56,6 +56,7 @@ Advanced workflows:
 - [snapshot](../../commands/en/snapshot.md)
 - [snapshot export](../../commands/en/snapshot.md#export)
 - [snapshot review](../../commands/en/snapshot.md#review)
+- [config](../../commands/en/config.md)
 - [config profile](../../commands/en/profile.md)
 - [config profile list](../../commands/en/profile.md#list)
 - [config profile show](../../commands/en/profile.md#show)
@@ -88,7 +89,7 @@ Dashboards   ok       32/32 Accessible
 Datasources  ok       Secret recovery verified
 Alerts       ok       No dangling rules
 ```
-Use `observe live` when you want the shared live status path to tell you whether Grafana is safe to read from or promote into. The extra staged sync files deepen the live view without changing the command shape.
+Use `observe live` when you want the shared observe path to tell you whether Grafana is safe to read from or promote into. The extra staged sync files deepen the live view without changing the command shape.
 
 ### 2. Staged Readiness Check
 Use this as a mandatory CI/CD gate before running `apply`.

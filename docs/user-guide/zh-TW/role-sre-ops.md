@@ -96,7 +96,7 @@ grafana-util advanced access org list --table
 
 ## 建議同時開著哪些指令頁
 
-- [config profile](../../commands/zh-TW/profile.md)
+- [config profile](../../commands/zh-TW/config.md)
 - [指令詳細說明總索引](../../commands/zh-TW/index.md)
 - [change](../../commands/zh-TW/change.md)
 - [dashboard](../../commands/zh-TW/dashboard.md)

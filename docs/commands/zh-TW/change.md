@@ -502,7 +502,7 @@ grafana-util change preflight \
 - 如果 live-backed preflight 看起來不對，先核對認證、org 與目標 Grafana
 - 如果 CI 要解析 JSON，請先看 `kind` 與 `schemaVersion`，再讀 `summary` 和 `checks`
 
-相關指令：`change summary`、`change plan`、`observe staged`。
+相關指令：`change summary`、`change plan`、[observe staged](./observe.md#staged)。
 
 ## `assess-alerts`
 
@@ -655,7 +655,7 @@ grafana-util change bundle-preflight --source-bundle ./sync-source-bundle.json -
 ```
 當你想先回答「這包東西整體能不能進下一步」時，bundle-preflight 比單純 plan 更貼近 promotion / handoff 場景。
 
-相關指令：`change bundle`、`change promotion-preflight`、`observe staged`。
+相關指令：`change bundle`、`change promotion-preflight`、[observe staged](./observe.md#staged)。
 
 ## `promotion-preflight`
 

@@ -156,6 +156,7 @@ You are ready to leave the new-user path when:
 ## Keep Open
 
 - [Command Docs](../../commands/en/index.md)
+- [config](../../commands/en/config.md)
 - [config profile](../../commands/en/profile.md)
 - [observe](../../commands/en/observe.md)
 - [dashboard](../../commands/en/dashboard.md)

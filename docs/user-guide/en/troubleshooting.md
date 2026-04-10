@@ -38,7 +38,7 @@ It helps you diagnose real failures instead of guessing. The most useful split i
 - command shape versus output shape
 - local profile wiring versus remote Grafana behavior
 
-If you are tracing auth or connection setup, keep [config profile](../../commands/en/profile.md), [observe](../../commands/en/observe.md), and [access](../../commands/en/access.md) open beside this chapter.
+If you are tracing auth or connection setup, keep [config](../../commands/en/config.md), [config profile](../../commands/en/profile.md), [observe](../../commands/en/observe.md), and [access](../../commands/en/access.md) open beside this chapter.
 
 ---
 

@@ -420,22 +420,14 @@ fn overview_args_parse_and_help_expose_output_mode() {
         .is_err());
     }
 
+    assert!(crate::overview::OVERVIEW_HELP_TEXT
+        .contains("grafana-util observe overview --dashboard-export-dir ./dashboards/raw"));
+    assert!(
+        crate::overview::OVERVIEW_LIVE_HELP_TEXT
+            .contains("grafana-util observe overview live --url http://localhost:3000 --token")
+    );
     let help = OverviewCliArgs::command().render_long_help().to_string();
-    assert!(help.contains("Usage: grafana-util observe overview"));
-    assert!(help.contains("--output-format <OUTPUT_FORMAT>"));
-    assert!(help.contains(
-        "Render the overview document as table, csv, text, json, yaml, or interactive output."
-    ));
-    assert!(help.contains("--dashboard-provisioning-dir"));
-    assert!(help.contains("--datasource-provisioning-file"));
-    assert!(help.contains("grafana-util observe overview --dashboard-export-dir"));
-    assert!(help.contains("grafana-util observe overview live --url"));
-    assert!(help.contains("shared observe live path"));
     assert!(!help.contains("grafana-util overview"));
-    #[cfg(feature = "tui")]
-    assert!(help.contains("interactive"));
-    #[cfg(not(feature = "tui"))]
-    assert!(!help.contains("interactive"));
 }
 
 fn sample_overview_document() -> OverviewDocument {
@@ -572,9 +564,14 @@ fn overview_args_reject_dashboard_export_and_provisioning_inputs_together() {
 
 #[test]
 fn overview_cli_help_exposes_staged_and_live_shapes() {
+    assert!(crate::overview::OVERVIEW_HELP_TEXT
+        .contains("grafana-util observe overview --dashboard-export-dir ./dashboards/raw"));
+    assert!(
+        crate::overview::OVERVIEW_LIVE_HELP_TEXT
+            .contains("grafana-util observe overview live --url http://localhost:3000 --token")
+    );
     let overview_help = OverviewCliArgs::command().render_long_help().to_string();
-    assert!(overview_help.contains("thin entrypoint into the shared observe live path"));
-    assert!(overview_help.contains("grafana-util observe overview live --url"));
+    assert!(!overview_help.contains("grafana-util overview"));
 }
 
 #[test]

@@ -6,7 +6,7 @@
 
 適用時機：當你想把 Grafana 連線預設放在目前 checkout，之後再用 `--profile` 重複使用。
 
-說明：如果你想先理解整個 profile 工作流，再決定要進哪個子命令，先看這一頁最合適。公開入口是 `grafana-util config profile`；舊的 top-level `profile` root 只應視為歷史對照，不要當成主入口。這個指令群組是 repo-local 連線預設、secret 處理，以及本機與 CI 重複執行方式的入口。
+說明：如果你想先理解整個 profile 工作流，再決定要進哪個子命令，先看這一頁最合適。公開入口是 `grafana-util config profile`；舊的 top-level `profile` root 已不再是可直接執行的主入口。這個指令群組是 repo-local 連線預設、secret 處理，以及本機與 CI 重複執行方式的入口。
 
 ## 採用前後對照
 
@@ -213,7 +213,7 @@ grafana-util config profile add stage --url https://grafana-stage.example.com --
 - 預設 config path：`grafana-util.yaml`
 - 預設加密秘密檔：`.grafana-util.secrets.yaml`
 - `encrypted-file` 且未設 passphrase 時，預設本地 key file：`.grafana-util.secrets.key`
-- `profile add --store-secret encrypted-file` 若 helper 檔位於 config 目錄樹內，會順手更新該目錄的 `.gitignore` 以忽略這些檔案。
+- `config profile add --store-secret encrypted-file` 若 helper 檔位於 config 目錄樹內，會順手更新該目錄的 `.gitignore` 以忽略這些檔案。
 - 這些預設 secret path 都是以 config file 所在目錄為基準，不是用臨時的 process cwd 去算。
 - `file` 是預設模式。
 - `os` 與 `encrypted-file` 都是明確 opt-in。

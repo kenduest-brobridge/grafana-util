@@ -736,7 +736,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
       <div class="topbar">
   <a class="brand" href="../../index.html">grafana-util docs</a>
   <div class="themebar">
-    <select id="page-locale-select" aria-label="Language switch"><option value="" selected>Language: 繁體中文</option><option value="../en/change-overview-status.html">Switch to English</option></select><select id="jump-select" aria-label="Jump"><option value="" selected>快速跳轉...</option><optgroup label="使用手冊"><option value="index.html">概觀</option><option value="what-is-grafana-util.html">這個工具是做什麼的</option><option value="getting-started.html">開始使用</option><option value="role-new-user.html">新手快速入門</option><option value="role-sre-ops.html">SRE / 維運角色導讀</option><option value="role-automation-ci.html">自動化 / CI 角色導讀</option><option value="architecture.html">系統架構與設計原則</option><option value="dashboard.html">Dashboard 維運人員手冊</option><option value="datasource.html">Data source 維運手冊</option><option value="alert.html">Alert 維運人員手冊</option><option value="access.html">身分與存取管理</option><option value="change-overview-status.html">專案狀態與變更總覽</option><option value="scenarios.html">維運情境手冊</option><option value="recipes.html">實戰錦囊與最佳實踐</option><option value="reference.html">技術參考手冊</option><option value="troubleshooting.html">疑難排解與名詞解釋</option></optgroup><optgroup label="指令參考"><option value="../../commands/zh-TW/dashboard.html">Dashboard</option><option value="../../commands/zh-TW/migrate.html">Migrate</option><option value="../../commands/zh-TW/alert.html">Alert</option><option value="../../commands/zh-TW/datasource.html">Datasource</option><option value="../../commands/zh-TW/access.html">Access</option><option value="../../commands/zh-TW/profile.html">Profile</option><option value="../../commands/zh-TW/status.html">Status</option><option value="../../commands/zh-TW/overview.html">Overview</option><option value="../../commands/zh-TW/change.html">Change</option><option value="../../commands/zh-TW/snapshot.html">Snapshot</option></optgroup></select>
+    <select id="page-locale-select" aria-label="Language switch"><option value="" selected>Language: 繁體中文</option><option value="../en/change-overview-status.html">Switch to English</option></select><select id="jump-select" aria-label="Jump"><option value="" selected>快速跳轉...</option><optgroup label="使用手冊"><option value="index.html">概觀</option><option value="what-is-grafana-util.html">這個工具是做什麼的</option><option value="getting-started.html">開始使用</option><option value="role-new-user.html">新手快速入門</option><option value="role-sre-ops.html">SRE / 維運角色導讀</option><option value="role-automation-ci.html">自動化 / CI 角色導讀</option><option value="architecture.html">系統架構與設計原則</option><option value="dashboard.html">Dashboard 維運人員手冊</option><option value="datasource.html">Data source 維運手冊</option><option value="alert.html">Alert 維運人員手冊</option><option value="access.html">身分與存取管理</option><option value="change-overview-status.html">專案狀態與變更總覽</option><option value="scenarios.html">維運情境手冊</option><option value="recipes.html">實戰錦囊與最佳實踐</option><option value="reference.html">技術參考手冊</option><option value="troubleshooting.html">疑難排解與名詞解釋</option></optgroup><optgroup label="指令參考"><option value="../../commands/zh-TW/dashboard.html">Dashboard</option><option value="../../commands/zh-TW/migrate.html">Migrate</option><option value="../../commands/zh-TW/alert.html">Alert</option><option value="../../commands/zh-TW/datasource.html">Datasource</option><option value="../../commands/zh-TW/access.html">Access</option><option value="../../commands/zh-TW/config.html">Config</option><option value="../../commands/zh-TW/observe.html">Observe</option><option value="../../commands/zh-TW/change.html">Change</option><option value="../../commands/zh-TW/snapshot.html">Snapshot</option></optgroup></select>
     <select id="font-select" aria-label="Font Size">
       <option value="0.9">Font: Compact</option>
       <option value="1">Font: Default</option>
@@ -765,28 +765,28 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 
     <p>這一章聚焦在變更前後的最後檢查，幫你確認目前狀態、差異與套用前的準備是否到位。</p>
 <h2 id="適用對象">適用對象</h2>
-<ul><li>要先看 live / staged 狀態再決定下一步的人</li><li>負責變更審查、check 或 apply gate 的人</li><li>需要把 status / overview / change 串成固定流程的人</li></ul>
+<ul><li>要先看 live / staged 狀態再決定下一步的人</li><li>負責變更審查、check 或 apply gate 的人</li><li>需要把 observe / change / config profile 串成固定流程的人</li></ul>
 <h2 id="主要目標">主要目標</h2>
 <ul><li>先區分 live 與 staged</li><li>再確認變更包、輸入結構與差異摘要</li><li>最後才進入 apply</li></ul>
 <h2 id="採用前後對照">採用前後對照</h2>
-<ul><li>以前：status、snapshot 與 change review 常常像是三套名稱接近但分工不清的工具。</li><li>現在：即時檢查、staged 審查與快照式總覽被放進同一條導引路線裡。</li></ul>
+<ul><li>以前：observe、snapshot 與 change review 常常像是三套名稱接近但分工不清的工具。</li><li>現在：即時檢查、staged 審查與快照式總覽被放進同一條導引路線裡。</li></ul>
 <h2 id="成功判準">成功判準</h2>
-<ul><li>你能在進入變更前，先判斷這章是在處理整備度、快照還是審查。</li><li>你知道流程從 status 進到 mutation 時，應該切到哪一個 command。</li><li>你能說清楚變更套用前應該先做哪些檢查。</li></ul>
+<ul><li>你能在進入變更前，先判斷這章是在處理整備度、快照還是審查。</li><li>你知道流程從 observe 進到 mutation 時，應該切到哪一個 command。</li><li>你能說清楚變更套用前應該先做哪些檢查。</li></ul>
 <h2 id="失敗時先檢查">失敗時先檢查</h2>
 <ul><li>如果 staged 與 live 看的不是同一個面，先停下來確認哪一條 lane 過期。</li><li>如果 snapshot 或 summary 跟預期不符，先把它當成流程警訊，不要只當成排版問題。</li><li>如果你說不出為什麼需要看這章，可能代表你走錯 lane 了。</li></ul>
 <h2 id="指令詳細頁面">指令詳細頁面</h2>
 <p>如果你現在要查的是指令細節，而不是整段工作流程，先看這兩組：</p>
 <p>Primary lane：</p>
-<ul><li><a href="../../commands/zh-TW/change.html">change</a></li><li><a href="../../commands/zh-TW/change-inspect.html">change inspect</a></li><li><a href="../../commands/zh-TW/change-check.html">change check</a></li><li><a href="../../commands/zh-TW/change-preview.html">change preview</a></li><li><a href="../../commands/zh-TW/change-apply.html">change apply</a></li><li><a href="../../commands/zh-TW/status.html">status</a></li><li><a href="../../commands/zh-TW/status.html#staged">status staged</a></li><li><a href="../../commands/zh-TW/status.html#live">status live</a></li><li><a href="../../commands/zh-TW/overview.html">overview</a></li><li><a href="../../commands/zh-TW/overview.html#live">overview live</a></li></ul>
+<ul><li><a href="../../commands/zh-TW/change.html">change</a></li><li><a href="../../commands/zh-TW/change-inspect.html">change inspect</a></li><li><a href="../../commands/zh-TW/change-check.html">change check</a></li><li><a href="../../commands/zh-TW/change-preview.html">change preview</a></li><li><a href="../../commands/zh-TW/change-apply.html">change apply</a></li><li><a href="../../commands/zh-TW/observe.html#staged">observe staged</a></li><li><a href="../../commands/zh-TW/observe.html#live">observe live</a></li><li><a href="../../commands/zh-TW/observe.html#overview">observe overview live</a></li></ul>
 <p>Advanced workflows：</p>
-<ul><li>如果你需要較低階 staged contract，或要看 bundle / promotion handoff 文件，從 <a href="../../commands/zh-TW/change.html#advanced">change advanced</a> 或 <a href="../../commands/zh-TW/index.html">指令詳細總索引</a> 開始。</li><li><a href="../../commands/zh-TW/snapshot.html">snapshot</a></li><li><a href="../../commands/zh-TW/snapshot.html#export">snapshot export</a></li><li><a href="../../commands/zh-TW/snapshot.html#review">snapshot review</a></li><li><a href="../../commands/zh-TW/profile.html">profile</a></li><li><a href="../../commands/zh-TW/profile.html#list">profile list</a></li><li><a href="../../commands/zh-TW/profile.html#show">profile show</a></li><li><a href="../../commands/zh-TW/profile.html#add">profile add</a></li><li><a href="../../commands/zh-TW/profile.html#example">profile example</a></li><li><a href="../../commands/zh-TW/profile.html#init">profile init</a></li></ul>
+<ul><li>如果你需要較低階 staged contract，或要看 bundle / promotion handoff 文件，從 <a href="../../commands/zh-TW/change.html#advanced">change advanced</a> 或 <a href="../../commands/zh-TW/index.html">指令詳細總索引</a> 開始。</li><li><a href="../../commands/zh-TW/snapshot.html">snapshot</a></li><li><a href="../../commands/zh-TW/snapshot.html#export">snapshot export</a></li><li><a href="../../commands/zh-TW/snapshot.html#review">snapshot review</a></li><li><a href="../../commands/zh-TW/config.html">config profile</a></li><li><a href="../../commands/zh-TW/config.html#list">config profile list</a></li><li><a href="../../commands/zh-TW/config.html#show">config profile show</a></li><li><a href="../../commands/zh-TW/config.html#add">config profile add</a></li><li><a href="../../commands/zh-TW/config.html#example">config profile example</a></li><li><a href="../../commands/zh-TW/config.html#init">config profile init</a></li></ul>
 <h2 id="狀態操作面">狀態操作面</h2>
 <p>這裡會區分 <strong>Live</strong>（目前 Grafana 上真的在跑的內容）和 <strong>Staged</strong>（你準備要部署的內容）。</p>
 <h3 id="1-即時整備度檢查-live-check">1. 即時整備度檢查 (Live Check)</h3>
 <pre><code># 用途：1. 即時整備度檢查 (Live Check)。
-grafana-util status live --output-format table</code></pre>
+grafana-util observe live --output-format table</code></pre>
 <pre><code># 用途：1. 即時整備度檢查 (Live Check)。
-grafana-util status live --profile prod --sync-summary-file ./sync-summary.json --bundle-preflight-file ./bundle-preflight.json --output-format json</code></pre>
+grafana-util observe live --profile prod --sync-summary-file ./sync-summary.json --bundle-preflight-file ./bundle-preflight.json --output-format json</code></pre>
 <p><strong>預期輸出：</strong></p>
 <pre><code>OVERALL: status=ready
 
@@ -794,20 +794,20 @@ COMPONENT    HEALTH   REASON
 Dashboards   ok       32/32 可存取
 Datasources  ok       秘密資訊恢復驗證通過
 Alerts       ok       無孤立規則</code></pre>
-<p><code>status live</code> 走的是共用的 live 狀態檢查流程。若同時帶入 staged sync 檔案，就能在不改變指令用法的前提下，讓 live 視圖多出更多對照資訊。</p>
+<p><code>observe live</code> 走的是共用的 live 狀態檢查流程。若同時帶入 staged sync 檔案，就能在不改變指令用法的前提下，讓 live 視圖多出更多對照資訊。</p>
 <h3 id="2-暫存整備度檢查-staged-check">2. 暫存整備度檢查 (Staged Check)</h3>
 <p>在執行 <code>apply</code> 之前，這一步很適合拿來當 CI/CD 的強制檢查。</p>
 <pre><code># 用途：在執行 apply 之前，這一步很適合拿來當 CI/CD 的強制檢查。
-grafana-util status staged --desired-file ./desired.json --output-format json</code></pre>
+grafana-util observe staged --desired-file ./desired.json --output-format json</code></pre>
 <pre><code># 用途：在執行 apply 之前，這一步很適合拿來當 CI/CD 的強制檢查。
-grafana-util status staged --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts --desired-file ./desired.json --output-format table</code></pre>
+grafana-util observe staged --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts --desired-file ./desired.json --output-format table</code></pre>
 <p><strong>預期輸出：</strong></p>
 <pre><code>{
   &quot;status&quot;: &quot;ready&quot;,
   &quot;blockers&quot;: [],
   &quot;warnings&quot;: [&quot;1 個儀表板缺少唯一的目錄分配&quot;]
 }</code></pre>
-<p><code>status staged</code> 比較偏向給腳本或 CI 判讀的驗證結果。<code>blockers</code> 代表一定得先處理，<code>warnings</code> 則表示需要人工再多看一眼。</p>
+<p><code>observe staged</code> 比較偏向給腳本或 CI 判讀的驗證結果。<code>blockers</code> 代表一定得先處理，<code>warnings</code> 則表示需要人工再多看一眼。</p>
 <h2 id="變更生命週期-change-lifecycle">變更生命週期 (Change Lifecycle)</h2>
 <p>管理從 Git 到正式 Grafana 環境的過渡。</p>
 <h3 id="第一次使用先走這條最短路徑">第一次使用，先走這條最短路徑</h3>
@@ -855,12 +855,12 @@ grafana-util change preview --desired-file ./desired.json --live-file ./live.jso
 <p>preview 是現在 task-first 路徑裡對應舊 <code>plan</code> 的入口。底層 contract 還是同一套，但對使用者來說，先想「這次會改到什麼」比先想「我要 build 哪種 plan 文件」更自然。 這份 preview contract 也是排序契約的公開面：<code>ordering.mode</code>、每筆 operation 的 <code>orderIndex</code> / <code>orderGroup</code> / <code>kindOrder</code>，以及 <code>summary.blocked_reasons</code> 會讓審查者看出 plan 的執行順序與尚未解除的受阻工作。</p>
 <p>如果同一個 mixed workspace root 最後要交接成 bundle，直接跑 <code>change bundle --workspace ./grafana-oac-repo --output-file ./sync-source-bundle.json</code>，保留產生的 <code>sync-source-bundle.json</code> 作為可攜式的 review artifact。</p>
 <h2 id="互動模式-tui-語意">互動模式 (TUI) 語意</h2>
-<p><code>overview live --output-format interactive</code> 會透過共用的 live status 路徑顯示 live project overview。</p>
-<pre><code># 用途：overview live --output-format interactive 會透過共用的 live status 路徑顯示 live project overview。
-grafana-util overview live --url http://localhost:3000 --basic-user admin --basic-password admin --output-format interactive</code></pre>
+<p><code>observe overview live --output-format interactive</code> 會透過共用的 observe live 路徑顯示 live project overview。</p>
+<pre><code># 用途：observe overview live --output-format interactive 會透過共用的 observe live 路徑顯示 live project overview。
+grafana-util observe overview live --url http://localhost:3000 --basic-user admin --basic-password admin --output-format interactive</code></pre>
 <p>TUI 使用以下視覺語言：</p>
 <ul><li><strong>🟢 綠色</strong>：組件健康且完全可達。</li><li><strong>🟡 黃色</strong>：組件可用，但有警告，例如缺少中繼資料。</li><li><strong>🔴 紅色</strong>：組件受阻，在進行任何部署前都需要處理。</li></ul>
-<p>如果要看 staged 產物的人工審查畫面，用不帶 <code>live</code> 的 <code>overview</code>；如果要拿結構化輸出做 live 檢查，改用 <code>status live</code>。</p>
+<p>如果要看 staged 產物的人工審查畫面，用不帶 <code>live</code> 的 <code>observe overview</code>；如果要拿結構化輸出做 live 檢查，改用 <code>observe live</code>。</p>
 <p><a href="access.html">⬅️ 上一章：Access 管理</a> | <a href="index.html">🏠 回首頁</a> | <a href="scenarios.html">➡️ 下一章：維運情境手冊</a></p>
     <nav class="footer-nav"><a class="link-card" href="access.html"><span>Previous</span>身分與存取管理 (Identity &amp; Access)</a><a class="link-card" href="scenarios.html"><span>Next</span>維運情境手冊 (Operator Scenarios)</a></nav>
   </article>

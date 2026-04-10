@@ -6,7 +6,7 @@ Purpose: list, inspect, validate, add, and initialize repo-local `grafana-util` 
 
 When to use: when you want to keep Grafana connection defaults in the current checkout and reuse them with `--profile`.
 
-Description: open this page when you want to understand the full profile workflow before choosing one subcommand. The public entrypoint is `grafana-util config profile`; the legacy top-level `profile` root is not the preferred path. This namespace covers repo-local connection defaults, secret handling, and non-interactive command reuse across local work, SRE tasks, and CI jobs.
+Description: open this page when you want to understand the full profile workflow before choosing one subcommand. The public entrypoint is `grafana-util config profile`; the old top-level `profile` root is no longer a runnable onboarding path. This namespace covers repo-local connection defaults, secret handling, and non-interactive command reuse across local work, SRE tasks, and CI jobs.
 
 ## Before / After
 
@@ -213,7 +213,7 @@ Notes:
 - Default config path: `grafana-util.yaml`
 - Default encrypted secret file: `.grafana-util.secrets.yaml`
 - Default local key file for encrypted-file without a passphrase: `.grafana-util.secrets.key`
-- `profile add --store-secret encrypted-file` updates the config-directory `.gitignore` with those helper files when they live under the same directory tree.
+- `config profile add --store-secret encrypted-file` updates the config-directory `.gitignore` with those helper files when they live under the same directory tree.
 - These default secret paths are resolved relative to the config file directory, not a temporary process cwd.
 - `file` is the default storage mode.
 - `os` and `encrypted-file` are explicit opt-in modes.

@@ -16,7 +16,7 @@ This manual provides the current command surface for `grafana-util`, including p
 - Clarify which output modes exist on which command surfaces.
 - Reduce time spent jumping between individual command pages for shared behavior.
 
-Use this chapter alongside [config profile](../../commands/en/profile.md), [observe](../../commands/en/observe.md), [change](../../commands/en/change.md), and [access](../../commands/en/access.md) when you want the command-by-command surface.
+Use this chapter alongside [config](../../commands/en/config.md), [config profile](../../commands/en/profile.md), [observe](../../commands/en/observe.md), [change](../../commands/en/change.md), and [access](../../commands/en/access.md) when you want the command-by-command surface.
 
 ---
 

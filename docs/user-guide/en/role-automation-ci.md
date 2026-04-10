@@ -107,6 +107,7 @@ Your automation path is in good shape when:
 
 ## Keep open
 
+- [config](../../commands/en/config.md)
 - [config profile](../../commands/en/profile.md)
 - [observe](../../commands/en/observe.md)
 - [change](../../commands/en/change.md)

@@ -119,6 +119,7 @@ You are in a good operator posture when:
 
 ## Keep open
 
+- [config](../../commands/en/config.md)
 - [config profile](../../commands/en/profile.md)
 - [observe](../../commands/en/observe.md)
 - [export dashboard](../../commands/en/export.md)

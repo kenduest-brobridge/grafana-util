@@ -7,7 +7,7 @@
 - 指令形狀錯，還是輸出形狀不對
 - 本機 profile 設定問題，還是遠端 Grafana 行為
 
-如果你正在追查驗證或連線設定，請把 [config profile](../../commands/zh-TW/profile.md)、[指令詳細說明總索引](../../commands/zh-TW/index.md) 與 [access](../../commands/zh-TW/access.md) 一起開著。
+如果你正在追查驗證或連線設定，請把 [config profile](../../commands/zh-TW/config.md)、[指令詳細說明總索引](../../commands/zh-TW/index.md) 與 [access](../../commands/zh-TW/access.md) 一起開著。
 
 ## 適用對象
 

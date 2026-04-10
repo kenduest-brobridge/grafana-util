@@ -75,13 +75,12 @@ If you are solving a real operational problem instead of looking up one flag, st
 
 Use this section to decide what kind of work you are doing before you jump into a handbook chapter or command page.
 
-### Status and overview
+### Observe
 
-Start with `status` and `overview` when you need a fast read on live or staged state.
+Start with `observe` when you need a fast read on live or staged state.
 
 - [Browse technical reference](../user-guide/en/reference.md)
-- [Browse status](../commands/en/status.md)
-- [Browse overview](../commands/en/overview.md)
+- [Browse observe command](../commands/en/observe.md)
 
 ### Asset operations
 
@@ -96,7 +95,7 @@ Start here when the work is about dashboards, data source objects, or alerts: ex
 Use this area when the work is about orgs, teams, service accounts, tokens, or profile-backed connection defaults.
 
 - [Browse access chapter](../user-guide/en/access.md)
-- [Browse profile command](../commands/en/profile.md)
+- [Browse config profile command](../commands/en/profile.md)
 
 ### Change review
 

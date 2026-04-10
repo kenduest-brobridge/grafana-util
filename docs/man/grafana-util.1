@@ -17,11 +17,9 @@ grafana\-util \- unified CLI for Grafana dashboards, alerts, datasources, access
 .PP
 .B grafana-util access [\fISUBCOMMAND\fR] [\fIOPTIONS\fR]
 .PP
-.B grafana-util profile [\fISUBCOMMAND\fR] [\fIOPTIONS\fR]
+.B grafana-util config [\fISUBCOMMAND\fR] [\fIOPTIONS\fR]
 .PP
-.B grafana-util status [\fISUBCOMMAND\fR] [\fIOPTIONS\fR]
-.PP
-.B grafana-util overview [\fISUBCOMMAND\fR] [\fIOPTIONS\fR]
+.B grafana-util observe [\fISUBCOMMAND\fR] [\fIOPTIONS\fR]
 .PP
 .B grafana-util change [\fISUBCOMMAND\fR] [\fIOPTIONS\fR]
 .PP
@@ -47,14 +45,11 @@ grafana\-util datasource is the namespace for catalog lookup, inventory reads, e
 .B access
 Run the access\-management command surface for users, orgs, teams, and service accounts. Use when: List live or local access inventory.; Create, modify, export, import, diff, or delete access resources.; Manage service\-account tokens.
 .TP
-.B profile
-list, inspect, validate, add, and initialize repo\-local grafana\-util profiles through the current config profile entrypoint. Use when: Want to keep Grafana connection defaults in the current checkout and reuse them with \-\-profile.
+.B config
+open repo\-local configuration workflows for repeatable Grafana access. Use when: Want to manage repo\-local defaults instead of repeating live connection flags in every command.
 .TP
-.B status
-compatibility reference for the old staged/live status root. Use when: Are translating older docs or scripts to the current observe surface.
-.TP
-.B overview
-compatibility reference for the old project\-wide overview root. Use when: Are translating older docs or scripts to the current observe surface.
+.B observe
+read live and staged Grafana state through one canonical observe surface. Use when: Want readiness, overview, snapshot, or direct live reads without moving into mutation work.
 .TP
 .B change
 task\-first staged change workflow with optional live Grafana preview and apply paths. Use when: Need to inspect a staged package, check whether it looks safe to continue, preview what would change, apply an approved preview, or drop into lower\-level advanced review contracts.
@@ -217,39 +212,23 @@ List live or local Grafana service accounts, create, export, import, diff, or de
 .TP
 .B grafana\-util\-access\-service\-account\-token(1)
 Add or delete tokens for a Grafana service account. Use when: Create a new service\-account token.; Delete an existing service\-account token by service\-account name or id.
-.SS profile
+.SS config
+.SS observe
 .TP
-.B grafana\-util\-profile\-list(1)
-list profile names from the resolved grafana\-util config file. Use when: Need to confirm which profiles are available in the current checkout.
+.B grafana\-util\-observe\-live(1)
+render a live readiness view from Grafana read surfaces. Use when: Need the current estate state and want to gate follow\-on work.
 .TP
-.B grafana\-util\-profile\-show(1)
-show the selected profile as text, table, csv, json, or yaml. Use when: Want to inspect the resolved connection settings before running a live command.
+.B grafana\-util\-observe\-staged(1)
+render a readiness gate from staged artifacts. Use when: Want to inspect exported files, desired state, or bundle inputs before apply.
 .TP
-.B grafana\-util\-profile\-current(1)
-show the currently selected profile, resolved config path, auth mode, and secret mode. Use when: Want to confirm which repo\-local profile would be used before a live command runs.
+.B grafana\-util\-observe\-overview(1)
+summarize staged artifacts or open the live overview. Use when: Want one estate\-wide summary across dashboards, alerts, datasources, access, or bundle inputs.
 .TP
-.B grafana\-util\-profile\-validate(1)
-validate the selected profile and optionally check Grafana reachability. Use when: Want to confirm profile selection, auth shape, and secret resolution before running a live command.
+.B grafana\-util\-observe\-snapshot(1)
+review or export a snapshot\-style artifact bundle. Use when: Want a portable artifact package for inspection, review, or handoff.
 .TP
-.B grafana\-util\-profile\-add(1)
-create or replace one named profile without hand\-editing grafana\-util.yaml. Use when: Want a friendlier path than editing YAML directly, especially for storing reusable auth defaults.
-.TP
-.B grafana\-util\-profile\-example(1)
-print a comment\-rich reference config that operators can copy and adapt. Use when: Want one canonical example that explains the supported profile fields and secret storage modes.
-.TP
-.B grafana\-util\-profile\-init(1)
-initialize grafana\-util.yaml in the current working directory. Use when: A checkout does not yet have a repo\-local profile file and you want the built\-in starter template.
-.SS status
-.TP
-.B grafana\-util\-status\-staged(1)
-render project status from staged artifacts. Use when: Need the machine\-readable readiness gate for exported files before apply.
-.TP
-.B grafana\-util\-status\-live(1)
-render project status from live Grafana read surfaces. Use when: Need current Grafana status, optionally deepened with staged context files.
-.SS overview
-.TP
-.B grafana\-util\-overview\-live(1)
-render the live overview by delegating to the shared observe live path. Use when: Need the same live readout that observe live uses, but want it under the overview namespace.
+.B grafana\-util\-observe\-resource(1)
+inspect one live Grafana resource directly. Use when: Already know the resource kind and want get, list, describe, or kinds style reads.
 .SS change
 .TP
 .B grafana\-util\-change\-advanced(1)
@@ -299,7 +278,7 @@ Turn a reviewed preview into a staged apply intent, or execute it live when you 
 .SS change
 .TP
 .B grafana\-util\-change\-check(1)
-Check whether the staged change package looks structurally safe to continue. Use when: Run this after change inspect when you need one readiness gate before preview.; Use this in CI when you want a fast staged readiness decision without building a full plan yet.; Prefer this over status staged when you want to stay in the task\-first change lane.
+Check whether the staged change package looks structurally safe to continue. Use when: Run this after change inspect when you need one readiness gate before preview.; Use this in CI when you want a fast staged readiness decision without building a full plan yet.; Prefer this over observe staged when you want to stay in the task\-first change lane.
 .SS change
 .TP
 .B grafana\-util\-change\-inspect(1)
@@ -328,6 +307,10 @@ Serve one or more dashboard drafts through a lightweight local preview server. U
 .TP
 .B grafana\-util\-export(1)
 grafana\-util export is the task\-first surface for common backup and local inventory capture jobs. Use when: The job is straightforward export or backup and you do not want to start from a domain\-heavy tree.
+.SS profile
+.TP
+.B grafana\-util\-profile(1)
+list, inspect, validate, add, and initialize repo\-local grafana\-util profiles through the current config profile entrypoint. Use when: Want to keep Grafana connection defaults in the current checkout and reuse them with \-\-profile.
 .SS resource
 .TP
 .B grafana\-util\-resource\-describe(1)
@@ -415,19 +398,19 @@ Inspect the dashboard namespace help before choosing a live or file\-based workf
 grafana-util dashboard --help
 .EE
 .PP
-Render staged or live estate status through a repo\-local profile.
+Render staged or live estate state through a repo\-local profile.
 .EX
-grafana-util status live --profile prod --output yaml
+grafana-util observe live --profile prod --output yaml
 .EE
 .PP
-Render live estate status with direct Basic auth during bootstrap or break\-glass work.
+Render live estate state with direct Basic auth during bootstrap or break\-glass work.
 .EX
-grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output yaml
+grafana-util observe live --url http://localhost:3000 --basic-user admin --prompt-password --output yaml
 .EE
 .PP
-Summarize live Grafana inventory as JSON under the overview namespace.
+Summarize live Grafana inventory as JSON under the observe overview namespace.
 .EX
-grafana-util overview live --url http://localhost:3000 --token $GRAFANA_API_TOKEN --output json
+grafana-util observe overview live --url http://localhost:3000 --token $GRAFANA_API_TOKEN --output json
 .EE
 .PP
 Export live dashboards into a local working tree for review or promotion.
@@ -450,9 +433,8 @@ grafana-util datasource export --url http://localhost:3000 --export-dir ./dataso
 \fBgrafana-util-alert\fR(1),
 \fBgrafana-util-datasource\fR(1),
 \fBgrafana-util-access\fR(1),
-\fBgrafana-util-profile\fR(1),
-\fBgrafana-util-status\fR(1),
-\fBgrafana-util-overview\fR(1),
+\fBgrafana-util-config\fR(1),
+\fBgrafana-util-observe\fR(1),
 \fBgrafana-util-change\fR(1),
 \fBgrafana-util-snapshot\fR(1),
 \fBman\fR(1)

@@ -91,7 +91,7 @@ grafana-util observe overview live --profile ci --output-format yaml
 
 ## 建議同時開著哪些指令頁
 
-- [config profile](../../commands/zh-TW/profile.md)
+- [config profile](../../commands/zh-TW/config.md)
 - [change](../../commands/zh-TW/change.md)
 - [指令詳細說明總索引](../../commands/zh-TW/index.md)
 - [access service-account](../../commands/zh-TW/access-service-account.md)

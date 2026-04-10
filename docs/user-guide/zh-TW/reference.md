@@ -2,7 +2,7 @@
 
 本章整理 `grafana-util` 目前常用的指令、共用旗標，以及 config profile 解析、輸出格式與 observe / change 用法。
 
-如果你想逐條對照指令與旗標，請搭配 [config profile](../../commands/zh-TW/profile.md)、[指令詳細說明總索引](../../commands/zh-TW/index.md) 與 [access](../../commands/zh-TW/access.md) 一起看。
+如果你想逐條對照指令與旗標，請搭配 [config profile](../../commands/zh-TW/config.md)、[指令詳細說明總索引](../../commands/zh-TW/index.md) 與 [access](../../commands/zh-TW/access.md) 一起看。
 
 ## 適用對象
 

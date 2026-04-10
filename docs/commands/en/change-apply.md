@@ -76,4 +76,4 @@ SYNC APPLY:
 - [change preview](./change-preview.md)
 - [change review](./change.md#review)
 - [change preflight](./change.md#preflight)
-- [status](./status.md)
+- [observe](./observe.md)

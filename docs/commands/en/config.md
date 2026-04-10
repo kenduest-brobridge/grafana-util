@@ -8,7 +8,7 @@ When to use: when you want to manage repo-local defaults instead of repeating li
 
 Description: the current public `config` surface is intentionally small. Today it exists to host `config profile`, which owns repo-local connection defaults, secret handling, and reusable authentication setup for local work and CI jobs.
 
-## Start Here
+Primary entrypoint:
 
 - [`config profile`](./profile.md): add, validate, inspect, and initialize repo-local profiles
 

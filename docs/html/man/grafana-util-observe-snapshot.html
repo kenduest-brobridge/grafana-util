@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Legacy: grafana-util status · grafana-util docs</title>
+  <title>grafana-util-observe-snapshot.1 · grafana-util docs</title>
   <style>:root {
   color-scheme: light dark;
   --font-scale: 1;
@@ -734,9 +734,9 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
   <div class="site">
     <div class="site-content">
       <div class="topbar">
-  <a class="brand" href="../../index.html">grafana-util docs</a>
+  <a class="brand" href="../index.html">grafana-util docs</a>
   <div class="themebar">
-    <select id="page-locale-select" aria-label="Language switch"><option value="" selected>Language: English</option><option value="../zh-TW/status.html">Switch to 繁體中文</option></select><select id="jump-select" aria-label="Jump"><option value="" selected>Jump to...</option><optgroup label="Handbook"><option value="../../handbook/en/index.html">Overview</option><option value="../../handbook/en/what-is-grafana-util.html">What grafana-util is for</option><option value="../../handbook/en/getting-started.html">Getting Started</option><option value="../../handbook/en/role-new-user.html">New User Handbook</option><option value="../../handbook/en/role-sre-ops.html">SRE / Operator Handbook</option><option value="../../handbook/en/role-automation-ci.html">Automation / CI Handbook</option><option value="../../handbook/en/architecture.html">Architecture &amp; Design Principles</option><option value="../../handbook/en/dashboard.html">Dashboard Operator Handbook</option><option value="../../handbook/en/datasource.html">Datasource Operator Handbook</option><option value="../../handbook/en/alert.html">Alert Operator Handbook</option><option value="../../handbook/en/access.html">Access Management (Identity &amp; Access)</option><option value="../../handbook/en/change-overview-status.html">Project Status &amp; Change Overview</option><option value="../../handbook/en/scenarios.html">Operator Scenarios</option><option value="../../handbook/en/recipes.html">Best Practices &amp; Real-World Recipes</option><option value="../../handbook/en/reference.html">Technical Reference</option><option value="../../handbook/en/troubleshooting.html">Troubleshooting &amp; Glossary</option></optgroup><optgroup label="Commands"><option value="dashboard.html">Dashboard</option><option value="migrate.html">Migrate</option><option value="alert.html">Alert</option><option value="datasource.html">Datasource</option><option value="access.html">Access</option><option value="profile.html">Profile</option><option value="status.html">Status</option><option value="overview.html">Overview</option><option value="change.html">Change</option><option value="snapshot.html">Snapshot</option></optgroup></select>
+    <select id="jump-select" aria-label="Jump"><option value="" selected>Jump to...</option><optgroup label="Handbook"><option value="../handbook/en/index.html">Overview</option><option value="../handbook/en/what-is-grafana-util.html">What grafana-util is for</option><option value="../handbook/en/getting-started.html">Getting Started</option><option value="../handbook/en/role-new-user.html">New User Handbook</option><option value="../handbook/en/role-sre-ops.html">SRE / Operator Handbook</option><option value="../handbook/en/role-automation-ci.html">Automation / CI Handbook</option><option value="../handbook/en/architecture.html">Architecture &amp; Design Principles</option><option value="../handbook/en/dashboard.html">Dashboard Operator Handbook</option><option value="../handbook/en/datasource.html">Datasource Operator Handbook</option><option value="../handbook/en/alert.html">Alert Operator Handbook</option><option value="../handbook/en/access.html">Access Management (Identity &amp; Access)</option><option value="../handbook/en/change-overview-status.html">Project Readiness &amp; Change Overview</option><option value="../handbook/en/scenarios.html">Operator Scenarios</option><option value="../handbook/en/recipes.html">Best Practices &amp; Real-World Recipes</option><option value="../handbook/en/reference.html">Technical Reference</option><option value="../handbook/en/troubleshooting.html">Troubleshooting &amp; Glossary</option></optgroup><optgroup label="Commands"><option value="../commands/en/dashboard.html">Dashboard</option><option value="../commands/en/migrate.html">Migrate</option><option value="../commands/en/alert.html">Alert</option><option value="../commands/en/datasource.html">Datasource</option><option value="../commands/en/access.html">Access</option><option value="../commands/en/config.html">Config</option><option value="../commands/en/observe.html">Observe</option><option value="../commands/en/change.html">Change</option><option value="../commands/en/snapshot.html">Snapshot</option></optgroup></select>
     <select id="font-select" aria-label="Font Size">
       <option value="0.9">Font: Compact</option>
       <option value="1">Font: Default</option>
@@ -754,82 +754,33 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
       <div class="layout">
   <aside class="nav-sidebar">
   <button class="sidebar-toggle sidebar-toggle-left" type="button" aria-expanded="true" aria-label="Toggle handbook navigation">◀</button>
-  <div class="nav-sidebar-content"><section class="nav-section"><h2>Guide Map</h2><div class="nav-group-block"><div class="nav-group-title">Start</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/en/index.html" class="nav-item">Overview</a></li><li class="nav-tree-node"><a href="../../handbook/en/what-is-grafana-util.html" class="nav-item">What grafana-util is for</a></li><li class="nav-tree-node"><a href="../../handbook/en/getting-started.html" class="nav-item">Getting Started</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">Role Paths</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/en/role-new-user.html" class="nav-item">New User Handbook</a></li><li class="nav-tree-node"><a href="../../handbook/en/role-sre-ops.html" class="nav-item">SRE / Operator Handbook</a></li><li class="nav-tree-node"><a href="../../handbook/en/role-automation-ci.html" class="nav-item">Automation / CI Handbook</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">Core Operations</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/en/dashboard.html" class="nav-item">Dashboard Operator Handbook</a></li><li class="nav-tree-node"><a href="../../handbook/en/datasource.html" class="nav-item">Datasource Operator Handbook</a></li><li class="nav-tree-node"><a href="../../handbook/en/alert.html" class="nav-item">Alert Operator Handbook</a></li><li class="nav-tree-node"><a href="../../handbook/en/access.html" class="nav-item">Access Management (Identity &amp; Access)</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">Governance</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/en/architecture.html" class="nav-item">Architecture &amp; Design Principles</a></li><li class="nav-tree-node"><a href="../../handbook/en/change-overview-status.html" class="nav-item">Project Status &amp; Change Overview</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">Scenarios &amp; Reference</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../../handbook/en/scenarios.html" class="nav-item">Operator Scenarios</a></li><li class="nav-tree-node"><a href="../../handbook/en/recipes.html" class="nav-item">Best Practices &amp; Real-World Recipes</a></li><li class="nav-tree-node"><a href="../../handbook/en/reference.html" class="nav-item">Technical Reference</a></li><li class="nav-tree-node"><a href="../../handbook/en/troubleshooting.html" class="nav-item">Troubleshooting &amp; Glossary</a></li></ul></div></section><section class="nav-section"><h2>Command Entry</h2><a href="index.html" class="nav-command-entry active">Open command docs</a></section></div>
+  <div class="nav-sidebar-content"><section class="nav-section"><h2>Guide Map</h2><div class="nav-group-block"><div class="nav-group-title">Start</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../handbook/en/index.html" class="nav-item">Overview</a></li><li class="nav-tree-node"><a href="../handbook/en/what-is-grafana-util.html" class="nav-item">What grafana-util is for</a></li><li class="nav-tree-node"><a href="../handbook/en/getting-started.html" class="nav-item">Getting Started</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">Role Paths</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../handbook/en/role-new-user.html" class="nav-item">New User Handbook</a></li><li class="nav-tree-node"><a href="../handbook/en/role-sre-ops.html" class="nav-item">SRE / Operator Handbook</a></li><li class="nav-tree-node"><a href="../handbook/en/role-automation-ci.html" class="nav-item">Automation / CI Handbook</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">Core Operations</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../handbook/en/dashboard.html" class="nav-item">Dashboard Operator Handbook</a></li><li class="nav-tree-node"><a href="../handbook/en/datasource.html" class="nav-item">Datasource Operator Handbook</a></li><li class="nav-tree-node"><a href="../handbook/en/alert.html" class="nav-item">Alert Operator Handbook</a></li><li class="nav-tree-node"><a href="../handbook/en/access.html" class="nav-item">Access Management (Identity &amp; Access)</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">Governance</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../handbook/en/architecture.html" class="nav-item">Architecture &amp; Design Principles</a></li><li class="nav-tree-node"><a href="../handbook/en/change-overview-status.html" class="nav-item">Project Readiness &amp; Change Overview</a></li></ul></div><div class="nav-group-block"><div class="nav-group-title">Scenarios &amp; Reference</div><ul class="nav-tree"><li class="nav-tree-node"><a href="../handbook/en/scenarios.html" class="nav-item">Operator Scenarios</a></li><li class="nav-tree-node"><a href="../handbook/en/recipes.html" class="nav-item">Best Practices &amp; Real-World Recipes</a></li><li class="nav-tree-node"><a href="../handbook/en/reference.html" class="nav-item">Technical Reference</a></li><li class="nav-tree-node"><a href="../handbook/en/troubleshooting.html" class="nav-item">Troubleshooting &amp; Glossary</a></li></ul></div></section><section class="nav-section"><h2>Command Entry</h2><a href="../commands/en/index.html" class="nav-command-entry">Open command docs</a></section></div>
 </aside>
 
   <article class="article">
-    <div class="breadcrumbs"><a href="../../index.html">Home</a> / Commands / Legacy: grafana-util status</div>
+    <div class="breadcrumbs"><a href="../index.html">Home</a> / <a href="index.html">Manpages</a> / grafana-util-observe-snapshot.1</div>
 
-    <h1><span class="hero-title-main">Legacy: grafana-util status</span></h1>
+    <h1><span class="hero-title-main">grafana-util-observe-snapshot.1</span></h1>
+<p class="hero-summary">Browser-readable rendering of a generated roff manpage.</p>
 
+    <div class="manpage-intro">
+  <p>This page renders the generated roff manpage into readable HTML for browser use. For richer per-subcommand detail, prefer the command-reference pages.</p>
+  <div class="manpage-rendered"><section class="man-section"><h2>NAME</h2><p>grafana-util-observe-snapshot - review or export a snapshot-style artifact bundle.</p></section><section class="man-section"><h2>SYNOPSIS</h2><p><strong>grafana-util observe snapshot [<em>OPTIONS</em>]</strong></p></section><section class="man-section"><h2>DESCRIPTION</h2><p>review or export a snapshot-style artifact bundle.</p><p>when you want a portable artifact package for inspection, review, or handoff.</p></section><section class="man-section"><h2>SEE ALSO</h2><p><strong>grafana-util</strong>(1), <strong>grafana-util-observe</strong>(1)</p></section></div>
+</div>
 
-    <section class="command-intro">
-  <div class="command-intro-grid"><div class="command-intro-block">
-  <p class="command-intro-label">What this page covers</p>
-  <p class="command-intro-text">compatibility reference for the old staged/live status root.</p>
-</div>
-<div class="command-intro-block">
-  <p class="command-intro-label">When to open this page</p>
-  <ul class="command-intro-list"><li>when you are translating older docs or scripts to the current observe surface.</li></ul>
-</div>
-<div class="command-intro-block">
-  <p class="command-intro-label">Who this page is for</p>
-  <p class="command-intro-text">Best for operators who need fast live or staged readiness checks before they change anything.</p>
-</div>
-</div>
-</section>
-<h2 id="root">Root</h2>
-<p>Purpose: compatibility reference for the old staged/live status root.</p>
-<p>When to use: when you are translating older docs or scripts to the current <code>observe</code> surface.</p>
-<p>Description: the public staged/live status surface now lives under <code>grafana-util observe</code>. Use <code>observe staged</code>, <code>observe live</code>, <code>observe overview</code>, or <code>observe snapshot</code> instead of the legacy top-level <code>status</code> root.</p>
-<p>Key flags: the canonical root is <code>observe</code>; staged and live inputs live on the subcommands. Common flags include <code>--output-format</code> and the shared live connection/auth options.</p>
-<p>Examples:</p>
-<pre><code># Purpose: Render staged status from dashboard and desired artifacts.
-grafana-util observe staged --dashboard-export-dir ./dashboards/raw --desired-file ./desired.json --output-format json</code></pre>
-<pre><code># Purpose: Render live status from a reusable profile.
-grafana-util observe live --profile prod --output-format yaml</code></pre>
-<p>Related commands: <code>grafana-util observe overview</code>, <code>grafana-util change check</code>, <code>grafana-util change apply</code>.</p>
-<p>Schema guide:</p>
-<ul><li><code>grafana-util observe --help-schema</code></li><li><code>grafana-util observe staged --help-schema</code></li><li><code>grafana-util observe live --help-schema</code></li></ul>
-<h2 id="staged"><code>staged</code></h2>
-<p>Purpose: render project status from staged artifacts.</p>
-<p>When to use: when you need the machine-readable readiness gate for exported files before apply.</p>
-<p>Key flags: <code>--dashboard-export-dir</code>, <code>--dashboard-provisioning-dir</code>, <code>--datasource-export-dir</code>, <code>--datasource-provisioning-file</code>, <code>--access-user-export-dir</code>, <code>--access-team-export-dir</code>, <code>--access-org-export-dir</code>, <code>--access-service-account-export-dir</code>, <code>--desired-file</code>, <code>--source-bundle</code>, <code>--target-inventory</code>, <code>--alert-export-dir</code>, <code>--availability-file</code>, <code>--mapping-file</code>, <code>--output-format</code>.</p>
-<p>Examples:</p>
-<pre><code># Purpose: staged.
-grafana-util observe staged --dashboard-export-dir ./dashboards/raw --desired-file ./desired.json --output-format table</code></pre>
-<pre><code># Purpose: staged.
-grafana-util observe staged --dashboard-provisioning-dir ./dashboards/provisioning --alert-export-dir ./alerts --output-format interactive</code></pre>
-<p>Related commands: <code>grafana-util observe overview</code>, <code>grafana-util change inspect</code>, <code>grafana-util change check</code>.</p>
-<p>Machine-readable contract: <code>grafana-util-project-status</code></p>
-<h2 id="live"><code>live</code></h2>
-<p>Purpose: render project status from live Grafana read surfaces.</p>
-<p>When to use: when you need current Grafana status, optionally deepened with staged context files.</p>
-<p>Key flags: <code>--profile</code>, <code>--url</code>, <code>--token</code>, <code>--basic-user</code>, <code>--basic-password</code>, <code>--prompt-password</code>, <code>--prompt-token</code>, <code>--timeout</code>, <code>--verify-ssl</code>, <code>--insecure</code>, <code>--ca-cert</code>, <code>--all-orgs</code>, <code>--org-id</code>, <code>--sync-summary-file</code>, <code>--bundle-preflight-file</code>, <code>--promotion-summary-file</code>, <code>--mapping-file</code>, <code>--availability-file</code>, <code>--output-format</code>.</p>
-<p>Notes:</p>
-<ul><li>Prefer <code>--profile</code> for normal live status checks.</li><li><code>--all-orgs</code> is safest with admin-backed <code>--profile</code> or direct Basic auth because token scope can hide other orgs.</li></ul>
-<p>Examples:</p>
-<pre><code># Purpose: live.
-grafana-util observe live --profile prod --output-format yaml</code></pre>
-<pre><code># Purpose: live.
-grafana-util observe live --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --output-format json</code></pre>
-<pre><code># Purpose: live.
-grafana-util observe live --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --sync-summary-file ./sync-summary.json --output-format interactive</code></pre>
-<p>Related commands: <code>grafana-util observe overview</code>, <code>grafana-util change apply</code>, <code>grafana-util config profile show</code>.</p>
-<p>Machine-readable contract: <code>grafana-util-project-status</code></p>
     
   </article>
   <aside class="sidebar">
   <button class="sidebar-toggle sidebar-toggle-right" type="button" aria-expanded="true" aria-label="Toggle page sidebar">▶</button>
   <div class="sidebar-content">
-    <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#root"><span class="toc-label">Root</span></a></li><li class="toc-level-2"><a href="#staged"><span class="toc-label">staged`</span></a></li><li class="toc-level-2"><a href="#live"><span class="toc-label">live`</span></a></li></ul></section><section class="sidebar-section"><h2>Related</h2><ul class="sidebar-meta-list"><li><a href="../../handbook/en/change-overview-status.html" class="sidebar-meta-link">Matching handbook chapter</a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: English</a></li><li><a href="../zh-TW/status.html" class="sidebar-meta-link">Switch to 繁體中文</a></li></ul></section>
+    <section class="sidebar-section"><h2>On This Page</h2><p>This page renders the generated manpage into readable HTML sections.</p></section><section class="sidebar-section"><h2>Related</h2><ul class="sidebar-meta-list"><li><a href="index.html" class="sidebar-meta-link">Manpage index</a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><p>English only. The manpage lane currently generates from English command docs.</p></section>
   </div>
 </aside>
 
 </div>
 
     </div>
-    <footer class="site-footer">Source: status.md</footer>
+    <footer class="site-footer">Source: <code>docs/man/grafana-util-observe-snapshot.1</code><br>Generated by <code>scripts/generate_command_html.py</code>.</footer>
   </div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js" async></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js" async></script>

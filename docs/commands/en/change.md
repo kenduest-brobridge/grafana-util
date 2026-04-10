@@ -129,8 +129,8 @@ Quick lookups from the CLI:
 
 | Command | Output kind | Top-level fields to expect |
 | --- | --- | --- |
-| `change inspect --output-format json` | overview/status-style staged summary | command-specific staged summary and discovered-input output |
-| `change check --output-format json` | project-status staged status | staged readiness/status output plus blockers or warnings |
+| `change inspect --output-format json` | observe-style staged summary | command-specific staged summary and discovered-input output |
+| `change check --output-format json` | observe staged readiness | staged readiness output plus blockers or warnings |
 | `change preview --output-format json` | `grafana-utils-sync-plan` or bundle/promotion preflight kinds | preview uses the existing staged plan/bundle-preflight/promotion-preflight contracts under a task-first entrypoint; sync-plan previews also carry `ordering.mode`, `operations[].orderIndex`, `operations[].orderGroup`, `operations[].kindOrder`, and `summary.blocked_reasons` |
 | `change apply --output-format json` | `grafana-utils-sync-apply-intent` | `kind`, `schemaVersion`, `toolVersion`, `mode`, `reviewed`, `reviewRequired`, `allowPrune`, `approved`, `summary`, `alertAssessment`, `operations`, optional `preflightSummary`, optional `bundlePreflightSummary`, `appliedBy`, `appliedAt`, `approvalReason`, `applyNote`, `traceId`, `stage`, `stepIndex`, `parentTraceId`; ordering metadata stays on the reviewed preview |
 | `change apply --execute-live --output-format json` | live apply result | `mode`, `appliedCount`, `results` |
@@ -430,7 +430,7 @@ Failure checks:
 - if a live-backed preflight looks wrong, confirm the auth, org, and target Grafana before trusting the result
 - if CI is parsing the JSON, use `kind` and `schemaVersion` first, then inspect `summary` and `checks`
 
-Related commands: `change summary`, `change plan`, `status staged`.
+Related commands: `change summary`, `change plan`, `observe staged`.
 
 ## `assess-alerts`
 
@@ -475,7 +475,7 @@ grafana-util change assess-alerts --alerts-file ./alerts.json --output-format js
 ```
 This is useful when alert resources need a narrower explanation than the wider sync plan gives you.
 
-Related commands: `change bundle`, `change bundle-preflight`, `overview`.
+Related commands: `change bundle`, `change bundle-preflight`, `observe overview`.
 
 ## `bundle`
 
@@ -583,7 +583,7 @@ grafana-util change bundle-preflight --source-bundle ./sync-source-bundle.json -
 ```
 This is the right artifact when you want one bundle-level go/no-go result before any promotion or apply handoff.
 
-Related commands: `change bundle`, `change promotion-preflight`, `status staged`.
+Related commands: `change bundle`, `change promotion-preflight`, `observe staged`.
 
 ## `promotion-preflight`
 

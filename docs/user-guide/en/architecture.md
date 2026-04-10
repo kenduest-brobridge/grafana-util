@@ -33,7 +33,7 @@ Understanding the architectural philosophy of `grafana-util` is key to managing 
 - If the runtime shape and the docs shape drift apart, treat that as an architecture bug, not just a docs bug.
 - If you are not sure why the split exists, reread the surface and lane sections before adding new work.
 
-For the command surface behind these ideas, see [observe](../../commands/en/observe.md), [change](../../commands/en/change.md), [dashboard](../../commands/en/dashboard.md), and [config profile](../../commands/en/profile.md).
+For the command surface behind these ideas, see [observe](../../commands/en/observe.md), [change](../../commands/en/change.md), [dashboard](../../commands/en/dashboard.md), [config](../../commands/en/config.md), and [config profile](../../commands/en/profile.md).
 
 ---
 

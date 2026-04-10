@@ -75,13 +75,12 @@
 
 先用這裡快速判斷自己遇到的是哪一類工作，再往對應章節或指令說明走。
 
-### 狀態與總覽
+### Observe
 
-想先看 live 或 staged 狀態、快速盤點環境，先從 `status` 和 `overview` 開始。
+想先看 live 或 staged 狀態、快速盤點環境，先從 `observe` 開始。
 
 - [瀏覽技術參考](../user-guide/zh-TW/reference.md)
-- [瀏覽 status](../commands/zh-TW/status.md)
-- [瀏覽 overview](../commands/zh-TW/overview.md)
+- [瀏覽 observe 指令](../commands/zh-TW/observe.md)
 
 ### 資產操作
 
@@ -96,7 +95,7 @@
 要整理 org、team、service account、token，或把連線與 secret 來源收進 profile，從這裡進去。
 
 - [瀏覽 Access 章節](../user-guide/zh-TW/access.md)
-- [瀏覽 Profile 指令](../commands/zh-TW/profile.md)
+- [瀏覽 config profile 指令](../commands/zh-TW/profile.md)
 
 ### 變更審查
 

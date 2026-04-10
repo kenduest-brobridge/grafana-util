@@ -81,4 +81,4 @@ This confirms that inspect found staged inputs and rendered the shared overview-
 - [change](./change.md)
 - [change check](./change-check.md)
 - [change preview](./change-preview.md)
-- [overview](./overview.md)
+- [observe](./observe.md)
