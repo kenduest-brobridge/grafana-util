@@ -246,6 +246,20 @@ pub(crate) fn access_diff_summary_line(
     }
 }
 
+/// Format a consistent review contract line for access diff workflows.
+pub(crate) fn access_diff_review_line(
+    kind: &str,
+    checked: usize,
+    differences: usize,
+    local_source: &str,
+    live_source: &str,
+) -> String {
+    let same = checked.saturating_sub(differences);
+    format!(
+        "Review: required=true reviewed=false kind={kind} checked={checked} same={same} different={differences} source={local_source} live={live_source}"
+    )
+}
+
 /// Format a consistent import summary line for access workflows.
 pub(crate) fn access_import_summary_line(
     kind: &str,
@@ -441,8 +455,8 @@ pub(crate) fn normalize_service_account_row(team: &Map<String, Value>) -> Map<St
 #[cfg(test)]
 mod tests {
     use super::{
-        access_delete_summary_line, access_diff_summary_line, access_export_summary_line,
-        access_import_summary_line,
+        access_delete_summary_line, access_diff_review_line, access_diff_summary_line,
+        access_export_summary_line, access_import_summary_line,
     };
 
     #[test]
@@ -472,6 +486,21 @@ mod tests {
         assert_eq!(
             line,
             "No team differences across 3 team(s) from ./access-teams against Grafana live teams."
+        );
+    }
+
+    #[test]
+    fn access_diff_review_line_surfaces_review_contract_for_diff() {
+        let line = access_diff_review_line(
+            "team",
+            3,
+            1,
+            "./access-teams",
+            "Grafana live teams",
+        );
+        assert_eq!(
+            line,
+            "Review: required=true reviewed=false kind=team checked=3 same=2 different=1 source=./access-teams live=Grafana live teams"
         );
     }
 
