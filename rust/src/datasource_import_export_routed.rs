@@ -3,7 +3,7 @@
 use serde_json::{json, Value};
 use std::path::Path;
 
-use crate::common::{message, render_json_value, Result};
+use crate::common::{message, render_json_value, tool_version, Result};
 use crate::http::JsonHttpClient;
 
 use super::{
@@ -227,6 +227,11 @@ pub(crate) fn build_routed_datasource_import_dry_run_json(
         "datasourceCount": imports.iter().filter_map(|entry| entry.get("summary").and_then(|summary| summary.get("datasourceCount")).and_then(Value::as_i64)).sum::<i64>(),
     });
     render_json_value(&json!({
+        "kind": "grafana-util-datasource-import-dry-run-routed",
+        "schemaVersion": 1,
+        "toolVersion": tool_version(),
+        "reviewRequired": true,
+        "reviewed": false,
         "mode": describe_datasource_import_mode(args.replace_existing, args.update_existing_only),
         "orgs": orgs,
         "imports": imports,
