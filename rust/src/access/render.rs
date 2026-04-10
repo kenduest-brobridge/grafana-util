@@ -276,6 +276,21 @@ pub(crate) fn access_export_summary_line(
     )
 }
 
+/// Format a consistent delete summary line for access workflows.
+pub(crate) fn access_delete_summary_line(
+    kind: &str,
+    identity: &str,
+    details: &[(&str, String)],
+) -> String {
+    let mut parts = vec![format!("Deleted {kind} {identity}")];
+    for (label, value) in details {
+        if !value.trim().is_empty() {
+            parts.push(format!("{label}={value}"));
+        }
+    }
+    parts.join(" ")
+}
+
 // Build a normalized user row shape expected by access list renderers.
 /// Purpose: implementation note.
 pub(crate) fn normalize_user_row(user: &Map<String, Value>, scope: &Scope) -> Map<String, Value> {
@@ -426,7 +441,8 @@ pub(crate) fn normalize_service_account_row(team: &Map<String, Value>) -> Map<St
 #[cfg(test)]
 mod tests {
     use super::{
-        access_diff_summary_line, access_export_summary_line, access_import_summary_line,
+        access_delete_summary_line, access_diff_summary_line, access_export_summary_line,
+        access_import_summary_line,
     };
 
     #[test]
@@ -494,6 +510,27 @@ mod tests {
         assert_eq!(
             live,
             "Exported 1 service-account(s) from /tmp/access-service-accounts -> /tmp/access-service-accounts/service-accounts.json and /tmp/access-service-accounts/metadata.json"
+        );
+    }
+
+    #[test]
+    fn access_delete_summary_line_surfaces_identity_and_context() {
+        let line = access_delete_summary_line(
+            "service-account",
+            "svc",
+            &[
+                ("serviceAccountId", "4".to_string()),
+                ("login", "sa-svc".to_string()),
+                ("role", "Viewer".to_string()),
+                ("disabled", "false".to_string()),
+                ("tokens", "2".to_string()),
+                ("message", "Service account deleted.".to_string()),
+            ],
+        );
+
+        assert_eq!(
+            line,
+            "Deleted service-account svc serviceAccountId=4 login=sa-svc role=Viewer disabled=false tokens=2 message=Service account deleted."
         );
     }
 }

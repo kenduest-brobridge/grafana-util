@@ -13,8 +13,8 @@ use super::super::pending_delete::{
     prompt_select_index, prompt_select_indexes, validate_delete_prompt,
 };
 use super::render::{
-    bool_label, map_get_text, normalize_org_role, render_objects_json, scalar_text,
-    user_scope_text, value_bool,
+    access_delete_summary_line, bool_label, map_get_text, normalize_org_role,
+    render_objects_json, scalar_text, user_scope_text, value_bool,
 };
 use super::{
     build_auth_context, iter_global_users_with_request, list_org_users_with_request,
@@ -310,20 +310,16 @@ fn user_delete_prompt_label(user: &Map<String, Value>) -> String {
 }
 
 fn user_delete_summary_line(row: &Map<String, Value>) -> String {
-    let mut parts = vec![
-        format!("Deleted user {}", map_get_text(row, "login")),
-        format!("id={}", map_get_text(row, "id")),
-        format!("scope={}", map_get_text(row, "scope")),
-    ];
-    let email = map_get_text(row, "email");
-    if !email.is_empty() {
-        parts.push(format!("email={email}"));
-    }
-    let name = map_get_text(row, "name");
-    if !name.is_empty() {
-        parts.push(format!("name={name}"));
-    }
-    parts.join(" ")
+    access_delete_summary_line(
+        "user",
+        &map_get_text(row, "login"),
+        &[
+            ("id", map_get_text(row, "id")),
+            ("scope", map_get_text(row, "scope")),
+            ("email", map_get_text(row, "email")),
+            ("name", map_get_text(row, "name")),
+        ],
+    )
 }
 
 fn prompt_resolve_user_delete_targets<F>(

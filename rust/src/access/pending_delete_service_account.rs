@@ -10,6 +10,7 @@ use serde_json::{Map, Value};
 use crate::common::{message, string_field, value_as_object, Result};
 
 use super::super::render::{map_get_text, normalize_service_account_row, scalar_text};
+use super::super::render::access_delete_summary_line;
 use super::super::{request_object, request_object_list_field, DEFAULT_PAGE_SIZE};
 use super::pending_delete_support::{
     format_prompt_row, print_delete_confirmation_summary, prompt_confirm_delete,
@@ -134,34 +135,18 @@ fn service_account_delete_result(
 
 /// Build a stable summary line for a deleted service account.
 fn service_account_delete_summary_line(result: &Map<String, Value>) -> String {
-    let mut parts = vec![
-        format!(
-            "serviceAccountId={}",
-            map_get_text(result, "serviceAccountId")
-        ),
-        format!("name={}", map_get_text(result, "name")),
-    ];
-    let login = map_get_text(result, "login");
-    if !login.is_empty() {
-        parts.push(format!("login={login}"));
-    }
-    let role = map_get_text(result, "role");
-    if !role.is_empty() {
-        parts.push(format!("role={role}"));
-    }
-    let disabled = map_get_text(result, "disabled");
-    if !disabled.is_empty() {
-        parts.push(format!("disabled={disabled}"));
-    }
-    let tokens = map_get_text(result, "tokens");
-    if !tokens.is_empty() {
-        parts.push(format!("tokens={tokens}"));
-    }
-    let message = map_get_text(result, "message");
-    if !message.is_empty() {
-        parts.push(format!("message={message}"));
-    }
-    parts.join(" ")
+    access_delete_summary_line(
+        "service-account",
+        &map_get_text(result, "name"),
+        &[
+            ("serviceAccountId", map_get_text(result, "serviceAccountId")),
+            ("login", map_get_text(result, "login")),
+            ("role", map_get_text(result, "role")),
+            ("disabled", map_get_text(result, "disabled")),
+            ("tokens", map_get_text(result, "tokens")),
+            ("message", map_get_text(result, "message")),
+        ],
+    )
 }
 
 fn service_account_prompt_label(service_account: &Map<String, Value>) -> String {
@@ -641,6 +626,29 @@ mod pending_delete_service_account_tests {
         assert!(line.contains("tokenId=9"));
         assert!(line.contains("tokenName=automation"));
         assert!(line.contains("message=Service-account token deleted."));
+    }
+
+    #[test]
+    fn service_account_delete_summary_line_includes_identity_and_context() {
+        let result = Map::from_iter(vec![
+            ("serviceAccountId".to_string(), Value::String("4".to_string())),
+            ("name".to_string(), Value::String("svc".to_string())),
+            ("login".to_string(), Value::String("sa-svc".to_string())),
+            ("role".to_string(), Value::String("Viewer".to_string())),
+            ("disabled".to_string(), Value::String("false".to_string())),
+            ("tokens".to_string(), Value::String("2".to_string())),
+            (
+                "message".to_string(),
+                Value::String("Service account deleted.".to_string()),
+            ),
+        ]);
+
+        let line = super::service_account_delete_summary_line(&result);
+
+        assert_eq!(
+            line,
+            "Deleted service-account svc serviceAccountId=4 login=sa-svc role=Viewer disabled=false tokens=2 message=Service account deleted."
+        );
     }
 
     #[test]

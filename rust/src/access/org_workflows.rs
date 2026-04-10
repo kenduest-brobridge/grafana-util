@@ -16,8 +16,9 @@ use super::super::pending_delete::{
     prompt_select_indexes, validate_delete_prompt,
 };
 use super::super::render::{
-    access_diff_summary_line, access_export_summary_line, access_import_summary_line,
-    format_table, render_csv, render_objects_json, render_yaml, scalar_text,
+    access_delete_summary_line, access_diff_summary_line, access_export_summary_line,
+    access_import_summary_line, format_table, render_csv, render_objects_json, render_yaml,
+    scalar_text,
 };
 use super::super::{
     OrgAddArgs, OrgDeleteArgs, OrgDiffArgs, OrgExportArgs, OrgImportArgs, OrgListArgs,
@@ -270,19 +271,18 @@ where
         println!("{}", render_objects_json(&rows)?);
     } else {
         for row in &rows {
-            let mut parts = vec![
-                format!("Deleted org {}", string_field(row, "name", "")),
-                format!("id={}", scalar_text(row.get("id"))),
-            ];
-            let user_count = string_field(row, "userCount", "");
-            if !user_count.is_empty() {
-                parts.push(format!("userCount={user_count}"));
-            }
-            let message = string_field(row, "message", "");
-            if !message.is_empty() {
-                parts.push(format!("message={message}"));
-            }
-            println!("{}", parts.join(" "));
+            println!(
+                "{}",
+                access_delete_summary_line(
+                    "org",
+                    &string_field(row, "name", ""),
+                    &[
+                        ("id", scalar_text(row.get("id"))),
+                        ("userCount", string_field(row, "userCount", "")),
+                        ("message", string_field(row, "message", "")),
+                    ],
+                )
+            );
         }
         if rows.len() > 1 {
             println!("Deleted {} organization(s).", rows.len());
@@ -319,6 +319,24 @@ mod org_delete_prompt_tests {
 
         assert!(label.contains("Main Org"));
         assert!(label.contains("id=4 users=12"));
+    }
+
+    #[test]
+    fn org_delete_summary_line_includes_identity_and_context() {
+        let line = super::access_delete_summary_line(
+            "org",
+            "Main Org",
+            &[
+                ("id", "4".to_string()),
+                ("userCount", "12".to_string()),
+                ("message", "Org deleted.".to_string()),
+            ],
+        );
+
+        assert_eq!(
+            line,
+            "Deleted org Main Org id=4 userCount=12 message=Org deleted."
+        );
     }
 }
 

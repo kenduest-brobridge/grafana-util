@@ -10,6 +10,7 @@ use serde_json::{Map, Value};
 use crate::common::{message, render_json_value, string_field, Result};
 
 use super::super::render::{map_get_text, scalar_text};
+use super::super::render::access_delete_summary_line;
 use super::super::{request_object, request_object_list_field, DEFAULT_PAGE_SIZE};
 use super::pending_delete_support::{
     format_prompt_row, print_delete_confirmation_summary, prompt_confirm_delete,
@@ -122,19 +123,15 @@ fn team_delete_result(
 
 /// Build a stable summary line for a deleted team.
 fn team_delete_summary_line(result: &Map<String, Value>) -> String {
-    let mut parts = vec![
-        format!("teamId={}", map_get_text(result, "teamId")),
-        format!("name={}", map_get_text(result, "name")),
-    ];
-    let email = map_get_text(result, "email");
-    if !email.is_empty() {
-        parts.push(format!("email={email}"));
-    }
-    let message = map_get_text(result, "message");
-    if !message.is_empty() {
-        parts.push(format!("message={message}"));
-    }
-    parts.join(" ")
+    access_delete_summary_line(
+        "team",
+        &map_get_text(result, "name"),
+        &[
+            ("teamId", map_get_text(result, "teamId")),
+            ("email", map_get_text(result, "email")),
+            ("message", map_get_text(result, "message")),
+        ],
+    )
 }
 
 fn team_delete_prompt_label(team: &Map<String, Value>) -> String {
@@ -249,5 +246,28 @@ mod pending_delete_team_tests {
         assert!(label.contains("Ops"));
         assert!(label.contains("ops@example.com"));
         assert!(label.contains("id=3 members=2"));
+    }
+
+    #[test]
+    fn team_delete_summary_line_includes_identity_and_message() {
+        let result = Map::from_iter(vec![
+            ("teamId".to_string(), Value::String("3".to_string())),
+            ("name".to_string(), Value::String("Ops".to_string())),
+            (
+                "email".to_string(),
+                Value::String("ops@example.com".to_string()),
+            ),
+            (
+                "message".to_string(),
+                Value::String("Team deleted.".to_string()),
+            ),
+        ]);
+
+        let line = super::team_delete_summary_line(&result);
+
+        assert_eq!(
+            line,
+            "Deleted team Ops teamId=3 email=ops@example.com message=Team deleted."
+        );
     }
 }
