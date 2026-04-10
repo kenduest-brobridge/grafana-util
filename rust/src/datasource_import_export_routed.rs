@@ -91,6 +91,18 @@ pub(crate) fn format_routed_datasource_target_org_label(target_org_id: Option<i6
         .unwrap_or_else(|| "<new>".to_string())
 }
 
+pub(crate) fn format_routed_datasource_source_org_label(
+    source_org_id: i64,
+    source_org_name: &str,
+) -> String {
+    let source_org_name = source_org_name.trim();
+    if source_org_name.is_empty() {
+        source_org_id.to_string()
+    } else {
+        format!("{source_org_id}:{source_org_name}")
+    }
+}
+
 pub(crate) fn format_routed_datasource_scope_summary_fields(
     source_org_id: i64,
     source_org_name: &str,
@@ -155,15 +167,22 @@ pub(crate) fn render_routed_datasource_import_org_table(
 
 pub(crate) fn format_routed_datasource_import_summary_line(
     org_count: usize,
+    source_org_labels: &[String],
     existing_org_count: usize,
     missing_org_count: usize,
     would_create_org_count: usize,
     datasource_count: usize,
     input_dir: &Path,
 ) -> String {
+    let source_org_labels = if source_org_labels.is_empty() {
+        "<none>".to_string()
+    } else {
+        format!("[{}]", source_org_labels.join(", "))
+    };
     format!(
-        "Routed datasource import summary: orgs={} existing={} missing={} would-create={} datasources={} from {}",
+        "Routed datasource import summary: orgs={} sources={} existing={} missing={} would-create={} datasources={} from {}",
         org_count,
+        source_org_labels,
         existing_org_count,
         missing_org_count,
         would_create_org_count,
@@ -240,6 +259,12 @@ pub(crate) fn build_routed_datasource_import_dry_run_json(
     }
     let summary = json!({
         "orgCount": orgs.len(),
+        "sourceOrgLabels": orgs.iter().map(|entry| {
+            format_routed_datasource_source_org_label(
+                entry.get("sourceOrgId").and_then(Value::as_i64).unwrap_or_default(),
+                entry.get("sourceOrgName").and_then(Value::as_str).unwrap_or_default(),
+            )
+        }).collect::<Vec<String>>(),
         "existingOrgCount": orgs.iter().filter(|entry| entry.get("orgAction") == Some(&Value::String("exists".to_string()))).count(),
         "missingOrgCount": orgs.iter().filter(|entry| entry.get("orgAction") == Some(&Value::String("missing".to_string()))).count(),
         "wouldCreateOrgCount": orgs.iter().filter(|entry| entry.get("orgAction") == Some(&Value::String("would-create".to_string()))).count(),

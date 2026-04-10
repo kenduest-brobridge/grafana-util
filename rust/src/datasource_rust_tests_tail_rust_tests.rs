@@ -237,6 +237,7 @@ fn routed_datasource_status_matrix_covers_exists_missing_would_create_and_create
 fn routed_datasource_import_summary_line_reports_org_and_datasource_totals() {
     let summary = format_routed_datasource_import_summary_line(
         3,
+        &["2:Org Two".to_string(), "9:Ops Org".to_string()],
         1,
         1,
         1,
@@ -246,7 +247,7 @@ fn routed_datasource_import_summary_line_reports_org_and_datasource_totals() {
 
     assert_eq!(
         summary,
-        "Routed datasource import summary: orgs=3 existing=1 missing=1 would-create=1 datasources=7 from /tmp/datasource-export-all-orgs"
+        "Routed datasource import summary: orgs=3 sources=[2:Org Two, 9:Ops Org] existing=1 missing=1 would-create=1 datasources=7 from /tmp/datasource-export-all-orgs"
     );
 }
 

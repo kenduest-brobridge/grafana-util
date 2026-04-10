@@ -44,6 +44,7 @@ pub(crate) use datasource_export_support::{
 pub(crate) use datasource_import_export_routed::{
     build_routed_datasource_import_dry_run_json, format_routed_datasource_scope_summary_fields,
     format_routed_datasource_import_summary_line, format_routed_datasource_target_org_label,
+    format_routed_datasource_source_org_label,
     render_routed_datasource_import_org_table,
     resolve_export_org_target_plan,
 };
@@ -599,6 +600,12 @@ pub(crate) fn import_datasources_by_export_org(args: &DatasourceImportArgs) -> R
         ]);
         plans.push(plan);
     }
+    let source_org_labels = plans
+        .iter()
+        .map(|plan| {
+            format_routed_datasource_source_org_label(plan.source_org_id, &plan.source_org_name)
+        })
+        .collect::<Vec<String>>();
     if args.dry_run && args.table {
         for line in render_routed_datasource_import_org_table(&org_rows, !args.no_header) {
             println!("{line}");
@@ -624,6 +631,7 @@ pub(crate) fn import_datasources_by_export_org(args: &DatasourceImportArgs) -> R
             "{}",
             format_routed_datasource_import_summary_line(
                 org_rows.len(),
+                &source_org_labels,
                 existing_org_count,
                 missing_org_count,
                 would_create_org_count,
@@ -686,6 +694,7 @@ pub(crate) fn import_datasources_by_export_org(args: &DatasourceImportArgs) -> R
             "{}",
             format_routed_datasource_import_summary_line(
                 org_count,
+                &source_org_labels,
                 existing_org_count,
                 missing_org_count,
                 would_create_org_count,
