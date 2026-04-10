@@ -2187,6 +2187,37 @@ fn build_alert_delete_preview_from_files_blocks_policy_reset_without_guard() {
 }
 
 #[test]
+fn render_alert_action_text_surfaces_review_contract() {
+    let document = json!({
+        "reviewRequired": true,
+        "reviewed": false,
+        "summary": {
+            "delete": 1,
+            "blocked": 0
+        },
+        "rows": [{
+            "kind": "grafana-notification-policies",
+            "identity": "root",
+            "action": "blocked",
+            "reason": "policy-reset-requires-allow-policy-reset"
+        }]
+    });
+
+    let lines = super::render_alert_action_text("Alert delete preview", &document);
+    assert_eq!(lines[0], "Alert delete preview");
+    assert_eq!(lines[1], "Review: required=true reviewed=false");
+    assert!(
+        lines
+            .iter()
+            .any(|line| line == "Summary: delete=1 blocked=0" || line == "Summary: blocked=0 delete=1")
+    );
+    assert!(lines.iter().any(|line| line == "Rows:"));
+    assert!(lines.iter().any(|line| {
+        line == "- grafana-notification-policies root action=blocked reason=policy-reset-requires-allow-policy-reset"
+    }));
+}
+
+#[test]
 fn build_route_preview_sorts_group_by_and_matchers_stably() {
     let route = json!({
         "receiver": "team-webhook",

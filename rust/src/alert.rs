@@ -154,8 +154,23 @@ fn build_alert_http_client(args: &AlertCliArgs) -> Result<JsonHttpClient> {
     .into_http_client())
 }
 
-fn render_alert_action_text(title: &str, document: &Value) -> Vec<String> {
+pub(crate) fn render_alert_action_text(title: &str, document: &Value) -> Vec<String> {
     let mut lines = vec![title.to_string()];
+    if document.get("reviewRequired").and_then(Value::as_bool).is_some()
+        || document.get("reviewed").and_then(Value::as_bool).is_some()
+    {
+        let review_required = document
+            .get("reviewRequired")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
+        let reviewed = document
+            .get("reviewed")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
+        lines.push(format!(
+            "Review: required={review_required} reviewed={reviewed}"
+        ));
+    }
     if let Some(summary) = document.get("summary").and_then(Value::as_object) {
         let summary_line = summary
             .iter()
