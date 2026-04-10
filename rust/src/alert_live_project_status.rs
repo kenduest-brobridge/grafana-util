@@ -9,6 +9,7 @@
 //! - Rule linkage stays the primary readiness signal; missing linked rules or
 //!   policy coverage can block readiness, and empty supporting surfaces can add
 //!   conservative coverage warnings when they are directly visible.
+//! - Support-only live surfaces do not make the alert domain ready on their own.
 
 use serde_json::Value;
 
@@ -233,7 +234,7 @@ pub fn build_alert_live_project_status_domain(
         ));
     }
 
-    let (status, reason_code, mut next_actions) = if primary_count == 0 {
+    let (status, reason_code, mut next_actions) = if rules == 0 {
         (
             PROJECT_STATUS_PARTIAL,
             ALERT_REASON_PARTIAL_NO_DATA,
@@ -658,6 +659,33 @@ mod alert_live_project_status_rust_tests {
         assert_eq!(value["status"], json!(PROJECT_STATUS_PARTIAL));
         assert_eq!(value["reasonCode"], json!("partial-no-data"));
         assert_eq!(value["primaryCount"], json!(0));
+        assert_eq!(
+            value["nextActions"],
+            json!(["capture at least one live alert resource"])
+        );
+    }
+
+    #[test]
+    fn build_alert_live_project_status_domain_is_partial_when_only_support_surfaces_exist() {
+        let rules = json!([]);
+        let contact_points = json!([{"uid": "cp-main"}]);
+        let mute_timings = json!([{"name": "off-hours"}]);
+        let policies = json!({"receiver": "grafana-default-email"});
+        let templates = json!([{"name": "slack.default"}]);
+
+        let domain = build_alert_live_project_status_domain(AlertLiveProjectStatusInputs {
+            rules_document: Some(&rules),
+            contact_points_document: Some(&contact_points),
+            mute_timings_document: Some(&mute_timings),
+            policies_document: Some(&policies),
+            templates_document: Some(&templates),
+        })
+        .unwrap();
+        let value = serde_json::to_value(domain).unwrap();
+
+        assert_eq!(value["status"], json!(PROJECT_STATUS_PARTIAL));
+        assert_eq!(value["reasonCode"], json!("partial-no-data"));
+        assert_eq!(value["primaryCount"], json!(4));
         assert_eq!(
             value["nextActions"],
             json!(["capture at least one live alert resource"])

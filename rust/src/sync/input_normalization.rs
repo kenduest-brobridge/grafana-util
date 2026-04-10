@@ -33,6 +33,10 @@ pub(crate) fn build_overview_args(
     discovered_dashboard_export_dir: Option<&PathBuf>,
     discovered_dashboard_provisioning_dir: Option<&PathBuf>,
     discovered_datasource_provisioning_file: Option<&PathBuf>,
+    discovered_access_user_export_dir: Option<&PathBuf>,
+    discovered_access_team_export_dir: Option<&PathBuf>,
+    discovered_access_org_export_dir: Option<&PathBuf>,
+    discovered_access_service_account_export_dir: Option<&PathBuf>,
     discovered_desired_file: Option<&PathBuf>,
     discovered_source_bundle: Option<&PathBuf>,
     discovered_target_inventory: Option<&PathBuf>,
@@ -57,10 +61,26 @@ pub(crate) fn build_overview_args(
             .datasource_provisioning_file
             .clone()
             .or(discovered_datasource_provisioning_file.cloned()),
-        access_user_export_dir: None,
-        access_team_export_dir: None,
-        access_org_export_dir: None,
-        access_service_account_export_dir: None,
+        access_user_export_dir: args
+            .inputs
+            .access_user_export_dir
+            .clone()
+            .or(discovered_access_user_export_dir.cloned()),
+        access_team_export_dir: args
+            .inputs
+            .access_team_export_dir
+            .clone()
+            .or(discovered_access_team_export_dir.cloned()),
+        access_org_export_dir: args
+            .inputs
+            .access_org_export_dir
+            .clone()
+            .or(discovered_access_org_export_dir.cloned()),
+        access_service_account_export_dir: args
+            .inputs
+            .access_service_account_export_dir
+            .clone()
+            .or(discovered_access_service_account_export_dir.cloned()),
         desired_file: args
             .inputs
             .desired_file
@@ -122,6 +142,10 @@ pub(crate) fn build_status_args(
     discovered_dashboard_export_dir: Option<&PathBuf>,
     discovered_dashboard_provisioning_dir: Option<&PathBuf>,
     discovered_datasource_provisioning_file: Option<&PathBuf>,
+    discovered_access_user_export_dir: Option<&PathBuf>,
+    discovered_access_team_export_dir: Option<&PathBuf>,
+    discovered_access_org_export_dir: Option<&PathBuf>,
+    discovered_access_service_account_export_dir: Option<&PathBuf>,
     discovered_desired_file: Option<&PathBuf>,
     discovered_source_bundle: Option<&PathBuf>,
     discovered_target_inventory: Option<&PathBuf>,
@@ -146,10 +170,26 @@ pub(crate) fn build_status_args(
             .datasource_provisioning_file
             .clone()
             .or(discovered_datasource_provisioning_file.cloned()),
-        access_user_export_dir: None,
-        access_team_export_dir: None,
-        access_org_export_dir: None,
-        access_service_account_export_dir: None,
+        access_user_export_dir: args
+            .inputs
+            .access_user_export_dir
+            .clone()
+            .or(discovered_access_user_export_dir.cloned()),
+        access_team_export_dir: args
+            .inputs
+            .access_team_export_dir
+            .clone()
+            .or(discovered_access_team_export_dir.cloned()),
+        access_org_export_dir: args
+            .inputs
+            .access_org_export_dir
+            .clone()
+            .or(discovered_access_org_export_dir.cloned()),
+        access_service_account_export_dir: args
+            .inputs
+            .access_service_account_export_dir
+            .clone()
+            .or(discovered_access_service_account_export_dir.cloned()),
         desired_file: args
             .inputs
             .desired_file
@@ -317,6 +357,11 @@ pub(crate) fn load_preview_desired_specs(
 #[cfg(test)]
 mod input_normalization_tests {
     use super::*;
+    use crate::common::CliColorChoice;
+    use crate::dashboard::CommonCliArgs;
+    use crate::sync::{ChangeOutputArgs, SyncOutputFormat};
+    use std::fs;
+    use tempfile::tempdir;
 
     fn staged_inputs(
         dashboard_export_dir: Option<&str>,
@@ -331,7 +376,120 @@ mod input_normalization_tests {
             alert_export_dir: None,
             datasource_export_file: None,
             datasource_provisioning_file: None,
+            access_user_export_dir: None,
+            access_team_export_dir: None,
+            access_org_export_dir: None,
+            access_service_account_export_dir: None,
         }
+    }
+
+    #[test]
+    fn build_overview_args_preserves_access_staged_inputs() {
+        let args = ChangeInspectArgs {
+            inputs: ChangeStagedInputsArgs {
+                workspace: PathBuf::from("."),
+                desired_file: None,
+                source_bundle: None,
+                dashboard_export_dir: None,
+                dashboard_provisioning_dir: None,
+                alert_export_dir: None,
+                datasource_export_file: None,
+                datasource_provisioning_file: None,
+                access_user_export_dir: Some(PathBuf::from("./access-users")),
+                access_team_export_dir: Some(PathBuf::from("./access-teams")),
+                access_org_export_dir: Some(PathBuf::from("./access-orgs")),
+                access_service_account_export_dir: Some(PathBuf::from("./access-service-accounts")),
+            },
+            output: ChangeOutputArgs {
+                output_format: SyncOutputFormat::Json,
+                output_file: None,
+                also_stdout: false,
+            },
+        };
+
+        let overview = build_overview_args(
+            &args, None, None, None, None, None, None, None, None, None, None, None, None, None,
+        );
+
+        assert_eq!(
+            overview.access_user_export_dir,
+            Some(PathBuf::from("./access-users"))
+        );
+        assert_eq!(
+            overview.access_team_export_dir,
+            Some(PathBuf::from("./access-teams"))
+        );
+        assert_eq!(
+            overview.access_org_export_dir,
+            Some(PathBuf::from("./access-orgs"))
+        );
+        assert_eq!(
+            overview.access_service_account_export_dir,
+            Some(PathBuf::from("./access-service-accounts"))
+        );
+    }
+
+    #[test]
+    fn build_status_args_preserves_access_staged_inputs() {
+        let args = ChangeCheckArgs {
+            inputs: ChangeStagedInputsArgs {
+                workspace: PathBuf::from("."),
+                desired_file: None,
+                source_bundle: None,
+                dashboard_export_dir: None,
+                dashboard_provisioning_dir: None,
+                alert_export_dir: None,
+                datasource_export_file: None,
+                datasource_provisioning_file: None,
+                access_user_export_dir: Some(PathBuf::from("./access-users")),
+                access_team_export_dir: Some(PathBuf::from("./access-teams")),
+                access_org_export_dir: Some(PathBuf::from("./access-orgs")),
+                access_service_account_export_dir: Some(PathBuf::from("./access-service-accounts")),
+            },
+            availability_file: None,
+            target_inventory: None,
+            mapping_file: None,
+            fetch_live: false,
+            common: CommonCliArgs {
+                color: CliColorChoice::Auto,
+                profile: None,
+                url: String::new(),
+                api_token: None,
+                username: None,
+                password: None,
+                prompt_password: false,
+                prompt_token: false,
+                timeout: crate::dashboard::DEFAULT_TIMEOUT,
+                verify_ssl: false,
+            },
+            org_id: None,
+            output: ChangeOutputArgs {
+                output_format: SyncOutputFormat::Json,
+                output_file: None,
+                also_stdout: false,
+            },
+        };
+
+        let status = build_status_args(
+            &args, None, None, None, None, None, None, None, None, None, None, None, None, None,
+        );
+
+        assert_eq!(
+            status.access_user_export_dir,
+            Some(PathBuf::from("./access-users"))
+        );
+        assert_eq!(
+            status.access_team_export_dir,
+            Some(PathBuf::from("./access-teams"))
+        );
+        assert_eq!(
+            status.access_org_export_dir,
+            Some(PathBuf::from("./access-orgs"))
+        );
+        assert_eq!(
+            status.access_service_account_export_dir,
+            Some(PathBuf::from("./access-service-accounts"))
+        );
     }
 
     #[test]
@@ -347,6 +505,45 @@ mod input_normalization_tests {
         assert!(provisioning_dir.is_none());
     }
 
+    fn write_nested_dashboard_raw_fixture(root: &std::path::Path) {
+        fs::create_dir_all(root).unwrap();
+        fs::write(
+            root.join("export-metadata.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "kind": "grafana-utils-dashboard-export-index",
+                "schemaVersion": 1,
+                "variant": "raw",
+                "dashboardCount": 1,
+                "indexFile": "index.json",
+                "format": "grafana-web-import-preserve-uid",
+                "foldersFile": "folders.json"
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        fs::write(
+            root.join("folders.json"),
+            serde_json::to_string_pretty(&serde_json::json!([
+                {"uid": "general", "title": "General", "path": "General"}
+            ]))
+            .unwrap(),
+        )
+        .unwrap();
+        fs::write(
+            root.join("cpu-main.json"),
+            serde_json::to_string_pretty(&serde_json::json!({
+                "dashboard": {
+                    "uid": "cpu-main",
+                    "title": "CPU Main",
+                    "panels": []
+                },
+                "meta": {"folderUid": "general"}
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+    }
+
     #[test]
     fn select_preview_dashboard_sources_prefers_explicit_provisioning_input() {
         let inputs = staged_inputs(None, Some("./dashboards/provisioning"));
@@ -357,6 +554,33 @@ mod input_normalization_tests {
         assert!(output_dir.is_none());
         let expected_provisioning_dir = PathBuf::from("./dashboards/provisioning");
         assert_eq!(provisioning_dir, Some(&expected_provisioning_dir));
+    }
+
+    #[test]
+    fn build_change_bundle_specs_preserves_nested_raw_org_source_paths() {
+        let temp = tempdir().unwrap();
+        let dashboard_export_dir = temp
+            .path()
+            .join("dashboards")
+            .join("raw")
+            .join("org_1_Main_Org")
+            .join("raw");
+        write_nested_dashboard_raw_fixture(&dashboard_export_dir);
+        let inputs = staged_inputs(None, None);
+
+        let specs =
+            build_change_bundle_specs(&inputs, Some(&dashboard_export_dir), None, None, None)
+                .unwrap()
+                .unwrap();
+
+        let dashboard = specs
+            .iter()
+            .find(|item| item["kind"] == "dashboard")
+            .unwrap();
+        assert_eq!(
+            dashboard["sourcePath"],
+            serde_json::json!("org_1_Main_Org/raw/cpu-main.json")
+        );
     }
 
     #[test]

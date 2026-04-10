@@ -12,7 +12,7 @@
 
 - 先把連線設定收斂成可重複的 profile
 - 先用 JSON 或 table 類輸出讓腳本穩定判讀
-- 先在 `status staged` 與 `change check` 擋掉有問題的變更
+- 先在 `observe staged` 與 `change check` 擋掉有問題的變更
 - 只在確定 scope 合理時才用 token 或 service account token
 
 ## 採用前後對照
@@ -91,10 +91,9 @@ grafana-util observe overview live --profile ci --output-format yaml
 
 ## 建議同時開著哪些指令頁
 
-- [profile](../../commands/zh-TW/profile.md)
-- [status](../../commands/zh-TW/status.md)
+- [config profile](../../commands/zh-TW/profile.md)
 - [change](../../commands/zh-TW/change.md)
-- [overview](../../commands/zh-TW/overview.md)
+- [指令詳細說明總索引](../../commands/zh-TW/index.md)
 - [access service-account](../../commands/zh-TW/access-service-account.md)
 - [access service-account token](../../commands/zh-TW/access-service-account-token.md)
 - [指令詳細說明總索引](../../commands/zh-TW/index.md)
@@ -102,7 +101,7 @@ grafana-util observe overview live --profile ci --output-format yaml
 ## 常見錯誤與限制
 
 - 不要在 CI log 裡直接印出 token 或 password。
-- 不要把 `status staged` 當成 `apply`；它是檢查關卡，不是變更執行器。
+- 不要把 `observe staged` 當成 `apply`；它是檢查關卡，不是變更執行器。
 - 不要假設 token 或 service account token 能跨 org 使用。
 - 不要依賴互動式輸出做自動化判讀；自動化流程應以 JSON、table 或明確的 exit code 為準。
 - 不要在 pipeline 裡臨時手刻明文設定檔，應把秘密來源固定在 env 或 secret store。

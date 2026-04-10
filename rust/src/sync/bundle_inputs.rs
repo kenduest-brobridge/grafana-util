@@ -11,7 +11,10 @@ use crate::alert::{
 };
 use crate::common::{message, Result};
 use crate::dashboard::DASHBOARD_PERMISSION_BUNDLE_FILENAME;
-use crate::dashboard::{load_dashboard_source, DashboardImportInputFormat};
+use crate::dashboard::{
+    load_dashboard_source, resolve_dashboard_workspace_variant_dir, DashboardImportInputFormat,
+    RAW_EXPORT_SUBDIR,
+};
 use serde::Deserialize;
 use serde_json::{Map, Value};
 use std::collections::BTreeSet;
@@ -268,9 +271,12 @@ pub(crate) fn load_dashboard_bundle_sections(
     metadata_dir: &Path,
     datasource_provisioning_file: Option<&Path>,
 ) -> Result<DashboardBundleSections> {
+    let dashboard_source_dir =
+        resolve_dashboard_workspace_variant_dir(dashboard_dir, RAW_EXPORT_SUBDIR)
+            .unwrap_or_else(|| dashboard_dir.to_path_buf());
     let mut dashboards = Vec::new();
     for path in discover_json_files(
-        dashboard_dir,
+        &dashboard_source_dir,
         &[
             "index.json",
             "export-metadata.json",
@@ -280,7 +286,7 @@ pub(crate) fn load_dashboard_bundle_sections(
         ],
     )? {
         let source_path = path
-            .strip_prefix(dashboard_dir)
+            .strip_prefix(&dashboard_source_dir)
             .unwrap_or(&path)
             .to_string_lossy()
             .replace('\\', "/");

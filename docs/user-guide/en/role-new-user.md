@@ -156,8 +156,8 @@ You are ready to leave the new-user path when:
 ## Keep Open
 
 - [Command Docs](../../commands/en/index.md)
-- [profile compatibility reference](../../commands/en/profile.md)
-- [overview compatibility reference](../../commands/en/overview.md)
+- [config profile](../../commands/en/profile.md)
+- [observe](../../commands/en/observe.md)
 - [dashboard](../../commands/en/dashboard.md)
 
 ## Common Mistakes And Limits

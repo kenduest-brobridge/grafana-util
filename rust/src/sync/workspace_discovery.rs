@@ -15,12 +15,21 @@ use super::discovery_model::{
 };
 use super::{SyncCommandOutput, SyncOutputFormat};
 
+const ACCESS_USER_EXPORT_DIR_NAME: &str = "access-users";
+const ACCESS_TEAM_EXPORT_DIR_NAME: &str = "access-teams";
+const ACCESS_ORG_EXPORT_DIR_NAME: &str = "access-orgs";
+const ACCESS_SERVICE_ACCOUNT_EXPORT_DIR_NAME: &str = "access-service-accounts";
+
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub(crate) struct DiscoveredChangeInputs {
     pub workspace_root: Option<PathBuf>,
     pub dashboard_export_dir: Option<PathBuf>,
     pub dashboard_provisioning_dir: Option<PathBuf>,
     pub datasource_provisioning_file: Option<PathBuf>,
+    pub access_user_export_dir: Option<PathBuf>,
+    pub access_team_export_dir: Option<PathBuf>,
+    pub access_org_export_dir: Option<PathBuf>,
+    pub access_service_account_export_dir: Option<PathBuf>,
     pub alert_export_dir: Option<PathBuf>,
     pub desired_file: Option<PathBuf>,
     pub source_bundle: Option<PathBuf>,
@@ -145,10 +154,32 @@ fn first_existing(paths: &[PathBuf]) -> Option<PathBuf> {
     paths.iter().find(|path| path.exists()).cloned()
 }
 
+fn access_workspace_dirs(
+    base_dir: &Path,
+) -> (
+    Option<PathBuf>,
+    Option<PathBuf>,
+    Option<PathBuf>,
+    Option<PathBuf>,
+) {
+    (
+        first_existing(&[base_dir.join(ACCESS_USER_EXPORT_DIR_NAME)]),
+        first_existing(&[base_dir.join(ACCESS_TEAM_EXPORT_DIR_NAME)]),
+        first_existing(&[base_dir.join(ACCESS_ORG_EXPORT_DIR_NAME)]),
+        first_existing(&[base_dir.join(ACCESS_SERVICE_ACCOUNT_EXPORT_DIR_NAME)]),
+    )
+}
+
 fn discover_from_workspace_root(base_dir: &Path) -> DiscoveredChangeInputs {
     let datasources_dir = base_dir.join("datasources");
     let alerts_dir = base_dir.join("alerts");
     let (dashboard_export_dir, dashboard_provisioning_dir) = dashboard_workspace_roots(base_dir);
+    let (
+        access_user_export_dir,
+        access_team_export_dir,
+        access_org_export_dir,
+        access_service_account_export_dir,
+    ) = access_workspace_dirs(base_dir);
     DiscoveredChangeInputs {
         workspace_root: Some(base_dir.to_path_buf()),
         dashboard_export_dir,
@@ -156,6 +187,10 @@ fn discover_from_workspace_root(base_dir: &Path) -> DiscoveredChangeInputs {
         datasource_provisioning_file: first_existing(&[datasources_dir
             .join("provisioning")
             .join("datasources.yaml")]),
+        access_user_export_dir,
+        access_team_export_dir,
+        access_org_export_dir,
+        access_service_account_export_dir,
         alert_export_dir: first_existing(&[alerts_dir.join("raw"), alerts_dir]),
         desired_file: first_existing(&[base_dir.join("desired.json")]),
         source_bundle: first_existing(&[
@@ -181,6 +216,20 @@ fn discover_from_workspace_root(base_dir: &Path) -> DiscoveredChangeInputs {
 }
 
 fn infer_workspace_root(base_dir: &Path) -> PathBuf {
+    for ancestor in base_dir.ancestors() {
+        let Some(name) = ancestor.file_name().and_then(|name| name.to_str()) else {
+            continue;
+        };
+        if matches!(
+            name,
+            ACCESS_USER_EXPORT_DIR_NAME
+                | ACCESS_TEAM_EXPORT_DIR_NAME
+                | ACCESS_ORG_EXPORT_DIR_NAME
+                | ACCESS_SERVICE_ACCOUNT_EXPORT_DIR_NAME
+        ) {
+            return ancestor.parent().unwrap_or(ancestor).to_path_buf();
+        }
+    }
     infer_dashboard_workspace_root(base_dir)
 }
 
@@ -238,11 +287,17 @@ fn overlay_direct_workspace_input(discovered: &mut DiscoveredChangeInputs, base_
         .and_then(Path::file_name)
         .and_then(|name| name.to_str());
     match (parent_name, name) {
-        (_, "dashboards") => {
-            let (dashboard_export_dir, dashboard_provisioning_dir) =
-                dashboard_workspace_roots(base_dir);
-            discovered.dashboard_export_dir = dashboard_export_dir;
-            discovered.dashboard_provisioning_dir = dashboard_provisioning_dir;
+        (_, ACCESS_USER_EXPORT_DIR_NAME) => {
+            discovered.access_user_export_dir = Some(base_dir.to_path_buf());
+        }
+        (_, ACCESS_TEAM_EXPORT_DIR_NAME) => {
+            discovered.access_team_export_dir = Some(base_dir.to_path_buf());
+        }
+        (_, ACCESS_ORG_EXPORT_DIR_NAME) => {
+            discovered.access_org_export_dir = Some(base_dir.to_path_buf());
+        }
+        (_, ACCESS_SERVICE_ACCOUNT_EXPORT_DIR_NAME) => {
+            discovered.access_service_account_export_dir = Some(base_dir.to_path_buf());
         }
         (Some("alerts"), "raw") => {
             discovered.alert_export_dir = Some(base_dir.to_path_buf());
@@ -348,6 +403,30 @@ fn build_change_discovery(discovered: &DiscoveredChangeInputs) -> Option<ChangeD
     if let Some(path) = discovered.datasource_provisioning_file.clone() {
         inputs.push(DiscoveryInput {
             kind: DiscoveryInputKind::DatasourceProvisioningFile,
+            path,
+        });
+    }
+    if let Some(path) = discovered.access_user_export_dir.clone() {
+        inputs.push(DiscoveryInput {
+            kind: DiscoveryInputKind::AccessUserExportDir,
+            path,
+        });
+    }
+    if let Some(path) = discovered.access_team_export_dir.clone() {
+        inputs.push(DiscoveryInput {
+            kind: DiscoveryInputKind::AccessTeamExportDir,
+            path,
+        });
+    }
+    if let Some(path) = discovered.access_org_export_dir.clone() {
+        inputs.push(DiscoveryInput {
+            kind: DiscoveryInputKind::AccessOrgExportDir,
+            path,
+        });
+    }
+    if let Some(path) = discovered.access_service_account_export_dir.clone() {
+        inputs.push(DiscoveryInput {
+            kind: DiscoveryInputKind::AccessServiceAccountExportDir,
             path,
         });
     }
@@ -466,6 +545,48 @@ mod workspace_discovery_rust_tests {
     }
 
     #[test]
+    fn discover_change_staged_inputs_accepts_mixed_workspace_with_access_exports() {
+        let temp = tempdir().unwrap();
+        let workspace = temp.path();
+        std::fs::create_dir_all(workspace.join("dashboards/raw")).unwrap();
+        std::fs::create_dir_all(workspace.join("alerts/raw")).unwrap();
+        std::fs::create_dir_all(workspace.join("datasources/provisioning")).unwrap();
+        std::fs::write(
+            workspace.join("datasources/provisioning/datasources.yaml"),
+            "apiVersion: 1\n",
+        )
+        .unwrap();
+        std::fs::create_dir_all(workspace.join("access-users")).unwrap();
+        std::fs::create_dir_all(workspace.join("access-teams")).unwrap();
+        std::fs::create_dir_all(workspace.join("access-orgs")).unwrap();
+        std::fs::create_dir_all(workspace.join("access-service-accounts")).unwrap();
+
+        let discovered = discover_change_staged_inputs(Some(workspace)).unwrap();
+
+        assert_eq!(
+            discovered.access_user_export_dir,
+            Some(workspace.join("access-users"))
+        );
+        assert_eq!(
+            discovered.access_team_export_dir,
+            Some(workspace.join("access-teams"))
+        );
+        assert_eq!(
+            discovered.access_org_export_dir,
+            Some(workspace.join("access-orgs"))
+        );
+        assert_eq!(
+            discovered.access_service_account_export_dir,
+            Some(workspace.join("access-service-accounts"))
+        );
+        let provenance = render_discovery_provenance(&discovered).unwrap();
+        assert!(provenance.contains("access-users="));
+        assert!(provenance.contains("access-teams="));
+        assert!(provenance.contains("access-orgs="));
+        assert!(provenance.contains("access-service-accounts="));
+    }
+
+    #[test]
     fn render_discovery_provenance_reports_workspace_root_and_sources() {
         let discovered = DiscoveredChangeInputs {
             workspace_root: Some(PathBuf::from("/tmp/grafana-oac-repo")),
@@ -564,6 +685,32 @@ mod workspace_discovery_rust_tests {
 
         let discovered = discover_change_staged_inputs(Some(
             &workspace.join("dashboards/git-sync/raw/org_1/raw"),
+        ))
+        .unwrap();
+
+        assert_eq!(discovered.workspace_root, Some(workspace.to_path_buf()));
+        assert_eq!(
+            discovered.dashboard_export_dir,
+            Some(workspace.join("dashboards/git-sync/raw"))
+        );
+        assert_eq!(
+            discovered.dashboard_provisioning_dir,
+            Some(workspace.join("dashboards/git-sync/provisioning"))
+        );
+    }
+
+    #[test]
+    fn discover_change_staged_inputs_accepts_org_scoped_git_sync_provisioning_subtree() {
+        let temp = tempdir().unwrap();
+        let workspace = temp.path();
+        std::fs::create_dir_all(workspace.join("dashboards/git-sync/raw")).unwrap();
+        std::fs::create_dir_all(
+            workspace.join("dashboards/git-sync/provisioning/org_1/provisioning/dashboards"),
+        )
+        .unwrap();
+
+        let discovered = discover_change_staged_inputs(Some(
+            &workspace.join("dashboards/git-sync/provisioning/org_1/provisioning/dashboards"),
         ))
         .unwrap();
 

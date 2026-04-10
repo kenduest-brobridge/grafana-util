@@ -324,7 +324,7 @@ where
         return render_diff_schema_help("datasource");
     }
     if args.len() >= 3
-        && args.get(1).map(String::as_str) == Some("status")
+        && matches!(args.get(1).map(String::as_str), Some("status" | "observe"))
         && args.iter().any(|value| value == "--help-schema")
     {
         let target = args

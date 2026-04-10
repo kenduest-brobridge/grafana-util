@@ -120,8 +120,7 @@ You are in a good operator posture when:
 ## Keep open
 
 - [config profile](../../commands/en/profile.md)
-- [observe live](../../commands/en/observe.md)
-- [observe overview](../../commands/en/observe.md)
+- [observe](../../commands/en/observe.md)
 - [export dashboard](../../commands/en/export.md)
 - [advanced](../../commands/en/advanced.md)
 - [change](../../commands/en/change.md)

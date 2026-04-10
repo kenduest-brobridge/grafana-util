@@ -1,4 +1,4 @@
-# Project Status & Change Overview
+# Project Readiness & Change Overview
 
 Use this chapter when you need to answer two questions before or after a change: is the estate ready, and what exactly will move?
 
@@ -48,7 +48,7 @@ Primary lane:
 - [observe staged](../../commands/en/observe.md#staged)
 - [observe live](../../commands/en/observe.md#live)
 - [observe overview](../../commands/en/observe.md#overview)
-- [observe overview live](../../commands/en/observe.md#live)
+- [observe overview live](../../commands/en/observe.md#overview)
 
 Advanced workflows:
 
@@ -202,10 +202,10 @@ If the same mixed workspace root needs to become a handoff package, run `change 
 
 ## 🖥️ Interactive Mode (TUI) Semantics
 
-`observe overview live --output-format interactive` opens the live project overview through the shared observe live path.
+`observe overview live --output-format interactive` opens the live project overview through the shared observe overview path.
 
 ```bash
-# Purpose: overview live --output-format interactive opens the live project overview through the shared status live path.
+# Purpose: observe overview live --output-format interactive opens the live project overview through the shared observe overview path.
 grafana-util observe overview live --url http://localhost:3000 --basic-user admin --basic-password admin --output-format interactive
 ```
 

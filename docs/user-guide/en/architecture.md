@@ -33,7 +33,7 @@ Understanding the architectural philosophy of `grafana-util` is key to managing 
 - If the runtime shape and the docs shape drift apart, treat that as an architecture bug, not just a docs bug.
 - If you are not sure why the split exists, reread the surface and lane sections before adding new work.
 
-For the command surface behind these ideas, see [status](../../commands/en/status.md), [overview](../../commands/en/overview.md), [change](../../commands/en/change.md), and [dashboard](../../commands/en/dashboard.md).
+For the command surface behind these ideas, see [observe](../../commands/en/observe.md), [change](../../commands/en/change.md), [dashboard](../../commands/en/dashboard.md), and [config profile](../../commands/en/profile.md).
 
 ---
 
@@ -43,21 +43,20 @@ For the command surface behind these ideas, see [status](../../commands/en/statu
 
 | Surface | Purpose | Primary Target | Output Formats |
 | :--- | :--- | :--- | :--- |
-| **Status** | **Readiness & Contracts** | CI/CD Pipelines, Scripts | JSON, Table |
-| **Overview** | **Global Observability** | Human SREs, Managers | Interactive TUI, Summary |
+| **Observe** | **Readiness, summary, and read-only estate views** | Human operators, CI scripts | JSON, Table, YAML, Interactive |
 | **Change** | **Intent & Lifecycle** | PR Reviews, Audit Logs | JSON Plan, Diff |
 
 ### How to choose the right surface
 
-- Use `status` when you need a gate, a machine-readable result, or a clean pass/fail readout.
-- Use `overview` when you need to look across the estate as a human and decide where to drill in next.
+- Use `observe live` when you need a gate, a machine-readable result, or a clean pass/fail readout.
+- Use `observe overview live` when you need to look across the estate as a human and decide where to drill in next.
 - Use `change` when you already know there is intended work and need to inspect, check, preview, or apply it.
 
 Typical operator decisions:
 
-- "Can I trust the current state enough to proceed?" -> `status live`
-- "What does this Grafana estate look like right now?" -> `overview live`
-- "Is my staged package structurally and operationally sane?" -> `status staged` plus `change check`
+- "Can I trust the current state enough to proceed?" -> `observe live`
+- "What does this Grafana estate look like right now?" -> `observe overview live`
+- "Is my staged package structurally and operationally sane?" -> `observe staged` plus `change check`
 - "What exactly will change?" -> `change inspect`, `change preview`, then `change apply`
 
 ### Why the split matters
@@ -158,7 +157,7 @@ Operational consequence:
 
 The architecture is working for you when:
 
-- your team can explain the difference between `status`, `overview`, and `change`
+- your team can explain the difference between `observe`, `change`, and `advanced`
 - live checks and staged checks are not treated as interchangeable
 - dashboard lanes are not mixed casually
 - masked secret exports are treated as safe artifacts, not as complete replay payloads

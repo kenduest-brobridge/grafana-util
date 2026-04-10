@@ -6,7 +6,7 @@
 
 - 要先看 live / staged 狀態再決定下一步的人
 - 負責變更審查、check 或 apply gate 的人
-- 需要把 status / overview / change 串成固定流程的人
+- 需要把 observe / change / config profile 串成固定流程的人
 
 ## 主要目標
 
@@ -16,13 +16,13 @@
 
 ## 採用前後對照
 
-- 以前：status、snapshot 與 change review 常常像是三套名稱接近但分工不清的工具。
+- 以前：observe、snapshot 與 change review 常常像是三套名稱接近但分工不清的工具。
 - 現在：即時檢查、staged 審查與快照式總覽被放進同一條導引路線裡。
 
 ## 成功判準
 
 - 你能在進入變更前，先判斷這章是在處理整備度、快照還是審查。
-- 你知道流程從 status 進到 mutation 時，應該切到哪一個 command。
+- 你知道流程從 observe 進到 mutation 時，應該切到哪一個 command。
 - 你能說清楚變更套用前應該先做哪些檢查。
 
 ## 失敗時先檢查
@@ -42,10 +42,8 @@ Primary lane：
 - [change check](../../commands/zh-TW/change-check.md)
 - [change preview](../../commands/zh-TW/change-preview.md)
 - [change apply](../../commands/zh-TW/change-apply.md)
-- [status](../../commands/zh-TW/status.md)
 - [observe staged](../../commands/zh-TW/observe.md#staged)
 - [observe live](../../commands/zh-TW/observe.md#live)
-- [overview](../../commands/zh-TW/overview.md)
 - [observe overview live](../../commands/zh-TW/observe.md#overview-live)
 
 Advanced workflows：
@@ -54,7 +52,7 @@ Advanced workflows：
 - [snapshot](../../commands/zh-TW/snapshot.md)
 - [snapshot export](../../commands/zh-TW/snapshot.md#export)
 - [snapshot review](../../commands/zh-TW/snapshot.md#review)
-- [profile](../../commands/zh-TW/profile.md)
+- [config profile](../../commands/zh-TW/profile.md)
 - [config profile list](../../commands/zh-TW/profile.md#list)
 - [config profile show](../../commands/zh-TW/profile.md#show)
 - [config profile add](../../commands/zh-TW/profile.md#add)
@@ -200,10 +198,10 @@ preview 是現在 task-first 路徑裡對應舊 `plan` 的入口。底層 contra
 
 ## 🖥️ 互動模式 (TUI) 語意
 
-`observe overview live --output-format interactive` 會透過共用的 live status 路徑顯示 live project overview。
+`observe overview live --output-format interactive` 會透過共用的 observe live 路徑顯示 live project overview。
 
 ```bash
-# 用途：overview live --output-format interactive 會透過共用的 live status 路徑顯示 live project overview。
+# 用途：observe overview live --output-format interactive 會透過共用的 observe live 路徑顯示 live project overview。
 grafana-util observe overview live --url http://localhost:3000 --basic-user admin --basic-password admin --output-format interactive
 ```
 

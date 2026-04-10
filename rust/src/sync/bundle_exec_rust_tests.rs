@@ -104,6 +104,11 @@ fn write_dashboard_raw_fixture(root: &std::path::Path) {
     .unwrap();
 }
 
+fn write_nested_dashboard_raw_fixture(root: &std::path::Path) {
+    fs::create_dir_all(root).unwrap();
+    write_dashboard_raw_fixture(root);
+}
+
 fn write_alert_export_fixture(root: &std::path::Path) {
     fs::create_dir_all(root).unwrap();
     fs::create_dir_all(root.join("rules").join("general").join("cpu-alerts")).unwrap();
@@ -303,6 +308,44 @@ fn run_sync_cli_bundle_writes_source_bundle_artifact() {
     assert_eq!(
         bundle["metadata"]["alertExportDir"],
         json!(alert_export_dir.display().to_string())
+    );
+}
+
+#[test]
+fn run_sync_cli_bundle_preserves_nested_raw_org_source_paths() {
+    let temp = tempdir().unwrap();
+    let dashboard_export_dir = temp
+        .path()
+        .join("dashboards")
+        .join("raw")
+        .join("org_1_Main_Org")
+        .join("raw");
+    write_nested_dashboard_raw_fixture(&dashboard_export_dir);
+    let output_file = temp.path().join("bundle.json");
+
+    let result = run_sync_cli(SyncGroupCommand::Bundle(SyncBundleArgs {
+        workspace: None,
+        dashboard_export_dir: Some(dashboard_export_dir.clone()),
+        dashboard_provisioning_dir: None,
+        alert_export_dir: None,
+        datasource_export_file: None,
+        datasource_provisioning_file: None,
+        metadata_file: None,
+        output_file: Some(output_file.clone()),
+        also_stdout: false,
+        output_format: SyncOutputFormat::Json,
+    }));
+
+    assert!(result.is_ok(), "{result:?}");
+    let bundle: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&output_file).unwrap()).unwrap();
+    assert_eq!(
+        bundle["dashboards"][0]["sourcePath"],
+        json!("org_1_Main_Org/raw/cpu-main.json")
+    );
+    assert_eq!(
+        bundle["metadata"]["dashboardExportDir"],
+        json!(dashboard_export_dir.display().to_string())
     );
 }
 

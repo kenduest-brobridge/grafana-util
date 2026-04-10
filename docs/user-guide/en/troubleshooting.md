@@ -38,7 +38,7 @@ It helps you diagnose real failures instead of guessing. The most useful split i
 - command shape versus output shape
 - local profile wiring versus remote Grafana behavior
 
-If you are tracing auth or connection setup, keep [profile](../../commands/en/profile.md), [status](../../commands/en/status.md), [overview](../../commands/en/overview.md), and [access](../../commands/en/access.md) open beside this chapter.
+If you are tracing auth or connection setup, keep [config profile](../../commands/en/profile.md), [observe](../../commands/en/observe.md), and [access](../../commands/en/access.md) open beside this chapter.
 
 ---
 
@@ -52,7 +52,7 @@ When a command fails or behaves unexpectedly, use these techniques to look under
 
 ```bash
 # Purpose: grafana-util uses standard Rust logging. You can increase verbosity to see the exact API requests and responses.
-RUST_LOG=debug grafana-util overview live --profile prod
+RUST_LOG=debug grafana-util observe overview live --profile prod
 grafana-util dashboard list -v
 ```
 
@@ -92,15 +92,15 @@ This is one of the most common operator mistakes.
 
 | Symptom | What is really happening | Fix |
 | :--- | :--- | :--- |
-| `status staged` looks healthy but live apply still fails | staged files are structurally valid, but live state or permissions differ | run `status live`, then `change check`, `change preview`, or command-specific dry-run paths |
-| `overview live` looks good so you skip change review | live readability is not the same as staged correctness | run the staged gate and preview path before apply |
+| `observe staged` looks healthy but live apply still fails | staged files are structurally valid, but live state or permissions differ | run `observe live`, then `change check`, `change preview`, or command-specific dry-run paths |
+| `observe overview live` looks good so you skip change review | live readability is not the same as staged correctness | run the staged gate and preview path before apply |
 | import or apply changes more than expected | the staged package was never inspected or previewed first | use `change inspect`, `change preview`, and `--dry-run` before execution |
 
 ### 5. Secret and profile problems
 
 | Symptom | Likely Cause | Fix |
 | :--- | :--- | :--- |
-| `profile show --show-secrets` fails to resolve a value | missing env var, missing OS-store entry, or missing encrypted secret file/key | verify the secret source that the profile points to |
+| `config profile show --show-secrets` fails to resolve a value | missing env var, missing OS-store entry, or missing encrypted secret file/key | verify the secret source that the profile points to |
 | profile works locally but not in CI | env injection or config path differs between environments | check `GRAFANA_UTIL_CONFIG`, env vars, and any required secret files |
 | `--store-secret os` works on macOS but not Linux | Linux runner may not have a working Secret Service session | switch to `password_env`, `token_env`, or `encrypted-file` |
 

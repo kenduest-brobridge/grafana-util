@@ -83,7 +83,7 @@ grafana-util observe overview --url http://localhost:3000 --basic-user admin --p
 *   **[Access Management](access.md)**: org, user, team, and service account operations.
 
 ### Phase 4: Governance & Readiness
-*   **[Change & Status](change-overview-status.md)**: staged workflows, project snapshots, and preflight checks.
+*   **[Change & Observe](change-overview-status.md)**: staged workflows, project snapshots, and preflight checks.
 
 ### Phase 5: Deep Dive
 *   **[Practical Scenarios](scenarios.md)**: end-to-end task recipes such as backups, DR, and audits.

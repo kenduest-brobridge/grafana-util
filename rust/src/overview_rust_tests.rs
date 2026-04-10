@@ -18,7 +18,7 @@ use std::fs;
 use std::io::{ErrorKind, Read, Write};
 use std::net::TcpListener;
 use std::path::Path;
-use std::sync::{mpsc, Arc, Mutex};
+use std::sync::{mpsc, Arc, LazyLock, Mutex};
 use std::thread;
 use std::time::Duration;
 use tempfile::tempdir;
@@ -2509,6 +2509,8 @@ fn spawn_live_project_status_test_server() -> (
     (format!("http://{address}"), requests, stop_tx, handle)
 }
 
+static LIVE_PROJECT_STATUS_TEST_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
+
 fn collect_scoped_paths<'a>(
     requests: &'a [LiveRequestRecord],
     path: &str,
@@ -2546,6 +2548,7 @@ fn sample_project_status_live_args(base_url: String) -> ProjectStatusLiveArgs {
 
 #[test]
 fn project_status_live_org_id_scopes_live_reads() {
+    let _guard = LIVE_PROJECT_STATUS_TEST_LOCK.lock().unwrap();
     let (base_url, requests, stop_tx, handle) = spawn_live_project_status_test_server();
     if base_url.is_empty() {
         return;
@@ -2567,6 +2570,7 @@ fn project_status_live_org_id_scopes_live_reads() {
 
 #[test]
 fn project_status_live_all_orgs_fans_out_across_visible_orgs() {
+    let _guard = LIVE_PROJECT_STATUS_TEST_LOCK.lock().unwrap();
     let (base_url, requests, stop_tx, handle) = spawn_live_project_status_test_server();
     if base_url.is_empty() {
         return;
@@ -2599,6 +2603,7 @@ fn project_status_live_all_orgs_fans_out_across_visible_orgs() {
 
 #[test]
 fn overview_live_delegates_org_scoped_reads_to_shared_live_path() {
+    let _guard = LIVE_PROJECT_STATUS_TEST_LOCK.lock().unwrap();
     let (base_url, requests, stop_tx, handle) = spawn_live_project_status_test_server();
     if base_url.is_empty() {
         return;

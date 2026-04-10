@@ -40,6 +40,10 @@ const ACCESS_MISSING_BUNDLE_KIND: &str = "missing-bundle-kind";
 const ACCESS_READY_NEXT_ACTIONS: &[&str] = &["re-run access export after membership changes"];
 const ACCESS_NO_DATA_NEXT_ACTIONS: &[&str] =
     &["export at least one access user, team, org, or service-account record"];
+const ACCESS_MIXED_WORKSPACE_REVIEW_ACTIONS: &[&str] = &[
+    "add the missing access export bundles before using this workspace as one mixed change handoff",
+    "re-run change check after the missing access bundles are exported",
+];
 
 #[derive(Debug, Clone, Copy)]
 struct AccessBundleSpec {
@@ -127,13 +131,19 @@ pub(crate) fn build_access_domain_status(
     }
 
     let (status, reason_code, next_actions) = if !missing_labels.is_empty() {
+        let mut next_actions = vec![format!(
+            "export the missing access bundle kinds: {}",
+            missing_labels.join(", ")
+        )];
+        next_actions.extend(
+            ACCESS_MIXED_WORKSPACE_REVIEW_ACTIONS
+                .iter()
+                .map(|item| (*item).to_string()),
+        );
         (
             PROJECT_STATUS_PARTIAL,
             ACCESS_REASON_PARTIAL_MISSING_BUNDLES,
-            vec![format!(
-                "export the missing access bundle kinds: {}",
-                missing_labels.join(", ")
-            )],
+            next_actions,
         )
     } else if total_records == 0 {
         (
@@ -222,7 +232,11 @@ mod access_project_status_rust_tests {
         assert_eq!(domain.warnings.len(), 2);
         assert_eq!(
             domain.next_actions,
-            vec!["export the missing access bundle kinds: teams, service accounts".to_string()]
+            vec![
+                "export the missing access bundle kinds: teams, service accounts".to_string(),
+                "add the missing access export bundles before using this workspace as one mixed change handoff".to_string(),
+                "re-run change check after the missing access bundles are exported".to_string(),
+            ]
         );
     }
 

@@ -2,6 +2,12 @@
 //! Exercises the repo-local inspect/check/preview/apply lane from one staged workspace.
 
 use super::{ChangeOutputArgs, ChangePreviewArgs};
+use crate::access::{
+    ACCESS_EXPORT_KIND_ORGS, ACCESS_EXPORT_KIND_SERVICE_ACCOUNTS, ACCESS_EXPORT_KIND_TEAMS,
+    ACCESS_EXPORT_KIND_USERS, ACCESS_EXPORT_METADATA_FILENAME, ACCESS_ORG_EXPORT_FILENAME,
+    ACCESS_SERVICE_ACCOUNT_EXPORT_FILENAME, ACCESS_TEAM_EXPORT_FILENAME,
+    ACCESS_USER_EXPORT_FILENAME,
+};
 use crate::common::tool_version;
 use crate::overview::{execute_overview, OverviewArgs, OverviewOutputFormat};
 use crate::project_status_command::{
@@ -182,6 +188,33 @@ fn write_alert_export_fixture(root: &Path) {
     .unwrap();
 }
 
+fn write_access_export_fixture(root: &Path, payload_filename: &str, kind: &str) {
+    fs::create_dir_all(root).unwrap();
+    fs::write(
+        root.join(payload_filename),
+        serde_json::to_string_pretty(&json!({
+            "kind": kind,
+            "version": 1,
+            "records": [{
+                "uid": "sample",
+                "name": "sample"
+            }]
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        root.join(ACCESS_EXPORT_METADATA_FILENAME),
+        serde_json::to_string_pretty(&json!({
+            "kind": kind,
+            "version": 1,
+            "recordCount": 1
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+}
+
 fn task_first_change_cli_args(
     command: &str,
     workspace: &Path,
@@ -343,6 +376,26 @@ fn task_first_change_lane_smoke_runs_from_git_sync_mixed_workspace_root() {
     write_dashboard_provisioning_fixture(&dashboards_provisioning);
     write_datasource_provisioning_fixture(&workspace.join("datasources").join("provisioning"));
     write_alert_export_fixture(&workspace.join("alerts").join("raw"));
+    write_access_export_fixture(
+        &workspace.join("access-users"),
+        ACCESS_USER_EXPORT_FILENAME,
+        ACCESS_EXPORT_KIND_USERS,
+    );
+    write_access_export_fixture(
+        &workspace.join("access-teams"),
+        ACCESS_TEAM_EXPORT_FILENAME,
+        ACCESS_EXPORT_KIND_TEAMS,
+    );
+    write_access_export_fixture(
+        &workspace.join("access-orgs"),
+        ACCESS_ORG_EXPORT_FILENAME,
+        ACCESS_EXPORT_KIND_ORGS,
+    );
+    write_access_export_fixture(
+        &workspace.join("access-service-accounts"),
+        ACCESS_SERVICE_ACCOUNT_EXPORT_FILENAME,
+        ACCESS_EXPORT_KIND_SERVICE_ACCOUNTS,
+    );
     let live_file = workspace.join("live.json");
     fs::write(&live_file, "[]").unwrap();
     let preview_file = workspace.join("change-preview.json");
@@ -386,10 +439,10 @@ fn task_first_change_lane_smoke_runs_from_git_sync_mixed_workspace_root() {
         dashboard_provisioning_dir: None,
         datasource_export_dir: None,
         datasource_provisioning_file: discovered.datasource_provisioning_file.clone(),
-        access_user_export_dir: None,
-        access_team_export_dir: None,
-        access_org_export_dir: None,
-        access_service_account_export_dir: None,
+        access_user_export_dir: discovered.access_user_export_dir.clone(),
+        access_team_export_dir: discovered.access_team_export_dir.clone(),
+        access_org_export_dir: discovered.access_org_export_dir.clone(),
+        access_service_account_export_dir: discovered.access_service_account_export_dir.clone(),
         desired_file: discovered.desired_file.clone(),
         source_bundle: discovered.source_bundle.clone(),
         target_inventory: discovered.target_inventory.clone(),
@@ -399,10 +452,14 @@ fn task_first_change_lane_smoke_runs_from_git_sync_mixed_workspace_root() {
         output_format: OverviewOutputFormat::Json,
     })
     .unwrap();
-    assert_eq!(overview.summary.artifact_count, 3);
+    assert_eq!(overview.summary.artifact_count, 7);
     assert_eq!(overview.summary.dashboard_export_count, 1);
     assert_eq!(overview.summary.datasource_export_count, 1);
     assert_eq!(overview.summary.alert_export_count, 1);
+    assert_eq!(overview.summary.access_user_export_count, 1);
+    assert_eq!(overview.summary.access_team_export_count, 1);
+    assert_eq!(overview.summary.access_org_export_count, 1);
+    assert_eq!(overview.summary.access_service_account_export_count, 1);
     assert!(overview
         .project_status
         .domains
@@ -413,6 +470,11 @@ fn task_first_change_lane_smoke_runs_from_git_sync_mixed_workspace_root() {
         .domains
         .iter()
         .any(|domain| domain.id == "datasource"));
+    assert!(overview
+        .project_status
+        .domains
+        .iter()
+        .any(|domain| domain.id == "access"));
     assert!(overview
         .project_status
         .domains
@@ -424,10 +486,10 @@ fn task_first_change_lane_smoke_runs_from_git_sync_mixed_workspace_root() {
         dashboard_provisioning_dir: None,
         datasource_export_dir: None,
         datasource_provisioning_file: discovered.datasource_provisioning_file.clone(),
-        access_user_export_dir: None,
-        access_team_export_dir: None,
-        access_org_export_dir: None,
-        access_service_account_export_dir: None,
+        access_user_export_dir: discovered.access_user_export_dir.clone(),
+        access_team_export_dir: discovered.access_team_export_dir.clone(),
+        access_org_export_dir: discovered.access_org_export_dir.clone(),
+        access_service_account_export_dir: discovered.access_service_account_export_dir.clone(),
         desired_file: discovered.desired_file.clone(),
         source_bundle: discovered.source_bundle.clone(),
         target_inventory: discovered.target_inventory.clone(),
@@ -438,7 +500,7 @@ fn task_first_change_lane_smoke_runs_from_git_sync_mixed_workspace_root() {
     })
     .unwrap();
     assert_eq!(project_status.scope, "staged-only");
-    assert_eq!(project_status.domains.len(), 3);
+    assert_eq!(project_status.domains.len(), 4);
     assert!(project_status
         .domains
         .iter()
@@ -447,6 +509,10 @@ fn task_first_change_lane_smoke_runs_from_git_sync_mixed_workspace_root() {
         .domains
         .iter()
         .any(|domain| domain.id == "datasource"));
+    assert!(project_status
+        .domains
+        .iter()
+        .any(|domain| domain.id == "access"));
     assert!(project_status
         .domains
         .iter()

@@ -71,9 +71,9 @@ use crate::common::{message, Result};
 use crate::dashboard::CommonCliArgs;
 /// Constant for default review token.
 pub const DEFAULT_REVIEW_TOKEN: &str = "reviewed-change-plan";
-const SYNC_ROOT_HELP_TEXT: &str = "Examples:\n\n  Inspect one repo root that carries source provenance for Git Sync dashboards, alerts/raw, and datasources/provisioning:\n    grafana-util change inspect --workspace ./grafana-oac-repo --output-format table\n\n  Example mixed workspace tree:\n    ./grafana-oac-repo/\n      dashboards/git-sync/raw/\n      dashboards/git-sync/provisioning/\n      alerts/raw/\n      datasources/provisioning/datasources.yaml\n\n  Check whether the staged package looks safe to continue:\n    grafana-util change check --workspace ./grafana-oac-repo --output-format json\n\n  Preview what would change against live Grafana:\n    grafana-util change preview --workspace ./grafana-oac-repo --fetch-live --profile prod --output-format json\n\n  Package the same mixed workspace provenance into one source bundle:\n    grafana-util change bundle --workspace ./grafana-oac-repo --output-file ./sync-source-bundle.json\n\n  Apply a reviewed change back to Grafana:\n    grafana-util change apply --approve --execute-live --profile prod\n\nAdvanced workflows:\n\n  Compare a source bundle against target inventory before apply:\n    grafana-util change advanced bundle-preflight --source-bundle ./sync-source-bundle.json --target-inventory ./target-inventory.json --output-format json\n\n  Assess staged promotion review handoff:\n    grafana-util change advanced promotion-preflight --source-bundle ./sync-source-bundle.json --target-inventory ./target-inventory.json --mapping-file ./promotion-map.json --output-format json";
-const SYNC_INSPECT_HELP_TEXT: &str = "Examples:\n\n  grafana-util change inspect --workspace ./grafana-oac-repo --output-format table\n  grafana-util change inspect --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts/raw --output-format json\n\n  Mixed workspace tree:\n    ./grafana-oac-repo/\n      dashboards/git-sync/raw/\n      dashboards/git-sync/provisioning/\n      alerts/raw/\n      datasources/provisioning/datasources.yaml";
-const SYNC_CHECK_HELP_TEXT: &str = "Examples:\n\n  grafana-util change check --workspace ./grafana-oac-repo --output-format json\n  grafana-util change check --dashboard-provisioning-dir ./dashboards/provisioning --output-format table\n\n  Same mixed workspace root can carry dashboard, alert, and datasource provenance together.";
+const SYNC_ROOT_HELP_TEXT: &str = "Examples:\n\n  Inspect one repo root that carries source provenance for Git Sync dashboards, access bundles, alerts/raw, and datasources/provisioning:\n    grafana-util change inspect --workspace ./grafana-oac-repo --output-format table\n\n  Example mixed workspace tree:\n    ./grafana-oac-repo/\n      dashboards/git-sync/raw/\n      dashboards/git-sync/provisioning/\n      access-users/\n      access-teams/\n      access-orgs/\n      access-service-accounts/\n      alerts/raw/\n      datasources/provisioning/datasources.yaml\n\n  Check whether the staged package looks safe to continue:\n    grafana-util change check --workspace ./grafana-oac-repo --output-format json\n\n  Preview what would change against live Grafana:\n    grafana-util change preview --workspace ./grafana-oac-repo --fetch-live --profile prod --output-format json\n\n  Package the same mixed workspace provenance into one source bundle:\n    grafana-util change bundle --workspace ./grafana-oac-repo --output-file ./sync-source-bundle.json\n\n  Apply a reviewed change back to Grafana:\n    grafana-util change apply --approve --execute-live --profile prod\n\nAdvanced workflows:\n\n  Compare a source bundle against target inventory before apply:\n    grafana-util change advanced bundle-preflight --source-bundle ./sync-source-bundle.json --target-inventory ./target-inventory.json --output-format json\n\n  Assess staged promotion review handoff:\n    grafana-util change advanced promotion-preflight --source-bundle ./sync-source-bundle.json --target-inventory ./target-inventory.json --mapping-file ./promotion-map.json --output-format json";
+const SYNC_INSPECT_HELP_TEXT: &str = "Examples:\n\n  grafana-util change inspect --workspace ./grafana-oac-repo --output-format table\n  grafana-util change inspect --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts/raw --output-format json\n\n  Mixed workspace tree:\n    ./grafana-oac-repo/\n      dashboards/git-sync/raw/\n      dashboards/git-sync/provisioning/\n      access-users/\n      access-teams/\n      access-orgs/\n      access-service-accounts/\n      alerts/raw/\n      datasources/provisioning/datasources.yaml";
+const SYNC_CHECK_HELP_TEXT: &str = "Examples:\n\n  grafana-util change check --workspace ./grafana-oac-repo --output-format json\n  grafana-util change check --dashboard-provisioning-dir ./dashboards/provisioning --output-format table\n\n  Same mixed workspace root can carry dashboard, access, alert, and datasource provenance together.";
 const SYNC_PREVIEW_HELP_TEXT: &str = "Examples:\n\n  grafana-util change preview --workspace ./grafana-oac-repo --fetch-live --profile prod --output-format json\n  grafana-util change preview --desired-file ./desired.json --live-file ./live.json\n  grafana-util change preview --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts/raw --fetch-live --profile prod --output-file ./change-preview.json\n\n  Preview the same mixed workspace root when dashboards, alerts, and datasources live under one repo tree.";
 const SYNC_SUMMARY_HELP_TEXT: &str = "Examples:\n\n  grafana-util change advanced summary --desired-file ./desired.json\n  grafana-util change advanced summary --desired-file ./desired.json --output-format json";
 const SYNC_PLAN_HELP_TEXT: &str = "Examples:\n\n  grafana-util change advanced plan --desired-file ./desired.json --live-file ./live.json\n  grafana-util change advanced plan --desired-file ./desired.json --fetch-live --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --allow-prune --output-format json";
@@ -149,6 +149,30 @@ pub struct ChangeStagedInputsArgs {
         help_heading = "Input Options"
     )]
     pub datasource_provisioning_file: Option<PathBuf>,
+    #[arg(
+        long,
+        help = "Access user export directory to include from staged artifacts.",
+        help_heading = "Input Options"
+    )]
+    pub access_user_export_dir: Option<PathBuf>,
+    #[arg(
+        long,
+        help = "Access team export directory to include from staged artifacts.",
+        help_heading = "Input Options"
+    )]
+    pub access_team_export_dir: Option<PathBuf>,
+    #[arg(
+        long,
+        help = "Access org export directory to include from staged artifacts.",
+        help_heading = "Input Options"
+    )]
+    pub access_org_export_dir: Option<PathBuf>,
+    #[arg(
+        long,
+        help = "Access service-account export directory to include from staged artifacts.",
+        help_heading = "Input Options"
+    )]
+    pub access_service_account_export_dir: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone, Args)]

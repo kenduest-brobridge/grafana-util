@@ -232,7 +232,7 @@ grafana-util observe live -h
 ```text
 Render project status from live Grafana read surfaces. Use current Grafana state plus optional staged context files.
 
-Usage: grafana-util status live [OPTIONS]
+Usage: grafana-util observe live [OPTIONS]
 
 Options:
       --profile <PROFILE>
@@ -255,7 +255,7 @@ Examples:
   grafana-util observe overview live --url http://localhost:3000 --basic-user admin --basic-password admin --output-format interactive
   grafana-util observe overview live --url http://localhost:3000 --basic-user admin --basic-password admin --output-format yaml
 ```
-`observe overview live` is a thin wrapper over shared live status. Use `--output-format yaml` for a readable summary and `--output-format interactive` for the TUI workbench.
+`observe overview live` is a thin wrapper over shared observe overview. Use `--output-format yaml` for a readable summary and `--output-format interactive` for the TUI workbench.
 
 ### 3. Run the same read-only check in both common auth styles
 ```bash

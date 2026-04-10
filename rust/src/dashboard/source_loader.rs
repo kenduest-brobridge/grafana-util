@@ -6,7 +6,7 @@
 // room for later live/history/prompt-backed sources.
 
 use std::fmt;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 use crate::common::{message, Result};
 
@@ -100,6 +100,14 @@ fn infer_workspace_root_from_layout_ancestors(input_dir: &Path) -> Option<PathBu
         };
         match name {
             "dashboards" | "alerts" | "datasources" => {
+                if ancestor
+                    .parent()
+                    .and_then(Path::file_name)
+                    .and_then(|v| v.to_str())
+                    == Some("provisioning")
+                {
+                    continue;
+                }
                 return Some(ancestor.parent().unwrap_or(ancestor).to_path_buf());
             }
             "git-sync" => {
@@ -176,11 +184,41 @@ fn infer_dashboard_workspace_root_fallback(input_dir: &Path) -> PathBuf {
     }
 }
 
+fn path_from_components(components: &[Component<'_>]) -> PathBuf {
+    let mut path = PathBuf::new();
+    for component in components {
+        path.push(component.as_os_str());
+    }
+    path
+}
+
+fn canonical_dashboard_variant_root(input_dir: &Path, variant_dir_name: &str) -> Option<PathBuf> {
+    let components: Vec<Component<'_>> = input_dir.components().collect();
+    let dashboards_index = components
+        .iter()
+        .position(|component| component.as_os_str() == "dashboards")?;
+    if dashboards_index + 2 < components.len()
+        && components[dashboards_index + 1].as_os_str() == "git-sync"
+        && components[dashboards_index + 2].as_os_str() == variant_dir_name
+    {
+        return Some(path_from_components(&components[..=dashboards_index + 2]));
+    }
+    if dashboards_index + 1 < components.len()
+        && components[dashboards_index + 1].as_os_str() == variant_dir_name
+    {
+        return Some(path_from_components(&components[..=dashboards_index + 1]));
+    }
+    None
+}
+
 /// Resolve a dashboard variant root from a workspace, dashboards root, or repo root.
 pub(crate) fn resolve_dashboard_workspace_variant_dir(
     input_dir: &Path,
     variant_dir_name: &str,
 ) -> Option<PathBuf> {
+    if let Some(canonical_root) = canonical_dashboard_variant_root(input_dir, variant_dir_name) {
+        return Some(canonical_root);
+    }
     if input_dir.file_name().and_then(|name| name.to_str()) == Some(variant_dir_name)
         && input_dir.is_dir()
     {
@@ -364,6 +402,22 @@ mod source_loader_tests {
         std::fs::create_dir_all(repo_root.join("dashboards/raw/org_1/raw")).unwrap();
         assert_eq!(
             infer_dashboard_workspace_root(&repo_root.join("dashboards/raw/org_1/raw")),
+            repo_root.to_path_buf()
+        );
+    }
+
+    #[test]
+    fn infers_workspace_root_from_org_scoped_git_sync_provisioning_tree() {
+        let temp = tempdir().unwrap();
+        let repo_root = temp.path();
+        std::fs::create_dir_all(
+            repo_root.join("dashboards/git-sync/provisioning/org_1/provisioning/dashboards"),
+        )
+        .unwrap();
+        assert_eq!(
+            infer_dashboard_workspace_root(
+                &repo_root.join("dashboards/git-sync/provisioning/org_1/provisioning/dashboards")
+            ),
             repo_root.to_path_buf()
         );
     }

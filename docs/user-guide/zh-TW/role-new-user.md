@@ -151,8 +151,8 @@ grafana-util observe live --url http://localhost:3000 --output-format yaml
 ## 推薦搭配參考的指令頁面
 
 - [指令詳細總索引](../../commands/zh-TW/index.md)
-- [profile 相容參考頁](../../commands/zh-TW/profile.md)
-- [overview 相容參考頁](../../commands/zh-TW/overview.md)
+- [config profile](../../commands/zh-TW/profile.md)
+- [指令詳細說明總索引](../../commands/zh-TW/index.md)
 
 ## 常見錯誤與限制
 

@@ -96,8 +96,8 @@ grafana-util advanced access org list --table
 
 ## 建議同時開著哪些指令頁
 
-- [status](../../commands/zh-TW/status.md)
-- [overview](../../commands/zh-TW/overview.md)
+- [config profile](../../commands/zh-TW/profile.md)
+- [指令詳細說明總索引](../../commands/zh-TW/index.md)
 - [change](../../commands/zh-TW/change.md)
 - [dashboard](../../commands/zh-TW/dashboard.md)
 - [alert](../../commands/zh-TW/alert.md)
@@ -117,7 +117,7 @@ grafana-util advanced access org list --table
 - 你知道目前的 credential 到底能不能看見要處理的 org 或管理範圍
 - 你能分清楚即時讀取、staged review 與真正 apply 是三種不同流程
 - 重大變更前會先跑 preflight 或 dry-run
-- 問題一旦從 status 轉進 dashboard、alert 或 access，你知道要切到哪一頁
+- 問題一旦從 observe 轉進 dashboard、alert 或 access，你知道要切到哪一頁
 
 ## 什麼時候切到更深的文件
 

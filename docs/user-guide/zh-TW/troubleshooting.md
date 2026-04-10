@@ -7,7 +7,7 @@
 - 指令形狀錯，還是輸出形狀不對
 - 本機 profile 設定問題，還是遠端 Grafana 行為
 
-如果你正在追查驗證或連線設定，請把 [profile](../../commands/zh-TW/profile.md)、[status](../../commands/zh-TW/status.md)、[overview](../../commands/zh-TW/overview.md) 與 [access](../../commands/zh-TW/access.md) 一起開著。
+如果你正在追查驗證或連線設定，請把 [config profile](../../commands/zh-TW/profile.md)、[指令詳細說明總索引](../../commands/zh-TW/index.md) 與 [access](../../commands/zh-TW/access.md) 一起開著。
 
 ## 適用對象
 
@@ -48,7 +48,7 @@
 
 ```bash
 # 用途：grafana-util 使用標準 Rust logging。你可以提高日誌等級來看實際 API request / response。
-RUST_LOG=debug grafana-util overview live --profile prod
+RUST_LOG=debug grafana-util observe live --profile prod
 grafana-util dashboard list -v
 ```
 
@@ -88,15 +88,15 @@ grafana-util dashboard list -v
 
 | 症狀 | 真正發生的事 | 建議修補方式 |
 | :--- | :--- | :--- |
-| `status staged` 看起來健康，但 live apply 仍失敗 | staged 檔案結構正確，不代表 live state 或權限也正確 | 先跑 `status live`，再跑 `change check`、`change preview` 或 command-specific dry-run |
-| `overview live` 看起來正常，就直接略過 change review | live 可讀性不等於 staged 套件正確 | apply 前仍要跑 staged gate 與 preview path |
+| `observe staged` 看起來健康，但 live apply 仍失敗 | staged 檔案結構正確，不代表 live state 或權限也正確 | 先跑 `observe live`，再跑 `change check`、`change preview` 或 command-specific dry-run |
+| `observe overview live` 看起來正常，就直接略過 change review | live 可讀性不等於 staged 套件正確 | apply 前仍要跑 staged gate 與 preview path |
 | import 或 apply 比預期改得更多 | staged 套件從來沒有先做 inspect 或 preview | 執行前先用 `change inspect`、`change preview` 與 `--dry-run` |
 
 ### 5. profile 與 secret 問題
 
 | 症狀 | 常見原因 | 建議修補方式 |
 | :--- | :--- | :--- |
-| `profile show --show-secrets` 解不出來 | env var 不存在、OS store entry 不見，或 encrypted secret file / key 不見 | 回頭檢查 profile 指到的 secret source |
+| `config profile show --show-secrets` 解不出來 | env var 不存在、OS store entry 不見，或 encrypted secret file / key 不見 | 回頭檢查 config profile 指到的 secret source |
 | 本機可跑、CI 跑不起來 | env 注入或 config path 不同 | 檢查 `GRAFANA_UTIL_CONFIG`、env vars 與必要的 secret files |
 | `--store-secret os` 在 macOS 可用，但 Linux 不行 | Linux runner 沒有可用的 Secret Service session | 改用 `password_env`、`token_env` 或 `encrypted-file` |
 

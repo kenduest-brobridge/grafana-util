@@ -30,7 +30,7 @@ use crate::project_status_staged::build_staged_project_status;
 fn ensure_any_discovered(discovered: &DiscoveredChangeInputs) -> Result<()> {
     if discovered == &DiscoveredChangeInputs::default() {
         return Err(message(
-            "Change input discovery did not find staged inputs in the current directory. Provide explicit flags such as --desired-file, --dashboard-export-dir, or --source-bundle.",
+            "Change input discovery did not find staged inputs in the current directory. Provide explicit flags such as --desired-file, --dashboard-export-dir, --access-user-export-dir, or --source-bundle.",
         ));
     }
     Ok(())
@@ -126,6 +126,10 @@ fn ensure_change_inputs_present(
     dashboard_export_dir: Option<&PathBuf>,
     dashboard_provisioning_dir: Option<&PathBuf>,
     datasource_provisioning_file: Option<&PathBuf>,
+    access_user_export_dir: Option<&PathBuf>,
+    access_team_export_dir: Option<&PathBuf>,
+    access_org_export_dir: Option<&PathBuf>,
+    access_service_account_export_dir: Option<&PathBuf>,
     alert_export_dir: Option<&PathBuf>,
     desired_file: Option<&PathBuf>,
     source_bundle: Option<&PathBuf>,
@@ -133,6 +137,10 @@ fn ensure_change_inputs_present(
     if dashboard_export_dir.is_none()
         && dashboard_provisioning_dir.is_none()
         && datasource_provisioning_file.is_none()
+        && access_user_export_dir.is_none()
+        && access_team_export_dir.is_none()
+        && access_org_export_dir.is_none()
+        && access_service_account_export_dir.is_none()
         && alert_export_dir.is_none()
         && desired_file.is_none()
         && source_bundle.is_none()
@@ -150,6 +158,10 @@ pub(crate) fn run_sync_inspect(args: ChangeInspectArgs) -> Result<()> {
         discovered.dashboard_export_dir.as_ref(),
         discovered.dashboard_provisioning_dir.as_ref(),
         discovered.datasource_provisioning_file.as_ref(),
+        discovered.access_user_export_dir.as_ref(),
+        discovered.access_team_export_dir.as_ref(),
+        discovered.access_org_export_dir.as_ref(),
+        discovered.access_service_account_export_dir.as_ref(),
         discovered.desired_file.as_ref(),
         discovered.source_bundle.as_ref(),
         discovered.target_inventory.as_ref(),
@@ -166,6 +178,10 @@ pub(crate) fn run_sync_inspect(args: ChangeInspectArgs) -> Result<()> {
         merged.dashboard_export_dir.as_ref(),
         merged.dashboard_provisioning_dir.as_ref(),
         merged.datasource_provisioning_file.as_ref(),
+        merged.access_user_export_dir.as_ref(),
+        merged.access_team_export_dir.as_ref(),
+        merged.access_org_export_dir.as_ref(),
+        merged.access_service_account_export_dir.as_ref(),
         merged.alert_export_dir.as_ref(),
         merged.desired_file.as_ref(),
         merged.source_bundle.as_ref(),
@@ -194,6 +210,10 @@ pub(crate) fn run_sync_check(args: ChangeCheckArgs) -> Result<()> {
         discovered.dashboard_export_dir.as_ref(),
         discovered.dashboard_provisioning_dir.as_ref(),
         discovered.datasource_provisioning_file.as_ref(),
+        discovered.access_user_export_dir.as_ref(),
+        discovered.access_team_export_dir.as_ref(),
+        discovered.access_org_export_dir.as_ref(),
+        discovered.access_service_account_export_dir.as_ref(),
         discovered.desired_file.as_ref(),
         discovered.source_bundle.as_ref(),
         discovered.target_inventory.as_ref(),
@@ -210,6 +230,10 @@ pub(crate) fn run_sync_check(args: ChangeCheckArgs) -> Result<()> {
         merged.dashboard_export_dir.as_ref(),
         merged.dashboard_provisioning_dir.as_ref(),
         merged.datasource_provisioning_file.as_ref(),
+        merged.access_user_export_dir.as_ref(),
+        merged.access_team_export_dir.as_ref(),
+        merged.access_org_export_dir.as_ref(),
+        merged.access_service_account_export_dir.as_ref(),
         merged.alert_export_dir.as_ref(),
         merged.desired_file.as_ref(),
         merged.source_bundle.as_ref(),
@@ -432,7 +456,35 @@ mod task_first_rust_tests {
             alert_export_dir: None,
             datasource_export_file: None,
             datasource_provisioning_file: None,
+            access_user_export_dir: None,
+            access_team_export_dir: None,
+            access_org_export_dir: None,
+            access_service_account_export_dir: None,
         }
+    }
+
+    #[test]
+    fn ensure_change_inputs_present_accepts_access_only_inputs() {
+        let discovered = DiscoveredChangeInputs {
+            workspace_root: Some(PathBuf::from(".")),
+            access_user_export_dir: Some(PathBuf::from("./access-users")),
+            ..DiscoveredChangeInputs::default()
+        };
+
+        assert!(ensure_change_inputs_present(
+            &discovered,
+            None,
+            None,
+            None,
+            Some(&PathBuf::from("./access-users")),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None
+        )
+        .is_ok());
     }
 
     #[test]

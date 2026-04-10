@@ -17,14 +17,19 @@ Use these pages when you want one stable page per command or subcommand instead 
 
 The public first-run CLI is organized around a small task-first surface:
 
-- `observe`: read-only status, overview, snapshot, and resource queries
+- [observe](./observe.md): read-only status, overview, snapshot, and resource queries
 - `export`: common backup and local-inventory capture
 - `change`: review-first staged change workflows
-- `config profile`: repo-local connection and secret management
+- [config profile](./profile.md): repo-local connection and secret management
 - `advanced`: domain-heavy workflows once you already know the subsystem
 
-Compatibility roots such as `dashboard`, `alert`, `datasource`, and `access` still exist, but they are no longer the primary onboarding path.
-Older `status`, `overview`, and `profile` pages are kept as compatibility references only; use `observe` and `config profile` as the public entrypoints.
+Compatibility roots such as `dashboard`, `alert`, `datasource`, and `access` still exist for expert workflows, but they are no longer the primary onboarding path.
+
+Removed root paths:
+
+- `status ...` -> `observe staged ...` or `observe live ...`
+- `overview ...` -> `observe overview ...`
+- `profile ...` -> `config profile ...`
 
 ## Common Tasks
 
@@ -34,6 +39,7 @@ Older `status`, `overview`, and `profile` pages are kept as compatibility refere
 - [change preview](./change-preview.md)
 - [change apply](./change-apply.md)
 - [export](./export.md)
+- [observe](./observe.md)
 - `export dashboard`
 - `export alert`
 - `export datasource`

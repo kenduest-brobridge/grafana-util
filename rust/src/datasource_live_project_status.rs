@@ -661,7 +661,7 @@ mod tests {
         assert_eq!(
             domain["nextActions"],
             json!([
-                "re-run live datasource read after aligning datasource org scope with the current org and visible org list"
+                "re-run live datasource read after correcting datasource identity or org scope"
             ])
         );
     }

@@ -31,10 +31,11 @@ const ALERT_EXPORT_AT_LEAST_ONE_ACTIONS: &[&str] =
     &["export at least one alert rule, contact point, or policy"];
 const ALERT_REEXPORT_AFTER_CHANGES_ACTIONS: &[&str] =
     &["re-run alert export after alerting changes"];
-const ALERT_MISSING_CONTACT_POINTS_ACTIONS: &[&str] =
-    &["capture at least one contact point before promotion handoff"];
+const ALERT_MISSING_CONTACT_POINTS_ACTIONS: &[&str] = &[
+    "capture at least one contact point before promotion handoff so rule routing stays reviewable",
+];
 const ALERT_MISSING_POLICIES_ACTIONS: &[&str] =
-    &["capture at least one notification policy before promotion handoff"];
+    &["capture at least one notification policy before promotion handoff so routing drift stays reviewable"];
 const ALERT_MISSING_MUTE_TIMINGS_ACTIONS: &[&str] =
     &["capture at least one mute timing before promotion handoff"];
 const ALERT_MISSING_TEMPLATES_ACTIONS: &[&str] =
@@ -271,8 +272,8 @@ mod alert_project_status_rust_tests {
             value["nextActions"],
             json!([
                 "re-run alert export after alerting changes",
-                "capture at least one contact point before promotion handoff",
-                "capture at least one notification policy before promotion handoff",
+                "capture at least one contact point before promotion handoff so rule routing stays reviewable",
+                "capture at least one notification policy before promotion handoff so routing drift stays reviewable",
                 "capture at least one mute timing before promotion handoff",
                 "capture at least one notification template before promotion handoff"
             ])
