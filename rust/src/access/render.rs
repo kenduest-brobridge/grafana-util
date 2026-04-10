@@ -297,6 +297,55 @@ pub(crate) fn build_access_diff_review_document(
     document
 }
 
+/// Build a shared access delete review document.
+pub(crate) fn build_access_delete_review_document(
+    resource_kind: &str,
+    live_source: &str,
+    rows: &[Value],
+) -> Value {
+    Value::Object(Map::from_iter(vec![
+        (
+            "kind".to_string(),
+            Value::String("grafana-utils-access-delete-review".to_string()),
+        ),
+        (
+            "schemaVersion".to_string(),
+            Value::Number(1.into()),
+        ),
+        (
+            "toolVersion".to_string(),
+            Value::String(TOOL_VERSION.to_string()),
+        ),
+        ("reviewRequired".to_string(), Value::Bool(true)),
+        ("reviewed".to_string(), Value::Bool(false)),
+        (
+            "resourceKind".to_string(),
+            Value::String(resource_kind.to_string()),
+        ),
+        (
+            "liveSource".to_string(),
+            Value::String(live_source.to_string()),
+        ),
+        (
+            "summary".to_string(),
+            Value::Object(Map::from_iter(vec![
+                (
+                    "deleted".to_string(),
+                    Value::Number((rows.len() as i64).into()),
+                ),
+                (
+                    "liveSource".to_string(),
+                    Value::String(live_source.to_string()),
+                ),
+            ])),
+        ),
+        (
+            "rows".to_string(),
+            Value::Array(rows.iter().cloned().collect()),
+        ),
+    ]))
+}
+
 /// Format a consistent import summary line for access workflows.
 pub(crate) fn access_import_summary_line(
     kind: &str,
@@ -493,7 +542,8 @@ pub(crate) fn normalize_service_account_row(team: &Map<String, Value>) -> Map<St
 mod tests {
     use super::{
         access_delete_summary_line, access_diff_review_line, access_diff_summary_line,
-        access_export_summary_line, access_import_summary_line, build_access_diff_review_document,
+        access_export_summary_line, access_import_summary_line, build_access_delete_review_document,
+        build_access_diff_review_document,
     };
     use crate::common::SharedDiffSummary;
     use crate::common::TOOL_VERSION;
@@ -648,6 +698,39 @@ mod tests {
         assert_eq!(
             line,
             "Deleted service-account svc serviceAccountId=4 login=sa-svc role=Viewer disabled=false tokens=2 message=Service account deleted."
+        );
+    }
+
+    #[test]
+    fn access_delete_review_document_surfaces_shared_review_contract() {
+        let rows = vec![json!({
+            "id": "9",
+            "login": "alice",
+            "scope": "global",
+            "message": "Deleted."
+        })];
+        let document =
+            build_access_delete_review_document("user", "Grafana live users", &rows);
+
+        assert_eq!(
+            document.get("kind"),
+            Some(&json!("grafana-utils-access-delete-review"))
+        );
+        assert_eq!(document.get("schemaVersion"), Some(&json!(1)));
+        assert_eq!(document.get("toolVersion"), Some(&json!(TOOL_VERSION)));
+        assert_eq!(document.get("reviewRequired"), Some(&json!(true)));
+        assert_eq!(document.get("reviewed"), Some(&json!(false)));
+        assert_eq!(document.get("resourceKind"), Some(&json!("user")));
+        assert_eq!(document.get("liveSource"), Some(&json!("Grafana live users")));
+        assert_eq!(
+            document
+                .get("summary")
+                .and_then(|summary| summary.get("deleted")),
+            Some(&json!(1))
+        );
+        assert_eq!(
+            document.get("rows").and_then(Value::as_array).map(Vec::len),
+            Some(1)
         );
     }
 }

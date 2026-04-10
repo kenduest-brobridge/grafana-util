@@ -13,14 +13,15 @@ use super::super::pending_delete::{
     prompt_select_index, prompt_select_indexes, validate_delete_prompt,
 };
 use super::render::{
-    access_delete_summary_line, bool_label, map_get_text, normalize_org_role,
-    render_objects_json, scalar_text, user_scope_text, value_bool,
+    access_delete_summary_line, bool_label, build_access_delete_review_document, map_get_text,
+    normalize_org_role, render_objects_json, scalar_text, user_scope_text, value_bool,
 };
 use super::{
     build_auth_context, iter_global_users_with_request, list_org_users_with_request,
     lookup_global_user_by_identity, lookup_org_user_by_identity, request_object, Scope,
     UserAddArgs, UserDeleteArgs, UserModifyArgs, DEFAULT_PAGE_SIZE,
 };
+use crate::common::render_json_value;
 
 pub(crate) fn get_user_with_request<F>(
     mut request_json: F,
@@ -622,7 +623,18 @@ where
         rows.push(row);
     }
     if args.json {
-        println!("{}", render_objects_json(&rows)?);
+        println!(
+            "{}",
+            render_json_value(&build_access_delete_review_document(
+                "user",
+                if matches!(scope, Scope::Org) {
+                    "Grafana live org users"
+                } else {
+                    "Grafana live users"
+                },
+                &rows.iter().cloned().map(Value::Object).collect::<Vec<_>>(),
+            ))?
+        );
     } else {
         for row in &rows {
             println!("{}", user_delete_summary_line(row));

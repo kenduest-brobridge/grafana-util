@@ -9,7 +9,9 @@ use serde_json::{Map, Value};
 
 use crate::common::{message, render_json_value, string_field, Result};
 
-use super::super::render::{map_get_text, scalar_text};
+use super::super::render::{
+    build_access_delete_review_document, map_get_text, scalar_text,
+};
 use super::super::render::access_delete_summary_line;
 use super::super::{request_object, request_object_list_field, DEFAULT_PAGE_SIZE};
 use super::pending_delete_support::{
@@ -210,8 +212,10 @@ where
     if args.json {
         println!(
             "{}",
-            render_json_value(&Value::Array(
-                results.iter().cloned().map(Value::Object).collect()
+            render_json_value(&build_access_delete_review_document(
+                "team",
+                "Grafana live teams",
+                &results.iter().cloned().map(Value::Object).collect::<Vec<_>>(),
             ))?
         );
     } else {

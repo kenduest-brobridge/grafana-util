@@ -9,7 +9,9 @@ use serde_json::{Map, Value};
 
 use crate::common::{message, string_field, value_as_object, Result};
 
-use super::super::render::{map_get_text, normalize_service_account_row, scalar_text};
+use super::super::render::{
+    build_access_delete_review_document, map_get_text, normalize_service_account_row, scalar_text,
+};
 use super::super::render::access_delete_summary_line;
 use super::super::{request_object, request_object_list_field, DEFAULT_PAGE_SIZE};
 use super::pending_delete_support::{
@@ -276,8 +278,10 @@ where
     if args.json {
         println!(
             "{}",
-            serde_json::to_string_pretty(&Value::Array(
-                results.iter().cloned().map(Value::Object).collect()
+            serde_json::to_string_pretty(&build_access_delete_review_document(
+                "service-account",
+                "Grafana live service accounts",
+                &results.iter().cloned().map(Value::Object).collect::<Vec<_>>(),
             ))?
         );
     } else {
@@ -555,8 +559,10 @@ where
     if args.json {
         println!(
             "{}",
-            serde_json::to_string_pretty(&Value::Array(
-                results.iter().cloned().map(Value::Object).collect()
+            serde_json::to_string_pretty(&build_access_delete_review_document(
+                "service-account-token",
+                "Grafana live service account tokens",
+                &results.iter().cloned().map(Value::Object).collect::<Vec<_>>(),
             ))?
         );
     } else {

@@ -17,14 +17,16 @@ use super::super::pending_delete::{
 };
 use super::super::render::{
     access_delete_summary_line, access_diff_review_line, access_diff_summary_line,
-    access_export_summary_line, access_import_summary_line, format_table, render_csv,
-    render_objects_json, render_yaml, scalar_text,
+    access_export_summary_line, access_import_summary_line,
+    build_access_delete_review_document, format_table, render_csv, render_objects_json,
+    render_yaml, scalar_text,
 };
 use super::super::{
     OrgAddArgs, OrgDeleteArgs, OrgDiffArgs, OrgExportArgs, OrgImportArgs, OrgListArgs,
     OrgModifyArgs, ACCESS_EXPORT_KIND_ORGS, ACCESS_EXPORT_METADATA_FILENAME, ACCESS_EXPORT_VERSION,
     ACCESS_ORG_EXPORT_FILENAME,
 };
+use crate::common::render_json_value;
 use super::org_import_export_diff::{
     assert_not_overwrite, build_org_diff_map, build_org_export_metadata,
     build_org_live_records_for_diff, build_record_diff_fields, load_org_import_records,
@@ -268,7 +270,14 @@ where
         ]));
     }
     if args.json {
-        println!("{}", render_objects_json(&rows)?);
+        println!(
+            "{}",
+            render_json_value(&build_access_delete_review_document(
+                "org",
+                "Grafana live orgs",
+                &rows.iter().cloned().map(Value::Object).collect::<Vec<_>>(),
+            ))?
+        );
     } else {
         for row in &rows {
             println!(
