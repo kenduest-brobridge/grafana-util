@@ -55,50 +55,63 @@ struct AlertCliRoot {
 pub struct AlertCommonArgs {
     #[arg(
         long,
-        help = "Load connection defaults from the selected repo-local profile in grafana-util.yaml."
+        help = "Load connection defaults from the selected repo-local profile in grafana-util.yaml.",
+        help_heading = "Connection Options"
     )]
     pub profile: Option<String>,
     #[arg(
         long,
         default_value = "",
         hide_default_value = true,
-        help = "Grafana base URL. Required unless supplied by --profile or GRAFANA_URL."
+        help = "Grafana base URL. Required unless supplied by --profile or GRAFANA_URL.",
+        help_heading = "Connection Options"
     )]
     pub url: String,
     #[arg(
         long = "token",
         visible_alias = "api-token",
-        help = "Grafana API token. Preferred flag: --token. Falls back to GRAFANA_API_TOKEN."
+        help = "Grafana API token. Preferred flag: --token. Falls back to GRAFANA_API_TOKEN.",
+        help_heading = "Connection Options"
     )]
     pub api_token: Option<String>,
     #[arg(
         long = "basic-user",
-        help = "Grafana Basic auth username. Preferred flag: --basic-user. Falls back to GRAFANA_USERNAME."
+        help = "Grafana Basic auth username. Preferred flag: --basic-user. Falls back to GRAFANA_USERNAME.",
+        help_heading = "Connection Options"
     )]
     pub username: Option<String>,
     #[arg(
         long = "basic-password",
-        help = "Grafana Basic auth password. Preferred flag: --basic-password. Falls back to GRAFANA_PASSWORD."
+        help = "Grafana Basic auth password. Preferred flag: --basic-password. Falls back to GRAFANA_PASSWORD.",
+        help_heading = "Connection Options"
     )]
     pub password: Option<String>,
     #[arg(
         long,
         default_value_t = false,
-        help = "Prompt for the Grafana Basic auth password without echo instead of passing --basic-password on the command line."
+        help = "Prompt for the Grafana Basic auth password without echo instead of passing --basic-password on the command line.",
+        help_heading = "Connection Options"
     )]
     pub prompt_password: bool,
     #[arg(
         long,
         default_value_t = false,
-        help = "Prompt for the Grafana API token without echo instead of passing --token on the command line."
+        help = "Prompt for the Grafana API token without echo instead of passing --token on the command line.",
+        help_heading = "Connection Options"
     )]
     pub prompt_token: bool,
-    #[arg(long, default_value_t = DEFAULT_TIMEOUT, help = "HTTP timeout in seconds.")]
+    #[arg(
+        long,
+        default_value_t = DEFAULT_TIMEOUT,
+        help = "HTTP timeout in seconds.",
+        help_heading = "Transport Options"
+    )]
     pub timeout: u64,
     #[arg(
         long,
         default_value_t = false,
-        help = "Enable TLS certificate verification. Verification is disabled by default."
+        help = "Enable TLS certificate verification. Verification is disabled by default.",
+        help_heading = "Transport Options"
     )]
     pub verify_ssl: bool,
 }

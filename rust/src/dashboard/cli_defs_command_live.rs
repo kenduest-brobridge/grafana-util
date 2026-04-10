@@ -179,44 +179,51 @@ pub struct BrowseArgs {
     #[arg(
         long,
         conflicts_with = "input_dir",
-        help = "Browse dashboards from this repo/workspace root instead of pointing directly at one local export tree. Use this for a repo-backed Git Sync tree or a workspace export root that contains dashboards/."
+        help = "Browse dashboards from this repo/workspace root instead of pointing directly at one local export tree. Use this for a repo-backed Git Sync tree or a workspace export root that contains dashboards/.",
+        help_heading = "Input Options"
     )]
     pub workspace: Option<PathBuf>,
     #[arg(
         long = "input-dir",
         conflicts_with = "workspace",
-        help = "Browse dashboards from this local export tree instead of live Grafana. Point this at a raw export root, an all-orgs export root, or a provisioning root when you want to inspect files without calling Grafana."
+        help = "Browse dashboards from this local export tree instead of live Grafana. Point this at a raw export root, an all-orgs export root, or a provisioning root when you want to inspect files without calling Grafana.",
+        help_heading = "Input Options"
     )]
     pub input_dir: Option<PathBuf>,
     #[arg(
         long,
         value_enum,
         default_value_t = super::DashboardImportInputFormat::Raw,
-        help = "Interpret --workspace or --input-dir as raw export files or Grafana file-provisioning artifacts. Use provisioning to accept either the provisioning/ root or its dashboards/ subdirectory."
+        help = "Interpret --workspace or --input-dir as raw export files or Grafana file-provisioning artifacts. Use provisioning to accept either the provisioning/ root or its dashboards/ subdirectory.",
+        help_heading = "Input Options"
     )]
     pub input_format: super::DashboardImportInputFormat,
     #[arg(
         long,
         default_value_t = DEFAULT_PAGE_SIZE,
-        help = "Dashboard search page size used to build the live browser tree."
+        help = "Dashboard search page size used to build the live browser tree.",
+        help_heading = "Selection Options"
     )]
     pub page_size: usize,
     #[arg(
         long,
         conflicts_with = "all_orgs",
-        help = "Browse dashboards from one explicit Grafana org ID instead of the current org."
+        help = "Browse dashboards from one explicit Grafana org ID instead of the current org.",
+        help_heading = "Selection Options"
     )]
     pub org_id: Option<i64>,
     #[arg(
         long,
         default_value_t = false,
         conflicts_with = "org_id",
-        help = "Enumerate all visible Grafana orgs and browse the dashboard tree across them. Prefer Basic auth when you need cross-org browse because API tokens are often scoped to one org."
+        help = "Enumerate all visible Grafana orgs and browse the dashboard tree across them. Prefer Basic auth when you need cross-org browse because API tokens are often scoped to one org.",
+        help_heading = "Selection Options"
     )]
     pub all_orgs: bool,
     #[arg(
         long,
-        help = "Optional folder path root to open instead of the full dashboard tree, for example 'Platform / Infra'."
+        help = "Optional folder path root to open instead of the full dashboard tree, for example 'Platform / Infra'.",
+        help_heading = "Selection Options"
     )]
     pub path: Option<String>,
 }

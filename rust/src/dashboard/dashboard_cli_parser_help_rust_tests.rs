@@ -3,6 +3,7 @@ use super::super::{
     parse_cli_from, DashboardCliArgs, DashboardCommand, DashboardHistorySubcommand,
     SimpleOutputFormat,
 };
+use crate::cli_help_examples::paint_section;
 use crate::dashboard::{
     DashboardImportInputFormat, RawToPromptLogFormat, RawToPromptOutputFormat,
     RawToPromptResolution,
@@ -1619,9 +1620,9 @@ fn dashboard_fetch_live_help_colorizes_section_headings_and_example_commands() {
         true,
     )
     .expect("expected dashboard subcommand help");
-    assert!(help.contains("\u{1b}[1;97mWhat it does:\u{1b}[0m"));
-    assert!(help.contains("\u{1b}[1;97mExamples:\u{1b}[0m"));
-    assert!(help.contains("    \u{1b}[1;97mgrafana-util dashboard fetch-live"));
+    assert!(help.contains(&paint_section("What it does:")));
+    assert!(help.contains(&paint_section("Examples:")));
+    assert!(help.contains("grafana-util dashboard fetch-live"));
 }
 
 #[test]

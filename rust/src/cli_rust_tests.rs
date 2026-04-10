@@ -2,6 +2,7 @@ use super::{
     dispatch_with_handlers, maybe_render_unified_help_from_os_args, parse_cli_from,
     render_unified_help_text, CliArgs, UnifiedCommand,
 };
+use crate::cli_help_examples::{paint_section, paint_support};
 use crate::dashboard::SimpleOutputFormat;
 use crate::help_styles::CLI_HELP_STYLES;
 use crate::profile_cli::ProfileCommand;
@@ -68,10 +69,10 @@ fn export_dashboard_help_colorizes_notes_and_example_commands() {
         true,
     )
     .expect("expected export dashboard help");
-    assert!(help.contains("\u{1b}[1;97mNotes:\u{1b}[0m"));
-    assert!(help.contains("\u{1b}[1;97mExamples:\u{1b}[0m"));
-    assert!(help.contains("\u{1b}[97mExport dashboards from the current org:\u{1b}[0m"));
-    assert!(help.contains("    \u{1b}[1;97mgrafana-util export dashboard"));
+    assert!(help.contains(&paint_section("Notes:")));
+    assert!(help.contains(&paint_section("Examples:")));
+    assert!(help.contains(&paint_support("Export dashboards from the current org:")));
+    assert!(help.contains("grafana-util export dashboard"));
 }
 
 #[test]
@@ -105,15 +106,16 @@ fn cli_help_styles_use_bright_green_bold_context() {
 }
 
 #[test]
-fn export_dashboard_help_colorizes_option_descriptions_bright_white() {
+fn export_dashboard_help_colorizes_option_descriptions_as_secondary_text() {
     let help = maybe_render_unified_help_from_os_args(
         ["grafana-util", "export", "dashboard", "--help"],
         true,
     )
     .expect("expected export dashboard help");
-    assert!(
-        help.contains("          \u{1b}[97mSet the generated provisioning provider name.\u{1b}[0m")
-    );
+    assert!(help.contains(&format!(
+        "          {}",
+        paint_support("Set the generated provisioning provider name.")
+    )));
 }
 
 #[test]

@@ -14,126 +14,151 @@ pub struct ImportArgs {
     #[arg(
         long,
         conflicts_with = "use_export_org",
-        help = "Import dashboards into this Grafana org ID instead of the current org. This switches the whole import run to one explicit destination org and requires Basic auth."
+        help = "Import dashboards into this Grafana org ID instead of the current org. This switches the whole import run to one explicit destination org and requires Basic auth.",
+        help_heading = "Routing Options"
     )]
     pub org_id: Option<i64>,
     #[arg(
         long,
         default_value_t = false,
         conflicts_with = "require_matching_export_org",
-        help = "Import a combined multi-org export root by routing each org-specific raw export back into the matching Grafana org. This requires Basic auth."
+        help = "Import a combined multi-org export root by routing each org-specific raw export back into the matching Grafana org. This requires Basic auth.",
+        help_heading = "Routing Options"
     )]
     pub use_export_org: bool,
     #[arg(
         long = "only-org-id",
         requires = "use_export_org",
         conflicts_with = "org_id",
-        help = "With --use-export-org, import only these exported source org IDs. Repeat the flag to select multiple orgs."
+        help = "With --use-export-org, import only these exported source org IDs. Repeat the flag to select multiple orgs.",
+        help_heading = "Routing Options"
     )]
     pub only_org_id: Vec<i64>,
     #[arg(
         long,
         default_value_t = false,
         requires = "use_export_org",
-        help = "With --use-export-org, create a missing destination org when an exported source org ID does not exist in Grafana. The new org is created from the exported org name and then used as the import target."
+        help = "With --use-export-org, create a missing destination org when an exported source org ID does not exist in Grafana. The new org is created from the exported org name and then used as the import target.",
+        help_heading = "Routing Options"
     )]
     pub create_missing_orgs: bool,
     #[arg(
         long = "input-dir",
-        help = "Import dashboards from this directory. Use the raw/ export directory for single-org import, or the combined export root when --use-export-org is enabled."
+        help = "Import dashboards from this directory. Use the raw/ export directory for single-org import, or the combined export root when --use-export-org is enabled.",
+        help_heading = "Input Options"
     )]
     pub input_dir: PathBuf,
     #[arg(
         long,
         value_enum,
         default_value_t = super::DashboardImportInputFormat::Raw,
-        help = "Interpret --input-dir as raw export files or Grafana file-provisioning artifacts. Use provisioning to accept either the provisioning/ root or its dashboards/ subdirectory."
+        help = "Interpret --input-dir as raw export files or Grafana file-provisioning artifacts. Use provisioning to accept either the provisioning/ root or its dashboards/ subdirectory.",
+        help_heading = "Input Options"
     )]
     pub input_format: super::DashboardImportInputFormat,
     #[arg(
         long,
-        help = "Force every imported dashboard into one destination Grafana folder UID. This overrides any folder UID carried by the exported dashboard files."
+        help = "Force every imported dashboard into one destination Grafana folder UID. This overrides any folder UID carried by the exported dashboard files.",
+        help_heading = "Folder Options"
     )]
     pub import_folder_uid: Option<String>,
     #[arg(
         long,
         default_value_t = false,
-        help = "Use the exported raw folder inventory to create any missing destination folders before import. In dry-run mode, also report folder missing/match/mismatch state first."
+        help = "Use the exported raw folder inventory to create any missing destination folders before import. In dry-run mode, also report folder missing/match/mismatch state first.",
+        help_heading = "Folder Options"
     )]
     pub ensure_folders: bool,
     #[arg(
         long,
         default_value_t = false,
-        help = "Update an existing destination dashboard when the imported dashboard UID already exists. Without this flag, existing UIDs are blocked."
+        help = "Update an existing destination dashboard when the imported dashboard UID already exists. Without this flag, existing UIDs are blocked.",
+        help_heading = "Safety Options"
     )]
     pub replace_existing: bool,
     #[arg(
         long,
         default_value_t = false,
-        help = "Reconcile only dashboards whose UID already exists in Grafana. Missing destination UIDs are skipped instead of created."
+        help = "Reconcile only dashboards whose UID already exists in Grafana. Missing destination UIDs are skipped instead of created.",
+        help_heading = "Safety Options"
     )]
     pub update_existing_only: bool,
     #[arg(
         long,
         default_value_t = false,
-        help = "Only update an existing dashboard when the source raw folder path matches the destination Grafana folder path exactly. Missing dashboards still follow the active create/skip mode."
+        help = "Only update an existing dashboard when the source raw folder path matches the destination Grafana folder path exactly. Missing dashboards still follow the active create/skip mode.",
+        help_heading = "Safety Options"
     )]
     pub require_matching_folder_path: bool,
     #[arg(
         long,
         default_value_t = false,
-        help = "Fail the import when the export orgId metadata does not match the target Grafana org for this run. This is a safety check for accidental cross-org imports."
+        help = "Fail the import when the export orgId metadata does not match the target Grafana org for this run. This is a safety check for accidental cross-org imports.",
+        help_heading = "Safety Options"
     )]
     pub require_matching_export_org: bool,
     #[arg(
         long,
         default_value_t = false,
-        help = "Enable strict dashboard schema validation before import. This rejects unsupported custom plugins, legacy layout shapes, and other preflight issues before any live write."
+        help = "Enable strict dashboard schema validation before import. This rejects unsupported custom plugins, legacy layout shapes, and other preflight issues before any live write.",
+        help_heading = "Validation Options"
     )]
     pub strict_schema: bool,
     #[arg(
         long,
         requires = "strict_schema",
-        help = "Optional target dashboard schemaVersion required by strict validation. Dashboards below this version are blocked as migration-required."
+        help = "Optional target dashboard schemaVersion required by strict validation. Dashboards below this version are blocked as migration-required.",
+        help_heading = "Validation Options"
     )]
     pub target_schema_version: Option<i64>,
-    #[arg(long, default_value = DEFAULT_IMPORT_MESSAGE, help = "Version-history message to attach to each imported dashboard revision in Grafana.")]
+    #[arg(
+        long,
+        default_value = DEFAULT_IMPORT_MESSAGE,
+        help = "Version-history message to attach to each imported dashboard revision in Grafana.",
+        help_heading = "Validation Options"
+    )]
     pub import_message: String,
     #[arg(
         long,
         default_value_t = false,
-        help = "Open an interactive review picker to choose which exported dashboards to import from --input-dir and preview each file's create/update/skip action. With --dry-run, Enter runs the dry-run only for the selected dashboards."
+        help = "Open an interactive review picker to choose which exported dashboards to import from --input-dir and preview each file's create/update/skip action. With --dry-run, Enter runs the dry-run only for the selected dashboards.",
+        help_heading = "Review Output Options"
     )]
     pub interactive: bool,
     #[arg(
         long,
         default_value_t = false,
-        help = "Preview what import would do without changing Grafana. This reports whether each dashboard would create, update, or be skipped/blocked."
+        help = "Preview what import would do without changing Grafana. This reports whether each dashboard would create, update, or be skipped/blocked.",
+        help_heading = "Review Output Options"
     )]
     pub dry_run: bool,
     #[arg(
         long,
         default_value_t = false,
-        help = "For --dry-run only, render a compact table instead of per-dashboard log lines. With --ensure-folders, the folder check is also shown in table form."
+        help = "For --dry-run only, render a compact table instead of per-dashboard log lines. With --ensure-folders, the folder check is also shown in table form.",
+        help_heading = "Review Output Options"
     )]
     pub table: bool,
     #[arg(
         long,
         default_value_t = false,
-        help = "For --dry-run only, render one JSON document with mode, folder checks, dashboard actions, and summary counts."
+        help = "For --dry-run only, render one JSON document with mode, folder checks, dashboard actions, and summary counts.",
+        help_heading = "Review Output Options"
     )]
     pub json: bool,
     #[arg(
         long,
         value_enum,
         conflicts_with_all = ["table", "json"],
-        help = "Alternative single-flag output selector for --dry-run output. Use text, table, or json."
+        help = "Alternative single-flag output selector for --dry-run output. Use text, table, or json.",
+        help_heading = "Review Output Options"
     )]
     pub output_format: Option<DryRunOutputFormat>,
     #[arg(
         long,
         default_value_t = false,
-        help = "For --dry-run --table only, omit the table header row."
+        help = "For --dry-run --table only, omit the table header row.",
+        help_heading = "Review Output Options"
     )]
     pub no_header: bool,
     #[arg(
@@ -141,27 +166,31 @@ pub struct ImportArgs {
         value_delimiter = ',',
         requires = "dry_run",
         value_parser = super::super::dashboard_runtime::parse_dashboard_import_output_column,
-        help = "For --dry-run --table only, render only these comma-separated columns. Supported values: uid, destination, action, folder_path, source_folder_path, destination_folder_path, reason, file."
+        help = "For --dry-run --table only, render only these comma-separated columns. Supported values: uid, destination, action, folder_path, source_folder_path, destination_folder_path, reason, file.",
+        help_heading = "Review Output Options"
     )]
     pub output_columns: Vec<String>,
     #[arg(
         long,
         default_value_t = false,
         requires = "dry_run",
-        help = "Print the supported --output-columns values and exit."
+        help = "Print the supported --output-columns values and exit.",
+        help_heading = "Review Output Options"
     )]
     pub list_columns: bool,
     #[arg(
         long,
         default_value_t = false,
-        help = "Show concise per-dashboard import progress in <current>/<total> form while processing files. Use this for long-running batch imports."
+        help = "Show concise per-dashboard import progress in <current>/<total> form while processing files. Use this for long-running batch imports.",
+        help_heading = "Progress Options"
     )]
     pub progress: bool,
     #[arg(
         short = 'v',
         long,
         default_value_t = false,
-        help = "Show detailed per-item import output, including target paths, dry-run actions, and folder status details. Overrides --progress output."
+        help = "Show detailed per-item import output, including target paths, dry-run actions, and folder status details. Overrides --progress output.",
+        help_heading = "Progress Options"
     )]
     pub verbose: bool,
 }
