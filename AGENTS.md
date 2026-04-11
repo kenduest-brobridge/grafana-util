@@ -28,6 +28,9 @@
 - Target Python 3.9+ in touched Python code and prefer modern built-in generics.
 - Use 4-space indentation and descriptive `snake_case` names.
 - Keep CLI help and docs concrete and operator-focused.
+- Use high-dimensional project thinking before local UX or CLI changes: identify the shared user journey, command family, docs layer, generated artifacts, tests, and future extension path before patching one visible symptom.
+- For public CLI and documentation surfaces, prefer one shared taxonomy or renderer over per-command special cases. If one command needs grouped help, color rules, terminology, or onboarding treatment, check sibling entrypoints for the same class of problem.
+- Treat inconsistency across command roots as an architecture issue, not a cosmetic issue. Fix the common layer when possible, then add regression coverage that spans multiple entrypoints.
 - Prefer the unified CLI shape in docs and examples:
   - `grafana-util dashboard ...`
   - `grafana-util alert ...`

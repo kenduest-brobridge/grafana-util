@@ -3,8 +3,8 @@ use clap::builder::styling::{AnsiColor, Styles};
 
 /// Constant for cli help styles.
 pub const CLI_HELP_STYLES: Styles = Styles::styled()
-    .header(AnsiColor::BrightWhite.on_default().bold())
-    .usage(AnsiColor::BrightWhite.on_default().bold())
+    .header(AnsiColor::Cyan.on_default().bold())
+    .usage(AnsiColor::Cyan.on_default().bold())
     .literal(AnsiColor::Blue.on_default().bold())
     .placeholder(AnsiColor::Cyan.on_default().bold())
     .context(AnsiColor::BrightGreen.on_default().bold());

@@ -3,6 +3,8 @@
 use clap::{ColorChoice, CommandFactory};
 
 use super::DashboardCliArgs;
+use crate::cli::CliArgs;
+use crate::cli_help::canonicalize_inferred_subcommands;
 use crate::cli_help_examples::colorize_dashboard_subcommand_help;
 
 fn ensure_trailing_blank_line(mut text: String) -> String {
@@ -81,6 +83,7 @@ where
         .into_iter()
         .map(|value| value.into().to_string_lossy().into_owned())
         .collect::<Vec<String>>();
+    let args = canonicalize_inferred_subcommands(CliArgs::command(), &args);
     let rest = args.get(1..).unwrap_or(&[]);
     if rest.first().map(String::as_str) == Some("dashboard")
         && rest.iter().any(|value| value == "--help" || value == "-h")
@@ -117,6 +120,7 @@ where
         .into_iter()
         .map(|value| value.into().to_string_lossy().into_owned())
         .collect::<Vec<String>>();
+    let args = canonicalize_inferred_subcommands(CliArgs::command(), &args);
     if !args.iter().any(|value| value == "--help-full") {
         return None;
     }

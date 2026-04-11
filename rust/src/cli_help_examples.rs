@@ -31,9 +31,9 @@ pub(crate) struct HelpPalette {
 }
 
 pub(crate) const HELP_PALETTE: HelpPalette = HelpPalette {
-    section: "\x1b[1;97m",
-    command: "\x1b[1;97m",
-    support: "\x1b[37m",
+    section: "\x1b[1;36m",
+    command: "\x1b[1;34m",
+    support: "\x1b[90m",
     reset: "\x1b[0m",
 };
 
@@ -52,9 +52,6 @@ pub(crate) fn paint_command(text: &str) -> String {
 pub(crate) fn paint_support(text: &str) -> String {
     paint_with(HELP_PALETTE.support, text)
 }
-
-pub(crate) const HELP_FULL_HINT: &str =
-    "Extended Help:\n  --help-full\n          Print help with extended examples\n";
 
 pub(crate) const UNIFIED_HELP_TEXT: &str = concat!(
     help_block!(
@@ -437,49 +434,31 @@ pub(crate) fn colorize_help_examples(text: &str) -> String {
     colored
 }
 
-pub(crate) fn colorize_dashboard_short_help(text: &str) -> String {
-    let mut colored = text.to_string();
-    for heading in [
-        "Usage:",
-        "Browse & Inspect:",
-        "Export & Import:",
-        "Review & Diff:",
-        "Edit & Publish:",
-        "Operate & Capture:",
-        "More help:",
-    ] {
-        let colored_heading = paint_section(heading);
-        colored = colored.replace(heading, &colored_heading);
+pub(crate) fn colorize_grouped_short_help(text: &str) -> String {
+    let mut lines = Vec::new();
+    for line in text.lines() {
+        let trimmed = line.trim_start();
+        let indent = &line[..line.len() - trimmed.len()];
+        let colored = if let Some(rest) = line.strip_prefix("Usage: ") {
+            format!("{} {rest}", paint_section("Usage:"))
+        } else if !trimmed.is_empty() && indent.is_empty() && trimmed.ends_with(':') {
+            paint_section(trimmed)
+        } else if trimmed.starts_with("grafana-util ") {
+            format!("{indent}{}", paint_command(trimmed))
+        } else if indent == "  " && !trimmed.starts_with('-') {
+            match trimmed.find(char::is_whitespace) {
+                Some(split_at) => {
+                    let (command, rest) = trimmed.split_at(split_at);
+                    format!("{indent}{}{}", paint_command(command), rest)
+                }
+                None => format!("{indent}{}", paint_command(trimmed)),
+            }
+        } else {
+            line.to_string()
+        };
+        lines.push(colored);
     }
-    for command in [
-        "browse",
-        "list",
-        "get",
-        "clone",
-        "variables",
-        "edit-live",
-        "delete",
-        "history",
-        "export",
-        "import",
-        "diff",
-        "review",
-        "patch",
-        "serve",
-        "publish",
-        "summary",
-        "dependencies",
-        "impact",
-        "policy",
-        "screenshot",
-        "convert",
-        "raw-to-prompt",
-    ] {
-        let needle = format!("\n  {command}");
-        let replacement = format!("\n  {}", paint_command(command));
-        colored = colored.replace(&needle, &replacement);
-    }
-    colored
+    lines.join("\n")
 }
 
 pub(crate) fn colorize_dashboard_subcommand_help(text: &str) -> String {
@@ -520,12 +499,4 @@ pub(crate) fn colorize_dashboard_subcommand_help(text: &str) -> String {
         lines.push(colored);
     }
     lines.join("\n")
-}
-
-pub(crate) fn inject_help_full_hint(help: String) -> String {
-    let help = help.replace(
-        "\nFirst 3 commands:\n",
-        &format!("\n{HELP_FULL_HINT}\nFirst 3 commands:\n"),
-    );
-    help.replace("\nExamples:\n", &format!("\n{HELP_FULL_HINT}\nExamples:\n"))
 }

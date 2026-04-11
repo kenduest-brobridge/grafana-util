@@ -8,6 +8,20 @@ Current AI-maintained status only.
 - Keep this file short and current. Additive historical detail belongs in `docs/internal/archive/`.
 - Detailed 2026-03-29 through 2026-03-31 entries moved to [`archive/ai-status-archive-2026-03-31.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-03-31.md).
 
+## 2026-04-12 - Support unique-prefix CLI subcommands
+- State: Done
+- Scope: `rust/src/cli.rs`, `rust/src/cli_help.rs`, `rust/src/dashboard/help.rs`, `rust/src/cli_rust_tests.rs`
+- Baseline: Clap rejected command prefixes such as `dashb` and `dashboard li`, while the custom help preflight only recognized canonical command names and could lose grouped/colorized help if prefix inference was added only to the parser.
+- Current Update: enabled Clap subcommand inference and wired the custom help paths through a clap-tree-based canonicalization helper, without adding a hand-written abbreviation table.
+- Result: unique prefixes such as `dashb` and `dashboard li` now resolve to canonical commands while grouped/colorized help remains intact; ambiguous prefixes such as `da` stay on Clap's error path with candidate suggestions.
+
+## 2026-04-11 - Group command entrypoint help by task type
+- State: Done
+- Scope: `AGENTS.md`, `rust/src/cli_help.rs`, `rust/src/cli_help_examples.rs`, `rust/src/help_styles.rs`, `rust/src/cli_rust_tests.rs`
+- Baseline: `grafana-util dashboard --help` used the custom grouped help, but bare entrypoints such as `grafana-util dashboard` fell through to Clap's missing-subcommand help and showed one long ungrouped `Commands:` list. Other domain roots had the same discovery problem.
+- Current Update: moved root and domain entrypoints onto grouped short-help generated from shared grouped-help specs for bare and `--help` forms, covering `status`, `export`, `dashboard`, `datasource`, `access`, `workspace`, `alert`, `config`, and `config profile`. Added one shared grouped-help colorizer so sibling roots use the same muted blue/cyan palette, removed misleading leaf `<COMMAND> --help-full` hints, and recorded a high-dimensional CLI/UX design rule in `AGENTS.md`. Added regression coverage to ensure these entrypoints do not expose a flat `Commands:` section, use consistent colors even with global `--color`, and only advertise supported `--help-full` paths.
+- Result: command discovery is now task-grouped at the top of each major entrypoint, so operators can choose by intent before drilling into detailed leaf-command flags, grouped roots no longer drift into per-command color behavior, and help text no longer points users at unsupported `--help-full` forms.
+
 ## 2026-04-11 - Stabilize beginner onboarding around status live
 - State: Done
 - Scope: `rust/src/{bin/grafana-util.rs,cli_help_examples.rs,cli_rust_tests.rs}`, `rust/src/dashboard/help.rs`, `scripts/check_ai_workflow.py`, `README*.md`, `docs/landing/*`, `docs/user-guide/{en,zh-TW}/*`, `docs/commands/{en,zh-TW}/*`, generated docs as needed
@@ -557,3 +571,9 @@ Current AI-maintained status only.
 - Baseline: most domain leaf commands already had curated `Examples:` blocks, but a few public leaves either inherited group-level examples only or carried explanation text without concrete invocation examples.
 - Current Update: attached curated examples to the remaining public leaf gaps (`status live/staged`, `export access *`, `dashboard convert raw-to-prompt`, `version`, and `config profile *`) and fixed `dashboard convert --help` routing so nested convert help does not hit the dashboard direct renderer. The recursive help test renders every visible public leaf command through the public help path.
 - Result: every current public leaf subcommand help output includes a normal `Examples:` section, and future leaf commands are blocked by test if they omit one or cannot render help through the public path.
+## 2026-04-12 - Split CLI help architecture by responsibility
+- State: Done
+- Scope: `rust/src/cli_help.rs`, `rust/src/cli_help/{grouped.rs,grouped_specs.rs,routing.rs,schema.rs,legacy.rs}`, `rust/src/cli_help_examples.rs`, `rust/src/help_styles.rs`, `rust/src/cli_rust_tests.rs`, `AGENTS.md`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`
+- Baseline: `rust/src/cli_help.rs` mixed grouped command entrypoint specs, renderer code, contextual clap routing, schema-help routing, color handling, full-help examples, and legacy command hints in one large file. Tests also asserted several fixed headings and raw ANSI escape strings, making normal output text edits too noisy.
+- Current Update: kept `cli_help.rs` as a facade and moved grouped specs/rendering, help routing, schema help, and legacy hints into focused modules. Root/domain short help now renders from shared `GroupedHelpSpec` entrypoints, top-level color handling is stripped before help routing, and unsupported leaf `--help-full` hints stay out of grouped dashboard help. The CLI help tests now iterate the shared grouped entrypoint table and use the help palette constants instead of duplicating every heading and ANSI sequence.
+- Result: command-entry help is still behaviorally compatible but has a clear extension path: add or adjust grouped entrypoints in the spec layer, route parser/contextual help in the routing layer, and keep schema/help contracts isolated from operator-facing short help.

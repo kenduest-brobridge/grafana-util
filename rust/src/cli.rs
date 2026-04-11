@@ -541,6 +541,7 @@ pub struct VersionArgs {
     version = crate::common::TOOL_VERSION_DETAILS,
     about = "Task-first Grafana CLI for status, export, dashboard, workspace review, alert, access, datasource, and config workflows.",
     after_help = UNIFIED_HELP_TEXT,
+    infer_subcommands(true),
     styles = crate::help_styles::CLI_HELP_STYLES
 )]
 pub struct CliArgs {

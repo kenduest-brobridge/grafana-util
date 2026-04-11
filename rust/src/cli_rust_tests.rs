@@ -1,8 +1,9 @@
 use super::{
     dispatch_with_handlers, legacy_command_error_hint, maybe_render_unified_help_from_os_args,
-    parse_cli_from, render_unified_help_text, CliArgs, UnifiedCommand,
+    parse_cli_from, render_unified_help_text, CliArgs, DashboardRootCommand, UnifiedCommand,
 };
 use crate::alert::AlertGroupCommand;
+use crate::cli_help::grouped_specs::GROUPED_HELP_ENTRYPOINTS;
 use crate::cli_help_examples::{paint_section, paint_support, HELP_PALETTE};
 use crate::dashboard::SimpleOutputFormat;
 use crate::dashboard::{
@@ -65,16 +66,18 @@ fn has_examples_section(help: &str) -> bool {
 #[test]
 fn unified_help_mentions_common_surfaces_without_legacy_dashboard_paths() {
     let help = render_unified_help_text(false);
+    assert!(help.contains("Start Here:"));
+    assert!(help.contains("Read & Export:"));
+    assert!(help.contains("Review & Apply:"));
     assert!(help.contains("First 3 commands:"));
     assert!(help.contains("grafana-util --version"));
     assert!(help.contains("grafana-util status live --url http://localhost:3000"));
     assert!(help.contains("config profile add"));
-    assert!(help.contains("status overview live"));
-    assert!(help.contains("export dashboard"));
-    assert!(help.contains("export alert"));
-    assert!(help.contains("workspace preview"));
-    assert!(help.contains("dashboard summary"));
-    assert!(help.contains("dashboard summary"));
+    assert!(help.contains("status"));
+    assert!(help.contains("export"));
+    assert!(help.contains("dashboard"));
+    assert!(help.contains("workspace"));
+    assert!(!help.contains("\nCommands:"));
     assert!(!help.contains("status overview --dashboard-export-dir"));
     assert!(!help.contains("--all-orgs"));
     assert!(!help.contains("--mapping-file"));
@@ -82,13 +85,192 @@ fn unified_help_mentions_common_surfaces_without_legacy_dashboard_paths() {
     assert!(!help.contains("output-format governance"));
     assert!(!help.contains("advanced dashboard"));
     assert!(!help.contains("observe"));
-    assert!(!help.contains("change"));
+    assert!(!help.contains("grafana-util change"));
     assert!(!help.contains("dashboard live"));
     assert!(!help.contains("dashboard draft"));
     assert!(!help.contains("dashboard sync"));
     assert!(!help.contains("dashboard analyze"));
     assert!(!help.contains("dashboard capture"));
     assert!(!help.contains("alert migrate export"));
+}
+
+#[test]
+fn root_command_entrypoints_use_grouped_help_for_bare_and_help_forms() {
+    for entrypoint in GROUPED_HELP_ENTRYPOINTS {
+        let first_heading = entrypoint.spec.sections[0].heading;
+        let paths = std::iter::once(entrypoint.path)
+            .chain(entrypoint.aliases.iter().copied())
+            .collect::<Vec<_>>();
+        for path in paths {
+            let mut bare_args = vec!["grafana-util"];
+            bare_args.extend(path.iter().copied());
+            let bare_help = maybe_render_unified_help_from_os_args(bare_args.clone(), false)
+                .unwrap_or_else(|| panic!("missing grouped help for {}", bare_args.join(" ")));
+            assert!(
+                bare_help.contains(&format!("{first_heading}:")),
+                "expected first grouped heading for {}\n{bare_help}",
+                bare_args.join(" ")
+            );
+            assert!(
+                !bare_help.contains("\nCommands:"),
+                "grouped entrypoint help should not use an ungrouped Commands section for {}\n{bare_help}",
+                bare_args.join(" ")
+            );
+
+            let mut help_args = bare_args.clone();
+            help_args.push("--help");
+            let help = maybe_render_unified_help_from_os_args(help_args.clone(), false)
+                .unwrap_or_else(|| panic!("missing grouped help for {}", help_args.join(" ")));
+            assert!(
+                help.contains(&format!("{first_heading}:")),
+                "expected first grouped heading for {}\n{help}",
+                help_args.join(" ")
+            );
+            assert!(!help.contains("\nCommands:"));
+        }
+    }
+}
+
+#[test]
+fn grouped_help_color_uses_muted_blue_cyan_palette() {
+    for (args, heading, command) in [
+        (
+            ["grafana-util", "--color", "always", "dashboard", "--help"],
+            "Browse & Inspect:",
+            "browse",
+        ),
+        (
+            ["grafana-util", "--color", "always", "datasource", "--help"],
+            "Browse & Inspect:",
+            "browse",
+        ),
+        (
+            ["grafana-util", "--color", "always", "workspace", "--help"],
+            "Beginner Path:",
+            "scan",
+        ),
+    ] {
+        let help = maybe_render_unified_help_from_os_args(args, false)
+            .expect("expected colored grouped help");
+        assert!(help.contains(&format!(
+            "{}{heading}{}",
+            HELP_PALETTE.section, HELP_PALETTE.reset
+        )));
+        assert!(help.contains(&format!(
+            "{}{command}{}",
+            HELP_PALETTE.command, HELP_PALETTE.reset
+        )));
+        assert!(!help.contains(&format!("\x1b[1;97m{heading}\x1b[0m")));
+        assert!(!help.contains("\nCommands:"));
+    }
+}
+
+#[test]
+fn inferred_root_subcommand_keeps_grouped_help_and_color() {
+    let help = maybe_render_unified_help_from_os_args(["grafana-util", "dashb", "--help"], false)
+        .expect("expected inferred dashboard grouped help");
+    assert!(help.contains("Browse & Inspect:"));
+    assert!(help.contains("Edit & Publish:"));
+    assert!(!help.contains("\nCommands:"));
+
+    let colored = maybe_render_unified_help_from_os_args(
+        ["grafana-util", "--color", "always", "dashb", "--help"],
+        false,
+    )
+    .expect("expected colored inferred dashboard grouped help");
+    assert!(colored.contains(&format!(
+        "{}Browse & Inspect:{}",
+        HELP_PALETTE.section, HELP_PALETTE.reset
+    )));
+    assert!(colored.contains(&format!(
+        "{}browse{}",
+        HELP_PALETTE.command, HELP_PALETTE.reset
+    )));
+}
+
+#[test]
+fn inferred_nested_dashboard_subcommand_keeps_dashboard_help_renderer() {
+    let args = ["grafana-util", "dashboard", "li", "--help"];
+    assert!(
+        maybe_render_unified_help_from_os_args(args, false).is_none(),
+        "direct dashboard leaf help should stay on the dashboard renderer"
+    );
+    let help = crate::dashboard::maybe_render_dashboard_subcommand_help_from_os_args(args, false)
+        .expect("expected inferred dashboard list help");
+    assert!(help.contains("Usage: grafana-util dashboard list"));
+    assert!(help.contains("Examples:"));
+    assert!(help.contains("grafana-util dashboard list"));
+}
+
+#[test]
+fn inferred_dashboard_help_full_keeps_dashboard_full_help_renderer() {
+    let help = crate::dashboard::maybe_render_dashboard_help_full_from_os_args([
+        "grafana-util",
+        "dashb",
+        "summ",
+        "--help-full",
+    ])
+    .expect("expected inferred dashboard summary full help");
+    assert!(help.contains("Usage: grafana-util dashboard summary"));
+    assert!(help.contains("Extended Examples:"));
+}
+
+#[test]
+fn ambiguous_root_subcommand_prefix_stays_on_clap_error_path() {
+    let args = ["grafana-util", "da", "--help"];
+    assert!(maybe_render_unified_help_from_os_args(args, false).is_none());
+    assert!(
+        crate::dashboard::maybe_render_dashboard_subcommand_help_from_os_args(args, false)
+            .is_none()
+    );
+
+    let error = CliArgs::try_parse_from(args).expect_err("da should be ambiguous");
+    let rendered = error.to_string();
+    assert!(rendered.contains("da"));
+    assert!(rendered.contains("dashboard"));
+    assert!(rendered.contains("datasource"));
+}
+
+#[test]
+fn inferred_root_subcommand_dispatches_through_clap_parser() {
+    let args = parse_cli_from(["grafana-util", "dashb", "list"]);
+    match args.command {
+        UnifiedCommand::Dashboard {
+            command: DashboardRootCommand::List(_),
+        } => {}
+        other => panic!("expected dashboard list command, got {other:?}"),
+    }
+}
+
+#[test]
+fn grouped_help_only_advertises_supported_help_full_paths() {
+    for args in [
+        ["grafana-util", "dashboard"],
+        ["grafana-util", "datasource"],
+        ["grafana-util", "alert"],
+    ] {
+        let help = maybe_render_unified_help_from_os_args(args, false)
+            .unwrap_or_else(|| panic!("missing grouped help for {}", args.join(" ")));
+        assert!(
+            !help.contains("<COMMAND> --help-full"),
+            "grouped help should not advertise unsupported leaf --help-full for {}\n{help}",
+            args.join(" ")
+        );
+    }
+
+    for args in [
+        vec!["grafana-util", "--help-full"],
+        vec!["grafana-util", "datasource", "--help-full"],
+        vec!["grafana-util", "alert", "--help-full"],
+        vec!["grafana-util", "access", "--help-full"],
+        vec!["grafana-util", "workspace", "--help-full"],
+    ] {
+        assert!(
+            maybe_render_unified_help_from_os_args(args.clone(), false).is_some(),
+            "advertised --help-full path should render: {}",
+            args.join(" ")
+        );
+    }
 }
 
 #[test]
