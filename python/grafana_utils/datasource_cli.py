@@ -75,6 +75,9 @@ from .datasource_diff import (
     load_datasource_diff_bundle,
 )
 
+_DEFAULT_BUILD_CLIENT = build_client
+_LAST_SYNCED_BUILD_CLIENT = build_client
+
 __all__ = [
     "DATASOURCE_EXPORT_FILENAME",
     "DATASOURCE_PROVISIONING_FILENAME",
@@ -92,6 +95,7 @@ __all__ = [
     "build_export_metadata",
     "build_export_records",
     "build_import_payload",
+    "browse_datasources",
     "compare_datasource_bundle_to_live",
     "determine_datasource_action",
     "determine_import_mode",
@@ -213,10 +217,11 @@ def _normalize_datasource_aliases(args):
 def _validate_datasource_org_routing_args(args, parser):
     """Validate datasource org-routing flags after argparse normalization."""
     command = getattr(args, "command", None)
-    if command == "list":
+    if command in ("list", "browse"):
         if bool(getattr(args, "all_orgs", False)) and getattr(args, "org_id", None):
             parser.error(
-                "--all-orgs cannot be combined with --org-id for datasource list."
+                "--all-orgs cannot be combined with --org-id for datasource %s."
+                % command
             )
         return
     if command == "export":
@@ -267,7 +272,16 @@ def parse_args(argv=None):
 
 def _sync_facade_overrides():
     """Rebind workflow-layer dependencies that might be overridden in tests."""
-    datasource_workflows.build_client = build_client
+    global _LAST_SYNCED_BUILD_CLIENT
+
+    if build_client is not _DEFAULT_BUILD_CLIENT:
+        datasource_workflows.build_client = build_client
+        _LAST_SYNCED_BUILD_CLIENT = build_client
+        return
+
+    if datasource_workflows.build_client is _LAST_SYNCED_BUILD_CLIENT:
+        datasource_workflows.build_client = _DEFAULT_BUILD_CLIENT
+        _LAST_SYNCED_BUILD_CLIENT = _DEFAULT_BUILD_CLIENT
 
 
 def list_datasources(args):
@@ -278,6 +292,12 @@ def list_datasources(args):
 
     _sync_facade_overrides()
     return datasource_workflows.list_datasources(args)
+
+
+def browse_datasources(args):
+    """Browse datasources implementation."""
+    _sync_facade_overrides()
+    return datasource_workflows.browse_datasources(args)
 
 
 def export_datasources(args):
@@ -387,6 +407,7 @@ __all__ = [
     "build_export_metadata",
     "build_export_records",
     "build_import_payload",
+    "browse_datasources",
     "build_live_datasource_diff_records",
     "build_parser",
     "compare_datasource_bundle_to_live",

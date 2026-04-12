@@ -277,6 +277,16 @@ class DatasourceCliTests(unittest.TestCase):
         self.assertIsNone(all_args.org_id)
         self.assertTrue(all_args.all_orgs)
 
+    def test_datasource_parse_args_supports_browse_org_scoping(self):
+        org_args = datasource_cli.parse_args(["browse", "--org-id", "7"])
+        all_args = datasource_cli.parse_args(["browse", "--all-orgs"])
+
+        self.assertEqual(org_args.command, "browse")
+        self.assertEqual(org_args.org_id, "7")
+        self.assertFalse(org_args.all_orgs)
+        self.assertIsNone(all_args.org_id)
+        self.assertTrue(all_args.all_orgs)
+
     def test_datasource_parse_args_supports_export_mode(self):
         args = datasource_cli.parse_args(
             ["export", "--output-dir", "./datasources", "--overwrite"]
@@ -395,7 +405,9 @@ class DatasourceCliTests(unittest.TestCase):
         )
         client = FakeDatasourceClient(datasources=[])
 
-        with mock.patch.object(datasource_cli, "build_client", return_value=client):
+        with mock.patch.object(
+            datasource_cli.datasource_workflows, "build_client", return_value=client
+        ):
             stdout = io.StringIO()
             with redirect_stdout(stdout):
                 result = datasource_cli.add_datasource(args)
@@ -424,7 +436,9 @@ class DatasourceCliTests(unittest.TestCase):
         )
         client = FakeDatasourceClient(datasources=[])
 
-        with mock.patch.object(datasource_cli, "build_client", return_value=client):
+        with mock.patch.object(
+            datasource_cli.datasource_workflows, "build_client", return_value=client
+        ):
             stdout = io.StringIO()
             with redirect_stdout(stdout):
                 result = datasource_cli.add_datasource(args)
@@ -453,7 +467,9 @@ class DatasourceCliTests(unittest.TestCase):
         )
         client = FakeDatasourceClient(datasources=[])
 
-        with mock.patch.object(datasource_cli, "build_client", return_value=client):
+        with mock.patch.object(
+            datasource_cli.datasource_workflows, "build_client", return_value=client
+        ):
             stdout = io.StringIO()
             with redirect_stdout(stdout):
                 result = datasource_cli.add_datasource(args)
@@ -479,7 +495,9 @@ class DatasourceCliTests(unittest.TestCase):
         )
         client = FakeDatasourceClient(datasources=[])
 
-        with mock.patch.object(datasource_cli, "build_client", return_value=client):
+        with mock.patch.object(
+            datasource_cli.datasource_workflows, "build_client", return_value=client
+        ):
             stdout = io.StringIO()
             with redirect_stdout(stdout):
                 result = datasource_cli.add_datasource(args)
@@ -512,7 +530,9 @@ class DatasourceCliTests(unittest.TestCase):
         )
         client = FakeDatasourceClient(datasources=[])
 
-        with mock.patch.object(datasource_cli, "build_client", return_value=client):
+        with mock.patch.object(
+            datasource_cli.datasource_workflows, "build_client", return_value=client
+        ):
             stdout = io.StringIO()
             with redirect_stdout(stdout):
                 result = datasource_cli.add_datasource(args)
@@ -538,7 +558,9 @@ class DatasourceCliTests(unittest.TestCase):
         )
         client = FakeDatasourceClient(datasources=[])
 
-        with mock.patch.object(datasource_cli, "build_client", return_value=client):
+        with mock.patch.object(
+            datasource_cli.datasource_workflows, "build_client", return_value=client
+        ):
             stdout = io.StringIO()
             with redirect_stdout(stdout):
                 result = datasource_cli.add_datasource(args)
@@ -1452,6 +1474,191 @@ class DatasourceCliTests(unittest.TestCase):
         self.assertEqual(
             lines[-1], "Listed 2 data source(s) from http://127.0.0.1:3000"
         )
+
+    def test_datasource_browse_requires_tty(self):
+        args = datasource_cli.parse_args(["browse"])
+
+        with self.assertRaisesRegex(
+            datasource_cli.GrafanaError, "requires an interactive terminal"
+        ):
+            datasource_cli.browse_datasources(args)
+
+    def test_datasource_browse_lists_and_prints_selected_json(self):
+        args = datasource_cli.parse_args(["browse"])
+        client = FakeDatasourceClient(
+            datasources=[
+                {
+                    "uid": "prom_uid",
+                    "name": "Prometheus Main",
+                    "type": "prometheus",
+                    "url": "http://prometheus:9090",
+                }
+            ]
+        )
+
+        with mock.patch.object(
+            datasource_cli.datasource_workflows, "build_client", return_value=client
+        ):
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = datasource_cli.datasource_workflows.browse_datasources(
+                    args,
+                    input_reader=mock.Mock(side_effect=["1", "q"]),
+                    is_tty=lambda: True,
+                )
+
+        self.assertEqual(result, 0)
+        output = stdout.getvalue()
+        self.assertIn("prom_uid | Prometheus Main | prometheus", output)
+        self.assertIn('"uid": "prom_uid"', output)
+
+    def test_datasource_browse_all_orgs_uses_scoped_clients(self):
+        org_one_client = FakeDatasourceClient(
+            datasources=[
+                {
+                    "uid": "prom_org1",
+                    "name": "Prometheus Main",
+                    "type": "prometheus",
+                }
+            ],
+            org={"id": 1, "name": "Main Org."},
+            headers={"Authorization": "Basic org1"},
+        )
+        org_two_client = FakeDatasourceClient(
+            datasources=[
+                {
+                    "uid": "loki_org2",
+                    "name": "Loki Org Two",
+                    "type": "loki",
+                }
+            ],
+            org={"id": 2, "name": "Org Two"},
+            headers={"Authorization": "Basic org2"},
+        )
+        client = FakeDatasourceClient(
+            datasources=[],
+            headers={"Authorization": "Basic root"},
+            orgs=[{"id": 1, "name": "Main Org."}, {"id": 2, "name": "Org Two"}],
+            org_clients={"1": org_one_client, "2": org_two_client},
+        )
+        args = datasource_cli.parse_args(["browse", "--all-orgs"])
+
+        with mock.patch.object(
+            datasource_cli.datasource_workflows, "build_client", return_value=client
+        ):
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = datasource_cli.datasource_workflows.browse_datasources(
+                    args,
+                    input_reader=mock.Mock(return_value="q"),
+                    is_tty=lambda: True,
+                )
+
+        self.assertEqual(result, 0)
+        output = stdout.getvalue()
+        self.assertIn("prom_org1 | Prometheus Main | prometheus | org=Main Org.", output)
+        self.assertIn("loki_org2 | Loki Org Two | loki | org=Org Two", output)
+
+    def test_datasource_browse_edit_updates_selected_datasource(self):
+        args = datasource_cli.parse_args(["browse"])
+        client = FakeDatasourceClient(
+            datasources=[
+                {
+                    "id": 7,
+                    "uid": "prom_uid",
+                    "name": "Prometheus Main",
+                    "type": "prometheus",
+                    "access": "proxy",
+                    "url": "http://prometheus:9090",
+                    "isDefault": False,
+                }
+            ]
+        )
+
+        with mock.patch.object(
+            datasource_cli.datasource_workflows, "build_client", return_value=client
+        ):
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = datasource_cli.datasource_workflows.browse_datasources(
+                    args,
+                    input_reader=mock.Mock(
+                        side_effect=[
+                            "e 1",
+                            "Prometheus Updated",
+                            "http://prometheus:9091",
+                            "",
+                            "yes",
+                            "q",
+                        ]
+                    ),
+                    is_tty=lambda: True,
+                )
+
+        self.assertEqual(result, 0)
+        self.assertEqual(client.imported_payloads[0]["method"], "PUT")
+        self.assertEqual(client.imported_payloads[0]["path"], "/api/datasources/7")
+        payload = client.imported_payloads[0]["payload"]
+        self.assertEqual(payload["name"], "Prometheus Updated")
+        self.assertEqual(payload["url"], "http://prometheus:9091")
+        self.assertTrue(payload["isDefault"])
+        self.assertIn("Updated datasource prom_uid.", stdout.getvalue())
+
+    def test_datasource_browse_delete_requires_yes_confirmation(self):
+        args = datasource_cli.parse_args(["browse"])
+        client = FakeDatasourceClient(
+            datasources=[
+                {
+                    "id": 7,
+                    "uid": "prom_uid",
+                    "name": "Prometheus Main",
+                    "type": "prometheus",
+                }
+            ]
+        )
+
+        with mock.patch.object(
+            datasource_cli.datasource_workflows, "build_client", return_value=client
+        ):
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = datasource_cli.datasource_workflows.browse_datasources(
+                    args,
+                    input_reader=mock.Mock(side_effect=["d 1", "no", "q"]),
+                    is_tty=lambda: True,
+                )
+
+        self.assertEqual(result, 0)
+        self.assertEqual(client.deleted_paths, [])
+        self.assertIn("Cancelled datasource delete.", stdout.getvalue())
+
+    def test_datasource_browse_delete_removes_selected_datasource(self):
+        args = datasource_cli.parse_args(["browse"])
+        client = FakeDatasourceClient(
+            datasources=[
+                {
+                    "id": 7,
+                    "uid": "prom_uid",
+                    "name": "Prometheus Main",
+                    "type": "prometheus",
+                }
+            ]
+        )
+
+        with mock.patch.object(
+            datasource_cli.datasource_workflows, "build_client", return_value=client
+        ):
+            stdout = io.StringIO()
+            with redirect_stdout(stdout):
+                result = datasource_cli.datasource_workflows.browse_datasources(
+                    args,
+                    input_reader=mock.Mock(side_effect=["d 1", "yes", "q"]),
+                    is_tty=lambda: True,
+                )
+
+        self.assertEqual(result, 0)
+        self.assertEqual(client.deleted_paths, ["/api/datasources/7"])
+        self.assertIn("Deleted datasource prom_uid.", stdout.getvalue())
 
     def test_datasource_list_datasources_from_local_input_dir_renders_table(self):
         args = datasource_cli.parse_args(

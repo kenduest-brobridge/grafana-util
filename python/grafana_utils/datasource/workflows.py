@@ -1459,6 +1459,7 @@ def build_modify_datasource_payload(existing, updates):
     payload["jsonData"] = deepcopy(existing_json_data or {})
 
     for key in (
+        "name",
         "url",
         "access",
         "isDefault",
@@ -1858,6 +1859,201 @@ def list_datasources(args):
     print("")
     print("Listed %s data source(s) from %s" % (len(datasources), args.url))
     return 0
+
+
+def _collect_live_datasource_records(args, client=None):
+    """Collect live datasource records with optional org scope."""
+    client = client or build_client(args)
+    all_orgs = bool(getattr(args, "all_orgs", False))
+    org_id = getattr(args, "org_id", None)
+    auth_header = client.headers.get("Authorization", "")
+    if (all_orgs or org_id) and not auth_header.startswith("Basic "):
+        raise GrafanaError(
+            "Datasource org switching does not support API token auth. Use Grafana "
+            "username/password login with --basic-user and --basic-password."
+        )
+    records = []
+    if all_orgs:
+        for org in client.list_orgs():
+            scoped_org_id = _normalize_org_id(org)
+            if not scoped_org_id:
+                continue
+            scoped_client = client.with_org_id(scoped_org_id)
+            scoped_org = scoped_client.fetch_current_org()
+            for datasource in scoped_client.list_datasources():
+                item = dict(datasource)
+                item["org"] = str(scoped_org.get("name") or "")
+                item["orgId"] = str(scoped_org.get("id") or "")
+                records.append(item)
+        records.sort(
+            key=lambda item: (
+                str(item.get("orgId") or ""),
+                str(item.get("name") or ""),
+                str(item.get("uid") or ""),
+            )
+        )
+        return records
+    if org_id:
+        scoped_client = client.with_org_id(str(org_id))
+        scoped_org = scoped_client.fetch_current_org()
+        for datasource in scoped_client.list_datasources():
+            item = dict(datasource)
+            item["org"] = str(scoped_org.get("name") or "")
+            item["orgId"] = str(scoped_org.get("id") or "")
+            records.append(item)
+        return records
+    return client.list_datasources()
+
+
+def _browse_record_client(base_client, record):
+    org_id = record.get("orgId") or record.get("org_id")
+    if org_id:
+        return base_client.with_org_id(str(org_id))
+    return base_client
+
+
+def _browse_selected_record(rows, value):
+    try:
+        selected_index = int(value) - 1
+    except ValueError:
+        return None, "Unknown command. Use a number, e N, d N, /filter, r, or q."
+    if selected_index < 0 or selected_index >= len(rows):
+        return None, "Selection out of range."
+    return rows[selected_index], None
+
+
+def _browse_confirm_delete(base_client, record, input_reader, output_writer):
+    uid = str(record.get("uid") or "")
+    name = str(record.get("name") or "")
+    if not uid:
+        output_writer("Datasource delete requires a datasource UID.")
+        return False
+    answer = input_reader("Delete datasource %s (%s)? type yes: " % (uid, name)).strip()
+    if answer != "yes":
+        output_writer("Cancelled datasource delete.")
+        return False
+    scoped_client = _browse_record_client(base_client, record)
+    target = fetch_datasource_by_uid_if_exists(scoped_client, uid) or record
+    target_id = target.get("id") or record.get("id")
+    if not target_id:
+        raise GrafanaError("Datasource browse delete requires a live datasource id.")
+    scoped_client.request_json("/api/datasources/%s" % target_id, method="DELETE")
+    output_writer("Deleted datasource %s." % uid)
+    return True
+
+
+def _browse_edit_selected(base_client, record, input_reader, output_writer):
+    uid = str(record.get("uid") or "")
+    if not uid:
+        output_writer("Datasource edit requires a datasource UID.")
+        return False
+    scoped_client = _browse_record_client(base_client, record)
+    existing = fetch_datasource_by_uid_if_exists(scoped_client, uid)
+    if existing is None:
+        raise GrafanaError("Datasource browse edit could not find UID %s." % uid)
+    prompts = (
+        ("name", "Name", existing.get("name") or ""),
+        ("url", "URL", existing.get("url") or ""),
+        ("access", "Access", existing.get("access") or ""),
+    )
+    updates = {}
+    for key, label, current in prompts:
+        value = input_reader("%s [%s]: " % (label, current)).strip()
+        if value and value != str(current):
+            updates[key] = value
+    current_default = bool(existing.get("isDefault"))
+    default_value = input_reader(
+        "Default datasource? [%s]: " % ("yes" if current_default else "no")
+    ).strip().lower()
+    if default_value in {"yes", "y", "true", "1"} and not current_default:
+        updates["isDefault"] = True
+    elif default_value in {"no", "n", "false", "0"} and current_default:
+        updates["isDefault"] = False
+    if not updates:
+        output_writer("No datasource changes detected for %s." % uid)
+        return False
+    payload = build_modify_datasource_payload(existing, updates)
+    target_id = payload.get("id")
+    if not target_id:
+        raise GrafanaError("Datasource browse edit requires a live datasource id.")
+    scoped_client.request_json(
+        "/api/datasources/%s" % target_id,
+        method="PUT",
+        payload=payload,
+    )
+    output_writer("Updated datasource %s." % uid)
+    return True
+
+
+def browse_datasources(args, input_reader=input, output_writer=print, is_tty=None):
+    """Browse live datasource inventory in a compact interactive terminal loop."""
+    is_tty = is_tty or (lambda: sys.stdin.isatty() and sys.stdout.isatty())
+    if not is_tty():
+        raise GrafanaError("Datasource browse requires an interactive terminal (TTY).")
+    client = build_client(args)
+    records = _collect_live_datasource_records(args, client=client)
+    if not records:
+        output_writer("No datasources matched.")
+        return 0
+    filtered = list(records)
+
+    def render_rows(rows):
+        output_writer("Datasource browse: number=view JSON, e N=edit, d N=delete, /text=filter, r=reset, q=quit.")
+        for index, record in enumerate(rows, 1):
+            output_writer(
+                "%d. %s | %s | %s | org=%s"
+                % (
+                    index,
+                    str(record.get("uid") or "-"),
+                    str(record.get("name") or "-"),
+                    str(record.get("type") or "-"),
+                    str(record.get("org") or record.get("orgId") or "-"),
+                )
+            )
+
+    render_rows(filtered)
+    while True:
+        choice = input_reader("datasource> ").strip()
+        if choice.lower() in {"q", "quit", "exit"}:
+            return 0
+        if choice.lower() in {"r", "reset"}:
+            filtered = list(records)
+            render_rows(filtered)
+            continue
+        if choice.startswith("/"):
+            needle = choice[1:].strip().lower()
+            filtered = [
+                record
+                for record in records
+                if needle in json.dumps(record, sort_keys=True).lower()
+            ]
+            render_rows(filtered)
+            continue
+        if choice.lower().startswith("e "):
+            selected, error = _browse_selected_record(filtered, choice.split(None, 1)[1])
+            if error:
+                output_writer(error)
+                continue
+            if _browse_edit_selected(client, selected, input_reader, output_writer):
+                records = _collect_live_datasource_records(args, client=client)
+                filtered = list(records)
+                render_rows(filtered)
+            continue
+        if choice.lower().startswith("d "):
+            selected, error = _browse_selected_record(filtered, choice.split(None, 1)[1])
+            if error:
+                output_writer(error)
+                continue
+            if _browse_confirm_delete(client, selected, input_reader, output_writer):
+                records = _collect_live_datasource_records(args, client=client)
+                filtered = list(records)
+                render_rows(filtered)
+            continue
+        selected, error = _browse_selected_record(filtered, choice)
+        if error:
+            output_writer(error)
+            continue
+        output_writer(json.dumps(selected, indent=2, sort_keys=False))
 
 
 def export_datasources(args):
@@ -2568,6 +2764,8 @@ def dispatch_datasource_command(args):
         return 0
     if args.command == "list":
         return list_datasources(args)
+    if args.command == "browse":
+        return browse_datasources(args)
     if args.command == "export":
         return export_datasources(args)
     if args.command == "import":

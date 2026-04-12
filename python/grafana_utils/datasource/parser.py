@@ -113,6 +113,13 @@ DIFF_HELP_EXAMPLES = (
     "  grafana-util datasource diff --url http://localhost:3000 "
     '--token "$GRAFANA_API_TOKEN" --diff-dir ./datasources --output-format text'
 )
+BROWSE_HELP_EXAMPLES = (
+    "Examples:\n\n"
+    "  grafana-util datasource browse --url http://localhost:3000 "
+    '--token "$GRAFANA_API_TOKEN"\n'
+    "  grafana-util datasource browse --url http://localhost:3000 "
+    "--basic-user admin --basic-password admin --all-orgs"
+)
 
 HELP_FULL_EXAMPLES = (
     "Extended Examples:\n\n"
@@ -399,6 +406,28 @@ def add_export_cli_args(parser):
         "--dry-run",
         action="store_true",
         help="Preview the datasource export files that would be written without changing disk.",
+    )
+
+
+def add_browse_cli_args(parser):
+    """Add browse cli args implementation."""
+    parser.add_argument(
+        "--org-id",
+        default=None,
+        help=(
+            "Browse datasource inventory from this explicit Grafana organization "
+            "ID instead of the current org context. API token auth is not "
+            "supported here; use Grafana username/password login."
+        ),
+    )
+    parser.add_argument(
+        "--all-orgs",
+        action="store_true",
+        help=(
+            "Aggregate datasource inventory from every visible Grafana "
+            "organization. API token auth is not supported here; use Grafana "
+            "username/password login."
+        ),
     )
 
 
@@ -1018,6 +1047,22 @@ def build_parser(prog=None):
     add_diff_cli_args(diff_parser)
     diff_parser.set_defaults(_help_full_examples=HELP_FULL_EXAMPLES)
     diff_parser.add_argument(
+        "--help-full",
+        nargs=0,
+        action=HelpFullAction,
+        help="Show normal help plus extended datasource examples.",
+    )
+
+    browse_parser = subparsers.add_parser(
+        "browse",
+        help="Browse live Grafana datasource inventory in an interactive terminal.",
+        epilog=BROWSE_HELP_EXAMPLES,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    add_common_cli_args(browse_parser)
+    add_browse_cli_args(browse_parser)
+    browse_parser.set_defaults(_help_full_examples=HELP_FULL_EXAMPLES)
+    browse_parser.add_argument(
         "--help-full",
         nargs=0,
         action=HelpFullAction,
