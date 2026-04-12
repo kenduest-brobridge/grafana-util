@@ -1,10 +1,11 @@
 use super::{
-    dispatch_with_handlers, legacy_command_error_hint, maybe_render_unified_help_from_os_args,
-    parse_cli_from, render_unified_help_text, CliArgs, DashboardRootCommand, UnifiedCommand,
+    dispatch_with_handlers, maybe_render_unified_help_from_os_args, parse_cli_from,
+    render_unified_help_text, CliArgs, DashboardRootCommand, UnifiedCommand,
 };
 use crate::alert::AlertGroupCommand;
 use crate::cli_help::grouped_specs::GROUPED_HELP_ENTRYPOINTS;
-use crate::cli_help_examples::{paint_section, paint_support, HELP_PALETTE};
+use crate::cli_help_examples::{paint_section, HELP_PALETTE};
+use crate::common::strip_ansi_codes;
 use crate::dashboard::SimpleOutputFormat;
 use crate::dashboard::{
     parse_cli_from as parse_dashboard_cli_from, DashboardCliArgs, DashboardCommand,
@@ -277,41 +278,6 @@ fn grouped_help_only_advertises_supported_help_full_paths() {
 }
 
 #[test]
-fn legacy_command_error_hints_point_to_current_surfaces() {
-    let observe = ["grafana-util", "observe", "live", "--help"]
-        .iter()
-        .map(|value| (*value).to_string())
-        .collect::<Vec<_>>();
-    assert!(legacy_command_error_hint(&observe)
-        .expect("observe hint")
-        .contains("status live"));
-
-    let overview = ["grafana-util", "overview", "live", "--help"]
-        .iter()
-        .map(|value| (*value).to_string())
-        .collect::<Vec<_>>();
-    assert!(legacy_command_error_hint(&overview)
-        .expect("overview hint")
-        .contains("status overview live"));
-
-    let change = ["grafana-util", "change", "plan", "--help"]
-        .iter()
-        .map(|value| (*value).to_string())
-        .collect::<Vec<_>>();
-    assert!(legacy_command_error_hint(&change)
-        .expect("change hint")
-        .contains("workspace"));
-
-    let dashboard_live = ["grafana-util", "dashboard", "live", "--help"]
-        .iter()
-        .map(|value| (*value).to_string())
-        .collect::<Vec<_>>();
-    assert!(legacy_command_error_hint(&dashboard_live)
-        .expect("dashboard live hint")
-        .contains("status live"));
-}
-
-#[test]
 fn public_leaf_subcommand_help_includes_examples_section() {
     let command = CliArgs::command();
     let mut paths = Vec::new();
@@ -434,7 +400,14 @@ fn export_dashboard_help_colorizes_notes_and_example_commands() {
     .expect("expected export dashboard help");
     assert!(help.contains(&paint_section("Notes:")));
     assert!(help.contains(&paint_section("Examples:")));
-    assert!(help.contains(&paint_support("Export dashboards from the current org:")));
+    let caption_line = help
+        .lines()
+        .find(|line| strip_ansi_codes(line).contains("Export dashboards from the current org:"))
+        .expect("expected example caption line");
+    assert!(
+        caption_line.contains(HELP_PALETTE.argument),
+        "example captions should be highlighted\n{help}"
+    );
     assert!(help.contains("grafana-util export dashboard"));
 }
 
@@ -656,6 +629,63 @@ fn export_dashboard_help_colorizes_option_descriptions_as_secondary_text() {
 }
 
 #[test]
+fn colored_contextual_help_highlights_option_entries_and_inline_flags() {
+    for (args, option_name, inline_flag) in [
+        (
+            vec!["grafana-util", "dashboard", "export", "--help"],
+            "--url",
+            "--profile",
+        ),
+        (
+            vec!["grafana-util", "alert", "export", "--help"],
+            "--url",
+            "--token",
+        ),
+        (
+            vec!["grafana-util", "datasource", "list", "--help"],
+            "--url",
+            "--profile",
+        ),
+        (
+            vec!["grafana-util", "config", "profile", "add", "--help"],
+            "--token-env",
+            "--set-default",
+        ),
+    ] {
+        let help = maybe_render_unified_help_from_os_args(args.clone(), true)
+            .unwrap_or_else(|| panic!("expected colored help for {}", args.join(" ")));
+        let option_line = help
+            .lines()
+            .find(|line| strip_ansi_codes(line).trim_start().starts_with(option_name))
+            .unwrap_or_else(|| {
+                panic!(
+                    "missing option entry {option_name} for {}\n{help}",
+                    args.join(" ")
+                )
+            });
+        assert!(
+            option_line.contains(HELP_PALETTE.argument),
+            "option entry should be highlighted for {}\n{help}",
+            args.join(" ")
+        );
+        let inline_line = help
+            .lines()
+            .find(|line| strip_ansi_codes(line).contains(inline_flag))
+            .unwrap_or_else(|| {
+                panic!(
+                    "missing inline flag {inline_flag} for {}\n{help}",
+                    args.join(" ")
+                )
+            });
+        assert!(
+            inline_line.contains(HELP_PALETTE.argument),
+            "inline flag should be highlighted for {}\n{help}",
+            args.join(" ")
+        );
+    }
+}
+
+#[test]
 fn status_overview_help_uses_canonical_examples() {
     assert!(crate::overview::OVERVIEW_HELP_TEXT
         .contains("grafana-util status overview --dashboard-export-dir ./dashboards/raw"));
@@ -727,6 +757,7 @@ fn dashboard_short_help_uses_flat_paths_only() {
     assert!(help.contains("impact"));
     assert!(help.contains("policy"));
     assert!(help.contains("screenshot"));
+    assert_eq!(help.matches("\n  get").count(), 1);
     assert!(!help.contains("live         browse, list, vars, fetch, clone, edit, delete, history"));
     assert!(!help.contains("draft        review, patch, serve, publish"));
     assert!(!help.contains("sync         export, import, diff, convert"));
@@ -739,14 +770,32 @@ fn dashboard_short_help_uses_flat_paths_only() {
 fn alert_short_help_uses_flat_task_groups_only() {
     let help =
         maybe_render_unified_help_from_os_args(["grafana-util", "alert", "-h"], false).unwrap();
-    assert!(help.contains("inventory"));
-    assert!(help.contains("backup"));
-    assert!(help.contains("authoring"));
-    assert!(help.contains("review"));
+    assert!(help.contains("Inventory:"));
+    assert!(help.contains("Backup & Compare:"));
+    assert!(help.contains("Author Desired State:"));
+    assert!(help.contains("Review & Apply:"));
     assert!(help.contains("list-rules"));
+    assert!(help.contains("list-contact-points"));
+    assert!(help.contains("list-mute-timings"));
+    assert!(help.contains("list-templates"));
     assert!(help.contains("export"));
+    assert!(help.contains("import"));
+    assert!(help.contains("diff"));
+    assert!(help.contains("init"));
     assert!(help.contains("add-rule"));
+    assert!(help.contains("clone-rule"));
+    assert!(help.contains("add-contact-point"));
+    assert!(help.contains("set-route"));
+    assert!(help.contains("preview-route"));
+    assert!(help.contains("new-rule"));
+    assert!(help.contains("new-contact-point"));
+    assert!(help.contains("new-template"));
     assert!(help.contains("plan"));
+    assert!(help.contains("apply"));
+    assert!(!help.contains("inventory  list-rules"));
+    assert!(!help.contains("backup     export"));
+    assert!(!help.contains("authoring  init"));
+    assert!(!help.contains("review     plan"));
     assert!(!help.contains("live         list-rules"));
     assert!(!help.contains("migrate      export, import, diff"));
     assert!(!help.contains("author       init, rule add|clone"));
@@ -812,12 +861,46 @@ fn parse_cli_supports_status_surface() {
 }
 
 #[test]
-fn parse_cli_rejects_legacy_status_roots() {
+fn parse_cli_rejects_removed_legacy_roots_without_compatibility() {
     for args in [
         vec!["grafana-util", "observe", "live"],
         vec!["grafana-util", "change", "inspect"],
+        vec!["grafana-util", "overview", "live"],
+        vec!["grafana-util", "advanced", "dashboard", "browse"],
+        vec!["grafana-util", "dashboard", "live", "list"],
+        vec!["grafana-util", "alert", "live", "list-rules"],
+        vec!["grafana-util", "alert", "migrate", "export"],
+        vec!["grafana-util", "alert", "author", "rule", "add"],
+        vec!["grafana-util", "alert", "scaffold", "template"],
+        vec!["grafana-util", "alert", "change", "apply"],
     ] {
-        let _error = CliArgs::try_parse_from(args).unwrap_err();
+        let error = CliArgs::try_parse_from(args.clone()).unwrap_err();
+        assert!(
+            error.to_string().contains("unrecognized subcommand"),
+            "expected a normal Clap rejection for {}",
+            args.join(" ")
+        );
+    }
+}
+
+#[test]
+fn removed_legacy_help_paths_stay_on_clap_error_path() {
+    for args in [
+        vec!["grafana-util", "observe", "live", "--help"],
+        vec!["grafana-util", "change", "inspect", "--help"],
+        vec!["grafana-util", "overview", "live", "--help"],
+        vec!["grafana-util", "advanced", "dashboard", "--help"],
+        vec!["grafana-util", "alert", "live", "list-rules", "--help"],
+        vec!["grafana-util", "alert", "migrate", "export", "--help"],
+        vec!["grafana-util", "alert", "author", "rule", "add", "--help"],
+        vec!["grafana-util", "alert", "scaffold", "template", "--help"],
+        vec!["grafana-util", "alert", "change", "apply", "--help"],
+    ] {
+        assert!(
+            maybe_render_unified_help_from_os_args(args.clone(), false).is_none(),
+            "legacy help preflight should not intercept {}",
+            args.join(" ")
+        );
     }
 }
 

@@ -26,6 +26,7 @@ macro_rules! help_block {
 pub(crate) struct HelpPalette {
     pub section: &'static str,
     pub command: &'static str,
+    pub argument: &'static str,
     pub support: &'static str,
     pub reset: &'static str,
 }
@@ -33,6 +34,7 @@ pub(crate) struct HelpPalette {
 pub(crate) const HELP_PALETTE: HelpPalette = HelpPalette {
     section: "\x1b[1;36m",
     command: "\x1b[1;34m",
+    argument: "\x1b[1;97m",
     support: "\x1b[90m",
     reset: "\x1b[0m",
 };
@@ -49,8 +51,86 @@ pub(crate) fn paint_command(text: &str) -> String {
     paint_with(HELP_PALETTE.command, text)
 }
 
+fn paint_argument(text: &str) -> String {
+    paint_with(HELP_PALETTE.argument, text)
+}
+
+fn paint_example_caption(text: &str) -> String {
+    paint_argument(text)
+}
+
 pub(crate) fn paint_support(text: &str) -> String {
     paint_with(HELP_PALETTE.support, text)
+}
+
+fn is_option_entry_line(trimmed: &str) -> bool {
+    let visible;
+    let trimmed = if trimmed.contains('\x1b') {
+        visible = crate::common::strip_ansi_codes(trimmed);
+        visible.as_str()
+    } else {
+        trimmed
+    };
+    trimmed.starts_with("--")
+        || trimmed
+            .strip_prefix('-')
+            .and_then(|rest| rest.chars().next())
+            .is_some_and(|ch| ch.is_ascii_alphanumeric())
+}
+
+fn highlight_option_tokens(text: &str, resume_color: &str) -> String {
+    let mut output = String::new();
+    let mut index = 0;
+    while index < text.len() {
+        let rest = &text[index..];
+        if let Some(token_rest) = rest.strip_prefix("--") {
+            if token_rest
+                .chars()
+                .next()
+                .is_some_and(|ch| ch.is_ascii_alphanumeric())
+            {
+                let token_len = 2 + token_rest
+                    .chars()
+                    .take_while(|ch| ch.is_ascii_alphanumeric() || *ch == '-')
+                    .map(char::len_utf8)
+                    .sum::<usize>();
+                output.push_str(HELP_PALETTE.reset);
+                output.push_str(HELP_PALETTE.argument);
+                output.push_str(&text[index..index + token_len]);
+                output.push_str(HELP_PALETTE.reset);
+                output.push_str(resume_color);
+                index += token_len;
+                continue;
+            }
+        }
+        let ch = rest
+            .chars()
+            .next()
+            .expect("index should point to a valid character");
+        output.push(ch);
+        index += ch.len_utf8();
+    }
+    output
+}
+
+fn paint_option_entry(text: &str) -> String {
+    if text.contains('\x1b') {
+        paint_argument(&crate::common::strip_ansi_codes(text))
+    } else {
+        paint_argument(text)
+    }
+}
+
+fn paint_support_with_args(text: &str) -> String {
+    if !text.contains("--") {
+        return paint_support(text);
+    }
+    format!(
+        "{}{}{}",
+        HELP_PALETTE.support,
+        highlight_option_tokens(text, HELP_PALETTE.support),
+        HELP_PALETTE.reset
+    )
 }
 
 pub(crate) const UNIFIED_HELP_TEXT: &str = concat!(
@@ -405,14 +485,23 @@ pub(crate) fn colorize_help_examples(text: &str) -> String {
             | "Extended Examples:"
             | "Notes:"
             | "More help:" => paint_section(trimmed),
+            _ if !trimmed.is_empty() && indent.is_empty() && trimmed.ends_with(':') => {
+                paint_section(trimmed)
+            }
             _ if trimmed.starts_with("grafana-util ") => {
                 format!("{indent}{}", paint_command(trimmed))
             }
+            _ if is_option_entry_line(trimmed) => {
+                format!("{indent}{}", paint_option_entry(trimmed))
+            }
             _ if trimmed.starts_with("- ") => {
-                format!("{indent}{}", paint_support(trimmed))
+                format!("{indent}{}", paint_support_with_args(trimmed))
+            }
+            _ if trimmed.starts_with('[') && trimmed.contains("--") => {
+                format!("{indent}{}", paint_support_with_args(trimmed))
             }
             _ if indent == "  " && trimmed.ends_with(':') => {
-                format!("{indent}{}", paint_support(trimmed))
+                format!("{indent}{}", paint_example_caption(trimmed))
             }
             _ if !trimmed.is_empty()
                 && indent.len() >= 6
@@ -420,7 +509,7 @@ pub(crate) fn colorize_help_examples(text: &str) -> String {
                 && !trimmed.starts_with('[')
                 && !trimmed.starts_with("grafana-util ") =>
             {
-                format!("{indent}{}", paint_support(trimmed))
+                format!("{indent}{}", paint_support_with_args(trimmed))
             }
             _ => line.to_string(),
         };
@@ -428,7 +517,11 @@ pub(crate) fn colorize_help_examples(text: &str) -> String {
     }
     let mut colored = lines.join("\n");
     for (label, color) in HELP_EXAMPLE_LABELS {
-        let colored_label = format!("{color}{label}{}", HELP_PALETTE.reset);
+        let colored_label = format!(
+            "{reset}{color}{label}{reset}{argument}",
+            reset = HELP_PALETTE.reset,
+            argument = HELP_PALETTE.argument
+        );
         colored = colored.replace(label, &colored_label);
     }
     colored
@@ -445,6 +538,8 @@ pub(crate) fn colorize_grouped_short_help(text: &str) -> String {
             paint_section(trimmed)
         } else if trimmed.starts_with("grafana-util ") {
             format!("{indent}{}", paint_command(trimmed))
+        } else if is_option_entry_line(trimmed) {
+            format!("{indent}{}", paint_option_entry(trimmed))
         } else if indent == "  " && !trimmed.starts_with('-') {
             match trimmed.find(char::is_whitespace) {
                 Some(split_at) => {
@@ -469,15 +564,24 @@ pub(crate) fn colorize_dashboard_subcommand_help(text: &str) -> String {
         let colored = match line {
             "Options:" | "What it does:" | "When to use:" | "Related commands:" | "Examples:"
             | "Arguments:" | "More help:" | "Notes:" => paint_section(line),
+            _ if !trimmed.is_empty() && indent.is_empty() && trimmed.ends_with(':') => {
+                paint_section(trimmed)
+            }
             _ if line.starts_with("Usage: ") => {
                 let rest = line.trim_start_matches("Usage: ");
                 format!("{} {}", paint_section("Usage:"), paint_command(rest))
             }
+            _ if is_option_entry_line(trimmed) => {
+                format!("{indent}{}", paint_option_entry(trimmed))
+            }
             _ if trimmed.starts_with("- ") => {
-                format!("{indent}{}", paint_support(trimmed))
+                format!("{indent}{}", paint_support_with_args(trimmed))
+            }
+            _ if trimmed.starts_with('[') && trimmed.contains("--") => {
+                format!("{indent}{}", paint_support_with_args(trimmed))
             }
             _ if indent == "  " && trimmed.ends_with(':') => {
-                format!("{indent}{}", paint_support(trimmed))
+                format!("{indent}{}", paint_example_caption(trimmed))
             }
             _ if !trimmed.is_empty()
                 && indent.len() >= 6
@@ -486,7 +590,7 @@ pub(crate) fn colorize_dashboard_subcommand_help(text: &str) -> String {
                 && !trimmed.starts_with("grafana-util ")
                 && !trimmed.starts_with("- dashboard ") =>
             {
-                format!("{indent}{}", paint_support(trimmed))
+                format!("{indent}{}", paint_support_with_args(trimmed))
             }
             _ if trimmed.starts_with("grafana-util ") => {
                 format!("{indent}{}", paint_command(trimmed))

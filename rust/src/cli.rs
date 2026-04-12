@@ -10,15 +10,10 @@ use clap::{Args, Parser, Subcommand};
 use crate::access::{
     AccessCliArgs, OrgExportArgs, ServiceAccountExportArgs, TeamExportArgs, UserExportArgs,
 };
-use crate::alert::{
-    AlertAddContactPointArgs, AlertAddRuleArgs, AlertApplyArgs, AlertCloneRuleArgs,
-    AlertDeleteArgs, AlertDiffArgs, AlertExportArgs, AlertGroupCommand, AlertImportArgs,
-    AlertInitArgs, AlertListArgs, AlertNewResourceArgs, AlertPlanArgs, AlertPreviewRouteArgs,
-    AlertSetRouteArgs,
-};
+use crate::alert::{AlertExportArgs, AlertGroupCommand};
 pub use crate::cli_help::{
-    legacy_command_error_hint, maybe_render_unified_help_from_os_args,
-    render_unified_help_full_text, render_unified_help_text, render_unified_version_text,
+    maybe_render_unified_help_from_os_args, render_unified_help_full_text,
+    render_unified_help_text, render_unified_version_text,
 };
 use crate::cli_help::{
     UNIFIED_ACCESS_HELP_TEXT, UNIFIED_ALERT_HELP_TEXT, UNIFIED_DATASOURCE_HELP_TEXT,
@@ -52,10 +47,6 @@ const EXPORT_ACCESS_SERVICE_ACCOUNT_HELP_TEXT: &str = "Examples:\n\n  Export Gra
 const EXPORT_DASHBOARD_HELP_TEXT: &str = "Notes:\n  - Writes raw/, prompt/, and provisioning/ by default.\n  - Use Basic auth with --all-orgs.\n  - Use --flat for files directly under each variant directory.\n  - Use --include-history to add history/ under each exported org scope.\n  - The provider file is provisioning/provisioning/dashboards.yaml.\n  - Keep raw/ for API import or diff, prompt/ for UI import, and provisioning/ for file provisioning.\n\nExamples:\n\n  Export dashboards from the current org:\n    grafana-util export dashboard --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output-dir ./dashboards --overwrite\n\n  Export dashboards across all visible orgs:\n    grafana-util export dashboard --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --output-dir ./dashboards --overwrite";
 const EXPORT_ALERT_HELP_TEXT: &str = "Examples:\n\n  Export alerting resources from Grafana:\n    grafana-util export alert --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output-dir ./alerts --overwrite";
 const EXPORT_DATASOURCE_HELP_TEXT: &str = "Examples:\n\n  Export datasource inventory into a local artifact tree:\n    grafana-util export datasource --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output-dir ./datasources --overwrite";
-const ALERT_MIGRATE_HELP_TEXT: &str = "Examples:\n\n  [Import]\n    grafana-util alert migrate import --input-dir ./alerts/raw --replace-existing --dry-run --json\n\n  [Export]\n    grafana-util alert migrate export --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output-dir ./alerts --overwrite\n\n  [Diff]\n    grafana-util alert migrate diff --url http://localhost:3000 --diff-dir ./alerts/raw --output-format json";
-const ALERT_MIGRATE_EXPORT_HELP_TEXT: &str = "Examples:\n\n  Export alerting resources with overwrite enabled:\n    grafana-util alert migrate export --url http://localhost:3000 --token \"$GRAFANA_API_TOKEN\" --output-dir ./alerts --overwrite";
-const ALERT_MIGRATE_IMPORT_HELP_TEXT: &str = "Examples:\n\n  Preview a replace-existing import before execution as structured JSON:\n    grafana-util alert migrate import --url http://localhost:3000 --input-dir ./alerts/raw --replace-existing --dry-run --json\n\n  Re-map linked dashboards and panels during import:\n    grafana-util alert migrate import --url http://localhost:3000 --input-dir ./alerts/raw --replace-existing --dashboard-uid-map ./dashboard-map.json --panel-id-map ./panel-map.json";
-const ALERT_MIGRATE_DIFF_HELP_TEXT: &str = "Examples:\n\n  Compare a local export against Grafana as structured JSON:\n    grafana-util alert migrate diff --url http://localhost:3000 --diff-dir ./alerts/raw --output-format json";
 const VERSION_HELP_TEXT: &str =
     "Examples:\n\n  Print the human-readable version:\n    grafana-util version\n\n  Print machine-readable version details:\n    grafana-util version --json";
 const DASHBOARD_RAW_TO_PROMPT_HELP_TEXT: &str = "Examples:\n\n  Convert one raw dashboard JSON file into a prompt artifact:\n    grafana-util dashboard convert raw-to-prompt --input ./dashboards/raw/cpu-main.json --output ./dashboards/prompt/cpu-main.prompt.json\n\n  Convert a raw export tree into the prompt lane:\n    grafana-util dashboard convert raw-to-prompt --input-dir ./dashboards/raw --output-dir ./dashboards/prompt --output-format table";
@@ -267,183 +258,6 @@ pub enum DashboardRootCommand {
         about = "Open one dashboard in a headless browser and capture image or PDF output."
     )]
     Screenshot(ScreenshotArgs),
-}
-
-#[derive(Debug, Clone, Subcommand)]
-pub enum AlertLiveCommand {
-    #[command(name = "list-rules", about = "List live Grafana alert rules.")]
-    ListRules(AlertListArgs),
-    #[command(
-        name = "list-contact-points",
-        about = "List live Grafana alert contact points."
-    )]
-    ListContactPoints(AlertListArgs),
-    #[command(name = "list-mute-timings", about = "List live Grafana mute timings.")]
-    ListMuteTimings(AlertListArgs),
-    #[command(
-        name = "list-templates",
-        about = "List live Grafana notification templates."
-    )]
-    ListTemplates(AlertListArgs),
-    #[command(
-        name = "delete",
-        about = "Delete one explicit alert resource identity."
-    )]
-    Delete(AlertDeleteArgs),
-}
-
-#[derive(Debug, Clone, Subcommand)]
-pub enum AlertMigrateCommand {
-    #[command(
-        name = "export",
-        about = "Export alerting resources into raw/ JSON files.",
-        after_help = ALERT_MIGRATE_EXPORT_HELP_TEXT
-    )]
-    Export(AlertExportArgs),
-    #[command(
-        name = "import",
-        about = "Import alerting resource JSON files through the Grafana API.",
-        after_help = ALERT_MIGRATE_IMPORT_HELP_TEXT
-    )]
-    Import(AlertImportArgs),
-    #[command(
-        name = "diff",
-        about = "Compare local alerting export files against live Grafana resources.",
-        after_help = ALERT_MIGRATE_DIFF_HELP_TEXT
-    )]
-    Diff(AlertDiffArgs),
-}
-
-#[derive(Debug, Clone, Subcommand)]
-pub enum AlertAuthorRuleCommand {
-    #[command(
-        name = "add",
-        about = "Add a managed alert rule into the staged desired tree."
-    )]
-    Add(AlertAddRuleArgs),
-    #[command(
-        name = "clone",
-        about = "Clone an existing staged alert rule into a new authoring target."
-    )]
-    Clone(AlertCloneRuleArgs),
-}
-
-#[derive(Debug, Clone, Subcommand)]
-pub enum AlertAuthorContactPointCommand {
-    #[command(
-        name = "add",
-        about = "Add a managed contact point into the staged desired tree."
-    )]
-    Add(AlertAddContactPointArgs),
-}
-
-#[derive(Debug, Clone, Subcommand)]
-pub enum AlertAuthorRouteCommand {
-    #[command(
-        name = "set",
-        about = "Set the tool-owned managed route inside the desired tree."
-    )]
-    Set(AlertSetRouteArgs),
-    #[command(
-        name = "preview",
-        about = "Preview how the staged managed route would match labels and severity."
-    )]
-    Preview(AlertPreviewRouteArgs),
-}
-
-#[derive(Debug, Clone, Subcommand)]
-pub enum AlertAuthorCommand {
-    #[command(name = "init", about = "Initialize a staged desired-state alert tree.")]
-    Init(AlertInitArgs),
-    #[command(name = "rule", about = "Author or clone managed alert rules.")]
-    Rule {
-        #[command(subcommand)]
-        command: AlertAuthorRuleCommand,
-    },
-    #[command(name = "contact-point", about = "Author managed alert contact points.")]
-    ContactPoint {
-        #[command(subcommand)]
-        command: AlertAuthorContactPointCommand,
-    },
-    #[command(
-        name = "route",
-        about = "Author or preview the managed alert routing subtree."
-    )]
-    Route {
-        #[command(subcommand)]
-        command: AlertAuthorRouteCommand,
-    },
-}
-
-#[derive(Debug, Clone, Subcommand)]
-pub enum AlertScaffoldCommand {
-    #[command(
-        name = "rule",
-        about = "Seed a low-level rule scaffold into the desired tree."
-    )]
-    Rule(AlertNewResourceArgs),
-    #[command(
-        name = "contact-point",
-        about = "Seed a low-level contact-point scaffold into the desired tree."
-    )]
-    ContactPoint(AlertNewResourceArgs),
-    #[command(
-        name = "template",
-        about = "Seed a low-level template scaffold into the desired tree."
-    )]
-    Template(AlertNewResourceArgs),
-}
-
-#[derive(Debug, Clone, Subcommand)]
-pub enum AlertChangeCommand {
-    #[command(
-        name = "plan",
-        about = "Build a staged alert change plan from desired files."
-    )]
-    Plan(AlertPlanArgs),
-    #[command(
-        name = "apply",
-        about = "Apply a reviewed alert plan after explicit approval."
-    )]
-    Apply(AlertApplyArgs),
-}
-
-#[derive(Debug, Clone, Args)]
-pub struct AlertSurfaceArgs {
-    #[command(subcommand)]
-    pub command: AlertCommandSurface,
-}
-
-#[derive(Debug, Clone, Subcommand)]
-pub enum AlertCommandSurface {
-    #[command(about = "Read live alert inventory or delete one live alert resource.")]
-    Live {
-        #[command(subcommand)]
-        command: AlertLiveCommand,
-    },
-    #[command(
-        about = "Move alert resources between local artifacts and Grafana.",
-        after_help = ALERT_MIGRATE_HELP_TEXT
-    )]
-    Migrate {
-        #[command(subcommand)]
-        command: AlertMigrateCommand,
-    },
-    #[command(about = "Author managed alert desired-state resources.")]
-    Author {
-        #[command(subcommand)]
-        command: AlertAuthorCommand,
-    },
-    #[command(about = "Seed low-level alert resource scaffolds.")]
-    Scaffold {
-        #[command(subcommand)]
-        command: AlertScaffoldCommand,
-    },
-    #[command(about = "Plan or apply staged alert changes.")]
-    Change {
-        #[command(subcommand)]
-        command: AlertChangeCommand,
-    },
 }
 
 #[derive(Debug, Clone, Subcommand)]

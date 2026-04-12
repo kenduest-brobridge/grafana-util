@@ -129,7 +129,6 @@ pub(crate) const DASHBOARD_HELP_SPEC: GroupedHelpSpec = GroupedHelpSpec {
         section!(
             "Edit & Publish",
             [
-                row!("get", "Fetch one dashboard JSON draft."),
                 row!("clone", "Clone one dashboard into a local draft."),
                 row!("patch", "Modify one local dashboard JSON draft."),
                 row!("serve", "Preview local dashboard drafts."),
@@ -305,21 +304,50 @@ pub(crate) const WORKSPACE_HELP_SPEC: GroupedHelpSpec = GroupedHelpSpec {
 
 pub(crate) const ALERT_HELP_SPEC: GroupedHelpSpec = GroupedHelpSpec {
     usage: "grafana-util alert <COMMAND>",
-    sections: &[section!(
-        "Choose the task first",
-        [
-            row!(
-                "inventory",
-                "list-rules, list-contact-points, list-mute-timings, list-templates, delete"
-            ),
-            row!("backup", "export, import, diff"),
-            row!(
-                "authoring",
-                "init, add-rule, clone-rule, add-contact-point, set-route, preview-route, new-rule, new-contact-point, new-template"
-            ),
-            row!("review", "plan, apply"),
-        ]
-    )],
+    sections: &[
+        section!(
+            "Inventory",
+            [
+                row!("list-rules", "List live alert rules."),
+                row!("list-contact-points", "List live contact points."),
+                row!("list-mute-timings", "List live mute timings."),
+                row!("list-templates", "List live notification templates."),
+                row!("delete", "Delete one explicit live alert resource."),
+            ]
+        ),
+        section!(
+            "Backup & Compare",
+            [
+                row!("export", "Export alerting resources."),
+                row!("import", "Import alerting resources."),
+                row!("diff", "Compare local alert files against Grafana."),
+            ]
+        ),
+        section!(
+            "Author Desired State",
+            [
+                row!("init", "Initialize a staged desired-state tree."),
+                row!("add-rule", "Author a managed alert rule."),
+                row!("clone-rule", "Clone a staged alert rule."),
+                row!("add-contact-point", "Author a managed contact point."),
+                row!("set-route", "Set the managed notification route."),
+                row!("preview-route", "Preview managed route matching."),
+                row!("new-rule", "Seed a low-level rule scaffold."),
+                row!(
+                    "new-contact-point",
+                    "Seed a low-level contact point scaffold."
+                ),
+                row!("new-template", "Seed a low-level template scaffold."),
+            ]
+        ),
+        section!(
+            "Review & Apply",
+            [
+                row!("plan", "Build a staged alert change plan."),
+                row!("apply", "Apply a reviewed alert plan."),
+            ]
+        ),
+    ],
     footer: &[
         "More help:",
         "  grafana-util alert <COMMAND> --help",
