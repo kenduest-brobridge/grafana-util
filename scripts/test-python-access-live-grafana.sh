@@ -62,6 +62,11 @@ json_field() {
   jq -r --arg field "${field}" '.[$field] // empty'
 }
 
+access_delete_json_field() {
+  local field="$1"
+  jq -r --arg field "${field}" '.rows[0][$field] // .[$field] // empty'
+}
+
 start_grafana() {
   local publish_args=()
 
@@ -326,7 +331,7 @@ run_team_smoke() {
       --yes \
       --json
   )"
-  [[ "$(printf '%s' "${delete_json}" | jq -r '.name')" == "access-ops" ]] \
+  [[ "$(printf '%s' "${delete_json}" | access_delete_json_field name)" == "access-ops" ]] \
     || fail "team delete did not remove the created team"
 
   wait_for_python_team_absent access-ops \
@@ -425,7 +430,7 @@ run_service_account_smoke() {
       --yes \
       --json
   )"
-  [[ "$(printf '%s' "${token_delete_json}" | jq -r '.tokenName')" == "access-cli-token" ]] \
+  [[ "$(printf '%s' "${token_delete_json}" | access_delete_json_field tokenName)" == "access-cli-token" ]] \
     || fail "service-account token delete did not remove the created token"
 
   delete_json="$(
@@ -437,7 +442,7 @@ run_service_account_smoke() {
       --yes \
       --json
   )"
-  [[ "$(printf '%s' "${delete_json}" | jq -r '.name')" == "access-cli-service-account" ]] \
+  [[ "$(printf '%s' "${delete_json}" | access_delete_json_field name)" == "access-cli-service-account" ]] \
     || fail "service-account delete did not remove the created service account"
 
   service_account_json="$(

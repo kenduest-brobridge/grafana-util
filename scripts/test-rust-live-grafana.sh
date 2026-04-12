@@ -178,6 +178,11 @@ json_field() {
   jq -r --arg field "${field}" '.[$field] // empty'
 }
 
+access_delete_json_field() {
+  local field="$1"
+  jq -r --arg field "${field}" '.rows[0][$field] // .[$field] // empty'
+}
+
 normalize_inspection_report_projection() {
   local path="$1"
 
@@ -1292,7 +1297,7 @@ run_access_smoke() {
       --yes \
       --json
   )"
-  [[ "$(printf '%s' "${delete_json}" | jq -r '.name')" == "rust-access-ops" ]] \
+  [[ "$(printf '%s' "${delete_json}" | access_delete_json_field name)" == "rust-access-ops" ]] \
     || fail "rust access team delete did not remove the created team"
 
   wait_for_rust_team_absent rust-access-ops \
@@ -1690,7 +1695,7 @@ run_access_smoke() {
       --yes \
       --json
   )"
-  [[ "$(printf '%s' "${token_delete_json}" | jq -r '.tokenName')" == "rust-access-token" ]] \
+  [[ "$(printf '%s' "${token_delete_json}" | access_delete_json_field tokenName)" == "rust-access-token" ]] \
     || fail "rust access service-account token delete did not remove the created token"
 
   delete_json="$(
@@ -1703,7 +1708,7 @@ run_access_smoke() {
       --yes \
       --json
   )"
-  [[ "$(printf '%s' "${delete_json}" | jq -r '.name')" == "rust-access-service-account" ]] \
+  [[ "$(printf '%s' "${delete_json}" | access_delete_json_field name)" == "rust-access-service-account" ]] \
     || fail "rust access service-account delete did not remove the created service account"
 
   service_account_json="$(
