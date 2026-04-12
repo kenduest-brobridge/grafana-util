@@ -22,17 +22,17 @@
 
 ## 範例
 ```bash
-# 用途：提供單一本地草稿檔案。
+# 提供單一本地草稿檔案。
 grafana-util dashboard serve --input ./drafts/cpu-main.json --port 18080 --open-browser
 ```
 
 ```bash
-# 用途：提供一個目錄下的所有 dashboard 草稿。
+# 提供一個目錄下的所有 dashboard 草稿。
 grafana-util dashboard serve --input ./dashboards/raw
 ```
 
 ```bash
-# 用途：提供一份生成儀表板，並監看 generator 輸入路徑以便自動 reload。
+# 提供一份生成儀表板，並監看 generator 輸入路徑以便自動 reload。
 grafana-util dashboard serve --script 'jsonnet dashboards/cpu.jsonnet' --watch ./dashboards --watch ./lib --port 18080
 ```
 

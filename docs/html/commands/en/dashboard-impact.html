@@ -326,13 +326,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   font-weight: 500;
 }
 .nav-command-branch-item .nav-command-leaf-link:hover { color: var(--heading); }
-.handbook-command-map .nav-command-root-link {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  font-size: 0.9rem;
-}
 
 .sidebar-toggle {
   position: absolute;
@@ -378,71 +371,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map { margin: 0 0 24px; }
-.handbook-command-map-panel {
-  margin-top: 16px;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--panel) 96%, white);
-}
-.handbook-command-map .nav-group-title {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-group {
-  padding-top: 0;
-}
-.handbook-command-map .nav-command-group + .nav-command-group {
-  margin-top: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
-  padding-top: 10px;
-}
-.handbook-command-map .nav-command-sub-list {
-  margin-top: 8px;
-  margin-left: 0;
-  padding-left: 0;
-  border-left: 0;
-}
-.handbook-command-map .nav-command-branch {
-  display: grid;
-  grid-template-columns: minmax(130px, 0.22fr) minmax(0, 1fr);
-  gap: 12px 18px;
-  align-items: start;
-}
-.handbook-command-map .nav-command-branch-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-left: 0;
-  padding-left: 14px;
-}
-.handbook-command-map .nav-command-branch-item + .nav-command-branch-item { margin-top: 0; }
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-  line-height: 1.25;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link:hover,
-.handbook-command-map .nav-command-link a:hover {
-  border-color: color-mix(in srgb, var(--border) 45%, var(--accent));
-  background: var(--panel-strong);
-}
-@media (max-width: 720px) {
-  .handbook-command-map .nav-command-branch {
-    grid-template-columns: 1fr;
-  }
-  .handbook-command-map .nav-command-branch-list {
-    padding-left: 0;
-    border-left: 0;
-  }
-}
 .article p,
 .article li { color: var(--text); font-weight: 460; }
 .article ul li::marker,
@@ -952,26 +880,26 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="key-flags">Key flags</h2>
 <ul><li><code>--url</code>: analyze live Grafana directly.</li><li><code>--input-dir</code>: analyze a local export tree directly.</li><li><code>--input-format</code>: choose <code>raw</code>, <code>provisioning</code>, or <code>git-sync</code> when analyzing local exports.</li><li><code>--governance</code>: dashboard governance JSON input (<code>governance-json</code> artifact).</li><li><code>--datasource-uid</code>: datasource UID to trace.</li><li><code>--alert-contract</code>: optional alert contract JSON input.</li><li><code>--output-format</code>: render <code>text</code> or <code>json</code>.</li><li><code>--interactive</code>: open the interactive terminal browser.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code># Purpose: Estimate the blast radius of one datasource directly from live Grafana.
+<pre><code># Estimate the blast radius of one datasource directly from live Grafana.
 grafana-util dashboard impact \
   --url http://localhost:3000 \
   --basic-user admin \
   --basic-password admin \
   --datasource-uid prom-main \
   --output-format text</code></pre>
-<pre><code># Purpose: Estimate the blast radius of one datasource from a local export tree.
+<pre><code># Estimate the blast radius of one datasource from a local export tree.
 grafana-util dashboard impact \
   --input-dir ./dashboards/raw \
   --input-format raw \
   --datasource-uid prom-main \
   --output-format json</code></pre>
-<pre><code># Purpose: Estimate the blast radius of one datasource from a repo-backed Git Sync tree.
+<pre><code># Estimate the blast radius of one datasource from a repo-backed Git Sync tree.
 grafana-util dashboard impact \
   --input-dir ./grafana-oac-repo \
   --input-format git-sync \
   --datasource-uid prom-main \
   --output-format json</code></pre>
-<pre><code># Purpose: Estimate the blast radius of one datasource from reusable dashboard governance artifacts.
+<pre><code># Estimate the blast radius of one datasource from reusable dashboard governance artifacts.
 grafana-util dashboard impact \
   --governance ./governance.json \
   --datasource-uid prom-main \

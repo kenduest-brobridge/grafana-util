@@ -326,13 +326,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   font-weight: 500;
 }
 .nav-command-branch-item .nav-command-leaf-link:hover { color: var(--heading); }
-.handbook-command-map .nav-command-root-link {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  font-size: 0.9rem;
-}
 
 .sidebar-toggle {
   position: absolute;
@@ -378,71 +371,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map { margin: 0 0 24px; }
-.handbook-command-map-panel {
-  margin-top: 16px;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--panel) 96%, white);
-}
-.handbook-command-map .nav-group-title {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-group {
-  padding-top: 0;
-}
-.handbook-command-map .nav-command-group + .nav-command-group {
-  margin-top: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
-  padding-top: 10px;
-}
-.handbook-command-map .nav-command-sub-list {
-  margin-top: 8px;
-  margin-left: 0;
-  padding-left: 0;
-  border-left: 0;
-}
-.handbook-command-map .nav-command-branch {
-  display: grid;
-  grid-template-columns: minmax(130px, 0.22fr) minmax(0, 1fr);
-  gap: 12px 18px;
-  align-items: start;
-}
-.handbook-command-map .nav-command-branch-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-left: 0;
-  padding-left: 14px;
-}
-.handbook-command-map .nav-command-branch-item + .nav-command-branch-item { margin-top: 0; }
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-  line-height: 1.25;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link:hover,
-.handbook-command-map .nav-command-link a:hover {
-  border-color: color-mix(in srgb, var(--border) 45%, var(--accent));
-  background: var(--panel-strong);
-}
-@media (max-width: 720px) {
-  .handbook-command-map .nav-command-branch {
-    grid-template-columns: 1fr;
-  }
-  .handbook-command-map .nav-command-branch-list {
-    padding-left: 0;
-    border-left: 0;
-  }
-}
 .article p,
 .article li { color: var(--text); font-weight: 460; }
 .article ul li::marker,
@@ -920,93 +848,121 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
       <div class="layout">
 <aside class="nav-sidebar">
   <button class="sidebar-toggle sidebar-toggle-left" type="button" aria-expanded="true" aria-label="Toggle handbook navigation">◀</button>
-  <div class="nav-sidebar-content"><section class="nav-section"><h2>Guide Map</h2><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 1 · Start Here</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="index.html" class="nav-item">Overview</a></li><li class="nav-tree-node"><a href="what-is-grafana-util.html" class="nav-item">What grafana-util is for</a></li><li class="nav-tree-node"><a href="getting-started.html" class="nav-item">Getting Started</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 2 · Role Paths</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="role-new-user.html" class="nav-item">First Run / Beginner Path</a></li><li class="nav-tree-node"><a href="role-sre-ops.html" class="nav-item">SRE / Operator</a></li><li class="nav-tree-node"><a href="role-automation-ci.html" class="nav-item">Automation / CI</a></li></ul></div><div class="nav-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Part 3 · Operation Surfaces</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="status-workspace.html" class="nav-item">Status &amp; Workspace</a></li><li class="nav-tree-node"><a href="dashboard.html" class="nav-item">Dashboard</a></li><li class="nav-tree-node"><a href="datasource.html" class="nav-item">Datasource</a></li><li class="nav-tree-node"><a href="alert.html" class="nav-item active">Alert</a></li><li class="nav-tree-node"><a href="access.html" class="nav-item">Access</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 4 · Design Principles</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="architecture.html" class="nav-item">Design Principles</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 5 · Reference &amp; Troubleshooting</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="scenarios.html" class="nav-item">Scenarios</a></li><li class="nav-tree-node"><a href="recipes.html" class="nav-item">Recipes</a></li><li class="nav-tree-node"><a href="reference.html" class="nav-item">Reference</a></li><li class="nav-tree-node"><a href="troubleshooting.html" class="nav-item">Troubleshooting</a></li></ul></div></section><section class="nav-section nav-command-section collapsed"><button class="nav-group-header nav-section-toggle" type="button" aria-expanded="false"><span class="nav-group-title-text">Command Relationships</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-section-body"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Review</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><a href="../../commands/en/alert.html" class="nav-command-root-link">alert</a></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/en/alert-list-rules.html" class="nav-command-leaf-link">list-rules</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-list-contact-points.html" class="nav-command-leaf-link">list-contact-points</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-list-mute-timings.html" class="nav-command-leaf-link">list-mute-timings</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-list-templates.html" class="nav-command-leaf-link">list-templates</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-diff.html" class="nav-command-leaf-link">diff</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-plan.html" class="nav-command-leaf-link">plan</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-preview-route.html" class="nav-command-leaf-link">preview-route</a></li></ul></div></div></div><div class="nav-group nav-command-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Author</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><span class="nav-command-root-link nav-command-root-static">alert</span></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/en/alert-new-rule.html" class="nav-command-leaf-link">new-rule</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-add-rule.html" class="nav-command-leaf-link">add-rule</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-clone-rule.html" class="nav-command-leaf-link">clone-rule</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-new-contact-point.html" class="nav-command-leaf-link">new-contact-point</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-add-contact-point.html" class="nav-command-leaf-link">add-contact-point</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-new-template.html" class="nav-command-leaf-link">new-template</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-set-route.html" class="nav-command-leaf-link">set-route</a></li></ul></div></div></div><div class="nav-group nav-command-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Move and Apply</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><span class="nav-command-root-link nav-command-root-static">alert</span></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/en/alert-export.html" class="nav-command-leaf-link">export</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-import.html" class="nav-command-leaf-link">import</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-apply.html" class="nav-command-leaf-link">apply</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-delete.html" class="nav-command-leaf-link">delete</a></li></ul></div></div></div></div></section><section class="nav-section"><h2>Command Reference</h2><a href="../../commands/en/index.html" class="nav-command-entry">Open command reference</a></section></div>
+  <div class="nav-sidebar-content"><section class="nav-section"><h2>Guide Map</h2><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 1 · Start Here</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="index.html" class="nav-item">Overview</a></li><li class="nav-tree-node"><a href="what-is-grafana-util.html" class="nav-item">What grafana-util is for</a></li><li class="nav-tree-node"><a href="getting-started.html" class="nav-item">Getting Started</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 2 · Role Paths</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="role-new-user.html" class="nav-item">First Run / Beginner Path</a></li><li class="nav-tree-node"><a href="role-sre-ops.html" class="nav-item">SRE / Operator</a></li><li class="nav-tree-node"><a href="role-automation-ci.html" class="nav-item">Automation / CI</a></li></ul></div><div class="nav-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Part 3 · Operation Surfaces</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="status-workspace.html" class="nav-item">Status &amp; Workspace</a></li><li class="nav-tree-node"><a href="dashboard.html" class="nav-item">Dashboard</a></li><li class="nav-tree-node"><a href="datasource.html" class="nav-item">Datasource</a></li><li class="nav-tree-node"><a href="alert.html" class="nav-item active">Alert</a></li><li class="nav-tree-node"><a href="access.html" class="nav-item">Access</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 4 · Design Principles</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="architecture.html" class="nav-item">Design Principles</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 5 · Reference &amp; Troubleshooting</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="scenarios.html" class="nav-item">Scenarios</a></li><li class="nav-tree-node"><a href="recipes.html" class="nav-item">Recipes</a></li><li class="nav-tree-node"><a href="reference.html" class="nav-item">Reference</a></li><li class="nav-tree-node"><a href="troubleshooting.html" class="nav-item">Troubleshooting</a></li></ul></div></section><section class="nav-section nav-command-section collapsed"><button class="nav-group-header nav-section-toggle" type="button" aria-expanded="false"><span class="nav-group-title-text">Command Shortcuts</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-section-body"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Review</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><a href="../../commands/en/alert.html" class="nav-command-root-link">alert</a></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/en/alert-list-rules.html" class="nav-command-leaf-link">list-rules</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-list-contact-points.html" class="nav-command-leaf-link">list-contact-points</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-list-mute-timings.html" class="nav-command-leaf-link">list-mute-timings</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-list-templates.html" class="nav-command-leaf-link">list-templates</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-diff.html" class="nav-command-leaf-link">diff</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-plan.html" class="nav-command-leaf-link">plan</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-preview-route.html" class="nav-command-leaf-link">preview-route</a></li></ul></div></div></div><div class="nav-group nav-command-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Author</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><span class="nav-command-root-link nav-command-root-static">alert</span></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/en/alert-new-rule.html" class="nav-command-leaf-link">new-rule</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-add-rule.html" class="nav-command-leaf-link">add-rule</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-clone-rule.html" class="nav-command-leaf-link">clone-rule</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-new-contact-point.html" class="nav-command-leaf-link">new-contact-point</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-add-contact-point.html" class="nav-command-leaf-link">add-contact-point</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-new-template.html" class="nav-command-leaf-link">new-template</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-set-route.html" class="nav-command-leaf-link">set-route</a></li></ul></div></div></div><div class="nav-group nav-command-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Move and Apply</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><span class="nav-command-root-link nav-command-root-static">alert</span></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/en/alert-export.html" class="nav-command-leaf-link">export</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-import.html" class="nav-command-leaf-link">import</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-apply.html" class="nav-command-leaf-link">apply</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-delete.html" class="nav-command-leaf-link">delete</a></li></ul></div></div></div></div></section><section class="nav-section"><h2>Command Reference</h2><a href="../../commands/en/index.html" class="nav-command-entry">Open command reference</a></section></div>
 </aside>
 
 <article class="article">
 <div class="breadcrumbs"><a href="../../index.html">Home</a> / Handbook / Alert</div>
 
-<div class="hero-eyebrow">Part 3 · Operation Surfaces · Chapter 10 of 16</div><h1><span class="hero-title-main">Alert</span></h1><p class="hero-subtitle">Alert Operator Handbook</p>
+<div class="hero-eyebrow">Part 3 · Operation Surfaces</div><h1><span class="hero-title-main">Alert</span></h1><p class="hero-subtitle">Alert Operator Handbook</p>
 
-<section class="section-index"><h2>Chapter Index</h2><p class="section-index-summary">Jump straight to the section you need.</p><ul class="section-index-list layout-list"><li><a href="#command-relationships">Command Relationships</a></li><li><a href="#who-it-is-for">Who It Is For</a></li><li><a href="#primary-goals">Primary Goals</a></li><li><a href="#before-after">Before / After</a></li><li><a href="#what-success-looks-like">What success looks like</a></li><li><a href="#failure-checks">Failure checks</a></li><li><a href="#command-pages">Command Pages</a></li><li><a href="#what-this-area-is-for">What This Area Is For</a></li><li><a href="#workflow-boundaries-four-lanes">Workflow Boundaries (Four Lanes)</a></li><li><a href="#authoring-desired-state">Authoring Desired State</a></li><li><a href="#review-and-apply-the-review-cycle">Review and Apply (The Review Cycle)</a></li><li><a href="#key-commands-full-argument-reference">Key Commands (Full Argument Reference)</a></li><li><a href="#validated-docker-examples">Validated Docker Examples</a></li></ul></section><section class="handbook-command-map"><h2 id="command-relationships">Command Relationships</h2><div class="handbook-command-map-panel"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Review</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><a href="../../commands/en/alert.html" class="nav-command-root-link">alert</a></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/en/alert-list-rules.html" class="nav-command-leaf-link">list-rules</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-list-contact-points.html" class="nav-command-leaf-link">list-contact-points</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-list-mute-timings.html" class="nav-command-leaf-link">list-mute-timings</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-list-templates.html" class="nav-command-leaf-link">list-templates</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-diff.html" class="nav-command-leaf-link">diff</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-plan.html" class="nav-command-leaf-link">plan</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-preview-route.html" class="nav-command-leaf-link">preview-route</a></li></ul></div></div></div><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Author</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><span class="nav-command-root-link nav-command-root-static">alert</span></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/en/alert-new-rule.html" class="nav-command-leaf-link">new-rule</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-add-rule.html" class="nav-command-leaf-link">add-rule</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-clone-rule.html" class="nav-command-leaf-link">clone-rule</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-new-contact-point.html" class="nav-command-leaf-link">new-contact-point</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-add-contact-point.html" class="nav-command-leaf-link">add-contact-point</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-new-template.html" class="nav-command-leaf-link">new-template</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-set-route.html" class="nav-command-leaf-link">set-route</a></li></ul></div></div></div><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Move and Apply</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><span class="nav-command-root-link nav-command-root-static">alert</span></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/en/alert-export.html" class="nav-command-leaf-link">export</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-import.html" class="nav-command-leaf-link">import</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-apply.html" class="nav-command-leaf-link">apply</a></li><li class="nav-command-branch-item"><a href="../../commands/en/alert-delete.html" class="nav-command-leaf-link">delete</a></li></ul></div></div></div></div></section><p>This guide is for operators who need to author alerting changes locally, review the delta before applying it, or replay legacy alert bundles without guessing at the live effect.</p>
-<p>This guide covers <code>grafana-util alert</code> as an operator workflow for alert desired-state authoring, review-first mutation, and replay flows.</p>
+<section class="section-index"><h2>Chapter Index</h2><p class="section-index-summary">Jump straight to the section you need.</p><ul class="section-index-list layout-list"><li><a href="#who-it-is-for">Who It Is For</a></li><li><a href="#alert-objects">Alert Objects</a></li><li><a href="#primary-goals">Primary Goals</a></li><li><a href="#what-success-looks-like">What Success Looks Like</a></li><li><a href="#alert-workflow-map">Alert Workflow Map</a></li><li><a href="#inventory-know-what-is-live">Inventory: Know What Is Live</a></li><li><a href="#migration-raw-bundles-are-snapshots">Migration: Raw Bundles Are Snapshots</a></li><li><a href="#authoring-desired-state-is-intent">Authoring: Desired State Is Intent</a></li><li><a href="#routing-preview-before-set">Routing: Preview Before Set</a></li><li><a href="#review-apply-plan-is-the-gate">Review / Apply: Plan Is The Gate</a></li><li><a href="#when-to-use-command-reference">When To Use Command Reference</a></li><li><a href="#failure-checks">Failure Checks</a></li></ul></section><p>This chapter is not a rewrite of <code>grafana-util alert --help</code>. It answers the operational question first: when you change Grafana Alerting, which connected objects move with the change, and should you inspect live state, author desired state, or produce a reviewed plan before touching Grafana?</p>
+<p>Alerting work is rarely about one rule in isolation. A rule connects to a folder, rule group, labels, contact points, notification policy, templates, and mute timings. A mistake in one part may not look like a syntax failure; it may mean the right person never receives the page.</p>
+<p>Read the <code>alert</code> subcommands as a workflow: inventory, backup, authoring, routing, review, and apply. The command reference still matters, but it should be where you confirm exact flags after you know which lane you are in.</p>
 <h2 id="who-it-is-for">Who It Is For</h2>
-<ul><li>Operators maintaining Grafana Alerting rules, routes, contact points, and templates.</li><li>Reviewers who need to understand an alert bundle before apply.</li><li>Teams moving alerting state through Git, review, or CI workflows.</li></ul>
+<ul><li>Operators maintaining Grafana Alerting rules, contact points, routes, templates, or mute timings.</li><li>Reviewers who need to understand alert changes before they reach live Grafana.</li><li>Teams moving alerting state through Git, review, or CI workflows.</li></ul>
+<h2 id="alert-objects">Alert Objects</h2>
+<p><code>grafana-util alert</code> is not only about rules. It deals with several connected assets:</p>
+<table><thead><tr><th>Asset</th><th>Question to answer first</th><th>Common commands</th></tr></thead><tbody><tr><td>Rule</td><td>Which folder / rule group changes? Are conditions, labels, and annotations complete?</td><td><code>list-rules</code>, <code>new-rule</code>, <code>add-rule</code>, <code>clone-rule</code></td></tr><tr><td>Contact point</td><td>Where will the notification go? Does the receiver name match the route?</td><td><code>list-contact-points</code>, <code>new-contact-point</code>, <code>add-contact-point</code></td></tr><tr><td>Route / policy</td><td>Which labels match which receiver? Is a matcher too broad?</td><td><code>set-route</code>, <code>preview-route</code></td></tr><tr><td>Template</td><td>Does the notification content also need to move or be authored?</td><td><code>list-templates</code>, <code>new-template</code></td></tr><tr><td>Mute timing</td><td>When should alerts not notify? Does migration need to include the timing?</td><td><code>list-mute-timings</code></td></tr><tr><td>Desired state</td><td>Local files that represent the Grafana state you want.</td><td><code>init</code>, <code>add-*</code>, <code>set-route</code>, <code>plan</code></td></tr><tr><td>Raw bundle</td><td>A snapshot exported from live Grafana for backup, migration, and diff.</td><td><code>export</code>, <code>import</code>, <code>diff</code></td></tr><tr><td>Plan</td><td>The review artifact produced by comparing desired state with live Grafana.</td><td><code>plan</code>, <code>apply</code></td></tr></tbody></table>
+<p>The boundaries matter. <code>raw/</code> export bundles are for moving current state. <code>desired/</code> files are for staging intent. A <code>plan</code> is the review evidence before apply. Mixing those paths is how a one-rule change accidentally becomes a route change or a delete candidate.</p>
 <h2 id="primary-goals">Primary Goals</h2>
-<ul><li>Build or import alert desired state without touching live Grafana first.</li><li>Review plan output before an apply path.</li><li>Use replay and migration flows without guessing what live resources will workspace.</li></ul>
-<h2 id="before-after">Before / After</h2>
-<ul><li>Before: alert changes often lived in a mixed UI and YAML path with little review context.</li><li>After: authoring, plan output, and apply become separate checkpoints with clearer evidence.</li></ul>
-<h2 id="what-success-looks-like">What success looks like</h2>
-<ul><li>You can tell whether you are editing desired state, reviewing a plan, or applying a real workspace.</li><li>You can explain which part of the alerting chain is affected before touching live state.</li><li>You can read the output and know whether the plan is safe to proceed.</li></ul>
-<h2 id="failure-checks">Failure checks</h2>
-<ul><li>If the plan output is missing a contact point or route you expected, stop and verify the staged input first.</li><li>If the apply path would touch more than you intended, treat that as a review failure, not a rendering issue.</li><li>If you cannot explain the alert lane you are in, return to the workflow chapter before mutating anything.</li></ul>
-<p>&gt; <strong>Operator Principle</strong>: Change alerts deliberately through a <strong>Plan -&gt; Review -&gt; Apply</strong> cycle to prevent accidental mutations in live environments.</p>
-<h2 id="command-pages">Command Pages</h2>
-<p>Need the command-by-command surface instead of the workflow guide?</p>
-<ul><li><a href="../../commands/en/alert.html">alert</a></li><li><a href="../../commands/en/alert-plan.html">alert plan</a></li><li><a href="../../commands/en/alert-apply.html">alert apply</a></li><li><a href="../../commands/en/alert-list-rules.html">alert list-rules</a></li><li><a href="../../commands/en/alert-list-contact-points.html">alert list-contact-points</a></li><li><a href="../../commands/en/alert-list-mute-timings.html">alert list-mute-timings</a></li><li><a href="../../commands/en/alert-list-templates.html">alert list-templates</a></li><li><a href="../../commands/en/index.html">full command index</a></li></ul>
-<h2 id="what-this-area-is-for">What This Area Is For</h2>
-<p>Use the alert area when the work is about Grafana alerting resources:</p>
-<ul><li><strong>Inventory</strong>: Inspect live rules, contact points, mute timings, and templates before you change anything.</li><li><strong>Backup</strong>: Export, import, or diff alert resources and bundles.</li><li><strong>Authoring</strong>: Build new alert configurations locally without touching live Grafana.</li><li><strong>Review</strong>: Compare your desired state against the live estate before approving changes, then apply only what you reviewed.</li></ul>
-<h2 id="workflow-boundaries-four-lanes">Workflow Boundaries (Four Lanes)</h2>
-<p>Alerting is split into four distinct operational lanes. <strong>Do not mix these lanes.</strong></p>
-<table><thead><tr><th>Lane</th><th>Purpose</th><th>Common Commands</th></tr></thead><tbody><tr><td><strong>Inventory</strong></td><td>Inspect the live alert estate before you change anything.</td><td><code>list-rules</code>, <code>list-contact-points</code>, <code>list-mute-timings</code>, <code>list-templates</code>, <code>delete</code></td></tr><tr><td><strong>Backup</strong></td><td>Export, import, or diff alert resources and bundles.</td><td><code>export</code>, <code>import</code>, <code>diff</code></td></tr><tr><td><strong>Authoring</strong></td><td>Scaffold and edit desired-state files for review/apply.</td><td><code>init</code>, <code>add-rule</code>, <code>clone-rule</code>, <code>add-contact-point</code>, <code>set-route</code>, <code>preview-route</code>, <code>new-rule</code>, <code>new-contact-point</code>, <code>new-template</code></td></tr><tr><td><strong>Review</strong></td><td>Build and apply a reviewed plan.</td><td><code>plan</code>, <code>apply</code></td></tr></tbody></table>
-<h2 id="authoring-desired-state">Authoring Desired State</h2>
-<p>Start by scaffolding a desired-state tree. This creates local files that represent your &quot;intent&quot;.</p>
-<pre><code># Initialize a desired-state tree
-grafana-util alert init --desired-dir ./alerts/desired
-
-# Add a rule to your local files (does not touch Grafana yet)
+<ul><li>Inspect live Grafana before changing it.</li><li>Turn alert changes into local, reviewable files.</li><li>Use plans to explain create / update / delete / noop before apply.</li><li>Keep raw migration flows separate from desired-state authoring.</li></ul>
+<h2 id="what-success-looks-like">What Success Looks Like</h2>
+<ul><li>You can say whether the task is inventory, backup, authoring, routing, or review/apply.</li><li>You know whether a subcommand consumes live Grafana, a raw bundle, a desired directory, or a reviewed plan.</li><li>Before <code>apply</code>, you have reviewed the plan and understand whether <code>--prune</code> creates delete candidates.</li></ul>
+<h2 id="alert-workflow-map">Alert Workflow Map</h2>
+<table><thead><tr><th>Job</th><th>Start here</th><th>Main input</th><th>Main output</th><th>Next step</th></tr></thead><tbody><tr><td>Inspect live alerting</td><td><code>list-rules</code>, <code>list-contact-points</code>, <code>list-mute-timings</code>, <code>list-templates</code></td><td>Grafana connection and permissions</td><td>Table, YAML, or JSON inventory</td><td>Decide whether to export or author</td></tr><tr><td>Back up or move current state</td><td><code>export</code></td><td>live Grafana</td><td><code>raw/</code> bundle</td><td><code>diff</code>, <code>import</code>, review</td></tr><tr><td>Compare a bundle with live</td><td><code>diff</code></td><td><code>raw/</code> bundle + live Grafana</td><td>diff summary or JSON</td><td>Import, re-export, or stop</td></tr><tr><td>Recreate exported state</td><td><code>import</code></td><td><code>raw/</code> bundle</td><td>live mutation or dry-run output</td><td>Dry-run before import</td></tr><tr><td>Author desired state</td><td><code>init</code>, <code>new-<em></code>, <code>add-</em></code>, <code>clone-rule</code>, <code>set-route</code></td><td>local desired dir</td><td>reviewable staged files</td><td><code>preview-route</code>, <code>plan</code></td></tr><tr><td>Preview routing</td><td><code>preview-route</code></td><td>desired dir + labels</td><td>matcher / receiver preview</td><td>adjust route or plan</td></tr><tr><td>Produce a change plan</td><td><code>plan</code></td><td>desired dir + live Grafana</td><td>plan JSON / text</td><td>human review</td></tr><tr><td>Apply reviewed changes</td><td><code>apply</code></td><td>reviewed plan file</td><td>live mutation result</td><td>inventory after apply</td></tr></tbody></table>
+<h2 id="inventory-know-what-is-live">Inventory: Know What Is Live</h2>
+<p>If you do not know what Grafana currently contains, do not start with export, import, or apply. Start with inventory:</p>
+<pre><code># Inspect rules first, including folder, rule group, and labels.
+grafana-util alert list-rules --profile prod --output-format table</code></pre>
+<pre><code># Inspect contact points so receiver names can be matched against routes.
+grafana-util alert list-contact-points --profile prod --output-format yaml</code></pre>
+<pre><code># Inspect templates and mute timings before migration.
+grafana-util alert list-templates --profile prod --output-format table
+grafana-util alert list-mute-timings --profile prod --output-format table</code></pre>
+<p>If inventory is missing resources you expected, check token permissions and org scope before you mutate anything.</p>
+<p><code>list-rules</code> is more than a way to print rule names. It is the first sanity check before and after alert changes. When reading its output, check rule name, folder, rule group, org scope, labels, and receiver-related fields. If you are migrating rules, also look for dashboard UID / panel ID links that must still make sense in the target environment. Use <code>--output-format table</code> for human review, and JSON / YAML when CI or a saved artifact will consume the result.</p>
+<p>The next step depends on what inventory shows. If you only need to preserve current state, run <code>alert export</code>. If you want to derive a new rule from an existing one, use <code>clone-rule</code>. If receiver or route names do not line up, continue with <code>list-contact-points</code> and <code>preview-route</code>. If this is post-apply verification, rerun <code>plan</code> or at least preserve before/after inventory.</p>
+<h2 id="migration-raw-bundles-are-snapshots">Migration: Raw Bundles Are Snapshots</h2>
+<p><code>alert export</code> writes live Grafana alerting resources into <code>raw/</code> JSON. This lane is for backup, migration, comparison, and disaster recovery. It is not the same as desired-state authoring.</p>
+<pre><code># Export live alert state into a raw bundle.
+grafana-util alert export --profile prod --output-dir ./alerts --overwrite</code></pre>
+<pre><code># Compare the raw bundle with the target Grafana estate.
+grafana-util alert diff --profile prod --diff-dir ./alerts/raw --output-format json</code></pre>
+<pre><code># Dry-run an import before mutating live Grafana.
+grafana-util alert import \
+  --profile prod \
+  --input-dir ./alerts/raw \
+  --replace-existing \
+  --dry-run --json</code></pre>
+<p>If rules are linked to dashboards or panels and the target environment uses different dashboard UIDs or panel IDs, prepare <code>--dashboard-uid-map</code> and <code>--panel-id-map</code> before diff / import / plan.</p>
+<h2 id="authoring-desired-state-is-intent">Authoring: Desired State Is Intent</h2>
+<p>The authoring lane creates the state you want, locally, before live Grafana changes.</p>
+<pre><code># Create the desired-state directory.
+grafana-util alert init --desired-dir ./alerts/desired</code></pre>
+<p>Use <code>new-*</code> when you want a low-level scaffold:</p>
+<pre><code># Create a rule scaffold that you will fill in later.
+grafana-util alert new-rule --desired-dir ./alerts/desired --name cpu-main</code></pre>
+<p>Use <code>add-rule</code> for day-to-day authoring because it can write the rule, placement, receiver, severity, threshold, labels, and annotations together.</p>
+<pre><code># Author a staged rule without touching live Grafana.
 grafana-util alert add-rule \
   --desired-dir ./alerts/desired \
-  --name cpu-high --folder platform-alerts \
-  --receiver pagerduty-primary --threshold 80 --above --for 5m</code></pre>
-<h2 id="review-and-apply-the-review-cycle">Review and Apply (The Review Cycle)</h2>
-<p>Use <code>plan</code> to build a preview of the delta between your local files and live Grafana.</p>
-<pre><code># Generate a plan for review
+  --name cpu-high \
+  --folder platform-alerts \
+  --rule-group cpu \
+  --receiver pagerduty-primary \
+  --severity critical \
+  --expr &#x27;A&#x27; \
+  --threshold 80 \
+  --above \
+  --for 5m \
+  --label team=platform \
+  --annotation summary=&#x27;CPU high&#x27;</code></pre>
+<p>Use <code>clone-rule</code> when a new rule should start from an existing one. Use <code>new-contact-point</code> / <code>new-template</code> for low-level scaffolds, and <code>add-contact-point</code> for the higher-level contact-point authoring path.</p>
+<h2 id="routing-preview-before-set">Routing: Preview Before Set</h2>
+<p>Routing failures are often semantic, not syntactic. Preview matcher input first, then write the managed route.</p>
+<pre><code># Preview the matcher input before writing route state.
+grafana-util alert preview-route \
+  --desired-dir ./alerts/desired \
+  --label team=platform \
+  --severity critical</code></pre>
+<pre><code># Write the managed route after the receiver and matchers look right.
+grafana-util alert set-route \
+  --desired-dir ./alerts/desired \
+  --receiver pagerduty-primary \
+  --label team=platform \
+  --severity critical</code></pre>
+<p><code>set-route</code> replaces the tool-managed route. It is not an arbitrary merge into a hand-written policy tree. If you need to preserve a complex existing policy, export and diff the live policy first.</p>
+<h2 id="review-apply-plan-is-the-gate">Review / Apply: Plan Is The Gate</h2>
+<p><code>plan</code> compares desired state with live Grafana. Treat it as a review artifact, not as disposable terminal output.</p>
+<pre><code># Produce a plan without applying live mutations.
 grafana-util alert plan \
-  --url http://localhost:3000 \
-  --basic-user admin --basic-password admin \
-  --desired-dir ./alerts/desired --prune --output-format json</code></pre>
-<p><strong>How to Read the Plan Output:</strong></p>
-<ul><li><strong>create</strong>: Desired resource is missing in live Grafana.</li><li><strong>update</strong>: Live Grafana differs from your desired file.</li><li><strong>delete</strong>: Triggered by <code>--prune</code> when a live resource is not in your files.</li></ul>
-<p><strong>Validated Apply Step:</strong> Only execute after the plan has been reviewed and saved.</p>
-<pre><code># Purpose: Only execute after the plan has been reviewed and saved.
+  --profile prod \
+  --desired-dir ./alerts/desired \
+  --prune \
+  --output-format json</code></pre>
+<p>When reviewing a plan, check at least:</p>
+<ul><li><code>create</code>: desired state exists but live Grafana is missing it.</li><li><code>update</code>: both sides exist but differ.</li><li><code>delete</code>: enabled by <code>--prune</code> when live has a resource absent from desired state.</li><li><code>noop</code>: both sides match.</li><li><code>blocked</code>: the tool decided the item should not be applied directly.</li></ul>
+<p><code>--prune</code> is useful and dangerous. On a first rollout, run one plan without <code>--prune</code>, then run another with <code>--prune</code> and compare the delete candidates.</p>
+<pre><code># Apply only a reviewed and saved plan.
 grafana-util alert apply \
+  --profile prod \
   --plan-file ./alert-plan-reviewed.json \
-  --approve --output-format json</code></pre>
-<h2 id="key-commands-full-argument-reference">Key Commands (Full Argument Reference)</h2>
-<table><thead><tr><th>Command</th><th>Full Example with Arguments</th></tr></thead><tbody><tr><td><strong>List Rules</strong></td><td><code>grafana-util alert list-rules --all-orgs --table</code></td></tr><tr><td><strong>Init</strong></td><td><code>grafana-util alert init --desired-dir ./alerts/desired</code></td></tr><tr><td><strong>Export</strong></td><td><code>grafana-util alert export --output-dir ./alerts --overwrite</code></td></tr><tr><td><strong>Import</strong></td><td><code>grafana-util alert import --input-dir ./alerts/raw --replace-existing --dry-run --json</code></td></tr><tr><td><strong>Diff</strong></td><td><code>grafana-util alert diff --diff-dir ./alerts/raw --output-format json</code></td></tr><tr><td><strong>Plan</strong></td><td><code>grafana-util alert plan --desired-dir ./alerts/desired --prune --output-format json</code></td></tr><tr><td><strong>Apply</strong></td><td><code>grafana-util alert apply --plan-file ./plan.json --approve</code></td></tr><tr><td><strong>Set Route</strong></td><td><code>grafana-util alert set-route --desired-dir ./alerts/desired --receiver pagerduty</code></td></tr><tr><td><strong>Preview Route</strong></td><td><code>grafana-util alert preview-route --desired-dir ./alerts/desired --label team=platform --severity critical</code></td></tr></tbody></table>
-<h2 id="validated-docker-examples">Validated Docker Examples</h2>
-<h3 id="1-alert-plan-excerpt">1. Alert Plan Excerpt</h3>
-<pre><code># Purpose: 1. Alert Plan Excerpt.
-grafana-util alert plan --desired-dir ./alerts/desired --prune --output-format json</code></pre>
-<p><strong>Output Excerpt:</strong></p>
-<pre><code>{
-  &quot;summary&quot;: {
-    &quot;create&quot;: 1,
-    &quot;update&quot;: 2,
-    &quot;delete&quot;: 1,
-    &quot;noop&quot;: 0,
-    &quot;blocked&quot;: 0
-  }
-}</code></pre>
-<h3 id="2-route-preview">2. Route Preview</h3>
-<p>Verify your routing logic locally before applying.</p>
-<pre><code># Purpose: Verify your routing logic locally before applying.
-grafana-util alert preview-route --desired-dir ./alerts/desired --label team=platform --severity critical</code></pre>
-<p><strong>Output Excerpt:</strong></p>
-<pre><code>{
-  &quot;input&quot;: { &quot;labels&quot;: { &quot;team&quot;: &quot;platform&quot; }, &quot;severity&quot;: &quot;critical&quot; },
-  &quot;matches&quot;: []
-}</code></pre>
-<p><em>Note: A blank match list means the contract was evaluated successfully, not necessarily that a live alert exists.</em></p>
+  --approve \
+  --output-format json</code></pre>
+<p>Do not apply a just-generated plan that nobody has reviewed. In practice, save the plan as a PR artifact, change-ticket attachment, or traceable file.</p>
+<h2 id="when-to-use-command-reference">When To Use Command Reference</h2>
+<p>This chapter explains the workflow. Once you know the subcommand, open the command reference for exact flags:</p>
+<ul><li><a href="../../commands/en/alert.html">alert</a></li><li><a href="../../commands/en/alert-list-rules.html">alert list-rules</a></li><li><a href="../../commands/en/alert-list-contact-points.html">alert list-contact-points</a></li><li><a href="../../commands/en/alert-list-mute-timings.html">alert list-mute-timings</a></li><li><a href="../../commands/en/alert-list-templates.html">alert list-templates</a></li><li><a href="../../commands/en/alert-export.html">alert export</a></li><li><a href="../../commands/en/alert-import.html">alert import</a></li><li><a href="../../commands/en/alert-diff.html">alert diff</a></li><li><a href="../../commands/en/alert-new-rule.html">alert new-rule</a></li><li><a href="../../commands/en/alert-add-rule.html">alert add-rule</a></li><li><a href="../../commands/en/alert-clone-rule.html">alert clone-rule</a></li><li><a href="../../commands/en/alert-new-contact-point.html">alert new-contact-point</a></li><li><a href="../../commands/en/alert-add-contact-point.html">alert add-contact-point</a></li><li><a href="../../commands/en/alert-new-template.html">alert new-template</a></li><li><a href="../../commands/en/alert-preview-route.html">alert preview-route</a></li><li><a href="../../commands/en/alert-set-route.html">alert set-route</a></li><li><a href="../../commands/en/alert-plan.html">alert plan</a></li><li><a href="../../commands/en/alert-apply.html">alert apply</a></li><li><a href="../../commands/en/alert-delete.html">alert delete</a></li></ul>
+<h2 id="failure-checks">Failure Checks</h2>
+<ul><li>If inventory is missing resources, check profile, token permissions, org scope, and folder access.</li><li>If export / import misses dashboard-linked rules, check dashboard UID and panel ID mappings.</li><li>If plan has unexpected deletes, remove <code>--prune</code> and compare again.</li><li>If route preview is empty, verify label key/value pairs and receiver names before apply.</li><li>If apply differs from the reviewed plan, check whether live Grafana changed since the plan was produced.</li></ul>
 <p><a href="datasource.html">⬅️ Previous: Datasource Management</a> | <a href="index.html">🏠 Home</a> | <a href="access.html">➡️ Next: Access Management</a></p>
-<nav class="footer-nav"><a class="link-card" href="datasource.html"><span>Previous Chapter</span>Chapter 9 · Datasource Operator Handbook</a><a class="link-card" href="access.html"><span>Next Chapter</span>Chapter 11 · Access Management (Identity &amp; Access)</a></nav>
+<nav class="footer-nav"><a class="link-card" href="datasource.html"><span>Previous Chapter</span>Datasource Operator Handbook</a><a class="link-card" href="access.html"><span>Next Chapter</span>Access Management (Identity &amp; Access)</a></nav>
 </article>
 <aside class="sidebar">
   <button class="sidebar-toggle sidebar-toggle-right" type="button" aria-expanded="true" aria-label="Toggle page sidebar">▶</button>
   <div class="sidebar-content">
-    <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#command-relationships"><span class="toc-label">Command Relationships</span></a></li><li class="toc-level-2"><a href="#who-it-is-for"><span class="toc-label">Who It Is For</span></a></li><li class="toc-level-2"><a href="#primary-goals"><span class="toc-label">Primary Goals</span></a></li><li class="toc-level-2"><a href="#before-after"><span class="toc-label">Before / After</span></a></li><li class="toc-level-2"><a href="#what-success-looks-like"><span class="toc-label">What success looks like</span></a></li><li class="toc-level-2"><a href="#failure-checks"><span class="toc-label">Failure checks</span></a></li><li class="toc-level-2"><a href="#command-pages"><span class="toc-label">Command Pages</span></a></li><li class="toc-level-2"><a href="#what-this-area-is-for"><span class="toc-label">What This Area Is For</span></a></li><li class="toc-level-2"><a href="#workflow-boundaries-four-lanes"><span class="toc-label">Workflow Boundaries (Four Lanes)</span></a></li><li class="toc-level-2"><a href="#authoring-desired-state"><span class="toc-label">Authoring Desired State</span></a></li><li class="toc-level-2"><a href="#review-and-apply-the-review-cycle"><span class="toc-label">Review and Apply (The Review Cycle)</span></a></li><li class="toc-level-2"><a href="#key-commands-full-argument-reference"><span class="toc-label">Key Commands (Full Argument Reference)</span></a></li><li class="toc-level-2"><a href="#validated-docker-examples"><span class="toc-label">Validated Docker Examples</span></a></li><li class="toc-level-3"><a href="#1-alert-plan-excerpt"><span class="toc-label">1. Alert Plan Excerpt</span></a></li><li class="toc-level-3"><a href="#2-route-preview"><span class="toc-label">2. Route Preview</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: English</a></li><li><a href="../zh-TW/alert.html" class="sidebar-meta-link">Switch to 繁體中文</a></li></ul></section>
+    <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#who-it-is-for"><span class="toc-label">Who It Is For</span></a></li><li class="toc-level-2"><a href="#alert-objects"><span class="toc-label">Alert Objects</span></a></li><li class="toc-level-2"><a href="#primary-goals"><span class="toc-label">Primary Goals</span></a></li><li class="toc-level-2"><a href="#what-success-looks-like"><span class="toc-label">What Success Looks Like</span></a></li><li class="toc-level-2"><a href="#alert-workflow-map"><span class="toc-label">Alert Workflow Map</span></a></li><li class="toc-level-2"><a href="#inventory-know-what-is-live"><span class="toc-label">Inventory: Know What Is Live</span></a></li><li class="toc-level-2"><a href="#migration-raw-bundles-are-snapshots"><span class="toc-label">Migration: Raw Bundles Are Snapshots</span></a></li><li class="toc-level-2"><a href="#authoring-desired-state-is-intent"><span class="toc-label">Authoring: Desired State Is Intent</span></a></li><li class="toc-level-2"><a href="#routing-preview-before-set"><span class="toc-label">Routing: Preview Before Set</span></a></li><li class="toc-level-2"><a href="#review-apply-plan-is-the-gate"><span class="toc-label">Review / Apply: Plan Is The Gate</span></a></li><li class="toc-level-2"><a href="#when-to-use-command-reference"><span class="toc-label">When To Use Command Reference</span></a></li><li class="toc-level-2"><a href="#failure-checks"><span class="toc-label">Failure Checks</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: English</a></li><li><a href="../zh-TW/alert.html" class="sidebar-meta-link">Switch to 繁體中文</a></li></ul></section>
   </div>
 </aside>
 

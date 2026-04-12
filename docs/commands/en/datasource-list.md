@@ -18,22 +18,22 @@ Use this when you need a non-interactive datasource read path. Live JSON and YAM
 
 ## Examples
 ```bash
-# Purpose: List live Grafana datasource inventory.
+# List live Grafana datasource inventory.
 grafana-util datasource list --url http://localhost:3000 --basic-user admin --basic-password admin --output-format text
 ```
 
 ```bash
-# Purpose: List live Grafana datasource inventory.
+# List live Grafana datasource inventory.
 grafana-util datasource list --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --output-format yaml
 ```
 
 ```bash
-# Purpose: Show datasource-specific fields such as Influx org/bucket in human-readable output.
+# Show datasource-specific fields such as Influx org/bucket in human-readable output.
 grafana-util datasource list --url http://localhost:3000 --basic-user admin --prompt-password --table --output-columns uid,type,database,jsonData.organization,jsonData.defaultBucket
 ```
 
 ```bash
-# Purpose: List datasource inventory from a local export bundle.
+# List datasource inventory from a local export bundle.
 grafana-util datasource list --input-dir ./datasources --json
 ```
 

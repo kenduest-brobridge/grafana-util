@@ -17,7 +17,7 @@ Create a low-level staged alert rule scaffold.
 ## Examples
 
 ```bash
-# Purpose: Create a low-level staged alert rule scaffold.
+# Create a low-level staged alert rule scaffold.
 grafana-util alert new-rule --desired-dir ./alerts/desired --name cpu-main
 ```
 

@@ -1,4 +1,4 @@
-# 🤖 自動化 / CI 角色導讀
+# 自動化 / CI 角色導讀
 
 這一頁給寫 pipeline、wrapper script、排程工作與自動化檢查的人。重點是讓輸出穩定、憑證好管理，失敗原因也看得出來。
 
@@ -49,27 +49,27 @@
 ## 建議先跑的 5 個指令
 
 ```bash
-# 用途：建議先跑的 5 個指令。
+# 建議先跑的 5 個指令。
 grafana-util config profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN
 ```
 
 ```bash
-# 用途：建議先跑的 5 個指令。
+# 建議先跑的 5 個指令。
 grafana-util config profile show --profile ci --output-format yaml
 ```
 
 ```bash
-# 用途：建議先跑的 5 個指令。
+# 建議先跑的 5 個指令。
 grafana-util status staged --desired-file ./desired.json --output-format json
 ```
 
 ```bash
-# 用途：建議先跑的 5 個指令。
+# 建議先跑的 5 個指令。
 grafana-util workspace test --desired-file ./desired.json --fetch-live --output-format json
 ```
 
 ```bash
-# 用途：建議先跑的 5 個指令。
+# 建議先跑的 5 個指令。
 grafana-util status overview live --profile ci --output-format yaml
 ```
 

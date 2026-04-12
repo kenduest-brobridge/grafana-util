@@ -42,32 +42,32 @@ List or browse live and local Grafana teams, create, modify, export, import, dif
 ## Examples
 
 ```bash
-# Purpose: Inspect team membership before adding or removing people.
+# Inspect team membership before adding or removing people.
 grafana-util access team list --url http://localhost:3000 --basic-user admin --basic-password admin --output-format text
 ```
 
 ```bash
-# Purpose: Review a saved team bundle before replaying it.
+# Review a saved team bundle before replaying it.
 grafana-util access team list --input-dir ./access-teams --output-format table
 ```
 
 ```bash
-# Purpose: Browse one saved team bundle interactively without touching Grafana.
+# Browse one saved team bundle interactively without touching Grafana.
 grafana-util access team browse --input-dir ./access-teams --name platform-team
 ```
 
 ```bash
-# Purpose: Create a team with explicit member and admin assignments.
+# Create a team with explicit member and admin assignments.
 grafana-util access team add --url http://localhost:3000 --basic-user admin --basic-password admin --name platform-team --email platform@example.com --member alice --admin alice --json
 ```
 
 ```bash
-# Purpose: Import a team bundle before switching environments.
+# Import a team bundle before switching environments.
 grafana-util access team import --url http://localhost:3000 --basic-user admin --basic-password admin --input-dir ./access-teams --replace-existing --yes
 ```
 
 ```bash
-# Purpose: Prompt for one team, confirm it, and then delete it.
+# Prompt for one team, confirm it, and then delete it.
 grafana-util access team delete --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --prompt
 ```
 

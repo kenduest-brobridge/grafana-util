@@ -62,7 +62,7 @@ backlogs, market analysis, and progress snapshots have been moved into
 - `zh-tw-style-guide.md` -> review rules for Taiwan-facing Traditional Chinese docs and product-object naming
 - `maintainer-quickstart.md` -> first-entry reading order, source-of-truth map, task routing, and safe validation commands
 - `../scripts/contracts/command-surface.json` -> machine-readable CLI/docs synchronization contract for public paths, legacy replacements, routing, and `--help-full` / `--help-flat` support
-- `../scripts/contracts/docs-entrypoints.json` -> machine-readable docs-entry/navigation contract for landing quick commands, jump-select entries, and handbook command-relationship maps
+- `../scripts/contracts/docs-entrypoints.json` -> machine-readable docs-entry/navigation contract for landing quick commands, jump-select entries, and handbook sidebar command shortcuts
 - `profile-secret-storage-architecture.md` -> profile secret modes, macOS/Linux backend behavior, and secret-resolution design rules
 - `rust-architecture-guardrails.md` -> Rust layer boundaries, split thresholds, hotspot order, and lint expectations
 - `docs-architecture-guardrails.md` -> handbook/manual, command docs, generated docs, internal docs, and trace docs boundaries

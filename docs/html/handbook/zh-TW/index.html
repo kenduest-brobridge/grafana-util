@@ -326,13 +326,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   font-weight: 500;
 }
 .nav-command-branch-item .nav-command-leaf-link:hover { color: var(--heading); }
-.handbook-command-map .nav-command-root-link {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  font-size: 0.9rem;
-}
 
 .sidebar-toggle {
   position: absolute;
@@ -378,71 +371,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map { margin: 0 0 24px; }
-.handbook-command-map-panel {
-  margin-top: 16px;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--panel) 96%, white);
-}
-.handbook-command-map .nav-group-title {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-group {
-  padding-top: 0;
-}
-.handbook-command-map .nav-command-group + .nav-command-group {
-  margin-top: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
-  padding-top: 10px;
-}
-.handbook-command-map .nav-command-sub-list {
-  margin-top: 8px;
-  margin-left: 0;
-  padding-left: 0;
-  border-left: 0;
-}
-.handbook-command-map .nav-command-branch {
-  display: grid;
-  grid-template-columns: minmax(130px, 0.22fr) minmax(0, 1fr);
-  gap: 12px 18px;
-  align-items: start;
-}
-.handbook-command-map .nav-command-branch-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-left: 0;
-  padding-left: 14px;
-}
-.handbook-command-map .nav-command-branch-item + .nav-command-branch-item { margin-top: 0; }
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-  line-height: 1.25;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link:hover,
-.handbook-command-map .nav-command-link a:hover {
-  border-color: color-mix(in srgb, var(--border) 45%, var(--accent));
-  background: var(--panel-strong);
-}
-@media (max-width: 720px) {
-  .handbook-command-map .nav-command-branch {
-    grid-template-columns: 1fr;
-  }
-  .handbook-command-map .nav-command-branch-list {
-    padding-left: 0;
-    border-left: 0;
-  }
-}
 .article p,
 .article li { color: var(--text); font-weight: 460; }
 .article ul li::marker,
@@ -920,17 +848,19 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
       <div class="layout">
 <aside class="nav-sidebar">
   <button class="sidebar-toggle sidebar-toggle-left" type="button" aria-expanded="true" aria-label="Toggle handbook navigation">◀</button>
-  <div class="nav-sidebar-content"><section class="nav-section"><h2>手冊導覽</h2><div class="nav-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">第 1 部 · 起步</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="index.html" class="nav-item active">概觀</a></li><li class="nav-tree-node"><a href="what-is-grafana-util.html" class="nav-item">這個工具是做什麼的</a></li><li class="nav-tree-node"><a href="getting-started.html" class="nav-item">開始使用</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 2 部 · 角色路徑</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="role-new-user.html" class="nav-item">第一次執行 / 新手路線</a></li><li class="nav-tree-node"><a href="role-sre-ops.html" class="nav-item">SRE / 維運</a></li><li class="nav-tree-node"><a href="role-automation-ci.html" class="nav-item">自動化 / CI</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 3 部 · 操作面</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="status-workspace.html" class="nav-item">Status / Workspace</a></li><li class="nav-tree-node"><a href="dashboard.html" class="nav-item">Dashboard</a></li><li class="nav-tree-node"><a href="datasource.html" class="nav-item">Datasource</a></li><li class="nav-tree-node"><a href="alert.html" class="nav-item">Alert</a></li><li class="nav-tree-node"><a href="access.html" class="nav-item">Access</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 4 部 · 設計原則</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="architecture.html" class="nav-item">設計原則</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 5 部 · 參考與排錯</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="scenarios.html" class="nav-item">情境手冊</a></li><li class="nav-tree-node"><a href="recipes.html" class="nav-item">實戰錦囊</a></li><li class="nav-tree-node"><a href="reference.html" class="nav-item">技術參考</a></li><li class="nav-tree-node"><a href="troubleshooting.html" class="nav-item">疑難排解</a></li></ul></div></section><section class="nav-section nav-command-section collapsed"><button class="nav-group-header nav-section-toggle" type="button" aria-expanded="false"><span class="nav-group-title-text">指令關係</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-section-body"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">第一次執行路線</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><ul class="nav-command-tree"><li class="nav-command-link"><a href="../../commands/zh-TW/version.html" class="nav-command-leaf-link">--version</a></li><li class="nav-command-link"><a href="../../commands/zh-TW/status.html" class="nav-command-leaf-link">status live</a></li><li class="nav-command-link"><a href="../../commands/zh-TW/profile.html" class="nav-command-leaf-link">config profile add</a></li></ul></div></div></div></section><section class="nav-section"><h2>指令參考</h2><a href="../../commands/zh-TW/index.html" class="nav-command-entry">開啟指令參考</a></section></div>
+  <div class="nav-sidebar-content"><section class="nav-section"><h2>手冊導覽</h2><div class="nav-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">第 1 部 · 起步</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="index.html" class="nav-item active">概觀</a></li><li class="nav-tree-node"><a href="what-is-grafana-util.html" class="nav-item">這個工具是做什麼的</a></li><li class="nav-tree-node"><a href="getting-started.html" class="nav-item">開始使用</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 2 部 · 角色路徑</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="role-new-user.html" class="nav-item">第一次執行 / 新手路線</a></li><li class="nav-tree-node"><a href="role-sre-ops.html" class="nav-item">SRE / 維運</a></li><li class="nav-tree-node"><a href="role-automation-ci.html" class="nav-item">自動化 / CI</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 3 部 · 操作面</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="status-workspace.html" class="nav-item">Status / Workspace</a></li><li class="nav-tree-node"><a href="dashboard.html" class="nav-item">Dashboard</a></li><li class="nav-tree-node"><a href="datasource.html" class="nav-item">Datasource</a></li><li class="nav-tree-node"><a href="alert.html" class="nav-item">Alert</a></li><li class="nav-tree-node"><a href="access.html" class="nav-item">Access</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 4 部 · 設計原則</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="architecture.html" class="nav-item">設計原則</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 5 部 · 參考與排錯</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="scenarios.html" class="nav-item">情境手冊</a></li><li class="nav-tree-node"><a href="recipes.html" class="nav-item">實戰錦囊</a></li><li class="nav-tree-node"><a href="reference.html" class="nav-item">技術參考</a></li><li class="nav-tree-node"><a href="troubleshooting.html" class="nav-item">疑難排解</a></li></ul></div></section><section class="nav-section"><h2>指令參考</h2><a href="../../commands/zh-TW/index.html" class="nav-command-entry">開啟指令參考</a></section></div>
 </aside>
 
 <article class="article">
 <div class="breadcrumbs"><a href="../../index.html">Home</a> / 手冊 / 概觀</div>
 
-<div class="hero-eyebrow">第 1 部 · 起步 · 第 1 章 / 共 16 章</div><h1><span class="hero-title-main">概觀</span></h1><p class="hero-subtitle">維運導引手冊 (Operator Handbook)</p>
+<div class="hero-eyebrow">第 1 部 · 起步</div><h1><span class="hero-title-main">概觀</span></h1><p class="hero-subtitle">維運導引手冊 (Operator Handbook)</p>
 
-<section class="handbook-command-map"><h2 id="command-relationships">指令關係</h2><div class="handbook-command-map-panel"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">第一次執行路線</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><ul class="nav-command-tree"><li class="nav-command-link"><a href="../../commands/zh-TW/version.html" class="nav-command-leaf-link">--version</a></li><li class="nav-command-link"><a href="../../commands/zh-TW/status.html" class="nav-command-leaf-link">status live</a></li><li class="nav-command-link"><a href="../../commands/zh-TW/profile.html" class="nav-command-leaf-link">config profile add</a></li></ul></div></div></div></section><h2 id="語言切換">語言切換</h2>
+<h2 id="語言切換">語言切換</h2>
 <ul><li>繁體中文手冊：<a href="index.html">目前頁面</a></li><li>English handbook: <a href="../en/index.html">英文手冊</a></li><li>繁體中文指令參考：<a href="../../commands/zh-TW/index.html">指令參考</a></li><li>English command reference: <a href="../../commands/en/index.html">Command Reference</a></li></ul>
 <p>這份手冊是 <code>grafana-util</code> 的閱讀路線圖。先讀脈絡，再讀流程，最後才進到精確語法。如果你已經知道要找哪個 command family 或哪個 flag，就直接切到指令參考，不要讓手冊代替語法表。</p>
+<p>你可以把這本手冊當成一本維運工作書來讀，而不是一份 API 索引。它先回答「我現在站在哪個工作現場」，再回答「我應該先看現況、審查本地輸入，還是準備套用變更」。真正需要輸入命令時，再從章節連到指令參考。</p>
+<p>如果你是第一次進來，不需要從頭背到尾。先找到自己的角色，再找到眼前任務：是要確認 Grafana 能不能連、要把 dashboard 帶出來 review、要讓 CI 檢查 workspace，還是要管理 org、team、service account。每個章節都應該幫你做這個判斷，而不是只列出工具有什麼功能。</p>
 <h2 id="如何閱讀這本手冊">如何閱讀這本手冊</h2>
 <ol><li>先看工具是拿來做什麼。</li><li>再看開始使用章節。</li><li>依照自己的角色或任務選章節。</li><li>需要精確 subcommand 或 flags 時，切到指令參考。</li></ol>
 <h2 id="書本結構">書本結構</h2>
@@ -947,13 +877,13 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="依角色閱讀">依角色閱讀</h2>
 <ul><li>新使用者：先看 <a href="what-is-grafana-util.html">這個工具是做什麼的</a>，再看 <a href="role-new-user.html">新手快速入門</a>，最後看 <a href="getting-started.html">開始使用</a>。</li><li>SRE / 維運人員：先看 <a href="role-sre-ops.html">SRE / 維運角色導讀</a>，再看 <a href="status-workspace.html">Workspace 審查與狀態</a>、<a href="dashboard.html">Dashboard 管理</a>、<a href="datasource.html">Data source 管理</a>、<a href="troubleshooting.html">疑難排解與名詞解釋</a>。</li><li>身份 / 權限管理者：先看 <a href="access.html">Access 管理</a>，再看 <a href="reference.html">技術參考手冊</a>，最後切到 <a href="../../commands/zh-TW/index.html">指令參考</a>。</li><li>自動化 / CI 維護者：先看 <a href="role-automation-ci.html">自動化 / CI 角色導讀</a>，再看 <a href="reference.html">技術參考手冊</a>，需要精確終端機語法時再看 <a href="../../commands/zh-TW/index.html">指令參考</a>。</li><li>維護者 / 架構師：先看 <a href="architecture.html">系統架構與設計原則</a>，再看 <a href="../../developer.html">開發者指南</a> 與 <a href="../../internal/README.md">docs/internal/README.md</a>。</li></ul>
 <h2 id="閱讀提示">閱讀提示</h2>
-<ul><li>頁尾的 <code>Next</code> 與 <code>Previous</code> 才是建議的連續閱讀方式。</li><li>手冊負責流程與脈絡，指令參考負責精確語法。</li><li>如果你要的是 terminal 風格的查找，直接開指令參考或 manpage，不要從記憶裡拼旗標。</li></ul>
-<nav class="footer-nav"><a class="link-card" href="what-is-grafana-util.html"><span>下一章</span>第 2 章 · 這個工具是做什麼的</a></nav>
+<ul><li>頁尾的 <code>Next</code> 與 <code>Previous</code> 才是建議的連續閱讀方式。</li><li>手冊負責流程與脈絡，指令參考負責精確語法。</li><li>如果你要的是 terminal 風格的查找，直接開指令參考或 manpage，不要從記憶裡拼旗標。</li><li>如果某一頁看起來像功能清單，請先問自己：這頁是在幫我決定下一步，還是在幫我查 flags。前者留在手冊讀，後者切到指令參考。</li></ul>
+<nav class="footer-nav"><a class="link-card" href="what-is-grafana-util.html"><span>下一章</span>這個工具是做什麼的</a></nav>
 </article>
 <aside class="sidebar">
   <button class="sidebar-toggle sidebar-toggle-right" type="button" aria-expanded="true" aria-label="Toggle page sidebar">▶</button>
   <div class="sidebar-content">
-    <section class="sidebar-section"><h2>本頁內容</h2><ul class="toc-list"><li class="toc-level-2"><a href="#command-relationships"><span class="toc-label">指令關係</span></a></li><li class="toc-level-2"><a href="#語言切換"><span class="toc-label">語言切換</span></a></li><li class="toc-level-2"><a href="#如何閱讀這本手冊"><span class="toc-label">如何閱讀這本手冊</span></a></li><li class="toc-level-2"><a href="#書本結構"><span class="toc-label">書本結構</span></a></li><li class="toc-level-3"><a href="#第-1-部起步"><span class="toc-label">第 1 部：起步</span></a></li><li class="toc-level-3"><a href="#第-2-部角色路徑"><span class="toc-label">第 2 部：角色路徑</span></a></li><li class="toc-level-3"><a href="#第-3-部操作面"><span class="toc-label">第 3 部：操作面</span></a></li><li class="toc-level-3"><a href="#第-4-部設計原則"><span class="toc-label">第 4 部：設計原則</span></a></li><li class="toc-level-3"><a href="#第-5-部參考與排錯"><span class="toc-label">第 5 部：參考與排錯</span></a></li><li class="toc-level-2"><a href="#依角色閱讀"><span class="toc-label">依角色閱讀</span></a></li><li class="toc-level-2"><a href="#閱讀提示"><span class="toc-label">閱讀提示</span></a></li></ul></section><section class="sidebar-section"><h2>版本</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>語言</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/index.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
+    <section class="sidebar-section"><h2>本頁內容</h2><ul class="toc-list"><li class="toc-level-2"><a href="#語言切換"><span class="toc-label">語言切換</span></a></li><li class="toc-level-2"><a href="#如何閱讀這本手冊"><span class="toc-label">如何閱讀這本手冊</span></a></li><li class="toc-level-2"><a href="#書本結構"><span class="toc-label">書本結構</span></a></li><li class="toc-level-3"><a href="#第-1-部起步"><span class="toc-label">第 1 部：起步</span></a></li><li class="toc-level-3"><a href="#第-2-部角色路徑"><span class="toc-label">第 2 部：角色路徑</span></a></li><li class="toc-level-3"><a href="#第-3-部操作面"><span class="toc-label">第 3 部：操作面</span></a></li><li class="toc-level-3"><a href="#第-4-部設計原則"><span class="toc-label">第 4 部：設計原則</span></a></li><li class="toc-level-3"><a href="#第-5-部參考與排錯"><span class="toc-label">第 5 部：參考與排錯</span></a></li><li class="toc-level-2"><a href="#依角色閱讀"><span class="toc-label">依角色閱讀</span></a></li><li class="toc-level-2"><a href="#閱讀提示"><span class="toc-label">閱讀提示</span></a></li></ul></section><section class="sidebar-section"><h2>版本</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>語言</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/index.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
   </div>
 </aside>
 

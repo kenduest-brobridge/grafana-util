@@ -11,6 +11,10 @@
 
 This handbook is the reading path for `grafana-util`. Start here when you want the workflow first and the exact syntax later. If you already know the command family or flag you need, switch to the command reference instead of forcing the handbook to do that job.
 
+Read this handbook as an operator's field guide, not as an API index. It first answers where you are in the work: observing live Grafana, reviewing local input, preparing a controlled change, or handing artifacts to another workflow. Only after that should you jump into exact command syntax.
+
+If this is your first visit, do not try to memorize the command tree. Find your role, then find the task in front of you: proving Grafana is reachable, exporting dashboards for review, putting a workspace through CI, or managing orgs, teams, and service accounts. Each chapter should help you make that decision before it sends you to the reference pages.
+
 ## How to read this handbook
 
 1. Start with what the tool is for.
@@ -63,3 +67,4 @@ This handbook is the reading path for `grafana-util`. Start here when you want t
 - The footer `Next` and `Previous` links are the intended way to continue chapter by chapter.
 - Use the handbook for process and context; use the command reference for exact syntax.
 - When you need terminal-shaped lookup, open the command reference or the manpage instead of reconstructing flags from memory.
+- If a page starts to feel like a feature list, ask whether you are choosing a workflow or looking up flags. Stay in the handbook for the first job; switch to the command reference for the second.

@@ -37,12 +37,12 @@ Author or replace the tool-owned staged notification route.
 ## Examples
 
 ```bash
-# Purpose: Author or replace the tool-owned staged notification route.
+# Author or replace the tool-owned staged notification route.
 grafana-util alert set-route --desired-dir ./alerts/desired --receiver pagerduty-primary --label team=platform --severity critical
 ```
 
 ```bash
-# Purpose: Author or replace the tool-owned staged notification route.
+# Author or replace the tool-owned staged notification route.
 grafana-util alert set-route --desired-dir ./alerts/desired --receiver pagerduty-primary --label team=platform --severity critical --dry-run
 ```
 

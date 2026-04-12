@@ -46,32 +46,32 @@ List live or local Grafana organizations, create, modify, export, import, diff, 
 ## Examples
 
 ```bash
-# Purpose: Inspect org inventory before a rename or migration.
+# Inspect org inventory before a rename or migration.
 grafana-util access org list --profile prod --output-format text
 ```
 
 ```bash
-# Purpose: Review a saved org bundle before replaying it.
+# Review a saved org bundle before replaying it.
 grafana-util access org list --input-dir ./access-orgs --output-format table
 ```
 
 ```bash
-# Purpose: Rename one org after confirming the current org name.
+# Rename one org after confirming the current org name.
 grafana-util access org modify --url http://localhost:3000 --basic-user admin --basic-password admin --name platform --set-name platform-core --json
 ```
 
 ```bash
-# Purpose: Review the exact org name before changing it.
+# Review the exact org name before changing it.
 grafana-util access org modify --url http://localhost:3000 --basic-user admin --basic-password admin --name platform --set-name platform-core --json
 ```
 
 ```bash
-# Purpose: Remove one org only after checking the exact name.
+# Remove one org only after checking the exact name.
 grafana-util access org delete --url http://localhost:3000 --basic-user admin --basic-password admin --name platform --yes
 ```
 
 ```bash
-# Purpose: Prompt for one organization, confirm it, and then delete it.
+# Prompt for one organization, confirm it, and then delete it.
 grafana-util access org delete --url http://localhost:3000 --basic-user admin --basic-password admin --prompt
 ```
 

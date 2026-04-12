@@ -32,35 +32,35 @@ Key flags: the root command is a namespace; operational flags live on subcommand
 .PP
 Examples:
 .PP
-# Purpose: List profiles available in the current checkout.
+# List profiles available in the current checkout.
 .PP
 grafana\-util config profile list
 .PP
-# Purpose: Inspect the resolved profile before running live commands.
+# Inspect the resolved profile before running live commands.
 .PP
 grafana\-util config profile show \-\-profile prod \-\-output\-format yaml
 .PP
-# Purpose: Show the currently selected profile and resolved config path.
+# Show the currently selected profile and resolved config path.
 .PP
 grafana\-util config profile current \-\-profile prod
 .PP
-# Purpose: Validate the selected profile and check Grafana reachability.
+# Validate the selected profile and check Grafana reachability.
 .PP
 grafana\-util config profile validate \-\-profile prod \-\-live
 .PP
-# Purpose: Create a reusable production profile with prompt\-based secrets.
+# Create a reusable production profile with prompt\-based secrets.
 .PP
 grafana\-util config profile add prod \-\-url https://grafana.example.com \-\-basic\-user admin \-\-prompt\-password \-\-store\-secret encrypted\-file
 .PP
-# Purpose: Create a CI profile that reads the token from an environment variable.
+# Create a CI profile that reads the token from an environment variable.
 .PP
 grafana\-util config profile add ci \-\-url https://grafana.example.com \-\-token\-env GRAFANA_CI_TOKEN \-\-store\-secret os
 .PP
-# Purpose: Print a fully annotated profile template.
+# Print a fully annotated profile template.
 .PP
 grafana\-util config profile example \-\-mode full
 .PP
-# Purpose: Initialize a fresh grafana\-util.yaml in the current checkout.
+# Initialize a fresh grafana\-util.yaml in the current checkout.
 .PP
 grafana\-util config profile init \-\-overwrite
 .PP

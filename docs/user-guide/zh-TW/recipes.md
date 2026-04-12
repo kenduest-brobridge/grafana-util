@@ -1,6 +1,8 @@
-# 🍳 實戰錦囊與最佳實踐
+# 實戰錦囊與最佳實踐
 
 本章整理幾個真的會用到的 Grafana 維運配方。重點不只是指令本身，而是什麼時候該用、成功長什麼樣、失敗先查哪裡。
+
+請把每個錦囊當成一個小型案例讀。先看問題是否符合你的現場，再確認「適合什麼時候用」是否吻合，最後才執行命令。命令是案例的最後一步，不是整個案例本身。
 
 ## 適用對象
 
@@ -33,7 +35,7 @@
 
 ---
 
-## 🚀 錦囊 1：跨環境儀表板遷移 (Dev -> Prod)
+## 錦囊 1：跨環境儀表板遷移 (Dev -> Prod)
 
 **問題描述**：直接從開發環境匯出再匯入到正式環境，常會因 org ID、folder context 或 data source UID 不一致而失敗。
 
@@ -46,8 +48,8 @@
 1. **從 Dev 匯出**：`grafana-util dashboard export --output-dir ./dev-assets`
 2. **定位乾淨來源**：使用 `./dev-assets/prompt/` 下的檔案。這些檔案已去除來源環境專屬 metadata。
 3. **匯入到 Prod**：
-   ```bash
-# 用途：匯入到 Prod。
+```bash
+# 把乾淨的 prompt lane 回放到 Prod。
    grafana-util dashboard import --input-dir ./dev-assets/prompt --url https://prod-grafana --replace-existing
    ```
 
@@ -69,7 +71,7 @@
 
 ---
 
-## 🔍 錦囊 2：匯入前的依賴性盤點
+## 錦囊 2：匯入前的依賴性盤點
 
 **問題描述**：dashboard 匯入成功了，但 panel 因缺少 data source 而全部壞掉。
 
@@ -80,7 +82,7 @@
 **解決方案**：匯入前先跑 **pre-import inspection**。
 
 ```bash
-# 用途：解決方案：匯入前先跑 pre-import inspection。
+# 解決方案：匯入前先跑 pre-import inspection。
 grafana-util dashboard dependencies --input-dir ./backups/raw --input-format raw --output-format dependency
 ```
 
@@ -102,7 +104,7 @@ grafana-util dashboard dependencies --input-dir ./backups/raw --input-format raw
 
 ---
 
-## 🛠️ 錦囊 3：批次加標籤或更名 (Surgical Patching)
+## 錦囊 3：批次加標籤或更名 (Surgical Patching)
 
 **問題描述**：你需要一次幫很多 dashboard 加 tag 或做機械式更名。
 
@@ -113,11 +115,12 @@ grafana-util dashboard dependencies --input-dir ./backups/raw --input-format raw
 **解決方案**：在迴圈中使用 `patch`，然後在 replay 前先 preview。
 
 ```bash
-# 用途：解決方案：在迴圈中使用 patch，然後在 replay 前先 preview。
+# 對每個 raw dashboard 檔套用同一個本地 tag patch。
 for file in ./dashboards/raw/*.json; do
   grafana-util dashboard patch --input "$file" --tag "ManagedBySRE" --output "$file"
 done
 
+# replay 前先 dry-run，確認不會直接改 live dashboard。
 grafana-util dashboard import --input-dir ./dashboards/raw --replace-existing --dry-run --table
 ```
 
@@ -139,14 +142,14 @@ grafana-util dashboard import --input-dir ./dashboards/raw --replace-existing --
 
 ---
 
-## 🚨 錦囊 4：驗證告警路由邏輯
+## 錦囊 4：驗證告警路由邏輯
 
 **問題描述**：通知策略很複雜，你很難只靠眼睛判斷告警最後會送到哪個 receiver。
 
 **解決方案**：使用 `preview-route` 模擬匹配結果。
 
 ```bash
-# 用途：解決方案：使用 preview-route 模擬匹配結果。
+# 用一組 critical alert label 模擬 desired route tree 的匹配結果。
 grafana-util alert preview-route \
   --desired-dir ./alerts/desired \
   --label service=order \
@@ -171,7 +174,7 @@ grafana-util alert preview-route \
 
 ---
 
-## 💡 專家建議
+## 專家建議
 
 - **UID 一致性**：務必在 JSON 中定義穩定的 `uid`，不要依賴自動遞增的 `id`。
 - **預覽優先**：任何 live 變動前，先跑 `--dry-run`。

@@ -43,37 +43,37 @@
 ## 範例
 
 ```bash
-# 用途：在調整成員權限前，先看清楚單一 org 裡有哪些使用者。
+# 在調整成員權限前，先看清楚單一 org 裡有哪些使用者。
 grafana-util access user list --profile prod --scope org --output-format text
 ```
 
 ```bash
-# 用途：先看本機存好的使用者套件。
+# 先看本機存好的使用者套件。
 grafana-util access user list --input-dir ./access-users --output-format table
 ```
 
 ```bash
-# 用途：直接互動式瀏覽本機使用者套件，不碰 live Grafana。
+# 直接互動式瀏覽本機使用者套件，不碰 live Grafana。
 grafana-util access user browse --input-dir ./access-users --login alice
 ```
 
 ```bash
-# 用途：用明確的認證與 org 範圍建立一個使用者。
+# 用明確的認證與 org 範圍建立一個使用者。
 grafana-util access user add --url http://localhost:3000 --basic-user admin --basic-password admin --login alice --email alice@example.com --name Alice --password secret
 ```
 
 ```bash
-# 用途：先看清楚目前 org 裡的使用者，再刪除這個帳號。
+# 先看清楚目前 org 裡的使用者，再刪除這個帳號。
 grafana-util access user list --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --scope org --json
 ```
 
 ```bash
-# 用途：在終端機中選一個使用者、確認目標，然後刪除。
+# 在終端機中選一個使用者、確認目標，然後刪除。
 grafana-util access user delete --url http://localhost:3000 --basic-user admin --basic-password admin --scope global --prompt
 ```
 
 ```bash
-# 用途：先在終端機中選刪除範圍，再選使用者並確認刪除。
+# 先在終端機中選刪除範圍，再選使用者並確認刪除。
 grafana-util access user delete --url http://localhost:3000 --basic-user admin --basic-password admin --prompt
 ```
 

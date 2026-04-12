@@ -3,6 +3,10 @@
 這一章整理 Grafana 的身分與存取資產：org、使用者、team 與 service account。重點是先把人、組織與自動化憑證的生命週期講清楚，再談匯出、同步與回放。
 盤點可以直接來自 live Grafana，也可以來自本機匯出的套件；流程本身是一樣的。
 
+Access 相關工作最容易被低估，因為它常被看成「新增一個 user」或「刪一個 token」。實際上，每個 user、team、org 與 service account 都在決定誰看得到資料、誰能修改資產、哪個自動化流程可以在半夜替你動 Grafana。這章的目標是讓你在動手前先看懂範圍。
+
+讀這章時，先問任務影響的是人、團隊、組織邊界，還是機器憑證。接著再決定要做 live 盤點、本機快照、diff，或真的變更。不要從「我有一個 token」開始推導流程；應該從「這次權限變更會影響誰」開始。
+
 ## 適用對象
 
 - 負責 org、使用者、team 或 service account 管理的人
@@ -14,6 +18,8 @@
 - 先理解 org / user / team / service account 的關係
 - 再把盤點、匯出、匯入與 diff 做成可重複流程，而且盤點可以來自 live 或本機
 - 需要時才對 token 做輪替或刪除
+
+好的 access 流程不是讓修改變快，而是讓修改前的 scope 變清楚。能先說出「誰會被影響」比能背出子命令更重要。
 
 ## 採用前後對照
 
@@ -32,42 +38,43 @@
 - 如果不確定 token 或 service account 能不能做這件事，先看指令頁，不要直接 mutate。
 - 如果你還覺得 team / org / user 的說法不一致，先回 glossary 和 command reference。
 
-## 🔗 指令頁面
+## Access 工作流地圖
 
-如果你現在要查的是指令細節，而不是工作流程章節，可以直接看下面這些指令頁：
+Access 子命令要先按「影響誰」分類，而不是按你手上有哪個 token 分類：
 
-- [access 指令總覽](../../commands/zh-TW/access.md)
-- [access user](../../commands/zh-TW/access-user.md)
-- [access org](../../commands/zh-TW/access-org.md)
-- [access team](../../commands/zh-TW/access-team.md)
-- [access service-account](../../commands/zh-TW/access-service-account.md)
-- [access service-account token](../../commands/zh-TW/access-service-account-token.md)
-- [指令參考](../../commands/zh-TW/index.md)
+| 任務 | 起點 | 主要輸入 | 主要輸出 | 下一步 |
+| --- | --- | --- | --- | --- |
+| 管理 org | `access org list/export/import/diff` | live Grafana 或 org bundle | org inventory / dry-run / diff | import 前 review |
+| 管理 user | `access user list/add/modify/delete/export/import/diff` | login、org role、bundle | 使用者 inventory 或 mutation 結果 | list / diff 驗證 |
+| 管理 team | `access team list/export/import/diff` | org scope、team bundle | team 與 members inventory | dry-run 後 import |
+| 管理 service account | `access service-account list/add/modify/delete/export/import/diff` | org scope、service account bundle | automation identity inventory | token 管理或 diff |
+| 管理 token | `access service-account token add/delete/list` | service account id/name | 一次性 token secret 或刪除結果 | 立即保存 secret / 輪替舊 token |
+| 比對漂移 | `diff` 子命令 | 本地 bundle + live Grafana | 變更差異 | 修 bundle 或 import |
 
----
+最重要的判斷是 scope：全域 user、某個 org 裡的 role、team membership、service account 權限與 token lifecycle 是不同層次。不要用能執行 API 的 token 反推它應該能做所有 access 工作。
 
-## 🏢 org 管理
+## org 管理
 
 需要用 Basic auth 盤點、匯出或回放 org 時，請使用 `access org`。它的 `list` 也可以直接讀本機 bundle。
 
 ### 1. 列出、匯出與回放 org
 ```bash
-# 用途：1. 列出、匯出與回放 org。
+# 先列出 live Grafana 裡目前可見的 org。
 grafana-util access org list --table
 ```
 
 ```bash
-# 用途：1. 列出、匯出與回放 org。
+# 不碰 live Grafana，直接檢視本機 org bundle。
 grafana-util access org list --input-dir ./access-orgs --table
 ```
 
 ```bash
-# 用途：1. 列出、匯出與回放 org。
+# 把 org inventory 匯出成可重播的本機套件。
 grafana-util access org export --output-dir ./access-orgs
 ```
 
 ```bash
-# 用途：1. 列出、匯出與回放 org。
+# 匯入前先 dry-run，確認會建立或更新哪些 org。
 grafana-util access org import --input-dir ./access-orgs --dry-run
 ```
 **預期輸出：**
@@ -87,9 +94,13 @@ PREFLIGHT IMPORT:
 
 ---
 
-## 👤 使用者與 team 管理
+## 使用者與 team 管理
 
 需要調整成員、管理快照或檢查漂移時，請使用 `access user` 與 `access team`。它們的 `list` 與 `browse` 都可以讀本機 bundle。
+
+先分清楚 user 與 team 的責任。User 決定某個登入身份存在不存在、是否停用、以及它在 org 裡的 role；team 則是協作與權限管理的集合。當你要處理「這個人能不能登入」時，先看 `access user`。當你要處理「這群人能不能一起看到某批資產」時，先看 `access team`。
+
+`list` 適合盤點 live 或本地 bundle；`export` 適合留下可 review 快照；`diff` 用來判斷 live 是否偏離 bundle；`import` 則應該在 dry-run 後才執行。直接 `add`、`modify`、`delete` user 時，要先確認 scope 是 global、org role，還是 Grafana admin，不要只看 login 名稱。
 
 ### 1. 新增、修改與比對使用者
 ```bash
@@ -119,22 +130,22 @@ No user differences across 12 user(s).
 
 ### 2. team 盤點與同步
 ```bash
-# 用途：2. team 盤點與同步。
+# 先看指定 org 裡目前有哪些 team。
 grafana-util access team list --org-id 1 --table
 ```
 
 ```bash
-# 用途：2. team 盤點與同步。
+# 從本機 team bundle 檢查同一份 inventory。
 grafana-util access team list --input-dir ./access-teams --table
 ```
 
 ```bash
-# 用途：2. team 盤點與同步。
+# 匯出 team 時連成員狀態一起保留。
 grafana-util access team export --output-dir ./access-teams --with-members
 ```
 
 ```bash
-# 用途：2. team 盤點與同步。
+# 匯入 team bundle 前先用表格預覽差異。
 grafana-util access team import --input-dir ./access-teams --replace-existing --dry-run --table
 ```
 **預期輸出：**
@@ -153,23 +164,27 @@ ops-user    Viewer  create   missing
 
 ---
 
-## 🤖 service account 管理
+## service account 管理
 
 service account 是自動化流程常見的基礎元件。它的 inventory 也可以先從本機套件看，不必先碰 live Grafana。
 
+Service account 是機器身份，不是比較安全的 user shortcut。它應該對應到一個明確的自動化用途，例如 CI deployment、nightly audit 或 incident bot。`access service-account` 管身份本身；`access service-account token` 管可用來呼叫 API 的 token。這兩層要分開 review。
+
+Token secret 通常只會出現一次。建立 token 後，先把 secret 存到正確的 secret store，再輪替舊 token。不要用終端 log 當成 token 保存方式，也不要因為 list 看得到 service account，就假設手上的 token 仍然有效。
+
 ### 1. 列出與匯出 service account
 ```bash
-# 用途：1. 列出與匯出 service account。
+# 用 JSON 盤點 live service account，方便交給腳本處理。
 grafana-util access service-account list --json
 ```
 
 ```bash
-# 用途：1. 列出與匯出 service account。
+# 從本機套件用文字格式檢視 service account inventory。
 grafana-util access service-account list --input-dir ./access-sa --output-format text
 ```
 
 ```bash
-# 用途：1. 列出與匯出 service account。
+# 匯出 service account inventory，供 review 或回放使用。
 grafana-util access service-account export --output-dir ./access-sa
 ```
 **預期輸出：**
@@ -225,22 +240,22 @@ Created service-account token nightly -> serviceAccountId=15
 
 ---
 
-## 🔍 漂移檢查 (Diff)
+## 漂移檢查 (Diff)
 
 比較本機快照與 live Grafana 之間的差異。
 
 ```bash
-# 用途：比較本機快照與 live Grafana 之間的差異。
+# 比較本機快照與 live Grafana 之間的差異。
 grafana-util access user diff --input-dir ./access-users
 ```
 
 ```bash
-# 用途：比較本機快照與 live Grafana 之間的差異。
+# 比較本機快照與 live Grafana 之間的差異。
 grafana-util access team diff --diff-dir ./access-teams
 ```
 
 ```bash
-# 用途：比較本機快照與 live Grafana 之間的差異。
+# 比較本機快照與 live Grafana 之間的差異。
 grafana-util access service-account diff --diff-dir ./access-sa
 ```
 **預期輸出：**
@@ -254,6 +269,18 @@ No team differences across 4 team(s).
 No service account differences across 2 service account(s).
 ```
 可以用 diff 輸出判斷快照是否適合匯入，也能先看出 live 環境是否已經發生漂移。
+
+## 何時切到指令參考
+
+這一章負責幫你判斷 access scope。當你已經知道要處理 org、user、team、service account 還是 token，再切到指令參考確認 flags、輸出格式與完整範例：
+
+- [access 指令總覽](../../commands/zh-TW/access.md)
+- [access user](../../commands/zh-TW/access-user.md)
+- [access org](../../commands/zh-TW/access-org.md)
+- [access team](../../commands/zh-TW/access-team.md)
+- [access service-account](../../commands/zh-TW/access-service-account.md)
+- [access service-account token](../../commands/zh-TW/access-service-account-token.md)
+- [指令參考](../../commands/zh-TW/index.md)
 
 ---
 [⬅️ 上一章：告警治理](alert.md) | [🏠 回首頁](index.md) | [➡️ 下一章：Workspace 審查與狀態](status-workspace.md)

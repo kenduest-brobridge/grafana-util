@@ -326,13 +326,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   font-weight: 500;
 }
 .nav-command-branch-item .nav-command-leaf-link:hover { color: var(--heading); }
-.handbook-command-map .nav-command-root-link {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  font-size: 0.9rem;
-}
 
 .sidebar-toggle {
   position: absolute;
@@ -378,71 +371,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map { margin: 0 0 24px; }
-.handbook-command-map-panel {
-  margin-top: 16px;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--panel) 96%, white);
-}
-.handbook-command-map .nav-group-title {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-group {
-  padding-top: 0;
-}
-.handbook-command-map .nav-command-group + .nav-command-group {
-  margin-top: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
-  padding-top: 10px;
-}
-.handbook-command-map .nav-command-sub-list {
-  margin-top: 8px;
-  margin-left: 0;
-  padding-left: 0;
-  border-left: 0;
-}
-.handbook-command-map .nav-command-branch {
-  display: grid;
-  grid-template-columns: minmax(130px, 0.22fr) minmax(0, 1fr);
-  gap: 12px 18px;
-  align-items: start;
-}
-.handbook-command-map .nav-command-branch-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-left: 0;
-  padding-left: 14px;
-}
-.handbook-command-map .nav-command-branch-item + .nav-command-branch-item { margin-top: 0; }
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-  line-height: 1.25;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link:hover,
-.handbook-command-map .nav-command-link a:hover {
-  border-color: color-mix(in srgb, var(--border) 45%, var(--accent));
-  background: var(--panel-strong);
-}
-@media (max-width: 720px) {
-  .handbook-command-map .nav-command-branch {
-    grid-template-columns: 1fr;
-  }
-  .handbook-command-map .nav-command-branch-list {
-    padding-left: 0;
-    border-left: 0;
-  }
-}
 .article p,
 .article li { color: var(--text); font-weight: 460; }
 .article ul li::marker,
@@ -958,11 +886,11 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="先決定你要輸出什麼">先決定你要輸出什麼</h2>
 <ul><li><code>table</code> / <code>tree-table</code>：給人快速盤點匯出樹</li><li><code>dependency</code> / <code>dependency-json</code>：給相依性檢視或其他工具接手</li><li><code>governance</code> / <code>governance-json</code>：給 <code>policy</code>、<code>impact</code> 或治理流程重用</li><li><code>queries-json</code>：給查詢層分析</li><li><code>interactive</code>：你已經確認來源正確，想現場往下鑽時再開</li></ul>
 <h2 id="範例由淺到深">範例（由淺到深）</h2>
-<pre><code># 用途：先用 table 盤點本地 raw 匯出樹。
+<pre><code># 先用 table 盤點本地 raw 匯出樹。
 grafana-util dashboard dependencies --input-dir ./dashboards/raw --input-format raw --output-format table</code></pre>
-<pre><code># 用途：產生可重用的 governance JSON，留給 policy / impact / CI。
+<pre><code># 產生可重用的 governance JSON，留給 policy / impact / CI。
 grafana-util dashboard dependencies --input-dir ./dashboards/provisioning --input-format provisioning --output-format governance-json</code></pre>
-<pre><code># 用途：分析 repo-backed Git Sync 樹，保留治理輸出給下一步。
+<pre><code># 分析 repo-backed Git Sync 樹，保留治理輸出給下一步。
 grafana-util dashboard dependencies --input-dir ./grafana-oac-repo --input-format git-sync --output-format governance</code></pre>
 <h2 id="什麼叫做這次跑成功">什麼叫做這次跑成功</h2>
 <ul><li>不必逐一打開 JSON，也能說清楚匯出樹裡有哪些 dashboard、查詢與相依關係</li><li>產物格式足以直接交給下一步，而不是還要重新分析一次</li><li>同一份輸出可以支撐 review、治理或影響分析</li></ul>

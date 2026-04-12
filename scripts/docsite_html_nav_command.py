@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import html
 
-from docgen_command_docs import RenderedHeading
 from docgen_common import relative_href
 from docgen_entrypoints import HANDBOOK_COMMAND_MAPS
 from docsite_html_common import prefixed_output_rel, render_template
@@ -71,7 +70,7 @@ def render_command_map_links(output_rel: str, locale: str, links, config) -> str
     return f'<ul class="nav-command-tree">{"".join(items_html)}</ul>'
 
 
-def render_command_map_nav(output_rel: str, locale: str, handbook_stem: str | None, config, *, compact: bool = False) -> str:
+def render_command_map_nav(output_rel: str, locale: str, handbook_stem: str | None, config, *, compact: bool = True) -> str:
     if handbook_stem is None:
         return ""
     groups = HANDBOOK_COMMAND_MAPS.get(handbook_stem)
@@ -93,33 +92,14 @@ def render_command_map_nav(output_rel: str, locale: str, handbook_stem: str | No
             f'<div class="nav-sub-list nav-command-sub-list">{render_command_map_links(output_rel, locale, group.links, config)}</div>'
             '</div>'
         )
-    if compact:
-        return (
-            '<section class="nav-section nav-command-section collapsed">'
-            f'<button class="nav-group-header nav-section-toggle" type="button" aria-expanded="false">'
-            f'<span class="nav-group-title-text">{html.escape(section_title)}</span>'
-            '<span class="nav-group-caret" aria-hidden="true">▾</span>'
-            '</button>'
-            f'<div class="nav-section-body">{"".join(items_html)}</div>'
-            '</section>'
-        )
     return (
-        '<section class="handbook-command-map">'
-        f'<h2 id="command-relationships">{html.escape(section_title)}</h2>'
-        f'<div class="handbook-command-map-panel">{"".join(items_html)}</div>'
-        "</section>"
-    )
-
-
-def render_command_map_heading(locale: str, handbook_stem: str | None) -> tuple[RenderedHeading, ...]:
-    if handbook_stem is None or handbook_stem not in HANDBOOK_COMMAND_MAPS:
-        return ()
-    return (
-        RenderedHeading(
-            level=2,
-            text="Command Relationships" if locale == "en" else "指令關係",
-            anchor="command-relationships",
-        ),
+        '<section class="nav-section nav-command-section collapsed">'
+        f'<button class="nav-group-header nav-section-toggle" type="button" aria-expanded="false">'
+        f'<span class="nav-group-title-text">{html.escape(section_title)}</span>'
+        '<span class="nav-group-caret" aria-hidden="true">▾</span>'
+        '</button>'
+        f'<div class="nav-section-body">{"".join(items_html)}</div>'
+        '</section>'
     )
 
 

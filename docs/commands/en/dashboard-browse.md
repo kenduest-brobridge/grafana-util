@@ -24,22 +24,22 @@ Use this when you want to explore folders, select a dashboard, inspect the live 
 
 ## Examples
 ```bash
-# Purpose: Open the live dashboard tree in an interactive terminal UI.
+# Open the live dashboard tree in an interactive terminal UI.
 grafana-util dashboard browse --url http://localhost:3000 --basic-user admin --basic-password admin
 ```
 
 ```bash
-# Purpose: Open the live dashboard tree in an interactive terminal UI.
+# Open the live dashboard tree in an interactive terminal UI.
 grafana-util dashboard browse --url http://localhost:3000 --basic-user admin --basic-password admin --path 'Platform / Infra'
 ```
 
 ```bash
-# Purpose: Open a local raw export tree in an interactive terminal UI.
+# Open a local raw export tree in an interactive terminal UI.
 grafana-util dashboard browse --input-dir ./dashboards/raw --path 'Platform / Infra'
 ```
 
 ```bash
-# Purpose: Open a repo-backed workspace root in an interactive terminal UI.
+# Open a repo-backed workspace root in an interactive terminal UI.
 grafana-util dashboard browse --workspace ./grafana-oac-repo --path 'Platform / Infra'
 ```
 

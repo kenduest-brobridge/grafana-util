@@ -31,12 +31,12 @@ Key flags: the root command is a namespace; the operational flags live on `expor
 Examples:
 
 ```bash
-# Purpose: Export a local snapshot bundle from live Grafana.
+# Export a local snapshot bundle from live Grafana.
 grafana-util status snapshot export --url http://localhost:3000 --basic-user admin --basic-password admin --output-dir ./snapshot
 ```
 
 ```bash
-# Purpose: Review the exported snapshot bundle as JSON.
+# Review the exported snapshot bundle as JSON.
 grafana-util status snapshot review --input-dir ./snapshot --output-format json
 ```
 
@@ -59,17 +59,17 @@ Key flags: `--output-dir`, `--overwrite`, `--prompt`, plus the shared Grafana co
 Examples:
 
 ```bash
-# Purpose: export.
+# export.
 grafana-util status snapshot export --url http://localhost:3000 --basic-user admin --basic-password admin --output-dir ./snapshot
 ```
 
 ```bash
-# Purpose: export.
+# export.
 grafana-util status snapshot export --profile prod --output-dir ./snapshot --overwrite
 ```
 
 ```bash
-# Purpose: choose snapshot lanes from a terminal prompt before export.
+# choose snapshot lanes from a terminal prompt before export.
 grafana-util status snapshot export --profile prod --prompt --output-dir ./snapshot
 ```
 
@@ -88,12 +88,12 @@ Key flags: `--input-dir`, `--interactive`, `--output-format`.
 Examples:
 
 ```bash
-# Purpose: review an exported snapshot root as table, csv, text, json, yaml, or interactive output.
+# review an exported snapshot root as table, csv, text, json, yaml, or interactive output.
 grafana-util status snapshot review --input-dir ./snapshot --output-format table
 ```
 
 ```bash
-# Purpose: review an exported snapshot root as table, csv, text, json, yaml, or interactive output.
+# review an exported snapshot root as table, csv, text, json, yaml, or interactive output.
 grafana-util status snapshot review --input-dir ./snapshot --interactive
 ```
 

@@ -1,184 +1,236 @@
 # Alert 維運人員手冊
 
-這一章整理告警的設計、審查與套用流程。它的重點不是只會建立 rule，而是先把 route、contact point、template 與 plan/apply 的關係說清楚。
+這一章不是 `grafana-util alert --help` 的重寫版。它要先回答一個比較實際的問題：當你要改 Grafana Alerting 時，哪些東西會一起被影響，應該先看 live 現況、先整理 desired state，還是先產生 plan 給人 review。
+
+告警的困難不在於多打一條 rule，而在於一條 rule 很少單獨存在。它會連到 folder、rule group、label、contact point、notification policy、template 與 mute timing。改錯其中一段，可能不是「規則沒生效」，而是半夜真的沒有人收到通知。
+
+所以這一章會用工作流來讀 `alert` 子命令：先分清楚盤點、搬移、編寫、路由與套用，再進入單一命令的精確參數。指令參考仍然重要，但它應該是你確認旗標時打開的頁面，不應該取代這裡的操作判斷。
 
 ## 適用對象
 
-- 負責 Grafana Alerting 設定的人
-- 需要先審查告警變更，再套用到 live 環境的人
-- 要把 alert 流程接到 Git、review 或 CI 的維運人員
+- 負責 Grafana Alerting 規則、contact point、route、template 或 mute timing 的人。
+- 需要先審查告警變更，再套用到 live Grafana 的維運人員。
+- 要把 alert 變更接到 Git、review 或 CI 的團隊。
+
+## 先看懂 Alert 物件
+
+`grafana-util alert` 不是只處理 rule。它會把告警拆成幾種互相連動的資產：
+
+| 資產 | 你要先問的問題 | 常用命令 |
+| --- | --- | --- |
+| Rule | 哪個 folder / rule group 會多一條或改一條規則？條件、labels、annotations 是否完整？ | `list-rules`, `new-rule`, `add-rule`, `clone-rule` |
+| Contact point | 通知會送到哪裡？receiver 名稱是否和路由一致？ | `list-contact-points`, `new-contact-point`, `add-contact-point` |
+| Route / policy | 哪些 labels 會匹配到哪個 receiver？會不會吃到太寬的 matcher？ | `set-route`, `preview-route` |
+| Template | 通知內容是否要一起搬移或建立？ | `list-templates`, `new-template` |
+| Mute timing | 什麼時間不通知？搬移時是否也要帶走？ | `list-mute-timings` |
+| Desired state | 本地檔案代表你希望 Grafana 變成的狀態。 | `init`, `add-*`, `set-route`, `plan` |
+| Raw bundle | 從 live Grafana 匯出的快照，適合備份、搬移與 diff。 | `export`, `import`, `diff` |
+| Plan | 將 desired state 與 live Grafana 對照後得到的變更計畫。 | `plan`, `apply` |
+
+這些物件的界線很重要。`raw/` 匯出包適合搬移現況；`desired/` 適合整理你要推進 live 的目標狀態；`plan` 則是 apply 前的審查證據。把三者混在一起，最容易造成「看起來只是改一條 rule，實際上動到 route 或 delete 候選」的問題。
 
 ## 主要目標
 
-- 先在本地整理 Desired State
-- 再做 plan / review / apply
-- 需要回放或遷移時，再走 export / import / diff
-
-## 採用前後對照
-
-- 以前：告警變更常混在 UI 與 YAML 的混合路徑裡，審查脈絡不夠清楚。
-- 現在：編寫 desired state、看 plan、真正 apply 分成不同關卡，證據也更明確。
+- 在動 live Grafana 前先知道現況。
+- 把要變更的 alert state 變成本地可讀、可 review 的檔案。
+- 用 plan 說清楚 create / update / delete / noop，而不是直接 apply。
+- 在搬移或恢復時，分清楚 raw bundle 與 desired-state workflow。
 
 ## 成功判準
 
-- 你能分清楚自己是在改 desired state、看 plan，還是要真的套用變更。
-- 你能在動 live state 前說清楚這次會影響 alert chain 的哪一段。
-- 你看得懂輸出，也能判斷 plan 是否可以繼續往下走。
+- 你能說清楚這次工作屬於 inventory、backup、authoring、routing 還是 review/apply。
+- 你知道每個 subcommand 吃的是 live Grafana、raw bundle、desired dir，還是 reviewed plan。
+- 在 `apply` 前，你已經看過 plan，且知道 `--prune` 是否會產生 delete 候選。
 
-## 失敗時先檢查
+## Alert 工作流地圖
 
-- 如果 plan 輸出少了你預期的 contact point 或 route，先檢查 staged input。
-- 如果 apply 會碰到比你預期更多的東西，先把它當成審查失敗，而不是 renderer 問題。
-- 如果你還說不出自己在 alert 哪條 lane，先回去看工作流章節，不要直接改 live。
+| 你現在要做的事 | 起點 | 主要輸入 | 主要輸出 | 下一步 |
+| --- | --- | --- | --- | --- |
+| 盤點 live alert 現況 | `list-rules`, `list-contact-points`, `list-mute-timings`, `list-templates` | Grafana 連線與權限 | 表格、YAML 或 JSON inventory | 決定是否 export 或 authoring |
+| 備份或搬移現況 | `export` | live Grafana | `raw/` bundle | `diff`, `import`, review |
+| 比對匯出包與 live | `diff` | `raw/` bundle + live Grafana | 差異摘要或 JSON | 決定是否 import 或重新 export |
+| 重建匯出包 | `import` | `raw/` bundle | live Grafana mutation 或 dry-run | dry-run 後才實際匯入 |
+| 建立 desired state | `init`, `new-*`, `add-*`, `clone-rule`, `set-route` | 本地 desired dir | 可 review 的 staged files | `preview-route`, `plan` |
+| 預覽 routing | `preview-route` | desired dir + labels | matcher / receiver 預覽 | 修正 route 或進入 plan |
+| 產生變更計畫 | `plan` | desired dir + live Grafana | plan JSON / text | 人工 review |
+| 套用已審查計畫 | `apply` | reviewed plan file | live Grafana mutation 結果 | apply 後再 inventory |
 
-> **維運原則**：透過 **計畫 (Plan) -> 審查 (Review) -> 套用 (Apply)** 週期來謹慎變更告警，防止即時環境發生意外。
+## 盤點：先知道 live 裡有什麼
 
-## 🔗 指令頁面
+如果你還不確定 Grafana 目前有哪些告警資產，先不要 export、import 或 apply。從 inventory 開始：
 
-如果你現在要查的是指令細節，而不是工作流程章節，可以直接看下面這些指令頁：
+```bash
+# 先看規則，確認 folder、rule group 與 labels 是否符合預期。
+grafana-util alert list-rules --profile prod --output-format table
+```
+
+```bash
+# 看 contact point，確認 receiver 名稱是否能對上 route。
+grafana-util alert list-contact-points --profile prod --output-format yaml
+```
+
+```bash
+# 看通知模板與 mute timing，避免搬移時漏掉通知內容或靜音設定。
+grafana-util alert list-templates --profile prod --output-format table
+grafana-util alert list-mute-timings --profile prod --output-format table
+```
+
+如果 inventory 少了你預期的資源，先查權限與 org scope。不要急著用 `import` 或 `apply` 補東西，因為你可能只是沒有看見完整範圍。
+
+`list-rules` 的目的不是單純把規則印出來。它是 alert 變更前後的第一個 sanity check。看輸出時，先確認 rule name、folder、rule group、org scope、labels 與 receiver 相關欄位；如果你準備搬移規則，也要留意 dashboard UID / panel id 的關聯是否還能在目標環境成立。人工 review 優先用 `--output-format table`，要交給 CI 或保存成 artifact 時改用 JSON / YAML。
+
+盤點完的下一步取決於你看到什麼：如果只是要保留現況，接 `alert export`；如果要從既有 rule 衍生新規則，接 `clone-rule`；如果 receiver 或 route 名稱對不上，接 `list-contact-points` 與 `preview-route`；如果盤點是 apply 後驗證，應該再跑一次 `plan` 或至少保存 apply 前後的 inventory。
+
+## 搬移：raw bundle 是現況快照
+
+`alert export` 會把 live Grafana 的 alert 資源匯出成 `raw/` JSON。這條路徑適合備份、搬移、比對與災難恢復，不等同於 desired-state authoring。
+
+```bash
+# 匯出 live alert state，建立可保存的 raw bundle。
+grafana-util alert export --profile prod --output-dir ./alerts --overwrite
+```
+
+```bash
+# 匯入前先比對 raw bundle 與目標 Grafana。
+grafana-util alert diff --profile prod --diff-dir ./alerts/raw --output-format json
+```
+
+```bash
+# 先 dry-run，確認會匯入或更新哪些資源。
+grafana-util alert import \
+  --profile prod \
+  --input-dir ./alerts/raw \
+  --replace-existing \
+  --dry-run --json
+```
+
+如果 alert rule 有 dashboard / panel 關聯，而且來源與目標環境的 UID 或 panel id 不同，先準備 `--dashboard-uid-map` 與 `--panel-id-map`。這類 mapping 應該在 diff / import / plan 前就決定，不要等 apply 後才補救。
+
+## 編寫：desired state 是變更意圖
+
+Authoring 路徑的重點是：你先在本地建立想要的 alert state，等 review 完再讓 live Grafana 改變。
+
+```bash
+# 建立 desired-state 目錄。
+grafana-util alert init --desired-dir ./alerts/desired
+```
+
+如果你只是要一個低階骨架，先用 `new-*`：
+
+```bash
+# 建立一個 rule 骨架，之後再補細節。
+grafana-util alert new-rule --desired-dir ./alerts/desired --name cpu-main
+```
+
+如果你要一次建立較完整的 rule，使用 `add-rule`。這條路徑比較適合日常維運，因為可以同時帶上 folder、rule group、receiver、severity、threshold、labels 與 annotations。
+
+```bash
+# 建立完整一點的 staged rule，仍然不碰 live Grafana。
+grafana-util alert add-rule \
+  --desired-dir ./alerts/desired \
+  --name cpu-high \
+  --folder platform-alerts \
+  --rule-group cpu \
+  --receiver pagerduty-primary \
+  --severity critical \
+  --expr 'A' \
+  --threshold 80 \
+  --above \
+  --for 5m \
+  --label team=platform \
+  --annotation summary='CPU high'
+```
+
+如果你要從既有規則衍生一條新規則，用 `clone-rule`；如果要建立 contact point 或 template 草稿，使用 `new-contact-point` / `new-template`；如果要較高階地建立 contact point，使用 `add-contact-point`。
+
+## 路由：先 preview，再 set-route
+
+Routing 最容易出現「語法正確但通知送錯地方」的問題。先用 `preview-route` 看 matcher 輸入，再用 `set-route` 寫入受工具管理的 route。
+
+```bash
+# 先預覽 labels 會如何被路由輸入解讀。
+grafana-util alert preview-route \
+  --desired-dir ./alerts/desired \
+  --label team=platform \
+  --severity critical
+```
+
+```bash
+# 確認後再寫入受管理 route。
+grafana-util alert set-route \
+  --desired-dir ./alerts/desired \
+  --receiver pagerduty-primary \
+  --label team=platform \
+  --severity critical
+```
+
+`set-route` 是替換受管理路由，不是任意 merge 手工 route tree。若你要保留複雜既有 policy，先 export / diff，看清楚 live policy，再決定是否改成 desired-state 管理。
+
+## Review / Apply：plan 是最後關卡
+
+`plan` 是 desired state 與 live Grafana 之間的審查文件。它應該在 review 裡被保存、討論，然後才交給 `apply`。
+
+```bash
+# 產生 plan，不直接碰 live mutation。
+grafana-util alert plan \
+  --profile prod \
+  --desired-dir ./alerts/desired \
+  --prune \
+  --output-format json
+```
+
+讀 plan 時至少看這幾件事：
+
+- `create`：desired state 有，但 live Grafana 沒有。
+- `update`：兩邊都有，但內容不同。
+- `delete`：使用 `--prune` 時，live 有而 desired state 沒有。
+- `noop`：兩邊一致。
+- `blocked`：工具判斷不應直接套用的項目。
+
+`--prune` 很有用，但也最危險。它代表「desired state 沒有列到的 live 資源可以被視為刪除候選」。第一次導入時，建議先不帶 `--prune` 跑一次，再帶 `--prune` 對照差異。
+
+```bash
+# 只套用已審查、已保存的 plan。
+grafana-util alert apply \
+  --profile prod \
+  --plan-file ./alert-plan-reviewed.json \
+  --approve \
+  --output-format json
+```
+
+`apply` 不應該直接吃剛產生但沒 review 的臨時輸出。實務上，plan file 應該進 PR、變更單或至少被保存成一個可追溯 artifact。
+
+## 什麼時候切到指令參考
+
+這一章負責流程判斷。當你已經知道要用哪個 subcommand，再打開指令參考確認 flags：
 
 - [alert 指令總覽](../../commands/zh-TW/alert.md)
-- [alert 指令總覽](../../commands/zh-TW/alert.md)
-- [alert export](../../commands/zh-TW/alert-export.md)
-- [alert import](../../commands/zh-TW/alert-import.md)
-- [alert diff](../../commands/zh-TW/alert-diff.md)
-- [alert plan](../../commands/zh-TW/alert-plan.md)
-- [alert apply](../../commands/zh-TW/alert-apply.md)
-- [alert delete](../../commands/zh-TW/alert-delete.md)
-- [alert add-rule](../../commands/zh-TW/alert-add-rule.md)
-- [alert clone-rule](../../commands/zh-TW/alert-clone-rule.md)
-- [alert add-contact-point](../../commands/zh-TW/alert-add-contact-point.md)
-- [alert set-route](../../commands/zh-TW/alert-set-route.md)
-- [alert preview-route](../../commands/zh-TW/alert-preview-route.md)
-- [alert new-rule](../../commands/zh-TW/alert-new-rule.md)
-- [alert new-contact-point](../../commands/zh-TW/alert-new-contact-point.md)
-- [alert new-template](../../commands/zh-TW/alert-new-template.md)
 - [alert list-rules](../../commands/zh-TW/alert-list-rules.md)
 - [alert list-contact-points](../../commands/zh-TW/alert-list-contact-points.md)
 - [alert list-mute-timings](../../commands/zh-TW/alert-list-mute-timings.md)
 - [alert list-templates](../../commands/zh-TW/alert-list-templates.md)
-- [指令參考](../../commands/zh-TW/index.md)
+- [alert export](../../commands/zh-TW/alert-export.md)
+- [alert import](../../commands/zh-TW/alert-import.md)
+- [alert diff](../../commands/zh-TW/alert-diff.md)
+- [alert new-rule](../../commands/zh-TW/alert-new-rule.md)
+- [alert add-rule](../../commands/zh-TW/alert-add-rule.md)
+- [alert clone-rule](../../commands/zh-TW/alert-clone-rule.md)
+- [alert new-contact-point](../../commands/zh-TW/alert-new-contact-point.md)
+- [alert add-contact-point](../../commands/zh-TW/alert-add-contact-point.md)
+- [alert new-template](../../commands/zh-TW/alert-new-template.md)
+- [alert preview-route](../../commands/zh-TW/alert-preview-route.md)
+- [alert set-route](../../commands/zh-TW/alert-set-route.md)
+- [alert plan](../../commands/zh-TW/alert-plan.md)
+- [alert apply](../../commands/zh-TW/alert-apply.md)
+- [alert delete](../../commands/zh-TW/alert-delete.md)
 
----
+## 失敗時先檢查
 
-## 🛠️ 核心工作流用途
-
-告警相關功能主要是為了這幾種場景設計：
-- **Desired State**：在不觸碰即時 Grafana 的情況下，於本地建立告警配置。
-- **審查差異**：在核准變更前，比對 Desired State 與現有資產。
-- **受控套用**：僅執行已通過審查的計畫。
-- **遷移與回放**：使用傳統 `raw/` 路徑進行資產快照與環境遷移。
-
----
-
-## 🚧 工作流程邊界（兩條資料路徑）
-
-告警管理拆成四條獨立的維運流程。**請不要混用這些路徑。**
-
-| 路徑 (Lane) | 用途 | 常用指令 |
-| :--- | :--- | :--- |
-| **盤點 (Inventory)** | 先看 live alert 現況，再決定後續要不要變更。 | `list-rules`, `list-contact-points`, `list-mute-timings`, `list-templates`, `delete` |
-| **搬移 (Backup)** | 匯出、匯入或比對 alert 資產與 bundle。 | `export`, `import`, `diff` |
-| **編寫 (Authoring)** | 建立與編輯供審查 / 套用的 Desired-State 檔案。 | `init`, `add-rule`, `clone-rule`, `add-contact-point`, `set-route`, `preview-route`, `new-rule`, `new-contact-point`, `new-template` |
-| **審查 (Review)** | 先產生並套用已審查過的 plan。 | `plan`, `apply` |
-
----
-
-## 📋 編寫 Desired State
-
-從建置 Desired-State 樹狀結構開始。這會建立代表您「變更意圖」的本地檔案。
-
-```bash
-# 初始化 Desired-State 目錄
-grafana-util alert init --desired-dir ./alerts/desired
-
-# 新增規則到本地檔案 (尚未觸及 Grafana)
-grafana-util alert add-rule \
-  --desired-dir ./alerts/desired \
-  --name cpu-high --folder platform-alerts \
-  --receiver pagerduty-primary --threshold 80 --above --for 5m
-```
-
----
-
-## 🔬 審查與套用 (審查週期)
-
-使用 `plan` 來建立本地檔案與即時 Grafana 之間的差異預覽。
-
-```bash
-# 產生供審查的計畫
-grafana-util alert plan \
-  --url http://localhost:3000 \
-  --basic-user admin --basic-password admin \
-  --desired-dir ./alerts/desired --prune --output-format json
-```
-
-**如何解讀計畫輸出：**
-- **create**：Desired 資源在即時 Grafana 中缺失。
-- **update**：即時 Grafana 與您的 Desired 檔案存在差異。
-- **delete**：當啟動 `--prune` 且即時資源不在您的檔案中時觸發。
-
-**驗證套用步驟：**
-僅在計畫審查完成並保存後執行。
-```bash
-# 用途：僅在計畫審查完成並保存後執行。
-grafana-util alert apply \
-  --plan-file ./alert-plan-reviewed.json \
-  --approve --output-format json
-```
-
----
-
-## 🚀 關鍵指令 (完整參數參考)
-
-| 指令 | 帶有參數的完整範例 |
-| :--- | :--- |
-| **列出規則 (List)** | `grafana-util alert list-rules --all-orgs --table` |
-| **初始化 (Init)** | `grafana-util alert init --desired-dir ./alerts/desired` |
-| **匯出 (Export)** | `grafana-util alert export --output-dir ./alerts --overwrite` |
-| **計畫 (Plan)** | `grafana-util alert plan --desired-dir ./alerts/desired --prune --output-format json` |
-| **套用 (Apply)** | `grafana-util alert apply --plan-file ./plan.json --approve` |
-| **設定路由 (Set Route)** | `grafana-util alert set-route --desired-dir ./alerts/desired --receiver pagerduty` |
-| **新增規則 (New)** | `grafana-util alert new-rule --name <NAME> --folder <FOLDER> --output <FILE>` |
-| **新增聯絡點 (New)** | `grafana-util alert new-contact-point --name <NAME> --type <TYPE> --output <FILE>` |
-| **新增範本 (New)** | `grafana-util alert new-template --name <NAME> --template <CONTENT> --output <FILE>` |
-
----
-
-## 🔬 實作範例
-
-### 1. 告警計畫摘錄
-```bash
-# 用途：1. 告警計畫摘錄。
-grafana-util alert plan --desired-dir ./alerts/desired --prune --output-format json
-```
-**範例輸出：**
-```json
-{
-  "summary": {
-    "create": 1,
-    "update": 2,
-    "delete": 1,
-    "noop": 0,
-    "blocked": 0
-  }
-}
-```
-
-### 2. 路由預覽
-在套用前於本地驗證路由邏輯。
-```bash
-# 用途：在套用前於本地驗證路由邏輯。
-grafana-util alert preview-route --desired-dir ./alerts/desired --label team=platform --severity critical
-```
-**範例輸出：**
-```json
-{
-  "input": { "labels": { "team": "platform" }, "severity": "critical" },
-  "matches": []
-}
-```
-*註：空白的 match list 代表合約驗證成功，不一定代表存在即時告警實例。*
+- 如果 inventory 看不到預期資源，先確認 profile、token 權限、org scope 與 folder 權限。
+- 如果 export / import 少了 dashboard-linked rule，先確認 dashboard UID 與 panel id mapping。
+- 如果 plan 比預期多出 delete，先移除 `--prune` 對照一次。
+- 如果 preview-route 結果空白，先確認 label key/value 與 receiver 名稱，不要直接 apply。
+- 如果 apply 結果和 plan 不一致，先確認 reviewed plan 是否仍對應目前 live Grafana；中間若有人改過 UI，應重新 plan。
 
 ---
 [⬅️ 上一章：Data source 管理](datasource.md) | [🏠 回首頁](index.md) | [➡️ 下一章：Access 管理](access.md)

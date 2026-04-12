@@ -32,17 +32,17 @@
 
 ## 範例
 ```bash
-# 用途：透過 Grafana API 匯入儀表板 JSON 檔案。
+# 透過 Grafana API 匯入儀表板 JSON 檔案。
 grafana-util dashboard import --profile prod --input-dir ./dashboards/raw --replace-existing
 ```
 
 ```bash
-# 用途：透過 Grafana API 匯入儀表板 JSON 檔案。
+# 透過 Grafana API 匯入儀表板 JSON 檔案。
 grafana-util dashboard import --url http://localhost:3000 --basic-user admin --basic-password admin --input-dir ./dashboards/raw --dry-run --table
 ```
 
 ```bash
-# 用途：透過 Grafana API 匯入儀表板 JSON 檔案。
+# 透過 Grafana API 匯入儀表板 JSON 檔案。
 grafana-util dashboard import --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --input-dir ./dashboards/raw --dry-run --table
 ```
 

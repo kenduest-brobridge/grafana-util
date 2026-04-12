@@ -11,12 +11,12 @@
 
 ## 範例
 ```bash
-# 用途：印出人類可讀的版本。
+# 印出人類可讀的版本。
 grafana-util version
 ```
 
 ```bash
-# 用途：印出機器可讀的版本資訊。
+# 印出機器可讀的版本資訊。
 grafana-util version --json
 ```
 

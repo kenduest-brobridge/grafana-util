@@ -11,7 +11,11 @@
   },
   "page_overrides": {
     "index": {
+      "show_command_map": false,
       "show_section_index": false
+    },
+    "what-is-grafana-util": {
+      "show_command_map": false
     }
   },
   "locale_strings": {

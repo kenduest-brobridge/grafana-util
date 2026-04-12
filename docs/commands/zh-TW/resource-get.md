@@ -17,17 +17,17 @@
 
 ## 範例
 ```bash
-# 用途：依 UID 取得單一 live dashboard。
+# 依 UID 取得單一 live dashboard。
 grafana-util status resource get dashboards/cpu-main --url http://localhost:3000 --basic-user admin --basic-password admin
 ```
 
 ```bash
-# 用途：以 YAML 取得單一 datasource payload。
+# 以 YAML 取得單一 datasource payload。
 grafana-util status resource get datasources/prom-main --profile prod --output-format yaml
 ```
 
 ```bash
-# 用途：依數字 ID 取得單一 org payload。
+# 依數字 ID 取得單一 org payload。
 grafana-util status resource get orgs/1 --profile prod --output-format json
 ```
 

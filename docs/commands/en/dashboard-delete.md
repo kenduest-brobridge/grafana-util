@@ -16,17 +16,17 @@ Use this when you need to remove one dashboard, a folder subtree, or a subtree p
 
 ## Examples
 ```bash
-# Purpose: Delete live dashboards by UID or folder path.
+# Delete live dashboards by UID or folder path.
 grafana-util dashboard delete --url http://localhost:3000 --basic-user admin --basic-password admin --uid cpu-main --dry-run --json
 ```
 
 ```bash
-# Purpose: Delete live dashboards by UID or folder path.
+# Delete live dashboards by UID or folder path.
 grafana-util dashboard delete --url http://localhost:3000 --basic-user admin --basic-password admin --path 'Platform / Infra' --yes
 ```
 
 ```bash
-# Purpose: Prompt for a delete selector, preview the delete plan, and confirm in the terminal.
+# Prompt for a delete selector, preview the delete plan, and confirm in the terminal.
 grafana-util dashboard delete --url http://localhost:3000 --prompt
 ```
 

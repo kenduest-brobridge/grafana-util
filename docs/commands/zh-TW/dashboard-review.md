@@ -13,17 +13,17 @@
 
 ## 範例
 ```bash
-# 用途：檢視一個本地儀表板 JSON 檔，但不會碰到 Grafana。
+# 檢視一個本地儀表板 JSON 檔，但不會碰到 Grafana。
 grafana-util dashboard review --input ./drafts/cpu-main.json
 ```
 
 ```bash
-# 用途：檢視一個本地儀表板 JSON 檔，但不會碰到 Grafana。
+# 檢視一個本地儀表板 JSON 檔，但不會碰到 Grafana。
 grafana-util dashboard review --input ./drafts/cpu-main.json --output-format yaml
 ```
 
 ```bash
-# 用途：從標準輸入檢視一份生成儀表板。
+# 從標準輸入檢視一份生成儀表板。
 jsonnet dashboards/cpu.jsonnet | grafana-util dashboard review --input - --output-format json
 ```
 

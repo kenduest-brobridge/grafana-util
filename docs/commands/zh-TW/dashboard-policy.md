@@ -26,12 +26,12 @@
 
 ## 範例
 ```bash
-# 用途：直接對線上 Grafana 套用治理政策檢查。
+# 直接對線上 Grafana 套用治理政策檢查。
 grafana-util dashboard policy --url http://localhost:3000 --basic-user admin --basic-password admin --policy-source file --policy ./policy.yaml
 ```
 
 ```bash
-# 用途：直接對本地匯出樹套用治理政策檢查。
+# 直接對本地匯出樹套用治理政策檢查。
 grafana-util dashboard policy --input-dir ./dashboards/raw --input-format raw --policy-source builtin --builtin-policy default --output-format json --json-output ./governance-check.json
 ```
 
@@ -40,7 +40,7 @@ grafana-util dashboard policy --input-dir ./grafana-oac-repo --input-format git-
 ```
 
 ```bash
-# 用途：進階重用：對可重用的分析成品套用治理政策檢查。
+# 進階重用：對可重用的分析成品套用治理政策檢查。
 grafana-util dashboard policy --policy-source builtin --builtin-policy default --governance ./governance.json --queries ./queries.json --output-format json --json-output ./governance-check.json
 ```
 

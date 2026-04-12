@@ -326,13 +326,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   font-weight: 500;
 }
 .nav-command-branch-item .nav-command-leaf-link:hover { color: var(--heading); }
-.handbook-command-map .nav-command-root-link {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  font-size: 0.9rem;
-}
 
 .sidebar-toggle {
   position: absolute;
@@ -378,71 +371,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map { margin: 0 0 24px; }
-.handbook-command-map-panel {
-  margin-top: 16px;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--panel) 96%, white);
-}
-.handbook-command-map .nav-group-title {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-group {
-  padding-top: 0;
-}
-.handbook-command-map .nav-command-group + .nav-command-group {
-  margin-top: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
-  padding-top: 10px;
-}
-.handbook-command-map .nav-command-sub-list {
-  margin-top: 8px;
-  margin-left: 0;
-  padding-left: 0;
-  border-left: 0;
-}
-.handbook-command-map .nav-command-branch {
-  display: grid;
-  grid-template-columns: minmax(130px, 0.22fr) minmax(0, 1fr);
-  gap: 12px 18px;
-  align-items: start;
-}
-.handbook-command-map .nav-command-branch-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-left: 0;
-  padding-left: 14px;
-}
-.handbook-command-map .nav-command-branch-item + .nav-command-branch-item { margin-top: 0; }
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-  line-height: 1.25;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link:hover,
-.handbook-command-map .nav-command-link a:hover {
-  border-color: color-mix(in srgb, var(--border) 45%, var(--accent));
-  background: var(--panel-strong);
-}
-@media (max-width: 720px) {
-  .handbook-command-map .nav-command-branch {
-    grid-template-columns: 1fr;
-  }
-  .handbook-command-map .nav-command-branch-list {
-    padding-left: 0;
-    border-left: 0;
-  }
-}
 .article p,
 .article li { color: var(--text); font-weight: 460; }
 .article ul li::marker,
@@ -937,7 +865,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="重點旗標">重點旗標</h2>
 <ul><li><code>--url</code>：Grafana 基底網址。</li><li><code>--token</code>、<code>--basic-user</code>、<code>--basic-password</code>：共用的線上 Grafana 憑證。</li><li><code>--profile</code>：從 <code>grafana-util.yaml</code> 載入 repo 本地預設值。</li><li><code>--color</code>：控制這個指令群組的 JSON 彩色輸出。</li></ul>
 <h2 id="這一組頁面怎麼讀比較不會亂">這一組頁面怎麼讀比較不會亂</h2>
-<ol><li>先看這頁，判斷你是在做 inventory、bundle、diff，還是 live mutation。</li><li>進到子命令頁後，先看資料來源是 live 還是本地 bundle。</li><li>先跑最短成功路徑，再加進階旗標，不要一開始就帶滿所有 options。</li><li>如果是 production 變更，先完成 export / diff，再進 live mutation。</li></ol>
+<ol><li>先看這頁，判斷你是在做 inventory、bundle、diff，還是 live mutation。</li><li>進到子命令頁後，先看 data source 來源是 live 還是本地 bundle。</li><li>先跑最短成功路徑，再加進階旗標，不要一開始就帶滿所有 options。</li><li>如果是 production 變更，先完成 export / diff，再進 live mutation。</li></ol>
 <h2 id="採用前後對照">採用前後對照</h2>
 <ul><li><strong>採用前</strong>：data source 工作常散在 Grafana UI、API 呼叫或一次性的 shell 指令裡，之後很難回頭審查。</li><li><strong>採用後</strong>：同一套生命週期集中在一個指令群組裡，browse、export、diff 和 live 修改可以共用同樣的驗證與審查習慣。</li></ul>
 <h2 id="成功判準">成功判準</h2>

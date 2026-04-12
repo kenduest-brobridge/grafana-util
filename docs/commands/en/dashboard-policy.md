@@ -26,22 +26,22 @@ Use this when you want a policy pass or fail result before promotion. Prefer dir
 
 ## Examples
 ```bash
-# Purpose: Evaluate governance policy against live Grafana directly.
+# Evaluate governance policy against live Grafana directly.
 grafana-util dashboard policy --url http://localhost:3000 --basic-user admin --basic-password admin --policy-source file --policy ./policy.yaml
 ```
 
 ```bash
-# Purpose: Evaluate governance policy against a local export tree directly.
+# Evaluate governance policy against a local export tree directly.
 grafana-util dashboard policy --input-dir ./dashboards/raw --input-format raw --policy-source builtin --builtin-policy default --output-format json --json-output ./governance-check.json
 ```
 
 ```bash
-# Purpose: Evaluate governance policy against a repo-backed Git Sync dashboard tree.
+# Evaluate governance policy against a repo-backed Git Sync dashboard tree.
 grafana-util dashboard policy --input-dir ./grafana-oac-repo --input-format git-sync --policy-source builtin --builtin-policy default --output-format json --json-output ./governance-check.json
 ```
 
 ```bash
-# Purpose: Advanced reuse: evaluate governance policy against reusable analysis artifacts.
+# Advanced reuse: evaluate governance policy against reusable analysis artifacts.
 grafana-util dashboard policy --policy-source builtin --builtin-policy default --governance ./governance.json --queries ./queries.json --output-format json --json-output ./governance-check.json
 ```
 

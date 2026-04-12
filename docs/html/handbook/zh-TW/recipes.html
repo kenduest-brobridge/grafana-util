@@ -326,13 +326,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   font-weight: 500;
 }
 .nav-command-branch-item .nav-command-leaf-link:hover { color: var(--heading); }
-.handbook-command-map .nav-command-root-link {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  font-size: 0.9rem;
-}
 
 .sidebar-toggle {
   position: absolute;
@@ -378,71 +371,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map { margin: 0 0 24px; }
-.handbook-command-map-panel {
-  margin-top: 16px;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--panel) 96%, white);
-}
-.handbook-command-map .nav-group-title {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-group {
-  padding-top: 0;
-}
-.handbook-command-map .nav-command-group + .nav-command-group {
-  margin-top: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
-  padding-top: 10px;
-}
-.handbook-command-map .nav-command-sub-list {
-  margin-top: 8px;
-  margin-left: 0;
-  padding-left: 0;
-  border-left: 0;
-}
-.handbook-command-map .nav-command-branch {
-  display: grid;
-  grid-template-columns: minmax(130px, 0.22fr) minmax(0, 1fr);
-  gap: 12px 18px;
-  align-items: start;
-}
-.handbook-command-map .nav-command-branch-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-left: 0;
-  padding-left: 14px;
-}
-.handbook-command-map .nav-command-branch-item + .nav-command-branch-item { margin-top: 0; }
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-  line-height: 1.25;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link:hover,
-.handbook-command-map .nav-command-link a:hover {
-  border-color: color-mix(in srgb, var(--border) 45%, var(--accent));
-  background: var(--panel-strong);
-}
-@media (max-width: 720px) {
-  .handbook-command-map .nav-command-branch {
-    grid-template-columns: 1fr;
-  }
-  .handbook-command-map .nav-command-branch-list {
-    padding-left: 0;
-    border-left: 0;
-  }
-}
 .article p,
 .article li { color: var(--text); font-weight: 460; }
 .article ul li::marker,
@@ -920,15 +848,16 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
       <div class="layout">
 <aside class="nav-sidebar">
   <button class="sidebar-toggle sidebar-toggle-left" type="button" aria-expanded="true" aria-label="Toggle handbook navigation">◀</button>
-  <div class="nav-sidebar-content"><section class="nav-section"><h2>手冊導覽</h2><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 1 部 · 起步</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="index.html" class="nav-item">概觀</a></li><li class="nav-tree-node"><a href="what-is-grafana-util.html" class="nav-item">這個工具是做什麼的</a></li><li class="nav-tree-node"><a href="getting-started.html" class="nav-item">開始使用</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 2 部 · 角色路徑</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="role-new-user.html" class="nav-item">第一次執行 / 新手路線</a></li><li class="nav-tree-node"><a href="role-sre-ops.html" class="nav-item">SRE / 維運</a></li><li class="nav-tree-node"><a href="role-automation-ci.html" class="nav-item">自動化 / CI</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 3 部 · 操作面</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="status-workspace.html" class="nav-item">Status / Workspace</a></li><li class="nav-tree-node"><a href="dashboard.html" class="nav-item">Dashboard</a></li><li class="nav-tree-node"><a href="datasource.html" class="nav-item">Datasource</a></li><li class="nav-tree-node"><a href="alert.html" class="nav-item">Alert</a></li><li class="nav-tree-node"><a href="access.html" class="nav-item">Access</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 4 部 · 設計原則</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="architecture.html" class="nav-item">設計原則</a></li></ul></div><div class="nav-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">第 5 部 · 參考與排錯</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="scenarios.html" class="nav-item">情境手冊</a></li><li class="nav-tree-node"><a href="recipes.html" class="nav-item active">實戰錦囊</a></li><li class="nav-tree-node"><a href="reference.html" class="nav-item">技術參考</a></li><li class="nav-tree-node"><a href="troubleshooting.html" class="nav-item">疑難排解</a></li></ul></div></section><section class="nav-section nav-command-section collapsed"><button class="nav-group-header nav-section-toggle" type="button" aria-expanded="false"><span class="nav-group-title-text">指令關係</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-section-body"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">維運路線</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><ul class="nav-command-tree"><li class="nav-command-link"><a href="../../commands/zh-TW/status.html" class="nav-command-leaf-link">status</a></li><li class="nav-command-link"><a href="../../commands/zh-TW/workspace.html" class="nav-command-leaf-link">workspace</a></li><li class="nav-command-link"><a href="../../commands/zh-TW/dashboard.html" class="nav-command-leaf-link">dashboard</a></li><li class="nav-command-link"><a href="../../commands/zh-TW/datasource.html" class="nav-command-leaf-link">datasource</a></li><li class="nav-command-link"><a href="../../commands/zh-TW/alert.html" class="nav-command-leaf-link">alert</a></li><li class="nav-command-link"><a href="../../commands/zh-TW/access.html" class="nav-command-leaf-link">access</a></li></ul></div></div></div></section><section class="nav-section"><h2>指令參考</h2><a href="../../commands/zh-TW/index.html" class="nav-command-entry">開啟指令參考</a></section></div>
+  <div class="nav-sidebar-content"><section class="nav-section"><h2>手冊導覽</h2><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 1 部 · 起步</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="index.html" class="nav-item">概觀</a></li><li class="nav-tree-node"><a href="what-is-grafana-util.html" class="nav-item">這個工具是做什麼的</a></li><li class="nav-tree-node"><a href="getting-started.html" class="nav-item">開始使用</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 2 部 · 角色路徑</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="role-new-user.html" class="nav-item">第一次執行 / 新手路線</a></li><li class="nav-tree-node"><a href="role-sre-ops.html" class="nav-item">SRE / 維運</a></li><li class="nav-tree-node"><a href="role-automation-ci.html" class="nav-item">自動化 / CI</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 3 部 · 操作面</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="status-workspace.html" class="nav-item">Status / Workspace</a></li><li class="nav-tree-node"><a href="dashboard.html" class="nav-item">Dashboard</a></li><li class="nav-tree-node"><a href="datasource.html" class="nav-item">Datasource</a></li><li class="nav-tree-node"><a href="alert.html" class="nav-item">Alert</a></li><li class="nav-tree-node"><a href="access.html" class="nav-item">Access</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 4 部 · 設計原則</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="architecture.html" class="nav-item">設計原則</a></li></ul></div><div class="nav-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">第 5 部 · 參考與排錯</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="scenarios.html" class="nav-item">情境手冊</a></li><li class="nav-tree-node"><a href="recipes.html" class="nav-item active">實戰錦囊</a></li><li class="nav-tree-node"><a href="reference.html" class="nav-item">技術參考</a></li><li class="nav-tree-node"><a href="troubleshooting.html" class="nav-item">疑難排解</a></li></ul></div></section><section class="nav-section nav-command-section collapsed"><button class="nav-group-header nav-section-toggle" type="button" aria-expanded="false"><span class="nav-group-title-text">指令捷徑</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-section-body"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">維運路線</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><ul class="nav-command-tree"><li class="nav-command-link"><a href="../../commands/zh-TW/status.html" class="nav-command-leaf-link">status</a></li><li class="nav-command-link"><a href="../../commands/zh-TW/workspace.html" class="nav-command-leaf-link">workspace</a></li><li class="nav-command-link"><a href="../../commands/zh-TW/dashboard.html" class="nav-command-leaf-link">dashboard</a></li><li class="nav-command-link"><a href="../../commands/zh-TW/datasource.html" class="nav-command-leaf-link">datasource</a></li><li class="nav-command-link"><a href="../../commands/zh-TW/alert.html" class="nav-command-leaf-link">alert</a></li><li class="nav-command-link"><a href="../../commands/zh-TW/access.html" class="nav-command-leaf-link">access</a></li></ul></div></div></div></section><section class="nav-section"><h2>指令參考</h2><a href="../../commands/zh-TW/index.html" class="nav-command-entry">開啟指令參考</a></section></div>
 </aside>
 
 <article class="article">
 <div class="breadcrumbs"><a href="../../index.html">Home</a> / 手冊 / 實戰錦囊</div>
 
-<div class="hero-eyebrow">第 5 部 · 參考與排錯 · 第 14 章 / 共 16 章</div><h1><span class="hero-title-main">實戰錦囊</span></h1><p class="hero-subtitle">實戰錦囊與最佳實踐</p>
+<div class="hero-eyebrow">第 5 部 · 參考與排錯</div><h1><span class="hero-title-main">實戰錦囊</span></h1><p class="hero-subtitle">實戰錦囊與最佳實踐</p>
 
-<section class="section-index"><h2>章節索引</h2><p class="section-index-summary">先從這裡跳到你要看的段落。</p><ul class="section-index-list layout-list"><li><a href="#command-relationships">指令關係</a></li><li><a href="#適用對象">適用對象</a></li><li><a href="#主要目標">主要目標</a></li><li><a href="#採用前後對照">採用前後對照</a></li><li><a href="#成功判準">成功判準</a></li><li><a href="#失敗時先檢查">失敗時先檢查</a></li><li><a href="#錦囊-1跨環境儀表板遷移-dev-prod">錦囊 1：跨環境儀表板遷移 (Dev -&gt; Prod)</a></li><li><a href="#錦囊-2匯入前的依賴性盤點">錦囊 2：匯入前的依賴性盤點</a></li><li><a href="#錦囊-3批次加標籤或更名-surgical-patching">錦囊 3：批次加標籤或更名 (Surgical Patching)</a></li><li><a href="#錦囊-4驗證告警路由邏輯">錦囊 4：驗證告警路由邏輯</a></li><li><a href="#專家建議">專家建議</a></li></ul></section><section class="handbook-command-map"><h2 id="command-relationships">指令關係</h2><div class="handbook-command-map-panel"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">維運路線</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><ul class="nav-command-tree"><li class="nav-command-link"><a href="../../commands/zh-TW/status.html" class="nav-command-leaf-link">status</a></li><li class="nav-command-link"><a href="../../commands/zh-TW/workspace.html" class="nav-command-leaf-link">workspace</a></li><li class="nav-command-link"><a href="../../commands/zh-TW/dashboard.html" class="nav-command-leaf-link">dashboard</a></li><li class="nav-command-link"><a href="../../commands/zh-TW/datasource.html" class="nav-command-leaf-link">datasource</a></li><li class="nav-command-link"><a href="../../commands/zh-TW/alert.html" class="nav-command-leaf-link">alert</a></li><li class="nav-command-link"><a href="../../commands/zh-TW/access.html" class="nav-command-leaf-link">access</a></li></ul></div></div></div></section><p>本章整理幾個真的會用到的 Grafana 維運配方。重點不只是指令本身，而是什麼時候該用、成功長什麼樣、失敗先查哪裡。</p>
+<section class="section-index"><h2>章節索引</h2><p class="section-index-summary">先從這裡跳到你要看的段落。</p><ul class="section-index-list layout-list"><li><a href="#適用對象">適用對象</a></li><li><a href="#主要目標">主要目標</a></li><li><a href="#採用前後對照">採用前後對照</a></li><li><a href="#成功判準">成功判準</a></li><li><a href="#失敗時先檢查">失敗時先檢查</a></li><li><a href="#錦囊-1跨環境儀表板遷移-dev-prod">錦囊 1：跨環境儀表板遷移 (Dev -&gt; Prod)</a></li><li><a href="#錦囊-2匯入前的依賴性盤點">錦囊 2：匯入前的依賴性盤點</a></li><li><a href="#錦囊-3批次加標籤或更名-surgical-patching">錦囊 3：批次加標籤或更名 (Surgical Patching)</a></li><li><a href="#錦囊-4驗證告警路由邏輯">錦囊 4：驗證告警路由邏輯</a></li><li><a href="#專家建議">專家建議</a></li></ul></section><p>本章整理幾個真的會用到的 Grafana 維運配方。重點不只是指令本身，而是什麼時候該用、成功長什麼樣、失敗先查哪裡。</p>
+<p>請把每個錦囊當成一個小型案例讀。先看問題是否符合你的現場，再確認「適合什麼時候用」是否吻合，最後才執行命令。命令是案例的最後一步，不是整個案例本身。</p>
 <h2 id="適用對象">適用對象</h2>
 <ul><li>想快速套用既有維運做法的人</li><li>需要把 dashboard、alert、access 的常見操作做成標準套路的人</li><li>想先看成功判準與失敗檢查點的人</li></ul>
 <h2 id="主要目標">主要目標</h2>
@@ -945,7 +874,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <p><strong>採用後</strong>：遷移會變成 lane 選擇加 replay 流程，比較容易審查，也比較容易說清楚做法。</p>
 <p><strong>解決方案</strong>：利用 <strong><code>prompt/</code> lane</strong> 做乾淨遷移。</p>
 <ol><li><strong>從 Dev 匯出</strong>：<code>grafana-util dashboard export --output-dir ./dev-assets</code></li><li><strong>定位乾淨來源</strong>：使用 <code>./dev-assets/prompt/</code> 下的檔案。這些檔案已去除來源環境專屬 metadata。</li><li><strong>匯入到 Prod</strong>：</li></ol>
-<pre><code># 用途：匯入到 Prod。
+<pre><code># 把乾淨的 prompt lane 回放到 Prod。
    grafana-util dashboard import --input-dir ./dev-assets/prompt --url https://prod-grafana --replace-existing</code></pre>
 <p><strong>適合什麼時候用</strong>：來源與目標環境的 dashboard 意圖相同，但不想直接帶著來源環境 metadata 時。</p>
 <p><strong>不適合什麼時候用</strong>：如果你的目標是 raw backup/replay 或災難恢復，請從 <code>raw/</code> 開始，不要從 <code>prompt/</code> 開始。</p>
@@ -958,7 +887,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <p><strong>採用前</strong>：你常常要等匯入完成後，才知道某些 panel 根本接不到需要的 data source。</p>
 <p><strong>採用後</strong>：在正式匯入前，就能先知道缺哪個 data source、哪批 dashboard 會被卡住。</p>
 <p><strong>解決方案</strong>：匯入前先跑 <strong>pre-import inspection</strong>。</p>
-<pre><code># 用途：解決方案：匯入前先跑 pre-import inspection。
+<pre><code># 解決方案：匯入前先跑 pre-import inspection。
 grafana-util dashboard dependencies --input-dir ./backups/raw --input-format raw --output-format dependency</code></pre>
 <p><strong>檢查重點</strong>：確認依賴報告列出的每個 datasource，都存在於目標環境的 <code>datasource list</code>。</p>
 <p><strong>適合什麼時候用</strong>：正式匯入前、promotion bundle 送審前，或確認某批 dashboard export 是否真的可攜時。</p>
@@ -971,11 +900,12 @@ grafana-util dashboard dependencies --input-dir ./backups/raw --input-format raw
 <p><strong>採用前</strong>：這種小改動很容易退化成手改 JSON，或一支很難 review 的臨時腳本。</p>
 <p><strong>採用後</strong>：修改仍然是機械式的，但過程可以 review，匯入前也還能先 preview。</p>
 <p><strong>解決方案</strong>：在迴圈中使用 <code>patch</code>，然後在 replay 前先 preview。</p>
-<pre><code># 用途：解決方案：在迴圈中使用 patch，然後在 replay 前先 preview。
+<pre><code># 對每個 raw dashboard 檔套用同一個本地 tag patch。
 for file in ./dashboards/raw/*.json; do
   grafana-util dashboard patch --input &quot;$file&quot; --tag &quot;ManagedBySRE&quot; --output &quot;$file&quot;
 done
 
+# replay 前先 dry-run，確認不會直接改 live dashboard。
 grafana-util dashboard import --input-dir ./dashboards/raw --replace-existing --dry-run --table</code></pre>
 <p><strong>適合什麼時候用</strong>：修改是本機、機械式，而且可以清楚 review 的結構調整時。</p>
 <p><strong>不適合什麼時候用</strong>：如果 patch 邏輯太複雜、已經看不出風險，或它其實依賴 live discovery，就不該只用單純迴圈硬改。</p>
@@ -986,7 +916,7 @@ grafana-util dashboard import --input-dir ./dashboards/raw --replace-existing --
 <h2 id="錦囊-4驗證告警路由邏輯">錦囊 4：驗證告警路由邏輯</h2>
 <p><strong>問題描述</strong>：通知策略很複雜，你很難只靠眼睛判斷告警最後會送到哪個 receiver。</p>
 <p><strong>解決方案</strong>：使用 <code>preview-route</code> 模擬匹配結果。</p>
-<pre><code># 用途：解決方案：使用 preview-route 模擬匹配結果。
+<pre><code># 用一組 critical alert label 模擬 desired route tree 的匹配結果。
 grafana-util alert preview-route \
   --desired-dir ./alerts/desired \
   --label service=order \
@@ -1000,12 +930,12 @@ grafana-util alert preview-route \
 <h2 id="專家建議">專家建議</h2>
 <ul><li><strong>UID 一致性</strong>：務必在 JSON 中定義穩定的 <code>uid</code>，不要依賴自動遞增的 <code>id</code>。</li><li><strong>預覽優先</strong>：任何 live 變動前，先跑 <code>--dry-run</code>。</li><li><strong>Git 整合</strong>：只把 <code>raw/</code> 與 <code>desired/</code> 視為真正值得版本管理的核心來源。</li><li><strong>先確認憑證範圍</strong>：recipe 看起來失敗時，先確認 credential 是否真的看得到目標 org、folder 或管理員操作面。</li><li><strong>角色分工</strong>：流程選擇先看 handbook，需要精確旗標時再切到指令頁。</li></ul>
 <p><a href="reference.html">⬅️ 上一章：技術參考手冊</a> | <a href="index.html">🏠 回首頁</a> | <a href="troubleshooting.html">➡️ 下一章：疑難排解與名詞解釋</a></p>
-<nav class="footer-nav"><a class="link-card" href="scenarios.html"><span>上一章</span>第 13 章 · 維運情境手冊 (Operator Scenarios)</a><a class="link-card" href="reference.html"><span>下一章</span>第 15 章 · 技術參考手冊 (Technical Reference)</a></nav>
+<nav class="footer-nav"><a class="link-card" href="scenarios.html"><span>上一章</span>維運情境手冊 (Operator Scenarios)</a><a class="link-card" href="reference.html"><span>下一章</span>技術參考手冊 (Technical Reference)</a></nav>
 </article>
 <aside class="sidebar">
   <button class="sidebar-toggle sidebar-toggle-right" type="button" aria-expanded="true" aria-label="Toggle page sidebar">▶</button>
   <div class="sidebar-content">
-    <section class="sidebar-section"><h2>本頁內容</h2><ul class="toc-list"><li class="toc-level-2"><a href="#command-relationships"><span class="toc-label">指令關係</span></a></li><li class="toc-level-2"><a href="#適用對象"><span class="toc-label">適用對象</span></a></li><li class="toc-level-2"><a href="#主要目標"><span class="toc-label">主要目標</span></a></li><li class="toc-level-2"><a href="#採用前後對照"><span class="toc-label">採用前後對照</span></a></li><li class="toc-level-2"><a href="#成功判準"><span class="toc-label">成功判準</span></a></li><li class="toc-level-2"><a href="#失敗時先檢查"><span class="toc-label">失敗時先檢查</span></a></li><li class="toc-level-2"><a href="#錦囊-1跨環境儀表板遷移-dev-prod"><span class="toc-label">錦囊 1：跨環境儀表板遷移 (Dev -&gt; Prod)</span></a></li><li class="toc-level-2"><a href="#錦囊-2匯入前的依賴性盤點"><span class="toc-label">錦囊 2：匯入前的依賴性盤點</span></a></li><li class="toc-level-2"><a href="#錦囊-3批次加標籤或更名-surgical-patching"><span class="toc-label">錦囊 3：批次加標籤或更名 (Surgical Patching)</span></a></li><li class="toc-level-2"><a href="#錦囊-4驗證告警路由邏輯"><span class="toc-label">錦囊 4：驗證告警路由邏輯</span></a></li><li class="toc-level-2"><a href="#專家建議"><span class="toc-label">專家建議</span></a></li></ul></section><section class="sidebar-section"><h2>版本</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>語言</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/recipes.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
+    <section class="sidebar-section"><h2>本頁內容</h2><ul class="toc-list"><li class="toc-level-2"><a href="#適用對象"><span class="toc-label">適用對象</span></a></li><li class="toc-level-2"><a href="#主要目標"><span class="toc-label">主要目標</span></a></li><li class="toc-level-2"><a href="#採用前後對照"><span class="toc-label">採用前後對照</span></a></li><li class="toc-level-2"><a href="#成功判準"><span class="toc-label">成功判準</span></a></li><li class="toc-level-2"><a href="#失敗時先檢查"><span class="toc-label">失敗時先檢查</span></a></li><li class="toc-level-2"><a href="#錦囊-1跨環境儀表板遷移-dev-prod"><span class="toc-label">錦囊 1：跨環境儀表板遷移 (Dev -&gt; Prod)</span></a></li><li class="toc-level-2"><a href="#錦囊-2匯入前的依賴性盤點"><span class="toc-label">錦囊 2：匯入前的依賴性盤點</span></a></li><li class="toc-level-2"><a href="#錦囊-3批次加標籤或更名-surgical-patching"><span class="toc-label">錦囊 3：批次加標籤或更名 (Surgical Patching)</span></a></li><li class="toc-level-2"><a href="#錦囊-4驗證告警路由邏輯"><span class="toc-label">錦囊 4：驗證告警路由邏輯</span></a></li><li class="toc-level-2"><a href="#專家建議"><span class="toc-label">專家建議</span></a></li></ul></section><section class="sidebar-section"><h2>版本</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>語言</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/recipes.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
   </div>
 </aside>
 

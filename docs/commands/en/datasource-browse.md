@@ -13,12 +13,12 @@ Use this when you want an interactive inventory view for inspecting, editing, or
 
 ## Examples
 ```bash
-# Purpose: Open a live datasource browser against Grafana with in-place modify and delete actions.
+# Open a live datasource browser against Grafana with in-place modify and delete actions.
 grafana-util datasource browse --url http://localhost:3000 --basic-user admin --basic-password admin
 ```
 
 ```bash
-# Purpose: Open a live datasource browser against Grafana with in-place modify and delete actions.
+# Open a live datasource browser against Grafana with in-place modify and delete actions.
 grafana-util datasource browse --url http://localhost:3000 --basic-user admin --basic-password admin --org-id 2
 ```
 

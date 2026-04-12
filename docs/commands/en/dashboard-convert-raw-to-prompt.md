@@ -49,32 +49,32 @@ Use this when someone gives you a normal Grafana dashboard export, legacy raw JS
 
 ## Examples
 ```bash
-# Purpose: Convert one raw dashboard file into Grafana UI prompt JSON with __inputs.
+# Convert one raw dashboard file into Grafana UI prompt JSON with __inputs.
 grafana-util dashboard convert raw-to-prompt --input-file ./dashboards/raw/cpu-main.json
 ```
 
 ```bash
-# Purpose: Convert multiple raw dashboard files and emit progress lines.
+# Convert multiple raw dashboard files and emit progress lines.
 grafana-util dashboard convert raw-to-prompt --input-file ./legacy/cpu.json --input-file ./legacy/logs.json --progress
 ```
 
 ```bash
-# Purpose: Convert a raw export tree into a sibling prompt/ lane.
+# Convert a raw export tree into a sibling prompt/ lane.
 grafana-util dashboard convert raw-to-prompt --input-dir ./dashboards/raw --output-dir ./dashboards/prompt --overwrite
 ```
 
 ```bash
-# Purpose: Convert a legacy directory tree into one explicit output root and render a table summary.
+# Convert a legacy directory tree into one explicit output root and render a table summary.
 grafana-util dashboard convert raw-to-prompt --input-dir ./legacy-json --output-dir ./converted/prompt --output-format table
 ```
 
 ```bash
-# Purpose: Repair datasource references with an explicit mapping file.
+# Repair datasource references with an explicit mapping file.
 grafana-util dashboard convert raw-to-prompt --input-file ./legacy/cpu.json --datasource-map ./datasource-map.yaml --resolution exact --log-file ./raw-to-prompt.log --log-format json
 ```
 
 ```bash
-# Purpose: Augment datasource repair from a saved live profile.
+# Augment datasource repair from a saved live profile.
 grafana-util dashboard convert raw-to-prompt --input-file ./legacy/cpu.json --profile prod --org-id 2 --resolution exact
 ```
 

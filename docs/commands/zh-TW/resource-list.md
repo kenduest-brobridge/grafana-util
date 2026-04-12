@@ -13,17 +13,17 @@
 
 ## 範例
 ```bash
-# 用途：從本機 Grafana 以表格列出 dashboards。
+# 從本機 Grafana 以表格列出 dashboards。
 grafana-util status resource list dashboards --url http://localhost:3000 --basic-user admin --basic-password admin
 ```
 
 ```bash
-# 用途：以 YAML 列出 folders。
+# 以 YAML 列出 folders。
 grafana-util status resource list folders --profile prod --output-format yaml
 ```
 
 ```bash
-# 用途：以 JSON 列出 alert rules。
+# 以 JSON 列出 alert rules。
 grafana-util status resource list alert-rules --profile prod --output-format json
 ```
 

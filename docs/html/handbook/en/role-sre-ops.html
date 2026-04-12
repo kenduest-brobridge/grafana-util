@@ -326,13 +326,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   font-weight: 500;
 }
 .nav-command-branch-item .nav-command-leaf-link:hover { color: var(--heading); }
-.handbook-command-map .nav-command-root-link {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  font-size: 0.9rem;
-}
 
 .sidebar-toggle {
   position: absolute;
@@ -378,71 +371,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map { margin: 0 0 24px; }
-.handbook-command-map-panel {
-  margin-top: 16px;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--panel) 96%, white);
-}
-.handbook-command-map .nav-group-title {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-group {
-  padding-top: 0;
-}
-.handbook-command-map .nav-command-group + .nav-command-group {
-  margin-top: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
-  padding-top: 10px;
-}
-.handbook-command-map .nav-command-sub-list {
-  margin-top: 8px;
-  margin-left: 0;
-  padding-left: 0;
-  border-left: 0;
-}
-.handbook-command-map .nav-command-branch {
-  display: grid;
-  grid-template-columns: minmax(130px, 0.22fr) minmax(0, 1fr);
-  gap: 12px 18px;
-  align-items: start;
-}
-.handbook-command-map .nav-command-branch-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-left: 0;
-  padding-left: 14px;
-}
-.handbook-command-map .nav-command-branch-item + .nav-command-branch-item { margin-top: 0; }
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-  line-height: 1.25;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link:hover,
-.handbook-command-map .nav-command-link a:hover {
-  border-color: color-mix(in srgb, var(--border) 45%, var(--accent));
-  background: var(--panel-strong);
-}
-@media (max-width: 720px) {
-  .handbook-command-map .nav-command-branch {
-    grid-template-columns: 1fr;
-  }
-  .handbook-command-map .nav-command-branch-list {
-    padding-left: 0;
-    border-left: 0;
-  }
-}
 .article p,
 .article li { color: var(--text); font-weight: 460; }
 .article ul li::marker,
@@ -920,15 +848,15 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
       <div class="layout">
 <aside class="nav-sidebar">
   <button class="sidebar-toggle sidebar-toggle-left" type="button" aria-expanded="true" aria-label="Toggle handbook navigation">◀</button>
-  <div class="nav-sidebar-content"><section class="nav-section"><h2>Guide Map</h2><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 1 · Start Here</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="index.html" class="nav-item">Overview</a></li><li class="nav-tree-node"><a href="what-is-grafana-util.html" class="nav-item">What grafana-util is for</a></li><li class="nav-tree-node"><a href="getting-started.html" class="nav-item">Getting Started</a></li></ul></div><div class="nav-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Part 2 · Role Paths</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="role-new-user.html" class="nav-item">First Run / Beginner Path</a></li><li class="nav-tree-node"><a href="role-sre-ops.html" class="nav-item active">SRE / Operator</a></li><li class="nav-tree-node"><a href="role-automation-ci.html" class="nav-item">Automation / CI</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 3 · Operation Surfaces</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="status-workspace.html" class="nav-item">Status &amp; Workspace</a></li><li class="nav-tree-node"><a href="dashboard.html" class="nav-item">Dashboard</a></li><li class="nav-tree-node"><a href="datasource.html" class="nav-item">Datasource</a></li><li class="nav-tree-node"><a href="alert.html" class="nav-item">Alert</a></li><li class="nav-tree-node"><a href="access.html" class="nav-item">Access</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 4 · Design Principles</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="architecture.html" class="nav-item">Design Principles</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 5 · Reference &amp; Troubleshooting</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="scenarios.html" class="nav-item">Scenarios</a></li><li class="nav-tree-node"><a href="recipes.html" class="nav-item">Recipes</a></li><li class="nav-tree-node"><a href="reference.html" class="nav-item">Reference</a></li><li class="nav-tree-node"><a href="troubleshooting.html" class="nav-item">Troubleshooting</a></li></ul></div></section><section class="nav-section nav-command-section collapsed"><button class="nav-group-header nav-section-toggle" type="button" aria-expanded="false"><span class="nav-group-title-text">Command Relationships</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-section-body"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Operator Lanes</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><ul class="nav-command-tree"><li class="nav-command-link"><a href="../../commands/en/status.html" class="nav-command-leaf-link">status</a></li><li class="nav-command-link"><a href="../../commands/en/workspace.html" class="nav-command-leaf-link">workspace</a></li><li class="nav-command-link"><a href="../../commands/en/dashboard.html" class="nav-command-leaf-link">dashboard</a></li><li class="nav-command-link"><a href="../../commands/en/datasource.html" class="nav-command-leaf-link">datasource</a></li><li class="nav-command-link"><a href="../../commands/en/alert.html" class="nav-command-leaf-link">alert</a></li><li class="nav-command-link"><a href="../../commands/en/access.html" class="nav-command-leaf-link">access</a></li></ul></div></div></div></section><section class="nav-section"><h2>Command Reference</h2><a href="../../commands/en/index.html" class="nav-command-entry">Open command reference</a></section></div>
+  <div class="nav-sidebar-content"><section class="nav-section"><h2>Guide Map</h2><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 1 · Start Here</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="index.html" class="nav-item">Overview</a></li><li class="nav-tree-node"><a href="what-is-grafana-util.html" class="nav-item">What grafana-util is for</a></li><li class="nav-tree-node"><a href="getting-started.html" class="nav-item">Getting Started</a></li></ul></div><div class="nav-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Part 2 · Role Paths</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="role-new-user.html" class="nav-item">First Run / Beginner Path</a></li><li class="nav-tree-node"><a href="role-sre-ops.html" class="nav-item active">SRE / Operator</a></li><li class="nav-tree-node"><a href="role-automation-ci.html" class="nav-item">Automation / CI</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 3 · Operation Surfaces</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="status-workspace.html" class="nav-item">Status &amp; Workspace</a></li><li class="nav-tree-node"><a href="dashboard.html" class="nav-item">Dashboard</a></li><li class="nav-tree-node"><a href="datasource.html" class="nav-item">Datasource</a></li><li class="nav-tree-node"><a href="alert.html" class="nav-item">Alert</a></li><li class="nav-tree-node"><a href="access.html" class="nav-item">Access</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 4 · Design Principles</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="architecture.html" class="nav-item">Design Principles</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 5 · Reference &amp; Troubleshooting</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="scenarios.html" class="nav-item">Scenarios</a></li><li class="nav-tree-node"><a href="recipes.html" class="nav-item">Recipes</a></li><li class="nav-tree-node"><a href="reference.html" class="nav-item">Reference</a></li><li class="nav-tree-node"><a href="troubleshooting.html" class="nav-item">Troubleshooting</a></li></ul></div></section><section class="nav-section nav-command-section collapsed"><button class="nav-group-header nav-section-toggle" type="button" aria-expanded="false"><span class="nav-group-title-text">Command Shortcuts</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-section-body"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Operator Lanes</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><ul class="nav-command-tree"><li class="nav-command-link"><a href="../../commands/en/status.html" class="nav-command-leaf-link">status</a></li><li class="nav-command-link"><a href="../../commands/en/workspace.html" class="nav-command-leaf-link">workspace</a></li><li class="nav-command-link"><a href="../../commands/en/dashboard.html" class="nav-command-leaf-link">dashboard</a></li><li class="nav-command-link"><a href="../../commands/en/datasource.html" class="nav-command-leaf-link">datasource</a></li><li class="nav-command-link"><a href="../../commands/en/alert.html" class="nav-command-leaf-link">alert</a></li><li class="nav-command-link"><a href="../../commands/en/access.html" class="nav-command-leaf-link">access</a></li></ul></div></div></div></section><section class="nav-section"><h2>Command Reference</h2><a href="../../commands/en/index.html" class="nav-command-entry">Open command reference</a></section></div>
 </aside>
 
 <article class="article">
 <div class="breadcrumbs"><a href="../../index.html">Home</a> / Handbook / SRE / Operator</div>
 
-<div class="hero-eyebrow">Part 2 · Role Paths · Chapter 5 of 16</div><h1><span class="hero-title-main">SRE / Operator</span></h1><p class="hero-subtitle">SRE / Operator Handbook</p>
+<div class="hero-eyebrow">Part 2 · Role Paths</div><h1><span class="hero-title-main">SRE / Operator</span></h1><p class="hero-subtitle">SRE / Operator Handbook</p>
 
-<section class="section-index"><h2>Chapter Index</h2><p class="section-index-summary">Jump straight to the section you need.</p><ul class="section-index-list layout-list"><li><a href="#command-relationships">Command Relationships</a></li><li><a href="#who-it-is-for">Who It Is For</a></li><li><a href="#primary-goals">Primary Goals</a></li><li><a href="#before-after">Before / After</a></li><li><a href="#what-success-looks-like">What success looks like</a></li><li><a href="#failure-checks">Failure checks</a></li><li><a href="#typical-operator-tasks">Typical Operator Tasks</a></li><li><a href="#recommended-connection-and-secret-handling">Recommended connection and secret handling</a></li><li><a href="#first-commands-to-run">First commands to run</a></li><li><a href="#what-good-operator-posture-looks-like">What good operator posture looks like</a></li><li><a href="#read-next">Read next</a></li><li><a href="#keep-open">Keep open</a></li><li><a href="#common-mistakes-and-limits">Common mistakes and limits</a></li><li><a href="#when-to-switch-to-deeper-docs">When to switch to deeper docs</a></li><li><a href="#next-steps">Next steps</a></li></ul></section><section class="handbook-command-map"><h2 id="command-relationships">Command Relationships</h2><div class="handbook-command-map-panel"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Operator Lanes</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><ul class="nav-command-tree"><li class="nav-command-link"><a href="../../commands/en/status.html" class="nav-command-leaf-link">status</a></li><li class="nav-command-link"><a href="../../commands/en/workspace.html" class="nav-command-leaf-link">workspace</a></li><li class="nav-command-link"><a href="../../commands/en/dashboard.html" class="nav-command-leaf-link">dashboard</a></li><li class="nav-command-link"><a href="../../commands/en/datasource.html" class="nav-command-leaf-link">datasource</a></li><li class="nav-command-link"><a href="../../commands/en/alert.html" class="nav-command-leaf-link">alert</a></li><li class="nav-command-link"><a href="../../commands/en/access.html" class="nav-command-leaf-link">access</a></li></ul></div></div></div></section><p>This page is for on-call operators and SREs who need a repeatable way to check readiness, inventory the estate, and move through dashboard, alert, and access workflows safely.</p>
+<section class="section-index"><h2>Chapter Index</h2><p class="section-index-summary">Jump straight to the section you need.</p><ul class="section-index-list layout-list"><li><a href="#who-it-is-for">Who It Is For</a></li><li><a href="#primary-goals">Primary Goals</a></li><li><a href="#before-after">Before / After</a></li><li><a href="#what-success-looks-like">What success looks like</a></li><li><a href="#failure-checks">Failure checks</a></li><li><a href="#typical-operator-tasks">Typical Operator Tasks</a></li><li><a href="#recommended-connection-and-secret-handling">Recommended connection and secret handling</a></li><li><a href="#first-commands-to-run">First commands to run</a></li><li><a href="#what-good-operator-posture-looks-like">What good operator posture looks like</a></li><li><a href="#read-next">Read next</a></li><li><a href="#keep-open">Keep open</a></li><li><a href="#common-mistakes-and-limits">Common mistakes and limits</a></li><li><a href="#when-to-switch-to-deeper-docs">When to switch to deeper docs</a></li><li><a href="#next-steps">Next steps</a></li></ul></section><p>This page is for on-call operators and SREs who need a repeatable way to check readiness, inventory the estate, and move through dashboard, alert, and access workflows safely.</p>
 <h2 id="who-it-is-for">Who It Is For</h2>
 <ul><li>On-call SREs.</li><li>Platform and Grafana operators.</li><li>Anyone who needs cross-org visibility, export/import checks, or break-glass access.</li></ul>
 <h2 id="primary-goals">Primary Goals</h2>
@@ -945,26 +873,26 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <p>Use a profile backed by admin-capable credentials for day-to-day work.</p>
 <ol><li><code>config profile</code> with <code>password_env</code>, <code>token_env</code>, or an OS-backed secret store for repeatable operator use.</li><li>Direct Basic auth with <code>--prompt-password</code> for bootstrap or break-glass work.</li><li>Token auth only for narrow reads where you already know the token can see every target org and resource.</li></ol>
 <h2 id="first-commands-to-run">First commands to run</h2>
-<pre><code># Purpose: First commands to run.
+<pre><code># First commands to run.
 grafana-util status live --profile prod --output-format table</code></pre>
-<pre><code># Purpose: First commands to run.
+<pre><code># First commands to run.
 grafana-util status overview live --profile prod --output-format interactive</code></pre>
-<pre><code># Purpose: First commands to run.
+<pre><code># First commands to run.
 grafana-util workspace scan .</code></pre>
-<pre><code># Purpose: First commands to run.
+<pre><code># First commands to run.
 grafana-util workspace test . --fetch-live --output-format json</code></pre>
-<pre><code># Purpose: First commands to run.
+<pre><code># First commands to run.
 grafana-util workspace preview . --fetch-live --output-format json</code></pre>
-<pre><code># Purpose: First commands to run.
+<pre><code># First commands to run.
 grafana-util export dashboard --output-dir ./backups --overwrite --progress</code></pre>
 <p>If you need to start from the access layer instead, swap the last line for:</p>
-<pre><code># Purpose: If you need to start from the access layer instead, swap the last line for.
+<pre><code># If you need to start from the access layer instead, swap the last line for.
 grafana-util access org list --table</code></pre>
 <p>If you are checking a host directly, Basic auth is the safest fallback for broad visibility:</p>
-<pre><code># Purpose: If you are checking a host directly, Basic auth is the safest fallback for broad visibility.
+<pre><code># If you are checking a host directly, Basic auth is the safest fallback for broad visibility.
 grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --all-orgs --output-format table</code></pre>
 <p>Use token auth only when the scope matches the work:</p>
-<pre><code># Purpose: Use token auth only when the scope matches the work.
+<pre><code># Use token auth only when the scope matches the work.
 grafana-util status overview live --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --output-format json</code></pre>
 <h2 id="what-good-operator-posture-looks-like">What good operator posture looks like</h2>
 <p>You are in a good operator posture when:</p>
@@ -979,12 +907,12 @@ grafana-util status overview live --url http://localhost:3000 --token &quot;$GRA
 <ul><li>Switch to <a href="dashboard.html">Dashboard Management</a> when the issue is inventory, export/import, inspection, or screenshot workflow.</li><li>Switch to <a href="alert.html">Alerting Governance</a> when the problem is rule ownership, contact points, routes, or plan/apply flow.</li><li>Switch to <a href="access.html">Access Management</a> when org, user, team, or service-account scope becomes part of the incident or maintenance task.</li><li>Switch to the <a href="../../commands/en/index.html">Command Reference</a> when you already know the workflow and just need the exact flags.</li></ul>
 <h2 id="next-steps">Next steps</h2>
 <ul><li><a href="index.html">Home</a></li><li><a href="status-workspace.html">Workspace Review &amp; Status</a></li><li><a href="dashboard.html">Dashboard Management</a></li><li><a href="../../commands/en/index.html">Command Reference</a></li></ul>
-<nav class="footer-nav"><a class="link-card" href="role-new-user.html"><span>Previous Chapter</span>Chapter 4 · First Run / Beginner Path</a><a class="link-card" href="role-automation-ci.html"><span>Next Chapter</span>Chapter 6 · Automation / CI Handbook</a></nav>
+<nav class="footer-nav"><a class="link-card" href="role-new-user.html"><span>Previous Chapter</span>First Run / Beginner Path</a><a class="link-card" href="role-automation-ci.html"><span>Next Chapter</span>Automation / CI Handbook</a></nav>
 </article>
 <aside class="sidebar">
   <button class="sidebar-toggle sidebar-toggle-right" type="button" aria-expanded="true" aria-label="Toggle page sidebar">▶</button>
   <div class="sidebar-content">
-    <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#command-relationships"><span class="toc-label">Command Relationships</span></a></li><li class="toc-level-2"><a href="#who-it-is-for"><span class="toc-label">Who It Is For</span></a></li><li class="toc-level-2"><a href="#primary-goals"><span class="toc-label">Primary Goals</span></a></li><li class="toc-level-2"><a href="#before-after"><span class="toc-label">Before / After</span></a></li><li class="toc-level-2"><a href="#what-success-looks-like"><span class="toc-label">What success looks like</span></a></li><li class="toc-level-2"><a href="#failure-checks"><span class="toc-label">Failure checks</span></a></li><li class="toc-level-2"><a href="#typical-operator-tasks"><span class="toc-label">Typical Operator Tasks</span></a></li><li class="toc-level-2"><a href="#recommended-connection-and-secret-handling"><span class="toc-label">Recommended connection and secret handling</span></a></li><li class="toc-level-2"><a href="#first-commands-to-run"><span class="toc-label">First commands to run</span></a></li><li class="toc-level-2"><a href="#what-good-operator-posture-looks-like"><span class="toc-label">What good operator posture looks like</span></a></li><li class="toc-level-2"><a href="#read-next"><span class="toc-label">Read next</span></a></li><li class="toc-level-2"><a href="#keep-open"><span class="toc-label">Keep open</span></a></li><li class="toc-level-2"><a href="#common-mistakes-and-limits"><span class="toc-label">Common mistakes and limits</span></a></li><li class="toc-level-2"><a href="#when-to-switch-to-deeper-docs"><span class="toc-label">When to switch to deeper docs</span></a></li><li class="toc-level-2"><a href="#next-steps"><span class="toc-label">Next steps</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: English</a></li><li><a href="../zh-TW/role-sre-ops.html" class="sidebar-meta-link">Switch to 繁體中文</a></li></ul></section>
+    <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#who-it-is-for"><span class="toc-label">Who It Is For</span></a></li><li class="toc-level-2"><a href="#primary-goals"><span class="toc-label">Primary Goals</span></a></li><li class="toc-level-2"><a href="#before-after"><span class="toc-label">Before / After</span></a></li><li class="toc-level-2"><a href="#what-success-looks-like"><span class="toc-label">What success looks like</span></a></li><li class="toc-level-2"><a href="#failure-checks"><span class="toc-label">Failure checks</span></a></li><li class="toc-level-2"><a href="#typical-operator-tasks"><span class="toc-label">Typical Operator Tasks</span></a></li><li class="toc-level-2"><a href="#recommended-connection-and-secret-handling"><span class="toc-label">Recommended connection and secret handling</span></a></li><li class="toc-level-2"><a href="#first-commands-to-run"><span class="toc-label">First commands to run</span></a></li><li class="toc-level-2"><a href="#what-good-operator-posture-looks-like"><span class="toc-label">What good operator posture looks like</span></a></li><li class="toc-level-2"><a href="#read-next"><span class="toc-label">Read next</span></a></li><li class="toc-level-2"><a href="#keep-open"><span class="toc-label">Keep open</span></a></li><li class="toc-level-2"><a href="#common-mistakes-and-limits"><span class="toc-label">Common mistakes and limits</span></a></li><li class="toc-level-2"><a href="#when-to-switch-to-deeper-docs"><span class="toc-label">When to switch to deeper docs</span></a></li><li class="toc-level-2"><a href="#next-steps"><span class="toc-label">Next steps</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: English</a></li><li><a href="../zh-TW/role-sre-ops.html" class="sidebar-meta-link">Switch to 繁體中文</a></li></ul></section>
   </div>
 </aside>
 

@@ -55,17 +55,17 @@ Choose this page when you need to decide whether the next access task is invento
 ## Examples
 
 ```bash
-# Purpose: Inspect access inventory before choosing a lane.
+# Inspect access inventory before choosing a lane.
 grafana-util access user list --profile prod --json
 ```
 
 ```bash
-# Purpose: Review a saved org bundle before importing or diffing it.
+# Review a saved org bundle before importing or diffing it.
 grafana-util access org list --input-dir ./access-orgs --output-format text
 ```
 
 ```bash
-# Purpose: Add a service-account token after reviewing the target account.
+# Add a service-account token after reviewing the target account.
 grafana-util access service-account token add --url http://localhost:3000 --basic-user admin --basic-password admin --name deploy-bot --token-name nightly
 ```
 

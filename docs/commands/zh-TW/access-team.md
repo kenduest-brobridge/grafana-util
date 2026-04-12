@@ -2,26 +2,26 @@
 
 ## 目的
 
-列出或瀏覽 live 與本機的 Grafana 團隊，以及建立、修改、匯出、匯入、比對或刪除 Grafana 團隊。
+列出或瀏覽 live 與本機的 Grafana team，以及建立、修改、匯出、匯入、比對或刪除 Grafana team。
 
 ## 使用時機
 
-- 檢視團隊清單與團隊成員關係。
-- 從 live Grafana 或本機匯出套件中檢視團隊。
-- 建立或更新團隊成員與管理員指派。
-- 匯出或匯入團隊套件。
-- 以 id 或精確名稱刪除團隊。
+- 檢視 team 清單與 team 成員關係。
+- 從 live Grafana 或本機匯出套件中檢視 team。
+- 建立或更新 team 成員與管理員指派。
+- 匯出或匯入 team 套件。
+- 以 id 或精確名稱刪除 team。
 
 ## 採用前後對照
 
-- **採用前**：團隊成員關係常常散在 UI 側邊選單或零碎腳本裡。
+- **採用前**：team 成員關係常常散在 UI 側邊選單或零碎腳本裡。
 - **採用後**：同一個命名空間就能處理 inventory、成員更新、匯出／匯入與刪除，而且認證方式一致。
 
 ## 成功判準
 
-- 團隊成員變更都綁定到精確的 team id 或名稱
+- team 成員變更都綁定到精確的 team id 或名稱
 - 在新增或移除成員前，可以先看出管理員指派
-- 匯出的套件可以在另一個環境重複使用，不必手動重建團隊
+- 匯出的套件可以在另一個環境重複使用，不必手動重建 team
 
 ## 失敗時先檢查
 
@@ -42,27 +42,27 @@
 ## 範例
 
 ```bash
-# 用途：在新增或移除成員前，先確認 team membership。
+# 在新增或移除成員前，先確認 team membership。
 grafana-util access team list --profile prod --output-format text
 ```
 
 ```bash
-# 用途：先看本機存好的 team 套件。
+# 先看本機存好的 team 套件。
 grafana-util access team list --input-dir ./access-teams --output-format table
 ```
 
 ```bash
-# 用途：直接互動式瀏覽本機 team 套件，不碰 live Grafana。
+# 直接互動式瀏覽本機 team 套件，不碰 live Grafana。
 grafana-util access team browse --input-dir ./access-teams --name platform-team
 ```
 
 ```bash
-# 用途：建立一個有明確成員與管理員指派的 team。
+# 建立一個有明確成員與管理員指派的 team。
 grafana-util access team add --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --name platform-team --email platform@example.com --member alice --admin alice --json
 ```
 
 ```bash
-# 用途：在終端機中選一個 team、確認目標，然後刪除。
+# 在終端機中選一個 team、確認目標，然後刪除。
 grafana-util access team delete --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --prompt
 ```
 

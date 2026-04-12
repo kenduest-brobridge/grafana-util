@@ -16,17 +16,17 @@
 
 ## 範例
 ```bash
-# 用途：說明所有支援的 live resource kinds。
+# 說明所有支援的 live resource kinds。
 grafana-util status resource describe
 ```
 
 ```bash
-# 用途：以 JSON 說明單一 resource kind。
+# 以 JSON 說明單一 resource kind。
 grafana-util status resource describe dashboards --output-format json
 ```
 
 ```bash
-# 用途：以表格說明單一 resource kind。
+# 以表格說明單一 resource kind。
 grafana-util status resource describe orgs --output-format table
 ```
 

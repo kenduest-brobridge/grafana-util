@@ -232,27 +232,27 @@ When `encrypted-file` uses these repo-local helper paths, `config profile add` a
 
 ### 2. Initialize, add, and list profiles
 ```bash
-# Purpose: 2. Initialize, add, and list profiles.
+# Create the local profile config file first.
 grafana-util config profile init --overwrite
 ```
 
 ```bash
-# Purpose: 2. Initialize, add, and list profiles.
+# Create a dev profile that prompts for the password.
 grafana-util config profile add dev --url http://127.0.0.1:3000 --basic-user admin --prompt-password
 ```
 
 ```bash
-# Purpose: 2. Initialize, add, and list profiles.
+# Create a CI profile that reads its token from the environment.
 grafana-util config profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN --store-secret os
 ```
 
 ```bash
-# Purpose: 2. Initialize, add, and list profiles.
+# List the profile names resolved from the current config.
 grafana-util config profile list
 ```
 
 ```bash
-# Purpose: 2. Initialize, add, and list profiles.
+# Print the fully commented profile template.
 grafana-util config profile example --mode full
 ```
 **Expected Output:**
@@ -265,12 +265,12 @@ prod
 
 ### 3. Show the resolved profile
 ```bash
-# Purpose: 3. Show the resolved profile.
+# Inspect the final resolved connection fields for prod.
 grafana-util config profile show --profile prod --output-format yaml
 ```
 
 ```bash
-# Purpose: 3. Show the resolved profile.
+# Show resolved secrets only during local debugging.
 grafana-util config profile show --profile prod --show-secrets --output-format yaml
 ```
 **Expected Output:**
@@ -344,17 +344,17 @@ profiles:
 
 ### 5. Daily-use examples in the common auth styles
 ```bash
-# Purpose: 5. Daily-use examples in the common auth styles.
+# Prefer saved profiles for normal daily checks.
 grafana-util status live --profile prod --output-format yaml
 ```
 
 ```bash
-# Purpose: 5. Daily-use examples in the common auth styles.
+# Use direct Basic auth for bootstrap or break-glass checks.
 grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output-format yaml
 ```
 
 ```bash
-# Purpose: 5. Daily-use examples in the common auth styles.
+# Use token auth for scoped automation that needs JSON output.
 grafana-util status overview live --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output-format json
 ```
 Use the `--profile` form by default. Keep direct Basic auth for admin-heavy workflows and token auth for scoped automation where you understand the permission envelope.
@@ -430,7 +430,7 @@ Why these examples matter:
 
 ---
 
-## 📊 Output Formats Comparison
+## Output Formats Comparison
 
 `grafana-util` supports explicit per-format flags plus a single `--output-format` selector. For dashboards, the current list command exposes `--json`, `--table`, `--csv`, `--yaml`, and `--output-format`.
 
@@ -445,7 +445,7 @@ Why these examples matter:
 
 ### 1. Table or JSON selection
 ```bash
-# Purpose: 1. Table or JSON selection.
+# Check which output formats dashboard list supports.
 grafana-util dashboard list -h
 ```
 **Expected Output:**
@@ -461,12 +461,12 @@ Use `--json` for automation, `--table` for quick human review, and `--output-for
 
 ### 2. Live status output selectors
 ```bash
-# Purpose: 2. Live status output selectors.
+# Inspect output-format support on the live readiness entrypoint.
 grafana-util status live -h
 ```
 
 ```bash
-# Purpose: 2. Live status overview output selectors.
+# Inspect output-format support on the overview entrypoint.
 grafana-util status overview live -h
 ```
 **Expected Output:**
@@ -495,7 +495,7 @@ Both live entrypoints now use `--output-format`.
 
 ---
 
-## 🤖 Automation & Scripting (CI/CD)
+## Automation & Scripting (CI/CD)
 
 ### 1. Filtering with `jq` (Bash/Zsh)
 ```bash
@@ -506,7 +506,7 @@ This is the current JSON path for scripting. If you need fewer or different fiel
 
 ### 2. Handling Exit Codes
 ```bash
-# Purpose: 2. Handling Exit Codes.
+# Use the exit code to wire status live into a shell gate.
 grafana-util status live --profile prod --output-format json
 if [ $? -eq 2 ]; then
   echo "CRITICAL: Grafana connection blocked!"

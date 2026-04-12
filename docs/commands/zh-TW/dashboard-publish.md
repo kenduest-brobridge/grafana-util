@@ -17,22 +17,22 @@
 
 ## 範例
 ```bash
-# 用途：透過既有的儀表板匯入流程發佈一個本地儀表板 JSON 檔。
+# 透過既有的儀表板匯入流程發佈一個本地儀表板 JSON 檔。
 grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --basic-password admin --input ./drafts/cpu-main.json --folder-uid infra --message 'Promote CPU dashboard'
 ```
 
 ```bash
-# 用途：透過既有的儀表板匯入流程發佈一個本地儀表板 JSON 檔。
+# 透過既有的儀表板匯入流程發佈一個本地儀表板 JSON 檔。
 grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --basic-password admin --input ./drafts/cpu-main.json --dry-run --table
 ```
 
 ```bash
-# 用途：從標準輸入發佈一份生成儀表板。
+# 從標準輸入發佈一份生成儀表板。
 jsonnet dashboards/cpu.jsonnet | grafana-util dashboard publish --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --input - --replace-existing
 ```
 
 ```bash
-# 用途：監看一份本地草稿，並在每次儲存後重新執行 dry-run。
+# 監看一份本地草稿，並在每次儲存後重新執行 dry-run。
 grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --basic-password admin --input ./drafts/cpu-main.json --dry-run --watch
 ```
 

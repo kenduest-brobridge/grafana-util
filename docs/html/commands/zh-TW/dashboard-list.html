@@ -326,13 +326,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   font-weight: 500;
 }
 .nav-command-branch-item .nav-command-leaf-link:hover { color: var(--heading); }
-.handbook-command-map .nav-command-root-link {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  font-size: 0.9rem;
-}
 
 .sidebar-toggle {
   position: absolute;
@@ -378,71 +371,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map { margin: 0 0 24px; }
-.handbook-command-map-panel {
-  margin-top: 16px;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--panel) 96%, white);
-}
-.handbook-command-map .nav-group-title {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-group {
-  padding-top: 0;
-}
-.handbook-command-map .nav-command-group + .nav-command-group {
-  margin-top: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
-  padding-top: 10px;
-}
-.handbook-command-map .nav-command-sub-list {
-  margin-top: 8px;
-  margin-left: 0;
-  padding-left: 0;
-  border-left: 0;
-}
-.handbook-command-map .nav-command-branch {
-  display: grid;
-  grid-template-columns: minmax(130px, 0.22fr) minmax(0, 1fr);
-  gap: 12px 18px;
-  align-items: start;
-}
-.handbook-command-map .nav-command-branch-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-left: 0;
-  padding-left: 14px;
-}
-.handbook-command-map .nav-command-branch-item + .nav-command-branch-item { margin-top: 0; }
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-  line-height: 1.25;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link:hover,
-.handbook-command-map .nav-command-link a:hover {
-  border-color: color-mix(in srgb, var(--border) 45%, var(--accent));
-  background: var(--panel-strong);
-}
-@media (max-width: 720px) {
-  .handbook-command-map .nav-command-branch {
-    grid-template-columns: 1fr;
-  }
-  .handbook-command-map .nav-command-branch-list {
-    padding-left: 0;
-    border-left: 0;
-  }
-}
 .article p,
 .article li { color: var(--text); font-weight: 460; }
 .article ul li::marker,
@@ -952,13 +880,13 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="說明">說明</h2>
 <ul><li>可重複執行的單一 org 盤點優先用 <code>--profile</code>。</li><li><code>--all-orgs</code> 最好搭配管理員憑證支援的 <code>--profile</code> 或直接 Basic auth，因為 token 權限可能看不到其他 org。</li></ul>
 <h2 id="範例">範例</h2>
-<pre><code># 用途：列出儀表板摘要，不寫入匯出檔案。
+<pre><code># 列出儀表板摘要，不寫入匯出檔案。
 grafana-util dashboard list --profile prod</code></pre>
-<pre><code># 用途：列出儀表板摘要，不寫入匯出檔案。
+<pre><code># 列出儀表板摘要，不寫入匯出檔案。
 grafana-util dashboard list --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --json</code></pre>
-<pre><code># 用途：列出儀表板摘要，不寫入匯出檔案。
+<pre><code># 列出儀表板摘要，不寫入匯出檔案。
 grafana-util dashboard list --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --json</code></pre>
-<pre><code># 用途：列出儀表板摘要，並在表格中顯示解析後的來源名稱。
+<pre><code># 列出儀表板摘要，並在表格中顯示解析後的來源名稱。
 grafana-util dashboard list --url http://localhost:3000 --basic-user admin --basic-password admin --show-sources --table</code></pre>
 <h2 id="相關指令">相關指令</h2>
 <ul><li><a href="dashboard-browse.html">dashboard browse</a></li><li><a href="dashboard-export.html">dashboard export</a></li><li><a href="dashboard-diff.html">dashboard diff</a></li></ul>

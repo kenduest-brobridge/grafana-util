@@ -326,13 +326,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   font-weight: 500;
 }
 .nav-command-branch-item .nav-command-leaf-link:hover { color: var(--heading); }
-.handbook-command-map .nav-command-root-link {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  font-size: 0.9rem;
-}
 
 .sidebar-toggle {
   position: absolute;
@@ -378,71 +371,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map { margin: 0 0 24px; }
-.handbook-command-map-panel {
-  margin-top: 16px;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--panel) 96%, white);
-}
-.handbook-command-map .nav-group-title {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-group {
-  padding-top: 0;
-}
-.handbook-command-map .nav-command-group + .nav-command-group {
-  margin-top: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
-  padding-top: 10px;
-}
-.handbook-command-map .nav-command-sub-list {
-  margin-top: 8px;
-  margin-left: 0;
-  padding-left: 0;
-  border-left: 0;
-}
-.handbook-command-map .nav-command-branch {
-  display: grid;
-  grid-template-columns: minmax(130px, 0.22fr) minmax(0, 1fr);
-  gap: 12px 18px;
-  align-items: start;
-}
-.handbook-command-map .nav-command-branch-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-left: 0;
-  padding-left: 14px;
-}
-.handbook-command-map .nav-command-branch-item + .nav-command-branch-item { margin-top: 0; }
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-  line-height: 1.25;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link:hover,
-.handbook-command-map .nav-command-link a:hover {
-  border-color: color-mix(in srgb, var(--border) 45%, var(--accent));
-  background: var(--panel-strong);
-}
-@media (max-width: 720px) {
-  .handbook-command-map .nav-command-branch {
-    grid-template-columns: 1fr;
-  }
-  .handbook-command-map .nav-command-branch-list {
-    padding-left: 0;
-    border-left: 0;
-  }
-}
 .article p,
 .article li { color: var(--text); font-weight: 460; }
 .article ul li::marker,
@@ -920,38 +848,42 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
       <div class="layout">
 <aside class="nav-sidebar">
   <button class="sidebar-toggle sidebar-toggle-left" type="button" aria-expanded="true" aria-label="Toggle handbook navigation">◀</button>
-  <div class="nav-sidebar-content"><section class="nav-section"><h2>手冊導覽</h2><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 1 部 · 起步</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="index.html" class="nav-item">概觀</a></li><li class="nav-tree-node"><a href="what-is-grafana-util.html" class="nav-item">這個工具是做什麼的</a></li><li class="nav-tree-node"><a href="getting-started.html" class="nav-item">開始使用</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 2 部 · 角色路徑</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="role-new-user.html" class="nav-item">第一次執行 / 新手路線</a></li><li class="nav-tree-node"><a href="role-sre-ops.html" class="nav-item">SRE / 維運</a></li><li class="nav-tree-node"><a href="role-automation-ci.html" class="nav-item">自動化 / CI</a></li></ul></div><div class="nav-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">第 3 部 · 操作面</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="status-workspace.html" class="nav-item">Status / Workspace</a></li><li class="nav-tree-node"><a href="dashboard.html" class="nav-item">Dashboard</a></li><li class="nav-tree-node"><a href="datasource.html" class="nav-item">Datasource</a></li><li class="nav-tree-node"><a href="alert.html" class="nav-item">Alert</a></li><li class="nav-tree-node"><a href="access.html" class="nav-item active">Access</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 4 部 · 設計原則</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="architecture.html" class="nav-item">設計原則</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 5 部 · 參考與排錯</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="scenarios.html" class="nav-item">情境手冊</a></li><li class="nav-tree-node"><a href="recipes.html" class="nav-item">實戰錦囊</a></li><li class="nav-tree-node"><a href="reference.html" class="nav-item">技術參考</a></li><li class="nav-tree-node"><a href="troubleshooting.html" class="nav-item">疑難排解</a></li></ul></div></section><section class="nav-section nav-command-section collapsed"><button class="nav-group-header nav-section-toggle" type="button" aria-expanded="false"><span class="nav-group-title-text">指令關係</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-section-body"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">選擇操作面</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><a href="../../commands/zh-TW/access.html" class="nav-command-root-link">access</a></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/zh-TW/access-user.html" class="nav-command-leaf-link">user</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/access-org.html" class="nav-command-leaf-link">org</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/access-team.html" class="nav-command-leaf-link">team</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/access-service-account.html" class="nav-command-leaf-link">service-account</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/access-service-account-token.html" class="nav-command-leaf-link">service-account token</a></li></ul></div></div></div></div></section><section class="nav-section"><h2>指令參考</h2><a href="../../commands/zh-TW/index.html" class="nav-command-entry">開啟指令參考</a></section></div>
+  <div class="nav-sidebar-content"><section class="nav-section"><h2>手冊導覽</h2><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 1 部 · 起步</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="index.html" class="nav-item">概觀</a></li><li class="nav-tree-node"><a href="what-is-grafana-util.html" class="nav-item">這個工具是做什麼的</a></li><li class="nav-tree-node"><a href="getting-started.html" class="nav-item">開始使用</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 2 部 · 角色路徑</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="role-new-user.html" class="nav-item">第一次執行 / 新手路線</a></li><li class="nav-tree-node"><a href="role-sre-ops.html" class="nav-item">SRE / 維運</a></li><li class="nav-tree-node"><a href="role-automation-ci.html" class="nav-item">自動化 / CI</a></li></ul></div><div class="nav-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">第 3 部 · 操作面</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="status-workspace.html" class="nav-item">Status / Workspace</a></li><li class="nav-tree-node"><a href="dashboard.html" class="nav-item">Dashboard</a></li><li class="nav-tree-node"><a href="datasource.html" class="nav-item">Datasource</a></li><li class="nav-tree-node"><a href="alert.html" class="nav-item">Alert</a></li><li class="nav-tree-node"><a href="access.html" class="nav-item active">Access</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 4 部 · 設計原則</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="architecture.html" class="nav-item">設計原則</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 5 部 · 參考與排錯</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="scenarios.html" class="nav-item">情境手冊</a></li><li class="nav-tree-node"><a href="recipes.html" class="nav-item">實戰錦囊</a></li><li class="nav-tree-node"><a href="reference.html" class="nav-item">技術參考</a></li><li class="nav-tree-node"><a href="troubleshooting.html" class="nav-item">疑難排解</a></li></ul></div></section><section class="nav-section nav-command-section collapsed"><button class="nav-group-header nav-section-toggle" type="button" aria-expanded="false"><span class="nav-group-title-text">指令捷徑</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-section-body"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">選擇操作面</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><a href="../../commands/zh-TW/access.html" class="nav-command-root-link">access</a></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/zh-TW/access-user.html" class="nav-command-leaf-link">user</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/access-org.html" class="nav-command-leaf-link">org</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/access-team.html" class="nav-command-leaf-link">team</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/access-service-account.html" class="nav-command-leaf-link">service-account</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/access-service-account-token.html" class="nav-command-leaf-link">service-account token</a></li></ul></div></div></div></div></section><section class="nav-section"><h2>指令參考</h2><a href="../../commands/zh-TW/index.html" class="nav-command-entry">開啟指令參考</a></section></div>
 </aside>
 
 <article class="article">
 <div class="breadcrumbs"><a href="../../index.html">Home</a> / 手冊 / Access</div>
 
-<div class="hero-eyebrow">第 3 部 · 操作面 · 第 11 章 / 共 16 章</div><h1><span class="hero-title-main">Access</span></h1><p class="hero-subtitle">身分與存取管理 (Identity &amp; Access)</p>
+<div class="hero-eyebrow">第 3 部 · 操作面</div><h1><span class="hero-title-main">Access</span></h1><p class="hero-subtitle">身分與存取管理 (Identity &amp; Access)</p>
 
-<section class="section-index"><h2>章節索引</h2><p class="section-index-summary">先從這裡跳到你要看的段落。</p><ul class="section-index-list layout-list"><li><a href="#command-relationships">指令關係</a></li><li><a href="#適用對象">適用對象</a></li><li><a href="#主要目標">主要目標</a></li><li><a href="#採用前後對照">採用前後對照</a></li><li><a href="#成功判準">成功判準</a></li><li><a href="#失敗時先檢查">失敗時先檢查</a></li><li><a href="#指令頁面">指令頁面</a></li><li><a href="#org-管理">org 管理</a></li><li><a href="#使用者與-team-管理">使用者與 team 管理</a></li><li><a href="#service-account-管理">service account 管理</a></li><li><a href="#漂移檢查-diff">漂移檢查 (Diff)</a></li></ul></section><section class="handbook-command-map"><h2 id="command-relationships">指令關係</h2><div class="handbook-command-map-panel"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">選擇操作面</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><a href="../../commands/zh-TW/access.html" class="nav-command-root-link">access</a></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/zh-TW/access-user.html" class="nav-command-leaf-link">user</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/access-org.html" class="nav-command-leaf-link">org</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/access-team.html" class="nav-command-leaf-link">team</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/access-service-account.html" class="nav-command-leaf-link">service-account</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/access-service-account-token.html" class="nav-command-leaf-link">service-account token</a></li></ul></div></div></div></div></section><p>這一章整理 Grafana 的身分與存取資產：org、使用者、team 與 service account。重點是先把人、組織與自動化憑證的生命週期講清楚，再談匯出、同步與回放。 盤點可以直接來自 live Grafana，也可以來自本機匯出的套件；流程本身是一樣的。</p>
+<section class="section-index"><h2>章節索引</h2><p class="section-index-summary">先從這裡跳到你要看的段落。</p><ul class="section-index-list layout-list"><li><a href="#適用對象">適用對象</a></li><li><a href="#主要目標">主要目標</a></li><li><a href="#採用前後對照">採用前後對照</a></li><li><a href="#成功判準">成功判準</a></li><li><a href="#失敗時先檢查">失敗時先檢查</a></li><li><a href="#access-工作流地圖">Access 工作流地圖</a></li><li><a href="#org-管理">org 管理</a></li><li><a href="#使用者與-team-管理">使用者與 team 管理</a></li><li><a href="#service-account-管理">service account 管理</a></li><li><a href="#漂移檢查-diff">漂移檢查 (Diff)</a></li><li><a href="#何時切到指令參考">何時切到指令參考</a></li></ul></section><p>這一章整理 Grafana 的身分與存取資產：org、使用者、team 與 service account。重點是先把人、組織與自動化憑證的生命週期講清楚，再談匯出、同步與回放。 盤點可以直接來自 live Grafana，也可以來自本機匯出的套件；流程本身是一樣的。</p>
+<p>Access 相關工作最容易被低估，因為它常被看成「新增一個 user」或「刪一個 token」。實際上，每個 user、team、org 與 service account 都在決定誰看得到資料、誰能修改資產、哪個自動化流程可以在半夜替你動 Grafana。這章的目標是讓你在動手前先看懂範圍。</p>
+<p>讀這章時，先問任務影響的是人、團隊、組織邊界，還是機器憑證。接著再決定要做 live 盤點、本機快照、diff，或真的變更。不要從「我有一個 token」開始推導流程；應該從「這次權限變更會影響誰」開始。</p>
 <h2 id="適用對象">適用對象</h2>
 <ul><li>負責 org、使用者、team 或 service account 管理的人</li><li>需要做權限盤點、同步、匯出或回放的人</li><li>需要把身分資產接進 Git 或 CI 流程的人</li></ul>
 <h2 id="主要目標">主要目標</h2>
 <ul><li>先理解 org / user / team / service account 的關係</li><li>再把盤點、匯出、匯入與 diff 做成可重複流程，而且盤點可以來自 live 或本機</li><li>需要時才對 token 做輪替或刪除</li></ul>
+<p>好的 access 流程不是讓修改變快，而是讓修改前的 scope 變清楚。能先說出「誰會被影響」比能背出子命令更重要。</p>
 <h2 id="採用前後對照">採用前後對照</h2>
 <ul><li>以前：身分與存取的工作分散在不同 command 群組，命名風格也不一致。</li><li>現在：org、user、team 與 service account 放在同一份導引，入口與術語都更清楚。</li></ul>
 <h2 id="成功判準">成功判準</h2>
 <ul><li>你一眼就能分辨任務是 org 管理、user 管理、team 管理，還是 service account 處理。</li><li>你在動手前就知道自己要進哪一組 command。</li><li>你知道什麼時候需要先看審查步驟，再做變更。</li></ul>
 <h2 id="失敗時先檢查">失敗時先檢查</h2>
 <ul><li>如果這次身分變更會影響到比預期更多的 org，先停下來確認範圍。</li><li>如果不確定 token 或 service account 能不能做這件事，先看指令頁，不要直接 mutate。</li><li>如果你還覺得 team / org / user 的說法不一致，先回 glossary 和 command reference。</li></ul>
-<h2 id="指令頁面">指令頁面</h2>
-<p>如果你現在要查的是指令細節，而不是工作流程章節，可以直接看下面這些指令頁：</p>
-<ul><li><a href="../../commands/zh-TW/access.html">access 指令總覽</a></li><li><a href="../../commands/zh-TW/access-user.html">access user</a></li><li><a href="../../commands/zh-TW/access-org.html">access org</a></li><li><a href="../../commands/zh-TW/access-team.html">access team</a></li><li><a href="../../commands/zh-TW/access-service-account.html">access service-account</a></li><li><a href="../../commands/zh-TW/access-service-account-token.html">access service-account token</a></li><li><a href="../../commands/zh-TW/index.html">指令參考</a></li></ul>
+<h2 id="access-工作流地圖">Access 工作流地圖</h2>
+<p>Access 子命令要先按「影響誰」分類，而不是按你手上有哪個 token 分類：</p>
+<table><thead><tr><th>任務</th><th>起點</th><th>主要輸入</th><th>主要輸出</th><th>下一步</th></tr></thead><tbody><tr><td>管理 org</td><td><code>access org list/export/import/diff</code></td><td>live Grafana 或 org bundle</td><td>org inventory / dry-run / diff</td><td>import 前 review</td></tr><tr><td>管理 user</td><td><code>access user list/add/modify/delete/export/import/diff</code></td><td>login、org role、bundle</td><td>使用者 inventory 或 mutation 結果</td><td>list / diff 驗證</td></tr><tr><td>管理 team</td><td><code>access team list/export/import/diff</code></td><td>org scope、team bundle</td><td>team 與 members inventory</td><td>dry-run 後 import</td></tr><tr><td>管理 service account</td><td><code>access service-account list/add/modify/delete/export/import/diff</code></td><td>org scope、service account bundle</td><td>automation identity inventory</td><td>token 管理或 diff</td></tr><tr><td>管理 token</td><td><code>access service-account token add/delete/list</code></td><td>service account id/name</td><td>一次性 token secret 或刪除結果</td><td>立即保存 secret / 輪替舊 token</td></tr><tr><td>比對漂移</td><td><code>diff</code> 子命令</td><td>本地 bundle + live Grafana</td><td>變更差異</td><td>修 bundle 或 import</td></tr></tbody></table>
+<p>最重要的判斷是 scope：全域 user、某個 org 裡的 role、team membership、service account 權限與 token lifecycle 是不同層次。不要用能執行 API 的 token 反推它應該能做所有 access 工作。</p>
 <h2 id="org-管理">org 管理</h2>
 <p>需要用 Basic auth 盤點、匯出或回放 org 時，請使用 <code>access org</code>。它的 <code>list</code> 也可以直接讀本機 bundle。</p>
 <h3 id="1-列出匯出與回放-org">1. 列出、匯出與回放 org</h3>
-<pre><code># 用途：1. 列出、匯出與回放 org。
+<pre><code># 先列出 live Grafana 裡目前可見的 org。
 grafana-util access org list --table</code></pre>
-<pre><code># 用途：1. 列出、匯出與回放 org。
+<pre><code># 不碰 live Grafana，直接檢視本機 org bundle。
 grafana-util access org list --input-dir ./access-orgs --table</code></pre>
-<pre><code># 用途：1. 列出、匯出與回放 org。
+<pre><code># 把 org inventory 匯出成可重播的本機套件。
 grafana-util access org export --output-dir ./access-orgs</code></pre>
-<pre><code># 用途：1. 列出、匯出與回放 org。
+<pre><code># 匯入前先 dry-run，確認會建立或更新哪些 org。
 grafana-util access org import --input-dir ./access-orgs --dry-run</code></pre>
 <p><strong>預期輸出：</strong></p>
 <pre><code>ID   NAME        IS_MAIN   QUOTA
@@ -967,6 +899,8 @@ PREFLIGHT IMPORT:
 <p>先用 list 確認主 org，再用 export/import 建立可重播的 org 快照。</p>
 <h2 id="使用者與-team-管理">使用者與 team 管理</h2>
 <p>需要調整成員、管理快照或檢查漂移時，請使用 <code>access user</code> 與 <code>access team</code>。它們的 <code>list</code> 與 <code>browse</code> 都可以讀本機 bundle。</p>
+<p>先分清楚 user 與 team 的責任。User 決定某個登入身份存在不存在、是否停用、以及它在 org 裡的 role；team 則是協作與權限管理的集合。當你要處理「這個人能不能登入」時，先看 <code>access user</code>。當你要處理「這群人能不能一起看到某批資產」時，先看 <code>access team</code>。</p>
+<p><code>list</code> 適合盤點 live 或本地 bundle；<code>export</code> 適合留下可 review 快照；<code>diff</code> 用來判斷 live 是否偏離 bundle；<code>import</code> 則應該在 dry-run 後才執行。直接 <code>add</code>、<code>modify</code>、<code>delete</code> user 時，要先確認 scope 是 global、org role，還是 Grafana admin，不要只看 login 名稱。</p>
 <h3 id="1-新增修改與比對使用者">1. 新增、修改與比對使用者</h3>
 <pre><code># 新增一個具備全域 Admin 角色的使用者
 grafana-util access user add --login dev-user --role Admin --prompt-password
@@ -985,13 +919,13 @@ grafana-util access user list --input-dir ./access-users</code></pre>
 No user differences across 12 user(s).</code></pre>
 <p>如果不想把密碼留在 shell history 裡，請改用 <code>--prompt-password</code>。<code>--scope global</code> 需要 Basic auth。</p>
 <h3 id="2-team-盤點與同步">2. team 盤點與同步</h3>
-<pre><code># 用途：2. team 盤點與同步。
+<pre><code># 先看指定 org 裡目前有哪些 team。
 grafana-util access team list --org-id 1 --table</code></pre>
-<pre><code># 用途：2. team 盤點與同步。
+<pre><code># 從本機 team bundle 檢查同一份 inventory。
 grafana-util access team list --input-dir ./access-teams --table</code></pre>
-<pre><code># 用途：2. team 盤點與同步。
+<pre><code># 匯出 team 時連成員狀態一起保留。
 grafana-util access team export --output-dir ./access-teams --with-members</code></pre>
-<pre><code># 用途：2. team 盤點與同步。
+<pre><code># 匯入 team bundle 前先用表格預覽差異。
 grafana-util access team import --input-dir ./access-teams --replace-existing --dry-run --table</code></pre>
 <p><strong>預期輸出：</strong></p>
 <pre><code>ID   NAME           MEMBERS   EMAIL
@@ -1006,12 +940,14 @@ ops-user    Viewer  create   missing</code></pre>
 <p>匯出時加上 <code>--with-members</code> 才會保留成員狀態；要做可能覆寫的匯入前，先用 <code>--dry-run --table</code> 看一次。</p>
 <h2 id="service-account-管理">service account 管理</h2>
 <p>service account 是自動化流程常見的基礎元件。它的 inventory 也可以先從本機套件看，不必先碰 live Grafana。</p>
+<p>Service account 是機器身份，不是比較安全的 user shortcut。它應該對應到一個明確的自動化用途，例如 CI deployment、nightly audit 或 incident bot。<code>access service-account</code> 管身份本身；<code>access service-account token</code> 管可用來呼叫 API 的 token。這兩層要分開 review。</p>
+<p>Token secret 通常只會出現一次。建立 token 後，先把 secret 存到正確的 secret store，再輪替舊 token。不要用終端 log 當成 token 保存方式，也不要因為 list 看得到 service account，就假設手上的 token 仍然有效。</p>
 <h3 id="1-列出與匯出-service-account">1. 列出與匯出 service account</h3>
-<pre><code># 用途：1. 列出與匯出 service account。
+<pre><code># 用 JSON 盤點 live service account，方便交給腳本處理。
 grafana-util access service-account list --json</code></pre>
-<pre><code># 用途：1. 列出與匯出 service account。
+<pre><code># 從本機套件用文字格式檢視 service account inventory。
 grafana-util access service-account list --input-dir ./access-sa --output-format text</code></pre>
-<pre><code># 用途：1. 列出與匯出 service account。
+<pre><code># 匯出 service account inventory，供 review 或回放使用。
 grafana-util access service-account export --output-dir ./access-sa</code></pre>
 <p><strong>預期輸出：</strong></p>
 <pre><code>[
@@ -1058,11 +994,11 @@ grafana-util access service-account token delete --service-account-id 15 --token
 <p>如果需要一次性的 <code>key</code>，請加上 <code>--json</code>。純文字輸出適合寫入日誌，不適合拿來擷取憑證。</p>
 <h2 id="漂移檢查-diff">漂移檢查 (Diff)</h2>
 <p>比較本機快照與 live Grafana 之間的差異。</p>
-<pre><code># 用途：比較本機快照與 live Grafana 之間的差異。
+<pre><code># 比較本機快照與 live Grafana 之間的差異。
 grafana-util access user diff --input-dir ./access-users</code></pre>
-<pre><code># 用途：比較本機快照與 live Grafana 之間的差異。
+<pre><code># 比較本機快照與 live Grafana 之間的差異。
 grafana-util access team diff --diff-dir ./access-teams</code></pre>
-<pre><code># 用途：比較本機快照與 live Grafana 之間的差異。
+<pre><code># 比較本機快照與 live Grafana 之間的差異。
 grafana-util access service-account diff --diff-dir ./access-sa</code></pre>
 <p><strong>預期輸出：</strong></p>
 <pre><code>--- Live Users
@@ -1073,13 +1009,16 @@ grafana-util access service-account diff --diff-dir ./access-sa</code></pre>
 No team differences across 4 team(s).
 No service account differences across 2 service account(s).</code></pre>
 <p>可以用 diff 輸出判斷快照是否適合匯入，也能先看出 live 環境是否已經發生漂移。</p>
+<h2 id="何時切到指令參考">何時切到指令參考</h2>
+<p>這一章負責幫你判斷 access scope。當你已經知道要處理 org、user、team、service account 還是 token，再切到指令參考確認 flags、輸出格式與完整範例：</p>
+<ul><li><a href="../../commands/zh-TW/access.html">access 指令總覽</a></li><li><a href="../../commands/zh-TW/access-user.html">access user</a></li><li><a href="../../commands/zh-TW/access-org.html">access org</a></li><li><a href="../../commands/zh-TW/access-team.html">access team</a></li><li><a href="../../commands/zh-TW/access-service-account.html">access service-account</a></li><li><a href="../../commands/zh-TW/access-service-account-token.html">access service-account token</a></li><li><a href="../../commands/zh-TW/index.html">指令參考</a></li></ul>
 <p><a href="alert.html">⬅️ 上一章：告警治理</a> | <a href="index.html">🏠 回首頁</a> | <a href="status-workspace.html">➡️ 下一章：Workspace 審查與狀態</a></p>
-<nav class="footer-nav"><a class="link-card" href="alert.html"><span>上一章</span>第 10 章 · Alert 維運人員手冊</a><a class="link-card" href="status-workspace.html"><span>下一章</span>第 12 章 · Workspace 審查與狀態</a></nav>
+<nav class="footer-nav"><a class="link-card" href="alert.html"><span>上一章</span>Alert 維運人員手冊</a><a class="link-card" href="status-workspace.html"><span>下一章</span>Workspace 審查與狀態</a></nav>
 </article>
 <aside class="sidebar">
   <button class="sidebar-toggle sidebar-toggle-right" type="button" aria-expanded="true" aria-label="Toggle page sidebar">▶</button>
   <div class="sidebar-content">
-    <section class="sidebar-section"><h2>本頁內容</h2><ul class="toc-list"><li class="toc-level-2"><a href="#command-relationships"><span class="toc-label">指令關係</span></a></li><li class="toc-level-2"><a href="#適用對象"><span class="toc-label">適用對象</span></a></li><li class="toc-level-2"><a href="#主要目標"><span class="toc-label">主要目標</span></a></li><li class="toc-level-2"><a href="#採用前後對照"><span class="toc-label">採用前後對照</span></a></li><li class="toc-level-2"><a href="#成功判準"><span class="toc-label">成功判準</span></a></li><li class="toc-level-2"><a href="#失敗時先檢查"><span class="toc-label">失敗時先檢查</span></a></li><li class="toc-level-2"><a href="#指令頁面"><span class="toc-label">指令頁面</span></a></li><li class="toc-level-2"><a href="#org-管理"><span class="toc-label">org 管理</span></a></li><li class="toc-level-3"><a href="#1-列出匯出與回放-org"><span class="toc-label">1. 列出、匯出與回放 org</span></a></li><li class="toc-level-2"><a href="#使用者與-team-管理"><span class="toc-label">使用者與 team 管理</span></a></li><li class="toc-level-3"><a href="#1-新增修改與比對使用者"><span class="toc-label">1. 新增、修改與比對使用者</span></a></li><li class="toc-level-3"><a href="#2-team-盤點與同步"><span class="toc-label">2. team 盤點與同步</span></a></li><li class="toc-level-2"><a href="#service-account-管理"><span class="toc-label">service account 管理</span></a></li><li class="toc-level-3"><a href="#1-列出與匯出-service-account"><span class="toc-label">1. 列出與匯出 service account</span></a></li><li class="toc-level-3"><a href="#2-建立與刪除-token"><span class="toc-label">2. 建立與刪除 token</span></a></li><li class="toc-level-2"><a href="#漂移檢查-diff"><span class="toc-label">漂移檢查 (Diff)</span></a></li></ul></section><section class="sidebar-section"><h2>版本</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>語言</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/access.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
+    <section class="sidebar-section"><h2>本頁內容</h2><ul class="toc-list"><li class="toc-level-2"><a href="#適用對象"><span class="toc-label">適用對象</span></a></li><li class="toc-level-2"><a href="#主要目標"><span class="toc-label">主要目標</span></a></li><li class="toc-level-2"><a href="#採用前後對照"><span class="toc-label">採用前後對照</span></a></li><li class="toc-level-2"><a href="#成功判準"><span class="toc-label">成功判準</span></a></li><li class="toc-level-2"><a href="#失敗時先檢查"><span class="toc-label">失敗時先檢查</span></a></li><li class="toc-level-2"><a href="#access-工作流地圖"><span class="toc-label">Access 工作流地圖</span></a></li><li class="toc-level-2"><a href="#org-管理"><span class="toc-label">org 管理</span></a></li><li class="toc-level-3"><a href="#1-列出匯出與回放-org"><span class="toc-label">1. 列出、匯出與回放 org</span></a></li><li class="toc-level-2"><a href="#使用者與-team-管理"><span class="toc-label">使用者與 team 管理</span></a></li><li class="toc-level-3"><a href="#1-新增修改與比對使用者"><span class="toc-label">1. 新增、修改與比對使用者</span></a></li><li class="toc-level-3"><a href="#2-team-盤點與同步"><span class="toc-label">2. team 盤點與同步</span></a></li><li class="toc-level-2"><a href="#service-account-管理"><span class="toc-label">service account 管理</span></a></li><li class="toc-level-3"><a href="#1-列出與匯出-service-account"><span class="toc-label">1. 列出與匯出 service account</span></a></li><li class="toc-level-3"><a href="#2-建立與刪除-token"><span class="toc-label">2. 建立與刪除 token</span></a></li><li class="toc-level-2"><a href="#漂移檢查-diff"><span class="toc-label">漂移檢查 (Diff)</span></a></li><li class="toc-level-2"><a href="#何時切到指令參考"><span class="toc-label">何時切到指令參考</span></a></li></ul></section><section class="sidebar-section"><h2>版本</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>語言</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/access.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
   </div>
 </aside>
 

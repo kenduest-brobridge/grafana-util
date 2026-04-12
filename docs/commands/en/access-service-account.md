@@ -41,27 +41,27 @@ List live or local Grafana service accounts, create, export, import, diff, or de
 ## Examples
 
 ```bash
-# Purpose: Inspect service accounts before creating or deleting a token.
+# Inspect service accounts before creating or deleting a token.
 grafana-util access service-account list --url http://localhost:3000 --basic-user admin --basic-password admin --output-format text
 ```
 
 ```bash
-# Purpose: Review a saved service-account bundle before replaying it.
+# Review a saved service-account bundle before replaying it.
 grafana-util access service-account list --input-dir ./access-service-accounts --output-format table
 ```
 
 ```bash
-# Purpose: Create a service account for repeatable deployment automation.
+# Create a service account for repeatable deployment automation.
 grafana-util access service-account add --url http://localhost:3000 --basic-user admin --basic-password admin --name deploy-bot --role Editor --json
 ```
 
 ```bash
-# Purpose: Issue a named token for one service account.
+# Issue a named token for one service account.
 grafana-util access service-account token add --profile prod --name deploy-bot --token-name nightly
 ```
 
 ```bash
-# Purpose: Prompt for one service account, confirm it, and then delete it.
+# Prompt for one service account, confirm it, and then delete it.
 grafana-util access service-account delete --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --prompt
 ```
 

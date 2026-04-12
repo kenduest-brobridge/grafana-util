@@ -19,12 +19,12 @@ Use this when a datasource already exists and you need to update its URL, auth, 
 
 ## Examples
 ```bash
-# Purpose: Modify one live Grafana datasource through the Grafana API.
+# Modify one live Grafana datasource through the Grafana API.
 grafana-util datasource modify --url http://localhost:3000 --basic-user admin --basic-password admin --uid prom-main --set-url http://prometheus-v2:9090 --dry-run --json
 ```
 
 ```bash
-# Purpose: Modify one live Grafana datasource through the Grafana API.
+# Modify one live Grafana datasource through the Grafana API.
 grafana-util datasource modify --profile prod --uid prom-main --set-default true --dry-run --table
 ```
 

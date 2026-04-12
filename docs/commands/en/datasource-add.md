@@ -19,12 +19,12 @@ Use this when you want to create a new datasource directly, or dry-run the creat
 
 ## Examples
 ```bash
-# Purpose: Create one live Grafana datasource through the Grafana API.
+# Create one live Grafana datasource through the Grafana API.
 grafana-util datasource add --url http://localhost:3000 --basic-user admin --basic-password admin --name prometheus-main --type prometheus --datasource-url http://prometheus:9090 --dry-run --table
 ```
 
 ```bash
-# Purpose: Create one live Grafana datasource through the Grafana API.
+# Create one live Grafana datasource through the Grafana API.
 grafana-util datasource add --profile prod --name tempo-main --type tempo --datasource-url http://tempo:3200 --preset-profile full --dry-run --json
 ```
 

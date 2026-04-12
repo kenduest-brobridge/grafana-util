@@ -29,22 +29,22 @@
 
 ## 範例
 ```bash
-# 用途：說明目前支援的 live resource kinds 與 selector 格式。
+# 說明目前支援的 live resource kinds 與 selector 格式。
 grafana-util status resource describe
 ```
 
 ```bash
-# 用途：顯示目前支援的 resource kinds。
+# 顯示目前支援的 resource kinds。
 grafana-util status resource kinds
 ```
 
 ```bash
-# 用途：從本機 Grafana 列出 live dashboards。
+# 從本機 Grafana 列出 live dashboards。
 grafana-util status resource list dashboards --url http://localhost:3000 --basic-user admin --basic-password admin
 ```
 
 ```bash
-# 用途：以 YAML 取得單一 datasource payload。
+# 以 YAML 取得單一 datasource payload。
 grafana-util status resource get datasources/prom-main --profile prod --output-format yaml
 ```
 

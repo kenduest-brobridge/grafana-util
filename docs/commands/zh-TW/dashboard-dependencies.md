@@ -47,17 +47,17 @@
 ## 範例（由淺到深）
 
 ```bash
-# 用途：先用 table 盤點本地 raw 匯出樹。
+# 先用 table 盤點本地 raw 匯出樹。
 grafana-util dashboard dependencies --input-dir ./dashboards/raw --input-format raw --output-format table
 ```
 
 ```bash
-# 用途：產生可重用的 governance JSON，留給 policy / impact / CI。
+# 產生可重用的 governance JSON，留給 policy / impact / CI。
 grafana-util dashboard dependencies --input-dir ./dashboards/provisioning --input-format provisioning --output-format governance-json
 ```
 
 ```bash
-# 用途：分析 repo-backed Git Sync 樹，保留治理輸出給下一步。
+# 分析 repo-backed Git Sync 樹，保留治理輸出給下一步。
 grafana-util dashboard dependencies --input-dir ./grafana-oac-repo --input-format git-sync --output-format governance
 ```
 

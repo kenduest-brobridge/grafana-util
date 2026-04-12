@@ -326,13 +326,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   font-weight: 500;
 }
 .nav-command-branch-item .nav-command-leaf-link:hover { color: var(--heading); }
-.handbook-command-map .nav-command-root-link {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  font-size: 0.9rem;
-}
 
 .sidebar-toggle {
   position: absolute;
@@ -378,71 +371,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map { margin: 0 0 24px; }
-.handbook-command-map-panel {
-  margin-top: 16px;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--panel) 96%, white);
-}
-.handbook-command-map .nav-group-title {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-group {
-  padding-top: 0;
-}
-.handbook-command-map .nav-command-group + .nav-command-group {
-  margin-top: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
-  padding-top: 10px;
-}
-.handbook-command-map .nav-command-sub-list {
-  margin-top: 8px;
-  margin-left: 0;
-  padding-left: 0;
-  border-left: 0;
-}
-.handbook-command-map .nav-command-branch {
-  display: grid;
-  grid-template-columns: minmax(130px, 0.22fr) minmax(0, 1fr);
-  gap: 12px 18px;
-  align-items: start;
-}
-.handbook-command-map .nav-command-branch-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-left: 0;
-  padding-left: 14px;
-}
-.handbook-command-map .nav-command-branch-item + .nav-command-branch-item { margin-top: 0; }
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-  line-height: 1.25;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link:hover,
-.handbook-command-map .nav-command-link a:hover {
-  border-color: color-mix(in srgb, var(--border) 45%, var(--accent));
-  background: var(--panel-strong);
-}
-@media (max-width: 720px) {
-  .handbook-command-map .nav-command-branch {
-    grid-template-columns: 1fr;
-  }
-  .handbook-command-map .nav-command-branch-list {
-    padding-left: 0;
-    border-left: 0;
-  }
-}
 .article p,
 .article li { color: var(--text); font-weight: 460; }
 .article ul li::marker,
@@ -920,15 +848,15 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
       <div class="layout">
 <aside class="nav-sidebar">
   <button class="sidebar-toggle sidebar-toggle-left" type="button" aria-expanded="true" aria-label="Toggle handbook navigation">◀</button>
-  <div class="nav-sidebar-content"><section class="nav-section"><h2>手冊導覽</h2><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 1 部 · 起步</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="index.html" class="nav-item">概觀</a></li><li class="nav-tree-node"><a href="what-is-grafana-util.html" class="nav-item">這個工具是做什麼的</a></li><li class="nav-tree-node"><a href="getting-started.html" class="nav-item">開始使用</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 2 部 · 角色路徑</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="role-new-user.html" class="nav-item">第一次執行 / 新手路線</a></li><li class="nav-tree-node"><a href="role-sre-ops.html" class="nav-item">SRE / 維運</a></li><li class="nav-tree-node"><a href="role-automation-ci.html" class="nav-item">自動化 / CI</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 3 部 · 操作面</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="status-workspace.html" class="nav-item">Status / Workspace</a></li><li class="nav-tree-node"><a href="dashboard.html" class="nav-item">Dashboard</a></li><li class="nav-tree-node"><a href="datasource.html" class="nav-item">Datasource</a></li><li class="nav-tree-node"><a href="alert.html" class="nav-item">Alert</a></li><li class="nav-tree-node"><a href="access.html" class="nav-item">Access</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 4 部 · 設計原則</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="architecture.html" class="nav-item">設計原則</a></li></ul></div><div class="nav-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">第 5 部 · 參考與排錯</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="scenarios.html" class="nav-item">情境手冊</a></li><li class="nav-tree-node"><a href="recipes.html" class="nav-item">實戰錦囊</a></li><li class="nav-tree-node"><a href="reference.html" class="nav-item">技術參考</a></li><li class="nav-tree-node"><a href="troubleshooting.html" class="nav-item active">疑難排解</a></li></ul></div></section><section class="nav-section nav-command-section collapsed"><button class="nav-group-header nav-section-toggle" type="button" aria-expanded="false"><span class="nav-group-title-text">指令關係</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-section-body"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">唯讀檢查</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><a href="../../commands/zh-TW/status.html" class="nav-command-root-link">status</a></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/zh-TW/resource.html" class="nav-command-leaf-link">resource</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/snapshot.html" class="nav-command-leaf-link">snapshot</a></li></ul></div></div></div><div class="nav-group nav-command-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Workspace 審查</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><a href="../../commands/zh-TW/workspace.html" class="nav-command-root-link">workspace</a></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/zh-TW/workspace-scan.html" class="nav-command-leaf-link">scan</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/workspace-test.html" class="nav-command-leaf-link">test</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/workspace-preview.html" class="nav-command-leaf-link">preview</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/workspace-apply.html" class="nav-command-leaf-link">apply</a></li></ul></div></div></div></div></section><section class="nav-section"><h2>指令參考</h2><a href="../../commands/zh-TW/index.html" class="nav-command-entry">開啟指令參考</a></section></div>
+  <div class="nav-sidebar-content"><section class="nav-section"><h2>手冊導覽</h2><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 1 部 · 起步</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="index.html" class="nav-item">概觀</a></li><li class="nav-tree-node"><a href="what-is-grafana-util.html" class="nav-item">這個工具是做什麼的</a></li><li class="nav-tree-node"><a href="getting-started.html" class="nav-item">開始使用</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 2 部 · 角色路徑</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="role-new-user.html" class="nav-item">第一次執行 / 新手路線</a></li><li class="nav-tree-node"><a href="role-sre-ops.html" class="nav-item">SRE / 維運</a></li><li class="nav-tree-node"><a href="role-automation-ci.html" class="nav-item">自動化 / CI</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 3 部 · 操作面</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="status-workspace.html" class="nav-item">Status / Workspace</a></li><li class="nav-tree-node"><a href="dashboard.html" class="nav-item">Dashboard</a></li><li class="nav-tree-node"><a href="datasource.html" class="nav-item">Datasource</a></li><li class="nav-tree-node"><a href="alert.html" class="nav-item">Alert</a></li><li class="nav-tree-node"><a href="access.html" class="nav-item">Access</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 4 部 · 設計原則</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="architecture.html" class="nav-item">設計原則</a></li></ul></div><div class="nav-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">第 5 部 · 參考與排錯</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="scenarios.html" class="nav-item">情境手冊</a></li><li class="nav-tree-node"><a href="recipes.html" class="nav-item">實戰錦囊</a></li><li class="nav-tree-node"><a href="reference.html" class="nav-item">技術參考</a></li><li class="nav-tree-node"><a href="troubleshooting.html" class="nav-item active">疑難排解</a></li></ul></div></section><section class="nav-section nav-command-section collapsed"><button class="nav-group-header nav-section-toggle" type="button" aria-expanded="false"><span class="nav-group-title-text">指令捷徑</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-section-body"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">唯讀檢查</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><a href="../../commands/zh-TW/status.html" class="nav-command-root-link">status</a></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/zh-TW/resource.html" class="nav-command-leaf-link">resource</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/snapshot.html" class="nav-command-leaf-link">snapshot</a></li></ul></div></div></div><div class="nav-group nav-command-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Workspace 審查</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><a href="../../commands/zh-TW/workspace.html" class="nav-command-root-link">workspace</a></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/zh-TW/workspace-scan.html" class="nav-command-leaf-link">scan</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/workspace-test.html" class="nav-command-leaf-link">test</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/workspace-preview.html" class="nav-command-leaf-link">preview</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/workspace-apply.html" class="nav-command-leaf-link">apply</a></li></ul></div></div></div></div></section><section class="nav-section"><h2>指令參考</h2><a href="../../commands/zh-TW/index.html" class="nav-command-entry">開啟指令參考</a></section></div>
 </aside>
 
 <article class="article">
 <div class="breadcrumbs"><a href="../../index.html">Home</a> / 手冊 / 疑難排解</div>
 
-<div class="hero-eyebrow">第 5 部 · 參考與排錯 · 第 16 章 / 共 16 章</div><h1><span class="hero-title-main">疑難排解</span></h1><p class="hero-subtitle">疑難排解與名詞解釋</p>
+<div class="hero-eyebrow">第 5 部 · 參考與排錯</div><h1><span class="hero-title-main">疑難排解</span></h1><p class="hero-subtitle">疑難排解與名詞解釋</p>
 
-<section class="section-index"><h2>章節索引</h2><p class="section-index-summary">先從這裡跳到你要看的段落。</p><ul class="section-index-list layout-list"><li><a href="#command-relationships">指令關係</a></li><li><a href="#適用對象">適用對象</a></li><li><a href="#主要目標">主要目標</a></li><li><a href="#採用前後對照">採用前後對照</a></li><li><a href="#成功判準">成功判準</a></li><li><a href="#失敗時先檢查">失敗時先檢查</a></li><li><a href="#cli-診斷與調修">CLI 診斷與調修</a></li><li><a href="#名詞解釋">名詞解釋</a></li><li><a href="#取得更多協助">取得更多協助</a></li></ul></section><section class="handbook-command-map"><h2 id="command-relationships">指令關係</h2><div class="handbook-command-map-panel"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">唯讀檢查</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><a href="../../commands/zh-TW/status.html" class="nav-command-root-link">status</a></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/zh-TW/resource.html" class="nav-command-leaf-link">resource</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/snapshot.html" class="nav-command-leaf-link">snapshot</a></li></ul></div></div></div><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Workspace 審查</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><a href="../../commands/zh-TW/workspace.html" class="nav-command-root-link">workspace</a></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/zh-TW/workspace-scan.html" class="nav-command-leaf-link">scan</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/workspace-test.html" class="nav-command-leaf-link">test</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/workspace-preview.html" class="nav-command-leaf-link">preview</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/workspace-apply.html" class="nav-command-leaf-link">apply</a></li></ul></div></div></div></div></section><p>本章不是只列錯誤訊息，而是幫你分辨問題到底屬於哪一類：</p>
+<section class="section-index"><h2>章節索引</h2><p class="section-index-summary">先從這裡跳到你要看的段落。</p><ul class="section-index-list layout-list"><li><a href="#適用對象">適用對象</a></li><li><a href="#主要目標">主要目標</a></li><li><a href="#採用前後對照">採用前後對照</a></li><li><a href="#成功判準">成功判準</a></li><li><a href="#失敗時先檢查">失敗時先檢查</a></li><li><a href="#cli-診斷與調修">CLI 診斷與調修</a></li><li><a href="#名詞解釋">名詞解釋</a></li><li><a href="#取得更多協助">取得更多協助</a></li></ul></section><p>本章不是只列錯誤訊息，而是幫你分辨問題到底屬於哪一類：</p>
 <ul><li>auth 還是 scope</li><li>live 還是 staged</li><li>指令形狀錯，還是輸出形狀不對</li><li>本機 profile 設定問題，還是遠端 Grafana 行為</li></ul>
 <p>如果你正在追查驗證或連線設定，請把 <a href="../../commands/zh-TW/profile.html">config profile</a>、<a href="../../commands/zh-TW/index.html">指令參考</a> 與 <a href="../../commands/zh-TW/access.html">access</a> 一起開著。</p>
 <h2 id="適用對象">適用對象</h2>
@@ -944,7 +872,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="cli-診斷與調修">CLI 診斷與調修</h2>
 <h3 id="1-啟用-verbose-日誌">1. 啟用 verbose 日誌</h3>
 <p><code>grafana-util</code> 使用標準 Rust logging。你可以提高日誌等級來看實際 API request / response。</p>
-<pre><code># 用途：grafana-util 使用標準 Rust logging。你可以提高日誌等級來看實際 API request / response。
+<pre><code># grafana-util 使用標準 Rust logging。你可以提高日誌等級來看實際 API request / response。
 RUST_LOG=debug grafana-util status live --profile prod
 grafana-util dashboard list -v</code></pre>
 <p>適合拿來回答這些問題：</p>
@@ -964,18 +892,18 @@ grafana-util dashboard list -v</code></pre>
 <h3 id="6-輸出格式用錯">6. 輸出格式用錯</h3>
 <table><thead><tr><th>症狀</th><th>常見原因</th><th>建議修補方式</th></tr></thead><tbody><tr><td>CI parser 突然壞掉</td><td>用到了給人看的輸出模式</td><td>改用 <code>json</code>、<code>yaml</code> 或其他適合腳本處理的結構化輸出</td></tr><tr><td>指令不接受某個 <code>--output-format</code> 值</td><td>這個指令只支援較少的輸出格式</td><td>直接查該 command help 或指令頁</td></tr><tr><td>第一次檢查時互動式輸出太複雜</td><td>畫面雖然好看，但資訊不夠直接</td><td>先切成 <code>yaml</code> 或 <code>json</code></td></tr></tbody></table>
 <h2 id="名詞解釋">名詞解釋</h2>
-<table><thead><tr><th>術語</th><th>定義</th></tr></thead><tbody><tr><td><strong>Live</strong></td><td>直接讀目前正在執行的 Grafana；第一次確認連線時先從這裡開始。</td></tr><tr><td><strong>Staged</strong></td><td>本地已準備好、但還沒套用到 Grafana 的檔案或變更包。</td></tr><tr><td><strong>Overview</strong></td><td>給人快速判斷下一步的總覽；讀 live Grafana 時用 <code>status overview live</code>。</td></tr><tr><td><strong>Workspace</strong></td><td>一包本地輸入，應該先 scan、test、preview，再決定是否 apply。</td></tr><tr><td><strong>Governance</strong></td><td>用政策或規則先抓風險；不是第一次使用時的起手式。</td></tr><tr><td><strong>Promotion</strong></td><td>把已審查的資產從一個環境或交付包推往另一個目標環境。</td></tr><tr><td><strong>Surface</strong></td><td>高階操作面分類，例如 <code>status</code>、<code>dashboard</code>、<code>workspace</code>、<code>access</code>。</td></tr><tr><td><strong>Lane</strong></td><td>資料路徑，例如 <code>raw/</code>、<code>prompt/</code>、<code>provisioning/</code>。</td></tr><tr><td><strong>Contract</strong></td><td>用來定義 readiness 或 compatibility 的結構化 JSON 文件</td></tr><tr><td><strong>Masked Recovery</strong></td><td>匯出時先把 secrets 遮蔽，匯入或 replay 時再補回</td></tr><tr><td><strong>Desired State</strong></td><td>儲存在 Git 中、CLI 拿來對照 live Grafana 的目標設定</td></tr><tr><td><strong>Drift</strong></td><td>live Grafana 與本地 staged / desired 輸出物之間的差距</td></tr></tbody></table>
+<table><thead><tr><th>術語</th><th>定義</th></tr></thead><tbody><tr><td><strong>Live</strong></td><td>直接讀目前正在執行的 Grafana；第一次確認連線時先從這裡開始。</td></tr><tr><td><strong>Staged</strong></td><td>本地已準備好、但還沒套用到 Grafana 的檔案或變更包。</td></tr><tr><td><strong>Review</strong></td><td>審查輸入、差異或計畫；這一步不應該直接改 live Grafana。</td></tr><tr><td><strong>Preview</strong></td><td>預覽接下來會發生的變更，用來確認 scope、action 與風險。</td></tr><tr><td><strong>Apply</strong></td><td>套用已審查的變更；這通常是會進入 mutation path 的步驟。</td></tr><tr><td><strong>Overview</strong></td><td>給人快速判斷下一步的總覽；讀 live Grafana 時用 <code>status overview live</code>。</td></tr><tr><td><strong>Workspace</strong></td><td>一包本地輸入，應該先 scan、test、preview，再決定是否 apply。</td></tr><tr><td><strong>Governance</strong></td><td>用政策或規則先抓風險；不是第一次使用時的起手式。</td></tr><tr><td><strong>Promotion</strong></td><td>把已審查的資產從一個環境或交付包推往另一個目標環境。</td></tr><tr><td><strong>Surface</strong></td><td>高階操作面分類，例如 <code>status</code>、<code>dashboard</code>、<code>workspace</code>、<code>access</code>。</td></tr><tr><td><strong>Lane</strong></td><td>資料路徑，例如 <code>raw/</code>、<code>prompt/</code>、<code>provisioning/</code>。</td></tr><tr><td><strong>Contract</strong></td><td>用來定義 readiness 或 compatibility 的結構化 JSON 文件</td></tr><tr><td><strong>Masked Recovery</strong></td><td>匯出時先把 secrets 遮蔽，匯入或 replay 時再補回</td></tr><tr><td><strong>Desired State</strong></td><td>儲存在 Git 中、CLI 拿來對照 live Grafana 的目標設定</td></tr><tr><td><strong>Drift</strong></td><td>live Grafana 與本地 staged / desired 輸出物之間的差距</td></tr></tbody></table>
 <h2 id="取得更多協助">取得更多協助</h2>
 <ul><li><strong>先確認版本</strong>：回報問題時先執行 <code>grafana-util --version</code></li><li><strong>專案儲存庫</strong>：請在 <a href="https://github.com/kenduest-brobridge/grafana-util/issues">GitHub Issues</a> 回報 Bug 或提需求</li></ul>
 <p>回報問題時，盡量附上：</p>
 <ul><li>完整指令</li><li>這次是 live 還是 staged</li><li>使用的是 <code>--profile</code>、direct Basic auth，還是 token auth</li><li>問題比較像語法、連線、scope，還是 staged input shape</li></ul>
 <p><a href="recipes.html">⬅️ 上一章：實戰錦囊與最佳實踐</a> | <a href="index.html">🏠 回首頁</a></p>
-<nav class="footer-nav"><a class="link-card" href="reference.html"><span>上一章</span>第 15 章 · 技術參考手冊 (Technical Reference)</a></nav>
+<nav class="footer-nav"><a class="link-card" href="reference.html"><span>上一章</span>技術參考手冊 (Technical Reference)</a></nav>
 </article>
 <aside class="sidebar">
   <button class="sidebar-toggle sidebar-toggle-right" type="button" aria-expanded="true" aria-label="Toggle page sidebar">▶</button>
   <div class="sidebar-content">
-    <section class="sidebar-section"><h2>本頁內容</h2><ul class="toc-list"><li class="toc-level-2"><a href="#command-relationships"><span class="toc-label">指令關係</span></a></li><li class="toc-level-2"><a href="#適用對象"><span class="toc-label">適用對象</span></a></li><li class="toc-level-2"><a href="#主要目標"><span class="toc-label">主要目標</span></a></li><li class="toc-level-2"><a href="#採用前後對照"><span class="toc-label">採用前後對照</span></a></li><li class="toc-level-2"><a href="#成功判準"><span class="toc-label">成功判準</span></a></li><li class="toc-level-2"><a href="#失敗時先檢查"><span class="toc-label">失敗時先檢查</span></a></li><li class="toc-level-2"><a href="#cli-診斷與調修"><span class="toc-label">CLI 診斷與調修</span></a></li><li class="toc-level-3"><a href="#1-啟用-verbose-日誌"><span class="toc-label">1. 啟用 verbose 日誌</span></a></li><li class="toc-level-3"><a href="#2-常見錯誤與快速修補"><span class="toc-label">2. 常見錯誤與快速修補</span></a></li><li class="toc-level-3"><a href="#3-權限範圍與驗證方式不匹配"><span class="toc-label">3. 權限範圍與驗證方式不匹配</span></a></li><li class="toc-level-3"><a href="#4-staged-與-live-搞混"><span class="toc-label">4. staged 與 live 搞混</span></a></li><li class="toc-level-3"><a href="#5-profile-與-secret-問題"><span class="toc-label">5. profile 與 secret 問題</span></a></li><li class="toc-level-3"><a href="#6-輸出格式用錯"><span class="toc-label">6. 輸出格式用錯</span></a></li><li class="toc-level-2"><a href="#名詞解釋"><span class="toc-label">名詞解釋</span></a></li><li class="toc-level-2"><a href="#取得更多協助"><span class="toc-label">取得更多協助</span></a></li></ul></section><section class="sidebar-section"><h2>版本</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>語言</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/troubleshooting.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
+    <section class="sidebar-section"><h2>本頁內容</h2><ul class="toc-list"><li class="toc-level-2"><a href="#適用對象"><span class="toc-label">適用對象</span></a></li><li class="toc-level-2"><a href="#主要目標"><span class="toc-label">主要目標</span></a></li><li class="toc-level-2"><a href="#採用前後對照"><span class="toc-label">採用前後對照</span></a></li><li class="toc-level-2"><a href="#成功判準"><span class="toc-label">成功判準</span></a></li><li class="toc-level-2"><a href="#失敗時先檢查"><span class="toc-label">失敗時先檢查</span></a></li><li class="toc-level-2"><a href="#cli-診斷與調修"><span class="toc-label">CLI 診斷與調修</span></a></li><li class="toc-level-3"><a href="#1-啟用-verbose-日誌"><span class="toc-label">1. 啟用 verbose 日誌</span></a></li><li class="toc-level-3"><a href="#2-常見錯誤與快速修補"><span class="toc-label">2. 常見錯誤與快速修補</span></a></li><li class="toc-level-3"><a href="#3-權限範圍與驗證方式不匹配"><span class="toc-label">3. 權限範圍與驗證方式不匹配</span></a></li><li class="toc-level-3"><a href="#4-staged-與-live-搞混"><span class="toc-label">4. staged 與 live 搞混</span></a></li><li class="toc-level-3"><a href="#5-profile-與-secret-問題"><span class="toc-label">5. profile 與 secret 問題</span></a></li><li class="toc-level-3"><a href="#6-輸出格式用錯"><span class="toc-label">6. 輸出格式用錯</span></a></li><li class="toc-level-2"><a href="#名詞解釋"><span class="toc-label">名詞解釋</span></a></li><li class="toc-level-2"><a href="#取得更多協助"><span class="toc-label">取得更多協助</span></a></li></ul></section><section class="sidebar-section"><h2>版本</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>語言</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/troubleshooting.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
   </div>
 </aside>
 

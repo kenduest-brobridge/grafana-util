@@ -8,6 +8,15 @@ Current AI change log only.
 - Detailed 2026-03-29 through 2026-03-31 entries moved to [`archive/ai-changes-archive-2026-03-31.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-03-31.md).
 - Detailed 2026-04-01 through 2026-04-12 entries moved to [`archive/ai-changes-archive-2026-04-12.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-04-12.md).
 - Keep this file limited to the latest active architecture and maintenance changes.
+- Older entries moved to [`ai-changes-archive-2026-04-13.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-04-13.md).
+
+## 2026-04-13 - Improve public docs voice and hygiene
+- Summary: refreshed handbook and command-reference wording so docs explain user workflows first, added explicit workflow maps plus task-first guidance sections for alert, dashboard, datasource, access, and status/workspace subcommand families, documented that handbooks should not duplicate one page per leaf command, removed generated-looking `Purpose` / `用途` example-comment labels, removed decorative handbook heading emoji, kept command maps out of handbook bodies, renamed the sidebar command map to command shortcuts, removed handbook chapter-count chrome, and tightened zh-TW product terminology.
+- Tests: regenerated command HTML and manpages, checked docs surface, and ran whitespace validation.
+- Test Run: `make html`; `make man`; `make html-check`; `make man-check`; `make quality-docs-surface`; `git diff --check`.
+- Impact: `README.zh-TW.md`, `docs/commands/{en,zh-TW}/`, `docs/user-guide/{en,zh-TW}/`, generated `docs/html/`, `docs/man/`, `docs/internal/zh-tw-style-guide.md`, `docs/internal/generated-docs-playbook.md`, and AI trace docs.
+- Rollback/Risk: docs-only wording and generated-output refresh; broad command-doc comment cleanup touches many files, so review should focus on example captions and generated HTML/man parity.
+- Follow-up: consider a later targeted pass for command pages whose examples still share similar captions after the global label cleanup.
 
 ## 2026-04-12 - Split Rust architecture hotspots and test modules
 - Summary: split unified help routing, snapshot review, access rendering, alert CLI runtime/output, and the largest Rust test suites into focused helper modules with thin aggregators.
@@ -79,8 +88,3 @@ Current AI change log only.
 ## 2026-04-12 - Re-scope Developer Guide as a short maintainer router
 - Summary: rewrote `docs/DEVELOPER.md` into a shorter maintainer landing page, tightened `docs/internal/maintainer-quickstart.md` into the first-entry reading-order and source-of-truth map, extracted stable closure rules into `docs/internal/ai-change-closure-rules.md`, and routed the maintainer and AI-workflow docs to that shared closure contract so future routing changes update the right maintainer docs together.
 - Validation: `make quality-ai-workflow`; `git diff --check`
-
-## 2026-04-12 - Externalize docs entry taxonomy and add handbook command maps
-- Summary: added `scripts/contracts/docs-entrypoints.json` as the shared definition file for landing quick commands, jump-select command entries, and handbook command-relationship maps; replaced the hard-coded Python metadata with a validating loader in `scripts/docgen_entrypoints.py`.
-- User impact: the generated docs homepage now exposes a stable first-run path panel, jump navigation includes `version` and `config profile`, and handbook pages such as dashboard show grouped subcommand relationships in both the left nav and an in-page command map.
-- Validation: `make html`; `make html-check`; `make quality-docs-surface`; `python3 -m unittest -v python.tests.test_python_docgen_entrypoints python.tests.test_python_docgen_command_docs python.tests.test_python_check_docs_surface`

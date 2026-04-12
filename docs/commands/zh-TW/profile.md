@@ -32,42 +32,42 @@
 範例：
 
 ```bash
-# 用途：列出目前 checkout 可用的 profile。
+# 列出目前 checkout 可用的 profile。
 grafana-util config profile list
 ```
 
 ```bash
-# 用途：在執行 live 指令前，先查看解析後的 profile。
+# 在執行 live 指令前，先查看解析後的 profile。
 grafana-util config profile show --profile prod --output-format yaml
 ```
 
 ```bash
-# 用途：顯示目前選到的 profile 與解析後的設定檔路徑。
+# 顯示目前選到的 profile 與解析後的設定檔路徑。
 grafana-util config profile current --profile prod
 ```
 
 ```bash
-# 用途：驗證所選 profile，並額外檢查 Grafana 是否可連通。
+# 驗證所選 profile，並額外檢查 Grafana 是否可連通。
 grafana-util config profile validate --profile prod --live
 ```
 
 ```bash
-# 用途：建立可重複使用的 production profile，並用互動式密碼保存 secret。
+# 建立可重複使用的 production profile，並用互動式密碼保存 secret。
 grafana-util config profile add prod --url https://grafana.example.com --basic-user admin --prompt-password --store-secret encrypted-file
 ```
 
 ```bash
-# 用途：建立會從環境變數讀取 token 的 CI profile。
+# 建立會從環境變數讀取 token 的 CI profile。
 grafana-util config profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN --store-secret os
 ```
 
 ```bash
-# 用途：輸出一份註解完整的 profile 範本。
+# 輸出一份註解完整的 profile 範本。
 grafana-util config profile example --mode full
 ```
 
 ```bash
-# 用途：在目前 checkout 初始化一份新的 grafana-util.yaml。
+# 在目前 checkout 初始化一份新的 grafana-util.yaml。
 grafana-util config profile init --overwrite
 ```
 
@@ -84,7 +84,7 @@ grafana-util config profile init --overwrite
 範例：
 
 ```bash
-# 用途：list。
+# list。
 grafana-util config profile list
 ```
 
@@ -104,17 +104,17 @@ grafana-util config profile list
 範例：
 
 ```bash
-# 用途：show。
+# show。
 grafana-util config profile show --profile prod --output-format yaml
 ```
 
 ```bash
-# 用途：show。
+# show。
 grafana-util config profile show --profile prod --output-format json
 ```
 
 ```bash
-# 用途：show。
+# show。
 grafana-util config profile show --profile prod --show-secrets --output-format yaml
 ```
 
@@ -137,12 +137,12 @@ grafana-util config profile show --profile prod --show-secrets --output-format y
 範例：
 
 ```bash
-# 用途：current。
+# current。
 grafana-util config profile current
 ```
 
 ```bash
-# 用途：current。
+# current。
 grafana-util config profile current --profile prod --output-format json
 ```
 
@@ -166,12 +166,12 @@ grafana-util config profile current --profile prod --output-format json
 範例：
 
 ```bash
-# 用途：validate。
+# validate。
 grafana-util config profile validate --profile prod
 ```
 
 ```bash
-# 用途：validate。
+# validate。
 grafana-util config profile validate --profile prod --live --output-format json
 ```
 
@@ -197,17 +197,17 @@ grafana-util config profile validate --profile prod --live --output-format json
 範例：
 
 ```bash
-# 用途：add。
+# add。
 grafana-util config profile add dev --url http://127.0.0.1:3000 --basic-user admin --password-env GRAFANA_DEV_PASSWORD
 ```
 
 ```bash
-# 用途：add。
+# add。
 grafana-util config profile add prod --url https://grafana.example.com --basic-user admin --prompt-password --store-secret os --set-default
 ```
 
 ```bash
-# 用途：add。
+# add。
 grafana-util config profile add stage --url https://grafana-stage.example.com --token-env GRAFANA_STAGE_TOKEN --store-secret encrypted-file --prompt-secret-passphrase
 ```
 
@@ -237,17 +237,17 @@ grafana-util config profile add stage --url https://grafana-stage.example.com --
 範例：
 
 ```bash
-# 用途：example。
+# example。
 grafana-util config profile example
 ```
 
 ```bash
-# 用途：example。
+# example。
 grafana-util config profile example --mode basic
 ```
 
 ```bash
-# 用途：example。
+# example。
 grafana-util config profile example --mode full
 ```
 
@@ -270,12 +270,12 @@ grafana-util config profile example --mode full
 範例：
 
 ```bash
-# 用途：init。
+# init。
 grafana-util config profile init
 ```
 
 ```bash
-# 用途：init。
+# init。
 grafana-util config profile init --overwrite
 ```
 

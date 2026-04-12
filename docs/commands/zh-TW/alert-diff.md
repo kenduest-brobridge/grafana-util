@@ -19,12 +19,12 @@
 ## 範例
 
 ```bash
-# 用途：比較本機 alert 匯出檔與線上 Grafana 資源的差異。
+# 比較本機 alert 匯出檔與線上 Grafana 資源的差異。
 grafana-util alert diff --url http://localhost:3000 --diff-dir ./alerts/raw
 ```
 
 ```bash
-# 用途：比較本機 alert 匯出檔與線上 Grafana 資源的差異。
+# 比較本機 alert 匯出檔與線上 Grafana 資源的差異。
 grafana-util alert diff --url http://localhost:3000 --diff-dir ./alerts/raw --output-format json
 ```
 

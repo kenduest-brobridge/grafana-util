@@ -326,13 +326,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   font-weight: 500;
 }
 .nav-command-branch-item .nav-command-leaf-link:hover { color: var(--heading); }
-.handbook-command-map .nav-command-root-link {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  font-size: 0.9rem;
-}
 
 .sidebar-toggle {
   position: absolute;
@@ -378,71 +371,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map { margin: 0 0 24px; }
-.handbook-command-map-panel {
-  margin-top: 16px;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--panel) 96%, white);
-}
-.handbook-command-map .nav-group-title {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-group {
-  padding-top: 0;
-}
-.handbook-command-map .nav-command-group + .nav-command-group {
-  margin-top: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
-  padding-top: 10px;
-}
-.handbook-command-map .nav-command-sub-list {
-  margin-top: 8px;
-  margin-left: 0;
-  padding-left: 0;
-  border-left: 0;
-}
-.handbook-command-map .nav-command-branch {
-  display: grid;
-  grid-template-columns: minmax(130px, 0.22fr) minmax(0, 1fr);
-  gap: 12px 18px;
-  align-items: start;
-}
-.handbook-command-map .nav-command-branch-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-left: 0;
-  padding-left: 14px;
-}
-.handbook-command-map .nav-command-branch-item + .nav-command-branch-item { margin-top: 0; }
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-  line-height: 1.25;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link:hover,
-.handbook-command-map .nav-command-link a:hover {
-  border-color: color-mix(in srgb, var(--border) 45%, var(--accent));
-  background: var(--panel-strong);
-}
-@media (max-width: 720px) {
-  .handbook-command-map .nav-command-branch {
-    grid-template-columns: 1fr;
-  }
-  .handbook-command-map .nav-command-branch-list {
-    padding-left: 0;
-    border-left: 0;
-  }
-}
 .article p,
 .article li { color: var(--text); font-weight: 460; }
 .article ul li::marker,
@@ -920,17 +848,19 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
       <div class="layout">
 <aside class="nav-sidebar">
   <button class="sidebar-toggle sidebar-toggle-left" type="button" aria-expanded="true" aria-label="Toggle handbook navigation">◀</button>
-  <div class="nav-sidebar-content"><section class="nav-section"><h2>Guide Map</h2><div class="nav-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Part 1 · Start Here</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="index.html" class="nav-item active">Overview</a></li><li class="nav-tree-node"><a href="what-is-grafana-util.html" class="nav-item">What grafana-util is for</a></li><li class="nav-tree-node"><a href="getting-started.html" class="nav-item">Getting Started</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 2 · Role Paths</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="role-new-user.html" class="nav-item">First Run / Beginner Path</a></li><li class="nav-tree-node"><a href="role-sre-ops.html" class="nav-item">SRE / Operator</a></li><li class="nav-tree-node"><a href="role-automation-ci.html" class="nav-item">Automation / CI</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 3 · Operation Surfaces</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="status-workspace.html" class="nav-item">Status &amp; Workspace</a></li><li class="nav-tree-node"><a href="dashboard.html" class="nav-item">Dashboard</a></li><li class="nav-tree-node"><a href="datasource.html" class="nav-item">Datasource</a></li><li class="nav-tree-node"><a href="alert.html" class="nav-item">Alert</a></li><li class="nav-tree-node"><a href="access.html" class="nav-item">Access</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 4 · Design Principles</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="architecture.html" class="nav-item">Design Principles</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 5 · Reference &amp; Troubleshooting</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="scenarios.html" class="nav-item">Scenarios</a></li><li class="nav-tree-node"><a href="recipes.html" class="nav-item">Recipes</a></li><li class="nav-tree-node"><a href="reference.html" class="nav-item">Reference</a></li><li class="nav-tree-node"><a href="troubleshooting.html" class="nav-item">Troubleshooting</a></li></ul></div></section><section class="nav-section nav-command-section collapsed"><button class="nav-group-header nav-section-toggle" type="button" aria-expanded="false"><span class="nav-group-title-text">Command Relationships</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-section-body"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">First-Run Path</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><ul class="nav-command-tree"><li class="nav-command-link"><a href="../../commands/en/version.html" class="nav-command-leaf-link">--version</a></li><li class="nav-command-link"><a href="../../commands/en/status.html" class="nav-command-leaf-link">status live</a></li><li class="nav-command-link"><a href="../../commands/en/profile.html" class="nav-command-leaf-link">config profile add</a></li></ul></div></div></div></section><section class="nav-section"><h2>Command Reference</h2><a href="../../commands/en/index.html" class="nav-command-entry">Open command reference</a></section></div>
+  <div class="nav-sidebar-content"><section class="nav-section"><h2>Guide Map</h2><div class="nav-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Part 1 · Start Here</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="index.html" class="nav-item active">Overview</a></li><li class="nav-tree-node"><a href="what-is-grafana-util.html" class="nav-item">What grafana-util is for</a></li><li class="nav-tree-node"><a href="getting-started.html" class="nav-item">Getting Started</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 2 · Role Paths</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="role-new-user.html" class="nav-item">First Run / Beginner Path</a></li><li class="nav-tree-node"><a href="role-sre-ops.html" class="nav-item">SRE / Operator</a></li><li class="nav-tree-node"><a href="role-automation-ci.html" class="nav-item">Automation / CI</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 3 · Operation Surfaces</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="status-workspace.html" class="nav-item">Status &amp; Workspace</a></li><li class="nav-tree-node"><a href="dashboard.html" class="nav-item">Dashboard</a></li><li class="nav-tree-node"><a href="datasource.html" class="nav-item">Datasource</a></li><li class="nav-tree-node"><a href="alert.html" class="nav-item">Alert</a></li><li class="nav-tree-node"><a href="access.html" class="nav-item">Access</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 4 · Design Principles</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="architecture.html" class="nav-item">Design Principles</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 5 · Reference &amp; Troubleshooting</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="scenarios.html" class="nav-item">Scenarios</a></li><li class="nav-tree-node"><a href="recipes.html" class="nav-item">Recipes</a></li><li class="nav-tree-node"><a href="reference.html" class="nav-item">Reference</a></li><li class="nav-tree-node"><a href="troubleshooting.html" class="nav-item">Troubleshooting</a></li></ul></div></section><section class="nav-section"><h2>Command Reference</h2><a href="../../commands/en/index.html" class="nav-command-entry">Open command reference</a></section></div>
 </aside>
 
 <article class="article">
 <div class="breadcrumbs"><a href="../../index.html">Home</a> / Handbook / Overview</div>
 
-<div class="hero-eyebrow">Part 1 · Start Here · Chapter 1 of 16</div><h1><span class="hero-title-main">Overview</span></h1><p class="hero-subtitle">Operator Handbook</p>
+<div class="hero-eyebrow">Part 1 · Start Here</div><h1><span class="hero-title-main">Overview</span></h1><p class="hero-subtitle">Operator Handbook</p>
 
-<section class="handbook-command-map"><h2 id="command-relationships">Command Relationships</h2><div class="handbook-command-map-panel"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">First-Run Path</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><ul class="nav-command-tree"><li class="nav-command-link"><a href="../../commands/en/version.html" class="nav-command-leaf-link">--version</a></li><li class="nav-command-link"><a href="../../commands/en/status.html" class="nav-command-leaf-link">status live</a></li><li class="nav-command-link"><a href="../../commands/en/profile.html" class="nav-command-leaf-link">config profile add</a></li></ul></div></div></div></section><h2 id="language">Language</h2>
+<h2 id="language">Language</h2>
 <ul><li>English handbook: <a href="index.html">current page</a></li><li>Traditional Chinese handbook: <a href="../zh-TW/index.html">繁體中文手冊</a></li><li>English command reference: <a href="../../commands/en/index.html">Command Reference</a></li><li>Traditional Chinese command reference: <a href="../../commands/zh-TW/index.html">指令參考</a></li></ul>
 <p>This handbook is the reading path for <code>grafana-util</code>. Start here when you want the workflow first and the exact syntax later. If you already know the command family or flag you need, switch to the command reference instead of forcing the handbook to do that job.</p>
+<p>Read this handbook as an operator&#x27;s field guide, not as an API index. It first answers where you are in the work: observing live Grafana, reviewing local input, preparing a controlled change, or handing artifacts to another workflow. Only after that should you jump into exact command syntax.</p>
+<p>If this is your first visit, do not try to memorize the command tree. Find your role, then find the task in front of you: proving Grafana is reachable, exporting dashboards for review, putting a workspace through CI, or managing orgs, teams, and service accounts. Each chapter should help you make that decision before it sends you to the reference pages.</p>
 <h2 id="how-to-read-this-handbook">How to read this handbook</h2>
 <ol><li>Start with what the tool is for.</li><li>Read the getting started chapter.</li><li>Choose the role or task chapter that matches your work.</li><li>Switch to the command reference when you need exact subcommands or flags.</li></ol>
 <h2 id="book-map">Book map</h2>
@@ -947,13 +877,13 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="reading-by-role">Reading by role</h2>
 <ul><li>New user: start with <a href="what-is-grafana-util.html">What grafana-util is for</a>, then <a href="role-new-user.html">New User Path</a>, then <a href="getting-started.html">Getting Started</a>.</li><li>SRE / operator: start with <a href="role-sre-ops.html">SRE / Ops Path</a>, then <a href="status-workspace.html">Workspace Review &amp; Status</a>, <a href="dashboard.html">Dashboard Management</a>, <a href="datasource.html">Data source Management</a>, and <a href="troubleshooting.html">Troubleshooting &amp; Glossary</a>.</li><li>Identity / access administrator: start with <a href="access.html">Access Management</a>, then <a href="reference.html">Technical Reference</a>, then the <a href="../../commands/en/index.html">Command Reference</a>.</li><li>Automation / CI owner: start with <a href="role-automation-ci.html">Automation / CI Path</a>, then <a href="reference.html">Technical Reference</a>, then the <a href="../../commands/en/index.html">Command Reference</a>.</li><li>Maintainer / architect: start with <a href="architecture.html">Architecture &amp; Design Principles</a>, then <a href="../../developer.html">Developer guide</a>, then the internal docs under <a href="../../internal/README.md">docs/internal/README.md</a>.</li></ul>
 <h2 id="reading-notes">Reading notes</h2>
-<ul><li>The footer <code>Next</code> and <code>Previous</code> links are the intended way to continue chapter by chapter.</li><li>Use the handbook for process and context; use the command reference for exact syntax.</li><li>When you need terminal-shaped lookup, open the command reference or the manpage instead of reconstructing flags from memory.</li></ul>
-<nav class="footer-nav"><a class="link-card" href="what-is-grafana-util.html"><span>Next Chapter</span>Chapter 2 · What grafana-util is for</a></nav>
+<ul><li>The footer <code>Next</code> and <code>Previous</code> links are the intended way to continue chapter by chapter.</li><li>Use the handbook for process and context; use the command reference for exact syntax.</li><li>When you need terminal-shaped lookup, open the command reference or the manpage instead of reconstructing flags from memory.</li><li>If a page starts to feel like a feature list, ask whether you are choosing a workflow or looking up flags. Stay in the handbook for the first job; switch to the command reference for the second.</li></ul>
+<nav class="footer-nav"><a class="link-card" href="what-is-grafana-util.html"><span>Next Chapter</span>What grafana-util is for</a></nav>
 </article>
 <aside class="sidebar">
   <button class="sidebar-toggle sidebar-toggle-right" type="button" aria-expanded="true" aria-label="Toggle page sidebar">▶</button>
   <div class="sidebar-content">
-    <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#command-relationships"><span class="toc-label">Command Relationships</span></a></li><li class="toc-level-2"><a href="#language"><span class="toc-label">Language</span></a></li><li class="toc-level-2"><a href="#how-to-read-this-handbook"><span class="toc-label">How to read this handbook</span></a></li><li class="toc-level-2"><a href="#book-map"><span class="toc-label">Book map</span></a></li><li class="toc-level-3"><a href="#part-1-start-here"><span class="toc-label">Part 1: Start here</span></a></li><li class="toc-level-3"><a href="#part-2-role-paths"><span class="toc-label">Part 2: Role paths</span></a></li><li class="toc-level-3"><a href="#part-3-operation-surfaces"><span class="toc-label">Part 3: Operation surfaces</span></a></li><li class="toc-level-3"><a href="#part-4-design-principles"><span class="toc-label">Part 4: Design principles</span></a></li><li class="toc-level-3"><a href="#part-5-reference-and-troubleshooting"><span class="toc-label">Part 5: Reference and troubleshooting</span></a></li><li class="toc-level-2"><a href="#reading-by-role"><span class="toc-label">Reading by role</span></a></li><li class="toc-level-2"><a href="#reading-notes"><span class="toc-label">Reading notes</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: English</a></li><li><a href="../zh-TW/index.html" class="sidebar-meta-link">Switch to 繁體中文</a></li></ul></section>
+    <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#language"><span class="toc-label">Language</span></a></li><li class="toc-level-2"><a href="#how-to-read-this-handbook"><span class="toc-label">How to read this handbook</span></a></li><li class="toc-level-2"><a href="#book-map"><span class="toc-label">Book map</span></a></li><li class="toc-level-3"><a href="#part-1-start-here"><span class="toc-label">Part 1: Start here</span></a></li><li class="toc-level-3"><a href="#part-2-role-paths"><span class="toc-label">Part 2: Role paths</span></a></li><li class="toc-level-3"><a href="#part-3-operation-surfaces"><span class="toc-label">Part 3: Operation surfaces</span></a></li><li class="toc-level-3"><a href="#part-4-design-principles"><span class="toc-label">Part 4: Design principles</span></a></li><li class="toc-level-3"><a href="#part-5-reference-and-troubleshooting"><span class="toc-label">Part 5: Reference and troubleshooting</span></a></li><li class="toc-level-2"><a href="#reading-by-role"><span class="toc-label">Reading by role</span></a></li><li class="toc-level-2"><a href="#reading-notes"><span class="toc-label">Reading notes</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: English</a></li><li><a href="../zh-TW/index.html" class="sidebar-meta-link">Switch to 繁體中文</a></li></ul></section>
   </div>
 </aside>
 

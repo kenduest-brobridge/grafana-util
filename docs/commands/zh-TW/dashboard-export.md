@@ -30,6 +30,29 @@
 - provider 檔案會寫到 `provisioning/provisioning/dashboards.yaml`。
 - `raw/` 給 API import 或 diff，`prompt/` 給 UI import，`provisioning/` 給 file provisioning。
 
+## 匯出變體差異
+
+`dashboard export` 預設一次產生三種 dashboard 表示法。這不是因為工具想多寫幾份檔案，而是因為 Grafana 後面有三條完全不同的入口：CLI/API 回放、UI 匯入，以及檔案 provisioning。匯出時先把三種路徑分清楚，後面 review、交接、部署時才不需要猜「這份 JSON 到底能不能拿去 import」。
+
+把 `raw/` 當成現場原始底片。它最接近 API 讀回來的狀態，適合拿來備份、比對、審查、dry-run，再由 `dashboard import` 推回 Grafana。如果這次匯出是為了留下可追溯、可重跑、可放進 Git 的紀錄，通常從 `raw/` 開始。
+
+把 `prompt/` 當成要交給人進 Grafana UI 的版本。它整理成 UI Import dashboard 流程比較能接受的形狀，目的是讓接手的人可以用瀏覽器匯入，而不是讓自動化流程直接 API replay。若手上只有一般 dashboard JSON 或 `raw/` 檔案，先用 `dashboard convert raw-to-prompt` 轉成這條路徑。
+
+把 `provisioning/` 當成 Grafana 從磁碟讀取的部署投影。它包含 dashboard JSON 與 provider YAML，適合被掛進 Grafana provisioning path，讓 Grafana 啟動或 reload provisioning 時接管。它不是互動式匯入，也不應該取代 `raw/` 成為審查與回放的主要來源。
+
+| 變體 | 內容 | 適合下一步 | 注意事項 |
+| :--- | :--- | :--- | :--- |
+| `raw/` | 從 Grafana API 讀回並保留 API 匯入所需上下文的 dashboard JSON。 | `dashboard import`、`dashboard diff`、`dashboard review`、`dashboard dependencies`、`workspace scan/test/preview`。 | 這是最適合拿來做 CLI replay、比對、審查與 Git 版本控管的格式。若不確定要留哪一種，先保留 `raw/`。 |
+| `prompt/` | 轉成 Grafana UI 匯入提示可接受的 dashboard JSON。 | 人工交接、貼到 Grafana UI 的 Import dashboard 流程、把一般 dashboard JSON 整理成 UI 匯入格式。 | 不是給 `dashboard import` API replay 用。若手上只有一般或 raw JSON，使用 `dashboard convert raw-to-prompt` 轉成這個格式。 |
+| `provisioning/` | 檔案 provisioning 目錄，含 dashboard JSON 與 provider YAML。 | 掛載到 Grafana provisioning path、建立 GitOps-style 檔案供應流程。 | provider YAML 預設位於 `provisioning/provisioning/dashboards.yaml`。這條路徑適合由 Grafana 啟動或 reload provisioning 時讀取，不是互動式 API 匯入流程。 |
+
+常見選擇：
+
+- 要做備份、review、diff、dry-run import，從 `raw/` 開始。
+- 要把 dashboard 交給人從 Grafana UI 匯入，交付 `prompt/`。
+- 要放進 Grafana file provisioning，使用 `provisioning/`，並確認 provider 參數是否符合部署路徑。
+- 若只需要其中一種輸出，可用 `--without-raw`、`--without-prompt` 或 `--without-provisioning` 減少噪音。
+
 ## 成功判準
 - 產生出可供 API replay 與進一步 inspect 的 `raw/` 樹
 - 如果需要較乾淨的 handoff，也有對應的 `prompt/` 樹
@@ -44,22 +67,22 @@
 
 ## 範例
 ```bash
-# 用途：將儀表板匯出成 `raw/`、`prompt/` 與 `provisioning/` 檔案。
+# 將儀表板匯出成 `raw/`、`prompt/` 與 `provisioning/` 檔案。
 grafana-util dashboard export --profile prod --output-dir ./dashboards --overwrite
 ```
 
 ```bash
-# 用途：將儀表板匯出成 `raw/`、`prompt/` 與 `provisioning/` 檔案。
+# 將儀表板匯出成 `raw/`、`prompt/` 與 `provisioning/` 檔案。
 grafana-util dashboard export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --output-dir ./dashboards --overwrite
 ```
 
 ```bash
-# 用途：將儀表板匯出成 `raw/`、`prompt/` 與 `provisioning/` 檔案。
+# 將儀表板匯出成 `raw/`、`prompt/` 與 `provisioning/` 檔案。
 grafana-util dashboard export --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output-dir ./dashboards --overwrite
 ```
 
 ```bash
-# 用途：匯出 dashboard，並把每個 org 的版本歷史成品一併寫入可重用的目錄樹。
+# 匯出 dashboard，並把每個 org 的版本歷史成品一併寫入可重用的目錄樹。
 grafana-util dashboard export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --include-history --output-dir ./dashboards --overwrite
 ```
 

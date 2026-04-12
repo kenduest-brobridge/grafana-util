@@ -326,13 +326,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   font-weight: 500;
 }
 .nav-command-branch-item .nav-command-leaf-link:hover { color: var(--heading); }
-.handbook-command-map .nav-command-root-link {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  font-size: 0.9rem;
-}
 
 .sidebar-toggle {
   position: absolute;
@@ -378,71 +371,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map { margin: 0 0 24px; }
-.handbook-command-map-panel {
-  margin-top: 16px;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--panel) 96%, white);
-}
-.handbook-command-map .nav-group-title {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-group {
-  padding-top: 0;
-}
-.handbook-command-map .nav-command-group + .nav-command-group {
-  margin-top: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
-  padding-top: 10px;
-}
-.handbook-command-map .nav-command-sub-list {
-  margin-top: 8px;
-  margin-left: 0;
-  padding-left: 0;
-  border-left: 0;
-}
-.handbook-command-map .nav-command-branch {
-  display: grid;
-  grid-template-columns: minmax(130px, 0.22fr) minmax(0, 1fr);
-  gap: 12px 18px;
-  align-items: start;
-}
-.handbook-command-map .nav-command-branch-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-left: 0;
-  padding-left: 14px;
-}
-.handbook-command-map .nav-command-branch-item + .nav-command-branch-item { margin-top: 0; }
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-  line-height: 1.25;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link:hover,
-.handbook-command-map .nav-command-link a:hover {
-  border-color: color-mix(in srgb, var(--border) 45%, var(--accent));
-  background: var(--panel-strong);
-}
-@media (max-width: 720px) {
-  .handbook-command-map .nav-command-branch {
-    grid-template-columns: 1fr;
-  }
-  .handbook-command-map .nav-command-branch-list {
-    padding-left: 0;
-    border-left: 0;
-  }
-}
 .article p,
 .article li { color: var(--text); font-weight: 460; }
 .article ul li::marker,
@@ -920,15 +848,15 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
       <div class="layout">
 <aside class="nav-sidebar">
   <button class="sidebar-toggle sidebar-toggle-left" type="button" aria-expanded="true" aria-label="Toggle handbook navigation">◀</button>
-  <div class="nav-sidebar-content"><section class="nav-section"><h2>Guide Map</h2><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 1 · Start Here</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="index.html" class="nav-item">Overview</a></li><li class="nav-tree-node"><a href="what-is-grafana-util.html" class="nav-item">What grafana-util is for</a></li><li class="nav-tree-node"><a href="getting-started.html" class="nav-item">Getting Started</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 2 · Role Paths</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="role-new-user.html" class="nav-item">First Run / Beginner Path</a></li><li class="nav-tree-node"><a href="role-sre-ops.html" class="nav-item">SRE / Operator</a></li><li class="nav-tree-node"><a href="role-automation-ci.html" class="nav-item">Automation / CI</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 3 · Operation Surfaces</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="status-workspace.html" class="nav-item">Status &amp; Workspace</a></li><li class="nav-tree-node"><a href="dashboard.html" class="nav-item">Dashboard</a></li><li class="nav-tree-node"><a href="datasource.html" class="nav-item">Datasource</a></li><li class="nav-tree-node"><a href="alert.html" class="nav-item">Alert</a></li><li class="nav-tree-node"><a href="access.html" class="nav-item">Access</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 4 · Design Principles</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="architecture.html" class="nav-item">Design Principles</a></li></ul></div><div class="nav-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Part 5 · Reference &amp; Troubleshooting</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="scenarios.html" class="nav-item active">Scenarios</a></li><li class="nav-tree-node"><a href="recipes.html" class="nav-item">Recipes</a></li><li class="nav-tree-node"><a href="reference.html" class="nav-item">Reference</a></li><li class="nav-tree-node"><a href="troubleshooting.html" class="nav-item">Troubleshooting</a></li></ul></div></section><section class="nav-section nav-command-section collapsed"><button class="nav-group-header nav-section-toggle" type="button" aria-expanded="false"><span class="nav-group-title-text">Command Relationships</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-section-body"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Operator Lanes</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><ul class="nav-command-tree"><li class="nav-command-link"><a href="../../commands/en/status.html" class="nav-command-leaf-link">status</a></li><li class="nav-command-link"><a href="../../commands/en/workspace.html" class="nav-command-leaf-link">workspace</a></li><li class="nav-command-link"><a href="../../commands/en/dashboard.html" class="nav-command-leaf-link">dashboard</a></li><li class="nav-command-link"><a href="../../commands/en/datasource.html" class="nav-command-leaf-link">datasource</a></li><li class="nav-command-link"><a href="../../commands/en/alert.html" class="nav-command-leaf-link">alert</a></li><li class="nav-command-link"><a href="../../commands/en/access.html" class="nav-command-leaf-link">access</a></li></ul></div></div></div></section><section class="nav-section"><h2>Command Reference</h2><a href="../../commands/en/index.html" class="nav-command-entry">Open command reference</a></section></div>
+  <div class="nav-sidebar-content"><section class="nav-section"><h2>Guide Map</h2><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 1 · Start Here</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="index.html" class="nav-item">Overview</a></li><li class="nav-tree-node"><a href="what-is-grafana-util.html" class="nav-item">What grafana-util is for</a></li><li class="nav-tree-node"><a href="getting-started.html" class="nav-item">Getting Started</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 2 · Role Paths</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="role-new-user.html" class="nav-item">First Run / Beginner Path</a></li><li class="nav-tree-node"><a href="role-sre-ops.html" class="nav-item">SRE / Operator</a></li><li class="nav-tree-node"><a href="role-automation-ci.html" class="nav-item">Automation / CI</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 3 · Operation Surfaces</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="status-workspace.html" class="nav-item">Status &amp; Workspace</a></li><li class="nav-tree-node"><a href="dashboard.html" class="nav-item">Dashboard</a></li><li class="nav-tree-node"><a href="datasource.html" class="nav-item">Datasource</a></li><li class="nav-tree-node"><a href="alert.html" class="nav-item">Alert</a></li><li class="nav-tree-node"><a href="access.html" class="nav-item">Access</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 4 · Design Principles</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="architecture.html" class="nav-item">Design Principles</a></li></ul></div><div class="nav-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Part 5 · Reference &amp; Troubleshooting</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="scenarios.html" class="nav-item active">Scenarios</a></li><li class="nav-tree-node"><a href="recipes.html" class="nav-item">Recipes</a></li><li class="nav-tree-node"><a href="reference.html" class="nav-item">Reference</a></li><li class="nav-tree-node"><a href="troubleshooting.html" class="nav-item">Troubleshooting</a></li></ul></div></section><section class="nav-section nav-command-section collapsed"><button class="nav-group-header nav-section-toggle" type="button" aria-expanded="false"><span class="nav-group-title-text">Command Shortcuts</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-section-body"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Operator Lanes</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><ul class="nav-command-tree"><li class="nav-command-link"><a href="../../commands/en/status.html" class="nav-command-leaf-link">status</a></li><li class="nav-command-link"><a href="../../commands/en/workspace.html" class="nav-command-leaf-link">workspace</a></li><li class="nav-command-link"><a href="../../commands/en/dashboard.html" class="nav-command-leaf-link">dashboard</a></li><li class="nav-command-link"><a href="../../commands/en/datasource.html" class="nav-command-leaf-link">datasource</a></li><li class="nav-command-link"><a href="../../commands/en/alert.html" class="nav-command-leaf-link">alert</a></li><li class="nav-command-link"><a href="../../commands/en/access.html" class="nav-command-leaf-link">access</a></li></ul></div></div></div></section><section class="nav-section"><h2>Command Reference</h2><a href="../../commands/en/index.html" class="nav-command-entry">Open command reference</a></section></div>
 </aside>
 
 <article class="article">
 <div class="breadcrumbs"><a href="../../index.html">Home</a> / Handbook / Scenarios</div>
 
-<div class="hero-eyebrow">Part 5 · Reference &amp; Troubleshooting · Chapter 13 of 16</div><h1><span class="hero-title-main">Scenarios</span></h1><p class="hero-subtitle">Operator Scenarios</p>
+<div class="hero-eyebrow">Part 5 · Reference &amp; Troubleshooting</div><h1><span class="hero-title-main">Scenarios</span></h1><p class="hero-subtitle">Operator Scenarios</p>
 
-<section class="section-index"><h2>Chapter Index</h2><p class="section-index-summary">Jump straight to the section you need.</p><ul class="section-index-list layout-list"><li><a href="#command-relationships">Command Relationships</a></li><li><a href="#who-it-is-for">Who It Is For</a></li><li><a href="#primary-goals">Primary Goals</a></li><li><a href="#before-after">Before / After</a></li><li><a href="#what-success-looks-like">What success looks like</a></li><li><a href="#failure-checks">Failure checks</a></li><li><a href="#1-environment-verification">1. Environment Verification</a></li><li><a href="#2-estate-wide-audit">2. Estate-Wide Audit</a></li><li><a href="#3-reliable-backups-dashboard-export">3. Reliable Backups (Dashboard Export)</a></li><li><a href="#4-controlled-restore-dashboard-import">4. Controlled Restore (Dashboard Import)</a></li><li><a href="#5-alert-governance-planapply">5. Alert Governance (Plan/Apply)</a></li><li><a href="#6-identity-replay-access-management">6. Identity Replay (Access Management)</a></li></ul></section><section class="handbook-command-map"><h2 id="command-relationships">Command Relationships</h2><div class="handbook-command-map-panel"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Operator Lanes</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><ul class="nav-command-tree"><li class="nav-command-link"><a href="../../commands/en/status.html" class="nav-command-leaf-link">status</a></li><li class="nav-command-link"><a href="../../commands/en/workspace.html" class="nav-command-leaf-link">workspace</a></li><li class="nav-command-link"><a href="../../commands/en/dashboard.html" class="nav-command-leaf-link">dashboard</a></li><li class="nav-command-link"><a href="../../commands/en/datasource.html" class="nav-command-leaf-link">datasource</a></li><li class="nav-command-link"><a href="../../commands/en/alert.html" class="nav-command-leaf-link">alert</a></li><li class="nav-command-link"><a href="../../commands/en/access.html" class="nav-command-leaf-link">access</a></li></ul></div></div></div></section><p>This chapter turns command families into end-to-end operator workflows so you can move from one-off commands to a repeatable operating sequence.</p>
+<section class="section-index"><h2>Chapter Index</h2><p class="section-index-summary">Jump straight to the section you need.</p><ul class="section-index-list layout-list"><li><a href="#who-it-is-for">Who It Is For</a></li><li><a href="#primary-goals">Primary Goals</a></li><li><a href="#before-after">Before / After</a></li><li><a href="#what-success-looks-like">What success looks like</a></li><li><a href="#failure-checks">Failure checks</a></li><li><a href="#1-environment-verification">1. Environment Verification</a></li><li><a href="#2-estate-wide-audit">2. Estate-Wide Audit</a></li><li><a href="#3-reliable-backups-dashboard-export">3. Reliable Backups (Dashboard Export)</a></li><li><a href="#4-controlled-restore-dashboard-import">4. Controlled Restore (Dashboard Import)</a></li><li><a href="#5-alert-governance-planapply">5. Alert Governance (Plan/Apply)</a></li><li><a href="#6-identity-replay-access-management">6. Identity Replay (Access Management)</a></li></ul></section><p>This chapter turns command families into end-to-end operator workflows so you can move from one-off commands to a repeatable operating sequence.</p>
 <h2 id="who-it-is-for">Who It Is For</h2>
 <ul><li>Operators who already know the job to do, but want the safest order of operations.</li><li>Teams standardizing common workflows for dashboard, access, alert, or recovery work.</li><li>Reviewers who need an end-to-end checklist instead of isolated command help.</li></ul>
 <h2 id="primary-goals">Primary Goals</h2>
@@ -944,11 +872,11 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <p>Prove connectivity and version alignment before making changes.</p>
 <p><strong>Before</strong>: You are not sure whether the CLI is pointing at the right Grafana, which credentials are active, or whether the live surface is healthy enough to continue.</p>
 <p><strong>After</strong>: You have one verified live target, one readable readiness result, and one browsable overview before any mutation starts.</p>
-<pre><code># Purpose: Prove connectivity and version alignment before making changes.
+<pre><code># Prove connectivity and version alignment before making changes.
 grafana-util config profile list</code></pre>
-<pre><code># Purpose: Prove connectivity and version alignment before making changes.
+<pre><code># Prove connectivity and version alignment before making changes.
 grafana-util status live --profile prod --output-format table</code></pre>
-<pre><code># Purpose: Prove connectivity and version alignment before making changes.
+<pre><code># Prove connectivity and version alignment before making changes.
 grafana-util status overview live --profile prod --output-format interactive</code></pre>
 <p><strong>Expected Output:</strong></p>
 <pre><code>PROFILES:
@@ -963,9 +891,9 @@ Live status: ready</code></pre>
 <p>Inventory all assets across all organizations.</p>
 <p><strong>Before</strong>: You know there are dashboards, orgs, and users in the estate, but you cannot quickly answer what exists or who owns what without jumping between screens.</p>
 <p><strong>After</strong>: You have one inventory surface for dashboards and one for access state, so you can explain the current estate before export, replay, or cleanup work.</p>
-<pre><code># Purpose: Inventory all assets across all organizations.
+<pre><code># Inventory all assets across all organizations.
 grafana-util dashboard list --profile prod --all-orgs --with-sources --table</code></pre>
-<pre><code># Purpose: Inventory all assets across all organizations.
+<pre><code># Inventory all assets across all organizations.
 grafana-util access org list --basic-user admin --basic-password admin --with-users --output-format yaml</code></pre>
 <p><strong>Expected Output:</strong></p>
 <pre><code>UID        TITLE             FOLDER    ORG   SOURCES
@@ -981,11 +909,11 @@ users:
 <p>Export live dashboards into a durable tree.</p>
 <p><strong>Before</strong>: A &quot;backup&quot; is either a UI export or a one-off file dump with weak review value.</p>
 <p><strong>After</strong>: You have a reviewable export tree that can feed inspection, replay, migration, and Git-based review.</p>
-<pre><code># Purpose: Export live dashboards into a durable tree.
+<pre><code># Export live dashboards into a durable tree.
 grafana-util export dashboard --output-dir ./backups --overwrite --progress</code></pre>
-<pre><code># Purpose: Export live dashboards into a durable tree.
+<pre><code># Export live dashboards into a durable tree.
 grafana-util export access org --output-dir ./access-orgs</code></pre>
-<pre><code># Purpose: Export live dashboards into a durable tree.
+<pre><code># Export live dashboards into a durable tree.
 grafana-util export access service-account --output-dir ./access-service-accounts</code></pre>
 <p><strong>Expected Output:</strong></p>
 <pre><code>Exporting dashboard 1/32: cpu-metrics
@@ -1000,9 +928,9 @@ Exported service account inventory -&gt; access-service-accounts/service-account
 <p>Replay a backup into a live Grafana instance.</p>
 <p><strong>Before</strong>: Restore means hoping the export is complete and finding out too late whether the import will overwrite something important.</p>
 <p><strong>After</strong>: You preview the replay with dry-run tables first, then decide whether the import is safe enough to continue.</p>
-<pre><code># Purpose: Replay a backup into a live Grafana instance.
+<pre><code># Replay a backup into a live Grafana instance.
 grafana-util dashboard import --input-dir ./backups/raw --replace-existing --dry-run --table</code></pre>
-<pre><code># Purpose: Replay a backup into a live Grafana instance.
+<pre><code># Replay a backup into a live Grafana instance.
 grafana-util access team import --input-dir ./access-teams --replace-existing --dry-run --table</code></pre>
 <p><strong>Expected Output:</strong></p>
 <pre><code>UID        TITLE          ACTION   DESTINATION
@@ -1015,11 +943,11 @@ ops-user    Viewer  create   missing</code></pre>
 <p>Use the dry-run tables to check whether the restore is additive or destructive before you commit to the live import.</p>
 <h2 id="5-alert-governance-planapply">5. Alert Governance (Plan/Apply)</h2>
 <p>Move alerting changes through a reviewed lifecycle.</p>
-<pre><code># Purpose: Move alerting changes through a reviewed lifecycle.
+<pre><code># Move alerting changes through a reviewed lifecycle.
 grafana-util workspace scan --desired-file ./desired.json</code></pre>
-<pre><code># Purpose: Move alerting changes through a reviewed lifecycle.
+<pre><code># Move alerting changes through a reviewed lifecycle.
 grafana-util workspace test --desired-file ./desired.json --fetch-live --output-format json</code></pre>
-<pre><code># Purpose: Move alerting changes through a reviewed lifecycle.
+<pre><code># Move alerting changes through a reviewed lifecycle.
 grafana-util alert plan --profile prod --desired-dir ./alerts/desired --output-format json</code></pre>
 <p><strong>Expected Output (Snippet):</strong></p>
 <pre><code>WORKSPACE PACKAGE SUMMARY:
@@ -1037,11 +965,11 @@ WORKSPACE TEST:
 <p>Run <code>workspace scan</code> first when you want to understand the size and shape of the staged package, then <code>workspace test</code> when you need to confirm the staged inputs are structurally sound before alert-specific planning.</p>
 <h2 id="6-identity-replay-access-management">6. Identity Replay (Access Management)</h2>
 <p>Manage users, teams, and service accounts through snapshots.</p>
-<pre><code># Purpose: Manage users, teams, and service accounts through snapshots.
+<pre><code># Manage users, teams, and service accounts through snapshots.
 grafana-util access user import --input-dir ./access-users --dry-run --table</code></pre>
-<pre><code># Purpose: Manage users, teams, and service accounts through snapshots.
+<pre><code># Manage users, teams, and service accounts through snapshots.
 grafana-util access service-account token add --service-account-id 15 --token-name nightly --seconds-to-live 3600 --json</code></pre>
-<pre><code># Purpose: Manage users, teams, and service accounts through snapshots.
+<pre><code># Manage users, teams, and service accounts through snapshots.
 grafana-util access service-account token delete --service-account-id 15 --token-name nightly --yes --json</code></pre>
 <p><strong>Expected Output:</strong></p>
 <pre><code>LOGIN       ROLE    ACTION   STATUS
@@ -1056,12 +984,12 @@ ops-user    Viewer  create   missing
 }</code></pre>
 <p>This workflow is for replaying identity state safely: use import dry-run for users, and use the service-account token commands when you need to rotate automation credentials without guessing at the target account.</p>
 <p><a href="status-workspace.html">⬅️ Previous: Workspace &amp; Status</a> | <a href="index.html">🏠 Home</a> | <a href="reference.html">➡️ Next: Technical Reference</a></p>
-<nav class="footer-nav"><a class="link-card" href="status-workspace.html"><span>Previous Chapter</span>Chapter 12 · Workspace Review &amp; Status</a><a class="link-card" href="recipes.html"><span>Next Chapter</span>Chapter 14 · Best Practices &amp; Real-World Recipes</a></nav>
+<nav class="footer-nav"><a class="link-card" href="status-workspace.html"><span>Previous Chapter</span>Workspace Review &amp; Status</a><a class="link-card" href="recipes.html"><span>Next Chapter</span>Best Practices &amp; Real-World Recipes</a></nav>
 </article>
 <aside class="sidebar">
   <button class="sidebar-toggle sidebar-toggle-right" type="button" aria-expanded="true" aria-label="Toggle page sidebar">▶</button>
   <div class="sidebar-content">
-    <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#command-relationships"><span class="toc-label">Command Relationships</span></a></li><li class="toc-level-2"><a href="#who-it-is-for"><span class="toc-label">Who It Is For</span></a></li><li class="toc-level-2"><a href="#primary-goals"><span class="toc-label">Primary Goals</span></a></li><li class="toc-level-2"><a href="#before-after"><span class="toc-label">Before / After</span></a></li><li class="toc-level-2"><a href="#what-success-looks-like"><span class="toc-label">What success looks like</span></a></li><li class="toc-level-2"><a href="#failure-checks"><span class="toc-label">Failure checks</span></a></li><li class="toc-level-2"><a href="#1-environment-verification"><span class="toc-label">1. Environment Verification</span></a></li><li class="toc-level-2"><a href="#2-estate-wide-audit"><span class="toc-label">2. Estate-Wide Audit</span></a></li><li class="toc-level-2"><a href="#3-reliable-backups-dashboard-export"><span class="toc-label">3. Reliable Backups (Dashboard Export)</span></a></li><li class="toc-level-2"><a href="#4-controlled-restore-dashboard-import"><span class="toc-label">4. Controlled Restore (Dashboard Import)</span></a></li><li class="toc-level-2"><a href="#5-alert-governance-planapply"><span class="toc-label">5. Alert Governance (Plan/Apply)</span></a></li><li class="toc-level-2"><a href="#6-identity-replay-access-management"><span class="toc-label">6. Identity Replay (Access Management)</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: English</a></li><li><a href="../zh-TW/scenarios.html" class="sidebar-meta-link">Switch to 繁體中文</a></li></ul></section>
+    <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#who-it-is-for"><span class="toc-label">Who It Is For</span></a></li><li class="toc-level-2"><a href="#primary-goals"><span class="toc-label">Primary Goals</span></a></li><li class="toc-level-2"><a href="#before-after"><span class="toc-label">Before / After</span></a></li><li class="toc-level-2"><a href="#what-success-looks-like"><span class="toc-label">What success looks like</span></a></li><li class="toc-level-2"><a href="#failure-checks"><span class="toc-label">Failure checks</span></a></li><li class="toc-level-2"><a href="#1-environment-verification"><span class="toc-label">1. Environment Verification</span></a></li><li class="toc-level-2"><a href="#2-estate-wide-audit"><span class="toc-label">2. Estate-Wide Audit</span></a></li><li class="toc-level-2"><a href="#3-reliable-backups-dashboard-export"><span class="toc-label">3. Reliable Backups (Dashboard Export)</span></a></li><li class="toc-level-2"><a href="#4-controlled-restore-dashboard-import"><span class="toc-label">4. Controlled Restore (Dashboard Import)</span></a></li><li class="toc-level-2"><a href="#5-alert-governance-planapply"><span class="toc-label">5. Alert Governance (Plan/Apply)</span></a></li><li class="toc-level-2"><a href="#6-identity-replay-access-management"><span class="toc-label">6. Identity Replay (Access Management)</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: English</a></li><li><a href="../zh-TW/scenarios.html" class="sidebar-meta-link">Switch to 繁體中文</a></li></ul></section>
   </div>
 </aside>
 

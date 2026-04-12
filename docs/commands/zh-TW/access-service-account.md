@@ -41,27 +41,27 @@
 ## 範例
 
 ```bash
-# 用途：在建立或刪除 token 前，先看清楚 service account。
+# 在建立或刪除 token 前，先看清楚 service account。
 grafana-util access service-account list --profile prod --output-format text
 ```
 
 ```bash
-# 用途：先看本機存好的 service-account 套件。
+# 先看本機存好的 service-account 套件。
 grafana-util access service-account list --input-dir ./access-service-accounts --output-format table
 ```
 
 ```bash
-# 用途：建立一個可重複使用在部署自動化裡的 service account。
+# 建立一個可重複使用在部署自動化裡的 service account。
 grafana-util access service-account add --url http://localhost:3000 --basic-user admin --basic-password admin --name deploy-bot --role Editor --json
 ```
 
 ```bash
-# 用途：替單一 service account 建立一個有名稱的 token。
+# 替單一 service account 建立一個有名稱的 token。
 grafana-util access service-account token add --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --name deploy-bot --token-name nightly
 ```
 
 ```bash
-# 用途：在終端機中選一個 service account、確認目標，然後刪除。
+# 在終端機中選一個 service account、確認目標，然後刪除。
 grafana-util access service-account delete --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --prompt
 ```
 

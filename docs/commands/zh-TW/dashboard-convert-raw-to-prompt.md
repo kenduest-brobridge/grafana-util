@@ -49,32 +49,32 @@
 
 ## 範例
 ```bash
-# Purpose: 把單一 raw dashboard 檔轉成 Grafana UI prompt JSON。
+# 把單一 raw dashboard 檔轉成 Grafana UI prompt JSON。
 grafana-util dashboard convert raw-to-prompt --input-file ./dashboards/raw/cpu-main.json
 ```
 
 ```bash
-# Purpose: 轉多個 raw dashboard 檔，並顯示進度。
+# 轉多個 raw dashboard 檔，並顯示進度。
 grafana-util dashboard convert raw-to-prompt --input-file ./legacy/cpu.json --input-file ./legacy/logs.json --progress
 ```
 
 ```bash
-# Purpose: 把 raw export tree 轉成旁邊的 prompt/ lane。
+# 把 raw export tree 轉成旁邊的 prompt/ lane。
 grafana-util dashboard convert raw-to-prompt --input-dir ./dashboards/raw --output-dir ./dashboards/prompt --overwrite
 ```
 
 ```bash
-# Purpose: 把 legacy 目錄樹轉成一個明確輸出根，並輸出 table 摘要。
+# 把 legacy 目錄樹轉成一個明確輸出根，並輸出 table 摘要。
 grafana-util dashboard convert raw-to-prompt --input-dir ./legacy-json --output-dir ./converted/prompt --output-format table
 ```
 
 ```bash
-# Purpose: 用明確 mapping 檔修補 datasource 參照。
+# 用明確 mapping 檔修補 datasource 參照。
 grafana-util dashboard convert raw-to-prompt --input-file ./legacy/cpu.json --datasource-map ./datasource-map.yaml --resolution exact --log-file ./raw-to-prompt.log --log-format json
 ```
 
 ```bash
-# Purpose: 從保存的 live profile 補強 datasource 修補。
+# 從保存的 live profile 補強 datasource 修補。
 grafana-util dashboard convert raw-to-prompt --input-file ./legacy/cpu.json --profile prod --org-id 2 --resolution exact
 ```
 

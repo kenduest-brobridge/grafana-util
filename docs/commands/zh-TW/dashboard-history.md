@@ -80,37 +80,37 @@
 
 ## 範例
 ```bash
-# 用途：列出最近 20 個 dashboard revision，方便審查。
+# 列出最近 20 個 dashboard revision，方便審查。
 grafana-util dashboard history list --url http://localhost:3000 --basic-user admin --basic-password admin --dashboard-uid cpu-main --limit 20 --output-format table
 ```
 
 ```bash
-# 用途：直接讀取一份匯出的 dashboard history 成品，並在本機列出版本。
+# 直接讀取一份匯出的 dashboard history 成品，並在本機列出版本。
 grafana-util dashboard history list --input ./cpu-main.history.json --output-format table
 ```
 
 ```bash
-# 用途：讀取包含 history 的 dashboard export tree，並列出指定 dashboard 的版本。
+# 讀取包含 history 的 dashboard export tree，並列出指定 dashboard 的版本。
 grafana-util dashboard history list --input-dir ./dashboards --dashboard-uid cpu-main --output-format table
 ```
 
 ```bash
-# 用途：把某個歷史 dashboard revision 還原成新的最新 Grafana 版本。
+# 把某個歷史 dashboard revision 還原成新的最新 Grafana 版本。
 grafana-util dashboard history restore --url http://localhost:3000 --basic-user admin --basic-password admin --dashboard-uid cpu-main --version 17 --message "Restore known good CPU dashboard after regression" --dry-run --output-format table
 ```
 
 ```bash
-# 用途：在終端機中選擇最近的歷史版本、預覽內容，並確認還原。
+# 在終端機中選擇最近的歷史版本、預覽內容，並確認還原。
 grafana-util dashboard history restore --url http://localhost:3000 --basic-user admin --basic-password admin --dashboard-uid cpu-main --prompt
 ```
 
 ```bash
-# 用途：比對同一個 dashboard UID 在兩個不同日期匯出的 history 成品。
+# 比對同一個 dashboard UID 在兩個不同日期匯出的 history 成品。
 grafana-util dashboard history diff --base-input-dir ./exports-2026-04-01 --base-dashboard-uid cpu-main --base-version 17 --new-input-dir ./exports-2026-04-07 --new-dashboard-uid cpu-main --new-version 21 --output-format json
 ```
 
 ```bash
-# 用途：把最近的 dashboard history 匯出成可重用的 JSON 成品。
+# 把最近的 dashboard history 匯出成可重用的 JSON 成品。
 grafana-util dashboard history export --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --dashboard-uid cpu-main --limit 20 --output ./cpu-main.history.json
 ```
 

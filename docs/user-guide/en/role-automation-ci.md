@@ -49,27 +49,27 @@ Use a `config profile` first, with env-backed secrets for CI.
 ## First commands to run
 
 ```bash
-# Purpose: First commands to run.
+# First commands to run.
 grafana-util config profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN
 ```
 
 ```bash
-# Purpose: First commands to run.
+# First commands to run.
 grafana-util config profile show --profile ci --output-format yaml
 ```
 
 ```bash
-# Purpose: First commands to run.
+# First commands to run.
 grafana-util status staged --desired-file ./desired.json --output-format json
 ```
 
 ```bash
-# Purpose: First commands to run.
+# First commands to run.
 grafana-util workspace test --desired-file ./desired.json --fetch-live --output-format json
 ```
 
 ```bash
-# Purpose: First commands to run.
+# First commands to run.
 grafana-util status overview live --profile ci --output-format yaml
 ```
 
@@ -78,14 +78,14 @@ If the job only needs to validate one live surface, you can replace the last lin
 If you need a bootstrap check before the profile is wired, use Basic auth with a prompted password:
 
 ```bash
-# Purpose: If you need a bootstrap check before the profile is wired, use Basic auth with a prompted password.
+# If you need a bootstrap check before the profile is wired, use Basic auth with a prompted password.
 grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output-format yaml
 ```
 
 If the job already receives a scoped token, you can call the live surface directly:
 
 ```bash
-# Purpose: If the job already receives a scoped token, you can call the live surface directly.
+# If the job already receives a scoped token, you can call the live surface directly.
 grafana-util status overview live --url https://grafana.example.com --token "$GRAFANA_CI_TOKEN" --output-format json
 ```
 
@@ -111,8 +111,8 @@ Your automation path is in good shape when:
 - [config profile](../../commands/en/profile.md)
 - [status](../../commands/en/status.md)
 - [workspace](../../commands/en/workspace.md)
-- [access service-account](../../commands/en/access.md)
-- [access service-account token](../../commands/en/access.md)
+- [access service-account](../../commands/en/access-service-account.md)
+- [access service-account token](../../commands/en/access-service-account-token.md)
 - [full command index](../../commands/en/index.md)
 
 ## Common mistakes and limits

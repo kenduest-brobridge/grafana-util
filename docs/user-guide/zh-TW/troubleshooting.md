@@ -1,4 +1,4 @@
-# 🔍 疑難排解與名詞解釋
+# 疑難排解與名詞解釋
 
 本章不是只列錯誤訊息，而是幫你分辨問題到底屬於哪一類：
 
@@ -40,14 +40,14 @@
 
 ---
 
-## 🛠️ CLI 診斷與調修
+## CLI 診斷與調修
 
 ### 1. 啟用 verbose 日誌
 
 `grafana-util` 使用標準 Rust logging。你可以提高日誌等級來看實際 API request / response。
 
 ```bash
-# 用途：grafana-util 使用標準 Rust logging。你可以提高日誌等級來看實際 API request / response。
+# grafana-util 使用標準 Rust logging。你可以提高日誌等級來看實際 API request / response。
 RUST_LOG=debug grafana-util status live --profile prod
 grafana-util dashboard list -v
 ```
@@ -110,12 +110,15 @@ grafana-util dashboard list -v
 
 ---
 
-## 📖 名詞解釋
+## 名詞解釋
 
 | 術語 | 定義 |
 | :--- | :--- |
 | **Live** | 直接讀目前正在執行的 Grafana；第一次確認連線時先從這裡開始。 |
 | **Staged** | 本地已準備好、但還沒套用到 Grafana 的檔案或變更包。 |
+| **Review** | 審查輸入、差異或計畫；這一步不應該直接改 live Grafana。 |
+| **Preview** | 預覽接下來會發生的變更，用來確認 scope、action 與風險。 |
+| **Apply** | 套用已審查的變更；這通常是會進入 mutation path 的步驟。 |
 | **Overview** | 給人快速判斷下一步的總覽；讀 live Grafana 時用 `status overview live`。 |
 | **Workspace** | 一包本地輸入，應該先 scan、test、preview，再決定是否 apply。 |
 | **Governance** | 用政策或規則先抓風險；不是第一次使用時的起手式。 |
@@ -129,7 +132,7 @@ grafana-util dashboard list -v
 
 ---
 
-## 🆘 取得更多協助
+## 取得更多協助
 
 - **先確認版本**：回報問題時先執行 `grafana-util --version`
 - **專案儲存庫**：請在 [GitHub Issues](https://github.com/kenduest-brobridge/grafana-util/issues) 回報 Bug 或提需求

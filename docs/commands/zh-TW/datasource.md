@@ -29,7 +29,7 @@
 ## 這一組頁面怎麼讀比較不會亂
 
 1. 先看這頁，判斷你是在做 inventory、bundle、diff，還是 live mutation。
-2. 進到子命令頁後，先看資料來源是 live 還是本地 bundle。
+2. 進到子命令頁後，先看 data source 來源是 live 還是本地 bundle。
 3. 先跑最短成功路徑，再加進階旗標，不要一開始就帶滿所有 options。
 4. 如果是 production 變更，先完成 export / diff，再進 live mutation。
 

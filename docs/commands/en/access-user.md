@@ -43,37 +43,37 @@ List or browse live and local Grafana users, create, modify, export, import, dif
 ## Examples
 
 ```bash
-# Purpose: Inspect users in one org before changing membership or roles.
+# Inspect users in one org before changing membership or roles.
 grafana-util access user list --url http://localhost:3000 --basic-user admin --basic-password admin --scope org --output-format text
 ```
 
 ```bash
-# Purpose: Review a saved user bundle without touching Grafana.
+# Review a saved user bundle without touching Grafana.
 grafana-util access user list --input-dir ./access-users --output-format table
 ```
 
 ```bash
-# Purpose: Browse one saved user bundle interactively without touching Grafana.
+# Browse one saved user bundle interactively without touching Grafana.
 grafana-util access user browse --input-dir ./access-users --login alice
 ```
 
 ```bash
-# Purpose: Create one user with explicit auth and org scope.
+# Create one user with explicit auth and org scope.
 grafana-util access user add --url http://localhost:3000 --basic-user admin --basic-password admin --login alice --email alice@example.com --name Alice --password secret
 ```
 
 ```bash
-# Purpose: Delete one account after checking the current org users.
+# Delete one account after checking the current org users.
 grafana-util access user delete --url http://localhost:3000 --basic-user admin --basic-password admin --login temp-user --scope global --yes --json
 ```
 
 ```bash
-# Purpose: Prompt for one user, confirm the target, and then delete it.
+# Prompt for one user, confirm the target, and then delete it.
 grafana-util access user delete --url http://localhost:3000 --basic-user admin --basic-password admin --scope global --prompt
 ```
 
 ```bash
-# Purpose: Prompt for the delete scope first, then select one user and confirm the delete.
+# Prompt for the delete scope first, then select one user and confirm the delete.
 grafana-util access user delete --url http://localhost:3000 --basic-user admin --basic-password admin --prompt
 ```
 

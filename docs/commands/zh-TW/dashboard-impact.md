@@ -45,7 +45,7 @@
 ## 範例（依來源分組）
 
 ```bash
-# 用途：直接從 live Grafana 看某個 datasource 的影響範圍。
+# 直接從 live Grafana 看某個 datasource 的影響範圍。
 grafana-util dashboard impact \
   --url http://localhost:3000 \
   --basic-user admin \
@@ -55,7 +55,7 @@ grafana-util dashboard impact \
 ```
 
 ```bash
-# 用途：從本地匯出樹做離線 impact 分析。
+# 從本地匯出樹做離線 impact 分析。
 grafana-util dashboard impact \
   --input-dir ./dashboards/raw \
   --input-format raw \
@@ -64,7 +64,7 @@ grafana-util dashboard impact \
 ```
 
 ```bash
-# 用途：從 repo-backed Git Sync 樹分析 datasource 牽動面。
+# 從 repo-backed Git Sync 樹分析 datasource 牽動面。
 grafana-util dashboard impact \
   --input-dir ./grafana-oac-repo \
   --input-format git-sync \
@@ -73,7 +73,7 @@ grafana-util dashboard impact \
 ```
 
 ```bash
-# 用途：直接重用 governance 成品，並把 alert contract 一起納入。
+# 直接重用 governance 成品，並把 alert contract 一起納入。
 grafana-util dashboard impact \
   --governance ./governance.json \
   --datasource-uid prom-main \

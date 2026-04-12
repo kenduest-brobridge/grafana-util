@@ -326,13 +326,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   font-weight: 500;
 }
 .nav-command-branch-item .nav-command-leaf-link:hover { color: var(--heading); }
-.handbook-command-map .nav-command-root-link {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  font-size: 0.9rem;
-}
 
 .sidebar-toggle {
   position: absolute;
@@ -378,71 +371,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map { margin: 0 0 24px; }
-.handbook-command-map-panel {
-  margin-top: 16px;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--panel) 96%, white);
-}
-.handbook-command-map .nav-group-title {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-group {
-  padding-top: 0;
-}
-.handbook-command-map .nav-command-group + .nav-command-group {
-  margin-top: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
-  padding-top: 10px;
-}
-.handbook-command-map .nav-command-sub-list {
-  margin-top: 8px;
-  margin-left: 0;
-  padding-left: 0;
-  border-left: 0;
-}
-.handbook-command-map .nav-command-branch {
-  display: grid;
-  grid-template-columns: minmax(130px, 0.22fr) minmax(0, 1fr);
-  gap: 12px 18px;
-  align-items: start;
-}
-.handbook-command-map .nav-command-branch-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-left: 0;
-  padding-left: 14px;
-}
-.handbook-command-map .nav-command-branch-item + .nav-command-branch-item { margin-top: 0; }
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-  line-height: 1.25;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link:hover,
-.handbook-command-map .nav-command-link a:hover {
-  border-color: color-mix(in srgb, var(--border) 45%, var(--accent));
-  background: var(--panel-strong);
-}
-@media (max-width: 720px) {
-  .handbook-command-map .nav-command-branch {
-    grid-template-columns: 1fr;
-  }
-  .handbook-command-map .nav-command-branch-list {
-    padding-left: 0;
-    border-left: 0;
-  }
-}
 .article p,
 .article li { color: var(--text); font-weight: 460; }
 .article ul li::marker,
@@ -956,21 +884,21 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <ul><li>if a command fails after switching profiles, verify the resolved <code>show</code> output before assuming the command is broken</li><li>if a secret is missing, check whether the profile is using <code>file</code>, <code>os</code>, or <code>encrypted-file</code> storage and whether that mode fits the current machine</li><li>if a live command still needs too many flags, reconsider whether the profile should carry the default URL or auth values instead</li></ul>
 <p>Key flags: the root command is a namespace; operational flags live on subcommands. The shared root flag is <code>--color</code>.</p>
 <p>Examples:</p>
-<pre><code># Purpose: List profiles available in the current checkout.
+<pre><code># List profiles available in the current checkout.
 grafana-util config profile list</code></pre>
-<pre><code># Purpose: Inspect the resolved profile before running live commands.
+<pre><code># Inspect the resolved profile before running live commands.
 grafana-util config profile show --profile prod --output-format yaml</code></pre>
-<pre><code># Purpose: Show the currently selected profile and resolved config path.
+<pre><code># Show the currently selected profile and resolved config path.
 grafana-util config profile current --profile prod</code></pre>
-<pre><code># Purpose: Validate the selected profile and check Grafana reachability.
+<pre><code># Validate the selected profile and check Grafana reachability.
 grafana-util config profile validate --profile prod --live</code></pre>
-<pre><code># Purpose: Create a reusable production profile with prompt-based secrets.
+<pre><code># Create a reusable production profile with prompt-based secrets.
 grafana-util config profile add prod --url https://grafana.example.com --basic-user admin --prompt-password --store-secret encrypted-file</code></pre>
-<pre><code># Purpose: Create a CI profile that reads the token from an environment variable.
+<pre><code># Create a CI profile that reads the token from an environment variable.
 grafana-util config profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN --store-secret os</code></pre>
-<pre><code># Purpose: Print a fully annotated profile template.
+<pre><code># Print a fully annotated profile template.
 grafana-util config profile example --mode full</code></pre>
-<pre><code># Purpose: Initialize a fresh grafana-util.yaml in the current checkout.
+<pre><code># Initialize a fresh grafana-util.yaml in the current checkout.
 grafana-util config profile init --overwrite</code></pre>
 <p>Related commands: <code>grafana-util status live</code>, <code>grafana-util status overview</code>, <code>grafana-util workspace preview</code>, <code>grafana-util config profile current</code>, <code>grafana-util config profile validate</code>.</p>
 <h2 id="list"><code>list</code></h2>
@@ -978,7 +906,7 @@ grafana-util config profile init --overwrite</code></pre>
 <p>When to use: when you need to confirm which profiles are available in the current checkout.</p>
 <p>Key flags: none beyond the shared root <code>--color</code>.</p>
 <p>Examples:</p>
-<pre><code># Purpose: list.
+<pre><code># list.
 grafana-util config profile list</code></pre>
 <p>Related commands: <code>config profile show</code>, <code>config profile current</code>, <code>config profile add</code>, <code>config profile init</code>.</p>
 <h2 id="show"><code>show</code></h2>
@@ -987,11 +915,11 @@ grafana-util config profile list</code></pre>
 <p>Key flags:</p>
 <ul><li><code>--profile</code></li><li><code>--output-format</code></li><li><code>--show-secrets</code></li></ul>
 <p>Examples:</p>
-<pre><code># Purpose: show.
+<pre><code># show.
 grafana-util config profile show --profile prod --output-format yaml</code></pre>
-<pre><code># Purpose: show.
+<pre><code># show.
 grafana-util config profile show --profile prod --output-format json</code></pre>
-<pre><code># Purpose: show.
+<pre><code># show.
 grafana-util config profile show --profile prod --show-secrets --output-format yaml</code></pre>
 <p>Notes:</p>
 <ul><li>Secret values are masked by default.</li><li><code>--show-secrets</code> reveals plaintext values or resolves secret-store references.</li></ul>
@@ -1002,9 +930,9 @@ grafana-util config profile show --profile prod --show-secrets --output-format y
 <p>Key flags:</p>
 <ul><li><code>--profile</code></li><li><code>--output-format</code></li></ul>
 <p>Examples:</p>
-<pre><code># Purpose: current.
+<pre><code># current.
 grafana-util config profile current</code></pre>
-<pre><code># Purpose: current.
+<pre><code># current.
 grafana-util config profile current --profile prod --output-format json</code></pre>
 <p>Notes:</p>
 <ul><li>The output is diagnostic only and does not reveal secrets.</li><li>If the config file is missing, <code>current</code> reports that the config does not exist instead of failing.</li></ul>
@@ -1015,9 +943,9 @@ grafana-util config profile current --profile prod --output-format json</code></
 <p>Key flags:</p>
 <ul><li><code>--profile</code></li><li><code>--live</code></li><li><code>--output-format</code></li></ul>
 <p>Examples:</p>
-<pre><code># Purpose: validate.
+<pre><code># validate.
 grafana-util config profile validate --profile prod</code></pre>
-<pre><code># Purpose: validate.
+<pre><code># validate.
 grafana-util config profile validate --profile prod --live --output-format json</code></pre>
 <p>Notes:</p>
 <ul><li><code>--live</code> adds a Grafana <code>/api/health</code> check after static validation succeeds.</li><li>Validation does not print secrets.</li></ul>
@@ -1028,11 +956,11 @@ grafana-util config profile validate --profile prod --live --output-format json<
 <p>Key flags:</p>
 <ul><li><code>--url</code></li><li>auth inputs: <code>--token</code>, <code>--token-env</code>, <code>--prompt-token</code>, <code>--basic-user</code>, <code>--basic-password</code>, <code>--password-env</code>, <code>--prompt-password</code></li><li>storage mode: <code>--store-secret file|os|encrypted-file</code></li><li>encrypted-file options: <code>--secret-file</code>, <code>--prompt-secret-passphrase</code>, <code>--secret-passphrase-env</code></li><li>behavior: <code>--replace-existing</code>, <code>--set-default</code></li></ul>
 <p>Examples:</p>
-<pre><code># Purpose: add.
+<pre><code># add.
 grafana-util config profile add dev --url http://127.0.0.1:3000 --basic-user admin --password-env GRAFANA_DEV_PASSWORD</code></pre>
-<pre><code># Purpose: add.
+<pre><code># add.
 grafana-util config profile add prod --url https://grafana.example.com --basic-user admin --prompt-password --store-secret os --set-default</code></pre>
-<pre><code># Purpose: add.
+<pre><code># add.
 grafana-util config profile add stage --url https://grafana-stage.example.com --token-env GRAFANA_STAGE_TOKEN --store-secret encrypted-file --prompt-secret-passphrase</code></pre>
 <p>Notes:</p>
 <ul><li>Default config path: <code>grafana-util.yaml</code></li><li>Default encrypted secret file: <code>.grafana-util.secrets.yaml</code></li><li>Default local key file for encrypted-file without a passphrase: <code>.grafana-util.secrets.key</code></li><li><code>config profile add --store-secret encrypted-file</code> updates the config-directory <code>.gitignore</code> with those helper files when they live under the same directory tree.</li><li>These default secret paths are resolved relative to the config file directory, not a temporary process cwd.</li><li><code>file</code> is the default storage mode.</li><li><code>os</code> and <code>encrypted-file</code> are explicit opt-in modes.</li><li><code>os</code> stores secrets in the macOS Keychain or Linux Secret Service, not in <code>grafana-util.yaml</code>.</li><li><code>os</code> is only supported on macOS and Linux. Headless Linux shells may need <code>password_env</code>, <code>token_env</code>, or <code>encrypted-file</code> instead.</li><li>Prefer profile-backed <code>password_env</code> or <code>token_env</code> entries for repeated automation instead of pasting secrets into every live command.</li></ul>
@@ -1043,11 +971,11 @@ grafana-util config profile add stage --url https://grafana-stage.example.com --
 <p>Key flags:</p>
 <ul><li><code>--mode basic|full</code></li></ul>
 <p>Examples:</p>
-<pre><code># Purpose: example.
+<pre><code># example.
 grafana-util config profile example</code></pre>
-<pre><code># Purpose: example.
+<pre><code># example.
 grafana-util config profile example --mode basic</code></pre>
-<pre><code># Purpose: example.
+<pre><code># example.
 grafana-util config profile example --mode full</code></pre>
 <p>Notes:</p>
 <ul><li><code>basic</code> is a short starter template.</li><li><code>full</code> includes commented examples for <code>file</code>, <code>os</code>, and <code>encrypted-file</code>.</li><li>The <code>os</code> examples assume macOS Keychain or Linux Secret Service is available.</li></ul>
@@ -1058,9 +986,9 @@ grafana-util config profile example --mode full</code></pre>
 <p>Key flags:</p>
 <ul><li><code>--overwrite</code></li></ul>
 <p>Examples:</p>
-<pre><code># Purpose: init.
+<pre><code># init.
 grafana-util config profile init</code></pre>
-<pre><code># Purpose: init.
+<pre><code># init.
 grafana-util config profile init --overwrite</code></pre>
 <p>Notes:</p>
 <ul><li><code>init</code> seeds the built-in starter template.</li><li><code>add</code> is the friendlier way to create one real profile entry directly.</li></ul>

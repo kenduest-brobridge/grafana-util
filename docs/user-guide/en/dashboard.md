@@ -31,6 +31,22 @@ This guide is for operators who need to inventory dashboards, export or import t
 - If inspect output shows missing queries or variables, stop and resolve that before import.
 - If you cannot explain what a screenshot or dependencies output is proving, you are probably in the wrong workflow lane.
 
+## Dashboard Workflow Map
+
+Dashboard subcommands are not a flat feature list. They are organized around different inputs and outcomes:
+
+| Job | Start here | Main input | Main output | Next step |
+| --- | --- | --- | --- | --- |
+| Find a dashboard | `browse`, `list`, `get` | live Grafana | UID, folder, title, JSON | clone, export, or review |
+| Build a local draft | `clone`, `get`, `patch`, `serve` | live dashboard or local JSON | reviewable draft file | `review`, `publish` |
+| Publish a draft | `review`, `publish`, `edit-live` | local dashboard JSON | dry-run / publish result | list / get after apply |
+| Back up and replay | `export`, `import`, `diff` | live Grafana or export tree | `raw/`, `prompt/`, `provisioning/` | diff / dry-run / import |
+| Analyze dependencies | `summary`, `dependencies`, `variables`, `policy` | live or local dashboard | query, datasource, variable, policy summary | fix dashboard or datasource |
+| Capture evidence | `screenshot` | live dashboard URL / UID | dashboard or panel screenshot | incident, PR, or docs evidence |
+| Recover history | `history list`, `history export`, `history restore` | dashboard UID and version | history list, version artifact, or new revision | review before restore |
+
+If you only have a dashboard UID, start with `get` or `clone`. If you have an export tree, start with `summary` / `diff`, not `import`. Use `prompt/` or screenshots for human handoff; use `raw/` for replay and audit.
+
 ## Draft authoring workflow
 
 Use the authoring lane when the work starts from one dashboard file instead of a full export tree.
@@ -45,29 +61,29 @@ Use the authoring lane when the work starts from one dashboard file instead of a
 Generator-driven teams do not need to stop at an intermediate temp file for every review or publish step.
 
 ```bash
-# Purpose: Review one generated dashboard from standard input.
+# Review one generated dashboard from standard input.
 jsonnet dashboards/cpu.jsonnet | grafana-util dashboard review --input - --output-format json
 ```
 
 ```bash
-# Purpose: Publish one generated dashboard from standard input.
+# Publish one generated dashboard from standard input.
 jsonnet dashboards/cpu.jsonnet | grafana-util dashboard publish --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --input - --replace-existing
 ```
 
 If you are editing one local draft repeatedly, use `dashboard publish --watch` with a file path instead of `--input -`. Watch mode reruns publish or dry-run after each stabilized save and keeps watching even if one iteration fails validation or the API call.
 
 ```bash
-# Purpose: Re-run dry-run publish after each save while editing one local draft.
+# Re-run dry-run publish after each save while editing one local draft.
 grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --basic-password admin --input ./drafts/cpu-main.json --dry-run --watch
 ```
 
 ```bash
-# Purpose: Keep one draft open in a lightweight local preview browser while you edit.
+# Keep one draft open in a lightweight local preview browser while you edit.
 grafana-util dashboard serve --input ./drafts/cpu-main.json --port 18080 --open-browser
 ```
 
 ```bash
-# Purpose: Fetch one live dashboard into an external editor and keep the result as a local draft by default.
+# Fetch one live dashboard into an external editor and keep the result as a local draft by default.
 grafana-util dashboard edit-live --profile prod --dashboard-uid cpu-main --output ./drafts/cpu-main.edited.json
 ```
 
@@ -88,36 +104,7 @@ Restore is not a destructive overwrite. The selected historical version stays in
 
 > **Operator-First Design**: This tool treats dashboards as version-controlled assets. The goal is to move and govern dashboard state safely, with enough visibility to decide whether a file is ready to replay, patch, or promote.
 
-## 🔗 Command Pages
-
-Need the command-by-command surface instead of the workflow guide?
-
-- [dashboard command overview](../../commands/en/dashboard.md)
-- [dashboard browse](../../commands/en/dashboard-browse.md)
-- [dashboard get](../../commands/en/dashboard-get.md)
-- [dashboard clone](../../commands/en/dashboard-clone.md)
-- [dashboard list](../../commands/en/dashboard-list.md)
-- [dashboard export](../../commands/en/dashboard-export.md)
-- [dashboard import](../../commands/en/dashboard-import.md)
-- [dashboard convert raw-to-prompt](../../commands/en/dashboard-convert-raw-to-prompt.md)
-- [dashboard patch](../../commands/en/dashboard-patch.md)
-- [dashboard serve](../../commands/en/dashboard-serve.md)
-- [dashboard edit-live](../../commands/en/dashboard-edit-live.md)
-- [dashboard review](../../commands/en/dashboard-review.md)
-- [dashboard publish](../../commands/en/dashboard-publish.md)
-- [dashboard delete](../../commands/en/dashboard-delete.md)
-- [dashboard diff](../../commands/en/dashboard-diff.md)
-- [dashboard summary](../../commands/en/dashboard-summary.md)
-- [dashboard variables](../../commands/en/dashboard-variables.md)
-- [dashboard history](../../commands/en/dashboard-history.md)
-- [dashboard policy](../../commands/en/dashboard-policy.md)
-- [dashboard dependencies](../../commands/en/dashboard-dependencies.md)
-- [dashboard screenshot](../../commands/en/dashboard-screenshot.md)
-- [full command index](../../commands/en/index.md)
-
----
-
-## 🛠️ What This Area Is For
+## What This Area Is For
 
 Use the dashboard area for estate-level governance:
 - **Inventory**: Understand what exists across one or many organizations.
@@ -148,9 +135,15 @@ Common cases:
 
 ---
 
-## 🚧 Workflow Boundaries (The Three Lanes)
+## Workflow Boundaries (The Three Lanes)
 
-Dashboard export intentionally produces three different "lanes" because each serves a different operator workflow. **These lanes are not interchangeable.**
+Dashboard export intentionally produces three different lanes. This is more than directory organization: it separates automated replay, human UI import, and disk-based provisioning before those workflows can be confused. When you are preserving evidence after an incident, reviewing a change before promotion, or handing a dashboard to another environment, choosing the right lane up front is cheaper than repairing a JSON file used in the wrong place.
+
+`raw/` is the record worth keeping. It stays closest to the API response and is the best source to commit to Git when you need traceability. Start here for backup, disaster recovery, diff, audit, dry-run import, or any workflow that will push dashboards back through the CLI.
+
+`prompt/` is the handoff copy for a person using the UI. It serves Grafana's "Upload JSON" flow, not `grafana-util dashboard import`. Use this lane when another team, another org, or a browser-based operator needs to import the dashboard manually.
+
+`provisioning/` is a deployment projection. It lets Grafana read dashboards from the filesystem through provisioning config, which fits container images, ConfigMaps, volume mounts, and GitOps-style deployment flows. It can deploy dashboards, but it should not become the only source for daily review and replay.
 
 | Lane | Purpose | Best Use Case |
 | :--- | :--- | :--- |
@@ -164,7 +157,7 @@ Use `dashboard history export` when you need a standalone JSON artifact for one 
 
 ---
 
-## 🔤 Prompt Placeholder Notes
+## Prompt Placeholder Notes
 
 - `$datasource` is a dashboard variable reference.
 - `${DS_*}` is an external-import placeholder created from `__inputs`.
@@ -174,7 +167,7 @@ Use `dashboard history export` when you need a standalone JSON artifact for one 
 
 ---
 
-## ⚖️ Staged vs Live: The Operator Logic
+## Staged vs Live: The Operator Logic
 
 - **Staged Work**: Local export trees, validation, offline inspection, and dry-run reviews.
 - **Live Work**: Grafana-backed inventory, live diffs, imports, and deletions.
@@ -183,12 +176,12 @@ Use `dashboard history export` when you need a standalone JSON artifact for one 
 
 ---
 
-## 📋 Reading Live Inventory
+## Reading Live Inventory
 
 Use `dashboard browse` or `dashboard list` to get a fast picture of the estate.
 
 ```bash
-# Purpose: Use dashboard browse to get a fast picture of the estate.
+# Use dashboard browse to get a fast picture of the estate.
 grafana-util dashboard browse \
   --url http://localhost:3000 \
   --basic-user admin \
@@ -211,7 +204,66 @@ spring-jmx-node-unified  Spring JMX + Node Unified Dashboard (VM)  Demo    ffhrm
 
 ---
 
-## 🚀 Key Commands (Full Argument Reference)
+## Inventory and Get: Confirm the Target First
+
+Dashboard work often starts from a fuzzy clue: a screen, a folder, a team name, or a screenshot left in an incident. Do not start by exporting the whole estate or publishing a local file. First identify the dashboard UID, folder, org, and title.
+
+Use `dashboard browse` when the folder view matters, `dashboard list` when you need sortable inventory, and `dashboard get` when you need the full JSON for one UID. Once you know the target, decide whether to `clone` it into a draft, `export` it into the replay lane, or use `summary` / `dependencies` for impact review.
+
+If `list` or `browse` misses a dashboard you expected, check profile, org scope, folder permissions, and token visibility. An empty result does not prove the dashboard does not exist.
+
+## Choose The Export Lane
+
+`dashboard export` does not produce just one JSON shape. It serves CLI replay, human UI import, and Grafana provisioning. Choosing the wrong lane makes review and handoff harder.
+
+- `raw/`: for `dashboard import`, `dashboard diff`, audit, and disaster recovery. This is the best source to keep in Git.
+- `prompt/`: for Grafana UI Upload JSON handoff. This is a human handoff artifact, not the primary CLI replay source.
+- `provisioning/`: for Grafana file provisioning. This is a deployment projection, not a replacement for raw review.
+
+If you are handing one dashboard to a person for manual UI import, `prompt/` is easier to use than `raw/`. If CI needs diff, dry-run, or replay, use `raw/`. If the target is GitOps or a mounted provisioning directory, use `provisioning/`.
+
+## Review / Publish: A Draft Must Be Explainable
+
+`dashboard review` and `dashboard publish` form a gate: first decide whether the draft is safe to send, then decide whether to write live state. Review at least the title, UID, folder UID, tags, datasource references, variables, and blocking issues. If you cannot explain where the JSON came from, which UID it will replace, and which folder it will land in, do not publish it.
+
+Use `dashboard publish --dry-run` before PRs or manual change windows. Use `--watch` while iterating on the same local draft. After publishing, verify live state with `dashboard get` or `dashboard list` instead of trusting only the publish output.
+
+## Analysis and Evidence
+
+`dashboard summary`, `dependencies`, `variables`, `policy`, and `screenshot` are not side features. They answer common review questions: which datasources does this dashboard query, do variables change query behavior, does policy allow production promotion, and is there visual evidence suitable for an incident or PR?
+
+When the review question is structural, start with `summary`, `variables`, and `dependencies`. When the review question needs a human-readable artifact, use `screenshot`. A screenshot does not replace structural review, and structural review does not replace a visual artifact when one is required.
+
+## When To Use Command Reference
+
+This chapter helps you choose the workflow. Once you know which command you need, use the command reference for exact flags, output formats, and complete examples:
+
+- [dashboard command overview](../../commands/en/dashboard.md)
+- [dashboard browse](../../commands/en/dashboard-browse.md)
+- [dashboard get](../../commands/en/dashboard-get.md)
+- [dashboard clone](../../commands/en/dashboard-clone.md)
+- [dashboard list](../../commands/en/dashboard-list.md)
+- [dashboard export](../../commands/en/dashboard-export.md)
+- [dashboard import](../../commands/en/dashboard-import.md)
+- [dashboard convert raw-to-prompt](../../commands/en/dashboard-convert-raw-to-prompt.md)
+- [dashboard patch](../../commands/en/dashboard-patch.md)
+- [dashboard serve](../../commands/en/dashboard-serve.md)
+- [dashboard edit-live](../../commands/en/dashboard-edit-live.md)
+- [dashboard review](../../commands/en/dashboard-review.md)
+- [dashboard publish](../../commands/en/dashboard-publish.md)
+- [dashboard delete](../../commands/en/dashboard-delete.md)
+- [dashboard diff](../../commands/en/dashboard-diff.md)
+- [dashboard summary](../../commands/en/dashboard-summary.md)
+- [dashboard variables](../../commands/en/dashboard-variables.md)
+- [dashboard history](../../commands/en/dashboard-history.md)
+- [dashboard policy](../../commands/en/dashboard-policy.md)
+- [dashboard dependencies](../../commands/en/dashboard-dependencies.md)
+- [dashboard screenshot](../../commands/en/dashboard-screenshot.md)
+- [full command index](../../commands/en/index.md)
+
+---
+
+## Common Commands
 
 | Command | Full Example with Arguments |
 | :--- | :--- |
@@ -230,12 +282,12 @@ spring-jmx-node-unified  Spring JMX + Node Unified Dashboard (VM)  Demo    ffhrm
 
 ---
 
-## 🔬 Validated Docker Examples
+## Operator Examples
 
 ### 1. Export Progress
 Use `--progress` for a clean log during large estate exports.
 ```bash
-# Purpose: Use --progress for a clean log during large estate exports.
+# Use --progress for a clean log during large estate exports.
 grafana-util export dashboard --output-dir ./dashboards --overwrite --progress
 ```
 **Output Excerpt:**
@@ -249,7 +301,7 @@ Exporting dashboard 7/7: two-prom-query-smoke
 ### 2. Dry-Run Import Preview
 Always confirm the destination action before mutation.
 ```bash
-# Purpose: Always confirm the destination action before mutation.
+# Always confirm the destination action before mutation.
 grafana-util dashboard import --input-dir ./dashboards/raw --dry-run --table
 ```
 **Output Excerpt:**
@@ -267,7 +319,7 @@ subfolder-chain-smoke  missing      create  Platform / Team / Apps / Prod  ./das
 ### 3. Provisioning-Oriented Comparison
 Compare your local provisioning files against live state.
 ```bash
-# Purpose: Compare your local provisioning files against live state.
+# Compare your local provisioning files against live state.
 grafana-util dashboard diff --input-dir ./dashboards/provisioning --input-format provisioning
 ```
 **Output Excerpt:**

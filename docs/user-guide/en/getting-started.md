@@ -1,4 +1,4 @@
-# 🚀 Getting Started
+# Getting Started
 
 This guide is for the first time you need to install `grafana-util`, prove that it can reach Grafana, and decide whether a direct command, env-backed auth, or a repo-local `config profile` is the cleanest starting point.
 
@@ -56,18 +56,18 @@ For the exact flags behind this chapter, keep [config](../../commands/en/config.
 
 ---
 
-## 📋 Step 1: Installation
+## Step 1: Installation
 
 ### Download and Install
 ```bash
-# Purpose: Download and Install.
+# Download and Install.
 curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-util/main/scripts/install.sh | sh
 ```
 
 If you want one fixed release or one explicit install directory, the same script also supports:
 
 ```bash
-# Purpose: Install one pinned release into one explicit binary directory.
+# Install one pinned release into one explicit binary directory.
 VERSION=0.10.0 BIN_DIR="$HOME/.local/bin" \
   curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-util/main/scripts/install.sh | sh
 ```
@@ -77,13 +77,13 @@ The installer uses `BIN_DIR` when you set it. Otherwise it tries `/usr/local/bin
 If the chosen install directory is not already on `PATH`, the installer prints the exact shell snippet to add it for `zsh` or `bash`. You can also inspect the contract first with:
 
 ```bash
-# Purpose: Show install script options, BIN_DIR behavior, and PATH setup notes.
+# Show install script options, BIN_DIR behavior, and PATH setup notes.
 sh ./scripts/install.sh --help
 ```
 
 ### Verify Version
 ```bash
-# Purpose: Verify Version.
+# Verify Version.
 grafana-util --version
 ```
 **Expected Output:**
@@ -94,7 +94,7 @@ This confirms that the binary is on your `PATH` and that you are running the ver
 
 ---
 
-## 📋 Step 2: Connection Patterns And Profile Files
+## Step 2: Connection Patterns And Profile Files
 
 Profile workflows are repo-local. `grafana-util config profile` works against `grafana-util.yaml` in the current working directory by default, or against the file pointed to by `GRAFANA_UTIL_CONFIG`.
 
@@ -153,12 +153,12 @@ For a first run, the cleanest mental model is:
 
 ### 1. Pick how you want to create profiles
 ```bash
-# Purpose: 1. Pick how you want to create profiles.
+# Create the profile config file in the current checkout.
 grafana-util config profile init --overwrite
 ```
 
 ```bash
-# Purpose: 1. Pick how you want to create profiles.
+# Create a local dev profile and enter the password interactively.
 grafana-util config profile add dev \
   --url http://127.0.0.1:3000 \
   --basic-user admin \
@@ -166,7 +166,7 @@ grafana-util config profile add dev \
 ```
 
 ```bash
-# Purpose: 1. Pick how you want to create profiles.
+# Create a CI profile that reads its token from the environment.
 grafana-util config profile add ci \
   --url https://grafana.example.com \
   --token-env GRAFANA_CI_TOKEN \
@@ -174,7 +174,7 @@ grafana-util config profile add ci \
 ```
 
 ```bash
-# Purpose: 1. Pick how you want to create profiles.
+# Print the fully annotated profile template for comparison.
 grafana-util config profile example --mode full
 ```
 `config profile init` creates a minimal starter `grafana-util.yaml`. `config profile add` can create a reusable Basic-auth or token-backed profile in one step, and `config profile example` prints a fully commented reference template that you can copy and edit.
@@ -182,7 +182,7 @@ grafana-util config profile example --mode full
 If you are still proving basic connectivity, you can do that before any profile work:
 
 ```bash
-# Purpose: If you are still proving basic connectivity, you can do that before any profile work.
+# Before creating a profile, prove that the Grafana connection works.
 grafana-util status live \
   --url http://localhost:3000 \
   --basic-user admin \
@@ -193,7 +193,7 @@ grafana-util status live \
 Then translate that same connection into a reusable profile:
 
 ```bash
-# Purpose: Then translate that same connection into a reusable profile.
+# Once the direct check works, turn the same connection into a dev profile.
 grafana-util config profile add dev \
   --url http://127.0.0.1:3000 \
   --basic-user admin \
@@ -201,7 +201,7 @@ grafana-util config profile add dev \
 ```
 
 ```bash
-# Purpose: Then translate that same connection into a reusable profile.
+# Use that profile for the same read-only check next time.
 grafana-util status live --profile dev --output-format yaml
 ```
 
@@ -215,7 +215,7 @@ By default, the config file lives next to your current checkout. If you point `G
 
 ### 2. List the profiles in the config file
 ```bash
-# Purpose: 2. List the profiles in the config file.
+# List the profile names available in the current config file.
 grafana-util config profile list
 ```
 **Expected Output:**
@@ -229,7 +229,7 @@ Use the [config profile](../../commands/en/profile.md) command reference when yo
 
 ### 3. Inspect one resolved profile
 ```bash
-# Purpose: 3. Inspect one resolved profile.
+# Inspect the final resolved connection settings for the prod profile.
 grafana-util config profile show --profile prod --output-format yaml
 ```
 **Expected Output:**
@@ -246,13 +246,13 @@ Use `config profile` when you want to override the default-selection rules, and 
 
 ---
 
-## 📋 Step 3: First Read-Only Checks
+## Step 3: First Read-Only Checks
 
 Once a profile file exists, use read-only commands to confirm the current command shape before you touch live data.
 
 ### 1. Project Status Entry Point
 ```bash
-# Purpose: 1. Project Status Entry Point.
+# Check which read-only options status live supports.
 grafana-util status live -h
 ```
 **Expected Output:**
@@ -271,7 +271,7 @@ Options:
 
 ### 2. Overview Entry Point
 ```bash
-# Purpose: 2. Overview Entry Point.
+# Inspect the human-oriented status overview entrypoint.
 grafana-util status overview -h
 ```
 **Expected Output:**
@@ -286,12 +286,12 @@ Examples:
 
 ### 3. Run the same read-only check in both common auth styles
 ```bash
-# Purpose: 3. Run the same read-only check in both common auth styles.
+# Use a profile for normal repeatable overview checks.
 grafana-util status overview live --profile prod --output-format yaml
 ```
 
 ```bash
-# Purpose: 3. Run the same read-only check in both common auth styles.
+# Use direct Basic auth for bootstrap or break-glass checks.
 grafana-util status overview live --url http://localhost:3000 --basic-user admin --prompt-password --output-format interactive
 ```
 Use the profile form for normal repeatable work. Keep the direct Basic-auth form for bootstrap, break-glass access, or admin-only workflows when you are not ready to create a profile yet.
@@ -299,7 +299,7 @@ Use the profile form for normal repeatable work. Keep the direct Basic-auth form
 If your shell already exports auth variables, the same read can stay short without creating a profile first:
 
 ```bash
-# Purpose: If your shell already exports auth variables, the same read can stay short without creating a profile first.
+# If the shell already has credentials, run the same read through env vars.
 export GRAFANA_USERNAME=admin
 export GRAFANA_PASSWORD=admin
 grafana-util status overview live --url http://localhost:3000 --output-format yaml
@@ -315,7 +315,7 @@ Token auth can be enough for single-org read flows, but multi-org or admin-scope
 
 ---
 
-## 🖥️ Interactive Mode (TUI)
+## Interactive Mode (TUI)
 
 `grafana-util dashboard browse` opens the live dashboard tree in a terminal UI. `status overview live --output-format interactive` opens the interactive overview mode.
 

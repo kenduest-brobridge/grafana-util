@@ -19,12 +19,12 @@
 
 ## 範例
 ```bash
-# 用途：透過 Grafana API 修改一個線上 Grafana datasource。
+# 透過 Grafana API 修改一個線上 Grafana datasource。
 grafana-util datasource modify --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --uid prom-main --set-url http://prometheus-v2:9090 --dry-run --json
 ```
 
 ```bash
-# 用途：透過 Grafana API 修改一個線上 Grafana datasource。
+# 透過 Grafana API 修改一個線上 Grafana datasource。
 grafana-util datasource modify --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --uid prom-main --set-default true --dry-run --table
 ```
 

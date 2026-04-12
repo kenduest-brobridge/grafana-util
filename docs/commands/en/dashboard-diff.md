@@ -15,12 +15,12 @@ Use this when you want to see what would change before importing or publishing a
 
 ## Examples
 ```bash
-# Purpose: Compare local dashboard files against live Grafana dashboards.
+# Compare local dashboard files against live Grafana dashboards.
 grafana-util dashboard diff --url http://localhost:3000 --basic-user admin --basic-password admin --input-dir ./dashboards/raw
 ```
 
 ```bash
-# Purpose: Compare local dashboard files against live Grafana dashboards.
+# Compare local dashboard files against live Grafana dashboards.
 grafana-util dashboard diff --url http://localhost:3000 --basic-user admin --basic-password admin --org-id 2 --input-dir ./dashboards/raw --output-format json
 ```
 

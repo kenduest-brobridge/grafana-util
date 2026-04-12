@@ -32,42 +32,42 @@ Key flags: the root command is a namespace; operational flags live on subcommand
 Examples:
 
 ```bash
-# Purpose: List profiles available in the current checkout.
+# List profiles available in the current checkout.
 grafana-util config profile list
 ```
 
 ```bash
-# Purpose: Inspect the resolved profile before running live commands.
+# Inspect the resolved profile before running live commands.
 grafana-util config profile show --profile prod --output-format yaml
 ```
 
 ```bash
-# Purpose: Show the currently selected profile and resolved config path.
+# Show the currently selected profile and resolved config path.
 grafana-util config profile current --profile prod
 ```
 
 ```bash
-# Purpose: Validate the selected profile and check Grafana reachability.
+# Validate the selected profile and check Grafana reachability.
 grafana-util config profile validate --profile prod --live
 ```
 
 ```bash
-# Purpose: Create a reusable production profile with prompt-based secrets.
+# Create a reusable production profile with prompt-based secrets.
 grafana-util config profile add prod --url https://grafana.example.com --basic-user admin --prompt-password --store-secret encrypted-file
 ```
 
 ```bash
-# Purpose: Create a CI profile that reads the token from an environment variable.
+# Create a CI profile that reads the token from an environment variable.
 grafana-util config profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN --store-secret os
 ```
 
 ```bash
-# Purpose: Print a fully annotated profile template.
+# Print a fully annotated profile template.
 grafana-util config profile example --mode full
 ```
 
 ```bash
-# Purpose: Initialize a fresh grafana-util.yaml in the current checkout.
+# Initialize a fresh grafana-util.yaml in the current checkout.
 grafana-util config profile init --overwrite
 ```
 
@@ -84,7 +84,7 @@ Key flags: none beyond the shared root `--color`.
 Examples:
 
 ```bash
-# Purpose: list.
+# list.
 grafana-util config profile list
 ```
 
@@ -104,17 +104,17 @@ Key flags:
 Examples:
 
 ```bash
-# Purpose: show.
+# show.
 grafana-util config profile show --profile prod --output-format yaml
 ```
 
 ```bash
-# Purpose: show.
+# show.
 grafana-util config profile show --profile prod --output-format json
 ```
 
 ```bash
-# Purpose: show.
+# show.
 grafana-util config profile show --profile prod --show-secrets --output-format yaml
 ```
 
@@ -137,12 +137,12 @@ Key flags:
 Examples:
 
 ```bash
-# Purpose: current.
+# current.
 grafana-util config profile current
 ```
 
 ```bash
-# Purpose: current.
+# current.
 grafana-util config profile current --profile prod --output-format json
 ```
 
@@ -166,12 +166,12 @@ Key flags:
 Examples:
 
 ```bash
-# Purpose: validate.
+# validate.
 grafana-util config profile validate --profile prod
 ```
 
 ```bash
-# Purpose: validate.
+# validate.
 grafana-util config profile validate --profile prod --live --output-format json
 ```
 
@@ -197,17 +197,17 @@ Key flags:
 Examples:
 
 ```bash
-# Purpose: add.
+# add.
 grafana-util config profile add dev --url http://127.0.0.1:3000 --basic-user admin --password-env GRAFANA_DEV_PASSWORD
 ```
 
 ```bash
-# Purpose: add.
+# add.
 grafana-util config profile add prod --url https://grafana.example.com --basic-user admin --prompt-password --store-secret os --set-default
 ```
 
 ```bash
-# Purpose: add.
+# add.
 grafana-util config profile add stage --url https://grafana-stage.example.com --token-env GRAFANA_STAGE_TOKEN --store-secret encrypted-file --prompt-secret-passphrase
 ```
 
@@ -237,17 +237,17 @@ Key flags:
 Examples:
 
 ```bash
-# Purpose: example.
+# example.
 grafana-util config profile example
 ```
 
 ```bash
-# Purpose: example.
+# example.
 grafana-util config profile example --mode basic
 ```
 
 ```bash
-# Purpose: example.
+# example.
 grafana-util config profile example --mode full
 ```
 
@@ -270,12 +270,12 @@ Key flags:
 Examples:
 
 ```bash
-# Purpose: init.
+# init.
 grafana-util config profile init
 ```
 
 ```bash
-# Purpose: init.
+# init.
 grafana-util config profile init --overwrite
 ```
 

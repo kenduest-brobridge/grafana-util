@@ -13,17 +13,17 @@ Use this when you need a read-only live inventory for one supported resource kin
 
 ## Examples
 ```bash
-# Purpose: List dashboards as a table from a local Grafana.
+# List dashboards as a table from a local Grafana.
 grafana-util status resource list dashboards --url http://localhost:3000 --basic-user admin --basic-password admin
 ```
 
 ```bash
-# Purpose: List folders as YAML.
+# List folders as YAML.
 grafana-util status resource list folders --profile prod --output-format yaml
 ```
 
 ```bash
-# Purpose: List alert rules as JSON.
+# List alert rules as JSON.
 grafana-util status resource list alert-rules --profile prod --output-format json
 ```
 

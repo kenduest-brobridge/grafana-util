@@ -25,6 +25,8 @@ Avoid:
 - AI-style emphasis such as "手術級", "精確形狀", "旨在帶領您"
 - abstract labels that hide the action
 - over-translating Grafana product objects
+- decorative emoji in headings
+- generated-looking code comments such as `# 用途：1. ...`
 
 ## Keep These Grafana Object Names In English
 
@@ -106,6 +108,8 @@ Rewrite phrases like these when you see them:
 - `需要機器可讀輸出的人`
 - `原始訊號不夠直觀`
 - `建議的驗證與秘密處理`
+- `# 用途：1. 選一種建立 profile 的方式。`
+- `# 用途：解決方案：...`
 
 Better replacements:
 
@@ -117,6 +121,8 @@ Better replacements:
 - `需要把輸出交給腳本或 pipeline 處理的人`
 - `資訊不夠直接`
 - `建議的連線與 secret 管理`
+- `# 建立一個本機 dev profile，密碼由終端機互動輸入。`
+- `# replay 前先 dry-run，確認不會直接改 live dashboard。`
 
 ## Translation Review Checklist
 
@@ -127,6 +133,7 @@ Before merging zh-TW doc edits, check:
 3. Is the sentence describing a real action, not just a category label?
 4. Does the page explain when to use the workflow, not only what it is called?
 5. If the page includes English, is it product terminology rather than untranslated filler?
+6. Do code comments explain the exact example, not the section title?
 
 ## Where To Apply This Guide
 

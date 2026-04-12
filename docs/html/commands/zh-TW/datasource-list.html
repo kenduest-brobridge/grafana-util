@@ -326,13 +326,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   font-weight: 500;
 }
 .nav-command-branch-item .nav-command-leaf-link:hover { color: var(--heading); }
-.handbook-command-map .nav-command-root-link {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  font-size: 0.9rem;
-}
 
 .sidebar-toggle {
   position: absolute;
@@ -378,71 +371,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map { margin: 0 0 24px; }
-.handbook-command-map-panel {
-  margin-top: 16px;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--panel) 96%, white);
-}
-.handbook-command-map .nav-group-title {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-group {
-  padding-top: 0;
-}
-.handbook-command-map .nav-command-group + .nav-command-group {
-  margin-top: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
-  padding-top: 10px;
-}
-.handbook-command-map .nav-command-sub-list {
-  margin-top: 8px;
-  margin-left: 0;
-  padding-left: 0;
-  border-left: 0;
-}
-.handbook-command-map .nav-command-branch {
-  display: grid;
-  grid-template-columns: minmax(130px, 0.22fr) minmax(0, 1fr);
-  gap: 12px 18px;
-  align-items: start;
-}
-.handbook-command-map .nav-command-branch-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-left: 0;
-  padding-left: 14px;
-}
-.handbook-command-map .nav-command-branch-item + .nav-command-branch-item { margin-top: 0; }
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-  line-height: 1.25;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link:hover,
-.handbook-command-map .nav-command-link a:hover {
-  border-color: color-mix(in srgb, var(--border) 45%, var(--accent));
-  background: var(--panel-strong);
-}
-@media (max-width: 720px) {
-  .handbook-command-map .nav-command-branch {
-    grid-template-columns: 1fr;
-  }
-  .handbook-command-map .nav-command-branch-list {
-    padding-left: 0;
-    border-left: 0;
-  }
-}
 .article p,
 .article li { color: var(--text); font-weight: 460; }
 .article ul li::marker,
@@ -950,15 +878,15 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="重點旗標">重點旗標</h2>
 <ul><li><code>--input-dir</code>：讀取本地 datasource 匯出 bundle 或 provisioning tree。</li><li><code>--input-format</code>：當本地路徑可能同時對應多種來源形狀時，選擇 <code>inventory</code> 或 <code>provisioning</code>。</li><li><code>--org-id</code>：列出指定的 Grafana org。</li><li><code>--all-orgs</code>：彙整所有可見 org 的 datasource inventory。需要 Basic auth。</li><li><code>--output-format</code>、<code>--text</code>、<code>--table</code>、<code>--csv</code>、<code>--json</code>、<code>--yaml</code>：輸出模式控制。</li><li><code>--output-columns</code>：選擇要顯示的 datasource 欄位。可用 <code>all</code> 展開目前資料集中所有可發現欄位。常見欄位包含 <code>uid</code>、<code>name</code>、<code>type</code>、<code>access</code>、<code>url</code>、<code>is_default</code>、<code>database</code>、<code>org</code>、<code>org_id</code>，也支援像 <code>jsonData.organization</code>、<code>jsonData.defaultBucket</code>、<code>secureJsonFields.basicAuthPassword</code> 這種巢狀路徑。</li><li><code>--list-columns</code>：列出常見的 <code>--output-columns</code> 欄位 id 與路徑模式後直接結束。</li><li><code>--no-header</code>：隱藏表格標頭。</li></ul>
 <h2 id="範例">範例</h2>
-<pre><code># 用途：列出線上 Grafana datasource inventory。
+<pre><code># 列出線上 Grafana datasource inventory。
 grafana-util datasource list --profile prod --output-format text</code></pre>
-<pre><code># 用途：列出線上 Grafana datasource inventory。
+<pre><code># 列出線上 Grafana datasource inventory。
 grafana-util datasource list --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --output-format yaml</code></pre>
-<pre><code># 用途：列出線上 Grafana datasource inventory。
+<pre><code># 列出線上 Grafana datasource inventory。
 grafana-util datasource list --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --json</code></pre>
-<pre><code># 用途：把 Influx / SQL / Loki 之類 datasource 的特定欄位拉到 human-readable 輸出。
+<pre><code># 把 Influx / SQL / Loki 之類 datasource 的特定欄位拉到 human-readable 輸出。
 grafana-util datasource list --url http://localhost:3000 --basic-user admin --prompt-password --table --output-columns uid,type,database,jsonData.organization,jsonData.defaultBucket</code></pre>
-<pre><code># 用途：列出來自本地匯出 bundle 的 datasource inventory。
+<pre><code># 列出來自本地匯出 bundle 的 datasource inventory。
 grafana-util datasource list --input-dir ./datasources --json</code></pre>
 <h2 id="採用前後對照">採用前後對照</h2>
 <ul><li><strong>採用前</strong>：想看 datasource inventory 時，常常要在 Grafana UI、export bundle 或零散 API 呼叫之間來回切換。</li><li><strong>採用後</strong>：一個 inventory 指令就能產生可審查的清單，輸出可用 text、table、CSV、JSON 或 YAML，也可來自線上 Grafana 或本地匯出 bundle；而且線上 JSON / YAML 不再丟失 datasource-specific 欄位。</li></ul>

@@ -20,7 +20,7 @@
 | 匯出或審查 dashboards | `grafana-util export dashboard` 或 `grafana-util dashboard summary` |
 | 套用前先審查本地變更 | `grafana-util workspace scan` 再跑 `workspace preview` |
 | 處理 alerts 或 route 預覽 | `grafana-util alert plan` 或 `alert preview-route` |
-| 管理使用者、團隊、組織與 service accounts | `grafana-util access ...` |
+| 管理 user、team、org 與 service accounts | `grafana-util access ...` |
 
 CLI 主要圍繞幾個穩定 root：`status`、`workspace`、`dashboard`、`datasource`、`alert`、`access`、`config profile`。工作流程脈絡請看 handbook，精確語法請看 command reference。
 
@@ -31,7 +31,7 @@ CLI 主要圍繞幾個穩定 root：`status`、`workspace`、`dashboard`、`data
 | Dashboards | 瀏覽、列表、匯出/匯入、比對、審查、修補、發布、歷史版本、相依性分析、政策檢查、截圖、raw-to-prompt 轉換。 | `grafana-util dashboard browse` |
 | Datasources | 盤點、匯出/匯入、比對、建立/修改/刪除、密鑰感知復原、類型探索。 | `grafana-util datasource list` |
 | Alerting | 規則、contact points、mute timings、templates、notification routes、審查計畫、套用流程、route 預覽。 | `grafana-util alert plan` |
-| Access | 組織、使用者、團隊、service accounts、service-account tokens、匯出/匯入、比對、刪除前審查。 | `grafana-util access user list` |
+| Access | org、user、team、service accounts、service-account tokens、匯出/匯入、比對、刪除前審查。 | `grafana-util access user list` |
 | Status 與 workspace | live readiness、資源盤點、本地 workspace scan/test/preview/package/apply、適合 CI 的檢查。 | `grafana-util status live` |
 | Profiles 與 secrets | repo-local 連線 profiles、直接旗標、環境變數驗證、互動輸入、支援的密鑰儲存。 | `grafana-util config profile add` |
 

@@ -326,13 +326,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   font-weight: 500;
 }
 .nav-command-branch-item .nav-command-leaf-link:hover { color: var(--heading); }
-.handbook-command-map .nav-command-root-link {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  font-size: 0.9rem;
-}
 
 .sidebar-toggle {
   position: absolute;
@@ -378,71 +371,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map { margin: 0 0 24px; }
-.handbook-command-map-panel {
-  margin-top: 16px;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--panel) 96%, white);
-}
-.handbook-command-map .nav-group-title {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-group {
-  padding-top: 0;
-}
-.handbook-command-map .nav-command-group + .nav-command-group {
-  margin-top: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
-  padding-top: 10px;
-}
-.handbook-command-map .nav-command-sub-list {
-  margin-top: 8px;
-  margin-left: 0;
-  padding-left: 0;
-  border-left: 0;
-}
-.handbook-command-map .nav-command-branch {
-  display: grid;
-  grid-template-columns: minmax(130px, 0.22fr) minmax(0, 1fr);
-  gap: 12px 18px;
-  align-items: start;
-}
-.handbook-command-map .nav-command-branch-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-left: 0;
-  padding-left: 14px;
-}
-.handbook-command-map .nav-command-branch-item + .nav-command-branch-item { margin-top: 0; }
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-  line-height: 1.25;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link:hover,
-.handbook-command-map .nav-command-link a:hover {
-  border-color: color-mix(in srgb, var(--border) 45%, var(--accent));
-  background: var(--panel-strong);
-}
-@media (max-width: 720px) {
-  .handbook-command-map .nav-command-branch {
-    grid-template-columns: 1fr;
-  }
-  .handbook-command-map .nav-command-branch-list {
-    padding-left: 0;
-    border-left: 0;
-  }
-}
 .article p,
 .article li { color: var(--text); font-weight: 460; }
 .article ul li::marker,
@@ -952,11 +880,11 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="補充說明">補充說明</h2>
 <ul><li>指令會依序使用 <code>$VISUAL</code>、<code>$EDITOR</code>，最後回退到 <code>vi</code>。</li><li>未指定 <code>--output</code> 或 <code>--apply-live</code> 時，這次編修只保持暫存，並自動執行 live <code>publish --dry-run</code> 預覽，不寫出草稿檔。</li><li>有指定 <code>--output</code> 時，指令會把編修後的草稿寫到磁碟；除非同時加上 <code>--publish-dry-run</code>，否則不會繼續預覽 publish。</li><li>編修完成後，指令會印出 review 摘要，包含阻擋性驗證問題與建議的下一步。</li><li><code>--apply-live</code> 只有在編修後的草稿維持 <code>dashboard.id</code> 為 null、保留原始 dashboard UID、且沒有阻擋性 review 問題時才會繼續。</li><li>編修後的 payload 仍必須保留 <code>dashboard.uid</code>。</li></ul>
 <h2 id="範例">範例</h2>
-<pre><code># 用途：編修一份 live dashboard，並把結果保留成本地草稿。
+<pre><code># 編修一份 live dashboard，並把結果保留成本地草稿。
 grafana-util dashboard edit-live --profile prod --dashboard-uid cpu-main --output ./drafts/cpu-main.edited.json</code></pre>
-<pre><code># 用途：編修一份 live dashboard，不寫出草稿檔，只預覽 live publish。
+<pre><code># 編修一份 live dashboard，不寫出草稿檔，只預覽 live publish。
 grafana-util dashboard edit-live --url http://localhost:3000 --basic-user admin --basic-password admin --dashboard-uid cpu-main</code></pre>
-<pre><code># 用途：編修一份 live dashboard，並明確回寫到 Grafana。
+<pre><code># 編修一份 live dashboard，並明確回寫到 Grafana。
 grafana-util dashboard edit-live --profile prod --dashboard-uid cpu-main --apply-live --yes --message &#x27;Hotfix CPU dashboard&#x27;</code></pre>
 <h2 id="相關指令">相關指令</h2>
 <ul><li><a href="dashboard-get.html">dashboard get</a></li><li><a href="dashboard-clone.html">dashboard clone</a></li><li><a href="dashboard-publish.html">dashboard publish</a></li></ul>

@@ -326,13 +326,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   font-weight: 500;
 }
 .nav-command-branch-item .nav-command-leaf-link:hover { color: var(--heading); }
-.handbook-command-map .nav-command-root-link {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  font-size: 0.9rem;
-}
 
 .sidebar-toggle {
   position: absolute;
@@ -378,71 +371,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map { margin: 0 0 24px; }
-.handbook-command-map-panel {
-  margin-top: 16px;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--panel) 96%, white);
-}
-.handbook-command-map .nav-group-title {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-group {
-  padding-top: 0;
-}
-.handbook-command-map .nav-command-group + .nav-command-group {
-  margin-top: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
-  padding-top: 10px;
-}
-.handbook-command-map .nav-command-sub-list {
-  margin-top: 8px;
-  margin-left: 0;
-  padding-left: 0;
-  border-left: 0;
-}
-.handbook-command-map .nav-command-branch {
-  display: grid;
-  grid-template-columns: minmax(130px, 0.22fr) minmax(0, 1fr);
-  gap: 12px 18px;
-  align-items: start;
-}
-.handbook-command-map .nav-command-branch-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-left: 0;
-  padding-left: 14px;
-}
-.handbook-command-map .nav-command-branch-item + .nav-command-branch-item { margin-top: 0; }
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-  line-height: 1.25;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link:hover,
-.handbook-command-map .nav-command-link a:hover {
-  border-color: color-mix(in srgb, var(--border) 45%, var(--accent));
-  background: var(--panel-strong);
-}
-@media (max-width: 720px) {
-  .handbook-command-map .nav-command-branch {
-    grid-template-columns: 1fr;
-  }
-  .handbook-command-map .nav-command-branch-list {
-    padding-left: 0;
-    border-left: 0;
-  }
-}
 .article p,
 .article li { color: var(--text); font-weight: 460; }
 .article ul li::marker,
@@ -956,19 +884,19 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="key-flags">Key flags</h2>
 <ul><li><code>list</code>: <code>--input-dir</code>, <code>--scope</code>, <code>--all-orgs</code>, <code>--query</code>, <code>--login</code>, <code>--email</code>, <code>--org-role</code>, <code>--grafana-admin</code>, <code>--with-teams</code>, <code>--output-columns</code>, <code>--list-columns</code>, <code>--page</code>, <code>--per-page</code>, <code>--table</code>, <code>--csv</code>, <code>--json</code>, <code>--yaml</code>, <code>--output-format</code></li><li><code>browse</code>: <code>--input-dir</code>, <code>--scope</code>, <code>--all-orgs</code>, <code>--current-org</code>, <code>--query</code>, <code>--login</code>, <code>--email</code>, <code>--org-role</code>, <code>--grafana-admin</code>, <code>--page</code>, <code>--per-page</code></li><li><code>add</code>: <code>--login</code>, <code>--email</code>, <code>--name</code>, <code>--password</code> or <code>--password-file</code> or <code>--prompt-user-password</code>, <code>--org-role</code>, <code>--grafana-admin</code>, <code>--json</code></li><li><code>modify</code>: <code>--user-id</code>, <code>--login</code>, <code>--email</code>, <code>--set-login</code>, <code>--set-email</code>, <code>--set-name</code>, <code>--set-password</code> or <code>--set-password-file</code> or <code>--prompt-set-password</code>, <code>--set-org-role</code>, <code>--set-grafana-admin</code>, <code>--json</code></li><li><code>export</code> and <code>diff</code>: <code>--output-dir</code> or <code>--diff-dir</code>, <code>--overwrite</code>, <code>--dry-run</code>, <code>--scope</code>, <code>--with-teams</code></li><li><code>import</code>: <code>--input-dir</code>, <code>--scope</code>, <code>--replace-existing</code>, <code>--dry-run</code>, <code>--table</code>, <code>--json</code>, <code>--output-format</code>, <code>--yes</code></li><li><code>delete</code>: <code>--user-id</code>, <code>--login</code>, <code>--email</code>, optional <code>--scope</code>, <code>--prompt</code>, <code>--yes</code>, <code>--json</code></li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code># Purpose: Inspect users in one org before changing membership or roles.
+<pre><code># Inspect users in one org before changing membership or roles.
 grafana-util access user list --url http://localhost:3000 --basic-user admin --basic-password admin --scope org --output-format text</code></pre>
-<pre><code># Purpose: Review a saved user bundle without touching Grafana.
+<pre><code># Review a saved user bundle without touching Grafana.
 grafana-util access user list --input-dir ./access-users --output-format table</code></pre>
-<pre><code># Purpose: Browse one saved user bundle interactively without touching Grafana.
+<pre><code># Browse one saved user bundle interactively without touching Grafana.
 grafana-util access user browse --input-dir ./access-users --login alice</code></pre>
-<pre><code># Purpose: Create one user with explicit auth and org scope.
+<pre><code># Create one user with explicit auth and org scope.
 grafana-util access user add --url http://localhost:3000 --basic-user admin --basic-password admin --login alice --email alice@example.com --name Alice --password secret</code></pre>
-<pre><code># Purpose: Delete one account after checking the current org users.
+<pre><code># Delete one account after checking the current org users.
 grafana-util access user delete --url http://localhost:3000 --basic-user admin --basic-password admin --login temp-user --scope global --yes --json</code></pre>
-<pre><code># Purpose: Prompt for one user, confirm the target, and then delete it.
+<pre><code># Prompt for one user, confirm the target, and then delete it.
 grafana-util access user delete --url http://localhost:3000 --basic-user admin --basic-password admin --scope global --prompt</code></pre>
-<pre><code># Purpose: Prompt for the delete scope first, then select one user and confirm the delete.
+<pre><code># Prompt for the delete scope first, then select one user and confirm the delete.
 grafana-util access user delete --url http://localhost:3000 --basic-user admin --basic-password admin --prompt</code></pre>
 <h2 id="related-commands">Related commands</h2>
 <ul><li><a href="access.html">access</a></li><li><a href="access-org.html">access org</a></li><li><a href="access-team.html">access team</a></li><li><a href="access-service-account.html">access service-account</a></li></ul>

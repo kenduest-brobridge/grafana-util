@@ -37,12 +37,12 @@
 ## 範例
 
 ```bash
-# 用途：根據目標 alert 資源建立一份暫存的 alert 管理計畫。
+# 根據目標 alert 資源建立一份暫存的 alert 管理計畫。
 grafana-util alert plan --desired-dir ./alerts/desired
 ```
 
 ```bash
-# 用途：根據目標 alert 資源建立一份暫存的 alert 管理計畫。
+# 根據目標 alert 資源建立一份暫存的 alert 管理計畫。
 grafana-util alert plan --desired-dir ./alerts/desired --prune --dashboard-uid-map ./dashboard-map.json --panel-id-map ./panel-map.json --output-format json
 ```
 

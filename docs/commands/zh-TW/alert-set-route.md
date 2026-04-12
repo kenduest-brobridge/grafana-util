@@ -37,12 +37,12 @@
 ## 範例
 
 ```bash
-# 用途：撰寫或替換由工具擁有的暫存通知路由。
+# 撰寫或替換由工具擁有的暫存通知路由。
 grafana-util alert set-route --desired-dir ./alerts/desired --receiver pagerduty-primary --label team=platform --severity critical
 ```
 
 ```bash
-# 用途：撰寫或替換由工具擁有的暫存通知路由。
+# 撰寫或替換由工具擁有的暫存通知路由。
 grafana-util alert set-route --desired-dir ./alerts/desired --receiver pagerduty-primary --label team=platform --severity critical --dry-run
 ```
 

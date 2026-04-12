@@ -23,17 +23,17 @@
 ## 範例
 
 ```bash
-# 用途：套用一份已審閱過的 alert 管理計畫。
+# 套用一份已審閱過的 alert 管理計畫。
 grafana-util alert apply --profile prod --plan-file ./alert-plan-reviewed.json --approve
 ```
 
 ```bash
-# 用途：套用一份已審閱過的 alert 管理計畫。
+# 套用一份已審閱過的 alert 管理計畫。
 grafana-util alert apply --url http://localhost:3000 --basic-user admin --basic-password admin --plan-file ./alert-plan-reviewed.json --approve
 ```
 
 ```bash
-# 用途：套用一份已審閱過的 alert 管理計畫。
+# 套用一份已審閱過的 alert 管理計畫。
 grafana-util alert apply --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --plan-file ./alert-plan-reviewed.json --approve
 ```
 

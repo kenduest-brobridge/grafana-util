@@ -17,22 +17,22 @@ Use this when a local draft is ready to go live and you want the command to stag
 
 ## Examples
 ```bash
-# Purpose: Publish one local dashboard JSON file through the existing dashboard import pipeline.
+# Publish one local dashboard JSON file through the existing dashboard import pipeline.
 grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --basic-password admin --input ./drafts/cpu-main.json --folder-uid infra --message 'Promote CPU dashboard'
 ```
 
 ```bash
-# Purpose: Publish one local dashboard JSON file through the existing dashboard import pipeline.
+# Publish one local dashboard JSON file through the existing dashboard import pipeline.
 grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --basic-password admin --input ./drafts/cpu-main.json --dry-run --table
 ```
 
 ```bash
-# Purpose: Publish one generated dashboard from standard input.
+# Publish one generated dashboard from standard input.
 jsonnet dashboards/cpu.jsonnet | grafana-util dashboard publish --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --input - --replace-existing
 ```
 
 ```bash
-# Purpose: Watch one local draft file and rerun dry-run after each save.
+# Watch one local draft file and rerun dry-run after each save.
 grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --basic-password admin --input ./drafts/cpu-main.json --dry-run --watch
 ```
 

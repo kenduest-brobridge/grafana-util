@@ -36,12 +36,12 @@ Export alerting resources into `raw/` JSON files.
 ## Examples
 
 ```bash
-# Purpose: Export alerting resources into `raw/` JSON files.
+# Export alerting resources into `raw/` JSON files.
 grafana-util alert export --url http://localhost:3000 --basic-user admin --basic-password admin --output-dir ./alerts --overwrite
 ```
 
 ```bash
-# Purpose: Export alerting resources into `raw/` JSON files.
+# Export alerting resources into `raw/` JSON files.
 grafana-util alert export --url http://localhost:3000 --basic-user admin --basic-password admin --output-dir ./alerts --flat
 ```
 

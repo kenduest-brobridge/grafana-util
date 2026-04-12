@@ -11,12 +11,12 @@
 
 ## 範例
 ```bash
-# 用途：用表格列出支援的 resource kinds。
+# 用表格列出支援的 resource kinds。
 grafana-util status resource kinds
 ```
 
 ```bash
-# 用途：以 JSON 輸出相同的支援清單。
+# 以 JSON 輸出相同的支援清單。
 grafana-util status resource kinds --output-format json
 ```
 

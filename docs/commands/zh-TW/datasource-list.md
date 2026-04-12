@@ -18,27 +18,27 @@
 
 ## 範例
 ```bash
-# 用途：列出線上 Grafana datasource inventory。
+# 列出線上 Grafana datasource inventory。
 grafana-util datasource list --profile prod --output-format text
 ```
 
 ```bash
-# 用途：列出線上 Grafana datasource inventory。
+# 列出線上 Grafana datasource inventory。
 grafana-util datasource list --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --output-format yaml
 ```
 
 ```bash
-# 用途：列出線上 Grafana datasource inventory。
+# 列出線上 Grafana datasource inventory。
 grafana-util datasource list --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --json
 ```
 
 ```bash
-# 用途：把 Influx / SQL / Loki 之類 datasource 的特定欄位拉到 human-readable 輸出。
+# 把 Influx / SQL / Loki 之類 datasource 的特定欄位拉到 human-readable 輸出。
 grafana-util datasource list --url http://localhost:3000 --basic-user admin --prompt-password --table --output-columns uid,type,database,jsonData.organization,jsonData.defaultBucket
 ```
 
 ```bash
-# 用途：列出來自本地匯出 bundle 的 datasource inventory。
+# 列出來自本地匯出 bundle 的 datasource inventory。
 grafana-util datasource list --input-dir ./datasources --json
 ```
 

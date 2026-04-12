@@ -16,22 +16,22 @@
 
 ## 範例
 ```bash
-# 用途：依 UID 或資料夾路徑刪除線上儀表板。
+# 依 UID 或資料夾路徑刪除線上儀表板。
 grafana-util dashboard delete --profile prod --uid cpu-main --dry-run --json
 ```
 
 ```bash
-# 用途：依 UID 或資料夾路徑刪除線上儀表板。
+# 依 UID 或資料夾路徑刪除線上儀表板。
 grafana-util dashboard delete --url http://localhost:3000 --basic-user admin --basic-password admin --path 'Platform / Infra' --yes
 ```
 
 ```bash
-# 用途：在終端機中提示刪除 selector、預覽刪除計畫，並確認執行。
+# 在終端機中提示刪除 selector、預覽刪除計畫，並確認執行。
 grafana-util dashboard delete --url http://localhost:3000 --prompt
 ```
 
 ```bash
-# 用途：依 UID 或資料夾路徑刪除線上儀表板。
+# 依 UID 或資料夾路徑刪除線上儀表板。
 grafana-util dashboard delete --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --uid cpu-main --dry-run --json
 ```
 

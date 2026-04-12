@@ -326,13 +326,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   font-weight: 500;
 }
 .nav-command-branch-item .nav-command-leaf-link:hover { color: var(--heading); }
-.handbook-command-map .nav-command-root-link {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  font-size: 0.9rem;
-}
 
 .sidebar-toggle {
   position: absolute;
@@ -378,71 +371,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map { margin: 0 0 24px; }
-.handbook-command-map-panel {
-  margin-top: 16px;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--panel) 96%, white);
-}
-.handbook-command-map .nav-group-title {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-group {
-  padding-top: 0;
-}
-.handbook-command-map .nav-command-group + .nav-command-group {
-  margin-top: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
-  padding-top: 10px;
-}
-.handbook-command-map .nav-command-sub-list {
-  margin-top: 8px;
-  margin-left: 0;
-  padding-left: 0;
-  border-left: 0;
-}
-.handbook-command-map .nav-command-branch {
-  display: grid;
-  grid-template-columns: minmax(130px, 0.22fr) minmax(0, 1fr);
-  gap: 12px 18px;
-  align-items: start;
-}
-.handbook-command-map .nav-command-branch-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-left: 0;
-  padding-left: 14px;
-}
-.handbook-command-map .nav-command-branch-item + .nav-command-branch-item { margin-top: 0; }
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-  line-height: 1.25;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link:hover,
-.handbook-command-map .nav-command-link a:hover {
-  border-color: color-mix(in srgb, var(--border) 45%, var(--accent));
-  background: var(--panel-strong);
-}
-@media (max-width: 720px) {
-  .handbook-command-map .nav-command-branch {
-    grid-template-columns: 1fr;
-  }
-  .handbook-command-map .nav-command-branch-list {
-    padding-left: 0;
-    border-left: 0;
-  }
-}
 .article p,
 .article li { color: var(--text); font-weight: 460; }
 .article ul li::marker,
@@ -953,9 +881,9 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="key-flags">Key flags</h2>
 <ul><li><code>--dashboard-uid</code> or <code>--dashboard-url</code>: choose the dashboard to capture.</li><li><code>--output</code>: destination file for the capture.</li><li><code>--panel-id</code>: capture only one panel through the solo route.</li><li><code>--vars-query</code> and <code>--var</code>: pass variable state into the capture.</li><li><code>--full-page</code> and <code>--full-page-output</code>: capture the full scrollable page or tiled output.</li><li><code>--header-title</code>, <code>--header-url</code>, <code>--header-captured-at</code>, <code>--header-text</code>: add PNG or JPEG headers.</li><li><code>--theme</code>: choose the browser theme.</li><li><code>--output-format</code>: force PNG, JPEG, or PDF.</li><li><code>--width</code>, <code>--height</code>, <code>--device-scale-factor</code>, <code>--wait-ms</code>, <code>--browser-path</code>: rendering controls.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code># Purpose: Open one dashboard in a headless browser and capture image or PDF output.
+<pre><code># Open one dashboard in a headless browser and capture image or PDF output.
 grafana-util dashboard screenshot --dashboard-url &#x27;https://grafana.example.com/d/cpu-main/cpu-overview?var-cluster=prod-a&#x27; --profile prod --output ./cpu-main.png --full-page --header-title --header-url --header-captured-at</code></pre>
-<pre><code># Purpose: Open one dashboard in a headless browser and capture image or PDF output.
+<pre><code># Open one dashboard in a headless browser and capture image or PDF output.
 grafana-util dashboard screenshot --url https://grafana.example.com --dashboard-uid rYdddlPWk --panel-id 20 --vars-query &#x27;var-datasource=prom-main&amp;var-job=node-exporter&amp;var-node=host01:9100&#x27; --basic-user admin --prompt-password --output ./panel.png --header-title &#x27;CPU Busy&#x27; --header-text &#x27;Solo panel debug capture&#x27;</code></pre>
 <h2 id="related-commands">Related commands</h2>
 <ul><li><a href="dashboard-variables.html">dashboard variables</a></li><li><a href="dashboard-summary.html">dashboard summary</a></li><li><a href="dashboard-dependencies.html">dashboard dependencies</a></li></ul>

@@ -17,17 +17,17 @@ Use this when you need to rewrite dashboard metadata locally before review or pu
 
 ## Examples
 ```bash
-# Purpose: Patch one local dashboard JSON file in place or write it to a new path.
+# Patch one local dashboard JSON file in place or write it to a new path.
 grafana-util dashboard patch --input ./dashboards/raw/cpu-main.json --name 'CPU Overview' --folder-uid infra --tag prod --tag sre
 ```
 
 ```bash
-# Purpose: Patch one local dashboard JSON file in place or write it to a new path.
+# Patch one local dashboard JSON file in place or write it to a new path.
 grafana-util dashboard patch --input ./drafts/cpu-main.json --output ./drafts/cpu-main-patched.json --uid cpu-main --message 'Add folder metadata before publish'
 ```
 
 ```bash
-# Purpose: Patch one generated dashboard from standard input into an explicit output file.
+# Patch one generated dashboard from standard input into an explicit output file.
 jsonnet dashboards/cpu.jsonnet | grafana-util dashboard patch --input - --output ./drafts/cpu-main.json --folder-uid infra
 ```
 

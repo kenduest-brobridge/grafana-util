@@ -326,13 +326,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   font-weight: 500;
 }
 .nav-command-branch-item .nav-command-leaf-link:hover { color: var(--heading); }
-.handbook-command-map .nav-command-root-link {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  font-size: 0.9rem;
-}
 
 .sidebar-toggle {
   position: absolute;
@@ -378,71 +371,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map { margin: 0 0 24px; }
-.handbook-command-map-panel {
-  margin-top: 16px;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--panel) 96%, white);
-}
-.handbook-command-map .nav-group-title {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-group {
-  padding-top: 0;
-}
-.handbook-command-map .nav-command-group + .nav-command-group {
-  margin-top: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
-  padding-top: 10px;
-}
-.handbook-command-map .nav-command-sub-list {
-  margin-top: 8px;
-  margin-left: 0;
-  padding-left: 0;
-  border-left: 0;
-}
-.handbook-command-map .nav-command-branch {
-  display: grid;
-  grid-template-columns: minmax(130px, 0.22fr) minmax(0, 1fr);
-  gap: 12px 18px;
-  align-items: start;
-}
-.handbook-command-map .nav-command-branch-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-left: 0;
-  padding-left: 14px;
-}
-.handbook-command-map .nav-command-branch-item + .nav-command-branch-item { margin-top: 0; }
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-  line-height: 1.25;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link:hover,
-.handbook-command-map .nav-command-link a:hover {
-  border-color: color-mix(in srgb, var(--border) 45%, var(--accent));
-  background: var(--panel-strong);
-}
-@media (max-width: 720px) {
-  .handbook-command-map .nav-command-branch {
-    grid-template-columns: 1fr;
-  }
-  .handbook-command-map .nav-command-branch-list {
-    padding-left: 0;
-    border-left: 0;
-  }
-}
 .article p,
 .article li { color: var(--text); font-weight: 460; }
 .article ul li::marker,
@@ -920,15 +848,15 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
       <div class="layout">
 <aside class="nav-sidebar">
   <button class="sidebar-toggle sidebar-toggle-left" type="button" aria-expanded="true" aria-label="Toggle handbook navigation">◀</button>
-  <div class="nav-sidebar-content"><section class="nav-section"><h2>Guide Map</h2><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 1 · Start Here</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="index.html" class="nav-item">Overview</a></li><li class="nav-tree-node"><a href="what-is-grafana-util.html" class="nav-item">What grafana-util is for</a></li><li class="nav-tree-node"><a href="getting-started.html" class="nav-item">Getting Started</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 2 · Role Paths</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="role-new-user.html" class="nav-item">First Run / Beginner Path</a></li><li class="nav-tree-node"><a href="role-sre-ops.html" class="nav-item">SRE / Operator</a></li><li class="nav-tree-node"><a href="role-automation-ci.html" class="nav-item">Automation / CI</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 3 · Operation Surfaces</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="status-workspace.html" class="nav-item">Status &amp; Workspace</a></li><li class="nav-tree-node"><a href="dashboard.html" class="nav-item">Dashboard</a></li><li class="nav-tree-node"><a href="datasource.html" class="nav-item">Datasource</a></li><li class="nav-tree-node"><a href="alert.html" class="nav-item">Alert</a></li><li class="nav-tree-node"><a href="access.html" class="nav-item">Access</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 4 · Design Principles</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="architecture.html" class="nav-item">Design Principles</a></li></ul></div><div class="nav-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Part 5 · Reference &amp; Troubleshooting</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="scenarios.html" class="nav-item">Scenarios</a></li><li class="nav-tree-node"><a href="recipes.html" class="nav-item">Recipes</a></li><li class="nav-tree-node"><a href="reference.html" class="nav-item active">Reference</a></li><li class="nav-tree-node"><a href="troubleshooting.html" class="nav-item">Troubleshooting</a></li></ul></div></section><section class="nav-section nav-command-section collapsed"><button class="nav-group-header nav-section-toggle" type="button" aria-expanded="false"><span class="nav-group-title-text">Command Relationships</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-section-body"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Read-Only Checks</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><a href="../../commands/en/status.html" class="nav-command-root-link">status</a></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/en/resource.html" class="nav-command-leaf-link">resource</a></li><li class="nav-command-branch-item"><a href="../../commands/en/snapshot.html" class="nav-command-leaf-link">snapshot</a></li></ul></div></div></div><div class="nav-group nav-command-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Workspace Review</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><a href="../../commands/en/workspace.html" class="nav-command-root-link">workspace</a></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/en/workspace-scan.html" class="nav-command-leaf-link">scan</a></li><li class="nav-command-branch-item"><a href="../../commands/en/workspace-test.html" class="nav-command-leaf-link">test</a></li><li class="nav-command-branch-item"><a href="../../commands/en/workspace-preview.html" class="nav-command-leaf-link">preview</a></li><li class="nav-command-branch-item"><a href="../../commands/en/workspace-apply.html" class="nav-command-leaf-link">apply</a></li></ul></div></div></div></div></section><section class="nav-section"><h2>Command Reference</h2><a href="../../commands/en/index.html" class="nav-command-entry">Open command reference</a></section></div>
+  <div class="nav-sidebar-content"><section class="nav-section"><h2>Guide Map</h2><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 1 · Start Here</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="index.html" class="nav-item">Overview</a></li><li class="nav-tree-node"><a href="what-is-grafana-util.html" class="nav-item">What grafana-util is for</a></li><li class="nav-tree-node"><a href="getting-started.html" class="nav-item">Getting Started</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 2 · Role Paths</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="role-new-user.html" class="nav-item">First Run / Beginner Path</a></li><li class="nav-tree-node"><a href="role-sre-ops.html" class="nav-item">SRE / Operator</a></li><li class="nav-tree-node"><a href="role-automation-ci.html" class="nav-item">Automation / CI</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 3 · Operation Surfaces</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="status-workspace.html" class="nav-item">Status &amp; Workspace</a></li><li class="nav-tree-node"><a href="dashboard.html" class="nav-item">Dashboard</a></li><li class="nav-tree-node"><a href="datasource.html" class="nav-item">Datasource</a></li><li class="nav-tree-node"><a href="alert.html" class="nav-item">Alert</a></li><li class="nav-tree-node"><a href="access.html" class="nav-item">Access</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 4 · Design Principles</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="architecture.html" class="nav-item">Design Principles</a></li></ul></div><div class="nav-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Part 5 · Reference &amp; Troubleshooting</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="scenarios.html" class="nav-item">Scenarios</a></li><li class="nav-tree-node"><a href="recipes.html" class="nav-item">Recipes</a></li><li class="nav-tree-node"><a href="reference.html" class="nav-item active">Reference</a></li><li class="nav-tree-node"><a href="troubleshooting.html" class="nav-item">Troubleshooting</a></li></ul></div></section><section class="nav-section nav-command-section collapsed"><button class="nav-group-header nav-section-toggle" type="button" aria-expanded="false"><span class="nav-group-title-text">Command Shortcuts</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-section-body"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Read-Only Checks</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><a href="../../commands/en/status.html" class="nav-command-root-link">status</a></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/en/resource.html" class="nav-command-leaf-link">resource</a></li><li class="nav-command-branch-item"><a href="../../commands/en/snapshot.html" class="nav-command-leaf-link">snapshot</a></li></ul></div></div></div><div class="nav-group nav-command-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Workspace Review</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><a href="../../commands/en/workspace.html" class="nav-command-root-link">workspace</a></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/en/workspace-scan.html" class="nav-command-leaf-link">scan</a></li><li class="nav-command-branch-item"><a href="../../commands/en/workspace-test.html" class="nav-command-leaf-link">test</a></li><li class="nav-command-branch-item"><a href="../../commands/en/workspace-preview.html" class="nav-command-leaf-link">preview</a></li><li class="nav-command-branch-item"><a href="../../commands/en/workspace-apply.html" class="nav-command-leaf-link">apply</a></li></ul></div></div></div></div></section><section class="nav-section"><h2>Command Reference</h2><a href="../../commands/en/index.html" class="nav-command-entry">Open command reference</a></section></div>
 </aside>
 
 <article class="article">
 <div class="breadcrumbs"><a href="../../index.html">Home</a> / Handbook / Reference</div>
 
-<div class="hero-eyebrow">Part 5 · Reference &amp; Troubleshooting · Chapter 15 of 16</div><h1><span class="hero-title-main">Reference</span></h1><p class="hero-subtitle">Technical Reference</p>
+<div class="hero-eyebrow">Part 5 · Reference &amp; Troubleshooting</div><h1><span class="hero-title-main">Reference</span></h1><p class="hero-subtitle">Technical Reference</p>
 
-<section class="section-index"><h2>Chapter Index</h2><p class="section-index-summary">Jump straight to the section you need.</p><ul class="section-index-list layout-list"><li><a href="#command-relationships">Command Relationships</a></li><li><a href="#who-it-is-for">Who It Is For</a></li><li><a href="#primary-goals">Primary Goals</a></li><li><a href="#output-selector-rules">Output selector rules</a></li><li><a href="#profile-connection-and-secret-handling">Profile, connection, and secret handling</a></li><li><a href="#output-formats-comparison">Output Formats Comparison</a></li><li><a href="#dashboard-lanes">Dashboard Lanes</a></li><li><a href="#automation-scripting-cicd">Automation &amp; Scripting (CI/CD)</a></li></ul></section><section class="handbook-command-map"><h2 id="command-relationships">Command Relationships</h2><div class="handbook-command-map-panel"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Read-Only Checks</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><a href="../../commands/en/status.html" class="nav-command-root-link">status</a></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/en/resource.html" class="nav-command-leaf-link">resource</a></li><li class="nav-command-branch-item"><a href="../../commands/en/snapshot.html" class="nav-command-leaf-link">snapshot</a></li></ul></div></div></div><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Workspace Review</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><a href="../../commands/en/workspace.html" class="nav-command-root-link">workspace</a></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/en/workspace-scan.html" class="nav-command-leaf-link">scan</a></li><li class="nav-command-branch-item"><a href="../../commands/en/workspace-test.html" class="nav-command-leaf-link">test</a></li><li class="nav-command-branch-item"><a href="../../commands/en/workspace-preview.html" class="nav-command-leaf-link">preview</a></li><li class="nav-command-branch-item"><a href="../../commands/en/workspace-apply.html" class="nav-command-leaf-link">apply</a></li></ul></div></div></div></div></section><p>Use this chapter when you already know the workflow and need the exact command behavior, output flags, profile rules, or secret-handling details.</p>
+<section class="section-index"><h2>Chapter Index</h2><p class="section-index-summary">Jump straight to the section you need.</p><ul class="section-index-list layout-list"><li><a href="#who-it-is-for">Who It Is For</a></li><li><a href="#primary-goals">Primary Goals</a></li><li><a href="#output-selector-rules">Output selector rules</a></li><li><a href="#profile-connection-and-secret-handling">Profile, connection, and secret handling</a></li><li><a href="#output-formats-comparison">Output Formats Comparison</a></li><li><a href="#dashboard-lanes">Dashboard Lanes</a></li><li><a href="#automation-scripting-cicd">Automation &amp; Scripting (CI/CD)</a></li></ul></section><p>Use this chapter when you already know the workflow and need the exact command behavior, output flags, profile rules, or secret-handling details.</p>
 <p>This manual provides the current command surface for <code>grafana-util</code>, including profile resolution, output flags, and status entrypoints.</p>
 <h2 id="who-it-is-for">Who It Is For</h2>
 <ul><li>Operators who know which command family they need and want exact flags or output behavior.</li><li>Script and CI authors who need stable formatting and secret-handling rules.</li><li>Reviewers checking which <code>--output-format</code> value fits a workflow.</li></ul>
@@ -1007,15 +935,15 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <table><thead><tr><th>File</th><th>Default location</th></tr></thead><tbody><tr><td><code>grafana-util.yaml</code></td><td>current working directory, or the path given by <code>GRAFANA_UTIL_CONFIG</code></td></tr><tr><td><code>.grafana-util.secrets.yaml</code></td><td>same directory as <code>grafana-util.yaml</code></td></tr><tr><td><code>.grafana-util.secrets.key</code></td><td>same directory as <code>grafana-util.yaml</code></td></tr></tbody></table>
 <p>When <code>encrypted-file</code> uses these repo-local helper paths, <code>config profile add</code> also appends them to the config-directory <code>.gitignore</code> if they are not already ignored.</p>
 <h3 id="2-initialize-add-and-list-profiles">2. Initialize, add, and list profiles</h3>
-<pre><code># Purpose: 2. Initialize, add, and list profiles.
+<pre><code># Create the local profile config file first.
 grafana-util config profile init --overwrite</code></pre>
-<pre><code># Purpose: 2. Initialize, add, and list profiles.
+<pre><code># Create a dev profile that prompts for the password.
 grafana-util config profile add dev --url http://127.0.0.1:3000 --basic-user admin --prompt-password</code></pre>
-<pre><code># Purpose: 2. Initialize, add, and list profiles.
+<pre><code># Create a CI profile that reads its token from the environment.
 grafana-util config profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN --store-secret os</code></pre>
-<pre><code># Purpose: 2. Initialize, add, and list profiles.
+<pre><code># List the profile names resolved from the current config.
 grafana-util config profile list</code></pre>
-<pre><code># Purpose: 2. Initialize, add, and list profiles.
+<pre><code># Print the fully commented profile template.
 grafana-util config profile example --mode full</code></pre>
 <p><strong>Expected Output:</strong></p>
 <pre><code>Wrote grafana-util.yaml.
@@ -1023,9 +951,9 @@ dev
 prod</code></pre>
 <p><code>config profile init</code> creates the local config file, <code>config profile add</code> creates a usable profile in one step, and <code>config profile list</code> prints one resolved profile name per line. <code>config profile example</code> prints a full commented template that you can copy and edit.</p>
 <h3 id="3-show-the-resolved-profile">3. Show the resolved profile</h3>
-<pre><code># Purpose: 3. Show the resolved profile.
+<pre><code># Inspect the final resolved connection fields for prod.
 grafana-util config profile show --profile prod --output-format yaml</code></pre>
-<pre><code># Purpose: 3. Show the resolved profile.
+<pre><code># Show resolved secrets only during local debugging.
 grafana-util config profile show --profile prod --show-secrets --output-format yaml</code></pre>
 <p><strong>Expected Output:</strong></p>
 <pre><code>name: prod
@@ -1090,11 +1018,11 @@ profiles:
       key: grafana-util/profile/stage_encrypted_local_key/password
       path: .grafana-util.secrets.yaml</code></pre>
 <h3 id="5-daily-use-examples-in-the-common-auth-styles">5. Daily-use examples in the common auth styles</h3>
-<pre><code># Purpose: 5. Daily-use examples in the common auth styles.
+<pre><code># Prefer saved profiles for normal daily checks.
 grafana-util status live --profile prod --output-format yaml</code></pre>
-<pre><code># Purpose: 5. Daily-use examples in the common auth styles.
+<pre><code># Use direct Basic auth for bootstrap or break-glass checks.
 grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output-format yaml</code></pre>
-<pre><code># Purpose: 5. Daily-use examples in the common auth styles.
+<pre><code># Use token auth for scoped automation that needs JSON output.
 grafana-util status overview live --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --output-format json</code></pre>
 <p>Use the <code>--profile</code> form by default. Keep direct Basic auth for admin-heavy workflows and token auth for scoped automation where you understand the permission envelope.</p>
 <h3 id="6-complete-secret-handling-examples">6. Complete secret-handling examples</h3>
@@ -1132,7 +1060,7 @@ grafana-util status overview live --profile ci --output-format json</code></pre>
 <h3 id="0-start-with-this-flag-map">0. Start with this flag map</h3>
 <table><thead><tr><th>Situation</th><th>Syntax</th><th>Common values</th><th>Notes</th></tr></thead><tbody><tr><td>Direct format selectors</td><td><code>--text</code>, <code>--table</code>, <code>--csv</code>, <code>--json</code>, <code>--yaml</code></td><td><code>text</code> / <code>table</code> / <code>csv</code> / <code>json</code> / <code>yaml</code></td><td>Common on list, review, inspect, and some dry-run mutation surfaces.</td></tr><tr><td>Single selector for common formats</td><td><code>--output-format &lt;FORMAT&gt;</code></td><td><code>text</code> / <code>table</code> / <code>csv</code> / <code>json</code> / <code>yaml</code></td><td>Some commands also define command-specific values such as <code>governance</code>, <code>governance-json</code>, <code>queries-json</code>, <code>mermaid</code>, or <code>dot</code>.</td></tr><tr><td>Live <code>status</code> entrypoint</td><td><code>--output-format &lt;FORMAT&gt;</code></td><td><code>table</code> / <code>csv</code> / <code>text</code> / <code>json</code> / <code>yaml</code> / <code>interactive</code></td><td>These live entrypoints now use the same standard selector.</td></tr><tr><td>Write the rendered result to a file</td><td><code>--output-file &lt;PATH&gt;</code> or a command-specific flag</td><td>command-specific</td><td>Common on dependencies, policy, screenshot, and similar output-producing commands.</td></tr></tbody></table>
 <h3 id="1-table-or-json-selection">1. Table or JSON selection</h3>
-<pre><code># Purpose: 1. Table or JSON selection.
+<pre><code># Check which output formats dashboard list supports.
 grafana-util dashboard list -h</code></pre>
 <p><strong>Expected Output:</strong></p>
 <pre><code>--text
@@ -1143,9 +1071,9 @@ grafana-util dashboard list -h</code></pre>
 --output-format &lt;OUTPUT_FORMAT&gt;</code></pre>
 <p>Use <code>--json</code> for automation, <code>--table</code> for quick human review, and <code>--output-format</code> when you want to switch output with a single flag. The older <code>--limit</code> example is no longer current; the command now uses <code>--page-size</code> for fetch sizing and <code>--output-columns</code> for column selection.</p>
 <h3 id="2-live-status-output-selectors">2. Live status output selectors</h3>
-<pre><code># Purpose: 2. Live status output selectors.
+<pre><code># Inspect output-format support on the live readiness entrypoint.
 grafana-util status live -h</code></pre>
-<pre><code># Purpose: 2. Live status overview output selectors.
+<pre><code># Inspect output-format support on the overview entrypoint.
 grafana-util status overview live -h</code></pre>
 <p><strong>Expected Output:</strong></p>
 <pre><code>Render live Grafana read surfaces. Use current Grafana state plus optional staged context files.
@@ -1166,7 +1094,7 @@ Render a live overview by delegating to the shared status live path.
 grafana-util dashboard list --profile prod --json | jq -r &#x27;.[] | select(.orgId == 5) | .uid&#x27;</code></pre>
 <p>This is the current JSON path for scripting. If you need fewer or different fields, use <code>--output-columns</code> instead of assuming the old sample table shape.</p>
 <h3 id="2-handling-exit-codes">2. Handling Exit Codes</h3>
-<pre><code># Purpose: 2. Handling Exit Codes.
+<pre><code># Use the exit code to wire status live into a shell gate.
 grafana-util status live --profile prod --output-format json
 if [ $? -eq 2 ]; then
   echo &quot;CRITICAL: Grafana connection blocked!&quot;
@@ -1174,12 +1102,12 @@ if [ $? -eq 2 ]; then
 fi</code></pre>
 <table><thead><tr><th>Exit Code</th><th>Meaning</th></tr></thead><tbody><tr><td><strong>0</strong></td><td><strong>Success</strong>: Task completed.</td></tr><tr><td><strong>1</strong></td><td><strong>General Error</strong>: Check syntax or local file permissions.</td></tr><tr><td><strong>2</strong></td><td><strong>Connection Blocked</strong>: Target Grafana is down or network is rejected.</td></tr><tr><td><strong>3</strong></td><td><strong>Validation Failed</strong>: Project contract or dashboard JSON is invalid.</td></tr></tbody></table>
 <p><a href="scenarios.html">⬅️ Previous: Operator Scenarios</a> | <a href="index.html">🏠 Home</a> | <a href="recipes.html">➡️ Next: Best Practices &amp; Recipes</a></p>
-<nav class="footer-nav"><a class="link-card" href="recipes.html"><span>Previous Chapter</span>Chapter 14 · Best Practices &amp; Real-World Recipes</a><a class="link-card" href="troubleshooting.html"><span>Next Chapter</span>Chapter 16 · Troubleshooting &amp; Glossary</a></nav>
+<nav class="footer-nav"><a class="link-card" href="recipes.html"><span>Previous Chapter</span>Best Practices &amp; Real-World Recipes</a><a class="link-card" href="troubleshooting.html"><span>Next Chapter</span>Troubleshooting &amp; Glossary</a></nav>
 </article>
 <aside class="sidebar">
   <button class="sidebar-toggle sidebar-toggle-right" type="button" aria-expanded="true" aria-label="Toggle page sidebar">▶</button>
   <div class="sidebar-content">
-    <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#command-relationships"><span class="toc-label">Command Relationships</span></a></li><li class="toc-level-2"><a href="#who-it-is-for"><span class="toc-label">Who It Is For</span></a></li><li class="toc-level-2"><a href="#primary-goals"><span class="toc-label">Primary Goals</span></a></li><li class="toc-level-2"><a href="#output-selector-rules"><span class="toc-label">Output selector rules</span></a></li><li class="toc-level-3"><a href="#standard-selector-output-format"><span class="toc-label">Standard selector: `--output-format`</span></a></li><li class="toc-level-3"><a href="#exceptions-worth-remembering"><span class="toc-label">Exceptions worth remembering</span></a></li><li class="toc-level-3"><a href="#workspace-json-documents-for-ci"><span class="toc-label">workspace` JSON documents for CI</span></a></li><li class="toc-level-3"><a href="#dashboard-history-json-documents-for-ci"><span class="toc-label">dashboard history` JSON documents for CI</span></a></li><li class="toc-level-3"><a href="#shared-diff-json-contract"><span class="toc-label">Shared diff JSON contract</span></a></li><li class="toc-level-3"><a href="#status-json-documents-for-ci"><span class="toc-label">status` JSON documents for CI</span></a></li><li class="toc-level-2"><a href="#profile-connection-and-secret-handling"><span class="toc-label">Profile, connection, and secret handling</span></a></li><li class="toc-level-3"><a href="#recommended-auth-order"><span class="toc-label">Recommended auth order</span></a></li><li class="toc-level-3"><a href="#secret-storage-modes-what-they-are-why-they-exist-and-when-to-use-them"><span class="toc-label">Secret storage modes: what they are, why they exist, and when to use them</span></a></li><li class="toc-level-3"><a href="#macos-and-linux-os-store-support"><span class="toc-label">macOS and Linux OS-store support</span></a></li><li class="toc-level-3"><a href="#1-choose-the-right-profile-workflow"><span class="toc-label">1. Choose the right profile workflow</span></a></li><li class="toc-level-3"><a href="#2-initialize-add-and-list-profiles"><span class="toc-label">2. Initialize, add, and list profiles</span></a></li><li class="toc-level-3"><a href="#3-show-the-resolved-profile"><span class="toc-label">3. Show the resolved profile</span></a></li><li class="toc-level-3"><a href="#4-commented-example-output"><span class="toc-label">4. Commented example output</span></a></li><li class="toc-level-3"><a href="#5-daily-use-examples-in-the-common-auth-styles"><span class="toc-label">5. Daily-use examples in the common auth styles</span></a></li><li class="toc-level-3"><a href="#6-complete-secret-handling-examples"><span class="toc-label">6. Complete secret-handling examples</span></a></li><li class="toc-level-3"><a href="#7-multi-org-and-admin-scope-caveats"><span class="toc-label">7. Multi-org and admin-scope caveats</span></a></li><li class="toc-level-3"><a href="#8-secret-storage-troubleshooting"><span class="toc-label">8. Secret-storage troubleshooting</span></a></li><li class="toc-level-2"><a href="#output-formats-comparison"><span class="toc-label">Output Formats Comparison</span></a></li><li class="toc-level-3"><a href="#0-start-with-this-flag-map"><span class="toc-label">0. Start with this flag map</span></a></li><li class="toc-level-3"><a href="#1-table-or-json-selection"><span class="toc-label">1. Table or JSON selection</span></a></li><li class="toc-level-3"><a href="#2-live-status-output-selectors"><span class="toc-label">2. Live status output selectors</span></a></li><li class="toc-level-2"><a href="#dashboard-lanes"><span class="toc-label">Dashboard Lanes</span></a></li><li class="toc-level-2"><a href="#automation-scripting-cicd"><span class="toc-label">Automation &amp; Scripting (CI/CD)</span></a></li><li class="toc-level-3"><a href="#1-filtering-with-jq-bashzsh"><span class="toc-label">1. Filtering with `jq` (Bash/Zsh)</span></a></li><li class="toc-level-3"><a href="#2-handling-exit-codes"><span class="toc-label">2. Handling Exit Codes</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: English</a></li><li><a href="../zh-TW/reference.html" class="sidebar-meta-link">Switch to 繁體中文</a></li></ul></section>
+    <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#who-it-is-for"><span class="toc-label">Who It Is For</span></a></li><li class="toc-level-2"><a href="#primary-goals"><span class="toc-label">Primary Goals</span></a></li><li class="toc-level-2"><a href="#output-selector-rules"><span class="toc-label">Output selector rules</span></a></li><li class="toc-level-3"><a href="#standard-selector-output-format"><span class="toc-label">Standard selector: `--output-format`</span></a></li><li class="toc-level-3"><a href="#exceptions-worth-remembering"><span class="toc-label">Exceptions worth remembering</span></a></li><li class="toc-level-3"><a href="#workspace-json-documents-for-ci"><span class="toc-label">workspace` JSON documents for CI</span></a></li><li class="toc-level-3"><a href="#dashboard-history-json-documents-for-ci"><span class="toc-label">dashboard history` JSON documents for CI</span></a></li><li class="toc-level-3"><a href="#shared-diff-json-contract"><span class="toc-label">Shared diff JSON contract</span></a></li><li class="toc-level-3"><a href="#status-json-documents-for-ci"><span class="toc-label">status` JSON documents for CI</span></a></li><li class="toc-level-2"><a href="#profile-connection-and-secret-handling"><span class="toc-label">Profile, connection, and secret handling</span></a></li><li class="toc-level-3"><a href="#recommended-auth-order"><span class="toc-label">Recommended auth order</span></a></li><li class="toc-level-3"><a href="#secret-storage-modes-what-they-are-why-they-exist-and-when-to-use-them"><span class="toc-label">Secret storage modes: what they are, why they exist, and when to use them</span></a></li><li class="toc-level-3"><a href="#macos-and-linux-os-store-support"><span class="toc-label">macOS and Linux OS-store support</span></a></li><li class="toc-level-3"><a href="#1-choose-the-right-profile-workflow"><span class="toc-label">1. Choose the right profile workflow</span></a></li><li class="toc-level-3"><a href="#2-initialize-add-and-list-profiles"><span class="toc-label">2. Initialize, add, and list profiles</span></a></li><li class="toc-level-3"><a href="#3-show-the-resolved-profile"><span class="toc-label">3. Show the resolved profile</span></a></li><li class="toc-level-3"><a href="#4-commented-example-output"><span class="toc-label">4. Commented example output</span></a></li><li class="toc-level-3"><a href="#5-daily-use-examples-in-the-common-auth-styles"><span class="toc-label">5. Daily-use examples in the common auth styles</span></a></li><li class="toc-level-3"><a href="#6-complete-secret-handling-examples"><span class="toc-label">6. Complete secret-handling examples</span></a></li><li class="toc-level-3"><a href="#7-multi-org-and-admin-scope-caveats"><span class="toc-label">7. Multi-org and admin-scope caveats</span></a></li><li class="toc-level-3"><a href="#8-secret-storage-troubleshooting"><span class="toc-label">8. Secret-storage troubleshooting</span></a></li><li class="toc-level-2"><a href="#output-formats-comparison"><span class="toc-label">Output Formats Comparison</span></a></li><li class="toc-level-3"><a href="#0-start-with-this-flag-map"><span class="toc-label">0. Start with this flag map</span></a></li><li class="toc-level-3"><a href="#1-table-or-json-selection"><span class="toc-label">1. Table or JSON selection</span></a></li><li class="toc-level-3"><a href="#2-live-status-output-selectors"><span class="toc-label">2. Live status output selectors</span></a></li><li class="toc-level-2"><a href="#dashboard-lanes"><span class="toc-label">Dashboard Lanes</span></a></li><li class="toc-level-2"><a href="#automation-scripting-cicd"><span class="toc-label">Automation &amp; Scripting (CI/CD)</span></a></li><li class="toc-level-3"><a href="#1-filtering-with-jq-bashzsh"><span class="toc-label">1. Filtering with `jq` (Bash/Zsh)</span></a></li><li class="toc-level-3"><a href="#2-handling-exit-codes"><span class="toc-label">2. Handling Exit Codes</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: English</a></li><li><a href="../zh-TW/reference.html" class="sidebar-meta-link">Switch to 繁體中文</a></li></ul></section>
   </div>
 </aside>
 

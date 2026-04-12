@@ -1,4 +1,4 @@
-# 🔍 Troubleshooting & Glossary
+# Troubleshooting & Glossary
 
 Use this chapter when a command looks syntactically correct but the result is wrong, incomplete, or inconsistent with what you expected.
 
@@ -42,7 +42,7 @@ If you are tracing auth or connection setup, keep [config](../../commands/en/con
 
 ---
 
-## 🛠️ Debugging the CLI
+## Debugging the CLI
 
 When a command fails or behaves unexpectedly, use these techniques to look under the hood.
 
@@ -51,7 +51,7 @@ When a command fails or behaves unexpectedly, use these techniques to look under
 `grafana-util` uses standard Rust logging. You can increase verbosity to see the exact API requests and responses.
 
 ```bash
-# Purpose: grafana-util uses standard Rust logging. You can increase verbosity to see the exact API requests and responses.
+# grafana-util uses standard Rust logging. You can increase verbosity to see the exact API requests and responses.
 RUST_LOG=debug grafana-util status overview live --profile prod
 grafana-util dashboard list -v
 ```
@@ -114,12 +114,15 @@ This is one of the most common operator mistakes.
 
 ---
 
-## 📖 Glossary of Terms
+## Glossary of Terms
 
 | Term | Definition |
 | :--- | :--- |
 | **Live** | The CLI is reading the Grafana server that is running right now. Start here for connectivity checks. |
 | **Staged** | Local files or a prepared change package that has not been applied to Grafana yet. |
+| **Review** | Inspecting input, diffs, or plans without changing live Grafana. |
+| **Preview** | Showing the next likely change so scope, action, and risk are visible before mutation. |
+| **Apply** | Applying a reviewed change; this usually enters a mutation path. |
 | **Overview** | A human-readable summary that helps you decide where to drill in next. Use `status overview live` for live Grafana. |
 | **Workspace** | A local package of inputs that should be scanned, tested, and previewed before apply. |
 | **Governance** | Policy or rule checks used to catch risk before promotion or apply; it is not the first-run path. |
@@ -133,7 +136,7 @@ This is one of the most common operator mistakes.
 
 ---
 
-## 🆘 Getting More Help
+## Getting More Help
 
 - **Check the version**: always run `grafana-util --version` when reporting issues.
 - **Project repository**: report bugs or request features on the [GitHub Issues](https://github.com/kenduest-brobridge/grafana-util/issues) page.

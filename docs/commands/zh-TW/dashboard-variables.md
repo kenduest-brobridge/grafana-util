@@ -19,17 +19,17 @@
 
 ## 範例
 ```bash
-# 用途：列出線上 Grafana 的儀表板模板變數與類似 datasource 的選項。
+# 列出線上 Grafana 的儀表板模板變數與類似 datasource 的選項。
 grafana-util dashboard variables --profile prod --dashboard-uid cpu-main --vars-query 'var-cluster=prod-a&var-instance=node01' --output-format json
 ```
 
 ```bash
-# 用途：列出線上 Grafana 的儀表板模板變數與類似 datasource 的選項。
+# 列出線上 Grafana 的儀表板模板變數與類似 datasource 的選項。
 grafana-util dashboard variables --url https://grafana.example.com --dashboard-uid cpu-main --vars-query 'var-cluster=prod-a&var-instance=node01' --basic-user admin --prompt-password --output-format json
 ```
 
 ```bash
-# 用途：列出本機儀表板 JSON 檔案中的變數。
+# 列出本機儀表板 JSON 檔案中的變數。
 grafana-util dashboard variables --input ./dashboards/raw/cpu-main.json --output-format yaml
 ```
 

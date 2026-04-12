@@ -49,7 +49,7 @@ The only exception is that the current `man` family is generated from `docs/comm
     follow-up when public names change
 - `scripts/contracts/docs-entrypoints.json`
   - machine-readable docs-entry taxonomy for landing quick commands, jump-select
-    command entries, and handbook command-relationship maps
+    command entries, and handbook sidebar command shortcuts
   - lets maintainers change navigation content without editing Python logic
 
 ## Output Model
@@ -128,7 +128,7 @@ Shared parser and Markdown subset renderer:
 Shared docs-entry loader and validator:
 
 - loads `scripts/contracts/docs-entrypoints.json`
-- validates quick-command, jump-select, and handbook command-map structure
+- validates quick-command, jump-select, and handbook sidebar shortcut structure
 - keeps docs-entry content in data files while generators stay focused on rendering
 - extracts `Purpose`, `When to use`, `Key flags`, and `Examples`
 - handles inline-subcommand pages such as `profile.md`

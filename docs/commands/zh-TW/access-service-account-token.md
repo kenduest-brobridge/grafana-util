@@ -34,22 +34,22 @@
 ## 範例
 
 ```bash
-# 用途：替單一 service account 建立新的 token。
+# 替單一 service account 建立新的 token。
 grafana-util access service-account token add --profile prod --name deploy-bot --token-name nightly
 ```
 
 ```bash
-# 用途：審核後刪除一個 token。
+# 審核後刪除一個 token。
 grafana-util access service-account token delete --url http://localhost:3000 --basic-user admin --basic-password admin --name deploy-bot --token-name nightly --yes --json
 ```
 
 ```bash
-# 用途：在終端機中先選 service account，再選 token，最後確認刪除。
+# 在終端機中先選 service account，再選 token，最後確認刪除。
 grafana-util access service-account token delete --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --prompt
 ```
 
 ```bash
-# 用途：用環境變數中的 token 建立新的 service-account token。
+# 用環境變數中的 token 建立新的 service-account token。
 grafana-util access service-account token add --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --name deploy-bot --token-name nightly
 ```
 

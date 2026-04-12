@@ -326,13 +326,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   font-weight: 500;
 }
 .nav-command-branch-item .nav-command-leaf-link:hover { color: var(--heading); }
-.handbook-command-map .nav-command-root-link {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  font-size: 0.9rem;
-}
 
 .sidebar-toggle {
   position: absolute;
@@ -378,71 +371,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map { margin: 0 0 24px; }
-.handbook-command-map-panel {
-  margin-top: 16px;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--panel) 96%, white);
-}
-.handbook-command-map .nav-group-title {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-group {
-  padding-top: 0;
-}
-.handbook-command-map .nav-command-group + .nav-command-group {
-  margin-top: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
-  padding-top: 10px;
-}
-.handbook-command-map .nav-command-sub-list {
-  margin-top: 8px;
-  margin-left: 0;
-  padding-left: 0;
-  border-left: 0;
-}
-.handbook-command-map .nav-command-branch {
-  display: grid;
-  grid-template-columns: minmax(130px, 0.22fr) minmax(0, 1fr);
-  gap: 12px 18px;
-  align-items: start;
-}
-.handbook-command-map .nav-command-branch-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-left: 0;
-  padding-left: 14px;
-}
-.handbook-command-map .nav-command-branch-item + .nav-command-branch-item { margin-top: 0; }
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-  line-height: 1.25;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link:hover,
-.handbook-command-map .nav-command-link a:hover {
-  border-color: color-mix(in srgb, var(--border) 45%, var(--accent));
-  background: var(--panel-strong);
-}
-@media (max-width: 720px) {
-  .handbook-command-map .nav-command-branch {
-    grid-template-columns: 1fr;
-  }
-  .handbook-command-map .nav-command-branch-list {
-    padding-left: 0;
-    border-left: 0;
-  }
-}
 .article p,
 .article li { color: var(--text); font-weight: 460; }
 .article ul li::marker,
@@ -956,17 +884,17 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="placeholder-模型">Placeholder 模型</h2>
 <ul><li><code>$datasource</code> 是 dashboard variable 參照，表示 dashboard 或 panel 是透過名為 <code>datasource</code> 的 Grafana 變數來選 datasource。</li><li><code>${DS_PROMETHEUS}</code> 或 <code>${DS_*}</code> 是 external-import input placeholder，表示 Grafana 在 <code>Upload JSON</code> 時要先詢問 datasource，再把結果注入 dashboard。</li><li>這兩者有關聯，但不是同一件事。生成後的 prompt 檔可以同時包含：</li><li><code>__inputs</code> 裡的 <code>${DS_*}</code> 與某些 typed datasource 參照</li><li>panel 層級刻意保留的 <code>$datasource</code></li><li><code>raw-to-prompt</code> 的目標是保留這個邊界，而不是把所有 datasource placeholder 都壓成同一種寫法。</li><li>如果原始 dashboard 本來就依賴 Grafana datasource variable，轉換後的 prompt 檔仍可能同時看到 <code>$datasource</code> 與 <code>__inputs</code>。</li></ul>
 <h2 id="範例">範例</h2>
-<pre><code># Purpose: 把單一 raw dashboard 檔轉成 Grafana UI prompt JSON。
+<pre><code># 把單一 raw dashboard 檔轉成 Grafana UI prompt JSON。
 grafana-util dashboard convert raw-to-prompt --input-file ./dashboards/raw/cpu-main.json</code></pre>
-<pre><code># Purpose: 轉多個 raw dashboard 檔，並顯示進度。
+<pre><code># 轉多個 raw dashboard 檔，並顯示進度。
 grafana-util dashboard convert raw-to-prompt --input-file ./legacy/cpu.json --input-file ./legacy/logs.json --progress</code></pre>
-<pre><code># Purpose: 把 raw export tree 轉成旁邊的 prompt/ lane。
+<pre><code># 把 raw export tree 轉成旁邊的 prompt/ lane。
 grafana-util dashboard convert raw-to-prompt --input-dir ./dashboards/raw --output-dir ./dashboards/prompt --overwrite</code></pre>
-<pre><code># Purpose: 把 legacy 目錄樹轉成一個明確輸出根，並輸出 table 摘要。
+<pre><code># 把 legacy 目錄樹轉成一個明確輸出根，並輸出 table 摘要。
 grafana-util dashboard convert raw-to-prompt --input-dir ./legacy-json --output-dir ./converted/prompt --output-format table</code></pre>
-<pre><code># Purpose: 用明確 mapping 檔修補 datasource 參照。
+<pre><code># 用明確 mapping 檔修補 datasource 參照。
 grafana-util dashboard convert raw-to-prompt --input-file ./legacy/cpu.json --datasource-map ./datasource-map.yaml --resolution exact --log-file ./raw-to-prompt.log --log-format json</code></pre>
-<pre><code># Purpose: 從保存的 live profile 補強 datasource 修補。
+<pre><code># 從保存的 live profile 補強 datasource 修補。
 grafana-util dashboard convert raw-to-prompt --input-file ./legacy/cpu.json --profile prod --org-id 2 --resolution exact</code></pre>
 <h2 id="相關指令">相關指令</h2>
 <ul><li><a href="dashboard.html">dashboard</a></li><li><a href="dashboard-export.html">dashboard export</a></li><li><a href="dashboard-import.html">dashboard import</a></li><li><a href="dashboard-dependencies.html">dashboard dependencies</a></li><li><a href="dashboard-diff.html">dashboard diff</a></li></ul>

@@ -34,17 +34,17 @@ Add or delete tokens for a Grafana service account.
 ## Examples
 
 ```bash
-# Purpose: Create a new token for one service account.
+# Create a new token for one service account.
 grafana-util access service-account token add --profile prod --name deploy-bot --token-name nightly
 ```
 
 ```bash
-# Purpose: Delete a token after review.
+# Delete a token after review.
 grafana-util access service-account token delete --profile prod --name deploy-bot --token-name nightly --yes --json
 ```
 
 ```bash
-# Purpose: Prompt for a service account, then a token, then confirm the delete.
+# Prompt for a service account, then a token, then confirm the delete.
 grafana-util access service-account token delete --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --prompt
 ```
 

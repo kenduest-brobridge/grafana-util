@@ -326,13 +326,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   font-weight: 500;
 }
 .nav-command-branch-item .nav-command-leaf-link:hover { color: var(--heading); }
-.handbook-command-map .nav-command-root-link {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  font-size: 0.9rem;
-}
 
 .sidebar-toggle {
   position: absolute;
@@ -378,71 +371,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map { margin: 0 0 24px; }
-.handbook-command-map-panel {
-  margin-top: 16px;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--panel) 96%, white);
-}
-.handbook-command-map .nav-group-title {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-group {
-  padding-top: 0;
-}
-.handbook-command-map .nav-command-group + .nav-command-group {
-  margin-top: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
-  padding-top: 10px;
-}
-.handbook-command-map .nav-command-sub-list {
-  margin-top: 8px;
-  margin-left: 0;
-  padding-left: 0;
-  border-left: 0;
-}
-.handbook-command-map .nav-command-branch {
-  display: grid;
-  grid-template-columns: minmax(130px, 0.22fr) minmax(0, 1fr);
-  gap: 12px 18px;
-  align-items: start;
-}
-.handbook-command-map .nav-command-branch-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-left: 0;
-  padding-left: 14px;
-}
-.handbook-command-map .nav-command-branch-item + .nav-command-branch-item { margin-top: 0; }
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-  line-height: 1.25;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link:hover,
-.handbook-command-map .nav-command-link a:hover {
-  border-color: color-mix(in srgb, var(--border) 45%, var(--accent));
-  background: var(--panel-strong);
-}
-@media (max-width: 720px) {
-  .handbook-command-map .nav-command-branch {
-    grid-template-columns: 1fr;
-  }
-  .handbook-command-map .nav-command-branch-list {
-    padding-left: 0;
-    border-left: 0;
-  }
-}
 .article p,
 .article li { color: var(--text); font-weight: 460; }
 .article ul li::marker,
@@ -956,19 +884,19 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="主要旗標">主要旗標</h2>
 <ul><li><code>list</code>: <code>--input-dir</code>, <code>--scope</code>, <code>--all-orgs</code>, <code>--query</code>, <code>--login</code>, <code>--email</code>, <code>--org-role</code>, <code>--grafana-admin</code>, <code>--with-teams</code>, <code>--output-columns</code>, <code>--list-columns</code>, <code>--page</code>, <code>--per-page</code>, <code>--table</code>, <code>--csv</code>, <code>--json</code>, <code>--yaml</code>, <code>--output-format</code></li><li><code>browse</code>: <code>--input-dir</code>, <code>--scope</code>, <code>--all-orgs</code>, <code>--current-org</code>, <code>--query</code>, <code>--login</code>, <code>--email</code>, <code>--org-role</code>, <code>--grafana-admin</code>, <code>--page</code>, <code>--per-page</code></li><li><code>add</code>: <code>--login</code>, <code>--email</code>, <code>--name</code>, <code>--password</code> 或 <code>--password-file</code> 或 <code>--prompt-user-password</code>, <code>--org-role</code>, <code>--grafana-admin</code>, <code>--json</code></li><li><code>modify</code>: <code>--user-id</code>, <code>--login</code>, <code>--email</code>, <code>--set-login</code>, <code>--set-email</code>, <code>--set-name</code>, <code>--set-password</code> 或 <code>--set-password-file</code> 或 <code>--prompt-set-password</code>, <code>--set-org-role</code>, <code>--set-grafana-admin</code>, <code>--json</code></li><li><code>export</code> 與 <code>diff</code>: <code>--output-dir</code> 或 <code>--diff-dir</code>, <code>--overwrite</code>, <code>--dry-run</code>, <code>--scope</code>, <code>--with-teams</code></li><li><code>import</code>: <code>--input-dir</code>, <code>--scope</code>, <code>--replace-existing</code>, <code>--dry-run</code>, <code>--table</code>, <code>--json</code>, <code>--output-format</code>, <code>--yes</code></li><li><code>delete</code>: <code>--user-id</code>, <code>--login</code>, <code>--email</code>, 可選的 <code>--scope</code>, <code>--prompt</code>, <code>--yes</code>, <code>--json</code></li></ul>
 <h2 id="範例">範例</h2>
-<pre><code># 用途：在調整成員權限前，先看清楚單一 org 裡有哪些使用者。
+<pre><code># 在調整成員權限前，先看清楚單一 org 裡有哪些使用者。
 grafana-util access user list --profile prod --scope org --output-format text</code></pre>
-<pre><code># 用途：先看本機存好的使用者套件。
+<pre><code># 先看本機存好的使用者套件。
 grafana-util access user list --input-dir ./access-users --output-format table</code></pre>
-<pre><code># 用途：直接互動式瀏覽本機使用者套件，不碰 live Grafana。
+<pre><code># 直接互動式瀏覽本機使用者套件，不碰 live Grafana。
 grafana-util access user browse --input-dir ./access-users --login alice</code></pre>
-<pre><code># 用途：用明確的認證與 org 範圍建立一個使用者。
+<pre><code># 用明確的認證與 org 範圍建立一個使用者。
 grafana-util access user add --url http://localhost:3000 --basic-user admin --basic-password admin --login alice --email alice@example.com --name Alice --password secret</code></pre>
-<pre><code># 用途：先看清楚目前 org 裡的使用者，再刪除這個帳號。
+<pre><code># 先看清楚目前 org 裡的使用者，再刪除這個帳號。
 grafana-util access user list --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --scope org --json</code></pre>
-<pre><code># 用途：在終端機中選一個使用者、確認目標，然後刪除。
+<pre><code># 在終端機中選一個使用者、確認目標，然後刪除。
 grafana-util access user delete --url http://localhost:3000 --basic-user admin --basic-password admin --scope global --prompt</code></pre>
-<pre><code># 用途：先在終端機中選刪除範圍，再選使用者並確認刪除。
+<pre><code># 先在終端機中選刪除範圍，再選使用者並確認刪除。
 grafana-util access user delete --url http://localhost:3000 --basic-user admin --basic-password admin --prompt</code></pre>
 <h2 id="相關命令">相關命令</h2>
 <ul><li><a href="access.html">access</a></li><li><a href="access-org.html">access org</a></li><li><a href="access-team.html">access team</a></li><li><a href="access-service-account.html">access service-account</a></li></ul>

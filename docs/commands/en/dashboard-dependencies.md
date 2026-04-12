@@ -24,12 +24,12 @@ Use this when you want to read a local export tree, inspect its structure, or re
 
 ## Examples
 ```bash
-# Purpose: Analyze dashboard export directories through the canonical dashboard dependencies command.
+# Analyze dashboard export directories through the canonical dashboard dependencies command.
 grafana-util dashboard dependencies --input-dir ./dashboards/raw --input-format raw --output-format table
 ```
 
 ```bash
-# Purpose: Analyze dashboard export directories through the canonical dashboard dependencies command.
+# Analyze dashboard export directories through the canonical dashboard dependencies command.
 grafana-util dashboard dependencies --input-dir ./dashboards/provisioning --input-format provisioning --output-format governance-json
 ```
 

@@ -326,13 +326,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   font-weight: 500;
 }
 .nav-command-branch-item .nav-command-leaf-link:hover { color: var(--heading); }
-.handbook-command-map .nav-command-root-link {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  font-size: 0.9rem;
-}
 
 .sidebar-toggle {
   position: absolute;
@@ -378,71 +371,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map { margin: 0 0 24px; }
-.handbook-command-map-panel {
-  margin-top: 16px;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--panel) 96%, white);
-}
-.handbook-command-map .nav-group-title {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-group {
-  padding-top: 0;
-}
-.handbook-command-map .nav-command-group + .nav-command-group {
-  margin-top: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
-  padding-top: 10px;
-}
-.handbook-command-map .nav-command-sub-list {
-  margin-top: 8px;
-  margin-left: 0;
-  padding-left: 0;
-  border-left: 0;
-}
-.handbook-command-map .nav-command-branch {
-  display: grid;
-  grid-template-columns: minmax(130px, 0.22fr) minmax(0, 1fr);
-  gap: 12px 18px;
-  align-items: start;
-}
-.handbook-command-map .nav-command-branch-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-left: 0;
-  padding-left: 14px;
-}
-.handbook-command-map .nav-command-branch-item + .nav-command-branch-item { margin-top: 0; }
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-  line-height: 1.25;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link:hover,
-.handbook-command-map .nav-command-link a:hover {
-  border-color: color-mix(in srgb, var(--border) 45%, var(--accent));
-  background: var(--panel-strong);
-}
-@media (max-width: 720px) {
-  .handbook-command-map .nav-command-branch {
-    grid-template-columns: 1fr;
-  }
-  .handbook-command-map .nav-command-branch-list {
-    padding-left: 0;
-    border-left: 0;
-  }
-}
 .article p,
 .article li { color: var(--text); font-weight: 460; }
 .article ul li::marker,
@@ -920,15 +848,15 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
       <div class="layout">
 <aside class="nav-sidebar">
   <button class="sidebar-toggle sidebar-toggle-left" type="button" aria-expanded="true" aria-label="Toggle handbook navigation">◀</button>
-  <div class="nav-sidebar-content"><section class="nav-section"><h2>Guide Map</h2><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 1 · Start Here</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="index.html" class="nav-item">Overview</a></li><li class="nav-tree-node"><a href="what-is-grafana-util.html" class="nav-item">What grafana-util is for</a></li><li class="nav-tree-node"><a href="getting-started.html" class="nav-item">Getting Started</a></li></ul></div><div class="nav-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Part 2 · Role Paths</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="role-new-user.html" class="nav-item active">First Run / Beginner Path</a></li><li class="nav-tree-node"><a href="role-sre-ops.html" class="nav-item">SRE / Operator</a></li><li class="nav-tree-node"><a href="role-automation-ci.html" class="nav-item">Automation / CI</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 3 · Operation Surfaces</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="status-workspace.html" class="nav-item">Status &amp; Workspace</a></li><li class="nav-tree-node"><a href="dashboard.html" class="nav-item">Dashboard</a></li><li class="nav-tree-node"><a href="datasource.html" class="nav-item">Datasource</a></li><li class="nav-tree-node"><a href="alert.html" class="nav-item">Alert</a></li><li class="nav-tree-node"><a href="access.html" class="nav-item">Access</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 4 · Design Principles</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="architecture.html" class="nav-item">Design Principles</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 5 · Reference &amp; Troubleshooting</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="scenarios.html" class="nav-item">Scenarios</a></li><li class="nav-tree-node"><a href="recipes.html" class="nav-item">Recipes</a></li><li class="nav-tree-node"><a href="reference.html" class="nav-item">Reference</a></li><li class="nav-tree-node"><a href="troubleshooting.html" class="nav-item">Troubleshooting</a></li></ul></div></section><section class="nav-section nav-command-section collapsed"><button class="nav-group-header nav-section-toggle" type="button" aria-expanded="false"><span class="nav-group-title-text">Command Relationships</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-section-body"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">First-Run Path</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><ul class="nav-command-tree"><li class="nav-command-link"><a href="../../commands/en/version.html" class="nav-command-leaf-link">--version</a></li><li class="nav-command-link"><a href="../../commands/en/status.html" class="nav-command-leaf-link">status live</a></li><li class="nav-command-link"><a href="../../commands/en/profile.html" class="nav-command-leaf-link">config profile add</a></li></ul></div></div></div></section><section class="nav-section"><h2>Command Reference</h2><a href="../../commands/en/index.html" class="nav-command-entry">Open command reference</a></section></div>
+  <div class="nav-sidebar-content"><section class="nav-section"><h2>Guide Map</h2><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 1 · Start Here</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="index.html" class="nav-item">Overview</a></li><li class="nav-tree-node"><a href="what-is-grafana-util.html" class="nav-item">What grafana-util is for</a></li><li class="nav-tree-node"><a href="getting-started.html" class="nav-item">Getting Started</a></li></ul></div><div class="nav-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Part 2 · Role Paths</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="role-new-user.html" class="nav-item active">First Run / Beginner Path</a></li><li class="nav-tree-node"><a href="role-sre-ops.html" class="nav-item">SRE / Operator</a></li><li class="nav-tree-node"><a href="role-automation-ci.html" class="nav-item">Automation / CI</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 3 · Operation Surfaces</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="status-workspace.html" class="nav-item">Status &amp; Workspace</a></li><li class="nav-tree-node"><a href="dashboard.html" class="nav-item">Dashboard</a></li><li class="nav-tree-node"><a href="datasource.html" class="nav-item">Datasource</a></li><li class="nav-tree-node"><a href="alert.html" class="nav-item">Alert</a></li><li class="nav-tree-node"><a href="access.html" class="nav-item">Access</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 4 · Design Principles</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="architecture.html" class="nav-item">Design Principles</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 5 · Reference &amp; Troubleshooting</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="scenarios.html" class="nav-item">Scenarios</a></li><li class="nav-tree-node"><a href="recipes.html" class="nav-item">Recipes</a></li><li class="nav-tree-node"><a href="reference.html" class="nav-item">Reference</a></li><li class="nav-tree-node"><a href="troubleshooting.html" class="nav-item">Troubleshooting</a></li></ul></div></section><section class="nav-section nav-command-section collapsed"><button class="nav-group-header nav-section-toggle" type="button" aria-expanded="false"><span class="nav-group-title-text">Command Shortcuts</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-section-body"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">First-Run Path</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><ul class="nav-command-tree"><li class="nav-command-link"><a href="../../commands/en/version.html" class="nav-command-leaf-link">--version</a></li><li class="nav-command-link"><a href="../../commands/en/status.html" class="nav-command-leaf-link">status live</a></li><li class="nav-command-link"><a href="../../commands/en/profile.html" class="nav-command-leaf-link">config profile add</a></li></ul></div></div></div></section><section class="nav-section"><h2>Command Reference</h2><a href="../../commands/en/index.html" class="nav-command-entry">Open command reference</a></section></div>
 </aside>
 
 <article class="article">
 <div class="breadcrumbs"><a href="../../index.html">Home</a> / Handbook / First Run / Beginner Path</div>
 
-<div class="hero-eyebrow">Part 2 · Role Paths · Chapter 4 of 16</div><h1><span class="hero-title-main">First Run / Beginner Path</span></h1>
+<div class="hero-eyebrow">Part 2 · Role Paths</div><h1><span class="hero-title-main">First Run / Beginner Path</span></h1>
 
-<section class="section-index"><h2>Chapter Index</h2><p class="section-index-summary">Jump straight to the section you need.</p><ul class="section-index-list layout-list"><li><a href="#command-relationships">Command Relationships</a></li><li><a href="#who-it-is-for">Who It Is For</a></li><li><a href="#primary-goals">Primary Goals</a></li><li><a href="#before-after">Before / After</a></li><li><a href="#what-success-looks-like">What success looks like</a></li><li><a href="#failure-checks">Failure checks</a></li><li><a href="#typical-first-day-tasks">Typical First-Day Tasks</a></li><li><a href="#how-connection-and-auth-work">How Connection And Auth Work</a></li><li><a href="#recommended-auth-and-secret-approach">Recommended Auth And Secret Approach</a></li><li><a href="#first-commands-to-run">First Commands To Run</a></li><li><a href="#what-good-looks-like">What Good Looks Like</a></li><li><a href="#read-next">Read Next</a></li><li><a href="#keep-open">Keep Open</a></li><li><a href="#common-mistakes-and-limits">Common Mistakes And Limits</a></li><li><a href="#when-to-switch-to-deeper-docs">When To Switch To Deeper Docs</a></li><li><a href="#next-steps">Next Steps</a></li></ul></section><section class="handbook-command-map"><h2 id="command-relationships">Command Relationships</h2><div class="handbook-command-map-panel"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">First-Run Path</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><ul class="nav-command-tree"><li class="nav-command-link"><a href="../../commands/en/version.html" class="nav-command-leaf-link">--version</a></li><li class="nav-command-link"><a href="../../commands/en/status.html" class="nav-command-leaf-link">status live</a></li><li class="nav-command-link"><a href="../../commands/en/profile.html" class="nav-command-leaf-link">config profile add</a></li></ul></div></div></div></section><p>This page is for someone opening <code>grafana-util</code> for the first time, or for a teammate who needs a safe local checklist before touching live Grafana data.</p>
+<section class="section-index"><h2>Chapter Index</h2><p class="section-index-summary">Jump straight to the section you need.</p><ul class="section-index-list layout-list"><li><a href="#who-it-is-for">Who It Is For</a></li><li><a href="#primary-goals">Primary Goals</a></li><li><a href="#before-after">Before / After</a></li><li><a href="#what-success-looks-like">What success looks like</a></li><li><a href="#failure-checks">Failure checks</a></li><li><a href="#typical-first-day-tasks">Typical First-Day Tasks</a></li><li><a href="#how-connection-and-auth-work">How Connection And Auth Work</a></li><li><a href="#recommended-auth-and-secret-approach">Recommended Auth And Secret Approach</a></li><li><a href="#first-commands-to-run">First Commands To Run</a></li><li><a href="#what-good-looks-like">What Good Looks Like</a></li><li><a href="#read-next">Read Next</a></li><li><a href="#keep-open">Keep Open</a></li><li><a href="#common-mistakes-and-limits">Common Mistakes And Limits</a></li><li><a href="#when-to-switch-to-deeper-docs">When To Switch To Deeper Docs</a></li><li><a href="#next-steps">Next Steps</a></li></ul></section><p>This page is for someone opening <code>grafana-util</code> for the first time, or for a teammate who needs a safe local checklist before touching live Grafana data.</p>
 <p>The first thing to understand is that <code>grafana-util</code> does not force one auth style. You can connect in several ways:</p>
 <ul><li>pass the Grafana URL and credentials directly on each command</li><li>prompt for a password or token instead of pasting it into the shell</li><li>rely on environment variables that the CLI already knows how to read</li><li>save repeatable defaults in a repo-local <code>config profile</code> and call them back with <code>config profile</code></li></ul>
 <p>Profiles matter because they remove repetition, not because direct flags are unsupported. The normal learning path is:</p>
@@ -954,28 +882,28 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <ol><li>Direct Basic auth with <code>--prompt-password</code> for a first local bootstrap or a one-time reachability check.</li><li><code>config profile</code> with <code>password_env</code>, <code>token_env</code>, or an OS-backed secret store for repeatable day-to-day work.</li><li>Direct token auth only when you already know the token is scoped tightly enough for the read you want.</li></ol>
 <p>The key idea is simple: direct flags prove the connection, profiles simplify repeated use.</p>
 <h2 id="first-commands-to-run">First Commands To Run</h2>
-<pre><code># Purpose: First Commands To Run.
+<pre><code># First Commands To Run.
 grafana-util --version</code></pre>
-<pre><code># Purpose: First Commands To Run.
+<pre><code># First Commands To Run.
 grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output-format yaml</code></pre>
-<pre><code># Purpose: First Commands To Run.
+<pre><code># First Commands To Run.
 grafana-util config profile init --overwrite</code></pre>
-<pre><code># Purpose: First Commands To Run.
+<pre><code># First Commands To Run.
 grafana-util config profile example --mode basic</code></pre>
-<pre><code># Purpose: First Commands To Run.
+<pre><code># First Commands To Run.
 grafana-util config profile add dev --url http://127.0.0.1:3000 --basic-user admin --prompt-password</code></pre>
-<pre><code># Purpose: First Commands To Run.
+<pre><code># First Commands To Run.
 grafana-util status live --profile dev --output-format yaml</code></pre>
 <p>The sequence matters:</p>
 <ul><li>first prove that the binary can talk to Grafana with one direct command</li><li>then initialize a repo-local config</li><li>then add a reusable profile for the same target</li><li>then run the same safe read again through <code>--profile</code></li></ul>
 <p>If you do not have a profile yet, this is the shortest safe bootstrap:</p>
-<pre><code># Purpose: If you do not have a profile yet, this is the shortest safe bootstrap.
+<pre><code># If you do not have a profile yet, this is the shortest safe bootstrap.
 grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output-format yaml</code></pre>
 <p>If you already have a scoped token, you can check the same live surface without a profile:</p>
-<pre><code># Purpose: If you already have a scoped token, you can check the same live surface without a profile.
+<pre><code># If you already have a scoped token, you can check the same live surface without a profile.
 grafana-util status overview live --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --output-format json</code></pre>
 <p>If your shell already exports auth variables, you can also keep the command shorter:</p>
-<pre><code># Purpose: If your shell already exports auth variables, you can also keep the command shorter.
+<pre><code># If your shell already exports auth variables, you can also keep the command shorter.
 export GRAFANA_USERNAME=admin
 export GRAFANA_PASSWORD=admin
 grafana-util status live --url http://localhost:3000 --output-format yaml</code></pre>
@@ -992,12 +920,12 @@ grafana-util status live --url http://localhost:3000 --output-format yaml</code>
 <ul><li>Switch to the handbook chapters when you need the workflow story behind dashboards, alerts, or staged workspace review.</li><li>Switch to the command-reference pages when you are choosing exact flags, output modes, or auth variants.</li><li>Switch to troubleshooting when the command works syntactically but the returned scope, auth, or output shape is not what you expected.</li></ul>
 <h2 id="next-steps">Next Steps</h2>
 <ul><li><a href="scenarios.html">Practical Scenarios</a></li><li><a href="recipes.html">Best Practices &amp; Recipes</a></li><li><a href="../../commands/en/index.html">Command Reference</a></li></ul>
-<nav class="footer-nav"><a class="link-card" href="getting-started.html"><span>Previous Chapter</span>Chapter 3 · Getting Started</a><a class="link-card" href="role-sre-ops.html"><span>Next Chapter</span>Chapter 5 · SRE / Operator Handbook</a></nav>
+<nav class="footer-nav"><a class="link-card" href="getting-started.html"><span>Previous Chapter</span>Getting Started</a><a class="link-card" href="role-sre-ops.html"><span>Next Chapter</span>SRE / Operator Handbook</a></nav>
 </article>
 <aside class="sidebar">
   <button class="sidebar-toggle sidebar-toggle-right" type="button" aria-expanded="true" aria-label="Toggle page sidebar">▶</button>
   <div class="sidebar-content">
-    <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#command-relationships"><span class="toc-label">Command Relationships</span></a></li><li class="toc-level-2"><a href="#who-it-is-for"><span class="toc-label">Who It Is For</span></a></li><li class="toc-level-2"><a href="#primary-goals"><span class="toc-label">Primary Goals</span></a></li><li class="toc-level-2"><a href="#before-after"><span class="toc-label">Before / After</span></a></li><li class="toc-level-2"><a href="#what-success-looks-like"><span class="toc-label">What success looks like</span></a></li><li class="toc-level-2"><a href="#failure-checks"><span class="toc-label">Failure checks</span></a></li><li class="toc-level-2"><a href="#typical-first-day-tasks"><span class="toc-label">Typical First-Day Tasks</span></a></li><li class="toc-level-2"><a href="#how-connection-and-auth-work"><span class="toc-label">How Connection And Auth Work</span></a></li><li class="toc-level-2"><a href="#recommended-auth-and-secret-approach"><span class="toc-label">Recommended Auth And Secret Approach</span></a></li><li class="toc-level-2"><a href="#first-commands-to-run"><span class="toc-label">First Commands To Run</span></a></li><li class="toc-level-2"><a href="#what-good-looks-like"><span class="toc-label">What Good Looks Like</span></a></li><li class="toc-level-2"><a href="#read-next"><span class="toc-label">Read Next</span></a></li><li class="toc-level-2"><a href="#keep-open"><span class="toc-label">Keep Open</span></a></li><li class="toc-level-2"><a href="#common-mistakes-and-limits"><span class="toc-label">Common Mistakes And Limits</span></a></li><li class="toc-level-2"><a href="#when-to-switch-to-deeper-docs"><span class="toc-label">When To Switch To Deeper Docs</span></a></li><li class="toc-level-2"><a href="#next-steps"><span class="toc-label">Next Steps</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: English</a></li><li><a href="../zh-TW/role-new-user.html" class="sidebar-meta-link">Switch to 繁體中文</a></li></ul></section>
+    <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#who-it-is-for"><span class="toc-label">Who It Is For</span></a></li><li class="toc-level-2"><a href="#primary-goals"><span class="toc-label">Primary Goals</span></a></li><li class="toc-level-2"><a href="#before-after"><span class="toc-label">Before / After</span></a></li><li class="toc-level-2"><a href="#what-success-looks-like"><span class="toc-label">What success looks like</span></a></li><li class="toc-level-2"><a href="#failure-checks"><span class="toc-label">Failure checks</span></a></li><li class="toc-level-2"><a href="#typical-first-day-tasks"><span class="toc-label">Typical First-Day Tasks</span></a></li><li class="toc-level-2"><a href="#how-connection-and-auth-work"><span class="toc-label">How Connection And Auth Work</span></a></li><li class="toc-level-2"><a href="#recommended-auth-and-secret-approach"><span class="toc-label">Recommended Auth And Secret Approach</span></a></li><li class="toc-level-2"><a href="#first-commands-to-run"><span class="toc-label">First Commands To Run</span></a></li><li class="toc-level-2"><a href="#what-good-looks-like"><span class="toc-label">What Good Looks Like</span></a></li><li class="toc-level-2"><a href="#read-next"><span class="toc-label">Read Next</span></a></li><li class="toc-level-2"><a href="#keep-open"><span class="toc-label">Keep Open</span></a></li><li class="toc-level-2"><a href="#common-mistakes-and-limits"><span class="toc-label">Common Mistakes And Limits</span></a></li><li class="toc-level-2"><a href="#when-to-switch-to-deeper-docs"><span class="toc-label">When To Switch To Deeper Docs</span></a></li><li class="toc-level-2"><a href="#next-steps"><span class="toc-label">Next Steps</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: English</a></li><li><a href="../zh-TW/role-new-user.html" class="sidebar-meta-link">Switch to 繁體中文</a></li></ul></section>
   </div>
 </aside>
 

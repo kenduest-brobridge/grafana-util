@@ -1,6 +1,8 @@
-# 🍳 Best Practices & Real-World Recipes
+# Best Practices & Real-World Recipes
 
 This chapter provides practical solutions for common Grafana operational headaches. The goal is not just to show a command, but to show when to use it, what success looks like, and what to check when the workflow goes sideways.
+
+Read each recipe as a small case study. Start from the problem statement, check whether the "use this when" section matches your environment, then run the command only after the lane and expected result make sense. The command is the last piece, not the whole recipe.
 
 ## Who It Is For
 
@@ -33,7 +35,7 @@ This chapter provides practical solutions for common Grafana operational headach
 
 ---
 
-## 🚀 Recipe 1: Promoting Dashboards (Dev -> Prod)
+## Recipe 1: Promoting Dashboards (Dev -> Prod)
 
 **Problem**: Exporting from Dev and importing to Prod often fails due to hardcoded organization IDs, folder context, or source-environment datasource UIDs.
 
@@ -46,8 +48,8 @@ This chapter provides practical solutions for common Grafana operational headach
 1. **Export from Dev**: `grafana-util dashboard export --output-dir ./dev-assets`
 2. **Locate Clean Source**: Use files in `./dev-assets/prompt/`. These have environment-specific metadata stripped.
 3. **Import to Prod**:
-   ```bash
-# Purpose: Import to Prod.
+```bash
+# Replay the clean prompt lane into Prod.
    grafana-util dashboard import --input-dir ./dev-assets/prompt --url https://prod-grafana --replace-existing
    ```
 
@@ -69,7 +71,7 @@ This chapter provides practical solutions for common Grafana operational headach
 
 ---
 
-## 🔍 Recipe 2: Auditing Dependencies Before Import
+## Recipe 2: Auditing Dependencies Before Import
 
 **Problem**: Importing a dashboard without its required datasource results in broken panels and misleading "successful" imports.
 
@@ -102,7 +104,7 @@ grafana-util dashboard dependencies --input-dir ./backups/raw --input-format raw
 
 ---
 
-## 🛠️ Recipe 3: Mass Tagging/Renaming (Surgical Patching)
+## Recipe 3: Mass Tagging/Renaming (Surgical Patching)
 
 **Problem**: You need to add a tag such as `ManagedBySRE` to many dashboards at once without hand-editing every file.
 
@@ -113,11 +115,12 @@ grafana-util dashboard dependencies --input-dir ./backups/raw --input-format raw
 **Solution**: Use `patch` in a loop, then preview the result before replaying it.
 
 ```bash
-# Purpose: Solution: Use patch in a loop, then preview the result before replaying it.
+# Apply the same local tag patch to every raw dashboard file.
 for file in ./dashboards/raw/*.json; do
   grafana-util dashboard patch --input "$file" --tag "ManagedBySRE" --output "$file"
 done
 
+# Preview the replay before any live dashboard changes.
 grafana-util dashboard import --input-dir ./dashboards/raw --replace-existing --dry-run --table
 ```
 
@@ -139,14 +142,14 @@ grafana-util dashboard import --input-dir ./dashboards/raw --replace-existing --
 
 ---
 
-## 🚨 Recipe 4: Verifying Alert Routing Logic
+## Recipe 4: Verifying Alert Routing Logic
 
 **Problem**: Complex notification policies make it hard to know where an alert will land.
 
 **Solution**: Use `preview-route` to simulate matches.
 
 ```bash
-# Purpose: Solution: Use preview-route to simulate matches.
+# Simulate one critical alert label set against the desired route tree.
 grafana-util alert preview-route \
   --desired-dir ./alerts/desired \
   --label service=order \
@@ -171,7 +174,7 @@ grafana-util alert preview-route \
 
 ---
 
-## 💡 Expert Tips
+## Expert Tips
 
 - **UID consistency**: Always define stable `uid`s in your JSON. Do not rely on incremental `id`s.
 - **Dry-run everything**: Use `--dry-run` to see the `ACTION=update` vs `ACTION=create` preview before making live changes.

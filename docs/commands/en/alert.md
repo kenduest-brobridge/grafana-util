@@ -59,32 +59,32 @@ Choose this page when alert work spans rules, routes, contact points, templates,
 ## Examples
 
 ```bash
-# Purpose: Inspect the grouped alert help before choosing a lane.
+# Inspect the grouped alert help before choosing a lane.
 grafana-util alert --help
 ```
 
 ```bash
-# Purpose: Initialize a staged alert desired-state tree.
+# Initialize a staged alert desired-state tree.
 grafana-util alert init --desired-dir ./alerts/desired
 ```
 
 ```bash
-# Purpose: List live rules from a saved profile.
+# List live rules from a saved profile.
 grafana-util alert list-rules --profile prod --json
 ```
 
 ```bash
-# Purpose: Export alert resources for review or migration.
+# Export alert resources for review or migration.
 grafana-util alert export --url http://localhost:3000 --basic-user admin --basic-password admin --output-dir ./alerts --overwrite
 ```
 
 ```bash
-# Purpose: Preview the route shape before mutating live alert routing.
+# Preview the route shape before mutating live alert routing.
 grafana-util alert preview-route --desired-dir ./alerts/desired --label team=platform --severity critical --output-format json
 ```
 
 ```bash
-# Purpose: Build a reviewed plan from desired alert files.
+# Build a reviewed plan from desired alert files.
 grafana-util alert plan --desired-dir ./alerts/desired --output-format json
 ```
 

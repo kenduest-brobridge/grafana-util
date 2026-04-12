@@ -36,17 +36,17 @@
 ## 範例
 
 ```bash
-# 用途：將 alert 資源匯出成 `raw/` JSON 檔案。
+# 將 alert 資源匯出成 `raw/` JSON 檔案。
 grafana-util alert export --profile prod --output-dir ./alerts --overwrite
 ```
 
 ```bash
-# 用途：將 alert 資源匯出成 `raw/` JSON 檔案。
+# 將 alert 資源匯出成 `raw/` JSON 檔案。
 grafana-util alert export --url http://localhost:3000 --basic-user admin --basic-password admin --output-dir ./alerts --flat
 ```
 
 ```bash
-# 用途：將 alert 資源匯出成 `raw/` JSON 檔案。
+# 將 alert 資源匯出成 `raw/` JSON 檔案。
 grafana-util alert export --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output-dir ./alerts --overwrite
 ```
 

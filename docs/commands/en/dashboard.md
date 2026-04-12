@@ -67,52 +67,52 @@ Choose this page when the task is dashboard work but you are still deciding whet
 ## Examples
 
 ```bash
-# Purpose: Inspect the dashboard namespace before choosing a lane.
+# Inspect the dashboard namespace before choosing a lane.
 grafana-util dashboard --help
 ```
 
 ```bash
-# Purpose: Browse dashboards from a saved profile.
+# Browse dashboards from a saved profile.
 grafana-util dashboard browse --profile prod
 ```
 
 ```bash
-# Purpose: Browse a local Grafana instance with explicit credentials.
+# Browse a local Grafana instance with explicit credentials.
 grafana-util dashboard browse --url http://localhost:3000 --basic-user admin --basic-password admin
 ```
 
 ```bash
-# Purpose: Convert a legacy dashboard export into prompt-friendly JSON.
+# Convert a legacy dashboard export into prompt-friendly JSON.
 grafana-util dashboard convert raw-to-prompt --input-file ./legacy/cpu-main.json --profile prod --org-id 2
 ```
 
 ```bash
-# Purpose: Review one generated dashboard from standard input before mutation.
+# Review one generated dashboard from standard input before mutation.
 jsonnet dashboards/cpu.jsonnet | grafana-util dashboard review --input - --output-format json
 ```
 
 ```bash
-# Purpose: Watch one local draft file and rerun publish dry-run after each save.
+# Watch one local draft file and rerun publish dry-run after each save.
 grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --basic-password admin --input ./drafts/cpu-main.json --dry-run --watch
 ```
 
 ```bash
-# Purpose: Open one local dashboard draft in the local preview server.
+# Open one local dashboard draft in the local preview server.
 grafana-util dashboard serve --input ./drafts/cpu-main.json --port 18080 --open-browser
 ```
 
 ```bash
-# Purpose: Pull one live dashboard into an external editor and keep the result as a local draft by default.
+# Pull one live dashboard into an external editor and keep the result as a local draft by default.
 grafana-util dashboard edit-live --profile prod --dashboard-uid cpu-main --output ./drafts/cpu-main.edited.json
 ```
 
 ```bash
-# Purpose: Analyze live dashboard governance data for downstream review.
+# Analyze live dashboard governance data for downstream review.
 grafana-util dashboard summary --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output-format governance
 ```
 
 ```bash
-# Purpose: Open the interactive analysis workbench for a live dashboard.
+# Open the interactive analysis workbench for a live dashboard.
 grafana-util dashboard summary --url http://localhost:3000 --basic-user admin --basic-password admin --interactive
 ```
 

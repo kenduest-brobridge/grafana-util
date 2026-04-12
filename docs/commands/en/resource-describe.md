@@ -16,17 +16,17 @@ Use this when you want to know how the generic read-only resource surface is sha
 
 ## Examples
 ```bash
-# Purpose: Describe every supported live resource kind.
+# Describe every supported live resource kind.
 grafana-util status resource describe
 ```
 
 ```bash
-# Purpose: Describe one supported resource kind as JSON.
+# Describe one supported resource kind as JSON.
 grafana-util status resource describe dashboards --output-format json
 ```
 
 ```bash
-# Purpose: Describe one supported resource kind as a table.
+# Describe one supported resource kind as a table.
 grafana-util status resource describe orgs --output-format table
 ```
 

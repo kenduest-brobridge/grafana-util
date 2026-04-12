@@ -326,13 +326,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   font-weight: 500;
 }
 .nav-command-branch-item .nav-command-leaf-link:hover { color: var(--heading); }
-.handbook-command-map .nav-command-root-link {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  font-size: 0.9rem;
-}
 
 .sidebar-toggle {
   position: absolute;
@@ -378,71 +371,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map { margin: 0 0 24px; }
-.handbook-command-map-panel {
-  margin-top: 16px;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--panel) 96%, white);
-}
-.handbook-command-map .nav-group-title {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-group {
-  padding-top: 0;
-}
-.handbook-command-map .nav-command-group + .nav-command-group {
-  margin-top: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
-  padding-top: 10px;
-}
-.handbook-command-map .nav-command-sub-list {
-  margin-top: 8px;
-  margin-left: 0;
-  padding-left: 0;
-  border-left: 0;
-}
-.handbook-command-map .nav-command-branch {
-  display: grid;
-  grid-template-columns: minmax(130px, 0.22fr) minmax(0, 1fr);
-  gap: 12px 18px;
-  align-items: start;
-}
-.handbook-command-map .nav-command-branch-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-left: 0;
-  padding-left: 14px;
-}
-.handbook-command-map .nav-command-branch-item + .nav-command-branch-item { margin-top: 0; }
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-  line-height: 1.25;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link:hover,
-.handbook-command-map .nav-command-link a:hover {
-  border-color: color-mix(in srgb, var(--border) 45%, var(--accent));
-  background: var(--panel-strong);
-}
-@media (max-width: 720px) {
-  .handbook-command-map .nav-command-branch {
-    grid-template-columns: 1fr;
-  }
-  .handbook-command-map .nav-command-branch-list {
-    padding-left: 0;
-    border-left: 0;
-  }
-}
 .article p,
 .article li { color: var(--text); font-weight: 460; }
 .article ul li::marker,
@@ -920,15 +848,17 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
       <div class="layout">
 <aside class="nav-sidebar">
   <button class="sidebar-toggle sidebar-toggle-left" type="button" aria-expanded="true" aria-label="Toggle handbook navigation">◀</button>
-  <div class="nav-sidebar-content"><section class="nav-section"><h2>Guide Map</h2><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 1 · Start Here</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="index.html" class="nav-item">Overview</a></li><li class="nav-tree-node"><a href="what-is-grafana-util.html" class="nav-item">What grafana-util is for</a></li><li class="nav-tree-node"><a href="getting-started.html" class="nav-item">Getting Started</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 2 · Role Paths</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="role-new-user.html" class="nav-item">First Run / Beginner Path</a></li><li class="nav-tree-node"><a href="role-sre-ops.html" class="nav-item">SRE / Operator</a></li><li class="nav-tree-node"><a href="role-automation-ci.html" class="nav-item">Automation / CI</a></li></ul></div><div class="nav-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Part 3 · Operation Surfaces</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="status-workspace.html" class="nav-item">Status &amp; Workspace</a></li><li class="nav-tree-node"><a href="dashboard.html" class="nav-item">Dashboard</a></li><li class="nav-tree-node"><a href="datasource.html" class="nav-item">Datasource</a></li><li class="nav-tree-node"><a href="alert.html" class="nav-item">Alert</a></li><li class="nav-tree-node"><a href="access.html" class="nav-item active">Access</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 4 · Design Principles</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="architecture.html" class="nav-item">Design Principles</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 5 · Reference &amp; Troubleshooting</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="scenarios.html" class="nav-item">Scenarios</a></li><li class="nav-tree-node"><a href="recipes.html" class="nav-item">Recipes</a></li><li class="nav-tree-node"><a href="reference.html" class="nav-item">Reference</a></li><li class="nav-tree-node"><a href="troubleshooting.html" class="nav-item">Troubleshooting</a></li></ul></div></section><section class="nav-section nav-command-section collapsed"><button class="nav-group-header nav-section-toggle" type="button" aria-expanded="false"><span class="nav-group-title-text">Command Relationships</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-section-body"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Choose the Surface</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><a href="../../commands/en/access.html" class="nav-command-root-link">access</a></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/en/access-user.html" class="nav-command-leaf-link">user</a></li><li class="nav-command-branch-item"><a href="../../commands/en/access-org.html" class="nav-command-leaf-link">org</a></li><li class="nav-command-branch-item"><a href="../../commands/en/access-team.html" class="nav-command-leaf-link">team</a></li><li class="nav-command-branch-item"><a href="../../commands/en/access-service-account.html" class="nav-command-leaf-link">service-account</a></li><li class="nav-command-branch-item"><a href="../../commands/en/access-service-account-token.html" class="nav-command-leaf-link">service-account token</a></li></ul></div></div></div></div></section><section class="nav-section"><h2>Command Reference</h2><a href="../../commands/en/index.html" class="nav-command-entry">Open command reference</a></section></div>
+  <div class="nav-sidebar-content"><section class="nav-section"><h2>Guide Map</h2><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 1 · Start Here</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="index.html" class="nav-item">Overview</a></li><li class="nav-tree-node"><a href="what-is-grafana-util.html" class="nav-item">What grafana-util is for</a></li><li class="nav-tree-node"><a href="getting-started.html" class="nav-item">Getting Started</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 2 · Role Paths</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="role-new-user.html" class="nav-item">First Run / Beginner Path</a></li><li class="nav-tree-node"><a href="role-sre-ops.html" class="nav-item">SRE / Operator</a></li><li class="nav-tree-node"><a href="role-automation-ci.html" class="nav-item">Automation / CI</a></li></ul></div><div class="nav-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Part 3 · Operation Surfaces</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="status-workspace.html" class="nav-item">Status &amp; Workspace</a></li><li class="nav-tree-node"><a href="dashboard.html" class="nav-item">Dashboard</a></li><li class="nav-tree-node"><a href="datasource.html" class="nav-item">Datasource</a></li><li class="nav-tree-node"><a href="alert.html" class="nav-item">Alert</a></li><li class="nav-tree-node"><a href="access.html" class="nav-item active">Access</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 4 · Design Principles</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="architecture.html" class="nav-item">Design Principles</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 5 · Reference &amp; Troubleshooting</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="scenarios.html" class="nav-item">Scenarios</a></li><li class="nav-tree-node"><a href="recipes.html" class="nav-item">Recipes</a></li><li class="nav-tree-node"><a href="reference.html" class="nav-item">Reference</a></li><li class="nav-tree-node"><a href="troubleshooting.html" class="nav-item">Troubleshooting</a></li></ul></div></section><section class="nav-section nav-command-section collapsed"><button class="nav-group-header nav-section-toggle" type="button" aria-expanded="false"><span class="nav-group-title-text">Command Shortcuts</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-section-body"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Choose the Surface</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><a href="../../commands/en/access.html" class="nav-command-root-link">access</a></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/en/access-user.html" class="nav-command-leaf-link">user</a></li><li class="nav-command-branch-item"><a href="../../commands/en/access-org.html" class="nav-command-leaf-link">org</a></li><li class="nav-command-branch-item"><a href="../../commands/en/access-team.html" class="nav-command-leaf-link">team</a></li><li class="nav-command-branch-item"><a href="../../commands/en/access-service-account.html" class="nav-command-leaf-link">service-account</a></li><li class="nav-command-branch-item"><a href="../../commands/en/access-service-account-token.html" class="nav-command-leaf-link">service-account token</a></li></ul></div></div></div></div></section><section class="nav-section"><h2>Command Reference</h2><a href="../../commands/en/index.html" class="nav-command-entry">Open command reference</a></section></div>
 </aside>
 
 <article class="article">
 <div class="breadcrumbs"><a href="../../index.html">Home</a> / Handbook / Access</div>
 
-<div class="hero-eyebrow">Part 3 · Operation Surfaces · Chapter 11 of 16</div><h1><span class="hero-title-main">Access</span></h1><p class="hero-subtitle">Access Management (Identity &amp; Access)</p>
+<div class="hero-eyebrow">Part 3 · Operation Surfaces</div><h1><span class="hero-title-main">Access</span></h1><p class="hero-subtitle">Access Management (Identity &amp; Access)</p>
 
-<section class="section-index"><h2>Chapter Index</h2><p class="section-index-summary">Jump straight to the section you need.</p><ul class="section-index-list layout-list"><li><a href="#command-relationships">Command Relationships</a></li><li><a href="#who-it-is-for">Who It Is For</a></li><li><a href="#primary-goals">Primary Goals</a></li><li><a href="#before-after">Before / After</a></li><li><a href="#what-success-looks-like">What success looks like</a></li><li><a href="#failure-checks">Failure checks</a></li><li><a href="#command-pages">Command Pages</a></li><li><a href="#org-management">org Management</a></li><li><a href="#user-and-team-management">User and team management</a></li><li><a href="#service-account-management">service account management</a></li><li><a href="#drift-detection-diff">Drift Detection (Diff)</a></li></ul></section><section class="handbook-command-map"><h2 id="command-relationships">Command Relationships</h2><div class="handbook-command-map-panel"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Choose the Surface</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><a href="../../commands/en/access.html" class="nav-command-root-link">access</a></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/en/access-user.html" class="nav-command-leaf-link">user</a></li><li class="nav-command-branch-item"><a href="../../commands/en/access-org.html" class="nav-command-leaf-link">org</a></li><li class="nav-command-branch-item"><a href="../../commands/en/access-team.html" class="nav-command-leaf-link">team</a></li><li class="nav-command-branch-item"><a href="../../commands/en/access-service-account.html" class="nav-command-leaf-link">service-account</a></li><li class="nav-command-branch-item"><a href="../../commands/en/access-service-account-token.html" class="nav-command-leaf-link">service-account token</a></li></ul></div></div></div></div></section><p>Use this chapter when identity and access are the task: org boundaries, users, teams, service accounts, and the tokens that let automation act safely. Inventory reads can come from live Grafana or from a local export bundle; the workflow is the same either way.</p>
+<section class="section-index"><h2>Chapter Index</h2><p class="section-index-summary">Jump straight to the section you need.</p><ul class="section-index-list layout-list"><li><a href="#who-it-is-for">Who It Is For</a></li><li><a href="#primary-goals">Primary Goals</a></li><li><a href="#before-after">Before / After</a></li><li><a href="#what-success-looks-like">What success looks like</a></li><li><a href="#failure-checks">Failure checks</a></li><li><a href="#access-workflow-map">Access Workflow Map</a></li><li><a href="#org-management">org Management</a></li><li><a href="#user-and-team-management">User and team management</a></li><li><a href="#service-account-management">service account management</a></li><li><a href="#drift-detection-diff">Drift Detection (Diff)</a></li><li><a href="#when-to-use-command-reference">When To Use Command Reference</a></li></ul></section><p>Use this chapter when identity and access are the task: org boundaries, users, teams, service accounts, and the tokens that let automation act safely. Inventory reads can come from live Grafana or from a local export bundle; the workflow is the same either way.</p>
+<p>Access work is easy to underestimate because it often looks like adding one user or deleting one token. In practice, each user, team, org, and service account defines who can see data, who can change assets, and which automation can touch Grafana while nobody is watching. This chapter starts with scope so the command is not chosen in isolation.</p>
+<p>Read it by asking whether the task affects a person, a team, an org boundary, or a machine credential. Then decide whether you need live inventory, a local snapshot, a diff, or a real mutation. Do not start from &quot;I have a token&quot;; start from &quot;who or what will this permission change affect?&quot;</p>
 <h2 id="who-it-is-for">Who It Is For</h2>
 <ul><li>Administrators managing org, user, team, or service-account lifecycle work.</li><li>Operators exporting or replaying identity state across environments.</li><li>Teams rotating service-account tokens or auditing access drift.</li></ul>
 <h2 id="primary-goals">Primary Goals</h2>
@@ -939,19 +869,20 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <ul><li>You can tell whether the task is org management, user management, team management, or service-account handling.</li><li>You can name the exact command family before you start mutating anything.</li><li>You know when you need a review step before applying a workspace.</li></ul>
 <h2 id="failure-checks">Failure checks</h2>
 <ul><li>If an identity workspace would affect more orgs than you intended, stop and verify the scope first.</li><li>If you are unsure whether a token or service account can perform the task, check the command page before mutation.</li><li>If the wording still feels split across team/org/user surfaces, return to the glossary and the command reference.</li></ul>
-<h2 id="command-pages">Command Pages</h2>
-<p>Need the command-by-command surface instead of the workflow guide?</p>
-<ul><li><a href="../../commands/en/access.html">access command overview</a></li><li><a href="../../commands/en/access.html">access user</a></li><li><a href="../../commands/en/access.html">access org</a></li><li><a href="../../commands/en/access.html">access team</a></li><li><a href="../../commands/en/access.html">access service-account</a></li><li><a href="../../commands/en/access.html">access service-account token</a></li><li><a href="../../commands/en/index.html">full command index</a></li></ul>
+<h2 id="access-workflow-map">Access Workflow Map</h2>
+<p>Classify access subcommands by who or what they affect, not by which token you happen to have:</p>
+<table><thead><tr><th>Job</th><th>Start here</th><th>Main input</th><th>Main output</th><th>Next step</th></tr></thead><tbody><tr><td>Manage orgs</td><td><code>access org list/export/import/diff</code></td><td>Live Grafana or org bundle</td><td>Org inventory / dry-run / diff</td><td>Review before import</td></tr><tr><td>Manage users</td><td><code>access user list/add/modify/delete/export/import/diff</code></td><td>Login, org role, bundle</td><td>User inventory or mutation result</td><td>Verify with list / diff</td></tr><tr><td>Manage teams</td><td><code>access team list/export/import/diff</code></td><td>Org scope, team bundle</td><td>Team and member inventory</td><td>Import after dry-run</td></tr><tr><td>Manage service accounts</td><td><code>access service-account list/add/modify/delete/export/import/diff</code></td><td>Org scope, service-account bundle</td><td>Automation identity inventory</td><td>Manage tokens or diff</td></tr><tr><td>Manage tokens</td><td><code>access service-account token add/delete/list</code></td><td>Service account id/name</td><td>One-time token secret or delete result</td><td>Store the secret immediately / rotate the old token</td></tr><tr><td>Compare drift</td><td><code>diff</code> subcommands</td><td>Local bundle + live Grafana</td><td>Change differences</td><td>Fix the bundle or import</td></tr></tbody></table>
+<p>The key decision is scope. A global user, an org role, team membership, service-account permissions, and token lifecycle are different layers. Do not infer that a token able to call one API should be used for every access workflow.</p>
 <h2 id="org-management">org Management</h2>
 <p>Use <code>access org</code> when you need Basic-auth-backed inventory, export, or replay for orgs, especially when you need to verify which orgs exist before a cross-org workspace. The same <code>list</code> command can also read a saved bundle with <code>--input-dir</code>.</p>
 <h3 id="1-list-export-and-replay-orgs">1. List, Export, and Replay orgs</h3>
-<pre><code># Purpose: 1. List, Export, and Replay orgs.
+<pre><code># Start by listing the orgs visible in live Grafana.
 grafana-util access org list --table</code></pre>
-<pre><code># Purpose: 1. List, Export, and Replay orgs.
+<pre><code># Review a saved org bundle without touching live Grafana.
 grafana-util access org list --input-dir ./access-orgs --table</code></pre>
-<pre><code># Purpose: 1. List, Export, and Replay orgs.
+<pre><code># Export org inventory into a replayable local bundle.
 grafana-util export access org --output-dir ./access-orgs</code></pre>
-<pre><code># Purpose: 1. List, Export, and Replay orgs.
+<pre><code># Dry-run the import before creating or updating orgs.
 grafana-util access org import --input-dir ./access-orgs --dry-run</code></pre>
 <p><strong>Expected Output:</strong></p>
 <pre><code>ID   NAME        IS_MAIN   QUOTA
@@ -967,6 +898,8 @@ PREFLIGHT IMPORT:
 <p>Use the list output to confirm the main org, then export/import when you need a repeatable org snapshot.</p>
 <h2 id="user-and-team-management">User and team management</h2>
 <p>Use <code>access user</code> and <code>access team</code> for membership changes, snapshots, and drift checks when you need to reconcile who can see or edit what. Their <code>list</code> and <code>browse</code> commands both read local bundles through <code>--input-dir</code>.</p>
+<p>Separate the user and team responsibilities first. User workflows decide whether one login exists, whether it is disabled, and which org role it has. Team workflows manage collaboration groups and membership. If the question is &quot;can this person sign in or hold this role?&quot;, start with <code>access user</code>. If the question is &quot;can this group see or manage a set of assets?&quot;, start with <code>access team</code>.</p>
+<p>Use <code>list</code> for live or bundled inventory, <code>export</code> for reviewable snapshots, <code>diff</code> to detect live drift from a bundle, and <code>import</code> only after dry-run. When using <code>add</code>, <code>modify</code>, or <code>delete</code> for a user, confirm whether the scope is global user state, org role, or Grafana admin state before mutating.</p>
 <h3 id="1-add-modify-and-diff-users">1. Add, Modify, and Diff Users</h3>
 <pre><code># Add a new user with global admin role
 grafana-util access user add --login dev-user --role Admin --prompt-password
@@ -985,13 +918,13 @@ grafana-util access user list --input-dir ./access-users</code></pre>
 No user differences across 12 user(s).</code></pre>
 <p>Use <code>--prompt-password</code> when you do not want a password in shell history. <code>--scope global</code> requires Basic auth.</p>
 <h3 id="2-discover-and-sync-teams">2. Discover and Sync Teams</h3>
-<pre><code># Purpose: 2. Discover and Sync Teams.
+<pre><code># List the teams currently present in one org.
 grafana-util access team list --org-id 1 --table</code></pre>
-<pre><code># Purpose: 2. Discover and Sync Teams.
+<pre><code># Inspect the same team inventory from a local bundle.
 grafana-util access team list --input-dir ./access-teams --table</code></pre>
-<pre><code># Purpose: 2. Discover and Sync Teams.
+<pre><code># Export teams and preserve membership state.
 grafana-util export access team --output-dir ./access-teams --with-members</code></pre>
-<pre><code># Purpose: 2. Discover and Sync Teams.
+<pre><code># Preview team replay actions before replacing existing state.
 grafana-util access team import --input-dir ./access-teams --replace-existing --dry-run --table</code></pre>
 <p><strong>Expected Output:</strong></p>
 <pre><code>ID   NAME           MEMBERS   EMAIL
@@ -1006,12 +939,14 @@ ops-user    Viewer  create   missing</code></pre>
 <p>Use <code>--with-members</code> when the export must preserve membership state, and use <code>--dry-run --table</code> before a destructive import.</p>
 <h2 id="service-account-management">service account management</h2>
 <p>Service accounts are the foundation of repeatable automation, CI jobs, and scoped integrations. Their inventory can be reviewed from live Grafana or from a local export bundle before you touch tokens.</p>
+<p>A service account is a machine identity, not a safer shortcut for a human user. It should map to one automation purpose, such as CI deployment, nightly audit, or an incident bot. <code>access service-account</code> manages the identity; <code>access service-account token</code> manages API tokens for that identity. Review those layers separately.</p>
+<p>Token secrets are usually shown only once. After creating a token, store the secret in the right secret store before rotating the old token. Do not treat terminal logs as secret storage, and do not assume a token is still usable just because the service account appears in inventory.</p>
 <h3 id="1-list-and-export-service-accounts">1. List and Export Service Accounts</h3>
-<pre><code># Purpose: 1. List and Export Service Accounts.
+<pre><code># Use JSON when service-account inventory will feed a script.
 grafana-util access service-account list --json</code></pre>
-<pre><code># Purpose: 1. List and Export Service Accounts.
+<pre><code># Review service-account inventory from a saved bundle.
 grafana-util access service-account list --input-dir ./access-sa --output-format text</code></pre>
-<pre><code># Purpose: 1. List and Export Service Accounts.
+<pre><code># Export service-account inventory for review or replay.
 grafana-util export access service-account --output-dir ./access-sa</code></pre>
 <p><strong>Expected Output:</strong></p>
 <pre><code>[
@@ -1058,11 +993,11 @@ grafana-util access service-account token delete --service-account-id 15 --token
 <p>Use <code>--json</code> when you need the one-time <code>key</code> field. Plain text is better for logs, not for credential capture.</p>
 <h2 id="drift-detection-diff">Drift Detection (Diff)</h2>
 <p>Compare your local identity snapshots against the live Grafana server.</p>
-<pre><code># Purpose: Compare your local identity snapshots against the live Grafana server.
+<pre><code># Compare your local identity snapshots against the live Grafana server.
 grafana-util access user diff --input-dir ./access-users</code></pre>
-<pre><code># Purpose: Compare your local identity snapshots against the live Grafana server.
+<pre><code># Compare your local identity snapshots against the live Grafana server.
 grafana-util access team diff --diff-dir ./access-teams</code></pre>
-<pre><code># Purpose: Compare your local identity snapshots against the live Grafana server.
+<pre><code># Compare your local identity snapshots against the live Grafana server.
 grafana-util access service-account diff --diff-dir ./access-sa</code></pre>
 <p><strong>Expected Output:</strong></p>
 <pre><code>--- Live Users
@@ -1073,13 +1008,16 @@ grafana-util access service-account diff --diff-dir ./access-sa</code></pre>
 No team differences across 4 team(s).
 No service account differences across 2 service account(s).</code></pre>
 <p>Use diff output to decide whether a snapshot is safe to import or whether live Grafana has already drifted.</p>
+<h2 id="when-to-use-command-reference">When To Use Command Reference</h2>
+<p>This chapter helps you choose the access scope. Once you know whether the task affects orgs, users, teams, service accounts, or tokens, use the command reference for exact flags, output formats, and complete examples:</p>
+<ul><li><a href="../../commands/en/access.html">access command overview</a></li><li><a href="../../commands/en/access-user.html">access user</a></li><li><a href="../../commands/en/access-org.html">access org</a></li><li><a href="../../commands/en/access-team.html">access team</a></li><li><a href="../../commands/en/access-service-account.html">access service-account</a></li><li><a href="../../commands/en/access-service-account-token.html">access service-account token</a></li><li><a href="../../commands/en/index.html">full command index</a></li></ul>
 <p><a href="alert.html">⬅️ Previous: Alerting Governance</a> | <a href="index.html">🏠 Home</a> | <a href="status-workspace.html">➡️ Next: Workspace Review &amp; Status</a></p>
-<nav class="footer-nav"><a class="link-card" href="alert.html"><span>Previous Chapter</span>Chapter 10 · Alert Operator Handbook</a><a class="link-card" href="status-workspace.html"><span>Next Chapter</span>Chapter 12 · Workspace Review &amp; Status</a></nav>
+<nav class="footer-nav"><a class="link-card" href="alert.html"><span>Previous Chapter</span>Alert Operator Handbook</a><a class="link-card" href="status-workspace.html"><span>Next Chapter</span>Workspace Review &amp; Status</a></nav>
 </article>
 <aside class="sidebar">
   <button class="sidebar-toggle sidebar-toggle-right" type="button" aria-expanded="true" aria-label="Toggle page sidebar">▶</button>
   <div class="sidebar-content">
-    <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#command-relationships"><span class="toc-label">Command Relationships</span></a></li><li class="toc-level-2"><a href="#who-it-is-for"><span class="toc-label">Who It Is For</span></a></li><li class="toc-level-2"><a href="#primary-goals"><span class="toc-label">Primary Goals</span></a></li><li class="toc-level-2"><a href="#before-after"><span class="toc-label">Before / After</span></a></li><li class="toc-level-2"><a href="#what-success-looks-like"><span class="toc-label">What success looks like</span></a></li><li class="toc-level-2"><a href="#failure-checks"><span class="toc-label">Failure checks</span></a></li><li class="toc-level-2"><a href="#command-pages"><span class="toc-label">Command Pages</span></a></li><li class="toc-level-2"><a href="#org-management"><span class="toc-label">org Management</span></a></li><li class="toc-level-3"><a href="#1-list-export-and-replay-orgs"><span class="toc-label">1. List, Export, and Replay orgs</span></a></li><li class="toc-level-2"><a href="#user-and-team-management"><span class="toc-label">User and team management</span></a></li><li class="toc-level-3"><a href="#1-add-modify-and-diff-users"><span class="toc-label">1. Add, Modify, and Diff Users</span></a></li><li class="toc-level-3"><a href="#2-discover-and-sync-teams"><span class="toc-label">2. Discover and Sync Teams</span></a></li><li class="toc-level-2"><a href="#service-account-management"><span class="toc-label">service account management</span></a></li><li class="toc-level-3"><a href="#1-list-and-export-service-accounts"><span class="toc-label">1. List and Export Service Accounts</span></a></li><li class="toc-level-3"><a href="#2-create-and-delete-tokens"><span class="toc-label">2. Create and Delete Tokens</span></a></li><li class="toc-level-2"><a href="#drift-detection-diff"><span class="toc-label">Drift Detection (Diff)</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: English</a></li><li><a href="../zh-TW/access.html" class="sidebar-meta-link">Switch to 繁體中文</a></li></ul></section>
+    <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#who-it-is-for"><span class="toc-label">Who It Is For</span></a></li><li class="toc-level-2"><a href="#primary-goals"><span class="toc-label">Primary Goals</span></a></li><li class="toc-level-2"><a href="#before-after"><span class="toc-label">Before / After</span></a></li><li class="toc-level-2"><a href="#what-success-looks-like"><span class="toc-label">What success looks like</span></a></li><li class="toc-level-2"><a href="#failure-checks"><span class="toc-label">Failure checks</span></a></li><li class="toc-level-2"><a href="#access-workflow-map"><span class="toc-label">Access Workflow Map</span></a></li><li class="toc-level-2"><a href="#org-management"><span class="toc-label">org Management</span></a></li><li class="toc-level-3"><a href="#1-list-export-and-replay-orgs"><span class="toc-label">1. List, Export, and Replay orgs</span></a></li><li class="toc-level-2"><a href="#user-and-team-management"><span class="toc-label">User and team management</span></a></li><li class="toc-level-3"><a href="#1-add-modify-and-diff-users"><span class="toc-label">1. Add, Modify, and Diff Users</span></a></li><li class="toc-level-3"><a href="#2-discover-and-sync-teams"><span class="toc-label">2. Discover and Sync Teams</span></a></li><li class="toc-level-2"><a href="#service-account-management"><span class="toc-label">service account management</span></a></li><li class="toc-level-3"><a href="#1-list-and-export-service-accounts"><span class="toc-label">1. List and Export Service Accounts</span></a></li><li class="toc-level-3"><a href="#2-create-and-delete-tokens"><span class="toc-label">2. Create and Delete Tokens</span></a></li><li class="toc-level-2"><a href="#drift-detection-diff"><span class="toc-label">Drift Detection (Diff)</span></a></li><li class="toc-level-2"><a href="#when-to-use-command-reference"><span class="toc-label">When To Use Command Reference</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: English</a></li><li><a href="../zh-TW/access.html" class="sidebar-meta-link">Switch to 繁體中文</a></li></ul></section>
   </div>
 </aside>
 

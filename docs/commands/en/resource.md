@@ -29,22 +29,22 @@ This namespace is intentionally narrower and more generic than the main operator
 
 ## Examples
 ```bash
-# Purpose: Describe the supported live resource kinds and selector patterns.
+# Describe the supported live resource kinds and selector patterns.
 grafana-util status resource describe
 ```
 
 ```bash
-# Purpose: Show the currently supported generic resource kinds.
+# Show the currently supported generic resource kinds.
 grafana-util status resource kinds
 ```
 
 ```bash
-# Purpose: List live dashboard resources from a local Grafana.
+# List live dashboard resources from a local Grafana.
 grafana-util status resource list dashboards --url http://localhost:3000 --basic-user admin --basic-password admin
 ```
 
 ```bash
-# Purpose: Fetch one datasource payload as YAML.
+# Fetch one datasource payload as YAML.
 grafana-util status resource get datasources/prom-main --profile prod --output-format yaml
 ```
 

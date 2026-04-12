@@ -18,12 +18,12 @@ Use this when you need the same analysis views as the local export-tree flow, bu
 
 ## Examples
 ```bash
-# Purpose: Analyze live Grafana dashboards through the canonical dashboard summary command.
+# Analyze live Grafana dashboards through the canonical dashboard summary command.
 grafana-util dashboard summary --url http://localhost:3000 --basic-user admin --basic-password admin --output-format governance
 ```
 
 ```bash
-# Purpose: Analyze live Grafana dashboards through the canonical dashboard summary command.
+# Analyze live Grafana dashboards through the canonical dashboard summary command.
 grafana-util dashboard summary --url http://localhost:3000 --basic-user admin --basic-password admin --interactive
 ```
 

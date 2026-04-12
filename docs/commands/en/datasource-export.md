@@ -16,12 +16,12 @@ Use this when you need a local datasource bundle for later inspection, diff, or 
 
 ## Examples
 ```bash
-# Purpose: Export live Grafana datasource inventory as normalized JSON plus provisioning files.
+# Export live Grafana datasource inventory as normalized JSON plus provisioning files.
 grafana-util datasource export --url http://localhost:3000 --basic-user admin --basic-password admin --output-dir ./datasources --overwrite
 ```
 
 ```bash
-# Purpose: Export live Grafana datasource inventory as normalized JSON plus provisioning files.
+# Export live Grafana datasource inventory as normalized JSON plus provisioning files.
 grafana-util datasource export --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --output-dir ./datasources --overwrite
 ```
 

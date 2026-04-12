@@ -49,22 +49,22 @@ Choose this page when the work might turn into inventory, migration, or a review
 
 ## Examples
 ```bash
-# Purpose: Inspect datasource types before choosing a lane.
+# Inspect datasource types before choosing a lane.
 grafana-util datasource --help
 ```
 
 ```bash
-# Purpose: Show the built-in datasource type catalog.
+# Show the built-in datasource type catalog.
 grafana-util datasource types
 ```
 
 ```bash
-# Purpose: Browse live datasources from a saved profile.
+# Browse live datasources from a saved profile.
 grafana-util datasource browse --profile prod
 ```
 
 ```bash
-# Purpose: Browse one org with explicit credentials.
+# Browse one org with explicit credentials.
 grafana-util datasource browse --url http://localhost:3000 --basic-user admin --basic-password admin
 ```
 

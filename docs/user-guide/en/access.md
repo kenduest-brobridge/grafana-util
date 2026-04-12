@@ -3,6 +3,10 @@
 Use this chapter when identity and access are the task: org boundaries, users, teams, service accounts, and the tokens that let automation act safely.
 Inventory reads can come from live Grafana or from a local export bundle; the workflow is the same either way.
 
+Access work is easy to underestimate because it often looks like adding one user or deleting one token. In practice, each user, team, org, and service account defines who can see data, who can change assets, and which automation can touch Grafana while nobody is watching. This chapter starts with scope so the command is not chosen in isolation.
+
+Read it by asking whether the task affects a person, a team, an org boundary, or a machine credential. Then decide whether you need live inventory, a local snapshot, a diff, or a real mutation. Do not start from "I have a token"; start from "who or what will this permission change affect?"
+
 ## Who It Is For
 
 - Administrators managing org, user, team, or service-account lifecycle work.
@@ -32,19 +36,20 @@ Inventory reads can come from live Grafana or from a local export bundle; the wo
 - If you are unsure whether a token or service account can perform the task, check the command page before mutation.
 - If the wording still feels split across team/org/user surfaces, return to the glossary and the command reference.
 
-## Command Pages
+## Access Workflow Map
 
-Need the command-by-command surface instead of the workflow guide?
+Classify access subcommands by who or what they affect, not by which token you happen to have:
 
-- [access command overview](../../commands/en/access.md)
-- [access user](../../commands/en/access.md)
-- [access org](../../commands/en/access.md)
-- [access team](../../commands/en/access.md)
-- [access service-account](../../commands/en/access.md)
-- [access service-account token](../../commands/en/access.md)
-- [full command index](../../commands/en/index.md)
+| Job | Start here | Main input | Main output | Next step |
+| --- | --- | --- | --- | --- |
+| Manage orgs | `access org list/export/import/diff` | Live Grafana or org bundle | Org inventory / dry-run / diff | Review before import |
+| Manage users | `access user list/add/modify/delete/export/import/diff` | Login, org role, bundle | User inventory or mutation result | Verify with list / diff |
+| Manage teams | `access team list/export/import/diff` | Org scope, team bundle | Team and member inventory | Import after dry-run |
+| Manage service accounts | `access service-account list/add/modify/delete/export/import/diff` | Org scope, service-account bundle | Automation identity inventory | Manage tokens or diff |
+| Manage tokens | `access service-account token add/delete/list` | Service account id/name | One-time token secret or delete result | Store the secret immediately / rotate the old token |
+| Compare drift | `diff` subcommands | Local bundle + live Grafana | Change differences | Fix the bundle or import |
 
----
+The key decision is scope. A global user, an org role, team membership, service-account permissions, and token lifecycle are different layers. Do not infer that a token able to call one API should be used for every access workflow.
 
 ## org Management
 
@@ -52,22 +57,22 @@ Use `access org` when you need Basic-auth-backed inventory, export, or replay fo
 
 ### 1. List, Export, and Replay orgs
 ```bash
-# Purpose: 1. List, Export, and Replay orgs.
+# Start by listing the orgs visible in live Grafana.
 grafana-util access org list --table
 ```
 
 ```bash
-# Purpose: 1. List, Export, and Replay orgs.
+# Review a saved org bundle without touching live Grafana.
 grafana-util access org list --input-dir ./access-orgs --table
 ```
 
 ```bash
-# Purpose: 1. List, Export, and Replay orgs.
+# Export org inventory into a replayable local bundle.
 grafana-util export access org --output-dir ./access-orgs
 ```
 
 ```bash
-# Purpose: 1. List, Export, and Replay orgs.
+# Dry-run the import before creating or updating orgs.
 grafana-util access org import --input-dir ./access-orgs --dry-run
 ```
 **Expected Output:**
@@ -90,6 +95,10 @@ Use the list output to confirm the main org, then export/import when you need a 
 ## User and team management
 
 Use `access user` and `access team` for membership changes, snapshots, and drift checks when you need to reconcile who can see or edit what. Their `list` and `browse` commands both read local bundles through `--input-dir`.
+
+Separate the user and team responsibilities first. User workflows decide whether one login exists, whether it is disabled, and which org role it has. Team workflows manage collaboration groups and membership. If the question is "can this person sign in or hold this role?", start with `access user`. If the question is "can this group see or manage a set of assets?", start with `access team`.
+
+Use `list` for live or bundled inventory, `export` for reviewable snapshots, `diff` to detect live drift from a bundle, and `import` only after dry-run. When using `add`, `modify`, or `delete` for a user, confirm whether the scope is global user state, org role, or Grafana admin state before mutating.
 
 ### 1. Add, Modify, and Diff Users
 ```bash
@@ -119,22 +128,22 @@ Use `--prompt-password` when you do not want a password in shell history. `--sco
 
 ### 2. Discover and Sync Teams
 ```bash
-# Purpose: 2. Discover and Sync Teams.
+# List the teams currently present in one org.
 grafana-util access team list --org-id 1 --table
 ```
 
 ```bash
-# Purpose: 2. Discover and Sync Teams.
+# Inspect the same team inventory from a local bundle.
 grafana-util access team list --input-dir ./access-teams --table
 ```
 
 ```bash
-# Purpose: 2. Discover and Sync Teams.
+# Export teams and preserve membership state.
 grafana-util export access team --output-dir ./access-teams --with-members
 ```
 
 ```bash
-# Purpose: 2. Discover and Sync Teams.
+# Preview team replay actions before replacing existing state.
 grafana-util access team import --input-dir ./access-teams --replace-existing --dry-run --table
 ```
 **Expected Output:**
@@ -158,19 +167,23 @@ Use `--with-members` when the export must preserve membership state, and use `--
 Service accounts are the foundation of repeatable automation, CI jobs, and scoped integrations.
 Their inventory can be reviewed from live Grafana or from a local export bundle before you touch tokens.
 
+A service account is a machine identity, not a safer shortcut for a human user. It should map to one automation purpose, such as CI deployment, nightly audit, or an incident bot. `access service-account` manages the identity; `access service-account token` manages API tokens for that identity. Review those layers separately.
+
+Token secrets are usually shown only once. After creating a token, store the secret in the right secret store before rotating the old token. Do not treat terminal logs as secret storage, and do not assume a token is still usable just because the service account appears in inventory.
+
 ### 1. List and Export Service Accounts
 ```bash
-# Purpose: 1. List and Export Service Accounts.
+# Use JSON when service-account inventory will feed a script.
 grafana-util access service-account list --json
 ```
 
 ```bash
-# Purpose: 1. List and Export Service Accounts.
+# Review service-account inventory from a saved bundle.
 grafana-util access service-account list --input-dir ./access-sa --output-format text
 ```
 
 ```bash
-# Purpose: 1. List and Export Service Accounts.
+# Export service-account inventory for review or replay.
 grafana-util export access service-account --output-dir ./access-sa
 ```
 **Expected Output:**
@@ -231,17 +244,17 @@ Use `--json` when you need the one-time `key` field. Plain text is better for lo
 Compare your local identity snapshots against the live Grafana server.
 
 ```bash
-# Purpose: Compare your local identity snapshots against the live Grafana server.
+# Compare your local identity snapshots against the live Grafana server.
 grafana-util access user diff --input-dir ./access-users
 ```
 
 ```bash
-# Purpose: Compare your local identity snapshots against the live Grafana server.
+# Compare your local identity snapshots against the live Grafana server.
 grafana-util access team diff --diff-dir ./access-teams
 ```
 
 ```bash
-# Purpose: Compare your local identity snapshots against the live Grafana server.
+# Compare your local identity snapshots against the live Grafana server.
 grafana-util access service-account diff --diff-dir ./access-sa
 ```
 **Expected Output:**
@@ -255,6 +268,18 @@ No team differences across 4 team(s).
 No service account differences across 2 service account(s).
 ```
 Use diff output to decide whether a snapshot is safe to import or whether live Grafana has already drifted.
+
+## When To Use Command Reference
+
+This chapter helps you choose the access scope. Once you know whether the task affects orgs, users, teams, service accounts, or tokens, use the command reference for exact flags, output formats, and complete examples:
+
+- [access command overview](../../commands/en/access.md)
+- [access user](../../commands/en/access-user.md)
+- [access org](../../commands/en/access-org.md)
+- [access team](../../commands/en/access-team.md)
+- [access service-account](../../commands/en/access-service-account.md)
+- [access service-account token](../../commands/en/access-service-account-token.md)
+- [full command index](../../commands/en/index.md)
 
 ---
 [⬅️ Previous: Alerting Governance](alert.md) | [🏠 Home](index.md) | [➡️ Next: Workspace Review & Status](status-workspace.md)

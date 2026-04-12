@@ -157,7 +157,7 @@ CLI schema 快速查詢：
 
 ---
 
-## 🔐 Profile、連線與 secret 處理
+## Profile、連線與 secret 處理
 
 Profile 是專案本地的設定。`grafana-util config profile` 會讀寫目前工作目錄中的 `grafana-util.yaml`，`--profile` 則是從這個檔案裡挑選一個命名 profile。
 
@@ -231,27 +231,27 @@ password_store:
 
 ### 2. 初始化、新增並列出 profile
 ```bash
-# 用途：2. 初始化、新增並列出 profile。
+# 先建立本機 profile 設定檔。
 grafana-util config profile init --overwrite
 ```
 
 ```bash
-# 用途：2. 初始化、新增並列出 profile。
+# 建立會互動輸入密碼的 dev profile。
 grafana-util config profile add dev --url http://127.0.0.1:3000 --basic-user admin --prompt-password
 ```
 
 ```bash
-# 用途：2. 初始化、新增並列出 profile。
+# 建立從環境變數讀 token 的 CI profile。
 grafana-util config profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN --store-secret os
 ```
 
 ```bash
-# 用途：2. 初始化、新增並列出 profile。
+# 列出目前設定檔解析到的 profile 名稱。
 grafana-util config profile list
 ```
 
 ```bash
-# 用途：2. 初始化、新增並列出 profile。
+# 印出完整註解版 profile 範本。
 grafana-util config profile example --mode full
 ```
 **預期輸出：**
@@ -264,12 +264,12 @@ prod
 
 ### 3. 顯示已解析的 profile
 ```bash
-# 用途：3. 顯示已解析的 profile。
+# 查看 prod profile 最後解析出的連線欄位。
 grafana-util config profile show --profile prod --output-format yaml
 ```
 
 ```bash
-# 用途：3. 顯示已解析的 profile。
+# 本機除錯時才顯示已解析 secret。
 grafana-util config profile show --profile prod --show-secrets --output-format yaml
 ```
 **預期輸出：**
@@ -343,17 +343,17 @@ profiles:
 
 ### 5. 日常使用時的三種常見驗證範例
 ```bash
-# 用途：5. 日常使用時的三種常見驗證範例。
+# 日常工作優先使用已保存的 profile。
 grafana-util status live --profile prod --output-format yaml
 ```
 
 ```bash
-# 用途：5. 日常使用時的三種常見驗證範例。
+# Bootstrap 或救援時，用直接 Basic auth 做同一種檢查。
 grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --output-format yaml
 ```
 
 ```bash
-# 用途：5. 日常使用時的三種常見驗證範例。
+# Scoped automation 可以用 token 輸出 JSON。
 grafana-util status overview live --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output-format json
 ```
 預設請以 `--profile` 為主。直接 Basic auth 比較適合管理員型流程；token 則適合你已經很清楚權限邊界的 scoped automation。
@@ -429,7 +429,7 @@ grafana-util status overview live --profile ci --output-format json
 
 ---
 
-## 📊 輸出格式對照
+## 輸出格式對照
 
 `grafana-util` 同時提供各格式旗標與單一 `--output-format` 選擇器。以 dashboard list 來說，目前可用的是 `--json`、`--table`、`--csv`、`--yaml` 與 `--output-format`。
 
@@ -444,7 +444,7 @@ grafana-util status overview live --profile ci --output-format json
 
 ### 1. 表格或 JSON 的選擇
 ```bash
-# 用途：1. 表格或 JSON 的選擇。
+# 先看 dashboard list 支援哪些輸出格式。
 grafana-util dashboard list -h
 ```
 **預期輸出：**
@@ -460,12 +460,12 @@ grafana-util dashboard list -h
 
 ### 2. Observe live 與 overview 的輸出選擇器
 ```bash
-# 用途：2. Observe live 與 overview 的輸出選擇器。
+# 檢查 live readiness 入口的輸出格式。
 grafana-util status live -h
 ```
 
 ```bash
-# 用途：2. Observe live 與 overview 的輸出選擇器。
+# 檢查 overview live 入口的輸出格式。
 grafana-util status overview live -h
 ```
 **預期輸出：**
@@ -494,7 +494,7 @@ Render a live overview by delegating to the shared status live path.
 
 ---
 
-## 🤖 自動化與腳本開發 (CI/CD)
+## 自動化與腳本開發 (CI/CD)
 
 ### 1. 使用 `jq` 進行過濾 (Bash/Zsh)
 ```bash
@@ -505,7 +505,7 @@ grafana-util dashboard list --profile prod --json | jq -r '.[] | select(.orgId =
 
 ### 2. 處理結束代碼 (Exit Codes)
 ```bash
-# 用途：2. 處理結束代碼 (Exit Codes)。
+# 用 exit code 把 status live 接進 shell gate。
 grafana-util status live --profile prod --output-format json
 if [ $? -eq 2 ]; then
   echo "CRITICAL: Grafana 連線受阻！"

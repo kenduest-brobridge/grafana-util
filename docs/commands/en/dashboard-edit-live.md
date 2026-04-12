@@ -25,22 +25,22 @@ Use this when Grafana already has the closest source dashboard and you want to e
 
 ## Examples
 ```bash
-# Purpose: Edit one live dashboard and preview the live publish without writing a draft file.
+# Edit one live dashboard and preview the live publish without writing a draft file.
 grafana-util dashboard edit-live --profile prod --dashboard-uid cpu-main
 ```
 
 ```bash
-# Purpose: Edit one live dashboard and keep the result as a local draft.
+# Edit one live dashboard and keep the result as a local draft.
 grafana-util dashboard edit-live --url http://localhost:3000 --basic-user admin --basic-password admin --dashboard-uid cpu-main --output ./drafts/cpu-main.edited.json
 ```
 
 ```bash
-# Purpose: Edit one live dashboard, save the draft, and immediately preview the publish.
+# Edit one live dashboard, save the draft, and immediately preview the publish.
 grafana-util dashboard edit-live --profile prod --dashboard-uid cpu-main --output ./drafts/cpu-main.edited.json --publish-dry-run
 ```
 
 ```bash
-# Purpose: Edit one live dashboard and explicitly write the result back to Grafana.
+# Edit one live dashboard and explicitly write the result back to Grafana.
 grafana-util dashboard edit-live --profile prod --dashboard-uid cpu-main --apply-live --yes --message 'Hotfix CPU dashboard'
 ```
 

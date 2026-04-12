@@ -1,7 +1,7 @@
 # dashboard summary
 
 ## 用途
-直接分析 live Grafana，整理出 dashboard、變數、資料來源與查詢概況，讓你在不先匯出的情況下就能先看清楚現在的環境。
+直接分析 live Grafana，整理出 dashboard、變數、data source 與查詢概況，讓你在不先匯出的情況下就能先看清楚現在的環境。
 
 ## 何時使用
 當你的來源是 live Grafana，而不是本地匯出樹時，就先開這頁。它適合拿來做盤點、治理輸出、相依性前置分析，或在要跑 `policy`、`impact`、`variables` 之前先把 live 狀態整理清楚。
@@ -40,17 +40,17 @@
 ## 範例（由淺到深）
 
 ```bash
-# 用途：先用 repo 既有 profile 盤點 live Grafana。
+# 先用 repo 既有 profile 盤點 live Grafana。
 grafana-util dashboard summary --profile prod --output-format governance
 ```
 
 ```bash
-# 用途：直接連到 live Grafana，先用 interactive 模式現場看內容。
+# 直接連到 live Grafana，先用 interactive 模式現場看內容。
 grafana-util dashboard summary --url http://localhost:3000 --basic-user admin --basic-password admin --interactive
 ```
 
 ```bash
-# 用途：產生可重用的治理輸出，留給後續 policy / impact / CI。
+# 產生可重用的治理輸出，留給後續 policy / impact / CI。
 grafana-util dashboard summary --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output-format governance
 ```
 

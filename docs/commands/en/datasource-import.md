@@ -17,12 +17,12 @@ Use this when you have a local datasource bundle or provisioning tree and want t
 
 ## Examples
 ```bash
-# Purpose: Import datasource inventory through the Grafana API.
+# Import datasource inventory through the Grafana API.
 grafana-util datasource import --url http://localhost:3000 --basic-user admin --basic-password admin --input-dir ./datasources --dry-run --table
 ```
 
 ```bash
-# Purpose: Import datasource inventory through the Grafana API.
+# Import datasource inventory through the Grafana API.
 grafana-util datasource import --url http://localhost:3000 --basic-user admin --basic-password admin --input-dir ./datasources --use-export-org --only-org-id 2 --create-missing-orgs --dry-run --json
 ```
 

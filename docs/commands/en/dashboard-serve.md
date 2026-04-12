@@ -22,17 +22,17 @@ Use this when you are iterating on one dashboard draft, one draft directory, or 
 
 ## Examples
 ```bash
-# Purpose: Serve one local draft file.
+# Serve one local draft file.
 grafana-util dashboard serve --input ./drafts/cpu-main.json --port 18080 --open-browser
 ```
 
 ```bash
-# Purpose: Serve all dashboard drafts in one local directory.
+# Serve all dashboard drafts in one local directory.
 grafana-util dashboard serve --input ./dashboards/raw
 ```
 
 ```bash
-# Purpose: Serve one generated dashboard and watch generator inputs for reload.
+# Serve one generated dashboard and watch generator inputs for reload.
 grafana-util dashboard serve --script 'jsonnet dashboards/cpu.jsonnet' --watch ./dashboards --watch ./lib --port 18080
 ```
 

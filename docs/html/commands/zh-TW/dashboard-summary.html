@@ -326,13 +326,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   font-weight: 500;
 }
 .nav-command-branch-item .nav-command-leaf-link:hover { color: var(--heading); }
-.handbook-command-map .nav-command-root-link {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  font-size: 0.9rem;
-}
 
 .sidebar-toggle {
   position: absolute;
@@ -378,71 +371,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map { margin: 0 0 24px; }
-.handbook-command-map-panel {
-  margin-top: 16px;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--panel) 96%, white);
-}
-.handbook-command-map .nav-group-title {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-group {
-  padding-top: 0;
-}
-.handbook-command-map .nav-command-group + .nav-command-group {
-  margin-top: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
-  padding-top: 10px;
-}
-.handbook-command-map .nav-command-sub-list {
-  margin-top: 8px;
-  margin-left: 0;
-  padding-left: 0;
-  border-left: 0;
-}
-.handbook-command-map .nav-command-branch {
-  display: grid;
-  grid-template-columns: minmax(130px, 0.22fr) minmax(0, 1fr);
-  gap: 12px 18px;
-  align-items: start;
-}
-.handbook-command-map .nav-command-branch-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-left: 0;
-  padding-left: 14px;
-}
-.handbook-command-map .nav-command-branch-item + .nav-command-branch-item { margin-top: 0; }
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-  line-height: 1.25;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link:hover,
-.handbook-command-map .nav-command-link a:hover {
-  border-color: color-mix(in srgb, var(--border) 45%, var(--accent));
-  background: var(--panel-strong);
-}
-@media (max-width: 720px) {
-  .handbook-command-map .nav-command-branch {
-    grid-template-columns: 1fr;
-  }
-  .handbook-command-map .nav-command-branch-list {
-    padding-left: 0;
-    border-left: 0;
-  }
-}
 .article p,
 .article li { color: var(--text); font-weight: 460; }
 .article ul li::marker,
@@ -931,7 +859,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <section class="command-intro">
   <div class="command-intro-grid"><div class="command-intro-block">
   <p class="command-intro-label">這頁在說什麼</p>
-  <p class="command-intro-text">直接分析 live Grafana，整理出 dashboard、變數、資料來源與查詢概況，讓你在不先匯出的情況下就能先看清楚現在的環境。</p>
+  <p class="command-intro-text">直接分析 live Grafana，整理出 dashboard、變數、data source 與查詢概況，讓你在不先匯出的情況下就能先看清楚現在的環境。</p>
 </div>
 <div class="command-intro-block">
   <p class="command-intro-label">什麼時候看這頁</p>
@@ -944,7 +872,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 </div>
 </section>
 <h2 id="用途">用途</h2>
-<p>直接分析 live Grafana，整理出 dashboard、變數、資料來源與查詢概況，讓你在不先匯出的情況下就能先看清楚現在的環境。</p>
+<p>直接分析 live Grafana，整理出 dashboard、變數、data source 與查詢概況，讓你在不先匯出的情況下就能先看清楚現在的環境。</p>
 <h2 id="何時使用">何時使用</h2>
 <p>當你的來源是 live Grafana，而不是本地匯出樹時，就先開這頁。它適合拿來做盤點、治理輸出、相依性前置分析，或在要跑 <code>policy</code>、<code>impact</code>、<code>variables</code> 之前先把 live 狀態整理清楚。</p>
 <h2 id="最短成功路徑">最短成功路徑</h2>
@@ -956,11 +884,11 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="先決定輸出長什麼樣">先決定輸出長什麼樣</h2>
 <ul><li><code>table</code> / <code>text</code>：給人直接看，適合手動盤點與 review 前確認</li><li><code>governance</code> / <code>governance-json</code>：給 <code>policy</code>、<code>impact</code> 或後續治理流程重用</li><li><code>queries-json</code>：給查詢層分析或外部工具接手</li><li><code>interactive</code>：來源已經確認正確，想現場往下鑽時再開</li></ul>
 <h2 id="範例由淺到深">範例（由淺到深）</h2>
-<pre><code># 用途：先用 repo 既有 profile 盤點 live Grafana。
+<pre><code># 先用 repo 既有 profile 盤點 live Grafana。
 grafana-util dashboard summary --profile prod --output-format governance</code></pre>
-<pre><code># 用途：直接連到 live Grafana，先用 interactive 模式現場看內容。
+<pre><code># 直接連到 live Grafana，先用 interactive 模式現場看內容。
 grafana-util dashboard summary --url http://localhost:3000 --basic-user admin --basic-password admin --interactive</code></pre>
-<pre><code># 用途：產生可重用的治理輸出，留給後續 policy / impact / CI。
+<pre><code># 產生可重用的治理輸出，留給後續 policy / impact / CI。
 grafana-util dashboard summary --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --output-format governance</code></pre>
 <h2 id="什麼叫做這次跑成功">什麼叫做這次跑成功</h2>
 <ul><li>你能在不先匯出的情況下，看出 live 環境有哪些 dashboard 與查詢結構</li><li>產物格式足以直接接到下一步，而不是還要重新抓一次資料</li><li>同一份輸出可以支撐 review、治理或影響分析，而不是每一步都重跑不同命令</li></ul>

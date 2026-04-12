@@ -23,7 +23,7 @@ Use this when you are about to review a workspace, migrate, or troubleshoot one 
 
 ## Examples
 ```bash
-# Purpose: Estimate the blast radius of one datasource directly from live Grafana.
+# Estimate the blast radius of one datasource directly from live Grafana.
 grafana-util dashboard impact \
   --url http://localhost:3000 \
   --basic-user admin \
@@ -33,7 +33,7 @@ grafana-util dashboard impact \
 ```
 
 ```bash
-# Purpose: Estimate the blast radius of one datasource from a local export tree.
+# Estimate the blast radius of one datasource from a local export tree.
 grafana-util dashboard impact \
   --input-dir ./dashboards/raw \
   --input-format raw \
@@ -42,7 +42,7 @@ grafana-util dashboard impact \
 ```
 
 ```bash
-# Purpose: Estimate the blast radius of one datasource from a repo-backed Git Sync tree.
+# Estimate the blast radius of one datasource from a repo-backed Git Sync tree.
 grafana-util dashboard impact \
   --input-dir ./grafana-oac-repo \
   --input-format git-sync \
@@ -51,7 +51,7 @@ grafana-util dashboard impact \
 ```
 
 ```bash
-# Purpose: Estimate the blast radius of one datasource from reusable dashboard governance artifacts.
+# Estimate the blast radius of one datasource from reusable dashboard governance artifacts.
 grafana-util dashboard impact \
   --governance ./governance.json \
   --datasource-uid prom-main \

@@ -25,17 +25,17 @@
 
 ## 範例
 ```bash
-# 用途：編修一份 live dashboard，並把結果保留成本地草稿。
+# 編修一份 live dashboard，並把結果保留成本地草稿。
 grafana-util dashboard edit-live --profile prod --dashboard-uid cpu-main --output ./drafts/cpu-main.edited.json
 ```
 
 ```bash
-# 用途：編修一份 live dashboard，不寫出草稿檔，只預覽 live publish。
+# 編修一份 live dashboard，不寫出草稿檔，只預覽 live publish。
 grafana-util dashboard edit-live --url http://localhost:3000 --basic-user admin --basic-password admin --dashboard-uid cpu-main
 ```
 
 ```bash
-# 用途：編修一份 live dashboard，並明確回寫到 Grafana。
+# 編修一份 live dashboard，並明確回寫到 Grafana。
 grafana-util dashboard edit-live --profile prod --dashboard-uid cpu-main --apply-live --yes --message 'Hotfix CPU dashboard'
 ```
 

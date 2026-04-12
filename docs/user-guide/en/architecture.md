@@ -1,8 +1,8 @@
-# 🏛️ Architecture & Design Principles
+# Architecture & Design Principles
 
-Use this chapter when you want to understand why the handbook and command surfaces are split the way they are, and how that split should workspace your day-to-day operator choices.
+Use this chapter when you want to understand why the handbook and command surfaces are split the way they are, and how that split should shape your day-to-day operator choices.
 
-Understanding the architectural philosophy of `grafana-util` is key to managing large-scale Grafana estates effectively. This chapter explains the "Why" behind the design decisions, but it also tells you how those decisions should workspace the way you operate.
+Understanding the architectural philosophy of `grafana-util` is key to managing large-scale Grafana estates effectively. This chapter explains the "why" behind the design decisions, but it also tells you how those decisions should shape the way you operate.
 
 ## Who It Is For
 
@@ -37,7 +37,7 @@ For the command surface behind these ideas, see [status](../../commands/en/statu
 
 ---
 
-## 🏗️ The Three Surfaces Pattern
+## The Three Surfaces Pattern
 
 `grafana-util` separates operational concerns into three distinct "Surfaces." This prevents mixing human-facing data with machine-readable contracts.
 
@@ -71,7 +71,7 @@ The design is intentionally opinionated so operators do not have to guess which 
 
 ---
 
-## 🛣️ Lane Isolation Policy
+## Lane Isolation Policy
 
 To prevent configuration drift and "Frankenstein" assets, we enforce strict isolation between data lanes.
 
@@ -99,7 +99,7 @@ If you ignore lane isolation, the failure is often subtle rather than spectacula
 
 ---
 
-## 🔐 Secret Governance (Masked Recovery)
+## Secret Governance (Masked Recovery)
 
 `grafana-util` follows a **"Safe-by-Default"** architecture for secrets such as datasource passwords and secure connection fields.
 
@@ -127,7 +127,7 @@ When this goes wrong, the symptoms are usually:
 
 ---
 
-## 🔄 State Transition Model
+## State Transition Model
 
 `grafana-util` operates as a **State Reconciler** for Alerting, and a **Snapshot Replayer** for Dashboards.
 
@@ -153,7 +153,7 @@ Operational consequence:
 
 ---
 
-## ✅ What Good Looks Like
+## What Good Looks Like
 
 The architecture is working for you when:
 

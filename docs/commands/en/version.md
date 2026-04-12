@@ -11,12 +11,12 @@ Use this when you need to confirm the installed binary or capture machine-readab
 
 ## Examples
 ```bash
-# Purpose: Print the human-readable version.
+# Print the human-readable version.
 grafana-util version
 ```
 
 ```bash
-# Purpose: Print machine-readable version details.
+# Print machine-readable version details.
 grafana-util version --json
 ```
 

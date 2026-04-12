@@ -326,13 +326,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   font-weight: 500;
 }
 .nav-command-branch-item .nav-command-leaf-link:hover { color: var(--heading); }
-.handbook-command-map .nav-command-root-link {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  font-size: 0.9rem;
-}
 
 .sidebar-toggle {
   position: absolute;
@@ -378,71 +371,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map { margin: 0 0 24px; }
-.handbook-command-map-panel {
-  margin-top: 16px;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--panel) 96%, white);
-}
-.handbook-command-map .nav-group-title {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-group {
-  padding-top: 0;
-}
-.handbook-command-map .nav-command-group + .nav-command-group {
-  margin-top: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
-  padding-top: 10px;
-}
-.handbook-command-map .nav-command-sub-list {
-  margin-top: 8px;
-  margin-left: 0;
-  padding-left: 0;
-  border-left: 0;
-}
-.handbook-command-map .nav-command-branch {
-  display: grid;
-  grid-template-columns: minmax(130px, 0.22fr) minmax(0, 1fr);
-  gap: 12px 18px;
-  align-items: start;
-}
-.handbook-command-map .nav-command-branch-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-left: 0;
-  padding-left: 14px;
-}
-.handbook-command-map .nav-command-branch-item + .nav-command-branch-item { margin-top: 0; }
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-  line-height: 1.25;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link:hover,
-.handbook-command-map .nav-command-link a:hover {
-  border-color: color-mix(in srgb, var(--border) 45%, var(--accent));
-  background: var(--panel-strong);
-}
-@media (max-width: 720px) {
-  .handbook-command-map .nav-command-branch {
-    grid-template-columns: 1fr;
-  }
-  .handbook-command-map .nav-command-branch-list {
-    padding-left: 0;
-    border-left: 0;
-  }
-}
 .article p,
 .article li { color: var(--text); font-weight: 460; }
 .article ul li::marker,
@@ -920,38 +848,39 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
       <div class="layout">
 <aside class="nav-sidebar">
   <button class="sidebar-toggle sidebar-toggle-left" type="button" aria-expanded="true" aria-label="Toggle handbook navigation">◀</button>
-  <div class="nav-sidebar-content"><section class="nav-section"><h2>Guide Map</h2><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 1 · Start Here</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="index.html" class="nav-item">Overview</a></li><li class="nav-tree-node"><a href="what-is-grafana-util.html" class="nav-item">What grafana-util is for</a></li><li class="nav-tree-node"><a href="getting-started.html" class="nav-item">Getting Started</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 2 · Role Paths</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="role-new-user.html" class="nav-item">First Run / Beginner Path</a></li><li class="nav-tree-node"><a href="role-sre-ops.html" class="nav-item">SRE / Operator</a></li><li class="nav-tree-node"><a href="role-automation-ci.html" class="nav-item">Automation / CI</a></li></ul></div><div class="nav-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Part 3 · Operation Surfaces</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="status-workspace.html" class="nav-item active">Status &amp; Workspace</a></li><li class="nav-tree-node"><a href="dashboard.html" class="nav-item">Dashboard</a></li><li class="nav-tree-node"><a href="datasource.html" class="nav-item">Datasource</a></li><li class="nav-tree-node"><a href="alert.html" class="nav-item">Alert</a></li><li class="nav-tree-node"><a href="access.html" class="nav-item">Access</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 4 · Design Principles</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="architecture.html" class="nav-item">Design Principles</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 5 · Reference &amp; Troubleshooting</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="scenarios.html" class="nav-item">Scenarios</a></li><li class="nav-tree-node"><a href="recipes.html" class="nav-item">Recipes</a></li><li class="nav-tree-node"><a href="reference.html" class="nav-item">Reference</a></li><li class="nav-tree-node"><a href="troubleshooting.html" class="nav-item">Troubleshooting</a></li></ul></div></section><section class="nav-section nav-command-section collapsed"><button class="nav-group-header nav-section-toggle" type="button" aria-expanded="false"><span class="nav-group-title-text">Command Relationships</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-section-body"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Read-Only Checks</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><a href="../../commands/en/status.html" class="nav-command-root-link">status</a></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/en/resource.html" class="nav-command-leaf-link">resource</a></li><li class="nav-command-branch-item"><a href="../../commands/en/snapshot.html" class="nav-command-leaf-link">snapshot</a></li></ul></div></div></div><div class="nav-group nav-command-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Workspace Review</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><a href="../../commands/en/workspace.html" class="nav-command-root-link">workspace</a></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/en/workspace-scan.html" class="nav-command-leaf-link">scan</a></li><li class="nav-command-branch-item"><a href="../../commands/en/workspace-test.html" class="nav-command-leaf-link">test</a></li><li class="nav-command-branch-item"><a href="../../commands/en/workspace-preview.html" class="nav-command-leaf-link">preview</a></li><li class="nav-command-branch-item"><a href="../../commands/en/workspace-apply.html" class="nav-command-leaf-link">apply</a></li></ul></div></div></div></div></section><section class="nav-section"><h2>Command Reference</h2><a href="../../commands/en/index.html" class="nav-command-entry">Open command reference</a></section></div>
+  <div class="nav-sidebar-content"><section class="nav-section"><h2>Guide Map</h2><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 1 · Start Here</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="index.html" class="nav-item">Overview</a></li><li class="nav-tree-node"><a href="what-is-grafana-util.html" class="nav-item">What grafana-util is for</a></li><li class="nav-tree-node"><a href="getting-started.html" class="nav-item">Getting Started</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 2 · Role Paths</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="role-new-user.html" class="nav-item">First Run / Beginner Path</a></li><li class="nav-tree-node"><a href="role-sre-ops.html" class="nav-item">SRE / Operator</a></li><li class="nav-tree-node"><a href="role-automation-ci.html" class="nav-item">Automation / CI</a></li></ul></div><div class="nav-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Part 3 · Operation Surfaces</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="status-workspace.html" class="nav-item active">Status &amp; Workspace</a></li><li class="nav-tree-node"><a href="dashboard.html" class="nav-item">Dashboard</a></li><li class="nav-tree-node"><a href="datasource.html" class="nav-item">Datasource</a></li><li class="nav-tree-node"><a href="alert.html" class="nav-item">Alert</a></li><li class="nav-tree-node"><a href="access.html" class="nav-item">Access</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 4 · Design Principles</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="architecture.html" class="nav-item">Design Principles</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 5 · Reference &amp; Troubleshooting</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="scenarios.html" class="nav-item">Scenarios</a></li><li class="nav-tree-node"><a href="recipes.html" class="nav-item">Recipes</a></li><li class="nav-tree-node"><a href="reference.html" class="nav-item">Reference</a></li><li class="nav-tree-node"><a href="troubleshooting.html" class="nav-item">Troubleshooting</a></li></ul></div></section><section class="nav-section nav-command-section collapsed"><button class="nav-group-header nav-section-toggle" type="button" aria-expanded="false"><span class="nav-group-title-text">Command Shortcuts</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-section-body"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Read-Only Checks</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><a href="../../commands/en/status.html" class="nav-command-root-link">status</a></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/en/resource.html" class="nav-command-leaf-link">resource</a></li><li class="nav-command-branch-item"><a href="../../commands/en/snapshot.html" class="nav-command-leaf-link">snapshot</a></li></ul></div></div></div><div class="nav-group nav-command-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Workspace Review</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><a href="../../commands/en/workspace.html" class="nav-command-root-link">workspace</a></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/en/workspace-scan.html" class="nav-command-leaf-link">scan</a></li><li class="nav-command-branch-item"><a href="../../commands/en/workspace-test.html" class="nav-command-leaf-link">test</a></li><li class="nav-command-branch-item"><a href="../../commands/en/workspace-preview.html" class="nav-command-leaf-link">preview</a></li><li class="nav-command-branch-item"><a href="../../commands/en/workspace-apply.html" class="nav-command-leaf-link">apply</a></li></ul></div></div></div></div></section><section class="nav-section"><h2>Command Reference</h2><a href="../../commands/en/index.html" class="nav-command-entry">Open command reference</a></section></div>
 </aside>
 
 <article class="article">
 <div class="breadcrumbs"><a href="../../index.html">Home</a> / Handbook / Status &amp; Workspace</div>
 
-<div class="hero-eyebrow">Part 3 · Operation Surfaces · Chapter 12 of 16</div><h1><span class="hero-title-main">Status &amp; Workspace</span></h1><p class="hero-subtitle">Workspace Review &amp; Status</p>
+<div class="hero-eyebrow">Part 3 · Operation Surfaces</div><h1><span class="hero-title-main">Status &amp; Workspace</span></h1><p class="hero-subtitle">Workspace Review &amp; Status</p>
 
-<section class="section-index"><h2>Chapter Index</h2><p class="section-index-summary">Jump straight to the section you need.</p><ul class="section-index-list layout-list"><li><a href="#command-relationships">Command Relationships</a></li><li><a href="#who-it-is-for">Who It Is For</a></li><li><a href="#primary-goals">Primary Goals</a></li><li><a href="#before-after">Before / After</a></li><li><a href="#what-success-looks-like">What success looks like</a></li><li><a href="#failure-checks">Failure checks</a></li><li><a href="#command-pages">Command Pages</a></li><li><a href="#status-surfaces">Status Surfaces</a></li><li><a href="#workspace-lifecycle">Workspace Lifecycle</a></li><li><a href="#interactive-mode-tui-semantics">Interactive Mode (TUI) Semantics</a></li></ul></section><section class="handbook-command-map"><h2 id="command-relationships">Command Relationships</h2><div class="handbook-command-map-panel"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Read-Only Checks</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><a href="../../commands/en/status.html" class="nav-command-root-link">status</a></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/en/resource.html" class="nav-command-leaf-link">resource</a></li><li class="nav-command-branch-item"><a href="../../commands/en/snapshot.html" class="nav-command-leaf-link">snapshot</a></li></ul></div></div></div><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Workspace Review</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><a href="../../commands/en/workspace.html" class="nav-command-root-link">workspace</a></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/en/workspace-scan.html" class="nav-command-leaf-link">scan</a></li><li class="nav-command-branch-item"><a href="../../commands/en/workspace-test.html" class="nav-command-leaf-link">test</a></li><li class="nav-command-branch-item"><a href="../../commands/en/workspace-preview.html" class="nav-command-leaf-link">preview</a></li><li class="nav-command-branch-item"><a href="../../commands/en/workspace-apply.html" class="nav-command-leaf-link">apply</a></li></ul></div></div></div></div></section><p>Use this chapter when you need to answer two questions before or after a workspace update: is the estate ready, and what exactly will move?</p>
+<section class="section-index"><h2>Chapter Index</h2><p class="section-index-summary">Jump straight to the section you need.</p><ul class="section-index-list layout-list"><li><a href="#who-it-is-for">Who It Is For</a></li><li><a href="#primary-goals">Primary Goals</a></li><li><a href="#before-after">Before / After</a></li><li><a href="#what-success-looks-like">What success looks like</a></li><li><a href="#failure-checks">Failure checks</a></li><li><a href="#status-workspace-workflow-map">Status / Workspace Workflow Map</a></li><li><a href="#status-surfaces">Status Surfaces</a></li><li><a href="#workspace-lifecycle">Workspace Lifecycle</a></li><li><a href="#interactive-mode-tui-semantics">Interactive Mode (TUI) Semantics</a></li><li><a href="#snapshot-evidence-not-a-preview-replacement">Snapshot: Evidence, Not A Preview Replacement</a></li><li><a href="#when-to-use-command-reference">When To Use Command Reference</a></li></ul></section><p>Use this chapter when you need to answer two questions before or after a workspace update: is the estate ready, and what exactly will move?</p>
 <p>This domain focuses on the review gate: the final layer of validation before and after a local Grafana workspace is applied.</p>
+<p>In day-to-day operations, the risky moment is often not the apply command itself. It is the unclear space before apply: you have a set of files, a target Grafana estate, and not enough confidence yet that the input is complete, current, and scoped correctly. This chapter is for that space.</p>
+<p>Do not read it as a deployment tutorial first. Read it as a decision framework: can you trust the live estate, can the staged workspace be parsed, and is the previewed change something you are willing to own? Once those answers are clear, apply is only the final step.</p>
 <h2 id="who-it-is-for">Who It Is For</h2>
 <ul><li>Operators reviewing readiness before a maintenance window or apply path.</li><li>Engineers who need to summarize a local workspace before apply.</li><li>Reviewers who want to separate “is the estate healthy?” from “what will this workspace do?”</li></ul>
 <h2 id="primary-goals">Primary Goals</h2>
 <ul><li>Separate live health checks from staged workspace review.</li><li>Catch broken inputs before an apply path starts.</li><li>Give reviewers a stable summary of what changed and what still looks risky.</li></ul>
+<p>Put another way, this chapter turns &quot;it should probably be fine&quot; into &quot;I have checked live, staged, and preview output, and I know what happens next.&quot;</p>
 <h2 id="before-after">Before / After</h2>
 <ul><li>Before: live checks, staged reviews, and snapshot-style summaries could feel like separate tools with overlapping names.</li><li>After: live checks, staged reviews, and workspace previews are grouped into one guided path.</li></ul>
 <h2 id="what-success-looks-like">What success looks like</h2>
 <ul><li>You can tell whether the task is about readiness, snapshots, or workspace review before apply.</li><li>You know which command to open when a workflow moves from read-only checks into mutation.</li><li>You can explain what should happen before a workspace is applied.</li></ul>
 <h2 id="failure-checks">Failure checks</h2>
 <ul><li>If the staged and live surfaces disagree, stop and identify which lane is stale before applying anything.</li><li>If a snapshot or summary does not match your expectation, treat that as a workflow warning, not a cosmetic issue.</li><li>If you cannot say why you need this chapter, you may be in the wrong workflow lane.</li></ul>
-<h2 id="command-pages">Command Pages</h2>
-<p>Need the command-by-command surface instead of the workflow guide?</p>
-<p>Primary lane:</p>
-<ul><li><a href="../../commands/en/workspace.html">workspace</a></li><li><a href="../../commands/en/workspace-scan.html">workspace scan</a></li><li><a href="../../commands/en/workspace-test.html">workspace test</a></li><li><a href="../../commands/en/workspace-preview.html">workspace preview</a></li><li><a href="../../commands/en/workspace-apply.html">workspace apply</a></li><li><a href="../../commands/en/status.html">status</a></li><li><a href="../../commands/en/status.html#staged">status staged</a></li><li><a href="../../commands/en/status.html#live">status live</a></li><li><a href="../../commands/en/status.html#overview">status overview</a></li><li><a href="../../commands/en/status.html#snapshot">status snapshot</a></li></ul>
-<p>Supporting pages:</p>
-<ul><li><a href="../../commands/en/snapshot.html">snapshot</a></li><li><a href="../../commands/en/snapshot.html#export">snapshot export</a></li><li><a href="../../commands/en/snapshot.html#review">snapshot review</a></li><li><a href="../../commands/en/config.html">config</a></li><li><a href="../../commands/en/profile.html">config profile</a></li><li><a href="../../commands/en/profile.html#list">config profile list</a></li><li><a href="../../commands/en/profile.html#show">config profile show</a></li><li><a href="../../commands/en/profile.html#add">config profile add</a></li><li><a href="../../commands/en/profile.html#example">config profile example</a></li><li><a href="../../commands/en/profile.html#init">config profile init</a></li></ul>
+<h2 id="status-workspace-workflow-map">Status / Workspace Workflow Map</h2>
+<p>Status and workspace subcommands start with one question: can you trust this state enough to apply anything?</p>
+<table><thead><tr><th>Job</th><th>Start here</th><th>Main input</th><th>Main output</th><th>Next step</th></tr></thead><tbody><tr><td>Check live Grafana</td><td><code>status live</code>, <code>status overview live</code></td><td>Grafana connection, profile, optional staged summaries</td><td>Ready / warning / blocking status</td><td>Export, review, or stop and fix</td></tr><tr><td>Check staged package</td><td><code>status staged</code>, <code>workspace scan</code>, <code>workspace test</code></td><td>Local workspace</td><td>Schema / package / policy results</td><td>Preview</td></tr><tr><td>Preview pending changes</td><td><code>workspace preview</code></td><td>Staged workspace + target profile</td><td>Pre-apply summary</td><td>Human review</td></tr><tr><td>Apply workspace</td><td><code>workspace apply</code></td><td>Reviewed workspace</td><td>Live mutation result</td><td>Run status live after apply</td></tr><tr><td>Package and hand off</td><td><code>workspace package</code>, <code>workspace ci</code></td><td>Local workspace</td><td>Bundle / CI artifact</td><td>Send to CI or the next environment</td></tr><tr><td>Capture review evidence</td><td><code>status snapshot</code>, <code>snapshot export</code>, <code>snapshot review</code></td><td>Live or staged state</td><td>Snapshot artifact / review output</td><td>Incident, PR, or audit trail</td></tr></tbody></table>
+<p>If the question is &quot;can I trust this Grafana estate right now?&quot;, start with <code>status live</code>. If the question is &quot;can this set of files be applied?&quot;, start with <code>workspace scan/test/preview</code>. Use snapshot when you need review evidence that can travel with an incident, PR, or audit trail.</p>
 <h2 id="status-surfaces">Status Surfaces</h2>
 <p>We distinguish between <strong>Live</strong> (what is actually running) and <strong>Staged</strong> (what you intend to apply).</p>
 <h3 id="1-live-readiness-check">1. Live Readiness Check</h3>
-<pre><code># Purpose: 1. Live Readiness Check.
+<pre><code># Use a table for a quick live readiness check.
 grafana-util status live --output-format table</code></pre>
-<pre><code># Purpose: 1. Live Readiness Check.
+<pre><code># Add staged summary files when the live check needs more review context.
 grafana-util status live --profile prod --sync-summary-file ./sync-summary.json --package-test-file ./workspace-package-test.json --output-format json</code></pre>
 <p><strong>Expected Output:</strong></p>
 <pre><code>OVERALL: status=ready
@@ -963,9 +892,9 @@ Alerts       ok       No dangling rules</code></pre>
 <p>Use <code>status live</code> when you want the shared status path to tell you whether Grafana is safe to read from or apply into. The extra staged sync files deepen the live view without changing the command shape.</p>
 <h3 id="2-staged-readiness-check">2. Staged Readiness Check</h3>
 <p>Use this as a mandatory CI/CD gate before running <code>apply</code>.</p>
-<pre><code># Purpose: Use this as a mandatory CI/CD gate before running apply.
+<pre><code># Gate one desired file before an apply job can continue.
 grafana-util status staged --desired-file ./desired.json --output-format json</code></pre>
-<pre><code># Purpose: Use this as a mandatory CI/CD gate before running apply.
+<pre><code># Check dashboard, alert, and desired inputs together as staged readiness.
 grafana-util status staged --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts --desired-file ./desired.json --output-format table</code></pre>
 <p><strong>Expected Output:</strong></p>
 <pre><code>{
@@ -976,6 +905,8 @@ grafana-util status staged --dashboard-export-dir ./dashboards/raw --alert-expor
 <p><code>status staged</code> is the machine-readable gate. Treat <code>blockers</code> as hard stops and <code>warnings</code> as review items.</p>
 <h2 id="workspace-lifecycle">Workspace Lifecycle</h2>
 <p>Manage the transition from Git to production Grafana.</p>
+<p>Workspace commands answer whether a staged set of files is ready to move into the next environment. They should not be read as apply tools first. <code>scan</code> tells you what is in the package, <code>test</code> tells you whether the structure can be understood, <code>preview</code> tells you what would change, and <code>apply</code> is the final action.</p>
+<p>If preview shows an unexpected operation count, ordering shape, or blocked reason, fix the workspace before applying. The review artifact should be something a PR, incident, or change ticket can reference, not only terminal output that disappears after the session.</p>
 <h3 id="first-run-shortcut">First-run shortcut</h3>
 <p>If you are not sure where to start, use this sequence:</p>
 <ol><li><code>workspace scan .</code></li><li><code>workspace test .</code></li><li><code>workspace preview . --fetch-live --profile &lt;profile&gt;</code></li><li><code>workspace apply --preview-file ./workspace-preview.json --approve --execute-live --profile &lt;profile&gt;</code></li></ol>
@@ -988,10 +919,10 @@ grafana-util status staged --dashboard-export-dir ./dashboards/raw --alert-expor
   datasources/provisioning/datasources.yaml</code></pre>
 <h3 id="1-workspace-scan">1. Workspace Scan</h3>
 <p>Get a fast, task-first summary of what the staged package contains.</p>
-<pre><code># Purpose: Scan the staged package from one mixed repo root.
+<pre><code># Scan the staged package from one mixed repo root.
 grafana-util workspace scan ./grafana-oac-repo</code></pre>
 <p>This same workspace root can contain <code>dashboards/git-sync/raw</code>, <code>dashboards/git-sync/provisioning</code>, <code>alerts/raw</code>, and <code>datasources/provisioning/datasources.yaml</code>.</p>
-<pre><code># Purpose: Scan explicit staged exports as JSON.
+<pre><code># Scan explicit staged exports as JSON.
 grafana-util workspace scan --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts/raw --output-format json</code></pre>
 <p><strong>Expected Output:</strong></p>
 <pre><code>WORKSPACE PACKAGE SUMMARY:
@@ -1002,9 +933,9 @@ grafana-util workspace scan --dashboard-export-dir ./dashboards/raw --alert-expo
 <p>Use scan to size the workspace before you fetch live state. If the total is unexpectedly large, stop and review the staged inputs first.</p>
 <h3 id="2-workspace-test">2. Workspace Test</h3>
 <p>Verify staged readiness before you preview or apply anything.</p>
-<pre><code># Purpose: Check the discovered mixed workspace with staged availability hints.
+<pre><code># Check the discovered mixed workspace with staged availability hints.
 grafana-util workspace test ./grafana-oac-repo --availability-file ./availability.json</code></pre>
-<pre><code># Purpose: Check the staged package and merge live availability hints.
+<pre><code># Check the staged package and merge live availability hints.
 grafana-util workspace test . --fetch-live --output-format json</code></pre>
 <p><strong>Expected Output:</strong></p>
 <pre><code>WORKSPACE TEST:
@@ -1014,26 +945,35 @@ grafana-util workspace test . --fetch-live --output-format json</code></pre>
 <p>Use test when you need a readiness gate before preview or apply. A clean test means the inputs are shaped correctly and any requested availability checks passed; it does not mean live Grafana already matches them.</p>
 <h3 id="3-workspace-preview">3. Workspace Preview</h3>
 <p>Build the actionable preview that shows what would change.</p>
-<pre><code># Purpose: Preview the current mixed workspace against live Grafana.
+<pre><code># Preview the current mixed workspace against live Grafana.
 grafana-util workspace preview ./grafana-oac-repo --fetch-live --profile prod</code></pre>
-<pre><code># Purpose: Preview one explicit desired/live pair as JSON.
+<pre><code># Preview one explicit desired/live pair as JSON.
 grafana-util workspace preview --desired-file ./desired.json --live-file ./live.json --output-format json</code></pre>
 <p>Preview is the task-first replacement for the common <code>plan</code> step. It still emits the same reviewable staged contract underneath, but the operator entrypoint is now “preview what would change” instead of “build a plan document.” That preview contract is also where ordering lives: <code>ordering.mode</code>, <code>operations[].orderIndex</code> / <code>orderGroup</code> / <code>kindOrder</code>, and <code>summary.blocked_reasons</code> tell reviewers how the preview is sequenced and which operations remain blocked before apply.</p>
 <p>If the same mixed workspace root needs to become a handoff package, run <code>workspace package ./grafana-oac-repo --output-file ./workspace-package.json</code>, then keep the resulting <code>workspace-package.json</code> as the portable review artifact.</p>
 <h2 id="interactive-mode-tui-semantics">Interactive Mode (TUI) Semantics</h2>
 <p><code>status overview live --output-format interactive</code> opens the live project overview through the shared status overview path.</p>
-<pre><code># Purpose: status overview live --output-format interactive opens the live project overview through the shared status overview path.
+<pre><code># status overview live --output-format interactive opens the live project overview through the shared status overview path.
 grafana-util status overview live --url http://localhost:3000 --basic-user admin --basic-password admin --output-format interactive</code></pre>
 <p>The TUI uses the following visual language:</p>
 <ul><li><strong>🟢 Green</strong>: The component is healthy and fully reachable.</li><li><strong>🟡 Yellow</strong>: The component is functional but has warnings, such as missing metadata.</li><li><strong>🔴 Red</strong>: The component is blocked and needs action before deployment.</li></ul>
 <p>Use <code>status overview</code> without <code>live</code> for staged artifact review, and use <code>status live</code> when you need the same live gate in machine-readable form.</p>
+<h2 id="snapshot-evidence-not-a-preview-replacement">Snapshot: Evidence, Not A Preview Replacement</h2>
+<p>Snapshot commands are for incidents, PRs, and audits that need evidence. They preserve a reviewable summary of live or staged state so someone else can inspect what was true at that moment. They do not replace workspace preview, because preview is still the main answer to &quot;what will apply do?&quot;</p>
+<p>If you are deciding whether to apply, start with <code>workspace scan/test/preview</code>. If you need to hand current state to another reviewer or preserve before/after evidence, use <code>status snapshot</code>, <code>snapshot export</code>, or <code>snapshot review</code>.</p>
+<h2 id="when-to-use-command-reference">When To Use Command Reference</h2>
+<p>This chapter helps you place live, staged, preview, apply, and snapshot workflows. Once you know the lane, use the command reference for exact flags, output formats, and complete examples:</p>
+<p>Primary lane:</p>
+<ul><li><a href="../../commands/en/workspace.html">workspace</a></li><li><a href="../../commands/en/workspace-scan.html">workspace scan</a></li><li><a href="../../commands/en/workspace-test.html">workspace test</a></li><li><a href="../../commands/en/workspace-preview.html">workspace preview</a></li><li><a href="../../commands/en/workspace-apply.html">workspace apply</a></li><li><a href="../../commands/en/status.html">status</a></li><li><a href="../../commands/en/status.html#staged">status staged</a></li><li><a href="../../commands/en/status.html#live">status live</a></li><li><a href="../../commands/en/status.html#overview">status overview</a></li><li><a href="../../commands/en/status.html#snapshot">status snapshot</a></li></ul>
+<p>Supporting pages:</p>
+<ul><li><a href="../../commands/en/snapshot.html">snapshot</a></li><li><a href="../../commands/en/snapshot.html#export">snapshot export</a></li><li><a href="../../commands/en/snapshot.html#review">snapshot review</a></li><li><a href="../../commands/en/config.html">config</a></li><li><a href="../../commands/en/profile.html">config profile</a></li><li><a href="../../commands/en/profile.html#list">config profile list</a></li><li><a href="../../commands/en/profile.html#show">config profile show</a></li><li><a href="../../commands/en/profile.html#add">config profile add</a></li><li><a href="../../commands/en/profile.html#example">config profile example</a></li><li><a href="../../commands/en/profile.html#init">config profile init</a></li></ul>
 <p><a href="access.html">⬅️ Previous: Access Management</a> | <a href="index.html">🏠 Home</a> | <a href="scenarios.html">➡️ Next: Operator Scenarios</a></p>
-<nav class="footer-nav"><a class="link-card" href="access.html"><span>Previous Chapter</span>Chapter 11 · Access Management (Identity &amp; Access)</a><a class="link-card" href="scenarios.html"><span>Next Chapter</span>Chapter 13 · Operator Scenarios</a></nav>
+<nav class="footer-nav"><a class="link-card" href="access.html"><span>Previous Chapter</span>Access Management (Identity &amp; Access)</a><a class="link-card" href="scenarios.html"><span>Next Chapter</span>Operator Scenarios</a></nav>
 </article>
 <aside class="sidebar">
   <button class="sidebar-toggle sidebar-toggle-right" type="button" aria-expanded="true" aria-label="Toggle page sidebar">▶</button>
   <div class="sidebar-content">
-    <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#command-relationships"><span class="toc-label">Command Relationships</span></a></li><li class="toc-level-2"><a href="#who-it-is-for"><span class="toc-label">Who It Is For</span></a></li><li class="toc-level-2"><a href="#primary-goals"><span class="toc-label">Primary Goals</span></a></li><li class="toc-level-2"><a href="#before-after"><span class="toc-label">Before / After</span></a></li><li class="toc-level-2"><a href="#what-success-looks-like"><span class="toc-label">What success looks like</span></a></li><li class="toc-level-2"><a href="#failure-checks"><span class="toc-label">Failure checks</span></a></li><li class="toc-level-2"><a href="#command-pages"><span class="toc-label">Command Pages</span></a></li><li class="toc-level-2"><a href="#status-surfaces"><span class="toc-label">Status Surfaces</span></a></li><li class="toc-level-3"><a href="#1-live-readiness-check"><span class="toc-label">1. Live Readiness Check</span></a></li><li class="toc-level-3"><a href="#2-staged-readiness-check"><span class="toc-label">2. Staged Readiness Check</span></a></li><li class="toc-level-2"><a href="#workspace-lifecycle"><span class="toc-label">Workspace Lifecycle</span></a></li><li class="toc-level-3"><a href="#first-run-shortcut"><span class="toc-label">First-run shortcut</span></a></li><li class="toc-level-3"><a href="#1-workspace-scan"><span class="toc-label">1. Workspace Scan</span></a></li><li class="toc-level-3"><a href="#2-workspace-test"><span class="toc-label">2. Workspace Test</span></a></li><li class="toc-level-3"><a href="#3-workspace-preview"><span class="toc-label">3. Workspace Preview</span></a></li><li class="toc-level-2"><a href="#interactive-mode-tui-semantics"><span class="toc-label">Interactive Mode (TUI) Semantics</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: English</a></li><li><a href="../zh-TW/status-workspace.html" class="sidebar-meta-link">Switch to 繁體中文</a></li></ul></section>
+    <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#who-it-is-for"><span class="toc-label">Who It Is For</span></a></li><li class="toc-level-2"><a href="#primary-goals"><span class="toc-label">Primary Goals</span></a></li><li class="toc-level-2"><a href="#before-after"><span class="toc-label">Before / After</span></a></li><li class="toc-level-2"><a href="#what-success-looks-like"><span class="toc-label">What success looks like</span></a></li><li class="toc-level-2"><a href="#failure-checks"><span class="toc-label">Failure checks</span></a></li><li class="toc-level-2"><a href="#status-workspace-workflow-map"><span class="toc-label">Status / Workspace Workflow Map</span></a></li><li class="toc-level-2"><a href="#status-surfaces"><span class="toc-label">Status Surfaces</span></a></li><li class="toc-level-3"><a href="#1-live-readiness-check"><span class="toc-label">1. Live Readiness Check</span></a></li><li class="toc-level-3"><a href="#2-staged-readiness-check"><span class="toc-label">2. Staged Readiness Check</span></a></li><li class="toc-level-2"><a href="#workspace-lifecycle"><span class="toc-label">Workspace Lifecycle</span></a></li><li class="toc-level-3"><a href="#first-run-shortcut"><span class="toc-label">First-run shortcut</span></a></li><li class="toc-level-3"><a href="#1-workspace-scan"><span class="toc-label">1. Workspace Scan</span></a></li><li class="toc-level-3"><a href="#2-workspace-test"><span class="toc-label">2. Workspace Test</span></a></li><li class="toc-level-3"><a href="#3-workspace-preview"><span class="toc-label">3. Workspace Preview</span></a></li><li class="toc-level-2"><a href="#interactive-mode-tui-semantics"><span class="toc-label">Interactive Mode (TUI) Semantics</span></a></li><li class="toc-level-2"><a href="#snapshot-evidence-not-a-preview-replacement"><span class="toc-label">Snapshot: Evidence, Not A Preview Replacement</span></a></li><li class="toc-level-2"><a href="#when-to-use-command-reference"><span class="toc-label">When To Use Command Reference</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: English</a></li><li><a href="../zh-TW/status-workspace.html" class="sidebar-meta-link">Switch to 繁體中文</a></li></ul></section>
   </div>
 </aside>
 

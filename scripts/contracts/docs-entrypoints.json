@@ -269,8 +269,6 @@
     ]
   },
   "handbook_command_map_aliases": {
-    "index": "role-new-user",
-    "what-is-grafana-util": "role-new-user",
     "architecture": "status-workspace",
     "scenarios": "role-sre-ops",
     "recipes": "role-sre-ops",

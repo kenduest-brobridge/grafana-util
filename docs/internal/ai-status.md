@@ -8,6 +8,13 @@ Current AI-maintained status only.
 - Detailed 2026-03-29 through 2026-03-31 entries moved to [`archive/ai-status-archive-2026-03-31.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-03-31.md).
 - Detailed 2026-04-01 through 2026-04-12 entries moved to [`archive/ai-status-archive-2026-04-12.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-04-12.md).
 - Keep this file short and current. Additive historical detail belongs in `docs/internal/archive/`.
+- Older entries moved to [`ai-status-archive-2026-04-13.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-04-13.md).
+
+## 2026-04-13 - Improve public docs voice and hygiene
+- State: Done
+- Scope: README zh-TW, command reference docs, handbook source, generated HTML/man output, zh-TW style guide, and generated-docs playbook.
+- Current Update: removed generated-looking example-comment labels, removed handbook emoji headings, tightened zh-TW product terminology, expanded reader-oriented handbook framing, added handbook workflow maps and task-first sections for alert, dashboard, datasource, access, and status/workspace, kept command maps out of handbook bodies, renamed the sidebar command map to command shortcuts, removed handbook chapter-count chrome, and pointed English handbook links at specific command pages.
+- Result: public docs read less like generated summaries while keeping command reference pages lookup-oriented; core handbook pages now explain subcommand relationships, output interpretation, and next-step decisions before sending readers to exact flag references; generated HTML/man outputs are refreshed and docs surface checks pass.
 
 ## 2026-04-12 - Split Rust architecture hotspots and test modules
 - State: Done
@@ -42,10 +49,3 @@ Current AI-maintained status only.
 - Baseline: grouped `--help` and supported `--help-full` paths exist, but no root-level flat inventory lists every public command path with purpose text.
 - Current Update: added `grafana-util --help-flat` as a pre-parse help path that renders visible Clap command paths with group/command kind and purpose.
 - Result: root flat help now lists public command paths across status, export, dashboard, datasource, alert, access, workspace, and config with operator-facing purpose text; access leaf command purposes no longer leak Args struct documentation.
-
-## 2026-04-12 - Infer unique long option prefixes
-- State: Done
-- Scope: `rust/src/cli.rs`, `rust/src/access/cli_defs.rs`, CLI parser tests, and AI trace docs.
-- Baseline: unique-prefix matching worked for subcommands, but long options such as `--all-o` only produced a suggestion for `--all-orgs` instead of resolving the unique match.
-- Current Update: enabled Clap unique long-argument inference on the unified root parser and access parser, with tests for inferred unique prefixes and rejected ambiguous prefixes.
-- Result: `grafana-util access user list --all-o --tab` now parses as `--all-orgs --table`; ambiguous or invalid long prefixes still stay on Clap's error path.

@@ -326,13 +326,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   font-weight: 500;
 }
 .nav-command-branch-item .nav-command-leaf-link:hover { color: var(--heading); }
-.handbook-command-map .nav-command-root-link {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  font-size: 0.9rem;
-}
 
 .sidebar-toggle {
   position: absolute;
@@ -378,71 +371,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map { margin: 0 0 24px; }
-.handbook-command-map-panel {
-  margin-top: 16px;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--panel) 96%, white);
-}
-.handbook-command-map .nav-group-title {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-group {
-  padding-top: 0;
-}
-.handbook-command-map .nav-command-group + .nav-command-group {
-  margin-top: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
-  padding-top: 10px;
-}
-.handbook-command-map .nav-command-sub-list {
-  margin-top: 8px;
-  margin-left: 0;
-  padding-left: 0;
-  border-left: 0;
-}
-.handbook-command-map .nav-command-branch {
-  display: grid;
-  grid-template-columns: minmax(130px, 0.22fr) minmax(0, 1fr);
-  gap: 12px 18px;
-  align-items: start;
-}
-.handbook-command-map .nav-command-branch-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-left: 0;
-  padding-left: 14px;
-}
-.handbook-command-map .nav-command-branch-item + .nav-command-branch-item { margin-top: 0; }
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-  line-height: 1.25;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link:hover,
-.handbook-command-map .nav-command-link a:hover {
-  border-color: color-mix(in srgb, var(--border) 45%, var(--accent));
-  background: var(--panel-strong);
-}
-@media (max-width: 720px) {
-  .handbook-command-map .nav-command-branch {
-    grid-template-columns: 1fr;
-  }
-  .handbook-command-map .nav-command-branch-list {
-    padding-left: 0;
-    border-left: 0;
-  }
-}
 .article p,
 .article li { color: var(--text); font-weight: 460; }
 .article ul li::marker,
@@ -951,11 +879,11 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <ul><li>如果 snapshot export 看起來是空的，先核對 auth profile 或 live 連線，不要先假設來源系統沒資料</li><li>如果 review 輸出和預期差很多，先確認你指向的是不是正確的 snapshot 目錄</li><li>如果要交給自動化，請把 <code>--output-format</code> 寫清楚，讓下游 parser 知道 contract</li></ul>
 <p>主要旗標：root 指令本身只是指令群組；操作旗標都在 <code>export</code> 和 <code>review</code>。共用的 root 旗標是 <code>--color</code>。</p>
 <p>範例：</p>
-<pre><code># 用途：從 live Grafana 匯出本機 snapshot bundle。
+<pre><code># 從 live Grafana 匯出本機 snapshot bundle。
 grafana-util status snapshot export --profile prod --output-dir ./snapshot</code></pre>
-<pre><code># 用途：用 JSON 檢視已匯出的 snapshot bundle。
+<pre><code># 用 JSON 檢視已匯出的 snapshot bundle。
 grafana-util status snapshot review --input-dir ./snapshot --output-format json</code></pre>
-<pre><code># 用途：用 token 認證從 live Grafana 匯出 snapshot bundle。
+<pre><code># 用 token 認證從 live Grafana 匯出 snapshot bundle。
 grafana-util status snapshot export --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --output-dir ./snapshot</code></pre>
 <p>相關指令：<code>grafana-util status overview</code>、<code>grafana-util status staged</code>、<code>grafana-util workspace package</code>。</p>
 <h2 id="export"><code>export</code></h2>
@@ -965,13 +893,13 @@ grafana-util status snapshot export --url http://localhost:3000 --token &quot;$G
 <ul><li><code>snapshot/dashboards/</code></li><li><code>snapshot/datasources/</code></li><li><code>snapshot/access/users/</code></li><li><code>snapshot/access/teams/</code></li><li><code>snapshot/access/orgs/</code></li><li><code>snapshot/access/service-accounts/</code></li><li><code>snapshot/snapshot-metadata.json</code></li></ul>
 <p>主要旗標：<code>--output-dir</code>、<code>--overwrite</code>、<code>--prompt</code>，以及共用的 Grafana 連線與驗證旗標。<code>--prompt</code> 會先開一個 terminal multi-select prompt，讓你在匯出前勾選要包含哪些 lane。datasource lane 會匯出 config 與 <code>secureJsonDataPlaceholders</code>，但不會匯出 datasource secret 明文，因為 Grafana live API 本身不會回這些值。</p>
 <p>範例：</p>
-<pre><code># 用途：export。
+<pre><code># export。
 grafana-util status snapshot export --profile prod --output-dir ./snapshot</code></pre>
-<pre><code># 用途：export。
+<pre><code># export。
 grafana-util status snapshot export --url http://localhost:3000 --basic-user admin --basic-password admin --output-dir ./snapshot --overwrite</code></pre>
-<pre><code># 用途：export。
+<pre><code># export。
 grafana-util status snapshot export --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --output-dir ./snapshot</code></pre>
-<pre><code># 用途：先用 terminal prompt 勾選要匯出的 snapshot lane。
+<pre><code># 先用 terminal prompt 勾選要匯出的 snapshot lane。
 grafana-util status snapshot export --profile prod --prompt --output-dir ./snapshot</code></pre>
 <p>相關指令：<code>snapshot review</code>、<code>workspace package</code>、<code>status overview</code>。</p>
 <h2 id="review"><code>review</code></h2>
@@ -980,9 +908,9 @@ grafana-util status snapshot export --profile prod --prompt --output-dir ./snaps
 <p>review summary 現在也會一起顯示 users、teams、orgs、service accounts 的 access 計數。</p>
 <p>主要旗標：<code>--input-dir</code>、<code>--interactive</code>、<code>--output-format</code>。</p>
 <p>範例：</p>
-<pre><code># 用途：在不接觸 Grafana 的情況下檢視本機 snapshot inventory。
+<pre><code># 在不接觸 Grafana 的情況下檢視本機 snapshot inventory。
 grafana-util status snapshot review --input-dir ./snapshot --output-format table</code></pre>
-<pre><code># 用途：在不接觸 Grafana 的情況下檢視本機 snapshot inventory。
+<pre><code># 在不接觸 Grafana 的情況下檢視本機 snapshot inventory。
 grafana-util status snapshot review --input-dir ./snapshot --interactive</code></pre>
 <p>相關指令：<code>snapshot export</code>、<code>status overview</code>、<code>status staged</code>。</p>
 

@@ -36,17 +36,17 @@
 ## 範例
 
 ```bash
-# 用途：刪除一個明確指定的 alert 資源識別。
+# 刪除一個明確指定的 alert 資源識別。
 grafana-util alert delete --profile prod --kind rule --identity cpu-main
 ```
 
 ```bash
-# 用途：刪除一個明確指定的 alert 資源識別。
+# 刪除一個明確指定的 alert 資源識別。
 grafana-util alert delete --url http://localhost:3000 --basic-user admin --basic-password admin --kind policy-tree --identity default --allow-policy-reset
 ```
 
 ```bash
-# 用途：刪除一個明確指定的 alert 資源識別。
+# 刪除一個明確指定的 alert 資源識別。
 grafana-util alert delete --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --kind rule --identity cpu-main
 ```
 

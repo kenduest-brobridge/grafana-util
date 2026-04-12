@@ -326,13 +326,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   font-weight: 500;
 }
 .nav-command-branch-item .nav-command-leaf-link:hover { color: var(--heading); }
-.handbook-command-map .nav-command-root-link {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  font-size: 0.9rem;
-}
 
 .sidebar-toggle {
   position: absolute;
@@ -378,71 +371,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map { margin: 0 0 24px; }
-.handbook-command-map-panel {
-  margin-top: 16px;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--panel) 96%, white);
-}
-.handbook-command-map .nav-group-title {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-group {
-  padding-top: 0;
-}
-.handbook-command-map .nav-command-group + .nav-command-group {
-  margin-top: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
-  padding-top: 10px;
-}
-.handbook-command-map .nav-command-sub-list {
-  margin-top: 8px;
-  margin-left: 0;
-  padding-left: 0;
-  border-left: 0;
-}
-.handbook-command-map .nav-command-branch {
-  display: grid;
-  grid-template-columns: minmax(130px, 0.22fr) minmax(0, 1fr);
-  gap: 12px 18px;
-  align-items: start;
-}
-.handbook-command-map .nav-command-branch-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-left: 0;
-  padding-left: 14px;
-}
-.handbook-command-map .nav-command-branch-item + .nav-command-branch-item { margin-top: 0; }
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-  line-height: 1.25;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link:hover,
-.handbook-command-map .nav-command-link a:hover {
-  border-color: color-mix(in srgb, var(--border) 45%, var(--accent));
-  background: var(--panel-strong);
-}
-@media (max-width: 720px) {
-  .handbook-command-map .nav-command-branch {
-    grid-template-columns: 1fr;
-  }
-  .handbook-command-map .nav-command-branch-list {
-    padding-left: 0;
-    border-left: 0;
-  }
-}
 .article p,
 .article li { color: var(--text); font-weight: 460; }
 .article ul li::marker,
@@ -950,11 +878,11 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="重點旗標">重點旗標</h2>
 <ul><li><code>--dashboard-uid</code>：要抓取的線上 Grafana 儀表板 UID。</li><li><code>--output</code>：將抓回來的草稿寫到這個路徑。</li><li>共用線上旗標：<code>--url</code>、<code>--token</code>、<code>--basic-user</code>、<code>--basic-password</code>、<code>--profile</code>。</li></ul>
 <h2 id="範例">範例</h2>
-<pre><code># 用途：將一個線上儀表板抓取成 API 安全的本地 JSON 草稿。
+<pre><code># 將一個線上儀表板抓取成 API 安全的本地 JSON 草稿。
 grafana-util dashboard get --profile prod --dashboard-uid cpu-main --output ./cpu-main.json</code></pre>
-<pre><code># 用途：將一個線上儀表板抓取成 API 安全的本地 JSON 草稿。
+<pre><code># 將一個線上儀表板抓取成 API 安全的本地 JSON 草稿。
 grafana-util dashboard get --url http://localhost:3000 --basic-user admin --basic-password admin --dashboard-uid cpu-main --output ./cpu-main.json</code></pre>
-<pre><code># 用途：將一個線上儀表板抓取成 API 安全的本地 JSON 草稿。
+<pre><code># 將一個線上儀表板抓取成 API 安全的本地 JSON 草稿。
 grafana-util dashboard get --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --dashboard-uid cpu-main --output ./cpu-main.json</code></pre>
 <h2 id="相關指令">相關指令</h2>
 <ul><li><a href="dashboard-clone.html">dashboard clone</a></li><li><a href="dashboard-patch.html">dashboard patch</a></li><li><a href="dashboard-review.html">dashboard review</a></li></ul>

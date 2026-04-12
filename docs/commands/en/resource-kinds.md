@@ -11,12 +11,12 @@ Use this when you need to confirm whether the generic resource query surface alr
 
 ## Examples
 ```bash
-# Purpose: Show supported resource kinds as a table.
+# Show supported resource kinds as a table.
 grafana-util status resource kinds
 ```
 
 ```bash
-# Purpose: Render the same supported resource kinds as JSON.
+# Render the same supported resource kinds as JSON.
 grafana-util status resource kinds --output-format json
 ```
 

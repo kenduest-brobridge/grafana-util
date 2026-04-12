@@ -49,53 +49,53 @@ Use a profile backed by admin-capable credentials for day-to-day work.
 ## First commands to run
 
 ```bash
-# Purpose: First commands to run.
+# First commands to run.
 grafana-util status live --profile prod --output-format table
 ```
 
 ```bash
-# Purpose: First commands to run.
+# First commands to run.
 grafana-util status overview live --profile prod --output-format interactive
 ```
 
 ```bash
-# Purpose: First commands to run.
+# First commands to run.
 grafana-util workspace scan .
 ```
 
 ```bash
-# Purpose: First commands to run.
+# First commands to run.
 grafana-util workspace test . --fetch-live --output-format json
 ```
 
 ```bash
-# Purpose: First commands to run.
+# First commands to run.
 grafana-util workspace preview . --fetch-live --output-format json
 ```
 
 ```bash
-# Purpose: First commands to run.
+# First commands to run.
 grafana-util export dashboard --output-dir ./backups --overwrite --progress
 ```
 
 If you need to start from the access layer instead, swap the last line for:
 
 ```bash
-# Purpose: If you need to start from the access layer instead, swap the last line for.
+# If you need to start from the access layer instead, swap the last line for.
 grafana-util access org list --table
 ```
 
 If you are checking a host directly, Basic auth is the safest fallback for broad visibility:
 
 ```bash
-# Purpose: If you are checking a host directly, Basic auth is the safest fallback for broad visibility.
+# If you are checking a host directly, Basic auth is the safest fallback for broad visibility.
 grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --all-orgs --output-format table
 ```
 
 Use token auth only when the scope matches the work:
 
 ```bash
-# Purpose: Use token auth only when the scope matches the work.
+# Use token auth only when the scope matches the work.
 grafana-util status overview live --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output-format json
 ```
 

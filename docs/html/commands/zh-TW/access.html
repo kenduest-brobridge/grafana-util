@@ -326,13 +326,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   font-weight: 500;
 }
 .nav-command-branch-item .nav-command-leaf-link:hover { color: var(--heading); }
-.handbook-command-map .nav-command-root-link {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  font-size: 0.9rem;
-}
 
 .sidebar-toggle {
   position: absolute;
@@ -378,71 +371,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map { margin: 0 0 24px; }
-.handbook-command-map-panel {
-  margin-top: 16px;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--panel) 96%, white);
-}
-.handbook-command-map .nav-group-title {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-group {
-  padding-top: 0;
-}
-.handbook-command-map .nav-command-group + .nav-command-group {
-  margin-top: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
-  padding-top: 10px;
-}
-.handbook-command-map .nav-command-sub-list {
-  margin-top: 8px;
-  margin-left: 0;
-  padding-left: 0;
-  border-left: 0;
-}
-.handbook-command-map .nav-command-branch {
-  display: grid;
-  grid-template-columns: minmax(130px, 0.22fr) minmax(0, 1fr);
-  gap: 12px 18px;
-  align-items: start;
-}
-.handbook-command-map .nav-command-branch-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-left: 0;
-  padding-left: 14px;
-}
-.handbook-command-map .nav-command-branch-item + .nav-command-branch-item { margin-top: 0; }
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-  line-height: 1.25;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link:hover,
-.handbook-command-map .nav-command-link a:hover {
-  border-color: color-mix(in srgb, var(--border) 45%, var(--accent));
-  background: var(--panel-strong);
-}
-@media (max-width: 720px) {
-  .handbook-command-map .nav-command-branch {
-    grid-template-columns: 1fr;
-  }
-  .handbook-command-map .nav-command-branch-list {
-    padding-left: 0;
-    border-left: 0;
-  }
-}
 .article p,
 .article li { color: var(--text); font-weight: 460; }
 .article ul li::marker,
@@ -962,14 +890,14 @@ grafana-util access service-account list --url http://localhost:3000 --token &qu
 <h2 id="相關命令">相關命令</h2>
 <h3 id="盤點">盤點</h3>
 <ul><li><a href="access-user.html">access user</a></li><li><a href="access-org.html">access org</a></li><li><a href="access-team.html">access team</a></li></ul>
-<h3 id="服務帳號與-token">服務帳號與 token</h3>
+<h3 id="service-account-與-token">service account 與 token</h3>
 <ul><li><a href="access-service-account.html">access service-account</a></li><li><a href="access-service-account-token.html">access service-account token</a></li></ul>
 
 </article>
 <aside class="sidebar">
   <button class="sidebar-toggle sidebar-toggle-right" type="button" aria-expanded="true" aria-label="Toggle page sidebar">▶</button>
   <div class="sidebar-content">
-    <section class="sidebar-section"><h2>本頁內容</h2><ul class="toc-list"><li class="toc-level-2"><a href="#先判斷你現在要做哪一種事"><span class="toc-label">先判斷你現在要做哪一種事</span></a></li><li class="toc-level-2"><a href="#這一頁對應的工作流"><span class="toc-label">這一頁對應的工作流</span></a></li><li class="toc-level-2"><a href="#從這裡開始"><span class="toc-label">從這裡開始</span></a></li><li class="toc-level-2"><a href="#先選哪一條資料路徑"><span class="toc-label">先選哪一條資料路徑</span></a></li><li class="toc-level-2"><a href="#這個入口是做什麼的"><span class="toc-label">這個入口是做什麼的</span></a></li><li class="toc-level-2"><a href="#主要旗標"><span class="toc-label">主要旗標</span></a></li><li class="toc-level-2"><a href="#這一組頁面怎麼讀比較不會亂"><span class="toc-label">這一組頁面怎麼讀比較不會亂</span></a></li><li class="toc-level-2"><a href="#採用前後對照"><span class="toc-label">採用前後對照</span></a></li><li class="toc-level-2"><a href="#成功判準"><span class="toc-label">成功判準</span></a></li><li class="toc-level-2"><a href="#失敗時先檢查"><span class="toc-label">失敗時先檢查</span></a></li><li class="toc-level-2"><a href="#範例"><span class="toc-label">範例</span></a></li><li class="toc-level-2"><a href="#各工作流入口"><span class="toc-label">各工作流入口</span></a></li><li class="toc-level-2"><a href="#相關命令"><span class="toc-label">相關命令</span></a></li><li class="toc-level-3"><a href="#盤點"><span class="toc-label">盤點</span></a></li><li class="toc-level-3"><a href="#服務帳號與-token"><span class="toc-label">服務帳號與 token</span></a></li></ul></section><section class="sidebar-section"><h2>相關頁面</h2><ul class="sidebar-meta-list"><li><a href="../../handbook/zh-TW/access.html" class="sidebar-meta-link">對應手冊章節</a></li></ul></section><section class="sidebar-section"><h2>版本</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>語言</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/access.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
+    <section class="sidebar-section"><h2>本頁內容</h2><ul class="toc-list"><li class="toc-level-2"><a href="#先判斷你現在要做哪一種事"><span class="toc-label">先判斷你現在要做哪一種事</span></a></li><li class="toc-level-2"><a href="#這一頁對應的工作流"><span class="toc-label">這一頁對應的工作流</span></a></li><li class="toc-level-2"><a href="#從這裡開始"><span class="toc-label">從這裡開始</span></a></li><li class="toc-level-2"><a href="#先選哪一條資料路徑"><span class="toc-label">先選哪一條資料路徑</span></a></li><li class="toc-level-2"><a href="#這個入口是做什麼的"><span class="toc-label">這個入口是做什麼的</span></a></li><li class="toc-level-2"><a href="#主要旗標"><span class="toc-label">主要旗標</span></a></li><li class="toc-level-2"><a href="#這一組頁面怎麼讀比較不會亂"><span class="toc-label">這一組頁面怎麼讀比較不會亂</span></a></li><li class="toc-level-2"><a href="#採用前後對照"><span class="toc-label">採用前後對照</span></a></li><li class="toc-level-2"><a href="#成功判準"><span class="toc-label">成功判準</span></a></li><li class="toc-level-2"><a href="#失敗時先檢查"><span class="toc-label">失敗時先檢查</span></a></li><li class="toc-level-2"><a href="#範例"><span class="toc-label">範例</span></a></li><li class="toc-level-2"><a href="#各工作流入口"><span class="toc-label">各工作流入口</span></a></li><li class="toc-level-2"><a href="#相關命令"><span class="toc-label">相關命令</span></a></li><li class="toc-level-3"><a href="#盤點"><span class="toc-label">盤點</span></a></li><li class="toc-level-3"><a href="#service-account-與-token"><span class="toc-label">service account 與 token</span></a></li></ul></section><section class="sidebar-section"><h2>相關頁面</h2><ul class="sidebar-meta-list"><li><a href="../../handbook/zh-TW/access.html" class="sidebar-meta-link">對應手冊章節</a></li></ul></section><section class="sidebar-section"><h2>版本</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>語言</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/access.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
   </div>
 </aside>
 

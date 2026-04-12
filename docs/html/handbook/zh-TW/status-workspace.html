@@ -326,13 +326,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   font-weight: 500;
 }
 .nav-command-branch-item .nav-command-leaf-link:hover { color: var(--heading); }
-.handbook-command-map .nav-command-root-link {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  font-size: 0.9rem;
-}
 
 .sidebar-toggle {
   position: absolute;
@@ -378,71 +371,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map { margin: 0 0 24px; }
-.handbook-command-map-panel {
-  margin-top: 16px;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--panel) 96%, white);
-}
-.handbook-command-map .nav-group-title {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-group {
-  padding-top: 0;
-}
-.handbook-command-map .nav-command-group + .nav-command-group {
-  margin-top: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
-  padding-top: 10px;
-}
-.handbook-command-map .nav-command-sub-list {
-  margin-top: 8px;
-  margin-left: 0;
-  padding-left: 0;
-  border-left: 0;
-}
-.handbook-command-map .nav-command-branch {
-  display: grid;
-  grid-template-columns: minmax(130px, 0.22fr) minmax(0, 1fr);
-  gap: 12px 18px;
-  align-items: start;
-}
-.handbook-command-map .nav-command-branch-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-left: 0;
-  padding-left: 14px;
-}
-.handbook-command-map .nav-command-branch-item + .nav-command-branch-item { margin-top: 0; }
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-  line-height: 1.25;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link:hover,
-.handbook-command-map .nav-command-link a:hover {
-  border-color: color-mix(in srgb, var(--border) 45%, var(--accent));
-  background: var(--panel-strong);
-}
-@media (max-width: 720px) {
-  .handbook-command-map .nav-command-branch {
-    grid-template-columns: 1fr;
-  }
-  .handbook-command-map .nav-command-branch-list {
-    padding-left: 0;
-    border-left: 0;
-  }
-}
 .article p,
 .article li { color: var(--text); font-weight: 460; }
 .article ul li::marker,
@@ -920,37 +848,38 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
       <div class="layout">
 <aside class="nav-sidebar">
   <button class="sidebar-toggle sidebar-toggle-left" type="button" aria-expanded="true" aria-label="Toggle handbook navigation">◀</button>
-  <div class="nav-sidebar-content"><section class="nav-section"><h2>手冊導覽</h2><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 1 部 · 起步</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="index.html" class="nav-item">概觀</a></li><li class="nav-tree-node"><a href="what-is-grafana-util.html" class="nav-item">這個工具是做什麼的</a></li><li class="nav-tree-node"><a href="getting-started.html" class="nav-item">開始使用</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 2 部 · 角色路徑</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="role-new-user.html" class="nav-item">第一次執行 / 新手路線</a></li><li class="nav-tree-node"><a href="role-sre-ops.html" class="nav-item">SRE / 維運</a></li><li class="nav-tree-node"><a href="role-automation-ci.html" class="nav-item">自動化 / CI</a></li></ul></div><div class="nav-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">第 3 部 · 操作面</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="status-workspace.html" class="nav-item active">Status / Workspace</a></li><li class="nav-tree-node"><a href="dashboard.html" class="nav-item">Dashboard</a></li><li class="nav-tree-node"><a href="datasource.html" class="nav-item">Datasource</a></li><li class="nav-tree-node"><a href="alert.html" class="nav-item">Alert</a></li><li class="nav-tree-node"><a href="access.html" class="nav-item">Access</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 4 部 · 設計原則</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="architecture.html" class="nav-item">設計原則</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 5 部 · 參考與排錯</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="scenarios.html" class="nav-item">情境手冊</a></li><li class="nav-tree-node"><a href="recipes.html" class="nav-item">實戰錦囊</a></li><li class="nav-tree-node"><a href="reference.html" class="nav-item">技術參考</a></li><li class="nav-tree-node"><a href="troubleshooting.html" class="nav-item">疑難排解</a></li></ul></div></section><section class="nav-section nav-command-section collapsed"><button class="nav-group-header nav-section-toggle" type="button" aria-expanded="false"><span class="nav-group-title-text">指令關係</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-section-body"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">唯讀檢查</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><a href="../../commands/zh-TW/status.html" class="nav-command-root-link">status</a></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/zh-TW/resource.html" class="nav-command-leaf-link">resource</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/snapshot.html" class="nav-command-leaf-link">snapshot</a></li></ul></div></div></div><div class="nav-group nav-command-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Workspace 審查</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><a href="../../commands/zh-TW/workspace.html" class="nav-command-root-link">workspace</a></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/zh-TW/workspace-scan.html" class="nav-command-leaf-link">scan</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/workspace-test.html" class="nav-command-leaf-link">test</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/workspace-preview.html" class="nav-command-leaf-link">preview</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/workspace-apply.html" class="nav-command-leaf-link">apply</a></li></ul></div></div></div></div></section><section class="nav-section"><h2>指令參考</h2><a href="../../commands/zh-TW/index.html" class="nav-command-entry">開啟指令參考</a></section></div>
+  <div class="nav-sidebar-content"><section class="nav-section"><h2>手冊導覽</h2><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 1 部 · 起步</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="index.html" class="nav-item">概觀</a></li><li class="nav-tree-node"><a href="what-is-grafana-util.html" class="nav-item">這個工具是做什麼的</a></li><li class="nav-tree-node"><a href="getting-started.html" class="nav-item">開始使用</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 2 部 · 角色路徑</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="role-new-user.html" class="nav-item">第一次執行 / 新手路線</a></li><li class="nav-tree-node"><a href="role-sre-ops.html" class="nav-item">SRE / 維運</a></li><li class="nav-tree-node"><a href="role-automation-ci.html" class="nav-item">自動化 / CI</a></li></ul></div><div class="nav-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">第 3 部 · 操作面</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="status-workspace.html" class="nav-item active">Status / Workspace</a></li><li class="nav-tree-node"><a href="dashboard.html" class="nav-item">Dashboard</a></li><li class="nav-tree-node"><a href="datasource.html" class="nav-item">Datasource</a></li><li class="nav-tree-node"><a href="alert.html" class="nav-item">Alert</a></li><li class="nav-tree-node"><a href="access.html" class="nav-item">Access</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 4 部 · 設計原則</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="architecture.html" class="nav-item">設計原則</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 5 部 · 參考與排錯</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="scenarios.html" class="nav-item">情境手冊</a></li><li class="nav-tree-node"><a href="recipes.html" class="nav-item">實戰錦囊</a></li><li class="nav-tree-node"><a href="reference.html" class="nav-item">技術參考</a></li><li class="nav-tree-node"><a href="troubleshooting.html" class="nav-item">疑難排解</a></li></ul></div></section><section class="nav-section nav-command-section collapsed"><button class="nav-group-header nav-section-toggle" type="button" aria-expanded="false"><span class="nav-group-title-text">指令捷徑</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-section-body"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">唯讀檢查</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><a href="../../commands/zh-TW/status.html" class="nav-command-root-link">status</a></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/zh-TW/resource.html" class="nav-command-leaf-link">resource</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/snapshot.html" class="nav-command-leaf-link">snapshot</a></li></ul></div></div></div><div class="nav-group nav-command-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Workspace 審查</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><a href="../../commands/zh-TW/workspace.html" class="nav-command-root-link">workspace</a></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/zh-TW/workspace-scan.html" class="nav-command-leaf-link">scan</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/workspace-test.html" class="nav-command-leaf-link">test</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/workspace-preview.html" class="nav-command-leaf-link">preview</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/workspace-apply.html" class="nav-command-leaf-link">apply</a></li></ul></div></div></div></div></section><section class="nav-section"><h2>指令參考</h2><a href="../../commands/zh-TW/index.html" class="nav-command-entry">開啟指令參考</a></section></div>
 </aside>
 
 <article class="article">
 <div class="breadcrumbs"><a href="../../index.html">Home</a> / 手冊 / Status / Workspace</div>
 
-<div class="hero-eyebrow">第 3 部 · 操作面 · 第 12 章 / 共 16 章</div><h1><span class="hero-title-main">Status / Workspace</span></h1><p class="hero-subtitle">Workspace 審查與狀態</p>
+<div class="hero-eyebrow">第 3 部 · 操作面</div><h1><span class="hero-title-main">Status / Workspace</span></h1><p class="hero-subtitle">Workspace 審查與狀態</p>
 
-<section class="section-index"><h2>章節索引</h2><p class="section-index-summary">先從這裡跳到你要看的段落。</p><ul class="section-index-list layout-list"><li><a href="#command-relationships">指令關係</a></li><li><a href="#適用對象">適用對象</a></li><li><a href="#主要目標">主要目標</a></li><li><a href="#採用前後對照">採用前後對照</a></li><li><a href="#成功判準">成功判準</a></li><li><a href="#失敗時先檢查">失敗時先檢查</a></li><li><a href="#指令詳細頁面">指令詳細頁面</a></li><li><a href="#狀態操作面">狀態操作面</a></li><li><a href="#workspace-審查生命週期">Workspace 審查生命週期</a></li><li><a href="#互動模式-tui-語意">互動模式 (TUI) 語意</a></li></ul></section><section class="handbook-command-map"><h2 id="command-relationships">指令關係</h2><div class="handbook-command-map-panel"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">唯讀檢查</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><a href="../../commands/zh-TW/status.html" class="nav-command-root-link">status</a></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/zh-TW/resource.html" class="nav-command-leaf-link">resource</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/snapshot.html" class="nav-command-leaf-link">snapshot</a></li></ul></div></div></div><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Workspace 審查</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><a href="../../commands/zh-TW/workspace.html" class="nav-command-root-link">workspace</a></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/zh-TW/workspace-scan.html" class="nav-command-leaf-link">scan</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/workspace-test.html" class="nav-command-leaf-link">test</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/workspace-preview.html" class="nav-command-leaf-link">preview</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/workspace-apply.html" class="nav-command-leaf-link">apply</a></li></ul></div></div></div></div></section><p>這一章聚焦在 workspace apply 前後的最後檢查，幫你確認目前狀態、差異與套用前的準備是否到位。</p>
+<section class="section-index"><h2>章節索引</h2><p class="section-index-summary">先從這裡跳到你要看的段落。</p><ul class="section-index-list layout-list"><li><a href="#適用對象">適用對象</a></li><li><a href="#主要目標">主要目標</a></li><li><a href="#採用前後對照">採用前後對照</a></li><li><a href="#成功判準">成功判準</a></li><li><a href="#失敗時先檢查">失敗時先檢查</a></li><li><a href="#status-workspace-工作流地圖">Status / Workspace 工作流地圖</a></li><li><a href="#狀態操作面">狀態操作面</a></li><li><a href="#workspace-審查生命週期">Workspace 審查生命週期</a></li><li><a href="#互動模式-tui-語意">互動模式 (TUI) 語意</a></li><li><a href="#snapshot用來留下證據不是取代-preview">Snapshot：用來留下證據，不是取代 preview</a></li><li><a href="#何時切到指令參考">何時切到指令參考</a></li></ul></section><p>這一章聚焦在 workspace apply 前後的最後檢查，幫你確認目前狀態、差異與套用前的準備是否到位。</p>
+<p>在實際維運裡，最危險的時刻通常不是按下 apply，而是 apply 之前那段模糊地帶：你知道手上有一包檔案，也知道要往某個 Grafana 環境推，但還不能確定這包東西是不是完整、是不是過期、是不是會改到超出預期的範圍。這一章就是為了處理那段模糊地帶。</p>
+<p>讀這章時，不要急著找哪個指令可以「完成部署」。先把問題拆成三個判斷：live Grafana 現況能不能信任、staged workspace 本身能不能解析、preview 出來的變更是不是你願意承擔的結果。三個答案都清楚後，apply 才只是最後一步。</p>
 <h2 id="適用對象">適用對象</h2>
 <ul><li>要先看 live / staged 狀態再決定下一步的人</li><li>負責 workspace 審查、test 或 apply gate 的人</li><li>需要把 status / workspace / config profile 串成固定流程的人</li></ul>
 <h2 id="主要目標">主要目標</h2>
 <ul><li>先區分 live 與 staged</li><li>再確認 workspace package、輸入結構與差異摘要</li><li>最後才進入 apply</li></ul>
+<p>換句話說，這章不是部署教學，而是部署前的判斷框架。它幫你把「我覺得應該可以」換成「我已經看過 live、staged 與 preview，而且知道下一步會發生什麼」。</p>
 <h2 id="採用前後對照">採用前後對照</h2>
 <ul><li>以前：status、snapshot 與 workspace review 常常像是三套名稱接近但分工不清的工具。</li><li>現在：即時檢查、staged 審查與快照式總覽被放進同一條導引路線裡。</li></ul>
 <h2 id="成功判準">成功判準</h2>
 <ul><li>你能在 workspace apply 前，先判斷這章是在處理整備度、快照還是審查。</li><li>你知道流程從 status 進到 mutation 時，應該切到哪一個 command。</li><li>你能說清楚 workspace apply 前應該先做哪些檢查。</li></ul>
 <h2 id="失敗時先檢查">失敗時先檢查</h2>
 <ul><li>如果 staged 與 live 看的不是同一個面，先停下來確認哪一條 lane 過期。</li><li>如果 snapshot 或 summary 跟預期不符，先把它當成流程警訊，不要只當成排版問題。</li><li>如果你說不出為什麼需要看這章，可能代表你走錯 lane 了。</li></ul>
-<h2 id="指令詳細頁面">指令詳細頁面</h2>
-<p>如果你現在要查的是指令細節，而不是整段工作流程，先看這兩組：</p>
-<p>Primary lane：</p>
-<ul><li><a href="../../commands/zh-TW/workspace.html">workspace</a></li><li><a href="../../commands/zh-TW/workspace-scan.html">workspace scan</a></li><li><a href="../../commands/zh-TW/workspace-test.html">workspace test</a></li><li><a href="../../commands/zh-TW/workspace-preview.html">workspace preview</a></li><li><a href="../../commands/zh-TW/workspace-apply.html">workspace apply</a></li><li><a href="../../commands/zh-TW/status.html#staged">status staged</a></li><li><a href="../../commands/zh-TW/status.html#live">status live</a></li><li><a href="../../commands/zh-TW/status.html#overview">status overview live</a></li></ul>
-<p>Advanced workflows：</p>
-<ul><li>如果你需要較低階 staged contract，或要看 bundle / promotion handoff 文件，從 <a href="../../commands/zh-TW/workspace.html#ci">workspace ci</a> 或 <a href="../../commands/zh-TW/index.html">指令詳細總索引</a> 開始。</li><li><a href="../../commands/zh-TW/snapshot.html">snapshot</a></li><li><a href="../../commands/zh-TW/snapshot.html#export">snapshot export</a></li><li><a href="../../commands/zh-TW/snapshot.html#review">snapshot review</a></li><li><a href="../../commands/zh-TW/profile.html">config profile</a></li><li><a href="../../commands/zh-TW/profile.html#list">config profile list</a></li><li><a href="../../commands/zh-TW/profile.html#show">config profile show</a></li><li><a href="../../commands/zh-TW/profile.html#add">config profile add</a></li><li><a href="../../commands/zh-TW/profile.html#example">config profile example</a></li><li><a href="../../commands/zh-TW/profile.html#init">config profile init</a></li></ul>
+<h2 id="status-workspace-工作流地圖">Status / Workspace 工作流地圖</h2>
+<p>Status 與 workspace 子命令的重點是「先證明狀態可以信任，再決定要不要 apply」：</p>
+<table><thead><tr><th>任務</th><th>起點</th><th>主要輸入</th><th>主要輸出</th><th>下一步</th></tr></thead><tbody><tr><td>檢查 live Grafana</td><td><code>status live</code>, <code>status overview live</code></td><td>Grafana 連線、profile、可選 staged 摘要</td><td>ready / warning / blocking 狀態</td><td>export、review 或停下來修</td></tr><tr><td>檢查 staged package</td><td><code>status staged</code>, <code>workspace scan</code>, <code>workspace test</code></td><td>本地 workspace</td><td>schema / package / policy 結果</td><td>preview</td></tr><tr><td>預覽即將套用內容</td><td><code>workspace preview</code></td><td>staged workspace + target profile</td><td>apply 前摘要</td><td>人工 review</td></tr><tr><td>套用 workspace</td><td><code>workspace apply</code></td><td>已審查 workspace</td><td>live mutation 結果</td><td>apply 後 status live</td></tr><tr><td>打包與交接</td><td><code>workspace package</code>, <code>workspace ci</code></td><td>本地 workspace</td><td>bundle / CI artifact</td><td>交給 CI 或下一環境</td></tr><tr><td>產生快照證據</td><td><code>status snapshot</code>, <code>snapshot export</code>, <code>snapshot review</code></td><td>live 或 staged state</td><td>snapshot artifact / review output</td><td>incident、PR 或 audit</td></tr></tbody></table>
+<p>如果你的問題是「目前 Grafana 能不能信任」，先看 <code>status live</code>。如果問題是「這包檔案能不能套用」，先看 <code>workspace scan/test/preview</code>。如果你要留下審查證據，才切到 snapshot。</p>
 <h2 id="狀態操作面">狀態操作面</h2>
 <p>這裡會區分 <strong>Live</strong>（目前 Grafana 上真的在跑的內容）和 <strong>Staged</strong>（你準備要部署的內容）。</p>
 <h3 id="1-即時整備度檢查-live-check">1. 即時整備度檢查 (Live Check)</h3>
-<pre><code># 用途：1. 即時整備度檢查 (Live Check)。
+<pre><code># 用表格快速看 live Grafana 目前是否 ready。
 grafana-util status live --output-format table</code></pre>
-<pre><code># 用途：1. 即時整備度檢查 (Live Check)。
+<pre><code># 帶入 staged 摘要檔，讓 live 檢查同時提供更多對照資訊。
 grafana-util status live --profile prod --sync-summary-file ./sync-summary.json --package-test-file ./workspace-package-test.json --output-format json</code></pre>
 <p><strong>預期輸出：</strong></p>
 <pre><code>OVERALL: status=ready
@@ -962,9 +891,9 @@ Alerts       ok       無孤立規則</code></pre>
 <p><code>status live</code> 走的是共用的 live 狀態檢查流程。若同時帶入 staged sync 檔案，就能在不改變指令用法的前提下，讓 live 視圖多出更多對照資訊。</p>
 <h3 id="2-暫存整備度檢查-staged-check">2. 暫存整備度檢查 (Staged Check)</h3>
 <p>在執行 <code>apply</code> 之前，這一步很適合拿來當 CI/CD 的強制檢查。</p>
-<pre><code># 用途：在執行 apply 之前，這一步很適合拿來當 CI/CD 的強制檢查。
+<pre><code># 在 CI 裡檢查 desired file 是否能繼續往 apply 走。
 grafana-util status staged --desired-file ./desired.json --output-format json</code></pre>
-<pre><code># 用途：在執行 apply 之前，這一步很適合拿來當 CI/CD 的強制檢查。
+<pre><code># 同時檢查 dashboard、alert 與 desired input 的 staged readiness。
 grafana-util status staged --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts --desired-file ./desired.json --output-format table</code></pre>
 <p><strong>預期輸出：</strong></p>
 <pre><code>{
@@ -975,6 +904,8 @@ grafana-util status staged --dashboard-export-dir ./dashboards/raw --alert-expor
 <p><code>status staged</code> 比較偏向給腳本或 CI 判讀的驗證結果。<code>blockers</code> 代表一定得先處理，<code>warnings</code> 則表示需要人工再多看一眼。</p>
 <h2 id="workspace-審查生命週期">Workspace 審查生命週期</h2>
 <p>管理從 Git 到正式 Grafana 環境的過渡。</p>
+<p>Workspace 這組命令處理的是「一包 staged files 能不能進下一個環境」。它不應該一開始就被看成 apply 工具。<code>scan</code> 先回答這包裡有什麼，<code>test</code> 回答結構能不能被工具理解，<code>preview</code> 回答即將改到什麼，<code>apply</code> 才是最後動作。</p>
+<p>如果 preview 的變更數量、operation order 或 blocked reason 和你預期不同，先回頭修 workspace，不要用 apply 去驗證猜測。Workspace review 的產物應該能被 PR、incident 或變更單引用，而不是只留在終端畫面。</p>
 <h3 id="第一次使用先走這條最短路徑">第一次使用，先走這條最短路徑</h3>
 <p>如果你還不確定要從哪裡開始，先照這個順序走：</p>
 <ol><li><code>workspace scan .</code></li><li><code>workspace test .</code></li><li><code>workspace preview . --fetch-live --profile &lt;profile&gt;</code></li><li><code>workspace apply --preview-file ./workspace-preview.json --approve --execute-live --profile &lt;profile&gt;</code></li></ol>
@@ -987,10 +918,10 @@ grafana-util status staged --dashboard-export-dir ./dashboards/raw --alert-expor
   datasources/provisioning/datasources.yaml</code></pre>
 <h3 id="1-workspace-掃描">1. Workspace 掃描</h3>
 <p>先看目前 workspace package 的高階摘要與輸入形狀。</p>
-<pre><code># 用途：先從同一個 mixed repo root 自動發現常見 staged inputs。
+<pre><code># 先從同一個 mixed repo root 自動發現常見 staged inputs。
 grafana-util workspace scan ./grafana-oac-repo</code></pre>
 <p>同一個 workspace root 可以同時包含 <code>dashboards/git-sync/raw</code>、<code>dashboards/git-sync/provisioning</code>、<code>alerts/raw</code> 與 <code>datasources/provisioning/datasources.yaml</code>。</p>
-<pre><code># 用途：用明確 staged 匯出目錄建立 inspection 輸出。
+<pre><code># 用明確 staged 匯出目錄建立 inspection 輸出。
 grafana-util workspace scan --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts/raw --output-format json</code></pre>
 <p><strong>預期輸出：</strong></p>
 <pre><code>WORKSPACE PACKAGE SUMMARY:
@@ -1001,9 +932,9 @@ grafana-util workspace scan --dashboard-export-dir ./dashboards/raw --alert-expo
 <p>先用 scan 看整個 workspace package 的規模與輸入形狀，再往下看 preview。若總數異常偏大，應先停下來檢查 staged 輸入。</p>
 <h3 id="2-workspace-測試">2. Workspace 測試</h3>
 <p>驗證匯出 / 匯入目錄結構與 staged readiness。</p>
-<pre><code># 用途：先檢查目前 mixed workspace 自動發現到的 staged package。
+<pre><code># 先檢查目前 mixed workspace 自動發現到的 staged package。
 grafana-util workspace test ./grafana-oac-repo --availability-file ./availability.json</code></pre>
-<pre><code># 用途：把 live availability hints 併進 staged 檢查。
+<pre><code># 把 live availability hints 併進 staged 檢查。
 grafana-util workspace test ./grafana-oac-repo --fetch-live --output-format json</code></pre>
 <p><strong>預期輸出：</strong></p>
 <pre><code>PREFLIGHT CHECK:
@@ -1013,26 +944,35 @@ grafana-util workspace test ./grafana-oac-repo --fetch-live --output-format json
 <p>test 適合放在 preview 或 apply 前，做 staged readiness 與結構層檢查。通過只代表輸入形狀合理，不代表 live 狀態已經完全吻合。</p>
 <h3 id="3-workspace-預覽">3. Workspace 預覽</h3>
 <p>先建立可操作的 preview，確認這次真的會改到哪些東西。</p>
-<pre><code># 用途：預覽目前 mixed workspace 對 live Grafana 的影響。
+<pre><code># 預覽目前 mixed workspace 對 live Grafana 的影響。
 grafana-util workspace preview ./grafana-oac-repo --fetch-live --profile prod</code></pre>
-<pre><code># 用途：用明確 desired/live 輸入產出 JSON preview。
+<pre><code># 用明確 desired/live 輸入產出 JSON preview。
 grafana-util workspace preview --desired-file ./desired.json --live-file ./live.json --output-format json</code></pre>
 <p>preview 對應底層 plan contract。對使用者來說，先想「這次會改到什麼」比先想「我要 build 哪種 plan 文件」更自然。 這份 preview contract 也是排序契約的公開面：<code>ordering.mode</code>、每筆 operation 的 <code>orderIndex</code> / <code>orderGroup</code> / <code>kindOrder</code>，以及 <code>summary.blocked_reasons</code> 會讓審查者看出 plan 的執行順序與尚未解除的受阻工作。</p>
 <p>如果同一個 mixed workspace root 最後要交接成 bundle，直接跑 <code>workspace package ./grafana-oac-repo --output-file ./workspace-package.json</code>，保留產生的 <code>workspace-package.json</code> 作為可攜式的 review artifact。</p>
 <h2 id="互動模式-tui-語意">互動模式 (TUI) 語意</h2>
 <p><code>status overview live --output-format interactive</code> 會透過共用的 status live 路徑顯示 live project overview。</p>
-<pre><code># 用途：status overview live --output-format interactive 會透過共用的 status live 路徑顯示 live project overview。
+<pre><code># status overview live --output-format interactive 會透過共用的 status live 路徑顯示 live project overview。
 grafana-util status overview live --url http://localhost:3000 --basic-user admin --basic-password admin --output-format interactive</code></pre>
 <p>TUI 使用以下視覺語言：</p>
 <ul><li><strong>🟢 綠色</strong>：組件健康且完全可達。</li><li><strong>🟡 黃色</strong>：組件可用，但有警告，例如缺少中繼資料。</li><li><strong>🔴 紅色</strong>：組件受阻，在進行任何部署前都需要處理。</li></ul>
 <p>如果要看 staged 產物的人工審查畫面，用不帶 <code>live</code> 的 <code>status overview</code>；如果要拿結構化輸出做 live 檢查，改用 <code>status live</code>。</p>
+<h2 id="snapshot用來留下證據不是取代-preview">Snapshot：用來留下證據，不是取代 preview</h2>
+<p>Snapshot 相關命令適合在 incident、PR 或 audit 需要證據時使用。它可以保存目前 live 或 staged state 的摘要，讓後續 review 有一份可以引用的 artifact。它不是 workspace preview 的替代品，因為 preview 仍然是回答「apply 會做什麼」的主要入口。</p>
+<p>如果你要判斷能不能 apply，先用 <code>workspace scan/test/preview</code>。如果你要把當下狀態交給別人 review，或要把變更前後狀態放進紀錄，才使用 <code>status snapshot</code>、<code>snapshot export</code> 或 <code>snapshot review</code>。</p>
+<h2 id="何時切到指令參考">何時切到指令參考</h2>
+<p>這一章負責幫你判斷 live、staged、preview、apply 與 snapshot 的位置。當你已經知道要使用哪條 lane，再切到指令參考確認 flags、輸出格式與完整範例：</p>
+<p>Primary lane：</p>
+<ul><li><a href="../../commands/zh-TW/workspace.html">workspace</a></li><li><a href="../../commands/zh-TW/workspace-scan.html">workspace scan</a></li><li><a href="../../commands/zh-TW/workspace-test.html">workspace test</a></li><li><a href="../../commands/zh-TW/workspace-preview.html">workspace preview</a></li><li><a href="../../commands/zh-TW/workspace-apply.html">workspace apply</a></li><li><a href="../../commands/zh-TW/status.html#staged">status staged</a></li><li><a href="../../commands/zh-TW/status.html#live">status live</a></li><li><a href="../../commands/zh-TW/status.html#overview">status overview live</a></li></ul>
+<p>Advanced workflows：</p>
+<ul><li>如果你需要較低階 staged contract，或要看 bundle / promotion handoff 文件，從 <a href="../../commands/zh-TW/workspace.html#ci">workspace ci</a> 或 <a href="../../commands/zh-TW/index.html">指令詳細總索引</a> 開始。</li><li><a href="../../commands/zh-TW/snapshot.html">snapshot</a></li><li><a href="../../commands/zh-TW/snapshot.html#export">snapshot export</a></li><li><a href="../../commands/zh-TW/snapshot.html#review">snapshot review</a></li><li><a href="../../commands/zh-TW/profile.html">config profile</a></li><li><a href="../../commands/zh-TW/profile.html#list">config profile list</a></li><li><a href="../../commands/zh-TW/profile.html#show">config profile show</a></li><li><a href="../../commands/zh-TW/profile.html#add">config profile add</a></li><li><a href="../../commands/zh-TW/profile.html#example">config profile example</a></li><li><a href="../../commands/zh-TW/profile.html#init">config profile init</a></li></ul>
 <p><a href="access.html">⬅️ 上一章：Access 管理</a> | <a href="index.html">🏠 回首頁</a> | <a href="scenarios.html">➡️ 下一章：維運情境手冊</a></p>
-<nav class="footer-nav"><a class="link-card" href="access.html"><span>上一章</span>第 11 章 · 身分與存取管理 (Identity &amp; Access)</a><a class="link-card" href="scenarios.html"><span>下一章</span>第 13 章 · 維運情境手冊 (Operator Scenarios)</a></nav>
+<nav class="footer-nav"><a class="link-card" href="access.html"><span>上一章</span>身分與存取管理 (Identity &amp; Access)</a><a class="link-card" href="scenarios.html"><span>下一章</span>維運情境手冊 (Operator Scenarios)</a></nav>
 </article>
 <aside class="sidebar">
   <button class="sidebar-toggle sidebar-toggle-right" type="button" aria-expanded="true" aria-label="Toggle page sidebar">▶</button>
   <div class="sidebar-content">
-    <section class="sidebar-section"><h2>本頁內容</h2><ul class="toc-list"><li class="toc-level-2"><a href="#command-relationships"><span class="toc-label">指令關係</span></a></li><li class="toc-level-2"><a href="#適用對象"><span class="toc-label">適用對象</span></a></li><li class="toc-level-2"><a href="#主要目標"><span class="toc-label">主要目標</span></a></li><li class="toc-level-2"><a href="#採用前後對照"><span class="toc-label">採用前後對照</span></a></li><li class="toc-level-2"><a href="#成功判準"><span class="toc-label">成功判準</span></a></li><li class="toc-level-2"><a href="#失敗時先檢查"><span class="toc-label">失敗時先檢查</span></a></li><li class="toc-level-2"><a href="#指令詳細頁面"><span class="toc-label">指令詳細頁面</span></a></li><li class="toc-level-2"><a href="#狀態操作面"><span class="toc-label">狀態操作面</span></a></li><li class="toc-level-3"><a href="#1-即時整備度檢查-live-check"><span class="toc-label">1. 即時整備度檢查 (Live Check)</span></a></li><li class="toc-level-3"><a href="#2-暫存整備度檢查-staged-check"><span class="toc-label">2. 暫存整備度檢查 (Staged Check)</span></a></li><li class="toc-level-2"><a href="#workspace-審查生命週期"><span class="toc-label">Workspace 審查生命週期</span></a></li><li class="toc-level-3"><a href="#第一次使用先走這條最短路徑"><span class="toc-label">第一次使用，先走這條最短路徑</span></a></li><li class="toc-level-3"><a href="#1-workspace-掃描"><span class="toc-label">1. Workspace 掃描</span></a></li><li class="toc-level-3"><a href="#2-workspace-測試"><span class="toc-label">2. Workspace 測試</span></a></li><li class="toc-level-3"><a href="#3-workspace-預覽"><span class="toc-label">3. Workspace 預覽</span></a></li><li class="toc-level-2"><a href="#互動模式-tui-語意"><span class="toc-label">互動模式 (TUI) 語意</span></a></li></ul></section><section class="sidebar-section"><h2>版本</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>語言</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/status-workspace.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
+    <section class="sidebar-section"><h2>本頁內容</h2><ul class="toc-list"><li class="toc-level-2"><a href="#適用對象"><span class="toc-label">適用對象</span></a></li><li class="toc-level-2"><a href="#主要目標"><span class="toc-label">主要目標</span></a></li><li class="toc-level-2"><a href="#採用前後對照"><span class="toc-label">採用前後對照</span></a></li><li class="toc-level-2"><a href="#成功判準"><span class="toc-label">成功判準</span></a></li><li class="toc-level-2"><a href="#失敗時先檢查"><span class="toc-label">失敗時先檢查</span></a></li><li class="toc-level-2"><a href="#status-workspace-工作流地圖"><span class="toc-label">Status / Workspace 工作流地圖</span></a></li><li class="toc-level-2"><a href="#狀態操作面"><span class="toc-label">狀態操作面</span></a></li><li class="toc-level-3"><a href="#1-即時整備度檢查-live-check"><span class="toc-label">1. 即時整備度檢查 (Live Check)</span></a></li><li class="toc-level-3"><a href="#2-暫存整備度檢查-staged-check"><span class="toc-label">2. 暫存整備度檢查 (Staged Check)</span></a></li><li class="toc-level-2"><a href="#workspace-審查生命週期"><span class="toc-label">Workspace 審查生命週期</span></a></li><li class="toc-level-3"><a href="#第一次使用先走這條最短路徑"><span class="toc-label">第一次使用，先走這條最短路徑</span></a></li><li class="toc-level-3"><a href="#1-workspace-掃描"><span class="toc-label">1. Workspace 掃描</span></a></li><li class="toc-level-3"><a href="#2-workspace-測試"><span class="toc-label">2. Workspace 測試</span></a></li><li class="toc-level-3"><a href="#3-workspace-預覽"><span class="toc-label">3. Workspace 預覽</span></a></li><li class="toc-level-2"><a href="#互動模式-tui-語意"><span class="toc-label">互動模式 (TUI) 語意</span></a></li><li class="toc-level-2"><a href="#snapshot用來留下證據不是取代-preview"><span class="toc-label">Snapshot：用來留下證據，不是取代 preview</span></a></li><li class="toc-level-2"><a href="#何時切到指令參考"><span class="toc-label">何時切到指令參考</span></a></li></ul></section><section class="sidebar-section"><h2>版本</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>語言</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/status-workspace.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
   </div>
 </aside>
 

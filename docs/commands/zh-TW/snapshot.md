@@ -31,17 +31,17 @@
 範例：
 
 ```bash
-# 用途：從 live Grafana 匯出本機 snapshot bundle。
+# 從 live Grafana 匯出本機 snapshot bundle。
 grafana-util status snapshot export --profile prod --output-dir ./snapshot
 ```
 
 ```bash
-# 用途：用 JSON 檢視已匯出的 snapshot bundle。
+# 用 JSON 檢視已匯出的 snapshot bundle。
 grafana-util status snapshot review --input-dir ./snapshot --output-format json
 ```
 
 ```bash
-# 用途：用 token 認證從 live Grafana 匯出 snapshot bundle。
+# 用 token 認證從 live Grafana 匯出 snapshot bundle。
 grafana-util status snapshot export --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output-dir ./snapshot
 ```
 
@@ -68,22 +68,22 @@ grafana-util status snapshot export --url http://localhost:3000 --token "$GRAFAN
 範例：
 
 ```bash
-# 用途：export。
+# export。
 grafana-util status snapshot export --profile prod --output-dir ./snapshot
 ```
 
 ```bash
-# 用途：export。
+# export。
 grafana-util status snapshot export --url http://localhost:3000 --basic-user admin --basic-password admin --output-dir ./snapshot --overwrite
 ```
 
 ```bash
-# 用途：export。
+# export。
 grafana-util status snapshot export --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output-dir ./snapshot
 ```
 
 ```bash
-# 用途：先用 terminal prompt 勾選要匯出的 snapshot lane。
+# 先用 terminal prompt 勾選要匯出的 snapshot lane。
 grafana-util status snapshot export --profile prod --prompt --output-dir ./snapshot
 ```
 
@@ -102,12 +102,12 @@ review summary 現在也會一起顯示 users、teams、orgs、service accounts 
 範例：
 
 ```bash
-# 用途：在不接觸 Grafana 的情況下檢視本機 snapshot inventory。
+# 在不接觸 Grafana 的情況下檢視本機 snapshot inventory。
 grafana-util status snapshot review --input-dir ./snapshot --output-format table
 ```
 
 ```bash
-# 用途：在不接觸 Grafana 的情況下檢視本機 snapshot inventory。
+# 在不接觸 Grafana 的情況下檢視本機 snapshot inventory。
 grafana-util status snapshot review --input-dir ./snapshot --interactive
 ```
 

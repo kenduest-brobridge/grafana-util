@@ -326,13 +326,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   font-weight: 500;
 }
 .nav-command-branch-item .nav-command-leaf-link:hover { color: var(--heading); }
-.handbook-command-map .nav-command-root-link {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  font-size: 0.9rem;
-}
 
 .sidebar-toggle {
   position: absolute;
@@ -378,71 +371,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map { margin: 0 0 24px; }
-.handbook-command-map-panel {
-  margin-top: 16px;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--panel) 96%, white);
-}
-.handbook-command-map .nav-group-title {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-group {
-  padding-top: 0;
-}
-.handbook-command-map .nav-command-group + .nav-command-group {
-  margin-top: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
-  padding-top: 10px;
-}
-.handbook-command-map .nav-command-sub-list {
-  margin-top: 8px;
-  margin-left: 0;
-  padding-left: 0;
-  border-left: 0;
-}
-.handbook-command-map .nav-command-branch {
-  display: grid;
-  grid-template-columns: minmax(130px, 0.22fr) minmax(0, 1fr);
-  gap: 12px 18px;
-  align-items: start;
-}
-.handbook-command-map .nav-command-branch-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-left: 0;
-  padding-left: 14px;
-}
-.handbook-command-map .nav-command-branch-item + .nav-command-branch-item { margin-top: 0; }
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-  line-height: 1.25;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link:hover,
-.handbook-command-map .nav-command-link a:hover {
-  border-color: color-mix(in srgb, var(--border) 45%, var(--accent));
-  background: var(--panel-strong);
-}
-@media (max-width: 720px) {
-  .handbook-command-map .nav-command-branch {
-    grid-template-columns: 1fr;
-  }
-  .handbook-command-map .nav-command-branch-list {
-    padding-left: 0;
-    border-left: 0;
-  }
-}
 .article p,
 .article li { color: var(--text); font-weight: 460; }
 .article ul li::marker,
@@ -955,9 +883,9 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <ul><li>if a snapshot export looks empty, verify the auth profile or live connection before assuming the source system is blank</li><li>if review output looks surprising, confirm that you are pointing at the intended snapshot directory</li><li>if automation reads the output, keep the chosen <code>--output-format</code> explicit so the downstream parser knows the contract</li></ul>
 <p>Key flags: the root command is a namespace; the operational flags live on <code>export</code> and <code>review</code>. The shared root flag is <code>--color</code>.</p>
 <p>Examples:</p>
-<pre><code># Purpose: Export a local snapshot bundle from live Grafana.
+<pre><code># Export a local snapshot bundle from live Grafana.
 grafana-util status snapshot export --url http://localhost:3000 --basic-user admin --basic-password admin --output-dir ./snapshot</code></pre>
-<pre><code># Purpose: Review the exported snapshot bundle as JSON.
+<pre><code># Review the exported snapshot bundle as JSON.
 grafana-util status snapshot review --input-dir ./snapshot --output-format json</code></pre>
 <p>Related commands: <code>grafana-util status overview</code>, <code>grafana-util status staged</code>, <code>grafana-util workspace package</code>.</p>
 <h2 id="export"><code>export</code></h2>
@@ -967,11 +895,11 @@ grafana-util status snapshot review --input-dir ./snapshot --output-format json<
 <ul><li><code>snapshot/dashboards/</code></li><li><code>snapshot/datasources/</code></li><li><code>snapshot/snapshot-metadata.json</code></li></ul>
 <p>Key flags: <code>--output-dir</code>, <code>--overwrite</code>, <code>--prompt</code>, plus the shared Grafana connection and auth flags. <code>--prompt</code> opens a terminal multi-select prompt so you can choose which lanes to export before the snapshot starts. The datasource lane exports config and any <code>secureJsonDataPlaceholders</code>, but it does not export datasource plaintext secrets because Grafana live APIs do not return them.</p>
 <p>Examples:</p>
-<pre><code># Purpose: export.
+<pre><code># export.
 grafana-util status snapshot export --url http://localhost:3000 --basic-user admin --basic-password admin --output-dir ./snapshot</code></pre>
-<pre><code># Purpose: export.
+<pre><code># export.
 grafana-util status snapshot export --profile prod --output-dir ./snapshot --overwrite</code></pre>
-<pre><code># Purpose: choose snapshot lanes from a terminal prompt before export.
+<pre><code># choose snapshot lanes from a terminal prompt before export.
 grafana-util status snapshot export --profile prod --prompt --output-dir ./snapshot</code></pre>
 <p>Related commands: <code>snapshot review</code>, <code>workspace package</code>, <code>status overview</code>.</p>
 <h2 id="review"><code>review</code></h2>
@@ -980,9 +908,9 @@ grafana-util status snapshot export --profile prod --prompt --output-dir ./snaps
 <p>Review summary focuses on the exported dashboard and datasource lanes present in the snapshot root.</p>
 <p>Key flags: <code>--input-dir</code>, <code>--interactive</code>, <code>--output-format</code>.</p>
 <p>Examples:</p>
-<pre><code># Purpose: review an exported snapshot root as table, csv, text, json, yaml, or interactive output.
+<pre><code># review an exported snapshot root as table, csv, text, json, yaml, or interactive output.
 grafana-util status snapshot review --input-dir ./snapshot --output-format table</code></pre>
-<pre><code># Purpose: review an exported snapshot root as table, csv, text, json, yaml, or interactive output.
+<pre><code># review an exported snapshot root as table, csv, text, json, yaml, or interactive output.
 grafana-util status snapshot review --input-dir ./snapshot --interactive</code></pre>
 <p>Related commands: <code>snapshot export</code>, <code>status overview</code>, <code>status staged</code>.</p>
 

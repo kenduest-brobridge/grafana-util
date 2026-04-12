@@ -41,17 +41,17 @@ List live Grafana notification templates.
 ## Examples
 
 ```bash
-# Purpose: List live Grafana notification templates.
+# List live Grafana notification templates.
 grafana-util alert list-templates --profile prod --output-format table
 ```
 
 ```bash
-# Purpose: List live Grafana notification templates.
+# List live Grafana notification templates.
 grafana-util alert list-templates --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output-format json
 ```
 
 ```bash
-# Purpose: List live Grafana notification templates.
+# List live Grafana notification templates.
 grafana-util alert list-templates --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --output-format yaml
 ```
 

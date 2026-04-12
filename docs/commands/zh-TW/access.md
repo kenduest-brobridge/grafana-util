@@ -106,7 +106,7 @@ grafana-util access service-account list --url http://localhost:3000 --token "$G
 - [access org](./access-org.md)
 - [access team](./access-team.md)
 
-### 服務帳號與 token
+### service account 與 token
 
 - [access service-account](./access-service-account.md)
 - [access service-account token](./access-service-account-token.md)

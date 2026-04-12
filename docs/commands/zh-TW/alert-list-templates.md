@@ -41,17 +41,17 @@
 ## 範例
 
 ```bash
-# 用途：列出目前 Grafana 線上的通知範本。
+# 列出目前 Grafana 線上的通知範本。
 grafana-util alert list-templates --profile prod --output-format table
 ```
 
 ```bash
-# 用途：列出目前 Grafana 線上的通知範本。
+# 列出目前 Grafana 線上的通知範本。
 grafana-util alert list-templates --url http://localhost:3000 --basic-user admin --basic-password admin --all-orgs --output-format yaml
 ```
 
 ```bash
-# 用途：列出目前 Grafana 線上的通知範本。
+# 列出目前 Grafana 線上的通知範本。
 grafana-util alert list-templates --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output-format json
 ```
 

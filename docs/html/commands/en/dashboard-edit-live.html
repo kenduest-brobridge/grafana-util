@@ -326,13 +326,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   font-weight: 500;
 }
 .nav-command-branch-item .nav-command-leaf-link:hover { color: var(--heading); }
-.handbook-command-map .nav-command-root-link {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  font-size: 0.9rem;
-}
 
 .sidebar-toggle {
   position: absolute;
@@ -378,71 +371,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map { margin: 0 0 24px; }
-.handbook-command-map-panel {
-  margin-top: 16px;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--panel) 96%, white);
-}
-.handbook-command-map .nav-group-title {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-group {
-  padding-top: 0;
-}
-.handbook-command-map .nav-command-group + .nav-command-group {
-  margin-top: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
-  padding-top: 10px;
-}
-.handbook-command-map .nav-command-sub-list {
-  margin-top: 8px;
-  margin-left: 0;
-  padding-left: 0;
-  border-left: 0;
-}
-.handbook-command-map .nav-command-branch {
-  display: grid;
-  grid-template-columns: minmax(130px, 0.22fr) minmax(0, 1fr);
-  gap: 12px 18px;
-  align-items: start;
-}
-.handbook-command-map .nav-command-branch-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-left: 0;
-  padding-left: 14px;
-}
-.handbook-command-map .nav-command-branch-item + .nav-command-branch-item { margin-top: 0; }
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-  line-height: 1.25;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link:hover,
-.handbook-command-map .nav-command-link a:hover {
-  border-color: color-mix(in srgb, var(--border) 45%, var(--accent));
-  background: var(--panel-strong);
-}
-@media (max-width: 720px) {
-  .handbook-command-map .nav-command-branch {
-    grid-template-columns: 1fr;
-  }
-  .handbook-command-map .nav-command-branch-list {
-    padding-left: 0;
-    border-left: 0;
-  }
-}
 .article p,
 .article li { color: var(--text); font-weight: 460; }
 .article ul li::marker,
@@ -952,13 +880,13 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="notes">Notes</h2>
 <ul><li>The command opens <code>$VISUAL</code>, then <code>$EDITOR</code>, then falls back to <code>vi</code>.</li><li>With neither <code>--output</code> nor <code>--apply-live</code>, the command keeps the edit session ephemeral and automatically runs a live <code>publish --dry-run</code> preview instead of writing a draft file.</li><li>With <code>--output</code>, the command writes the edited draft to disk and stops there unless you also add <code>--publish-dry-run</code>.</li><li>After editing, the command prints a review summary that includes blocking validation issues and the suggested next action.</li><li><code>--apply-live</code> only proceeds when the edited draft keeps <code>dashboard.id</code> null, preserves the source dashboard UID, and has no blocking review issues.</li><li>The edited payload must still contain <code>dashboard.uid</code>.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code># Purpose: Edit one live dashboard and preview the live publish without writing a draft file.
+<pre><code># Edit one live dashboard and preview the live publish without writing a draft file.
 grafana-util dashboard edit-live --profile prod --dashboard-uid cpu-main</code></pre>
-<pre><code># Purpose: Edit one live dashboard and keep the result as a local draft.
+<pre><code># Edit one live dashboard and keep the result as a local draft.
 grafana-util dashboard edit-live --url http://localhost:3000 --basic-user admin --basic-password admin --dashboard-uid cpu-main --output ./drafts/cpu-main.edited.json</code></pre>
-<pre><code># Purpose: Edit one live dashboard, save the draft, and immediately preview the publish.
+<pre><code># Edit one live dashboard, save the draft, and immediately preview the publish.
 grafana-util dashboard edit-live --profile prod --dashboard-uid cpu-main --output ./drafts/cpu-main.edited.json --publish-dry-run</code></pre>
-<pre><code># Purpose: Edit one live dashboard and explicitly write the result back to Grafana.
+<pre><code># Edit one live dashboard and explicitly write the result back to Grafana.
 grafana-util dashboard edit-live --profile prod --dashboard-uid cpu-main --apply-live --yes --message &#x27;Hotfix CPU dashboard&#x27;</code></pre>
 <h2 id="related-commands">Related commands</h2>
 <ul><li><a href="dashboard-get.html">dashboard get</a></li><li><a href="dashboard-clone.html">dashboard clone</a></li><li><a href="dashboard-publish.html">dashboard publish</a></li></ul>

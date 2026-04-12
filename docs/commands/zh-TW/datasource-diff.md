@@ -13,22 +13,22 @@
 
 ## 範例
 ```bash
-# 用途：比較本地 bundle 中的 datasource inventory 與線上 Grafana，並輸出給操作人員看的 diff 報告。
+# 比較本地 bundle 中的 datasource inventory 與線上 Grafana，並輸出給操作人員看的 diff 報告。
 grafana-util datasource diff --profile prod --diff-dir ./datasources --input-format inventory
 ```
 
 ```bash
-# 用途：比較本地 bundle 中的 datasource inventory 與線上 Grafana，並輸出給操作人員看的 diff 報告。
+# 比較本地 bundle 中的 datasource inventory 與線上 Grafana，並輸出給操作人員看的 diff 報告。
 grafana-util datasource diff --url http://localhost:3000 --basic-user admin --basic-password admin --diff-dir ./datasources/provisioning --input-format provisioning
 ```
 
 ```bash
-# 用途：比較本地 bundle 中的 datasource inventory 與線上 Grafana，並輸出給操作人員看的 diff 報告。
+# 比較本地 bundle 中的 datasource inventory 與線上 Grafana，並輸出給操作人員看的 diff 報告。
 grafana-util datasource diff --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --diff-dir ./datasources --input-format inventory
 ```
 
 ```bash
-# 用途：比較本地 datasource inventory 與線上 Grafana，並輸出共用 diff JSON contract。
+# 比較本地 datasource inventory 與線上 Grafana，並輸出共用 diff JSON contract。
 grafana-util datasource diff --profile prod --diff-dir ./datasources --input-format inventory --output-format json
 ```
 

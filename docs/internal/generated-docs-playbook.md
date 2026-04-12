@@ -16,7 +16,7 @@ If you need to:
 - change handbook ordering or prev/next navigation: edit `scripts/docgen_handbook.py`
 - change handbook sidebar grouping: edit `scripts/docgen_handbook.py`
 - change landing quick commands, jump-select command entries, or handbook
-  command-relationship maps: edit `scripts/contracts/docs-entrypoints.json`
+  sidebar command shortcuts: edit `scripts/contracts/docs-entrypoints.json`
 - change public command paths, legacy replacements, command-doc routing, or
   `--help-full` / `--help-flat` support: edit `scripts/contracts/command-surface.json`
 - change command-to-handbook back-links in HTML: edit `scripts/generate_command_html.py`
@@ -24,12 +24,24 @@ If you need to:
 - change supported Markdown behavior: edit `scripts/docgen_command_docs.py`
 - change generated output write/check behavior: edit `scripts/docgen_common.py`
 
+## Handbook vs Command Reference
+
+Do not create one handbook page for every leaf command. Handbook pages are task-first: they explain when to use a command family, how to read the output, what to check before mutation, and what the next command usually is. Command reference pages are syntax-first: exact flags, output formats, examples, and related command links.
+
+When a reader asks for something like `alert list-rules` user guidance, add or improve the relevant task section inside the family handbook, such as alert inventory, rather than adding `docs/user-guide/*/alert-list-rules.md`. A good handbook task section should say:
+
+- why the operator is doing this task now
+- which commands belong together in the workflow
+- what fields or output shapes matter
+- what common mistakes mean
+- when to switch to command reference for exact flags
+
 ## Standard Validation Loop
 
 After any docs-generator change:
 
 ```bash
-# Purpose: After any docs-generator change.
+# Regenerate every generated docs artifact and verify it is stable.
 make man
 make html
 make quality-docs-surface
@@ -45,7 +57,7 @@ python3 -m unittest -v \
 Useful local review commands:
 
 ```bash
-# Purpose: Useful local review commands.
+# Inspect the generated manpage and HTML entrypoint locally.
 man ./docs/man/grafana-util.1
 open ./docs/html/index.html
 ```
@@ -71,6 +83,7 @@ Steps:
    - `When to use`
    - `Key flags`
    - `Examples`
+   - example comments that describe the exact command, not the section title
 5. add links from the locale command indexes if needed:
    - `docs/commands/en/index.md`
    - `docs/commands/zh-TW/index.md`
@@ -337,7 +350,7 @@ Most likely cause:
 Fix:
 
 ```bash
-# Purpose: Fix.
+# Regenerate HTML before checking it.
 make html
 make html-check
 ```

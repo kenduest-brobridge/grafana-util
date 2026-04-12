@@ -80,37 +80,37 @@ Top-level keys worth remembering:
 
 ## Examples
 ```bash
-# Purpose: List the last 20 dashboard revisions as a table for review.
+# List the last 20 dashboard revisions as a table for review.
 grafana-util dashboard history list --url http://localhost:3000 --basic-user admin --basic-password admin --dashboard-uid cpu-main --limit 20 --output-format table
 ```
 
 ```bash
-# Purpose: Read one exported dashboard history artifact and list its revisions locally.
+# Read one exported dashboard history artifact and list its revisions locally.
 grafana-util dashboard history list --input ./cpu-main.history.json --output-format table
 ```
 
 ```bash
-# Purpose: Read a dashboard export tree with included history and list one dashboard by UID.
+# Read a dashboard export tree with included history and list one dashboard by UID.
 grafana-util dashboard history list --input-dir ./dashboards --dashboard-uid cpu-main --output-format table
 ```
 
 ```bash
-# Purpose: Restore one historical dashboard revision as a new latest Grafana version.
+# Restore one historical dashboard revision as a new latest Grafana version.
 grafana-util dashboard history restore --url http://localhost:3000 --basic-user admin --basic-password admin --dashboard-uid cpu-main --version 17 --message "Restore known good CPU dashboard after regression" --dry-run --output-format table
 ```
 
 ```bash
-# Purpose: Prompt for one recent historical version, preview it, and confirm the restore.
+# Prompt for one recent historical version, preview it, and confirm the restore.
 grafana-util dashboard history restore --url http://localhost:3000 --basic-user admin --basic-password admin --dashboard-uid cpu-main --prompt
 ```
 
 ```bash
-# Purpose: Compare two dated history exports for the same dashboard UID.
+# Compare two dated history exports for the same dashboard UID.
 grafana-util dashboard history diff --base-input-dir ./exports-2026-04-01 --base-dashboard-uid cpu-main --base-version 17 --new-input-dir ./exports-2026-04-07 --new-dashboard-uid cpu-main --new-version 21 --output-format json
 ```
 
 ```bash
-# Purpose: Export the recent dashboard history revisions into a reusable JSON artifact.
+# Export the recent dashboard history revisions into a reusable JSON artifact.
 grafana-util dashboard history export --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --dashboard-uid cpu-main --limit 20 --output ./cpu-main.history.json
 ```
 

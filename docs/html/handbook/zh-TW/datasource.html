@@ -326,13 +326,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   font-weight: 500;
 }
 .nav-command-branch-item .nav-command-leaf-link:hover { color: var(--heading); }
-.handbook-command-map .nav-command-root-link {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  font-size: 0.9rem;
-}
 
 .sidebar-toggle {
   position: absolute;
@@ -378,71 +371,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map { margin: 0 0 24px; }
-.handbook-command-map-panel {
-  margin-top: 16px;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--panel) 96%, white);
-}
-.handbook-command-map .nav-group-title {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-group {
-  padding-top: 0;
-}
-.handbook-command-map .nav-command-group + .nav-command-group {
-  margin-top: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
-  padding-top: 10px;
-}
-.handbook-command-map .nav-command-sub-list {
-  margin-top: 8px;
-  margin-left: 0;
-  padding-left: 0;
-  border-left: 0;
-}
-.handbook-command-map .nav-command-branch {
-  display: grid;
-  grid-template-columns: minmax(130px, 0.22fr) minmax(0, 1fr);
-  gap: 12px 18px;
-  align-items: start;
-}
-.handbook-command-map .nav-command-branch-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-left: 0;
-  padding-left: 14px;
-}
-.handbook-command-map .nav-command-branch-item + .nav-command-branch-item { margin-top: 0; }
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-  line-height: 1.25;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link:hover,
-.handbook-command-map .nav-command-link a:hover {
-  border-color: color-mix(in srgb, var(--border) 45%, var(--accent));
-  background: var(--panel-strong);
-}
-@media (max-width: 720px) {
-  .handbook-command-map .nav-command-branch {
-    grid-template-columns: 1fr;
-  }
-  .handbook-command-map .nav-command-branch-list {
-    padding-left: 0;
-    border-left: 0;
-  }
-}
 .article p,
 .article li { color: var(--text); font-weight: 460; }
 .article ul li::marker,
@@ -920,19 +848,22 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
       <div class="layout">
 <aside class="nav-sidebar">
   <button class="sidebar-toggle sidebar-toggle-left" type="button" aria-expanded="true" aria-label="Toggle handbook navigation">◀</button>
-  <div class="nav-sidebar-content"><section class="nav-section"><h2>手冊導覽</h2><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 1 部 · 起步</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="index.html" class="nav-item">概觀</a></li><li class="nav-tree-node"><a href="what-is-grafana-util.html" class="nav-item">這個工具是做什麼的</a></li><li class="nav-tree-node"><a href="getting-started.html" class="nav-item">開始使用</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 2 部 · 角色路徑</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="role-new-user.html" class="nav-item">第一次執行 / 新手路線</a></li><li class="nav-tree-node"><a href="role-sre-ops.html" class="nav-item">SRE / 維運</a></li><li class="nav-tree-node"><a href="role-automation-ci.html" class="nav-item">自動化 / CI</a></li></ul></div><div class="nav-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">第 3 部 · 操作面</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="status-workspace.html" class="nav-item">Status / Workspace</a></li><li class="nav-tree-node"><a href="dashboard.html" class="nav-item">Dashboard</a></li><li class="nav-tree-node"><a href="datasource.html" class="nav-item active">Datasource</a></li><li class="nav-tree-node"><a href="alert.html" class="nav-item">Alert</a></li><li class="nav-tree-node"><a href="access.html" class="nav-item">Access</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 4 部 · 設計原則</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="architecture.html" class="nav-item">設計原則</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 5 部 · 參考與排錯</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="scenarios.html" class="nav-item">情境手冊</a></li><li class="nav-tree-node"><a href="recipes.html" class="nav-item">實戰錦囊</a></li><li class="nav-tree-node"><a href="reference.html" class="nav-item">技術參考</a></li><li class="nav-tree-node"><a href="troubleshooting.html" class="nav-item">疑難排解</a></li></ul></div></section><section class="nav-section nav-command-section collapsed"><button class="nav-group-header nav-section-toggle" type="button" aria-expanded="false"><span class="nav-group-title-text">指令關係</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-section-body"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">檢查與盤點</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><a href="../../commands/zh-TW/datasource.html" class="nav-command-root-link">datasource</a></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/zh-TW/datasource-types.html" class="nav-command-leaf-link">types</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/datasource-list.html" class="nav-command-leaf-link">list</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/datasource-browse.html" class="nav-command-leaf-link">browse</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/datasource-diff.html" class="nav-command-leaf-link">diff</a></li></ul></div></div></div><div class="nav-group nav-command-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">搬運與同步</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><span class="nav-command-root-link nav-command-root-static">datasource</span></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/zh-TW/datasource-export.html" class="nav-command-leaf-link">export</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/datasource-import.html" class="nav-command-leaf-link">import</a></li></ul></div></div></div><div class="nav-group nav-command-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">變更 live</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><span class="nav-command-root-link nav-command-root-static">datasource</span></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/zh-TW/datasource-add.html" class="nav-command-leaf-link">add</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/datasource-modify.html" class="nav-command-leaf-link">modify</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/datasource-delete.html" class="nav-command-leaf-link">delete</a></li></ul></div></div></div></div></section><section class="nav-section"><h2>指令參考</h2><a href="../../commands/zh-TW/index.html" class="nav-command-entry">開啟指令參考</a></section></div>
+  <div class="nav-sidebar-content"><section class="nav-section"><h2>手冊導覽</h2><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 1 部 · 起步</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="index.html" class="nav-item">概觀</a></li><li class="nav-tree-node"><a href="what-is-grafana-util.html" class="nav-item">這個工具是做什麼的</a></li><li class="nav-tree-node"><a href="getting-started.html" class="nav-item">開始使用</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 2 部 · 角色路徑</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="role-new-user.html" class="nav-item">第一次執行 / 新手路線</a></li><li class="nav-tree-node"><a href="role-sre-ops.html" class="nav-item">SRE / 維運</a></li><li class="nav-tree-node"><a href="role-automation-ci.html" class="nav-item">自動化 / CI</a></li></ul></div><div class="nav-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">第 3 部 · 操作面</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="status-workspace.html" class="nav-item">Status / Workspace</a></li><li class="nav-tree-node"><a href="dashboard.html" class="nav-item">Dashboard</a></li><li class="nav-tree-node"><a href="datasource.html" class="nav-item active">Datasource</a></li><li class="nav-tree-node"><a href="alert.html" class="nav-item">Alert</a></li><li class="nav-tree-node"><a href="access.html" class="nav-item">Access</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 4 部 · 設計原則</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="architecture.html" class="nav-item">設計原則</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">第 5 部 · 參考與排錯</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="scenarios.html" class="nav-item">情境手冊</a></li><li class="nav-tree-node"><a href="recipes.html" class="nav-item">實戰錦囊</a></li><li class="nav-tree-node"><a href="reference.html" class="nav-item">技術參考</a></li><li class="nav-tree-node"><a href="troubleshooting.html" class="nav-item">疑難排解</a></li></ul></div></section><section class="nav-section nav-command-section collapsed"><button class="nav-group-header nav-section-toggle" type="button" aria-expanded="false"><span class="nav-group-title-text">指令捷徑</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-section-body"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">檢查與盤點</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><a href="../../commands/zh-TW/datasource.html" class="nav-command-root-link">datasource</a></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/zh-TW/datasource-types.html" class="nav-command-leaf-link">types</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/datasource-list.html" class="nav-command-leaf-link">list</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/datasource-browse.html" class="nav-command-leaf-link">browse</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/datasource-diff.html" class="nav-command-leaf-link">diff</a></li></ul></div></div></div><div class="nav-group nav-command-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">搬運與同步</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><span class="nav-command-root-link nav-command-root-static">datasource</span></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/zh-TW/datasource-export.html" class="nav-command-leaf-link">export</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/datasource-import.html" class="nav-command-leaf-link">import</a></li></ul></div></div></div><div class="nav-group nav-command-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">變更 live</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><span class="nav-command-root-link nav-command-root-static">datasource</span></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/zh-TW/datasource-add.html" class="nav-command-leaf-link">add</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/datasource-modify.html" class="nav-command-leaf-link">modify</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/datasource-delete.html" class="nav-command-leaf-link">delete</a></li></ul></div></div></div></div></section><section class="nav-section"><h2>指令參考</h2><a href="../../commands/zh-TW/index.html" class="nav-command-entry">開啟指令參考</a></section></div>
 </aside>
 
 <article class="article">
 <div class="breadcrumbs"><a href="../../index.html">Home</a> / 手冊 / Datasource</div>
 
-<div class="hero-eyebrow">第 3 部 · 操作面 · 第 9 章 / 共 16 章</div><h1><span class="hero-title-main">Datasource</span></h1><p class="hero-subtitle">Data source 維運手冊</p>
+<div class="hero-eyebrow">第 3 部 · 操作面</div><h1><span class="hero-title-main">Datasource</span></h1><p class="hero-subtitle">Data source 維運手冊</p>
 
-<section class="section-index"><h2>章節索引</h2><p class="section-index-summary">先從這裡跳到你要看的段落。</p><ul class="section-index-list layout-list"><li><a href="#command-relationships">指令關係</a></li><li><a href="#適用對象">適用對象</a></li><li><a href="#主要目標">主要目標</a></li><li><a href="#採用前後對照">採用前後對照</a></li><li><a href="#成功判準">成功判準</a></li><li><a href="#失敗時先檢查">失敗時先檢查</a></li><li><a href="#指令頁面">指令頁面</a></li><li><a href="#核心工作流用途">核心工作流用途</a></li><li><a href="#工作流程邊界">工作流程邊界</a></li><li><a href="#閱讀即時資產盤點">閱讀即時資產盤點</a></li><li><a href="#關鍵指令-完整參數參考">關鍵指令 (完整參數參考)</a></li><li><a href="#實作範例">實作範例</a></li></ul></section><section class="handbook-command-map"><h2 id="command-relationships">指令關係</h2><div class="handbook-command-map-panel"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">檢查與盤點</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><a href="../../commands/zh-TW/datasource.html" class="nav-command-root-link">datasource</a></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/zh-TW/datasource-types.html" class="nav-command-leaf-link">types</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/datasource-list.html" class="nav-command-leaf-link">list</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/datasource-browse.html" class="nav-command-leaf-link">browse</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/datasource-diff.html" class="nav-command-leaf-link">diff</a></li></ul></div></div></div><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">搬運與同步</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><span class="nav-command-root-link nav-command-root-static">datasource</span></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/zh-TW/datasource-export.html" class="nav-command-leaf-link">export</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/datasource-import.html" class="nav-command-leaf-link">import</a></li></ul></div></div></div><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">變更 live</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><div class="nav-command-branch"><div class="nav-command-root"><span class="nav-command-root-link nav-command-root-static">datasource</span></div><ul class="nav-command-branch-list"><li class="nav-command-branch-item"><a href="../../commands/zh-TW/datasource-add.html" class="nav-command-leaf-link">add</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/datasource-modify.html" class="nav-command-leaf-link">modify</a></li><li class="nav-command-branch-item"><a href="../../commands/zh-TW/datasource-delete.html" class="nav-command-leaf-link">delete</a></li></ul></div></div></div></div></section><p>這一章整理 data source 的盤點、備份、回放與受控變更。重點是讓你知道哪些資料適合進 Git，哪些資料只適合在恢復時補回，也能先看 live Grafana 或本地 bundle 的 inventory。</p>
+<section class="section-index"><h2>章節索引</h2><p class="section-index-summary">先從這裡跳到你要看的段落。</p><ul class="section-index-list layout-list"><li><a href="#適用對象">適用對象</a></li><li><a href="#主要目標">主要目標</a></li><li><a href="#採用前後對照">採用前後對照</a></li><li><a href="#成功判準">成功判準</a></li><li><a href="#失敗時先檢查">失敗時先檢查</a></li><li><a href="#data-source-工作流地圖">Data source 工作流地圖</a></li><li><a href="#核心工作流用途">核心工作流用途</a></li><li><a href="#工作流程邊界">工作流程邊界</a></li><li><a href="#盤點先確認-typeuid-與-default">盤點：先確認 type、UID 與 default</a></li><li><a href="#備份與回放datasourcesjson-才是主契約">備份與回放：datasources.json 才是主契約</a></li><li><a href="#diff先看漂移再決定要修誰">Diff：先看漂移，再決定要修誰</a></li><li><a href="#live-mutationadd-modify-delete-要當成例外">Live mutation：add / modify / delete 要當成例外</a></li><li><a href="#何時切到指令參考">何時切到指令參考</a></li><li><a href="#閱讀即時資產盤點">閱讀即時資產盤點</a></li><li><a href="#常用指令">常用指令</a></li><li><a href="#操作範例">操作範例</a></li></ul></section><p>這一章整理 data source 的盤點、備份、回放與受控變更。重點是讓你知道哪些資料適合進 Git，哪些資料只適合在恢復時補回，也能先看 live Grafana 或本地 bundle 的 inventory。</p>
+<p>Data source 看起來像設定表，實際上是 dashboard、alert 與查詢路徑共同依賴的入口。改一個 UID、type、URL 或 default datasource，影響可能會穿過很多 dashboard 與告警。更麻煩的是，真正能連線的 secret 通常不能被直接寫進 Git，所以備份、回放與 provisioning 不能被混成同一件事。</p>
+<p>這章的讀法是：先把 data source 當成「可被引用的基礎資產」來盤點，再決定你要的是恢復包、provisioning 投影，還是 live mutation。先做這個判斷，後面的 export/import/diff 才不會變成只是在搬 JSON。</p>
 <h2 id="適用對象">適用對象</h2>
 <ul><li>負責 data source 盤點、同步與恢復的人</li><li>需要把 data source 資產接進 Git 或 provisioning 流程的人</li><li>需要先做 dry-run，再決定要不要套用的人</li></ul>
 <h2 id="主要目標">主要目標</h2>
 <ul><li>先看懂 live data source 或本地 bundle 長什麼樣</li><li>再建立可回放的輸出樹</li><li>最後才進行匯入、修改或刪除</li></ul>
+<p>好的 data source 流程應該讓你在變更前就知道三件事：誰引用它、哪些欄位可以安全留存、哪些 secret 必須透過恢復機制補回。</p>
 <h2 id="採用前後對照">採用前後對照</h2>
 <ul><li>以前：data source 變更常被當成單次設定修改，回復方式與還原層級不夠清楚。</li><li>現在：先盤點、再做遮蔽式還原、再投影到 provisioning，最後才做 dry-run 或實際變更。</li></ul>
 <h2 id="成功判準">成功判準</h2>
@@ -940,9 +871,10 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="失敗時先檢查">失敗時先檢查</h2>
 <ul><li>如果回放包裡出現明文 secret，先停下來修匯出路徑，不要先存檔。</li><li>如果匯入預覽跟你以為的 live data source 對不上，先檢查 UID 與 type mapping。</li><li>如果 provisioning 投影跟恢復包不一致，先確認你到底要的是哪一條 lane。</li></ul>
 <p>&gt; <strong>維運目標</strong>：確保 data source 設定可以安全地備份、比對與回放，並透過 <strong>Masked Recovery（遮蔽式還原）</strong> 保護敏感憑證。</p>
-<h2 id="指令頁面">指令頁面</h2>
-<p>如果你現在要查的是指令細節，而不是工作流程章節，可以直接看下面這些指令頁：</p>
-<ul><li><a href="../../commands/zh-TW/datasource.html">datasource 指令總覽</a></li><li><a href="../../commands/zh-TW/datasource-types.html">datasource types</a></li><li><a href="../../commands/zh-TW/datasource-browse.html">datasource browse</a></li><li><a href="../../commands/zh-TW/datasource-list.html">datasource list</a></li><li><a href="../../commands/zh-TW/datasource-export.html">datasource export</a></li><li><a href="../../commands/zh-TW/datasource-import.html">datasource import</a></li><li><a href="../../commands/zh-TW/datasource-diff.html">datasource diff</a></li><li><a href="../../commands/zh-TW/datasource-list.html">datasource list</a></li><li><a href="../../commands/zh-TW/datasource-add.html">datasource add</a></li><li><a href="../../commands/zh-TW/datasource-modify.html">datasource modify</a></li><li><a href="../../commands/zh-TW/datasource-delete.html">datasource delete</a></li><li><a href="../../commands/zh-TW/index.html">指令參考</a></li></ul>
+<h2 id="data-source-工作流地圖">Data source 工作流地圖</h2>
+<p>Data source 子命令的差異，主要在於它讀的是 live Grafana、本地 bundle，還是準備要寫回 live：</p>
+<table><thead><tr><th>任務</th><th>起點</th><th>主要輸入</th><th>主要輸出</th><th>下一步</th></tr></thead><tbody><tr><td>確認支援型別</td><td><code>types</code></td><td>CLI 內建型別表</td><td>type 與必要欄位</td><td>決定 add / modify 欄位</td></tr><tr><td>盤點 live 或本地 bundle</td><td><code>list</code>, <code>browse</code></td><td>live Grafana 或 <code>--input-dir</code></td><td>UID、type、URL、default 狀態</td><td>export、diff 或 review</td></tr><tr><td>備份與恢復</td><td><code>export</code>, <code>import</code></td><td>live Grafana 或 <code>datasources.json</code></td><td>masked recovery bundle / dry-run</td><td>dry-run 後 import</td></tr><tr><td>比對漂移</td><td><code>diff</code></td><td>本地 bundle + live Grafana</td><td>create / update / delete 差異</td><td>修 bundle 或 import</td></tr><tr><td>直接 live 變更</td><td><code>add</code>, <code>modify</code>, <code>delete</code></td><td>flags + live Grafana</td><td>dry-run 或 mutation 結果</td><td>list / diff 後驗證</td></tr><tr><td>產生 provisioning 投影</td><td><code>export</code></td><td>live Grafana</td><td><code>provisioning/datasources.yaml</code></td><td>交給 Grafana provisioning lane</td></tr></tbody></table>
+<p><code>datasources.json</code> 是恢復與 diff 的主資料；<code>provisioning/datasources.yaml</code> 是部署投影。前者用來說明「要恢復什麼」，後者用來配合 Grafana 的檔案式 provisioning。不要把 provisioning YAML 當成唯一真相來源。</p>
 <h2 id="核心工作流用途">核心工作流用途</h2>
 <p>data source 這組功能主要是為了這幾種場景設計：</p>
 <ul><li><strong>資產盤點</strong>：稽核現有的 data source、其類型以及後端 URL，來源可以是 live Grafana 或本地 bundle。</li><li><strong>恢復與回放</strong>：維護可供災難恢復的 data source 匯出紀錄。</li><li><strong>Provisioning 投影</strong>：產生 Grafana 檔案式配置系統所需的 YAML 檔案。</li><li><strong>差異審查 (Drift Review)</strong>：在套用變更前，比對本地暫存檔案與 live Grafana。</li><li><strong>受控變更</strong>：在 Dry-run 保護下新增、修改或刪除 live 的 data source。</li></ul>
@@ -950,9 +882,24 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <p>data source 匯出會產生兩個主要輸出物，各自負責不同的用途：</p>
 <table><thead><tr><th>檔案</th><th>用途</th><th>最佳使用場景</th></tr></thead><tbody><tr><td><code>datasources.json</code></td><td><strong>Masked Recovery（遮蔽式還原）</strong></td><td>標準回放合約。用於還原、回放與差異比對。</td></tr><tr><td><code>provisioning/datasources.yaml</code></td><td><strong>Provisioning 投影</strong></td><td>模擬 Grafana 檔案配置系統所需的磁碟結構。</td></tr></tbody></table>
 <p><strong>重要提示</strong>：請始終把 <code>datasources.json</code> 視為真正的恢復來源。Provisioning YAML 只是從恢復包衍生出來的次要投影。</p>
+<h2 id="盤點先確認-typeuid-與-default">盤點：先確認 type、UID 與 default</h2>
+<p>Data source 變更要先從 inventory 開始。<code>datasource types</code> 讓你確認工具知道哪些 type 與必要欄位；<code>datasource list</code> 讓你看 live 或本地 bundle 的 UID、type、URL 與 default 狀態；<code>datasource browse</code> 適合用較接近瀏覽的方式看本地輸出樹。</p>
+<p>盤點時最重要的是 UID 與 type。UID 是 dashboard、alert 與 provisioning 會引用的穩定身份；type 決定 Grafana 要用哪個 plugin 讀它。default datasource 看似只是 UI 預設值，但很多 dashboard 變數與 panel 查詢會受它影響。若 list 結果和預期不同，先查 org scope、profile、token 權限與本地 bundle 來源，不要直接 add 一個看起來缺少的 data source。</p>
+<h2 id="備份與回放datasourcesjson-才是主契約">備份與回放：datasources.json 才是主契約</h2>
+<p><code>datasource export</code> 的主產物是 <code>datasources.json</code>。它保留足夠的結構讓你 diff、dry-run import 或做災難恢復，同時避免把 secret 明文放進 Git。<code>provisioning/datasources.yaml</code> 則是部署投影，適合交給 Grafana provisioning lane，但不應該變成 review 的唯一來源。</p>
+<p>匯入前一定先跑 dry-run。dry-run 裡的 create / update 才是這次回放真正會造成的變化；檔案存在不代表 live 一定會照你想像更新。如果 dry-run 顯示的 UID、name 或 type 對不上，先修 bundle 或 mapping，不要靠 import 去猜。</p>
+<h2 id="diff先看漂移再決定要修誰">Diff：先看漂移，再決定要修誰</h2>
+<p><code>datasource diff</code> 是用來回答「本地 bundle 和 live Grafana 哪邊偏了」。如果本地是你認定的來源，diff 後通常接 import；如果 live 是被人工 hotfix 過的現況，diff 後應該先重新 export 或更新 review 文件。不要把 diff 當成 apply，它只是讓你知道兩邊差在哪裡。</p>
+<p>Diff 特別適合在 dashboard 或 alert 變更前使用。當 dashboard 依賴的 UID 不存在，或 default data source 不一致，問題通常會在 dashboard apply 後才爆出來。先 diff data source，可以提早發現這類環境漂移。</p>
+<h2 id="live-mutationadd-modify-delete-要當成例外">Live mutation：add / modify / delete 要當成例外</h2>
+<p><code>datasource add</code>、<code>modify</code>、<code>delete</code> 是直接碰 live Grafana 的工具，適合小範圍修正、break-glass 或明確的維運變更。日常流程仍應優先走 export / diff / import，讓變更可以被 review。</p>
+<p>如果必須 live mutation，先用 <code>--dry-run</code>，再用 <code>list</code> 或 <code>diff</code> 驗證結果。刪除 data source 前，先確認 dashboard、alert rule 與 provisioning 不再引用該 UID。工具可以幫你執行 mutation，但不會替你判斷上游依賴是否已經改完。</p>
+<h2 id="何時切到指令參考">何時切到指令參考</h2>
+<p>這一章負責幫你決定 data source 工作流。當你已經知道要使用哪個 command，再切到指令參考確認 flags、輸出格式與完整範例：</p>
+<ul><li><a href="../../commands/zh-TW/datasource.html">datasource 指令總覽</a></li><li><a href="../../commands/zh-TW/datasource-types.html">datasource types</a></li><li><a href="../../commands/zh-TW/datasource-browse.html">datasource browse</a></li><li><a href="../../commands/zh-TW/datasource-list.html">datasource list</a></li><li><a href="../../commands/zh-TW/datasource-export.html">datasource export</a></li><li><a href="../../commands/zh-TW/datasource-import.html">datasource import</a></li><li><a href="../../commands/zh-TW/datasource-diff.html">datasource diff</a></li><li><a href="../../commands/zh-TW/datasource-add.html">datasource add</a></li><li><a href="../../commands/zh-TW/datasource-modify.html">datasource modify</a></li><li><a href="../../commands/zh-TW/datasource-delete.html">datasource delete</a></li><li><a href="../../commands/zh-TW/index.html">指令參考</a></li></ul>
 <h2 id="閱讀即時資產盤點">閱讀即時資產盤點</h2>
 <p>使用 <code>datasource list</code> 驗證目前 Grafana 的外掛與目標狀態。</p>
-<pre><code># 用途：使用 datasource list 驗證目前 Grafana 的外掛與目標狀態。
+<pre><code># 使用 datasource list 驗證目前 Grafana 的外掛與目標狀態。
 grafana-util datasource list \
   --url http://localhost:3000 \
   --basic-user admin \
@@ -964,18 +911,18 @@ grafana-util datasource list \
 dehk4kxat5la8b  Prometheus  prometheus  http://prometheus:9090  true             1</code></pre>
 <p><strong>如何解讀：</strong></p>
 <ul><li><strong>UID</strong>：用於自動化的穩定身份識別。</li><li><strong>TYPE</strong>：識別外掛實作 (例如 prometheus, loki)。</li><li><strong>IS_DEFAULT</strong>：標示這是否為該 org 的預設 data source。</li><li><strong>URL</strong>：該紀錄關聯的後端目標位址。</li></ul>
-<h2 id="關鍵指令-完整參數參考">關鍵指令 (完整參數參考)</h2>
+<h2 id="常用指令">常用指令</h2>
 <table><thead><tr><th>指令</th><th>帶有參數的完整範例</th></tr></thead><tbody><tr><td><strong>盤點 (List)</strong></td><td><code>grafana-util datasource list --all-orgs --table</code> 或 <code>grafana-util datasource list --input-dir ./datasources --table</code></td></tr><tr><td><strong>匯出 (Export)</strong></td><td><code>grafana-util datasource export --output-dir ./datasources --overwrite</code></td></tr><tr><td><strong>匯入 (Import)</strong></td><td><code>grafana-util datasource import --input-dir ./datasources --replace-existing --dry-run --table</code></td></tr><tr><td><strong>比對 (Diff)</strong></td><td><code>grafana-util datasource diff --input-dir ./datasources</code></td></tr><tr><td><strong>新增 (Add)</strong></td><td><code>grafana-util datasource add --uid &lt;UID&gt; --name &lt;NAME&gt; --type prometheus --datasource-url &lt;URL&gt; --dry-run --table</code></td></tr></tbody></table>
-<h2 id="實作範例">實作範例</h2>
+<h2 id="操作範例">操作範例</h2>
 <h3 id="1-匯出盤點資產">1. 匯出盤點資產</h3>
-<pre><code># 用途：1. 匯出盤點資產。
+<pre><code># 匯出 data source inventory 與 provisioning 投影。
 grafana-util datasource export --output-dir ./datasources --overwrite</code></pre>
 <p><strong>範例輸出：</strong></p>
 <pre><code>Exported datasource inventory -&gt; datasources/datasources.json
 Exported metadata            -&gt; datasources/export-metadata.json
 Datasource export completed: 3 item(s)</code></pre>
 <h3 id="2-dry-run-匯入預覽">2. Dry-Run 匯入預覽</h3>
-<pre><code># 用途：2. Dry-Run 匯入預覽。
+<pre><code># 匯入前先預覽會 create 還是 update。
 grafana-util datasource import --input-dir ./datasources --replace-existing --dry-run --table</code></pre>
 <p><strong>範例輸出：</strong></p>
 <pre><code>UID         NAME               TYPE         ACTION   DESTINATION
@@ -983,7 +930,7 @@ prom-main   prometheus-main    prometheus   update   existing
 loki-prod   loki-prod          loki         create   missing</code></pre>
 <ul><li><strong>ACTION=create</strong>：將建立新的 data source 紀錄。</li><li><strong>ACTION=update</strong>：將取代現有的紀錄。</li><li><strong>DESTINATION=missing</strong>：Grafana 目前沒有這個 UID，因此匯入時會建立新紀錄。</li><li><strong>DESTINATION=existing</strong>：Grafana 目前已經有這個 UID，因此匯入時會覆蓋既有 data source 紀錄。</li></ul>
 <h3 id="3-直接即時新增-dry-run">3. 直接即時新增 (Dry-Run)</h3>
-<pre><code># 用途：3. 直接即時新增 (Dry-Run)。
+<pre><code># 先 dry-run 一個 live add，不立即寫入 Grafana。
 grafana-util datasource add \
   --uid prom-main --name prom-new --type prometheus \
   --datasource-url http://prometheus:9090 --dry-run --table</code></pre>
@@ -991,7 +938,7 @@ grafana-util datasource add \
 <pre><code>INDEX  NAME       TYPE         ACTION  DETAIL
 1      prom-new   prometheus   create  would create datasource uid=prom-main</code></pre>
 <h3 id="4-本地盤點">4. 本地盤點</h3>
-<pre><code># 用途：4. 本地盤點。
+<pre><code># 從剛匯出的本地套件讀取 data source inventory。
 grafana-util datasource list --input-dir ./datasources --table</code></pre>
 <p><strong>範例輸出：</strong></p>
 <pre><code>UID             NAME        TYPE        URL                     IS_DEFAULT  ORG  ORG_ID
@@ -999,12 +946,12 @@ grafana-util datasource list --input-dir ./datasources --table</code></pre>
 dehk4kxat5la8b  Prometheus  prometheus  http://prometheus:9090  true             1</code></pre>
 <ul><li><strong>UID</strong>：用於自動化的穩定身份識別碼。</li><li><strong>TYPE</strong>：識別外掛實作 (例如 prometheus, loki)。</li><li><strong>IS_DEFAULT</strong>：標示這是否為該 org 的預設 data source。</li><li><strong>URL</strong>：該紀錄關聯的後端目標位址。</li></ul>
 <p><a href="dashboard.html">⬅️ 上一章：Dashboard 管理</a> | <a href="index.html">🏠 回首頁</a> | <a href="alert.html">➡️ 下一章：告警治理</a></p>
-<nav class="footer-nav"><a class="link-card" href="dashboard.html"><span>上一章</span>第 8 章 · Dashboard 維運人員手冊</a><a class="link-card" href="alert.html"><span>下一章</span>第 10 章 · Alert 維運人員手冊</a></nav>
+<nav class="footer-nav"><a class="link-card" href="dashboard.html"><span>上一章</span>Dashboard 維運人員手冊</a><a class="link-card" href="alert.html"><span>下一章</span>Alert 維運人員手冊</a></nav>
 </article>
 <aside class="sidebar">
   <button class="sidebar-toggle sidebar-toggle-right" type="button" aria-expanded="true" aria-label="Toggle page sidebar">▶</button>
   <div class="sidebar-content">
-    <section class="sidebar-section"><h2>本頁內容</h2><ul class="toc-list"><li class="toc-level-2"><a href="#command-relationships"><span class="toc-label">指令關係</span></a></li><li class="toc-level-2"><a href="#適用對象"><span class="toc-label">適用對象</span></a></li><li class="toc-level-2"><a href="#主要目標"><span class="toc-label">主要目標</span></a></li><li class="toc-level-2"><a href="#採用前後對照"><span class="toc-label">採用前後對照</span></a></li><li class="toc-level-2"><a href="#成功判準"><span class="toc-label">成功判準</span></a></li><li class="toc-level-2"><a href="#失敗時先檢查"><span class="toc-label">失敗時先檢查</span></a></li><li class="toc-level-2"><a href="#指令頁面"><span class="toc-label">指令頁面</span></a></li><li class="toc-level-2"><a href="#核心工作流用途"><span class="toc-label">核心工作流用途</span></a></li><li class="toc-level-2"><a href="#工作流程邊界"><span class="toc-label">工作流程邊界</span></a></li><li class="toc-level-2"><a href="#閱讀即時資產盤點"><span class="toc-label">閱讀即時資產盤點</span></a></li><li class="toc-level-2"><a href="#關鍵指令-完整參數參考"><span class="toc-label">關鍵指令 (完整參數參考)</span></a></li><li class="toc-level-2"><a href="#實作範例"><span class="toc-label">實作範例</span></a></li><li class="toc-level-3"><a href="#1-匯出盤點資產"><span class="toc-label">1. 匯出盤點資產</span></a></li><li class="toc-level-3"><a href="#2-dry-run-匯入預覽"><span class="toc-label">2. Dry-Run 匯入預覽</span></a></li><li class="toc-level-3"><a href="#3-直接即時新增-dry-run"><span class="toc-label">3. 直接即時新增 (Dry-Run)</span></a></li><li class="toc-level-3"><a href="#4-本地盤點"><span class="toc-label">4. 本地盤點</span></a></li></ul></section><section class="sidebar-section"><h2>版本</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>語言</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/datasource.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
+    <section class="sidebar-section"><h2>本頁內容</h2><ul class="toc-list"><li class="toc-level-2"><a href="#適用對象"><span class="toc-label">適用對象</span></a></li><li class="toc-level-2"><a href="#主要目標"><span class="toc-label">主要目標</span></a></li><li class="toc-level-2"><a href="#採用前後對照"><span class="toc-label">採用前後對照</span></a></li><li class="toc-level-2"><a href="#成功判準"><span class="toc-label">成功判準</span></a></li><li class="toc-level-2"><a href="#失敗時先檢查"><span class="toc-label">失敗時先檢查</span></a></li><li class="toc-level-2"><a href="#data-source-工作流地圖"><span class="toc-label">Data source 工作流地圖</span></a></li><li class="toc-level-2"><a href="#核心工作流用途"><span class="toc-label">核心工作流用途</span></a></li><li class="toc-level-2"><a href="#工作流程邊界"><span class="toc-label">工作流程邊界</span></a></li><li class="toc-level-2"><a href="#盤點先確認-typeuid-與-default"><span class="toc-label">盤點：先確認 type、UID 與 default</span></a></li><li class="toc-level-2"><a href="#備份與回放datasourcesjson-才是主契約"><span class="toc-label">備份與回放：datasources.json 才是主契約</span></a></li><li class="toc-level-2"><a href="#diff先看漂移再決定要修誰"><span class="toc-label">Diff：先看漂移，再決定要修誰</span></a></li><li class="toc-level-2"><a href="#live-mutationadd-modify-delete-要當成例外"><span class="toc-label">Live mutation：add / modify / delete 要當成例外</span></a></li><li class="toc-level-2"><a href="#何時切到指令參考"><span class="toc-label">何時切到指令參考</span></a></li><li class="toc-level-2"><a href="#閱讀即時資產盤點"><span class="toc-label">閱讀即時資產盤點</span></a></li><li class="toc-level-2"><a href="#常用指令"><span class="toc-label">常用指令</span></a></li><li class="toc-level-2"><a href="#操作範例"><span class="toc-label">操作範例</span></a></li><li class="toc-level-3"><a href="#1-匯出盤點資產"><span class="toc-label">1. 匯出盤點資產</span></a></li><li class="toc-level-3"><a href="#2-dry-run-匯入預覽"><span class="toc-label">2. Dry-Run 匯入預覽</span></a></li><li class="toc-level-3"><a href="#3-直接即時新增-dry-run"><span class="toc-label">3. 直接即時新增 (Dry-Run)</span></a></li><li class="toc-level-3"><a href="#4-本地盤點"><span class="toc-label">4. 本地盤點</span></a></li></ul></section><section class="sidebar-section"><h2>版本</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>語言</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/datasource.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
   </div>
 </aside>
 

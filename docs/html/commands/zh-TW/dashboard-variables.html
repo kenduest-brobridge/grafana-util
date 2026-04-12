@@ -326,13 +326,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   font-weight: 500;
 }
 .nav-command-branch-item .nav-command-leaf-link:hover { color: var(--heading); }
-.handbook-command-map .nav-command-root-link {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  font-size: 0.9rem;
-}
 
 .sidebar-toggle {
   position: absolute;
@@ -378,71 +371,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map { margin: 0 0 24px; }
-.handbook-command-map-panel {
-  margin-top: 16px;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--panel) 96%, white);
-}
-.handbook-command-map .nav-group-title {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-group {
-  padding-top: 0;
-}
-.handbook-command-map .nav-command-group + .nav-command-group {
-  margin-top: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
-  padding-top: 10px;
-}
-.handbook-command-map .nav-command-sub-list {
-  margin-top: 8px;
-  margin-left: 0;
-  padding-left: 0;
-  border-left: 0;
-}
-.handbook-command-map .nav-command-branch {
-  display: grid;
-  grid-template-columns: minmax(130px, 0.22fr) minmax(0, 1fr);
-  gap: 12px 18px;
-  align-items: start;
-}
-.handbook-command-map .nav-command-branch-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-left: 0;
-  padding-left: 14px;
-}
-.handbook-command-map .nav-command-branch-item + .nav-command-branch-item { margin-top: 0; }
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-  line-height: 1.25;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link:hover,
-.handbook-command-map .nav-command-link a:hover {
-  border-color: color-mix(in srgb, var(--border) 45%, var(--accent));
-  background: var(--panel-strong);
-}
-@media (max-width: 720px) {
-  .handbook-command-map .nav-command-branch {
-    grid-template-columns: 1fr;
-  }
-  .handbook-command-map .nav-command-branch-list {
-    padding-left: 0;
-    border-left: 0;
-  }
-}
 .article p,
 .article li { color: var(--text); font-weight: 460; }
 .article ul li::marker,
@@ -950,11 +878,11 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="重點旗標">重點旗標</h2>
 <ul><li><code>--dashboard-uid</code> 或 <code>--dashboard-url</code>：選擇要列出變數的儀表板。</li><li><code>--input</code>：直接讀取一個本機儀表板 JSON 檔案。</li><li><code>--input-dir</code>：從本機匯出樹讀取儀表板。</li><li><code>--input-format</code>：將 <code>--input-dir</code> 視為 <code>raw</code> 或 <code>provisioning</code>。</li><li><code>--vars-query</code>：疊加變數查詢字串，例如 <code>var-env=prod&amp;var-host=web01</code>。</li><li><code>--org-id</code>：將檢查限制在單一 org。</li><li><code>--output-format</code>：輸出 <code>table</code>、<code>csv</code>、<code>text</code>、<code>json</code> 或 <code>yaml</code>。</li><li><code>--no-header</code>：隱藏表格或 CSV 標頭。</li><li><code>--output-file</code>：將輸出複本寫到磁碟。</li></ul>
 <h2 id="範例">範例</h2>
-<pre><code># 用途：列出線上 Grafana 的儀表板模板變數與類似 datasource 的選項。
+<pre><code># 列出線上 Grafana 的儀表板模板變數與類似 datasource 的選項。
 grafana-util dashboard variables --profile prod --dashboard-uid cpu-main --vars-query &#x27;var-cluster=prod-a&amp;var-instance=node01&#x27; --output-format json</code></pre>
-<pre><code># 用途：列出線上 Grafana 的儀表板模板變數與類似 datasource 的選項。
+<pre><code># 列出線上 Grafana 的儀表板模板變數與類似 datasource 的選項。
 grafana-util dashboard variables --url https://grafana.example.com --dashboard-uid cpu-main --vars-query &#x27;var-cluster=prod-a&amp;var-instance=node01&#x27; --basic-user admin --prompt-password --output-format json</code></pre>
-<pre><code># 用途：列出本機儀表板 JSON 檔案中的變數。
+<pre><code># 列出本機儀表板 JSON 檔案中的變數。
 grafana-util dashboard variables --input ./dashboards/raw/cpu-main.json --output-format yaml</code></pre>
 <h2 id="相關指令">相關指令</h2>
 <ul><li><a href="dashboard-screenshot.html">dashboard screenshot</a></li><li><a href="dashboard-summary.html">dashboard summary</a></li><li><a href="dashboard-browse.html">dashboard browse</a></li></ul>

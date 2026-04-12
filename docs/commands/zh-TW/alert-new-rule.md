@@ -17,7 +17,7 @@
 ## 範例
 
 ```bash
-# 用途：建立一個較低階的暫存 alert 規則骨架。
+# 建立一個較低階的暫存 alert 規則骨架。
 grafana-util alert new-rule --desired-dir ./alerts/desired --name cpu-main
 ```
 

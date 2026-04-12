@@ -19,17 +19,17 @@ Use this when you need to list variable state, feed a screenshot workflow, debug
 
 ## Examples
 ```bash
-# Purpose: List dashboard templating variables and datasource-like choices from live Grafana.
+# List dashboard templating variables and datasource-like choices from live Grafana.
 grafana-util dashboard variables --dashboard-url 'https://grafana.example.com/d/cpu-main/cpu-overview?var-cluster=prod-a' --profile prod --output-format table
 ```
 
 ```bash
-# Purpose: List dashboard templating variables and datasource-like choices from live Grafana.
+# List dashboard templating variables and datasource-like choices from live Grafana.
 grafana-util dashboard variables --url https://grafana.example.com --dashboard-uid cpu-main --vars-query 'var-cluster=prod-a&var-instance=node01' --basic-user admin --prompt-password --output-format json
 ```
 
 ```bash
-# Purpose: List dashboard templating variables and datasource-like choices from a local dashboard file.
+# List dashboard templating variables and datasource-like choices from a local dashboard file.
 grafana-util dashboard variables --input ./dashboards/raw/cpu-main.json --output-format yaml
 ```
 

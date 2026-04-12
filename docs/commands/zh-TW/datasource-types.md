@@ -11,12 +11,12 @@
 
 ## 範例
 ```bash
-# 用途：顯示內建且支援的 datasource 類型目錄。
+# 顯示內建且支援的 datasource 類型目錄。
 grafana-util datasource types
 ```
 
 ```bash
-# 用途：顯示內建且支援的 datasource 類型目錄。
+# 顯示內建且支援的 datasource 類型目錄。
 grafana-util datasource types --output-format yaml
 ```
 

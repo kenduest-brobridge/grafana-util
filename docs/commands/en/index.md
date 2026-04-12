@@ -13,6 +13,10 @@ These pages track the current Rust CLI help for the command tree exposed by `gra
 
 Use these pages when you want one stable page per command or subcommand instead of a handbook chapter. The handbook explains workflow and intent; the command pages explain the concrete CLI surface.
 
+The command reference is intentionally shorter than the handbook. Its job is to help you confirm when a command is appropriate, what it reads or writes, what usually comes next, and which flags matter once the workflow is already clear. If you are still choosing between `dashboard`, `workspace`, `status`, and `access`, go back to the handbook first. If you know the command you need, this is the right place.
+
+On a single command page, read "when to use" and the success criteria before the examples. Do not start from flags and infer the workflow backwards; that often leads to a command that runs but does not fit the job.
+
 For a quick terminal inventory of every public command path and its purpose, run:
 
 ```bash

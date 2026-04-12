@@ -326,13 +326,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   font-weight: 500;
 }
 .nav-command-branch-item .nav-command-leaf-link:hover { color: var(--heading); }
-.handbook-command-map .nav-command-root-link {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  font-size: 0.9rem;
-}
 
 .sidebar-toggle {
   position: absolute;
@@ -378,71 +371,6 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map { margin: 0 0 24px; }
-.handbook-command-map-panel {
-  margin-top: 16px;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--panel) 96%, white);
-}
-.handbook-command-map .nav-group-title {
-  font-size: 0.95rem;
-}
-.handbook-command-map .nav-command-group {
-  padding-top: 0;
-}
-.handbook-command-map .nav-command-group + .nav-command-group {
-  margin-top: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
-  padding-top: 10px;
-}
-.handbook-command-map .nav-command-sub-list {
-  margin-top: 8px;
-  margin-left: 0;
-  padding-left: 0;
-  border-left: 0;
-}
-.handbook-command-map .nav-command-branch {
-  display: grid;
-  grid-template-columns: minmax(130px, 0.22fr) minmax(0, 1fr);
-  gap: 12px 18px;
-  align-items: start;
-}
-.handbook-command-map .nav-command-branch-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-left: 0;
-  padding-left: 14px;
-}
-.handbook-command-map .nav-command-branch-item + .nav-command-branch-item { margin-top: 0; }
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link,
-.handbook-command-map .nav-command-link a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
-  border-radius: 6px;
-  background: var(--panel);
-  color: var(--text);
-  line-height: 1.25;
-}
-.handbook-command-map .nav-command-branch-item .nav-command-leaf-link:hover,
-.handbook-command-map .nav-command-link a:hover {
-  border-color: color-mix(in srgb, var(--border) 45%, var(--accent));
-  background: var(--panel-strong);
-}
-@media (max-width: 720px) {
-  .handbook-command-map .nav-command-branch {
-    grid-template-columns: 1fr;
-  }
-  .handbook-command-map .nav-command-branch-list {
-    padding-left: 0;
-    border-left: 0;
-  }
-}
 .article p,
 .article li { color: var(--text); font-weight: 460; }
 .article ul li::marker,
@@ -930,7 +858,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 
 <div class="manpage-intro">
   <p>This page renders the generated roff manpage into readable HTML for browser use. For richer per-subcommand detail, prefer the command-reference pages.</p>
-  <div class="manpage-rendered"><section class="man-section"><h2>NAME</h2><p>grafana-util-config-profile - list, inspect, validate, add, and initialize repo-local grafana-util profiles through the current config profile entrypoint.</p></section><section class="man-section"><h2>SYNOPSIS</h2><p><strong>grafana-util config profile [<em>OPTIONS</em>]</strong></p></section><section class="man-section"><h2>DESCRIPTION</h2><p>list, inspect, validate, add, and initialize repo-local grafana-util profiles through the current config profile entrypoint.</p><p>when you want to keep Grafana connection defaults in the current checkout and reuse them with --profile.</p></section><section class="man-section"><h2>BEFORE / AFTER</h2><ul class="man-bullets"><li>Before: connection settings live in scattered flags or ad hoc shell history, so the same live command is hard to repeat later.</li><li>After: a named profile keeps URL, auth, and secret handling in one place so live commands stay shorter and easier to reuse.</li></ul></section><section class="man-section"><h2>SUCCESS CRITERIA</h2><ul class="man-bullets"><li>one profile name captures the connection setup you actually want to reuse</li><li>secret storage mode matches the environment instead of forcing every command to restate auth</li><li>downstream live commands can stay readable because the profile hides repeated boilerplate</li></ul></section><section class="man-section"><h2>FAILURE CHECKS</h2><p>- if a command fails after switching profiles, verify the resolved show output before assuming the command is broken</p><p>- if a secret is missing, check whether the profile is using file, os, or encrypted-file storage and whether that mode fits the current machine</p><p>- if a live command still needs too many flags, reconsider whether the profile should carry the default URL or auth values instead</p><p>Key flags: the root command is a namespace; operational flags live on subcommands. The shared root flag is --color.</p><p>Examples:</p><p># Purpose: List profiles available in the current checkout.</p><p>grafana-util config profile list</p><p># Purpose: Inspect the resolved profile before running live commands.</p><p>grafana-util config profile show --profile prod --output-format yaml</p><p># Purpose: Show the currently selected profile and resolved config path.</p><p>grafana-util config profile current --profile prod</p><p># Purpose: Validate the selected profile and check Grafana reachability.</p><p>grafana-util config profile validate --profile prod --live</p><p># Purpose: Create a reusable production profile with prompt-based secrets.</p><p>grafana-util config profile add prod --url https://grafana.example.com --basic-user admin --prompt-password --store-secret encrypted-file</p><p># Purpose: Create a CI profile that reads the token from an environment variable.</p><p>grafana-util config profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN --store-secret os</p><p># Purpose: Print a fully annotated profile template.</p><p>grafana-util config profile example --mode full</p><p># Purpose: Initialize a fresh grafana-util.yaml in the current checkout.</p><p>grafana-util config profile init --overwrite</p><p>Related commands: grafana-util status live, grafana-util status overview, grafana-util workspace preview, grafana-util config profile current, grafana-util config profile validate.</p></section><section class="man-section"><h2>SEE ALSO</h2><p><strong>grafana-util</strong>(1)</p></section></div>
+  <div class="manpage-rendered"><section class="man-section"><h2>NAME</h2><p>grafana-util-config-profile - list, inspect, validate, add, and initialize repo-local grafana-util profiles through the current config profile entrypoint.</p></section><section class="man-section"><h2>SYNOPSIS</h2><p><strong>grafana-util config profile [<em>OPTIONS</em>]</strong></p></section><section class="man-section"><h2>DESCRIPTION</h2><p>list, inspect, validate, add, and initialize repo-local grafana-util profiles through the current config profile entrypoint.</p><p>when you want to keep Grafana connection defaults in the current checkout and reuse them with --profile.</p></section><section class="man-section"><h2>BEFORE / AFTER</h2><ul class="man-bullets"><li>Before: connection settings live in scattered flags or ad hoc shell history, so the same live command is hard to repeat later.</li><li>After: a named profile keeps URL, auth, and secret handling in one place so live commands stay shorter and easier to reuse.</li></ul></section><section class="man-section"><h2>SUCCESS CRITERIA</h2><ul class="man-bullets"><li>one profile name captures the connection setup you actually want to reuse</li><li>secret storage mode matches the environment instead of forcing every command to restate auth</li><li>downstream live commands can stay readable because the profile hides repeated boilerplate</li></ul></section><section class="man-section"><h2>FAILURE CHECKS</h2><p>- if a command fails after switching profiles, verify the resolved show output before assuming the command is broken</p><p>- if a secret is missing, check whether the profile is using file, os, or encrypted-file storage and whether that mode fits the current machine</p><p>- if a live command still needs too many flags, reconsider whether the profile should carry the default URL or auth values instead</p><p>Key flags: the root command is a namespace; operational flags live on subcommands. The shared root flag is --color.</p><p>Examples:</p><p># List profiles available in the current checkout.</p><p>grafana-util config profile list</p><p># Inspect the resolved profile before running live commands.</p><p>grafana-util config profile show --profile prod --output-format yaml</p><p># Show the currently selected profile and resolved config path.</p><p>grafana-util config profile current --profile prod</p><p># Validate the selected profile and check Grafana reachability.</p><p>grafana-util config profile validate --profile prod --live</p><p># Create a reusable production profile with prompt-based secrets.</p><p>grafana-util config profile add prod --url https://grafana.example.com --basic-user admin --prompt-password --store-secret encrypted-file</p><p># Create a CI profile that reads the token from an environment variable.</p><p>grafana-util config profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN --store-secret os</p><p># Print a fully annotated profile template.</p><p>grafana-util config profile example --mode full</p><p># Initialize a fresh grafana-util.yaml in the current checkout.</p><p>grafana-util config profile init --overwrite</p><p>Related commands: grafana-util status live, grafana-util status overview, grafana-util workspace preview, grafana-util config profile current, grafana-util config profile validate.</p></section><section class="man-section"><h2>SEE ALSO</h2><p><strong>grafana-util</strong>(1)</p></section></div>
 </div>
 
 
