@@ -1510,7 +1510,7 @@ run_access_smoke() {
   grep -q 'Would add org user rust-access-org-replay-user -> Editor in org rust-access-org-replay' \
     "${org_import_dry_run_log}" \
     || fail "rust access org dry-run import did not predict the expected user-role update"
-  grep -q 'Import summary: processed=' "${org_import_dry_run_log}" \
+  grep -q 'Import summary for org: processed=' "${org_import_dry_run_log}" \
     || fail "rust access org dry-run import did not print the expected summary"
 
   "$(access_bin)" access org import \
