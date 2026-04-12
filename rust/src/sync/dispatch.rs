@@ -9,7 +9,9 @@ use super::cli_args::{SyncAdvancedCliArgs, SyncAdvancedCommand, SyncGroupCommand
 use super::output::emit_text_or_json;
 use super::{run_sync_check, run_sync_inspect, run_sync_preview};
 
-/// Execute reusable sync commands without writing to stdout.
+/// Execute reusable sync commands into structured output.
+/// This path is used by callers that need deterministic documents for tests and
+/// downstream programmatic checks, so output formatting is intentionally deferred.
 pub fn execute_sync_command(
     command: &SyncGroupCommand,
 ) -> Result<super::output::SyncCommandOutput> {
@@ -45,6 +47,8 @@ pub fn execute_sync_command(
 }
 
 pub fn run_sync_cli(command: SyncGroupCommand) -> Result<()> {
+    // Interactive/run-time path: each variant chooses either staged plan/render
+    // outputs or live mutation behavior, but all exits as a single CLI result.
     match command {
         SyncGroupCommand::Inspect(args) => run_sync_inspect(args),
         SyncGroupCommand::Check(args) => run_sync_check(args),

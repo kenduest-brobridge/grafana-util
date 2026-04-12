@@ -974,15 +974,11 @@ fn run_alert_preview_route_cli(args: &AlertCliArgs) -> Result<()> {
     )
 }
 
-/// Alert domain execution entrypoint.
+/// Alert domain execution boundary.
 ///
-/// Dispatches by checking argument exclusivity (`list`, `import`, `diff`, else export) and
-/// forwarding to the corresponding handler.
+/// Each parsed command path (authoring, plan/apply, export/import/diff/list) is reduced to
+/// exactly one handler; this keeps all alert orchestration decisions in one switch.
 pub fn run_alert_cli(args: AlertCliArgs) -> Result<()> {
-    // Call graph (hierarchy): this function is used in related modules.
-    // Upstream callers: 無
-    // Downstream callees: alert.rs:diff_alerting_resources, alert.rs:export_alerting_resources, alert.rs:import_alerting_resources, alert_list.rs:list_alert_resources
-
     match args.authoring_command_kind {
         Some(AlertAuthoringCommandKind::AddRule) => return run_alert_add_rule_cli(&args),
         Some(AlertAuthoringCommandKind::CloneRule) => return run_alert_clone_rule_cli(&args),

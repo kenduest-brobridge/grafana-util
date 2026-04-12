@@ -118,6 +118,8 @@ fn load_sync_apply_bundle_preflight_summary(
 }
 
 pub(crate) fn run_sync_audit(args: SyncAuditArgs) -> Result<()> {
+    // Audit is a read-only orchestration command: materialize a lock/baseline view,
+    // compare drift, then emit a structured document for downstream gate checks.
     if args.managed_file.is_none() && args.lock_file.is_none() {
         return Err(message(
             "Sync audit requires --managed-file, --lock-file, or both.",
@@ -176,6 +178,8 @@ pub(crate) fn run_sync_audit(args: SyncAuditArgs) -> Result<()> {
 }
 
 pub(crate) fn execute_sync_plan(args: &SyncPlanArgs) -> Result<SyncCommandOutput> {
+    // Plan is the normalized contract: consume desired + live, stamp trace metadata,
+    // and return a stage-1 artifact ready for review without mutating live state.
     let desired = load_json_array_file(&args.desired_file, "Sync desired input")?;
     // Live fetch stays at orchestration level so the planner only sees
     // normalized arrays and never has to own Grafana transport details.
@@ -201,6 +205,8 @@ pub(crate) fn execute_sync_plan(args: &SyncPlanArgs) -> Result<SyncCommandOutput
 }
 
 pub(crate) fn run_sync_review(args: SyncReviewArgs) -> Result<()> {
+    // Review is a pure transform step over a stage-1 plan; it can run interactively,
+    // then emits a stage-2 reviewed artifact with mandatory trace and audit details.
     let plan = load_json_value(&args.plan_file, "Sync plan input")?;
     let trace_id = require_trace_id(&plan, "Sync plan document")?;
     require_optional_stage(&plan, "Sync plan document", "plan", 1, None)?;
@@ -225,6 +231,9 @@ pub(crate) fn run_sync_review(args: SyncReviewArgs) -> Result<()> {
 }
 
 pub(crate) fn run_sync_apply(args: SyncApplyArgs) -> Result<()> {
+    // Apply is the branch point for either dry-run intent output (default) or live execution.
+    // The input is always converted into a reviewed/apply-intent document before execution,
+    // so both code paths stay audit-friendly.
     let discovered = discover_change_staged_inputs(None)?;
     let preview_file = args
         .plan_file
@@ -307,6 +316,8 @@ pub(crate) fn execute_sync_summary(args: &SyncSummaryArgs) -> Result<SyncCommand
 }
 
 pub(crate) fn execute_sync_preflight(args: &SyncPreflightArgs) -> Result<SyncCommandOutput> {
+    // Preflight is the cheapest validation seam: combine staged desired state with
+    // optional live-derived availability and produce a stage-ready preflight artifact.
     let desired = load_json_array_file(&args.desired_file, "Sync desired input")?;
     let availability = load_sync_merged_availability(
         args.fetch_live,

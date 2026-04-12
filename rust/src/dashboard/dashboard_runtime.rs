@@ -185,6 +185,8 @@ pub fn normalize_dashboard_cli_args(mut args: DashboardCliArgs) -> DashboardCliA
 }
 
 pub fn build_auth_context(common: &CommonCliArgs) -> Result<DashboardAuthContext> {
+    // Auth context is the single contract between parsing and transport:
+    // profile/env defaults are resolved here and then reused by every dashboard client call.
     let connection = GrafanaConnection::resolve(
         common.profile.as_deref(),
         ConnectionMergeInput {
@@ -269,6 +271,8 @@ pub(crate) fn build_http_client_for_org_from_api(
 }
 
 fn build_connection(common: &CommonCliArgs) -> Result<GrafanaConnection> {
+    // Internal client boundary: keep connection/profile merge rules in one place
+    // so dashboard commands stay focused on command semantics.
     GrafanaConnection::resolve(
         common.profile.as_deref(),
         ConnectionMergeInput {

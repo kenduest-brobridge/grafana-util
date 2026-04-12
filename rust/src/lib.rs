@@ -20,6 +20,8 @@
 //!   `datasource_provider`, and `datasource_secret` assessments.
 //! - Interactive/TUI flows stay inside their owning domains, with shared shell
 //!   chrome isolated in `tui_shell` when that feature is enabled.
+// Public modules are operator entrypoints; crate-private modules are shared plumbing.
+// Add a new public module only when the surface contract (help/docs/contracts) is also updated.
 /// Access-management domain: users, orgs, teams, and service accounts.
 pub mod access;
 /// Alerting export/import/diff/list workflows and shared alert models.

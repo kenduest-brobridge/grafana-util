@@ -753,6 +753,8 @@ fn run_profile_init(args: ProfileInitArgs) -> Result<()> {
 }
 
 pub fn run_profile_cli(args: ProfileCliArgs) -> Result<()> {
+    // Profile entrypoint boundary: CLI argument parsing is already done,
+    // this switch maps to pure formatter/runtime handlers and keeps side effects in one lane.
     set_json_color_choice(args.color);
     match args.command {
         ProfileCommand::List(_) => run_profile_list(),

@@ -555,6 +555,9 @@ pub struct CliArgs {
     pub command: UnifiedCommand,
 }
 
+// Parser boundary: convert raw process args into a validated, domain-shaped command tree.
+// Keep this call thin so tests can inject controlled arg iterators and exercise the same
+// clap-derived behavior as production.
 pub fn parse_cli_from<I, T>(iter: I) -> CliArgs
 where
     I: IntoIterator<Item = T>,
@@ -563,6 +566,8 @@ where
     CliArgs::parse_from(iter)
 }
 
+// Runner boundary: a fully parsed command always follows one of the explicit domain invocations
+// in `cli_dispatch` and exits through one shared dispatch path.
 pub fn run_cli(args: CliArgs) -> Result<()> {
     set_json_color_choice(args.color);
     dispatch_with_handlers(

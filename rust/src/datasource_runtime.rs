@@ -46,6 +46,8 @@ const DATASOURCE_IMPORT_LIST_COLUMNS: &[&str] = &[
 ];
 
 pub fn run_datasource_cli(command: DatasourceGroupCommand) -> Result<()> {
+    // Runtime boundary for datasource commands:
+    // normalize legacy flags once, apply command-only exits, then materialize auth and execute.
     let command = super::normalize_datasource_group_command(command);
     if handle_datasource_command_early_exits(&command)? {
         return Ok(());

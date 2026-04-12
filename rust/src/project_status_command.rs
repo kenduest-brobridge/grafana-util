@@ -434,6 +434,7 @@ pub fn execute_project_status_live(args: &ProjectStatusLiveArgs) -> CommonResult
 }
 
 pub fn run_project_status_staged(args: ProjectStatusStagedArgs) -> CommonResult<()> {
+    // Staged status is deterministic and artifact-driven; it never touches live Grafana.
     let status = execute_project_status_staged(&args)?;
     match args.output_format {
         ProjectStatusOutputFormat::Table => {
@@ -468,6 +469,8 @@ pub fn run_project_status_staged(args: ProjectStatusStagedArgs) -> CommonResult<
 }
 
 pub fn run_project_status_live(args: ProjectStatusLiveArgs) -> CommonResult<()> {
+    // Live status is the operational contract that refreshes live domain state and folds
+    // it into the same shared status output schema used by staged mode.
     let status = execute_project_status_live(&args)?;
     match args.output_format {
         ProjectStatusOutputFormat::Table => {
@@ -502,6 +505,7 @@ pub fn run_project_status_live(args: ProjectStatusLiveArgs) -> CommonResult<()> 
 }
 
 pub fn run_project_status_cli(args: ProjectStatusCliArgs) -> CommonResult<()> {
+    // CLI boundary: parse color choice, then route to either staged or live runner.
     set_json_color_choice(args.color);
     match args.command {
         ProjectStatusSubcommand::Staged(inner) => run_project_status_staged(inner),

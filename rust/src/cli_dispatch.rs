@@ -20,6 +20,8 @@ use crate::resource::ResourceCliArgs;
 use crate::snapshot::SnapshotCommand;
 use crate::sync::SyncGroupCommand;
 
+// Routing target after CLI parse. Every normalized command is reduced to exactly
+// one of these domain-specific invocations before handlers are executed.
 #[derive(Debug)]
 pub(crate) enum DomainInvocation {
     Version {
@@ -48,6 +50,9 @@ pub(crate) enum DomainInvocation {
 }
 
 fn wrap_dashboard_root(command: DashboardRootCommand) -> DashboardCommand {
+    // Dashboard has a legacy-shape entrypoint split.
+    // Keep this adapter as the single place that normalizes root commands into the
+    // internal dashboard command variants the domain runner expects.
     match command {
         DashboardRootCommand::Browse(inner) => DashboardCommand::Browse(inner),
         DashboardRootCommand::List(inner) => DashboardCommand::List(inner),
@@ -111,6 +116,9 @@ fn wrap_project_status(
 }
 
 fn route_cli_args(args: CliArgs) -> DomainInvocation {
+    // Parse-to-domain translation boundary.
+    // If this match grows out of sync with CLI schema changes, the explicit
+    // `expect` below will catch it in tests and CI rather than silently dropping routes.
     let CliArgs { color, command } = args;
     match command {
         UnifiedCommand::Version(args) => DomainInvocation::Version {
@@ -213,6 +221,8 @@ where
     FQ: FnMut(OverviewCliArgs) -> Result<()>,
     FP2: FnMut(ProjectStatusCliArgs) -> Result<()>,
 {
+    // Dispatch boundary is injectable: production passes real runners, tests can
+    // pass lightweight handlers to verify the routing contract.
     match route_cli_args(args) {
         DomainInvocation::Version { json, color } => {
             if json {

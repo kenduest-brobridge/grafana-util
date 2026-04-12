@@ -657,6 +657,8 @@ where
 }
 
 pub fn run_snapshot_export(args: super::SnapshotExportArgs) -> Result<()> {
+    // Snapshot export is cross-domain orchestration:
+    // each lane (dashboard/datasource/access) shares auth materialization and a single selection contract.
     let mut args = args;
     args.common = materialize_snapshot_common_auth(args.common)?;
     let selection = if args.prompt {
@@ -775,6 +777,8 @@ where
 
 #[allow(dead_code)]
 pub fn run_snapshot_review(args: super::SnapshotReviewArgs) -> Result<()> {
+    // Review path is output-format routing over a prebuilt snapshot document;
+    // it intentionally does not mutate source artifacts.
     let output = if args.interactive {
         #[cfg(feature = "tui")]
         {
@@ -793,6 +797,8 @@ pub fn run_snapshot_review(args: super::SnapshotReviewArgs) -> Result<()> {
 }
 
 pub fn run_snapshot_cli(command: super::SnapshotCommand) -> Result<()> {
+    // Snapshot namespace boundary keeps only two concrete commands and delegates each to
+    // its dedicated orchestration path.
     match command {
         super::SnapshotCommand::Export(args) => run_snapshot_export(args),
         super::SnapshotCommand::Review(args) => run_snapshot_review(args),

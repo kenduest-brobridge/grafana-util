@@ -708,6 +708,8 @@ fn materialize_access_command_auth(mut args: AccessCliArgs) -> Result<AccessCliA
 }
 
 pub fn run_access_cli(args: AccessCliArgs) -> Result<()> {
+    // Access CLI boundary:
+    // normalize and materialize auth/headers once, then dispatch to user/org/team/service-account handlers.
     let args = normalize_access_cli_args(args);
     match &args.command {
         AccessCommand::User {

@@ -24,6 +24,8 @@ where
     I: IntoIterator<Item = T>,
     T: Into<std::ffi::OsString> + Clone,
 {
+    // Parse boundary for access CLI:
+    // keep color defaults and normalization in one place so direct callers and tests behave identically.
     let root = AccessCliRoot::parse_from(iter);
     set_json_color_choice(root.color);
     normalize_access_cli_args(root.args)

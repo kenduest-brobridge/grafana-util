@@ -643,6 +643,8 @@ fn render_get(args: &ResourceGetArgs) -> Result<()> {
 }
 
 pub fn run_resource_cli(args: ResourceCliArgs) -> Result<()> {
+    // Resource is a pure read-only surface; dispatch only routes to renderers,
+    // with output shape determined by each command variant.
     set_json_color_choice(args.color);
     match args.command {
         ResourceCommand::Kinds(inner) => render_kind_catalog(&inner),
