@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>grafana-util-datasource-types.1 · Grafana Documentation</title>
+  <title>grafana-util-datasource-types(1) · Grafana Documentation</title>
   <style>:root {
   color-scheme: light dark;
   --font-scale: 1;
@@ -930,12 +930,12 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 </aside>
 
 <article class="article">
-<div class="breadcrumbs"><a href="../index.html">Home</a> / <a href="index.html">Manpages</a> / grafana-util-datasource-types.1</div>
+<div class="breadcrumbs"><a href="../index.html">Home</a> / <a href="index.html">Manpages</a> / grafana-util-datasource-types(1)</div>
 
-<h1><span class="hero-title-main">grafana-util-datasource-types.1</span></h1><p class="hero-summary">Generated manpage mirror.</p>
+<h1><span class="hero-title-main">grafana-util-datasource-types(1)</span></h1><p class="hero-summary">CLI manual page.</p>
 
 <div class="manpage-intro">
-  <p>Generated manpage mirror. Use the command reference for fuller workflow notes and examples.</p>
+  <p>This page keeps the terminal manpage format available in the browser. Use the command reference for fuller workflow notes and examples.</p>
   <div class="manpage-rendered"><section class="man-section"><h2 id="name">NAME</h2><p>grafana-util-datasource-types - Show the built-in supported datasource type catalog.</p></section><section class="man-section"><h2 id="synopsis">SYNOPSIS</h2><p><strong>grafana-util datasource types [<em>OPTIONS</em>]</strong></p></section><section class="man-section"><h2 id="description">DESCRIPTION</h2><p>Show the built-in supported datasource type catalog.</p><p>Use this when you need to see the canonical datasource type ids that the CLI normalizes and supports for create flows.</p></section><section class="man-section"><h2 id="before-after">BEFORE / AFTER</h2><ul class="man-bullets"><li>Before: you had to guess the canonical plugin type ids from UI labels, examples, or stale notes.</li><li>After: one catalog lists the built-in datasource type ids the CLI normalizes for create flows.</li></ul></section><section class="man-section"><h2 id="common-options">COMMON OPTIONS</h2><dl class="man-definitions"><dt><strong>--output-format</strong></dt><dd>render the catalog as text, table, csv, json, or yaml.</dd></dl></section><section class="man-section"><h2 id="success-criteria">SUCCESS CRITERIA</h2><ul class="man-bullets"><li>you can pick the right type id before creating or modifying a datasource</li><li>the list is short enough to scan quickly but explicit enough for automation</li></ul></section><section class="man-section"><h2 id="failure-checks">FAILURE CHECKS</h2><ul class="man-bullets"><li>if a type is missing, confirm whether the plugin is actually supported by this repo version</li><li>if the catalog does not match the Grafana you expect, check whether you are looking at an older binary</li></ul></section><section class="man-section"><h2 id="examples">EXAMPLES</h2><p>Show the built-in supported datasource type catalog.</p><pre class="man-example"><code>grafana-util datasource types</code></pre></section><section class="man-section"><h2 id="see-also">SEE ALSO</h2><p><strong><a class="manpage-ref" href="grafana-util.html">grafana-util(1)</a></strong>, <strong><a class="manpage-ref" href="grafana-util-datasource.html">grafana-util-datasource(1)</a></strong></p></section></div>
 </div>
 

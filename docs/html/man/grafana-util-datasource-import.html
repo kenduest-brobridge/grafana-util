@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>grafana-util-datasource-import.1 · Grafana Documentation</title>
+  <title>grafana-util-datasource-import(1) · Grafana Documentation</title>
   <style>:root {
   color-scheme: light dark;
   --font-scale: 1;
@@ -930,12 +930,12 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 </aside>
 
 <article class="article">
-<div class="breadcrumbs"><a href="../index.html">Home</a> / <a href="index.html">Manpages</a> / grafana-util-datasource-import.1</div>
+<div class="breadcrumbs"><a href="../index.html">Home</a> / <a href="index.html">Manpages</a> / grafana-util-datasource-import(1)</div>
 
-<h1><span class="hero-title-main">grafana-util-datasource-import.1</span></h1><p class="hero-summary">Generated manpage mirror.</p>
+<h1><span class="hero-title-main">grafana-util-datasource-import(1)</span></h1><p class="hero-summary">CLI manual page.</p>
 
 <div class="manpage-intro">
-  <p>Generated manpage mirror. Use the command reference for fuller workflow notes and examples.</p>
+  <p>This page keeps the terminal manpage format available in the browser. Use the command reference for fuller workflow notes and examples.</p>
   <div class="manpage-rendered"><section class="man-section"><h2 id="name">NAME</h2><p>grafana-util-datasource-import - Import datasource inventory through the Grafana API.</p></section><section class="man-section"><h2 id="synopsis">SYNOPSIS</h2><p><strong>grafana-util datasource import [<em>OPTIONS</em>]</strong></p></section><section class="man-section"><h2 id="description">DESCRIPTION</h2><p>Import datasource inventory through the Grafana API.</p><p>Use this when you have a local datasource bundle or provisioning tree and want to push it into Grafana, either live or as a dry run.</p></section><section class="man-section"><h2 id="before-after">BEFORE / AFTER</h2><ul class="man-bullets"><li>Before: importing datasource bundles usually meant manually reconciling files, orgs, and secrets before touching Grafana.</li><li>After: one import command can preview the plan, reconcile org routing, and then push the bundle with the right guardrails.</li></ul></section><section class="man-section"><h2 id="common-options">COMMON OPTIONS</h2><dl class="man-definitions"><dt><strong>--input-dir</strong></dt><dd>source path for inventory or provisioning input.</dd><dt><strong>--input-format</strong></dt><dd>choose inventory or provisioning.</dd><dt><strong>--org-id, --use-export-org, --only-org-id, --create-missing-orgs</strong></dt><dd>control cross-org routing.</dd><dt><strong>--replace-existing, --update-existing-only, --require-matching-export-org</strong></dt><dd>import safety and reconciliation controls.</dd><dt><strong>--secret-values</strong></dt><dd>resolve placeholder secrets during import.</dd><dt><strong>--secret-values-file</strong></dt><dd>resolve placeholder secrets from a JSON file during import.</dd><dt><strong>--dry-run, --table, --json, --output-format, --no-header, --output-columns, --list-columns, --progress, --verbose</strong></dt><dd>preview and reporting controls. Use --output-columns all for the full dry-run table.</dd></dl></section><section class="man-section"><h2 id="success-criteria">SUCCESS CRITERIA</h2><ul class="man-bullets"><li>the import preview shows which orgs and datasources will change</li><li>provisioning and inventory inputs both route correctly</li><li>secrets are resolved before the live import, not after the damage is done</li></ul></section><section class="man-section"><h2 id="failure-checks">FAILURE CHECKS</h2><ul class="man-bullets"><li>if the import touches the wrong org, verify the routing flags before trying again</li><li>if the plan is incomplete, confirm the --input-format and whether the bundle is inventory or provisioning</li><li>if secrets stay unresolved, check the placeholder names in secureJsonDataPlaceholders and the keys provided through --secret-values or --secret-values-file</li></ul></section><section class="man-section"><h2 id="examples">EXAMPLES</h2><p>Import datasource inventory through the Grafana API.</p><pre class="man-example"><code>grafana-util datasource import --url http://localhost:3000 --basic-user admin --basic-password admin --input-dir ./datasources --dry-run --table</code></pre></section><section class="man-section"><h2 id="see-also">SEE ALSO</h2><p><strong><a class="manpage-ref" href="grafana-util.html">grafana-util(1)</a></strong>, <strong><a class="manpage-ref" href="grafana-util-datasource.html">grafana-util-datasource(1)</a></strong></p></section></div>
 </div>
 

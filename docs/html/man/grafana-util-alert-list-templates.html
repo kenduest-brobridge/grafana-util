@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>grafana-util-alert-list-templates.1 · Grafana Documentation</title>
+  <title>grafana-util-alert-list-templates(1) · Grafana Documentation</title>
   <style>:root {
   color-scheme: light dark;
   --font-scale: 1;
@@ -930,12 +930,12 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 </aside>
 
 <article class="article">
-<div class="breadcrumbs"><a href="../index.html">Home</a> / <a href="index.html">Manpages</a> / grafana-util-alert-list-templates.1</div>
+<div class="breadcrumbs"><a href="../index.html">Home</a> / <a href="index.html">Manpages</a> / grafana-util-alert-list-templates(1)</div>
 
-<h1><span class="hero-title-main">grafana-util-alert-list-templates.1</span></h1><p class="hero-summary">Generated manpage mirror.</p>
+<h1><span class="hero-title-main">grafana-util-alert-list-templates(1)</span></h1><p class="hero-summary">CLI manual page.</p>
 
 <div class="manpage-intro">
-  <p>Generated manpage mirror. Use the command reference for fuller workflow notes and examples.</p>
+  <p>This page keeps the terminal manpage format available in the browser. Use the command reference for fuller workflow notes and examples.</p>
   <div class="manpage-rendered"><section class="man-section"><h2 id="name">NAME</h2><p>grafana-util-alert-list-templates - List live Grafana notification templates.</p></section><section class="man-section"><h2 id="synopsis">SYNOPSIS</h2><p><strong>grafana-util alert list-templates [<em>OPTIONS</em>]</strong></p></section><section class="man-section"><h2 id="description">DESCRIPTION</h2><p>List live Grafana notification templates.</p><ul class="man-bullets"><li>Inspect template inventory from one org or from all visible orgs.</li><li>Render the list in text, table, CSV, JSON, or YAML form.</li></ul></section><section class="man-section"><h2 id="before-after">BEFORE / AFTER</h2><ul class="man-bullets"><li>Before: open template pages one by one to see what notification templates exist.</li><li>After: list the inventory once and compare it against the org or profile you care about.</li></ul></section><section class="man-section"><h2 id="common-options">COMMON OPTIONS</h2><ul class="man-bullets"><li>--org-id lists templates from one Grafana org ID.</li><li>--all-orgs aggregates inventory across visible orgs.</li><li>--output-format controls the output format, including text, table, csv, json, and yaml.</li><li>--no-header omits the header row.</li></ul></section><section class="man-section"><h2 id="success-criteria">SUCCESS CRITERIA</h2><ul class="man-bullets"><li>The templates you expect are present in the chosen format.</li><li>The output scope matches the org or profile you intended to inspect.</li><li>The format is ready for human review or scripting if needed.</li></ul></section><section class="man-section"><h2 id="failure-checks">FAILURE CHECKS</h2><ul class="man-bullets"><li>If the list is unexpectedly small, verify token scope or switch to a broader profile.</li><li>If --all-orgs misses entries, try admin-backed credentials instead of a narrow token.</li><li>Confirm the org/profile before interpreting an empty response as a real absence.</li></ul></section><section class="man-section"><h2 id="examples">EXAMPLES</h2><p>List live Grafana notification templates.</p><pre class="man-example"><code>grafana-util alert list-templates --profile prod --output-format table</code></pre></section><section class="man-section"><h2 id="see-also">SEE ALSO</h2><p><strong><a class="manpage-ref" href="grafana-util.html">grafana-util(1)</a></strong>, <strong><a class="manpage-ref" href="grafana-util-alert.html">grafana-util-alert(1)</a></strong></p></section></div>
 </div>
 

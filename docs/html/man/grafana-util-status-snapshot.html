@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>grafana-util-status-snapshot.1 · Grafana Documentation</title>
+  <title>grafana-util-status-snapshot(1) · Grafana Documentation</title>
   <style>:root {
   color-scheme: light dark;
   --font-scale: 1;
@@ -930,12 +930,12 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 </aside>
 
 <article class="article">
-<div class="breadcrumbs"><a href="../index.html">Home</a> / <a href="index.html">Manpages</a> / grafana-util-status-snapshot.1</div>
+<div class="breadcrumbs"><a href="../index.html">Home</a> / <a href="index.html">Manpages</a> / grafana-util-status-snapshot(1)</div>
 
-<h1><span class="hero-title-main">grafana-util-status-snapshot.1</span></h1><p class="hero-summary">Generated manpage mirror.</p>
+<h1><span class="hero-title-main">grafana-util-status-snapshot(1)</span></h1><p class="hero-summary">CLI manual page.</p>
 
 <div class="manpage-intro">
-  <p>Generated manpage mirror. Use the command reference for fuller workflow notes and examples.</p>
+  <p>This page keeps the terminal manpage format available in the browser. Use the command reference for fuller workflow notes and examples.</p>
   <div class="manpage-rendered"><section class="man-section"><h2 id="name">NAME</h2><p>grafana-util-status-snapshot - export and review Grafana snapshot inventory bundles</p></section><section class="man-section"><h2 id="synopsis">SYNOPSIS</h2><p><strong>grafana-util status snapshot [<em>SUBCOMMAND</em>] [<em>OPTIONS</em>]</strong></p></section><section class="man-section"><h2 id="description">DESCRIPTION</h2><p>export and review Grafana snapshot inventory bundles.</p><p>when you want a local snapshot root that captures dashboard and datasource inventory for later inspection.</p></section><section class="man-section"><h2 id="before-after">BEFORE / AFTER</h2><ul class="man-bullets"><li>Before: snapshot-style review usually means re-querying Grafana or opening a pile of dashboards and datasources one by one.</li><li>After: export first, then review the local bundle as a repeatable artifact without touching the live server again.</li></ul></section><section class="man-section"><h2 id="subcommands">SUBCOMMANDS</h2><dl class="man-definitions"><dt><strong>export</strong></dt><dd>export dashboard and datasource inventory into a local snapshot bundle. Use when: Need a local snapshot root that can be reviewed without Grafana access.</dd><dt><strong>review</strong></dt><dd>review a local snapshot inventory without touching Grafana. Use when: Want to inspect an exported snapshot root as table, csv, text, json, yaml, or interactive output.</dd></dl></section><section class="man-section"><h2 id="success-criteria">SUCCESS CRITERIA</h2><ul class="man-bullets"><li>you can hand off a snapshot root and another operator can inspect it without asking for live access</li><li>export output is a durable artifact instead of a temporary UI session</li><li>the snapshot root includes lane metadata that later analysis can resolve without rescanning the whole tree</li><li>review output is clear enough to feed into a follow-up analysis or incident note</li></ul></section><section class="man-section"><h2 id="failure-checks">FAILURE CHECKS</h2><p>- if a snapshot export looks empty, verify the auth profile or live connection before assuming the source system is blank</p><p>- if review output looks surprising, confirm that you are pointing at the intended snapshot directory</p><p>- if automation reads the output, keep the chosen --output-format explicit so the downstream parser knows the contract</p><p>Key flags: the root command is a namespace; the operational flags live on export and review. The shared root flag is --color.</p><p>Examples:</p><p># Export a local snapshot bundle from live Grafana.</p><pre class="man-example"><code>grafana-util status snapshot export --url http://localhost:3000 --basic-user admin --basic-password admin --output-dir ./snapshot</code></pre><p># Review the exported snapshot bundle as JSON.</p><pre class="man-example"><code>grafana-util status snapshot review --input-dir ./snapshot --output-format json</code></pre><p>Related commands: grafana-util status overview, grafana-util status staged, grafana-util workspace package.</p></section><section class="man-section"><h2 id="see-also">SEE ALSO</h2><p><strong><a class="manpage-ref" href="grafana-util.html">grafana-util(1)</a></strong>, <strong><a class="manpage-ref" href="grafana-util-status.html">grafana-util-status(1)</a></strong>, <strong><a class="manpage-ref" href="grafana-util-dashboard.html">grafana-util-dashboard(1)</a></strong>, <strong><a class="manpage-ref" href="grafana-util-datasource.html">grafana-util-datasource(1)</a></strong>, <strong><a class="manpage-ref" href="grafana-util-workspace.html">grafana-util-workspace(1)</a></strong></p></section></div>
 </div>
 

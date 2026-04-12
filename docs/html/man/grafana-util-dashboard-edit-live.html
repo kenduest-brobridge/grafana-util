@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>grafana-util-dashboard-edit-live.1 · Grafana Documentation</title>
+  <title>grafana-util-dashboard-edit-live(1) · Grafana Documentation</title>
   <style>:root {
   color-scheme: light dark;
   --font-scale: 1;
@@ -930,12 +930,12 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 </aside>
 
 <article class="article">
-<div class="breadcrumbs"><a href="../index.html">Home</a> / <a href="index.html">Manpages</a> / grafana-util-dashboard-edit-live.1</div>
+<div class="breadcrumbs"><a href="../index.html">Home</a> / <a href="index.html">Manpages</a> / grafana-util-dashboard-edit-live(1)</div>
 
-<h1><span class="hero-title-main">grafana-util-dashboard-edit-live.1</span></h1><p class="hero-summary">Generated manpage mirror.</p>
+<h1><span class="hero-title-main">grafana-util-dashboard-edit-live(1)</span></h1><p class="hero-summary">CLI manual page.</p>
 
 <div class="manpage-intro">
-  <p>Generated manpage mirror. Use the command reference for fuller workflow notes and examples.</p>
+  <p>This page keeps the terminal manpage format available in the browser. Use the command reference for fuller workflow notes and examples.</p>
   <div class="manpage-rendered"><section class="man-section"><h2 id="name">NAME</h2><p>grafana-util-dashboard-edit-live - Fetch one live dashboard into an external editor, then preview, save, or apply the edited result.</p></section><section class="man-section"><h2 id="synopsis">SYNOPSIS</h2><p><strong>grafana-util dashboard edit-live [<em>OPTIONS</em>]</strong></p></section><section class="man-section"><h2 id="description">DESCRIPTION</h2><p>Fetch one live dashboard into an external editor, then preview, save, or apply the edited result.</p><p>Use this when Grafana already has the closest source dashboard and you want to edit that payload directly, while keeping a clear choice between preview-only, saved draft, and direct live apply flows.</p></section><section class="man-section"><h2 id="common-options">COMMON OPTIONS</h2><dl class="man-definitions"><dt><strong>--dashboard-uid</strong></dt><dd>live Grafana dashboard UID to edit.</dd><dt><strong>--output</strong></dt><dd>local draft path to write after editing. When omitted, edit-live stays ephemeral and does not create a local draft file.</dd><dt><strong>--apply-live</strong></dt><dd>write the edited payload back to Grafana instead of writing a local draft.</dd><dt><strong>--publish-dry-run</strong></dt><dd>when --output is set, save the local draft and immediately run the equivalent dashboard publish --dry-run preview.</dd><dt><strong>--yes</strong></dt><dd>required with --apply-live because it mutates live Grafana.</dd><dt><strong>--message</strong></dt><dd>revision message used when --apply-live writes back to Grafana.</dd><dt><strong>--profile, --url, --token, --basic-user, --basic-password</strong></dt><dd>live Grafana connection settings.</dd></dl></section><section class="man-section"><h2 id="examples">EXAMPLES</h2><p>Fetch one live dashboard into an external editor, then preview, save, or apply the edited result.</p><pre class="man-example"><code>grafana-util dashboard edit-live --profile prod --dashboard-uid cpu-main</code></pre></section><section class="man-section"><h2 id="see-also">SEE ALSO</h2><p><strong><a class="manpage-ref" href="grafana-util.html">grafana-util(1)</a></strong>, <strong><a class="manpage-ref" href="grafana-util-dashboard.html">grafana-util-dashboard(1)</a></strong></p></section></div>
 </div>
 

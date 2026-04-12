@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>grafana-util-alert-plan.1 · Grafana Documentation</title>
+  <title>grafana-util-alert-plan(1) · Grafana Documentation</title>
   <style>:root {
   color-scheme: light dark;
   --font-scale: 1;
@@ -930,12 +930,12 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 </aside>
 
 <article class="article">
-<div class="breadcrumbs"><a href="../index.html">Home</a> / <a href="index.html">Manpages</a> / grafana-util-alert-plan.1</div>
+<div class="breadcrumbs"><a href="../index.html">Home</a> / <a href="index.html">Manpages</a> / grafana-util-alert-plan(1)</div>
 
-<h1><span class="hero-title-main">grafana-util-alert-plan.1</span></h1><p class="hero-summary">Generated manpage mirror.</p>
+<h1><span class="hero-title-main">grafana-util-alert-plan(1)</span></h1><p class="hero-summary">CLI manual page.</p>
 
 <div class="manpage-intro">
-  <p>Generated manpage mirror. Use the command reference for fuller workflow notes and examples.</p>
+  <p>This page keeps the terminal manpage format available in the browser. Use the command reference for fuller workflow notes and examples.</p>
   <div class="manpage-rendered"><section class="man-section"><h2 id="name">NAME</h2><p>grafana-util-alert-plan - Build a staged alert management plan from desired alert resources.</p></section><section class="man-section"><h2 id="synopsis">SYNOPSIS</h2><p><strong>grafana-util alert plan [<em>OPTIONS</em>]</strong></p></section><section class="man-section"><h2 id="description">DESCRIPTION</h2><p>Build a staged alert management plan from desired alert resources.</p><ul class="man-bullets"><li>Review the changes needed to align Grafana with a desired-state alert tree.</li><li>Prune live-only alert resources from the plan when needed.</li><li>Repair linked rules with dashboard or panel remapping during planning.</li></ul></section><section class="man-section"><h2 id="before-after">BEFORE / AFTER</h2><ul class="man-bullets"><li>Before: alert changes are hard to reason about until you attempt apply.</li><li>After: one plan shows create/update/delete intent and linked-rule repair choices before live mutation.</li></ul></section><section class="man-section"><h2 id="common-options">COMMON OPTIONS</h2><ul class="man-bullets"><li>--desired-dir points to the staged alert desired-state tree.</li><li>--prune marks live-only resources as delete candidates.</li><li>--dashboard-uid-map and --panel-id-map repair linked alert rules.</li><li>--output-format renders the plan as text or json.</li></ul></section><section class="man-section"><h2 id="success-criteria">SUCCESS CRITERIA</h2><ul class="man-bullets"><li>you can review alert changes before apply</li><li>linked dashboard or panel remapping is visible in the plan step</li><li>delete candidates are explicit instead of implicit</li></ul></section><section class="man-section"><h2 id="failure-checks">FAILURE CHECKS</h2><ul class="man-bullets"><li>if the plan is missing expected rules, check the desired tree first</li><li>if linked rules still look broken, verify the dashboard and panel mapping files</li><li>if prune feels too destructive, remove --prune and compare again before apply</li></ul></section><section class="man-section"><h2 id="examples">EXAMPLES</h2><p>Build a staged alert management plan from desired alert resources.</p><pre class="man-example"><code>grafana-util alert plan --desired-dir ./alerts/desired</code></pre></section><section class="man-section"><h2 id="see-also">SEE ALSO</h2><p><strong><a class="manpage-ref" href="grafana-util.html">grafana-util(1)</a></strong>, <strong><a class="manpage-ref" href="grafana-util-alert.html">grafana-util-alert(1)</a></strong></p></section></div>
 </div>
 

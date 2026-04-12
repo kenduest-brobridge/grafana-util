@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>grafana-util-datasource-add.1 · Grafana Documentation</title>
+  <title>grafana-util-datasource-add(1) · Grafana Documentation</title>
   <style>:root {
   color-scheme: light dark;
   --font-scale: 1;
@@ -930,12 +930,12 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 </aside>
 
 <article class="article">
-<div class="breadcrumbs"><a href="../index.html">Home</a> / <a href="index.html">Manpages</a> / grafana-util-datasource-add.1</div>
+<div class="breadcrumbs"><a href="../index.html">Home</a> / <a href="index.html">Manpages</a> / grafana-util-datasource-add(1)</div>
 
-<h1><span class="hero-title-main">grafana-util-datasource-add.1</span></h1><p class="hero-summary">Generated manpage mirror.</p>
+<h1><span class="hero-title-main">grafana-util-datasource-add(1)</span></h1><p class="hero-summary">CLI manual page.</p>
 
 <div class="manpage-intro">
-  <p>Generated manpage mirror. Use the command reference for fuller workflow notes and examples.</p>
+  <p>This page keeps the terminal manpage format available in the browser. Use the command reference for fuller workflow notes and examples.</p>
   <div class="manpage-rendered"><section class="man-section"><h2 id="name">NAME</h2><p>grafana-util-datasource-add - Create one live Grafana datasource through the Grafana API.</p></section><section class="man-section"><h2 id="synopsis">SYNOPSIS</h2><p><strong>grafana-util datasource add [<em>OPTIONS</em>]</strong></p></section><section class="man-section"><h2 id="description">DESCRIPTION</h2><p>Create one live Grafana datasource through the Grafana API.</p><p>Use this when you want to create a new datasource directly, or dry-run the create step before applying it.</p></section><section class="man-section"><h2 id="before-after">BEFORE / AFTER</h2><ul class="man-bullets"><li>Before: datasource creation often lived in UI clicks or hand-written API payloads.</li><li>After: one command can scaffold the create payload, preview it, and show the exact fields you are about to send.</li></ul></section><section class="man-section"><h2 id="common-options">COMMON OPTIONS</h2><dl class="man-definitions"><dt><strong>--uid</strong></dt><dd>stable datasource identity.</dd><dt><strong>--name</strong></dt><dd>datasource name.</dd><dt><strong>--type</strong></dt><dd>Grafana datasource plugin type id.</dd><dt><strong>--datasource-url</strong></dt><dd>datasource target URL.</dd><dt><strong>--access</strong></dt><dd>proxy or direct access mode.</dd><dt><strong>--default</strong></dt><dd>mark as the default datasource.</dd><dt><strong>--preset-profile and --apply-supported-defaults</strong></dt><dd>scaffold supported defaults.</dd><dt><strong>--json-data, --secure-json-data, --secure-json-data-placeholders, --secret-values</strong></dt><dd>configure custom fields and secrets.</dd><dt><strong>--dry-run, --table, --json, --output-format, --no-header</strong></dt><dd>preview output controls.</dd></dl></section><section class="man-section"><h2 id="success-criteria">SUCCESS CRITERIA</h2><ul class="man-bullets"><li>the type id and URL are explicit before the live create</li><li>--dry-run shows the payload shape you expect</li><li>secret placeholders and defaults are resolved the same way every time</li></ul></section><section class="man-section"><h2 id="failure-checks">FAILURE CHECKS</h2><ul class="man-bullets"><li>if the create preview looks wrong, confirm the type id and datasource URL before going live</li><li>if a secret field remains unresolved, check whether --secret-values or the chosen preset profile is complete</li><li>if the live create fails, compare the preview payload against the datasource rules for that plugin type</li></ul></section><section class="man-section"><h2 id="examples">EXAMPLES</h2><p>Create one live Grafana datasource through the Grafana API.</p><pre class="man-example"><code>grafana-util datasource add --url http://localhost:3000 --basic-user admin --basic-password admin --name prometheus-main --type prometheus --datasource-url http://prometheus:9090 --dry-run --table</code></pre></section><section class="man-section"><h2 id="see-also">SEE ALSO</h2><p><strong><a class="manpage-ref" href="grafana-util.html">grafana-util(1)</a></strong>, <strong><a class="manpage-ref" href="grafana-util-datasource.html">grafana-util-datasource(1)</a></strong></p></section></div>
 </div>
 

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>grafana-util-dashboard-convert-raw-to-prompt.1 · Grafana Documentation</title>
+  <title>grafana-util-dashboard-convert-raw-to-prompt(1) · Grafana Documentation</title>
   <style>:root {
   color-scheme: light dark;
   --font-scale: 1;
@@ -930,12 +930,12 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 </aside>
 
 <article class="article">
-<div class="breadcrumbs"><a href="../index.html">Home</a> / <a href="index.html">Manpages</a> / grafana-util-dashboard-convert-raw-to-prompt.1</div>
+<div class="breadcrumbs"><a href="../index.html">Home</a> / <a href="index.html">Manpages</a> / grafana-util-dashboard-convert-raw-to-prompt(1)</div>
 
-<h1><span class="hero-title-main">grafana-util-dashboard-convert-raw-to-prompt.1</span></h1><p class="hero-summary">Generated manpage mirror.</p>
+<h1><span class="hero-title-main">grafana-util-dashboard-convert-raw-to-prompt(1)</span></h1><p class="hero-summary">CLI manual page.</p>
 
 <div class="manpage-intro">
-  <p>Generated manpage mirror. Use the command reference for fuller workflow notes and examples.</p>
+  <p>This page keeps the terminal manpage format available in the browser. Use the command reference for fuller workflow notes and examples.</p>
   <div class="manpage-rendered"><section class="man-section"><h2 id="name">NAME</h2><p>grafana-util-dashboard-convert-raw-to-prompt - Convert ordinary dashboard JSON or raw/ lane files into Grafana UI prompt JSON with __inputs.</p></section><section class="man-section"><h2 id="synopsis">SYNOPSIS</h2><p><strong>grafana-util dashboard convert raw-to-prompt [<em>OPTIONS</em>]</strong></p></section><section class="man-section"><h2 id="description">DESCRIPTION</h2><p>Convert ordinary dashboard JSON or raw/ lane files into Grafana UI prompt JSON with __inputs.</p><p>Use this when someone gives you a normal Grafana dashboard export, legacy raw JSON, or a raw/ lane file and you need a prompt-safe file for the Grafana UI Upload JSON flow.</p></section><section class="man-section"><h2 id="common-options">COMMON OPTIONS</h2><dl class="man-definitions"><dt><strong>--input-file</strong></dt><dd>repeat this for one or more dashboard JSON files.</dd><dt><strong>--input-dir</strong></dt><dd>convert a directory tree. For raw/ or export roots, the default output is a sibling prompt/ lane.</dd><dt><strong>--output-file</strong></dt><dd>write one explicit output file. Only valid with one --input-file.</dd><dt><strong>--output-dir</strong></dt><dd>write converted files under one output tree.</dd><dt><strong>--overwrite</strong></dt><dd>replace existing prompt files.</dd><dt><strong>--datasource-map</strong></dt><dd>optional JSON or YAML map for repairing datasource references.</dd><dt><strong>--resolution</strong></dt><dd>choose infer-family, exact, or strict.</dd><dt><strong>--profile, --url, --token, --basic-user, --basic-password, --org-id</strong></dt><dd>optional live datasource lookup inputs used to augment datasource resolution.</dd><dt><strong>--dry-run</strong></dt><dd>show what would be converted without writing files.</dd><dt><strong>--progress, --verbose</strong></dt><dd>show progress lines or detailed per-file results.</dd><dt><strong>--output-format</strong></dt><dd>render the final summary as text, table, json, or yaml.</dd><dt><strong>--log-file, --log-format</strong></dt><dd>write per-item success/fail events to a text log or NDJSON log.</dd><dt><strong>--color</strong></dt><dd>colorize summary output with auto, always, or never.</dd></dl></section><section class="man-section"><h2 id="examples">EXAMPLES</h2><p>Convert ordinary dashboard JSON or raw/ lane files into Grafana UI prompt JSON with __inputs.</p><pre class="man-example"><code>grafana-util dashboard convert raw-to-prompt --input-file ./dashboards/raw/cpu-main.json</code></pre></section><section class="man-section"><h2 id="see-also">SEE ALSO</h2><p><strong><a class="manpage-ref" href="grafana-util.html">grafana-util(1)</a></strong>, <strong><a class="manpage-ref" href="grafana-util-dashboard.html">grafana-util-dashboard(1)</a></strong></p></section></div>
 </div>
 

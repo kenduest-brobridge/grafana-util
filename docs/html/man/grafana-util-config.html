@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>grafana-util-config.1 · Grafana Documentation</title>
+  <title>grafana-util-config(1) · Grafana Documentation</title>
   <style>:root {
   color-scheme: light dark;
   --font-scale: 1;
@@ -930,12 +930,12 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 </aside>
 
 <article class="article">
-<div class="breadcrumbs"><a href="../index.html">Home</a> / <a href="index.html">Manpages</a> / grafana-util-config.1</div>
+<div class="breadcrumbs"><a href="../index.html">Home</a> / <a href="index.html">Manpages</a> / grafana-util-config(1)</div>
 
-<h1><span class="hero-title-main">grafana-util-config.1</span></h1><p class="hero-summary">Generated manpage mirror.</p>
+<h1><span class="hero-title-main">grafana-util-config(1)</span></h1><p class="hero-summary">CLI manual page.</p>
 
 <div class="manpage-intro">
-  <p>Generated manpage mirror. Use the command reference for fuller workflow notes and examples.</p>
+  <p>This page keeps the terminal manpage format available in the browser. Use the command reference for fuller workflow notes and examples.</p>
   <div class="manpage-rendered"><section class="man-section"><h2 id="name">NAME</h2><p>grafana-util-config - manage repo-local grafana-util configuration workflows</p></section><section class="man-section"><h2 id="synopsis">SYNOPSIS</h2><p><strong>grafana-util config [<em>SUBCOMMAND</em>] [<em>OPTIONS</em>]</strong></p></section><section class="man-section"><h2 id="description">DESCRIPTION</h2><p>explain what the grafana-util config namespace is for, when to stay at the root, and when to move into config profile.</p><ul class="man-bullets"><li>when you need the setup model before picking a profile subcommand</li><li>when you are deciding between direct flags and repo-local --profile usage</li><li>when you need to understand where URL, auth defaults, and secret handling should live</li></ul></section><section class="man-section"><h2 id="before-after">BEFORE / AFTER</h2><ul class="man-bullets"><li>Before: live commands repeat --url, Basic auth, or token flags across shell history, scripts, and onboarding notes</li><li>After: one repo-local profile carries the shared connection defaults so daily commands stay shorter and CI is easier to audit</li></ul></section><section class="man-section"><h2 id="subcommands">SUBCOMMANDS</h2></section><section class="man-section"><h2 id="common-options">COMMON OPTIONS</h2><ul class="man-bullets"><li>the root page is a namespace overview; operational flags live under config profile</li></ul></section><section class="man-section"><h2 id="success-criteria">SUCCESS CRITERIA</h2><ul class="man-bullets"><li>one checkout has the connection defaults it actually needs</li><li>repeated live commands can use --profile instead of restating credentials</li><li>the chosen secret storage mode fits the machine and operating model</li><li>the team can separate the config root from the config profile operational surface</li></ul></section><section class="man-section"><h2 id="failure-checks">FAILURE CHECKS</h2><ul class="man-bullets"><li>if a saved profile does not behave like a direct command line, inspect it with config profile show</li><li>if validation fails, confirm the selected secret mode is supported on the current machine</li><li>if a repo still needs repeated auth flags, check whether the intended profile was created and selected</li><li>if you are still mixing up config and config profile, stop here before going deeper into leaf pages</li></ul></section><section class="man-section"><h2 id="see-also">SEE ALSO</h2><p><strong><a class="manpage-ref" href="grafana-util.html">grafana-util(1)</a></strong>, <strong><a class="manpage-ref" href="grafana-util-status.html">grafana-util-status(1)</a></strong>, <strong><a class="manpage-ref" href="grafana-util-access.html">grafana-util-access(1)</a></strong></p></section></div>
 </div>
 

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>grafana-util-dashboard-publish.1 · Grafana Documentation</title>
+  <title>grafana-util-dashboard-publish(1) · Grafana Documentation</title>
   <style>:root {
   color-scheme: light dark;
   --font-scale: 1;
@@ -930,12 +930,12 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 </aside>
 
 <article class="article">
-<div class="breadcrumbs"><a href="../index.html">Home</a> / <a href="index.html">Manpages</a> / grafana-util-dashboard-publish.1</div>
+<div class="breadcrumbs"><a href="../index.html">Home</a> / <a href="index.html">Manpages</a> / grafana-util-dashboard-publish(1)</div>
 
-<h1><span class="hero-title-main">grafana-util-dashboard-publish.1</span></h1><p class="hero-summary">Generated manpage mirror.</p>
+<h1><span class="hero-title-main">grafana-util-dashboard-publish(1)</span></h1><p class="hero-summary">CLI manual page.</p>
 
 <div class="manpage-intro">
-  <p>Generated manpage mirror. Use the command reference for fuller workflow notes and examples.</p>
+  <p>This page keeps the terminal manpage format available in the browser. Use the command reference for fuller workflow notes and examples.</p>
   <div class="manpage-rendered"><section class="man-section"><h2 id="name">NAME</h2><p>grafana-util-dashboard-publish - Publish one local dashboard JSON file through the existing dashboard import pipeline.</p></section><section class="man-section"><h2 id="synopsis">SYNOPSIS</h2><p><strong>grafana-util dashboard publish [<em>OPTIONS</em>]</strong></p></section><section class="man-section"><h2 id="description">DESCRIPTION</h2><p>Publish one local dashboard JSON file through the existing dashboard import pipeline.</p><p>Use this when a local draft is ready to go live and you want the command to stage or push it through the same import path used by the CLI.</p></section><section class="man-section"><h2 id="common-options">COMMON OPTIONS</h2><dl class="man-definitions"><dt><strong>--input</strong></dt><dd>dashboard JSON file to publish. Use - to read one wrapped or bare dashboard JSON document from standard input.</dd><dt><strong>--replace-existing</strong></dt><dd>update an existing dashboard when the UID already exists.</dd><dt><strong>--folder-uid</strong></dt><dd>override the destination folder UID. The built-in General folder is normalized back to the default root publish path instead of sending a literal general folder UID.</dd><dt><strong>--message</strong></dt><dd>revision message stored in Grafana.</dd><dt><strong>--dry-run</strong></dt><dd>preview the publish without changing Grafana.</dd><dt><strong>--watch</strong></dt><dd>rerun publish or dry-run whenever the local input file changes. Use this with a local file path, not --input -. The watcher reports workspace detection, transient failures, and reruns, and keeps watching until you stop it.</dd><dt><strong>--table, --json</strong></dt><dd>dry-run output modes.</dd></dl></section><section class="man-section"><h2 id="examples">EXAMPLES</h2><p>Publish one local dashboard JSON file through the existing dashboard import pipeline.</p><pre class="man-example"><code>grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --basic-password admin --input ./drafts/cpu-main.json --folder-uid infra --message &#x27;Promote CPU dashboard&#x27;</code></pre></section><section class="man-section"><h2 id="see-also">SEE ALSO</h2><p><strong><a class="manpage-ref" href="grafana-util.html">grafana-util(1)</a></strong>, <strong><a class="manpage-ref" href="grafana-util-dashboard.html">grafana-util-dashboard(1)</a></strong></p></section></div>
 </div>
 

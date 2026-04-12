@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>grafana-util-dashboard-variables.1 · Grafana Documentation</title>
+  <title>grafana-util-dashboard-variables(1) · Grafana Documentation</title>
   <style>:root {
   color-scheme: light dark;
   --font-scale: 1;
@@ -930,12 +930,12 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 </aside>
 
 <article class="article">
-<div class="breadcrumbs"><a href="../index.html">Home</a> / <a href="index.html">Manpages</a> / grafana-util-dashboard-variables.1</div>
+<div class="breadcrumbs"><a href="../index.html">Home</a> / <a href="index.html">Manpages</a> / grafana-util-dashboard-variables(1)</div>
 
-<h1><span class="hero-title-main">grafana-util-dashboard-variables.1</span></h1><p class="hero-summary">Generated manpage mirror.</p>
+<h1><span class="hero-title-main">grafana-util-dashboard-variables(1)</span></h1><p class="hero-summary">CLI manual page.</p>
 
 <div class="manpage-intro">
-  <p>Generated manpage mirror. Use the command reference for fuller workflow notes and examples.</p>
+  <p>This page keeps the terminal manpage format available in the browser. Use the command reference for fuller workflow notes and examples.</p>
   <div class="manpage-rendered"><section class="man-section"><h2 id="name">NAME</h2><p>grafana-util-dashboard-variables - List dashboard templating variables and datasource-like choices from live Grafana, a local dashboard file, or a local export tree.</p></section><section class="man-section"><h2 id="synopsis">SYNOPSIS</h2><p><strong>grafana-util dashboard variables [<em>OPTIONS</em>]</strong></p></section><section class="man-section"><h2 id="description">DESCRIPTION</h2><p>List dashboard templating variables and datasource-like choices from live Grafana, a local dashboard file, or a local export tree.</p><p>Use this when you need to list variable state, feed a screenshot workflow, debug variable-scoped dashboard URLs, or inspect a rendered local dashboard file.</p></section><section class="man-section"><h2 id="common-options">COMMON OPTIONS</h2><dl class="man-definitions"><dt><strong>--dashboard-uid or --dashboard-url</strong></dt><dd>choose the dashboard to inspect for variable values.</dd><dt><strong>--input</strong></dt><dd>read one local dashboard JSON file instead of calling Grafana.</dd><dt><strong>--input-dir</strong></dt><dd>read a dashboard from a local export tree instead of calling Grafana.</dd><dt><strong>--input-format</strong></dt><dd>interpret --input-dir as raw or provisioning.</dd><dt><strong>--vars-query</strong></dt><dd>overlay a variable query string such as var-env=prod&amp;var-host=web01.</dd><dt><strong>--org-id</strong></dt><dd>scope the inspection to one org.</dd><dt><strong>--output-format</strong></dt><dd>render table, csv, text, json, or yaml.</dd><dt><strong>--no-header</strong></dt><dd>suppress table or CSV headers.</dd><dt><strong>--output-file</strong></dt><dd>write a copy of the output to disk.</dd></dl></section><section class="man-section"><h2 id="examples">EXAMPLES</h2><p>List dashboard templating variables and datasource-like choices from live Grafana, a local dashboard file, or a local export tree.</p><pre class="man-example"><code>grafana-util dashboard variables --dashboard-url &#x27;https://grafana.example.com/d/cpu-main/cpu-overview?var-cluster=prod-a&#x27; --profile prod --output-format table</code></pre></section><section class="man-section"><h2 id="see-also">SEE ALSO</h2><p><strong><a class="manpage-ref" href="grafana-util.html">grafana-util(1)</a></strong>, <strong><a class="manpage-ref" href="grafana-util-dashboard.html">grafana-util-dashboard(1)</a></strong></p></section></div>
 </div>
 

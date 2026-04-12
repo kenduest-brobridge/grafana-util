@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>grafana-util-alert-apply.1 · Grafana Documentation</title>
+  <title>grafana-util-alert-apply(1) · Grafana Documentation</title>
   <style>:root {
   color-scheme: light dark;
   --font-scale: 1;
@@ -930,12 +930,12 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 </aside>
 
 <article class="article">
-<div class="breadcrumbs"><a href="../index.html">Home</a> / <a href="index.html">Manpages</a> / grafana-util-alert-apply.1</div>
+<div class="breadcrumbs"><a href="../index.html">Home</a> / <a href="index.html">Manpages</a> / grafana-util-alert-apply(1)</div>
 
-<h1><span class="hero-title-main">grafana-util-alert-apply.1</span></h1><p class="hero-summary">Generated manpage mirror.</p>
+<h1><span class="hero-title-main">grafana-util-alert-apply(1)</span></h1><p class="hero-summary">CLI manual page.</p>
 
 <div class="manpage-intro">
-  <p>Generated manpage mirror. Use the command reference for fuller workflow notes and examples.</p>
+  <p>This page keeps the terminal manpage format available in the browser. Use the command reference for fuller workflow notes and examples.</p>
   <div class="manpage-rendered"><section class="man-section"><h2 id="name">NAME</h2><p>grafana-util-alert-apply - Apply a reviewed alert management plan.</p></section><section class="man-section"><h2 id="synopsis">SYNOPSIS</h2><p><strong>grafana-util alert apply [<em>OPTIONS</em>]</strong></p></section><section class="man-section"><h2 id="description">DESCRIPTION</h2><p>Apply a reviewed alert management plan.</p><ul class="man-bullets"><li>Execute a plan that was reviewed outside the live Grafana connection.</li><li>Require explicit acknowledgement before touching Grafana.</li></ul></section><section class="man-section"><h2 id="before-after">BEFORE / AFTER</h2><ul class="man-bullets"><li>Before: a reviewed alert plan still leaves one risky question open: what actually happens when someone presses go against live Grafana?</li><li>After: alert apply turns that final step into an explicit command with approval, reproducible auth, and machine-readable output.</li></ul></section><section class="man-section"><h2 id="common-options">COMMON OPTIONS</h2><ul class="man-bullets"><li>--plan-file points to the reviewed plan document.</li><li>--approve is required before execution is allowed.</li><li>--output-format renders apply output as text or json.</li></ul></section><section class="man-section"><h2 id="success-criteria">SUCCESS CRITERIA</h2><ul class="man-bullets"><li>a reviewed alert plan can be applied without hand-editing YAML or replaying a sequence of UI clicks</li><li>the live apply step keeps approval explicit instead of hiding it in shell history</li><li>JSON output is stable enough to feed into CI, workspace records, or a post-apply verification step</li></ul></section><section class="man-section"><h2 id="failure-checks">FAILURE CHECKS</h2><ul class="man-bullets"><li>if apply refuses to run, confirm that the plan file is the reviewed artifact and that --approve is present</li><li>if the live result differs from the expected plan, re-check credentials, org scope, and whether the reviewed plan matches the current target Grafana</li><li>if automation reads the output, prefer --output-format json and validate the result shape before treating the apply as successful</li></ul></section><section class="man-section"><h2 id="examples">EXAMPLES</h2><p>Apply a reviewed alert management plan.</p><pre class="man-example"><code>grafana-util alert apply --plan-file ./alert-plan-reviewed.json --approve</code></pre></section><section class="man-section"><h2 id="see-also">SEE ALSO</h2><p><strong><a class="manpage-ref" href="grafana-util.html">grafana-util(1)</a></strong>, <strong><a class="manpage-ref" href="grafana-util-alert.html">grafana-util-alert(1)</a></strong></p></section></div>
 </div>
 

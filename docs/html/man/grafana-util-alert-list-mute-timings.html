@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>grafana-util-alert-list-mute-timings.1 · Grafana Documentation</title>
+  <title>grafana-util-alert-list-mute-timings(1) · Grafana Documentation</title>
   <style>:root {
   color-scheme: light dark;
   --font-scale: 1;
@@ -930,12 +930,12 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 </aside>
 
 <article class="article">
-<div class="breadcrumbs"><a href="../index.html">Home</a> / <a href="index.html">Manpages</a> / grafana-util-alert-list-mute-timings.1</div>
+<div class="breadcrumbs"><a href="../index.html">Home</a> / <a href="index.html">Manpages</a> / grafana-util-alert-list-mute-timings(1)</div>
 
-<h1><span class="hero-title-main">grafana-util-alert-list-mute-timings.1</span></h1><p class="hero-summary">Generated manpage mirror.</p>
+<h1><span class="hero-title-main">grafana-util-alert-list-mute-timings(1)</span></h1><p class="hero-summary">CLI manual page.</p>
 
 <div class="manpage-intro">
-  <p>Generated manpage mirror. Use the command reference for fuller workflow notes and examples.</p>
+  <p>This page keeps the terminal manpage format available in the browser. Use the command reference for fuller workflow notes and examples.</p>
   <div class="manpage-rendered"><section class="man-section"><h2 id="name">NAME</h2><p>grafana-util-alert-list-mute-timings - List live Grafana mute timings.</p></section><section class="man-section"><h2 id="synopsis">SYNOPSIS</h2><p><strong>grafana-util alert list-mute-timings [<em>OPTIONS</em>]</strong></p></section><section class="man-section"><h2 id="description">DESCRIPTION</h2><p>List live Grafana mute timings.</p><ul class="man-bullets"><li>Inspect mute timing inventory from one org or from all visible orgs.</li><li>Render the list in text, table, CSV, JSON, or YAML form.</li></ul></section><section class="man-section"><h2 id="before-after">BEFORE / AFTER</h2><ul class="man-bullets"><li>Before: browse Grafana pages manually to check which mute timings exist.</li><li>After: list the inventory in one pass and compare it against the org or profile you need.</li></ul></section><section class="man-section"><h2 id="common-options">COMMON OPTIONS</h2><ul class="man-bullets"><li>--org-id lists mute timings from one Grafana org ID.</li><li>--all-orgs aggregates inventory across visible orgs.</li><li>--output-format controls the output format, including text, table, csv, json, and yaml.</li><li>--no-header omits the header row.</li></ul></section><section class="man-section"><h2 id="success-criteria">SUCCESS CRITERIA</h2><ul class="man-bullets"><li>The mute timings you expect appear in the selected format.</li><li>The output matches the org or profile scope you intended to query.</li><li>The result is ready for a quick review or a CI check.</li></ul></section><section class="man-section"><h2 id="failure-checks">FAILURE CHECKS</h2><ul class="man-bullets"><li>If the inventory looks partial, check token scope or use a broader profile.</li><li>If --all-orgs omits entries, switch to admin-backed credentials.</li><li>Make sure the org/profile matches the area you intended to inspect before treating an empty output as meaningful.</li></ul></section><section class="man-section"><h2 id="examples">EXAMPLES</h2><p>List live Grafana mute timings.</p><pre class="man-example"><code>grafana-util alert list-mute-timings --profile prod --output-format table</code></pre></section><section class="man-section"><h2 id="see-also">SEE ALSO</h2><p><strong><a class="manpage-ref" href="grafana-util.html">grafana-util(1)</a></strong>, <strong><a class="manpage-ref" href="grafana-util-alert.html">grafana-util-alert(1)</a></strong></p></section></div>
 </div>
 

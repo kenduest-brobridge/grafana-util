@@ -136,7 +136,7 @@ def render_manpage_index_page(output_rel, names, config):
         hero_summary="Browser-readable HTML mirrors of the generated roff pages.",
         breadcrumbs=[("Home", relative_href(output_rel, prefixed_output_rel(config, "index.html"))), ("Manpages", None)],
         body_html=body,
-        toc_html="<p>Open a generated manpage mirror or jump back to the command-reference lane.</p>",
+        toc_html="<p>Open a browser-readable manpage or jump back to the command-reference lane.</p>",
         related_html=html_list(related),
         version_html=render_version_links(output_rel, config),
         locale_html="",
@@ -149,6 +149,7 @@ def render_manpage_index_page(output_rel, names, config):
 
 def render_manpage_page(output_rel, name, roff, config, *, manpage_names=()):
     stem = Path(name).stem
+    display_name = manpage_label(name)
     command_root = command_reference_root_for_stem(stem, config)
     related = [("Manpage index", relative_href(output_rel, prefixed_output_rel(config, "man/index.html")))]
     if config.raw_manpage_target_rel:
@@ -159,14 +160,14 @@ def render_manpage_page(output_rel, name, roff, config, *, manpage_names=()):
     def manpage_href(target_stem):
         return relative_href(output_rel, prefixed_output_rel(config, f"man/{target_stem}.html"))
 
-    body = render_template("manpage_intro.html.tmpl", summary_html="Generated manpage mirror. Use the command reference for fuller workflow notes and examples.", body_html=render_roff_manpage_html(roff, manpage_href=manpage_href))
+    body = render_template("manpage_intro.html.tmpl", summary_html="This page keeps the terminal manpage format available in the browser. Use the command reference for fuller workflow notes and examples.", body_html=render_roff_manpage_html(roff, manpage_href=manpage_href))
     return page_shell(
-        page_title=name,
+        page_title=display_name,
         html_lang="en",
         home_href=relative_href(output_rel, prefixed_output_rel(config, "index.html")),
-        hero_title=name,
-        hero_summary="Generated manpage mirror.",
-        breadcrumbs=[("Home", relative_href(output_rel, prefixed_output_rel(config, "index.html"))), ("Manpages", relative_href(output_rel, prefixed_output_rel(config, "man/index.html"))), (name, None)],
+        hero_title=display_name,
+        hero_summary="CLI manual page.",
+        breadcrumbs=[("Home", relative_href(output_rel, prefixed_output_rel(config, "index.html"))), ("Manpages", relative_href(output_rel, prefixed_output_rel(config, "man/index.html"))), (display_name, None)],
         body_html=body,
         toc_html='<ul class="sidebar-meta-list"><li><a href="#synopsis" class="sidebar-meta-link">Syntax</a></li><li><a href="#description" class="sidebar-meta-link">Description</a></li><li><a href="#see-also" class="sidebar-meta-link">Related manpages</a></li></ul>',
         related_html=html_list(related),

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>grafana-util-alert-add-rule.1 · Grafana Documentation</title>
+  <title>grafana-util-alert-add-rule(1) · Grafana Documentation</title>
   <style>:root {
   color-scheme: light dark;
   --font-scale: 1;
@@ -930,12 +930,12 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 </aside>
 
 <article class="article">
-<div class="breadcrumbs"><a href="../index.html">Home</a> / <a href="index.html">Manpages</a> / grafana-util-alert-add-rule.1</div>
+<div class="breadcrumbs"><a href="../index.html">Home</a> / <a href="index.html">Manpages</a> / grafana-util-alert-add-rule(1)</div>
 
-<h1><span class="hero-title-main">grafana-util-alert-add-rule.1</span></h1><p class="hero-summary">Generated manpage mirror.</p>
+<h1><span class="hero-title-main">grafana-util-alert-add-rule(1)</span></h1><p class="hero-summary">CLI manual page.</p>
 
 <div class="manpage-intro">
-  <p>Generated manpage mirror. Use the command reference for fuller workflow notes and examples.</p>
+  <p>This page keeps the terminal manpage format available in the browser. Use the command reference for fuller workflow notes and examples.</p>
   <div class="manpage-rendered"><section class="man-section"><h2 id="name">NAME</h2><p>grafana-util-alert-add-rule - Author a staged alert rule from the higher-level authoring surface.</p></section><section class="man-section"><h2 id="synopsis">SYNOPSIS</h2><p><strong>grafana-util alert add-rule [<em>OPTIONS</em>]</strong></p></section><section class="man-section"><h2 id="description">DESCRIPTION</h2><p>Author a staged alert rule from the higher-level authoring surface.</p><ul class="man-bullets"><li>Create a new rule under a desired-state alert tree.</li><li>Attach labels, annotations, severity, and threshold logic in one command.</li><li>Generate a route for the rule unless you explicitly skip it.</li></ul></section><section class="man-section"><h2 id="before-after">BEFORE / AFTER</h2><ul class="man-bullets"><li>Before: adding a rule often means hand-assembling YAML, then separately fixing routing or metadata gaps.</li><li>After: one CLI step can create the rule, wire its route, and leave a staged artifact that is easier to review later.</li></ul></section><section class="man-section"><h2 id="common-options">COMMON OPTIONS</h2><ul class="man-bullets"><li>--desired-dir points to the staged alert tree.</li><li>--name, --folder, and --rule-group define the rule placement.</li><li>--receiver or --no-route controls route authoring.</li><li>--label, --annotation, --severity, --for, --expr, --threshold, --above, and --below shape the rule.</li><li>--dry-run previews the planned file output.</li></ul></section><section class="man-section"><h2 id="success-criteria">SUCCESS CRITERIA</h2><ul class="man-bullets"><li>the rule name, folder, rule group, thresholds, and route are created together</li><li>the staged alert tree is readable enough for another operator to review</li><li>--dry-run shows the shape of the files before you commit them</li></ul></section><section class="man-section"><h2 id="failure-checks">FAILURE CHECKS</h2><ul class="man-bullets"><li>if rule creation fails, confirm that --desired-dir points at the correct staged alert tree</li><li>if the route is missing, check whether --no-route was used or whether --receiver was omitted</li><li>if you plan to hand the output to a later apply step, inspect the --dry-run result or the generated files first</li></ul></section><section class="man-section"><h2 id="examples">EXAMPLES</h2><p>Author a staged alert rule from the higher-level authoring surface.</p><pre class="man-example"><code>grafana-util alert add-rule --desired-dir ./alerts/desired --name cpu-high --folder platform-alerts --rule-group cpu --receiver pagerduty-primary --severity critical --expr &#x27;A&#x27; --threshold 80 --above --for 5m --label team=platform --annotation summary=&#x27;CPU high&#x27;</code></pre></section><section class="man-section"><h2 id="see-also">SEE ALSO</h2><p><strong><a class="manpage-ref" href="grafana-util.html">grafana-util(1)</a></strong>, <strong><a class="manpage-ref" href="grafana-util-alert.html">grafana-util-alert(1)</a></strong></p></section></div>
 </div>
 

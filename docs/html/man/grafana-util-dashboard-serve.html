@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>grafana-util-dashboard-serve.1 · Grafana Documentation</title>
+  <title>grafana-util-dashboard-serve(1) · Grafana Documentation</title>
   <style>:root {
   color-scheme: light dark;
   --font-scale: 1;
@@ -930,12 +930,12 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 </aside>
 
 <article class="article">
-<div class="breadcrumbs"><a href="../index.html">Home</a> / <a href="index.html">Manpages</a> / grafana-util-dashboard-serve.1</div>
+<div class="breadcrumbs"><a href="../index.html">Home</a> / <a href="index.html">Manpages</a> / grafana-util-dashboard-serve(1)</div>
 
-<h1><span class="hero-title-main">grafana-util-dashboard-serve.1</span></h1><p class="hero-summary">Generated manpage mirror.</p>
+<h1><span class="hero-title-main">grafana-util-dashboard-serve(1)</span></h1><p class="hero-summary">CLI manual page.</p>
 
 <div class="manpage-intro">
-  <p>Generated manpage mirror. Use the command reference for fuller workflow notes and examples.</p>
+  <p>This page keeps the terminal manpage format available in the browser. Use the command reference for fuller workflow notes and examples.</p>
   <div class="manpage-rendered"><section class="man-section"><h2 id="name">NAME</h2><p>grafana-util-dashboard-serve - Serve one or more dashboard drafts through a lightweight local preview server.</p></section><section class="man-section"><h2 id="synopsis">SYNOPSIS</h2><p><strong>grafana-util dashboard serve [<em>OPTIONS</em>]</strong></p></section><section class="man-section"><h2 id="description">DESCRIPTION</h2><p>Serve one or more dashboard drafts through a lightweight local preview server.</p><p>Use this when you are iterating on one dashboard draft, one draft directory, or one generator command and want a local browser surface without publishing back to Grafana after every workspace.</p></section><section class="man-section"><h2 id="common-options">COMMON OPTIONS</h2><dl class="man-definitions"><dt><strong>--input</strong></dt><dd>local dashboard file or directory to load into the preview server.</dd><dt><strong>--script</strong></dt><dd>external generator command whose stdout emits one dashboard JSON or YAML document, or an array of documents.</dd><dt><strong>--script-format</strong></dt><dd>parse --script stdout as json or yaml.</dd><dt><strong>--watch</strong></dt><dd>extra local files or directories to watch for reloads.</dd><dt><strong>--no-watch</strong></dt><dd>disable background polling reloads.</dd><dt><strong>--open-browser</strong></dt><dd>open the preview URL in your default browser after the server starts.</dd><dt><strong>--address, --port</strong></dt><dd>bind address and port for the local preview server.</dd></dl></section><section class="man-section"><h2 id="examples">EXAMPLES</h2><p>Serve one or more dashboard drafts through a lightweight local preview server.</p><pre class="man-example"><code>grafana-util dashboard serve --input ./drafts/cpu-main.json --port 18080 --open-browser</code></pre></section><section class="man-section"><h2 id="see-also">SEE ALSO</h2><p><strong><a class="manpage-ref" href="grafana-util.html">grafana-util(1)</a></strong>, <strong><a class="manpage-ref" href="grafana-util-dashboard.html">grafana-util-dashboard(1)</a></strong></p></section></div>
 </div>
 

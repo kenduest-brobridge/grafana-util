@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>grafana-util-dashboard-summary.1 · Grafana Documentation</title>
+  <title>grafana-util-dashboard-summary(1) · Grafana Documentation</title>
   <style>:root {
   color-scheme: light dark;
   --font-scale: 1;
@@ -930,12 +930,12 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 </aside>
 
 <article class="article">
-<div class="breadcrumbs"><a href="../index.html">Home</a> / <a href="index.html">Manpages</a> / grafana-util-dashboard-summary.1</div>
+<div class="breadcrumbs"><a href="../index.html">Home</a> / <a href="index.html">Manpages</a> / grafana-util-dashboard-summary(1)</div>
 
-<h1><span class="hero-title-main">grafana-util-dashboard-summary.1</span></h1><p class="hero-summary">Generated manpage mirror.</p>
+<h1><span class="hero-title-main">grafana-util-dashboard-summary(1)</span></h1><p class="hero-summary">CLI manual page.</p>
 
 <div class="manpage-intro">
-  <p>Generated manpage mirror. Use the command reference for fuller workflow notes and examples.</p>
+  <p>This page keeps the terminal manpage format available in the browser. Use the command reference for fuller workflow notes and examples.</p>
   <div class="manpage-rendered"><section class="man-section"><h2 id="name">NAME</h2><p>grafana-util-dashboard-summary - Analyze live Grafana dashboards through the canonical dashboard summary command.</p></section><section class="man-section"><h2 id="synopsis">SYNOPSIS</h2><p><strong>grafana-util dashboard summary [<em>OPTIONS</em>]</strong></p></section><section class="man-section"><h2 id="description">DESCRIPTION</h2><p>Analyze live Grafana dashboards through the canonical dashboard summary command.</p><p>Use this when you need the same analysis views as the local export-tree flow, but sourced from live Grafana instead of a local export tree. Prefer dashboard summary --url ... in new docs and scripts.</p></section><section class="man-section"><h2 id="common-options">COMMON OPTIONS</h2><dl class="man-definitions"><dt><strong>--page-size</strong></dt><dd>dashboard search page size.</dd><dt><strong>--concurrency</strong></dt><dd>maximum parallel fetch workers.</dd><dt><strong>--org-id</strong></dt><dd>analyze one explicit Grafana org.</dd><dt><strong>--all-orgs</strong></dt><dd>analyze across visible orgs.</dd><dt><strong>--output-format, --output-file, --interactive, --no-header</strong></dt><dd>output controls.</dd><dt><strong>--report-columns</strong></dt><dd>trim table, csv, or tree-table query output to the selected fields. Use all for the full query-column set.</dd><dt><strong>--list-columns</strong></dt><dd>print the supported --report-columns values and exit.</dd><dt><strong>--progress</strong></dt><dd>show fetch progress.</dd></dl></section><section class="man-section"><h2 id="examples">EXAMPLES</h2><p>Analyze live Grafana dashboards through the canonical dashboard summary command.</p><pre class="man-example"><code>grafana-util dashboard summary --url http://localhost:3000 --basic-user admin --basic-password admin --output-format governance</code></pre></section><section class="man-section"><h2 id="see-also">SEE ALSO</h2><p><strong><a class="manpage-ref" href="grafana-util.html">grafana-util(1)</a></strong>, <strong><a class="manpage-ref" href="grafana-util-dashboard.html">grafana-util-dashboard(1)</a></strong></p></section></div>
 </div>
 
