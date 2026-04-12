@@ -1124,8 +1124,8 @@ fn docs_describe_dashboard_and_legacy_compatibility_surfaces() {
 
     let zh_index = include_str!("../../docs/commands/zh-TW/index.md");
     assert!(zh_index.contains("先從這裡開始"));
-    assert!(zh_index.contains("常用工作"));
-    assert!(zh_index.contains("dashboard convert raw-to-prompt"));
+    assert!(zh_index.contains("先選一條操作路徑"));
+    assert!(zh_index.contains("dashboard summary"));
     assert!(!zh_index.contains("advanced dashboard"));
     assert!(!zh_index.contains("migrate dashboard"));
     assert!(zh_index.contains("status"));
