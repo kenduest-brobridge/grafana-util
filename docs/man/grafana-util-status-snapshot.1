@@ -7,16 +7,16 @@ grafana\-util\-status\-snapshot \- export and review Grafana snapshot inventory 
 .SH DESCRIPTION
 export and review Grafana snapshot inventory bundles.
 .PP
-when you want a local snapshot root that captures dashboard, datasource, and access inventory for later inspection.
+when you want a local snapshot root that captures dashboard and datasource inventory for later inspection.
 .SH BEFORE / AFTER
 .IP \(bu 2
-Before: snapshot\-style review usually means re\-querying Grafana or opening a pile of dashboards, datasources, and access records one by one.
+Before: snapshot\-style review usually means re\-querying Grafana or opening a pile of dashboards and datasources one by one.
 .IP \(bu 2
 After: export first, then review the local bundle as a repeatable artifact without touching the live server again.
 .SH SUBCOMMANDS
 .TP
 .B export
-export dashboard, datasource, and access inventory into a local snapshot bundle. Use when: Need a local snapshot root that can be reviewed without Grafana access.
+export dashboard and datasource inventory into a local snapshot bundle. Use when: Need a local snapshot root that can be reviewed without Grafana access.
 .TP
 .B review
 review a local snapshot inventory without touching Grafana. Use when: Want to inspect an exported snapshot root as table, csv, text, json, yaml, or interactive output.

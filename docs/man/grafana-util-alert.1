@@ -13,6 +13,8 @@ Import or diff alert bundles against live Grafana state.
 .IP \(bu 2
 Build and apply a reviewed alert management plan.
 .IP \(bu 2
+Initialize a staged desired-state tree before authoring managed alert files.
+.IP \(bu 2
 Author staged rules, contact points, routes, and templates.
 .IP \(bu 2
 List live alert rules, contact points, mute timings, and templates.
@@ -20,11 +22,11 @@ List live alert rules, contact points, mute timings, and templates.
 .PP
 \- Inventory: list\-rules, list\-contact\-points, list\-mute\-timings, list\-templates, delete
 .PP
-\- Backup: export, import, diff
+\- Backup & Compare: export, import, diff
 .PP
-\- Authoring: init, add\-rule, clone\-rule, add\-contact\-point, set\-route, preview\-route, new\-rule, new\-contact\-point, new\-template
+\- Author Desired State: init, add\-rule, clone\-rule, add\-contact\-point, set\-route, preview\-route, new\-rule, new\-contact\-point, new\-template
 .PP
-\- Review: plan, apply
+\- Review & Apply: plan, apply
 .PP
 Choose this page when alert work spans rules, routes, contact points, templates, or the initial desired\-state scaffold and you want the workflow before the flags.
 .SH BEFORE / AFTER
@@ -96,7 +98,7 @@ List live Grafana notification templates. Use when: Inspect template inventory f
 the root alert command is a namespace; operational flags live on the leaf subcommands
 .SH SUCCESS CRITERIA
 .IP \(bu 2
-you can tell whether the task belongs to inventory, backup, authoring, or review before you open a subcommand
+you can tell whether the task belongs to inventory, backup and compare, desired-state authoring, or review before you open a subcommand
 .IP \(bu 2
 a plan or export can move through review without losing routing context
 .IP \(bu 2
@@ -113,34 +115,34 @@ if the result is going to automation, set \-\-output\-format explicitly so the d
 The safest alert workflow is: author or update desired files, inspect the delta with alert plan, then execute only reviewed changes with alert apply.
 .SH EXAMPLES
 .PP
-Run the alerting command surface for listing, exporting, importing, diffing, planning, applying, deleting, and authoring Grafana alert resources.
+Inspect the grouped alert help before choosing a lane.
 .EX
 grafana-util alert --help
 .EE
 .PP
-export: Export alerting resources into raw/ JSON files.
+init: Initialize a staged alert desired-state tree.
+.EX
+grafana-util alert init --desired-dir ./alerts/desired
+.EE
+.PP
+list-rules: List live rules from a saved profile.
+.EX
+grafana-util alert list-rules --profile prod --json
+.EE
+.PP
+export: Export alert resources for review or migration.
 .EX
 grafana-util alert export --url http://localhost:3000 --basic-user admin --basic-password admin --output-dir ./alerts --overwrite
 .EE
 .PP
-import: Import alerting resource JSON files through the Grafana API.
+preview-route: Preview the route shape before mutating live alert routing.
 .EX
-grafana-util alert import --url http://localhost:3000 --input-dir ./alerts/raw --replace-existing
+grafana-util alert preview-route --desired-dir ./alerts/desired --label team=platform --severity critical --output-format json
 .EE
 .PP
-diff: Compare local alerting export files against live Grafana resources.
+plan: Build a reviewed plan from desired alert files.
 .EX
-grafana-util alert diff --url http://localhost:3000 --diff-dir ./alerts/raw
-.EE
-.PP
-plan: Build a staged alert management plan from desired alert resources.
-.EX
-grafana-util alert plan --desired-dir ./alerts/desired
-.EE
-.PP
-apply: Apply a reviewed alert management plan.
-.EX
-grafana-util alert apply --plan-file ./alert-plan-reviewed.json --approve
+grafana-util alert plan --desired-dir ./alerts/desired --output-format json
 .EE
 .SH SEE ALSO
 \fBgrafana-util\fR(1),

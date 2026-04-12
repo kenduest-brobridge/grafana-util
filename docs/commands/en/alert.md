@@ -9,20 +9,21 @@ Run the alerting command surface for listing, exporting, importing, diffing, pla
 - Export local alert bundles from Grafana.
 - Import or diff alert bundles against live Grafana state.
 - Build and apply a reviewed alert management plan.
+- Initialize a staged desired-state tree before authoring managed alert files.
 - Author staged rules, contact points, routes, and templates.
 - List live alert rules, contact points, mute timings, and templates.
 
 ## Description
-Open this page when the work is about Grafana alerting as a full workflow, not just one command. The `alert` namespace keeps the path shallow, and the help groups commands by task so you can move from inventory to backup, authoring, and review without switching command roots.
+Open this page when the work is about Grafana alerting as a full workflow, not just one command. The `alert` namespace keeps the path shallow, and the help groups commands by task so you can move from inventory to backup and compare, desired-state authoring, and review without switching command roots.
 
 This is the right entrypoint for SREs, platform operators, and anyone who wants to understand how alert rules, notification routing, contact points, and desired-state review fit together before diving into one exact subcommand.
 
 ## Workflow lanes
 
 - Inventory: `list-rules`, `list-contact-points`, `list-mute-timings`, `list-templates`, `delete`
-- Backup: `export`, `import`, `diff`
-- Authoring: `init`, `add-rule`, `clone-rule`, `add-contact-point`, `set-route`, `preview-route`, `new-rule`, `new-contact-point`, `new-template`
-- Review: `plan`, `apply`
+- Backup & Compare: `export`, `import`, `diff`
+- Author Desired State: `init`, `add-rule`, `clone-rule`, `add-contact-point`, `set-route`, `preview-route`, `new-rule`, `new-contact-point`, `new-template`
+- Review & Apply: `plan`, `apply`
 
 Choose this page when alert work spans rules, routes, contact points, templates, or the initial desired-state scaffold and you want the workflow before the flags.
 
@@ -33,7 +34,7 @@ Choose this page when alert work spans rules, routes, contact points, templates,
 
 ## What success looks like
 
-- you can tell whether the task belongs to inventory, backup, authoring, or review before you open a subcommand
+- you can tell whether the task belongs to inventory, backup and compare, desired-state authoring, or review before you open a subcommand
 - a plan or export can move through review without losing routing context
 - the same alert flow can be repeated in CI or during incident follow-up
 
@@ -97,13 +98,15 @@ grafana-util alert plan --desired-dir ./alerts/desired --output-format json
 - [alert list-templates](./alert-list-templates.md)
 - [alert delete](./alert-delete.md)
 
-### Backup
+### Backup & Compare
 
 - [alert export](./alert-export.md)
 - [alert import](./alert-import.md)
 - [alert diff](./alert-diff.md)
 
-### Authoring
+### Author Desired State
+
+- [alert init](./alert.md)
 
 - [alert add-rule](./alert-add-rule.md)
 - [alert clone-rule](./alert-clone-rule.md)
@@ -114,7 +117,7 @@ grafana-util alert plan --desired-dir ./alerts/desired --output-format json
 - [alert new-contact-point](./alert-new-contact-point.md)
 - [alert new-template](./alert-new-template.md)
 
-### Review
+### Review & Apply
 
 - [alert plan](./alert-plan.md)
 - [alert apply](./alert-apply.md)

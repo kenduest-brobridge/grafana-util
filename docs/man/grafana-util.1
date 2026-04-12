@@ -50,7 +50,7 @@ read live and staged Grafana state through one canonical status surface. Use whe
 scan, test, preview, package, and apply one local Grafana workspace. Use when: Already have a local repo root or staged package and want to understand it, validate it, preview the impact, package it for handoff, or apply a reviewed result.
 .TP
 .B status snapshot
-export and review Grafana snapshot inventory bundles. Use when: Want a local snapshot root that captures dashboard, datasource, and access inventory for later inspection.
+export and review Grafana snapshot inventory bundles. Use when: Want a local snapshot root that captures dashboard and datasource inventory for later inspection.
 .SH SUBCOMMAND MANPAGES
 .SS dashboard
 .TP
@@ -254,7 +254,7 @@ expose lower\-level contract checks for CI and automation.
 .SS status snapshot
 .TP
 .B grafana\-util\-status\-snapshot\-export(1)
-export dashboard, datasource, and access inventory into a local snapshot bundle. Use when: Need a local snapshot root that can be reviewed without Grafana access.
+export dashboard and datasource inventory into a local snapshot bundle. Use when: Need a local snapshot root that can be reviewed without Grafana access.
 .TP
 .B grafana\-util\-status\-snapshot\-review(1)
 review a local snapshot inventory without touching Grafana. Use when: Want to inspect an exported snapshot root as table, csv, text, json, yaml, or interactive output.
