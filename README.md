@@ -24,6 +24,17 @@ Common uses:
 
 The CLI is organized around a few stable roots: `status`, `workspace`, `dashboard`, `datasource`, `alert`, `access`, and `config profile`. Use the handbook for workflow context and the command reference for exact syntax.
 
+Supported Grafana surfaces:
+
+| Area | What is covered | Good first command |
+| :--- | :--- | :--- |
+| Dashboards | Browse, list, export/import, diff, review, patch, publish, history, dependency analysis, policy checks, screenshots, and raw-to-prompt conversion. | `grafana-util dashboard browse` |
+| Datasources | Inventory, export/import, diff, create/modify/delete, secret-aware recovery, and type discovery. | `grafana-util datasource list` |
+| Alerting | Rules, contact points, mute timings, templates, notification routes, review plans, apply flows, and route previews. | `grafana-util alert plan` |
+| Access | Orgs, users, teams, service accounts, service-account tokens, export/import, diff, and delete review. | `grafana-util access user list` |
+| Status and workspace | Live readiness, resource inventory, local workspace scan/test/preview/package/apply, and CI-friendly checks. | `grafana-util status live` |
+| Profiles and secrets | Repo-local connection profiles with direct flags, environment-backed auth, prompt input, and supported secret storage. | `grafana-util config profile add` |
+
 ---
 
 ## Install
@@ -54,7 +65,7 @@ Local installer help:
 sh ./scripts/install.sh --help
 ```
 
-- **Releases**: <https://github.com/kenduest-brobridge/grafana-util/releases>
+- **Releases**: [GitHub releases](https://github.com/kenduest-brobridge/grafana-util/releases)
 - **Binaries**: standard `linux-amd64` and `macos-arm64`; screenshot-enabled builds use `*-browser-*`
 - **Default path**: `/usr/local/bin` if writable, otherwise `$HOME/.local/bin`
 
@@ -88,8 +99,8 @@ grafana-util config profile add dev \
 
 After that:
 
-- learn the workflow: <https://kenduest-brobridge.github.io/grafana-util/handbook/en/role-new-user.html>
-- look up exact syntax: <https://kenduest-brobridge.github.io/grafana-util/commands/en/index.html>
+- learn the workflow: [New User Path](https://kenduest-brobridge.github.io/grafana-util/handbook/en/role-new-user.html)
+- look up exact syntax: [Command Reference](https://kenduest-brobridge.github.io/grafana-util/commands/en/index.html)
 
 ---
 
@@ -141,11 +152,11 @@ grafana-util config profile --help
 
 Use the handbook for workflow context. Use the command reference for exact CLI syntax.
 
-- **Published docs**: <https://kenduest-brobridge.github.io/grafana-util/>
-- **First-time setup**: <https://kenduest-brobridge.github.io/grafana-util/handbook/en/getting-started.html> and <https://kenduest-brobridge.github.io/grafana-util/handbook/en/role-new-user.html>
-- **Operator workflow**: <https://kenduest-brobridge.github.io/grafana-util/handbook/en/index.html> and <https://kenduest-brobridge.github.io/grafana-util/handbook/en/role-sre-ops.html>
-- **Exact CLI syntax**: <https://kenduest-brobridge.github.io/grafana-util/commands/en/index.html> and `grafana-util --help`
-- **Troubleshooting**: <https://kenduest-brobridge.github.io/grafana-util/handbook/en/troubleshooting.html>
+- [Published docs](https://kenduest-brobridge.github.io/grafana-util/)
+- First-time setup: [Getting Started](https://kenduest-brobridge.github.io/grafana-util/handbook/en/getting-started.html) and [New User Path](https://kenduest-brobridge.github.io/grafana-util/handbook/en/role-new-user.html)
+- Operator workflow: [Operator Handbook](https://kenduest-brobridge.github.io/grafana-util/handbook/en/index.html) and [SRE / Ops Path](https://kenduest-brobridge.github.io/grafana-util/handbook/en/role-sre-ops.html)
+- Exact CLI syntax: [Command Reference](https://kenduest-brobridge.github.io/grafana-util/commands/en/index.html) and `grafana-util --help`
+- [Troubleshooting](https://kenduest-brobridge.github.io/grafana-util/handbook/en/troubleshooting.html)
 
 If you are maintaining docs inside the repository, use the local HTML mirror and maintainer sources:
 
@@ -155,9 +166,9 @@ If you are maintaining docs inside the repository, use the local HTML mirror and
 
 By role:
 
-- **New user**: <https://kenduest-brobridge.github.io/grafana-util/handbook/en/role-new-user.html>
-- **SRE / operator**: <https://kenduest-brobridge.github.io/grafana-util/handbook/en/role-sre-ops.html>
-- **Automation / CI owner**: <https://kenduest-brobridge.github.io/grafana-util/handbook/en/role-automation-ci.html>
+- [New user](https://kenduest-brobridge.github.io/grafana-util/handbook/en/role-new-user.html)
+- [SRE / operator](https://kenduest-brobridge.github.io/grafana-util/handbook/en/role-sre-ops.html)
+- [Automation / CI owner](https://kenduest-brobridge.github.io/grafana-util/handbook/en/role-automation-ci.html)
 - **Maintainer / developer**: [docs/DEVELOPER.md](./docs/DEVELOPER.md)
 
 ---
