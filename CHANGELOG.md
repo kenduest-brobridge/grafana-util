@@ -14,6 +14,40 @@ Format rule going forward:
 - keep older tagged releases below
 - use commit/tag history as the source of truth
 
+## [0.10.0] - 2026-04-12
+
+### Highlights
+
+- Review-first change workflows now expose richer, more consistent context across access, datasource, alert, dashboard, and workspace commands before operators apply live changes.
+- The public CLI shape is now centered on the unified command roots, with legacy compatibility paths removed from docs and command surfaces.
+- Public docs, generated docs, and maintainer guardrails were tightened so release, GitHub Pages, and architecture checks are easier to keep aligned.
+
+### Added
+
+- New review signals for datasource routing, datasource dry-run scope, alert routes and rules, access delete/import/diff flows, service-account tokens, and dashboard/workspace change discovery.
+- Flat CLI help inventory support for auditing the public command surface.
+- AI workflow maintenance helpers for pruning and validating trace/status/changelog documentation.
+
+### Changed
+
+- Access, datasource, alert, dashboard, and workspace outputs now use more standardized review envelopes and summary text for dry-run, diff, delete, import, and promotion paths.
+- Dashboard source loading, browse/edit flows, and workspace discovery now share more common routing and provenance handling.
+- README, handbook, command-reference sources, generated docs contracts, and docs portal generation were refreshed around the current unified CLI roots.
+- Rust implementation hotspots were split into smaller modules across CLI help, snapshot review, access rendering, alert runtime/output, and large Rust test suites.
+- Release metadata, install examples, package manifests, and getting-started docs now point at `0.10.0`.
+
+### Fixed
+
+- Access list output and flag inference are more reliable.
+- Live smoke assertions and delete checks were hardened for dashboard, access, alert, and Grafana sample workflows.
+- Docs-site generation and GitHub Pages workflow behavior were repaired after the docs contract and action updates.
+- Dashboard workspace root resolution, source-loader follow-up paths, alert semantic comparison drift, repeated live auth prompts, datasource delete previews, and team delete prompt context were tightened.
+
+### Migration Notes
+
+- Use the unified roots shown in the README and command reference, such as `grafana-util dashboard ...`, `grafana-util alert ...`, `grafana-util access ...`, `grafana-util status ...`, and `grafana-util config profile ...`.
+- Legacy command aliases and compatibility surfaces have been removed from the maintained docs path.
+
 ## [0.9.1] - 2026-04-07
 
 ### Highlights

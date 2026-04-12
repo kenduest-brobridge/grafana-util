@@ -37,7 +37,7 @@ curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-util/main
 Install a specific version:
 
 ```bash
-VERSION=0.9.1 \
+VERSION=0.10.0 \
   curl -sSL https://raw.githubusercontent.com/kenduest-brobridge/grafana-util/main/scripts/install.sh | sh
 ```
 

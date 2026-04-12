@@ -46,6 +46,7 @@ pub(crate) fn map_get_text(map: &Map<String, Value>, key: &str) -> String {
         Some(Value::Array(values)) => values
             .iter()
             .filter_map(Value::as_str)
+            .filter(|text| !text.is_empty())
             .collect::<Vec<&str>>()
             .join(","),
         _ => String::new(),
