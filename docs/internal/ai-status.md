@@ -10,6 +10,13 @@ Current AI-maintained status only.
 - Keep this file short and current. Additive historical detail belongs in `docs/internal/archive/`.
 - Older entries moved to [`ai-status-archive-2026-04-13.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-04-13.md).
 
+## 2026-04-13 - Split Rust snapshot/import/live-status hotspots
+- State: Done
+- Scope: Rust snapshot CLI/review document assembly, dashboard import lookup helpers, access live project-status helpers, and dashboard inspect CLI definition modules.
+- Current Update: split `snapshot.rs` into CLI definitions, review count/warning rules, lane loading, and typed review-document serialization; split dashboard import lookup into cache, org lookup, and folder/inventory helpers; kept worker-produced access live-status and dashboard inspect CLI splits integrated with the current dev branch.
+- Result: behavior and public command contracts are unchanged; full `cd rust && cargo test --quiet` passes with 1463 passed / 1 ignored in the main lib suite plus integration targets, and `cargo fmt --manifest-path rust/Cargo.toml --all --check` passes.
+- Follow-up: `scripts/rust_maintainability_report.py --root rust/src` still flags larger untouched files, led by datasource project-status/live-status, `project_status_live_runtime.rs`, `snapshot_support.rs`, `profile_config.rs`, dashboard browse/export/import/project-status/topology surfaces, sync preflight modules, and large Rust test files.
+
 ## 2026-04-13 - Reject credentials in Grafana base URLs
 - State: Done, focused test blocked by existing worktree compile errors
 - Scope: Rust profile/env/CLI connection URL resolution and focused connection-setting tests.
@@ -41,17 +48,3 @@ Current AI-maintained status only.
 - Scope: `rust/src/alert.rs`, `rust/src/access/render.rs`, `rust/src/cli_help/routing.rs`, `rust/src/snapshot_review.rs`, and split Rust test modules for CLI, access, alert, dashboard help, and overview coverage.
 - Current Update: Split large orchestration/render/test surfaces into focused helper modules and thin aggregators while preserving public command behavior and test contracts.
 - Result: Focused Rust tests pass; `make quality-architecture` now reports 17 warnings, down from the pre-refactor 23, with remaining warnings limited to untouched hotspots and two existing brittle help-test files.
-
-## 2026-04-12 - Split snapshot review shaping and browser behavior
-- State: Done
-- Scope: `rust/src/snapshot_review.rs`, new `rust/src/snapshot_review_common.rs`, `rust/src/snapshot_review_render.rs`, `rust/src/snapshot_review_browser.rs`, `rust/src/snapshot_review_output.rs`, and snapshot review coverage in `rust/src/snapshot_rust_tests.rs`.
-- Baseline: `snapshot_review.rs` still mixed text rendering, tabular shaping, browser item shaping, and interactive browser dispatch in one file.
-- Current Update: split shared validation, text rendering, table/output shaping, and browser-specific behavior into separate helper modules; kept the public snapshot review entrypoints unchanged.
-- Result: snapshot review responsibilities are now thinner and easier to extend; targeted Rust verification hit unrelated pre-existing `access` / `alert` compile errors in the current worktree, but no new `snapshot_review` errors remained.
-
-## 2026-04-12 - Split unified CLI help routing helpers
-- State: Done
-- Scope: `rust/src/cli_help.rs`, `rust/src/cli_help/routing.rs`, new `rust/src/cli_help/*` helper modules, Rust CLI help tests, and AI trace docs.
-- Baseline: `rust/src/cli_help/routing.rs` still mixes orchestration, flat help inventory rendering, contextual clap help shaping, option-heading inference, ANSI stripping, and inferred-subcommand normalization in one large file.
-- Current Update: kept `routing.rs` as the orchestration layer, moved contextual clap help shaping plus inferred-heading logic into `cli_help/contextual.rs`, and moved flat inventory rendering into `cli_help/flat.rs` without changing unified help entrypoints.
-- Result: unified help routing now has clearer seams between routing, contextual rendering, and flat inventory rendering; focused Rust help tests and `dashboard` help-full coverage still pass after the split.

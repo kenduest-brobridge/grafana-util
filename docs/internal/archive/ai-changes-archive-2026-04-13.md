@@ -17,3 +17,20 @@
 - Impact: `rust/src/bin/grafana-util.rs`, `rust/src/cli.rs`, `rust/src/cli_help.rs`, `rust/src/cli_help_examples.rs`, `rust/src/cli_help/grouped_specs.rs`, `rust/src/cli_rust_tests.rs`, `scripts/check_docs_surface.py`, `scripts/contracts/command-surface.json`, `scripts/contracts/command-reference-index.json`, `docs/commands/{en,zh-TW}/`, `docs/internal/ai-status.md`.
 - Rollback/Risk: old commands now receive standard parser errors with no compatibility mapping; rollback would restore the deleted legacy hint module and contract field.
 - Follow-up: none.
+
+## 2026-04-12 - Infer unique long option prefixes
+- Summary: enabled unique long-option prefix inference on the unified CLI root and the standalone access parser so shortcuts such as `--all-o` and `--tab` resolve when they match exactly one known option.
+- Tests: added parser coverage for successful unique long option inference and for rejected ambiguous/invalid prefixes in both unified CLI and access parser paths.
+- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all`; `cargo test --manifest-path rust/Cargo.toml --quiet long_option -- --test-threads=1`; `cargo test --manifest-path rust/Cargo.toml --quiet access_cli_rust_tests -- --test-threads=1`; `cargo test --manifest-path rust/Cargo.toml --quiet cli_rust_tests -- --test-threads=1`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `git diff --check`; `cargo build --manifest-path rust/Cargo.toml --quiet --bin grafana-util`; `make quality-ai-workflow`.
+- Validation: `./rust/target/debug/grafana-util access user list --all-o --list-col` prints the user list columns without calling Grafana; `./rust/target/debug/grafana-util access user list --output json` remains rejected with a suggestion for `--output-format`.
+- Impact: `rust/src/cli.rs`, `rust/src/access/cli_defs.rs`, `rust/src/access/access_cli_rust_tests.rs`, `rust/src/cli_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`, `docs/internal/ai-learnings.md`.
+- Rollback/Risk: command-line abbreviations now work for unique long option prefixes; ambiguous or invalid prefixes still fail, so scripts should continue to prefer full canonical flag names for clarity.
+- Follow-up: none.
+
+## 2026-04-12 - Show org users in list table output
+- Summary: fixed `grafana-util access org list --with-users` human-readable output so table, CSV, and text modes include user summaries when user details are requested; default org list output remains the original `id/name/userCount` shape.
+- Tests: added formatter tests for org list headers, table rows, CSV headers, and text summary lines with and without `--with-users`.
+- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all`; `cargo test --manifest-path rust/Cargo.toml --quiet org_ -- --test-threads=1`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `git diff --check`.
+- Impact: `rust/src/access/org.rs`, `rust/src/access/org_workflows.rs`, `rust/src/access/rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`.
+- Rollback/Risk: only `--with-users` table/CSV/text rendering gains a user-summary column or suffix; scripts parsing fixed three-column table output with `--with-users` should switch to JSON or omit `--with-users`.
+- Follow-up: none.

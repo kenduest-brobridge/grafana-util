@@ -10,6 +10,14 @@ Current AI change log only.
 - Keep this file limited to the latest active architecture and maintenance changes.
 - Older entries moved to [`ai-changes-archive-2026-04-13.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-04-13.md).
 
+## 2026-04-13 - Split Rust snapshot/import/live-status hotspots
+- Summary: split `snapshot.rs` into focused CLI definition, lane-loading, count/warning, and review-document modules; changed snapshot review output assembly from one large `json!` object to module-local `Serialize` structs for the stable document contract; integrated worker splits for dashboard import lookup, dashboard inspect CLI definitions, and access live-status helpers.
+- Tests: preserved existing behavior coverage and added no new public output changes.
+- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all`; `cd rust && cargo test --quiet snapshot_rust_tests --no-run`; `cd rust && cargo test --quiet dashboard_import --no-run`; `cd rust && cargo test --quiet access_live_project_status --no-run`; `cd rust && cargo test --quiet`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `python3 scripts/rust_maintainability_report.py --root rust/src`.
+- Impact: `rust/src/snapshot.rs`, new `rust/src/snapshot_cli_defs.rs`, `rust/src/snapshot_review_counts.rs`, `rust/src/snapshot_review_document.rs`, `rust/src/snapshot_review_lanes.rs`, `rust/src/dashboard/import_lookup*.rs`, `rust/src/dashboard/cli_defs_inspect*.rs`, and `rust/src/access/live_project_status*.rs`.
+- Rollback/Risk: behavior-preserving module-boundary refactor; rollback would collapse helper modules back into their former large files. The snapshot review document is now constrained by internal serde structs plus existing tests, but there is still no external JSON Schema file.
+- Follow-up: keep using the maintainability report to target remaining non-test hotspots, especially datasource project status/live status, `snapshot_support.rs`, dashboard browse/export/import-apply/project-status/topology, and sync preflight modules.
+
 ## 2026-04-13 - Reject credentials in Grafana base URLs
 - Summary: added a Rust connection-resolution guard that rejects username/password userinfo in Grafana base URLs supplied through `--url`, `GRAFANA_URL`, or profile `url`, and points operators to explicit Basic auth flags, Basic auth environment variables, or profile credentials instead.
 - Tests: added focused profile-config regressions for `GRAFANA_URL` and profile URLs containing credentials, including a check that the secret value is not echoed in the error.
@@ -81,21 +89,4 @@ Current AI change log only.
 - Validation: manually checked `cargo run --manifest-path rust/Cargo.toml --quiet --bin grafana-util -- --help-flat` and confirmed all public roots render with purpose text and access leaf commands use operator-facing descriptions.
 - Impact: `rust/src/cli.rs`, `rust/src/cli_help.rs`, `rust/src/cli_help/routing.rs`, access CLI command definitions, CLI help tests, command-surface contract/checker, command-reference index docs, and maintainer workflow docs that reference root help inventory support.
 - Rollback/Risk: root pre-parse now reserves `--help-flat`; command purposes depend on command-level Clap `about` metadata, so new commands should provide product-facing `about` text instead of relying on Args struct comments.
-- Follow-up: none.
-
-## 2026-04-12 - Infer unique long option prefixes
-- Summary: enabled unique long-option prefix inference on the unified CLI root and the standalone access parser so shortcuts such as `--all-o` and `--tab` resolve when they match exactly one known option.
-- Tests: added parser coverage for successful unique long option inference and for rejected ambiguous/invalid prefixes in both unified CLI and access parser paths.
-- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all`; `cargo test --manifest-path rust/Cargo.toml --quiet long_option -- --test-threads=1`; `cargo test --manifest-path rust/Cargo.toml --quiet access_cli_rust_tests -- --test-threads=1`; `cargo test --manifest-path rust/Cargo.toml --quiet cli_rust_tests -- --test-threads=1`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `git diff --check`; `cargo build --manifest-path rust/Cargo.toml --quiet --bin grafana-util`; `make quality-ai-workflow`.
-- Validation: `./rust/target/debug/grafana-util access user list --all-o --list-col` prints the user list columns without calling Grafana; `./rust/target/debug/grafana-util access user list --output json` remains rejected with a suggestion for `--output-format`.
-- Impact: `rust/src/cli.rs`, `rust/src/access/cli_defs.rs`, `rust/src/access/access_cli_rust_tests.rs`, `rust/src/cli_rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`, `docs/internal/ai-learnings.md`.
-- Rollback/Risk: command-line abbreviations now work for unique long option prefixes; ambiguous or invalid prefixes still fail, so scripts should continue to prefer full canonical flag names for clarity.
-- Follow-up: none.
-
-## 2026-04-12 - Show org users in list table output
-- Summary: fixed `grafana-util access org list --with-users` human-readable output so table, CSV, and text modes include user summaries when user details are requested; default org list output remains the original `id/name/userCount` shape.
-- Tests: added formatter tests for org list headers, table rows, CSV headers, and text summary lines with and without `--with-users`.
-- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all`; `cargo test --manifest-path rust/Cargo.toml --quiet org_ -- --test-threads=1`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `git diff --check`.
-- Impact: `rust/src/access/org.rs`, `rust/src/access/org_workflows.rs`, `rust/src/access/rust_tests.rs`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`.
-- Rollback/Risk: only `--with-users` table/CSV/text rendering gains a user-summary column or suffix; scripts parsing fixed three-column table output with `--with-users` should switch to JSON or omit `--with-users`.
 - Follow-up: none.

@@ -9,16 +9,13 @@
 #![allow(dead_code)]
 
 use reqwest::Method;
-use serde_json::{Map, Value};
+use serde_json::Value;
 
 use crate::common::Result;
-use crate::grafana_api::{
-    project_status_live as project_status_live_support, AccessResourceClient,
-};
+use crate::grafana_api::AccessResourceClient;
 use crate::http::JsonHttpClient;
 use crate::project_status::{
-    status_finding, ProjectDomainStatus, ProjectStatusFinding, PROJECT_STATUS_PARTIAL,
-    PROJECT_STATUS_READY,
+    status_finding, ProjectDomainStatus, ProjectStatusFinding, PROJECT_STATUS_READY,
 };
 
 use super::render::{normalize_org_role, scalar_text, value_bool};
