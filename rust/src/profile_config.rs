@@ -10,6 +10,8 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use reqwest::Url;
+
 use crate::common::{env_value, validation, Result};
 use crate::profile_secret_store::{
     ensure_owner_only_permissions, read_secret_from_encrypted_file, read_secret_from_os_store,
@@ -223,6 +225,7 @@ pub fn resolve_connection_settings(
             "Grafana base URL is required. Pass --url, set GRAFANA_URL, or configure a profile with url.",
         ));
     };
+    reject_url_credentials(&url)?;
     let api_token = resolve_credential_value(
         input.api_token,
         profile.and_then(|item| item.token.as_deref()),
@@ -273,6 +276,18 @@ pub fn resolve_connection_settings(
         verify_ssl,
         ca_cert,
     })
+}
+
+fn reject_url_credentials(url: &str) -> Result<()> {
+    let Ok(parsed) = Url::parse(url) else {
+        return Ok(());
+    };
+    if !parsed.username().is_empty() || parsed.password().is_some() {
+        return Err(validation(
+            "Grafana base URL must not include username or password. Use --basic-user with --basic-password or --prompt-password, set GRAFANA_USERNAME and GRAFANA_PASSWORD, or store credentials in a profile instead.",
+        ));
+    }
+    Ok(())
 }
 
 fn resolve_verify_ssl(
@@ -569,6 +584,69 @@ mod tests {
         env::remove_var("GRAFANA_URL");
 
         assert_eq!(resolved.url, "https://env-grafana.example.com");
+    }
+
+    #[test]
+    fn resolve_connection_settings_rejects_credentials_in_grafana_url_env() {
+        env::set_var("GRAFANA_URL", "https://admin:secret@grafana.example.com");
+        let error = resolve_connection_settings(
+            ConnectionMergeInput {
+                url: "",
+                url_default: "",
+                api_token: None,
+                username: None,
+                password: None,
+                org_id: None,
+                timeout: 30,
+                timeout_default: 30,
+                verify_ssl: false,
+                insecure: false,
+                ca_cert: None,
+            },
+            None,
+        )
+        .unwrap_err();
+        env::remove_var("GRAFANA_URL");
+
+        let message = error.to_string();
+        assert!(message.contains("Grafana base URL must not include username or password."));
+        assert!(message.contains("--basic-user"));
+        assert!(message.contains("GRAFANA_USERNAME"));
+        assert!(!message.contains("secret"));
+    }
+
+    #[test]
+    fn resolve_connection_settings_rejects_credentials_in_profile_url() {
+        env::remove_var("GRAFANA_URL");
+        let selected_profile = super::SelectedProfile {
+            name: "prod".to_string(),
+            source_path: PathBuf::from("./grafana-util.yaml"),
+            profile: ConnectionProfile {
+                url: Some("https://admin:secret@grafana.example.com".to_string()),
+                ..ConnectionProfile::default()
+            },
+        };
+        let error = resolve_connection_settings(
+            ConnectionMergeInput {
+                url: "",
+                url_default: "",
+                api_token: None,
+                username: None,
+                password: None,
+                org_id: None,
+                timeout: 30,
+                timeout_default: 30,
+                verify_ssl: false,
+                insecure: false,
+                ca_cert: None,
+            },
+            Some(&selected_profile),
+        )
+        .unwrap_err();
+
+        assert!(error
+            .to_string()
+            .contains("Grafana base URL must not include username or password."));
     }
 
     #[test]

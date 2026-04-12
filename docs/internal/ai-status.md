@@ -10,6 +10,13 @@ Current AI-maintained status only.
 - Keep this file short and current. Additive historical detail belongs in `docs/internal/archive/`.
 - Older entries moved to [`ai-status-archive-2026-04-13.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-04-13.md).
 
+## 2026-04-13 - Reject credentials in Grafana base URLs
+- State: Done, focused test blocked by existing worktree compile errors
+- Scope: Rust profile/env/CLI connection URL resolution and focused connection-setting tests.
+- Baseline: `GRAFANA_URL`, `--url`, or profile `url` values containing URL userinfo were treated as plain base URLs instead of producing an explicit operator-facing error.
+- Current Update: added a shared URL userinfo guard after connection URL precedence is resolved, with guidance to use explicit Basic auth flags, Basic auth environment variables, or profile credentials instead.
+- Result: Grafana base URLs that include username or password now fail fast without echoing the supplied secret; narrow file formatting and diff checks pass, while the focused Rust test cannot compile until unrelated current worktree refactor errors are resolved.
+
 ## 2026-04-13 - Split Rust facade and CLI-args hotspots
 - State: Done
 - Scope: dashboard reusable runners, access dispatch/auth materialization, datasource local-list/diff/import-export support helpers, sync CLI args modules, Rust maintainability reporter, and Rust maintainer architecture notes.

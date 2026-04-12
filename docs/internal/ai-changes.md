@@ -10,6 +10,14 @@ Current AI change log only.
 - Keep this file limited to the latest active architecture and maintenance changes.
 - Older entries moved to [`ai-changes-archive-2026-04-13.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-04-13.md).
 
+## 2026-04-13 - Reject credentials in Grafana base URLs
+- Summary: added a Rust connection-resolution guard that rejects username/password userinfo in Grafana base URLs supplied through `--url`, `GRAFANA_URL`, or profile `url`, and points operators to explicit Basic auth flags, Basic auth environment variables, or profile credentials instead.
+- Tests: added focused profile-config regressions for `GRAFANA_URL` and profile URLs containing credentials, including a check that the secret value is not echoed in the error.
+- Test Run: `rustfmt --check rust/src/profile_config.rs` passed; `git diff --check -- rust/src/profile_config.rs docs/internal/ai-status.md docs/internal/ai-changes.md` passed; `cargo test --manifest-path rust/Cargo.toml --quiet profile_config::tests::resolve_connection_settings_rejects_credentials -- --test-threads=1` did not compile because the current worktree has unrelated pre-existing Rust errors in `snapshot_review_common.rs`, `snapshot_support.rs`, `access/live_project_status.rs`, and `dashboard/import_lookup*.rs`.
+- Impact: `rust/src/profile_config.rs`, `docs/internal/ai-status.md`, and `docs/internal/ai-changes.md`.
+- Rollback/Risk: low CLI behavior change; users who relied on `http://user:pass@host` must move credentials to `--basic-user` plus `--basic-password` / `--prompt-password`, `GRAFANA_USERNAME` / `GRAFANA_PASSWORD`, or a profile secret.
+- Follow-up: consider documenting the rejected URL-userinfo form in troubleshooting if operators hit it often.
+
 ## 2026-04-13 - Split Rust facade and CLI-args hotspots
 - Summary: split several Rust maintainability hotspots into focused modules while keeping command paths, flags, output contracts, and public runner behavior unchanged; added a read-only maintainability reporter for oversized Rust files and re-export-heavy module roots.
 - Tests: preserved existing Rust coverage and added Python coverage for the new reporter.
