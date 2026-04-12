@@ -1,23 +1,23 @@
 # datasource
 
-## 這一頁對應的工作流
+## 先判斷你現在要做哪一種事
 
-| 工作流 | 常用子命令 |
-| --- | --- |
-| 盤點與瀏覽 data source | `types`、`list`、`browse` |
-| 匯出 / 匯入 / 比對 | `export`、`import`、`diff` |
-| 新增 / 修改 / 刪除 | `add`、`modify`、`delete` |
+| 你現在想做的事 | 先開哪個命令頁 | 這頁會幫你回答什麼 |
+| --- | --- | --- |
+| 想先看支援哪些 datasource 類型 | [datasource types](./datasource-types.md) | 先確認這個環境能建立什麼 |
+| 想先盤點 live 或本地 datasource 現況 | [datasource list](./datasource-list.md)、[datasource browse](./datasource-browse.md) | 先知道有哪些 datasource 與內容 |
+| 想先匯出、匯入或比對 | [datasource export](./datasource-export.md)、[datasource diff](./datasource-diff.md)、[datasource import](./datasource-import.md) | 先決定搬移或 review 路徑 |
+| 想直接改 live datasource | [datasource add](./datasource-add.md)、[datasource modify](./datasource-modify.md)、[datasource delete](./datasource-delete.md) | 先確認變更面，再動 live |
 
-## 從這裡開始
+## 先選哪一條資料路徑
 
-- 新環境先看支援類型：`datasource types`
-- 要盤點線上現況，或看本地匯出內容：`datasource list`、`datasource browse`
-- 要先做草稿或搬移：`datasource export`、`datasource diff`
-- 要直接改 live data source：`datasource add`、`datasource modify`、`datasource delete`
+- **live Grafana**：先用 `types`、`list`、`browse` 盤點，再決定要不要 export 或 modify
+- **本地 bundle / 匯出樹**：先用 `diff`、`import` 看搬移或回放路徑
+- **直接 live mutation**：只有在 scope 與輸入都確認過後，才進 `add` / `modify` / `delete`
 
-## 說明
+## 這個入口是做什麼的
 
-`grafana-util datasource` 把 data source 的生命週期收在同一個入口：從類型查找、瀏覽、讀取 live 或本地 inventory、匯出、匯入、比對，到 live add / modify / delete 都在這裡處理。這頁適合先判斷下一步該走 inventory、bundle、diff，還是 live mutation。
+`grafana-util datasource` 把 datasource 的生命週期收在同一個入口：從類型查找、瀏覽、讀取 live 或本地 inventory、匯出、匯入、比對，到 live add / modify / delete 都在這裡處理。這頁適合先判斷下一步該走 inventory、bundle、diff，還是 live mutation。
 
 ## 重點旗標
 
@@ -25,6 +25,13 @@
 - `--token`、`--basic-user`、`--basic-password`：共用的線上 Grafana 憑證。
 - `--profile`：從 `grafana-util.yaml` 載入 repo 本地預設值。
 - `--color`：控制這個指令群組的 JSON 彩色輸出。
+
+## 這一組頁面怎麼讀比較不會亂
+
+1. 先看這頁，判斷你是在做 inventory、bundle、diff，還是 live mutation。
+2. 進到子命令頁後，先看資料來源是 live 還是本地 bundle。
+3. 先跑最短成功路徑，再加進階旗標，不要一開始就帶滿所有 options。
+4. 如果是 production 變更，先完成 export / diff，再進 live mutation。
 
 ## 採用前後對照
 
@@ -60,22 +67,10 @@ grafana-util datasource browse --profile prod
 grafana-util datasource export --profile prod --output-dir ./datasources
 ```
 
-## 相關命令
+## 各工作流入口
 
-### 盤點
-
-- [datasource types](./datasource-types.md)
-- [datasource list](./datasource-list.md)
-- [datasource browse](./datasource-browse.md)
-
-### 搬移
-
-- [datasource export](./datasource-export.md)
-- [datasource import](./datasource-import.md)
-- [datasource diff](./datasource-diff.md)
-
-### 變更前檢查
-
-- [datasource add](./datasource-add.md)
-- [datasource modify](./datasource-modify.md)
-- [datasource delete](./datasource-delete.md)
+| 工作流 | 入口頁 | 常見延伸頁 |
+| --- | --- | --- |
+| 盤點 | [datasource types](./datasource-types.md) | [datasource list](./datasource-list.md)、[datasource browse](./datasource-browse.md) |
+| 搬移 | [datasource export](./datasource-export.md) | [datasource import](./datasource-import.md)、[datasource diff](./datasource-diff.md) |
+| live 變更 | [datasource add](./datasource-add.md) | [datasource modify](./datasource-modify.md)、[datasource delete](./datasource-delete.md) |

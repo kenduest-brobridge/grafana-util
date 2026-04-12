@@ -23,10 +23,12 @@ LANDING_ROOT = get_landing_root()
 LANDING_LOCALES = ("en", "zh-TW")
 LANDING_UI_LABELS = {
     "en": {
+        "eyebrow": "Documentation Portal",
         "search_placeholder": "Jump to a command or handbook page",
         "search_button": "Jump",
     },
     "zh-TW": {
+        "eyebrow": "文件入口",
         "search_placeholder": "快速跳到指令或手冊頁面",
         "search_button": "跳轉",
     },

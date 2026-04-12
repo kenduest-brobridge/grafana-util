@@ -1,6 +1,6 @@
-# grafana-util
+# Grafana Documentation
 
-Jump straight into the handbook, command docs, or a common workflow.
+Use this site to move quickly between the handbook, command reference, and common `grafana-util` workflows.
 
 ## Quick jump
 

@@ -1,10 +1,24 @@
 # dashboard dependencies
 
 ## 用途
-透過 canonical 的 `dashboard dependencies` 指令分析儀表板匯出目錄。
+分析本地 dashboard 匯出樹，整理相依性、治理與查詢結構，讓你在不連到 Grafana 的情況下也能先看清楚內容。
 
 ## 何時使用
-當您想讀取本地匯出樹、檢視其結構，或在不連到 Grafana 的情況下產生治理與相依性視圖時，使用這個頁面。新文件與腳本請優先使用 `grafana-util dashboard dependencies --input-dir ...`。
+當你的來源是本地匯出樹，而不是 live Grafana 時，就先開這頁。它適合拿來做離線盤點、產出治理成品、提供 `policy` / `impact` / CI 重用，或在 review 前先確認匯出樹內容。
+
+## 最短成功路徑
+
+1. 先確認手上的資料是 `raw`、`provisioning` 還是 `git-sync`。
+2. 指向匯出根目錄：`--input-dir ...`。
+3. 先跑一次 `--output-format table` 或 `--output-format governance-json`。
+4. 結果可信後，再決定要不要接 `policy`、`impact` 或 CI。
+
+## 你應該選 `dependencies` 還是 `summary`
+
+- 來源是 **本地匯出樹**：用 `dashboard dependencies`
+- 來源是 **live Grafana**：改看 [dashboard summary](./dashboard-summary.md)
+- 你要追某個 datasource 的牽動範圍：改看 [dashboard impact](./dashboard-impact.md)
+- 你只想做 dashboard 草稿比對：先看 `dashboard diff` / `dashboard review`
 
 ## 採用前後對照
 
@@ -22,20 +36,36 @@
 - `--output-file`：將結果寫到磁碟。
 - `--no-header`：隱藏表格類輸出的標頭。
 
-## 範例
+## 先決定你要輸出什麼
+
+- `table` / `tree-table`：給人快速盤點匯出樹
+- `dependency` / `dependency-json`：給相依性檢視或其他工具接手
+- `governance` / `governance-json`：給 `policy`、`impact` 或治理流程重用
+- `queries-json`：給查詢層分析
+- `interactive`：你已經確認來源正確，想現場往下鑽時再開
+
+## 範例（由淺到深）
+
 ```bash
-# 用途：透過 canonical 的 dashboard dependencies 指令分析儀表板匯出目錄。
+# 用途：先用 table 盤點本地 raw 匯出樹。
 grafana-util dashboard dependencies --input-dir ./dashboards/raw --input-format raw --output-format table
 ```
 
 ```bash
-# 用途：透過 canonical 的 dashboard dependencies 指令分析儀表板匯出目錄。
+# 用途：產生可重用的 governance JSON，留給 policy / impact / CI。
 grafana-util dashboard dependencies --input-dir ./dashboards/provisioning --input-format provisioning --output-format governance-json
 ```
 
 ```bash
+# 用途：分析 repo-backed Git Sync 樹，保留治理輸出給下一步。
 grafana-util dashboard dependencies --input-dir ./grafana-oac-repo --input-format git-sync --output-format governance
 ```
+
+## 什麼叫做這次跑成功
+
+- 不必逐一打開 JSON，也能說清楚匯出樹裡有哪些 dashboard、查詢與相依關係
+- 產物格式足以直接交給下一步，而不是還要重新分析一次
+- 同一份輸出可以支撐 review、治理或影響分析
 
 ## 成功判準
 

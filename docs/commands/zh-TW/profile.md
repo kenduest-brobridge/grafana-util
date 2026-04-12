@@ -8,6 +8,8 @@
 
 說明：如果你想先理解整個 profile 工作流，再決定要進哪個子命令，先看這一頁最合適。公開入口是 `grafana-util config profile`；舊的 top-level `profile` root 已不再是可直接執行的主入口。這個指令群組是 repo-local 連線預設、secret 處理，以及本機與 CI 重複執行方式的入口。
 
+如果你要先理解 namespace 層級，而不是直接看某個 subcommand，先回 [config](./config.md)。
+
 ## 採用前後對照
 
 - **採用前**：連線設定散在各種旗標或 shell 歷史裡，想重跑同一個 live 指令時很容易漏掉參數。

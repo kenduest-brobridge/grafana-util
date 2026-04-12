@@ -42,7 +42,9 @@ Its main strengths are a review-first workflow, separate paths for dashboard imp
 
 ## Quick Start
 
-### First 3 commands
+### First-Run Path
+
+Start with these three steps, then continue into the handbook or command reference when you need the full workflow.
 
 ```bash
 # Confirm the binary is installed.

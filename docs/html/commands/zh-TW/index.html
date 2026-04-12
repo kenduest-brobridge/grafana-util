@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>指令參考 · grafana-util docs</title>
+  <title>指令參考 · Grafana Documentation</title>
   <style>:root {
   color-scheme: light dark;
   --font-scale: 1;
@@ -126,7 +126,13 @@ pre:hover .code-controls { opacity: 1; }
 .site.landing-shell .topbar { margin-bottom: 10px; }
 .site-content { flex-grow: 1; }
 .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 16px; border-bottom: 1px solid var(--border); padding-bottom: 14px; }
-.brand { font: 760 1.08rem var(--font-mono); text-transform: uppercase; letter-spacing: 0.045em; color: var(--heading) !important; text-decoration: none !important; }
+.brand {
+  font: 700 0.9rem var(--font-display);
+  text-transform: none;
+  letter-spacing: 0.01em;
+  color: var(--heading) !important;
+  text-decoration: none !important;
+}
 .themebar { display: flex; gap: 8px; align-items: center; }
 .themebar select {
   border: 1px solid var(--border);
@@ -372,30 +378,24 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map {
-  margin-bottom: 24px;
+.handbook-command-map { margin: 0 0 24px; }
+.handbook-command-map-panel {
+  margin-top: 16px;
   padding: 16px 18px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: color-mix(in srgb, var(--panel) 96%, white);
 }
-.handbook-command-map .nav-section + .nav-section { margin-top: 14px; }
-.handbook-command-map h2 {
-  margin: 0 0 10px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--border);
-  font-size: 0.82rem;
-  color: var(--muted);
-}
 .handbook-command-map .nav-group-title {
   font-size: 0.95rem;
 }
 .handbook-command-map .nav-command-group {
-  padding-top: 10px;
+  padding-top: 0;
 }
 .handbook-command-map .nav-command-group + .nav-command-group {
   margin-top: 12px;
   border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
+  padding-top: 10px;
 }
 .handbook-command-map .nav-command-sub-list {
   margin-top: 8px;
@@ -523,21 +523,36 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   line-height: 1.68;
 }
 .section-index-list {
-  list-style: none;
   margin: 0;
+}
+.section-index-list.layout-grid {
+  list-style: none;
   padding: 0;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 0.4rem 1rem;
 }
+.section-index-list.layout-list {
+  list-style: disc;
+  padding-left: 1.25rem;
+  display: block;
+}
 .section-index-list li {
   margin: 0;
+}
+.section-index-list.layout-list li {
+  margin: 0 0 0.45rem;
 }
 .section-index-list a {
   display: block;
   padding: 0.25rem 0;
   color: var(--text);
   font-weight: 560;
+}
+.section-index-list.layout-list a {
+  display: inline;
+  padding: 0;
+  font-weight: 540;
 }
 .section-index-list a:hover {
   color: var(--heading);
@@ -622,41 +637,49 @@ html[lang="zh-TW"] .sidebar { font-family: var(--font-zh); letter-spacing: 0; }
 }
 .landing-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(420px, 0.88fr);
-  gap: 48px;
+  grid-template-columns: minmax(0, 1.14fr) minmax(360px, 0.86fr);
+  gap: 34px;
   align-items: start;
-  padding: 18px 0 30px;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--panel) 98%, white), color-mix(in srgb, var(--panel) 96%, var(--accent-soft)));
+  padding: 8px 0 22px;
 }
 .landing-hero-inner {
-  max-width: none;
+  max-width: 60rem;
+}
+.landing-eyebrow {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font: 700 0.72rem var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 .landing-title {
   margin: 0 0 18px;
-  font-size: clamp(2.35rem, 4.3vw, 3.6rem);
-  line-height: 0.96;
-  letter-spacing: -0.05em;
+  font-size: clamp(1.72rem, 2.7vw, 2.3rem);
+  line-height: 1.06;
+  letter-spacing: -0.025em;
 }
 .landing-summary {
-  max-width: 72ch;
+  max-width: 56ch;
   margin: 0;
-  font-size: 1.02rem;
-  line-height: 1.72;
+  font-size: 0.96rem;
+  line-height: 1.68;
   color: var(--text);
 }
 .landing-search-panel {
-  padding-top: 12px;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-strong);
 }
 .landing-search-panel h2 {
   margin: 0 0 8px;
-  font-size: 1.15rem;
+  font-size: 1.02rem;
   letter-spacing: -0.02em;
 }
 .landing-search-panel p {
   margin: 0 0 16px;
-  font-size: 0.95rem;
-  line-height: 1.7;
+  font-size: 0.9rem;
+  line-height: 1.62;
   color: var(--muted);
 }
 .landing-search-form {
@@ -713,8 +736,8 @@ html[lang="zh-TW"] .sidebar { font-family: var(--font-zh); letter-spacing: 0; }
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 28px;
-  margin-top: 30px;
-  padding-top: 26px;
+  margin-top: 22px;
+  padding-top: 22px;
   border-top: 1px solid var(--border);
 }
 .landing-section h2 {
@@ -760,17 +783,12 @@ html[lang="zh-TW"] .sidebar { font-family: var(--font-zh); letter-spacing: 0; }
   color: var(--muted);
 }
 html[data-theme="dark"] .landing-hero {
-  background:
-    radial-gradient(circle at 14% 10%, rgba(255, 255, 255, 0.04), transparent 24%),
-    radial-gradient(circle at 82% 14%, rgba(170, 180, 191, 0.11), transparent 28%),
-    linear-gradient(180deg, #0b0f14 0%, #0d1218 58%, #10161d 100%);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 0;
 }
 html[data-theme="dark"] .landing-search-panel {
-  padding: 18px 20px 20px;
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: 8px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 html[data-theme="dark"] .landing-search-input::placeholder {
@@ -791,6 +809,15 @@ html[data-theme="dark"] .landing-task {
 }
 html[data-theme="dark"] .landing-meta {
   border-top-color: var(--border);
+}
+@media (max-width: 980px) {
+  .landing-hero {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  .landing-hero-inner {
+    max-width: none;
+  }
 }
 .landing-link-list {
   display: flex;
@@ -920,7 +947,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
   <div class="site">
     <div class="site-content">
       <div class="topbar">
-  <a class="brand" href="../../index.html">grafana-util docs</a>
+  <a class="brand" href="../../index.html">Grafana Documentation</a>
   <div class="themebar">
     <select id="page-locale-select" aria-label="Language switch"><option value="" selected>Language: 繁體中文</option><option value="../en/index.html">Switch to English</option></select><select id="jump-select" aria-label="Jump"><option value="" selected>快速跳轉...</option><optgroup label="手冊"><option value="../../handbook/zh-TW/index.html">概觀</option><option value="../../handbook/zh-TW/what-is-grafana-util.html">這個工具是做什麼的</option><option value="../../handbook/zh-TW/getting-started.html">開始使用</option><option value="../../handbook/zh-TW/role-new-user.html">第一次執行 / 新手路線</option><option value="../../handbook/zh-TW/role-sre-ops.html">SRE / 維運</option><option value="../../handbook/zh-TW/role-automation-ci.html">自動化 / CI</option><option value="../../handbook/zh-TW/architecture.html">設計原則</option><option value="../../handbook/zh-TW/dashboard.html">Dashboard</option><option value="../../handbook/zh-TW/datasource.html">Datasource</option><option value="../../handbook/zh-TW/alert.html">Alert</option><option value="../../handbook/zh-TW/access.html">Access</option><option value="../../handbook/zh-TW/status-workspace.html">Status / Workspace</option><option value="../../handbook/zh-TW/scenarios.html">情境手冊</option><option value="../../handbook/zh-TW/recipes.html">實戰錦囊</option><option value="../../handbook/zh-TW/reference.html">技術參考</option><option value="../../handbook/zh-TW/troubleshooting.html">疑難排解</option></optgroup><optgroup label="指令參考"><option value="version.html">Version</option><option value="dashboard.html">Dashboard</option><option value="alert.html">Alert</option><option value="datasource.html">Datasource</option><option value="access.html">Access</option><option value="config.html">Config</option><option value="profile.html">Config Profile</option><option value="status.html">Status</option><option value="resource.html">Status Resource</option><option value="snapshot.html">Snapshot</option><option value="workspace.html">Workspace</option></optgroup></select>
     <select id="font-select" aria-label="Font Size">
@@ -944,40 +971,30 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 </aside>
 
 <article class="article">
-<div class="breadcrumbs"><a href="../../index.html">Home</a> / 指令參考</div>
+<div class="breadcrumbs"><a href="../../index.html">Home</a> / <a href="index.html">指令參考</a></div>
 
 <h1><span class="hero-title-main">指令參考</span></h1>
 
-<h2 id="語言">語言</h2>
-<ul><li>英文指令說明：<a href="../en/index.html">English command reference</a></li><li>繁體中文指令說明：<a href="index.html">目前頁面</a></li><li>英文手冊：<a href="../../handbook/en/index.html">英文手冊</a></li><li>繁體中文手冊：<a href="../../handbook/zh-TW/index.html">繁體中文手冊</a></li></ul>
 <p>這些頁面對應 <code>grafana-util</code> 目前 Rust CLI 的指令樹。</p>
 <p>如果你要的是每個指令或子指令一頁的穩定說明，請看這裡；如果你想先理解操作流程與場景，請先看手冊。</p>
 <h2 id="先從這裡開始">先從這裡開始</h2>
-<p>現在建議的新手入口是比較小的 task-first surface：</p>
-<ul><li><a href="status.html">status</a>：唯讀狀態、overview、snapshot、resource 查詢</li><li><a href="version.html">version</a>：確認目前安裝的 binary 與版本資訊</li><li><a href="config.html">config</a>：repo-local 連線與 secret 管理，主要是 <code>config profile</code></li><li><a href="export.html">export</a>：常見備份與本地 inventory 擷取</li><li><a href="workspace.html">workspace</a>：scan、test、preview、package、apply 的本機 workspace workflow</li><li><a href="dashboard.html">dashboard</a>：瀏覽、get、clone、export/import、summary、dependencies、policy 與 screenshot workflow</li><li><a href="alert.html">alert</a>：alert inventory、authoring、review 與 apply workflow</li><li><a href="datasource.html">datasource</a>：datasource inventory 與生命週期 workflow</li><li><a href="access.html">access</a>：user、team、org、service-account workflow</li></ul>
-<p>如果舊筆記提到已移除的 root，請直接改用目前的 task name：</p>
+<ol><li><a href="version.html">version</a>：確認 binary 與版本</li><li><a href="status.html">status</a>：確認 CLI 跟 Grafana 能不能溝通</li><li><a href="config.html">config</a>：把 profile 與 secret 存起來，後面少打一堆參數</li></ol>
+<h2 id="先選一條操作路徑">先選一條操作路徑</h2>
+<table><thead><tr><th>你現在最像哪一種情境</th><th>先開哪一頁</th><th>下一步通常接什麼</th></tr></thead><tbody><tr><td>想先確認 CLI 與 Grafana 連得通</td><td><a href="version.html">version</a> / <a href="status.html">status</a></td><td><code>status live</code>、<code>status overview live</code></td></tr><tr><td>想把連線設定存起來，之後少打一堆參數</td><td><a href="config.html">config</a></td><td><code>config profile add/show/list</code></td></tr><tr><td>想先備份或抓本地 inventory</td><td><a href="export.html">export</a></td><td><code>export dashboard</code> / <code>alert</code> / <code>datasource</code></td></tr><tr><td>想審查一包本地變更</td><td><a href="workspace.html">workspace</a></td><td><code>scan</code> -&gt; <code>preview</code> -&gt; <code>test</code> / <code>apply</code></td></tr><tr><td>想處理 dashboard 的瀏覽、分析、草稿或發佈</td><td><a href="dashboard.html">dashboard</a></td><td><code>browse</code> / <code>summary</code> / <code>diff</code> / <code>publish</code></td></tr><tr><td>想處理 alert inventory 或 authoring</td><td><a href="alert.html">alert</a></td><td><code>list-<em></code> / <code>new-</em></code> / <code>apply</code></td></tr><tr><td>想處理 datasource inventory 或 lifecycle</td><td><a href="datasource.html">datasource</a></td><td><code>list</code> / <code>export</code> / <code>diff</code> / <code>modify</code></td></tr><tr><td>想管理 user、team、org 或 service account</td><td><a href="access.html">access</a></td><td><code>user</code> / <code>team</code> / <code>org</code> / <code>service-account</code></td></tr></tbody></table>
+<h2 id="指令地圖">指令地圖</h2>
+<table><thead><tr><th>類型</th><th>入口頁</th><th>這組命令主要是做什麼</th></tr></thead><tbody><tr><td>起步與連線</td><td><a href="version.html">version</a>、<a href="status.html">status</a>、<a href="config.html">config</a></td><td>驗證 binary、檢查 live 狀態、保存 profile</td></tr><tr><td>匯出與離線成品</td><td><a href="export.html">export</a>、<a href="snapshot.html">snapshot bundles</a>、<a href="resource.html">resource queries</a></td><td>抓本地 inventory、做 snapshot、查單一資源</td></tr><tr><td>本地審查工作區</td><td><a href="workspace.html">workspace</a></td><td>scan、test、preview、package、apply</td></tr><tr><td>Dashboard</td><td><a href="dashboard.html">dashboard</a></td><td>瀏覽、分析、草稿、匯出匯入、發佈</td></tr><tr><td>Alert</td><td><a href="alert.html">alert</a></td><td>inventory、authoring、route、plan / apply</td></tr><tr><td>Datasource</td><td><a href="datasource.html">datasource</a></td><td>inventory、類型查找、匯出匯入、live mutation</td></tr><tr><td>Access</td><td><a href="access.html">access</a></td><td>user、org、team、service account、token</td></tr></tbody></table>
+<h2 id="移除的-root-與替代寫法">移除的 root 與替代寫法</h2>
 <ul><li><code>profile ...</code> -&gt; <code>grafana-util config profile ...</code></li><li><code>resource ...</code> -&gt; <code>grafana-util status resource ...</code></li><li><code>snapshot ...</code> -&gt; <code>grafana-util status snapshot ...</code></li><li>legacy overview root -&gt; <code>grafana-util status overview ...</code></li></ul>
 <h2 id="我該用哪個指令">我該用哪個指令？</h2>
 <table><thead><tr><th>需求</th><th>先從這裡開始</th></tr></thead><tbody><tr><td>確認目前安裝的 binary 或 scriptable version</td><td><code>grafana-util version</code></td></tr><tr><td>確認 Grafana 連得到</td><td><code>grafana-util status live</code></td></tr><tr><td>用人的角度看 live 總覽</td><td><code>grafana-util status overview live</code></td></tr><tr><td>儲存連線預設值</td><td><code>grafana-util config profile</code></td></tr><tr><td>匯出備份</td><td><code>grafana-util export dashboard</code> / <code>export alert</code> / <code>export datasource</code></td></tr><tr><td>審查本地變更包</td><td><code>grafana-util workspace scan</code>，再跑 <code>workspace preview</code></td></tr><tr><td>深入檢查 dashboard</td><td><code>grafana-util dashboard summary</code> / <code>dashboard diff</code></td></tr><tr><td>通用查詢單一 live resource</td><td><code>grafana-util status resource describe</code>、<code>list</code> 或 <code>get</code></td></tr><tr><td>匯出或檢視 snapshot bundle</td><td><code>grafana-util status snapshot export</code> 或 <code>review</code></td></tr><tr><td>管理 user、team、org 或 service account</td><td><code>grafana-util access ...</code></td></tr></tbody></table>
-<h2 id="常用工作">常用工作</h2>
-<ul><li><a href="version.html">version</a></li><li><a href="workspace.html">workspace</a></li><li><a href="workspace-scan.html">workspace scan</a></li><li><a href="workspace-test.html">workspace test</a></li><li><a href="workspace-preview.html">workspace preview</a></li><li><a href="workspace-apply.html">workspace apply</a></li><li><a href="export.html">export</a></li><li><a href="status.html">status</a></li><li><a href="resource.html">resource queries</a></li><li><a href="snapshot.html">snapshot bundles</a></li><li><a href="dashboard-convert-raw-to-prompt.html">dashboard convert raw-to-prompt</a></li><li><code>export dashboard</code></li><li><code>export alert</code></li><li><code>export datasource</code></li><li><code>export access user|org|team|service-account</code></li><li><code>status live</code></li><li><code>status staged</code></li><li><code>status overview</code></li><li><code>status snapshot export|review</code></li><li><code>status resource describe|kinds|list|get</code></li><li><code>config profile</code></li></ul>
-<h2 id="domain-參考頁">Domain 參考頁</h2>
-<ul><li><a href="dashboard.html">dashboard</a></li><li><a href="dashboard-export.html">dashboard export</a></li><li><a href="dashboard-import.html">dashboard import</a></li><li><a href="datasource.html">datasource</a></li><li><a href="datasource-export.html">datasource export</a></li><li><a href="datasource-import.html">datasource import</a></li><li><a href="alert.html">alert</a></li><li><a href="alert-export.html">alert export</a></li><li><a href="alert-import.html">alert import</a></li><li><a href="access.html">access</a></li><li><a href="access-user.html">access user</a></li><li><a href="access-org.html">access org</a></li><li><a href="access-team.html">access team</a></li><li><a href="access-service-account.html">access service-account</a></li><li><a href="access-service-account-token.html">access service-account token</a></li></ul>
-<h2 id="輸出格式旗標慣例">輸出格式旗標慣例</h2>
-<p>許多 list、review、dry-run 指令同時支援長格式輸出選擇器與較短的快捷旗標。</p>
-<p>常見對應如下：</p>
-<ul><li><code>--output-format table</code> 通常等同 <code>--table</code></li><li><code>--output-format json</code> 通常等同 <code>--json</code></li><li><code>--output-format csv</code> 通常等同 <code>--csv</code></li><li><code>--output-format yaml</code> 通常等同 <code>--yaml</code></li><li><code>--output-format text</code> 通常等同 <code>--text</code></li></ul>
-<p>如果你要讓 script 或 template 更清楚，優先用長格式；如果你只是互動式操作，短旗標通常更快。</p>
-<p>注意例外：</p>
-<ul><li>有些指令只支援其中一部分快捷旗標</li><li><code>dashboard dependencies</code> 是特例：它支援 <code>text</code>、<code>json</code>、<code>mermaid</code>、<code>dot</code>，但沒有 <code>--table</code></li><li>像 <code>--output-file</code>、<code>--output</code> 這種輸出檔路徑旗標不是 render format selector</li></ul>
-<p>如果不確定，請以該指令自己的頁面為準。</p>
-<p>如果你偏好 <code>man</code> 形式，可以在本地用 <code>man ./docs/man/grafana-util.1</code>（macOS）或 <code>man -l docs/man/grafana-util.1</code>（GNU/Linux）查看 <a href="../../man/grafana-util.1">grafana-util(1)</a>。 版本庫中的 <code>docs/man/<em>.1</code> 是由這些英文 command source page 經 <code>python3 scripts/generate_manpages.py</code> 產生。 版本庫中的 <code>docs/html/commands/zh-TW/</em>.html</code> 則來自同一份 source，再經 <code>python3 scripts/generate_command_html.py</code> 產生。</p>
+<h2 id="各領域入口與延伸頁">各領域入口與延伸頁</h2>
+<table><thead><tr><th>領域</th><th>先進哪頁</th><th>這頁之後通常會再去哪裡</th></tr></thead><tbody><tr><td>Dashboard</td><td><a href="dashboard.html">dashboard</a></td><td><a href="dashboard-export.html">dashboard export</a>、<a href="dashboard-import.html">dashboard import</a>、<a href="dashboard-summary.html">dashboard summary</a>、<a href="dashboard-impact.html">dashboard impact</a></td></tr><tr><td>Datasource</td><td><a href="datasource.html">datasource</a></td><td><a href="datasource-export.html">datasource export</a>、<a href="datasource-import.html">datasource import</a>、<a href="datasource-diff.html">datasource diff</a></td></tr><tr><td>Alert</td><td><a href="alert.html">alert</a></td><td><a href="alert-export.html">alert export</a>、<a href="alert-import.html">alert import</a>、<a href="alert-plan.html">alert plan</a>、<a href="alert-apply.html">alert apply</a></td></tr><tr><td>Access</td><td><a href="access.html">access</a></td><td><a href="access-user.html">access user</a>、<a href="access-org.html">access org</a>、<a href="access-team.html">access team</a>、<a href="access-service-account.html">access service-account</a></td></tr></tbody></table>
 
 </article>
 <aside class="sidebar">
   <button class="sidebar-toggle sidebar-toggle-right" type="button" aria-expanded="true" aria-label="Toggle page sidebar">▶</button>
   <div class="sidebar-content">
-    <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#語言"><span class="toc-label">語言</span></a></li><li class="toc-level-2"><a href="#先從這裡開始"><span class="toc-label">先從這裡開始</span></a></li><li class="toc-level-2"><a href="#我該用哪個指令"><span class="toc-label">我該用哪個指令？</span></a></li><li class="toc-level-2"><a href="#常用工作"><span class="toc-label">常用工作</span></a></li><li class="toc-level-2"><a href="#domain-參考頁"><span class="toc-label">Domain 參考頁</span></a></li><li class="toc-level-2"><a href="#輸出格式旗標慣例"><span class="toc-label">輸出格式旗標慣例</span></a></li></ul></section><section class="sidebar-section"><h2>Related</h2><ul class="sidebar-meta-list"><li><a href="../../handbook/zh-TW/index.html" class="sidebar-meta-link">Matching handbook chapter</a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/index.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
+    <section class="sidebar-section"><h2>本頁內容</h2><ul class="toc-list"><li class="toc-level-2"><a href="#先從這裡開始"><span class="toc-label">先從這裡開始</span></a></li><li class="toc-level-2"><a href="#先選一條操作路徑"><span class="toc-label">先選一條操作路徑</span></a></li><li class="toc-level-2"><a href="#指令地圖"><span class="toc-label">指令地圖</span></a></li><li class="toc-level-2"><a href="#移除的-root-與替代寫法"><span class="toc-label">移除的 root 與替代寫法</span></a></li><li class="toc-level-2"><a href="#我該用哪個指令"><span class="toc-label">我該用哪個指令？</span></a></li><li class="toc-level-2"><a href="#各領域入口與延伸頁"><span class="toc-label">各領域入口與延伸頁</span></a></li></ul></section><section class="sidebar-section"><h2>相關頁面</h2><ul class="sidebar-meta-list"><li><a href="../../handbook/zh-TW/index.html" class="sidebar-meta-link">對應手冊章節</a></li></ul></section><section class="sidebar-section"><h2>版本</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>語言</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/index.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
   </div>
 </aside>
 

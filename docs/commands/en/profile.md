@@ -8,6 +8,8 @@ When to use: when you want to keep Grafana connection defaults in the current ch
 
 Description: open this page when you want to understand the full profile workflow before choosing one subcommand. The public entrypoint is `grafana-util config profile`; the old top-level `profile` root is no longer a runnable onboarding path. This namespace covers repo-local connection defaults, secret handling, and non-interactive command reuse across local work, SRE tasks, and CI jobs.
 
+If you want the namespace-level overview before picking one subcommand, go back to [config](./config.md).
+
 ## Before / After
 
 - **Before**: connection settings live in scattered flags or ad hoc shell history, so the same live command is hard to repeat later.

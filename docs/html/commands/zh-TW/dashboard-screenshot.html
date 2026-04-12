@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>dashboard screenshot · grafana-util docs</title>
+  <title>dashboard screenshot · Grafana Documentation</title>
   <style>:root {
   color-scheme: light dark;
   --font-scale: 1;
@@ -126,7 +126,13 @@ pre:hover .code-controls { opacity: 1; }
 .site.landing-shell .topbar { margin-bottom: 10px; }
 .site-content { flex-grow: 1; }
 .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 16px; border-bottom: 1px solid var(--border); padding-bottom: 14px; }
-.brand { font: 760 1.08rem var(--font-mono); text-transform: uppercase; letter-spacing: 0.045em; color: var(--heading) !important; text-decoration: none !important; }
+.brand {
+  font: 700 0.9rem var(--font-display);
+  text-transform: none;
+  letter-spacing: 0.01em;
+  color: var(--heading) !important;
+  text-decoration: none !important;
+}
 .themebar { display: flex; gap: 8px; align-items: center; }
 .themebar select {
   border: 1px solid var(--border);
@@ -372,30 +378,24 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map {
-  margin-bottom: 24px;
+.handbook-command-map { margin: 0 0 24px; }
+.handbook-command-map-panel {
+  margin-top: 16px;
   padding: 16px 18px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: color-mix(in srgb, var(--panel) 96%, white);
 }
-.handbook-command-map .nav-section + .nav-section { margin-top: 14px; }
-.handbook-command-map h2 {
-  margin: 0 0 10px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--border);
-  font-size: 0.82rem;
-  color: var(--muted);
-}
 .handbook-command-map .nav-group-title {
   font-size: 0.95rem;
 }
 .handbook-command-map .nav-command-group {
-  padding-top: 10px;
+  padding-top: 0;
 }
 .handbook-command-map .nav-command-group + .nav-command-group {
   margin-top: 12px;
   border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
+  padding-top: 10px;
 }
 .handbook-command-map .nav-command-sub-list {
   margin-top: 8px;
@@ -523,21 +523,36 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   line-height: 1.68;
 }
 .section-index-list {
-  list-style: none;
   margin: 0;
+}
+.section-index-list.layout-grid {
+  list-style: none;
   padding: 0;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 0.4rem 1rem;
 }
+.section-index-list.layout-list {
+  list-style: disc;
+  padding-left: 1.25rem;
+  display: block;
+}
 .section-index-list li {
   margin: 0;
+}
+.section-index-list.layout-list li {
+  margin: 0 0 0.45rem;
 }
 .section-index-list a {
   display: block;
   padding: 0.25rem 0;
   color: var(--text);
   font-weight: 560;
+}
+.section-index-list.layout-list a {
+  display: inline;
+  padding: 0;
+  font-weight: 540;
 }
 .section-index-list a:hover {
   color: var(--heading);
@@ -622,41 +637,49 @@ html[lang="zh-TW"] .sidebar { font-family: var(--font-zh); letter-spacing: 0; }
 }
 .landing-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(420px, 0.88fr);
-  gap: 48px;
+  grid-template-columns: minmax(0, 1.14fr) minmax(360px, 0.86fr);
+  gap: 34px;
   align-items: start;
-  padding: 18px 0 30px;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--panel) 98%, white), color-mix(in srgb, var(--panel) 96%, var(--accent-soft)));
+  padding: 8px 0 22px;
 }
 .landing-hero-inner {
-  max-width: none;
+  max-width: 60rem;
+}
+.landing-eyebrow {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font: 700 0.72rem var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 .landing-title {
   margin: 0 0 18px;
-  font-size: clamp(2.35rem, 4.3vw, 3.6rem);
-  line-height: 0.96;
-  letter-spacing: -0.05em;
+  font-size: clamp(1.72rem, 2.7vw, 2.3rem);
+  line-height: 1.06;
+  letter-spacing: -0.025em;
 }
 .landing-summary {
-  max-width: 72ch;
+  max-width: 56ch;
   margin: 0;
-  font-size: 1.02rem;
-  line-height: 1.72;
+  font-size: 0.96rem;
+  line-height: 1.68;
   color: var(--text);
 }
 .landing-search-panel {
-  padding-top: 12px;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-strong);
 }
 .landing-search-panel h2 {
   margin: 0 0 8px;
-  font-size: 1.15rem;
+  font-size: 1.02rem;
   letter-spacing: -0.02em;
 }
 .landing-search-panel p {
   margin: 0 0 16px;
-  font-size: 0.95rem;
-  line-height: 1.7;
+  font-size: 0.9rem;
+  line-height: 1.62;
   color: var(--muted);
 }
 .landing-search-form {
@@ -713,8 +736,8 @@ html[lang="zh-TW"] .sidebar { font-family: var(--font-zh); letter-spacing: 0; }
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 28px;
-  margin-top: 30px;
-  padding-top: 26px;
+  margin-top: 22px;
+  padding-top: 22px;
   border-top: 1px solid var(--border);
 }
 .landing-section h2 {
@@ -760,17 +783,12 @@ html[lang="zh-TW"] .sidebar { font-family: var(--font-zh); letter-spacing: 0; }
   color: var(--muted);
 }
 html[data-theme="dark"] .landing-hero {
-  background:
-    radial-gradient(circle at 14% 10%, rgba(255, 255, 255, 0.04), transparent 24%),
-    radial-gradient(circle at 82% 14%, rgba(170, 180, 191, 0.11), transparent 28%),
-    linear-gradient(180deg, #0b0f14 0%, #0d1218 58%, #10161d 100%);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 0;
 }
 html[data-theme="dark"] .landing-search-panel {
-  padding: 18px 20px 20px;
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: 8px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 html[data-theme="dark"] .landing-search-input::placeholder {
@@ -791,6 +809,15 @@ html[data-theme="dark"] .landing-task {
 }
 html[data-theme="dark"] .landing-meta {
   border-top-color: var(--border);
+}
+@media (max-width: 980px) {
+  .landing-hero {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  .landing-hero-inner {
+    max-width: none;
+  }
 }
 .landing-link-list {
   display: flex;
@@ -920,7 +947,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
   <div class="site">
     <div class="site-content">
       <div class="topbar">
-  <a class="brand" href="../../index.html">grafana-util docs</a>
+  <a class="brand" href="../../index.html">Grafana Documentation</a>
   <div class="themebar">
     <select id="page-locale-select" aria-label="Language switch"><option value="" selected>Language: 繁體中文</option><option value="../en/dashboard-screenshot.html">Switch to English</option></select><select id="jump-select" aria-label="Jump"><option value="" selected>快速跳轉...</option><optgroup label="手冊"><option value="../../handbook/zh-TW/index.html">概觀</option><option value="../../handbook/zh-TW/what-is-grafana-util.html">這個工具是做什麼的</option><option value="../../handbook/zh-TW/getting-started.html">開始使用</option><option value="../../handbook/zh-TW/role-new-user.html">第一次執行 / 新手路線</option><option value="../../handbook/zh-TW/role-sre-ops.html">SRE / 維運</option><option value="../../handbook/zh-TW/role-automation-ci.html">自動化 / CI</option><option value="../../handbook/zh-TW/architecture.html">設計原則</option><option value="../../handbook/zh-TW/dashboard.html">Dashboard</option><option value="../../handbook/zh-TW/datasource.html">Datasource</option><option value="../../handbook/zh-TW/alert.html">Alert</option><option value="../../handbook/zh-TW/access.html">Access</option><option value="../../handbook/zh-TW/status-workspace.html">Status / Workspace</option><option value="../../handbook/zh-TW/scenarios.html">情境手冊</option><option value="../../handbook/zh-TW/recipes.html">實戰錦囊</option><option value="../../handbook/zh-TW/reference.html">技術參考</option><option value="../../handbook/zh-TW/troubleshooting.html">疑難排解</option></optgroup><optgroup label="指令參考"><option value="version.html">Version</option><option value="dashboard.html">Dashboard</option><option value="alert.html">Alert</option><option value="datasource.html">Datasource</option><option value="access.html">Access</option><option value="config.html">Config</option><option value="profile.html">Config Profile</option><option value="status.html">Status</option><option value="resource.html">Status Resource</option><option value="snapshot.html">Snapshot</option><option value="workspace.html">Workspace</option></optgroup></select>
     <select id="font-select" aria-label="Font Size">
@@ -944,7 +971,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 </aside>
 
 <article class="article">
-<div class="breadcrumbs"><a href="../../index.html">Home</a> / 指令參考 / dashboard screenshot</div>
+<div class="breadcrumbs"><a href="../../index.html">Home</a> / <a href="index.html">指令參考</a> / dashboard screenshot</div>
 
 <h1><span class="hero-title-main">dashboard screenshot</span></h1>
 
@@ -986,7 +1013,7 @@ grafana-util dashboard screenshot --dashboard-url &#x27;https://grafana.example.
 <aside class="sidebar">
   <button class="sidebar-toggle sidebar-toggle-right" type="button" aria-expanded="true" aria-label="Toggle page sidebar">▶</button>
   <div class="sidebar-content">
-    <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#用途"><span class="toc-label">用途</span></a></li><li class="toc-level-2"><a href="#何時使用"><span class="toc-label">何時使用</span></a></li><li class="toc-level-2"><a href="#說明"><span class="toc-label">說明</span></a></li><li class="toc-level-2"><a href="#重點旗標"><span class="toc-label">重點旗標</span></a></li><li class="toc-level-2"><a href="#範例"><span class="toc-label">範例</span></a></li><li class="toc-level-2"><a href="#相關指令"><span class="toc-label">相關指令</span></a></li></ul></section><section class="sidebar-section"><h2>Related</h2><ul class="sidebar-meta-list"><li><a href="../../handbook/zh-TW/dashboard.html" class="sidebar-meta-link">Matching handbook chapter</a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/dashboard-screenshot.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
+    <section class="sidebar-section"><h2>本頁內容</h2><ul class="toc-list"><li class="toc-level-2"><a href="#用途"><span class="toc-label">用途</span></a></li><li class="toc-level-2"><a href="#何時使用"><span class="toc-label">何時使用</span></a></li><li class="toc-level-2"><a href="#說明"><span class="toc-label">說明</span></a></li><li class="toc-level-2"><a href="#重點旗標"><span class="toc-label">重點旗標</span></a></li><li class="toc-level-2"><a href="#範例"><span class="toc-label">範例</span></a></li><li class="toc-level-2"><a href="#相關指令"><span class="toc-label">相關指令</span></a></li></ul></section><section class="sidebar-section"><h2>相關頁面</h2><ul class="sidebar-meta-list"><li><a href="../../handbook/zh-TW/dashboard.html" class="sidebar-meta-link">對應手冊章節</a></li></ul></section><section class="sidebar-section"><h2>版本</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>語言</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/dashboard-screenshot.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
   </div>
 </aside>
 

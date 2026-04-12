@@ -1,27 +1,34 @@
-# `grafana-util alert`
+# alert
 
-## 這一頁對應的工作流
+## 先判斷你現在要做哪一種事
 
-| 工作流 | 常用子命令 |
-| --- | --- |
-| 盤點現況 | `list-rules`、`list-contact-points`、`list-mute-timings`、`list-templates`、`delete` |
-| 匯出 / 匯入 / 比對 | `export`、`import`、`diff` |
-| 變更規劃與套用 | `plan`、`apply` |
-| 規則 / 聯絡點 / 路由撰寫 | `init`、`new-rule`、`add-rule`、`clone-rule`、`new-contact-point`、`add-contact-point`、`new-template`、`set-route`、`preview-route` |
+| 你現在想做的事 | 先開哪個命令頁 | 這頁會幫你回答什麼 |
+| --- | --- | --- |
+| 想先看目前有哪些規則、聯絡點、靜音時段 | [alert list-rules](./alert-list-rules.md)、[alert list-contact-points](./alert-list-contact-points.md) | 先盤點現況與範圍 |
+| 想先把現況匯出、比對或搬移 | [alert export](./alert-export.md)、[alert diff](./alert-diff.md)、[alert import](./alert-import.md) | 先決定搬移或 review 路徑 |
+| 想先規劃變更，再決定要不要套用 | [alert plan](./alert-plan.md)、[alert apply](./alert-apply.md) | 先看 planned change，而不是直接改 live |
+| 想建立規則、contact point 或通知模板草稿 | [alert new-rule](./alert-new-rule.md)、[alert new-contact-point](./alert-new-contact-point.md)、[alert new-template](./alert-new-template.md) | 先做 authoring，不要直接猜 API payload |
+| 想調通知路由 | [alert set-route](./alert-set-route.md)、[alert preview-route](./alert-preview-route.md) | 先看 routing 結果，再決定是否落地 |
 
-## 從這裡開始
+## 先選哪一條資料路徑
 
-- 先盤點：`alert list-rules`、`alert list-contact-points`
-- 先看現況再改：`alert export`、`alert diff`
-- 先規劃再套用：`alert plan`、`alert apply`
-- 先建草稿：`alert init`、`alert new-rule`、`alert new-contact-point`、`alert new-template`
-- 先調路由：`alert set-route`、`alert preview-route`
+- **live Grafana**：先用 `list-*` 盤點，必要時再 `export`
+- **desired-state / 本地草稿樹**：先用 `plan` 看變更，再決定 `apply`
+- **單一規則或 contact point 草稿**：先用 `new-*`、`add-*` 或 `clone-rule`
+- **通知路由**：先走 `preview-route`，確認結果後再 `set-route`
 
-## 說明
+## 這個入口是做什麼的
 
 `grafana-util alert` 把告警工作流收在同一個較淺的入口，並依任務把 help 分成盤點、搬移、撰寫與審查幾個區塊：從盤點、匯出、比對，到路由設計、草稿撰寫，再到 plan / apply。這頁適合先搞懂規則、通知路由與 contact point 的關係，再決定要往哪個子命令深入。
 
 目前公開命令不使用舊的 `alert live ...`、`alert migrate ...`、`alert author ...` 分層；請直接使用 `grafana-util alert list-rules`、`grafana-util alert export`、`grafana-util alert init`、`grafana-util alert preview-route` 這類 current path。
+
+## 這一組頁面怎麼讀比較不會亂
+
+1. 先看這頁，判斷你是在做 inventory、authoring、routing，還是 apply。
+2. 進到子命令頁後，先看「何時使用」與「最短成功路徑」。
+3. 再確認輸入來源是 live、本地 desired-state，還是單一草稿檔。
+4. 最後才看完整 flags 與輸出格式。
 
 ## 採用前後對照
 
@@ -68,35 +75,11 @@ grafana-util alert export --url http://localhost:3000 --basic-user admin --basic
 grafana-util alert plan --desired-dir ./alerts/desired --output-format json
 ```
 
-## 相關命令
+## 各工作流入口
 
-### 盤點
-
-- [alert list-rules](./alert-list-rules.md)
-- [alert list-contact-points](./alert-list-contact-points.md)
-- [alert list-mute-timings](./alert-list-mute-timings.md)
-- [alert list-templates](./alert-list-templates.md)
-
-### 搬移
-
-- [alert export](./alert-export.md)
-- [alert import](./alert-import.md)
-- [alert diff](./alert-diff.md)
-
-### 變更前檢查
-
-- [alert plan](./alert-plan.md)
-- [alert apply](./alert-apply.md)
-- [alert delete](./alert-delete.md)
-
-### 規則與路由撰寫
-
-- [alert add-rule](./alert-add-rule.md)
-- [alert clone-rule](./alert-clone-rule.md)
-- [alert add-contact-point](./alert-add-contact-point.md)
-- [alert set-route](./alert-set-route.md)
-- [alert preview-route](./alert-preview-route.md)
-- [alert new-rule](./alert-new-rule.md)
-- [alert new-contact-point](./alert-new-contact-point.md)
-- [alert new-template](./alert-new-template.md)
-- [access](./access.md)
+| 工作流 | 入口頁 | 常見延伸頁 |
+| --- | --- | --- |
+| 盤點 | [alert list-rules](./alert-list-rules.md) | [alert list-contact-points](./alert-list-contact-points.md)、[alert list-mute-timings](./alert-list-mute-timings.md)、[alert list-templates](./alert-list-templates.md) |
+| 搬移 | [alert export](./alert-export.md) | [alert import](./alert-import.md)、[alert diff](./alert-diff.md) |
+| 變更前檢查 | [alert plan](./alert-plan.md) | [alert apply](./alert-apply.md) |
+| 規則與路由撰寫 | [alert new-rule](./alert-new-rule.md) | [alert add-rule](./alert-add-rule.md)、[alert clone-rule](./alert-clone-rule.md)、[alert preview-route](./alert-preview-route.md)、[alert set-route](./alert-set-route.md) |

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>grafana-util config · grafana-util docs</title>
+  <title>config · Grafana Documentation</title>
   <style>:root {
   color-scheme: light dark;
   --font-scale: 1;
@@ -126,7 +126,13 @@ pre:hover .code-controls { opacity: 1; }
 .site.landing-shell .topbar { margin-bottom: 10px; }
 .site-content { flex-grow: 1; }
 .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 16px; border-bottom: 1px solid var(--border); padding-bottom: 14px; }
-.brand { font: 760 1.08rem var(--font-mono); text-transform: uppercase; letter-spacing: 0.045em; color: var(--heading) !important; text-decoration: none !important; }
+.brand {
+  font: 700 0.9rem var(--font-display);
+  text-transform: none;
+  letter-spacing: 0.01em;
+  color: var(--heading) !important;
+  text-decoration: none !important;
+}
 .themebar { display: flex; gap: 8px; align-items: center; }
 .themebar select {
   border: 1px solid var(--border);
@@ -372,30 +378,24 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map {
-  margin-bottom: 24px;
+.handbook-command-map { margin: 0 0 24px; }
+.handbook-command-map-panel {
+  margin-top: 16px;
   padding: 16px 18px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: color-mix(in srgb, var(--panel) 96%, white);
 }
-.handbook-command-map .nav-section + .nav-section { margin-top: 14px; }
-.handbook-command-map h2 {
-  margin: 0 0 10px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--border);
-  font-size: 0.82rem;
-  color: var(--muted);
-}
 .handbook-command-map .nav-group-title {
   font-size: 0.95rem;
 }
 .handbook-command-map .nav-command-group {
-  padding-top: 10px;
+  padding-top: 0;
 }
 .handbook-command-map .nav-command-group + .nav-command-group {
   margin-top: 12px;
   border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
+  padding-top: 10px;
 }
 .handbook-command-map .nav-command-sub-list {
   margin-top: 8px;
@@ -523,21 +523,36 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   line-height: 1.68;
 }
 .section-index-list {
-  list-style: none;
   margin: 0;
+}
+.section-index-list.layout-grid {
+  list-style: none;
   padding: 0;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 0.4rem 1rem;
 }
+.section-index-list.layout-list {
+  list-style: disc;
+  padding-left: 1.25rem;
+  display: block;
+}
 .section-index-list li {
   margin: 0;
+}
+.section-index-list.layout-list li {
+  margin: 0 0 0.45rem;
 }
 .section-index-list a {
   display: block;
   padding: 0.25rem 0;
   color: var(--text);
   font-weight: 560;
+}
+.section-index-list.layout-list a {
+  display: inline;
+  padding: 0;
+  font-weight: 540;
 }
 .section-index-list a:hover {
   color: var(--heading);
@@ -622,41 +637,49 @@ html[lang="zh-TW"] .sidebar { font-family: var(--font-zh); letter-spacing: 0; }
 }
 .landing-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(420px, 0.88fr);
-  gap: 48px;
+  grid-template-columns: minmax(0, 1.14fr) minmax(360px, 0.86fr);
+  gap: 34px;
   align-items: start;
-  padding: 18px 0 30px;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--panel) 98%, white), color-mix(in srgb, var(--panel) 96%, var(--accent-soft)));
+  padding: 8px 0 22px;
 }
 .landing-hero-inner {
-  max-width: none;
+  max-width: 60rem;
+}
+.landing-eyebrow {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font: 700 0.72rem var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 .landing-title {
   margin: 0 0 18px;
-  font-size: clamp(2.35rem, 4.3vw, 3.6rem);
-  line-height: 0.96;
-  letter-spacing: -0.05em;
+  font-size: clamp(1.72rem, 2.7vw, 2.3rem);
+  line-height: 1.06;
+  letter-spacing: -0.025em;
 }
 .landing-summary {
-  max-width: 72ch;
+  max-width: 56ch;
   margin: 0;
-  font-size: 1.02rem;
-  line-height: 1.72;
+  font-size: 0.96rem;
+  line-height: 1.68;
   color: var(--text);
 }
 .landing-search-panel {
-  padding-top: 12px;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-strong);
 }
 .landing-search-panel h2 {
   margin: 0 0 8px;
-  font-size: 1.15rem;
+  font-size: 1.02rem;
   letter-spacing: -0.02em;
 }
 .landing-search-panel p {
   margin: 0 0 16px;
-  font-size: 0.95rem;
-  line-height: 1.7;
+  font-size: 0.9rem;
+  line-height: 1.62;
   color: var(--muted);
 }
 .landing-search-form {
@@ -713,8 +736,8 @@ html[lang="zh-TW"] .sidebar { font-family: var(--font-zh); letter-spacing: 0; }
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 28px;
-  margin-top: 30px;
-  padding-top: 26px;
+  margin-top: 22px;
+  padding-top: 22px;
   border-top: 1px solid var(--border);
 }
 .landing-section h2 {
@@ -760,17 +783,12 @@ html[lang="zh-TW"] .sidebar { font-family: var(--font-zh); letter-spacing: 0; }
   color: var(--muted);
 }
 html[data-theme="dark"] .landing-hero {
-  background:
-    radial-gradient(circle at 14% 10%, rgba(255, 255, 255, 0.04), transparent 24%),
-    radial-gradient(circle at 82% 14%, rgba(170, 180, 191, 0.11), transparent 28%),
-    linear-gradient(180deg, #0b0f14 0%, #0d1218 58%, #10161d 100%);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 0;
 }
 html[data-theme="dark"] .landing-search-panel {
-  padding: 18px 20px 20px;
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: 8px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 html[data-theme="dark"] .landing-search-input::placeholder {
@@ -791,6 +809,15 @@ html[data-theme="dark"] .landing-task {
 }
 html[data-theme="dark"] .landing-meta {
   border-top-color: var(--border);
+}
+@media (max-width: 980px) {
+  .landing-hero {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  .landing-hero-inner {
+    max-width: none;
+  }
 }
 .landing-link-list {
   display: flex;
@@ -920,7 +947,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
   <div class="site">
     <div class="site-content">
       <div class="topbar">
-  <a class="brand" href="../../index.html">grafana-util docs</a>
+  <a class="brand" href="../../index.html">Grafana Documentation</a>
   <div class="themebar">
     <select id="page-locale-select" aria-label="Language switch"><option value="" selected>Language: 繁體中文</option><option value="../en/config.html">Switch to English</option></select><select id="jump-select" aria-label="Jump"><option value="" selected>快速跳轉...</option><optgroup label="手冊"><option value="../../handbook/zh-TW/index.html">概觀</option><option value="../../handbook/zh-TW/what-is-grafana-util.html">這個工具是做什麼的</option><option value="../../handbook/zh-TW/getting-started.html">開始使用</option><option value="../../handbook/zh-TW/role-new-user.html">第一次執行 / 新手路線</option><option value="../../handbook/zh-TW/role-sre-ops.html">SRE / 維運</option><option value="../../handbook/zh-TW/role-automation-ci.html">自動化 / CI</option><option value="../../handbook/zh-TW/architecture.html">設計原則</option><option value="../../handbook/zh-TW/dashboard.html">Dashboard</option><option value="../../handbook/zh-TW/datasource.html">Datasource</option><option value="../../handbook/zh-TW/alert.html">Alert</option><option value="../../handbook/zh-TW/access.html">Access</option><option value="../../handbook/zh-TW/status-workspace.html">Status / Workspace</option><option value="../../handbook/zh-TW/scenarios.html">情境手冊</option><option value="../../handbook/zh-TW/recipes.html">實戰錦囊</option><option value="../../handbook/zh-TW/reference.html">技術參考</option><option value="../../handbook/zh-TW/troubleshooting.html">疑難排解</option></optgroup><optgroup label="指令參考"><option value="version.html">Version</option><option value="dashboard.html">Dashboard</option><option value="alert.html">Alert</option><option value="datasource.html">Datasource</option><option value="access.html">Access</option><option value="config.html">Config</option><option value="profile.html">Config Profile</option><option value="status.html">Status</option><option value="resource.html">Status Resource</option><option value="snapshot.html">Snapshot</option><option value="workspace.html">Workspace</option></optgroup></select>
     <select id="font-select" aria-label="Font Size">
@@ -944,14 +971,14 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 </aside>
 
 <article class="article">
-<div class="breadcrumbs"><a href="../../index.html">Home</a> / 指令參考 / grafana-util config</div>
+<div class="breadcrumbs"><a href="../../index.html">Home</a> / <a href="index.html">指令參考</a> / config</div>
 
-<h1><span class="hero-title-main">grafana-util config</span></h1>
+<h1><span class="hero-title-main">config</span></h1>
 
 <section class="command-intro">
   <div class="command-intro-grid"><div class="command-intro-block">
   <p class="command-intro-label">這頁在說什麼</p>
-  <p class="command-intro-text">打開 repo-local 設定工作流，讓 Grafana 連線方式可以重複使用。</p>
+  <p class="command-intro-text">說明 grafana-util config 這個 namespace 是做什麼的、什麼時候停在 root 看整體設定模型，以及什麼時候該進 config profile。</p>
 </div>
 <div class="command-intro-block">
   <p class="command-intro-label">適合誰</p>
@@ -960,23 +987,52 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 </div>
 </section>
 <h2 id="root">Root</h2>
-<p>用途：打開 repo-local 設定工作流，讓 Grafana 連線方式可以重複使用。</p>
-<p>適用時機：當你不想在每個 live 指令上重複輸入連線旗標，而是想把預設值整理成 repo-local 設定。</p>
-<p>說明：目前公開的 <code>config</code> surface 很小，主要就是承載 <code>config profile</code>。這條路徑負責 repo-local 連線預設、secret 處理，以及本機與 CI 可重複執行的認證設定。</p>
-<p>主要入口：</p>
-<ul><li><a href="profile.html"><code>config profile</code></a>：新增、驗證、檢視、初始化 repo-local profiles</li></ul>
-<p>Examples:</p>
-<pre><code># 用途：在目前 checkout 中初始化一份 starter config。
+<p>用途：說明 <code>grafana-util config</code> 這個 namespace 是做什麼的、什麼時候停在 root 看整體設定模型，以及什麼時候該進 <code>config profile</code>。</p>
+<p>適用時機：</p>
+<ul><li>當你要先理解設定模型，再決定要進哪個 profile 子命令</li><li>當你正在判斷 direct flags 與 repo-local <code>--profile</code> 的分工</li><li>當你想先理解 URL、auth 預設值與 secret 應該放在哪裡</li></ul>
+<p>主要旗標：</p>
+<ul><li>root 頁是 namespace 入口說明；實際操作旗標都在 <code>config profile</code></li></ul>
+<p>範例：</p>
+<pre><code># 先看 config namespace 的整體入口。
+grafana-util config --help</code></pre>
+<pre><code># 在目前 checkout 初始化一份 starter config。
 grafana-util config profile init --overwrite</code></pre>
-<pre><code># 用途：建立一個可重複使用的 production profile，secret 以 prompt 方式輸入。
+<h2 id="先判斷你現在要做哪一種事">先判斷你現在要做哪一種事</h2>
+<table><thead><tr><th>你現在想做的事</th><th>先開哪個命令頁</th><th>這頁會幫你回答什麼</th></tr></thead><tbody><tr><td>想建立 repo-local 連線設定，之後少打一堆參數</td><td><a href="profile.html">config profile</a></td><td>怎麼建立、驗證與重複使用 profile</td></tr><tr><td>想確認目前 checkout 內的 profile 長怎樣</td><td><a href="profile.html#show">config profile</a></td><td>先看解析結果，不要直接猜設定值</td></tr><tr><td>想確認目前會選到哪個 profile</td><td><a href="profile.html#current">config profile</a></td><td>先知道 default / current 選擇規則</td></tr><tr><td>想驗證 profile 與 live Grafana 是否可連通</td><td><a href="profile.html#validate">config profile</a></td><td>先驗證 auth 形狀與 health check</td></tr><tr><td>想初始化一份新的 <code>grafana-util.yaml</code></td><td><a href="profile.html#init">config profile</a></td><td>先有一份最小可用設定檔，再慢慢補</td></tr></tbody></table>
+<h2 id="這個入口是做什麼的">這個入口是做什麼的</h2>
+<p><code>grafana-util config</code> 是 repo-local 設定入口。公開 surface 目前不大，但語意很重要：它不是某一個 leaf command，而是整個「連線預設、secret source、profile 重複使用」的 namespace。</p>
+<p>如果你的問題是：</p>
+<ul><li>這個 repo 應該怎麼保存 Grafana URL 與 auth 預設值</li><li>什麼時候應該直接帶旗標，什麼時候應該改用 <code>--profile</code></li><li>secret 應該放 env、OS store，還是 <code>encrypted-file</code></li></ul>
+<p>就先看這頁，再進 <code>config profile</code> 的子命令頁。</p>
+<h2 id="先選哪一條設定路徑">先選哪一條設定路徑</h2>
+<ul><li><strong>第一次連線驗證</strong>：先用 direct flags 跑 <code>status live</code>，證明真的連得上</li><li><strong>日常維運 / repo-local workflow</strong>：進 <code>config profile add</code> 建立具名 profile</li><li><strong>CI / automation</strong>：優先用 <code>token_env</code>、<code>password_env</code> 或 secret store</li><li><strong>break-glass / bootstrap</strong>：先用 direct Basic auth，再決定要不要整理成 profile</li></ul>
+<h2 id="config-與-config-profile-的關係"><code>config</code> 與 <code>config profile</code> 的關係</h2>
+<ul><li><code>config</code>：namespace / 入口頁，回答「這個 repo 該怎麼存放與重用連線設定」</li><li><code>config profile</code>：真正執行 list / show / current / validate / add / example / init 的命令群組</li></ul>
+<p>也就是說：</p>
+<ul><li>如果你在找「我該從哪裡開始整理設定」，先看 <code>config</code></li><li>如果你已經知道自己要 list / show / add / validate，直接進 <a href="profile.html">config profile</a></li></ul>
+<h2 id="採用前後對照">採用前後對照</h2>
+<ul><li><strong>採用前</strong>：live 指令常反覆帶 <code>--url</code>、Basic auth 或 token，shell 歷史與 onboarding 筆記都容易越來越亂</li><li><strong>採用後</strong>：把重複的連線預設收進 repo-local profile，讓日常維運、CI 與交接都維持在同一套設定邏輯下</li></ul>
+<h2 id="成功判準">成功判準</h2>
+<ul><li>同一個 checkout 有清楚的 repo-local 連線預設</li><li>常用 live 指令能改成 <code>--profile</code>，不必每次重打 auth</li><li>secret storage mode 符合目前機器與工作模式</li><li>團隊能分清楚 <code>config</code> 是入口，<code>config profile</code> 才是實際操作群組</li></ul>
+<h2 id="失敗時先檢查">失敗時先檢查</h2>
+<ul><li>如果 saved profile 行為和 direct flags 不一致，先看 <a href="profile.html#show">config profile show</a></li><li>如果 validation 失敗，先確認 secret mode 是否適用於目前機器</li><li>如果 repo 還是得反覆帶一長串 auth flags，先檢查 intended profile 是否真的建立並選中</li><li>如果你連 <code>config</code> 和 <code>config profile</code> 的層級都還沒分清楚，先停下來看這頁，不要直接跳 leaf</li></ul>
+<h2 id="各工作流入口">各工作流入口</h2>
+<table><thead><tr><th>工作流</th><th>入口頁</th><th>常見延伸頁</th></tr></thead><tbody><tr><td>盤點與檢視</td><td><a href="profile.html#list">config profile</a></td><td><a href="profile.html#show">show</a>、<a href="profile.html#current">current</a></td></tr><tr><td>驗證</td><td><a href="profile.html#validate">config profile</a></td><td><a href="profile.html#show">show</a>、<a href="profile.html#current">current</a></td></tr><tr><td>建立與初始化</td><td><a href="profile.html#add">config profile</a></td><td><a href="profile.html#example">example</a>、<a href="profile.html#init">init</a></td></tr></tbody></table>
+<h2 id="範例">範例</h2>
+<pre><code># 先看 config namespace 的整體入口。
+grafana-util config --help</code></pre>
+<pre><code># 在目前 checkout 初始化一份 starter config。
+grafana-util config profile init --overwrite</code></pre>
+<pre><code># 建立可重複使用的 production profile。
 grafana-util config profile add prod --url https://grafana.example.com --basic-user admin --prompt-password --store-secret encrypted-file</code></pre>
-<p>相關指令：<code>grafana-util status live</code>、<code>grafana-util status overview</code>、<code>grafana-util workspace preview</code>。</p>
+<h2 id="相關指令">相關指令</h2>
+<ul><li><a href="profile.html">config profile</a></li><li><a href="status.html">status</a></li><li><a href="workspace.html">workspace</a></li><li><a href="version.html">version</a></li></ul>
 
 </article>
 <aside class="sidebar">
   <button class="sidebar-toggle sidebar-toggle-right" type="button" aria-expanded="true" aria-label="Toggle page sidebar">▶</button>
   <div class="sidebar-content">
-    <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#root"><span class="toc-label">Root</span></a></li></ul></section><section class="sidebar-section"><h2>Related</h2><ul class="sidebar-meta-list"><li><a href="../../handbook/zh-TW/getting-started.html" class="sidebar-meta-link">Matching handbook chapter</a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/config.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
+    <section class="sidebar-section"><h2>本頁內容</h2><ul class="toc-list"><li class="toc-level-2"><a href="#root"><span class="toc-label">Root</span></a></li><li class="toc-level-2"><a href="#先判斷你現在要做哪一種事"><span class="toc-label">先判斷你現在要做哪一種事</span></a></li><li class="toc-level-2"><a href="#這個入口是做什麼的"><span class="toc-label">這個入口是做什麼的</span></a></li><li class="toc-level-2"><a href="#先選哪一條設定路徑"><span class="toc-label">先選哪一條設定路徑</span></a></li><li class="toc-level-2"><a href="#config-與-config-profile-的關係"><span class="toc-label">config` 與 `config profile` 的關係</span></a></li><li class="toc-level-2"><a href="#採用前後對照"><span class="toc-label">採用前後對照</span></a></li><li class="toc-level-2"><a href="#成功判準"><span class="toc-label">成功判準</span></a></li><li class="toc-level-2"><a href="#失敗時先檢查"><span class="toc-label">失敗時先檢查</span></a></li><li class="toc-level-2"><a href="#各工作流入口"><span class="toc-label">各工作流入口</span></a></li><li class="toc-level-2"><a href="#範例"><span class="toc-label">範例</span></a></li><li class="toc-level-2"><a href="#相關指令"><span class="toc-label">相關指令</span></a></li></ul></section><section class="sidebar-section"><h2>相關頁面</h2><ul class="sidebar-meta-list"><li><a href="profile.html" class="sidebar-meta-link">子命令群組: config profile</a></li><li><a href="../../handbook/zh-TW/getting-started.html" class="sidebar-meta-link">對應手冊章節</a></li></ul></section><section class="sidebar-section"><h2>版本</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>語言</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/config.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
   </div>
 </aside>
 

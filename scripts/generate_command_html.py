@@ -25,6 +25,7 @@ from docsite_html_common import (
     title_only,
     prefixed_output_rel,
 )
+from docsite_command_surface import command_audience_hint, command_handbook_stem
 from docsite_html_nav import (
     command_reference_label,
     handbook_surface_label,

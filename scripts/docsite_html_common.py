@@ -148,13 +148,15 @@ def render_section_index(
     title: str,
     summary: str = "",
     levels: tuple[int, ...] = (2,),
+    min_entries: int = 1,
+    variant: str = "grid",
 ) -> str:
     entries = [
         (strip_decorative_prefix(heading.text), f"#{heading.anchor}")
         for heading in headings
         if heading.level in levels
     ]
-    if not entries:
+    if not entries or len(entries) < min_entries:
         return ""
     intro_html = f'<p class="section-index-summary">{html.escape(summary)}</p>' if summary else ""
     items_html = "".join(
@@ -165,7 +167,7 @@ def render_section_index(
         '<section class="section-index">'
         f'<h2>{html.escape(title)}</h2>'
         f"{intro_html}"
-        f'<ul class="section-index-list">{items_html}</ul>'
+        f'<ul class="section-index-list layout-{html.escape(variant)}">{items_html}</ul>'
         "</section>"
     )
 

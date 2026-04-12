@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "defaults": {
+    "show_command_map": true,
+    "show_section_index": true,
+    "section_index_levels": [
+      2
+    ],
+    "section_index_variant": "list",
+    "section_index_min_entries": 4
+  },
+  "page_overrides": {
+    "index": {
+      "show_section_index": false
+    }
+  },
+  "locale_strings": {
+    "en": {
+      "previous_chapter": "Previous Chapter",
+      "next_chapter": "Next Chapter",
+      "section_index_title": "Chapter Index",
+      "section_index_summary": "Jump straight to the section you need."
+    },
+    "zh-TW": {
+      "previous_chapter": "上一章",
+      "next_chapter": "下一章",
+      "section_index_title": "章節索引",
+      "section_index_summary": "先從這裡跳到你要看的段落。"
+    }
+  }
+}

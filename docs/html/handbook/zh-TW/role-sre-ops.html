@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>SRE / 維運角色導讀 · grafana-util docs</title>
+  <title>SRE / 維運角色導讀 · Grafana Documentation</title>
   <style>:root {
   color-scheme: light dark;
   --font-scale: 1;
@@ -126,7 +126,13 @@ pre:hover .code-controls { opacity: 1; }
 .site.landing-shell .topbar { margin-bottom: 10px; }
 .site-content { flex-grow: 1; }
 .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 16px; border-bottom: 1px solid var(--border); padding-bottom: 14px; }
-.brand { font: 760 1.08rem var(--font-mono); text-transform: uppercase; letter-spacing: 0.045em; color: var(--heading) !important; text-decoration: none !important; }
+.brand {
+  font: 700 0.9rem var(--font-display);
+  text-transform: none;
+  letter-spacing: 0.01em;
+  color: var(--heading) !important;
+  text-decoration: none !important;
+}
 .themebar { display: flex; gap: 8px; align-items: center; }
 .themebar select {
   border: 1px solid var(--border);
@@ -372,30 +378,24 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map {
-  margin-bottom: 24px;
+.handbook-command-map { margin: 0 0 24px; }
+.handbook-command-map-panel {
+  margin-top: 16px;
   padding: 16px 18px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: color-mix(in srgb, var(--panel) 96%, white);
 }
-.handbook-command-map .nav-section + .nav-section { margin-top: 14px; }
-.handbook-command-map h2 {
-  margin: 0 0 10px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--border);
-  font-size: 0.82rem;
-  color: var(--muted);
-}
 .handbook-command-map .nav-group-title {
   font-size: 0.95rem;
 }
 .handbook-command-map .nav-command-group {
-  padding-top: 10px;
+  padding-top: 0;
 }
 .handbook-command-map .nav-command-group + .nav-command-group {
   margin-top: 12px;
   border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
+  padding-top: 10px;
 }
 .handbook-command-map .nav-command-sub-list {
   margin-top: 8px;
@@ -523,21 +523,36 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   line-height: 1.68;
 }
 .section-index-list {
-  list-style: none;
   margin: 0;
+}
+.section-index-list.layout-grid {
+  list-style: none;
   padding: 0;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 0.4rem 1rem;
 }
+.section-index-list.layout-list {
+  list-style: disc;
+  padding-left: 1.25rem;
+  display: block;
+}
 .section-index-list li {
   margin: 0;
+}
+.section-index-list.layout-list li {
+  margin: 0 0 0.45rem;
 }
 .section-index-list a {
   display: block;
   padding: 0.25rem 0;
   color: var(--text);
   font-weight: 560;
+}
+.section-index-list.layout-list a {
+  display: inline;
+  padding: 0;
+  font-weight: 540;
 }
 .section-index-list a:hover {
   color: var(--heading);
@@ -622,41 +637,49 @@ html[lang="zh-TW"] .sidebar { font-family: var(--font-zh); letter-spacing: 0; }
 }
 .landing-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(420px, 0.88fr);
-  gap: 48px;
+  grid-template-columns: minmax(0, 1.14fr) minmax(360px, 0.86fr);
+  gap: 34px;
   align-items: start;
-  padding: 18px 0 30px;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--panel) 98%, white), color-mix(in srgb, var(--panel) 96%, var(--accent-soft)));
+  padding: 8px 0 22px;
 }
 .landing-hero-inner {
-  max-width: none;
+  max-width: 60rem;
+}
+.landing-eyebrow {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font: 700 0.72rem var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 .landing-title {
   margin: 0 0 18px;
-  font-size: clamp(2.35rem, 4.3vw, 3.6rem);
-  line-height: 0.96;
-  letter-spacing: -0.05em;
+  font-size: clamp(1.72rem, 2.7vw, 2.3rem);
+  line-height: 1.06;
+  letter-spacing: -0.025em;
 }
 .landing-summary {
-  max-width: 72ch;
+  max-width: 56ch;
   margin: 0;
-  font-size: 1.02rem;
-  line-height: 1.72;
+  font-size: 0.96rem;
+  line-height: 1.68;
   color: var(--text);
 }
 .landing-search-panel {
-  padding-top: 12px;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-strong);
 }
 .landing-search-panel h2 {
   margin: 0 0 8px;
-  font-size: 1.15rem;
+  font-size: 1.02rem;
   letter-spacing: -0.02em;
 }
 .landing-search-panel p {
   margin: 0 0 16px;
-  font-size: 0.95rem;
-  line-height: 1.7;
+  font-size: 0.9rem;
+  line-height: 1.62;
   color: var(--muted);
 }
 .landing-search-form {
@@ -713,8 +736,8 @@ html[lang="zh-TW"] .sidebar { font-family: var(--font-zh); letter-spacing: 0; }
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 28px;
-  margin-top: 30px;
-  padding-top: 26px;
+  margin-top: 22px;
+  padding-top: 22px;
   border-top: 1px solid var(--border);
 }
 .landing-section h2 {
@@ -760,17 +783,12 @@ html[lang="zh-TW"] .sidebar { font-family: var(--font-zh); letter-spacing: 0; }
   color: var(--muted);
 }
 html[data-theme="dark"] .landing-hero {
-  background:
-    radial-gradient(circle at 14% 10%, rgba(255, 255, 255, 0.04), transparent 24%),
-    radial-gradient(circle at 82% 14%, rgba(170, 180, 191, 0.11), transparent 28%),
-    linear-gradient(180deg, #0b0f14 0%, #0d1218 58%, #10161d 100%);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 0;
 }
 html[data-theme="dark"] .landing-search-panel {
-  padding: 18px 20px 20px;
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: 8px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 html[data-theme="dark"] .landing-search-input::placeholder {
@@ -791,6 +809,15 @@ html[data-theme="dark"] .landing-task {
 }
 html[data-theme="dark"] .landing-meta {
   border-top-color: var(--border);
+}
+@media (max-width: 980px) {
+  .landing-hero {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  .landing-hero-inner {
+    max-width: none;
+  }
 }
 .landing-link-list {
   display: flex;
@@ -920,7 +947,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
   <div class="site">
     <div class="site-content">
       <div class="topbar">
-  <a class="brand" href="../../index.html">grafana-util docs</a>
+  <a class="brand" href="../../index.html">Grafana Documentation</a>
   <div class="themebar">
     <select id="page-locale-select" aria-label="Language switch"><option value="" selected>Language: 繁體中文</option><option value="../en/role-sre-ops.html">Switch to English</option></select><select id="jump-select" aria-label="Jump"><option value="" selected>快速跳轉...</option><optgroup label="手冊"><option value="index.html">概觀</option><option value="what-is-grafana-util.html">這個工具是做什麼的</option><option value="getting-started.html">開始使用</option><option value="role-new-user.html">第一次執行 / 新手路線</option><option value="role-sre-ops.html">SRE / 維運</option><option value="role-automation-ci.html">自動化 / CI</option><option value="architecture.html">設計原則</option><option value="dashboard.html">Dashboard</option><option value="datasource.html">Datasource</option><option value="alert.html">Alert</option><option value="access.html">Access</option><option value="status-workspace.html">Status / Workspace</option><option value="scenarios.html">情境手冊</option><option value="recipes.html">實戰錦囊</option><option value="reference.html">技術參考</option><option value="troubleshooting.html">疑難排解</option></optgroup><optgroup label="指令參考"><option value="../../commands/zh-TW/version.html">Version</option><option value="../../commands/zh-TW/dashboard.html">Dashboard</option><option value="../../commands/zh-TW/alert.html">Alert</option><option value="../../commands/zh-TW/datasource.html">Datasource</option><option value="../../commands/zh-TW/access.html">Access</option><option value="../../commands/zh-TW/config.html">Config</option><option value="../../commands/zh-TW/profile.html">Config Profile</option><option value="../../commands/zh-TW/status.html">Status</option><option value="../../commands/zh-TW/resource.html">Status Resource</option><option value="../../commands/zh-TW/snapshot.html">Snapshot</option><option value="../../commands/zh-TW/workspace.html">Workspace</option></optgroup></select>
     <select id="font-select" aria-label="Font Size">
@@ -948,55 +975,120 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 
 <div class="hero-eyebrow">第 2 部 · 角色路徑 · 第 5 章 / 共 16 章</div><h1><span class="hero-title-main">SRE / 維運</span></h1><p class="hero-subtitle">SRE / 維運角色導讀</p>
 
-<section class="handbook-command-map"><section class="nav-section"><h2>指令關係</h2><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">維運路線</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><ul class="nav-command-tree"><li class="nav-command-link"><a href="../../commands/zh-TW/status.html" class="nav-command-leaf-link">status</a></li><li class="nav-command-link"><a href="../../commands/zh-TW/workspace.html" class="nav-command-leaf-link">workspace</a></li><li class="nav-command-link"><a href="../../commands/zh-TW/dashboard.html" class="nav-command-leaf-link">dashboard</a></li><li class="nav-command-link"><a href="../../commands/zh-TW/datasource.html" class="nav-command-leaf-link">datasource</a></li><li class="nav-command-link"><a href="../../commands/zh-TW/alert.html" class="nav-command-leaf-link">alert</a></li><li class="nav-command-link"><a href="../../commands/zh-TW/access.html" class="nav-command-leaf-link">access</a></li></ul></div></div></section></section><p>這一頁給負責日常維運、健康檢查、回放與故障處理的人。先把 live / staged 兩套流程看懂，再把匯出、匯入與變更前檢查串起來。</p>
+<section class="section-index"><h2>章節索引</h2><p class="section-index-summary">先從這裡跳到你要看的段落。</p><ul class="section-index-list layout-list"><li><a href="#command-relationships">指令關係</a></li><li><a href="#適用對象">適用對象</a></li><li><a href="#主要目標">主要目標</a></li><li><a href="#採用前後對照">採用前後對照</a></li><li><a href="#成功判準">成功判準</a></li><li><a href="#失敗時先檢查">失敗時先檢查</a></li><li><a href="#維運工作模型">維運工作模型</a></li><li><a href="#典型維運任務">典型維運任務</a></li><li><a href="#建議的連線與秘密資料處理方式">建議的連線與秘密資料處理方式</a></li><li><a href="#建議先跑的-6-個指令">建議先跑的 6 個指令</a></li><li><a href="#什麼叫做處於良好的維運姿勢">什麼叫做處於良好的維運姿勢</a></li><li><a href="#接下來先讀哪些章節">接下來先讀哪些章節</a></li><li><a href="#建議同時開著哪些指令頁">建議同時開著哪些指令頁</a></li><li><a href="#常見錯誤與限制">常見錯誤與限制</a></li><li><a href="#什麼時候切到更深的文件">什麼時候切到更深的文件</a></li><li><a href="#下一步">下一步</a></li></ul></section><section class="handbook-command-map"><h2 id="command-relationships">指令關係</h2><div class="handbook-command-map-panel"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">維運路線</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><ul class="nav-command-tree"><li class="nav-command-link"><a href="../../commands/zh-TW/status.html" class="nav-command-leaf-link">status</a></li><li class="nav-command-link"><a href="../../commands/zh-TW/workspace.html" class="nav-command-leaf-link">workspace</a></li><li class="nav-command-link"><a href="../../commands/zh-TW/dashboard.html" class="nav-command-leaf-link">dashboard</a></li><li class="nav-command-link"><a href="../../commands/zh-TW/datasource.html" class="nav-command-leaf-link">datasource</a></li><li class="nav-command-link"><a href="../../commands/zh-TW/alert.html" class="nav-command-leaf-link">alert</a></li><li class="nav-command-link"><a href="../../commands/zh-TW/access.html" class="nav-command-leaf-link">access</a></li></ul></div></div></div></section><p>這一頁是給值班 SRE、平台維運與 Grafana operator。目標不是背指令，而是先建立一套穩定的維運節奏：先確認 live 現況，再審查 staged 輸入，最後才決定要不要做匯入、套用或回放。</p>
+<p>如果你平常會遇到這幾種情況，這頁就是你的起點：</p>
+<ul><li>維護前要確認現在的 Grafana 狀態到底健不健康</li><li>收到一包 staged 變更，但還不知道能不能安全套用</li><li>需要跨 org 盤點 dashboard、datasource、alert 或 access 資產</li><li>要做備份、漂移檢查、故障排除或 break-glass recovery</li></ul>
+<p>先抓住一個核心原則：<strong>SRE 的工作不是「會不會下指令」，而是能不能在正確的 lane 上工作。</strong></p>
+<ul><li><strong>live read lane</strong>：先看 live 現況，不改任何東西</li><li><strong>staged review lane</strong>：先驗 staged input、preview、test</li><li><strong>apply / replay lane</strong>：確認輸入與 scope 都對了，才進真正的變更或回放</li></ul>
+<p>很多事故不是因為指令語法錯，而是因為直接跳過前兩條 lane，太早進第三條。</p>
 <h2 id="適用對象">適用對象</h2>
-<ul><li>值班 SRE、平台維運、Grafana operator</li><li>需要做健康檢查、盤點、回放或漂移比對的人</li><li>需要在變更前後做檢查把關的人</li></ul>
+<ul><li>值班 SRE、平台維運、Grafana operator</li><li>需要做健康檢查、盤點、備份、回放或漂移比對的人</li><li>需要在 maintenance window 前後做檢查把關的人</li><li>需要處理跨 org 可見性、管理員憑證與 break-glass 流程的人</li></ul>
 <h2 id="主要目標">主要目標</h2>
-<ul><li>先用 <code>status live</code> 和 <code>status overview live</code> 確認現況</li><li>先在 <code>workspace scan</code>、<code>workspace test</code>、<code>workspace preview</code> 擋掉不合理的變更包</li><li>先用 <code>--dry-run</code> 看匯入結果，再決定要不要真的套用</li><li>需要時才用 direct Basic auth 做 break-glass</li></ul>
+<ul><li>在碰任何變更前，先確認 live readiness、scope 與 auth 能不能覆蓋真實任務範圍</li><li>建立一條可重複的 operator path：<code>status</code> -&gt; <code>workspace</code> -&gt; domain command -&gt; <code>--dry-run</code> / <code>apply</code></li><li>讓 dashboard、datasource、alert、access 的維運流程共用同一套判斷模型，而不是每次重新猜</li><li>把 direct Basic auth、profile、token 的使用邏輯講清楚，避免憑證一開始就選錯</li></ul>
 <h2 id="採用前後對照">採用前後對照</h2>
-<ul><li>以前：SRE 要靠一串零散指令自己拼出 readiness、scope 與 replay 風險。</li><li>現在：先用可重複的 profile，接著走 live check、staged review，最後才進 apply。</li></ul>
+<ul><li><strong>以前</strong>：SRE 常靠一串零散指令自行推測 readiness、scope 與 replay 風險；匯出、比對、review、apply 之間也沒有清楚的邊界。</li><li><strong>現在</strong>：先用可重複的 profile 或明確的 direct auth 做 live check，再走 staged review，最後才進 apply 或 replay。</li></ul>
+<p>差異不只是「指令比較整齊」，而是：</p>
+<ul><li>live read 有清楚入口</li><li>staged review 有清楚入口</li><li>destructive / high-impact path 會自然被放到最後</li></ul>
 <h2 id="成功判準">成功判準</h2>
-<ul><li>你能判斷憑證到底看不看得到你要處理的範圍。</li><li>你能分清楚 live read、staged review 和 apply 是不同路徑。</li><li>你有一條能穩定處理 dashboard、alert 與 access 的維運路線。</li></ul>
+<ul><li>你能在開始前就說出這次工作屬於 live read、staged review，還是 apply / replay</li><li>你知道目前這張 credential 到底能不能看見你要處理的 org、folder 或 admin scope</li><li>你能穩定處理 dashboard、alert、access 其中任一條維運路線，而不需要每次重猜流程</li><li>重大變更前，你會先跑 test、preview、diff 或 <code>--dry-run</code>，而不是直接動 live</li></ul>
 <h2 id="失敗時先檢查">失敗時先檢查</h2>
-<ul><li>如果 token scope 比任務還窄，先停下來換一張真的看得到該範圍的憑證。</li><li>如果 live check 成功、apply 失敗，先檢查寫入權限與 staged input，不要先懷疑 renderer。</li><li>如果你還說不出任務屬於哪條 lane，先回去看工作流章節，不要直接改 live。</li></ul>
+<ul><li>如果 token scope 比任務還窄，先停下來換一張真的看得到目標範圍的憑證</li><li>如果 live check 成功、apply 失敗，先檢查寫入權限、org scope 與 staged input，而不是先怪 renderer 或 formatter</li><li>如果 export / diff / preview 的結果和預期差很多，先確認你是不是連到錯的 Grafana，或拿錯 bundle / staged root</li><li>如果你還說不出任務屬於哪條 lane，先回去看工作模型，不要直接進 live mutation</li></ul>
+<h2 id="維運工作模型">維運工作模型</h2>
+<p>把 <code>grafana-util</code> 當成三段式操作面會比較穩：</p>
+<h3 id="1-live-read">1. Live Read</h3>
+<p>這條 lane 的目標是回答：</p>
+<ul><li>現在 Grafana 到底長什麼樣</li><li>目前 credential 到底看得到什麼</li><li>這次工作是否真的需要跨 org 或 admin scope</li></ul>
+<p>常用入口：</p>
+<ul><li><code>status live</code></li><li><code>status overview live</code></li><li><code>dashboard browse</code> / <code>dashboard list</code></li><li><code>datasource list</code></li><li><code>alert list-rules</code></li><li><code>access org list</code></li></ul>
+<p>這一段不要急著改東西。先用它把範圍、權限與風險看清楚。</p>
+<h3 id="2-staged-review">2. Staged Review</h3>
+<p>這條 lane 的目標是回答：</p>
+<ul><li>staged inputs 本身是不是完整、可解析、可預覽</li><li>這包輸入會影響哪些資產</li><li>套用前能不能先在本地或 dry-run 裡看出問題</li></ul>
+<p>常用入口：</p>
+<ul><li><code>workspace scan</code></li><li><code>workspace test</code></li><li><code>workspace preview</code></li><li><code>dashboard diff</code></li><li><code>alert plan</code></li><li><code>datasource diff</code></li></ul>
+<p>這一段是防呆層。真正有經驗的 SRE，花時間最多的通常不是 apply，而是這段 review。</p>
+<h3 id="3-apply-replay">3. Apply / Replay</h3>
+<p>這條 lane 的目標是：</p>
+<ul><li>做受控的匯入、套用、回放或 restore</li><li>在明確 scope 下執行 high-impact 操作</li></ul>
+<p>常用入口：</p>
+<ul><li><code>workspace apply</code></li><li><code>dashboard import</code> / <code>dashboard publish</code></li><li><code>alert apply</code></li><li><code>dashboard history restore</code></li></ul>
+<p>這一段只有在前兩段都清楚時才該進。</p>
 <h2 id="典型維運任務">典型維運任務</h2>
-<ul><li>維護前先做即時整備度檢查</li><li>盤點跨 org 的 dashboard、data source 或 alert</li><li>在 apply 之前先做 staged inspect、check、preview 與 dry-run</li><li>在備份、漂移檢查或災難復原時做匯出與比對</li></ul>
+<h3 id="維護前健康檢查">維護前健康檢查</h3>
+<p>情境：</p>
+<ul><li>進 maintenance window 前，先確認目前 host、org 與資產概況</li><li>不想等到 apply 才發現 token 根本看不到目標</li></ul>
+<p>常見做法：</p>
+<ol><li><code>status live --profile prod</code></li><li><code>status overview live --profile prod</code></li><li>若要進 asset lane，再轉到 <code>dashboard</code> / <code>datasource</code> / <code>alert</code> / <code>access</code></li></ol>
+<h3 id="staged-變更審查">Staged 變更審查</h3>
+<p>情境：</p>
+<ul><li>有一包 repo staged inputs，準備做 preview 或 apply</li><li>想先知道這包變更是否自洽、有沒有缺檔或 scope 錯置</li></ul>
+<p>常見做法：</p>
+<ol><li><code>workspace scan .</code></li><li><code>workspace test . --fetch-live</code></li><li><code>workspace preview . --fetch-live</code></li><li>必要時再接 domain-specific diff / plan</li></ol>
+<h3 id="備份與回放">備份與回放</h3>
+<p>情境：</p>
+<ul><li>做例行備份</li><li>事故後要回看當時的 dashboard / alert / access 狀態</li><li>migration 前先把現在的 live content 存下來</li></ul>
+<p>常見做法：</p>
+<ul><li><code>export dashboard</code></li><li><code>export datasource</code></li><li><code>alert export</code></li><li><code>access ... list --input-dir ...</code> 或對應 export bundle review</li></ul>
+<h3 id="漂移與異常調查">漂移與異常調查</h3>
+<p>情境：</p>
+<ul><li>現況跟 repo / staged inputs 對不起來</li><li>某些 dashboard 或 alert 看起來被手動改過</li></ul>
+<p>常見做法：</p>
+<ul><li><code>dashboard diff</code></li><li><code>datasource diff</code></li><li><code>alert diff</code></li><li><code>dashboard summary</code> / <code>dashboard dependencies</code></li></ul>
 <h2 id="建議的連線與秘密資料處理方式">建議的連線與秘密資料處理方式</h2>
-<ol><li>日常維運優先用 <code>--profile</code>，並把密碼或 token 放在環境變數或 secret store。</li><li>出現緊急處理或尚未建立 profile 時，再用 direct Basic auth。</li><li>token 只適合權限範圍很清楚的讀取或單一 org 自動化，不要假設它能完成所有管理動作。</li><li>跨 org、管理員層級與 service account 類作業，通常還是需要更完整的管理員憑證。</li></ol>
-<h2 id="建議先跑的-5-個指令">建議先跑的 5 個指令</h2>
-<pre><code># 用途：建議先跑的 5 個指令。
+<p>維運工作優先考慮「範圍正確、可重複、能安全交接」，不是只求當下能執行。</p>
+<p>把 URL、帳號與 secret source 收進 repo-local profile，讓值班交接與重跑都一致。</p>
+<ol><li><strong>日常維運優先用 <code>--profile</code></strong></li></ol>
+<p>優先用 <code>password_env</code>、<code>token_env</code>、<code>os</code> 或 <code>encrypted-file</code>。 本機引導或緊急操作可改用 <code>--prompt-password</code> / <code>--prompt-token</code>。</p>
+<ol><li><strong>secret 不要直接打在命令列</strong></li></ol>
+<p>特別是：</p>
+<ol><li><strong>Direct Basic auth 主要用在 break-glass 或 bootstrap</strong></li></ol>
+<ul><li>還沒有 profile</li><li>需要管理員等級視野</li><li>需要跨 org 或較廣權限的盤點</li></ul>
+<p>它很適合單一 org 的 read-only automation；不適合你還不知道 scope 的維運工作。</p>
+<ol><li><strong>Token auth 只用在 scope 非常清楚的工作</strong></li></ol>
+<p><code>--all-orgs</code>、service account 管理、某些 access 操作，常會需要更完整的管理員憑證。</p>
+<ol><li><strong>跨 org 與管理層作業，不要先假設 token 夠用</strong></li></ol>
+<h2 id="建議先跑的-6-個指令">建議先跑的 6 個指令</h2>
+<p>下面這組不是「背起來就好」，而是對應一條自然的 operator path：</p>
+<pre><code># 先看目前 live host 的基本狀態。
 grafana-util status live --profile prod --output-format table</code></pre>
-<pre><code># 用途：建議先跑的 5 個指令。
+<pre><code># 用人的角度看整體環境，而不是只看低階欄位。
 grafana-util status overview live --profile prod --output-format interactive</code></pre>
-<pre><code># 用途：建議先跑的 5 個指令。
+<pre><code># 掃描目前這包 staged inputs 到底有哪些 lane。
 grafana-util workspace scan .</code></pre>
-<pre><code># 用途：建議先跑的 5 個指令。
+<pre><code># 驗 staged inputs 與 live context 能不能對得起來。
 grafana-util workspace test . --fetch-live --output-format json</code></pre>
-<pre><code># 用途：建議先跑的 5 個指令。
+<pre><code># 在 apply 前先看 preview 結果。
 grafana-util workspace preview . --fetch-live --output-format json</code></pre>
-<pre><code># 用途：建議先跑的 5 個指令。
+<pre><code># 例行備份或變更前留底。
 grafana-util export dashboard --output-dir ./backups --overwrite --progress</code></pre>
-<p>如果你要先處理存取層資產，可以把 <code>export dashboard</code> 換成：</p>
-<pre><code># 用途：如果你要先處理存取層資產，可以把 dashboard export 換成。
+<p>如果你這次任務主要在存取層，最後一條可換成：</p>
+<pre><code># 先盤點 org，可快速知道目前 scope 與管理面。
 grafana-util access org list --table</code></pre>
+<p>如果你正在做 break-glass 檢查，Basic auth 通常是比較安全的 fallback：</p>
+<pre><code># 直接對 host 做廣範圍唯讀檢查。
+grafana-util status live --url http://localhost:3000 --basic-user admin --prompt-password --all-orgs --output-format table</code></pre>
+<p>如果你手上的 token scope 很清楚，也可以只做較窄的唯讀檢查：</p>
+<pre><code># 適合範圍明確的 read-only 檢查。
+grafana-util status overview live --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --output-format json</code></pre>
+<h2 id="什麼叫做處於良好的維運姿勢">什麼叫做處於良好的維運姿勢</h2>
+<p>你可以用下面幾點檢查自己目前是不是在穩定的維運姿勢裡：</p>
+<ul><li>你知道目前 credential 到底能不能看見要處理的 org、folder 或 admin scope</li><li>你能分清楚即時讀取、staged review 與真正 apply 是三種不同流程</li><li>高風險變更前，你會先跑 input test、preview、diff 或 <code>--dry-run</code></li><li>問題一旦從 <code>status</code> 轉進 <code>dashboard</code>、<code>alert</code> 或 <code>access</code>，你知道要切到哪一頁</li><li>你留下來的輸出與備份，能讓下一位值班的人接得起來</li></ul>
 <h2 id="接下來先讀哪些章節">接下來先讀哪些章節</h2>
 <ul><li><a href="status-workspace.html">Workspace 審查與狀態</a></li><li><a href="dashboard.html">Dashboard 管理</a></li><li><a href="datasource.html">Data source 管理</a></li><li><a href="alert.html">告警治理</a></li><li><a href="access.html">Access 管理</a></li><li><a href="troubleshooting.html">疑難排解與名詞解釋</a></li></ul>
 <h2 id="建議同時開著哪些指令頁">建議同時開著哪些指令頁</h2>
-<ul><li><a href="../../commands/zh-TW/config.html">config profile</a></li><li><a href="../../commands/zh-TW/index.html">指令參考</a></li><li><a href="../../commands/zh-TW/workspace.html">workspace</a></li><li><a href="../../commands/zh-TW/dashboard.html">dashboard</a></li><li><a href="../../commands/zh-TW/alert.html">alert</a></li><li><a href="../../commands/zh-TW/access.html">access</a></li><li><a href="../../commands/zh-TW/index.html">指令參考</a></li></ul>
+<ul><li><a href="../../commands/zh-TW/config.html">config</a></li><li><a href="../../commands/zh-TW/profile.html">config profile</a></li><li><a href="../../commands/zh-TW/status.html">status</a></li><li><a href="../../commands/zh-TW/workspace.html">workspace</a></li><li><a href="../../commands/zh-TW/dashboard.html">dashboard</a></li><li><a href="../../commands/zh-TW/alert.html">alert</a></li><li><a href="../../commands/zh-TW/access.html">access</a></li><li><a href="../../commands/zh-TW/index.html">完整指令索引</a></li></ul>
 <h2 id="常見錯誤與限制">常見錯誤與限制</h2>
-<ul><li>不要把 <code>status live</code> 當成部署前的唯一檢查；<code>workspace test</code> 和 staged 驗證還是要跑。</li><li>不要在匯入前略過 <code>--dry-run</code>，尤其是會覆寫既有資產時。</li><li>不要假設 token 看得到所有 org，<code>--all-orgs</code> 與管理操作常會受 scope 限制。</li><li>不要把 <code>tokens.json</code> 當一般輸出檔；它包含敏感資訊。</li><li>不要直接進行破壞性操作，先 inspect、再 check、再 preview，最後才套用。</li></ul>
-<h2 id="什麼叫做處於良好的維運姿勢">什麼叫做處於良好的維運姿勢</h2>
-<ul><li>你知道目前的 credential 到底能不能看見要處理的 org 或管理範圍</li><li>你能分清楚即時讀取、staged review 與真正 apply 是三種不同流程</li><li>重大變更前會先跑 input test 或 dry-run</li><li>問題一旦從 status 轉進 dashboard、alert 或 access，你知道要切到哪一頁</li></ul>
+<ul><li>不要把 <code>status live</code> 當成變更前的唯一檢查；<code>workspace test</code>、<code>workspace preview</code> 與 domain-specific review 仍然要跑</li><li>不要在匯入或 apply 前略過 <code>--dry-run</code>、<code>plan</code> 或 diff，尤其是會覆寫既有資產時</li><li>不要假設 token 一定看得到所有 org；<code>--all-orgs</code> 與管理操作很容易因 scope 限制而出現部分結果</li><li>不要把 <code>tokens.json</code>、service-account token 輸出或明文 secret 當一般輸出檔處理</li><li>不要把「可以讀」誤判成「也可以寫」；讀權限和管理 / 寫入權限是兩回事</li></ul>
 <h2 id="什麼時候切到更深的文件">什麼時候切到更深的文件</h2>
-<ul><li>inventory、export/import、inspect、screenshot 類問題，切到 <a href="dashboard.html">Dashboard 管理</a></li><li>rule、route、contact point、plan/apply 類問題，切到 <a href="alert.html">告警治理</a></li><li>org、user、team、service account 類問題，切到 <a href="access.html">Access 管理</a></li><li>已經知道要跑哪個流程，只差精確旗標時，切到 <a href="../../commands/zh-TW/index.html">指令參考</a></li></ul>
+<ul><li><strong>inventory、export / import、inspect、screenshot</strong> 類問題：切到 <a href="dashboard.html">Dashboard 管理</a></li><li><strong>rule、route、contact point、plan / apply</strong> 類問題：切到 <a href="alert.html">告警治理</a></li><li><strong>org、user、team、service account</strong> 類問題：切到 <a href="access.html">Access 管理</a></li><li><strong>已經知道流程，只差精確旗標</strong>：切到 <a href="../../commands/zh-TW/index.html">指令參考</a></li><li><strong>問題卡在 staged vs live 邊界</strong>：切到 <a href="status-workspace.html">Workspace 審查與狀態</a></li></ul>
 <h2 id="下一步">下一步</h2>
-<ul><li><a href="index.html">回到手冊首頁</a></li><li><a href="status-workspace.html">先看 Workspace 審查與狀態</a></li><li><a href="dashboard.html">再看 Dashboard 管理</a></li><li><a href="../../commands/zh-TW/index.html">需要指令細節時查看指令參考</a></li></ul>
+<ul><li><a href="index.html">回到手冊首頁</a></li><li><a href="status-workspace.html">先看 Workspace 審查與狀態</a></li><li><a href="dashboard.html">再看 Dashboard 管理</a></li><li><a href="../../commands/zh-TW/index.html">需要精確旗標時查看指令參考</a></li></ul>
 <nav class="footer-nav"><a class="link-card" href="role-new-user.html"><span>上一章</span>第 4 章 · 第一次執行 / 新手路線</a><a class="link-card" href="role-automation-ci.html"><span>下一章</span>第 6 章 · 自動化 / CI 角色導讀</a></nav>
 </article>
 <aside class="sidebar">
   <button class="sidebar-toggle sidebar-toggle-right" type="button" aria-expanded="true" aria-label="Toggle page sidebar">▶</button>
   <div class="sidebar-content">
-    <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#適用對象"><span class="toc-label">適用對象</span></a></li><li class="toc-level-2"><a href="#主要目標"><span class="toc-label">主要目標</span></a></li><li class="toc-level-2"><a href="#採用前後對照"><span class="toc-label">採用前後對照</span></a></li><li class="toc-level-2"><a href="#成功判準"><span class="toc-label">成功判準</span></a></li><li class="toc-level-2"><a href="#失敗時先檢查"><span class="toc-label">失敗時先檢查</span></a></li><li class="toc-level-2"><a href="#典型維運任務"><span class="toc-label">典型維運任務</span></a></li><li class="toc-level-2"><a href="#建議的連線與秘密資料處理方式"><span class="toc-label">建議的連線與秘密資料處理方式</span></a></li><li class="toc-level-2"><a href="#建議先跑的-5-個指令"><span class="toc-label">建議先跑的 5 個指令</span></a></li><li class="toc-level-2"><a href="#接下來先讀哪些章節"><span class="toc-label">接下來先讀哪些章節</span></a></li><li class="toc-level-2"><a href="#建議同時開著哪些指令頁"><span class="toc-label">建議同時開著哪些指令頁</span></a></li><li class="toc-level-2"><a href="#常見錯誤與限制"><span class="toc-label">常見錯誤與限制</span></a></li><li class="toc-level-2"><a href="#什麼叫做處於良好的維運姿勢"><span class="toc-label">什麼叫做處於良好的維運姿勢</span></a></li><li class="toc-level-2"><a href="#什麼時候切到更深的文件"><span class="toc-label">什麼時候切到更深的文件</span></a></li><li class="toc-level-2"><a href="#下一步"><span class="toc-label">下一步</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/role-sre-ops.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
+    <section class="sidebar-section"><h2>本頁內容</h2><ul class="toc-list"><li class="toc-level-2"><a href="#command-relationships"><span class="toc-label">指令關係</span></a></li><li class="toc-level-2"><a href="#適用對象"><span class="toc-label">適用對象</span></a></li><li class="toc-level-2"><a href="#主要目標"><span class="toc-label">主要目標</span></a></li><li class="toc-level-2"><a href="#採用前後對照"><span class="toc-label">採用前後對照</span></a></li><li class="toc-level-2"><a href="#成功判準"><span class="toc-label">成功判準</span></a></li><li class="toc-level-2"><a href="#失敗時先檢查"><span class="toc-label">失敗時先檢查</span></a></li><li class="toc-level-2"><a href="#維運工作模型"><span class="toc-label">維運工作模型</span></a></li><li class="toc-level-3"><a href="#1-live-read"><span class="toc-label">1. Live Read</span></a></li><li class="toc-level-3"><a href="#2-staged-review"><span class="toc-label">2. Staged Review</span></a></li><li class="toc-level-3"><a href="#3-apply-replay"><span class="toc-label">3. Apply / Replay</span></a></li><li class="toc-level-2"><a href="#典型維運任務"><span class="toc-label">典型維運任務</span></a></li><li class="toc-level-3"><a href="#維護前健康檢查"><span class="toc-label">維護前健康檢查</span></a></li><li class="toc-level-3"><a href="#staged-變更審查"><span class="toc-label">Staged 變更審查</span></a></li><li class="toc-level-3"><a href="#備份與回放"><span class="toc-label">備份與回放</span></a></li><li class="toc-level-3"><a href="#漂移與異常調查"><span class="toc-label">漂移與異常調查</span></a></li><li class="toc-level-2"><a href="#建議的連線與秘密資料處理方式"><span class="toc-label">建議的連線與秘密資料處理方式</span></a></li><li class="toc-level-2"><a href="#建議先跑的-6-個指令"><span class="toc-label">建議先跑的 6 個指令</span></a></li><li class="toc-level-2"><a href="#什麼叫做處於良好的維運姿勢"><span class="toc-label">什麼叫做處於良好的維運姿勢</span></a></li><li class="toc-level-2"><a href="#接下來先讀哪些章節"><span class="toc-label">接下來先讀哪些章節</span></a></li><li class="toc-level-2"><a href="#建議同時開著哪些指令頁"><span class="toc-label">建議同時開著哪些指令頁</span></a></li><li class="toc-level-2"><a href="#常見錯誤與限制"><span class="toc-label">常見錯誤與限制</span></a></li><li class="toc-level-2"><a href="#什麼時候切到更深的文件"><span class="toc-label">什麼時候切到更深的文件</span></a></li><li class="toc-level-2"><a href="#下一步"><span class="toc-label">下一步</span></a></li></ul></section><section class="sidebar-section"><h2>版本</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>語言</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/role-sre-ops.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
   </div>
 </aside>
 

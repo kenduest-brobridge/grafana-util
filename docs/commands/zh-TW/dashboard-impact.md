@@ -6,6 +6,21 @@
 ## 何時使用
 當你準備調整、搬移或排查某個 datasource，想先知道有哪些 dashboard 與 alert 相關資產會被牽動，再動到 live 系統時，就該用這個指令。常見流程請優先用 live 或 local 輸入；只有重用治理成品時才保留 artifact 路徑。
 
+## 最短成功路徑
+
+1. 先拿到你要追的 `datasource uid`，不要只靠顯示名稱。
+2. 決定來源是 live、本地匯出樹，還是既有 governance 成品。
+3. 先跑一次 `--output-format text` 或 `json`。
+4. 若還需要把 alert 一起算進來，再補 `--alert-contract`。
+
+## 先選輸入路徑
+
+- **live Grafana**：你要看現在環境裡某個 datasource 會牽動哪些 dashboard
+- **本地匯出樹**：你要做離線 review、搬移前盤點或 CI 檢查
+- **governance 成品**：你已經有既有分析成品，只想在後續重跑 impact
+
+如果你還沒有治理或相依性成品，通常先跑 [dashboard summary](./dashboard-summary.md) 或 [dashboard dependencies](./dashboard-dependencies.md)，再回來看這頁。
+
 ## 採用前後對照
 
 - **採用前**：datasource 的風險通常只能靠記憶、命名習慣或人工在 Grafana 裡搜尋來猜。
@@ -21,9 +36,16 @@
 - `--output-format`：輸出 `text` 或 `json`。
 - `--interactive`：開啟互動式終端機瀏覽器。
 
-## 範例
+## 先決定你要看什麼結果
+
+- `text`：給人快速看一眼 impact 結果
+- `json`：給 review、CI 或外部工具接手
+- `interactive`：來源已經確認正確，想現場往下鑽時再開
+
+## 範例（依來源分組）
+
 ```bash
-# 用途：直接從 live Grafana 評估單一 datasource 的影響範圍。
+# 用途：直接從 live Grafana 看某個 datasource 的影響範圍。
 grafana-util dashboard impact \
   --url http://localhost:3000 \
   --basic-user admin \
@@ -33,7 +55,7 @@ grafana-util dashboard impact \
 ```
 
 ```bash
-# 用途：從本地匯出樹評估單一 datasource 的影響範圍。
+# 用途：從本地匯出樹做離線 impact 分析。
 grafana-util dashboard impact \
   --input-dir ./dashboards/raw \
   --input-format raw \
@@ -42,7 +64,7 @@ grafana-util dashboard impact \
 ```
 
 ```bash
-# 用途：從 repo-backed Git Sync 樹評估單一 datasource 的影響範圍。
+# 用途：從 repo-backed Git Sync 樹分析 datasource 牽動面。
 grafana-util dashboard impact \
   --input-dir ./grafana-oac-repo \
   --input-format git-sync \
@@ -51,13 +73,19 @@ grafana-util dashboard impact \
 ```
 
 ```bash
-# 用途：從可重用的治理成品（`governance-json`）評估單一 datasource 的影響範圍。
+# 用途：直接重用 governance 成品，並把 alert contract 一起納入。
 grafana-util dashboard impact \
   --governance ./governance.json \
   --datasource-uid prom-main \
   --alert-contract ./alert-contract.json \
   --output-format json
 ```
+
+## 結果該怎麼判讀
+
+- 如果 dashboard 名單很多，代表這不是單純局部調整，應先走 review / 搬移計畫
+- 如果 dashboard 很少但你原本以為很多，先懷疑來源或 `datasource uid` 對不上
+- 如果你有帶 `--alert-contract`，就把 alert 一起視為變更範圍，不要只盯著 dashboard
 
 ## 成功判準
 

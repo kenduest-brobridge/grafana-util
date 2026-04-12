@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "locales": {
+    "en": {
+      "command_reference_label": "Command Reference",
+      "open_command_reference_label": "Open command reference",
+      "command_relationships_title": "Command Relationships",
+      "parent_command_label": "Parent command",
+      "child_command_label": "Subcommand group",
+      "sibling_command_label": "Sibling command",
+      "jump_prompt_label": "Jump to...",
+      "sidebar_labels": {
+        "toc": "On This Page",
+        "related": "Related",
+        "version": "Version",
+        "language": "Language"
+      },
+      "page_locale_current_prefix": "Language: ",
+      "page_locale_switch_prefix": "Switch to "
+    },
+    "zh-TW": {
+      "command_reference_label": "指令參考",
+      "open_command_reference_label": "開啟指令參考",
+      "command_relationships_title": "指令關係",
+      "parent_command_label": "上層命令",
+      "child_command_label": "子命令群組",
+      "sibling_command_label": "同層命令",
+      "jump_prompt_label": "快速跳轉...",
+      "sidebar_labels": {
+        "toc": "本頁內容",
+        "related": "相關頁面",
+        "version": "版本",
+        "language": "語言"
+      },
+      "page_locale_current_prefix": "Language: ",
+      "page_locale_switch_prefix": "Switch to "
+    }
+  }
+}

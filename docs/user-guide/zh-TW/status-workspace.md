@@ -52,12 +52,12 @@ Advanced workflows：
 - [snapshot](../../commands/zh-TW/snapshot.md)
 - [snapshot export](../../commands/zh-TW/snapshot.md#export)
 - [snapshot review](../../commands/zh-TW/snapshot.md#review)
-- [config profile](../../commands/zh-TW/config.md)
-- [config profile list](../../commands/zh-TW/config.md#list)
-- [config profile show](../../commands/zh-TW/config.md#show)
-- [config profile add](../../commands/zh-TW/config.md#add)
-- [config profile example](../../commands/zh-TW/config.md#example)
-- [config profile init](../../commands/zh-TW/config.md#init)
+- [config profile](../../commands/zh-TW/profile.md)
+- [config profile list](../../commands/zh-TW/profile.md#list)
+- [config profile show](../../commands/zh-TW/profile.md#show)
+- [config profile add](../../commands/zh-TW/profile.md#add)
+- [config profile example](../../commands/zh-TW/profile.md#example)
+- [config profile init](../../commands/zh-TW/profile.md#init)
 
 ---
 

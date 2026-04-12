@@ -5,6 +5,8 @@ from pathlib import Path
 
 from docgen_command_docs import command_doc_cli_path, parse_command_page, render_markdown_document
 from docgen_common import relative_href
+from docsite_command_index import render_command_reference_index
+from docsite_command_surface import command_audience_hint, command_breadcrumb_parents, command_reference_links
 from docgen_handbook import LOCALE_LABELS
 from docsite_html_common import (
     html_list,
@@ -20,64 +22,11 @@ from docsite_html_links import command_handbook_context, rewrite_markdown_link
 from docsite_html_nav import command_reference_label, render_global_nav, render_jump_select, render_page_locale_select
 from docsite_html_page_shell import page_shell
 
-COMMAND_AUDIENCE_HINTS = {
-    "dashboard": {
-        "en": "Best for SREs, Grafana operators, and responders working with dashboard inventory, inspection, export, policy, or screenshots.",
-        "zh-TW": "適合 SRE、Grafana 維運人員，以及要處理 dashboard 盤點、檢查、匯出、政策或截圖的人。",
-    },
-    "datasource": {
-        "en": "Best for operators who manage Grafana data source configuration, dependency checks, and recovery paths.",
-        "zh-TW": "適合要管理 Grafana data source 設定、依賴檢查與復原流程的維運人員。",
-    },
-    "alert": {
-        "en": "Best for operators who review alert rules, routes, contact points, and staged alert changes.",
-        "zh-TW": "適合要檢查告警規則、通知路由、contact point 與 staged 變更的人。",
-    },
-    "access": {
-        "en": "Best for administrators who work with org, user, team, service account, and token lifecycle operations.",
-        "zh-TW": "適合要管理 org、使用者、team、service account 與 token 生命週期的管理者。",
-    },
-    "config": {
-        "en": "Best for anyone setting up repo-local connection defaults, secret handling, and repeatable live-command authentication.",
-        "zh-TW": "適合想整理 repo-local 連線預設、secret 處理，以及可重複執行的 live 指令認證方式的人。",
-    },
-    "profile": {
-        "en": "Best for anyone setting up repeatable connection defaults, secret handling, and non-interactive runs.",
-        "zh-TW": "適合想整理可重複連線預設、secret 處理與非互動式執行方式的人。",
-    },
-    "status": {
-        "en": "Best for operators who need fast live or staged readiness checks before they change anything.",
-        "zh-TW": "適合想在動手前先做 live 或 staged readiness 檢查的人。",
-    },
-    "workspace": {
-        "en": "Best for operators who need one local workspace flow to scan, test, preview, package, and apply staged changes.",
-        "zh-TW": "適合想用一條本機 workspace 流程完成掃描、檢查、預覽、打包與套用 staged 變更的人。",
-    },
-    "overview": {
-        "en": "Best for readers who need a fast cross-surface inventory and health overview of the current Grafana estate.",
-        "zh-TW": "適合想快速盤點目前 Grafana 環境、先看健康度與資產概況的人。",
-    },
-    "snapshot": {
-        "en": "Best for readers who need a local snapshot bundle for offline review, backup, or handoff work.",
-        "zh-TW": "適合需要建立本機 snapshot bundle，做離線檢視、備份或交接的人。",
-    },
-}
-
 
 def command_intro_labels(locale: str) -> dict[str, str]:
     if locale == "zh-TW":
         return {"what": "這頁在說什麼", "when": "什麼時候看這頁", "who": "適合誰"}
     return {"what": "What this page covers", "when": "When to open this page", "who": "Who this page is for"}
-
-
-def command_audience_hint(locale: str, source_path: Path) -> str:
-    root = source_path.stem.split("-", 1)[0]
-    hints = COMMAND_AUDIENCE_HINTS.get(root)
-    if not hints:
-        return ""
-    return hints.get(locale, "")
-
-
 def render_command_intro(locale: str, source_path: Path) -> str:
     cli_path = command_doc_cli_path(source_path, "grafana-util " + source_path.stem.replace("-", " "))
     if cli_path is None:
@@ -126,12 +75,21 @@ def render_language_links(current_label, switch_label, switch_href):
 
 
 def render_command_page(locale, source_path, output_rel, config):
-    doc = render_markdown_document(source_path.read_text(encoding="utf-8"), link_transform=lambda target: rewrite_markdown_link(source_path, output_rel, target, config))
+    if source_path.stem == "index":
+        doc = render_command_reference_index(locale, link_transform=lambda target: rewrite_markdown_link(source_path, output_rel, target, config))
+    else:
+        doc = render_markdown_document(source_path.read_text(encoding="utf-8"), link_transform=lambda target: rewrite_markdown_link(source_path, output_rel, target, config))
     title = title_only(doc.title or source_path.stem)
     switch_label, switch_href = command_language_switch_href(output_rel, locale, source_path.name, config)
     handbook_link = command_handbook_context(locale, output_rel, source_name=source_path.name, config=config)
+    related_items = command_reference_links(locale, output_rel, source_path, config)
+    if handbook_link:
+        related_items.append(handbook_link)
     body_html = render_command_intro(locale, source_path) + strip_heading_decorations(strip_leading_h1(doc.body_html))
-    breadcrumbs = [("Home", relative_href(output_rel, prefixed_output_rel(config, "index.html"))), (command_breadcrumb_label(locale), None)]
+    command_index_href = relative_href(output_rel, prefixed_output_rel(config, f"commands/{locale}/index.html"))
+    breadcrumbs = [("Home", relative_href(output_rel, prefixed_output_rel(config, "index.html"))), (command_breadcrumb_label(locale), command_index_href)]
+    for label, href in command_breadcrumb_parents(locale, output_rel, source_path, config):
+        breadcrumbs.append((label, href))
     if source_path.stem != "index":
         breadcrumbs.append((title, None))
-    return page_shell(page_title=title, html_lang=locale, home_href=relative_href(output_rel, prefixed_output_rel(config, "index.html")), hero_title=title, hero_summary="", breadcrumbs=breadcrumbs, body_html=body_html, toc_html=render_toc(doc.headings), related_html=html_list([handbook_link]) if handbook_link else "", version_html=render_version_links(output_rel, config), locale_html=render_language_links(LOCALE_LABELS[locale], switch_label, switch_href), footer_nav_html="", footer_html="Source: " + source_path.name, jump_html=render_page_locale_select(LOCALE_LABELS[locale], switch_label, switch_href) + render_jump_select(output_rel, locale, config), nav_html=render_global_nav(output_rel, locale, config))
+    return page_shell(page_title=title, html_lang=locale, home_href=relative_href(output_rel, prefixed_output_rel(config, "index.html")), hero_title=title, hero_summary="", breadcrumbs=breadcrumbs, body_html=body_html, toc_html=render_toc(doc.headings), related_html=html_list(related_items) if related_items else "", version_html=render_version_links(output_rel, config), locale_html=render_language_links(LOCALE_LABELS[locale], switch_label, switch_href), footer_nav_html="", footer_html="Source: " + source_path.name, jump_html=render_page_locale_select(LOCALE_LABELS[locale], switch_label, switch_href) + render_jump_select(output_rel, locale, config), nav_html=render_global_nav(output_rel, locale, config))

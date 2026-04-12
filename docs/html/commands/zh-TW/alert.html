@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>grafana-util alert · grafana-util docs</title>
+  <title>alert · Grafana Documentation</title>
   <style>:root {
   color-scheme: light dark;
   --font-scale: 1;
@@ -126,7 +126,13 @@ pre:hover .code-controls { opacity: 1; }
 .site.landing-shell .topbar { margin-bottom: 10px; }
 .site-content { flex-grow: 1; }
 .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 16px; border-bottom: 1px solid var(--border); padding-bottom: 14px; }
-.brand { font: 760 1.08rem var(--font-mono); text-transform: uppercase; letter-spacing: 0.045em; color: var(--heading) !important; text-decoration: none !important; }
+.brand {
+  font: 700 0.9rem var(--font-display);
+  text-transform: none;
+  letter-spacing: 0.01em;
+  color: var(--heading) !important;
+  text-decoration: none !important;
+}
 .themebar { display: flex; gap: 8px; align-items: center; }
 .themebar select {
   border: 1px solid var(--border);
@@ -372,30 +378,24 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map {
-  margin-bottom: 24px;
+.handbook-command-map { margin: 0 0 24px; }
+.handbook-command-map-panel {
+  margin-top: 16px;
   padding: 16px 18px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: color-mix(in srgb, var(--panel) 96%, white);
 }
-.handbook-command-map .nav-section + .nav-section { margin-top: 14px; }
-.handbook-command-map h2 {
-  margin: 0 0 10px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--border);
-  font-size: 0.82rem;
-  color: var(--muted);
-}
 .handbook-command-map .nav-group-title {
   font-size: 0.95rem;
 }
 .handbook-command-map .nav-command-group {
-  padding-top: 10px;
+  padding-top: 0;
 }
 .handbook-command-map .nav-command-group + .nav-command-group {
   margin-top: 12px;
   border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
+  padding-top: 10px;
 }
 .handbook-command-map .nav-command-sub-list {
   margin-top: 8px;
@@ -523,21 +523,36 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   line-height: 1.68;
 }
 .section-index-list {
-  list-style: none;
   margin: 0;
+}
+.section-index-list.layout-grid {
+  list-style: none;
   padding: 0;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 0.4rem 1rem;
 }
+.section-index-list.layout-list {
+  list-style: disc;
+  padding-left: 1.25rem;
+  display: block;
+}
 .section-index-list li {
   margin: 0;
+}
+.section-index-list.layout-list li {
+  margin: 0 0 0.45rem;
 }
 .section-index-list a {
   display: block;
   padding: 0.25rem 0;
   color: var(--text);
   font-weight: 560;
+}
+.section-index-list.layout-list a {
+  display: inline;
+  padding: 0;
+  font-weight: 540;
 }
 .section-index-list a:hover {
   color: var(--heading);
@@ -622,41 +637,49 @@ html[lang="zh-TW"] .sidebar { font-family: var(--font-zh); letter-spacing: 0; }
 }
 .landing-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(420px, 0.88fr);
-  gap: 48px;
+  grid-template-columns: minmax(0, 1.14fr) minmax(360px, 0.86fr);
+  gap: 34px;
   align-items: start;
-  padding: 18px 0 30px;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--panel) 98%, white), color-mix(in srgb, var(--panel) 96%, var(--accent-soft)));
+  padding: 8px 0 22px;
 }
 .landing-hero-inner {
-  max-width: none;
+  max-width: 60rem;
+}
+.landing-eyebrow {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font: 700 0.72rem var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 .landing-title {
   margin: 0 0 18px;
-  font-size: clamp(2.35rem, 4.3vw, 3.6rem);
-  line-height: 0.96;
-  letter-spacing: -0.05em;
+  font-size: clamp(1.72rem, 2.7vw, 2.3rem);
+  line-height: 1.06;
+  letter-spacing: -0.025em;
 }
 .landing-summary {
-  max-width: 72ch;
+  max-width: 56ch;
   margin: 0;
-  font-size: 1.02rem;
-  line-height: 1.72;
+  font-size: 0.96rem;
+  line-height: 1.68;
   color: var(--text);
 }
 .landing-search-panel {
-  padding-top: 12px;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-strong);
 }
 .landing-search-panel h2 {
   margin: 0 0 8px;
-  font-size: 1.15rem;
+  font-size: 1.02rem;
   letter-spacing: -0.02em;
 }
 .landing-search-panel p {
   margin: 0 0 16px;
-  font-size: 0.95rem;
-  line-height: 1.7;
+  font-size: 0.9rem;
+  line-height: 1.62;
   color: var(--muted);
 }
 .landing-search-form {
@@ -713,8 +736,8 @@ html[lang="zh-TW"] .sidebar { font-family: var(--font-zh); letter-spacing: 0; }
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 28px;
-  margin-top: 30px;
-  padding-top: 26px;
+  margin-top: 22px;
+  padding-top: 22px;
   border-top: 1px solid var(--border);
 }
 .landing-section h2 {
@@ -760,17 +783,12 @@ html[lang="zh-TW"] .sidebar { font-family: var(--font-zh); letter-spacing: 0; }
   color: var(--muted);
 }
 html[data-theme="dark"] .landing-hero {
-  background:
-    radial-gradient(circle at 14% 10%, rgba(255, 255, 255, 0.04), transparent 24%),
-    radial-gradient(circle at 82% 14%, rgba(170, 180, 191, 0.11), transparent 28%),
-    linear-gradient(180deg, #0b0f14 0%, #0d1218 58%, #10161d 100%);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 0;
 }
 html[data-theme="dark"] .landing-search-panel {
-  padding: 18px 20px 20px;
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: 8px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 html[data-theme="dark"] .landing-search-input::placeholder {
@@ -791,6 +809,15 @@ html[data-theme="dark"] .landing-task {
 }
 html[data-theme="dark"] .landing-meta {
   border-top-color: var(--border);
+}
+@media (max-width: 980px) {
+  .landing-hero {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  .landing-hero-inner {
+    max-width: none;
+  }
 }
 .landing-link-list {
   display: flex;
@@ -920,7 +947,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
   <div class="site">
     <div class="site-content">
       <div class="topbar">
-  <a class="brand" href="../../index.html">grafana-util docs</a>
+  <a class="brand" href="../../index.html">Grafana Documentation</a>
   <div class="themebar">
     <select id="page-locale-select" aria-label="Language switch"><option value="" selected>Language: 繁體中文</option><option value="../en/alert.html">Switch to English</option></select><select id="jump-select" aria-label="Jump"><option value="" selected>快速跳轉...</option><optgroup label="手冊"><option value="../../handbook/zh-TW/index.html">概觀</option><option value="../../handbook/zh-TW/what-is-grafana-util.html">這個工具是做什麼的</option><option value="../../handbook/zh-TW/getting-started.html">開始使用</option><option value="../../handbook/zh-TW/role-new-user.html">第一次執行 / 新手路線</option><option value="../../handbook/zh-TW/role-sre-ops.html">SRE / 維運</option><option value="../../handbook/zh-TW/role-automation-ci.html">自動化 / CI</option><option value="../../handbook/zh-TW/architecture.html">設計原則</option><option value="../../handbook/zh-TW/dashboard.html">Dashboard</option><option value="../../handbook/zh-TW/datasource.html">Datasource</option><option value="../../handbook/zh-TW/alert.html">Alert</option><option value="../../handbook/zh-TW/access.html">Access</option><option value="../../handbook/zh-TW/status-workspace.html">Status / Workspace</option><option value="../../handbook/zh-TW/scenarios.html">情境手冊</option><option value="../../handbook/zh-TW/recipes.html">實戰錦囊</option><option value="../../handbook/zh-TW/reference.html">技術參考</option><option value="../../handbook/zh-TW/troubleshooting.html">疑難排解</option></optgroup><optgroup label="指令參考"><option value="version.html">Version</option><option value="dashboard.html">Dashboard</option><option value="alert.html">Alert</option><option value="datasource.html">Datasource</option><option value="access.html">Access</option><option value="config.html">Config</option><option value="profile.html">Config Profile</option><option value="status.html">Status</option><option value="resource.html">Status Resource</option><option value="snapshot.html">Snapshot</option><option value="workspace.html">Workspace</option></optgroup></select>
     <select id="font-select" aria-label="Font Size">
@@ -944,17 +971,19 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 </aside>
 
 <article class="article">
-<div class="breadcrumbs"><a href="../../index.html">Home</a> / 指令參考 / grafana-util alert</div>
+<div class="breadcrumbs"><a href="../../index.html">Home</a> / <a href="index.html">指令參考</a> / alert</div>
 
-<h1><span class="hero-title-main">grafana-util alert</span></h1>
+<h1><span class="hero-title-main">alert</span></h1>
 
-<h2 id="這一頁對應的工作流">這一頁對應的工作流</h2>
-<table><thead><tr><th>工作流</th><th>常用子命令</th></tr></thead><tbody><tr><td>盤點現況</td><td><code>list-rules</code>、<code>list-contact-points</code>、<code>list-mute-timings</code>、<code>list-templates</code>、<code>delete</code></td></tr><tr><td>匯出 / 匯入 / 比對</td><td><code>export</code>、<code>import</code>、<code>diff</code></td></tr><tr><td>變更規劃與套用</td><td><code>plan</code>、<code>apply</code></td></tr><tr><td>規則 / 聯絡點 / 路由撰寫</td><td><code>init</code>、<code>new-rule</code>、<code>add-rule</code>、<code>clone-rule</code>、<code>new-contact-point</code>、<code>add-contact-point</code>、<code>new-template</code>、<code>set-route</code>、<code>preview-route</code></td></tr></tbody></table>
-<h2 id="從這裡開始">從這裡開始</h2>
-<ul><li>先盤點：<code>alert list-rules</code>、<code>alert list-contact-points</code></li><li>先看現況再改：<code>alert export</code>、<code>alert diff</code></li><li>先規劃再套用：<code>alert plan</code>、<code>alert apply</code></li><li>先建草稿：<code>alert init</code>、<code>alert new-rule</code>、<code>alert new-contact-point</code>、<code>alert new-template</code></li><li>先調路由：<code>alert set-route</code>、<code>alert preview-route</code></li></ul>
-<h2 id="說明">說明</h2>
+<h2 id="先判斷你現在要做哪一種事">先判斷你現在要做哪一種事</h2>
+<table><thead><tr><th>你現在想做的事</th><th>先開哪個命令頁</th><th>這頁會幫你回答什麼</th></tr></thead><tbody><tr><td>想先看目前有哪些規則、聯絡點、靜音時段</td><td><a href="alert-list-rules.html">alert list-rules</a>、<a href="alert-list-contact-points.html">alert list-contact-points</a></td><td>先盤點現況與範圍</td></tr><tr><td>想先把現況匯出、比對或搬移</td><td><a href="alert-export.html">alert export</a>、<a href="alert-diff.html">alert diff</a>、<a href="alert-import.html">alert import</a></td><td>先決定搬移或 review 路徑</td></tr><tr><td>想先規劃變更，再決定要不要套用</td><td><a href="alert-plan.html">alert plan</a>、<a href="alert-apply.html">alert apply</a></td><td>先看 planned change，而不是直接改 live</td></tr><tr><td>想建立規則、contact point 或通知模板草稿</td><td><a href="alert-new-rule.html">alert new-rule</a>、<a href="alert-new-contact-point.html">alert new-contact-point</a>、<a href="alert-new-template.html">alert new-template</a></td><td>先做 authoring，不要直接猜 API payload</td></tr><tr><td>想調通知路由</td><td><a href="alert-set-route.html">alert set-route</a>、<a href="alert-preview-route.html">alert preview-route</a></td><td>先看 routing 結果，再決定是否落地</td></tr></tbody></table>
+<h2 id="先選哪一條資料路徑">先選哪一條資料路徑</h2>
+<ul><li><strong>live Grafana</strong>：先用 <code>list-*</code> 盤點，必要時再 <code>export</code></li><li><strong>desired-state / 本地草稿樹</strong>：先用 <code>plan</code> 看變更，再決定 <code>apply</code></li><li><strong>單一規則或 contact point 草稿</strong>：先用 <code>new-<em></code>、<code>add-</em></code> 或 <code>clone-rule</code></li><li><strong>通知路由</strong>：先走 <code>preview-route</code>，確認結果後再 <code>set-route</code></li></ul>
+<h2 id="這個入口是做什麼的">這個入口是做什麼的</h2>
 <p><code>grafana-util alert</code> 把告警工作流收在同一個較淺的入口，並依任務把 help 分成盤點、搬移、撰寫與審查幾個區塊：從盤點、匯出、比對，到路由設計、草稿撰寫，再到 plan / apply。這頁適合先搞懂規則、通知路由與 contact point 的關係，再決定要往哪個子命令深入。</p>
 <p>目前公開命令不使用舊的 <code>alert live ...</code>、<code>alert migrate ...</code>、<code>alert author ...</code> 分層；請直接使用 <code>grafana-util alert list-rules</code>、<code>grafana-util alert export</code>、<code>grafana-util alert init</code>、<code>grafana-util alert preview-route</code> 這類 current path。</p>
+<h2 id="這一組頁面怎麼讀比較不會亂">這一組頁面怎麼讀比較不會亂</h2>
+<ol><li>先看這頁，判斷你是在做 inventory、authoring、routing，還是 apply。</li><li>進到子命令頁後，先看「何時使用」與「最短成功路徑」。</li><li>再確認輸入來源是 live、本地 desired-state，還是單一草稿檔。</li><li>最後才看完整 flags 與輸出格式。</li></ol>
 <h2 id="採用前後對照">採用前後對照</h2>
 <ul><li><strong>採用前</strong>：告警工作常分散在 UI、臨時 export，或不容易重跑的 shell 指令裡。</li><li><strong>採用後</strong>：同一個命令群組就能把 inventory、撰寫、diff、規劃與套用放在一起。</li></ul>
 <h2 id="成功判準">成功判準</h2>
@@ -972,21 +1001,14 @@ grafana-util alert init --desired-dir ./alerts/desired</code></pre>
 grafana-util alert export --url http://localhost:3000 --basic-user admin --basic-password admin --output-dir ./alerts --overwrite</code></pre>
 <pre><code># 先試跑規劃，不要直接套用。
 grafana-util alert plan --desired-dir ./alerts/desired --output-format json</code></pre>
-<h2 id="相關命令">相關命令</h2>
-<h3 id="盤點">盤點</h3>
-<ul><li><a href="alert-list-rules.html">alert list-rules</a></li><li><a href="alert-list-contact-points.html">alert list-contact-points</a></li><li><a href="alert-list-mute-timings.html">alert list-mute-timings</a></li><li><a href="alert-list-templates.html">alert list-templates</a></li></ul>
-<h3 id="搬移">搬移</h3>
-<ul><li><a href="alert-export.html">alert export</a></li><li><a href="alert-import.html">alert import</a></li><li><a href="alert-diff.html">alert diff</a></li></ul>
-<h3 id="變更前檢查">變更前檢查</h3>
-<ul><li><a href="alert-plan.html">alert plan</a></li><li><a href="alert-apply.html">alert apply</a></li><li><a href="alert-delete.html">alert delete</a></li></ul>
-<h3 id="規則與路由撰寫">規則與路由撰寫</h3>
-<ul><li><a href="alert-add-rule.html">alert add-rule</a></li><li><a href="alert-clone-rule.html">alert clone-rule</a></li><li><a href="alert-add-contact-point.html">alert add-contact-point</a></li><li><a href="alert-set-route.html">alert set-route</a></li><li><a href="alert-preview-route.html">alert preview-route</a></li><li><a href="alert-new-rule.html">alert new-rule</a></li><li><a href="alert-new-contact-point.html">alert new-contact-point</a></li><li><a href="alert-new-template.html">alert new-template</a></li><li><a href="access.html">access</a></li></ul>
+<h2 id="各工作流入口">各工作流入口</h2>
+<table><thead><tr><th>工作流</th><th>入口頁</th><th>常見延伸頁</th></tr></thead><tbody><tr><td>盤點</td><td><a href="alert-list-rules.html">alert list-rules</a></td><td><a href="alert-list-contact-points.html">alert list-contact-points</a>、<a href="alert-list-mute-timings.html">alert list-mute-timings</a>、<a href="alert-list-templates.html">alert list-templates</a></td></tr><tr><td>搬移</td><td><a href="alert-export.html">alert export</a></td><td><a href="alert-import.html">alert import</a>、<a href="alert-diff.html">alert diff</a></td></tr><tr><td>變更前檢查</td><td><a href="alert-plan.html">alert plan</a></td><td><a href="alert-apply.html">alert apply</a></td></tr><tr><td>規則與路由撰寫</td><td><a href="alert-new-rule.html">alert new-rule</a></td><td><a href="alert-add-rule.html">alert add-rule</a>、<a href="alert-clone-rule.html">alert clone-rule</a>、<a href="alert-preview-route.html">alert preview-route</a>、<a href="alert-set-route.html">alert set-route</a></td></tr></tbody></table>
 
 </article>
 <aside class="sidebar">
   <button class="sidebar-toggle sidebar-toggle-right" type="button" aria-expanded="true" aria-label="Toggle page sidebar">▶</button>
   <div class="sidebar-content">
-    <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#這一頁對應的工作流"><span class="toc-label">這一頁對應的工作流</span></a></li><li class="toc-level-2"><a href="#從這裡開始"><span class="toc-label">從這裡開始</span></a></li><li class="toc-level-2"><a href="#說明"><span class="toc-label">說明</span></a></li><li class="toc-level-2"><a href="#採用前後對照"><span class="toc-label">採用前後對照</span></a></li><li class="toc-level-2"><a href="#成功判準"><span class="toc-label">成功判準</span></a></li><li class="toc-level-2"><a href="#失敗時先檢查"><span class="toc-label">失敗時先檢查</span></a></li><li class="toc-level-2"><a href="#主要旗標"><span class="toc-label">主要旗標</span></a></li><li class="toc-level-2"><a href="#範例"><span class="toc-label">範例</span></a></li><li class="toc-level-2"><a href="#相關命令"><span class="toc-label">相關命令</span></a></li><li class="toc-level-3"><a href="#盤點"><span class="toc-label">盤點</span></a></li><li class="toc-level-3"><a href="#搬移"><span class="toc-label">搬移</span></a></li><li class="toc-level-3"><a href="#變更前檢查"><span class="toc-label">變更前檢查</span></a></li><li class="toc-level-3"><a href="#規則與路由撰寫"><span class="toc-label">規則與路由撰寫</span></a></li></ul></section><section class="sidebar-section"><h2>Related</h2><ul class="sidebar-meta-list"><li><a href="../../handbook/zh-TW/alert.html" class="sidebar-meta-link">Matching handbook chapter</a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/alert.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
+    <section class="sidebar-section"><h2>本頁內容</h2><ul class="toc-list"><li class="toc-level-2"><a href="#先判斷你現在要做哪一種事"><span class="toc-label">先判斷你現在要做哪一種事</span></a></li><li class="toc-level-2"><a href="#先選哪一條資料路徑"><span class="toc-label">先選哪一條資料路徑</span></a></li><li class="toc-level-2"><a href="#這個入口是做什麼的"><span class="toc-label">這個入口是做什麼的</span></a></li><li class="toc-level-2"><a href="#這一組頁面怎麼讀比較不會亂"><span class="toc-label">這一組頁面怎麼讀比較不會亂</span></a></li><li class="toc-level-2"><a href="#採用前後對照"><span class="toc-label">採用前後對照</span></a></li><li class="toc-level-2"><a href="#成功判準"><span class="toc-label">成功判準</span></a></li><li class="toc-level-2"><a href="#失敗時先檢查"><span class="toc-label">失敗時先檢查</span></a></li><li class="toc-level-2"><a href="#主要旗標"><span class="toc-label">主要旗標</span></a></li><li class="toc-level-2"><a href="#範例"><span class="toc-label">範例</span></a></li><li class="toc-level-2"><a href="#各工作流入口"><span class="toc-label">各工作流入口</span></a></li></ul></section><section class="sidebar-section"><h2>相關頁面</h2><ul class="sidebar-meta-list"><li><a href="../../handbook/zh-TW/alert.html" class="sidebar-meta-link">對應手冊章節</a></li></ul></section><section class="sidebar-section"><h2>版本</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>語言</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/alert.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
   </div>
 </aside>
 

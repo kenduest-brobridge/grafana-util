@@ -42,7 +42,7 @@ This page is for script authors, pipeline owners, and release engineers who need
 
 Use a `config profile` first, with env-backed secrets for CI.
 
-1. `config profile` with `password_env` or `token_env` for repeatable jobs and checked-in config.
+1. `config profile` with `password_env` or `token_env` for repeatable jobs and repo-local config.
 2. Direct Basic auth only for bootstrap or one-off validation in a safe local shell.
 3. Token auth is the normal steady state for narrow automation, as long as the token scope matches the exact resource set you need.
 

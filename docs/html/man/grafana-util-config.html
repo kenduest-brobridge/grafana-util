@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>grafana-util-config.1 · grafana-util docs</title>
+  <title>grafana-util-config.1 · Grafana Documentation</title>
   <style>:root {
   color-scheme: light dark;
   --font-scale: 1;
@@ -126,7 +126,13 @@ pre:hover .code-controls { opacity: 1; }
 .site.landing-shell .topbar { margin-bottom: 10px; }
 .site-content { flex-grow: 1; }
 .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 16px; border-bottom: 1px solid var(--border); padding-bottom: 14px; }
-.brand { font: 760 1.08rem var(--font-mono); text-transform: uppercase; letter-spacing: 0.045em; color: var(--heading) !important; text-decoration: none !important; }
+.brand {
+  font: 700 0.9rem var(--font-display);
+  text-transform: none;
+  letter-spacing: 0.01em;
+  color: var(--heading) !important;
+  text-decoration: none !important;
+}
 .themebar { display: flex; gap: 8px; align-items: center; }
 .themebar select {
   border: 1px solid var(--border);
@@ -372,30 +378,24 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map {
-  margin-bottom: 24px;
+.handbook-command-map { margin: 0 0 24px; }
+.handbook-command-map-panel {
+  margin-top: 16px;
   padding: 16px 18px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: color-mix(in srgb, var(--panel) 96%, white);
 }
-.handbook-command-map .nav-section + .nav-section { margin-top: 14px; }
-.handbook-command-map h2 {
-  margin: 0 0 10px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--border);
-  font-size: 0.82rem;
-  color: var(--muted);
-}
 .handbook-command-map .nav-group-title {
   font-size: 0.95rem;
 }
 .handbook-command-map .nav-command-group {
-  padding-top: 10px;
+  padding-top: 0;
 }
 .handbook-command-map .nav-command-group + .nav-command-group {
   margin-top: 12px;
   border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
+  padding-top: 10px;
 }
 .handbook-command-map .nav-command-sub-list {
   margin-top: 8px;
@@ -523,21 +523,36 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   line-height: 1.68;
 }
 .section-index-list {
-  list-style: none;
   margin: 0;
+}
+.section-index-list.layout-grid {
+  list-style: none;
   padding: 0;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 0.4rem 1rem;
 }
+.section-index-list.layout-list {
+  list-style: disc;
+  padding-left: 1.25rem;
+  display: block;
+}
 .section-index-list li {
   margin: 0;
+}
+.section-index-list.layout-list li {
+  margin: 0 0 0.45rem;
 }
 .section-index-list a {
   display: block;
   padding: 0.25rem 0;
   color: var(--text);
   font-weight: 560;
+}
+.section-index-list.layout-list a {
+  display: inline;
+  padding: 0;
+  font-weight: 540;
 }
 .section-index-list a:hover {
   color: var(--heading);
@@ -622,41 +637,49 @@ html[lang="zh-TW"] .sidebar { font-family: var(--font-zh); letter-spacing: 0; }
 }
 .landing-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(420px, 0.88fr);
-  gap: 48px;
+  grid-template-columns: minmax(0, 1.14fr) minmax(360px, 0.86fr);
+  gap: 34px;
   align-items: start;
-  padding: 18px 0 30px;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--panel) 98%, white), color-mix(in srgb, var(--panel) 96%, var(--accent-soft)));
+  padding: 8px 0 22px;
 }
 .landing-hero-inner {
-  max-width: none;
+  max-width: 60rem;
+}
+.landing-eyebrow {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font: 700 0.72rem var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 .landing-title {
   margin: 0 0 18px;
-  font-size: clamp(2.35rem, 4.3vw, 3.6rem);
-  line-height: 0.96;
-  letter-spacing: -0.05em;
+  font-size: clamp(1.72rem, 2.7vw, 2.3rem);
+  line-height: 1.06;
+  letter-spacing: -0.025em;
 }
 .landing-summary {
-  max-width: 72ch;
+  max-width: 56ch;
   margin: 0;
-  font-size: 1.02rem;
-  line-height: 1.72;
+  font-size: 0.96rem;
+  line-height: 1.68;
   color: var(--text);
 }
 .landing-search-panel {
-  padding-top: 12px;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-strong);
 }
 .landing-search-panel h2 {
   margin: 0 0 8px;
-  font-size: 1.15rem;
+  font-size: 1.02rem;
   letter-spacing: -0.02em;
 }
 .landing-search-panel p {
   margin: 0 0 16px;
-  font-size: 0.95rem;
-  line-height: 1.7;
+  font-size: 0.9rem;
+  line-height: 1.62;
   color: var(--muted);
 }
 .landing-search-form {
@@ -713,8 +736,8 @@ html[lang="zh-TW"] .sidebar { font-family: var(--font-zh); letter-spacing: 0; }
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 28px;
-  margin-top: 30px;
-  padding-top: 26px;
+  margin-top: 22px;
+  padding-top: 22px;
   border-top: 1px solid var(--border);
 }
 .landing-section h2 {
@@ -760,17 +783,12 @@ html[lang="zh-TW"] .sidebar { font-family: var(--font-zh); letter-spacing: 0; }
   color: var(--muted);
 }
 html[data-theme="dark"] .landing-hero {
-  background:
-    radial-gradient(circle at 14% 10%, rgba(255, 255, 255, 0.04), transparent 24%),
-    radial-gradient(circle at 82% 14%, rgba(170, 180, 191, 0.11), transparent 28%),
-    linear-gradient(180deg, #0b0f14 0%, #0d1218 58%, #10161d 100%);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 0;
 }
 html[data-theme="dark"] .landing-search-panel {
-  padding: 18px 20px 20px;
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: 8px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 html[data-theme="dark"] .landing-search-input::placeholder {
@@ -791,6 +809,15 @@ html[data-theme="dark"] .landing-task {
 }
 html[data-theme="dark"] .landing-meta {
   border-top-color: var(--border);
+}
+@media (max-width: 980px) {
+  .landing-hero {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  .landing-hero-inner {
+    max-width: none;
+  }
 }
 .landing-link-list {
   display: flex;
@@ -920,7 +947,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
   <div class="site">
     <div class="site-content">
       <div class="topbar">
-  <a class="brand" href="../index.html">grafana-util docs</a>
+  <a class="brand" href="../index.html">Grafana Documentation</a>
   <div class="themebar">
     <select id="jump-select" aria-label="Jump"><option value="" selected>Jump to...</option><optgroup label="Handbook"><option value="../handbook/en/index.html">Overview</option><option value="../handbook/en/what-is-grafana-util.html">What grafana-util is for</option><option value="../handbook/en/getting-started.html">Getting Started</option><option value="../handbook/en/role-new-user.html">First Run / Beginner Path</option><option value="../handbook/en/role-sre-ops.html">SRE / Operator</option><option value="../handbook/en/role-automation-ci.html">Automation / CI</option><option value="../handbook/en/architecture.html">Design Principles</option><option value="../handbook/en/dashboard.html">Dashboard</option><option value="../handbook/en/datasource.html">Datasource</option><option value="../handbook/en/alert.html">Alert</option><option value="../handbook/en/access.html">Access</option><option value="../handbook/en/status-workspace.html">Status &amp; Workspace</option><option value="../handbook/en/scenarios.html">Scenarios</option><option value="../handbook/en/recipes.html">Recipes</option><option value="../handbook/en/reference.html">Reference</option><option value="../handbook/en/troubleshooting.html">Troubleshooting</option></optgroup><optgroup label="Command Reference"><option value="../commands/en/version.html">Version</option><option value="../commands/en/dashboard.html">Dashboard</option><option value="../commands/en/alert.html">Alert</option><option value="../commands/en/datasource.html">Datasource</option><option value="../commands/en/access.html">Access</option><option value="../commands/en/config.html">Config</option><option value="../commands/en/profile.html">Config Profile</option><option value="../commands/en/status.html">Status</option><option value="../commands/en/resource.html">Status Resource</option><option value="../commands/en/snapshot.html">Snapshot</option><option value="../commands/en/workspace.html">Workspace</option></optgroup></select>
     <select id="font-select" aria-label="Font Size">
@@ -950,7 +977,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 
 <div class="manpage-intro">
   <p>This page renders the generated roff manpage into readable HTML for browser use. For richer per-subcommand detail, prefer the command-reference pages.</p>
-  <div class="manpage-rendered"><section class="man-section"><h2>NAME</h2><p>grafana-util-config - manage repo-local grafana-util configuration workflows</p></section><section class="man-section"><h2>SYNOPSIS</h2><p><strong>grafana-util config [<em>SUBCOMMAND</em>] [<em>OPTIONS</em>]</strong></p></section><section class="man-section"><h2>DESCRIPTION</h2><p>open repo-local configuration workflows for repeatable Grafana access.</p><p>when you want to manage repo-local defaults instead of repeating live connection flags in every command.</p></section><section class="man-section"><h2>COMMAND GROUPS</h2><p>- Connection Setup: profile</p><p>Open this page first when the question is not about one profile subcommand yet, but about how this repo should store and reuse Grafana connection details at all.</p><p>Primary entrypoint:</p><p>- config profile: add, validate, inspect, and initialize repo-local profiles</p></section><section class="man-section"><h2>BEFORE / AFTER</h2><ul class="man-bullets"><li>Before: live commands often repeat --url, token, or Basic auth flags in shell history, scripts, and onboarding notes.</li><li>After: one repo-local profile can carry the shared connection defaults so daily commands stay shorter and CI stays easier to audit.</li></ul></section><section class="man-section"><h2>SUBCOMMANDS</h2></section><section class="man-section"><h2>SUCCESS CRITERIA</h2><ul class="man-bullets"><li>one checkout has the connection defaults it actually needs</li><li>repeated live commands can use --profile instead of restating credentials</li><li>secret storage mode matches the machine and operating model</li></ul></section><section class="man-section"><h2>FAILURE CHECKS</h2><p>- if a saved profile does not behave like a direct command line, inspect it with config profile show</p><p>- if validation fails, confirm the selected secret mode is supported on the current machine</p><p>- if a repo still needs repeated auth flags, check whether the intended profile was created and selected</p><p>### Key flags</p><p>- --color: control JSON color output for this namespace</p><p>### Examples</p><p># inspect the config namespace before choosing a profile subcommand.</p><p>grafana-util config --help</p><p># initialize a starter config file in the current checkout.</p><p>grafana-util config profile init --overwrite</p><p># add a reusable production profile backed by prompt-based secrets.</p><p>grafana-util config profile add prod --url https://grafana.example.com --basic-user admin --prompt-password --store-secret encrypted-file</p></section><section class="man-section"><h2>SEE ALSO</h2><p><strong>grafana-util</strong>(1), <strong>grafana-util-status</strong>(1), <strong>grafana-util-access</strong>(1)</p></section></div>
+  <div class="manpage-rendered"><section class="man-section"><h2>NAME</h2><p>grafana-util-config - manage repo-local grafana-util configuration workflows</p></section><section class="man-section"><h2>SYNOPSIS</h2><p><strong>grafana-util config [<em>SUBCOMMAND</em>] [<em>OPTIONS</em>]</strong></p></section><section class="man-section"><h2>DESCRIPTION</h2><p>explain what the grafana-util config namespace is for, when to stay at the root, and when to move into config profile.</p><ul class="man-bullets"><li>when you need the setup model before picking a profile subcommand</li><li>when you are deciding between direct flags and repo-local --profile usage</li><li>when you need to understand where URL, auth defaults, and secret handling should live</li></ul></section><section class="man-section"><h2>BEFORE / AFTER</h2><ul class="man-bullets"><li>Before: live commands repeat --url, Basic auth, or token flags across shell history, scripts, and onboarding notes</li><li>After: one repo-local profile carries the shared connection defaults so daily commands stay shorter and CI is easier to audit</li></ul></section><section class="man-section"><h2>SUBCOMMANDS</h2></section><section class="man-section"><h2>COMMON OPTIONS</h2><ul class="man-bullets"><li>the root page is a namespace overview; operational flags live under config profile</li></ul></section><section class="man-section"><h2>SUCCESS CRITERIA</h2><ul class="man-bullets"><li>one checkout has the connection defaults it actually needs</li><li>repeated live commands can use --profile instead of restating credentials</li><li>the chosen secret storage mode fits the machine and operating model</li><li>the team can separate the config root from the config profile operational surface</li></ul></section><section class="man-section"><h2>FAILURE CHECKS</h2><ul class="man-bullets"><li>if a saved profile does not behave like a direct command line, inspect it with config profile show</li><li>if validation fails, confirm the selected secret mode is supported on the current machine</li><li>if a repo still needs repeated auth flags, check whether the intended profile was created and selected</li><li>if you are still mixing up config and config profile, stop here before going deeper into leaf pages</li></ul></section><section class="man-section"><h2>SEE ALSO</h2><p><strong>grafana-util</strong>(1), <strong>grafana-util-status</strong>(1), <strong>grafana-util-access</strong>(1)</p></section></div>
 </div>
 
 

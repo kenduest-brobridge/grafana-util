@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Operator Handbook · grafana-util docs</title>
+  <title>Operator Handbook · Grafana Documentation</title>
   <style>:root {
   color-scheme: light dark;
   --font-scale: 1;
@@ -126,7 +126,13 @@ pre:hover .code-controls { opacity: 1; }
 .site.landing-shell .topbar { margin-bottom: 10px; }
 .site-content { flex-grow: 1; }
 .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 16px; border-bottom: 1px solid var(--border); padding-bottom: 14px; }
-.brand { font: 760 1.08rem var(--font-mono); text-transform: uppercase; letter-spacing: 0.045em; color: var(--heading) !important; text-decoration: none !important; }
+.brand {
+  font: 700 0.9rem var(--font-display);
+  text-transform: none;
+  letter-spacing: 0.01em;
+  color: var(--heading) !important;
+  text-decoration: none !important;
+}
 .themebar { display: flex; gap: 8px; align-items: center; }
 .themebar select {
   border: 1px solid var(--border);
@@ -372,30 +378,24 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map {
-  margin-bottom: 24px;
+.handbook-command-map { margin: 0 0 24px; }
+.handbook-command-map-panel {
+  margin-top: 16px;
   padding: 16px 18px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: color-mix(in srgb, var(--panel) 96%, white);
 }
-.handbook-command-map .nav-section + .nav-section { margin-top: 14px; }
-.handbook-command-map h2 {
-  margin: 0 0 10px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--border);
-  font-size: 0.82rem;
-  color: var(--muted);
-}
 .handbook-command-map .nav-group-title {
   font-size: 0.95rem;
 }
 .handbook-command-map .nav-command-group {
-  padding-top: 10px;
+  padding-top: 0;
 }
 .handbook-command-map .nav-command-group + .nav-command-group {
   margin-top: 12px;
   border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
+  padding-top: 10px;
 }
 .handbook-command-map .nav-command-sub-list {
   margin-top: 8px;
@@ -523,21 +523,36 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   line-height: 1.68;
 }
 .section-index-list {
-  list-style: none;
   margin: 0;
+}
+.section-index-list.layout-grid {
+  list-style: none;
   padding: 0;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 0.4rem 1rem;
 }
+.section-index-list.layout-list {
+  list-style: disc;
+  padding-left: 1.25rem;
+  display: block;
+}
 .section-index-list li {
   margin: 0;
+}
+.section-index-list.layout-list li {
+  margin: 0 0 0.45rem;
 }
 .section-index-list a {
   display: block;
   padding: 0.25rem 0;
   color: var(--text);
   font-weight: 560;
+}
+.section-index-list.layout-list a {
+  display: inline;
+  padding: 0;
+  font-weight: 540;
 }
 .section-index-list a:hover {
   color: var(--heading);
@@ -622,41 +637,49 @@ html[lang="zh-TW"] .sidebar { font-family: var(--font-zh); letter-spacing: 0; }
 }
 .landing-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(420px, 0.88fr);
-  gap: 48px;
+  grid-template-columns: minmax(0, 1.14fr) minmax(360px, 0.86fr);
+  gap: 34px;
   align-items: start;
-  padding: 18px 0 30px;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--panel) 98%, white), color-mix(in srgb, var(--panel) 96%, var(--accent-soft)));
+  padding: 8px 0 22px;
 }
 .landing-hero-inner {
-  max-width: none;
+  max-width: 60rem;
+}
+.landing-eyebrow {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font: 700 0.72rem var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 .landing-title {
   margin: 0 0 18px;
-  font-size: clamp(2.35rem, 4.3vw, 3.6rem);
-  line-height: 0.96;
-  letter-spacing: -0.05em;
+  font-size: clamp(1.72rem, 2.7vw, 2.3rem);
+  line-height: 1.06;
+  letter-spacing: -0.025em;
 }
 .landing-summary {
-  max-width: 72ch;
+  max-width: 56ch;
   margin: 0;
-  font-size: 1.02rem;
-  line-height: 1.72;
+  font-size: 0.96rem;
+  line-height: 1.68;
   color: var(--text);
 }
 .landing-search-panel {
-  padding-top: 12px;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-strong);
 }
 .landing-search-panel h2 {
   margin: 0 0 8px;
-  font-size: 1.15rem;
+  font-size: 1.02rem;
   letter-spacing: -0.02em;
 }
 .landing-search-panel p {
   margin: 0 0 16px;
-  font-size: 0.95rem;
-  line-height: 1.7;
+  font-size: 0.9rem;
+  line-height: 1.62;
   color: var(--muted);
 }
 .landing-search-form {
@@ -713,8 +736,8 @@ html[lang="zh-TW"] .sidebar { font-family: var(--font-zh); letter-spacing: 0; }
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 28px;
-  margin-top: 30px;
-  padding-top: 26px;
+  margin-top: 22px;
+  padding-top: 22px;
   border-top: 1px solid var(--border);
 }
 .landing-section h2 {
@@ -760,17 +783,12 @@ html[lang="zh-TW"] .sidebar { font-family: var(--font-zh); letter-spacing: 0; }
   color: var(--muted);
 }
 html[data-theme="dark"] .landing-hero {
-  background:
-    radial-gradient(circle at 14% 10%, rgba(255, 255, 255, 0.04), transparent 24%),
-    radial-gradient(circle at 82% 14%, rgba(170, 180, 191, 0.11), transparent 28%),
-    linear-gradient(180deg, #0b0f14 0%, #0d1218 58%, #10161d 100%);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 0;
 }
 html[data-theme="dark"] .landing-search-panel {
-  padding: 18px 20px 20px;
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: 8px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 html[data-theme="dark"] .landing-search-input::placeholder {
@@ -791,6 +809,15 @@ html[data-theme="dark"] .landing-task {
 }
 html[data-theme="dark"] .landing-meta {
   border-top-color: var(--border);
+}
+@media (max-width: 980px) {
+  .landing-hero {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  .landing-hero-inner {
+    max-width: none;
+  }
 }
 .landing-link-list {
   display: flex;
@@ -920,7 +947,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
   <div class="site">
     <div class="site-content">
       <div class="topbar">
-  <a class="brand" href="../../index.html">grafana-util docs</a>
+  <a class="brand" href="../../index.html">Grafana Documentation</a>
   <div class="themebar">
     <select id="page-locale-select" aria-label="Language switch"><option value="" selected>Language: English</option><option value="../zh-TW/index.html">Switch to 繁體中文</option></select><select id="jump-select" aria-label="Jump"><option value="" selected>Jump to...</option><optgroup label="Handbook"><option value="index.html">Overview</option><option value="what-is-grafana-util.html">What grafana-util is for</option><option value="getting-started.html">Getting Started</option><option value="role-new-user.html">First Run / Beginner Path</option><option value="role-sre-ops.html">SRE / Operator</option><option value="role-automation-ci.html">Automation / CI</option><option value="architecture.html">Design Principles</option><option value="dashboard.html">Dashboard</option><option value="datasource.html">Datasource</option><option value="alert.html">Alert</option><option value="access.html">Access</option><option value="status-workspace.html">Status &amp; Workspace</option><option value="scenarios.html">Scenarios</option><option value="recipes.html">Recipes</option><option value="reference.html">Reference</option><option value="troubleshooting.html">Troubleshooting</option></optgroup><optgroup label="Command Reference"><option value="../../commands/en/version.html">Version</option><option value="../../commands/en/dashboard.html">Dashboard</option><option value="../../commands/en/alert.html">Alert</option><option value="../../commands/en/datasource.html">Datasource</option><option value="../../commands/en/access.html">Access</option><option value="../../commands/en/config.html">Config</option><option value="../../commands/en/profile.html">Config Profile</option><option value="../../commands/en/status.html">Status</option><option value="../../commands/en/resource.html">Status Resource</option><option value="../../commands/en/snapshot.html">Snapshot</option><option value="../../commands/en/workspace.html">Workspace</option></optgroup></select>
     <select id="font-select" aria-label="Font Size">
@@ -940,7 +967,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
       <div class="layout">
 <aside class="nav-sidebar">
   <button class="sidebar-toggle sidebar-toggle-left" type="button" aria-expanded="true" aria-label="Toggle handbook navigation">◀</button>
-  <div class="nav-sidebar-content"><section class="nav-section"><h2>Guide Map</h2><div class="nav-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Part 1 · Start Here</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="index.html" class="nav-item active">Overview</a></li><li class="nav-tree-node"><a href="what-is-grafana-util.html" class="nav-item">What grafana-util is for</a></li><li class="nav-tree-node"><a href="getting-started.html" class="nav-item">Getting Started</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 2 · Role Paths</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="role-new-user.html" class="nav-item">First Run / Beginner Path</a></li><li class="nav-tree-node"><a href="role-sre-ops.html" class="nav-item">SRE / Operator</a></li><li class="nav-tree-node"><a href="role-automation-ci.html" class="nav-item">Automation / CI</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 3 · Operation Surfaces</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="status-workspace.html" class="nav-item">Status &amp; Workspace</a></li><li class="nav-tree-node"><a href="dashboard.html" class="nav-item">Dashboard</a></li><li class="nav-tree-node"><a href="datasource.html" class="nav-item">Datasource</a></li><li class="nav-tree-node"><a href="alert.html" class="nav-item">Alert</a></li><li class="nav-tree-node"><a href="access.html" class="nav-item">Access</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 4 · Design Principles</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="architecture.html" class="nav-item">Design Principles</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 5 · Reference &amp; Troubleshooting</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="scenarios.html" class="nav-item">Scenarios</a></li><li class="nav-tree-node"><a href="recipes.html" class="nav-item">Recipes</a></li><li class="nav-tree-node"><a href="reference.html" class="nav-item">Reference</a></li><li class="nav-tree-node"><a href="troubleshooting.html" class="nav-item">Troubleshooting</a></li></ul></div></section><section class="nav-section nav-command-section collapsed"><button class="nav-group-header nav-section-toggle" type="button" aria-expanded="false"><span class="nav-group-title-text">Command Relationships</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-section-body"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">First 3 Commands</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><ul class="nav-command-tree"><li class="nav-command-link"><a href="../../commands/en/version.html" class="nav-command-leaf-link">--version</a></li><li class="nav-command-link"><a href="../../commands/en/status.html" class="nav-command-leaf-link">status live</a></li><li class="nav-command-link"><a href="../../commands/en/profile.html" class="nav-command-leaf-link">config profile add</a></li></ul></div></div></div></section><section class="nav-section"><h2>Command Reference</h2><a href="../../commands/en/index.html" class="nav-command-entry">Open command reference</a></section></div>
+  <div class="nav-sidebar-content"><section class="nav-section"><h2>Guide Map</h2><div class="nav-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Part 1 · Start Here</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="index.html" class="nav-item active">Overview</a></li><li class="nav-tree-node"><a href="what-is-grafana-util.html" class="nav-item">What grafana-util is for</a></li><li class="nav-tree-node"><a href="getting-started.html" class="nav-item">Getting Started</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 2 · Role Paths</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="role-new-user.html" class="nav-item">First Run / Beginner Path</a></li><li class="nav-tree-node"><a href="role-sre-ops.html" class="nav-item">SRE / Operator</a></li><li class="nav-tree-node"><a href="role-automation-ci.html" class="nav-item">Automation / CI</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 3 · Operation Surfaces</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="status-workspace.html" class="nav-item">Status &amp; Workspace</a></li><li class="nav-tree-node"><a href="dashboard.html" class="nav-item">Dashboard</a></li><li class="nav-tree-node"><a href="datasource.html" class="nav-item">Datasource</a></li><li class="nav-tree-node"><a href="alert.html" class="nav-item">Alert</a></li><li class="nav-tree-node"><a href="access.html" class="nav-item">Access</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 4 · Design Principles</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="architecture.html" class="nav-item">Design Principles</a></li></ul></div><div class="nav-group collapsed"><button class="nav-group-header" type="button" aria-expanded="false"><span class="nav-group-title-text">Part 5 · Reference &amp; Troubleshooting</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><ul class="nav-sub-list"><li class="nav-tree-node"><a href="scenarios.html" class="nav-item">Scenarios</a></li><li class="nav-tree-node"><a href="recipes.html" class="nav-item">Recipes</a></li><li class="nav-tree-node"><a href="reference.html" class="nav-item">Reference</a></li><li class="nav-tree-node"><a href="troubleshooting.html" class="nav-item">Troubleshooting</a></li></ul></div></section><section class="nav-section nav-command-section collapsed"><button class="nav-group-header nav-section-toggle" type="button" aria-expanded="false"><span class="nav-group-title-text">Command Relationships</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-section-body"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">First-Run Path</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><ul class="nav-command-tree"><li class="nav-command-link"><a href="../../commands/en/version.html" class="nav-command-leaf-link">--version</a></li><li class="nav-command-link"><a href="../../commands/en/status.html" class="nav-command-leaf-link">status live</a></li><li class="nav-command-link"><a href="../../commands/en/profile.html" class="nav-command-leaf-link">config profile add</a></li></ul></div></div></div></section><section class="nav-section"><h2>Command Reference</h2><a href="../../commands/en/index.html" class="nav-command-entry">Open command reference</a></section></div>
 </aside>
 
 <article class="article">
@@ -948,7 +975,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 
 <div class="hero-eyebrow">Part 1 · Start Here · Chapter 1 of 16</div><h1><span class="hero-title-main">Overview</span></h1><p class="hero-subtitle">Operator Handbook</p>
 
-<section class="handbook-command-map"><section class="nav-section"><h2>Command Relationships</h2><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">First 3 Commands</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><ul class="nav-command-tree"><li class="nav-command-link"><a href="../../commands/en/version.html" class="nav-command-leaf-link">--version</a></li><li class="nav-command-link"><a href="../../commands/en/status.html" class="nav-command-leaf-link">status live</a></li><li class="nav-command-link"><a href="../../commands/en/profile.html" class="nav-command-leaf-link">config profile add</a></li></ul></div></div></section></section><h2 id="language">Language</h2>
+<section class="handbook-command-map"><h2 id="command-relationships">Command Relationships</h2><div class="handbook-command-map-panel"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">First-Run Path</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><ul class="nav-command-tree"><li class="nav-command-link"><a href="../../commands/en/version.html" class="nav-command-leaf-link">--version</a></li><li class="nav-command-link"><a href="../../commands/en/status.html" class="nav-command-leaf-link">status live</a></li><li class="nav-command-link"><a href="../../commands/en/profile.html" class="nav-command-leaf-link">config profile add</a></li></ul></div></div></div></section><h2 id="language">Language</h2>
 <ul><li>English handbook: <a href="index.html">current page</a></li><li>Traditional Chinese handbook: <a href="../zh-TW/index.html">繁體中文手冊</a></li><li>English command reference: <a href="../../commands/en/index.html">Command Reference</a></li><li>Traditional Chinese command reference: <a href="../../commands/zh-TW/index.html">指令參考</a></li></ul>
 <p>Welcome to the <code>grafana-util</code> handbook. Start here if you need a practical operator path from first connection, to repeatable profiles, to day-to-day Grafana maintenance and automation.</p>
 <p><code>grafana-util</code> is a personal long-term tool built around real Grafana maintenance pain. This handbook is written from that same angle: not &quot;how to expose every API surface&quot;, but how to move through inventory, inspection, review, migration, and safer live changes without rebuilding the workflow every time.</p>
@@ -1002,7 +1029,7 @@ grafana-util status overview live --url http://localhost:3000 --basic-user admin
 <aside class="sidebar">
   <button class="sidebar-toggle sidebar-toggle-right" type="button" aria-expanded="true" aria-label="Toggle page sidebar">▶</button>
   <div class="sidebar-content">
-    <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#language"><span class="toc-label">Language</span></a></li><li class="toc-level-2"><a href="#before-after"><span class="toc-label">Before / After</span></a></li><li class="toc-level-2"><a href="#what-success-looks-like"><span class="toc-label">What success looks like</span></a></li><li class="toc-level-2"><a href="#failure-checks"><span class="toc-label">Failure checks</span></a></li><li class="toc-level-2"><a href="#30-second-quick-start"><span class="toc-label">30-Second Quick Start</span></a></li><li class="toc-level-3"><a href="#1-install-global-binary"><span class="toc-label">1. Install (Global Binary)</span></a></li><li class="toc-level-3"><a href="#2-confirm-the-installed-version"><span class="toc-label">2. Confirm the Installed Version</span></a></li><li class="toc-level-3"><a href="#3-run-your-first-live-overview"><span class="toc-label">3. Run Your First Live Overview</span></a></li><li class="toc-level-2"><a href="#which-command-should-i-use"><span class="toc-label">Which command should I use?</span></a></li><li class="toc-level-2"><a href="#navigation-map"><span class="toc-label">Navigation Map</span></a></li><li class="toc-level-3"><a href="#phase-1-foundation"><span class="toc-label">Phase 1: Foundation</span></a></li><li class="toc-level-3"><a href="#phase-2-core-asset-management"><span class="toc-label">Phase 2: Core Asset Management</span></a></li><li class="toc-level-3"><a href="#phase-3-identity-access"><span class="toc-label">Phase 3: Identity &amp; Access</span></a></li><li class="toc-level-3"><a href="#phase-4-governance-readiness"><span class="toc-label">Phase 4: Governance &amp; Readiness</span></a></li><li class="toc-level-3"><a href="#phase-5-deep-dive"><span class="toc-label">Phase 5: Deep Dive</span></a></li><li class="toc-level-2"><a href="#choose-your-role"><span class="toc-label">Choose Your Role</span></a></li><li class="toc-level-2"><a href="#how-to-use-this-guide"><span class="toc-label">How to use this guide</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: English</a></li><li><a href="../zh-TW/index.html" class="sidebar-meta-link">Switch to 繁體中文</a></li></ul></section>
+    <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#command-relationships"><span class="toc-label">Command Relationships</span></a></li><li class="toc-level-2"><a href="#language"><span class="toc-label">Language</span></a></li><li class="toc-level-2"><a href="#before-after"><span class="toc-label">Before / After</span></a></li><li class="toc-level-2"><a href="#what-success-looks-like"><span class="toc-label">What success looks like</span></a></li><li class="toc-level-2"><a href="#failure-checks"><span class="toc-label">Failure checks</span></a></li><li class="toc-level-2"><a href="#30-second-quick-start"><span class="toc-label">30-Second Quick Start</span></a></li><li class="toc-level-3"><a href="#1-install-global-binary"><span class="toc-label">1. Install (Global Binary)</span></a></li><li class="toc-level-3"><a href="#2-confirm-the-installed-version"><span class="toc-label">2. Confirm the Installed Version</span></a></li><li class="toc-level-3"><a href="#3-run-your-first-live-overview"><span class="toc-label">3. Run Your First Live Overview</span></a></li><li class="toc-level-2"><a href="#which-command-should-i-use"><span class="toc-label">Which command should I use?</span></a></li><li class="toc-level-2"><a href="#navigation-map"><span class="toc-label">Navigation Map</span></a></li><li class="toc-level-3"><a href="#phase-1-foundation"><span class="toc-label">Phase 1: Foundation</span></a></li><li class="toc-level-3"><a href="#phase-2-core-asset-management"><span class="toc-label">Phase 2: Core Asset Management</span></a></li><li class="toc-level-3"><a href="#phase-3-identity-access"><span class="toc-label">Phase 3: Identity &amp; Access</span></a></li><li class="toc-level-3"><a href="#phase-4-governance-readiness"><span class="toc-label">Phase 4: Governance &amp; Readiness</span></a></li><li class="toc-level-3"><a href="#phase-5-deep-dive"><span class="toc-label">Phase 5: Deep Dive</span></a></li><li class="toc-level-2"><a href="#choose-your-role"><span class="toc-label">Choose Your Role</span></a></li><li class="toc-level-2"><a href="#how-to-use-this-guide"><span class="toc-label">How to use this guide</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: English</a></li><li><a href="../zh-TW/index.html" class="sidebar-meta-link">Switch to 繁體中文</a></li></ul></section>
   </div>
 </aside>
 

@@ -52,7 +52,7 @@ profile 的重點是讓日常操作少重打重複參數，不是代表一開始
 
 如果你還做不到這些，先停在第一個失敗的唯讀命令，搭配 [疑難排解與名詞解釋](troubleshooting.md) 找原因，不要急著往變更或匯入流程走。
 
-若要對照本章提到的旗標，請一併參考 [config profile](../../commands/zh-TW/config.md) 與 [指令參考](../../commands/zh-TW/index.md)。
+若要對照本章提到的旗標，請一併參考 [config profile](../../commands/zh-TW/profile.md) 與 [指令參考](../../commands/zh-TW/index.md)。
 
 ---
 
@@ -199,7 +199,7 @@ prod
 ```
 在剛初始化完成的設定檔中，`config profile list` 會一行列出一個 profile 名稱。
 
-若要看每個旗標背後的驗證規則，可再對照 [config profile](../../commands/zh-TW/config.md) 指令頁。
+若要看每個旗標背後的驗證規則，可再對照 [config profile](../../commands/zh-TW/profile.md) 指令頁。
 
 ### 3. 查看已解析的 profile
 ```bash

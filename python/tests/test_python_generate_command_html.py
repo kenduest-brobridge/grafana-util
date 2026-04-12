@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import sys
 import tempfile
 import unittest
@@ -8,6 +9,10 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT_PATH = REPO_ROOT / "scripts" / "generate_command_html.py"
 SCRIPTS_DIR = REPO_ROOT / "scripts"
+
+
+def load_json(path: Path):
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def load_module():
@@ -21,7 +26,31 @@ def load_module():
     return module
 
 
+def load_script_module(name: str):
+    if str(SCRIPTS_DIR) not in sys.path:
+        sys.path.insert(0, str(SCRIPTS_DIR))
+    return __import__(name)
+
+
 class GenerateCommandHtmlTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.doc_ui = load_json(REPO_ROOT / "scripts" / "contracts" / "doc-ui.json")
+        cls.command_taxonomy = load_json(REPO_ROOT / "scripts" / "contracts" / "command-taxonomy.json")
+        cls.command_index = load_json(REPO_ROOT / "scripts" / "contracts" / "command-reference-index.json")
+        cls.handbook_nav = load_json(REPO_ROOT / "scripts" / "contracts" / "handbook-nav.json")
+        cls.handbook_render = load_json(REPO_ROOT / "scripts" / "contracts" / "handbook-render.json")
+
+    def locale_ui(self, locale: str) -> dict:
+        return self.doc_ui["locales"][locale]
+
+    def handbook_nav_titles(self, locale: str) -> dict:
+        return self.handbook_nav["nav_titles"][locale]
+
+    def handbook_group_labels(self, locale: str) -> list[str]:
+        key = "label_zh_tw" if locale == "zh-TW" else "label_en"
+        return [group[key] for group in self.handbook_nav["nav_groups"]]
+
     def test_generated_html_matches_checked_in_outputs(self):
         module = load_module()
 
@@ -191,6 +220,25 @@ class GenerateCommandHtmlTests(unittest.TestCase):
         self.assertIn('href="#install"', rendered)
         self.assertNotIn("⚡", rendered)
 
+    def test_render_section_index_supports_list_variant_and_min_entries(self):
+        module = load_module()
+
+        headings = (
+            module.RenderedHeading(level=2, text="適用對象", anchor="audience"),
+            module.RenderedHeading(level=2, text="主要目標", anchor="goals"),
+            module.RenderedHeading(level=2, text="採用前後對照", anchor="before-after"),
+            module.RenderedHeading(level=2, text="成功判準", anchor="success"),
+        )
+
+        rendered = module.render_section_index(headings, title="章節索引", variant="list", min_entries=4)
+
+        self.assertIn('class="section-index-list layout-list"', rendered)
+        self.assertIn('href="#audience"', rendered)
+        self.assertIn(">主要目標<", rendered)
+
+        suppressed = module.render_section_index(headings[:3], title="章節索引", variant="list", min_entries=4)
+        self.assertEqual("", suppressed)
+
     def test_theme_script_copies_full_code_blocks_without_filtering_comments(self):
         module = load_module()
 
@@ -223,12 +271,13 @@ class GenerateCommandHtmlTests(unittest.TestCase):
 
         rendered = module.render_global_nav("handbook/zh-TW/index.html", "zh-TW", config)
 
-        self.assertIn("第 1 部 · 起步", rendered)
-        self.assertIn("第 2 部 · 角色路徑", rendered)
-        self.assertIn("第 3 部 · 操作面", rendered)
-        self.assertIn("第 5 部 · 參考與排錯", rendered)
-        self.assertIn("開始使用", rendered)
-        self.assertIn("第一次執行 / 新手路線", rendered)
+        for label in self.handbook_group_labels("zh-TW"):
+            if label == "第 4 部 · 設計原則":
+                continue
+            self.assertIn(label, rendered)
+        nav_titles = self.handbook_nav_titles("zh-TW")
+        self.assertIn(nav_titles["getting-started"], rendered)
+        self.assertIn(nav_titles["role-new-user"], rendered)
         self.assertIn(">Dashboard<", rendered)
         self.assertIn('class="nav-group-header"', rendered)
         self.assertIn('class="nav-group-title-text"', rendered)
@@ -237,6 +286,7 @@ class GenerateCommandHtmlTests(unittest.TestCase):
 
     def test_render_global_nav_renders_single_command_reference_entry(self):
         module = load_module()
+        ui_text = self.locale_ui("zh-TW")
 
         config = module.HtmlBuildConfig(
             source_root=REPO_ROOT,
@@ -247,8 +297,8 @@ class GenerateCommandHtmlTests(unittest.TestCase):
 
         rendered = module.render_global_nav("commands/zh-TW/datasource.html", "zh-TW", config)
 
-        self.assertIn(">開啟指令參考<", rendered)
-        self.assertIn(">指令參考<", rendered)
+        self.assertIn(f'>{ui_text["open_command_reference_label"]}<', rendered)
+        self.assertIn(f'>{ui_text["command_reference_label"]}<', rendered)
         self.assertIn('class="nav-command-entry active"', rendered)
         self.assertEqual(rendered.count('class="nav-command-entry active"'), 1)
         self.assertIn(">Datasource<", rendered)
@@ -275,6 +325,7 @@ class GenerateCommandHtmlTests(unittest.TestCase):
 
     def test_render_command_map_nav_uses_alias_map_for_architecture_page(self):
         module = load_module()
+        ui_text = self.locale_ui("zh-TW")
 
         config = module.HtmlBuildConfig(
             source_root=REPO_ROOT,
@@ -285,13 +336,140 @@ class GenerateCommandHtmlTests(unittest.TestCase):
 
         rendered = module.render_command_map_nav("handbook/zh-TW/architecture.html", "zh-TW", "architecture", config)
 
+        self.assertIn(ui_text["command_relationships_title"], rendered)
         self.assertIn("唯讀檢查", rendered)
         self.assertIn(">status<", rendered)
         self.assertIn(">resource<", rendered)
         self.assertIn(">snapshot<", rendered)
 
+    def test_render_command_page_adds_parent_breadcrumb_and_related_links_for_profile(self):
+        module = load_module()
+        ui_text = self.locale_ui("zh-TW")
+
+        config = module.HtmlBuildConfig(
+            source_root=REPO_ROOT,
+            command_docs_root=REPO_ROOT / "docs" / "commands",
+            handbook_root=REPO_ROOT / "docs" / "user-guide",
+            version="9.9.0",
+        )
+
+        rendered = module.render_command_page(
+            "zh-TW",
+            REPO_ROOT / "docs" / "commands" / "zh-TW" / "profile.md",
+            "commands/zh-TW/profile.html",
+            config,
+        )
+
+        self.assertIn('href="config.html">config</a> / grafana-util config profile', rendered)
+        self.assertIn(f'{ui_text["parent_command_label"]}: config', rendered)
+        self.assertIn("對應手冊章節", rendered)
+
+    def test_render_command_page_adds_child_reference_links_for_config_root(self):
+        module = load_module()
+        ui_text = self.locale_ui("zh-TW")
+
+        config = module.HtmlBuildConfig(
+            source_root=REPO_ROOT,
+            command_docs_root=REPO_ROOT / "docs" / "commands",
+            handbook_root=REPO_ROOT / "docs" / "user-guide",
+            version="9.9.0",
+        )
+
+        rendered = module.render_command_page(
+            "zh-TW",
+            REPO_ROOT / "docs" / "commands" / "zh-TW" / "config.md",
+            "commands/zh-TW/config.html",
+            config,
+        )
+
+        self.assertIn(f'{ui_text["child_command_label"]}: config profile', rendered)
+        self.assertIn('href="profile.html"', rendered)
+
+    def test_render_command_page_links_command_reference_breadcrumb(self):
+        module = load_module()
+        ui_text = self.locale_ui("zh-TW")
+
+        config = module.HtmlBuildConfig(
+            source_root=REPO_ROOT,
+            command_docs_root=REPO_ROOT / "docs" / "commands",
+            handbook_root=REPO_ROOT / "docs" / "user-guide",
+            version="9.9.0",
+        )
+
+        rendered = module.render_command_page(
+            "zh-TW",
+            REPO_ROOT / "docs" / "commands" / "zh-TW" / "profile.md",
+            "commands/zh-TW/profile.html",
+            config,
+        )
+
+        self.assertIn(f'href="index.html">{ui_text["command_reference_label"]}</a>', rendered)
+
+    def test_command_taxonomy_contract_drives_audience_and_handbook_mapping(self):
+        module = load_module()
+        expected_handbook = self.command_taxonomy["handbook_context_by_page"]["profile"]
+        expected_hint = self.command_taxonomy["audience_hints_by_root"]["config"]["zh-TW"]
+
+        self.assertEqual(
+            expected_handbook,
+            module.command_handbook_stem(REPO_ROOT / "docs" / "commands" / "zh-TW" / "profile.md"),
+        )
+        self.assertIn(
+            expected_hint,
+            module.command_audience_hint("zh-TW", REPO_ROOT / "docs" / "commands" / "zh-TW" / "config.md"),
+        )
+
+    def test_render_command_reference_index_uses_structured_contract_content(self):
+        module = load_module()
+        command_index = self.command_index["locales"]["zh-TW"]
+        section_titles = [section["title"] for section in command_index["sections"]]
+
+        config = module.HtmlBuildConfig(
+            source_root=REPO_ROOT,
+            command_docs_root=REPO_ROOT / "docs" / "commands",
+            handbook_root=REPO_ROOT / "docs" / "user-guide",
+            version="9.9.0",
+        )
+
+        rendered = module.render_command_page(
+            "zh-TW",
+            REPO_ROOT / "docs" / "commands" / "zh-TW" / "index.md",
+            "commands/zh-TW/index.html",
+            config,
+        )
+
+        for title in section_titles[:3]:
+            self.assertIn(title, rendered)
+        self.assertIn('href="dashboard.html"', rendered)
+
+    def test_render_command_reference_index_uses_removed_roots_section_from_contract(self):
+        module = load_module()
+        command_index = self.command_index["locales"]["en"]
+        removed_roots_title = next(section["title"] for section in command_index["sections"] if section["title"] == "Removed roots")
+        selector_title = next(section["title"] for section in command_index["sections"] if section["title"] == "Which command should I use?")
+
+        config = module.HtmlBuildConfig(
+            source_root=REPO_ROOT,
+            command_docs_root=REPO_ROOT / "docs" / "commands",
+            handbook_root=REPO_ROOT / "docs" / "user-guide",
+            version="9.9.0",
+        )
+
+        rendered = module.render_command_page(
+            "en",
+            REPO_ROOT / "docs" / "commands" / "en" / "index.md",
+            "commands/en/index.html",
+            config,
+        )
+
+        self.assertIn(removed_roots_title, rendered)
+        self.assertIn("grafana-util config profile", rendered)
+        self.assertIn(selector_title, rendered)
+
     def test_render_handbook_page_includes_topbar_language_switch(self):
         module = load_module()
+        ui_text = self.locale_ui("zh-TW")
+        start_label = self.handbook_group_labels("zh-TW")[0]
 
         config = module.HtmlBuildConfig(
             source_root=REPO_ROOT,
@@ -304,16 +482,17 @@ class GenerateCommandHtmlTests(unittest.TestCase):
         rendered = module.render_handbook_page(page, config)
 
         self.assertIn('id="page-locale-select"', rendered)
-        self.assertIn("Language: 繁體中文", rendered)
-        self.assertIn("Switch to English", rendered)
+        self.assertIn(f'{ui_text["page_locale_current_prefix"]}繁體中文', rendered)
+        self.assertIn(f'{ui_text["page_locale_switch_prefix"]}English', rendered)
         self.assertNotIn('id="locale-select"', rendered)
         self.assertIn('class="sidebar-toggle sidebar-toggle-left"', rendered)
         self.assertIn('class="sidebar-toggle sidebar-toggle-right"', rendered)
-        self.assertIn("第 1 部 · 起步", rendered)
+        self.assertIn(start_label, rendered)
         self.assertIn("第 1 章 / 共", rendered)
 
     def test_render_handbook_page_uses_continuous_reading_footer_labels(self):
         module = load_module()
+        locale_strings = self.handbook_render["locale_strings"]["zh-TW"]
 
         config = module.HtmlBuildConfig(
             source_root=REPO_ROOT,
@@ -325,13 +504,15 @@ class GenerateCommandHtmlTests(unittest.TestCase):
 
         rendered = module.render_handbook_page(page, config)
 
-        self.assertIn(">上一章<", rendered)
-        self.assertIn(">下一章<", rendered)
+        self.assertIn(f'>{locale_strings["previous_chapter"]}<', rendered)
+        self.assertIn(f'>{locale_strings["next_chapter"]}<', rendered)
         self.assertIn("第 7 章", rendered)
         self.assertIn("第 9 章", rendered)
 
     def test_render_handbook_page_uses_short_nav_title_with_full_title_subtitle(self):
         module = load_module()
+        role_paths_label = self.handbook_group_labels("zh-TW")[1]
+        nav_title = self.handbook_nav_titles("zh-TW")["role-automation-ci"]
 
         config = module.HtmlBuildConfig(
             source_root=REPO_ROOT,
@@ -344,12 +525,51 @@ class GenerateCommandHtmlTests(unittest.TestCase):
         rendered = module.render_handbook_page(page, config)
 
         self.assertIn("/ 手冊 /", rendered)
-        self.assertIn(">自動化 / CI<", rendered)
+        self.assertIn(f'>{nav_title}<', rendered)
         self.assertIn('class="hero-subtitle">自動化 / CI 角色導讀</p>', rendered)
-        self.assertIn("第 2 部 · 角色路徑", rendered)
+        self.assertIn(role_paths_label, rendered)
+
+    def test_render_handbook_page_includes_section_index_for_long_chapters(self):
+        module = load_module()
+        locale_strings = self.handbook_render["locale_strings"]["zh-TW"]
+
+        config = module.HtmlBuildConfig(
+            source_root=REPO_ROOT,
+            command_docs_root=REPO_ROOT / "docs" / "commands",
+            handbook_root=REPO_ROOT / "docs" / "user-guide",
+            version="9.9.0",
+        )
+        page = next(p for p in module.build_handbook_pages("zh-TW", handbook_root=config.handbook_root) if p.stem == "architecture")
+
+        rendered = module.render_handbook_page(page, config)
+
+        self.assertIn('class="section-index"', rendered)
+        self.assertIn(f'>{locale_strings["section_index_title"]}<', rendered)
+        self.assertIn(locale_strings["section_index_summary"], rendered)
+        self.assertIn('class="section-index-list layout-list"', rendered)
+        self.assertIn('href="#command-relationships"', rendered)
+        self.assertIn('href="#', rendered)
+
+    def test_render_command_map_nav_renders_as_handbook_section(self):
+        module = load_module()
+
+        config = module.HtmlBuildConfig(
+            source_root=REPO_ROOT,
+            command_docs_root=REPO_ROOT / "docs" / "commands",
+            handbook_root=REPO_ROOT / "docs" / "user-guide",
+            version="9.9.0",
+        )
+
+        rendered = module.render_command_map_nav("handbook/zh-TW/architecture.html", "zh-TW", "architecture", config, compact=False)
+
+        self.assertIn('class="handbook-command-map"', rendered)
+        self.assertIn('id="command-relationships"', rendered)
+        self.assertIn('class="handbook-command-map-panel"', rendered)
+        self.assertNotIn('<section class="nav-section"><h2>', rendered)
 
     def test_render_command_page_includes_intro_panel_from_command_doc_metadata(self):
         module = load_module()
+        labels = load_script_module("docsite_html_command_pages").command_intro_labels("en")
 
         config = module.HtmlBuildConfig(
             source_root=REPO_ROOT,
@@ -361,13 +581,14 @@ class GenerateCommandHtmlTests(unittest.TestCase):
 
         rendered = module.render_command_page("en", source, "commands/en/dashboard-screenshot.html", config)
 
-        self.assertIn("What this page covers", rendered)
-        self.assertIn("When to open this page", rendered)
-        self.assertIn("Who this page is for", rendered)
+        self.assertIn(labels["what"], rendered)
+        self.assertIn(labels["when"], rendered)
+        self.assertIn(labels["who"], rendered)
         self.assertIn("Open one dashboard in a headless browser and capture image or PDF output.", rendered)
 
     def test_render_command_page_includes_intro_panel_for_zh_tw_command_docs(self):
         module = load_module()
+        labels = load_script_module("docsite_html_command_pages").command_intro_labels("zh-TW")
 
         config = module.HtmlBuildConfig(
             source_root=REPO_ROOT,
@@ -379,9 +600,9 @@ class GenerateCommandHtmlTests(unittest.TestCase):
 
         rendered = module.render_command_page("zh-TW", source, "commands/zh-TW/dashboard-screenshot.html", config)
 
-        self.assertIn("這頁在說什麼", rendered)
-        self.assertIn("什麼時候看這頁", rendered)
-        self.assertIn("適合誰", rendered)
+        self.assertIn(labels["what"], rendered)
+        self.assertIn(labels["when"], rendered)
+        self.assertIn(labels["who"], rendered)
 
     def test_render_developer_page_collapses_empty_nav_and_sidebar_sections(self):
         module = load_module()

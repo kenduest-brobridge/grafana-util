@@ -90,7 +90,7 @@ grafana-util --version
 ```text
 grafana-util 0.9.1
 ```
-This confirms that the binary is on your `PATH` and matches the checked-in release.
+This confirms that the binary is on your `PATH` and that you are running the version you expect.
 
 ---
 

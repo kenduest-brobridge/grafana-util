@@ -219,8 +219,8 @@
     ],
     "getting-started": [
       {
-        "title_en": "First 3 Commands",
-        "title_zh_tw": "前 3 個指令",
+        "title_en": "First-Run Path",
+        "title_zh_tw": "第一次執行路線",
         "links": [
           { "command": "grafana-util --version", "target": "version.html" },
           { "command": "grafana-util status live", "target": "status.html" },
@@ -230,8 +230,8 @@
     ],
     "role-new-user": [
       {
-        "title_en": "First 3 Commands",
-        "title_zh_tw": "前 3 個指令",
+        "title_en": "First-Run Path",
+        "title_zh_tw": "第一次執行路線",
         "links": [
           { "command": "grafana-util --version", "target": "version.html" },
           { "command": "grafana-util status live", "target": "status.html" },

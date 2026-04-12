@@ -3,30 +3,16 @@ from __future__ import annotations
 from pathlib import Path
 
 from docgen_common import relative_href
+from docsite_command_surface import command_handbook_stem
 from docsite_html_common import prefixed_output_rel
-
-HANDBOOK_CONTEXT_BY_COMMAND = {
-    "index": "index",
-    "config": "getting-started",
-    "dashboard": "dashboard",
-    "datasource": "datasource",
-    "alert": "alert",
-    "access": "access",
-    "status": "status-workspace",
-    "workspace": "status-workspace",
-    "overview": "status-workspace",
-    "snapshot": "status-workspace",
-    "profile": "getting-started",
-}
 
 
 def command_handbook_context(locale, output_rel, source_name, config):
-    stem = Path(source_name).stem
-    root = stem.split("-", 1)[0]
-    handbook_stem = HANDBOOK_CONTEXT_BY_COMMAND.get(stem) or HANDBOOK_CONTEXT_BY_COMMAND.get(root)
+    handbook_stem = command_handbook_stem(Path(source_name))
     if not handbook_stem:
         return None
-    return ("Matching handbook chapter", relative_href(output_rel, prefixed_output_rel(config, f"handbook/{locale}/{handbook_stem}.html")))
+    label = "Matching handbook chapter" if locale == "en" else "對應手冊章節"
+    return (label, relative_href(output_rel, prefixed_output_rel(config, f"handbook/{locale}/{handbook_stem}.html")))
 
 
 def rewrite_markdown_link(source_path, output_rel, target, config):

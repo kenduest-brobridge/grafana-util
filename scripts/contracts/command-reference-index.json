@@ -1,0 +1,181 @@
+{
+  "schema": 1,
+  "locales": {
+    "en": {
+      "title": "Command Reference",
+      "intro": [
+        "These pages track the current Rust CLI help for the command tree exposed by `grafana-util`.",
+        "Use these pages when you want one stable page per command or subcommand instead of a handbook chapter. The handbook explains workflow and intent; the command pages explain the concrete CLI surface."
+      ],
+      "sections": [
+        {
+          "title": "Start Here",
+          "type": "bullet_links",
+          "items": [
+            { "label": "version", "target": "./version.md", "summary": "confirm the installed binary and machine-readable version details" },
+            { "label": "status", "target": "./status.md", "summary": "read-only status, overview, snapshot, and resource queries" },
+            { "label": "config", "target": "./config.md", "summary": "repo-local configuration workflows and profile management" },
+            { "label": "export", "target": "./export.md", "summary": "common backup and local-inventory capture" },
+            { "label": "workspace", "target": "./workspace.md", "summary": "scan, test, preview, package, and apply local Grafana workspaces" },
+            { "label": "dashboard", "target": "./dashboard.md", "summary": "browse, get, clone, export/import, summary, dependencies, policy, and screenshot workflows" },
+            { "label": "alert", "target": "./alert.md", "summary": "alert inventory, authoring, review, and apply workflows" },
+            { "label": "datasource", "target": "./datasource.md", "summary": "datasource inventory and lifecycle workflows" },
+            { "label": "access", "target": "./access.md", "summary": "user, team, org, and service-account workflows" }
+          ]
+        },
+        {
+          "title": "Removed roots",
+          "type": "bullet_text",
+          "items": [
+            "`profile ...` from older notes -> `grafana-util config profile ...`",
+            "`resource ...` from older notes -> `grafana-util status resource ...`",
+            "legacy overview root -> `grafana-util status overview ...`",
+            "`snapshot ...` from older notes -> `grafana-util status snapshot ...`"
+          ]
+        },
+        {
+          "title": "Which command should I use?",
+          "type": "table",
+          "columns": ["Need", "Start with"],
+          "rows": [
+            ["Confirm the installed binary or scriptable version", "`grafana-util version`"],
+            ["Check that Grafana is reachable", "`grafana-util status live`"],
+            ["See the live estate as a human", "`grafana-util status overview live`"],
+            ["Save connection defaults", "`grafana-util config profile`"],
+            ["Export a backup", "`grafana-util export dashboard` / `export alert` / `export datasource`"],
+            ["Review a local change package", "`grafana-util workspace scan` then `workspace preview`"],
+            ["Inspect dashboards deeply", "`grafana-util dashboard summary` / `dashboard diff`"],
+            ["Query one resource generically", "`grafana-util status resource describe`, `list`, or `get`"],
+            ["Export or review a snapshot bundle", "`grafana-util status snapshot export` or `review`"],
+            ["Manage users, teams, orgs, or service accounts", "`grafana-util access ...`"]
+          ]
+        },
+        {
+          "title": "Domain Reference",
+          "type": "bullet_links",
+          "items": [
+            { "label": "dashboard", "target": "./dashboard.md" },
+            { "label": "dashboard export", "target": "./dashboard-export.md" },
+            { "label": "dashboard import", "target": "./dashboard-import.md" },
+            { "label": "datasource", "target": "./datasource.md" },
+            { "label": "datasource export", "target": "./datasource-export.md" },
+            { "label": "datasource import", "target": "./datasource-import.md" },
+            { "label": "alert", "target": "./alert.md" },
+            { "label": "alert export", "target": "./alert-export.md" },
+            { "label": "alert import", "target": "./alert-import.md" },
+            { "label": "access", "target": "./access.md" },
+            { "label": "access user", "target": "./access-user.md" },
+            { "label": "access org", "target": "./access-org.md" },
+            { "label": "access team", "target": "./access-team.md" },
+            { "label": "access service-account", "target": "./access-service-account.md" },
+            { "label": "access service-account token", "target": "./access-service-account-token.md" },
+            { "label": "resource queries", "target": "./resource.md" },
+            { "label": "snapshot bundles", "target": "./snapshot.md" }
+          ]
+        },
+        {
+          "title": "Output Selector Conventions",
+          "type": "bullet_text",
+          "lead": [
+            "Many list, review, and dry-run commands support both a long output selector and one or more direct shorthand flags.",
+            "If you are unsure, treat the per-command page as authoritative for that exact command surface."
+          ],
+          "items": [
+            "`--output-format table` is usually equivalent to `--table`",
+            "`--output-format json` is usually equivalent to `--json`",
+            "`--output-format csv` is usually equivalent to `--csv`",
+            "`--output-format yaml` is usually equivalent to `--yaml`",
+            "`--output-format text` is usually equivalent to `--text`",
+            "`dashboard dependencies` is different: it supports `text`, `json`, `mermaid`, and `dot`, but it does not have shortcut flags such as `--table`",
+            "destination-path flags such as `--output-file` or `--output` on draft/export commands are not render-format selectors"
+          ]
+        }
+      ]
+    },
+    "zh-TW": {
+      "title": "指令參考",
+      "intro": [
+        "這些頁面對應 `grafana-util` 目前 Rust CLI 的指令樹。",
+        "如果你要的是每個指令或子指令一頁的穩定說明，請看這裡；如果你想先理解操作流程與場景，請先看手冊。"
+      ],
+      "sections": [
+        {
+          "title": "先從這裡開始",
+          "type": "numbered_links",
+          "items": [
+            { "label": "version", "target": "./version.md", "summary": "確認 binary 與版本" },
+            { "label": "status", "target": "./status.md", "summary": "確認 CLI 跟 Grafana 能不能溝通" },
+            { "label": "config", "target": "./config.md", "summary": "把 profile 與 secret 存起來，後面少打一堆參數" }
+          ]
+        },
+        {
+          "title": "先選一條操作路徑",
+          "type": "table",
+          "columns": ["你現在最像哪一種情境", "先開哪一頁", "下一步通常接什麼"],
+          "rows": [
+            ["想先確認 CLI 與 Grafana 連得通", "[version](./version.md) / [status](./status.md)", "`status live`、`status overview live`"],
+            ["想把連線設定存起來，之後少打一堆參數", "[config](./config.md)", "`config profile add/show/list`"],
+            ["想先備份或抓本地 inventory", "[export](./export.md)", "`export dashboard` / `alert` / `datasource`"],
+            ["想審查一包本地變更", "[workspace](./workspace.md)", "`scan` -> `preview` -> `test` / `apply`"],
+            ["想處理 dashboard 的瀏覽、分析、草稿或發佈", "[dashboard](./dashboard.md)", "`browse` / `summary` / `diff` / `publish`"],
+            ["想處理 alert inventory 或 authoring", "[alert](./alert.md)", "`list-*` / `new-*` / `apply`"],
+            ["想處理 datasource inventory 或 lifecycle", "[datasource](./datasource.md)", "`list` / `export` / `diff` / `modify`"],
+            ["想管理 user、team、org 或 service account", "[access](./access.md)", "`user` / `team` / `org` / `service-account`"]
+          ]
+        },
+        {
+          "title": "指令地圖",
+          "type": "table",
+          "columns": ["類型", "入口頁", "這組命令主要是做什麼"],
+          "rows": [
+            ["起步與連線", "[version](./version.md)、[status](./status.md)、[config](./config.md)", "驗證 binary、檢查 live 狀態、保存 profile"],
+            ["匯出與離線成品", "[export](./export.md)、[snapshot bundles](./snapshot.md)、[resource queries](./resource.md)", "抓本地 inventory、做 snapshot、查單一資源"],
+            ["本地審查工作區", "[workspace](./workspace.md)", "scan、test、preview、package、apply"],
+            ["Dashboard", "[dashboard](./dashboard.md)", "瀏覽、分析、草稿、匯出匯入、發佈"],
+            ["Alert", "[alert](./alert.md)", "inventory、authoring、route、plan / apply"],
+            ["Datasource", "[datasource](./datasource.md)", "inventory、類型查找、匯出匯入、live mutation"],
+            ["Access", "[access](./access.md)", "user、org、team、service account、token"]
+          ]
+        },
+        {
+          "title": "移除的 root 與替代寫法",
+          "type": "bullet_text",
+          "items": [
+            "`profile ...` -> `grafana-util config profile ...`",
+            "`resource ...` -> `grafana-util status resource ...`",
+            "`snapshot ...` -> `grafana-util status snapshot ...`",
+            "legacy overview root -> `grafana-util status overview ...`"
+          ]
+        },
+        {
+          "title": "我該用哪個指令？",
+          "type": "table",
+          "columns": ["需求", "先從這裡開始"],
+          "rows": [
+            ["確認目前安裝的 binary 或 scriptable version", "`grafana-util version`"],
+            ["確認 Grafana 連得到", "`grafana-util status live`"],
+            ["用人的角度看 live 總覽", "`grafana-util status overview live`"],
+            ["儲存連線預設值", "`grafana-util config profile`"],
+            ["匯出備份", "`grafana-util export dashboard` / `export alert` / `export datasource`"],
+            ["審查本地變更包", "`grafana-util workspace scan`，再跑 `workspace preview`"],
+            ["深入檢查 dashboard", "`grafana-util dashboard summary` / `dashboard diff`"],
+            ["通用查詢單一 live resource", "`grafana-util status resource describe`、`list` 或 `get`"],
+            ["匯出或檢視 snapshot bundle", "`grafana-util status snapshot export` 或 `review`"],
+            ["管理 user、team、org 或 service account", "`grafana-util access ...`"]
+          ]
+        },
+        {
+          "title": "各領域入口與延伸頁",
+          "type": "table",
+          "columns": ["領域", "先進哪頁", "這頁之後通常會再去哪裡"],
+          "rows": [
+            ["Dashboard", "[dashboard](./dashboard.md)", "[dashboard export](./dashboard-export.md)、[dashboard import](./dashboard-import.md)、[dashboard summary](./dashboard-summary.md)、[dashboard impact](./dashboard-impact.md)"],
+            ["Datasource", "[datasource](./datasource.md)", "[datasource export](./datasource-export.md)、[datasource import](./datasource-import.md)、[datasource diff](./datasource-diff.md)"],
+            ["Alert", "[alert](./alert.md)", "[alert export](./alert-export.md)、[alert import](./alert-import.md)、[alert plan](./alert-plan.md)、[alert apply](./alert-apply.md)"],
+            ["Access", "[access](./access.md)", "[access user](./access-user.md)、[access org](./access-org.md)、[access team](./access-team.md)、[access service-account](./access-service-account.md)"]
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -116,6 +116,9 @@ Important exceptions:
 
 If you are unsure, treat the per-command page as authoritative for that exact command surface.
 
-If you prefer `man` format, render [grafana-util(1)](../../man/grafana-util.1) locally with `man ./docs/man/grafana-util.1` on macOS or `man -l docs/man/grafana-util.1` on GNU/Linux.
-The checked-in `docs/man/*.1` files are generated from these English command pages via `python3 scripts/generate_manpages.py`.
-The checked-in `docs/html/commands/en/*.html` files are generated from the same source via `python3 scripts/generate_command_html.py`.
+If you prefer `man` format, see [grafana-util(1)](../../man/grafana-util.1).
+
+- macOS: `man ./docs/man/grafana-util.1`
+- GNU/Linux: `man -l docs/man/grafana-util.1`
+
+If you prefer web reading, use this HTML command reference directly.

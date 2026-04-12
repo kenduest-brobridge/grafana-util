@@ -1,6 +1,6 @@
-# grafana-util
+# Grafana Documentation
 
-從這裡直接進手冊、指令頁或常用工作流程。
+從這裡快速進入手冊、指令參考與常用的 `grafana-util` 工作流程。
 
 ## 快速跳轉
 

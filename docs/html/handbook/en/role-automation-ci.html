@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Automation / CI Handbook · grafana-util docs</title>
+  <title>Automation / CI Handbook · Grafana Documentation</title>
   <style>:root {
   color-scheme: light dark;
   --font-scale: 1;
@@ -126,7 +126,13 @@ pre:hover .code-controls { opacity: 1; }
 .site.landing-shell .topbar { margin-bottom: 10px; }
 .site-content { flex-grow: 1; }
 .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 16px; border-bottom: 1px solid var(--border); padding-bottom: 14px; }
-.brand { font: 760 1.08rem var(--font-mono); text-transform: uppercase; letter-spacing: 0.045em; color: var(--heading) !important; text-decoration: none !important; }
+.brand {
+  font: 700 0.9rem var(--font-display);
+  text-transform: none;
+  letter-spacing: 0.01em;
+  color: var(--heading) !important;
+  text-decoration: none !important;
+}
 .themebar { display: flex; gap: 8px; align-items: center; }
 .themebar select {
   border: 1px solid var(--border);
@@ -372,30 +378,24 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
 }
 
 .article { min-width: 0; padding: 10px 0 24px; }
-.handbook-command-map {
-  margin-bottom: 24px;
+.handbook-command-map { margin: 0 0 24px; }
+.handbook-command-map-panel {
+  margin-top: 16px;
   padding: 16px 18px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: color-mix(in srgb, var(--panel) 96%, white);
 }
-.handbook-command-map .nav-section + .nav-section { margin-top: 14px; }
-.handbook-command-map h2 {
-  margin: 0 0 10px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--border);
-  font-size: 0.82rem;
-  color: var(--muted);
-}
 .handbook-command-map .nav-group-title {
   font-size: 0.95rem;
 }
 .handbook-command-map .nav-command-group {
-  padding-top: 10px;
+  padding-top: 0;
 }
 .handbook-command-map .nav-command-group + .nav-command-group {
   margin-top: 12px;
   border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
+  padding-top: 10px;
 }
 .handbook-command-map .nav-command-sub-list {
   margin-top: 8px;
@@ -523,21 +523,36 @@ html[lang="zh-TW"] .nav-command-root-link { font-family: var(--font-zh); }
   line-height: 1.68;
 }
 .section-index-list {
-  list-style: none;
   margin: 0;
+}
+.section-index-list.layout-grid {
+  list-style: none;
   padding: 0;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 0.4rem 1rem;
 }
+.section-index-list.layout-list {
+  list-style: disc;
+  padding-left: 1.25rem;
+  display: block;
+}
 .section-index-list li {
   margin: 0;
+}
+.section-index-list.layout-list li {
+  margin: 0 0 0.45rem;
 }
 .section-index-list a {
   display: block;
   padding: 0.25rem 0;
   color: var(--text);
   font-weight: 560;
+}
+.section-index-list.layout-list a {
+  display: inline;
+  padding: 0;
+  font-weight: 540;
 }
 .section-index-list a:hover {
   color: var(--heading);
@@ -622,41 +637,49 @@ html[lang="zh-TW"] .sidebar { font-family: var(--font-zh); letter-spacing: 0; }
 }
 .landing-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(420px, 0.88fr);
-  gap: 48px;
+  grid-template-columns: minmax(0, 1.14fr) minmax(360px, 0.86fr);
+  gap: 34px;
   align-items: start;
-  padding: 18px 0 30px;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--panel) 98%, white), color-mix(in srgb, var(--panel) 96%, var(--accent-soft)));
+  padding: 8px 0 22px;
 }
 .landing-hero-inner {
-  max-width: none;
+  max-width: 60rem;
+}
+.landing-eyebrow {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font: 700 0.72rem var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 .landing-title {
   margin: 0 0 18px;
-  font-size: clamp(2.35rem, 4.3vw, 3.6rem);
-  line-height: 0.96;
-  letter-spacing: -0.05em;
+  font-size: clamp(1.72rem, 2.7vw, 2.3rem);
+  line-height: 1.06;
+  letter-spacing: -0.025em;
 }
 .landing-summary {
-  max-width: 72ch;
+  max-width: 56ch;
   margin: 0;
-  font-size: 1.02rem;
-  line-height: 1.72;
+  font-size: 0.96rem;
+  line-height: 1.68;
   color: var(--text);
 }
 .landing-search-panel {
-  padding-top: 12px;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-strong);
 }
 .landing-search-panel h2 {
   margin: 0 0 8px;
-  font-size: 1.15rem;
+  font-size: 1.02rem;
   letter-spacing: -0.02em;
 }
 .landing-search-panel p {
   margin: 0 0 16px;
-  font-size: 0.95rem;
-  line-height: 1.7;
+  font-size: 0.9rem;
+  line-height: 1.62;
   color: var(--muted);
 }
 .landing-search-form {
@@ -713,8 +736,8 @@ html[lang="zh-TW"] .sidebar { font-family: var(--font-zh); letter-spacing: 0; }
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 28px;
-  margin-top: 30px;
-  padding-top: 26px;
+  margin-top: 22px;
+  padding-top: 22px;
   border-top: 1px solid var(--border);
 }
 .landing-section h2 {
@@ -760,17 +783,12 @@ html[lang="zh-TW"] .sidebar { font-family: var(--font-zh); letter-spacing: 0; }
   color: var(--muted);
 }
 html[data-theme="dark"] .landing-hero {
-  background:
-    radial-gradient(circle at 14% 10%, rgba(255, 255, 255, 0.04), transparent 24%),
-    radial-gradient(circle at 82% 14%, rgba(170, 180, 191, 0.11), transparent 28%),
-    linear-gradient(180deg, #0b0f14 0%, #0d1218 58%, #10161d 100%);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 0;
 }
 html[data-theme="dark"] .landing-search-panel {
-  padding: 18px 20px 20px;
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: 8px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 html[data-theme="dark"] .landing-search-input::placeholder {
@@ -791,6 +809,15 @@ html[data-theme="dark"] .landing-task {
 }
 html[data-theme="dark"] .landing-meta {
   border-top-color: var(--border);
+}
+@media (max-width: 980px) {
+  .landing-hero {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  .landing-hero-inner {
+    max-width: none;
+  }
 }
 .landing-link-list {
   display: flex;
@@ -920,7 +947,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
   <div class="site">
     <div class="site-content">
       <div class="topbar">
-  <a class="brand" href="../../index.html">grafana-util docs</a>
+  <a class="brand" href="../../index.html">Grafana Documentation</a>
   <div class="themebar">
     <select id="page-locale-select" aria-label="Language switch"><option value="" selected>Language: English</option><option value="../zh-TW/role-automation-ci.html">Switch to 繁體中文</option></select><select id="jump-select" aria-label="Jump"><option value="" selected>Jump to...</option><optgroup label="Handbook"><option value="index.html">Overview</option><option value="what-is-grafana-util.html">What grafana-util is for</option><option value="getting-started.html">Getting Started</option><option value="role-new-user.html">First Run / Beginner Path</option><option value="role-sre-ops.html">SRE / Operator</option><option value="role-automation-ci.html">Automation / CI</option><option value="architecture.html">Design Principles</option><option value="dashboard.html">Dashboard</option><option value="datasource.html">Datasource</option><option value="alert.html">Alert</option><option value="access.html">Access</option><option value="status-workspace.html">Status &amp; Workspace</option><option value="scenarios.html">Scenarios</option><option value="recipes.html">Recipes</option><option value="reference.html">Reference</option><option value="troubleshooting.html">Troubleshooting</option></optgroup><optgroup label="Command Reference"><option value="../../commands/en/version.html">Version</option><option value="../../commands/en/dashboard.html">Dashboard</option><option value="../../commands/en/alert.html">Alert</option><option value="../../commands/en/datasource.html">Datasource</option><option value="../../commands/en/access.html">Access</option><option value="../../commands/en/config.html">Config</option><option value="../../commands/en/profile.html">Config Profile</option><option value="../../commands/en/status.html">Status</option><option value="../../commands/en/resource.html">Status Resource</option><option value="../../commands/en/snapshot.html">Snapshot</option><option value="../../commands/en/workspace.html">Workspace</option></optgroup></select>
     <select id="font-select" aria-label="Font Size">
@@ -948,7 +975,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 
 <div class="hero-eyebrow">Part 2 · Role Paths · Chapter 6 of 16</div><h1><span class="hero-title-main">Automation / CI</span></h1><p class="hero-subtitle">Automation / CI Handbook</p>
 
-<section class="handbook-command-map"><section class="nav-section"><h2>Command Relationships</h2><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Automation Lanes</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><ul class="nav-command-tree"><li class="nav-command-link"><a href="../../commands/en/version.html" class="nav-command-leaf-link">version</a></li><li class="nav-command-link"><a href="../../commands/en/profile.html" class="nav-command-leaf-link">config profile</a></li><li class="nav-command-link"><a href="../../commands/en/workspace-test.html" class="nav-command-leaf-link">workspace test</a></li><li class="nav-command-link"><a href="../../commands/en/workspace-preview.html" class="nav-command-leaf-link">workspace preview</a></li><li class="nav-command-link"><a href="../../commands/en/status.html" class="nav-command-leaf-link">status</a></li><li class="nav-command-link"><a href="../../commands/en/export.html" class="nav-command-leaf-link">export</a></li></ul></div></div></section></section><p>This page is for script authors, pipeline owners, and release engineers who need non-interactive <code>grafana-util</code> runs that are predictable, secret-safe, and easy to rotate.</p>
+<section class="section-index"><h2>Chapter Index</h2><p class="section-index-summary">Jump straight to the section you need.</p><ul class="section-index-list layout-list"><li><a href="#command-relationships">Command Relationships</a></li><li><a href="#who-it-is-for">Who It Is For</a></li><li><a href="#primary-goals">Primary Goals</a></li><li><a href="#before-after">Before / After</a></li><li><a href="#what-success-looks-like">What success looks like</a></li><li><a href="#failure-checks">Failure checks</a></li><li><a href="#typical-automation-tasks">Typical Automation Tasks</a></li><li><a href="#recommended-connection-and-secret-handling">Recommended connection and secret handling</a></li><li><a href="#first-commands-to-run">First commands to run</a></li><li><a href="#what-a-stable-automation-path-looks-like">What a stable automation path looks like</a></li><li><a href="#read-next">Read next</a></li><li><a href="#keep-open">Keep open</a></li><li><a href="#common-mistakes-and-limits">Common mistakes and limits</a></li><li><a href="#failure-triage-hints">Failure triage hints</a></li><li><a href="#when-to-switch-to-deeper-docs">When to switch to deeper docs</a></li><li><a href="#next-steps">Next steps</a></li></ul></section><section class="handbook-command-map"><h2 id="command-relationships">Command Relationships</h2><div class="handbook-command-map-panel"><div class="nav-group nav-command-group"><button class="nav-group-header" type="button" aria-expanded="true"><span class="nav-group-title-text">Automation Lanes</span><span class="nav-group-caret" aria-hidden="true">▾</span></button><div class="nav-sub-list nav-command-sub-list"><ul class="nav-command-tree"><li class="nav-command-link"><a href="../../commands/en/version.html" class="nav-command-leaf-link">version</a></li><li class="nav-command-link"><a href="../../commands/en/profile.html" class="nav-command-leaf-link">config profile</a></li><li class="nav-command-link"><a href="../../commands/en/workspace-test.html" class="nav-command-leaf-link">workspace test</a></li><li class="nav-command-link"><a href="../../commands/en/workspace-preview.html" class="nav-command-leaf-link">workspace preview</a></li><li class="nav-command-link"><a href="../../commands/en/status.html" class="nav-command-leaf-link">status</a></li><li class="nav-command-link"><a href="../../commands/en/export.html" class="nav-command-leaf-link">export</a></li></ul></div></div></div></section><p>This page is for script authors, pipeline owners, and release engineers who need non-interactive <code>grafana-util</code> runs that are predictable, secret-safe, and easy to rotate.</p>
 <h2 id="who-it-is-for">Who It Is For</h2>
 <ul><li>CI job authors.</li><li>Platform engineers wiring repeatable checks into pipelines.</li><li>Automation owners who need stable command output and clear secret handling.</li></ul>
 <h2 id="primary-goals">Primary Goals</h2>
@@ -963,7 +990,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <ul><li>Run readiness checks in CI before promotion or apply.</li><li>Build machine-readable summaries from staged or live state.</li><li>Keep one profile shape that works across multiple jobs.</li><li>Fail fast when auth scope, connectivity, or staged inputs are wrong.</li></ul>
 <h2 id="recommended-connection-and-secret-handling">Recommended connection and secret handling</h2>
 <p>Use a <code>config profile</code> first, with env-backed secrets for CI.</p>
-<ol><li><code>config profile</code> with <code>password_env</code> or <code>token_env</code> for repeatable jobs and checked-in config.</li><li>Direct Basic auth only for bootstrap or one-off validation in a safe local shell.</li><li>Token auth is the normal steady state for narrow automation, as long as the token scope matches the exact resource set you need.</li></ol>
+<ol><li><code>config profile</code> with <code>password_env</code> or <code>token_env</code> for repeatable jobs and repo-local config.</li><li>Direct Basic auth only for bootstrap or one-off validation in a safe local shell.</li><li>Token auth is the normal steady state for narrow automation, as long as the token scope matches the exact resource set you need.</li></ol>
 <h2 id="first-commands-to-run">First commands to run</h2>
 <pre><code># Purpose: First commands to run.
 grafana-util config profile add ci --url https://grafana.example.com --token-env GRAFANA_CI_TOKEN</code></pre>
@@ -1005,7 +1032,7 @@ grafana-util status overview live --url https://grafana.example.com --token &quo
 <aside class="sidebar">
   <button class="sidebar-toggle sidebar-toggle-right" type="button" aria-expanded="true" aria-label="Toggle page sidebar">▶</button>
   <div class="sidebar-content">
-    <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#who-it-is-for"><span class="toc-label">Who It Is For</span></a></li><li class="toc-level-2"><a href="#primary-goals"><span class="toc-label">Primary Goals</span></a></li><li class="toc-level-2"><a href="#before-after"><span class="toc-label">Before / After</span></a></li><li class="toc-level-2"><a href="#what-success-looks-like"><span class="toc-label">What success looks like</span></a></li><li class="toc-level-2"><a href="#failure-checks"><span class="toc-label">Failure checks</span></a></li><li class="toc-level-2"><a href="#typical-automation-tasks"><span class="toc-label">Typical Automation Tasks</span></a></li><li class="toc-level-2"><a href="#recommended-connection-and-secret-handling"><span class="toc-label">Recommended connection and secret handling</span></a></li><li class="toc-level-2"><a href="#first-commands-to-run"><span class="toc-label">First commands to run</span></a></li><li class="toc-level-2"><a href="#what-a-stable-automation-path-looks-like"><span class="toc-label">What a stable automation path looks like</span></a></li><li class="toc-level-2"><a href="#read-next"><span class="toc-label">Read next</span></a></li><li class="toc-level-2"><a href="#keep-open"><span class="toc-label">Keep open</span></a></li><li class="toc-level-2"><a href="#common-mistakes-and-limits"><span class="toc-label">Common mistakes and limits</span></a></li><li class="toc-level-2"><a href="#failure-triage-hints"><span class="toc-label">Failure triage hints</span></a></li><li class="toc-level-2"><a href="#when-to-switch-to-deeper-docs"><span class="toc-label">When to switch to deeper docs</span></a></li><li class="toc-level-2"><a href="#next-steps"><span class="toc-label">Next steps</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: English</a></li><li><a href="../zh-TW/role-automation-ci.html" class="sidebar-meta-link">Switch to 繁體中文</a></li></ul></section>
+    <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#command-relationships"><span class="toc-label">Command Relationships</span></a></li><li class="toc-level-2"><a href="#who-it-is-for"><span class="toc-label">Who It Is For</span></a></li><li class="toc-level-2"><a href="#primary-goals"><span class="toc-label">Primary Goals</span></a></li><li class="toc-level-2"><a href="#before-after"><span class="toc-label">Before / After</span></a></li><li class="toc-level-2"><a href="#what-success-looks-like"><span class="toc-label">What success looks like</span></a></li><li class="toc-level-2"><a href="#failure-checks"><span class="toc-label">Failure checks</span></a></li><li class="toc-level-2"><a href="#typical-automation-tasks"><span class="toc-label">Typical Automation Tasks</span></a></li><li class="toc-level-2"><a href="#recommended-connection-and-secret-handling"><span class="toc-label">Recommended connection and secret handling</span></a></li><li class="toc-level-2"><a href="#first-commands-to-run"><span class="toc-label">First commands to run</span></a></li><li class="toc-level-2"><a href="#what-a-stable-automation-path-looks-like"><span class="toc-label">What a stable automation path looks like</span></a></li><li class="toc-level-2"><a href="#read-next"><span class="toc-label">Read next</span></a></li><li class="toc-level-2"><a href="#keep-open"><span class="toc-label">Keep open</span></a></li><li class="toc-level-2"><a href="#common-mistakes-and-limits"><span class="toc-label">Common mistakes and limits</span></a></li><li class="toc-level-2"><a href="#failure-triage-hints"><span class="toc-label">Failure triage hints</span></a></li><li class="toc-level-2"><a href="#when-to-switch-to-deeper-docs"><span class="toc-label">When to switch to deeper docs</span></a></li><li class="toc-level-2"><a href="#next-steps"><span class="toc-label">Next steps</span></a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: English</a></li><li><a href="../zh-TW/role-automation-ci.html" class="sidebar-meta-link">Switch to 繁體中文</a></li></ul></section>
   </div>
 </aside>
 

@@ -15,14 +15,16 @@ from docsite_html_common import (
     title_only,
 )
 from docsite_html_links import rewrite_markdown_link
-from docsite_html_nav import handbook_surface_label, render_command_map_nav, render_global_nav, render_jump_select, render_page_locale_select
+from docsite_html_nav import handbook_surface_label, render_command_map_heading, render_command_map_nav, render_global_nav, render_jump_select, render_page_locale_select
 from docsite_html_page_shell import page_shell
+from docsite_handbook_render import HANDBOOK_RENDER_LOCALE_STRINGS, handbook_render_policy
 
 
 def render_footer_nav(prev, nxt, *, locale: str = "en"):
     cards = []
-    previous_label = "Previous Chapter" if locale == "en" else "上一章"
-    next_label = "Next Chapter" if locale == "en" else "下一章"
+    locale_strings = HANDBOOK_RENDER_LOCALE_STRINGS[locale]
+    previous_label = locale_strings["previous_chapter"]
+    next_label = locale_strings["next_chapter"]
     if prev:
         cards.append(f'<a class="link-card" href="{html.escape(prev[1])}"><span>{html.escape(previous_label)}</span>{html.escape(prev[0])}</a>')
     if nxt:
@@ -66,12 +68,27 @@ def render_handbook_page(page, config):
     doc = render_markdown_document(page.source_path.read_text(encoding="utf-8"), link_transform=lambda target: rewrite_markdown_link(page.source_path, page.output_rel, target, config))
     full_title = title_only(doc.title or page.title)
     nav_title = HANDBOOK_NAV_TITLES.get(page.locale, {}).get(page.stem, full_title)
+    render_policy = handbook_render_policy(page.stem)
+    locale_strings = HANDBOOK_RENDER_LOCALE_STRINGS[page.locale]
     locale_href = handbook_language_href(page)
     locale_label = LOCALE_LABELS["zh-TW" if page.locale == "en" else "en"] if locale_href else None
     prev = (handbook_page_nav_title(page.locale, page.previous_title, page.chapter_number - 1), relative_href(page.output_rel, page.previous_output_rel)) if page.previous_output_rel else None
     nxt = (handbook_page_nav_title(page.locale, page.next_title, page.chapter_number + 1), relative_href(page.output_rel, page.next_output_rel)) if page.next_output_rel else None
-    command_map_intro = render_command_map_nav(page.output_rel, page.locale, page.stem, config, compact=False)
-    body_html = (f'<section class="handbook-command-map">{command_map_intro}</section>' if command_map_intro else "") + strip_heading_decorations(strip_leading_h1(doc.body_html))
+    command_map_intro = render_command_map_nav(page.output_rel, page.locale, page.stem, config, compact=False) if render_policy.show_command_map else ""
+    toc_headings = render_command_map_heading(page.locale, page.stem) + doc.headings if render_policy.show_command_map else doc.headings
+    section_index = render_section_index(
+        toc_headings,
+        title=locale_strings["section_index_title"],
+        summary=locale_strings["section_index_summary"],
+        levels=render_policy.section_index_levels,
+        min_entries=render_policy.section_index_min_entries,
+        variant=render_policy.section_index_variant,
+    )
+    body_html = (
+        (section_index if render_policy.show_section_index else "")
+        + command_map_intro
+        + strip_heading_decorations(strip_leading_h1(doc.body_html))
+    )
     return page_shell(
         page_title=full_title,
         html_lang=page.locale,
@@ -81,7 +98,7 @@ def render_handbook_page(page, config):
         hero_summary="",
         breadcrumbs=[("Home", relative_href(page.output_rel, "index.html")), (handbook_surface_label(page.locale), None), (nav_title, None)],
         body_html=body_html,
-        toc_html=render_toc(doc.headings),
+        toc_html=render_toc(toc_headings),
         related_html="",
         version_html=render_version_links(page.output_rel, config),
         locale_html=render_language_links(LOCALE_LABELS[page.locale], locale_label, locale_href),

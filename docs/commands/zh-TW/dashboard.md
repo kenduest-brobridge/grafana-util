@@ -1,49 +1,21 @@
 # dashboard
 
-## 指令分類
+## 先判斷你現在要做哪一種事
 
-- 瀏覽與檢視：先找 dashboard、讀內容、看變數或歷史版本。常用子命令：`browse`、`list`、`get`、`variables`、`history`。
-- 匯出與匯入：在 Grafana、raw JSON、prompt JSON、provisioning 檔案之間搬移 dashboard。常用子命令：`export`、`import`、`convert raw-to-prompt`。
-- 審查與比對：做差異比對、草稿檢查、相依性分析、影響面或治理檢查。常用子命令：`diff`、`review`、`summary`、`dependencies`、`impact`、`policy`。
-- 編修與發佈：建立或修改本地草稿，再有意識地發佈或刪除。常用子命令：`get`、`clone`、`patch`、`serve`、`edit-live`、`publish`、`delete`。
-- 操作與截圖：為報告、事故或交接取得視覺證據。常用子命令：`screenshot`。
+| 你現在想做的事 | 先開哪個命令頁 | 這頁會幫你回答什麼 |
+| --- | --- | --- |
+| 想先看 live dashboard 現況 | [dashboard browse](./dashboard-browse.md) / [dashboard list](./dashboard-list.md) | 先知道有哪些 dashboard、要不要往下抓內容 |
+| 想把 live 或本地內容整理成可重用分析成品 | [dashboard summary](./dashboard-summary.md) / [dashboard dependencies](./dashboard-dependencies.md) | 先決定分析來源是 live 還是本地匯出樹 |
+| 想知道某個 datasource 會牽動哪些 dashboard 或 alert | [dashboard impact](./dashboard-impact.md) | 先看變更影響面，避免直接動 live |
+| 想比對草稿與 live 差異 | [dashboard diff](./dashboard-diff.md) / [dashboard review](./dashboard-review.md) | 先做 review，再決定是否 publish |
+| 想做本地草稿與發佈 | [dashboard get](./dashboard-get.md) / [dashboard clone](./dashboard-clone.md) / [dashboard publish](./dashboard-publish.md) | 先進 authoring 路徑，不要直接在 live 上亂改 |
+| 想補事故、報告或交接素材 | [dashboard screenshot](./dashboard-screenshot.md) | 先拿可重現的視覺證據 |
 
-指令路徑仍維持扁平，例如 `grafana-util dashboard list`。分類只用在 help 與文件導覽，避免再加一層不必要的 namespace。
-
-## 從這裡開始
-
-- 先看現況：`dashboard browse` 或 `dashboard list`
-- 先做草稿：`dashboard get`、`dashboard clone`、`dashboard export`
-- 先做比對：`dashboard diff`、`dashboard review`
-- 先做分析：`dashboard summary --input-dir ...`、`dashboard summary --url ...`、`dashboard variables`
-- 先做上線前檢查：`dashboard policy`
-- 先看相依性與影響面：`dashboard dependencies`、`dashboard impact`
-- 先處理歷史版本：`dashboard history list`、`dashboard history restore`、`dashboard history export`
-- 先拿素材：`dashboard screenshot`
-
-## 說明
+## 這個入口是做什麼的
 
 `grafana-util dashboard` 把 dashboard 相關工作收在同一個入口：從瀏覽、草稿、匯出、匯入、比對，到相依性、影響面、政策和截圖。它也可用 `grafana-util db` 呼叫。命令本身維持扁平，help 和文件用分組降低閱讀壓力。
 
-新的 canonical 路徑是：
-- `dashboard browse`
-- `dashboard list`
-- `dashboard variables`
-- `dashboard get`
-- `dashboard clone`
-- `dashboard edit-live`
-- `dashboard review`
-- `dashboard patch`
-- `dashboard serve`
-- `dashboard publish`
-- `dashboard export`
-- `dashboard import`
-- `dashboard diff`
-- `dashboard convert raw-to-prompt`
-- `dashboard summary`
-- `dashboard dependencies`
-- `dashboard policy`
-- `dashboard screenshot`
+這組頁面採用扁平 command path，例如 `grafana-util dashboard list`、`grafana-util dashboard summary`、`grafana-util dashboard publish`，不再另外包一層 author / migrate / inspect namespace。
 
 如果是單一 dashboard 的 authoring 路徑，建議把它想成：
 - `dashboard get` 或 `dashboard clone`：先做草稿
@@ -55,6 +27,13 @@
 
 `review`、`patch`、`publish` 也都支援 `--input -`，可以直接吃標準輸入的一份 wrapped 或 bare dashboard JSON。這適合外部 generator 已經把 JSON 寫到 stdout 的情況。`patch --input -` 必須搭配 `--output`，若你是在本地反覆編修同一份檔案，則改用 `publish --watch`；它只支援本地檔案路徑，不支援 `--input -`。
 
+## 先選哪一條資料路徑
+
+- **live Grafana**：先用 [dashboard summary](./dashboard-summary.md)、`browse`、`list` 讀現在的環境。
+- **本地匯出樹**：先用 [dashboard dependencies](./dashboard-dependencies.md) 做離線分析，再接 `policy`、`impact` 或 `diff`。
+- **單一 dashboard 草稿**：先走 `get` / `clone` / `review` / `publish` 這條草稿路徑。
+- **治理成品或 review 成品**：先確認成品格式，再交給 `policy` 或 `impact`，不要把不同輸出格式混用。
+
 ## 歷史與還原工作流
 
 如果你的問題不是「現在這份 dashboard 長什麼樣」，而是「哪個舊版本應該被救回來並變成新的最新版本」，就看這一組。
@@ -65,6 +44,13 @@
 - `dashboard history export`：把歷史版本匯出成可重用的 JSON 成品，方便審查或 CI。
 
 這條路徑最適合要找回已知可用版本，但不想手動重建 dashboard 的情況。
+
+## 這一組頁面怎麼讀比較不會亂
+
+1. 先看這頁，決定你要走哪個子命令。
+2. 進到子命令頁後，先讀「何時使用」與「最短成功路徑」。
+3. 再看「輸入路徑怎麼選」與「重點旗標」。
+4. 最後才看完整範例與相關指令，不要一開始就被所有 flags 淹沒。
 
 ## 採用前後對照
 

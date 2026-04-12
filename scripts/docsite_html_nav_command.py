@@ -2,14 +2,16 @@ from __future__ import annotations
 
 import html
 
+from docgen_command_docs import RenderedHeading
 from docgen_common import relative_href
 from docgen_entrypoints import HANDBOOK_COMMAND_MAPS
 from docsite_html_common import prefixed_output_rel, render_template
 from docsite_html_nav_handbook import handbook_group_for_stem, handbook_nav_groups
+from docsite_ui_text import ui_text
 
 
 def command_reference_label(locale: str) -> str:
-    return "Command Reference" if locale == "en" else "指令參考"
+    return ui_text(locale, "command_reference_label")
 
 
 def command_tokens(command: str) -> tuple[str, ...]:
@@ -75,7 +77,7 @@ def render_command_map_nav(output_rel: str, locale: str, handbook_stem: str | No
     groups = HANDBOOK_COMMAND_MAPS.get(handbook_stem)
     if not groups:
         return ""
-    section_title = "Command Relationships" if locale == "en" else "指令關係"
+    section_title = ui_text(locale, "command_relationships_title")
     items_html: list[str] = []
     for index, group in enumerate(groups):
         collapsed = compact and index > 0
@@ -101,7 +103,24 @@ def render_command_map_nav(output_rel: str, locale: str, handbook_stem: str | No
             f'<div class="nav-section-body">{"".join(items_html)}</div>'
             '</section>'
         )
-    return f'<section class="nav-section"><h2>{html.escape(section_title)}</h2>{"".join(items_html)}</section>'
+    return (
+        '<section class="handbook-command-map">'
+        f'<h2 id="command-relationships">{html.escape(section_title)}</h2>'
+        f'<div class="handbook-command-map-panel">{"".join(items_html)}</div>'
+        "</section>"
+    )
+
+
+def render_command_map_heading(locale: str, handbook_stem: str | None) -> tuple[RenderedHeading, ...]:
+    if handbook_stem is None or handbook_stem not in HANDBOOK_COMMAND_MAPS:
+        return ()
+    return (
+        RenderedHeading(
+            level=2,
+            text="Command Relationships" if locale == "en" else "指令關係",
+            anchor="command-relationships",
+        ),
+    )
 
 
 def render_global_nav(output_rel: str, locale: str, config, *, handbook_stem: str | None = None) -> str:
@@ -138,6 +157,6 @@ def render_global_nav(output_rel: str, locale: str, config, *, handbook_stem: st
     command_target = prefixed_output_rel(config, f"commands/{locale}/index.html")
     command_href = relative_href(output_rel, command_target)
     command_active = " active" if output_rel == command_target or f"commands/{locale}/" in output_rel else ""
-    command_label_text = "Open command reference" if locale == "en" else "開啟指令參考"
+    command_label_text = ui_text(locale, "open_command_reference_label")
     sections.append(f'<section class="nav-section"><h2>{commands_label}</h2><a href="{html.escape(command_href)}" class="nav-command-entry{command_active}">{html.escape(command_label_text)}</a></section>')
     return render_template("nav_sidebar.html.tmpl", sections_html="".join(sections))

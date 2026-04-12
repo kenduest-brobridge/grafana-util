@@ -9,12 +9,13 @@ from docgen_handbook import existing_handbook_files
 from docsite_html_common import prefixed_output_rel
 from docsite_html_nav_command import command_reference_label
 from docsite_html_nav_handbook import handbook_surface_label, handbook_nav_titles
+from docsite_ui_text import ui_text
 
 
 def render_jump_select_options(output_rel: str, locale: str, config) -> str:
     handbook_label = handbook_surface_label(locale)
     commands_label = command_reference_label(locale)
-    prompt_label = "Jump to..." if locale == "en" else "快速跳轉..."
+    prompt_label = ui_text(locale, "jump_prompt_label")
     titles = handbook_nav_titles(locale, config)
     sections = [f'<option value="" selected>{html.escape(prompt_label)}</option>', f'<optgroup label="{handbook_label}">']
     for name in existing_handbook_files(locale, handbook_root=config.handbook_root):
@@ -48,7 +49,7 @@ def render_landing_locale_select(current_locale: str = "en") -> str:
 
 
 def render_page_locale_select(current_label: str, switch_label: str | None = None, switch_href: str | None = None) -> str:
-    options = [f'<option value="" selected>Language: {html.escape(current_label)}</option>']
+    options = [f'<option value="" selected>{html.escape(ui_text("en", "page_locale_current_prefix"))}{html.escape(current_label)}</option>']
     if switch_label and switch_href:
-        options.append(f'<option value="{html.escape(switch_href)}">Switch to {html.escape(switch_label)}</option>')
+        options.append(f'<option value="{html.escape(switch_href)}">{html.escape(ui_text("en", "page_locale_switch_prefix"))}{html.escape(switch_label)}</option>')
     return f'<select id="page-locale-select" aria-label="Language switch">{"".join(options)}</select>'

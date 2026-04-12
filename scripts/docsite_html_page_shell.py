@@ -9,6 +9,14 @@ from docsite_html_common import (
     render_template,
     split_display_title,
 )
+from docsite_ui_text import ui_text
+
+
+def page_shell_sidebar_labels(html_lang: str) -> dict[str, str]:
+    labels = ui_text(html_lang, "sidebar_labels")
+    if not isinstance(labels, dict):
+        raise TypeError(f"sidebar_labels must be a map for locale {html_lang}")
+    return {key: str(value) for key, value in labels.items()}
 
 
 def page_shell(*, page_title, html_lang, home_href, hero_title, hero_summary, breadcrumbs, body_html, toc_html, related_html, version_html, locale_html, footer_nav_html, footer_html, jump_html="", nav_html="", is_landing=False, hero_eyebrow="", hero_subtitle=""):
@@ -25,15 +33,16 @@ def page_shell(*, page_title, html_lang, home_href, hero_title, hero_summary, br
 
     sidebar_html = ""
     if not is_landing:
+        sidebar_labels = page_shell_sidebar_labels(html_lang)
         sidebar_sections: list[str] = []
         if toc_html:
-            sidebar_sections.append(f'<section class="sidebar-section"><h2>On This Page</h2>{toc_html}</section>')
+            sidebar_sections.append(f'<section class="sidebar-section"><h2>{sidebar_labels["toc"]}</h2>{toc_html}</section>')
         if related_html:
-            sidebar_sections.append(f'<section class="sidebar-section"><h2>Related</h2>{related_html}</section>')
+            sidebar_sections.append(f'<section class="sidebar-section"><h2>{sidebar_labels["related"]}</h2>{related_html}</section>')
         if version_html:
-            sidebar_sections.append(f'<section class="sidebar-section"><h2>Version</h2>{version_html}</section>')
+            sidebar_sections.append(f'<section class="sidebar-section"><h2>{sidebar_labels["version"]}</h2>{version_html}</section>')
         if locale_html:
-            sidebar_sections.append(f'<section class="sidebar-section"><h2>Language</h2>{locale_html}</section>')
+            sidebar_sections.append(f'<section class="sidebar-section"><h2>{sidebar_labels["language"]}</h2>{locale_html}</section>')
         if sidebar_sections:
             sidebar_html = render_template("right_sidebar.html.tmpl", sections_html="".join(sidebar_sections))
 
