@@ -1,5 +1,5 @@
 # grafana-util
-### 專為 Grafana 維運與管理設計的 Rust CLI
+### 先審查再變更的 Grafana 維運 CLI
 
 [![CI](https://img.shields.io/github/actions/workflow/status/kenduest-brobridge/grafana-util/ci.yml?branch=main)](https://github.com/kenduest-brobridge/grafana-util/actions)
 [![License](https://img.shields.io/github/license/kenduest-brobridge/grafana-util)](LICENSE)
@@ -7,9 +7,9 @@
 
 [English](./README.md) | 繁體中文
 
-**用先審查再變更的方式處理 Grafana 的 dashboard、alert、datasource、access control 與 workspace 變更。**
+**用來檢查、比對，並安全套用跨環境 Grafana configuration。**
 
-`grafana-util` 是一個給日常 Grafana 維運使用的 Rust CLI。它把唯讀檢查、匯出/匯入、比對、workspace 審查、連線 profile 與密鑰處理收斂到同一個指令介面，讓維運者可以先看清楚，再決定要不要變更。
+`grafana-util` 是一個給日常 Grafana 維運使用的 Rust CLI。它把唯讀檢查、匯出/匯入、比對、workspace preview、安全套用、連線 profile 與密鑰處理收斂到同一個指令介面，讓維運者可以先審查變更，再決定要不要動 live Grafana。
 
 常見用途：
 

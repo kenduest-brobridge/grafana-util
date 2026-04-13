@@ -1,6 +1,6 @@
-# Start Here
+# Review-first Grafana Operations
 
-Choose the job you need to do now. This page only keeps the most common entry points; use the jump menu for the full handbook and command index.
+Inspect, diff, and safely apply Grafana configuration across environments. This page keeps the most common entry points; use the jump menu for the full handbook and command index.
 
 - [Start with the handbook](../user-guide/en/index.md)
 - [Open command reference](../commands/en/index.md)

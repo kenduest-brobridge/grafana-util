@@ -3,7 +3,7 @@ name = "grafana-utils-rust"
 version = "0.10.0"
 edition = "2021"
 license = "Apache-2.0"
-description = "Rust rewrite scaffold for Grafana dashboard and alerting utilities."
+description = "Review-first CLI for Grafana operations, workspace preview, diff, and safe apply workflows."
 
 [features]
 default = ["tui"]

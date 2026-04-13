@@ -1,5 +1,5 @@
 # grafana-util
-### A Rust CLI for Grafana Operations and Administration
+### Review-first CLI for Grafana operations
 
 [![CI](https://img.shields.io/github/actions/workflow/status/kenduest-brobridge/grafana-util/ci.yml?branch=main)](https://github.com/kenduest-brobridge/grafana-util/actions)
 [![License](https://img.shields.io/github/license/kenduest-brobridge/grafana-util)](LICENSE)
@@ -7,9 +7,9 @@
 
 English | [繁體中文](./README.zh-TW.md)
 
-**Review-first Grafana operations for dashboards, alerts, datasources, access control, and workspace changes.**
+**Inspect, diff, and safely apply Grafana configuration across environments.**
 
-`grafana-util` is a Rust CLI for day-to-day Grafana operations. It keeps read-only inspection, export/import, diff, workspace review, connection profiles, and secret handling on one command surface so operators can inspect before they mutate.
+`grafana-util` is a Rust CLI for day-to-day Grafana operations. It keeps read-only inspection, export/import, diff, workspace preview, safe apply, connection profiles, and secret handling on one command surface so operators can review changes before they mutate live Grafana.
 
 Common uses:
 

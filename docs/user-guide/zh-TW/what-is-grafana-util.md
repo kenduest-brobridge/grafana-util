@@ -1,6 +1,6 @@
 # 這個工具是做什麼的
 
-`grafana-util` 不是單純把 Grafana HTTP API 包成一堆指令，也不是只有備份匯出工具。它的重點是把日常維運會碰到的狀態檢查、匯出、本地 workspace 審查與安全套用接起來，讓你有一套一致的做法。
+`grafana-util` 是一個先審查再變更的 CLI，用來檢查、比對，並安全套用跨環境 Grafana configuration。它不是單純把 Grafana HTTP API 包成一堆指令，也不是只有備份匯出工具。它的重點是把日常維運會碰到的狀態檢查、匯出、本地 workspace preview 與安全套用接起來，讓你有一套一致的做法。
 
 ## 適用對象
 

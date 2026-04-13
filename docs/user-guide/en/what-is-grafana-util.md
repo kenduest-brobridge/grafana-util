@@ -1,6 +1,6 @@
 # What grafana-util is for
 
-`grafana-util` is not just a thin wrapper around the Grafana HTTP API, and it is not only a backup/export tool. Its job is to connect day-to-day operator workflows around status checks, exports, local workspace review, and safe apply into one consistent CLI.
+`grafana-util` is a review-first CLI for inspecting, diffing, and safely applying Grafana configuration across environments. It is not just a thin wrapper around the Grafana HTTP API, and it is not only a backup/export tool. Its job is to connect day-to-day operator workflows around status checks, exports, local workspace preview, and safe apply into one consistent command surface.
 
 If you regularly hit problems like these, this is the tool solving them:
 
