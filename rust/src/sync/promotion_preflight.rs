@@ -30,6 +30,56 @@ pub struct SyncPromotionPreflightSummary {
     pub blocking_count: i64,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PromotionCheckDocument {
+    kind: String,
+    identity: String,
+    source_value: String,
+    target_value: String,
+    resolution: String,
+    mapping_source: String,
+    status: String,
+    detail: String,
+    blocking: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PromotionMappingSummaryDocument {
+    mapping_kind: Value,
+    mapping_schema_version: Value,
+    source_environment: Value,
+    target_environment: Value,
+    folder_mapping_count: usize,
+    datasource_uid_mapping_count: usize,
+    datasource_name_mapping_count: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SyncPromotionPreflightDocument {
+    kind: &'static str,
+    schema_version: i64,
+    tool_version: &'static str,
+    summary: SyncPromotionPreflightSummary,
+    #[serde(rename = "bundlePreflight")]
+    bundle_preflight: Value,
+    #[serde(rename = "mappingSummary")]
+    mapping_summary: PromotionMappingSummaryDocument,
+    #[serde(rename = "checkSummary")]
+    check_summary: PromotionCheckSummary,
+    #[serde(rename = "handoffSummary")]
+    handoff_summary: PromotionHandoffSummary,
+    #[serde(rename = "continuationSummary")]
+    continuation_summary: PromotionContinuationSummary,
+    checks: Vec<PromotionCheckDocument>,
+    #[serde(rename = "resolvedChecks")]
+    resolved_checks: Vec<PromotionCheckDocument>,
+    #[serde(rename = "blockingChecks")]
+    blocking_checks: Vec<PromotionCheckDocument>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase", default)]
 struct PromotionCheckSummary {
@@ -75,6 +125,40 @@ struct PromotionCheck {
     status: String,
     detail: String,
     blocking: bool,
+}
+
+impl From<&PromotionCheck> for PromotionCheckDocument {
+    fn from(check: &PromotionCheck) -> Self {
+        Self {
+            kind: check.kind.clone(),
+            identity: check.identity.clone(),
+            source_value: check.source_value.clone(),
+            target_value: check.target_value.clone(),
+            resolution: check.resolution.clone(),
+            mapping_source: check.mapping_source.clone(),
+            status: check.status.clone(),
+            detail: check.detail.clone(),
+            blocking: check.blocking,
+        }
+    }
+}
+
+fn promotion_check_documents(checks: &[PromotionCheck]) -> Vec<PromotionCheckDocument> {
+    checks.iter().map(PromotionCheckDocument::from).collect()
+}
+
+fn promotion_check_documents_with_filter<F>(
+    checks: &[PromotionCheck],
+    predicate: F,
+) -> Vec<PromotionCheckDocument>
+where
+    F: Fn(&PromotionCheck) -> bool,
+{
+    checks
+        .iter()
+        .filter(|check| predicate(*check))
+        .map(PromotionCheckDocument::from)
+        .collect()
 }
 
 impl SyncPromotionPreflightSummary {
@@ -570,11 +654,11 @@ pub fn build_sync_promotion_preflight_document(
         .map(|summary| summary.values().filter_map(Value::as_i64).sum::<i64>())
         .unwrap_or(0);
 
-    Ok(serde_json::json!({
-        "kind": SYNC_PROMOTION_PREFLIGHT_KIND,
-        "schemaVersion": SYNC_PROMOTION_PREFLIGHT_SCHEMA_VERSION,
-        "toolVersion": tool_version(),
-        "summary": SyncPromotionPreflightSummary {
+    Ok(serde_json::to_value(SyncPromotionPreflightDocument {
+        kind: SYNC_PROMOTION_PREFLIGHT_KIND,
+        schema_version: SYNC_PROMOTION_PREFLIGHT_SCHEMA_VERSION,
+        tool_version: tool_version(),
+        summary: SyncPromotionPreflightSummary {
             resource_count,
             direct_match_count,
             mapped_count,
@@ -582,61 +666,32 @@ pub fn build_sync_promotion_preflight_document(
             bundle_blocking_count,
             blocking_count,
         },
-        "bundlePreflight": bundle_preflight,
-        "mappingSummary": {
-            "mappingKind": mapping_document.get("kind").cloned().unwrap_or(Value::Null),
-            "mappingSchemaVersion": mapping_document.get("schemaVersion").cloned().unwrap_or(Value::Null),
-            "sourceEnvironment": mapping_document.get("sourceEnvironment").cloned().unwrap_or(Value::Null),
-            "targetEnvironment": mapping_document.get("targetEnvironment").cloned().unwrap_or(Value::Null),
-            "folderMappingCount": folder_mapping.len(),
-            "datasourceUidMappingCount": datasource_uid_mapping.len(),
-            "datasourceNameMappingCount": datasource_name_mapping.len(),
+        bundle_preflight,
+        mapping_summary: PromotionMappingSummaryDocument {
+            mapping_kind: mapping_document.get("kind").cloned().unwrap_or(Value::Null),
+            mapping_schema_version: mapping_document
+                .get("schemaVersion")
+                .cloned()
+                .unwrap_or(Value::Null),
+            source_environment: mapping_document
+                .get("sourceEnvironment")
+                .cloned()
+                .unwrap_or(Value::Null),
+            target_environment: mapping_document
+                .get("targetEnvironment")
+                .cloned()
+                .unwrap_or(Value::Null),
+            folder_mapping_count: folder_mapping.len(),
+            datasource_uid_mapping_count: datasource_uid_mapping.len(),
+            datasource_name_mapping_count: datasource_name_mapping.len(),
         },
-        "checkSummary": serde_json::to_value(check_summary)?,
-        "handoffSummary": serde_json::to_value(summarize_promotion_handoff(blocking_count))?,
-        "continuationSummary": serde_json::to_value(continuation_summary)?,
-        "checks": checks.iter().map(|item| serde_json::json!({
-            "kind": item.kind,
-            "identity": item.identity,
-            "sourceValue": item.source_value,
-            "targetValue": item.target_value,
-            "resolution": item.resolution,
-            "mappingSource": item.mapping_source,
-            "status": item.status,
-            "detail": item.detail,
-            "blocking": item.blocking,
-        })).collect::<Vec<_>>(),
-        "resolvedChecks": checks
-            .iter()
-            .filter(|item| !item.blocking)
-            .map(|item| serde_json::json!({
-                "kind": item.kind,
-                "identity": item.identity,
-                "sourceValue": item.source_value,
-                "targetValue": item.target_value,
-                "resolution": item.resolution,
-                "mappingSource": item.mapping_source,
-                "status": item.status,
-                "detail": item.detail,
-                "blocking": item.blocking,
-            }))
-            .collect::<Vec<_>>(),
-        "blockingChecks": checks
-            .iter()
-            .filter(|item| item.blocking)
-            .map(|item| serde_json::json!({
-                "kind": item.kind,
-                "identity": item.identity,
-                "sourceValue": item.source_value,
-                "targetValue": item.target_value,
-                "resolution": item.resolution,
-                "mappingSource": item.mapping_source,
-                "status": item.status,
-                "detail": item.detail,
-                "blocking": item.blocking,
-            }))
-            .collect::<Vec<_>>(),
-    }))
+        check_summary,
+        handoff_summary: summarize_promotion_handoff(blocking_count),
+        continuation_summary,
+        checks: promotion_check_documents(&checks),
+        resolved_checks: promotion_check_documents_with_filter(&checks, |check| !check.blocking),
+        blocking_checks: promotion_check_documents_with_filter(&checks, |check| check.blocking),
+    })?)
 }
 
 pub fn render_sync_promotion_preflight_text(document: &Value) -> Result<Vec<String>> {

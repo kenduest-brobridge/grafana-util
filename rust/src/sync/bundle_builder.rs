@@ -7,7 +7,37 @@ use super::bundle_alert_contracts::build_alert_bundle_contract_document;
 use super::render_discovery_summary_from_value;
 use super::workbench::{SYNC_SOURCE_BUNDLE_KIND, SYNC_SOURCE_BUNDLE_SCHEMA_VERSION};
 use crate::common::{message, tool_version, Result};
+use serde::Serialize;
 use serde_json::{Map, Value};
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SyncSourceBundleSummaryDocument {
+    dashboard_count: usize,
+    datasource_count: usize,
+    folder_count: usize,
+    alert_rule_count: i64,
+    contact_point_count: i64,
+    mute_timing_count: i64,
+    policy_count: i64,
+    template_count: i64,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SyncSourceBundleDocument {
+    kind: &'static str,
+    schema_version: i64,
+    tool_version: &'static str,
+    summary: SyncSourceBundleSummaryDocument,
+    dashboards: Vec<Value>,
+    datasources: Vec<Value>,
+    folders: Vec<Value>,
+    alerts: Vec<Value>,
+    alerting: Value,
+    alert_contract: Value,
+    metadata: Value,
+}
 
 pub fn build_sync_source_bundle_document(
     dashboards: &[Value],
@@ -36,28 +66,44 @@ pub fn build_sync_source_bundle_document(
         .cloned()
         .unwrap_or_default();
     let alert_contract = build_alert_bundle_contract_document(&alerting_contract_source);
-    Ok(serde_json::json!({
-        "kind": SYNC_SOURCE_BUNDLE_KIND,
-        "schemaVersion": SYNC_SOURCE_BUNDLE_SCHEMA_VERSION,
-        "toolVersion": tool_version(),
-        "summary": {
-            "dashboardCount": dashboards.len(),
-            "datasourceCount": datasources.len(),
-            "folderCount": folders.len(),
-            "alertRuleCount": alerting_summary.get("ruleCount").and_then(Value::as_i64).unwrap_or(0),
-            "contactPointCount": alerting_summary.get("contactPointCount").and_then(Value::as_i64).unwrap_or(0),
-            "muteTimingCount": alerting_summary.get("muteTimingCount").and_then(Value::as_i64).unwrap_or(0),
-            "policyCount": alerting_summary.get("policyCount").and_then(Value::as_i64).unwrap_or(0),
-            "templateCount": alerting_summary.get("templateCount").and_then(Value::as_i64).unwrap_or(0),
+    let document = SyncSourceBundleDocument {
+        kind: SYNC_SOURCE_BUNDLE_KIND,
+        schema_version: SYNC_SOURCE_BUNDLE_SCHEMA_VERSION,
+        tool_version: tool_version(),
+        summary: SyncSourceBundleSummaryDocument {
+            dashboard_count: dashboards.len(),
+            datasource_count: datasources.len(),
+            folder_count: folders.len(),
+            alert_rule_count: alerting_summary
+                .get("ruleCount")
+                .and_then(Value::as_i64)
+                .unwrap_or(0),
+            contact_point_count: alerting_summary
+                .get("contactPointCount")
+                .and_then(Value::as_i64)
+                .unwrap_or(0),
+            mute_timing_count: alerting_summary
+                .get("muteTimingCount")
+                .and_then(Value::as_i64)
+                .unwrap_or(0),
+            policy_count: alerting_summary
+                .get("policyCount")
+                .and_then(Value::as_i64)
+                .unwrap_or(0),
+            template_count: alerting_summary
+                .get("templateCount")
+                .and_then(Value::as_i64)
+                .unwrap_or(0),
         },
-        "dashboards": dashboards,
-        "datasources": datasources,
-        "folders": folders,
-        "alerts": alerts,
-        "alerting": alerting,
-        "alertContract": alert_contract,
-        "metadata": metadata,
-    }))
+        dashboards: dashboards.to_vec(),
+        datasources: datasources.to_vec(),
+        folders: folders.to_vec(),
+        alerts: alerts.to_vec(),
+        alerting,
+        alert_contract,
+        metadata,
+    };
+    Ok(serde_json::to_value(document)?)
 }
 
 pub fn render_sync_source_bundle_text(document: &Value) -> Result<Vec<String>> {

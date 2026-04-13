@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 
-use serde_json::{json, Value};
+use serde::Serialize;
+use serde_json::Value;
 
 use crate::common::Result;
 
@@ -13,6 +14,63 @@ pub(super) struct SnapshotReviewOrgCounts {
     pub(super) datasource_count: usize,
     pub(super) default_datasource_count: usize,
     pub(super) datasource_types: BTreeMap<String, usize>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct SnapshotReviewWarning {
+    code: SnapshotReviewWarningCode,
+    message: String,
+}
+
+#[derive(Debug, Clone, Copy, Serialize)]
+#[serde(rename_all = "kebab-case")]
+enum SnapshotReviewWarningCode {
+    #[serde(rename = "org-count-mismatch")]
+    OrgCountMismatch,
+    #[serde(rename = "empty-dashboard-inventory")]
+    EmptyDashboardInventory,
+    #[serde(rename = "empty-datasource-inventory")]
+    EmptyDatasourceInventory,
+    #[serde(rename = "dashboard-org-missing-scope")]
+    DashboardOrgMissingScope,
+    #[serde(rename = "datasource-org-missing-scope")]
+    DatasourceOrgMissingScope,
+    #[serde(rename = "dashboard-raw-lane-missing")]
+    DashboardRawLaneMissing,
+    #[serde(rename = "dashboard-prompt-lane-missing")]
+    DashboardPromptLaneMissing,
+    #[serde(rename = "dashboard-provisioning-lane-missing")]
+    DashboardProvisioningLaneMissing,
+    #[serde(rename = "datasource-inventory-lane-missing")]
+    DatasourceInventoryLaneMissing,
+    #[serde(rename = "datasource-provisioning-lane-missing")]
+    DatasourceProvisioningLaneMissing,
+    #[serde(rename = "org-partial-coverage")]
+    OrgPartialCoverage,
+}
+
+impl SnapshotReviewWarning {
+    fn new(code: SnapshotReviewWarningCode, message: impl Into<String>) -> Self {
+        Self {
+            code,
+            message: message.into(),
+        }
+    }
+}
+
+fn snapshot_review_warning_value(warning: SnapshotReviewWarning) -> Value {
+    serde_json::to_value(warning)
+        .unwrap_or_else(|error| panic!("snapshot review warning serialization failed: {error}"))
+}
+
+fn push_snapshot_review_warning(
+    warnings: &mut Vec<Value>,
+    code: SnapshotReviewWarningCode,
+    message: impl Into<String>,
+) {
+    warnings.push(snapshot_review_warning_value(SnapshotReviewWarning::new(
+        code, message,
+    )));
 }
 
 fn snapshot_review_org_key(org_id: &str, org: &str) -> String {
@@ -254,38 +312,42 @@ pub(super) fn build_snapshot_review_warnings(
 ) -> Vec<Value> {
     let mut warnings = Vec::new();
     if dashboard_org_count != datasource_org_count {
-        warnings.push(json!({
-            "code": "org-count-mismatch",
-            "message": format!(
+        push_snapshot_review_warning(
+            &mut warnings,
+            SnapshotReviewWarningCode::OrgCountMismatch,
+            format!(
                 "Dashboard export covers {} org(s) while datasource inventory covers {} org(s).",
-                dashboard_org_count,
-                datasource_org_count
-            )
-        }));
+                dashboard_org_count, datasource_org_count
+            ),
+        );
     }
     if dashboard_count == 0 {
-        warnings.push(json!({
-            "code": "empty-dashboard-inventory",
-            "message": "Dashboard export did not record any dashboards."
-        }));
+        push_snapshot_review_warning(
+            &mut warnings,
+            SnapshotReviewWarningCode::EmptyDashboardInventory,
+            "Dashboard export did not record any dashboards.",
+        );
     }
     if datasource_count == 0 {
-        warnings.push(json!({
-            "code": "empty-datasource-inventory",
-            "message": "Datasource inventory did not record any datasources."
-        }));
+        push_snapshot_review_warning(
+            &mut warnings,
+            SnapshotReviewWarningCode::EmptyDatasourceInventory,
+            "Datasource inventory did not record any datasources.",
+        );
     }
     if missing_dashboard_org_scope {
-        warnings.push(json!({
-            "code": "dashboard-org-missing-scope",
-            "message": "At least one dashboard export org entry is missing org or orgId metadata."
-        }));
+        push_snapshot_review_warning(
+            &mut warnings,
+            SnapshotReviewWarningCode::DashboardOrgMissingScope,
+            "At least one dashboard export org entry is missing org or orgId metadata.",
+        );
     }
     if missing_datasource_org_scope {
-        warnings.push(json!({
-            "code": "datasource-org-missing-scope",
-            "message": "At least one datasource inventory row is missing org or orgId metadata."
-        }));
+        push_snapshot_review_warning(
+            &mut warnings,
+            SnapshotReviewWarningCode::DatasourceOrgMissingScope,
+            "At least one datasource inventory row is missing org or orgId metadata.",
+        );
     }
     let dashboard_scope_count = dashboard_lane_summary
         .get("scopeCount")
@@ -297,10 +359,11 @@ pub(super) fn build_snapshot_review_warnings(
         .unwrap_or(0)
         < dashboard_scope_count
     {
-        warnings.push(json!({
-            "code": "dashboard-raw-lane-missing",
-            "message": "At least one dashboard export scope is missing raw/ artifacts."
-        }));
+        push_snapshot_review_warning(
+            &mut warnings,
+            SnapshotReviewWarningCode::DashboardRawLaneMissing,
+            "At least one dashboard export scope is missing raw/ artifacts.",
+        );
     }
     if dashboard_lane_summary
         .get("promptScopeCount")
@@ -308,10 +371,11 @@ pub(super) fn build_snapshot_review_warnings(
         .unwrap_or(0)
         < dashboard_scope_count
     {
-        warnings.push(json!({
-            "code": "dashboard-prompt-lane-missing",
-            "message": "At least one dashboard export scope is missing prompt/ artifacts."
-        }));
+        push_snapshot_review_warning(
+            &mut warnings,
+            SnapshotReviewWarningCode::DashboardPromptLaneMissing,
+            "At least one dashboard export scope is missing prompt/ artifacts.",
+        );
     }
     if dashboard_lane_summary
         .get("provisioningScopeCount")
@@ -319,10 +383,11 @@ pub(super) fn build_snapshot_review_warnings(
         .unwrap_or(0)
         < dashboard_scope_count
     {
-        warnings.push(json!({
-            "code": "dashboard-provisioning-lane-missing",
-            "message": "At least one dashboard export scope is missing provisioning/ artifacts."
-        }));
+        push_snapshot_review_warning(
+            &mut warnings,
+            SnapshotReviewWarningCode::DashboardProvisioningLaneMissing,
+            "At least one dashboard export scope is missing provisioning/ artifacts.",
+        );
     }
     let datasource_inventory_scope_count = datasource_lane_summary
         .get("inventoryExpectedScopeCount")
@@ -334,10 +399,11 @@ pub(super) fn build_snapshot_review_warnings(
         .unwrap_or(0)
         < datasource_inventory_scope_count
     {
-        warnings.push(json!({
-            "code": "datasource-inventory-lane-missing",
-            "message": "At least one datasource export scope is missing datasources.json."
-        }));
+        push_snapshot_review_warning(
+            &mut warnings,
+            SnapshotReviewWarningCode::DatasourceInventoryLaneMissing,
+            "At least one datasource export scope is missing datasources.json.",
+        );
     }
     let datasource_provisioning_scope_count = datasource_lane_summary
         .get("provisioningExpectedScopeCount")
@@ -349,23 +415,33 @@ pub(super) fn build_snapshot_review_warnings(
         .unwrap_or(0)
         < datasource_provisioning_scope_count
     {
-        warnings.push(json!({
-            "code": "datasource-provisioning-lane-missing",
-            "message": "At least one datasource export scope is missing provisioning/datasources.yaml."
-        }));
+        push_snapshot_review_warning(
+            &mut warnings,
+            SnapshotReviewWarningCode::DatasourceProvisioningLaneMissing,
+            "At least one datasource export scope is missing provisioning/datasources.yaml.",
+        );
     }
     for org in orgs {
         if org.dashboard_count == 0 || org.datasource_count == 0 {
-            warnings.push(json!({
-                "code": "org-partial-coverage",
-                "message": format!(
+            push_snapshot_review_warning(
+                &mut warnings,
+                SnapshotReviewWarningCode::OrgPartialCoverage,
+                format!(
                     "Org {} (orgId={}) has {} dashboard(s) and {} datasource(s).",
-                    if org.org.is_empty() { "unknown" } else { &org.org },
-                    if org.org_id.is_empty() { "unknown" } else { &org.org_id },
+                    if org.org.is_empty() {
+                        "unknown"
+                    } else {
+                        &org.org
+                    },
+                    if org.org_id.is_empty() {
+                        "unknown"
+                    } else {
+                        &org.org_id
+                    },
                     org.dashboard_count,
                     org.datasource_count
-                )
-            }));
+                ),
+            );
         }
     }
     warnings

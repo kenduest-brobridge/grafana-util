@@ -10,6 +10,14 @@ Current AI change log only.
 - Keep this file limited to the latest active architecture and maintenance changes.
 - Older entries moved to [`ai-changes-archive-2026-04-13.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-04-13.md).
 
+## 2026-04-13 - Type Rust machine-output contract builders
+- Summary: replaced selected ad hoc JSON document assembly with module-local typed serde DTOs for snapshot review warnings, sync source bundle documents, sync bundle preflight documents, and sync promotion preflight documents/check lists.
+- Tests: no public behavior changes; existing contract tests continue to cover serialized field names and consumer expectations.
+- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all`; `cd rust && cargo test --quiet snapshot_rust_tests --no-run`; `cd rust && cargo test --quiet sync_source_bundle --no-run`; `cd rust && cargo test --quiet bundle_contract_preflight --no-run`; `cd rust && cargo test --quiet bundle_contract --no-run`; `cd rust && cargo test --quiet promotion_preflight --no-run`.
+- Impact: `rust/src/snapshot_review_counts.rs`, `rust/src/sync/bundle_builder.rs`, `rust/src/sync/bundle_preflight.rs`, and `rust/src/sync/promotion_preflight.rs`.
+- Rollback/Risk: behavior-preserving contract-assembly refactor; rollback would restore inline JSON construction. Nested resource arrays remain `serde_json::Value` because they carry staged Grafana/resource payloads rather than this repo's stable wrapper contract.
+- Follow-up: consider applying the same typed DTO pattern to datasource/dashboard project-status outputs and live sync read/apply result documents.
+
 ## 2026-04-13 - Split Rust snapshot/import/live-status hotspots
 - Summary: split `snapshot.rs` into focused CLI definition, lane-loading, count/warning, and review-document modules; changed snapshot review output assembly from one large `json!` object to module-local `Serialize` structs for the stable document contract; integrated worker splits for dashboard import lookup, dashboard inspect CLI definitions, and access live-status helpers.
 - Tests: preserved existing behavior coverage and added no new public output changes.
@@ -80,13 +88,4 @@ Current AI change log only.
 - Test Run: `python3 -m unittest -v python.tests.test_python_ai_trace python.tests.test_python_check_ai_workflow`; `python3 scripts/ai_trace.py check-size`; `make quality-ai-workflow`; `git diff --check`.
 - Impact: `scripts/ai_trace.py`, `scripts/check_ai_workflow.py`, `python/tests/test_python_ai_trace.py`, `python/tests/test_python_check_ai_workflow.py`, `docs/internal/ai-status.md`, `docs/internal/ai-changes.md`, and current AI trace archives after compaction.
 - Rollback/Risk: internal maintainer tooling only; rollback removes the helper and the size check, but manual trace maintenance would again be required.
-- Follow-up: none.
-
-## 2026-04-12 - Add flat CLI help inventory
-- Summary: added root `grafana-util --help-flat` output that expands the visible public Clap command tree into a grep-friendly table with command path, group/command kind, and operator-facing purpose text.
-- Tests: added CLI help coverage for root pre-parse routing, colorized output, public command inclusion, hidden command exclusion, and rejection of leaked internal `Struct definition` / `Arguments for` wording.
-- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all`; `cargo test --manifest-path rust/Cargo.toml --quiet cli_rust_tests -- --test-threads=1`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `git diff --check`; `python3 -m json.tool scripts/contracts/command-surface.json`.
-- Validation: manually checked `cargo run --manifest-path rust/Cargo.toml --quiet --bin grafana-util -- --help-flat` and confirmed all public roots render with purpose text and access leaf commands use operator-facing descriptions.
-- Impact: `rust/src/cli.rs`, `rust/src/cli_help.rs`, `rust/src/cli_help/routing.rs`, access CLI command definitions, CLI help tests, command-surface contract/checker, command-reference index docs, and maintainer workflow docs that reference root help inventory support.
-- Rollback/Risk: root pre-parse now reserves `--help-flat`; command purposes depend on command-level Clap `about` metadata, so new commands should provide product-facing `about` text instead of relying on Args struct comments.
 - Follow-up: none.

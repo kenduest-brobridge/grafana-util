@@ -10,6 +10,13 @@ Current AI-maintained status only.
 - Keep this file short and current. Additive historical detail belongs in `docs/internal/archive/`.
 - Older entries moved to [`ai-status-archive-2026-04-13.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-04-13.md).
 
+## 2026-04-13 - Type Rust machine-output contract builders
+- State: Done
+- Scope: snapshot review warnings, sync source bundle, sync bundle preflight, and sync promotion preflight output assembly.
+- Baseline: several machine-readable Rust outputs still assembled stable document structures with inline `serde_json::json!` or manual `Map` construction, leaving field names and summary shapes mostly constrained by tests and reviewer discipline.
+- Current Update: replaced selected top-level document and warning builders with module-local `Serialize` DTOs/helpers while leaving nested resource `Value` payloads intact where they represent external Grafana or staged resource documents.
+- Result: public JSON fields and behavior are unchanged; focused no-run targets for snapshot, sync source bundle, bundle preflight, and promotion preflight pass locally.
+
 ## 2026-04-13 - Split Rust snapshot/import/live-status hotspots
 - State: Done
 - Scope: Rust snapshot CLI/review document assembly, dashboard import lookup helpers, access live project-status helpers, and dashboard inspect CLI definition modules.
@@ -42,9 +49,3 @@ Current AI-maintained status only.
 - Scope: README zh-TW, command reference docs, handbook source, generated HTML/man output, zh-TW style guide, and generated-docs playbook.
 - Current Update: removed generated-looking example-comment labels, removed handbook emoji headings, tightened zh-TW product terminology, expanded reader-oriented handbook framing, added handbook workflow maps and task-first sections for alert, dashboard, datasource, access, and status/workspace, kept command maps out of handbook bodies, renamed the sidebar command map to command shortcuts, removed handbook chapter-count chrome, and pointed English handbook links at specific command pages.
 - Result: public docs read less like generated summaries while keeping command reference pages lookup-oriented; core handbook pages now explain subcommand relationships, output interpretation, and next-step decisions before sending readers to exact flag references; generated HTML/man outputs are refreshed and docs surface checks pass.
-
-## 2026-04-12 - Split Rust architecture hotspots and test modules
-- State: Done
-- Scope: `rust/src/alert.rs`, `rust/src/access/render.rs`, `rust/src/cli_help/routing.rs`, `rust/src/snapshot_review.rs`, and split Rust test modules for CLI, access, alert, dashboard help, and overview coverage.
-- Current Update: Split large orchestration/render/test surfaces into focused helper modules and thin aggregators while preserving public command behavior and test contracts.
-- Result: Focused Rust tests pass; `make quality-architecture` now reports 17 warnings, down from the pre-refactor 23, with remaining warnings limited to untouched hotspots and two existing brittle help-test files.

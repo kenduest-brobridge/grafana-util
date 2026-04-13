@@ -59,6 +59,18 @@ pub(crate) struct AlertArtifactAssessmentSummary {
     pub(crate) plan_only_count: i64,
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SyncBundlePreflightDocument {
+    kind: &'static str,
+    schema_version: i64,
+    summary: SyncBundlePreflightSummary,
+    sync_preflight: Value,
+    alert_artifact_assessment: Value,
+    secret_placeholder_assessment: Value,
+    provider_assessment: Value,
+}
+
 impl SyncBundlePreflightSummary {
     pub(crate) fn from_document(document: &Value) -> Result<Self> {
         let object = require_json_object(document, "Sync bundle preflight document")?;
@@ -746,27 +758,20 @@ pub fn build_sync_bundle_preflight_document(
         alert_artifact_blocked_count: alert_artifact_summary.blocked_count,
         alert_artifact_plan_only_count: alert_artifact_summary.plan_only_count,
     };
-    Ok(Value::Object(Map::from_iter(vec![
-        (
-            "kind".to_string(),
-            Value::String(SYNC_BUNDLE_PREFLIGHT_KIND.to_string()),
-        ),
-        (
-            "schemaVersion".to_string(),
-            Value::Number(SYNC_BUNDLE_PREFLIGHT_SCHEMA_VERSION.into()),
-        ),
-        ("summary".to_string(), serde_json::to_value(&summary)?),
-        ("syncPreflight".to_string(), sync_preflight),
-        (
-            "alertArtifactAssessment".to_string(),
-            alert_artifact_assessment.clone(),
-        ),
-        (
-            "secretPlaceholderAssessment".to_string(),
-            secret_placeholder_assessment,
-        ),
-        ("providerAssessment".to_string(), provider_assessment),
-    ])))
+    let document = SyncBundlePreflightDocument {
+        kind: SYNC_BUNDLE_PREFLIGHT_KIND,
+        schema_version: SYNC_BUNDLE_PREFLIGHT_SCHEMA_VERSION,
+        summary,
+        sync_preflight,
+        alert_artifact_assessment,
+        secret_placeholder_assessment,
+        provider_assessment,
+    };
+    serde_json::to_value(document).map_err(|error| {
+        message(format!(
+            "Sync bundle preflight document serialization failed: {error}"
+        ))
+    })
 }
 
 /// Purpose: implementation note.
