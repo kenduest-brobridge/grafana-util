@@ -13,11 +13,11 @@ Current AI-maintained status only.
 - Older entries moved to [`ai-status-archive-2026-04-15.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-04-15.md).
 
 ## 2026-04-15 - Start Rust TODO maintainability pass
-- State: In Progress
+- State: Done
 - Scope: conservative-boundary TODO execution across Rust tests, access TUI input, and status producer model. Python implementation and README files are out of scope.
 - Baseline: `todo.md` records the Rust-first maintainability backlog and requires responsibility-based splits instead of line-count-only splits.
-- Current Update: workers are being assigned disjoint TODO slices with conservative write scopes and focused validation.
-- Result: In progress.
+- Current Update: Split datasource tail diff parser/live comparison tests into `tail_diff.rs`, moved access team browse action handling into `team_browse_actions.rs`, and added a `ProjectDomainStatusReading` producer shape used by live status fallback and aggregation.
+- Result: Focused Rust tests, full Rust tests, clippy, architecture guardrails, AI workflow checks, and whitespace checks pass. README files and Python implementation were left untouched.
 
 ## 2026-04-15 - Improve Rust maintainability priorities
 - State: Done
@@ -53,10 +53,3 @@ Current AI-maintained status only.
 - Baseline: `access user browse` could expand a user to show team membership rows, but those rows were read-only. Operators had to switch to `access team browse` to remove a user from a team, and the user/team delete previews were still rendered inside the right facts pane instead of as confirmation dialogs.
 - Current Update: expanded user team rows now preserve Grafana team ids, `r` and team-row `d` open a `Remove membership` confirmation dialog, and `y` removes the selected user from that team through `/api/teams/{team_id}/members/{user_id}` before refreshing back to the parent user. User delete and team delete/remove confirmations now render as centered dialogs.
 - Result: team membership removal is available from both team-first and user-first browse flows without deleting the user account or the team.
-
-## 2026-04-13 - Add team browse membership actions
-- State: Done
-- Scope: access team browser member-row actions, shared team browse footer/dialog presentation, focused Rust regressions, and worker-assisted implementation review.
-- Baseline: selecting a team member row in `access team browse` could show membership detail, but `e` only told users to select a team row and there was no direct way from the member row to remove that relationship or change team-admin state. Team browse also still owned local footer/control and dialog presentation code while user browse had moved to shared TUI shell helpers.
-- Current Update: member rows now keep user-owned fields read-only and direct account edits to `access user browse`; `r` and member-row `d` open a confirmation dialog before removing the selected team membership through the existing team modify flow; `a` grants or revokes team-admin state through the existing membership update path. Team-row `d` opens the whole-team delete confirmation dialog. Team browse footer controls now use the shared control grid/height helpers, and team edit/search/delete overlays use the shared dialog shell.
-- Result: team browse can manage team/member relationships without pretending to edit user profile fields, and the browser presentation is closer to the shared TUI treatment already used by user browse.
