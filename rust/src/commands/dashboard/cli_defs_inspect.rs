@@ -11,7 +11,7 @@ pub use cli_defs_inspect_analysis::*;
 pub use cli_defs_inspect_policy::*;
 pub use cli_defs_inspect_screenshot::*;
 
-fn parse_dashboard_analysis_input_format(
+fn parse_dashboard_summary_input_format(
     value: &str,
 ) -> Result<super::DashboardImportInputFormat, String> {
     match value.trim().to_ascii_lowercase().as_str() {

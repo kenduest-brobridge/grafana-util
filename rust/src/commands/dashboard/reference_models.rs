@@ -1,7 +1,7 @@
 //! Typed reference shapes for dashboard inspection and dependency workflows.
 //!
 //! These structs are intentionally conservative and independent from command
-//! execution. Workers can wire them into dashboard analyzers later.
+//! execution. Workers can wire them into dashboard summary and dependency flows later.
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;

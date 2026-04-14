@@ -29,9 +29,9 @@ use super::vars::inspect_dashboard_variables;
 #[allow(unused_imports)]
 use super::{
     build_dashboard_review, build_http_client, materialize_dashboard_common_auth,
-    render_inspect_export_help_full, render_inspect_live_help_full, AnalyzeArgs, DashboardCliArgs,
+    render_inspect_export_help_full, render_inspect_live_help_full, DashboardCliArgs,
     DashboardCommand, DashboardHistorySubcommand, InspectExportArgs, InspectLiveArgs, ReviewArgs,
-    SimpleOutputFormat,
+    SimpleOutputFormat, SummaryArgs,
 };
 
 const DASHBOARD_LIST_OUTPUT_COLUMNS: &[&str] = &[
@@ -61,7 +61,7 @@ fn print_supported_dashboard_report_columns() {
     print_supported_columns(SUPPORTED_REPORT_COLUMN_IDS);
 }
 
-fn analyze_args_to_export_args(args: AnalyzeArgs) -> Result<InspectExportArgs> {
+fn summary_args_to_export_args(args: SummaryArgs) -> Result<InspectExportArgs> {
     let input_dir = args
         .input_dir
         .ok_or_else(|| message("dashboard summary local mode requires --input-dir."))?;
@@ -87,7 +87,7 @@ fn analyze_args_to_export_args(args: AnalyzeArgs) -> Result<InspectExportArgs> {
     })
 }
 
-fn analyze_args_to_live_args(args: AnalyzeArgs) -> InspectLiveArgs {
+fn summary_args_to_live_args(args: SummaryArgs) -> InspectLiveArgs {
     InspectLiveArgs {
         common: args.common,
         page_size: args.page_size,
@@ -121,6 +121,50 @@ fn request_json_with_client(
     payload: Option<&Value>,
 ) -> Result<Option<Value>> {
     client.request_json(method, path, params, payload)
+}
+
+fn run_dashboard_inspect_export_dispatch(
+    inspect_args: InspectExportArgs,
+    run: impl FnOnce(InspectExportArgs) -> Result<usize>,
+) -> Result<()> {
+    if inspect_args.list_columns {
+        print_supported_dashboard_report_columns();
+        return Ok(());
+    }
+    if inspect_args.help_full {
+        print!("{}", render_inspect_export_help_full());
+        return Ok(());
+    }
+    run(inspect_args).map(|_| ())
+}
+
+fn run_dashboard_inspect_live_dispatch(
+    inspect_args: InspectLiveArgs,
+    run: impl FnOnce(InspectLiveArgs) -> Result<usize>,
+) -> Result<()> {
+    if inspect_args.list_columns {
+        print_supported_dashboard_report_columns();
+        return Ok(());
+    }
+    if inspect_args.help_full {
+        print!("{}", render_inspect_live_help_full());
+        return Ok(());
+    }
+    run(inspect_args).map(|_| ())
+}
+
+fn run_dashboard_summary_dispatch(
+    summary_args: SummaryArgs,
+    run_export: impl FnOnce(InspectExportArgs) -> Result<usize>,
+    run_live: impl FnOnce(InspectLiveArgs) -> Result<usize>,
+) -> Result<()> {
+    if summary_args.input_dir.is_some() {
+        let inspect_args = summary_args_to_export_args(summary_args)?;
+        run_dashboard_inspect_export_dispatch(inspect_args, run_export)
+    } else {
+        let inspect_args = summary_args_to_live_args(summary_args);
+        run_dashboard_inspect_live_dispatch(inspect_args, run_live)
+    }
 }
 
 pub(crate) fn review_dashboard_file(args: &ReviewArgs) -> Result<()> {
@@ -211,33 +255,11 @@ pub fn run_dashboard_cli_with_client(
         DashboardCommand::Publish(publish_args) => {
             super::publish_dashboard_with_client(client, &publish_args)
         }
-        DashboardCommand::Analyze(analyze_args) => {
-            if analyze_args.input_dir.is_some() {
-                let inspect_args = analyze_args_to_export_args(analyze_args)?;
-                if inspect_args.list_columns {
-                    print_supported_dashboard_report_columns();
-                    return Ok(());
-                }
-                if inspect_args.help_full {
-                    print!("{}", render_inspect_export_help_full());
-                    return Ok(());
-                }
-                let _ = inspect::analyze_export_dir(&inspect_args)?;
-                Ok(())
-            } else {
-                let inspect_args = analyze_args_to_live_args(analyze_args);
-                if inspect_args.list_columns {
-                    print_supported_dashboard_report_columns();
-                    return Ok(());
-                }
-                if inspect_args.help_full {
-                    print!("{}", render_inspect_live_help_full());
-                    return Ok(());
-                }
-                let _ = inspect_live::inspect_live_dashboards_with_client(client, &inspect_args)?;
-                Ok(())
-            }
-        }
+        DashboardCommand::Summary(summary_args) => run_dashboard_summary_dispatch(
+            summary_args,
+            |inspect_args| inspect::analyze_export_dir(&inspect_args),
+            |inspect_args| inspect_live::inspect_live_dashboards_with_client(client, &inspect_args),
+        ),
         DashboardCommand::Delete(delete_args) => {
             let _ = delete::delete_dashboards_with_client(client, &delete_args)?;
             Ok(())
@@ -253,28 +275,14 @@ pub fn run_dashboard_cli_with_client(
             Ok(())
         }
         DashboardCommand::InspectExport(inspect_args) => {
-            if inspect_args.list_columns {
-                print_supported_dashboard_report_columns();
-                return Ok(());
-            }
-            if inspect_args.help_full {
-                print!("{}", render_inspect_export_help_full());
-                return Ok(());
-            }
-            let _ = inspect::analyze_export_dir(&inspect_args)?;
-            Ok(())
+            run_dashboard_inspect_export_dispatch(inspect_args, |inspect_args| {
+                inspect::analyze_export_dir(&inspect_args)
+            })
         }
         DashboardCommand::InspectLive(inspect_args) => {
-            if inspect_args.list_columns {
-                print_supported_dashboard_report_columns();
-                return Ok(());
-            }
-            if inspect_args.help_full {
-                print!("{}", render_inspect_live_help_full());
-                return Ok(());
-            }
-            let _ = inspect_live::inspect_live_dashboards_with_client(client, &inspect_args)?;
-            Ok(())
+            run_dashboard_inspect_live_dispatch(inspect_args, |inspect_args| {
+                inspect_live::inspect_live_dashboards_with_client(client, &inspect_args)
+            })
         }
         DashboardCommand::InspectVars(inspect_vars_args) => {
             inspect_dashboard_variables(&inspect_vars_args)
@@ -383,34 +391,14 @@ pub fn run_dashboard_cli(args: DashboardCliArgs) -> Result<()> {
             let client = build_http_client(&publish_args.common)?;
             super::publish_dashboard_with_client(&client, &publish_args)
         }
-        DashboardCommand::Analyze(analyze_args) => {
-            if analyze_args.input_dir.is_some() {
-                let inspect_args = analyze_args_to_export_args(analyze_args)?;
-                if inspect_args.list_columns {
-                    print_supported_dashboard_report_columns();
-                    return Ok(());
-                }
-                if inspect_args.help_full {
-                    print!("{}", render_inspect_export_help_full());
-                    return Ok(());
-                }
-                let _ = inspect::analyze_export_dir(&inspect_args)?;
-                Ok(())
-            } else {
-                let inspect_args = analyze_args_to_live_args(analyze_args);
-                if inspect_args.list_columns {
-                    print_supported_dashboard_report_columns();
-                    return Ok(());
-                }
-                if inspect_args.help_full {
-                    print!("{}", render_inspect_live_help_full());
-                    return Ok(());
-                }
+        DashboardCommand::Summary(summary_args) => run_dashboard_summary_dispatch(
+            summary_args,
+            |inspect_args| inspect::analyze_export_dir(&inspect_args),
+            |inspect_args| {
                 let client = build_http_client(&inspect_args.common)?;
-                let _ = inspect_live::inspect_live_dashboards_with_client(&client, &inspect_args)?;
-                Ok(())
-            }
-        }
+                inspect_live::inspect_live_dashboards_with_client(&client, &inspect_args)
+            },
+        ),
         DashboardCommand::Delete(delete_args) => {
             let _ = delete::delete_dashboards_with_org_clients(&delete_args)?;
             Ok(())
@@ -427,29 +415,15 @@ pub fn run_dashboard_cli(args: DashboardCliArgs) -> Result<()> {
             Ok(())
         }
         DashboardCommand::InspectExport(inspect_args) => {
-            if inspect_args.list_columns {
-                print_supported_dashboard_report_columns();
-                return Ok(());
-            }
-            if inspect_args.help_full {
-                print!("{}", render_inspect_export_help_full());
-                return Ok(());
-            }
-            let _ = inspect::analyze_export_dir(&inspect_args)?;
-            Ok(())
+            run_dashboard_inspect_export_dispatch(inspect_args, |inspect_args| {
+                inspect::analyze_export_dir(&inspect_args)
+            })
         }
         DashboardCommand::InspectLive(inspect_args) => {
-            if inspect_args.list_columns {
-                print_supported_dashboard_report_columns();
-                return Ok(());
-            }
-            if inspect_args.help_full {
-                print!("{}", render_inspect_live_help_full());
-                return Ok(());
-            }
-            let client = build_http_client(&inspect_args.common)?;
-            let _ = inspect_live::inspect_live_dashboards_with_client(&client, &inspect_args)?;
-            Ok(())
+            run_dashboard_inspect_live_dispatch(inspect_args, |inspect_args| {
+                let client = build_http_client(&inspect_args.common)?;
+                inspect_live::inspect_live_dashboards_with_client(&client, &inspect_args)
+            })
         }
         DashboardCommand::InspectVars(inspect_vars_args) => {
             inspect_dashboard_variables(&inspect_vars_args)
@@ -585,7 +559,7 @@ pub(crate) fn materialize_dashboard_command_auth(args: &mut DashboardCliArgs) ->
         DashboardCommand::Review(_)
         | DashboardCommand::PatchFile(_)
         | DashboardCommand::Serve(_)
-        | DashboardCommand::Analyze(_)
+        | DashboardCommand::Summary(_)
         | DashboardCommand::GovernanceGate(_)
         | DashboardCommand::Topology(_)
         | DashboardCommand::Impact(_)

@@ -4,18 +4,18 @@ use crate::common::CliColorChoice;
 use clap::{Parser, Subcommand, ValueEnum};
 
 use super::cli_defs_inspect::{
-    AnalyzeArgs, GovernanceGateArgs, ImpactArgs, InspectExportArgs, InspectLiveArgs,
-    InspectVarsArgs, ScreenshotArgs, TopologyArgs, ValidateExportArgs,
+    GovernanceGateArgs, ImpactArgs, InspectExportArgs, InspectLiveArgs, InspectVarsArgs,
+    ScreenshotArgs, SummaryArgs, TopologyArgs, ValidateExportArgs,
 };
 use super::{
-    DASHBOARD_ANALYZE_AFTER_HELP, DASHBOARD_ANALYZE_EXPORT_AFTER_HELP,
-    DASHBOARD_ANALYZE_LIVE_AFTER_HELP, DASHBOARD_BROWSE_AFTER_HELP, DASHBOARD_CLI_AFTER_HELP,
-    DASHBOARD_CLONE_LIVE_AFTER_HELP, DASHBOARD_DELETE_AFTER_HELP, DASHBOARD_DIFF_AFTER_HELP,
-    DASHBOARD_EDIT_LIVE_AFTER_HELP, DASHBOARD_EXPORT_AFTER_HELP, DASHBOARD_FETCH_LIVE_AFTER_HELP,
+    DASHBOARD_BROWSE_AFTER_HELP, DASHBOARD_CLI_AFTER_HELP, DASHBOARD_CLONE_LIVE_AFTER_HELP,
+    DASHBOARD_DELETE_AFTER_HELP, DASHBOARD_DIFF_AFTER_HELP, DASHBOARD_EDIT_LIVE_AFTER_HELP,
+    DASHBOARD_EXPORT_AFTER_HELP, DASHBOARD_FETCH_LIVE_AFTER_HELP,
     DASHBOARD_GOVERNANCE_GATE_AFTER_HELP, DASHBOARD_IMPACT_AFTER_HELP, DASHBOARD_IMPORT_AFTER_HELP,
     DASHBOARD_LIST_AFTER_HELP, DASHBOARD_LIST_VARS_AFTER_HELP, DASHBOARD_PATCH_FILE_AFTER_HELP,
     DASHBOARD_PUBLISH_AFTER_HELP, DASHBOARD_REVIEW_AFTER_HELP, DASHBOARD_SCREENSHOT_AFTER_HELP,
-    DASHBOARD_SERVE_AFTER_HELP, DASHBOARD_TOPOLOGY_AFTER_HELP,
+    DASHBOARD_SERVE_AFTER_HELP, DASHBOARD_SUMMARY_AFTER_HELP, DASHBOARD_SUMMARY_EXPORT_AFTER_HELP,
+    DASHBOARD_SUMMARY_LIVE_AFTER_HELP, DASHBOARD_TOPOLOGY_AFTER_HELP,
     DASHBOARD_VALIDATE_EXPORT_AFTER_HELP,
 };
 
@@ -148,21 +148,21 @@ pub enum DashboardCommand {
     #[command(
         name = "summary",
         about = "Summarize dashboards from live Grafana or a local export tree and build summary or governance artifacts.",
-        after_help = DASHBOARD_ANALYZE_AFTER_HELP
+        after_help = DASHBOARD_SUMMARY_AFTER_HELP
     )]
-    Analyze(AnalyzeArgs),
+    Summary(SummaryArgs),
     #[command(
         name = "summary-export",
         hide = true,
-        about = "Analyze dashboards from local export directories.",
-        after_help = DASHBOARD_ANALYZE_EXPORT_AFTER_HELP
+        about = "Summarize dashboards from local export directories.",
+        after_help = DASHBOARD_SUMMARY_EXPORT_AFTER_HELP
     )]
     InspectExport(InspectExportArgs),
     #[command(
         name = "summary-live",
         hide = true,
-        about = "Analyze dashboards from live Grafana.",
-        after_help = DASHBOARD_ANALYZE_LIVE_AFTER_HELP
+        about = "Summarize dashboards from live Grafana.",
+        after_help = DASHBOARD_SUMMARY_LIVE_AFTER_HELP
     )]
     InspectLive(InspectLiveArgs),
     #[command(

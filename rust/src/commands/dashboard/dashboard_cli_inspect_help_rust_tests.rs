@@ -20,7 +20,7 @@ fn parse_cli_supports_summary_through_canonical_summary_command() {
     ]);
 
     match args.command {
-        DashboardCommand::Analyze(analyze_args) => {
+        DashboardCommand::Summary(analyze_args) => {
             assert_eq!(analyze_args.common.url, "https://grafana.example.com");
             assert!(analyze_args.input_dir.is_none());
             assert_eq!(
@@ -46,7 +46,7 @@ fn parse_cli_supports_summary_export_tree_through_canonical_summary_command() {
     ]);
 
     match args.command {
-        DashboardCommand::Analyze(analyze_args) => {
+        DashboardCommand::Summary(analyze_args) => {
             assert_eq!(
                 analyze_args.input_dir,
                 Some(PathBuf::from("./dashboards/raw"))
@@ -75,7 +75,7 @@ fn parse_cli_supports_summary_export_git_sync_input_format() {
     ]);
 
     match args.command {
-        DashboardCommand::Analyze(analyze_args) => {
+        DashboardCommand::Summary(analyze_args) => {
             assert_eq!(analyze_args.input_format, DashboardImportInputFormat::Raw);
             assert_eq!(
                 analyze_args.output_format,
@@ -176,7 +176,7 @@ fn parse_cli_supports_analyze_live_queries_json_output_format() {
     ]);
 
     match args.command {
-        DashboardCommand::Analyze(analyze_args) => {
+        DashboardCommand::Summary(analyze_args) => {
             assert_eq!(analyze_args.common.url, "https://grafana.example.com");
             assert_eq!(
                 analyze_args.output_format,
@@ -201,7 +201,7 @@ fn parse_cli_supports_analyze_live_output_format_flag() {
     ]);
 
     match args.command {
-        DashboardCommand::Analyze(analyze_args) => {
+        DashboardCommand::Summary(analyze_args) => {
             assert_eq!(analyze_args.common.url, "https://grafana.example.com");
             assert_eq!(
                 analyze_args.output_format,
@@ -226,7 +226,7 @@ fn parse_cli_supports_analyze_live_output_format_dependency_json_flag() {
     ]);
 
     match args.command {
-        DashboardCommand::Analyze(analyze_args) => {
+        DashboardCommand::Summary(analyze_args) => {
             assert_eq!(analyze_args.common.url, "https://grafana.example.com");
             assert_eq!(
                 analyze_args.output_format,
@@ -249,14 +249,14 @@ fn parse_cli_supports_analyze_live_output_file() {
         "--output-format",
         "tree",
         "--output-file",
-        "/tmp/analyze-live.txt",
+        "/tmp/summary-live.txt",
     ]);
 
     match args.command {
-        DashboardCommand::Analyze(analyze_args) => {
+        DashboardCommand::Summary(analyze_args) => {
             assert_eq!(
                 analyze_args.output_file,
-                Some(PathBuf::from("/tmp/analyze-live.txt"))
+                Some(PathBuf::from("/tmp/summary-live.txt"))
             );
             assert!(!analyze_args.also_stdout);
             assert_eq!(analyze_args.output_format, Some(InspectOutputFormat::Tree));
@@ -273,15 +273,15 @@ fn parse_cli_supports_analyze_live_also_stdout_with_output_file() {
         "--url",
         "https://grafana.example.com",
         "--output-file",
-        "/tmp/analyze-live.txt",
+        "/tmp/summary-live.txt",
         "--also-stdout",
     ]);
 
     match args.command {
-        DashboardCommand::Analyze(analyze_args) => {
+        DashboardCommand::Summary(analyze_args) => {
             assert_eq!(
                 analyze_args.output_file,
-                Some(PathBuf::from("/tmp/analyze-live.txt"))
+                Some(PathBuf::from("/tmp/summary-live.txt"))
             );
             assert!(analyze_args.also_stdout);
         }
@@ -301,7 +301,7 @@ fn parse_cli_supports_analyze_live_tree_table_output_format() {
     ]);
 
     match args.command {
-        DashboardCommand::Analyze(analyze_args) => {
+        DashboardCommand::Summary(analyze_args) => {
             assert_eq!(analyze_args.common.url, "https://grafana.example.com");
             assert_eq!(
                 analyze_args.output_format,
@@ -326,7 +326,7 @@ fn parse_cli_supports_analyze_live_dependency_output_format() {
     ]);
 
     match args.command {
-        DashboardCommand::Analyze(analyze_args) => {
+        DashboardCommand::Summary(analyze_args) => {
             assert_eq!(analyze_args.common.url, "https://grafana.example.com");
             assert_eq!(
                 analyze_args.output_format,
@@ -351,7 +351,7 @@ fn parse_cli_supports_analyze_live_governance_json_output_format() {
     ]);
 
     match args.command {
-        DashboardCommand::Analyze(analyze_args) => {
+        DashboardCommand::Summary(analyze_args) => {
             assert_eq!(analyze_args.common.url, "https://grafana.example.com");
             assert_eq!(
                 analyze_args.output_format,
@@ -375,7 +375,7 @@ fn parse_cli_supports_analyze_live_help_full_flag() {
     ]);
 
     match args.command {
-        DashboardCommand::Analyze(analyze_args) => {
+        DashboardCommand::Summary(analyze_args) => {
             assert!(analyze_args.help_full);
             assert_eq!(analyze_args.common.url, "https://grafana.example.com");
         }
@@ -398,7 +398,7 @@ fn parse_cli_supports_analyze_live_report_columns_all_and_list_columns() {
     ]);
 
     match args.command {
-        DashboardCommand::Analyze(analyze_args) => {
+        DashboardCommand::Summary(analyze_args) => {
             assert_eq!(analyze_args.common.url, "https://grafana.example.com");
             assert_eq!(
                 analyze_args.output_format,
@@ -416,7 +416,7 @@ fn parse_cli_supports_analyze_live_all_orgs_flag() {
     let args = parse_cli_from(["grafana-util", "summary", "--all-orgs", "--table"]);
 
     match args.command {
-        DashboardCommand::Analyze(analyze_args) => {
+        DashboardCommand::Summary(analyze_args) => {
             assert!(analyze_args.all_orgs);
             assert!(analyze_args.table);
             assert!(analyze_args.org_id.is_none());
@@ -673,7 +673,7 @@ fn parse_cli_supports_analyze_export_provisioning_input_format() {
     ]);
 
     match args.command {
-        DashboardCommand::Analyze(inspect_args) => {
+        DashboardCommand::Summary(inspect_args) => {
             assert_eq!(
                 inspect_args.input_format,
                 DashboardImportInputFormat::Provisioning

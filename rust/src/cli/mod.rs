@@ -23,10 +23,10 @@ use crate::cli_help::{
 use crate::cli_help_examples::UNIFIED_HELP_TEXT;
 use crate::common::{set_json_color_choice, CliColorChoice, Result};
 use crate::dashboard::{
-    AnalyzeArgs, BrowseArgs, CloneLiveArgs, DashboardHistoryArgs, DeleteArgs, DiffArgs,
-    EditLiveArgs, ExportArgs as DashboardExportArgs, GetArgs, GovernanceGateArgs, ImpactArgs,
-    ImportArgs, InspectVarsArgs, ListArgs, PatchFileArgs, PublishArgs, RawToPromptArgs, ReviewArgs,
-    ScreenshotArgs, ServeArgs, TopologyArgs,
+    BrowseArgs, CloneLiveArgs, DashboardHistoryArgs, DeleteArgs, DiffArgs, EditLiveArgs,
+    ExportArgs as DashboardExportArgs, GetArgs, GovernanceGateArgs, ImpactArgs, ImportArgs,
+    InspectVarsArgs, ListArgs, PatchFileArgs, PublishArgs, RawToPromptArgs, ReviewArgs,
+    ScreenshotArgs, ServeArgs, SummaryArgs, TopologyArgs,
 };
 use crate::datasource::{DatasourceExportArgs, DatasourceGroupCommand};
 use crate::overview::{OverviewArgs, OverviewCommand};
@@ -236,9 +236,9 @@ pub enum DashboardRootCommand {
     Publish(PublishArgs),
     #[command(
         name = "summary",
-        about = "Analyze dashboards from live Grafana or a local export tree."
+        about = "Summarize dashboards from live Grafana or a local export tree."
     )]
-    Summary(AnalyzeArgs),
+    Summary(SummaryArgs),
     #[command(
         name = "dependencies",
         about = "Show which dashboards, variables, data sources, and alerts depend on each other."
@@ -290,7 +290,7 @@ pub enum UnifiedCommand {
         command: ExportCommand,
     },
     #[command(
-        about = "Canonical dashboard root for browse, list, authoring, export, import, analysis, and capture workflows."
+        about = "Canonical dashboard root for browse, list, authoring, export, import, summary, dependency, and capture workflows."
     )]
     Dashboard {
         #[command(subcommand)]

@@ -227,8 +227,8 @@ Examples:
   Watch one local draft file and rerun dry-run after each save:
     grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --basic-password admin --input ./drafts/cpu-main.json --dry-run --watch"#;
 
-pub(crate) const DASHBOARD_ANALYZE_AFTER_HELP: &str = r#"What it does:
-  Analyze dashboards from live Grafana or a local export tree and render summary, governance, dependency, or queries-json outputs.
+pub(crate) const DASHBOARD_SUMMARY_AFTER_HELP: &str = r#"What it does:
+  Summarize dashboards from live Grafana or a local export tree and render summary, governance, dependency, or queries-json outputs.
 
 When to use:
   - Inspect a live environment before dependency, policy, or impact checks.
@@ -241,22 +241,22 @@ Related commands:
 
 Examples:
 
-  Analyze live Grafana and render governance JSON:
+  Summarize live Grafana and render governance JSON:
     grafana-util dashboard summary --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output-format governance-json
 
-  Analyze a raw export tree without calling Grafana:
+  Summarize a raw export tree without calling Grafana:
     grafana-util dashboard summary --input-dir ./dashboards/raw --input-format raw --output-format tree-table
 
-  Analyze a repo-backed Git Sync dashboard tree from the repo root:
+  Summarize a repo-backed Git Sync dashboard tree from the repo root:
     grafana-util dashboard summary --input-dir ./grafana-oac-repo --input-format git-sync --output-format governance
 "#;
 
-pub(crate) const DASHBOARD_ANALYZE_EXPORT_AFTER_HELP: &str = r#"Examples:
+pub(crate) const DASHBOARD_SUMMARY_EXPORT_AFTER_HELP: &str = r#"Examples:
 
   Render an operator-summary table from raw exports:
     grafana-util dashboard summary --input-dir ./dashboards/raw --input-format raw --output-format table
 
-  Open the interactive analysis workbench over raw exports:
+  Open the interactive summary workbench over raw exports:
     grafana-util dashboard summary --input-dir ./dashboards/raw --input-format raw --interactive
 
   Render the machine-readable governance artifact from raw exports:
@@ -268,7 +268,7 @@ pub(crate) const DASHBOARD_ANALYZE_EXPORT_AFTER_HELP: &str = r#"Examples:
   Inspect a file-provisioning tree from the provisioning root:
     grafana-util dashboard summary --input-dir ./dashboards/provisioning --input-format provisioning --output-format tree-table"#;
 
-pub(crate) const DASHBOARD_ANALYZE_LIVE_AFTER_HELP: &str = r#"Examples:
+pub(crate) const DASHBOARD_SUMMARY_LIVE_AFTER_HELP: &str = r#"Examples:
 
   Render governance JSON from live Grafana:
     grafana-util dashboard summary --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output-format governance-json
@@ -276,7 +276,7 @@ pub(crate) const DASHBOARD_ANALYZE_LIVE_AFTER_HELP: &str = r#"Examples:
   Render the queries-json artifact from live Grafana:
     grafana-util dashboard summary --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output-format queries-json
 
-  Open the interactive analysis workbench over live Grafana:
+  Open the interactive summary workbench over live Grafana:
     grafana-util dashboard summary --url http://localhost:3000 --basic-user admin --basic-password admin --interactive"#;
 
 pub(crate) const DASHBOARD_LIST_VARS_AFTER_HELP: &str = r#"Examples:
@@ -301,18 +301,18 @@ pub(crate) const DASHBOARD_GOVERNANCE_GATE_AFTER_HELP: &str = r#"Examples:
   Check an export tree without calling Grafana:
     grafana-util dashboard policy --policy-source builtin --builtin-policy default --input-dir ./dashboards/raw --input-format raw
 
-  Advanced reuse: recheck saved analysis artifacts and write normalized JSON:
+  Advanced reuse: recheck saved review artifacts and write normalized JSON:
     grafana-util dashboard policy --policy-source builtin --builtin-policy default --governance ./governance.json --queries ./queries.json --output-format json --json-output ./governance-check.json"#;
 
 pub(crate) const DASHBOARD_TOPOLOGY_AFTER_HELP: &str = r#"Examples:
 
-  Analyze live Grafana directly and render Mermaid:
+  Inspect live Grafana directly and render Mermaid:
     grafana-util dashboard dependencies --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output-format mermaid
 
-  Analyze an export tree without calling Grafana:
+  Inspect an export tree without calling Grafana:
     grafana-util dashboard dependencies --input-dir ./dashboards/raw --input-format raw --output-format text
 
-  Advanced reuse: render Graphviz DOT from saved analysis artifacts:
+  Advanced reuse: render Graphviz DOT from saved review artifacts:
     grafana-util dashboard dependencies --governance ./governance.json --queries ./queries.json --alert-contract ./alert-contract.json --output-format dot --output-file ./dashboard-dependencies.dot"#;
 
 pub(crate) const DASHBOARD_IMPACT_AFTER_HELP: &str = r#"Examples:

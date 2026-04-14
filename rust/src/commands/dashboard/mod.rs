@@ -104,7 +104,7 @@ pub(crate) use cli_defs::materialize_dashboard_common_auth;
 pub(crate) use cli_defs::{build_api_client, build_http_client_for_org_from_api};
 pub use cli_defs::{
     build_auth_context, build_http_client, build_http_client_for_org, normalize_dashboard_cli_args,
-    parse_cli_from, AnalyzeArgs, BrowseArgs, CloneLiveArgs, CommonCliArgs, DashboardAuthContext,
+    parse_cli_from, BrowseArgs, CloneLiveArgs, CommonCliArgs, DashboardAuthContext,
     DashboardCliArgs, DashboardCommand, DashboardHistoryArgs, DashboardHistorySubcommand,
     DashboardImportInputFormat, DashboardServeScriptFormat, DeleteArgs, DiffArgs, EditLiveArgs,
     ExportArgs, GetArgs, GovernanceGateArgs, GovernanceGateOutputFormat, GovernancePolicySource,
@@ -113,8 +113,8 @@ pub use cli_defs::{
     InspectExportReportFormat, InspectLiveArgs, InspectOutputFormat, InspectVarsArgs, ListArgs,
     PatchFileArgs, PublishArgs, RawToPromptArgs, RawToPromptLogFormat, RawToPromptOutputFormat,
     RawToPromptResolution, ReviewArgs, ScreenshotArgs, ScreenshotFullPageOutput,
-    ScreenshotOutputFormat, ScreenshotTheme, ServeArgs, SimpleOutputFormat, TopologyArgs,
-    TopologyOutputFormat, ValidateExportArgs, ValidationOutputFormat,
+    ScreenshotOutputFormat, ScreenshotTheme, ServeArgs, SimpleOutputFormat, SummaryArgs,
+    TopologyArgs, TopologyOutputFormat, ValidateExportArgs, ValidationOutputFormat,
 };
 pub use command_runner::{
     execute_dashboard_inspect_export, execute_dashboard_inspect_live,

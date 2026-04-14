@@ -80,7 +80,7 @@ fn governance_gate_help_mentions_policy_and_queries_inputs() {
     assert!(help.contains("--output-format"));
     assert!(help.contains("policy"));
     assert!(help.contains("Check live Grafana directly"));
-    assert!(help.contains("Advanced reuse: recheck saved analysis artifacts"));
+    assert!(help.contains("Advanced reuse: recheck saved review artifacts"));
 }
 
 #[test]
@@ -258,7 +258,7 @@ fn topology_help_mentions_alert_contract_and_visual_formats() {
     assert!(help.contains("--output-file"));
     assert!(help.contains("--also-stdout"));
     assert!(help.contains("--interactive"));
-    assert!(help.contains("Analyze live Grafana directly"));
+    assert!(help.contains("Inspect live Grafana directly"));
     assert!(help.contains("governance.json"));
     assert!(help.contains("mermaid"));
     assert!(help.contains("dot"));

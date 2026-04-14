@@ -308,7 +308,7 @@ fn parse_dashboard_cli_supports_flat_dashboard_surface() {
     }
 
     match analyze_args.command {
-        DashboardCommand::Analyze(inner) => {
+        DashboardCommand::Summary(inner) => {
             assert_eq!(
                 inner.input_dir.as_deref(),
                 Some(Path::new("./dashboards/raw"))

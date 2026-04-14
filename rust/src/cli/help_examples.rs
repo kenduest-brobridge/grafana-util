@@ -199,7 +199,7 @@ pub(crate) const UNIFIED_HELP_FULL_TEXT: &str = help_block!(
     ),
     (
         "[Dashboard]",
-        "Analyze dashboards from a raw export tree through the flat dashboard surface:",
+        "Summarize dashboards from a raw export tree through the flat dashboard surface:",
         "grafana-util dashboard summary --input-dir ./dashboards/raw --input-format raw --output-format tree-table --report-columns dashboard_uid,panel_title,datasource_uid,query"
     ),
     (
@@ -425,7 +425,7 @@ pub(crate) const HELP_EXAMPLE_LABELS: [(&str, &str); 42] = [
     ("[Access administration]", HELP_PALETTE.section),
     ("[Dashboard Export]", HELP_PALETTE.section),
     ("[Dashboard Capture]", HELP_PALETTE.section),
-    ("[Dashboard Analyze]", HELP_PALETTE.section),
+    ("[Dashboard Summary]", HELP_PALETTE.section),
     ("[Alert Export]", HELP_PALETTE.section),
     ("[Alert Import]", HELP_PALETTE.section),
     ("[Alert List]", HELP_PALETTE.section),

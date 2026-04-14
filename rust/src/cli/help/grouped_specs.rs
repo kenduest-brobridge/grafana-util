@@ -118,7 +118,7 @@ pub(crate) const DASHBOARD_HELP_SPEC: GroupedHelpSpec = GroupedHelpSpec {
             [
                 row!("diff", "Compare local raw dashboards against Grafana."),
                 row!("review", "Check one local dashboard JSON draft."),
-                row!("summary", "Analyze live or exported dashboards."),
+                row!("summary", "Summarize live or exported dashboards."),
                 row!(
                     "dependencies",
                     "Show dashboard, datasource, variable, and alert dependencies."

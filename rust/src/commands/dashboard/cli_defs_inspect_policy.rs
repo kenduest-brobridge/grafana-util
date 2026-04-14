@@ -6,7 +6,7 @@ use super::super::{
     CommonCliArgs, DashboardImportInputFormat, GovernanceGateOutputFormat, GovernancePolicySource,
     ImpactOutputFormat, InspectExportInputType, TopologyOutputFormat, ValidationOutputFormat,
 };
-use super::parse_dashboard_analysis_input_format;
+use super::parse_dashboard_summary_input_format;
 use super::parse_dashboard_validate_input_format;
 
 /// Struct definition for GovernanceGateArgs.
@@ -23,26 +23,26 @@ pub struct GovernanceGateArgs {
     #[arg(
         long,
         conflicts_with = "all_orgs",
-        help = "Analyze dashboards from one explicit Grafana org ID instead of the current org when reading live Grafana."
+        help = "Stage dashboard findings from one explicit Grafana org ID instead of the current org when reading live Grafana."
     )]
     pub org_id: Option<i64>,
     #[arg(
         long,
         default_value_t = false,
         conflicts_with = "org_id",
-        help = "Analyze dashboards across all visible Grafana orgs when reading live Grafana. Prefer Basic auth when you need cross-org analysis because API tokens are often scoped to one org."
+        help = "Stage dashboard findings across all visible Grafana orgs when reading live Grafana. Prefer Basic auth when you need cross-org analysis because API tokens are often scoped to one org."
     )]
     pub all_orgs: bool,
     #[arg(
         long = "input-dir",
         conflicts_with_all = ["governance", "queries"],
-        help = "Analyze dashboards from this local export tree directly. Prefer --url for live Grafana or saved artifacts only for advanced reuse. Use --input-format git-sync for a repo-backed Git Sync dashboard tree."
+        help = "Stage dashboard findings from this local export tree directly. Prefer --url for live Grafana or saved artifacts only for advanced reuse. Use --input-format git-sync for a repo-backed Git Sync dashboard tree."
     )]
     pub input_dir: Option<PathBuf>,
     #[arg(
         long = "input-format",
         default_value = "raw",
-        value_parser = parse_dashboard_analysis_input_format,
+        value_parser = parse_dashboard_summary_input_format,
         value_name = "raw|provisioning|git-sync",
         help = "Interpret --input-dir as raw export files, Grafana file-provisioning artifacts, or a repo-backed Git Sync dashboard tree from a local analysis source."
     )]
@@ -115,26 +115,26 @@ pub struct TopologyArgs {
     #[arg(
         long,
         conflicts_with = "all_orgs",
-        help = "Analyze dashboards from one explicit Grafana org ID instead of the current org when reading live Grafana."
+        help = "Stage dashboard findings from one explicit Grafana org ID instead of the current org when reading live Grafana."
     )]
     pub org_id: Option<i64>,
     #[arg(
         long,
         default_value_t = false,
         conflicts_with = "org_id",
-        help = "Analyze dashboards across all visible Grafana orgs when reading live Grafana. Prefer Basic auth when you need cross-org analysis because API tokens are often scoped to one org."
+        help = "Stage dashboard findings across all visible Grafana orgs when reading live Grafana. Prefer Basic auth when you need cross-org analysis because API tokens are often scoped to one org."
     )]
     pub all_orgs: bool,
     #[arg(
         long = "input-dir",
         conflicts_with_all = ["governance", "queries"],
-        help = "Analyze dashboards from this local export tree directly. Prefer --url for live Grafana or saved artifacts only for advanced reuse. Use --input-format git-sync for a repo-backed Git Sync dashboard tree."
+        help = "Stage dashboard findings from this local export tree directly. Prefer --url for live Grafana or saved artifacts only for advanced reuse. Use --input-format git-sync for a repo-backed Git Sync dashboard tree."
     )]
     pub input_dir: Option<PathBuf>,
     #[arg(
         long = "input-format",
         default_value = "raw",
-        value_parser = parse_dashboard_analysis_input_format,
+        value_parser = parse_dashboard_summary_input_format,
         value_name = "raw|provisioning|git-sync",
         help = "Interpret --input-dir as raw export files, Grafana file-provisioning artifacts, or a repo-backed Git Sync dashboard tree from a local analysis source."
     )]
@@ -201,26 +201,26 @@ pub struct ImpactArgs {
     #[arg(
         long,
         conflicts_with = "all_orgs",
-        help = "Analyze dashboards from one explicit Grafana org ID instead of the current org when reading live Grafana."
+        help = "Trace dashboard impact from one explicit Grafana org ID instead of the current org when reading live Grafana."
     )]
     pub org_id: Option<i64>,
     #[arg(
         long,
         default_value_t = false,
         conflicts_with = "org_id",
-        help = "Analyze dashboards across all visible Grafana orgs when reading live Grafana. Prefer Basic auth when you need cross-org analysis because API tokens are often scoped to one org."
+        help = "Trace dashboard impact across all visible Grafana orgs when reading live Grafana. Prefer Basic auth when you need cross-org analysis because API tokens are often scoped to one org."
     )]
     pub all_orgs: bool,
     #[arg(
         long = "input-dir",
         conflicts_with_all = ["governance", "queries"],
-        help = "Analyze dashboards from this export directory instead of live Grafana or prebuilt artifact files. Use --input-format git-sync for a repo-backed Git Sync dashboard tree."
+        help = "Trace dashboard impact from this export directory instead of live Grafana or prebuilt artifact files. Use --input-format git-sync for a repo-backed Git Sync dashboard tree."
     )]
     pub input_dir: Option<PathBuf>,
     #[arg(
         long = "input-format",
         default_value = "raw",
-        value_parser = parse_dashboard_analysis_input_format,
+        value_parser = parse_dashboard_summary_input_format,
         value_name = "raw|provisioning|git-sync",
         help = "Interpret --input-dir as raw export files, Grafana file-provisioning artifacts, or a repo-backed Git Sync dashboard tree."
     )]

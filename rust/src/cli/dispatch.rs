@@ -73,7 +73,7 @@ fn wrap_dashboard_root(command: DashboardRootCommand) -> DashboardCommand {
         DashboardRootCommand::Patch(inner) => DashboardCommand::PatchFile(inner),
         DashboardRootCommand::Serve(inner) => DashboardCommand::Serve(inner),
         DashboardRootCommand::Publish(inner) => DashboardCommand::Publish(inner),
-        DashboardRootCommand::Summary(inner) => DashboardCommand::Analyze(inner),
+        DashboardRootCommand::Summary(inner) => DashboardCommand::Summary(inner),
         DashboardRootCommand::Dependencies(inner) => DashboardCommand::Topology(inner),
         DashboardRootCommand::Impact(inner) => DashboardCommand::Impact(inner),
         DashboardRootCommand::Policy(inner) => DashboardCommand::GovernanceGate(inner),
