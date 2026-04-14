@@ -9,14 +9,12 @@ use crate::common::{message, Result};
 use super::team_browse_dialog::{EditDialogAction, EditDialogState};
 use super::team_browse_state::{row_kind, BrowserState, PaneFocus, SearchDirection, SearchState};
 use super::TeamBrowseArgs;
-use crate::access::pending_delete::{delete_team_with_request, TeamDeleteArgs};
 use crate::access::render::{map_get_text, normalize_team_row, value_bool};
 use crate::access::team::{
-    iter_teams_with_request, list_team_members_with_request, modify_team_with_request,
-    team_member_identity,
+    iter_teams_with_request, list_team_members_with_request, team_member_identity,
 };
 use crate::access::team_import_export_diff::load_team_import_records;
-use crate::access::{TeamModifyArgs, ACCESS_EXPORT_KIND_TEAMS};
+use crate::access::ACCESS_EXPORT_KIND_TEAMS;
 
 pub(super) enum BrowseAction {
     Continue,
@@ -42,7 +40,7 @@ where
                 return Ok(BrowseAction::Continue);
             }
             EditDialogAction::Save => {
-                save_edit(request_json, args, state)?;
+                super::team_browse_actions::save_edit(request_json, args, state)?;
                 return Ok(BrowseAction::Continue);
             }
         }
@@ -51,26 +49,8 @@ where
         handle_search_key(state, key);
         return Ok(BrowseAction::Continue);
     }
-    if state.pending_delete {
-        match key.code {
-            KeyCode::Char('y') => confirm_delete(request_json, args, state)?,
-            KeyCode::Char('n') | KeyCode::Esc | KeyCode::Char('q') => {
-                state.pending_delete = false;
-                state.status = "Cancelled team delete.".to_string();
-            }
-            _ => {}
-        }
-        return Ok(BrowseAction::Continue);
-    }
-    if state.pending_member_remove {
-        match key.code {
-            KeyCode::Char('y') => remove_member(request_json, args, state)?,
-            KeyCode::Char('n') | KeyCode::Esc | KeyCode::Char('q') => {
-                state.pending_member_remove = false;
-                state.status = "Cancelled team membership removal.".to_string();
-            }
-            _ => {}
-        }
+    if super::team_browse_actions::handle_pending_confirmation_key(request_json, args, state, key)?
+    {
         return Ok(BrowseAction::Continue);
     }
 
@@ -202,7 +182,7 @@ where
                         .to_string();
                 return Ok(BrowseAction::Continue);
             }
-            toggle_member_admin(request_json, args, state)?;
+            super::team_browse_actions::toggle_member_admin(request_json, args, state)?;
         }
         KeyCode::Char('r') => {
             if state.selected_member_row().is_some() {
@@ -367,159 +347,6 @@ fn load_rows_from_input_dir(args: &TeamBrowseArgs) -> Result<Vec<Map<String, Val
     Ok(rows.into_iter().skip(start).take(args.per_page).collect())
 }
 
-fn save_edit<F>(request_json: &mut F, args: &TeamBrowseArgs, state: &mut BrowserState) -> Result<()>
-where
-    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
-{
-    let edit = state
-        .pending_edit
-        .take()
-        .ok_or_else(|| message("Team browse edit state is missing."))?;
-    let modify = TeamModifyArgs {
-        common: args.common.clone(),
-        team_id: Some(edit.id.clone()),
-        name: None,
-        add_member: split_csv(&edit.add_member),
-        remove_member: split_csv(&edit.remove_member),
-        add_admin: split_csv(&edit.add_admin),
-        remove_admin: split_csv(&edit.remove_admin),
-        json: false,
-    };
-    if modify.add_member.is_empty()
-        && modify.remove_member.is_empty()
-        && modify.add_admin.is_empty()
-        && modify.remove_admin.is_empty()
-    {
-        state.status = format!("No team changes detected for {}.", edit.name);
-        return Ok(());
-    }
-    let _ = modify_team_with_request(&mut *request_json, &modify)?;
-    state.replace_rows(load_rows(&mut *request_json, args)?);
-    state.status = format!("Updated team {}.", edit.name);
-    Ok(())
-}
-
-fn confirm_delete<F>(
-    request_json: &mut F,
-    args: &TeamBrowseArgs,
-    state: &mut BrowserState,
-) -> Result<()>
-where
-    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
-{
-    let row = state
-        .selected_row()
-        .ok_or_else(|| message("Team browse has no selected row to delete."))?
-        .clone();
-    if row_kind(&row) == "member" {
-        return Err(message("Select a team row before deleting a team."));
-    }
-    let name = map_get_text(&row, "name");
-    let delete = TeamDeleteArgs {
-        common: args.common.clone(),
-        team_id: Some(map_get_text(&row, "id")),
-        name: None,
-        prompt: false,
-        yes: true,
-        json: false,
-    };
-    let _ = delete_team_with_request(&mut *request_json, &delete)?;
-    state.replace_rows(load_rows(&mut *request_json, args)?);
-    state.status = format!("Deleted team {}.", name);
-    Ok(())
-}
-
-fn remove_member<F>(
-    request_json: &mut F,
-    args: &TeamBrowseArgs,
-    state: &mut BrowserState,
-) -> Result<()>
-where
-    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
-{
-    let row = state
-        .selected_member_row()
-        .ok_or_else(|| message("Team browse has no selected member to remove."))?
-        .clone();
-    let team_id = map_get_text(&row, "parentTeamId");
-    let team_name = map_get_text(&row, "parentTeamName");
-    let identity = state
-        .selected_member_identity()
-        .ok_or_else(|| message("Team member row is missing the member identity."))?;
-    if team_id.is_empty() || identity.is_empty() {
-        return Err(message(
-            "Team member row is missing the team id or member identity.",
-        ));
-    }
-    let modify = TeamModifyArgs {
-        common: args.common.clone(),
-        team_id: Some(team_id.clone()),
-        name: None,
-        add_member: Vec::new(),
-        remove_member: vec![identity.clone()],
-        add_admin: Vec::new(),
-        remove_admin: Vec::new(),
-        json: false,
-    };
-    let _ = modify_team_with_request(&mut *request_json, &modify)?;
-    state.replace_rows(load_rows(&mut *request_json, args)?);
-    state.status = format!("Removed {} from team {}.", identity, team_name);
-    Ok(())
-}
-
-fn toggle_member_admin<F>(
-    request_json: &mut F,
-    args: &TeamBrowseArgs,
-    state: &mut BrowserState,
-) -> Result<()>
-where
-    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
-{
-    let row = state
-        .selected_member_row()
-        .ok_or_else(|| message("Team browse has no selected member to update."))?
-        .clone();
-    let team_id = map_get_text(&row, "parentTeamId");
-    let team_name = map_get_text(&row, "parentTeamName");
-    let identity = state
-        .selected_member_identity()
-        .ok_or_else(|| message("Team member row is missing the member identity."))?;
-    if team_id.is_empty() || identity.is_empty() {
-        return Err(message(
-            "Team member row is missing the team id or member identity.",
-        ));
-    }
-    let is_admin = state
-        .selected_member_role()
-        .is_some_and(|role| role.eq_ignore_ascii_case("admin"));
-    let modify = TeamModifyArgs {
-        common: args.common.clone(),
-        team_id: Some(team_id.clone()),
-        name: None,
-        add_member: Vec::new(),
-        remove_member: Vec::new(),
-        add_admin: if is_admin {
-            Vec::new()
-        } else {
-            vec![identity.clone()]
-        },
-        remove_admin: if is_admin {
-            vec![identity.clone()]
-        } else {
-            Vec::new()
-        },
-        json: false,
-    };
-    let _ = modify_team_with_request(&mut *request_json, &modify)?;
-    state.replace_rows(load_rows(&mut *request_json, args)?);
-    state.status = if is_admin {
-        format!("Removed team admin from {} on {}.", identity, team_name)
-    } else {
-        format!("Granted team admin to {} on {}.", identity, team_name)
-    };
-    Ok(())
-}
-
 fn handle_search_key(state: &mut BrowserState, key: &KeyEvent) {
     let Some(mut search) = state.pending_search.take() else {
         return;
@@ -570,15 +397,6 @@ fn repeat_search(state: &mut BrowserState) {
     } else {
         state.status = format!("No more matches for '{}'.", last.query);
     }
-}
-
-fn split_csv(value: &str) -> Vec<String> {
-    value
-        .split(',')
-        .map(str::trim)
-        .filter(|part| !part.is_empty())
-        .map(ToOwned::to_owned)
-        .collect()
 }
 
 fn current_detail_line_count(state: &BrowserState) -> usize {

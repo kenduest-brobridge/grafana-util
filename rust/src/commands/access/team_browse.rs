@@ -17,6 +17,9 @@ use super::browse_support::BrowseSwitch;
 #[cfg(feature = "tui")]
 use super::browse_terminal::TerminalSession;
 #[cfg(feature = "tui")]
+#[path = "team_browse_actions.rs"]
+mod team_browse_actions;
+#[cfg(feature = "tui")]
 #[path = "team_browse_dialog.rs"]
 mod team_browse_dialog;
 #[cfg(feature = "tui")]
