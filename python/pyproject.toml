@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "grafana-util"
 version = "0.10.0"
-description = "Review-first Grafana operations CLI with inspection, diff, workspace preview, and safe apply workflows."
+description = "CLI for reviewing Grafana changes with live inventory, diff, preview, and safe apply workflows."
 readme = "README.md"
 requires-python = ">=3.9"
 license = "Apache-2.0"

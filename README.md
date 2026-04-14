@@ -1,5 +1,5 @@
 # grafana-util
-### Review-first CLI for Grafana operations
+### Review Grafana changes before you apply them
 
 [![CI](https://img.shields.io/github/actions/workflow/status/kenduest-brobridge/grafana-util/ci.yml?branch=main)](https://github.com/kenduest-brobridge/grafana-util/actions)
 [![License](https://img.shields.io/github/license/kenduest-brobridge/grafana-util)](LICENSE)
@@ -7,9 +7,9 @@
 
 English | [繁體中文](./README.zh-TW.md)
 
-**Inspect, diff, and safely apply Grafana configuration across environments.**
+**Live inventory, export/import, diff, change preview, and safe apply in one workflow.**
 
-`grafana-util` is a Rust CLI for day-to-day Grafana operations. It keeps read-only inspection, export/import, diff, workspace preview, safe apply, connection profiles, and secret handling on one command surface so operators can review changes before they mutate live Grafana.
+`grafana-util` is a Rust CLI for Grafana operators. Instead of stitching together scripts and manual API calls, it gives you a repeatable workflow for inspecting live state, comparing it with local config, previewing changes, and applying reviewed updates.
 
 Common uses:
 
@@ -22,7 +22,7 @@ Common uses:
 | work on alerts or routes | `grafana-util alert plan` or `alert preview-route` |
 | manage users, teams, orgs, or service accounts | `grafana-util access ...` |
 
-The CLI is organized around a few stable roots: `status`, `workspace`, `dashboard`, `datasource`, `alert`, `access`, and `config profile`. Use the handbook for workflow context and the command reference for exact syntax.
+The CLI is organized around these command families: `status`, `workspace`, `dashboard`, `datasource`, `alert`, `access`, and `config profile`. Use the handbook for workflow context and the command reference for exact syntax.
 
 Supported Grafana surfaces:
 
@@ -101,7 +101,7 @@ For Zsh, make sure `~/.zfunc` is in `fpath` before `compinit`.
 
 ## First Run
 
-Use this as the first successful path:
+Three steps to your first working session:
 
 ```bash
 # 1. Confirm the CLI is installed.
@@ -155,7 +155,7 @@ Export dashboards:
 grafana-util export dashboard --profile prod --output-dir ./backup --overwrite
 ```
 
-List dashboards without exporting files:
+List dashboards using a specified connection profile:
 
 ```bash
 grafana-util dashboard list --profile prod
@@ -178,7 +178,7 @@ grafana-util config profile --help
 
 ## Docs
 
-Use the handbook for workflow context. Use the command reference for exact CLI syntax.
+Handbook for workflow context; command reference for exact CLI syntax.
 
 - [Published docs](https://kenduest-brobridge.github.io/grafana-util/)
 - First-time setup: [Getting Started](https://kenduest-brobridge.github.io/grafana-util/handbook/en/getting-started.html) and [New User Path](https://kenduest-brobridge.github.io/grafana-util/handbook/en/role-new-user.html)
@@ -186,7 +186,7 @@ Use the handbook for workflow context. Use the command reference for exact CLI s
 - Exact CLI syntax: [Command Reference](https://kenduest-brobridge.github.io/grafana-util/commands/en/index.html) and `grafana-util --help`
 - [Troubleshooting](https://kenduest-brobridge.github.io/grafana-util/handbook/en/troubleshooting.html)
 
-If you are maintaining docs inside the repository, use the local HTML mirror and maintainer sources:
+For in-repo doc maintenance:
 
 - **Local HTML docs portal**: [docs/html/index.html](./docs/html/index.html)
 - **Maintainer guide**: [docs/DEVELOPER.md](./docs/DEVELOPER.md)
@@ -203,9 +203,7 @@ By role:
 
 ## Project Status
 
-This project is still under active development. CLI paths, help output, examples, and documentation structure may change noticeably between releases.
-
-For the current command surface, prefer the command reference and `--help` output over older examples copied from issues, snippets, or prior revisions.
+This project is under active development. CLI paths, help output, examples, and documentation structure may change between releases. Always prefer the command reference and `--help` output over examples from older issues or prior revisions.
 
 ---
 

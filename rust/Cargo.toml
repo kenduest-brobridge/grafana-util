@@ -3,7 +3,7 @@ name = "grafana-utils-rust"
 version = "0.10.0"
 edition = "2021"
 license = "Apache-2.0"
-description = "Review-first CLI for Grafana operations, workspace preview, diff, and safe apply workflows."
+description = "Rust CLI for reviewing Grafana changes with live inventory, diff, preview, and safe apply workflows."
 
 [features]
 default = ["tui"]
