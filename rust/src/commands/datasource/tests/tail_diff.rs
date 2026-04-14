@@ -1,6 +1,15 @@
 //! Datasource tail diff parser and live comparison tests.
 
-use super::*;
+use crate::datasource::{
+    diff_datasources_with_live, DatasourceCliArgs, DatasourceGroupCommand,
+    DatasourceImportInputFormat,
+};
+use serde_json::json;
+use std::fs;
+use std::path::Path;
+use tempfile::tempdir;
+
+use super::tail_fixtures::{write_diff_fixture, write_provisioning_diff_fixture};
 
 #[test]
 fn parse_datasource_diff_preserves_requested_path() {
