@@ -680,14 +680,14 @@ Prefer extending existing commands with new input or export formats.
 
 Good direction:
 
-- `dashboard analyze --input-format git-sync`
+- `dashboard dependencies --input-format git-sync`
 - `dashboard import --input-format git-sync`
 - `dashboard export --export-layout git-sync`
 - `dashboard validate-export --target git-sync`
 
 Avoid:
 
-- `dashboard git-sync analyze`
+- `dashboard git-sync dependencies`
 - `dashboard git-sync publish`
 - new namespaces that duplicate the existing command surface
 
@@ -790,7 +790,7 @@ These workflows should consume canonical models, not upstream raw formats direct
 
 Recommended near-term additions:
 
-- `dashboard analyze --input-format git-sync`
+- `dashboard dependencies --input-format git-sync`
 - `dashboard import --input-format git-sync`
 - `dashboard validate-export --target git-sync`
 - `dashboard export --export-layout git-sync`
@@ -999,7 +999,7 @@ If Git Sync support is added before source-kind and source-resolution cleanup, t
 
 Recommended additions:
 
-- `dashboard analyze --input-format git-sync`
+- `dashboard dependencies --input-format git-sync`
 - `dashboard import --input-format git-sync`
 - `dashboard validate-export --target git-sync`
 - `dashboard export --git-sync-layout`

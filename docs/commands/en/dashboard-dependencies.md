@@ -1,7 +1,7 @@
 # dashboard dependencies
 
 ## Purpose
-Analyze dashboard export directories through the canonical `dashboard dependencies` command.
+Inspect dashboard export directories through the canonical `dashboard dependencies` command.
 
 ## When to use
 Use this when you want to read a local export tree, inspect its structure, or render governance and dependency views without contacting Grafana. Prefer `dashboard dependencies --input-dir ...` in new docs and scripts.
@@ -9,27 +9,27 @@ Use this when you want to read a local export tree, inspect its structure, or re
 ## Before / After
 
 - **Before**: an export tree is just a folder of JSON files, and you still have to guess which dashboards, variables, or policy checks matter.
-- **After**: one analysis pass turns that tree into operator views you can review, hand to CI, or feed into later checks such as `dependencies` and `policy`.
+- **After**: one dependency pass turns that tree into operator views you can review, hand to CI, or feed into later checks such as `dependencies` and `policy`.
 
 ## Key flags
-- `--input-dir`: dashboard export root to analyze.
+- `--input-dir`: dashboard export root to inspect.
 - `--input-format`: choose `raw`, `provisioning`, or `git-sync`.
 - `--input-type`: select `raw` or `source` when the export root has multiple dashboard variants.
 - `--output-format`: render `text`, `table`, `csv`, `json`, `yaml`, `tree`, `tree-table`, `dependency`, `dependency-json`, `governance`, `governance-json`, or `queries-json` views.
 - `--report-columns`: trim table, csv, or tree-table query output to the selected fields. Use `all` for the full query-column set.
 - `--list-columns`: print the supported `--report-columns` values and exit.
-- `--interactive`: open the shared analysis workbench.
+- `--interactive`: open the shared dependency workbench.
 - `--output-file`: write the result to disk.
 - `--no-header`: suppress table-like headers.
 
 ## Examples
 ```bash
-# Analyze dashboard export directories through the canonical dashboard dependencies command.
+# Inspect dashboard export directories through the canonical dashboard dependencies command.
 grafana-util dashboard dependencies --input-dir ./dashboards/raw --input-format raw --output-format table
 ```
 
 ```bash
-# Analyze dashboard export directories through the canonical dashboard dependencies command.
+# Inspect dashboard export directories through the canonical dashboard dependencies command.
 grafana-util dashboard dependencies --input-dir ./dashboards/provisioning --input-format provisioning --output-format governance-json
 ```
 

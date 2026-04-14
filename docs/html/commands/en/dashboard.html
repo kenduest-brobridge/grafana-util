@@ -990,9 +990,9 @@ grafana-util dashboard publish --url http://localhost:3000 --basic-user admin --
 grafana-util dashboard serve --input ./drafts/cpu-main.json --port 18080 --open-browser</code></pre>
 <pre><code># Pull one live dashboard into an external editor and keep the result as a local draft by default.
 grafana-util dashboard edit-live --profile prod --dashboard-uid cpu-main --output ./drafts/cpu-main.edited.json</code></pre>
-<pre><code># Analyze live dashboard governance data for downstream review.
+<pre><code># Summarize live dashboard governance data for downstream review.
 grafana-util dashboard summary --url http://localhost:3000 --token &quot;$GRAFANA_API_TOKEN&quot; --output-format governance</code></pre>
-<pre><code># Open the interactive analysis workbench for a live dashboard.
+<pre><code># Open the interactive summary workbench for a live dashboard.
 grafana-util dashboard summary --url http://localhost:3000 --basic-user admin --basic-password admin --interactive</code></pre>
 <h2 id="related-commands">Related commands</h2>
 <h3 id="browse-inspect">Browse &amp; Inspect</h3>

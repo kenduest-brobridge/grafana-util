@@ -18,6 +18,10 @@
     "access",
     "workspace"
   ],
+  "removed_public_command_paths": [
+    "dashboard analyze",
+    "dashboard-analyze-"
+  ],
   "doc_pages": {
     "alert": "alert.md",
     "completion": "completion.md",

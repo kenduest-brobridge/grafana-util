@@ -937,7 +937,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <section class="command-intro">
   <div class="command-intro-grid"><div class="command-intro-block">
   <p class="command-intro-label">What this page covers</p>
-  <p class="command-intro-text">Analyze dashboard export directories through the canonical dashboard dependencies command.</p>
+  <p class="command-intro-text">Inspect dashboard export directories through the canonical dashboard dependencies command.</p>
 </div>
 <div class="command-intro-block">
   <p class="command-intro-label">When to open this page</p>
@@ -950,17 +950,17 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 </div>
 </section>
 <h2 id="purpose">Purpose</h2>
-<p>Analyze dashboard export directories through the canonical <code>dashboard dependencies</code> command.</p>
+<p>Inspect dashboard export directories through the canonical <code>dashboard dependencies</code> command.</p>
 <h2 id="when-to-use">When to use</h2>
 <p>Use this when you want to read a local export tree, inspect its structure, or render governance and dependency views without contacting Grafana. Prefer <code>dashboard dependencies --input-dir ...</code> in new docs and scripts.</p>
 <h2 id="before-after">Before / After</h2>
-<ul><li><strong>Before</strong>: an export tree is just a folder of JSON files, and you still have to guess which dashboards, variables, or policy checks matter.</li><li><strong>After</strong>: one analysis pass turns that tree into operator views you can review, hand to CI, or feed into later checks such as <code>dependencies</code> and <code>policy</code>.</li></ul>
+<ul><li><strong>Before</strong>: an export tree is just a folder of JSON files, and you still have to guess which dashboards, variables, or policy checks matter.</li><li><strong>After</strong>: one dependency pass turns that tree into operator views you can review, hand to CI, or feed into later checks such as <code>dependencies</code> and <code>policy</code>.</li></ul>
 <h2 id="key-flags">Key flags</h2>
-<ul><li><code>--input-dir</code>: dashboard export root to analyze.</li><li><code>--input-format</code>: choose <code>raw</code>, <code>provisioning</code>, or <code>git-sync</code>.</li><li><code>--input-type</code>: select <code>raw</code> or <code>source</code> when the export root has multiple dashboard variants.</li><li><code>--output-format</code>: render <code>text</code>, <code>table</code>, <code>csv</code>, <code>json</code>, <code>yaml</code>, <code>tree</code>, <code>tree-table</code>, <code>dependency</code>, <code>dependency-json</code>, <code>governance</code>, <code>governance-json</code>, or <code>queries-json</code> views.</li><li><code>--report-columns</code>: trim table, csv, or tree-table query output to the selected fields. Use <code>all</code> for the full query-column set.</li><li><code>--list-columns</code>: print the supported <code>--report-columns</code> values and exit.</li><li><code>--interactive</code>: open the shared analysis workbench.</li><li><code>--output-file</code>: write the result to disk.</li><li><code>--no-header</code>: suppress table-like headers.</li></ul>
+<ul><li><code>--input-dir</code>: dashboard export root to inspect.</li><li><code>--input-format</code>: choose <code>raw</code>, <code>provisioning</code>, or <code>git-sync</code>.</li><li><code>--input-type</code>: select <code>raw</code> or <code>source</code> when the export root has multiple dashboard variants.</li><li><code>--output-format</code>: render <code>text</code>, <code>table</code>, <code>csv</code>, <code>json</code>, <code>yaml</code>, <code>tree</code>, <code>tree-table</code>, <code>dependency</code>, <code>dependency-json</code>, <code>governance</code>, <code>governance-json</code>, or <code>queries-json</code> views.</li><li><code>--report-columns</code>: trim table, csv, or tree-table query output to the selected fields. Use <code>all</code> for the full query-column set.</li><li><code>--list-columns</code>: print the supported <code>--report-columns</code> values and exit.</li><li><code>--interactive</code>: open the shared dependency workbench.</li><li><code>--output-file</code>: write the result to disk.</li><li><code>--no-header</code>: suppress table-like headers.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code># Analyze dashboard export directories through the canonical dashboard dependencies command.
+<pre><code># Inspect dashboard export directories through the canonical dashboard dependencies command.
 grafana-util dashboard dependencies --input-dir ./dashboards/raw --input-format raw --output-format table</code></pre>
-<pre><code># Analyze dashboard export directories through the canonical dashboard dependencies command.
+<pre><code># Inspect dashboard export directories through the canonical dashboard dependencies command.
 grafana-util dashboard dependencies --input-dir ./dashboards/provisioning --input-format provisioning --output-format governance-json</code></pre>
 <pre><code>grafana-util dashboard dependencies --input-dir ./grafana-oac-repo --input-format git-sync --output-format governance</code></pre>
 <h2 id="what-success-looks-like">What success looks like</h2>

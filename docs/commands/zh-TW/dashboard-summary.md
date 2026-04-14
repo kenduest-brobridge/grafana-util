@@ -6,6 +6,11 @@
 ## 何時使用
 當你的來源是 live Grafana，而不是本地匯出樹時，就先開這頁。它適合拿來做盤點、治理輸出、相依性前置分析，或在要跑 `policy`、`impact`、`variables` 之前先把 live 狀態整理清楚。
 
+## 採用前後對照
+
+- **採用前**：live dashboard 審查常常要先匯出檔案，或在 UI 裡逐一點開 dashboard、變數與 data source。
+- **採用後**：`dashboard summary` 直接讀 live Grafana，先產生可審查的 summary、governance、dependency 或 query 輸出，再決定下一步。
+
 ## 最短成功路徑
 
 1. 先決定你是要看人看的結果，還是給下一步工具吃的結果。
@@ -54,7 +59,7 @@ grafana-util dashboard summary --url http://localhost:3000 --basic-user admin --
 grafana-util dashboard summary --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output-format governance
 ```
 
-## 什麼叫做這次跑成功
+## 成功判準
 
 - 你能在不先匯出的情況下，看出 live 環境有哪些 dashboard 與查詢結構
 - 產物格式足以直接接到下一步，而不是還要重新抓一次資料

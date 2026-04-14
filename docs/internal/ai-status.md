@@ -11,6 +11,13 @@ Current AI-maintained status only.
 - Older entries moved to [`ai-status-archive-2026-04-13.md`](docs/internal/archive/ai-status-archive-2026-04-13.md).
 - Older entries moved to [`ai-status-archive-2026-04-14.md`](docs/internal/archive/ai-status-archive-2026-04-14.md).
 
+## 2026-04-15 - Consolidate Rust review workflow contracts
+- State: Done
+- Scope: Rust dashboard summary/dependency naming, dashboard command dispatch boundaries, public JSON output contract fixtures, docs evidence checks, generated docs, and validation.
+- Baseline: public docs and CLI use `dashboard summary` / `dashboard dependencies`, but Rust internals still carry `Analyze` names; dashboard dispatch duplicates summary/history handling across client-owned and top-level paths; output contract registry covers only core sync/datasource fixtures; docs evidence tests contained stale page/path expectations.
+- Current Update: renamed Rust dashboard summary internals away from `Analyze`/`dashboard analyze`, split dashboard dispatch into focused summary/export/live helpers, expanded output contracts for dashboard review artifacts, refreshed source/generated docs evidence sections, and added guardrails that reject removed public dashboard analysis paths outside archive/trace contexts.
+- Result: Rust tests, clippy, docs surface checks, output contract checks, generated docs checks, AI workflow checks, feature `browser` check, command smoke checks, and whitespace checks pass. README files were left untouched.
+
 ## 2026-04-14 - Tighten review-first workflow contracts
 - State: Done
 - Scope: public/internal workspace naming policy, core output contract registry, README positioning, generated handbook HTML, access browse loading boundaries, dashboard impact traversal, and validation.
@@ -45,10 +52,3 @@ Current AI-maintained status only.
 - Baseline: `access user browse` facts navigation counted fewer user fact rows than the right pane rendered, so Down/End could not reach the final rows. The user browser footer also allocated four terminal rows while rendering three control rows plus a status line inside a bordered block, causing clipping and visual misalignment. The edit/search overlays each owned their own centering and frame style instead of using a common TUI dialog surface.
 - Current Update: corrected the user facts line count, added shared `tui_shell::footer_height`, `centered_fixed_rect`, `dialog_block`, and `render_dialog_shell` helpers, made footer controls clip instead of wrapping across rows, switched user browse footer controls to the shared grid alignment helper, and moved user edit/search overlays onto the shared dialog shell.
 - Result: the facts pane can select the final user fact row, the footer has enough height for its controls/status without rows overwriting each other, and user browse overlays now share the same centered dialog frame and background treatment.
-
-## 2026-04-13 - Improve CLI help command emphasis
-- State: Done
-- Scope: Rust unified CLI grouped help footer, shared help color palette, CLI help colorization helpers, and focused help regressions.
-- Baseline: root `grafana-util --help` ended with the vague label `First 3 commands:` and included completion setup as one of the first commands. Colored help also split terminal styling between Clap's `CLI_HELP_STYLES` and the custom help-example palette, so Clap-rendered `Commands:` entries such as `browse` stayed blue while custom `grafana-util ...` examples could be bright white.
-- Current Update: changed the root quick-start footer and full-help section to `Suggested flow:`, aligned the suggested commands to version, read-only status, and profile setup, moved terminal help color ownership into `help_styles`, set Clap literal styling and custom command rendering to the same bright-white command treatment, and routed full command lines plus grouped `Usage:` command syntax through a shared CLI-command detector.
-- Result: CLI help now presents a workflow-oriented footer, and command syntax/entries are highlighted consistently across Clap-generated help and custom Rust help renderers.

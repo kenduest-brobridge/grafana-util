@@ -207,6 +207,11 @@ make test-installer-local
   files, not long-form design docs
 - `change`, `status`, and `overview` are related surfaces, but they are not
   interchangeable
+- dashboard analysis has two current public names:
+  - live analysis: `grafana-util dashboard summary`
+  - local/export analysis: `grafana-util dashboard dependencies`
+  - the retired dashboard analysis wording belongs only in archive or trace
+    contexts
 - when a command writes a persisted artifact, keep the on-disk output plain
   text and only duplicate stdout when `--also-stdout` is explicitly set
 

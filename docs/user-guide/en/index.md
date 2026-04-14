@@ -15,6 +15,25 @@ Read this handbook as an operator's field guide, not as an API index. It first a
 
 If this is your first visit, do not try to memorize the command tree. Find your role, then find the task in front of you: proving Grafana is reachable, exporting dashboards for review, putting a workspace through CI, or managing orgs, teams, and service accounts. Each chapter should help you make that decision before it sends you to the reference pages.
 
+## Before / After
+
+| Before | After |
+| :--- | :--- |
+| Operators jump between live UI checks, local JSON edits, and one-off scripts without a shared review trail. | Start from the role path, then move through status, workspace review, and command-specific docs before applying changes. |
+| A command reference is used as the first stop, so workflow questions get answered by flag hunting. | Use the handbook to choose the lane and evidence, then use the command reference only for exact syntax. |
+
+## What success looks like
+
+- you can identify whether the work starts with live status, workspace review, dashboard evidence, alert planning, datasource handling, or access management
+- each next command has a reason and a review artifact, not just a remembered flag
+- command reference pages are used after the workflow choice is clear
+
+## Failure checks
+
+- if you are unsure whether to inspect live state or staged files, start with [Workspace Review & Status](status-workspace.md)
+- if you are looking for exact flags before choosing a lane, read the role path first
+- if a page feels like a feature list, switch to the task chapter that matches your operator question
+
 ## How to read this handbook
 
 1. Start with what the tool is for.

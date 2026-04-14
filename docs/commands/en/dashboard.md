@@ -107,12 +107,12 @@ grafana-util dashboard edit-live --profile prod --dashboard-uid cpu-main --outpu
 ```
 
 ```bash
-# Analyze live dashboard governance data for downstream review.
+# Summarize live dashboard governance data for downstream review.
 grafana-util dashboard summary --url http://localhost:3000 --token "$GRAFANA_API_TOKEN" --output-format governance
 ```
 
 ```bash
-# Open the interactive analysis workbench for a live dashboard.
+# Open the interactive summary workbench for a live dashboard.
 grafana-util dashboard summary --url http://localhost:3000 --basic-user admin --basic-password admin --interactive
 ```
 

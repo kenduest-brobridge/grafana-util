@@ -937,11 +937,11 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <section class="command-intro">
   <div class="command-intro-grid"><div class="command-intro-block">
   <p class="command-intro-label">What this page covers</p>
-  <p class="command-intro-text">Analyze live Grafana dashboards through the canonical dashboard summary command.</p>
+  <p class="command-intro-text">Summarize live Grafana dashboards through the canonical dashboard summary command.</p>
 </div>
 <div class="command-intro-block">
   <p class="command-intro-label">When to open this page</p>
-  <ul class="command-intro-list"><li>Use this when you need the same analysis views as the local export-tree flow, but sourced from live Grafana instead of a local export tree. Prefer dashboard summary --url ... in new docs and scripts.</li></ul>
+  <ul class="command-intro-list"><li>Use this when you need the same summary and governance views as the local export-tree flow, but sourced from live Grafana instead of a local export tree. Prefer dashboard summary --url ... in new docs and scripts.</li></ul>
 </div>
 <div class="command-intro-block">
   <p class="command-intro-label">Who this page is for</p>
@@ -950,24 +950,30 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 </div>
 </section>
 <h2 id="purpose">Purpose</h2>
-<p>Analyze live Grafana dashboards through the canonical <code>dashboard summary</code> command.</p>
+<p>Summarize live Grafana dashboards through the canonical <code>dashboard summary</code> command.</p>
 <h2 id="when-to-use">When to use</h2>
-<p>Use this when you need the same analysis views as the local export-tree flow, but sourced from live Grafana instead of a local export tree. Prefer <code>dashboard summary --url ...</code> in new docs and scripts.</p>
+<p>Use this when you need the same summary and governance views as the local export-tree flow, but sourced from live Grafana instead of a local export tree. Prefer <code>dashboard summary --url ...</code> in new docs and scripts.</p>
+<h2 id="before-after">Before / After</h2>
+<ul><li><strong>Before</strong>: live dashboard review starts by exporting files or clicking through the UI before you know which dashboards, variables, or datasources matter.</li><li><strong>After</strong>: <code>dashboard summary</code> reads live Grafana directly and produces reviewable summary, governance, dependency, or query outputs before you decide the next command.</li></ul>
 <h2 id="key-flags">Key flags</h2>
-<ul><li><code>--page-size</code>: dashboard search page size.</li><li><code>--concurrency</code>: maximum parallel fetch workers.</li><li><code>--org-id</code>: analyze one explicit Grafana org.</li><li><code>--all-orgs</code>: analyze across visible orgs.</li><li><code>--output-format</code>, <code>--output-file</code>, <code>--interactive</code>, <code>--no-header</code>: output controls.</li><li><code>--report-columns</code>: trim table, csv, or tree-table query output to the selected fields. Use <code>all</code> for the full query-column set.</li><li><code>--list-columns</code>: print the supported <code>--report-columns</code> values and exit.</li><li><code>--progress</code>: show fetch progress.</li></ul>
+<ul><li><code>--page-size</code>: dashboard search page size.</li><li><code>--concurrency</code>: maximum parallel fetch workers.</li><li><code>--org-id</code>: summarize one explicit Grafana org.</li><li><code>--all-orgs</code>: summarize across visible orgs.</li><li><code>--output-format</code>, <code>--output-file</code>, <code>--interactive</code>, <code>--no-header</code>: output controls.</li><li><code>--report-columns</code>: trim table, csv, or tree-table query output to the selected fields. Use <code>all</code> for the full query-column set.</li><li><code>--list-columns</code>: print the supported <code>--report-columns</code> values and exit.</li><li><code>--progress</code>: show fetch progress.</li></ul>
 <h2 id="examples">Examples</h2>
-<pre><code># Analyze live Grafana dashboards through the canonical dashboard summary command.
+<pre><code># Summarize live Grafana dashboards through the canonical dashboard summary command.
 grafana-util dashboard summary --url http://localhost:3000 --basic-user admin --basic-password admin --output-format governance</code></pre>
-<pre><code># Analyze live Grafana dashboards through the canonical dashboard summary command.
+<pre><code># Summarize live Grafana dashboards through the canonical dashboard summary command.
 grafana-util dashboard summary --url http://localhost:3000 --basic-user admin --basic-password admin --interactive</code></pre>
 <h2 id="related-commands">Related commands</h2>
 <ul><li><a href="dashboard-dependencies.html">dashboard dependencies</a></li><li><a href="dashboard-variables.html">dashboard variables</a></li><li><a href="dashboard-policy.html">dashboard policy</a></li></ul>
+<h2 id="what-success-looks-like">What success looks like</h2>
+<ul><li>you can explain the live dashboard estate without exporting it first</li><li>governance or query output is stable enough to hand to policy, impact, CI, or another operator</li><li>the command choice is clear: live sources use <code>dashboard summary</code>; local export trees use <code>dashboard dependencies</code></li></ul>
+<h2 id="failure-checks">Failure checks</h2>
+<ul><li>if the result looks smaller than the UI, check org scope, credentials, and folder permissions first</li><li>if a downstream command cannot consume the output, confirm whether you emitted <code>governance-json</code>, <code>queries-json</code>, or a human-readable table</li><li>if the review is meant to be offline or reproducible without Grafana access, export first and switch to <code>dashboard dependencies</code></li></ul>
 
 </article>
 <aside class="sidebar">
   <button class="sidebar-toggle sidebar-toggle-right" type="button" aria-expanded="true" aria-label="Toggle page sidebar">▶</button>
   <div class="sidebar-content">
-    <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#purpose"><span class="toc-label">Purpose</span></a></li><li class="toc-level-2"><a href="#when-to-use"><span class="toc-label">When to use</span></a></li><li class="toc-level-2"><a href="#key-flags"><span class="toc-label">Key flags</span></a></li><li class="toc-level-2"><a href="#examples"><span class="toc-label">Examples</span></a></li><li class="toc-level-2"><a href="#related-commands"><span class="toc-label">Related commands</span></a></li></ul></section><section class="sidebar-section"><h2>Related</h2><ul class="sidebar-meta-list"><li><a href="../../handbook/en/dashboard.html" class="sidebar-meta-link">Matching handbook chapter</a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: English</a></li><li><a href="../zh-TW/dashboard-summary.html" class="sidebar-meta-link">Switch to 繁體中文</a></li></ul></section>
+    <section class="sidebar-section"><h2>On This Page</h2><ul class="toc-list"><li class="toc-level-2"><a href="#purpose"><span class="toc-label">Purpose</span></a></li><li class="toc-level-2"><a href="#when-to-use"><span class="toc-label">When to use</span></a></li><li class="toc-level-2"><a href="#before-after"><span class="toc-label">Before / After</span></a></li><li class="toc-level-2"><a href="#key-flags"><span class="toc-label">Key flags</span></a></li><li class="toc-level-2"><a href="#examples"><span class="toc-label">Examples</span></a></li><li class="toc-level-2"><a href="#related-commands"><span class="toc-label">Related commands</span></a></li><li class="toc-level-2"><a href="#what-success-looks-like"><span class="toc-label">What success looks like</span></a></li><li class="toc-level-2"><a href="#failure-checks"><span class="toc-label">Failure checks</span></a></li></ul></section><section class="sidebar-section"><h2>Related</h2><ul class="sidebar-meta-list"><li><a href="../../handbook/en/dashboard.html" class="sidebar-meta-link">Matching handbook chapter</a></li></ul></section><section class="sidebar-section"><h2>Version</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>Language</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: English</a></li><li><a href="../zh-TW/dashboard-summary.html" class="sidebar-meta-link">Switch to 繁體中文</a></li></ul></section>
   </div>
 </aside>
 

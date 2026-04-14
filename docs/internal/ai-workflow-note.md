@@ -148,6 +148,12 @@ Lint here means checking for:
 - summary/spec/trace drift
 - parser behavior that no longer matches examples or command pages
 - changes that touched a contract shape without updating the contract doc
+- public docs, command pages, and docs evidence tests must keep dashboard
+  analysis on the current names:
+  - `dashboard summary` for live analysis
+  - `dashboard dependencies` for local/export analysis
+  - removed legacy dashboard analysis page names only belong in archive or
+    trace docs
 
 The repo already has concrete lint-style checks:
 

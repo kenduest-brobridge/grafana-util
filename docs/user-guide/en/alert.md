@@ -36,7 +36,14 @@ The boundaries matter. `raw/` export bundles are for moving current state. `desi
 - Use plans to explain create / update / delete / noop before apply.
 - Keep raw migration flows separate from desired-state authoring.
 
-## What Success Looks Like
+## Before / After
+
+| Before | After |
+| :--- | :--- |
+| Alert changes move as isolated rules, while contact points, routes, templates, and mute timings are checked later. | Treat rules, receivers, routes, templates, mute timings, desired state, raw bundles, and plans as connected review inputs. |
+| Apply happens from memory or a just-generated command line. | Produce inventory or a plan first, then apply only after the reviewed artifact is understood. |
+
+## What success looks like
 
 - You can say whether the task is inventory, backup, authoring, routing, or review/apply.
 - You know whether a subcommand consumes live Grafana, a raw bundle, a desired directory, or a reviewed plan.
@@ -224,7 +231,7 @@ This chapter explains the workflow. Once you know the subcommand, open the comma
 - [alert apply](../../commands/en/alert-apply.md)
 - [alert delete](../../commands/en/alert-delete.md)
 
-## Failure Checks
+## Failure checks
 
 - If inventory is missing resources, check profile, token permissions, org scope, and folder access.
 - If export / import misses dashboard-linked rules, check dashboard UID and panel ID mappings.

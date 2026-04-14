@@ -36,6 +36,13 @@
 - 用 plan 說清楚 create / update / delete / noop，而不是直接 apply。
 - 在搬移或恢復時，分清楚 raw bundle 與 desired-state workflow。
 
+## 採用前後對照
+
+| 採用前 | 採用後 |
+| :--- | :--- |
+| 告警變更只看單一 rule，contact point、route、template 與 mute timing 之後才補查。 | 把 rule、receiver、route、template、mute timing、desired state、raw bundle 與 plan 當成同一組可審查輸入。 |
+| 套用靠記憶或剛產生的命令直接執行。 | 先產生 inventory 或 plan，確認審查成品後才 apply。 |
+
 ## 成功判準
 
 - 你能說清楚這次工作屬於 inventory、backup、authoring、routing 還是 review/apply。

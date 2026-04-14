@@ -59,6 +59,13 @@ def load_surface() -> dict[str, object]:
     return json.loads(SURFACE_PATH.read_text(encoding="utf-8"))
 
 
+def removed_public_command_paths(surface: dict[str, object]) -> tuple[str, ...]:
+    paths = surface.get("removed_public_command_paths", [])
+    if not isinstance(paths, list) or not all(isinstance(path, str) for path in paths):
+        raise TypeError("removed_public_command_paths must be a list of strings")
+    return tuple(paths)
+
+
 def command_doc_locales(surface: dict[str, object]) -> tuple[str, ...]:
     locales = surface.get("command_doc_locales", list(DEFAULT_COMMAND_DOC_LOCALES))
     if not isinstance(locales, list) or not all(isinstance(locale, str) for locale in locales):
@@ -99,6 +106,15 @@ def is_public_doc(path: Path) -> bool:
         or rel.startswith("docs/user-guide/")
         or rel.startswith("docs/commands/")
     )
+
+
+def is_current_internal_guardrail_doc(path: Path) -> bool:
+    rel = path.relative_to(REPO_ROOT).as_posix()
+    if not rel.startswith("docs/internal/"):
+        return False
+    if rel.startswith("docs/internal/archive/"):
+        return False
+    return rel not in {"docs/internal/ai-status.md", "docs/internal/ai-changes.md"}
 
 
 def joined_command_lines(text: str) -> list[tuple[int, str]]:
@@ -415,10 +431,31 @@ def validate_links(path: Path, text: str) -> list[Finding]:
     return findings
 
 
+def validate_removed_public_command_paths(path: Path, text: str, removed_paths: tuple[str, ...]) -> list[Finding]:
+    rel = path.relative_to(REPO_ROOT).as_posix()
+    if rel.startswith("README"):
+        return []
+    if not (is_public_doc(path) or is_current_internal_guardrail_doc(path)):
+        return []
+    lowered = text.lower()
+    findings: list[Finding] = []
+    for removed_path in removed_paths:
+        if removed_path.lower() in lowered:
+            findings.append(
+                Finding(
+                    path,
+                    1,
+                    f"stale public command path reference `{removed_path}` must not appear outside archive or trace docs; use `dashboard summary` for live analysis and `dashboard dependencies` for local/export analysis",
+                )
+            )
+    return findings
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.parse_args()
     surface = load_surface()
+    removed_paths = removed_public_command_paths(surface)
     findings: list[Finding] = validate_command_doc_locale_parity(surface)
     files = iter_markdown_files()
     for index, path in enumerate(files, start=1):
@@ -427,6 +464,7 @@ def main() -> int:
         text = path.read_text(encoding="utf-8")
         findings.extend(validate_commands(path, text, surface))
         findings.extend(validate_links(path, text))
+        findings.extend(validate_removed_public_command_paths(path, text, removed_paths))
     if findings:
         print("Docs surface check failed:")
         for finding in findings:

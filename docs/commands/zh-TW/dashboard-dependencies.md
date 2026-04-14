@@ -23,7 +23,7 @@
 ## 採用前後對照
 
 - **採用前**：匯出樹只是一堆 JSON 檔案，還得自己猜哪些 dashboard、變數或治理檢查比較重要。
-- **採用後**：跑一次 analyze，就能把匯出樹整理成維運人員看得懂的檢視，也能直接交給 CI 或後續的 `dependencies`、`policy`。
+- **採用後**：跑一次 `dashboard dependencies`，就能把匯出樹整理成維運人員看得懂的檢視，也能直接交給 CI 或後續的 `dependencies`、`policy`。
 
 ## 重點旗標
 - `--input-dir`：要分析的儀表板匯出根目錄。
@@ -71,7 +71,7 @@ grafana-util dashboard dependencies --input-dir ./grafana-oac-repo --input-forma
 
 - 不必逐一打開 dashboard 檔案，也能說清楚匯出樹裡有哪些內容
 - governance 或 dependency 輸出穩定到可以直接交給 CI 或另一位維護者
-- 後續要跑 `dashboard dependencies`、`dashboard impact`、`dashboard policy` 時，可以直接從 analyze 產物開始，不用再重新讀原始匯出樹
+- 後續要跑 `dashboard dependencies`、`dashboard impact`、`dashboard policy` 時，可以直接從分析產物開始，不用再重新讀原始匯出樹
 
 ## 失敗時先檢查
 

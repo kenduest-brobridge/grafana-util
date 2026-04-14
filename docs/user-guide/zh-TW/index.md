@@ -15,6 +15,25 @@
 
 如果你是第一次進來，不需要從頭背到尾。先找到自己的角色，再找到眼前任務：是要確認 Grafana 能不能連、要把 dashboard 帶出來 review、要讓 CI 檢查 workspace，還是要管理 org、team、service account。每個章節都應該幫你做這個判斷，而不是只列出工具有什麼功能。
 
+## 採用前後對照
+
+| 採用前 | 採用後 |
+| :--- | :--- |
+| 維運人員在 live UI、本地 JSON 修改與一次性腳本之間切換，缺少共同的審查紀錄。 | 先從角色路徑進來，再依序走 status、workspace review 與 domain 指令文件，最後才套用變更。 |
+| 一開始就翻指令參考，結果 workflow 問題變成找 flag。 | 先用手冊決定工作 lane 與要留下的 evidence，再到指令參考查精確語法。 |
+
+## 成功判準
+
+- 你能判斷眼前工作應該先看 live status、workspace review、dashboard evidence、alert planning、datasource handling，還是 access management
+- 每個下一步命令都有明確原因與可審查產物，而不是靠記憶拼 flags
+- 指令參考是在 workflow 選定後才拿來查精確語法
+
+## 失敗時先檢查
+
+- 如果你不確定該檢查 live state 還是 staged files，先看 [Workspace 審查與狀態](status-workspace.md)
+- 如果你還沒選工作 lane 就開始找 flags，先回到角色路徑
+- 如果某頁讀起來像功能清單，切到更接近你手上問題的任務章節
+
 ## 如何閱讀這本手冊
 
 1. 先看工具是拿來做什麼。

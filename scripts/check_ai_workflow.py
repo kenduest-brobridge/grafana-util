@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -12,6 +13,7 @@ import ai_trace
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+COMMAND_SURFACE_PATH = REPO_ROOT / "scripts" / "contracts" / "command-surface.json"
 
 TRACE_FILES = {
     "docs/internal/ai-status.md",
@@ -72,6 +74,15 @@ ONBOARDING_FORBIDDEN_SNIPPETS = {
     "grafana-util overview": "use grafana-util status overview, with live for live Grafana reads",
     "advanced dashboard": "use the flat grafana-util dashboard surface",
     "grafana-util status overview --url": "live overview requires grafana-util status overview live --url",
+}
+
+REMOVED_PUBLIC_COMMAND_PATHS = (
+    "dashboard analyze",
+    "dashboard-analyze-",
+)
+
+EVIDENCE_TEST_FILES = {
+    "python/tests/test_python_public_docs_evidence.py",
 }
 
 PUBLIC_NAMING_POLICY_FILES = {
@@ -205,6 +216,14 @@ def leading_section(text: str, excerpt_lines: int) -> str:
     return "\n".join(text.splitlines()[:excerpt_lines]).lower()
 
 
+def load_removed_public_command_paths() -> tuple[str, ...]:
+    surface = json.loads(COMMAND_SURFACE_PATH.read_text(encoding="utf-8"))
+    paths = surface.get("removed_public_command_paths", REMOVED_PUBLIC_COMMAND_PATHS)
+    if not isinstance(paths, list) or not all(isinstance(path, str) for path in paths):
+        raise TypeError("removed_public_command_paths must be a list of strings")
+    return tuple(paths)
+
+
 def detect_changed_files() -> list[str]:
     diff_cmd = [
         "git",
@@ -243,6 +262,7 @@ def validate_paths(
     touched_onboarding_sources = [
         path for path in normalized if path in ONBOARDING_SOURCE_FILES
     ]
+    removed_public_paths = load_removed_public_command_paths()
 
     if touched_html:
         has_html_source = any(
@@ -280,6 +300,22 @@ def validate_paths(
         for snippet, guidance in ONBOARDING_FORBIDDEN_SNIPPETS.items():
             if snippet in text:
                 errors.append(f"{path} contains '{snippet}'; {guidance}")
+
+    for path in normalized:
+        if path.startswith("README"):
+            continue
+        if path in EVIDENCE_TEST_FILES or path.startswith("docs/landing/") or path.startswith("docs/user-guide/") or path.startswith("docs/commands/") or (
+            path.startswith("docs/internal/")
+            and not path.startswith("docs/internal/archive/")
+            and path not in {"docs/internal/ai-status.md", "docs/internal/ai-changes.md"}
+        ):
+            text = (root / path).read_text(encoding="utf-8")
+            lowered = text.lower()
+            for snippet in removed_public_paths:
+                if snippet.lower() in lowered:
+                    errors.append(
+                        f"{path} contains stale public command reference '{snippet}'; use dashboard summary for live analysis and dashboard dependencies for local/export analysis, and keep legacy analyze wording only in archive or trace docs"
+                    )
 
     for path, policy in PUBLIC_NAMING_POLICY_FILES.items():
         if path not in path_set:

@@ -958,7 +958,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <h2 id="你應該選-dependencies-還是-summary">你應該選 <code>dependencies</code> 還是 <code>summary</code></h2>
 <ul><li>來源是 <strong>本地匯出樹</strong>：用 <code>dashboard dependencies</code></li><li>來源是 <strong>live Grafana</strong>：改看 <a href="dashboard-summary.html">dashboard summary</a></li><li>你要追某個 datasource 的牽動範圍：改看 <a href="dashboard-impact.html">dashboard impact</a></li><li>你只想做 dashboard 草稿比對：先看 <code>dashboard diff</code> / <code>dashboard review</code></li></ul>
 <h2 id="採用前後對照">採用前後對照</h2>
-<ul><li><strong>採用前</strong>：匯出樹只是一堆 JSON 檔案，還得自己猜哪些 dashboard、變數或治理檢查比較重要。</li><li><strong>採用後</strong>：跑一次 analyze，就能把匯出樹整理成維運人員看得懂的檢視，也能直接交給 CI 或後續的 <code>dependencies</code>、<code>policy</code>。</li></ul>
+<ul><li><strong>採用前</strong>：匯出樹只是一堆 JSON 檔案，還得自己猜哪些 dashboard、變數或治理檢查比較重要。</li><li><strong>採用後</strong>：跑一次 <code>dashboard dependencies</code>，就能把匯出樹整理成維運人員看得懂的檢視，也能直接交給 CI 或後續的 <code>dependencies</code>、<code>policy</code>。</li></ul>
 <h2 id="重點旗標">重點旗標</h2>
 <ul><li><code>--input-dir</code>：要分析的儀表板匯出根目錄。</li><li><code>--input-format</code>：選擇 <code>raw</code>、<code>provisioning</code> 或 <code>git-sync</code>。</li><li><code>--input-type</code>：當匯出根目錄包含多種儀表板變體時，選擇 <code>raw</code> 或 <code>source</code>。</li><li><code>--output-format</code>：輸出 <code>text</code>、<code>table</code>、<code>csv</code>、<code>json</code>、<code>yaml</code>、<code>tree</code>、<code>tree-table</code>、<code>dependency</code>、<code>dependency-json</code>、<code>governance</code>、<code>governance-json</code> 或 <code>queries-json</code> 檢視。</li><li><code>--report-columns</code>：把 table、csv 或 tree-table 的 query 輸出裁成指定欄位。可用 <code>all</code> 展開完整 query 欄位集合。</li><li><code>--list-columns</code>：列出支援的 <code>--report-columns</code> 值後直接結束。</li><li><code>--interactive</code>：開啟共用分析工作台。</li><li><code>--output-file</code>：將結果寫到磁碟。</li><li><code>--no-header</code>：隱藏表格類輸出的標頭。</li></ul>
 <h2 id="先決定你要輸出什麼">先決定你要輸出什麼</h2>
@@ -973,7 +973,7 @@ grafana-util dashboard dependencies --input-dir ./grafana-oac-repo --input-forma
 <h2 id="什麼叫做這次跑成功">什麼叫做這次跑成功</h2>
 <ul><li>不必逐一打開 JSON，也能說清楚匯出樹裡有哪些 dashboard、查詢與相依關係</li><li>產物格式足以直接交給下一步，而不是還要重新分析一次</li><li>同一份輸出可以支撐 review、治理或影響分析</li></ul>
 <h2 id="成功判準">成功判準</h2>
-<ul><li>不必逐一打開 dashboard 檔案，也能說清楚匯出樹裡有哪些內容</li><li>governance 或 dependency 輸出穩定到可以直接交給 CI 或另一位維護者</li><li>後續要跑 <code>dashboard dependencies</code>、<code>dashboard impact</code>、<code>dashboard policy</code> 時，可以直接從 analyze 產物開始，不用再重新讀原始匯出樹</li></ul>
+<ul><li>不必逐一打開 dashboard 檔案，也能說清楚匯出樹裡有哪些內容</li><li>governance 或 dependency 輸出穩定到可以直接交給 CI 或另一位維護者</li><li>後續要跑 <code>dashboard dependencies</code>、<code>dashboard impact</code>、<code>dashboard policy</code> 時，可以直接從分析產物開始，不用再重新讀原始匯出樹</li></ul>
 <h2 id="失敗時先檢查">失敗時先檢查</h2>
 <ul><li>如果匯出樹看起來不完整，先確認你指的是 <code>raw</code> 還是 <code>provisioning</code> 內容</li><li>如果後續命令讀不進去，先確認你輸出的是 <code>governance-json</code> 還是別的分析成品格式</li><li>如果匯出樹來自較舊的匯出結果，先重跑 <code>dashboard export</code>，避免分析到過期檔案</li></ul>
 <h2 id="相關指令">相關指令</h2>

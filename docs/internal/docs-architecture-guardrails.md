@@ -39,6 +39,12 @@ Keep each docs layer doing one job:
 - when public command paths, legacy replacements, or `--help-full` / `--help-flat` support
   change, update `scripts/contracts/command-surface.json` and run
   `make quality-docs-surface`
+- when a public command path is retired, record the removed public path list in
+  `scripts/contracts/command-surface.json` so docs checks can block stale
+  references in public docs and evidence tests
+- public live analysis stays `grafana-util dashboard summary`; local/export
+  analysis stays `grafana-util dashboard dependencies`
+- historical `analyze` wording is acceptable only in archive or trace docs
 - keep manual updates limited to user journeys, decision tables, and stable
   narrative examples
 - prefer semantic examples and task-based routing over large copy-heavy
@@ -69,6 +75,8 @@ Treat these as signs the docs boundary is drifting:
 - trace docs that grow into design notes or implementation plans
 - command examples that bypass the command-surface contract or mention removed
   roots without a replacement
+- public docs or docs evidence tests that reintroduce removed public dashboard
+  analysis paths instead of the current `summary` / `dependencies` split
 
 ## Maintenance Rule
 

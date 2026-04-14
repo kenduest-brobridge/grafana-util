@@ -41,7 +41,7 @@ Dashboard subcommands are not a flat feature list. They are organized around dif
 | Build a local draft | `clone`, `get`, `patch`, `serve` | live dashboard or local JSON | reviewable draft file | `review`, `publish` |
 | Publish a draft | `review`, `publish`, `edit-live` | local dashboard JSON | dry-run / publish result | list / get after apply |
 | Back up and replay | `export`, `import`, `diff` | live Grafana or export tree | `raw/`, `prompt/`, `provisioning/` | diff / dry-run / import |
-| Analyze dependencies | `summary`, `dependencies`, `variables`, `policy` | live or local dashboard | query, datasource, variable, policy summary | fix dashboard or datasource |
+| Inspect dependencies | `summary`, `dependencies`, `variables`, `policy` | live or local dashboard | query, datasource, variable, policy summary | fix dashboard or datasource |
 | Capture evidence | `screenshot` | live dashboard URL / UID | dashboard or panel screenshot | incident, PR, or docs evidence |
 | Recover history | `history list`, `history export`, `history restore` | dashboard UID and version | history list, version artifact, or new revision | review before restore |
 
@@ -109,7 +109,7 @@ Restore is not a destructive overwrite. The selected historical version stays in
 Use the dashboard area for estate-level governance:
 - **Inventory**: Understand what exists across one or many organizations.
 - **Structured Export**: Move dashboards between environments with dedicated "lanes".
-- **Deep Inspection**: Analyze queries and datasource dependencies offline.
+- **Deep Inspection**: Inspect queries and datasource dependencies offline.
 - **Screenshots and visual checks**: Produce reproducible dashboard or panel captures for docs, incident notes, and debugging.
 - **Drift Review**: Compare staged files against live Grafana before applying.
 - **Controlled Mutation**: Import or delete dashboards with mandatory dry-runs.

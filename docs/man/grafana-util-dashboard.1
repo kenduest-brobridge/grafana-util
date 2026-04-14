@@ -91,10 +91,10 @@ Delete live dashboards by UID or folder path. Use when: You need to remove one d
 Compare local dashboard files against live Grafana dashboards. Use when: You want to see what would change before importing or publishing a dashboard bundle.
 .TP
 .B dependencies
-Analyze dashboard export directories through the canonical dashboard dependencies command. Use when: You want to read a local export tree, inspect its structure, or render governance and dependency views without contacting Grafana. Prefer dashboard dependencies \-\-input\-dir ... in new docs and scripts.
+Inspect dashboard export directories through the canonical dashboard dependencies command. Use when: You want to read a local export tree, inspect its structure, or render governance and dependency views without contacting Grafana. Prefer dashboard dependencies \-\-input\-dir ... in new docs and scripts.
 .TP
 .B summary
-Analyze live Grafana dashboards through the canonical dashboard summary command. Use when: You need the same analysis views as the local export\-tree flow, but sourced from live Grafana instead of a local export tree. Prefer dashboard summary \-\-url ... in new docs and scripts.
+Summarize live Grafana dashboards through the canonical dashboard summary command. Use when: You need the same summary and governance views as the local export\-tree flow, but sourced from live Grafana instead of a local export tree. Prefer dashboard summary \-\-url ... in new docs and scripts.
 .TP
 .B variables
 List dashboard templating variables and datasource\-like choices from live Grafana, a local dashboard file, or a local export tree. Use when: You need to list variable state, feed a screenshot workflow, debug variable\-scoped dashboard URLs, or inspect a rendered local dashboard file.
