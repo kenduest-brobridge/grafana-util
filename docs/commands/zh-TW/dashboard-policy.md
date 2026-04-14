@@ -1,7 +1,7 @@
 # dashboard policy
 
 ## 用途
-直接針對 live Grafana 或本地匯出樹套用治理政策檢查，已保存的分析成品則作為進階重用路徑。
+直接針對 live Grafana 或本地匯出樹套用治理政策檢查，已保存的 review 成品則作為進階重用路徑。
 
 ## 何時使用
 當您想在推進之前先得到政策通過或失敗結果時，使用這個指令。常見流程應直接用 live 或 local 輸入；只有進階重用與 CI pipeline 才保留 `governance-json` 與 `queries-json`。
@@ -40,7 +40,7 @@ grafana-util dashboard policy --input-dir ./grafana-oac-repo --input-format git-
 ```
 
 ```bash
-# 進階重用：對可重用的分析成品套用治理政策檢查。
+# 進階重用：對可重用的 review 成品套用治理政策檢查。
 grafana-util dashboard policy --policy-source builtin --builtin-policy default --governance ./governance.json --queries ./queries.json --output-format json --json-output ./governance-check.json
 ```
 

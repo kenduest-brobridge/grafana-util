@@ -937,7 +937,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <section class="command-intro">
   <div class="command-intro-grid"><div class="command-intro-block">
   <p class="command-intro-label">這頁在說什麼</p>
-  <p class="command-intro-text">直接針對 live Grafana 或本地匯出樹套用治理政策檢查，已保存的分析成品則作為進階重用路徑。</p>
+  <p class="command-intro-text">直接針對 live Grafana 或本地匯出樹套用治理政策檢查，已保存的 review 成品則作為進階重用路徑。</p>
 </div>
 <div class="command-intro-block">
   <p class="command-intro-label">什麼時候看這頁</p>
@@ -950,7 +950,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 </div>
 </section>
 <h2 id="用途">用途</h2>
-<p>直接針對 live Grafana 或本地匯出樹套用治理政策檢查，已保存的分析成品則作為進階重用路徑。</p>
+<p>直接針對 live Grafana 或本地匯出樹套用治理政策檢查，已保存的 review 成品則作為進階重用路徑。</p>
 <h2 id="何時使用">何時使用</h2>
 <p>當您想在推進之前先得到政策通過或失敗結果時，使用這個指令。常見流程應直接用 live 或 local 輸入；只有進階重用與 CI pipeline 才保留 <code>governance-json</code> 與 <code>queries-json</code>。</p>
 <h2 id="採用前後對照">採用前後對照</h2>
@@ -963,7 +963,7 @@ grafana-util dashboard policy --url http://localhost:3000 --basic-user admin --b
 <pre><code># 直接對本地匯出樹套用治理政策檢查。
 grafana-util dashboard policy --input-dir ./dashboards/raw --input-format raw --policy-source builtin --builtin-policy default --output-format json --json-output ./governance-check.json</code></pre>
 <pre><code>grafana-util dashboard policy --input-dir ./grafana-oac-repo --input-format git-sync --policy-source builtin --builtin-policy default --output-format json --json-output ./governance-check.json</code></pre>
-<pre><code># 進階重用：對可重用的分析成品套用治理政策檢查。
+<pre><code># 進階重用：對可重用的 review 成品套用治理政策檢查。
 grafana-util dashboard policy --policy-source builtin --builtin-policy default --governance ./governance.json --queries ./queries.json --output-format json --json-output ./governance-check.json</code></pre>
 <h2 id="成功判準">成功判準</h2>
 <ul><li>在 promotion 前就能把政策違規擋下來，而不是等 dashboard 上線後才發現</li><li>文字輸出夠清楚，適合人工檢查；JSON 輸出也夠穩定，適合接進 CI gate</li><li>換政策後可以重跑同一批 inspect 成品，不必重新 export 或 inspect</li></ul>

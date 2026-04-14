@@ -9,7 +9,6 @@ use serde_json::Value;
 
 // Keep the dashboard surface area split by concern. This file should stay focused
 // on re-exports, shared constants, and top-level command dispatch.
-mod analysis_source;
 mod authoring;
 mod browse;
 mod browse_actions;
@@ -84,6 +83,7 @@ mod raw_to_prompt_output;
 mod raw_to_prompt_plan;
 mod raw_to_prompt_resolution;
 mod raw_to_prompt_types;
+mod review_source;
 mod run_inspect;
 mod run_list;
 mod screenshot;

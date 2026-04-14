@@ -1,5 +1,5 @@
 //! Dashboard governance gate evaluator.
-//! Direct live/local analysis is the common path; governance-json and query-report artifacts stay available for advanced reuse.
+//! Direct live/local review is the common path; governance-json and query-report artifacts stay available for advanced reuse.
 use serde::Serialize;
 use serde_json::Value;
 #[cfg(any(feature = "tui", test))]
@@ -9,10 +9,10 @@ use std::path::Path;
 
 use crate::common::{message, render_json_value, Result};
 
-use super::analysis_source::{resolve_dashboard_analysis_artifacts, DashboardAnalysisSourceArgs};
 use super::governance_gate_rules as rules;
 #[cfg(all(feature = "tui", not(test)))]
 use super::governance_gate_tui::run_governance_gate_interactive;
+use super::review_source::{resolve_dashboard_review_artifacts, DashboardReviewSourceArgs};
 use super::{
     load_governance_policy, write_json_document, GovernanceGateArgs, GovernanceGateOutputFormat,
 };
@@ -403,7 +403,7 @@ pub(crate) fn render_dashboard_governance_gate_result(
 
 pub(crate) fn run_dashboard_governance_gate(args: &GovernanceGateArgs) -> Result<()> {
     let policy = load_governance_policy(args)?;
-    let artifacts = resolve_dashboard_analysis_artifacts(&DashboardAnalysisSourceArgs {
+    let artifacts = resolve_dashboard_review_artifacts(&DashboardReviewSourceArgs {
         common: &args.common,
         page_size: args.page_size,
         org_id: args.org_id,
@@ -482,11 +482,11 @@ mod tests {
     use std::fs;
     use tempfile::tempdir;
 
-    use super::super::analysis_source::{
-        resolve_dashboard_analysis_artifacts, DashboardAnalysisSourceArgs,
-    };
     use super::super::cli_defs::{CommonCliArgs, InspectExportInputType};
     use super::super::governance_policy::built_in_governance_policy;
+    use super::super::review_source::{
+        resolve_dashboard_review_artifacts, DashboardReviewSourceArgs,
+    };
 
     fn make_common_args() -> CommonCliArgs {
         CommonCliArgs {
@@ -608,7 +608,7 @@ mod tests {
         let raw_dir = repo_root.join("dashboards/git-sync/raw/org_1/raw");
         write_basic_git_sync_raw_export(&raw_dir);
 
-        let artifacts = resolve_dashboard_analysis_artifacts(&DashboardAnalysisSourceArgs {
+        let artifacts = resolve_dashboard_review_artifacts(&DashboardReviewSourceArgs {
             common: &make_common_args(),
             page_size: 100,
             org_id: None,

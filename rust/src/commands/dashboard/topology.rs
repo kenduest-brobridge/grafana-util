@@ -1,5 +1,5 @@
 //! Topology and impact analysis for dashboards and alert contracts.
-//! Direct live/local analysis is the common path; saved artifacts stay available for advanced reuse.
+//! Direct live/local review is the common path; saved artifacts stay available for advanced reuse.
 use serde::Serialize;
 use serde_json::Value;
 use std::path::Path;
@@ -8,7 +8,7 @@ use crate::common::{
     emit_plain_output, load_json_object_file, render_json_value, should_print_stdout, Result,
 };
 
-use super::analysis_source::{resolve_dashboard_analysis_artifacts, DashboardAnalysisSourceArgs};
+use super::review_source::{resolve_dashboard_review_artifacts, DashboardReviewSourceArgs};
 use super::{
     write_json_document, ImpactArgs, ImpactOutputFormat, TopologyArgs, TopologyOutputFormat,
 };
@@ -20,6 +20,13 @@ pub(crate) use topology_build::{build_impact_document, build_topology_document};
 mod topology_browser;
 #[cfg(any(feature = "tui", test))]
 pub(crate) use topology_browser::{build_impact_browser_items, build_topology_browser_items};
+#[path = "topology_render.rs"]
+mod topology_render;
+#[cfg(test)]
+use topology_render::build_impact_summary_lines;
+pub(crate) use topology_render::{
+    render_impact_text, render_topology_dot, render_topology_mermaid, render_topology_text,
+};
 
 #[cfg(all(feature = "tui", not(test)))]
 use super::impact_tui::run_impact_interactive;
@@ -144,181 +151,8 @@ struct ParsedAlertResource {
     node_id: String,
 }
 
-fn slug_for_mermaid(value: &str) -> String {
-    let mut slug = String::with_capacity(value.len());
-    for character in value.chars() {
-        if character.is_ascii_alphanumeric() || character == '_' {
-            slug.push(character);
-        } else {
-            slug.push('_');
-        }
-    }
-    if slug
-        .chars()
-        .next()
-        .map(|character| character.is_ascii_digit())
-        .unwrap_or(true)
-    {
-        slug.insert(0, 'n');
-    }
-    slug
-}
-
-fn escape_label(value: &str) -> String {
-    value.replace('\\', "\\\\").replace('"', "\\\"")
-}
-
 fn load_object(path: &Path) -> Result<Value> {
     load_json_object_file(path, "Topology/impact JSON")
-}
-
-pub(crate) fn render_topology_text(document: &TopologyDocument) -> String {
-    let mut lines = vec![format!(
-        "Dashboard topology: nodes={} edges={} datasources={} dashboards={} panels={} variables={} alert-resources={} alert-rules={} contact-points={} mute-timings={} notification-policies={} templates={}",
-        document.summary.node_count,
-        document.summary.edge_count,
-        document.summary.datasource_count,
-        document.summary.dashboard_count,
-        document.summary.panel_count,
-        document.summary.variable_count,
-        document.summary.alert_resource_count,
-        document.summary.alert_rule_count,
-        document.summary.contact_point_count,
-        document.summary.mute_timing_count,
-        document.summary.notification_policy_count,
-        document.summary.template_count
-    )];
-    for edge in &document.edges {
-        lines.push(format!(
-            "  {} --{}--> {}",
-            edge.from, edge.relation, edge.to
-        ));
-    }
-    lines.join("\n")
-}
-
-pub(crate) fn render_topology_mermaid(document: &TopologyDocument) -> String {
-    let mut lines = vec!["graph TD".to_string()];
-    for node in &document.nodes {
-        lines.push(format!(
-            "  {}[\"{}\"]",
-            slug_for_mermaid(&node.id),
-            escape_label(&node.label)
-        ));
-    }
-    for edge in &document.edges {
-        lines.push(format!(
-            "  {} -->|{}| {}",
-            slug_for_mermaid(&edge.from),
-            edge.relation,
-            slug_for_mermaid(&edge.to)
-        ));
-    }
-    lines.join("\n")
-}
-
-pub(crate) fn render_topology_dot(document: &TopologyDocument) -> String {
-    let mut lines = vec!["digraph grafana_topology {".to_string()];
-    for node in &document.nodes {
-        lines.push(format!(
-            "  \"{}\" [label=\"{}\\n{}\"] ;",
-            node.id,
-            escape_label(&node.label),
-            node.kind
-        ));
-    }
-    for edge in &document.edges {
-        lines.push(format!(
-            "  \"{}\" -> \"{}\" [label=\"{}\"] ;",
-            escape_label(&edge.from),
-            escape_label(&edge.to),
-            escape_label(&edge.relation)
-        ));
-    }
-    lines.push("}".to_string());
-    lines.join("\n")
-}
-
-pub(crate) fn render_impact_text(document: &ImpactDocument) -> String {
-    let mut lines = vec![format!(
-        "Datasource impact: {} dashboards={} alert-resources={} alert-rules={} contact-points={} mute-timings={} notification-policies={} templates={}",
-        document.summary.datasource_uid,
-        document.summary.dashboard_count,
-        document.summary.alert_resource_count,
-        document.summary.alert_rule_count,
-        document.summary.contact_point_count,
-        document.summary.mute_timing_count,
-        document.summary.notification_policy_count,
-        document.summary.template_count
-    )];
-    if !document.dashboards.is_empty() {
-        lines.push("Dashboards:".to_string());
-        for dashboard in &document.dashboards {
-            lines.push(format!(
-                "  {} ({}) panels={} queries={}",
-                dashboard.dashboard_uid,
-                dashboard.folder_path,
-                dashboard.panel_count,
-                dashboard.query_count
-            ));
-        }
-    }
-    if !document.alert_resources.is_empty() {
-        lines.push("Alert resources:".to_string());
-        for resource in &document.alert_resources {
-            lines.push(format!(
-                "  {}:{} {}",
-                resource.kind, resource.identity, resource.title
-            ));
-        }
-    }
-    if !document.affected_contact_points.is_empty() {
-        lines.push("Affected contact points:".to_string());
-        for resource in &document.affected_contact_points {
-            lines.push(format!(
-                "  {}:{} {}",
-                resource.kind, resource.identity, resource.title
-            ));
-        }
-    }
-    if !document.affected_policies.is_empty() {
-        lines.push("Affected policies:".to_string());
-        for resource in &document.affected_policies {
-            lines.push(format!(
-                "  {}:{} {}",
-                resource.kind, resource.identity, resource.title
-            ));
-        }
-    }
-    if !document.affected_templates.is_empty() {
-        lines.push("Affected templates:".to_string());
-        for resource in &document.affected_templates {
-            lines.push(format!(
-                "  {}:{} {}",
-                resource.kind, resource.identity, resource.title
-            ));
-        }
-    }
-    lines.join("\n")
-}
-
-#[cfg(test)]
-fn build_impact_summary_lines(document: &ImpactDocument) -> Vec<String> {
-    vec![
-        format!(
-            "Datasource {} impact: dashboards={}; alert assets={} (alert rules={}, contact points={}, policies={}, templates={}, mute timings={}).",
-            document.summary.datasource_uid,
-            document.summary.dashboard_count,
-            document.summary.alert_resource_count,
-            document.summary.alert_rule_count,
-            document.summary.contact_point_count,
-            document.summary.notification_policy_count,
-            document.summary.template_count,
-            document.summary.mute_timing_count
-        ),
-        "Blast radius first: inspect dashboards, then follow alert rules into routing assets."
-            .to_string(),
-    ]
 }
 
 #[cfg(test)]
@@ -327,7 +161,7 @@ fn build_impact_interactive_summary(document: &ImpactDocument) -> Vec<String> {
 }
 
 pub(crate) fn run_dashboard_topology(args: &TopologyArgs) -> Result<()> {
-    let artifacts = resolve_dashboard_analysis_artifacts(&DashboardAnalysisSourceArgs {
+    let artifacts = resolve_dashboard_review_artifacts(&DashboardReviewSourceArgs {
         common: &args.common,
         page_size: args.page_size,
         org_id: args.org_id,
@@ -397,7 +231,7 @@ pub(crate) fn run_dashboard_topology(args: &TopologyArgs) -> Result<()> {
 }
 
 pub(crate) fn run_dashboard_impact(args: &ImpactArgs) -> Result<()> {
-    let artifacts = resolve_dashboard_analysis_artifacts(&DashboardAnalysisSourceArgs {
+    let artifacts = resolve_dashboard_review_artifacts(&DashboardReviewSourceArgs {
         common: &args.common,
         page_size: args.page_size,
         org_id: args.org_id,
@@ -534,10 +368,10 @@ mod tests {
     use std::fs;
     use tempfile::tempdir;
 
-    use super::super::analysis_source::{
-        resolve_dashboard_analysis_artifacts, DashboardAnalysisSourceArgs,
-    };
     use super::super::cli_defs::{CommonCliArgs, InspectExportInputType};
+    use super::super::review_source::{
+        resolve_dashboard_review_artifacts, DashboardReviewSourceArgs,
+    };
 
     fn make_common_args() -> CommonCliArgs {
         CommonCliArgs {
@@ -847,7 +681,7 @@ mod tests {
         let raw_dir = repo_root.join("dashboards/git-sync/raw/org_1/raw");
         write_basic_git_sync_raw_export(&raw_dir);
 
-        let artifacts = resolve_dashboard_analysis_artifacts(&DashboardAnalysisSourceArgs {
+        let artifacts = resolve_dashboard_review_artifacts(&DashboardReviewSourceArgs {
             common: &make_common_args(),
             page_size: 100,
             org_id: None,

@@ -937,11 +937,11 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <section class="command-intro">
   <div class="command-intro-grid"><div class="command-intro-block">
   <p class="command-intro-label">What this page covers</p>
-  <p class="command-intro-text">Evaluate governance policy directly against live Grafana or a local export tree, with saved analysis artifacts as an advanced reuse path.</p>
+  <p class="command-intro-text">Evaluate governance policy directly against live Grafana or a local export tree, with saved review artifacts as an advanced reuse path.</p>
 </div>
 <div class="command-intro-block">
   <p class="command-intro-label">When to open this page</p>
-  <ul class="command-intro-list"><li>Use this when you want a policy pass or fail result before promotion. Prefer direct live or local analysis inputs for the common path; keep governance-json and queries-json for advanced reuse and CI pipelines.</li></ul>
+  <ul class="command-intro-list"><li>Use this when you want a policy pass or fail result before promotion. Prefer direct live or local review inputs for the common path; keep governance-json and queries-json for advanced reuse and CI pipelines.</li></ul>
 </div>
 <div class="command-intro-block">
   <p class="command-intro-label">Who this page is for</p>
@@ -950,9 +950,9 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 </div>
 </section>
 <h2 id="purpose">Purpose</h2>
-<p>Evaluate governance policy directly against live Grafana or a local export tree, with saved analysis artifacts as an advanced reuse path.</p>
+<p>Evaluate governance policy directly against live Grafana or a local export tree, with saved review artifacts as an advanced reuse path.</p>
 <h2 id="when-to-use">When to use</h2>
-<p>Use this when you want a policy pass or fail result before promotion. Prefer direct live or local analysis inputs for the common path; keep <code>governance-json</code> and <code>queries-json</code> for advanced reuse and CI pipelines.</p>
+<p>Use this when you want a policy pass or fail result before promotion. Prefer direct live or local review inputs for the common path; keep <code>governance-json</code> and <code>queries-json</code> for advanced reuse and CI pipelines.</p>
 <h2 id="before-after">Before / After</h2>
 <ul><li><strong>Before</strong>: teams can export dashboards and inspect them, but policy violations still need a human to spot them one by one.</li><li><strong>After</strong>: policy turns those artifacts into an explicit pass/fail decision with machine-readable findings for CI or review.</li></ul>
 <h2 id="key-flags">Key flags</h2>
@@ -964,7 +964,7 @@ grafana-util dashboard policy --url http://localhost:3000 --basic-user admin --b
 grafana-util dashboard policy --input-dir ./dashboards/raw --input-format raw --policy-source builtin --builtin-policy default --output-format json --json-output ./governance-check.json</code></pre>
 <pre><code># Evaluate governance policy against a repo-backed Git Sync dashboard tree.
 grafana-util dashboard policy --input-dir ./grafana-oac-repo --input-format git-sync --policy-source builtin --builtin-policy default --output-format json --json-output ./governance-check.json</code></pre>
-<pre><code># Advanced reuse: evaluate governance policy against reusable analysis artifacts.
+<pre><code># Advanced reuse: evaluate governance policy against reusable review artifacts.
 grafana-util dashboard policy --policy-source builtin --builtin-policy default --governance ./governance.json --queries ./queries.json --output-format json --json-output ./governance-check.json</code></pre>
 <h2 id="what-success-looks-like">What success looks like</h2>
 <ul><li>policy checks fail before promotion, not after a dashboard lands in the wrong environment</li><li>text output is readable enough for manual review, while JSON output is stable enough for CI gates</li><li>the same artifacts can be rechecked after a policy workspace without rerunning export or inspect from scratch</li></ul>

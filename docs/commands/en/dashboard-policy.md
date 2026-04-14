@@ -1,10 +1,10 @@
 # dashboard policy
 
 ## Purpose
-Evaluate governance policy directly against live Grafana or a local export tree, with saved analysis artifacts as an advanced reuse path.
+Evaluate governance policy directly against live Grafana or a local export tree, with saved review artifacts as an advanced reuse path.
 
 ## When to use
-Use this when you want a policy pass or fail result before promotion. Prefer direct live or local analysis inputs for the common path; keep `governance-json` and `queries-json` for advanced reuse and CI pipelines.
+Use this when you want a policy pass or fail result before promotion. Prefer direct live or local review inputs for the common path; keep `governance-json` and `queries-json` for advanced reuse and CI pipelines.
 
 ## Before / After
 
@@ -41,7 +41,7 @@ grafana-util dashboard policy --input-dir ./grafana-oac-repo --input-format git-
 ```
 
 ```bash
-# Advanced reuse: evaluate governance policy against reusable analysis artifacts.
+# Advanced reuse: evaluate governance policy against reusable review artifacts.
 grafana-util dashboard policy --policy-source builtin --builtin-policy default --governance ./governance.json --queries ./queries.json --output-format json --json-output ./governance-check.json
 ```
 

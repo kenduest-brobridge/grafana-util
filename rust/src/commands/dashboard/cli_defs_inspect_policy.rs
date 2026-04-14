@@ -17,7 +17,7 @@ pub struct GovernanceGateArgs {
     #[arg(
         long,
         default_value_t = DEFAULT_PAGE_SIZE,
-        help = "Dashboard search page size when policy stages live analysis artifacts."
+        help = "Dashboard search page size when policy stages live review artifacts."
     )]
     pub page_size: usize,
     #[arg(
@@ -109,7 +109,7 @@ pub struct TopologyArgs {
     #[arg(
         long,
         default_value_t = DEFAULT_PAGE_SIZE,
-        help = "Dashboard search page size when dependencies stages live analysis artifacts."
+        help = "Dashboard search page size when dependencies stages live review artifacts."
     )]
     pub page_size: usize,
     #[arg(
@@ -195,7 +195,7 @@ pub struct ImpactArgs {
     #[arg(
         long,
         default_value_t = DEFAULT_PAGE_SIZE,
-        help = "Dashboard search page size when impact stages live analysis artifacts."
+        help = "Dashboard search page size when impact stages live review artifacts."
     )]
     pub page_size: usize,
     #[arg(

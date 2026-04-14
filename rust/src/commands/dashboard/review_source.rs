@@ -1,4 +1,4 @@
-//! Shared source resolution for dashboard analysis commands.
+//! Shared source resolution for dashboard review commands.
 
 use serde_json::Value;
 use std::path::Path;
@@ -19,13 +19,41 @@ use super::source_loader::load_dashboard_source;
 use super::ExportArgs;
 
 #[derive(Debug)]
-pub(crate) struct DashboardAnalysisArtifacts {
+pub(crate) struct DashboardReviewArtifacts {
     pub(crate) governance: Value,
     pub(crate) queries: Value,
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct DashboardAnalysisSourceArgs<'a> {
+pub(crate) enum DashboardReviewSource<'a> {
+    ExportTree(DashboardExportTreeSource<'a>),
+    SavedArtifacts(DashboardSavedArtifactsSource<'a>),
+    Live(DashboardLiveReviewSource<'a>),
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct DashboardExportTreeSource<'a> {
+    pub(crate) input_dir: &'a Path,
+    pub(crate) input_format: DashboardImportInputFormat,
+    pub(crate) input_type: Option<InspectExportInputType>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct DashboardSavedArtifactsSource<'a> {
+    pub(crate) governance: &'a Path,
+    pub(crate) queries: Option<&'a Path>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct DashboardLiveReviewSource<'a> {
+    pub(crate) common: &'a CommonCliArgs,
+    pub(crate) page_size: usize,
+    pub(crate) org_id: Option<i64>,
+    pub(crate) all_orgs: bool,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct DashboardReviewSourceArgs<'a> {
     pub(crate) common: &'a CommonCliArgs,
     pub(crate) page_size: usize,
     pub(crate) org_id: Option<i64>,
@@ -46,7 +74,7 @@ fn build_artifacts_from_export_dir(
     input_dir: &Path,
     input_format: DashboardImportInputFormat,
     input_type: Option<InspectExportInputType>,
-) -> Result<DashboardAnalysisArtifacts> {
+) -> Result<DashboardReviewArtifacts> {
     let resolved = load_dashboard_source(input_dir, input_format, input_type, false)?;
     let summary = build_export_inspection_summary_for_variant(
         &resolved.input_dir,
@@ -56,7 +84,7 @@ fn build_artifacts_from_export_dir(
         &resolved.input_dir,
         resolved.expected_variant,
     )?;
-    Ok(DashboardAnalysisArtifacts {
+    Ok(DashboardReviewArtifacts {
         governance: serde_json::to_value(build_export_inspection_governance_document(
             &summary, &report,
         ))?,
@@ -65,9 +93,9 @@ fn build_artifacts_from_export_dir(
 }
 
 fn build_artifacts_from_live(
-    source: &DashboardAnalysisSourceArgs<'_>,
-) -> Result<DashboardAnalysisArtifacts> {
-    let temp_dir = TempInspectDir::new("dashboard-analysis-live")?;
+    source: &DashboardLiveReviewSource<'_>,
+) -> Result<DashboardReviewArtifacts> {
+    let temp_dir = TempInspectDir::new("dashboard-review-live")?;
     let export_args: ExportArgs = build_analysis_live_export_args(
         source.common,
         temp_dir.path.clone(),
@@ -84,39 +112,75 @@ fn build_artifacts_from_live(
     )
 }
 
-pub(crate) fn resolve_dashboard_analysis_artifacts(
-    source: &DashboardAnalysisSourceArgs<'_>,
-) -> Result<DashboardAnalysisArtifacts> {
+fn build_artifacts_from_saved(
+    source: &DashboardSavedArtifactsSource<'_>,
+) -> Result<DashboardReviewArtifacts> {
+    let governance = load_object(source.governance, "Dashboard governance JSON")?;
+    let queries = match source.queries {
+        Some(path) => load_object(path, "Dashboard query report JSON")?,
+        None => Value::Null,
+    };
+    Ok(DashboardReviewArtifacts {
+        governance,
+        queries,
+    })
+}
+
+pub(crate) fn resolve_dashboard_review_source<'a>(
+    source: &DashboardReviewSourceArgs<'a>,
+) -> Result<DashboardReviewSource<'a>> {
     if let Some(input_dir) = source.input_dir {
         if source.governance.is_some() || source.queries.is_some() {
             return Err(message(
                 "--input-dir cannot be combined with --governance or --queries.",
             ));
         }
-        return build_artifacts_from_export_dir(input_dir, source.input_format, source.input_type);
+        return Ok(DashboardReviewSource::ExportTree(
+            DashboardExportTreeSource {
+                input_dir,
+                input_format: source.input_format,
+                input_type: source.input_type,
+            },
+        ));
     }
 
     if source.governance.is_some() || source.queries.is_some() {
         let governance_path = source.governance.ok_or_else(|| {
-            message("--governance is required when reusing saved analysis artifacts.")
+            message("--governance is required when reusing saved dashboard review artifacts.")
         })?;
         if source.require_queries && source.queries.is_none() {
             return Err(message(
-                "--queries is required when reusing saved analysis artifacts for policy.",
+                "--queries is required when reusing saved dashboard review artifacts for policy.",
             ));
         }
-        let governance = load_object(governance_path, "Dashboard governance JSON")?;
-        let queries = match source.queries {
-            Some(path) => load_object(path, "Dashboard query report JSON")?,
-            None => Value::Null,
-        };
-        return Ok(DashboardAnalysisArtifacts {
-            governance,
-            queries,
-        });
+        return Ok(DashboardReviewSource::SavedArtifacts(
+            DashboardSavedArtifactsSource {
+                governance: governance_path,
+                queries: source.queries,
+            },
+        ));
     }
 
-    build_artifacts_from_live(source)
+    Ok(DashboardReviewSource::Live(DashboardLiveReviewSource {
+        common: source.common,
+        page_size: source.page_size,
+        org_id: source.org_id,
+        all_orgs: source.all_orgs,
+    }))
+}
+
+pub(crate) fn resolve_dashboard_review_artifacts(
+    source: &DashboardReviewSourceArgs<'_>,
+) -> Result<DashboardReviewArtifacts> {
+    match resolve_dashboard_review_source(source)? {
+        DashboardReviewSource::ExportTree(export_tree) => build_artifacts_from_export_dir(
+            export_tree.input_dir,
+            export_tree.input_format,
+            export_tree.input_type,
+        ),
+        DashboardReviewSource::SavedArtifacts(saved) => build_artifacts_from_saved(&saved),
+        DashboardReviewSource::Live(live) => build_artifacts_from_live(&live),
+    }
 }
 
 #[cfg(test)]
@@ -247,13 +311,13 @@ mod tests {
     }
 
     #[test]
-    fn resolve_dashboard_analysis_artifacts_from_import_dir_builds_documents() {
+    fn resolve_dashboard_review_artifacts_from_import_dir_builds_documents() {
         let temp = tempdir().unwrap();
         let raw_dir = temp.path().join("raw");
         write_basic_raw_export(&raw_dir, "cpu-main", "CPU Main", "prom-main");
         let common = make_common_args();
 
-        let artifacts = resolve_dashboard_analysis_artifacts(&DashboardAnalysisSourceArgs {
+        let artifacts = resolve_dashboard_review_artifacts(&DashboardReviewSourceArgs {
             common: &common,
             page_size: 500,
             org_id: None,
@@ -276,7 +340,121 @@ mod tests {
     }
 
     #[test]
-    fn resolve_dashboard_analysis_artifacts_supports_git_sync_repo_layout() {
+    fn resolve_dashboard_review_source_classifies_export_tree_inputs() {
+        let temp = tempdir().unwrap();
+        let raw_dir = temp.path().join("raw");
+        let common = make_common_args();
+
+        let source = resolve_dashboard_review_source(&DashboardReviewSourceArgs {
+            common: &common,
+            page_size: 500,
+            org_id: None,
+            all_orgs: false,
+            input_dir: Some(&raw_dir),
+            input_format: DashboardImportInputFormat::Raw,
+            input_type: Some(InspectExportInputType::Raw),
+            governance: None,
+            queries: None,
+            require_queries: false,
+        })
+        .unwrap();
+
+        match source {
+            DashboardReviewSource::ExportTree(export_tree) => {
+                assert_eq!(export_tree.input_dir, raw_dir.as_path());
+                assert_eq!(export_tree.input_format, DashboardImportInputFormat::Raw);
+                assert_eq!(export_tree.input_type, Some(InspectExportInputType::Raw));
+            }
+            _ => panic!("expected export tree source"),
+        }
+    }
+
+    #[test]
+    fn resolve_dashboard_review_source_rejects_mixed_export_and_saved_artifact_inputs() {
+        let temp = tempdir().unwrap();
+        let raw_dir = temp.path().join("raw");
+        let governance_path = temp.path().join("governance.json");
+        let common = make_common_args();
+
+        let error = resolve_dashboard_review_source(&DashboardReviewSourceArgs {
+            common: &common,
+            page_size: 500,
+            org_id: None,
+            all_orgs: false,
+            input_dir: Some(&raw_dir),
+            input_format: DashboardImportInputFormat::Raw,
+            input_type: Some(InspectExportInputType::Raw),
+            governance: Some(&governance_path),
+            queries: None,
+            require_queries: false,
+        })
+        .unwrap_err();
+
+        assert!(error
+            .to_string()
+            .contains("--input-dir cannot be combined with --governance or --queries"));
+    }
+
+    #[test]
+    fn resolve_dashboard_review_source_classifies_saved_artifacts_without_query_report() {
+        let temp = tempdir().unwrap();
+        let governance_path = temp.path().join("governance.json");
+        let common = make_common_args();
+
+        let source = resolve_dashboard_review_source(&DashboardReviewSourceArgs {
+            common: &common,
+            page_size: 500,
+            org_id: None,
+            all_orgs: false,
+            input_dir: None,
+            input_format: DashboardImportInputFormat::Raw,
+            input_type: None,
+            governance: Some(&governance_path),
+            queries: None,
+            require_queries: false,
+        })
+        .unwrap();
+
+        match source {
+            DashboardReviewSource::SavedArtifacts(saved) => {
+                assert_eq!(saved.governance, governance_path.as_path());
+                assert!(saved.queries.is_none());
+            }
+            _ => panic!("expected saved artifact source"),
+        }
+    }
+
+    #[test]
+    fn resolve_dashboard_review_source_classifies_live_inputs_when_no_files_are_given() {
+        let common = make_common_args();
+
+        let source = resolve_dashboard_review_source(&DashboardReviewSourceArgs {
+            common: &common,
+            page_size: 250,
+            org_id: Some(7),
+            all_orgs: true,
+            input_dir: None,
+            input_format: DashboardImportInputFormat::Raw,
+            input_type: None,
+            governance: None,
+            queries: None,
+            require_queries: false,
+        })
+        .unwrap();
+
+        match source {
+            DashboardReviewSource::Live(live) => {
+                assert_eq!(live.page_size, 250);
+                assert_eq!(live.org_id, Some(7));
+                assert!(live.all_orgs);
+                assert_eq!(live.common.url, "http://127.0.0.1:3000");
+            }
+            _ => panic!("expected live source"),
+        }
+    }
+
+    #[test]
+    fn resolve_dashboard_review_artifacts_supports_git_sync_repo_layout() {
         let temp = tempdir().unwrap();
         let repo_root = temp.path();
         fs::create_dir_all(repo_root.join(".git")).unwrap();
@@ -284,7 +462,7 @@ mod tests {
         write_basic_raw_export(&raw_dir, "cpu-main", "CPU Main", "prom-main");
         let common = make_common_args();
 
-        let artifacts = resolve_dashboard_analysis_artifacts(&DashboardAnalysisSourceArgs {
+        let artifacts = resolve_dashboard_review_artifacts(&DashboardReviewSourceArgs {
             common: &common,
             page_size: 500,
             org_id: None,
@@ -307,7 +485,7 @@ mod tests {
     }
 
     #[test]
-    fn resolve_dashboard_analysis_artifacts_requires_queries_for_gate_artifacts() {
+    fn resolve_dashboard_review_artifacts_requires_queries_for_gate_artifacts() {
         let temp = tempdir().unwrap();
         let governance_path = temp.path().join("governance.json");
         fs::write(
@@ -317,7 +495,7 @@ mod tests {
         .unwrap();
         let common = make_common_args();
 
-        let error = resolve_dashboard_analysis_artifacts(&DashboardAnalysisSourceArgs {
+        let error = resolve_dashboard_review_artifacts(&DashboardReviewSourceArgs {
             common: &common,
             page_size: 500,
             org_id: None,
@@ -331,8 +509,8 @@ mod tests {
         })
         .unwrap_err();
 
-        assert!(error
-            .to_string()
-            .contains("--queries is required when reusing saved analysis artifacts for policy"));
+        assert!(error.to_string().contains(
+            "--queries is required when reusing saved dashboard review artifacts for policy"
+        ));
     }
 }
