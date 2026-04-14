@@ -12,6 +12,14 @@ Current AI change log only.
 - Older entries moved to [`ai-changes-archive-2026-04-14.md`](docs/internal/archive/ai-changes-archive-2026-04-14.md).
 - Older entries moved to [`ai-changes-archive-2026-04-15.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-changes-archive-2026-04-15.md).
 
+## 2026-04-15 - Split datasource supported catalog tests
+- Summary: split supported datasource catalog output tests out of `cli_mutation.rs` into `cli_mutation_supported_catalog.rs`. The parent module remains focused on command help, parser compatibility, and add-payload behavior.
+- Tests: preserved existing supported catalog assertions for JSON fixture projection, profile metadata, family defaults, text, table, csv, and yaml output.
+- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `cargo test --manifest-path rust/Cargo.toml --quiet datasource_`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings`; `make quality-architecture`; `git diff --check`.
+- Impact: `rust/src/commands/datasource/tests/cli_mutation.rs`, `rust/src/commands/datasource/tests/cli_mutation_supported_catalog.rs`, `rust/src/commands/datasource/tests/mod.rs`, and AI trace docs. README files and Python implementation were intentionally left unchanged.
+- Rollback/Risk: low test-only split. Rollback would move supported catalog assertions back into the datasource CLI mutation test module.
+- Follow-up: continue remaining architecture-warning hotspots: dashboard browse support, dashboard dependency contract, datasource staged reading, sync live apply, and help-test semantic assertions.
+
 ## 2026-04-15 - Split datasource tail import and inspect tests
 - Summary: split datasource tail import validation/loader tests and inspect-export/local-source tests into focused sibling modules. The parent tail test module now keeps routed datasource import identity, summary, and export-org routing behavior.
 - Tests: preserved existing datasource import loader, inspect-export renderer, manifest classifier, local-source help, and routed import assertions while moving them into responsibility-based modules.
@@ -83,11 +91,3 @@ Current AI change log only.
 - Impact: `rust/src/lib.rs`, `rust/src/commands/`, `rust/src/cli/`, `rust/src/common/`, `rust/src/grafana/`, `rust/tests/project_status_tui_rust_tests.rs`, `docs/overview-rust.md`, `docs/DEVELOPER.md`, and AI trace docs.
 - Rollback/Risk: behavior-preserving filesystem/module refactor; rollback would move files back to the prior root-prefixed layout and remove the `#[path]` compatibility wiring. Main risk is stale maintainer references or external tooling that assumes old source paths.
 - Follow-up: update any external scripts or editor bookmarks that reference the old root-level Rust paths.
-
-## 2026-04-13 - Add user browse membership removal
-- Summary: made `access user browse` symmetrical with team browse for team membership removal. Expanded user team rows now carry structured `teamRows` data with `teamId` plus display names while keeping the existing `teams` summary string array for rendering/filtering. Pressing `r` or `d` on a team membership row opens a centered `Remove membership` dialog, and pressing `y` deletes `/api/teams/{team_id}/members/{user_id}` before refreshing the user list back to the parent user. User account delete and team delete/remove previews now render as centered dialogs instead of replacing the facts pane.
-- Tests: added focused Rust coverage for membership remove preview without API calls, confirmation DELETE and refresh behavior, remove dialog copy, plus existing team browse dialog tests.
-- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all`; `cargo test --manifest-path rust/Cargo.toml --quiet user_browse`.
-- Impact: `rust/src/commands/access/user_browse_input.rs`, `rust/src/commands/access/user_browse_state.rs`, `rust/src/commands/access/user_browse_render.rs`, `rust/src/commands/access/user_browse_dialog.rs`, team browse dialog/render follow-up files, and AI trace docs.
-- Rollback/Risk: medium TUI mutation change. Rollback would keep membership removal team-first only and restore right-pane delete previews. The main risk is Grafana team-list responses that omit team ids; those rows remain visible but removal errors with a missing-id message instead of guessing by name.
-- Follow-up: consider resolving missing team ids by exact team-name lookup only if real Grafana versions produce name-only user-team rows.

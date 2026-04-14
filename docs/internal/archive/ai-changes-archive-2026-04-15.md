@@ -47,3 +47,11 @@
 - Impact: `rust/src/commands/access/team_browse_input.rs`, `rust/src/commands/access/team_browse_render.rs`, `rust/src/commands/access/team_browse_dialog.rs`, `rust/src/commands/access/team_browse_state.rs`, and AI trace docs.
 - Rollback/Risk: medium TUI mutation change. Rollback would remove direct member-row relationship operations and return team browse to team-row-only editing. The new actions reuse existing team modify helpers, so API risk is mainly around operator expectation for immediate live relationship changes.
 - Follow-up: consider whether team-admin toggle should also ask for confirmation in high-risk environments.
+
+## 2026-04-13 - Add user browse membership removal
+- Summary: made `access user browse` symmetrical with team browse for team membership removal. Expanded user team rows now carry structured `teamRows` data with `teamId` plus display names while keeping the existing `teams` summary string array for rendering/filtering. Pressing `r` or `d` on a team membership row opens a centered `Remove membership` dialog, and pressing `y` deletes `/api/teams/{team_id}/members/{user_id}` before refreshing the user list back to the parent user. User account delete and team delete/remove previews now render as centered dialogs instead of replacing the facts pane.
+- Tests: added focused Rust coverage for membership remove preview without API calls, confirmation DELETE and refresh behavior, remove dialog copy, plus existing team browse dialog tests.
+- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all`; `cargo test --manifest-path rust/Cargo.toml --quiet user_browse`.
+- Impact: `rust/src/commands/access/user_browse_input.rs`, `rust/src/commands/access/user_browse_state.rs`, `rust/src/commands/access/user_browse_render.rs`, `rust/src/commands/access/user_browse_dialog.rs`, team browse dialog/render follow-up files, and AI trace docs.
+- Rollback/Risk: medium TUI mutation change. Rollback would keep membership removal team-first only and restore right-pane delete previews. The main risk is Grafana team-list responses that omit team ids; those rows remain visible but removal errors with a missing-id message instead of guessing by name.
+- Follow-up: consider resolving missing team ids by exact team-name lookup only if real Grafana versions produce name-only user-team rows.
