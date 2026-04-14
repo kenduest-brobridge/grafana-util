@@ -1,0 +1,215 @@
+{
+  "kind": "grafana-utils-dashboard-summary-governance",
+  "schemaVersion": 1,
+  "summary": {
+    "dashboardCount": 1,
+    "queryRecordCount": 2,
+    "datasourceInventoryCount": 1,
+    "datasourceFamilyCount": 1,
+    "datasourceCoverageCount": 1,
+    "dashboardDatasourceEdgeCount": 1,
+    "datasourceRiskCoverageCount": 0,
+    "highBlastRadiusDatasourceCount": 0,
+    "dashboardRiskCoverageCount": 0,
+    "mixedDatasourceDashboardCount": 0,
+    "orphanedDatasourceCount": 0,
+    "riskRecordCount": 0,
+    "queryAuditCount": 1,
+    "dashboardAuditCount": 1
+  },
+  "datasourceFamilies": [
+    {
+      "family": "prometheus",
+      "datasourceTypes": [
+        "prometheus"
+      ],
+      "datasourceCount": 1,
+      "orphanedDatasourceCount": 0,
+      "dashboardCount": 1,
+      "panelCount": 2,
+      "queryCount": 2
+    }
+  ],
+  "dashboardDependencies": [
+    {
+      "dashboardUid": "core-main",
+      "dashboardTitle": "Core Main",
+      "folderPath": "General",
+      "file": "dashboards/core-main.json",
+      "panelCount": 2,
+      "queryCount": 2,
+      "datasourceCount": 1,
+      "datasourceFamilyCount": 1,
+      "panelIds": [
+        "7",
+        "8"
+      ],
+      "datasources": [
+        "Prometheus Main"
+      ],
+      "datasourceFamilies": [
+        "prometheus"
+      ],
+      "queryFields": [
+        "expr"
+      ],
+      "panelVariables": [
+        "job"
+      ],
+      "queryVariables": [
+        "job"
+      ],
+      "metrics": [
+        "http_requests_total"
+      ],
+      "functions": [
+        "rate",
+        "sum"
+      ],
+      "measurements": [
+        "job=\"grafana\""
+      ],
+      "buckets": [
+        "5m"
+      ]
+    }
+  ],
+  "dashboardGovernance": [
+    {
+      "dashboardUid": "core-main",
+      "dashboardTitle": "Core Main",
+      "folderPath": "General",
+      "panelCount": 2,
+      "queryCount": 2,
+      "datasourceCount": 1,
+      "datasourceFamilyCount": 1,
+      "datasources": [
+        "Prometheus Main"
+      ],
+      "datasourceFamilies": [
+        "prometheus"
+      ],
+      "mixedDatasource": false,
+      "riskCount": 0,
+      "riskKinds": []
+    }
+  ],
+  "dashboardDatasourceEdges": [
+    {
+      "dashboardUid": "core-main",
+      "dashboardTitle": "Core Main",
+      "folderPath": "General",
+      "datasourceUid": "prom-main",
+      "datasource": "Prometheus Main",
+      "datasourceType": "prometheus",
+      "family": "prometheus",
+      "panelCount": 2,
+      "queryCount": 2,
+      "queryFields": [
+        "expr"
+      ],
+      "queryVariables": [
+        "job"
+      ],
+      "metrics": [
+        "http_requests_total"
+      ],
+      "functions": [
+        "rate"
+      ],
+      "measurements": [
+        "job=\"grafana\""
+      ],
+      "buckets": [
+        "5m"
+      ]
+    }
+  ],
+  "datasourceGovernance": [
+    {
+      "datasourceUid": "prom-main",
+      "datasource": "Prometheus Main",
+      "family": "prometheus",
+      "queryCount": 2,
+      "dashboardCount": 1,
+      "panelCount": 2,
+      "mixedDashboardCount": 0,
+      "riskCount": 0,
+      "riskKinds": [],
+      "folderCount": 1,
+      "highBlastRadius": false,
+      "crossFolder": false,
+      "folderPaths": [
+        "General"
+      ],
+      "dashboardUids": [
+        "core-main"
+      ],
+      "dashboardTitles": [
+        "Core Main"
+      ],
+      "orphaned": false
+    }
+  ],
+  "datasources": [
+    {
+      "datasourceUid": "prom-main",
+      "datasource": "Prometheus Main",
+      "family": "prometheus",
+      "queryCount": 2,
+      "dashboardCount": 1,
+      "panelCount": 2,
+      "dashboardUids": [
+        "core-main"
+      ],
+      "queryFields": [
+        "expr"
+      ],
+      "orphaned": false
+    }
+  ],
+  "riskRecords": [],
+  "queryAudits": [
+    {
+      "dashboardUid": "core-main",
+      "dashboardTitle": "Core Main",
+      "folderPath": "General",
+      "panelId": "7",
+      "panelTitle": "Errors",
+      "refId": "A",
+      "datasource": "Prometheus Main",
+      "datasourceUid": "prom-main",
+      "datasourceFamily": "prometheus",
+      "aggregationDepth": 1,
+      "regexMatcherCount": 0,
+      "estimatedSeriesRisk": "low",
+      "queryCostScore": 2,
+      "score": 2,
+      "severity": "low",
+      "reasons": [
+        "simple-prometheus-query"
+      ],
+      "recommendations": [
+        "keep query scope narrow"
+      ]
+    }
+  ],
+  "dashboardAudits": [
+    {
+      "dashboardUid": "core-main",
+      "dashboardTitle": "Core Main",
+      "folderPath": "General",
+      "panelCount": 2,
+      "queryCount": 2,
+      "refreshIntervalSeconds": 60,
+      "score": 1,
+      "severity": "low",
+      "reasons": [
+        "balanced query load"
+      ],
+      "recommendations": [
+        "review on the normal cadence"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,80 @@
+{
+  "kind": "grafana-utils-dashboard-policy-gate",
+  "schemaVersion": 1,
+  "ok": false,
+  "summary": {
+    "dashboardCount": 1,
+    "queryRecordCount": 2,
+    "violationCount": 1,
+    "warningCount": 1,
+    "checkedRules": {
+      "datasourceAllowedFamilies": [
+        "prometheus"
+      ],
+      "datasourceAllowedUids": [
+        "prom-main"
+      ],
+      "allowedFolderPrefixes": [
+        "General"
+      ],
+      "forbidUnknown": false,
+      "forbidHighBlastRadius": false,
+      "forbidMixedFamilies": false,
+      "forbidSelectStar": false,
+      "requireSqlTimeFilter": false,
+      "forbidBroadLokiRegex": false,
+      "forbidBroadPrometheusSelectors": false,
+      "forbidRegexHeavyPrometheus": false,
+      "forbidHighCardinalityRegex": false,
+      "maxPrometheusRangeWindowSeconds": null,
+      "maxPrometheusAggregationDepth": null,
+      "maxPrometheusCostScore": null,
+      "forbidUnscopedLokiSearch": false,
+      "maxPanelsPerDashboard": 50,
+      "minRefreshIntervalSeconds": 30,
+      "maxAuditScore": 10,
+      "maxReasonCount": 3,
+      "blockReasons": [
+        "maxQueriesPerDashboard"
+      ],
+      "maxDashboardLoadScore": 12,
+      "maxQueryComplexityScore": 5,
+      "maxDashboardComplexityScore": 15,
+      "maxQueriesPerDashboard": 40,
+      "maxQueriesPerPanel": 8,
+      "failOnWarnings": true
+    }
+  },
+  "violations": [
+    {
+      "severity": "error",
+      "code": "max-queries-per-dashboard",
+      "message": "Dashboard query count 2 exceeds policy maxQueriesPerDashboard=1.",
+      "dashboardUid": "core-main",
+      "dashboardTitle": "Core Main",
+      "panelId": "",
+      "panelTitle": "",
+      "refId": "",
+      "datasource": "",
+      "datasourceUid": "",
+      "datasourceFamily": "",
+      "riskKind": ""
+    }
+  ],
+  "warnings": [
+    {
+      "severity": "warning",
+      "code": "broad-loki-selector",
+      "message": "Narrow the Loki stream selector.",
+      "dashboardUid": "core-main",
+      "dashboardTitle": "Core Main",
+      "panelId": "7",
+      "panelTitle": "Errors",
+      "refId": "A",
+      "datasource": "Logs Main",
+      "datasourceUid": "loki-main",
+      "datasourceFamily": "loki",
+      "riskKind": "broad-loki-selector"
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "kind": "grafana-utils-dashboard-dependencies-topology",
+  "schemaVersion": 1,
+  "summary": {
+    "nodeCount": 4,
+    "edgeCount": 3,
+    "datasourceCount": 1,
+    "dashboardCount": 1,
+    "panelCount": 1,
+    "variableCount": 1,
+    "alertResourceCount": 0,
+    "alertRuleCount": 0,
+    "contactPointCount": 0,
+    "muteTimingCount": 0,
+    "notificationPolicyCount": 0,
+    "templateCount": 0
+  },
+  "nodes": [
+    {
+      "id": "datasource:prom-main",
+      "kind": "datasource",
+      "label": "Prometheus Main"
+    },
+    {
+      "id": "dashboard:core-main",
+      "kind": "dashboard",
+      "label": "Core Main"
+    },
+    {
+      "id": "panel:core-main:7",
+      "kind": "panel",
+      "label": "Panel 7"
+    },
+    {
+      "id": "variable:core-main:job",
+      "kind": "variable",
+      "label": "job"
+    }
+  ],
+  "edges": [
+    {
+      "from": "datasource:prom-main",
+      "to": "dashboard:core-main",
+      "relation": "feeds"
+    },
+    {
+      "from": "panel:core-main:7",
+      "to": "dashboard:core-main",
+      "relation": "belongs-to"
+    },
+    {
+      "from": "variable:core-main:job",
+      "to": "panel:core-main:7",
+      "relation": "used-by"
+    }
+  ]
+}

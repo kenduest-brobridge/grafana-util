@@ -72,6 +72,69 @@
       "forbiddenFields": [
         "secureJsonData"
       ]
+    },
+    {
+      "name": "dashboard-summary-governance",
+      "kind": "grafana-utils-dashboard-summary-governance",
+      "schemaVersion": 1,
+      "fixture": "output-fixtures/dashboard-summary-governance.json",
+      "requiredFields": [
+        "kind",
+        "schemaVersion",
+        "summary",
+        "datasourceFamilies",
+        "dashboardDependencies",
+        "dashboardGovernance",
+        "dashboardDatasourceEdges",
+        "datasourceGovernance",
+        "datasources",
+        "riskRecords",
+        "queryAudits",
+        "dashboardAudits"
+      ]
+    },
+    {
+      "name": "dashboard-dependencies-topology",
+      "kind": "grafana-utils-dashboard-dependencies-topology",
+      "schemaVersion": 1,
+      "fixture": "output-fixtures/dashboard-dependencies-topology.json",
+      "requiredFields": [
+        "kind",
+        "schemaVersion",
+        "summary",
+        "nodes",
+        "edges"
+      ]
+    },
+    {
+      "name": "dashboard-impact",
+      "kind": "grafana-utils-dashboard-impact",
+      "schemaVersion": 1,
+      "fixture": "output-fixtures/dashboard-impact.json",
+      "requiredFields": [
+        "kind",
+        "schemaVersion",
+        "summary",
+        "dashboards",
+        "alertResources",
+        "affectedContactPoints",
+        "affectedPolicies",
+        "affectedTemplates"
+      ]
+    },
+    {
+      "name": "dashboard-policy-gate",
+      "kind": "grafana-utils-dashboard-policy-gate",
+      "schemaVersion": 1,
+      "fixture": "output-fixtures/dashboard-policy-gate.json",
+      "requiredFields": [
+        "kind",
+        "schemaVersion",
+        "ok",
+        "summary",
+        "violations",
+        "warnings"
+      ]
     }
   ]
 }

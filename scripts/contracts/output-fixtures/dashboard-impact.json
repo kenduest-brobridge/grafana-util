@@ -1,0 +1,73 @@
+{
+  "kind": "grafana-utils-dashboard-impact",
+  "schemaVersion": 1,
+  "summary": {
+    "datasourceUid": "prom-main",
+    "dashboardCount": 1,
+    "alertResourceCount": 4,
+    "alertRuleCount": 1,
+    "contactPointCount": 1,
+    "muteTimingCount": 0,
+    "notificationPolicyCount": 1,
+    "templateCount": 1
+  },
+  "dashboards": [
+    {
+      "dashboardUid": "core-main",
+      "dashboardTitle": "Core Main",
+      "folderPath": "General",
+      "panelCount": 2,
+      "queryCount": 2
+    }
+  ],
+  "alertResources": [
+    {
+      "kind": "alert-rule",
+      "identity": "cpu-high",
+      "title": "CPU High",
+      "sourcePath": "alerts/rules/cpu-high.json"
+    },
+    {
+      "kind": "contact-point",
+      "identity": "ops-email",
+      "title": "Ops Email",
+      "sourcePath": "alerts/contact-points/ops-email.json"
+    },
+    {
+      "kind": "notification-policy",
+      "identity": "default",
+      "title": "Default Policy",
+      "sourcePath": "alerts/policies/default.json"
+    },
+    {
+      "kind": "template",
+      "identity": "alert-default",
+      "title": "Alert Default",
+      "sourcePath": "alerts/templates/alert-default.json"
+    }
+  ],
+  "affectedContactPoints": [
+    {
+      "kind": "contact-point",
+      "identity": "ops-email",
+      "title": "Ops Email",
+      "sourcePath": "alerts/contact-points/ops-email.json"
+    }
+  ],
+  "affectedPolicies": [
+    {
+      "kind": "notification-policy",
+      "identity": "default",
+      "title": "Default Policy",
+      "sourcePath": "alerts/policies/default.json"
+    }
+  ],
+  "affectedTemplates": [
+    {
+      "kind": "template",
+      "identity": "alert-default",
+      "title": "Alert Default",
+      "sourcePath": "alerts/templates/alert-default.json"
+    }
+  ]
+}
