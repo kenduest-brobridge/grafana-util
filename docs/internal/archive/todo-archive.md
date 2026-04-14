@@ -2,7 +2,9 @@
 
 This file preserves completed and superseded items that previously lived in `TODO.md`.
 
-`TODO.md` should stay focused on active backlog and current constraints.
+`TODO.md` was retired after the active backlog became stale. Current planning
+and architecture guidance lives in the maintained `docs/internal/*.md` files and
+machine-readable contracts under `scripts/contracts/`.
 
 Historical note:
 
