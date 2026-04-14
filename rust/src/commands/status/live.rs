@@ -20,8 +20,9 @@ use crate::datasource_live_project_status::{
 };
 use crate::http::JsonHttpClient;
 use crate::project_status::{
-    build_project_status, status_finding, ProjectDomainStatus, ProjectStatus, ProjectStatusFinding,
-    ProjectStatusFreshness, PROJECT_STATUS_BLOCKED, PROJECT_STATUS_PARTIAL, PROJECT_STATUS_READY,
+    build_project_status, status_finding, ProjectDomainStatus, ProjectDomainStatusReading,
+    ProjectStatus, ProjectStatusFinding, ProjectStatusFreshness, PROJECT_STATUS_BLOCKED,
+    PROJECT_STATUS_PARTIAL, PROJECT_STATUS_READY,
 };
 use crate::project_status_command::{ProjectStatusLiveArgs, PROJECT_STATUS_DOMAIN_COUNT};
 use crate::project_status_freshness::{
@@ -50,15 +51,13 @@ fn build_live_read_failed_domain_status(
     signal_key: &str,
     action: &str,
 ) -> ProjectDomainStatus {
-    ProjectDomainStatus {
+    ProjectDomainStatusReading {
         id: id.to_string(),
         scope: PROJECT_STATUS_LIVE_SCOPE.to_string(),
         mode: mode.to_string(),
         status: PROJECT_STATUS_PARTIAL.to_string(),
         reason_code: PROJECT_STATUS_LIVE_READ_FAILED.to_string(),
         primary_count: 0,
-        blocker_count: 1,
-        warning_count: 0,
         source_kinds: vec![source_kind.to_string()],
         signal_keys: vec![signal_key.to_string()],
         blockers: vec![status_finding(
@@ -70,6 +69,7 @@ fn build_live_read_failed_domain_status(
         next_actions: vec![action.to_string()],
         freshness: ProjectStatusFreshness::default(),
     }
+    .into_domain_status()
 }
 
 fn load_optional_project_status_document_with_metadata(
@@ -289,22 +289,21 @@ fn merge_live_domain_statuses(statuses: Vec<ProjectDomainStatus>) -> Result<Proj
             acc
         });
 
-    Ok(ProjectDomainStatus {
+    Ok(ProjectDomainStatusReading {
         id: aggregate.id.clone(),
         scope: aggregate.scope.clone(),
         mode,
         status: aggregate.status.clone(),
         reason_code,
         primary_count: statuses.iter().map(|status| status.primary_count).sum(),
-        blocker_count: statuses.iter().map(|status| status.blocker_count).sum(),
-        warning_count: statuses.iter().map(|status| status.warning_count).sum(),
         source_kinds,
         signal_keys,
         blockers,
         warnings,
         next_actions,
         freshness,
-    })
+    }
+    .into_domain_status())
 }
 
 fn build_live_multi_org_domain_status_with_orgs<F>(

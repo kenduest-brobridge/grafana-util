@@ -56,6 +56,53 @@ pub struct ProjectDomainStatus {
     pub freshness: ProjectStatusFreshness,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct ProjectDomainStatusReading {
+    pub id: String,
+    pub scope: String,
+    pub mode: String,
+    pub status: String,
+    pub reason_code: String,
+    pub primary_count: usize,
+    pub source_kinds: Vec<String>,
+    pub signal_keys: Vec<String>,
+    pub blockers: Vec<ProjectStatusFinding>,
+    pub warnings: Vec<ProjectStatusFinding>,
+    pub next_actions: Vec<String>,
+    pub freshness: ProjectStatusFreshness,
+}
+
+impl ProjectDomainStatusReading {
+    pub(crate) fn into_domain_status(self) -> ProjectDomainStatus {
+        let blocker_count = self
+            .blockers
+            .iter()
+            .map(|finding| finding.count)
+            .sum::<usize>();
+        let warning_count = self
+            .warnings
+            .iter()
+            .map(|finding| finding.count)
+            .sum::<usize>();
+        ProjectDomainStatus {
+            id: self.id,
+            scope: self.scope,
+            mode: self.mode,
+            status: self.status,
+            reason_code: self.reason_code,
+            primary_count: self.primary_count,
+            blocker_count,
+            warning_count,
+            source_kinds: self.source_kinds,
+            signal_keys: self.signal_keys,
+            blockers: self.blockers,
+            warnings: self.warnings,
+            next_actions: self.next_actions,
+            freshness: self.freshness,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct ProjectStatusOverall {
@@ -332,5 +379,39 @@ pub(crate) fn build_project_status(
         top_blockers: build_project_top_blockers(&domains),
         next_actions: build_project_next_actions(&domains),
         domains,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        status_finding, ProjectDomainStatusReading, ProjectStatusFreshness, PROJECT_STATUS_PARTIAL,
+    };
+
+    #[test]
+    fn project_domain_status_reading_derives_finding_counts() {
+        let status = ProjectDomainStatusReading {
+            id: "dashboard".to_string(),
+            scope: "live".to_string(),
+            mode: "live-dashboard-read".to_string(),
+            status: PROJECT_STATUS_PARTIAL.to_string(),
+            reason_code: "live-read-failed".to_string(),
+            primary_count: 0,
+            source_kinds: vec!["live-dashboard-search".to_string()],
+            signal_keys: vec!["live.dashboardCount".to_string()],
+            blockers: vec![
+                status_finding("live-read-failed", 1, "live.dashboardCount"),
+                status_finding("permission-missing", 2, "live.dashboardVersions"),
+            ],
+            warnings: vec![status_finding("stale", 3, "dashboard-version-history")],
+            next_actions: vec!["restore dashboard search access".to_string()],
+            freshness: ProjectStatusFreshness::default(),
+        }
+        .into_domain_status();
+
+        assert_eq!(status.blocker_count, 3);
+        assert_eq!(status.warning_count, 3);
+        assert_eq!(status.source_kinds, vec!["live-dashboard-search"]);
+        assert_eq!(status.signal_keys, vec!["live.dashboardCount"]);
     }
 }
