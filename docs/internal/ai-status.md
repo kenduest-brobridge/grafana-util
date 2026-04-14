@@ -12,6 +12,13 @@ Current AI-maintained status only.
 - Older entries moved to [`ai-status-archive-2026-04-14.md`](docs/internal/archive/ai-status-archive-2026-04-14.md).
 - Older entries moved to [`ai-status-archive-2026-04-15.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-04-15.md).
 
+## 2026-04-15 - Continue Rust TODO worker pass
+- State: Done
+- Scope: worker-split Rust maintainability cleanup for datasource tail tests, access command tests, dashboard browse workflow tests, datasource staged project status, and sync live apply. README files and Python implementation are out of scope.
+- Baseline: `make quality-architecture` reports remaining warnings for large test modules and several production hotspots. Previous worker pass already split datasource tail diff tests, team browse actions, and status live reading shape.
+- Current Update: Split datasource tail fixture builders, access team tests, dashboard interactive import workflow tests, datasource staged status reading, and sync live-apply result envelope assembly into focused sibling modules.
+- Result: Focused Rust tests, full Rust tests, clippy, formatting, architecture guardrails, and whitespace checks pass. README files and Python implementation were left untouched.
+
 ## 2026-04-15 - Start Rust TODO maintainability pass
 - State: Done
 - Scope: conservative-boundary TODO execution across Rust tests, access TUI input, and status producer model. Python implementation and README files are out of scope.
@@ -46,10 +53,3 @@ Current AI-maintained status only.
 - Baseline: several command families still lived as root-level prefixed files under `rust/src/`, while shared transport/output/TUI helpers also lived as root singletons.
 - Current Update: moved command families under `rust/src/commands/`, moved unified CLI internals under `rust/src/cli/`, split command-agnostic helpers under `rust/src/common/`, and moved Grafana transport/API integration under `rust/src/grafana/`. `lib.rs` keeps the public crate module names stable through explicit `#[path]` declarations.
 - Result: Rust tests and formatting pass; public CLI behavior and docs contracts were not intentionally changed.
-
-## 2026-04-13 - Add user browse membership removal
-- State: Done
-- Scope: access user browser team-membership rows, membership removal confirmation, user browse delete dialog consistency, and focused Rust regressions.
-- Baseline: `access user browse` could expand a user to show team membership rows, but those rows were read-only. Operators had to switch to `access team browse` to remove a user from a team, and the user/team delete previews were still rendered inside the right facts pane instead of as confirmation dialogs.
-- Current Update: expanded user team rows now preserve Grafana team ids, `r` and team-row `d` open a `Remove membership` confirmation dialog, and `y` removes the selected user from that team through `/api/teams/{team_id}/members/{user_id}` before refreshing back to the parent user. User delete and team delete/remove confirmations now render as centered dialogs.
-- Result: team membership removal is available from both team-first and user-first browse flows without deleting the user account or the team.
