@@ -8,6 +8,12 @@ use super::dashboard_cli_parser_help_rust_tests::render_dashboard_subcommand_hel
 use clap::{CommandFactory, Parser};
 use std::path::{Path, PathBuf};
 
+fn assert_help_includes(help: &str, expected: &[&str]) {
+    for text in expected {
+        assert!(help.contains(text), "missing help text: {text}");
+    }
+}
+
 #[test]
 fn parse_cli_supports_summary_through_canonical_summary_command() {
     let args = parse_cli_from([
@@ -517,61 +523,67 @@ fn parse_cli_supports_dashboard_validate_export_git_sync_input_format() {
 fn validate_export_help_mentions_git_sync_input_format() {
     let help = render_dashboard_subcommand_help("validate-export");
 
-    assert!(help.contains("--input-format"));
-    assert!(help.contains("Grafana file-provisioning artifacts"));
-    assert!(help.contains("provisioning/ root or its dashboards/ subdirectory"));
-    assert!(help.contains("git-sync"));
-    assert!(help.contains("Grafana OaC repo root"));
-    assert!(help.contains("Validate a provisioning export root explicitly"));
+    assert_help_includes(
+        &help,
+        &[
+            "--input-format",
+            "Grafana file-provisioning artifacts",
+            "provisioning/ root or its dashboards/ subdirectory",
+            "git-sync",
+            "Grafana OaC repo root",
+            "Validate a provisioning export root explicitly",
+        ],
+    );
 }
 
 #[test]
 fn governance_gate_help_mentions_git_sync_input_format() {
     let help = render_dashboard_subcommand_help("policy");
 
-    assert!(help.contains("git-sync"));
-    assert!(help.contains("repo-backed Git Sync dashboard tree"));
+    assert_help_includes(&help, &["git-sync", "repo-backed Git Sync dashboard tree"]);
 }
 
 #[test]
 fn topology_help_mentions_git_sync_input_format() {
     let help = render_dashboard_subcommand_help("dependencies");
 
-    assert!(help.contains("git-sync"));
-    assert!(help.contains("repo-backed Git Sync dashboard tree"));
+    assert_help_includes(&help, &["git-sync", "repo-backed Git Sync dashboard tree"]);
 }
 
 #[test]
 fn impact_help_mentions_git_sync_input_format() {
     let help = render_dashboard_subcommand_help("impact");
 
-    assert!(help.contains("git-sync"));
-    assert!(help.contains("repo-backed Git Sync dashboard tree"));
+    assert_help_includes(&help, &["git-sync", "repo-backed Git Sync dashboard tree"]);
 }
 
 #[test]
 fn inspect_live_help_mentions_report_and_panel_filter_flags() {
     let help = render_dashboard_subcommand_help("summary");
 
-    assert!(help.contains("--output-format"));
-    assert!(help.contains("text, table, csv, json, yaml"));
-    assert!(help.contains("queries-json"));
-    assert!(help.contains("--report-filter-panel-id"));
-    assert!(help.contains("--all-orgs"));
-    assert!(help.contains("--concurrency"));
-    assert!(help.contains("--progress"));
-    assert!(help.contains("--help-full"));
-    assert!(help.contains("--also-stdout"));
-    assert!(help.contains("tree"));
-    assert!(help.contains("tree-table"));
+    assert_help_includes(
+        &help,
+        &[
+            "--output-format",
+            "text, table, csv, json, yaml",
+            "queries-json",
+            "--report-filter-panel-id",
+            "--all-orgs",
+            "--concurrency",
+            "--progress",
+            "--help-full",
+            "--also-stdout",
+            "tree",
+            "tree-table",
+        ],
+    );
 }
 
 #[test]
 fn analyze_help_mentions_git_sync_input_format_alias() {
     let help = render_dashboard_subcommand_help("summary");
 
-    assert!(help.contains("git-sync"));
-    assert!(help.contains("repo-backed Git Sync dashboard tree"));
+    assert_help_includes(&help, &["git-sync", "repo-backed Git Sync dashboard tree"]);
 }
 
 #[test]
@@ -583,29 +595,40 @@ fn inspect_export_help_lists_datasource_uid_report_column() {
         .render_help()
         .to_string();
 
-    assert!(help.contains("--input-format"));
-    assert!(help.contains("--output-format"));
-    assert!(help.contains("--interactive"));
+    assert_help_includes(
+        &help,
+        &["--input-format", "--output-format", "--interactive"],
+    );
 }
 
 #[test]
 fn inspect_export_help_mentions_operator_summary_and_machine_readable_paths() {
     let help = render_dashboard_subcommand_help("summary");
 
-    assert!(help.contains("--interactive"));
-    assert!(help.contains("--output-format"));
-    assert!(help.contains("queries-json"));
-    assert!(help.contains("--report-columns"));
+    assert_help_includes(
+        &help,
+        &[
+            "--interactive",
+            "--output-format",
+            "queries-json",
+            "--report-columns",
+        ],
+    );
 }
 
 #[test]
 fn inspect_vars_help_mentions_all_baseline_output_formats() {
     let help = render_dashboard_subcommand_help("variables");
 
-    assert!(help.contains("Render dashboard variables as table, csv, text, json, or yaml."));
-    assert!(help.contains("output-format yaml"));
-    assert!(help.contains("local dashboard file"));
-    assert!(help.contains("local export tree"));
+    assert_help_includes(
+        &help,
+        &[
+            "Render dashboard variables as table, csv, text, json, or yaml.",
+            "output-format yaml",
+            "local dashboard file",
+            "local export tree",
+        ],
+    );
 }
 
 #[test]
@@ -691,50 +714,46 @@ fn parse_cli_supports_analyze_export_provisioning_input_format() {
 fn inspect_export_help_full_includes_extended_examples() {
     let help = test_support::render_inspect_export_help_full();
 
-    assert!(help.contains("--help-full"));
-    assert!(help.contains("Extended Examples:"));
-    assert!(help.contains("--interactive"));
-    assert!(help.contains("--input-format raw"));
-    assert!(help.contains("--input-format provisioning"));
-    assert!(help.contains("provisioning root"));
-    assert!(help.contains("--output-format tree-table"));
-    assert!(help.contains("--report-filter-datasource"));
-    assert!(help.contains("--report-filter-panel-id 7"));
-    assert!(help.contains("--report-columns"));
-    assert!(help.contains(
-        "--report-columns dashboard_tags,panel_id,panel_query_count,panel_datasource_count,query_variables,panel_variables"
-    ));
-    assert!(help.contains(
-        "--report-columns dashboard_uid,folder_path,folder_full_path,folder_level,folder_uid,parent_folder_uid,file"
-    ));
-    assert!(help.contains(
-        "--report-columns datasource_name,datasource_org,datasource_org_id,datasource_database,datasource_bucket,datasource_index_pattern,query"
-    ));
+    assert_help_includes(
+        &help,
+        &[
+            "--help-full",
+            "Extended Examples:",
+            "--interactive",
+            "--input-format raw",
+            "--input-format provisioning",
+            "provisioning root",
+            "--output-format tree-table",
+            "--report-filter-datasource",
+            "--report-filter-panel-id 7",
+            "--report-columns",
+            "--report-columns dashboard_tags,panel_id,panel_query_count,panel_datasource_count,query_variables,panel_variables",
+            "--report-columns dashboard_uid,folder_path,folder_full_path,folder_level,folder_uid,parent_folder_uid,file",
+            "--report-columns datasource_name,datasource_org,datasource_org_id,datasource_database,datasource_bucket,datasource_index_pattern,query",
+        ],
+    );
 }
 
 #[test]
 fn inspect_live_help_full_includes_extended_examples() {
     let help = test_support::render_inspect_live_help_full();
 
-    assert!(help.contains("--help-full"));
-    assert!(help.contains("Extended Examples:"));
-    assert!(help.contains("--interactive"));
-    assert!(help.contains("--token \"$GRAFANA_API_TOKEN\""));
-    assert!(help.contains("--output-format tree-table"));
-    assert!(help.contains("--report-filter-panel-id"));
-    assert!(help.contains("--report-columns"));
-    assert!(help.contains(
-        "--report-columns panel_id,ref_id,datasource_name,metrics,functions,buckets,query"
-    ));
-    assert!(help.contains(
-        "--report-columns dashboard_tags,panel_id,panel_query_count,panel_datasource_count,query_variables,panel_variables"
-    ));
-    assert!(help.contains(
-        "--report-columns dashboard_uid,folder_path,folder_full_path,folder_level,folder_uid,parent_folder_uid,file"
-    ));
-    assert!(help.contains(
-        "--report-columns datasource_name,datasource_org,datasource_org_id,datasource_database,datasource_bucket,datasource_index_pattern,query"
-    ));
+    assert_help_includes(
+        &help,
+        &[
+            "--help-full",
+            "Extended Examples:",
+            "--interactive",
+            "--token \"$GRAFANA_API_TOKEN\"",
+            "--output-format tree-table",
+            "--report-filter-panel-id",
+            "--report-columns",
+            "--report-columns panel_id,ref_id,datasource_name,metrics,functions,buckets,query",
+            "--report-columns dashboard_tags,panel_id,panel_query_count,panel_datasource_count,query_variables,panel_variables",
+            "--report-columns dashboard_uid,folder_path,folder_full_path,folder_level,folder_uid,parent_folder_uid,file",
+            "--report-columns datasource_name,datasource_org,datasource_org_id,datasource_database,datasource_bucket,datasource_index_pattern,query",
+        ],
+    );
 }
 
 #[test]
@@ -747,10 +766,15 @@ fn maybe_render_dashboard_help_full_from_os_args_handles_missing_required_args()
     ])
     .expect("expected summary full help");
 
-    assert!(help.contains("summary"));
-    assert!(help.contains("Extended Examples:"));
-    assert!(help.contains("--output-format tree-table"));
-    assert!(help.contains("Render a live Grafana dashboard summary as governance JSON"));
+    assert_help_includes(
+        &help,
+        &[
+            "summary",
+            "Extended Examples:",
+            "--output-format tree-table",
+            "Render a live Grafana dashboard summary as governance JSON",
+        ],
+    );
 }
 
 #[test]
