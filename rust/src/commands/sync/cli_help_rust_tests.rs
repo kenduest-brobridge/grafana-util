@@ -29,111 +29,151 @@ fn render_workspace_ci_subcommand_help(name: &str) -> String {
     String::from_utf8(output).unwrap()
 }
 
+fn assert_help_includes(help: &str, expected: &[&str]) {
+    for text in expected {
+        assert!(help.contains(text), "missing help text: {text}");
+    }
+}
+
 #[test]
 fn workspace_scan_help_includes_examples_and_output_heading() {
     let help = render_workspace_subcommand_help("scan");
-    assert!(help.contains("Examples:"));
-    assert!(help.contains("Output Options"));
+    assert_help_includes(&help, &["Examples:", "Output Options"]);
 }
 
 #[test]
 fn workspace_test_help_includes_examples_and_live_heading() {
     let help = render_workspace_subcommand_help("test");
-    assert!(help.contains("Examples:"));
-    assert!(help.contains("Input Options"));
-    assert!(help.contains("Live Options"));
-    assert!(help.contains("--fetch-live"));
+    assert_help_includes(
+        &help,
+        &["Examples:", "Input Options", "Live Options", "--fetch-live"],
+    );
 }
 
 #[test]
 fn workspace_preview_help_includes_examples_and_live_heading() {
     let help = render_workspace_subcommand_help("preview");
-    assert!(help.contains("Examples:"));
-    assert!(help.contains("Input Options"));
-    assert!(help.contains("Live Options"));
-    assert!(help.contains("--fetch-live"));
+    assert_help_includes(
+        &help,
+        &["Examples:", "Input Options", "Live Options", "--fetch-live"],
+    );
 }
 
 #[test]
 fn workspace_apply_help_includes_examples_and_approval_flags() {
     let help = render_workspace_subcommand_help("apply");
-    assert!(help.contains("Examples:"));
-    assert!(help.contains("Approval Options"));
-    assert!(help.contains("Live Options"));
-    assert!(help.contains("--approve"));
-    assert!(help.contains("--execute-live"));
-    assert!(help.contains("--allow-folder-delete"));
-    assert!(help.contains("--allow-policy-reset"));
-    assert!(help.contains("--preview-file"));
+    assert_help_includes(
+        &help,
+        &[
+            "Examples:",
+            "Approval Options",
+            "Live Options",
+            "--approve",
+            "--execute-live",
+            "--allow-folder-delete",
+            "--allow-policy-reset",
+            "--preview-file",
+        ],
+    );
 }
 
 #[test]
 fn workspace_ci_help_mentions_lower_level_workflows() {
     let help = render_workspace_subcommand_help("ci");
-    assert!(help.contains("summary"));
-    assert!(help.contains("mark-reviewed"));
-    assert!(help.contains("input-test"));
-    assert!(help.contains("package-test"));
-    assert!(help.contains("promote-test"));
+    assert_help_includes(
+        &help,
+        &[
+            "summary",
+            "mark-reviewed",
+            "input-test",
+            "package-test",
+            "promote-test",
+        ],
+    );
 }
 
 #[test]
 fn workspace_ci_audit_help_mentions_lock_and_drift_controls() {
     let help = render_workspace_ci_subcommand_help("audit");
-    assert!(help.contains("--managed-file"));
-    assert!(help.contains("--lock-file"));
-    assert!(help.contains("--write-lock"));
-    assert!(help.contains("--fail-on-drift"));
-    assert!(help.contains("--interactive"));
+    assert_help_includes(
+        &help,
+        &[
+            "--managed-file",
+            "--lock-file",
+            "--write-lock",
+            "--fail-on-drift",
+            "--interactive",
+        ],
+    );
 }
 
 #[test]
 fn workspace_ci_review_help_mentions_interactive_review() {
     let help = render_workspace_ci_subcommand_help("mark-reviewed");
-    assert!(help.contains("--interactive"));
+    assert_help_includes(&help, &["--interactive"]);
 }
 
 #[test]
 fn workspace_ci_package_test_help_includes_examples_and_grouped_headings() {
     let help = render_workspace_ci_subcommand_help("package-test");
-    assert!(help.contains("Examples:"));
-    assert!(help.contains("Input Options"));
-    assert!(help.contains("Live Options"));
-    assert!(help.contains("--availability-file"));
-    assert!(help.contains("secretPlaceholderNames"));
-    assert!(help.contains("\"providerNames\": [\"vault\"]"));
+    assert_help_includes(
+        &help,
+        &[
+            "Examples:",
+            "Input Options",
+            "Live Options",
+            "--availability-file",
+            "secretPlaceholderNames",
+            "\"providerNames\": [\"vault\"]",
+        ],
+    );
 }
 
 #[test]
 fn workspace_ci_promote_test_help_includes_mapping_input() {
     let help = render_workspace_ci_subcommand_help("promote-test");
-    assert!(help.contains("Examples:"));
-    assert!(help.contains("Input Options"));
-    assert!(help.contains("staged review handoff"));
-    assert!(help.contains("--mapping-file"));
-    assert!(help.contains("--availability-file"));
-    assert!(help.contains("grafana-utils-sync-promotion-mapping"));
+    assert_help_includes(
+        &help,
+        &[
+            "Examples:",
+            "Input Options",
+            "staged review handoff",
+            "--mapping-file",
+            "--availability-file",
+            "grafana-utils-sync-promotion-mapping",
+        ],
+    );
 }
 
 #[test]
 fn workspace_package_help_includes_examples_and_output_heading() {
     let help = render_workspace_subcommand_help("package");
-    assert!(help.contains("Examples:"));
-    assert!(help.contains("grafana-util workspace package ./grafana-oac-repo"));
-    assert!(help.contains("--dashboard-export-dir"));
-    assert!(help.contains("--dashboard-provisioning-dir"));
-    assert!(help.contains("--output-file"));
-    assert!(help.contains("--also-stdout"));
-    assert!(help.contains("Mixed workspace package handoff"));
-    assert!(help.contains("workspace-package.json"));
+    assert_help_includes(
+        &help,
+        &[
+            "Examples:",
+            "grafana-util workspace package ./grafana-oac-repo",
+            "--dashboard-export-dir",
+            "--dashboard-provisioning-dir",
+            "--output-file",
+            "--also-stdout",
+            "Mixed workspace package handoff",
+            "workspace-package.json",
+        ],
+    );
 }
 
 #[test]
 fn workspace_package_help_includes_workspace_example() {
     let help = render_workspace_subcommand_help("package");
-    assert!(help.contains("Examples:"));
-    assert!(help.contains("grafana-util workspace package ./grafana-oac-repo"));
-    assert!(help.contains("workspace-package.json"));
+    assert_help_includes(
+        &help,
+        &[
+            "Examples:",
+            "grafana-util workspace package ./grafana-oac-repo",
+            "workspace-package.json",
+        ],
+    );
 }
 
 #[test]
@@ -143,22 +183,27 @@ fn workspace_root_help_includes_task_first_examples() {
     command.write_long_help(&mut output).unwrap();
     let help = String::from_utf8(output).unwrap();
 
-    assert!(help.contains("Git Sync dashboards"));
-    assert!(help.contains("source provenance"));
-    assert!(help.contains("./grafana-oac-repo/"));
-    assert!(help.contains("dashboards/git-sync/provisioning"));
-    assert!(help.contains("grafana-util workspace scan ./grafana-oac-repo"));
-    assert!(help.contains("grafana-util workspace test ./grafana-oac-repo"));
-    assert!(help.contains("grafana-util workspace preview ./grafana-oac-repo"));
-    assert!(help.contains("alerts/raw"));
-    assert!(help.contains("datasources/provisioning"));
-    assert!(help.contains("grafana-util workspace scan"));
-    assert!(help.contains("grafana-util workspace test"));
-    assert!(help.contains("grafana-util workspace preview"));
-    assert!(help.contains("grafana-util workspace apply"));
-    assert!(help.contains("grafana-util workspace package"));
-    assert!(help.contains("grafana-util workspace ci package-test"));
-    assert!(help.contains("grafana-util workspace ci promote-test"));
+    assert_help_includes(
+        &help,
+        &[
+            "Git Sync dashboards",
+            "source provenance",
+            "./grafana-oac-repo/",
+            "dashboards/git-sync/provisioning",
+            "grafana-util workspace scan ./grafana-oac-repo",
+            "grafana-util workspace test ./grafana-oac-repo",
+            "grafana-util workspace preview ./grafana-oac-repo",
+            "alerts/raw",
+            "datasources/provisioning",
+            "grafana-util workspace scan",
+            "grafana-util workspace test",
+            "grafana-util workspace preview",
+            "grafana-util workspace apply",
+            "grafana-util workspace package",
+            "grafana-util workspace ci package-test",
+            "grafana-util workspace ci promote-test",
+        ],
+    );
 }
 
 #[test]
