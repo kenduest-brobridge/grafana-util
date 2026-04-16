@@ -24,8 +24,8 @@ use crate::cli_help_examples::UNIFIED_HELP_TEXT;
 use crate::common::{set_json_color_choice, CliColorChoice, Result};
 use crate::dashboard::{
     BrowseArgs, CloneLiveArgs, DashboardHistoryArgs, DeleteArgs, DiffArgs, EditLiveArgs,
-    ExportArgs as DashboardExportArgs, GetArgs, GovernanceGateArgs, ImpactArgs, ImportArgs,
-    InspectVarsArgs, ListArgs, PatchFileArgs, PublishArgs, RawToPromptArgs, ReviewArgs,
+    ExportArgs as DashboardExportArgs, ExportLayoutArgs, GetArgs, GovernanceGateArgs, ImpactArgs,
+    ImportArgs, InspectVarsArgs, ListArgs, PatchFileArgs, PublishArgs, RawToPromptArgs, ReviewArgs,
     ScreenshotArgs, ServeArgs, SummaryArgs, TopologyArgs,
 };
 use crate::datasource::{DatasourceExportArgs, DatasourceGroupCommand};
@@ -51,6 +51,7 @@ const EXPORT_DATASOURCE_HELP_TEXT: &str = "Examples:\n\n  Export datasource inve
 const VERSION_HELP_TEXT: &str =
     "Examples:\n\n  Print the human-readable version:\n    grafana-util version\n\n  Print machine-readable version details:\n    grafana-util version --json";
 const DASHBOARD_RAW_TO_PROMPT_HELP_TEXT: &str = "Examples:\n\n  Convert one raw dashboard JSON file into a prompt artifact:\n    grafana-util dashboard convert raw-to-prompt --input ./dashboards/raw/cpu-main.json --output ./dashboards/prompt/cpu-main.prompt.json\n\n  Convert a raw export tree into the prompt lane:\n    grafana-util dashboard convert raw-to-prompt --input-dir ./dashboards/raw --output-dir ./dashboards/prompt --output-format table";
+const DASHBOARD_EXPORT_LAYOUT_HELP_TEXT: &str = "Examples:\n\n  Preview layout repairs for an older dashboard export:\n    grafana-util dashboard convert export-layout --input-dir ./dashboards --output-dir ./dashboards.fixed --dry-run --output-format table\n\n  Write a repaired copy without touching the original export:\n    grafana-util dashboard convert export-layout --input-dir ./dashboards --output-dir ./dashboards.fixed --overwrite\n\n  Repair an export in place after backing up changed files:\n    grafana-util dashboard convert export-layout --input-dir ./dashboards --in-place --backup-dir ./dashboards.layout-backup --overwrite";
 #[derive(Debug, Clone, Subcommand)]
 #[allow(clippy::large_enum_variant)]
 pub enum StatusCommand {
@@ -149,6 +150,12 @@ pub enum DashboardConvertCommand {
         after_help = DASHBOARD_RAW_TO_PROMPT_HELP_TEXT
     )]
     RawToPrompt(RawToPromptArgs),
+    #[command(
+        name = "export-layout",
+        about = "Repair old dashboard export folder layouts using local metadata.",
+        after_help = DASHBOARD_EXPORT_LAYOUT_HELP_TEXT
+    )]
+    ExportLayout(ExportLayoutArgs),
 }
 
 #[derive(Debug, Clone, Subcommand)]

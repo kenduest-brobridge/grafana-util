@@ -18,3 +18,51 @@ grafana-util status overview live --url http://localhost:3000 --basic-user admin
 ```
 
 相關指令：`grafana-util export`、`grafana-util workspace`、`grafana-util config profile`。
+
+## `live`
+
+用途：從 Grafana live read surface 產生 readiness 視圖。
+
+JSON/YAML 輸出會包含共用 project status contract：`kind`、`schemaVersion`、
+`toolVersion`、`scope`、`overall`、`domains`、`topBlockers`、`nextActions`。
+live 輸出也會從 Grafana `GET /api/health` 補上 `discovery.instance`。
+成功時會有 `source: api-health`、`status: available`，以及 `database`、
+`version`、`commit` 等 health 欄位。若 health 讀取失敗，
+`discovery.instance.status` 會是 `unavailable` 並帶 `error`；這不會單獨把
+domain readiness 判成 blocked。
+
+成功時的 instance metadata：
+
+```json
+{
+  "discovery": {
+    "instance": {
+      "source": "api-health",
+      "status": "available",
+      "health": {
+        "database": "ok",
+        "version": "12.4.0",
+        "commit": "abc123"
+      }
+    }
+  }
+}
+```
+
+health 讀取失敗時：
+
+```json
+{
+  "discovery": {
+    "instance": {
+      "source": "api-health",
+      "status": "unavailable",
+      "error": "..."
+    }
+  }
+}
+```
+
+automation 如果需要 Grafana build 資訊，讀
+`discovery.instance.health.version` 與 `discovery.instance.health.commit`。
+readiness gate 仍應讀 `overall` 與 `domains`。

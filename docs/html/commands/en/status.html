@@ -983,6 +983,32 @@ grafana-util status snapshot export --profile prod --output-dir ./snapshot</code
 <ul><li><code>grafana-util export</code></li><li><code>grafana-util workspace</code></li><li><code>grafana-util config profile</code></li></ul>
 <h2 id="live"><code>live</code></h2>
 <p>Purpose: render a live readiness view from Grafana read surfaces.</p>
+<p>Machine-readable JSON/YAML output includes the shared project status contract: <code>kind</code>, <code>schemaVersion</code>, <code>toolVersion</code>, <code>scope</code>, <code>overall</code>, <code>domains</code>, <code>topBlockers</code>, and <code>nextActions</code>. Live output also adds <code>discovery.instance</code> from Grafana <code>GET /api/health</code> when the endpoint can be read. That section carries <code>source: api-health</code>, <code>status: available</code>, and the raw health fields such as <code>database</code>, <code>version</code>, and <code>commit</code>. If the health read fails, <code>discovery.instance.status</code> is <code>unavailable</code> with an <code>error</code>; this does not by itself block the domain readiness result.</p>
+<p>Successful instance metadata:</p>
+<pre><code>{
+  &quot;discovery&quot;: {
+    &quot;instance&quot;: {
+      &quot;source&quot;: &quot;api-health&quot;,
+      &quot;status&quot;: &quot;available&quot;,
+      &quot;health&quot;: {
+        &quot;database&quot;: &quot;ok&quot;,
+        &quot;version&quot;: &quot;12.4.0&quot;,
+        &quot;commit&quot;: &quot;abc123&quot;
+      }
+    }
+  }
+}</code></pre>
+<p>Unavailable health metadata:</p>
+<pre><code>{
+  &quot;discovery&quot;: {
+    &quot;instance&quot;: {
+      &quot;source&quot;: &quot;api-health&quot;,
+      &quot;status&quot;: &quot;unavailable&quot;,
+      &quot;error&quot;: &quot;...&quot;
+    }
+  }
+}</code></pre>
+<p>Use <code>discovery.instance.health.version</code> and <code>discovery.instance.health.commit</code> when automation needs the Grafana build. Use <code>overall</code> and <code>domains</code> for readiness gates.</p>
 <h2 id="staged"><code>staged</code></h2>
 <p>Purpose: render a readiness gate from staged artifacts.</p>
 <h2 id="overview"><code>overview</code></h2>

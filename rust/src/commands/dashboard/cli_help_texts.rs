@@ -88,6 +88,7 @@ Examples:
 pub(crate) const DASHBOARD_EXPORT_AFTER_HELP: &str = r#"Notes:
   - Writes raw/, prompt/, and provisioning/ by default.
   - Use Basic auth with --all-orgs.
+  - Non-flat raw/ and prompt/ exports mirror Grafana folder paths.
   - Use --flat for files directly under each variant directory.
   - Use --include-history to add history/ under each exported org scope.
   - The provider file is provisioning/provisioning/dashboards.yaml.

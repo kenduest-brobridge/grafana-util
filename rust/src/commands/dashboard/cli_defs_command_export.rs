@@ -1,13 +1,19 @@
 //! CLI definitions for dashboard export and raw-to-prompt workflows.
 
 use crate::common::CliColorChoice;
-use clap::Args;
+use clap::{Args, ValueEnum};
 use std::path::PathBuf;
 
 use super::super::super::{DEFAULT_EXPORT_DIR, DEFAULT_PAGE_SIZE};
 use super::super::cli_defs_shared::{
     CommonCliArgs, RawToPromptLogFormat, RawToPromptOutputFormat, RawToPromptResolution,
 };
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum ExportLayoutVariant {
+    Raw,
+    Prompt,
+}
 
 /// Arguments for exporting dashboards into raw, prompt, and provisioning variants.
 #[derive(Debug, Clone, Args)]
@@ -320,4 +326,87 @@ pub struct RawToPromptArgs {
         help = "Enable TLS certificate verification for optional live datasource lookup."
     )]
     pub verify_ssl: bool,
+}
+
+/// Arguments for repairing old dashboard export folder layouts.
+#[derive(Debug, Clone, Args)]
+pub struct ExportLayoutArgs {
+    #[arg(
+        long = "input-dir",
+        value_name = "DIR",
+        help = "Existing dashboard export root or variant directory to repair."
+    )]
+    pub input_dir: PathBuf,
+    #[arg(
+        long = "output-dir",
+        value_name = "DIR",
+        required_unless_present = "in_place",
+        conflicts_with = "in_place",
+        help = "Directory to write the repaired copy into."
+    )]
+    pub output_dir: Option<PathBuf>,
+    #[arg(
+        long = "in-place",
+        default_value_t = false,
+        requires = "backup_dir",
+        help = "Repair the input tree in place after backing up changed files."
+    )]
+    pub in_place: bool,
+    #[arg(
+        long = "backup-dir",
+        value_name = "DIR",
+        requires = "in_place",
+        help = "Directory used to back up changed files before in-place repair."
+    )]
+    pub backup_dir: Option<PathBuf>,
+    #[arg(
+        long = "variant",
+        value_enum,
+        help = "Repair one export variant. Repeat for raw and prompt; defaults to both."
+    )]
+    pub variant: Vec<ExportLayoutVariant>,
+    #[arg(
+        long = "raw-dir",
+        value_name = "DIR",
+        help = "Raw export lane used as metadata source when repairing prompt-only input."
+    )]
+    pub raw_dir: Option<PathBuf>,
+    #[arg(
+        long = "folders-file",
+        value_name = "FILE",
+        help = "Override the folder inventory file used for repair."
+    )]
+    pub folders_file: Option<PathBuf>,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Preview the layout repair plan without writing files."
+    )]
+    pub dry_run: bool,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Replace existing repaired files in the target tree."
+    )]
+    pub overwrite: bool,
+    #[arg(
+        long,
+        value_enum,
+        default_value_t = RawToPromptOutputFormat::Text,
+        help = "Render the repair summary as text, table, json, or yaml."
+    )]
+    pub output_format: RawToPromptOutputFormat,
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "Do not print table headers when rendering table output."
+    )]
+    pub no_header: bool,
+    #[arg(
+        long,
+        value_enum,
+        default_value_t = CliColorChoice::Auto,
+        help = "Colorize output. Use auto, always, or never."
+    )]
+    pub color: CliColorChoice,
 }

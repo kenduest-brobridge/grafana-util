@@ -30,7 +30,9 @@ mod cli_defs_command_live;
 #[path = "cli_defs_command_local.rs"]
 mod cli_defs_command_local;
 
-pub use cli_defs_command_export::{ExportArgs, RawToPromptArgs};
+pub use cli_defs_command_export::{
+    ExportArgs, ExportLayoutArgs, ExportLayoutVariant, RawToPromptArgs,
+};
 pub use cli_defs_command_history::{
     DashboardHistoryArgs, DashboardHistorySubcommand, HistoryDiffArgs, HistoryExportArgs,
     HistoryListArgs, HistoryRestoreArgs,

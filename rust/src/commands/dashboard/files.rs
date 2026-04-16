@@ -539,6 +539,8 @@ pub(crate) fn build_dashboard_index_item(
         uid: uid.to_string(),
         title: string_field(summary, "title", DEFAULT_DASHBOARD_TITLE),
         folder_title: string_field(summary, "folderTitle", DEFAULT_FOLDER_TITLE),
+        folder_uid: string_field(summary, "folderUid", ""),
+        folder_path: String::new(),
         org: string_field(summary, "orgName", DEFAULT_ORG_NAME),
         org_id: summary
             .get("orgId")
@@ -567,6 +569,9 @@ pub(crate) fn build_variant_index(
                 title: item.title.clone(),
                 path: path.to_string(),
                 format: export_format.to_string(),
+                folder_title: item.folder_title.clone(),
+                folder_uid: item.folder_uid.clone(),
+                folder_path: item.folder_path.clone(),
                 org: item.org.clone(),
                 org_id: item.org_id.clone(),
             })

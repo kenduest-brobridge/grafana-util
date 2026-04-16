@@ -133,6 +133,7 @@ grafana-util dashboard edit-live --profile prod --dashboard-uid cpu-main --outpu
 - [dashboard export](./dashboard-export.md)
 - [dashboard import](./dashboard-import.md)
 - [dashboard convert raw-to-prompt](./dashboard-convert-raw-to-prompt.md)
+- [dashboard convert export-layout](./dashboard-convert-export-layout.md)
 
 ### 審查與比對
 

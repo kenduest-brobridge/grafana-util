@@ -7,7 +7,7 @@
 use reqwest::Method;
 use serde::Serialize;
 use serde_json::{Map, Value};
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
@@ -30,8 +30,8 @@ use super::{
     list_datasources_with_request, write_dashboard, write_json_document, DashboardIndexItem,
     ExportArgs, ExportOrgSummary, FolderInventoryItem, RootExportIndex,
     DASHBOARD_PERMISSION_BUNDLE_FILENAME, DATASOURCE_INVENTORY_FILENAME, DEFAULT_DASHBOARD_TITLE,
-    DEFAULT_FOLDER_TITLE, DEFAULT_UNKNOWN_UID, EXPORT_METADATA_FILENAME, FOLDER_INVENTORY_FILENAME,
-    PROMPT_EXPORT_SUBDIR, PROVISIONING_EXPORT_SUBDIR, RAW_EXPORT_SUBDIR,
+    DEFAULT_FOLDER_TITLE, DEFAULT_ORG_ID, DEFAULT_UNKNOWN_UID, EXPORT_METADATA_FILENAME,
+    FOLDER_INVENTORY_FILENAME, PROMPT_EXPORT_SUBDIR, PROVISIONING_EXPORT_SUBDIR, RAW_EXPORT_SUBDIR,
 };
 #[path = "export_support.rs"]
 mod export_support;
@@ -84,6 +84,65 @@ pub fn build_output_path(output_dir: &Path, summary: &Map<String, Value>, flat: 
             .join(sanitize_path_component(&folder_title))
             .join(file_name)
     }
+}
+
+fn export_folder_inventory_key(summary: &Map<String, Value>) -> Option<String> {
+    let folder_uid = string_field(summary, "folderUid", "");
+    if folder_uid.is_empty() {
+        return None;
+    }
+    let org_id = summary
+        .get("orgId")
+        .map(|value| match value {
+            Value::String(text) => text.clone(),
+            _ => value.to_string(),
+        })
+        .unwrap_or_else(|| DEFAULT_ORG_ID.to_string());
+    Some(format!("{org_id}:{folder_uid}"))
+}
+
+fn build_folder_paths_by_inventory_key(
+    folder_inventory: &[FolderInventoryItem],
+) -> BTreeMap<String, String> {
+    folder_inventory
+        .iter()
+        .map(|folder| {
+            (
+                format!("{}:{}", folder.org_id, folder.uid),
+                folder.path.clone(),
+            )
+        })
+        .collect()
+}
+
+fn build_output_path_with_folder_path(
+    output_dir: &Path,
+    summary: &Map<String, Value>,
+    folder_path: Option<&str>,
+    flat: bool,
+) -> PathBuf {
+    if flat {
+        return build_output_path(output_dir, summary, true);
+    }
+
+    let title = string_field(summary, "title", DEFAULT_DASHBOARD_TITLE);
+    let uid = string_field(summary, "uid", DEFAULT_UNKNOWN_UID);
+    let file_name = format!(
+        "{}__{}.json",
+        sanitize_path_component(&title),
+        sanitize_path_component(&uid)
+    );
+    let Some(folder_path) = folder_path.filter(|path| !path.trim().is_empty()) else {
+        return build_output_path(output_dir, summary, false);
+    };
+
+    folder_path
+        .split(" / ")
+        .filter(|segment| !segment.trim().is_empty())
+        .fold(output_dir.to_path_buf(), |path, segment| {
+            path.join(sanitize_path_component(segment.trim()))
+        })
+        .join(file_name)
 }
 
 pub fn build_export_variant_dirs(output_dir: &Path) -> (PathBuf, PathBuf, PathBuf) {
@@ -311,6 +370,7 @@ where
     let summaries = attach_dashboard_org_metadata(&summaries, &current_org);
     let folder_inventory =
         super::collect_folder_inventory_with_request(&mut scoped_request, &summaries)?;
+    let folder_paths_by_key = build_folder_paths_by_inventory_key(&folder_inventory);
     let permission_documents = if args.without_dashboard_raw || args.dry_run {
         Vec::new()
     } else {
@@ -360,9 +420,14 @@ where
             }
         }
         let mut item = super::build_dashboard_index_item(&summary, &uid);
+        let folder_path = export_folder_inventory_key(&summary)
+            .and_then(|key| folder_paths_by_key.get(&key))
+            .map(String::as_str);
+        item.folder_path = folder_path.unwrap_or("").to_string();
         if !args.without_dashboard_raw {
             let raw_document = build_preserved_web_import_document(&payload)?;
-            let raw_path = build_output_path(&raw_dir, &summary, args.flat);
+            let raw_path =
+                build_output_path_with_folder_path(&raw_dir, &summary, folder_path, args.flat);
             if !args.dry_run {
                 write_dashboard(&raw_document, &raw_path, args.overwrite)?;
             }
@@ -376,7 +441,8 @@ where
         }
         if !args.without_dashboard_prompt {
             let prompt_document = build_external_export_document(&payload, &datasource_catalog)?;
-            let prompt_path = build_output_path(&prompt_dir, &summary, args.flat);
+            let prompt_path =
+                build_output_path_with_folder_path(&prompt_dir, &summary, folder_path, args.flat);
             if !args.dry_run {
                 write_dashboard(&prompt_document, &prompt_path, args.overwrite)?;
             }
@@ -790,6 +856,8 @@ mod export_tests {
             uid: "cpu-main".to_string(),
             title: "CPU Main".to_string(),
             folder_title: "General".to_string(),
+            folder_uid: "general".to_string(),
+            folder_path: "General".to_string(),
             org: "Main Org".to_string(),
             org_id: "1".to_string(),
             raw_path: Some("/tmp/export/raw/CPU__cpu-main.json".to_string()),
@@ -837,5 +905,31 @@ mod export_tests {
         assert_eq!(metadata["variant"], json!("root"));
         assert_eq!(metadata["orgCount"], json!(1));
         assert_eq!(metadata["orgs"].as_array().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn dashboard_export_indexes_include_folder_identity_metadata() {
+        let mut summary = Map::new();
+        summary.insert("uid".to_string(), json!("cpu-main"));
+        summary.insert("title".to_string(), json!("CPU Main"));
+        summary.insert("folderTitle".to_string(), json!("Infra"));
+        summary.insert("folderUid".to_string(), json!("infra"));
+        summary.insert("orgName".to_string(), json!("Main Org"));
+        summary.insert("orgId".to_string(), json!("1"));
+        let mut item = super::super::build_dashboard_index_item(&summary, "cpu-main");
+        item.folder_path = "Platform / Team / Infra".to_string();
+        item.raw_path = Some("/tmp/export/raw/Platform/Team/Infra/CPU.json".to_string());
+
+        let variant_index = build_variant_index(
+            &[item.clone()],
+            |item| item.raw_path.as_deref(),
+            "grafana-web-import-preserve-uid",
+        );
+        let root_index = build_root_export_index(&[item], None, None, None, &[]);
+
+        assert_eq!(variant_index[0].folder_uid, "infra");
+        assert_eq!(variant_index[0].folder_path, "Platform / Team / Infra");
+        assert_eq!(root_index.items[0].folder_uid, "infra");
+        assert_eq!(root_index.items[0].folder_path, "Platform / Team / Infra");
     }
 }

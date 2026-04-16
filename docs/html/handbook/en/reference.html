@@ -987,6 +987,26 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <ul><li><code>grafana-util status --help-schema</code></li><li><code>grafana-util status staged --help-schema</code></li><li><code>grafana-util status live --help-schema</code></li></ul>
 <p>Practical mapping:</p>
 <ul><li><code>status staged --output-format json</code> -&gt; <code>grafana-util-project-status</code></li><li><code>status live --output-format json</code> -&gt; <code>grafana-util-project-status</code></li></ul>
+<p>For <code>status live</code>, machine-readable output may also include <code>discovery.instance</code> from Grafana <code>/api/health</code>. Use it for instance metadata such as Grafana <code>version</code>, <code>commit</code>, and database health; keep readiness gates on <code>overall</code> and <code>domains</code>.</p>
+<p>Minimal success shape:</p>
+<pre><code>{
+  &quot;kind&quot;: &quot;grafana-util-project-status&quot;,
+  &quot;schemaVersion&quot;: 1,
+  &quot;discovery&quot;: {
+    &quot;instance&quot;: {
+      &quot;source&quot;: &quot;api-health&quot;,
+      &quot;status&quot;: &quot;available&quot;,
+      &quot;health&quot;: {
+        &quot;database&quot;: &quot;ok&quot;,
+        &quot;version&quot;: &quot;12.4.0&quot;,
+        &quot;commit&quot;: &quot;abc123&quot;
+      }
+    }
+  },
+  &quot;overall&quot;: {},
+  &quot;domains&quot;: []
+}</code></pre>
+<p>If <code>/api/health</code> cannot be read, <code>discovery.instance.status</code> becomes <code>unavailable</code> with an <code>error</code>. That metadata is diagnostic only; it is not a replacement for the readiness fields.</p>
 <h2 id="profile-connection-and-secret-handling">Profile, connection, and secret handling</h2>
 <p>Profiles are repo-local. <code>grafana-util config profile</code> reads and writes <code>grafana-util.yaml</code> in the current working directory, and <code>--profile</code> selects one named profile from that file.</p>
 <h3 id="recommended-auth-order">Recommended auth order</h3>

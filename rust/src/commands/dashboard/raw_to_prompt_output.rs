@@ -242,6 +242,8 @@ pub(crate) fn write_prompt_lane_metadata(
                 .and_then(|value| value.to_str())
                 .unwrap_or("General")
                 .to_string(),
+            folder_uid: String::new(),
+            folder_path: String::new(),
             org: source_org.unwrap_or("Main Org.").to_string(),
             org_id: source_org_id.unwrap_or("1").to_string(),
             raw_path: None,

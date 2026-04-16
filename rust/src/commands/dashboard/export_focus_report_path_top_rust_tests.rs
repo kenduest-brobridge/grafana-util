@@ -292,6 +292,106 @@ fn export_dashboards_with_request_all_orgs_aggregates_results() {
 }
 
 #[test]
+fn export_dashboards_mirrors_nested_folder_paths_for_raw_and_prompt() {
+    let temp = tempdir().unwrap();
+    let args = ExportArgs {
+        common: make_common_args("http://127.0.0.1:3000".to_string()),
+        output_dir: temp.path().join("dashboards"),
+        page_size: 500,
+        org_id: None,
+        all_orgs: false,
+        flat: false,
+        overwrite: true,
+        without_dashboard_raw: false,
+        without_dashboard_prompt: false,
+        without_dashboard_provisioning: false,
+        include_history: false,
+        provisioning_provider_name: "grafana-utils-dashboards".to_string(),
+        provisioning_provider_org_id: None,
+        provisioning_provider_path: None,
+        provisioning_provider_disable_deletion: false,
+        provisioning_provider_allow_ui_updates: false,
+        provisioning_provider_update_interval_seconds: 30,
+        dry_run: false,
+        progress: false,
+        verbose: false,
+    };
+
+    let count = export_dashboards_with_request(
+        |_method, path, _params, _payload| match path {
+            "/api/org" => Ok(Some(json!({"id": 1, "name": "Main Org"}))),
+            "/api/search" => Ok(Some(json!([
+                {
+                    "uid": "cpu-main",
+                    "title": "CPU",
+                    "folderUid": "infra-a",
+                    "folderTitle": "Infra"
+                },
+                {
+                    "uid": "api-main",
+                    "title": "API",
+                    "folderUid": "infra-b",
+                    "folderTitle": "Infra"
+                }
+            ]))),
+            "/api/datasources" => Ok(Some(json!([]))),
+            "/api/folders/infra-a" => Ok(Some(json!({
+                "uid": "infra-a",
+                "title": "Infra",
+                "parents": [
+                    {"uid": "platform", "title": "Platform"},
+                    {"uid": "team-a", "title": "Team A"}
+                ]
+            }))),
+            "/api/folders/infra-b" => Ok(Some(json!({
+                "uid": "infra-b",
+                "title": "Infra",
+                "parents": [
+                    {"uid": "apps", "title": "Apps"},
+                    {"uid": "team-b", "title": "Team B"}
+                ]
+            }))),
+            "/api/dashboards/uid/cpu-main" => Ok(Some(json!({
+                "dashboard": {"id": 7, "uid": "cpu-main", "title": "CPU", "panels": []}
+            }))),
+            "/api/dashboards/uid/api-main" => Ok(Some(json!({
+                "dashboard": {"id": 8, "uid": "api-main", "title": "API", "panels": []}
+            }))),
+            path if path.ends_with("/permissions") => Ok(Some(json!([]))),
+            _ => Err(test_support::message(format!("unexpected path {path}"))),
+        },
+        &args,
+    )
+    .unwrap();
+
+    assert_eq!(count, 2);
+    assert!(args
+        .output_dir
+        .join("raw/Platform/Team_A/Infra/CPU__cpu-main.json")
+        .is_file());
+    assert!(args
+        .output_dir
+        .join("prompt/Platform/Team_A/Infra/CPU__cpu-main.json")
+        .is_file());
+    assert!(args
+        .output_dir
+        .join("raw/Apps/Team_B/Infra/API__api-main.json")
+        .is_file());
+    assert!(args
+        .output_dir
+        .join("prompt/Apps/Team_B/Infra/API__api-main.json")
+        .is_file());
+    assert!(args
+        .output_dir
+        .join("provisioning/dashboards/Infra/CPU__cpu-main.json")
+        .is_file());
+    assert!(args
+        .output_dir
+        .join("provisioning/dashboards/Infra/API__api-main.json")
+        .is_file());
+}
+
+#[test]
 fn export_dashboards_with_request_include_history_writes_scope_history_artifacts() {
     let current_temp = tempdir().unwrap();
     let current_args =

@@ -69,3 +69,24 @@
 - Baseline: `make quality-architecture` still warned on `access_runtime_org_rust_tests.rs` after the previous worker pass because user runtime/export/import/diff cases remained mixed into the org runtime test module.
 - Current Update: Moved user runtime diff, global/org user export/import/diff, and local user list input-dir cases into `access_runtime_user_rust_tests.rs`, leaving the org runtime module focused on org/team/service-account routing and org workflows.
 - Result: Access focused tests, full Rust tests, clippy, architecture guardrails, formatting, and whitespace checks pass. `access_runtime_org_rust_tests.rs` is no longer an architecture warning.
+
+## 2026-04-15 - Split snapshot review tests
+- State: Done
+- Scope: Rust snapshot test maintainability. README files and Python implementation are out of scope.
+- Baseline: `make quality-architecture` still warned on `snapshot/tests.rs` after earlier maintainability passes.
+- Current Update: Moved staged export scope resolver coverage into `tests_staged_scopes.rs` and snapshot review wrapper/warning coverage into `tests_review_warnings.rs`, leaving the main snapshot test module focused on shared fixtures and broader snapshot export/review behavior.
+- Result: Snapshot focused tests, full Rust tests, clippy, architecture guardrails, formatting, and whitespace checks pass. `snapshot/tests.rs` is no longer an architecture warning.
+
+## 2026-04-15 - Split datasource tail import and inspect tests
+- State: Done
+- Scope: Rust datasource test maintainability. README files and Python implementation are out of scope.
+- Baseline: `make quality-architecture` still warned on `datasource/tests/tail.rs` after previous tail diff and fixture splits.
+- Current Update: Moved datasource import validation/loader coverage into `tail_import.rs` and inspect-export/local source/manifest coverage into `tail_inspect.rs`, leaving `tail.rs` focused on routed import summary and export-org routing behavior.
+- Result: Datasource focused tests, full Rust tests, clippy, architecture guardrails, formatting, and whitespace checks pass. `datasource/tests/tail.rs` is no longer an architecture warning.
+
+## 2026-04-15 - Split datasource supported catalog tests
+- State: Done
+- Scope: Rust datasource test maintainability. README files and Python implementation are out of scope.
+- Baseline: `make quality-architecture` still warned on `datasource/tests/cli_mutation.rs` after previous datasource test splits.
+- Current Update: Moved supported datasource catalog JSON/text/table/csv/yaml tests into `cli_mutation_supported_catalog.rs`, leaving `cli_mutation.rs` focused on datasource command help, parser compatibility, and add-payload behavior.
+- Result: Datasource focused tests, full Rust tests, clippy, architecture guardrails, formatting, and whitespace checks pass. `datasource/tests/cli_mutation.rs` is no longer an architecture warning.

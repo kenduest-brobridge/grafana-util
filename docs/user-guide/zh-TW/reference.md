@@ -155,6 +155,35 @@ CLI schema 快速查詢：
 - `status staged --output-format json` -> `grafana-util-project-status`
 - `status live --output-format json` -> `grafana-util-project-status`
 
+`status live` 的 machine-readable output 也可能包含來自 Grafana
+`/api/health` 的 `discovery.instance`。這段適合讀 Grafana `version`、
+`commit` 與 database health；CI gate 仍應以 `overall` 與 `domains` 為準。
+
+成功時的最小 shape：
+
+```json
+{
+  "kind": "grafana-util-project-status",
+  "schemaVersion": 1,
+  "discovery": {
+    "instance": {
+      "source": "api-health",
+      "status": "available",
+      "health": {
+        "database": "ok",
+        "version": "12.4.0",
+        "commit": "abc123"
+      }
+    }
+  },
+  "overall": {},
+  "domains": []
+}
+```
+
+如果 `/api/health` 讀不到，`discovery.instance.status` 會變成
+`unavailable` 並帶 `error`。這段只當診斷 metadata，不取代 readiness 欄位。
+
 ---
 
 ## Profile、連線與 secret 處理

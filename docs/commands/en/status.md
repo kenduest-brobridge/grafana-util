@@ -84,6 +84,51 @@ grafana-util status snapshot export --profile prod --output-dir ./snapshot
 
 Purpose: render a live readiness view from Grafana read surfaces.
 
+Machine-readable JSON/YAML output includes the shared project status contract:
+`kind`, `schemaVersion`, `toolVersion`, `scope`, `overall`, `domains`,
+`topBlockers`, and `nextActions`. Live output also adds
+`discovery.instance` from Grafana `GET /api/health` when the endpoint can be
+read. That section carries `source: api-health`, `status: available`, and the
+raw health fields such as `database`, `version`, and `commit`. If the health
+read fails, `discovery.instance.status` is `unavailable` with an `error`; this
+does not by itself block the domain readiness result.
+
+Successful instance metadata:
+
+```json
+{
+  "discovery": {
+    "instance": {
+      "source": "api-health",
+      "status": "available",
+      "health": {
+        "database": "ok",
+        "version": "12.4.0",
+        "commit": "abc123"
+      }
+    }
+  }
+}
+```
+
+Unavailable health metadata:
+
+```json
+{
+  "discovery": {
+    "instance": {
+      "source": "api-health",
+      "status": "unavailable",
+      "error": "..."
+    }
+  }
+}
+```
+
+Use `discovery.instance.health.version` and
+`discovery.instance.health.commit` when automation needs the Grafana build.
+Use `overall` and `domains` for readiness gates.
+
 ## `staged`
 
 Purpose: render a readiness gate from staged artifacts.

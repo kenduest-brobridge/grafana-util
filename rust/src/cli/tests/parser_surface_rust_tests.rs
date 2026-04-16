@@ -361,11 +361,74 @@ fn parse_cli_supports_dashboard_convert_surface() {
                         vec![Path::new("./dashboards/raw/cpu-main.json").to_path_buf()]
                     );
                 }
+                DashboardConvertCommand::ExportLayout(_) => panic!("expected raw-to-prompt"),
             },
             _ => panic!("expected dashboard convert"),
         },
         _ => panic!("expected dashboard command"),
     }
+}
+
+#[test]
+fn parse_cli_supports_dashboard_convert_export_layout_surface() {
+    let args: CliArgs = parse_cli_from([
+        "grafana-util",
+        "dashboard",
+        "convert",
+        "export-layout",
+        "--input-dir",
+        "./dashboards",
+        "--output-dir",
+        "./dashboards.fixed",
+        "--variant",
+        "raw",
+        "--dry-run",
+    ]);
+
+    match args.command {
+        UnifiedCommand::Dashboard { command } => match command {
+            DashboardRootCommand::Convert { command } => match command {
+                DashboardConvertCommand::ExportLayout(inner) => {
+                    assert_eq!(inner.input_dir, Path::new("./dashboards"));
+                    assert_eq!(
+                        inner.output_dir.as_deref(),
+                        Some(Path::new("./dashboards.fixed"))
+                    );
+                    assert_eq!(inner.variant.len(), 1);
+                    assert!(inner.dry_run);
+                }
+                DashboardConvertCommand::RawToPrompt(_) => panic!("expected export-layout"),
+            },
+            _ => panic!("expected dashboard convert"),
+        },
+        _ => panic!("expected dashboard command"),
+    }
+}
+
+#[test]
+fn parse_cli_enforces_dashboard_convert_export_layout_write_mode() {
+    let missing_output = CliArgs::try_parse_from([
+        "grafana-util",
+        "dashboard",
+        "convert",
+        "export-layout",
+        "--input-dir",
+        "./dashboards",
+    ])
+    .expect_err("copy mode should require --output-dir");
+    assert!(missing_output.to_string().contains("--output-dir"));
+
+    let missing_backup = CliArgs::try_parse_from([
+        "grafana-util",
+        "dashboard",
+        "convert",
+        "export-layout",
+        "--input-dir",
+        "./dashboards",
+        "--in-place",
+    ])
+    .expect_err("in-place mode should require --backup-dir");
+    assert!(missing_backup.to_string().contains("--backup-dir"));
 }
 
 #[test]

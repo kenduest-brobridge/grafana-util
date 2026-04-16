@@ -12,7 +12,10 @@ use crate::cli::{
     ExportAccessCommand, ExportCommand, StatusCommand, UnifiedCommand,
 };
 use crate::common::{set_json_color_choice, CliColorChoice, Result};
-use crate::dashboard::{run_raw_to_prompt, DashboardCliArgs, DashboardCommand, RawToPromptArgs};
+use crate::dashboard::{
+    run_export_layout_repair, run_raw_to_prompt, DashboardCliArgs, DashboardCommand,
+    ExportLayoutArgs, RawToPromptArgs,
+};
 use crate::overview::OverviewCliArgs;
 use crate::profile_cli::ProfileCliArgs;
 use crate::project_status_command::{ProjectStatusCliArgs, ProjectStatusSubcommand};
@@ -48,6 +51,7 @@ pub(crate) enum DomainInvocation {
     ProjectStatus(ProjectStatusCliArgs),
     Resource(ResourceCliArgs),
     RawToPrompt(RawToPromptArgs),
+    ExportLayout(ExportLayoutArgs),
 }
 
 fn wrap_dashboard_root(command: DashboardRootCommand) -> DashboardCommand {
@@ -168,6 +172,9 @@ fn route_cli_args(args: CliArgs) -> DomainInvocation {
             DashboardRootCommand::Convert {
                 command: DashboardConvertCommand::RawToPrompt(inner),
             } => DomainInvocation::RawToPrompt(inner),
+            DashboardRootCommand::Convert {
+                command: DashboardConvertCommand::ExportLayout(inner),
+            } => DomainInvocation::ExportLayout(inner),
             other => DomainInvocation::Dashboard(DashboardCliArgs {
                 color,
                 command: wrap_dashboard_root(other),
@@ -278,6 +285,10 @@ where
         DomainInvocation::RawToPrompt(args) => {
             set_json_color_choice(args.color);
             run_raw_to_prompt(&args)
+        }
+        DomainInvocation::ExportLayout(args) => {
+            set_json_color_choice(args.color);
+            run_export_layout_repair(&args)
         }
     }
 }

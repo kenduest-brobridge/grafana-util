@@ -1,5 +1,13 @@
 # ai-learnings.md
 
+## 2026-04-16 - Dashboard export layout extra-file detection
+- Mistake/Symptom: real export-layout dry-run initially reported four `extraFiles` for dashboards whose index paths used `ARCHIVED` while the filesystem entry was `Archived`.
+- Root Cause: the planner compared index-relative paths as strings. On a case-insensitive macOS filesystem, `ARCHIVED/...` and `Archived/...` can refer to the same file, so string comparison produced false unindexed-file findings.
+- Fix: treat a discovered file as indexed when the exact relative path matches or when the indexed path and discovered path canonicalize to the same filesystem path.
+- Prevention: when validating local export artifact membership, compare canonical paths in addition to serialized index path strings before reporting an operator-facing extra-file warning.
+- Keywords: dashboard export-layout extraFiles case-insensitive macOS canonicalize index path Archived ARCHIVED
+- Refs: `rust/src/commands/dashboard/export_layout.rs`, `/Users/kendlee/work/scsb/grafana-dashboard/scsb-dev/dashboards`
+
 ## 2026-04-12 - Infer unique long option prefixes
 - Mistake/Symptom: repeated focused Rust test attempts used invalid multiple `cargo test` filters, then Cargo printed `error: test failed, to rerun pass --lib` after normal lib-test failures, creating noisy and misleading iteration.
 - Root Cause: `cargo test` accepts at most one positional test filter before `--`; Cargo's `--lib` line is a rerun hint for the failed target, not a diagnostic or a better next command.

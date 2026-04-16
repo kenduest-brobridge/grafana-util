@@ -955,12 +955,40 @@ grafana-util status staged --desired-file ./desired.json --output-format json
 grafana-util status overview --dashboard-export-dir ./dashboards/raw --alert-export-dir ./alerts --output-format table
 grafana-util status overview live --url http://localhost:3000 --basic-user admin --basic-password admin --output-format interactive</code></pre>
 <p>相關指令：<code>grafana-util export</code>、<code>grafana-util workspace</code>、<code>grafana-util config profile</code>。</p>
+<h2 id="live"><code>live</code></h2>
+<p>用途：從 Grafana live read surface 產生 readiness 視圖。</p>
+<p>JSON/YAML 輸出會包含共用 project status contract：<code>kind</code>、<code>schemaVersion</code>、 <code>toolVersion</code>、<code>scope</code>、<code>overall</code>、<code>domains</code>、<code>topBlockers</code>、<code>nextActions</code>。 live 輸出也會從 Grafana <code>GET /api/health</code> 補上 <code>discovery.instance</code>。 成功時會有 <code>source: api-health</code>、<code>status: available</code>，以及 <code>database</code>、 <code>version</code>、<code>commit</code> 等 health 欄位。若 health 讀取失敗， <code>discovery.instance.status</code> 會是 <code>unavailable</code> 並帶 <code>error</code>；這不會單獨把 domain readiness 判成 blocked。</p>
+<p>成功時的 instance metadata：</p>
+<pre><code>{
+  &quot;discovery&quot;: {
+    &quot;instance&quot;: {
+      &quot;source&quot;: &quot;api-health&quot;,
+      &quot;status&quot;: &quot;available&quot;,
+      &quot;health&quot;: {
+        &quot;database&quot;: &quot;ok&quot;,
+        &quot;version&quot;: &quot;12.4.0&quot;,
+        &quot;commit&quot;: &quot;abc123&quot;
+      }
+    }
+  }
+}</code></pre>
+<p>health 讀取失敗時：</p>
+<pre><code>{
+  &quot;discovery&quot;: {
+    &quot;instance&quot;: {
+      &quot;source&quot;: &quot;api-health&quot;,
+      &quot;status&quot;: &quot;unavailable&quot;,
+      &quot;error&quot;: &quot;...&quot;
+    }
+  }
+}</code></pre>
+<p>automation 如果需要 Grafana build 資訊，讀 <code>discovery.instance.health.version</code> 與 <code>discovery.instance.health.commit</code>。 readiness gate 仍應讀 <code>overall</code> 與 <code>domains</code>。</p>
 
 </article>
 <aside class="sidebar">
   <button class="sidebar-toggle sidebar-toggle-right" type="button" aria-expanded="true" aria-label="Toggle page sidebar">▶</button>
   <div class="sidebar-content">
-    <section class="sidebar-section"><h2>本頁內容</h2><ul class="toc-list"><li class="toc-level-2"><a href="#root"><span class="toc-label">Root</span></a></li></ul></section><section class="sidebar-section"><h2>相關頁面</h2><ul class="sidebar-meta-list"><li><a href="resource.html" class="sidebar-meta-link">子命令群組: status resource</a></li><li><a href="snapshot.html" class="sidebar-meta-link">子命令群組: status snapshot</a></li><li><a href="../../handbook/zh-TW/status-workspace.html" class="sidebar-meta-link">對應手冊章節</a></li></ul></section><section class="sidebar-section"><h2>版本</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>語言</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/status.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
+    <section class="sidebar-section"><h2>本頁內容</h2><ul class="toc-list"><li class="toc-level-2"><a href="#root"><span class="toc-label">Root</span></a></li><li class="toc-level-2"><a href="#live"><span class="toc-label">live`</span></a></li></ul></section><section class="sidebar-section"><h2>相關頁面</h2><ul class="sidebar-meta-list"><li><a href="resource.html" class="sidebar-meta-link">子命令群組: status resource</a></li><li><a href="snapshot.html" class="sidebar-meta-link">子命令群組: status snapshot</a></li><li><a href="../../handbook/zh-TW/status-workspace.html" class="sidebar-meta-link">對應手冊章節</a></li></ul></section><section class="sidebar-section"><h2>版本</h2><p class="sidebar-meta-text">Current checkout</p></section><section class="sidebar-section"><h2>語言</h2><ul class="sidebar-meta-list"><li><a href="#" class="sidebar-meta-link sidebar-meta-current">Current: 繁體中文</a></li><li><a href="../en/status.html" class="sidebar-meta-link">Switch to English</a></li></ul></section>
   </div>
 </aside>
 

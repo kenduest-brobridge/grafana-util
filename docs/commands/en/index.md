@@ -67,6 +67,7 @@ The public first-run CLI is organized around a small task-first surface:
 - [resource queries](./resource.md)
 - [snapshot bundles](./snapshot.md)
 - [dashboard convert raw-to-prompt](./dashboard-convert-raw-to-prompt.md)
+- [dashboard convert export-layout](./dashboard-convert-export-layout.md)
 - `version`
 - `export dashboard`
 - `export alert`
@@ -84,6 +85,7 @@ The public first-run CLI is organized around a small task-first surface:
 - [dashboard](./dashboard.md)
 - [dashboard export](./dashboard-export.md)
 - [dashboard import](./dashboard-import.md)
+- [dashboard convert export-layout](./dashboard-convert-export-layout.md)
 - [datasource](./datasource.md)
 - [datasource export](./datasource-export.md)
 - [datasource import](./datasource-import.md)

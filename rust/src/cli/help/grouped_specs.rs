@@ -83,6 +83,7 @@ pub(crate) const UNIFIED_ROOT_HELP_SPEC: GroupedHelpSpec = GroupedHelpSpec {
         "More help:",
         "  grafana-util <COMMAND> --help",
         "  grafana-util --help-full",
+        "  grafana-util --help-flat",
     ],
 };
 
@@ -107,10 +108,7 @@ pub(crate) const DASHBOARD_HELP_SPEC: GroupedHelpSpec = GroupedHelpSpec {
                     "Back up dashboards into raw/, prompt/, and provisioning/."
                 ),
                 row!("import", "Import raw dashboard JSON through the API."),
-                row!(
-                    "convert",
-                    "Convert raw dashboard JSON into prompt artifacts."
-                ),
+                row!("convert", "Convert or repair local dashboard artifacts."),
             ]
         ),
         section!(
@@ -146,7 +144,11 @@ pub(crate) const DASHBOARD_HELP_SPEC: GroupedHelpSpec = GroupedHelpSpec {
             [row!("screenshot", "Capture dashboard evidence.")]
         ),
     ],
-    footer: &["More help:", "  grafana-util dashboard <COMMAND> --help"],
+    footer: &[
+        "More help:",
+        "  grafana-util dashboard <COMMAND> --help",
+        "  grafana-util dashboard summary --help-full",
+    ],
 };
 
 pub(crate) const STATUS_HELP_SPEC: GroupedHelpSpec = GroupedHelpSpec {
@@ -264,7 +266,11 @@ pub(crate) const ACCESS_HELP_SPEC: GroupedHelpSpec = GroupedHelpSpec {
             ]
         ),
     ],
-    footer: &["More help:", "  grafana-util access <COMMAND> --help"],
+    footer: &[
+        "More help:",
+        "  grafana-util access <COMMAND> --help",
+        "  grafana-util access --help-full",
+    ],
 };
 
 pub(crate) const WORKSPACE_HELP_SPEC: GroupedHelpSpec = GroupedHelpSpec {
@@ -300,6 +306,8 @@ pub(crate) const WORKSPACE_HELP_SPEC: GroupedHelpSpec = GroupedHelpSpec {
         "More help:",
         "  grafana-util workspace <COMMAND> --help",
         "  grafana-util workspace ci --help",
+        "  grafana-util workspace --help-full",
+        "  grafana-util workspace --help-schema",
     ],
 };
 

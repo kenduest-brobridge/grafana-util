@@ -31,6 +31,7 @@ mod edit;
 mod edit_external;
 mod edit_live;
 mod export;
+mod export_layout;
 mod facade_support;
 mod files;
 mod governance_gate;
@@ -107,20 +108,22 @@ pub use cli_defs::{
     parse_cli_from, BrowseArgs, CloneLiveArgs, CommonCliArgs, DashboardAuthContext,
     DashboardCliArgs, DashboardCommand, DashboardHistoryArgs, DashboardHistorySubcommand,
     DashboardImportInputFormat, DashboardServeScriptFormat, DeleteArgs, DiffArgs, EditLiveArgs,
-    ExportArgs, GetArgs, GovernanceGateArgs, GovernanceGateOutputFormat, GovernancePolicySource,
-    HistoryDiffArgs, HistoryExportArgs, HistoryListArgs, HistoryOutputFormat, HistoryRestoreArgs,
-    ImpactArgs, ImpactOutputFormat, ImportArgs, InspectExportArgs, InspectExportInputType,
-    InspectExportReportFormat, InspectLiveArgs, InspectOutputFormat, InspectVarsArgs, ListArgs,
-    PatchFileArgs, PublishArgs, RawToPromptArgs, RawToPromptLogFormat, RawToPromptOutputFormat,
-    RawToPromptResolution, ReviewArgs, ScreenshotArgs, ScreenshotFullPageOutput,
-    ScreenshotOutputFormat, ScreenshotTheme, ServeArgs, SimpleOutputFormat, SummaryArgs,
-    TopologyArgs, TopologyOutputFormat, ValidateExportArgs, ValidationOutputFormat,
+    ExportArgs, ExportLayoutArgs, ExportLayoutVariant, GetArgs, GovernanceGateArgs,
+    GovernanceGateOutputFormat, GovernancePolicySource, HistoryDiffArgs, HistoryExportArgs,
+    HistoryListArgs, HistoryOutputFormat, HistoryRestoreArgs, ImpactArgs, ImpactOutputFormat,
+    ImportArgs, InspectExportArgs, InspectExportInputType, InspectExportReportFormat,
+    InspectLiveArgs, InspectOutputFormat, InspectVarsArgs, ListArgs, PatchFileArgs, PublishArgs,
+    RawToPromptArgs, RawToPromptLogFormat, RawToPromptOutputFormat, RawToPromptResolution,
+    ReviewArgs, ScreenshotArgs, ScreenshotFullPageOutput, ScreenshotOutputFormat, ScreenshotTheme,
+    ServeArgs, SimpleOutputFormat, SummaryArgs, TopologyArgs, TopologyOutputFormat,
+    ValidateExportArgs, ValidationOutputFormat,
 };
 pub use command_runner::{
     execute_dashboard_inspect_export, execute_dashboard_inspect_live,
     execute_dashboard_inspect_vars, execute_dashboard_list,
 };
 pub use export::{build_export_variant_dirs, build_output_path, export_dashboards_with_client};
+pub(crate) use export_layout::run_export_layout_repair;
 pub use help::{
     maybe_render_dashboard_help_full_from_os_args,
     maybe_render_dashboard_subcommand_help_from_os_args, render_inspect_export_help_full,

@@ -20,6 +20,8 @@ fn unified_help_mentions_common_surfaces_without_legacy_dashboard_paths() {
     assert!(help.contains("grafana-util --version"));
     assert!(help.contains("grafana-util status live --url http://localhost:3000"));
     assert!(help.contains("grafana-util config profile add dev"));
+    assert!(help.contains("grafana-util --help-full"));
+    assert!(help.contains("grafana-util --help-flat"));
     assert!(help.contains("status"));
     assert!(help.contains("completion"));
     assert!(help.contains("export"));
@@ -46,21 +48,17 @@ fn unified_help_mentions_common_surfaces_without_legacy_dashboard_paths() {
 fn unified_help_flat_lists_public_commands_with_purpose() {
     let help = render_unified_help_flat_text(false);
     assert!(help.contains("Flat command inventory"));
-    assert!(help.contains("COMMAND"));
-    assert!(help.contains("KIND"));
-    assert!(help.contains("PURPOSE"));
+    assert!(help.contains("\nCOMMAND\n"));
     assert!(help.contains("grafana-util status"));
-    assert!(help.contains("group"));
     assert!(help.contains("grafana-util status live"));
-    assert!(help.contains("Render shared project-wide live status."));
     assert!(help.contains("grafana-util dashboard export"));
-    assert!(help.contains("Export dashboards into a local artifact tree"));
     assert!(help.contains("grafana-util access user list"));
-    assert!(help.contains("List live or local Grafana users"));
+    assert!(!help.contains("\t"));
     assert!(!help.contains("Struct definition"));
     assert!(!help.contains("Arguments for"));
     assert!(!help.contains("grafana-util observe"));
     assert!(!help.contains("grafana-util dashboard live"));
+    assert!(help.lines().all(|line| line.len() <= 150));
 }
 
 #[test]
@@ -232,6 +230,8 @@ fn grouped_help_only_advertises_supported_help_full_paths() {
         ["grafana-util", "dashboard"],
         ["grafana-util", "datasource"],
         ["grafana-util", "alert"],
+        ["grafana-util", "access"],
+        ["grafana-util", "workspace"],
     ] {
         let help = maybe_render_unified_help_from_os_args(args, false)
             .unwrap_or_else(|| panic!("missing grouped help for {}", args.join(" ")));
@@ -248,6 +248,7 @@ fn grouped_help_only_advertises_supported_help_full_paths() {
         vec!["grafana-util", "alert", "--help-full"],
         vec!["grafana-util", "access", "--help-full"],
         vec!["grafana-util", "workspace", "--help-full"],
+        vec!["grafana-util", "dashboard", "summary", "--help-full"],
     ] {
         assert!(
             maybe_render_unified_help_from_os_args(args.clone(), false).is_some(),
@@ -255,6 +256,19 @@ fn grouped_help_only_advertises_supported_help_full_paths() {
             args.join(" ")
         );
     }
+
+    let dashboard_help =
+        maybe_render_unified_help_from_os_args(["grafana-util", "dashboard"], false).unwrap();
+    assert!(dashboard_help.contains("grafana-util dashboard summary --help-full"));
+
+    let access_help =
+        maybe_render_unified_help_from_os_args(["grafana-util", "access"], false).unwrap();
+    assert!(access_help.contains("grafana-util access --help-full"));
+
+    let workspace_help =
+        maybe_render_unified_help_from_os_args(["grafana-util", "workspace"], false).unwrap();
+    assert!(workspace_help.contains("grafana-util workspace --help-full"));
+    assert!(workspace_help.contains("grafana-util workspace --help-schema"));
 }
 
 #[test]
@@ -700,6 +714,7 @@ fn dashboard_convert_help_shows_flat_subcommand() {
     let help = render_cli_help_path(&["dashboard", "convert"]);
     assert!(help.contains("Run dashboard format conversion workflows."));
     assert!(help.contains("raw-to-prompt"));
+    assert!(help.contains("export-layout"));
     assert!(!help.contains("advanced dashboard"));
     assert!(!help.contains("sync"));
 }

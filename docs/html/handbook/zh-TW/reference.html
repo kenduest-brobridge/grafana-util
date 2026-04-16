@@ -986,6 +986,26 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <ul><li><code>grafana-util status --help-schema</code></li><li><code>grafana-util status staged --help-schema</code></li><li><code>grafana-util status live --help-schema</code></li></ul>
 <p>常見對應：</p>
 <ul><li><code>status staged --output-format json</code> -&gt; <code>grafana-util-project-status</code></li><li><code>status live --output-format json</code> -&gt; <code>grafana-util-project-status</code></li></ul>
+<p><code>status live</code> 的 machine-readable output 也可能包含來自 Grafana <code>/api/health</code> 的 <code>discovery.instance</code>。這段適合讀 Grafana <code>version</code>、 <code>commit</code> 與 database health；CI gate 仍應以 <code>overall</code> 與 <code>domains</code> 為準。</p>
+<p>成功時的最小 shape：</p>
+<pre><code>{
+  &quot;kind&quot;: &quot;grafana-util-project-status&quot;,
+  &quot;schemaVersion&quot;: 1,
+  &quot;discovery&quot;: {
+    &quot;instance&quot;: {
+      &quot;source&quot;: &quot;api-health&quot;,
+      &quot;status&quot;: &quot;available&quot;,
+      &quot;health&quot;: {
+        &quot;database&quot;: &quot;ok&quot;,
+        &quot;version&quot;: &quot;12.4.0&quot;,
+        &quot;commit&quot;: &quot;abc123&quot;
+      }
+    }
+  },
+  &quot;overall&quot;: {},
+  &quot;domains&quot;: []
+}</code></pre>
+<p>如果 <code>/api/health</code> 讀不到，<code>discovery.instance.status</code> 會變成 <code>unavailable</code> 並帶 <code>error</code>。這段只當診斷 metadata，不取代 readiness 欄位。</p>
 <h2 id="profile連線與-secret-處理">Profile、連線與 secret 處理</h2>
 <p>Profile 是專案本地的設定。<code>grafana-util config profile</code> 會讀寫目前工作目錄中的 <code>grafana-util.yaml</code>，<code>--profile</code> 則是從這個檔案裡挑選一個命名 profile。</p>
 <h3 id="建議的使用順序">建議的使用順序</h3>

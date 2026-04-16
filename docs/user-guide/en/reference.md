@@ -156,6 +156,37 @@ Practical mapping:
 - `status staged --output-format json` -> `grafana-util-project-status`
 - `status live --output-format json` -> `grafana-util-project-status`
 
+For `status live`, machine-readable output may also include
+`discovery.instance` from Grafana `/api/health`. Use it for instance metadata
+such as Grafana `version`, `commit`, and database health; keep readiness gates
+on `overall` and `domains`.
+
+Minimal success shape:
+
+```json
+{
+  "kind": "grafana-util-project-status",
+  "schemaVersion": 1,
+  "discovery": {
+    "instance": {
+      "source": "api-health",
+      "status": "available",
+      "health": {
+        "database": "ok",
+        "version": "12.4.0",
+        "commit": "abc123"
+      }
+    }
+  },
+  "overall": {},
+  "domains": []
+}
+```
+
+If `/api/health` cannot be read, `discovery.instance.status` becomes
+`unavailable` with an `error`. That metadata is diagnostic only; it is not a
+replacement for the readiness fields.
+
 ---
 
 ## Profile, connection, and secret handling

@@ -86,7 +86,7 @@ grafana-util --help-flat
 
 | 領域 | 先進哪頁 | 這頁之後通常會再去哪裡 |
 | :--- | :--- | :--- |
-| Dashboard | [dashboard](./dashboard.md) | [dashboard export](./dashboard-export.md)、[dashboard import](./dashboard-import.md)、[dashboard summary](./dashboard-summary.md)、[dashboard impact](./dashboard-impact.md) |
+| Dashboard | [dashboard](./dashboard.md) | [dashboard export](./dashboard-export.md)、[dashboard import](./dashboard-import.md)、[dashboard convert export-layout](./dashboard-convert-export-layout.md)、[dashboard summary](./dashboard-summary.md)、[dashboard impact](./dashboard-impact.md) |
 | Datasource | [datasource](./datasource.md) | [datasource export](./datasource-export.md)、[datasource import](./datasource-import.md)、[datasource diff](./datasource-diff.md) |
 | Alert | [alert](./alert.md) | [alert export](./alert-export.md)、[alert import](./alert-import.md)、[alert plan](./alert-plan.md)、[alert apply](./alert-apply.md) |
 | Access | [access](./access.md) | [access user](./access-user.md)、[access org](./access-org.md)、[access team](./access-team.md)、[access service-account](./access-service-account.md) |

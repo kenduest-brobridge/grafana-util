@@ -25,6 +25,9 @@
 ## 說明
 - 預設會寫出 `raw/`、`prompt/`、`provisioning/`。
 - 搭配 `--all-orgs` 時，優先用 Basic auth。
+- 非 flat 的 `raw/` 與 `prompt/` 匯出會對齊 Grafana folder path，例如 `Platform / Team / Infra` 會成為 `raw/Platform/Team/Infra/`。
+- export index 會記錄每個 dashboard 的 `folderUid`、`folderTitle` 與完整 `folderPath`，讓後續 repair、review、conversion workflow 不必依賴 dashboard JSON 內一定有 `meta.folderUid`。
+- 舊版匯出若仍是 leaf folder layout，可用 `dashboard convert export-layout` 修復。
 - `--flat` 會把檔案直接寫在各變體目錄下。
 - `--include-history` 會在每個匯出 org 範圍下加上 `history/`。
 - provider 檔案會寫到 `provisioning/provisioning/dashboards.yaml`。
@@ -91,4 +94,5 @@ grafana-util dashboard export --url http://localhost:3000 --basic-user admin --b
 - [dashboard import](./dashboard-import.md)
 - [dashboard diff](./dashboard-diff.md)
 - [dashboard convert raw-to-prompt](./dashboard-convert-raw-to-prompt.md)
+- [dashboard convert export-layout](./dashboard-convert-export-layout.md)
 - [dashboard history](./dashboard-history.md)

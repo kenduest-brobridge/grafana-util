@@ -163,6 +163,18 @@ pub(crate) struct DashboardIndexItem {
     pub title: String,
     #[serde(rename = "folderTitle")]
     pub folder_title: String,
+    #[serde(
+        rename = "folderUid",
+        default,
+        skip_serializing_if = "String::is_empty"
+    )]
+    pub folder_uid: String,
+    #[serde(
+        rename = "folderPath",
+        default,
+        skip_serializing_if = "String::is_empty"
+    )]
+    pub folder_path: String,
     pub org: String,
     #[serde(rename = "orgId")]
     pub org_id: String,
@@ -181,6 +193,24 @@ pub(crate) struct VariantIndexEntry {
     pub title: String,
     pub path: String,
     pub format: String,
+    #[serde(
+        rename = "folderTitle",
+        default,
+        skip_serializing_if = "String::is_empty"
+    )]
+    pub folder_title: String,
+    #[serde(
+        rename = "folderUid",
+        default,
+        skip_serializing_if = "String::is_empty"
+    )]
+    pub folder_uid: String,
+    #[serde(
+        rename = "folderPath",
+        default,
+        skip_serializing_if = "String::is_empty"
+    )]
+    pub folder_path: String,
     #[serde(default)]
     pub org: String,
     #[serde(rename = "orgId")]

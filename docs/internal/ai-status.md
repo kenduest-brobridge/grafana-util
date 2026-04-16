@@ -11,6 +11,42 @@ Current AI-maintained status only.
 - Older entries moved to [`ai-status-archive-2026-04-13.md`](docs/internal/archive/ai-status-archive-2026-04-13.md).
 - Older entries moved to [`ai-status-archive-2026-04-14.md`](docs/internal/archive/ai-status-archive-2026-04-14.md).
 - Older entries moved to [`ai-status-archive-2026-04-15.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-04-15.md).
+- Older entries moved to [`ai-status-archive-2026-04-16.md`](/Users/kendlee/work/grafana-utils/docs/internal/archive/ai-status-archive-2026-04-16.md).
+
+## 2026-04-16 - Add dashboard export layout repair
+- State: Done
+- Scope: Rust dashboard convert CLI surface, local export-layout repair planner/executor, dashboard export index metadata, focused parser/runtime/export tests, command docs/generated docs, command-surface contracts, and AI trace docs. README files, Python implementation, and provisioning layout repair are out of scope.
+- Baseline: older dashboard exports can have correct `raw/folders.json` metadata while `raw/` and `prompt/` files are flattened under the leaf `folderTitle`; raw dashboard JSON may also omit `meta.folderUid`, so repair needs stable artifact metadata instead of relying on the dashboard payload alone.
+- Current Update: Added `dashboard convert export-layout` with dry-run planning, copy-mode repair, in-place repair with backups, raw/prompt variant selection, folder inventory lookup, updated index paths, `extraFiles` reporting for unindexed files, case-insensitive/canonical path handling, and index-level `folderUid`/`folderPath` metadata for new exports.
+- Result: Focused export-layout/dashboard export index tests, full Rust tests, clippy, docs surface, generated-doc checks, AI workflow, formatting, and whitespace checks pass. Real export smoke against `/Users/kendlee/work/scsb/grafana-dashboard/scsb-dev/dashboards` reports move=220, same=92, blocked=0, extra=0 and writes a repaired copy under `/tmp/grafana-export-layout-test.9JfjGR/fixed`.
+
+## 2026-04-16 - Mirror dashboard export folder paths
+- State: Done
+- Scope: Rust dashboard export path assembly, focused dashboard export tests, dashboard export command docs/help, and AI trace docs. README files, Python implementation, and provisioning layout are out of scope.
+- Baseline: non-flat `dashboard export` writes raw and prompt files under the dashboard leaf `folderTitle`, even when Grafana reports a nested folder path through folder inventory. This can flatten distinct `Platform / Infra` and `Apps / Infra` folders into the same `Infra/` export directory.
+- Current Update: Raw and prompt export paths now use the collected folder inventory full path when available; `--flat` and provisioning layout continue to use their previous behavior.
+- Result: Focused dashboard export tests, full Rust tests, clippy, generated docs, docs-surface checks, formatting, AI workflow, and whitespace checks pass.
+
+## 2026-04-15 - Make help-flat terminal-safe
+- State: Done
+- Scope: Rust `--help-flat` rendering and focused help regression tests. Runtime command behavior, public docs, README files, and Python implementation are out of scope.
+- Baseline: `grafana-util --help-flat` renders a padded table with long purpose text, so narrow terminals wrap rows and make the flat command inventory hard to scan.
+- Current Update: Changed the flat inventory to one public command path per line and removed KIND/PURPOSE columns so terminal output stays readable; detailed purpose and flags remain available through `<COMMAND> --help`.
+- Result: Focused help tests and formatting pass; manual `--help-flat` smoke output now shows one command path per line without columns or ellipses.
+
+## 2026-04-15 - Advertise help-flat in root help
+- State: Done
+- Scope: Rust grouped root/domain help, focused help regression tests, and command-surface contract metadata. Runtime command behavior, README files, and Python implementation are out of scope.
+- Baseline: `grafana-util --help-flat` renders the flat public command inventory, but `grafana-util --help` only advertised `--help-full`. Follow-up review also found supported `access --help-full`, `workspace --help-full`, `workspace --help-schema`, and `dashboard summary --help-full` paths were not discoverable from their adjacent grouped help, while the command-surface contract incorrectly listed unsupported `dashboard --help-full`.
+- Current Update: Added the missing help hints to root/dashboard/access/workspace grouped help, extended focused help regressions, and removed unsupported `dashboard` from `help_full_supported`.
+- Result: Focused help tests, docs-surface contract checks, formatting, and CLI smoke checks pass.
+
+## 2026-04-15 - Add Grafana instance metadata to status live
+- State: Done
+- Scope: Rust `status live` document assembly, focused status-live tests, operator docs, generated docs, and AI trace docs. Python implementation is out of scope.
+- Baseline: `status live` returns project/domain readiness fields but does not read `/api/health`, so JSON/YAML output cannot show Grafana instance fields such as version, commit, or database health.
+- Current Update: Added an additive `discovery.instance` section populated from `GET /api/health`; failed health reads are recorded as non-blocking discovery metadata instead of changing domain readiness.
+- Result: Focused status tests, full Rust tests, clippy, docs surface, generated-doc checks, AI workflow, and whitespace checks pass. Source command/reference docs and generated man/html docs now describe the live instance metadata shape.
 
 ## 2026-04-15 - Fix stale dashboard command references
 - State: Done
@@ -18,38 +54,3 @@ Current AI-maintained status only.
 - Baseline: `grafana-util dashboard analyze` and `grafana-util dashboard inspect-export` are rejected by the CLI, but README and maintainer docs still mention them as command paths.
 - Current Update: Replaced README dependency examples with `dashboard summary`, updated policy/about artifact wording to dashboard summary JSON artifacts, refreshed generated man/html docs, and clarified maintainer docs that `inspect` is an internal artifact flow rather than a public dashboard command.
 - Result: CLI smoke checks confirm `dashboard analyze` and `dashboard inspect-export` are rejected while `dashboard summary` is accepted. Docs, generated-doc, Rust help, AI workflow, and whitespace checks pass.
-
-## 2026-04-15 - Clear remaining Rust architecture warnings
-- State: Done
-- Scope: Rust maintainability cleanup for sync help assertions plus large dashboard dependency, sync live-apply, datasource staged-reading, and dashboard browse-support modules. README files, Python implementation, and dashboard summary/analyze public naming are out of scope.
-- Baseline: `make quality-architecture` reports five warnings: `sync/cli_help_rust_tests.rs` direct help assertions plus four production files over the 900-line warning threshold.
-- Current Update: Added grouped sync help assertions and split dependency contract tests, sync request-json live-apply shim, datasource staged-reading tests, and dashboard local browse tests into focused sibling modules.
-- Result: Focused tests, full Rust tests, clippy, formatting, and architecture guardrails pass. `make quality-architecture` now reports no warnings. Dashboard summary/analyze naming cleanup remains deferred.
-
-## 2026-04-15 - Reduce dashboard help assertions
-- State: Done
-- Scope: Rust dashboard help-test maintainability. README files and Python implementation are out of scope.
-- Baseline: `make quality-architecture` warned that `dashboard_cli_inspect_help_rust_tests.rs` used many direct `help.contains()` assertions.
-- Current Update: Added a small `assert_help_includes` helper and routed grouped dashboard help assertions through it while preserving the same expected help text coverage.
-- Result: Dashboard help focused tests, full Rust tests, clippy, architecture guardrails, formatting, and whitespace checks pass. The dashboard help-test warning is cleared.
-
-## 2026-04-15 - Split datasource supported catalog tests
-- State: Done
-- Scope: Rust datasource test maintainability. README files and Python implementation are out of scope.
-- Baseline: `make quality-architecture` still warned on `datasource/tests/cli_mutation.rs` after previous datasource test splits.
-- Current Update: Moved supported datasource catalog JSON/text/table/csv/yaml tests into `cli_mutation_supported_catalog.rs`, leaving `cli_mutation.rs` focused on datasource command help, parser compatibility, and add-payload behavior.
-- Result: Datasource focused tests, full Rust tests, clippy, architecture guardrails, formatting, and whitespace checks pass. `datasource/tests/cli_mutation.rs` is no longer an architecture warning.
-
-## 2026-04-15 - Split datasource tail import and inspect tests
-- State: Done
-- Scope: Rust datasource test maintainability. README files and Python implementation are out of scope.
-- Baseline: `make quality-architecture` still warned on `datasource/tests/tail.rs` after previous tail diff and fixture splits.
-- Current Update: Moved datasource import validation/loader coverage into `tail_import.rs` and inspect-export/local source/manifest coverage into `tail_inspect.rs`, leaving `tail.rs` focused on routed import summary and export-org routing behavior.
-- Result: Datasource focused tests, full Rust tests, clippy, architecture guardrails, formatting, and whitespace checks pass. `datasource/tests/tail.rs` is no longer an architecture warning.
-
-## 2026-04-15 - Split snapshot review tests
-- State: Done
-- Scope: Rust snapshot test maintainability. README files and Python implementation are out of scope.
-- Baseline: `make quality-architecture` still warned on `snapshot/tests.rs` after earlier maintainability passes.
-- Current Update: Moved staged export scope resolver coverage into `tests_staged_scopes.rs` and snapshot review wrapper/warning coverage into `tests_review_warnings.rs`, leaving the main snapshot test module focused on shared fixtures and broader snapshot export/review behavior.
-- Result: Snapshot focused tests, full Rust tests, clippy, architecture guardrails, formatting, and whitespace checks pass. `snapshot/tests.rs` is no longer an architecture warning.

@@ -25,6 +25,9 @@ Use this when you need a local export tree for later import, review, diff, or fi
 ## Notes
 - Writes `raw/`, `prompt/`, and `provisioning/` by default.
 - Use Basic auth with `--all-orgs`.
+- Non-flat `raw/` and `prompt/` exports mirror Grafana folder paths, for example `Platform / Team / Infra` becomes `raw/Platform/Team/Infra/`.
+- Export indexes record each dashboard's `folderUid`, `folderTitle`, and full `folderPath`, so later repair, review, and conversion workflows do not depend on dashboard JSON carrying `meta.folderUid`.
+- Older exports with leaf-folder-only `raw/` or `prompt/` layouts can be repaired with `dashboard convert export-layout`.
 - Use `--flat` for files directly under each variant directory.
 - Use `--include-history` to add `history/` under each exported org scope.
 - The provider file is `provisioning/provisioning/dashboards.yaml`.
@@ -91,4 +94,5 @@ grafana-util dashboard export --url http://localhost:3000 --basic-user admin --b
 - [dashboard import](./dashboard-import.md)
 - [dashboard diff](./dashboard-diff.md)
 - [dashboard convert raw-to-prompt](./dashboard-convert-raw-to-prompt.md)
+- [dashboard convert export-layout](./dashboard-convert-export-layout.md)
 - [dashboard history](./dashboard-history.md)

@@ -131,6 +131,7 @@ grafana-util dashboard summary --url http://localhost:3000 --basic-user admin --
 - [dashboard export](./dashboard-export.md)
 - [dashboard import](./dashboard-import.md)
 - [dashboard convert raw-to-prompt](./dashboard-convert-raw-to-prompt.md)
+- [dashboard convert export-layout](./dashboard-convert-export-layout.md)
 
 ### Review & Diff
 

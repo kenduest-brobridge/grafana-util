@@ -101,7 +101,8 @@
           { "command": "grafana-util dashboard policy", "target": "dashboard-policy.html" },
           { "command": "grafana-util dashboard variables", "target": "dashboard-variables.html" },
           { "command": "grafana-util dashboard history", "target": "dashboard-history.html" },
-          { "command": "grafana-util dashboard convert raw-to-prompt", "target": "dashboard-convert-raw-to-prompt.html" }
+          { "command": "grafana-util dashboard convert raw-to-prompt", "target": "dashboard-convert-raw-to-prompt.html" },
+          { "command": "grafana-util dashboard convert export-layout", "target": "dashboard-convert-export-layout.html" }
         ]
       },
       {
