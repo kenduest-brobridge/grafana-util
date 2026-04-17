@@ -14,6 +14,7 @@
 - `--secret-values`：在匯入時解析佔位秘密值。
 - `--secret-values-file`：從 JSON 檔提供佔位秘密值，供匯入時解析。
 - `--dry-run`、`--table`、`--json`、`--output-format`、`--no-header`、`--output-columns`、`--list-columns`、`--progress`、`--verbose`：預覽與回報控制。若想看完整 dry-run 表格欄位，可用 `--output-columns all`。
+- dry-run 輸出可包含 `target_uid`、`target_version`、`target_read_only` 與 `blocked_reason`，讓 read-only 或 provisioned target 在 live import 前就可見。
 
 ## 範例
 ```bash
@@ -39,6 +40,7 @@ grafana-util datasource import --url http://localhost:3000 --token "$GRAFANA_API
 ## 成功判準
 
 - 匯入預覽會清楚顯示哪些 org 與 datasource 會被修改
+- update 會使用 target datasource UID，並顯示 target version/read-only evidence
 - provisioning 與 inventory 兩種輸入都能正確路由
 - secrets 在 live import 前就已經解開，不會等到送出後才發現問題
 
@@ -46,6 +48,7 @@ grafana-util datasource import --url http://localhost:3000 --token "$GRAFANA_API
 
 - 如果匯入碰到錯的 org，先確認路由旗標再重跑
 - 如果計畫看起來不完整，先確認 `--input-format` 與 bundle 是 inventory 還是 provisioning
+- 如果 dry-run 回報 `blocked-read-only`，target datasource 很可能由 Grafana provisioning 管理，應回到來源設定修改
 - 如果 secrets 還沒解開，先檢查 `secureJsonDataPlaceholders` 裡的 placeholder 名稱，以及 `--secret-values` 或 `--secret-values-file` 提供的 key 是否對得上
 
 ## 相關指令

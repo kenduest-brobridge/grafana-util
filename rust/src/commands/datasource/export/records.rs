@@ -355,6 +355,15 @@ fn build_secure_json_data_placeholders(
     })))
 }
 
+fn export_evidence_fields(datasource: &Map<String, Value>, record: &mut DatasourceImportRecord) {
+    record.read_only = datasource.get("readOnly").and_then(Value::as_bool);
+    record.version = datasource.get("version").and_then(Value::as_i64);
+    record.api_version = datasource
+        .get("apiVersion")
+        .and_then(Value::as_str)
+        .map(str::to_string);
+}
+
 pub(crate) fn build_export_record_from_datasource(
     datasource: &Map<String, Value>,
     org_name: &str,
@@ -363,6 +372,7 @@ pub(crate) fn build_export_record_from_datasource(
     let mut record = DatasourceImportRecord::from_generic_map(datasource);
     record.org_name = org_name.to_string();
     record.org_id = org_id.to_string();
+    export_evidence_fields(datasource, &mut record);
     if let Some(placeholders) = build_secure_json_data_placeholders(datasource) {
         record.secure_json_data_placeholders = Some(placeholders);
     }

@@ -70,7 +70,8 @@ pub(crate) use datasource_import_payload::{
 };
 #[allow(unused_imports)]
 pub(crate) use datasource_import_plan::{
-    prepare_datasource_import_plan, PreparedDatasourceImportPlan, PreparedDatasourceImportRequest,
+    prepare_datasource_import_plan, prepare_datasource_import_plan_with_target_resolver,
+    DatasourceUpdateTargetEvidence, PreparedDatasourceImportPlan, PreparedDatasourceImportRequest,
 };
 
 pub(crate) fn import_datasources_with_client(
@@ -93,6 +94,7 @@ pub(crate) fn import_datasources_with_client(
 
     let live = DatasourceResourceClient::new(client).list_datasources()?;
     let plan = prepare_datasource_import_plan(
+        client,
         &records,
         &live,
         replace_existing,
@@ -265,6 +267,9 @@ mod tests {
             })
             .as_object()
             .cloned(),
+            read_only: None,
+            version: None,
+            api_version: None,
             secure_json_data_placeholders: json!({
                 "basicAuthPassword": "${secret:loki-basic-auth}",
                 "httpHeaderValue1": "${secret:loki-tenant-token}",
@@ -308,6 +313,9 @@ mod tests {
                 basic_auth_user: String::new(),
                 database: String::new(),
                 json_data: None,
+                read_only: None,
+                version: None,
+                api_version: None,
                 secure_json_data_placeholders: None,
                 user: String::new(),
                 with_credentials: None,
@@ -330,6 +338,9 @@ mod tests {
                 })
                 .as_object()
                 .cloned(),
+                read_only: None,
+                version: None,
+                api_version: None,
                 secure_json_data_placeholders: json!({
                     "basicAuthPassword": "${secret:loki-basic-auth}",
                     "httpHeaderValue1": "${secret:loki-tenant-token}",
@@ -346,12 +357,13 @@ mod tests {
             "loki-tenant-token": "tenant-token",
         });
 
-        let plan = prepare_datasource_import_plan(
+        let plan = datasource_import_plan::prepare_datasource_import_plan_with_target_resolver(
             &records,
             &live,
             false,
             false,
             secret_values.as_object(),
+            |_, _| unreachable!("target resolver is not used for create-only plan test"),
         )
         .unwrap();
 
@@ -369,6 +381,93 @@ mod tests {
             plan.requests[1].payload["secureJsonData"]["httpHeaderValue1"],
             json!("tenant-token")
         );
+    }
+
+    #[test]
+    fn prepare_datasource_import_plan_updates_by_uid_with_target_version() {
+        let records = vec![DatasourceImportRecord {
+            uid: "prom-main".to_string(),
+            name: "Prometheus Main".to_string(),
+            datasource_type: "prometheus".to_string(),
+            access: "proxy".to_string(),
+            url: "http://prometheus:9090".to_string(),
+            org_id: "1".to_string(),
+            ..Default::default()
+        }];
+        let live = vec![json!({
+            "id": 42,
+            "uid": "prom-main",
+            "name": "Prometheus Main",
+            "type": "prometheus"
+        })
+        .as_object()
+        .unwrap()
+        .clone()];
+
+        let plan = datasource_import_plan::prepare_datasource_import_plan_with_target_resolver(
+            &records,
+            &live,
+            true,
+            false,
+            None,
+            |target_uid, _identity| {
+                assert_eq!(target_uid, "prom-main");
+                Ok(datasource_import_plan::DatasourceUpdateTargetEvidence {
+                    uid: "prom-main".to_string(),
+                    version: Some(7),
+                    read_only: false,
+                })
+            },
+        )
+        .unwrap();
+
+        assert_eq!(plan.would_update, 1);
+        assert_eq!(plan.requests[0].method, reqwest::Method::PUT);
+        assert_eq!(plan.requests[0].path, "/api/datasources/uid/prom-main");
+        assert_eq!(plan.requests[0].payload["uid"], json!("prom-main"));
+        assert_eq!(plan.requests[0].payload["version"], json!(7));
+    }
+
+    #[test]
+    fn prepare_datasource_import_plan_blocks_read_only_target_before_writes() {
+        let records = vec![DatasourceImportRecord {
+            uid: "prom-main".to_string(),
+            name: "Prometheus Main".to_string(),
+            datasource_type: "prometheus".to_string(),
+            access: "proxy".to_string(),
+            url: "http://prometheus:9090".to_string(),
+            org_id: "1".to_string(),
+            ..Default::default()
+        }];
+        let live = vec![json!({
+            "id": 42,
+            "uid": "prom-main",
+            "name": "Prometheus Main",
+            "type": "prometheus"
+        })
+        .as_object()
+        .unwrap()
+        .clone()];
+
+        let error = datasource_import_plan::prepare_datasource_import_plan_with_target_resolver(
+            &records,
+            &live,
+            true,
+            false,
+            None,
+            |_target_uid, _identity| {
+                Ok(datasource_import_plan::DatasourceUpdateTargetEvidence {
+                    uid: "prom-main".to_string(),
+                    version: Some(7),
+                    read_only: true,
+                })
+            },
+        )
+        .err()
+        .unwrap();
+
+        assert!(error.to_string().contains("read-only"));
+        assert!(error.to_string().contains("Grafana provisioning"));
     }
 
     #[test]

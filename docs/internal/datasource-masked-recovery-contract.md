@@ -7,7 +7,8 @@ contract.
 
 - `datasources.json` is the canonical replay, import, and diff artifact for
   the masked-recovery datasource contract.
-- `provisioning/datasources.yaml` is a derived provisioning projection only.
+- `provisioning/datasources.yaml` is a derived provisioning projection only and
+  is not guaranteed to be Grafana-ready while secret placeholders remain.
 - The contract is recovery-capable but does not export plaintext secret
   material from Grafana live export.
 
@@ -34,7 +35,15 @@ contract.
 - Export writes `secureJsonDataPlaceholders`, not plaintext datasource secrets.
 - Import resolves those placeholders only from external secret input such as
   `--secret-values` or `--secret-values-file`.
+- Any provisioning projection that still contains placeholders is an
+  intermediate artifact, not a complete ready-to-apply Grafana provisioning
+  file.
 - Export metadata does not carry datasource secret companion discovery fields.
+
+## Adapter Boundary
+
+- Grafana K8s datasource API support is later adapter work and is out of scope
+  for the current masked-recovery contract.
 
 ## Compatibility Rule
 

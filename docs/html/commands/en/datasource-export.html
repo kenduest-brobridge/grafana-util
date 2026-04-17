@@ -937,11 +937,11 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 <section class="command-intro">
   <div class="command-intro-grid"><div class="command-intro-block">
   <p class="command-intro-label">What this page covers</p>
-  <p class="command-intro-text">Export live Grafana datasource inventory as normalized JSON plus provisioning files.</p>
+  <p class="command-intro-text">Export live Grafana datasource inventory as normalized JSON plus a derived provisioning projection.</p>
 </div>
 <div class="command-intro-block">
   <p class="command-intro-label">When to open this page</p>
-  <ul class="command-intro-list"><li>Use this when you need a local datasource bundle for later inspection, diff, or import.</li></ul>
+  <ul class="command-intro-list"><li>Use this when you need a local datasource bundle for later inspection, diff, or</li><li>import.</li></ul>
 </div>
 <div class="command-intro-block">
   <p class="command-intro-label">Who this page is for</p>
@@ -950,7 +950,7 @@ code[class*="language-"],pre[class*="language-"]{color:#ccc;background:none;font
 </div>
 </section>
 <h2 id="purpose">Purpose</h2>
-<p>Export live Grafana datasource inventory as normalized JSON plus provisioning files.</p>
+<p>Export live Grafana datasource inventory as normalized JSON plus a derived provisioning projection.</p>
 <h2 id="when-to-use">When to use</h2>
 <p>Use this when you need a local datasource bundle for later inspection, diff, or import.</p>
 <h2 id="key-flags">Key flags</h2>
@@ -963,9 +963,12 @@ grafana-util datasource export --url http://localhost:3000 --basic-user admin --
 <h2 id="before-after">Before / After</h2>
 <ul><li><strong>Before</strong>: live datasource state was easy to lose because the export shape was not normalized or easy to reuse later.</li><li><strong>After</strong>: one export gives you a local bundle that is stable enough for inspection, diff, and import.</li></ul>
 <h2 id="what-success-looks-like">What success looks like</h2>
-<ul><li>the export tree is complete enough to inspect later without Grafana</li><li>normalized JSON and provisioning files stay aligned with the source inventory</li><li>the bundle is ready for diff or import without extra hand cleanup</li></ul>
+<p>inventory</p>
+<p>Grafana-ready once any secret placeholders are resolved</p>
+<ul><li>the export tree is complete enough to inspect later without Grafana</li><li>normalized JSON and provisioning projection stay aligned with the source</li><li>the provisioning projection is treated as derived output, and it is only</li><li>the bundle is ready for diff or import without extra hand cleanup</li></ul>
 <h2 id="failure-checks">Failure checks</h2>
-<ul><li>if the export tree is missing org data, confirm the org scope and whether the credentials can see it</li><li>if <code>--all-orgs</code> fails, use Basic auth and verify that the account can see each target org</li><li>if the bundle looks stale, verify the export directory and whether <code>--overwrite</code> was used intentionally</li><li>if you expected secret plaintext in the export, remember that Grafana live datasource APIs do not return it; export only captures config and <code>secureJsonDataPlaceholders</code></li></ul>
+<p>artifact and resolve secrets before trying to apply it as Grafana</p>
+<ul><li>if the export tree is missing org data, confirm the org scope and whether the credentials can see it</li><li>if <code>--all-orgs</code> fails, use Basic auth and verify that the account can see each target org</li><li>if the bundle looks stale, verify the export directory and whether <code>--overwrite</code> was used intentionally</li><li>if you expected secret plaintext in the export, remember that Grafana live datasource APIs do not return it; export only captures config and <code>secureJsonDataPlaceholders</code></li><li>if the provisioning output still has placeholders, treat it as an intermediate</li></ul>
 <h2 id="related-commands">Related commands</h2>
 <ul><li><a href="datasource-list.html">datasource list</a></li><li><a href="datasource-import.html">datasource import</a></li><li><a href="datasource-diff.html">datasource diff</a></li></ul>
 

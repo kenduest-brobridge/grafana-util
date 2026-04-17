@@ -42,6 +42,9 @@ const DATASOURCE_RECOVERY_IMPORT_EXTRA_FIELDS: &[&str] = &[
     "basicAuthUser",
     "database",
     "jsonData",
+    "readOnly",
+    "version",
+    "apiVersion",
     "secureJsonDataPlaceholders",
     "user",
     "withCredentials",
@@ -131,7 +134,7 @@ pub(crate) use datasource_import_export_support_orgs::{
     discover_export_org_import_scopes, validate_matching_export_org,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub(crate) struct DatasourceImportRecord {
     pub uid: String,
     pub name: String,
@@ -145,6 +148,9 @@ pub(crate) struct DatasourceImportRecord {
     pub basic_auth_user: String,
     pub database: String,
     pub json_data: Option<Map<String, Value>>,
+    pub read_only: Option<bool>,
+    pub version: Option<i64>,
+    pub api_version: Option<String>,
     pub secure_json_data_placeholders: Option<Map<String, Value>>,
     pub user: String,
     pub with_credentials: Option<bool>,
@@ -173,6 +179,12 @@ impl DatasourceImportRecord {
             basic_auth_user: normalize_optional_string_field(record, "basicAuthUser"),
             database: normalize_optional_string_field(record, "database"),
             json_data: record.get("jsonData").and_then(Value::as_object).cloned(),
+            read_only: normalize_generic_bool_value(record.get("readOnly")),
+            version: record.get("version").and_then(Value::as_i64),
+            api_version: record
+                .get("apiVersion")
+                .and_then(Value::as_str)
+                .map(str::to_string),
             secure_json_data_placeholders: record
                 .get("secureJsonDataPlaceholders")
                 .and_then(Value::as_object)
@@ -213,6 +225,15 @@ impl DatasourceImportRecord {
         }
         if let Some(json_data) = &self.json_data {
             object.insert("jsonData".to_string(), Value::Object(json_data.clone()));
+        }
+        if let Some(value) = self.read_only {
+            object.insert("readOnly".to_string(), Value::Bool(value));
+        }
+        if let Some(value) = self.version {
+            object.insert("version".to_string(), Value::Number(value.into()));
+        }
+        if let Some(value) = &self.api_version {
+            object.insert("apiVersion".to_string(), Value::String(value.clone()));
         }
         if let Some(placeholders) = &self.secure_json_data_placeholders {
             object.insert(
@@ -256,6 +277,12 @@ impl DatasourceImportRecord {
                 "jsonData",
                 context_label,
             )?,
+            read_only: normalize_generic_bool_value(record.get("readOnly")),
+            version: record.get("version").and_then(Value::as_i64),
+            api_version: record
+                .get("apiVersion")
+                .and_then(Value::as_str)
+                .map(str::to_string),
             secure_json_data_placeholders: normalize_optional_object_value(
                 record.get("secureJsonDataPlaceholders"),
                 "secureJsonDataPlaceholders",

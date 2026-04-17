@@ -1,10 +1,12 @@
 # datasource export
 
 ## Purpose
-Export live Grafana datasource inventory as normalized JSON plus provisioning files.
+Export live Grafana datasource inventory as normalized JSON plus a derived
+provisioning projection.
 
 ## When to use
-Use this when you need a local datasource bundle for later inspection, diff, or import.
+Use this when you need a local datasource bundle for later inspection, diff, or
+import.
 
 ## Key flags
 - `--output-dir`: target directory for the export tree.
@@ -33,7 +35,10 @@ grafana-util datasource export --url http://localhost:3000 --basic-user admin --
 ## What success looks like
 
 - the export tree is complete enough to inspect later without Grafana
-- normalized JSON and provisioning files stay aligned with the source inventory
+- normalized JSON and provisioning projection stay aligned with the source
+  inventory
+- the provisioning projection is treated as derived output, and it is only
+  Grafana-ready once any secret placeholders are resolved
 - the bundle is ready for diff or import without extra hand cleanup
 
 ## Failure checks
@@ -42,6 +47,8 @@ grafana-util datasource export --url http://localhost:3000 --basic-user admin --
 - if `--all-orgs` fails, use Basic auth and verify that the account can see each target org
 - if the bundle looks stale, verify the export directory and whether `--overwrite` was used intentionally
 - if you expected secret plaintext in the export, remember that Grafana live datasource APIs do not return it; export only captures config and `secureJsonDataPlaceholders`
+- if the provisioning output still has placeholders, treat it as an intermediate
+  artifact and resolve secrets before trying to apply it as Grafana
 
 ## Related commands
 - [datasource list](./datasource-list.md)

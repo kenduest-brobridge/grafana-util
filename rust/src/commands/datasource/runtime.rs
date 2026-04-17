@@ -43,6 +43,10 @@ const DATASOURCE_IMPORT_LIST_COLUMNS: &[&str] = &[
     "action",
     "org_id",
     "file",
+    "target_uid",
+    "target_version",
+    "target_read_only",
+    "blocked_reason",
 ];
 
 // Datasource runtime boundary:

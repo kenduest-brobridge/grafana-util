@@ -13,6 +13,7 @@ use crate::datasource_secret::{
 use crate::grafana_api::DatasourceResourceClient;
 
 use super::datasource_import_export_support::DatasourceImportDryRunReport;
+use super::datasource_import_plan::fetch_update_target_evidence;
 use super::render_import_table;
 use super::{
     describe_datasource_import_mode, fetch_current_org, load_import_records,
@@ -80,9 +81,28 @@ fn build_import_secret_visibility_entries(
 
 pub(crate) fn format_datasource_import_dry_run_line(row: &[String]) -> String {
     format!(
-        "Dry-run datasource uid={} name={} type={} match={} dest={} action={} file={}",
-        row[0], row[1], row[2], row[3], row[4], row[5], row[7]
+        "Dry-run datasource uid={} name={} type={} match={} dest={} action={} targetUid={} targetVersion={} targetReadOnly={} blockedReason={} file={}",
+        row[0], row[1], row[2], row[3], row[4], row[5], row[8], row[9], row[10], row[11], row[7]
     )
+}
+
+fn optional_string_value(value: &str) -> Value {
+    if value.trim().is_empty() {
+        Value::Null
+    } else {
+        Value::String(value.to_string())
+    }
+}
+
+fn optional_i64_value(value: &str) -> Value {
+    value.parse::<i64>().map(Value::from).unwrap_or(Value::Null)
+}
+
+fn optional_bool_value(value: &str) -> Value {
+    value
+        .parse::<bool>()
+        .map(Value::from)
+        .unwrap_or(Value::Null)
 }
 
 pub(crate) fn collect_datasource_import_dry_run_report(
@@ -107,17 +127,50 @@ pub(crate) fn collect_datasource_import_dry_run_report(
     for (index, record) in records.iter().enumerate() {
         let matching = resolve_match(record, &live, replace_existing, args.update_existing_only);
         let file_ref = format!("{}#{}", metadata.datasources_file, index);
+        let mut action = matching.action.to_string();
+        let mut target_uid = matching.target_uid.clone();
+        let mut target_version = String::new();
+        let mut target_read_only = String::new();
+        let mut blocked_reason = String::new();
+        if matching.action == "would-update" {
+            let identity = if record.uid.is_empty() {
+                record.name.as_str()
+            } else {
+                record.uid.as_str()
+            };
+            match fetch_update_target_evidence(client, &matching.target_uid, identity) {
+                Ok(target) => {
+                    target_uid = target.uid;
+                    if let Some(version) = target.version {
+                        target_version = version.to_string();
+                    }
+                    target_read_only = target.read_only.to_string();
+                    if target.read_only {
+                        action = "blocked-read-only".to_string();
+                        blocked_reason = "blocked-read-only".to_string();
+                    }
+                }
+                Err(error) => {
+                    action = "blocked-target-evidence".to_string();
+                    blocked_reason = error.to_string();
+                }
+            }
+        }
         rows.push(vec![
             record.uid.clone(),
             record.name.clone(),
             record.datasource_type.clone(),
             matching.match_basis.to_string(),
             matching.destination.to_string(),
-            matching.action.to_string(),
+            action.clone(),
             target_org_id.clone(),
             file_ref,
+            target_uid,
+            target_version,
+            target_read_only,
+            blocked_reason,
         ]);
-        match matching.action {
+        match action.as_str() {
             "would-create" => created += 1,
             "would-update" => updated += 1,
             "would-skip-missing" => skipped += 1,
@@ -185,6 +238,10 @@ pub(crate) fn build_datasource_import_dry_run_json_value(
                             ("action".to_string(), Value::String(row[5].clone())),
                             ("orgId".to_string(), Value::String(row[6].clone())),
                             ("file".to_string(), Value::String(row[7].clone())),
+                            ("targetUid".to_string(), optional_string_value(&row[8])),
+                            ("targetVersion".to_string(), optional_i64_value(&row[9])),
+                            ("targetReadOnly".to_string(), optional_bool_value(&row[10])),
+                            ("blockedReason".to_string(), optional_string_value(&row[11])),
                         ]))
                     })
                     .collect(),

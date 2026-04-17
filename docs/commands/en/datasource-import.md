@@ -14,6 +14,7 @@ Use this when you have a local datasource bundle or provisioning tree and want t
 - `--secret-values`: resolve placeholder secrets during import.
 - `--secret-values-file`: resolve placeholder secrets from a JSON file during import.
 - `--dry-run`, `--table`, `--json`, `--output-format`, `--no-header`, `--output-columns`, `--list-columns`, `--progress`, `--verbose`: preview and reporting controls. Use `--output-columns all` for the full dry-run table.
+- dry-run output can include `target_uid`, `target_version`, `target_read_only`, and `blocked_reason` so read-only or provisioned targets are visible before live import.
 
 ## Examples
 ```bash
@@ -34,6 +35,7 @@ grafana-util datasource import --url http://localhost:3000 --basic-user admin --
 ## What success looks like
 
 - the import preview shows which orgs and datasources will change
+- updates use target datasource UIDs and show target version/read-only evidence
 - provisioning and inventory inputs both route correctly
 - secrets are resolved before the live import, not after the damage is done
 
@@ -41,6 +43,7 @@ grafana-util datasource import --url http://localhost:3000 --basic-user admin --
 
 - if the import touches the wrong org, verify the routing flags before trying again
 - if the plan is incomplete, confirm the `--input-format` and whether the bundle is inventory or provisioning
+- if dry-run reports `blocked-read-only`, the target datasource is likely managed by Grafana provisioning and must be changed at its source
 - if secrets stay unresolved, check the placeholder names in `secureJsonDataPlaceholders` and the keys provided through `--secret-values` or `--secret-values-file`
 
 ## Related commands

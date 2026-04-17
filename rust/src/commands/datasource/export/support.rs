@@ -315,6 +315,7 @@ pub(crate) fn parse_export_metadata(path: &Path) -> Result<DatasourceExportMetad
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::datasource::DatasourceImportRecord;
     use serde_json::json;
 
     #[test]
@@ -335,6 +336,9 @@ mod tests {
                 "maxLines": 1000,
                 "timeout": 60
             },
+            "readOnly": true,
+            "version": 17,
+            "apiVersion": "datasource.grafana.app/v1alpha1",
             "secureJsonData": {
                 "basicAuthPassword": "super-secret"
             },
@@ -364,6 +368,12 @@ mod tests {
                     .clone()
             )
         );
+        assert_eq!(record.read_only, Some(true));
+        assert_eq!(record.version, Some(17));
+        assert_eq!(
+            record.api_version,
+            Some("datasource.grafana.app/v1alpha1".to_string())
+        );
         assert_eq!(
             record.secure_json_data_placeholders,
             Some(
@@ -376,6 +386,19 @@ mod tests {
                 .clone()
             )
         );
+        let inventory_record = record.to_inventory_record();
+        assert_eq!(inventory_record["readOnly"], Value::Bool(true));
+        assert_eq!(inventory_record["version"], Value::Number(17.into()));
+        assert_eq!(
+            inventory_record["apiVersion"],
+            Value::String("datasource.grafana.app/v1alpha1".to_string())
+        );
+        let reparsed = DatasourceImportRecord::from_inventory_record(
+            &inventory_record,
+            "datasource export evidence test",
+        )
+        .unwrap();
+        assert_eq!(reparsed, record);
     }
 
     #[test]

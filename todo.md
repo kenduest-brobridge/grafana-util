@@ -99,6 +99,30 @@ Validation:
 - `cargo test --manifest-path rust/Cargo.toml --quiet`
 - `cargo fmt --manifest-path rust/Cargo.toml --all --check`
 
+## P1 - Datasource Masked-Recovery Safety
+
+### Keep Export Projections Derived and Safe
+
+Status: done for the current Rust datasource masked-recovery safety pass.
+Export records now preserve additive live evidence, import update planning uses
+target UID/version evidence, read-only targets are blocked before live writes,
+and provisioning output remains documented as derived projection only.
+
+Action:
+
+- Keep `datasources.json` as the canonical replay/import/diff artifact.
+- Keep `provisioning/datasources.yaml` documented as derived output only while
+  secret placeholders remain.
+- Keep K8s datasource API support out of this task and note it separately as a
+  future adapter boundary.
+- Later, evaluate plugin-availability preflight and a separate K8s datasource
+  adapter lane without mixing either into the masked-recovery contract.
+
+Validation so far:
+
+- Focused datasource export, import-plan, dry-run JSON, render, parser, and
+  round-trip tests pass.
+
 ## P0 - Test Surface Control
 
 ### Split Oversized Rust Test Files

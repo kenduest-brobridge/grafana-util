@@ -52,6 +52,9 @@ fn build_import_payload_matches_shared_contract_fixtures() {
             basic_auth_user: String::new(),
             database: String::new(),
             json_data: None,
+            read_only: None,
+            version: None,
+            api_version: None,
             secure_json_data_placeholders: None,
             user: String::new(),
             with_credentials: None,
@@ -83,6 +86,9 @@ fn datasource_import_record_round_trips_through_inventory_shape() {
             .unwrap()
             .clone(),
         ),
+        read_only: None,
+        version: None,
+        api_version: None,
         secure_json_data_placeholders: Some(
             json!({
                 "basicAuthPassword": "${secret:loki-main-basicauthpassword}"
@@ -305,6 +311,9 @@ fn build_import_payload_resolves_secret_placeholders_into_secure_json_data() {
         basic_auth_user: String::new(),
         database: String::new(),
         json_data: None,
+        read_only: None,
+        version: None,
+        api_version: None,
         secure_json_data_placeholders: json!({
             "basicAuthPassword": "${secret:loki-basic-auth}",
             "httpHeaderValue1": "${secret:loki-tenant-token}"
@@ -350,6 +359,9 @@ fn build_import_payload_rejects_missing_secret_values_for_placeholders() {
         basic_auth_user: String::new(),
         database: String::new(),
         json_data: None,
+        read_only: None,
+        version: None,
+        api_version: None,
         secure_json_data_placeholders: json!({
             "basicAuthPassword": "${secret:loki-basic-auth}"
         })
@@ -423,6 +435,10 @@ fn build_datasource_import_dry_run_json_value_includes_secret_visibility() {
             "would-create".to_string(),
             "7".to_string(),
             "datasources.json#0".to_string(),
+            String::new(),
+            String::new(),
+            String::new(),
+            String::new(),
         ]],
         datasource_count: 1,
         would_create: 1,
@@ -467,6 +483,10 @@ fn build_datasource_import_dry_run_json_value_includes_secret_visibility() {
         json!(["basicAuthPassword", "httpHeaderValue1"])
     );
     assert_eq!(value["datasources"][0]["matchBasis"], json!("name"));
+    assert_eq!(value["datasources"][0]["targetUid"], Value::Null);
+    assert_eq!(value["datasources"][0]["targetVersion"], Value::Null);
+    assert_eq!(value["datasources"][0]["targetReadOnly"], Value::Null);
+    assert_eq!(value["datasources"][0]["blockedReason"], Value::Null);
 }
 
 #[test]

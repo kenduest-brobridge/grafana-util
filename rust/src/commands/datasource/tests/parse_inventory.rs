@@ -128,7 +128,7 @@ fn parse_datasource_import_supports_output_columns() {
         "--output-format",
         "table",
         "--output-columns",
-        "uid,matchBasis,action,orgId,file",
+        "uid,matchBasis,action,orgId,targetUid,targetVersion,targetReadOnly,blockedReason,file",
     ]);
 
     match args.command {
@@ -136,7 +136,17 @@ fn parse_datasource_import_supports_output_columns() {
             assert!(inner.table);
             assert_eq!(
                 inner.output_columns,
-                vec!["uid", "match_basis", "action", "org_id", "file"]
+                vec![
+                    "uid",
+                    "match_basis",
+                    "action",
+                    "org_id",
+                    "target_uid",
+                    "target_version",
+                    "target_read_only",
+                    "blocked_reason",
+                    "file"
+                ]
             );
         }
         _ => panic!("expected datasource import"),

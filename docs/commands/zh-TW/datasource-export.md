@@ -1,10 +1,12 @@
 # datasource export
 
 ## 用途
-將線上 Grafana datasource inventory 匯出成標準化 JSON 與 provisioning 檔案。
+將線上 Grafana datasource inventory 匯出成標準化 JSON 與衍生的
+provisioning projection。
 
 ## 何時使用
-當您需要一個本地 dataworkspace package，供後續檢查、比對或匯入時，使用這個指令。
+當您需要一個本地 dataworkspace package，供後續檢查、比對或匯入時，
+使用這個指令。
 
 ## 重點旗標
 - `--output-dir`：匯出樹的目標目錄。
@@ -33,7 +35,9 @@ grafana-util datasource export --url http://localhost:3000 --basic-user admin --
 ## 成功判準
 
 - 匯出樹完整到可以日後不連 Grafana 也能檢查
-- 標準化 JSON 與 provisioning 檔案都能和來源 inventory 對得上
+- 標準化 JSON 與 provisioning projection 都能和來源 inventory 對得上
+- provisioning projection 仍是衍生輸出，只有在秘密 placeholder 被補齊後，
+  才能視為可直接套用的 Grafana provisioning 檔案
 - 這個 bundle 可以直接拿去做 diff 或 import，不需要再手動清理
 
 ## 失敗時先檢查
@@ -42,6 +46,8 @@ grafana-util datasource export --url http://localhost:3000 --basic-user admin --
 - 如果 `--all-orgs` 失敗，先改用 Basic auth，並確認帳號是否能看見每個目標 org
 - 如果 bundle 看起來像舊資料，先確認匯出目錄與 `--overwrite` 是否有刻意使用
 - 如果你原本期待匯出裡直接有 secret 明文，先記得 Grafana live datasource API 不會回這些值；export 只會保留 config 與 `secureJsonDataPlaceholders`
+- 如果 provisioning 輸出還有 placeholder，先把它當成中介產物，補完
+  secrets 後再拿去當 Grafana provisioning 檔案
 
 ## 相關指令
 - [datasource list](./datasource-list.md)

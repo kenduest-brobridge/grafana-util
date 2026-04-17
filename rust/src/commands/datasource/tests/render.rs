@@ -13,6 +13,10 @@ fn render_import_table_honors_selected_columns() {
         "would-update".to_string(),
         "7".to_string(),
         "datasources.json#0".to_string(),
+        "prom-main".to_string(),
+        "12".to_string(),
+        "false".to_string(),
+        String::new(),
     ]];
 
     let lines = render_import_table(
@@ -45,6 +49,10 @@ fn render_import_table_supports_all_columns() {
         "would-update".to_string(),
         "7".to_string(),
         "datasources.json#0".to_string(),
+        "prom-main".to_string(),
+        "12".to_string(),
+        "false".to_string(),
+        String::new(),
     ]];
 
     let lines = render_import_table(&rows, true, Some(&["all".to_string()]));
@@ -57,6 +65,10 @@ fn render_import_table_supports_all_columns() {
     assert!(lines[0].contains("ACTION"));
     assert!(lines[0].contains("ORG_ID"));
     assert!(lines[0].contains("FILE"));
+    assert!(lines[0].contains("TARGET_UID"));
+    assert!(lines[0].contains("TARGET_VERSION"));
+    assert!(lines[0].contains("TARGET_READ_ONLY"));
+    assert!(lines[0].contains("BLOCKED_REASON"));
 }
 
 #[test]

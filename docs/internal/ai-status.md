@@ -21,6 +21,12 @@ Current AI-maintained status only.
 - Current Update: Added classic prompt parity for constant variables, kept expression datasource refs outside user-mapped inputs, rejected dashboard v2 resource/spec shapes in raw-to-prompt, and surfaced library panel portability warnings without adding a v2 export lane.
 - Result: Focused raw-to-prompt and validation tests, full Rust tests, formatting, AI workflow, and whitespace checks pass.
 
+## 2026-04-17 - Harden datasource masked-recovery import
+- State: Done
+- Scope: Rust datasource masked-recovery export/import, dry-run evidence, focused datasource tests, datasource command docs, internal contract docs, TODO backlog, and AI trace docs. README files, Python implementation, and Grafana K8s datasource API support are out of scope.
+- Current Update: Datasource export now preserves additive `readOnly`, `version`, and `apiVersion` evidence. Datasource import update planning now fetches target live datasource evidence, updates through `/api/datasources/uid/{uid}`, carries target `version`, and blocks read-only/provisioned targets before live writes. Dry-run JSON/table/text now exposes target UID/version/read-only and blocked reason evidence.
+- Result: Focused datasource tests, full Rust tests, clippy, formatting, generated docs checks, docs-surface checks, AI workflow, and whitespace checks pass.
+
 ## 2026-04-17 - Align dashboard prompt external export semantics
 - State: Done
 - Scope: Rust prompt/raw-to-prompt datasource handling and pre-resolution, focused regression tests, internal prompt-lane semantics note, raw-to-prompt command docs in English and zh-TW, and AI trace docs. README files and Python implementation are out of scope.
@@ -47,10 +53,3 @@ Current AI-maintained status only.
 - Baseline: `grafana-util --help-flat` renders a padded table with long purpose text, so narrow terminals wrap rows and make the flat command inventory hard to scan.
 - Current Update: Changed the flat inventory to one public command path per line and removed KIND/PURPOSE columns so terminal output stays readable; detailed purpose and flags remain available through `<COMMAND> --help`.
 - Result: Focused help tests and formatting pass; manual `--help-flat` smoke output now shows one command path per line without columns or ellipses.
-
-## 2026-04-15 - Advertise help-flat in root help
-- State: Done
-- Scope: Rust grouped root/domain help, focused help regression tests, and command-surface contract metadata. Runtime command behavior, README files, and Python implementation are out of scope.
-- Baseline: `grafana-util --help-flat` renders the flat public command inventory, but `grafana-util --help` only advertised `--help-full`. Follow-up review also found supported `access --help-full`, `workspace --help-full`, `workspace --help-schema`, and `dashboard summary --help-full` paths were not discoverable from their adjacent grouped help, while the command-surface contract incorrectly listed unsupported `dashboard --help-full`.
-- Current Update: Added the missing help hints to root/dashboard/access/workspace grouped help, extended focused help regressions, and removed unsupported `dashboard` from `help_full_supported`.
-- Result: Focused help tests, docs-surface contract checks, formatting, and CLI smoke checks pass.

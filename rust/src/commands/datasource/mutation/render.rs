@@ -150,6 +150,10 @@ pub(crate) fn render_import_table(
                 (5usize, "ACTION"),
                 (6usize, "ORG_ID"),
                 (7usize, "FILE"),
+                (8usize, "TARGET_UID"),
+                (9usize, "TARGET_VERSION"),
+                (10usize, "TARGET_READ_ONLY"),
+                (11usize, "BLOCKED_REASON"),
             ]
         } else {
             selected
@@ -163,6 +167,10 @@ pub(crate) fn render_import_table(
                     "action" => (5usize, "ACTION"),
                     "org_id" => (6usize, "ORG_ID"),
                     "file" => (7usize, "FILE"),
+                    "target_uid" => (8usize, "TARGET_UID"),
+                    "target_version" => (9usize, "TARGET_VERSION"),
+                    "target_read_only" => (10usize, "TARGET_READ_ONLY"),
+                    "blocked_reason" => (11usize, "BLOCKED_REASON"),
                     _ => unreachable!("validated datasource import output column"),
                 })
                 .collect::<Vec<(usize, &str)>>()
@@ -177,6 +185,10 @@ pub(crate) fn render_import_table(
             (5usize, "ACTION"),
             (6usize, "ORG_ID"),
             (7usize, "FILE"),
+            (8usize, "TARGET_UID"),
+            (9usize, "TARGET_VERSION"),
+            (10usize, "TARGET_READ_ONLY"),
+            (11usize, "BLOCKED_REASON"),
         ]
     };
     let headers = columns

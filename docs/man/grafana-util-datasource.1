@@ -36,7 +36,7 @@ List datasource inventory from live Grafana or a local export bundle. Use when: 
 Open a live datasource browser against Grafana with in\-place modify and delete actions. Use when: You want an interactive inventory view for inspecting, editing, or deleting live datasources.
 .TP
 .B export
-Export live Grafana datasource inventory as normalized JSON plus provisioning files. Use when: You need a local datasource bundle for later inspection, diff, or import.
+Export live Grafana datasource inventory as normalized JSON plus a derived provisioning projection. Use when: You need a local datasource bundle for later inspection, diff, or import.
 .TP
 .B import
 Import datasource inventory through the Grafana API. Use when: You have a local datasource bundle or provisioning tree and want to push it into Grafana, either live or as a dry run.
@@ -104,7 +104,7 @@ browse: Open a live datasource browser against Grafana with in\-place modify and
 grafana-util datasource browse --url http://localhost:3000 --basic-user admin --basic-password admin
 .EE
 .PP
-export: Export live Grafana datasource inventory as normalized JSON plus provisioning files.
+export: Export live Grafana datasource inventory as normalized JSON plus a derived provisioning projection.
 .EX
 grafana-util datasource export --url http://localhost:3000 --basic-user admin --basic-password admin --output-dir ./datasources --overwrite
 .EE

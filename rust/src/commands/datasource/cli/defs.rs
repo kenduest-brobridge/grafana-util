@@ -316,7 +316,7 @@ pub struct DatasourceImportArgs {
         value_delimiter = ',',
         requires = "dry_run",
         value_parser = parse_datasource_import_output_column,
-        help = "For --dry-run --table only, render only these comma-separated columns. Supported values: uid, name, type, destination, action, org_id, file."
+        help = "For --dry-run --table only, render only these comma-separated columns. Supported values: uid, name, type, destination, action, org_id, file, target_uid, target_version, target_read_only, blocked_reason."
     )]
     pub output_columns: Vec<String>,
     #[arg(
@@ -828,8 +828,12 @@ fn parse_datasource_import_output_column(value: &str) -> std::result::Result<Str
         "action" => Ok("action".to_string()),
         "org_id" | "orgId" => Ok("org_id".to_string()),
         "file" => Ok("file".to_string()),
+        "target_uid" | "targetUid" => Ok("target_uid".to_string()),
+        "target_version" | "targetVersion" => Ok("target_version".to_string()),
+        "target_read_only" | "targetReadOnly" => Ok("target_read_only".to_string()),
+        "blocked_reason" | "blockedReason" => Ok("blocked_reason".to_string()),
         _ => Err(format!(
-            "Unsupported --output-columns value '{value}'. Supported values: all, uid, name, type, match_basis, destination, action, org_id, file."
+            "Unsupported --output-columns value '{value}'. Supported values: all, uid, name, type, match_basis, destination, action, org_id, file, target_uid, target_version, target_read_only, blocked_reason."
         )),
     }
 }

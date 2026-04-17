@@ -13,3 +13,10 @@
 - Baseline: `status live` returns project/domain readiness fields but does not read `/api/health`, so JSON/YAML output cannot show Grafana instance fields such as version, commit, or database health.
 - Current Update: Added an additive `discovery.instance` section populated from `GET /api/health`; failed health reads are recorded as non-blocking discovery metadata instead of changing domain readiness.
 - Result: Focused status tests, full Rust tests, clippy, docs surface, generated-doc checks, AI workflow, and whitespace checks pass. Source command/reference docs and generated man/html docs now describe the live instance metadata shape.
+
+## 2026-04-15 - Advertise help-flat in root help
+- State: Done
+- Scope: Rust grouped root/domain help, focused help regression tests, and command-surface contract metadata. Runtime command behavior, README files, and Python implementation are out of scope.
+- Baseline: `grafana-util --help-flat` renders the flat public command inventory, but `grafana-util --help` only advertised `--help-full`. Follow-up review also found supported `access --help-full`, `workspace --help-full`, `workspace --help-schema`, and `dashboard summary --help-full` paths were not discoverable from their adjacent grouped help, while the command-surface contract incorrectly listed unsupported `dashboard --help-full`.
+- Current Update: Added the missing help hints to root/dashboard/access/workspace grouped help, extended focused help regressions, and removed unsupported `dashboard` from `help_full_supported`.
+- Result: Focused help tests, docs-surface contract checks, formatting, and CLI smoke checks pass.
