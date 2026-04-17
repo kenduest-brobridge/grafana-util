@@ -12,6 +12,20 @@ Current AI-maintained status only.
 - Older entries moved to [`ai-status-archive-2026-04-14.md`](docs/internal/archive/ai-status-archive-2026-04-14.md).
 - Older entries moved to [`ai-status-archive-2026-04-15.md`](docs/internal/archive/ai-status-archive-2026-04-15.md).
 - Older entries moved to [`ai-status-archive-2026-04-16.md`](docs/internal/archive/ai-status-archive-2026-04-16.md).
+- Older entries moved to [`ai-status-archive-2026-04-17.md`](docs/internal/archive/ai-status-archive-2026-04-17.md).
+
+## 2026-04-17 - Finish classic prompt export guardrails
+- State: Done
+- Scope: Rust dashboard prompt/raw-to-prompt conversion, dashboard export validation, focused prompt conversion tests, maintainer prompt semantics docs, and AI trace docs. README files, Python implementation, and dashboard v2 export lane support are out of scope.
+- Baseline: classic prompt export already preserves datasource variables and maps used datasource-variable current values, but constant variables are not exported as `VAR_*` inputs, dashboard v2-shaped files are not explicitly rejected by raw-to-prompt, and library panel references are not surfaced as portability warnings.
+- Current Update: Added classic prompt parity for constant variables, kept expression datasource refs outside user-mapped inputs, rejected dashboard v2 resource/spec shapes in raw-to-prompt, and surfaced library panel portability warnings without adding a v2 export lane.
+- Result: Focused raw-to-prompt and validation tests, full Rust tests, formatting, AI workflow, and whitespace checks pass.
+
+## 2026-04-17 - Align dashboard prompt external export semantics
+- State: Done
+- Scope: Rust prompt/raw-to-prompt datasource handling and pre-resolution, focused regression tests, internal prompt-lane semantics note, raw-to-prompt command docs in English and zh-TW, and AI trace docs. README files and Python implementation are out of scope.
+- Current Update: Aligned prompt conversion with Grafana UI external-export semantics: concrete datasource refs become `__inputs`, built-in Grafana datasource selectors stay excluded, datasource variables keep their own variable shape, and the converter no longer synthesizes a new datasource variable when the source dashboard did not already have one. Used datasource variables with a concrete current datasource now point `current.value` at the generated `${DS_*}` input while panel and target references stay variable-based.
+- Result: The prompt builder no longer over-normalizes single datasource families or turns datasource variable plugin filters into extra import inputs, and raw-to-prompt pre-resolution now preserves `$datasource` placeholders instead of failing inference. Focused raw-to-prompt coverage and full Rust tests pass; the docs record the contract, the known bug pattern, and the later `VAR_*` parity follow-up without naming local machine paths.
 
 ## 2026-04-16 - Add dashboard export layout repair
 - State: Done
@@ -40,17 +54,3 @@ Current AI-maintained status only.
 - Baseline: `grafana-util --help-flat` renders the flat public command inventory, but `grafana-util --help` only advertised `--help-full`. Follow-up review also found supported `access --help-full`, `workspace --help-full`, `workspace --help-schema`, and `dashboard summary --help-full` paths were not discoverable from their adjacent grouped help, while the command-surface contract incorrectly listed unsupported `dashboard --help-full`.
 - Current Update: Added the missing help hints to root/dashboard/access/workspace grouped help, extended focused help regressions, and removed unsupported `dashboard` from `help_full_supported`.
 - Result: Focused help tests, docs-surface contract checks, formatting, and CLI smoke checks pass.
-
-## 2026-04-15 - Add Grafana instance metadata to status live
-- State: Done
-- Scope: Rust `status live` document assembly, focused status-live tests, operator docs, generated docs, and AI trace docs. Python implementation is out of scope.
-- Baseline: `status live` returns project/domain readiness fields but does not read `/api/health`, so JSON/YAML output cannot show Grafana instance fields such as version, commit, or database health.
-- Current Update: Added an additive `discovery.instance` section populated from `GET /api/health`; failed health reads are recorded as non-blocking discovery metadata instead of changing domain readiness.
-- Result: Focused status tests, full Rust tests, clippy, docs surface, generated-doc checks, AI workflow, and whitespace checks pass. Source command/reference docs and generated man/html docs now describe the live instance metadata shape.
-
-## 2026-04-15 - Fix stale dashboard command references
-- State: Done
-- Scope: Public docs and maintainer guidance that still present removed dashboard command names or stale inspect-artifact wording. Python implementation is out of scope.
-- Baseline: `grafana-util dashboard analyze` and `grafana-util dashboard inspect-export` are rejected by the CLI, but README and maintainer docs still mention them as command paths.
-- Current Update: Replaced README dependency examples with `dashboard summary`, updated policy/about artifact wording to dashboard summary JSON artifacts, refreshed generated man/html docs, and clarified maintainer docs that `inspect` is an internal artifact flow rather than a public dashboard command.
-- Result: CLI smoke checks confirm `dashboard analyze` and `dashboard inspect-export` are rejected while `dashboard summary` is accepted. Docs, generated-doc, Rust help, AI workflow, and whitespace checks pass.

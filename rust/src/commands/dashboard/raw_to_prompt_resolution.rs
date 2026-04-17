@@ -73,11 +73,16 @@ pub(crate) fn convert_raw_dashboard_file(
     resolution: RawToPromptResolution,
 ) -> Result<RawToPromptOutcome> {
     let payload = load_json_file(input_path)?;
+    if is_dashboard_v2_payload(&payload) {
+        return Err(message(
+            "dashboard raw-to-prompt does not support Grafana dashboard v2 resources yet; export classic dashboard JSON for the prompt lane.",
+        ));
+    }
     let mut dashboard = super::build_preserved_web_import_document(&payload)?;
+    let mut warnings = collect_library_panel_portability_warnings(&dashboard);
     let placeholder_paths = collect_panel_placeholder_datasource_paths(&dashboard);
     let mut scan = DashboardScanContext::default();
     collect_reference_families(&mut dashboard, &mut scan);
-    let mut warnings = Vec::new();
     let mut stats = RawToPromptStats::default();
     rewrite_datasource_refs(
         &mut dashboard,
@@ -107,6 +112,61 @@ pub(crate) fn convert_raw_dashboard_file(
         resolution: resolution_kind,
         warnings,
     })
+}
+
+fn is_dashboard_v2_payload(payload: &Value) -> bool {
+    let Some(object) = payload.as_object() else {
+        return false;
+    };
+    let api_version = object
+        .get("apiVersion")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    if api_version.starts_with("dashboard.grafana.app/") {
+        return true;
+    }
+    let kind = object
+        .get("kind")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    if kind != "Dashboard" {
+        return false;
+    }
+    object
+        .get("spec")
+        .and_then(Value::as_object)
+        .is_some_and(|spec| spec.contains_key("elements") || spec.contains_key("variables"))
+}
+
+fn collect_library_panel_portability_warnings(dashboard: &Value) -> Vec<String> {
+    let mut count = 0usize;
+    collect_library_panel_reference_count(dashboard, &mut count);
+    if count == 0 {
+        Vec::new()
+    } else {
+        vec![format!(
+            "library panel external export is not fully portable yet; preserved {count} libraryPanel reference(s) without inlining models"
+        )]
+    }
+}
+
+fn collect_library_panel_reference_count(node: &Value, count: &mut usize) {
+    match node {
+        Value::Object(object) => {
+            if object.contains_key("libraryPanel") {
+                *count += 1;
+            }
+            for value in object.values() {
+                collect_library_panel_reference_count(value, count);
+            }
+        }
+        Value::Array(items) => {
+            for item in items {
+                collect_library_panel_reference_count(item, count);
+            }
+        }
+        _ => {}
+    }
 }
 
 pub(crate) fn load_datasource_mapping(
@@ -399,7 +459,10 @@ fn rewrite_datasource_ref_value(
     warnings: &mut Vec<String>,
     stats: &mut RawToPromptStats,
 ) -> Result<()> {
-    if super::is_builtin_datasource_ref(reference) || reference.is_null() {
+    if super::is_builtin_datasource_ref(reference)
+        || reference.is_null()
+        || is_placeholder_datasource_reference(reference)
+    {
         return Ok(());
     }
     let Some(resolved) =

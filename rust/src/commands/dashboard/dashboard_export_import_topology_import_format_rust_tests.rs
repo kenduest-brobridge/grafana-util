@@ -301,6 +301,37 @@ fn validate_dashboard_export_dir_detects_custom_plugin_legacy_layout_and_schema_
 }
 
 #[test]
+fn validate_dashboard_export_dir_warns_for_dashboard_v2_resource_shape() {
+    let temp = tempdir().unwrap();
+    let raw_dir = temp.path().join("raw");
+    fs::create_dir_all(&raw_dir).unwrap();
+    fs::write(
+        raw_dir.join("v2.json"),
+        serde_json::to_string_pretty(&json!({
+            "apiVersion": "dashboard.grafana.app/v2",
+            "kind": "Dashboard",
+            "metadata": {"name": "v2-main"},
+            "spec": {
+                "title": "V2 Main",
+                "elements": {},
+                "variables": []
+            }
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+
+    let result =
+        test_support::validate_dashboard_export_dir(&raw_dir, true, true, Some(39)).unwrap();
+    let output = test_support::render_validation_result_json(&result).unwrap();
+
+    assert_eq!(result.dashboard_count, 1);
+    assert_eq!(result.error_count, 0);
+    assert_eq!(result.warning_count, 1);
+    assert!(output.contains("unsupported-dashboard-v2-resource"));
+}
+
+#[test]
 fn snapshot_live_dashboard_export_with_fetcher_writes_dashboards_in_parallel() {
     let temp = tempdir().unwrap();
     let raw_dir = temp.path().join("raw");

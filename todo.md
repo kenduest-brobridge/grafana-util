@@ -51,6 +51,54 @@ Reject the split if the answer is only "the file is large." Large files are
 acceptable when they own one clear responsibility and are easier to read in one
 place.
 
+## P0 - Dashboard Prompt External Export
+
+### Align Prompt Export With Grafana UI Semantics
+
+Status: partially done for classic prompt parity. Keep this item open only for
+the remaining library panel live-model parity and any future dashboard v2
+adapter work.
+
+Problem:
+
+Grafana's official source has two external dashboard export paths. The classic
+exporter and the scene exporter agree that prompt output must not synthesize
+datasource variables or treat a datasource variable `query` as an import input.
+The newer scene exporter also preserves `$datasource` panel references while
+mapping a datasource variable's current concrete datasource through a `DS_*`
+input when that variable is used by panel or target datasource references.
+
+Official source areas to keep using as behavior references:
+
+- `/Users/kendlee/tmp/grafana/public/app/features/dashboard/components/DashExportModal/DashboardExporter.ts`
+- `/Users/kendlee/tmp/grafana/public/app/features/dashboard-scene/scene/export/exporters.ts`
+- `/Users/kendlee/tmp/grafana/public/app/features/manage-dashboards/import/utils/inputs.ts`
+- `/Users/kendlee/tmp/grafana/pkg/services/dashboardimport/utils/dash_template_evaluator.go`
+- `/Users/kendlee/tmp/grafana/pkg/services/dashboardimport/service/service.go`
+
+Action:
+
+- Keep concrete datasource references mapped to `__inputs` and `${DS_*}`.
+- Keep datasource variable definitions as variables; do not convert the variable
+  `query` into a datasource input.
+- Preserve panel and target datasource references such as `$datasource`.
+- When a used datasource variable has a concrete current value and datasource
+  type, add the corresponding `DS_*` input and set the variable `current.value`
+  to `${DS_*}`.
+- Keep constant variables mapped through `VAR_*` inputs.
+- Keep expression datasource import handling (`__expr__`) out of user-mapped
+  datasource inputs.
+- Reject dashboard v2 resource/spec input in raw-to-prompt until a dedicated
+  adapter exists.
+- Add later parity for library panel `__elements` live-model export and import
+  input validation.
+
+Validation:
+
+- `cargo test --manifest-path rust/Cargo.toml --quiet raw_to_prompt`
+- `cargo test --manifest-path rust/Cargo.toml --quiet`
+- `cargo fmt --manifest-path rust/Cargo.toml --all --check`
+
 ## P0 - Test Surface Control
 
 ### Split Oversized Rust Test Files

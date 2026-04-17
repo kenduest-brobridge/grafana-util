@@ -155,6 +155,29 @@ fn validate_dashboard_document(
     target_schema_version: Option<i64>,
 ) -> Result<Vec<DashboardValidationIssue>> {
     let document_object = value_as_object(document, "Dashboard payload must be a JSON object.")?;
+    if is_dashboard_v2_document(document_object) {
+        let title = document_object
+            .get("spec")
+            .and_then(Value::as_object)
+            .map(|spec| string_field(spec, "title", ""))
+            .unwrap_or_default();
+        let uid = document_object
+            .get("metadata")
+            .and_then(Value::as_object)
+            .map(|metadata| string_field(metadata, "name", ""))
+            .unwrap_or_default();
+        let mut issues = Vec::new();
+        push_issue(
+            &mut issues,
+            "warning",
+            "unsupported-dashboard-v2-resource",
+            file,
+            &uid,
+            &title,
+            "Dashboard v2 resources are detected but not fully supported by classic dashboard export validation yet.",
+        );
+        return Ok(issues);
+    }
     let dashboard = extract_dashboard_object(document_object)?;
     let dashboard_uid = string_field(dashboard, "uid", "");
     let dashboard_title = string_field(dashboard, "title", "");
@@ -267,6 +290,27 @@ fn validate_dashboard_document(
     }
 
     Ok(issues)
+}
+
+fn is_dashboard_v2_document(document: &Map<String, Value>) -> bool {
+    let api_version = document
+        .get("apiVersion")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    if api_version.starts_with("dashboard.grafana.app/") {
+        return true;
+    }
+    let kind = document
+        .get("kind")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    if kind != "Dashboard" {
+        return false;
+    }
+    document
+        .get("spec")
+        .and_then(Value::as_object)
+        .is_some_and(|spec| spec.contains_key("elements") || spec.contains_key("variables"))
 }
 
 pub(crate) fn validate_dashboard_export_dir(

@@ -28,6 +28,7 @@
 - `raw/` 或 combined export root 會預設寫到旁邊或新生成的 `prompt/` 路徑，並同時產生 `index.json` 與 `export-metadata.json`。
 - `prompt/` 成品是給 Grafana UI `Upload JSON` 用的，不是給 `grafana-util dashboard import` 用的；後者仍然只吃 `raw/` 或 `provisioning/`。
 - 如果你提供 `--profile` 或其他 live auth，命令會查詢目標 Grafana 的 datasource inventory，並優先使用這些 live matches 來修補 staged raw inventory。
+- prompt 轉換會對齊 Grafana 的 external export 語義：具體 datasource 參照會變成 `__inputs`，內建 Grafana datasource selector 不會被放進 `__inputs`，datasource 變數會保留原本的變數形狀，而且若原始 dashboard 本來沒有 datasource 變數，轉換器不會自己合成一個。
 - 新文件請改用 `grafana-util dashboard convert raw-to-prompt`。
 
 ## Datasource 解析
@@ -46,6 +47,7 @@
 - panel 層級刻意保留的 `$datasource`
 - `raw-to-prompt` 的目標是保留這個邊界，而不是把所有 datasource placeholder 都壓成同一種寫法。
 - 如果原始 dashboard 本來就依賴 Grafana datasource variable，轉換後的 prompt 檔仍可能同時看到 `$datasource` 與 `__inputs`。
+- 舊版 prompt export 曾經把單一 datasource family 過度正規化成 synthetic datasource variable；目前 maintainer contract 不再保留這個行為。
 
 ## 範例
 ```bash

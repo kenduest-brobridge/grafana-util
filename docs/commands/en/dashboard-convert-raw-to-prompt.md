@@ -28,6 +28,7 @@ Use this when someone gives you a normal Grafana dashboard export, legacy raw JS
 - `raw/` or combined export roots default to a sibling/generated `prompt/` lane and also write `index.json` plus `export-metadata.json`.
 - `prompt/` artifacts are for the Grafana UI `Upload JSON` flow. They are not valid input for `grafana-util dashboard import`, which still expects `raw/` or `provisioning/`.
 - If you provide `--profile` or other live auth flags, the command queries the target Grafana datasource inventory and prefers those live matches over staged raw inventory.
+- Prompt conversion follows Grafana's external-export semantics: concrete datasource refs become `__inputs`, built-in Grafana datasource selectors stay out of `__inputs`, datasource variables keep their own variable shape, and the converter does not synthesize a new datasource variable when the source dashboard did not already have one.
 - New docs should use `grafana-util dashboard convert raw-to-prompt`.
 
 ## Datasource resolution
@@ -46,6 +47,7 @@ Use this when someone gives you a normal Grafana dashboard export, legacy raw JS
 - `$datasource` in panel-level datasource fields that intentionally keep the dashboard-variable flow
 - `raw-to-prompt` tries to preserve that distinction instead of flattening everything into one placeholder style.
 - If a dashboard historically used Grafana datasource variables, the migrated prompt may still contain `$datasource` alongside `__inputs`.
+- Older prompt exports sometimes over-normalized a single datasource family into a synthetic datasource variable; that is not the current maintainer contract.
 
 ## Examples
 ```bash

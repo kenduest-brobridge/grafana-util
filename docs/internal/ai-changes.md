@@ -12,6 +12,22 @@ Current AI change log only.
 - Older entries moved to [`ai-changes-archive-2026-04-14.md`](docs/internal/archive/ai-changes-archive-2026-04-14.md).
 - Older entries moved to [`ai-changes-archive-2026-04-15.md`](docs/internal/archive/ai-changes-archive-2026-04-15.md).
 - Older entries moved to [`ai-changes-archive-2026-04-16.md`](docs/internal/archive/ai-changes-archive-2026-04-16.md).
+- Older entries moved to [`ai-changes-archive-2026-04-17.md`](docs/internal/archive/ai-changes-archive-2026-04-17.md).
+
+## 2026-04-17 - Finish classic prompt export guardrails
+- Summary: completed the next classic prompt-lane guardrails without adding dashboard v2 export support. Raw-to-prompt now emits `VAR_*` inputs for constant variables, keeps expression datasource refs out of user-mapped inputs, rejects dashboard v2 resource/spec input with a clear unsupported message, and warns when library panel references are preserved without inlining models.
+- Tests: added focused raw-to-prompt regressions for constant variables, expression datasource refs, dashboard v2 rejection, and library panel warnings; added validation coverage for dashboard v2 resource warning.
+- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `cargo test --manifest-path rust/Cargo.toml --quiet raw_to_prompt`; `cargo test --manifest-path rust/Cargo.toml --quiet validate_dashboard_export_dir_warns_for_dashboard_v2_resource_shape`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings`; `make quality-ai-workflow`; `git diff --check`.
+- Impact: prompt-lane Rust conversion, raw-to-prompt regression coverage, dashboard export validation, maintainer prompt semantics docs, TODO backlog, and AI trace docs.
+- Rollback/Risk: medium prompt-lane behavior change. Rollback would remove constant variable prompt inputs and v2/library panel guardrails, returning those cases to less explicit conversion behavior.
+- Follow-up: full library panel external-export parity still needs live model lookup; dashboard v2 remains a future adapter rather than a prompt-lane format.
+
+## 2026-04-17 - Align dashboard prompt external export semantics
+- Summary: aligned prompt-lane datasource behavior with Grafana UI external-export semantics. Prompt conversion now keeps datasource variables as variables instead of treating their plugin filter query as a datasource input, no longer synthesizes a `datasource` variable for single-family dashboards, and preserves `$datasource` placeholders during raw-to-prompt pre-resolution. When a used datasource variable has a concrete current datasource, the variable current value now points at the generated `${DS_*}` input while panel and target references stay variable-based.
+- Tests: updated raw-to-prompt regression coverage for single-family concrete datasource refs, datasource template variables, object and string placeholder datasource refs, datasource-variable current mapping, and existing multi/generic datasource behavior.
+- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `cargo test --manifest-path rust/Cargo.toml --quiet raw_to_prompt`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings`; `make man`; `make html`; `make quality-docs-surface`; real raw-to-prompt sample conversion reported scanned=112, converted=112, failed=0.
+- Impact: prompt-lane Rust conversion, raw-to-prompt regression coverage, command/reference docs, maintainer prompt semantics note, and AI trace docs.
+- Rollback/Risk: medium prompt-lane behavior change. Rollback would restore the synthetic datasource variable shortcut, but would also reintroduce duplicate datasource input prompts for dashboards that already define a datasource variable.
 
 ## 2026-04-16 - Add dashboard export layout repair
 - Summary: added the formal `grafana-util dashboard convert export-layout` command for repairing old dashboard export artifacts whose raw/prompt files were flattened under leaf folder titles. The repair planner uses `raw/folders.json` plus stable export index metadata, falls back safely when raw dashboard JSON omits `meta.folderUid`, reports unindexed files through `extraFiles`, supports dry-run text/table/csv/json/yaml output, copy-mode output, and in-place repair with backups. Text/table/csv output now default to summary views, with per-dashboard operations gated behind `--show-operations`. New dashboard exports now record `folderUid`, `folderTitle`, and full `folderPath` in root and variant indexes.
@@ -76,19 +92,3 @@ Current AI change log only.
 - Impact: `rust/src/commands/dashboard/dashboard_cli_inspect_help_rust_tests.rs` and AI trace docs. README files and Python implementation were intentionally left unchanged.
 - Rollback/Risk: low test-only refactor. Rollback would restore the prior direct `help.contains()` assertions.
 - Follow-up: apply the same semantic-help assertion cleanup to `sync/cli_help_rust_tests.rs`.
-
-## 2026-04-15 - Split datasource supported catalog tests
-- Summary: split supported datasource catalog output tests out of `cli_mutation.rs` into `cli_mutation_supported_catalog.rs`. The parent module remains focused on command help, parser compatibility, and add-payload behavior.
-- Tests: preserved existing supported catalog assertions for JSON fixture projection, profile metadata, family defaults, text, table, csv, and yaml output.
-- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `cargo test --manifest-path rust/Cargo.toml --quiet datasource_`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings`; `make quality-architecture`; `git diff --check`.
-- Impact: `rust/src/commands/datasource/tests/cli_mutation.rs`, `rust/src/commands/datasource/tests/cli_mutation_supported_catalog.rs`, `rust/src/commands/datasource/tests/mod.rs`, and AI trace docs. README files and Python implementation were intentionally left unchanged.
-- Rollback/Risk: low test-only split. Rollback would move supported catalog assertions back into the datasource CLI mutation test module.
-- Follow-up: continue remaining architecture-warning hotspots: dashboard browse support, dashboard dependency contract, datasource staged reading, sync live apply, and help-test semantic assertions.
-
-## 2026-04-15 - Split datasource tail import and inspect tests
-- Summary: split datasource tail import validation/loader tests and inspect-export/local-source tests into focused sibling modules. The parent tail test module now keeps routed datasource import identity, summary, and export-org routing behavior.
-- Tests: preserved existing datasource import loader, inspect-export renderer, manifest classifier, local-source help, and routed import assertions while moving them into responsibility-based modules.
-- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `cargo test --manifest-path rust/Cargo.toml --quiet datasource_`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings`; `make quality-architecture`; `git diff --check`.
-- Impact: `rust/src/commands/datasource/tests/tail.rs`, `rust/src/commands/datasource/tests/tail_import.rs`, `rust/src/commands/datasource/tests/tail_inspect.rs`, and AI trace docs. README files and Python implementation were intentionally left unchanged.
-- Rollback/Risk: low test-only split. Rollback would move import and inspect-export tests back into the parent datasource tail module.
-- Follow-up: continue remaining architecture-warning hotspots: dashboard browse support, dashboard dependency contract, datasource staged reading, datasource CLI mutation tests, sync live apply, and help-test semantic assertions.

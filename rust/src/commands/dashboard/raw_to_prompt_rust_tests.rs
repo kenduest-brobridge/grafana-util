@@ -213,7 +213,7 @@ fn raw_to_prompt_uses_datasource_map_for_exact_resolution() {
 }
 
 #[test]
-fn raw_to_prompt_keeps_single_family_datasource_template_and_slot_requires() {
+fn raw_to_prompt_keeps_concrete_single_family_datasource_refs_without_synthetic_variable() {
     let temp = tempdir().unwrap();
     let input = temp.path().join("host-list.json");
     write_json(
@@ -252,21 +252,64 @@ fn raw_to_prompt_keeps_single_family_datasource_template_and_slot_requires() {
     let output = temp.path().join("host-list.prompt.json");
     let prompt: serde_json::Value =
         serde_json::from_str(&fs::read_to_string(output).unwrap()).unwrap();
+    assert!(prompt
+        .get("templating")
+        .and_then(serde_json::Value::as_object)
+        .and_then(|templating| templating.get("list"))
+        .and_then(serde_json::Value::as_array)
+        .map(|variables| {
+            !variables.iter().any(|variable| {
+                variable["type"] == serde_json::Value::String("datasource".to_string())
+            })
+        })
+        .unwrap_or(true));
+    assert_eq!(prompt["__inputs"].as_array().unwrap().len(), 3);
+    assert!(prompt["panels"][0]["datasource"]["uid"]
+        .as_str()
+        .is_some_and(|value| value.starts_with("${DS_INFLUXDB_")));
+}
+
+#[test]
+fn raw_to_prompt_does_not_turn_datasource_template_variables_into_inputs() {
+    let temp = tempdir().unwrap();
+    let input = temp.path().join("host-list.json");
+    write_json(
+        &input,
+        json!({
+            "uid": "host-list",
+            "title": "Host List",
+            "templating": {
+                "list": [{
+                    "name": "datasource",
+                    "type": "datasource",
+                    "query": "influxdb",
+                    "current": {},
+                    "options": []
+                }]
+            },
+            "panels": [{
+                "id": 1,
+                "type": "table",
+                "datasource": {"type": "influxdb", "uid": "influx-a"},
+                "targets": []
+            }]
+        }),
+    );
+
+    let mut args = make_args();
+    args.input_file = vec![input.clone()];
+
+    run_raw_to_prompt(&args).unwrap();
+
+    let output = temp.path().join("host-list.prompt.json");
+    let prompt: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(output).unwrap()).unwrap();
+    let inputs = prompt["__inputs"].as_array().unwrap();
+    assert_eq!(inputs.len(), 1);
     assert_eq!(
         prompt["templating"]["list"][0]["type"],
         serde_json::Value::String("datasource".to_string())
     );
-    assert_eq!(
-        prompt["panels"][0]["datasource"]["uid"],
-        serde_json::Value::String("$datasource".to_string())
-    );
-    let datasource_requires = prompt["__requires"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .filter(|item| item["type"] == "datasource" && item["id"] == "influxdb")
-        .count();
-    assert_eq!(datasource_requires, 3);
 }
 
 #[test]
@@ -342,7 +385,143 @@ fn raw_to_prompt_keeps_builtin_grafana_datasource_objects_outside_prompt_slots()
 }
 
 #[test]
-fn raw_to_prompt_reuses_datasource_variable_slot_for_typed_placeholder_refs() {
+fn raw_to_prompt_maps_constant_variables_to_var_inputs() {
+    let temp = tempdir().unwrap();
+    let input = temp.path().join("constants.json");
+    write_json(
+        &input,
+        json!({
+            "uid": "constants",
+            "title": "Constants",
+            "templating": {
+                "list": [{
+                    "name": "env name",
+                    "label": "Environment",
+                    "type": "constant",
+                    "query": "prod",
+                    "current": {"text": "prod", "value": "prod"},
+                    "options": []
+                }]
+            },
+            "panels": []
+        }),
+    );
+
+    let mut args = make_args();
+    args.input_file = vec![input.clone()];
+
+    run_raw_to_prompt(&args).unwrap();
+
+    let output = temp.path().join("constants.prompt.json");
+    let prompt: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(output).unwrap()).unwrap();
+    let inputs = prompt["__inputs"].as_array().unwrap();
+    assert_eq!(inputs.len(), 1);
+    assert_eq!(inputs[0]["name"], "VAR_ENV_NAME");
+    assert_eq!(inputs[0]["type"], "constant");
+    assert_eq!(inputs[0]["value"], "prod");
+    assert_eq!(prompt["templating"]["list"][0]["query"], "${VAR_ENV_NAME}");
+    assert_eq!(
+        prompt["templating"]["list"][0]["current"]["value"],
+        "${VAR_ENV_NAME}"
+    );
+}
+
+#[test]
+fn raw_to_prompt_keeps_expression_datasource_refs_outside_prompt_slots() {
+    let temp = tempdir().unwrap();
+    let input = temp.path().join("expressions.json");
+    write_json(
+        &input,
+        json!({
+            "uid": "expressions",
+            "title": "Expressions",
+            "panels": [{
+                "id": 1,
+                "type": "timeseries",
+                "datasource": {"type": "__expr__", "uid": "__expr__", "name": "Expression"},
+                "targets": []
+            }]
+        }),
+    );
+
+    let mut args = make_args();
+    args.input_file = vec![input.clone()];
+
+    run_raw_to_prompt(&args).unwrap();
+
+    let output = temp.path().join("expressions.prompt.json");
+    let prompt: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(output).unwrap()).unwrap();
+    assert!(prompt["__inputs"].as_array().unwrap().is_empty());
+    assert_eq!(prompt["panels"][0]["datasource"]["uid"], "__expr__");
+}
+
+#[test]
+fn raw_to_prompt_rejects_dashboard_v2_resource_shape() {
+    let temp = tempdir().unwrap();
+    let input = temp.path().join("v2.json");
+    write_json(
+        &input,
+        json!({
+            "apiVersion": "dashboard.grafana.app/v2",
+            "kind": "Dashboard",
+            "metadata": {"name": "v2-main"},
+            "spec": {
+                "title": "V2 Main",
+                "elements": {},
+                "variables": [],
+                "annotations": []
+            }
+        }),
+    );
+
+    let mut args = make_args();
+    args.input_file = vec![input.clone()];
+
+    let error = run_raw_to_prompt(&args).unwrap_err().to_string();
+    assert!(error.contains("dashboard raw-to-prompt completed with 1 failure"));
+
+    let output = temp.path().join("v2.prompt.json");
+    assert!(!output.exists());
+}
+
+#[test]
+fn raw_to_prompt_warns_for_library_panel_references_without_inlining() {
+    let temp = tempdir().unwrap();
+    let input = temp.path().join("library.json");
+    write_json(
+        &input,
+        json!({
+            "uid": "library",
+            "title": "Library",
+            "panels": [{
+                "id": 1,
+                "type": "timeseries",
+                "libraryPanel": {"uid": "lib-panel", "name": "Shared Panel"},
+                "datasource": {"type": "prometheus", "uid": "prom-main"},
+                "targets": []
+            }]
+        }),
+    );
+
+    let mut args = make_args();
+    args.input_file = vec![input.clone()];
+    args.log_file = Some(temp.path().join("raw-to-prompt.log"));
+
+    run_raw_to_prompt(&args).unwrap();
+
+    let output = temp.path().join("library.prompt.json");
+    let prompt: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(output).unwrap()).unwrap();
+    assert_eq!(prompt["panels"][0]["libraryPanel"]["uid"], "lib-panel");
+    assert_eq!(prompt["__elements"], json!({}));
+    let log = fs::read_to_string(temp.path().join("raw-to-prompt.log")).unwrap();
+    assert!(log.contains("library panel external export is not fully portable yet"));
+}
+
+#[test]
+fn raw_to_prompt_preserves_datasource_placeholder_refs_without_inputs() {
     let temp = tempdir().unwrap();
     let input = temp.path().join("kube.json");
     write_json(
@@ -377,11 +556,109 @@ fn raw_to_prompt_reuses_datasource_variable_slot_for_typed_placeholder_refs() {
     let prompt: serde_json::Value =
         serde_json::from_str(&fs::read_to_string(output).unwrap()).unwrap();
     let inputs = prompt["__inputs"].as_array().unwrap();
-    let prometheus_inputs = inputs
-        .iter()
-        .filter(|item| item["pluginId"] == "prometheus")
-        .count();
-    assert_eq!(prometheus_inputs, 1);
+    assert!(inputs.is_empty());
+    assert_eq!(
+        prompt["panels"][0]["datasource"]["uid"],
+        serde_json::Value::String("$datasource".to_string())
+    );
+    assert_eq!(
+        prompt["panels"][0]["targets"][0]["datasource"]["uid"],
+        serde_json::Value::String("$datasource".to_string())
+    );
+}
+
+#[test]
+fn raw_to_prompt_maps_used_datasource_variable_current_to_prompt_input() {
+    let temp = tempdir().unwrap();
+    let input = temp.path().join("kube-current.json");
+    write_json(
+        &input,
+        json!({
+            "uid": "kube-current",
+            "title": "Kube Current",
+            "templating": {
+                "list": [{
+                    "name": "datasource",
+                    "type": "datasource",
+                    "query": "prometheus",
+                    "current": {
+                        "text": "Prometheus Main",
+                        "value": "prom-main",
+                        "selected": true
+                    },
+                    "options": []
+                }]
+            },
+            "panels": [{
+                "id": 1,
+                "type": "timeseries",
+                "datasource": {"type": "prometheus", "uid": "$datasource"},
+                "targets": [{"datasource": {"type": "prometheus", "uid": "$datasource"}}]
+            }]
+        }),
+    );
+
+    let mut args = make_args();
+    args.input_file = vec![input.clone()];
+
+    run_raw_to_prompt(&args).unwrap();
+
+    let output = temp.path().join("kube-current.prompt.json");
+    let prompt: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(output).unwrap()).unwrap();
+    let inputs = prompt["__inputs"].as_array().unwrap();
+    assert_eq!(inputs.len(), 1);
+    assert_eq!(inputs[0]["pluginId"], "prometheus");
+    assert_eq!(
+        prompt["templating"]["list"][0]["current"]["value"],
+        serde_json::Value::String("${DS_PROMETHEUS_MAIN}".to_string())
+    );
+    assert_eq!(
+        prompt["panels"][0]["datasource"]["uid"],
+        serde_json::Value::String("$datasource".to_string())
+    );
+    assert_eq!(
+        prompt["panels"][0]["targets"][0]["datasource"]["uid"],
+        serde_json::Value::String("$datasource".to_string())
+    );
+}
+
+#[test]
+fn raw_to_prompt_preserves_string_datasource_placeholder_refs_without_resolution() {
+    let temp = tempdir().unwrap();
+    let input = temp.path().join("linux.json");
+    write_json(
+        &input,
+        json!({
+            "uid": "linux",
+            "title": "Linux",
+            "templating": {
+                "list": [{
+                    "name": "datasource",
+                    "type": "datasource",
+                    "query": "influxdb",
+                    "current": {},
+                    "options": []
+                }]
+            },
+            "panels": [{
+                "id": 1,
+                "type": "timeseries",
+                "datasource": "$datasource",
+                "targets": [{"datasource": "$datasource"}]
+            }]
+        }),
+    );
+
+    let mut args = make_args();
+    args.input_file = vec![input.clone()];
+
+    run_raw_to_prompt(&args).unwrap();
+
+    let output = temp.path().join("linux.prompt.json");
+    let prompt: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(output).unwrap()).unwrap();
+    assert!(prompt["__inputs"].as_array().unwrap().is_empty());
     assert_eq!(
         prompt["panels"][0]["datasource"]["uid"],
         serde_json::Value::String("$datasource".to_string())
