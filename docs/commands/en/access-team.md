@@ -27,7 +27,13 @@ List or browse live and local Grafana teams, create, modify, export, import, dif
 
 - if list, add, modify, or delete fails, confirm the team exists in the selected org and the auth scope is correct
 - if membership looks incomplete, recheck the exact member names and whether `--with-members` was set
+- if import reports a blocked membership update, check whether the target team is provisioned or whether each member identity resolves to a live org user with an email address
 - if an import behaves unexpectedly, verify the workspace package and the target environment before retrying
+
+## Import notes
+
+- Team import accepts exported member identities, but Grafana's bulk membership API applies members by email. The importer resolves login, email, or user id against live org users before apply.
+- `--dry-run --output-format table` or `--dry-run --json` reports blocked provisioned-team updates before live writes.
 
 ## Key flags
 

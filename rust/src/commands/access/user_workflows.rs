@@ -46,6 +46,8 @@ fn build_access_import_dry_run_row(
         ("index".to_string(), Value::String(index.to_string())),
         ("identity".to_string(), Value::String(identity.to_string())),
         ("action".to_string(), Value::String(action.to_string())),
+        ("status".to_string(), Value::String("planned".to_string())),
+        ("blocked".to_string(), Value::Bool(false)),
         ("detail".to_string(), Value::String(detail.to_string())),
     ])
 }
@@ -57,6 +59,7 @@ fn build_access_import_dry_run_rows(rows: &[Map<String, Value>]) -> Vec<Vec<Stri
                 map_get_text(row, "index"),
                 map_get_text(row, "identity"),
                 map_get_text(row, "action"),
+                map_get_text(row, "status"),
                 map_get_text(row, "detail"),
             ]
         })

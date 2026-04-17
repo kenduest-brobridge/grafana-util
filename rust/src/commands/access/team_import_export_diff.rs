@@ -98,37 +98,6 @@ pub(super) fn build_record_diff_fields(
     changed
 }
 
-pub(super) fn sorted_membership_union(members: &[String], admins: &[String]) -> Vec<String> {
-    let mut seen = BTreeSet::new();
-    let mut merged = Vec::new();
-    for identity in members.iter().chain(admins.iter()) {
-        let key = normalize_access_identity(identity);
-        if seen.insert(key) {
-            merged.push(identity.clone());
-        }
-    }
-    merged
-}
-
-pub(super) fn build_membership_payloads(
-    members: &[String],
-    admins: &[String],
-) -> (Vec<String>, Vec<String>) {
-    let admin_keys = admins
-        .iter()
-        .map(|identity| normalize_access_identity(identity))
-        .collect::<BTreeSet<_>>();
-    let mut regular_members = Vec::new();
-    for identity in members {
-        if !admin_keys.contains(&normalize_access_identity(identity))
-            && !regular_members.contains(identity)
-        {
-            regular_members.push(identity.clone());
-        }
-    }
-    (regular_members, admins.to_vec())
-}
-
 pub(super) fn parse_access_identity_list(value: &Value) -> Vec<String> {
     // Call graph (hierarchy): this function is used in related modules.
     // Upstream callers: team.rs:normalize_team_for_diff
@@ -166,6 +135,8 @@ pub(super) fn build_team_import_dry_run_row(
         ("index".to_string(), Value::String(index.to_string())),
         ("identity".to_string(), Value::String(identity.to_string())),
         ("action".to_string(), Value::String(action.to_string())),
+        ("status".to_string(), Value::String("planned".to_string())),
+        ("blocked".to_string(), Value::Bool(false)),
         ("detail".to_string(), Value::String(detail.to_string())),
     ])
 }
@@ -177,6 +148,7 @@ pub(super) fn build_team_import_dry_run_rows(rows: &[Map<String, Value>]) -> Vec
                 map_get_text(row, "index"),
                 map_get_text(row, "identity"),
                 map_get_text(row, "action"),
+                map_get_text(row, "status"),
                 map_get_text(row, "detail"),
             ]
         })

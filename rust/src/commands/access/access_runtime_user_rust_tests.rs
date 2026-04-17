@@ -316,6 +316,296 @@ fn user_import_with_request_dry_run_reports_global_profile_and_admin_drift() {
 }
 
 #[test]
+fn user_import_rejects_external_profile_update_before_apply() {
+    let temp_dir = tempdir().unwrap();
+    fs::write(
+        temp_dir.path().join("users.json"),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-access-user-export-index",
+            "version": 1,
+            "records": [
+                {"login": "alice", "email": "alice@example.com", "name": "Alice Two"}
+            ]
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let args = UserImportArgs {
+        common: make_basic_common(),
+        input_dir: temp_dir.path().to_path_buf(),
+        scope: Scope::Global,
+        replace_existing: true,
+        dry_run: false,
+        table: false,
+        json: false,
+        output_format: DryRunOutputFormat::Text,
+        yes: false,
+    };
+    let error = import_users_with_request(
+        |method, path, _params, _payload| match (method, path) {
+            (Method::GET, "/api/users") => Ok(Some(json!([
+                {"id": 7, "login": "alice", "email": "alice@example.com", "name": "Alice", "isExternal": true}
+            ]))),
+            _ => panic!("unexpected path {path}"),
+        },
+        &args,
+    )
+    .unwrap_err();
+
+    assert!(error.to_string().contains("external user profile"));
+}
+
+#[test]
+fn user_import_dry_run_blocks_externally_synced_org_role_update() {
+    let temp_dir = tempdir().unwrap();
+    fs::write(
+        temp_dir.path().join("users.json"),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-access-user-export-index",
+            "version": 1,
+            "records": [
+                {"login": "alice", "email": "alice@example.com", "name": "Alice", "orgRole": "Admin"}
+            ]
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let args = UserImportArgs {
+        common: make_token_common(),
+        input_dir: temp_dir.path().to_path_buf(),
+        scope: Scope::Org,
+        replace_existing: true,
+        dry_run: true,
+        table: true,
+        json: false,
+        output_format: DryRunOutputFormat::Table,
+        yes: false,
+    };
+    let mut calls = Vec::new();
+    let result = import_users_with_request(
+        |method, path, _params, payload| {
+            calls.push((method.to_string(), path.to_string(), payload.cloned()));
+            match (method, path) {
+                (Method::GET, "/api/org/users") => Ok(Some(json!([
+                    {"userId": 7, "login": "alice", "email": "alice@example.com", "name": "Alice", "role": "Viewer", "isExternallySynced": true, "authLabels": ["LDAP"]}
+                ]))),
+                _ => panic!("unexpected path {path}"),
+            }
+        },
+        &args,
+    );
+
+    assert!(result.is_ok());
+    assert!(calls
+        .iter()
+        .all(|(method, path, _)| !(method == "PATCH" && path == "/api/orgs/1/users/7")));
+}
+
+#[test]
+fn user_modify_with_request_blocks_external_profile_and_password_before_any_write() {
+    let args = UserModifyArgs {
+        common: make_basic_common(),
+        user_id: Some("7".to_string()),
+        login: None,
+        email: None,
+        set_login: Some("alice2".to_string()),
+        set_email: None,
+        set_name: Some("Alice Two".to_string()),
+        set_password: Some("newpw".to_string()),
+        set_password_file: None,
+        prompt_set_password: false,
+        set_org_role: None,
+        set_grafana_admin: None,
+        json: false,
+    };
+    let mut calls = Vec::new();
+    let error = modify_user_with_request(
+        |method, path, params, payload| {
+            calls.push((
+                method.to_string(),
+                path.to_string(),
+                params.to_vec(),
+                payload.cloned(),
+            ));
+            match (method, path) {
+                (Method::GET, "/api/users/7") => Ok(Some(json!({
+                    "id": 7,
+                    "login": "alice",
+                    "email": "alice@example.com",
+                    "name": "Alice",
+                    "isExternal": true,
+                    "isProvisioned": true
+                }))),
+                _ => panic!("unexpected path {path}"),
+            }
+        },
+        &args,
+    )
+    .unwrap_err();
+
+    assert!(error
+        .to_string()
+        .contains("external or provisioned user profile/password"));
+    assert_eq!(calls.len(), 1);
+    assert_eq!(calls[0].1, "/api/users/7");
+}
+
+#[test]
+fn user_modify_with_request_blocks_externally_synced_org_role_before_any_write() {
+    let args = UserModifyArgs {
+        common: make_basic_common(),
+        user_id: Some("7".to_string()),
+        login: None,
+        email: None,
+        set_login: None,
+        set_email: None,
+        set_name: None,
+        set_password: None,
+        set_password_file: None,
+        prompt_set_password: false,
+        set_org_role: Some("Admin".to_string()),
+        set_grafana_admin: None,
+        json: false,
+    };
+    let mut calls = Vec::new();
+    let error = modify_user_with_request(
+        |method, path, params, payload| {
+            calls.push((
+                method.to_string(),
+                path.to_string(),
+                params.to_vec(),
+                payload.cloned(),
+            ));
+            match (method, path) {
+                (Method::GET, "/api/users/7") => Ok(Some(json!({
+                    "id": 7,
+                    "login": "alice",
+                    "email": "alice@example.com",
+                    "name": "Alice",
+                    "role": "Viewer",
+                    "isExternallySynced": true
+                }))),
+                _ => panic!("unexpected path {path}"),
+            }
+        },
+        &args,
+    )
+    .unwrap_err();
+
+    assert!(error.to_string().contains("externally synced user orgRole"));
+    assert_eq!(calls.len(), 1);
+    assert_eq!(calls[0].1, "/api/users/7");
+}
+
+#[test]
+fn user_modify_with_request_blocks_externally_synced_admin_before_any_write() {
+    let args = UserModifyArgs {
+        common: make_basic_common(),
+        user_id: Some("7".to_string()),
+        login: None,
+        email: None,
+        set_login: None,
+        set_email: None,
+        set_name: None,
+        set_password: None,
+        set_password_file: None,
+        prompt_set_password: false,
+        set_org_role: None,
+        set_grafana_admin: Some(true),
+        json: false,
+    };
+    let mut calls = Vec::new();
+    let error = modify_user_with_request(
+        |method, path, params, payload| {
+            calls.push((
+                method.to_string(),
+                path.to_string(),
+                params.to_vec(),
+                payload.cloned(),
+            ));
+            match (method, path) {
+                (Method::GET, "/api/users/7") => Ok(Some(json!({
+                    "id": 7,
+                    "login": "alice",
+                    "email": "alice@example.com",
+                    "name": "Alice",
+                    "isGrafanaAdminExternallySynced": true
+                }))),
+                _ => panic!("unexpected path {path}"),
+            }
+        },
+        &args,
+    )
+    .unwrap_err();
+
+    assert!(error.to_string().contains("externally synced grafanaAdmin"));
+    assert_eq!(calls.len(), 1);
+    assert_eq!(calls[0].1, "/api/users/7");
+}
+
+#[test]
+fn user_modify_with_request_updates_allowed_profile_password_role_and_admin_changes() {
+    let args = UserModifyArgs {
+        common: make_basic_common(),
+        user_id: Some("7".to_string()),
+        login: None,
+        email: None,
+        set_login: Some("alice2".to_string()),
+        set_email: Some("alice2@example.com".to_string()),
+        set_name: Some("Alice Two".to_string()),
+        set_password: Some("newpw".to_string()),
+        set_password_file: None,
+        prompt_set_password: false,
+        set_org_role: Some("Editor".to_string()),
+        set_grafana_admin: Some(true),
+        json: false,
+    };
+    let mut calls = Vec::new();
+    let result = modify_user_with_request(
+        |method, path, params, payload| {
+            calls.push((
+                method.to_string(),
+                path.to_string(),
+                params.to_vec(),
+                payload.cloned(),
+            ));
+            match (method, path) {
+                (Method::GET, "/api/users/7") => Ok(Some(json!({
+                    "id": 7,
+                    "login": "alice",
+                    "email": "alice@example.com",
+                    "name": "Alice",
+                    "role": "Viewer",
+                    "isGrafanaAdmin": false
+                }))),
+                (Method::PUT, "/api/users/7") => Ok(Some(json!({"message": "ok"}))),
+                (Method::PUT, "/api/admin/users/7/password") => Ok(Some(json!({"message": "ok"}))),
+                (Method::PATCH, "/api/org/users/7") => Ok(Some(json!({"message": "ok"}))),
+                (Method::PUT, "/api/admin/users/7/permissions") => {
+                    Ok(Some(json!({"message": "ok"})))
+                }
+                _ => panic!("unexpected path {path}"),
+            }
+        },
+        &args,
+    );
+
+    assert!(result.is_ok());
+    assert!(calls
+        .iter()
+        .any(|(method, path, _, _)| method == "PUT" && path == "/api/users/7"));
+    assert!(calls
+        .iter()
+        .any(|(method, path, _, _)| method == "PUT" && path == "/api/admin/users/7/password"));
+    assert!(calls
+        .iter()
+        .any(|(method, path, _, _)| method == "PATCH" && path == "/api/org/users/7"));
+    assert!(calls
+        .iter()
+        .any(|(method, path, _, _)| method == "PUT" && path == "/api/admin/users/7/permissions"));
+}
+
+#[test]
 fn user_import_with_request_dry_run_json_reports_global_summary_and_rows() {
     let temp_dir = tempdir().unwrap();
     fs::write(

@@ -23,6 +23,7 @@
 ## 失敗時先檢查
 
 - 如果建立 token 失敗，先確認指定的是正確的 `--name` 或 `--service-account-id`
+- 如果 Grafana 拒絕指定的 lifetime，請改用符合目標 server token expiration policy 的 `--seconds-to-live`
 - 如果刪除看起來沒作用，先核對 token 名稱，以及目前連到的是不是正確的 Grafana org 或環境
 - 如果結果要交給自動化，請加 `--json`，並先驗證回傳 shape 再存檔或往下傳
 

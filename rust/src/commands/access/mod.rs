@@ -155,6 +155,13 @@ pub(crate) fn build_access_import_dry_run_document(
     skipped: usize,
     source: &Path,
 ) -> Value {
+    let blocked = rows
+        .iter()
+        .filter(|row| {
+            matches!(row.get("blocked"), Some(Value::Bool(true)))
+                || matches!(row.get("status"), Some(Value::String(status)) if status == "blocked")
+        })
+        .count();
     Value::Object(Map::from_iter(vec![
         (
             "kind".to_string(),
@@ -196,6 +203,10 @@ pub(crate) fn build_access_import_dry_run_document(
                 (
                     "skipped".to_string(),
                     Value::Number((skipped as i64).into()),
+                ),
+                (
+                    "blocked".to_string(),
+                    Value::Number((blocked as i64).into()),
                 ),
                 (
                     "source".to_string(),

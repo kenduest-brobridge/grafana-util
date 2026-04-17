@@ -371,6 +371,156 @@ fn team_import_rejects_kind_mismatch_and_future_version_bundle_contract() {
 }
 
 #[test]
+fn team_import_resolves_members_to_email_for_bulk_update() {
+    let temp_dir = tempdir().unwrap();
+    fs::write(
+        temp_dir.path().join("teams.json"),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-access-team-export-index",
+            "version": 1,
+            "records": [
+                {"name": "Ops", "email": "ops@example.com", "members": ["alice", "bob@example.com"], "admins": ["bob@example.com"]}
+            ]
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let args = TeamImportArgs {
+        common: super::make_token_common(),
+        input_dir: temp_dir.path().to_path_buf(),
+        replace_existing: true,
+        dry_run: false,
+        table: false,
+        json: false,
+        output_format: DryRunOutputFormat::Text,
+        yes: false,
+    };
+    let mut calls = Vec::new();
+    let result = import_teams_with_request(
+        |method, path, _params, payload| {
+            calls.push((method.to_string(), path.to_string(), payload.cloned()));
+            match (method.clone(), path) {
+                (Method::GET, "/api/org/users") => Ok(Some(json!([
+                    {"userId": 7, "login": "alice", "email": "alice@example.com"},
+                    {"userId": 8, "login": "bob", "email": "bob@example.com"}
+                ]))),
+                (Method::GET, "/api/teams/search") => Ok(Some(json!({
+                    "teams": [{"id": 3, "uid": "team-ops", "name": "Ops", "email": "ops@example.com"}]
+                }))),
+                (Method::GET, "/api/teams/3/members") => Ok(Some(json!([]))),
+                (Method::POST, "/api/teams/3/members") => Ok(Some(json!({"message": "ok"}))),
+                (Method::PUT, "/api/teams/3/members") => Ok(Some(json!({"message": "ok"}))),
+                _ => panic!("unexpected path {path} {method:?}"),
+            }
+        },
+        &args,
+    );
+
+    assert!(result.is_ok());
+    let bulk_payload = calls
+        .iter()
+        .find(|(method, path, _)| method == "PUT" && path == "/api/teams/3/members")
+        .and_then(|(_, _, payload)| payload.as_ref())
+        .expect("expected bulk membership payload");
+    assert_eq!(
+        bulk_payload.get("members"),
+        Some(&json!(["alice@example.com"]))
+    );
+    assert_eq!(
+        bulk_payload.get("admins"),
+        Some(&json!(["bob@example.com"]))
+    );
+}
+
+#[test]
+fn team_import_blocks_bulk_update_when_identity_has_no_email() {
+    let temp_dir = tempdir().unwrap();
+    fs::write(
+        temp_dir.path().join("teams.json"),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-access-team-export-index",
+            "version": 1,
+            "records": [
+                {"name": "Ops", "members": ["alice"]}
+            ]
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let args = TeamImportArgs {
+        common: super::make_token_common(),
+        input_dir: temp_dir.path().to_path_buf(),
+        replace_existing: true,
+        dry_run: false,
+        table: false,
+        json: false,
+        output_format: DryRunOutputFormat::Text,
+        yes: false,
+    };
+    let error = import_teams_with_request(
+        |method, path, _params, _payload| match (method.clone(), path) {
+            (Method::GET, "/api/org/users") => Ok(Some(json!([
+                {"userId": 7, "login": "alice"}
+            ]))),
+            _ => panic!("unexpected path {path} {method:?}"),
+        },
+        &args,
+    )
+    .unwrap_err();
+
+    assert!(error.to_string().contains("require user emails"));
+}
+
+#[test]
+fn team_import_dry_run_blocks_provisioned_team_membership_updates() {
+    let temp_dir = tempdir().unwrap();
+    fs::write(
+        temp_dir.path().join("teams.json"),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-access-team-export-index",
+            "version": 1,
+            "records": [
+                {"name": "Ops", "members": ["alice@example.com"]}
+            ]
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let args = TeamImportArgs {
+        common: super::make_token_common(),
+        input_dir: temp_dir.path().to_path_buf(),
+        replace_existing: true,
+        dry_run: true,
+        table: true,
+        json: false,
+        output_format: DryRunOutputFormat::Table,
+        yes: false,
+    };
+    let mut calls = Vec::new();
+    let result = import_teams_with_request(
+        |method, path, _params, payload| {
+            calls.push((method.to_string(), path.to_string(), payload.cloned()));
+            match (method.clone(), path) {
+                (Method::GET, "/api/org/users") => Ok(Some(json!([
+                    {"userId": 7, "login": "alice", "email": "alice@example.com"}
+                ]))),
+                (Method::GET, "/api/teams/search") => Ok(Some(json!({
+                    "teams": [{"id": 3, "uid": "team-ops", "name": "Ops", "isProvisioned": true}]
+                }))),
+                (Method::GET, "/api/teams/3/members") => Ok(Some(json!([]))),
+                _ => panic!("unexpected path {path} {method:?}"),
+            }
+        },
+        &args,
+    );
+
+    assert!(result.is_ok());
+    assert!(calls
+        .iter()
+        .all(|(method, path, _)| !(method == "PUT" && path == "/api/teams/3/members")));
+}
+
+#[test]
 fn team_diff_with_request_reports_same_state_for_members_and_admins() {
     let temp_dir = tempdir().unwrap();
     let export_args = TeamExportArgs {

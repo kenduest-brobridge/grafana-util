@@ -42,6 +42,7 @@ List live or local Grafana organizations, create, modify, export, import, diff, 
 
 - Use `--profile` for repeatable org inventory when the selected profile has the required admin privileges.
 - Org administration is commonly broader than a narrow API token. Basic auth or an admin-backed profile is the safer default for create, rename, export, import, and delete flows.
+- When an org bundle includes users, import dry-run checks live org users so role plans reflect the target environment. Externally synced user role changes are reported as blocked before apply.
 
 ## Examples
 

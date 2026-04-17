@@ -28,7 +28,14 @@
 
 - 如果 list、add 或 delete 看起來是空的或不對，先確認選到的 profile 或 token 具有正確的 org 或 admin scope
 - 如果建立或修改失敗，先核對 login / email 是否重複，以及目前範圍是 org 還是 global
+- 如果匯入回報 blocked update，先確認目標 user 是否為 external、externally synced，或由 provisioned identity source 管理
 - 如果匯入的行為不如預期，先確認套件來源與目標範圍，再重試
+
+## 匯入注意事項
+
+- User import 會把 `id`、`userId`、`uid`、`authLabels` 與 external/provisioned 旗標視為目標 evidence，不把它們當成跨環境 desired identity。
+- `--dry-run --output-format table` 或 `--dry-run --json` 會在寫入前標出 Grafana 判定為外部管理的 profile、org role 或 Grafana admin blocked update。
+- `modify` 也會在任何寫入前套用相同的 Grafana-source guardrails：external 或 provisioned user 會阻擋 profile/password 變更，externally synced user 會阻擋 org-role 變更，externally synced Grafana-admin 狀態會阻擋 admin 變更。
 
 ## 主要旗標
 

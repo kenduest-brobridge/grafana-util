@@ -13,13 +13,12 @@ use crate::common::{message, render_json_value, string_field, write_json_file, R
 
 use crate::access::render::{
     access_export_summary_line, access_import_summary_line, format_table, map_get_text,
-    normalize_team_row, scalar_text,
+    normalize_team_row, scalar_text, value_bool,
 };
 use crate::access::team_import_export_diff::{
-    assert_not_overwrite, build_membership_payloads, build_team_access_export_metadata,
-    build_team_import_dry_run_document, build_team_import_dry_run_row,
-    build_team_import_dry_run_rows, load_team_import_records, parse_access_identity_list,
-    sorted_membership_union, validate_team_import_dry_run_output,
+    assert_not_overwrite, build_team_access_export_metadata, build_team_import_dry_run_document,
+    build_team_import_dry_run_row, build_team_import_dry_run_rows, load_team_import_records,
+    parse_access_identity_list, validate_team_import_dry_run_output,
 };
 use crate::access::team_runtime::{
     add_team_member_with_request, create_team_with_request, iter_teams_with_request,
@@ -32,6 +31,110 @@ use crate::access::{
     TeamExportArgs, TeamImportArgs, ACCESS_EXPORT_KIND_TEAMS, ACCESS_EXPORT_METADATA_FILENAME,
     ACCESS_EXPORT_VERSION, ACCESS_TEAM_EXPORT_FILENAME,
 };
+
+struct ResolvedTeamMember {
+    identity: String,
+    email: String,
+    user_id: String,
+}
+
+struct ResolvedTeamMemberships {
+    members: Vec<String>,
+    admins: Vec<String>,
+    merged: Vec<ResolvedTeamMember>,
+    target_keys: BTreeSet<String>,
+}
+
+fn mark_team_import_row_blocked(row: &mut Map<String, Value>, blocker: &str) {
+    row.insert("status".to_string(), Value::String("blocked".to_string()));
+    row.insert("blocked".to_string(), Value::Bool(true));
+    row.insert(
+        "blockers".to_string(),
+        Value::Array(vec![Value::String(blocker.to_string())]),
+    );
+}
+
+fn attach_team_target(row: &mut Map<String, Value>, team: &Map<String, Value>) {
+    let mut target = Map::new();
+    for (source, dest) in [
+        ("id", "targetId"),
+        ("teamId", "targetId"),
+        ("uid", "targetUid"),
+        ("memberCount", "memberCount"),
+    ] {
+        let value = scalar_text(team.get(source));
+        if !value.is_empty() && !target.contains_key(dest) {
+            target.insert(dest.to_string(), Value::String(value));
+        }
+    }
+    if let Some(is_provisioned) = value_bool(team.get("isProvisioned")) {
+        target.insert("isProvisioned".to_string(), Value::Bool(is_provisioned));
+    }
+    if !target.is_empty() {
+        row.insert("target".to_string(), Value::Object(target));
+    }
+}
+
+fn resolve_team_memberships_for_bulk<F>(
+    request_json: &mut F,
+    record_members: &[String],
+    record_admins: &[String],
+) -> Result<ResolvedTeamMemberships>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    let mut seen_email_keys = BTreeSet::new();
+    let mut members = Vec::new();
+    let mut admins = Vec::new();
+    let mut merged = Vec::new();
+
+    for (identity, admin) in record_admins
+        .iter()
+        .map(|identity| (identity, true))
+        .chain(record_members.iter().map(|identity| (identity, false)))
+    {
+        let user = lookup_org_user_by_identity(&mut *request_json, identity)?;
+        let email = string_field(&user, "email", "");
+        if email.is_empty() {
+            return Err(message(format!(
+                "Team member identity {identity} resolved without an email; Grafana bulk team membership updates require user emails."
+            )));
+        }
+        let user_id = user_id_from_record(&user);
+        if user_id.is_empty() {
+            return Err(message(format!(
+                "Team member lookup did not return an id: {}",
+                identity
+            )));
+        }
+        let email_key = normalize_access_identity(&email);
+        if !seen_email_keys.insert(email_key) {
+            continue;
+        }
+        if admin {
+            admins.push(email.clone());
+        } else {
+            members.push(email.clone());
+        }
+        merged.push(ResolvedTeamMember {
+            identity: identity.clone(),
+            email,
+            user_id,
+        });
+    }
+
+    let target_keys = merged
+        .iter()
+        .map(|member| normalize_access_identity(&member.email))
+        .collect::<BTreeSet<String>>();
+
+    Ok(ResolvedTeamMemberships {
+        members,
+        admins,
+        merged,
+        target_keys,
+    })
+}
 
 pub(crate) fn export_teams_with_request<F>(
     mut request_json: F,
@@ -164,13 +267,40 @@ where
             parse_access_identity_list(record.get("members").unwrap_or(&Value::Null));
         let record_admins =
             parse_access_identity_list(record.get("admins").unwrap_or(&Value::Null));
-        let merged_members = sorted_membership_union(&record_members, &record_admins);
-        let (regular_members_payload, admin_payload) =
-            build_membership_payloads(&record_members, &record_admins);
-        let target_keys = merged_members
-            .iter()
-            .map(|identity| normalize_access_identity(identity))
-            .collect::<BTreeSet<String>>();
+        let has_membership_payload = !(record_members.is_empty() && record_admins.is_empty());
+        let resolved_memberships = if has_membership_payload {
+            match resolve_team_memberships_for_bulk(
+                &mut request_json,
+                &record_members,
+                &record_admins,
+            ) {
+                Ok(resolved) => Some(resolved),
+                Err(error) if args.dry_run => {
+                    let detail = error.to_string();
+                    if is_dry_run_table_or_json {
+                        let mut row = build_team_import_dry_run_row(
+                            index + 1,
+                            &team_name,
+                            "blocked",
+                            &detail,
+                        );
+                        mark_team_import_row_blocked(&mut row, &detail);
+                        dry_run_rows.push(row);
+                    } else {
+                        println!("Blocked team {} import: {}", team_name, detail);
+                    }
+                    updated += 1;
+                    continue;
+                }
+                Err(error) => return Err(error),
+            }
+        } else {
+            None
+        };
+        let target_keys = resolved_memberships
+            .as_ref()
+            .map(|resolved| resolved.target_keys.clone())
+            .unwrap_or_default();
 
         let existing = lookup_team_by_name(&mut request_json, &team_name).ok();
 
@@ -191,12 +321,42 @@ where
         if existing_team_id.is_none() {
             if args.dry_run {
                 if is_dry_run_table_or_json {
-                    dry_run_rows.push(build_team_import_dry_run_row(
+                    let mut row = build_team_import_dry_run_row(
                         index + 1,
                         &team_name,
                         "create",
                         "would create team",
-                    ));
+                    );
+                    if let Some(resolved) = resolved_memberships.as_ref() {
+                        row.insert(
+                            "desired".to_string(),
+                            Value::Object(Map::from_iter(vec![
+                                (
+                                    "members".to_string(),
+                                    Value::Array(
+                                        resolved
+                                            .members
+                                            .iter()
+                                            .cloned()
+                                            .map(Value::String)
+                                            .collect(),
+                                    ),
+                                ),
+                                (
+                                    "admins".to_string(),
+                                    Value::Array(
+                                        resolved
+                                            .admins
+                                            .iter()
+                                            .cloned()
+                                            .map(Value::String)
+                                            .collect(),
+                                    ),
+                                ),
+                            ])),
+                        );
+                    }
+                    dry_run_rows.push(row);
                 } else {
                     println!("Would create team {}", team_name);
                 }
@@ -229,27 +389,19 @@ where
                 )));
             }
 
-            if !(record_members.is_empty() && record_admins.is_empty()) {
+            if let Some(resolved) = resolved_memberships {
                 // Add every referenced user first so the later bulk membership
                 // update only has to flip admin-state, not create missing edges.
-                for identity in merged_members.iter() {
-                    let user = lookup_org_user_by_identity(&mut request_json, identity)?;
-                    let user_id = user_id_from_record(&user);
-                    if user_id.is_empty() {
-                        return Err(message(format!(
-                            "Team member lookup did not return an id: {}",
-                            identity
-                        )));
-                    }
-                    add_team_member_with_request(&mut request_json, &team_id, &user_id)?;
+                for member in resolved.merged.iter() {
+                    add_team_member_with_request(&mut request_json, &team_id, &member.user_id)?;
                 }
 
-                if !regular_members_payload.is_empty() || !admin_payload.is_empty() {
+                if !resolved.members.is_empty() || !resolved.admins.is_empty() {
                     let _ = update_team_members_with_request(
                         &mut request_json,
                         &team_id,
-                        regular_members_payload,
-                        admin_payload,
+                        resolved.members,
+                        resolved.admins,
                     )?;
                 }
             }
@@ -263,17 +415,27 @@ where
         if !args.replace_existing {
             skipped += 1;
             if is_dry_run_table_or_json {
-                dry_run_rows.push(build_team_import_dry_run_row(
+                let mut row = build_team_import_dry_run_row(
                     index + 1,
                     &team_name,
                     "skip",
                     "existing and --replace-existing was not set.",
-                ));
+                );
+                if let Some(team) = existing.as_ref() {
+                    attach_team_target(&mut row, team);
+                }
+                row.insert("status".to_string(), Value::String("skipped".to_string()));
+                dry_run_rows.push(row);
             } else {
                 println!("Skipped team {} ({})", team_name, index + 1);
             }
             continue;
         }
+
+        let existing_is_provisioned = existing
+            .as_ref()
+            .and_then(|team| value_bool(team.get("isProvisioned")))
+            .unwrap_or(false);
 
         let mut existing_members = BTreeMap::<String, (String, bool, String)>::new();
         for member in list_team_members_with_request(&mut request_json, &team_id)? {
@@ -303,29 +465,41 @@ where
             )));
         }
 
+        if existing_is_provisioned && (has_membership_payload || !remove_keys.is_empty()) {
+            let detail = "provisioned team memberships cannot be changed";
+            if args.dry_run {
+                if is_dry_run_table_or_json {
+                    let mut row =
+                        build_team_import_dry_run_row(index + 1, &team_name, "blocked", detail);
+                    mark_team_import_row_blocked(&mut row, detail);
+                    if let Some(team) = existing.as_ref() {
+                        attach_team_target(&mut row, team);
+                    }
+                    dry_run_rows.push(row);
+                } else {
+                    println!("Blocked team {} import: {}", team_name, detail);
+                }
+                updated += 1;
+                continue;
+            }
+            return Err(message(format!(
+                "Team import blocked for {team_name}: {detail}"
+            )));
+        }
+
         if !args.dry_run {
             // For existing teams, converge to the exported membership set before
             // sending the admin/member payload split that finalizes role state.
-            for identity in record_members
-                .iter()
-                .chain(record_admins.iter())
-                .collect::<Vec<&String>>()
-                .iter()
-            {
-                let key = normalize_access_identity(identity);
-                if existing_members.contains_key(&key) {
-                    continue;
+            if let Some(resolved) = resolved_memberships.as_ref() {
+                for member in resolved.merged.iter() {
+                    let key = normalize_access_identity(&member.email);
+                    if existing_members.contains_key(&key) {
+                        continue;
+                    }
+                    add_team_member_with_request(&mut request_json, &team_id, &member.user_id)?;
+                    existing_members
+                        .insert(key, (member.email.clone(), false, member.user_id.clone()));
                 }
-                let user = lookup_org_user_by_identity(&mut request_json, identity)?;
-                let user_id = user_id_from_record(&user);
-                if user_id.is_empty() {
-                    return Err(message(format!(
-                        "Team member lookup did not return an id: {}",
-                        identity
-                    )));
-                }
-                add_team_member_with_request(&mut request_json, &team_id, &user_id)?;
-                existing_members.insert(key, (identity.to_string(), false, user_id));
             }
 
             if !remove_keys.is_empty() {
@@ -341,36 +515,55 @@ where
             let _ = update_team_members_with_request(
                 &mut request_json,
                 &team_id,
-                regular_members_payload,
-                admin_payload,
+                resolved_memberships
+                    .as_ref()
+                    .map(|resolved| resolved.members.clone())
+                    .unwrap_or_default(),
+                resolved_memberships
+                    .as_ref()
+                    .map(|resolved| resolved.admins.clone())
+                    .unwrap_or_default(),
             )?;
         }
 
         if args.dry_run {
-            for identity in record_members.iter().chain(record_admins.iter()) {
-                let key = normalize_access_identity(identity);
-                if !existing_members.contains_key(&key) {
-                    if is_dry_run_table_or_json {
-                        dry_run_rows.push(build_team_import_dry_run_row(
-                            index + 1,
-                            &team_name,
-                            "add-member",
-                            &format!("would add team member {identity}"),
-                        ));
-                    } else {
-                        println!("Would add team {} member {}", team_name, identity);
+            if let Some(resolved) = resolved_memberships.as_ref() {
+                for member in resolved.merged.iter() {
+                    let key = normalize_access_identity(&member.email);
+                    if !existing_members.contains_key(&key) {
+                        if is_dry_run_table_or_json {
+                            let mut row = build_team_import_dry_run_row(
+                                index + 1,
+                                &team_name,
+                                "add-member",
+                                &format!(
+                                    "would add team member {} as {}",
+                                    member.identity, member.email
+                                ),
+                            );
+                            if let Some(team) = existing.as_ref() {
+                                attach_team_target(&mut row, team);
+                            }
+                            dry_run_rows.push(row);
+                        } else {
+                            println!("Would add team {} member {}", team_name, member.email);
+                        }
                     }
                 }
             }
             for key in remove_keys.iter() {
                 if let Some((identity, _, _)) = existing_members.get(key.as_str()) {
                     if is_dry_run_table_or_json {
-                        dry_run_rows.push(build_team_import_dry_run_row(
+                        let mut row = build_team_import_dry_run_row(
                             index + 1,
                             &team_name,
                             "remove-member",
                             &format!("would remove team member {identity}"),
-                        ));
+                        );
+                        if let Some(team) = existing.as_ref() {
+                            attach_team_target(&mut row, team);
+                        }
+                        dry_run_rows.push(row);
                     } else {
                         println!("Would remove team {} member {}", team_name, identity);
                     }
@@ -380,12 +573,16 @@ where
 
         updated += 1;
         if is_dry_run_table_or_json {
-            dry_run_rows.push(build_team_import_dry_run_row(
+            let mut row = build_team_import_dry_run_row(
                 index + 1,
                 &team_name,
                 "updated",
                 "would update team",
-            ));
+            );
+            if let Some(team) = existing.as_ref() {
+                attach_team_target(&mut row, team);
+            }
+            dry_run_rows.push(row);
         } else {
             println!("Updated team {}", team_name);
         }
@@ -408,7 +605,7 @@ where
         }
         if args.table {
             for line in format_table(
-                &["INDEX", "IDENTITY", "ACTION", "DETAIL"],
+                &["INDEX", "IDENTITY", "ACTION", "STATUS", "DETAIL"],
                 &build_team_import_dry_run_rows(&dry_run_rows),
             ) {
                 println!("{line}");

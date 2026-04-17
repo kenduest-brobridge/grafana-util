@@ -627,6 +627,58 @@ fn service_account_token_add_with_request_resolves_name() {
 }
 
 #[test]
+fn service_account_token_add_with_request_surfaces_ttl_and_duplicate_hints() {
+    let cases = [
+        (
+            None,
+            "Number of seconds before expiration should be set",
+            "requires --seconds-to-live",
+        ),
+        (
+            Some(11_000usize),
+            "Number of seconds before expiration is greater than the global limit",
+            "Reduce --seconds-to-live",
+        ),
+        (
+            Some(345_600usize),
+            "The expiration date input exceeds the limit for service account access tokens expiration date",
+            "Reduce --seconds-to-live",
+        ),
+        (
+            Some(3_600usize),
+            "service account token with name nightly already exists in the organization",
+            "Choose a different --token-name",
+        ),
+    ];
+
+    for (seconds_to_live, grafana_error, expected_hint) in cases {
+        let args = ServiceAccountTokenAddArgs {
+            common: make_token_common(),
+            service_account_id: Some("4".to_string()),
+            name: None,
+            token_name: "nightly".to_string(),
+            seconds_to_live,
+            json: false,
+        };
+
+        let error = add_service_account_token_with_request(
+            |_method, path, _params, _payload| match path {
+                "/api/serviceaccounts/4/tokens" => Err(crate::common::message(format!(
+                    "HTTP error 400 for /api/serviceaccounts/4/tokens: {grafana_error}"
+                ))),
+                _ => panic!("unexpected path {path}"),
+            },
+            &args,
+        )
+        .unwrap_err()
+        .to_string();
+
+        assert!(error.contains(grafana_error));
+        assert!(error.contains(expected_hint));
+    }
+}
+
+#[test]
 fn team_delete_with_request_deletes_resolved_team() {
     let args = TeamDeleteArgs {
         common: make_token_common(),

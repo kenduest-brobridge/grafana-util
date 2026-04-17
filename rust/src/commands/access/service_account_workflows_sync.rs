@@ -23,12 +23,33 @@ use super::super::{
     update_service_account_with_request,
 };
 use super::service_account_workflows_support::{
-    assert_not_overwrite, build_record_diff_fields, build_service_account_diff_map,
-    build_service_account_diff_review_line, build_service_account_export_metadata,
-    build_service_account_import_dry_run_document, build_service_account_import_dry_run_row,
-    build_service_account_import_dry_run_rows, list_all_service_accounts_with_request,
-    load_service_account_import_records, validate_service_account_import_dry_run_output,
+    assert_not_overwrite, attach_service_account_target, build_record_diff_fields,
+    build_service_account_diff_map, build_service_account_diff_review_line,
+    build_service_account_export_metadata, build_service_account_import_dry_run_document,
+    build_service_account_import_dry_run_row, build_service_account_import_dry_run_rows,
+    list_all_service_accounts_with_request, load_service_account_import_records,
+    mark_service_account_import_row_blocked, normalize_service_account_import_role,
+    validate_service_account_import_dry_run_output,
 };
+
+fn service_account_privilege_warning(role: &str) -> Option<&'static str> {
+    if role == "Admin" {
+        Some(
+            "Grafana may reject Admin role changes if the caller lacks sufficient service-account privileges.",
+        )
+    } else {
+        None
+    }
+}
+
+fn attach_service_account_warnings(row: &mut Map<String, Value>, warning: Option<&str>) {
+    if let Some(warning) = warning {
+        row.insert(
+            "warnings".to_string(),
+            Value::Array(vec![Value::String(warning.to_string())]),
+        );
+    }
+}
 
 /// Purpose: implementation note.
 pub(crate) fn export_service_accounts_with_request<F>(
@@ -123,6 +144,7 @@ where
         )?
         .into_iter()
         .find(|item| string_field(item, "name", "") == identity);
+        let desired_role_raw = string_field(record, "role", "");
 
         if existing.is_none() {
             if !args.replace_existing {
@@ -146,31 +168,63 @@ where
                 continue;
             }
             if args.dry_run {
+                let desired_role = match normalize_service_account_import_role(&desired_role_raw) {
+                    Ok(role) => role.unwrap_or_else(|| "Viewer".to_string()),
+                    Err(error) => {
+                        let detail = error.to_string();
+                        if structured_output {
+                            let mut row = build_service_account_import_dry_run_row(
+                                index + 1,
+                                &identity,
+                                "blocked",
+                                &detail,
+                            );
+                            mark_service_account_import_row_blocked(&mut row, &detail);
+                            dry_run_rows.push(row);
+                        } else {
+                            println!("Blocked service-account {} import: {}", identity, detail);
+                        }
+                        continue;
+                    }
+                };
+                let role_warning = service_account_privilege_warning(&desired_role);
                 created += 1;
                 if structured_output {
-                    dry_run_rows.push(build_service_account_import_dry_run_row(
+                    let detail = if let Some(warning) = role_warning {
+                        format!("would create service account role={desired_role}; {warning}")
+                    } else {
+                        format!("would create service account role={desired_role}")
+                    };
+                    let mut row = build_service_account_import_dry_run_row(
                         index + 1,
                         &identity,
                         "create",
-                        "would create service account",
-                    ));
+                        &detail,
+                    );
+                    attach_service_account_warnings(&mut row, role_warning);
+                    dry_run_rows.push(row);
+                } else if let Some(warning) = role_warning {
+                    println!(
+                        "Would create service-account {} role={} ({})",
+                        identity, desired_role, warning
+                    );
                 } else {
-                    println!("Would create service-account {}", identity);
+                    println!(
+                        "Would create service-account {} role={}",
+                        identity, desired_role
+                    );
                 }
                 continue;
             }
+            let desired_role = match normalize_service_account_import_role(&desired_role_raw) {
+                Ok(role) => role.unwrap_or_else(|| "Viewer".to_string()),
+                Err(error) => return Err(error),
+            };
             let payload = Value::Object(Map::from_iter(vec![
                 ("name".to_string(), Value::String(identity.clone())),
                 (
                     "role".to_string(),
-                    Value::String(service_account_role_to_api(&{
-                        let role = string_field(record, "role", "");
-                        if role.is_empty() {
-                            "Viewer".to_string()
-                        } else {
-                            role
-                        }
-                    })),
+                    Value::String(service_account_role_to_api(&desired_role)),
                 ),
                 (
                     "isDisabled".to_string(),
@@ -208,7 +262,30 @@ where
             continue;
         }
 
-        let desired_role = string_field(record, "role", "");
+        let desired_role = match normalize_service_account_import_role(&desired_role_raw) {
+            Ok(role) => role.unwrap_or_else(|| "Viewer".to_string()),
+            Err(error) => {
+                let detail = error.to_string();
+                if args.dry_run {
+                    if structured_output {
+                        let mut row = build_service_account_import_dry_run_row(
+                            index + 1,
+                            &identity,
+                            "blocked",
+                            &detail,
+                        );
+                        mark_service_account_import_row_blocked(&mut row, &detail);
+                        attach_service_account_target(&mut row, &existing);
+                        dry_run_rows.push(row);
+                    } else {
+                        println!("Blocked service-account {} import: {}", identity, detail);
+                    }
+                    continue;
+                }
+                return Err(error);
+            }
+        };
+        let role_warning = service_account_privilege_warning(&desired_role);
         let existing_role = string_field(&existing, "role", "");
         let desired_disabled =
             value_bool(record.get("disabled")).or_else(|| value_bool(record.get("isDisabled")));
@@ -217,7 +294,7 @@ where
         let mut update_payload =
             Map::from_iter(vec![("name".to_string(), Value::String(identity.clone()))]);
         let mut changed = Vec::new();
-        if !desired_role.is_empty() && desired_role != existing_role {
+        if desired_role != existing_role {
             update_payload.insert(
                 "role".to_string(),
                 Value::String(service_account_role_to_api(&desired_role)),
@@ -253,14 +330,35 @@ where
         }
         if args.dry_run {
             updated += 1;
-            let detail = format!("would update fields={}", changed.join(","));
+            let role_changed = changed.iter().any(|field| field == "role");
+            let detail = if role_changed {
+                if let Some(warning) = role_warning {
+                    format!(
+                        "would update fields={} role={desired_role}; {warning}",
+                        changed.join(",")
+                    )
+                } else {
+                    format!(
+                        "would update fields={} role={desired_role}",
+                        changed.join(",")
+                    )
+                }
+            } else {
+                format!("would update fields={}", changed.join(","))
+            };
             if structured_output {
-                dry_run_rows.push(build_service_account_import_dry_run_row(
+                let mut row = build_service_account_import_dry_run_row(
                     index + 1,
                     &identity,
                     "update",
                     &detail,
-                ));
+                );
+                attach_service_account_target(&mut row, &existing);
+                attach_service_account_warnings(
+                    &mut row,
+                    if role_changed { role_warning } else { None },
+                );
+                dry_run_rows.push(row);
             } else {
                 println!("Would update service-account {} {}", identity, detail);
             }
@@ -299,7 +397,7 @@ where
         }
         if args.table {
             for line in format_table(
-                &["INDEX", "IDENTITY", "ACTION", "DETAIL"],
+                &["INDEX", "IDENTITY", "ACTION", "STATUS", "DETAIL"],
                 &build_service_account_import_dry_run_rows(&dry_run_rows),
             ) {
                 println!("{line}");
@@ -394,4 +492,154 @@ where
         )
     );
     Ok(differences)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::access::{CommonCliArgs, DryRunOutputFormat};
+    use serde_json::json;
+    use std::fs;
+    use tempfile::tempdir;
+
+    #[test]
+    fn service_account_import_dry_run_rows_include_status_and_blocked_summary() {
+        let planned = build_service_account_import_dry_run_row(
+            1,
+            "svc",
+            "update",
+            "would update fields=role",
+        );
+        let mut blocked =
+            build_service_account_import_dry_run_row(2, "svc-blocked", "blocked", "invalid role");
+        mark_service_account_import_row_blocked(&mut blocked, "invalid role");
+        let rows = vec![planned, blocked];
+
+        assert_eq!(
+            build_service_account_import_dry_run_rows(&rows),
+            vec![
+                vec![
+                    "1".to_string(),
+                    "svc".to_string(),
+                    "update".to_string(),
+                    "planned".to_string(),
+                    "would update fields=role".to_string(),
+                ],
+                vec![
+                    "2".to_string(),
+                    "svc-blocked".to_string(),
+                    "blocked".to_string(),
+                    "blocked".to_string(),
+                    "invalid role".to_string(),
+                ],
+            ]
+        );
+
+        let document = build_service_account_import_dry_run_document(
+            &rows,
+            2,
+            0,
+            1,
+            0,
+            std::path::Path::new("./access-service-accounts"),
+        );
+        assert_eq!(document["summary"]["blocked"], json!(1));
+        assert_eq!(document["rows"][0]["status"], json!("planned"));
+        assert_eq!(document["rows"][1]["status"], json!("blocked"));
+    }
+
+    #[test]
+    fn service_account_import_dry_run_update_rows_include_target_evidence() {
+        let mut row = build_service_account_import_dry_run_row(
+            2,
+            "svc",
+            "update",
+            "would update fields=role,disabled",
+        );
+        let target = Map::from_iter(vec![
+            ("id".to_string(), json!("4")),
+            ("name".to_string(), json!("svc")),
+            ("login".to_string(), json!("sa-svc")),
+            ("role".to_string(), json!("Viewer")),
+            ("isDisabled".to_string(), json!(false)),
+            ("tokens".to_string(), json!("2")),
+            ("orgId".to_string(), json!("1")),
+        ]);
+
+        attach_service_account_target(&mut row, &target);
+
+        assert_eq!(row["status"], json!("planned"));
+        assert_eq!(row["blocked"], json!(false));
+        assert_eq!(row["target"]["targetId"], json!("4"));
+        assert_eq!(row["target"]["name"], json!("svc"));
+        assert_eq!(row["target"]["login"], json!("sa-svc"));
+        assert_eq!(row["target"]["role"], json!("Viewer"));
+        assert_eq!(row["target"]["isDisabled"], json!(false));
+    }
+
+    #[test]
+    fn service_account_import_rejects_invalid_role_before_create() {
+        let temp_dir = tempdir().unwrap();
+        fs::write(
+            temp_dir.path().join("service-accounts.json"),
+            serde_json::to_string_pretty(&json!({
+                "kind": "grafana-utils-access-service-account-export-index",
+                "version": 1,
+                "records": [
+                    {"name": "svc-invalid", "role": "SuperAdmin", "disabled": false}
+                ]
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+
+        let args = ServiceAccountImportArgs {
+            common: CommonCliArgs {
+                profile: None,
+                url: "http://127.0.0.1:3000".to_string(),
+                api_token: Some("token".to_string()),
+                username: None,
+                password: None,
+                prompt_password: false,
+                prompt_token: false,
+                org_id: None,
+                timeout: 30,
+                verify_ssl: false,
+                insecure: false,
+                ca_cert: None,
+            },
+            input_dir: temp_dir.path().to_path_buf(),
+            replace_existing: true,
+            dry_run: false,
+            table: false,
+            json: false,
+            output_format: DryRunOutputFormat::Text,
+            yes: false,
+        };
+
+        let mut calls = Vec::new();
+        let error = import_service_accounts_with_request(
+            |method, path, params, payload| {
+                calls.push((
+                    method.to_string(),
+                    path.to_string(),
+                    params.to_vec(),
+                    payload.cloned(),
+                ));
+                match path {
+                    "/api/serviceaccounts/search" => Ok(Some(json!({"serviceAccounts": []}))),
+                    _ => panic!("unexpected path {path}"),
+                }
+            },
+            &args,
+        )
+        .unwrap_err();
+
+        assert!(error
+            .to_string()
+            .contains("Service account import role must be one of None, Viewer, Editor, Admin"));
+        assert!(calls
+            .iter()
+            .all(|(_, path, _, _)| path == "/api/serviceaccounts/search"));
+    }
 }

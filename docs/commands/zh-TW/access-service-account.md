@@ -25,8 +25,15 @@
 ## 失敗時先檢查
 
 - 如果 token add 或 delete 失敗，先確認 service account 名稱或 ID 是否對應到正確的目標環境
+- 如果 token 建立因 expiration 設定失敗，先確認目標 Grafana server 的 token lifetime 設定，再用 `--seconds-to-live` 重試
 - 如果 inventory 看起來不完整，先核對認證範圍與 org context，再判斷是不是 service account 不存在
 - 如果輸出要接給下一步，請先選好明確的 `--output-format`，不要依賴預設值
+
+## 匯入說明
+
+- Service-account import 會在寫入前驗證 role。支援的 role 是 `None`、`Viewer`、`Editor` 與 `Admin`。
+- `--dry-run --output-format table` 或 `--dry-run --json` 會在 live write 前回報 `status`、blocked invalid role 與 target service-account evidence。
+- `Admin` role plan 會附上 operator warning，因為 Grafana apply 時仍會依 caller 的 org role 與 RBAC 權限做最終判斷。
 
 ## 主要旗標
 

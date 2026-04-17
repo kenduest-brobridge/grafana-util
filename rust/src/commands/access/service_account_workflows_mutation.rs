@@ -239,7 +239,10 @@ where
         &mut request_json,
         &service_account_id,
         &Value::Object(payload),
-    )?;
+    )
+    .map_err(|error| {
+        service_account_token_create_error_with_hint(error, &args.token_name, args.seconds_to_live)
+    })?;
     token.insert(
         "serviceAccountId".to_string(),
         Value::String(service_account_id.clone()),
@@ -253,4 +256,44 @@ where
         );
     }
     Ok(0)
+}
+
+fn service_account_token_create_error_with_hint(
+    error: crate::common::GrafanaCliError,
+    token_name: &str,
+    seconds_to_live: Option<usize>,
+) -> crate::common::GrafanaCliError {
+    let text = error.to_string();
+    let lower = text.to_ascii_lowercase();
+    let hint = if lower.contains("number of seconds before expiration should be set")
+        || lower.contains("cannot create token with no expiration date")
+    {
+        if seconds_to_live.is_some() {
+            format!(
+                "Grafana rejected --seconds-to-live for token {token_name:?}; choose a non-zero TTL that the server allows."
+            )
+        } else {
+            format!(
+                "Grafana requires --seconds-to-live for token {token_name:?} because this server does not allow non-expiring tokens."
+            )
+        }
+    } else if lower.contains("number of seconds before expiration is greater than the global limit")
+        || lower.contains("the expiration date input exceeds the limit")
+        || lower.contains("invalid service account token expiration value")
+    {
+        format!(
+            "Reduce --seconds-to-live for token {token_name:?} to stay within the Grafana server limit."
+        )
+    } else if lower.contains("already exists in the organization")
+        || lower.contains("service account token with given name already exists")
+    {
+        format!(
+            "Choose a different --token-name for token {token_name:?}; Grafana token names must be unique within the organization."
+        )
+    } else {
+        return error;
+    };
+    message(format!(
+        "Service-account token creation failed: {text}\nHint: {hint}"
+    ))
 }

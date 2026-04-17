@@ -28,7 +28,14 @@ List or browse live and local Grafana users, create, modify, export, import, dif
 
 - if list, add, or delete looks empty or wrong, confirm the selected profile or auth token has the right org or admin scope
 - if create or modify fails, recheck login or email uniqueness and whether the selected scope is org or global
+- if import reports a blocked update, check whether the target user is external, externally synced, or managed by a provisioned identity source
 - if an import does not behave as expected, verify the bundle source and the target scope before retrying
+
+## Import notes
+
+- User import treats `id`, `userId`, `uid`, `authLabels`, and external/provisioned flags as target evidence, not portable identity.
+- `--dry-run --output-format table` or `--dry-run --json` reports blocked profile, org role, or Grafana admin updates before live writes when Grafana marks the target user as externally managed.
+- `modify` uses the same Grafana-source guardrails before any write: external or provisioned users block profile/password changes, externally synced users block org-role changes, and externally synced Grafana-admin state blocks admin changes.
 
 ## Key flags
 

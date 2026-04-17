@@ -23,6 +23,7 @@ Add or delete tokens for a Grafana service account.
 ## Failure checks
 
 - if token creation fails, confirm whether you targeted the right service account by `--name` or `--service-account-id`
+- if Grafana rejects the requested lifetime, retry with a `--seconds-to-live` value that fits the target server's token expiration policy
 - if deletion looks like a no-op, recheck the token name and whether you are pointing at the correct Grafana org or environment
 - if you plan to pass the result into automation, use `--json` and validate the response shape before storing or forwarding it
 

@@ -190,6 +190,79 @@ where
     Ok(())
 }
 
+fn mark_user_import_row_blocked(row: &mut Map<String, Value>, blocker: &str) {
+    row.insert("status".to_string(), Value::String("blocked".to_string()));
+    row.insert("blocked".to_string(), Value::Bool(true));
+    row.insert(
+        "blockers".to_string(),
+        Value::Array(vec![Value::String(blocker.to_string())]),
+    );
+}
+
+fn attach_user_target(row: &mut Map<String, Value>, user: &Map<String, Value>) {
+    let mut target = Map::new();
+    for (source, dest) in [
+        ("id", "targetId"),
+        ("userId", "targetId"),
+        ("uid", "targetUid"),
+        ("login", "login"),
+        ("email", "email"),
+    ] {
+        let value = scalar_text(user.get(source));
+        if !value.is_empty() && !target.contains_key(dest) {
+            target.insert(dest.to_string(), Value::String(value));
+        }
+    }
+    for key in [
+        "isExternal",
+        "isExternallySynced",
+        "isGrafanaAdminExternallySynced",
+        "isProvisioned",
+    ] {
+        if let Some(value) = value_bool(user.get(key)) {
+            target.insert(key.to_string(), Value::Bool(value));
+        }
+    }
+    if let Some(Value::Array(labels)) = user.get("authLabels") {
+        target.insert("authLabels".to_string(), Value::Array(labels.clone()));
+    }
+    if !target.is_empty() {
+        row.insert("target".to_string(), Value::Object(target));
+    }
+}
+
+struct UserImportBlockContext<'a> {
+    dry_run_rows: &'a mut Vec<Map<String, Value>>,
+    structured_output: bool,
+    dry_run: bool,
+    index: usize,
+    identity: &'a str,
+}
+
+fn block_or_error_user_import(
+    ctx: &mut UserImportBlockContext<'_>,
+    action: &str,
+    detail: &str,
+    existing: &Map<String, Value>,
+) -> Result<bool> {
+    if ctx.dry_run {
+        if ctx.structured_output {
+            let mut row = build_access_import_dry_run_row(ctx.index, ctx.identity, action, detail);
+            mark_user_import_row_blocked(&mut row, detail);
+            attach_user_target(&mut row, existing);
+            ctx.dry_run_rows.push(row);
+        } else {
+            println!("Blocked user {} import: {}", ctx.identity, detail);
+        }
+        Ok(true)
+    } else {
+        Err(message(format!(
+            "User import blocked for {}: {}",
+            ctx.identity, detail
+        )))
+    }
+}
+
 pub(crate) fn import_users_with_request<F>(
     mut request_json: F,
     args: &UserImportArgs,
@@ -401,6 +474,11 @@ where
         let existing_login = string_field(&existing, "login", "");
         let existing_email = string_field(&existing, "email", "");
         let existing_name = string_field(&existing, "name", "");
+        let existing_is_external = value_bool(existing.get("isExternal")).unwrap_or(false);
+        let existing_is_externally_synced =
+            value_bool(existing.get("isExternallySynced")).unwrap_or(false);
+        let existing_admin_externally_synced =
+            value_bool(existing.get("isGrafanaAdminExternallySynced")).unwrap_or(false);
         let desired_name = string_field(record, "name", "");
         let resolved_login = if login.is_empty() {
             existing_login.clone()
@@ -428,14 +506,33 @@ where
                 ("email".to_string(), Value::String(resolved_email)),
                 ("name".to_string(), Value::String(resolved_name)),
             ]);
-            if args.dry_run {
+            if existing_is_external {
+                let mut block_context = UserImportBlockContext {
+                    dry_run_rows: &mut dry_run_rows,
+                    structured_output: is_dry_run_table_or_json,
+                    dry_run: args.dry_run,
+                    index: index + 1,
+                    identity: &identity,
+                };
+                let blocked = block_or_error_user_import(
+                    &mut block_context,
+                    "update-profile",
+                    "external user profile cannot be updated through Grafana user API",
+                    &existing,
+                )?;
+                if !blocked {
+                    unreachable!();
+                }
+            } else if args.dry_run {
                 if is_dry_run_table_or_json {
-                    dry_run_rows.push(build_access_import_dry_run_row(
+                    let mut row = build_access_import_dry_run_row(
                         index + 1,
                         &identity,
                         "update-profile",
                         "would update user profile",
-                    ));
+                    );
+                    attach_user_target(&mut row, &existing);
+                    dry_run_rows.push(row);
                 } else {
                     println!("Would update user {} profile", identity);
                 }
@@ -461,14 +558,33 @@ where
             Scope::Org => normalize_org_role(existing.get("role")),
         };
         if !desired_org_role.is_empty() && desired_org_role != existing_org_role {
-            if args.dry_run {
+            if existing_is_externally_synced {
+                let mut block_context = UserImportBlockContext {
+                    dry_run_rows: &mut dry_run_rows,
+                    structured_output: is_dry_run_table_or_json,
+                    dry_run: args.dry_run,
+                    index: index + 1,
+                    identity: &identity,
+                };
+                let blocked = block_or_error_user_import(
+                    &mut block_context,
+                    "update-org-role",
+                    "externally synced user orgRole cannot be updated through Grafana org user API",
+                    &existing,
+                )?;
+                if !blocked {
+                    unreachable!();
+                }
+            } else if args.dry_run {
                 if is_dry_run_table_or_json {
-                    dry_run_rows.push(build_access_import_dry_run_row(
+                    let mut row = build_access_import_dry_run_row(
                         index + 1,
                         &identity,
                         "update-org-role",
                         &format!("would update orgRole -> {desired_org_role}"),
-                    ));
+                    );
+                    attach_user_target(&mut row, &existing);
+                    dry_run_rows.push(row);
                 } else {
                     println!(
                         "Would update orgRole for user {} -> {}",
@@ -488,14 +604,33 @@ where
         let existing_admin = value_bool(existing.get("isGrafanaAdmin"))
             .or_else(|| value_bool(existing.get("isAdmin")));
         if desired_admin.is_some() && desired_admin != existing_admin {
-            if args.dry_run {
+            if existing_admin_externally_synced {
+                let mut block_context = UserImportBlockContext {
+                    dry_run_rows: &mut dry_run_rows,
+                    structured_output: is_dry_run_table_or_json,
+                    dry_run: args.dry_run,
+                    index: index + 1,
+                    identity: &identity,
+                };
+                let blocked = block_or_error_user_import(
+                    &mut block_context,
+                    "update-admin",
+                    "externally synced grafanaAdmin cannot be updated through Grafana permissions API",
+                    &existing,
+                )?;
+                if !blocked {
+                    unreachable!();
+                }
+            } else if args.dry_run {
                 if is_dry_run_table_or_json {
-                    dry_run_rows.push(build_access_import_dry_run_row(
+                    let mut row = build_access_import_dry_run_row(
                         index + 1,
                         &identity,
                         "update-admin",
                         &format!("would update grafanaAdmin -> {}", bool_label(desired_admin)),
-                    ));
+                    );
+                    attach_user_target(&mut row, &existing);
+                    dry_run_rows.push(row);
                 } else {
                     println!(
                         "Would update grafanaAdmin for user {} -> {}",
@@ -524,12 +659,14 @@ where
                 let team_id = scalar_text(team.get("id"));
                 if args.dry_run {
                     if is_dry_run_table_or_json {
-                        dry_run_rows.push(build_access_import_dry_run_row(
+                        let mut row = build_access_import_dry_run_row(
                             index + 1,
                             &identity,
                             "add-team",
                             &format!("would add user to team {target}"),
-                        ));
+                        );
+                        attach_user_target(&mut row, &existing);
+                        dry_run_rows.push(row);
                     } else {
                         println!("Would add user {} to team {}", identity, target);
                     }
@@ -549,12 +686,14 @@ where
                     .unwrap_or_default();
                 if args.dry_run {
                     if is_dry_run_table_or_json {
-                        dry_run_rows.push(build_access_import_dry_run_row(
+                        let mut row = build_access_import_dry_run_row(
                             index + 1,
                             &identity,
                             "remove-team",
                             &format!("would remove user from team {team_name}"),
-                        ));
+                        );
+                        attach_user_target(&mut row, &existing);
+                        dry_run_rows.push(row);
                     } else {
                         println!("Would remove user {} from team {}", identity, team_name);
                     }
@@ -570,12 +709,14 @@ where
 
         updated += 1;
         if is_dry_run_table_or_json {
-            dry_run_rows.push(build_access_import_dry_run_row(
+            let mut row = build_access_import_dry_run_row(
                 index + 1,
                 &identity,
                 "updated",
                 "would update user",
-            ));
+            );
+            attach_user_target(&mut row, &existing);
+            dry_run_rows.push(row);
         } else {
             println!("Updated user {}", identity);
         }
@@ -584,7 +725,7 @@ where
     if args.dry_run && is_dry_run_table_or_json {
         if args.table {
             for line in format_table(
-                &["INDEX", "IDENTITY", "ACTION", "DETAIL"],
+                &["INDEX", "IDENTITY", "ACTION", "STATUS", "DETAIL"],
                 &build_access_import_dry_run_rows(&dry_run_rows),
             ) {
                 println!("{line}");

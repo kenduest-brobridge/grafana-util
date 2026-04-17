@@ -18,7 +18,7 @@ use super::super::pending_delete::{
 use super::super::render::{
     access_delete_summary_line, access_diff_review_line, access_diff_summary_line,
     access_export_summary_line, access_import_summary_line, build_access_delete_review_document,
-    format_table, render_csv, render_objects_json, render_yaml, scalar_text,
+    format_table, render_csv, render_objects_json, render_yaml, scalar_text, value_bool,
 };
 use super::super::{
     OrgAddArgs, OrgDeleteArgs, OrgDiffArgs, OrgExportArgs, OrgImportArgs, OrgListArgs,
@@ -37,6 +37,39 @@ use super::{
     update_org_user_role_with_request, update_organization_with_request, validate_basic_auth_only,
 };
 use crate::common::render_json_value;
+
+fn org_user_role_change_blocker(user: &Map<String, Value>) -> Option<String> {
+    if value_bool(user.get("isExternallySynced")).unwrap_or(false) {
+        Some(
+            "externally synced user orgRole cannot be updated through Grafana org user API"
+                .to_string(),
+        )
+    } else {
+        None
+    }
+}
+
+fn org_user_role_target_evidence(user: &Map<String, Value>) -> String {
+    let mut details = Vec::new();
+    for (label, value) in [
+        ("userId", scalar_text(user.get("userId"))),
+        ("id", scalar_text(user.get("id"))),
+        ("login", string_field(user, "login", "")),
+        ("email", string_field(user, "email", "")),
+        ("currentRole", string_field(user, "role", "")),
+    ] {
+        if !value.is_empty() {
+            details.push(format!("{label}={value}"));
+        }
+    }
+    if let Some(is_externally_synced) = value_bool(user.get("isExternallySynced")) {
+        details.push(format!("isExternallySynced={is_externally_synced}"));
+    }
+    if let Some(is_provisioned) = value_bool(user.get("isProvisioned")) {
+        details.push(format!("isProvisioned={is_provisioned}"));
+    }
+    details.join(" ")
+}
 
 pub(crate) fn list_orgs_with_request<F>(mut request_json: F, args: &OrgListArgs) -> Result<usize>
 where
@@ -573,11 +606,6 @@ where
         };
 
         if !org_id.is_empty() {
-            let live_users = if args.dry_run {
-                Vec::new()
-            } else {
-                list_org_users_with_request(&mut request_json, &org_id)?
-            };
             let desired_users = match record.get("users") {
                 Some(Value::Array(values)) => values
                     .iter()
@@ -585,6 +613,11 @@ where
                     .map(normalize_org_user_row)
                     .collect::<Vec<Map<String, Value>>>(),
                 _ => Vec::new(),
+            };
+            let live_users = if desired_users.is_empty() {
+                Vec::new()
+            } else {
+                list_org_users_with_request(&mut request_json, &org_id)?
             };
             for desired_user in desired_users {
                 let login = string_field(&desired_user, "login", "");
@@ -609,12 +642,36 @@ where
                     Some(user) => {
                         let current_role = string_field(user, "role", "");
                         if current_role != desired_role {
+                            let blocker = org_user_role_change_blocker(user);
                             if args.dry_run {
-                                println!(
-                                    "Would update org user role {} -> {} in org {}",
-                                    identity, desired_role, desired_name
-                                );
+                                if let Some(blocker) = blocker {
+                                    println!(
+                                        "Blocked org user role update {} -> {} in org {} ({})",
+                                        identity,
+                                        desired_role,
+                                        desired_name,
+                                        org_user_role_target_evidence(user)
+                                    );
+                                    println!("  blocker: {blocker}");
+                                } else {
+                                    println!(
+                                        "Would update org user role {} -> {} in org {} ({})",
+                                        identity,
+                                        desired_role,
+                                        desired_name,
+                                        org_user_role_target_evidence(user)
+                                    );
+                                }
                             } else {
+                                if let Some(blocker) = blocker {
+                                    return Err(message(format!(
+                                        "Org import blocked for {} user {}: {} ({})",
+                                        desired_name,
+                                        identity,
+                                        blocker,
+                                        org_user_role_target_evidence(user)
+                                    )));
+                                }
                                 let user_id = {
                                     let user_id = scalar_text(user.get("userId"));
                                     if user_id.is_empty() {

@@ -27,7 +27,13 @@
 
 - 如果 list、add、modify 或 delete 失敗，先確認這個 team 在選到的 org 裡存在，而且認證範圍正確
 - 如果成員看起來不完整，先核對精確的 member 名稱，以及是否有加上 `--with-members`
+- 如果匯入回報 blocked membership update，先確認目標 team 是否為 provisioned，以及每個 member identity 是否能解析成有 email 的 live org user
 - 如果匯入結果不如預期，先確認來源套件與目標環境，再重試
+
+## 匯入注意事項
+
+- Team import 可以接受匯出檔裡的 member identity，但 Grafana bulk membership API 實際上用 email 套用成員；importer 會先把 login、email 或 user id 解析成 live org user email。
+- `--dry-run --output-format table` 或 `--dry-run --json` 會在寫入前標出 provisioned team 的 blocked update。
 
 ## 主要旗標
 

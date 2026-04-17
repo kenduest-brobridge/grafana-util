@@ -255,6 +255,84 @@ fn resolve_user_modify_password(args: &UserModifyArgs) -> Result<Option<String>>
     Ok(None)
 }
 
+fn user_modify_identity(base_user: &Map<String, Value>, args: &UserModifyArgs) -> String {
+    let login = args
+        .login
+        .as_ref()
+        .cloned()
+        .filter(|value| !value.is_empty())
+        .or_else(|| {
+            let value = string_field(base_user, "login", "");
+            if value.is_empty() {
+                None
+            } else {
+                Some(value)
+            }
+        });
+    if let Some(login) = login {
+        return login;
+    }
+
+    let email = args
+        .email
+        .as_ref()
+        .cloned()
+        .filter(|value| !value.is_empty())
+        .or_else(|| {
+            let value = string_field(base_user, "email", "");
+            if value.is_empty() {
+                None
+            } else {
+                Some(value)
+            }
+        });
+    if let Some(email) = email {
+        return email;
+    }
+
+    let user_id = scalar_text(base_user.get("id"));
+    if !user_id.is_empty() {
+        return user_id;
+    }
+    scalar_text(base_user.get("userId"))
+}
+
+fn user_modify_blockers(base_user: &Map<String, Value>, args: &UserModifyArgs) -> Vec<String> {
+    let existing_is_external = value_bool(base_user.get("isExternal")).unwrap_or(false);
+    let existing_is_provisioned = value_bool(base_user.get("isProvisioned")).unwrap_or(false);
+    let existing_is_externally_synced =
+        value_bool(base_user.get("isExternallySynced")).unwrap_or(false);
+    let existing_admin_externally_synced =
+        value_bool(base_user.get("isGrafanaAdminExternallySynced")).unwrap_or(false);
+    let profile_requested =
+        args.set_login.is_some() || args.set_email.is_some() || args.set_name.is_some();
+    let password_requested =
+        args.set_password.is_some() || args.set_password_file.is_some() || args.prompt_set_password;
+
+    let mut blockers = Vec::new();
+    if (profile_requested || password_requested)
+        && (existing_is_external || existing_is_provisioned)
+    {
+        blockers.push(
+            "external or provisioned user profile/password cannot be updated through Grafana user API"
+                .to_string(),
+        );
+    }
+    if args.set_org_role.is_some() && existing_is_externally_synced {
+        blockers.push(
+            "externally synced user orgRole cannot be updated through Grafana org user API"
+                .to_string(),
+        );
+    }
+    if args.set_grafana_admin.is_some() && existing_admin_externally_synced {
+        blockers.push(
+            "externally synced grafanaAdmin cannot be updated through Grafana permissions API"
+                .to_string(),
+        );
+    }
+    blockers
+}
+
 fn validate_user_delete_args(args: &UserDeleteArgs) -> Result<()> {
     validate_delete_prompt(args.prompt, args.json, "User")?;
     if !args.prompt && !args.yes {
@@ -439,6 +517,15 @@ where
     } else {
         user_id
     };
+    let identity = user_modify_identity(&base_user, args);
+    let blockers = user_modify_blockers(&base_user, args);
+    if !blockers.is_empty() {
+        return Err(message(format!(
+            "User modify blocked for {}: {}",
+            identity,
+            blockers.join("; ")
+        )));
+    }
     let mut payload = Map::new();
     if let Some(value) = &args.set_login {
         payload.insert("login".to_string(), Value::String(value.clone()));

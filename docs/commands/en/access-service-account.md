@@ -25,8 +25,15 @@ List live or local Grafana service accounts, create, export, import, diff, or de
 ## Failure checks
 
 - if a token add or delete fails, recheck whether the service account name or ID matches the target environment
+- if token creation fails with an expiration message, check the target Grafana server token lifetime settings before retrying with `--seconds-to-live`
 - if an inventory listing looks incomplete, confirm auth scope and org context before assuming the service account is missing
 - if the output is going into another step, pick the exact `--output-format` you want rather than relying on a default
+
+## Import notes
+
+- Service-account import validates roles before writing. Supported roles are `None`, `Viewer`, `Editor`, and `Admin`.
+- `--dry-run --output-format table` or `--dry-run --json` reports `status`, blocked invalid roles, and target service-account evidence before live writes.
+- `Admin` role plans include an operator warning because Grafana still enforces the caller's org role and RBAC permissions at apply time.
 
 ## Key flags
 

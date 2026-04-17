@@ -505,12 +505,144 @@ fn org_import_with_request_dry_run_reports_user_role_update_without_mutating() {
     assert!(calls
         .iter()
         .any(|(method, path, _)| method == "GET" && path == "/api/orgs"));
+    assert!(calls
+        .iter()
+        .any(|(method, path, _)| method == "GET" && path == "/api/orgs/1/users"));
     assert!(!calls
         .iter()
         .any(|(method, path, _)| method == "PATCH" && path == "/api/orgs/1/users/7"));
     assert!(!calls
         .iter()
         .any(|(method, path, _)| method == "POST" && path == "/api/orgs"));
+}
+
+#[test]
+fn org_import_with_request_blocks_externally_synced_org_user_role_update_before_mutation() {
+    let temp = tempdir().unwrap();
+    let input_dir = temp.path().join("access-orgs");
+    fs::create_dir_all(&input_dir).unwrap();
+    let bundle = json!({
+        "kind": "grafana-utils-access-org-export-index",
+        "version": 1,
+        "records": [
+            {
+                "name": "Main Org",
+                "users": [
+                    {"login": "alice", "email": "alice@example.com", "name": "Alice", "orgRole": "Editor"}
+                ]
+            }
+        ]
+    });
+    fs::write(
+        input_dir.join("orgs.json"),
+        serde_json::to_string_pretty(&bundle).unwrap(),
+    )
+    .unwrap();
+    let args = OrgImportArgs {
+        common: make_basic_common_no_org_id(),
+        input_dir: input_dir.clone(),
+        replace_existing: true,
+        dry_run: false,
+        yes: true,
+    };
+    let mut calls = Vec::new();
+    let result = import_orgs_with_request(
+        |method, path, _params, payload| {
+            calls.push((method.to_string(), path.to_string(), payload.cloned()));
+            match (method, path) {
+                (Method::GET, "/api/orgs") => Ok(Some(json!([{"id": 1, "name": "Main Org"}]))),
+                (Method::GET, "/api/orgs/1/users") => Ok(Some(json!([
+                    {
+                        "userId": 7,
+                        "login": "alice",
+                        "email": "alice@example.com",
+                        "name": "Alice",
+                        "role": "Viewer",
+                        "isExternallySynced": true,
+                        "authLabels": ["LDAP"]
+                    }
+                ]))),
+                _ => panic!("unexpected path {path}"),
+            }
+        },
+        &args,
+    );
+
+    let error = result.unwrap_err();
+    assert!(error
+        .to_string()
+        .contains("externally synced user orgRole cannot be updated through Grafana org user API"));
+    assert!(calls
+        .iter()
+        .any(|(method, path, _)| method == "GET" && path == "/api/orgs/1/users"));
+    assert!(!calls
+        .iter()
+        .any(|(method, path, _)| method == "PATCH" && path == "/api/orgs/1/users/7"));
+}
+
+#[test]
+fn org_import_with_request_adds_missing_org_user_to_existing_org() {
+    let temp = tempdir().unwrap();
+    let input_dir = temp.path().join("access-orgs");
+    fs::create_dir_all(&input_dir).unwrap();
+    let bundle = json!({
+        "kind": "grafana-utils-access-org-export-index",
+        "version": 1,
+        "records": [
+            {
+                "name": "Main Org",
+                "users": [
+                    {"login": "bob", "email": "bob@example.com", "name": "Bob", "orgRole": "Viewer"}
+                ]
+            }
+        ]
+    });
+    fs::write(
+        input_dir.join("orgs.json"),
+        serde_json::to_string_pretty(&bundle).unwrap(),
+    )
+    .unwrap();
+    let args = OrgImportArgs {
+        common: make_basic_common_no_org_id(),
+        input_dir: input_dir.clone(),
+        replace_existing: true,
+        dry_run: false,
+        yes: true,
+    };
+    let mut calls = Vec::new();
+    let result = import_orgs_with_request(
+        |method, path, _params, payload| {
+            calls.push((method.to_string(), path.to_string(), payload.cloned()));
+            match (method, path) {
+                (Method::GET, "/api/orgs") => Ok(Some(json!([{"id": 1, "name": "Main Org"}]))),
+                (Method::GET, "/api/orgs/1/users") => Ok(Some(json!([]))),
+                (Method::POST, "/api/orgs/1/users") => {
+                    assert_eq!(
+                        payload
+                            .and_then(|value| value.as_object())
+                            .unwrap()
+                            .get("loginOrEmail"),
+                        Some(&json!("bob"))
+                    );
+                    assert_eq!(
+                        payload
+                            .and_then(|value| value.as_object())
+                            .unwrap()
+                            .get("role"),
+                        Some(&json!("Viewer"))
+                    );
+                    Ok(Some(json!({"message": "added"})))
+                }
+                _ => panic!("unexpected path {path}"),
+            }
+        },
+        &args,
+    );
+
+    assert!(result.is_ok());
+    assert!(calls
+        .iter()
+        .any(|(method, path, _)| method == "POST" && path == "/api/orgs/1/users"));
 }
 
 #[test]

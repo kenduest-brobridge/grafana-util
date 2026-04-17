@@ -42,6 +42,7 @@
 
 - 只要 profile 具備必要管理員權限，就可優先用 `--profile` 做可重複的 org inventory。
 - org 管理面通常比窄權限 API token 更廣。建立、重新命名、匯出、匯入與刪除流程，較建議使用 Basic auth 或管理員憑證支援的 profile。
+- 當 org bundle 包含 users 時，import dry-run 會查詢 live org users，讓 role plan 反映目標環境。Externally synced user 的 role 變更會在 apply 前標示為 blocked。
 
 ## 範例
 

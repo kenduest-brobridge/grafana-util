@@ -181,8 +181,68 @@ pub(super) fn build_service_account_import_dry_run_row(
         ("index".to_string(), Value::String(index.to_string())),
         ("identity".to_string(), Value::String(identity.to_string())),
         ("action".to_string(), Value::String(action.to_string())),
+        ("status".to_string(), Value::String("planned".to_string())),
+        ("blocked".to_string(), Value::Bool(false)),
         ("detail".to_string(), Value::String(detail.to_string())),
     ])
+}
+
+pub(super) fn mark_service_account_import_row_blocked(row: &mut Map<String, Value>, blocker: &str) {
+    row.insert("status".to_string(), Value::String("blocked".to_string()));
+    row.insert("blocked".to_string(), Value::Bool(true));
+    row.insert(
+        "blockers".to_string(),
+        Value::Array(vec![Value::String(blocker.to_string())]),
+    );
+}
+
+pub(super) fn attach_service_account_target(
+    row: &mut Map<String, Value>,
+    service_account: &Map<String, Value>,
+) {
+    let mut target = Map::new();
+    for (source, dest) in [
+        ("id", "targetId"),
+        ("serviceAccountId", "targetId"),
+        ("uid", "targetUid"),
+        ("name", "name"),
+        ("login", "login"),
+        ("role", "role"),
+        ("tokens", "tokens"),
+        ("orgId", "orgId"),
+    ] {
+        let value = map_get_text(service_account, source);
+        if !value.is_empty() && !target.contains_key(dest) {
+            target.insert(dest.to_string(), Value::String(value));
+        }
+    }
+    if let Some(is_disabled) = value_bool(service_account.get("isDisabled"))
+        .or_else(|| value_bool(service_account.get("disabled")))
+    {
+        target.insert("isDisabled".to_string(), Value::Bool(is_disabled));
+    }
+    if !target.is_empty() {
+        row.insert("target".to_string(), Value::Object(target));
+    }
+}
+
+pub(super) fn normalize_service_account_import_role(role: &str) -> Result<Option<String>> {
+    let trimmed = role.trim();
+    if trimmed.is_empty() {
+        return Ok(None);
+    }
+    let normalized = match trimmed.to_ascii_lowercase().as_str() {
+        "none" => "None",
+        "viewer" => "Viewer",
+        "editor" => "Editor",
+        "admin" => "Admin",
+        _ => {
+            return Err(message(format!(
+                "Service account import role must be one of None, Viewer, Editor, Admin; got {trimmed}."
+            )));
+        }
+    };
+    Ok(Some(normalized.to_string()))
 }
 
 pub(super) fn build_service_account_import_dry_run_rows(
@@ -194,6 +254,7 @@ pub(super) fn build_service_account_import_dry_run_rows(
                 map_get_text(row, "index"),
                 map_get_text(row, "identity"),
                 map_get_text(row, "action"),
+                map_get_text(row, "status"),
                 map_get_text(row, "detail"),
             ]
         })
