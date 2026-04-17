@@ -28,6 +28,10 @@ use super::super::import_render::{
     build_folder_inventory_dry_run_record, build_import_dry_run_record,
     describe_dashboard_import_mode, render_folder_inventory_dry_run_table, ImportDryRunReport,
 };
+use super::super::import_target::{
+    build_dashboard_target_review, build_dashboard_target_review_reason,
+    dashboard_target_review_is_blocked,
+};
 
 pub(crate) fn collect_import_dry_run_report_with_request<F>(
     mut request_json: F,
@@ -177,6 +181,39 @@ where
             (true, "", String::new(), None::<String>)
         };
         let action = apply_folder_path_guard_to_action(action, folder_paths_match);
+        let existing_dashboard = if action == "would-create" {
+            None
+        } else {
+            super::super::import_lookup::fetch_dashboard_if_exists_cached(
+                &mut request_json,
+                &mut lookup_cache,
+                &uid,
+            )?
+        };
+        let target_review = existing_dashboard
+            .as_ref()
+            .map(build_dashboard_target_review)
+            .transpose()?;
+        let target_reason = target_review
+            .as_ref()
+            .map(build_dashboard_target_review_reason)
+            .unwrap_or_default();
+        let action = if target_review
+            .as_ref()
+            .is_some_and(dashboard_target_review_is_blocked)
+            && action == "would-update"
+        {
+            "would-fail-existing"
+        } else {
+            action
+        };
+        let mut reason = folder_match_reason.to_string();
+        if !target_reason.is_empty() {
+            if !reason.is_empty() {
+                reason.push_str("; ");
+            }
+            reason.push_str(&target_reason);
+        }
         let needs_dry_run_folder_path = args.table || args.json || args.verbose || args.progress;
         let folder_path = if needs_dry_run_folder_path {
             let prefer_live_folder_path = folder_uid_override.is_some()
@@ -199,7 +236,7 @@ where
             &folder_path,
             &normalized_source_folder_path,
             normalized_destination_folder_path.as_deref(),
-            folder_match_reason,
+            &reason,
         ));
     }
     Ok(ImportDryRunReport {
@@ -370,6 +407,39 @@ pub(crate) fn collect_import_dry_run_report_with_client(
             (true, "", String::new(), None::<String>)
         };
         let action = apply_folder_path_guard_to_action(action, folder_paths_match);
+        let existing_dashboard = if action == "would-create" {
+            None
+        } else {
+            super::super::import_lookup::fetch_dashboard_if_exists_cached_with_client(
+                &dashboard_client,
+                &mut lookup_cache,
+                &uid,
+            )?
+        };
+        let target_review = existing_dashboard
+            .as_ref()
+            .map(build_dashboard_target_review)
+            .transpose()?;
+        let target_reason = target_review
+            .as_ref()
+            .map(build_dashboard_target_review_reason)
+            .unwrap_or_default();
+        let action = if target_review
+            .as_ref()
+            .is_some_and(dashboard_target_review_is_blocked)
+            && action == "would-update"
+        {
+            "would-fail-existing"
+        } else {
+            action
+        };
+        let mut reason = folder_match_reason.to_string();
+        if !target_reason.is_empty() {
+            if !reason.is_empty() {
+                reason.push_str("; ");
+            }
+            reason.push_str(&target_reason);
+        }
         let needs_dry_run_folder_path = args.table || args.json || args.verbose || args.progress;
         let folder_path = if needs_dry_run_folder_path {
             let prefer_live_folder_path = folder_uid_override.is_some()
@@ -392,7 +462,7 @@ pub(crate) fn collect_import_dry_run_report_with_client(
             &folder_path,
             &normalized_source_folder_path,
             normalized_destination_folder_path.as_deref(),
-            folder_match_reason,
+            &reason,
         ));
     }
     Ok(ImportDryRunReport {

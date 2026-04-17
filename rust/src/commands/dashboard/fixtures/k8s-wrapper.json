@@ -1,0 +1,15 @@
+{
+  "kind": "Dashboard",
+  "apiVersion": "dashboard.grafana.app/v0alpha1",
+  "metadata": {
+    "name": "adfbg6f",
+    "namespace": "default",
+    "uid": "b396894e-56bf-4a01-837b-64157912ca00"
+  },
+  "spec": {
+    "title": "k8s wrapper",
+    "elements": {},
+    "variables": [],
+    "annotations": []
+  }
+}

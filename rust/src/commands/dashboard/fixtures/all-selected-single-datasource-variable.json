@@ -1,0 +1,40 @@
+{
+  "uid": "2HLX_B3nk",
+  "title": "new-dashboard-var-ds-test",
+  "templating": {
+    "list": [
+      {
+        "name": "dsVariable",
+        "type": "datasource",
+        "query": "sqlite-datasource",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "includeAll": true,
+        "options": []
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 2,
+      "title": "Panel Title",
+      "type": "table",
+      "datasource": {
+        "type": "sqlite-datasource",
+        "uid": "${dsVariable}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "sqlite-datasource",
+            "uid": "${dsVariable}"
+          }
+        }
+      ]
+    }
+  ]
+}

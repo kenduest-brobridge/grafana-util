@@ -32,6 +32,12 @@ pub(crate) use super::import_render::{
 pub(crate) use super::import_routed::{
     build_routed_import_dry_run_json_with_request, import_dashboards_by_export_org_with_request,
 };
+#[allow(unused_imports)]
+pub(crate) use super::import_target::{
+    build_dashboard_target_review, build_dashboard_target_review_reason,
+    dashboard_target_review_is_blocked, dashboard_target_review_is_warning,
+    dashboard_target_review_status_label, DashboardTargetReview,
+};
 pub(crate) use super::import_validation::build_import_auth_context;
 #[allow(unused_imports)]
 use super::{

@@ -1,0 +1,20 @@
+{
+  "kind": "Dashboard",
+  "apiVersion": "dashboard.grafana.app/v2",
+  "metadata": {
+    "name": "v2-dash-uid"
+  },
+  "spec": {
+    "title": "v2 dashboard",
+    "elements": {
+      "panel-1": {
+        "kind": "Panel",
+        "spec": {
+          "title": "A"
+        }
+      }
+    },
+    "variables": [],
+    "annotations": []
+  }
+}

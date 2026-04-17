@@ -3,6 +3,7 @@ use crate::common::CliColorChoice;
 use crate::dashboard::{RawToPromptOutputFormat, RawToPromptResolution, EXPORT_METADATA_FILENAME};
 use serde_json::json;
 use std::fs;
+use std::path::{Path, PathBuf};
 use tempfile::tempdir;
 
 fn write_json(path: &std::path::Path, value: serde_json::Value) {
@@ -40,6 +41,33 @@ fn make_args() -> RawToPromptArgs {
         timeout: None,
         verify_ssl: false,
     }
+}
+
+fn fixture_path(name: &str) -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("src/commands/dashboard/fixtures")
+        .join(name)
+}
+
+fn load_fixture(name: &str) -> serde_json::Value {
+    serde_json::from_str(&fs::read_to_string(fixture_path(name)).unwrap()).unwrap()
+}
+
+fn write_fixture(path: &Path, name: &str) {
+    write_json(path, load_fixture(name));
+}
+
+fn run_prompt_fixture(temp: &Path, name: &str) -> serde_json::Value {
+    let input = temp.join(name);
+    write_fixture(&input, name);
+
+    let mut args = make_args();
+    args.input_file = vec![input];
+
+    run_raw_to_prompt(&args).unwrap();
+
+    let prompt_path = temp.join(name.replace(".json", ".prompt.json"));
+    serde_json::from_str(&fs::read_to_string(prompt_path).unwrap()).unwrap()
 }
 
 #[test]
@@ -667,4 +695,178 @@ fn raw_to_prompt_preserves_string_datasource_placeholder_refs_without_resolution
         prompt["panels"][0]["targets"][0]["datasource"]["uid"],
         serde_json::Value::String("$datasource".to_string())
     );
+}
+
+#[test]
+fn raw_to_prompt_matches_datasource_variable_fixture_parity() {
+    let temp = tempdir().unwrap();
+    let prompt = run_prompt_fixture(temp.path(), "datasource-variable.json");
+
+    let inputs = prompt["__inputs"].as_array().unwrap();
+    assert_eq!(inputs.len(), 1);
+    assert_eq!(inputs[0]["type"], "datasource");
+    assert_eq!(inputs[0]["pluginId"], "sqlite-datasource");
+    assert!(prompt["templating"]["list"][0]["current"]["value"]
+        .as_str()
+        .is_some_and(|value| value.starts_with("${DS_")));
+    assert_eq!(
+        prompt["panels"][0]["datasource"]["uid"],
+        serde_json::Value::String("$datasource".to_string())
+    );
+}
+
+#[test]
+fn raw_to_prompt_preserves_all_selected_datasource_variable_without_prompt_inputs() {
+    let temp = tempdir().unwrap();
+    let prompt = run_prompt_fixture(temp.path(), "all-selected-single-datasource-variable.json");
+
+    assert!(prompt["__inputs"].as_array().unwrap().is_empty());
+    assert_eq!(
+        prompt["templating"]["list"][0]["current"]["value"],
+        serde_json::Value::String("$__all".to_string())
+    );
+    assert_eq!(
+        prompt["panels"][0]["datasource"]["uid"],
+        serde_json::Value::String("$datasource".to_string())
+    );
+}
+
+#[test]
+fn raw_to_prompt_maps_default_datasource_variable_to_prompt_input() {
+    let temp = tempdir().unwrap();
+    let prompt = run_prompt_fixture(temp.path(), "default-datasource-variable.json");
+
+    let inputs = prompt["__inputs"].as_array().unwrap();
+    assert_eq!(inputs.len(), 1);
+    assert_eq!(inputs[0]["pluginId"], "testdata");
+    assert!(prompt["templating"]["list"][0]["current"]["value"]
+        .as_str()
+        .is_some_and(|value| value.starts_with("${DS_")));
+    assert_eq!(
+        prompt["panels"][0]["datasource"]["uid"],
+        serde_json::Value::String("$datasource".to_string())
+    );
+}
+
+#[test]
+fn raw_to_prompt_excludes_builtin_and_expression_datasources_from_inputs() {
+    let temp = tempdir().unwrap();
+    let prompt = run_prompt_fixture(temp.path(), "special-datasource-types.json");
+
+    let inputs = prompt["__inputs"].as_array().unwrap();
+    assert_eq!(inputs.len(), 1);
+    assert_eq!(inputs[0]["pluginId"], "frser-sqlite-datasource");
+    assert!(prompt["panels"][0]["datasource"]["uid"]
+        .as_str()
+        .is_some_and(|value| value.starts_with("${DS_")));
+    assert_eq!(prompt["panels"][1]["datasource"]["uid"], "grafana");
+    assert_eq!(
+        prompt["panels"][0]["targets"][0]["datasource"]["uid"],
+        "__expr__"
+    );
+}
+
+#[test]
+fn raw_to_prompt_resolves_string_datasource_ids_using_mapping() {
+    let temp = tempdir().unwrap();
+    let input = temp.path().join("check-string-datasource-id.json");
+    let mapping = temp.path().join("datasource-map.json");
+    write_fixture(&input, "check-string-datasource-id.json");
+    write_json(
+        &mapping,
+        json!({
+            "kind": "grafana-utils-dashboard-datasource-map",
+            "datasources": [{
+                "match": {"name": "sqlite-1"},
+                "replace": {
+                    "uid": "sqlite-1",
+                    "name": "sqlite-1",
+                    "type": "sqlite-datasource"
+                }
+            }]
+        }),
+    );
+
+    let mut args = make_args();
+    args.input_file = vec![input];
+    args.datasource_map = Some(mapping);
+
+    run_raw_to_prompt(&args).unwrap();
+
+    let prompt: serde_json::Value = serde_json::from_str(
+        &fs::read_to_string(temp.path().join("check-string-datasource-id.prompt.json")).unwrap(),
+    )
+    .unwrap();
+
+    let inputs = prompt["__inputs"].as_array().unwrap();
+    assert_eq!(inputs.len(), 1);
+    assert_eq!(inputs[0]["pluginId"], "sqlite-datasource");
+    assert!(prompt["panels"][0]["datasource"]["uid"]
+        .as_str()
+        .is_some_and(|value| value.starts_with("${DS_")));
+    assert!(prompt["panels"][0]["targets"][0]["datasource"]["uid"]
+        .as_str()
+        .is_some_and(|value| value.starts_with("${DS_")));
+    assert!(prompt["panels"][1]["datasource"]["uid"]
+        .as_str()
+        .is_some_and(|value| value.starts_with("${DS_")));
+    assert!(prompt["panels"][1]["targets"][0]["datasource"]["uid"]
+        .as_str()
+        .is_some_and(|value| value.starts_with("${DS_")));
+}
+
+#[test]
+fn raw_to_prompt_warns_for_library_panel_references_without_inlining_fixture() {
+    let temp = tempdir().unwrap();
+    let input = temp.path().join("with-library-panels.json");
+    write_fixture(&input, "with-library-panels.json");
+    let log_file = temp.path().join("raw-to-prompt.log");
+
+    let mut args = make_args();
+    args.input_file = vec![input.clone()];
+    args.log_file = Some(log_file.clone());
+
+    run_raw_to_prompt(&args).unwrap();
+
+    let prompt: serde_json::Value = serde_json::from_str(
+        &fs::read_to_string(temp.path().join("with-library-panels.prompt.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(prompt["__elements"], json!({}));
+    assert_eq!(
+        prompt["panels"][0]["libraryPanel"]["uid"],
+        "a7975b7a-fb53-4ab7-951d-15810953b54f"
+    );
+    assert_eq!(
+        prompt["panels"][2]["panels"][0]["libraryPanel"]["uid"],
+        "l3d2s634-fdgf-75u4-3fg3-67j966ii7jur"
+    );
+    let log = fs::read_to_string(log_file).unwrap();
+    assert!(log.contains("library panel external export is not fully portable yet"));
+}
+
+#[test]
+fn raw_to_prompt_rejects_dashboard_v2_fixture() {
+    let temp = tempdir().unwrap();
+    let input = temp.path().join("v2-elements.json");
+    write_fixture(&input, "v2-elements.json");
+
+    let mut args = make_args();
+    args.input_file = vec![input];
+
+    let error = run_raw_to_prompt(&args).unwrap_err().to_string();
+    assert!(error.contains("dashboard raw-to-prompt completed with 1 failure"));
+}
+
+#[test]
+fn raw_to_prompt_rejects_dashboard_k8s_wrapper_fixture() {
+    let temp = tempdir().unwrap();
+    let input = temp.path().join("k8s-wrapper.json");
+    write_fixture(&input, "k8s-wrapper.json");
+
+    let mut args = make_args();
+    args.input_file = vec![input];
+
+    let error = run_raw_to_prompt(&args).unwrap_err().to_string();
+    assert!(error.contains("dashboard raw-to-prompt completed with 1 failure"));
 }

@@ -1,0 +1,35 @@
+{
+  "uid": "special-ds",
+  "title": "special ds",
+  "panels": [
+    {
+      "id": 10,
+      "title": "mixed ds with grafana ds",
+      "type": "timeseries",
+      "datasource": {
+        "type": "frser-sqlite-datasource",
+        "uid": "dgd92lq7k"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__",
+            "name": "Expression"
+          }
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "grafana ds",
+      "type": "timeseries",
+      "datasource": {
+        "type": "grafana",
+        "uid": "grafana"
+      },
+      "targets": []
+    }
+  ]
+}

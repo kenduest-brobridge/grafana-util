@@ -1,0 +1,40 @@
+{
+  "uid": "7BzWolqnk",
+  "title": "ds-variables",
+  "templating": {
+    "list": [
+      {
+        "name": "sqllite",
+        "type": "datasource",
+        "query": "sqlite-datasource",
+        "current": {
+          "selected": false,
+          "text": "SQLite Grafana",
+          "value": "SQLite Grafana"
+        },
+        "options": []
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "usersss!",
+      "type": "table",
+      "datasource": {
+        "type": "sqlite-datasource",
+        "uid": "${sqllite}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryText": "select * from user",
+          "datasource": {
+            "type": "sqlite-datasource",
+            "uid": "${sqllite}"
+          }
+        }
+      ]
+    }
+  ]
+}

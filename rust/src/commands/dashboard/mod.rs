@@ -52,6 +52,7 @@ mod import_interactive_state;
 mod import_lookup;
 mod import_render;
 mod import_routed;
+mod import_target;
 mod import_validation;
 mod inspect;
 mod inspect_analyzer_flux;

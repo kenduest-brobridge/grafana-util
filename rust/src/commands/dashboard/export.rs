@@ -21,24 +21,25 @@ use super::list::{
     attach_dashboard_org_metadata, collect_dashboard_source_metadata,
     fetch_current_org_with_request, list_orgs_with_request, org_id_value,
 };
+use super::prompt::build_external_export_document_with_library_panels;
 use super::{
     build_api_client, build_datasource_catalog, build_datasource_inventory_record,
-    build_export_metadata, build_external_export_document, build_http_client,
-    build_http_client_for_org, build_http_client_for_org_from_api,
-    build_preserved_web_import_document, build_root_export_index, build_variant_index,
-    fetch_dashboard_with_request, list_dashboard_summaries_with_request,
-    list_datasources_with_request, write_dashboard, write_json_document, DashboardIndexItem,
-    ExportArgs, ExportOrgSummary, FolderInventoryItem, RootExportIndex,
-    DASHBOARD_PERMISSION_BUNDLE_FILENAME, DATASOURCE_INVENTORY_FILENAME, DEFAULT_DASHBOARD_TITLE,
-    DEFAULT_FOLDER_TITLE, DEFAULT_ORG_ID, DEFAULT_UNKNOWN_UID, EXPORT_METADATA_FILENAME,
-    FOLDER_INVENTORY_FILENAME, PROMPT_EXPORT_SUBDIR, PROVISIONING_EXPORT_SUBDIR, RAW_EXPORT_SUBDIR,
+    build_export_metadata, build_http_client, build_http_client_for_org,
+    build_http_client_for_org_from_api, build_preserved_web_import_document,
+    build_root_export_index, build_variant_index, fetch_dashboard_with_request,
+    list_dashboard_summaries_with_request, list_datasources_with_request, write_dashboard,
+    write_json_document, DashboardIndexItem, ExportArgs, ExportOrgSummary, FolderInventoryItem,
+    RootExportIndex, DASHBOARD_PERMISSION_BUNDLE_FILENAME, DATASOURCE_INVENTORY_FILENAME,
+    DEFAULT_DASHBOARD_TITLE, DEFAULT_FOLDER_TITLE, DEFAULT_ORG_ID, DEFAULT_UNKNOWN_UID,
+    EXPORT_METADATA_FILENAME, FOLDER_INVENTORY_FILENAME, PROMPT_EXPORT_SUBDIR,
+    PROVISIONING_EXPORT_SUBDIR, RAW_EXPORT_SUBDIR,
 };
 #[path = "export_support.rs"]
 mod export_support;
 
 use self::export_support::{
     build_all_orgs_output_dir, build_permission_bundle_document, build_used_datasource_summaries,
-    collect_permission_export_documents,
+    collect_library_panel_exports_with_request, collect_permission_export_documents,
 };
 
 #[derive(Serialize)]
@@ -440,7 +441,16 @@ where
             item.raw_path = Some(raw_path.display().to_string());
         }
         if !args.without_dashboard_prompt {
-            let prompt_document = build_external_export_document(&payload, &datasource_catalog)?;
+            let (library_panel_exports, library_panel_warnings) =
+                collect_library_panel_exports_with_request(&mut scoped_request, &payload)?;
+            for warning in library_panel_warnings {
+                eprintln!("Dashboard export prompt warning: {warning}");
+            }
+            let prompt_document = build_external_export_document_with_library_panels(
+                &payload,
+                &datasource_catalog,
+                Some(&library_panel_exports),
+            )?;
             let prompt_path =
                 build_output_path_with_folder_path(&prompt_dir, &summary, folder_path, args.flat);
             if !args.dry_run {
@@ -845,8 +855,24 @@ pub(crate) fn export_dashboards_with_org_clients(args: &ExportArgs) -> Result<us
 #[cfg(test)]
 mod export_tests {
     use super::*;
+    use crate::dashboard::CommonCliArgs;
     use serde_json::json;
     use tempfile::tempdir;
+
+    fn make_common_args(base_url: String) -> CommonCliArgs {
+        CommonCliArgs {
+            color: crate::common::CliColorChoice::Auto,
+            profile: None,
+            url: base_url,
+            api_token: Some("token".to_string()),
+            username: None,
+            password: None,
+            prompt_password: false,
+            prompt_token: false,
+            timeout: 30,
+            verify_ssl: false,
+        }
+    }
 
     #[test]
     fn write_all_orgs_root_export_bundle_streams_root_index_without_changing_shape() {
@@ -931,5 +957,113 @@ mod export_tests {
         assert_eq!(variant_index[0].folder_path, "Platform / Team / Infra");
         assert_eq!(root_index.items[0].folder_uid, "infra");
         assert_eq!(root_index.items[0].folder_path, "Platform / Team / Infra");
+    }
+
+    #[test]
+    fn export_dashboards_with_request_includes_live_library_panel_elements_in_prompt_variant() {
+        let temp = tempdir().unwrap();
+        let args = ExportArgs {
+            common: make_common_args("http://127.0.0.1:3000".to_string()),
+            output_dir: temp.path().join("dashboards"),
+            page_size: 500,
+            org_id: None,
+            all_orgs: false,
+            flat: false,
+            overwrite: true,
+            without_dashboard_raw: true,
+            without_dashboard_prompt: false,
+            without_dashboard_provisioning: true,
+            include_history: false,
+            provisioning_provider_name: "grafana-utils-dashboards".to_string(),
+            provisioning_provider_org_id: None,
+            provisioning_provider_path: None,
+            provisioning_provider_disable_deletion: false,
+            provisioning_provider_allow_ui_updates: false,
+            provisioning_provider_update_interval_seconds: 30,
+            dry_run: false,
+            progress: false,
+            verbose: false,
+        };
+
+        let count = export_dashboards_with_request(
+            |method, path, params, payload| {
+                let scoped_org = params
+                    .iter()
+                    .find(|(key, _)| key == "orgId")
+                    .map(|(_, value)| value.as_str());
+                match (method.as_str(), path, scoped_org) {
+                    ("GET", "/api/org", None) => Ok(Some(json!({"id": 1, "name": "Main Org"}))),
+                    ("GET", "/api/search", None) => Ok(Some(json!([
+                        {
+                            "uid": "cpu-main",
+                            "title": "CPU Main",
+                            "folderTitle": "General"
+                        }
+                    ]))),
+                    ("GET", "/api/datasources", None) => Ok(Some(json!([
+                        {
+                            "uid": "prom-main",
+                            "name": "Prometheus Main",
+                            "type": "prometheus",
+                            "url": "http://prometheus:9090",
+                            "access": "proxy",
+                            "isDefault": true
+                        }
+                    ]))),
+                    ("GET", "/api/dashboards/uid/cpu-main", None) => Ok(Some(json!({
+                        "dashboard": {
+                            "id": 7,
+                            "uid": "cpu-main",
+                            "title": "CPU Main",
+                            "panels": [
+                                {
+                                    "id": 1,
+                                    "type": "graph",
+                                    "datasource": {"uid": "prom-main", "type": "prometheus"},
+                                    "libraryPanel": {"uid": "shared-panel", "name": "Shared Panel"},
+                                    "targets": []
+                                }
+                            ]
+                        }
+                    }))),
+                    ("GET", "/api/library-elements/shared-panel", None) => Ok(Some(json!({
+                        "result": {
+                            "uid": "shared-panel",
+                            "name": "Shared Panel",
+                            "kind": 1,
+                            "type": "graph",
+                            "model": {
+                                "type": "graph",
+                                "datasource": {"uid": "prom-main", "type": "prometheus"}
+                            }
+                        }
+                    }))),
+                    _ => Err(crate::common::message(format!(
+                        "unexpected request path={path} payload={payload:?}"
+                    ))),
+                }
+            },
+            &args,
+        )
+        .unwrap();
+
+        assert_eq!(count, 1);
+        let prompt_path = args
+            .output_dir
+            .join("prompt/General/CPU_Main__cpu-main.json");
+        assert!(prompt_path.is_file());
+        let prompt: Value =
+            serde_json::from_str(&fs::read_to_string(prompt_path).unwrap()).unwrap();
+        assert_eq!(
+            prompt["__elements"]["shared-panel"]["name"],
+            json!("Shared Panel")
+        );
+        assert_eq!(prompt["__elements"]["shared-panel"]["kind"], json!(1));
+        assert_eq!(prompt["__elements"]["shared-panel"]["type"], json!("graph"));
+        assert!(
+            prompt["__elements"]["shared-panel"]["model"]["datasource"]["uid"]
+                .as_str()
+                .is_some_and(|value| value.starts_with("${DS_"))
+        );
     }
 }

@@ -1,0 +1,33 @@
+{
+  "uid": "check-string-ds",
+  "title": "string datasource id",
+  "panels": [
+    {
+      "id": 3,
+      "title": "Panel Title",
+      "type": "timeseries",
+      "datasource": {
+        "uid": "sqlite-1",
+        "type": "sqlite-datasource"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": "sqlite-1"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Panel Title 2",
+      "type": "timeseries",
+      "datasource": "sqlite-1",
+      "targets": [
+        {
+          "refId": "B",
+          "datasource": "sqlite-1"
+        }
+      ]
+    }
+  ]
+}

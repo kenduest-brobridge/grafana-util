@@ -28,7 +28,11 @@ use super::super::import_lookup::{
 };
 use super::super::import_render::{
     format_import_progress_line, format_import_verbose_line, render_import_dry_run_json,
-    render_import_dry_run_table,
+    render_import_dry_run_table, target_review_counts,
+};
+use super::super::import_target::{
+    build_dashboard_target_review, build_dashboard_target_review_reason,
+    dashboard_target_review_is_blocked, dashboard_target_review_is_warning,
 };
 use super::super::import_validation::{
     validate_dashboard_import_dependencies_with_request, validate_matching_export_org_with_request,
@@ -75,6 +79,12 @@ trait LiveImportBackend {
         cache: &mut ImportLookupCache,
         uid: &str,
     ) -> Result<Option<String>>;
+
+    fn fetch_existing_dashboard(
+        &mut self,
+        cache: &mut ImportLookupCache,
+        uid: &str,
+    ) -> Result<Option<Value>>;
 
     fn ensure_folder_inventory_entry(
         &mut self,
@@ -175,6 +185,18 @@ where
         uid: &str,
     ) -> Result<Option<String>> {
         resolve_existing_dashboard_folder_path_with_request(&mut *self.request_json, cache, uid)
+    }
+
+    fn fetch_existing_dashboard(
+        &mut self,
+        cache: &mut ImportLookupCache,
+        uid: &str,
+    ) -> Result<Option<Value>> {
+        super::super::import_lookup::fetch_dashboard_if_exists_cached(
+            &mut *self.request_json,
+            cache,
+            uid,
+        )
     }
 
     fn ensure_folder_inventory_entry(
@@ -278,6 +300,18 @@ impl LiveImportBackend for ClientImportBackend<'_> {
         uid: &str,
     ) -> Result<Option<String>> {
         resolve_existing_dashboard_folder_path_with_client(&self.dashboard, cache, uid)
+    }
+
+    fn fetch_existing_dashboard(
+        &mut self,
+        cache: &mut ImportLookupCache,
+        uid: &str,
+    ) -> Result<Option<Value>> {
+        super::super::import_lookup::fetch_dashboard_if_exists_cached_with_client(
+            &self.dashboard,
+            cache,
+            uid,
+        )
     }
 
     fn ensure_folder_inventory_entry(
@@ -548,6 +582,24 @@ fn run_live_import<B: LiveImportBackend>(
                 continue;
             }
         }
+        if effective_replace_existing && !uid.is_empty() {
+            let existing_dashboard = backend.fetch_existing_dashboard(lookup_cache, &uid)?;
+            if let Some(existing_dashboard) = existing_dashboard {
+                let review = build_dashboard_target_review(&existing_dashboard)?;
+                if dashboard_target_review_is_blocked(&review) {
+                    return Err(message(format!(
+                        "Refusing to overwrite provisioned dashboard uid={uid}: {}",
+                        build_dashboard_target_review_reason(&review)
+                    )));
+                }
+                if dashboard_target_review_is_warning(&review) {
+                    eprintln!(
+                        "Warning: overwriting managed dashboard uid={uid}: {}",
+                        build_dashboard_target_review_reason(&review)
+                    );
+                }
+            }
+        }
         if args.ensure_folders {
             let payload_object = crate::common::value_as_object(
                 &payload,
@@ -622,6 +674,8 @@ fn render_dry_run_report(
     report: &super::super::import_render::ImportDryRunReport,
     args: &ImportArgs,
 ) -> Result<usize> {
+    let (target_warning_count, target_blocked_count) =
+        target_review_counts(&report.dashboard_records);
     if args.json {
         print!(
             "{}",
@@ -655,15 +709,27 @@ fn render_dry_run_report(
             }
         } else if args.verbose {
             for record in &report.dashboard_records {
-                if record[3].is_empty() {
+                if record[6].is_empty() {
+                    if record[3].is_empty() {
+                        println!(
+                            "Dry-run import uid={} dest={} action={} file={}",
+                            record[0], record[1], record[2], record[7]
+                        );
+                    } else {
+                        println!(
+                            "Dry-run import uid={} dest={} action={} folderPath={} file={}",
+                            record[0], record[1], record[2], record[3], record[7]
+                        );
+                    }
+                } else if record[3].is_empty() {
                     println!(
-                        "Dry-run import uid={} dest={} action={} file={}",
-                        record[0], record[1], record[2], record[7]
+                        "Dry-run import uid={} dest={} action={} reason={} file={}",
+                        record[0], record[1], record[2], record[6], record[7]
                     );
                 } else {
                     println!(
-                        "Dry-run import uid={} dest={} action={} folderPath={} file={}",
-                        record[0], record[1], record[2], record[3], record[7]
+                        "Dry-run import uid={} dest={} action={} folderPath={} reason={} file={}",
+                        record[0], record[1], record[2], record[3], record[6], record[7]
                     );
                 }
             }
@@ -718,9 +784,19 @@ fn render_dry_run_report(
             );
         } else {
             println!(
-                "Dry-run checked {} dashboard(s) from {}",
+                "Dry-run checked {} dashboard(s) from {}{}{}",
                 report.dashboard_records.len(),
-                report.input_dir.display()
+                report.input_dir.display(),
+                if target_warning_count > 0 {
+                    format!("; target warnings={target_warning_count}")
+                } else {
+                    String::new()
+                },
+                if target_blocked_count > 0 {
+                    format!("; target blocked={target_blocked_count}")
+                } else {
+                    String::new()
+                }
             );
         }
     }

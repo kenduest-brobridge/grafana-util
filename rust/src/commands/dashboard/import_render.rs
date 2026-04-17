@@ -31,6 +31,32 @@ fn describe_import_action(action: &str) -> (&'static str, &str) {
     }
 }
 
+fn target_review_label(reason: &str) -> Option<&'static str> {
+    reason.split(';').find_map(|part| {
+        let value = part.trim();
+        if value.starts_with("target=warn") {
+            Some("warn")
+        } else if value.starts_with("target=blocked") {
+            Some("blocked")
+        } else {
+            None
+        }
+    })
+}
+
+pub(crate) fn target_review_counts(records: &[[String; 8]]) -> (usize, usize) {
+    let mut warnings = 0usize;
+    let mut blocked = 0usize;
+    for record in records {
+        match target_review_label(&record[6]) {
+            Some("warn") => warnings += 1,
+            Some("blocked") => blocked += 1,
+            _ => {}
+        }
+    }
+    (warnings, blocked)
+}
+
 pub(crate) fn describe_dashboard_import_mode(
     replace_existing: bool,
     update_existing_only: bool,
@@ -410,6 +436,8 @@ pub(crate) fn build_import_dry_run_json_value(report: &ImportDryRunReport) -> Va
             })
         })
         .collect::<Vec<Value>>();
+    let (target_warning_count, target_blocked_count) =
+        target_review_counts(&report.dashboard_records);
     serde_json::json!({
         "mode": report.mode,
         "folders": folders,
@@ -423,6 +451,8 @@ pub(crate) fn build_import_dry_run_json_value(report: &ImportDryRunReport) -> Va
             "missingDashboards": report.dashboard_records.iter().filter(|row| row[1] == "missing").count(),
             "skippedMissingDashboards": report.skipped_missing_count,
             "skippedFolderMismatchDashboards": report.skipped_folder_mismatch_count,
+            "targetWarningCount": target_warning_count,
+            "targetBlockedCount": target_blocked_count,
         }
     })
 }

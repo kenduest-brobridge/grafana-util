@@ -159,6 +159,32 @@ impl<'a> DashboardResourceClient<'a> {
     }
 
     #[allow(dead_code)]
+    pub(crate) fn fetch_library_panel(&self, uid: &str) -> Result<Value> {
+        match self.request_json(
+            Method::GET,
+            &format!("/api/library-elements/{uid}"),
+            &[],
+            None,
+        )? {
+            Some(value) => {
+                let object = value_as_object(
+                    &value,
+                    &format!("Unexpected library panel payload for UID {uid}."),
+                )?;
+                if !object.contains_key("result") {
+                    return Err(message(format!(
+                        "Unexpected library panel payload for UID {uid}."
+                    )));
+                }
+                Ok(value)
+            }
+            None => Err(message(format!(
+                "Unexpected empty library panel payload for UID {uid}."
+            ))),
+        }
+    }
+
+    #[allow(dead_code)]
     pub(crate) fn fetch_dashboard_permissions(&self, uid: &str) -> Result<Vec<Map<String, Value>>> {
         let path = format!("/api/dashboards/uid/{uid}/permissions");
         self.expect_object_list(

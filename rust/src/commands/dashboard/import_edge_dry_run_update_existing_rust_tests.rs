@@ -18,6 +18,70 @@ use std::fs;
 use tempfile::tempdir;
 
 #[test]
+fn import_dashboards_with_update_existing_only_blocks_provisioned_dashboards() {
+    let temp = tempdir().unwrap();
+    let raw_dir = temp.path().join("raw");
+    fs::create_dir_all(&raw_dir).unwrap();
+    fs::write(
+        raw_dir.join(EXPORT_METADATA_FILENAME),
+        serde_json::to_string_pretty(&json!({
+            "kind": "grafana-utils-dashboard-export-index",
+            "schemaVersion": TOOL_SCHEMA_VERSION,
+            "variant": "raw",
+            "dashboardCount": 1,
+            "indexFile": "index.json",
+            "format": "grafana-web-import-preserve-uid"
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    fs::write(
+        raw_dir.join("dash.json"),
+        serde_json::to_string_pretty(&json!({
+            "dashboard": {"id": 7, "uid": "abc", "title": "CPU", "schemaVersion": 38}
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+
+    let mut args = make_import_args(raw_dir);
+    args.replace_existing = true;
+    args.dry_run = false;
+
+    let error = import_dashboards_with_request(
+        |method, path, _params, _payload| match (method, path) {
+            (reqwest::Method::GET, "/api/datasources") => Ok(Some(json!([]))),
+            (reqwest::Method::GET, "/api/plugins") => Ok(Some(json!([]))),
+            (reqwest::Method::GET, "/api/search") => Ok(Some(json!([
+                {"uid": "abc", "folderUid": "infra"}
+            ]))),
+            (reqwest::Method::GET, "/api/dashboards/uid/abc") => Ok(Some(json!({
+                "dashboard": {"id": 7, "uid": "abc", "title": "CPU"},
+                "meta": {
+                    "folderUid": "infra",
+                    "provisioned": true,
+                    "provisionedExternalId": "dashboards/cpu.json"
+                }
+            }))),
+            (reqwest::Method::GET, "/api/folders/infra") => Ok(Some(json!({
+                "uid": "infra",
+                "title": "Infra"
+            }))),
+            (reqwest::Method::POST, "/api/dashboards/db") => Err(test_support::message(
+                "provisioned dashboards must not be overwritten",
+            )),
+            _ => Err(test_support::message(format!("unexpected path {path}"))),
+        },
+        &args,
+    )
+    .unwrap_err();
+
+    assert!(error
+        .to_string()
+        .contains("Refusing to overwrite provisioned dashboard uid=abc"));
+}
+
+#[test]
 fn import_dashboards_with_dry_run_replace_existing_reuses_summary_folder_uid() {
     use std::cell::RefCell;
     use std::rc::Rc;
@@ -61,6 +125,14 @@ fn import_dashboards_with_dry_run_replace_existing_reuses_summary_folder_uid() {
                     {"uid":"abc","folderUid":"folder-a"},
                     {"uid":"def","folderUid":"folder-b"}
                 ]))),
+                "/api/dashboards/uid/abc" => Ok(Some(json!({
+                    "dashboard": {"uid": "abc", "title": "CPU"},
+                    "meta": {"folderUid": "folder-a"}
+                }))),
+                "/api/dashboards/uid/def" => Ok(Some(json!({
+                    "dashboard": {"uid": "def", "title": "Mem"},
+                    "meta": {"folderUid": "folder-b"}
+                }))),
                 "/api/dashboards/db" => {
                     Err(test_support::message("dry-run must not post dashboards"))
                 }
@@ -78,7 +150,7 @@ fn import_dashboards_with_dry_run_replace_existing_reuses_summary_folder_uid() {
             .iter()
             .filter(|entry| entry.starts_with("GET /api/dashboards/uid/"))
             .count(),
-        0
+        2
     );
 }
 

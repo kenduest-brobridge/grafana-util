@@ -2,11 +2,13 @@
 
 use reqwest::Method;
 use serde_json::{Map, Value};
+use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
 use crate::common::{sanitize_path_component, string_field, Result};
 
+use super::super::prompt::{build_library_panel_export, collect_library_panel_uids};
 use crate::dashboard::live::{
     fetch_dashboard_permissions_with_request, fetch_folder_permissions_with_request,
 };
@@ -82,6 +84,43 @@ pub(crate) fn build_used_datasource_summaries(
     }
 
     used
+}
+
+pub(crate) fn collect_library_panel_exports_with_request<F>(
+    mut request_json: F,
+    dashboard_payload: &Value,
+) -> Result<(BTreeMap<String, Value>, Vec<String>)>
+where
+    F: FnMut(Method, &str, &[(String, String)], Option<&Value>) -> Result<Option<Value>>,
+{
+    let mut exports = BTreeMap::new();
+    let mut warnings = Vec::new();
+
+    for uid in collect_library_panel_uids(dashboard_payload) {
+        match request_json(
+            Method::GET,
+            &format!("/api/library-elements/{uid}"),
+            &[],
+            None,
+        ) {
+            Ok(Some(value)) => match build_library_panel_export(&value) {
+                Ok((export_uid, export)) => {
+                    exports.insert(export_uid, export);
+                }
+                Err(error) => warnings.push(format!(
+                    "Failed to normalize library panel {uid} for export: {error}"
+                )),
+            },
+            Ok(None) => warnings.push(format!(
+                "Library panel {uid} did not return a response from Grafana."
+            )),
+            Err(error) => warnings.push(format!(
+                "Failed to fetch library panel {uid} for export: {error}"
+            )),
+        }
+    }
+
+    Ok((exports, warnings))
 }
 
 fn normalize_permission_level(record: &Map<String, Value>) -> (i64, &'static str) {
@@ -416,4 +455,29 @@ pub(crate) fn build_permission_bundle_document(permission_documents: &[Value]) -
         Value::Array(permission_documents.to_vec()),
     );
     Value::Object(bundle)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn collect_library_panel_exports_with_request_records_failures_as_warnings() {
+        let payload = json!({
+            "panels": [{
+                "libraryPanel": {"uid": "shared-panel", "name": "Shared Panel"}
+            }]
+        });
+
+        let (exports, warnings) = collect_library_panel_exports_with_request(
+            |_method, _path, _params, _payload| Err(crate::common::message("boom")),
+            &payload,
+        )
+        .unwrap();
+
+        assert!(exports.is_empty());
+        assert_eq!(warnings.len(), 1);
+        assert!(warnings[0].contains("shared-panel"));
+    }
 }
