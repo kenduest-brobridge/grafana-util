@@ -1,14 +1,18 @@
 # dashboard convert export-layout
 
 ## Purpose
-Repair older dashboard export trees whose `raw/` or `prompt/` files were written under the leaf Grafana folder title instead of the full nested folder path.
+Repair older dashboard export trees whose `raw/` or `prompt/` files were written under the leaf Grafana folder title instead of the full nested folder path, and rebuild legacy all-orgs root indexes when child org exports are present but the root aggregate only describes one org.
 
 ## When to use
 Use this when an existing export already has correct `raw/folders.json` metadata, but files are laid out like `raw/Infra/CPU__uid.json` instead of `raw/Platform/Team/Infra/CPU__uid.json`. This is an offline artifact repair; it does not contact Grafana.
 
+Also use this on older `--all-orgs` exports when the root `index.json` or `export-metadata.json` only lists one org even though `org_*/raw` and `org_*/prompt` child exports exist.
+
 ## Before / After
 - **Before**: old exports flatten nested Grafana folders that share the same leaf title.
 - **After**: repaired `raw/` and `prompt/` lanes mirror the Grafana folder path recorded in `raw/folders.json`.
+- **Before**: old all-orgs roots can list only one org at the root while sibling `org_*` directories contain more dashboards.
+- **After**: the root aggregate is rebuilt from child org indexes with `scopeKind=all-orgs-root`, `orgCount`, and `orgs[]`.
 
 ## Key flags
 - `--input-dir`: existing dashboard export root or variant directory.
@@ -30,6 +34,7 @@ Use this when an existing export already has correct `raw/folders.json` metadata
 - Prompt repair uses the matching raw dashboard UID to recover folder identity.
 - When raw dashboard JSON lacks `meta.folderUid`, repair falls back to the root export index `folderTitle` only when that title is unique for the org in `raw/folders.json`.
 - Blocked items are reported instead of guessed when metadata is missing.
+- For legacy all-orgs roots, the command can still rebuild the root aggregate from child org indexes when no file moves are possible because folder identity is missing.
 - Text output prints only the summary by default. Add `--show-operations` when you need the per-dashboard operation list.
 - Table and CSV output also render summary by default; combine them with `--show-operations` for per-dashboard operation rows.
 - JSON and YAML output always include the full plan contract with `summary`, `operations`, and `extraFiles`.

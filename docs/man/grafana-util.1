@@ -119,7 +119,7 @@ Open one dashboard in a headless browser and capture image or PDF output.
 Convert ordinary dashboard JSON or raw/ lane files into Grafana UI prompt JSON with __inputs.
 .TP
 .B grafana\-util\-dashboard\-convert\-export\-layout(1)
-Repair older dashboard export trees whose raw/ or prompt/ files were written under the leaf Grafana folder title instead of the full nested folder path.
+Repair older dashboard export trees whose raw/ or prompt/ files were written under the leaf Grafana folder title instead of the full nested folder path, and rebuild legacy all\-orgs root indexes when child org exports are present but the root aggregate only describes one org.
 .SS alert
 .TP
 .B grafana\-util\-alert\-export(1)

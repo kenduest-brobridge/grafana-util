@@ -224,6 +224,16 @@ fn export_dashboards_with_request_all_orgs_aggregates_results() {
         Value::String("root".to_string())
     );
     assert_eq!(
+        aggregate_root_metadata["scopeKind"],
+        Value::String("all-orgs-root".to_string())
+    );
+    assert_eq!(
+        aggregate_root_metadata["source"]["orgScope"],
+        Value::String("all-orgs".to_string())
+    );
+    assert!(aggregate_root_metadata.get("org").is_none());
+    assert!(aggregate_root_metadata.get("orgId").is_none());
+    assert_eq!(
         aggregate_root_metadata["indexFile"],
         Value::String("index.json".to_string())
     );

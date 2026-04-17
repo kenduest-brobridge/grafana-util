@@ -15,6 +15,14 @@ Current AI change log only.
 - Older entries moved to [`ai-changes-archive-2026-04-17.md`](docs/internal/archive/ai-changes-archive-2026-04-17.md).
 - Older entries moved to [`ai-changes-archive-2026-04-18.md`](docs/internal/archive/ai-changes-archive-2026-04-18.md).
 
+## 2026-04-18 - Repair legacy dashboard all-orgs root aggregates
+- Summary: extended `dashboard convert export-layout` so legacy all-orgs roots can be repaired when child `org_*` exports are complete but the root aggregate only contains one org. The repair now rebuilds root `index.json` and `export-metadata.json` from child raw/prompt indexes and writes all-orgs metadata instead of a single root `org/orgId`. Current all-orgs export coverage now explicitly protects that root metadata shape.
+- Tests: added an export-layout regression for rebuilding a broken legacy all-orgs root aggregate and tightened the all-orgs export regression to assert `scopeKind=all-orgs-root`, source `orgScope=all-orgs`, and no root-level `org/orgId`.
+- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `cargo test --manifest-path rust/Cargo.toml --quiet export_layout`; `cargo test --manifest-path rust/Cargo.toml --quiet export_dashboards_with_request_all_orgs_aggregates_results`; copied legacy sample smoke with `dashboard convert export-layout` and verified root `index.json` reports 112 dashboards for org 1 plus 26 for org 3 and root metadata reports 138 dashboards across 2 orgs.
+- Impact: Rust dashboard export-layout repair, all-orgs export regression tests, dashboard convert command docs, generated man/html docs, and AI trace docs.
+- Rollback/Risk: low to medium local artifact repair behavior change. Rollback would leave legacy all-orgs roots with stale root aggregates and require manual root metadata/index reconstruction.
+- Follow-up: consider adding a dedicated root-aggregate-only output summary field if operators need dry-run evidence separate from layout move/block counts.
+
 ## 2026-04-18 - Align dashboard export/import with Grafana source
 - Summary: aligned the dashboard lane with the useful parts of Grafana source behavior without adding dashboard v2 support. Live prompt export now resolves referenced library panels through Grafana and emits `__elements`; offline raw-to-prompt still preserves references and warns instead of inventing missing models. Dashboard import/publish now reads target dashboard metadata during dry-run/review and blocks provisioned dashboard overwrites before live POST while warning on managed/repository evidence.
 - Tests: added raw-to-prompt parity fixtures for datasource variables, default/all-selected current values, special datasource refs, string datasource mappings, library panel references, and v2/k8s rejection; added import dry-run/apply tests for target evidence and provisioned blocking; added prompt/export tests for library panel element wiring.
@@ -84,12 +92,4 @@ Current AI change log only.
 - Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `cargo test --manifest-path rust/Cargo.toml --quiet help_rust_tests`; manual `grafana-util --help-flat` smoke.
 - Impact: `rust/src/cli/help/flat.rs`, `rust/src/cli/tests/help_rust_tests.rs`, and AI trace docs. Runtime command behavior, public docs, README files, and Python implementation were intentionally left unchanged.
 - Rollback/Risk: low CLI help formatting change. Scripts that parse the old aligned table by fixed columns should switch to tabs; command paths remain first-column stable.
-- Follow-up: none.
-
-## 2026-04-15 - Advertise help-flat in root help
-- Summary: updated grouped help discoverability for special help paths. Root help now advertises `grafana-util --help-flat`; dashboard help advertises `dashboard summary --help-full`; access help advertises `access --help-full`; workspace help advertises both `workspace --help-full` and `workspace --help-schema`. The command-surface contract no longer claims unsupported `dashboard --help-full`.
-- Tests: extended unified help regressions to require the newly advertised special help paths and to verify advertised `--help-full` paths render.
-- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `cargo test --manifest-path rust/Cargo.toml --quiet help_rust_tests`; `make quality-docs-surface`; CLI smoke checks for root/dashboard/access/workspace grouped help and the advertised `dashboard summary --help-full`, `access --help-full`, `workspace --help-full`, and `workspace --help-schema` paths.
-- Impact: `rust/src/cli/help/grouped_specs.rs`, `rust/src/cli/tests/help_rust_tests.rs`, `scripts/contracts/command-surface.json`, and AI trace docs. Runtime command behavior and Python implementation were intentionally left unchanged.
-- Rollback/Risk: low CLI help/contract fix. Rollback would make existing special help features undiscoverable from nearby help and would restore the unsupported dashboard root `--help-full` contract entry.
 - Follow-up: none.

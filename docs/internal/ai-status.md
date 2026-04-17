@@ -15,6 +15,13 @@ Current AI-maintained status only.
 - Older entries moved to [`ai-status-archive-2026-04-17.md`](docs/internal/archive/ai-status-archive-2026-04-17.md).
 - Older entries moved to [`ai-status-archive-2026-04-18.md`](docs/internal/archive/ai-status-archive-2026-04-18.md).
 
+## 2026-04-18 - Repair legacy dashboard all-orgs root aggregates
+- State: Done
+- Scope: Rust dashboard export-layout repair, all-orgs export regression coverage, command docs, generated docs, and AI trace docs. README files, Python implementation, and live export behavior beyond regression coverage are out of scope.
+- Baseline: older all-orgs export artifacts can contain valid `org_*` child exports while the root `index.json` and `export-metadata.json` only describe one org. `export-layout` repairs file layout and existing root index paths, but it does not rebuild missing all-orgs aggregate root data from child org indexes.
+- Current Update: `dashboard convert export-layout` now rebuilds legacy all-orgs root `index.json` and root metadata from child `org_*/raw` and `org_*/prompt` indexes, even when no layout moves are possible because legacy folder identity is missing. The current exporter regression now asserts all-orgs root metadata uses all-orgs scope and does not carry a single root `org/orgId`.
+- Result: Focused export-layout and all-orgs export tests pass; a copied legacy sample rebuilds root aggregate metadata to 138 dashboards across 2 orgs.
+
 ## 2026-04-18 - Align dashboard export/import with Grafana source
 - State: Done
 - Scope: Rust dashboard prompt export, raw-to-prompt fixture parity tests, import/publish target preflight evidence, dashboard command docs, generated docs, maintainer contract notes, and AI trace docs. README files, Python implementation, and dashboard v2 support are out of scope.
@@ -48,9 +55,3 @@ Current AI-maintained status only.
 - Scope: Rust datasource masked-recovery export/import, dry-run evidence, focused datasource tests, datasource command docs, internal contract docs, TODO backlog, and AI trace docs. README files, Python implementation, and Grafana K8s datasource API support are out of scope.
 - Current Update: Datasource export now preserves additive `readOnly`, `version`, and `apiVersion` evidence. Datasource import update planning now fetches target live datasource evidence, updates through `/api/datasources/uid/{uid}`, carries target `version`, and blocks read-only/provisioned targets before live writes. Dry-run JSON/table/text now exposes target UID/version/read-only and blocked reason evidence.
 - Result: Focused datasource tests, full Rust tests, clippy, formatting, generated docs checks, docs-surface checks, AI workflow, and whitespace checks pass.
-
-## 2026-04-17 - Align dashboard prompt external export semantics
-- State: Done
-- Scope: Rust prompt/raw-to-prompt datasource handling and pre-resolution, focused regression tests, internal prompt-lane semantics note, raw-to-prompt command docs in English and zh-TW, and AI trace docs. README files and Python implementation are out of scope.
-- Current Update: Aligned prompt conversion with Grafana UI external-export semantics: concrete datasource refs become `__inputs`, built-in Grafana datasource selectors stay excluded, datasource variables keep their own variable shape, and the converter no longer synthesizes a new datasource variable when the source dashboard did not already have one. Used datasource variables with a concrete current datasource now point `current.value` at the generated `${DS_*}` input while panel and target references stay variable-based.
-- Result: The prompt builder no longer over-normalizes single datasource families or turns datasource variable plugin filters into extra import inputs, and raw-to-prompt pre-resolution now preserves `$datasource` placeholders instead of failing inference. Focused raw-to-prompt coverage and full Rust tests pass; the docs record the contract, the known bug pattern, and the later `VAR_*` parity follow-up without naming local machine paths.

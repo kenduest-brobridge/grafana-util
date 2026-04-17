@@ -11,9 +11,10 @@ use crate::tabular_output::render_yaml;
 
 use super::inspect_render::render_simple_table;
 use super::{
-    load_export_metadata, load_folder_inventory, load_json_file, write_json_document,
-    DashboardIndexItem, ExportLayoutArgs, ExportLayoutOutputFormat, ExportLayoutVariant,
-    FolderInventoryItem, RootExportIndex, VariantIndexEntry, DASHBOARD_PERMISSION_BUNDLE_FILENAME,
+    build_export_metadata, build_root_export_index, load_export_metadata, load_folder_inventory,
+    load_json_file, write_json_document, DashboardIndexItem, ExportLayoutArgs,
+    ExportLayoutOutputFormat, ExportLayoutVariant, ExportOrgSummary, FolderInventoryItem,
+    RootExportIndex, VariantIndexEntry, DASHBOARD_PERMISSION_BUNDLE_FILENAME,
     DATASOURCE_INVENTORY_FILENAME, DEFAULT_ORG_ID, EXPORT_METADATA_FILENAME,
     FOLDER_INVENTORY_FILENAME, PROMPT_EXPORT_SUBDIR, RAW_EXPORT_SUBDIR,
 };
@@ -131,7 +132,10 @@ pub(crate) fn run_export_layout_repair(args: &ExportLayoutArgs) -> Result<()> {
     if args.dry_run {
         return Ok(());
     }
-    if plan.summary.blocked_count > 0 {
+    let allow_metadata_only_repair = plan.summary.move_count == 0
+        && plan.summary.blocked_count > 0
+        && has_nested_all_orgs_export_roots(&args.input_dir)?;
+    if plan.summary.blocked_count > 0 && !allow_metadata_only_repair {
         return Err(message(format!(
             "dashboard export-layout repair blocked {} operation(s).",
             plan.summary.blocked_count
@@ -148,8 +152,42 @@ pub(crate) fn run_export_layout_repair(args: &ExportLayoutArgs) -> Result<()> {
         output_dir
     };
 
-    apply_export_layout_plan(args, execution_root, &plan)?;
+    let aggregate_rebuilt = apply_export_layout_plan(args, execution_root, &plan)?;
+    if aggregate_rebuilt
+        && matches!(
+            args.output_format,
+            ExportLayoutOutputFormat::Text | ExportLayoutOutputFormat::Table
+        )
+    {
+        println!("Rebuilt all-orgs root aggregate from child org indexes.");
+    }
     Ok(())
+}
+
+fn has_nested_all_orgs_export_roots(input_dir: &Path) -> Result<bool> {
+    if !input_dir.is_dir() {
+        return Ok(false);
+    }
+    let mut org_root_count = 0usize;
+    for entry in fs::read_dir(input_dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if !path.is_dir() {
+            continue;
+        }
+        let Some(name) = path.file_name().and_then(|value| value.to_str()) else {
+            continue;
+        };
+        if !name.starts_with("org_") {
+            continue;
+        }
+        if path.join(RAW_EXPORT_SUBDIR).join("index.json").is_file()
+            || path.join(PROMPT_EXPORT_SUBDIR).join("index.json").is_file()
+        {
+            org_root_count += 1;
+        }
+    }
+    Ok(org_root_count > 1)
 }
 
 fn selected_variants(args: &ExportLayoutArgs) -> BTreeSet<LayoutVariant> {
@@ -742,7 +780,7 @@ fn apply_export_layout_plan(
     args: &ExportLayoutArgs,
     execution_root: &Path,
     plan: &ExportLayoutPlan,
-) -> Result<()> {
+) -> Result<bool> {
     let mut changed_variants = BTreeSet::new();
     for operation in &plan.operations {
         if operation.action != "move" {
@@ -773,7 +811,7 @@ fn apply_export_layout_plan(
         update_root_index(&variant_dir, &variant_scope, &variant, plan)?;
     }
     update_aggregate_root_index(execution_root, plan)?;
-    Ok(())
+    rebuild_all_orgs_aggregate_root(execution_root)
 }
 
 fn backup_file(args: &ExportLayoutArgs, input_root: &Path, path: &Path) -> Result<()> {
@@ -908,6 +946,167 @@ fn update_aggregate_root_index(execution_root: &Path, plan: &ExportLayoutPlan) -
     }
     if changed {
         write_json_document(&root_index, &index_path)?;
+    }
+    Ok(())
+}
+
+fn rebuild_all_orgs_aggregate_root(execution_root: &Path) -> Result<bool> {
+    let mut root_items_by_key = BTreeMap::<String, DashboardIndexItem>::new();
+    let mut root_folders = Vec::<FolderInventoryItem>::new();
+    let mut org_summaries = Vec::<ExportOrgSummary>::new();
+
+    for entry in fs::read_dir(execution_root)? {
+        let entry = entry?;
+        let org_root = entry.path();
+        if !org_root.is_dir() {
+            continue;
+        }
+        let Some(name) = org_root.file_name().and_then(|value| value.to_str()) else {
+            continue;
+        };
+        if !name.starts_with("org_") {
+            continue;
+        }
+
+        let raw_dir = org_root.join(RAW_EXPORT_SUBDIR);
+        let prompt_dir = org_root.join(PROMPT_EXPORT_SUBDIR);
+        let raw_metadata = load_export_metadata(&raw_dir, Some(RAW_EXPORT_SUBDIR))?;
+        let prompt_metadata = load_export_metadata(&prompt_dir, Some(PROMPT_EXPORT_SUBDIR))?;
+        let org_name = raw_metadata
+            .as_ref()
+            .and_then(|metadata| metadata.org.as_deref())
+            .or_else(|| {
+                prompt_metadata
+                    .as_ref()
+                    .and_then(|metadata| metadata.org.as_deref())
+            })
+            .unwrap_or(name)
+            .to_string();
+        let org_id = raw_metadata
+            .as_ref()
+            .and_then(|metadata| metadata.org_id.as_deref())
+            .or_else(|| {
+                prompt_metadata
+                    .as_ref()
+                    .and_then(|metadata| metadata.org_id.as_deref())
+            })
+            .unwrap_or(DEFAULT_ORG_ID)
+            .to_string();
+
+        if raw_dir.join("index.json").is_file() {
+            merge_variant_entries_into_root(
+                &raw_dir,
+                LayoutVariant::Raw,
+                &org_name,
+                &org_id,
+                &mut root_items_by_key,
+            )?;
+            root_folders.extend(load_folder_inventory(&raw_dir, raw_metadata.as_ref())?);
+        }
+        if prompt_dir.join("index.json").is_file() {
+            merge_variant_entries_into_root(
+                &prompt_dir,
+                LayoutVariant::Prompt,
+                &org_name,
+                &org_id,
+                &mut root_items_by_key,
+            )?;
+        }
+
+        let dashboard_count = root_items_by_key
+            .values()
+            .filter(|item| item.org_id == org_id)
+            .count() as u64;
+        if dashboard_count > 0 {
+            org_summaries.push(ExportOrgSummary {
+                org: org_name,
+                org_id,
+                dashboard_count,
+                datasource_count: None,
+                used_datasource_count: None,
+                used_datasources: None,
+                output_dir: Some(org_root.display().to_string()),
+            });
+        }
+    }
+
+    if org_summaries.len() < 2 {
+        return Ok(false);
+    }
+
+    let root_items = root_items_by_key.into_values().collect::<Vec<_>>();
+    let root_index = build_root_export_index(&root_items, None, None, None, &root_folders);
+    write_json_document(&root_index, &execution_root.join("index.json"))?;
+    write_json_document(
+        &build_export_metadata(
+            "root",
+            root_items.len(),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some(org_summaries),
+            "local-repair",
+            None,
+            Some(execution_root),
+            None,
+            execution_root,
+            &execution_root.join(EXPORT_METADATA_FILENAME),
+        ),
+        &execution_root.join(EXPORT_METADATA_FILENAME),
+    )?;
+    Ok(true)
+}
+
+fn merge_variant_entries_into_root(
+    variant_dir: &Path,
+    variant: LayoutVariant,
+    org_name: &str,
+    org_id: &str,
+    items_by_key: &mut BTreeMap<String, DashboardIndexItem>,
+) -> Result<()> {
+    for entry in load_variant_index_entries(variant_dir)? {
+        let entry_org_id = if entry.org_id.trim().is_empty() {
+            org_id.to_string()
+        } else {
+            entry.org_id.clone()
+        };
+        let key = format!("{}:{}", entry_org_id, entry.uid);
+        let relative = entry_relative_path(&entry.path, variant_dir, variant)?;
+        let path = variant_dir.join(relative).display().to_string();
+        let item = items_by_key
+            .entry(key)
+            .or_insert_with(|| DashboardIndexItem {
+                uid: entry.uid.clone(),
+                title: entry.title.clone(),
+                folder_title: entry.folder_title.clone(),
+                folder_uid: entry.folder_uid.clone(),
+                folder_path: entry.folder_path.clone(),
+                org: if entry.org.trim().is_empty() {
+                    org_name.to_string()
+                } else {
+                    entry.org.clone()
+                },
+                org_id: entry_org_id,
+                raw_path: None,
+                prompt_path: None,
+                provisioning_path: None,
+            });
+        if item.folder_title.is_empty() {
+            item.folder_title = entry.folder_title;
+        }
+        if item.folder_uid.is_empty() {
+            item.folder_uid = entry.folder_uid;
+        }
+        if item.folder_path.is_empty() {
+            item.folder_path = entry.folder_path;
+        }
+        match variant {
+            LayoutVariant::Raw => item.raw_path = Some(path),
+            LayoutVariant::Prompt => item.prompt_path = Some(path),
+        }
     }
     Ok(())
 }
@@ -1265,6 +1464,119 @@ mod tests {
         );
     }
 
+    fn write_old_all_orgs_export(root: &Path) {
+        write_json(
+            &root.join("export-metadata.json"),
+            json!({
+                "schemaVersion": 1,
+                "kind": "grafana-utils-dashboard-export-index",
+                "variant": "root",
+                "dashboardCount": 1,
+                "indexFile": "index.json",
+                "org": "Main Org",
+                "orgId": "1"
+            }),
+        );
+        write_json(
+            &root.join("index.json"),
+            json!({
+                "schemaVersion": 1,
+                "kind": "grafana-utils-dashboard-export-index",
+                "items": [{
+                    "uid": "cpu-main",
+                    "title": "CPU",
+                    "folderTitle": "Infra",
+                    "folderUid": "infra",
+                    "folderPath": "Infra",
+                    "org": "Main Org",
+                    "orgId": "1",
+                    "raw_path": root.join("org_1_Main/raw/Infra/CPU__cpu-main.json").display().to_string()
+                }],
+                "variants": {"raw": null, "prompt": null, "provisioning": null},
+                "folders": []
+            }),
+        );
+        for (org_dir, org_name, org_id, uid, title, folder) in [
+            ("org_1_Main", "Main Org", "1", "cpu-main", "CPU", "Infra"),
+            ("org_2_Ops", "Ops Org", "2", "logs-main", "Logs", "Ops"),
+        ] {
+            let org_root = root.join(org_dir);
+            let raw_dir = org_root.join(RAW_EXPORT_SUBDIR);
+            let prompt_dir = org_root.join(PROMPT_EXPORT_SUBDIR);
+            write_json(
+                &raw_dir.join(EXPORT_METADATA_FILENAME),
+                json!({
+                    "schemaVersion": 1,
+                    "kind": "grafana-utils-dashboard-export-index",
+                    "variant": "raw",
+                    "dashboardCount": 1,
+                    "indexFile": "index.json",
+                    "foldersFile": "folders.json",
+                    "org": org_name,
+                    "orgId": org_id
+                }),
+            );
+            write_json(
+                &raw_dir.join(FOLDER_INVENTORY_FILENAME),
+                json!([{
+                    "uid": folder.to_lowercase(),
+                    "title": folder,
+                    "path": folder,
+                    "org": org_name,
+                    "orgId": org_id
+                }]),
+            );
+            write_json(
+                &raw_dir.join("index.json"),
+                json!([{
+                    "uid": uid,
+                    "title": title,
+                    "path": raw_dir.join(folder).join(format!("{title}__{uid}.json")).display().to_string(),
+                    "format": "grafana-web-import-preserve-uid",
+                    "folderTitle": folder,
+                    "folderUid": folder.to_lowercase(),
+                    "folderPath": folder,
+                    "org": org_name,
+                    "orgId": org_id
+                }]),
+            );
+            write_json(
+                &prompt_dir.join(EXPORT_METADATA_FILENAME),
+                json!({
+                    "schemaVersion": 1,
+                    "kind": "grafana-utils-dashboard-export-index",
+                    "variant": "prompt",
+                    "dashboardCount": 1,
+                    "indexFile": "index.json",
+                    "org": org_name,
+                    "orgId": org_id
+                }),
+            );
+            write_json(
+                &prompt_dir.join("index.json"),
+                json!([{
+                    "uid": uid,
+                    "title": title,
+                    "path": prompt_dir.join(folder).join(format!("{title}__{uid}.json")).display().to_string(),
+                    "format": "grafana-web-import-with-datasource-inputs",
+                    "folderTitle": folder,
+                    "folderUid": folder.to_lowercase(),
+                    "folderPath": folder,
+                    "org": org_name,
+                    "orgId": org_id
+                }]),
+            );
+            write_json(
+                &raw_dir.join(folder).join(format!("{title}__{uid}.json")),
+                json!({"uid": uid, "title": title}),
+            );
+            write_json(
+                &prompt_dir.join(folder).join(format!("{title}__{uid}.json")),
+                json!({"uid": uid, "title": title, "__inputs": []}),
+            );
+        }
+    }
+
     #[test]
     fn export_layout_plan_repairs_raw_and_prompt_from_folder_inventory() {
         let temp = tempdir().unwrap();
@@ -1550,6 +1862,51 @@ mod tests {
             .as_ref()
             .unwrap()
             .contains("Platform/Team/Infra"));
+    }
+
+    #[test]
+    fn export_layout_repair_rebuilds_legacy_all_orgs_root_aggregate() {
+        let temp = tempdir().unwrap();
+        let input = temp.path().join("dashboards");
+        write_old_all_orgs_export(&input);
+        let args = ExportLayoutArgs {
+            input_dir: input.clone(),
+            output_dir: None,
+            in_place: true,
+            backup_dir: None,
+            variant: Vec::new(),
+            raw_dir: None,
+            folders_file: None,
+            dry_run: false,
+            overwrite: true,
+            show_operations: false,
+            output_format: ExportLayoutOutputFormat::Text,
+            no_header: false,
+            color: crate::common::CliColorChoice::Never,
+        };
+
+        run_export_layout_repair(&args).unwrap();
+
+        let root_index: RootExportIndex =
+            serde_json::from_str(&fs::read_to_string(input.join("index.json")).unwrap()).unwrap();
+        assert_eq!(root_index.items.len(), 2);
+        assert!(root_index.items.iter().any(|item| item.org_id == "1"));
+        assert!(root_index.items.iter().any(|item| item.org_id == "2"));
+        let metadata: Value = serde_json::from_str(
+            &fs::read_to_string(input.join(EXPORT_METADATA_FILENAME)).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(metadata["scopeKind"], "all-orgs-root");
+        assert_eq!(metadata["source"]["orgScope"], "all-orgs");
+        assert_eq!(metadata["dashboardCount"], 2);
+        assert_eq!(metadata["orgCount"], 2);
+        assert!(metadata.get("org").is_none());
+        assert!(metadata.get("orgId").is_none());
+        assert!(metadata["orgs"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|entry| entry["orgId"] == "2" && entry["dashboardCount"] == 1));
     }
 
     #[test]

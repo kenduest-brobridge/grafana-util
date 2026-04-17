@@ -23,3 +23,11 @@
 - Impact: `rust/src/commands/status/live.rs`, command/reference docs in English and zh-TW, generated man/html docs, and AI trace docs. Python implementation was intentionally left unchanged.
 - Rollback/Risk: low additive contract change. Rollback would remove `discovery.instance` population and the related docs/tests; existing readiness fields remain unchanged.
 - Follow-up: consider rendering a compact instance line in text/table output only if operators ask for non-JSON visibility.
+
+## 2026-04-15 - Advertise help-flat in root help
+- Summary: updated grouped help discoverability for special help paths. Root help now advertises `grafana-util --help-flat`; dashboard help advertises `dashboard summary --help-full`; access help advertises `access --help-full`; workspace help advertises both `workspace --help-full` and `workspace --help-schema`. The command-surface contract no longer claims unsupported `dashboard --help-full`.
+- Tests: extended unified help regressions to require the newly advertised special help paths and to verify advertised `--help-full` paths render.
+- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `cargo test --manifest-path rust/Cargo.toml --quiet help_rust_tests`; `make quality-docs-surface`; CLI smoke checks for root/dashboard/access/workspace grouped help and the advertised `dashboard summary --help-full`, `access --help-full`, `workspace --help-full`, and `workspace --help-schema` paths.
+- Impact: `rust/src/cli/help/grouped_specs.rs`, `rust/src/cli/tests/help_rust_tests.rs`, `scripts/contracts/command-surface.json`, and AI trace docs. Runtime command behavior and Python implementation were intentionally left unchanged.
+- Rollback/Risk: low CLI help/contract fix. Rollback would make existing special help features undiscoverable from nearby help and would restore the unsupported dashboard root `--help-full` contract entry.
+- Follow-up: none.
