@@ -15,3 +15,11 @@
 - Impact: `README.md`, `README.zh-TW.md`, dashboard policy command docs/generated docs, `rust/src/cli/mod.rs`, maintainer docs, and AI trace docs. Python implementation was intentionally left unchanged.
 - Rollback/Risk: low docs/help correction. Rollback would reintroduce removed command examples and stale inspect-artifact wording.
 - Follow-up: keep `scripts/contracts/command-surface.json` and `scripts/check_ai_workflow.py` removed-command guardrails in place so `dashboard analyze` does not return to public docs.
+
+## 2026-04-15 - Add Grafana instance metadata to status live
+- Summary: added a non-blocking `discovery.instance` section to `status live` JSON/YAML output. The live status runtime now reads Grafana `GET /api/health`, records successful health payloads under `source: api-health` and `status: available`, and records health-read errors as `status: unavailable` without changing the project/domain readiness gate.
+- Tests: added focused Rust coverage for successful `/api/health` discovery payloads and failed health reads.
+- Test Run: `cargo fmt --manifest-path rust/Cargo.toml --all`; `cargo fmt --manifest-path rust/Cargo.toml --all --check`; `cargo test --manifest-path rust/Cargo.toml --quiet status`; `cargo test --manifest-path rust/Cargo.toml --quiet`; `cargo clippy --manifest-path rust/Cargo.toml --all-targets -- -D warnings`; `make man`; `make html`; `make quality-docs-surface`; `make quality-ai-workflow`; `make man-check`; `make html-check`; `git diff --check`.
+- Impact: `rust/src/commands/status/live.rs`, command/reference docs in English and zh-TW, generated man/html docs, and AI trace docs. Python implementation was intentionally left unchanged.
+- Rollback/Risk: low additive contract change. Rollback would remove `discovery.instance` population and the related docs/tests; existing readiness fields remain unchanged.
+- Follow-up: consider rendering a compact instance line in text/table output only if operators ask for non-JSON visibility.

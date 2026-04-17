@@ -15,6 +15,10 @@ Use this when a local draft is ready to go live and you want the command to stag
 - `--watch`: rerun publish or dry-run whenever the local input file changes. Use this with a local file path, not `--input -`. The watcher reports workspace detection, transient failures, and reruns, and keeps watching until you stop it.
 - `--table`, `--json`: dry-run output modes.
 
+## What success looks like
+- dry-run previews the same target evidence and overwrite protection used by `dashboard import`
+- provisioned dashboards are blocked before a live overwrite is attempted
+
 ## Examples
 ```bash
 # Publish one local dashboard JSON file through the existing dashboard import pipeline.

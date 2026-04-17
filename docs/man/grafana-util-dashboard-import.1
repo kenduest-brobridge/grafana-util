@@ -42,6 +42,8 @@ preview and reporting controls. Use \-\-output\-columns all for the full dry\-ru
 .IP \(bu 2
 dry\-run shows the expected create/update actions before you touch the live server
 .IP \(bu 2
+dry\-run also surfaces live dashboard target evidence when Grafana already owns the UID, including provisioned or managed\-state warnings
+.IP \(bu 2
 the destination org and folder routing are explicit enough to review
 .IP \(bu 2
 the chosen input lane matches the replay goal: raw or provisioning, not prompt
@@ -50,6 +52,8 @@ the chosen input lane matches the replay goal: raw or provisioning, not prompt
 if folder or org placement looks wrong, verify the routing flags before re\-running live import
 .IP \(bu 2
 if the replay looks too destructive, stop at \-\-dry\-run and inspect the export tree first
+.IP \(bu 2
+if Grafana reports a provisioned dashboard at the target UID, the live overwrite is blocked before the POST call
 .IP \(bu 2
 if the schema check blocks replay, confirm whether the source tree needs normalization before import
 .SH EXAMPLES

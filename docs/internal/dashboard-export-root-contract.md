@@ -7,7 +7,8 @@ Detailed requirements for the current dashboard staged export contract.
 - The dashboard export root is a typed contract boundary.
 - `raw/` is the canonical staged export variant for dashboard consumers.
 - `provisioning/` is a derived provisioning-oriented variant with its own
-  explicit input contract.
+  explicit input contract; compare it against Grafana file provisioning later
+  rather than treating it as the source of truth.
 - Combined roots are valid only for commands that explicitly consume the
   dashboard export-root contract.
 
@@ -25,6 +26,15 @@ Detailed requirements for the current dashboard staged export contract.
     export metadata directly
   - `workspace-root`: higher-level staged workspace that contains the dashboard
     export tree and sibling staged domains such as `datasources/`
+
+## Boundary Notes
+
+- Dashboard permissions belong with access evidence and access workflows, not
+  as embedded dashboard JSON fields.
+- `permissionsFile` is export-root metadata for the staged tree; it does not
+  turn permissions into part of the dashboard JSON contract.
+- Dashboard v2 remains a separate adapter boundary and does not participate in
+  this classic export-root contract until a dedicated lane exists.
 
 ## Output-Layering Rule
 
@@ -62,3 +72,6 @@ Detailed requirements for the current dashboard staged export contract.
 - Keep this file as the current detailed dashboard contract doc.
 - Trace files should record changes to this contract, not restate the whole
   contract.
+- Future module splits should follow responsibility boundaries, not line-count
+  thresholds. Keep large dashboard modules readable as facades over a stable
+  workflow.

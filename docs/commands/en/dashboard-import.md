@@ -22,12 +22,14 @@ Use this when you have a local export tree or provisioning tree and need to push
 
 ## What success looks like
 - dry-run shows the expected create/update actions before you touch the live server
+- dry-run also surfaces live dashboard target evidence when Grafana already owns the UID, including provisioned or managed-state warnings
 - the destination org and folder routing are explicit enough to review
 - the chosen input lane matches the replay goal: `raw` or `provisioning`, not `prompt`
 
 ## Failure checks
 - if folder or org placement looks wrong, verify the routing flags before re-running live import
 - if the replay looks too destructive, stop at `--dry-run` and inspect the export tree first
+- if Grafana reports a provisioned dashboard at the target UID, the live overwrite is blocked before the POST call
 - if the schema check blocks replay, confirm whether the source tree needs normalization before import
 
 ## Examples

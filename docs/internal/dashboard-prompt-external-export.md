@@ -19,7 +19,7 @@ Define how `dashboard convert raw-to-prompt` should mirror Grafana's external UI
 - Constant variables become `VAR_*` import inputs. Their `query`, `current`, and `options` point at the generated placeholder.
 - Expression and built-in Grafana datasource selectors are not user-mapped datasource inputs.
 - Multiple distinct concrete datasource references stay as separate prompt inputs when Grafana would ask for them separately.
-- Library panel references are preserved, but local raw-to-prompt conversion does not fetch and inline missing library panel models. Emit a portability warning instead of inventing `__elements`.
+- Library panel references are preserved. Local raw-to-prompt conversion does not fetch and inline missing library panel models; emit a portability warning instead of inventing `__elements`. Live export/import-handoff parity may look up the referenced model later, but that stays outside the offline converter path.
 
 ## Known Issue Pattern
 - Some older prompt exports over-normalized a single datasource family into a synthetic `datasource` variable.
@@ -28,7 +28,8 @@ Define how `dashboard convert raw-to-prompt` should mirror Grafana's external UI
 
 ## Later Parity
 - Full library panel external-export parity requires live library panel model lookup and is intentionally left for later.
-- Dashboard v2 resources use `grafana.app/export-label`, not classic `__inputs`. Treat v2 as a future adapter and do not mix it into the prompt lane.
+- Dashboard v2 resources use `grafana.app/export-label`, not classic `__inputs`. Keep v2 as a separate adapter boundary and do not mix it into the classic prompt lane.
+- Dashboard permissions are outside prompt export semantics. Keep them as adjacent access evidence instead of trying to encode them in dashboard JSON.
 
 ## Notes
 - Keep this file as the maintainer reference for prompt-lane datasource semantics.

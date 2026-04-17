@@ -93,6 +93,32 @@ Action:
 - Add later parity for library panel `__elements` live-model export and import
   input validation.
 
+### Dashboard Source-Alignment Follow-ups
+
+Keep these follow-ups separated from the classic prompt contract so the next
+changes stay reviewable and do not blur lane boundaries.
+
+- Add live library-panel `__elements` lookup only on the live export /
+  import-handoff path. Keep local raw-to-prompt conversion warning-only when a
+  referenced library panel model is missing.
+- Keep prompt/export fixture parity anchored to Grafana source testdata for
+  datasource variables, selected current datasource handling, library panels,
+  and the classic-vs-v2 rejection boundary.
+- Add dashboard import/publish preflight evidence for provisioned or managed
+  dashboards before any live write. Surface ownership and provenance as target
+  evidence instead of waiting for Grafana API failures.
+- Keep dashboard v2 as a separate future adapter boundary. Continue rejecting
+  v2-shaped input in the classic prompt lane rather than mixing it into
+  `raw/`, `prompt/`, or provisioning behavior.
+- Treat provisioning as a derived projection that can be compared later
+  against Grafana file provisioning. Do not rebase the dashboard contract on
+  provisioning as if it were the source of truth.
+- Keep dashboard permissions adjacent to access evidence and access workflows,
+  not as dashboard JSON fields or as an extension of the prompt export shape.
+- Split large dashboard modules by responsibility, not by line count alone.
+  Favor focused export planning, prompt conversion, live preflight, and
+  provisioning projection boundaries over arbitrary file carving.
+
 Validation:
 
 - `cargo test --manifest-path rust/Cargo.toml --quiet raw_to_prompt`
